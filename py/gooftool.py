@@ -497,7 +497,9 @@ def Verify(options):
     VerifyDevSwitch({})
     VerifyWpSwitch({})
   VerifyHwid(options)
-  VerifySystemTime({})
+  # Disable system time check as system time is not preserved across power
+  # cycles. (crosbug.com/p/9937)
+  #VerifySystemTime({})
   VerifyKeys({})
   VerifyRootFs({})
 
