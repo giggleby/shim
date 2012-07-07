@@ -753,7 +753,9 @@ def Probe(target_comp_classes=None,
   if probe_volatile:
     main_fw_file = crosfw.LoadMainFirmware().GetFileName()
     results.volatiles.update(CalculateFirmwareHashes(main_fw_file))
-    ec_fw_file = crosfw.LoadEcFirmware().GetFileName()
-    if ec_fw_file is not None:
-      results.volatiles.update(CalculateFirmwareHashes(ec_fw_file))
+    # TODO(yongjaek): EC does not fully support FMAP. The following lines
+    # should be added back.
+    #ec_fw_file = crosfw.LoadEcFirmware().GetFileName()
+    #if ec_fw_file is not None:
+    #  results.volatiles.update(CalculateFirmwareHashes(ec_fw_file))
   return results
