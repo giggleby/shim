@@ -300,7 +300,9 @@ def PrepareWipe(options):
 
 @Command('verify',
          CmdArg('--dev', action='store_true',
-                help='Do not verify switch state (dev mode and fw wp).'),
+                help='Do not verify dev switch state.'),
+         CmdArg('--no_write_protect', action='store_true',
+                help='Do not check write protection switch state.'),
          _hwdb_path_cmd_arg)
 def Verify(options):
   """Verifies if whole factory process is ready for finalization.
@@ -312,6 +314,7 @@ def Verify(options):
   """
   if not options.dev:
     VerifyDevSwitch({})
+  if not options.no_write_protect:
     VerifyWpSwitch({})
   VerifyHwid(options)
   VerifySystemTime({})
@@ -334,7 +337,9 @@ def UploadReport(options):
 
 @Command('finalize',
          CmdArg('--dev', action='store_true',
-                help='Do not verify or alter write protection or dev mode.'),
+                help='Do not verify dev switch state.'),
+         CmdArg('--no_write_protect', action='store_true',
+                help='Do not enable firmware write protection.'),
          CmdArg('--fast', action='store_true',
                 help='use non-secure but faster wipe method.'),
          _hwdb_path_cmd_arg,
@@ -351,7 +356,7 @@ def Finalize(options):
   ClearGbbFlags({})
   Verify(options)
   SetFirmwareBitmapLocale({})
-  if not options.dev:
+  if not options.no_write_protect:
     EnableFwWp({})
   UploadReport(options)
   PrepareWipe(options)
