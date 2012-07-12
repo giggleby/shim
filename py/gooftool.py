@@ -399,13 +399,6 @@ def VerifyWpSwitch(options):
 
 @Command('verify_switch_dev')
 def VerifyDevSwitch(options):
-  """Verify developer switch is disabled."""
-  result = Shell('crossystem devsw_cur')
-  if result.success:
-    if result.stdout.strip() != '0':
-      raise Error, 'developer mode is enabled'
-    else:
-      return
   # devsw_cur is not available -- probably a device using keyboard-based
   # developer/recovery mode.  We can't verify this until next reboot, because
   # the real values are stored in TPM.
@@ -489,8 +482,8 @@ def Verify(options):
   system time, keys, and root file system.
   """
   if not options.dev:
-    VerifyDevSwitch({})
     VerifyWpSwitch({})
+  VerifyDevSwitch({})
   VerifyHwid(options)
   VerifySystemTime({})
   VerifyKeys({})
