@@ -580,7 +580,11 @@ def Finalize(options):
   and sets the necessary boot flags to cause wipe of the factory image
   on the next boot.
   """
-  ClearGbbFlags({})
+  # Current firmware doesn't allow the user to switch to dev mode from normal
+  # mode(crosbug.com/p/11346). ClearGbbFlags will be skipped until we have the
+  # fix in the firmware.
+  # TODO(yongjaek): Revert this when crosbug.com/p/11346 is fixed.
+  #ClearGbbFlags({})
   Verify(options)
   SetFirmwareBitmapLocale({})
   if not options.dev:
