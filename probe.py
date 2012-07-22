@@ -490,9 +490,12 @@ def _ProbeMainFlashChip():
   return crosfw.LoadMainFirmware().GetChipId()
 
 
-@_ComponentProbe('storage')
-def _ProbeStorage():
-  """Compile sysfs data for all non-removable block storage devices."""
+def _ProbeStorage(fixed=True, event=None):
+  """Compile sysfs data for block storage devices."""
+  def HasEvent(node, event):
+    path = os.path.join(node, 'events')
+    return (os.path.exists(path) and
+            event in open(path).read().strip().split(' '))
   def IsFixed(node):
     path = os.path.join(node, 'removable')
     return (os.path.exists(path) and open(path).read().strip() == '0')
@@ -507,10 +510,29 @@ def _ProbeStorage():
             _ReadSysfsFields(dev_path, emmc_fields) or
             None)
     return CompactStr(data + [size]) if data is not None else None
-  fixed_devices = [node for node in glob('/sys/class/block/*') if IsFixed(node)]
-  ident_list = [ident for ident in map(ProcessNode, fixed_devices)
+  devices = [node for node in glob('/sys/class/block/*')]
+  if fixed:
+    devices = filter(IsFixed, devices)
+  else:
+    devices = filter(lambda x: not IsFixed(x), devices)
+  if event is not None:
+    devices = [node for node in devices if HasEvent(node, event)]
+  ident_list = [ident for ident in map(ProcessNode, devices)
                 if ident is not None]
   return ' ; '.join(ident_list) if ident_list else None
+
+
+@_ComponentProbe('storage')
+def _ProbeFixedStorage():
+  """Compile sysfs data for all non-removable block storage devices."""
+  return _ProbeStorage(fixed=True)
+
+
+@_ComponentProbe('optical_storage')
+def _ProbeOpticalStorage():
+  """Compile sysfs data for removable, ejectable storage devices."""
+  # TODO(dparker): Find a more direct way of identifying optical drives.
+  return _ProbeStorage(fixed=False, event='eject_request')
 
 
 @_ComponentProbe('touchpad')
