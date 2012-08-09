@@ -134,6 +134,8 @@ class SystemStatus(object):
   TEMPERATURE_RE = re.compile('^(\d+): (\d+)$', re.MULTILINE)
   TEMPERATURE_INFO_RE = re.compile('^(\d+): \d+ (.+)$', re.MULTILINE)
 
+  CACHE_MAIN_TEMP_INDEX = None
+
   def __init__(self):
     self.battery = {}
     for k, item_type in [('charge_full', int),
@@ -160,11 +162,15 @@ class SystemStatus(object):
     except:
       self.temperatures = []
 
-    try:
-      self.main_temperature_index = self._ParseTemperatureInfo(
-          self.CallECTool(['tempsinfo', 'all'])).index('PECI')
-    except:
-      self.main_temperature_index = None
+    if SystemStatus.CACHE_MAIN_TEMP_INDEX is None:
+      try:
+        self.main_temperature_index = self._ParseTemperatureInfo(
+            self.CallECTool(['tempsinfo', 'all'])).index('PECI')
+        SystemStatus.CACHE_MAIN_TEMP_INDEX = self.main_temperature_index
+      except:
+        self.main_temperature_index = None
+    else:
+      self.main_temperature_index = SystemStatus.CACHE_MAIN_TEMP_INDEX
 
     try:
       self.load_avg = map(
