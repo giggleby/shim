@@ -41,6 +41,23 @@ _TEST_TITLE = test_ui.MakeLabel('SIM / IMEI / MEID Extraction',
 DEVICE_NORMAL_RESPONSE = 'OK'
 
 
+def CheckOutput(event_log, *args, **kwargs):
+  """A wrapper for CheckOutput to log detail information of command execution.
+     Any exception will be logged and return the exception in string format.
+  """
+  try:
+    exception_str = ''
+    output = utils.CheckOutput(*args, **kwargs)
+  except Exception as e:
+    output = exception_str = 'Exception in detail %s' % e
+  finally:
+    event_log.Log('command_detail',
+                  command_args=args,
+                  command_kwargs=kwargs,
+                  command_return=output)
+  return output
+
+
 class Error(Exception):
   """Generic fatal error."""
   pass
@@ -82,8 +99,13 @@ class IMEITask(FactoryTask):
   def Run(self):
     if not self.test.modem_path:
       # TODO(itspeter): Parse flimflam to get the IMEI.
-      modem_info = utils.CheckOutput(['mmcli', '-m','0'])
-      imei = re.search(self.test.imei_re, modem_info).group(1)
+      modem_info = CheckOutput(self.test.event_log, ['mmcli', '-m','0'])
+      imei = re.search(self.test.imei_re, modem_info)
+      # Check the imei format.
+      if not imei:
+        raise Error('Expected %r but got %r' % (self.test.imei_re, modem_info))
+      else:
+        imei = imei.group(1)
     else:
       # Directly issue commands to the modem.
       modem = _Serial(self.test.modem_path)
@@ -92,6 +114,7 @@ class IMEITask(FactoryTask):
       modem.check_response(DEVICE_NORMAL_RESPONSE)
       modem.send_command('AT+CGSN')
       imei = modem.check_response(self.test.imei_re).group(1)
+
     self.test.event_log.Log('imei', imei=imei)
     factory.log('IMEI: %s' % imei)
     self.Stop()
@@ -105,12 +128,18 @@ class ICCIDTask(FactoryTask):
     if not self.test.modem_path:
       # TODO(itspeter): Parse flimflam to get the ICCID.
       if self.test.pin_command: # Additional command to manipulate sim.
-        pin_ret = utils.CheckOutput(
+        pin_ret = CheckOutput(
+            self.test.event_log,
             ['mmcli', '-i', '0'] + self.test.pin_command)
         factory.log('pin command returned:%s' % pin_ret)
 
-      sim_info = utils.CheckOutput(['mmcli', '-i', '0'])
-      iccid = re.search(self.test.iccid_re, sim_info).group(1)
+      sim_info = CheckOutput(self.test.event_log, ['mmcli', '-i', '0'])
+      iccid = re.search(self.test.iccid_re, sim_info)
+      # Check the iccid format.
+      if not iccid:
+        raise Error('Expected %r but got %r' % (self.test.iccid_re, sim_info))
+      else:
+        iccid = iccid.group(1)
     else:
       # Directly issue commands to the modem.
       modem = _Serial(self.test.modem_path)
