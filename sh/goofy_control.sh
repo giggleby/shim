@@ -12,6 +12,9 @@ BOARD_SETUP="$FACTORY/custom/board_setup_factory.sh"
 # Default args for Goofy.
 GOOFY_ARGS=""
 
+# Use wrappers for tools that use the EC.
+export PATH="/usr/local/factory/bin/ec_lock:$PATH"
+
 # Default implementation for factory_setup (no-op).  May be overriden
 # by board_setup_factory.sh.
 factory_setup() {
