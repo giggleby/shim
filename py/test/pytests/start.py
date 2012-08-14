@@ -13,10 +13,12 @@
 # 'require_shop_floor': Prompts and waits for serial number as input.  The
 #       server is default to the host running mini-omaha, unless you specify an
 #       URL by 'shop_floor_server_url' darg.
+# 'check_factory_install_complete': Check factory install process was complete.
 # 'press_to_continue': Prompts and waits for a key press (SPACE) to continue.
 
 import glob
 import os
+import re
 import socket
 import sys
 import time
@@ -35,6 +37,16 @@ from cros.factory.event_log import EventLog
 _TEST_TITLE = test_ui.MakeLabel('Start Factory Test', u'開始工廠測試')
 
 # Messages for tasks
+_MSG_INSTALL_INCOMPLETE = test_ui.MakeLabel(
+    '<br/>'.join([
+        'Factory install process did not complete. Auto-testing stopped.<br/>',
+        'Please install the factory test image using the mini-Omaha server',
+        'rather than booting from a USB drive.</br>']),
+    '<br/>'.join([
+        u'安装过程中失败, 停止自動測試。<br/>',
+        u'請使用完整的 mini-Omaha 伺服器安裝測試程式，',
+        u'不要直接從 USB 碟開機執行。<br/>']),
+    'start-font-size test-error')
 _MSG_TASK_POWER = test_ui.MakeLabel(
     'Plug in external power to continue.',
     u'請插上外接電源以繼續。',
@@ -93,7 +105,7 @@ _JS_SHOP_FLOOR = '''
       }
     })
     element.focus();''' % _EVENT_SUBTYPE_SHOP_FLOOR
-
+_LSB_FACTORY_PATH = '/usr/local/etc/lsb-factory'
 
 class PressSpaceTask(FactoryTask):
   def __init__(self, ui, template): # pylint: disable=W0231
@@ -148,8 +160,33 @@ class ExternalPowerTask(FactoryTask):
     raise IOError('Unable to determine external power state.')
 
 
+class FactoryInstallCompleteTask(FactoryTask):
+  def __init__(self, ui, template): # pylint: disable=W0231:
+    self._ui = ui
+    self._template = template
+
+  def Run(self):
+    #TODO check ec RO and RW version are the same
+    if not os.path.exists(_LSB_FACTORY_PATH):
+      factory.console.error('%s is missing' % _LSB_FACTORY_PATH)
+      self._template.SetState(_MSG_INSTALL_INCOMPLETE)
+      return
+    version_info = utils.CheckOutput(['ectool', 'version'])
+    ro_version_output = re.search(r'^RO version:\s*(\S+)$', version_info,
+                                  re.MULTILINE)
+    rw_version_output = re.search(r'^RW version:\s*(\S+)$', version_info,
+                                  re.MULTILINE)
+    if (ro_version_output is None or rw_version_output is None
+        or ro_version_output.group(1) != rw_version_output.group(1)):
+      self._template.SetState(_MSG_INSTALL_INCOMPLETE)
+      factory.console.info(
+          'EC RO and RW version does not match, %s' % version_info)
+      return
+    self.Stop()
+
+
 class ShopFloorTask(FactoryTask):
-  def __init__(self, ui, template, server_url): # pylint: disable=W0231
+  def __init__(self, ui, template, server_url): # pylint: disable=W0231:
     self._ui = ui
     self._template = template
     self._server_url = server_url or shopfloor.detect_default_server_url()
@@ -217,6 +254,7 @@ class StartTest(unittest.TestCase):
     self._require_external_power = False
     self._require_shop_floor = None
     self._shop_floor_server_url = None
+    self._check_factory_install_complete = None
 
   def runTest(self):
     args = self.test_info.args
@@ -224,6 +262,8 @@ class StartTest(unittest.TestCase):
     self._require_external_power = args.get('require_external_power', False)
     self._require_shop_floor = args.get('require_shop_floor', None)
     self._shop_floor_server_url = args.get('shop_floor_server_url', None)
+    self._check_factory_install_complete = args.get(
+        'check_factory_install_complete', None)
 
     # Reset shop floor data only if require_shop_floor is explicitly
     # defined, for test lists using factory_Start multiple times between
@@ -236,6 +276,11 @@ class StartTest(unittest.TestCase):
       self._task_list.append(ShopFloorTask(self._ui,
                                            self._template,
                                            self._shop_floor_server_url))
+
+    if self._check_factory_install_complete:
+      self._task_list.append(FactoryInstallCompleteTask(self._ui,
+                                           self._template))
+
     if self._require_external_power:
       self._task_list.append(ExternalPowerTask(self._ui, self._template))
     if self._press_to_continue:
