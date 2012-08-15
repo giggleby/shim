@@ -32,6 +32,20 @@ load_setup() {
 }
 
 start_factory() {
+  # HACK: get /var/factory off of the stateful partition
+  if [ ! -e /var/factory/.remounted ]; then
+    mkdir -p /mnt/stateful_partition/var_overlay/factory /var/factory
+    if [ ! -e /mnt/stateful_partition/var_overlay/factory/.remounted ]; then
+      rsync -a /var/factory/ /mnt/stateful_partition/var_overlay/factory/
+      touch /mnt/stateful_partition/var_overlay/factory/.remounted
+      # Delete old /var/factory/tests to make more room.
+      rm -rf /var/factory/tests
+    fi
+    mount --bind /mnt/stateful_partition/var_overlay/factory /var/factory
+    mkdir -p /var/factory/log /var/factory/state /var/factory/tests
+    ln -sf /var/factory/log/factory.log /var/log
+  fi
+
   # This should already exist, but just in case...
   mkdir -p "$(dirname "$FACTORY_LOG_FILE")"
   ln -sf "$FACTORY_LOG_FILE" /var/log
