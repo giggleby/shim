@@ -24,6 +24,10 @@ def main():
   my_path = os.path.realpath(__file__)
   my_name = os.path.basename(sys.argv[0])
 
+  os.environ['PATH'] = ':'.join([
+      x for x in os.environ['PATH'].split(':')
+      if not os.path.exists(os.path.join(x, 'ec_lock'))])
+
   if my_name == 'ec_lock':
     os.execvp(sys.argv[1], sys.argv[1:])
     print >> sys.stderr, 'Unable to exec %s' % sys.argv[1]
