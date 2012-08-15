@@ -44,8 +44,9 @@ class Time(object):
     # Set hwclock (in a background thread, since this is slow).
     utils.StartDaemonThread(
         target=lambda:
-          Spawn(['hwclock', '-w', '--utc', '--noadjfile'],
-                check_call=True, log=True))
+          Spawn(['hwclock -w --utc --noadjfile || '
+                 'hwclock -w --utc --noadjfile'],
+                check_call=True, log=True, shell=True))
 
 SECONDS_PER_DAY = 86400
 

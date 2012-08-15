@@ -98,7 +98,7 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   new_path = os.path.join(parent_dir, 'updater.new')
   RunRsync(
     'rsync',
-    '-a', '--delete', '--stats',
+    '-a', '--stats',
     '--timeout=%s' % timeout,
     # Use copies of identical files from the old autotest
     # as much as possible to save network bandwidth.
