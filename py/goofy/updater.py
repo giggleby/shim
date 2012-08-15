@@ -98,7 +98,7 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   new_path = os.path.join(parent_dir, 'updater.new')
   RunRsync(
     'rsync',
-    '-a', '--stats',
+    '-a', '--delete', '--stats',
     '--timeout=%s' % timeout,
     # Use copies of identical files from the old autotest
     # as much as possible to save network bandwidth.
@@ -108,6 +108,13 @@ def TryUpdate(pre_update_hook=None, timeout=15):
       update_port,
       new_md5sum),
     '%s/' % new_path)
+
+  hwid_path = os.path.join(factory.FACTORY_PATH, 'hwid')
+  new_hwid_path = os.path.join(new_path, 'factory', 'hwid')
+  if os.path.exists(hwid_path) and not os.path.exists(new_hwid_path):
+    RunRsync(
+      'rsync', '-a',
+      hwid_path, '%s/factory' % new_path)
 
   CheckCriticalFiles(new_path)
 
