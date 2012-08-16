@@ -80,6 +80,11 @@ class SpawnTest(unittest.TestCase):
                        ('ERROR', 'Exit code 3 from command: "exit 3"')],
                       self.log_entries)
 
+  def testCheckCallFunction(self):
+    Spawn('exit 3', shell=True, check_call=lambda code: code == 3)
+    self.assertRaises(subprocess.CalledProcessError,
+        lambda: Spawn('exit 2', shell=True, check_call=lambda code: code == 3))
+
   def testCheckOutput(self):
     self.assertEquals(
         'foo\n',

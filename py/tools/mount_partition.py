@@ -5,9 +5,10 @@
 # found in the LICENSE file.
 
 import argparse
-import getpass
 import logging
 import os
+import time
+from contextlib import contextmanager
 
 import factory_common  # pylint: disable=W0611
 from cros.factory.utils.process_utils import Spawn
@@ -42,13 +43,25 @@ def MountPartition(image_file, index, mount_point, rw=False):
               read_stdout=True, check_call=True).stdout_data)
   offset = RunCGPT('-b') * 512
   size = RunCGPT('-s') * 512
-  Spawn(([] if getpass.getuser() == 'root' else ['sudo']) +
-        ['mount', '-o',
+  Spawn(['mount', '-o',
          '%s,loop,offset=%d,sizelimit=%d' % (
              'rw' if rw else 'ro', offset, size),
          image_file, mount_point],
-        log=True, check_call=True)
+        log=True, check_call=True, sudo=True)
 
+  @contextmanager
+  def Unmounter():
+    try:
+      yield
+    finally:
+      for _ in range(5):
+        if Spawn(['umount', mount_point], log=True, call=True,
+                 log_stderr_on_error=True, sudo=True).returncode == 0:
+          break
+        time.sleep(1)  # And retry
+      else:
+        logging.warn('Unable to umount %s', mount_point)
+  return Unmounter()
 
 def main():
   logging.basicConfig(level=logging.INFO)
