@@ -179,6 +179,7 @@ class Goofy(object):
     self.env = None
     self.last_idle = None
     self.last_shutdown_time = None
+    self.last_connection_check = None
     self.last_update_check = None
     self.last_sync_time = None
 
@@ -670,6 +671,28 @@ class Goofy(object):
         self.connection_manager.EnableNetworking()
         self.network_enabled = True
 
+  def check_for_connection(self):
+    if not self.test_list.options.connection_period_secs:
+      # Not enabled.
+      return
+
+    if not self.network_enabled:
+      # Running networking exclusive tests.
+      return
+
+    now = time.time()
+    if self.last_connection_check and (
+        now - self.last_connection_check <
+        self.test_list.options.connection_period_secs):
+      # Not yet time for another check.
+      return
+
+    self.last_connection_check = now
+    if not self.connection_manager.IsConnected():
+      # No need to force connecting wired network.
+      logging.info('Trying to connect to known wireless networks')
+      self.connection_manager.ConnectWireless()
+
   def check_for_updates(self):
     '''
     Schedules an asynchronous check for updates if necessary.
@@ -1141,6 +1164,7 @@ class Goofy(object):
     self.last_idle = now
 
     self.check_connection_manager()
+    self.check_for_connection()
     self.check_for_updates()
     self.sync_time_in_background()
     if self.charge_manager:

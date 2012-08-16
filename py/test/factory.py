@@ -338,6 +338,10 @@ class Options(object):
   update_period_secs = None
   _types['update_period_secs'] = (type(None), int)
 
+  # Interval to use when trying to connect wireless networks.
+  connection_period_secs = None
+  _types['connection_period_secs'] = (type(None), int)
+
   # Timeout talking to shopfloor server for background operations.
   shopfloor_timeout_secs = 10
 

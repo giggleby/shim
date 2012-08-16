@@ -21,6 +21,7 @@ except ImportError:
 _CONNECTION_TIMEOUT_SEC = 15.0
 _PING_TIMEOUT_SEC = 15
 _SLEEP_INTERVAL_SEC = 0.5
+_WIRELESS_RETRY_CNT = 1
 
 _UNKNOWN_PROC = 'unknown'
 _DEFAULT_MANAGER = 'flimflam'
@@ -193,6 +194,25 @@ class ConnectionManager():
     stat = flim.GetSystemState()
     return stat != 'offline'
 
+  def ConnectWireless(self, n_retry=_WIRELESS_RETRY_CNT):
+    '''Try to connect to known wireless services.
+
+    Args:
+      n_retry: Number of retry times.
+    '''
+    flim = flimflam.FlimFlam()
+    for t in range(n_retry):
+      for wlan in self.wlans:
+        params = {
+          "mode": 'managed',
+          "ssid": wlan['SSID'],
+          "security": wlan['Security'],
+          "passphrase": wlan['Passphrase']
+          }
+        success, _ = flim.ConnectService(service_type='wifi', **params)
+        if success:
+          return True
+    return False
 
 class DummyConnectionManager(object):
   '''A dummy connection manager that always reports being connected.
