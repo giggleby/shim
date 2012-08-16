@@ -34,6 +34,7 @@ LINT_BLACKLIST=\
 	py/test/media_util.py \
 	py/test/media_util_unittest.py \
 	py/test/pytests/execpython.py \
+	py/test/pytests/start.py \
 	py/test/shopfloor.py \
 	py/test/state_machine.py \
 	py/test/state.py \
