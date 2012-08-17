@@ -9,6 +9,7 @@ import os
 import pipes
 import subprocess
 import types
+from StringIO import StringIO
 
 
 PIPE = subprocess.PIPE
@@ -16,6 +17,17 @@ PIPE = subprocess.PIPE
 
 # File descriptor for /dev/null.
 dev_null = None
+
+
+def WrapLines(data):
+  '''Returns a function that returns a list of all lines in data.'''
+  def Wrapper(strip=False):
+    ret = StringIO(data).readlines()
+    if strip:
+      ret = [x.strip() for x in ret]
+    return ret
+
+  return Wrapper
 
 
 def OpenDevNull():
@@ -152,15 +164,19 @@ def Spawn(args, **kwargs):
 
   process = subprocess.Popen(args, **kwargs)
   process.stdout_data = None
+  process.stdout_lines = None
   process.stderr_data = None
+  process.stderr_lines = None
 
   if call:
     if read_stdout or read_stderr:
       stdout, stderr = process.communicate()
       if read_stdout:
         process.stdout_data = stdout
+        process.stdout_lines = WrapLines(process.stdout_data)
       if read_stderr:
         process.stderr_data = stderr
+        process.stderr_lines = WrapLines(process.stderr_data)
       process.communicate = (
           lambda: (process.stdout_data, process.stderr_data))
     else:

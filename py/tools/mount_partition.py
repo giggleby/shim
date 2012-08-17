@@ -52,7 +52,7 @@ def MountPartition(image_file, index, mount_point, rw=False):
   @contextmanager
   def Unmounter():
     try:
-      yield
+      yield mount_point
     finally:
       for _ in range(5):
         if Spawn(['umount', mount_point], log=True, call=True,
@@ -61,6 +61,7 @@ def MountPartition(image_file, index, mount_point, rw=False):
         time.sleep(1)  # And retry
       else:
         logging.warn('Unable to umount %s', mount_point)
+
   return Unmounter()
 
 def main():
