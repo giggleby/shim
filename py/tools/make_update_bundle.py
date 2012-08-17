@@ -52,6 +52,7 @@ def main():
   try:
     Spawn(['tar', 'cf', args.output, '-I', 'pbzip2',
            '-C', os.path.join(BUNDLE_MOUNT_POINT, 'dev_image'),
+           '--exclude', 'factory/MD5SUM',
            'factory', 'autotest'],
           check_call=True, log=True)
     md5sum = (Spawn(['md5sum', args.output], check_output=True).
