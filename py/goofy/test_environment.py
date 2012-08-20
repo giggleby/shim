@@ -15,6 +15,7 @@ import threading
 import time
 
 import factory_common  # pylint: disable=W0611
+from cros.factory import system
 from cros.factory.test import factory
 from cros.factory.goofy import connection_manager
 from cros.factory.test import state
