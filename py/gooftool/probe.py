@@ -474,11 +474,17 @@ def _ProbeDramX86():
 
 @_ComponentProbe('dram', 'arm')
 def _ProbeDramArm():
-  """Memory is not directly probable, so use kernel cmdline info."""
-  # TODO(tammo): Request that mosys provide this info (by any means).
-  cmdline = open('/proc/cmdline').read().strip()
-  # Format: *mem=384M@0M (size@address)
-  return [CompactStr(re.findall(r'\s\w*mem=(\d+M@\d+M)', cmdline))]
+  """Combine mosys memory id information."""
+  # TODO(tammo): Document why mosys cannot load i2c_dev itself.
+  _LoadKernelModule('i2c_dev')
+  id_data = Shell('mosys -k memory spd print id').stdout
+  manufacturers = dict(re.findall('dimm="([^"]*)".*module_mfg="([^"]*)".*\n',
+                       id_data))
+  part_numbers = dict(re.findall('dimm="([^"]*)".*part_number="([^"]*)".*\n',
+                      id_data))
+  return [CompactStr(['%s|%s|%s' %
+      (i, manufacturers[i].replace(':', ''), part_numbers[i])
+      for i in sorted(manufacturers)])]
 
 
 @_ComponentProbe('ec_flash_chip')
