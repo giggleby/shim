@@ -5,9 +5,11 @@
 # found in the LICENSE file.
 
 import factory_common  # pylint: disable=W0611
+import logging
 import re
 
 from cros.factory.system.ec import EC, ECException
+from cros.factory.test import factory
 from cros.factory.utils.process_utils import Spawn
 
 
@@ -88,3 +90,24 @@ class ChromeOSEC(EC):
         raise ECException('Unknown EC charge state: %s' % state)
     except Exception as e:
       raise ECException('Unable to set charge state: %s' % e)
+
+class SnowEC(ChromeOSEC):
+  '''EC interface for Snow EC. Uses ectool to access EC.'''
+
+  def SetChargeState(self, state):
+    try:
+      if state == EC.ChargeState.CHARGE:
+        self._CallECTool(['gpioset', 'charger_en', '1'])
+        logging.info('Enabled the charger.')
+      elif state == EC.ChargeState.IDLE:
+        self._CallECTool(['gpioset', 'charger_en', '0'])
+        logging.info('Disabled the charger.')
+      elif state == EC.ChargeState.DISCHARGE:
+        self._CallECTool(['gpioset', 'charger_en', '0'])
+        factory.console.info('Can not force discharging.'
+                             'Disabled the charger instead.'
+                             'IF SYSTEM POWER IS OFF, PLEASE UNPLUG AC.')
+      else:
+        raise ECException('Unknown SnowEC charge state: %s' % state)
+    except Exception as e:
+      raise ECException('Unable to set charge state in SnowEC: %s' % e)
