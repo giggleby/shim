@@ -557,7 +557,7 @@ def EnableFwWp(options):  # pylint: disable=W0613
     """
     raw_image = open(fw_file_path, 'rb').read()
     wp_section = 'WP_RO'
-    image = crosfw.FirmwareImage(raw_image)
+    image = crosfw.FirmwareImage(raw_image, fw_type)
     if image.has_section(wp_section):
       section_data = image.get_section_area(wp_section)
       ro_offset = section_data[0]

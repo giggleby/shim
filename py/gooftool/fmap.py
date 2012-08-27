@@ -20,7 +20,7 @@ Usage:
   tuple of decoded area flags.
 """
 
-
+import re
 import struct
 
 
@@ -98,18 +98,20 @@ def _fmap_decode_area_flags(area_flags):
   return tuple([name for name in FMAP_FLAGS if area_flags & FMAP_FLAGS[name]])
 
 
-def fmap_decode(blob, offset=None):
+def fmap_decode(blob, offset=None, fw_type='main'):
   """ Decodes a blob to FMAP dictionary object.
 
   Arguments:
     blob: a binary data containing FMAP structure.
     offset: starting offset of FMAP. When omitted, fmap_decode will search in
             the blob.
+    fw_type: the firmware type. It should be 'main' or 'ec'.
+             The default value is 'main'.
   """
   fmap = {}
-  if offset == None:
-    # try search magic in fmap
-    offset = blob.find(FMAP_SIGNATURE)
+  if offset is None:
+    offset = _fmap_find_signature_offset(blob, fw_type)
+
   (fmap, size) = _fmap_decode_header(blob, offset)
   fmap['areas'] = []
   offset = offset + size
@@ -118,6 +120,34 @@ def fmap_decode(blob, offset=None):
     offset = offset + size
     fmap['areas'].append(area)
   return fmap
+
+def _fmap_find_signature_offset(blob, fw_type='main'):
+  """ Search in a blob to find FMAP signature offset.
+
+  Arguments:
+    blob: a binary data containing FMAP structure.
+    fw_type: the firmware type. It should be 'main' or 'ec'. There may
+             be two FMAPs in the blob. In searching for FMAP signuture,
+             we should also check 'name' in the header. It should be
+             'FMAP' for 'main' and 'EC_FMAP' for 'ec'.
+             The default value is 'main'.
+  """
+  # try to search magic in fmap
+  match_indices = [match.start() for match in
+                   re.finditer(FMAP_SIGNATURE, blob)]
+  header_name_dict = {'main': 'FMAP', 'ec': 'EC_FMAP'}
+  offset_candidates = []
+  for match_index in match_indices:
+    (header, size) = _fmap_decode_header(blob, match_index)
+    if header['name'] == header_name_dict[fw_type]:
+      offset_candidates.append(match_index)
+
+  if len(offset_candidates) != 1:
+    raise struct.error('Can not find unique fmap signature %s'
+                       'with matched header name %s' %
+                       (FMAP_SIGNATURE, header_name_dict[fw_type]))
+  else:
+    return offset_candidates[0]
 
 
 def _fmap_encode_header(obj):
