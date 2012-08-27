@@ -576,6 +576,31 @@ def UploadReport(options):
     raise Error('unknown report upload method %r', method)
 
 
+@Command('prepare_finalize',
+         CmdArg('--dev', action='store_true',
+                help='Do not verify or alter write protection or dev mode.'),
+         CmdArg('--fast', action='store_true',
+                help='use non-secure but faster wipe method.'),
+         _hwdb_path_cmd_arg,
+         _upload_method_cmd_arg)
+def PrepareFinalize(options):
+  """Verify system readiness and upload the factory logs.
+
+  This routine first verifies system state (see verify command), then
+  clears all of the testing flags from the GBB, then modifies firmware
+  bitmaps to match locale.  Then it enables firmware write protection
+  and sets the necessary boot flags to cause wipe of the factory image
+  on the next boot.
+  """
+  ClearGbbFlags({})
+  Verify(options)
+  SetFirmwareBitmapLocale({})
+  if not options.dev:
+    EnableFwWp({})
+  LogSystemDetails(options)
+  UploadReport(options)
+
+
 @Command('finalize',
          CmdArg('--dev', action='store_true',
                 help='Do not verify or alter write protection or dev mode.'),
@@ -592,13 +617,7 @@ def Finalize(options):
   and sets the necessary boot flags to cause wipe of the factory image
   on the next boot.
   """
-  ClearGbbFlags({})
-  Verify(options)
-  SetFirmwareBitmapLocale({})
-  if not options.dev:
-    EnableFwWp({})
-  LogSystemDetails(options)
-  UploadReport(options)
+  PrepareFinalize(options)
   PrepareWipe(options)
 
 
