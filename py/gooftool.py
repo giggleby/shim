@@ -150,6 +150,7 @@ def ProbeHwid(options):
   results and argument contraints, one per line.
   """
   hwdb = hwid_tool.ReadDatastore(options.hwdb_path)
+  ro_vpd = ReadRoVpd(crosfw.LoadMainFirmware().GetFileName())
   if options.board not in hwdb.device_db:
     sys.exit('ERROR: unknown board %r' % options.board)
   device = hwdb.device_db[options.board]
@@ -172,6 +173,17 @@ def ProbeHwid(options):
         sys.exit('ERROR: multiple specifications for %r components'
                  ' (both VARIANT and BOM)' % comp_class)
       component_map[comp_class] = comp_name
+  else:
+    # Parrot factory specific request to detect keyboard to determine HWID
+    # from probing the components including keyboard. The keyboard is probed
+    # from RO_VPD.
+    if not ro_vpd['keyboard_layout']:
+      sys.exit('ERROR: keyboard_layout in RO_VPD is not specified')
+    keyboard_list = hwdb.comp_db.registry['keyboard']
+    for kbd in keyboard_list.keys():
+      if keyboard_list[kbd] == ro_vpd['keyboard_layout']:
+        component_map['keyboard'] = kbd
+
   if options.comp_map:
     input_map = YamlRead(sys.stdin.read())
     logging.info('stdin component map: %r', input_map)
