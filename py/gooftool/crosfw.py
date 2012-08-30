@@ -158,9 +158,9 @@ class Flashrom(object):
 
 class FirmwareImage(object):
   """Provides access to firmware image via FMAP sections."""
-  def __init__(self, image_source, fw_type=None):
+  def __init__(self, image_source):
     self._image = image_source
-    self._fmap = fmap.fmap_decode(self._image, fw_type=fw_type)
+    self._fmap = fmap.fmap_decode(self._image)
     self._areas = dict(
         (entry['name'], [entry['offset'], entry['size']])
         for entry in self._fmap['areas'])
