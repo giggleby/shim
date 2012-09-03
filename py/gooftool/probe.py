@@ -730,13 +730,17 @@ def _GbbHash(image):
 
 
 def _MainRoHash(image):
-  """Algorithm: sha256(fmap, RO_SECTION[-GBB])."""
+  """Algorithm: sha256(fmap, RO_SECTION[-GBB, -RO_VPD])."""
   hash_src = image.get_fmap_blob()
   gbb = image.get_section('GBB')
+  ro_vpd = image.get_section('RO_VPD')
   zero_gbb = chr(0) * len(gbb)
+  zero_ro_vpd = chr(0) * len(ro_vpd)
   image.put_section('GBB', zero_gbb)
+  image.put_section('RO_VPD', zero_ro_vpd)
   hash_src += image.get_section('RO_SECTION')
   image.put_section('GBB', gbb)
+  image.put_section('RO_VPD', ro_vpd)
   return 'mv2#%s%s' % (hashlib.sha256(hash_src).hexdigest(),
                        _AddFirmwareIdTag(image))
 
