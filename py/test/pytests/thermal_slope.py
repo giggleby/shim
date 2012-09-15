@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-#
 # Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-u'''Determines how fast the processor heats/cools.
+'''Determines how fast the processor heats/cools.
 
 1. 'cool_down' stage: Runs the fan at <cool_down_fan_rpm> until it
    reaches <cool_down_temperature_c> (at least
@@ -20,13 +18,13 @@ u'''Determines how fast the processor heats/cools.
 4. Determines the thermal slope during this period.  The thermal slope
    is defined as
 
-     ΔT / ΔP / Δt
+     DT / DP / Dt
 
    where
 
-     ΔT is the change in temperature between the idle and one_core stages.
-     ΔP is the change in power usage between the idle and one_core stages.
-     Δt is the amount of time the one_core stage was run
+     DT is the change in temperature between the idle and one_core stages.
+     DP is the change in power usage between the idle and one_core stages.
+     Dt is the amount of time the one_core stage was run
 
    If the thermal slope is not between min_slope and max_slope, the test
    fails.
@@ -71,10 +69,10 @@ class ThermalSlopeTest(unittest.TestCase):
           'Duration of slope test',
           default=5),
       Arg('min_slope', (int, float),
-          u'Minimum allowable thermal slope in °C/J',
+          'Minimum allowable thermal slope in deg C/J',
           optional=True),
       Arg('max_slope', (int, float),
-          u'Maximum allowable thermal slope in °C/J',
+          'Maximum allowable thermal slope in deg C/J',
           optional=True),
       Arg('console_log', bool,
           'Enable console log (disabling may make results more accurate '
@@ -110,7 +108,7 @@ class ThermalSlopeTest(unittest.TestCase):
     self.system_status = SystemStatus()
     elapsed_time = time.time() - self.stage_start_time
     self.log.info(
-        u'%s (%.1f s): fan_rpm=%d, temp=%d°C, pkg_power_w=%.3f W' % (
+        '%s (%.1f s): fan_rpm=%d, temp=%d deg C, pkg_power_w=%.3f W' % (
             self.stage, elapsed_time,
             self.system_status.fan_rpm, self._MainTemperature(),
             (float('nan') if self.msr.pkg_power_w is None
@@ -155,8 +153,8 @@ class ThermalSlopeTest(unittest.TestCase):
         break
       self._Sleep()
     else:
-      self.fail(u'Temperature never got down to %s°C' %
-                self.args.cool_down_max_duration_secs)
+      self.fail('Temperature never got down to %s deg C' %
+                self.args.cool_down_temperature_c)
 
     self.ec.SetFanRPM(self.args.target_fan_rpm)
 
@@ -188,7 +186,7 @@ class ThermalSlopeTest(unittest.TestCase):
 
       temp = self._MainTemperature()
       pkg_power_w = sum(pkg_power_w[-POWER_SAMPLES:]) / POWER_SAMPLES
-      self.log.info(u'%s: temp=%d°C, pkg_power_w: %.3f W',
+      self.log.info('%s: temp=%d deg C, pkg_power_w: %.3f W',
                     stage, temp, pkg_power_w)
       self.event_log.Log('stage_result', stage=self.stage,
                          temp=temp, pkg_power_w=pkg_power_w)
@@ -209,11 +207,11 @@ class ThermalSlopeTest(unittest.TestCase):
              one_core_duration_secs)
     # Always use factory.console for this one, since we're done and
     # don't need to worry about conserving CPU cycles.
-    factory.console.info(u'Δtemp=%d°C, Δpower=%.03f W, duration=%s s',
+    factory.console.info('Dtemp=%d deg C, Dpower=%.03f W, duration=%s s',
                          one_core_temp - base_temp,
                          one_core_pkg_power_w - base_pkg_power_w,
                          one_core_duration_secs)
-    factory.console.info(u'slope=%.5f°C/J', slope)
+    factory.console.info('slope=%.5f deg C/J', slope)
     self.event_log.Log('result', slope=slope)
 
     errors = []
