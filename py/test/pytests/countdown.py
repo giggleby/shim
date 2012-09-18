@@ -72,8 +72,8 @@ class CountDownTest(unittest.TestCase):
       if last is None and current is None:
         continue
       if last is None or current is None:
-        factory.console.warn(
-            'ALARM! Cannot read temperature index %d (current: %d, last: %d)',
+        self.fail(
+            u'Cannot read temperature index %d (current: %d, last: %d)',
             index, current, last)
 
       if abs(current - last) > self._temp_max_delta:
