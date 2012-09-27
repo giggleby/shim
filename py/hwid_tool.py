@@ -521,9 +521,9 @@ def ProcessComponentCrossproduct(data, board, comp_list):
   rev_comp_map = CalcReverseComponentMap(hwid_map)
   common_comp_map = CalcCommonComponentMap(rev_comp_map)
   class_coverage = set(comp_map) | set(common_comp_map)
-  if class_coverage != set(rev_comp_map):
-    raise Error('need component data for: %s' % ', '.join(
-        set(rev_comp_map) - class_coverage))
+  #if class_coverage != set(rev_comp_map):
+  #  raise Error('need component data for: %s' % ', '.join(
+  #      set(rev_comp_map) - class_coverage))
   existing_comp_map_str_set = set(ComponentConfigStr(hwid.component_map)
                                   for hwid in hwid_map.values())
   new_comp_map_list = DoCrossproduct(comp_map.items(), common_comp_map.items())
@@ -648,7 +648,8 @@ def LookupHwidProperties(data, hwid):
          CmdArg('-b', '--board', required=True),
          CmdArg('-c', '--comps', nargs='*', required=True),
          CmdArg('-x', '--make_it_so', action='store_true'),
-         CmdArg('-v', '--variants', nargs='*'))
+         CmdArg('-v', '--variants', nargs='*'),
+         CmdArg('-l', '--volatile', required=True))
 def CreateHwidsCommand(config, data):
   """Derive new HWIDs from the cross-product of specified components.
 
@@ -671,12 +672,26 @@ def CreateHwidsCommand(config, data):
                                   variant_list=variant_list))
                   for bom_name, comp_map in zip(bom_name_list, comp_map_list))
   device = data.device_db[config.board]
-  device.hwid_status_map.setdefault('proposed', []).extend(bom_name_list)
-  PrintHwidHierarchy(config.board, device, hwid_map)
+  hwid_map = data.device_db[config.board].hwid_map
+  bom_name_list_ext = []
+  for bom_name in bom_name_list:
+    bom_name_list_ext.append(bom_name+'-'+config.volatile)
+  device.hwid_status_map.setdefault('proposed', []).extend(bom_name_list_ext)
+  for initial_config_index, initial_config in device.initial_config_map.items():
+    initial_config_match_index = initial_config_index
+    print 'found initial_config match: %r' % initial_config_match_index
+  ic_use_list = device.initial_config_use_map.setdefault(
+      initial_config_match_index, [])
   if config.make_it_so:
-    #TODO(tammo): Actually add to the device hwid_map, and qualify.
-    pass
-
+    for bom_name, comp_map in zip(bom_name_list, comp_map_list):
+      bom = Hwid.New()
+      bom.component_map = comp_map
+      bom.variant_list = list(variant_list)
+      hwid_map[bom_name] = bom
+      print '%r added' % bom_name
+      #TODO(tammo): Actually add to the device hwid_map, and qualify.
+      if bom_name not in ic_use_list:
+        ic_use_list.append(bom_name)
 
 @Command('hwid_overview',
          CmdArg('-b', '--board'))
