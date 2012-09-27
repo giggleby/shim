@@ -17,6 +17,7 @@ from common import Shell, YamlWrite
 # Update this if any field names (or formats) have been changed.
 REPORT_VERSION = 6
 
+VPD_BLACKLIST = ['gbind_attribute', 'ubind_attribute']
 
 def Create(log_path):
   """Creates a detail report for current device.
@@ -52,7 +53,13 @@ def Create(log_path):
   main_fw_file = crosfw.LoadMainFirmware().GetFileName()
   vpd_cmd = '-f %s' % main_fw_file
   report['ro_vpd'] = Shell('vpd -i RO_VPD -l %s' % vpd_cmd).stdout.splitlines()
-  report['rw_vpd'] = Shell('vpd -i RW_VPD -l %s' % vpd_cmd).stdout.splitlines()
+  report['rw_vpd'] = []
+  rw_vpd_raw = Shell('vpd -i RW_VPD -l %s' % vpd_cmd).stdout.splitlines()
+  for line in rw_vpd_raw:
+    name, value = (x.strip('"') for x in line.split('"="'))
+    if name in VPD_BLACKLIST:
+      value = 'REDACTED'
+    report['rw_vpd'].append('"%s"="%s"' % (name, value))
 
   # Firmware write protection status
   # TODO(hungte) Replace by crosfw.Flashrom.
