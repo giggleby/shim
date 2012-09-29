@@ -443,6 +443,11 @@ def _ProbeCellular():
 def _ProbeWimax():
   return _FlimflamDevices.ReadSysfsDeviceIds('wimax')
 
+@_ComponentProbe('adc')
+def _ProbeADC():
+  cmd = 'python /usr/local/autotest/site_tests/suite_Factory/directtherm.py'
+  stdout = Shell(cmd).stdout
+  return [CompactStr(stdout)]
 
 @_ComponentProbe('display_converter')
 def _ProbeDisplayConverter():
