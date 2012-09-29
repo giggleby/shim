@@ -447,7 +447,7 @@ def _ProbeWimax():
 def _ProbeADC():
   cmd = 'python /usr/local/autotest/site_tests/suite_Factory/directtherm.py'
   stdout = Shell(cmd).stdout
-  return [CompactStr(stdout)]
+  return [CompactStr(stdout)] if stdout else []
 
 @_ComponentProbe('display_converter')
 def _ProbeDisplayConverter():
@@ -653,6 +653,16 @@ def _ProbeVga():
 def _ProbeWireless():
   return _FlimflamDevices.ReadSysfsDeviceIds('wifi')
 
+
+@_ComponentProbe('carrier')
+def _ProbeCarrier():
+  cmd = 'modem status | grep carrier'
+  modem_status = Shell(cmd).stdout.strip()
+  info = re.findall('^\s*carrier:\s*(.*)', modem_status)
+  if info and info[0]:
+    return [CompactStr(info[0])]
+  else:
+    return []
 
 @_InitialConfigProbe('cellular_fw_version')
 def _ProbeCellularFirmwareVersion():
