@@ -28,7 +28,7 @@ from tempfile import NamedTemporaryFile
 
 import factory_common  # pylint: disable=W0611
 
-from cros.factory.common import CompactStr, Error, Obj, Shell
+from cros.factory.common import CompactStr, Error, Obj, ParseKeyValueData, Shell
 from cros.factory.gooftool import edid
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import vblock
@@ -653,7 +653,6 @@ def _ProbeVga():
 def _ProbeWireless():
   return _FlimflamDevices.ReadSysfsDeviceIds('wifi')
 
-
 @_ComponentProbe('carrier')
 def _ProbeCarrier():
   cmd = 'modem status | grep carrier'
@@ -662,6 +661,14 @@ def _ProbeCarrier():
   if info and info[0]:
     return [CompactStr(info[0])]
   else:
+    return []
+
+@_ComponentProbe('keyboard')
+def _ProbeKeyboard():
+  ro_vpd = ReadRoVpd(crosfw.LoadMainFirmware().GetFileName())
+  try:
+    return [ro_vpd['keyboard_layout']]
+  except KeyError:
     return []
 
 @_InitialConfigProbe('cellular_fw_version')
@@ -812,6 +819,12 @@ def CalculateFirmwareHashes(fw_file_path):
     hashes['key_root'] = _FwKeyHash(fw_file_path, 'rootkey')
   return hashes
 
+def ReadVpd(fw_image_file, kind):
+  raw_vpd_data = Shell('vpd -i %s -l -f %s' % (kind, fw_image_file)).stdout
+  return ParseKeyValueData('"(.*)"="(.*)"$', raw_vpd_data)
+
+def ReadRoVpd(fw_image_file):
+  return ReadVpd(fw_image_file, 'RO_VPD')
 
 def Probe(target_comp_classes=None,
           probe_volatile=True,
