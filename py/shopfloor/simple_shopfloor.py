@@ -143,6 +143,10 @@ class ShopFloor(shopfloor.ShopFloorBase):
     self._CheckSerialNumber(serial)
     logging.info("Finalized: %s", serial)
 
+  def VerifySNs(self, mlb_sn, device_sn, mac_address):
+    # Dummy method for testing.  On factory-3004.B only.
+    pass
+
 
 def LoadCsvData(filename):
   """Loads a CSV file and returns structured shop floor system data."""
