@@ -143,7 +143,7 @@ class ShopFloor(shopfloor.ShopFloorBase):
     self._CheckSerialNumber(serial)
     logging.info("Finalized: %s", serial)
 
-  def VerifySNs(self, mlb_sn, device_sn, mac_address):
+  def VerifySNs(self, mlb_sn, device_sn, mac_address, bt_address):
     # Dummy method for testing.  On factory-3004.B only.
     pass
 
