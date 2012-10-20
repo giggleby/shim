@@ -345,8 +345,8 @@ def VerifyHwid(options):
       matched_components=cooked_results.matched_components,
       initial_configs=cooked_results.matched_initial_config_tags,
       volatiles=cooked_results.matched_volatile_tags,
-      ro_vpd=ro_vpd,
-      rw_vpd=rw_vpd)
+      ro_vpd=vpd_data.FilterVPD(ro_vpd),
+      rw_vpd=vpd_data.FilterVPD(rw_vpd))
 
 
 @Command('verify_keys')

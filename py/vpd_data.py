@@ -9,6 +9,17 @@
 
 """Collection of valid VPD values for ChromeOS."""
 
+# Keys that may not be logged.
+VPD_BLACKLIST_KEYS = [
+  'ubind_attribute',
+  'gbind_attribute'
+]
+REDACTED = 'REDACTED'
+def FilterVPD(vpd_map):
+  '''Replaces values of any keys in VPD_BLACKLIST_KEYS with REDACTED.'''
+  return dict((k, REDACTED if k in VPD_BLACKLIST_KEYS else v)
+              for k, v in vpd_map.iteritems())
+
 
 # keyboard_layout: http://gerrit.chromium.org/gerrit/gitweb?p=chromium/src.git;a=blob;f=chrome/browser/chromeos/input_method/ibus_input_methods.txt
 KEYBOARD_LAYOUT = [
