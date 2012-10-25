@@ -1183,6 +1183,14 @@ cros.factory.Goofy.prototype.showTestPopup = function(path, labelElement,
         });
 
     var menu = this.contextMenu = new goog.ui.PopupMenu();
+    function addSeparator() {
+        if (menu.getChildCount() &&
+            !(menu.getChildAt(menu.getChildCount() - 1)
+              instanceof goog.ui.MenuSeparator)) {
+            menu.addChild(new goog.ui.MenuSeparator(), true);
+        }
+    }
+
     this.lastContextMenuPath = path;
 
     var numLeaves = 0;
@@ -1216,7 +1224,12 @@ cros.factory.Goofy.prototype.showTestPopup = function(path, labelElement,
             restartOrRunEn += ' all';
             restartOrRunZh += '所有的';
         }
-        if (this.engineeringMode) {
+        if (this.engineeringMode ||
+            (!test.subtests.length && test.state.status != 'PASSED')) {
+            // Allow user to restart all tests under a particular node if
+            // (a) in engineering mode, or (b) if this is a single non-passed
+            // test.  If neither of these is true, it's too easy to
+            // accidentally re-run a bunch of tests and wipe their state.
             menu.addChild(this.makeMenuItem(
                 restartOrRunEn, restartOrRunZh, '', '', numLeaves, test,
                 function(event) {
@@ -1236,16 +1249,20 @@ cros.factory.Goofy.prototype.showTestPopup = function(path, labelElement,
                         'path': path
                     });
                 }, /*opt_adjectiveAtEnd=*/true), true);
-            menu.addChild(this.makeMenuItem(
-                'Run', '执行', 'untested', '未测的',
-                (numLeavesByStatus['UNTESTED'] || 0) +
-                (numLeavesByStatus['ACTIVE'] || 0),
-                test, function(event) {
-                    this.sendEvent('goofy:auto_run', {'path': path});
-                }), true);
+            if (this.engineeringmode) {
+                // For operators, the previous menu item is
+                // sufficient.
+                menu.addChild(this.makeMenuItem(
+                    'Run', '执行', 'untested', '未测的',
+                    (numLeavesByStatus['UNTESTED'] || 0) +
+                    (numLeavesByStatus['ACTIVE'] || 0),
+                    test, function(event) {
+                        this.sendEvent('goofy:auto_run', {'path': path});
+                    }), true);
+            }
         }
     }
-    menu.addChild(new goog.ui.MenuSeparator(), true);
+    addSeparator();
 
     var stopAllItem = new goog.ui.MenuItem(cros.factory.Content(
         'Stop all tests',
@@ -1268,12 +1285,12 @@ cros.factory.Goofy.prototype.showTestPopup = function(path, labelElement,
     }
 
     if (this.engineeringMode && !test.subtests.length) {
-        menu.addChild(new goog.ui.MenuSeparator(), true);
+        addSeparator();
         menu.addChild(this.createViewLogMenu(path), true);
     }
 
     if (extraItems && extraItems.length) {
-        menu.addChild(new goog.ui.MenuSeparator(), true);
+        addSeparator();
         goog.array.forEach(extraItems, function(item) {
                 menu.addChild(item, true);
             }, this);
@@ -1804,11 +1821,11 @@ cros.factory.Goofy.prototype.setTestList = function(testList) {
                                 action, false, this);
                             extraItems.push(item);
                         }, this);
-                    addExtraItem('Update factory software',
-                                 '更新工厂软体',
-                                 this.updateFactory);
 
                     if (this.engineeringMode) {
+                        addExtraItem('Update factory software',
+                                     '更新工厂软体',
+                                     this.updateFactory);
                         extraItems.push(new goog.ui.MenuSeparator());
                         addExtraItem('View /var/log/messages',
                                      '检视 /var/log/messages',
@@ -1822,7 +1839,6 @@ cros.factory.Goofy.prototype.setTestList = function(testList) {
                                      this.viewDmesg);
                     }
 
-                    extraItems.push(new goog.ui.MenuSeparator());
                     addExtraItem('Save factory logs to USB drive...',
                                  '保存工厂记录到 U盘',
                                  this.saveFactoryLogsToUSB);
