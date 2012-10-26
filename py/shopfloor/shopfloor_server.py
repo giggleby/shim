@@ -32,6 +32,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 import factory_common  # pylint: disable=W0611
 from cros.factory import shopfloor
 from cros.factory.test import utils
+from cros.factory.utils import debug_utils
 
 
 DEFAULT_SERVER_PORT = 8082
@@ -180,6 +181,8 @@ def main():
   logging.basicConfig(level=verbosity, format=log_format)
   if options.quiet:
     logging.disable(logging.INFO)
+
+  debug_utils.MaybeStartDebugServer()
 
   # Disable all DNS lookups, since otherwise the logging code may try to
   # resolve IP addresses, which may delay request handling.
