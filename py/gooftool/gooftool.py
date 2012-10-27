@@ -725,6 +725,7 @@ def UploadReport(options):
   # Intentionally ignoring dotfiles in EVENT_LOG_DIR.
   tar_cmd = 'cd %s ; tar cjf %s *' % (EVENT_LOG_DIR, target_path)
   tar_cmd += ' --add-file %s' % FACTORY_LOG_PATH
+  tar_cmd += ' --add-file /var/log/messages'
   if options.add_file:
     for f in options.add_file:
       # Require absolute paths since the tar command may change the
