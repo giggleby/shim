@@ -287,7 +287,7 @@ class _TouchpadData():  # pylint: disable=W0232
 
   @classmethod
   def Cypress(cls):
-    for node in glob('/sys/class/input/mouse[0-9]*/device/device'):
+    for node in glob('/sys/class/input/input[0-9]*/device'):
       model_path_list = [os.path.join(node, field) for field in
                          ['product_id', 'hardware_version', 'protocol_version']]
       firmware_path = os.path.join(node, 'firmware_version')
