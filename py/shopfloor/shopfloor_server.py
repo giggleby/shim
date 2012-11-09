@@ -259,7 +259,8 @@ def main():
   else:
     logging.warn('No HWID updater id currently available; add a single '
                  'file named %s to enable dynamic updating of HWIDs.',
-                 os.path.join(options.data_dir, shopfloor.HWID_UPDATER_PATTERN))
+                 os.path.join(options.data_dir, shopfloor.UPDATE_DIR,
+                              shopfloor.HWID_UPDATER_PATTERN))
 
   try:
     instance._StartBase()
