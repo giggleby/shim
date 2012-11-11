@@ -18,7 +18,7 @@ from cros.factory.test.event import Event
 from cros.factory.test.factory_task import FactoryTaskManager
 from cros.factory.test.factory_task import InteractiveFactoryTask
 from cros.factory.test.pytests import audio
-from cros.factory.utils.process_utils import SpawnOutput
+from cros.factory.utils.process_utils import Spawn, SpawnOutput
 
 _TEST_TITLE = test_ui.MakeLabel('External Display Test',
                                 u'外接显示屏测试')
@@ -331,6 +331,11 @@ class ExtDisplayTest(unittest.TestCase):
 
   def runTest(self):
     self.InitUI()
+
+    # Temporary hack to make cras work on some machines
+    # TODO(jcliang): Find out why cras is failing and remove this hack
+    Spawn(['restart', 'cras'], check_call=True)
+
     self._task_manager = FactoryTaskManager(
       self._ui, self.ComposeTasks(),
       update_progress=self._template.SetProgressBarValue)
