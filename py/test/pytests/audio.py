@@ -17,7 +17,7 @@ from cros.factory.test.args import Arg
 from cros.factory.test.event import Event
 from cros.factory.test.factory_task import FactoryTaskManager
 from cros.factory.test.factory_task import InteractiveFactoryTask
-from cros.factory.utils.process_utils import SpawnOutput
+from cros.factory.utils.process_utils import CheckOutput, SpawnOutput
 
 _TEST_TITLE = test_ui.MakeLabel('Audio Test',
                                 u'音讯测试')
@@ -245,6 +245,10 @@ class AudioTest(unittest.TestCase):
     self._ui = test_ui.UI()
     self._template = ui_templates.TwoSections(self._ui)
     self._task_manager = None
+    # On some machines, cras may crash, which is needed for Chrome audio
+    # playback. A temporary hack is to restart cras before playing audio.
+    # TODO(jcliang): Find out why cras is failing and remove this hack.
+    CheckOutput(['restart', 'cras'])
 
   def InitUI(self):
     """Initializes UI.
