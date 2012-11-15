@@ -69,10 +69,6 @@ class LidSwitchTest(unittest.TestCase):
     StartDaemonThread(target=self.MonitorDbusSignal)
     # Create a thread to run countdown timer.
     StartDaemonThread(target=self.CountdownTimer)
-    # Temporary hack to make cras work on some machines
-    # TODO(jcliang): Find out why cras is failing and remove this hack
-    Spawn(['restart', 'cras'], check_call=True)
-
 
   def tearDown(self):
     self.TerminateProcess()
