@@ -88,6 +88,7 @@ par:
 	rsync -a \
 	  $(PYTHON_SITEDIR)/argparse.py \
 	  $(PYTHON_SITEDIR)/jsonrpclib \
+	  $(PYTHON_SITEDIR)/yaml \
 	  $(PAR_BUILD_DIR)
 # Add empty __init__.py files so Python realizes these directories are
 # modules.
