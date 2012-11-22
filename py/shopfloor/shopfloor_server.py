@@ -20,6 +20,7 @@ import logging
 import optparse
 import os
 import shutil
+import signal
 import socket
 import SocketServer
 import threading
@@ -259,6 +260,10 @@ def main():
   except:  # pylint: disable=W0702
     logging.exception('Failed loading module: %s', options.module)
     exit(1)
+
+  def handler(signum, frame):  # pylint: disable=W0613
+    raise SystemExit
+  signal.signal(signal.SIGTERM, handler)
 
   try:
     instance._StartBase()
