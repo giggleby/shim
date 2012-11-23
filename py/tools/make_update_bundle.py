@@ -32,7 +32,8 @@ def MakeUpdateBundle(factory_image, output):
       logging.error('%s is already mounted', BUNDLE_MOUNT_POINT)
       sys.exit(1)
 
-  utils.TryMakeDirs(BUNDLE_MOUNT_POINT)
+  # Make BUNDLE_MOUNT_POINT as root.
+  Spawn(['mkdir', '-p', BUNDLE_MOUNT_POINT], sudo=True, check_call=True)
   with MountPartition(factory_image, 1, BUNDLE_MOUNT_POINT,
                       rw=True):
     Spawn(['tar', 'cf', output, '-I', 'pbzip2',
