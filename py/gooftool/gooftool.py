@@ -24,6 +24,7 @@ from tempfile import gettempdir, NamedTemporaryFile
 
 import factory_common  # pylint: disable=W0611
 
+from cros.factory import vpd_constraints
 from cros.factory.common import Error, ParseKeyValueData, SetupLogging, Shell
 from cros.factory.common import YamlWrite
 from cros.factory.gooftool import crosfw
@@ -381,6 +382,32 @@ def VerifyHwid(options):
         sys.exit('Invalid VPD entry : key %r, value %r' % (key, value))
     rw_vpd = ReadRwVpd(main_fw_file)
     _event_log.Log('vpd', ro_vpd=ro_vpd, rw_vpd=rw_vpd)
+
+  def VerifyVPDForComponent(expected_ro_vpd_for_component,
+                            missing_component_classes):
+    """Verify VPD value for certain component.
+
+    Checks VPD matches the expected value if certain component exists.
+    Args:
+      expected_ro_vpd_for_component: A dict with component as key and the
+        expected RO VPD value corresponding to that component as value.
+        For example:
+        {'cpu': {'keyboard_layout': 'xkb:us::eng',
+                 'initial_locale': 'en-US',
+                 'initial_timezone': 'America/Los_Angeles'}}
+      missing_component_classes: A list containing the missing component
+        classes.
+    """
+    ro_vpd = ReadRoVpd(main_fw_file)
+    for component, expected_vpd in expected_ro_vpd_for_component.items():
+      if not component in missing_component_classes:
+        for key, expected_value in expected_vpd.items():
+          if key not in ro_vpd:
+            sys.exit('Missing required VPD field: %s' % key)
+          value = ro_vpd[key]
+          if value != expected_value:
+            sys.exit('Wrong VPD entry for component %s: key %r, value %r' %
+                     (component, key, value))
   map(hwid_tool.Validate.Status, options.status)
   main_fw_file = crosfw.LoadMainFirmware().GetFileName()
   gbb_result = Shell('gbb_utility -g --hwid %s' % main_fw_file).stdout
@@ -449,6 +476,9 @@ def VerifyHwid(options):
     found_status = matched_volatiles.get(hwid.volatile, None)
     sys.exit(err_msg + ', but hwid status %r was unacceptable' % found_status)
   VerifyVpd(device.vpd_ro_fields)
+  if vpd_constraints.expected_vpd_for_component:
+    VerifyVPDForComponent(vpd_constraints.expected_vpd_for_component,
+                          probe_results.missing_component_classes)
   _event_log.Log('verified_hwid', hwid=hwid)
   print 'Verification SUCCESS!'
 
