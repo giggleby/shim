@@ -11,7 +11,6 @@ import pipes
 import sys
 
 import factory_common  # pylint: disable=W0611
-from cros.factory.test import utils
 from cros.factory.tools.mount_partition import MountPartition
 from cros.factory.utils.process_utils import Spawn
 
