@@ -1078,6 +1078,7 @@ class Goofy(object):
 
     if not utils.in_chroot() and self.test_list.options.disable_log_rotation:
       open('/var/lib/cleanup_logs_paused', 'w').close()
+      open('/var/lib/crash_sender_paused', 'w').close()
 
     if self.options.dummy_shopfloor:
       os.environ[shopfloor.SHOPFLOOR_SERVER_ENV_VAR_NAME] = (
