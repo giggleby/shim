@@ -20,6 +20,12 @@ from cros.factory.test import shopfloor
 from cros.factory.utils.process_utils import Spawn
 
 
+# MD5SUMs to ignore if returned by the shopfloor server.
+IGNORE_UPDATES = [
+    '37d2bf1b0c737bb2eb007735d427529b',  # factory-3004.B only
+]
+
+
 class UpdaterException(Exception):
   pass
 
@@ -86,6 +92,9 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   shopfloor_client = shopfloor.get_instance(detect=True, timeout=timeout)
   new_md5sum = shopfloor_client.GetTestMd5sum()
   factory.console.info('MD5SUM from server is %s', new_md5sum)
+  if new_md5sum in IGNORE_UPDATES:
+    factory.console.info('(ignoring old MD5SUM from server)')
+    new_md5sum = None
   if current_md5sum == new_md5sum or new_md5sum is None:
     factory.console.info('Factory software is up to date')
     return False
@@ -166,6 +175,9 @@ def CheckForUpdate(timeout):
   '''
   shopfloor_client = shopfloor.get_instance(detect=True, timeout=timeout)
   new_md5sum = shopfloor_client.GetTestMd5sum()
+  if new_md5sum in IGNORE_UPDATES:
+    logging.info('Ignoring update with MD5SUM %s', new_md5sum)
+    new_md5sum = None
   current_md5sum = factory.get_current_md5sum()
   return (new_md5sum,
           new_md5sum and new_md5sum != current_md5sum)
