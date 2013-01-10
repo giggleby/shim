@@ -371,6 +371,13 @@ class Options(object):
   # Whether to stop on any failure.
   stop_on_failure = False
 
+  # Used to disable ChromeOS shortcut keys (see factory/tools/key_filter.py)
+  # For some models with CapsLock, you may set disable_caps_lock to True
+  # to disable it.
+  disable_cros_shortcut_keys = False
+  disable_caps_lock = False
+  caps_lock_keycode = 66
+
   def check_valid(self):
     '''Throws a TestListError if there are any invalid options.'''
     # Make sure no errant options, or options with weird types,
