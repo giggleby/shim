@@ -642,6 +642,8 @@ def UploadReport(options):
     return
   method, param = options.upload_method.split(':', 1)
   if method == 'shopfloor':
+    if '#' not in param:
+      param += '#' + device_sn
     report_upload.ShopFloorUpload(target_path, param)
   elif method == 'ftp':
     report_upload.FtpUpload(target_path, 'ftp:' + param)

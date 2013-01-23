@@ -65,7 +65,8 @@ def MakeTestLabel(test):
   Args:
      test: A test object from the test list.
   '''
-  return MakeLabel(Escape(test.label_en), Escape(test.label_zh))
+  return MakeLabel(Escape(test.label_en or test.id),
+                   Escape(test.label_zh or test.label_en or test.id))
 
 
 def MakePassFailKeyLabel(pass_key=True, fail_key=True):

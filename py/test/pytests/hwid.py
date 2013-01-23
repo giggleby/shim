@@ -82,7 +82,7 @@ class WriteHWIDTask(FactoryTask):
     # When the input is not a complete HWID (i.e., BOM-VARIANT pair), select
     # and derive the complete ID from active HWIDs in current database.
     # Ex: input="BLUE A" => matched to "MARIO BLUE A-B 6868".
-    current_hwid = CheckOutput(['crossystem', 'hwid']).strip()
+    current_hwid = None and CheckOutput(['crossystem', 'hwid']).strip()  # XXX(jsalz)
     # To save time, only do HWID write if the input HWID is different from
     # the one already on the system.
     if hwid != current_hwid:
@@ -154,7 +154,7 @@ class SelectHWIDTask(FactoryTask):
     self.hwid_list = None
 
   def BuildHWIDList(self):
-    current_hwid = CheckOutput(['crossystem', 'hwid']).strip()
+    current_hwid = None and CheckOutput(['crossystem', 'hwid']).strip()  # XXX(jsalz)
 
     if self.test.hwid_list:
       known_list = self.test.hwid_list
