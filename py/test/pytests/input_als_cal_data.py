@@ -12,6 +12,18 @@ from cros.factory.test import utils
 from cros.factory.test.args import Arg
 from cros.factory.utils.process_utils import Spawn
 
+_EVENT_ALS_INPUT = 'ALS-Input'
+_JS_ALS_CAL_DATA = '''
+    var element = document.getElementById("inputValue");
+    element.focus();
+'''
+
+_MESSAGE_WRITING = (lambda als:
+    test_ui.MakeLabel('Writing ALS calibration value: %d' % als,
+                      '写ALS值: %d' % als,
+                      'als-font-size'))
+
+_MESSAGE_WRITING_CSS = '.als-font-size {font-size: 2em;}'
 
 class InputAlsCalData(unittest.TestCase):
   '''Display a input box for operator to enter ALS calibration value and
@@ -38,6 +50,7 @@ class InputAlsCalData(unittest.TestCase):
       assert als_cal_data >= self.args.min_value
       assert als_cal_data <= self.args.max_value
       if als_cal_data != self._als_cal_data:
+        self.template.SetState(_MESSAGE_WRITING(als_cal_data))
         Spawn(['vpd', '-i', 'RO_VPD', '-s', 'als_cal_data=%d' % als_cal_data],
               check_call=True, log=True)
     except ValueError:
@@ -52,28 +65,27 @@ class InputAlsCalData(unittest.TestCase):
 
   def setUp(self):
     self.ui = test_ui.UI()
+    self.ui.AppendCSS(_MESSAGE_WRITING_CSS)
+    self.template = ui_templates.OneSection(self.ui)
     self._als_cal_data = int(Spawn(
         ['vpd', '-i', 'RO_VPD', '-g', 'als_cal_data'],
         check_output=True).stdout_data)
-
-  def runTest(self):
-    template = ui_templates.OneSection(self.ui)
-    template.SetTitle(test_ui.MakeLabel('Input ALS calibration value',
-                                        u'输入 ALS 校正资料'))
-
-    # Display choices as radio buttons.
-    template.SetState(
+    self.template.SetTitle(test_ui.MakeLabel('Input ALS calibration value',
+                                             u'输入 ALS 校正资料'))
+    self.template.SetState(
         test_ui.MakeLabel(
             'Please input ALS calibration value and press ENTER.',
             u'请输入 ALS 校正资料後按下 ENTER') + '<br>' +
         '<input id="inputValue" type="input" value="%d">' % self._als_cal_data +
         '<br><p id="inputError" class="test-error">')
-
-    # Handle input value when Enter pressed.
+    self.ui.AddEventHandler(_EVENT_ALS_INPUT, self.HandleInputValue)
     self.ui.BindKeyJS(
         '\r',
         'window.test.sendTestEvent('
-        '  "input_value", document.getElementById("inputValue").value)')
+        '  "%s", document.getElementById("inputValue").value)' %
+        _EVENT_ALS_INPUT)
     self.ui.AddEventHandler('input_value', self.HandleInputValue)
 
+  def runTest(self):
+    self.ui.RunJS(_JS_ALS_CAL_DATA)
     self.ui.Run()
