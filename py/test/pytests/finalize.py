@@ -51,7 +51,7 @@ class Finalize(unittest.TestCase):
           'Interval between updating results (None to disable polling).',
           default=5),
       Arg('allow_force_finalize', bool,
-          'Allow the user to force finalization (even in operator mode).',
+          'Allow the user to force finalization.',
           default=True),
       Arg('min_charge_pct', int,
           'Minimum battery charge percentage allowed (None to disable '
@@ -119,8 +119,7 @@ class Finalize(unittest.TestCase):
 
     def Go(force=False):
       with self.go_cond:
-        if (self.args.allow_force_finalize or
-            self.ui.InEngineeringMode()):
+        if self.args.allow_force_finalize:
           self.force = force
         self.go_cond.notify()
     self.ui.BindKey(' ', lambda _: Go(False))
@@ -231,8 +230,6 @@ class Finalize(unittest.TestCase):
                else MSG_NOT_READY)
         if self.args.allow_force_finalize:
           msg += '<div>' + MSG_FORCE + '</div>'
-        else:
-          msg += '<div class=test-engineering-mode-only>' + MSG_FORCE + '</div>'
         self.ui.SetHTML(msg, id='finalize-state')
 
       return all_passed
