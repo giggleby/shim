@@ -60,6 +60,8 @@ class Finalize(unittest.TestCase):
       Arg('secure_wipe', bool,
           'Wipe the stateful partition securely (False for a fast wipe).',
           default=True),
+      Arg('skip_shopfloor_finalize', bool,
+          'Skip calling shopfloor.finalize in the end.', default=False),
       Arg('upload_method', str,
           'Upload method for "gooftool finalize"',
           optional=True),
@@ -292,7 +294,7 @@ class Finalize(unittest.TestCase):
 
     gooftools.run(command)
 
-    if shopfloor.is_enabled():
+    if shopfloor.is_enabled() and not self.args.skip_shopfloor_finalize:
       shopfloor.finalize()
 
     # TODO(hungte): Use Reboot in test list to replace this, or add a
