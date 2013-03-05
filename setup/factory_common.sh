@@ -46,3 +46,8 @@ die() {
   [ -z "$*" ] || error "$@"
   exit 1
 }
+
+quit() {
+  [ -z "$*" ] || info "$@"
+  exit 0
+}
