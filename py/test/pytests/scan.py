@@ -16,6 +16,7 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test import utils
 from cros.factory.test.args import Arg
+from cros.factory.test.event import Event
 
 
 class Scan(unittest.TestCase):
@@ -88,6 +89,7 @@ class Scan(unittest.TestCase):
       factory.set_shared_data(self.args.shared_data_key,
                               scan_value)
 
+    self.ui.event_client.post_event(Event(Event.Type.UPDATE_SYSTEM_INFO))
     self.ui.Pass()
 
   def setUp(self):
