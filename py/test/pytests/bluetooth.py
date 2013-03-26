@@ -28,7 +28,6 @@ from cros.factory.event_log import Log
 from cros.factory.test import factory
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
-from cros.factory.event_log import Log
 from cros.factory.test.args import Arg
 from cros.factory.test.factory_task import FactoryTask, FactoryTaskManager
 from cros.factory.test.test_ui import MakeLabel
