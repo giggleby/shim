@@ -57,6 +57,9 @@ def InitGrabKeys(grab_keys):
   # Search.
   grab_keys.append(Keystroke(X.AnyModifier, 'Super_L'))
 
+  # Power button.
+  grab_keys.append(Keystroke(X.AnyModifier, 124))
+
   # Ctrl+?
   grab_keys.extend([
       Keystroke(X.ControlMask, k) for k in (
