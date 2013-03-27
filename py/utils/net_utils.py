@@ -132,8 +132,9 @@ def _SendDhclientCommand(arguments, interface):
   """
   DHCLIENT_SCRIPT = "/usr/local/sbin/dhclient-script"
   DHCLIENT_LEASE = os.path.join(factory.get_state_root(), "dhclient.leases")
-  Spawn(['dhclient', '-sf', DHCLIENT_SCRIPT, '-lf', DHCLIENT_LEASE, interface] +
-        arguments, call=True, ignore_stdin=True)
+  Spawn(['dhclient', '-sf', DHCLIENT_SCRIPT, '-lf', DHCLIENT_LEASE, '-1',
+        interface] + arguments, call=True, ignore_stdin=True)
+  Spawn(['pkill', '-9', 'dhclient'], call=True)
 
 def SendDhcpRequest(interface=None):
   """Sends dhcp request via dhclient.

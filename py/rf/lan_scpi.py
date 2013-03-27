@@ -61,7 +61,7 @@ def Timeout(secs):
 
 class LANSCPI(object):
   '''A SCPI-over-TCP controller.'''
-  def __init__(self, host, port=5025, timeout=6, retries=10):
+  def __init__(self, host, port=5025, timeout=3, retries=5):
     '''
     Connects to a device using SCPI-over-TCP.
 
@@ -87,6 +87,7 @@ class LANSCPI(object):
         self._Connect()
         return
       except Exception as e:
+        self.Close()
         time.sleep(1)
         self.logger.info("Unable to connect to %s:%d: %s" % (
                            host, port, e))
@@ -108,13 +109,22 @@ class LANSCPI(object):
 
     self.logger.debug('Connected')
 
+    # Sleep one second to give some warm up time.
+    time.sleep(1)
     self.id = self.Query('*IDN?')
 
   def Close(self):
     self.logger.debug('Destroying')
-    self.rfile.close()
-    self.wfile.close()
-    self.socket.close()
+    if self.rfile:
+      self.rfile.close()
+    if self.wfile:
+      self.wfile.close()
+    if self.socket:
+      self.socket.close()
+    self.rfile = None
+    self.wfile = None
+    self.socket = None
+    self.logger.debug('Destroyed')
 
   def Reopen(self):
     '''
