@@ -78,11 +78,11 @@ PACKAGES = {
            package='chromeos-base/chromeos-factory',
            workon=True),
     'chromeos-factory-board':
-      dict(path='private-overlays/overlay-%(board)s-private',
+      dict(path='private-overlays/overlay-variant-daisy-spring-private',
            package='chromeos-base/chromeos-factory-board',
            workon=False),
     'autotest-private-board':
-      dict(path='private-overlays/overlay-%(board)s-private',
+      dict(path='private-overlays/overlay-variant-daisy-spring-private',
            package='chromeos-base/autotest-private-board',
            workon=False),
     'autotest':
