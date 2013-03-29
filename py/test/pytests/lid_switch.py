@@ -23,9 +23,10 @@ dargs:
 """
 
 import asyncore
-import evdev
-import serial
 import datetime
+import evdev
+import logging
+import serial
 import unittest
 
 from cros.factory.test import test_ui
@@ -145,8 +146,15 @@ class LidSwitchTest(unittest.TestCase):
     self.TerminateLoop()
     file_utils.TryUnlink('/var/run/power_manager/lid_opened')
     if self.serial:
-      self.serial.write(self.args.lid_open)
-      self.serial.close()
+      try:
+        # Clean up unread buffer before sending a command.
+        self.serial.flushInput()
+        self.serial.write(self.args.lid_open)
+        self.serial.read(1)
+        self.serial.close()
+      except serial.SerialTimeoutException:
+        logging.warning('Serial write/read timeout during tearDown.')
+
     Log('lid_wait_sec',
         time_to_close_sec=(self._closed_sec - self._start_waiting_sec),
         time_to_open_sec=(self._opened_sec - self._closed_sec),
@@ -185,6 +193,8 @@ class LidSwitchTest(unittest.TestCase):
   def _CommandFixture(self, command):
     if self.serial:
       try:
+        # Clean up unread buffer before sending a command.
+        self.serial.flushInput()
         self.serial.write(command)
         self.serial.read(1)
       except serial.SerialTimeoutException:
