@@ -6,6 +6,7 @@
 
 """Tests audio playback and record."""
 
+import logging
 import random
 import threading
 import unittest
@@ -45,32 +46,36 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
     port_id: ID of audio port to output (w/o "Playback Switch" postfix).
     title_id: HTML id for placing testing title.
     instruction_id: HTML id for placing instruction.
-    volume: Playback volume in [0,100]; default 100.
     channel: target channel. Value of 'left', 'right', 'all'. Default 'all'.
   """
 
   def __init__(self, ui, port_label, port_id, title_id, instruction_id,
-               volume=100, channel='all'):
+               channel='all'):
     super(AudioDigitPlaybackTask, self).__init__(ui)
     self._pass_digit = random.randint(0, 9)
+    # TODO(deanliao): for this branch only. I remove "Playback" after port_id.
+    #     Don't merge it back to ToT!
     self._port_switch = ['amixer', '-c', '0', 'cset',
-                         'name="%s Playback Switch"' % port_id]
+                         'name="%s Switch"' % port_id]
     self._port_volume = ['amixer', '-c', '0', 'cset',
-                         'name="%s Playback Volume"' % port_id]
+                         'name="%s Volume"' % port_id]
     self._port_id = port_id
     self._port_label = port_label
     self._title_id = title_id
     self._instruction_id = instruction_id
     self._channel = channel
 
+    self._switch_postfix = 'on,on'
     if channel == 'all':
-      self._port_volume.append('%d%%,%d%%' % (volume, volume))
+      self._port_volume.append('15,15')
     elif channel == 'left':
-      self._port_volume.append('%d%%,%d%%' % (volume, 0))
+      self._port_volume.append('15,0')
       self._port_label += test_ui.MakeLabel(' (Left Channel)', u'(左声道)')
+      self._switch_postfix = 'on,off'
     elif channel == 'right':
-      self._port_volume.append('%d%%,%d%%' % (0, volume))
+      self._port_volume.append('0,15')
       self._port_label += test_ui.MakeLabel(' (Right Channel)', u'(右声道)')
+      self._switch_postfix = 'off,on'
 
   def _InitUI(self):
     self._ui.SetHTML(self._port_label, id=self._title_id)
@@ -82,8 +87,9 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
 
   def Run(self):
     def _HasPlaybackVolume(port_id):
-      volumn_name = '%s Playback Volume' % port_id
-      return volumn_name in SpawnOutput(['amixer', '-c', '0','controls'])
+      volumn_name = '%s Volume' % port_id
+      return volumn_name in SpawnOutput(['amixer', '-c', '0','controls'],
+                                        log=True)
 
     def _PlayDigit(num):
       """Plays digit sound with language from UI.
@@ -95,7 +101,7 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
       self._ui.PlayAudioFile('%d_%s.ogg' % (num, lang))
 
     # It makes no sense to continue if it fails to enable audio port.
-    if not self.RunCommand(self._port_switch + ['on,on'],
+    if not self.RunCommand(self._port_switch + [self._switch_postfix],
                            'Fail to enable audio port.'):
       return
 
@@ -145,7 +151,7 @@ class WaitHeadphoneThread(threading.Thread):
     else:
       expect = 'values=off'
     while not self._done.is_set():
-      if expect in SpawnOutput(cmd):
+      if expect in SpawnOutput(cmd, log=True):
         self._on_success()
         self.Stop()
       else:
@@ -171,6 +177,8 @@ class DetectHeadphoneTask(InteractiveFactoryTask):
   def __init__(self, ui, headphone_numid, wait_for_connect,
                title_id, instruction_id):
     super(DetectHeadphoneTask, self).__init__(ui)
+    logging.info('Wait for headphone ' +
+                 'connect' if wait_for_connect else 'disconnect')
     self._title_id = title_id
     self._instruction_id = instruction_id
     self._wait_headphone = WaitHeadphoneThread(headphone_numid,
@@ -256,6 +264,11 @@ class AudioTest(unittest.TestCase):
     self._template.DrawProgressBar()
     self._ui.AppendCSS(_CSS)
 
+  def _DisableAudio(self, port_id):
+    cmd = ['amixer', '-c', '0', 'cset', 'name="%s Switch"' % port_id,
+           'off,off']
+    SpawnOutput(cmd, log=True)
+
   def ComposeTasks(self):
     """Composes subtasks based on dargs.
 
@@ -273,13 +286,22 @@ class AudioTest(unittest.TestCase):
     _INSTRUCTION_ID = 'instruction-center'
 
     tasks = []
+
+    # Hack. Disable both internal and external ports here.
+    if self.args.internal_port_id:
+      logging.info('disable speaker')
+      self._DisableAudio(self.args.internal_port_id)
+
+    if self.args.external_port_id:
+      logging.info('disable headphone')
+      self._DisableAudio(self.args.external_port_id)
+
     if self.args.internal_port_id:
       if self.args.headphone_numid:
         tasks.append(DetectHeadphoneTask(self._ui, self.args.headphone_numid,
                                          False, _TITLE_ID, _INSTRUCTION_ID))
       args = (self._ui, test_ui.MakeLabel(*self.args.internal_port_label),
-              self.args.internal_port_id, _TITLE_ID, _INSTRUCTION_ID,
-              self.args.internal_volume)
+              self.args.internal_port_id, _TITLE_ID, _INSTRUCTION_ID)
       _ComposeLeftRightTasks(tasks, args)
 
     if self.args.external_port_id:
@@ -287,8 +309,7 @@ class AudioTest(unittest.TestCase):
         tasks.append(DetectHeadphoneTask(self._ui, self.args.headphone_numid,
                                          True, _TITLE_ID, _INSTRUCTION_ID))
       args = (self._ui, test_ui.MakeLabel(*self.args.external_port_label),
-              self.args.external_port_id, _TITLE_ID, _INSTRUCTION_ID,
-              self.args.external_volume)
+              self.args.external_port_id, _TITLE_ID, _INSTRUCTION_ID)
       _ComposeLeftRightTasks(tasks, args)
 
     return tasks
