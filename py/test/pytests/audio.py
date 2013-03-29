@@ -67,13 +67,13 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
 
     self._switch_postfix = 'on,on'
     if channel == 'all':
-      self._port_volume.append('15,15')
+      self._port_volume.append('25,25')
     elif channel == 'left':
-      self._port_volume.append('15,0')
+      self._port_volume.append('25,0')
       self._port_label += test_ui.MakeLabel(' (Left Channel)', u'(左声道)')
       self._switch_postfix = 'on,off'
     elif channel == 'right':
-      self._port_volume.append('0,15')
+      self._port_volume.append('0,25')
       self._port_label += test_ui.MakeLabel(' (Right Channel)', u'(右声道)')
       self._switch_postfix = 'off,on'
 
