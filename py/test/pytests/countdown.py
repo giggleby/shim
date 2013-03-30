@@ -9,7 +9,7 @@ It shows count down and system loads for run-in period. It also alarms if
 there's any abnormal status detected during run-in.
 '''
 
-import datetime
+import logging
 import os
 import time
 import unittest
@@ -47,9 +47,10 @@ class CountDownTest(unittest.TestCase):
     return open(log_path, 'a')
 
   def UpdateUILog(self, sys_status):
-    log_items = [datetime.datetime.now().isoformat(),
-                 'Temperatures: %s' % sys_status.temperatures,
-                 'Fan RPM: %s' % sys_status.fan_rpm]
+    log_items = [time.strftime('%H:%M:%S'),
+                 '%s°C' % sys_status.temperatures]
+    if sys_status.fan_rpm:
+      log_items.append('%s RPM' % sys_status.fan_rpm)
     log_str = '.  '.join(log_items)
     self._verbose_log.write(log_str + os.linesep)
     self._verbose_log.flush()
@@ -172,8 +173,9 @@ class CountDownTest(unittest.TestCase):
     board = system.GetBoard()
     try:
       self.UpdateLegend(board.GetTemperatureSensorNames())
-    except NotImplementedError:
-      pass
+    except:  # pylint: disable=W0702
+      # E.g., in chroot; no big deal
+      logging.exception('Unable to get temperature sensor names')
 
     # Loop until count-down ends.
     while self._remaining_secs >= 0:
