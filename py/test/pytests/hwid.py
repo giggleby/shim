@@ -26,7 +26,7 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.args import Arg
 from cros.factory.test.factory_task import FactoryTask, FactoryTaskManager
-from cros.factory.utils.process_utils import Spawn
+from cros.factory.utils.process_utils import Spawn, SpawnOutput
 
 _MESSAGE_FETCH_FROM_SHOP_FLOOR = test_ui.MakeLabel(
     'Fetching HWID from shop floor server...',
@@ -57,6 +57,14 @@ _JS_HWID_SELECT = '''
     idx = ele.selectedIndex;
     window.test.sendTestEvent("%s", ele.options[idx].value)
 ''' % (_SELECT_BOX_ID, _EVENT_SUBTYPE_HWID_SELECT)
+
+_VARIANT_SELECT_BOX_ID = 'variant_select'
+_EVENT_SUBTYPE_VARIANT_SELECT = 'Variant-Select'
+_JS_VARIANT_SELECT = '''
+    ele = document.getElementById("%s");
+    idx = ele.selectedIndex;
+    window.test.sendTestEvent("%s", ele.options[idx].value)
+''' % (_VARIANT_SELECT_BOX_ID, _EVENT_SUBTYPE_VARIANT_SELECT)
 
 _ERR_HWID_NOT_FOUND = test_ui.MakeLabel('Cannot find matched HWID.',
                                         u'无法找到匹配的 HWID。',
@@ -142,6 +150,132 @@ class AutoProbeHWIDTask(FactoryTask):
     self.Stop()
 
 
+class FilterVariantTask(FactoryTask):
+  '''Filter HWIDs by variant by running automated and interactive tests.
+
+  Reads a list of rules from test.variant_filter and removes entries from
+  test.hwid_list that that do not match. The order of the rules must match
+  the order the variants appear in the HWID.
+
+  The format of variant_filter is a list of tuples (filter_name, filter_args).
+  The filter_name specifies what type check to perform. filter_args is a dict
+  that maps variant character values to properties of the device that are either
+  probed or manually selected.
+  '''
+
+  def __init__(self, test):
+    super(FilterVariantTask, self).__init__()
+    self.FILTER_MAP = {
+        'keyboard': self._IdentifyKeyboard,
+        'motherboard': self._IdentifyMotherboard,
+        'memory': self._IdentifyMemory
+    }
+    self.test = test
+    self.filter_rules = test.args.variant_filter
+    self.variant = ''
+
+  def Run(self):
+    self._RunNextFilter()
+
+  def _FilterByVariant(self):
+    '''Filter test.hwid_list to HWIDs matching self.variant.'''
+
+    filtered_hwids = []
+    variant_re = re.compile(r'^LINK [\w]+ (?P<variant>[\w ]+)-\w [0-9]{4}$')
+    for hwid in self.test.hwid_list:
+      variant_match = variant_re.match(hwid)
+      if self.variant == variant_match.group('variant'):
+        filtered_hwids.append(hwid)
+    factory.console.info('Matching HWIDs: %s', filtered_hwids)
+    self.test.hwid_list = filtered_hwids
+
+  def _RunNextFilter(self):
+    '''Run the next variant filter rule.'''
+
+    if len(self.filter_rules) == 0:
+      self._FilterByVariant()
+      self.Stop()
+    filter_name, filter_args = self.filter_rules.pop(0)
+    self.FILTER_MAP[filter_name](filter_args)
+
+  def _IdentifyKeyboard(self, keyboard_layout_map):
+    '''Automatically probe the keyboard type.
+
+    Uses the keyboard_layout set in the VPD.
+    Args:
+      keyboard_layout_map: Dict. Map of keyboard layouts to variant values.
+                  Example: {'xkb:us::eng': 'A', 'xkb:gb:extd:eng': 'B'}
+    Returns:
+      None but adds an variant character to self.variant
+    '''
+    vpd_keyboard_layout = SpawnOutput(['vpd', '-g', 'keyboard_layout'])
+    keyboard_variant = keyboard_layout_map[vpd_keyboard_layout]
+    self.variant += keyboard_variant
+    factory.console.info('Selected %s for keyboard variant.', keyboard_variant)
+    self._RunNextFilter()
+
+  def _IdentifyMemory(self, memory_map):
+    '''Automatically probe the memory vendor.
+
+    Args:
+      memory_map: Dict. Map of memory vendors to variant values.
+                  Example: {'Hynix': 'A'}
+    Returns:
+      None but adds an variant charater to self.variant
+    '''
+    mosys_raw_output = SpawnOutput(['mosys', 'memory', 'spd', 'print', 'id'])
+    spd_vendor_re = re.compile(
+        r'^\d \| \d+-\d+: (?P<vendor>[\w ]+) \| \d+ \| [\w-]+ $')
+    # Only check the first bank. Assuming vendors are uniform across all banks.
+    spd_vendor_match = spd_vendor_re.match(mosys_raw_output.splitlines()[0])
+    spd_vendor = spd_vendor_match.group('vendor')
+    memory_variant = memory_map[spd_vendor]
+    self.variant += memory_variant
+    factory.console.info('Selected %s for memory variant.', memory_variant)
+    self._RunNextFilter()
+
+  def _IdentifyMotherboardCallback(self, event):
+    '''Callback from _IdentifyMotherboard.
+
+    Args:
+      event: factory.test.Event returned by UI framework.
+             data property contains variant selected by operator.
+    '''
+    self.variant += event.data
+    factory.console.info('Selected %s for motherboard variant.', event.data)
+    self._RunNextFilter()
+
+  def _IdentifyMotherboard(self, option_map):
+    '''Prompt the operator to select the motherboard vendor.
+
+    Args:
+      option_map: Dict. Map of motherboard vendors to variant values.
+                  Example: {'Chintech': 'D'}
+    Returns:
+      None but adds an variant character to self.variant
+    '''
+    PROMPT_EN = 'Select Motherboard Vendor:<br/><br/>'
+    PROMPT_ZH = u'选择主板供应商:<br/><br/>'
+    prompt_label = test_ui.MakeLabel(PROMPT_EN, PROMPT_ZH,
+                                     'hwid-font-size')
+    self.test.template.SetState(prompt_label)
+    select_list = ['<select size=%d style="%s" id="%s">' %
+                   (_SELECTION_PER_PAGE, _SELECT_BOX_STYLE,
+                    _VARIANT_SELECT_BOX_ID)]
+    for name, value in option_map.iteritems():
+      select_list.append('<option value="%s">%s</option>' % (value, name))
+    select_list.append('</select>')
+    self.test.template.SetState(select_list, append=True)
+    self.test.template.SetState(_MESSAGE_HOW_TO_SELECT, append=True)
+    self.test.ui.BindKeyJS(13, _JS_VARIANT_SELECT)
+    self.test.ui.AddEventHandler(_EVENT_SUBTYPE_VARIANT_SELECT,
+                                 self._IdentifyMotherboardCallback)
+    self.test.ui.RunJS('document.getElementById("%s").selectedIndex=0' %
+                       _VARIANT_SELECT_BOX_ID)
+    self.test.ui.RunJS('document.getElementById("%s").focus()' %
+                       _VARIANT_SELECT_BOX_ID)
+
+
 class SelectHWIDTask(FactoryTask):
   '''Shows a list of HWIDs on UI and let operator choose a HWID from the it.'''
 
@@ -211,9 +345,6 @@ class HWIDTest(unittest.TestCase):
     Arg('override_hwid', (str, unicode),
         'An override HWID which is used during development.', default=None,
         optional=True),
-    Arg('manual_override', bool, 'Whether to allow manual HWID selection even '
-        'when the shopfloor server is enabled.', default=False,
-        optional=True),
     Arg('auto_probe', bool, 'Whether to enable HWID auto probe.', default=False,
         optional=True),
     Arg('auto_select', bool,
@@ -229,6 +360,9 @@ class HWIDTest(unittest.TestCase):
     Arg('variant', (str, unicode),
         'A string indicating the variant code to pass to gooftool',
         default=None, optional=True),
+    Arg('variant_filter', list,
+        'A set of rules to filter HWIDs by variant', default=None,
+        optional=True),
     Arg('status', (str, unicode),
         'A string indicating from what status of HWIDs should the program'
         'find possible match. (deprecated, eol, qualified, supported)',
@@ -246,17 +380,18 @@ class HWIDTest(unittest.TestCase):
     self.template.SetTitle(_TEST_TITLE)
 
   def runTest(self):
-    self.hwid = self.args.override_hwid
-
-    if not self.args.override_hwid:
+    if self.args.override_hwid:
+      self.hwid = self.args.override_hwid
+    elif shopfloor.is_enabled() and not self.args.auto_probe:
+      self.task_list.append(ShopFloorHWIDTask(self))
+    else:
       if self.args.auto_probe:
         self.task_list.append(AutoProbeHWIDTask(self))
-        self.task_list.append(SelectHWIDTask(self))
-      else:
-        if shopfloor.is_enabled():
-          self.task_list.append(ShopFloorHWIDTask(self))
-        if not shopfloor.is_enabled() or self.args.manual_override:
-          self.task_list.append(SelectHWIDTask(self))
-    self.task_list.append(WriteHWIDTask(self))
 
+      if self.args.variant_filter:
+        self.task_list.append(FilterVariantTask(self))
+
+      self.task_list.append(SelectHWIDTask(self))
+
+    self.task_list.append(WriteHWIDTask(self))
     FactoryTaskManager(self.ui, self.task_list).Run()
