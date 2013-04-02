@@ -121,6 +121,8 @@ def main():
                       default=GetDefaultBoardOrNone())
   parser.add_argument('--no-clean', action='store_false', dest='clean',
                       help="Don't insist on clean repositories (be careful!)")
+  parser.add_argument('--overlay',
+                      help="Additional directory from which to overlay files")
   parser.add_argument('--no-emerge', action='store_false', dest='emerge',
                       help="Don't emerge (for debugging only)")
   parser.add_argument('--no-sync', action='store_false', dest='sync',
@@ -263,6 +265,10 @@ def main():
     assert not re.search(r'\s', f)
     Spawn(['shopt -s nullglob; rm -rf %s/%s' % (staging_dir, f)],
           shell=True, check_call=True)
+
+  if args.overlay:
+    Spawn(['rsync', '-av', args.overlay + '/', os.path.join(staging_dir) + '/'],
+          check_call=True)
 
   # Move /usr/local/factory to dev_image.
   dev_image = os.path.join(staging_dir, 'dev_image')
