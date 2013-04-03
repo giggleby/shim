@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import glob
+import numpy
 import os
 
 from cros.factory.test.utils import Enum, ReadOneLine
@@ -67,7 +68,10 @@ class Power(object):
 
   def GetCharge(self):
     '''Get current charge level in mAh.'''
-    charge_now = self.GetBatteryAttribute('charge_now')
+    # Use median since charge_now is not stable.
+    # Check crosbug.com/p/18535
+    charge_now = numpy.median(
+        [float(self.GetBatteryAttribute('charge_now')) for _ in xrange(5)])
     if charge_now:
       return int(charge_now) / 1000
     else:
