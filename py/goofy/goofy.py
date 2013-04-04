@@ -1416,6 +1416,9 @@ class Goofy(object):
     thread.daemon = True
     thread.start()
 
+  def rsync_files(self, source, dest):
+    Spawn(['rsync', source, dest], call=True)
+
   def _run_queue_idle(self):
     '''Invoked when the run queue has no events.
 
@@ -1434,6 +1437,7 @@ class Goofy(object):
     self.check_for_updates()
     self.sync_time_in_background()
     self.log_disk_space_stats()
+    self.rsync_files('/var/spool/crash/*glbench*', '/usr/local/')
 
   def handle_event_logs(self, log_name, chunk):
     '''Callback for event watcher.
