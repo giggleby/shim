@@ -228,7 +228,8 @@ class CameraTest(unittest.TestCase):
     Arg('uvcdriver', str, 'Load uvcdriver manually',
         default=None),
     Arg('camera_usb_ids', list, 'Optional list of tuples, specifying USB IDs '
-        ' and how to test that specific camera type.', default=None),
+        ' and how to test that specific camera type.', default=None,
+        optional=True),
   ]
 
   def _ProbeCamera(self):
