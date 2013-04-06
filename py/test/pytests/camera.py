@@ -12,7 +12,6 @@ except ImportError:
 
 import os
 import logging
-import re
 import random
 import time
 import tempfile
@@ -242,23 +241,22 @@ class CameraTest(unittest.TestCase):
       A self.fail exception if the test should fail.
     """
     if self.args.camera_usb_ids:
-      response = SpawnOutput(['lsusb', '-v'], log=True)
+      response = SpawnOutput(['lsusb'], log=True)
       for camera_id_string, test_procedure in self.args.camera_usb_ids:
-        for line in response:
-          if re.search(camera_id_string, line):
-            if test_procedure == 'pass':
-              logging.info('Passing without testing %s.', camera_id_string)
-              self.ui.Pass()
-              return False
-            elif test_procedure == 'test':
-              logging.info('Found camera %s, running test.', camera_id_string)
-              return True
-            elif test_procedure == 'fail':
-              logging.info('Failing without testing %s.', camera_id_string)
-              self.fail('Probed camera automatically failed by test_list.')
-            else:
-              logging.warn('Invalid test procedure %s specified for %s '
-                           'ignoring.', test_procedure, camera_id_string)
+        if camera_id_string in response:
+          if test_procedure == 'pass':
+            logging.info('Passing without testing %s.', camera_id_string)
+            self.ui.Pass()
+            return False
+          elif test_procedure == 'test':
+            logging.info('Found camera %s, running test.', camera_id_string)
+            return True
+          elif test_procedure == 'fail':
+            logging.info('Failing without testing %s.', camera_id_string)
+            self.fail('Probed camera automatically failed by test_list.')
+          else:
+            logging.warn('Invalid test procedure %s specified for %s '
+                         'ignoring.', test_procedure, camera_id_string)
       logging.warn('Camera USB ID not located, attempting test anyway.')
       return True
     else:
