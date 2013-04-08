@@ -359,7 +359,7 @@ table + .goofy-history-header {
 #goofy-main {
   left: 0; top: 0;
   width: 100%; height: 100%;
-  background: -webkit-linear-gradient(210deg, #fea9cc, #f654aa);
+  background: -webkit-linear-gradient(210deg, #cddff0, #85b4df);
 }
 #goofy-main-logo {
   opacity: 0.1;
@@ -478,7 +478,7 @@ button {
   left: 0; right: 0; top: 0; bottom: 0;
 }
 .goog-splitpane-handle {
-  background: #f0dff0;
+  background: #cddff0;
   position: absolute;
 }
 .goog-splitpane-handle-horizontal {
