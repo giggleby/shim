@@ -9,6 +9,7 @@
 The main factory flow that runs the factory test and finalizes a device.
 '''
 
+import glob
 import logging
 import os
 import Queue
@@ -21,6 +22,7 @@ import uuid
 from xmlrpclib import Binary
 from collections import deque
 from optparse import OptionParser
+from urlparse import urlparse
 
 import factory_common  # pylint: disable=W0611
 from cros.factory import event_log
@@ -46,7 +48,7 @@ from cros.factory.test.event import EventClient
 from cros.factory.test.event import EventServer
 from cros.factory.test.factory import TestState
 from cros.factory.tools.key_filter import KeyFilter
-from cros.factory.utils.process_utils import Spawn
+from cros.factory.utils.process_utils import Spawn, TerminateOrKillProcess
 
 
 CUSTOM_DIR = os.path.join(factory.FACTORY_PATH, 'custom')
@@ -174,6 +176,9 @@ class Goofy(object):
     exceptions: Exceptions encountered in invocation threads.
     last_log_disk_space_message: The last message we logged about disk space
       (to avoid duplication).
+    last_rsync_log_time: Last time rsync succeeded to upload factory logs.
+    rsync_thread: A daemon thread running rsync factory logs.
+    rsync_thread_stop_event : A thread.Event to stop rsync_thread if timeout.
   '''
   def __init__(self):
     self.uuid = str(uuid.uuid4())
@@ -210,6 +215,9 @@ class Goofy(object):
     self.last_sync_time = None
     self.last_log_disk_space_time = None
     self.last_log_disk_space_message = None
+    self.last_rsync_log_time = None
+    self.rsync_thread = None
+    self.rsync_thread_stop_event = None
     self.exclusive_items = set()
     self.event_log = None
     self.key_filter = None
@@ -1391,6 +1399,61 @@ class Goofy(object):
     except:  # pylint: disable=W0702
       logging.exception('Unable to get disk space used')
 
+  def sync_factory_log(self, shopfloor_timeout=5, rsync_io_timeout=5):
+    '''Rsync factory logs to shopfloor server.
+
+    Set the list of logs to rsync in self.test_list.options.sync_log_paths.
+    '''
+    if not self.test_list.options.sync_log_period_secs:
+      return
+
+    now = time.time()
+    if (self.last_rsync_log_time and now - self.last_rsync_log_time <
+        self.test_list.options.sync_log_period_secs):
+      return
+    self.last_rsync_log_time = now
+
+    # Stops the last rsync thread if it is still running.
+    if self.rsync_thread and self.rsync_thread.isAlive():
+      self.rsync_thread_stop_event.set()
+
+    def Target(stop_event):
+      try:
+        url = (shopfloor.get_server_url() or
+               shopfloor.detect_default_server_url())
+        proxy = shopfloor.get_instance(detect=True,
+                                       timeout=shopfloor_timeout)
+        factory_log_port = proxy.GetFactoryLogPort()
+        folder_name = ('%s_%s' %
+            (event_log.GetDeviceId().replace(':', ''), event_log.GetImageId()))
+        rsync_command = ['rsync', '-azR', '--stats', '--chmod=o-t',
+                         '--timeout=%s' % rsync_io_timeout]
+        self.test_list.options.sync_log_paths = list(set(
+            self.test_list.options.sync_log_paths))
+        rsync_command += sum([glob.glob(x)
+            for x in self.test_list.options.sync_log_paths], [])
+        rsync_command += ['rsync://%s:%s/system_logs/%s' %
+                          (urlparse(url).hostname, factory_log_port,
+                          folder_name)]
+        rsync = Spawn(rsync_command, ignore_stdout=True, ignore_stderr=True)
+        while rsync.poll() is None:
+          stop_event.wait(1)
+          if stop_event.isSet():
+            TerminateOrKillProcess(rsync)
+            logging.warning('Factory log rsync aborted.')
+            return
+        if rsync.returncode:
+          logging.error('Factory log rsync returned status %d',
+                        rsync.returncode)
+      except:  # pylint: disable=W0702
+        logging.exception(
+          'Unable to rsync factory logs to shopfloor server')
+
+    # Starts a new thread to run rsync.
+    self.rsync_thread_stop_event = threading.Event()
+    self.rsync_thread = utils.StartDaemonThread(target=Target,
+        args=(self.rsync_thread_stop_event,))
+
   def sync_time_in_background(self):
     '''Writes out current time and tries to sync with shopfloor server.'''
     if not self.time_sanitizer:
@@ -1444,6 +1507,7 @@ class Goofy(object):
     Spawn("rsync /var/spool/crash/*glbench* /usr/local",
           call=True, shell=True,
           ignore_stdout=True, ignore_stderr=True)
+    self.sync_factory_log()
 
   def handle_event_logs(self, log_name, chunk):
     '''Callback for event watcher.
