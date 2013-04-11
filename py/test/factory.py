@@ -483,6 +483,11 @@ class TestState(object):
     '''
     old_dict = dict(self.__dict__)
 
+    # We have to deploy the factory update bundle on an image without retries.
+    # This is only needed for factory branch.
+    if not hasattr(self, 'retries_left'):
+      self.retries_left = 0
+
     if status:
       self.status = status
     if error_msg is not None:
