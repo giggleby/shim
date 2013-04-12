@@ -16,6 +16,7 @@ import os
 import re
 import serial
 
+
 def OpenSerial(param):
   """Tries to open a serial port.
 
@@ -30,6 +31,14 @@ def OpenSerial(param):
   Raises:
     serial.SerialException if open failed.
   """
+  def _VerifyParam(param):
+    return isinstance(param, (list, tuple)) and len(param) == 6
+
+  if not _VerifyParam(param):
+    raise serial.SerialException(
+      'Param format mismatch, expect (port, baudrate, bytesize, parity, '
+      'stopbits, timeout_secs), actual: %s' % str(param))
+
   ser = None
   (port, baudrate, bytesize, parity, stopbits, timeout) = param
   try:
@@ -42,7 +51,7 @@ def OpenSerial(param):
     param_str = ('(port:%r, baudrate:%d, bytesize:%d, parity:%s, stopbits:%d, '
                  'timeout:%.2f)' % param)
     raise serial.SerialException(
-      'Failed to open serial port: %s.\nReason: %s' % (param_str, e))
+      'Failed to open serial (param: %s).\nReason: %s' % (param_str, str(e)))
 
 
 def FindTtyByDriver(driver_name):

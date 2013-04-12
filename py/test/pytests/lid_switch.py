@@ -39,7 +39,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import serial_utils
 
 _DEFAULT_TIMEOUT = 10
-_SERIAL_TIMEOUT = 1
 
 _MSG_PROMPT_CLOSE = test_ui.MakeLabel(
     'Close then open the lid', u'关上接着打开上盖', 'lid-test-info')
@@ -96,9 +95,8 @@ class LidSwitchTest(unittest.TestCase):
     Arg('lid_open', str, 'A char command to fixture MCU to open the lid.',
         default=chr(0xC3)),
     Arg('serial_param', tuple,
-        'The parameter list of a serial connection we want to use.',
-        default=('/dev/ttyUSB0', 19200, serial.EIGHTBITS, serial.PARITY_NONE,
-                 serial.STOPBITS_ONE , _SERIAL_TIMEOUT)),
+        'The parameter tuple for a serial connection. Refer serial_utils.',
+        default=None),
   ]
 
   def setUp(self):
@@ -122,7 +120,7 @@ class LidSwitchTest(unittest.TestCase):
       try:
         self.serial = serial_utils.OpenSerial(self.args.serial_param)
       except serial.SerialException as e:
-        self.ui.Fail(e)
+        self.ui.Fail('Fail to connect to the SMT fixture. Detail: ' + str(e))
 
     # Create a thread to monitor evdev events.
     self.dispatcher = None
