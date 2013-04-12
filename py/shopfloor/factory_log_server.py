@@ -40,7 +40,8 @@ class FactoryLogServer(object):
       os.mkdir(factory_log_dir)
 
     self._rsyncd = StartRsyncServer(self.rsyncd_port, self._state_dir,
-        [RsyncModule(module='system_logs', path=factory_log_dir, read_only=False)])
+        [RsyncModule(module='system_logs', path=factory_log_dir,
+         read_only=False)])
 
   def Stop(self):
     if self._rsyncd:
