@@ -375,6 +375,10 @@ class Options(object):
       '/var/log/bios_info.txt',
       '/var/log/ec_info.txt']
 
+  # The list of core dump pattern to watch
+  core_dump_watchlist = None
+  _types['core_dump_watchlist'] = (type(None), list)
+
   # The range in which the charge level should be. If min_charge_pct and
   # max_charge_pct are set, Goofy will use ChargeManager to attempt to keep
   # the battery charge within these thresholds.

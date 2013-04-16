@@ -38,6 +38,7 @@ from cros.factory.goofy.prespawner import Prespawner
 from cros.factory.goofy.web_socket_manager import WebSocketManager
 from cros.factory.system.board import Board, BoardException
 from cros.factory.system.charge_manager import ChargeManager
+from cros.factory.system.core_dump_manager import CoreDumpManager
 from cros.factory.system import disk_space
 from cros.factory.test import factory
 from cros.factory.test import state
@@ -191,6 +192,7 @@ class Goofy(object):
     self.event_client = None
     self.connection_manager = None
     self.charge_manager = None
+    self.core_dump_manager = None
     self.time_sanitizer = None
     self.time_synced = False
     self.log_watcher = None
@@ -1235,6 +1237,9 @@ class Goofy(object):
       except BoardException:
         logging.exception('Unable to set charge state on this board')
 
+    self.core_dump_manager = CoreDumpManager(
+        self.test_list.options.core_dump_watchlist)
+
     os.environ['CROS_FACTORY'] = '1'
     os.environ['CROS_DISABLE_SITE_SYSINFO'] = '1'
 
@@ -1447,6 +1452,14 @@ class Goofy(object):
             self.test_list.options.sync_log_paths))
         rsync_command += sum([glob.glob(x)
             for x in self.test_list.options.sync_log_paths], [])
+
+        # Checks if there is any core dump files matching watch list.
+        core_dump_files = self.core_dump_manager.ScanFiles()
+        if core_dump_files:
+          self.event_log.Log('core_dumped', files=core_dump_files)
+          self.log_watcher.ScanEventLogs()
+          rsync_command += core_dump_files
+
         rsync_command += ['rsync://%s:%s/system_logs/%s' %
                           (urlparse(url).hostname, factory_log_port,
                           folder_name)]
@@ -1460,6 +1473,10 @@ class Goofy(object):
         if rsync.returncode:
           logging.error('Factory log rsync returned status %d',
                         rsync.returncode)
+        else:
+          # rsync succeeded, so clear the core dump files.
+          self.core_dump_manager.ClearFiles(core_dump_files)
+
       except:  # pylint: disable=W0702
         logging.exception(
           'Unable to rsync factory logs to shopfloor server')
