@@ -10,7 +10,6 @@ try:
 except ImportError:
   pass
 
-import os
 import logging
 import random
 import time
@@ -224,8 +223,6 @@ class CameraTest(unittest.TestCase):
         default=False),
     Arg('show_image', bool, 'Whether to actually show the image.',
         default=True),
-    Arg('uvcdriver', str, 'Load uvcdriver manually',
-        default=None),
     Arg('camera_usb_ids', list, 'Optional list of tuples, specifying USB IDs '
         ' and how to test that specific camera type.', default=None,
         optional=True),
@@ -291,12 +288,6 @@ class CameraTest(unittest.TestCase):
       self.ui.Fail('Camera test failed due to timeout.')
 
   def setUp(self):
-    if self.args.uvcdriver:
-      os.chdir(os.path.join(os.path.dirname(__file__), '%s_static' %
-                            self.test_info.pytest_name)) # pylint: disable=E1101
-      os.system('rmmod uvcvideo')
-      os.system('insmod %s' % self.args.uvcdriver)
-
     self.camera_device = None
     self.ui = test_ui.UI()
     self.template = OneSection(self.ui)
