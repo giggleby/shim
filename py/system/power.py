@@ -71,7 +71,7 @@ class Power(object):
     # Use median since charge_now is not stable.
     # Check crosbug.com/p/18535
     charge_now = numpy.median(
-        [float(self.GetBatteryAttribute('charge_now')) for _ in xrange(5)])
+        [float(self.GetBatteryAttribute('charge_now')) for _ in xrange(10)])
     if charge_now:
       return int(charge_now) / 1000
     else:
