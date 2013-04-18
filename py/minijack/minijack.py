@@ -90,7 +90,7 @@ class EventList(list):
         logging.exception('Error on parsing the yaml string "%s": %s',
                           event_str, e)
 
-      if event is None:
+      if event is None or 'EVENT' not in event:
         continue
       if event['EVENT'] == 'preamble':
         self.preamble = event
