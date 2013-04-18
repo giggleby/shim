@@ -96,7 +96,7 @@ class LidSwitchTest(unittest.TestCase):
         default=chr(0xC3)),
     Arg('serial_param', tuple,
         'The parameter tuple for a serial connection. Refer serial_utils.',
-        default=None),
+        default=None, optional=True),
   ]
 
   def setUp(self):
