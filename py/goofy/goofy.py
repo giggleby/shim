@@ -1463,6 +1463,15 @@ class Goofy(object):
 
     Set the list of logs to rsync in self.test_list.options.sync_log_paths.
     '''
+    # Remove useless file to save disk space.
+    # TODO(cychiang) Log cleaning function will be merged to FactoryLogManager,
+    # so put this code here just for factory branch.
+    try:
+      if os.path.exists('/var/log/connectivity.bak'):
+        os.unlink('/var/log/connectivity.bak')
+    except:  # pylint: disable=W0702
+      logging.exception('Unable to remove connectivity.bak file')
+
     if not self.test_list.options.sync_log_period_secs:
       return
 
