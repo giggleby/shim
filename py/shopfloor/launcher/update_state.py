@@ -15,6 +15,8 @@ interfaces to query updater state.
 import glob
 import os
 
+import factory_common  # pylint: disable=W0611
+from cros.factory.shopfloor.launcher import constants
 
 FACTORY_DIR = 'factory'
 LATEST_MD5SUM = 'latest.md5sum'
@@ -40,6 +42,7 @@ class FactoryUpdater(object):
     self.factory_dir = os.path.join(state_dir, FACTORY_DIR)
     if not os.path.exists(self.factory_dir):
       os.mkdir(self.factory_dir)
+    self.rsyncd_port = constants.DEFAULT_RSYNC_PORT
 
   @property
   def hwid_path(self):

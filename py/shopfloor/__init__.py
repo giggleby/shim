@@ -116,10 +116,14 @@ class ShopFloorBase(object):
     utils.TryMakeDirs(self.parameters_dir)
     self.parameters_dir = os.path.realpath(self.parameters_dir)
     # Create factory log directory
-    self.factory_log_dir = os.path.join(self.data_dir, FACTORY_LOG_DIR)
-    utils.TryMakeDirs(self.factory_log_dir)
-    self.factory_log_dir = os.path.realpath(self.factory_log_dir)
-    self.log_server = factory_log_server.FactoryLogServer(self.factory_log_dir)
+    if updater is None:
+      self.factory_log_dir = os.path.join(self.data_dir, FACTORY_LOG_DIR)
+      utils.TryMakeDirs(self.factory_log_dir)
+      self.factory_log_dir = os.path.realpath(self.factory_log_dir)
+      self.log_server = factory_log_server.FactoryLogServer(
+          self.factory_log_dir)
+    else:
+      self.log_server = updater
 
   def _StartBase(self):
     """Starts the base class."""

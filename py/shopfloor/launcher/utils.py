@@ -18,7 +18,7 @@ from cros.factory.shopfloor.launcher import ShopFloorLauncherException
 from cros.factory.shopfloor.launcher.yamlconf import LauncherYAMLConfig
 from cros.factory.shopfloor.launcher.http_service import HttpService
 from cros.factory.shopfloor.launcher.fcgi_service import FcgiService
-from cros.factory.shopfloor.launcher.update_service import FactoryUpdateService
+from cros.factory.shopfloor.launcher.rsync_service import RsyncService
 
 
 # Launcher config holds the dictionary deserialized from YAML config file
@@ -42,19 +42,18 @@ def StopServices():
 
 def UpdateConfig(yaml_config_file):
   """Loads new launcher config file and restarts all services."""
-  global _launcher_services
   global _launcher_config
+  global _launcher_services
   StopServices()
-  _launcher_config = LauncherYAMLConfig(  # pylint: disable=W0621
-      yaml_config_file)
-  _launcher_services = GenerateServices()  # pylint: disable=W0621
+  _launcher_config = LauncherYAMLConfig(yaml_config_file)
+  _launcher_services = GenerateServices()
   StartServices()
 
 def GenerateServices():
   """Generates service list."""
   global _launcher_config
   return [FcgiService(_launcher_config), HttpService(_launcher_config),
-          FactoryUpdateService(_launcher_config)]
+          RsyncService(_launcher_config)]
 
 def SearchFile(filename, folders):
   """Gets first match of filename in folders.
