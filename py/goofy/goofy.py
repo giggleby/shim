@@ -934,7 +934,7 @@ class Goofy(object):
           self._run_test(t)
 
     if test_completed:
-      self.log_watcher.ScanEventLogs()
+      self.log_watcher.KickWatchThread()
 
     if (self.visible_test is None or
         self.visible_test not in self.invocations):
@@ -1446,7 +1446,7 @@ class Goofy(object):
                     'bytes_used_pct': FloatDigit(encrypted.bytes_used_pct, 2),
                     'inodes_used_pct': FloatDigit(encrypted.inodes_used_pct, 2)}
             })
-        self.log_watcher.ScanEventLogs()
+        self.log_watcher.KickWatchThread()
 
       message = disk_space.FormatSpaceUsedAll(vfs_infos)
       if message != self.last_log_disk_space_message:
@@ -1505,7 +1505,7 @@ class Goofy(object):
         core_dump_files = self.core_dump_manager.ScanFiles()
         if core_dump_files:
           self.event_log.Log('core_dumped', files=core_dump_files)
-          self.log_watcher.ScanEventLogs()
+          self.log_watcher.KickWatchThread()
           rsync_command += core_dump_files
 
         rsync_command += ['rsync://%s:%s/system_logs/%s' %
