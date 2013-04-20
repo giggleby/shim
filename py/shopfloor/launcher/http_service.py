@@ -75,7 +75,7 @@ class HttpService(ServiceBase):
         # Blocks section, keep the order
         'alias.url': {'/res': env.GetResourcesDir()},
         'fastcgi.server': {
-            '/xmlrpc': [{
+            '/': [{
                 'host': '127.0.0.1',
                 'port': env.fcgi_port,
                 'check-local': 'disable' }]}}
