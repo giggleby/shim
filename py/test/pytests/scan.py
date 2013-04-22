@@ -5,7 +5,9 @@
 
 import logging
 import re
+import serial
 import socket
+import threading
 import unittest
 
 
@@ -18,6 +20,7 @@ from cros.factory.test import ui_templates
 from cros.factory.test import utils
 from cros.factory.test.args import Arg
 from cros.factory.test.event import Event
+from cros.factory.utils import serial_utils
 
 
 class Scan(unittest.TestCase):
@@ -43,6 +46,18 @@ class Scan(unittest.TestCase):
         'Regexp that the scanned value must match', optional=True),
     Arg('check_device_data_key', str,
         'Checks that the given value in device data matches the scanned value',
+        optional=True),
+    Arg('barcode_command', str,
+        'A one-char serial command for triggering barcode scanner.',
+        optional=True),
+    Arg('fixture_id_command', str,
+        'A one-char serial command for getting fixture ID.',
+        optional=True),
+    Arg('command_delay_secs', (int, float),
+        'Number of seconds to execute command after ui.Run().',
+        default=0.5),
+    Arg('serial_param', tuple,
+        'The parameter tuple for a serial connection. Refer serial_utils.',
         optional=True),
   ]
 
@@ -137,8 +152,77 @@ class Scan(unittest.TestCase):
     self.ui.event_client.post_event(Event(Event.Type.UPDATE_SYSTEM_INFO))
     self.ui.Pass()
 
+  def _InitSerial(self):
+    try:
+      self._serial = serial_utils.OpenSerial(self.args.serial_param)
+    except serial.SerialException as e:
+      self.fail('Fail to connect to the SMT fixture. Detail: ' + str(e))
+
+  def _CommandFixture(self, command):
+    """Issues command to fixture.
+
+    Args:
+      command: a byte.
+
+    Returns:
+      A one-char fixture response.
+      None if timeout or other SerialException occurs.
+    """
+    result = None
+    try:
+      logging.info('Command fixture: 0x%X', ord(command))
+      self._serial.write(command)
+      # Consume response.
+      result = self._serial.read(1)
+    except serial.SerialException:
+      return None
+    return result
+
+  def _DelayAutoScan(self, scan_command, send_event=False):
+    """Issues auto scan command with a delay.
+
+    It gets scan value from test fixture. To wait for UI.run, it waits
+    self._command_delay_secs before sending the command. If the fixture
+    triggers barcode scanner, which returns Enter followed by the
+    value it scans, we don't need to send_event.
+
+    Args:
+      scan_command: A one-char command to get a scan value from test
+          fixture.
+      send_event: True to send test event 'scan_value'.
+    """
+    def AutoScan():
+      response = self._CommandFixture(scan_command)
+      self.assertTrue(response is not None,
+                      'Fail to scan value using fixture.')
+      if send_event:
+        scan_value = ord(response[0])
+        self.ui.RunJS(
+            'window.test.sendTestEvent("scan_value","%d")' % scan_value)
+
+    self._auto_scan_timer = threading.Timer(self._command_delay_secs,
+                                            AutoScan)
+    self._auto_scan_timer.start()
+
   def setUp(self):
     self.ui = test_ui.UI()
+
+    # command's default: None
+    self._barcode_command = self.args.barcode_command
+    self._fixture_id_command = self.args.fixture_id_command
+
+    self._command_delay_secs = self.args.command_delay_secs
+    self._auto_scan_timer = None
+
+    self._serial = None
+    self._InitSerial()
+
+  def tearDown(self):
+    if self._serial is not None:
+      self._serial.close()
+
+    if self._auto_scan_timer is not None:
+      self._auto_scan_timer.cancel()
 
   def runTest(self):
     template = ui_templates.OneSection(self.ui)
@@ -164,4 +248,14 @@ class Scan(unittest.TestCase):
         ('window.test.sendTestEvent("scan_value",'
          'document.getElementById("scan-value").value)'))
     self.ui.AddEventHandler('scan_value', self.HandleScanValue)
+
+    if self._barcode_command:
+      logging.info('Triggering barcode scanner...')
+      self._DelayAutoScan(self._barcode_command)
+
+    if self._fixture_id_command:
+      logging.info('Getting fixture ID...')
+      self._DelayAutoScan(self._fixture_id_command,
+                          send_event=True)
+
     self.ui.Run()
