@@ -68,7 +68,7 @@ class ChargerTest(unittest.TestCase):
     self.assertTrue(start_charge, 'Error getting battery state.')
     target_charge = self.args.target_charge_pct
     if self.args.target_charge_pct_is_delta is True:
-      target_charge = min(target_charge + start_charge, 100)
+      target_charge = min(target_charge + start_charge, 80)
     if start_charge >= target_charge:
       return
     self._ec.SetChargeState(EC.ChargeState.CHARGE)
