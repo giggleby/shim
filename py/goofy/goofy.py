@@ -1472,6 +1472,12 @@ class Goofy(object):
     except:  # pylint: disable=W0702
       logging.exception('Unable to remove connectivity.bak file')
 
+    # Checks if there is any core dump files matching watch list.
+    core_dump_files = self.core_dump_manager.ScanFiles()
+    if core_dump_files:
+      self.event_log.Log('core_dumped', files=core_dump_files)
+      self.log_watcher.KickWatchThread()
+
     if not self.test_list.options.sync_log_period_secs:
       return
 
@@ -1501,11 +1507,7 @@ class Goofy(object):
         rsync_command += sum([glob.glob(x)
             for x in self.test_list.options.sync_log_paths], [])
 
-        # Checks if there is any core dump files matching watch list.
-        core_dump_files = self.core_dump_manager.ScanFiles()
         if core_dump_files:
-          self.event_log.Log('core_dumped', files=core_dump_files)
-          self.log_watcher.KickWatchThread()
           rsync_command += core_dump_files
 
         rsync_command += ['rsync://%s:%s/system_logs/%s' %
