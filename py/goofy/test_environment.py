@@ -84,24 +84,9 @@ class DUTEnvironment(Environment):
   '''
   def shutdown(self, operation):
     assert operation in ['reboot', 'halt']
-
-    try:
-      is_mmc16g = open('/sys/class/block/mmcblk0/device/name'
-                         ).read().strip() == 'MMC16G'
-    except:
-      logging.exception('Unable to set is_mmc16g')
-      is_mmc16g = False
-
-    logging.info('Shutting down: %s (is_mmc16g=%s)', operation, is_mmc16g)
+    logging.info('Shutting down: %s', operation)
     subprocess.check_call('sync')
-
-    if is_mmc16g and operation == 'reboot':
-      logging.info('is_mmc16g is true: doing cold reboot')
-      subprocess.check_call('sync')
-      subprocess.check_call(['ectool', 'reboot_ec', 'cold'])
-    else:
-      subprocess.check_call(operation)
-
+    subprocess.check_call(operation)
     time.sleep(30)
     assert False, 'Never reached (should %s)' % operation
 
