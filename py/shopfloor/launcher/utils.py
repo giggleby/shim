@@ -19,6 +19,7 @@ from cros.factory.shopfloor.launcher.yamlconf import LauncherYAMLConfig
 from cros.factory.shopfloor.launcher.http_service import HttpService
 from cros.factory.shopfloor.launcher.fcgi_service import FcgiService
 from cros.factory.shopfloor.launcher.rsync_service import RsyncService
+from cros.factory.shopfloor.launcher.mjack_service import MinijackService
 
 
 # Launcher config holds the dictionary deserialized from YAML config file
@@ -53,7 +54,7 @@ def GenerateServices():
   """Generates service list."""
   global _launcher_config
   return [FcgiService(_launcher_config), HttpService(_launcher_config),
-          RsyncService(_launcher_config)]
+          RsyncService(_launcher_config), MinijackService(_launcher_config)]
 
 def SearchFile(filename, folders):
   """Gets first match of filename in folders.
