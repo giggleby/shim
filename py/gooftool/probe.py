@@ -444,7 +444,16 @@ def _ProbeCamera():
         info.append('V4L2:%04x %04x' % (v4l2_ident, buf[V4L2_INDEX_REVISION]))
   except:  # pylint: disable=W0702
     pass
-  return [CompactStr(info)] if info else []
+  #return [CompactStr(info)] if info else []
+  result = CompactStr(info)
+  if not result:
+    return []
+  else:
+    result = result.split(' ')
+    if re.match(r'[0-9A-Za-z]{23}', result[1]):
+      return [' '.join([result[0]] + result[2:])]
+    else:
+      return [' '.join(result)]
 
 
 @_ComponentProbe('cellular')
@@ -541,14 +550,17 @@ def _ProbeDram():
   """Combine mosys memory timing and geometry information."""
   # TODO(tammo): Document why mosys cannot load i2c_dev itself.
   _LoadKernelModule('i2c_dev')
-  vendor_data = Shell('mosys -k memory spd print id').stdout
-  time_data = Shell('mosys -k memory spd print timings').stdout
-  size_data = Shell('mosys -k memory spd print geometry').stdout
-  vendor = dict(re.findall('dimm="([^"]*)".*module_mfg="([^"]*)"', vendor_data))
+  mosys = '/usr/local/factory/bin/mosys'
+  if not os.path.exists(mosys):
+    mosys = 'mosys'
+  part_data = Shell('%s -k memory spd print id' % mosys).stdout
+  time_data = Shell('%s -k memory spd print timings' % mosys).stdout
+  size_data = Shell('%s -k memory spd print geometry' % mosys).stdout
+  part = dict(re.findall('dimm="([^"]*)".*part_number="([^"]*)"', part_data))
   times = dict(re.findall('dimm="([^"]*)".*speeds="([^"]*)"', time_data))
   sizes = dict(re.findall('dimm="([^"]*)".*size_mb="([^"]*)"', size_data))
   return [CompactStr([
-      '%s|%s|%s|%s' % (i, vendor[i], sizes[i], times[i].replace(' ', ''))
+      '%s|%s|%s|%s' % (i, part[i], sizes[i], times[i].replace(' ', ''))
       for i in sorted(times)])]
 
 
