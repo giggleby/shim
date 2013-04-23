@@ -89,6 +89,7 @@ class SerialEchoTest(unittest.TestCase):
       if self._recv is not None:
         self.assertEqual(
             self._recv, response,
-            self.args.fail_message + ' Received a mismatched response.')
+            '%s Response mismatch; expect: 0x%X, actual: 0x%X.' % (
+                self.args.fail_message, ord(self._recv), ord(response)))
     except serial.SerialTimeoutException:
       self.fail(self.args.fail_message + ' Timeout receiving a response.')

@@ -180,7 +180,7 @@ class SerialEchoUnittest(unittest.TestCase):
 
     self.SetUpTestCase(self._DEFAULT_DARGS)
     self.RunTestCase()
-    self.HasFailure('Received a mismatched response.',
+    self.HasFailure('Response mismatch',
                     'Unable to handle read failure.')
 
   def testWriteTimeout(self):
