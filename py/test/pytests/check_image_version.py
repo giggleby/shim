@@ -37,7 +37,7 @@ _MSG_VERSION_MISMATCH = test_ui.MakeLabel(
     u'映像版本不正确，请重新安装。',
     'start-font-size test-error')
 _MSG_NETWORK = test_ui.MakeLabel(
-    'Press connect to ethernet.',
+    'Please connect to ethernet.',
     u'请连接到以太网。')
 _MSG_NETBOOT = test_ui.MakeLabel(
     'Factory image version is incorrect. Press space to re-image.',
