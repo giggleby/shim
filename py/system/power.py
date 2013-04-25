@@ -7,6 +7,7 @@
 import glob
 import numpy
 import os
+import time
 
 from cros.factory.test.utils import Enum, ReadOneLine
 
@@ -68,14 +69,21 @@ class Power(object):
 
   def GetCharge(self):
     '''Get current charge level in mAh.'''
-    # Use median since charge_now is not stable.
-    # Check crosbug.com/p/18535
-    charge_now = numpy.median(
-        [float(self.GetBatteryAttribute('charge_now')) for _ in xrange(10)])
+    charge_now = self.GetBatteryAttribute('charge_now')
     if charge_now:
       return int(charge_now) / 1000
     else:
       return None
+
+  def GetChargeMedian(self, read_count=10):
+    '''Read charge level several times and return the median.'''
+    charge_nows = []
+    for _ in xrange(read_count):
+      charge_now = self.GetCharge()
+      if charge_now:
+        charge_nows.append(charge_now)
+      time.sleep(0.1)
+    return numpy.median(charge_nows)
 
   def GetChargeFull(self):
     '''Get full charge level in mAh.'''
