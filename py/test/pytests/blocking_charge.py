@@ -47,6 +47,8 @@ class ChargerTest(unittest.TestCase):
       Arg('target_charge_pct_is_delta', bool,
           'Specify target_charge_pct is a delta of current charge',
           default=False),
+      Arg('max_charge_pct', int, 'Maximum charge level',
+          default=100),
       Arg('timeout_secs', int, 'Maximum allowed time to charge battery',
           default=3600),
       ]
@@ -68,7 +70,8 @@ class ChargerTest(unittest.TestCase):
     self.assertTrue(start_charge, 'Error getting battery state.')
     target_charge = self.args.target_charge_pct
     if self.args.target_charge_pct_is_delta is True:
-      target_charge = min(target_charge + start_charge, 80)
+      target_charge = min(target_charge + start_charge,
+                          self.args.max_charge_pct)
     if start_charge >= target_charge:
       return
     self._ec.SetChargeState(EC.ChargeState.CHARGE)
