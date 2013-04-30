@@ -12,9 +12,12 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.gooftool import Gooftool
 from cros.factory.gooftool import Mismatch
 from cros.factory.gooftool import ProbedComponentResult
+from cros.factory.test import shopfloor
 from cros.factory.test.pytests import verify_components
 from cros.factory.test.pytests.verify_components import CheckComponentsTask
 from cros.factory.test.pytests.verify_components import VerifyAnyBOMTask
+from cros.factory.test.pytests.verify_components import (
+  CheckAuxTableComponentsTask)
 from cros.factory.test.ui_templates import OneSection
 
 class VerifyComponentsUnitTest(unittest.TestCase):
@@ -25,6 +28,7 @@ class VerifyComponentsUnitTest(unittest.TestCase):
     self._mock_test = self._mox.CreateMock(
         verify_components.VerifyComponentsTest)
     self._mock_test.gooftool = self._mox.CreateMock(Gooftool)
+    self._mock_shopfloor = self._mox.CreateMock(shopfloor)
     self._mock_test.template = self._mox.CreateMock(OneSection)
     self._mock_test.board = "BENDER"
 
@@ -130,6 +134,77 @@ class VerifyComponentsUnitTest(unittest.TestCase):
     self._mox.ReplayAll()
     task.Run()
 
+  def testCheckAuxTableComponentsTaskPass(self):
+    task = CheckAuxTableComponentsTask(self._mock_test,
+                                       self._mock_shopfloor,
+                                       'bom', ['storage', 'cpu'])
+    self._StubPassFail(task)
+    self._mock_test.probed_results = (
+        {'storage':[ProbedComponentResult('storage_1', 'STORAGE_1', None)],
+         'cpu':[ProbedComponentResult('cpu_1', 'CPU_1', None)]})
+
+    self._mock_test.template.SetState(mox.IsA(unicode))
+
+    self._mock_shopfloor.get_selected_aux_data(
+        'bom').MultipleTimes().AndReturn(
+           {'storage': 'storage_1', 'cpu': 'cpu_1'})
+
+    task.Pass()
+
+    self._mox.ReplayAll()
+    task.Run()
+
+  def testCheckAuxTableComponentsTaskUnexpectedValueFail(self):
+    task = CheckAuxTableComponentsTask(self._mock_test,
+                                       self._mock_shopfloor,
+                                       'bom', ['storage', 'cpu'])
+    self._StubPassFail(task)
+    self._mock_test.probed_results = (
+        {'storage':[ProbedComponentResult('storage_1', 'STORAGE_1', None)],
+         'cpu':[ProbedComponentResult('cpu_1', 'CPU_1', None)]})
+
+    self._mock_test.template.SetState(mox.IsA(unicode))
+
+    self._mock_shopfloor.get_selected_aux_data(
+        'bom').MultipleTimes().AndReturn(
+           {'storage': 'storage_2', 'cpu': 'cpu_1'})
+
+    task.Fail(mox.IsA(str))
+
+    self._mox.ReplayAll()
+    task.Run()
+
+  def testCheckAuxTableComponentsTaskNoneValueFail(self):
+    task = CheckAuxTableComponentsTask(self._mock_test,
+                                       self._mock_shopfloor,
+                                       'bom', ['storage', 'cpu'])
+    self._StubPassFail(task)
+
+    self._mock_test.template.SetState(mox.IsA(unicode))
+
+    self._mock_shopfloor.get_selected_aux_data(
+        'bom').MultipleTimes().AndReturn(
+           {'touchpad': 'touchpad_1', 'tpm': 'tpm_1'})
+
+    task.Fail(mox.IsA(str))
+
+    self._mox.ReplayAll()
+    task.Run()
+
+  def testCheckAuxTableComponentsTaskNoAuxTableFail(self):
+    task = CheckAuxTableComponentsTask(self._mock_test,
+                                       self._mock_shopfloor,
+                                       'no-table', ['storage', 'cpu'])
+    self._StubPassFail(task)
+
+    self._mock_test.template.SetState(mox.IsA(unicode))
+
+    self._mock_shopfloor.get_selected_aux_data('no-table').AndRaise(ValueError)
+
+    task.Fail(mox.IsA(str))
+
+    self._mox.ReplayAll()
+    task.Run()
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)
