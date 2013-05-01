@@ -184,6 +184,16 @@ def ProbeHwid(options):
       if keyboard_list[kbd] == ro_vpd['keyboard_layout']:
         component_map['keyboard'] = kbd
 
+    # Parrot factory specific request to differentiate SKU (to determine
+    # HWID) by probing custom components in RO VPD.
+    if 'custom' not in ro_vpd.keys():
+      component_map['custom'] = 'none'
+    else:
+      custom_list = hwdb.comp_db.registry['custom']
+      for ctm in custom_list.keys():
+        if custom_list[ctm] == ro_vpd['custom']:
+          component_map['custom'] = ctm
+
   if options.comp_map:
     input_map = YamlRead(sys.stdin.read())
     logging.info('stdin component map: %r', input_map)
