@@ -23,3 +23,10 @@ class PitBoard(ChromeOSBoard):
 
   def GetTemperatureSensorNames(self):
     return ['CPU']
+
+  def SetChargeState(self, state):
+    #TODO: Add an actual SetChargeState implementation
+    logging.info('SetChargeState: Non-functional. See crosbug.com/p/19417')
+
+  def GetChargerCurrent(self):
+    raise NotImplementedError
