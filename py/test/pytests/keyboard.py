@@ -11,7 +11,8 @@ dargs:
       VPD)
   keyboard_device_name: Device name of keyboard. (default: 'AT Translated Set 2
       keyboard')
-  keyboard_event_id: Keyboard input event id. (default: 6)
+  keyboard_event_path: Keyboard input event path.
+      (default: platform-i8042-serio-0-event-kbd)
   timeout_secs: Timeout for the test. (default: 30 seconds)
   key_order_list: (optional) A list of keycodes that need to be pressed
       sequentially to pass the test.
@@ -57,8 +58,8 @@ class KeyboardTest(unittest.TestCase):
         'from VPD.', default=None, optional=True),
     Arg('keyboard_device_name', (str, unicode), 'Device name of keyboard.',
         default='AT Translated Set 2 keyboard'),
-    Arg('keyboard_event_id', int, 'Keyboard input event id.',
-        default=6),
+    Arg('keyboard_event_path', str, 'Keyboard input event path.',
+        default='platform-i8042-serio-0-event-kbd'),
     Arg('timeout_secs', int, 'Timeout for the test.', default=30),
     Arg('key_order_list', list, 'A list of keycodes that need to be pressed '
         'sequentially to pass the test.', default=None, optional=True),
@@ -122,8 +123,8 @@ class KeyboardTest(unittest.TestCase):
 
   def MonitorEvtest(self):
     """Monitors keyboard events from output of evtest."""
-    self.monitor_process = Spawn(['evtest', '/dev/input/event%d' % (
-                                  self.args.keyboard_event_id)],
+    self.monitor_process = Spawn(['evtest', '/dev/input/by-path/%s' % (
+                                  self.args.keyboard_event_path)],
                                  stdout=subprocess.PIPE)
     while True:
       re_obj = _RE_EVTEST_EVENT.search(self.monitor_process.stdout.readline())
