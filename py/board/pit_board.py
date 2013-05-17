@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import factory_common  # pylint: disable=W0611
+import logging
 
 from cros.factory.board.chromeos_board import ChromeOSBoard
 
