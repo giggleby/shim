@@ -66,11 +66,10 @@ class RsyncService(ServiceBase):
           path=update_bundle_path,
           read_only='yes')
       if 'update_bundle' in config['updater']:
-        self._PrepareUpdateBundle(os.path.join(env.GetUpdatesDir(),
+        self._PrepareUpdateBundle(os.path.join(env.GetResourcesDir(),
                                   config['updater']['update_bundle']))
       if 'hwid_bundle' in config['updater']:
-        self._PrepareHwidBundle(os.path.join(env.GetUpdatesDir(),
-                                config['updater']['hwid_bundle']))
+        self._PrepareHwidBundle(config['updater']['hwid_bundle'])
     else:
       latest_md5file = os.path.join(update_bundle_path, LATEST_MD5FILE)
       if os.path.isfile(latest_md5file):
@@ -115,7 +114,8 @@ class RsyncService(ServiceBase):
     bundle_md5sum = Md5sum(bundle)
     dest_dir = os.path.join(bundle_dir, bundle_md5sum)
     if not os.path.isfile(os.path.join(dest_dir, 'factory', 'MD5SUM')):
-      shutil.rmtree(dest_dir)
+      if os.path.isdir(dest_dir):
+        shutil.rmtree(dest_dir)
       TryMakeDirs(dest_dir)
       logging.info('Stagging into %s', dest_dir)
       try:
@@ -130,8 +130,8 @@ class RsyncService(ServiceBase):
       f.write(bundle_md5sum)
 
   def _PrepareHwidBundle(self, bundle):
-    os.symlink(bundle, os.path.join(env.GetUpdatesDir(),
-               os.path.basename(bundle)[0:-9]))
+    os.symlink(os.path.join(env.GetResourcesDir(), bundle),
+               os.path.join(env.GetUpdatesDir(), bundle[0:-9]))
 
 
 Service = RsyncService
