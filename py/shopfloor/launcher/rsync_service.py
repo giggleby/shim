@@ -66,8 +66,7 @@ class RsyncService(ServiceBase):
           path=update_bundle_path,
           read_only='yes')
       if 'update_bundle' in config['updater']:
-        self._PrepareUpdateBundle(os.path.join(env.GetResourcesDir(),
-                                  config['updater']['update_bundle']))
+        self._PrepareUpdateBundle(config['updater']['update_bundle'])
       if 'hwid_bundle' in config['updater']:
         self._PrepareHwidBundle(config['updater']['hwid_bundle'])
     else:
@@ -100,6 +99,7 @@ class RsyncService(ServiceBase):
     self.SetConfig(svc_conf)
 
   def _PrepareUpdateBundle(self, bundle):
+    bundle_file = os.path.join(env.GetResourcesDir(), bundle)
     bundle_dir = os.path.join(env.GetUpdatesDir(), 'factory')
     latest_md5file = os.path.join(bundle_dir, LATEST_MD5FILE)
     latest_md5sum = None
@@ -119,7 +119,7 @@ class RsyncService(ServiceBase):
       TryMakeDirs(dest_dir)
       logging.info('Stagging into %s', dest_dir)
       try:
-        subprocess.check_call(['tar', '-xjf', bundle, '-C', dest_dir])
+        subprocess.check_call(['tar', '-xjf', bundle_file, '-C', dest_dir])
       except subprocess.CalledProcessError as e:
         logging.exception('Failed to extract update bundle %s to %s',
                           bundle, dest_dir)
