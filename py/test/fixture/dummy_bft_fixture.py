@@ -53,6 +53,9 @@ class DummyBFTFixture(BFTFixture):
   def IsLEDColor(self, unused_color):  # pylint: disable=W0613
     return True
 
+  def SetStatusColor(self, unused_color):
+    pass
+
   @property
   def delay_secs(self):
     return self._delay_secs

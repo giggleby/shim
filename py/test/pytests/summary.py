@@ -31,12 +31,14 @@ dargs:
     stop/abort the test.
 '''
 
+import logging
 import unittest
 
 import factory_common  # pylint: disable=W0611
 from cros.factory.test.args import Arg
 from cros.factory.test import factory
 from cros.factory.test import test_ui
+from cros.factory.test.fixture import bft_fixture
 
 CSS = '''
 table {
@@ -53,7 +55,15 @@ class Report(unittest.TestCase):
   ARGS = [
     Arg('disable_input_on_fail', bool,
         'Disable user input to pass/fail when the overall status is not PASSED',
-        default=False)]
+        default=False),
+    Arg('bft_fixture', dict,
+        ('BFT fixture arguments (see bft_fixture test).  If provided, then a '
+         'red/green light is lit to indicate failure/success rather than '
+         'showing the summary on-screen.  The test does not fail if unable '
+         'to connect to the BFT fixture.'),
+        optional=True),
+    ]
+
   def runTest(self):
     test_list = self.test_info.ReadTestList()
     test = test_list.lookup_path(self.test_info.path)
@@ -102,6 +112,17 @@ class Report(unittest.TestCase):
     # can only pass the test.
     elif overall_status == factory.TestState.PASSED:
       ui.BindStandardKeys(bind_fail_keys=False)
+
+    if self.args.bft_fixture:
+      try:
+        fixture = bft_fixture.CreateBFTFixture(**self.args.bft_fixture)
+        fixture.SetStatusColor(
+            fixture.StatusColor.GREEN
+            if overall_status == factory.TestState.PASSED
+            else fixture.StatusColor.RED)
+        fixture.Disconnect()
+      except bft_fixture.BFTFixtureException:
+        logging.exception('Unable to set status color on BFT fixture')
 
     ui.SetHTML(''.join(html))
     ui.Run()

@@ -26,6 +26,7 @@ class BFTFixture(object):
   """
 
   LEDColor = Enum(['RED', 'GREEN', 'AMBER', 'OFF'])
+  StatusColor = Enum(['RED', 'GREEN'])
   Device = Enum(['AC_ADAPTER', 'AUDIO_JACK', 'EXT_DISPLAY', 'LID_MAGNET',
                  'USB_0', 'USB_1', 'USB_2'])
 
@@ -113,6 +114,14 @@ class BFTFixture(object):
 
     Returns:
       True if LED's color is correct; False otherwise.
+    """
+    raise NotImplementedError
+
+  def SetStatusColor(self, color):
+    """Sets the fixture's status indicator to a given color.
+
+    Args:
+      color: color defined in StatusColor.
     """
     raise NotImplementedError
 
