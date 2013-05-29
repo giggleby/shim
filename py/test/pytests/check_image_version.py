@@ -84,8 +84,8 @@ class ImageCheckTask(FactoryTask):
     self._test.template.SetState(_MSG_REIMAGING)
     try:
       Spawn(['/usr/local/factory/bin/flash_netboot', '-y'] +
-            ['-i', self._test.args.netboot_fw]
-            if self._test.args.netboot_fw else [],
+            (['-i', self._test.args.netboot_fw]
+             if self._test.args.netboot_fw else []),
             check_call=True, log=True, log_stderr_on_error=True)
       Spawn(['reboot'])
     except: # pylint: disable=W0702
