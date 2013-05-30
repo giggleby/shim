@@ -252,6 +252,10 @@ class GoofyRPC(object):
     '''Posts an event.'''
     self.goofy.event_client.post_event(event)
 
+  def StopTest(self):
+    '''Stops current tests.'''
+    self.PostEvent(Event(Event.Type.STOP))
+
   def RunTest(self, path):
     '''Runs a test.'''
     self.PostEvent(Event(Event.Type.RESTART_TESTS,
