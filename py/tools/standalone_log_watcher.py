@@ -10,14 +10,20 @@ import time
 import traceback
 
 import factory_common  # pylint: disable=W0611
-from cros.factory.utils.process_utils import Spawn
+from cros.factory.utils.process_utils import Spawn, CheckOutput
 
 DEFAULT_LOG_PATH = '/var/log/messages'
 WATCH_FOR = 'EMI?'
 
 ACTION_MSG = 'Please stop testing and call a factory team member to investigate'
+OUTPUT_TRIGGER_ACTION_MSG = 'Please unplug and plug the charger, reboot, rerun.'
+
+COMMAND = 'ectool powerinfo'
+OUTPUT_WATCH_FOR = 'USB Device Type: 0x60000'
+OUTPUT_TRIGGER_TIME = 3
 
 COLOR_RED = '\033[1;31m'
+COLOR_YELLOW = '\033[1;33m'
 
 class StandaloneLogWatcher(object):
 
@@ -25,24 +31,34 @@ class StandaloneLogWatcher(object):
                log_path=DEFAULT_LOG_PATH,
                watch_str=WATCH_FOR,
                action_str=ACTION_MSG,
+               command=COMMAND,
+               output_watch_str=OUTPUT_WATCH_FOR,
+               output_trigger_times=OUTPUT_TRIGGER_TIME,
+               output_trigger_action_str=OUTPUT_TRIGGER_ACTION_MSG,
                watch_period_sec=10):
     self._watch_period_sec = watch_period_sec
     self._log_path = log_path
     self._watch_str = watch_str
     self._action_str = action_str
     self._last_size = None
-    self._exception_caught = False
+    self._command = command
+    self._output_watch_str = output_watch_str
+    self._output_trigger_times = output_trigger_times
+    self._output_trigger_count = 0
+    self._output_trigger_action_str = output_trigger_action_str
+    self._exception_caught_scan = False
+    self._exception_caught_command = False
 
-  def Alert(self, msg, die=True):
+  def Alert(self, msg, action=None, color=COLOR_RED, die=True):
     if die:
       Spawn(['goofy_rpc', 'StopTest()'], call=True)
       time.sleep(2)
       Spawn(['chvt', '4'], call=True)
       with open('/dev/tty4', 'w') as f:
-        f.write(COLOR_RED)
+        f.write(color)
         mark_line = '!' * 80 + '\n'
         f.writelines([mark_line, mark_line, msg + '\n\n',
-                      self._action_str + '\n', mark_line, mark_line])
+                      (action if action else '') + '\n', mark_line, mark_line])
     else:
       with open('/var/factory/log/factory.log', 'w') as f:
         f.write(msg + '\n')
@@ -63,20 +79,43 @@ class StandaloneLogWatcher(object):
           f.seek(seek_pos)
           s = f.read(read_size)
         if self._watch_str in s:
-          self.Alert('Found "%s" in %s.' % (self._watch_str, self._log_path))
+          self.Alert('Found "%s" in %s.' % (self._watch_str, self._log_path),
+                     self._action_str)
         self._last_size = log_size
     except: # pylint: disable=W0702
       # Only reports the first exception caught
-      if not self._exception_caught:
+      if not self._exception_caught_scan:
         self.Alert('StandaloneLogWatcher: %s' %
                    traceback.format_exc().replace('\n', '|'),
                    die=False)
-        self._exception_caught = True
+        self._exception_caught_scan = True
+      return
+
+  def CheckCommand(self):
+    try:
+      output = CheckOutput(self._command.split(' '))
+      if self._output_watch_str in output:
+        self._output_trigger_count += 1
+        if self._output_trigger_count == self._output_trigger_times:
+          self.Alert(('Found "%s" in %s output:\n%s for %d times.' %
+              (self._output_watch_str, self._command, output,
+               self._output_trigger_count)), self._output_trigger_action_str,
+              color=COLOR_YELLOW)
+      else:
+        self._output_trigger_count = 0
+    except: # pylint: disable=W0702
+      # Only reports the first exception caught
+      if not self._exception_caught_command:
+        self.Alert('StandaloneLogWatcher: %s' %
+                   traceback.format_exc().replace('\n', '|'),
+                   die=False)
+        self._exception_caught_command = True
       return
 
   def WatchForever(self):
     while True:
       self.ScanNewLogLines()
+      self.CheckCommand()
       time.sleep(self._watch_period_sec)
 
 def main():
@@ -89,10 +128,28 @@ def main():
                       help='String to watch for')
   parser.add_argument('--action_str', '-a', default=ACTION_MSG,
                       help='String to display in error message')
+  parser.add_argument('--command', '-c', default=COMMAND,
+                      help='The command to check its output')
+  parser.add_argument('--output_watch_str', '-p', default=OUTPUT_WATCH_FOR,
+                      help='The pattern to check in command output')
+  parser.add_argument('--output_trigger_times', '-t',
+                      default=OUTPUT_TRIGGER_TIME,
+                      help='The consecutive times to trigger alert for checking'
+                           ' command output')
+  parser.add_argument('--output_trigger_action_str', '-o',
+                      default=OUTPUT_TRIGGER_ACTION_MSG,
+                      help='String to display in error message when alert is '
+                           'triggered by command output')
   args = parser.parse_args()
-  watcher = StandaloneLogWatcher(log_path=args.log_path,
-                                 watch_str=args.watch_str,
-                                 action_str=args.action_str)
+  watcher = StandaloneLogWatcher(
+      log_path=args.log_path,
+      watch_str=args.watch_str,
+      action_str=args.action_str,
+      command=args.command,
+      output_watch_str=args.output_watch_str,
+      output_trigger_times=args.output_trigger_times,
+      output_trigger_action_str=args.output_trigger_action_str)
+
   watcher.WatchForever()
 
 if __name__ == '__main__':
