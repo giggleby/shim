@@ -12,11 +12,15 @@ import yaml
 
 
 # The following YAML strings needs further handler. So far we just simply
-# remove them. It works well now, while tuples are treated as lists, unicodes
-# are treated as strings, objects are dropped.
-# TODO(waihong): Use yaml.add_multi_constructor to handle them.
+# remove them. It works well now, while tuples are treated as lists, unicodes/
+# names are treated as strings, and objects are treated as dicts.
 YAML_STR_BLACKLIST = (
-    r'( !!python/tuple| !!python/unicode| !!python/object[A-Za-z_.:/]+)')
+    r'( !!python/tuple'
+    r'| !!python/unicode'
+    r'| !!python/name[A-Za-z_.:/]+'
+    r'| !!python/object[A-Za-z_.:/]+'
+    r')')
+EVENT_SEPARATOR = '\n---\n'
 
 
 class EventBlob(object):
@@ -64,29 +68,30 @@ def GenerateEventStreamsFromYaml(metadata, yaml_str):
   """
   first = True
   stream = EventStream(metadata)
-  # Some un-expected patterns appear in the log. Remove them.
+  # Remove the yaml datatype strings which safe_load can't handle.
   yaml_str = re.sub(YAML_STR_BLACKLIST, '', yaml_str)
-  try:
-    for event in yaml.safe_load_all(yaml_str):
-      if not event:
-        continue
-      if 'EVENT' not in event:
-        logging.warn('The event dict is invalid, no EVENT tag:\n%s.',
-                     pprint.pformat(event))
-        continue
-      if event['EVENT'] == 'preamble':
-        # Yeild the stream it just created when it meets a new preamble,
-        # except the case of the first one.
-        if not first:
-          yield stream
-          stream = EventStream(metadata)
-        stream.preamble = event
-      else:
-        stream.append(event)
-      first = False
-  except yaml.YAMLError, e:
-    logging.exception('Error on parsing the yaml string "%s": %s',
-                      yaml_str, e)
+  for event_str in yaml_str.split(EVENT_SEPARATOR):
+    event = None
+    try:
+      event = yaml.safe_load(event_str)
+    except yaml.YAMLError:
+      logging.exception('Error on parsing the yaml string %r', event_str)
+    if not event:
+      continue
+    if 'EVENT' not in event:
+      logging.warn('The event dict is invalid, no EVENT tag:\n%s.',
+                   pprint.pformat(event))
+      continue
+    if event['EVENT'] == 'preamble':
+      # Yeild the stream it just created when it meets a new preamble,
+      # except the case of the first one.
+      if not first:
+        yield stream
+        stream = EventStream(metadata)
+      stream.preamble = event
+    else:
+      stream.append(event)
+    first = False
   yield stream
 
 

@@ -143,9 +143,26 @@ class EventStreamTest(unittest.TestCase):
   def testWrongYAML(self):
     self._yaml_str_list.remove('  - id: SMT')
     yaml_str = '\n'.join(self._yaml_str_list)
-    stream = next(GenerateEventStreamsFromYaml(None, yaml_str), None)
+    streams = GenerateEventStreamsFromYaml(None, yaml_str)
+    stream = next(streams, None)
     self.assertEqual('d0:xx:xx:xx:xx:df', stream.preamble['device_id'])
-    self.assertEqual(0, len(stream))
+    self.assertEqual(1, len(stream))
+    stream = next(streams, None)
+    self.assertEqual('d0:xx:xx:xx:xx:df', stream.preamble['device_id'])
+    self.assertEqual(1, len(stream))
+
+  def testNotSupportedYamlDatatype(self):
+    self._yaml_str_list.insert(
+        self._yaml_str_list.index('EVENT: waived_tests') + 1,
+        "name: !!python/name:cros.factory.gooftool.CreateReportArchiveBlob ''")
+    yaml_str = '\n'.join(self._yaml_str_list)
+    streams = GenerateEventStreamsFromYaml(None, yaml_str)
+    stream = next(streams, None)
+    self.assertEqual('d0:xx:xx:xx:xx:df', stream.preamble['device_id'])
+    self.assertEqual(2, len(stream))
+    stream = next(streams, None)
+    self.assertEqual('d0:xx:xx:xx:xx:df', stream.preamble['device_id'])
+    self.assertEqual(1, len(stream))
 
 
 class EventPacketTest(unittest.TestCase):
