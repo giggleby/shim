@@ -168,6 +168,13 @@ class SpringBFTFixture(BFTFixture):
     if not command:
       raise BFTFixtureException('Unsupported action: ' + action_str)
 
+    # This sysfs node controls DP bandwidth. BFT fixture supports only
+    # 2.7G, mode 'a'.
+    if device == self.Device.EXT_DISPLAY:
+      mode = 'a' if engage else '0'
+      with open('/sys/bus/i2c/devices/7-0038/dp_manual_bw', 'w') as f:
+        f.write(mode)
+
     self._SendRecvDefault(command, 'Failed to %s. ' % action_str)
 
   def Ping(self):
