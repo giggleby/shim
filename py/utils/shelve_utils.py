@@ -34,8 +34,7 @@ def IsShelfValid(shelf):
                    'shelve.open(sys.argv[1], "r").items(); '
                    r'print "\nSHELF OK"',
                    os.path.realpath(shelf)],
-                  cwd=os.path.dirname(__file__), call=True,
-                  log=True, read_stdout=True, read_stderr=True)
+                  call=True, log=True, read_stdout=True, read_stderr=True)
   if process.returncode == 0 and process.stdout_data.endswith('SHELF OK\n'):
     return True
 
