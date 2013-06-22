@@ -7,6 +7,7 @@
 import time
 
 import factory_common  # pylint: disable=W0611
+from cros.factory.test import factory
 from cros.factory.utils.process_utils import Spawn
 
 COLOR_RED = '\033[1;31m'
@@ -36,7 +37,7 @@ class StandaloneLogWatcher(object):
         f.writelines([mark_line, mark_line, msg + '\n\n',
                       action + '\n', mark_line, mark_line])
     else:
-      with open('/var/factory/log/factory.log', 'w') as f:
+      with open(factory.FACTORY_LOG_PATH, 'a') as f:
         f.write(msg + '\n')
 
   def WatchForever(self):
