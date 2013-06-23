@@ -34,8 +34,9 @@ class StandaloneLogWatcher(object):
       with open('/dev/tty4', 'w') as f:
         f.write(color)
         mark_line = '!' * 80 + '\n'
-        f.writelines([mark_line, mark_line, msg + '\n\n',
-                      action + '\n', mark_line, mark_line])
+        f.writelines([mark_line, mark_line, '%s\n\n' % msg,
+                      '%s\n' % action if action else '',
+                      mark_line, mark_line])
     else:
       with open(factory.FACTORY_LOG_PATH, 'a') as f:
         f.write(msg + '\n')
