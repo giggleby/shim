@@ -28,3 +28,6 @@ class PitBoard(ChromeOSBoard):
 
   def GetChargerCurrent(self):
     raise NotImplementedError
+
+  def GetECConsoleLog(self):
+    return NotImplementedError
