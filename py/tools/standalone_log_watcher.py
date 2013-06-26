@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import logging
 import time
 
 import factory_common  # pylint: disable=W0611
@@ -25,21 +26,25 @@ class StandaloneLogWatcher(object):
   def __init__(self, watchers, watch_period_sec=10):
     self._watchers = watchers
     self._watch_period_sec = watch_period_sec
+    factory.init_logging()
+    logging.info('Standalone watchers: %s',
+                 ', '.join([w.__class__.__name__ for w in watchers]))
 
   def Alert(self, msg, action=None, color=COLOR_RED, die=True):
+    logging.error('Watcher error: %s', msg)
+    if action:
+      logging.error('Displaying action: %s', action)
     if die:
-      Spawn(['goofy_rpc', 'StopTest()'], call=True)
+      logging.error('Watcher says "die"...stopping running test.')
+      Spawn(['goofy_rpc', 'StopTest()'], call=True, log=True)
       time.sleep(2)
-      Spawn(['chvt', '4'], call=True)
+      Spawn(['chvt', '4'], call=True, log=True)
       with open('/dev/tty4', 'w') as f:
         f.write(color)
         mark_line = '!' * 80 + '\n'
         f.writelines([mark_line, mark_line, '%s\n\n' % msg,
                       '%s\n' % action if action else '',
                       mark_line, mark_line])
-    else:
-      with open(factory.FACTORY_LOG_PATH, 'a') as f:
-        f.write(msg + '\n')
 
   def WatchForever(self):
     while True:
