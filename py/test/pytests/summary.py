@@ -91,6 +91,17 @@ class Report(unittest.TestCase):
 
     overall_status = factory.overall_status(statuses)
 
+    if self.args.bft_fixture:
+      try:
+        fixture = bft_fixture.CreateBFTFixture(**self.args.bft_fixture)
+        fixture.SetStatusColor(
+            fixture.StatusColor.GREEN
+            if overall_status == factory.TestState.PASSED
+            else fixture.StatusColor.RED)
+        fixture.Disconnect()
+      except bft_fixture.BFTFixtureException:
+        logging.exception('Unable to set status color on BFT fixture')
+
     if (overall_status == factory.TestState.PASSED and
         self.args.pass_without_prompt):
       return
@@ -119,17 +130,6 @@ class Report(unittest.TestCase):
     # can only pass the test.
     elif overall_status == factory.TestState.PASSED:
       ui.BindStandardKeys(bind_fail_keys=False)
-
-    if self.args.bft_fixture:
-      try:
-        fixture = bft_fixture.CreateBFTFixture(**self.args.bft_fixture)
-        fixture.SetStatusColor(
-            fixture.StatusColor.GREEN
-            if overall_status == factory.TestState.PASSED
-            else fixture.StatusColor.RED)
-        fixture.Disconnect()
-      except bft_fixture.BFTFixtureException:
-        logging.exception('Unable to set status color on BFT fixture')
 
     ui.SetHTML(''.join(html))
     ui.Run()
