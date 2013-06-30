@@ -1403,7 +1403,7 @@ class Goofy(object):
         "hooks should be of type Hooks but is %r" % type(self.hooks))
     self.hooks.test_list = self.test_list
 
-    if not utils.in_chroot():
+    if not utils.in_chroot() and self.test_list.options.use_cpufreq_manager:
       self.cpufreq_manager = CpufreqManager(event_log=self.event_log)
 
     # Call startup hook.
