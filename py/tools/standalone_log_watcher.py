@@ -5,9 +5,11 @@
 # found in the LICENSE file.
 
 import logging
+import syslog
 import time
 
 import factory_common  # pylint: disable=W0611
+from cros.factory.event_log import EventLog
 from cros.factory.test import factory
 from cros.factory.utils.process_utils import Spawn
 
@@ -24,18 +26,25 @@ class StandaloneWatcherAlert(Exception):
 class StandaloneLogWatcher(object):
 
   def __init__(self, watchers, watch_period_sec=10):
+    syslog.openlog('standalone_watcher')
+    self._event_log = EventLog('standalone_watcher')
     self._watchers = watchers
     self._watch_period_sec = watch_period_sec
     factory.init_logging()
     logging.info('Standalone watchers: %s',
                  ', '.join([w.__class__.__name__ for w in watchers]))
 
+  def _Log(self, log_str):
+    logging.error(log_str)
+    syslog.syslog(log_str)
+
   def Alert(self, msg, action=None, color=COLOR_RED, die=True):
-    logging.error('Watcher error: %s', msg)
+    self._Log('Watcher error: %s' % msg)
+    self._event_log.Log('watcher_error', message=msg, action=action, die=die)
     if action:
-      logging.error('Displaying action: %s', action)
+      self._Log('Displaying action: %s' % action)
     if die:
-      logging.error('Watcher says "die"...stopping running test.')
+      self._Log('Watcher says "die"...stopping running test.')
       Spawn(['goofy_rpc', 'StopTest()'], call=True, log=True)
       time.sleep(2)
       Spawn(['chvt', '4'], call=True, log=True)
