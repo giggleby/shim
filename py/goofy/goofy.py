@@ -1071,14 +1071,17 @@ class Goofy(object):
     self.run_queue.put(None)
     raise KeyboardInterrupt()
 
-  def init_hook(self):
-    """Initializes hooks."""
+  def init_hooks(self):
+    """Initializes hooks.
+
+    Must run after self.test_list ready.
+    """
     module, cls = self.test_list.options.hooks_class.rsplit('.', 1)
     self.hooks = getattr(__import__(module, fromlist=[cls]), cls)()
     assert isinstance(self.hooks, factory.Hooks), (
         "hooks should be of type Hooks but is %r" % type(self.hooks))
     self.hooks.test_list = self.test_list
-    self.hooks.OnStartup()
+    self.hooks.OnCreatedTestList()
 
   def init(self, args=None, env=None):
     '''Initializes Goofy.
@@ -1212,6 +1215,8 @@ class Goofy(object):
         # Bail with an error; no point in starting up.
         sys.exit('No valid test list; exiting.')
 
+    self.init_hooks()
+
     if self.test_list.options.clear_state_on_start:
       self.state_instance.clear_test_state()
 
@@ -1232,8 +1237,6 @@ class Goofy(object):
 
     if not utils.in_chroot() and self.test_list.options.disable_log_rotation:
       open('/var/lib/cleanup_logs_paused', 'w').close()
-
-    self.init_hook()
 
     if self.options.dummy_shopfloor:
       os.environ[shopfloor.SHOPFLOOR_SERVER_ENV_VAR_NAME] = (
@@ -1313,6 +1316,9 @@ class Goofy(object):
 
     if not utils.in_chroot() and self.test_list.options.use_cpufreq_manager:
       self.cpufreq_manager = CpufreqManager(event_log=self.event_log)
+
+    # Should not move earlier.
+    self.hooks.OnStartup()
 
     if self.options.ui == 'chrome':
       self.env.launch_chrome()
