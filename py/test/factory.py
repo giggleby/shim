@@ -1160,6 +1160,8 @@ class FactoryTestList(FactoryTest):
 
   Properties:
     path_map: A map from test paths to FactoryTest objects.
+    source_path: The path to the file in which the test list was defined,
+        if known.  For new-style test lists only.
   '''
   def __init__(self, subtests, state_instance, options,
                test_list_id=None, label_en=None, finish_construction=True):
@@ -1190,6 +1192,7 @@ class FactoryTestList(FactoryTest):
     self.state_change_callback = None
     self.options = options
     self.label_en = label_en or 'untitled'
+    self.source_path = None
 
     if finish_construction:
       self.FinishConstruction()
