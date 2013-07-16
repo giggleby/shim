@@ -132,4 +132,5 @@ class Report(unittest.TestCase):
       ui.BindStandardKeys(bind_fail_keys=False)
 
     ui.SetHTML(''.join(html))
+    logging.info('starting ui.Run with overall_status %r', overall_status)
     ui.Run()
