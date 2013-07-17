@@ -767,7 +767,7 @@ def Finalize(options):
   """
   Verify(options)
   SetFirmwareBitmapLocale(options)
-  ClearGBBFlags(options)
+  #ClearGBBFlags(options)
   ClearFactoryVPDEntries(options)
   if options.no_write_protect:
     logging.warn('WARNING: Firmware Write Protection is SKIPPED.')
