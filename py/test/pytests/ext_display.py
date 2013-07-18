@@ -343,6 +343,9 @@ class VideoTask(ExtDisplayTask):
                              subtype=self._fail_event))
 
   def Run(self):
+    if self._args.pause_after_connect_secs:
+      time.sleep(self._args.pause_after_connect_secs)
+
     self.InitUI()
 
     if self._fixture:
@@ -352,9 +355,6 @@ class VideoTask(ExtDisplayTask):
 
     if self._manual:
       self.BindDigitKeys(self._pass_digit)
-
-    if self._args.pause_after_connect_secs:
-      time.sleep(self._args.pause_after_connect_secs)
 
     show_dual_display = ['xrandr', '-d', ':0',
                          '--output', self._args.main_display_id, '--auto',
