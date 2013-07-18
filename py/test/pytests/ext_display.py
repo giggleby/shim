@@ -316,7 +316,8 @@ class VideoTask(ExtDisplayTask):
       self._ui.AddEventHandler(self._pass_event, lambda _: self.Pass())
       self._ui.AddEventHandler(
           self._fail_event,
-          lambda _: self.Fail('Fail to check screen on external display'))
+          lambda _: self.Fail('Fail to check screen on external display',
+                              later=True))
 
     super(VideoTask, self).__init__(args,
                                     _TITLE_VIDEO_TEST(args.display_label),
