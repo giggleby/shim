@@ -9,6 +9,7 @@
 import logging
 import random
 import re
+import time
 import threading
 import unittest
 import uuid
@@ -351,10 +352,19 @@ class VideoTask(ExtDisplayTask):
     if self._manual:
       self.BindDigitKeys(self._pass_digit)
 
-    self.RunCommand(
-      ['xrandr', '-d', ':0', '--output', self._args.main_display_id, '--auto',
-       '--output', self._args.display_id, '--auto'],
-      'Fail to set dual display on %s' % self._args.display_id)
+    if self._args.pause_after_connect_secs:
+      time.sleep(self._args.pause_after_connect_secs)
+
+    show_dual_display = ['xrandr', '-d', ':0',
+                         '--output', self._args.main_display_id, '--auto',
+                         '--output', self._args.display_id]
+    if self._args.display_mode:
+      show_dual_display.extend(['--mode', self._args.display_mode])
+    else:
+      show_dual_display.append('--auto')
+
+    self.RunCommand(show_dual_display,
+                    'Fail to set dual display on %s' % self._args.display_id)
     self.RunCommand(
       ['xrandr', '-d', ':0', '--output', self._args.main_display_id, '--off'],
       'Fail to turn off main display %s' % self._args.main_display_id)
@@ -380,6 +390,8 @@ class ExtDisplayTaskArg(object):
     self.ui = None
     self.template = None
     self.fixture = None
+    self.display_mode = None
+    self.pause_after_connect_secs = None
 
     # This is for a reboot hack which tells DetectDisplayTask
     # whether to send a display plug command or not.
@@ -437,6 +449,11 @@ class ExtDisplayTest(unittest.TestCase):
         'Also for the reboot hack with fixture. With it set to True, DUT does '
         'not issue plug ext display command.',
         default=False),
+    Arg('display_mode', str, 'xrandr mode used for external display.',
+        default=None, optional=True),
+    Arg('pause_after_connect_secs', (int, float),
+        'Pause N seconds after external connection is detected. It is used to '
+        'wait for xrandr gets all available mode.', default=0),
   ]
 
   def setUp(self):
@@ -475,6 +492,8 @@ class ExtDisplayTest(unittest.TestCase):
       args.template = self._template
       args.fixture = self._fixture
       args.already_connect = self.args.already_connect
+      args.display_mode = self.args.display_mode
+      args.pause_after_connect_secs = self.args.pause_after_connect_secs
 
       if not self.args.stop_output_only:
         tasks.append(ConnectTask(args))
