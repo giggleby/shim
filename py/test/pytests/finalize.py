@@ -75,7 +75,8 @@ class Finalize(unittest.TestCase):
           default=[]),
       Arg('hwid_version', int,
           'Version of HWID library to use in gooftool.', default=2,
-          optional=True)
+          optional=True),
+      Arg('sync_event_logs', bool, 'Sync event logs to shopfloor', default=True)
       ]
 
   def setUp(self):
@@ -289,7 +290,8 @@ class Finalize(unittest.TestCase):
       self.Warn('TESTS WERE WAIVED: %s.' % sorted(list(self.waived_tests)))
     Log('waived_tests', waived_tests=sorted(list(self.waived_tests)))
 
-    factory.get_state_instance().FlushEventLogs()
+    if self.args.sync_event_logs:
+      factory.get_state_instance().FlushEventLogs()
 
     if not self.args.write_protection:
       self.Warn('WRITE PROTECTION IS DISABLED.')
