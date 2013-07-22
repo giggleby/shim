@@ -73,6 +73,8 @@ class Power(object):
       Content of the attribute in str.
     '''
     try:
+      if not self.CheckBatteryPresent():
+        return None
       return ReadOneLine(os.path.join(self._battery_path, attribute_name))
     except IOError:
       # Battery driver is not fully initialized
