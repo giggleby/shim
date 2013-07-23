@@ -35,6 +35,9 @@ class HWIDV3Test(unittest.TestCase):
       Arg('generate', bool,
           'Generate and write the HWID (if False, only verify it).',
           True),
+      Arg('rma_mode', bool,
+          'Enable rma_mode, do not check for deprecated components.',
+          default=False, optional=True)
   ]
 
   def runTest(self):
@@ -67,7 +70,8 @@ class HWIDV3Test(unittest.TestCase):
       template.SetState(test_ui.MakeLabel(
           'Generating HWID (v3)...',
           '正在产生 HWID (v3)...'))
-      generated_hwid = gt.GenerateHwidV3(device_info=device_data)
+      generated_hwid = gt.GenerateHwidV3(device_info=device_data,
+                                         rma_mode=self.args.rma_mode)
       hwid = generated_hwid.encoded_string
       factory.console.info('Generated HWID: %s', hwid)
       decoded_hwid = gt.DecodeHwidV3(hwid)
