@@ -192,6 +192,8 @@ class DetectDisplayTask(ExtDisplayTask):
       try:
         self._fixture.SetDeviceEngaged(BFTFixture.Device.EXT_DISPLAY,
                                        self._connect)
+        if not self._connect:
+          self._fixture.SetDeviceEngaged(BFTFixture.Device.AC_ADAPTER, True)
       except BFTFixtureException as e:
         self.Fail('Detect display failed: %s' % e)
 
