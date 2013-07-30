@@ -31,7 +31,7 @@ from cros.factory.test.factory_task import FactoryTask, FactoryTaskManager
 from cros.factory.utils.process_utils import Spawn, SpawnOutput
 
 _SIM_PRESENT_RE = r'IMSI: (\d{14,15})'
-_SIM_NOT_PRESENT_RE = r'IMSI:[\s]*$'
+_SIM_NOT_PRESENT_RE = r'SIM: /$'
 
 _TEST_TITLE = test_ui.MakeLabel('SIM Card Test', u'SIM卡测试')
 _INSERT_SIM_INSTRUCTION = test_ui.MakeLabel(
@@ -57,8 +57,8 @@ class WaitSIMCardThread(threading.Thread):
     self._done = threading.Event()
     self._simcard_event = simcard_event
     self._on_success = on_success
-    self._re_present = re.compile(_SIM_PRESENT_RE, re.MULTILINE)
-    self._re_not_present = re.compile(_SIM_NOT_PRESENT_RE, re.MULTILINE)
+    self._re_present = re.compile(_SIM_PRESENT_RE, re.MULTILINE | re.IGNORECASE)
+    self._re_not_present = re.compile(_SIM_NOT_PRESENT_RE, re.MULTILINE | re.IGNORECASE)
     self._force_stop = force_stop
     self._force_stop.clear()
 
@@ -156,7 +156,7 @@ class CheckSIMAbsentTask(FactoryTask):
     Spawn(['modem', 'factory-reset', '000000'], call=True, log=True)
     output = SpawnOutput(['modem', 'status'], log=True)
     logging.info(output)
-    if not re.compile(_SIM_NOT_PRESENT_RE, re.MULTILINE).search(output):
+    if not re.compile(_SIM_NOT_PRESENT_RE, re.MULTILINE | re.IGNORECASE).search(output):
       self.Fail('Fail to make sure sim card is not present')
     else:
       self.Pass()
