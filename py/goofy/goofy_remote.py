@@ -92,9 +92,13 @@ def SyncTestList(host, board, test_list,
         [test_list, host + ':/usr/local/factory/%s/' % test_list_dir],
         check_call=True, log=True)
 
+  # Set active test list by test list ID.
+  # Test list ID is the file extension of a test list.  For example, the ID of
+  # test_list.runin_fatp is 'runin_fatp'.  For test_list, its ID is 'main'.
+  test_list_id = os.path.splitext(test_list)[1][1:]
   Spawn(ssh_command +
-        [host, 'ln', '-sf', os.path.basename(test_list),
-         '/usr/local/factory/%s/active' % test_list_dir],
+        [host, '/usr/local/factory/bin/factory', 'test-list',
+         test_list_id if test_list_id else 'main'],
         check_call=True, log=True)
 
   return board
