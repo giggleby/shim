@@ -40,11 +40,20 @@ _FAIL_LATER = True
 
 I18nLabel = namedtuple('I18nLabel', 'en zh')
 LEDColor = Board.LEDColor
+LEDIndex = Board.LEDIndex
 _COLOR_LABEL = {
     LEDColor.YELLOW : I18nLabel('yellow', u'黃色'),
     LEDColor.GREEN  : I18nLabel('green', u'绿色'),
     LEDColor.RED    : I18nLabel('red', u'紅色'),
+    LEDColor.WHITE  : I18nLabel('white', u'白色'),
+    LEDColor.BLUE   : I18nLabel('blue', u'蓝色'),
+    LEDColor.AMBER  : I18nLabel('amber', u'琥珀色'),
     LEDColor.OFF    : I18nLabel('off', u'关闭')}
+_INDEX_LABEL = {
+    None             : I18nLabel('', ''),
+    LEDIndex.POWER   : I18nLabel('power ', u'电源 '),
+    LEDIndex.BATTERY : I18nLabel('battery ', u'电池 '),
+    LEDIndex.ADAPTER : I18nLabel('adapter ', u'电源适配器 ')}
 
 
 class CheckLEDTask(InteractiveFactoryTask):
@@ -55,30 +64,38 @@ class CheckLEDTask(InteractiveFactoryTask):
     template: ui_templates.OneSection() instance.
     board: Board instance to control LED.
     color: LEDColor to inspect.
+    index: target LED to inspect. None means default LED.
   """
 
-  def __init__(self, ui, template, board, color):
+  def __init__(self, ui, template, board, color, index):
     super(CheckLEDTask, self).__init__(ui)
     self._template = template
     self._board = board
     self._color = color
+    self._index = index
 
   def Run(self):
     """Lights LED in color and asks operator to verify it."""
     self._InitUI()
-    self._board.SetLEDColor(self._color)
+    if self._index is None:
+      self._board.SetLEDColor(self._color)
+    else:
+      self._board.SetLEDColor(self._color, led_index=self._index)
 
   def _InitUI(self):
     """Sets instructions and binds pass/fail key."""
+    index_label = _INDEX_LABEL[self._index]
     if self._color == LEDColor.OFF:
       instruction = test_ui.MakeLabel(
-          'If the LED is off, press ENTER.',
-          u'請檢查 LED 是否关掉了，关掉了請按 ENTER。')
+          'If the %sLED is off, press ENTER.' % index_label.en,
+          u'請檢查 %sLED 是否关掉了，关掉了請按 ENTER。' % index_label.zh)
     else:
       color_label = _COLOR_LABEL[self._color]
       instruction = test_ui.MakeLabel(
-          'If the LED lights up in %s, press ENTER.' % color_label.en,
-          u'請檢查 LED 是否亮%s，是請按 ENTER。' % color_label.zh)
+          'If the %sLED lights up in %s, press ENTER.' % (index_label.en,
+                                                          color_label.en),
+          u'請檢查 %sLED 是否亮%s，是請按 ENTER。' % (index_label.zh,
+                                                      color_label.zh))
     self._template.SetState(instruction)
 
     self.BindPassFailKeys(fail_later=_FAIL_LATER)
@@ -91,13 +108,15 @@ class FixtureCheckLEDTask(FactoryTask):
     fixture: BFTFixture instance.
     board: Board instance to control LED.
     color: LEDColor to inspect.
+    index: target LED to inspect (unused yet).
   """
 
-  def __init__(self, fixture, board, color):
+  def __init__(self, fixture, board, color, index):
     super(FixtureCheckLEDTask, self).__init__()
     self._fixture = fixture
     self._board = board
     self._color = color
+    self._index = index
 
   def Run(self):
     """Lights LED in color and asks fixture to verify it."""
@@ -128,9 +147,11 @@ class LEDTest(unittest.TestCase):
         '{class_name: BFTFixture\'s import path + module name\n'
         ' params: a dict of params for BFTFixture\'s Init()}.\n'
         'Default None means no BFT fixture is used.',
-        default=None, optional=True),
+        optional=True),
     Arg('colors', (list, tuple),
-        'List of colors to test, must be one of YELLOW, GREEN, RED, OFF.',
+        'List of colors or (color, index) to test. color must be in '
+        'Board.LEDColor or OFF, and index, if specified, must be in '
+        'Board.LEDIndex.',
         default=[LEDColor.YELLOW, LEDColor.GREEN, LEDColor.RED, LEDColor.OFF]),
   ]
 
@@ -144,12 +165,6 @@ class LEDTest(unittest.TestCase):
     if self.args.bft_fixture:
       self._fixture = CreateBFTFixture(**self.args.bft_fixture)
 
-    _VALID_COLOR = set([LEDColor.YELLOW, LEDColor.GREEN, LEDColor.RED,
-                        LEDColor.OFF])
-    for color in self.args.colors:
-      if color not in _VALID_COLOR:
-        self.fail('Invalid color %s' % color)
-
   def tearDown(self):
     if self._board:
       self._board.SetLEDColor(LEDColor.AUTO)
@@ -160,11 +175,19 @@ class LEDTest(unittest.TestCase):
     self._template.SetTitle(_TEST_TITLE)
 
     tasks = []
-    for color in self.args.colors:
-      if self._fixture:
-        tasks.append(FixtureCheckLEDTask(self._fixture, self._board, color))
+    for color_index in self.args.colors:
+      if isinstance(color_index, str):
+        color = color_index
+        index = None
       else:
-        tasks.append(CheckLEDTask(self._ui, self._template, self._board, color))
+        color, index = color_index
+
+      if self._fixture:
+        tasks.append(FixtureCheckLEDTask(self._fixture, self._board, color,
+                                         index))
+      else:
+        tasks.append(CheckLEDTask(self._ui, self._template, self._board, color,
+                                  index))
 
     self._task_manager = FactoryTaskManager(self._ui, tasks)
     self._task_manager.Run()
