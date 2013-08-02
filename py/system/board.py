@@ -20,7 +20,12 @@ class Board(object):
   """Basic board specific interface class."""
   ChargeState = Enum(['CHARGE', 'IDLE', 'DISCHARGE'])
 
-  LEDColor = Enum(['AUTO', 'OFF', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE'])
+  LEDColor = Enum(['AUTO', 'OFF', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE',
+                   'AMBER'])
+
+  # Latest ectool uses English label instead of integer index to specify
+  # which LED to control.
+  LEDIndex = Enum(['POWER', 'BATTERY', 'ADAPTER'])
 
   # Auto fan speed.
   AUTO = 'auto'
@@ -214,7 +219,7 @@ class Board(object):
 
     Args:
       color: LED color of type LEDColor enum.
-      led_index: target LED index.
+      led_index: target LED index (can use index or LEDIndex enum).
       brightness: LED brightness in percentage [0, 100].
           If color is 'auto' or 'off', brightness is ignored.
     """

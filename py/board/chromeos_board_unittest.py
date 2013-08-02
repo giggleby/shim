@@ -265,8 +265,6 @@ class ChromeOSBoardTest(unittest.TestCase):
   def testSetLEDColorInvalidInput(self):
     with self.assertRaisesRegexp(ValueError, 'Invalid color'):
       self.board.SetLEDColor('invalid color')
-    with self.assertRaisesRegexp(TypeError, 'Invalid led_index'):
-      self.board.SetLEDColor(Board.LEDColor.RED, led_index='1')
     with self.assertRaisesRegexp(TypeError, 'Invalid brightness'):
       self.board.SetLEDColor(Board.LEDColor.RED, brightness='1')
     with self.assertRaisesRegexp(ValueError, 'brightness out-of-range'):

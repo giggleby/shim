@@ -15,6 +15,11 @@ from cros.factory.utils.process_utils import Spawn
 
 class ChromeOSBoard(Board):
   """Board interface for ChromeOS EC. Uses ectool to access board info."""
+
+  # True if the board's "ectool" command supports "off" command, e.g.
+  # "ectool led battery off".
+  SUPPORT_LED_OFF = False
+
   # pylint: disable=W0223
   GET_FAN_SPEED_RE = re.compile('Current fan RPM: ([0-9]*)')
   TEMPERATURE_RE = re.compile('^(\d+): (\d+)$', re.MULTILINE)
@@ -182,7 +187,7 @@ class ChromeOSBoard(Board):
   def SetLEDColor(self, color, led_index=0, brightness=100):
     if color not in Board.LEDColor:
       raise ValueError('Invalid color')
-    if not isinstance(led_index, int):
+    if not isinstance(led_index, (int, str)):
       raise TypeError('Invalid led_index')
     if not isinstance(brightness, int):
       raise TypeError('Invalid brightness')
@@ -192,14 +197,22 @@ class ChromeOSBoard(Board):
       if color == Board.LEDColor.AUTO:
         color_brightness = color.lower()
       elif color == Board.LEDColor.OFF:
-        # This is a workaround. Currently ectool does not provide 'off'
-        # command. However, right now setting a color brightness implies
-        # other colors' brightness to zero. So 'red=0' is equivalent to
-        # turning off the LED.
-        color_brightness = 'red=0'
+        if self.SUPPORT_LED_OFF:
+          color_brightness = color.lower()
+        else:
+          # This is a workaround. Currently ectool does not provide 'off'
+          # command. However, right now setting a color brightness implies
+          # other colors' brightness to zero. So 'red=0' is equivalent to
+          # turning off the LED.
+          color_brightness = 'red=0'
       else:
         scaled_brightness = int(round(brightness / 100.0 * 255))
         color_brightness = '%s=%d' % (color.lower(), scaled_brightness)
-      self._CallECTool(['led', str(led_index), color_brightness])
+
+      if isinstance(led_index, int):
+        led_index = str(led_index)
+      else:
+        led_index = led_index.lower()
+      self._CallECTool(['led', led_index, color_brightness])
     except Exception as e:
       logging.exception('Unable to set LED color: %s', e)
