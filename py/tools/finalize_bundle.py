@@ -611,6 +611,29 @@ class FinalizeBundle(object):
       assert len(wipe_option) == 1, 'There should be one wipe_option.'
       option = wipe_option[0]
       assert option in ['shutdown', 'battery_cut_off', 'reboot']
+
+      def PatchLSBFactoryWipeOption(mount_point):
+        """Patches wipe option to lsb-factory in an image.
+
+        Returns:
+          True if there were any changes.
+        """
+        return self.PatchLSBFactory(
+            mount=mount_point,
+            options=dict(FACTORY_WIPE_OPTION=option))
+
+      # Patch in the install shim, if present.
+      shims = self._GetShims()
+
+      if len(shims) > 1:
+        sys.exit('Expected to find 1 shim but found %d' % len(shims))
+      elif len(shims) == 1:
+        with MountPartition(shims[0], 1, rw=True) as mount:
+          PatchLSBFactoryWipeOption(mount)
+      else:
+        logging.warning('There is no install shim in the bundle.')
+
+      # Patch in factory image to set wipe option for finalize
       # No need to write option if option is reboot.
       if option == 'reboot':
         return
