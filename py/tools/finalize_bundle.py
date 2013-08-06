@@ -6,6 +6,7 @@
 
 
 import argparse
+import copy
 import fnmatch
 import glob
 import logging
@@ -28,6 +29,7 @@ from cros.factory.tools.make_update_bundle import MakeUpdateBundle
 from cros.factory.tools.mount_partition import MountPartition
 from cros.factory.utils.file_utils import UnopenedTemporaryFile
 from cros.factory.utils.process_utils import Spawn, CheckOutput
+from cros.factory.utils.string_utils import ParseDict, DictToLines
 
 
 GSUTIL_CACHE_DIR = os.path.join(os.environ['HOME'], 'gsutil_cache')
@@ -599,6 +601,10 @@ class FinalizeBundle(object):
           Spawn(['ln', '-sf', test_list, active], log=True, sudo=True,
                 check_call=True)
 
+  def _GetShims(self):
+    return glob.glob(os.path.join(self.bundle_dir, 'factory_shim',
+                                  'chromeos_*_factory*.bin'))
+
   def SetWipeOption(self):
     wipe_option = self.manifest.get('wipe_option', [])
     if wipe_option:
@@ -631,39 +637,56 @@ class FinalizeBundle(object):
       utils.TryMakeDirs(os.path.dirname(updater_path))
       MakeUpdateBundle(self.factory_image_path, updater_path)
 
+  def PatchLSBFactory(self, mount, options):
+    """Patches lsb-factory in an image.
+
+    Patches lsb-factory. The options to patch is in options.
+
+    Args:
+      mount: mount point of stateful partition.
+      options: A dict of options in lsb-factory to patch.
+        e.g.: options=dict(FACTORY_WIPE_OPTION='battery_cut_off')
+
+    Returns:
+      True if there were any changes.
+    """
+    lsb_factory_path = os.path.join(
+        mount, 'dev_image', 'etc', 'lsb-factory')
+    logging.info('Patching %s in %s', options, lsb_factory_path)
+    with open(lsb_factory_path) as f:
+      orig_lsb_factory_lines = f.readlines()
+    orig_lsb_factory_dict = ParseDict(orig_lsb_factory_lines, '=')
+    new_lsb_factory_dict = copy.copy(orig_lsb_factory_dict)
+    new_lsb_factory_dict.update(options)
+    if orig_lsb_factory_dict == new_lsb_factory_dict:
+      return False # No changes
+    new_lsb_factory = '\n'.join(DictToLines(new_lsb_factory_dict, '=')) + '\n'
+    self._WriteWithSudo(lsb_factory_path, new_lsb_factory)
+    return True
+
   def UpdateMiniOmahaURL(self):
     mini_omaha_url = self.manifest.get('mini_omaha_url')
     if not mini_omaha_url:
       return
 
-    def PatchLSBFactory(mount):
-      """Patches lsb-factory in an image.
+    def PatchLSBFactoryMiniOmahaURL(mount):
+      """Patches mini-Omaha url to lsb-factory in an image.
 
       Returns:
         True if there were any changes.
       """
-      lsb_factory_path = os.path.join(
-          mount, 'dev_image', 'etc', 'lsb-factory')
-      logging.info('Patching URLs in %s', lsb_factory_path)
-      orig_lsb_factory = open(lsb_factory_path).read()
-      lsb_factory, number_of_subs = re.subn(
-          '(?m)^(CHROMEOS_(AU|DEV)SERVER=).+$', r'\1' + mini_omaha_url,
-          orig_lsb_factory)
-      if number_of_subs != 2:
-        sys.exit('Unable to set mini-Omaha server in %s' % lsb_factory_path)
-      if lsb_factory == orig_lsb_factory:
-        return False  # No changes
-      self._WriteWithSudo(lsb_factory_path, lsb_factory)
-      return True
+      return self.PatchLSBFactory(
+          mount=mount,
+          options=dict(CHROMEOS_AUSERVER=mini_omaha_url,
+                       CHROMEOS_DEVSERVER=mini_omaha_url))
 
     # Patch in the install shim, if present.
-    shims = glob.glob(os.path.join(self.bundle_dir, 'factory_shim',
-                                   'chromeos_*_factory*.bin'))
+    shims = self._GetShims()
     if len(shims) > 1:
       sys.exit('Expected to find 1 shim but found %d' % len(shims))
     elif len(shims) == 1:
       with MountPartition(shims[0], 1, rw=True) as mount:
-        PatchLSBFactory(mount)
+        PatchLSBFactoryMiniOmahaURL(mount)
       with MountPartition(shims[0], 3) as mount:
         self.install_shim_version = GetReleaseVersion(mount)
     else:
@@ -682,7 +705,7 @@ class FinalizeBundle(object):
                 ['gunzip', '-c'],
                 stdin=netboot_image_in, stdout=rootfs_out, check_call=True)
         with MountPartition(rootfs, rw=True) as mount:
-          lsb_factory_changed = PatchLSBFactory(
+          lsb_factory_changed = PatchLSBFactoryMiniOmahaURL(
               os.path.join(mount, 'mnt', 'stateful_partition'))
 
         if lsb_factory_changed:

@@ -38,3 +38,16 @@ def ParseDict(lines, delimeter=':'):
     else:
       ret[key.strip()] = value.strip()
   return ret
+
+def DictToLines(dict_data, delimeter=':'):
+  '''Transforms a dict to a list of lines
+
+  Args:
+    dict_data: a dict.
+    delimeter: separation string between key and value.
+  Returns:
+    A list of lines. Each line contains key + delimeter + value.
+    The lines are sorted.
+  '''
+  return sorted(
+      [delimeter.join((str(k), str(v))) for k, v in dict_data.iteritems()])
