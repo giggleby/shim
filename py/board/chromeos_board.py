@@ -215,4 +215,5 @@ class ChromeOSBoard(Board):
         led_index = led_index.lower()
       self._CallECTool(['led', led_index, color_brightness])
     except Exception as e:
-      logging.exception('Unable to set LED color: %s', e)
+      logging.exception('Unable to set LED color (ectool led %s %s): %s',
+                        led_index, color_brightness, e)
