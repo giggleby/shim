@@ -649,9 +649,10 @@ def _ProbeDram():
   """Combine mosys memory timing and geometry information."""
   # TODO(tammo): Document why mosys cannot load i2c_dev itself.
   _LoadKernelModule('i2c_dev')
-  part_data = Shell('mosys -k memory spd print id').stdout
-  timing_data = Shell('mosys -k memory spd print timings').stdout
-  size_data = Shell('mosys -k memory spd print geometry').stdout
+  mosys_cmd = '/usr/local/factory/bin/mosys'
+  part_data = Shell('%s -k memory spd print id' % mosys_cmd).stdout
+  timing_data = Shell('%s -k memory spd print timings' % mosys_cmd).stdout
+  size_data = Shell('%s -k memory spd print geometry' % mosys_cmd).stdout
   parts = dict(re.findall('dimm="([^"]*)".*part_number="([^"]*)"', part_data))
   timings = dict(re.findall('dimm="([^"]*)".*speeds="([^"]*)"', timing_data))
   sizes = dict(re.findall('dimm="([^"]*)".*size_mb="([^"]*)"', size_data))
@@ -680,8 +681,9 @@ def _ProbeEmbeddedController():
   """Reformat mosys output."""
   # Example mosys command output:
   # vendor="VENDOR" name="CHIPNAME" fw_version="ECFWVER"
+  mosys_cmd = '/usr/local/factory/bin/mosys'
   ecinfo = re.findall(r'\bvendor="([^"]*)".*\bname="([^"]*)"',
-                      Shell('mosys -k ec info').stdout)
+                      Shell('%s -k ec info' % mosys_cmd).stdout)
   if not ecinfo:
     return []
   return [{'vendor': ecinfo[0][0], 'name': ecinfo[0][1],
