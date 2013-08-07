@@ -22,9 +22,16 @@ from cros.factory.test.args import Arg
 
 class CallShopfloor(unittest.TestCase):
   ARGS = [
-    Arg('keys', (list, tuple), 'Keys to write to the VPD.'),
+    Arg('vpd_data_fields', list,
+         ('Fields to write into RW_VPD from device_data.'
+          'Each item is a tuple of the form (prefix, key) meaning that the '
+          'pair (prefix + key, value) should be added into RW_VPD if there is '
+          'a pair (key, value) in device_data.'),
+        default=[], optional=True),
+    Arg('keys', (list, tuple), 'Keys to write to the VPD.',
+        default=[], optional=True),
     Arg('prefix', str, 'Prefix to use when writing keys to the VPD.',
-        default='factory.device_data.'),
+        default='factory.device_data.', optional=True),
 
   ]
 
@@ -35,12 +42,20 @@ class CallShopfloor(unittest.TestCase):
         'Writing device data to RW VPD...',
         '机器资料正在写入到 RW VPD...'))
 
+    # This is for backward capability.
+    # Previously it did not have 'vpd_data_fields' and writes all keys
+    # with prefix into RW_VPD.
+    if self.args.vpd_data_fields is []:
+      for k in self.args.keys:
+        self.args.vpd_data_fields.append((self.args.prefix, k))
+
     device_data = shopfloor.GetDeviceData()
-    data_to_write = dict((k, device_data.get(k))
-                         for k in self.args.keys)
+    # d[0] is prefix and d[1] is key
+    data_to_write = dict((d[0] + d[1], device_data.get(d[1]))
+                         for d in self.args.vpd_data_fields)
     missing_keys = [k for k, v in data_to_write.iteritems() if v is None]
     if missing_keys:
       self.fail('Missing device data keys: %r' % sorted(missing_keys))
 
-    vpd.rw.Update(dict((self.args.prefix + k, str(v))
+    vpd.rw.Update(dict((k, str(v))
                        for k, v in data_to_write.iteritems()))
