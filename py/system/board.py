@@ -20,8 +20,7 @@ class Board(object):
   """Basic board specific interface class."""
   ChargeState = Enum(['CHARGE', 'IDLE', 'DISCHARGE'])
 
-  LEDColor = Enum(['AUTO', 'OFF', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE',
-                   'AMBER'])
+  LEDColor = Enum(['AUTO', 'OFF', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE'])
 
   # Latest ectool uses English label instead of integer index to specify
   # which LED to control.
