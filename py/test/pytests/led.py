@@ -148,10 +148,14 @@ class LEDTest(unittest.TestCase):
         'Default None means no BFT fixture is used.',
         optional=True),
     Arg('colors', (list, tuple),
-        'List of colors or (color, index) to test. color must be in '
+        'List of colors or (index, color) to test. color must be in '
         'Board.LEDColor or OFF, and index, if specified, must be in '
         'Board.LEDIndex.',
         default=[LEDColor.YELLOW, LEDColor.GREEN, LEDColor.RED, LEDColor.OFF]),
+    Arg('target_leds', (list, tuple),
+        'List of LEDs to test. If specified, it turns off all LEDs first, '
+        'and turns auto after test.',
+        optional=True)
   ]
 
   def setUp(self):
@@ -164,9 +168,11 @@ class LEDTest(unittest.TestCase):
     if self.args.bft_fixture:
       self._fixture = CreateBFTFixture(**self.args.bft_fixture)
 
+    self.SetAllLED(self.args.target_leds, LEDColor.OFF)
+
   def tearDown(self):
-    if self._board:
-      self._board.SetLEDColor(LEDColor.AUTO)
+    self.SetAllLED(self.args.target_leds, LEDColor.AUTO)
+
     if self._fixture:
       self._fixture.Disconnect()
 
@@ -174,12 +180,12 @@ class LEDTest(unittest.TestCase):
     self._template.SetTitle(_TEST_TITLE)
 
     tasks = []
-    for color_index in self.args.colors:
-      if isinstance(color_index, str):
-        color = color_index
+    for index_color in self.args.colors:
+      if isinstance(index_color, str):
+        color = index_color
         index = None
       else:
-        color, index = color_index
+        index, color = index_color
 
       if self._fixture:
         tasks.append(FixtureCheckLEDTask(self._fixture, self._board, color,
@@ -190,3 +196,21 @@ class LEDTest(unittest.TestCase):
 
     self._task_manager = FactoryTaskManager(self._ui, tasks)
     self._task_manager.Run()
+
+  def SetAllLED(self, leds, color):
+    """Sets all LEDs to a given color.
+
+    Args:
+      leds: list of LED index. None for default LED.
+      color: One of Board.LEDColor.
+    """
+    if not self._board:
+      # Sanity check. It shoud not happen.
+      return
+
+    if not leds:
+      self._board.SetLEDColor(color)
+      return
+
+    for led in leds:
+      self._board.SetLEDColor(color, led_index=led)
