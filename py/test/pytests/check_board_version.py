@@ -17,7 +17,7 @@ from cros.factory.test.args import Arg
 from cros.factory.utils.process_utils import Spawn
 
 _RE_REV = re.compile(
-    r'^\w+: v0: (\w), v1: (\w), v2: (\w) => rev (\w)$', flags=re.MULTILINE)
+    r'^\w+: v0: (\w), v1: (\w), v2: (\w) => rev (\w+)$', flags=re.MULTILINE)
 
 class CheckBoardVersionTest(unittest.TestCase):
   ARGS = [
