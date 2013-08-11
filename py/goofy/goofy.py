@@ -1824,6 +1824,7 @@ class Goofy(object):
           detect=True,
           timeout=self.test_list.options.shopfloor_timeout_secs)
         shopfloor_client.UploadEvent(chunk.log_name + "." +
+                                     event_log.GetDeviceId() + "." +
                                      event_log.GetReimageId(),
                                      Binary(chunk.chunk))
         logging.info(
