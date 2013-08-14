@@ -119,7 +119,7 @@ class SystemLogManager(object):
     return ['rsync://%s:%s/system_logs/%s' %
             (urlparse(url).hostname, factory_log_port, folder_name)]
 
-  def _ClearLogs(self):
+  def ClearLogs(self):
     """Clears system logs listed in _clear_log_paths."""
     file_list = sum([glob.glob(x) for x in self._clear_log_paths], [])
     for f in file_list:
@@ -182,7 +182,7 @@ class SystemLogManager(object):
       if self._aborted.isSet():
         return
       try:
-        self._ClearLogs()
+        self.ClearLogs()
         if self._sync_period_sec:
           abort_time = time.time() + self._sync_period_sec
         else:

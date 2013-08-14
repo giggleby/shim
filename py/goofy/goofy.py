@@ -1745,6 +1745,11 @@ class Goofy(object):
           'touch' if self.test_list.options.disable_log_rotation else 'delete',
           CLEANUP_LOGS_PAUSED, utils.FormatExceptionOnly())
 
+  def check_obsolete_logs(self):
+    '''Removes obsolete_logs'''
+    if self.system_log_manager:
+      self.system_log_manager.ClearLogs()
+
   def sync_time_in_background(self):
     '''Writes out current time and tries to sync with shopfloor server.'''
     if not self.time_sanitizer:
@@ -1798,6 +1803,7 @@ class Goofy(object):
     self.check_battery()
     self.check_core_dump()
     self.check_log_rotation()
+    self.check_obsolete_logs()
 
   def handle_event_logs(self, chunks):
     '''Callback for event watcher.
