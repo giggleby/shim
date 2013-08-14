@@ -21,6 +21,7 @@ from cros.factory.system.board import Board
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.args import Arg
+from cros.factory.test.power_monitor import PowerMonitor
 
 _TEST_TITLE = test_ui.MakeLabel('Charging', u'充电')
 
@@ -49,6 +50,11 @@ class ChargerTest(unittest.TestCase):
           default=False),
       Arg('timeout_secs', int, 'Maximum allowed time to charge battery',
           default=3600),
+      Arg('ac_warning_countdown_secs', int,
+          'Warning duration when AC is unplugged. If AC is not plugged back'
+          ' within this duration, this test will stop all other tests and'
+          ' generate a warning message.', optional=True),
+      Arg('ac_type', str, 'The expected AC type', optional=True)
       ]
 
   def setUp(self):
@@ -103,6 +109,11 @@ class ChargerTest(unittest.TestCase):
 
   def runTest(self):
     self._thread.start()
+    if self.args.ac_warning_countdown_secs is not None:
+      self.assertTrue(self.args.ac_type, 'ac_type must be specified if'
+          ' ac_warning_countdown_secs is set.')
+      PowerMonitor(self.args.ac_warning_countdown_secs,
+                   self.args.ac_type).start()
     try:
       self.CheckPower()
       self.Charge()

@@ -18,6 +18,7 @@ from cros.factory import system
 from cros.factory.event_log import Log
 from cros.factory.system import SystemStatus
 from cros.factory.test import factory, test_ui
+from cros.factory.test.power_monitor import PowerMonitor
 from cros.factory.test.args import Arg
 
 
@@ -137,6 +138,11 @@ class CountDownTest(unittest.TestCase):
         'temp sensors in the rule', [], optional=True),
     Arg('fan_min_expected_rpm', int, 'Minimum fan rpm expected', None,
         optional=True),
+    Arg('ac_warning_countdown_secs', int,
+        'Warning duration when AC is unplugged. If AC is not plugged back'
+        ' within this duration, this test will stop all other tests and'
+        ' generate a warning message.', optional=True),
+    Arg('ac_type', str, 'The expected AC type', optional=True)
   ]
 
   def runTest(self):
@@ -167,6 +173,12 @@ class CountDownTest(unittest.TestCase):
       self.UpdateLegend(board.GetTemperatureSensorNames())
     except NotImplementedError:
       pass
+
+    if self.args.ac_warning_countdown_secs is not None:
+      self.assertTrue(self.args.ac_type, 'ac_type must be specified if'
+          ' ac_warning_countdown_secs is set.')
+      PowerMonitor(self.args.ac_warning_countdown_secs,
+                   self.args.ac_type).start()
 
     # Loop until count-down ends.
     while self._remaining_secs >= 0:
