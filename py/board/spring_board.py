@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import time
 import factory_common  # pylint: disable=W0611
 
 from cros.factory.board.chromeos_board import ChromeOSBoard
@@ -42,6 +43,9 @@ class SpringBoard(ChromeOSBoard):
       if state == Board.ChargeState.CHARGE:
         self._CallECTool(['extpwrcurrentlimit', '9999'])
         self._CallECTool(['gpioset', 'charger_en', '1'])
+        self._CallECTool(['gpioset', 'boost_en', '0'])
+        time.sleep(1)
+        self._CallECTool(['gpioset', 'boost_en', '1'])
       elif state == Board.ChargeState.IDLE:
         self._CallECTool(['extpwrcurrentlimit', '9999'])
         self._CallECTool(['gpioset', 'charger_en', '0'])
