@@ -117,6 +117,21 @@ def GetPartitionUsage(vfs_info):
              GetUsedPercentage(vfs_info.statvfs.f_favail,
                                vfs_info.statvfs.f_files))
 
+def GetEncyptedStatefulPartitionUsage():
+  '''Gets encrypted stateful partition usage.
+
+  Returns:
+    A DiskUsedPercentage namedtuple like (bytes_used_pct=87,
+                                          inodes_used_pct=17).
+  Raises:
+    DiskException if usage can not be obtained.
+  '''
+  vfs_infos = GetAllVFSInfo()
+  for vfs_info in vfs_infos.values():
+    if '/mnt/stateful_partition/encrypted' in vfs_info.mount_points:
+      return GetPartitionUsage(vfs_info)
+  raise DiskException('Can not get encrypted stateful partition usage')
+
 def GetMaxStatefulPartitionUsage():
   '''Gets the max stateful partition usage.
 
