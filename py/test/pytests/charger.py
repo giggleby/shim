@@ -392,6 +392,7 @@ class ChargerTest(unittest.TestCase):
       # Start testing the specs when battery charge is between
       # min_starting_charge_pct and max_starting_charge_pct.
       for spec in self.args.spec_list:
+        time.sleep(10)
         self._RegulateCharge(self._GetSpec(*spec))
     except Exception, e:
       self._ui.Fail(str(e))
