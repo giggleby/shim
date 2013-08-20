@@ -1692,6 +1692,11 @@ class Goofy(object):
           self.log_watcher.KickWatchThread()
           if self.system_log_manager:
             self.system_log_manager.KickSyncThread()
+          self.goofy_rpc.AddNote(dict(
+              name='CheckBattery',
+              text=message + ' Please stop the tests and charge battery now.',
+              level='CRITICAL'))
+
     except: # pylint: disable=W0702
       logging.exception('Unable to check battery or notify shopfloor')
     finally:
