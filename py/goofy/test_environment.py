@@ -83,7 +83,7 @@ class DUTEnvironment(Environment):
   A real environment on a device under test.
   '''
   def shutdown(self, operation):
-    assert operation in ['reboot', 'halt']
+    assert operation in ['reboot', 'halt', 'factory_restart']
     logging.info('Shutting down: %s', operation)
     subprocess.check_call('sync')
     subprocess.check_call(operation)

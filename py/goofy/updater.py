@@ -68,8 +68,7 @@ def TryUpdate(pre_update_hook=None, timeout=15):
       2. I/O timeout of rsync in seconds.
 
   Returns:
-    True if an update was performed and the machine should be
-    rebooted.
+    True if an update was performed and factory should be restarted.
   '''
   # On a real device, this will resolve to 'autotest' (since 'client'
   # is a symlink to that).  In the chroot, this will resolve to the

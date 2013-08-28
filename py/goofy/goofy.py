@@ -1078,7 +1078,8 @@ class Goofy(object):
     if updater.TryUpdate(pre_update_hook=pre_update_hook):
       if post_update_hook:
         post_update_hook()
-      self.env.shutdown('reboot')
+      # Goofy restart is sufficient. Without reboot, it saves about 20 seconds.
+      self.env.shutdown('factory_restart')
 
   def handle_sigint(self, dummy_signum, dummy_frame):
     logging.error('Received SIGINT')
