@@ -1690,6 +1690,17 @@ class Goofy(object):
                              battery_level=charge_pct,
                              charger_connected=ac_present,
                              critical=critical_low_battery)
+
+          def _get_powerinfo():
+            """Gets power info on this board"""
+            try:
+              power_info = system.GetBoard().GetPowerInfo()
+            except NotImplementedError:
+              return None
+            else:
+              return power_info
+          logging.warning('Power info =\n%s\n', _get_powerinfo())
+
           self.log_watcher.KickWatchThread()
           if self.system_log_manager:
             self.system_log_manager.KickSyncThread()
