@@ -103,7 +103,11 @@ class KeyboardTest(unittest.TestCase):
                        check_output=True).stdout_data.strip()
     if vpd_layout:
       # Take US for example, translate 'xkb:us::eng' into 'xkb_us_eng'.
-      return vpd_layout.replace('::','_').replace(':','_')
+      layout = vpd_layout.replace('::','_').replace(':','_')
+      # Use either US KB layout file, or International
+      if layout != 'xkb_us_eng':
+        layout = 'xkb_us_intl_eng'
+      return layout
     else:
       return 'xkb_us_eng'
 
