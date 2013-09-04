@@ -17,7 +17,6 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.args import Arg
 from cros.factory.event_log import EventLog
-from cros.factory.utils.process_utils import Spawn
 
 _TEST_TITLE = test_ui.MakeLabel('Set modem to LTE only mode.',
                                 u'数据机模式设定')
@@ -78,9 +77,6 @@ class CelluarModeTest(unittest.TestCase):
 
   def SetLTEMode(self):
     '''Set modem to LTE mode.'''
-    # Stop modem manager first.
-    Spawn(['stop', 'modemmanager'],
-          call=True, ignore_stderr=True, log=True)
     # Directly issue commands to the modem.
     modem = _Serial(self.args.modem_path)
     # Send an AT command and expect 'OK'
