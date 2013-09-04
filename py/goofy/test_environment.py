@@ -19,6 +19,9 @@ import factory_common  # pylint: disable=W0611
 from cros.factory import system
 from cros.factory.test import factory
 from cros.factory.goofy import connection_manager
+from cros.factory.goofy.service_manager import GetServiceStatus
+from cros.factory.goofy.service_manager import SetServiceStatus
+from cros.factory.goofy.service_manager import Status
 from cros.factory.test import state
 from cros.factory.test import utils
 from cros.factory.utils.process_utils import Spawn
@@ -83,10 +86,26 @@ class DUTEnvironment(Environment):
   A real environment on a device under test.
   '''
   def shutdown(self, operation):
+    def prepare_shutdown():
+      '''Prepares for a clean shutdown.'''
+      self.goofy.connection_manager.DisableNetworking()
+      respawn_services = ['syslog',
+                          'tcsd',
+                          'shill',
+                          'warn-collector']
+      for service in respawn_services:
+        if GetServiceStatus(service) == Status.START:
+          SetServiceStatus(service, Status.STOP)
+
     assert operation in ['reboot', 'halt', 'factory_restart']
     logging.info('Shutting down: %s', operation)
     subprocess.check_call('sync')
-    subprocess.check_call(operation)
+    commands = dict(reboot=['shutdown', '-r', 'now'],
+                    halt=['shutdown', '-h', 'now'],
+                    factory_restart=['factory_restart'])
+    if 'shutdown' in commands[operation]:
+      prepare_shutdown()
+    subprocess.check_call(commands[operation])
     time.sleep(30)
     assert False, 'Never reached (should %s)' % operation
 
