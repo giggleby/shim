@@ -1708,6 +1708,16 @@ class Goofy(object):
               name='CheckBattery',
               text=message + ' Please stop the tests and charge battery now.',
               level='CRITICAL'))
+        else:
+          # Checks if a critical note needs to be cancelled since battery
+          # level is normal now.
+          notes = self.state_instance.get_shared_data('factory_note', True)
+          if notes and notes[-1]['level'] == 'CRITICAL':
+            if notes[-1]['name'] in ['MonitorAC', 'CheckBattery']:
+              self.goofy_rpc.AddNote(dict(
+                  name='CheckBattery',
+                  text='Battery is normal now, so cancel the critical note.',
+                  level='INFO'))
 
     except: # pylint: disable=W0702
       logging.exception('Unable to check battery or notify shopfloor')
