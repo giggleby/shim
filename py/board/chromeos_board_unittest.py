@@ -282,5 +282,20 @@ class ChromeOSBoardTest(unittest.TestCase):
     self.board.SetLEDColor(Board.LEDColor.RED)
     self.mox.VerifyAll()
 
+  def testECJumpRO(self):
+    self.board._CallECTool(['reboot_ec', 'RO'], log=True)
+    self.mox.ReplayAll()
+    self.board.ECJump('RO')
+    self.mox.VerifyAll()
+
+  def testECJumpRW(self):
+    self.board._CallECTool(['reboot_ec', 'RW'], log=True)
+    self.mox.ReplayAll()
+    self.board.ECJump('RW')
+    self.mox.VerifyAll()
+
+  def testECJumpException(self):
+    self.assertRaises(BoardException, self.board.ECJump, 'Foo')
+
 if __name__ == '__main__':
   unittest.main()

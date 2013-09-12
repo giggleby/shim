@@ -37,24 +37,36 @@ class ChromeOSBoard(Board):
   def __init__(self):
     super(ChromeOSBoard, self).__init__()
 
-  def _CallECTool(self, cmd, check=True):
+  def _CallECTool(self, cmd, check=True, log=False):
     """Invokes ectool.
 
     Args:
       cmd: ectool argument list
       check: True to check returncode and raise BoardException for non-zero
           returncode.
+      log: The log argument passed to Spawn to log the command being executed.
 
     Returns:
       ectool command's stdout.
     """
-    p = Spawn(['ectool'] + cmd, read_stdout=True, ignore_stderr=True)
+    p = Spawn(['ectool'] + cmd, read_stdout=True, ignore_stderr=True, log=log)
     if check:
       if p.returncode == 252:
         raise BoardException('EC is locked by write protection')
       elif p.returncode != 0:
         raise BoardException('EC returned error %d' % p.returncode)
     return p.stdout_data
+
+  def ECJump(self, destination):
+    """Lets EC jump to certian section
+
+    Args:
+      destination: 'RO' or 'RW'.
+    """
+    if destination not in ['RO', 'RW']:
+      raise BoardException('EC jump destination %r is not RO or RW',
+                           destination)
+    self._CallECTool(['reboot_ec', destination], log=True)
 
   def I2CRead(self, port, addr, reg):
     try:
