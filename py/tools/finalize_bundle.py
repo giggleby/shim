@@ -620,7 +620,7 @@ class FinalizeBundle(object):
         """
         return self.PatchLSBFactory(
             mount=mount_point,
-            options=dict(FACTORY_WIPE_OPTION=option))
+            options=dict(FACTORY_WIPE_OPTION='battery_cut_off'))
 
       # Patch in the install shim, if present.
       shims = self._GetShims()
