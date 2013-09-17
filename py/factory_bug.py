@@ -142,11 +142,6 @@ def SaveLogs(output_dir, archive_id=None,
     with open(os.path.join(tmp, 'crossystem'), 'w') as f:
       Spawn('crossystem', stdout=f, stderr=f, check_call=True)
 
-      if not utils.in_chroot():
-        print >> f, '\nectool version:'
-        f.flush()
-        Spawn(['ectool', 'version'], stdout=f, check_call=True)
-
     with open(os.path.join(tmp, 'dmesg'), 'w') as f:
       Spawn('dmesg', stdout=f, check_call=True)
 
