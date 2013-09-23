@@ -238,6 +238,7 @@ INITIAL_TIMEZONE = [
   "Europe/Berlin",
   "Europe/Brussels",
   "Europe/Paris",
+  "Europe/Stockholm",
   "Europe/Sarajevo",
   "Africa/Windhoek",
   "Africa/Brazzaville",
