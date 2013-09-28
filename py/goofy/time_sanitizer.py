@@ -50,17 +50,21 @@ class Time(object):
   def Time(self):
     return time.time()
 
-  def _ClearCronLiteTimeStamps(self):
+  def _ClearCronLiteTimeStamps(self, new_time):
     for root, _, files in os.walk(CRON_LITE_TIMESTAMP_PATH):
       for f in files:
         path = os.path.join(root, f)
-        logging.info('Deleting cron-lite time stamp file %r', path)
-        TryUnlink(path)
+        # Only deletes timestamp files which are in the future. Otherwise,
+        # every time we set time, we effectively reset cron-lite timer.
+        if os.stat(path).st_mtime > new_time:
+          logging.info('Deleting cron-lite time stamp file ' +
+                       'modified in the future %r', path)
+          TryUnlink(path)
 
   def SetTime(self, new_time):
     # Deletes cron-lite time stamps files in case it will be a long time before
     # cron-lite jobs get executed again.
-    self._ClearCronLiteTimeStamps()
+    self._ClearCronLiteTimeStamps(new_time)
     logging.warn('Setting time to %s', _FormatTime(new_time))
     us, s = math.modf(new_time)
     value = timespec(int(s), int(us * 1000000))
