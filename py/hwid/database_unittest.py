@@ -508,7 +508,15 @@ class ComponentsTest(unittest2.TestCase):
                 'label1': 'FOO', 'label2': 'BAR'}}},
         self.components.MatchComponentsFromValues('comp_cls_2', None))
     self.assertEquals(
-        None,
+        {'comp_1': {
+            'values': {
+                'field1': Value('foo'),
+                'field2': Value('bar')}},
+         'comp_3': {
+             'values': {
+                'field1': Value('foo'),
+                'field2': Value('buz'),
+                'field3': Value('acme')}}},
         self.components.MatchComponentsFromValues('comp_cls_1',
                                                   {'field1': 'foo'}))
 
