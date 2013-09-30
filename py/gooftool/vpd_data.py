@@ -250,6 +250,7 @@ INITIAL_TIMEZONE = [
   "Asia/Jerusalem",
   "Europe/Minsk",
   "Africa/Harare",
+  "Africa/Johannesburg",
   "Asia/Baghdad",
   "Europe/Moscow",
   "Asia/Kuwait",
