@@ -8,6 +8,7 @@ import ctypes
 import factory_common  # pylint: disable=W0611
 import logging
 import re
+import time
 
 from cros.factory.system.board import Board, BoardException
 from cros.factory.utils.process_utils import Spawn
@@ -68,13 +69,18 @@ class ChromeOSBoard(Board):
                            destination)
     self._CallECTool(['reboot_ec', destination], log=True)
 
-  def I2CRead(self, port, addr, reg):
-    try:
-      ectool_output = self._CallECTool(['i2cread', '16', str(port), str(addr),
-                                        str(reg)])
-      return int(self.I2C_READ_RE.findall(ectool_output)[0], 16)
-    except Exception as e: # pylint: disable=W0703
-      raise BoardException('Unable to read from I2C: %s' % e)
+  def I2CRead(self, port, addr, reg, retry=1, interval=0.1):
+    for i in xrange(retry):
+      try:
+        ectool_output = self._CallECTool(['i2cread', '16', str(port), str(addr),
+                                          str(reg)])
+        return int(self.I2C_READ_RE.findall(ectool_output)[0], 16)
+      except Exception as e: # pylint: disable=W0703
+        logging.error('Unable to read from I2C (%d/%d): %s', i + 1, retry, e)
+      time.sleep(interval)
+    err_msg = ('Unable to read from I2C (port=%d, addr=0x%x, reg=0x%x)' %
+               (port, addr, reg))
+    raise BoardException(err_msg)
 
   def I2CWrite(self, port, addr, reg, value):
     try:
@@ -183,7 +189,7 @@ class ChromeOSBoard(Board):
     return ctypes.c_int16(self.I2CRead(0, 0x12, 0x14)).value
 
   def GetBatteryCurrent(self):
-    return ctypes.c_int16(self.I2CRead(0, 0x16, 0x0a)).value
+    return ctypes.c_int16(self.I2CRead(0, 0x16, 0x0a, retry=3)).value
 
   def ProbeEC(self):
     try:

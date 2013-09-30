@@ -139,13 +139,15 @@ class Board(object):
     """
     raise NotImplementedError
 
-  def I2CRead(self, port, addr, reg):
+  def I2CRead(self, port, addr, reg, retry=1, interval=0.1):
     """Reads 16-bit value from I2C bus.
 
     Args:
       port: I2C port ID.
       addr: I2C slave address.
       reg: Slave register address.
+      retry: Number of read tries before giving up.
+      interval: Delay interval between tries.
 
     Returns:
       Integer value read from slave.

@@ -123,6 +123,16 @@ class ChromeOSBoardTest(unittest.TestCase):
     self.assertEquals(self.board.GetBatteryCurrent(), 0x1000)
     self.mox.VerifyAll()
 
+  def testGetBatteryCurrentRetry(self):
+    _MOCK_I2C_READ = 'Read from I2C port 0 at 0x16 offset 0xa = 0x1000'
+    self.board._CallECTool(['i2cread', '16', '0', '22',
+        '10']).AndRaise(BoardException('ectool returned error 1'))
+    self.board._CallECTool(['i2cread', '16', '0', '22',
+                            '10']).AndReturn(_MOCK_I2C_READ)
+    self.mox.ReplayAll()
+    self.assertEquals(self.board.GetBatteryCurrent(), 0x1000)
+    self.mox.VerifyAll()
+
   def testGetECVersion(self):
     _MOCK_VERSION = '\n'.join([
         'vendor               | ti',
