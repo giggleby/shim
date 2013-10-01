@@ -15,7 +15,10 @@ DisplayTest = function(container) {
   this.styleDiv = null;
   this.fullScreenElement = null;
   this.styleList = [
-    "display-subtest-solid-red",
+    "display-subtest-solid-gray-170",
+    "display-subtest-solid-gray-127",
+    "display-subtest-solid-gray-63",
+    /*"display-subtest-solid-red",
     "display-subtest-solid-green",
     "display-subtest-solid-blue",
     "display-subtest-solid-white",
@@ -26,10 +29,13 @@ DisplayTest = function(container) {
     "display-subtest-gradient-red",
     "display-subtest-gradient-green",
     "display-subtest-gradient-blue",
-    "display-subtest-gradient-white",
+    "display-subtest-gradient-white",*/
   ];
   this.enItemList = [
-    "solid-red",
+    "solid-gray-170",
+    "solid-gray-127",
+    "solid-gray-63",
+    /*"solid-red",
     "solid-green",
     "solid-blue",
     "solid-white",
@@ -40,10 +46,13 @@ DisplayTest = function(container) {
     "gradient-red",
     "gradient-green",
     "gradient-blue",
-    "gradient-white",
+    "gradient-white",*/
   ];
   this.zhItemList = [
-    "红色",
+    "灰色170",
+    "灰色127",
+    "灰色63",
+    /*"红色",
     "绿色",
     "蓝色",
     "白色",
@@ -54,7 +63,7 @@ DisplayTest = function(container) {
     "渐红",
     "渐绿",
     "渐蓝",
-    "渐白",
+    "渐白",*/
   ];
   this.enPassed = "Passed";
   this.zhPassed = "通过";
@@ -95,6 +104,8 @@ function setupDisplayTest(container) {
  * There is a table with itemNumber rows and two columns.
  */
 DisplayTest.prototype.init = function() {
+  this.itemNumber = this.enItemList.length;
+
   var caption = document.createElement("div");
   caption.className = "display-caption";
   appendSpanEnZh(caption, this.enInstruct, this.zhInstruct);
