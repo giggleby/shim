@@ -252,13 +252,15 @@ def BestMatchHwids(options):
   if len(potential_volatiles) == 0:
     sys.exit('FAILURE: no VOLATILEs found for potential matching BOMs/VARIANTS '
              '(with specified status)')
-  if (options.optimistic and
-      len(match_tree) == 1 and
-      len(potential_variants) == 1 and
-      len(potential_volatiles) == 1):
-    print ('MATCHING HWID: %s' % device.FmtHwid(match_tree.keys().pop(),
-                                                potential_variants.pop(),
-                                                potential_volatiles.pop()))
+  if options.optimistic:
+    if (len(match_tree) == 1 and
+        len(potential_variants) == 1 and
+        len(potential_volatiles) == 1):
+      print ('MATCHING HWID: %s' % device.FmtHwid(match_tree.keys().pop(),
+                                                  potential_variants.pop(),
+                                                  potential_volatiles.pop()))
+    else:
+      print ('Can not determine unique HWID without probing.')
     return
   print ('probing VOLATILEs to resolve potential matches: %s\n' %
          ', '.join(sorted(potential_volatiles)))
