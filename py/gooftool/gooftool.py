@@ -24,7 +24,6 @@ from tempfile import gettempdir, NamedTemporaryFile
 
 import factory_common  # pylint: disable=W0611
 
-from cros.factory import vpd_constraints
 from cros.factory.common import Error, ParseKeyValueData, SetupLogging, Shell
 from cros.factory.common import YamlWrite
 from cros.factory.gooftool import crosfw
@@ -37,7 +36,11 @@ from cros.factory.hacked_argparse import verbosity_cmd_arg
 from cros.factory.hwdb import hwid_tool
 from cros.factory.event_log import EventLog, EVENT_LOG_DIR
 from cros.factory.event_log import TimedUuid
-from cros.factory.test.factory import FACTORY_LOG_PATH
+from cros.factory.test.factory import FACTORY_LOG_PATH, in_chroot
+# vpd_constraints is installed from private overlay. It is not needed
+# when user wants to use gooftool in chroot.
+if not in_chroot():
+  from cros.factory import vpd_constraints
 
 
 # Use a global event log, so that only a single log is created when
