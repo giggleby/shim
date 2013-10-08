@@ -10,14 +10,19 @@
 
 """Collection of valid VPD values for ChromeOS."""
 
-# keyboard_layout: https://gerrit.chromium.org/gerrit/gitweb?p=chromium/src.git;a=blob;f=chrome/browser/chromeos/input_method/input_methods.txt
+# keyboard_layout:https://code.google.com/p/chromium/codesearch#chromium/src/chromeos/ime/input_methods.txt&q=input_methods.txt&sq=package:chromium&type=cs
 KEYBOARD_LAYOUT = [
-  'xkb:nl::nld',
+  'xkb:us::eng',
+  'xkb:us:intl:eng',
+  'xkb:us:altgr-intl:eng',
+  'xkb:us:dvorak:eng',
+  'xkb:us:colemak:eng',
   'xkb:be::nld',
   'xkb:fr::fra',
   'xkb:be::fra',
   'xkb:ca::fra',
   'xkb:ch:fr:fra',
+  'xkb:ca:multix:fra',
   'xkb:de::ger',
   'xkb:de:neo:ger',
   'xkb:be::ger',
@@ -25,23 +30,18 @@ KEYBOARD_LAYOUT = [
   'xkb:jp::jpn',
   'xkb:ru::rus',
   'xkb:ru:phonetic:rus',
-  'xkb:us::eng',
-  'xkb:us:intl:eng',
-  'xkb:us:altgr-intl:eng',
-  'xkb:us:dvorak:eng',
-  'xkb:us:colemak:eng',
   'xkb:br::por',
   'xkb:bg::bul',
   'xkb:bg:phonetic:bul',
   'xkb:ca:eng:eng',
   'xkb:cz::cze',
+  'xkb:cz:qwerty:cze',
   'xkb:ee::est',
   'xkb:es::spa',
   'xkb:es:cat:cat',
   'xkb:dk::dan',
   'xkb:gr::gre',
   'xkb:il::heb',
-  'xkb:kr:kr104:kor',
   'xkb:latam::spa',
   'xkb:lt::lit',
   'xkb:lv:apostrophe:lav',
@@ -51,6 +51,7 @@ KEYBOARD_LAYOUT = [
   'xkb:fi::fin',
   'xkb:hu::hun',
   'xkb:it::ita',
+  'xkb:is::ice',
   'xkb:no::nob',
   'xkb:pl::pol',
   'xkb:pt::por',
@@ -61,6 +62,10 @@ KEYBOARD_LAYOUT = [
   'xkb:rs::srp',
   'xkb:tr::tur',
   'xkb:ua::ukr',
+  'xkb:by::bel',
+  'xkb:am:phonetic:arm',
+  'xkb:ge::geo',
+  'xkb:mn::mon',
   ]
 
 # initial_locale: http://git.chromium.org/gitweb/?p=chromium.git;a=blob;f=ui/base/l10n/l10n_util.cc
