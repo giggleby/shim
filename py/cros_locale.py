@@ -397,8 +397,10 @@ DEFAULT_REGION_LIST = (
     # Use 'en-GB' for Singapore and India because they are
     # British Commonwealth of Nations.
     # http://en.wikipedia.org/wiki/Commonwealth_of_Nations
-    ('en-GB', 'xkb:us::eng', 'Asia/Kuala_Lumpur', 'English (Singapore)'),
+    ('en-GB', 'xkb:us::eng', 'Asia/Singapore', 'English (Singapore)'),
     ('en-GB', 'xkb:us::eng', 'Asia/Calcutta', 'English (India)'),
+    ('ms', 'xkb:us::eng', 'Asia/Kuala_Lumpur', 'Malay (Malaysia)'),
+    ('en-US', 'xkb:us:intl:eng', 'Africa/Johannesburg', 'English (South Africa)'),
 )
 ALL_KEYBOARDS = set(x[1] for x in DEFAULT_REGION_LIST if len(x) > 1 and x[1])
 
