@@ -7,6 +7,7 @@
 """Visualize and/or modify HWID and related component data."""
 
 
+import copy
 import logging
 import os
 import re
@@ -1356,6 +1357,63 @@ def ListHwidsCommand(config, hw_db):
         print '%s%s  [%s]' % (hwid, (max_hwid_len - len(hwid)) * ' ', status)
       else:
         print hwid
+
+
+@Command('hwid_list_csv',
+         CmdArg('-b', '--board'),
+         CmdArg('-s', '--status', nargs='*'))
+def ListHwidsCSVCommand(config, hw_db):
+  """Print sorted list of existing HWIDs as CSV format.
+
+  Optionally list HWIDs for specific status values (default is for all
+  HWIDs which have some kind of status to be shown).  Optionally show
+  the status of each HWID.  Optionally limit the list to a specific
+  board.
+  """
+  status_mask = config.status if config.status else LIFE_CYCLE_STAGES
+  for board, device in hw_db.devices.items():
+    if config.board:
+      if not config.board == board:
+        continue
+    filtered_hwid_map = dict(
+      (hwid, status) for hwid, status in device.flat_hwid_status_map.items()
+      if status in status_mask)
+
+    header = ['hwid']
+    var_header = []
+    for var_code in device.variants:
+      var_header = sorted(device.variants[var_code].classes_missing +
+          device.variants[var_code].components.keys())
+      break
+
+    var_comps_dict = {}
+    for var_code in device.variants:
+      var_comps_dict[var_code] = []
+      tmp_dict = copy.copy(device.variants[var_code].components)
+      for comp_class in device.variants[var_code].classes_missing:
+        tmp_dict[comp_class] = 'None'
+      for comp_class, comps in sorted(tmp_dict.items()):
+        var_comps_dict[var_code].append(comps)
+
+    for bom_name, bom in sorted(device.boms.items()):
+      if len(header) == 1:
+        for comp_class, comps in sorted(bom.primary.components.items()):
+          header.append(comp_class)
+        header += var_header
+        print ','.join(header)
+
+      for var_code in bom.variants:
+        for vol_code in device.volatiles:
+          hwid = device.FmtHwid(bom_name, var_code, vol_code)
+          if hwid in filtered_hwid_map:
+            comp_list = []
+            for comp_class, comps in sorted(bom.primary.components.items()):
+              if isinstance(comps, list):
+                comp_list.append(' '.join(comps))
+              else:
+                comp_list.append(comps)
+            comp_list += var_comps_dict[var_code]
+            print "%s,%s" % (hwid, ','.join(comp_list))
 
 
 @Command('component_breakdown',
