@@ -35,8 +35,7 @@ DEVICE_ID_PATH = os.path.join(factory.get_factory_root(), ".device_id")
 
 EVENT_LOG_DIR = os.path.join(factory.get_state_root(), "events")
 WLAN0_MAC_PATH = "/sys/class/net/wlan0/address"
-MLAN0_MAC_PATH = "/sys/class/net/mlan0/address"
-DEVICE_ID_SEARCH_PATHS = [WLAN0_MAC_PATH, MLAN0_MAC_PATH]
+DEVICE_ID_SEARCH_PATHS = [WLAN0_MAC_PATH]
 
 # Path to use to generate an image ID in case none exists (i.e.,
 # this is the first time we're creating an event log).
