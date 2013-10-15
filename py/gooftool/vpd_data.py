@@ -240,6 +240,7 @@ INITIAL_TIMEZONE = [
   "Europe/Paris",
   "Europe/Stockholm",
   "Europe/Sarajevo",
+  "Europe/Zurich",
   "Africa/Windhoek",
   "Africa/Brazzaville",
   "Asia/Amman",
