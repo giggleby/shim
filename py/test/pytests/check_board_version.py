@@ -23,7 +23,7 @@ class CheckBoardVersionTest(unittest.TestCase):
   ARGS = [
     Arg('mosys_path', str, 'path to mosys binary',
         default='/usr/sbin/mosys'),
-    Arg('board_version', str, 'board version like "PVT".'),
+    Arg('board_versions', list, 'board versions like ["PVT", "MP"].'),
     Arg('board_rev_ids', list, 'a list of valid rev ids read from resistors')]
 
   def runTest(self):
@@ -36,6 +36,6 @@ class CheckBoardVersionTest(unittest.TestCase):
         else (None, None, None, None))
     factory.console.info('resistors: v0: %s, v1: %s, v2: %s', v0, v1, v2)
     factory.console.info('rev id: %s', rev)
-    self.assertEquals(self.args.board_version, board_version)
+    self.assertIn(board_version, self.args.board_versions)
     self.assertTrue(rev in self.args.board_rev_ids,
         'rev id %s is not in valid id list %s' % (rev, self.args.board_rev_ids))
