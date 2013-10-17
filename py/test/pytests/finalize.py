@@ -53,7 +53,7 @@ class Finalize(unittest.TestCase):
           default=5),
       Arg('allow_force_finalize', bool,
           'Allow the user to force finalization (even in operator mode).',
-          default=True),
+          default=False),
       Arg('min_charge_pct', int,
           'Minimum battery charge percentage allowed (None to disable '
           'checking charge level)',
