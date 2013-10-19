@@ -591,8 +591,7 @@ class FinalizeBundle(object):
           logging.info('Using test_list v2 ACTIVE file')
           active = os.path.join(mount, 'dev_image', 'factory', 'py', 'test',
                                 'test_lists', 'ACTIVE')
-          with open(active, 'w') as f:
-            f.write(self.args.test_list)
+          self._WriteWithSudo(active, self.args.test_list)
         else:
           logging.info('Using test_list v1 active symlink')
           test_list = 'test_list.%s' % self.args.test_list
