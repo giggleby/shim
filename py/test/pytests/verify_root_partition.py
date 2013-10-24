@@ -23,6 +23,9 @@ DM_DEVICE_NAME = 'verifyroot'
 DM_DEVICE_PATH = os.path.join('/dev/mapper', DM_DEVICE_NAME)
 BLOCK_SIZE = 8*1024*1024
 
+KERN_PAYLOAD_VER_1 = '%U+1'
+KERN_PAYLOAD_VER_2 = 'PARTUUID=%U/PARTNROFF=1'
+
 class VerifyRootPartitionTest(unittest.TestCase):
   ARGS = [
       Arg('kern_a_device', str, 'Device containing KERN-A partition',
@@ -63,9 +66,16 @@ class VerifyRootPartitionTest(unittest.TestCase):
     table = match.group(1)
     partition_size = int(match.group(2)) * 512
 
-    assert 'PARTUUID=%U/PARTNROFF=1' in table
-    table = table.replace('PARTUUID=%U/PARTNROFF=1',
-                          '/dev/%s' % self.args.root_device)
+    if KERN_PAYLOAD_VER_1 in table:
+      table = table.replace(KERN_PAYLOAD_VER_1,
+                            '/dev/%s' % self.args.root_device)
+    elif KERN_PAYLOAD_VER_2 in table:
+      table = table.replace(KERN_PAYLOAD_VER_2,
+                            '/dev/%s' % self.args.root_device)
+    else:
+      self.fail('Unable to find %r or %r in vbutil_kernel output.' % (
+          KERN_PAYLOAD_VER_1, KERN_PAYLOAD_VER_2))
+
     # Cause I/O error on invalid bytes
     table += ' error_behavior=eio'
 
