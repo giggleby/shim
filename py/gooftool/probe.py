@@ -445,6 +445,10 @@ def _ProbeWimax():
 
 @_ComponentProbe('adc')
 def _ProbeADC():
+  adc_dts = '/proc/device-tree/adc@12D10000/status'
+  if os.path.exists(adc_dts) and open(adc_dts).read().startswith('disabled'):
+    return ['na']
+
   cmd = 'python /usr/local/autotest/site_tests/suite_Factory/directtherm.py'
   stdout = Shell(cmd).stdout
   return [CompactStr(stdout)] if stdout else []
