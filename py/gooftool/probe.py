@@ -491,7 +491,7 @@ def _ProbeChipsetArm():
   if not os.path.exists(fdt_compatible_file):
     return []
   compatible_list = open(fdt_compatible_file).read().strip()
-  return [CompactStr(compatible_list.strip(chr(0)).split(chr(0)))]
+  return [CompactStr(compatible_list.strip(chr(0)).split(',').pop())]
 
 
 @_ComponentProbe('cpu', 'x86')
