@@ -296,7 +296,7 @@ class FinalizeBundle(object):
         self.manifest, ['board', 'bundle_name', 'add_files', 'delete_files',
                         'add_files_to_image', 'delete_files_from_image',
                         'site_tests', 'wipe_option', 'files', 'mini_omaha_url',
-                        'patch_image_args'])
+                        'patch_image_args', 'network_install_cros_boards'])
 
     self.board = self.manifest['board']
     self.simple_board = self.board.split('_')[-1]
@@ -749,15 +749,28 @@ class FinalizeBundle(object):
     if os.path.exists(netboot_firmware_image):
       update_firmware_vars = os.path.join(self.bundle_dir, 'factory_setup',
                                          'update_firmware_vars.py')
-      new_netboot_firmware_image = netboot_firmware_image + '.INPROGRESS'
-      Spawn([update_firmware_vars,
-             '--force',
-             '-i', netboot_firmware_image,
-             '-o', new_netboot_firmware_image,
-             '--omahaserver=%s' % mini_omaha_url,
-             '--tftpserverip=%s' % urlparse.urlparse(mini_omaha_url).hostname],
-             check_call=True, log=True)
-      shutil.move(new_netboot_firmware_image, netboot_firmware_image)
+      # If no network_install_cros_board is specified, then we don't need to
+      # set cros_board arg in netboot firmware.
+      network_install_cros_boards = ([''] +
+          self.manifest.get('network_install_cros_boards', []))
+
+      for cros_board in network_install_cros_boards:
+        new_netboot_firmware_image = (netboot_firmware_image +
+            (('.' + cros_board) if cros_board else ''))
+        new_netboot_firmware_image_inprogress = (new_netboot_firmware_image +
+            '.INPROGRESS')
+        args = ['--force',
+                '-i', netboot_firmware_image,
+                '-o', new_netboot_firmware_image_inprogress,
+                '--omahaserver=%s' % mini_omaha_url,
+                ('--tftpserverip=%s' %
+                 urlparse.urlparse(mini_omaha_url).hostname)]
+        if cros_board:
+          args += ['--arg=cros_board=%s' % cros_board]
+        Spawn([update_firmware_vars] + args, check_call=True, log=True)
+        shutil.move(new_netboot_firmware_image_inprogress,
+                    new_netboot_firmware_image)
+
 
   def MakeFactoryPackages(self):
     release_images = glob.glob(os.path.join(self.bundle_dir, 'release/*.bin'))
