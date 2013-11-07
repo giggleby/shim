@@ -207,6 +207,9 @@ class ChromeOSBoard(Board):
     except Exception as e:
       raise BoardException('Unable to get battery design capacity: %s' % e)
 
+  def GetBatteryRegisters(self):
+    raise NotImplementedError
+
   def SetLEDColor(self, color, led_index=0, brightness=100):
     if color not in Board.LEDColor:
       raise ValueError('Invalid color')
