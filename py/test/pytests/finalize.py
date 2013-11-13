@@ -6,6 +6,7 @@
 import logging
 import os
 import re
+import tempfile
 import threading
 import time
 import unittest
@@ -15,6 +16,7 @@ import factory_common  # pylint: disable=W0611
 from cros.factory import system
 from cros.factory.event_log import Log
 from cros.factory.gooftool import Gooftool
+from cros.factory.system import SystemInfo
 from cros.factory.test import factory
 from cros.factory.test import gooftools
 from cros.factory.test import shopfloor
@@ -22,6 +24,7 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.args import Arg
 from cros.factory.test.test_ui import MakeLabel
+from cros.factory.utils.process_utils import Spawn
 
 
 MSG_CHECKING = MakeLabel("Checking system status for finalization...",
@@ -142,12 +145,54 @@ class Finalize(unittest.TestCase):
 
   def Run(self):
     try:
+      self.LogImageVersion()
       self.RunPreflight()
       self.template.SetState(MSG_FINALIZING)
       self.DoFinalize()
       self.ui.Fail('Should never be reached')
     except Exception, e:  # pylint: disable=W0703
       self.ui.Fail('Exception during finalization: %s' % e)
+
+  def LogImageVersion(self):
+    release_rootfs = ('/dev/mmcblk0p5' if os.path.exists('/dev/mmcblk0')
+                      else '/dev/sda5')
+    mount_point = tempfile.mkdtemp(prefix='release_rootfs.')
+    lsb_release = None
+    try:
+      if Spawn(['mount', '-o', 'ro', release_rootfs, mount_point],
+               ignore_stdout=True, ignore_stderr=True,
+               call=True, log=True).returncode == 0:
+        # Success
+        logging.info('Mounted %s on %s', release_rootfs, mount_point)
+        lsb_release = open(
+            os.path.join(mount_point, 'etc', 'lsb-release')).read()
+        logging.info('lsb_release of release image: %s', lsb_release)
+    finally:
+      # Always try to unmount, even if we think the mount failed.
+      if Spawn(['umount', '-l', mount_point],
+               ignore_stdout=True, ignore_stderr=True,
+               call=True, log=True).returncode == 0:
+        logging.info('Unmounted %s', release_rootfs)
+      try:
+        os.rmdir(mount_point)
+      except OSError:
+        logging.exception('Unable to remove %s', mount_point)
+
+    if lsb_release:
+      match = re.search('^GOOGLE_RELEASE=(.+)$', lsb_release, re.MULTILINE)
+    else:
+      self.ui.Fail('Can not read lsb-release in release partition')
+
+    if match:
+      release_image_version = match.group(1)
+      logging.info('release image version: %s', release_image_version)
+      factory_image_version = SystemInfo().factory_image_version
+      logging.info('factory image version: %s', factory_image_version)
+      Log('finalize_image_version',
+          factory_image_version=factory_image_version,
+          release_image_version=release_image_version)
+    else:
+      self.ui.Fail('Can not find release image version')
 
   def RunPreflight(self):
     power = system.GetBoard().power
