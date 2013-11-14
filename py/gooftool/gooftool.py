@@ -613,7 +613,8 @@ def PrepareWipe(options):
          _hwdb_path_cmd_arg,
          _board_cmd_arg,
          _probe_results_cmd_arg,
-         _hwid_cmd_arg)
+         _hwid_cmd_arg,
+         _rma_mode_cmd_arg)
 def Verify(options):
   """Verifies if whole factory process is ready for finalization.
 
@@ -754,7 +755,8 @@ def UploadReport(options):
          _add_file_cmd_arg,
          _board_cmd_arg,
          _probe_results_cmd_arg,
-         _hwid_cmd_arg)
+         _hwid_cmd_arg,
+         _rma_mode_cmd_arg)
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
 
@@ -862,7 +864,8 @@ def GenerateHwidV3(options):
          _board_cmd_arg,
          _hwdb_path_cmd_arg,
          _probe_results_cmd_arg,
-         _hwid_cmd_arg)
+         _hwid_cmd_arg,
+         _rma_mode_cmd_arg)
 def VerifyHwidV3(options):
   """Verify system HWID properties match probed device properties.
 
@@ -915,7 +918,8 @@ def VerifyHwidV3(options):
   if not options.board:
     options.board = common.ProbeBoard(hwid_str)
   GetGooftool(options).VerifyHwidV3(
-      hwid_str, probe_results, probed_ro_vpd, probed_rw_vpd)
+      hwid_str, probe_results, probed_ro_vpd, probed_rw_vpd,
+      rma_mode=options.rma_mode)
 
   event_log.Log('verified_hwid', hwid=hwid_str)
   print 'Verification SUCCESS!'
