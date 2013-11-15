@@ -66,7 +66,8 @@ class Modem(object):
 
   def ExpectMultipleLines(self, expected_regex):
     '''Expects a multiple line regular expression.'''
-    lines = self.readlines()
-    logging.info('modem[ %r', lines)
-    if not re.search(expected_regex, lines, re.MULTILINE | re.DOTALL):
+    lines = self.ser.readlines()
+    for line in lines:
+      logging.info('modem[ %r', line)
+    if not re.search(expected_regex, ''.join(lines), re.MULTILINE | re.DOTALL):
       raise Error('Expected %r but got %r' % (expected_regex, lines))
