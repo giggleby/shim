@@ -226,7 +226,8 @@ class ProbeSimCardTrayTest(unittest.TestCase):
     if ret not in ['0', '1']:
       raise ProbeTrayException('Get invalid detection %s from %s',
                                ret, value_path)
-    return ProbeTrayTask.INSERT if ret == '1' else ProbeTrayTask.REMOVE
+    # HACK for Samus Proto1b: 0 and 1 is reversed.
+    return ProbeTrayTask.INSERT if ret == '0' else ProbeTrayTask.REMOVE
 
   def CheckPresence(self):
     self.assertEquals(
