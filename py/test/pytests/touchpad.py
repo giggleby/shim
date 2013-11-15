@@ -21,7 +21,7 @@ from cros.factory.test import test_ui
 from cros.factory.test.args import Arg
 from cros.factory.test.countdown_timer import StartCountdownTimer
 from cros.factory.test.ui_templates import OneSection
-from cros.factory.test.utils import StartDaemonThread
+from cros.factory.test.utils import StartDaemonThread, SetTwoFingerScrolling
 from cros.factory.utils.process_utils import Spawn
 
 #Event: time 1352876832.935291, type 3 (EV_ABS), code 53
@@ -342,6 +342,9 @@ class TouchpadTest(unittest.TestCase):
       self.touchpad_event_path = ('/dev/input/event' +
                                   str(self.args.touchpad_event_id))
 
+    # Enable two-finger scrolling.
+    SetTwoFingerScrolling(True)
+
     logging.info('start monitor daemon thread')
     StartDaemonThread(target=self.MonitorEvtest)
     logging.info('start countdown timer daemon thread')
@@ -377,6 +380,8 @@ class TouchpadTest(unittest.TestCase):
     if self.monitor_process.poll() is None:
       self.monitor_process.terminate()
     self.EnableTouchpadX(True)
+    # Disable two-finger scrolling.
+    SetTwoFingerScrolling(False)
 
   def MonitorEvtest(self):
     '''

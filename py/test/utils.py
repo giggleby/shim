@@ -457,3 +457,13 @@ def WaitFor(condition, timeout_secs, poll_interval=0.1):
     if time.time() > end_time:
       raise TimeoutError('Timeout waititng for %r' % _GetConditionString())
     time.sleep(poll_interval)
+
+def SetTwoFingerScrolling(enabled):
+  os.environ['DISPLAY'] = ':0'
+  os.environ['XAUTHORITY'] = '/home/chronos/.Xauthority'
+  if bool(enabled):
+    Spawn(['xinput', 'set-prop', '11', '398', '2.5'])
+    Spawn(['xinput', 'set-prop', '11', '399', '2.5'])
+  else:
+    Spawn(['xinput', 'set-prop', '11', '398', '0'])
+    Spawn(['xinput', 'set-prop', '11', '399', '0'])
