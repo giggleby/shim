@@ -77,6 +77,9 @@ class Finalize(unittest.TestCase):
       Arg('hwid_version', int,
           'Version of HWID library to use in gooftool.', default=2,
           optional=True),
+      Arg('rma_mode', bool,
+          'Enable rma_mode, do not check for deprecated components.',
+          default=False, optional=True),
       Arg('sync_event_logs', bool, 'Sync event logs to shopfloor', default=True)
       ]
 
@@ -310,6 +313,9 @@ class Finalize(unittest.TestCase):
       command += ' --fast'
     command += ' --upload_method "%s"' % upload_method
     command += ' --add_file "%s"' % self.test_states_path
+    if self.args.rma_mode:
+      command += ' --rma_mode'
+      logging.info('Using RMA mode. Accept deprecated components')
 
     gooftools.run(command)
 
