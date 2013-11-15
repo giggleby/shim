@@ -4,6 +4,7 @@
 
 """A wrapper for talking with a tty modem."""
 
+import re
 import serial
 import logging
 
@@ -62,3 +63,10 @@ class Modem(object):
     line = self.ReadLine()
     if line != expected_line:
       raise Error('Expected %r but got %r' % (expected_line, line))
+
+  def ExpectMultipleLines(self, expected_regex):
+    '''Expects a multiple line regular expression.'''
+    lines = self.readlines()
+    logging.info('modem[ %r', lines)
+    if not re.search(expected_regex, lines, re.MULTILINE | re.DOTALL):
+      raise Error('Expected %r but got %r' % (expected_regex, lines))
