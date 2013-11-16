@@ -23,6 +23,8 @@ class ProbeCellularInfoTest(unittest.TestCase):
   ARGS = [
       Arg('probe_imei', bool, 'Whether to probe IMEI', True),
       Arg('probe_meid', bool, 'Whether to probe MEID', True),
+      Arg('probe_EquipmentIdentifier', bool,
+          'Whether to probe EquipmentIdentifier', True),
       ]
 
   def runTest(self):
@@ -31,8 +33,10 @@ class ProbeCellularInfoTest(unittest.TestCase):
 
     data = {}
 
-    for name, enabled in (('imei', self.args.probe_imei),
-                          ('meid', self.args.probe_meid)):
+    for name, enabled in (
+        ('imei', self.args.probe_imei),
+        ('meid', self.args.probe_meid),
+        ('EquipmentIdentifier', self.args.probe_EquipmentIdentifier)):
       if not enabled:
         continue
 
