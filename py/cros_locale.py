@@ -361,7 +361,7 @@ DEFAULT_REGION_LIST = (
     ('lv',    'xkb:lv:apostrophe:lav',),
     ('nb',    'xkb:no::nob',),
     ('pl',    'xkb:pl::pol',),
-    ('pt-BR', 'xkb:br::por',),
+    ('pt-BR', 'xkb:us:intl:eng',),
     ('pt-PT', 'xkb:pt::por',),
     ('ro',    'xkb:ro::rum',),
     ('ru',    'xkb:ru::rus',),
