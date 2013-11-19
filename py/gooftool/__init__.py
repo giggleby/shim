@@ -531,9 +531,9 @@ class Gooftool(object):
       bitmap_locales = bmpblk_data.get('locales', bitmap_locales)
 
     # Some locale values are just a language code and others are a
-    # hyphen-separated language code and country code pair.  We care
-    # only about the language code part.
-    language_code = locale.partition('-')[0]
+    # hyphen-separated language code and country code pair.
+    # However, it uses underscore instead of hyphen in firmware bitmap locale.
+    language_code = locale.replace('-','_')
     if language_code in bitmap_locales:
       locale_index = bitmap_locales.index(language_code)
       self._util.shell('crossystem loc_idx=%d' % locale_index)
