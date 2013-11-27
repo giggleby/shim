@@ -13,6 +13,7 @@ import os
 import re
 import threading
 import yaml
+from collections import namedtuple
 from contextlib import contextmanager
 
 from cros.factory.test import factory
@@ -47,6 +48,12 @@ CUSTOM_DIR = os.path.join(factory.FACTORY_PATH, 'custom')
 #       that have been built or are being built.
 builder_state = threading.local()
 
+# Sampling is the helper class to control sampling of tests in test list.
+# key: The key used in device_data which will be evaluated in run_if argument.
+# rate:
+#   0.0: 0% sampling rate
+#   1.0: 100% sampling rate
+SamplingRate = namedtuple('SamplingRate', ['key', 'rate'])
 
 class TestListError(Exception):
   pass
