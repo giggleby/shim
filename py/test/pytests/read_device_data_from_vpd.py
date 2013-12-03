@@ -62,7 +62,8 @@ class CallShopfloor(unittest.TestCase):
     vpd_data = vpd.rw.GetAll()
     for d in self.args.vpd_data_fields:
       shopfloor.UpdateDeviceData(
-          dict((k[len(d[0]):], v)
+          dict((k[len(d[0]):],
+                (v.upper() == 'TRUE') if v.upper() in ['TRUE', 'FALSE'] else v)
                for k, v in vpd_data.iteritems() if self._ShouldIncludeKey(
                    k, d)))
 
