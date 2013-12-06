@@ -79,6 +79,7 @@ class ValidHWIDDBsTest(unittest2.TestCase):
         del probe_results.found_volatile_values[k]
         vpd[match.group(1)][match.group(2)] = v
     device_info = sample_dict.get('device_info')
+    rma_mode = sample_dict.get('rma_mode', False)
 
     def _Encode():
       gt = Gooftool(hwid_version=3, board=board_name,
@@ -87,7 +88,8 @@ class ValidHWIDDBsTest(unittest2.TestCase):
       hwid = gt.GenerateHwidV3(probe_results=probe_results,
                                device_info=device_info,
                                probed_ro_vpd=vpd['ro'],
-                               probed_rw_vpd=vpd['rw'])
+                               probed_rw_vpd=vpd['rw'],
+                               rma_mode=rma_mode)
       # Test all rules.
       gt.db.rules.EvaluateRules(Context(hwid=hwid, vpd=vpd,
                                         device_info=device_info))
