@@ -59,9 +59,15 @@ class RegionsList(Directive):
         for r in getattr(module, name):
           # Build a row.
           row = nodes.row('')
+
+          # Add an asterisk to description/region code for
+          # regions from the overlay.
+          overlay_suffix = (
+            '*' if module == overlay else '')
+
           # For each of the columns...
-          for value in [r.description,
-                        r.region_code,
+          for value in [r.description + overlay_suffix,
+                        r.region_code + overlay_suffix,
                         r.keyboard,
                         r.time_zone,
                         r.language_code,
