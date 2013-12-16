@@ -566,7 +566,10 @@ def _ProbeCellular():
         # Sleep 2 seconds to wait modem shutdown as there's no event we can
         # watch for.
         time.sleep(2)
-        version_output = Shell(modem_utils + ' get_version')
+        version_output = Shell(modem_utils + ' --logging DEBUG get_version')
+        # Verbose output for understanding things underhood
+        logging.info('get_version returned stdout: %r', version_output.stdout)
+        logging.info('get_version returned stderr: %r', version_output.stderr)
         if not version_output.status:
           for (key, pattern) in (
               ('mac_package_version', r'MAC Package Version: (\w+)'),
