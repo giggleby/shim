@@ -127,7 +127,6 @@ MakeDatastoreClass('DeviceSpec', {
     'volatiles': (dict, (dict, str)),
     'volatile_values': (dict, str),
     'vpd_ro_fields': (list, str),
-    'vpd_rw_fields': (list, str),
     })
 
 MakeDatastoreClass('ProbeResults', {
@@ -1633,8 +1632,7 @@ def FilterDatabase(config, hw_db):
                    if vol_code in target_volatiles),
     volatile_values=dict((vol_name, device.volatile_values[vol_name])
                          for vol_name in target_volatile_names),
-    vpd_ro_fields=device.vpd_ro_fields,
-    vpd_rw_fields=device.vpd_rw_fields))
+    vpd_ro_fields=device.vpd_ro_fields))
   filtered_comp_db.Write(config.dest_dir)
   filtered_hw_db = HardwareDb(config.dest_dir)
   filtered_hw_db.devices[config.board] = filtered_device

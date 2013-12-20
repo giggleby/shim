@@ -349,7 +349,7 @@ class _TouchpadData():  # pylint: disable=W0232
 
   @classmethod
   def Cypress(cls):
-    for node in glob('/sys/class/input/mouse[0-9]*/device/device'):
+    for node in glob('/sys/class/input/input[0-9]*/device'):
       model_path_list = [os.path.join(node, field) for field in
                          ['product_id', 'hardware_version', 'protocol_version']]
       firmware_path = os.path.join(node, 'firmware_version')
@@ -556,6 +556,17 @@ def _ProbeWimax():
   return _FlimflamDevices.ReadSysfsDeviceIds('wimax')
 
 
+@_ComponentProbe('adc')
+def _ProbeADC():
+  adc_dts = '/proc/device-tree/adc@12D10000/status'
+  if os.path.exists(adc_dts) and open(adc_dts).read().startswith('disabled'):
+    return [DictCompactProbeStr('na')]
+
+  cmd = 'python /usr/local/autotest/site_tests/suite_Factory/directtherm.py'
+  stdout = Shell(cmd).stdout
+  return [DictCompactProbeStr(stdout)] if stdout else []
+
+
 @_ComponentProbe('display_converter')
 def _ProbeDisplayConverter():
   """Try brand-specific probes, return the first viable result."""
@@ -594,7 +605,7 @@ def _ProbeChipsetArm():
   if not os.path.exists(fdt_compatible_file):
     return []
   compatible_list = open(fdt_compatible_file).read().strip()
-  return [DictCompactProbeStr(compatible_list.strip(chr(0)).split(chr(0)))]
+  return [DictCompactProbeStr(compatible_list.strip(chr(0)).split(',').pop())]
 
 
 @_ComponentProbe('cpu', 'x86')
@@ -644,29 +655,32 @@ def _ProbeDisplayPanel():
   return edid_list
 
 
-@_ComponentProbe('dram')
-def _ProbeDram():
+@_ComponentProbe('dram', 'x86') 
+def _ProbeDramX86():
   """Combine mosys memory timing and geometry information."""
   # TODO(tammo): Document why mosys cannot load i2c_dev itself.
   _LoadKernelModule('i2c_dev')
-  part_data = Shell('mosys -k memory spd print id').stdout
-  timing_data = Shell('mosys -k memory spd print timings').stdout
+  time_data = Shell('mosys -k memory spd print timings').stdout
   size_data = Shell('mosys -k memory spd print geometry').stdout
-  parts = dict(re.findall('dimm="([^"]*)".*part_number="([^"]*)"', part_data))
-  timings = dict(re.findall('dimm="([^"]*)".*speeds="([^"]*)"', timing_data))
+  times = dict(re.findall('dimm="([^"]*)".*speeds="([^"]*)"', time_data))
   sizes = dict(re.findall('dimm="([^"]*)".*size_mb="([^"]*)"', size_data))
-  results = []
-  for slot in sorted(parts):
-    part = parts[slot]
-    size = sizes[slot]
-    timing = timings[slot].replace(' ', '')
-    results.append({
-        'slot': slot,
-        'part': part,
-        'size': size,
-        'timing': timing,
-        COMPACT_PROBE_STR: CompactStr(['|'.join([slot, part, size, timing])])})
-  return results
+  return [DictCompactProbeStr(['%s|%s|%s' % (i, sizes[i], times[i].replace(' ', ''))
+                      for i in sorted(times)])]
+
+
+@_ComponentProbe('dram', 'arm')
+def _ProbeDramArm():
+  """Combine mosys memory id information."""
+  # TODO(tammo): Document why mosys cannot load i2c_dev itself.
+  _LoadKernelModule('i2c_dev')
+  id_data = Shell('mosys -k memory spd print id').stdout
+  manufacturers = dict(re.findall('dimm="([^"]*)".*module_mfg="([^"]*)".*\n',
+                       id_data))
+  part_numbers = dict(re.findall('dimm="([^"]*)".*part_number="([^"]*)".*\n',
+                      id_data))
+  return [DictCompactProbeStr(['%s|%s|%s' %
+      (i, manufacturers[i].replace(':', ''), part_numbers[i])
+      for i in sorted(manufacturers)])]
 
 
 @_ComponentProbe('ec_flash_chip')
@@ -738,10 +752,9 @@ def _ProbeStorage():
     sectors = (open(size_path).read().strip()
                if os.path.exists(size_path) else '')
     ata_fields = ['vendor', 'model']
-    emmc_fields = ['type', 'name', 'hwrev', 'oemid', 'manfid']
-    optional_fields = ['cid', 'prv']
+    emmc_fields = ['type', 'name', 'fwrev', 'hwrev', 'oemid', 'manfid']
     data = (_ReadSysfsFields(dev_path, ata_fields) or
-            _ReadSysfsFields(dev_path, emmc_fields, optional_fields) or
+            _ReadSysfsFields(dev_path, emmc_fields) or
             None)
     if not data:
       return None
@@ -809,17 +822,39 @@ def _ProbeVga():
 def _ProbeWireless():
   return _FlimflamDevices.ReadSysfsDeviceIds('wifi')
 
+'''
 @_ComponentProbe('pmic')
 def _ProbePmic():
   pmics = glob('/sys/bus/platform/devices/*-pmic')
   return ([{COMPACT_PROBE_STR: os.path.basename(x)} for x in pmics]
           if pmics else [])
+'''
 
 @_ComponentProbe('keyboard')
 def _ProbeKeyboard():
   ro_vpd = ReadRoVpd(crosfw.LoadMainFirmware().GetFileName())
   try:
     return [{COMPACT_PROBE_STR: ro_vpd['keyboard_layout']}]
+  except KeyError:
+    return []
+
+
+@_ComponentProbe('carrier')
+def _ProbeCarrier():
+  cmd = 'modem status | grep carrier'
+  modem_status = Shell(cmd).stdout.strip()
+  info = re.findall('^\s*carrier:\s*(.*)', modem_status)
+  if info and info[0]:
+    return [DictCompactProbeStr(info[0])]
+  else:
+    return []
+
+
+@_ComponentProbe('custom')
+def _ProbeCustom():
+  ro_vpd = ReadRoVpd(crosfw.LoadMainFirmware().GetFileName())
+  try:
+    return [{COMPACT_PROBE_STR: ro_vpd['custom']}]
   except KeyError:
     return []
 

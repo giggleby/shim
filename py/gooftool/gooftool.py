@@ -368,23 +368,17 @@ def VerifyHwid(options):
   the necessary fields as specified by the board data, and when
   possible verify that values are legitimate.
   """
-
-  def VerifyVpd(ro_vpd_keys, rw_vpd_keys):
+  def VerifyVpd(ro_vpd_keys):
+    ro_vpd = ReadRoVpd(main_fw_file)
     for key in ro_vpd_keys:
       if key not in ro_vpd:
-        sys.exit('Missing required RO VPD field: %s' % key)
+        sys.exit('Missing required VPD field: %s' % key)
       known_valid_values = KNOWN_VPD_FIELD_DATA.get(key, None)
       value = ro_vpd[key]
       if (known_valid_values is not None) and (value not in known_valid_values):
         sys.exit('Invalid RO VPD entry : key %r, value %r' % (key, value))
-    for key in rw_vpd_keys:
-      if key not in rw_vpd:
-        sys.exit('Missing required RW VPD field: %s' % key)
-      known_valid_values = KNOWN_VPD_FIELD_DATA.get(key, None)
-      value = rw_vpd[key]
-      if (known_valid_values is not None) and (value not in known_valid_values):
-        sys.exit('Invalid RW VPD entry : key %r, value %r' % (key, value))
-    event_log.Log('vpd', ro_vpd=FilterDict(ro_vpd), rw_vpd=FilterDict(rw_vpd))
+    rw_vpd = ReadRwVpd(main_fw_file)
+    event_log.Log('vpd', ro_vpd=ro_vpd, rw_vpd=rw_vpd)
   map(hwid_tool.Validate.Status, options.status)
 
   if not options.hwid or not options.probe_results:
@@ -473,7 +467,7 @@ def VerifyHwid(options):
                hwid.volatile)
     found_status = matched_volatiles.get(hwid.volatile, None)
     sys.exit(err_msg + ', but hwid status %r was unacceptable' % found_status)
-  VerifyVpd(device.vpd_ro_fields, device.vpd_rw_fields)
+  VerifyVpd(device.vpd_ro_fields)
   event_log.Log('verified_hwid', hwid=hwid)
   print 'Verification SUCCESS!'
 
@@ -1014,7 +1008,7 @@ def Main():
              help='Write logs to this file.'),
       CmdArg('--suppress-event-logs', action='store_true',
              help='Suppress event logging.'),
-      CmdArg('-i', '--hwid-version', default=3, choices=[2, 3], type=int,
+      CmdArg('-i', '--hwid-version', default=2, choices=[2, 3], type=int,
              help='Version of HWID to operate on.'),
       verbosity_cmd_arg)
   SetupLogging(options.verbosity, options.log)
