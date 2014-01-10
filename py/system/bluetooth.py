@@ -240,20 +240,6 @@ class BluetoothManager(object):
                                  'org.freedesktop.DBus.Properties')
     device_prop.Set(ADAPTER_INTERFACE, 'Powered', on)
 
-  def _WaitUntilAdapterPowered(self, adapter, timeout_secs):
-    """Waits until adapter powered mode.
-
-    After calling self._SwitchAdapterPower(), there is a delay before the adapter
-    actually powered on. This function blocks until it sees adapter property
-    "Powered" is True with a timeout timeout_secs.
-    """
-    bus = dbus.SystemBus()
-    device_prop = dbus.Interface(bus.get_object(BUS_NAME, adapter.object_path),
-                                 'org.freedesktop.DBus.Properties')
-    _Condition = lambda: device_prop.Get(ADAPTER_INTERFACE, 'Powered') == 1
-    PollForCondition(_Condition, timeout_secs,
-                     condition_name="Wait for Adapter Powered==1")
-
   def _WaitUntilStartDiscovery(self, adapter, timeout_secs):
     """Waits until adapter starts discovery mode.
 
@@ -350,9 +336,6 @@ class BluetoothManager(object):
     devices = dict()
     self._SwitchAdapterPower(adapter, True)
     logging.info('Powered on adapter')
-
-    self._WaitUntilAdapterPowered(adapter, 10)
-    logging.info('Adapter Powered successfully')
 
     def _ScanTimeout():
       """The callback when scan duration is over.
