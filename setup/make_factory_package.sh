@@ -461,6 +461,40 @@ apply_hwid_updater() {
   fi
 }
 
+# Copies "unencrypted" files (such as the CRX cache) from release
+# stateful partition into the target stateful partition.
+#
+# Currently this copies all of unencrypted (in order to get the
+# "unencrypted" directory's ownership right).  TODO(jsalz): Figure out
+# how to determine the right list of files to copy.
+tar_unencrypted() {
+  local indev="$1"
+  local outdev="$2"
+  local result="0"
+
+  local release_stateful_dir="$(mktemp -d --tmpdir)"
+  image_add_temp "${release_stateful_dir}"
+  image_mount_partition "${FLAGS_release}" "1" "${release_stateful_dir}" "ro"
+  if [ -d "${release_stateful_dir}/unencrypted" ]; then
+    echo "Creating stateful_files.tar.xz in stateful partition..."
+    local factory_stateful_dir="$(mktemp -d --tmpdir)"
+    image_add_temp "${factory_stateful_dir}"
+    image_mount_partition "${outdev}" 1 "${factory_stateful_dir}" "rw"
+    local dest_file="${factory_stateful_dir}/stateful_files.tar.xz"
+    sudo tar acf "${dest_file}" --numeric-owner -C "${release_stateful_dir}" \
+        unencrypted || result="$?"
+    # ls destination file to show its size
+    ls -hl "${dest_file}"
+    image_umount_partition "${factory_stateful_dir}"
+  else
+    echo "Release image has no files in stateful partition."
+  fi
+  image_umount_partition "${release_stateful_dir}"
+  [ $result = "0" ] ||
+    die "tar of release stateful partition's unencrypted dir failed " \
+        "($result). aborting."
+}
+
 generate_usbimg() {
   if ! type cgpt >/dev/null 2>&1; then
     die "Missing 'cgpt'. Please install cgpt, or run inside chroot."
@@ -485,6 +519,7 @@ generate_usbimg() {
   "$builder" -m "${FLAGS_factory}" -f "${FLAGS_usbimg}" \
     "${FLAGS_install_shim}" "${FLAGS_factory}" "${release_file}"
   apply_hwid_updater "${FLAGS_hwid_updater}" "${FLAGS_usbimg}"
+  tar_unencrypted "${FLAGS_release}" "${FLAGS_usbimg}"
 
   # Extract and modify lsb-factory from original install shim
   local lsb_path="/dev_image/etc/lsb-factory"
@@ -560,6 +595,7 @@ generate_img() {
   echo "EFI Partition"
   image_partition_copy "${factory_image}" 12 "${outdev}" 12
   apply_hwid_updater "${hwid_updater}" "${outdev}"
+  tar_unencrypted "${release_image}" "${outdev}"
 
   # TODO(nsanders, wad): consolidate this code into some common code
   # when cleaning up kernel commandlines. There is code that touches
@@ -599,6 +635,15 @@ generate_omaha() {
   echo "Output omaha image to ${OMAHA_DATA_DIR}"
   echo "Output omaha config to ${OMAHA_CONF}"
 
+  # Make a copy of the image
+  local test_image="$(mktemp --tmpdir)"
+  image_add_temp "${test_image}"
+  echo "Creating temporary test image..."
+  cp "${FLAGS_factory}" "${test_image}"
+
+  # Add the unencrypted bits from the release stateful partition
+  tar_unencrypted "${FLAGS_release}" "${test_image}"
+
   kernel="${RELEASE_KERNEL:-${FLAGS_release}:2}"
   rootfs="${FLAGS_release}:3"
   release_hash="$(compress_and_hash_memento_image "$kernel" "$rootfs" \
@@ -609,17 +654,17 @@ generate_omaha() {
               "${OMAHA_DATA_DIR}/oem.gz")"
   echo "oem: ${oem_hash}"
 
-  kernel="${FLAGS_factory}:2"
-  rootfs="${FLAGS_factory}:3"
+  kernel="${test_image}:2"
+  rootfs="${test_image}:3"
   test_hash="$(compress_and_hash_memento_image "$kernel" "$rootfs" \
                "${OMAHA_DATA_DIR}/rootfs-test.gz")"
   echo "test: ${test_hash}"
 
-  state_hash="$(compress_and_hash_partition "${FLAGS_factory}" 1 \
+  state_hash="$(compress_and_hash_partition "${test_image}" 1 \
                 "${OMAHA_DATA_DIR}/state.gz")"
   echo "state: ${state_hash}"
 
-  efi_hash="$(compress_and_hash_partition "${FLAGS_factory}" 12 \
+  efi_hash="$(compress_and_hash_partition "${test_image}" 12 \
               "${OMAHA_DATA_DIR}/efi.gz")"
   echo "efi: ${efi_hash}"
 
