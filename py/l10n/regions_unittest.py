@@ -9,7 +9,9 @@
 import logging
 import os
 import re
+import StringIO
 import unittest
+import yaml
 
 import factory_common  # pylint: disable=W0611
 from cros.factory.l10n import regions, regions_unittest_data
@@ -80,6 +82,30 @@ class RegionTest(unittest.TestCase):
       method = methods_dict.get(r.keyboard)
       # Make sure the keyboard method is present.
       self.assertTrue(method, 'Missing keyboard layout %r' % r.keyboard)
+
+  def testVPDSettings(self):
+    self.assertEquals(
+      {'initial_locale': 'en-US',
+       'initial_timezone': 'America/Los_Angeles',
+       'keyboard': 'xkb:us::eng',
+       'region': 'us'},
+      regions.BuildRegionsDict()['us'].GetVPDSettings())
+
+  def testYAMLOutput(self):
+    output = StringIO.StringIO()
+    regions.main(['--format', 'yaml'], output)
+    data = yaml.load(output.getvalue())
+    self.assertEquals(
+      {'keyboard': 'xkb:us::eng',
+       'keyboard_mechanical_layout': 'ANSI',
+       'language_code': 'en-US',
+       'region_code': 'us',
+       'time_zone': 'America/Los_Angeles',
+       'vpd_settings': {'initial_locale': 'en-US',
+                        'initial_timezone': 'America/Los_Angeles',
+                        'keyboard': 'xkb:us::eng',
+                        'region': 'us'}},
+      data['us'])
 
 if __name__ == '__main__':
   unittest.main()
