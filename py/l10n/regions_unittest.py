@@ -4,6 +4,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Tests for regions.py."""
+
 import logging
 import os
 import re
@@ -21,6 +23,7 @@ def _FindAllStrings(c_source):
 
 
 class RegionTest(unittest.TestCase):
+  """Tests for the Region class."""
   def testZoneInfo(self):
     all_regions = regions.BuildRegionsDict(include_all=True)
 
