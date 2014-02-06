@@ -24,8 +24,10 @@ from cros.factory.test.ui_templates import OneSection
 from cros.factory.test.utils import StartDaemonThread
 
 _MSG_CAMERA_MANUAL_TEST = test_ui.MakeLabel(
-    'Press ENTER to pass or ESC to fail.',
-    zh='摄像头运作正常请按 ENTER，不正常请按 ESC',
+    'Press <font size="9" color="red">ENTER</font> to pass '
+    'or <font size="9" color="red">BACK</font> to fail.',
+    zh='摄像头运作正常请按 <font size="9" color="red">ENTER</font>，'
+       '不正常请按 <font size="9" color="red">BACK</font>',
     css_class='camera-test-info')
 _MSG_CAMERA_TIMEOUT_TEST = test_ui.MakeLabel(
     'Running the camera until timeout.',
@@ -36,9 +38,10 @@ _MSG_CAMERA_FACIAL_RECOGNITION = test_ui.MakeLabel(
     zh='侦测人脸中...',
     css_class='camera-test-info')
 _MSG_LED_TEST = test_ui.MakeLabel(
-    'Press 0 if LED is flickering, 1 if LED is constantly lit,'
-    '<br/>or ESC to fail.',
-    zh='LED 闪烁请按 0，一直亮着请按 1，没亮请按 ESC',
+    'Press <font size="9" color="red">0</font> if LED is flickering, '
+    '<font size="9" color="red">1</font> if LED is constantly lit,',
+    zh='LED 闪烁请按 <font size="9" color="red">0</font>, '
+    '一直亮着请按 <font size="9" color="red">1</font>',
     css_class='camera-test-info')
 _MSG_TIME_REMAINING = lambda t: test_ui.MakeLabel(
     'Time remaining: %d' % t, u'剩余时间：%d' % t, 'camera-test-info')
@@ -85,6 +88,25 @@ class CaptureTask(factory_task.InteractiveFactoryTask):
   Args:
     camera_test: The main CameraTest object.
   """
+
+  def BindPassFailKeys(self, pass_key=True, fail_later=True):
+    """Binds pass and/or fail keys.
+
+    If pass_key is True, binds Enter key to pass the task; otherwise, pressing
+    Enter triggers nothing.
+    Always binds Esc key to fail the task.
+
+    Args:
+      pass_key: True to bind Enter key to pass the task.
+      fail_later: True to fail later when Esc is pressed.
+    """
+    self._ui.BindKey(test_ui.ENTER_KEY,
+                     lambda _: self.Pass() if pass_key else None)
+
+    self._ui.BindKey(test_ui.BACK_KEY,
+                     lambda _: self.Fail(
+        '%s failed by operator.' % self.__class__.__name__, later=fail_later))
+
   def __init__(self, camera_test):
     super(CaptureTask, self).__init__(camera_test.ui)
     self.camera_test = camera_test
@@ -167,6 +189,31 @@ class LEDTask(factory_task.InteractiveFactoryTask):
   LED_FLICKERING = 0
   LED_CONSTANTLY_LIT = 1
 
+  def BindDigitKeysForNumKeyboard(self, pass_digit, fail_later=True):
+    """Binds the pass_digit to pass the task and other digits to fail it
+    for numeric keyboard..
+
+    To prevent operator's cheating by key swiping, we bind the remaining digit
+    keys to fail the task.
+
+    Arg:
+      pass_digit: a digit [LED_FLICKERING, LED_CONSTANTLY_LI9] to pass the task.
+      fail_later: True to fail the parent test case later when the wrong key is
+          pressed.
+    """
+    convert_digit = pass_digit+96
+    for i in xrange(96, 106):
+      if i == convert_digit:
+        self._ui.BindKey(i, lambda _: self.Pass())
+      else:
+        self._ui.BindKey(i, lambda _: self.Fail('Wrong key pressed.',
+                                                        later=fail_later))
+
+  def UnbindDigitKeysForNumKeyboard(self):
+    """Unbinds all digit keys for numeric keyboard."""
+    for i in xrange(96, 106):
+      self._ui.UnbindKey(i)
+
   def __init__(self, camera_test):
     super(LEDTask, self).__init__(camera_test.ui)
     self.camera_test = camera_test
@@ -192,11 +239,11 @@ class LEDTask(factory_task.InteractiveFactoryTask):
   def Init(self):
     self.camera_test.ui.SetHTML(_MSG_LED_TEST, id=_ID_PROMPT)
     self.BindPassFailKeys(pass_key=False)
-    self.BindDigitKeys(self.pass_key)
+    self.BindDigitKeysForNumKeyboard(self.pass_key)
 
   def Cleanup(self):
     self.finished = True
-    self.UnbindDigitKeys()
+    self.UnbindDigitKeysForNumKeyboard()
 
   def Run(self):
     self.Init()
@@ -259,7 +306,8 @@ class CameraTest(unittest.TestCase):
 
   def CountdownTimer(self):
     """Starts countdown timer and fails the test if timer reaches zero,
-    unless in timeout_run mode, than it just passes."""
+    unless in timeout_run mode, than it just passes.
+    """
     end_time = time.time() + self.args.timeout_secs
     while True:
       remaining_time = end_time - time.time()

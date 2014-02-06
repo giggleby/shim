@@ -24,6 +24,7 @@ FactoryTestFailure = factory.FactoryTestFailure
 # Keycodes
 ENTER_KEY = 13
 ESCAPE_KEY = 27
+BACK_KEY = 8
 
 # A list of tuple (exception-source, exception-desc):
 #   exception-source: Source of exception. For example, 'ui-thread' if the

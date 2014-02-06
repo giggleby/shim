@@ -46,8 +46,8 @@ _MSG_SCANNING_DONE = lambda device, freq: test_ui.MakeLabel(
     u'在装置 %s 上扫描频率%d 完成' % (device, freq),
     'wireless-info')
 _MSG_SPACE = test_ui.MakeLabel(
-    'Press space to start scanning.',
-    u'请按空白键开始扫描。', 'wireless-info')
+    'Press <font size="9" color="red">Enter</font> to start scanning.',
+    u'请按<font size="9" color="red">Enter</font>键开始扫描。', 'wireless-info')
 
 _RE_FREQ = re.compile(r'^freq: ([\d]*?)$')
 _RE_SIGNAL = re.compile(r'^signal: ([-\d.]*?) dBm')
@@ -195,7 +195,7 @@ class WirelessTest(unittest.TestCase):
          'aux': {'AP1': -40, 'AP2': -50}}
     _test_spec: the reduced version of spec_dict. The candidate services in
         spec_dict.keys() are replaced by the services with the largest strength.
-    _space_event: An event that space has been pressed. It will also be set
+    _enter_event: An event that enter has been pressed. It will also be set
         if test has been done.
     _done: An event that test has been done.
   """
@@ -233,7 +233,7 @@ class WirelessTest(unittest.TestCase):
     self._test_spec = dict()
     self.SwitchAntenna('all')
     self._antenna = 'all'
-    self._space_event = threading.Event()
+    self._enter_event = threading.Event()
     self._done = threading.Event()
 
   def tearDown(self):
@@ -451,10 +451,10 @@ class WirelessTest(unittest.TestCase):
             'Antenna %s, service: %s: The scanned strength %f > spec strength'
             ' %f', antenna, test_service, scanned_strength, spec_strength)
 
-  def PromptSpace(self):
-    """Prompts a message to ask operator to press space."""
+  def PromptEnter(self):
+    """Prompts a message to ask operator to press enter."""
     self._template.SetState(_MSG_SPACE)
-    self._ui.BindKey(' ', lambda _: self.OnSpacePressed())
+    self._ui.BindKey(test_ui.ENTER_KEY, lambda _: self.OnEnterPressed())
     self._ui.Run(blocking=False, on_finish=self.Done)
 
   def Done(self):
@@ -464,17 +464,17 @@ class WirelessTest(unittest.TestCase):
     'Mark Failed'.
     """
     self._done.set()
-    self._space_event.set()
+    self._enter_event.set()
 
-  def OnSpacePressed(self):
-    """The handler of space key."""
-    logging.info('Space pressed by operator.')
-    self._space_event.set()
+  def OnEnterPressed(self):
+    """The handler of enter key."""
+    logging.info('Enter pressed by operator.')
+    self._enter_event.set()
 
   def runTest(self):
-    # Prompts a message to tell operator to press space key when ready.
-    self.PromptSpace()
-    self._space_event.wait()
+    # Prompts a message to tell operator to press enter key when ready.
+    self.PromptEnter()
+    self._enter_event.wait()
     if self._done.isSet():
       return
 

@@ -10,7 +10,7 @@ init = function(autostart, require_dongle) {
     test.sendTestEvent("start_run_test", {});
   } else {
     window.onkeydown = function(event) {
-      if (event.keyCode == 83) { // 's'
+      if (event.keyCode == 13) { // enter
         test.sendTestEvent("start_run_test", {});
         window.onkeydown = null;
       }

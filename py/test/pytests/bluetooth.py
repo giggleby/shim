@@ -38,26 +38,30 @@ from cros.factory.system.bluetooth import BluetoothManagerException
 
 _TEST_TITLE = MakeLabel('Bluetooth functional Test', u'蓝牙功能测试')
 _MSG_DETECT_ADAPTER = MakeLabel('Detect bluetooth adapter', u'检测蓝牙适配器')
-_MSG_TURN_ON_DEVICE = MakeLabel('Enable the connection ability of'
-                                ' bluetooth device and press Enter',
-                                u'启用蓝牙装置的连接功能然后按输入键',
-                                'start-font-size')
+_MSG_TURN_ON_DEVICE = MakeLabel(
+    'Enable the connection ability of'
+    ' bluetooth device and press <font size="9" color="red">Enter</font>',
+    u'启用蓝牙装置的连接功能然后按<font size="9" color="red">输入</font>键',
+    'start-font-size')
 _MSG_SCAN_DEVICE = MakeLabel('Scanning...', u'扫描中...', 'start-font-size')
-_MSG_TURN_ON_INPUT_DEVICE = MakeLabel('Enable the connection ability of '
-                                      'input bluetooth device and press Enter',
-                                      u'启用蓝牙输入装置的连接功能然后按输入键',
-                                      'start-font-size')
+_MSG_TURN_ON_INPUT_DEVICE = MakeLabel(
+    'Enable the connection ability of '
+    'input bluetooth device and press <font size="9" color="red">Enter</font>',
+    u'启用蓝牙输入装置的连接功能然后按<font size="9" color="red">输入</font>键',
+    'start-font-size')
 _MSG_PAIR_INPUT_DEVICE = MakeLabel('Pairing to input device now...',
                                    u'配对到蓝牙输入设备...',
                                    'start-font-size')
 _MSG_CONNECT_INPUT_DEVICE = MakeLabel('Connecting to input device now...',
                                       u'连接到蓝牙输入设备...',
                                       'start-font-size')
-_MSG_TEST_INPUT = MakeLabel('Please test input. '
-                            'Press Escape to fail and Enter to pass',
-                            u'请测试输入, 如果失败, 请按Esc键'
-                            u'如果成功，请按Enter键',
-                            'start-font-size')
+_MSG_TEST_INPUT = MakeLabel(
+    'Please test input. '
+    'Press <font size="9" color="red">Back</font> to fail and '
+    '<font size="9" color="red">Enter</font> to pass',
+    u'请测试输入, 如果失败, 请按<font size="9" color="red">Back</font>键'
+    u'如果成功，请按<font size="9" color="red">Enter</font>键',
+    'start-font-size')
 INPUT_MAX_RETRY_TIMES = 10
 INPUT_RETRY_INTERVAL = 2
 

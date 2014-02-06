@@ -17,18 +17,19 @@ from cros.factory.utils.process_utils import Spawn
 
 _MSG_BUZZER_INFO = test_ui.MakeLabel(
     'How many beeps do you hear? <br>'
-    'Press space to start.',
+    'Press <font size="9" color="red">Enter</font> key to start.',
     zh='你听到几声哔声？<br>'
-    '压下空白键开始测试',
+    '压下<font size="9" color="red">Enter</font>键开始测试',
     css_class='buzzer-test-info')
 
 _MSG_BUZZER_TEST = test_ui.MakeLabel(
     'How many beeps do you hear? <br>'
-    'Press the number you hear to pass the test.<br>'
-    'Press \'r\' to play again.',
+    'Press the <font size="9" color="red">number(1~3)</font>'
+    'you hear to pass the test.<br>'
+    'Press <font size="9" color="red">\'+\'</font> to play again.',
     zh='你听到几声哔声？<br>'
     '请按下数字代表你听到几声哔声<br>'
-    '按下 \'r\' 重播',
+    '按下 <font size="9" color="red">\'+\'</font> 重播',
     css_class='buzzer-test-info')
 
 _HTML_BUZZER = """
@@ -45,10 +46,10 @@ _CSS_BUZZER = """
 
 _JS_BUZZER = """
 window.onkeydown = function(event) {
-  if (event.keyCode == 32 || event.keyCode == 82) { // space and 'R'
+  if (event.keyCode == 13 || event.keyCode == 107) { // enter and '+'
     test.sendTestEvent("StartTest", '');
-  } else if (event.keyCode >= 48 && event.keyCode <= 57) { // 0 ~ 9
-    test.sendTestEvent("CheckResult", event.keyCode - 48)
+  } else if (event.keyCode >= 97 && event.keyCode <= 99) { //1~3 
+    test.sendTestEvent("CheckResult", event.keyCode - 96)
   }
 }
 """
@@ -65,7 +66,7 @@ class BuzzerTest(unittest.TestCase):
   ]
 
   def setUp(self):
-    self._pass_digit = random.randint(1, 5)
+    self._pass_digit = random.randint(1, 3)
     self.ui = test_ui.UI()
     self.template = OneSection(self.ui)
     self.ui.AppendCSS(_CSS_BUZZER)

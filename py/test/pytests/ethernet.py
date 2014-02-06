@@ -23,9 +23,9 @@ from cros.factory.utils.process_utils import Spawn, CheckOutput
 
 _MSG_ETHERNET_INFO = test_ui.MakeLabel(
     'Please plug ethernet cable into built-in ethernet port<br>'
-    'Press space to start.',
+    'Press <font size="9" color="red">Enter</font> to start.',
     zh='请插入网路线到内建网路埠<br>'
-    '压下空白键开始测试',
+    '按<font size="9" color="red">Enter</font>键就可以开始测试',
     css_class='ethernet-test-info')
 
 _HTML_ETHERNET = """
@@ -47,7 +47,7 @@ init = function(autostart) {
   }
 }
 window.onkeydown = function(event) {
-  if (event.keyCode == 32) { // space
+  if (event.keyCode == 13) { // enter
     test.sendTestEvent("StartTest", '');
   }
 }

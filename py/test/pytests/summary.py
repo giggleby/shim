@@ -54,8 +54,8 @@ th, td {
 class Report(unittest.TestCase):
   ARGS = [
     Arg('disable_input_on_fail', bool,
-        'Disable user input to pass/fail when the overall status is not PASSED',
-        default=False),
+        'Disable user input to pass/fail when the overall status is not'
+        'PASSED', default=False),
     Arg('pass_without_prompt', bool,
         'If all tests passed, pass this test without prompting',
         default=False, optional=True),
@@ -120,14 +120,20 @@ class Report(unittest.TestCase):
             overall_status, test_ui.MakeStatusLabel(overall_status)),
         '<table>'] + table + ['</table>']
     if (not self.args.disable_input_on_fail or all_pass):
-      html = html + ['<a onclick="onclick:window.test.pass()" href="#">',
-                     test_ui.MakeLabel('Click or press SPACE to continue',
-                                       u'点击或按空白键继续'),
-                     '</a>']
+      html = html + [
+         '<a onclick="onclick:window.test.pass()" href="#">',
+         test_ui.MakeLabel(
+             '<font size="6">Click or press </font>'
+             '<font size="6" color="red">Enter</font><font size="6">'
+             ' to continue</font>',
+             u'<font size="6">点击或按</font><font size="6" color="red">'
+             u'空白</font><font size="6">键继续</font>'),
+         '</a>']
     else:
       html = html + [test_ui.MakeLabel(
-          'Unable to proceed, since some previous tests have not passed.',
-          u'之前所有的测试必须通过才能通过此项目')]
+          '<font size="6">Unable to proceed, since some previous'
+          'tests have not passed.</font>',
+          u'<font size="6">之前所有的测试必须通过才能通过此项目</font>')]
     html = html + ['</div></div>']
 
     if self.args.accessibility and not all_pass:

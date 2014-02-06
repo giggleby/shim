@@ -12,7 +12,7 @@
 # 'require_external_power': Prompts and waits for external power to be applied.
 # 'require_shop_floor': Prompts and waits for serial number as input.
 # 'check_factory_install_complete': Check factory install process was complete.
-# 'press_to_continue': Prompts and waits for a key press (SPACE) to continue.
+# 'press_to_continue': Prompts and waits for a key press (Enter) to continue.
 
 import logging
 import os
@@ -71,9 +71,9 @@ _MSG_TASK_POWER = test_ui.MakeLabel(
     'Plug in external power to continue.',
     u'请插上外接电源以继续。',
     'start-font-size')
-_MSG_TASK_SPACE = test_ui.MakeLabel(
-    'Hit SPACE to start testing...',
-    u'按 "空白键" 开始测试...',
+_MSG_TASK_ENTER = test_ui.MakeLabel(
+    'Hit <font size="9" color="red">Enter</font> to start testing...',
+    u'按 "<font size="9" color="red">Enter</font>键" 开始测试...',
     'start-font-size')
 _MSG_NO_SHOP_FLOOR_SERVER_URL = test_ui.MakeLabel(
     '<br/>'.join([
@@ -95,14 +95,16 @@ _MSG_CONTACTING_SERVER = test_ui.MakeLabel(
     r'start-contacting-server')
 
 # Javascripts and HTML for tasks
-_JS_SPACE = '''
-    function enableSpaceKeyPressListener() {
+_JS_ENTER = '''
+    function enableEnterKeyPressListener() {
       window.addEventListener(
           "keypress",
           function(event) {
-            if (event.keyCode == " ".charCodeAt(0)) {
+            if (event.keyCode == 13 ) {
               window.test.pass();
             }
+            Log('key pressed = %d', event.keyCode);
+            ShowErrorMsg('key pressed = %d', event.keyCode);
           });
       window.focus();
     }'''
@@ -128,14 +130,14 @@ _JS_SHOP_FLOOR = '''
     element.focus();''' % _EVENT_SUBTYPE_SHOP_FLOOR
 _LSB_FACTORY_PATH = '/usr/local/etc/lsb-factory'
 
-class PressSpaceTask(FactoryTask):
+class PressEnterTask(FactoryTask):
   def __init__(self, test): # pylint: disable=W0231
     self._test = test
 
   def Run(self):
-    self._test.template.SetState(_MSG_TASK_SPACE)
-    self._test.ui.RunJS(_JS_SPACE)
-    self._test.ui.CallJSFunction('enableSpaceKeyPressListener')
+    self._test.template.SetState(_MSG_TASK_ENTER)
+    self._test.ui.RunJS(_JS_ENTER)
+    self._test.ui.CallJSFunction('enableEnterKeyPressListener')
 
 
 class ExternalPowerTask(FactoryTask):
@@ -292,7 +294,7 @@ class ReadVPDSerialTask(FactoryTask):
 
 class StartTest(unittest.TestCase):
   ARGS = [
-    Arg('press_to_continue', bool, 'Need to press space to continue',
+    Arg('press_to_continue', bool, 'Need to press enter to continue',
         default=True, optional=True),
     Arg('require_external_power', bool,
         'Prompts and waits for external power to be applied.',
@@ -329,7 +331,7 @@ class StartTest(unittest.TestCase):
 
     # Reset shop floor data only if require_shop_floor is explicitly
     # defined, for test lists using factory_Start multiple times between
-    # groups (ex, to prompt for space or check power adapter).
+    # groups (ex, to prompt for enter or check power adapter).
     if self.args.require_shop_floor is not None:
       shopfloor.set_enabled(self.args.require_shop_floor)
 
@@ -346,6 +348,6 @@ class StartTest(unittest.TestCase):
     if self.args.require_external_power:
       self._task_list.append(ExternalPowerTask(self))
     if self.args.press_to_continue:
-      self._task_list.append(PressSpaceTask(self))
+      self._task_list.append(PressEnterTask(self))
 
     FactoryTaskManager(self.ui, self._task_list).Run()
