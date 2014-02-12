@@ -392,16 +392,8 @@ class FinalizeBundle(object):
               os.path.basename(os.path.dirname(source))))
         install_into = os.path.join(self.bundle_dir, f['install_into'])
         if self.args.download:
-          if cached_file.endswith('.zip'):
-            Spawn(['unzip', '-o', cached_file,
-                   '-d', install_into] +
-                  f['extract_files'],
-                  log=True, check_call=True)
-          else:
-            Spawn(['tar', '-xvvf', cached_file,
-                   '-C', install_into] +
-                  f['extract_files'],
-                  log=True, check_call=True)
+          ExtractFile(cached_file, install_into,
+                      only_extracts=f['extract_files'])
         for f in f['extract_files']:
           self.expected_files.add(os.path.relpath(os.path.join(install_into, f),
                                              self.bundle_dir))
