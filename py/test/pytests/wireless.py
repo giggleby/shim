@@ -177,7 +177,7 @@ class WirelessTest(unittest.TestCase):
                                      self.args.test_url)
                 break
 
-        if not success_url_test:
-          self.fail('Failed to connect to url %s' % self.args.test_url)
+          if not success_url_test:
+            self.fail('Failed to connect to url %s' % self.args.test_url)
         logging.info('Disconnecting %s', name)
         flim.DisconnectService(service)
