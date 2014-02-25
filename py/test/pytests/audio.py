@@ -6,6 +6,8 @@
 
 """Tests audio playback and record."""
 
+import glob
+import os
 import random
 import threading
 import unittest
@@ -17,7 +19,7 @@ from cros.factory.test.args import Arg
 from cros.factory.test.event import Event
 from cros.factory.test.factory_task import FactoryTaskManager
 from cros.factory.test.factory_task import InteractiveFactoryTask
-from cros.factory.utils.process_utils import SpawnOutput
+from cros.factory.utils.process_utils import SpawnOutput, Spawn
 
 _TEST_TITLE = test_ui.MakeLabel('Audio Test',
                                 u'音讯测试')
@@ -157,6 +159,144 @@ class WaitHeadphoneThread(threading.Thread):
     self._done.set()
 
 
+class DetectJackTask(InteractiveFactoryTask):
+  """Task to wait for headphone and microphone connect/disconnect.
+
+  Args:
+    ui: cros.factory.test.test_ui object.
+    headphone_name: headphone's device name.
+    microphone_name: microphone's device name.
+    wait_for_connect: True to wait for headphone/microphone connect.
+      Otherwise, wait for disconnect.
+    title_id: HTML id for placing testing title.
+    instruction_id: HTML id for placing instruction.
+  """
+  def __init__(self, ui, headphone_name, microphone_name,
+               wait_for_connect, title_id, instruction_id):
+    super(DetectJackTask, self).__init__(ui)
+    self._title_id = title_id
+    self._instruction_id = instruction_id
+    self._wait_jack = WaitJackThread(headphone_name,
+                                     microphone_name,
+                                     wait_for_connect,
+                                     self.PostSuccessEvent)
+    self._pass_event = str(uuid.uuid4())  # used to bind a post event.
+    if wait_for_connect:
+      self._title = test_ui.MakeLabel('Connect Headphone/Microphone',
+                                      u'连接耳机麥克風')
+      self._instruction = test_ui.MakeLabel(
+          'Please plug headphone/microphone in.', u'请接上耳机麥克風')
+    else:
+      self._title = test_ui.MakeLabel('Discnnect Headphone/Microphone',
+          u'移除耳机麥克風')
+      self._instruction = test_ui.MakeLabel(
+          'Please unplug headphone/microphone.', u'请拔下耳机麥克風')
+
+  def PostSuccessEvent(self):
+    """Posts an event to trigger self.Pass().
+
+    It is called by another thread. It ensures that self.Pass() is called
+    via event queue to prevent race condition.
+    """
+    self._ui.PostEvent(Event(Event.Type.TEST_UI_EVENT,
+                             subtype=self._pass_event))
+
+  def _InitUI(self):
+    self._ui.SetHTML(self._title, id=self._title_id)
+    self._ui.SetHTML(
+      '%s<br>%s' % (self._instruction,
+                    test_ui.MakePassFailKeyLabel(pass_key=False)),
+      id=self._instruction_id)
+    self.BindPassFailKeys(pass_key=False, fail_later=False)
+
+  def Run(self):
+    self._InitUI()
+    self._ui.AddEventHandler(self._pass_event, lambda _: self.Pass())
+    self._wait_jack.start()
+
+  def Cleanup(self):
+    self._wait_jack.Stop()
+
+
+def FindEventDeviceByName(name):
+  """Finds the event device by matching name.
+
+  Args:
+    name: The name to look up event device by substring matching.
+
+  Returns:
+    The full name of the found event device of form /dev/input/event*
+  """
+  for evdev in glob.glob('/dev/input/event*'):
+    f = open(os.path.join('/sys/class/input/',
+                          os.path.basename(evdev),
+                         'device/name'),
+             'r')
+    evdev_name = f.read()
+    if evdev_name.find(name) != -1:
+      return evdev
+  return None
+
+class WaitJackThread(threading.Thread):
+  """A thread to wait for headphone/microphone.
+
+  When headphone/microphone is plugged, it calls on_success and stop.
+  Or the calling thread can stop it using stop().
+
+  Args:
+    headphone_name: headphone's device name.
+    microphone_name: microphone's device name.
+    wait_for_connect: True to wait for headphone connect. Otherwise,
+        wait for disconnect.
+    on_success: callback for success.
+    check_period: status checking period in seconds. Default 1.
+  """
+  def __init__(self, headphone_name, microphone_name,
+               wait_for_connect, on_success, check_period=1.0):
+    super(WaitJackThread, self).__init__(name='WaitJackThread')
+    self._done = threading.Event()
+    self._headphone_name = headphone_name
+    self._microphone_name = microphone_name
+    self._wait_for_connect = wait_for_connect
+    self._on_success = on_success
+    self._check_period = check_period
+
+  def run(self):
+    evdev_headphone = FindEventDeviceByName(self._headphone_name)
+    evdev_microphone = FindEventDeviceByName(self._microphone_name)
+    if not evdev_headphone or not evdev_microphone:
+      raise ValueError('Device name is not correct.')
+    cmd_headphone = ['evtest', '--query', evdev_headphone, 'EV_SW',
+                      'SW_HEADPHONE_INSERT']
+    cmd_microphone = ['evtest', '--query', evdev_microphone, 'EV_SW',
+                      'SW_MICROPHONE_INSERT']
+
+    success = False
+    while not self._done.is_set():
+      query_headphone = Spawn(cmd_headphone, call=True)
+      query_microphone = Spawn(cmd_microphone, call=True)
+      if self._wait_for_connect:
+        if (query_headphone.returncode != 0 and
+            query_microphone.returncode != 0):
+          success = True
+
+      else:
+        if (query_headphone.returncode == 0 and
+            query_microphone.returncode == 0):
+          success = True
+
+      if success:
+        self._on_success()
+        self.Stop()
+      else:
+        self._done.wait(self._check_period)
+
+  def Stop(self):
+    """Stops the thread.
+    """
+    self._done.set()
+
+
 class DetectHeadphoneTask(InteractiveFactoryTask):
   """Task to wait for headphone connect/disconnect.
 
@@ -239,6 +379,12 @@ class AudioTest(unittest.TestCase):
     Arg('headphone_numid', str,
         'amixer numid for headphone. Skip connection check if empty.',
         optional=True),
+    Arg('jack_detect_only', bool, 'Skip playback tests. Just test audio jack'
+        ' connection', default=False),
+    Arg('headphone_name', str,
+        'The device name of headphone.', optional=True),
+    Arg('microphone_name', str,
+        'The device name of microphone.', optional=True)
   ]
 
   def setUp(self):
@@ -273,6 +419,13 @@ class AudioTest(unittest.TestCase):
     _INSTRUCTION_ID = 'instruction-center'
 
     tasks = []
+    if self.args.jack_detect_only:
+      tasks.append(DetectJackTask(self._ui, self.args.headphone_name,
+          self.args.microphone_name, True, _TITLE_ID, _INSTRUCTION_ID))
+      tasks.append(DetectJackTask(self._ui, self.args.headphone_name,
+          self.args.microphone_name, False, _TITLE_ID, _INSTRUCTION_ID))
+      return tasks
+
     if self.args.internal_port_id:
       if self.args.headphone_numid:
         tasks.append(DetectHeadphoneTask(self._ui, self.args.headphone_numid,
