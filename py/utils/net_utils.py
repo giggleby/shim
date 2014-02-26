@@ -33,6 +33,19 @@ class TimeoutHTTP(httplib.HTTP):
   def set_timeout(self, timeout):
     self._conn.timeout = timeout
 
+def Ifconfig(devname, enable, sleep_time_secs=1):
+  """Brings up/down interface.
+
+  Args:
+    devname: Device name.
+    enable: True is to bring up interface. False is down.
+    sleep_time_secs: The sleeping time after ifconfig up.
+  """
+  Spawn(['ifconfig', devname, 'up' if enable else 'down'],
+      check_call=True, log=True)
+  # Wait for device to settle down.
+  time.sleep(sleep_time_secs)
+
 class TimeoutXMLRPCTransport(xmlrpclib.Transport):
   '''Transport subclass supporting timeout.'''
   def __init__(self, timeout=DEFAULT_TIMEOUT, *args, **kwargs):
@@ -106,7 +119,7 @@ def SetEthernetIp(ip, interface=None, force=False):
     force: If force is False, the address is set only if the interface
         does not already have an assigned IP address.'''
   interface = interface or FindUsableEthDevice(raise_exception=True)
-  Spawn(['ifconfig', interface, 'up'], call=True)
+  Ifconfig(interface, True)
   current_ip = GetEthernetIp(interface)
   if force or not current_ip:
     Spawn(['ifconfig', interface, ip], call=True)
@@ -167,7 +180,7 @@ def SendDhcpRequest(interface=None):
     specific interface.
   """
   interface = interface or FindUsableEthDevice(raise_exception=True)
-  Spawn(['ifconfig', interface, 'up'], call=True)
+  Ifconfig(interface, True)
   _SendDhclientCommand([], interface,
                        expect_str=r"bound to (\d+\.\d+\.\d+\.\d+)")
 
@@ -179,7 +192,7 @@ def ReleaseDhcp(interface=None):
     specific interface.
   """
   interface = interface or FindUsableEthDevice(raise_exception=True)
-  Spawn(['ifconfig', interface, 'up'], call=True)
+  Ifconfig(interface, True)
   _SendDhclientCommand(['-r'], interface)
 
 def PollForCondition(condition, timeout=10,
@@ -233,3 +246,35 @@ def GetWLANMACAddress():
         return f.read().strip()
 
   raise IOError('Unable to determine WLAN MAC address')
+
+def GetWLANInterface():
+  """Returns the interface for wireless LAN device.
+
+  Returns:
+    'mlan0' or 'wlan0' depends on the interface name.
+    None if there is no wireless interface.
+  """
+  for dev in ['wlan0', 'mlan0']:
+    path = '/sys/class/net/%s/address' % dev
+    if os.path.exists(path):
+      return dev
+  return None
+
+def GetEthernetInterfaces():
+  """Returns the interfaces for Ethernet.
+
+  Returns:
+    A list like ['eth0', 'eth1'] if those Ethernet interfaces are available.
+    Or return [] if there is no Ethernet interface.
+  """
+  return [os.path.basename(path) for path in glob.glob('/sys/class/net/eth*')]
+
+def SwitchEthernetInterfaces(enable):
+  """Switches on/off all Ethernet interfaces.
+
+  Args:
+    enable: True to turn up, False to turn down.
+  """
+  devs = GetEthernetInterfaces()
+  for dev in devs:
+    Ifconfig(dev, enable)
