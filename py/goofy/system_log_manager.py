@@ -90,6 +90,7 @@ class SystemLogManager(object):
   def StartSyncThread(self):
     """Starts _sync_thread."""
     logging.info('Start sync thread.')
+    self._ClearLogs()
     self._sync_thread = threading.Thread(target=self._RunForever,
                                          name='SystemLogManager')
     self._sync_thread.start()
