@@ -519,6 +519,10 @@ class Options(object):
   # Check if MLB has been changed, and reset all tests if so.
   check_if_mlb_changed = False
 
+  chrome_startup_tries = 5
+  """Number of tries allowed to run telemetry login procedure. Setting this
+  value greater than 1 enables retry for telemetry if login fails."""
+
   def check_valid(self):
     '''Throws a TestListError if there are any invalid options.'''
     # Make sure no errant options, or options with weird types,
