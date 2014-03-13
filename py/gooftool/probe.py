@@ -680,7 +680,7 @@ def _ProbeDram():
   """Combine mosys memory timing and geometry information."""
   # TODO(tammo): Document why mosys cannot load i2c_dev itself.
   _LoadKernelModule('i2c_dev')
-  mosys_cmd = '/usr/local/factory/bin/mosys'
+  mosys_cmd = '/usr/sbin/mosys'
   part_data = Shell('%s -k memory spd print id' % mosys_cmd).stdout
   timing_data = Shell('%s -k memory spd print timings' % mosys_cmd).stdout
   size_data = Shell('%s -k memory spd print geometry' % mosys_cmd).stdout
