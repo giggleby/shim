@@ -54,10 +54,10 @@ Usage examples::
         dargs={'orientation' = {
                    'in_accel_x_base': 0,
                    'in_accel_y_base': 0,
-                   'in_accel_z_base': -1,
+                   'in_accel_z_base': 1,
                    'in_accel_x_lid': 0,
                    'in_accel_y_lid': 0,
-                   'in_accel_z_lid': 1},
+                   'in_accel_z_lid': -1},
                'spec_offset': (128, 230),
                'spec_ideal_values': (0, 1024)})
 
@@ -158,13 +158,14 @@ class AccelerometerController(object):
     add_trigger_path = os.path.join(
         _IIO_DEVICES_PATH, 'iio_sysfs_trigger/add_trigger')
     current_trigger_path = os.path.join(
-        _IIO_DEVICES_PATH, iio_bus_id, 'trigger/current_trigger')
+        _IIO_DEVICES_PATH, self.iio_bus_id, 'trigger/current_trigger')
     scan_elements_path = os.path.join(
-        _IIO_DEVICES_PATH, iio_bus_id, 'scan_elements')
+        _IIO_DEVICES_PATH, self.iio_bus_id, 'scan_elements')
 
     # Clean up capture settings in case previous invocation was
     # not terminated gracefully.
-    self.CleanUp()
+    self.CleanUpCapture()
+    self._CleanUpCalibrationValues()
 
     sysfs_init = [
         # Choose a number and add it into add_trigger.
@@ -193,7 +194,7 @@ class AccelerometerController(object):
           log=True))
       self.index_to_signal_name[index] = signal_name
 
-  def CleanUp(self):
+  def CleanUpCapture(self):
     """Clean up settings of raw data capture."""
     logging.info('Clean up capture settings.')
     buffer_enable_path = os.path.join(
@@ -229,6 +230,21 @@ class AccelerometerController(object):
       for axis in ['x', 'y', 'z']:
         yield 'in_accel_' + axis + '_' + location + postfix
 
+  def _CleanUpCalibrationValues(self):
+    """Clean up calibration values.
+
+    This is used to prevent get "already calibrated" raw data to calculate
+    calibration result.
+    """
+    iio_bus_path = os.path.join(_IIO_DEVICES_PATH, self.iio_bus_id)
+    for calibbias in self._GenSignalNames('_calibbias'):
+      self._SetSysfsValues(
+          [SYSFS_VALUE(os.path.join(iio_bus_path, calibbias), '0')])
+    for calibscale in self._GenSignalNames('_calibscale'):
+      self._SetSysfsValues([SYSFS_VALUE(
+          os.path.join(iio_bus_path, calibscale),
+                       str(self.spec_ideal_values[1]))])
+
   def GetRawDataAverage(self, capture_count=1):
     """Reads several records of raw data and returns the average.
 
@@ -247,10 +263,10 @@ class AccelerometerController(object):
       A dict of the format {'signal_name': average value}
       Ex, {'in_accel_x_base': 4,
            'in_accel_y_base': 1,
-           'in_accel_z_base': -1001,
+           'in_accel_z_base': 1001,
            'in_accel_x_lid': -3,
            'in_accel_y_lid': 32,
-           'in_accel_z_lid': 999}
+           'in_accel_z_lid': -999}
     """
     # The accelerometer raw data is 2 bytes and the timestamp is 8 bytes.
     # The timestamp is always last and is 8-byte aligned. We enable
@@ -304,19 +320,19 @@ class AccelerometerController(object):
       raw_data: a dict containing digital output for each signal.
         Ex, {'in_accel_x_base': 5,
              'in_accel_y_base': 21,
-             'in_accel_z_base': -1004,
+             'in_accel_z_base': 1004,
              'in_accel_x_lid': -39,
              'in_accel_y_lid': 12,
-             'in_accel_z_lid': 998}
+             'in_accel_z_lid': -998}
 
       orientations: a dict indicating the orentation in gravity
         (either 0 or -/+1) of the signal.
         Ex, {'in_accel_x_base': 0,
              'in_accel_y_base': 0,
-             'in_accel_z_base': -1,
+             'in_accel_z_base': 1,
              'in_accel_x_lid': 0,
              'in_accel_y_lid': 0,
-             'in_accel_z_lid': 1}
+             'in_accel_z_lid': -1}
     Returns:
       True if the raw data is within the tolerance of the spec.
     """
@@ -347,10 +363,10 @@ class AccelerometerController(object):
       raw_data: a dict containing digital output for each signal.
         Ex, {'in_accel_x_base': 23,
              'in_accel_y_base': -19,
-             'in_accel_z_base': -998,
+             'in_accel_z_base': 998,
              'in_accel_x_lid': 12,
              'in_accel_y_lid': 21,
-             'in_accel_z_lid': 1005}
+             'in_accel_z_lid': -1005}
     Returns:
       True if the gravity is within the tolerance of the spec.
     """
@@ -375,10 +391,10 @@ class HorizontalCalibrationTask(FactoryTask):
       of two sensors during calibration.
     Ex, {'in_accel_x_base': 0,
          'in_accel_y_base': 0,
-         'in_accel_z_base': -1,
+         'in_accel_z_base': 1,
          'in_accel_x_lid': 0,
          'in_accel_y_lid': 0,
-         'in_accel_z_lid': 1}
+         'in_accel_z_lid': -1}
     capture_count: How many iterations to capture the raw data to calculate
       the average.
     setup_time_secs: How many seconds to wait after pressing space to
@@ -473,10 +489,10 @@ class AccelerometersCalibration(unittest.TestCase):
         'An example of orientation for horizontal calibration: {'
         '    "in_accel_x_base": 0,'
         '    "in_accel_y_base": 0,'
-        '    "in_accel_z_base": -1,'
+        '    "in_accel_z_base": 1,'
         '    "in_accel_x_lid": 0,'
         '    "in_accel_y_lid": 0,'
-        '    "in_accel_z_lid": 1}.'
+        '    "in_accel_z_lid": -1}.'
         'Another example of orientation_gravity for six-sided calibration: {'
         '    "in_accel_x_base": (0, 0, 1, -1, 0, 0),'
         '    "in_accel_y_base": (0, 0, 0, 0, 1, -1),'
@@ -536,7 +552,7 @@ class AccelerometersCalibration(unittest.TestCase):
           self, self.args.orientation)]
     self._task_manager = FactoryTaskManager(self.ui, task_list)
     self._task_manager.Run()
-    self.accelerometer_controller.CleanUp()
+    self.accelerometer_controller.CleanUpCapture()
 
   def _ProbeIIOBus(self):
     """Auto probing the iio bus of accelerometers.
