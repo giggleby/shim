@@ -660,19 +660,8 @@ def _ProbeCpuArm():
 
 @_ComponentProbe('display_panel')
 def _ProbeDisplayPanel():
-  """Combine all available edid data, from sysfs and directly from the i2c."""
-  edid_list = []
-  for path in glob('/sys/class/drm/*LVDS*/edid'):
-    with open(path) as f:
-      parsed_edid = edid.Parse(f.read())
-      if parsed_edid:
-        edid_list.append(parsed_edid)
-  _LoadKernelModule('i2c_dev')
-  for path in sorted(glob('/dev/i2c-[0-9]*')):
-    parsed_edid = edid.LoadFromI2c(path)
-    if parsed_edid:
-      edid_list.append(parsed_edid)
-  return edid_list
+  display = Shell('grep -Eo -m 1 "LCD panel:(.*)$" /var/log/messages | sed "s/LCD panel://g"').stdout
+  return [DictCompactProbeStr(display)] if display is not None else []
 
 
 @_ComponentProbe('dram')
