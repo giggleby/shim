@@ -751,10 +751,23 @@ class Goofy(object):
                          'before running %s', i.path, test.path)
             return
 
-      if self.invocations and not (test.backgroundable and all(
-        [x.backgroundable for x in self.invocations])):
-        logging.debug('Waiting for non-backgroundable tests to '
-                'complete before running %s', test.path)
+      # We have three cases: Backgroundable, Force-background and Normal.
+      # For all cases, we don't allow there is another normal test in
+      # invocations.
+      def is_normal_test(test):
+        return not (test.backgroundable or test.force_background)
+
+      if self.invocations and any(
+          [is_normal_test(x) for x in self.invocations]):
+        logging.info('Waiting for non-backgroundable tests to '
+                     'complete before running %s', test.path)
+        return
+
+      # We also don't allow there is a backgroundable test for normal case.
+      if self.invocations and is_normal_test(test) and any(
+          [x.backgroundable for x in self.invocations]):
+        logging.info('Waiting for backgroundable tests to '
+                     'complete before running %s', test.path)
         return
 
       if test.get_state().skip:

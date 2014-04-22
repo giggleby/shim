@@ -793,6 +793,22 @@ class FactoryTest(object):
           should be run.
       implicit_id: Whether the ID was determined implicitly (i.e., not
           explicitly specified in the test list).
+
+  We have three kinds of test cases:
+    1. normal
+    2. backgroundable
+    3. force_background
+  And we have four situations of invocations:
+    a. only a running normal test
+    b. all running tests are backgroundable
+    c. all running tests are force_background
+    d. all running tests are any combination of backgroundable and
+       force_background
+  When a test case would like to be run, it must follow the rules:
+    [123] cannot run with [a].
+    [23] can run with [bcd].
+    [1] can run with [c].
+    [1] cannot run with [bd].
   '''
 
   # If True, the test never fails, but only returns to an untested state.
@@ -837,6 +853,7 @@ class FactoryTest(object):
                retries=0,
                prepare=None,
                finish=None,
+               force_background=False,
                _root=None,
                _default_id=None):
     '''
@@ -858,6 +875,7 @@ class FactoryTest(object):
     self.kbd_shortcut = kbd_shortcut.lower() if kbd_shortcut else None
     self.dargs = dargs or {}
     self.backgroundable = backgroundable
+    self.force_background = force_background
     if isinstance(exclusive, str):
       self.exclusive = [exclusive]
     else:
@@ -958,9 +976,15 @@ class FactoryTest(object):
     assert not bogus_exclusive_items, (
         'In test %s, invalid exclusive options: %s (should be in %s)' %
         (self.id, bogus_exclusive_items, self.EXCLUSIVE_OPTIONS))
-    assert not (backgroundable and (enable_services or disable_services)), (
+    assert not ((backgroundable or force_background) and (
+        enable_services or disable_services)), (
         'Test %s may not be backgroundable with enable_services or '
         'disable_services specified.' % self.id)
+    assert not (force_background and self.has_ui), (
+        'Test %s may not have UI with force background.' % self.id)
+    assert not (force_background and backgroundable), (
+        'Test %s may not set backgroundable and force_background at '
+        'the same time.' % self.id)
 
   @staticmethod
   def pytest_name_to_id(pytest_name):
