@@ -17,6 +17,7 @@ Contents:
 
    intro
    regions
+   branding
 
 APIs:
 
