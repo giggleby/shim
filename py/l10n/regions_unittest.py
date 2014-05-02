@@ -87,7 +87,7 @@ class RegionTest(unittest.TestCase):
     self.assertEquals(
       {'initial_locale': 'en-US',
        'initial_timezone': 'America/Los_Angeles',
-       'keyboard': 'xkb:us::eng',
+       'keyboard_layout': 'xkb:us::eng',
        'region': 'us'},
       regions.BuildRegionsDict()['us'].GetVPDSettings())
 
@@ -103,7 +103,7 @@ class RegionTest(unittest.TestCase):
        'time_zone': 'America/Los_Angeles',
        'vpd_settings': {'initial_locale': 'en-US',
                         'initial_timezone': 'America/Los_Angeles',
-                        'keyboard': 'xkb:us::eng',
+                        'keyboard_layout': 'xkb:us::eng',
                         'region': 'us'}},
       data['us'])
 

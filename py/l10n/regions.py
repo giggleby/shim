@@ -114,7 +114,7 @@ class Region(object):
   def GetVPDSettings(self):
     """Returns a dictionary of VPD settings for the locale."""
     return dict(initial_locale=self.language_code,
-                keyboard=self.keyboard,
+                keyboard_layout=self.keyboard,
                 initial_timezone=self.time_zone,
                 region=self.region_code)
 
