@@ -11,6 +11,7 @@ This is a minimalist umpired implementation for development testing purpose.
 import logging
 import optparse
 import os
+import re
 import sys
 
 import factory_common  # pylint: disable=W0611
@@ -26,10 +27,19 @@ TEST_YAML = os.path.join(
     os.path.dirname(sys.modules[__name__].__file__),
     'testdata', 'umpired_test.yaml')
 
+SERVER_TOOLKIT_HASH_RE = r'/toolkits/server/([0-9a-f]{8,32})/usr/local/factory/'
+
 
 def StartServer(testmode=False, config_file=TEST_YAML):
-  # Instanciate environment and load default configuration file
-  env = UmpireEnv()
+  daemon_path = sys.modules[__name__].__file__
+  toolkit_hash = None
+  # Get server toolkit from absolute daemon file path.
+  real_daemon_path = os.path.realpath(daemon_path)
+  match = re.search(SERVER_TOOLKIT_HASH_RE, real_daemon_path)
+  if match:
+    toolkit_hash = match[1]
+  # Instanciate environment and load default configuration file.
+  env = UmpireEnv(active_server_toolkit_hash=toolkit_hash)
   if testmode:
     (test_base_dir, _) = os.path.split(
         os.path.realpath(__file__))
@@ -43,24 +53,24 @@ def StartServer(testmode=False, config_file=TEST_YAML):
   if env.config is None:
     raise UmpireError('Umpire config was not loaded.')
 
-  # Instanciate Umpire daemon and set command handlers and webapp handler
+  # Instanciate Umpire daemon and set command handlers and webapp handler.
   umpired = UmpireDaemon(env)
-  # Add command line handlers
+  # Add command line handlers.
   cli_commands = CLICommand(env)
   umpired.AddMethodForCLI(cli_commands)
-  # Add root RPC handlers
+  # Add root RPC handlers.
   root_dut_rpc = rpc_dut.RootDUTCommands(env)
   umpired.AddMethodForDUT(root_dut_rpc)
-  # Add Umpire RPC handlers
+  # Add Umpire RPC handlers.
   umpire_dut_rpc = rpc_dut.UmpireDUTCommands(env)
   umpired.AddMethodForDUT(umpire_dut_rpc)
-  # Add log RPC handlers
+  # Add log RPC handlers.
   log_dut_rpc = rpc_dut.LogDUTCommands(env)
   umpired.AddMethodForDUT(log_dut_rpc)
-  # Add web applications
+  # Add web applications.
   resourcemap_webapp = ResourceMapApp(env)
   umpired.AddWebApp(resourcemap_webapp.GetPathInfo(), resourcemap_webapp)
-  # Start listening to command port and webapp port
+  # Start listening to command port and webapp port.
   umpired.Run()
 
 
