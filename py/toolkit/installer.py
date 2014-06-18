@@ -129,11 +129,13 @@ class FactoryToolkitInstaller():
 
     self._dest = dest
     self._usr_local_src = os.path.join(src, 'usr', 'local')
+    self._usr_src = os.path.join(src, 'usr')
     self._var_src = os.path.join(src, 'var')
     self._no_enable = no_enable
     self._tag_file = os.path.join(self._usr_local_dest, 'factory', 'enabled')
 
     if (not os.path.exists(self._usr_local_src) or
+        not os.path.exists(self._usr_src) or
         not os.path.exists(self._var_src)):
       raise Exception(
           'This installer must be run from within the factory toolkit!')
@@ -185,6 +187,7 @@ class FactoryToolkitInstaller():
   def Install(self):
     print '*** Installing factory toolkit...'
     for src, dest in ((self._usr_local_src, self._usr_local_dest),
+                      (self._usr_src, self._usr_local_dest),
                       (self._var_src, self._var_dest)):
       # Change the source directory to root, and add group/world read
       # permissions.  This is necessary because when the toolkit was
