@@ -113,7 +113,7 @@ class GetPanelVPDTest(unittest.TestCase):
       self.ui.CallJSFunction('setClear')
       return
 
-    data = urllib.urlencode({'serial': scan_value})
+    data = urllib.urlencode({'action': 'getvpd', 'serial': scan_value})
     try:
       filehandle = urllib2.urlopen(self.url + '?' + data)
     except urllib2.URLError as e:
@@ -129,7 +129,7 @@ class GetPanelVPDTest(unittest.TestCase):
     Args:
       data: 'None' string or a yaml format dictionary
     """
-    if data == 'None':
+    if not data or data == 'None':
       self.SetStatus('No VPD updated', '没有VPD需要更新')
       time.sleep(1)
       return
