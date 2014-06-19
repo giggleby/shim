@@ -38,7 +38,7 @@ def StartServer(testmode=False, config_file=TEMPLATE_YAML):
   real_daemon_path = os.path.realpath(daemon_path)
   match = re.search(SERVER_TOOLKIT_HASH_RE, real_daemon_path)
   if match:
-    toolkit_hash = match[1]
+    toolkit_hash = match.groups()[0]
   # Instanciate environment and load default configuration file.
   env = UmpireEnv(active_server_toolkit_hash=toolkit_hash)
   if testmode:
