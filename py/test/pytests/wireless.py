@@ -117,7 +117,7 @@ class WirelessTest(unittest.TestCase):
     logging.info('Try connecting to %s', self.args.test_url)
     for i in range(5): # pylint: disable=W0612
       try:
-        remote_file = urllib2.urlopen(self.args.test_url, timeout=2)
+        remote_file = urllib2.urlopen(self.args.test_url, timeout=10)
       except urllib2.HTTPError as e:
         factory.console.info(
             'Connected to %s but got status code %d: %s.',
