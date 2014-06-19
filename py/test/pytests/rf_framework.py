@@ -186,7 +186,6 @@ class RfFramework(object):
     factory.console.info('interactive_mode = %s', self.interactive_mode)
     factory.console.info('equipment_enabled = %s', self.equipment_enabled)
 
-    self.unique_identification = self.GetUniqueIdentification()
 
   def TestStep0_BeforeFactoryMode(self):
     """Connects shopfloor and downloads parameters. The test has not entered
@@ -196,6 +195,18 @@ class RfFramework(object):
       if len(self.args.parameters) > 0:
         self.SetHTML(MSG_DOWNLOADING_PARAMETERS)
         DownloadParameters(self.args.parameters, self.caches_dir)
+
+    # Load the main configuration.
+    with open(os.path.join(
+        self.caches_dir, self.args.config_file), "r") as fd:
+      self.config = yaml.load(fd.read())
+    config_version = self.config['annotation']
+    factory.console.info('Loaded config = %r', config_version)
+    self.field_to_eventlog[CONFIG_VERSION] = config_version
+    self.field_to_csv[CONFIG_VERSION] = config_version
+
+    self.unique_identification = self.GetUniqueIdentification()
+    logging.info('Unique ID: %s', self.unique_identification)
 
     # Prepare additional parameters if we are in calibration mode.
     if self.args.category == 'calibration':
@@ -217,14 +228,6 @@ class RfFramework(object):
       factory.console.info('Calibration target=\n%s',
           self.calibration_target)
 
-    # Load the main configuration.
-    with open(os.path.join(
-        self.caches_dir, self.args.config_file), "r") as fd:
-      self.config = yaml.load(fd.read())
-    config_version = self.config['annotation']
-    factory.console.info('Loaded config = %r', config_version)
-    self.field_to_eventlog[CONFIG_VERSION] = config_version
-    self.field_to_csv[CONFIG_VERSION] = config_version
 
   def TestStep1_PrepareOutsideShieldBox(self):
     """Brings up test environments on DUT. Typically enters factory mode here.
