@@ -4,9 +4,10 @@
 
 """A wrapper for talking with a tty modem."""
 
+import logging
 import re
 import serial
-import logging
+import select
 
 import factory_common  # pylint: disable=W0611
 from cros.factory.common import Error
@@ -27,6 +28,8 @@ class Modem(object):
         not throw unexpected messages.
     """
     self.ser = serial.Serial('/dev/%s' % port, timeout=timeout)
+    # Clear the output first.
+    self.ReadAllOutput()
 
     if cancel_echo:
       self.SendCommandWithCheck('ATE0')
@@ -36,6 +39,14 @@ class Modem(object):
 
     # Send an AT command and expect 'OK'
     self.SendCommandWithCheck('AT')
+
+  def ReadAllOutput(self):
+    while True:
+      r = select.select([self.ser], [], [], 0.01)
+      if r == ([], [], []):
+        break
+      else:
+        self.ReadLine()
 
   def ReadLine(self):
     """Reads a line from the modem."""
