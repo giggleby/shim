@@ -52,6 +52,7 @@ from cros.factory.test import test_ui
 from cros.factory.test.args import Arg
 from cros.factory.test.event import Event
 from cros.factory.test.factory import TestState
+from cros.factory.test.fixture import arduino
 from cros.factory.test.media_util import MediaMonitor, MountedMedia
 from cros.factory.test.utils import TimeString, TryMakeDirs
 from cros.factory.utils import file_utils
@@ -203,6 +204,7 @@ class VSWR(unittest.TestCase):
     self._vswr_threshold = {
         'cell': self._sn_config['cell_vswr_threshold'],
         'wifi': self._sn_config['wifi_vswr_threshold']}
+    self._antenna_configs = self._sn_config.get('antenna_configs')
 
   def _WaitForValidSN(self):
     """Waits for the operator to enter/scan a valid serial number.
@@ -268,7 +270,7 @@ class VSWR(unittest.TestCase):
                        self._serial_number)
         self._ui.RunJS('$("sn-format-error").style.display = ""')
 
-  def _GetTraces(self, freqs_in_mhz, parameters, purpose='unspecified'):
+  def _GetTraces(self, segments, parameters, purpose='unspecified'):
     """Wrapper for GetTraces in order to log details.
 
     Args:
@@ -281,13 +283,12 @@ class VSWR(unittest.TestCase):
       Current traces from the ENA.
     """
     # Generate the sweep tuples.
-    freqs = sorted(freqs_in_mhz)
-    segments = [(freq_min * 1e6, freq_max * 1e6, 2) for
-                freq_min, freq_max in zip(freqs, freqs[1:])]
-
     self._ena.SetSweepSegments(segments)
     ret = self._ena.GetTraces(parameters)
-    self._raw_traces[purpose] = ret
+    if not purpose in self._raw_traces:
+      self._raw_traces[purpose] = ret
+    else:
+      self._raw_traces[purpose] += ret
     return ret
 
   def _CaptureScreenshot(self, filename_prefix):
@@ -314,7 +315,8 @@ class VSWR(unittest.TestCase):
     urllib.urlopen('http://%s/image.asp' % self._ena_ip).read()
     png_content = urllib.urlopen('http://%s/disp.png' % self._ena_ip).read()
     Log('vswr_screenshot',
-        ab_serial_number=self._serial_number,
+        panel_serial=self._serial_number,
+        fixture_id=self._config['fixture_id'],
         path=self._path_name,
         filename=filename)
 
@@ -382,7 +384,8 @@ class VSWR(unittest.TestCase):
         'diff': difference}
     return check_pass
 
-  def _CompareTraces(self, traces, cell_or_wifi, main_or_aux, ena_parameter):
+  def _CompareTraces(self, traces, cell_or_wifi, main_or_aux,
+                     antenna_config_id, ena_parameter):
     """Returns the traces and spec are aligned or not.
 
     It calls the check_measurement for each frequency and records
@@ -395,10 +398,11 @@ class VSWR(unittest.TestCase):
       traces: Trace information from ENA.
       cell_or_wifi: 'cell' or 'wifi' antenna.
       main_or_aux: 'main' or 'aux' antenna.
+      antenna_config_id: ID to use under VSWR threshold dict.
       ena_parameter: the type of trace to acquire, e.g., 'S11', 'S22', etc.
           Detailed in ena.GetTraces()
     """
-    log_title = '%s_%s' % (cell_or_wifi, main_or_aux)
+    log_title = '%s_%s_%s' % (cell_or_wifi, main_or_aux, antenna_config_id)
     self._log_to_file.write(
         'Start measurement [%s], with profile[%s,col %s], from ENA-%s\n' %
         (log_title, cell_or_wifi, main_or_aux, ena_parameter))
@@ -409,7 +413,7 @@ class VSWR(unittest.TestCase):
              'Antenna-%s' % main_or_aux,
              'ENA-%s' % ena_parameter,
              'Result')]
-    for threshold in self._vswr_threshold[cell_or_wifi]:
+    for threshold in self._vswr_threshold[cell_or_wifi][antenna_config_id]:
       freq = threshold['freq'] * 1e6
       standard = (threshold['%s_min' % main_or_aux],
                   threshold['%s_max' % main_or_aux])
@@ -423,7 +427,8 @@ class VSWR(unittest.TestCase):
     self._log_to_file.write(
         '%s results:\n%s\n' % (log_title, pprint.pformat(logs)))
     Log('vswr_%s' % log_title,
-        ab_serial_number=self._serial_number,
+        panel_serial=self._serial_number,
+        fixture_id=self._config['fixture_id'],
         iterations=self._current_iteration,
         iteration_hash=self._iteration_hash,
         current_config_name=self._sn_config_name,
@@ -469,32 +474,68 @@ class VSWR(unittest.TestCase):
     Args:
       main_or_aux: str, specify which antenna to test, either 'main' or 'aux'.
     """
-    # Get frequencies we want to test.
-    freqs = (
-        set([f['freq'] for f in self._vswr_threshold['cell']]) |
-        set([f['freq'] for f in self._vswr_threshold['wifi']]))
-    traces = self._GetTraces(
-        freqs, ['S11', 'S22'], purpose=('test_%s_antennas' % main_or_aux))
+    arduino_controller = arduino.ArduinoDigitalPinController()
+    arduino_controller.Connect()
 
-    # Restore sweep if needed.
-    if self._sweep_restore:
-      self._ena.SetLinearSweep(self._sweep_restore[0], self._sweep_restore[1])
-    # Set marker.
-    for marker in self._marker_info:
-      self._ena.SetMarker(
-          marker['channel'], marker['marker_num'], marker['marker_freq'])
-    # Take screenshot if needed.
-    if self._take_screenshot:
-      self._CaptureScreenshot('[%s]%s' % (main_or_aux, self._serial_number))
+    antenna_results = {'cell-%s' % main_or_aux: {},
+                       'wifi-%s' % main_or_aux: {}}
+    # Reset all pins.
+    for antenna_config in self._antenna_configs:
+      for pin in antenna_config['arduino_high_pins']:
+        arduino_controller.SetPin(pin, False)
 
+    iteration = 0
+    for antenna_config in self._antenna_configs:
+      # Switch antenna.
+      logging.info('Switch to antenna config %s', antenna_config['id'])
+      for high_pin in antenna_config['arduino_high_pins']:
+        arduino_controller.SetPin(high_pin)
+
+      # Get frequencies we want to test.
+      segments = [(
+          self._sn_config['measurement']['min_freq'],
+          self._sn_config['measurement']['max_freq'],
+          self._sn_config['measurement']['points'])]
+      traces = self._GetTraces(
+          segments, ['S11', 'S22'], purpose=(
+              'test_%s_antennas_%s' % (main_or_aux, antenna_config['id'])))
+
+      # Restore sweep if needed.
+      if self._sweep_restore:
+        self._ena.SetLinearSweep(self._sweep_restore[0], self._sweep_restore[1])
+      # Set marker.
+      for marker in self._marker_info:
+        self._ena.SetMarker(
+            marker['channel'], marker['marker_num'], marker['marker_freq'])
+      # Take screenshot if needed.
+      if self._take_screenshot:
+        self._CaptureScreenshot('[%s]%s' % (main_or_aux, self._serial_number))
+
+      antenna_results['cell-%s' % main_or_aux][antenna_config['id']] = (
+          self._CompareTraces(
+              traces, 'cell', main_or_aux, antenna_config['id'], 'S11'))
+      antenna_results['wifi-%s' % main_or_aux][antenna_config['id']] = (
+          self._CompareTraces(
+              traces, 'wifi', main_or_aux, antenna_config['id'], 'S22'))
+
+      iteration += 1
+      if self._config.get('step', False):
+        if iteration < len(self._antenna_configs):
+          self._ShowMessageBlock('test-switch-antenna')
+          self._WaitForKey('S')
+          self._ShowMessageBlock('test-%s-antenna' % main_or_aux)
+
+    arduino_controller.Disconnect()
+
+    # Collect the results from antenna_results.
+    cell_result = all(
+        r for r in antenna_results['cell-%s' % main_or_aux].values())
     self._results['cell-%s' % main_or_aux] = (
-        TestState.PASSED
-        if self._CompareTraces(traces, 'cell', main_or_aux, 'S11') else
-        TestState.FAILED)
+        TestState.PASSED if cell_result else TestState.FAILED)
+    wifi_result = all(
+        r for r in antenna_results['wifi-%s' % main_or_aux].values())
     self._results['wifi-%s' % main_or_aux] = (
-        TestState.PASSED
-        if self._CompareTraces(traces, 'wifi', main_or_aux, 'S22') else
-        TestState.FAILED)
+        TestState.PASSED if wifi_result else TestState.FAILED)
 
   def _GenerateFinalResult(self):
     """Generates the final result."""
@@ -505,7 +546,8 @@ class VSWR(unittest.TestCase):
     self._log_to_file.write('Result in summary:\n%s\n' %
                             pprint.pformat(self._results))
     Log('vswr_result',
-        ab_serial_number=self._serial_number,
+        panel_serial=self._serial_number,
+        fixture_id=self._config['fixture_id'],
         path=self._path_name,
         results=self._results)
 
@@ -514,7 +556,8 @@ class VSWR(unittest.TestCase):
     self._log_to_file.write('\n\nRaw traces:\n%s\n' %
                             pprint.pformat(self._raw_traces))
     Log('vswr_detail',
-        ab_serial_number=self._serial_number,
+        panel_serial=self._serial_number,
+        fixture_id=self._config['fixture_id'],
         path=self._path_name,
         raw_trace=self._raw_traces)
 
@@ -696,6 +739,10 @@ class VSWR(unittest.TestCase):
     self._results = {name: TestState.UNTESTED for name in self._RESULT_IDS}
     # Misc.
     self._current_iteration = 0
+
+    # Initialize the arduino controller.
+    self._antenna_configs = []
+    self._step_mode = False
 
     # Set up UI.
     self._event_queue = Queue.Queue()
