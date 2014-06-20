@@ -17,12 +17,14 @@ from cros.factory.utils.process_utils import SpawnOutput
 class WriteProtectSwitchTest(unittest.TestCase):
   ARGS = [
     Arg('has_ectool', bool, 'Has ectool utility or not.',
-        default=True)
+        default=True),
+    Arg('crossystem_field', str, 'crossystem field to check',
+        default='wpsw_cur'),
   ]
 
   def runTest(self):
     self.assertEqual('1', SpawnOutput(
-        ['crossystem', 'wpsw_cur'],
+        ['crossystem', self.args.crossystem_field],
         log=True, check_output=True, log_stderr_on_error=True))
 
     if self.args.has_ectool:
