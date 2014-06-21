@@ -186,7 +186,9 @@ class ProbeSimCardTrayTest(unittest.TestCase):
       Arg('remove', bool, 'Check sim card tray removal', default=False),
       Arg('only_check_presence', bool,
           'Only checks sim card tray presence matches tray_already_present. '
-          'No user interaction required', default=True)]
+          'No user interaction required', default=True),
+      Arg('gpio_active_high', bool, 'Whether GPIO is active high.',
+          default=True)]
 
   def setUp(self):
     self.ui = test_ui.UI()
@@ -214,6 +216,12 @@ class ProbeSimCardTrayTest(unittest.TestCase):
                         str(self.args.tray_detection_gpio), export_path)
       raise ProbeTrayException('Can not export detection gpio %s' %
                                self.args.tray_detection_gpio)
+    direction_path = os.path.join(self._detection_gpio_path, 'direction')
+    try:
+      WriteFile(direction_path, 'out', True)
+    except IOError:
+      logging.exception('Can not write "out" into %s', direction_path)
+      raise ProbeTrayException('Can set detection gpio direction to out')
 
   def GetDetection(self):
     """Returns tray status ProbeTrayTask.INSERT or ProbeTrayTask.REMOVE."""
@@ -226,7 +234,9 @@ class ProbeSimCardTrayTest(unittest.TestCase):
     if ret not in ['0', '1']:
       raise ProbeTrayException('Get invalid detection %s from %s',
                                ret, value_path)
-    return ProbeTrayTask.INSERT if ret == '1' else ProbeTrayTask.REMOVE
+    return (ProbeTrayTask.INSERT
+            if (self.args.gpio_active_high == (ret == '1'))
+            else ProbeTrayTask.REMOVE)
 
   def CheckPresence(self):
     self.assertEquals(
