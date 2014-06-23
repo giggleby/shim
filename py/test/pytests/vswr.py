@@ -25,6 +25,7 @@ This test measures VSWR value using an Agilent E5071C Network Analyzer (ENA).
 """
 
 
+import datetime
 import logging
 import os
 import pprint
@@ -565,7 +566,8 @@ class VSWR(unittest.TestCase):
     with file_utils.UnopenedTemporaryFile() as temp_log_path:
       with open(temp_log_path, 'w') as f:
         f.write(self._log_to_file.getvalue())
-      filename = self._serial_number + '.txt'
+      timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
+      filename = '%s_%s.txt' % (timestamp, self._serial_number)
 
       # Write log file to USB.
       with MountedMedia(self._usb_path, 1) as mount_dir:
