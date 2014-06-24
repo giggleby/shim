@@ -8,6 +8,7 @@
 from contextlib import contextmanager
 
 import errno
+import glob
 import logging
 import os
 import re
@@ -118,6 +119,16 @@ def TryUnlink(path):
       raise
 
 
+def ReadFile(path):
+  """Reads bytes from a file.
+
+  Args:
+    path: The path of the file to read.
+  """
+  with open(path) as f:
+    return f.read()
+
+
 def WriteFile(path, data, log=False):
   """Writes a value to a file.
 
@@ -132,6 +143,16 @@ def WriteFile(path, data, log=False):
     logging.info('Writing %r to %s', data, path)
   with open(path, 'w') as f:
     f.write(data)
+
+
+def TouchFile(path):
+  """Touches a file.
+
+  Args:
+    path: The path to touch.
+  """
+  with file(path, 'a'):
+    os.utime(path, None)
 
 
 def CopyFileSkipBytes(in_file_name, out_file_name, skip_size):
@@ -266,3 +287,20 @@ def ExtractFile(compressed_file, output_dir, only_extracts=None,
     raise ExtractFileError('Unsupported compressed file: %s' % compressed_file)
 
   return Spawn(cmd, log=True, check_call=True)
+
+
+def GlobSingleFile(pattern):
+  """Returns the name of the single file matching a pattern.
+
+  Args:
+    pattern: A pattern that should match exactly one file.
+
+  Raises:
+    ValueError if the pattern matches zero or >1 files.
+  """
+  matches = glob.glob(pattern)
+  if len(matches) != 1:
+    raise ValueError, 'Expected one match for %s but got %s' % (
+        pattern, matches)
+
+  return matches[0]
