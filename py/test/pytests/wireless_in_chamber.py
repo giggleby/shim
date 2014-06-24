@@ -187,6 +187,7 @@ class WirelessTest(unittest.TestCase):
 
   def runTest(self):
     flim = flimflam.FlimFlam(dbus.SystemBus())
+    flim.manager.RequestScan("")
 
     if self.args.services is None:
       # Basic wifi test -- succeeds if it can see any AP
