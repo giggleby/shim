@@ -20,6 +20,7 @@ import threading
 import time
 import unittest
 
+from cros.factory import common
 from cros.factory.event_log import Log
 from cros.factory.test.fixture.bft_fixture import (BFTFixture,
                                                    BFTFixtureException,
@@ -135,7 +136,8 @@ class RemovableStorageTest(unittest.TestCase):
     Arg('vidpid', (str, list),
         'Vendor ID and Product ID of the target testing device', None,
         optional=True),
-    Arg('sysfs_path', str, 'The expected sysfs path that udev events should'
+    Arg('sysfs_path', (str, list),
+        'The expected sysfs path that udev events should'
         'come from, ex: /sys/devices/pci0000:00/0000:00:1a.0/usb1/1-1/1-1.2',
         None, optional=True),
     Arg('block_size', int,
@@ -555,8 +557,9 @@ class RemovableStorageTest(unittest.TestCase):
             return
           logging.info('VID:PID == %s', self.args.vidpid)
         elif self.args.sysfs_path:
-          if (not os.path.exists(self.args.sysfs_path) or
-              not self.args.sysfs_path in device.sys_path):
+          self.args.sysfs_path = common.MakeList(self.args.sysfs_path)
+          if (not any(os.path.exists(p) for p in self.args.sysfs_path) or
+              not any(p in device.sys_path for p in self.args.sysfs_path)):
             return
           logging.info('sys path = %s', self.args.sysfs_path)
         else:
