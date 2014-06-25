@@ -316,9 +316,9 @@ class RfFramework(object):
 
       self.TestStep2_PrepareInsideShieldBox()
       self.Prompt(MSG_SHIELD_BOX_CHECKED, force_prompt=True)
-      time.sleep(5)
 
       with leds.Blinker(self.args.blinking_pattern):
+        time.sleep(5)
         self.TestStep3_PrimaryTestInsideShieldBox()
 
       # Light all LEDs to indicate test is completed.
