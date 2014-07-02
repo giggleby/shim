@@ -115,33 +115,27 @@ class WaitDisplayThread(threading.Thread):
 
   Args:
     display_id: target display ID.
-    connect: DetectDisplayTask.CONNECT or DetectDisplayTask.DISCONNECT
+    connect: 'connected' / 'disconnected'
     on_success: callback for success.
   """
   def __init__(self, display_id, connect, on_success):
     threading.Thread.__init__(self, name='WaitDisplayThread')
     self._done = threading.Event()
-    self._connect = connect == DetectDisplayTask.CONNECT
-    self._xrandr_expect = re.compile(
-        '^%s %s' % (display_id,
-                    'connected' if self._connect else 'disconnected'),
-        re.MULTILINE)
+    self._xrandr_expect = re.compile('^%s %s' % (display_id, connect),
+                                     re.MULTILINE)
     self._on_success = on_success
 
   def run(self):
     while not self._done.is_set():
       if self._xrandr_expect.search(SpawnOutput(['xrandr', '-d', ':0'])):
-        display_info = factory.get_state_instance().GetDisplayInfo()
-        if ((len(display_info) > 1 and self._connect) or
-            (len(display_info) == 1 and not self._connect)):
-          logging.info('Get display info %r', display_info)
-          self._on_success()
-          self.Stop()
+        self._on_success()
+        self.Stop()
       else:
         self._done.wait(_CONNECTION_CHECK_PERIOD_SECS)
 
   def Stop(self):
-    """Stops the thread."""
+    """Stops the thread.
+    """
     self._done.set()
 
 
@@ -156,10 +150,10 @@ class DetectDisplayTask(ExtDisplayTask):
     instruction: refer base class.
     display_label: target display's human readable name.
     display_id: target display's id in xrandr.
-    connect: (CONNECT/DISCONNECT) checks for connect/disconnect.
+    connect: (_CONNECT/_DISCONNECT) checks for connect/disconnect.
   """
-  CONNECT = 'connected'
-  DISCONNECT = 'disconnected'
+  _CONNECT = 'connected'
+  _DISCONNECT = 'disconnected'
 
   def __init__(self, args, title, instruction, connect):
     super(DetectDisplayTask, self).__init__(args, title, instruction,
@@ -168,7 +162,7 @@ class DetectDisplayTask(ExtDisplayTask):
                                            self.PostSuccessEvent)
     self._pass_event = str(uuid.uuid4())  # used to bind a post event.
     self._fixture = args.fixture
-    self._connect = connect == self.CONNECT
+    self._connect = connect == self._CONNECT
 
     # Whether or not to send a BFT command.
     self._bft_command = self._fixture is not None
@@ -185,7 +179,8 @@ class DetectDisplayTask(ExtDisplayTask):
                              subtype=self._pass_event))
 
   def Prepare(self):
-    """Called before running display detection loop."""
+    """Called before running display detection loop.
+    """
     pass
 
   def Run(self):
@@ -218,7 +213,7 @@ class ConnectTask(DetectDisplayTask):
       args,
       _TITLE_CONNECT_TEST(args.display_label),
       _MSG_CONNECT_TEST(args.display_label),
-      DetectDisplayTask.CONNECT)
+      DetectDisplayTask._CONNECT)
 
 
 class DisconnectTask(DetectDisplayTask):
@@ -232,7 +227,7 @@ class DisconnectTask(DetectDisplayTask):
       args,
       _TITLE_DISCONNECT_TEST(args.display_label),
       _MSG_DISCONNECT_TEST(args.display_label),
-      DetectDisplayTask.DISCONNECT)
+      DetectDisplayTask._DISCONNECT)
 
 
 class FixtureCheckDisplayThread(threading.Thread):
@@ -282,7 +277,8 @@ class FixtureCheckDisplayThread(threading.Thread):
           self.Stop()
 
   def Stop(self):
-    """Stops the thread."""
+    """Stops the thread.
+    """
     self._done.set()
 
 
@@ -405,7 +401,8 @@ class VideoTask(ExtDisplayTask):
 
 
 class ExtDisplayTaskArg(object):
-  """Contains args needed by ExtDisplayTask."""
+  """Contains args needed by ExtDisplayTask.
+  """
   def __init__(self):
     self.main_display_id = None
     self.display_label = None
@@ -420,7 +417,8 @@ class ExtDisplayTaskArg(object):
     self.already_connect = False
 
   def ParseDisplayInfo(self, info):
-    """Parses tuple from args.display_info.
+    """
+    It parses tuple from args.display_info.
 
     Args:
       info: a tuple in args.display_info. Refer display_info definition.
@@ -438,7 +436,6 @@ class ExtDisplayTaskArg(object):
 
 
 class ExtDisplayTest(unittest.TestCase):
-  """Main class for external display test."""
   ARGS = [
     Arg('main_display', str, 'xrandr ID for ChromeBook\'s main display.',
         optional=False),
