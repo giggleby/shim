@@ -4,8 +4,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""This is a buzzer test."""
-
 import random
 import time
 import unittest
@@ -17,19 +15,18 @@ from cros.factory.utils.process_utils import Spawn
 
 _MSG_BUZZER_INFO = test_ui.MakeLabel(
     'How many beeps do you hear? <br>'
-    'Press <font size="9" color="red">Enter</font> key to start.',
+    'Press space to start.',
     zh='你听到几声哔声？<br>'
-    '压下<font size="9" color="red">Enter</font>键开始测试',
+    '压下空白键开始测试',
     css_class='buzzer-test-info')
 
 _MSG_BUZZER_TEST = test_ui.MakeLabel(
     'How many beeps do you hear? <br>'
-    'Press the <font size="9" color="red">number(1~3)</font>'
-    'you hear to pass the test.<br>'
-    'Press <font size="9" color="red">\'+\'</font> to play again.',
+    'Press the number you hear to pass the test.<br>'
+    'Press \'r\' to play again.',
     zh='你听到几声哔声？<br>'
     '请按下数字代表你听到几声哔声<br>'
-    '按下 <font size="9" color="red">\'+\'</font> 重播',
+    '按下 \'r\' 重播',
     css_class='buzzer-test-info')
 
 _HTML_BUZZER = """
@@ -46,35 +43,33 @@ _CSS_BUZZER = """
 
 _JS_BUZZER = """
 window.onkeydown = function(event) {
-  if (event.keyCode == 13 || event.keyCode == 107) { // enter and '+'
+  if (event.keyCode == 32 || event.keyCode == 82) { // space and 'R'
     test.sendTestEvent("StartTest", '');
-  } else if (event.keyCode >= 97 && event.keyCode <= 99) { //1~3 
-    test.sendTestEvent("CheckResult", event.keyCode - 96)
+  } else if (event.keyCode >= 48 && event.keyCode <= 57) { // 0 ~ 9
+    test.sendTestEvent("CheckResult", event.keyCode - 48)
   }
 }
 """
 
-class BuzzerTest(unittest.TestCase):
-  """Tests buzzer."""
+class AudioLoopTest(unittest.TestCase):
   ARGS = [
     # Common arguments
-    Arg('init_commands', list, 'Setup buzzer commands', optional=True),
-    Arg('start_command', list, 'Start beep command', optional=True),
-    Arg('stop_command', list, 'Stop beep command', optional=True),
+    Arg('init_commands', list, 'Setup buzzer commands', []),
+    Arg('start_command', list, 'Start beep command', []),
+    Arg('stop_command', list, 'Stop beep command', []),
     Arg('beep_duration_secs', float, 'How long for one beep', 0.3),
     Arg('mute_duration_secs', float, 'Mute duration between two beeps', 0.5),
   ]
 
   def setUp(self):
-    self._pass_digit = random.randint(1, 3)
+    self._pass_digit = random.randint(1, 5)
     self.ui = test_ui.UI()
     self.template = OneSection(self.ui)
     self.ui.AppendCSS(_CSS_BUZZER)
     self.template.SetState(_HTML_BUZZER)
     self.ui.RunJS(_JS_BUZZER)
     self.ui.SetHTML(_MSG_BUZZER_INFO, id='buzzer_title')
-    if self.args.init_commands:
-      self.InitialBuzzer(self.args.init_commands)
+    self.InitialBuzzer(self.args.init_commands)
     self.ui.AddEventHandler('StartTest', self.StartTest)
     self.ui.AddEventHandler('CheckResult', self.CheckResult)
 
@@ -82,12 +77,10 @@ class BuzzerTest(unittest.TestCase):
     for command in commands:
       Spawn(command, check_call=True)
 
-  def BeepOne(self, start_cmd, stop_cmd):
-    if start_cmd:
-      Spawn(start_cmd, check_call=True)
+  def BeepOne(self, start, stop):
+    Spawn(start, check_call=True)
     time.sleep(self.args.beep_duration_secs)
-    if stop_cmd:
-      Spawn(stop_cmd, check_call=True)
+    Spawn(stop, check_call=True)
 
   def StartTest(self, event):  # pylint: disable=W0613
     self.ui.SetHTML(_MSG_BUZZER_TEST, id='buzzer_title')
