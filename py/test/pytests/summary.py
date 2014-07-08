@@ -109,13 +109,14 @@ class Report(unittest.TestCase):
         self.args.pass_without_prompt):
       return
 
-    html = [
+    html = ([
         '<div class="test-vcenter-outer"><div class="test-vcenter-inner">',
         test_ui.MakeLabel('Test Status for %s:' % test.parent.path,
                           u'%s 测试结果列表：' % test.parent.path),
         '<div class="test-status-%s" style="font-size: 300%%">%s</div>' % (
             overall_status, test_ui.MakeStatusLabel(overall_status)),
-        '<table>'] + table + ['</table>']
+        '<div style="height:60%; overflow:auto;"><table>'] + table +
+        ['</table></div>'])
     if (not self.args.disable_input_on_fail or
         overall_status == factory.TestState.PASSED):
       html = html + ['<a onclick="onclick:window.test.pass()" href="#">',
