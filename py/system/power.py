@@ -80,6 +80,14 @@ class Power(object):
       # Battery driver is not fully initialized
       return None
 
+  def GetCurrent(self):
+    '''Get current current in mA.'''
+    current_now = self.GetBatteryAttribute('current_now')
+    if current_now:
+      return int(current_now) / 1000
+    else:
+      return None
+
   def GetCharge(self):
     '''Get current charge level in mAh.'''
     charge_now = self.GetBatteryAttribute('charge_now')
