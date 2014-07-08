@@ -57,8 +57,9 @@ class WaitSIMCardThread(threading.Thread):
     self._done = threading.Event()
     self._simcard_event = simcard_event
     self._on_success = on_success
-    self._re_present = re.compile(_SIM_PRESENT_RE, re.MULTILINE)
-    self._re_not_present = re.compile(_SIM_NOT_PRESENT_RE, re.MULTILINE)
+    self._re_present = re.compile(_SIM_PRESENT_RE, re.MULTILINE | re.IGNORECASE)
+    self._re_not_present = re.compile(_SIM_NOT_PRESENT_RE,
+                                      re.MULTILINE | re.IGNORECASE)
     self._force_stop = force_stop
     self._force_stop.clear()
 
