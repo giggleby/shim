@@ -148,6 +148,7 @@ class Scan(unittest.TestCase):
         logging.exception('Setting VPD failed')
         return SetError(utils.FormatExceptionOnly())
 
+    factory.get_state_instance().UpdateSkippedTests()
     self.ui.event_client.post_event(Event(Event.Type.UPDATE_SYSTEM_INFO))
     self.ui.Pass()
 
