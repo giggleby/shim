@@ -32,6 +32,13 @@ class UpdateFirmwareTest(unittest.TestCase):
     Arg('apply_customization_id', bool,
         'Update root key based on the customization_id stored in VPD.',
         default=False, optional=True),
+    Arg('mode', str, 'Firmware updater mode.',
+        default='factory', optional=True),
+    Arg('override_write_protect_value', int,
+        'The value to override write protection state.'
+        'Use 0 to override the state to False and 1 to override the state '
+        'to True, respectively.',
+        default=None, optional=True),
   ]
 
   def setUp(self):
@@ -62,6 +69,11 @@ class UpdateFirmwareTest(unittest.TestCase):
       logging.warn('Removing %s', LOCK_FILE)
       os.unlink(LOCK_FILE)
 
+    firmware_updater_command = [
+        self.args.firmware_updater, '--force', '--mode', self.args.mode,
+        '--update_ec' if self.args.update_ec else '--noupdate_ec',
+        '--update_main' if self.args.update_main else '--noupdate_main']
+
     if self.args.apply_customization_id:
       customization_id = vpd.ro.get("customization_id")
       if customization_id is None:
@@ -71,17 +83,14 @@ class UpdateFirmwareTest(unittest.TestCase):
         self._ui.Fail(
             'Main firmware must be updated when apply customization_id.')
         return
-      p = Spawn(
-        [self.args.firmware_updater, '--force', '--factory',
-         '--customization_id', customization_id, '--update_main',
-         '--update_ec' if self.args.update_ec else '--noupdate_ec',],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, log=True)
-    else:
-      p = Spawn(
-        [self.args.firmware_updater, '--force', '--factory',
-         '--update_ec' if self.args.update_ec else '--noupdate_ec',
-         '--update_main' if self.args.update_main else '--noupdate_main',],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, log=True)
+      firmware_updater_command += ['--customization_id', customization_id]
+
+    if self.args.override_write_protect_value is not None:
+      firmware_updater_command += [
+          '--wp', str(self.args.override_write_protect_value)]
+
+    p = Spawn(firmware_updater_command, stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT, log=True)
     for line in iter(p.stdout.readline, ''):
       logging.info(line.strip())
       self._template.SetState(Escape(line), append=True)
