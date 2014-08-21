@@ -288,6 +288,9 @@ def Spawn(args, **kwargs):
             process.returncode, args_to_log)
         if log_stderr_on_error:
           message += '; stderr: """\n%s\n"""' % process.stderr_data
+        # itspeter_hack: get who makes the call failing
+        import traceback, pprint
+        logger.error(pprint.pformat(traceback.format_stack()))
         logger.error(message)
 
       if check_call:

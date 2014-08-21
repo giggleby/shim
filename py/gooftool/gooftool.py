@@ -725,28 +725,53 @@ def CreateReportArchiveBlob(*args, **kwargs):
     return xmlrpclib.Binary(f.read())
 
 
-def CreateReportArchive(device_sn=None, add_file=None):
+def CreateReportArchive(device_sn=None, add_file=None, status='PASSALL', testname=None, error_reason=None):
   """Creates a report archive in a temporary directory.
 
   Args:
-    device_sn: The device serial number (optional).
+    device_sn: The device serial number (optional), in the form of ${MLB_SN}_${PrimaryMAC}
     add_file: A list of files to add (optional).
+    status: the status of this generated report
+    error_reason: Will be cut to 30 Charcters.
 
   Returns:
     Path to the archive.
+    itspeter_hack:
+      Factory require a format like below:
+      ${MLB_SN}_${PrimaryMAC}_${status}_${error_reason}_${timestamp}.tbz2
+
   """
   def NormalizeAsFileName(token):
-    return re.sub(r'\W+', '', token).strip()
+    return re.sub(r'[^a-zA-Z0-9]+', '', token).strip()
 
-  target_name = '%s%s.tar.xz' % (
-      time.strftime('%Y%m%dT%H%M%SZ',
-                    time.gmtime()),
-      ("" if device_sn is None else
-       "_" + NormalizeAsFileName(device_sn)))
+  # Get timestamp
+  timestamp = time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())
+
+  # Trim the error_reason and timestamp
+  if error_reason:
+    error_reason = NormalizeAsFileName(error_reason)
+    error_reason = error_reason[:30]
+    timestamp = '_'.join([error_reason, timestamp])
+    if testname:
+      timestamp = testname + '_' + timestamp
+
+  else:
+    error_reason = ''
+
+  if device_sn is None:
+    device_sn = ''
+  # Normalize the device sn
+  device_sn = NormalizeAsFileName(device_sn)
+  # TODO(itspeter): have the test image install app-arch/xz-utils
+  #target_name = '%s%s.tar.xz' % (
+  target_name = '_'.join([device_sn, status, timestamp]) + '.tbz2'
+  logging.info('Is the targetname not normalized ? %r', target_name)
   target_path = os.path.join(gettempdir(), target_name)
 
   # Intentionally ignoring dotfiles in EVENT_LOG_DIR.
-  tar_cmd = 'cd %s ; tar cJf %s *' % (event_log.EVENT_LOG_DIR, target_path)
+  # TODO(itspeter): have the test image install app-arch/xz-utils
+  #tar_cmd = 'cd %s ; tar cJf %s *' % (event_log.EVENT_LOG_DIR, target_path)
+  tar_cmd = 'cd %s ; tar cjf %s *' % (event_log.EVENT_LOG_DIR, target_path)
   tar_cmd += ' --add-file %s' % FACTORY_LOG_PATH
   if add_file:
     for f in add_file:
@@ -765,7 +790,9 @@ def CreateReportArchive(device_sn=None, add_file=None):
            "Removing leading `/' from member names" in x)
           for x in cmd_result.stderr.split('\n'))):
     # That's OK.  Make sure it's valid though.
-    Spawn(['tar', 'tfJ', target_path], check_call=True, log=True,
+    # TODO(itspeter): have the test image install app-arch/xz-utils
+    #Spawn(['tar', 'tfJ', target_path], check_call=True, log=True,
+    Spawn(['tar', 'tfj', target_path], check_call=True, log=True,
           ignore_stdout=True)
   elif not cmd_result.success:
     raise Error('unable to tar event logs, cmd %r failed, stderr: %r' %

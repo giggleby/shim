@@ -33,7 +33,8 @@ TEST_LISTS_PATH = os.path.join(
 ACTIVE_PATH = os.path.join(TEST_LISTS_PATH, 'ACTIVE')
 
 # Main test list name.
-MAIN_TEST_LIST_ID = 'main'
+# itspeter_hack: No main exist for non-board specific one.
+MAIN_TEST_LIST_ID = 'ap_test'
 
 # Old symlinked custom directory (which may contain test lists).
 # For backward compatibility only.

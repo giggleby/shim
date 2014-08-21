@@ -2902,6 +2902,9 @@ cros.factory.Goofy.prototype.handleBackendEvent = function(jsonMessage) {
         }
     } else if (message.type == 'goofy:log') {
         this.logToConsole(message.message);
+    } else if (message.type == 'goofy:alert') {
+        // Special alert that not for any test.
+        alert(message.message);
     } else if (message.type == 'goofy:state_change') {
         this.setTestState(message.path, message.state);
     } else if (message.type == 'goofy:init_test_ui') {

@@ -102,7 +102,13 @@ class DUTEnvironment(Environment):
     return self.goofy.prespawner.spawn(args, env_additions)
 
   def launch_chrome(self):
-    utils.WaitFor(self.has_sockets, 30)
+    # itspeter_hack: 30 secs for the presenter might be too short. Change it to
+    # 5 minutes.
+    utils.WaitFor(self.has_sockets, 300)
+    # itspeter_hack: Since Brillo don't have Chrome, we can just return here.
+    return
+
+
     subprocess.check_call(['initctl', 'emit', 'login-prompt-visible'])
     # Disable X-axis two-finger scrolling on touchpad.
     utils.SetTouchpadTwoFingerScrollingX(False)
@@ -114,8 +120,10 @@ class DUTEnvironment(Environment):
         utils.SetXinputDeviceEnabled(device_id, False)
 
   def create_connection_manager(self, wlans, scan_wifi_period_secs):
-    return connection_manager.ConnectionManager(wlans,
-                                                scan_wifi_period_secs)
+    # itspeter_hack: Wifi if not fully up.
+    return connection_manager.DummyConnectionManager()
+    #return connection_manager.ConnectionManager(wlans,
+    #                                            scan_wifi_period_secs)
 
 
 class DUTTelemetryEnvironment(DUTEnvironment):

@@ -27,6 +27,7 @@ from cros.factory import event_log
 from cros.factory import system
 from cros.factory.event_log import EventLog, FloatDigit
 from cros.factory.event_log_watcher import EventLogWatcher
+from cros.factory.goofy_split import invocation
 from cros.factory.goofy_split import test_environment
 from cros.factory.goofy_split import time_sanitizer
 from cros.factory.goofy_split import updater
@@ -804,10 +805,12 @@ class Goofy(GoofyBase):
       if self.charge_manager:
         self.charge_manager.AdjustChargeState()
       else:
-        try:
-          system.GetBoard().SetChargeState(Board.ChargeState.CHARGE)
-        except BoardException:
-          logging.exception('Unable to set charge state on this board')
+        # itspeter_hack: No battery so no ChargeState
+        pass
+        #try:
+        #  system.GetBoard().SetChargeState(Board.ChargeState.CHARGE)
+        #except BoardException:
+        #  logging.exception('Unable to set charge state on this board')
 
     self.exclusive_items = current_exclusive_items
 
@@ -1292,12 +1295,13 @@ class Goofy(GoofyBase):
     # If the phase is invalid, this will raise a ValueError.
     phase.SetPersistentPhase(self.test_list.options.phase)
 
-    if system.SystemInfo().firmware_version is None and not utils.in_chroot():
-      self.state_instance.set_shared_data('startup_error',
-          'Netboot firmware detected\n'
-          'Connect Ethernet and reboot to re-image.\n'
-          u'侦测到网路开机固件\n'
-          u'请连接乙太网并重启')
+    # itspeter_hack: The Brillo currently no able to get the firmware.
+    #if system.SystemInfo().firmware_version is None and not utils.in_chroot():
+    #  self.state_instance.set_shared_data('startup_error',
+    #      'Netboot firmware detected\n'
+    #      'Connect Ethernet and reboot to re-image.\n'
+    #      u'侦测到网路开机固件\n'
+    #      u'请连接乙太网并重启')
 
     if not self.state_instance.has_shared_data('ui_lang'):
       self.state_instance.set_shared_data('ui_lang',
@@ -1376,10 +1380,12 @@ class Goofy(GoofyBase):
       system.SystemStatus.charge_manager = self.charge_manager
     else:
       # Goofy should set charger state to charge if charge_manager is disabled.
-      try:
-        system.GetBoard().SetChargeState(Board.ChargeState.CHARGE)
-      except BoardException:
-        logging.exception('Unable to set charge state on this board')
+      # itspeter_hack: No battery so no ChargeState
+      pass
+      #try:
+      #  system.GetBoard().SetChargeState(Board.ChargeState.CHARGE)
+      #except BoardException:
+      #  logging.exception('Unable to set charge state on this board')
 
     self.core_dump_manager = CoreDumpManager(
         self.test_list.options.core_dump_watchlist)
@@ -1407,6 +1413,9 @@ class Goofy(GoofyBase):
       # wait here.
       self.env.controller_ready_for_ui()
       logging.info('Waiting for a web socket connection')
+      # itspeter_hack:
+      #  Indicate we are waiting for presenter and factory is up to here.
+      Spawn('/etc/init/sh/blink_green_led.sh')
       self.web_socket_manager.wait()
 
       # Wait for the test widget size to be set; this is done in
@@ -1421,6 +1430,13 @@ class Goofy(GoofyBase):
         time.sleep(0.1)  # 100 ms
       else:
         logging.warn('Never received test_widget_size from UI')
+
+      # itspeter_hack: No Chrome launched in Brillo
+      ## Send Chrome a Tab to get focus to the factory UI
+      ## (http://crosbug.com/p/19444).  TODO(jsalz): remove this hack
+      ## and figure out the right way to get the focus to Chrome.
+      #if not utils.in_chroot():
+      #  utils.SendKey('Tab')
 
     # Create download path for autotest beforehand or autotests run at
     # the same time might fail due to race condition.
@@ -1459,6 +1475,8 @@ class Goofy(GoofyBase):
     self.restore_active_run_state()
 
     self.may_disable_cros_shortcut_keys()
+    # itspeter_hack: To fit the strange request of factory.
+    invocation.CheckIfCanSwithUnit(full_path=None, error_msg='Unknown')
 
   def may_disable_cros_shortcut_keys(self):
     test_options = self.test_list.options

@@ -555,6 +555,9 @@ def SetWLANs(options):
     options: The options attribute of the TestList object to be constructed.
       Note that it will be modified in-place in this method.
   """
+  # itspeter_hack: We don't have a working wifi yet on Brillo
+  return
+
   # Sets default network.
   options.wlans = [WLAN(ssid='crosfactory',
                         security='psk', passphrase='crosfactory')]

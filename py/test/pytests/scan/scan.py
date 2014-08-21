@@ -6,6 +6,7 @@
 """Prompts the operator to input a string of data."""
 
 import logging
+import pprint
 import re
 import socket
 import time
@@ -23,6 +24,61 @@ from cros.factory.test.event import Event
 from cros.factory.test.fixture.bft_fixture import (CreateBFTFixture,
                                                    TEST_ARG_HELP)
 from cros.factory.test.utils import StartDaemonThread
+
+
+def AddToHex(hex_in_str, value_to_add):
+  """ Handles addition in hex and return in hex string.
+
+  Some hex string's range is not fit in any type of python
+  primitive (ex. int32), so we do the carry-on addition by
+  ourselves.
+
+  Args:
+    hex_in_str: hex string, case insensitive, length must be in
+                the multiple of 2.
+    value_to_add: an integer to add to the hex_in_str
+
+  Returns:
+    hex string in lower case, because the default hex() returns
+    in lower.
+
+  Unittest with:
+    assert(AddToHex('FF', 2) == '0101')
+    assert(AddToHex('6002b4f11d4f', 1) == '6002b4f11d50')
+    assert(AddToHex('6002b4f11d4f', 2) == '6002b4f11d51')
+    assert(AddToHex('6002b4f11d4f', 3) == '6002b4f11d52')
+    assert(AddToHex('6002b4f11d4f', 4) == '6002b4f11d53')
+
+    assert(AddToHex('0000000001FE', 0) == '0000000001fe')
+    assert(AddToHex('0000000001FE', 1) == '0000000001ff')
+    assert(AddToHex('0000000001FE', 2) == '000000000200')
+    assert(AddToHex('0000000001FE', 3) == '000000000201')
+    assert(AddToHex('0000000001FE', 4) == '000000000202')
+  """
+  # Hex must be in the multiple of 2
+  assert((len(hex_in_str) % 2) == 0)
+
+  new_hex_str = ''
+  index = len(hex_in_str) - 2  # Start with least siginificant byte.
+  carry_on = value_to_add
+
+  while index >= 0:
+    hex_byte = hex_in_str[index:(index + 2)]
+    hex_int = int(hex_byte, 16) + carry_on
+    hex_byte = hex(hex_int)[2:]  # First two is 0x
+    new_hex_str = hex_byte[len(hex_byte) - 2:].zfill(2) + new_hex_str
+    # See if any carry_on
+    if len(hex_byte) > 2:
+      carry_on = int(hex_byte[ :len(hex_byte) - 2], 16)
+    else:
+      carry_on = 0
+    index = index - 2
+
+  if carry_on > 0:
+    # TODO(itspeter): Calculate the correct zfill
+    new_hex_str = hex(carry_on)[2:].zfill(2) + new_hex_str
+
+  return new_hex_str
 
 
 class Scan(unittest.TestCase):
@@ -45,6 +101,10 @@ class Scan(unittest.TestCase):
         'Key to use to store in scanned value in device data', optional=True),
     Arg('rw_vpd_key', str,
         'Key to use to store in scanned value in RW VPD', optional=True),
+    Arg('ro_vpd_key', str,
+        'Key to use to store in scanned value in RO VPD', optional=True),
+    Arg('mac_extend', int,
+        'Number of total mac address to write', optional=True),
     Arg('regexp', str,
         'Regexp that the scanned value must match', optional=True),
     Arg('check_device_data_key', str,
@@ -157,6 +217,30 @@ class Scan(unittest.TestCase):
           id='scan-status')
       try:
         vpd.rw.Update({self.args.rw_vpd_key: scan_value})
+      except:  # pylint: disable=W0702
+        logging.exception('Setting VPD failed')
+        return SetError(utils.FormatExceptionOnly())
+
+    # itspeter_hack: RO_VPD currently used by MAC address scanning only.
+    if self.args.ro_vpd_key:
+      if self.args.mac_extend:
+        # Get rid of the colon
+        scan_value = scan_value.replace(':','')
+        mac_update_table = dict()
+        for idx in range(0, self.args.mac_extend):
+          mac_update_table[self.args.ro_vpd_key.replace('?', str(idx))] = AddToHex(scan_value, idx)
+        factory.console.info("Mac address calculated from primary are:\n%s\n", mac_update_table)
+      else:
+        # Normal "single" scan value
+        mac_update_table = {self.args.ro_vpd_key: scan_value}
+
+      self.ui.SetHTML(
+          test_ui.MakeLabel('Writing to RO_VPD. Please wait…',
+                            '正在写到 RO_VPD，请稍等…') +
+          ' ' + test_ui.SPINNER_HTML_16x16,
+          id='scan-status')
+      try:
+        vpd.ro.Update(mac_update_table)
       except:  # pylint: disable=W0702
         logging.exception('Setting VPD failed')
         return SetError(utils.FormatExceptionOnly())

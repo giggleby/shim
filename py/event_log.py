@@ -20,6 +20,7 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.test import factory
 from cros.factory.test import utils
 from cros.factory.utils import file_utils
+from cros.factory.utils.process_utils import Spawn
 
 
 # A global event logger to log all events for a test. Since each
@@ -36,8 +37,9 @@ DEVICE_ID_PATH = os.path.join(factory.get_factory_root(), ".device_id")
 EVENT_LOG_DIR = os.path.join(factory.get_state_root(), "events")
 WLAN0_MAC_PATH = "/sys/class/net/wlan0/address"
 MLAN0_MAC_PATH = "/sys/class/net/mlan0/address"
-DEVICE_ID_SEARCH_PATHS = [WLAN0_MAC_PATH, MLAN0_MAC_PATH]
-
+PCI_BUS_1_PATH = "/sys/class/net/wifi0/address"
+PCI_BUS_2_PATH = "/sys/class/net/wifi1/address"
+DEVICE_ID_SEARCH_PATHS = [WLAN0_MAC_PATH, MLAN0_MAC_PATH, PCI_BUS_1_PATH, PCI_BUS_2_PATH]
 # Path to use to generate an image ID in case none exists (i.e.,
 # this is the first time we're creating an event log).
 REIMAGE_ID_PATH = os.path.join(EVENT_LOG_DIR, ".reimage_id")
@@ -51,9 +53,6 @@ RUN_DIR = os.path.join(
 # /var/run so it is cleared on each boot.
 SEQUENCE_PATH = os.path.join(RUN_DIR, "event_log_seq")
 
-# The main events file.  Goofy will add "." + reimage_id to this
-# filename when it synchronizes events to the shopfloor server.
-EVENTS_PATH = os.path.join(EVENT_LOG_DIR, "events")
 
 BOOT_SEQUENCE_PATH = os.path.join(EVENT_LOG_DIR, ".boot_sequence")
 
@@ -272,31 +271,73 @@ def GetDeviceId():
   the device ID will change.
   """
   global device_id  # pylint: disable=W0603
+
+  def SaveDeviceId():
+    with open("/tmp/event_log.log", "a") as f:
+      f.write('Device ID %r created.' % device_id)
+      f.flush()
+      os.fsync(f)
+
+    # Cache the device ID to DEVICE_ID_PATH for all future references.
+    utils.TryMakeDirs(os.path.dirname(DEVICE_ID_PATH))
+    with open(DEVICE_ID_PATH, "w") as f:
+      print >> f, device_id
+      f.flush()
+      os.fdatasync(f)
+
+  # itspeter_hack: To use same USB across different unit.
+
+  # If alraeday cached in memory, just return.
   if device_id:
     return device_id
 
-  # Always respect the device ID recorded in DEVICE_ID_PATH first.
-  if os.path.exists(DEVICE_ID_PATH):
-    device_id = open(DEVICE_ID_PATH).read().strip()
-    if device_id:
-      return device_id
-
   # Find or generate device ID from the search path.
+  mac_device_id = None
   for path in DEVICE_ID_SEARCH_PATHS:
     if os.path.exists(path):
-      device_id = open(path).read().strip()
-      if device_id:
+      mac_device_id = open(path).read().strip()
+      if mac_device_id:
         break
+
+  # Check if a local device ID exist.
+  local_device_id = None
+  if os.path.exists(DEVICE_ID_PATH):
+    local_device_id = open(DEVICE_ID_PATH).read().strip()
+
+  if local_device_id is not None:
+    if mac_device_id != local_device_id:
+      # The USB stick changed to another DUT.
+      with open("/tmp/event_log.log", "a") as f:
+        f.write("*** miscompare local_device_id %r, mac_device_id %r.\n" % (local_device_id, mac_device_id))
+        f.write("*** usb stick changed to another dut, going to clear all data.\n")
+        f.flush()
+        os.fsync(f)
+
+
+      if not utils.in_chroot():
+        device_id = mac_device_id
+        SaveDeviceId()
+        import time
+        time.sleep(0.5)
+        #Spawn(['stop', 'factory'], check_call=True)  # For debug
+        Spawn(['rm', '-rf', '/var/factory'], check_call=True)
+        Spawn(['factory_restart', '-a'])
+      else:
+        with open("/tmp/event_log.log", "a") as f:
+          f.write("*** In choort, no operation.")
+          f.flush()
+          os.fsync(f)
+
+    else:
+      return local_device_id
+
+  if mac_device_id is not None:
+    device_id = mac_device_id
   else:
     device_id = str(uuid4())
-    logging.warning('No device_id available yet: generated %s', device_id)
+    logging.info('No device_id available yet: generated %s', device_id)
 
-  # Cache the device ID to DEVICE_ID_PATH for all future references.
-  utils.TryMakeDirs(os.path.dirname(DEVICE_ID_PATH))
-  with open(DEVICE_ID_PATH, "w") as f:
-    print >> f, device_id
-    f.flush()
-    os.fdatasync(f)
+  SaveDeviceId()
 
   return device_id
 
@@ -438,6 +479,8 @@ class GlobalSeq(object):
     Args:
       path: The path to examine (defaults to EVENTS_PATH).
     '''
+    SetEventsPath()
+
     if not os.path.exists(EVENTS_PATH):
       # There is no events file.  It's safe to start at 0.
       return 0
@@ -564,6 +607,7 @@ class EventLog(object):
 
     Requires that the lock has already been acquired.
     """
+    logging.info("What's wrong on the path : %s", EVENTS_PATH)
     parent_dir = os.path.dirname(EVENTS_PATH)
     if not os.path.exists(parent_dir):
       try:
@@ -578,6 +622,7 @@ class EventLog(object):
     self.opened = True
 
     logging.info('Logging events for %s into %s', self.prefix, EVENTS_PATH)
+
 
     self.file = open(EVENTS_PATH, "a")
     self._LogUnlocked("preamble",
@@ -620,3 +665,19 @@ class EventLog(object):
     finally:
       fcntl.flock(self.file.fileno(), fcntl.LOCK_UN)
     os.fdatasync(self.file.fileno())
+
+def SetEventsPath():
+  # Determine the EVENTS_PATH
+  global EVENTS_PATH
+  device_id = GetDeviceId()
+  if EVENTS_PATH is None:
+    EVENTS_PATH = os.path.join(
+        EVENT_LOG_DIR,
+        '.'.join(["events", device_id.replace(':', '')]))
+
+# The main events file.  Goofy will add "." + reimage_id to this
+# filename when it synchronizes events to the shopfloor server.
+# EVENTS_PATH = os.path.join(EVENT_LOG_DIR, "events")
+# itspeter_hack: postpone the timing of determine the EVENTS_PATH
+EVENTS_PATH = None
+SetEventsPath()

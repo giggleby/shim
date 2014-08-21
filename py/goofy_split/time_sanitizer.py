@@ -26,6 +26,9 @@ def _FormatTime(t):
 
 def CheckHwclock():
   '''Check hwclock is working by a write(retry once if fail) and a read.'''
+  # itspeter_hack: Jetstream doesn't have a hwclock.
+  return
+
   for _ in xrange(2):
     if Spawn(['hwclock', '-w', '--utc', '--noadjfile'], log=True,
              log_stderr_on_error=True).returncode == 0:
@@ -147,19 +150,21 @@ class TimeSanitizer(object):
                    'current time (%s) is correct.',
                    _FormatTime(now))
     else:
-      sane_time = minimum_time + self.time_bump_secs
-      if now < minimum_time:
-        logging.warn('Current time %s is less than minimum time %s; '
-                     'assuming clock is hosed',
-                     _FormatTime(now), _FormatTime(minimum_time))
-        self._time.SetTime(sane_time)
-        now = sane_time
-      elif now > minimum_time + self.max_leap_secs:
-        logging.warn(
-          'Current time %s is too far past %s; assuming clock is hosed',
-          _FormatTime(now), _FormatTime(minimum_time + self.max_leap_secs))
-        self._time.SetTime(sane_time)
-        now = sane_time
+      pass
+      # itspeter_hack: the time sync is done in the upstart already.
+      #sane_time = minimum_time + self.time_bump_secs
+      #if now < minimum_time:
+      #  logging.warn('Current time %s is less than minimum time %s; '
+      #               'assuming clock is hosed',
+      #               _FormatTime(now), _FormatTime(minimum_time))
+      #  self._time.SetTime(sane_time)
+      #  now = sane_time
+      #elif now > minimum_time + self.max_leap_secs:
+      #  logging.warn(
+      #    'Current time %s is too far past %s; assuming clock is hosed',
+      #    _FormatTime(now), _FormatTime(minimum_time + self.max_leap_secs))
+      #  self._time.SetTime(sane_time)
+      #  now = sane_time
 
     self.SaveTime(now)
 
@@ -219,6 +224,9 @@ def GetBaseTimeFromFile(*base_time_files):
   base_time_files, or None.
 
   Never throws an exception.'''
+
+  # itspeter_hack: the time sync is done in the upstart already.
+  return
   for f in base_time_files:
     if os.path.exists(f):
       try:

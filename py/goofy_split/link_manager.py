@@ -37,7 +37,7 @@ class PresenterLinkManager(object):
                check_interval=5,
                methods=None,
                handshake_timeout=0.3,
-               rpc_timeout=1,
+               rpc_timeout=5,
                connect_hook=None,
                disconnect_hook=None):
     self._check_interval = check_interval
@@ -152,7 +152,11 @@ class PresenterLinkManager(object):
         my_ip = [my_ip]
 
       for ip in my_ip:
-        log('Trying IP address %s', ip)
+        log('Trying with local IP address %s', ip)
+        if ip is None:
+          # itspeter_hack, locally will not always get valid IP.
+          log('Found non valid local IP %r, skipped', ip)
+          continue
         self._presenter_proxy.Register(ip)
 
         # Make sure the presenter sees us
@@ -227,7 +231,7 @@ class DUTLinkManager(object):
   def __init__(self,
                check_interval=5,
                methods=None,
-               rpc_timeout=1,
+               rpc_timeout=5,
                connect_hook=None,
                disconnect_hook=None):
     self._check_interval = check_interval

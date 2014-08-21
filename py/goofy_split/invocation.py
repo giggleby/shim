@@ -1,4 +1,5 @@
 #!/usr/bin/python -u
+# -*- coding: utf-8 -*-
 #
 # Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -12,7 +13,9 @@ import logging
 import os
 import cPickle as pickle
 import pipes
+import pprint
 import re
+import shutil
 import signal
 import syslog
 import subprocess
@@ -29,7 +32,9 @@ from setproctitle import setproctitle
 
 import factory_common  # pylint: disable=W0611
 from cros.factory import event_log
+from cros.factory.event_log import GetDeviceId
 from cros.factory.goofy_split.service_manager import ServiceManager
+from cros.factory.gooftool import gooftool
 from cros.factory.privacy import FilterDict
 from cros.factory.test import factory
 from cros.factory.test import shopfloor
@@ -37,7 +42,7 @@ from cros.factory.test import test_ui
 from cros.factory.test import utils
 from cros.factory.test.args import Args
 from cros.factory.test.e2e_test.common import AutomationMode
-from cros.factory.test.event import Event
+from cros.factory.test.event import Event, EventClient
 from cros.factory.test.factory import TestState
 from cros.factory.test.test_lists.test_lists import BuildAllTestLists
 from cros.factory.test.test_lists.test_lists import OldStyleTestList
@@ -658,6 +663,7 @@ class TestInvocation(object):
     decrement_iterations_left = 0
     decrement_retries_left = 0
 
+    reason = ''
     if status == TestState.FAILED:
       reason = error_msg.split('\n')[0]
       factory.console.error('Test %s%s %s: %s', self.test.path,
@@ -683,7 +689,80 @@ class TestInvocation(object):
     self.goofy.run_queue.put(self.goofy.reap_completed_tests)
     if self.on_completion:
       self.goofy.run_queue.put(self.on_completion)
+      # itspeter_hack: Check if we already have the machine finished !?
+      func = lambda : CheckIfCanSwithUnit(full_path=self.test.path, error_msg=reason)
+      self.goofy.run_queue.put(func)
 
+
+def CheckIfCanSwithUnit(full_path=None, error_msg=None):
+  # Trim the path.
+  path = ''
+  if full_path is not None:
+    path = full_path.split('.')[-1]
+
+  if CheckIfAllTestPassed() is True:
+    # Create the finalized report
+    sn = GetDeviceId()
+    tmp_archive = gooftool.CreateReportArchive(
+        device_sn=sn, add_file=['/var/log/messages'])
+    factory.console.info("Create PASS archive at %r", tmp_archive)
+
+  else:
+    if full_path is None or CheckIfFailed(full_path) is True:
+      # If reboot unexpected and not all test passed. Generate the fail report
+      # per the request. Use GoofyReboot as the path name.
+      # Otherwise, only search if the particular path failed, so we will not
+      # have the case that regenerate reports because previous fail records.
+      if full_path is None:
+        path = 'GoofyReboot'
+      logging.info('Create FAIL archive data with error_msg %r', error_msg)
+      # TODO(itspeter): Get the sn in the form ${MLB_SN}_{PrimaryMAC}
+      sn = GetDeviceId()
+      tmp_archive = gooftool.CreateReportArchive(
+          device_sn=sn, add_file=['/var/log/messages'],
+          status='FAIL', testname=path, error_reason=error_msg)
+      factory.console.info("Create FAILED archive at %r", tmp_archive)
+    else:
+      # No operation
+      return
+
+  new_archive = os.path.join('/usr/local/reports', os.path.basename(tmp_archive))
+  factory.console.info("Moving the %r to %r", tmp_archive, new_archive)
+  shutil.move(tmp_archive, new_archive)
+  Spawn("sync", log=True)
+  Spawn("sync", log=True)
+  Spawn("sync", log=True)
+  factory.console.info("%r moved", tmp_archive)
+
+  if CheckIfAllTestPassed() is True:
+    # Show to the UI that we can switch to the new unit.
+    factory.console.info("Clean /var/log/messages")
+    Spawn('ifconfig -a > /var/log/messages', shell=True, check_call=True)
+    Spawn('echo "---Above device had all tests passed. Might switch to new unit soon---" >> /var/log/messages',
+        shell=True, check_call=True)
+
+
+    msg = "All test passed.\nYou can now unplug the power.\n"
+    factory.console.info(msg)
+    event_client = EventClient()
+    factory.console.info("Going to show the alert")
+    event_client.post_event(Event("goofy:alert", message=msg))
+    event_client.close()
+
+def CheckIfAllTestPassed():
+  state_instance = factory.get_state_instance()
+  test_states = state_instance.get_test_states()
+  logging.info("Current states: %s\n", pprint.pformat(test_states))
+  all_passed = all([test_state.status == 'PASSED' for test_state in test_states.itervalues()])
+  logging.info("All passed ? %r", all_passed)
+  return all_passed
+
+def CheckIfFailed(full_path):
+  state_instance = factory.get_state_instance()
+  test_states = state_instance.get_test_states()
+  logging.info("Current states: %s\n", pprint.pformat(test_states))
+  if test_states[full_path].status == 'FAILED':
+    return True
 
 def _RecursiveApply(func, suite):
   """Recursively applies a function to all the test cases in a test suite.

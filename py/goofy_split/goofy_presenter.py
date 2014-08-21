@@ -82,6 +82,10 @@ class GoofyPresenter(GoofyBase):
 
 
 if __name__ == '__main__':
+  # itspeter_hack: Don't know where the presenter logged. Explicitly assign one to it.
+  FORMAT = '[%(levelname)5s] %(filename)15s:%(lineno)d %(asctime)s %(message)s'
+  logging.basicConfig(filename='/tmp/presenter.log', level=logging.DEBUG, format=FORMAT)
+
   goofy = GoofyPresenter()
   try:
     goofy.main()
