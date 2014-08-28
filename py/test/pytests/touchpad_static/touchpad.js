@@ -11,7 +11,8 @@
  * @param {int} countTarget
  * @param {int} quadCountTarget
  */
-TouchpadTest = function(container, xSegments, ySegments, countTarget, quadCountTarget) {
+TouchpadTest = function(container, xSegments, ySegments, countTarget,
+                        quadCountTarget, skipUpperQuadrants) {
   this.container = container;
   this.xSegments = xSegments;
   this.ySegments = ySegments;
@@ -21,6 +22,7 @@ TouchpadTest = function(container, xSegments, ySegments, countTarget, quadCountT
   this.quadCountTarget = quadCountTarget;
   this.quadrant_count = {};
   this.quadrant_total_count = 0;
+  this.skipUpperQuadrants = skipUpperQuadrants;
 };
 
 /**
@@ -31,9 +33,11 @@ TouchpadTest = function(container, xSegments, ySegments, countTarget, quadCountT
  * @param {int} countTarget
  * @param {int} quadCountTarget
  */
-function setupTouchpadTest(container, xSegments, ySegments, countTarget, quadCountTarget) {
+function setupTouchpadTest(container, xSegments, ySegments, countTarget,
+                           quadCountTarget, skipUpperQuadrants) {
   window.touchpadTest = new TouchpadTest(container, xSegments, ySegments,
-                                         countTarget, quadCountTarget);
+                                         countTarget, quadCountTarget,
+                                         skipUpperQuadrants);
   window.touchpadTest.init();
 }
 
@@ -69,6 +73,12 @@ TouchpadTest.prototype.init = function() {
   table.appendChild(tableBody);
   $(this.container).appendChild(table);
   this.updateCircleCountText();
+
+  /* Skip upper-left/right quadrants */
+  if (this.skipUpperQuadrants) {
+    window.touchpadTest.markQuadrantSectorTested(1, true);
+    window.touchpadTest.markQuadrantSectorTested(2, true);
+  }
 
   /* This is for SMT test, operator cannot click for each quadrant */
   if (this.quadCountTarget == 0) {
@@ -112,11 +122,18 @@ TouchpadTest.prototype.markScrollSectorTested = function(y) {
 /**
  * Marks the given quadrant sector as "tested" on the test ui.
  * @param {int} quadrant
+ * @param {boolean} hide
  */
-TouchpadTest.prototype.markQuadrantSectorTested = function(quadrant) {
+TouchpadTest.prototype.markQuadrantSectorTested = function(quadrant, hide) {
   var id = "quadrant" + quadrant;
   var element = document.getElementById(id);
+  if (typeof(hide) === 'undefined')
+    hide = false;
   if (element) {
+    if (hide) {
+      element.style.display = "none";
+      this.quadrant_count[quadrant] = this.quadCountTarget;
+    }
     element.className = "touchpad-test-sector-tested";
   }
   this.checkTestComplete();
@@ -212,7 +229,8 @@ TouchpadTest.prototype.checkTestComplete = function() {
   if ((this.getClassArray("touchpad-test-sector-untested").length == 0) &&
       (this.leftCount == this.countTarget) &&
       (this.rightCount == this.countTarget) &&
-      (this.quadrant_total_count == this.quadCountTarget * 4)) {
+      (this.quadrant_total_count == this.quadCountTarget *
+        (this.skipUpperQuadrants ? 2 : 4))) {
     window.test.pass();
   }
 };

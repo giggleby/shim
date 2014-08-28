@@ -314,6 +314,7 @@ class TouchpadTest(unittest.TestCase):
     Arg('number_to_click', int, 'Target number to click.', default=10),
     Arg('number_to_quadrant', int, 'Target number to click for each quadrant.',
         default=3),
+    Arg('skip_upper_quadrants', bool, 'Skip upper quadrants.', default=False),
     Arg('x_segments', int, 'Number of X axis segments to test.', default=5),
     Arg('y_segments', int, 'Number of Y axis segments to test.', default=5)
   ]
@@ -326,7 +327,7 @@ class TouchpadTest(unittest.TestCase):
     self.template.SetState(_HTML_TOUCHPAD)
     self.ui.CallJSFunction('setupTouchpadTest', _ID_CONTAINER,
         self.args.x_segments, self.args.y_segments, self.args.number_to_click,
-        self.args.number_to_quadrant)
+        self.args.number_to_quadrant, self.args.skip_upper_quadrants)
 
     # Initialize properties
     self.x_max = None
