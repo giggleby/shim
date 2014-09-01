@@ -28,9 +28,9 @@ def FormatTime(seconds):
   return "%d:%02d:%02d" % (seconds / 3600, (seconds / 60) % 60, seconds % 60)
 
 def MakeChargeTextLabel(start, current, target, elapsed, remaining):
-  _LABEL_EN = ('Charging to %d%% (Start: %d%%. Current: %d%%.)<br>' +
+  _LABEL_EN = ('Charging to %s%% (Start: %s%%. Current: %s%%.)<br>' +
                'Time elapsed: %s' + '&nbsp;' * 8 + 'Time remaining: %s')
-  _LABEL_ZH = (u'充电至 %d%% (起始电量: %d%%. 当前电量: %d%%.)<br>' +
+  _LABEL_ZH = (u'充电至 %s%% (起始电量: %s%%. 当前电量: %s%%.)<br>' +
                u'经过时间: %s' + u'&nbsp;' * 8 + u'剩余时间: %s')
   values = (target, start, current, FormatTime(elapsed), FormatTime(remaining))
   return test_ui.MakeLabel(_LABEL_EN % values, _LABEL_ZH % values)
