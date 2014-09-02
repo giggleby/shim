@@ -55,8 +55,10 @@ class AccelerometerController(object):
     if not os.path.exists(_ACCELEROMETER_DEVICES_PATH):
       raise AccelerometerControllerException('Accelerometer not found')
     self.trigger_number = '0'
-    self.num_signals = 2 * 3 # Two sensors * (x, y, z).
     self.iio_bus_id = os.readlink(_ACCELEROMETER_DEVICES_PATH)
+    self.num_signals = 2 * 3 # Two accelerometers sensors * (x, y, z).
+    if self._IsGyroPresent():
+      self.num_signals += 3  # One gyroscope sensor * (x, y, z).
     self.spec_offset = spec_offset
     self.spec_ideal_values = spec_ideal_values
     self.sample_rate = sample_rate
@@ -77,6 +79,18 @@ class AccelerometerController(object):
           log=True))
       self.index_to_signal_name[index] = signal_name
 
+  def _IsGyroPresent(self):
+    """Checks if the system has gyroscope enabled.
+
+    Returns:
+      True if the system has a gyroscope enabled; False otherwise
+    """
+    return all(
+        os.path.exists(os.path.join(
+            _IIO_DEVICES_PATH, self.iio_bus_id,
+            'in_anglvel_%s_gyro_raw' % axis))
+        for axis in ['x', 'y', 'z'])
+
   def _SetSysfsValues(self, sysfs_values, check_call=True):
     """Assigns corresponding values to a list of sysfs.
 
@@ -94,12 +108,17 @@ class AccelerometerController(object):
     Args:
       postfix: a string that will be appended to each signale name.
 
-    Returns:
-      Strings: 'in_accel_(x|y|z)_(base|lid)_' + postfix.
+    Yields:
+      Strings: 'in_accel_(x|y|z)_(base|lid)_' + postfix. If gyroscope is
+      present, also yields 'in_anglvel_(x|y|z)_gyro_' + postfix.
     """
     for location in ['base', 'lid']:
       for axis in ['x', 'y', 'z']:
-        yield 'in_accel_' + axis + '_' + location + postfix
+        yield 'in_accel_%s_%s%s' % (axis, location, postfix)
+
+    if self._IsGyroPresent():
+      for axis in ['x', 'y', 'z']:
+        yield 'in_anglvel_%s_gyro%s' % (axis, postfix)
 
   def _CleanUpCalibrationValues(self):
     """Clean up calibration values.
@@ -144,7 +163,9 @@ class AccelerometerController(object):
     # | x | y | z | x | y | z |
     # +-+-+-+-+-+-+-+-+-+-+-+-+
     buffer_length_per_record = 12
-    FORMAT_RAW_DATA = '<6h'
+    if self._IsGyroPresent():
+      buffer_length_per_record += 6
+    FORMAT_RAW_DATA = '<%dh' % (buffer_length_per_record / 2)
     trigger_now_path = os.path.join(
         _IIO_DEVICES_PATH, 'trigger' + self.trigger_number, 'trigger_now')
 
@@ -217,10 +238,10 @@ class AccelerometerController(object):
     Returns:
       True if the raw data is within the tolerance of the spec.
     """
-    if set(raw_data) != set(orientations) or len(raw_data) != self.num_signals:
+    if set(orientations) - set(raw_data) or len(raw_data) < self.num_signals:
       logging.error('The size of raw data or orientations is wrong.')
       return False
-    for signal_name in raw_data:
+    for signal_name in orientations:
       value = raw_data[signal_name]
       orientation = orientations[signal_name]
       # Check the sign of the value for -/+1G orientation.

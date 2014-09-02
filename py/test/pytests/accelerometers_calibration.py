@@ -152,7 +152,7 @@ class HorizontalCalibrationTask(FactoryTask):
       self.Fail('Raw data out of range, the accelerometers may be damaged.')
       return
     # Calculating calibration data.
-    for signal_name in raw_data:
+    for signal_name in self.orientation:
       index = abs(self.orientation[signal_name])
       ideal_value = self.accelerometer.spec_ideal_values[index]
       # For -1G, the ideal_value is -1024.
