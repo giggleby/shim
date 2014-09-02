@@ -185,6 +185,11 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   for d in ['factory']:
     shutil.move(os.path.join(parent_dir, d), old_path)
     shutil.move(os.path.join(new_path, d), parent_dir)
+
+  # Set the permission to be readable for chronos and other users.
+  Spawn(['chmod', '-R', 'o=g', factory.FACTORY_PATH], check_call=True)
+  Spawn(['chmod', '-R', 'o=g', autotest_path], check_call=True)
+
   # Delete the old and new trees
   shutil.rmtree(old_path, ignore_errors=True)
   shutil.rmtree(new_path, ignore_errors=True)
