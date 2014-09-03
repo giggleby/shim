@@ -127,14 +127,13 @@ def main():
   _DisableDNSLookup()
   instance = _ShopFloorHandlerFactory(options.module)
 
-  # WSGI environ's SCRIPT_NAME and PATH_INFO to accept.
-  script_name = '/shop_floor/%d$' % options.port
-  path_info = '/%s$' % options.token
+  # WSGI environ's SCRIPT_NAME to accept.
+  script_name = '/shop_floor/%d/%s' % (options.port, options.token)
 
   # FastCGI server runs forever.
   fastcgi_server.FastCGIServer(
       options.address, options.port, instance, script_name=script_name,
-      path_info=path_info)
+      path_info=None)
 
 
 if __name__ == '__main__':
