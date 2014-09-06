@@ -30,7 +30,7 @@ VERSION_COMPONENTS = ['firmware_bios', 'firmware_ec', 'hwid', 'rootfs_test',
 HASH_COMPONENTS = ['device_factory_toolkit']
 ALL_COMPONENTS = VERSION_COMPONENTS + HASH_COMPONENTS
 # Factory stages in running sequence.
-FACTORY_STAGES = ['SMT', 'RUNIN', 'FA', 'GRT']
+FACTORY_STAGES = ['SMT', 'FAT', 'RUNIN', 'FFT', 'GRT']
 SYNC_URL = '%{scheme}s://%{ip}s:%{port}d/%{path}s/%{toolkit_md5sum}s/'
 
 

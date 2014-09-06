@@ -21,7 +21,7 @@ rulesets:
   enable_update:
     device_factory_toolkit: [RUNIN, RUNIN]
     rootfs_release: [SMT, SMT]
-    rootfs_test: [FA, FA]
+    rootfs_test: [FAT, FAT]
     firmware_ec: [GRT, GRT]
     firmware_bios: [~, ~]
 - bundle_id: test
