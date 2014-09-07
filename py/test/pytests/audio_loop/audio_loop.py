@@ -340,8 +340,7 @@ class AudioLoopTest(unittest.TestCase):
     noise_file = self.RecordFile(duration)
 
     # Playback sine tone and check the recorded audio frequency.
-    self.TestLoopbackChannel(self._output_device, noise_file.name,
-        audio_utils.DEFAULT_NUM_CHANNELS)
+    self.TestLoopbackChannel(self._output_device, noise_file.name, 1)
     os.unlink(noise_file.name)
 
   def NoiseTest(self):
