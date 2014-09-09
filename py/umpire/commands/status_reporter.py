@@ -55,5 +55,5 @@ class StatusReporter(object):
     Returns:
       list of (port, bundle_id) pairs.
     """
-    mapping = self._env.GetPortMapping()
+    mapping = self._env.shop_floor_manager.GetPortMapping()
     return filter(lambda x: x[1] is not None, mapping)
