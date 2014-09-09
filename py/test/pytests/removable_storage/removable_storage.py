@@ -20,8 +20,7 @@ import time
 import unittest
 
 from cros.factory.event_log import Log
-from cros.factory.test.fixture.bft_fixture import (BFTFixture,
-                                                   BFTFixtureException,
+from cros.factory.test.fixture.bft_fixture import (BFTFixtureException,
                                                    CreateBFTFixture,
                                                    TEST_ARG_HELP)
 from cros.factory.test import factory
@@ -510,8 +509,10 @@ class RemovableStorageTest(unittest.TestCase):
           self.args.media, dev_path, self._device_size))
     else:
       # clear partition table first and create one partition
-      SpawnOutput(['parted', '-s', dev_path, 'mklabel', 'gpt'])
-      SpawnOutput(['parted', '-s', dev_path, 'mkpart', 'primary',
+      # HACK for Samus EVT.
+      parted = '/usr/local/factory/bin/parted'
+      SpawnOutput([parted, '-s', dev_path, 'mklabel', 'gpt'])
+      SpawnOutput([parted, '-s', dev_path, 'mkpart', 'primary',
                    'ext4', '0', str(partition_size)])
 
   def VerifyPartition(self):
