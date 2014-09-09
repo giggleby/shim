@@ -1433,8 +1433,11 @@ class Goofy(object):
       # Send Chrome a Tab to get focus to the factory UI
       # (http://crosbug.com/p/19444).  TODO(jsalz): remove this hack
       # and figure out the right way to get the focus to Chrome.
-      if not utils.in_chroot():
-        utils.SendKey('Tab')
+
+      # This is not working on Ryu. Disable for now.
+      # TODO: Fix me.
+      # if not utils.in_chroot():
+      #   utils.SendKey('Tab')
 
     # Create download path for autotest beforehand or autotests run at
     # the same time might fail due to race condition.
