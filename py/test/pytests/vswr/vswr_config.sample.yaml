@@ -1,0 +1,101 @@
+# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+
+# This is the sample config file of VSWR test.
+
+
+config:
+  name: VSWR Prepressed Config for Project-X Proto  # human readable name
+  last_updated: 2014-09-10 17:42:30.568931          # last update time
+
+
+dut:
+  network:
+    interface: eth0
+    ip: 10.3.0.20
+    netmask: 255.255.255.0
+
+
+network_analyzer:
+  possible_ips:
+  - 10.3.0.12
+  - 192.168.132.11
+  - 192.168.132.44
+  - 192.168.132.55
+  possible_ids:
+    MY99999999: Mock Network Analyzer
+    MY46111701: QSMC RMA Center
+  calibration:
+    min_frequency: 600000000.0
+    max_frequency: 6000000000.0
+    thresholds: !!python/tuple
+    - -50
+    - 50
+    sample_points: 2
+  measure_segment:
+    min_frequency: 600000000.0
+    max_frequency: 6000000000.0
+    sample_points: 2
+  set_marker: []
+  sweep_restore: null
+  take_screenshot: false
+
+
+shopfloor:
+  enabled: true
+  ignore_on_fail: false
+  timeout: 15
+
+
+test:
+  event_log_name: vswr_prepressed
+  shopfloor_log_dir: vswr_prepressed
+  fixture_id: VSWR_PREPRESSED_1
+  max_iterations: 3000
+
+
+thresholds:
+- name: WiFi only Device
+  serial_number_regex: ^TESTDEV-WIFI-.*$
+  wifi_main:
+    2412: !!python/tuple
+    - -40.0
+    - -10.0
+    2417: !!python/tuple
+    - -40.0
+    - -10.0
+  wifi_aux:
+    2412: !!python/tuple
+    - -40.0
+    - -10.0
+    2417: !!python/tuple
+    - -40.0
+    - -10.0
+  lte_main: {}
+  lte_aux: {}
+- name: LTE + WiFi Device
+  serial_number_regex: ^TESTDEV-LTE-.*$
+  wifi_main:
+    2412: !!python/tuple
+    - -40.0
+    - -10.0
+    2417: !!python/tuple
+    - -40.0
+    - -10.0
+  wifi_aux:
+    2412: !!python/tuple
+    - -40.0
+    - -10.0
+    2417: !!python/tuple
+    - -40.0
+    - -10.0
+  lte_main:
+    836: !!python/tuple
+    - -40.0
+    - -20.0
+  lte_aux:
+    836: !!python/tuple
+    - -40.0
+    - -10.0
