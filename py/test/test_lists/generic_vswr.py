@@ -22,8 +22,8 @@ from cros.factory.test.test_lists.test_lists import TestGroup
 from cros.factory.test.test_lists.test_lists import TestList
 
 
-_SHOPFLOOR_IP = '10.3.0.11'
-_SHOPFLOOR_PORT = 8082
+_SHOPFLOOR_IP = '10.3.0.12'
+_SHOPFLOOR_PORT = 9090
 _PARAMETER_BASE_NAME = 'vswr.%s.%s.params'
 _DEFAULT_TIMEZONE = 'Asia/Taipei'
 
@@ -49,71 +49,55 @@ def CreateTestLists():
     test_list.options.sync_event_log_period_secs = 30
     test_list.options.sync_time_period_secs = 300
     test_list.options.update_period_secs = None
-    test_list.options.shopfloor_server_url = 'http://%s:%s/' % (
+    test_list.options.shopfloor_server_url = 'http://%s:%s' % (
         _SHOPFLOOR_IP, _SHOPFLOOR_PORT)
 
-    with TestGroup(id='Production', label_zh='生产线端测试'):
-      with AutomatedSequence(id='WiFi', label_zh='WiFi 天线'):
+    with TestGroup(id='Prepressed', label_zh='組裝前'):
+      with AutomatedSequence(id='Antenna', label_zh='天线'):
         OperatorTest(
             id='VSWR',
-            label_en='VSWR WiFi Antenna Test',
-            label_zh=u'VSWR WiFi 天线测试',
+            label_en='VSWR Antenna Test',
+            label_zh=u'VSWR 天线测试',
             pytest_name='vswr',
             dargs={
-                'config_path': (
-                    'rf/vswr/' + _PARAMETER_BASE_NAME % ('prod', 'wifi')),
+                'config_path': 'rf/vswr_prepressed/vswr_config.prepressed.yaml',
                 'timezone': _DEFAULT_TIMEZONE,
                 'load_from_shopfloor': True})
         _SyncShopfloor()
 
-      with AutomatedSequence(id='Cellular', label_zh='Cellular 天线'):
+      with AutomatedSequence(id='AntennaStep', label_zh='天线 debug'):
         OperatorTest(
             id='VSWR',
-            label_en='VSWR Cellular Antenna Test',
-            label_zh=u'VSWR Cellular 天线测试',
+            label_en='VSWR Antenna Test Step',
+            label_zh=u'VSWR 階段天线测试',
             pytest_name='vswr',
             dargs={
-                'config_path': (
-                    'rf/vswr/' + _PARAMETER_BASE_NAME % ('prod', 'cellular')),
+                'config_path': 'rf/vswr/vswr-prepressed-step-parameters',
                 'timezone': _DEFAULT_TIMEZONE,
                 'load_from_shopfloor': True})
         _SyncShopfloor()
 
-      with AutomatedSequence(id='LTE', label_zh='LTE 天线'):
+    with TestGroup(id='Postpressed', label_zh='組裝後'):
+      with AutomatedSequence(id='Antenna', label_zh='天线'):
         OperatorTest(
             id='VSWR',
-            label_en='VSWR LTE Antenna Test',
-            label_zh=u'VSWR LTE 天线测试',
+            label_en='VSWR Antenna Test',
+            label_zh=u'VSWR 天线测试',
             pytest_name='vswr',
             dargs={
-                'config_path': (
-                    'rf/vswr/' + _PARAMETER_BASE_NAME % ('prod', 'lte')),
+                'config_path': 'rf/vswr_postpressed/vswr_config.postpressed.yaml',
                 'timezone': _DEFAULT_TIMEZONE,
                 'load_from_shopfloor': True})
         _SyncShopfloor()
 
-    with TestGroup(id='OfflineDebug', label_zh='非产线除错用'):
-      OperatorTest(
-          id='VSWRDebugWiFi',
-          label_en='VSWR WiFi Antenna Debug',
-          label_zh=u'VSWR WiFi 天线非产线除错用',
-          pytest_name='vswr',
-          dargs={'config_path': _PARAMETER_BASE_NAME % ('debug', 'wifi'),
-                 'timezone': _DEFAULT_TIMEZONE,
-                 'load_from_shopfloor': False})
-      OperatorTest(
-          id='VSWRDebugCellular',
-          label_en='VSWR Cellular Antenna Debug',
-          label_zh=u'VSWR Cellular 天线非产线除错用',
-          pytest_name='vswr',
-          dargs={'config_path': _PARAMETER_BASE_NAME % ('debug', 'cellular'),
-                 'timezone': _DEFAULT_TIMEZONE,
-                 'load_from_shopfloor': False})
-      OperatorTest(
-          id='VSWRDebugLTE',
-          label_en='VSWR LTE Antenna Debug',
-          label_zh=u'VSWR LTE 天线非产线除错用',
-          pytest_name='vswr',
-          dargs={'config_path': _PARAMETER_BASE_NAME % ('debug', 'lte'),
-                 'timezone': _DEFAULT_TIMEZONE,
-                 'load_from_shopfloor': False})
+      with AutomatedSequence(id='AntennaStep', label_zh='天线 debug'):
+        OperatorTest(
+            id='VSWR',
+            label_en='VSWR Antenna Test Step',
+            label_zh=u'VSWR 階段天线测试',
+            pytest_name='vswr',
+            dargs={
+                'config_path': 'rf/vswr/vswr-postpressed-step-parameters',
+                'timezone': _DEFAULT_TIMEZONE,
+                'load_from_shopfloor': True})
+        _SyncShopfloor()
