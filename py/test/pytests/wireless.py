@@ -22,7 +22,7 @@ from cros.factory.goofy.service_manager import SetServiceStatus
 from cros.factory.goofy.service_manager import Status
 from cros.factory.test import factory
 from cros.factory.test.args import Arg
-from cros.factory.utils.net_utils import GetWLANInterface
+from cros.factory.utils.net_utils import GetWLANInterface, SwitchEthernetInterfaces
 from cros.factory.utils.net_utils import GetEthernetIp
 from cros.factory.utils.process_utils import Spawn, SpawnOutput
 
@@ -95,7 +95,7 @@ class WirelessTest(unittest.TestCase):
         'remaining time < transmit_time will not be independently reported.',
         optional=True, default=1),
     Arg('throughput_threshold', int,
-        'Required minimum throughput in bytes/sec.  If any intervals or the '
+        'Required minimum throughput in bits/sec.  If any intervals or the '
         'overall throughput is lower than this, we will fail.',
         optional=True, default=None),
   ]
@@ -156,13 +156,15 @@ class WirelessTest(unittest.TestCase):
               'raw_output': iperf_output,
               'throughput': []}
 
-    # We only need (bits_per_second / 8) as our return list of throughputs.
-    throughputs = [int(x[8]) / 8.0 for x in iperf_output_table]
+    # We only need bits_per_second as our return list of throughputs.
+    throughputs = [int(x[8]) for x in iperf_output_table]
     factory.console.info(
-        'Successfully connected to %s, transferred: %d bytes, '
-        'time spent: %d sec, throughput: %d bytes/sec',
-        self.args.host, int(iperf_output_table[-1][7]) / 8.0,
-        self.args.transmit_time, throughputs[-1])
+        'Successfully connected to %s, transferred: %.2f Mbits, '
+        'time spent: %d sec, throughput: %.2f Mbits/sec',
+        self.args.host,
+        int(iperf_output_table[-1][7]) / (10.0 ** 6) * 8, # bytes -> Kbits
+        self.args.transmit_time,
+        throughputs[-1] / (10.0 ** 6))                    # bits -> Kbits
     return {'result': True,
             'raw_output': iperf_output,
             'throughput': throughputs}
@@ -177,9 +179,18 @@ class WirelessTest(unittest.TestCase):
     else:
       logging.info('ifconfig %s up', dev)
       Spawn(['ifconfig', dev, 'up'], check_call=True, log=True)
+    logging.info('Disabling ethernet interfaces')
+    eth = SwitchEthernetInterfaces(False)
 
   def runTest(self):
     flim = flimflam.FlimFlam(dbus.SystemBus())
+    # Sometimes the previous scan is cached and returned, even though it is
+    # already no longer valid.  Let's request a scan manually to prevent this
+    # problem.
+    flim.manager.RequestScan('')
+    # TODO(kitching): The above doesn't seem to help.  Let's investigate this
+    #                 later.  Adding a sleep for 10 seconds seems to help.
+    time.sleep(10)
 
     if self.args.services is None:
       # Basic wifi test -- succeeds if it can see any AP
@@ -193,10 +204,10 @@ class WirelessTest(unittest.TestCase):
           continue
         found_ssids.add(service_name)
       if not found_ssids:
-        self.fail("No SSIDs found.")
+        self.fail('No SSIDs found.')
       logging.info('found SSIDs: %s', ', '.join(found_ssids))
     else:
-      # Test Wifi signal strength for each service
+      # Test WiFi signal strength for each service
       if not isinstance(self.args.services, list):
         self.args.services = [self.args.services]
       for name, password in self.args.services:
@@ -225,7 +236,7 @@ class WirelessTest(unittest.TestCase):
 
         ethernet_ip = GetEthernetIp()
         if ethernet_ip:
-          self.fail('Still got ethernet ip %r' % ethernet_ip)
+          self.fail('Still have ethernet IP %r, aborting' % ethernet_ip)
 
         Spawn(['ifconfig'], check_call=True, log=True)
 
@@ -243,15 +254,13 @@ class WirelessTest(unittest.TestCase):
                 'output from iperf.' % self.args.host)
 
           if self.args.throughput_threshold is not None:
-            # We want to ensure that ALL measured throughputs are over the
-            # threshold.  Filter throughputs for failed cases.
-            failed_throughputs = [x for x in ret['throughput']
-                if x < self.args.throughput_threshold]
-            if failed_throughputs:
+            # We want to ensure that the overall average throughput is over the
+            # threshold.
+            if ret['throughput'][-1][8] < self.args.throughput_threshold:
               self.fail(
-                  'Throughputs: %s < %d bytes/sec didn\'t meet '
+                  'Throughput %.2f < %.2f Mbits/s didn\'t meet '
                   'the threshold requirement.' % (
-                      str(["%d" % x for x in ret['throughput']]),
-                      self.args.throughput_threshold))
+                      ret['throughput'][-1][8] / (10.0 ** 6),
+                      self.args.throughput_threshold / (10.0 ** 6)))
 
         flim.DisconnectService(service)
