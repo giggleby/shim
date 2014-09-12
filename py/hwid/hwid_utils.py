@@ -190,7 +190,8 @@ def WriteHWID(encoded_string):
     encoded_string: An encoded HWID string to write.
   """
   main_fw = crosfw.LoadMainFirmware()
-  process_utils.Spawn(['gbb_utility', '--set', '--hwid=%s' % encoded_string,
+  process_utils.Spawn(['/usr/local/factory/bin/gbb_utility', '--set',
+                       '--hwid=%s' % encoded_string,
                        '%s' % main_fw.GetFileName()], check_call=True, log=True)
   main_fw.Write(sections=['GBB'])
 
