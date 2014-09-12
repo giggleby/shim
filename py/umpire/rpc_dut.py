@@ -404,4 +404,4 @@ class LogDUTCommands(UmpireRPC):
   @RPCCall
   def GetFactoryLogPort(self):
     """Fetches system logs rsync port."""
-    return self.env.umpire_rsync_port()
+    return self.env.umpire_rsync_port
