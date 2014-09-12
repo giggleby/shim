@@ -40,7 +40,7 @@ LIGHTY_CONFIG_FILENAME = 'lighttpd_#%s#.conf'
 # String template for handlers.
 # %d is the binding port of its corresponding shop floor handler FastCGI
 # running locally.
-SHOP_FLOOR_HANDLER_PATH = '/shop_floor/%d/'
+SHOP_FLOOR_HANDLER_PATH = common.HANDLER_BASE + '/%d/'
 
 # Prefixes use in lighty proxy config:
 # Handles RPC requests to / and /RPC2.
