@@ -172,7 +172,7 @@ class RFRadiatedTest(unittest.TestCase):
     # Manually add route to shopfloor.
     process_utils.Spawn([
         'route', 'add', 'default', 'gw',
-        network_config['gateway']], check_call=True)
+        network_config['gateway']], call=True)
 
   def _SetUpPowerMeter(self, power_meter_config):
     """Initializes the power meter, and returns the power meter object."""
@@ -253,6 +253,7 @@ class RFRadiatedTest(unittest.TestCase):
         test_profile['power_meter_rf_port'],
         avg_length=self.config['power_meter_config']['averaging_count'])
     # Record the result.
+    factory.console.info('Got power %f.', power)
     self.log['test']['results'][test_profile['name']] = power
     # Stop transmitting power.
     self.chip_controller.StopTransmitting()
@@ -272,10 +273,18 @@ class RFRadiatedTest(unittest.TestCase):
     """Tasks to do before test ends.
 
     The function will:
-      1. Save into event log, and upload aux log onto shopfloor.
-      2. Clean up.
-      3. Raise an exception if there are any failures.
+      1. Leave MFG mode and close connection to the power meter.
+      2. Save into event log, and upload aux log onto shopfloor.
+      3. Stop blinking USB keyboard LEDs.
+      4. Raise an exception if there are any failures.
     """
+    # Leave manufacturing mode.
+    if self.chip_controller:
+      self.chip_controller.LeaveMFGMode()
+    # Close the connection to power meter.
+    if self.power_meter:
+      self.power_meter.Close()
+
     # Save into event log.
     logging.info('Saving into event log.')
     event_log_fields = {
@@ -295,12 +304,6 @@ class RFRadiatedTest(unittest.TestCase):
         posixpath.join(self.args.shopfloor_log_dir, log_file_name),
         xmlrpclib.Binary(log_content))
 
-    # Leave manufacturing mode.
-    if self.chip_controller:
-      self.chip_controller.LeaveMFGMode()
-    # Close the connection to power meter.
-    if self.power_meter:
-      self.power_meter.Close()
     # Stop blinking LEDs.
     if self.leds_blinker:
       self.leds_blinker.Stop()
