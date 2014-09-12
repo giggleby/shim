@@ -35,7 +35,9 @@ _CAMERA_MAPPING_FILE = '%s/tarfiles/camera_mapping' % _BASE_DIR
 
 # File pattern setting
 _SERIAL_DIGIT = 10
-_FILE_NAME_RE = re.compile(r'(\w+?)_(\w{%d})_(\d{17})$' % _SERIAL_DIGIT)
+# HACK: We do not specify serial digit because they are not following
+# the same format.
+_FILE_NAME_RE = re.compile(r'(\w+?)_(\w+?)_(\d{17})$')
 _FILE_EXT_RE = re.compile(r'.(tgz|zip|tar)$')
 
 # Event Log setting
