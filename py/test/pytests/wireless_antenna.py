@@ -477,8 +477,8 @@ class WirelessTest(unittest.TestCase):
     This will be called when test is finished, or if operator presses
     'Mark Failed'.
     """
-    self._done.set()
-    self._space_event.set()
+    #self._done.set()
+    #self._space_event.set()
 
   def OnSpacePressed(self):
     """The handler of space key."""
@@ -487,10 +487,10 @@ class WirelessTest(unittest.TestCase):
 
   def runTest(self):
     # Prompts a message to tell operator to press space key when ready.
-    self.PromptSpace()
-    self._space_event.wait()
-    if self._done.isSet():
-      return
+    #self.PromptSpace()
+    #self._space_event.wait()
+    #if self._done.isSet():
+    #  return
 
     # Gets all the candidate services and required antenna configs.
     set_all_services = set()
