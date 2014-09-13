@@ -21,8 +21,11 @@ from cros.factory.goofy.service_manager import GetServiceStatus
 from cros.factory.goofy.service_manager import SetServiceStatus
 from cros.factory.goofy.service_manager import Status
 from cros.factory.test import factory
+from cros.factory.test import leds
 from cros.factory.test.args import Arg
-from cros.factory.utils.net_utils import GetWLANInterface, SwitchEthernetInterfaces
+from cros.factory.test.fixture import arduino
+from cros.factory.utils.net_utils import GetWLANInterface
+from cros.factory.utils.net_utils import SwitchEthernetInterfaces
 from cros.factory.utils.net_utils import GetEthernetIp
 from cros.factory.utils.process_utils import Spawn, SpawnOutput
 
@@ -98,7 +101,14 @@ class WirelessTest(unittest.TestCase):
         'Required minimum throughput in bits/sec.  If any intervals or the '
         'overall throughput is lower than this, we will fail.',
         optional=True, default=None),
+    Arg('arduino_high_pins', list,
+        'A list of int.  If not None, set arduino pins in the list to high.',
+        default=None),
   ]
+
+  def __init__(self, *args, **kwargs):
+    super(WirelessTest, self).__init__(*args, **kwargs)
+    self.leds_blinker = None
 
   def _RunIperfClientAndParseThroughput(self):
     '''Invokes an iperf client and parses throughput.
@@ -170,6 +180,19 @@ class WirelessTest(unittest.TestCase):
             'throughput': throughputs}
 
   def setUp(self):
+    # We're in the chamber without a monitor.  Start blinking keyboard LEDs to
+    # inform the operator that we're still working.
+    self.leds_blinker = leds.Blinker(
+        [(0, 0.5), (leds.LED_NUM|leds.LED_CAP|leds.LED_SCR, 0.5)])
+    self.leds_blinker.Start()
+
+    if self.args.arduino_high_pins:
+      arduino_controller = arduino.ArduinoDigitalPinController()
+      arduino_controller.Connect()
+      for high_pin in self.args.arduino_high_pins:
+        arduino_controller.SetPin(high_pin)
+      arduino_controller.Disconnect()
+
     for service in _SERVICE_LIST:
       if GetServiceStatus(service) == Status.STOP:
         SetServiceStatus(service, Status.START)
@@ -180,7 +203,7 @@ class WirelessTest(unittest.TestCase):
       logging.info('ifconfig %s up', dev)
       Spawn(['ifconfig', dev, 'up'], check_call=True, log=True)
     logging.info('Disabling ethernet interfaces')
-    eth = SwitchEthernetInterfaces(False)
+    SwitchEthernetInterfaces(False)
 
   def runTest(self):
     flim = flimflam.FlimFlam(dbus.SystemBus())
@@ -264,3 +287,8 @@ class WirelessTest(unittest.TestCase):
                       self.args.throughput_threshold / (10.0 ** 6)))
 
         flim.DisconnectService(service)
+
+  def tearDown(self):
+    # Stop blinking LEDs.
+    if self.leds_blinker:
+      self.leds_blinker.Stop()
