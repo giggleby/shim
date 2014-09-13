@@ -130,7 +130,8 @@ class WirelessTest(unittest.TestCase):
         '--signal', 'KILL',
         # Add 5 seconds to allow for process overhead and connection time.
         str(self.args.transmit_time + 5)] + iperf_cmd
-    iperf_output = SpawnOutput(timeout_cmd, log=True, ignore_stderr=True)
+    iperf_output = SpawnOutput(timeout_cmd, log=True)
+    logging.info(iperf_output)
 
     # iperf outputs CSV with the following as its columns, with rows[:-1] for
     # intervals, and a[-1] for overall values:
@@ -146,15 +147,30 @@ class WirelessTest(unittest.TestCase):
     # Check for properly-formatted output (CSV with 9 columns).  Also, ensure
     # that transferred_bytes > 0.  If these conditions fail, we can assume iperf
     # failed.
+    # TODO(kitching): Turn this into a map.  Also parse integers.
     iperf_output_table = \
         [x.split(',') for x in iperf_output.strip().split("\n")]
-    if len(iperf_output_table[0]) != 9 or int(iperf_output_table[0][8]) <= 0:
+    if len(iperf_output_table[0]) != 9 or int(iperf_output_table[0][7]) <= 0:
       factory.console.info(
           'Failed to make a connection to %s, or received bogus '
           'output from iperf.', self.args.host)
       return {'result': False,
               'raw_output': iperf_output,
               'throughput': []}
+
+    # TODO(kitching): Figure out if there is a bug in the iperf binary.
+    # Sometimes there is a bug where the speed is always reported as 0,
+    # regardless of how much data was transferred.  Let's fix this.
+    if (int(iperf_output_table[0][8]) == 0):
+      # All rows except for the last one are intervals:
+      # interval_rate = interval_transferred / interval_time
+      for i in range(len(iperf_output_table) - 1):
+        iperf_output_table[i][8] = \
+            int(iperf_output_table[i][7]) * 8 / self.args.transmit_interval
+      # The last row is overall average:
+      # overall_rate = overall_transferred / overall_time
+      iperf_output_table[-1][8] = \
+          int(iperf_output_table[-1][7]) * 8 / self.args.transmit_time
 
     # We only need bits_per_second as our return list of throughputs.
     throughputs = [int(x[8]) for x in iperf_output_table]
