@@ -103,7 +103,7 @@ class WirelessTest(unittest.TestCase):
         optional=True, default=None),
     Arg('arduino_high_pins', list,
         'A list of int.  If not None, set arduino pins in the list to high.',
-        default=None),
+        optional=True, default=None),
   ]
 
   def __init__(self, *args, **kwargs):
