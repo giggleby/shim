@@ -141,4 +141,6 @@ def main():
 
 
 if __name__ == '__main__':
+  logging.basicConfig(level=logging.DEBUG,
+                      format='%(levelname)5s %(message)s')
   main()
