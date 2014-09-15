@@ -15,6 +15,8 @@ DisplayTest = function(container, colors) {
   this.styleDiv = null;
   this.fullScreenElement = null;
   this.allStyleList = [
+    "display-subtest-border-white",
+    "display-subtest-border-black",
     "display-subtest-solid-gray-170",
     "display-subtest-solid-gray-127",
     "display-subtest-solid-gray-63",
@@ -35,13 +37,12 @@ DisplayTest = function(container, colors) {
     "display-subtest-image-white",
     "display-subtest-image-crosstalk-black",
     "display-subtest-image-crosstalk-white",
-    "display-subtest-image-gray-63",
-    "display-subtest-image-gray-127",
-    "display-subtest-image-gray-170",
     "display-subtest-image-horizontal-rgbw",
     "display-subtest-image-vertical-rgbw",
   ];
   this.allEnItemList = [
+    "border-white",
+    "border-black",
     "solid-gray-170",
     "solid-gray-127",
     "solid-gray-63",
@@ -62,13 +63,12 @@ DisplayTest = function(container, colors) {
     "image-WHITE.BMP",
     "image-CrossTalk(black).bmp",
     "image-CrossTalk(white).bmp",
-    "image-gray(63).bmp",
-    "image-gray(127).bmp",
-    "image-gray(170).bmp",
     "image-Horizontal(RGBW).bmp",
     "image-Vertical(RGBW).bmp",
   ];
   this.allZhItemList = [
+    "周围白色",
+    "周围黑色",
     "灰色170",
     "灰色127",
     "灰色63",
@@ -89,9 +89,6 @@ DisplayTest = function(container, colors) {
     "影像-白色",
     "影像-方形-黑色",
     "影像-方形-白色",
-    "影像-灰色63",
-    "影像-灰色127",
-    "影像-灰色170",
     "影像-水平",
     "影像-垂直",
   ];

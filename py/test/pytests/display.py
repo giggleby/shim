@@ -37,6 +37,8 @@ class DisplayTest(unittest.TestCase):
   ARGS = [
     Arg('colors', list,
         """Set colors. Available colors are
+        "border-white",
+        "border-black",
         "solid-gray-170",
         "solid-gray-127",
         "solid-gray-63",
@@ -53,7 +55,8 @@ class DisplayTest(unittest.TestCase):
         "gradient-blue",
         "gradient-white"
         """,
-        default= ["solid-gray-170", "solid-gray-127", "solid-gray-63",
+        default= ["border-white", "border-black",
+                  "solid-gray-170", "solid-gray-127", "solid-gray-63",
                   "solid-red", "solid-green", "solid-blue"],
         optional=True),
     Arg('images',list,
@@ -63,9 +66,6 @@ class DisplayTest(unittest.TestCase):
         "WHITE.BMP",
         "CrossTalk(black).bmp",
         "CrossTalk(white).bmp",
-        "gray(63).bmp",
-        "gray(127).bmp",
-        "gray(170).bmp",
         "Horizontal(RGBW).bmp",
         "Vertical(RGBW).bmp"
         """,

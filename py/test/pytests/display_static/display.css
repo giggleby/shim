@@ -49,6 +49,12 @@
   bottom: 0;
   top: 0;
   visibility: visible;}
+.display-subtest-border-white {
+  background-color: black; width: 100%; height: 100%;
+  border-style: solid; border-width: 1px; border-color: white;}
+.display-subtest-border-black {
+  background-color: white; width: 100%; height: 100%;
+  border-style: solid; border-width: 1px; border-color: black;}
 .display-subtest-solid-gray-170 {
   background-color: #aaaaaa; width: 100%; height: 100%; }
 .display-subtest-solid-gray-127 {
