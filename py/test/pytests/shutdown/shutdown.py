@@ -204,10 +204,11 @@ class ShutdownTest(unittest.TestCase):
                   error_msg=None)
 
   def runTest(self):
-    if self.goofy.get_shared_data('post_shutdown', True):
+    POST_SHUTDOWN = '%s.post_shutdown' % self.test_info.path
+    if self.goofy.get_shared_data(POST_SHUTDOWN, True):
       # Only do post shutdown verification once.
       self.template.SetState(_SHUTDOWN_COMPLETE_MSG(self.args.operation))
-      self.goofy.set_shared_data('post_shutdown', False)
+      self.goofy.set_shared_data(POST_SHUTDOWN, False)
       self.PostShutdown()
     else:
       self.template.SetState(

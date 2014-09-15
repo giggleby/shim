@@ -479,7 +479,7 @@ class Goofy(object):
           'tests_after_shutdown', [test.path] + tests_after_shutdown)
 
     # Set 'post_shutdown' to inform shutdown test that a shutdown just occurred.
-    self.state_instance.set_shared_data('post_shutdown', True)
+    self.state_instance.set_shared_data('%s.post_shutdown' % test.path, True)
 
   def init_states(self):
     """Initializes all states on startup."""
