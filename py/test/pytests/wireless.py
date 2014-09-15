@@ -22,7 +22,7 @@ from cros.factory.goofy.service_manager import SetServiceStatus
 from cros.factory.goofy.service_manager import Status
 from cros.factory.test import factory
 from cros.factory.test.args import Arg
-from cros.factory.utils.net_utils import GetWLANInterface, SwitchEthernetInterfaces
+from cros.factory.utils.net_utils import GetWLANInterface
 from cros.factory.utils.net_utils import GetEthernetIp
 from cros.factory.utils.process_utils import Spawn, SpawnOutput
 
@@ -195,8 +195,6 @@ class WirelessTest(unittest.TestCase):
     else:
       logging.info('ifconfig %s up', dev)
       Spawn(['ifconfig', dev, 'up'], check_call=True, log=True)
-    logging.info('Disabling ethernet interfaces')
-    eth = SwitchEthernetInterfaces(False)
 
   def runTest(self):
     flim = flimflam.FlimFlam(dbus.SystemBus())
@@ -249,10 +247,6 @@ class WirelessTest(unittest.TestCase):
                                                                    diagnostics))
           else:
             factory.console.info('Successfully connected to service %s' % name)
-
-        ethernet_ip = GetEthernetIp()
-        if ethernet_ip:
-          self.fail('Still have ethernet IP %r, aborting' % ethernet_ip)
 
         Spawn(['ifconfig'], check_call=True, log=True)
 
