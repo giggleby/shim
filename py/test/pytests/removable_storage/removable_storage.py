@@ -16,12 +16,12 @@ import os
 import logging
 import pyudev
 import random
+import re
 import time
 import unittest
 
 from cros.factory.event_log import Log
-from cros.factory.test.fixture.bft_fixture import (BFTFixture,
-                                                   BFTFixtureException,
+from cros.factory.test.fixture.bft_fixture import (BFTFixtureException,
                                                    CreateBFTFixture,
                                                    TEST_ARG_HELP)
 from cros.factory.test import factory
@@ -168,7 +168,9 @@ class RemovableStorageTest(unittest.TestCase):
     Arg('bft_fixture', dict, TEST_ARG_HELP, default=None, optional=True),
     Arg('bft_media_device', str,
         'Device name of BFT used to insert/remove the media.',
-        optional=True)
+        optional=True),
+    Arg('raiden_port_polarity', tuple,
+        'A tuple of integers indicating (port, polarity)', optional=True),
   ]
   # pylint: disable=E1101
 
@@ -532,6 +534,30 @@ class RemovableStorageTest(unittest.TestCase):
     except:   # pylint: disable=W0702
       self.Fail(_ERR_VERIFY_PARTITION_FMT_STR(self.args.media, dev_path))
 
+  def VerifyRaidenPolarity(self):
+    """Verifies the USB CC polarity on the Raiden port."""
+    if not self.args.raiden_port_polarity:
+      return
+
+    GPIO_DP_MODE = 'USB_C%d_SS%d_DP_MODE'
+
+    def GetGPIO(gpio_name):
+      value = CheckOutput(['ectool', '--dev=1', '--interface=lpc',
+                           'gpioget', gpio_name])
+      logging.info('%s, %s', gpio_name, value)
+      matchobj = re.match(r'GPIO %s = (\d+)' % gpio_name, value)
+      if not matchobj:
+        self.Fail('Unable to get GPIO value of %s' % gpio_name)
+      return int(matchobj.group(1))
+
+    # It takes some time for the PD to negotiate and settle down the polarity.
+    time.sleep(1)
+
+    is_enabled = not GetGPIO(GPIO_DP_MODE % self.args.raiden_port_polarity)
+    if not is_enabled:
+      self.Fail('USB CC polarity mismatch on Raiden port %d' %
+                self.args.raiden_port_polarity[0])
+
   def HandleUdevEvent(self, action, device):
     """The udev event handler.
 
@@ -573,6 +599,7 @@ class RemovableStorageTest(unittest.TestCase):
         self._device_size = self.GetDeviceSize(self._target_device)
         if self.args.media == 'SD':
           self.CreatePartition()
+        self.VerifyRaidenPolarity()
         self.TestReadWrite()
 
       elif self._state == _STATE_LOCKTEST_WAIT_INSERT:
