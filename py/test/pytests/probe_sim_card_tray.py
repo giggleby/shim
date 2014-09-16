@@ -217,12 +217,6 @@ class ProbeSimCardTrayTest(unittest.TestCase):
                         str(self.args.tray_detection_gpio), export_path)
       raise ProbeTrayException('Can not export detection gpio %s' %
                                self.args.tray_detection_gpio)
-    direction_path = os.path.join(self._detection_gpio_path, 'direction')
-    try:
-      WriteFile(direction_path, 'out', log=True)
-    except IOError:
-      logging.exception('Can not write "out" into %s', direction_path)
-      raise ProbeTrayException('Can set detection gpio direction to out')
 
   def GetDetection(self):
     """Returns tray status ProbeTrayTask.INSERTED or ProbeTrayTask.REMOVED."""
