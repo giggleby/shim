@@ -20,6 +20,7 @@ from cros.factory.utils.jsonrpc_utils import JSONRPCServer
 from cros.factory.utils.jsonrpc_utils import TimeoutJSONRPCTransport
 from cros.factory.utils.net_utils import GetEthernetInterfaces
 from cros.factory.utils.net_utils import GetEthernetIp
+from cros.factory.utils.process_utils import Spawn
 
 
 # Standard RPC ports.  These may be replaced by unit tests.
@@ -169,6 +170,8 @@ class PresenterLinkManager(object):
           self._reported_failure.remove(presenter_ip)
         if self._connect_hook:
           self._connect_hook(presenter_ip)
+        Spawn(['flock', '/tmp/lightbar-lock',
+               '/usr/local/factory/board/lightbar.sh', 'green'])
         return
     except (socket.error, socket.timeout):
       pass
@@ -195,6 +198,8 @@ class PresenterLinkManager(object):
         self._presenter_proxy = None
         if self._disconnect_hook:
           self._disconnect_hook()
+        Spawn(['flock', '/tmp/lightbar-lock',
+               '/usr/local/factory/board/lightbar.sh', 'blue'])
 
     ips = self._discoverer.Discover()
     if not ips:
