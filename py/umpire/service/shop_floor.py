@@ -85,11 +85,14 @@ class ShopFloorService(umpire_service.UmpireService):
       def ReleaseResource(release_port):
         env.shop_floor_manager.Release(release_port)
 
-      proc.AddStateCallback(
-          [umpire_service.State.ERROR, umpire_service.State.STOPPED],
-          ReleaseResource,
-          fcgi_port)
-      processes.append(proc)
+      if proc in self.processes or proc in processes:
+        ReleaseResource(fcgi_port)
+      else:
+        proc.AddStateCallback(
+            [umpire_service.State.ERROR, umpire_service.State.STOPPED],
+            ReleaseResource,
+            fcgi_port)
+        processes.append(proc)
     self.properties['num_shopfloor_handlers'] = len(processes)
     return processes
 
