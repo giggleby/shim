@@ -218,7 +218,7 @@ class UmpireOrderedDict(dict):
 class RulesetOrderedDict(dict):
 
   """Used to output an UmpireConfig's ruleset with desired key order."""
-  _KEY_ORDER = ['bundle_id', 'note', 'active', 'update', 'match']
+  _KEY_ORDER = ['bundle_id', 'note', 'active', 'enable_update', 'match']
 
   def Omap(self):
     return [(k, self[k]) for k in self._KEY_ORDER if k in self]
