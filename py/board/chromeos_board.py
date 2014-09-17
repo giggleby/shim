@@ -33,6 +33,7 @@ class ChromeOSBoard(Board):
   EC_BATTERY_CHARGING_RE = re.compile(r'^\s+Flags\s+.*\s+CHARGING.*$',
       re.MULTILINE)
   EC_CHARGER_RE = re.compile(r'^chg_current = (\d+)mA$', re.MULTILINE)
+  EC_VERSION_RE = re.compile(r'RO version:\s+(\S.+)$', re.MULTILINE)
 
   # Expected battery info.
   BATTERY_DESIGN_CAPACITY_RE = re.compile('Design capacity:\s+([1-9]\d*)\s+mAh')
@@ -144,8 +145,12 @@ class ChromeOSBoard(Board):
         raise BoardException('Unable to set fan speed to %d RPM: %s' % (rpm, e))
 
   def GetECVersion(self):
-    return self._Spawn(['mosys', 'ec', 'info', '-s', 'fw_version'],
-                       read_stdout=True, ignore_stderr=True).stdout_data.strip()
+    ectool_output = self._CallECTool(['version'], check=False)
+    re_object = self.EC_VERSION_RE.findall(ectool_output)
+    if re_object:
+      return re_object[0]
+    else:
+      raise BoardException('Cannot find ec version in ectool version')
 
   def GetPDVersion(self):
     return self._Spawn(['mosys', 'pd', 'info', '-s', 'fw_version'],
