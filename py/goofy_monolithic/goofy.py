@@ -758,7 +758,8 @@ class Goofy(object):
           continue
 
       if (isinstance(test, factory.ShutdownStep) and
-          self.state_instance.get_shared_data('post_shutdown', optional=True)):
+          self.state_instance.get_shared_data(
+              '%s.post_shutdown' % test.path, optional=True)):
         # Invoking post shutdown method of shutdown test. We should retain the
         # iterations_left and retries_left of the original test state.
         test_state = self.state_instance.get_test_state(test.path)
