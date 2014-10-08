@@ -27,7 +27,8 @@ from cros.factory.test.utils import Enum
 KeyboardMechanicalLayout = Enum(['ANSI', 'ISO', 'JIS', 'ABNT2'])
 
 
-KEYBOARD_PATTERN = re.compile(r'^xkb:\w+:\w*:\w+$')
+KEYBOARD_PATTERN = re.compile(r'^xkb:\w+:\w*:\w+$|'
+                              r'^(ime|m17n|t13n):[\w:-]+$')
 LANGUAGE_CODE_PATTERN = re.compile(r'^(\w+)(-[A-Z0-9]+)?$')
 
 
