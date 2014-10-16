@@ -14,7 +14,6 @@ Usage example::
       label_zh=u'确认 LTE 参数',
       pytest_name='lte_verify_config',
       dargs={
-          'modem_path': 'ttyACM0',
           'attempts': 3,
           'config_to_check': [
               # Single line response example.
@@ -22,12 +21,13 @@ Usage example::
               # Multi-line response example.
               ('AT_COMMAND_2', ['RESPONSE_2_LINE_1', RESPONSE_2_LINE_2]),
 """
-
+import glob
+import os
 import unittest
 
 import factory_common  # pylint: disable=W0611
 
-from cros.factory.board import modem_utils
+from cros.factory.board import modem_utils # pylint: disable=e0611
 from cros.factory.test import factory
 from cros.factory.test.args import Arg
 from cros.factory.rf import modem
@@ -35,7 +35,6 @@ from cros.factory.rf import modem
 
 class LTEVerifyConfig(unittest.TestCase):
   ARGS = [
-    Arg('modem_path', str, 'The path of the serial port.'),
     Arg('attempts', int,
         'Number of tries to enter factory mode, since the firmware AT+CFUN=4 '
         'is not stable enough.', default=2),
@@ -45,8 +44,19 @@ class LTEVerifyConfig(unittest.TestCase):
         'one line response or a list of strings indicating multiline response.')
   ]
 
+  def probeSerialPort(self):
+    for serial_port in glob.glob('/dev/ttyACM*'):
+      if os.path.exists(serial_port):
+        return serial_port[5:]
+    return None
+
   def setUp(self):
-    self.modem = modem.Modem(self.args.modem_path)
+    modem_path = self.probeSerialPort()
+
+    if modem_path is None:
+      raise factory.FactoryTestFailure('Cannot find serial port.')
+
+    self.modem = modem.Modem(modem_path)
 
   def EnterFactoryMode(self):
     factory.console.info('LTE: Entering factory test mode')
