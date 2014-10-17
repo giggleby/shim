@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -74,6 +74,7 @@ import time
 import threading
 import unittest
 
+import factory_common  # pylint: disable=W0611
 from cros.factory.test.args import Arg
 from cros.factory.test import audio_utils
 from cros.factory.test import factory
@@ -320,6 +321,8 @@ class AudioLoopTest(unittest.TestCase):
           self.AppendErrorMessage('audiofuntest terminated unexpectedly')
       time.sleep(0.5)
 
+  # pylint: disable=W0613
+  # Revert the lint once cl/225344 hack is resolved.
   def TestLoopbackChannel(self, output_device, noise_file_name, num_channels):
     """Tests loopback on all channels.
 
@@ -348,7 +351,8 @@ class AudioLoopTest(unittest.TestCase):
       # audio_utils.NoiseReduceFile(record_file_path, noise_file_name,
       #     reduced_file_path)
 
-      # sox_output_reduced = audio_utils.SoxStatOutput(reduced_file_path, channel)
+      # sox_output_reduced = audio_utils.SoxStatOutput(reduced_file_path,
+      #                                                channel)
       # self.CheckRecordedAudio(sox_output_reduced)
 
       # os.unlink(reduced_file_path)
@@ -356,8 +360,8 @@ class AudioLoopTest(unittest.TestCase):
 
   def SinewavTest(self):
     self._ui.CallJSFunction('testInProgress', None)
-    duration = self._current_test_args.get(
-        'duration', _DEFAULT_SINEWAV_TEST_DURATION)
+    # duration = self._current_test_args.get(
+    #     'duration', _DEFAULT_SINEWAV_TEST_DURATION)
     # Record a sample of "silence" to use as a noise profile.
     # noise_file = self.RecordFile(duration)
 

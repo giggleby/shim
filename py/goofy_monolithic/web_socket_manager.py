@@ -1,9 +1,10 @@
 #!/usr/bin/python -u
 #
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from __future__ import print_function
 import collections
 import logging
 import subprocess
@@ -12,6 +13,7 @@ import time
 
 from ws4py.websocket import WebSocket
 
+import factory_common  # pylint: disable=W0611
 from cros.factory.test import factory
 from cros.factory.test.event import Event
 from cros.factory.test.event import EventClient
@@ -96,6 +98,12 @@ class WebSocketManager(object):
       return
 
     class MyWebSocket(WebSocket):
+      def __init__(self, **kwargs):
+        # Add a per-socket lock to use for sending, since ws4py is not
+        # thread-safe.
+        self.send_lock = threading.Lock()
+        super(MyWebSocket, self).__init__(**kwargs)
+
       def received_message(socket_self, message): # pylint: disable=E0213
         event = Event.from_json(str(message))
         if event.type == Event.Type.KEEPALIVE:
@@ -111,10 +119,6 @@ class WebSocketManager(object):
           self.event_client.post_event(event)
 
     web_socket = MyWebSocket(sock=request.connection)
-
-    # Add a per-socket lock to use for sending, since ws4py is not
-    # thread-safe.
-    web_socket.send_lock = threading.Lock()
 
     with self.lock:
       lines = list(self.tail_buffer)
