@@ -79,10 +79,6 @@ start_factory() {
   modprobe i2c-dev 2>/dev/null || true
   check_disk_usage
 
-  if [ -z "$(status ui | grep running)" ]; then
-    start ui
-  fi
-
   "$FACTORY/bin/goofy" $GOOFY_ARGS >>"$FACTORY_LOG_FILE" 2>&1
 }
 
