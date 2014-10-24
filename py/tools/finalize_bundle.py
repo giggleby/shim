@@ -6,6 +6,8 @@
 
 """Tools to finalize a factory bundle."""
 
+from __future__ import print_function
+
 import argparse
 import glob
 import logging
@@ -56,18 +58,19 @@ def GetReleaseVersion(mount_point):
   return result
 
 
-def GetFirmwareVersions(updater, has_ec):
+def GetFirmwareVersions(updater, has_ec, has_pd):
   """Returns the firmware versions in an updater.
 
   Args:
     updater: Path to a firmware updater.
     has_ec: True if updater has EC.
+    has_pd: True if updater has PD.
 
   Returns:
     A tuple (bios_version, ec_version)
     If has_ec is False, ec_version is set to None
   """
-  bios, ec = get_version.GetFirmwareVersions(updater)
+  bios, ec, pd = get_version.GetFirmwareVersions(updater)
 
   if bios is None:
     sys.exit('Unable to read BIOS version from chromeos-firmwareupdater')
@@ -76,7 +79,12 @@ def GetFirmwareVersions(updater, has_ec):
       sys.exit('Unable to read EC version from chromeos-firmwareupdater')
   else:
     ec = None
-  return (bios, ec)
+  if has_pd:
+    if pd is None:
+      sys.exit('Unable to read PD version from chromeos-firmwareupdater')
+  else:
+    pd = None
+  return (bios, ec, pd)
 
 
 USAGE = """
@@ -1068,11 +1076,14 @@ class FinalizeBundle(object):
         fw_updater_file = firmware_updater
       else:
         fw_updater_file = os.path.join(f, 'usr/sbin/chromeos-firmwareupdate')
-      bios_version, ec_version = GetFirmwareVersions(fw_updater_file,
-          self.manifest.get('has_ec', True))
+      bios_version, ec_version, pd_version = GetFirmwareVersions(
+          fw_updater_file, self.manifest.get('has_ec', True),
+          self.manifest.get('has_pd', True))
       vitals.append(('Release (FSI) BIOS', bios_version))
       if ec_version is not None:
         vitals.append(('Release (FSI) EC', ec_version))
+      if pd_version is not None:
+        vitals.append(('Release (FSI) PD', pd_version))
 
     # If we have any firmware in the tree, add them to the vitals.
     firmwareupdates = []
@@ -1080,11 +1091,14 @@ class FinalizeBundle(object):
       path = os.path.join(self.bundle_dir, f)
       if os.path.basename(f) == 'chromeos-firmwareupdate':
         firmwareupdates.append(path)
-        bios_version, ec_version = GetFirmwareVersions(path,
-            self.manifest.get('has_ec', True))
+        bios_version, ec_version, pd_version = GetFirmwareVersions(
+            path, self.manifest.get('has_ec', True),
+            self.manifest.get('had_pd', True))
         vitals.append(('%s BIOS' % f, bios_version))
         if ec_version is not None:
           vitals.append(('%s EC' % f, ec_version))
+        if pd_version is not None:
+          vitals.append(('%s PD' % f, pd_version))
       elif os.path.basename(f) == 'ec.bin':
         version = get_version.GetFirmwareBinaryVersion(path)
         if not version:
