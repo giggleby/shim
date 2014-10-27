@@ -30,6 +30,7 @@ from cros.factory.test import leds
 from cros.factory.test.args import Arg
 from cros.factory.test.fixture import arduino
 from cros.factory.utils.net_utils import GetWLANInterface, GetWLANMACAddress
+from cros.factory.utils.net_utils import SwitchEthernetInterfaces
 from cros.factory.utils import process_utils
 
 # pylint: disable=W0611, F0401
@@ -327,8 +328,20 @@ class RFWifiThroughput(unittest.TestCase):
     # Initialize our WifiProxy library.
     self.wifi = wifi_proxy.WifiProxy()
 
+    # Since in some test set-ups, the ethernet interface will be on the same
+    # subnet as the wireless interface, we need to first disable ethernet to
+    # avoid the throughput test being routed through a wired connection.
+    # TODO(kitching): Change the network topology of tests with this problem so
+    # that we don't have to take down ethernet.  This way, goofy-split won't
+    # disconnect its display when the test is run.
+    logging.info('Disabling ethernet interfaces')
+    SwitchEthernetInterfaces(False)
+
   def tearDown(self):
     self._EndOperatorFeedback()
+
+    # Enable ethernet devices.
+    SwitchEthernetInterfaces(True)
 
   def _RunTestChecks(self):
     # Check that we have an online WLAN interface.
