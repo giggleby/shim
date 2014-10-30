@@ -139,4 +139,5 @@ echo "Restarting factory tests..."
 export PATH=/sbin:"$PATH"
 (status factory | grep -q 'stop/waiting') || stop factory
 (status ui | grep -q 'stop/waiting') || stop ui
+start ui
 start factory
