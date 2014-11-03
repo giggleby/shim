@@ -149,6 +149,11 @@ class WriteVPDTask(FactoryTask):
         except ValueError as e:
           self.Fail(str(e))
 
+      if (self.test.registration_code_map['user'] ==
+          self.test.registration_code_map['group']):
+        raise factory.FactoryTestFailure(
+            'user code and group code should not be the same')
+
       # Add registration codes, being careful not to log the command.
       logging.info('Storing registration codes.')
       Spawn(['vpd', '-i', 'RW_VPD'] + self.FormatVPDParameter(
