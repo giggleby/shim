@@ -153,6 +153,14 @@ class WriteVPDTask(FactoryTask):
         except ValueError as e:
           self.Fail(str(e))
 
+      # For legacy registration code, it was found that some devices were
+      # assigned with same user/group values. So add a simple assertion here.
+      # with same user/group values and that should be apparently wrong value.
+      if (self.test.registration_code_map['user'] ==
+          self.test.registration_code_map['group']):
+        raise factory.FactoryTestFailure(
+            'user code and group code should not be the same')
+
       # Add registration codes, being careful not to log the command.
       logging.info('Storing registration codes.')
       Spawn(['vpd', '-i', 'RW_VPD'] + self.FormatVPDParameter(
