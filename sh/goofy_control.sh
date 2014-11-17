@@ -137,10 +137,6 @@ start_factory() {
   export DISPLAY=":0"
   export XAUTHORITY="/home/chronos/.Xauthority"
 
-  # HACK for EVT2. Explicitly enable standalone mode due to crosbug.com/p/33165.
-  touch "${RUN_GOOFY_PRESENTER_TAG_FILE}"
-  touch "${RUN_GOOFY_DEVICE_TAG_FILE}"
-
   # Run goofy_presenter if goofy_presenter tag file is present
   if [ -f "${RUN_GOOFY_PRESENTER_TAG_FILE}" ]; then
     "$FACTORY/bin/goofy_presenter" $PRESENTER_ARGS >>"$FACTORY_LOG_FILE" 2>&1 &
