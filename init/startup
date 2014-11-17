@@ -10,10 +10,6 @@ main() {
   # Install console (VT2) customizations
   mount --bind "${MYDIR}/profile.d/vt2.sh" /etc/profile.d/cursor.sh
 
-  # HACK for EVT2. Explicitly enable standalone mode due to crosbug.com/p/33165.
-  touch /usr/local/factory/init/run_goofy_device
-  touch /usr/local/factory/init/run_goofy_presenter
-
   if [ -f "${FACTORY_BASE}/py/goofy/GOOFY_SPLIT" ]; then
     # Load presenter app if we are running goofy_presenter.
     if [ -f "${MYDIR}/run_goofy_presenter" ]; then
