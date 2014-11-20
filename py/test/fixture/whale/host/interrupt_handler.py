@@ -19,6 +19,7 @@ from cros.factory.test.utils import Enum
 ActionType = Enum(['CLOSE_COVER', 'HOOK_COVER', 'PUSH_NEEDLE',
                    'PLUG_LATERAL', 'FIXTURE_STARTED'])
 
+
 def TimeClassMethodDebug(func):
   """A decorator to log method running time on debug level."""
   def Wrapped(*args, **kwargs):
@@ -59,6 +60,14 @@ class InterruptHandler(object):
 
   _INPUT_INTERRUPT_GPIO = 7
 
+  _FixtureState = Enum(['WAIT', 'CLOSED', 'CLOSING', 'OPENING'])
+  # Fixture state to LED light and LCD message (green, red, message).
+  _FixtureStateParams = {
+      _FixtureState.WAIT: ('on', 'on', 'ready'),
+      _FixtureState.CLOSED: ('on', 'off', 'testing'),
+      _FixtureState.CLOSING: ('off', 'on', 'closing'),
+      _FixtureState.OPENING: ('off', 'on', 'opening')}
+
   def __init__(self, use_polld, host, polld_port, servod_port, rpc_debug,
                polling_wait_secs):
     """Constructor.
@@ -98,11 +107,20 @@ class InterruptHandler(object):
     self._servo.Disable(self._CONTROL.FIXTURE_PUSH_NEEDLE)
     self._servo.Disable(self._CONTROL.FIXTURE_HOOK_COVER)
     self._servo.Disable(self._CONTROL.FIXTURE_CLOSE_COVER)
+    self._SetState(self._FixtureState.WAIT)
+
+  def _SetState(self, state):
+    green, red, message = self._FixtureStateParams[state]
+    self._servo.MultipleSet([(self._CONTROL.PASS_LED, green),
+                             (self._CONTROL.FAIL_LED, red),
+                             (self._CONTROL.LCM_CMD, 'clear'),
+                             (self._CONTROL.LCM_TEXT, message)])
 
   @TimeClassMethodDebug
   def _HandleStopFixture(self):
     """Stop Fixture Step"""
     logging.debug('[Stopping fixture...]')
+    self._SetState(self._FixtureState.OPENING)
     while True:
       feedback_status = self._servo.MultipleIsOn(self._FEEDBACK_LIST)
       if (not feedback_status[self._FIXTURE_FEEDBACK.FB7] or
@@ -133,6 +151,7 @@ class InterruptHandler(object):
         self._starting_fixture_action = None
         logging.debug('[Fixture stopped]')
         break
+    self._SetState(self._FixtureState.WAIT)
 
   @TimeClassMethodDebug
   def _HandleStartFixtureFeedbackChange(self, feedback_status):
@@ -161,6 +180,7 @@ class InterruptHandler(object):
             feedback_status[self._FIXTURE_FEEDBACK.FB10]):
         logging.debug('[START] CYLIDER ACTION is done...')
         self._starting_fixture_action = ActionType.FIXTURE_STARTED
+        self._SetState(self._FixtureState.CLOSED)
 
   @TimeClassMethodDebug
   def _HandleStartFixture(self):
@@ -177,6 +197,7 @@ class InterruptHandler(object):
     if self._starting_fixture_action is None:
       logging.debug('[HandleStartFixture] ACTION = None')
       self._starting_fixture_action = ActionType.CLOSE_COVER
+      self._SetState(self._FixtureState.CLOSING)
 
     if self._starting_fixture_action == ActionType.CLOSE_COVER:
       logging.debug('[HandleStartFixture] ACTION = CLOSE_COVER')
