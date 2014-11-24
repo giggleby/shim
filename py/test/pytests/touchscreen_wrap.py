@@ -59,16 +59,20 @@ class TouchscreenTest(unittest.TestCase):
       Arg('y_segments', int, 'Number of segments in y-axis.',
           default=5),
       Arg('retries', int, 'Number of retries.', default=5),
+      Arg('sets_enabled', bool, 'Whether to enable the touchscreen device',
+          default=True),
       Arg('demo_interval_ms', int,
           'Interval (ms) to show drawing pattern. <= 0 means no demo.',
           default=150),]
 
   def setUp(self):
     # Enable touchscreen.
-    self.touchscreen_device_id = utils.GetTouchscreenDeviceIds()[0]
-    self.touchscreen_enabled = utils.IsXinputDeviceEnabled(
-        self.touchscreen_device_id)
-    utils.SetXinputDeviceEnabled(self.touchscreen_device_id, True)
+    self.touchscreen_device_id = None
+    if self.args.sets_enabled:
+      self.touchscreen_device_id = utils.GetTouchscreenDeviceIds()[0]
+      self.touchscreen_enabled = utils.IsXinputDeviceEnabled(
+          self.touchscreen_device_id)
+      utils.SetXinputDeviceEnabled(self.touchscreen_device_id, True)
     # Initialize frontend presentation
     self.ui = test_ui.UI()
     self.ui.AppendHTML(_HTML_TOUCHSCREEN)
@@ -78,8 +82,9 @@ class TouchscreenTest(unittest.TestCase):
 
   def tearDown(self):
     # Restore touchscreen enabled state.
-    utils.SetXinputDeviceEnabled(self.touchscreen_device_id,
-                                 self.touchscreen_enabled)
+    if self.touchscreen_device_id is not None:
+      utils.SetXinputDeviceEnabled(self.touchscreen_device_id,
+                                   self.touchscreen_enabled)
 
   def OnFailPressed(self):
     """Fails the test."""
