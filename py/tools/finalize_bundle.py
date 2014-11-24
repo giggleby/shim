@@ -263,9 +263,9 @@ class FinalizeBundle(object):
         self.manifest, ['board', 'bundle_name', 'add_files', 'delete_files',
                         'add_files_to_image', 'delete_files_from_image',
                         'site_tests', 'wipe_option', 'files', 'mini_omaha_url',
-                        'patch_image_args', 'use_factory_toolkit',
-                        'test_image_version', 'complete_script',
-                        'has_firmware'])
+                        'netboot_args', 'patch_image_args',
+                        'use_factory_toolkit', 'test_image_version',
+                        'complete_script', 'has_firmware'])
 
     self.build_board = build_board.BuildBoard(self.manifest['board'])
     self.board = self.build_board.full_name
@@ -761,14 +761,17 @@ class FinalizeBundle(object):
         update_firmware_vars = os.path.join(
             self.bundle_dir, 'factory_setup', 'update_firmware_vars.py')
         new_netboot_firmware_image = netboot_firmware_image + '.INPROGRESS'
-        Spawn([update_firmware_vars,
+        cmd = [update_firmware_vars,
                '--force',
                '-i', netboot_firmware_image,
                '-o', new_netboot_firmware_image,
                '--omahaserver=%s' % mini_omaha_url,
                '--tftpserverip=%s' %
-                 urlparse.urlparse(mini_omaha_url).hostname],
-              check_call=True, log=True)
+                 urlparse.urlparse(mini_omaha_url).hostname]
+        additional_args = self.manifest.get('netboot_args')
+        if additional_args:
+          cmd += ['--arg=%s' % additional_args]
+        Spawn(cmd, check_call=True, log=True)
         shutil.move(new_netboot_firmware_image, netboot_firmware_image)
 
     def UpdateDepthchargeNetboot():
@@ -784,14 +787,17 @@ class FinalizeBundle(object):
         update_firmware_settings = os.path.join(
             self.bundle_dir, 'factory_setup', 'update_firmware_settings.py')
         new_netboot_firmware_image = netboot_firmware_image + '.INPROGRESS'
-        Spawn([update_firmware_settings,
+        cmd = [update_firmware_settings,
                '--bootfile', target_bootfile,
                '--input', netboot_firmware_image,
                '--output', new_netboot_firmware_image,
                '--omahaserver=%s' % mini_omaha_url,
                '--tftpserverip=%s' %
-               urlparse.urlparse(mini_omaha_url).hostname],
-              check_call=True, log=True)
+               urlparse.urlparse(mini_omaha_url).hostname]
+        additional_args = self.manifest.get('netboot_args')
+        if additional_args:
+          cmd += ['--arg=%s' % additional_args]
+        Spawn(cmd, check_call=True, log=True)
         shutil.move(new_netboot_firmware_image, netboot_firmware_image)
 
         target_netboot_shim = os.path.join(self.bundle_dir, 'factory_shim',
