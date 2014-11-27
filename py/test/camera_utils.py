@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Camera utilities."""
+
+# TODO(jchuang): move to py/utils folder.
+
 from __future__ import print_function
 
 import abc
@@ -11,8 +15,14 @@ try:
 except ImportError:
   pass
 import glob
+import logging
 import os
 import re
+
+import factory_common  # pylint: disable=W0611
+from cros.factory.utils.file_utils import TryUnlink
+from cros.factory.utils.process_utils import Spawn
+
 
 # Paths of mock images.
 _MOCK_IMAGE_PATHS = ['fixture', 'camera', 'static']
@@ -22,9 +32,27 @@ _MOCK_IMAGE_VGA = 'mock_B.jpg'
 _MOCK_IMAGE_QR = 'mock_QR.jpg'
 
 
-class CameraDeviceError(Exception):
+class CameraError(Exception):
   """Camera device exception class."""
   pass
+
+
+def ReadImageFile(filename):
+  """Reads an image file.
+
+  Args:
+    filename: Image file name.
+
+  Returns:
+    An OpenCV image.
+
+  Raise:
+    CameraError on error.
+  """
+  img = cv2.imread(filename)
+  if img is None:
+    raise CameraError('Can not open image file %s' % filename)
+  return img
 
 
 class CameraDeviceBase(object):
@@ -36,7 +64,7 @@ class CameraDeviceBase(object):
     """Enables camera device.
 
     Raise:
-      CameraDeviceError on error.
+      CameraError on error.
     """
     raise NotImplementedError
 
@@ -45,7 +73,7 @@ class CameraDeviceBase(object):
     """Disabled camera device.
 
     Raise:
-      CameraDeviceError on error.
+      CameraError on error.
     """
     raise NotImplementedError
 
@@ -57,7 +85,7 @@ class CameraDeviceBase(object):
       An OpenCV image.
 
     Raise:
-      CameraDeviceError on error.
+      CameraError on error.
     """
     raise NotImplementedError
 
@@ -97,7 +125,7 @@ class CVCameraDevice(CameraDeviceBase):
 
     self._device = cv2.VideoCapture(device_index)
     if not self._device.isOpened():
-      raise CameraDeviceError('Unable to open video capture interface')
+      raise CameraError('Unable to open video capture interface')
     self._device.set(cv.CV_CAP_PROP_FRAME_WIDTH, self._resolution[0])
     self._device.set(cv.CV_CAP_PROP_FRAME_HEIGHT, self._resolution[1])
 
@@ -108,10 +136,10 @@ class CVCameraDevice(CameraDeviceBase):
 
   def ReadSingleFrame(self):
     if not self._device:
-      raise CameraDeviceError('Try to capture image with camera disabled')
+      raise CameraError('Try to capture image with camera disabled')
     ret, cv_img = self._device.read()
     if not ret or cv_img is None:
-      raise CameraDeviceError('Error on capturing. Camera disconnected?')
+      raise CameraError('Error on capturing. Camera disconnected?')
     return cv_img
 
   def IsEnabled(self):
@@ -128,9 +156,9 @@ class CVCameraDevice(CameraDeviceBase):
     uvc_vid_dirs = glob.glob(
         '/sys/bus/usb/drivers/uvcvideo/*/video4linux/video*')
     if not uvc_vid_dirs:
-      raise CameraDeviceError('No video capture interface found')
+      raise CameraError('No video capture interface found')
     if len(uvc_vid_dirs) > 1:
-      raise CameraDeviceError('Multiple video capture interface found')
+      raise CameraError('Multiple video capture interface found')
     return int(re.search(r'video([0-9]+)$', uvc_vid_dirs[0]).group(1))
 
 
@@ -164,10 +192,69 @@ class MockCameraDevice(CameraDeviceBase):
 
   def ReadSingleFrame(self):
     if not self._enabled:
-      raise CameraDeviceError('Try to capture image with camera disabled')
-    img = cv2.imread(self._image_path)
-    if img is None:
-      raise CameraDeviceError('Can not open mock image %s' % self._image_path)
+      raise CameraError('Try to capture image with camera disabled')
+    return ReadImageFile(self._image_path)
+
+  def IsEnabled(self):
+    return self._enabled
+
+
+class YavtaCameraDevice(CameraDeviceBase):
+  """Captures image with yavta and raw2bmp."""
+
+  _RAW_PATH = '/tmp/yavta_output.raw'
+  _BMP_PATH = '/tmp/yavta_output.bmp'
+
+  _BRIGHTNESS_SCALE = 2.0
+
+  def __init__(self, device_index, resolution, controls, postprocess):
+    """Constructor.
+
+    Args:
+      device_index: Index of video device.
+      resolution: (width, height) tuple of capture resolution.
+      controls: v4l2 controls.
+      postprocess: Whether to enhance image.
+          (Do not use this for LSC/AWB calibration)
+    """
+    super(YavtaCameraDevice, self).__init__()
+    self._device_index = device_index
+    self._resolution = resolution
+    self._controls = controls
+    self._postprocess = postprocess
+    self._enabled = False
+
+  def EnableCamera(self):
+    self._enabled = True
+
+  def DisableCamera(self):
+    self._enabled = False
+
+  def GetRawImage(self, filename):
+    command = ['yavta', '/dev/video%d' % self._device_index, '-c1', '-n1',
+               '-s%dx%d' % (self._resolution[0], self._resolution[1]),
+               '-fSRGGB10', '-F%s' % filename]
+    for ctl in self._controls:
+      command.extend(['-w', ctl])
+    logging.info(' '.join(command))
+    Spawn(command, check_call=True)
+
+  def ReadSingleFrame(self):
+    def unlink_temp_files():
+      TryUnlink(self._RAW_PATH)
+      TryUnlink(self._BMP_PATH)
+
+    unlink_temp_files()
+    self.GetRawImage(self._RAW_PATH)
+    command = ['raw2bmp', self._RAW_PATH, self._BMP_PATH,
+               str(self._resolution[0]), str(self._resolution[1]),
+               '16', '2']
+    logging.info(' '.join(command))
+    Spawn(command, check_call=True)
+    img = ReadImageFile(self._BMP_PATH)
+    if self._postprocess:
+      img = img * self._BRIGHTNESS_SCALE
+    unlink_temp_files()
     return img
 
   def IsEnabled(self):
