@@ -357,8 +357,8 @@ class AudioLoopTest(unittest.TestCase):
 
   def SinewavTest(self):
     self._ui.CallJSFunction('testInProgress', None)
-    # duration = self._current_test_args.get(
-    #     'duration', _DEFAULT_SINEWAV_TEST_DURATION)
+    duration = self._current_test_args.get(
+        'duration', _DEFAULT_SINEWAV_TEST_DURATION)
     # Record a sample of "silence" to use as a noise profile.
     noise_file = self.RecordFile(duration)
 
