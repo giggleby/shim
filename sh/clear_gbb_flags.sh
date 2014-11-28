@@ -19,7 +19,8 @@ TMPFILE="$(mktemp --tmpdir)"
 FIRMWARE_IMAGE="$([ -z "$1" ] || readlink -f "$1")"
 RETRIES=2
 FLASHROM_READ_PARAM="flashrom -p host"
-FLASHROM_WRITE_PARAM="flashrom -p host --fast-verify"
+# Not using "--fast-verify" due to crbug.com/428475
+FLASHROM_WRITE_PARAM="flashrom -p host"
 
 cleanup() {
   rm -f "$_STDERR" "$_STDOUT" "$TMPFILE"
