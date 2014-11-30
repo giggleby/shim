@@ -59,6 +59,9 @@ class InputDeviceDispatcher(asyncore.file_dispatcher):
     for event in self.recv():
       self.event_handler(event)
 
+  def writable(self):
+    return False
+
 class KeyboardTest(unittest.TestCase):
   """Tests if all the keys on a keyboard are functioning. The test checks for
   keydown and keyup events for each key, following certain order if required,
