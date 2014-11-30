@@ -39,7 +39,8 @@ _KEYBOARD_TEST_DEFAULT_CSS = (
     '#keyboard-test-timer { font-size: 2em; }\n'
     '.keyboard-test-key-untested { display: none; }\n'
     '.keyboard-test-keydown { background-color: yellow; opacity: 0.5; }\n'
-    '.keyboard-test-keyup { background-color: green; opacity: 0.5; }\n')
+    '.keyboard-test-keyup { background-color: green; opacity: 0.5; }\n'
+    '.keyboard-test-key-skip { background-color: gray; opacity: 0.5; }\n')
 
 _POWER_KEY_CODE = 116
 
@@ -79,6 +80,7 @@ class KeyboardTest(unittest.TestCase):
         'If presents, in filename, the board name is appended after layout. ',
         default=''),
     Arg('skip_power_key', bool, 'Skip power button testing', default=False),
+    Arg('skip_keycodes', list, 'Key codes to skip', default=[])
   ]
 
   def setUp(self):
@@ -99,8 +101,10 @@ class KeyboardTest(unittest.TestCase):
     if self.args.board:
       self.layout += '_%s' % self.args.board
     self.bindings = self.ReadBindings(self.layout)
+
+    keycodes_to_skip_strings = map(str, self.args.skip_keycodes)
     if self.args.skip_power_key:
-      self.bindings.pop(_POWER_KEY_CODE)
+      keycodes_to_skip_strings.append(str(_POWER_KEY_CODE))
 
     self.key_order_list = None
     if self.args.sequential_press:
@@ -110,8 +114,8 @@ class KeyboardTest(unittest.TestCase):
     # Initialize frontend presentation
     self.template.SetState(_HTML_KEYBOARD)
     self.ui.CallJSFunction('setUpKeyboardTest', self.layout, self.bindings,
-                           _ID_IMAGE, self.key_order_list,
-                           self.args.allow_multi_keys)
+                           keycodes_to_skip_strings, _ID_IMAGE,
+                           self.key_order_list, self.args.allow_multi_keys)
 
     self.dispatchers = []
     self.EnableXKeyboard(False)
