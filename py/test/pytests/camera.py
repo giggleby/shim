@@ -322,8 +322,8 @@ class CameraTest(unittest.TestCase):
         'QR code scanning in times per second.', default=5),
     Arg('QR_string', str, 'Encoded string in QR code.',
         default='Hello ChromeOS!'),
-    Arg('capture_fps', int, 'Camera capture rate in frames per second.',
-        default=30),
+    Arg('capture_fps', (int, float),
+        'Camera capture rate in frames per second.', default=30),
     Arg('timeout_secs', int, 'Timeout value for the test.', default=20),
     Arg('capture_resolution', tuple, 'A tuple (x-res, y-res) indicating the '
         'image capture resolution.', default=(1280, 720)),

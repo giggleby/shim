@@ -226,6 +226,10 @@ class YavtaCameraDevice(CameraDeviceBase):
 
   def EnableCamera(self):
     self._enabled = True
+    for ctl in self._controls:
+      command = ['yavta', '/dev/video%d' % self._device_index, '-w', ctl]
+      logging.info(' '.join(command))
+      Spawn(command, check_call=True)
 
   def DisableCamera(self):
     self._enabled = False
@@ -234,8 +238,6 @@ class YavtaCameraDevice(CameraDeviceBase):
     command = ['yavta', '/dev/video%d' % self._device_index, '-c1', '-n1',
                '-s%dx%d' % (self._resolution[0], self._resolution[1]),
                '-fSRGGB10', '-F%s' % filename]
-    for ctl in self._controls:
-      command.extend(['-w', ctl])
     logging.info(' '.join(command))
     Spawn(command, check_call=True)
 
