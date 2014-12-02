@@ -226,12 +226,14 @@ class AudioLoopTest(unittest.TestCase):
       self._audio_util.ApplyAudioConfig(action, card)
 
     self._current_test_args = None
+    self._get_result = False
 
     # Setup HTML UI, and event handler
     self._ui = test_ui.UI()
     self._ui.AddEventHandler('start_run_test', self.StartRunTest)
     self._ui_template = ui_templates.OneSection(self._ui)
     self._ui_template.SetState(_UI_HTML)
+    self._ui.AddEventHandler('mark_result', self.CheckHeadphoneOut)
 
     # Check cras status
     if self.args.cras_enabled:
@@ -347,8 +349,8 @@ class AudioLoopTest(unittest.TestCase):
       num_channels: Number of channels to test
     """
     for channel in xrange(num_channels):
-      reduced_file_path = "/tmp/reduced-%d-%s.wav" % (channel, time.time())
-      record_file_path = "/tmp/record-%d-%s.wav" % (channel, time.time())
+      # reduced_file_path = "/tmp/reduced-%d-%s.wav" % (channel, time.time())
+      # record_file_path = "/tmp/record-%d-%s.wav" % (channel, time.time())
 
       # Play thread has one more second to ensure record process can record
       # entire sine tone
@@ -359,30 +361,32 @@ class AudioLoopTest(unittest.TestCase):
       playsine_thread.start()
       time.sleep(0.5)
 
-      self.RecordFile(duration, file_path=record_file_path)
+      # self.RecordFile(duration, file_path=record_file_path)
 
       playsine_thread.join()
 
-      audio_utils.NoiseReduceFile(record_file_path, noise_file_name,
-          reduced_file_path)
+      # audio_utils.NoiseReduceFile(record_file_path, noise_file_name,
+      #     reduced_file_path)
 
-      sox_output_reduced = audio_utils.SoxStatOutput(reduced_file_path, channel)
-      self.CheckRecordedAudio(sox_output_reduced)
+      # sox_output_reduced = audio_utils.SoxStatOutput(reduced_file_path,
+      #                                                channel)
+      # self.CheckRecordedAudio(sox_output_reduced)
 
-      os.unlink(reduced_file_path)
-      os.unlink(record_file_path)
+      # os.unlink(reduced_file_path)
+      # os.unlink(record_file_path)
 
   def SinewavTest(self):
     self._ui.CallJSFunction('testInProgress', None)
     duration = self._current_test_args.get(
         'duration', _DEFAULT_SINEWAV_TEST_DURATION)
     # Record a sample of "silence" to use as a noise profile.
-    noise_file = self.RecordFile(duration)
+    # noise_file = self.RecordFile(duration)
 
     # Playback sine tone and check the recorded audio frequency.
-    self.TestLoopbackChannel(self._output_device, noise_file.name,
+    self.TestLoopbackChannel(self._output_device, None,
         audio_utils.DEFAULT_NUM_CHANNELS)
-    os.unlink(noise_file.name)
+    #os.unlink(noise_file.name)
+    self._ui.CallJSFunction('testEnd', None)
 
   def NoiseTest(self):
     self._ui.CallJSFunction('testInProgress', None)
@@ -466,6 +470,11 @@ class AudioLoopTest(unittest.TestCase):
     else:
       self._ui.Fail('; '.join(self._test_message))
 
+  def CheckHeadphoneOut(self, event): # pylint: disable=W0613
+    if event.data == 'fail':
+      self._test_result = False
+    self.EndTest()
+
   def StartRunTest(self, event): # pylint: disable=W0613
     jack_status = self._audio_util.GetAudioJackStatus()
     # When audio jack detection feature is ready on a platform, we can
@@ -508,11 +517,14 @@ class AudioLoopTest(unittest.TestCase):
       self._current_test_args = test
       if test['type'] == 'audiofun':
         self.AudioFunTest()
+        self._get_result = True
       elif test['type'] == 'sinewav':
         self.SinewavTest()
       elif test['type'] == 'noise':
         self.NoiseTest()
+        self._get_result = True
       else:
         raise ValueError('Test type "%s" not supported.' % test['type'])
 
-    self.EndTest()
+    if self._get_result:
+      self.EndTest()
