@@ -207,7 +207,7 @@ class YavtaCameraDevice(CameraDeviceBase):
 
   _BRIGHTNESS_SCALE = 2.0
 
-  def __init__(self, device_index, resolution, controls, postprocess):
+  def __init__(self, device_index, resolution, controls, postprocess, skip=0):
     """Constructor.
 
     Args:
@@ -222,6 +222,7 @@ class YavtaCameraDevice(CameraDeviceBase):
     self._resolution = resolution
     self._controls = controls
     self._postprocess = postprocess
+    self._skip = skip
     self._enabled = False
 
   def EnableCamera(self):
@@ -235,9 +236,9 @@ class YavtaCameraDevice(CameraDeviceBase):
     self._enabled = False
 
   def GetRawImage(self, filename):
-    command = ['yavta', '/dev/video%d' % self._device_index, '-c1', '-n1',
-               '-s%dx%d' % (self._resolution[0], self._resolution[1]),
-               '-fSRGGB10', '-F%s' % filename]
+    command = ['yavta', '/dev/video%d' % self._device_index,
+               '-c%d' % (self._skip + 1), '--skip', str(self._skip), '-n1',
+               '-s%dx%d' % self._resolution, '-fSRGGB10', '-F%s' % filename]
     logging.info(' '.join(command))
     Spawn(command, check_call=True)
 
