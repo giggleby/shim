@@ -736,7 +736,7 @@ class AudioQualityTest(unittest.TestCase):
     self.PrepareNetwork(None, _LABEL_WAITING_ETHERNET)
     factory.console.info('Start uploading logs...')
     self._ui.CallJSFunction('setMessage', _LABEL_UPLOAD_AUXLOG)
-    shopfloor.UploadAuxLogs(self._auxlogs)
+    shopfloor.UploadAuxLogs(self._auxlogs, dir_name='audio')
 
   def StartRun(self, event): #pylint: disable=W0613
     """Runs the testing flow after user press 'space'.
