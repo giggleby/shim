@@ -21,6 +21,7 @@ RE_I2C_RESULT = re.compile('Read from I2C port \d+ at \S+ offset \S+ = (0x\S+)')
 class EctoolI2CDevIdTest(unittest.TestCase):
 
   ARGS = [
+    Arg('name', str, 'EC chip name (e.g. cros_sh)', optional=True),
     Arg('bus', int, 'I2C bus to probe.'),
     Arg('spec', list,
         'A list of tuples containing address/registers and expected '
@@ -36,7 +37,11 @@ class EctoolI2CDevIdTest(unittest.TestCase):
   ]
 
   def CheckDevice(self, bus, addr, reg, expected_value):
-    cmd = 'ectool i2cread 8 %d %d %d' % (bus, addr, reg)
+    if self.args.name:
+      name_arg = '--name %s' % self.args.name
+    else:
+      name_arg = ''
+    cmd = 'ectool %s i2cread 8 %d %d %d' % (name_arg, bus, addr, reg)
     output = SpawnOutput(cmd.split(), log=True)
     match = RE_I2C_RESULT.search(output)
     if not match:
