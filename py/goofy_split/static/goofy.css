@@ -28,6 +28,11 @@ time, mark, audio, video {
   background: transparent;
 }
 
+body {
+  /* Override default cursor with something more visible */
+  cursor: url('images/arrow-cursor.png'), auto !important;
+}
+
 /* Language-specific labels.  Default to display: none, but set display: inline
    when the respective language class is present. */
 .goofy-label-en, .goofy-label-zh {
@@ -72,7 +77,7 @@ body {
   padding: 5px 0;
 }
 #goofy-control, #goofy-status-bar {
-  cursor: default;
+  /* cursor: default; */
   -webkit-user-select: none;
   user-select: none;
 }
@@ -543,7 +548,7 @@ table + .goofy-history-header {
 }
 #goofy-control .goog-tree-item-label {
   margin-left: 2px;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 #goofy-control .goog-tree-expand-icon {
   vertical-align: -1px;
