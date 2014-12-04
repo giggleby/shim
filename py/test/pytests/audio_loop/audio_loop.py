@@ -80,7 +80,8 @@ from cros.factory.test import audio_utils
 from cros.factory.test import factory
 from cros.factory.test import test_ui
 from cros.factory.test.utils import Enum
-from cros.factory.utils.process_utils import Spawn, SpawnOutput, PIPE
+from cros.factory.utils.process_utils import (Spawn, SpawnOutput, PIPE,
+  TerminateOrKillProcess)
 
 # Default setting
 _DEFAULT_FREQ_HZ = 1000
@@ -396,7 +397,9 @@ class AudioLoopTest(unittest.TestCase):
 
     rec_cmd = ['arecord', '-D', self._input_device, '-f', 'dat', '-d',
         str(duration)]
-    Spawn(rec_cmd + [recorded_file.name], check_call=True)
+    record_process = Spawn(rec_cmd + [recorded_file.name])
+    time.sleep(duration)
+    TerminateOrKillProcess(record_process)
 
     return recorded_file
 
