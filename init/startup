@@ -7,6 +7,9 @@ MYDIR="$(dirname "$(readlink -f "$0")")"
 FACTORY_BASE="/usr/local/factory"
 
 main() {
+  # Hack for Pre-DVT.
+  mount --bind "${MYDIR}/group" /etc/group
+
   # Install console (VT2) customizations
   mount --bind "${MYDIR}/profile.d/vt2.sh" /etc/profile.d/cursor.sh
 
