@@ -14,6 +14,14 @@ window.onkeydown = function(event) {
   }
 }
 
+function init(autostart) {
+  if (autostart) {
+    test.sendTestEvent("start_run",{});
+    document.getElementById('msg-utility').style.display = 'none';
+    start_run = true;
+  }
+}
+
 //window.onload = function(event) {
 //  test.sendTestEvent("start_run",{});
 //}

@@ -115,6 +115,7 @@ class AudioQualityTest(unittest.TestCase):
     Arg('fixture_param', list, 'Fixture parameters', _FIXTURE_PARAMETERS,
         optional=True),
     Arg('use_shopfloor', bool, 'Use shopfloor', True, optional=True),
+    Arg('autostart', bool, 'Auto start option', False),
   ]
 
   def setUp(self):
@@ -181,6 +182,7 @@ class AudioQualityTest(unittest.TestCase):
         'ACCEPT'], check_call=True)
 
   def runTest(self):
+    self._ui.CallJSFunction('init', self.args.autostart)
     self._ui.Run()
 
   def tearDown(self):
