@@ -28,7 +28,7 @@ class ChargeManagerTest(unittest.TestCase):
 
   def testCharge(self):
     self._charge_manager._power.CheckBatteryPresent().AndReturn(True)
-    self._charge_manager._power.CheckACPresent().AndReturn(True)
+    self._charge_manager._board.CheckACPresent().AndReturn(True)
     self._charge_manager._power.GetChargePct().AndReturn(65)
     self._charge_manager._board.SetChargeState(Board.ChargeState.CHARGE)
     self.mox.ReplayAll()
@@ -39,7 +39,7 @@ class ChargeManagerTest(unittest.TestCase):
 
   def testDischarge(self):
     self._charge_manager._power.CheckBatteryPresent().AndReturn(True)
-    self._charge_manager._power.CheckACPresent().AndReturn(True)
+    self._charge_manager._board.CheckACPresent().AndReturn(True)
     self._charge_manager._power.GetChargePct().AndReturn(85)
     self._charge_manager._board.SetChargeState(Board.ChargeState.DISCHARGE)
     self.mox.ReplayAll()
@@ -50,7 +50,7 @@ class ChargeManagerTest(unittest.TestCase):
 
   def testStopCharge(self):
     self._charge_manager._power.CheckBatteryPresent().AndReturn(True)
-    self._charge_manager._power.CheckACPresent().AndReturn(True)
+    self._charge_manager._board.CheckACPresent().AndReturn(True)
     self._charge_manager._power.GetChargePct().AndReturn(75)
     self._charge_manager._board.SetChargeState(Board.ChargeState.IDLE)
     self.mox.ReplayAll()
@@ -61,7 +61,7 @@ class ChargeManagerTest(unittest.TestCase):
 
   def testNoAC(self):
     self._charge_manager._power.CheckBatteryPresent().AndReturn(True)
-    self._charge_manager._power.CheckACPresent().AndReturn(False)
+    self._charge_manager._board.CheckACPresent().AndReturn(False)
     self.mox.ReplayAll()
 
     self._charge_manager.AdjustChargeState()

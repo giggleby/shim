@@ -73,7 +73,7 @@ class ChargeManager(object):
       if not self._power.CheckBatteryPresent():
         self._SetState(self.ErrorState.BATTERY_NOT_PRESENT)
         return
-      if not self._power.CheckACPresent():
+      if not self._board.CheckACPresent():
         self._SetState(self.ErrorState.AC_UNPLUGGED)
         return
 
