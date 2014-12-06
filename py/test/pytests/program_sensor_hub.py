@@ -30,6 +30,8 @@ class UpdateFirmwareTest(unittest.TestCase):
     Arg('i2c_adapter', int, 'I2C adapter number.', optional=False),
     Arg('firmware_path', str, 'Full path of sensor hub firmware.',
         optional=False),
+    Arg('reset_only', bool, 'Reset the sensor hub without programming it',
+        default=False),
   ]
 
   def _SensorHubHello(self):
@@ -93,23 +95,23 @@ class UpdateFirmwareTest(unittest.TestCase):
 
     While running updater, it shows updater activity on factory UI.
     """
-    self.EnableBootLoader()
-    p = Spawn(
-        ['stm32mon', '-a', str(self.args.i2c_adapter),
-         '-w', self.args.firmware_path],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, log=True)
-    for line in iter(p.stdout.readline, ''):
-      logging.info(line.strip())
-      self._template.SetState(Escape(line), append=True)
-
-    if p.poll() != 0:
-      self._ui.Fail('Firmware update failed: %d.' % p.returncode)
-    else:
-      self.DisableBootLoader()
-      self._template.SetState('Checking Sensor Hub...', append=True)
-      if not self._SensorHubHello():
-        self._ui.Fail('Failed to talk to sensor hub.')
-      self._ui.Pass()
+    if not self.args.reset_only:
+      self.EnableBootLoader()
+      p = Spawn(
+          ['stm32mon', '-a', str(self.args.i2c_adapter),
+           '-w', self.args.firmware_path],
+          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, log=True)
+      for line in iter(p.stdout.readline, ''):
+        logging.info(line.strip())
+        self._template.SetState(Escape(line), append=True)
+      if p.poll() != 0:
+        self._ui.Fail('Firmware update failed: %d.' % p.returncode)
+        return
+    self.DisableBootLoader()
+    self._template.SetState('Checking Sensor Hub...', append=True)
+    if not self._SensorHubHello():
+      self._ui.Fail('Failed to talk to sensor hub.')
+    self._ui.Pass()
 
   def runTest(self):
     threading.Thread(target=self.UpdateFirmware).start()
