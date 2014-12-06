@@ -62,7 +62,7 @@ class ChargerTest(unittest.TestCase):
 
   def CheckPower(self):
     self.assertTrue(self._power.CheckBatteryPresent(), 'Cannot find battery.')
-    self.assertTrue(self._power.CheckACPresent(), 'Cannot find AC power.')
+    self.assertTrue(self._board.CheckACPresent(), 'Cannot find AC power.')
 
   def Charge(self):
     start_charge = self._power.GetChargePct()

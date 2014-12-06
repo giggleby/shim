@@ -138,7 +138,7 @@ class ChargerTest(unittest.TestCase):
   def _CheckPower(self):
     """Checks battery and AC power adapter are present."""
     self.assertTrue(self._power.CheckBatteryPresent(), 'Cannot find battery.')
-    self.assertTrue(self._power.CheckACPresent(), 'Cannot find AC power.')
+    self.assertTrue(self._board.CheckACPresent(), 'Cannot find AC power.')
     if self.args.charger_type:
       self.assertEqual(self._power.GetACType(), self.args.charger_type,
                        'Incorrect charger type: %s' % self._power.GetACType())
