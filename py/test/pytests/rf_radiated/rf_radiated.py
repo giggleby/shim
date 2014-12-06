@@ -103,9 +103,12 @@ class RFRadiatedTest(unittest.TestCase):
         'dut': {
             'antenna_model': None,
             'device_id': event_log.GetDeviceId(),
-            'mac_address': net_utils.GetWLANMACAddress(),
-            'serial_number': system_info.serial_number,
-            'mlb_serial_number': system_info.mlb_serial_number},
+            # TODO(littlecvr): Find a way to get MAC address in MFG mode.
+            'mac_address': '',
+            'serial_number': shopfloor.GetDeviceData().get(
+                'serial_number', None),
+            'mlb_serial_number': shopfloor.GetDeviceData().get(
+                'mlb_serial_number', None)},
         'test': {
             'start_time': None,
             'end_time': None,
@@ -144,7 +147,7 @@ class RFRadiatedTest(unittest.TestCase):
       # Enter manufacturing mode.
       logging.info('Entering manufacturing mode.')
       self.chip_controller = self._CreateChipController(
-          self.config['chip_controller_config'])
+          self.config.get('chip_controller_config', None))
       self.chip_controller.EnterMFGMode()
 
       # Set up power meter.
@@ -242,7 +245,7 @@ class RFRadiatedTest(unittest.TestCase):
 
     # Start transmitting power.
     self.chip_controller.SetParameters(test_profile)
-    self.chip_controller.StartTransmitting()
+    self.chip_controller.StartTransmitting(test_profile)
     # The chip may not respond to the command immediately, so delay before
     # measuring if necessary.
     if self.config['power_meter_config']['msecs_delay_before_measuring'] > 0:
@@ -256,7 +259,7 @@ class RFRadiatedTest(unittest.TestCase):
     factory.console.info('Got power %f.', power)
     self.log['test']['results'][test_profile['name']] = power
     # Stop transmitting power.
-    self.chip_controller.StopTransmitting()
+    self.chip_controller.StopTransmitting(test_profile)
 
     # Check if power meets the thresholds.
     threshold_min, threshold_max = test_profile['test_power_thresholds']
