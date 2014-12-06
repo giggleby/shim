@@ -95,7 +95,6 @@ class RFRadiatedTest(unittest.TestCase):
 
     # Initialize the log dict, which will later be fed into event log and
     # stored as an aux_log on shopfloor.
-    system_info = system.SystemInfo()
     self.log = {
         'config': {
             'file_path': None,
