@@ -7,14 +7,11 @@
 '''Resets the test list by invoking factory_restart -a
 '''
 
-import logging
-import os
 import time
 import unittest
 
 import factory_common  # pylint: disable=W0611
 
-from cros.factory.test import factory
 from cros.factory.test.args import Arg
 from cros.factory.utils.process_utils import Spawn
 
@@ -33,7 +30,7 @@ class ResetTest(unittest.TestCase):
     # This is expected to kill us. Give it a chance to, and then
     # fail if we're still alive.
     time.sleep(10)
-    self.Fail('Test was expected to reset')
+    self.fail('Test was expected to reset')
 
   def tearDown(self):
     pass
