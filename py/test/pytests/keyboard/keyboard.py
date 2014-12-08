@@ -176,9 +176,11 @@ class KeyboardTest(unittest.TestCase):
 
   def EnableXKeyboard(self, enable):
     """Enables/Disables keyboard at the X server."""
-    CheckOutput(['xinput', 'set-prop', self.args.keyboard_device_name,
-                 'Device Enabled', '1' if enable else '0'],
-                env=self.env)
+    device = self.args.keyboard_device_name
+    if device:
+      CheckOutput(['xinput', 'set-prop', device,
+                   'Device Enabled', '1' if enable else '0'],
+                  env=self.env)
 
   def MonitorEvdevEvent(self):
     """Monitors keyboard events from evdev."""
