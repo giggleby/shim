@@ -723,10 +723,14 @@ class RemovableStorageTest(unittest.TestCase):
     # Start to monitor udev events.
     context = pyudev.Context()
     if self.args.skip_insert_remove:
-      device_node = self.GetDeviceNodeBySysPath(self.args.sysfs_path)
-      if device_node is None:
-        self.Fail('Can not corresponding device node of %s'
-                  % self.args.sysfs_path)
+      device_node = None
+      # Poll sysfs_path is present
+      detect_start_time = time.time()
+      while not device_node:
+        device_node = self.GetDeviceNodeBySysPath(self.args.sysfs_path)
+        if (time.time() - detect_start_time > self.args.timeout_secs):
+          self.fail('Fail to find path: %s' % self.args.sysfs_path)
+        time.sleep(1)
       device_udev = pyudev.Device.from_name(context, 'block', device_node)
       self.HandleUdevEvent(_UDEV_ACTION_INSERT, device_udev)
       self.HandleUdevEvent(_UDEV_ACTION_REMOVE, device_udev)
