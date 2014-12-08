@@ -65,6 +65,7 @@ looks like this::
 
 from __future__ import print_function
 
+import dbus
 import json
 import logging
 import os
@@ -74,7 +75,6 @@ import unittest
 
 import factory_common  # pylint: disable=W0611
 from cros.factory import event_log
-from cros.factory import system
 from cros.factory.goofy import service_manager
 from cros.factory.test import factory, leds
 from cros.factory.test import shopfloor
@@ -88,9 +88,37 @@ import cros.factory.test.autotest_common
 from autotest_lib.client.cros.networking import wifi_proxy
 # pylint: enable=W0611, F0401
 
+try:
+  sys.path.append('/usr/local/lib/flimflam/test')
+  import flimflam  # pylint: disable=F0401
+except:  # pylint: disable=W0702
+  pass
+
 
 _SERVICE_LIST = ['shill', 'shill_respawn', 'wpasupplicant', 'modemmanager']
 _DEFAULT_TIMEOUT_SECS = 10
+
+
+def FlimGetService(flim, name):
+  timeout = time.time() + 10
+  while time.time() < timeout:
+    service = flim.FindElementByPropertySubstring('Service', 'Name', name)
+    if service:
+      return service
+    time.sleep(0.5)
+
+
+def FlimConfigureService(flim, name, password):
+  wlan_dict = {
+      'Type': 'wifi',
+      'Mode': 'managed',
+      'AutoConnect': False,
+      'SSID': name}
+  if password:
+    wlan_dict['Security'] = 'psk'
+    wlan_dict['Passphrase'] = password
+
+  flim.manager.ConfigureService(wlan_dict)
 
 
 def _BitsToMbits(x):
@@ -320,6 +348,7 @@ class _ServiceTest(object):
     self._wifi = wifi
     self._iperf3 = iperf3
     self._bind_wifi = bind_wifi
+    self._flim = flimflam.FlimFlam(dbus.SystemBus())
 
   def _Log(self, text, *args):
     f_name = sys._getframe(1).f_code.co_name  # pylint: disable=W0212
@@ -463,14 +492,19 @@ class _ServiceTest(object):
 
     # Try connecting.
     logging.info('Connecting to %s...', ssid)
-    security_dict = {
-        self._wifi.SERVICE_PROPERTY_PASSPHRASE: password}
-    (success, _, _, _, reason) = self._wifi.connect_to_wifi_network(
-        ssid=ssid,
-        security=('psk' if password else 'none'),
-        security_parameters=(security_dict if password else {}),
-        save_credentials=False,
-        autoconnect=False)
+    # HACK: Temporarily revert back to old Flim library for connection.
+    # TODO(kitching): Look into why old library is causing trouble.
+    service = FlimGetService(self._flim, ssid)
+    FlimConfigureService(self._flim, ssid, password)
+    success, reason = self._flim.ConnectService(service=service)
+    #security_dict = {
+    #    self._wifi.SERVICE_PROPERTY_PASSPHRASE: password}
+    #(success, _, _, _, reason) = self._wifi.connect_to_wifi_network(
+    #    ssid=ssid,
+    #    security=('psk' if password else 'none'),
+    #    security_parameters=(security_dict if password else {}),
+    #    save_credentials=False,
+    #    autoconnect=False)
     if not success:
       raise self._TestException('Unable to connect to %s: %s' % (ssid, reason))
     else:
