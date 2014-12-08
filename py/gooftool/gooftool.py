@@ -676,7 +676,7 @@ def Verify(options):
   VerifyKeys(options)
   VerifyRootFs(options)
   VerifyTPM(options)
-  VerifyBranding(options)
+  #VerifyBranding(options)
 
 @Command('untar_stateful_files')
 def UntarStatefulFiles(unused_options):
