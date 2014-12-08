@@ -42,7 +42,7 @@ _KEYBOARD_TEST_DEFAULT_CSS = (
     '.keyboard-test-keydown { background-color: yellow; opacity: 0.5; }\n'
     '.keyboard-test-keyup { background-color: green; opacity: 0.5; }\n')
 
-_POWER_KEY_CODE = 116
+_POWER_KEY_CODE = '116'
 
 
 class KeyboardTest(unittest.TestCase):
@@ -84,7 +84,7 @@ class KeyboardTest(unittest.TestCase):
     self.layout = self.GetKeyboardLayout()
     if self.args.board:
       self.layout += '_%s' % self.args.board
-    self.bindings = self.ReadBindings(self.layout)
+    self.bindings, self.key_pressed_count = self.ReadBindings(self.layout)
     if self.args.skip_power_key:
       self.bindings.pop(_POWER_KEY_CODE)
 
@@ -131,16 +131,24 @@ class KeyboardTest(unittest.TestCase):
   def ReadBindings(self, layout):
     """Reads in key bindings and their associates figure regions."""
     bindings = None
+    key_pressed_count = {}
     base = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), 'static')
     bindings_filename = os.path.join(base, layout + '.bindings')
     with open(bindings_filename, 'r') as f:
       bindings = eval(f.read())
+    # Convert all integer keys to strings since we can have keycodes like '57_1'
+    # in bindings dict.
+    for k in bindings.keys():
+      if isinstance(k, int):
+        bindings[str(k)] = bindings[k]
+        del bindings[k]
     for k in bindings:
       # Convert single tuple to list of tuples
       if not isinstance(bindings[k], list):
         bindings[k] = [bindings[k],]
-    return bindings
+      key_pressed_count[k] = 0
+    return bindings, key_pressed_count
 
   def ReadKeyOrder(self, layout):
     """Reads in key order that must be followed when press key."""
@@ -167,32 +175,53 @@ class KeyboardTest(unittest.TestCase):
       elif event.value == 0:
         self.MarkKeyup(event.code)
 
+  def _IsKeycodeInBindings(self, keycode):
+    """Checks if the keycode is in the bindings dict.
+
+    The keycode in bindings dict can be either <keycode> or
+    <keycode>_<sequence_number>.
+    """
+    return any(re.search(r'%s_?' % keycode, b) for b in self.bindings)
+
   def MarkKeydown(self, keycode):
     """Calls Javascript to mark the given keycode as keydown."""
-    if not keycode in self.bindings:
+    if not self._IsKeycodeInBindings(keycode):
       return True
+    key_pressed_count = self.key_pressed_count[str(keycode)]
+    keycode_sequence = (
+        '%s_%s' % (keycode, key_pressed_count)
+        if key_pressed_count else keycode)
+
     # Fails the test if got two key pressed at the same time.
     if not self.args.allow_multi_keys and len(self.key_down):
       factory.console.error(
           'Got key down event on keycode %r but there is other key pressed: %r',
-          keycode, self.key_down)
+          keycode_sequence, self.key_down)
       self.ui.CallJSFunction('failTest')
-    self.ui.CallJSFunction('markKeydown', keycode)
-    self.key_down.add(keycode)
-    logging.info('Mark key down %d', keycode)
+    self.ui.CallJSFunction('markKeydown', keycode_sequence)
+    self.key_down.add(keycode_sequence)
+    logging.info('Mark key down %s', keycode_sequence)
 
   def MarkKeyup(self, keycode):
     """Calls Javascript to mark the given keycode as keyup."""
-    if not keycode in self.bindings:
+    if not self._IsKeycodeInBindings(keycode):
       return True
-    if keycode not in self.key_down:
+    key_pressed_count = self.key_pressed_count[str(keycode)]
+    keycode_sequence = (
+        '%s_%s' % (keycode, key_pressed_count)
+        if key_pressed_count else keycode)
+
+    if keycode_sequence not in self.key_down:
       factory.console.error(
           'Got key up event for keycode %r but did not get key down event',
-          keycode)
+          keycode_sequence)
       self.ui.CallJSFunction('failTest')
     else:
-      self.key_down.remove(keycode)
-    self.ui.CallJSFunction('markKeyup', keycode)
+      self.key_down.remove(keycode_sequence)
+
+    self.key_pressed_count[str(keycode)] += 1
+    self.ui.CallJSFunction('markKeyup', keycode_sequence)
+    logging.info('Mark key up %s', keycode_sequence)
 
   def runTest(self):
     self.ui.Run()
