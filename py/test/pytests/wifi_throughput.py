@@ -97,6 +97,9 @@ except:  # pylint: disable=W0702
 
 _SERVICE_LIST = ['shill', 'shill_respawn', 'wpasupplicant', 'modemmanager']
 _DEFAULT_TIMEOUT_SECS = 10
+# HACK: Intel firmware errors.
+_MESSAGES_LOG_PATH = '/var/log/messages'
+_FIRMWARE_ERROR_STR = 'Microcode SW error detected.'
 
 
 def FlimGetService(flim, name):
@@ -672,9 +675,28 @@ class WiFiThroughput(unittest.TestCase):
   def __init__(self, *args, **kwargs):
     super(WiFiThroughput, self).__init__(*args, **kwargs)
     self._leds_blinker = None
+    # HACK: Intel firmware errors: Save the current position in the messages
+    # log, in order to look for errors during test run.
+    wc_output = process_utils.SpawnOutput(
+        'cat "%s" | wc -l' % _MESSAGES_LOG_PATH, shell=True)
+    self._log_start_line = int(wc_output.strip()) + 1
 
   def _Log(self):
-    event_log.Log(self.args.event_log_name, **self.log)
+    # HACK: Intel firmware errors: Save relevent error lines and sections from
+    # the messages log, which will be pushed to event_log.
+    all_errors = process_utils.SpawnOutput('grep "%s" "%s"' % (
+        _FIRMWARE_ERROR_STR, _MESSAGES_LOG_PATH), shell=True)
+    test_errors = process_utils.SpawnOutput('tail -n +%s "%s" | grep "%s"' % (
+        self._log_start_line, _MESSAGES_LOG_PATH, _FIRMWARE_ERROR_STR),
+        shell=True)
+    log_during_test = process_utils.SpawnOutput('tail -n +%s "%s"' % (
+        self._log_start_line, _MESSAGES_LOG_PATH), shell=True)
+
+    event_log.Log(self.args.event_log_name,
+                  intel_firmware_all_errors=all_errors,
+                  intel_firmware_test_errors=test_errors,
+                  intel_firmware_log_since_start=log_during_test,
+                  **self.log)
 
   def _StartOperatorFeedback(self):
     # In case we're in a chamber without a monitor, start blinking keyboard LEDs
