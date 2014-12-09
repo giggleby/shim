@@ -895,6 +895,9 @@ class GoofyRPC(object):
     self._InRunQueue(self.goofy.log_startup_messages,
                      timeout_secs=timeout_secs)
 
+  def HasKcrash(self):
+    return self.goofy._found_kcrash
+
   def Shutdown(self, operation):
     """Starts a shutdown operation through Goofy.
 

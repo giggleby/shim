@@ -6,6 +6,7 @@
 
 """Shutdown factory test."""
 
+import glob
 import logging
 import os
 import time
@@ -42,6 +43,14 @@ _TEST_TITLE = lambda operation: test_ui.MakeLabel(
     u'关机测试 (%s)' % _DICT_OPERATION.get(operation, operation))
 _CSS = 'body { font-size: 2em; }'
 
+TEMP_PATH = [
+    '/sys/class/hwmon/hwmon0/*_input',
+    '/sys/class/hwmon/hwmon1/*_input',
+    '/sys/class/thermal/thermal_zone*/temp',
+]
+GREP_TEMPER_PATH = '/sys/kernel/debug/tegra_soctherm/regs'
+FREQ_PATH = '/sys/*/*/cpu/cpu0/cpufreq/cpuinfo_cur_freq'
+
 
 class ShutdownError(Exception):
   """Shutdown operation error."""
@@ -75,6 +84,8 @@ class ShutdownTest(unittest.TestCase):
       Arg('wait_shutdown_secs', int,
           'Number of seconds to wait for system shutdown.', default=60),
       Arg('check_tag_file', bool, 'Checks shutdown failure tag file',
+          default=False),
+      Arg('fail_only_kcrash', bool, 'Fails only on kcrash',
           default=False)
   ]
 
@@ -88,6 +99,36 @@ class ShutdownTest(unittest.TestCase):
     self.goofy = factory.get_state_instance()
     self.test = self.test_info.ReadTestList().lookup_path(self.test_info.path)
     self.test_state = self.goofy.get_test_state(self.test_info.path)
+
+  def LogTemperature(self):
+    try:
+      to_log = sum([glob.glob(p) for p in TEMP_PATH], [])
+    except IndexError: # wtf
+      to_log = []
+    for p in to_log:
+      try:
+        with open(p, 'r') as f:
+          factory.console.info('%s: %s', p, f.read().strip())
+      except IOError:
+        factory.console.info('%s: <IOError>', p)
+
+    with open(GREP_TEMPER_PATH, 'r') as f:
+      lines = f.readlines()
+    for line in lines:
+      if line.startswith('Temper'):
+        factory.console.info('%s: %s', GREP_TEMPER_PATH, line.strip())
+
+  def LogFrequency(self):
+    try:
+      to_log = glob.glob(FREQ_PATH)
+    except IndexError: # wtf
+      to_log = []
+    for p in to_log:
+      try:
+        with open(p, 'r') as f:
+          factory.console.info('%s: %s', p, f.read().strip())
+      except IOError:
+        factory.console.info('%s: <IOError>', p)
 
   def PromptCancelShutdown(self, iteration):
     """Shows prompt on Goofy UI for user to cancel shutdown.
@@ -179,11 +220,21 @@ class ShutdownTest(unittest.TestCase):
       if status == TestState.FAILED:
         raise ShutdownError(error_msg)
 
+    self.LogTemperature()
+    self.LogFrequency()
     last_shutdown_time = self.goofy.GetLastShutdownTime()
     if not last_shutdown_time:
+      if self.args.fail_only_kcrash:
+        factory.console.warning('Unable to read shutdown_time; ignoring.')
+        # Make sure the elapsed time check passed.
+        last_shutdown_time = time.time() - 1
+      else:
+        LogAndEndTest(status=TestState.FAILED,
+                      error_msg=('Unable to read shutdown_time; '
+                                 'unexpected shutdown during reboot?'))
+    if self.args.fail_only_kcrash and self.goofy.HasKcrash():
       LogAndEndTest(status=TestState.FAILED,
-                    error_msg=('Unable to read shutdown_time; '
-                               'unexpected shutdown during reboot?'))
+                    error_msg=('Found kcrash. Failed.'))
 
     now = time.time()
     logging.info('%.03f s passed since reboot', now - last_shutdown_time)

@@ -168,6 +168,7 @@ class Goofy(GoofyBase):
     self.chrome = None
     self.hooks = None
     self.cpu_usage_watcher = None
+    self._found_kcrash = None
 
     self.options = None
     self.args = None
@@ -1119,6 +1120,7 @@ class Goofy(GoofyBase):
 
   def find_kcrashes(self):
     """Finds kcrash files, logs them, and marks them as seen."""
+    has_crash = False
     seen_crashes = set(
         self.state_instance.get_shared_data('seen_crashes', optional=True)
         or [])
@@ -1135,6 +1137,7 @@ class Goofy(GoofyBase):
             'Found new crash file %s (%d bytes at %s)',
             path, stat.st_size, mtime)
         extra_log_args = {}
+        has_crash = True
 
         try:
           _, ext = os.path.splitext(path)
@@ -1168,6 +1171,7 @@ class Goofy(GoofyBase):
       seen_crashes.add(path)
 
     self.state_instance.set_shared_data('seen_crashes', list(seen_crashes))
+    return has_crash
 
   def GetTestList(self, test_list_id):
     """Returns the test list with the given ID.
@@ -1468,7 +1472,7 @@ class Goofy(GoofyBase):
     # Startup hooks may want to skip some tests.
     self.update_skipped_tests()
 
-    self.find_kcrashes()
+    self._found_kcrash = self.find_kcrashes()
 
     # Should not move earlier.
     self.hooks.OnStartup()
