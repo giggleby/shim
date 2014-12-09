@@ -176,8 +176,8 @@ TouchscreenTest.prototype.xyToIndex = function(x, y) {
  * @returns {number} Block ID.
  */
 TouchscreenTest.prototype.getBlockIndex = function(touch) {
-  var col = Math.floor(touch.screenX / screen.width * this.numColumns);
-  var row = Math.floor(touch.screenY / screen.height * this.numRows);
+  var col = Math.floor(touch.screenX * 1.6 / screen.width * this.numColumns);
+  var row = Math.floor(touch.screenY * 1.6 / screen.height * this.numRows);
   return this.xyToIndex(col, row);
 };
 
