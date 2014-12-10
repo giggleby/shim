@@ -300,3 +300,14 @@ class Board(object):
         'state': <state>
     """
     raise NotImplementedError
+
+  def GetPDGPIOValue(self, gpio_name):
+    """Gets PD GPIO value.
+
+    Args:
+      gpio_name: GPIO name.
+
+    Returns:
+      Return 1 if GPIO is high; otherwise 0.
+    """
+    raise NotImplementedError
