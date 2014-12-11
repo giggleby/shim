@@ -161,7 +161,10 @@ class ScanDevicesTask(FactoryTask):
     self._test = test
     self._keyword = test.args.keyword
     self._average_rssi_threshold = test.args.average_rssi_threshold
-    self._scanned_addresses_validator = test.args.scanned_addresses_validator
+    if test.args.scan_mac_only:
+      self._mac_to_scan = test.GetInputDeviceMac()
+    else:
+      self._mac_to_scan = None
     self._scan_counts = 1
     if self._average_rssi_threshold is not None:
       self._scan_counts = test.args.scan_counts
@@ -234,6 +237,16 @@ class ScanDevicesTask(FactoryTask):
     # Records RSSI of each scan and calculates average rssi.
     candidate_rssis = dict()
 
+    # Helper to check if the target MAC has been scanned.
+    # We are forgiving about colons.
+    def has_scanned_target_mac():
+      if self._mac_to_scan:
+        for key in candidate_rssis:
+          key_no_colons = ''.join(key.split(':'))
+          if self._mac_to_scan[-6:] == key_no_colons[-6:]:
+            return True
+      return False
+
     for _ in xrange(self._scan_counts):
       self._test.template.SetState(_MSG_SCAN_DEVICE)
       self.SetAndStartScanProgressBar(self._timeout_secs)
@@ -249,6 +262,11 @@ class ScanDevicesTask(FactoryTask):
           logging.exception('Name or RSSI is not available in %s', mac)
 
       self.UpdateRssi(candidate_rssis, self.FilterByKeyword(devices))
+      # Optimization: if we are only interested in one particular address,
+      # then we can early-out as soon as we find it
+      if self._average_rssi_threshold is None and has_scanned_target_mac():
+        logging.info("Address found, ending scan early")
+        break
 
     logging.info('Found %d candidate device(s) in %s scans.',
                  len(candidate_rssis), self._scan_counts)
@@ -280,13 +298,11 @@ class ScanDevicesTask(FactoryTask):
 
     self._test.SetStrongestRssiMac(max_average_rssi_mac)
 
-    # Validate using the scanned address validator, if we have one
-    if self._scanned_addresses_validator:
-      scanned_addresses = candidate_rssis.keys()
-      error_or_none = self._scanned_addresses_validator(scanned_addresses)
-      if error_or_none:
-        self.Fail(error_or_none)
-        return
+    if self._mac_to_scan and not has_scanned_target_mac():
+      found_addresses = [str(k) for k in candidate_rssis]
+      self.Fail('Failed to find MAC address %s.'
+               'Scanned addresses: %s' % (self._mac_to_scan, found_addresses))
+      return
 
     if self._average_rssi_threshold is None:
       # Test is uninterested in RSSI thresholds
@@ -541,13 +557,12 @@ class BluetoothTest(unittest.TestCase):
     Arg('scan_counts', int, 'Number of scans to calculate average RSSI',
         default=3),
     Arg('scan_timeout_secs', int, 'Timeout to do one scan', default=5),
-    Arg('input_device_mac', (str, type(lambda:None)), 'The mac address of '
-      'bluetooth input device, or a function returning an address',
+    Arg('input_device_mac', str, 'The mac address of bluetooth input device',
       default=None, optional=True),
-    Arg('scanned_addresses_validator', type(lambda s:None), 'A function of type'
-      ' [string] -> object that is passed the scanned addresses and returns'
-      ' None on success, or an error message to fail the test',
-      default=None, optional=True),
+    Arg('input_device_mac_key', str, 'A key for factory shared data containing'
+      ' the mac address', default=None, optional=True),
+    Arg('scan_mac_only', bool, 'If true, do not attempt to pair with '
+      'input_device_mac', default=None, optional=True),
     Arg('pair_with_match', bool, 'Whether to pair with the strongest match.',
         default=False, optional=True),
     Arg('finish_after_pair', bool, 'Whether the test should end immediately '
@@ -575,8 +590,9 @@ class BluetoothTest(unittest.TestCase):
     self.template.SetTitle(_TEST_TITLE)
     self._task_list = []
     self._strongest_rssi_mac = None
-    if callable(self.args.input_device_mac):
-      self._input_device_mac = self.args.input_device_mac()
+    if self.args.input_device_mac_key:
+      self._input_device_mac = \
+        factory.get_shared_data(self.args.input_device_mac_key)
     else:
       self._input_device_mac = self.args.input_device_mac
 
@@ -592,8 +608,9 @@ class BluetoothTest(unittest.TestCase):
 
     if self.args.unpair:
       self._task_list.append(
-        UnpairTask(self, self.args.input_device_mac, self.args.keyword))
-    elif self._input_device_mac or self.args.pair_with_match:
+        UnpairTask(self, self._input_device_mac, self.args.keyword))
+    elif not self.args.scan_mac_only and \
+        (self._input_device_mac or self.args.pair_with_match):
       # If the MAC address was found via a scan, then of course it's already on
       if not self.args.pair_with_match:
         self._task_list.append(TurnOnTask(self, _MSG_TURN_ON_INPUT_DEVICE))
