@@ -1232,7 +1232,7 @@ class Goofy(object):
                       help=('do not automatically run the test list on goofy '
                             'start; this is only valid when factory test '
                             'automation is enabled'))
-    parser.add_option('--standalone', dest='standalone',
+    parser.add_option('--standalone', dest='standalone', action='store_true',
                       help='(This option is for goofy_split only)')
     (self.options, self.args) = parser.parse_args(args)
 
