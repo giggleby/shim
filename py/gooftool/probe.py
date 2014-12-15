@@ -286,6 +286,13 @@ class _FlimflamDevices(object):
     # Filter out 'None' results
     return sorted(device for device in ids if device is not None)
 
+  @classmethod
+  def ReadSysfsUsbDeviceIds(cls, devtype):
+    """Return _ReadSysfsUsbFields result for each device of specified type."""
+    ids = [_ReadSysfsUsbFields(dev.path) for dev in cls.GetDevices(devtype)]
+    # Filter out 'None' results
+    return sorted(device for device in ids if device is not None)
+
 class _GobiDevices(object):
   """Wrapper around Gobi specific utility information."""
   # TODO(bhthompson): This will need to be rewritten when gobi-fw is
@@ -822,7 +829,27 @@ def _ProbePowerMgmtChip():
 def _ProbeEthernet():
   # Build-in ethernet devices should not be attached to USB. They are usually
   # either PCI or SOC.
-  return _FlimflamDevices.ReadSysfsDeviceIds('ethernet', ignore_usb=True)
+
+  # There is a onboard usb-ethernet device for some projects. However, other
+  # projects still use external usb-ethernet device to connect to shopfloor
+  # in factory. Here we just probe some specific onboard usb-ethernet devices
+  # and ignore other usb-ethernet devices. See http://crosbug.com/p/33538
+  # for more details.
+  non_usb_devices = (
+      _FlimflamDevices.ReadSysfsDeviceIds('ethernet', ignore_usb=True))
+  usb_devices = _FlimflamDevices.ReadSysfsUsbDeviceIds('ethernet')
+
+  supported_devices = [{'idProduct': '8152', 'idVendor': '0bda'}]
+
+  returned_devices = non_usb_devices
+  for usb_device in usb_devices:
+    for supported_device in supported_devices:
+      if all(
+          field in usb_device.items() for field in supported_device.items()):
+        returned_devices.append(usb_device)
+        break
+
+  return returned_devices
 
 
 @_ComponentProbe('flash_chip')
