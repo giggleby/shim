@@ -44,7 +44,7 @@ class ChromeOSBoard(Board):
       r'State:(?P<state>\d+)')
 
   # GPIO info.
-  GPIO_INFO_RE = re.compile(r'^GPIO %s = (\d)' % gpio_name)
+  GPIO_INFO_RE = lambda g: re.compile(r'^GPIO %s = (\d)' % g)
 
   # EC tool arguments for accessing PD. Subclass may override this to match the
   # arguments used on the actual board.
@@ -282,7 +282,7 @@ class ChromeOSBoard(Board):
 
   def GetPDGPIOValue(self, gpio_name):
     response = self._CallECTool(self.ECTOOL_PD_ARGS + ['gpioget', gpio_name])
-    gpio_value = GPIO_INFO_RE.findall(response)
+    gpio_value = self.GPIO_INFO_RE(gpio_name).findall(response)
     if gpio_value:
       return int(gpio_value[0])
     else:
