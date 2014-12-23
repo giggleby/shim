@@ -65,7 +65,9 @@ class EthernetTest(unittest.TestCase):
         optional=True),
     Arg('retry_interval_msecs', int,
         'Milliseconds before next retry.',
-        default=1000),
+        default=1500),
+    Arg('ignore_usb', bool, 'Ignore USB-interface option.',
+        True),
   ]
 
   def setUp(self):
@@ -87,10 +89,18 @@ class EthernetTest(unittest.TestCase):
       return None
     else:
       for dev in devices:
-        if 'usb' not in os.path.realpath('/sys/class/net/%s' % dev):
-          factory.console.info('Built-in ethernet device %s found.', dev)
-          Spawn(['ifconfig', dev, 'up'], check_call=True, log=True)
-          return dev
+        if not self.args.ignore_usb:
+          if len(devices) >= 2:
+            self.ui.Fail('There are multiple Ethernet devices on board. Remove external one.')
+          else:
+            factory.console.info('Built-in ethernet device %s found.', dev)
+            Spawn(['ifconfig', dev, 'up'], check_call=True, log=True)
+            return dev
+        else:
+          if 'usb' not in os.path.realpath('/sys/class/net/%s' % dev):
+            factory.console.info('Built-in ethernet device %s found.', dev)
+            Spawn(['ifconfig', dev, 'up'], check_call=True, log=True)
+            return dev
     return None
 
   def GetFile(self):
