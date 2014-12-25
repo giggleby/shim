@@ -2,17 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-window.onkeydown = function(event) {
-  if (event.keyCode == 83) { // 's'
-    test.sendTestEvent("start_run_test", {});
-//    window.onkeydown = null;
-  } else if (event.keyCode == 89) { // 'y'
-    test.sendTestEvent("mark_result", 'pass');
-  } else if (event.keyCode == 78) { // 'n'
-    test.sendTestEvent("mark_result", 'fail');
-  }
-}
-
 init = function(autostart, require_dongle) {
   if (!require_dongle)
     document.getElementById("require_dongle").style.display = "None";
@@ -20,6 +9,12 @@ init = function(autostart, require_dongle) {
     document.getElementById("message").innerHTML = "";
     test.sendTestEvent("start_run_test", {});
   } else {
+    window.onkeydown = function(event) {
+      if (event.keyCode == 83) { // 's'
+        test.sendTestEvent("start_run_test", {});
+        window.onkeydown = null;
+      }
+    }
   }
 }
 
@@ -51,15 +46,6 @@ testInProgress = function(success_rate) {
       "Loopback testing...\n",
       "音源回放测试中...\n"));
   }
-}
-
-testEnd = function() {
-  var msgs = document.getElementById("message");
-  msgs.innerHTML = "";
-  msgs.appendChild(createLabel(
-    "Test pass : Press 'y'\nTest fail : Press 'n'\nReplay : Press 's'",
-    "测试成功 : 请按下 'y' 键\n测试失败 : 请按下 'n' 键\n重播 : 请按下 's' 键"
-    ));
 }
 
 testFailResult = function(success_rate) {
