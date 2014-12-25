@@ -11,12 +11,17 @@ from __future__ import print_function
 import logging
 import os
 import re
+import time
 import unittest
+
 import factory_common  # pylint: disable=W0611
 from cros.factory.test.args import Arg
 from cros.factory.test import factory
+from cros.factory.test.fixture.whale import whale_bft_fixture
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
+
+_CHECK_BARCODE_SECS = 0.3
 
 
 class BarcodeScanToFileTest(unittest.TestCase):
@@ -32,6 +37,8 @@ class BarcodeScanToFileTest(unittest.TestCase):
         'True to ignore case from input.', default=False),
     Arg('save_path', str,
         'The file path of saving barcode'),
+    Arg('bft_params', dict, "BeagleBone's IP and port",
+        default=None, optional=True),
   ]
 
   def ShowError(self, message, message_zh):
@@ -79,6 +86,17 @@ class BarcodeScanToFileTest(unittest.TestCase):
 
   def setUp(self):
     self.ui = test_ui.UI()
+    if self.args.bft_params is not None:
+      self._bft = whale_bft_fixture.WhaleBFTFixture()
+      self._bft.Init(**self.args.bft_params)
+    else:
+      self._bft = None
+
+    # clean barcode file first
+    try:
+      os.remove(self.args.save_path)
+    except OSError:
+      pass
 
   def runTest(self):
     template = ui_templates.OneSection(self.ui)
@@ -108,4 +126,11 @@ class BarcodeScanToFileTest(unittest.TestCase):
          'document.getElementById("scan-value").value)'))
     self.ui.AddEventHandler('scan_value', self.HandleScanValue)
 
-    self.ui.Run()
+    if self._bft:
+      self.ui.Run(blocking=False)
+      while True:
+        self._bft.TriggerScanner()
+        time.sleep(_CHECK_BARCODE_SECS)
+    else:
+      # manual scan
+      self.ui.Run()
