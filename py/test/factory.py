@@ -805,7 +805,7 @@ class FactoryTest(object):
 
   REPR_FIELDS = ['test_list_id', 'id', 'autotest_name', 'pytest_name', 'dargs',
                  'backgroundable', 'exclusive', 'never_fails',
-                 'enable_services', 'disable_services']
+                 'enable_services', 'disable_services', 'no_host']
 
   # Subsystems that the test may require exclusive access to.
   EXCLUSIVE_OPTIONS = utils.Enum(['NETWORKING', 'CHARGER', 'CPUFREQ'])
@@ -825,6 +825,7 @@ class FactoryTest(object):
                subtests=None,
                id=None,  # pylint: disable=W0622
                has_ui=None,
+               no_host=False,
                never_fails=None,
                disable_abort=None,
                exclusive=None,
@@ -859,6 +860,7 @@ class FactoryTest(object):
     self.dargs = dargs or {}
     self.backgroundable = backgroundable
     self.force_background = force_background
+    self.no_host = no_host
     if isinstance(exclusive, str):
       self.exclusive = [exclusive]
     else:
@@ -1136,6 +1138,12 @@ class FactoryTest(object):
     assert option in self.EXCLUSIVE_OPTIONS
     return option in self.exclusive or (
         self.parent and self.parent.is_exclusive(option))
+
+  def is_no_host(self):
+    """Returns true if the test or any parent is marked 'no_host'."""
+    if self.no_host:
+      return True
+    return any([node.no_host for node in self.get_ancestor_groups()])
 
   def as_dict(self, state_map=None):
     """Returns this node and children in a dictionary suitable for
