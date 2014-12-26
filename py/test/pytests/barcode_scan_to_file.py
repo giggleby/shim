@@ -128,7 +128,7 @@ class BarcodeScanToFileTest(unittest.TestCase):
 
     if self._bft:
       self.ui.Run(blocking=False)
-      while True:
+      while not os.path.exists(self.args.save_path):
         self._bft.TriggerScanner()
         time.sleep(_CHECK_BARCODE_SECS)
     else:
