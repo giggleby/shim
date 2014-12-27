@@ -217,7 +217,17 @@ class UmpireDUTCommands(UmpireRPC):
 
       resource_type = (component if not component.startswith('firmware_') else
                        'firmware')
-      resource_filename = resource_map[resource_type]
+
+      resource_filename = resource_map.get(resource_type)
+      # Handle the case that the resource type not defined in the bundle.
+      if not resource_filename:
+        update_matrix[component] = {
+            'needs_update': False,
+            'md5sum': '',
+            'scheme': '',
+            'url': ''}
+        continue
+
       resource_tag, resource_hash = self._GetResourceTag(
           component, resource_filename)
 
