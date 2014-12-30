@@ -5,6 +5,7 @@
 
 from __future__ import print_function
 import logging
+import os
 
 import factory_common  # pylint: disable=W0611
 import cros.factory.test.fixture.bft_fixture as bft
@@ -156,6 +157,8 @@ class WhaleBFTFixture(bft.BFTFixture):
       raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'nuc_mlbsn_path')
     if not self._testing_rsa_path:
       raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'testing_rsa_path')
+    # Make identity file less open to make ssh happy
+    os.chmod(self._testing_rsa_path, 0600)
 
     ssh_command_base = ssh_utils.BuildSSHCommand(
         identity_file=self._testing_rsa_path)
