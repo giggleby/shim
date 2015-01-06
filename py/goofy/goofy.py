@@ -1226,7 +1226,7 @@ class Goofy(GoofyBase):
     """Initialize UI."""
     self._ui_initialized = True
     if self.options.ui == 'chrome':
-      if self.options.standalone:
+      if self.options.monolithic:
         self.env.launch_chrome()
       else:
         # The presenter is responsible for launching Chrome. Let's just
@@ -1301,6 +1301,9 @@ class Goofy(GoofyBase):
                       action='store_true', default=False,
                       help=('Assume the presenter is running on the same '
                             'machines.'))
+    parser.add_option('--monolithic', dest='monolithic',
+                      action='store_true', default=False,
+                      help='Run in monolithic mode (without presenter)')
     (self.options, self.args) = parser.parse_args(args)
 
     signal.signal(signal.SIGINT, self.handle_sigint)
@@ -1350,7 +1353,7 @@ class Goofy(GoofyBase):
 
     logging.info('Started')
 
-    if not self.options.standalone:
+    if not self.options.monolithic:
       self.link_manager = PresenterLinkManager(
           check_interval=1,
           handshake_timeout=self.options.handshake_timeout,
