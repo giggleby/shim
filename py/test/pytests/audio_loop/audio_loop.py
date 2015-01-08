@@ -129,6 +129,10 @@ _UI_HTML = """
 
 MicSource = Enum(['external', 'panel', 'mlb'])
 
+class AudioLoopError(Exception):
+  """Error raised in the audio loop test."""
+
+
 class PlaySineThread(threading.Thread):
   """Wraps the execution of arecord in a thread."""
   def __init__(self, channel, odev, freq, seconds):
@@ -497,11 +501,15 @@ class AudioLoopTest(unittest.TestCase):
       return True
     return False
 
-  def FailTest(self):
+  def FailTest(self, message=None):
     """Fails test."""
     factory.console.info('Test results for each output volumes: %r',
                          zip(self._output_volumes, self._test_results))
-    self._ui.Fail('; '.join(self._test_message))
+    if not message:
+      message = '; '.join(self._test_message)
+    factory.console.error(message)
+    self._ui.Fail(message)
+    raise AudioLoopError(message)
 
   def StartRunTest(self, event): # pylint: disable=W0613
     jack_status = self._audio_util.GetAudioJackStatus(self._in_card)
@@ -513,11 +521,9 @@ class AudioLoopTest(unittest.TestCase):
       # audiofuntest with HP/MIC jack
       if jack_status is True:
         if any((t['type'] == 'audiofun') for t in self.args.tests_to_conduct):
-          factory.console.info('Audiofuntest does not require dongle.')
-          raise ValueError('Audiofuntest does not require dongle.')
+          self.FailTest('Audiofuntest does not require dongle.')
       if jack_status != self.args.require_dongle:
-        factory.console.info('Dongle Status is wrong.')
-        raise ValueError('Dongle Status is wrong.')
+        self.FailTest('Dongle Status is wrong.')
 
     # Enable/disable devices according to require_dongle.
     # We don't use jack_status because jack_status may not be ready at early
@@ -556,7 +562,7 @@ class AudioLoopTest(unittest.TestCase):
         elif test['type'] == 'noise':
           self.NoiseTest()
         else:
-          raise ValueError('Test type "%s" not supported.' % test['type'])
+          self.FailTest('Test type "%s" not supported.' % test['type'])
 
       if self.MayPassTest():
         return
