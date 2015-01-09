@@ -30,48 +30,47 @@ from cros.factory.test.utils import StartDaemonThread
 class Scan(unittest.TestCase):
   """The main class for this pytest."""
   ARGS = [
-    Arg('aux_table_name', str,
-        'Name of the auxiliary table containing the device',
-        optional=True),
-    Arg('label_en', str,
-        'Name of the ID or serial number being scanned, e.g., '
-        '"MLB serial number"'),
-    Arg('label_zh', (str, unicode),
-        'Chinese name of the ID or serial number being scanned '
-        '(defaults to the same as the English label)'),
-    Arg('event_log_key', str,
-        'Key to use for event log', optional=True),
-    Arg('shared_data_key', str,
-        'Key to use to store in scanned value in shared data', optional=True),
-    Arg('device_data_key', str,
-        'Key to use to store in scanned value in device data', optional=True),
-    Arg('rw_vpd_key', str,
-        'Key to use to store in scanned value in RW VPD', optional=True),
-    Arg('regexp', str,
-        'Regexp that the scanned value must match', optional=True),
-    Arg('check_device_data_key', str,
-        'Checks that the given value in device data matches the scanned value',
-        optional=True),
-    Arg('bft_scan_fixture_id', bool,
-        'True to scan BFT fixture ID.', default=False),
-    Arg('bft_scan_barcode', bool,
-        'True to trigger BFT barcode scanner.', default=False),
-    Arg('bft_get_barcode', bool,
-        'True to get barcode from BFT. BFT stores barcode in advance so this '
-        'obtains barcode immidiately.', default=False),
-    Arg('bft_fixture', dict, TEST_ARG_HELP, default=None, optional=True),
-    Arg('barcode_scan_interval_secs', (int, float),
-        'Interval for repeatedly trigger BFT\'s barcode scaner',
-        default=2.0),
-    Arg('match_the_last_few_chars', int,
-        'This is for OP to manually input last few SN chars based on the\n'
-        'sticker on machine to make sure SN in VPD matches sticker SN.',
-        default=0),
-    Arg('ignore_case', bool,
-        'True to ignore case from input.', default=False),
-    Arg('value_assigned', str,
-        'If not None, use the value to fill the key.', optional=True)
-  ]
+      Arg('aux_table_name', str,
+          'Name of the auxiliary table containing the device',
+          optional=True),
+      Arg('label_en', str,
+          'Name of the ID or serial number being scanned, e.g., '
+          '"MLB serial number"'),
+      Arg('label_zh', (str, unicode),
+          'Chinese name of the ID or serial number being scanned '
+          '(defaults to the same as the English label)'),
+      Arg('event_log_key', str,
+          'Key to use for event log', optional=True),
+      Arg('shared_data_key', str,
+          'Key to use to store in scanned value in shared data', optional=True),
+      Arg('device_data_key', str,
+          'Key to use to store in scanned value in device data', optional=True),
+      Arg('rw_vpd_key', str,
+          'Key to use to store in scanned value in RW VPD', optional=True),
+      Arg('regexp', str,
+          'Regexp that the scanned value must match', optional=True),
+      Arg('check_device_data_key', str,
+          'Checks that the given value in device data matches the scanned '
+          'value', optional=True),
+      Arg('bft_scan_fixture_id', bool,
+          'True to scan BFT fixture ID.', default=False),
+      Arg('bft_scan_barcode', bool,
+          'True to trigger BFT barcode scanner.', default=False),
+      Arg('bft_get_barcode', bool,
+          'True to get barcode from BFT. BFT stores barcode in advance so this '
+          'obtains barcode immidiately.', default=False),
+      Arg('bft_fixture', dict, TEST_ARG_HELP, default=None, optional=True),
+      Arg('barcode_scan_interval_secs', (int, float),
+          'Interval for repeatedly trigger BFT\'s barcode scaner',
+          default=2.0),
+      Arg('match_the_last_few_chars', int,
+          'This is for OP to manually input last few SN chars based on the\n'
+          'sticker on machine to make sure SN in VPD matches sticker SN.',
+          default=0),
+      Arg('ignore_case', bool,
+          'True to ignore case from input.', default=False),
+      Arg('value_assigned', str,
+          'If not None, use the value to fill the key.', optional=True)]
 
   def HandleScanValue(self, event):
     def SetError(label_en, label_zh=None):
@@ -116,7 +115,7 @@ class Scan(unittest.TestCase):
         return SetError(
             'Unable to contact shopfloor server: %s' % e,
             label_zh=u'連不到 shopfloor server: %s' % e)
-      except:  # pylint: disable=W0622
+      except:  # pylint: disable=W0702
         logging.exception('select_aux_data failed')
         return SetError(utils.FormatExceptionOnly())
       factory.get_state_instance().UpdateSkippedTests()
@@ -190,6 +189,9 @@ class Scan(unittest.TestCase):
       self.fixture.ScanBarcode()
       time.sleep(self.args.barcode_scan_interval_secs)
 
+  def SendScanValue(self, value):
+    self.ui.RunJS('window.test.sendTestEvent("scan_value", "%s")' % value)
+
   def runTest(self):
     template = ui_templates.OneSection(self.ui)
 
@@ -220,21 +222,15 @@ class Scan(unittest.TestCase):
     self.ui.AddEventHandler('scan_value', self.HandleScanValue)
 
     if self.args.value_assigned is not None:
-      self.ui.RunJS(
-          'window.test.sendTestEvent("scan_value", "%s")' %
-          self.args.value_assigned)
+      self.SendScanValue(self.args.value_assigned)
     elif self.args.bft_scan_fixture_id:
       logging.info('Getting fixture ID...')
-      fixture_id = self.fixture.GetFixtureId()
-      self.ui.RunJS(
-        'window.test.sendTestEvent("scan_value", "%d")' % fixture_id)
+      self.SendScanValue(self.fixture.GetFixtureId())
     elif self.args.bft_scan_barcode:
       logging.info('Triggering barcode scanner...')
       StartDaemonThread(target=self.ScanBarcode)
     elif self.args.bft_get_barcode:
       logging.info('Getting barcode from BFT...')
-      barcode = self.fixture.ScanBarcode()
-      self.ui.RunJS(
-        'window.test.sendTestEvent("scan_value", "%s")' % barcode)
+      self.SendScanValue(self.fixture.ScanBarcode())
 
     self.ui.Run()

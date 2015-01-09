@@ -4,6 +4,7 @@
 """Provides interfaces to interact with Whale BFT fixture."""
 
 from __future__ import print_function
+import ast
 import logging
 import os
 
@@ -51,6 +52,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     self._lcm = None
     self._nuc_host = None
     self._nuc_dut_serial_path = None
+    self._nuc_fixture_id_path = None
     self._testing_rsa_path = None
 
   def Init(self, **params):
@@ -69,10 +71,12 @@ class WhaleBFTFixture(bft.BFTFixture):
       self._lcm = lcm2004.Lcm2004(self._servo)
       self._nuc_host = params.get('nuc_host')
       self._nuc_dut_serial_path = params.get('nuc_dut_serial_path')
+      self._nuc_fixture_id_path = params.get('nuc_fixture_id_path')
       self._testing_rsa_path = params.get('testing_rsa_path')
       if self._testing_rsa_path:
         # Make identity file less open to make ssh happy
         os.chmod(self._testing_rsa_path, 0600)
+
     except servo_client.ServoClientError as e:
       raise bft.BFTFixtureException('Failed to Init(). Reason: %s' % e)
 
@@ -136,7 +140,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     result = dict((k, int(v)) for k, v in inas.iteritems())
 
     # Servo returns a string of list of integers
-    adc = eval(self._servo.Get(self._WHALE_CONTROL.ADC))
+    adc = ast.literal_eval(self._servo.Get(self._WHALE_CONTROL.ADC))
     result['vdd_kbd_bl_dut'] = adc[0] * 32.5
     result['pp1200_ssd_dut'] = adc[1]
     result['vcore_dut'] = adc[2]
@@ -149,26 +153,45 @@ class WhaleBFTFixture(bft.BFTFixture):
   def CheckExtDisplay(self):
     raise NotImplementedError
 
-  def GetFixtureId(self):
-    raise NotImplementedError
-
-  def ScanBarcode(self):
+  def _CheckNUCParam(self):
+    """Used to check NUC-related parameters for ScanBarcode and ScanFixture."""
     _UNSPECIFIED_ERROR = 'unspecified %s in BFT params'
     if not self._nuc_host:
       raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'nuc_host')
     if not self._nuc_dut_serial_path:
       raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'nuc_dut_serial_path')
+    if not self._nuc_fixture_id_path:
+      raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'nuc_fixture_id_path')
     if not self._testing_rsa_path:
       raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'testing_rsa_path')
 
-    ssh_command_base = ssh_utils.BuildSSHCommand(
+  def _CatFileFromNUC(self, file_path, file_description):
+    """Concaternates a file from NUC.
+
+    Args:
+      file_path: Full path to file in NUC.
+      file_description: Description of the file.
+
+    Returns:
+      file content, stripped.
+    """
+    ssh_command = ssh_utils.BuildSSHCommand(
         identity_file=self._testing_rsa_path)
-    mlbsn = process_utils.SpawnOutput(
-        ssh_command_base + [self._nuc_host, 'cat', self._nuc_dut_serial_path])
-    if not mlbsn:
-      raise bft.BFTFixtureException('Unable to read barcode from %s:%s' %
-                                    (self._nuc_host, self._nuc_dut_serial_path))
-    return mlbsn.strip()
+    content = process_utils.SpawnOutput(
+        ssh_command + [self._nuc_host, 'cat', file_path])
+    if not content:
+      raise bft.BFTFixtureException(
+          'Unable to read %s from %s:%s' %
+          (file_description, self._nuc_host, file_path))
+    return content.strip()
+
+  def GetFixtureId(self):
+    self._CheckNUCParam()
+    return self._CatFileFromNUC(self._nuc_fixture_id_path, 'fixture ID')
+
+  def ScanBarcode(self):
+    self._CheckNUCParam()
+    return self._CatFileFromNUC(self._nuc_dut_serial_path, 'DUT serial number')
 
   def IsLEDColor(self, color):
     if not self._color_sensor1:
@@ -187,9 +210,8 @@ class WhaleBFTFixture(bft.BFTFixture):
       for color, value in WhaleBFTFixture._STATUS_COLOR.iteritems():
         if value == (is_pass, is_fail):
           return color
-      else:
-        # If no match, treat as OFF status
-        return bft.BFTFixture.StatusColor.OFF
+      # If no match, treat as OFF status
+      return bft.BFTFixture.StatusColor.OFF
     except servo_client.ServoClientError as e:
       raise bft.BFTFixtureException('Failed to get LED status. Reason: %s' % e)
 
