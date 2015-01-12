@@ -618,6 +618,10 @@ class WiFiThroughput(unittest.TestCase):
       Arg('bind_wifi', bool,
           'Whether we should restrict iperf3 to running on the WiFi interface.',
           optional=True, default=True),
+      Arg('disable_eth', bool,
+          'Whether we should disable ethernet interfaces while running the '
+          'test.',
+          optional=True, default=False),
       Arg('services', (list, dict),
           'A list of dicts, each representing a WiFi service to test.  At '
           'minimum, each must have a "ssid" field.  Usually, a "password" '
@@ -738,12 +742,22 @@ class WiFiThroughput(unittest.TestCase):
           service_manager.Status.STOP):
         service_manager.SetServiceStatus(service, service_manager.Status.START)
 
+    # Disable ethernet interfaces if needed.
+    if self.args.disable_eth:
+      logging.info('Disabling ethernet interfaces')
+      net_utils.SwitchEthernetInterfaces(False)
+
     # Initialize our WifiProxy library and Iperf3 library.
     self._wifi = wifi_proxy.WifiProxy()
     self._iperf3 = Iperf3()
 
   def tearDown(self):
     self._EndOperatorFeedback()
+
+    # Enable ethernet interfaces if needed.
+    if self.args.disable_eth:
+      logging.info('Enabling ethernet interfaces')
+      net_utils.SwitchEthernetInterfaces(True)
 
   def _RunTestChecks(self):
     # Check that we have an online WLAN interface.
