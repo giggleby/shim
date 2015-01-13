@@ -59,7 +59,7 @@ def PollForCondition(poll_method, condition_method=None,
       else:
         condition_name = 'Timed out waiting for unnamed condition'
       logging.error(condition_name)
-      raise type_utils.TimeoutError(condition_name)
+      raise type_utils.TimeoutError(condition_name, ret)
     time.sleep(poll_interval_secs)
 
 
