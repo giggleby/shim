@@ -18,6 +18,7 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.test.args import Arg
 from cros.factory.test import factory
 from cros.factory.test.fixture.whale import whale_bft_fixture
+from cros.factory.test import shopfloor
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 
@@ -27,20 +28,22 @@ _CHECK_BARCODE_SECS = 0.3
 class BarcodeScanToFileTest(unittest.TestCase):
   """Scans barcode and saves it to a specific file."""
   ARGS = [
-    Arg('label_en', (str, unicode), 'Name of the barcode to scan'),
-    Arg('label_zh', (str, unicode),
-        'Chinese name of barcode being scanned '
-        '(defaults to the same as the English label)'),
-    Arg('regexp', str,
-        'Regexp that the scanned value must match', optional=True),
-    Arg('ignore_case', bool,
-        'True to ignore case from input.', default=False),
-    Arg('save_path', str,
-        'The file path of saving barcode'),
-    Arg('bft_params', dict,
-        'Parameters to initialize WhaleBFTFixture. It is a dict which contains '
-        'at least "host" and "port" that points to BeagleBone servod.',
-        optional=True),
+      Arg('label_en', (str, unicode), 'Name of the barcode to scan'),
+      Arg('label_zh', (str, unicode),
+          'Chinese name of barcode being scanned '
+          '(defaults to the same as the English label)'),
+      Arg('regexp', str,
+          'Regexp that the scanned value must match', optional=True),
+      Arg('ignore_case', bool,
+          'True to ignore case from input.', default=False),
+      Arg('save_path', str,
+          'The file path of saving barcode'),
+      Arg('device_data_key', str,
+          'If specified, it stores the value to DeviceData with the key.',
+          optional=True),
+      Arg('bft_params', dict,
+          'BFT parameters. Used to connect to BFT to trigger barcode scanner',
+          optional=True),
   ]
 
   def ShowError(self, message, message_zh):
@@ -57,7 +60,7 @@ class BarcodeScanToFileTest(unittest.TestCase):
     self.ui.RunJS('$("scan-value").disabled = true')
     scan_value = event.data.strip()
 
-    # check scan value
+    # Check scan value.
     if self.args.ignore_case:
       scan_value = scan_value.upper()
     esc_scan_value = test_ui.Escape(scan_value)
@@ -74,15 +77,18 @@ class BarcodeScanToFileTest(unittest.TestCase):
             u'所扫描的编号「%s」格式不对。' % esc_scan_value)
         return
 
-    # create directory
-    dirname = os.path.dirname(self.args.save_path)
-    if not os.path.exists(dirname):
-      os.makedirs(dirname)
+    # Save scan value.
+    if self.args.save_path:
+      dirname = os.path.dirname(self.args.save_path)
+      if not os.path.exists(dirname):
+        os.makedirs(dirname)
 
-    # save scan value
-    factory.console.info('Save barcode at: ' + self.args.save_path)
-    with open(self.args.save_path, 'w') as f:
-      f.write(esc_scan_value)
+      factory.console.info('Save barcode at: ' + self.args.save_path)
+      with open(self.args.save_path, 'w') as f:
+        f.write(scan_value)
+
+    if self.args.device_data_key:
+      shopfloor.UpdateDeviceData({self.args.device_data_key: scan_value})
 
     self.ui.Pass()
 
@@ -94,7 +100,7 @@ class BarcodeScanToFileTest(unittest.TestCase):
     else:
       self._bft = None
 
-    # clean barcode file first
+    # Clean barcode file first.
     if os.path.exists(self.args.save_path):
       os.remove(self.args.save_path)
 
@@ -130,5 +136,5 @@ class BarcodeScanToFileTest(unittest.TestCase):
         self._bft.TriggerScanner()
         time.sleep(_CHECK_BARCODE_SECS)
     else:
-      # manual scan
+      # Manual scan.
       self.ui.Run()
