@@ -106,6 +106,15 @@ class Finalize(unittest.TestCase):
           'A list of string indicating the enforced release image channels. '
           'Each item should be one of "dev", "beta" or "stable".',
           default=None, optional=True),
+      Arg('is_cros_core', bool,
+          'For ChromeOS Core device, skip verifying branding and setting'
+          'firmware bitmap locale.',
+          default=False, optional=True),
+      Arg('wipe_in_place', bool,
+          'Wipe the stateful partition directly in a tmpfs without reboot. '
+          'False for legacy implementation to invoke wiping under '
+          'release image after reboot.',
+          default=False, optional=True),
       ]
 
   def setUp(self):
@@ -373,6 +382,8 @@ class Finalize(unittest.TestCase):
       command += ' --no_write_protect'
     if not self.args.secure_wipe:
       command += ' --fast'
+    if self.args.wipe_in_place:
+      command += ' --wipe_in_place'
     command += ' --upload_method "%s"' % upload_method
     command += ' --add_file "%s"' % self.test_states_path
     if self.args.rma_mode:
@@ -386,6 +397,18 @@ class Finalize(unittest.TestCase):
 
     gooftools.run(command)
 
+    # If using wipe_in_place in the above gooftool command,
+    # factory service should be stopped here.
+    if self.args.wipe_in_place:
+      time.sleep(60)
+      # The following line should not be reached.
+      self.ui.Fail('Failed to wipe in place')
+      return
+
+    # It will reach the following if not using wipe_in_place in the above
+    # gooftool command.
+
+    # TODO(shunhsingou): Notifying shopfloor when using wipe_in_place.
     if shopfloor.is_enabled():
       shopfloor.finalize()
 
