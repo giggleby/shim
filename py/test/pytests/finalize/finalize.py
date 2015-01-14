@@ -102,6 +102,11 @@ class Finalize(unittest.TestCase):
       Arg('rma_mode', bool,
           'Enable rma_mode, do not check for deprecated components.',
           default=False, optional=True),
+      Arg('wipe_in_place', bool,
+          'Wipe the stateful partition directly in a tmpfs without reboot. '
+          'False for legacy implementation to invoke wiping under '
+          'release image after reboot.',
+          default=False, optional=True),
       ]
 
   def setUp(self):
@@ -371,6 +376,8 @@ class Finalize(unittest.TestCase):
       command += ' --no_write_protect'
     if not self.args.secure_wipe:
       command += ' --fast'
+    if self.args.wipe_in_place:
+      command += ' --wipe_in_place'
     command += ' --upload_method "%s"' % upload_method
     command += ' --add_file "%s"' % self.test_states_path
     if self.args.rma_mode:
@@ -379,11 +386,23 @@ class Finalize(unittest.TestCase):
 
     gooftools.run(command)
 
+    # If using wipe_in_place in the above gooftool command,
+    # factory service should be stopped here.
+    if self.args.wipe_in_place:
+      time.sleep(60)
+      # The following line should not be reached.
+      self.ui.Fail('Failed to wipe in place')
+      return
+
+    # It will reach the following if not using wipe_in_place in the above
+    # gooftool command.
+
+    # TODO(shunhsingou): Notifying shopfloor when using wipe_in_place.
     if shopfloor.is_enabled():
       shopfloor.finalize()
 
     # TODO(hungte): Use Reboot in test list to replace this, or add a
     # key-press check in developer mode.
-    os.system("sync; sync; sync; shutdown -r now")
+    os.system('sync; sleep 3; shutdown -r now')
     time.sleep(60)
     self.ui.Fail('Unable to shutdown')
