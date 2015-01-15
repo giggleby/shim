@@ -69,7 +69,6 @@ import json
 import logging
 import os
 import string  # pylint: disable=W0402
-import subprocess
 import sys
 import threading
 import time
@@ -98,7 +97,7 @@ from autotest_lib.client.cros.networking import wifi_proxy
 
 _SERVICE_LIST = ['shill', 'shill_respawn', 'wpasupplicant', 'modemmanager']
 _DEFAULT_TIMEOUT_SECS = 10
-_WIFI_TIMEOUT_SECS = 30
+_WIFI_TIMEOUT_SECS = 20
 _IPERF_TIMEOUT_SECS = 5
 
 _DEFAULT_WIRELESS_TEST_CSS = '.wireless-info {font-size: 2em;}'
@@ -292,7 +291,7 @@ class Iperf3(object):
       return output
 
     # Check that there is one or more interval.
-    if 'intervals' not in output and len(output['intervals']) >= 1:
+    if 'intervals' not in output:
       output['error'] = 'output error - no intervals'
       return output
 
@@ -453,11 +452,6 @@ class _ServiceTest(object):
                log_key=('iperf_%s' % tx_rx.lower()),
                log_pass_key=('pass_iperf_%s' % tx_rx.lower()),
                min_throughput=min_throughput)
-
-        DoTest(self._RunPing, abort=True,
-               tx_rx=tx_rx,
-               iperf_host=ap_config.iperf_host,
-               log_pass_key=('pass_ping_%s' % tx_rx.lower()))
       except self._TestException:
         pass  # continue to next test (TX/RX)
 
@@ -589,6 +583,8 @@ class _ServiceTest(object):
       self._Log('%s iperf3 error: %s' % (tx_rx, iperf_output['error']))
 
     # Count, print, and log number of zero-transfer intervals.
+    if 'intervals' not in iperf_output:
+      iperf_output['intervals'] = []
     throughputs = [
         x['sum']['bits_per_second'] for x in iperf_output['intervals']]
     throughputs_string = ' '.join(
@@ -634,21 +630,6 @@ class _ServiceTest(object):
                 tx_rx,
                 _BitsToMbits(iperf_avg['bits_per_second']),
                 min_throughput))
-
-  def _RunPing(self, tx_rx, iperf_host, log_pass_key):
-    # Ping host once with a one-second timeout.  This is to ensure that our
-    # network is still in an "up" state after running iperf.
-    # Make sure we take off the port of the iperf host.
-    iperf_host = iperf_host.split(':')[0]
-    try:
-      process_utils.LogAndCheckOutput(
-          ['ping', '-c1', '-W1', iperf_host])
-    except subprocess.CalledProcessError:
-      self._log[log_pass_key] = False
-      raise self._TestException(
-          '%s couldn\'t ping host %s' % (tx_rx, iperf_host))
-    self._log[log_pass_key] = True
-    return '%s ping host %s successful' % (tx_rx, iperf_host)
 
 
 class _Ui(object):
