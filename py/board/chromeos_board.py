@@ -285,11 +285,13 @@ class ChromeOSBoard(Board):
         polarity=match.group('polarity'),
         state=int(match.group('state')))
 
-  def GetPDGPIOValue(self, gpio_name):
+  def GetGPIOValue(self, gpio_name, from_pd=False):
     gpio_info_re = re.compile(r'^GPIO %s = (\d)' % gpio_name)
-    response = self._CallECTool(self.ECTOOL_PD_ARGS + ['gpioget', gpio_name])
+    append_args = self.ECTOOL_PD_ARGS if from_pd else []
+    response = self._CallECTool(append_args + ['gpioget', gpio_name])
     gpio_value = gpio_info_re.findall(response)
     if gpio_value:
       return int(gpio_value[0])
     else:
-      raise BoardException('Fail to get GPIO %s value' % gpio_name)
+      raise BoardException('Fail to get GPIO %s value from %s' %
+                           (gpio_name, 'PD' if from_pd else 'EC'))

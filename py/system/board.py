@@ -301,14 +301,14 @@ class Board(object):
     """
     raise NotImplementedError
 
-  def GetPDGPIOValue(self, gpio_name):
-    """Gets PD GPIO value.
+  def GetGPIOValue(self, gpio_name, from_pd=False):
+    """Gets EC/PD GPIO value.
 
     Args:
       gpio_name: GPIO name.
+      from_pd: True for getting from PD; False for EC.
 
     Returns:
       Return 1 if GPIO is high; otherwise 0.
-
     """
     raise NotImplementedError
