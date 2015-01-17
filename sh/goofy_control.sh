@@ -9,6 +9,7 @@ set -e
 
 FACTORY="$(dirname "$(dirname "$(readlink -f "$0")")")"
 FACTORY_LOG_FILE=/var/factory/log/factory.log
+PRESENTER_LOG_FILE=/var/factory/log/presenter.log
 SESSION_LOG_FILE=/var/log/factory_session.log
 INTERACTIVE_CONSOLES=""
 LOG_PROCESSES=""
@@ -260,7 +261,8 @@ start_factory() {
     fi
     # Note presenter output is only kept in SESSION_LOG_FILE.
     echo "Starting Goofy Presenter... ($PRESENTER_ARGS)"
-    "$FACTORY/bin/goofy_presenter" $PRESENTER_ARGS &
+    "$FACTORY/bin/goofy_presenter" $PRESENTER_ARGS \
+        >>"$PRESENTER_LOG_FILE" 2>&1 &
   elif [ ! -f "${tag_device}" ]; then
     # Monolithic mode.
     GOOFY_ARGS="${GOOFY_ARGS} --monolithic"
