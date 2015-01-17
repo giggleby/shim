@@ -615,6 +615,12 @@ def EnableFwWp(options):  # pylint: disable=W0613
     event_log.Log('wp', fw='ec')
   else:
     logging.warning('EC not write protected (seems there is no EC flash).')
+  pd_fw_file = crosfw.LoadPDFirmware().GetFileName()
+  if pd_fw_file is not None:
+    WriteProtect(pd_fw_file, 'pd', 'EC_RO')
+    event_log.Log('wp', fw='pd')
+  else:
+    logging.warning('PD not write protected (seems there is no PD flash).')
 
 
 @Command('clear_gbb_flags')
