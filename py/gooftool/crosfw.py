@@ -44,7 +44,7 @@ class Flashrom(object):
       TARGET_EC: "-p ec",
       TARGET_PD: "-p ec:dev=1",
   }
-  _WRITE_FLAGS = ""  # Not using "--fast-verify" due to crbug.com/428475
+  _WRITE_FLAGS = "--fast-verify"
   _READ_FLAGS = ""
 
   def __init__(self, target=None):
