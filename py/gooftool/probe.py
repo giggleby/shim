@@ -635,6 +635,11 @@ def _ProbeCamera():
                                             buf[V4L2_INDEX_REVISION])
   except:  # pylint: disable=W0702
     pass
+  # Samus DVT camera modules have buggy string in serial number so we have to
+  # workaround.
+  if info:
+    info['manufacturer'] = 'Samus DVT Camera'
+    info[COMPACT_PROBE_STR] = 'Samus DVT Camera'
   return [info] if info else []
 
 
