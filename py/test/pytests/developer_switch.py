@@ -12,8 +12,8 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.test.args import Arg
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
+from cros.factory.test import utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import sync_utils
 
 _MSG_TURN_ON = test_ui.MakeLabel(
     'Please turn <b class="on">ON</b> Developer Switch.',
@@ -75,10 +75,9 @@ class DeveloperSwitchTest(unittest.TestCase):
     timeout_secs = self.args.timeout_secs
     UpdateUI(initial_state)
 
-    sync_utils.WaitFor(lambda: GetState() != initial_state, timeout_secs)
+    utils.WaitFor(lambda: GetState() != initial_state, timeout_secs)
     UpdateUI(not initial_state)
-    sync_utils.WaitFor(lambda: GetState() == initial_state, timeout_secs)
+    utils.WaitFor(lambda: GetState() == initial_state, timeout_secs)
     UpdateUI(initial_state)
     # Flip again if state is not end_state
-    sync_utils.WaitFor(lambda: GetState() != int(self.args.end_state),
-                       timeout_secs)
+    utils.WaitFor(lambda: GetState() != int(self.args.end_state), timeout_secs)
