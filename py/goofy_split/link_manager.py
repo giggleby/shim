@@ -360,10 +360,16 @@ class DUTLinkManager(object):
     If the connection is down, put ourselves into disconnected state and start
     announcing ourselves to potential DUTs again.
     """
+    logging.info('CheckDUTConnection')
     if self._lock.acquire(False):
       try:
         if self._dut_connected:
           if self.DUTIsAlive():
+            if self._connect_hook:
+              logging.info('All good')
+              # Purposely not to call connect_hook and see if
+              # we will in this strange state.
+              #self._connect_hook(self._dut_ip)
             return # All good!
           else:
             logging.info('Disconnected from DUT %s', self._dut_ip)
@@ -403,6 +409,7 @@ class DUTLinkManager(object):
     self._kick_event.set()
 
   def MonitorLink(self):
+    logging.info('Monitoring start')
     while True:
       if self._suspend_deadline:
         if time.time() > self._suspend_deadline:

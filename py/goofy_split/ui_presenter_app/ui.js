@@ -136,7 +136,9 @@ function connectWebSocket() {
     } else if (message.command == "CONNECT") {
       // Check the URL given by the backend and connect to it if
       // it's alive.
-      checkDUT(message.url, message.uuid);
+      if (!connected) {
+        checkDUT(message.url, message.uuid);
+      }
     } else if (message.command == "INFO") {
       // Show info message.
       setInfo(message.str);
