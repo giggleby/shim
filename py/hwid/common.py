@@ -276,6 +276,8 @@ class HWID(object):
           image_name))
 
     # MP-key checking applies only in PVT and above
+    # (PVT Hack): Allow Pre-MP key as MP-signed images are not available yet.
+    """
     if current_phase >= phase.PVT:
       errors = []
       for key_type in ('recovery', 'root'):
@@ -287,6 +289,7 @@ class HWID(object):
       if errors:
         raise HWIDException('MP keys are required in %s, but %s' % (
             current_phase, ' and '.join(errors)))
+    """
 
   def GetLabels(self):
     """Gets from the database the labels of all the components encoded in this
