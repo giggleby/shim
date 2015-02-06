@@ -161,12 +161,10 @@ class ScanDevicesTask(FactoryTask):
     self._test = test
     self._keyword = test.args.keyword
     self._average_rssi_threshold = test.args.average_rssi_threshold
-    if test.args.scan_mac_only:
-      self._mac_to_scan = test.GetInputDeviceMac()
-    else:
-      self._mac_to_scan = None
+    self._mac_to_scan = test.GetInputDeviceMac() # may be None
+    logging.info("Scanning for MAC %s", self._mac_to_scan)
     self._scan_counts = 1
-    if self._average_rssi_threshold is not None:
+    if self._average_rssi_threshold is not None or test.args.pair_with_match:
       self._scan_counts = test.args.scan_counts
     self._timeout_secs = test.args.scan_timeout_secs
 
@@ -238,14 +236,15 @@ class ScanDevicesTask(FactoryTask):
     candidate_rssis = dict()
 
     # Helper to check if the target MAC has been scanned.
+    # Returns the scanned MAC if it matches the target, otherwise None
     # We are forgiving about colons.
-    def has_scanned_target_mac():
+    def scanned_mac_matching_target():
       if self._mac_to_scan:
         for key in candidate_rssis:
           key_no_colons = ''.join(key.split(':'))
-          if self._mac_to_scan[-6:] == key_no_colons[-6:]:
-            return True
-      return False
+          if self._mac_to_scan[-6:].upper() == key_no_colons[-6:].upper():
+            return key
+      return None
 
     for _ in xrange(self._scan_counts):
       self._test.template.SetState(_MSG_SCAN_DEVICE)
@@ -264,9 +263,12 @@ class ScanDevicesTask(FactoryTask):
       self.UpdateRssi(candidate_rssis, self.FilterByKeyword(devices))
       # Optimization: if we are only interested in one particular address,
       # then we can early-out as soon as we find it
-      if self._average_rssi_threshold is None and has_scanned_target_mac():
-        logging.info("Address found, ending scan early")
-        break
+      if self._average_rssi_threshold is None:
+        scanned_mac = scanned_mac_matching_target()
+        if scanned_mac:
+          self._test._input_device_mac = scanned_mac
+          logging.info("Address %s found, ending scan early", scanned_mac)
+          break
 
     logging.info('Found %d candidate device(s) in %s scans.',
                  len(candidate_rssis), self._scan_counts)
@@ -298,7 +300,7 @@ class ScanDevicesTask(FactoryTask):
 
     self._test.SetStrongestRssiMac(max_average_rssi_mac)
 
-    if self._mac_to_scan and not has_scanned_target_mac():
+    if self._mac_to_scan and not scanned_mac_matching_target():
       found_addresses = [str(k) for k in candidate_rssis]
       self.Fail('Failed to find MAC address %s.'
                'Scanned addresses: %s' % (self._mac_to_scan, found_addresses))
