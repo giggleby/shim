@@ -20,6 +20,7 @@ import unittest
 import factory_common   # pylint: disable=W0611
 from cros.factory import system
 from cros.factory.system import power
+from cros.factory.system import board
 from cros.factory.test import factory
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
@@ -108,6 +109,7 @@ class SimpleBatteryTest(unittest.TestCase):
     self._template.SetState(_PLUG_AC)
     utils.WaitFor(self._board.CheckACPresent, timeout_secs=10)
     self._template.SetState(_TESTING_CHARGE)
+    self._board.SetChargeState(board.Board.ChargeState.CHARGE)
     sampled_current = self.SampleBatteryCurrent(duration_secs)
     if self.args.min_charge_current_mA:
       if not any(
