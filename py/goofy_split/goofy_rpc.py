@@ -32,7 +32,8 @@ from cros.factory.test import factory
 from cros.factory.test import shopfloor
 from cros.factory.test import utils
 from cros.factory.test.event import Event, EventClient
-from cros.factory.test.test_lists.test_lists import SetActiveTestList
+from cros.factory.test.test_lists.test_lists import (SetActiveTestList,
+                                                     ACTIVE_PATH)
 from cros.factory.tools import factory_bug
 from cros.factory.utils import debug_utils, file_utils, process_utils
 
@@ -154,6 +155,10 @@ class GoofyRPC(object):
         factory.FACTORY_PATH, 'init', goofy_remote.PRESENTER_TAG)
     is_device = os.path.exists(device_tag)
     is_presenter = os.path.exists(presenter_tag)
+    try:
+      active_test_list = file_utils.ReadFile(ACTIVE_PATH)
+    except IOError:
+      active_test_list = None
 
     def PostUpdateHook():
       # Restore all the host-based tag files after update.
@@ -161,6 +166,8 @@ class GoofyRPC(object):
         file_utils.TouchFile(device_tag)
       if is_presenter:
         file_utils.TouchFile(presenter_tag)
+      if active_test_list:
+        file_utils.WriteFile(ACTIVE_PATH, active_test_list)
       # After update, wait REBOOT_AFTER_UPDATE_DELAY_SECS before the
       # update, and return a value to the caller.
       now = time.time()
