@@ -54,6 +54,9 @@ class Scan(unittest.TestCase):
           'rw_vpd_key', str,
           'Key to use to store in scanned value in RW VPD', optional=True),
       Arg(
+          'insert_colon_in_between_hex', bool,
+          'True to add colon in between hex', optional=False),
+      Arg(
           'regexp', str, 'Regexp that the scanned value must match',
           optional=True),
       Arg(
@@ -134,6 +137,9 @@ class Scan(unittest.TestCase):
         logging.exception('select_aux_data failed')
         return SetError(utils.FormatExceptionOnly())
       factory.get_state_instance().UpdateSkippedTests()
+
+    if self.args.insert_colon_in_between_hex:
+      scan_value = ':'.join(ch.encode('hex') for ch in scan_value.decode('hex'))
 
     if self.args.event_log_key:
       Log('scan', key=self.args.event_log_key, value=scan_value)
