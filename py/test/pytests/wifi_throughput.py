@@ -244,8 +244,9 @@ class Iperf3(object):
           }
         }
     """
+    os.environ['LD_LIBRARY_PATH'] = '/usr/local/factory/third_party/iperf3'
     iperf_cmd = [
-        'iperf3',
+        '/usr/local/factory/third_party/iperf3/iperf3',
         '--client', server_host,
         '--time', str(transmit_time),
         '--interval', str(transmit_interval),
