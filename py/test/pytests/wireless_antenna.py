@@ -116,6 +116,11 @@ def IwSetAntenna(devname, phyname, tx_bitmap, rx_bitmap, max_retries=10,
   Raises:
     IwException if fail to set antenna for max_retries tries.
   """
+  ######################################################
+  # Hack: disable switching antenna.
+  IfconfigUp(devname, switch_antenna_sleep_secs)
+  return
+  ######################################################
   IfconfigDown(devname)
   try_count = 0
   success = False
