@@ -59,8 +59,8 @@ _MSG_TEST_INPUT = MakeLabel('Please test input. '
                             u'如果成功，请按Enter键',
                             'start-font-size')
 _MSG_UNPAIRING = MakeLabel('Unpairing', u'取消配对', 'start-font-size')
-_MSG_AUTH_FAILED = MakeLabel('Authentication failed',
-                             u'验证失败', 'start-font-size')
+_MSG_AUTH_FAILED = MakeLabel('Authentication failed, retrying...',
+                             u'验证失败，重试', 'start-font-size')
 
 INPUT_MAX_RETRY_TIMES = 10
 INPUT_RETRY_INTERVAL = 2
@@ -533,7 +533,6 @@ class InputTestTask(FactoryTask):
     self._test.template.SetState(label)
 
   def _AuthenticationCancelled(self):
-    self.Fail('Authentication was cancelled or failed')
     self._test.template.SetState(_MSG_AUTH_FAILED)
 
 
