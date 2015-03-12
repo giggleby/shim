@@ -59,8 +59,8 @@ class TouchscreenTest(unittest.TestCase):
     self.checked: user has already pressed spacebar to check touchscreen.
   """
   ARGS = [
-    Arg('touchscreen_event_id', int, 'Touchscreen input event id.',
-        default=None, optional=True)
+      Arg('touchscreen_event_id', int, 'Touchscreen input event id.',
+          default=None, optional=True)
   ]
 
   def setUp(self):
@@ -81,7 +81,8 @@ class TouchscreenTest(unittest.TestCase):
 
     if self.args.touchscreen_event_id is None:
       touchscreen_devices = evdev_utils.GetTouchscreenDevices()
-      assert len(touchscreen_devices) == 1, 'Multiple touchscreen detected'
+      assert len(touchscreen_devices) == 1, (
+          'Multiple touchscreen devices detected')
       self.touchscreen_device = touchscreen_devices[0]
     else:
       self.touchscreen_device = evdev.InputDevice(

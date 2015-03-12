@@ -4,8 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Tests lid switch functionality.
-"""
+"""Tests lid switch functionality."""
 
 import asyncore
 import datetime
@@ -16,6 +15,7 @@ import unittest
 import factory_common  # pylint: disable=W0611
 from cros.factory.event_log import Log
 
+from cros.factory.test import evdev_utils
 from cros.factory.test import test_ui
 from cros.factory.test.args import Arg
 from cros.factory.test.countdown_timer import StartCountdownTimer
@@ -40,12 +40,9 @@ _MSG_PROMPT_OPEN = test_ui.MakeLabel(
     'Open the lid', u'请打开上盖', 'lid-test-info')
 
 _MSG_LID_FIXTURE_CLOSE = test_ui.MakeLabel(
-    'Magnitizing lid sensor', u'磁化上盖感应器', 'lid-test-info')
+    'Magnetizing lid sensor', u'磁化上盖感应器', 'lid-test-info')
 _MSG_LID_FIXTURE_OPEN = test_ui.MakeLabel(
-    'Demagnitizeing lid sensor', u'消磁化上盖感应器', 'lid-test-info')
-
-_MSG_TIME_REMAINING = lambda t: test_ui.MakeLabel(
-    'Time remaining: %d' % t, u'剩余时间：%d' % t, 'lid-test-info')
+    'Demagnetizing lid sensor', u'消磁化上盖感应器', 'lid-test-info')
 
 _ID_PROMPT = 'lid-test-prompt'
 _ID_COUNTDOWN_TIMER = 'lid-test-timer'
@@ -61,49 +58,35 @@ _TIMESTAMP_BL_ON = _BACKLIGHT_OFF_TIMEOUT - _TEST_TOLERANCE
 _TIMESTAMP_BL_OFF = _BACKLIGHT_OFF_TIMEOUT + _TEST_TOLERANCE
 
 
-class InputDeviceDispatcher(asyncore.file_dispatcher):
-  """A class to monitor input events asynchronously."""
-  def __init__(self, device, event_handler):
-    self.device = device
-    self.event_handler = event_handler
-    asyncore.file_dispatcher.__init__(self, device)
-
-  def recv(self, ign=None): # pylint:disable=W0613
-    return self.device.read()
-
-  def handle_read(self):
-    for event in self.recv():
-      self.event_handler(event)
-
 class LidSwitchTest(unittest.TestCase):
   """Lid switch factory test."""
   ARGS = [
-    Arg('timeout_secs', int, 'Timeout value for the test.',
-        default=_DEFAULT_TIMEOUT),
-    Arg('ok_audio_path', (str, unicode),
-        'Path to the OK audio file which is played after detecting lid close'
-        'signal. Defaults to play ok_*.ogg in /sounds.',
-        default=None, optional=True),
-    Arg('audio_volume', int,
-        'Percentage of audio volume to use when playing OK audio file.',
-        default=100),
-    Arg('event_id', int, 'Event ID for evdev. None for auto probe.',
-        default=None, optional=True),
-    Arg('bft_fixture', dict, TEST_ARG_HELP,
-        default=None, optional=True),
-    Arg('bft_retries', int,
-        'Number of retries for BFT lid open / close.',
-        default=3),
-    Arg('bft_pause_secs', (int, float),
-        'Pause time before issuing BFT command.',
-        default=0.5),
-    Arg('brightness_path', str, 'Path to control brightness level.',
-        default=None, optional=True),
-    Arg('brightness_when_closed', int,
-        'Value to brightness when lid switch closed.',
-        default=None, optional=True),
-    Arg('check_delayed_backlight', bool, 'True to check delayed backlight.',
-        default=False)
+      Arg('timeout_secs', int, 'Timeout value for the test.',
+          default=_DEFAULT_TIMEOUT),
+      Arg('ok_audio_path', (str, unicode),
+          'Path to the OK audio file which is played after detecting lid close'
+          'signal. Defaults to play ok_*.ogg in /sounds.',
+          default=None, optional=True),
+      Arg('audio_volume', int,
+          'Percentage of audio volume to use when playing OK audio file.',
+          default=100),
+      Arg('event_id', int, 'Event ID for evdev. None for auto probe.',
+          default=None, optional=True),
+      Arg('bft_fixture', dict, TEST_ARG_HELP,
+          default=None, optional=True),
+      Arg('bft_retries', int,
+          'Number of retries for BFT lid open / close.',
+          default=3),
+      Arg('bft_pause_secs', (int, float),
+          'Pause time before issuing BFT command.',
+          default=0.5),
+      Arg('brightness_path', str, 'Path to control brightness level.',
+          default=None, optional=True),
+      Arg('brightness_when_closed', int,
+          'Value to brightness when lid switch closed.',
+          default=None, optional=True),
+      Arg('check_delayed_backlight', bool, 'True to check delayed backlight.',
+          default=False)
   ]
 
   def AdjustBrightness(self, value):
@@ -134,7 +117,10 @@ class LidSwitchTest(unittest.TestCase):
       self.event_dev = evdev.InputDevice('/dev/input/event%d' %
                                          self.args.event_id)
     else:
-      self.event_dev = self.ProbeLidEventSource()
+      lid_event_devices = evdev_utils.GetLidEventDevices()
+      assert len(lid_event_devices) == 1, (
+          'Multiple lid event devices detected')
+      self.event_dev = lid_event_devices[0]
     self.ui.AppendCSS(_LID_SWITCH_TEST_DEFAULT_CSS)
     self.template.SetState(_HTML_LID_SWITCH)
 
@@ -190,14 +176,6 @@ class LidSwitchTest(unittest.TestCase):
     '''Returns the time since epoch.'''
 
     return float(datetime.datetime.now().strftime("%s.%f"))
-
-  def ProbeLidEventSource(self):
-    """Probe for lid event source."""
-    for dev in map(evdev.InputDevice, evdev.list_devices()):
-      for event_type, event_codes in dev.capabilities().iteritems():
-        if (event_type == evdev.ecodes.EV_SW and
-            evdev.ecodes.SW_LID in event_codes):
-          return dev
 
   def CheckDelayedBacklight(self):
     """Checks delayed backlight off.
@@ -269,7 +247,8 @@ class LidSwitchTest(unittest.TestCase):
 
   def MonitorEvdevEvent(self):
     """Creates a process to monitor evdev event and checks for lid events."""
-    self.dispatcher = InputDeviceDispatcher(self.event_dev, self.HandleEvent)
+    self.dispatcher = evdev_utils.InputDeviceDispatcher(
+        self.event_dev, self.HandleEvent)
     asyncore.loop()
 
   def TerminateLoop(self):
