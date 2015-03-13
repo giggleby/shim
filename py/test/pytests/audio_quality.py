@@ -41,7 +41,9 @@ from cros.factory.goofy.goofy import CACHES_DIR
 # communication in between.
 _HOST = ''
 _PORT = 8888
-_LOCAL_IP = '192.168.1.2'
+_LOCAL_IP_FIXTURE = '192.168.1.2'
+#choose one IP outside DHCP range
+_LOCAL_IP_SHOPFLOOR = '10.3.0.123'
 
 # Setting
 _SHOPFLOOR_TIMEOUT_SECS = 10 # Timeout for shopfloor connection.
@@ -658,16 +660,15 @@ class AudioQualityTest(unittest.TestCase):
         factory.console.error('Remove Ethernet Exception: %s',
                               exception_string)
 
-  def PrepareNetwork(self, force_ip, msg):
+  def PrepareNetwork(self, ip, msg):
     """Blocks forever until network is prepared.
 
     Args:
-      force_ip: If true, set _LOCAL_IP. Otherwise, use DHCP
       msg: The message will be shown in UI
     """
     self._ui.CallJSFunction('setMessage', msg)
     network.PrepareNetwork(
-        _LOCAL_IP, force_ip,
+        ip, True,
         lambda: self._ui.CallJSFunction('setMessage', _LABEL_WAITING_IP))
     self._eth = net_utils.FindUsableEthDevice()
 
@@ -705,7 +706,7 @@ class AudioQualityTest(unittest.TestCase):
     If the version is mismatch, analysis software can download
     latest parameter and apply it.
     """
-    self.PrepareNetwork(False, _LABEL_WAITING_ETHERNET)
+    self.PrepareNetwork(_LOCAL_IP_SHOPFLOOR, _LABEL_WAITING_ETHERNET)
     factory.console.info('Start downloading parameters...')
     self._ui.CallJSFunction('setMessage', _LABEL_CONNECT_SHOPFLOOR)
     shopfloor_client = self.GetShopfloorConnection()
@@ -732,11 +733,10 @@ class AudioQualityTest(unittest.TestCase):
       binary_obj = shopfloor_client.GetParameter(filepath)
       with open(os.path.join(self._caches_dir, filepath), 'wb') as fd:
         fd.write(binary_obj.data)
-    self.RemoveNetwork()
 
   def RunAudioServer(self):
     """Initializes server and starts listening for external commands."""
-    self.PrepareNetwork(True, _LABEL_WAITING_FIXTURE_ETHERNET)
+    self.PrepareNetwork(_LOCAL_IP_FIXTURE, _LABEL_WAITING_FIXTURE_ETHERNET)
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((_HOST, _PORT))
@@ -752,13 +752,12 @@ class AudioQualityTest(unittest.TestCase):
       if self._test_complete:
         break
       time.sleep(_CHECK_FIXTURE_COMPLETE_SECS)
-    self.RemoveNetwork()
 
   def UploadAuxlog(self):
     """Uploads files which are sent from DUT by send_file command to
     shopfloor.
     """
-    self.PrepareNetwork(False, _LABEL_WAITING_ETHERNET)
+    self.PrepareNetwork(_LOCAL_IP_SHOPFLOOR, _LABEL_WAITING_ETHERNET)
     factory.console.info('Start uploading logs...')
     self._ui.CallJSFunction('setMessage', _LABEL_UPLOAD_AUXLOG)
     shopfloor.UploadAuxLogs(self._auxlogs)
@@ -769,8 +768,11 @@ class AudioQualityTest(unittest.TestCase):
     Args:
       event: event from UI.
     """
+    '''
+    Bypass audio parameter, otherwise the test will be fail
     if self._use_shopfloor:
       self.InitAudioParameter()
+    '''
 
     self.RunAudioServer()
 
