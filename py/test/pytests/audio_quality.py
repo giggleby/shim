@@ -768,6 +768,9 @@ class AudioQualityTest(unittest.TestCase):
     Args:
       event: event from UI.
     """
+    #Release DHCP before we use fixed IP
+    network.ReleaseDhcp()
+
     '''
     Bypass audio parameter, otherwise the test will be fail
     if self._use_shopfloor:
