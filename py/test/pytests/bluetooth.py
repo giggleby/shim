@@ -65,6 +65,15 @@ _MSG_AUTH_FAILED = MakeLabel('Authentication failed, retrying...',
 INPUT_MAX_RETRY_TIMES = 10
 INPUT_RETRY_INTERVAL = 2
 
+def ColonizeMac(mac):
+  """ Given a MAC address, normalize its colons.
+
+  Example: ABCDEF123456 -> AB:CD:EF:12:34:56
+  """
+  mac_no_colons = ''.join(mac.split(':'))
+  groups = [mac_no_colons[x:x+2] for x in range(0, len(mac_no_colons), 2)]
+  return ':'.join(groups)
+
 def MakePasskeyLabelPrompt(passkey):
   """Creates a label prompting the operator to enter a passkey"""
   return MakeLabel('Enter passkey %s' % passkey,
@@ -161,13 +170,8 @@ class ScanDevicesTask(FactoryTask):
     self._test = test
     self._keyword = test.args.keyword
     self._average_rssi_threshold = test.args.average_rssi_threshold
-    if test.args.scan_mac_only:
-      self._mac_to_scan = test.GetInputDeviceMac()
-    else:
-      self._mac_to_scan = None
-    self._scan_counts = 1
-    if self._average_rssi_threshold is not None:
-      self._scan_counts = test.args.scan_counts
+    self._mac_to_scan = test.GetInputDeviceMac()
+    self._scan_counts = test.args.scan_counts
     self._timeout_secs = test.args.scan_timeout_secs
 
     self._progress_thread = None
@@ -240,12 +244,7 @@ class ScanDevicesTask(FactoryTask):
     # Helper to check if the target MAC has been scanned.
     # We are forgiving about colons.
     def has_scanned_target_mac():
-      if self._mac_to_scan:
-        for key in candidate_rssis:
-          key_no_colons = ''.join(key.split(':'))
-          if self._mac_to_scan[-6:] == key_no_colons[-6:]:
-            return True
-      return False
+      return self._mac_to_scan and self._mac_to_scan in candidate_rssis
 
     for _ in xrange(self._scan_counts):
       self._test.template.SetState(_MSG_SCAN_DEVICE)
@@ -585,13 +584,14 @@ class BluetoothTest(unittest.TestCase):
 
   def setUp(self):
     self.ui = test_ui.UI()
+    self.ui.AppendCSS('.start-font-size {font-size: 2em;}')
     self.template = ui_templates.TwoSections(self.ui)
     self.template.SetTitle(_TEST_TITLE)
     self._task_list = []
     self._strongest_rssi_mac = None
     if self.args.input_device_mac_key:
       self._input_device_mac = \
-        factory.get_shared_data(self.args.input_device_mac_key)
+        ColonizeMac(factory.get_shared_data(self.args.input_device_mac_key))
     else:
       self._input_device_mac = self.args.input_device_mac
 
