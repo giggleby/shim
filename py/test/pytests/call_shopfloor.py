@@ -33,12 +33,19 @@ def UpdateDeviceData(data):
   factory.get_state_instance().UpdateSkippedTests()
   Log('update_device_data', data=FilterDict(data))
 
+def UpdateFactorySharedData(data):
+  for key, val in data.iteritems():
+    factory.set_shared_data(key, val)
+  Log('update_factory_shared_data', data=FilterDict(data))
+
 
 class CallShopfloor(unittest.TestCase):
   # Possible values for the "action" handler
   RETURN_VALUE_ACTIONS = {
       # Update device data with the returned dictionary.
-      'update_device_data': UpdateDeviceData
+      'update_device_data': UpdateDeviceData,
+      # Update factory shared data with the returned dictionary.
+      'update_factory_shared_data': UpdateFactorySharedData
   }
 
   ARGS = [
