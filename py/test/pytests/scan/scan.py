@@ -55,7 +55,7 @@ class Scan(unittest.TestCase):
           'Key to use to store in scanned value in RW VPD', optional=True),
       Arg(
           'insert_colon_in_between_hex', bool,
-          'True to add colon in between hex', optional=False),
+          'True to add colon in between hex', optional=True),
       Arg(
           'regexp', str, 'Regexp that the scanned value must match',
           optional=True),
