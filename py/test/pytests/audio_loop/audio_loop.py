@@ -200,6 +200,8 @@ class AudioLoopTest(unittest.TestCase):
         '      amplitude <= maximum measured amplitude <= max*, otherwise,\n'
         '      fail the test.  Both of **min** and **max** can be set to\n'
         '      None, which means no limit.\n', optional=False),
+        Arg('enter_to_pass', bool,
+            'Require operator to press ENTER if speakers work fine', False),
   ]
 
   def setUp(self):
@@ -493,7 +495,13 @@ class AudioLoopTest(unittest.TestCase):
     if self._test_results[self._output_volume_index]:
       self._ui.CallJSFunction('testPassResult')
       time.sleep(0.5)
-      self._ui.Pass()
+      if not self.args.enter_to_pass:
+        self._ui.Pass()
+      else:
+        instruction = test_ui.MakeLabel('Press ENTER if speaker works fine, or mark failed!')
+        self._template = ui_templates.OneSection(self._ui)
+        self._template.SetState(instruction)
+        self._ui.BindKey(test_ui.ENTER_KEY, lambda _: self._ui.Pass())
       return True
     return False
 
