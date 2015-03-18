@@ -253,14 +253,17 @@ class ChromeOSBoard(Board):
     if brightness is not None and not (0 <= brightness <= 100):
       raise ValueError('brightness out-of-range [0, 100]')
     try:
+      led_command = ['led', led_name]
       if color in [Board.LEDColor.AUTO, Board.LEDColor.OFF]:
-        color_brightness = color.lower()
+        led_command.append(color.lower())
+      elif color == Board.LEDColor.AMBER:
+        led_command.extend(['red=1', 'green=1'])
       elif brightness is not None:
         scaled_brightness = int(round(brightness / 100.0 * 255))
-        color_brightness = '%s=%d' % (color.lower(), scaled_brightness)
+        led_command.append('%s=%d' % (color.lower(), scaled_brightness))
       else:
-        color_brightness = color.lower()
-      self._CallECTool(['led', led_name, color_brightness])
+        led_command.append(color.lower())
+      self._CallECTool(led_command)
     except Exception as e:
       logging.exception('Unable to set LED color: %s', e)
 
