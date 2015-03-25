@@ -402,6 +402,21 @@ class _TouchpadData():  # pylint: disable=W0232
                  config_csum=config_csum)
 
   @classmethod
+  def Synaptics2(cls):
+    input_file = '/proc/bus/input/devices'
+    re_device_name = re.compile(r'^N: Name="(SYNA0000.*)"$', re.MULTILINE)
+    re_sysfs = re.compile(r'^S: Sysfs=(.*)$', re.MULTILINE)
+    with open(input_file, 'r') as f:
+      buf = f.read()
+    devices = buf.split('\n\n')
+    for d in devices:
+      match = re_device_name.findall(d)
+      if not match:
+        continue
+      device_name = match[0]
+      return Obj(ident_str=device_name, fw_version=None, config_csum=None)
+
+  @classmethod
   def Generic(cls):
     # TODO(hungte) add more information from id/*
     # format: N: Name="???_trackpad"
@@ -417,7 +432,8 @@ class _TouchpadData():  # pylint: disable=W0232
   def Get(cls):
     if cls.cached_data is None:
       cls.cached_data = Obj(ident_str=None, fw_version=None)
-      for vendor_fun in [cls.Cypress, cls.Synaptics, cls.Atmel, cls.Generic]:
+      for vendor_fun in [cls.Cypress, cls.Synaptics, cls.Atmel,
+        cls.Synaptics2, cls.Generic]:
         data = vendor_fun()
         if data is not None:
           cls.cached_data = data
