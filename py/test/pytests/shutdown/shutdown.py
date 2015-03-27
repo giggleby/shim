@@ -139,10 +139,11 @@ class ShutdownTest(unittest.TestCase):
       raise ShutdownError('Shutdown aborted by operator')
 
     try:
-      self.goofy.UIPresenterCountdown(
-          'Reboot test in progress...',
-          self.args.max_reboot_time_secs,
-          'Reboot test failed.')
+      if self.args.operation != factory.ShutdownStep.HALT:
+        self.goofy.UIPresenterCountdown(
+            'Reboot test in progress...',
+            self.args.max_reboot_time_secs,
+            'Reboot test failed.')
     except ProtocolError:
       # The presenter may be absent (e.g. during run-in). Ignore error
       # in this case.
