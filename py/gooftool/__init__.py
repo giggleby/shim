@@ -564,6 +564,12 @@ class Gooftool(object):
       disabled and it is not virtual.
     """
 
+    # TODO(akahuang): crosbug.com/p/38436
+    # At DVT1 we use firmware 6315.27, that does not support
+    # the virtual dev switch. Therefore the check is skipped for workaround.
+    # After we use newer firmware, the code should be deleted.
+    return True
+
     VBSD_HONOR_VIRT_DEV_SWITCH = 0x400
     if (self._util.GetVBSharedDataFlags() & VBSD_HONOR_VIRT_DEV_SWITCH) != 0:
       # Note when the system is using virtual developer switch. It could be
