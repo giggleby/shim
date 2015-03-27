@@ -154,9 +154,11 @@ def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
        'evaluate': ['Assert(ValidVPDValue("ro", "%s"))' % field for field in
                     ('initial_locale', 'initial_timezone', 'keyboard_layout',
                      'serial_number')]},
-      {'name': 'verify.vpd.rw',
-       'evaluate': ['CheckRegistrationCode(GetVPDValue("rw", "%s"))' % field
-                    for field in ('gbind_attribute', 'ubind_attribute')]},
+      # TODO(akahuang): Wait the partner to implement the registration code API.
+      # After writing the code into RW-VPD, the check can be un-commented.
+      #{'name': 'verify.vpd.rw',
+      # 'evaluate': ['CheckRegistrationCode(GetVPDValue("rw", "%s"))' % field
+      #              for field in ('gbind_attribute', 'ubind_attribute')]},
   ]
   database.Rules(mandatory_rules).EvaluateRules(context)
 
