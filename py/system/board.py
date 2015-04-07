@@ -301,6 +301,17 @@ class Board(object):
     """
     raise NotImplementedError
 
+  def GetUSBPDChargeVoltage(self, port):
+    """Gets the USB PD charge voltage.
+
+    Args:
+      port: The USB port number.
+
+    Returns:
+      An integer value in minivolt of the USB PD charge voltage.
+    """
+    raise NotImplementedError
+
   def GetGPIOValue(self, gpio_name, from_pd=False):
     """Gets EC/PD GPIO value.
 

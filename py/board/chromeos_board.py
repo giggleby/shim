@@ -14,7 +14,7 @@ import re
 
 from cros.factory.system.board import Board, BoardException
 from cros.factory.utils.process_utils import Spawn
-
+from cros.factory.utils.process_utils import SpawnOutput
 
 class ChromeOSBoard(Board):
   """Default implementation of the :py:class:`cros.factory.system.board.Board`
@@ -34,6 +34,9 @@ class ChromeOSBoard(Board):
   EC_BATTERY_CHARGING_RE = re.compile(r'^\s+Flags\s+.*\s+CHARGING.*$',
       re.MULTILINE)
   EC_CHARGER_RE = re.compile(r'^chg_current = (\d+)mA$', re.MULTILINE)
+  EC_VOLT_STR_RE = re.compile(r'^\s*Current\s+charging\s+voltage\S+\s*\d*\w*',
+                              re.MULTILINE)
+  EC_VOLT_VAL_RE = re.compile(r'\d+', re.MULTILINE)
 
   # Expected battery info.
   BATTERY_DESIGN_CAPACITY_RE = re.compile('Design capacity:\s+([1-9]\d*)\s+mAh')
@@ -284,6 +287,21 @@ class ChromeOSBoard(Board):
         role=match.group('role'),
         polarity=match.group('polarity'),
         state=int(match.group('state')))
+
+  def GetUSBPDChargeVoltage(self, port):
+    cmd = 'ectool --interface=dev --dev=1 usbpdpower'
+    read_ectool = SpawnOutput(cmd.split(), log=True)
+    sample_volt = self.EC_VOLT_STR_RE.findall(read_ectool)
+    if (port == 0):
+      sample_volt_left = self.EC_VOLT_VAL_RE.findall(sample_volt[0])
+      volt_value = int(sample_volt_left[0])
+    else:
+      sample_volt_right = self.EC_VOLT_VAL_RE.findall(sample_volt[1])
+      volt_value = int(sample_volt_right[0])
+    if volt_value:
+      return volt_value
+    else:
+      raise BoardException('Cannot get USB PD charge voltage')
 
   def GetGPIOValue(self, gpio_name, from_pd=False):
     gpio_info_re = re.compile(r'^GPIO %s = (\d)' % gpio_name)

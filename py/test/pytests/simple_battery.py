@@ -19,7 +19,6 @@ import unittest
 
 import factory_common   # pylint: disable=W0611
 from cros.factory import system
-from cros.factory.system import power
 from cros.factory.test import factory
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
@@ -27,7 +26,6 @@ from cros.factory.test import utils
 from cros.factory.test.args import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import time_utils
-
 
 _TEST_TITLE = test_ui.MakeLabel('Simple Battery Test', u'简单电池测试')
 _UNPLUG_AC = test_ui.MakeLabel('Unplug AC to proceed', u'拔除 AC 电源')
@@ -59,6 +57,12 @@ class SimpleBatteryTest(unittest.TestCase):
       Arg('max_cycle_count', type=int, default=1,
           help=('the maximum cycle count beyond which the battery is considered'
                 'used')),
+      Arg('raiden_index', int, 'Index of DUT raiden port', optional=True),
+      Arg('check_volt_range', tuple,
+          'A tuple for indicating reasonable voltage in minivolt',
+          optional=True),
+      Arg('check_voltage', bool, 'to turn on checking input voltage function',
+          default=False)
   ]
 
   def setUp(self):
@@ -109,6 +113,8 @@ class SimpleBatteryTest(unittest.TestCase):
     sync_utils.WaitFor(self._board.power.CheckACPresent, timeout_secs=10)
     self._template.SetState(_TESTING_CHARGE)
     sampled_current = self.SampleBatteryCurrent(duration_secs)
+    if self.args.check_voltage:
+      self.CheckChargeVoltage()
     if self.args.min_charge_current_mA:
       if not any(
           [c > self.args.min_charge_current_mA for c in sampled_current]):
@@ -149,6 +155,18 @@ class SimpleBatteryTest(unittest.TestCase):
       if not any([c < 0 for c in sampled_current]):
         raise factory.FactoryTestFailure(
             'Battery was not discharging during charge test')
+
+  def CheckChargeVoltage(self):
+    """Checks the charging voltage.
+
+    Raises:
+      FactoryTestFailure if charging voltage not in range.
+    """
+    volt_value = self._board.GetUSBPDChargeVoltage(self.args.raiden_index)
+    factory.console.info('volt value: %d', volt_value)
+    volt_min, volt_max = self.args.check_volt_range
+    if not (volt_min < volt_value < volt_max):
+      raise factory.FactoryTestFailure('Voltage Not In Range')
 
   def runTest(self):
     if not self._board.power.CheckBatteryPresent():
