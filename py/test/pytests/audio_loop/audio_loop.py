@@ -72,6 +72,7 @@ Here are three test list examples for three test cases::
 from __future__ import print_function
 
 import os
+import random
 import re
 import tempfile
 import time
@@ -112,6 +113,9 @@ _DEFAULT_SOX_AMPLITUDE_THRESHOLD = (None, None)
 _DEFAULT_AUDIOFUN_TEST_PAIRS = [(0, 0), (1, 1)]
 # Default duration in seconds to trim in the beginning of recorded file.
 _DEFAULT_TRIM_SECONDS = 0.5
+
+_DURATION_SHORT = 2
+_DURATION_LONG = 5
 
 _UI_HTML = """
 <h1 id="message" style="position:absolute; top:45%">
@@ -326,8 +330,12 @@ class AudioLoopTest(unittest.TestCase):
         self._audio_util.MuteLeftMLBDmic(self._in_card)
 
     test_result = None
-    duration = self._current_test_args.get(
-        'duration', _DEFAULT_AUDIOFUN_TEST_DURATION)
+    if not self.args.enter_to_pass:
+      duration = self._current_test_args.get(
+          'duration', _DEFAULT_AUDIOFUN_TEST_DURATION)
+    else:
+      duration = random.choice([_DURATION_SHORT, _DURATION_LONG])
+      self._passkey = duration
     process = Spawn([audio_utils.AUDIOFUNTEST_PATH,
         '-r', '48000', '-i', self._input_device, '-o', self._output_device,
         '-l', '%d' % duration, '-a', '%d' % speaker_channel],
@@ -493,15 +501,24 @@ class AudioLoopTest(unittest.TestCase):
                          self._output_volumes[self._output_volume_index],
                          self._test_results[self._output_volume_index])
     if self._test_results[self._output_volume_index]:
-      self._ui.CallJSFunction('testPassResult')
-      time.sleep(0.5)
       if not self.args.enter_to_pass:
+        self._ui.CallJSFunction('testPassResult')
+        time.sleep(0.5)
         self._ui.Pass()
       else:
-        instruction = test_ui.MakeLabel('Press ENTER if speaker works fine, or mark failed!')
+        if self._passkey == _DURATION_SHORT:
+          time.sleep(_DURATION_LONG - _DURATION_SHORT)
+        self._ui.CallJSFunction('testPassResult')
+        time.sleep(0.5)
+        instruction = test_ui.MakeLabel('如果听到 %d 秒的声音, 请按“ %d ”,'
+                                        '如果听到 %d 秒的声音，请按“ %d ”'
+                                         % (_DURATION_SHORT, _DURATION_SHORT,
+                                            _DURATION_LONG, _DURATION_LONG))
         self._template = ui_templates.OneSection(self._ui)
         self._template.SetState(instruction)
-        self._ui.BindKey(test_ui.ENTER_KEY, lambda _: self._ui.Pass())
+        self._ui.BindKey(str(self._passkey), lambda _: self._ui.Pass())
+        self._ui.BindKey(str(_DURATION_SHORT + _DURATION_LONG - self._passkey),
+            lambda _: self._ui.Fail('Wrong Selection!'))
       return True
     return False
 
