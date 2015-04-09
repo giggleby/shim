@@ -338,7 +338,7 @@ class DUTLinkManager(object):
       sync_utils.WaitFor(lambda: service_manager.GetServiceStatus('shill') ==
                          service_manager.Status.START, 15)
       # Give shill some time to run DHCP
-      time.sleep(3)
+      time.sleep(10)
     # OK, shill has done its job now. Let's see what interfaces are not managed.
     intf_blacklist = self._GetDHCPInterfaceBlacklist()
     intfs = [intf for intf in net_utils.GetUnmanagedEthernetInterfaces()
