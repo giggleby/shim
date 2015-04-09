@@ -683,7 +683,7 @@ def Verify(options):
   VerifyKeys(options)
   VerifyRootFs(options)
   VerifyTPM(options)
-  VerifyBranding(options)
+  #VerifyBranding(options)
 
 
 @Command('untar_stateful_files')
@@ -850,7 +850,7 @@ def Finalize(options):
   Verify(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
-  SetFirmwareBitmapLocale(options)
+  #SetFirmwareBitmapLocale(options)
   ClearGBBFlags(options)
   ClearFactoryVPDEntries(options)
   if options.no_write_protect:
