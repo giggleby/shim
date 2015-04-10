@@ -96,7 +96,13 @@ main() {
     die "Failed to identify release/factory partition numbers: $release_rootfs"
 
   NEED_ROLLBACK="YES"
-  install_splash
+  # TODO (bowgotsai): Enable this after http://crbug.com/457081 is resolved.
+  # Release images with Freon enabled cannot show the splash picture.
+  # During factory wiping, it only shows Chrome logo and looks like being
+  # stuck. If there is no splash picture, it can show 'powerwash in progress'.
+  # For short term, we'll skip installing the splash picture so it can show
+  # some message during wiping.
+  # install_splash
   install_wipe_tag
   if chromeos_is_legacy_firmware; then
     # When booting with legacy firmware, we need to update the legacy boot
