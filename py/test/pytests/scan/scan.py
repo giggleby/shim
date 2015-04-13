@@ -12,6 +12,8 @@ import socket
 import time
 import unittest
 
+import jsonrpclib
+
 import factory_common  # pylint: disable=W0611
 from cros.factory.test.event_log import Log
 from cros.factory.system import vpd
@@ -25,6 +27,7 @@ from cros.factory.test.event import Event
 from cros.factory.test.fixture.bft_fixture import (CreateBFTFixture,
                                                    TEST_ARG_HELP)
 from cros.factory.test.utils import StartDaemonThread
+from cros.factory.tools.ghost import GHOST_RPC_PORT
 
 
 class Scan(unittest.TestCase):
@@ -130,7 +133,7 @@ class Scan(unittest.TestCase):
         return SetError(
             'Unable to contact shopfloor server: %s' % e,
             label_zh=u'連不到 shopfloor server: %s' % e)
-      except:  # pylint: disable=W0622
+      except:  # pylint: disable=W0702
         logging.exception('select_aux_data failed')
         return SetError(utils.FormatExceptionOnly())
       factory.get_state_instance().UpdateSkippedTests()
@@ -199,10 +202,19 @@ class Scan(unittest.TestCase):
     if self.auto_scan_timer:
       self.auto_scan_timer.cancel()
 
+    self.KickGhost()
+
   def ScanBarcode(self):
     while True:
       self.fixture.ScanBarcode()
       time.sleep(self.args.barcode_scan_interval_secs)
+
+  def KickGhost(self):
+    server = jsonrpclib.Server('http://localhost:%d' % GHOST_RPC_PORT)
+    try:
+      server.Reconnect()
+    except socket.error as e:
+      logging.exception(str(e))
 
   def runTest(self):
     template = ui_templates.OneSection(self.ui)

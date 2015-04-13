@@ -19,6 +19,10 @@ import threading
 import time
 import uuid
 
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+
+
+GHOST_RPC_PORT = 4499
 
 _OVERLORD_PORT = 4455
 _OVERLORD_LAN_DISCOVERY_PORT = 4456
@@ -86,7 +90,7 @@ class Ghost(object):
     self._shell_command = command
     self._buf = ''
     self._requests = {}
-    self._reset = False
+    self._reset = threading.Event()
     self._last_ping = 0
     self._queue = Queue.Queue()
 
@@ -106,7 +110,7 @@ class Ghost(object):
     pid = os.fork()
     if pid == 0:
       g = Ghost([self._connected_addr], mode, True, sid, command)
-      g.Start(True)
+      g.Start()
       sys.exit(0)
     else:
       return pid
@@ -179,7 +183,7 @@ class Ghost(object):
 
   def Reset(self):
     """Reset state and clear request handlers."""
-    self._reset = False
+    self._reset.clear()
     self._buf = ""
     self._last_ping = 0
     self._requests = {}
@@ -337,7 +341,7 @@ class Ghost(object):
           self.Ping()
         self.ScanForTimeoutRequests()
 
-        if self._reset:
+        if self._reset.is_set():
           self.Reset()
           break
     except socket.error:
@@ -358,7 +362,7 @@ class Ghost(object):
       non_local['addr'] = addr
       def registered(response):
         if response is None:
-          self._reset = True
+          self._reset.set()
           raise RuntimeError('Register request timeout')
         logging.info('Registered with Overlord at %s:%d', *non_local['addr'])
         self._queue.put("pause", True)
@@ -393,60 +397,79 @@ class Ghost(object):
 
     raise RuntimeError("Cannot connect to any server")
 
+  def Reconnect(self):
+    logging.info('Received reconnect request from RPC server, reconnecting...')
+    self._reset.set()
+
   def StartLanDiscovery(self):
     """Start to listen to LAN discovery packet at
     _OVERLORD_LAN_DISCOVERY_PORT."""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    try:
-      s.bind(('0.0.0.0', _OVERLORD_LAN_DISCOVERY_PORT))
-    except socket.error as e:
-      logging.error("LAN discovery: %s, abort", e)
-      return
 
-    logging.info('LAN Discovery: started')
-    while True:
-      rd, _, _ = select.select([s], [], [], 1)
-
-      if s in rd:
-        data, source_addr = s.recvfrom(_BUFSIZE)
-        parts = data.split()
-        if parts[0] == 'OVERLORD':
-          ip, port = parts[1].split(':')
-          if len(ip.strip()) == 0:
-            ip = source_addr[0]
-          self._queue.put((ip, int(port)), True)
-
+    def thread_func():
+      s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+      s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+      s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
       try:
-        obj = self._queue.get(False)
-      except Queue.Empty:
-        pass
-      else:
-        if type(obj) is not str:
-          self._queue.put(obj)
-        elif obj == 'pause':
-          logging.info('LAN Discovery: paused')
-          while True:
-            obj = self._queue.get(True)
-            if obj == 'resume':
-              logging.info('LAN Discovery: resumed')
-              break
+        s.bind(('0.0.0.0', _OVERLORD_LAN_DISCOVERY_PORT))
+      except socket.error as e:
+        logging.error("LAN discovery: %s, abort", e)
+        return
+
+      logging.info('LAN Discovery: started')
+      while True:
+        rd, _, _ = select.select([s], [], [], 1)
+
+        if s in rd:
+          data, source_addr = s.recvfrom(_BUFSIZE)
+          parts = data.split()
+          if parts[0] == 'OVERLORD':
+            ip, port = parts[1].split(':')
+            if len(ip.strip()) == 0:
+              ip = source_addr[0]
+            self._queue.put((ip, int(port)), True)
+
+        try:
+          obj = self._queue.get(False)
+        except Queue.Empty:
+          pass
+        else:
+          if type(obj) is not str:
+            self._queue.put(obj)
+          elif obj == 'pause':
+            logging.info('LAN Discovery: paused')
+            while True:
+              obj = self._queue.get(True)
+              if obj == 'resume':
+                logging.info('LAN Discovery: resumed')
+                break
+
+    t = threading.Thread(target=thread_func)
+    t.daemon = True
+    t.start()
+
+  def StartRPCServer(self):
+    rpc_server = SimpleJSONRPCServer(('0.0.0.0', GHOST_RPC_PORT),
+                                     logRequests=False)
+    rpc_server.register_function(self.Reconnect, 'Reconnect')
+    t = threading.Thread(target=rpc_server.serve_forever)
+    t.daemon = True
+    t.start()
 
   def ScanGateway(self):
     for addr in [(x, _OVERLORD_PORT) for x in self.GetGateWayIP()]:
       if addr not in self._overlord_addrs:
         self._overlord_addrs.append(addr)
 
-  def Start(self, no_lan_disc=False):
+  def Start(self, no_lan_disc=True, no_rpc_server=True):
     logging.info('%s started', self.MODE_NAME[self._mode])
     logging.info('MID: %s', self._machine_id)
     logging.info('CID: %s', self._client_id)
 
     if not no_lan_disc:
-      t = threading.Thread(target=self.StartLanDiscovery)
-      t.daemon = True
-      t.start()
+      self.StartLanDiscovery()
+
+    if not no_rpc_server:
+      self.StartRPCServer()
 
     try:
       while True:
@@ -481,6 +504,9 @@ def main():
                       default=False, help='use random machine ID')
   parser.add_argument('--no-lan-disc', dest='no_lan_disc', action='store_true',
                       default=False, help='disable LAN discovery')
+  parser.add_argument('--no-rpc-server', dest='no_rpc_server',
+                      action='store_true', default=False,
+                      help='disable RPC server')
   parser.add_argument("--prop-file", dest="prop_file", type=str, default=None,
                       help='file containing the JSON representation of client '
                            'properties')
@@ -494,7 +520,7 @@ def main():
   g = Ghost(addrs, Ghost.AGENT, args.rand_mid)
   if args.prop_file:
     g.LoadPropertiesFromFile(args.prop_file)
-  g.Start(args.no_lan_disc)
+  g.Start(args.no_lan_disc, args.no_rpc_server)
 
 
 if __name__ == '__main__':
