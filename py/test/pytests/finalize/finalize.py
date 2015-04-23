@@ -127,13 +127,16 @@ class Finalize(unittest.TestCase):
       self.args.polling_seconds = None
 
   def runTest(self):
-    # Check waived_tests argument.  (It must be empty at DVT and
-    # beyond.)
-    phase.AssertStartingAtPhase(
-        phase.DVT,
-        not self.args.waive_tests,
-        'Tests may not be waived; set of waived tests is %s' % (
-            self.args.waive_tests))
+    # Because we introduct the run-in starts from DVT stage and to
+    # avoid it blocks the build. We decide to allow waiving until
+    # http://crosbug/p/38770 is root caused.
+    ## Check waived_tests argument.  (It must be empty at DVT and
+    ## beyond.)
+    #phase.AssertStartingAtPhase(
+    #    phase.DVT,
+    #    not self.args.waive_tests,
+    #    'Tests may not be waived; set of waived tests is %s' % (
+    #        self.args.waive_tests))
 
     phase.AssertStartingAtPhase(phase.PVT, self.args.write_protection,
                                 'Write protection must be enabled')
