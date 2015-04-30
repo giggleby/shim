@@ -525,12 +525,13 @@ class VSWR(unittest.TestCase):
     event_log_fields.update(self.log)
     event_log.Log(self._config['test']['event_log_name'], **event_log_fields)
 
-    logging.info('Uploading aux log onto shopfloor.')
-    shopfloor_server = shopfloor.GetShopfloorConnection()
-    shopfloor_server.SaveAuxLog(
-        posixpath.join(self._config['test']['shopfloor_log_dir'],
-                       log_file_name),
-        xmlrpclib.Binary(log_content))
+    if self._config['shopfloor']['enabled']:
+      logging.info('Uploading aux log onto shopfloor.')
+      shopfloor_server = shopfloor.GetShopfloorConnection()
+      shopfloor_server.SaveAuxLog(
+          posixpath.join(self._config['test']['shopfloor_log_dir'],
+                         log_file_name),
+          xmlrpclib.Binary(log_content))
 
   def _SetUpNetwork(self):
     """Sets up the local network.
