@@ -120,6 +120,8 @@ _DURATION_LONG = 5
 _UI_HTML = """
 <h1 id="message" style="position:absolute; top:45%">
 <center style="font-size: 20pt">
+    <div id="test_title">
+    </div>
     <div id="require_dongle">
         <span class="goofy-label-en">Plug in audio jack dongle</span>
         <span class="goofy-label-zh">請放入音源孔測試置具</span>
@@ -167,6 +169,10 @@ class AudioLoopTest(unittest.TestCase):
         False),
     Arg('mic_source', str, 'Microphone source: external, panel, mlb',
         'external'),
+    Arg('test_title', str,
+        'Title on the test screen.'
+        'It can be used to tell operators the test info'
+        'For example: "LRGM Mic", "LRMG Mic"', ''),
     Arg('tests_to_conduct', list, 'A list of dicts.  A dict should contain \n'
         'at least one key named **type** indicating the test type, which can \n'
         'be **audiofun**, **sinewav**, or **noise**.\n'
@@ -279,7 +285,7 @@ class AudioLoopTest(unittest.TestCase):
     # If autostart, JS triggers start_run_test event.
     # Otherwise, it binds start_run_test with 's' key pressed.
     self._ui.CallJSFunction('init', self.args.autostart,
-        self.args.require_dongle)
+        self.args.require_dongle, self.args.test_title)
     self._ui.Run()
 
   def AppendErrorMessage(self, error_message):
