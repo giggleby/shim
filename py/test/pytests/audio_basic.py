@@ -14,6 +14,7 @@
 
 import logging
 import os
+import time
 import unittest
 
 import factory_common  # pylint: disable=W0611
@@ -35,6 +36,13 @@ _MSG_AUDIO_INFO = test_ui.MakeLabel(
     '压住 \'P\' 键播放范例<br>'
     '压下空白表示成功',
     css_class='audio-test-info')
+_MSG_AUDIO_INFO_NO_SAMPLE = test_ui.MakeLabel(
+    'Press & hold \'R\' to record, Playback will follow<br>'
+    'Press space to mark pass',
+    zh='压住 \'R\' 键开始录音，之后会重播录到的声音<br>'
+    '压下空白表示成功',
+    css_class='audio-test-info')
+
 
 _HTML_AUDIO = """
 <table style="width: 70%%; margin: auto;">
@@ -82,7 +90,9 @@ class AudioBasicTest(unittest.TestCase):
   ARGS = [
     Arg('audio_title', str, 'Title of audio test', 'Headset Audio Test'),
     Arg('amixer_init_config', list, 'Initial config of amixer', None,
-        optional=True)
+        optional=True),
+    Arg('not_play_sample', bool, 'Choose whether to play sample', default=False),
+    Arg('need_test_to_pass', bool, 'Add space event after recording', default=False)
   ]
 
   def setUp(self):
@@ -96,7 +106,10 @@ class AudioBasicTest(unittest.TestCase):
         self.args.audio_title,
         css_class='audio-test-info')
     self.ui.SetHTML(msg_audio_title, id='audio_title')
-    self.ui.SetHTML(_MSG_AUDIO_INFO, id='audio_info')
+    if not self.args.not_play_sample:
+      self.ui.SetHTML(_MSG_AUDIO_INFO, id='audio_info')
+    else:
+      self.ui.SetHTML(_MSG_AUDIO_INFO_NO_SAMPLE, id='audio_info')
     self.current_process = None
     self.key_press = None
     base = os.path.dirname(os.path.realpath(__file__))
@@ -107,8 +120,10 @@ class AudioBasicTest(unittest.TestCase):
       self.ConfigAmixerSetting(self.args.amixer_init_config)
 
     self.ui.AddEventHandler('HandleRecordEvent', self.HandleRecordEvent)
-    self.ui.AddEventHandler('HandleSampleEvent', self.HandleSampleEvent)
-    self.ui.AddEventHandler('MarkPass', self.MarkPass)
+    if not self.args.not_play_sample:
+      self.ui.AddEventHandler('HandleSampleEvent', self.HandleSampleEvent)
+    if not self.args.need_test_to_pass:
+      self.ui.AddEventHandler('MarkPass', self.MarkPass)
 
   def ConfigAmixerSetting(self, config_list):
     for config in config_list:
@@ -123,9 +138,12 @@ class AudioBasicTest(unittest.TestCase):
       self.current_process = Spawn(_CMD_RECORD_AUDIO + ['/tmp/rec.wav'])
     elif event.data == 'stop' and self.key_press == 'R':
       TerminateOrKillProcess(self.current_process)
+      time.sleep(1)
       logging.info('stop record and start playback')
       Spawn(_CMD_PLAY_AUDIO + ['/tmp/rec.wav'], check_call=True)
       self.key_press = None
+      if self.args.need_test_to_pass:
+        self.ui.AddEventHandler('MarkPass', self.MarkPass)
 
   def HandleSampleEvent(self, event):
     if event.data == 'start' and not self.key_press:
