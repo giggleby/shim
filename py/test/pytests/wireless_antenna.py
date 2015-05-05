@@ -227,7 +227,10 @@ class WirelessTest(unittest.TestCase):
         'antenna and ifconfig up. Need to decide this value carefully since it'
         'depends on the platform and antenna config to test.', default=10),
     Arg('disable_switch', bool, 'Do not switch antenna, just check "all" '
-        'config.', default=False)
+        'config.', default=False),
+    Arg('same_ssid_ap', bool, 'Allow more APs which have same SSID,'
+        ' choose the strengest one and check whether or not up to standard',
+        default=False)
   ]
 
   def setUp(self):
@@ -322,6 +325,9 @@ class WirelessTest(unittest.TestCase):
     """
     parsed_tuples = []
     (mac, ssid, freq, signal, last_seen) = (None, None, None, None, None)
+    if self.args.same_ssid_ap:
+      max_sginal = 0.0
+      strength_ap_index = 0
     for line in scan_output.splitlines():
       line = line.strip()
       # a line starts with BSS should look like
@@ -336,6 +342,11 @@ class WirelessTest(unittest.TestCase):
       last_seen = GetProp(line, _RE_LAST_SEEN, last_seen)
       if mac and freq and signal and ssid and last_seen:
         if ssid == service_ssid:
+          if self.args.same_ssid_ap:
+            if max_sginal < signal:
+	      max_sginal = signal
+            else:
+              strength_ap_index = len(parsed_tuples)
           parsed_tuples.append(
               (mac, int(freq), float(signal), int(last_seen)))
         (mac, ssid, freq, signal, last_seen) = (None, None, None, None, None)
@@ -350,7 +361,10 @@ class WirelessTest(unittest.TestCase):
       for mac, freq, signal, last_seen in parsed_tuples:
         factory.console.warning('mac: %s, ssid: %s, freq: %d, signal %f, '
             'last_seen %d ms', mac, service_ssid, freq, signal, last_seen)
-      return (None, None, None, None)
+      if self.args.same_ssid_ap:
+        return parsed_tuples[strength_ap_index]
+      else:
+        return (None, None, None, None)
 
   def SwitchAntenna(self, antenna):
     """Switches antenna.
