@@ -64,3 +64,31 @@ testPassResult = function(success_rate) {
     "Testing Result: Success!",
     "测试结果: 成功!"));
 }
+
+testMicSound = function(progress) {
+  var msgs = document.getElementById("message");
+  msgs.innerHTML = "";
+  if (progress == 0) {
+    msgs.appendChild(createLabel(
+      "Recording...\n",
+      "录音中...\n"));
+  } else if (progress == 1) {
+    msgs.appendChild(createLabel(
+      "Playing the recorded file...\n",
+      "播放录音文件...\n"));
+  } else {
+    msgs.appendChild(createLabel(
+      "If recorded file sound good, press 'P' else press 'F'\n",
+      "录音大小听起来可以接受请按'P', 否则按'F'\n"));
+    window.onkeydown = function(event) {
+      if (event.keyCode == 80) { // 'p'
+        test.sendTestEvent("on_micsound_passed", {});
+        window.onkeydown = null;
+      }
+      if (event.keyCode == 70) { // 'f'
+        test.sendTestEvent("on_micsound_failed", {});
+        window.onkeydown = null;
+      }
+    }
+  }
+}

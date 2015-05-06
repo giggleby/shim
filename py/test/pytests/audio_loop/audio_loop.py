@@ -178,7 +178,7 @@ class AudioLoopTest(unittest.TestCase):
         'nocheck'),
     Arg('tests_to_conduct', list, 'A list of dicts.  A dict should contain \n'
         'at least one key named **type** indicating the test type, which can \n'
-        'be **audiofun**, **sinewav**, or **noise**.\n'
+        'be **audiofun**, **sinewav**, **noise**, or **micsound**.\n'
         '\n'
         'If type is **audiofun**, the dict can optionally contain:\n'
         '  - **duration**: The test duration, in seconds.\n'
@@ -201,6 +201,10 @@ class AudioLoopTest(unittest.TestCase):
         '      fail the test.  Both of **min** and **max** can be set to\n'
         '      None, which means no limit.\n'
         '\n'
+        'If type is **micsound**, the dict can optionally contain:\n'
+	'  - **duration**: The test duration, in seconds.\n'
+	'  - **freq**: The play frequency, default: 1Khz.\n'
+	'\n'
         'If type is **noise**, the dict can optionally contain:\n'
         '  - **duration**: The test duration, in seconds.\n'
         '  - **rms_threshold**: A tuple of **(min, max)** that will make\n'
@@ -267,6 +271,8 @@ class AudioLoopTest(unittest.TestCase):
 
     # Setup HTML UI, and event handler
     self._ui = test_ui.UI()
+    self._ui.AddEventHandler('on_micsound_passed', self.OnMicSoundPassed)
+    self._ui.AddEventHandler('on_micsound_failed', self.OnMicSoundFailed)
     self._ui.AddEventHandler('start_run_test', self.StartRunTest)
     self._ui_template = ui_templates.OneSection(self._ui)
     self._ui_template.SetState(_UI_HTML)
@@ -426,6 +432,34 @@ class AudioLoopTest(unittest.TestCase):
 
       os.unlink(record_file_path)
 
+  def TestMicSound(self):
+    """Tests loopback and operator check the result of record."""
+
+    self._ui.CallJSFunction('testMicSound', 0)
+
+    record_file_path = '/tmp/record-%d-%s.raw' % (
+        self._output_volumes[self._output_volume_index], time.time())
+    duration = self._current_test_args.get('duration',
+                                           _DEFAULT_SINEWAV_TEST_DURATION)
+    freq = self._current_test_args.get('freq', _DEFAULT_FREQ_HZ)
+    playsine_thread = PlaySineThread(2, self._output_device, freq,
+                                     duration + 1)
+    factory.console.info('MicSound: duration %d' % duration)
+    playsine_thread.start()
+    time.sleep(0.5)
+
+    self.RecordFile(duration, record_file_path)
+
+    playsine_thread.join()
+
+    # Play the recorded file and let operator check the result
+    self._ui.CallJSFunction('testMicSound', 1)
+    time.sleep(0.5)
+    self.PlayFile(record_file_path)
+    self._ui.CallJSFunction('testMicSound', 2)
+
+    os.unlink(record_file_path)
+
   def SinewavTest(self):
     self._ui.CallJSFunction('testInProgress', None)
 
@@ -468,6 +502,17 @@ class AudioLoopTest(unittest.TestCase):
       audio_utils.TrimAudioFile(in_path=record_path, out_path=file_path,
                                 start=trim, end=None, num_channel=2)
       os.unlink(record_path)
+
+  def PlayFile(self, file_path):
+    """Play the recorded file by RecordFile() using aplay.
+
+    Args:
+      file_path: The file path to play
+    """
+    factory.console.info('PlayFile : %s.', file_path)
+    play_cmd = ['aplay', '-D', self._output_device, '-f', 'dat',
+                '-t', 'raw', file_path]
+    Spawn(play_cmd, log=True, check_call=True)
 
   def CheckRecordedAudio(self, sox_output):
     rms_value = audio_utils.GetAudioRms(sox_output)
@@ -544,6 +589,14 @@ class AudioLoopTest(unittest.TestCase):
                          zip(self._output_volumes, self._test_results))
     self._ui.Fail('; '.join(self._test_message))
 
+  def OnMicSoundFailed(self, event):
+    factory.console.info('Test Mic Sound failed')
+    self._ui.Fail('; Failed')
+
+  def OnMicSoundPassed(self, event):
+    factory.console.info('Test Mic Sound passed')
+    self._ui.Pass()
+
   def StartRunTest(self, event): # pylint: disable=W0613
     mic_status = self._audio_util.GetMicJackStatus(self._in_card)
     headphone_status = self._audio_util.GetHeadphoneJackStatus(self._out_card)
@@ -616,6 +669,9 @@ class AudioLoopTest(unittest.TestCase):
           self.SinewavTest()
         elif test['type'] == 'noise':
           self.NoiseTest()
+        elif test['type'] == 'micsound':
+          self.TestMicSound()
+	  return
         else:
           raise ValueError('Test type "%s" not supported.' % test['type'])
 
