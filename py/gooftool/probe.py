@@ -123,12 +123,14 @@ def _ReadSysfsFields(base_path, field_list, optional_field_list=None):
 def _ReadSysfsPciFields(path):
   """Returns string containing PCI 'vendor:device' tuple."""
   # TODO(hungte): Maybe add PCI 'rev' field.
-  field_data = _ReadSysfsFields(path, ['vendor', 'device'])
+  field_data = _ReadSysfsFields(path, ['vendor', 'device'], ['subsystem_vendor', 'subsystem_device'])
   if field_data is None:
     return None
   field_data.update(DictCompactProbeStr([
-      '%s:%s' % (field_data['vendor'].replace('0x', ''),
-                 field_data['device'].replace('0x', ''))]))
+      '%s:%s %s:%s' % (field_data['vendor'].replace('0x', ''),
+                       field_data['device'].replace('0x', ''),
+                       field_data['subsystem_vendor'].replace('0x', ''),
+                       field_data['subsystem_device'].replace('0x', ''))]))
   return field_data
 
 
