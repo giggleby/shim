@@ -57,6 +57,8 @@ class KeyboardTest(unittest.TestCase):
         ('Use specified layout other than derived from VPD. '
          'If None, the layout from the VPD is used.'),
         default=None, optional=True),
+    Arg('keyboard_device_name', (str, unicode), 'Device name of keyboard.',
+        default='AT Translated Set 2 keyboard', optional=True),
     Arg('timeout_secs', int, 'Timeout for the test.', default=30),
     Arg('sequential_press', bool, 'Indicate whether keycodes need to be '
         'pressed sequentially or not.', default=False, optional=True),
@@ -64,6 +66,7 @@ class KeyboardTest(unittest.TestCase):
         'If presents, in filename, the board name is appended after layout.',
         default=''),
     Arg('skip_power_key', bool, 'Skip power button testing', default=False),
+    Arg('test_power_key', bool, 'test the power button', default=False),
   ]
 
   def setUp(self):
@@ -75,10 +78,16 @@ class KeyboardTest(unittest.TestCase):
     self.template = OneSection(self.ui)
     self.ui.AppendCSS(_KEYBOARD_TEST_DEFAULT_CSS)
 
-    # Get the keyboard input device.
-    keyboard_devices = evdev_utils.GetKeyboardDevices()
-    assert len(keyboard_devices) == 1, 'Multiple keyboards detected.'
-    self.keyboard_device = keyboard_devices[0]
+    if self.args.test_power_key:
+      self.env = {
+          'DISPLAY': ':0',
+          'XAUTHORITY': '/home/chronos/.Xauthority'
+      }
+    else:
+      # Get the keyboard input device.
+      keyboard_devices = evdev_utils.GetKeyboardDevices()
+      assert len(keyboard_devices) == 1, 'Multiple keyboards detected.'
+      self.keyboard_device = keyboard_devices[0]
 
     # Initialize keyboard layout and bindings
     self.layout = self.GetKeyboardLayout()
@@ -100,7 +109,10 @@ class KeyboardTest(unittest.TestCase):
                            self.args.allow_multi_keys)
 
     self.dispatchers = []
-    self.keyboard_device.grab()
+    if self.args.test_power_key:
+      self.EnableXKeyboard(False)
+    else:
+      self.keyboard_device.grab()
     StartDaemonThread(target=self.MonitorEvdevEvent)
     StartCountdownTimer(self.args.timeout_secs,
                         lambda: self.ui.CallJSFunction('failTest'),
@@ -112,7 +124,10 @@ class KeyboardTest(unittest.TestCase):
     """
     for dispatcher in self.dispatchers:
       dispatcher.close()
-    self.keyboard_device.ungrab()
+    if self.args.test_power_key:
+      self.EnableXKeyboard(True)
+    else:
+      self.keyboard_device.ungrab()
 
   def GetKeyboardLayout(self):
     """Uses the given keyboard layout or auto-detect from VPD."""
@@ -152,12 +167,22 @@ class KeyboardTest(unittest.TestCase):
       key_order_list = eval(f.read())
     return key_order_list
 
+  def EnableXKeyboard(self, enable):
+    """Enables/Disables keyboard at the X server."""
+    CheckOutput(['xinput', 'set-prop', self.args.keyboard_device_name,
+                 'Device Enabled', '1' if enable else '0'],
+                env=self.env)
 
   def MonitorEvdevEvent(self):
     """Monitors keyboard events from evdev."""
-    self.dispatchers.append(
-        evdev_utils.InputDeviceDispatcher(
-            self.keyboard_device, self.HandleEvent))
+    if self.args.test_power_key:
+      for dev in map(evdev.InputDevice, evdev.list_devices()):
+        if evdev.ecodes.EV_KEY in dev.capabilities().iterkeys():
+          self.dispatchers.append(evdev_utils.InputDeviceDispatcher(dev, self.HandleEvent))
+    else:
+      self.dispatchers.append(
+          evdev_utils.InputDeviceDispatcher(
+              self.keyboard_device, self.HandleEvent))
     asyncore.loop()
 
   def HandleEvent(self, event):
