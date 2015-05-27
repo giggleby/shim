@@ -10,6 +10,8 @@ or SMT fixture confirm LED functionality.
 
 from collections import namedtuple
 import logging
+import random
+import time
 import unittest
 
 import factory_common  # pylint: disable=W0611
@@ -26,6 +28,7 @@ from cros.factory.test.factory_task import (FactoryTask, FactoryTaskManager,
 from cros.factory.test.fixture.bft_fixture import (BFTFixtureException,
                                                    CreateBFTFixture,
                                                    TEST_ARG_HELP)
+from cros.factory.test.utils import StartDaemonThread
 
 
 _TEST_TITLE = test_ui.MakeLabel('LED Test', u'LED 测试')
@@ -96,6 +99,58 @@ class CheckLEDTask(InteractiveFactoryTask):
     self.BindPassFailKeys(fail_later=_FAIL_LATER)
 
 
+class CheckLEDTaskUpgrade(InteractiveFactoryTask):
+  """Base on CheckLEDTask. Need operator to select led status.
+
+  Args:
+    ui: test_ui.UI instance.
+    template: ui_templates.OneSection() instance.
+    board: Board instance to control LED.
+    color: LEDColor to inspect.
+    index: target LED to inspect. None means default LED.
+  """
+
+  LED_FLICKERING = 0
+  LED_CONSTANTLY_LIT = 1
+
+  def __init__(self, ui, template, board, color, index):
+    super(CheckLEDTaskUpgrade, self).__init__(ui)
+    self._template = template
+    self._board = board
+    self._color = color
+    self._index = index
+    self.finished = False
+    self.pass_key = random.randint(self.LED_FLICKERING, self.LED_CONSTANTLY_LIT)
+
+  def TestLED(self):
+    while not self.finished:
+      self._board.SetLEDColor(self._color, led_name=self._index)
+      if self.pass_key == self.LED_FLICKERING:
+        time.sleep(0.5)
+        self._board.SetLEDColor(LEDColor.OFF, led_name=self._index)
+        time.sleep(0.5)
+
+  def Run(self):
+    """Lights LED in color and asks operator to verify it."""
+    self._InitUI()
+    self.BindDigitKeys(self.pass_key)
+    StartDaemonThread(target=self.TestLED)
+
+  def _InitUI(self):
+    """Sets instructions."""
+    index_label = _INDEX_LABEL[self._index]
+    color_label = _COLOR_LABEL[self._color]
+    instruction = test_ui.MakeLabel(
+        'If the %sLED lights up in %s, press 0 if flickering,'
+        'press 1 if constantly lit, or mark failed.' % (index_label.en,
+                                                        color_label.en),
+         u'請檢查 %sLED 是否亮%s，闪烁请按0，常亮请按1，'
+         u'否则标记失败。' % (index_label.zh, color_label.zh))
+    self._template.SetState(instruction)
+
+  def Cleanup(self):
+    self.finished = True
+
 class FixtureCheckLEDTask(FactoryTask):
   """A FactoryTask that uses fixture to check LED color.
 
@@ -147,7 +202,10 @@ class LEDTest(unittest.TestCase):
     Arg('target_leds', (list, tuple),
         'List of LEDs to test. If specified, it turns off all LEDs first, '
         'and turns auto after test.',
-        optional=True)
+        optional=True),
+    Arg('fool_proof', bool,
+        'Need user to select if leds flickering or Constantly lighted',
+         default=False)
   ]
 
   def setUp(self):
@@ -183,8 +241,12 @@ class LEDTest(unittest.TestCase):
         tasks.append(FixtureCheckLEDTask(self._fixture, self._board, color,
                                          index))
       else:
-        tasks.append(CheckLEDTask(self._ui, self._template, self._board, color,
-                                  index))
+        if not self.args.fool_proof:
+          tasks.append(CheckLEDTask(self._ui, self._template, self._board, color,
+                                    index))
+        else:
+          tasks.append(CheckLEDTaskUpgrade(self._ui, self._template, self._board, color,
+                                           index))
 
     self._task_manager = FactoryTaskManager(self._ui, tasks)
     self._task_manager.Run()
