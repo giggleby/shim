@@ -31,6 +31,7 @@ from cros.factory.test.fixture.bft_fixture import (BFTFixture,
                                                    CreateBFTFixture,
                                                    TEST_ARG_HELP)
 from cros.factory.test.pytests import audio
+from cros.factory.test.utils import StartDaemonThread
 from cros.factory.utils import process_utils
 
 _TEST_TITLE = test_ui.MakeLabel('External Display Test',
@@ -85,15 +86,18 @@ class ExtDisplayTask(InteractiveFactoryTask):  # pylint: disable=W0223
     self._instruction = instruction
     self._pass_key = pass_key
 
-  def _SetTitleInstruction(self):
+  def _SetTitleInstruction(self, instr):
     """Sets title and instruction.
 
     Shows task title on the upper left corner and instruction at the center
     of the test area.
+
+    Args:
+      instr: Instruction
     """
     self._template.SetInstruction(self._title)
     self._ui.SetHTML(
-      '%s<br>%s' % (self._instruction,
+      '%s<br>%s' % (instr,
                     test_ui.MakePassFailKeyLabel(pass_key=self._pass_key)),
       id='instruction-center')
 
@@ -106,9 +110,20 @@ class ExtDisplayTask(InteractiveFactoryTask):  # pylint: disable=W0223
     Args:
       fail_later: True to fail later when fail key is pressed.
     """
-    self._SetTitleInstruction()
+    self._SetTitleInstruction(self._instruction)
     self.BindPassFailKeys(pass_key=self._pass_key, fail_later=fail_later)
 
+  def InitUIWithoutPass(self, instr, fail_later=True):
+    """Initializes UI.
+
+    Sets task title and instruction. Binds fail keys.
+
+    Args:
+      instr: Instruction
+      fail_later: True to fail later when fail key is pressed.
+    """
+    self._SetTitleInstruction(instr)
+    self.BindPassFailKeys(pass_key=self._pass_key, fail_later=fail_later)
 
 class WaitDisplayThread(threading.Thread):
   """A thread to wait for display connection state.
@@ -313,6 +328,9 @@ class VideoTask(ExtDisplayTask):
     args: refer base class.
   """
   def __init__(self, args):
+    self._display_label = args.display_label
+    self._show_key_ext_display_only = args.show_key_ext_display_only
+    self._is_running = True
     self._fixture = args.fixture
     self._manual = not self._fixture
     self._ui = args.ui
@@ -414,9 +432,24 @@ class VideoTask(ExtDisplayTask):
 
     if self._fixture:
       self._check_display.start()
+    if self._show_key_ext_display_only:
+      StartDaemonThread(target=self.ChangeUI)
+
+  def ChangeUI(self):
+    disconnected = False
+    while self._is_running:
+      display_info = factory.get_state_instance().DeviceGetDisplayInfo()
+      if (len(display_info) == 1) and not disconnected:
+        instr = _MSG_VIDEO_TEST(self._display_label)
+        self.InitUIWithoutPass(instr)
+        disconnected = True
+      elif (len(display_info) > 1) and disconnected:
+        self.InitUI()
+        disconnected = False
 
   def Cleanup(self):
     self.SetMainDisplay(recover_original=True)
+    self._is_running = False
     if self._manual:
       self.UnbindDigitKeys()
     if self._fixture:
@@ -434,6 +467,7 @@ class ExtDisplayTaskArg(object):
     self.ui = None
     self.template = None
     self.fixture = None
+    self.show_key_ext_display_only = False
 
     # This is for a reboot hack which tells DetectDisplayTask
     # whether to send a display plug command or not.
@@ -509,6 +543,8 @@ class ExtDisplayTest(unittest.TestCase):
         'Also for the reboot hack with fixture. With it set to True, DUT does '
         'not issue plug ext display command.',
         default=False),
+    Arg('show_key_ext_display_only', bool, 'only show pass key on external display ',
+        default=False)
   ]
 
   def setUp(self):
@@ -547,6 +583,7 @@ class ExtDisplayTest(unittest.TestCase):
       args.template = self._template
       args.fixture = self._fixture
       args.already_connect = self.args.already_connect
+      args.show_key_ext_display_only = self.args.show_key_ext_display_only
 
       if not self.args.stop_output_only:
         tasks.append(ConnectTask(args))
