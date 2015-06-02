@@ -325,7 +325,7 @@ class RemovableStorageTest(unittest.TestCase):
     Returns:
       Device node, ex: 'sdb'. Return None if no node matched.
     """
-    block_dirs = glob.glob('/sys/block/sd*')
+    block_dirs = glob.glob('/sys/block/sd*') + glob.glob('/sys/block/mmcblk*')
     for block_dir in block_dirs:
       if sys_path in os.path.realpath(block_dir):
         return os.path.basename(block_dir)
