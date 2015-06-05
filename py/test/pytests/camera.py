@@ -125,6 +125,15 @@ _HTML_CAMERA_TEST = """
     <div id="%(prompt)s"></div>
     <div id="%(timer)s"></div>
 """ % {'image': _ID_IMAGE, 'prompt': _ID_PROMPT, 'timer': _ID_COUNTDOWN_TIMER}
+_HTML_CAMERA_TEST_ENLARGE = """
+    <img id="%(image)s"/>
+    <div style="text-align:center">
+        <div style="display:inline" id="%(prompt)s"></div>
+        <div style="display:inline">&nbsp;&nbsp;&nbsp;</div>
+        <div style="display:inline" id="%(timer)s"></div>
+    </div>
+""" % {'image': _ID_IMAGE, 'prompt': _ID_PROMPT, 'timer': _ID_COUNTDOWN_TIMER}
+
 _JS_CAMERA_TEST = """
     function showJpegImage(jpeg_binary) {
       var element = $("%(image)s");
@@ -139,7 +148,9 @@ _JS_CAMERA_TEST = """
       }
     }
 """ % {'image': _ID_IMAGE}
-_CSS_CAMERA_TEST = '.camera-test-info { font-size: 2em; }'
+_CSS_CAMERA_FONT_SIZE = lambda font_size: """
+    .camera-test-info { font-size: %dem; }
+""" % font_size
 
 # Set JPEG image compression quality to 70 so that the image can be transferred
 # through websocket.
@@ -337,6 +348,8 @@ class CameraTest(unittest.TestCase):
     Arg('yavta_postprocess', bool, 'Postprocess image.', default=False),
     Arg('yavta_ctls', list, 'List of controls used in yavta.', default=[]),
     Arg('yavta_skip', int, 'Skip first n frames.', default=0),
+    Arg('enlarge_camera_display', bool, 'Enlarge the size of camera capture '
+        'screen.', default=False)
   ]
 
   def _CountdownTimer(self):
@@ -363,8 +376,12 @@ class CameraTest(unittest.TestCase):
 
     self.ui = test_ui.UI()
     self.template = OneSection(self.ui)
-    self.ui.AppendCSS(_CSS_CAMERA_TEST)
-    self.template.SetState(_HTML_CAMERA_TEST)
+    if self.args.enlarge_camera_display:
+      self.ui.AppendCSS(_CSS_CAMERA_FONT_SIZE(1))
+      self.template.SetState(_HTML_CAMERA_TEST_ENLARGE)
+    else:
+      self.ui.AppendCSS(_CSS_CAMERA_FONT_SIZE(2))
+      self.template.SetState(_HTML_CAMERA_TEST)
     self.ui.RunJS(_JS_CAMERA_TEST)
 
     exclusive_check = False
