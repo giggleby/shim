@@ -265,7 +265,7 @@ class FinalizeBundle(object):
                         'site_tests', 'wipe_option', 'files', 'mini_omaha_url',
                         'patch_image_args', 'use_factory_toolkit',
                         'test_image_version', 'complete_script',
-                        'has_firmware', 'external_presenter'])
+                        'has_firmware', 'external_presenter', 'netboot_cmdline'])
 
     self.build_board = build_board.BuildBoard(self.manifest['board'])
     self.board = self.build_board.full_name
@@ -795,14 +795,24 @@ class FinalizeBundle(object):
         update_firmware_settings = os.path.join(
             self.bundle_dir, 'factory_setup', 'update_firmware_settings.py')
         new_netboot_firmware_image = netboot_firmware_image + '.INPROGRESS'
-        Spawn([update_firmware_settings,
-               '--bootfile', target_bootfile,
-               '--input', netboot_firmware_image,
-               '--output', new_netboot_firmware_image,
-               '--omahaserver=%s' % mini_omaha_url,
-               '--tftpserverip=%s' %
-               urlparse.urlparse(mini_omaha_url).hostname],
-              check_call=True, log=True)
+        update_firmware_setting_cmdline = [
+            update_firmware_settings,
+            '--bootfile', target_bootfile,
+            '--input', netboot_firmware_image,
+            '--output', new_netboot_firmware_image,
+            '--omahaserver=%s' % mini_omaha_url,
+            '--tftpserverip=%s' %
+            urlparse.urlparse(mini_omaha_url).hostname]
+
+        # If in the configuration, the netboot_cmdline is given, it will assign
+        # the argsfile to the netboot firmware.
+        netboot_cmdline = self.manifest.get('netboot_cmdline', '')
+        if netboot_cmdline:
+          logging.info('Assign argsfile %r to netboot firmware.', netboot_cmdline)
+          update_firmware_setting_cmdline += [
+              '--argsfile', netboot_cmdline]
+
+        Spawn(update_firmware_setting_cmdline, check_call=True, log=True)
         shutil.move(new_netboot_firmware_image, netboot_firmware_image)
 
         target_netboot_shim = os.path.join(self.bundle_dir, 'factory_shim',
