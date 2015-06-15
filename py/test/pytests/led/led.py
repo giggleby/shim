@@ -42,6 +42,7 @@ _COLOR_LABEL = {
     LEDColor.RED    : I18nLabel('red', u'紅色'),
     LEDColor.WHITE  : I18nLabel('white', u'白色'),
     LEDColor.BLUE   : I18nLabel('blue', u'蓝色'),
+    LEDColor.ORANGE : I18nLabel('orange', u'橘色'),
     LEDColor.OFF    : I18nLabel('off', u'关闭')}
 _INDEX_LABEL = {
     None             : I18nLabel('', ''),

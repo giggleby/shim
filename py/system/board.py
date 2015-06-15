@@ -59,7 +59,9 @@ class Board(object):
   - ``DISCHARGE``: Force the device to discharge.
   """
 
-  LEDColor = Enum(['AUTO', 'OFF', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE'])
+  LEDColor = Enum(['AUTO', 'OFF', 'RED',
+                   'GREEN', 'BLUE', 'YELLOW',
+                   'WHITE', 'ORANGE'])
   """Charger LED colors.
 
   - ``AUTO``: Use the default logic to select the LED color.
