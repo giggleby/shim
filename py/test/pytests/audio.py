@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import os
 import random
+import re
 import threading
 import unittest
 import uuid
@@ -31,15 +32,18 @@ _DIV_CENTER_INSTRUCTION = """
 _CSS = '#pass_key {font-size:36px; font-weight:bold;}'
 
 _INSTRUCTION_AUDIO_RANDOM_TEST = lambda d, k: test_ui.MakeLabel(
-    '</br>'.join(['Press the number you hear from %s to pass the test.' % d,
+    '</br>'.join(['If you didn\'t hear a low frequency tone, mark it failed'
+                  'Press the number you hear from %s to pass the test.' % d,
                   'Press "%s" to replay.' % k]),
-    '</br>'.join([u'请按你从 %s 输出所听到的数字' % d,
+    '</br>'.join([u'如果没听到一段低频的声音，请标记失败',
+                  u'请按你从 %s 输出所听到的数字' % d,
                   u'按 %s 重播语音' % k]))
 
 _SOUND_DIRECTORY = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..', '..', 'goofy',
     'static', 'sounds')
 
+_DEFAULT_OUTPUT_DEV = 'hw:0,0'
 
 class AudioDigitPlaybackTask(InteractiveFactoryTask):
   """Task to verify audio playback function.
@@ -61,15 +65,17 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
   """
 
   def __init__(self, ui, port_label, port_id, title_id, instruction_id,
-               volume=100, bypass_cras=False, channel='all', card_id=0):
+               output_dev, volume=100, bypass_cras=False, channel='all'):
     super(AudioDigitPlaybackTask, self).__init__(ui)
+    card_id = self.GetCardIndex(output_dev)
     self._pass_digit = random.randint(0, 9)
-    self._port_switch = ['amixer', '-c', str(card_id), 'cset',
+    self._port_switch = ['amixer', '-c', card_id, 'cset',
                          'name="%s Playback Switch"' % port_id]
-    self._port_volume = ['amixer', '-c', str(card_id), 'cset',
+    self._port_volume = ['amixer', '-c', card_id, 'cset',
                          'name="%s Playback Volume"' % port_id]
     self._bypass_cras = bypass_cras
     self._card_id = card_id
+    self._output_dev = output_dev
     self._port_id = port_id
     self._port_label = port_label
     self._title_id = title_id
@@ -118,9 +124,13 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
       base_name = '%d_%s.ogg' % (num, lang)
       if self._bypass_cras:
         with file_utils.UnopenedTemporaryFile(suffix='.wav') as wav_path:
+          # Play 3 secs 300Hz sine tone
+          Spawn(['sox', '-b', '16', '-r', '48000', '-c', '2', '-n',
+                 '-t', 'alsa', self._output_dev,
+                 'synth', '3', 'sine', '300', 'sine', '300'], check_call=True)
           Spawn(['sox', os.path.join(_SOUND_DIRECTORY, base_name), '-c2',
-                 wav_path], check_call=True)
-          Spawn(['aplay', '-D', 'plughw:0,0', wav_path], check_call=True)
+                 '-r', '48000', wav_path], check_call=True)
+          Spawn(['aplay', '-D', self._output_dev, wav_path], check_call=True)
       else:
         self._ui.PlayAudioFile(base_name)
 
@@ -144,6 +154,19 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
     self.UnbindDigitKeys()
     self.RunCommand(self._port_switch + ['off,off'],
                     'Fail to disable audio port.')
+
+  def GetCardIndex(self, device):
+    """Gets the card index from given device names.
+
+    Args:
+      device: ALSA device name
+    """
+    dev_name_pattern = re.compile('.*hw:([0-9]+),([0-9]+)')
+    match = dev_name_pattern.match(device)
+    if match:
+      return match.group(1)
+    else:
+      raise ValueError('device name %s is incorrect' % device)
 
 
 # TODO(deanliao): abstract state detection thread/task to common utils.
@@ -273,7 +296,9 @@ class AudioTest(unittest.TestCase):
           'amixer numid for headphone. Skip connection check if empty.',
           optional=True),
       Arg('bypass_cras', bool, 'Use basic alsa utilities and bypass cras '
-          'to play audio.', default=False)
+          'to play audio.', default=False),
+      Arg('output_dev', str, 'The alsa output device',
+          default=_DEFAULT_OUTPUT_DEV)
   ]
 
   def setUp(self):
@@ -314,7 +339,8 @@ class AudioTest(unittest.TestCase):
                                          False, _TITLE_ID, _INSTRUCTION_ID))
       args = (self._ui, test_ui.MakeLabel(*self.args.internal_port_label),
               self.args.internal_port_id, _TITLE_ID, _INSTRUCTION_ID,
-              self.args.internal_volume, self.args.bypass_cras)
+              self.args.output_dev, self.args.internal_volume,
+              self.args.bypass_cras)
       _ComposeLeftRightTasks(tasks, args)
 
     if self.args.external_port_id:
@@ -323,7 +349,8 @@ class AudioTest(unittest.TestCase):
                                          True, _TITLE_ID, _INSTRUCTION_ID))
       args = (self._ui, test_ui.MakeLabel(*self.args.external_port_label),
               self.args.external_port_id, _TITLE_ID, _INSTRUCTION_ID,
-              self.args.external_volume, self.args.bypass_cras)
+              self.args.output_dev, self.args.external_volume,
+              self.args.bypass_cras)
       _ComposeLeftRightTasks(tasks, args)
 
     return tasks
