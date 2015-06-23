@@ -63,7 +63,7 @@ from cros.factory.test.utils import Enum
 from cros.factory.tools.key_filter import KeyFilter
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
-from cros.factory.utils.process_utils import Spawn
+from cros.factory.utils.process_utils import CheckOutput, Spawn
 
 
 HWID_CFG_PATH = '/usr/local/share/chromeos-hwid/cfg'
@@ -1093,6 +1093,18 @@ class Goofy(GoofyBase):
 
     self.status = Status.RUNNING
     syslog.syslog('Goofy (factory test harness) starting')
+    # Special debug for getting verbose information on PCI-bus
+    # TODO(itspeter): Remove once http://crosbug.com/p/41785 fixed.
+    def _get_pcie_register(address):
+      try:
+        return CheckOutput(['mem', 'r', address])
+      except:  # pylint: disable=W0702
+        return 'Unable to get infos on address %s' % address
+
+    syslog.syslog('PCIE1 link status: %s' % _get_pcie_register('0x1b500080'))
+    syslog.syslog('PCIE2 link status: %s' % _get_pcie_register('0x1b700080'))
+    syslog.syslog('PCIE3 link status: %s' % _get_pcie_register('0x1b900080'))
+
     self.run()
 
   def update_system_info(self):
