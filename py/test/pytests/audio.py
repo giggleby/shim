@@ -125,9 +125,9 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
       if self._bypass_cras:
         with file_utils.UnopenedTemporaryFile(suffix='.wav') as wav_path:
           # Play 3 secs 300Hz sine tone
-          Spawn(['sox', '-b', '16', '-r', '48000', '-c', '2', '-n',
-                 '-t', 'alsa', self._output_dev,
-                 'synth', '3', 'sine', '300', 'sine', '300'], check_call=True)
+          Spawn(['aplay', '-D', self._output_dev,
+                 os.path.join(_SOUND_DIRECTORY, '3SEC_sine300HZ.wav')],
+                check_call=True)
           Spawn(['sox', os.path.join(_SOUND_DIRECTORY, base_name), '-c2',
                  '-r', '48000', wav_path], check_call=True)
           Spawn(['aplay', '-D', self._output_dev, wav_path], check_call=True)
