@@ -201,10 +201,11 @@ class AudioLoopTest(unittest.TestCase):
         '      fail the test.  Both of **min** and **max** can be set to\n'
         '      None, which means no limit.\n'
         '\n'
-        'If type is **micsound**, the dict can optionally contain:\n'
-	'  - **duration**: The test duration, in seconds.\n'
-	'  - **freq**: The play frequency, default: 1Khz.\n'
-	'\n'
+        'If type is **micsound** or **speakersound**,\n'
+        'the dict can optionally contain:\n'
+        '  - **duration**: The test duration, in seconds.\n'
+        '  - **freq**: The play frequency, default: 1Khz.\n'
+        '\n'
         'If type is **noise**, the dict can optionally contain:\n'
         '  - **duration**: The test duration, in seconds.\n'
         '  - **rms_threshold**: A tuple of **(min, max)** that will make\n'
@@ -273,6 +274,8 @@ class AudioLoopTest(unittest.TestCase):
     self._ui = test_ui.UI()
     self._ui.AddEventHandler('on_micsound_passed', self.OnMicSoundPassed)
     self._ui.AddEventHandler('on_micsound_failed', self.OnMicSoundFailed)
+    self._ui.AddEventHandler('on_speakersound_passed', self.OnSpeakerSoundPassed)
+    self._ui.AddEventHandler('on_speakersound_failed', self.OnSpeakerSoundFailed)
     self._ui.AddEventHandler('start_run_test', self.StartRunTest)
     self._ui_template = ui_templates.OneSection(self._ui)
     self._ui_template.SetState(_UI_HTML)
@@ -431,6 +434,33 @@ class AudioLoopTest(unittest.TestCase):
       self.CheckRecordedAudio(sox_output)
 
       os.unlink(record_file_path)
+
+  def TestSpeakerSound(self):
+    """Tests Speaker and operator check the result of record."""
+    duration = self._current_test_args.get('duration',
+                                           _DEFAULT_SINEWAV_TEST_DURATION)
+    freq = self._current_test_args.get('freq', _DEFAULT_FREQ_HZ)
+    # Play left channel
+    factory.console.info('SpeakerSound: left channel duration %d' % duration)
+    self._ui.CallJSFunction('testSpeakerSound', 0)
+    playsine_thread = PlaySineThread(0, self._output_device, freq,
+                                     duration + 1)
+    playsine_thread.start()
+    playsine_thread.join()
+
+    # sleep for 2 seconds
+    time.sleep(2);
+
+    # Play right channel
+    factory.console.info('SpeakerSound: right channel duration %d' % duration)
+    self._ui.CallJSFunction('testSpeakerSound', 1)
+    playsine_thread = PlaySineThread(1, self._output_device, freq,
+                                     duration + 1)
+    playsine_thread.start()
+    playsine_thread.join()
+
+    # Show message and let operator check the result
+    self._ui.CallJSFunction('testSpeakerSound', 2)
 
   def TestMicSound(self):
     """Tests loopback and operator check the result of record."""
@@ -597,6 +627,14 @@ class AudioLoopTest(unittest.TestCase):
     factory.console.info('Test Mic Sound passed')
     self._ui.Pass()
 
+  def OnSpeakerSoundFailed(self, event):
+    factory.console.info('Test Speaker Sound failed')
+    self._ui.Fail('; Failed')
+
+  def OnSpeakerSoundPassed(self, event):
+    factory.console.info('Test Speaker Sound passed')
+    self._ui.Pass()
+
   def StartRunTest(self, event): # pylint: disable=W0613
     mic_status = self._audio_util.GetMicJackStatus(self._in_card)
     headphone_status = self._audio_util.GetHeadphoneJackStatus(self._out_card)
@@ -671,7 +709,10 @@ class AudioLoopTest(unittest.TestCase):
           self.NoiseTest()
         elif test['type'] == 'micsound':
           self.TestMicSound()
-	  return
+          return
+        elif test['type'] == 'speakersound':
+          self.TestSpeakerSound()
+          return
         else:
           raise ValueError('Test type "%s" not supported.' % test['type'])
 

@@ -92,3 +92,31 @@ testMicSound = function(progress) {
     }
   }
 }
+
+testSpeakerSound = function(progress) {
+  var msgs = document.getElementById("message");
+  msgs.innerHTML = "";
+  if (progress == 0) {
+    msgs.appendChild(createLabel(
+      "Playing on left channel...\n",
+      "左声道播放中...\n"));
+  } else if (progress == 1) {
+    msgs.appendChild(createLabel(
+      "Playing on right channel...\n",
+      "右声道播放中...\n"));
+  } else {
+    msgs.appendChild(createLabel(
+      "If both left and right channel sound good, press 'P' else press 'F'\n",
+      "左右声道都OK，请按'P', 否则按'F'\n"));
+    window.onkeydown = function(event) {
+      if (event.keyCode == 80) { // 'p'
+        test.sendTestEvent("on_speakersound_passed", {});
+        window.onkeydown = null;
+      }
+      if (event.keyCode == 70) { // 'f'
+        test.sendTestEvent("on_speakersound_failed", {});
+        window.onkeydown = null;
+      }
+    }
+  }
+}
