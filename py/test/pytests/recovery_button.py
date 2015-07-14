@@ -45,6 +45,9 @@ window.onkeydown = function(event) {
 }
 """
 
+_JS_START_TEST = """
+  test.sendTestEvent("StartTest", '');
+"""
 
 class RecoveryButtonTest(unittest.TestCase):
   """Tests Recovery Button."""
@@ -54,6 +57,7 @@ class RecoveryButtonTest(unittest.TestCase):
         'Interval between checking whether recovery buttion is pressed or not.'
         'Valid values: 0.2, 0.5 and 1.0',
         default=0.5),
+    Arg('skip_space_to_start', bool, 'Skip press SPACE to start test.', default=False),
   ]
 
   def setUp(self):
@@ -61,7 +65,10 @@ class RecoveryButtonTest(unittest.TestCase):
     self.template = OneSection(self.ui)
     self.ui.AppendCSS(_CSS_RECOVERY_BUTTON)
     self.template.SetState(_HTML_RECOVERY_BUTTON)
-    self.ui.RunJS(_JS_SPACE)
+    if self.args.skip_space_to_start:
+      self.ui.RunJS(_JS_START_TEST)
+    else:
+      self.ui.RunJS(_JS_SPACE)
     self.ui.SetHTML(_MSG_PRESS_SPACE, id='recovery_button_title')
     self.ui.AddEventHandler('StartTest', self.StartTest)
     if self.args.polling_interval_secs not in (0.2, 0.5, 1.0):
