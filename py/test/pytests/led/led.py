@@ -8,16 +8,22 @@
 or SMT fixture confirm LED functionality.
 """
 
-from collections import namedtuple
+from __future__ import print_function
+
 import logging
+import random
+import time
 import unittest
 
 import factory_common  # pylint: disable=W0611
+from collections import namedtuple
 from cros.factory import system
 from cros.factory.system.board import Board
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.args import Arg
+from cros.factory.test.utils import StartDaemonThread
+from cros.factory.utils.process_utils import SpawnOutput
 from cros.factory.test.factory_task import (FactoryTask, FactoryTaskManager,
                                             InteractiveFactoryTask)
 
@@ -48,6 +54,45 @@ _INDEX_LABEL = {
     LEDIndex.POWER   : I18nLabel('power ', u'电源 '),
     LEDIndex.BATTERY : I18nLabel('battery ', u'电池 '),
     LEDIndex.ADAPTER : I18nLabel('adapter ', u'电源适配器 ')}
+
+LED_FLICKERING = 0
+LED_CONSTANTLY = 1
+
+class FlickeringCheckLEDTask(InteractiveFactoryTask):
+
+  def __init__(self, ui, template, pass_key, index, color):
+    super(FlickeringCheckLEDTask, self).__init__(ui)
+    self._template = template
+    self._pass_key = pass_key
+    self._index = index
+    self._color = color
+
+
+  def Run(self):
+    self._InitUI()
+    StartDaemonThread(target=self.FlickeringTest)
+
+  def _InitUI(self):
+    """Sets instructions and binds pass/fail key."""
+    instruction = test_ui.MakeLabel(
+      'Press 0 if LED is flickering, 1 if LED is constantly lit',
+      u'LED 闪烁请按 0，一直亮着请按 1，没亮请按 ESC')
+    self._template.SetState(instruction)
+
+    self.BindPassFailKeys(pass_key=False)
+    self.BindDigitKeys(self._pass_key)
+
+  def FlickeringTest(self):
+    if self._pass_key == LED_FLICKERING:
+      while True:
+        SpawnOutput(['ectool', 'led', str(self._index), 'off'])
+        time.sleep(0.3)
+        SpawnOutput(['ectool', 'led', str(self._index),
+                    str(self._color), 'on'])
+        time.sleep(0.3)
+    else:
+      SpawnOutput(['ectool', 'led', str(self._index),
+                                    str(self._color), 'on'])
 
 
 class CheckLEDTask(InteractiveFactoryTask):
@@ -94,7 +139,6 @@ class CheckLEDTask(InteractiveFactoryTask):
 
     self.BindPassFailKeys(fail_later=_FAIL_LATER)
 
-
 class FixtureCheckLEDTask(FactoryTask):
   """A FactoryTask that uses fixture to check LED color.
 
@@ -135,6 +179,7 @@ class FixtureCheckLEDTask(FactoryTask):
 
 
 class LEDTest(unittest.TestCase):
+
   """Tests if the onboard LED can light yellow/green/red colors."""
   ARGS = [
     Arg('bft_fixture', dict, TEST_ARG_HELP, optional=True),
@@ -146,7 +191,10 @@ class LEDTest(unittest.TestCase):
     Arg('target_leds', (list, tuple),
         'List of LEDs to test. If specified, it turns off all LEDs first, '
         'and turns auto after test.',
-        optional=True)
+        optional=True),
+    Arg('random_flicker', bool,
+        'When set to True, LED might flicker instead of always on',
+        default=False)
   ]
 
   def setUp(self):
@@ -156,8 +204,12 @@ class LEDTest(unittest.TestCase):
     self._fixture = None
     self._board = None
     self._board = system.GetBoard()
+    self._random_flicker = None
     if self.args.bft_fixture:
       self._fixture = CreateBFTFixture(**self.args.bft_fixture)
+    if self.args.random_flicker:
+      self._pass_key = random.randint(LED_FLICKERING,
+                                      LED_CONSTANTLY)
 
     self.SetAllLED(self.args.target_leds, LEDColor.OFF)
 
@@ -169,8 +221,8 @@ class LEDTest(unittest.TestCase):
 
   def runTest(self):
     self._template.SetTitle(_TEST_TITLE)
-
     tasks = []
+
     for index_color in self.args.colors:
       if isinstance(index_color, str):
         color = index_color
@@ -181,9 +233,12 @@ class LEDTest(unittest.TestCase):
       if self._fixture:
         tasks.append(FixtureCheckLEDTask(self._fixture, self._board, color,
                                          index))
+      elif self.args.random_flicker:
+        tasks.append(FlickeringCheckLEDTask(self._ui, self._template,
+                                            self._pass_key, index, color))
       else:
-        tasks.append(CheckLEDTask(self._ui, self._template, self._board, color,
-                                  index))
+        tasks.append(CheckLEDTask(self._ui, self._template,
+                                  self._board, color, index))
 
     self._task_manager = FactoryTaskManager(self._ui, tasks)
     self._task_manager.Run()
