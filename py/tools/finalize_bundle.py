@@ -679,7 +679,7 @@ class FinalizeBundle(object):
     if wipe_option:
       assert len(wipe_option) == 1, 'There should be one wipe_option.'
       option = wipe_option[0]
-      assert option in ['shutdown', 'battery_cut_off', 'reboot']
+      assert option in ['shutdown', 'battery_cut_off', 'reboot', 'rma_battery_cut_off']
       # No need to write option if option is reboot.
       if option == 'reboot':
         return
