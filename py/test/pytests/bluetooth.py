@@ -17,6 +17,8 @@
 #    mouse.
 # Check the ARGS in BluetoothTest for the detail of arguments.
 
+from __future__ import print_function
+
 import factory_common # pylint: disable=W0611
 import glob
 import logging
@@ -40,12 +42,12 @@ _TEST_TITLE = MakeLabel('Bluetooth functional Test', u'蓝牙功能测试')
 _MSG_DETECT_ADAPTER = MakeLabel('Detect bluetooth adapter', u'检测蓝牙适配器')
 _MSG_TURN_ON_DEVICE = MakeLabel('Enable the connection ability of'
                                 ' bluetooth device and press Enter',
-                                u'启用蓝牙装置的连接功能然后按输入键',
+                                u'启用蓝牙装置的连接功能然后按回车键',
                                 'start-font-size')
 _MSG_SCAN_DEVICE = MakeLabel('Scanning...', u'扫描中...', 'start-font-size')
 _MSG_TURN_ON_INPUT_DEVICE = MakeLabel('Enable the connection ability of '
                                       'input bluetooth device and press Enter',
-                                      u'启用蓝牙输入装置的连接功能然后按输入键',
+                                      u'启用蓝牙输入装置的连接功能然后按回车键',
                                       'start-font-size')
 _MSG_PAIR_INPUT_DEVICE = MakeLabel('Pairing to input device now...',
                                    u'配对到蓝牙输入设备...',
