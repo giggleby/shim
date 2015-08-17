@@ -6,6 +6,7 @@
 
 """This is audio utility module to setup amixer related options."""
 
+import dbus
 import logging
 import os
 import re
@@ -555,3 +556,19 @@ class CRAS(object):
       if node_id == node.node_id:
         self._SelectNode(node, CRAS.OUTPUT)
         return
+
+  def _GetControlInterface(self):
+    """Returns an interface to control Cras using DBus API.
+
+    Returns:
+      A dbus.Interface object that can control Cras through DBus API.
+    """
+    bus = dbus.SystemBus()
+    cras_object = bus.get_object('org.chromium.cras', '/org/chromium/cras')
+    return dbus.Interface(cras_object, 'org.chromium.cras.Control')
+
+  def EnableOutput(self):
+    """Enables output by setting system mute and user mute states to False."""
+    interface = self._GetControlInterface()
+    interface.SetOutputMute(False)
+    interface.SetOutputUserMute(False)
