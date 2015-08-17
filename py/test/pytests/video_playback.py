@@ -7,6 +7,7 @@
 import logging
 import unittest
 
+from cros.factory.test import audio_utils
 from cros.factory.test import test_ui
 from cros.factory.test.args import Arg
 
@@ -34,6 +35,7 @@ class VideoPlaybackTest(unittest.TestCase):
     logging.info('Video Playback test started')
     logging.info('video_file=[%s]', self.args.video_file)
     logging.info('time_limit=%s secs', self.args.time_limit)
+    audio_utils.CRAS().EnableOutput()
     ui = test_ui.UI()
     ui.CallJSFunction('init',
                       self.args.video_file,
