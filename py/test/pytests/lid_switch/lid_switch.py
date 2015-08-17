@@ -15,6 +15,7 @@ import unittest
 
 from cros.factory.event_log import Log
 
+from cros.factory.test import audio_utils
 from cros.factory.test import test_ui
 from cros.factory.test.args import Arg
 from cros.factory.test.countdown_timer import StartCountdownTimer
@@ -99,6 +100,7 @@ class LidSwitchTest(unittest.TestCase):
   ]
 
   def setUp(self):
+    audio_utils.CRAS().EnableOutput()
     self.ui = test_ui.UI()
     self.template = OneSection(self.ui)
     if self.args.event_id:
