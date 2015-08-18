@@ -20,6 +20,7 @@ Be sure to set AP correctly.
 This test case can be used for Intel WP2 7260 chip.
 """
 
+from __future__ import print_function
 import dbus
 import collections
 import logging
@@ -368,6 +369,8 @@ class WirelessRadiotapTest(unittest.TestCase):
         optional=False),
     Arg('scan_count', int, 'number of scanning to get average signal strength',
         default=5),
+    Arg('prompt_space', bool, 'Whether to prompt a message for the operator '
+        'to press space to start the test or not.', default=True),
     Arg('switch_antenna_sleep_secs', int, 'The sleep time after switching'
         'antenna and ifconfig up. Need to decide this value carefully since it'
         'depends on the platform and antenna config to test.', default=10)
@@ -599,8 +602,9 @@ class WirelessRadiotapTest(unittest.TestCase):
 
   def runTest(self):
     # Prompts a message to tell operator to press space key when ready.
-    self.PromptSpace()
-    self._space_event.wait()
+    if self.args.prompt_space:
+      self.PromptSpace()
+      self._space_event.wait()
     if self._done.isSet():
       return
 
