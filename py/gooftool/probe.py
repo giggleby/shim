@@ -51,6 +51,7 @@ from cros.factory.utils.type_utils import Error
 
 
 try:
+  # TODO(akahuang): Use shill_proxy instead of flimflam
   sys.path.append('/usr/local/lib/flimflam/test')
   import flimflam  # pylint: disable=F0401
 except:  # pylint: disable=W0702
@@ -270,6 +271,8 @@ class _FlimflamDevices(object):
   @classmethod
   def GetDevices(cls, devtype):
     """Return device Obj list for devices with the specified type."""
+    def FilterValidPath(dev_list):
+      return [dev for dev in dev_list if os.path.exists(dev.path)]
 
     def ProcessDevice(device):
       properties = device.GetProperties()
@@ -286,8 +289,10 @@ class _FlimflamDevices(object):
       return result
 
     if cls.cached_dev_list is None:
-      cls.cached_dev_list = [ProcessDevice(device) for device in
-                             flimflam.FlimFlam().GetObjectList('Device')]
+      cls.cached_dev_list = FilterValidPath(
+          [ProcessDevice(device) for device in
+           flimflam.FlimFlam().GetObjectList('Device')])
+
       # On some Brillo (AP-type) devices, WiFi interfaces are blacklisted by
       # shill and needs to be discovered manually.
       wifi_devs = [dev for dev in cls.cached_dev_list if dev.devtype == 'wifi']
@@ -295,8 +300,9 @@ class _FlimflamDevices(object):
         logging.info('No WiFi components found by shill. Use iwconfig.')
         shell_command = 'iwconfig | grep "IEEE 802.11" | cut -d " " -f 1'
         nodes = Shell(shell_command).stdout.split()
-        wifi_devs = [Obj(devtype='wifi', path='/sys/class/net/%s/device' % node)
-                     for node in nodes]
+        wifi_devs = FilterValidPath(
+            [Obj(devtype='wifi', path='/sys/class/net/%s/device' % node)
+             for node in nodes])
         if wifi_devs:
           logging.info('iwconfig found: %s', wifi_devs)
           cls.cached_dev_list += wifi_devs
