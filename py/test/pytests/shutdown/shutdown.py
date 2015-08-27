@@ -76,7 +76,9 @@ class ShutdownTest(unittest.TestCase):
       Arg('wait_shutdown_secs', int,
           'Number of seconds to wait for system shutdown.', default=60),
       Arg('check_tag_file', bool, 'Checks shutdown failure tag file',
-          default=False)
+          default=False),
+      Arg('check_shutdown_time', bool, 'Checks shutdown time',
+          default=True)
   ]
 
   def setUp(self):
@@ -185,36 +187,38 @@ class ShutdownTest(unittest.TestCase):
       if status == TestState.FAILED:
         raise ShutdownError(error_msg)
 
-    last_shutdown_time = self.goofy.GetLastShutdownTime()
-    if not last_shutdown_time:
-      LogAndEndTest(status=TestState.FAILED,
-                    error_msg=('Unable to read shutdown_time; '
-                               'unexpected shutdown during reboot?'))
+    if self.args.check_shutdown_time:
+      last_shutdown_time = self.goofy.GetLastShutdownTime()
+      if not last_shutdown_time:
+        LogAndEndTest(status=TestState.FAILED,
+                      error_msg=('Unable to read shutdown_time; '
+                                 'unexpected shutdown during reboot?'))
 
-    now = time.time()
-    logging.info('%.03f s passed since reboot', now - last_shutdown_time)
+      now = time.time()
+      logging.info('%.03f s passed since reboot', now - last_shutdown_time)
 
-    if last_shutdown_time > now:
-      LogAndEndTest(status=TestState.FAILED,
-                    error_msg='Time moved backward during reboot')
-    elif (self.args.operation == factory.ShutdownStep.REBOOT and
-          self.args.max_reboot_time_secs and
-          (now - last_shutdown_time > self.args.max_reboot_time_secs)):
-      # A reboot took too long; fail.  (We don't check this for
-      # HaltSteps, because the machine could be halted for a
-      # very long time, and even unplugged with battery backup,
-      # thus hosing the clock.)
-      LogAndEndTest(
-          status=TestState.FAILED,
-          error_msg=('More than %d s elapsed during reboot '
-                     '(%.03f s, from %s to %s)' % (
-                         self.args.max_reboot_time_secs,
-                         now - last_shutdown_time,
-                         utils.TimeString(last_shutdown_time),
-                         utils.TimeString(now))),
-          duration=(now - last_shutdown_time))
-      self.goofy.LogStartupMessages()
-    elif self.test_state.shutdown_count > self.test.iterations:
+      if last_shutdown_time > now:
+        LogAndEndTest(status=TestState.FAILED,
+                      error_msg='Time moved backward during reboot')
+      elif (self.args.operation == factory.ShutdownStep.REBOOT and
+            self.args.max_reboot_time_secs and
+            (now - last_shutdown_time > self.args.max_reboot_time_secs)):
+        # A reboot took too long; fail.  (We don't check this for
+        # HaltSteps, because the machine could be halted for a
+        # very long time, and even unplugged with battery backup,
+        # thus hosing the clock.)
+        LogAndEndTest(
+            status=TestState.FAILED,
+            error_msg=('More than %d s elapsed during reboot '
+                       '(%.03f s, from %s to %s)' % (
+                           self.args.max_reboot_time_secs,
+                           now - last_shutdown_time,
+                           utils.TimeString(last_shutdown_time),
+                           utils.TimeString(now))),
+            duration=(now - last_shutdown_time))
+        self.goofy.LogStartupMessages()
+
+    if self.test_state.shutdown_count > self.test.iterations:
       # Shut down too many times
       LogAndEndTest(status=TestState.FAILED, error_msg='Too many shutdowns')
       self.goofy.LogStartupMessages()
@@ -224,8 +228,12 @@ class ShutdownTest(unittest.TestCase):
                     error_msg='Found shutdown fail tag file')
 
     # Good!
+    if self.args.check_shutdown_time:
+      duration = now - last_shutdown_time
+    else:
+      duration = 'Skip checking'
     LogAndEndTest(status=TestState.PASSED,
-                  duration=(now - last_shutdown_time),
+                  duration=duration,
                   error_msg=None)
 
   def runTest(self):
