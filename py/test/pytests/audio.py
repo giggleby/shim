@@ -63,7 +63,7 @@ class AudioDigitPlaybackTask(InteractiveFactoryTask):
   def __init__(self, ui, port_label, port_id, title_id, instruction_id,
                volume=100, bypass_cras=False, channel='all', card_id=0):
     super(AudioDigitPlaybackTask, self).__init__(ui)
-    self._pass_digit = random.randint(0, 9)
+    self._pass_digit = random.randint(1, 3)
     self._port_switch = ['amixer', '-c', str(card_id), 'cset',
                          'name="%s Playback Switch"' % port_id]
     self._port_volume = ['amixer', '-c', str(card_id), 'cset',
