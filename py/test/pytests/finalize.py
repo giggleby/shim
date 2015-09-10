@@ -101,6 +101,10 @@ class Finalize(unittest.TestCase):
       Arg('rma_mode', bool,
           'Enable rma_mode, do not check for deprecated components.',
           default=False, optional=True),
+      Arg('enforced_release_channels', list,
+          'A list of string indicating the enforced release image channels. '
+          'Each item should be one of "dev", "beta" or "stable".',
+          default=None, optional=True),
       ]
 
   def setUp(self):
@@ -366,6 +370,11 @@ class Finalize(unittest.TestCase):
     if self.args.rma_mode:
       command += ' --rma_mode'
       logging.info('Using RMA mode. Accept deprecated components')
+    if self.args.enforced_release_channels:
+      command += ' --enforced_release_channels %s' % (
+          ' '.join(self.args.enforced_release_channels))
+      logging.info(
+          'Enforced release channels: %s.', self.args.enforced_release_channels)
 
     gooftools.run(command)
 
