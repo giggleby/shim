@@ -12,7 +12,6 @@ from __future__ import print_function
 import glob
 import logging
 import os
-import re
 import shutil
 import signal
 import sys
@@ -1095,33 +1094,19 @@ class Goofy(GoofyBase):
     self.status = Status.RUNNING
     syslog.syslog('Goofy (factory test harness) starting')
     syslog.syslog('Boot sequence = %d' % GetBootSequence())
-
-    def _supress_check_output_exception(cmds, *args, **kwargs):
-      """Simple wrapper to supress exception if return code is not 0."""
-      try:
-        return re.escape(CheckOutput(cmds, *args, **kwargs))
-      except:  # pylint: disable=W0702
-        return 'Unable to get infos with commands %s' % cmds
-
-    # Special debug for getting verbose information on PCI bus status
+    # Special debug for getting verbose information on PCI-bus
     # TODO(itspeter): Remove once http://crosbug.com/p/41785 fixed.
-    syslog.syslog(
-        'PCIE1 link status: %s' %
-        _supress_check_output_exception(['mem', 'r', '0x1b500080']))
-    syslog.syslog(
-        'PCIE2 link status: %s' %
-        _supress_check_output_exception(['mem', 'r', '0x1b700080']))
-    syslog.syslog(
-        'PCIE3 link status: %s' %
-        _supress_check_output_exception(['mem', 'r', '0x1b900080']))
-    syslog.syslog(
-        'interfaces: %s' %
-        _supress_check_output_exception(['ls', '/sys/class/net/']))
-    # Special debug to check tpm status every time.
-    # TODO(itspeter): Remove once http://crosbug.com/p/41786 fixed.
-    syslog.syslog(
-        'tpm_version status: %s' %
-        _supress_check_output_exception(['/usr/local/sbin/tpm_version']))
+    def _get_pcie_register(address):
+      try:
+        return CheckOutput(['mem', 'r', address])
+      except:  # pylint: disable=W0702
+        return 'Unable to get infos on address %s' % address
+
+    # Checking on PCIE status:
+    syslog.syslog('PCIE1 link status: %s' % _get_pcie_register('0x1b500080'))
+    syslog.syslog('PCIE2 link status: %s' % _get_pcie_register('0x1b700080'))
+    syslog.syslog('PCIE3 link status: %s' % _get_pcie_register('0x1b900080'))
+
 
     self.run()
 
