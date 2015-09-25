@@ -857,18 +857,8 @@ class GoofyRPC(object):
     self.goofy.run_queue.put(Target)
     done.wait()
 
-  def SyncTimeWithShopfloorServer(self, foreground=True):
-    if not self.goofy.time_sanitizer:
-      return
-    # Write out the current time.
-    self.goofy.time_sanitizer.SaveTime()
-    try:
-      self.goofy.sync_time_with_shopfloor_server(foreground)
-    except:  # pylint: disable=W0702
-      # Oh well.  Log an error (but no trace)
-      logging.info(
-          'Unable to get time from shopfloor server: %s',
-          utils.FormatExceptionOnly())
+  def SyncTimeWithShopfloorServer(self):
+    self.goofy.sync_time_with_shopfloor_server(True)
 
   def PostEvent(self, event):
     """Posts an event."""

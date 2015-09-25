@@ -181,8 +181,8 @@ class TimeSanitizer(object):
     with self.lock:
       with open(self.state_file, 'w') as f:
         now = now or self._time.Time()
-        logging.info('Recording current time %s into %s',
-                     _FormatTime(now), self.state_file)
+        logging.debug('Recording current time %s into %s',
+                      _FormatTime(now), self.state_file)
         print >> f, now
 
   def SyncWithShopfloor(self, timeout=5):
