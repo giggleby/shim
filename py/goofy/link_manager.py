@@ -200,6 +200,10 @@ class PresenterLinkManager(object):
             self._reported_failure.remove(presenter_ip)
           if self._connect_hook:
             self._connect_hook(presenter_ip)
+          # Try to sync the time with the shopfloor.
+          logging.info('Just connected, try to sync time immediately')
+          goofy = factory.get_state_instance()
+          goofy.SyncTimeWithShopfloorServer(foreground=False)
           return
       except:  # pylint: disable=W0702
         logging.exception('Failed to register DUT as %s', my_ip)
