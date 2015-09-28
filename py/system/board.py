@@ -313,6 +313,16 @@ class Board(object):
     """
     raise NotImplementedError
 
+  def OnGoofyStart(self):
+    """Callback invoked when goofy starts.
+
+    This method is called when goofy starts in goofy.main(). If any
+    non-simple debug logic this should be the place. The difference
+    compare to OnTestStart is that it will only be called once for
+    each goofy session.
+    """
+    pass
+
   def OnTestStart(self):
     """Callback invoked when factory test starts.
 
