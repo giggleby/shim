@@ -27,6 +27,7 @@ from cros.factory.hwid.encoder import Encode, BOMToBinaryString
 from cros.factory.hwid.encoder import BinaryStringToEncodedString
 from cros.factory.privacy import FilterDict
 from cros.factory.rule import Context
+from cros.factory.system import SystemInfo
 from cros.factory.system import vpd
 from cros.factory.test import branding
 from cros.factory.tools.mount_partition import MountPartition
@@ -464,6 +465,15 @@ class Gooftool(object):
 
     return dict(rlz_brand_code=rlz_brand_code,
                 customization_id=customization_id)
+
+  def VerifyReleaseChannel(self):
+    """Verify that release image channel is correct."""
+    release_channel = SystemInfo().release_image_channel
+    allowed_channels = ['dev', 'beta', 'stable']
+    if not any(channel in release_channel for channel in allowed_channels):
+      raise Error('Release image channel is incorrect: %s. '
+                  'Approved channels are %s.' % (
+                      release_channel, allowed_channels))
 
   def ClearGBBFlags(self):
     """Zero out the GBB flags, in preparation for transition to release state.
