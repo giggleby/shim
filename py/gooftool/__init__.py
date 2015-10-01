@@ -7,9 +7,13 @@
 import logging
 import os
 import re
+import sys
+import traceback
 
 import collections
 from collections import namedtuple
+from contextlib import contextmanager
+from distutils.version import LooseVersion
 from tempfile import NamedTemporaryFile
 
 import factory_common  # pylint: disable=W0611
@@ -658,3 +662,71 @@ class Gooftool(object):
                    if k.startswith('factory.'))
     logging.info('Removing VPD entries %s', FilterDict(entries))
     vpd.rw.Delete(*entries.keys())
+
+  def GenerateStableDeviceSecret(self):
+    """Generates a fresh stable device secret and stores it in RO VPD.
+
+    The stable device secret generated here is a high-entropy identifier that
+    is unique to each device. It gets generated at manufacturing time and reset
+    during RMA, but is stable under normal operation and notably also across
+    recovery image installation.
+
+    The stable device secret is suitable to obtain per-device stable hardware
+    identifiers and/or encryption keys. Please never use the secret directly,
+    but derive a secret specific for your context like this:
+
+        your_secret = HMAC_SHA256(stable_device_secret,
+                                  context_label\0optional_parameters)
+
+    The stable_device_secret acts as the HMAC key. context_label is a string
+    that uniquely identifies your usage context, which allows us to generate as
+    many per-context secrets as we need. The optional_parameters string can
+    contain additional information to further segregate your context, for
+    example if there is a need for multiple secrets.
+
+    The resulting secret(s) can be used freely, in particular they may be
+    shared with the environment or servers. Before you start generating and
+    using a secret in a new context, please always make sure to contact the
+    privacy and security teams to check whether your intended usage meets the
+    Chrome OS privacy and security guidelines.
+
+    MOST IMPORTANTLY: THE STABLE DEVICE SECRET MUST NOT LEAVE THE DEVICE AT ANY
+    TIME. DO NOT INCLUDE IT IN NETWORK COMMUNICATION, AND MAKE SURE IT DOES NOT
+    SHOW UP IN DATA THAT GETS SHARED POTENTIALLY (LOGS, ETC.). FAILURE TO DO SO
+    MAY BREAK THE SECURITY AND PRIVACY OF ALL OUR USERS. YOU HAVE BEEN WARNED.
+    """
+
+    # Ensure that the release image is recent enough to handle the stable
+    # device secret key in VPD. Version 6887.0.0 is the first one that has the
+    # session_manager change to generate server-backed state keys for forced
+    # re-enrollment from the stable device secret.
+    release_image_version = LooseVersion(SystemInfo().release_image_version)
+    if not release_image_version >= LooseVersion('6887.0.0'):
+      raise Error, 'Release image version can\'t handle stable device secret!'
+
+    # A context manager useful for wrapping code blocks that handle the device
+    # secret in an exception handler, so the secret value does not leak due to
+    # exception handling (for example, the value will be part of the VPD update
+    # command, which may get included in exceptions). Chances are that
+    # exceptions will prevent the secret value from getting written to VPD
+    # anyways, but better safe than sorry.
+    @contextmanager
+    def scrub_exceptions(operation):
+      try:
+        yield
+      except:
+        # Re-raise an exception including type and stack trace for the original
+        # exception to facilitate error analysis. Don't include the exception
+        # value as it may contain the device secret.
+        (exc_type, _, exc_traceback) = sys.exc_info()
+        cause = '%s: %s' % (operation, exc_type)
+        raise Error, cause, exc_traceback
+
+    with scrub_exceptions('Error obtaining device secret'):
+      secret_bytes = open('/dev/random').read(32)
+      if len(secret_bytes) != 32:
+        raise Error, 'Stable device secret is not of correct length!'
+
+    with scrub_exceptions('Error writing device secret to VPD'):
+      vpd.ro.Update(
+          {'stable_device_secret_DO_NOT_SHARE': secret_bytes.encode('hex')})
