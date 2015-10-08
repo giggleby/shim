@@ -646,14 +646,24 @@ def ClearFactoryVPDEntries(options):  # pylint: disable=W0613
   event_log.Log('clear_factory_vpd_entries', entries=FilterDict(entries))
 
 
+_cutoff_args_cmd_arg = CmdArg(
+    '--cutoff_args',
+    help='Battery cutoff arguments to be passed to battery_cutoff.sh '
+         'after wiping. Should be the following format: '
+         '[--method shutdown|reboot|battery_cutoff|battery_cutoff_at_shutdown] '
+         '[--check-ac connect_ac|remove_ac] '
+         '[--min-battery-percent <minimum battery percentage>] '
+         '[--max-battery-percent <maximum battery percentage>] '
+         '[--min-battery-voltage <minimum battery voltage>] '
+         '[--max-battery-voltage <maximum battery voltage>]')
 @Command('wipe_in_place',
          CmdArg('--fast', action='store_true',
-                help='use non-secure but faster wipe method.'))
+                help='use non-secure but faster wipe method.'),
+         _cutoff_args_cmd_arg)
 def WipeInPlace(options):
   """Start factory wipe directly without reboot."""
 
-  GetGooftool(options).WipeInPlace(options.fast)
-
+  GetGooftool(options).WipeInPlace(options.fast, options.cutoff_args)
 
 @Command('prepare_wipe',
          CmdArg('--fast', action='store_true',
@@ -837,6 +847,7 @@ def UploadReport(options):
                 help='use non-secure but faster wipe method.'),
          CmdArg('--wipe_in_place', action='store_true',
                 help='Start factory wiping in place without reboot.'),
+         _cutoff_args_cmd_arg,
          _hwid_version_cmd_arg,
          _hwdb_path_cmd_arg,
          _hwid_status_list_cmd_arg,
