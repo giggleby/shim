@@ -71,8 +71,8 @@ class PresenterLinkManager(object):
                disconnect_hook=None,
                standalone=False):
     self._check_interval = check_interval
-    self._handshake_timeout = handshake_timeout
-    self._rpc_timeout = rpc_timeout
+    self._handshake_timeout = 5.0
+    self._rpc_timeout = 3.0
     self._connect_hook = connect_hook
     self._disconnect_hook = disconnect_hook
     self._standalone = standalone
