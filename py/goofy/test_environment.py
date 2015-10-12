@@ -150,7 +150,7 @@ class DUTEnvironment(Environment):
 
   def launch_chrome(self):
     self.override_chrome_start_pages()
-    sync_utils.WaitFor(self.has_sockets, 30)
+    sync_utils.WaitFor(self.has_sockets, 90)
     subprocess.check_call(['initctl', 'emit', 'login-prompt-visible'])
 
   def create_connection_manager(self, wlans, scan_wifi_period_secs,
