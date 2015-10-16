@@ -418,6 +418,11 @@ class Finalize(unittest.TestCase):
       command += ' --rma_mode'
       logging.info('Using RMA mode. Accept deprecated components')
 
+    # Factory service would be stopped after using wipe_in_place in the
+    # following gooftool command, we need to inform shopfloor here.
+    if self.args.wipe_in_place and shopfloor.is_enabled():
+      shopfloor.finalize()
+
     gooftools.run(command)
 
     # If using wipe_in_place in the above gooftool command,
@@ -431,7 +436,6 @@ class Finalize(unittest.TestCase):
     # It will reach the following if not using wipe_in_place in the above
     # gooftool command.
 
-    # TODO(shunhsingou): Notifying shopfloor when using wipe_in_place.
     if shopfloor.is_enabled():
       shopfloor.finalize()
 
