@@ -425,6 +425,8 @@ class Finalize(unittest.TestCase):
         for key, value in self.args.cutoff_options.iteritems():
           cutoff_args += ' --%s %s' % (key.replace('_', '-'), str(value))
         command += ' --cutoff_args "%s"' % cutoff_args
+      if shopfloor.is_enabled():
+        command += ' --shopfloor_url "%s"' % shopfloor.get_server_url()
 
     if not self.args.generate_stable_device_secret:
       command += ' --skip_generate_stable_device_secret'
@@ -445,11 +447,6 @@ class Finalize(unittest.TestCase):
           ' '.join(self.args.enforced_release_channels))
       logging.info(
           'Enforced release channels: %s.', self.args.enforced_release_channels)
-
-    # Factory service would be stopped after using wipe_in_place in the
-    # following gooftool command, we need to inform shopfloor here.
-    if self.args.wipe_in_place and shopfloor.is_enabled():
-      shopfloor.finalize()
 
     gooftools.run(command)
 
