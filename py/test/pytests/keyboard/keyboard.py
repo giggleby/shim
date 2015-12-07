@@ -157,6 +157,10 @@ class KeyboardTest(unittest.TestCase):
 
     # Use the primary keyboard_layout for testing.
     region = CheckOutput(['vpd', '-g', 'region']).strip()
+
+    if not region:
+      return 'ANSI'
+
     return regions.REGIONS[region].keyboard_mechanical_layout
 
   def ReadBindings(self, layout):
