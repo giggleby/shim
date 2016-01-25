@@ -82,9 +82,17 @@ def FlimGetService(flim, name):
   """
   timeout = time.time() + 10
   while time.time() < timeout:
-    service = flim.FindElementByPropertySubstring('Service', 'Name', name)
-    if service:
-      return service
+    for service in flim.GetObjectList('Service'):
+      try:
+        properties = service.GetProperties(utf8_strings=True)
+      except dbus.exceptions.DBusException, error:
+        if (error.get_dbus_name() == flim.UNKNOWN_METHOD or
+            error.get_dbus_name() == flim.UNKNOWN_OBJECT):
+          continue
+        else:
+          raise error
+      if 'Name' in properties and properties['Name'] == name:
+        return service
     time.sleep(0.5)
 
 
