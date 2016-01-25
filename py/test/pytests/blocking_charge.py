@@ -23,18 +23,36 @@ from cros.factory.test.args import Arg
 
 _TEST_TITLE = test_ui.MakeLabel('Charging', u'充电')
 
+_LABEL_TIME_EN = 'Time elapsed: %s' + '&nbsp;' * 8 + 'Time remaining: %s'
+_LABEL_TIME_ZH = u'经过时间: %s' + u'&nbsp;' * 8 + u'剩余时间: %s'
+_LABEL_CHARGING_EN = (
+    'Charging to %d%% (Start: %d%%. Current: %d%%.)<br>' +
+    _LABEL_TIME_EN)
+_LABEL_CHARGING_ZH = (
+    u'充电至 %d%% (起始电量: %d%%. 当前电量: %d%%.)<br>' +
+    _LABEL_TIME_ZH)
+_LABEL_REQUIRE_AC_EN = (
+    'Plug in external power to charge.<br>' +
+    _LABEL_TIME_EN)
+_LABEL_REQUIRE_AC_ZH = (
+    u'请插上外接电源以充电。<br>' +
+    _LABEL_TIME_ZH)
 
 def FormatTime(seconds):
   return '%d:%02d:%02d' % (seconds / 3600, (seconds / 60) % 60, seconds % 60)
 
 
-def MakeChargeTextLabel(start, current, target, elapsed, remaining):
-  _LABEL_EN = ('Charging to %d%% (Start: %d%%. Current: %d%%.)<br>' +
-               'Time elapsed: %s' + '&nbsp;' * 8 + 'Time remaining: %s')
-  _LABEL_ZH = (u'充电至 %d%% (起始电量: %d%%. 当前电量: %d%%.)<br>' +
-               u'经过时间: %s' + u'&nbsp;' * 8 + u'剩余时间: %s')
+def MakeChargeTextLabel(ac_present, start, current, target, elapsed, remaining):
+  if not ac_present:
+    values = (FormatTime(elapsed), FormatTime(remaining))
+    return test_ui.MakeLabel(
+        _LABEL_REQUIRE_AC_EN % values,
+        _LABEL_REQUIRE_AC_ZH % values)
+
   values = (target, start, current, FormatTime(elapsed), FormatTime(remaining))
-  return test_ui.MakeLabel(_LABEL_EN % values, _LABEL_ZH % values)
+  return test_ui.MakeLabel(
+      _LABEL_CHARGING_EN % values,
+      _LABEL_CHARGING_ZH % values)
 
 
 def MakeSpriteHTMLTag(src, height, width):
@@ -50,6 +68,9 @@ class ChargerTest(unittest.TestCase):
       Arg('target_charge_pct_is_delta', bool,
           'Specify target_charge_pct is a delta of current charge',
           default=False),
+      Arg('wait_for_external_power', bool,
+          'Waits for external power if it is not found',
+          default=False),
       Arg('timeout_secs', int, 'Maximum allowed time to charge battery',
           default=3600),
   ]
@@ -64,7 +85,8 @@ class ChargerTest(unittest.TestCase):
 
   def CheckPower(self):
     self.assertTrue(self._power.CheckBatteryPresent(), 'Cannot find battery.')
-    self.assertTrue(self._power.CheckACPresent(), 'Cannot find AC power.')
+    if not self.args.wait_for_external_power:
+      self.assertTrue(self._power.CheckACPresent(), 'Cannot find AC power.')
 
   def Charge(self):
     start_charge = self._power.GetChargePct()
@@ -78,6 +100,7 @@ class ChargerTest(unittest.TestCase):
     self._template.SetState(MakeSpriteHTMLTag('charging_sprite.png', 256, 256))
     logging.info('Charging starting at %d%%', start_charge)
 
+
     for elapsed in xrange(self.args.timeout_secs):
       charge = self._power.GetChargePct()
 
@@ -88,6 +111,7 @@ class ChargerTest(unittest.TestCase):
       self._ui.RunJS('$("batteryIcon").style.backgroundPosition = "-%dpx 0px"' %
                      ((elapsed % 4) * 256))
       self._template.SetInstruction(MakeChargeTextLabel(
+          self._power.CheckACPresent(),
           start_charge,
           charge,
           target_charge,
