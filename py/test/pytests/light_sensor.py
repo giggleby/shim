@@ -18,13 +18,19 @@ Roughly speaking:
 
 from __future__ import print_function
 
+import datetime
 import logging
 import math
 import os
+import posixpath
 import time
+import threading
 import unittest
+import xmlrpclib
 
 import factory_common  # pylint: disable=W0611
+from cros.factory.test import factory
+from cros.factory.test import shopfloor
 from cros.factory.test import test_ui
 from cros.factory.test.args import Arg
 from cros.factory.test.countdown_timer import StartCountdownTimer
@@ -183,6 +189,18 @@ class LightSensorTest(unittest.TestCase):
       # Special parameter for ISL 29018 light sensor
       Arg('range_value', int, 'one of value (1000, 4000, 16000, 64000)',
           optional=True),
+      # Fine tune on user behavior.
+      Arg('pause_between_subtests', bool,
+          'True to require additional user interaction between subtests',
+          default=False, optional=True),
+      # Details of how to read the sensors.
+      Arg('check_sensor_event_interval', float,
+          'Interval between two CheckSensorEvent call in second.',
+          default=0.5, optional=True),
+      # Observation mode will save value in CSV to determine threshold.
+      Arg('observe_mode', bool,
+          'True to save observation in csv format on shopfloor',
+          default=False, optional=True),
   ]
 
   def setUp(self):
@@ -211,10 +229,12 @@ class LightSensorTest(unittest.TestCase):
     self._iter_req_per_subtest = self.args.check_per_subtest
     self._current_iter_remained = self._iter_req_per_subtest
     self._cumulative_val = 0
+    self._current_iter = 1
 
     self._tested = 0
     self._started = False
-    self._active_subtest = self._subtest_list[0]
+    self._active_subtest = self._subtest_list[self._tested]
+    self._subtest_pass_before_timeout = threading.Event()
 
     test = 0
     for name in self._subtest_list:
@@ -225,39 +245,64 @@ class LightSensorTest(unittest.TestCase):
       self.ui.SetHTML(' : UNTESTED', id='result%d' % test)
       test += 1
 
+    # For observation
+    device_data = shopfloor.GetDeviceData()
+    self._serial_number = device_data.get('mlb_serial_number', 'unknown')
+    self._csv_rows = []
+
     StartDaemonThread(target=self.MonitorSensor)
 
   def StartCountDown(self, event):  # pylint: disable=W0613
+    logging.info('Running subtask [%d] %s',
+                 self._tested, self._subtest_list[self._tested])
     self._started = True
-    self._active_subtest = self._subtest_list[0]
-    self.ui.SetHTML(' : ACTIVE', id='result%d' % self._tested)
-    StartCountdownTimer(self._timeout_per_subtest * len(self._subtest_list),
-                        self.TimeoutHandler,
-                        self.ui,
-                        _ID_COUNTDOWN_TIMER)
-
-  def NextSubtest(self):
-    self._tested += 1
-    if self._tested >= len(self._subtest_list):
-      self.ui.Pass()
-      return False
+    self._current_iter = 1
+    self._subtest_pass_before_timeout.clear()
     self._active_subtest = self._subtest_list[self._tested]
     self.ui.SetHTML(' : ACTIVE', id='result%d' % self._tested)
     self._current_iter_remained = self._iter_req_per_subtest
     self._cumulative_val = 0
+    StartCountdownTimer(self._timeout_per_subtest,
+                        self.TimeoutHandler,
+                        self.ui,
+                        _ID_COUNTDOWN_TIMER,
+                        self._subtest_pass_before_timeout)
+
+  def NextSubtest(self):
+    if self.args.pause_between_subtests:
+      self._started = False  # Wait another SPACE to trigger next item.
+      self.ui.SetHTML('', id=_ID_COUNTDOWN_TIMER)
+
+    if self._tested >= len(self._subtest_list):
+      self.SaveObservation(0, upload=True)
+      self.ui.Pass()
+      return False
+    self.ui.RunJS(_JS_LIGHT_SENSOR_TEST)
     return True
 
   def TimeoutHandler(self):
+    self._subtest_pass_before_timeout.set()
     self.ui.SetHTML(' : FAILED', id='result%d' % self._tested)
-    self.ui.Fail('Timeout on subtest "%s"' % self._active_subtest)
+    # No failure in observation mode.
+    failure_str = 'Subtask [%d] failed' % self._tested
+    if self.args.observe_mode:
+      factory.console.info(failure_str)
+      factory.console.info('Observation mode skips the failure')
+      # Keep the remaining subtest running.
+      self._current_iter_remained = self._iter_req_per_subtest
+      self._tested += 1
+      self.NextSubtest()
+    else:
+      self.ui.Fail(failure_str)
 
   def PassOneIter(self, name):
     self._current_iter_remained -= 1
     if self._current_iter_remained is 0:
+      self._subtest_pass_before_timeout.set()
       self.ui.SetHTML(' : PASSED', id='result%d' % self._tested)
+      logging.info('Passed subtest %r', name)
       self._current_iter_remained = self._iter_req_per_subtest
-      mean_val = self._cumulative_val / self._iter_req_per_subtest
-      logging.info('Passed subtest "%s" with mean value %d.', name, mean_val)
+      self._tested += 1
       if not self.NextSubtest():
         return
 
@@ -265,6 +310,9 @@ class LightSensorTest(unittest.TestCase):
     val = self._als.Read('mean', samples=5, delay=0)
 
     if self._started:
+      if self.args.observe_mode:
+        self.SaveObservation(val)
+
       name = self._active_subtest
       cfg = self._subtest_cfg[name]
       passed = False
@@ -284,6 +332,10 @@ class LightSensorTest(unittest.TestCase):
           logging.info('Passed checking "between" %d < %d < %d',
                        lb, val, ub)
           passed = True
+
+      logging.debug('Value: %d, Pass=%r, iter_remains=%d',
+                    val, passed, self._current_iter_remained)
+      self._current_iter += 1
       if passed:
         self._cumulative_val += val
         self.PassOneIter(name)
@@ -295,6 +347,33 @@ class LightSensorTest(unittest.TestCase):
 
     self.ui.SetHTML('Input: %d' % val, id='sensor_input')
     return True
+
+  def SaveObservation(self, value, upload=False):
+    '''Saves the observation to determine the threshold in early stage.
+
+    Args:
+      value: The observed value.
+      upload: True to save to shopfloor server. value will be ignored in this
+              particular call.
+    '''
+    if upload:
+      csv_header = ['serial_number', 'subtask', 'iteration', 'value']
+      csv_filename = 'light_sensor_%s_%s.csv' % (
+          datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3],  # time
+          self._serial_number)
+      csv_content = '%s\n%s' % (','.join(csv_header), '\n'.join(self._csv_rows))
+      logging.debug(csv_content)
+      shopfloor_server = shopfloor.GetShopfloorConnection()
+      # Save to the shopfloor
+      factory.console.info('Uploading %s to shopfloor.', csv_filename)
+      shopfloor_server.SaveAuxLog(
+          posixpath.join('light_sensor', csv_filename),
+          xmlrpclib.Binary(csv_content))
+    else:
+      self._csv_rows.append(','.join(
+          [str(self._serial_number), str(self._tested),
+           str(self._current_iter), str(value)]))
+
 
   def GetConfigDescription(self, cfg):
     if 'above' in cfg:
@@ -319,7 +398,7 @@ class LightSensorTest(unittest.TestCase):
   def MonitorSensor(self):
     while True:
       self.CheckSensorEvent()
-      time.sleep(0.6)
+      time.sleep(self.args.check_sensor_event_interval)
 
   def runTest(self):
     self.ui.AddEventHandler('StartCountDown', self.StartCountDown)
