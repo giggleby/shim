@@ -21,6 +21,7 @@ import os
 import re
 import socket
 import sys
+import threading
 import time
 import unittest
 
@@ -45,6 +46,10 @@ _CSS = """
 .start-font-size {
   font-size: 2em;
 }
+.screensaver-font-size {
+  font-size: 8em;
+  color: white;
+}
 .start-contacting-server {
   background-image: url('/images/active.gif');
   background-repeat: no-repeat;
@@ -57,6 +62,117 @@ _CSS = """
   min-height: 2em;
   font-size: 150%;
 }
+"""
+
+_HTML_SCREENSAVER = """
+    <div id="display-test-container">
+      <center>
+        <span id="text-screensaver-en" class="screensaver-font-size">
+           PASSED<br \>Press anykey to exit
+        </span>
+        <br \>
+        <span id="text-screensaver-zh" class="screensaver-font-size">
+           PASSED<br \>按任意键退出
+        </span>
+      </center>
+     </div>
+"""
+
+_CSS_SCREENSAVER = """
+.display-full-screen-hide {
+  background-color: white;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  visibility: hidden;}
+.display-full-screen-show {
+  background-color: white;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  visibility: visible;}
+"""
+
+_JS_SCREENSAVER = """
+DisplayTest = function() {
+  this.display = false;
+  this.focusItem = 0;
+  this.styleDiv = null;
+  this.fullScreenElement = null;
+  this.text_zh = null;
+  this.text_en = null;
+};
+
+/**
+ * Creates a display test and runs it.
+ */
+function setupDisplayTest() {
+  window.displayTest = new DisplayTest();
+  window.displayTest.setupFullScreenElement();
+  window.onkeydown = function(event) {
+    test.sendTestEvent("onScreensaverOff", {});
+  }
+}
+
+function changeBackgroundColor(color, text_color) {
+  window.displayTest.fullScreenElement.style.backgroundColor=color;
+  window.displayTest.text_zh.style.color=text_color;
+  window.displayTest.text_en.style.color=text_color;
+}
+
+/**
+ * Switches the display.
+ */
+function switchDisplayOnOff() {
+  window.displayTest.switchDisplayOnOff();
+}
+
+/**
+ * Initializes fullscreen elements.
+ */
+DisplayTest.prototype.setupFullScreenElement = function() {
+  this.fullScreenElement = document.getElementById("display-test-container");
+  this.text_en= document.getElementById("text-screensaver-en");
+  this.text_zh= document.getElementById("text-screensaver-zh");
+  this.fullScreenElement.className = "display-full-screen-hide";
+};
+
+/**
+ * Toggles the fullscreen display visibility.
+ */
+DisplayTest.prototype.switchDisplayOnOff = function() {
+  //If current display is on, turns it off
+  if (this.display) {
+    this.switchDisplayOff();
+  } else {
+    this.switchDisplayOn();
+  }
+
+};
+
+/**
+ * Switches the fullscreen display on. Sets fullScreenElement
+ * visibility to visible and enlarges the test iframe to fullscreen.
+ */
+DisplayTest.prototype.switchDisplayOn = function() {
+  this.display = true;
+  this.fullScreenElement.className = "display-full-screen-show";
+  window.test.setFullScreen(true);
+};
+
+/**
+ * Switches the fullscreen display off. Sets fullScreenElement
+ * visibility to hidden and restores the test iframe to normal.
+ */
+DisplayTest.prototype.switchDisplayOff = function() {
+  this.display = false;
+  this.fullScreenElement.className = "display-full-screen-hide";
+  window.test.setFullScreen(false);
+};
 """
 
 # Messages for tasks
@@ -349,7 +465,10 @@ class StartTest(unittest.TestCase):
       Arg('has_ectool', bool, 'Has ectool utility or not.',
           default=True, optional=True),
       Arg('init_shared_data', dict, 'the shared data to initialize',
-          default={}, optional=True)]
+          default={}, optional=True),
+      Arg('screensaver_wait_secs', int, 'Waiting time in seconds to turn on screensaver.',
+          default=None, optional=True),
+    ]
 
   def setUp(self):
     self._task_list = []
@@ -357,6 +476,46 @@ class StartTest(unittest.TestCase):
     self.template = ui_templates.OneSection(self.ui)
     self.ui.AppendCSS(_CSS)
     self.template.SetTitle(_TEST_TITLE)
+    self.ui.AddEventHandler('onScreensaverOff', self.onScreensaverOff)
+    self._task_finished = threading.Event()
+    self._force_stop = threading.Event()
+    self._screensaver_thread = threading.Thread(target=self.screensaveObserver,
+      args=(self._task_finished, self._force_stop))
+
+
+  def onScreensaverOff(self, event):
+    self._force_stop.set()
+
+  def screensaveObserver(self, task_finished, force_stop):
+    self.ui.AppendCSS(_CSS_SCREENSAVER)
+    self.ui.AppendHTML(_HTML_SCREENSAVER)
+    self.ui.RunJS(_JS_SCREENSAVER)
+
+    self.ui.CallJSFunction('setupDisplayTest')
+
+    while True:
+      # Now the screensaver is off, wait for 10 sec and then show screensaver
+      end_time = time.time() + self.args.screensaver_wait_secs
+      while end_time - time.time() >= 0:
+        if task_finished.is_set():
+          return
+        time.sleep(1)
+
+      self.ui.CallJSFunction('switchDisplayOnOff') # Turn on
+      force_stop.clear()
+
+      count = 0
+      colors = ['red', 'green', 'blue', 'white']
+      text_colors = ['green', 'blue', 'white', 'red']
+      while not task_finished.is_set() and not force_stop.is_set():
+        # Wait for the screensaverOff flag turn to be True,
+        time.sleep(1)
+        count = (count + 1) % len(colors)
+        self.ui.CallJSFunction('changeBackgroundColor', colors[count],
+          text_colors[count])
+
+      # Now the screensaver is off again
+      self.ui.CallJSFunction('switchDisplayOnOff') # Turn off
 
   def runTest(self):
 
@@ -384,4 +543,11 @@ class StartTest(unittest.TestCase):
     if self.args.press_to_continue:
       self._task_list.append(PressSpaceTask(self))
 
+    self._task_finished.clear()
+    if self.args.screensaver_wait_secs is not None:
+      self._screensaver_thread.start()
+
     FactoryTaskManager(self.ui, self._task_list).Run()
+    self._task_finished.set()
+    if self.args.screensaver_wait_secs is not None:
+      self._screensaver_thread.join()
