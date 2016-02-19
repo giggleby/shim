@@ -286,7 +286,7 @@ REGIONS_LIST = [
            'Singapore', None, 28),
     Region('us', 'xkb:us::eng', 'America/Los_Angeles', 'en-US', _KML.ANSI,
            'United States', None, 29),
-    Region('za', 'xkb:us:intl:eng', 'Africa/Johannesburg', 'en-ZA', _KML.ANSI,
+    Region('za', 'xkb:gb:extd:eng', 'Africa/Johannesburg', 'en-ZA', _KML.ISO,
            'South Africa', None, 31),
     Region('th', ['xkb:us::eng', 'm17n:th', 'm17n:th_pattajoti', 'm17n:th_tis'],
            'Asia/Bangkok', ['th', 'en-GB'], _KML.ANSI, 'Thailand', None, 36),
