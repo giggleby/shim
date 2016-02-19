@@ -346,6 +346,19 @@ def EnlargeStatefulPartition(args):
                         partitions.STATEFUL.path,
                         args.desired_stateful_size_gb),
                     False)]))
+
+    # Remove 'encrypted.key' to re-assign the enlarged stateful partition to /var
+    FactoryTest(
+        id='RemoveEncryptedKey',
+        label_zh=u'删除硬盘加密',
+        pytest_name='line_check_item',
+        run_if=args.NeedEnlargeStateful,
+        dargs=dict(
+            title_en='RemoveEncryptedKey',
+            title_zh=u'删除硬盘加密',
+            items=[('RemoveEncryptedKey', u'删除硬盘加密',
+                    'rm -rf /mnt/stateful_partition/encrypted.key', False)]))
+
     # Writes 'resize_complete' into device_data to mark this DUT has finished
     # EnlargeStatefulPartition.
     OperatorTest(
@@ -354,6 +367,10 @@ def EnlargeStatefulPartition(args):
         pytest_name='update_device_data',
         dargs=dict(data=dict(resize_complete=True)))
 
+    RebootStep(
+        id='Reboot',
+        label_zh=u'重新开机',
+        iterations=1)
 
 def Idle(id_suffix='', wait_secs=1):
   """Sleep for seconds."""
