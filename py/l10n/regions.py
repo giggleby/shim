@@ -288,7 +288,7 @@ REGIONS_LIST = [
            'United States', None, 29),
     Region('jp', 'xkb:jp::jpn', 'Asia/Tokyo', 'ja', _KML.JIS,
            'Japan', None, 30),
-    Region('za', 'xkb:us:intl:eng', 'Africa/Johannesburg', 'en-ZA', _KML.ANSI,
+    Region('za', 'xkb:gb:extd:eng', 'Africa/Johannesburg', 'en-ZA', _KML.ISO,
            'South Africa', None, 31),
     Region('hk',
            ['xkb:us::eng', 'ime:zh-t:cangjie', 'ime:zh-t:quick',
