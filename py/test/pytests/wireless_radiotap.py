@@ -380,6 +380,9 @@ class WirelessRadiotapTest(unittest.TestCase):
           'FREQ_AP2, PASS_AP2)):         {"all": 50, "main": 50, "aux": 50},'
           '     ((SSID_AP3, FREQ_AP3, PASS_AP3)): {"all": 60}}.',
           optional=False),
+      Arg('deviation_spec', int,
+          'Check the signal deviation between main and aux antenna',
+          default=None, optional=True),
       Arg(
           'scan_count', int,
           'number of scanning to get average signal strength', default=5),
@@ -577,6 +580,18 @@ class WirelessRadiotapTest(unittest.TestCase):
           factory.console.info(
               'Antenna %s, service: %s: The scanned strength %f > spec strength'
               ' %f', antenna, test_service, scanned_strength, spec_strength)
+
+    if self.args.deviation_spec is not None:
+      for service, signal in average_signal.iteritems():
+        deviation = abs(signal['main'] - signal['aux'])
+        if deviation > self.args.deviation_spec:
+          self.fail(
+              'Deviation between main and aux, service: %s: The scanned deviation\
+              %f > spec deviation %f' % (service, deviation, self.args.deviation_spec))
+        else:
+          factory.console.info(
+              'Deviation between main and aux, service: %s: The scanned deviation\
+              %f < spec deviation %f', service, deviation, self.args.deviation_spec)
 
   def PreCheck(self, services):
     """Checks each service only has one frequency.
