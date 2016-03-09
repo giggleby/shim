@@ -17,7 +17,7 @@ NEWROOT="/tmp/wipe_tmpfs"
 STATE_PATH="/mnt/stateful_partition"
 
 # Move the following mount points to tmpfs by mount --rbind
-REBIND_MOUNT_POINTS="/dev /proc /sys"
+REBIND_MOUNT_POINTS="/dev /proc /sys /run"
 
 SERVICES_NEEDS_RUNNING="boot-services console-tty2 dbus factory-wipe"
 
