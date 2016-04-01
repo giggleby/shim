@@ -1179,7 +1179,8 @@ def _ProbeTouchpad():
 
   results = {'id': data.ident_str}
   results.update(DictCompactProbeStr(data.ident_str))
-  for key in ('product_id', 'fw_version', 'fw_csum', 'config_csum'):
+  for key in ('product_id', 'vendor_id', 'version', 'fw_version', 'hw_version',
+              'fw_csum', 'config_csum'):
     value = getattr(data, key, '')
     if value:
       results[key] = value
@@ -1194,7 +1195,8 @@ def _ProbeTouchscreen():
 
   results = {'id': data.ident_str}
   results.update(DictCompactProbeStr(data.ident_str))
-  for key in ('fw_version', 'hw_version', 'config_csum'):
+  for key in ('product_id', 'vendor_id', 'version', 'fw_version', 'hw_version',
+              'fw_csum', 'config_csum'):
     value = getattr(data, key, '')
     if value:
       results[key] = value
