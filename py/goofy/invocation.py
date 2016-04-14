@@ -823,7 +823,7 @@ def LoadPytestModule(pytest_name):
     return getattr(getattr(pytests, base_pytest_name), pytest_name)
   except ImportError:
     logging.info(
-        ('Cannot import cros.factory.test.pytests.%s.%s. '
+        ('Cannot from cros.factory.test.pytests.%s.%s import  '
          'Fall back to cros.factory.test.pytests.%s'),
         base_pytest_name, pytest_name, pytest_name)
     __import__('cros.factory.test.pytests.%s' % pytest_name)

@@ -13,7 +13,7 @@ import unittest
 import yaml
 
 import factory_common   # pylint: disable=W0611
-import cros.factory.common_rule_functions   #pylint: disable=W0611
+from cros.factory import common_rule_functions   #pylint: disable=W0611
 from cros.factory.hwid.common import HWIDException
 from cros.factory.hwid.database import Database
 from cros.factory.hwid.encoder import Encode

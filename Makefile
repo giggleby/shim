@@ -108,7 +108,7 @@ par:
 	# Sanity check: make sure we can import state using only
 	# factory.par.
 	PYTHONPATH=$(PAR_BUILD_DIR)/$(PAR_NAME) $(PYTHON) -c \
-	  'import cros.factory.test.state'; \
+	  'from cros.factory.test import state'; \
 	# Sanity check: make sure we can run "gooftool --help" using
 	# factory.par.
 	$(PAR_BUILD_DIR)/$(PAR_NAME) gooftool --help | \

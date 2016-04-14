@@ -15,7 +15,7 @@ from collections import namedtuple
 from tempfile import NamedTemporaryFile
 
 import factory_common  # pylint: disable=W0611
-import cros.factory.hwid.common as hwid3_common
+from cros.factory.hwid import common as hwid3_common
 from cros.factory.common import Shell
 from cros.factory.hwdb import hwid_tool
 from cros.factory.hwid import common

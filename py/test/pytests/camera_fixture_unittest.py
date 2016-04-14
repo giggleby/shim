@@ -15,8 +15,8 @@ import unittest
 import factory_common # pylint: disable=W0611
 
 from cros.factory.test.fixture.camera.light_chamber import LightChamber
-import cros.factory.test.fixture.camera.perf_tester as camperf
-import cros.factory.test.fixture.camera.barcode as barcode
+from cros.factory.test.fixture.camera import perf_tester as camperf
+from cros.factory.test.fixture.camera import barcode as barcode
 
 
 class CameraFixtureTest(unittest.TestCase):

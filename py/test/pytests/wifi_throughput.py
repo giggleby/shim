@@ -90,7 +90,7 @@ from cros.factory.utils import type_utils
 
 
 # pylint: disable=W0611, F0401
-import cros.factory.test.autotest_common
+from cros.factory.test import autotest_common
 from autotest_lib.client.cros.networking import wifi_proxy
 # pylint: enable=W0611, F0401
 

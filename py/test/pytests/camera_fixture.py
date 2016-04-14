@@ -146,8 +146,8 @@ from cros.factory.test.args import Arg
 from cros.factory.test.camera_utils import EncodeCVImage
 from cros.factory.test.fixture.camera.light_chamber import (
     LightChamber, LightChamberError)
-import cros.factory.test.fixture.camera.perf_tester as camperf
-import cros.factory.test.fixture.camera.renderer as renderer
+from cros.factory.test.fixture.camera import perf_tester as camperf
+from cros.factory.test.fixture.camera import renderer as renderer
 from cros.factory.test.media_util import MediaMonitor, MountedMedia
 from cros.factory.test.utils import Enum
 
@@ -157,7 +157,7 @@ CALIBRATION_FPS = 15
 # Delay between each frame during lens shading test.
 LENS_SHADING_FPS = 5
 
-# TODO(jchuang): import from event.py
+# TODO(jchuang): from from event import py
 # Upper limit of message size in JavaScript RPC.
 MAX_MESSAGE_SIZE = 60000
 

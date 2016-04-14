@@ -14,7 +14,7 @@ from collections import defaultdict
 
 import factory_common # pylint: disable=W0611
 from cros.factory import common
-import cros.factory.hwid.common
+from cros.factory.hwid import common
 from cros.factory.hwid import database
 from cros.factory.utils.process_utils import Spawn
 

@@ -1129,8 +1129,8 @@ class Rules(object):
     # These imports are needed to make sure all the rule functions needed by
     # HWID-related operations are loaded and initialized.
     # pylint: disable = W0612
-    import cros.factory.common_rule_functions
-    import cros.factory.hwid.hwid_rule_functions
+    from cros.factory import common_rule_functions
+    from cros.factory.hwid import hwid_rule_functions
     self.initialized = True
 
   def EvaluateRules(self, context, namespace=None):
