@@ -196,8 +196,8 @@ chroot_tmpfs_to_wipe() {
   local oldroot=""
   oldroot=$(mktemp -d --tmpdir="${NEWROOT}")
   cd "${NEWROOT}"
-  pivot_root . "$(basename "${oldroot}")"
-  exec chroot . "${WIPE_INIT_UNDER_NEWROOT}" "${FACTORY_ROOT_DEV}" \
+  # pivot_root . "$(basename "${oldroot}")"
+  exec "/usr/local/factory/sh/wipe_init.sh" "${FACTORY_ROOT_DEV}" \
     "${ROOT_DISK}" "${WIPE_ARGS}" "${CUTOFF_ARGS}" "${SHOPFLOOR_URL}"
 }
 
@@ -223,9 +223,9 @@ main() {
 
   parse_wipe_args
   load_usbnet_module
-  stop_running_upstart_jobs
-  unmount_stateful
-  rebind_mount_point
+  # stop_running_upstart_jobs
+  # unmount_stateful
+  # rebind_mount_point
   chroot_tmpfs_to_wipe
 }
 
