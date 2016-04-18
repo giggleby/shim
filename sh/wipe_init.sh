@@ -71,20 +71,18 @@ start_wipe() {
   local release_root_dev=""
   release_root_dev=$(echo "${FACTORY_ROOT_DEV}" | tr '35' '53')
 
-  # ROOT_DEV="${release_root_dev}" ROOT_DISK="${ROOT_DISK}" \
-  #   FACTORY_RETURN_AFTER_WIPING="YES" clobber-state "${WIPE_ARGS}"
-  # mv -f "/tmp/clobber-state.log" "${STATE_PATH}/unencrypted/clobber-state.log"
+  ROOT_DEV="${release_root_dev}" ROOT_DISK="${ROOT_DISK}" \
+    FACTORY_RETURN_AFTER_WIPING="YES" clobber-state "${WIPE_ARGS}"
+  mv -f "/tmp/clobber-state.log" "${STATE_PATH}/unencrypted/clobber-state.log"
 
   # Remove developer flag, which is created by clobber-state after wiping.
-  # rm -f "${STATE_PATH}/.developer_mode"
+  rm -f "${STATE_PATH}/.developer_mode"
 
   "${ENABLE_RELEASE_PARTITION}" "${release_root_dev}"
 
   if [ -n "${SHOPFLOOR_URL}" ]; then
     "${INFORM_SHOPFLOOR}" "${SHOPFLOOR_URL}" "factory_wipe"
   fi
-
-  rm -f /usr/local/factory/enabled
 
   trap - EXIT
   "${BATTERY_CUTOFF}" ${CUTOFF_ARGS}
