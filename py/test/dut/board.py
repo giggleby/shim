@@ -19,6 +19,7 @@ from cros.factory.test.dut import bluetooth
 from cros.factory.test.dut import component
 from cros.factory.test.dut import display
 from cros.factory.test.dut import ec
+from cros.factory.test.dut import gyroscope
 from cros.factory.test.dut import hooks
 from cros.factory.test.dut import i2c
 from cros.factory.test.dut import info
@@ -110,6 +111,10 @@ class DUTBoard(object):
   @DUTProperty
   def ec(self):
     return ec.EmbeddedController(self)
+
+  @DUTProperty
+  def gyroscope(self):
+    return gyroscope.Gyroscope(self)
 
   @DUTProperty
   def hooks(self):
