@@ -218,7 +218,7 @@ class Util(object):
 
   def GetAllowedReleaseImageChannels(self):
     """Returns a list of channels allowed for release image."""
-    return ['dev', 'beta', 'stable']
+    return ['dev', 'beta', 'stable', 'canary-channel']
 
   def GetReleaseImageChannel(self):
     """Returns the channel of current release image."""

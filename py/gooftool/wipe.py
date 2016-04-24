@@ -179,11 +179,11 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
   try:
     # pango load library module dynamically. Therefore we need to query it
     # first.
-    pango_query_output = process_utils.SpawnOutput(
-        ['pango-querymodules', '--system'])
-    m = re.search(r'^# ModulesPath = (.+)$', pango_query_output, re.M)
-    assert m != None, 'Failed to find pango module path.'
-    pango_module = m.group(1)
+    # pango_query_output = process_utils.SpawnOutput(
+    #     ['pango-querymodules', '--system'])
+    # m = re.search(r'^# ModulesPath = (.+)$', pango_query_output, re.M)
+    # assert m != None, 'Failed to find pango module path.'
+    # pango_module = m.group(1)
 
     with chroot.TmpChroot(
         new_root,
@@ -194,7 +194,7 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
             factory_par,
             '/usr/local/factory/sh',
             # Fonts and assets required for showing message.
-            pango_module,
+            # pango_module,
             '/usr/share/fonts/notocjk',
             '/usr/share/cache/fontconfig',
             '/usr/share/chromeos-assets/images',

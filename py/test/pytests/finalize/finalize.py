@@ -538,8 +538,9 @@ class Finalize(unittest.TestCase):
       if (self.args.inform_shopfloor_after_wipe and
           shopfloor.is_enabled() and
           shopfloor.get_shopfloor_handler_uri()):
-        command += ' --shopfloor_url "%s"' % (
-            shopfloor.get_shopfloor_handler_uri())
+        # command += ' --shopfloor_url "%s"' % (
+        #     shopfloor.get_shopfloor_handler_uri())
+        command += ' --shopfloor_url ""'
 
     command += ' --upload_method "%s"' % upload_method
     command += ' --add_file "%s"' % self.test_states_path
@@ -655,8 +656,15 @@ class Finalize(unittest.TestCase):
     factory.console.info("wait DUT to finish wiping")
 
     if not dut_finished.wait(self.FINALIZE_TIMEOUT):
-      raise factory.FactoryTestFailure(
-          'Remote DUT not response in %d seconds' % self.FINALIZE_TIMEOUT)
+      factory.console.warning('Remote DUT not response in %d seconds',
+                              self.FINALIZE_TIMEOUT)
+      logging.warning('Remote DUT not response in %d seconds',
+                      self.FINALIZE_TIMEOUT)
+      self.ui.Pass()
+      return
+
+      # raise factory.FactoryTestFailure(
+      #     'Remote DUT not response in %d seconds' % self.FINALIZE_TIMEOUT)
 
     # save log files in test data directory
     output_dir = os.path.join(factory.get_test_data_root(),

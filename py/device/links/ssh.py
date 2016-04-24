@@ -8,6 +8,7 @@
 import logging
 import pipes
 import subprocess
+import tempfile
 import threading
 import types
 
@@ -116,18 +117,36 @@ class SSHLink(link.DeviceLink):
       options += ['-i', self.identity]
     return sig, options
 
+  def _SCPWithRetry(self, options, src, dest, max_retry=3):
+    for retry_time in xrange(max_retry):
+      with tempfile.TemporaryFile() as stderr:
+        returncode = subprocess.call(['scp'] + options + [src, dest],
+                                     stderr=stderr)
+        if returncode != 0:
+          stderr.flush()
+          stderr.seek(0)
+          error = stderr.read()
+          SSH_CONNECT_ERROR_MSG = [
+              'ssh: connect to host',
+              'Connection timed out',]
+          if [msg for msg in SSH_CONNECT_ERROR_MSG if msg in error]:
+            # it's a connection problem, try again
+            logging.warning(error)
+            logging.warning('try again (%d)', retry_time + 1)
+            continue
+        break
+    return returncode
+
   def Push(self, local, remote):
     """See DeviceLink.Push"""
     remote_sig, options = self._signature(True)
-    return subprocess.check_call(['scp'] + options +
-                                 [local, '%s:%s' % (remote_sig, remote)])
+    return self._SCPWithRetry(options, local, '%s:%s' % (remote_sig, remote))
 
   def PushDirectory(self, local, remote):
     """See DeviceLink.PushDirectory"""
     remote_sig, options = self._signature(True)
     options.append('-r')
-    return subprocess.check_call(['scp'] + options +
-                                 [local, '%s:%s' % (remote_sig, remote)])
+    return self._SCPWithRetry(options, local, '%s:%s' % (remote_sig, remote))
 
   def Pull(self, remote, local=None):
     """See DeviceLink.Pull"""
@@ -138,8 +157,7 @@ class SSHLink(link.DeviceLink):
           return f.read()
 
     remote_sig, options = self._signature(True)
-    subprocess.check_call(['scp'] + options +
-                          ['%s:%s' % (remote_sig, remote), local])
+    return self._SCPWithRetry(options, '%s:%s' % (remote_sig, remote), local)
 
   def Shell(self, command, stdin=None, stdout=None, stderr=None):
     """See DeviceLink.Shell"""
@@ -154,6 +172,7 @@ class SSHLink(link.DeviceLink):
       shell = False
 
     logging.debug('SSHLink: Run [%r]', command)
+
     return subprocess.Popen(command, shell=shell, close_fds=True, stdin=stdin,
                             stdout=stdout, stderr=stderr)
 

@@ -341,9 +341,22 @@ class DeviceBoard(object):
     Returns:
       Exit code from executed command.
     """
-    process = self.Popen(*args, **kargs)
-    process.wait()
-    return process.returncode
+    CONNECTION_ERROR = 255
+    for retry_time in xrange(3):
+      process = self.Popen(*args, **kargs)
+      process.wait()
+      returncode = process.returncode
+      if returncode == CONNECTION_ERROR:
+        logging.warning('returned %d, try again (%d)',
+                        CONNECTION_ERROR,
+                        retry_time + 1)
+      else:
+        break
+
+    if returncode == CONNECTION_ERROR:
+      logging.warning('still returned %d, test IsReady', CONNECTION_ERROR)
+      logging.warning('IsReady? %s', self.link.IsReady())
+    return returncode
 
   def CheckCall(self, command, stdin=None, stdout=None, stderr=None, log=False):
     """Executes a command on DUT, using subprocess.check_call convention.

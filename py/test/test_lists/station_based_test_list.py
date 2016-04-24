@@ -17,7 +17,8 @@ def StartStationTest(test_list_id, label_en, label_zh, prompt_start):
       label_en=u'Start %s' % label_en,
       label_zh=u'开始 %s' % label_zh,
       pytest_name='station_entry',
-      dargs={'prompt_start': prompt_start})
+      dargs={'prompt_start': prompt_start,
+             'timeout_secs': 180})
 
 
 def EndStationTest(test_list_id, label_en, label_zh, disconnect_dut):

@@ -43,7 +43,9 @@ class OfflineTestFetchLog(unittest.TestCase):
           'Relative directory on shopfloor', default='offline_test'),
       Arg('upload_to_shopfloor', bool,
           'Whether uploading fetched log file to shopfloor or not.',
-          default=True)]
+          default=True),
+      Arg('disable_script_only', bool, 'Only disable startup script and done',
+          default=False, optional=True),]
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
@@ -83,6 +85,9 @@ class OfflineTestFetchLog(unittest.TestCase):
   def runTest(self):
     # disable test script
     self._DisableStartUpApp()
+
+    if self.args.disable_script_only:
+      return
 
     # fetch results
     upload_files = []

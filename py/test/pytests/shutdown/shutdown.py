@@ -322,4 +322,6 @@ class ShutdownTest(unittest.TestCase):
     if self.dut.link.IsLocal():
       self.LocalShutdown()
     else:
+      dut_dict = self.dut.storage.LoadDict()
       self.RemoteShutdown()
+      self.dut.storage.SaveDict(dut_dict)

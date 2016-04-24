@@ -11,6 +11,7 @@ This factory test invokes functions to setup or teardown a station-based
 test list.
 """
 
+import time
 import threading
 import unittest
 
@@ -144,7 +145,9 @@ class StationEntry(unittest.TestCase):
 
     def _IsReady():
       try:
-        self._dut.CheckCall(['true'])
+        for _ in xrange(5):
+          self._dut.CheckCall(['true'])
+          time.sleep(1)
         return True
       except:  # pylint: disable=bare-except
         return False
@@ -164,7 +167,12 @@ class StationEntry(unittest.TestCase):
     self._ui.SetHTML(_MSG_REMOVE_DUT, id=_ID_MSG_DIV)
     if not self._dut.link.IsLocal():
       if self.args.disconnect_dut:
-        sync_utils.WaitFor(lambda: not self._dut.link.IsReady(),
+        def IsDisconnected():
+          for _ in xrange(3):
+            if self._dut.link.IsReady():
+              return False
+          return True
+        sync_utils.WaitFor(IsDisconnected,
                            self.args.timeout_secs,
                            poll_interval=1)
       else:

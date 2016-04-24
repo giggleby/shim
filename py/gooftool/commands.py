@@ -1040,7 +1040,7 @@ def Finalize(options):
   else:
     EnableFwWp({})
   LogSystemDetails(options)
-  UploadReport(options)
+  # UploadReport(options)
   if options.wipe_in_place:
     event_log.Log('wipe_in_place')
     # WipeInPlace(options)
