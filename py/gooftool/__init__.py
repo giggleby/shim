@@ -652,29 +652,6 @@ class Gooftool(object):
 
     raise Error, 'developer mode is not disabled'
 
-  def HasVirtualDevSwitch(self):
-    """Returns true if the device has virtual dev switch."""
-    VBSD_HONOR_VIRT_DEV_SWITCH = 0x400
-    vdat_flags = int(CheckOutput(['crossystem', 'vdat_flags']), 16)
-    return bool(vdat_flags & VBSD_HONOR_VIRT_DEV_SWITCH)
-
-  def VirtualDevModeOn(self):
-    """Returns true if the virtual dev mode is on."""
-
-    # We use tpm_nvread to read the virtual dev mode flag stored in TPM.
-    # An example output of tpm_nvread looks like:
-    #
-    # 00000000  02 03 01 00 01 00 00 00 00 7a
-    #
-    # Where the second field is the version and the third field is flag we
-    # need.
-    FIRMWARE_NV_INDEX = 0x1007
-    FLAG_VIRTUAL_DEV_MODE_ON = 0x02
-    nvdata = CheckOutput(['tpm_nvread', '-i',
-                          '%d' % FIRMWARE_NV_INDEX])
-    flag = int(nvdata.split()[2], 16)
-    return bool(flag & FLAG_VIRTUAL_DEV_MODE_ON)
-
   def SetFirmwareBitmapLocale(self):
     """Sets firmware bitmap locale to the default value stored in VPD.
 
