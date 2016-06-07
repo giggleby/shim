@@ -42,6 +42,7 @@ class GyroscopeController(component.DUTComponent):
         continue
       if name == iio_name.strip() and location == iio_location.strip():
         self._iio_path = iio_path
+        break
     if self._iio_path is None:
       raise GyroscopeException('Gyroscope at %s not found' % location)
 
