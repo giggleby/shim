@@ -246,7 +246,11 @@ class AccelerometersCalibration(unittest.TestCase):
       Arg(
           'location', str,
           'The location for the accelerometer', default='base',
-          optional=True)]
+          optional=True),
+      Arg(
+          'resolution', int,
+          'the number of bits in the accelerometer to store the output number.'
+          'For example: 12 or 16.', optional=False)]
 
   def setUp(self):
     self.dut = dut.Create()
@@ -262,6 +266,7 @@ class AccelerometersCalibration(unittest.TestCase):
         self.args.spec_ideal_values,
         self.args.sample_rate_hz,
         self.args.location,
+        self.args.resolution,
     )
     self.ui.AppendCSS(_CSS)
     self._task_manager = None

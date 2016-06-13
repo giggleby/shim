@@ -114,6 +114,12 @@ class AccelerometersLidAngleTest(unittest.TestCase):
       Arg('sample_rate_hz', int,
           'The sample rate in Hz to get raw data from '
           'accelerometers.', default=20, optional=True),
+      Arg(
+          'resolution', dict,
+          'Keys: the position of the accelerometer. For example: "base" or "lid".'
+          'Values: The number of bits in the accelerometer to store the output number.'
+          'For example: 12 or 16. A example for resolution: {"base": 16, "lid": 16}',
+          optional=False),
   ]
 
   def setUp(self):
@@ -137,7 +143,8 @@ class AccelerometersLidAngleTest(unittest.TestCase):
           self.args.spec_offset,
           self.args.spec_ideal_values,
           self.args.sample_rate_hz,
-          location
+          location,
+          self.args.resolution[location]
       )
 
   def _CalculateLidAngle(self):
