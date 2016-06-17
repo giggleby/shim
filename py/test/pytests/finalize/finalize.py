@@ -122,6 +122,12 @@ class Finalize(unittest.TestCase):
           'False for legacy implementation to invoke wiping under '
           'release image after reboot.',
           default=False, optional=True),
+      Arg('inform_shopfloor_after_wipe', bool,
+          'Inform shopfloor server that the device is finalized after it gets'
+          'wiped. For in-place wipe, it is recommended to set to True so'
+          'a shopfloor call can be made AFTER device gets wiped successfully.'
+          'For legacy wipe, shopfloor call is always made before wiping.',
+          default=True),
       Arg('cutoff_options', dict,
           'Battery cutoff options after wiping. Only used when wipe_in_place'
           'is set to true. Should be a dict with following optional keys:\n'
@@ -457,7 +463,9 @@ class Finalize(unittest.TestCase):
         for key, value in self.args.cutoff_options.iteritems():
           cutoff_args += ' --%s %s' % (key.replace('_', '-'), str(value))
         command += ' --cutoff_args "%s"' % cutoff_args
-      if shopfloor.is_enabled():
+      if (self.args.inform_shopfloor_after_wipe and
+          shopfloor.is_enabled() and
+          shopfloor.get_shopfloor_handler_uri()):
         command += ' --shopfloor_url "%s"' % shopfloor.get_server_url()
 
     command += ' --upload_method "%s"' % upload_method
@@ -473,6 +481,10 @@ class Finalize(unittest.TestCase):
           ' '.join(self.args.enforced_release_channels))
       logging.info(
           'Enforced release channels: %s.', self.args.enforced_release_channels)
+
+    if self.args.wipe_in_place:
+      if not self.args.inform_shopfloor_after_wipe and shopfloor.is_enabled():
+        shopfloor.finalize()  # notify shopfloor
 
     gooftools.run(command)
 
