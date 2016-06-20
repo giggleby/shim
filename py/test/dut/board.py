@@ -31,6 +31,7 @@ from cros.factory.test.dut import status
 from cros.factory.test.dut import storage
 from cros.factory.test.dut import temp
 from cros.factory.test.dut import thermal
+from cros.factory.test.dut import touchscreen
 from cros.factory.test.dut import udev
 from cros.factory.test.dut import usb_c
 from cros.factory.test.dut import utils
@@ -179,6 +180,10 @@ class DUTBoard(object):
   @DUTProperty
   def thermal(self):
     return thermal.Thermal(self)
+
+  @DUTProperty
+  def touchscreen(self):
+    return touchscreen.Touchscreen(self)
 
   @DUTProperty
   def udev(self):
