@@ -130,6 +130,8 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
   # Set the defual umask.
   os.umask(0022)
 
+  _KickStation(station_ip, station_port, wipe_finish_token,
+               'start WipeInTmpFs')
   logfile = os.path.join('/tmp', WIPE_IN_TMPFS_LOG)
   ResetLog(logfile)
 
@@ -205,11 +207,16 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
             # /var/empty is required by openssh server.
             '/var/empty'],
         binary_list=binary_deps, etc_issue=etc_issue).PivotRoot(old_root):
+
       logging.debug(
           'lsof: %s',
           process_utils.SpawnOutput('lsof -p %d' % os.getpid(), shell=True))
 
       process_utils.Spawn(['sync'], call=True)
+
+      _KickStation(station_ip, station_port, wipe_finish_token,
+                   'Changed to new root, calling wipe_init')
+
       time.sleep(3)
 
       # Restart gooftool under new root. Since current gooftool might be using
@@ -336,16 +343,7 @@ def _InformStation(ip, port, token, wipe_init_log=None,
   logging.debug('inform station %s:%d', ip, port)
 
   try:
-    sync_utils.WaitFor(
-        lambda: 0 == process_utils.Spawn(['ping', '-w1', '-c1', ip],
-                                         call=True).returncode,
-        timeout_secs=180, poll_interval=1)
-  except:  # pylint: disable=bare-except
-    logging.exception('cannot get network connection...')
-  else:
-    sock = socket.socket()
-    sock.connect((ip, port))
-
+    sock = socket.create_connection((ip, port), 90)
     response = dict(token=token, success=success)
 
     if wipe_init_log:
@@ -358,9 +356,31 @@ def _InformStation(ip, port, token, wipe_init_log=None,
 
     sock.sendall(json.dumps(response) + '\n')
     sock.close()
+  except:  # pylint: disable=bare-except
+    logging.exception('cannot get network connection...')
+
+
+def _KickStation(ip, port, token, message):
+  """Send a message to station.
+
+  Send a message to station so station knows that we are still alive.
+  """
+  if not ip:
+    return
+  port = int(port)
+  logging.debug('kick station %s:%d with message: %s', ip, port, message)
+
+  try:
+    sock = socket.create_connection((ip, port), 5)
+    response = dict(token=token, message=message)
+    sock.sendall(json.dumps(response) + '\n')
+    sock.close()
+  except:
+    logging.exception('cannot send message to station')
 
 
 def _WipeStateDev(release_rootfs, root_disk, wipe_args):
+  logging.debug('wipe stateful partition')
   stateful_partition_path = '/mnt/stateful_partition'
 
   clobber_state_env = os.environ.copy()
@@ -420,8 +440,12 @@ def WipeInit(wipe_args, cutoff_args, shopfloor_url, state_dev, release_rootfs,
   logging.debug('release_rootfs: %s', release_rootfs)
   logging.debug('root_disk: %s', root_disk)
   logging.debug('old_root: %s', old_root)
+  _KickStation(station_ip, station_port, finish_token,
+               'Start wipe_init')
 
   try:
+    _KickStation(station_ip, station_port, finish_token,
+                 'stopping upstart jobs')
     _StopAllUpstartJobs(exclude_list=[
         # Milestone marker that use to determine the running of other services.
         'boot-services',
@@ -436,15 +460,24 @@ def WipeInit(wipe_args, cutoff_args, shopfloor_url, state_dev, release_rootfs,
         # sslh is a service in ARC++ for muxing between ssh and adb.
         'sslh'
         ])
+
+    _KickStation(station_ip, station_port, finish_token,
+                 'unmount stateful partition')
     _UnmountStatefulPartition(old_root, state_dev)
 
     process_utils.Spawn([os.path.join(SCRIPT_DIR, 'display_wipe_message.sh'),
                          'wipe'], call=True)
 
+    _KickStation(station_ip, station_port, finish_token,
+                 'wipe stateful partition')
     _WipeStateDev(release_rootfs, root_disk, wipe_args)
 
+    _KickStation(station_ip, station_port, finish_token,
+                 'enable release partition: %s' % release_rootfs)
     _EnableReleasePartition(release_rootfs)
 
+    _KickStation(station_ip, station_port, finish_token,
+                 'inform shopfloor %s' % shopfloor_url)
     _InformShopfloor(shopfloor_url)
 
     _InformStation(station_ip, station_port, finish_token,

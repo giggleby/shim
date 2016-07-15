@@ -60,7 +60,8 @@ MSG_FINALIZING = MakeLabel(
     'or the device may become unusable.',
     '正在开始最终程序，请稍等.<br>'
     '不要重启机器或停止测试，<br>'
-    '不然机器将无法开机。')
+    '不然机器将无法开机。<br>'
+    '<div id="wipe-message"></div>')
 MSG_CHANGE_TO_REBOOT = MakeLabel(
     '<strong>Virtual dev mode is on, system will reboot '
     'after wiping instead of battery cutoff.</strong><br>'
@@ -622,8 +623,13 @@ class Finalize(unittest.TestCase):
       try:
         dut_response = json.loads(handler.rfile.readline())
         if dut_response['token'] == token:
-          self.dut_response = dut_response
-          dut_finished.set()
+          if 'success' in dut_response:
+            self.dut_response = dut_response
+            dut_finished.set()
+          if 'message' in dut_response:
+            message = dut_response['message']
+            self.ui.SetHTML(MakeLabel(message, message), id='wipe-message')
+
         # otherwise, the reponse is invalid, just ignore it
       except:  # pylint: disable=bare-except
         pass
