@@ -6,6 +6,8 @@
 
 from __future__ import print_function
 
+import hashlib
+import hmac
 import logging
 import os
 import re
@@ -736,6 +738,23 @@ class Gooftool(object):
     logging.info('Removing VPD entries %s', FilterDict(entries))
     vpd.rw.Delete(*entries.keys())
 
+  def CheckVersionForStableDeviceSecret(self):
+    """Ensures that the release image can handle a stable device secret.
+
+    Version 6887.0.0 is the first release image that can since it has the
+    session_manager change to generate server-backed state keys for forced
+    re-enrollment from the stable device secret.
+    """
+    release_image_version = LooseVersion(SystemInfo().release_image_version)
+    if not release_image_version >= LooseVersion('6887.0.0'):
+      raise Error, 'Release image version can\'t handle stable device secret!'
+
+  @property
+  def stable_device_secret_key(self):
+    """Returns the name of the stable device secret VPD key.
+    """
+    return 'stable_device_secret_DO_NOT_SHARE'
+
   def GenerateStableDeviceSecret(self):
     """Generates a fresh stable device secret and stores it in RO VPD.
 
@@ -769,13 +788,8 @@ class Gooftool(object):
     MAY BREAK THE SECURITY AND PRIVACY OF ALL OUR USERS. YOU HAVE BEEN WARNED.
     """
 
-    # Ensure that the release image is recent enough to handle the stable
-    # device secret key in VPD. Version 6887.0.0 is the first one that has the
-    # session_manager change to generate server-backed state keys for forced
-    # re-enrollment from the stable device secret.
-    release_image_version = LooseVersion(SystemInfo().release_image_version)
-    if not release_image_version >= LooseVersion('6887.0.0'):
-      raise Error, 'Release image version can\'t handle stable device secret!'
+    # Ensure that we are on an image version that can support the device secret.
+    self.CheckVersionForStableDeviceSecret()
 
     # A context manager useful for wrapping code blocks that handle the device
     # secret in an exception handler, so the secret value does not leak due to
@@ -808,4 +822,91 @@ class Gooftool(object):
 
     with scrub_exceptions('Error writing device secret to VPD'):
       vpd.ro.Update(
-          {'stable_device_secret_DO_NOT_SHARE': secret_bytes.encode('hex')})
+          {self.stable_device_secret_key: secret_bytes.encode('hex')})
+
+  def PrintEnrollmentID(self):
+    """Prints the device's enterprise enrollment identifier (EID).
+
+    The EID is a value derived from both the TPM endorsement key (EK) and the
+    stable device secret on standard output, followed by a newline.
+
+    The EID is computed as follows:
+
+      den = HMAC_SHA256(stable_device_secret, "zero_touch_enrollment")
+      eid = HMAC_SHA256(ek, den)
+
+    The EID will therefore change whenever the stable device secret is changed.
+    """
+
+    # Ensure that we are on an image version that can support the device secret.
+    self.CheckVersionForStableDeviceSecret()
+
+    # See explanation for exceptions scrubbing in GenerateStableDeviceSecret.
+    # We do not want to leak the value when, e.g. decoding its value (a non-risk
+    # until we decide maybe to allow for different syntax od that value).
+    @contextmanager
+    def scrub_exceptions(operation):
+      try:
+        yield
+      except:
+        # Re-raise an exception including type and stack trace for the original
+        # exception to facilitate error analysis. Don't include the exception
+        # value as it may contain the device secret.
+        (exc_type, _, exc_traceback) = sys.exc_info()
+        cause = '%s: %s' % (operation, exc_type)
+        raise Error, cause, exc_traceback
+
+    # Read the stable device secret from the VPD and get its binary value.
+    image_file = self._crosfw.LoadMainFirmware().GetFileName()
+    ro_vpd = self._read_ro_vpd(image_file)
+    secret_string = ro_vpd.get(self.stable_device_secret_key)
+    if secret_string is None:
+      raise Error('A stable device secret must be present in the VPD.')
+
+    with scrub_exceptions('Error validating device secret'):
+      secret = secret_string.decode('hex')
+      if len(secret) != 32:
+        raise Error
+
+    # Compute the enterprise device enrollment nonce (DEN).
+    h = hmac.new(b'zero_touch_enrollment', msg=secret, digestmod=hashlib.sha256)
+    den = h.digest()
+
+    # Extract the EK public key from the TPM. The tpm_getpubek command
+    # returns a certificate dump that has version and encoding information
+    # and then a public key formatted as hexadecimal digits blocks.
+    #
+    # The following is an example, where [...] indicates truncation due
+    # to formatting limitations:
+    #
+    # Public Endorsement Key:
+    #   Version:   01010000
+    #   Usage:     0x0002 (Unknown)
+    #   Flags:     0x00000000 (!VOLATILE, !MIGRATABLE, !REDIRECTION)
+    #   AuthUsage: 0x00 (Never)
+    #   Algorithm:         0x00000020 (Unknown)
+    #   Encryption Scheme: 0x00000012 (Unknown)
+    #   Signature Scheme:  0x00000010 (Unknown)
+    #   Public Key:
+    #     07acf405 f39163d9 2303d6bd bda6aef7 92cce554 d0fbf16d 0b048d63 [...]
+    #     31aefde0 ad9eca78 fe8bd19c 44ea2f8d 4a000b03 8f1f2d88 9e1aca17 [...]
+    #     185c83f5 448d9dcf afc96def 6cb1c89f fbb32f02 46a2c3f6 4e64eaff [...]
+    #     699d020e a187f68a 74829974 da41eaa3 7ae3bccf fc1fe271 2e34242a [...]
+    #     a4b9fc23 49c84f00 6ad3f3a3 7d534c77 c09ac4f3 338ae78c a3458503 [...]
+    #     e20ef6ae 0e6592f4 a4d7de80 bc1756df 6b0609ca 9edf9843 ca2092a4 [...]
+    #     886fc75c 02a207ba 86eac86e 1ff5460c c664a118 97fdce49 b80687a7 [...]
+    #     4aa2b1bf d23edffa 175237ae 11fc6032 af0ccd9f 3fe645bb 238b6749 [...]
+    ek_pub_cert = self._util.shell('tpm_getpubek', log=False).stdout.strip()
+    with scrub_exceptions('Malformed TPM EK certificate.'):
+      if not ek_pub_cert.startswith('Public Endorsement Key:'):
+        raise ValueError
+      ek = re.sub(r'[\r\n\t ]', '',
+                  ek_pub_cert[(ek_pub_cert.find('Public Key:') + 11):]) .decode(
+                      'hex')
+      # The EK is 2048 bits (256 bytes) as of the TPM 1.2 specification.
+      if len(ek) != 256:
+        raise ValueError
+
+    # Compute and print the enterprise enrollment identifier for the device.
+    h = hmac.new(den, msg=ek, digestmod=hashlib.sha256)
+    print(h.hexdigest())

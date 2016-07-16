@@ -670,6 +670,11 @@ def GenerateStableDeviceSecret(options):  # pylint: disable=W0613
   GetGooftool(options).GenerateStableDeviceSecret()
   event_log.Log('generate_stable_device_secret')
 
+@Command('print_enrollment_id')
+def PrintEnrollmentID(options):  # pylint: disable=W0613
+  """Prints the enterprise enrollment ID for this device on standard output."""
+  GetGooftool(options).PrintEnrollmentID()
+
 _cutoff_args_cmd_arg = CmdArg(
     '--cutoff_args',
     help='Battery cutoff arguments to be passed to battery_cutoff.sh '

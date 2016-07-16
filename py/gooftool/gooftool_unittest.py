@@ -7,6 +7,8 @@
 
 """Unit tests for gooftool module."""
 
+from __future__ import print_function
+
 import __builtin__
 import logging
 import mox
@@ -408,6 +410,67 @@ class GooftoolTest(unittest.TestCase):
     self.mox.ReplayAll()
     self.assertRaisesRegexp(Error, 'Error writing device secret',
                             self._gooftool.GenerateStableDeviceSecret)
+
+  def testPrintEnrollmentIDSuccess(self):
+    SystemInfo.release_image_version = '6887.0.0'
+    self._gooftool._crosfw.LoadMainFirmware().AndReturn(MockMainFirmware())
+    self._gooftool._read_ro_vpd('firmware').AndReturn({
+        'stable_device_secret_DO_NOT_SHARE':
+            'ddc00f02aae77c512b1cc7e86011265804b1d2bcf37f7aec4d207d8b02c620fa'})
+    self._gooftool._util.shell(
+        'tpm_getpubek', log=False).AndReturn(
+            StubStdout("""Public Endorsement Key:
+  Usage:     0x0002 (Unknown)
+  Flags:     0x00000000 (!VOLATILE, !MIGRATABLE, !REDIRECTION)
+  AuthUsage: 0x00 (Never)
+  Algorithm:         0x00000020 (Unknown)
+  Encryption Scheme: 0x00000012 (Unknown)
+  Signature Scheme:  0x00000010 (Unknown)
+  Public Key:
+        e654166e 1d22a08b 81e598b2 ecd93261 41e7291f 970d0bce e779fe73 8d4bee3b
+        fb113b46 c5ae7964 211811ef 55023280 53c9efc5 661a5255 2b80fdf8 52660463
+        14c0b065 fc35440c d16edde3 4fd6ed8e 74c3898d acc04808 c86cc88f 36d9c533
+        28496a3d cb0448b0 920a130d 0780b6c3 4fcb8a7f b1099894 b57c6b4b 0193bb01
+        c61dd1a4 49e2e075 380e1730 81457d39 08e44b05 4bee4127 5f25b40b 4f790250
+        5ffaa017 b39f31e4 6ce98706 5c48ebc9 545baa71 634d3854 e4a44db2 71d13d05
+        7b1dc275 eafdced9 e7c64210 68f871f8 fd3a161c 4b9aa454 5974cebb 006ec856
+        8237a75b 063aa7c6 72c27f22 d3d81a30 15030caf f52ce02d faa4733c bb6a9482\n"""))
+    # Mock stdout and set calling expectations with the expected EID.
+    self.mox.StubOutWithMock(__builtin__, 'print', True)
+    __builtin__.print('34493eb51c271a90dc0c2f78c12863c43f3b3d3bce0af9b21fd4e2e6a8ad2c8c')
+
+    stub_result = lambda: None
+    stub_result.success = True
+
+    self.mox.ReplayAll()
+    self._gooftool.PrintEnrollmentID()
+    self.mox.VerifyAll()
+
+  def testPrintEnrollmentIDNoStableDeviceSecret(self):
+    SystemInfo.release_image_version = '6887.0.0'
+    self._gooftool._crosfw.LoadMainFirmware().AndReturn(MockMainFirmware())
+    self._gooftool._read_ro_vpd('firmware').AndReturn({})
+    self.mox.ReplayAll()
+    self.assertRaisesRegexp(Error, 'A stable device secret must be present in the VPD',
+                            self._gooftool.PrintEnrollmentID)
+
+  def testPrintEnrollmentIDMalformedCertificate(self):
+    SystemInfo.release_image_version = '6887.0.0'
+    self._gooftool._crosfw.LoadMainFirmware().AndReturn(MockMainFirmware())
+    self._gooftool._read_ro_vpd('firmware').AndReturn({
+        'stable_device_secret_DO_NOT_SHARE':
+            'ddc00f02aae77c512b1cc7e86011265804b1d2bcf37f7aec4d207d8b02c620fa'})
+    self._gooftool._util.shell(
+        'tpm_getpubek', log=False).AndReturn(StubStdout(''))
+    self.mox.ReplayAll()
+    self.assertRaisesRegexp(Error, 'Malformed TPM EK certificate',
+                            self._gooftool.PrintEnrollmentID)
+
+  def testPrintEnrollmentIDBadReleaseImageVersion(self):
+    SystemInfo.release_image_version = '6886.0.0'
+    self.mox.ReplayAll()
+    self.assertRaisesRegexp(Error, 'Release image version',
+                            self._gooftool.PrintEnrollmentID)
 
   def testPrepareWipe(self):
     self._gooftool._util.GetReleaseRootPartitionPath(
