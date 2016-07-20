@@ -792,11 +792,12 @@ def CreateReportArchiveBlob(*args, **kwargs):
     return xmlrpclib.Binary(f.read())
 
 
-def CreateReportArchive(device_sn=None, add_file=None):
+def CreateReportArchive(device_sn=None, enrollment_id=None, add_file=None):
   """Creates a report archive in a temporary directory.
 
   Args:
     device_sn: The device serial number (optional).
+    enrollment_id: The device enrollment ID (optional, req. device_sn).
     add_file: A list of files to add (optional).
 
   Returns:
@@ -805,11 +806,13 @@ def CreateReportArchive(device_sn=None, add_file=None):
   def NormalizeAsFileName(token):
     return re.sub(r'\W+', '', token).strip()
 
-  target_name = '%s%s.tar.xz' % (
+  target_name = '%s%s%s.tar.xz' % (
       time.strftime('%Y%m%dT%H%M%SZ',
                     time.gmtime()),
       ('' if device_sn is None else
-       '_' + NormalizeAsFileName(device_sn)))
+       '_' + NormalizeAsFileName(device_sn)),
+      ('' if device_sn is None or enrollment_id is None else
+       '_' + NormalizeAsFileName(enrollment_id)))
   target_path = os.path.join(gettempdir(), target_name)
 
   # Intentionally ignoring dotfiles in EVENT_LOG_DIR.
@@ -859,7 +862,12 @@ def UploadReport(options):
   if device_sn is None:
     logging.warning('RO_VPD missing device serial number')
     device_sn = 'MISSING_SN_' + event_log.TimedUuid()
-  target_path = CreateReportArchive(device_sn)
+  # TODO(drcrash): Offer option not to leak the EID unless required?
+  try:
+    enrollment_id = GetGooftool(options).ComputeEnrollmentID()
+  except:
+    enrollment_id = None
+  target_path = CreateReportArchive(device_sn, enrollment_id)
 
   if options.upload_method is None or options.upload_method == 'none':
     logging.warning('REPORT UPLOAD SKIPPED (report left at %s)', target_path)

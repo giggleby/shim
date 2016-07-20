@@ -824,13 +824,11 @@ class Gooftool(object):
       vpd.ro.Update(
           {self.stable_device_secret_key: secret_bytes.encode('hex')})
 
-  def PrintEnrollmentID(self):
-    """Prints the device's enterprise enrollment identifier (EID).
+  def ComputeEnrollmentID(self):
+    """Computes the device's enterprise enrollment identifier (EID).
 
     The EID is a value derived from both the TPM endorsement key (EK) and the
-    stable device secret on standard output, followed by a newline.
-
-    The EID is computed as follows:
+    stable device secret. The EID is computed as follows:
 
       den = HMAC_SHA256(stable_device_secret, "zero_touch_enrollment")
       eid = HMAC_SHA256(ek, den)
@@ -909,4 +907,10 @@ class Gooftool(object):
 
     # Compute and print the enterprise enrollment identifier for the device.
     h = hmac.new(den, msg=ek, digestmod=hashlib.sha256)
-    print(h.hexdigest())
+    return h.hexdigest()
+
+  def PrintEnrollmentID(self):
+    """Computes the device's enterprise enrollment identifier (EID)
+    and prints it on standard output, followed by a newline.
+    """
+    print(self.ComputeEnrollmentID())
