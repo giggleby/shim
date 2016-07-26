@@ -830,7 +830,7 @@ class Gooftool(object):
     The EID is a value derived from both the TPM endorsement key (EK) and the
     stable device secret. The EID is computed as follows:
 
-      den = HMAC_SHA256(stable_device_secret, "zero_touch_enrollment")
+      den = HMAC_SHA256(stable_device_secret, "attestation_based_enrollment")
       eid = HMAC_SHA256(ek, den)
 
     The EID will therefore change whenever the stable device secret is changed.
@@ -867,7 +867,8 @@ class Gooftool(object):
         raise Error
 
     # Compute the enterprise device enrollment nonce (DEN).
-    h = hmac.new(b'zero_touch_enrollment', msg=secret, digestmod=hashlib.sha256)
+    h = hmac.new(b'attestation_based_enrollment', msg=secret,
+                 digestmod=hashlib.sha256)
     den = h.digest()
 
     # Extract the EK public key from the TPM. The tpm_getpubek command

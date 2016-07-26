@@ -437,7 +437,7 @@ class GooftoolTest(unittest.TestCase):
         8237a75b 063aa7c6 72c27f22 d3d81a30 15030caf f52ce02d faa4733c bb6a9482\n"""))
     # Mock stdout and set calling expectations with the expected EID.
     self.mox.StubOutWithMock(__builtin__, 'print', True)
-    __builtin__.print('34493eb51c271a90dc0c2f78c12863c43f3b3d3bce0af9b21fd4e2e6a8ad2c8c')
+    __builtin__.print('5995b9c873448d872f0c5a8057007a5de720be81d9bb95f493a5b28bde0dcec2')
 
     stub_result = lambda: None
     stub_result.success = True
