@@ -226,6 +226,15 @@ def get_instance(url=None, detect=False, timeout=None, quiet=False):
   return umpire_server_proxy.TimeoutUmpireServerProxy(
       url, quiet=quiet, allow_none=True, verbose=False, timeout=timeout)
 
+def get_shopfloor_handler_uri():
+  """Gets shop floor server XMLRPC handler URI."""
+  instance = get_instance()
+  if hasattr(instance, 'GetShopFloorHandlerUri'):
+    uri = instance.GetShopFloorHandlerUri()
+  else:
+    uri = get_server_url()
+  logging.info('Get shopfloor handler uri %s', uri)
+  return uri
 
 def save_aux_data(table_name, id, data):  # pylint: disable=W0622
   """Saves data from an auxiliary table."""
