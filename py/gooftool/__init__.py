@@ -755,6 +755,37 @@ class Gooftool(object):
     """
     return 'stable_device_secret_DO_NOT_SHARE'
 
+  def CheckStableDeviceSecret(self):
+    """Checks if a valid stable device secret exists.
+
+    Raises:
+      Error if not found or invalid.
+    """
+    @contextmanager
+    def scrub_exceptions(operation):
+      # TODO(itspeter): Consider move the scrub_exception out so similar calls
+      # can share this snippet.
+      try:
+        yield
+      except:
+        (exc_type, _, exc_traceback) = sys.exc_info()
+        cause = '%s: %s' % (operation, exc_type)
+        raise Error, cause, exc_traceback
+
+    # Read the stable device secret from the VPD and get its binary value.
+    image_file = self._crosfw.LoadMainFirmware().GetFileName()
+    ro_vpd = self._read_ro_vpd(image_file)
+    secret_string = ro_vpd.get(self.stable_device_secret_key)
+    if secret_string is None:
+      raise Error('A stable device secret must be present in the VPD.')
+
+    with scrub_exceptions('Error validating device secret'):
+      secret = secret_string.decode('hex')
+      if len(secret) != 32:
+        raise Error
+
+    return secret
+
   def GenerateStableDeviceSecret(self):
     """Generates a fresh stable device secret and stores it in RO VPD.
 
@@ -854,17 +885,8 @@ class Gooftool(object):
         cause = '%s: %s' % (operation, exc_type)
         raise Error, cause, exc_traceback
 
-    # Read the stable device secret from the VPD and get its binary value.
-    image_file = self._crosfw.LoadMainFirmware().GetFileName()
-    ro_vpd = self._read_ro_vpd(image_file)
-    secret_string = ro_vpd.get(self.stable_device_secret_key)
-    if secret_string is None:
-      raise Error('A stable device secret must be present in the VPD.')
-
-    with scrub_exceptions('Error validating device secret'):
-      secret = secret_string.decode('hex')
-      if len(secret) != 32:
-        raise Error
+    # Check the generated secret.
+    secret = self.CheckStableDeviceSecret()
 
     # Compute the enterprise device enrollment nonce (DEN).
     h = hmac.new(b'attestation_based_enrollment', msg=secret,

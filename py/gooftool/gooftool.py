@@ -670,6 +670,11 @@ def GenerateStableDeviceSecret(options):  # pylint: disable=W0613
   GetGooftool(options).GenerateStableDeviceSecret()
   event_log.Log('generate_stable_device_secret')
 
+@Command('check_stable_device_secret')
+def CheckStableDeviceSecret(options):  # pylint: disable=W0613
+  """Check if RO VPD already contains the stable device secret."""
+  GetGooftool(options).CheckStableDeviceSecret()
+
 @Command('print_enrollment_id')
 def PrintEnrollmentID(options):  # pylint: disable=W0613
   """Prints the enterprise enrollment ID for this device on standard output."""
@@ -886,6 +891,9 @@ def UploadReport(options):
 
 
 @Command('finalize',
+         CmdArg('--skip_generate_stable_device_secret',
+                action='store_true', default=False,
+                help='Do not generate but check its existence.'),
          CmdArg('--no_write_protect', action='store_true',
                 help='Do not enable firmware write protection.'),
          CmdArg('--fast', action='store_true',
@@ -928,7 +936,14 @@ def Finalize(options):
     SetFirmwareBitmapLocale(options)
   ClearGBBFlags(options)
   ClearFactoryVPDEntries(options)
-  GenerateStableDeviceSecret(options)
+
+  if not options.skip_generate_stable_device_secret:
+    GenerateStableDeviceSecret(options)
+  # There are some use cases we will need to generate the device secret prior
+  # to the finalization. In such cases, we check the existence instead of
+  # generating one.
+  CheckStableDeviceSecret(options)
+
   if options.no_write_protect:
     logging.warn('WARNING: Firmware Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
