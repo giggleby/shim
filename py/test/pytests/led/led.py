@@ -40,6 +40,7 @@ LEDColor = Board.LEDColor
 LEDIndex = Board.LEDIndex
 _COLOR_LABEL = {
     LEDColor.YELLOW: I18nLabel('yellow', u'黃色'),
+    LEDColor.AMBER: I18nLabel('amber', u'琥珀色'),
     LEDColor.GREEN: I18nLabel('green', u'绿色'),
     LEDColor.RED: I18nLabel('red', u'紅色'),
     LEDColor.WHITE: I18nLabel('white', u'白色'),
@@ -54,6 +55,7 @@ _INDEX_LABEL = {
 # Hash values are: (LED color, readable text color).
 _COLOR_CODE = {
     LEDColor.YELLOW: ('#ffff00', 'black'),
+    LEDColor.AMBER: ('#ffff00', 'black'),
     LEDColor.GREEN: ('#00ff00', 'black'),
     LEDColor.RED: ('#ff0000', 'black'),
     LEDColor.WHITE: ('#ffffff', 'black'),
@@ -318,7 +320,7 @@ class LEDTest(unittest.TestCase):
     self._SetAllLED(self.args.target_leds, LEDColor.OFF)
 
   def tearDown(self):
-    self._SetAllLED(self.args.target_leds, LEDColor.AUTO)
+    self._SetAllLED(self.args.target_leds, LEDColor.OFF)
 
     if self._fixture:
       self._fixture.Disconnect()
