@@ -132,6 +132,13 @@ class Finalize(unittest.TestCase):
           'A list of string indicating the enforced release image channels. '
           'Each item should be one of "dev", "beta" or "stable".',
           default=None, optional=True),
+      Arg('generate_stable_device_secret', bool,
+          'False to not generate the stable device secret during finalization '
+          'and check for its existence only.',
+          default=True, optional=True),
+      Arg('check_regcode', bool,
+          'False to skip the checking of registration code.',
+          default=True, optional=True),
       ]
 
   def setUp(self):
@@ -415,6 +422,12 @@ class Finalize(unittest.TestCase):
         for key, value in self.args.cutoff_options.iteritems():
           cutoff_args += ' --%s %s' % (key.replace('_', '-'), str(value))
         command += ' --cutoff_args "%s"' % cutoff_args
+
+    if not self.args.generate_stable_device_secret:
+      command += ' --skip_generate_stable_device_secret'
+
+    if not self.args.check_regcode:
+      command += ' --skip_regcode_checking'
 
     command += ' --upload_method "%s"' % upload_method
     command += ' --add_file "%s"' % self.test_states_path

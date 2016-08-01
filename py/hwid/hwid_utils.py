@@ -111,7 +111,7 @@ def ParseDecodedHWID(hwid):
 
 
 def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
-               current_phase=None):
+               current_phase=None, skip_rules=None):
   """Verifies the given encoded HWID v3 string against the component db.
 
   A HWID context is built with the encoded HWID string and the board-specific
@@ -136,10 +136,14 @@ def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
     current_phase: The current phase, for phase checks.  If None is
         specified, then phase.GetPhase() is used (this defaults to PVT
         if none is available).
+    skip_rules: A set of rules' name in string that will skip the verify
+        process.
 
   Raises:
     HWIDException if verification fails.
   """
+  if skip_rules is None:
+    skip_rules = set()
   hwid_mode = _HWIDMode(rma_mode)
   hwid = decoder.Decode(db, encoded_string, mode=hwid_mode)
   hwid.VerifyProbeResult(yaml.dump(probed_results))
@@ -148,16 +152,18 @@ def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
   context = rule.Context(hwid=hwid, vpd=vpd)
   db.rules.EvaluateRules(context, namespace='verify.*')
 
-  mandatory_rules = [
+  all_rules = [
       # VPD
       {'name': 'verify.vpd.ro',
        'evaluate': ['Assert(ValidVPDValue("ro", "%s"))' % field for field in
                     ('region', 'serial_number')]},
       {'name': 'verify.vpd.rw',
        'evaluate': ['CheckRegistrationCode(GetVPDValue("rw", "%s"))' % field
-                    for field in ('gbind_attribute', 'ubind_attribute')]},
-  ]
-  database.Rules(mandatory_rules).EvaluateRules(context)
+                    for field in ('gbind_attribute', 'ubind_attribute')]}]
+
+  for rule_to_verify in all_rules:
+    if rule_to_verify['name'] not in skip_rules:
+      database.Rules([rule_to_verify]).EvaluateRules(context)
 
 
 def VerifyComponents(db, probed_results, component_list):

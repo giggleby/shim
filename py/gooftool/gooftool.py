@@ -130,6 +130,13 @@ _cros_core_cmd_arg = CmdArg(
          'items. For example, branding verification or firmware bitmap '
          'locale settings).')
 
+_check_regcode_cmd_arg = CmdArg(
+    '--skip_regcode_checking', dest='check_regcode',
+    action='store_false', default=True,
+    help='Skip the verification of registration code during the verify step.'
+         'Use with extra catious only for product that doesn\'t have a '
+         'registration code!')
+
 _hwid_version_cmd_arg = CmdArg(
     '-i', '--hwid-version', default=3, choices=(2, 3), type=int,
     help='Version of HWID to operate on. (default: %(default)s)')
@@ -719,6 +726,7 @@ def PrepareWipe(options):
          _hwid_cmd_arg,
          _rma_mode_cmd_arg,
          _cros_core_cmd_arg,
+         _check_regcode_cmd_arg,
          _enforced_release_channels_cmd_arg)
 def Verify(options):
   """Verifies if whole factory process is ready for finalization.
@@ -911,6 +919,7 @@ def UploadReport(options):
          _hwid_cmd_arg,
          _rma_mode_cmd_arg,
          _cros_core_cmd_arg,
+         _check_regcode_cmd_arg,
          _enforced_release_channels_cmd_arg)
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
@@ -975,8 +984,10 @@ def VerifyHWIDv3(options):
   event_log.Log('probed_results', probed_results=FilterDict(probed_results))
   event_log.Log('vpd', vpd=FilterDict(vpd))
 
+  skip_rules = None if options.check_regcode else set(['verify.vpd.rw'])
   hwid_utils.VerifyHWID(db, encoded_string, probed_results, vpd,
-                        rma_mode=options.rma_mode)
+                        rma_mode=options.rma_mode,
+                        skip_rules=skip_rules)
 
   event_log.Log('verified_hwid', hwid=encoded_string)
 

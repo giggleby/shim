@@ -46,6 +46,9 @@ class HWIDV3Test(unittest.TestCase):
           'Set this value to True to skip updating hwid data from shopfloor '
           'server.',
           default=False, optional=True),
+      Arg('check_regcode', bool,
+          'Set this value to False to skip checking registration code.',
+          default=True, optional=True),
       Arg('rma_mode', bool,
           'Enable rma_mode, do not check for deprecated components.',
           default=False, optional=True),
@@ -111,8 +114,10 @@ class HWIDV3Test(unittest.TestCase):
             encoded_string or '(unchanged)'),
         '正在验证 HWID (v3): %s...' % (
             encoded_string or '（不变）')))
+    skip_rules = set(['verify.vpd.rw']) if self.args.check_regcode else None
     hwid_utils.VerifyHWID(hwdb, encoded_string, probed_results, vpd,
-                          rma_mode=self.args.rma_mode)
+                          rma_mode=self.args.rma_mode,
+                          skip_rules=skip_rules)
     Log('hwid_verified', hwid=encoded_string,
         hwdb_checksum=hwdb.checksum)
 
