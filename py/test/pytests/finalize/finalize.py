@@ -139,6 +139,9 @@ class Finalize(unittest.TestCase):
       Arg('check_regcode', bool,
           'False to skip the checking of registration code.',
           default=True, optional=True),
+      Arg('use_reboot', bool,
+          'True to use reboot to replace shutdown in the end.',
+          default=False, optional=True),
       ]
 
   def setUp(self):
@@ -466,6 +469,10 @@ class Finalize(unittest.TestCase):
 
     # TODO(hungte): Use Reboot in test list to replace this, or add a
     # key-press check in developer mode.
-    os.system('sync; sleep 3; shutdown -r now')
+    if self.args.use_reboot:
+      os.system('sync; sleep 3; sync; sleep 10; reboot;')
+    else:
+      os.system('sync; sleep 3; shutdown -r now')
+
     time.sleep(60)
     self.ui.Fail('Unable to shutdown')
