@@ -70,7 +70,7 @@ class ChargerTest(unittest.TestCase):
 
     if self.args.check_capacity:
       test = shopfloor.GetDeviceData().get('customization_id')
-      if test == 'NCOMPUTING' or test == 'CTL':
+      if test == 'NCOMPUTING':
         self.assertTrue(self._power.GetChargeFull()>=3450,'battery capacity is less than 3450mAh.')
 
   def Charge(self):
