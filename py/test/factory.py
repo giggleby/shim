@@ -797,7 +797,8 @@ class FactoryTest(object):
                force_background=False,
                waived=False,
                _root=None,
-               _default_id=None):
+               _default_id=None,
+               is_critical_test=False):
     """Constructor.
 
     See cros.factory.test.test_lists.FactoryTest for argument
@@ -821,6 +822,7 @@ class FactoryTest(object):
     self.force_background = force_background
     self.no_host = no_host
     self.waived = waived
+    self.is_critical_test = is_critical_test
     if isinstance(exclusive, str):
       self.exclusive = [exclusive]
     else:

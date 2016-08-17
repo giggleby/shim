@@ -1040,13 +1040,21 @@ class Goofy(GoofyBase):
         new_state = t.update_state(**v.update_state_on_completion)
         del self.invocations[t]
 
-        # Stop on failure if flag is true and there is no retry chances.
+        # If "stop_on_failure" flag is set, we should clean up the queue and
+        # stop testing.
         if (self.test_list.options.stop_on_failure and
             new_state.retries_left < 0 and
             new_state.status == TestState.FAILED):
           # Clean all the tests to cause goofy to stop.
           self.tests_to_run = []
           factory.console.info('Stop on failure triggered. Empty the queue.')
+
+        # if we are failing a critical test,
+        # we should clean up and restart on next *top level* *untested* test.
+        if (t.is_critical_test and new_state.retries_left < 0 and
+            new_state.status == TestState.FAILED):
+          self.tests_to_run = []
+          self.run_tests_with_status([TestState.UNTESTED])
 
         if new_state.iterations_left and new_state.status == TestState.PASSED:
           # Play it again, Sam!

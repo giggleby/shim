@@ -133,6 +133,9 @@ def FactoryTest(*args, **kwargs):
     enable_services: Services to enable for the test to run correctly.
     disable_services: Services to disable for the test to run correctly.
     _default_id: A default ID to use if no ID is specified.
+    is_critical_test: True if Goofy should clear test queue if this test item
+      fails.  After clean up the test queue, Goofy will restart running on next
+      *top level* and *untested* test.
     require_run: A list of RequireRun objects indicating which
       tests must have been run (and optionally passed) before this
       test may be run.  If the specified path includes this test, then
