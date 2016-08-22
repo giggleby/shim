@@ -4,7 +4,12 @@
 # found in the LICENSE file.
 
 # Customize Chrome startup settings.
-mount --bind "$(dirname $0)/chrome_dev.conf" /etc/chrome_dev.conf
+
+if [ -f /usr/local/factory/board/chrome_dev_board.conf ]; then
+  mount --bind /usr/local/factory/board/chrome_dev_board.conf /etc/chrome_dev.conf
+else
+  mount --bind "$(dirname $0)/chrome_dev.conf" /etc/chrome_dev.conf
+fi
 
 # For factory environment, we don't need to preserve Chrome session data.
 mount -t tmpfs none /home/chronos
