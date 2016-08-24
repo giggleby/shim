@@ -5,11 +5,16 @@
 
 # Customize Chrome startup settings.
 
-if [ -f /usr/local/factory/board/chrome_dev_board.conf ]; then
-  mount --bind /usr/local/factory/board/chrome_dev_board.conf /etc/chrome_dev.conf
-else
-  mount --bind "$(dirname $0)/chrome_dev.conf" /etc/chrome_dev.conf
+conf_dir="$(dirname $0)"
+conf_file="${conf_dir}/chrome_dev.conf"
+board_conf_file="${conf_dir}/chrome_dev_board.conf"
+
+# If board conf file from board overlay exists, use it
+if [ -f "${board_conf_file}" ]; then
+  conf_file="${board_conf_file}"
 fi
+
+mount --bind "${conf_file}" /etc/chrome_dev.conf
 
 # For factory environment, we don't need to preserve Chrome session data.
 mount -t tmpfs none /home/chronos
