@@ -354,8 +354,9 @@ class DeviceBoard(object):
         break
 
     if returncode == CONNECTION_ERROR:
-      logging.warning('still returned %d, test IsReady', CONNECTION_ERROR)
-      logging.warning('IsReady? %s', self.link.IsReady())
+      from cros.factory.test import factory
+      factory.console.warning('still returned %d, test IsReady', CONNECTION_ERROR)
+      factory.console.warning('IsReady? %s', self.link.IsReady())
     return returncode
 
   def CheckCall(self, command, stdin=None, stdout=None, stderr=None, log=False):

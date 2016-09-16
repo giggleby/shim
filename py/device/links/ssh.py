@@ -174,6 +174,9 @@ class SSHLink(link.DeviceLink):
     def _Callback(retry_time, max_retry_times):
       logging.info('SCP: src=%s, dst=%s (%d/%d)',
                    src, dest, retry_time, max_retry_times)
+      if retry_time > 0:
+        factory.console.info('SCP: src=%s, dst=%s (%d/%d)',
+                             src, dest, retry_time, max_retry_times)
 
     result = sync_utils.Retry(
         max_retry, 0.1, callback=_Callback, target=_TryOnce)
