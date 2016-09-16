@@ -118,12 +118,12 @@ class StationEntry(unittest.TestCase):
 
     if self.args.start_station_tests:
       # Clear dut.info data.
-      factory.console.info('Clearing dut.info data...')
-      self._dut.info.Reload()
+      # factory.console.info('Clearing dut.info data...')
+      # self._dut.info.Reload()
       self.Start()
       # Reload serial numbers by accessing the dut.info field.
-      factory.console.info('Loading serial numbers...')
-      self._dut.info.all_serial_numbers
+      # factory.console.info('Loading serial numbers...')
+      # self._dut.info.all_serial_numbers
     else:
       self.End()
       # Clear dut.info data.
