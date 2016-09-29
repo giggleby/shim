@@ -253,7 +253,8 @@ def init_logging(prefix=None, verbose=False):
   level = logging.DEBUG if verbose else logging.INFO
   logging.basicConfig(
       format=('[%(levelname)s] ' + prefix +
-              ' %(filename)s:%(lineno)d %(asctime)s.%(msecs)03d %(message)s'),
+              ' %(threadName)s %(filename)s:%(lineno)d' +
+              ' %(asctime)s.%(msecs)03d %(message)s'),
       level=level,
       datefmt='%Y-%m-%d %H:%M:%S')
 
