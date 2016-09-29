@@ -153,9 +153,9 @@ def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
       {'name': 'verify.vpd.ro',
        'evaluate': ['Assert(ValidVPDValue("ro", "%s"))' % field for field in
                     ('region', 'serial_number')]},
-      #{'name': 'verify.vpd.rw',
-      # 'evaluate': ['CheckRegistrationCode(GetVPDValue("rw", "%s"))' % field
-      #              for field in ('gbind_attribute', 'ubind_attribute')]},
+      {'name': 'verify.vpd.rw',
+       'evaluate': ['CheckRegistrationCode(GetVPDValue("rw", "%s"))' % field
+                    for field in ('gbind_attribute', 'ubind_attribute')]},
   ]
   database.Rules(mandatory_rules).EvaluateRules(context)
 
