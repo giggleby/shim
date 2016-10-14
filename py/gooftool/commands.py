@@ -705,7 +705,7 @@ def Finalize(options):
     logging.warn('WARNING: Firmware Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
   else:
-    EnableFwWp({})
+    EnableFwWp(options)
   LogSystemDetails(options)
   UploadReport(options)
 
