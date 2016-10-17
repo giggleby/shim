@@ -28,32 +28,32 @@ from tempfile import gettempdir
 
 import factory_common  # pylint: disable=W0611
 
-from cros.factory.gooftool import crosfw
-from cros.factory.gooftool import report_upload
-from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool.common import ExecFactoryPar
 from cros.factory.gooftool.common import Shell
+from cros.factory.gooftool.core import Gooftool
+from cros.factory.gooftool import crosfw
+from cros.factory.gooftool.probe import CalculateFirmwareHashes
 from cros.factory.gooftool.probe import Probe, PROBEABLE_COMPONENT_CLASSES
 from cros.factory.gooftool.probe import ReadRoVpd, ReadRwVpd
-from cros.factory.gooftool.probe import CalculateFirmwareHashes
+from cros.factory.gooftool import report_upload
 from cros.factory.gooftool.vpd_data import KNOWN_VPD_FIELD_DATA
 from cros.factory.hwid.v2 import hwid_tool
 from cros.factory.hwid.v2.yaml_datastore import YamlWrite
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils
-from cros.factory.test import event_log
 from cros.factory.test.env import paths
+from cros.factory.test import event_log
 from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
+from cros.factory.utils import argparse_utils
 from cros.factory.utils.argparse_utils import CmdArg
 from cros.factory.utils.argparse_utils import ParseCmdline
 from cros.factory.utils.argparse_utils import verbosity_cmd_arg
-from cros.factory.utils import argparse_utils
+from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import file_utils
+from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
-from cros.factory.utils.debug_utils import SetupLogging
-from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils.type_utils import Error
 
 
@@ -714,8 +714,27 @@ def EnableFwWp(options):  # pylint: disable=W0613
   event_log.Log('wp', fw='main')
   ec_fw_file = crosfw.LoadEcFirmware().GetFileName()
   if ec_fw_file is not None:
-    WriteProtect(ec_fw_file, 'ec', 'EC_RO')
-    event_log.Log('wp', fw='ec')
+    try:
+      WriteProtect(ec_fw_file, 'ec', 'EC_RO')
+      event_log.Log('wp', fw='ec')
+    except IOError:
+      logging.exception('Exception raised when enabling EC write protect, '
+                        'check if RO_AT_BOOT is set')
+      try:
+        output = process_utils.CheckOutput(['ectool', 'flashprotect'], log=True)
+        # the output would be something like:
+        #
+        #   Flash protect flags: 0x00000003 ro_at_boot ro_now
+        #   Valid flags:         0x0000007f wp_gpio_asserted ro_at_boot ...
+        #   Writable flags:      0x00000000
+        protect_flags = output.splitlines()[0]  # the first line
+        match = re.match(r'Flash protect flags: (\w+)', protect_flags)
+        protect_flags = int(match.group(1), 16)
+        if not protect_flags & 0x1:
+          logging.error('RO_AT_BOOT is not set')
+          raise
+      except Exception:
+        raise
   else:
     logging.warning('EC not write protected (seems there is no EC flash).')
 
@@ -850,8 +869,8 @@ def UntarStatefulFiles(unused_options):
   """
   tar_file = os.path.join(paths.DEVICE_STATEFUL_PATH, 'stateful_files.tar.xz')
   if os.path.exists(tar_file):
-    Spawn(['tar', 'xf', tar_file], cwd=paths.DEVICE_STATEFUL_PATH,
-          log=True, check_call=True)
+    process_utils.Spawn(['tar', 'xf', tar_file], cwd=paths.DEVICE_STATEFUL_PATH,
+                        log=True, check_call=True)
   else:
     logging.warning('No stateful files at %s', tar_file)
 
@@ -938,8 +957,8 @@ def CreateReportArchive(device_sn=None, add_file=None):
            "Removing leading `/' from member names" in x)
           for x in cmd_result.stderr.split('\n'))):
     # That's OK.  Make sure it's valid though.
-    Spawn(['tar', 'tfJ', target_path], check_call=True, log=True,
-          ignore_stdout=True)
+    process_utils.Spawn(['tar', 'tfJ', target_path], check_call=True, log=True,
+                        ignore_stdout=True)
   elif not cmd_result.success:
     raise Error('unable to tar event logs, cmd %r failed, stderr: %r' %
                 (tar_cmd, cmd_result.stderr))
