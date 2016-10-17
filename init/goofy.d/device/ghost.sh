@@ -16,6 +16,6 @@ if ! [ -e "${PROPERTIES_FILE}" ]; then
 fi
 
 ${FACTORY_BASE}/bin/ghost \
-    --fork 172.23.104.2 \
+    --fork 172.23.104.4 \
     --mid "${TEST_LIST}-${MAC}" \
     --prop-file "${PROPERTIES_FILE}" > /dev/null 2>&1
