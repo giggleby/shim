@@ -773,8 +773,11 @@ class Gooftool(object):
         raise Error, cause, exc_traceback
 
     # Read the stable device secret from the VPD and get its binary value.
-    image_file = self._crosfw.LoadMainFirmware().GetFileName()
-    ro_vpd = self._read_ro_vpd(image_file)
+    # Do not use the cached firmware since we may just write secret in
+    # GenerateStableDeviceSecret()
+    fileref = NamedTemporaryFile(prefix='fw_checksecret')
+    self._crosfw.Flashrom().Read(filename=fileref.name)
+    ro_vpd = self._read_ro_vpd(fileref.name)
     secret_string = ro_vpd.get(self.stable_device_secret_key)
     if secret_string is None:
       raise Error('A stable device secret must be present in the VPD.')
