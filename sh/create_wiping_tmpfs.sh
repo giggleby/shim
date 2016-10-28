@@ -121,9 +121,6 @@ die() {
 create_tmpfs_layout() {
   (cd "${TMPFS_PATH}" && mkdir -p ${TMPFS_LAYOUT_DIRS})
   # Create symlinks because some binary programs will call them via full path.
-  ln -s . "${TMPFS_PATH}/usr"
-  ln -s . "${TMPFS_PATH}/local"
-  ln -s bin "${TMPFS_PATH}/sbin"
   ln -s /run "${TMPFS_PATH}/var/run"
   ln -s /run/lock "${TMPFS_PATH}/var/lock"
 }
@@ -138,7 +135,7 @@ copy_dependent_binary_files() {
   fi
   # Use busybox to install other common utilities.
   # Run the busybox inside tmpfs to prevent 'invalid cross-device link'.
-  "${TMPFS_PATH}/bin/busybox" --install "${TMPFS_PATH}/bin"
+  "${TMPFS_PATH}/usr/local/bin/busybox" --install "${TMPFS_PATH}/bin"
 }
 
 copy_rootfs_files_and_dirs() {
