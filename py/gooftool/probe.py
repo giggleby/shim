@@ -1163,7 +1163,17 @@ def _ProbePowerMgmtChip():
 def _ProbeEthernet():
   # Build-in ethernet devices should not be attached to USB. They are usually
   # either PCI or SOC.
-  return _NetworkDevices.ReadSysfsDeviceIds('ethernet', ignore_usb=True)
+  try:
+    probed = _NetworkDevices.ReadSysfsDeviceIds('ethernet', ignore_usb=True)
+  except Exception:
+    logging.exception('cannot probe ethernet component')
+    probed = []
+
+  path = '/sys/bus/platform/devices/c000000.ess-switch/mii_info/phy_id2'
+  with open(path) as f:
+    phy_id2 = f.read().strip()
+    probed.append({'phy_id2': phy_id2})
+  return probed
 
 
 @_ComponentProbe('flash_chip')
