@@ -658,6 +658,31 @@ class _StylusData(_TouchInputData):
 
   @classmethod
   def Wacom(cls):
+    for device_path in glob('/sys/bus/i2c/devices/*/*/input/input[0-9]*/'):
+      driver_link = os.path.join(device_path, 'name')
+      if not os.path.exists(driver_link):
+        continue
+      with open(driver_link, 'r') as f:
+        driver_name = f.read().strip()
+      if '2D1F' not in driver_name:
+        continue
+
+      result = {}
+      id_device_path = os.path.join(device_path, 'id')
+      if not os.path.exists(id_device_path):
+        continue
+      with open(os.path.join(id_device_path, 'product'), 'r') as f:
+        product_id = f.read().strip()
+        result['product_id']=product_id
+      with open(os.path.join(id_device_path, 'vendor'), 'r') as f:
+        vendor_id = f.read().strip()
+        result['vendor_id']=vendor_id
+      with open(os.path.join(id_device_path, 'version'), 'r') as f:
+        version = f.read().strip()
+        result['version']=version
+      result['ident_str']= 'hid-over-i2c %s:%s' % (vendor_id, product_id)
+      return Obj(**result)
+
     return cls.HidOverI2c(['2d1f:0163'])
 
   @classmethod
