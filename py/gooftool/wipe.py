@@ -9,7 +9,6 @@
 import json
 import logging
 import os
-import re
 import resource
 import shutil
 import signal
@@ -375,7 +374,7 @@ def _KickStation(ip, port, token, message):
     response = dict(token=token, message=message)
     sock.sendall(json.dumps(response) + '\n')
     sock.close()
-  except:
+  except Exception:
     logging.exception('cannot send message to station')
 
 
@@ -489,7 +488,7 @@ def WipeInit(wipe_args, cutoff_args, shopfloor_url, state_dev, release_rootfs,
                    wipe_in_tmpfs_log=wipe_in_tmpfs_log,
                    success=True)
 
-    _BatteryCutoff(cutoff_args)
+    # _BatteryCutoff(cutoff_args)
 
     # should not reach here
     time.sleep(1e8)
