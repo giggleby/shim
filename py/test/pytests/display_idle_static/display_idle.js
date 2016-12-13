@@ -68,16 +68,16 @@ DisplayTest = function(container) {
     "渐蓝",
     "渐白",*/
   ];
-  this.enPassed = "Passed";
-  this.zhPassed = "通过";
-  this.enFailed = "Failed";
-  this.zhFailed = "失败";
-  this.enUntested = "Untested";
-  this.zhUntested = "未经测试";
-  this.enInstruct = "Press Space to display;<br>"
-                  + "Esc to fail. Test will pass itself after timeout.";
-  this.zhInstruct = "按空格键显示;<br>"
-                  + "按Esc键失败。时间到测试会自行结束";
+  this.enPassed = 'Passed';
+  this.zhPassed = '通过';
+  this.enFailed = 'Failed';
+  this.zhFailed = '失败';
+  this.enUntested = 'Untested';
+  this.zhUntested = '未经测试';
+  this.enInstruct = 'Press Space to display;<br>' +
+      'Esc to fail. Test will pass itself after timeout.';
+  this.zhInstruct = '按空白键显示;<br>' +
+      '按Esc键失败。时间到测试会自行结束';
   this.gridWidth = 10;
   this.gridHeight = 10;
   this.gridStyleCSS = ""

@@ -95,16 +95,16 @@ DisplayTest = function(container, colors) {
     "影像-水平",
     "影像-垂直",
   ];
-  this.enPassed = "Passed";
-  this.zhPassed = "通过";
-  this.enFailed = "Failed";
-  this.zhFailed = "失败";
-  this.enUntested = "Untested";
-  this.zhUntested = "未经测试";
-  this.enInstruct = "Press Space to display;<br>"
-                  + "After checking, Enter to pass; Esc to fail.";
-  this.zhInstruct = "按空格键显示;<br>"
-                  + "检查后按Enter键通过; 按Esc键失败。";
+  this.enPassed = 'Passed';
+  this.zhPassed = '通过';
+  this.enFailed = 'Failed';
+  this.zhFailed = '失败';
+  this.enUntested = 'Untested';
+  this.zhUntested = '未经测试';
+  this.enInstruct = 'Press Space to display;<br>' +
+      'After checking, Enter to pass; Esc to fail.';
+  this.zhInstruct = '按空白键显示;<br>' +
+      '检查后按Enter键通过; 按Esc键失败。';
   this.gridWidth = 10;
   this.gridHeight = 10;
   this.gridStyleCSS = ""
