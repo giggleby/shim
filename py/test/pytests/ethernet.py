@@ -13,7 +13,6 @@ import unittest
 import urllib2
 
 import factory_common  # pylint: disable=W0611
-from cros.factory.device import device_utils
 from cros.factory.test import event as test_event
 from cros.factory.test import factory
 from cros.factory.test import test_ui

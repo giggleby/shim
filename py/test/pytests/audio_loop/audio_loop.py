@@ -99,8 +99,6 @@ import time
 import unittest
 
 import factory_common  # pylint: disable=W0611
-from cros.factory.device.audio.base import MicJackType
-from cros.factory.device import device_utils
 from cros.factory.test import dut
 from cros.factory.test import event as test_event
 from cros.factory.test import factory
