@@ -34,7 +34,6 @@ FILES_DIRS_COPIED_FROM_ROOTFS="
   /etc
   /lib
   /lib64
-  /opt
   /root
   /sbin
   /usr/share/fonts/notocjk
