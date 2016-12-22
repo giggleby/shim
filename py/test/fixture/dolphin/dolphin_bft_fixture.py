@@ -12,6 +12,7 @@ import xmlrpclib
 import factory_common  # pylint: disable=W0611
 
 from cros.factory.test.fixture import bft_fixture
+from cros.factory.test.fixture import dummy_bft_fixture
 from cros.factory.test.utils import serial_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
@@ -586,3 +587,20 @@ class DolphinBFTFixture(bft_fixture.BFTFixture):
                                id_string)
     # Waits for procfs update.
     time.sleep(1)
+
+
+class DummyDolphinBFTFixture(dummy_bft_fixture.DummyBFTFixture):
+  def IsParallelTest(self):
+    return False
+
+  def IsDoubleCCCable(self):
+    return False
+
+  def SetMuxFlip(self):
+    raise NotImplementedError
+
+  def SetDeviceEngaged(self, device, engage):
+    return  # does nothing
+
+  def GetPDState(self):
+    raise NotImplementedError
