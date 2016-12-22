@@ -69,7 +69,7 @@ class RaidenCCFlipCheck(unittest.TestCase):
           'Timeout seconds for operation, set 0 for operator pressing enter '
           'key to finish operation.',
           default=0),
-      Arg('state_src_ready', int, 'State number of pd state SRC_READY.',
+      Arg('state_src_ready', (int, str), 'State number of pd state SRC_READY.',
           default=22)
   ]
 
