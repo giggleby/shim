@@ -543,6 +543,13 @@ class _TouchpadData(_TouchInputData):
   @classmethod
   def Synaptics(cls):
 
+    def SynapticsTP7817():
+      data = cls.GenericInput(r'SYNA7817:01 .*', [])
+      if data is not None:
+        data.fw_version = None
+        return data
+      return None
+
     def SynapticsSyndetect():
       detect_program = '/opt/Synaptics/bin/syndetect'
       if not os.path.exists(detect_program):
@@ -570,7 +577,7 @@ class _TouchpadData(_TouchInputData):
     def SynapticsI2c():
       return cls.HidOverI2c(['06cb:7a3b'])
 
-    return SynapticsSyndetect() or SynapticsByName() or SynapticsI2c()
+    return SynapticsTP7817() or SynapticsSyndetect() or SynapticsByName() or SynapticsI2c()
 
   @classmethod
   def Cypress(cls):
@@ -641,7 +648,8 @@ class _TouchscreenData(_TouchInputData):  # pylint: disable=W0232
 
   @classmethod
   def Synaptics(cls):
-    return cls.SynapticsInput(r'SYTS.*', ['fw_version'])
+    return (cls.GenericInput(r'SYNA7817:00 .*', []) or
+            cls.SynapticsInput(r'SYTS.*', ['fw_version']))
 
   @classmethod
   def Generic(cls):
