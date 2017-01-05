@@ -267,10 +267,9 @@ def VerifyComponents(args):
       backgroundable=True,
       dargs=dict(
           component_list=[
-              'audio_codec', 'bluetooth', 'chipset',
+              'audio_codec', 'bluetooth',
               'cpu', 'dram', 'embedded_controller', 'flash_chip',
-              'pmic', 'storage', 'tpm', 'usb_hosts', 'wireless',
-              'power_mgmt_chip'],
+              'pmic', 'storage', 'tpm', 'usb_hosts', 'wireless'],
           # We skipped ro_main_firmware and ro_ec_firmware here because
           # they will get updated in RunIn. Update firmware in SMT takes
           # too much time.
