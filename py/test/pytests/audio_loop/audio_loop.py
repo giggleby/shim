@@ -93,20 +93,20 @@ from __future__ import print_function
 import os
 import re
 import tempfile
-import textwrap
 import time
 import unittest
 
-import factory_common  # pylint: disable=W0611
-from cros.factory.device.audio.base import MicJackType
+import factory_common  # pylint: disable=unused-import
+from cros.factory.device.audio import base
 from cros.factory.device import device_utils
+from cros.factory.test import event as test_event
 from cros.factory.test import factory
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.utils import audio_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.process_utils import (PIPE, Spawn)
-from cros.factory.utils.type_utils import Enum
+from cros.factory.utils import process_utils
+from cros.factory.utils import type_utils
 
 # Default setting
 _DEFAULT_FREQ_HZ = 1000
@@ -135,6 +135,8 @@ _DEFAULT_NOISE_TEST_DURATION = 1
 _DEFAULT_SOX_RMS_THRESHOLD = (0.08, None)
 # Default Amplitude thresholds when checking recorded file.
 _DEFAULT_SOX_AMPLITUDE_THRESHOLD = (None, None)
+# Default channels of the input_dev to be tested.
+_DEFAULT_AUDIOFUN_TEST_INPUT_CHANNELS = [0, 1]
 # Default channels of the output_dev to be tested.
 _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS = [0, 1]
 # Default capture sample rate used for audiofuntest.
@@ -158,7 +160,7 @@ _UI_HTML = """
 </h1>
 """
 
-MicSource = Enum(['external', 'panel', 'mlb'])
+MicSource = type_utils.Enum(['external', 'panel', 'mlb'])
 
 
 class AudioLoopTest(unittest.TestCase):
@@ -169,30 +171,26 @@ class AudioLoopTest(unittest.TestCase):
   ARGS = [
       Arg('audio_conf', str, 'Audio config file path', None, optional=True),
       Arg('initial_actions', list, 'List of tuple (card, actions)', []),
-      Arg(
-          'input_dev', tuple,
+      Arg('input_dev', tuple,
           'Input ALSA device. (card_name, sub_device).'
           'For example: ("audio_card", "0").', ('0', '0')),
-      Arg(
-          'output_dev', tuple,
+      Arg('num_input_channels', int,
+          'Number of input channels.', default=2),
+      Arg('output_dev', tuple,
           'Onput ALSA device. (card_name, sub_device).'
           'For example: ("audio_card", "0").', ('0', '0')),
-      Arg(
-          'output_volume', (int, list),
+      Arg('output_volume', (int, list),
           'An int of output volume or a list of'
           ' output volume candidates', 10),
       Arg('autostart', bool, 'Auto start option', False),
       Arg('require_dongle', bool, 'Require dongle option', False),
-      Arg(
-          'check_dongle', bool,
+      Arg('check_dongle', bool,
           'Check dongle status whether match require_dongle', False),
       Arg('check_cras', bool, 'Do we need to check if CRAS is running',
           True),
-      Arg(
-          'cras_enabled', bool, 'Whether cras should be running or not',
+      Arg('cras_enabled', bool, 'Whether cras should be running or not',
           False),
-      Arg(
-          'mic_source', str, 'Microphone source: external, panel, mlb',
+      Arg('mic_source', str, 'Microphone source: external, panel, mlb',
           'external'),
       Arg('test_title', str,
           'Title on the test screen.'
@@ -203,43 +201,44 @@ class AudioLoopTest(unittest.TestCase):
       Arg('audiofuntest_run_delay', (int, float),
           'Delay between consecutive calls to audiofuntest',
           default=None, optional=True),
-      Arg('tests_to_conduct', list, textwrap.dedent("""
-          A list of dicts. A dict should contain at least one key named
-          **type** indicating the test type, which can be **audiofun**,
-          **sinewav**, or **noise**.
-
-          If type is **audiofun**, the dict can optionally contain:
-            - **iteration*: Iterations to run the test.
-            - **threshold**: The minimum success rate to pass the test.
-            - **output_channels**: A list of output channels to be tested.
-            - **capture_rate**: The capturing sample rate use for testing.
-
-          If type is **sinewav**, the dict can optionally contain:
-            - **duration**: The test duration, in seconds.
-            - **freq_threshold**: Acceptable frequency margin.
-            - **rms_threshold**: A tuple of **(min, max)** that will make
-                  sure the following inequality is true: *min <= recorded
-                  audio RMS (root mean square) value <= max*, otherwise, fail
-                  the test.  Both of **min** and **max** can be set to None,
-                  which means no limit.
-            - **amplitude_threshold**: A tuple of (min, max) and it will make
-                  sure the inequality is true: *min <= minimum measured
-                  amplitude <= maximum measured amplitude <= max*, otherwise,
-                  fail the test.  Both of **min** and **max** can be set to
-                  None, which means no limit.
-
-          If type is **noise**, the dict can optionally contain:
-            - **duration**: The test duration, in seconds.
-            - **rms_threshold**: A tuple of **(min, max)** that will make
-                  sure the following inequality is true: *min <= recorded audio
-                  RMS (root mean square) value <= max*, otherwise, fail the
-                  test.  Both of **min** and **max** can be set to None
-                  which means no limit.
-            - **amplitude_threshold**: A tuple of (min, max) and it will make
-                  sure the inequality is true: *min <= minimum measured
-                  amplitude <= maximum measured amplitude <= max*, otherwise,
-                  fail the test.  Both of **min** and **max** can be set to
-                  None, which means no limit."""), optional=False)]
+      Arg('tests_to_conduct', list,
+          'A list of dicts. A dict should contain at least one key named\n'
+          '**type** indicating the test type, which can be **audiofun**,\n'
+          '**sinewav**, or **noise**.\n'
+          '\n'
+          'If type is **audiofun**, the dict can optionally contain:\n'
+          '  - **iteration**: Iterations to run the test.\n'
+          '  - **threshold**: The minimum success rate to pass the test.\n'
+          '  - **input_channels**: A list of input channels to be tested.\n'
+          '  - **output_channels**: A list of output channels to be tested.\n'
+          '  - **capture_rate**: The capturing sample rate use for testing.\n'
+          '\n'
+          'If type is **sinewav**, the dict can optionally contain:\n'
+          '  - **duration**: The test duration, in seconds.\n'
+          '  - **freq_threshold**: Acceptable frequency margin.\n'
+          '  - **rms_threshold**: A tuple of **(min, max)** that will make\n'
+          '        sure the following inequality is true: *min <= recorded\n'
+          '        audio RMS (root mean square) value <= max*, otherwise,\n'
+          '        fail the test.  Both of **min** and **max** can be set to\n'
+          '        None, which means no limit.\n'
+          '  - **amplitude_threshold**: A tuple of (min, max) and it will\n'
+          '        make sure the inequality is true: *min <= minimum measured\n'
+          '        amplitude <= maximum measured amplitude <= max*,\n'
+          '        otherwise, fail the test.  Both of **min** and **max** can\n'
+          '        be set to None, which means no limit.\n'
+          '\n'
+          'If type is **noise**, the dict can optionally contain:\n'
+          '  - **duration**: The test duration, in seconds.\n'
+          '  - **rms_threshold**: A tuple of **(min, max)** that will make\n'
+          '        sure the following inequality is true: *min <= recorded\n'
+          '        audio RMS (root mean square) value <= max*, otherwise,\n'
+          '        fail the test.  Both of **min** and **max** can be set to\n'
+          '        None, which means no limit.\n'
+          '  - **amplitude_threshold**: A tuple of (min, max) and it will\n'
+          '        make sure the inequality is true: *min <= minimum measured\n'
+          '        amplitude <= maximum measured amplitude <= max*,\n'
+          '        otherwise, fail the test.  Both of **min** and **max** can\n'
+          '        be set to None, which means no limit.', optional=False)]
 
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
@@ -252,7 +251,7 @@ class AudioLoopTest(unittest.TestCase):
     self._out_card = self._dut.audio.GetCardIndexByName(self.args.output_dev[0])
     self._out_device = self.args.output_dev[1]
 
-    # Backward compitable for non-porting case, which use ALSA device name.
+    # Backward compatible for non-porting case, which use ALSA device name.
     # only works on chromebook device
     # TODO(mojahsu) Remove them later.
     self._alsa_input_device = 'hw:%s,%s' % (self._in_card, self._in_device)
@@ -272,13 +271,17 @@ class AudioLoopTest(unittest.TestCase):
     self._test_results = [True] * len(self._output_volumes)
     self._test_message = []
 
-    self._mic_source = {'external': MicSource.external,
-                        'panel': MicSource.panel,
-                        'mlb': MicSource.mlb}[self.args.mic_source]
+    self._mic_source = {
+        'external': MicSource.external,
+        'panel': MicSource.panel,
+        'mlb': MicSource.mlb
+    }[self.args.mic_source]
 
-    self._mic_jack_type = {'nocheck': None,
-                           'lrgm': MicJackType.lrgm,
-                           'lrmg': MicJackType.lrmg}[self.args.mic_jack_type]
+    self._mic_jack_type = {
+        'nocheck': None,
+        'lrgm': base.MicJackType.lrgm,
+        'lrmg': base.MicJackType.lrmg
+    }[self.args.mic_jack_type]
 
     for card, action in self.args.initial_actions:
       if card.isdigit() is False:
@@ -287,9 +290,8 @@ class AudioLoopTest(unittest.TestCase):
 
     self._current_test_args = None
 
-    # Setup HTML UI, and event handler
+    # Setup HTML UI
     self._ui = test_ui.UI()
-    self._ui.AddEventHandler('start_run_test', self.StartRunTest)
     self._ui_template = ui_templates.OneSection(self._ui)
     self._ui_template.SetState(_UI_HTML)
 
@@ -313,8 +315,15 @@ class AudioLoopTest(unittest.TestCase):
   def runTest(self):
     # If autostart, JS triggers start_run_test event.
     # Otherwise, it binds start_run_test with 's' key pressed.
-    self._ui.CallJSFunction('init', self.args.autostart,
+    self._ui.CallJSFunction('init',
                             self.args.require_dongle, self.args.test_title)
+    if self.args.autostart:
+      self._ui.RunJS('document.getElementById("message").innerHTML = "";')
+      self._ui.AddEventHandler('start_run_test', self.StartRunTest)
+      self._ui.PostEvent(test_event.Event(test_event.Event.Type.TEST_UI_EVENT,
+                                          subtype='start_run_test'))
+    else:
+      self._ui.BindKey('S', self.StartRunTest, once=True)
     self._ui.Run()
 
   def AppendErrorMessage(self, error_message):
@@ -374,7 +383,8 @@ class AudioLoopTest(unittest.TestCase):
       all_channel_rate.append(float(m.group(2)))
     return all_channel_rate
 
-  def AudioFunTestWithOutputChannel(self, capture_rate, output_channel):
+  def AudioFunTestWithOutputChannel(self, capture_rate, input_channels,
+                                    output_channel):
     """Runs audiofuntest program to get the frequency from microphone
     immediately according to speaker and microphone setting.
 
@@ -411,51 +421,53 @@ class AudioLoopTest(unittest.TestCase):
     iteration = self._current_test_args.get(
         'iteration', _DEFAULT_AUDIOFUN_TEST_ITERATION)
 
-    with self._dut.temp.TempFile() as config_file:
-      config_str = (
-          'player-proc=aplay -D %s -r %d -f s16 -t raw -c 2 -B 0 -\n'
-          'recorder-proc=arecord -D %s -r %d -f s16 -t raw -c 2 -B 0 -' % (
-              self._alsa_output_device, capture_rate,
-              self._alsa_input_device, capture_rate))
+    player_cmd = 'aplay -D %s -r %d -f s16 -t raw -c 2 -B 0 -' % (
+        self._alsa_output_device, capture_rate)
+    recorder_cmd = 'arecord -D %s -r %d -f s16 -t raw -c %d -B 0 -' % (
+        self._alsa_input_device, capture_rate,
+        self.args.num_input_channels)
 
-      self._dut.WriteFile(config_file, config_str)
+    process = self._dut.Popen(
+        [audio_utils.AUDIOFUNTEST_PATH,
+         '-P', player_cmd,
+         '-R', recorder_cmd,
+         '-r', '%d' % capture_rate,
+         '-T', '%d' % iteration,
+         '-a', '%d' % output_channel,
+         '-c', '%d' % self.args.num_input_channels],
+        stdout=process_utils.PIPE, stderr=process_utils.PIPE)
 
-      process = self._dut.Popen(
-          [audio_utils.AUDIOFUNTEST_PATH, '-r', '%d' % capture_rate,
-           '-z', config_file, '-T', '%d' % iteration,
-           '-A', '%d' % output_channel],
-          stdout=PIPE, stderr=PIPE)
+    m = self._MatchPatternLines(process.stdout, _AUDIOFUNTEST_MIC_CHANNEL_RE)
 
-      m = self._MatchPatternLines(process.stdout, _AUDIOFUNTEST_MIC_CHANNEL_RE)
+    if m is None:
+      self.AppendErrorMessage(
+          'Number of channels not found from audiofuntest')
+      process.terminate()
+      return
 
-      if m is None:
-        self.AppendErrorMessage(
-            'Number of channels not found from audiofuntest')
-        process.terminate()
+    num_mic = int(m.group(1))
+
+    last_success_rate = None
+    while self._MatchPatternLines(process.stdout,
+                                  _AUDIOFUNTEST_RUN_START_RE) is not None:
+      last_success_rate = self._ParseSingleRunOutput(process.stdout, num_mic)
+      if last_success_rate is None:
+        self.AppendErrorMessage('Failed to parse audiofuntest output')
         return
+      rate_msg = ', '.join(
+          'Mic %d: %.1f%%' %
+          (channel, rate) for channel, rate in enumerate(last_success_rate))
+      self._ui.CallJSFunction('testInProgress', rate_msg)
 
-      num_mic = int(m.group(1))
-
-      last_success_rate = None
-      while self._MatchPatternLines(process.stdout,
-                                    _AUDIOFUNTEST_RUN_START_RE) is not None:
-        last_success_rate = self._ParseSingleRunOutput(process.stdout, num_mic)
-        if last_success_rate is None:
-          self.AppendErrorMessage('Failed to parse audiofuntest output')
-          return
-        rate_msg = ', '.join(
-            'Mic %d: %.1f%%' %
-            (channel, rate) for channel, rate in enumerate(last_success_rate))
-        self._ui.CallJSFunction('testInProgress', rate_msg)
-
-      threshold = self._current_test_args.get(
-          'threshold', _DEFAULT_AUDIOFUN_TEST_THRESHOLD)
-      if any(x < threshold for x in last_success_rate):
-        self.AppendErrorMessage(
-            'For output device channel %s, the success rate is "'
-            '%s", too low!' % (output_channel, rate_msg))
-        self._ui.CallJSFunction('testFailResult', rate_msg)
-      time.sleep(1)
+    threshold = self._current_test_args.get(
+        'threshold', _DEFAULT_AUDIOFUN_TEST_THRESHOLD)
+    if any(rate < threshold and channel in input_channels
+           for channel, rate in enumerate(last_success_rate)):
+      self.AppendErrorMessage(
+          'For output device channel %s, the success rate is "'
+          '%s", too low!' % (output_channel, rate_msg))
+      self._ui.CallJSFunction('testFailResult', rate_msg)
+    time.sleep(1)
 
   def AudioFunTest(self):
     """Setup speaker and microphone test pairs and run audiofuntest program."""
@@ -463,12 +475,15 @@ class AudioLoopTest(unittest.TestCase):
     factory.console.info('Run audiofuntest from %r to %r',
                          self._alsa_output_device, self._alsa_input_device)
 
+    input_channels = self._current_test_args.get(
+        'input_channels', _DEFAULT_AUDIOFUN_TEST_INPUT_CHANNELS)
     output_channels = self._current_test_args.get(
         'output_channels', _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS)
     capture_rate = self._current_test_args.get(
         'capture_rate', _DEFAULT_AUDIOFUN_TEST_SAMPLE_RATE)
-    for channel in output_channels:
-      self.AudioFunTestWithOutputChannel(capture_rate, channel)
+    for output_channel in output_channels:
+      self.AudioFunTestWithOutputChannel(capture_rate, input_channels,
+                                         output_channel)
       if self.args.audiofuntest_run_delay is not None:
         time.sleep(self.args.audiofuntest_run_delay)
 
@@ -478,6 +493,10 @@ class AudioLoopTest(unittest.TestCase):
     Args:
       num_channels: Number of channels to test
     """
+    # TODO(phoenixshen): Support quad channels here.
+    # This test assumes number of input channels == number of output channels,
+    # and ID of valid channels should be the same,
+    # Need to redesign the args to provide more flexbility.
     duration = self._current_test_args.get('duration',
                                            _DEFAULT_SINEWAV_TEST_DURATION)
 
@@ -499,7 +518,7 @@ class AudioLoopTest(unittest.TestCase):
       cmd = audio_utils.GetGenerateSineWavArgs(sine_wav_path, channel,
                                                self._freq,
                                                _DEFAULT_SINEWAV_DURATION)
-      Spawn(cmd.split(' '), log=True, check_call=True)
+      process_utils.Spawn(cmd.split(' '), log=True, check_call=True)
       self._dut.link.Push(sine_wav_path, dut_sine_wav_path)
 
       self._dut.audio.PlaybackWavFile(dut_sine_wav_path, self._out_card,
@@ -670,7 +689,8 @@ class AudioLoopTest(unittest.TestCase):
     elif self._mic_source == MicSource.mlb:
       self._dut.audio.EnableMLBDmic(self._in_card)
 
-  def StartRunTest(self, event):  # pylint: disable=W0613
+  def StartRunTest(self, event):
+    del event  # Unused.
     self.CheckDongleStatus()
     self.SetupAudio()
 
