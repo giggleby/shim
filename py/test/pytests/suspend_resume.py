@@ -45,6 +45,9 @@ _MIN_SUSPEND_MARGIN_SECS = 5
 
 _MESSAGES = '/var/log/messages'
 
+_KERNEL_DEBUG_WAKEUP_SOURCES = '/sys/kernel/debug/wakeup_sources'
+_EARLY_RESUME_RETRY_WAIT_SECS = 3
+
 
 class SuspendResumeTest(unittest.TestCase):
   ARGS = [
@@ -83,7 +86,14 @@ class SuspendResumeTest(unittest.TestCase):
           default='/sys/class/rtc/rtc0/since_epoch'),
       Arg(
           'wakeup_count_path', str, 'Path to the wakeup_count file',
-          default='/sys/power/wakeup_count')]
+          default='/sys/power/wakeup_count'),
+      Arg(
+          'ignore_wakeup_source', str, 'Wakeup source to ignore',
+          default=None, optional=True),
+      Arg(
+          'max_early_resume_retries', int,
+          'Maximum to retry suspend from early resume',
+          default=3, optional=True)]
 
   def setUp(self):
     self.assertTrue(os.path.exists(self.args.wakealarm_path), 'wakealarm_path '
@@ -145,6 +155,28 @@ class SuspendResumeTest(unittest.TestCase):
     # Clear any active wake alarms
     open(self.args.wakealarm_path, 'w').write('0')
 
+  def _GetIgnoredWakeupSourceCount(self):
+    """Return the recorded wakeup count for the ignored wakeup source."""
+    if not self.args.ignore_wakeup_source:
+      return None
+
+    with open(_KERNEL_DEBUG_WAKEUP_SOURCES, 'r') as f:
+      # The output has the format of:
+      #
+      # name active_count event_count wakeup_count expire_count active_since \
+      #   total_time max_time last_change prevent_suspend_time
+      # mmc2:0001:1 0 0 0 0 0 00 33154 0
+      # ...
+      #
+      # We want to get the 'wakeup_count' column
+      for line in f.readlines()[1:]:
+        parts = line.split()
+        if parts[0] == self.args.ignore_wakeup_source:
+          return int(parts[3])
+
+      raise RuntimeError('Ignore wakeup source %s not found' %
+                         self.args.ignore_wakeup_source)
+
   def _MonitorWakealarm(self):
     """Start and extend the wakealarm as needed for the main thread."""
     open(self.args.wakealarm_path, 'w').write(str(self.resume_at))
@@ -181,7 +213,7 @@ class SuspendResumeTest(unittest.TestCase):
       time.sleep(0.1)
     self.alarm_started.clear()
 
-  def _Suspend(self):
+  def _Suspend(self, retry_count=0):
     """Suspend the device by writing to /sys/power/state."""
     # Explicitly sync the filesystem
     Spawn(['sync'], check_call=True, log_stderr_on_error=True)
@@ -194,14 +226,30 @@ class SuspendResumeTest(unittest.TestCase):
       # there was an unexpected early wake event.
       raise IOError('Failed to write to wakeup_count (early wake): %s' %
                     debug_utils.FormatExceptionOnly())
+
+    prev_suspend_ignore_count = self._GetIgnoredWakeupSourceCount()
     logging.info('Suspending at %d', self._ReadCurrentTime())
     try:
       with open('/sys/power/state', 'w') as f:
         f.write('mem')
     except IOError as err:
       if err.errno == errno.EBUSY:
-        raise IOError('EBUSY: Early wake event when attempting suspend: %s' %
-                      debug_utils.FormatExceptionOnly())
+        if prev_suspend_ignore_count:
+          logging.info('Early wake event when attempting suspend')
+          if prev_suspend_ignore_count != self._GetIgnoredWakeupSourceCount():
+            if retry_count == self.args.max_early_resume_retries:
+              raise RuntimeError('Maximum re-suspend retry exceeded for '
+                                 'ignored wakeup source %s',
+                                 self.args.ignore_wakeup_source)
+
+            logging.info('Wakeup source ignored, re-suspending...')
+            time.sleep(_EARLY_RESUME_RETRY_WAIT_SECS)
+            with open(self.args.wakeup_count_path, 'r') as f:
+              self.wakeup_count = f.read().strip()
+            return self._Suspend(retry_count + 1)
+          else:
+            raise IOError('EBUSY: Early wake event when attempting suspend: %s'
+                          % debug_utils.FormatExceptionOnly())
       else:
         raise IOError('Failed to write to /sys/power/state: %s' %
                       debug_utils.FormatExceptionOnly())
