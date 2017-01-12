@@ -33,10 +33,12 @@ _HTML_REMAIN = '<br><div id="remain"></div>'
 
 class ShowingTask(FactoryTask):
   """The task to show message for seconds """
-  def __init__(self, ui, seconds, manual_check):  # pylint: disable=W0231
+  def __init__(self, ui, seconds, manual_check,
+               fail_on_timeout):  # pylint: disable=W0231
     self._ui = ui
     self._seconds = seconds
     self._done = False
+    self._fail_on_timeout = fail_on_timeout
 
     self._ui.BindKey(test_ui.SPACE_KEY, lambda _: self.Done())
     self._ui.BindKey(test_ui.ENTER_KEY, lambda _: self.Done())
@@ -52,7 +54,10 @@ class ShowingTask(FactoryTask):
       self._ui.SetHTML(str(seconds), id='remain')
       time.sleep(1)
       seconds = seconds - 1
-    self.Pass()
+    if self._fail_on_timeout and not self._done:
+      self.Fail('Timeout')
+    else:
+      self.Pass()
 
 
 class MessageTest(unittest.TestCase):
@@ -72,6 +77,9 @@ class MessageTest(unittest.TestCase):
           'fail the test case.', default=False, optional=True),
       Arg('show_press_button_hint', bool, 'If set to true, will show addition '
           'message to ask operators to press the button.', default=False,
+          optional=True),
+      Arg('fail_on_timeout', bool, 'if `seconds` is not None, test will fail '
+          'if operator did not press ENTER or SPACE.', default=False,
           optional=True),
   ]
 
@@ -104,7 +112,8 @@ class MessageTest(unittest.TestCase):
         _HTML_REMAIN +
         '</div>')
     if self.args.seconds:
-      task = ShowingTask(ui, self.args.seconds, self.args.manual_check)
+      task = ShowingTask(ui, self.args.seconds, self.args.manual_check,
+                         self.args.fail_on_timeout)
       FactoryTaskManager(ui, [task]).Run()
     else:
       ui.BindStandardKeys(bind_fail_keys=self.args.manual_check)
