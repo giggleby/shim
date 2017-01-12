@@ -488,7 +488,7 @@ def WipeInit(wipe_args, cutoff_args, shopfloor_url, state_dev, release_rootfs,
                    wipe_in_tmpfs_log=wipe_in_tmpfs_log,
                    success=True)
 
-    # _BatteryCutoff(cutoff_args)
+    _BatteryCutoff(cutoff_args)
 
     # should not reach here
     time.sleep(1e8)
