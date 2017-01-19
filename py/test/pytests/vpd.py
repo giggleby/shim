@@ -157,8 +157,9 @@ class WriteVPDTask(FactoryTask):
               'user': registration_codes.RegistrationCode.Type.UNIQUE_CODE,
               'group': registration_codes.RegistrationCode.Type.GROUP_CODE}[k]
           registration_codes.CheckRegistrationCode(
-              self.test.registration_code_map[k],
-              code_type, BuildBoard().short_name)
+              self.test.registration_code_map[k], code_type,
+              self.test.args.override_registration_codes_device or
+              BuildBoard().short_name)
         except ValueError as e:
           self.Fail(str(e))
 
@@ -443,6 +444,10 @@ class VPDTest(unittest.TestCase):
           'It does not require engineering mode. The dict should be of the '
           'format: {"ro": { RO_VPD key-value pairs }, "rw": { RW_VPD key-value '
           'pairs }}', default=None, optional=True),
+      Arg('override_registration_codes_device', str,
+          'A string to override the device in registration codes. If None, '
+          'use the board name in /etc/lsb-release.',
+          default=None, optional=True),
       Arg(
           'store_registration_codes', bool,
           'Whether to store registration codes onto the machine.',
