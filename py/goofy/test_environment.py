@@ -155,11 +155,6 @@ class DUTEnvironment(Environment):
     # Set the timeout to a value reasonably long enough such that UI should be
     # ready on all kinds of devices.
     sync_utils.WaitFor(self.has_sockets, 90)
-    # This dbus command should trigger 'initctl emit login-prompt-visible'.
-    subprocess.check_call(
-        ['dbus-send', '--system', '--dest=org.chromium.SessionManager',
-         '--print-reply', '/org/chromium/SessionManager',
-         'org.chromium.SessionManagerInterface.EmitLoginPromptVisible'])
 
   def create_connection_manager(self, wlans, scan_wifi_period_secs,
                                 override_blacklisted_devices=None):
