@@ -12,7 +12,7 @@ from cros.factory.device import sensor_utils
 class Gyroscope(component.DeviceComponent):
   """Gyroscope component module."""
 
-  def GetController(self, name='cros-ec-gyro', location='base', sample_rate=60):
+  def GetController(self, location='base'):
     """Gets a controller with specified arguments.
 
     See sensor_utils.BasicSensorController for more information.
