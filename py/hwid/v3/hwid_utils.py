@@ -14,6 +14,7 @@ import yaml
 import factory_common  # pylint: disable=W0611
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import probe
+from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import decoder
@@ -28,6 +29,24 @@ def _HWIDMode(rma_mode):
   if rma_mode:
     return common.HWID.OPERATION_MODE.rma
   return common.HWID.OPERATION_MODE.normal
+
+
+def BuildDatabase(database_path, probed_results, board, image_id,
+                  add_default_comp=None, add_null_comp=None, del_comp=None,
+                  region=None, customization_id=None):
+  db_builder = builder.DatabaseBuilder(board=board)
+  db_builder.Update(probed_results, image_id, add_default_comp, add_null_comp,
+                    del_comp, region, customization_id)
+  db_builder.Render(database_path)
+
+
+def UpdateDatabase(database_path, probed_results, old_db, image_id=None,
+                   add_default_comp=None, add_null_comp=None, del_comp=None,
+                   region=None, customization_id=None):
+  db_builder = builder.DatabaseBuilder(db=old_db)
+  db_builder.Update(probed_results, image_id, add_default_comp, add_null_comp,
+                    del_comp, region, customization_id)
+  db_builder.Render(database_path)
 
 
 def GenerateHWID(db, probed_results, device_info, vpd, rma_mode):
@@ -55,10 +74,6 @@ def GenerateHWID(db, probed_results, device_info, vpd, rma_mode):
   # Construct a base BOM from probe_results.
   device_bom = db.ProbeResultToBOM(probed_results_yaml)
   hwid = encoder.Encode(db, device_bom, mode=hwid_mode, skip_check=True)
-
-  # Verify the probe result with the generated HWID to make sure nothing is
-  # mis-configured after setting default values to unprobeable encoded fields.
-  hwid.VerifyProbeResult(probed_results_yaml)
 
   # Update unprobeable components with rules defined in db before verification.
   context = rule.Context(hwid=hwid, device_info=device_info, vpd=vpd)
@@ -148,7 +163,8 @@ def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
   context = rule.Context(hwid=hwid, vpd=vpd)
   db.rules.EvaluateRules(context, namespace='verify.*')
 
-  default_rules = [
+  mandatory_rules = [
+      # VPD
       {'name': 'verify.vpd.ro',
        'evaluate': ['Assert(ValidVPDValue("ro", "%s"))' % field for field in
                     ('region', 'serial_number')]},
@@ -156,9 +172,7 @@ def VerifyHWID(db, encoded_string, probed_results, vpd, rma_mode,
        'evaluate': ['CheckRegistrationCode(GetVPDValue("rw", "%s"))' % field
                     for field in ('gbind_attribute', 'ubind_attribute')]},
   ]
-  executed_rule_names = [r.name for r in db.rules.rule_list]
-  new_rules = [r for r in default_rules if r['name'] not in executed_rule_names]
-  database.Rules(new_rules).EvaluateRules(context)
+  database.Rules(mandatory_rules).EvaluateRules(context)
 
 
 def VerifyComponents(db, probed_results, component_list):
@@ -325,14 +339,13 @@ def EnumerateHWID(db, image_id=None, status='supported'):
     if not isinstance(image_id, int):
       if image_id is None:
         image_id = max_image_id
+      elif image_id.isdigit():
+        image_id = int(image_id)
       else:
-        if image_id.isdigit():
-          image_id = int(image_id)
-        else:
-          for k, v in db.image_id.iteritems():
-            if image_id == v:
-              image_id = k
-              break
+        for k, v in db.image_id.iteritems():
+          if image_id == v:
+            image_id = k
+            break
     assert image_id in range(0, max_image_id + 1), 'Invalid Image ID'
     return image_id
 
@@ -344,9 +357,7 @@ def EnumerateHWID(db, image_id=None, status='supported'):
   for field in db.pattern.GetPatternByImageId(image_id)['fields']:
     comp, bit_width = field.items()[0]
     fields_bits[comp] += bit_width
-  fields_list = []
-  for comp_cls in db.encoded_fields.keys():
-    fields_list.append(comp_cls)
+  fields_list = db.encoded_fields.keys()
 
   # Recursively generate all combinations of HWID.
   _RecursivelyGenerate(0, encoded_fields)

@@ -13,11 +13,93 @@ import unittest
 import yaml
 import factory_common  # pylint: disable=W0611
 
+from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.common import HWIDException, ProbedComponentResult
 from cros.factory.hwid.v3.database import Database, Components
 from cros.factory.hwid.v3.rule import Value
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
+
+class NewDatabaseTest(unittest.TestCase):
+  """Test the new style of HWID database.
+
+  - Split key_root and key_recovery to a new component: firmware_keys
+  - Separate firmware field to let each field only has one component
+  - Add default argument in audio_codec and cellular
+  """
+
+  def setUp(self):
+    self.database = Database.LoadFile(os.path.join(_TEST_DATA_PATH,
+                                                   'test_new_db.yaml'))
+    self.results = [
+        yaml.dump(result) for result in yaml.load_all(open(os.path.join(
+            _TEST_DATA_PATH, 'test_probe_result.yaml')).read())]
+
+  def testProbeResultToBOM(self):
+    result = self.results[0]
+    bom = self.database.ProbeResultToBOM(result)
+    self.assertEquals('CHROMEBOOK', bom.board)
+    self.assertEquals(0, bom.encoding_pattern_index)
+    self.assertEquals(0, bom.image_id)
+    self.assertEquals(bom.components['firmware_keys'],
+                      [('firmware_keys_0',
+                        {'key_recovery': Value('kv3#key_recovery_0'),
+                         'key_root': Value('kv3#key_root_0')},
+                        None)])
+    self.assertEquals(bom.components['ro_ec_firmware'],
+                      [('ro_ec_firmware_0',
+                        {'compact_str': Value('ev2#ro_ec_firmware_0')},
+                        None)])
+    self.assertEquals(bom.components['ro_main_firmware'],
+                      [('ro_main_firmware_0',
+                        {'compact_str': Value('mv2#ro_main_firmware_0')},
+                        None)])
+    self.assertEquals(bom.encoded_fields['ro_main_firmware_field'], 0)
+    self.assertEquals(bom.encoded_fields['firmware_keys_field'], 0)
+    self.assertEquals(bom.encoded_fields['ro_ec_firmware_field'], 0)
+
+  def testProbeResultToBOMWithDefault(self):
+    """Test the behaviour of the default argument.
+
+    In this database, audio_codec has only one default item, and cellular has a
+    deprecated default item.
+    """
+    # No audio_codec and no cellular
+    result = self.results[6]
+    bom = self.database.ProbeResultToBOM(result)
+    self.assertEquals(bom.components['audio_codec'],
+                      [('audio_codec_default', None, None)])
+    self.assertEquals(bom.components['cellular'],
+                      [(None, None,
+                        common.MISSING_COMPONENT_ERROR('cellular'))])
+    self.assertEquals(bom.encoded_fields['audio_codec_field'], 0)
+    self.assertEquals(bom.encoded_fields['cellular_field'], 1)
+
+    # There is audio_codec and cellular_a
+    result = self.results[7]
+    bom = self.database.ProbeResultToBOM(result)
+    self.assertEquals(bom.components['audio_codec'],
+                      [('audio_codec_default', None, None)])
+    self.assertEquals(bom.components['cellular'],
+                      [('cellular_a',
+                        {'compact_str': Value('cellular_a')},
+                        None)])
+    self.assertEquals(bom.encoded_fields['audio_codec_field'], 0)
+    self.assertEquals(bom.encoded_fields['cellular_field'], 2)
+
+    # Invalid cellular probed result
+    result = self.results[8]
+    bom = self.database.ProbeResultToBOM(result)
+    probed_value = {'compact_str': 'invalid_value'}
+    self.assertEquals(bom.components['cellular'],
+                      [(None, probed_value,
+                        common.INVALID_COMPONENT_ERROR('cellular',
+                                                       probed_value))])
+    self.assertEquals(bom.encoded_fields['cellular_field'], None)
+
+  def testVerifyBOMWithDefault(self):
+    bom = self.database.ProbeResultToBOM(self.results[6])
+    self.assertEquals(None, self.database.VerifyBOM(bom, True))
 
 
 class DatabaseTest(unittest.TestCase):
@@ -127,11 +209,10 @@ class DatabaseTest(unittest.TestCase):
                         'bcd': Value('0001')},
                        None)],
         'cellular': [(None, None, "Missing 'cellular' component")],
-        'chipset': [('chipset_0', {'compact_str': Value('cdef:abcd')}, None)],
         'cpu': [('cpu_5',
                  {'name': Value('CPU @ 2.80GHz'), 'cores': Value('4')},
                  None)],
-        'display_panel': [(None, None, "Missing 'display_panel' component")],
+        'display_panel': [('display_panel_0', None, None)],
         'dram': [('dram_0',
                   {'vendor': Value('DRAM 0'), 'size': Value('4G')},
                   None)],
@@ -176,9 +257,8 @@ class DatabaseTest(unittest.TestCase):
         'battery': 3,
         'bluetooth': 0,
         'cellular': 0,
-        'chipset': 0,
         'cpu': 5,
-        'display_panel': None,
+        'display_panel': 0,
         'dram': 0,
         'ec_flash_chip': 0,
         'embedded_controller': 0,
@@ -189,16 +269,14 @@ class DatabaseTest(unittest.TestCase):
         'video': 0}, bom.encoded_fields)
 
     result = yaml.load(result)
-    result['found_probe_value_map']['chipset']['compact_str'] = 'something else'
     result = yaml.dump(result)
     self.assertEquals({
         'audio_codec': 1,
         'battery': 3,
         'bluetooth': 0,
         'cellular': 0,
-        'chipset': None,
         'cpu': 5,
-        'display_panel': None,
+        'display_panel': 0,
         'dram': 0,
         'ec_flash_chip': 0,
         'embedded_controller': 0,
@@ -256,8 +334,6 @@ class DatabaseTest(unittest.TestCase):
         'storage', bom.components))
     self.assertEquals(0, self.database._GetFieldIndexFromProbedComponents(
         'cellular', bom.components))
-    self.assertEquals(None, self.database._GetFieldIndexFromProbedComponents(
-        'wimax', bom.components))
 
   def testGetAllIndices(self):
     self.assertEquals([0, 1, 2, 3, 4, 5], self.database._GetAllIndices('cpu'))
@@ -331,63 +407,49 @@ class DatabaseTest(unittest.TestCase):
         self.database.VerifyEncodedString, 'CHROMEBOOK AW3L-M7IA-B')
 
   def testVerifyBOM(self):
+    # Before evaluating rule to update the unprobeable component, we only verify
+    # the probeable components.
     bom = self.database.ProbeResultToBOM(self.results[0])
-    self.assertEquals(
-        None, self.database.VerifyBOM(bom))
-
-    original_value = bom.components['ec_flash_chip']
-    bom.components.pop('ec_flash_chip')
-    self.assertRaisesRegexp(
-        HWIDException, r'Missing component classes: .*',
-        self.database.VerifyBOM, bom)
-    bom.components['ec_flash_chip'] = original_value
+    self.assertEquals(None, self.database.VerifyBOM(bom, True))
 
     original_value = bom.board
     bom.board = 'FOO'
-    self.assertRaisesRegexp(
-        HWIDException, r'Invalid board name. Expected .*, got .*',
-        self.database.VerifyBOM, bom)
+    with self.assertRaisesRegexp(HWIDException,
+                                 r'Invalid board name. Expected .*, got .*'):
+      self.database.VerifyBOM(bom, True)
     bom.board = original_value
 
     original_value = bom.encoding_pattern_index
     bom.encoding_pattern_index = 2
-    self.assertRaisesRegexp(
-        HWIDException, r'Invalid encoding pattern', self.database.VerifyBOM,
-        bom)
+    with self.assertRaisesRegexp(HWIDException, r'Invalid encoding pattern'):
+      self.database.VerifyBOM(bom, True)
     bom.encoding_pattern_index = original_value
 
     original_value = bom.image_id
     bom.image_id = 6
-    self.assertRaisesRegexp(
-        HWIDException, r'Invalid image id: .*', self.database.VerifyBOM, bom)
+    with self.assertRaisesRegexp(HWIDException, r'Invalid image id: .*'):
+      self.database.VerifyBOM(bom, True)
     bom.image_id = original_value
 
     original_value = bom.encoded_fields['cpu']
     bom.encoded_fields['cpu'] = 8
-    self.assertRaisesRegexp(
-        HWIDException, r'Encoded fields .* have unknown indices',
-        self.database.VerifyBOM, bom)
+    with self.assertRaisesRegexp(HWIDException,
+                                 r'Encoded fields .* have unknown indices'):
+      self.database.VerifyBOM(bom, True)
     bom.encoded_fields['cpu'] = original_value
-
-    bom.encoded_fields['foo'] = 1
-    self.assertRaisesRegexp(
-        HWIDException, r'Extra encoded fields in BOM: .*',
-        self.database.VerifyBOM, bom)
-    bom.encoded_fields.pop('foo')
 
     original_value = bom.components['cpu']
     bom.components['cpu'] = [ProbedComponentResult(
         'cpu', {'name': Value('foo'), 'cores': Value('4')}, None)]
-    self.assertRaisesRegexp(
-        HWIDException, r'Unknown component values: .*', self.database.VerifyBOM,
-        bom)
+    with self.assertRaisesRegexp(HWIDException, r'Unknown component values:.*'):
+      self.database.VerifyBOM(bom, True)
     bom.components['cpu'] = original_value
 
     original_value = bom.encoded_fields['cpu']
     bom.encoded_fields.pop('cpu')
-    self.assertRaisesRegexp(
-        HWIDException, r'Missing encoded fields in BOM: .*',
-        self.database.VerifyBOM, bom)
+    with self.assertRaisesRegexp(HWIDException,
+                                 r'Missing encoded fields in BOM: .*'):
+      self.database.VerifyBOM(bom, True)
     bom.encoded_fields['cpu'] = original_value
 
   def testVerifyComponents(self):
@@ -460,13 +522,37 @@ class PatternTest(unittest.TestCase):
                                                    'test_db.yaml'))
     self.pattern = self.database.pattern
 
+  def testGetFieldNames(self):
+    self.assertEquals(
+        set(['audio_codec',
+             'battery',
+             'firmware',
+             'storage',
+             'bluetooth',
+             'display_panel',
+             'video',
+             'cellular',
+             'keyboard',
+             'dram',
+             'cpu']), self.pattern.GetFieldNames())
+
+    # Add a item in image_id [0, 1].
+    self.assertTrue('foo' not in self.pattern.GetFieldNames(0))
+    self.assertTrue('foo' not in self.pattern.GetFieldNames(1))
+    original_value = self.pattern.pattern
+    self.pattern.pattern[0]['fields'].append({'foo': 1})
+    self.assertTrue('foo' in self.pattern.GetFieldNames(0))
+    self.assertTrue('foo' in self.pattern.GetFieldNames(1))
+    self.assertTrue('foo' not in self.pattern.GetFieldNames(2))
+    self.assertTrue('foo' not in self.pattern.GetFieldNames())
+    self.pattern.pattern = original_value
+
   def testGetFieldsBitLength(self):
     length = self.pattern.GetFieldsBitLength()
     self.assertEquals(1, length['audio_codec'])
     self.assertEquals(2, length['battery'])
     self.assertEquals(0, length['bluetooth'])
     self.assertEquals(1, length['cellular'])
-    self.assertEquals(0, length['chipset'])
     self.assertEquals(3, length['cpu'])
     self.assertEquals(0, length['display_panel'])
     self.assertEquals(1, length['dram'])
@@ -478,7 +564,6 @@ class PatternTest(unittest.TestCase):
     self.assertEquals(0, length['touchpad'])
     self.assertEquals(0, length['tpm'])
     self.assertEquals(0, length['usb_hosts'])
-    self.assertEquals(0, length['vga'])
     self.assertEquals(0, length['video'])
     self.assertEquals(0, length['wireless'])
     self.assertEquals(5, length['firmware'])
@@ -564,10 +649,7 @@ class ComponentsTest(unittest.TestCase):
           'probeable': False,
           'items': {
               'comp_2': {
-                  'values': None,
-                  'labels': {
-                      'label1': 'FOO',
-                      'label2': 'BAR'}}}}}
+                  'values': None}}}}
 
   def setUp(self):
     self.components = Components(ComponentsTest.MOCK_COMPONENTS_DICT)
@@ -582,7 +664,7 @@ class ComponentsTest(unittest.TestCase):
         {'values': {'field1': Value('foo'), 'field2': Value('bar')}},
         self.components.GetComponentAttributes('comp_cls_1', 'comp_1'))
     self.assertEquals(
-        {'values': None, 'labels': {'label1': 'FOO', 'label2': 'BAR'}},
+        {'values': None},
         self.components.GetComponentAttributes('comp_cls_2', 'comp_2'))
 
   def testMatchComponentsFromValues(self):
@@ -595,10 +677,7 @@ class ComponentsTest(unittest.TestCase):
                                                   {'field1': 'foo',
                                                    'field2': 'bar'}))
     self.assertEquals(
-        {'comp_2': {
-            'values': None,
-            'labels': {
-                'label1': 'FOO', 'label2': 'BAR'}}},
+        {'comp_2': {'values': None}},
         self.components.MatchComponentsFromValues('comp_cls_2', None))
     self.assertEquals(
         None,

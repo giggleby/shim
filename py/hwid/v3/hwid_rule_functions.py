@@ -8,8 +8,6 @@ import factory_common  # pylint: disable=W0611
 
 from cros.factory.gooftool.vpd_data import KNOWN_VPD_FIELD_DATA
 from cros.factory.hwid.v3.common import HWIDException
-from cros.factory.hwid.v3.encoder import (
-    BOMToBinaryString, BinaryStringToEncodedString)
 from cros.factory.hwid.v3.rule import GetContext
 from cros.factory.hwid.v3.rule import GetLogger
 from cros.factory.hwid.v3.rule import RuleFunction
@@ -166,10 +164,6 @@ def SetComponent(comp_cls, name):
   context = GetContext()
   context.hwid.bom = context.hwid.database.UpdateComponentsOfBOM(
       context.hwid.bom, {comp_cls: name})
-  context.hwid.binary_string = BOMToBinaryString(context.hwid.database,
-                                                 context.hwid.bom)
-  context.hwid.encoded_string = BinaryStringToEncodedString(
-      context.hwid.database, context.hwid.binary_string)
 
 
 @RuleFunction(['hwid'])
@@ -191,10 +185,6 @@ def SetImageId(image_id):
   if image_id not in context.hwid.database.image_id:
     raise HWIDException('Invalid image id: %r' % image_id)
   context.hwid.bom.image_id = image_id
-  context.hwid.binary_string = BOMToBinaryString(context.hwid.database,
-                                                 context.hwid.bom)
-  context.hwid.encoded_string = BinaryStringToEncodedString(
-      context.hwid.database, context.hwid.binary_string)
 
 
 @RuleFunction(['hwid'])
@@ -275,7 +265,7 @@ def ValidVPDValue(section, key):
 
 # pylint: disable=W0622
 @RuleFunction(['hwid'])
-def CheckRegistrationCode(code, type=None, device=None):
+def CheckRegistrationCode(code, type=None):
   """A wrapper method to verify registration code.
 
   Args:
@@ -296,12 +286,10 @@ def CheckRegistrationCode(code, type=None, device=None):
     else:
       raise ValueError('Unknown reg code type %r' % type)
 
-  # Device name is usually exactly the same as in the HWID, except lowercase
-  # (e.g., "spring", not "daisy_spring"). For Zerg devices this may be chassis
-  # or project ID.
-  if device is None:
-    device = GetContext().hwid.database.board.lower()
-  registration_codes.CheckRegistrationCode(code, type=type, device=device)
+  # Board name is exactly the same as in the HWID, except lowercase (e.g.,
+  # "spring", not "daisy_spring").
+  board = GetContext().hwid.database.board.lower()
+  registration_codes.CheckRegistrationCode(code, type=type, device=board)
 
 
 @RuleFunction([])

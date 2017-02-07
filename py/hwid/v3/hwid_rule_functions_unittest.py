@@ -162,8 +162,6 @@ class HWIDRuleTest(unittest.TestCase):
   def testGetClassAttributesOnBOM(self):
     cpu_attrs = GetClassAttributesOnBOM(self.hwid, 'cpu')
     self.assertEquals(['cpu_5'], cpu_attrs)
-    storage_attrs = GetClassAttributesOnBOM(self.hwid, 'storage')
-    self.assertEquals(['storage_0', 'SSD', '16G'], storage_attrs)
 
     self.assertEquals(None, GetClassAttributesOnBOM(self.hwid, 'foo'))
     self.assertEquals("ERROR: Invalid component class: 'foo'",
@@ -171,17 +169,11 @@ class HWIDRuleTest(unittest.TestCase):
 
   def testComponentEq(self):
     self.assertTrue(ComponentEq('cpu', 'cpu_5'))
-    self.assertTrue(
-        ComponentEq('storage', ['SSD', '16G']))
     self.assertFalse(ComponentEq('cpu', 'cpu_3'))
-    self.assertFalse(
-        ComponentEq('storage', ['SSD', '32G']))
 
   def testComponentIn(self):
     self.assertTrue(
         ComponentIn('cpu', ['cpu_3', 'cpu_4', 'cpu_5']))
-    self.assertTrue(
-        ComponentIn('storage', ['16G', '32G']))
     self.assertFalse(
         ComponentIn('cpu', ['cpu_3', 'cpu_4']))
 
@@ -294,9 +286,9 @@ class HWIDRuleTest(unittest.TestCase):
   def testGetPhase(self):
     # Should be 'PVT' when no build phase is set.
     self.assertEquals('PVT', GetPhase())
-    phase._current_phase = phase.PROTO
+    phase._current_phase = phase.PROTO  # pylint: disable=protected-access
     self.assertEquals('PROTO', GetPhase())
-    phase._current_phase = phase.PVT_DOGFOOD
+    phase._current_phase = phase.PVT_DOGFOOD  # pylint: disable=protected-access
     self.assertEquals('PVT_DOGFOOD', GetPhase())
 
 

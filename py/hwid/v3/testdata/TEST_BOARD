@@ -19,7 +19,6 @@ pattern:
     - battery: 2
     - bluetooth: 0
     - cellular: 1
-    - chipset: 0
     - cpu: 1                  # 5 bits
     - display_panel: 0
     - dram: 1
@@ -39,7 +38,6 @@ pattern:
     - battery: 2
     - bluetooth: 0
     - cellular: 1
-    - chipset: 0
     - cpu: 1                  # 5 bits
     - display_panel: 0
     - dram: 1
@@ -75,9 +73,6 @@ encoded_fields:
       cellular: NULL
     1:
       cellular: cellular_0
-  chipset:
-    0:
-      chipset: chipset_0
   cpu:
     0:
       cpu: cpu_0
@@ -198,11 +193,6 @@ components:
           idProduct: abcd
           name: Cellular Card
 
-  chipset:
-    items:
-      chipset_0:
-        values: { compact_str: 'cdef:abcd' }
-
   cpu:
     items:
       cpu_0:
@@ -279,13 +269,9 @@ components:
     items:
       keyboard_gb:
         values: NULL
-        labels:
-          layout: GB
 
       keyboard_us:
         values: NULL
-        labels:
-          layout: US
 
   storage:
     items:
@@ -294,27 +280,18 @@ components:
           type: SSD
           size: 16G
           serial: '#123456'
-        labels:
-          technology: SSD
-          size: 16G
 
       storage_1:
         values:
           type: SSD
           size: 32G
           serial: '#123456'
-        labels:
-          technology: SSD
-          size: 32G
 
       storage_2:
         values:
           type: HDD
           size: 500G
           serial: '#123456'
-        labels:
-          technology: HDD
-          size: 500G
 
   video:
     items:
@@ -410,18 +387,9 @@ rules:
 - name: verify.components.rule_4
   when: not ComponentEq('cpu', None)
   evaluate:
-  - Assert(ComponentEq('storage', ['SSD', '16G']))
   - Assert((not ComponentEq('battery', 'battery_small')) or
            (ComponentIn('cpu', ['cpu_1', 'cpu_2', 'cpu_3'])))
 
-- name: verify.components.rule_5
-  when: not ComponentEq('cpu', None)
-  evaluate: Assert(ComponentEq('storage', 'SSD') or
-                   ComponentEq('storage', '16G'))
-
-- name: verify.components.rule_6
-  evaluate: Assert(ComponentEq('storage', 'SSD') or
-                   ComponentEq('storage', '16G'))
 
 - name: verify.sku.us
   evaluate: >

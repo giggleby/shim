@@ -12,12 +12,11 @@ import unittest
 import yaml
 import factory_common  # pylint: disable=W0611
 
+from cros.factory.hwid.v3.common import HWID
 from cros.factory.hwid.v3.common import HWIDException
 from cros.factory.hwid.v3.common import IsMPKeyName
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3.encoder import Encode
-from cros.factory.utils.type_utils import MakeSet
-from cros.factory.utils.type_utils import MakeList
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -49,17 +48,26 @@ class HWIDTest(unittest.TestCase):
         yaml.dump(result) for result in yaml.load_all(open(os.path.join(
             _TEST_DATA_PATH, 'test_probe_result.yaml')).read())]
 
-  def testMakeList(self):
-    self.assertEquals(['a'], MakeList('a'))
-    self.assertEquals(['abc'], MakeList('abc'))
-    self.assertEquals(['a', 'b'], MakeList(['a', 'b']))
-    self.assertEquals(['a', 'b'], MakeList({'a': 'foo', 'b': 'bar'}))
+  def testInvalidInitialize(self):
+    bom = self.database.ProbeResultToBOM(self.results[0])
+    bom = self.database.UpdateComponentsOfBOM(bom, {
+        'keyboard': 'keyboard_us', 'dram': 'dram_0',
+        'display_panel': 'display_panel_0'})
+    bom.image_id = 2
+    with self.assertRaisesRegexp(HWIDException,
+                                 'The last bit of binary_string must be 1.'):
+      HWID(self.database, bom, binary_string='00000')
+    with self.assertRaisesRegexp(HWIDException,
+                                 'Invalid operation mode'):
+      HWID(self.database, bom, mode='UNKNOWN')
 
-  def testMakeSet(self):
-    self.assertEquals(set(['ab']), MakeSet('ab'))
-    self.assertEquals(set(['a', 'b']), MakeSet(['a', 'b']))
-    self.assertEquals(set(['a', 'b']), MakeSet(('a', 'b')))
-    self.assertEquals(set(['a', 'b']), MakeSet({'a': 'foo', 'b': 'bar'}))
+  def testIsEquivalentBinaryString(self):
+    self.assertTrue(HWID.IsEquivalentBinaryString('01001', '01001'))
+    self.assertTrue(HWID.IsEquivalentBinaryString('01011', '010100001'))
+    self.assertFalse(HWID.IsEquivalentBinaryString('01011', '010110001'))
+    self.assertFalse(HWID.IsEquivalentBinaryString('01011', '011110001'))
+    with self.assertRaises(AssertionError):
+      HWID.IsEquivalentBinaryString('010110', '01011000')
 
   def testVerifySelf(self):
     bom = self.database.ProbeResultToBOM(self.results[0])
@@ -70,41 +78,16 @@ class HWIDTest(unittest.TestCase):
     hwid = Encode(self.database, bom)
     self.assertEquals(None, hwid.VerifySelf())
 
-    # The correct binary string: '0000000000111010000011'
-    original_value = hwid.binary_string
-    hwid.binary_string = '000000000011101000001011'
-    self.assertRaisesRegexp(
-        HWIDException, r'Invalid bit string length', hwid.VerifySelf)
-    hwid.binary_string = '0000000001111010000011'
-    self.assertRaisesRegexp(
-        HWIDException,
-        r'Encoded string CHROMEBOOK C2H-I3Q-A6Q does not decode to binary '
-        r"string '0000000001111010000011'",
-        hwid.VerifySelf)
-    hwid.binary_string = original_value
+    with self.assertRaises(AttributeError):
+      hwid.binary_string = 'CANNOT SET binary_string'
 
-    original_value = hwid.encoded_string
-    hwid.encoded_string = 'ASDF CWER-TY'
-    self.assertRaisesRegexp(
-        HWIDException, r"Invalid HWID string format: 'ASDF CWER-TY",
-        hwid.VerifySelf)
-    hwid.encoded_string = original_value
-
-    original_value = hwid.encoded_string
-    hwid.encoded_string = 'ASDF C2W-E3R'
-    self.assertRaisesRegexp(
-        HWIDException, r"Invalid board name: 'ASDF'", hwid.VerifySelf)
-    hwid.encoded_string = original_value
+    with self.assertRaises(AttributeError):
+      hwid.encoded_string = 'CANNOT SET encoded_string'
 
     original_value = hwid.bom
     hwid.bom.encoded_fields['cpu'] = 10
     self.assertRaisesRegexp(
         HWIDException, r'Encoded fields .* have unknown indices',
-        hwid.VerifySelf)
-    hwid.bom.encoded_fields['cpu'] = 2
-    self.assertRaisesRegexp(
-        HWIDException,
-        r"Binary string '0001000000111010000011' does not decode to BOM",
         hwid.VerifySelf)
     hwid.bom = original_value
 
@@ -122,12 +105,11 @@ class HWIDTest(unittest.TestCase):
         r"\['hdmi_0'\] and is missing components: \['hdmi_1'\]. "
         r"Expected components are: \['codec_1', 'hdmi_1'\]",
         hwid.VerifyProbeResult, fake_result)
+    # We only verify the components listed in the pattern. Do not raise
+    # exception while the component which is not in the pattern is missing.
     fake_result = result.replace('EC Flash Chip', 'Foo chip')
-    self.assertRaisesRegexp(
-        HWIDException, r"Component class 'ec_flash_chip' is missing "
-        r"components: \['ec_flash_chip_0'\]. Expected components are: "
-        r"\['ec_flash_chip_0'\]",
-        hwid.VerifyProbeResult, fake_result)
+    self.assertEquals(None, hwid.VerifyProbeResult(fake_result))
+
     fake_result = result.replace('name: CPU @ 2.80GHz',
                                  'name: CPU @ 2.40GHz')
     self.assertRaisesRegexp(
@@ -138,21 +120,6 @@ class HWIDTest(unittest.TestCase):
     self.assertEquals(None, hwid.VerifyProbeResult(result))
     fake_result = result.replace('xkb:us::eng', 'xkb:gb:extd:eng')
     self.assertEquals(None, hwid.VerifyProbeResult(fake_result))
-
-  def testGetLabels(self):
-    result = self.results[0]
-    bom = self.database.ProbeResultToBOM(result)
-    bom = self.database.UpdateComponentsOfBOM(bom, {
-        'keyboard': 'keyboard_us', 'dram': 'dram_0',
-        'display_panel': 'display_panel_0'})
-    bom.image_id = 2
-    hwid = Encode(self.database, bom)
-    labels_dict = hwid.GetLabels()
-    self.assertEquals({'dram_0': {'size': '4G'}}, labels_dict['dram'])
-    self.assertEquals({'keyboard_us': {'layout': 'US'}},
-                      labels_dict['keyboard'])
-    self.assertEquals({'storage_0': {'size': '16G', 'technology': 'SSD'}},
-                      labels_dict['storage'])
 
 
 if __name__ == '__main__':

@@ -304,47 +304,82 @@ class Database(object):
       # comp_cls is in probed_bom['missing_component_classes'].
       return None
 
+    def TryAddDefaultItem(probed_components, comp_cls):
+      """Try to add the default component item.
+
+      If the default component exists and its status is not 'unsupported', then
+      add it into the probed_components and return True.
+      """
+      if comp_cls in self.components.default:
+        comp_name = self.components.default[comp_cls]
+        comp_status = self.components.GetComponentStatus(comp_cls, comp_name)
+        if comp_status != common.HWID.COMPONENT_STATUS.unsupported:
+          probed_components[comp_cls].append(
+              common.ProbedComponentResult(comp_name, None, None))
+          return True
+      return False
+
     # Construct a dict of component classes to list of ProbedComponentResult.
     probed_components = collections.defaultdict(list)
     for comp_cls in self.components.GetRequiredComponents():
       probed_comp_values = LookupProbedValue(comp_cls)
-      if probed_comp_values is not None:
-        for probed_value in probed_comp_values:
-          if comp_cls not in self.components.probeable:
-            probed_components[comp_cls].append(
-                common.ProbedComponentResult(
-                    None, probed_value,
-                    common.UNPROBEABLE_COMPONENT_ERROR(comp_cls)))
-            continue
-          matched_comps = self.components.MatchComponentsFromValues(
-              comp_cls, probed_value, loose_matching)
-          if matched_comps is None:
-            probed_components[comp_cls].append(common.ProbedComponentResult(
-                None, probed_value,
-                common.INVALID_COMPONENT_ERROR(comp_cls, probed_value)))
-          elif len(matched_comps) == 1:
-            comp_name, comp_data = matched_comps.items()[0]
+      if probed_comp_values is None:
+        # The component class has the default item.
+        if TryAddDefaultItem(probed_components, comp_cls):
+          continue
+        # Probeable comp_cls but no component is found in probe results.
+        if comp_cls in self.components.probeable:
+          probed_components[comp_cls].append(
+              common.ProbedComponentResult(
+                  None, None, common.MISSING_COMPONENT_ERROR(comp_cls)))
+        else:
+          # Unprobeable comp_cls and only has 1 component, treat as found.
+          comp_dict = self.components.components_dict[comp_cls]
+          if len(comp_dict['items']) == 1:
+            comp_name = comp_dict['items'].keys()[0]
             comp_status = self.components.GetComponentStatus(
                 comp_cls, comp_name)
             if comp_status == common.HWID.COMPONENT_STATUS.supported:
               probed_components[comp_cls].append(
-                  common.ProbedComponentResult(
-                      comp_name, comp_data['values'], None))
-            else:
-              probed_components[comp_cls].append(
-                  common.ProbedComponentResult(
-                      comp_name, comp_data['values'],
-                      common.UNSUPPORTED_COMPONENT_ERROR(comp_cls, comp_name,
-                                                         comp_status)))
-          elif len(matched_comps) > 1:
+                  common.ProbedComponentResult(comp_name, None, None))
+        continue
+
+      for probed_value in probed_comp_values:
+        # Unprobeable comp_cls but component is found in probe results.
+        if comp_cls not in self.components.probeable:
+          probed_components[comp_cls].append(
+              common.ProbedComponentResult(
+                  None, probed_value,
+                  common.UNPROBEABLE_COMPONENT_ERROR(comp_cls)))
+          continue
+
+        matched_comps = self.components.MatchComponentsFromValues(
+            comp_cls, probed_value, loose_matching, include_default=False)
+        if matched_comps is None:
+          # If there is no default item, add invalid error.
+          if not TryAddDefaultItem(probed_components, comp_cls):
             probed_components[comp_cls].append(common.ProbedComponentResult(
                 None, probed_value,
-                common.AMBIGUOUS_COMPONENT_ERROR(
-                    comp_cls, probed_value, matched_comps)))
-      else:
-        # No component of comp_cls is found in probe results.
-        probed_components[comp_cls].append(common.ProbedComponentResult(
-            None, probed_comp_values, common.MISSING_COMPONENT_ERROR(comp_cls)))
+                common.INVALID_COMPONENT_ERROR(comp_cls, probed_value)))
+        elif len(matched_comps) == 1:
+          comp_name, comp_data = matched_comps.items()[0]
+          comp_status = self.components.GetComponentStatus(
+              comp_cls, comp_name)
+          if comp_status == common.HWID.COMPONENT_STATUS.supported:
+            probed_components[comp_cls].append(
+                common.ProbedComponentResult(
+                    comp_name, comp_data['values'], None))
+          else:
+            probed_components[comp_cls].append(
+                common.ProbedComponentResult(
+                    comp_name, comp_data['values'],
+                    common.UNSUPPORTED_COMPONENT_ERROR(comp_cls, comp_name,
+                                                       comp_status)))
+        elif len(matched_comps) > 1:
+          probed_components[comp_cls].append(common.ProbedComponentResult(
+              None, probed_value,
+              common.AMBIGUOUS_COMPONENT_ERROR(
+                  comp_cls, probed_value, matched_comps)))
 
     # Encode the components to a dict of encoded fields to encoded indices.
     encoded_fields = {}
@@ -559,39 +594,26 @@ class Database(object):
       raise common.HWIDException('Checksum of %r mismatch (expected %r)' % (
           encoded_string, expected_checksum))
 
-  def VerifyBOM(self, bom):
+  def VerifyBOM(self, bom, probeable_only=False):
     """Verifies the data contained in the given BOM object matches the settings
     and definitions in the database.
 
+    Because the components for each image ID might be different, for example a
+    component might be removed in later build. We only verify the components in
+    the target image ID, not all components listed in the database.
+
+    When the BOM is decoded by HWID string, it would contain the information of
+    every component recorded in the pattern. But if the BOM object is created by
+    the probed result, it does not contain the unprobeable component before
+    evaluating the rule. We should verify the probeable components only.
+
     Args:
       bom: The BOM object to verify.
+      probeable_only: True to verify the probeable component only.
 
     Raises:
       HWIDException if verification fails.
     """
-    # All the classes encoded in the pattern should exist in BOM.
-    missing_comp = []
-    for encoded_indices in self.encoded_fields.itervalues():
-      for index_content in encoded_indices.itervalues():
-        missing_comp.extend([comp_cls for comp_cls in index_content
-                             if comp_cls not in bom.components])
-    if missing_comp:
-      raise common.HWIDException('Missing component classes: %r',
-                                 ', '.join(sorted(missing_comp)))
-
-    bom_encoded_fields = type_utils.MakeSet(bom.encoded_fields.keys())
-    db_encoded_fields = type_utils.MakeSet(self.encoded_fields.keys())
-    # Every encoded field defined in the database must present in BOM.
-    if db_encoded_fields - bom_encoded_fields:
-      raise common.HWIDException('Missing encoded fields in BOM: %r',
-                                 ', '.join(sorted(db_encoded_fields -
-                                                  bom_encoded_fields)))
-    # Every encoded field the BOM has must exist in the database.
-    if bom_encoded_fields - db_encoded_fields:
-      raise common.HWIDException('Extra encoded fields in BOM: %r',
-                                 ', '.join(sorted(bom_encoded_fields -
-                                                  db_encoded_fields)))
-
     if bom.board != self.board:
       raise common.HWIDException('Invalid board name. Expected %r, got %r' %
                                  (self.board, bom.board))
@@ -602,16 +624,40 @@ class Database(object):
     if bom.image_id not in self.image_id:
       raise common.HWIDException('Invalid image id: %r' % bom.image_id)
 
+    # All the classes encoded in the pattern should exist in BOM.
+    # Ignore unprobeable components if probeable_only is True.
+    missing_comp = []
+    expected_encoded_fields = self.pattern.GetFieldNames(bom.image_id)
+    for encoded_field_name in expected_encoded_fields:
+      for index_content in self.encoded_fields[encoded_field_name].itervalues():
+        for comp_cls in index_content:
+          if (comp_cls not in bom.components and
+              (comp_cls in self.components.probeable or not probeable_only)):
+            missing_comp.append(comp_cls)
+    if missing_comp:
+      raise common.HWIDException('Missing component classes: %r',
+                                 ', '.join(sorted(missing_comp)))
+
+    bom_encoded_fields = type_utils.MakeSet(bom.encoded_fields.keys())
+    db_encoded_fields = type_utils.MakeSet(expected_encoded_fields)
+    # Every encoded field defined in the database must present in BOM.
+    if db_encoded_fields - bom_encoded_fields:
+      raise common.HWIDException('Missing encoded fields in BOM: %r',
+                                 ', '.join(sorted(db_encoded_fields -
+                                                  bom_encoded_fields)))
+
     # All the probeable component values in the BOM should exist in the
     # database.
     unknown_values = []
     for comp_cls, probed_values in bom.components.iteritems():
+      if comp_cls not in self.components.probeable:
+        continue
       for element in probed_values:
         probed_values = element.probed_values
-        if probed_values is None or comp_cls not in self.components.probeable:
+        if probed_values is None:
           continue
-        found_comps = (
-            self.components.MatchComponentsFromValues(comp_cls, probed_values))
+        found_comps = self.components.MatchComponentsFromValues(
+            comp_cls, probed_values, include_default=True)
         if not found_comps:
           unknown_values.append('%s:%s' % (comp_cls, pprint.pformat(
               probed_values, indent=0, width=1024)))
@@ -621,9 +667,16 @@ class Database(object):
 
     # All the encoded index should exist in the database.
     invalid_fields = []
-    for field, index in bom.encoded_fields.iteritems():
-      if index is not None and index not in self.encoded_fields[field]:
-        invalid_fields.append(field)
+    for field_name in expected_encoded_fields:
+      # Ignore the field containing unprobeable component.
+      if probeable_only and not all(
+          [comp_cls in self.components.probeable
+           for comp_cls in self.encoded_fields[field_name][0].keys()]):
+        continue
+      index = bom.encoded_fields[field_name]
+      if index is None or index not in self.encoded_fields[field_name]:
+        invalid_fields.append(field_name)
+
     if invalid_fields:
       raise common.HWIDException('Encoded fields %r have unknown indices' %
                                  ', '.join(sorted(invalid_fields)))
@@ -808,16 +861,28 @@ class Components(object):
                                             schema.Scalar('probe value regexp',
                                                           rule.Value)])))},
                         optional_items={
-                            'labels': schema.Dict(
-                                'dict of labels',
-                                key_type=schema.Scalar('label key', str),
-                                value_type=schema.Scalar('label value', str)),
+                            'default': schema.Scalar(
+                                'is default component item', bool),
                             'status': schema.Scalar('item status', str)}))
             },
             optional_items={
                 'probeable': schema.Scalar('is component probeable', bool)
             }))
     self.schema.Validate(components_dict)
+
+    # Check there is at most one default items for each component class.
+    self.default = {}
+    for comp_cls, comp_cls_data in components_dict.iteritems():
+      default_items = []
+      for comp_name, comp_attrs in comp_cls_data['items'].iteritems():
+        if comp_attrs.get('default', False):
+          default_items.append(comp_name)
+      if len(default_items) == 1:
+        self.default[comp_cls] = default_items[0]
+      elif len(default_items) > 1:
+        raise common.HWIDException(
+            'Component %s has more than one default items: %r' %
+            (comp_cls, default_items))
 
     # Classify components based on their attributes.
     self.probeable = set()
@@ -884,7 +949,7 @@ class Components(object):
         'status', common.HWID.COMPONENT_STATUS.supported)
 
   def MatchComponentsFromValues(self, comp_cls, values_dict,
-                                loose_matching=False):
+                                loose_matching=False, include_default=False):
     """Matches a list of components whose 'values' attributes match the given
     'values_dict'.
 
@@ -903,6 +968,7 @@ class Components(object):
           know if the firmware version is supported, then we can enable
           loose_matching to see if the firmware version is supported in the
           database.
+      include_default: If set to True, match the default item.
 
     Returns:
       A dict with keys being the matched component names and values being the
@@ -915,7 +981,10 @@ class Components(object):
     results = {}
     for comp_name, comp_attrs in (
         self.components_dict[comp_cls]['items'].iteritems()):
-      if comp_attrs['values'] is None and values_dict is None:
+      if comp_attrs.get('default', False):
+        if include_default:
+          results[comp_name] = copy.deepcopy(comp_attrs)
+      elif comp_attrs['values'] is None and values_dict is None:
         # Special handling for None values.
         results[comp_name] = copy.deepcopy(comp_attrs)
       elif comp_attrs['values'] is None:
@@ -1033,6 +1102,18 @@ class Pattern(object):
         ret[cls] += length
     return ret
 
+  def GetFieldNames(self, image_id=None):
+    """Get the set of the encoded fields defined by the pattern.
+
+    Args:
+      image_id: An integer of the image id to query. If not given, the latest
+          image id would be used.
+
+    Returns:
+      a set that contains the names of all the encoded_field in the pattern.
+    """
+    return set(self.GetFieldsBitLength(image_id).keys())
+
   def GetTotalBitLength(self, image_id=None):
     """Gets the total bit length defined by the pattern. Common header and
     stopper bit are included.
@@ -1102,40 +1183,6 @@ class Pattern(object):
         for field_index in xrange(
             first_bit_index, first_bit_index - length, -1):
           ret[index] = BitEntry(field, field_index)
-          index += 1
-    return ret
-
-  def GetBitMappingSpringEVT(self, image_id=None):
-    """Gets a map indicating the bit offset of certain encoded field a bit in a
-    encoded binary string corresponds to.
-
-    This is a hack for Spring EVT, which used the LSB first encoding pattern.
-
-    Args:
-      image_id: An integer of the image id to query. If not given, the latest
-          image id would be used.
-
-    Returns:
-      A list of BitEntry objects indexed by bit position in the encoded binary
-      string. Each BitEntry object has attributes (field, bit_offset) indicating
-      which bit_offset of field this particular bit corresponds to. For example,
-      if ret[6] has attributes (field='cpu', bit_offset=1), then it means that
-      bit position 6 of the encoded binary string corresponds to the bit offset
-      1 (which is the second least significant bit) of encoded field 'cpu'.
-    """
-    BitEntry = collections.namedtuple('BitEntry', ['field', 'bit_offset'])
-
-    if self.pattern is None:
-      raise common.HWIDException(
-          'Cannot construct bit mapping with uninitialized pattern')
-    ret = {}
-    index = common.HWID.HEADER_BITS   # Skips the 5-bit common header.
-    field_offset_map = collections.defaultdict(int)
-    for element in self.GetPatternByImageId(image_id)['fields']:
-      for field, length in element.iteritems():
-        for _ in xrange(length):
-          ret[index] = BitEntry(field, field_offset_map[field])
-          field_offset_map[field] += 1
           index += 1
     return ret
 

@@ -9,8 +9,6 @@ found_probe_value_map:
     idVendor: '0123'
     idProduct: abcd
     bcd: '0001'
-  chipset:
-    compact_str: cdef:abcd
   cpu:
     name: CPU @ 2.80GHz
     cores: '4'
@@ -37,6 +35,9 @@ found_probe_value_map:
     region_code: us
 
 found_volatile_values:
+  firmware_keys:
+    key_recovery: kv3#key_recovery_mp
+    key_root: kv3#key_root_mp
   hash_gbb:
     compact_str: gv2#hash_gbb_0
   key_recovery:
@@ -56,8 +57,6 @@ initial_configs:
   rw_fw_key_version: '2'
   storage_fw_version: 11.22.33
 missing_component_classes:
-- wimax
 - cellular
-- display_converter
 - display_panel
 - ethernet
