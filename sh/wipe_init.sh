@@ -15,7 +15,6 @@ STATE_PATH="/mnt/stateful_partition"
 BATTERY_CUTOFF="/usr/local/factory/sh/battery_cutoff.sh"
 DISPLAY_MESSAGE="/usr/local/factory/sh/display_wipe_message.sh"
 ENABLE_RELEASE_PARTITION="/usr/local/factory/bin/enable_release_partition"
-INFORM_SHOPFLOOR="/usr/local/factory/sh/inform_shopfloor.sh"
 
 LOG_FILE="/tmp/wipe_init.log"
 
@@ -60,7 +59,6 @@ STATE_DEV=${FACTORY_ROOT_DEV%[0-9]*}1
 ROOT_DISK="$2"
 WIPE_ARGS="$3"
 CUTOFF_ARGS="$4"
-SHOPFLOOR_URL="$5"
 
 # ======================================================================
 # Helper functions
@@ -78,9 +76,7 @@ start_wipe() {
 
   "${ENABLE_RELEASE_PARTITION}" "${release_root_dev}"
 
-  if [ -n "${SHOPFLOOR_URL}" ]; then
-    "${INFORM_SHOPFLOOR}" "${SHOPFLOOR_URL}" "factory_wipe"
-  fi
+  # TODO(shunhsingou): need to inform shopfloor here.
 
   trap - EXIT
   "${BATTERY_CUTOFF}" ${CUTOFF_ARGS}
