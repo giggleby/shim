@@ -305,7 +305,7 @@ class StartTest(unittest.TestCase):
     Arg('prompt', tuple,
         'Message to show to the operator when prompting for input.',
         default=('Enter valid serial number:<br/>',
-                 u'请输入有效的序号:<br/>'), optional=True),
+                 u'请输入有效的序号:<br/>'), optional=True)]
 
   def setUp(self):
     self._task_list = []
