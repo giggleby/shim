@@ -1045,8 +1045,8 @@ def _ProbeCellular():
 @_ComponentProbe('chassis')
 def _ProbeChassis():
   """Returns chassis identifier."""
-  chessis_id = _ShellOutput('mosys platform chessis')
-  return [{'id': chessis_id}] if chessis_id else []
+  chassis_id = _ShellOutput('mosys platform chassis')
+  return [{'id': chassis_id}] if chassis_id else []
 
 
 @_ComponentProbe('cpu', 'x86')
