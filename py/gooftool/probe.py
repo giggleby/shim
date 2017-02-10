@@ -1045,7 +1045,7 @@ def _ProbeCellular():
 @_ComponentProbe('chassis')
 def _ProbeChassis():
   """Returns chassis identifier."""
-  chassis_id = _ShellOutput('mosys platform chassis')
+  chassis_id = _ShellOutput('VPD_IGNORE_CACHE=1 mosys platform chassis')
   return [{'id': chassis_id}] if chassis_id else []
 
 
