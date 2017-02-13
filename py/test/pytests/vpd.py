@@ -148,7 +148,7 @@ class WriteVPDTask(FactoryTask):
           registration_codes.CheckRegistrationCode(
               self.test.registration_code_map[k], code_type,
               self.test.args.override_registration_codes_device or
-              build_board.BuildBoard().short_name)
+              BuildBoard().short_name)
         except ValueError as e:
           self.Fail(str(e))
 
