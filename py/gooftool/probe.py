@@ -1147,9 +1147,6 @@ def _ProbeEcFlashChip():
   ec_chip_id = crosfw.LoadEcFirmware().GetChipId()
   if ec_chip_id is not None:
     ret.append(SingleDictCompactProbeStr(ec_chip_id))
-  pd_chip_id = crosfw.LoadPDFirmware().GetChipId()
-  if pd_chip_id:
-    ret.append(SingleDictCompactProbeStr(pd_chip_id))
   return ret
 
 
@@ -1160,18 +1157,17 @@ def _ProbeEmbeddedController():
   # vendor="VENDOR" name="CHIPNAME" fw_version="ECFWVER"
   ret = []
   info_keys = ('vendor', 'name')
-  for name in ('ec', 'pd'):
-    try:
-      ec_info = dict(
-          (key, _ShellOutput(['mosys', name, 'info', '-s', key]))
-          for key in info_keys)
-      ec_info[COMPACT_PROBE_STR] = CompactStr(
-          [ec_info[key] for key in info_keys])
-    except subprocess.CalledProcessError:
-      # The EC type is not supported on this board.
-      pass
-    else:
-      ret.append(ec_info)
+  try:
+    ec_info = dict(
+        (key, _ShellOutput(['mosys', 'ec', 'info', '-s', key]))
+        for key in info_keys)
+    ec_info[COMPACT_PROBE_STR] = CompactStr(
+        [ec_info[key] for key in info_keys])
+  except subprocess.CalledProcessError:
+    # The EC type is not supported on this board.
+    pass
+  else:
+    ret.append(ec_info)
   return ret
 
 
@@ -1748,7 +1744,6 @@ def Probe(target_comp_classes=None,
     logging.debug('fast_fw_probe enabled.')
     optional_fields = {
         'ro_ec_firmware': _ShellOutput('mosys ec info -s fw_version'),
-        'ro_pd_firmware': _ShellOutput('mosys pd info -s fw_version')
     }
     for k, v in optional_fields.iteritems():
       if v:
@@ -1791,12 +1786,6 @@ def Probe(target_comp_classes=None,
     ec_fw_file = crosfw.LoadEcFirmware().GetFileName()
     if ec_fw_file is not None:
       volatiles.update(CalculateFirmwareHashes(ec_fw_file))
-    pd_fw_file = crosfw.LoadPDFirmware().GetFileName()
-    if pd_fw_file is not None:
-      # Currently PD is using same FMAP layout as EC so we have to rename
-      # section name to avoid conflict.
-      hashes = CalculateFirmwareHashes(pd_fw_file)
-      volatiles.update({'ro_pd_firmware': hashes['ro_ec_firmware']})
 
   if probe_vpd:
     for which, vpd_field in (('ro', ReadRoVpd()),
