@@ -32,7 +32,7 @@ class BatteryMonitor(periodic_plugin.PeriodicPlugin):
     """Checks the current battery status.
 
     Logs current battery charging level and status to log. If the battery level
-    is lower below warning_low_battery_pct, send warning event to shopfloor.
+    is lower below warning_log_battery_pct, send warning event to shopfloor.
     If the battery level is lower below critical_low_battery_pct, flush disks.
     """
 
@@ -65,7 +65,7 @@ class BatteryMonitor(periodic_plugin.PeriodicPlugin):
 
         # Notify shopfloor server
         if (critical_low_battery or
-            (not ac_present and charge_pct <= self._warning_low_battery_pct)):
+            (not ac_present and charge_pct <= self._warning_log_battery_pct)):
           log_level = logging.WARNING
 
           self.goofy.event_log.Log('low_battery',
