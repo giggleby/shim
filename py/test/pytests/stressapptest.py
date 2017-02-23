@@ -37,7 +37,7 @@ class StressAppTest(unittest.TestCase):
           default=True),
       Arg('disk_thread_dir', str,
           'directory of disk thread file will be placed',
-          default=None),
+          optional=True, default=None),
   ]
 
   def setUp(self):
