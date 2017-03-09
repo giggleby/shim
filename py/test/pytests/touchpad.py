@@ -234,7 +234,15 @@ class TouchpadTest(unittest.TestCase):
           'number_to_quadrant', int,
           'Target number to click for each quadrant.', default=3),
       Arg('x_segments', int, 'Number of X axis segments to test.', default=5),
-      Arg('y_segments', int, 'Number of Y axis segments to test.', default=5)]
+      Arg('y_segments', int, 'Number of Y axis segments to test.', default=5),
+      Arg('skip_sectors', list,
+          'What sectors are intended to skip test. ex: There would be a case '
+          'of that touch surface is not a rectangle.',
+          default=[]),
+      Arg('reverse_x_value', bool,
+          'Whether to reverse reported value of x axis.', default=False),
+      Arg('reverse_y_value', bool,
+          'Whether to reverse reported value of y axis.', default=False)]
 
   def setUp(self):
     # Initialize frontend presentation
@@ -263,6 +271,7 @@ class TouchpadTest(unittest.TestCase):
       self.touchpad_device = evdev.InputDevice(
           '/dev/input/event%d' % self.args.touchpad_event_id)
     self.dispatcher = None
+    self.MarkSectorsSkipTest(self.args.skip_sectors)
 
     logging.info('start monitor daemon thread')
     self.touchpad_device.grab()
@@ -369,9 +378,15 @@ class TouchpadTest(unittest.TestCase):
       event: the event to process.
     """
     if event.code == evdev.ecodes.ABS_MT_POSITION_X:
-      self.move_event.x = event.value
+      if self.args.reverse_x_value:
+        self.move_event.x = self.x_max - event.value
+      else:
+        self.move_event.x = event.value
     elif event.code == evdev.ecodes.ABS_MT_POSITION_Y:
-      self.move_event.y = event.value
+      if self.args.reverse_y_value:
+        self.move_event.y = self.y_max - event.value
+      else:
+        self.move_event.y = event.value
     elif event.code == evdev.ecodes.ABS_MT_SLOT:
       self.move_event.scroll = event.value
     elif event.code == evdev.ecodes.SYN_REPORT:
@@ -458,6 +473,10 @@ class TouchpadTest(unittest.TestCase):
     y_segment = int(y_ratio * self.args.y_segments)
     logging.info('mark x-%d y-%d sector tested', x_segment, y_segment)
     self.ui.CallJSFunction('markSectorTested', x_segment, y_segment)
+
+  def MarkSectorsSkipTest(self, skip_sectors):
+    for x, y in skip_sectors:
+      self.ui.CallJSFunction('markSectorTested', x, y)
 
   def runTest(self):
     self.ui.Run()
