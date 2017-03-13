@@ -43,6 +43,7 @@ _MSG_IN_PROGRESS = test_ui.MakeLabel(
 _MSG_START_MOVING = test_ui.MakeLabel(
     'Please rotate the device.',
     u'请转动待测物。', 'test-info')
+_MSG_SUBTESTS = '<div class="{state}">{key}={value}</div>'
 
 def GetPreparingMessage(secs):
   return test_ui.MakeLabel(
@@ -86,6 +87,15 @@ class ReadGyroscopeTask(FactoryTask):
     self.setup_time_secs = setup_time_secs
     self.template = test.template
 
+  def _UpdateState(self, max_values):
+    state_msg = ''.join(
+        _MSG_SUBTESTS.format(state=('test-pass' if v > self.rotation_threshold
+                                    else 'test-fail'),
+                             key=k, value=v)
+        for k, v in max_values.items())
+
+    self.template.SetState(state_msg)
+
   def _WaitForDeviceStop(self):
     """Wait until absolute value of all sensors less than stop_threshold."""
 
@@ -104,6 +114,7 @@ class ReadGyroscopeTask(FactoryTask):
       for sensor_name in data:
         max_values[sensor_name] = max(max_values[sensor_name],
                                       abs(data[sensor_name]))
+      self._UpdateState(max_values)
       return all(abs(v) > self.rotation_threshold for v in max_values.values())
 
     sync_utils.WaitFor(CheckSensorMaxValues, self.timeout_secs)
@@ -115,10 +126,10 @@ class ReadGyroscopeTask(FactoryTask):
       time.sleep(1)
 
     try:
-      self.template.SetState(_MSG_IN_PROGRESS)
+      self.template.SetInstruction(_MSG_IN_PROGRESS)
       self._WaitForDeviceStop()
 
-      self.template.SetState(_MSG_START_MOVING)
+      self.template.SetInstruction(_MSG_START_MOVING)
       self._WaitForDeviceRotate()
     except type_utils.TimeoutError as e:
       self.Fail(e.message)
@@ -153,7 +164,7 @@ class Gyroscope(unittest.TestCase):
     self.dut = device_utils.CreateDUTInterface()
     self.gyroscope = self.dut.gyroscope.GetController()
     self.ui = test_ui.UI()
-    self.template = ui_templates.OneSection(self.ui)
+    self.template = ui_templates.TwoSections(self.ui)
     self.ui.AppendCSS(_CSS)
     self._task_manager = None
 
