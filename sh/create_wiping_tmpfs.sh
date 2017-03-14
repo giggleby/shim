@@ -75,7 +75,6 @@ BIN_DEPS="
   dd
   display_boot_message
   dumpe2fs
-  ectool
   flashrom
   halt
   initctl
@@ -101,6 +100,10 @@ if [ -e /sbin/frecon ]; then
   BIN_DEPS="${BIN_DEPS} /sbin/frecon"
 else
   BIN_DEPS="${BIN_DEPS} /usr/bin/ply-image"
+fi
+
+if [ -e /usr/sbin/ectool]; then
+  BIN_DEPS="${BIN_DEPS} ectool"
 fi
 
 # ======================================================================
