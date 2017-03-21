@@ -215,13 +215,15 @@ class TouchscreenUniformity(unittest.TestCase):
           'form of (rows, cols). This is used when the matrix size read from '
           'kernel i2c device path is different from the matrix size of '
           'enabled sensors.',
-          optional=True)]
+          optional=True),
+      Arg('device_index', int, 'Index of touchscreen to test.', default=0)]
 
   def setUp(self):
     self.ui = test_ui.UI()
     self.template = ui_templates.OneSection(self.ui)
     self.ui.AppendCSS(_CSS)
-    self.touchscreen = dut.Create().touchscreen
+    self.touchscreen = dut.Create().touchscreen.GetController(
+        self.args.device_index)
     self.touchscreen.SetSubmatrixSize(self.args.matrix_size)
 
   def runTest(self):
