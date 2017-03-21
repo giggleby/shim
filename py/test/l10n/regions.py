@@ -20,7 +20,7 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.utils import type_utils
 
 
-KEYBOARD_PATTERN = re.compile(r'^xkb:\w+:\w*:\w+$|'
+KEYBOARD_PATTERN = re.compile(r'^xkb:\w+:[\w-]*:\w+$|'
                               r'^(ime|m17n|t13n):[\w:-]+$')
 LANGUAGE_CODE_PATTERN = re.compile(r'^(\w+)(-[A-Z0-9]+)?$')
 CROS_REGIONS_DATABASE = os.getenv('CROS_REGIONS_DATABASE',
