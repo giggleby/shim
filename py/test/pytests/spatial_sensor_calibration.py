@@ -162,7 +162,7 @@ class SpatialSensorCalibration(unittest.TestCase):
         raise InvalidPositionError
 
   def EnableAutoCalibration(self, path):
-    RETRIES = 5
+    RETRIES = 20
     for unused_i in range(RETRIES):
       try:
         self._dut.WriteFile(self._dut.path.join(path, 'calibrate'), '1')
@@ -183,7 +183,8 @@ class SpatialSensorCalibration(unittest.TestCase):
                                                 u'正在写入校正结果...'))
       calibbias_key = self.args.calibbias_entry_template % axis
       vpd_key = self.args.vpd_entry_template % axis
-      value = self._dut.ReadFile(self._dut.path.join(self._device_path, calibbias_key))
+      value = self._dut.ReadFile(
+          self._dut.path.join(self._device_path, calibbias_key))
       cmd.extend(['-s', '%s=%s' % (vpd_key, value.strip())])
 
     self._dut.CheckCall(cmd)
