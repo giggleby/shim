@@ -140,7 +140,8 @@ class HorizontalCalibrationTask(FactoryTask):
     # Starts calibration.
     self.template.SetState(_MSG_CALIBRATION_IN_PROGRESS)
     try:
-      raw_data = self.accelerometer.GetData(self.capture_count)
+      raw_data = self.accelerometer.GetData(self.capture_count,
+                                            self.sample_rate)
     except accelerometer.AccelerometerException:
       self.Fail('Read raw data failed.')
       return
@@ -210,7 +211,7 @@ class AccelerometersCalibration(unittest.TestCase):
       Arg(
           'sample_rate_hz', int,
           'The sample rate in Hz to get raw data from '
-          'accelerometers.', default=20, optional=True),
+          'accelerometers.', default=100, optional=True),
       Arg(
           'capture_count', int,
           'How many times to capture the raw data to '
