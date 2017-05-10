@@ -511,20 +511,21 @@ class FileLock(object):
     lockfile: The path to the file used as lock.
     timeout_secs: The maximum duration in seconds to wait for the lock, or None
       to fail immediately if unable to acquire lock.
+    retry_secs: seconds to wait between retries when timeout_secs is not None.
   """
 
-  def __init__(self, lockfile, timeout_secs=None):
+  def __init__(self, lockfile, timeout_secs=None, retry_secs=0.1):
     self._lockfile = lockfile
     self._timeout_secs = timeout_secs
+    self._retry_secs = retry_secs
     self._fd = None
     self._locked = False
     self._sys_lock = platform_utils.GetProvider('FileLock')
 
   def Acquire(self):
     self._fd = os.open(self._lockfile, os.O_RDWR | os.O_CREAT)
-    if self._timeout_secs:
-      end_time = time_utils.MonotonicTime() + self._timeout_secs
 
+    remaining_secs = self._timeout_secs
     while True:
       try:
         self._sys_lock(self._fd, is_exclusive=True, is_blocking=False)
@@ -533,9 +534,12 @@ class FileLock(object):
                       self._lockfile, self._fd, os.getpid())
         break
       except IOError:
-        if self._timeout_secs:
-          time.sleep(0.1)
-          if time_utils.MonotonicTime() > end_time:
+        if self._timeout_secs is not None:
+          # We don't want to use real system time because the sleep may
+          # be longer due to system busy or suspend/resume.
+          time.sleep(self._retry_secs)
+          remaining_secs -= self._retry_secs
+          if remaining_secs < 0:
             raise FileLockTimeoutError(
                 'Could not acquire file lock of %s in %s second(s)' %
                 (self._lockfile, self._timeout_secs))
