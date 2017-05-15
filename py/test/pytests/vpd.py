@@ -105,6 +105,9 @@ _REGEX_TYPE = type(re.compile(''))
 # String to indicate that rlz_brand_code and customization_id should
 # come from device data.
 FROM_DEVICE_DATA = 'FROM_DEVICE_DATA'
+# String to indicate that the device name used to check registration code should
+# come from the customization_id not the board name in /etc/lsb-release.
+FROM_VPD_CUSTOMIZATION_ID = 'FROM_VPD_CUSTOMIZATION_ID'
 
 
 class WriteVPDTask(FactoryTask):
@@ -148,6 +151,10 @@ class WriteVPDTask(FactoryTask):
       Spawn(['vpd', '-i', '%s' % section] + vpds, log=True, check_call=True)
 
     if self.test.registration_code_map:
+      override_name = self.test.args.override_registration_codes_device
+      if override_name == FROM_VPD_CUSTOMIZATION_ID:
+        override_name = vpd['ro']['customization_id'].split('-')[1].lower()
+
       # Check registration codes (fail test if invalid).
       for k in ['user', 'group']:
         if k not in self.test.registration_code_map:
@@ -158,8 +165,7 @@ class WriteVPDTask(FactoryTask):
               'group': registration_codes.RegistrationCode.Type.GROUP_CODE}[k]
           registration_codes.CheckRegistrationCode(
               self.test.registration_code_map[k], code_type,
-              self.test.args.override_registration_codes_device or
-              BuildBoard().short_name)
+              override_name or BuildBoard().short_name)
         except ValueError as e:
           self.Fail(str(e))
 
@@ -445,8 +451,13 @@ class VPDTest(unittest.TestCase):
           'format: {"ro": { RO_VPD key-value pairs }, "rw": { RW_VPD key-value '
           'pairs }}', default=None, optional=True),
       Arg('override_registration_codes_device', str,
-          'A string to override the device in registration codes. If None, '
-          'use the board name in /etc/lsb-release.',
+          'A string to override the device in registration codes.  This may be '
+          'any of:\n'
+          '\n'
+          '- A fixed string\n'
+          '- None, use the board name in /etc/lsb-release.\n'
+          '- The string `"FROM_VPD_CUSTOMIZATION_ID"`, to use a value\n'
+          '  obtained from latter part of customization_id in vpd.',
           default=None, optional=True),
       Arg(
           'store_registration_codes', bool,
