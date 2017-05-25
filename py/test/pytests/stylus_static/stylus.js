@@ -2,118 +2,140 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/**
- * Get the parametric representation of the projection point on the diagnoal
- * line.
- * @param {Object} canvas
- * @param {number} x
- * @param {number} y
- */
-function getT(canvas, x, y) {
-  var dd = canvas.width ** 2 + canvas.height ** 2;
-  return (canvas.width * x + canvas.height * (canvas.height - y)) / dd;
+function Vector(x, y) {
+  this.x = x;
+  this.y = y;
 }
 
 /**
- * Get the XY coordinate of a parametric representation plus a given offset.
- * @param {Object} canvas
- * @param {number} t
- * @param {number} offset
+ * Vector addition.
+ * @param {Vector} a
+ * @param {Vector} b
+ * @return {Vector}
  */
-function getXY(canvas, t, offset) {
-  var d = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
-  var x = canvas.width * t + canvas.height / d * offset;
-  var y = canvas.height * (1 - t) + canvas.width / d * offset;
-  return [x, y];
+function add(a, b) {
+  return new Vector(a.x + b.x, a.y + b.y);
 }
 
 /**
- * Draw a red boundary line.
- * @param {Object} canvas
- * @param {Object} ctx
- * @param {number} offset
+ * Element-wise vector multiplication.
+ * @param {Vector} a
+ * @param {Vector} b
+ * @return {Vector}
  */
-function drawBoundaryLine(canvas, ctx, offset) {
-  ctx.beginPath();
-  var xy = getXY(canvas, 0, offset);
-  ctx.moveTo(xy[0], xy[1]);
-  xy = getXY(canvas, 1, offset);
-  ctx.lineTo(xy[0], xy[1]);
-  ctx.strokeStyle = "red";
-  ctx.stroke();
+function mul_ew(a, b) {
+  return new Vector(a.x * b.x, a.y * b.y);
 }
 
 /**
- * Draw a green progress line.
- * @param {Object} canvas
- * @param {Object} ctx
- * @param {number} t
+ * Vector scalar multiplication.
+ * @param {Vector} v
+ * @param {number} k
+ * @return {Vector}
  */
-function drawProgressLine(canvas, ctx, t) {
-  var xy = getXY(canvas, t, 0);
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height);
-  ctx.lineTo(xy[0], xy[1]);
-  ctx.strokeStyle = "green";
-  ctx.stroke();
+function mul_scalar(v, k) {
+  return new Vector(v.x * k, v.y * k);
 }
 
 /**
- * StylusTest constructor.
- * @param {Object} canvas
- * @param {int} error_margin
- * @param {number} begin_position
- * @param {number} end_position
- * @param {number} step_size
+ * Vector subtraction.
+ * @param {Vector} a
+ * @param {Vector} b
+ * @return {Vector}
  */
-function StylusTest(canvas, error_margin,
-                    begin_position, end_position, step_size) {
-  this.canvas = canvas;
-  canvas.style["background-color"] = "white";
-  this.ctx = canvas.getContext("2d");
-  this.error_margin = error_margin;
-  drawBoundaryLine(canvas, this.ctx, -error_margin);
-  drawBoundaryLine(canvas, this.ctx, +error_margin);
-  this.last_position = begin_position;
-  drawProgressLine(canvas, this.ctx, this.last_position);
-  this.end_position = end_position;
-  this.step_size = step_size;
+function sub(a, b) {
+  return add(a, mul_scalar(b, -1));
 }
 
 /**
- * Unhide the canvas.
+ * Vector dot product.
+ * @param {Vector} a
+ * @param {Vector} b
+ * @return {number}
  */
-StylusTest.prototype.showCanvas = function() {
-  this.canvas.style["display"] = "";
+function dot(a, b) {
+  return a.x * b.x + a.y * b.y;
+}
+
+/**
+ * Vector absolute square.
+ * @param {Vector} v
+ * @return {number}
+ */
+function abs2(v) {
+  return dot(v, v);
+}
+
+function Line(begin, end) {
+  this.begin = begin;
+  this.v = sub(end, begin);
+  const nv = new Vector(-this.v.y, this.v.x);
+  // Unit normal vector of `this.v`.
+  this.unv = mul_scalar(nv, 1 / Math.sqrt(abs2(nv)));
+}
+
+Line.prototype.getT = function(p) {
+  return dot(this.v, sub(p, this.begin)) / abs2(this.v);
 };
 
-/**
- * Handle an input event.
- * @param {number} x_ratio
- * @param {number} y_ratio
- */
-StylusTest.prototype.handler = function(x_ratio, y_ratio) {
-  var x = x_ratio * this.canvas.width;
-  var y = y_ratio * this.canvas.height;
-  var t = getT(this.canvas, x, y);
-  var xyt = getXY(this.canvas, t, 0);
-  var xt = xyt[0], yt = xyt[1];
-  var d = Math.sqrt((x - xt) ** 2 + (y - yt) ** 2);
-  if(d > this.error_margin) {
+Line.prototype.getXY = function(t) {
+  return add(this.begin, mul_scalar(this.v, t));
+};
+
+function StylusTest(canvas, error_margin, begin_ratio, end_ratio, step_ratio,
+              endpoints_ratio) {
+  this.canvas = canvas;
+  canvas.style['background-color'] = 'white';
+  this.ctx = canvas.getContext('2d');
+  this.error_margin = error_margin;
+  this.end_ratio = end_ratio;
+  this.step_ratio = step_ratio;
+  this.size = new Vector(canvas.width, canvas.height);
+  this.line = new Line(mul_ew(endpoints_ratio[0], this.size),
+                       mul_ew(endpoints_ratio[1], this.size));
+
+  this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+  this.drawBoundaryLines();
+  this.last_ratio = begin_ratio;
+  this.drawProgressLine();
+}
+
+StylusTest.prototype.handler = function(p_ratio) {
+  const p = mul_ew(p_ratio, this.size);
+  const t = this.line.getT(p);
+  const q = this.line.getXY(t);
+  const d = Math.sqrt(abs2(sub(q, p)));
+  if (d > this.error_margin) {
     window.test.fail(
-        "Distance " + d + " larger than error margin " + this.error_margin);
+        'Distance ' + d + ' larger than error margin ' + this.error_margin);
   }
-  if(t <= this.last_position || t > this.last_position + this.step_size) {
+  if (t <= this.last_ratio || t > this.last_ratio + this.step_ratio) {
     return;
   }
+  this.drawLine(p, q, 'blue');
+  this.last_ratio = t;
+  this.drawProgressLine();
+  if (t >= this.end_ratio) window.test.pass();
+};
+
+StylusTest.prototype.drawLine = function(p, q, color) {
   this.ctx.beginPath();
-  this.ctx.moveTo(x, y);
-  this.ctx.lineTo(xt, yt);
-  this.ctx.strokeStyle = "blue";
+  this.ctx.moveTo(p.x, p.y);
+  this.ctx.lineTo(q.x, q.y);
+  this.ctx.strokeStyle = color;
   this.ctx.stroke();
-  this.last_position = t;
-  drawProgressLine(this.canvas, this.ctx, this.last_position);
-  if(t >= this.end_position) window.test.pass();
+};
+
+StylusTest.prototype.drawBoundaryLines = function() {
+  for(const side of [-1, +1]) {
+    const d = mul_scalar(this.line.unv, side * this.error_margin);
+    this.drawLine(add(this.line.getXY(-1), d),
+                  add(this.line.getXY(2), d), 'red');
+  }
+};
+
+StylusTest.prototype.drawProgressLine = function() {
+  this.drawLine(this.line.begin, this.line.getXY(this.last_ratio), 'green');
 };
 
 /**
@@ -126,26 +148,22 @@ function failTest() {
 /**
  * Set up a stylus test.
  * @param {string} canvasId
- * @param {int} error_margin
- * @param {number} begin_position
- * @param {number} end_position
- * @param {number} step_size
+ * @param {number} error_margin
+ * @param {number} begin_ratio
+ * @param {number} end_ratio
+ * @param {number} step_ratio
+ * @param {Array<Array<number>>} endpoints_ratio
  */
-function setupStylusTest(canvasId, error_margin,
-                         begin_position, end_position, step_size) {
-  var canvas = document.getElementById(canvasId);
+function setupStylusTest(canvasId, error_margin, begin_ratio, end_ratio,
+                         step_ratio, endpoints_ratio) {
+  const canvas = document.getElementById(canvasId);
   canvas.width = screen.width;
   canvas.height = screen.height;
-  window.stylusTest = new StylusTest(canvas, error_margin,
-                                     begin_position, end_position, step_size);
-}
-
-/**
- * Show the canvas in fullscreen.
- */
-function startTest() {
+  window.stylusTest = new StylusTest(
+      canvas, error_margin, begin_ratio, end_ratio, step_ratio,
+      endpoints_ratio.map(xy_ratio => new Vector(xy_ratio[0], xy_ratio[1])));
   window.test.setFullScreen(true);
-  window.stylusTest.showCanvas();
+  canvas.style.display = '';
 }
 
 /**
@@ -154,5 +172,5 @@ function startTest() {
  * @param {number} y_ratio
  */
 function handler(x_ratio, y_ratio) {
-  window.stylusTest.handler(x_ratio, y_ratio);
+  window.stylusTest.handler(new Vector(x_ratio, y_ratio));
 }

@@ -21,10 +21,10 @@ _HTML = '<canvas id="%s" style="display: none"></canvas>' % _ID_CANVAS
 _MSG_PROMPT_CSS_CLASS = 'stylus-test-css-class'
 _MSG_PROMPT_CSS = '.%s { font-size: 2em; }' % _MSG_PROMPT_CSS_CLASS
 _MSG_PROMPT = test_ui.MakeLabel(
-    'Please draw a line with stylus from bottom left corner to top right '
-    'corner. Stay between the two red lines.<br>'
+    'Please extend the green line with stylus to the other end.<br>'
+    'Stay between the two red lines.<br>'
     'Press SPACE to start; Esc to fail.',
-    u'请使用触控笔从左下方画至右上角，不要超出红线区域。<br>'
+    u'请使用触控笔将绿色线段延伸至另一头，<br>不要超出红线区域。<br>'
     u'按空白键开始测试; Esc 键标记失败',
     _MSG_PROMPT_CSS_CLASS)
 
@@ -51,19 +51,26 @@ class StylusTest(unittest.TestCase):
       Arg('error_margin', int,
           'Maximum tolerable distance to the diagonal line (in pixel).',
           default=25),
-      Arg('begin_position', float,
-          'The beginning position of the diagnoal line segment to check. '
+      Arg('begin_ratio', float,
+          'The beginning position of the diagonal line segment to check. '
           'Should be in (0, 1).',
           default=0.01),
-      Arg('end_position', float,
-          'The ending position of the diagnoal line segment to check. '
+      Arg('end_ratio', float,
+          'The ending position of the diagonal line segment to check. '
           'Should be in (0, 1).',
           default=0.99),
-      Arg('step_size', float,
+      Arg('step_ratio', float,
           'If the distance between an input event to the latest accepted '
           'input event is larger than this size, it would be ignored. '
           'Should be in (0, 1).',
-          default=0.01)]
+          default=0.01),
+      Arg('endpoints_ratio', list,
+          'A list of two pairs, each pair contains the X and Y coordinates '
+          'ratio of an endpoint of the line segment for operator to draw. '
+          'Both endpoints must be on the border '
+          '(e.g., X=0 or X=1 or Y=0 or Y=1).',
+          default=[(0, 1), (1, 0)]),
+      ]
 
   def setUp(self):
     if self.args.stylus_event_id is not None:
@@ -81,8 +88,15 @@ class StylusTest(unittest.TestCase):
     self._touch = False
 
     assert self.args.error_margin >= 0
-    assert 0 < self.args.begin_position < self.args.end_position < 1
-    assert 0 < self.args.step_size < 1
+    assert 0 < self.args.begin_ratio < self.args.end_ratio < 1
+    assert 0 < self.args.step_ratio < 1
+
+    assert len(self.args.endpoints_ratio) == 2
+    assert self.args.endpoints_ratio[0] != self.args.endpoints_ratio[1]
+    for point in self.args.endpoints_ratio:
+      assert isinstance(point, tuple) and len(point) == 2
+      assert all(0 <= x_or_y <= 1 for x_or_y in point)
+      assert point[0] in [0, 1] or point[1] in [0, 1]
 
     self._ui = test_ui.UI()
     self._template = ui_templates.OneSection(self._ui)
@@ -114,10 +128,10 @@ class StylusTest(unittest.TestCase):
     self._ui.CallJSFunction('setupStylusTest',
                             _ID_CANVAS,
                             self.args.error_margin,
-                            self.args.begin_position,
-                            self.args.end_position,
-                            self.args.step_size)
-    self._ui.CallJSFunction('startTest')
+                            self.args.begin_ratio,
+                            self.args.end_ratio,
+                            self.args.step_ratio,
+                            self.args.endpoints_ratio)
     process_utils.StartDaemonThread(target=self._Monitor)
 
   def runTest(self):
