@@ -44,6 +44,7 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.tools import build_board
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import shelve_utils
 from cros.factory.utils import type_utils
 
 _MSG_FETCH_FROM_SHOP_FLOOR = i18n_test_ui.MakeI18nLabelWithClass(
@@ -475,10 +476,40 @@ class VPDTest(unittest.TestCase):
           '  is a helpful string and only the customization_id will be\n'
           '  written into VPD.', default=None, optional=True)]
 
+  def FixDeviceData(self):
+    """Fixes incorrect device data.
+
+    Old toolkits set device data with incorrect key names so we should correct
+    here.
+    """
+    key_remap = {
+        state.KEY_SERIAL_NUMBER: shelve_utils.DictKey.Join(
+            state.KEY_ALL_SERIAL_NUMBERS,
+            state.KEY_SERIAL_NUMBER),
+        state.KEY_MLB_SERIAL_NUMBER: shelve_utils.DictKey.Join(
+            state.KEY_ALL_SERIAL_NUMBERS,
+            state.KEY_MLB_SERIAL_NUMBER),
+        'region': 'vpd.ro.region',
+        'smt_operator_id': 'factory.smt_operator_id',
+        'smt_station_id': 'factory.smt_station_id',
+        'ubind_attribute': 'vpd.rw.ubind_attribute',
+        'gbind_attribute': 'vpd.rw.gbind_attribute',
+    }
+    for old, new in key_remap.iteritems():
+      value = state.GetDeviceData(old, None)
+      if not value:
+        continue
+      state.UpdateDeviceData({new: value})
+      state.DeleteDeviceData([old])
+
   def _ReadShopFloorDeviceData(self):
-    required_keys = set(['all_serial_numbers.serial_number', 'region',
-                         'ubind_attribute', 'gbind_attribute'] +
-                        [x[1] for x in self.args.extra_device_data_fields])
+    self.FixDeviceData()
+
+    required_keys = set(
+        [shelve_utils.DictKey.Join(state.KEY_ALL_SERIAL_NUMBERS,
+                                   state.KEY_SERIAL_NUMBER),
+         'vpd.ro.region', 'vpd.rw.ubind_attribute', 'vpd.rw.gbind_attribute'] +
+        [x[1] for x in self.args.extra_device_data_fields])
     missing_keys = []
     for key in required_keys:
       try:
@@ -491,9 +522,12 @@ class VPDTest(unittest.TestCase):
                 sorted(missing_keys))
 
     self.vpd['ro']['serial_number'] = state.GetDeviceData(
-        'all_serial_numbers.serial_number')
+        shelve_utils.DictKey.Join(state.KEY_ALL_SERIAL_NUMBERS,
+                                  state.KEY_SERIAL_NUMBER))
 
-    region = regions.REGIONS[state.GetDeviceData('region')]
+    # Find region code
+    region_code = state.GetDeviceData('vpd.ro.region')
+    region = regions.REGIONS[region_code]
     self.vpd['ro']['region'] = region.region_code
 
     for ro_or_rw, key in self.args.extra_device_data_fields:
@@ -506,8 +540,8 @@ class VPDTest(unittest.TestCase):
       self.vpd['rw'][k] = v
 
     self.registration_code_map = {
-        'user': state.GetDeviceData('ubind_attribute'),
-        'group': state.GetDeviceData('gbind_attribute'),
+        'user': state.GetDeviceData('vpd.rw.ubind_attribute'),
+        'group': state.GetDeviceData('vpd.rw.gbind_attribute'),
     }
 
   def setUp(self):
