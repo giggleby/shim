@@ -32,6 +32,7 @@ from cros.factory.test.env import paths
 from cros.factory.test import factory
 from cros.factory.test.i18n import test_ui as i18n_test_ui
 from cros.factory.test import shopfloor
+from cros.factory.test import state
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.testlog import testlog
@@ -236,7 +237,7 @@ class RFGraphyteTest(unittest.TestCase):
     # Workaround: Get the serial number without InfoProperty.
     # https://bugs.chromium.org/p/chromium/issues/detail?id=707200
     # Revert it after the issue is resolved.
-    mlb_serial_number = self._dut.vpd.ro.get('mlb_serial_number', 'unknown')
+    mlb_serial_number = state.GetSerialNumber(state.KEY_MLB_SERIAL_NUMBER)
     file_name = '%s_%s_%s' % (
         mlb_serial_number, timestamp, suffix)
     # save the log under /var/factory/tests/<TestID>-<UUID>/
