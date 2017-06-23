@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "definitions": {},
+  "id": "http://example.com/example.json",
+  "properties": {
+    "force_light_init": {
+      "id": "/properties/force_light_init",
+      "type": "boolean"
+    },
+    "light_delay": {
+      "id": "/properties/light_delay",
+      "type": "number"
+    },
+    "light_seq": {
+      "id": "/properties/light_seq",
+      "items": {
+        "id": "/properties/light_seq/items",
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "luxs": {
+      "id": "/properties/luxs",
+      "items": {
+        "id": "/properties/luxs/items",
+        "type": "integer"
+      },
+      "type": "array"
+    },
+    "n_samples": {
+      "id": "/properties/n_samples",
+      "type": "integer"
+    },
+    "read_delay": {
+      "id": "/properties/read_delay",
+      "type": "number"
+    },
+    "validating_err_limit": {
+      "id": "/properties/validating_err_limit",
+      "type": "number"
+    },
+    "validating_light": {
+      "id": "/properties/validating_light",
+      "type": "string"
+    },
+    "validating_lux": {
+      "id": "/properties/validating_lux",
+      "type": "integer"
+    },
+    "version": {
+      "id": "/properties/version",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

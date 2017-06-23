@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"POT-Creation-Date: 2017-06-13 12:59+CST\n"
+"POT-Creation-Date: 2017-08-09 11:01+CST\n"
 "PO-Revision-Date: 2017-01-05 07:36+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
@@ -494,122 +494,47 @@ msgstr "正在确认角度……"
 
 #: ../py/test/pytests/als_fixture.py
 msgid "ALS Sensor Calibration"
-msgstr "光感应器校正"
-
-#: ../py/test/pytests/als_fixture.py ../py/test/pytests/camera_fixture.py
-msgid "Starting the test"
-msgstr "开始测试"
-
-#: ../py/test/pytests/als_fixture.py ../py/test/pytests/camera_fixture.py
-msgid "Reading serial number"
-msgstr "读取序号"
-
-#: ../py/test/pytests/als_fixture.py ../py/test/pytests/camera_fixture.py
-msgid "Initializing camera"
-msgstr "初始化摄像头"
+msgstr "ALS光感应器校正"
 
 #: ../py/test/pytests/als_fixture.py
-msgid "Reading Light1 ALS value"
-msgstr "读取灯光1 ALS数值"
+msgid "Fixture Connected"
+msgstr "治具已连接"
 
 #: ../py/test/pytests/als_fixture.py
-msgid "Reading Light2 ALS value"
-msgstr "读取灯光2 ALS数值"
+msgid "Fixture Disconnected"
+msgstr "治具未连接"
 
 #: ../py/test/pytests/als_fixture.py
-msgid "Reading Light3 ALS value"
-msgstr "读取灯光3 ALS数值"
+msgid "Logging serial numbers"
+msgstr "记录待测物序号"
 
 #: ../py/test/pytests/als_fixture.py
-msgid "Calculate the ALS line"
-msgstr "计算ALS结果"
+msgid "Cleaning up calibration values"
+msgstr "待测物光感应器重新设定"
 
 #: ../py/test/pytests/als_fixture.py
-msgid "Writing the ALS calibration data to vpd"
+msgid "Sampling {name}"
+msgstr "读取灯光ALS {name} 数值"
+
+#: ../py/test/pytests/als_fixture.py
+msgid "Checking ALS ordering"
+msgstr "检查ALS光感顺序"
+
+#: ../py/test/pytests/als_fixture.py
+msgid "Calculating calibration coefficients"
+msgstr "计算ALS校正系数"
+
+#: ../py/test/pytests/als_fixture.py
+msgid "Saving calibration coefficients to VPD"
 msgstr "写入ALS校正结果"
 
 #: ../py/test/pytests/als_fixture.py
-msgid "Validating the calibrated ALS value"
-msgstr "验证已完成校正灯光 ALS数值"
+msgid "Validating ALS"
+msgstr "验证光感应器ALS校正结果"
 
-#: ../py/test/pytests/als_fixture.py ../py/test/pytests/camera_fixture.py
-msgid "All tests are complete"
-msgstr "测试已全部完成"
-
-#: ../py/test/pytests/als_fixture.py ../py/test/pytests/camera_fixture.py
-msgid "Test data saved"
-msgstr "记录档已写入"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "Please insert the USB stick to load test parameters"
-msgstr "请插入U盘读取测试参数"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "Please insert ethernet dongle to load test parameters"
-msgstr "请插入网路介面卡读取测试参数"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-msgid "ALS Calibration"
-msgstr "光感应器校正"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "USB Stick:"
-msgstr "测试参数U盘:"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/als_fixture_static/als_fixture.js
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
-msgid "USB UNLOADED"
-msgstr "U盘已载入"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "Serial Number:"
-msgstr "待测物序号:"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "Fixture:"
-msgstr "治具链接:"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "UNAVAILABLE"
-msgstr "未连接"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "Start Test"
-msgstr "开始测试"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "Exit Test"
-msgstr "离开测试"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.html
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
-msgid "IDLE"
-msgstr "閒置中"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.js
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
-msgid "USB LOADED"
-msgstr "U盘未载入"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.js
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
-msgid "Fixture CONNECTED"
-msgstr "治具已连接"
-
-#: ../py/test/pytests/als_fixture_static/als_fixture.js
-#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
-msgid "Fixture UNAVAILABLE"
-msgstr "治具未连接"
+#: ../py/test/pytests/als_fixture.py
+msgid "Switching to lighting {name}"
+msgstr "切换到灯光 {name}"
 
 #: ../py/test/pytests/audio.py
 msgid "Audio Test"
@@ -1093,8 +1018,20 @@ msgid "Camera Image Quality Test"
 msgstr "相机影像品质测试"
 
 #: ../py/test/pytests/camera_fixture.py
+msgid "Starting the test"
+msgstr "开始测试"
+
+#: ../py/test/pytests/camera_fixture.py
+msgid "Reading serial number"
+msgstr "读取序号"
+
+#: ../py/test/pytests/camera_fixture.py
 msgid "Checking firmware version"
 msgstr "检查韧体版本"
+
+#: ../py/test/pytests/camera_fixture.py
+msgid "Initializing camera"
+msgstr "初始化摄像头"
 
 #: ../py/test/pytests/camera_fixture.py
 msgid "Adjusting white balance"
@@ -1116,9 +1053,70 @@ msgstr "检测影像暗角"
 msgid "Checking image sharpness"
 msgstr "检测影像清晰度"
 
+#: ../py/test/pytests/camera_fixture.py
+msgid "All tests are complete"
+msgstr "测试已全部完成"
+
+#: ../py/test/pytests/camera_fixture.py
+msgid "Test data saved"
+msgstr "记录档已写入"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "Please insert the USB stick to load test parameters"
+msgstr "请插入U盘读取测试参数"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "Please insert ethernet dongle to load test parameters"
+msgstr "请插入网路介面卡读取测试参数"
+
 #: ../py/test/pytests/camera_fixture_static/camera_fixture.html
 msgid "Camera Performance Test"
 msgstr "相机效能测试"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "USB Stick:"
+msgstr "测试参数U盘:"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
+msgid "USB UNLOADED"
+msgstr "U盘已载入"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "Serial Number:"
+msgstr "待测物序号:"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "Fixture:"
+msgstr "治具链接:"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "UNAVAILABLE"
+msgstr "未连接"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "Start Test"
+msgstr "开始测试"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "Exit Test"
+msgstr "离开测试"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.html
+msgid "IDLE"
+msgstr "閒置中"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
+msgid "USB LOADED"
+msgstr "U盘未载入"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
+msgid "Fixture CONNECTED"
+msgstr "治具已连接"
+
+#: ../py/test/pytests/camera_fixture_static/camera_fixture.js
+msgid "Fixture UNAVAILABLE"
+msgstr "治具未连接"
 
 #: ../py/test/pytests/cellular_switch_firmware.py
 msgid "Switching firmware to {target!r}<br>"
@@ -3432,3 +3430,24 @@ msgstr "正在测"
 #: ../py/test/test_ui.py
 msgid "untested"
 msgstr "未测"
+
+#~ msgid "ALS Calibration"
+#~ msgstr "光感应器校正"
+
+#~ msgid "Reading Light1 ALS value"
+#~ msgstr "读取灯光1 ALS数值"
+
+#~ msgid "Reading Light2 ALS value"
+#~ msgstr "读取灯光2 ALS数值"
+
+#~ msgid "Reading Light3 ALS value"
+#~ msgstr "读取灯光3 ALS数值"
+
+#~ msgid "Calculate the ALS line"
+#~ msgstr "计算ALS结果"
+
+#~ msgid "Writing the ALS calibration data to vpd"
+#~ msgstr "写入ALS校正结果"
+
+#~ msgid "Validating the calibrated ALS value"
+#~ msgstr "验证已完成校正灯光 ALS数值"

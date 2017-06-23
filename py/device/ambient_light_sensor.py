@@ -12,6 +12,9 @@ from cros.factory.device import component
 from cros.factory.device import sensor_utils
 
 
+_DEFAULT_MIN_DELAY = 0.2
+
+
 class AmbientLightSensorException(Exception):
   pass
 
@@ -42,7 +45,7 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
 
   def _GetSysfsValue(self, signal_name):
     try:
-      return self._dut.ReadFile(os.path.join(
+      return self._dut.ReadSpecialFile(os.path.join(
           self._iio_path, signal_name)).strip()
     except Exception as e:
       raise AmbientLightSensorException(e.message)
@@ -56,7 +59,7 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
     """Reads the calibration values from sysfs."""
     vals = {}
     for signal_name in self.calib_signal_names:
-      vals[signal_name] = self._GetSysfsValue(signal_name)
+      vals[signal_name] = float(self._GetSysfsValue(signal_name))
     return vals
 
   def SetCalibrationValue(self, signal_name, value):
@@ -68,10 +71,24 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
     except Exception as e:
       raise AmbientLightSensorException(e.message)
 
+  def SetCalibrationIntercept(self, value):
+    """Sets the calibration bias to sysfs."""
+    try:
+      self._SetSysfsValue('in_illuminance_calibbias', str(value))
+    except Exception as e:
+      raise AmbientLightSensorException(e.message)
+
+  def SetCalibrationSlope(self, value):
+    """Sets the calibration scale to sysfs."""
+    try:
+      self._SetSysfsValue('in_illuminance_calibscale', str(value))
+    except Exception as e:
+      raise AmbientLightSensorException(e.message)
+
   def GetLuxValue(self):
     """Reads the LUX raw value from sysfs."""
     try:
-      return self._GetSysfsValue('in_illuminance_raw')
+      return int(self._GetSysfsValue('in_illuminance_raw'))
     except Exception as e:
       logging.exception('Failed to get illuminance value')
       raise AmbientLightSensorException(e.message)
@@ -79,8 +96,11 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
   def ForceLightInit(self):
     """Froce als to apply the vpd value."""
     try:
-      self._dut.CheckCall('/lib/udev/light-init.sh')
+      device_name = os.path.basename(self._iio_path)
+      self._dut.CheckCall('/lib/udev/light-init.sh', device_name, 'illuminance')
     except Exception as e:
+      logging.exception('Failed to invoke light-init.sh (%s, illuminance)',
+                        device_name)
       raise AmbientLightSensorException(e.message)
 
 
