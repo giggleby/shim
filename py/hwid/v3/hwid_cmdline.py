@@ -248,8 +248,11 @@ def VerifyComponentsWrapper(options):
                                          options.components)
   if options.json_output:
     def _ConvertToDict(obj):
-      if isinstance(obj, (common.ProbedComponentResult, rule.Value)):
+      if isinstance(obj, common.ProbedComponentResult):
         return _ConvertToDict(obj.__dict__)
+      if isinstance(obj, rule.Value):
+        return _ConvertToDict({
+            'raw_value': obj.raw_value, 'type': obj.__class__})
       if isinstance(obj, list):
         return [_ConvertToDict(item) for item in obj]
       if isinstance(obj, tuple):

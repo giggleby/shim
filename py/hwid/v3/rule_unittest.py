@@ -7,11 +7,17 @@
 
 import unittest
 import yaml
-import factory_common  # pylint: disable=W0611
+import factory_common  # pylint: disable=unused-import
 
-from cros.factory.hwid.v3.rule import (
-    RuleFunction, Rule, Value, Context, RuleException,
-    SetContext, GetContext, GetLogger)
+from cros.factory.hwid.v3.rule import Context
+from cros.factory.hwid.v3.rule import GetContext
+from cros.factory.hwid.v3.rule import GetLogger
+from cros.factory.hwid.v3.rule import PlainTextValue
+from cros.factory.hwid.v3.rule import RegExpValue
+from cros.factory.hwid.v3.rule import Rule
+from cros.factory.hwid.v3.rule import RuleException
+from cros.factory.hwid.v3.rule import RuleFunction
+from cros.factory.hwid.v3.rule import SetContext
 
 
 @RuleFunction(['string'])
@@ -50,11 +56,20 @@ class HWIDRuleTest(unittest.TestCase):
     self.assertRaisesRegexp(
         RuleException, r'ERROR: Assertion error', rule.Evaluate, self.context)
 
-  def testValue(self):
-    self.assertTrue(Value('foo').Matches('foo'))
-    self.assertFalse(Value('foo').Matches('bar'))
-    self.assertTrue(Value('^foo.*bar$', is_re=True).Matches('fooxyzbar'))
-    self.assertFalse(Value('^foo.*bar$', is_re=True).Matches('barxyzfoo'))
+  def testPlainTextValue(self):
+    self.assertTrue(PlainTextValue('foo').Matches('foo'))
+    self.assertFalse(PlainTextValue('foo').Matches('bar'))
+    self.assertTrue(PlainTextValue('foo').Matches(RegExpValue('^fo*$')))
+
+  def testRegExpValue(self):
+    self.assertTrue(RegExpValue('^foo.*bar$').Matches('fooxyzbar'))
+    self.assertFalse(RegExpValue('^foo.*bar$').Matches('barxyzfoo'))
+    self.assertTrue(
+        RegExpValue('^foo.*bar$').Matches(PlainTextValue('fooxyzbar')))
+    self.assertFalse(
+        RegExpValue('^foo.*bar$').Matches(RegExpValue('fooxyzbar')))
+    self.assertTrue(
+        RegExpValue('^foo.*bar$').Matches(RegExpValue('^foo.*bar$')))
 
   def testYAMLParsing(self):
     SetContext(self.context)

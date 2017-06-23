@@ -12,6 +12,7 @@ from cros.factory.hwid.v3.rule import GetContext
 from cros.factory.hwid.v3.rule import GetLogger
 from cros.factory.hwid.v3.rule import RuleFunction
 from cros.factory.hwid.v3.rule import Value
+from cros.factory.hwid.v3.rule import PlainTextValue
 from cros.factory.test.rules import phase
 from cros.factory.test.rules import registration_codes
 from cros.factory.test.rules.registration_codes import RegistrationCode
@@ -114,8 +115,8 @@ def _ComponentCompare(comp_cls, values, op_for_values):
   attrs = GetClassAttributesOnBOM(context.hwid, comp_cls)
   if attrs is None:
     return False
-  values = [
-      Value(v) if not isinstance(v, Value) else v for v in MakeList(values)]
+  values = [PlainTextValue(v) if not isinstance(v, Value) else v
+            for v in MakeList(values)]
   return op_for_values(
       [any([v.Matches(attr) for attr in attrs]) for v in values])
 

@@ -20,7 +20,7 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import rule
-from cros.factory.hwid.v3.rule import Value
+from cros.factory.hwid.v3.rule import PlainTextValue
 from cros.factory.test.rules import phase
 from cros.factory.utils import sys_utils
 from cros.factory.utils import yaml_utils
@@ -79,8 +79,8 @@ class HWIDv3UtilsTestWithNewDatabase(unittest.TestCase):
     self.assertNotIn('firmware_keys', parsed_result)
     self.assertEquals(parsed_result['components']['cellular'], [{None: None}])
     self.assertEquals(parsed_result['components']['audio_codec'],
-                      [{'codec_1': {'compact_str': Value('Codec 1')}},
-                       {'hdmi_1': {'compact_str': Value('HDMI 1')}}])
+                      [{'codec_1': {'compact_str': PlainTextValue('Codec 1')}},
+                       {'hdmi_1': {'compact_str': PlainTextValue('HDMI 1')}}])
     self.assertEquals(parsed_result['components']['display_panel'],
                       [{'display_panel_0': None}])
 
@@ -91,11 +91,11 @@ class HWIDv3UtilsTestWithNewDatabase(unittest.TestCase):
     self.assertNotIn('cellular', parsed_result)
     self.assertEquals(parsed_result['components']['firmware_keys'],
                       [{'firmware_keys_mp': {
-                          'key_recovery': Value('kv3#key_recovery_mp'),
-                          'key_root': Value('kv3#key_root_mp')}}])
+                          'key_recovery': PlainTextValue('kv3#key_recovery_mp'),
+                          'key_root': PlainTextValue('kv3#key_root_mp')}}])
     self.assertEquals(parsed_result['components']['audio_codec'],
-                      [{'codec_1': {'compact_str': Value('Codec 1')}},
-                       {'hdmi_1': {'compact_str': Value('HDMI 1')}}])
+                      [{'codec_1': {'compact_str': PlainTextValue('Codec 1')}},
+                       {'hdmi_1': {'compact_str': PlainTextValue('HDMI 1')}}])
 
     # Decode new HWID string without audio_codec
     hwid = hwid_utils.DecodeHWID(self.db, 'CHROMEBOOK E45-A2Y-A2Z')
@@ -104,8 +104,8 @@ class HWIDv3UtilsTestWithNewDatabase(unittest.TestCase):
     self.assertNotIn('cellular', parsed_result)
     self.assertEquals(parsed_result['components']['firmware_keys'],
                       [{'firmware_keys_mp': {
-                          'key_recovery': Value('kv3#key_recovery_mp'),
-                          'key_root': Value('kv3#key_root_mp')}}])
+                          'key_recovery': PlainTextValue('kv3#key_recovery_mp'),
+                          'key_root': PlainTextValue('kv3#key_root_mp')}}])
     self.assertEquals(parsed_result['components']['audio_codec'],
                       [{None: None}])
 
@@ -163,8 +163,11 @@ class HWIDv3UtilsTest(unittest.TestCase):
 
     self.assertEquals(
         [('bluetooth_0',
-          {'idVendor': rule.Value('0123'), 'idProduct': rule.Value('abcd'),
-           'bcd': rule.Value('0001')},
+          {
+            'idVendor': rule.PlainTextValue('0123'),
+            'idProduct': rule.PlainTextValue('abcd'),
+            'bcd': rule.PlainTextValue('0001')
+          },
           None)],
         results['bluetooth'])
     self.assertEquals(
@@ -177,8 +180,8 @@ class HWIDv3UtilsTest(unittest.TestCase):
            '(no matching name in the component DB)'))],
         results['battery'])
     self.assertEquals(
-        [('codec_1', {'compact_str': rule.Value('Codec 1')}, None),
-         ('hdmi_1', {'compact_str': rule.Value('HDMI 1')}, None),
+        [('codec_1', {'compact_str': rule.PlainTextValue('Codec 1')}, None),
+         ('hdmi_1', {'compact_str': rule.PlainTextValue('HDMI 1')}, None),
          (None, {'compact_str': 'fake value'},
           ("Invalid 'audio_codec' component found with probe result "
            "{ 'compact_str': 'fake value'} "
@@ -371,52 +374,52 @@ class HWIDv3UtilsTest(unittest.TestCase):
     self.assertEquals(parsed_result['components'], {
         'key_recovery': [{
             'key_recovery_mp': {
-                'compact_str': Value('kv3#key_recovery_mp', is_re=False)}}],
+                'compact_str': PlainTextValue('kv3#key_recovery_mp')}}],
         'cellular': [{None: None}],
         'ro_main_firmware': [{
             'ro_main_firmware_0': {
-                'compact_str': Value('mv2#ro_main_firmware_0', is_re=False)}}],
+                'compact_str': PlainTextValue('mv2#ro_main_firmware_0')}}],
         'battery': [{
             'battery_huge': {
-                'tech': Value('Battery Li-ion', is_re=False),
-                'size': Value('10000000', is_re=False)}}],
+                'tech': PlainTextValue('Battery Li-ion'),
+                'size': PlainTextValue('10000000')}}],
         'hash_gbb': [{
             'hash_gbb_0': {
-                'compact_str': Value('gv2#hash_gbb_0', is_re=False)}}],
+                'compact_str': PlainTextValue('gv2#hash_gbb_0')}}],
         'bluetooth': [{
             'bluetooth_0': {
-                'bcd': Value('0001', is_re=False),
-                'idVendor': Value('0123', is_re=False),
-                'idProduct': Value('abcd', is_re=False)}}],
+                'bcd': PlainTextValue('0001'),
+                'idVendor': PlainTextValue('0123'),
+                'idProduct': PlainTextValue('abcd')}}],
         'key_root': [{
             'key_root_mp': {
-                'compact_str': Value('kv3#key_root_mp', is_re=False)}}],
+                'compact_str': PlainTextValue('kv3#key_root_mp')}}],
         'video': [{
             'camera_0': {
-                'idVendor': Value('4567', is_re=False),
-                'type': Value('webcam', is_re=False),
-                'idProduct': Value('abcd', is_re=False)}}],
+                'idVendor': PlainTextValue('4567'),
+                'type': PlainTextValue('webcam'),
+                'idProduct': PlainTextValue('abcd')}}],
         'audio_codec': [
-            {'codec_1': {'compact_str': Value('Codec 1', is_re=False)}},
-            {'hdmi_1': {'compact_str': Value('HDMI 1', is_re=False)}}],
+            {'codec_1': {'compact_str': PlainTextValue('Codec 1')}},
+            {'hdmi_1': {'compact_str': PlainTextValue('HDMI 1')}}],
         'keyboard': [{'keyboard_us': None}],
         'dram': [{
             'dram_0': {
-                'vendor': Value('DRAM 0', is_re=False),
-                'size': Value('4G', is_re=False)}}],
+                'vendor': PlainTextValue('DRAM 0'),
+                'size': PlainTextValue('4G')}}],
         'storage': [{
             'storage_0': {
-                'serial': Value('#123456', is_re=False),
-                'type': Value('SSD', is_re=False),
-                'size': Value('16G', is_re=False)}}],
+                'serial': PlainTextValue('#123456'),
+                'type': PlainTextValue('SSD'),
+                'size': PlainTextValue('16G')}}],
         'display_panel': [{'display_panel_0': None}],
         'ro_ec_firmware':[{
             'ro_ec_firmware_0': {
-                'compact_str': Value('ev2#ro_ec_firmware_0', is_re=False)}}],
+                'compact_str': PlainTextValue('ev2#ro_ec_firmware_0')}}],
         'cpu': [{
             'cpu_5': {
-                'cores': Value('4', is_re=False),
-                'name': Value('CPU @ 2.80GHz', is_re=False)}}]})
+                'cores': PlainTextValue('4'),
+                'name': PlainTextValue('CPU @ 2.80GHz')}}]})
 
 
 class DatabaseBuilderTest(unittest.TestCase):

@@ -330,7 +330,78 @@ class Rule(object):
       SetContext(None)
 
 
-class RegexpMetaclass(yaml_utils.BaseYAMLTagMetaclass):
+class Value(object):
+  """The base class to hold a value for expression evaluation.
+
+  Attributes:
+    raw_value: A string of value or None.
+  """
+  def __init__(self, raw_value):
+    self.raw_value = raw_value
+
+  def Matches(self, operand):
+    """Matches the value of operand.
+
+    Args:
+      operand: The operand to match with.
+
+    Returns:
+      True if self matches operand, False otherwise.
+    """
+    raise NotImplementedError()
+
+  def __repr__(self):
+    return '%s(%r)' % (self.__class__.__name__, self.raw_value)
+
+  def __eq__(self, rhs):
+    return (isinstance(rhs, Value) and
+            self.raw_value == rhs.raw_value and
+            self.__class__ == rhs.__class__)
+
+  def __ne__(self, rhs):
+    return not self == rhs
+
+
+class PlainTextMetaclass(yaml_utils.BaseYAMLTagMetaclass):
+  """Metaclass for dumping plain text Value object.
+
+  This metaclass registers YAML representer to encode a PlainTextValue object
+  to its corrosponding YAML representation, i.e. like a normal python string.
+  """
+  # TODO(yhong): Finds a way to remove this dummy tag.
+  #   Currently the hwid database loading flow in database.py is:
+  #     1. Call yaml.load() to load the yaml file.  Fields starts with special
+  #         tag will be loaded as corrosponding type.
+  #     2. For those value without special tag, database.py wraps those value
+  #         into PlainTextValue manually.
+  #   As the result, PlainTextValue will never be created by yaml loader, but
+  #       an instance of PlainTextValue should be able to dump to yaml object
+  #       like a normal python string.  The above flow is derived from the work
+  #       flow before refactor, but it still not a good way.
+  YAML_TAG = '!just_a_fake_tag'
+
+  @classmethod
+  def YAMLRepresenter(mcs, dumper, data):
+    return dumper.represent_data(data.raw_value)
+
+
+class PlainTextValue(Value, str):
+  """The calss to hold a plain text value for expression evaluation."""
+  __metaclass__ = PlainTextMetaclass
+
+  def Matches(self, operand):
+    """Matches the value of operand with raw_value.
+
+    The value to be matched depends on the type of operand. If it is Value,
+    it use operand.Matches to match instead; otherwise it just compare the
+    raw_value with the operand.
+    """
+    if isinstance(operand, Value):
+      return operand.Matches(self.raw_value)
+    return self.raw_value == operand
+
+
+class RegExpMetaclass(yaml_utils.BaseYAMLTagMetaclass):
   """Metaclass for creating regular expression-enabled Value object.
 
   This metaclass registers YAML constructor and representer to decode from YAML
@@ -342,65 +413,36 @@ class RegexpMetaclass(yaml_utils.BaseYAMLTagMetaclass):
   @classmethod
   def YAMLConstructor(mcs, loader, node):
     value = loader.construct_scalar(node)
-    return Value(value, is_re=True)
+    return RegExpValue(value)
 
   @classmethod
   def YAMLRepresenter(mcs, dumper, data):
-    if data.is_re:
-      return dumper.represent_scalar('!re', data.raw_value)
-    else:
-      return dumper.represent_data(data.raw_value)
+    return dumper.represent_scalar(mcs.YAML_TAG, data.raw_value)
 
 
-class Value(object):
-  """A class to hold a value for expression evaluation.
-
-  The value can be a plain string or a regular expression.
-
-  Attributes:
-    raw_value: A string of value or None.
-    is_re: If True, raw_value is treated as a regular expression in expression
-        evaluation.
-  """
-  __metaclass__ = RegexpMetaclass
-
-  def __init__(self, raw_value, is_re=False):
-    self.raw_value = raw_value
-    self.is_re = is_re
+class RegExpValue(Value):
+  """A class to hold a regular expression value for expression evaluation."""
+  __metaclass__ = RegExpMetaclass
 
   def Matches(self, operand):
-    """Matches the value of operand.
+    """Matches the value of operand by the regular expression.
 
-    The value to be matched depends on the type of operand. If it is Value,
-    matches its 'raw_value'; otherwise, matches itself.
-
-    The way to match operand depends on the instance's 'is_re' attribute. If
-    'is_re' is True, it checks if the target matches the regular expression.
-    Otherwise, a string comparison is used.
-
-    Args:
-      operand: The operand to match with.
-
-    Returns:
-      True if self matches operand, False otherwise.
+    The match rules are listed as following:
+      - If the operand is an instance of PlainTextValue, the function matchs
+          with operand.raw_value.
+      - If the operand is also an instance of RegExpValue, compare the raw
+          regular expression directly.
+      - If the operand is an instance of Value but not fits above rules,
+          always trick this case as unmatched.
+      - Otherwise, use the ragular expression to match the operand.
     """
+    if isinstance(operand, RegExpValue):
+      return self.raw_value == operand.raw_value
+
+    if isinstance(operand, PlainTextValue):
+      return self.Matches(operand.raw_value)
+
     if isinstance(operand, Value):
-      if operand.is_re:
-        # If operand is a regular expression Value object, compare with __eq__
-        # directly.
-        return self.__eq__(operand)
-      operand = operand.raw_value
-    if self.is_re:
-      return re.match(self.raw_value, operand) is not None
-    else:
-      return self.raw_value == operand
+      return False
 
-  def __eq__(self, operand):
-    return isinstance(operand, Value) and self.__dict__ == operand.__dict__
-
-  def __ne__(self, operand):
-    return not self == operand
-
-  def __repr__(self):
-    return '%s(%r, is_re=%r)' % (
-        self.__class__.__name__, self.raw_value, self.is_re)
+    return re.match(self.raw_value, operand) is not None

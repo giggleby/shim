@@ -14,7 +14,7 @@ from cros.factory.hwid.v3.common import HWIDException
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3.decoder import EncodedStringToBinaryString
 from cros.factory.hwid.v3.decoder import BinaryStringToBOM, Decode
-from cros.factory.hwid.v3.rule import Value
+from cros.factory.hwid.v3.rule import PlainTextValue, RegExpValue
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -28,56 +28,71 @@ class DecoderTest(unittest.TestCase):
         yaml.dump(result) for result in yaml.load_all(open(os.path.join(
             _TEST_DATA_PATH, 'test_probe_result.yaml')).read())]
     self.expected_components_from_db = {
-        'audio_codec': [('codec_1', {'compact_str': Value('Codec 1')}, None),
-                        ('hdmi_1', {'compact_str': Value('HDMI 1')}, None)],
+        'audio_codec': [
+            ('codec_1', {'compact_str': PlainTextValue('Codec 1')}, None),
+            ('hdmi_1', {'compact_str': PlainTextValue('HDMI 1')}, None)],
         'battery': [('battery_huge',
-                     {'tech': Value('Battery Li-ion'),
-                      'size': Value('10000000')},
+                     {'tech': PlainTextValue('Battery Li-ion'),
+                      'size': PlainTextValue('10000000')},
                      None)],
         'bluetooth': [('bluetooth_0',
-                       {'idVendor': Value('0123'), 'idProduct': Value('abcd'),
-                        'bcd': Value('0001')},
+                       {
+                         'idVendor': PlainTextValue('0123'),
+                         'idProduct': PlainTextValue('abcd'),
+                         'bcd': PlainTextValue('0001')
+                       },
                        None)],
         'cellular': [(None, None, "Missing 'cellular' component")],
         'cpu': [('cpu_5',
-                 {'name': Value('CPU @ 2.80GHz'), 'cores': Value('4')},
+                 {
+                   'name': PlainTextValue('CPU @ 2.80GHz'),
+                   'cores': PlainTextValue('4')
+                 },
                  None)],
         'display_panel': [('display_panel_0', None, None)],
         'dram': [('dram_0',
-                  {'vendor': Value('DRAM 0'), 'size': Value('4G')},
+                  {
+                    'vendor': PlainTextValue('DRAM 0'),
+                    'size': PlainTextValue('4G')
+                  },
                   None)],
         'ec_flash_chip': [('ec_flash_chip_0',
-                           {'compact_str': Value('EC Flash Chip')},
+                           {'compact_str': PlainTextValue('EC Flash Chip')},
                            None)],
         'embedded_controller': [('embedded_controller_0',
-                                 {'compact_str': Value('Embedded Controller')},
+                                 {'compact_str':
+                                    PlainTextValue('Embedded Controller')},
                                  None)],
         'flash_chip': [('flash_chip_0',
-                        {'compact_str': Value('Flash Chip')},
+                        {'compact_str': PlainTextValue('Flash Chip')},
                         None)],
         'hash_gbb': [('hash_gbb_0',
-                      {'compact_str': Value('gv2#hash_gbb_0')},
+                      {'compact_str': PlainTextValue('gv2#hash_gbb_0')},
                       None)],
         'key_recovery': [('key_recovery_0',
-                          {'compact_str': Value('kv3#key_recovery_0')},
+                          {'compact_str': PlainTextValue('kv3#key_recovery_0')},
                           None)],
         'key_root': [('key_root_0',
-                      {'compact_str': Value('kv3#key_root_0')},
+                      {'compact_str': PlainTextValue('kv3#key_root_0')},
                       None)],
         'keyboard': [('keyboard_us', None, None)],
         'ro_ec_firmware': [('ro_ec_firmware_0',
-                            {'compact_str': Value('ev2#ro_ec_firmware_0')},
+                            {'compact_str':
+                               PlainTextValue('ev2#ro_ec_firmware_0')},
                             None)],
         'ro_main_firmware': [('ro_main_firmware_0',
-                              {'compact_str': Value('mv2#ro_main_firmware_0')},
+                              {'compact_str':
+                                 PlainTextValue('mv2#ro_main_firmware_0')},
                               None)],
         'storage': [('storage_0',
-                     {'type': Value('SSD'), 'size': Value('16G'),
-                      'serial': Value(r'^#123\d+$', is_re=True)},
+                     {'type': PlainTextValue('SSD'),
+                      'size': PlainTextValue('16G'),
+                      'serial': RegExpValue(r'^#123\d+$')},
                      None)],
         'video': [('camera_0',
-                   {'idVendor': Value('4567'), 'idProduct': Value('abcd'),
-                    'type': Value('webcam')},
+                   {'idVendor': PlainTextValue('4567'),
+                    'idProduct': PlainTextValue('abcd'),
+                    'type': PlainTextValue('webcam')},
                    None)]}
 
   def _CheckBOM(self, reference_bom, bom):
@@ -192,7 +207,7 @@ class DecoderTest(unittest.TestCase):
     # The BOM should load 'us' region from the probe result (numeric_id=29).)
     self.assertEquals(29, hwid.bom.encoded_fields['region_field'])
     self.assertEquals(
-        [('us', {'region_code': Value('us')}, None)],
+        [('us', {'region_code': PlainTextValue('us')}, None)],
         hwid.bom.components['region'])
 
 

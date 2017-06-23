@@ -914,7 +914,7 @@ class Components(object):
           continue
         for key, value in comp_cls_item_attrs['values'].items():
           if not isinstance(value, rule.Value):
-            comp_cls_item_attrs['values'][key] = rule.Value(value)
+            comp_cls_item_attrs['values'][key] = rule.PlainTextValue(value)
 
     self.components_dict = components_dict
 

@@ -108,7 +108,7 @@ class VerifyComponentsTest(unittest.TestCase):
     #       'probed_values': {
     #         value1: {
     #           'raw_value': probed string,
-    #           'is_re': bool value
+    #           'type': string of class name
     #         }
     #       },
     #       'error': None or error string

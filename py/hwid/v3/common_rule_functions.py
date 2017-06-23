@@ -7,7 +7,7 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.hwid.v3.rule import GetLogger
 from cros.factory.hwid.v3.rule import RuleException
 from cros.factory.hwid.v3.rule import RuleFunction
-from cros.factory.hwid.v3.rule import Value
+from cros.factory.hwid.v3.rule import RegExpValue
 
 
 @RuleFunction([])
@@ -33,7 +33,7 @@ def Re(expr):
   Returns:
     A regular expression-enabled Value object.
   """
-  return Value(expr, is_re=True)
+  return RegExpValue(expr)
 
 
 @RuleFunction([])
