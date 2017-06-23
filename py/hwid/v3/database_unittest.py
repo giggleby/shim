@@ -16,7 +16,9 @@ import factory_common  # pylint: disable=W0611
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.common import HWIDException, ProbedComponentResult
 from cros.factory.hwid.v3.database import Database, Components
-from cros.factory.hwid.v3.rule import PlainTextValue, RegExpValue
+from cros.factory.hwid.v3.rule import PlainTextValue
+from cros.factory.hwid.v3.rule import RangeNumValue
+from cros.factory.hwid.v3.rule import RegExpValue
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -207,7 +209,7 @@ class DatabaseTest(unittest.TestCase):
         ],
         'battery': [('battery_huge',
                      {'tech': PlainTextValue('Battery Li-ion'),
-                      'size': PlainTextValue('10000000')},
+                      'size': RangeNumValue('>= 9000000')},
                      None)],
         'bluetooth': [('bluetooth_0',
                        {

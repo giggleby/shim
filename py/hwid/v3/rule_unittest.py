@@ -13,6 +13,7 @@ from cros.factory.hwid.v3.rule import Context
 from cros.factory.hwid.v3.rule import GetContext
 from cros.factory.hwid.v3.rule import GetLogger
 from cros.factory.hwid.v3.rule import PlainTextValue
+from cros.factory.hwid.v3.rule import RangeNumValue
 from cros.factory.hwid.v3.rule import RegExpValue
 from cros.factory.hwid.v3.rule import Rule
 from cros.factory.hwid.v3.rule import RuleException
@@ -70,6 +71,38 @@ class HWIDRuleTest(unittest.TestCase):
         RegExpValue('^foo.*bar$').Matches(RegExpValue('fooxyzbar')))
     self.assertTrue(
         RegExpValue('^foo.*bar$').Matches(RegExpValue('^foo.*bar$')))
+
+  def testRangeNumValue(self):
+    for cls in [str, PlainTextValue]:
+      self.assertFalse(RangeNumValue('== 5').Matches(cls('4')))
+      self.assertTrue(RangeNumValue('== 5').Matches(cls('5')))
+      self.assertFalse(RangeNumValue('== 5').Matches(cls('6')))
+
+      self.assertFalse(RangeNumValue('>= 5').Matches(cls('4')))
+      self.assertTrue(RangeNumValue('>= 5').Matches(cls('5')))
+      self.assertTrue(RangeNumValue('>= 5').Matches(cls('6')))
+
+      self.assertFalse(RangeNumValue('> 5').Matches(cls('4')))
+      self.assertFalse(RangeNumValue('> 5').Matches(cls('5')))
+      self.assertTrue(RangeNumValue('> 5').Matches(cls('6')))
+
+      self.assertTrue(RangeNumValue('<= 5').Matches(cls('4')))
+      self.assertTrue(RangeNumValue('<= 5').Matches(cls('5')))
+      self.assertFalse(RangeNumValue('<= 5').Matches(cls('6')))
+
+      self.assertTrue(RangeNumValue('< 5').Matches(cls('4')))
+      self.assertFalse(RangeNumValue('< 5').Matches(cls('5')))
+      self.assertFalse(RangeNumValue('< 5').Matches(cls('6')))
+
+      self.assertFalse(RangeNumValue('[] 5 10').Matches(cls('3')))
+      self.assertTrue(RangeNumValue('[] 5 10').Matches(cls('5')))
+      self.assertTrue(RangeNumValue('[] 5 10').Matches(cls('7')))
+      self.assertTrue(RangeNumValue('[] 5 10').Matches(cls('10')))
+      self.assertFalse(RangeNumValue('[] 5 10').Matches(cls('11')))
+
+    self.assertTrue(RangeNumValue('[] 5 10').Matches(RangeNumValue('[] 5 10')))
+    self.assertFalse(RangeNumValue('[] 5 10').Matches(RangeNumValue('[] 5 1')))
+    self.assertFalse(RangeNumValue('[] 5 10').Matches(RegExpValue('^[] 5 10$')))
 
   def testYAMLParsing(self):
     SetContext(self.context)

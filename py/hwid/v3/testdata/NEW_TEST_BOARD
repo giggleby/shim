@@ -1,4 +1,4 @@
-checksum: 71343da7919352cbc255e2c232aca27c1fadbd6d
+checksum: 415693a2999e5c3ff90cf4afee51031d4b9cb0cf
 board: CHROMEBOOK
 
 encoding_patterns:
@@ -199,7 +199,7 @@ components:
       battery_huge:
         values:
           tech: Battery Li-ion
-          size: '10000000'
+          size: !num '>= 9000000'
 
   bluetooth:
     items:

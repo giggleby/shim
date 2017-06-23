@@ -175,7 +175,7 @@ components:
       battery_huge:
         values:
           tech: Battery Li-ion
-          size: '10000000'
+          size: !num '>= 9000000'
 
   bluetooth:
     items:

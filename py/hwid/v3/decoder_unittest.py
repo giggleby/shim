@@ -14,7 +14,9 @@ from cros.factory.hwid.v3.common import HWIDException
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3.decoder import EncodedStringToBinaryString
 from cros.factory.hwid.v3.decoder import BinaryStringToBOM, Decode
-from cros.factory.hwid.v3.rule import PlainTextValue, RegExpValue
+from cros.factory.hwid.v3.rule import PlainTextValue
+from cros.factory.hwid.v3.rule import RangeNumValue
+from cros.factory.hwid.v3.rule import RegExpValue
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -33,7 +35,7 @@ class DecoderTest(unittest.TestCase):
             ('hdmi_1', {'compact_str': PlainTextValue('HDMI 1')}, None)],
         'battery': [('battery_huge',
                      {'tech': PlainTextValue('Battery Li-ion'),
-                      'size': PlainTextValue('10000000')},
+                      'size': RangeNumValue('>= 9000000')},
                      None)],
         'bluetooth': [('bluetooth_0',
                        {

@@ -1,5 +1,5 @@
 # Dummy line before checksum
-checksum: 31b628b9ecef4a5bff9e12b463191b108653b9b7
+checksum: 91375fceee292c3bb71b5242aa87d87be4f30550
 # Dummy line after checksum
 board: CHROMEBOOK
 
@@ -176,7 +176,7 @@ components:
       battery_huge:
         values:
           tech: Battery Li-ion
-          size: '10000000'
+          size: !num '>= 9000000'
 
   bluetooth:
     items:

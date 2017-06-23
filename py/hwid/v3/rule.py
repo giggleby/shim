@@ -13,6 +13,7 @@ for some examples.
 """
 
 import collections
+import inspect
 import logging
 import re
 import threading
@@ -446,3 +447,80 @@ class RegExpValue(Value):
       return False
 
     return re.match(self.raw_value, operand) is not None
+
+
+class RangeNumMetaclass(yaml_utils.BaseYAMLTagMetaclass):
+  """Metaclass for creating a Value object responsed for number within a range.
+
+  This metaclass registers YAML constructor and representer to decode from YAML
+  tag '!num' and data to a Value object, and to encode a Value object to its
+  corresponding YAML representation.
+  """
+  YAML_TAG = '!num'
+
+  @classmethod
+  def YAMLConstructor(mcs, loader, node):
+    value = loader.construct_scalar(node)
+    return RangeNumValue(value)
+
+  @classmethod
+  def YAMLRepresenter(mcs, dumper, data):
+    return dumper.represent_scalar(mcs.YAML_TAG, data.raw_value)
+
+
+class RangeNumValue(Value):
+  """A class to hold a regular expression value for expression evaluation."""
+  __metaclass__ = RangeNumMetaclass
+
+  _MATCH_FUNCTIONS = {
+    '>=': lambda my_value, operand: operand >= my_value,
+    '==': lambda my_value, operand: operand == my_value,
+    '<=': lambda my_value, operand: operand <= my_value,
+    '>': lambda my_value, operand: operand > my_value,
+    '<': lambda my_value, operand: operand < my_value,
+    '[]': lambda my_value1, my_value2, operand: \
+        my_value1 <= operand <= my_value2,
+  }
+
+  def __init__(self, raw_value):
+    super(RangeNumValue, self).__init__(raw_value)
+
+    words = [word for word in raw_value.split(' ') if word]
+
+    if len(words) < 1:
+      raise ValueError('No operator found')
+    operator, words = words[0], words[1:]
+
+    self._match_func = self._MATCH_FUNCTIONS.get(operator, None)
+    if not self._match_func:
+      raise ValueError('Invalid operator: %s' % operator)
+
+    num_args = len(inspect.getargspec(self._match_func).args) - 1
+    if len(words) != num_args:
+      raise ValueError('Number of arguments of operator %r should be %d, got %d'
+                       % (operator, num_args, len(words)))
+
+    self._match_func_args = [float(word) for word in words]
+
+  def Matches(self, operand):
+    """Checks if the given value is in the specific value.
+
+    The match rules are listed as following:
+      - If the operand is an instance of PlainTextValue, the function matchs
+          with operand.raw_value.
+      - If the operand is also an instance of RangeNumValue, compare the
+          raw_value directly.
+      - If the operand is an instance of Value but not fits above rules,
+          always trick this case as unmatched.
+      - Otherwise, use the number comparasion.
+    """
+    if isinstance(operand, PlainTextValue):
+      return self.Matches(operand.raw_value)
+
+    if isinstance(operand, RangeNumValue):
+      return self.raw_value == operand.raw_value
+
+    if isinstance(operand, Value):
+      return False
+
+    return self._match_func(*(self._match_func_args + [float(operand)]))
