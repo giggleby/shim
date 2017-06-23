@@ -55,8 +55,8 @@ class NewDatabaseTest(unittest.TestCase):
     self.assertEquals(bom.components['ro_main_firmware'],
                       [('ro_main_firmware_0',
                         {
-                          'compact_str':
-                              PlainTextValue('mv2#ro_main_firmware_0')
+                            'compact_str':
+                                PlainTextValue('mv2#ro_main_firmware_0')
                         },
                         None)])
     self.assertEquals(bom.encoded_fields['ro_main_firmware_field'], 0)
@@ -204,8 +204,8 @@ class DatabaseTest(unittest.TestCase):
     self.assertEquals(0, bom.image_id)
     self.assertEquals({
         'audio_codec': [
-          ('codec_1', {'compact_str': PlainTextValue('Codec 1')}, None),
-          ('hdmi_1', {'compact_str': PlainTextValue('HDMI 1')}, None)
+            ('codec_1', {'compact_str': PlainTextValue('Codec 1')}, None),
+            ('hdmi_1', {'compact_str': PlainTextValue('HDMI 1')}, None)
         ],
         'battery': [('battery_huge',
                      {'tech': PlainTextValue('Battery Li-ion'),
@@ -213,23 +213,23 @@ class DatabaseTest(unittest.TestCase):
                      None)],
         'bluetooth': [('bluetooth_0',
                        {
-                         'idVendor': PlainTextValue('0123'),
-                         'idProduct': PlainTextValue('abcd'),
-                         'bcd': PlainTextValue('0001')
+                           'idVendor': PlainTextValue('0123'),
+                           'idProduct': PlainTextValue('abcd'),
+                           'bcd': PlainTextValue('0001')
                        },
                        None)],
         'cellular': [(None, None, "Missing 'cellular' component")],
         'cpu': [('cpu_5',
                  {
-                   'name': PlainTextValue('CPU @ 2.80GHz'),
-                   'cores': PlainTextValue('4')
+                     'name': PlainTextValue('CPU @ 2.80GHz'),
+                     'cores': PlainTextValue('4')
                  },
                  None)],
         'display_panel': [('display_panel_0', None, None)],
         'dram': [('dram_0',
                   {
-                    'vendor': PlainTextValue('DRAM 0'),
-                    'size': PlainTextValue('4G')
+                      'vendor': PlainTextValue('DRAM 0'),
+                      'size': PlainTextValue('4G')
                   },
                   None)],
         'ec_flash_chip': [('ec_flash_chip_0',
@@ -237,8 +237,8 @@ class DatabaseTest(unittest.TestCase):
                            None)],
         'embedded_controller': [('embedded_controller_0',
                                  {
-                                   'compact_str':
-                                       PlainTextValue('Embedded Controller')
+                                     'compact_str':
+                                         PlainTextValue('Embedded Controller')
                                  },
                                  None)],
         'flash_chip': [('flash_chip_0',
@@ -258,28 +258,28 @@ class DatabaseTest(unittest.TestCase):
                       "Component class 'keyboard' is unprobeable")],
         'ro_ec_firmware': [('ro_ec_firmware_0',
                             {
-                              'compact_str':
-                                  PlainTextValue('ev2#ro_ec_firmware_0')
+                                'compact_str':
+                                    PlainTextValue('ev2#ro_ec_firmware_0')
                             },
                             None)],
         'ro_main_firmware': [('ro_main_firmware_0',
                               {
-                                'compact_str':
-                                    PlainTextValue('mv2#ro_main_firmware_0')
+                                  'compact_str':
+                                      PlainTextValue('mv2#ro_main_firmware_0')
                               },
                               None)],
         'storage': [('storage_0',
                      {
-                       'type': PlainTextValue('SSD'),
-                       'size': PlainTextValue('16G'),
-                       'serial': RegExpValue(r'^#123\d+$')
+                         'type': PlainTextValue('SSD'),
+                         'size': PlainTextValue('16G'),
+                         'serial': RegExpValue(r'^#123\d+$')
                      },
                      None)],
         'video': [('camera_0',
                    {
-                     'idVendor': PlainTextValue('4567'),
-                     'idProduct': PlainTextValue('abcd'),
-                     'type': PlainTextValue('webcam')
+                       'idVendor': PlainTextValue('4567'),
+                       'idProduct': PlainTextValue('abcd'),
+                       'type': PlainTextValue('webcam')
                    },
                    None)]}, bom.components)
     self.assertEquals({
@@ -334,9 +334,9 @@ class DatabaseTest(unittest.TestCase):
         bom, {'cellular': 'cellular_0'})
     self.assertEquals([('cellular_0',
                         {
-                          'idVendor': PlainTextValue('89ab'),
-                          'idProduct': PlainTextValue('abcd'),
-                          'name': PlainTextValue('Cellular Card')
+                            'idVendor': PlainTextValue('89ab'),
+                            'idProduct': PlainTextValue('abcd'),
+                            'name': PlainTextValue('Cellular Card')
                         },
                         None)],
                       new_bom.components['cellular'])
@@ -405,12 +405,12 @@ class DatabaseTest(unittest.TestCase):
     self.assertEquals({
         'audio_codec': [
             {
-              'name': 'codec_0',
-              'values': {'compact_str': PlainTextValue('Codec 0')}
+                'name': 'codec_0',
+                'values': {'compact_str': PlainTextValue('Codec 0')}
             },
             {
-              'name': 'hdmi_0',
-              'values': {'compact_str': PlainTextValue('HDMI 0')}
+                'name': 'hdmi_0',
+                'values': {'compact_str': PlainTextValue('HDMI 0')}
             }]}, self.database._GetAttributesByIndex('audio_codec', 0))
     self.assertEquals({'cellular': None},
                       self.database._GetAttributesByIndex('cellular', 0))
@@ -501,19 +501,19 @@ class DatabaseTest(unittest.TestCase):
         r"\['keyboard'\] do not have probe values and cannot be verified",
         self.database.VerifyComponents, self.results[0], ['keyboard'])
     self.assertEquals(
-      {
-        'audio_codec': [
-            ('codec_1', {'compact_str': PlainTextValue('Codec 1')}, None),
-            ('hdmi_1', {'compact_str': PlainTextValue('HDMI 1')}, None)],
-        'cellular': [
-            (None, None, "Missing 'cellular' component")],
-        'cpu': [
-            ('cpu_5', {
-              'name': PlainTextValue('CPU @ 2.80GHz'),
-              'cores': PlainTextValue('4')
-             }, None)]
-      }, self.database.VerifyComponents(
-          self.results[0], ['audio_codec', 'cellular', 'cpu']))
+        {
+            'audio_codec': [
+                ('codec_1', {'compact_str': PlainTextValue('Codec 1')}, None),
+                ('hdmi_1', {'compact_str': PlainTextValue('HDMI 1')}, None)],
+            'cellular': [
+                (None, None, "Missing 'cellular' component")],
+            'cpu': [
+                ('cpu_5', {
+                    'name': PlainTextValue('CPU @ 2.80GHz'),
+                    'cores': PlainTextValue('4')
+                }, None)]
+        }, self.database.VerifyComponents(
+            self.results[0], ['audio_codec', 'cellular', 'cpu']))
     self.assertEquals({
         'audio_codec': [
             ('codec_1', {'compact_str': PlainTextValue('Codec 1')}, None),
@@ -528,18 +528,19 @@ class DatabaseTest(unittest.TestCase):
              "Invalid 'storage' component found with probe result "
              "{ 'serial': '#1234aa', 'size': '16G', 'type': 'SSD'} "
              '(no matching name in the component DB)')]},
-                  self.database.VerifyComponents(self.results[2], ['storage']))
+                      self.database.VerifyComponents(self.results[2],
+                                                     ['storage']))
     self.assertEquals(
-      {
-        'storage': [
-          ('storage_2', {
-            'type': PlainTextValue('HDD'),
-            'size': PlainTextValue('500G'),
-            'serial': RegExpValue(r'^#123\d+$')
-          }, None)
-        ]
-      }, self.database.VerifyComponents(self.results[3], ['storage'],
-                                        loose_matching=True))
+        {
+            'storage': [
+                ('storage_2', {
+                    'type': PlainTextValue('HDD'),
+                    'size': PlainTextValue('500G'),
+                    'serial': RegExpValue(r'^#123\d+$')
+                }, None)
+            ]
+        }, self.database.VerifyComponents(self.results[3], ['storage'],
+                                          loose_matching=True))
     self.assertEquals({
         'storage': [
             (None, {'foo': 'bar'},
@@ -708,10 +709,10 @@ class ComponentsTest(unittest.TestCase):
   def testGetComponentAttributes(self):
     self.assertEquals(
         {
-          'values': {
-            'field1': PlainTextValue('foo'),
-            'field2': PlainTextValue('bar')
-          }
+            'values': {
+                'field1': PlainTextValue('foo'),
+                'field2': PlainTextValue('bar')
+            }
         },
         self.components.GetComponentAttributes('comp_cls_1', 'comp_1'))
     self.assertEquals(

@@ -164,9 +164,9 @@ class HWIDv3UtilsTest(unittest.TestCase):
     self.assertEquals(
         [('bluetooth_0',
           {
-            'idVendor': rule.PlainTextValue('0123'),
-            'idProduct': rule.PlainTextValue('abcd'),
-            'bcd': rule.PlainTextValue('0001')
+              'idVendor': rule.PlainTextValue('0123'),
+              'idProduct': rule.PlainTextValue('abcd'),
+              'bcd': rule.PlainTextValue('0001')
           },
           None)],
         results['bluetooth'])

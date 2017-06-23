@@ -39,23 +39,23 @@ class DecoderTest(unittest.TestCase):
                      None)],
         'bluetooth': [('bluetooth_0',
                        {
-                         'idVendor': PlainTextValue('0123'),
-                         'idProduct': PlainTextValue('abcd'),
-                         'bcd': PlainTextValue('0001')
+                           'idVendor': PlainTextValue('0123'),
+                           'idProduct': PlainTextValue('abcd'),
+                           'bcd': PlainTextValue('0001')
                        },
                        None)],
         'cellular': [(None, None, "Missing 'cellular' component")],
         'cpu': [('cpu_5',
                  {
-                   'name': PlainTextValue('CPU @ 2.80GHz'),
-                   'cores': PlainTextValue('4')
+                     'name': PlainTextValue('CPU @ 2.80GHz'),
+                     'cores': PlainTextValue('4')
                  },
                  None)],
         'display_panel': [('display_panel_0', None, None)],
         'dram': [('dram_0',
                   {
-                    'vendor': PlainTextValue('DRAM 0'),
-                    'size': PlainTextValue('4G')
+                      'vendor': PlainTextValue('DRAM 0'),
+                      'size': PlainTextValue('4G')
                   },
                   None)],
         'ec_flash_chip': [('ec_flash_chip_0',
@@ -63,7 +63,7 @@ class DecoderTest(unittest.TestCase):
                            None)],
         'embedded_controller': [('embedded_controller_0',
                                  {'compact_str':
-                                    PlainTextValue('Embedded Controller')},
+                                      PlainTextValue('Embedded Controller')},
                                  None)],
         'flash_chip': [('flash_chip_0',
                         {'compact_str': PlainTextValue('Flash Chip')},
@@ -80,11 +80,11 @@ class DecoderTest(unittest.TestCase):
         'keyboard': [('keyboard_us', None, None)],
         'ro_ec_firmware': [('ro_ec_firmware_0',
                             {'compact_str':
-                               PlainTextValue('ev2#ro_ec_firmware_0')},
+                                 PlainTextValue('ev2#ro_ec_firmware_0')},
                             None)],
         'ro_main_firmware': [('ro_main_firmware_0',
                               {'compact_str':
-                                 PlainTextValue('mv2#ro_main_firmware_0')},
+                                   PlainTextValue('mv2#ro_main_firmware_0')},
                               None)],
         'storage': [('storage_0',
                      {'type': PlainTextValue('SSD'),

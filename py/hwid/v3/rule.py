@@ -382,6 +382,13 @@ class PlainTextMetaclass(yaml_utils.BaseYAMLTagMetaclass):
   YAML_TAG = '!just_a_fake_tag'
 
   @classmethod
+  def YAMLConstructor(mcs, dumper, data):
+    del dumper
+    del data
+    raise RuntimeError(
+        'No one can call the yaml constructor for PlainTextValue')
+
+  @classmethod
   def YAMLRepresenter(mcs, dumper, data):
     return dumper.represent_data(data.raw_value)
 
@@ -473,13 +480,13 @@ class RangeNumValue(Value):
   __metaclass__ = RangeNumMetaclass
 
   _MATCH_FUNCTIONS = {
-    '>=': lambda my_value, operand: operand >= my_value,
-    '==': lambda my_value, operand: operand == my_value,
-    '<=': lambda my_value, operand: operand <= my_value,
-    '>': lambda my_value, operand: operand > my_value,
-    '<': lambda my_value, operand: operand < my_value,
-    '[]': lambda my_value1, my_value2, operand: \
-        my_value1 <= operand <= my_value2,
+      '>=': lambda my_value, operand: operand >= my_value,
+      '==': lambda my_value, operand: operand == my_value,
+      '<=': lambda my_value, operand: operand <= my_value,
+      '>': lambda my_value, operand: operand > my_value,
+      '<': lambda my_value, operand: operand < my_value,
+      '[]': (lambda my_value1, my_value2, operand:
+             my_value1 <= operand <= my_value2),
   }
 
   def __init__(self, raw_value):
