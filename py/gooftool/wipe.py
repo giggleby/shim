@@ -140,7 +140,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
       'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom', 'halt',
       'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
       'od', 'pango-view', 'pkill', 'pv', 'python', 'reboot', 'setterm', 'sh',
-      'shutdown', 'stop', 'umount', 'vpd', 'wget', 'lsof', 'jq', '/sbin/frecon']
+      'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof', 'jq', '/sbin/frecon']
 
   etc_issue = textwrap.dedent("""
     You are now in tmp file system created for in-place wiping.
@@ -185,6 +185,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
             # Factory related scripts.
             factory_par,
             '/usr/local/factory/sh',
+            '/usr/local/factory/py/config',
             # Fonts and assets required for showing message.
             pango_module,
             '/usr/share/fonts/notocjk',
@@ -253,6 +254,14 @@ def _StopAllUpstartJobs(exclude_list=None):
       if service in exclude_list or service.startswith('console-'):
         continue
       process_utils.Spawn(['stop', service], call=True, log=True)
+
+
+def _EnsureUpstartJobs(jobs):
+  if not jobs:
+    return
+
+  for job in jobs:
+    process_utils.Spawn(['start', job], call=True, log=True)
 
 
 def _UnmountStatefulPartition(root, state_dev):
@@ -453,6 +462,8 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
         # sslh is a service in ARC++ for muxing between ssh and adb.
         'sslh'
         ])
+    # start shill just in case some other services stop it.
+    _EnsureUpstartJobs(['shill'])
     _UnmountStatefulPartition(old_root, state_dev)
 
     process_utils.Spawn(
