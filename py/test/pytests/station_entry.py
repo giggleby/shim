@@ -127,7 +127,8 @@ class StationEntry(unittest.TestCase):
       self.Start()
       if self.args.load_dut_storage:
         # TODO(stimim): 1. cache dut.info, 2. load session on dut.
-        pass
+        self._dut.info.GetSerialNumber('serial_number')
+        self._dut.info.GetSerialNumber('mlb_serial_number')
     else:
       self.End()
       # Clear dut.info data.
