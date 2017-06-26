@@ -258,6 +258,9 @@ class TestListIterator(object):
     return [test.path for test in root.Walk() if test.IsLeaf()]
 
   def RestartLastTest(self):
+    if self.Top().next_step != self.CheckContinue.__name__:
+      logging.critical('next_step = %s != CheckContinue', self.Top().next_step)
+      self.Top().next_step = self.CheckContinue.__name__
     assert self.Top().next_step == self.CheckContinue.__name__
     self.Top().next_step = self.Body.__name__
 
