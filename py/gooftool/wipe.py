@@ -5,6 +5,7 @@
 
 """Transition to release state directly without reboot."""
 
+import glob
 import json
 import logging
 import os
@@ -22,6 +23,7 @@ from cros.factory.gooftool import chroot
 from cros.factory.gooftool.common import ExecFactoryPar
 from cros.factory.gooftool.common import Util
 from cros.factory.test.env import paths
+from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
@@ -254,6 +256,8 @@ def _StopAllUpstartJobs(exclude_list=None):
       if service in exclude_list or service.startswith('console-'):
         continue
       process_utils.Spawn(['stop', service], call=True, log=True)
+      logging.debug('shill status: %s',
+                    process_utils.SpawnOutput(['status', 'shill']))
 
 
 def _EnsureUpstartJobs(jobs):
@@ -433,6 +437,21 @@ def _Cutoff():
   process_utils.Spawn('%s' % (cutoff_script), shell=True, check_call=True)
 
 
+def _SaveEthernetIp(saved_ethernet_ip):
+  for path in glob.glob('/sys/class/net/eth*'):
+    name = os.path.basename(path)
+    # pylint: disable=unpacking-non-sequence
+    ip, netmask = net_utils.GetEthernetIp(name, True)
+    if ip:
+      saved_ethernet_ip[name] = (ip, netmask)
+      logging.info('%s=%r', name, saved_ethernet_ip[name])
+
+
+def _RestoreEthernetIp(saved_ethernet_ip):
+  for name, (ip, netmask) in saved_ethernet_ip.iteritems():
+    net_utils.SetEthernetIp(ip, name, netmask)
+
+
 def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
              root_disk, old_root, station_ip, station_port, finish_token):
   Daemonize()
@@ -448,6 +467,9 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
   logging.debug('old_root: %s', old_root)
 
   try:
+    saved_ethernet_ip = {}
+    _SaveEthernetIp(saved_ethernet_ip)
+
     _StopAllUpstartJobs(exclude_list=[
         # Milestone marker that use to determine the running of other services.
         'boot-services',
@@ -462,8 +484,9 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
         # sslh is a service in ARC++ for muxing between ssh and adb.
         'sslh'
         ])
-    # start shill just in case some other services stop it.
-    _EnsureUpstartJobs(['shill'])
+
+    _RestoreEthernetIp(saved_ethernet_ip)
+
     _UnmountStatefulPartition(old_root, state_dev)
 
     process_utils.Spawn(
