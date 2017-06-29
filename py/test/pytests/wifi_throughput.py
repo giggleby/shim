@@ -94,7 +94,7 @@ from cros.factory.utils import type_utils
 
 _WIFI_TIMEOUT_SECS = 20
 _DEFAULT_POLL_INTERVAL_SECS = 1
-_IPERF_TIMEOUT_SECS = 5
+_IPERF_TIMEOUT_SECS = 30
 
 _DEFAULT_WIRELESS_TEST_CSS = '.wireless-info {font-size: 2em;}'
 
@@ -154,7 +154,7 @@ class Iperf3Client(object):
   """
   ERROR_MSG_BUSY = 'error - the server is busy running a test. try again later'
   DEFAULT_PORT = 5201
-  DEFAULT_TRANSMIT_TIME = 5
+  DEFAULT_TRANSMIT_TIME = 10
   DEFAULT_TRANSMIT_INTERVAL = 1
   # Wait (transmit_time + _TIMEOUT_KILL_BUFFER) before killing iperf3.
   _TIMEOUT_KILL_BUFFER = 5
