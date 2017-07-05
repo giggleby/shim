@@ -29,6 +29,18 @@ def GetLidEventDevices():
           if (evdev.ecodes.EV_SW in d.capabilities().iterkeys() and
               evdev.ecodes.SW_LID in d.capabilities()[evdev.ecodes.EV_SW])]
 
+def GetTabletEventDevices():
+  """Gets tablet event devices.
+
+  Looks for devices with EV_SW capabilities and with a SW_TABLET_MODE.
+
+  Returns:
+    A list of evdev.InputDevice() instances of tablet event devices.
+  """
+  return [d for d in GetDevices()
+          if (evdev.ecodes.EV_SW in d.capabilities().iterkeys() and
+              evdev.ecodes.SW_TABLET_MODE in d.capabilities()[
+                  evdev.ecodes.EV_SW])]
 
 def GetKeyboardDevices():
   """Gets the keyboard device.
