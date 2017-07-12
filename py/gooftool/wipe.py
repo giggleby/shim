@@ -23,6 +23,7 @@ from cros.factory.gooftool import chroot
 from cros.factory.gooftool.common import ExecFactoryPar
 from cros.factory.gooftool.common import Util
 from cros.factory.test.env import paths
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
@@ -32,6 +33,14 @@ from cros.factory.utils import sys_utils
 SCRIPT_DIR = '/usr/local/factory/sh'
 
 WIPE_IN_TMPFS_LOG = 'wipe_in_tmpfs.log'
+
+STATEFUL_PARTITION_PATH = '/mnt/stateful_partition/'
+
+WIPE_MARK_FILE = 'wipe_mark_file'
+
+
+class WipeError(StandardError):
+  """Failed to complete wiping."""
 
 
 def _CopyLogFileToStateDev(state_dev, logfile):
@@ -188,6 +197,7 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
         file_dir_list=[
             # Basic rootfs.
             '/bin', '/etc', '/lib', '/lib64', '/root', '/sbin',
+            '/usr/sbin', '/usr/bin',
             # Factory related scripts.
             factory_par,
             '/usr/local/factory/sh',
@@ -198,6 +208,7 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
             '/usr/share/chromeos-assets/images',
             '/usr/share/chromeos-assets/text/boot_messages',
             '/usr/share/misc/chromeos-common.sh',
+            '/usr/share/cros',
             # File required for enable ssh connection.
             '/mnt/stateful_partition/etc/ssh',
             '/root/.ssh',
@@ -245,8 +256,8 @@ def WipeInTmpFs(is_fast=None, cutoff_args=None, shopfloor_url=None,
       args += ['--old_root', old_root]
 
       ExecFactoryPar('gooftool', 'wipe_init', *args)
-      raise RuntimeError('Should not reach here')
-  except:  # pylint: disable=bare-except
+      raise WipeError('Should not reach here')
+  except Exception:
     logging.exception('wipe_in_place failed')
     _OnError(station_ip, station_port, wipe_finish_token, state_dev,
              wipe_in_tmpfs_log=logfile, wipe_init_log=None)
@@ -277,6 +288,12 @@ def _UnmountStatefulPartition(root, state_dev):
   logging.debug('unmount stateful partition')
   # mount points that need chromeos_shutdown to umount
 
+  # touch a mark file so we can check if the stateful partition is wiped
+  # successfullly.
+  file_utils.WriteFile(
+      os.path.join(root, STATEFUL_PARTITION_PATH.strip(os.path.sep),
+                   WIPE_MARK_FILE), '')
+
   # 1. find mount points on stateful partition
   mount_output = process_utils.SpawnOutput(['mount'], log=True)
 
@@ -301,7 +318,7 @@ def _UnmountStatefulPartition(root, state_dev):
     logging.error(
         'lsof: %s',
         process_utils.SpawnOutput('lsof -p %d' % os.getpid(), shell=True))
-    raise RuntimeError('using stateful partition')
+    raise WipeError('wipe_init itself is using stateful partition')
 
   def _KillOpeningBySignal(sig):
     proc_list = _ListProcOpening(mount_point_list)
@@ -337,8 +354,16 @@ def _UnmountStatefulPartition(root, state_dev):
   process_utils.Spawn(['sync'], call=True)
 
   # Check if the stateful partition is unmounted successfully.
-  process_utils.Spawn(r'mount | grep -c "^\S*stateful" | grep -q ^0$',
-                      shell=True, check_call=True)
+  if _IsStateDevMounted(state_dev):
+    raise WipeError('Failed to unmount stateful_partition')
+
+
+def _IsStateDevMounted(state_dev):
+  try:
+    output = process_utils.CheckOutput(['df', state_dev])
+    return output.splitlines()[-1].split()[0] == state_dev
+  except Exception:
+    return False
 
 
 def _InformStation(ip, port, token, wipe_init_log=None,
@@ -374,8 +399,7 @@ def _InformStation(ip, port, token, wipe_init_log=None,
     sock.close()
 
 
-def _WipeStateDev(release_rootfs, root_disk, wipe_args):
-  stateful_partition_path = '/mnt/stateful_partition'
+def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev):
 
   clobber_state_env = os.environ.copy()
   clobber_state_env.update(ROOT_DEV=release_rootfs,
@@ -383,21 +407,28 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args):
                            FACTORY_RETURN_AFTER_WIPING='YES')
   logging.debug('clobber-state: root_dev=%s, root_disk=%s',
                 release_rootfs, root_disk)
-  process_utils.Spawn(['clobber-state', wipe_args], env=clobber_state_env,
-                      call=True)
+  process_utils.Spawn(
+      ['clobber-state', wipe_args], env=clobber_state_env, check_call=True)
 
-  shutil.move('/tmp/clobber-state.log', os.path.join(stateful_partition_path,
-                                                     'unencrypted',
-                                                     'clobber-state.log'))
-  # remove developer flag, which is created by clobber-state after wiping.
+  # Check if the stateful partition is wiped.
+  if not _IsStateDevMounted(state_dev):
+    process_utils.Spawn(['mount', state_dev, STATEFUL_PARTITION_PATH],
+                        check_call=True)
+
+  if os.path.exists(
+      os.path.join(STATEFUL_PARTITION_PATH, WIPE_MARK_FILE)):
+    raise WipeError(WIPE_MARK_FILE + ' still exists')
+  # Check done, stateful partition should be wiped successfully.
+
+  # Remove developer flag, which is created by clobber-state after wiping.
   try:
-    os.unlink(os.path.join(stateful_partition_path, '.developer_mode'))
+    os.unlink(os.path.join(STATEFUL_PARTITION_PATH, '.developer_mode'))
   except OSError:
     pass
-  # make sure that everything is synced
-  for unused_i in xrange(3):
-    process_utils.Spawn(['sync'], call=True)
-    time.sleep(1)
+  process_utils.Spawn(['umount', STATEFUL_PARTITION_PATH], call=True)
+  # Make sure that everything is synced.
+  process_utils.Spawn(['sync'], call=True)
+  time.sleep(3)
 
 
 def _EnableReleasePartition(release_rootfs):
@@ -459,7 +490,13 @@ def WipeInit(wipe_args, cutoff_args, shopfloor_url, state_dev, release_rootfs,
     process_utils.Spawn([os.path.join(SCRIPT_DIR, 'display_wipe_message.sh'),
                          'wipe'], call=True)
 
-    _WipeStateDev(release_rootfs, root_disk, wipe_args)
+    try:
+      _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev)
+    except Exception:
+      process_utils.Spawn(
+          [os.path.join(SCRIPT_DIR, 'display_wipe_message.sh'),
+           'wipe_failed'], call=True)
+      raise
 
     _EnableReleasePartition(release_rootfs)
 
