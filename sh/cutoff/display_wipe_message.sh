@@ -66,15 +66,15 @@ display_message() {
   local short_message="$1"
   shift
 
-  if has_bin frecon && has_bin pango-view; then
+  if has_bin figlet; then
+    figlet "$short_message"
+  elif has_bin frecon && has_bin pango-view; then
     prepare_message "$@" >"${MESSAGE_FILE}"
     if [ "${SHOW_SPINNER}" = "true" ]; then
       SPINNER_INTERVAL=25 display_boot_message "show_spinner" "${MESSAGE_FILE}"
     else
       display_boot_message "show_file" "${MESSAGE_FILE}"
     fi
-  elif has_bin figlet; then
-    figlet "$short_message"
   else
     echo "$short_message"
   fi
