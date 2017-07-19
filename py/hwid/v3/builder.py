@@ -414,7 +414,7 @@ class DatabaseBuilder(object):
         return False
       for key, value in db_comp_value.iteritems():
         rule = (value if isinstance(value, rule_module.Value)
-                else rule_module.RegExpValue(value))
+                else rule_module.PlainTextValue(value))
         if not rule.Matches(comp_value[key]):
           return False
       return True
