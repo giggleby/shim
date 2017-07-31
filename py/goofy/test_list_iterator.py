@@ -280,6 +280,9 @@ class TestListIterator(object):
 
     self._ResetIterations(test)
     frame.next_step = self.CheckContinue.__name__
+    if test.IsTopLevelTest():
+      self._ResetSubtestStatus(test)
+
     return self.RETURN_CODE.CONTINUE, None
 
   def CheckContinue(self):
@@ -302,9 +305,7 @@ class TestListIterator(object):
       # should continue
       frame.next_step = self.Body.__name__
       if frame.locals.get('executed', False):
-        # reset test state of subtests
-        for subtest in test.Walk():
-          subtest.UpdateState(status=factory.TestState.UNTESTED)
+        self._ResetSubtestStatus(test)
       return self.RETURN_CODE.CONTINUE, None
     else:
       # should not continue
@@ -432,3 +433,7 @@ class TestListIterator(object):
     (SKIPPED, FAILED_AND_WAIVED, UNTESTED) are not.
     """
     return test.GetState().status != factory.TestState.FAILED
+
+  def _ResetSubtestStatus(self, test):
+    for subtest in test.Walk():
+      subtest.UpdateState(status=factory.TestState.UNTESTED)
