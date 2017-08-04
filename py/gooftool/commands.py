@@ -430,6 +430,12 @@ def GenerateStableDeviceSecret(options):  # pylint: disable=W0613
   event_log.Log('generate_stable_device_secret')
 
 
+@Command('cr50_set_board_id')
+def Cr50SetBoardId(options):
+  """Set the board id and flag in the Cr50 chip."""
+  GetGooftool(options).Cr50SetBoardId()
+  event_log.Log('cr50_set_board_id')
+
 @Command('wipe_in_place',
          CmdArg('--fast', action='store_true',
                 help='use non-secure but faster wipe method.'),
@@ -701,6 +707,7 @@ def Finalize(options):
   ClearGBBFlags(options)
   ClearFactoryVPDEntries(options)
   GenerateStableDeviceSecret(options)
+  Cr50SetBoardId(options)
   if options.no_write_protect:
     logging.warn('WARNING: Firmware Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
