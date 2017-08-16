@@ -63,7 +63,7 @@ _TEST_TITLE = test_ui.MakeLabel('Update Firmware', u'更新韧体')
 _CSS = '#state { text-align: left; }'
 
 TRUNKS_SEND = '/usr/sbin/trunks_send'
-FIRMWARE_RELATIVE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
+FIRMWARE_RELATIVE_PATH = 'opt/google/cr50/firmware/cr50.bin.prod'
 
 
 class UpdateCr50FirmwareTest(unittest.TestCase):
