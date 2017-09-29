@@ -176,6 +176,8 @@ class ALSFixture(unittest.TestCase):
       Arg('config_dict', dict, 'The config dictionary. '
           'If None, then the config is loaded by config_utils.LoadConfig().',
           default=None, optional=True),
+      Arg('sampled_lux_range_bound', float, 'The bound of the value range for '
+          'the sampled luxes.', default=50.0, optional=True)
 
   ]
 
@@ -418,6 +420,10 @@ class ALSFixture(unittest.TestCase):
         time.sleep(delay)
         buf.append(self.als_controller.GetLuxValue())
         self._LogValue(series, time.time() - start_time, buf[-1])
+      value_range = max(buf) - min(buf)
+      if value_range > self.args.sampled_lux_range_bound:
+        raise ValueError('The value range (%s > %s) of sampled lux too large.',
+                         value_range, self.args.sampled_lux_range_bound)
     except ambient_light_sensor.AmbientLightSensorException as e:
       logging.exception('Error reading ALS value: %s', e.message)
       raise e
