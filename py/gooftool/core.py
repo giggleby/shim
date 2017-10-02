@@ -726,6 +726,50 @@ class Gooftool(object):
           'stable_device_secret_DO_NOT_SHARE': secret_bytes.encode('hex')}):
         raise Error
 
+  def _Cr50SetBoardId(self, arg_phase):
+    """Set the board ID and phase to Cr50 chip.
+
+    Args:
+      arg_phase: The phase to set. One of 'pvt', 'dev', or 'unknown'
+
+    Returns:
+      A tuple of (success, phase):
+        success: a bool indicates if the phase is written successfully.
+        phase: the phase info in the Cr50 ship
+    """
+    script_path = '/usr/share/cros/cr50-set-board-id.sh'
+    SCRIPT_RET_SUCCESS = 0
+    SCRIPT_RET_ERR_GENERAL = 1
+    SCRIPT_RET_ERR_ALREADY_SET = 2
+    SCRIPT_RET_ERR_ALREADY_SET_DIFFERENTLY = 3
+
+    result = self._util.shell([script_path, arg_phase])
+    if result.status == SCRIPT_RET_SUCCESS:
+      logging.info('Successfully set Cr50 board ID with phase %s.', arg_phase)
+      return True, arg_phase
+
+    elif result.status == SCRIPT_RET_ERR_GENERAL:
+      raise Error('Failed to set Cr50 board ID with phase %s.' % arg_phase)
+
+    elif result.status == SCRIPT_RET_ERR_ALREADY_SET:
+      logging.info('Board ID has already been set on Cr50! '
+                   'This is okay, meaning it may run finalize before.')
+      return True, arg_phase
+
+    elif result.status == SCRIPT_RET_ERR_ALREADY_SET_DIFFERENTLY:
+      logging.info('Board ID and/or flag has been set DIFFERENTLY on Cr50!')
+      for checking_phase in ['pvt', 'dev', 'unknown']:
+        result = self._util.shell([script_path, checking_phase])
+        if result.status == SCRIPT_RET_ERR_ALREADY_SET:
+          return False, checking_phase
+        elif result.status == SCRIPT_RET_ERR_ALREADY_SET_DIFFERENTLY:
+          pass
+        else:
+          raise Error('Cr50 script should not return %d' % result.status)
+      return False, None
+
+    else:
+      raise Error('Failed to set Cr50 board ID with phase %s.' % arg_phase)
 
   def Cr50SetBoardId(self):
     """Set the board id and flag on the Cr50 chip.
@@ -739,6 +783,27 @@ class Gooftool(object):
 
     To the detail design of the lock-down mechanism, please refer to
     go/cr50-boardid-lock for more details.
+
+    There are three kinds of flags in Cr50 flag field:
+      1. 0x7f80: for mp, or pvt
+      2. 0xff7f: for dev, proto, evt, or dvt
+      3. 0xff00: for unknown phase
+         This happens if Cr50 board id is not set, and DUT is booted in a
+         release image.
+
+    In ideal, factory should set Cr50 flag according to phase. However, some
+    units may accidentally set to a wrong phase flag. After discussed with
+    Cr50 team, a device is ok-to-leave-factory if:
+      * If phase >= PVT_DOGFOOD:
+        * Flag = pvt --> OK, correct value
+        * Flag = dev --> NOT OK
+        * Flag = unknown --> OK, but should show a warning
+        * Flag = any other value --> NOT OK
+      * If phase < PVT_DOGFOOD:
+        * Flag = pvt --> NOT OK
+        * Flag = dev --> OK, correct value
+        * Flag = unknown --> NOT OK
+        * Flag = any other value --> NOT OK
     """
 
     script_path = '/usr/share/cros/cr50-set-board-id.sh'
@@ -751,29 +816,27 @@ class Gooftool(object):
 
     if phase.GetPhase() >= phase.PVT_DOGFOOD:
       arg_phase = 'pvt'
+      allowed_phases = ['pvt', 'unknown']
     else:
       arg_phase = 'dev'
+      allowed_phases = ['dev']
 
     service_mgr = service_utils.ServiceManager()
 
     try:
       service_mgr.SetupServices(disable_services=disable_services)
 
-      result = self._util.shell([script_path, arg_phase])
-      if result.status == 0:
-        logging.info('Successfully set board ID on Cr50 with phase %s.',
-                     arg_phase)
-      elif result.status == 2:
-        logging.error('Board ID has already been set on Cr50!')
-      elif result.status == 3:
-        error_msg = 'Board ID and/or flag has been set DIFFERENTLY on Cr50!'
-        if arg_phase == 'pvt':
-          raise Error(error_msg)
-        else:
-          logging.error(error_msg)
-      else:  # General errors.
-        raise Error('Failed to set board ID and flag on Cr50. '
-                    '(args=%s)' % arg_phase)
+      success, current_phase = self._Cr50SetBoardId(arg_phase)
+
+      if not success:
+        if current_phase not in allowed_phases:
+          raise Error('Cr50 board id has been set differently. '
+                      'Phase set on Cr50 is %s, but allowed phases are %s' % (
+                          current_phase, allowed_phases))
+
+        logging.info('Cr50 phase is set in a wrong value, but is still fine. '
+                     'Correct phase is %s, the current phase is %s',
+                     arg_phase, current_phase)
 
     except Exception:
       logging.exception('Failed to set Cr50 Board ID.')
