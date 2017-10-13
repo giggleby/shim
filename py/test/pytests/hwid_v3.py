@@ -13,7 +13,6 @@ import yaml
 import factory_common  # pylint: disable=unused-import
 from cros.factory.device import device_utils
 from cros.factory.hwid.v3 import common
-from cros.factory.test.event_log import Log
 from cros.factory.test import factory
 from cros.factory.test.i18n import _
 from cros.factory.test.i18n import test_ui as i18n_test_ui
@@ -23,6 +22,7 @@ from cros.factory.test import state
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.utils import deploy_utils
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
@@ -82,12 +82,12 @@ class HWIDV3Test(unittest.TestCase):
                                               'probed_results_file')
     if os.path.exists(OVERRIDE_PROBED_RESULTS_PATH):
       self._dut.SendFile(OVERRIDE_PROBED_RESULTS_PATH, probed_results_file)
-      Log('probe', probe_results=yaml.load(open(OVERRIDE_PROBED_RESULTS_PATH)))
+      probed_results = file_utils.ReadFile(OVERRIDE_PROBED_RESULTS_PATH)
     else:
       probed_results = self.factory_tools.CallOutput(
           ['gooftool', 'probe', '--include_vpd'])
       self._dut.WriteFile(probed_results_file, probed_results)
-      Log('probe', probe_results=probed_results)
+    testlog.LogParam(name='probed_results', value=probed_results)
 
     # check if we are overriding the board name.
     if os.path.exists(OVERRIDE_BOARD_PATH):
@@ -127,14 +127,15 @@ class HWIDV3Test(unittest.TestCase):
       # try to decode HWID
       decode_cmd = ['hwid', 'decode'] + (['-b', board] if board else [])
       decode_cmd += [encoded_string]
-      output = self.factory_tools.CallOutput(decode_cmd)
-      self.assertIsNotNone(output, 'HWID decode failed.')
-      decoded_hwid = yaml.load(output)
+      decoded_hwid = self.factory_tools.CallOutput(decode_cmd)
+      self.assertIsNotNone(decoded_hwid, 'HWID decode failed.')
 
       logging.info('HWDB checksum: %s', hwid['hwdb_checksum'])
-      Log('hwid', hwid=encoded_string,
-          hwdb_checksum=hwid['hwdb_checksum'],
-          components=decoded_hwid)
+
+      testlog.LogParam(name='generated_hwid', value=encoded_string)
+      testlog.LogParam(name='hwdb_checksum', value=hwid['hwdb_checksum'])
+      testlog.LogParam(name='decoded_hwid', value=decoded_hwid)
+
       state.UpdateDeviceData({'hwid': encoded_string})
     else:
       encoded_string = self.factory_tools.CheckOutput(['hwid', 'read']).strip()
@@ -157,7 +158,7 @@ class HWIDV3Test(unittest.TestCase):
 
     output = self.factory_tools.CheckOutput(verify_cmd)
     self.assertTrue('Verification passed.' in output)
-    Log('hwid_verified', hwid=encoded_string)
+    testlog.LogParam(name='verified_hwid', value=encoded_string)
 
     if self.args.generate:
       template.SetState(
