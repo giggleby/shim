@@ -2,11 +2,54 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# DESCRIPTION :
-#
-# This test case is used to communicate with audio fixture and parse
-# the result of CLIO which is audio quality analysis software.
-# DUT will connect to 2 subnets, one is for shopfloor the other is for fixture.
+"""Audio Quality Test the use audio fixture.
+
+Description
+-----------
+This test case is used to communicate with audio fixture and parse
+the result of CLIO which is audio quality analysis software.
+DUT will connect to 2 subnets, one is for factory server and the other is for
+fixture.
+
+This pytest starts a socket server listening on port 8888 (can be overriden by
+argument ``network_setting``).  Third party fixture will connect to this port
+and communicate with this pytest in a speical protocol.  See
+``HandleConnection`` and ``setupLoopHandler`` for more details.
+
+The test flow is controlled by the third party fixture, this pytest is command
+driven, it does whatever third party fixture asks it to do.
+
+Test Procedure
+--------------
+This test does not require operator interaction.
+
+1. Connect DUT with fixture
+2. Press ``SPACE`` to start testing
+3. The test will judge PASS / FAIL result by itself
+
+Dependency
+----------
+No extra dependency.
+
+Examples
+--------
+Here is an example, assuming your audio device is ``<audio_device>``::
+
+  "AudioQuality": {
+    "label": "AudioQuality",
+    "pytest_name": "audio_quality",
+    "args": {
+      "initial_actions": [["<audio_device>", "initial"]],
+      "input_dev": ["<audio_device>", "1"],
+      "output_dev": ["<audio_device>", "0"],
+      "use_shopfloor": true,
+      "wav_file": "/usr/local/factory/third_party/SPK48k.wav"
+    }
+  }
+
+Set ``use_shopfloor`` to ``false`` if you don't want to upload files received by
+``send_file`` command.
+"""
 
 from __future__ import print_function
 
@@ -28,7 +71,6 @@ import factory_common  # pylint: disable=unused-import
 from cros.factory.device import device_utils
 from cros.factory.goofy import goofy
 from cros.factory.test.env import paths
-from cros.factory.test import event_log
 from cros.factory.test import factory
 from cros.factory.test.i18n import test_ui as i18n_test_ui
 from cros.factory.test import shopfloor
@@ -36,6 +78,7 @@ from cros.factory.test import state
 from cros.factory.test import test_ui
 from cros.factory.test.utils import audio_utils
 from cros.factory.test.utils import time_utils
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
@@ -78,7 +121,6 @@ _LABEL_REMOVE_ETHERNET = i18n_test_ui.MakeI18nLabel(
 _LABEL_WAITING_ETHERNET = i18n_test_ui.MakeI18nLabel(
     'Waiting for Ethernet connectivity to audio fixture')
 _LABEL_READY = i18n_test_ui.MakeI18nLabel('Ready for connection')
-_LABEL_UPLOAD_AUXLOG = i18n_test_ui.MakeI18nLabel('Upload log')
 _LABEL_FAIL_LOGS = 'Test fail, find more detail in log.'
 
 # Regular expression to match external commands.
@@ -216,7 +258,10 @@ class AudioQualityTest(unittest.TestCase):
     base = os.path.dirname(os.path.realpath(__file__))
     self._file_path = os.path.join(base, '..', '..', 'goofy', 'static',
                                    'sounds')
-    self._auxlogs = []
+
+    # save the log under /var/factory/tests/<TestID>-<UUID>/
+    self._test_dir = os.path.join(paths.DATA_TESTS_DIR,
+                                  factory.get_current_test_path())
 
     self._ui = test_ui.UI()
     self._ui.CallJSFunction('setMessage', _LABEL_SPACE_TO_START)
@@ -434,18 +479,23 @@ class AudioQualityTest(unittest.TestCase):
     logging.info('Received file %s with size %d', file_name, size)
     real_data = binascii.a2b_hex(received_data)
 
-    write_path = os.path.join(paths.DATA_LOG_DIR, 'aux', 'audio', file_name)
+    write_path = os.path.join(self._test_dir, file_name)
     file_utils.TryMakeDirs(os.path.dirname(write_path))
     factory.console.info('save file: %s', write_path)
     with open(write_path, 'wb') as f:
       f.write(real_data)
-    self._auxlogs.append(write_path)
+
+    testlog.AttachFile(
+        path=write_path,
+        name=file_name,
+        mime_type='application/octet-stream')
 
     if self.DecompressZip(write_path, tempfile.gettempdir()):
       file_path = os.path.join(tempfile.gettempdir(), 'description.yaml')
-      with open(file_path, 'r') as f:
-        test_result = yaml.load(f)
-      event_log.Log('audio_quality_result', **test_result)
+      testlog.AttachFile(
+          path=file_path,
+          name='audio_quality_result.yaml',
+          mime_type='text/plain')
 
     self.SendResponse(None, args)
 
@@ -460,12 +510,16 @@ class AudioQualityTest(unittest.TestCase):
     size = int(attr_list[2])
     received_data = attr_list[3].replace('\x00', ' ')
 
-    write_path = os.path.join(paths.DATA_LOG_DIR, 'aux', 'audio', file_name)
+    write_path = os.path.join(self._test_dir, file_name)
     file_utils.TryMakeDirs(os.path.dirname(write_path))
     factory.console.info('save file: %s', write_path)
     with open(write_path, 'wb') as f:
       f.write(received_data)
-    self._auxlogs.append(write_path)
+
+    testlog.AttachFile(
+        path=write_path,
+        name=file_name,
+        mime_type='application/octet-stream')
 
     logging.info('Received file %s with size %d', file_name, size)
 
@@ -512,17 +566,23 @@ class AudioQualityTest(unittest.TestCase):
 
       test_result = {}
       # Remarks:
-      # 1. cros.factory.test.event_log requires special format for key string
-      # 2. because the harmonic of some frequencies are not valid, we may
+      # 1. because the harmonic of some frequencies are not valid, we may
       #    have empty values in certain fields
-      # 3. The missing fields are always in the last columns
+      # 2. The missing fields are always in the last columns
       frequencies = dict((row[0], row[1:]) for row in table)
       test_result['frequencies'] = frequencies
       test_result['header_row'] = header_row
       test_result['serial_number'] = serial_number
       test_result['timestamp'] = timestamp
+      test_result['test_index'] = test_index
 
-      event_log.Log(('audio_quality_test_%s' % test_index), **test_result)
+      with file_utils.UnopenedTemporaryFile() as path:
+        with open(path, 'w') as f:
+          yaml.dump(test_result, f)
+        testlog.AddArgument(
+            path=path,
+            name='audio_quality_test_%s' % test_index,
+            mime_type='text/plain')
     elif match2:
       serial_number, timestamp = match2.groups()
 
@@ -531,7 +591,13 @@ class AudioQualityTest(unittest.TestCase):
       final_result['timestamp'] = timestamp
       final_result['data'] = received_data.replace('\r', '')
 
-      event_log.Log('audio_quality_final_result', **final_result)
+      with file_utils.UnopenedTemporaryFile() as path:
+        with open(path, 'w') as f:
+          yaml.dump(final_result, f)
+        testlog.AddArgument(
+            path=path,
+            name='audio_quality_final_result',
+            mime_type='text/plain')
     else:
       logging.info('Unrecognizable filename %s', file_name)
 
@@ -551,9 +617,6 @@ class AudioQualityTest(unittest.TestCase):
     """Handles test completion.
     Runs post test script before ends this test
     """
-    if self._use_shopfloor:
-      self.UploadAuxlog()
-
     self.SendResponse(None, args)
     self._test_complete = True
 
@@ -792,14 +855,6 @@ class AudioQualityTest(unittest.TestCase):
         break
       time.sleep(_CHECK_FIXTURE_COMPLETE_SECS)
 
-  def UploadAuxlog(self):
-    """Uploads files which are sent from DUT by send_file command to
-    shopfloor.
-    """
-    factory.console.info('Start uploading logs...')
-    self._ui.CallJSFunction('setMessage', _LABEL_UPLOAD_AUXLOG)
-    shopfloor.UploadAuxLogs(self._auxlogs, dir_name='audio')
-
   def StartRun(self, event):
     """Runs the testing flow after user press 'space'.
 
@@ -814,8 +869,7 @@ class AudioQualityTest(unittest.TestCase):
       factory.console.info('Test passed')
     else:
       if self._use_shopfloor:
-        factory.console.info(
-            'Test failed. Force to flush event logs...')
+        factory.console.info('Test failed. Force to flush event logs...')
         goofy_instance = state.get_instance()
         goofy_instance.FlushEventLogs()
       self._ui.Fail(_LABEL_FAIL_LOGS)
