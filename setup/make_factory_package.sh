@@ -637,7 +637,7 @@ generate_img() {
   echo "Factory Stateful"
   image_partition_overwrite "${FACTORY_IMAGE}" 1 "${outdev}" 1
   echo "EFI Partition"
-  image_partition_copy "${FACTORY_IMAGE}" 12 "${outdev}" 12
+  image_partition_overwrite "${FACTORY_IMAGE}" 12 "${outdev}" 12
   apply_hwid_updater "${hwid_updater}" "${outdev}"
   tar_unencrypted "${release_image}" "${outdev}"
 
