@@ -60,11 +60,10 @@ MOCK_POLLING_DURATION = 3.8 * MOCK_POLLING_PERIOD
 MOCK_SERVER_URL = 'http://0.0.0.0:1234'
 MOCK_PORT = '8084'
 MOCK_DEVICE_ID = 'ab:cd:ef:12:34:56'
-MOCK_IMAGE_ID = '123456'
 MOCK_RSYNC_DESTINATION = [
     'rsync://%s:%s/system_logs/%s' %
     (urlparse(MOCK_SERVER_URL).hostname, MOCK_PORT,
-     MOCK_DEVICE_ID.replace(':', '') + '_' + MOCK_IMAGE_ID)]
+     MOCK_DEVICE_ID.replace(':', ''))]
 MOCK_RSYNC_COMMAND_ARG = ['rsync', '-azR', '--stats', '--chmod=o-t',
                           '--timeout=%s' % MOCK_RSYNC_IO_TIMEOUT]
 
@@ -187,7 +186,6 @@ class TestSystemLogManager(unittest.TestCase):
     self.mox.StubOutWithMock(shopfloor, 'get_server_url')
     self.mox.StubOutWithMock(shopfloor, 'get_instance')
     self.mox.StubOutWithMock(event_log, 'GetDeviceId')
-    self.mox.StubOutWithMock(event_log, 'GetReimageId')
     self.mox.StubOutWithMock(system_log_manager, 'Spawn')
     self.mox.StubOutWithMock(system_log_manager, 'TerminateOrKillProcess')
     self.fake_shopfloor = self.mox.CreateMockAnything()
@@ -223,7 +221,6 @@ class TestSystemLogManager(unittest.TestCase):
             self.fake_shopfloor)
     self.fake_shopfloor.GetFactoryLogPort().AndReturn(MOCK_PORT)
     event_log.GetDeviceId().AndReturn(MOCK_DEVICE_ID)
-    event_log.GetReimageId().AndReturn(MOCK_IMAGE_ID)
     if extra_files:
       logging.debug('Mocks getting extra_files %r', extra_files)
       mock_rsync_command = self.AddExtraFilesToRsync(extra_files)

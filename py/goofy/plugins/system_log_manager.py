@@ -202,10 +202,7 @@ class SystemLogManager(plugin.Plugin):
     proxy = shopfloor.get_instance(detect=True, timeout=self._shopfloor_timeout,
                                    quiet=quiet)
     factory_log_port = proxy.GetFactoryLogPort()
-    folder_name = (
-        '%s_%s' %
-        (event_log.GetDeviceId().replace(':', ''),
-         event_log.GetReimageId()))
+    folder_name = event_log.GetDeviceId().replace(':', '')
     return ['rsync://%s:%s/system_logs/%s' %
             (urlparse(url).hostname, factory_log_port, folder_name)]
 
