@@ -37,6 +37,7 @@ from cros.factory.test import state
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.utils import deploy_utils
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
@@ -174,6 +175,7 @@ class Finalize(unittest.TestCase):
       self.response_listener = None
 
   def runTest(self):
+    testlog.LogParam(name='phase', value=str(phase.GetPhase()))
     # Check waived_tests argument.  (It must be empty at DVT and
     # beyond.)
     phase.AssertStartingAtPhase(

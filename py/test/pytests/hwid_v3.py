@@ -73,6 +73,8 @@ class HWIDV3Test(unittest.TestCase):
         self.args.verify_checksum,
         'HWID checksum must be verified')
 
+    testlog.LogParam(name='phase', value=str(phase.GetPhase()))
+
     if not self.args.skip_shopfloor:
       shopfloor.update_local_hwid_data(self._dut)
 
