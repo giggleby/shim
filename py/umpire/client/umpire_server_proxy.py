@@ -252,12 +252,6 @@ class UmpireServerProxy(xmlrpclib.ServerProxy):
     except Exception:
       # This is pretty common and not necessarily an error because by the time
       # when proxy instance is initiated, connection might not be ready.
-      if not self._quiet:
-        logging.warning(
-            'Unable to contact factory server to decide using'
-            ' Umpire protocol or not : %s',
-            '\n'.join(
-                traceback.format_exception_only(*sys.exc_info()[:2])).strip())
       return None
     if isinstance(result, dict) and (
         result.get('version') == common.UMPIRE_VERSION):
