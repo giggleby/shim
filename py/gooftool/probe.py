@@ -595,7 +595,7 @@ class _TouchscreenData(_TouchInputData):  # pylint: disable=W0232
 
   @classmethod
   def Synaptics(cls):
-    return cls.GenericInput(r'SYTS.*',
+    return cls.GenericInput(r'SYTS.*|hid-over-i2c.*',
                             ['fw_version', 'hw_version', 'config_csum'],
                             filter_rule=lambda e: e.Vendor == '06cb')
   @classmethod
