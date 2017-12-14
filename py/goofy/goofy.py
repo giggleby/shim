@@ -357,6 +357,9 @@ class Goofy(GoofyBase):
       return
 
     logging.info('Start Goofy shutdown (%s)', operation)
+
+    self._LogUnsafeShutdownCount()
+
     # Save pending test list in the state server
     self.state_instance.set_shared_data(
         TESTS_AFTER_SHUTDOWN, self.test_list_iterator)
@@ -454,9 +457,20 @@ class Goofy(GoofyBase):
               TESTS_AFTER_SHUTDOWN,
               TestListIterator(None))
 
+    self._LogUnsafeShutdownCount()
+
     if is_unexpected_shutdown:
       logging.warning("Unexpected shutdown.")
       self.dut.hooks.OnUnexpectedReboot()
+
+  def _LogUnsafeShutdownCount(self):
+    # BUG(b/69556815): log 'unsafe shutdown' count.
+    if os.path.exists('/dev/nvme0n1'):
+      unsafe_shutdown_count = self.dut.CallOutput(
+          "smartctl --all /dev/nvme0n1 | "
+          "grep 'Unsafe Shutdowns' | grep -o '[[:digit:]]*'")
+      logging.critical('SMART Unsafe Shutdown Count: %s',
+                       unsafe_shutdown_count)
 
   def handle_event(self, event):
     """Handles an event from the event server."""
