@@ -70,10 +70,19 @@ main() {
     die_with_error_message "'serial_number' not set in RO VPD."
   fi
 
+  # BUG(b/69556815): Collect NVMe 'Unsafe Shutdown' count.
+  local unsafe_shutdown_count=
+
+  if [ -b '/dev/nvme0n1' ]; then
+    unsafe_shutdown_count="$(smartctl --all /dev/nvme0n1 | \
+        grep 'Unsafe Shutdowns' | grep -o '[[:digit:]]*')"
+  fi
+
   # Follow Shopfloor Service API 1.0
   print_post_content NotifyEvent "${event}" \
     serial_number "${SERIAL_NUMBER}" \
-    hwid "$(crossystem hwid)"
+    hwid "$(crossystem hwid)" \
+    unsafe_shutdown_count "${unsafe_shutdown_count}"
 }
 
 main "$@"
