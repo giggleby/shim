@@ -63,6 +63,7 @@ in the DUT::
   }
 """
 
+import contextlib
 import logging
 import os
 import subprocess
@@ -78,8 +79,15 @@ from cros.factory.test import ui_templates
 from cros.factory.test.utils import update_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
+from cros.factory.utils import sys_utils
 
 _FIRMWARE_UPDATER_NAME = 'chromeos-firmwareupdate'
+_FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
+
+
+
+class NoUpdatesException(Exception):
+  pass
 
 _CSS = 'test-template { text-align: left; }'
 
@@ -93,6 +101,8 @@ class UpdateFirmwareTest(unittest.TestCase):
       Arg('update_pd', bool, 'Update PD firmware.', default=True),
       Arg('download_from_server', bool, 'Download firmware updater from server',
           default=False),
+      Arg('from_release', bool, 'Find the firmware from release rootfs.',
+          default=False),
       Arg('update_main', bool, 'Update main firmware.', default=True),
       Arg('force_update', bool,
           'force to update firmwares even if the version is the same.',
@@ -105,7 +115,7 @@ class UpdateFirmwareTest(unittest.TestCase):
 
     self._dut = device_utils.CreateDUTInterface()
 
-  def DownloadFirmware(self):
+  def DownloadFirmware(self, force_update, target_path):
     """Downloads firmware updater from server."""
     updater = update_utils.Updater(update_utils.COMPONENTS.firmware)
     if not updater.IsUpdateAvailable():
@@ -123,11 +133,11 @@ class UpdateFirmwareTest(unittest.TestCase):
     if not updater.IsUpdateAvailable(current_version):
       logging.info('Your firmware is already in same version as server (%s)',
                    updater.GetUpdateVersion())
-      if not self.args.force_update:
+      if not force_update:
         return False
 
-    updater.PerformUpdate(destination=self.args.firmware_updater)
-    os.chmod(self.args.firmware_updater, 0755)
+    updater.PerformUpdate(destination=target_path)
+    os.chmod(target_path, 0755)
     return True
 
   def UpdateFirmware(self):
@@ -172,16 +182,34 @@ class UpdateFirmwareTest(unittest.TestCase):
     self.assertEqual(p.poll(), 0, 'Firmware update failed: %d.' % p.returncode)
 
   def runTest(self):
-    if self.args.download_from_server:
-      # The temporary folder will not be removed after this test finished
-      # for the convenient of debugging.
-      self.args.firmware_updater = os.path.join(tempfile.mkdtemp(),
-                                                _FIRMWARE_UPDATER_NAME)
-      if not self.DownloadFirmware():
-        return
-    else:
-      self.assertTrue(os.path.isfile(self.args.firmware_updater),
-                      msg='%s is missing.' % self.args.firmware_updater)
+    # Either download_from_server or from_release can be True.
+    self.assertFalse(self.args.download_from_server and self.args.from_release)
 
-    self._ui.RunInBackground(self.UpdateFirmware)
-    self._ui.Run()
+    @contextlib.contextmanager
+    def GetUpdater():
+      if self.args.download_from_server:
+        # The temporary folder will not be removed after this test finished
+        # for the convenient of debugging.
+        temp_path = os.path.join(
+            tempfile.mkdtemp(prefix='test_fw_update_'), _FIRMWARE_UPDATER_NAME)
+        if self.DownloadFirmware(
+            self.args.force_update, temp_path):
+          yield temp_path
+        else:
+          raise NoUpdatesException
+      elif self.args.from_release:
+        with sys_utils.MountPartition(
+            self._dut.partitions.RELEASE_ROOTFS.path, dut=self._dut) as root:
+          yield os.path.join(root, _FIRMWARE_RELATIVE_PATH)
+      else:
+        yield self.args.firmware_updater
+
+    try:
+      with GetUpdater() as updater_path:
+        self.assertTrue(
+            os.path.isfile(updater_path), msg='%s is missing.' % updater_path)
+        self.args.firmware_updater = updater_path
+        self._ui.RunInBackground(self.UpdateFirmware)
+        self._ui.Run()
+    except NoUpdatesException:
+      pass
