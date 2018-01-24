@@ -1789,8 +1789,8 @@ msgid "{display} Disconnect"
 msgstr "{display} 移除"
 
 #: ../py/test/pytests/external_display.py
-msgid "Connect external display: {display}"
-msgstr "请接上外接显示屏: {display}"
+msgid "Connect external display: {display} and wait until it becomes primary."
+msgstr "请接上外接显示屏: {display} 并等待其成为主要显示屏。"
 
 #: ../py/test/pytests/external_display.py
 msgid "Do you see video on {display}?"

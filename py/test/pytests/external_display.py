@@ -102,7 +102,7 @@ _CSS = """
 """
 
 # Interval (seconds) of probing connection state.
-_CONNECTION_CHECK_PERIOD_SECS = 2
+_CONNECTION_CHECK_PERIOD_SECS = 1
 
 
 # Messages for tasks
@@ -119,8 +119,9 @@ def _GetTitleDisconnectTest(display):
 
 
 def _GetMsgConnectTest(display):
-  return i18n_test_ui.MakeI18nLabel('Connect external display: {display}',
-                                    display=display)
+  return i18n_test_ui.MakeI18nLabel(
+      'Connect external display: {display} and wait until it becomes primary.',
+      display=display)
 
 
 def _GetMsgVideoTest(display):
@@ -210,29 +211,37 @@ class WaitDisplayThread(threading.Thread):
     self._on_success = on_success
     self._usbpd_port = usbpd_port
     self._dut = dut_obj
+    self._toggle_timestamp = 0
+
+  def _SetExtendMode(self):
+    """Simulate pressing Ctrl+F4 to switch to extend mode from mirror mode."""
+    t = time.time()
+    # Ctrl+F4 actually toggles the mode, while what we want is extend mode.
+    # It takes about 0.5 seconds to switch the mode. We should avoid pressing
+    # them again in a short time or it might get back to mirror mode, so we
+    # wait for 2 seconds for the previous transition to be completed.
+    if self._toggle_timestamp < t - 2:
+      evdev_utils.SendKeys([evdev.ecodes.KEY_LEFTCTRL, evdev.ecodes.KEY_F4])
+      self._toggle_timestamp = t
 
   def run(self):
     while not self._done.is_set():
       # Check USBPD status before display info
-      if self._usbpd_port is not None:
-        if not self.VerifyUSBPD(self._usbpd_port):
-          continue
-
-      port_info = self._dut.display.GetPortInfo()
-      if port_info[self._display_id].connected == self._connect:
-        display_info = state.get_instance().DeviceGetDisplayInfo()
-        # In the case of connecting an external display, make sure there
-        # is an item in display_info with 'isInternal' False.
-        # On the other hand, in the case of disconnecting an external display,
-        # we can not check display info has no display with 'isInternal' False
-        # because any display for chromebox has 'isInternal' False.
-        if ((self._connect and
-             any(x['isInternal'] is False for x in display_info)) or
-            not self._connect):
-          logging.info('Get display info %r', display_info)
-          self._on_success()
-          self.Stop()
-
+      if self._usbpd_port is None or self.VerifyUSBPD(self._usbpd_port):
+        port_info = self._dut.display.GetPortInfo()
+        if port_info[self._display_id].connected == self._connect:
+          display_info = state.get_instance().DeviceGetDisplayInfo()
+          # In the case of connecting an external display, make sure there
+          # is an item in display_info with 'isInternal' False.
+          # On the other hand, in the case of disconnecting an external display,
+          # we can not check display info has no display with 'isInternal' False
+          # because any display for chromebox has 'isInternal' False.
+          if self._connect and all(x['isInternal'] for x in display_info):
+            self._SetExtendMode()
+          else:
+            logging.info('Get display info %r', display_info)
+            self._on_success()
+            self.Stop()
       self._done.wait(_CONNECTION_CHECK_PERIOD_SECS)
 
   def Stop(self):
@@ -240,7 +249,7 @@ class WaitDisplayThread(threading.Thread):
     self._done.set()
 
   def VerifyUSBPD(self, port):
-    """ Verifies the USB PD port Status.
+    """Verifies the USB PD port Status.
 
     Returns:
       True for verifying OK,
@@ -348,7 +357,7 @@ class FixtureCheckDisplayThread(threading.Thread):
 
   When expected connection state is observed, it calls on_success and stop.
   Or the calling thread can stop it using Stop().
-  It probes display state every _CONNECTION_CHECK_PERIOD_SECS seconds.
+  It probes display state every check_interval_secs seconds.
 
   Args:
     fixture: BFTFixture instance.
@@ -630,7 +639,7 @@ class ExtDisplayTest(unittest.TestCase):
     self._ui.AppendCSS(_CSS)
 
   def ComposeTasks(self):
-    """Composes tasks acoording to display_info dargs.
+    """Composes tasks according to display_info dargs.
 
     Returns:
       A list of tasks derived from ExtDisplayTask.
