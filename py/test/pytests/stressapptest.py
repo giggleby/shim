@@ -54,6 +54,16 @@ To stress for one day without accessing disk::
       "disk_thread": false
     }
   }
+
+To stress using only two threads, and only run on cpu core 2 and 3::
+
+  {
+    "pytest_name": "stressapptest",
+    "args": {
+      "num_threads": 2,
+      "taskset_args": ["-c", "2,3"]
+    }
+  }
 """
 
 import logging
@@ -83,12 +93,21 @@ class StressAppTest(unittest.TestCase):
           'Time to wait in seconds before executing stressapptest.',
           default=0),
       Arg('disk_thread', bool,
-          'stress disk using -f argument of stressapptest.',
+          'Stress disk using -f argument of stressapptest.',
           default=True),
       Arg('disk_thread_dir', str,
-          'directory of disk thread file will be placed '
+          'Directory of disk thread file will be placed '
           '(default to system stateful partition.)',
           default=None),
+      Arg('max_errors', int,
+          'Number of errors to exit early.',
+          default=stress_manager.DEFAULT_MAX_ERRORS),
+      Arg('num_threads', int,
+          'Number of threads to be used. Default to number of cores.',
+          default=None),
+      Arg('taskset_args', list,
+          'Argument to taskset to change CPU affinity for stressapptest.',
+          default=None)
   ]
 
   def setUp(self):
@@ -106,7 +125,10 @@ class StressAppTest(unittest.TestCase):
           memory_ratio=self.args.memory_ratio,
           free_memory_only=self.args.free_memory_only,
           disk_thread=self.args.disk_thread,
-          disk_thread_dir=self.args.disk_thread_dir):
+          disk_thread_dir=self.args.disk_thread_dir,
+          max_errors=self.args.max_errors,
+          num_threads=self.args.num_threads,
+          taskset_args=self.args.taskset_args):
         pass
     except stress_manager.StressManagerError as e:
       logging.error('StressAppTest failed: %s', e)
