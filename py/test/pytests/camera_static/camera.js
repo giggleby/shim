@@ -76,6 +76,7 @@ class CameraTest {
     this.canvas.width = frame.width;
     this.canvas.height = frame.height;
     this.canvas.getContext('2d').drawImage(frame, 0, 0);
+    frame.close();
   }
 
   async grabFrameAndTransmitBack(data_event_name) {
