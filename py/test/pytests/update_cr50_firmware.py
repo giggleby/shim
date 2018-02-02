@@ -55,18 +55,24 @@ import logging
 import os
 import subprocess
 import unittest
+import re
 
 import factory_common  # pylint: disable=unused-import
 from cros.factory.device import device_utils
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 
 _CSS = 'test-template { text-align: left; }'
 
 TRUNKS_SEND = '/usr/sbin/trunks_send'
+GSCTOOL = '/usr/sbin/gsctool'
 DEFAULT_FIRMWARE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
+BOARD_ID_FLAG_RE = re.compile(r'^RO_A:[^\[]*\[[0-9A-F]*:[0-9A-F]*:([01]*)\]',
+                              re.MULTILINE)
+PREPVT_FLAG_MASK = 0x7F
 
 
 class UpdateCr50FirmwareTest(unittest.TestCase):
@@ -77,6 +83,14 @@ class UpdateCr50FirmwareTest(unittest.TestCase):
           optional=True, default=True),
       Arg('force', bool, 'Force update',
           optional=True, default=False),
+      Arg('skip_prepvt_flag_check',
+          bool, 'Skip prepvt flag check. For non-dogfood devcies, '
+          'we should always use prod firmware, rather than prepvt one. '
+          'A dogfood device can use prod firmware, as long as the board id'
+          'setting is correct. The dogfood device will update to the prepvt '
+          'firmware when first time boot to recovery image. '
+          'http://crbug.com/802235',
+          default=False)
   ]
 
   def setUp(self):
@@ -108,7 +122,18 @@ class UpdateCr50FirmwareTest(unittest.TestCase):
           self.dut.SendFile(self.args.firmware_file, dut_temp_file)
           self._UpdateCr50Firmware(dut_temp_file)
 
+  def _IsPrePVTFirmware(self, firmware_file):
+    p = self.dut.CheckOutput([GSCTOOL, '-b', firmware_file]).strip()
+    board_id_flag = int(BOARD_ID_FLAG_RE.search(p).group(1), 16)
+    logging.info('Cr50 firmware board ID flag: %s', hex(board_id_flag))
+    testlog.LogParam(
+        'cr50_firmware_file_info', p, description='Output of gsctool -b.')
+    return board_id_flag & PREPVT_FLAG_MASK
+
   def _UpdateCr50Firmware(self, firmware_file):
+    if not self.args.skip_prepvt_flag_check:
+      if self._IsPrePVTFirmware(firmware_file):
+        raise ValueError('Cr50 firmware board ID flag is PrePVT.')
     if self.args.force:
       cmd = [TRUNKS_SEND, '--force', '--update', firmware_file]
     else:
