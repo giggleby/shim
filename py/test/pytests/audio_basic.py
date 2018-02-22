@@ -171,7 +171,7 @@ class AudioBasicTest(unittest.TestCase):
       logging.info('start play sample')
       locale = self.ui.GetUILocale()
       for i in xrange(self.args.output_channels):
-        ogg_path = os.path.join(_SOUND_DIRECTORY, locale, '%d.ogg' % i + 1)
+        ogg_path = os.path.join(_SOUND_DIRECTORY, locale, '%d.ogg' % (i + 1))
         number_wav_path = '%s.wav' % ogg_path
         process_utils.Spawn(
             ['sox', ogg_path, '-c1', number_wav_path], check_call=True)
