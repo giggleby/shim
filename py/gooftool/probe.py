@@ -1098,25 +1098,52 @@ def _ProbeCpuArm():
 @_ComponentProbe('display_panel')
 def _ProbeDisplayPanel():
   """Combine all available edid data, from sysfs and directly from the i2c."""
-  edid_list = []
-  glob_list = [
-      '/sys/class/drm/*LVDS*/edid',
-      '/sys/kernel/debug/edid*',
-  ]
-  path_list = []
-  for path in glob_list:
-    path_list += glob(path)
-  for path in path_list:
-    with open(path) as f:
-      parsed_edid = edid.Parse(f.read())
+
+  def _ProbeEDID():
+    edid_list = []
+    glob_list = [
+        '/sys/class/drm/*LVDS*/edid',
+        '/sys/kernel/debug/edid*',
+    ]
+    path_list = []
+    for path in glob_list:
+      path_list += glob(path)
+    for path in path_list:
+      with open(path) as f:
+        parsed_edid = edid.Parse(f.read())
+        if parsed_edid:
+          edid_list.append(parsed_edid)
+    sys_utils.LoadKernelModule('i2c_dev', error_on_fail=False)
+    for path in sorted(glob('/dev/i2c-[0-9]*')):
+      parsed_edid = edid.LoadFromI2c(path)
       if parsed_edid:
         edid_list.append(parsed_edid)
-  sys_utils.LoadKernelModule('i2c_dev', error_on_fail=False)
-  for path in sorted(glob('/dev/i2c-[0-9]*')):
-    parsed_edid = edid.LoadFromI2c(path)
-    if parsed_edid:
-      edid_list.append(parsed_edid)
-  return edid_list
+    return edid_list
+
+  def _ProbeMIPIPanels():
+    mipi_panels = [sys_path.split('/')[5][6:]
+                   for sys_path in glob(
+                       '/sys/bus/mipi-*/drivers/panel-*/*.mipi.*')]
+    if len(mipi_panels) != 1:
+      logging.warning(
+          '_ProbeMIPIPanels: not detecting exactly one MIPI panels: %r',
+          mipi_panels)
+      return []
+
+    lines = process_utils.CheckOutput(['modetest', '-p'], log=True)
+    resolutions = [resolution
+                   for resolution in re.findall(r'\((\d+)x(\d+)\)', lines)
+                   if resolution != ('0', '0')]
+    if len(resolutions) != 1:
+      logging.warning(
+          "_ProbeMIPIPanels: modetest doesn't output exactly one resolution: "
+          "%r", resolutions)
+      return []
+
+    return [{'name': mipi_panels[0],
+             'width': resolutions[0][0], 'height': resolutions[0][1]}]
+
+  return _ProbeEDID() or _ProbeMIPIPanels()
 
 
 @_ComponentProbe('dram')
