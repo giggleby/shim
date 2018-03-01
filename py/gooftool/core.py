@@ -19,6 +19,7 @@ from cros.factory.gooftool.bmpblk import unpack_bmpblock
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool.probe import DeleteRwVpd
+from cros.factory.gooftool.probe import DeleteRoVpd
 from cros.factory.gooftool.probe import Probe
 from cros.factory.gooftool.probe import ReadRoVpd
 from cros.factory.gooftool.probe import ReadRwVpd
@@ -94,6 +95,7 @@ class Gooftool(object):
     self._crosfw = crosfw
     self._read_ro_vpd = ReadRoVpd
     self._read_rw_vpd = ReadRwVpd
+    self._delete_ro_vpd = DeleteRoVpd
     self._delete_rw_vpd = DeleteRwVpd
     self._update_ro_vpd = UpdateRoVpd
     self._unpack_bmpblock = unpack_bmpblock
@@ -619,13 +621,18 @@ class Gooftool(object):
     Returns:
       A dict of the removed entries.
     """
+    ro_vpd = self._read_ro_vpd()
     rw_vpd = self._read_rw_vpd()
-    entries = dict((k, v) for k, v in rw_vpd.items()
-                   if k.startswith('factory.'))
-    logging.info('Removing VPD entries %s', FilterDict(entries))
-    if entries:
-      if not self._delete_rw_vpd(entries):
-        raise Error('Failed to remove VPD entries: %s' % entries.keys())
+    ro_entries = dict((k, v) for k, v in ro_vpd.items() if '.' in k)
+    rw_entries = dict((k, v) for k, v in rw_vpd.items() if '.' in k)
+    logging.info('Removing VPD RW entries %s, RO entries %s',
+                 FilterDict(rw_entries), ro_entries)
+    if rw_entries:
+      if not self._delete_rw_vpd(rw_entries):
+        raise Error('Failed to remove RW VPD entries: %s' % rw_entries.keys())
+    if ro_entries:
+      if not self._delete_ro_vpd(ro_entries):
+        raise Error('Failed to remove RO VPD entries: %s' % ro_entries.keys())
 
   def GenerateStableDeviceSecret(self):
     """Generates a fresh stable device secret and stores it in RO VPD.
