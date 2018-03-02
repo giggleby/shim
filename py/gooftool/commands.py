@@ -697,6 +697,7 @@ def Finalize(options):
   - Uploads system logs & reports
   - Wipes the testing kernel, rootfs, and stateful partition
   """
+  Cr50SetBoardId(options)
   Verify(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
@@ -707,7 +708,6 @@ def Finalize(options):
   ClearGBBFlags(options)
   ClearFactoryVPDEntries(options)
   GenerateStableDeviceSecret(options)
-  Cr50SetBoardId(options)
   if options.no_write_protect:
     logging.warn('WARNING: Firmware Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
