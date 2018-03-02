@@ -57,7 +57,7 @@ _RE_LAST_SEEN = re.compile(r'^last seen: ([\d]+) ms ago$')
 _RE_WIPHY = re.compile(r'wiphy (\d+)')
 
 # The scanned result with last_seen value greater than this value
-# will be neglected.
+# will be ignored.
 _THRESHOLD_LAST_SEEN_MS = 1000
 
 
@@ -416,7 +416,7 @@ class WirelessTest(unittest.TestCase):
           (mac, freq_scanned, strength, last_seen) = self.ParseScanOutput(
               scan_output, service_ssid)
           if last_seen > _THRESHOLD_LAST_SEEN_MS:
-            logging.warning('Neglect cached scan : %s %d ms ago.',
+            logging.warning('Ignore cached scan : %s %d ms ago.',
                             service_ssid, last_seen)
             continue
           # strength may be 0.
@@ -522,7 +522,7 @@ class WirelessTest(unittest.TestCase):
     test_service = self.ChooseMaxStrengthService(
         services, self._antenna_service_strength['all'])
     if test_service is None:
-      self.fail('Services %s are not valid.' % services)
+      self.fail('Services %s are not valid.' % (services,))
 
     # Checks 'all' since we have scanned using antenna 'all' already.
     self.CheckSpec(test_service, self.args.strength, 'all')
