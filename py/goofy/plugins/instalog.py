@@ -200,3 +200,25 @@ class Instalog(plugin.Plugin):
   def OnStop(self):
     """Called when the plugin stops."""
     self._RunCommand(['stop'], check_output=True, verbose=True)
+
+  @plugin.RPCFunction
+  def Archive(self, path, detail):
+    state = self._state
+    if state == self.STATE.DESTROYED:
+      logging.error('Instalog plugin has been destroyed, abort archive')
+      return
+
+    try:
+      self.Stop()
+
+      def _IsInstalogStopped():
+        p = self._RunCommand(['status'], check_output=True)
+        return p.stdout_data.strip() == 'DOWN'
+
+      sync_utils.WaitFor(_IsInstalogStopped, timeout_secs=5, poll_interval=1)
+
+      detail = ['-' + 'd' * detail] if detail else []
+      self._RunCommand(['archive', '-o', path] + detail, check_call=True)
+    finally:
+      if state == self.STATE.RUNNING:
+        self.Start()
