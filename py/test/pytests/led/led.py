@@ -12,6 +12,7 @@ import logging
 import random
 import time
 import unittest
+import threading
 
 import factory_common  # pylint: disable=W0611
 from cros.factory import system
@@ -19,6 +20,8 @@ from cros.factory.system.board import Board
 from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.args import Arg
+from cros.factory.test.utils import StartDaemonThread
+from cros.factory.utils.process_utils import SpawnOutput
 from cros.factory.test.factory_task import (FactoryTask, FactoryTaskManager,
                                             InteractiveFactoryTask)
 
@@ -124,6 +127,55 @@ strong {
 }
 """
 
+_MSG_SPACE = test_ui.MakeLabel(
+    'Press space to start',
+    u'请按空白键开始')
+
+class FlickerLEDTask(InteractiveFactoryTask):
+
+  def __init__(self, ui, template, pass_key, index, color):
+    super(FlickerLEDTask, self).__init__(ui)
+    self._template = template
+    self._pass_key = pass_key
+    self._index = index
+    self._color = color
+    self._space_event = threading.Event()
+
+  def OnSpacePressed(self):
+    """The handler of space key."""
+    logging.info('Space pressed by operator.')
+    self._space_event.set()
+
+  def PromptSpace(self):
+    """Prompts a message to ask operator to press space."""
+    self._template.SetState(_MSG_SPACE)
+    self._ui.BindKey(' ', lambda _: self.OnSpacePressed())
+
+
+  def Run(self):
+    self.PromptSpace()
+    self._space_event.wait()
+
+    self._InitUI()
+    StartDaemonThread(target=self.FlickeringTest)
+
+  def _InitUI(self):
+    """Sets instructions and binds pass/fail key."""
+    instruction = test_ui.MakeLabel(
+      'Press the number determined by the times of blinking LEDs',
+      u'请根据LED闪烁的次数按下数字')
+    self._template.SetState(instruction)
+
+    self.BindPassFailKeys(pass_key=False)
+    self.BindDigitKeys(self._pass_key)
+
+  def FlickeringTest(self):
+    for i in range(0, self._pass_key, 1):
+      SpawnOutput(['ectool', 'led', str(self._index), 'off'])
+      time.sleep(0.3)
+      SpawnOutput(['ectool', 'led', str(self._index),
+                  str(self._color), 'on'])
+      time.sleep(0.3)
 
 class CheckLEDTask(InteractiveFactoryTask):
   """An InteractiveFactoryTask that asks operator to check LED color.
@@ -305,7 +357,10 @@ class LEDTest(unittest.TestCase):
       Arg('index_i18n', dict,
           'Mapping of (index, zh) translations.  If an index is used without '
           'providing a translation, it will simply show the original index '
-          'name.', optional=True, default={})]
+          'name.', optional=True, default={}),
+      Arg('flicker', bool,
+          'When set to True, LED might flicker random times', default=False)
+]
 
   def setUp(self):
     self._ui = test_ui.UI()
@@ -314,8 +369,12 @@ class LEDTest(unittest.TestCase):
     self._fixture = None
     self._board = None
     self._board = system.GetBoard()
+    self._flicker = None
     if self.args.bft_fixture:
       self._fixture = CreateBFTFixture(**self.args.bft_fixture)
+    if self.args.flicker:
+      self._pass_key = random.randint(2,5)
+
 
     self._SetAllLED(self.args.target_leds, LEDColor.OFF)
 
@@ -357,6 +416,10 @@ class LEDTest(unittest.TestCase):
                                            color, color_label,
                                            index, index_label,
                                            challenge_colors))
+
+      elif self.args.flicker:
+        tasks.append(FlickerLEDTask(self._ui, self._template,
+                                    self._pass_key, index, color))
       else:
         tasks.append(CheckLEDTaskNormal(self._ui, self._template,
                                         self._board, i + 1,
