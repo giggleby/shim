@@ -50,6 +50,11 @@ try:
 except ImportError:
   pass
 
+try:
+  from cros.factory.gooftool import private_probe
+except ImportError:
+  private_probe = None
+
 # TODO(tammo): Some tests look for multiple components, some tests
 # throw away all but the first, and some just look for one.  All tests
 # should return a list of results, with the empty list indicating no
@@ -1389,6 +1394,11 @@ def _ProbeMainBoard():
     return []
   else:
     return [{'version': version}]
+
+
+@_ComponentProbe('daughter_board')
+def _ProbeDaughterBoard():
+  return private_probe.ProbeDaughterBoard()
 
 
 @_InitialConfigProbe('cellular_fw_version')
