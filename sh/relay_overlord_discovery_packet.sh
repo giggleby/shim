@@ -39,7 +39,8 @@ main() {
   fi
 
   while true; do
-    socat -u UDP-RECVFROM:4456 UDP-DATAGRAM:${bcast_ip}:4456,broadcast
+    socat -u UDP-RECVFROM:4456 UDP-DATAGRAM:${bcast_ip}:4456,broadcast \
+      >/dev/null 2>&1
     if ${QUIT}; then
       break
     fi

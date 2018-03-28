@@ -56,9 +56,12 @@ main() {
 
   trap clean_up EXIT
   TMP_DATA_DIR="$(mktemp -d --tmpdir || mktemp -d)"
+  # Note --load-extension and --no-sandbox are needed on recent (M6x, probably
+  # also M5x) Chromium browsers.
   google-chrome \
-    --load-and-launch-app="${FACTORY_DIR}/py/goofy/ui_presenter_app" \
-    chrome-extension://oaaomfgfdeefdhpfbokkpkhodmjaicoh/main.html \
+    --no-sandbox \
+    --load-extension="${FACTORY_DIR}/py/goofy/ui_presenter_app" \
+    "${FACTORY_DIR}"/py/goofy/ui_presenter_app/first.html \
     --user-data-dir="${TMP_DATA_DIR}" \
     --disable-translate \
     --overscroll-history-navigation=0 &
