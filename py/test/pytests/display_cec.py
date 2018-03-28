@@ -7,17 +7,21 @@ import subprocess
 
 import factory_common  # pylint: disable=unused-import
 from cros.factory.test import test_ui
+from cros.factory.test.i18n import test_ui as i18n_test_ui
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-_MSG_CEC_SELF_TEST_INFO = ('Please disconnect HDMI, then press SPACE<br>' +
-                           'after one second reconnect HDMI')
+_MSG_CEC_SELF_TEST_INFO = i18n_test_ui.MakeI18nLabel(
+    'Please disconnect HDMI, then press SPACE<br>'
+    'after one second reconnect HDMI.')
 
-_MSG_CEC_MANUAL_INFO = ('The TV will turn off and then on again<br>' +
-                        'Press SPACE to start the test')
+_MSG_CEC_MANUAL_INFO = i18n_test_ui.MakeI18nLabel(
+    'The TV will turn off and then on again<br>'
+    'Press SPACE to start the test.')
 
-_MSG_CEC_TEST = ('Did the TV turn off then on again?<br>' +
-                 'Press SPACE if yes, "F" if no.')
+_MSG_CEC_TEST = i18n_test_ui.MakeI18nLabel(
+    'Did the TV turn off then on again?<br>'
+    'Press SPACE if yes, "F" if no.')
 
 _HTML_CEC = '<div id="cec-title"></div>'
 

@@ -142,6 +142,10 @@ msgid "Display"
 msgstr "显示"
 
 #: ../build/pytests_label_generated.json
+msgid "Display Cec"
+msgstr "CEC显示测试"
+
+#: ../build/pytests_label_generated.json
 msgid "Display Images"
 msgstr "显示图像"
 
@@ -1760,6 +1764,20 @@ msgstr "影像-水平"
 #: ../py/test/pytests/display.py
 msgid "image-vertical-rgbw"
 msgstr "影像-垂直"
+
+#: ../py/test/pytests/display_cec.py
+msgid ""
+"Please disconnect HDMI, then press SPACE<br>after one second reconnect HDMI."
+msgstr "请移除HDMI线，再按下SPACE键 <br> 等待1秒后将HDMI线插回"
+
+#: ../py/test/pytests/display_cec.py
+msgid ""
+"The TV will turn off and then on again<br>Press SPACE to start the test."
+msgstr "显示器会暂时关闭并重新开启<br>请按 空白键 开始测试..."
+
+#: ../py/test/pytests/display_cec.py
+msgid "Did the TV turn off then on again?<br>Press SPACE if yes, \"F\" if no."
+msgstr "显示器是否重新开启？<br>是请按空白键，不是请按 F 。"
 
 #: ../py/test/pytests/display_images.py
 msgid ""
