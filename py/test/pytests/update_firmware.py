@@ -78,6 +78,7 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.utils import update_utils
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
@@ -140,6 +141,49 @@ class UpdateFirmwareTest(unittest.TestCase):
     os.chmod(target_path, 0755)
     return True
 
+  def _RunCommand(self, title, command):
+    self._template.SetState(
+        test_ui.Escape(title + '\n' + '=' * len(title) + '\n'), append=True)
+
+    p = process_utils.Spawn(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, log=True)
+    for line in iter(p.stdout.readline, ''):
+      logging.info(line.strip())
+      self._template.SetState(test_ui.Escape(line), append=True)
+
+    self._template.SetState(test_ui.Escape('\n'), append=True)
+    return p
+
+  def PatchFirmwareUpdater(self):
+    new_path = tempfile.mkdtemp()
+    p = self._RunCommand('Copy the firmware updater to writable partition',
+                         ['cp', self.args.firmware_updater, new_path])
+    self.assertEquals(p.poll(), 0)
+    self.args.firmware_updater = os.path.join(
+        new_path, os.path.basename(self.args.firmware_updater))
+
+    with file_utils.TempDirectory() as bundle_path:
+      p = self._RunCommand(
+          'Unpack the firmware updater',
+          [self.args.firmware_updater, '--sb_extract', bundle_path])
+      self.assertEqual(
+          p.poll(), 0, 'Failed to unpack the updater: %d.' % p.returncode)
+
+      for f in ['bin/mosys', 'mosys']:
+        path = os.path.join(bundle_path, f)
+        if os.path.isfile(path):
+          os.unlink(path)
+          logging.info('Removed the file: %r', path)
+          self._template.SetState(
+              test_ui.Escape('Removed the file from the bundle: %r\n' % f),
+              append=True)
+
+      p = self._RunCommand(
+          'Pack back the firmware updater',
+          [self.args.firmware_updater, '--sb_repack', bundle_path])
+      self.assertEqual(
+          p.poll(), 0, 'Failed to repack the updater: %d.' % p.returncode)
+
   def UpdateFirmware(self):
     """Runs firmware updater.
 
@@ -160,6 +204,8 @@ class UpdateFirmwareTest(unittest.TestCase):
       logging.warn('Removing %s', LOCK_FILE)
       os.unlink(LOCK_FILE)
 
+    self.PatchFirmwareUpdater()
+
     command = [self.args.firmware_updater, '--force',
                '--update_main' if self.args.update_main else '--noupdate_main',
                '--update_ec' if self.args.update_ec else '--noupdate_ec',
@@ -169,11 +215,7 @@ class UpdateFirmwareTest(unittest.TestCase):
     else:
       command += ['--mode=factory']
 
-    p = process_utils.Spawn(
-        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, log=True)
-    for line in iter(p.stdout.readline, ''):
-      logging.info(line.strip())
-      self._template.SetState(test_ui.Escape(line), append=True)
+    p = self._RunCommand('Update the firmware', command)
 
     # Updates system info so EC and Firmware version in system info box
     # are correct.
