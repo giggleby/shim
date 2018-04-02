@@ -107,7 +107,10 @@ class UpdateFirmwareTest(unittest.TestCase):
       Arg('update_main', bool, 'Update main firmware.', default=True),
       Arg('force_update', bool,
           'force to update firmwares even if the version is the same.',
-          default=True)
+          default=True),
+      Arg('patch_mosys', bool,
+          'force to use the mosys on the current image instead of the one in '
+          'release image', default=False)
   ]
 
   def setUp(self):
@@ -154,7 +157,7 @@ class UpdateFirmwareTest(unittest.TestCase):
     self._template.SetState(test_ui.Escape('\n'), append=True)
     return p
 
-  def PatchFirmwareUpdater(self):
+  def PatchMosys(self):
     new_path = tempfile.mkdtemp()
     p = self._RunCommand('Copy the firmware updater to writable partition',
                          ['cp', self.args.firmware_updater, new_path])
@@ -204,7 +207,8 @@ class UpdateFirmwareTest(unittest.TestCase):
       logging.warn('Removing %s', LOCK_FILE)
       os.unlink(LOCK_FILE)
 
-    self.PatchFirmwareUpdater()
+    if self.args.patch_mosys:
+      self.PatchMosys()
 
     command = [self.args.firmware_updater, '--force',
                '--update_main' if self.args.update_main else '--noupdate_main',
