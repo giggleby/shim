@@ -12,7 +12,7 @@
 
 TESTLISTS=/usr/local/factory/py/test/test_lists
 ACTIVE_FILE="${TESTLISTS}/ACTIVE"
-if [ -e "${ACTIVE_FILE}" ]; then
+if [ -s "${ACTIVE_FILE}" ]; then
   exit
 fi
 
