@@ -142,8 +142,8 @@ class ChargerTest(unittest.TestCase):
     self.assertTrue(self._power.CheckBatteryPresent(), 'Cannot find battery.')
     self.assertTrue(self._power.CheckACPresent(), 'Cannot find AC power.')
     if self.args.charger_type:
-      self.assertEqual(self._power.GetACType(), self.args.charger_type,
-                       'Incorrect charger type: %s' % self._power.GetACType())
+      self.assertTrue(self.args.charger_type in self._power.GetACTypes(),
+                      'Incorrect charger type: %s' % self._power.GetACTypes())
 
   def _GetCharge(self, use_percentage=True):
     """Gets charge level through power interface"""

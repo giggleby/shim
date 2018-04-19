@@ -64,11 +64,17 @@ class Power(types.DeviceComponent):
     return ''
 
   def FindPowerPath(self, power_source):
-    """Find battery path in sysfs."""
+    """Find battery path in sysfs.
+
+    Args:
+      power_source: PowerSource.BATTERY or PowerSource.AC
+    Returns:
+      A list of available power paths.
+    """
     def GetValue(path, sub_path):
       full_path = self._device.path.join(path, sub_path)
       if not self._device.path.exists(full_path):
-        return None
+        return []
       return self.ReadOneLine(full_path)
 
     power_supplies = self._device.Glob(
@@ -79,36 +85,39 @@ class Power(types.DeviceComponent):
       ]
     else:
       power_supplies = [
-          p for p in power_supplies if GetValue(p, 'type') != 'Battery'
+          p for p in power_supplies
+          if GetValue(p, 'type') != 'Battery' and GetValue(p, 'online') == '1'
       ]
 
     if power_supplies:
-      # Systems with multiple USB-C ports may have multiple power sources.
-      # Since the end goal is to determine if the system is powered, let's
-      # just return the first powered AC path if there's any; otherwise
-      # return the first in the list.
-      for p in power_supplies:
-        if GetValue(p, 'online') == '1':
-          return p
-      return power_supplies[0]
+      return power_supplies
 
     raise PowerException('Cannot find %s' % power_source)
 
   def CheckACPresent(self):
     """Check if AC power is present."""
     try:
-      p = self.FindPowerPath(self.PowerSource.AC)
-      return self.ReadOneLine(self._device.path.join(p, 'online')) == '1'
+      return any([
+          self.ReadOneLine(self._device.path.join(p, 'online')) == '1'
+          for p in self.FindPowerPath(self.PowerSource.AC)
+      ])
     except (PowerException, IOError):
       return False
 
-  def GetACType(self):
-    """Get AC power type."""
+  def GetACTypes(self):
+    """Get AC power types.
+
+    Returns:
+      A list of available AC types.
+    """
     try:
-      p = self.FindPowerPath(self.PowerSource.AC)
-      return self.ReadOneLine(self._device.path.join(p, 'type'))
+      return [
+          self.ReadOneLine(self._device.path.join(p, 'type'))
+          for p in self.FindPowerPath(self.PowerSource.AC)
+          if self.ReadOneLine(self._device.path.join(p, 'online')) == '1'
+      ]
     except (PowerException, IOError):
-      return 'Unknown'
+      return ['Unknown']
 
   @types.DeviceProperty
   def _battery_path(self):
@@ -120,7 +129,10 @@ class Power(types.DeviceComponent):
       Battery path if available, None otherwise.
     """
     try:
-      return self.FindPowerPath(self.PowerSource.BATTERY)
+      power_path = self.FindPowerPath(self.PowerSource.BATTERY)
+      if len(power_path) != 1:
+        raise PowerException('Zero or multiple battery power path.')
+      return power_path[0]
     except PowerException:
       return None
 

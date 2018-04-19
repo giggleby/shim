@@ -98,7 +98,6 @@ class ACPowerTest(unittest.TestCase):
 
     self._power_state = {}
     self._done = threading.Event()
-    self._last_type = None
     self._last_ac_present = None
     self._skip_warning_remains = self.args.silent_warning
     if self.args.usbpd_power_range is not None:
@@ -123,30 +122,26 @@ class ACPowerTest(unittest.TestCase):
 
   def CheckCondition(self):
     ac_present = self._power.CheckACPresent()
-    current_type = self._power.GetACType()
+    current_types = self._power.GetACTypes()
 
     # Reset silent warning countdown when AC present status change.
-    # Also reset _last_type as we want to give a warning for each
-    # mismatched charger attached.
     if self._last_ac_present != ac_present:
       self._last_ac_present = ac_present
       self._skip_warning_remains = self.args.silent_warning
-      self._last_type = None
 
     if ac_present != self.args.online:
       if not ac_present:
         self.UpdateACStatus(_NO_AC)
       return False
 
-    if self.args.power_type and self.args.power_type != current_type:
+    if self.args.power_type and self.args.power_type not in current_types:
       if self._skip_warning_remains > 0:
         self.UpdateACStatus(_AC_TYPE_PROBING)
         self._skip_warning_remains -= 1
-      elif self._last_type != current_type:
-        self.UpdateACStatus(_AC_TYPE + current_type)
+      else:
+        self.UpdateACStatus(_AC_TYPE + current_types)
         session.console.warning(
-            'Expecting %s but see %s', self.args.power_type, current_type)
-        self._last_type = current_type
+            'Expecting %s but see %s', self.args.power_type, current_types)
       return False
 
     if self.args.usbpd_power_range and self.args.power_type == _AC_TYPE_USB_PD:
