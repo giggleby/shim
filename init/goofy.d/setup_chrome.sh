@@ -15,17 +15,20 @@ if [ -f "${board_conf_file}" ]; then
 fi
 
 mount --bind "${conf_file}" /etc/chrome_dev.conf
+echo "/etc/chrome_dev.conf" >> /run/factory/mounts
 
 # For factory environment, we don't need to preserve Chrome session data.
 # /home/chronos may have been mounted by stateful partition and encstateful.
 umount -R /home/chronos || true
 mount -t tmpfs none /home/chronos
+echo "/home/chronos" >> /run/factory/mounts
 
 # Chrome uses /var/tmp to create some sqlite database files and would raise
 # profile error if writing to /var/tmp failed (for example, encstateful full).
 # To speed up and ensure Chrome can run without problems, mount /var/tmp as
 # tmpfs.
 mount -t tmpfs none /var/tmp
+echo "/var/tmp" >> /run/factory/mounts
 
 # Enable all debug-friendly features, by information from following page:
 # http://www.chromium.org/chromium-os/how-tos-and-troubleshooting/debugging-tips

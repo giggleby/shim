@@ -25,8 +25,10 @@ main() {
     # JAILED_DIR may be mounted with noexec so we have to re-bind.
     touch "${jailed_path}"
     mount --bind "${target_dest}" "${jailed_path}"
+    echo "${jailed_path}" >> /run/factory/mounts
     if [ -x "${target_dest}" ]; then
       mount --bind "${target_src}" "${target_dest}"
+      echo "${target_dest}" >> /run/factory/mounts
     fi
   done
 }
