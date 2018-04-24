@@ -10,11 +10,7 @@
   "externally_connectable": {
     "matches": ["*://localhost/*"]
   },
-  "web_accessible_resources": [
-    "main.html"
-  ],
   "permissions": [
-    "debugger",
     "system.display",
     "tabs"
   ]
