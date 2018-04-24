@@ -6,4 +6,4 @@
 # Install the job filter to inhibit Upstart jobs.
 mount --bind "$(dirname $(readlink -f $0))/inhibit_jobs/filter.sh" \
   /usr/sbin/job-filter
-echo "/usr/sbin/job-filter" >> /run/factory/mounts
+echo "/usr/sbin/job-filter" >>/run/factory/mounts

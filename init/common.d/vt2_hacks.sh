@@ -8,4 +8,4 @@
 # Install console (VT2) customizations
 mount --bind "$(dirname $(readlink -f $0))/vt2_hacks/cursor.sh" \
   /etc/profile.d/cursor.sh
-echo "/etc/profile.d/cursor.sh" >> /run/factory/mounts
+echo "/etc/profile.d/cursor.sh" >>/run/factory/mounts
