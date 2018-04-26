@@ -74,7 +74,7 @@ def GetGooftool(options):
 
 
 def Command(cmd_name, *args, **kwargs):
-  """Decorator for commands in gooftool.
+  """ Decorator for commands in gooftool.
 
   This is similar to argparse_utils.Command, but all gooftool commands
   can be waived during `gooftool finalize` or `gooftool verify` using
@@ -367,16 +367,10 @@ def VerifyReleaseChannel(options):
       options.enforced_release_channels)
 
 
-@Command('write_protect',
-         CmdArg('--no_enable', dest='enable', action='store_false',
-                help="Don't enable write protection."),
-         CmdArg('--no_verify', dest='verify', action='store_false',
-                help="Don't verify write protection."),
-         CmdArg('--no_ap', dest='ap', action='store_false', help='Skip AP.'),
-         CmdArg('--no_ec', dest='ec', action='store_false', help='Skip EC.'),
-         CmdArg('--no_pd', dest='pd', action='store_false', help='Skip PD.'))
+@Command('write_protect')
 def EnableFwWp(options):
   """Enable then verify firmware write protection."""
+  del options  # Unused.
 
   def WriteProtect(fw):
     """Calculate protection size, then invoke flashrom.
@@ -399,16 +393,10 @@ def EnableFwWp(options):
 
     logging.debug('write protecting %s [off=%x size=%x]', fw.target.upper(),
                   ro_offset, ro_size)
-    crosfw.Flashrom(fw.target).EnableAndVerifyWriteProtection(
-        ro_offset, ro_size, options.enable, options.verify)
+    crosfw.Flashrom(fw.target).EnableWriteProtection(ro_offset, ro_size)
 
-    event_log.Log('wp', fw=fw.target)
-
-  if not (options.enable or options.verify):
-    return
-
-  if options.ap:
-    WriteProtect(crosfw.LoadMainFirmware())
+  WriteProtect(crosfw.LoadMainFirmware())
+  event_log.Log('wp', fw='main')
 
   # Some EC (mostly PD) does not support "RO NOW". Instead they will only set
   # "RO_AT_BOOT" when you request to enable RO (These platforms consider
@@ -417,15 +405,14 @@ def EnableFwWp(options):
   # After reboot, "flashrom -p host --wp-status" will return protected range.
   # If you don't reboot, returned range will be (0, 0), and running command
   # "ectool flashprotect" will not have RO_NOW.
-  for flag, fw in ((options.ec, crosfw.LoadEcFirmware()),
-                   (options.pd, crosfw.LoadPDFirmware())):
-    if not flag:
-      continue
+
+  for fw in [crosfw.LoadEcFirmware(), crosfw.LoadPDFirmware()]:
     if fw.GetChipId() is None:
       logging.warning('%s not write protected (seems there is no %s flash).',
                       fw.target.upper(), fw.target.upper())
       continue
     WriteProtect(fw)
+    event_log.Log('wp', fw=fw.target)
 
 
 @Command('clear_gbb_flags')

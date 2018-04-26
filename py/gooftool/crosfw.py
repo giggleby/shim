@@ -148,33 +148,27 @@ class Flashrom(object):
     if len(wp_range) != 1:
       raise IOError('Failed getting write protection range')
     wp_range = wp_range[0]
-    return WpStatus(
-        status == 'enabled', int(wp_range[0], 0), int(wp_range[1], 0))
+    return WpStatus(True if status == 'enabled' else False,
+                    int(wp_range[0], 0),
+                    int(wp_range[1], 0))
 
-  def CheckWriteProtectionStatus(self, enabled, offset, size, error_msg):
-    status = self.GetWriteProtectionStatus()
-    if (status.enabled != enabled or
-        status.offset != offset or status.size != size):
-      raise IOError(error_msg)
-
-  def EnableAndVerifyWriteProtection(self, offset, size, enable, verify):
+  def EnableWriteProtection(self, offset, size):
     """Enables write protection by specified range."""
-    if enable:
-      self._InvokeCommand(
-          '--wp-range 0x%06X 0x%06X --wp-enable' % (offset, size),
-          ignore_status=True)
-    if verify:
-      # Try to verify write protection by attempting to disable it.
-      self.DisableWriteProtection(False)
-      self.CheckWriteProtectionStatus(
-          True, offset, size, 'Failed to enabled write protection.')
-
-  def DisableWriteProtection(self, verify):
-    """Tries to Disable whole write protection range and status."""
+    self._InvokeCommand('--wp-range 0x%06X 0x%06X --wp-enable' % (offset, size))
+    # Try to verify write protection by attempting to disable it.
     self._InvokeCommand('--wp-disable --wp-range 0 0', ignore_status=True)
-    if verify:
-      self.CheckWriteProtectionStatus(
-          False, 0, 0, 'Failed to disable write protection.')
+    # Verify the results
+    result = self.GetWriteProtectionStatus()
+    if ((not result.enabled) or (result.offset != offset) or
+        (result.size != size)):
+      raise IOError('Failed to enabled write protection.')
+
+  def DisableWriteProtection(self):
+    """Tries to Disable whole write protection range and status."""
+    self._InvokeCommand('--wp-disable --wp-range 0 0')
+    result = self.GetWriteProtectionStatus()
+    if result.enabled or (result.offset != 0) or (result.size != 0):
+      raise IOError('Failed to disable write protection.')
 
 
 class FirmwareImage(object):
