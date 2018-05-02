@@ -18,6 +18,7 @@ import factory_common  # pylint: disable=unused-import
 from cros.factory.gooftool.bmpblk import unpack_bmpblock
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import crosfw
+from cros.factory.gooftool import report_upload
 from cros.factory.gooftool.probe import DeleteRwVpd
 from cros.factory.gooftool.probe import DeleteRoVpd
 from cros.factory.gooftool.probe import Probe
@@ -759,6 +760,15 @@ class Gooftool(object):
           'stable_device_secret_DO_NOT_SHARE': secret_bytes.encode('hex')}):
         raise Error
 
+    return secret
+
+  def UploadEnrollmentID(self, upload_method, secret):
+    # TODO(stimim): do we need scrub_exceptions like GenerateStableDeviceSecret?
+
+    enrollment_id = self._util.shell(
+        'eid -tpm2 -vpdval=%r | grep EID | cut -d" " -f2' % secret,
+        log=False).stdout.strip()
+    report_upload.UploadEnrollmentID(enrollment_id, upload_method)
 
   def Cr50SetBoardId(self):
     """Set the board id and flag on the Cr50 chip.

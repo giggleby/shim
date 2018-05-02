@@ -437,7 +437,8 @@ def ClearFactoryVPDEntries(options):
 @Command('generate_stable_device_secret')
 def GenerateStableDeviceSecret(options):
   """Generates a fresh stable device secret and stores it in the RO VPD."""
-  GetGooftool(options).GenerateStableDeviceSecret()
+  secret = GetGooftool(options).GenerateStableDeviceSecret()
+  GetGooftool(options).UploadEnrollmentID(options.upload_method, secret)
   event_log.Log('generate_stable_device_secret')
 
 

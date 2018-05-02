@@ -50,11 +50,18 @@ def RetryCommand(callback, message_prefix, interval):
       time.sleep(1)
 
 
+def ParseShopFloorRemoteSpec(remote_spec):
+  if '#' not in remote_spec:
+    raise Error('ParseShopFloorRemoteSpec: '
+                'need a valid parameter in URL#SN format.')
+  (server_url, _, serial_number) = remote_spec.partition('#')
+  return server_url, serial_number
+
+
 def ShopFloorUpload(source_path, remote_spec,
                     retry_interval=DEFAULT_RETRY_INTERVAL):
-  if '#' not in remote_spec:
-    raise Error('ShopFloorUpload: need a valid parameter in URL#SN format.')
-  (server_url, _, serial_number) = remote_spec.partition('#')
+  server_url, serial_number = ParseShopFloorRemoteSpec(remote_spec)
+
   logging.debug('ShopFloorUpload: [%s].UploadReport(%s, %s)',
                 server_url, serial_number, source_path)
   instance = xmlrpclib.ServerProxy(server_url, allow_none=True, verbose=False)
@@ -66,7 +73,7 @@ def ShopFloorUpload(source_path, remote_spec,
     try:
       instance.UploadReport(serial_number, blob, remote_name)
       return True
-    except xmlrpclib.Fault, err:
+    except xmlrpclib.Fault as err:
       result['message'] = 'Remote server fault #%d: %s' % (err.faultCode,
                                                            err.faultString)
       result['abort'] = True
@@ -231,3 +238,27 @@ def FtpUpload(source_path, ftp_url, retry_interval=DEFAULT_RETRY_INTERVAL,
   logging.debug('FtpUpload: upload complete.')
   ftp.quit()
   logging.info('FtpUpload: successfully uploaded to %s', ftp_url)
+
+
+def UploadEnrollmentID(enrollment_id, upload_method,
+                       retry_interval=DEFAULT_RETRY_INTERVAL):
+  method, remote_spec = upload_method.split(':', 1)
+  assert method == 'shopfloor'
+  server_url, serial_number = ParseShopFloorRemoteSpec(remote_spec)
+  instance = xmlrpclib.ServerProxy(server_url, allow_none=True, verbose=False)
+
+  def ShopFloorCallback(result):
+    try:
+      instance.UploadCSVEntry('enrollment_id', [serial_number, enrollment_id])
+      return True
+    except xmlrpclib.Fault as e:
+      result['message'] = 'Remote server fault #%d: %s' % (e.faultCode,
+                                                           e.faultString)
+      result['abort'] = True
+    except Exception:
+      result['message'] = sys.exc_info()[1]
+      result['abort'] = False
+
+  RetryCommand(ShopFloorCallback, 'UploadEnrollmentID', interval=retry_interval)
+  logging.info('UploadEnrollmentID: successfully uploaded for %s.',
+               serial_number)
