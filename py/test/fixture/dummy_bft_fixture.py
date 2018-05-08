@@ -37,6 +37,9 @@ class DummyBFTFixture(bft_fixture.BFTFixture):
     self._Prompt(
         'Please %s device: %s' % ('engage' if engage else 'disengage', device))
 
+  def SetFakeDisconnection(self, *args, **kwargs):
+    self._Log('Fake Disconnect (%r, %r)' % (args, kwargs))
+
   def Ping(self):
     self._Log('ping back.')
 
