@@ -757,10 +757,10 @@ def Verify(options):
   VerifySystemTime(options)
   VerifyKeys(options)
   VerifyRootFs(options)
-  VerifyTPM(options)
   if options.cros_core:
-    logging.info('VerifyBranding is skipped for ChromeOS Core device.')
+    logging.info('VerifyTPM and VerifyBranding are skipped for ChromeOS Core device.')
   else:
+    VerifyTPM(options)
     VerifyBranding(options)
   VerifyReleaseChannel(options)
 

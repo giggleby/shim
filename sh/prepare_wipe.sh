@@ -66,6 +66,7 @@ main() {
   install_message
   install_wipe_tag
   . "$SCRIPT_DIR/enable_release_partition.sh" "$1" || exit 1
+  crossystem clear_tpm_owner_request=1 || true  # Best effort.
   NEED_ROLLBACK=""
   alert "Prepare wipe: Complete."
 }
