@@ -74,6 +74,9 @@ class SuspendResumeTest(unittest.TestCase):
           default='/sys/class/rtc/rtc0/wakealarm'),
       Arg('time_path', str, 'Path to the time (since_epoch) file',
           default='/sys/class/rtc/rtc0/since_epoch'),
+      Arg('wait_secs', int,
+          'Time to wait in seconds before executing suspend_resume.',
+          default=0),
       Arg('wakeup_count_path', str, 'Path to the wakeup_count file',
           default='/sys/power/wakeup_count'),
       Arg('suspend_type', str, 'Suspend type',
@@ -349,6 +352,12 @@ class SuspendResumeTest(unittest.TestCase):
     return wake_source
 
   def _runTest(self):
+    # Suspending right after booting may fail. The booting process triggers
+    # RTC. If we are suspending and the booting process not finished,
+    # then RTC may wake the system up and suspend_resume test fails.
+    if self.args.wait_secs:
+      time.sleep(self.args.wait_secs)
+
     self._ui.SetHTML(self.args.cycles, id=_ID_CYCLES)
     self.initial_suspend_count = self._ReadSuspendCount()
     logging.info('The initial suspend count is %d.', self.initial_suspend_count)
