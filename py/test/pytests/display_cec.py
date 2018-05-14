@@ -10,6 +10,7 @@ from cros.factory.test import test_ui
 from cros.factory.test.i18n import test_ui as i18n_test_ui
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
+from cros.factory.utils.arg_utils import Arg
 
 _MSG_CEC_SELF_TEST_INFO = i18n_test_ui.MakeI18nLabel(
     'Please disconnect HDMI, then press SPACE<br>'
@@ -33,15 +34,26 @@ _CSS_CEC = """
 """
 
 class DisplayCecTest(test_ui.TestCaseWithUI):
+  ARGS = [
+      Arg('run_external_monitor_test',
+          bool,
+          'Whether to run the full test with external monitor',
+          default=False)
+  ]
 
   def setUp(self):
     self.ui.AppendCSS(_CSS_CEC)
     self.template.SetState(_HTML_CEC)
 
   def runTest(self):
+    self.SelfTest()
+    if self.args.run_external_display_test:
+      self.ExternalDisplayTest()
+
+  def SelfTest(self):
     self.ui.SetHTML(_MSG_CEC_SELF_TEST_INFO, id='cec-title')
     self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
-    # Self test
+
     # Check that CEC_IN and CEC_PULL_UP is connected
     self.InvokeGPIO('set', 'CEC_OUT', 1)
     self.InvokeGPIO('set', 'CEC_PULL_UP', 1)
@@ -58,7 +70,7 @@ class DisplayCecTest(test_ui.TestCaseWithUI):
     self.InvokeGPIO('set', 'CEC_OUT', 1)
     self.InvokeGPIO('set', 'CEC_PULL_UP', 1)
 
-    #Manual test
+  def ExternalDisplayTest(self):
     self.ui.SetHTML(_MSG_CEC_MANUAL_INFO, id='cec-title')
     self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
 
@@ -74,7 +86,6 @@ class DisplayCecTest(test_ui.TestCaseWithUI):
     key = self.ui.WaitKeysOnce([test_ui.SPACE_KEY] + ['F'])
     if key == 'F':
       raise type_utils.TestFailure('Failed to send CEC commands')
-    return
 
   def InvokeGPIO(self, direction, pin_name, value):
     """Sets or checks GPIO value using 'ectool'.
