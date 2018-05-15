@@ -54,6 +54,7 @@ def MountUSB(read_only=False):
   Raises:
     IOError if no mounted or mountable partition is found.
   """
+  # TODO(stimim): what if we are booting from USB?
   usb_devices = set(os.path.basename(x)
                     for x in glob('/sys/class/block/sd?')
                     if '/usb' in os.readlink(x))
@@ -252,11 +253,11 @@ EXAMPLES = """Examples:
   When booting from a USB drive:
 
     # Mount sda1, sda3, encrypted stateful partition from SSD,
-    # and save logs to the USB drive's stateful partition
-    factory_bug
-
-    # Same as above, but don't save the logs
+    # and save logs on SSD to the USB drive's stateful partition
     factory_bug --mount
+
+    # Save logs on this USB.
+    factory_bug
 
 """
 
@@ -288,14 +289,14 @@ def main():
       epilog=EXAMPLES,
       formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument('--output_dir', '-o', dest='output_dir', metavar='DIR',
-                      default=(USB_ROOT_OUTPUT_DIR if root_is_usb else '/tmp'),
+                      default=None,
                       help=('output directory in which to save file. Normally '
                             'default to /tmp, but defaults to ' +
                             USB_ROOT_OUTPUT_DIR + ' when booted '
-                            'from USB'))
+                            'from USB and --mount is True'))
   parser.add_argument('--mount', action='store_true',
-                      help=('when booted from USD, only '
-                            "mount encrypted SSD and exit (don't save logs)"))
+                      help=('when booted from USD, mount encrypted SSD and '
+                            'save logs on the SSD.'))
   parser.add_argument('--usb', action='store_true',
                       help=('save logs to a USB stick (using any mounted '
                             'USB drive partition if available, otherwise '
@@ -310,10 +311,16 @@ def main():
 
   paths = {}
 
-  if root_is_usb:
+  if not args.output_dir:
+    if root_is_usb and args.mount:
+      args.output_dir = USB_ROOT_OUTPUT_DIR
+    else:
+      args.output_dir = '/tmp'
+
+  if root_is_usb and args.mount:
     logging.warn('Root partition is a USB drive')
     if not os.path.exists('/dev/sda1'):
-      # TODO(jsalz): Make this work on ARM too.
+      # TODO(stimim): This won't work for eMMC / NVMe (/dev/mmcblk, /dev/nvme).
       logging.error('/dev/sda1 does not exist; cannot mount SSD')
       sys.exit(1)
     logging.warn('Saving report to the %s directory', USB_ROOT_OUTPUT_DIR)
@@ -356,14 +363,11 @@ def main():
   elif args.mount:
     parser.error('--mount only applies when root device is USB')
 
-  # When --mount is specified, we only mount and don't actually
-  # collect logs.
-  if not args.mount:
-    with (MountUSB() if args.usb else
-          DummyContext(MountUSBInfo(None, args.output_dir, False))) as mount:
-      output_file = SaveLogs(mount.mount_point, args.net, args.id, **paths)
-      logging.info('Wrote %s (%d bytes)',
-                   output_file, os.path.getsize(output_file))
+  with (MountUSB() if args.usb else
+        DummyContext(MountUSBInfo(None, args.output_dir, False))) as mount:
+    output_file = SaveLogs(mount.mount_point, args.net, args.id, **paths)
+    logging.info('Wrote %s (%d bytes)',
+                 output_file, os.path.getsize(output_file))
 
   if root_is_usb:
     logging.info('SSD remains mounted:')
