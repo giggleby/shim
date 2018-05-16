@@ -35,7 +35,7 @@ _CSS_CEC = """
 
 class DisplayCecTest(test_ui.TestCaseWithUI):
   ARGS = [
-      Arg('run_external_monitor_test',
+      Arg('run_external_display_test',
           bool,
           'Whether to run the full test with external monitor',
           default=False)
