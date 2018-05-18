@@ -227,6 +227,17 @@ cros.factory.Test.prototype.fail = function(errorMsg) {
   this.invocation.dispose();
 };
 
+cros.factory.Test.prototype.markFail = function() {
+  var goofy = this.invocation.goofy;
+
+  if (!goofy.engineeringMode && this.disable_abort) {
+    goofy.logInternal('This test can only be aborted in engineering mode.');
+    return;
+  }
+
+  this.fail('Marked failed by operator');
+};
+
 /**
  * Sends an event to the test backend.
  * @export
@@ -396,6 +407,7 @@ cros.factory.Invocation = function(goofy, path, uuid, parentUuid) {
    * Test API for the invocation.
    */
   this.test = new cros.factory.Test(this);
+  this.test.disable_abort = goofy.pathTestMap[path].disable_abort;
 
   if (parentUuid) {
     /**
