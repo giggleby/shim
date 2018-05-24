@@ -38,7 +38,11 @@ class DisplayCecTest(test_ui.TestCaseWithUI):
       Arg('run_external_display_test',
           bool,
           'Whether to run the full test with external monitor',
-          default=False)
+          default=True),
+      Arg('command_pause_secs',
+          int,
+          'Time to wait between CEC commands',
+          default=10)
   ]
 
   def setUp(self):
@@ -74,13 +78,13 @@ class DisplayCecTest(test_ui.TestCaseWithUI):
     self.ui.SetHTML(_MSG_CEC_MANUAL_INFO, id='cec-title')
     self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
 
-    self.Ectool(['cec', 'tv_off'])
-    time.sleep(1)
-    self.Ectool(['cec', 'status'])
-    time.sleep(10)
-    self.Ectool(['cec', 'tv_on'])
-    time.sleep(1)
-    self.Ectool(['cec', 'status'])
+    self.Ectool(['cec', 'set', 'enable', '1'])
+    # Display off
+    self.Ectool(['cec', 'write', '0x40', '0x36'])
+    time.sleep(self.args.command_pause_secs)
+    # Display on
+    self.Ectool(['cec', 'write', '0x40', '0x04'])
+    self.Ectool(['cec', 'set', 'enable', '0'])
 
     self.ui.SetHTML(_MSG_CEC_TEST, id='cec-title')
     key = self.ui.WaitKeysOnce([test_ui.SPACE_KEY] + ['F'])
