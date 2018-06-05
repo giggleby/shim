@@ -724,8 +724,14 @@ def Finalize(options):
   else:
     SetFirmwareBitmapLocale(options)
   ClearFactoryVPDEntries(options)
-  GenerateStableDeviceSecret(options)
-  ClearGBBFlags(options)
+  try:
+    GenerateStableDeviceSecret(options)
+    ClearGBBFlags(options)
+  except Exception:
+    if options.rma_mode:
+      logging.warn('RO write protection is not disabled?', exc_info=1)
+    else:
+      raise
   if options.no_write_protect:
     logging.warn('WARNING: Firmware Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
