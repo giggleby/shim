@@ -9,6 +9,7 @@
 # shopfloor the operation is completed.
 
 : "${SERIAL_NUMBER:="$(vpd -g serial_number)"}"
+: "${MLB_SERIAL_NUMBER:="$(vpd -g mlb_serial_number)"}"
 
 usage() {
   echo "Usage: $0 [factory_wipe|factory_reset]"
@@ -73,6 +74,7 @@ main() {
   # Follow Shopfloor Service API 1.0
   print_post_content NotifyEvent "${event}" \
     serial_number "${SERIAL_NUMBER}" \
+    serials.mlb_serial_number "${MLB_SERIAL_NUMBER}" \
     hwid "$(crossystem hwid)"
 }
 
