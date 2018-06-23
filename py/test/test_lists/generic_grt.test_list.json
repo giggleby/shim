@@ -42,6 +42,7 @@
         "enforced_release_channels": "eval! ['stable'] if options.phase == 'PVT' else None",
         "gooftool_skip_list": "eval! constants.grt.gooftool_skip_list",
         "gooftool_waive_list": "eval! constants.grt.gooftool_waive_list",
+        "rma_mode": "eval! constants.rma_mode",
         "secure_wipe": "eval! constants.grt.secure_wipe",
         "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
         "write_protection": "eval! constants.grt.force_write_protect or options.phase == 'PVT'"
