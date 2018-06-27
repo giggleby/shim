@@ -199,14 +199,17 @@ class ECToolPowerInfoTest(unittest.TestCase):
     self.board.CallOutput = mock.MagicMock(
         return_value=self._MOCK_EC_BATTERY_READ)
     expected_dict = {
-        'current_now': 128,
         'status': 'CHARGE',
         'present': True,
         'voltage_now': 15370,
+        'current_now': 128,
         'charge_full': 3194,
         'charge_full_design': 3220,
         'charge_now': 1597,
-        'fraction_full': 0.5
+        'chargePct': 50,
+        'wearPct': 1,
+        'cycleCount': 4,
+        'manufacturer': 'LGC'
     }
     self.assertEqual(self.power.GetInfoDict(), expected_dict)
 

@@ -46,7 +46,7 @@ class SysfsBatteryTest(unittest.TestCase):
       Arg('maximum_cycle_count', int,
           'Maximum cycle count allowed to pass test', default=10),
       Arg('percent_battery_wear_allowed', int,
-          'Maximum pecent battery wear allowed to pass test', default=5),
+          'Maximum percent battery wear allowed to pass test', default=5),
   ]
 
   def setUp(self):
@@ -82,11 +82,6 @@ class SysfsBatteryTest(unittest.TestCase):
           msg = 'Battery cycle count is too high: %d' % cycleCount
           success = False
 
-      manufacturer = power.GetBatteryManufacturer()
-
-      testlog.LogParam('wearPct', wearPct)
-      testlog.LogParam('cycleCount', cycleCount)
-      testlog.LogParam('manufacturer', manufacturer)
       testlog.LogParam('battery_sysfs_info', power.GetInfoDict())
 
     self.assertTrue(success, msg)

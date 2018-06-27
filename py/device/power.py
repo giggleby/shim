@@ -210,19 +210,19 @@ class PowerInfoMixinBase:
     raise NotImplementedError
 
   def GetInfoDict(self):
-    """Returns a dict containing information about the battery.
-
-    TODO(kitching): Determine whether this function is necessary (who uses it?).
-    """
+    """Returns a dict containing information about the battery."""
     _SysfsBatteryAttributes = [
-        ('current_now', self.GetBatteryCurrent),
         ('present', self.CheckBatteryPresent),
         ('status', self.GetChargeState),
         ('voltage_now', self.GetBatteryVoltage),
+        ('current_now', self.GetBatteryCurrent),
         ('charge_full', self.GetChargeFull),
         ('charge_full_design', self.GetBatteryDesignCapacity),
         ('charge_now', self.GetCharge),
-        ('fraction_full', lambda: self.GetChargePct(True) / 100),
+        ('chargePct', self.GetChargePct),
+        ('wearPct', self.GetWearPct),
+        ('cycleCount', self.GetBatteryCycleCount),
+        ('manufacturer', self.GetBatteryManufacturer),
     ]
     result = {}
     for k, getter in _SysfsBatteryAttributes:
@@ -440,11 +440,12 @@ class SysfsPowerInfoMixin(PowerInfoMixinBase):
   def GetBatteryVoltage(self):
     """See PowerInfoMixinBase.GetBatteryVoltage"""
     voltage = self.GetBatteryAttribute('voltage_now')
-    return int(voltage) // 1000
+    return int(voltage) // 1000 if voltage else None
 
   def GetBatteryCycleCount(self):
     """See PowerInfoMixinBase.GetBatteryCycleCount"""
-    return int(self.GetBatteryAttribute('cycle_count'))
+    cycle_count = self.GetBatteryAttribute('cycle_count')
+    return int(cycle_count) if cycle_count else None
 
   def GetBatteryManufacturer(self):
     """See PowerInfoMixinBase.GetBatteryManufacturer"""
