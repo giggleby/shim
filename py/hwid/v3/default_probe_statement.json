@@ -168,8 +168,16 @@
   "touchscreen": {
     "generic": {
       "eval": {
-        "input_device": {
-          "device_type": "touchscreen"
+        "concat": {
+          "functions": [
+            {
+              "input_device": {
+                "device_type": "touchscreen"
+              }
+            },
+            "touchscreen_elan",
+            "touchscreen_raydium"
+          ]
         }
       },
       "expect": {
@@ -181,12 +189,6 @@
         "product",
         "vendor"
       ]
-    },
-    "elan": {
-      "eval": "touchscreen_elan"
-    },
-    "raydium": {
-      "eval": "touchscreen_raydium"
     }
   },
   "tpm": {
@@ -209,10 +211,14 @@
   },
   "video": {
     "generic": {
-      "eval": "generic_video"
-    },
-    "camera_cros": {
-      "eval": "camera_cros"
+      "eval": {
+        "concat": {
+          "functions": [
+            "generic_video",
+            "camera_cros"
+          ]
+        }
+      }
     }
   },
   "wireless": {
