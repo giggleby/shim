@@ -398,9 +398,9 @@ def Cr50SetBoardId(options):
 
 
 @Command('cr50_disable_rma_mode')
-def Cr50DisableRmaMode(options):
+def Cr50DisableFactoryMode(options):
   """Reset Cr50 state back to default state after RMA."""
-  return GetGooftool(options).Cr50DisableRmaMode()
+  return GetGooftool(options).Cr50DisableFactoryMode()
 
 
 @Command('enable_release_partition',
@@ -682,7 +682,7 @@ def Finalize(options):
   - Wipes the testing kernel, rootfs, and stateful partition
   """
   Cr50SetBoardId(options)
-  Cr50DisableRmaMode(options)
+  Cr50DisableFactoryMode(options)
   Verify(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
