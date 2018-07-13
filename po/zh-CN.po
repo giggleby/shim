@@ -126,6 +126,10 @@ msgid "Charger"
 msgstr "充电器"
 
 #: ../build/pytests_label_generated.json
+msgid "Check Device State"
+msgstr "检查机器状态"
+
+#: ../build/pytests_label_generated.json
 msgid "Check Image Version"
 msgstr "检查映像版本"
 
@@ -1551,6 +1555,10 @@ msgstr "测试充电中"
 #: ../py/test/pytests/charger.py
 msgid "OK! Meet {target}"
 msgstr "OK! 达到 {target}"
+
+#: ../py/test/pytests/check_device_state.py
+msgid "Checking Device State"
+msgstr "检查机器状态"
 
 #: ../py/test/pytests/check_image_version.py
 msgid "Please connect to ethernet."

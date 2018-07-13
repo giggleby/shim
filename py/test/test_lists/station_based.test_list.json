@@ -5,6 +5,8 @@
   ],
   "label": "Station-Based Test Template",
   "constants": {
+    "check_device_state": true,
+    "__comment_check_device_state": "Set this to false if you don't expect MLB SN on device.",
     "load_dut_storage": false,
     "__comment_load_dut_storage": "Load data from STORAGE_SAVED_DICT.json on device."
   },
@@ -14,6 +16,10 @@
     "plugin_config_name": "goofy_plugin_station"
   },
   "definitions": {
+    "CheckDeviceState": {
+      "pytest_name": "check_device_state",
+      "run_if": "constants.check_device_state"
+    },
     "ConnectDevice": {
       "pytest_name": "station_entry",
       "label": "Connect Device",
@@ -129,11 +135,12 @@
       ]
     },
     "StationLoopStart": {
-      "child_action_on_failure": "PARENT",
+      "child_action_on_failure": "STOP",
       "subtests": [
         "SyncFactoryServer",
         "StationLoopItemsBeforeConnection",
         "ConnectDevice",
+        "CheckDeviceState",
         "FactoryStateSetup"
       ]
     },
