@@ -82,13 +82,26 @@ def Command(cmd_name, *args, **kwargs):
   """
   def Decorate(fun):
     def CommandWithWaiveSkipCheck(options):
+      MOBLAB_SKU_ID = '5'
+
       waive_list = vars(options).get('waive_list', [])
       skip_list = vars(options).get('skip_list', [])
-      if phase.GetPhase() >= phase.PVT_DOGFOOD and (
-          waive_list != [] or skip_list != []):
-        raise Error(
-            'waive_list and skip_list should be empty for phase %s' %
-            phase.GetPhase())
+      if phase.GetPhase() >= phase.PVT_DOGFOOD:
+        # This is a special request in Fizz factory branch from partner of
+        # moblab device which would like to ship devices in dev mode. As the
+        # result, the solution here is to allow to skip clear_gbb_flags but
+        # only in SKU ID belonged to moblab device.
+        result = Shell('mosys platform sku')
+        sku_id = result.stdout.rstrip('\n') if result.success else '255'
+        if sku_id != MOBLAB_SKU_ID:
+          if waive_list != [] or skip_list != []:
+            raise Error(
+                'waive_list and skip_list should be empty for phase %s' %
+                phase.GetPhase())
+        elif len(skip_list) >= 1 and skip_list != ['clear_gbb_flags']:
+          raise Error('only clear_gbb_flags can be in skip_list %s and in the'
+                      'moblab sku for phase %s.' % (skip_list,
+                                                    phase.GetPhase()))
 
       if cmd_name not in skip_list:
         try:
