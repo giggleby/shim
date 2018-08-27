@@ -11,7 +11,7 @@ from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
 
 
-PHASE_NAMES = ['PROTO', 'EVT', 'DVT', 'PVT_DOGFOOD', 'PVT']
+PHASE_NAMES = ['PROTO', 'EVT', 'EVT_LTE', 'DVT', 'DVT_LTE', 'PVT_DOGFOOD', 'PVT']
 PHASE_NAME_TO_INDEX_MAP = dict(
     (name, index)
     for (index, name) in enumerate(PHASE_NAMES))
@@ -210,6 +210,8 @@ def OverridePhase(phase):
 # PHASE_NAMES, but instead we define them manually to make lint happy.
 PROTO = Phase('PROTO')
 EVT = Phase('EVT')
+EVT_LTE = Phase('EVT_LTE')
 DVT = Phase('DVT')
+DVT_LTE = Phase('DVT_LTE')
 PVT_DOGFOOD = Phase('PVT_DOGFOOD')
 PVT = Phase('PVT')
