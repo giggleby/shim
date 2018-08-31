@@ -723,9 +723,9 @@ def Finalize(options):
   - Uploads system logs & reports
   - Wipes the testing kernel, rootfs, and stateful partition
   """
-  Verify(options)
   Cr50SetBoardId(options)
   Cr50DisableRmaMode(options)
+  Verify(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
   if options.cros_core:
