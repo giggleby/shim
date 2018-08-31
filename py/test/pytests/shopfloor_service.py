@@ -77,6 +77,7 @@ To invoke a non-standard call 'DoSomething' with args (1, 2) and keyword args
 
 
 import collections
+import itertools
 import logging
 import pprint
 import threading
@@ -87,6 +88,7 @@ from cros.factory.test import device_data
 from cros.factory.test.i18n import _
 from cros.factory.test.rules import privacy
 from cros.factory.test import server_proxy
+from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
@@ -121,6 +123,11 @@ class ShopfloorService(test_case.TestCase):
           default=False),
       Arg('server_url', str,
           'The URL to shopfloor service server', default=None),
+      Arg('test_status_to_upload', list,
+          'A list of test status for UpdateTestResult', default=None),
+      Arg('upload_test_result_include_parents', bool,
+          'Recursively include parent groups in summary',
+          default=False),
   ]
 
   # The expected value for GetVersion, to help checking server implementation.
@@ -221,6 +228,14 @@ class ShopfloorService(test_case.TestCase):
       if not spec:
         raise ValueError('Unknown method for shopfloor service: %s' % method)
 
+    if method == 'UpdateTestResult' and not args:
+      # TODO(yhong): Design a better way to submit summary of the test results.
+      for test_id, test_status in self._GetTestResultsToUpload():
+        self._CallMethod(server, method, spec, [test_id, test_status], kargs)
+    else:
+      self._CallMethod(server, method, spec, args, kargs)
+
+  def _CallMethod(self, server, method, spec, args, kargs):
     if spec.data_args:
       args = [device_data.GetDeviceData(k) for k in spec.data_args] + args
     if spec.has_data:
@@ -274,3 +289,26 @@ class ShopfloorService(test_case.TestCase):
         message = debug_utils.FormatExceptionOnly()
         logger.Log(message, 'Exception invoking shopfloor service: %s')
         HandleError(message)
+
+  def _GetTestResultsToUpload(self):
+    test_list = self.test_info.ReadTestList()
+    test = test_list.LookupPath(self.test_info.path)
+    states = state.get_instance().get_test_states()
+
+    previous_tests = []
+    current = test
+    root = (test.root if self.args.upload_test_result_include_parents
+            else test.parent)
+    while current != root:
+      previous_tests = list(itertools.takewhile(
+          lambda t: t != current, current.parent.subtests)) + previous_tests
+      current = current.parent
+
+    test_results = []
+    for t in previous_tests:
+      test_status = states.get(t.path).status
+      if (self.args.test_status_to_upload is None or
+          test_status in self.args.test_status_to_upload):
+        test_results.append((t.path, test_status))
+
+    return test_results
