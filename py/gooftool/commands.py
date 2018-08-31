@@ -682,8 +682,8 @@ def Finalize(options):
   - Wipes the testing kernel, rootfs, and stateful partition
   """
   Cr50SetBoardId(options)
-  Verify(options)
   Cr50DisableFactoryMode(options)
+  Verify(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
   if options.cros_core:
