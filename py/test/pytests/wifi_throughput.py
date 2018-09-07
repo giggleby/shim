@@ -83,6 +83,7 @@ from cros.factory.test.utils import kbd_leds
 from cros.factory.testlog import testlog
 from cros.factory.utils import arg_utils
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
@@ -800,7 +801,7 @@ class WiFiThroughput(test_case.TestCase):
       error_msg = 'Timed out while searching for WiFi services'
       self.log['failures'].append(error_msg)
       self._Log()
-      self.fail(error_msg)
+      self.FailTask(error_msg)
     return found_aps
 
   def _ProcessArgs(self):
@@ -814,8 +815,8 @@ class WiFiThroughput(test_case.TestCase):
     # it with the DHCP IP when running the pytest.
     if isinstance(self.args.iperf_host, str) and '/' in self.args.iperf_host:
       if not self.args.enable_iperf_server:
-        self.fail('CIDR format is valid only when '
-                  '`enable_iperf_server` argument is enabled')
+        self.FailTask('CIDR format is valid only when '
+                      '`enable_iperf_server` argument is enabled')
       ip, _unused_char, prefix = self.args.iperf_host.partition('/')
       cidr = net_utils.CIDR(ip, int(prefix))
       session.console.info('Try to find the host IP in CIDR: %s...', cidr)
@@ -828,7 +829,7 @@ class WiFiThroughput(test_case.TestCase):
           self.args.iperf_host = str(ip)
           break
       else:
-        self.fail('There is no host IP in CIDR: %s' % cidr)
+        self.FailTask('There is no host IP in CIDR: %s' % cidr)
 
     # If only one service is provided as a dict, wrap a list around it.
     # Ensure that each service SSID is only specified once.
@@ -952,14 +953,14 @@ class WiFiThroughput(test_case.TestCase):
       error_str = 'No WLAN interfaces available'
       self.log['failures'].append(error_str)
       self._Log()
-      self.fail(error_str)
+      self.FailTask(error_str)
 
     # If a specific interface is specified, check that it exists.
     if self.args.interface and self.args.interface not in interfaces:
       error_str = 'Specified interface %s not available' % self.args.interface
       self.log['failures'].append(error_str)
       self._Log()
-      self.fail(error_str)
+      self.FailTask(error_str)
 
     # Return the selected interface if specified, or choose the first available
     # one by default.
@@ -1018,7 +1019,7 @@ class WiFiThroughput(test_case.TestCase):
       session.console.error('Error summary:')
       for (ssid, failure) in all_failures:
         session.console.error(failure)
-      self.fail(error_msg)
+      self.FailTask(error_msg + ':' + json_utils.DumpStr(all_failures))
 
   def _LogIperfParams(self, ap_ssid, log_type, iperf_data):
     self._LogParams(ap_ssid, log_type, throughput=iperf_data['bits_per_second'],

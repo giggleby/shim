@@ -85,7 +85,7 @@ class VSWR(test_case.TestCase):
     self._serial_number = device_data.GetSerialNumber(
         self.args.serial_number_key)
     if self._serial_number is None:
-      self.fail('Serial number does not exist.')
+      self.FailTask('Serial number does not exist.')
     self.log = {
         'config': {
             'file_path': None,
@@ -456,7 +456,7 @@ class VSWR(test_case.TestCase):
     if not calibration_passed:
       self._ShowMessageBlock('need-calibration')
       self.ui.WaitKeysOnce(test_ui.ENTER_KEY)
-      self.fail('The network analyzer needs calibration.')
+      self.FailTask('The network analyzer needs calibration.')
 
     self._ShowMessageBlock('prepare-panel')
     self.ui.WaitKeysOnce(test_ui.ENTER_KEY)
@@ -496,7 +496,9 @@ class VSWR(test_case.TestCase):
     self._ShowMessageBlock('show-result')
     self.ui.WaitKeysOnce(test_ui.ENTER_KEY)
     if not self.test_passed:
-      self.fail()
+      self.FailTask('Antenna fail: %s' %
+                    ','.join(k for k, v in self._results.iteritems()
+                             if v == state.TestState.FAILED))
 
   def _LogTrace(self, trace, name, min=None, max=None):
     """Uses testlog to log the trace data.

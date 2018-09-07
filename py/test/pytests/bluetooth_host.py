@@ -91,7 +91,7 @@ class BluetoothScanTest(unittest.TestCase):
 
   def runTest(self):
     if self.dut.link.IsLocal():
-      self.fail('This pytest can only be run at station-based style.')
+      self.FailTask('This pytest can only be run at station-based style.')
 
     # Setup host Bluetooth device.
     for host_interface in self.host_interfaces:
@@ -108,14 +108,15 @@ class BluetoothScanTest(unittest.TestCase):
     host_devices = self._GetHostDevicesInfo(self.host_interfaces)
 
     # DUT scans the host station.
-    self.assertTrue(
-        sync_utils.Retry(self.args.max_retry_times, 0, None,
-                         lambda: self.ScanTask(host_devices)))
+    ret = sync_utils.Retry(self.args.max_retry_times, 0, None,
+                           lambda: self.ScanTask(host_devices))
+    if not ret:
+      self.FailTask('Failed to scan the bluetooth host')
 
     if self.args.enable_pair:
-      self.assertTrue(
-          sync_utils.Retry(self.args.max_retry_times, 0, None,
-                           self.PairTask))
+      ret = sync_utils.Retry(self.args.max_retry_times, 0, None, self.PairTask)
+      if not ret:
+        self.FailTask('Failed to pair the bluetooth host')
 
   def ScanTask(self, host_devices):
     """Scans the Bluetooth devices and checks the host station is found."""

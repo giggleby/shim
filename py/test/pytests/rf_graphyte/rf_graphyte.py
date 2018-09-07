@@ -157,8 +157,8 @@ class RFGraphyteTest(test_case.TestCase):
 
     # Check the config file exists.
     if not os.path.exists(self.config_file_path):
-      self.fail('Graphyte config file %s does not exist.' %
-                self.config_file_path)
+      self.FailTask('Graphyte config file %s does not exist.' %
+                    self.config_file_path)
 
     # Patch the DUT config with DHCP IP.
     if self.args.patch_dhcp_ssh_dut_ip:
@@ -202,7 +202,7 @@ class RFGraphyteTest(test_case.TestCase):
 
     # Parse result file.
     if not os.path.exists(self.result_file_path):
-      self.fail('Result file is not found.')
+      self.FailTask('Result file is not found.')
     with open(self.result_file_path) as result_file:
       result_data = result_file.read()
       logging.debug('Graphyte result: %s', result_data)
@@ -226,11 +226,14 @@ class RFGraphyteTest(test_case.TestCase):
       final_result = result_lines[-1].split(',')[-1]
     except Exception as e:
       logging.exception(e)
-      self.fail('Corrupt or incomplete result file %s: %s: %s'
-                % (self.result_file_path, e.__class__.__name__, e))
+      self.FailTask('Corrupt or incomplete result file %s: %s: %s'
+                    % (self.result_file_path, e.__class__.__name__, e))
 
     # Pass or fail the pytest.
-    self.assertEquals(final_result, 'PASS')
+    if final_result != 'PASS':
+      self.FailTask('Graphyte failed items: %s' %
+                    ','.join(str(i) for i, s in enumerate(result_lines[:-1])
+                             if 'FAIL' in s))
 
   def GetLogPath(self, timestamp, suffix):
     """Get the file path of Graphyte output files.
