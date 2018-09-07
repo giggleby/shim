@@ -230,8 +230,10 @@ class ShopfloorService(test_case.TestCase):
 
     if method == 'UpdateTestResult' and not args:
       # TODO(yhong): Design a better way to submit summary of the test results.
-      for test_id, test_status in self._GetTestResultsToUpload():
-        self._CallMethod(server, method, spec, [test_id, test_status], kargs)
+      for test_id, test_status, error_msg in self._GetTestResultsToUpload():
+        self._CallMethod(server, method, spec,
+                         [test_id, test_status, {'error_msg': error_msg}],
+                         kargs)
     else:
       self._CallMethod(server, method, spec, args, kargs)
 
@@ -306,9 +308,9 @@ class ShopfloorService(test_case.TestCase):
 
     test_results = []
     for t in previous_tests:
-      test_status = states.get(t.path).status
+      test_state = states.get(t.path)
       if (self.args.test_status_to_upload is None or
-          test_status in self.args.test_status_to_upload):
-        test_results.append((t.path, test_status))
+          test_state.status in self.args.test_status_to_upload):
+        test_results.append((t.path, test_state.status, test_state.error_msg))
 
     return test_results
