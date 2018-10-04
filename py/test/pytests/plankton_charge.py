@@ -88,6 +88,8 @@ class PlanktonChargeBFTTest(test_case.TestCase):
           'The duration in seconds to charge the battery', default=5),
       Arg('discharge_duration_secs', (int, float),
           'The duration in seconds to discharge the battery', default=5),
+      Arg('repeat_set_engage', (int, float),
+          'The repetition of sending engage command to plankton ', default=1),
       Arg('wait_after_engage_secs', (int, float),
           'The duration in seconds to wait after engage / disengage '
           'charge device', default=0),
@@ -326,8 +328,11 @@ class PlanktonChargeBFTTest(test_case.TestCase):
         _('Testing battery {voltage}V charging...', voltage=testing_volt))
 
     # Plankton-Raiden board setting: engage
-    self._bft_fixture.SetDeviceEngaged(command_device, engage=True)
-    self.Sleep(self.args.wait_after_engage_secs)
+    # Sometimes plakton seems to ignore the first engage command and fail to
+    # engage correct voltage properly. A repetition as a work around to it.
+    for x in xrange(self.args.repeat_set_engage):
+      self._bft_fixture.SetDeviceEngaged(command_device, engage=True)
+      self.Sleep(self.args.wait_after_engage_secs)
 
     if self.args.monitor_plankton_voltage_only:
       if not self.MonitorINAVoltage(self.args.charge_duration_secs,
