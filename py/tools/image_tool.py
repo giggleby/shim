@@ -1933,7 +1933,8 @@ class EditLSBCommand(SubCommand):
     """
     answer = self._DoOptions(
         'Select cutoff method after factory reset', 'CUTOFF_METHOD',
-        ['shutdown', 'reboot', 'battery_cutoff', 'ectool_cutoff'])
+        ['shutdown', 'reboot', 'battery_cutoff', 'ectool_cutoff',
+         'ec_hibernate'])
     if not answer.endswith('cutoff'):
       return
     answer = self._DoOptions(

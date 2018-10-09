@@ -2,7 +2,8 @@
 # -----------------------------------
 # See README.md for more information.
 
-# Valid options: `shutdown`, `reboot`, `battery_cutoff`, and `ectool_cutoff`.
+# Valid options: `shutdown`, `reboot`, `battery_cutoff`, `ectool_cutoff`,
+# and `ec_hibernate`.
 CUTOFF_METHOD=shutdown
 
 # Valid options: empty or `connect_ac`, `remove_ac`.
