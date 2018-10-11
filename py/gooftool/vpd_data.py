@@ -22,8 +22,9 @@ REQUIRED_RO_DATA = {
 }
 
 REQUIRED_RW_DATA = {
-    'ubind_attribute': ANY,
-    'gbind_attribute': ANY,
+    # See b/117463731.
+    'ubind_attribute': r'^((?!__TESTING__).)+$',
+    'gbind_attribute': r'^((?!__TESTING__).)+$',
 }
 
 KNOWN_RO_DATA = {
