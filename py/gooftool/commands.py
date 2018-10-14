@@ -354,6 +354,14 @@ def EnableFwWp(options):
                   ro_offset, ro_size)
     crosfw.Flashrom(fw.target).EnableWriteProtection(ro_offset, ro_size)
 
+  # enable the FPMCU FW write protection
+  cmd_result = Shell(
+      os.path.join(paths.FACTORY_DIR, 'sh', 'enable_fpmcu_write_protection.sh'))
+  if not cmd_result.success:
+    raise Error(
+        'Failed to enable FPMCU write protection, stdout=%r, stderr=%r' %
+        (cmd_result.stdout, cmd_result.stderr))
+
   WriteProtect(crosfw.LoadMainFirmware())
   event_log.Log('wp', fw='main')
 
