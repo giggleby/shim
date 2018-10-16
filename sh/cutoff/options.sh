@@ -14,6 +14,10 @@
 : ${CUTOFF_BATTERY_MAX_VOLTAGE:=}
 : ${SHOPFLOOR_URL:=}
 
+# A flag for factory_reset.sh to ask the cutoff.sh to control the battery level
+# at any place.
+: ${CUTOFF_ONLY_CHECK_BATTERY_LIMIT:=}
+
 # After calling display_wipe_message.sh to draw image with frecon, we must
 # redirect text output to active terminal to display information on the screen.
 : ${TTY:=/run/frecon/vt0}
@@ -153,6 +157,7 @@ explicitly specify the option \"CUTOFF_AC_STATE\" to \"remove_ac\"."
   echo "CUTOFF_BATTERY_MAX_PERCENTAGE=${CUTOFF_BATTERY_MAX_PERCENTAGE}"
   echo "CUTOFF_BATTERY_MIN_VOLTAGE=${CUTOFF_BATTERY_MIN_VOLTAGE}"
   echo "CUTOFF_BATTERY_MAX_VOLTAGE=${CUTOFF_BATTERY_MAX_VOLTAGE}"
+  echo "CUTOFF_ONLY_CHECK_BATTERY_LIMIT=${CUTOFF_ONLY_CHECK_BATTERY_LIMIT}"
   echo "SHOPFLOOR_URL=${SHOPFLOOR_URL}"
   echo "TTY=${TTY}"
   echo "---------------------"
@@ -170,6 +175,7 @@ options_usage_help() {
     [--max-battery-voltage <maximum battery voltage>]
     [--shopfloor <shopfloor_url]
     [--tty <tty_path>]
+    [--check-battery-limit-only]
     "
   exit 1
 }
@@ -210,6 +216,9 @@ options_parse_command_line() {
       --tty )
         shift
         TTY="$1"
+        ;;
+      --check-battery-limit-only )
+        CUTOFF_ONLY_CHECK_BATTERY_LIMIT=1
         ;;
       * )
         options_usage_help "$1"
