@@ -133,7 +133,22 @@ def ComponentEq(comp_cls, values):
   Returns:
     True if the component equals to the given values, False otherwise.
   """
-  return _ComponentCompare(comp_cls, values, all)
+  context = GetContext()
+  attrs = GetClassAttributesOnBOM(context.hwid, comp_cls)
+  if attrs is None:
+    return False
+
+  has_re = False
+  for v in MakeList(values):
+    if isinstance(v, Value):
+      has_re = True
+
+  if has_re:
+    values = [
+        Value(v) if not isinstance(v, Value) else v for v in MakeList(values)]
+    return _ComponentCompare(comp_cls, values, all)
+
+  return sorted(attrs) == sorted(MakeList(values))
 
 
 @RuleFunction(['hwid'])
