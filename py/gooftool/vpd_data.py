@@ -10,6 +10,7 @@
 
 # Shortcut to allow arbitrary format.
 ANY = r'.+'
+ANY_OR_EMPTY = r'.*'
 
 # The data is described in a mapping as key_name: value_re_format.
 # Note value_re_format has implicit '^' and '$' (see MatchWhole in core.py).
@@ -73,7 +74,7 @@ KNOWN_RW_DATA = {
 KNOWN_RW_DATA_RE = {
     # These VPD values are used only for factory process and should be deleted
     # by "gooftool clear_factory_vpd_entries" in finalization.
-    r'factory\..+': ANY,
+    r'factory\..+': ANY_OR_EMPTY,
     r'component\..+': ANY,
     r'serials\..+': ANY,
 }
