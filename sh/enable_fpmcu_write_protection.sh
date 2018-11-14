@@ -22,6 +22,10 @@ fpcmd() {
 
 
 main() {
+  # Reset the FPMCU state.
+  fpcmd reboot_ec || true
+  sleep 2
+
   # Verify that the FPMCU has the right firmware.
   fpcmd version | check_pattern '^RO version:\s*nocturne_fp_v2.2.64-58cf5974e$'
 
