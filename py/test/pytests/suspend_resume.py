@@ -188,7 +188,12 @@ class SuspendResumeTest(test_case.TestCase):
 
   def _MonitorWakealarm(self):
     """Start and extend the wakealarm as needed for the main thread."""
-    file_utils.WriteFile(self.args.wakealarm_path, str(self.resume_at))
+    try:
+      file_utils.WriteFile(self.args.wakealarm_path, str(self.resume_at))
+    except IOError:
+      content = file_utils.ReadFile(self.args.wakealarm_path)
+      logging.warn('Cannot write to wakealarm file, which has content %s',
+                   content)
     self.alarm_started.set()
     # CAUTION: the loop below is subject to race conditions with suspend time.
     while (self._ReadSuspendCount() < self.initial_suspend_count + self.run
