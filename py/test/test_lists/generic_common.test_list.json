@@ -645,7 +645,7 @@
         {
           "pytest_name": "update_cr50_firmware"
         },
-        "RebootStep"
+        "FullRebootStep"
       ]
     },
     "UpdateDeviceData": {
