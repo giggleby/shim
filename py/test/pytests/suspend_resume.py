@@ -194,6 +194,9 @@ class SuspendResumeTest(test_case.TestCase):
       content = file_utils.ReadFile(self.args.wakealarm_path)
       logging.warn('Cannot write to wakealarm file, which has content %s',
                    content)
+      # Clear wakealarm and write again
+      file_utils.WriteFile(self.args.wakealarm_path, '0')
+      file_utils.WriteFile(self.args.wakealarm_path, str(self.resume_at))
     self.alarm_started.set()
     # CAUTION: the loop below is subject to race conditions with suspend time.
     while (self._ReadSuspendCount() < self.initial_suspend_count + self.run
