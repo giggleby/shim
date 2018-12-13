@@ -189,6 +189,7 @@ interaction_menu() {
   echo "(2) Enable/disable board prompt on download."
   echo "(3) Enable/disable RELEASE-ONLY recovery download mode."
   echo "(4) Modify cutoff method after factory reset."
+  echo "(5) Enable/disable RMA autorun."
   echo "(w) Write settings and exit."
   echo "(q) Quit without saving."
   echo ""
@@ -237,6 +238,20 @@ interaction_menu() {
       ;;
     4 )
       interaction_cutoff_menu "$edit_file"
+      ;;
+    5 )
+      echo -n "Enable (or 'n' to disable) RMA autorun? (y/n): "
+      read ans
+      case "$ans" in
+        y )
+          replace_or_append "RMA_AUTORUN" "true" "$edit_file"
+          ;;
+        n )
+          replace_or_append "RMA_AUTORUN" "false" "$edit_file"
+          ;;
+        * )
+          warn "Unknown answer: $ans"
+      esac
       ;;
     w )
       # Make a backup of current (before modification) lsb-factor file so people
