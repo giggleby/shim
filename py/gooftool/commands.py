@@ -229,6 +229,10 @@ _no_ectool_cmd_arg = CmdArg(
     help='There is no ectool utility so tests rely on ectool should be '
          'skipped.')
 
+_has_fpmcu_cmd_arg = CmdArg(
+    '--has_fpmcu', action='store_true', default=None,
+    help='Software write protection must be enabled if fpmcu exists.')
+
 @Command(
     'verify_ec_key',
     _ec_pubkey_path_cmd_arg,
@@ -326,7 +330,8 @@ def VerifyReleaseChannel(options):
       options.enforced_release_channels)
 
 
-@Command('write_protect')
+@Command('write_protect',
+         _has_fpmcu_cmd_arg)
 def EnableFwWp(options):
   """Enable then verify firmware write protection."""
   del options  # Unused.
@@ -355,12 +360,18 @@ def EnableFwWp(options):
     crosfw.Flashrom(fw.target).EnableWriteProtection(ro_offset, ro_size)
 
   # enable the FPMCU FW write protection
-  cmd_result = Shell(
-      os.path.join(paths.FACTORY_DIR, 'sh', 'enable_fpmcu_write_protection.sh'))
-  if not cmd_result.success:
-    raise Error(
-        'Failed to enable FPMCU write protection, stdout=%r, stderr=%r' %
-        (cmd_result.stdout, cmd_result.stderr))
+  if options.has_fpmcu:
+    cmd_result = Shell(
+        os.path.join(paths.FACTORY_DIR,
+                     'sh',
+                     'enable_fpmcu_write_protection.sh'))
+    if not cmd_result.success:
+      raise Error(
+          'Failed to enable FPMCU write protection, stdout=%r, stderr=%r' %
+          (cmd_result.stdout, cmd_result.stderr))
+  elif os.path.exists('/dev/cros_fp'):
+    raise Error('has_fpmcu of options is not specified '
+                'but dev node of cros_fp exists.')
 
   WriteProtect(crosfw.LoadMainFirmware())
   event_log.Log('wp', fw='main')
@@ -686,7 +697,8 @@ def UploadReport(options):
          _wipe_finish_token_cmd_arg,
          _rlz_embargo_end_date_offset_cmd_arg,
          _waive_list_cmd_arg,
-         _skip_list_cmd_arg)
+         _skip_list_cmd_arg,
+         _has_fpmcu_cmd_arg)
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
 

@@ -160,6 +160,9 @@ class Finalize(test_case.TestCase):
       Arg('is_chromebox', bool,
           'Perform ChromeBox specific checks.',
           default=None),
+      Arg('has_fpmcu', bool,
+          'Perform fingerprint MCU specific checks.',
+          default=None),
       Arg('enforced_release_channels', list,
           'A list of string indicating the enforced release image channels. '
           'Each item should be one of "dev", "beta" or "stable".',
@@ -339,6 +342,9 @@ class Finalize(test_case.TestCase):
     if self.args.is_chromebox:
       command += ' --chromebox'
       logging.info('ChromeBox device. Perform additional checks.')
+    if self.args.has_fpmcu:
+      command += ' --has_fpmcu'
+      logging.info('Feature - fingerprint exists. Perform additional checks.')
     if self.args.enforced_release_channels:
       command += ' --enforced_release_channels %s' % (
           ' '.join(self.args.enforced_release_channels))

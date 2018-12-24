@@ -26,8 +26,8 @@ main() {
   fpcmd reboot_ec || true
   sleep 2
 
-  # Verify that the FPMCU has the right firmware.
-  fpcmd version | check_pattern '^RO version:\s*nocturne_fp_v2.2.64-58cf5974e$'
+  # Regarding the verification of FPMCU FW version, it is done by the probe
+  # pytest in the FATP/FFT test list.
 
   # Check if the system is unlocked as expected.
   fpcmd flashprotect | check_pattern \
