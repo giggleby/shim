@@ -6,6 +6,7 @@
   "label": "Generic RMA",
   "constants": {
     "phase": "PVT",
+    "rma_factory_server": "none",
     "rma_mode": true
   },
   "definitions": {
@@ -19,13 +20,8 @@
     "RMAGRT": {
       "inherit": "TestGroup",
       "label": "GRT (Google Required Tests)",
-      "locals": {
-        "station_end_upload_report": true,
-        "station": "GRT"
-      },
       "subtests": [
         "WriteHWID",
-        "RMACr50Reset",
         "RMAGRTEnd",
         "AllCheckPoint",
         "RMAGRTFinalize"
@@ -55,10 +51,7 @@
     "RMAGRTFinalize": {
       "inherit": "GRTFinalize",
       "args": {
-        "rma_mode": true,
-        "enable_factory_server": false,
-        "upload_method": "none",
-        "write_protection": "eval! constants.grt.force_write_protect or options.phase == 'PVT'"
+        "upload_method": "eval! constants.rma_factory_server"
       }
     }
   },
