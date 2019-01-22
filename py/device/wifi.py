@@ -559,16 +559,20 @@ class Connection(object):
 
   def GetStatus(self):
     def _ParseSignal(s):
-      try:
-        # the command output must looks like "  signal: -50 [-40 -60] dBm"
-        data = s.partition(':')[2].strip()
-        assert data.endswith('] dBm')
-        data = data[:-5].replace(' ', '')
-        computed, unused_sep, antenna = data.partition('[')
-        return ConnectionStatus.Signal(
-            int(computed), [int(a) for a in antenna.split(',')])
-      except Exception as e:
+      # the command output must looks like "  signal: -50 [-40, -60] dBm"
+      # or "  signal: -50 dBm"
+      _REGEXP = (
+          r'[^:]*:\s*(-?\d+)(\s*\[(-?\d+((\s+|\s*,\s*)-?\d+)*)?\])?\s+dBm$')
+      matched_obj = re.match(_REGEXP, s)
+      if not matched_obj:
         raise WiFiError('unexpected signal format: %r, %r' % (s, e))
+      computed = int(matched_obj.groups()[0])
+      if matched_obj.groups()[2]:
+        antennas = [int(a)
+                    for a in re.split(r'[\s,]+', matched_obj.groups()[2])]
+      else:
+        antennas = None
+      return ConnectionStatus.Signal(computed, antennas)
 
     def _ParseBitRate(s):
       try:
