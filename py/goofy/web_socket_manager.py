@@ -158,10 +158,16 @@ class WebSocketManager(object):
 
   def wait(self):
     """Waits for one socket to connect successfully."""
+    wait_times = 0
     while not self.has_confirmed_socket.is_set():
       # Wait at most 100 ms at a time; without a timeout, this seems
       # to eat SIGINT signals.
       self.has_confirmed_socket.wait(0.1)
+      wait_times += 1
+      if wait_times > 100:
+        process_utils.LogAndCheckCall(['chrome_openurl',
+                                       'http://localhost:4012/'])
+        wait_times = 0
 
   def _tail_console(self):
     """Tails the console log, generating an event whenever a new
