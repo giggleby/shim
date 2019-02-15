@@ -520,7 +520,7 @@ class Gooftool(object):
 
     ectool_flashprotect = self._util.shell('ectool flashprotect').stdout
     if not re.search('^Flash protect flags:.+wp_gpio_asserted',
-                       ectool_flashprotect, re.MULTILINE):
+                     ectool_flashprotect, re.MULTILINE):
       raise Error('write protectioin switch of EC is disabled.')
 
   def CheckDevSwitchForDisabling(self):
@@ -873,3 +873,30 @@ class Gooftool(object):
     # mode status directly for short term plan 0x?ffff would be checked.
     if re.search('^CCD caps bitmap: 0x[0-9a-z]ffff$', info, re.MULTILINE):
       raise Error('Failed to disable Cr50 factory mode. CCD info:\n%s' % info)
+
+  def FpmcuInitializeEntropy(self):
+    """Initialze entropy of FPMCU.
+
+    Verify entropy of FPMCU is not added yet and initialize the entropy in
+    FPMCU.
+    """
+    ROLLBACK_INFO_RE_EX = '^Rollback block id:\s*(\d)$'
+
+    cmd_rbinfo = ['ectool', '--name=cros_fp', 'rollbackinfo']
+    if '0' != re.search(ROLLBACK_INFO_RE_EX,
+                        self._util.shell(cmd_rbinfo).stdout,
+                        re.MULTILINE).group(1):
+      raise Error('FPMCU entropy should not be initialized already.')
+
+    cmd = ['bio_wash', '--factory_init']
+    result = self._util.shell(cmd)
+    if not result.success:
+      raise Error('Fail to call `bio_wash --factory_init`. Log:\n\n%s' %
+                  result.stderr)
+
+    if '1' != re.search(ROLLBACK_INFO_RE_EX,
+                        self._util.shell(cmd_rbinfo).stdout,
+                        re.MULTILINE).group(1):
+      raise Error('FPMCU entropy did not be initialized properly and log of'
+                  '`bio_wash --factory_init` is below\n%s' % result.stderr)
+
