@@ -722,6 +722,7 @@ def Finalize(options):
     event_log.Log('wp', fw='both', status='skipped')
   else:
     EnableFwWp(options)
+  FpmcuInitializeEntropy(options)
   LogSystemDetails(options)
   UploadReport(options)
 
@@ -781,6 +782,12 @@ def GetFirmwareHash(options):
       print '  %s: %s' % (key, value)
   else:
     raise Error('File does not exist: %s' % options.file)
+
+
+@Command('fpmcu_initialize_entropy')
+def FpmcuInitializeEntropy(options):
+  """Initialze entropy of FPMCU."""
+  return GetGooftool(options).FpmcuInitializeEntropy()
 
 
 def main():
