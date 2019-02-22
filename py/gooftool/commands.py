@@ -334,7 +334,6 @@ def VerifyReleaseChannel(options):
          _has_fpmcu_cmd_arg)
 def EnableFwWp(options):
   """Enable then verify firmware write protection."""
-  del options  # Unused.
 
   def WriteProtect(fw):
     """Calculate protection size, then invoke flashrom.
