@@ -119,7 +119,7 @@ def DummyContext(arg):
 
 
 def SaveLogs(output_dir, include_network_log=False, archive_id=None,
-             var='/var', usr_local='/usr/local', etc='/etc'):
+             probe=False, var='/var', usr_local='/usr/local', etc='/etc'):
   '''Saves dmesg and relevant log files to a new archive in output_dir.
 
   The archive will be named factory_bug.<description>.<timestamp>.tar.bz2,
@@ -130,6 +130,7 @@ def SaveLogs(output_dir, include_network_log=False, archive_id=None,
     include_network_log: Whether to include network related logs or not.
     archive_id: An optional short ID to put in the filename (so
       archives may be more easily differentiated).
+    probe: True to include probe result in the logs.
     var, usr_local, etc: Paths to the relavant directories.
   '''
   output_dir = os.path.realpath(output_dir)
@@ -176,6 +177,11 @@ def SaveLogs(output_dir, include_network_log=False, archive_id=None,
         Spawn(['ectool', 'console'],
               stdout=f, stderr=f, call=True)
       files += ['ec_console']
+
+    if probe:
+      with open(os.path.join(tmp, 'probe_result.yaml'), 'w') as f:
+        Spawn(['gooftool', 'probe'], stdout=f, ignore_stderr=True, call=True)
+      files += ['probe_result.yaml']
 
     files += ['crossystem', 'dmesg', 'mosys_eventlog'] + sum(
         [glob(x) for x in [
@@ -297,6 +303,8 @@ def main():
   parser.add_argument('--id', '-i', metavar='ID',
                       help=('short ID to include in file name to help '
                             'differentiate archives'))
+  parser.add_argument('--probe', action='store_true',
+                      help=('include probe result in the logs'))
   args = parser.parse_args()
 
   paths = {}
@@ -350,9 +358,10 @@ def main():
   # When --mount is specified, we only mount and don't actually
   # collect logs.
   if not args.mount:
-    with (MountUSB() if args.usb
-          else DummyContext(MountUSBInfo(None, args.output_dir, False))) as mount:
-      output_file = SaveLogs(mount.mount_point, args.net, args.id, **paths)
+    with (MountUSB() if args.usb else
+          DummyContext(MountUSBInfo(None, args.output_dir, False))) as mount:
+      output_file = SaveLogs(
+          mount.mount_point, args.net, args.id, args.probe, **paths)
       logging.info('Wrote %s (%d bytes)',
                    output_file, os.path.getsize(output_file))
 
