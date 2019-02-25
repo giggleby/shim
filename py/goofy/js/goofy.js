@@ -2106,12 +2106,7 @@ cros.factory.Goofy.prototype.saveFactoryLogsToUSB = function() {
         'Save Factory Logs to USB', '保存工厂记录到 U盘');
 
     function doSave() {
-        function callback(id) {
-            if (id == null) {
-                // Cancelled.
-                return;
-            }
-
+        function save(id, probe) {
             var dialog = new goog.ui.Dialog();
             this.registerDialog(dialog);
             dialog.setTitle(titleContent);
@@ -2121,7 +2116,7 @@ cros.factory.Goofy.prototype.saveFactoryLogsToUSB = function() {
             dialog.setButtonSet(null);
             dialog.setVisible(true);
             this.positionOverConsole(dialog.getElement());
-            this.sendRpc('SaveLogsToUSB', [id],
+            this.sendRpc('SaveLogsToUSB', [id, probe],
                 function(info) {
                     var dev = info[0];
                     var filename = info[1];
@@ -2149,19 +2144,51 @@ cros.factory.Goofy.prototype.saveFactoryLogsToUSB = function() {
                 });
         }
 
-        var idDialog = new goog.ui.Prompt(
-            titleContent,
-            cros.factory.Label(
+        var dialog = new goog.ui.Dialog();
+        this.registerDialog(dialog);
+        dialog.setModal(true);
+
+        var table = [];
+        table.push('<table class="goofy-usblog-table">');
+        table.push(
+            '<tr><td>' +
+            cros.factory.Content(
                 'Enter an optional identifier for the archive ' +
                 '(or press Enter for none):',
                 '请输入识別号给工厂记录文件，' +
-                '或按回车键不选：'),
-            goog.bind(callback, this));
-        this.registerDialog(idDialog);
-        idDialog.setVisible(true);
-        goog.dom.classes.add(idDialog.getElement(),
-                             'goofy-log-identifier-prompt');
-        this.positionOverConsole(idDialog.getElement());
+                '或按回车键不选：').innerHTML +
+            '</td></tr>');
+        table.push(
+            '<tr><td>' +
+            '<input id="goofy-usblog-id" size="50">' +
+            '</td></tr>');
+        table.push(
+            '<tr><td>' +
+            '<input id="goofy-usblog-probe" type="checkbox">' +
+            cros.factory.Content('Include probe result (takes longer time)',
+                                 '加入侦测结果 (需要较久时间)').innerHTML +
+            '</td></tr>');
+        table.push('</table>');
+
+        dialog.setContent(table.join(''));
+        var buttons = goog.ui.Dialog.ButtonSet.createOkCancel();
+        dialog.setButtonSet(buttons);
+        dialog.setTitle(titleContent);
+        dialog.setVisible(true);
+
+        var idElt = document.getElementById('goofy-usblog-id');
+        var probeElt = document.getElementById('goofy-usblog-probe');
+
+        goog.events.listen(
+            dialog, goog.ui.Dialog.EventType.SELECT,
+            function(event) {
+                if (event.key != goog.ui.Dialog.DefaultButtonKeys.OK)
+                    return;
+
+                dialog.dispose();
+                save.call(this, idElt.value, probeElt.checked);
+                event.preventDefault();
+            }, false, this);
     }
 
     // Active timer, if any.
