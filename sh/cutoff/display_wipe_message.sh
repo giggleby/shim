@@ -159,6 +159,11 @@ mode_inform_shopfloor_failed() {
                                     "请联络RD")
 }
 
+mode_press_enter_to_continue() {
+  (display_message "OK. Press ENTER to continue" \
+                   "OK. 按 ENTER 继续")
+}
+
 main() {
   if [ $# -lt 1 ]; then
     usage_help
@@ -170,7 +175,8 @@ main() {
   case "${mode}" in
     "connect_ac" | "remove_ac" | "charging" | "discharging" | \
         "cutting_off" | "cutoff_failed" | "wipe" | "wipe_failed" | \
-        "inform_shopfloor" | "inform_shopfloor_failed" )
+        "inform_shopfloor" | "inform_shopfloor_failed" | \
+        "press_enter_to_continue" )
       mode_"${mode}" "$@"
 
       # Light up the screen if possible.

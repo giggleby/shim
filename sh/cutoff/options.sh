@@ -12,6 +12,7 @@
 : ${CUTOFF_BATTERY_MAX_PERCENTAGE:=}
 : ${CUTOFF_BATTERY_MIN_VOLTAGE:=}
 : ${CUTOFF_BATTERY_MAX_VOLTAGE:=}
+: ${CONFIRMATION:=false}
 : ${SHOPFLOOR_URL:=}
 
 # After calling display_wipe_message.sh to draw image with frecon, we must
@@ -71,7 +72,7 @@ options_load_file() {
     for key in CUTOFF_METHOD CUTOFF_AC_STATE \
         CUTOFF_BATTERY_MIN_PERCENTAGE CUTOFF_BATTERY_MAX_PERCENTAGE \
         CUTOFF_BATTERY_MIN_VOLTAGE CUTOFF_BATTERY_MAX_VOLTAGE \
-        SHOPFLOOR_URL TTY; do
+        CONFIRMATION SHOPFLOOR_URL TTY; do
       if [ "${file%.json}" != "${file}" ]; then
         # "jq -n -f" allows more flexible JSON, for example keys without quotes
         # or comments started with #.
@@ -134,6 +135,8 @@ options_check_values() {
     CUTOFF_BATTERY_MIN_PERCENTAGE 0 100
   option_check_range "${CUTOFF_BATTERY_MAX_PERCENTAGE}" \
     CUTOFF_BATTERY_MAX_PERCENTAGE 0 100
+  option_check_set "${CONFIRMATION}" CONFIRMATION \
+    "true" "false"
   if [ ! -e "${TTY}" ]; then
     die "Cannot find valid TTY in ${TTY}."
   fi
@@ -145,6 +148,7 @@ options_check_values() {
   echo "CUTOFF_BATTERY_MAX_PERCENTAGE=${CUTOFF_BATTERY_MAX_PERCENTAGE}"
   echo "CUTOFF_BATTERY_MIN_VOLTAGE=${CUTOFF_BATTERY_MIN_VOLTAGE}"
   echo "CUTOFF_BATTERY_MAX_VOLTAGE=${CUTOFF_BATTERY_MAX_VOLTAGE}"
+  echo "CONFIRMATION=${CONFIRMATION}"
   echo "SHOPFLOOR_URL=${SHOPFLOOR_URL}"
   echo "TTY=${TTY}"
   echo "---------------------"
@@ -160,7 +164,8 @@ options_usage_help() {
     [--max-battery-percent <maximum battery percentage>]
     [--min-battery-voltage <minimum battery voltage>]
     [--max-battery-voltage <maximum battery voltage>]
-    [--shopfloor <shopfloor_url]
+    [--confirmation true|false]
+    [--shopfloor <shopfloor_url>]
     [--tty <tty_path>]
     "
   exit 1
@@ -194,6 +199,10 @@ options_parse_command_line() {
       --max-battery-voltage )
         shift
         CUTOFF_BATTERY_MAX_VOLTAGE="$1"
+        ;;
+      --confirmation )
+        shift
+        CONFIRMATION="$1"
         ;;
       --shopfloor )
         shift

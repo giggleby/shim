@@ -20,6 +20,9 @@
     "CUTOFF_BATTERY_MAX_VOLTAGE": {
       "type": "number"
     },
+    "CONFIRMATION": {
+      "type": "boolean"
+    },
     "SHOPFLOOR_URL": {
       "type": "string"
     },

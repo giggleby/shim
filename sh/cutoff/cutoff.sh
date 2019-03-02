@@ -9,6 +9,7 @@
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 DISPLAY_MESSAGE="${SCRIPT_DIR}/display_wipe_message.sh"
+CONFIRM="${SCRIPT_DIR}/confirm.sh"
 . "${SCRIPT_DIR}/options.sh"
 
 reset_activate_date() {
@@ -179,6 +180,10 @@ main() {
 
   # Ask operator to plug or unplug AC before doing cut off.
   check_ac_state "$CUTOFF_AC_STATE"
+
+  if [ "${CONFIRMATION}" = "true" ]; then
+    $CONFIRM
+  fi
 
   $DISPLAY_MESSAGE "cutting_off"
 
