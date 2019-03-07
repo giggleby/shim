@@ -460,11 +460,11 @@ def GenerateStableDeviceSecret(options):
   event_log.Log('generate_stable_device_secret')
 
 
-@Command('cr50_set_board_id')
-def Cr50SetBoardId(options):
-  """Set the board id and flag in the Cr50 chip."""
-  GetGooftool(options).Cr50SetBoardId()
-  event_log.Log('cr50_set_board_id')
+@Command('cr50_set_sn_bits_and_board_id')
+def Cr50SetSnBitsAndBoardId(options):
+  """Set the serial number bits, board id and flags on the Cr50 chip."""
+  GetGooftool(options).Cr50SetSnBitsAndBoardId()
+  event_log.Log('cr50_set_sn_bits_and_board_id')
 
 
 @Command('cr50_disable_factory_mode')
@@ -742,7 +742,7 @@ def Finalize(options):
   - Uploads system logs & reports
   - Wipes the testing kernel, rootfs, and stateful partition
   """
-  Cr50SetBoardId(options)
+  Cr50SetSnBitsAndBoardId(options)
   Cr50DisableFactoryMode(options)
   Verify(options)
   LogSourceHashes(options)
