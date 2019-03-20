@@ -484,6 +484,13 @@ class Gooftool(object):
         'rlz_embargo_end_date': embargo_date.isoformat(),
     }, partition=vpd.VPD_READWRITE_PARTITION_NAME)
 
+  def WriteVPDForMFGDate(self):
+    """Write manufacturing date into VPD."""
+    mfg_date = datetime.date.today()
+    self._vpd.UpdateData({
+        'mfg_date': mfg_date.isoformat()
+    }, partition=vpd.VPD_READONLY_PARTITION_NAME)
+
   def WriteHWID(self, hwid=None):
     """Writes specified HWID value into the system BB.
 
@@ -725,7 +732,6 @@ class Gooftool(object):
       self._vpd.UpdateData(
           {'stable_device_secret_DO_NOT_SHARE': secret_bytes.encode('hex')},
           partition=vpd.VPD_READONLY_PARTITION_NAME)
-
 
   def Cr50SetBoardId(self):
     """Set the board id and flag on the Cr50 chip.
