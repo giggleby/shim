@@ -13,7 +13,8 @@ HEADER_BIT_LENGTH = 5
 HEADER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 OPERATION_MODE = type_utils.Enum(['normal', 'rma', 'no_check'])
 COMPONENT_STATUS = type_utils.Enum(['supported', 'deprecated',
-                                    'unsupported', 'unqualified'])
+                                    'unsupported', 'unqualified',
+                                    'duplicate'])
 ENCODING_SCHEME = type_utils.Enum(['base32', 'base8192'])
 
 
