@@ -43,6 +43,9 @@ KNOWN_RO_DATA = {
     'model_name': ANY,
     'service_tag': ANY,
     'dsm_calib': r'[0-9a-f ]*',
+
+    # Sarien only VPD values.
+    'dock_mac': r'[0-9a-fA-F:]+',
 }
 
 # Variable key names in regular expression.
