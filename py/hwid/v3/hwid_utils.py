@@ -19,6 +19,7 @@ from cros.factory.hwid.v3.configless_fields import ConfiglessFields
 from cros.factory.hwid.v3 import transformer
 from cros.factory.hwid.v3 import verifier
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
+from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
@@ -371,6 +372,13 @@ def ProbeProject():
 
   from cros.factory.utils import process_utils
   from cros.factory.utils import cros_board_utils
+
+  override_path = os.path.join(
+      GetDefaultDataPath(), 'OVERRIDE_PROJECT')
+  if os.path.exists(override_path):
+    project = file_utils.ReadFile(override_path).strip().lower()
+    if project:
+      return project
 
   try:
     project = process_utils.CheckOutput(
