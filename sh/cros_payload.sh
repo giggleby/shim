@@ -384,7 +384,7 @@ update_json() {
   local new_config="$(mktemp)"
   register_tmp_object "${new_config}"
 
-  echo "${new_json}" | json_merge "${json_path}" - >"${new_config}"
+  printf '%s' "${new_json}" | json_merge "${json_path}" - >"${new_config}"
   cp -f "${new_config}" "${json_path}"
   chmod a+r "${json_path}"
 }
