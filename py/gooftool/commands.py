@@ -399,7 +399,8 @@ def GenerateStableDeviceSecret(options):
   event_log.Log('generate_stable_device_secret')
 
 
-@Command('cr50_set_sn_bits_and_board_id')
+@Command('cr50_set_sn_bits_and_board_id',
+         _rma_mode_cmd_arg)
 def Cr50SetSnBitsAndBoardId(options):
   """Deprecated: use Cr50WriteFlashInfo instead."""
   logging.warning('This function is renamed to Cr50WriteFlashInfo')
@@ -409,7 +410,8 @@ def Cr50SetSnBitsAndBoardId(options):
 @Command('cr50_write_flash_info',
          CmdArg('--expect_zero_touch', action='store_true',
                 help='zero touch feature is expected, the command will fail '
-                     'immediately if required dependencies are not found.'))
+                     'immediately if required dependencies are not found.'),
+         _rma_mode_cmd_arg)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   # The '--expect_zero_touch' argument is for testing purpose, therefore, the
@@ -417,7 +419,7 @@ def Cr50WriteFlashInfo(options):
   # subcommand.  And the `expect_zero_touch` attribute won't exist when this
   # function is invoked by other subcommands, e.g. `finalize`.
   expect_zero_touch = getattr(options, 'expect_zero_touch', False)
-  GetGooftool(options).Cr50WriteFlashInfo(expect_zero_touch)
+  GetGooftool(options).Cr50WriteFlashInfo(expect_zero_touch, options.rma_mode)
   event_log.Log('cr50_write_flash_info')
 
 
