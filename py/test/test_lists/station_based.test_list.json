@@ -92,6 +92,10 @@
       "subtests": [
         "StationLoopStart",
         "StationLoopMain",
+        "SyncFactoryServer",
+        "CheckPoint",
+        "SendFailedItems",
+        "ShopfloorNotifyEnd",
         "CheckPoint",
         "StationLoopEnd"
       ]
@@ -104,6 +108,13 @@
         "DisconnectDevice",
         "StationLoopItemsAfterDisconnection"
       ]
+    },
+    "SendFailedItems": {
+      "inherit": "ShopfloorService",
+      "args": {
+        "method": "UpdateTestResult",
+        "test_status_to_upload": ["FAILED"]
+      }
     },
     "StationLoopItemsAfterDisconnection": {
       "inherit": "FlattenGroup",
