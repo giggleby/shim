@@ -165,8 +165,11 @@ class WebSocketManager(object):
       self.has_confirmed_socket.wait(0.1)
       wait_times += 1
       if wait_times > 100:
-        process_utils.LogAndCheckCall(['chrome_openurl',
-                                       'http://localhost:4012/'])
+        try:
+          process_utils.LogAndCheckCall(['chrome_openurl',
+                                         'http://localhost:4012/'])
+        except Exception as e:
+          logging.info('got exception',exc_info=True)
         wait_times = 0
 
   def _tail_console(self):
