@@ -646,9 +646,11 @@ for k in j:
     toolkit_config)
       local temp="$(md5sum "${file}")"
       echo "${temp%% *}"
+      ;;
     lsb_factory)
       local temp="$(md5sum "${file}")"
       echo "${temp%% *}"
+      ;;
   esac
 }
 
