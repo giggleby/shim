@@ -117,6 +117,7 @@ don't show the image::
 """
 
 
+import logging
 import numbers
 import os
 import Queue
@@ -133,6 +134,7 @@ from cros.factory.test import test_case
 from cros.factory.test.utils import barcode
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
+from cros.factory.utils import service_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
@@ -246,7 +248,23 @@ class CameraTest(test_case.TestCase):
         return cv2.imdecode(
             np.fromstring(blob, dtype=np.uint8), cv2.CV_LOAD_IMAGE_COLOR)
       else:
-        self.RunJSPromiseBlocking('cameraTest.grabFrame()')
+        try:
+          self.RunJSPromiseBlocking('cameraTest.grabFrame()')
+        except type_utils.TestFailure as e:
+          if service_utils.CheckServiceExists('cros-camera'):
+            logging.info(
+                'grabFrame() failed, restart cros-camera and retry (%s)', e)
+            self.RunJSBlocking('cameraTest.disable()')
+            # Use stop/start instead of restart to skip the 3s respawn delay.
+            service_utils.SetServiceStatus('cros-camera',
+                                           service_utils.Status.STOP)
+            service_utils.SetServiceStatus('cros-camera',
+                                           service_utils.Status.START)
+            self.RunJSPromiseBlocking('cameraTest.enable()')
+            self.RunJSPromiseBlocking('cameraTest.grabFrame()')
+            logging.info('grabFrame() succeed after retry')
+          else:
+            raise
         return None
     else:
       return self.camera_device.ReadSingleFrame()
