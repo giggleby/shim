@@ -30,7 +30,8 @@ ESSENTIAL_COMPS = [
 PRIORITY_COMPS = OrderedDict([
     ('firmware_keys', 3),
     ('ro_main_firmware', 3),
-    ('ro_ec_firmware', 2)])
+    ('ro_ec_firmware', 2),
+    ('rlz', 5)])
 
 
 def FilterSpecialCharacter(string):

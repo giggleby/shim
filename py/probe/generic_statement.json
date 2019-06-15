@@ -97,6 +97,11 @@
       }
     }
   },
+  "rlz": {
+    "generic": {
+      "eval": "generic_rlz"
+    }
+  },
   "storage": {
     "generic": {
       "eval": "generic_storage"
