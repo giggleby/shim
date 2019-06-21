@@ -49,6 +49,8 @@ import os
 import re
 import time
 
+import jsonrpclib
+
 import factory_common  # pylint: disable=unused-import
 from cros.factory.device import device_utils
 from cros.factory.test import event as test_event
@@ -201,6 +203,8 @@ class ShutdownTest(test_case.TestCase):
 
       self.Sleep(self.args.wait_shutdown_secs)
     except type_utils.TestFailure:
+      return
+    except jsonrpclib.ProtocolError:
       return
     self.FailTask(
         'System did not shutdown in %s seconds.' % self.args.wait_shutdown_secs)
