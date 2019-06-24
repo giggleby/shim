@@ -1,0 +1,10 @@
+{
+  "inherit": [
+    "default_probe_statement"
+  ],
+  "rlz": {
+    "generic": {
+      "eval": "generic_rlz"
+    }
+  }
+}
