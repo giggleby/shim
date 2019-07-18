@@ -79,6 +79,7 @@ To invoke a non-standard call 'DoSomething' with args (1, 2) and keyword args
 import collections
 import logging
 import pprint
+import sys
 import threading
 
 import factory_common  # pylint: disable=unused-import
@@ -96,6 +97,9 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import shelve_utils
 from cros.factory.utils import webservice_utils
 
+# TODO: properly handles UTF-8 encoding when migrating to Python 3
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 class ServiceSpec(object):
   """The specification of shopfloor service API."""
