@@ -204,7 +204,7 @@ main() {
       ;;
       shutdown | *)
         # By default we shutdown the device without doing anything.
-        shutdown -h now
+        charge_control "normal" && shutdown -h now
     esac
     sleep 15
   done
