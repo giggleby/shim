@@ -550,6 +550,8 @@ class _TouchpadData(_TouchInputData):
     # ("06cb","7a3b") is synaptics hid-over-i2c touchpad.
     known_list = [
         '06cb:7a3b',  # Synaptics hid-over-i2c touchpad.
+        '06cb:7c9e',  # Synaptics hid-over-i2c touchpad.
+        '093a:1001',  # SIPO hid-over-i2c touchpad
     ]
     def in_known_list(entry):
       return '%s:%s' % (entry.Vendor, entry.Product) in known_list
