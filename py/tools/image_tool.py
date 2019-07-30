@@ -2484,6 +2484,19 @@ class EditLSBCommand(SubCommand):
       answer = raw_input('Please input "y" or "n": ').strip().lower()
     self.lsb.SetValue('USER_SELECT', 'true' if answer == 'y' else 'false')
 
+  def EditDefaultAction(self):
+    """Modify default action (will be overridden by RMA autorun)."""
+    action = raw_input(
+        'Enter default action (empty to remove): ').strip().lower()
+    while len(action) > 1:
+      action = raw_input(
+          'Action should be a single character or empty: ').strip().lower()
+    key = 'FACTORY_INSTALL_DEFAULT_ACTION'
+    if action:
+      self.lsb.SetValue(key, action)
+    else:
+      self.lsb.DeleteValue(key)
+
   def EditCutOff(self):
     """Modify cutoff method after factory reset.
 
@@ -2583,6 +2596,7 @@ class EditLSBCommand(SubCommand):
       self.old_data = self.lsb.AsRawData()
       self.DoMenu(self.EditServerAddress,
                   self.EditBoardPrompt,
+                  self.EditDefaultAction,
                   self.EditCutOff,
                   self.EditRMAAutorun,
                   w=self.Write,
