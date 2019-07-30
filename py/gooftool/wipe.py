@@ -501,6 +501,28 @@ def _Cutoff():
   cutoff_script = os.path.join(CUTOFF_SCRIPT_DIR, 'cutoff.sh')
   process_utils.Spawn([cutoff_script], check_call=True)
 
+def _ShowLED(color, times):
+  red = blue = green = '0x0'
+  if color == 'RED':
+    red = '0xff'
+  elif color == 'GREEN':
+    green = '0xff'
+  elif color == 'BLUE':
+    blue = '0xff'
+
+  if times != -1:
+    for _ in range(times):
+      Shell('i2cset -f -y 0 0x30 2 {}'.format(blue))
+      Shell('i2cset -f -y 0 0x30 3 {}'.format(green))
+      Shell('i2cset -f -y 0 0x30 4 {}'.format(red))
+      time.sleep(1)
+  else:
+    while True:
+      Shell('i2cset -f -y 0 0x30 2 {}'.format(blue))
+      Shell('i2cset -f -y 0 0x30 3 {}'.format(green))
+      Shell('i2cset -f -y 0 0x30 4 {}'.format(red))
+      time.sleep(1)
+
 
 def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
              root_disk, old_root, station_ip, station_port, finish_token,
@@ -534,17 +556,11 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
     ])
     _UnmountStatefulPartition(old_root, state_dev)
 
-    process_utils.Spawn(
-        [os.path.join(CUTOFF_SCRIPT_DIR, 'display_wipe_message.sh'), 'wipe'],
-        call=True)
-
     try:
       _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
                     keep_developer_mode_flag)
     except Exception:
-      process_utils.Spawn(
-          [os.path.join(CUTOFF_SCRIPT_DIR, 'display_wipe_message.sh'),
-           'wipe_failed'], call=True)
+      _ShowLED('RED', 5)
       raise
 
     EnableReleasePartition(release_rootfs)
@@ -556,13 +572,12 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
                    wipe_in_tmpfs_log=wipe_in_tmpfs_log,
                    success=True)
 
-    _Cutoff()
+    _ShowLED('GREEN', -1)
 
     # should not reach here
     logging.info('Going to sleep forever!')
     time.sleep(1e8)
   except Exception:
     logging.exception('wipe_init failed')
-    _OnError(station_ip, station_port, finish_token, state_dev,
-             wipe_in_tmpfs_log=wipe_in_tmpfs_log, wipe_init_log=logfile)
+    _ShowLED('RED', 5)
     raise
