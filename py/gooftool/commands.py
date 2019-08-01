@@ -80,12 +80,6 @@ def Command(cmd_name, *args, **kwargs):
     def CommandWithWaiveSkipCheck(options):
       waive_list = vars(options).get('waive_list', [])
       skip_list = vars(options).get('skip_list', [])
-      if phase.GetPhase() >= phase.PVT_DOGFOOD and (
-          waive_list != [] or skip_list != []):
-        raise Error(
-            'waive_list and skip_list should be empty for phase %s' %
-            phase.GetPhase())
-
       if cmd_name not in skip_list:
         try:
           fun(options)
