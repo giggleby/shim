@@ -1411,7 +1411,7 @@ class ChromeOSFactoryBundle(object):
     parser.AddArgument(
         (cls.PREFLASH, cls.RMA, cls.BUNDLE, cls.REPLACEABLE),
         '--toolkit',
-        default='toolkit/*.run',
+        default='-toolkit/*.run',
         type=ArgTypes.GlobPath,
         help='path to a Chromium OS factory toolkit. default: %(default)s')
     parser.AddArgument(
@@ -1717,9 +1717,11 @@ class ChromeOSFactoryBundle(object):
     part.ResizeFileSystem(
         part.GetFileSystemSize() + stateful_free_space * MEGABYTE)
     with GPT.Partition.MapAll(output) as output_dev:
-      targets = ['toolkit', 'release_image.crx_cache']
+      targets = []
       if self.hwid:
         targets += ['hwid']
+      if self.toolkit:
+        targets += ['toolkit']
       CrosPayloadUtils.InstallComponents(json_path, output_dev, targets)
 
     logging.debug('Add /etc/lsb-factory if not exists.')
@@ -2225,6 +2227,9 @@ class ChromeOSFactoryBundle(object):
       return LSBFile(lsb_path).GetChromeOSVersion(remove_timestamp=False)
 
   def GetToolkitVersion(self, toolkit=None):
+    toolkit = toolkit or self.toolkit
+    if not toolkit:
+      return 'NO_TOOLKIT'
     return Shell([toolkit or self.toolkit, '--lsm'], output=True).strip()
 
   def CreateBundle(self, output_dir, phase, notes, timestamp=None):
