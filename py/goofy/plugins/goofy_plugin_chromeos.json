@@ -23,8 +23,8 @@
     "charge_manager": {
       "args": {
         "period_secs": 120,
-        "min_charge_pct": 88,
-        "max_charge_pct": 89
+        "min_charge_pct": 91,
+        "max_charge_pct": 92
       }
     },
     "cpu_usage_monitor": {
