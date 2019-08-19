@@ -1276,6 +1276,7 @@ class ChromeOSFactoryBundle(object):
       lsb_path = os.path.join(stateful, 'dev_image', 'etc', 'lsb-factory')
       lsb_file = LSBFile(lsb_path if os.path.exists(lsb_path) else None)
       lsb_file.AppendValue('FACTORY_INSTALL_FROM_USB', '1')
+      lsb_file.AppendValue('FACTORY_INSTALL_ACTION_COUNTDOWN', 'true')
       lsb_file.AppendValue('USE_CROS_PAYLOAD', '1')
       lsb_file.AppendValue('RMA_AUTORUN', 'true')
       lsb_file.Install(lsb_path)
@@ -2497,6 +2498,15 @@ class EditLSBCommand(SubCommand):
     else:
       self.lsb.DeleteValue(key)
 
+  def EditActionCountdown(self):
+    """Enable/Disable countdown before default action."""
+    answer = raw_input(
+        'Enable (y) or disable (n) default action countdown? ').strip().lower()
+    while not answer in ['y', 'n']:
+      answer = raw_input('Please input "y" or "n": ').strip().lower()
+    self.lsb.SetValue('FACTORY_INSTALL_ACTION_COUNTDOWN',
+                      'true' if answer == 'y' else 'false')
+
   def EditCutOff(self):
     """Modify cutoff method after factory reset.
 
@@ -2597,6 +2607,7 @@ class EditLSBCommand(SubCommand):
       self.DoMenu(self.EditServerAddress,
                   self.EditBoardPrompt,
                   self.EditDefaultAction,
+                  self.EditActionCountdown,
                   self.EditCutOff,
                   self.EditRMAAutorun,
                   w=self.Write,
