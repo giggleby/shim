@@ -112,7 +112,10 @@ class HWIDV3Test(test_case.TestCase):
           default=False),
       Arg('verify_checksum', bool,
           'Enable database checksum verification.',
-          default=True)
+          default=True),
+      Arg('include_brand_code', bool,
+          'Include RLZ brand code',
+          default=True),
   ]
 
   def setUp(self):
@@ -188,6 +191,8 @@ class HWIDV3Test(test_case.TestCase):
         generate_cmd += ['--rma-mode']
       if not self.args.verify_checksum:
         generate_cmd += ['--no-verify-checksum']
+      if not self.args.include_brand_code:
+        generate_cmd += ['--no-brand-code']
 
       output = self.factory_tools.CallOutput(generate_cmd)
       self.assertIsNotNone(output, 'HWID generate failed.')
