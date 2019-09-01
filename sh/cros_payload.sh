@@ -311,7 +311,7 @@ json_merge() {
     return
   fi
 
-  python -c "\
+  python2 -c "\
 import json
 import sys
 
@@ -344,7 +344,7 @@ json_get_file_value() {
     return
   fi
 
-  python -c "\
+  python2 -c "\
 import json
 import sys
 
@@ -363,7 +363,7 @@ json_get_keys() {
     return
   fi
 
-  python -c "import json; import sys; print('\n'.join(json.load(sys.stdin)))"
+  python2 -c "import json; import sys; print('\n'.join(json.load(sys.stdin)))"
 }
 
 # Encodes a string from argument to single JSON string.
@@ -373,7 +373,7 @@ json_encode_str() {
     "${JQ}" -n --arg input "$1" '$input'
     return
   fi
-  python -c "import json; import sys; print(json.dumps(sys.argv[1]))" "$1"
+  python2 -c "import json; import sys; print(json.dumps(sys.argv[1]))" "$1"
 }
 
 # Updates JSON data to specified config.
@@ -585,7 +585,7 @@ get_file_component_version() {
         return
       fi
 
-      echo "${json_manifest}" | python -c "\
+      echo "${json_manifest}" | python2 -c "\
 import json
 import sys
 j = json.load(sys.stdin)
