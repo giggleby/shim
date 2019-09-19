@@ -24,14 +24,13 @@ import os
 import shutil
 import threading
 
-from jsonrpclib import jsonclass
-
 import factory_common  # pylint: disable=unused-import
 from cros.factory.test.env import goofy_proxy
 from cros.factory.test.env import paths
 from cros.factory.test.utils.selector_utils import DataShelfSelector
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
+from cros.factory.utils import jsonrpc_utils
 from cros.factory.utils import shelve_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
@@ -159,8 +158,7 @@ class FactoryState(object):
 
     self._lock = threading.RLock()
 
-    if TestState not in jsonclass.SUPPORTED_TYPES:
-      jsonclass.SUPPORTED_TYPES = jsonclass.SUPPORTED_TYPES + (TestState, )
+    jsonrpc_utils.AddToJsonclassSupportedTypes(TestState)
 
   @sync_utils.Synchronized
   def Close(self):

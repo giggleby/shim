@@ -12,10 +12,25 @@ import threading
 import uuid
 
 import jsonrpclib
+from jsonrpclib import jsonclass
 from jsonrpclib import SimpleJSONRPCServer
 
 from . import net_utils
 from .net_utils import TimeoutXMLRPCTransport
+
+
+# jsonrpclib/0.3.1 renamed this to 'SUPPORTED_TYPES'
+_LEGACY_MODE = hasattr(jsonclass, 'supported_types')
+
+
+def AddToJsonclassSupportedTypes(new_class):
+  """Add |new_class| to jsonclass.SUPPORTED_TYPES"""
+  if _LEGACY_MODE:
+    if new_class not in jsonclass.supported_types:
+      jsonclass.supported_types += [new_class, ]
+  else:
+    if new_class not in jsonclass.SUPPORTED_TYPES:
+      jsonclass.SUPPORTED_TYPES += (new_class, )
 
 
 class TimeoutJSONRPCTransport(jsonrpclib.jsonrpc.TransportMixIn,
@@ -158,5 +173,7 @@ class MultiPathJSONRPCServer(SimpleJSONRPCServer.SimpleJSONRPCServer):
     handler = inspect.currentframe().f_back.f_locals['self']
     path = handler.path
     # pylint: disable=protected-access
+    if _LEGACY_MODE:
+      return self.dispatchers[path]._marshaled_dispatch(data, dispatch_method)
     return self.dispatchers[path]._marshaled_dispatch(
         data, dispatch_method, path)
