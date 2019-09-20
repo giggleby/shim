@@ -13,15 +13,15 @@ main() {
   "${DISPLAY_MESSAGE}" "press_enter_to_continue"
   stty -F "${TTY}" sane
 
+  local tmp=""
   if ! type evtest >/dev/null 2>&1; then
-    echo "Cannot find command evtest" >"${TTY}"
-    sleep 1d
+    read tmp
+  else
+    # TODO(stimim); find correct event id
+    while evtest --query /dev/input/event2 EV_KEY KEY_ENTER; do
+      sleep 0.01
+    done
   fi
-
-  # TODO(stimim); find correct event id
-  while evtest --query /dev/input/event2 EV_KEY KEY_ENTER; do
-    sleep 0.01
-  done
   echo "Received ENTER"
 }
 
