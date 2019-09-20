@@ -2519,7 +2519,7 @@ class EditLSBCommand(SubCommand):
       return
     answer = self._DoOptions(
         'Select cutoff AC state', 'CUTOFF_AC_STATE',
-        ['remove_ac', 'connect_ac'])
+        ['none', 'remove_ac', 'connect_ac'])
     answer = self._DoOptionalNumber(
         'Minimum allowed battery percentage', 'CUTOFF_BATTERY_MIN_PERCENTAGE',
         0, 100)

@@ -130,7 +130,7 @@ options_check_values() {
   option_check_set "${CUTOFF_METHOD}" CUTOFF_METHOD \
     shutdown reboot battery_cutoff ectool_cutoff
   option_check_set "${CUTOFF_AC_STATE}" CUTOFF_AC_STATE \
-    connect_ac remove_ac
+    connect_ac remove_ac none
   option_check_range "${CUTOFF_BATTERY_MIN_PERCENTAGE}" \
     CUTOFF_BATTERY_MIN_PERCENTAGE 0 100
   option_check_range "${CUTOFF_BATTERY_MAX_PERCENTAGE}" \
@@ -159,7 +159,7 @@ options_check_values() {
 options_usage_help() {
   echo "Usage: $0
     [--method shutdown|reboot|battery_cutoff|ectool_cutoff]
-    [--check-ac connect_ac|remove_ac]
+    [--check-ac connect_ac|remove_ac|none]
     [--min-battery-percent <minimum battery percentage>]
     [--max-battery-percent <maximum battery percentage>]
     [--min-battery-voltage <minimum battery voltage>]
