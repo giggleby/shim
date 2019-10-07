@@ -86,7 +86,7 @@ DEFAULT_BLOCK_SIZE = pygpt.GPT.DEFAULT_BLOCK_SIZE
 # Components for cros_payload
 PAYLOAD_COMPONENTS = [
     'release_image', 'test_image',
-    'toolkit', 'firmware', 'hwid', 'complete', 'toolkit_config']
+    'toolkit', 'firmware', 'hwid', 'complete', 'toolkit_config', 'description']
 # Payload subtypes
 PAYLOAD_SUBTYPE_VERSION = 'version'
 
@@ -828,7 +828,7 @@ class ChromeOSFactoryBundle(object):
   def __init__(self, temp_dir, board, release_image, test_image, toolkit,
                factory_shim=None, enable_firmware=True, firmware=None,
                hwid=None, complete=None, netboot=None, toolkit_config=None,
-               setup_dir=None, server_url=None):
+               description=None, setup_dir=None, server_url=None):
     self._temp_dir = temp_dir
     # Member data will be looked up by getattr so we don't prefix with '_'.
     self._board = board
@@ -842,6 +842,7 @@ class ChromeOSFactoryBundle(object):
     self.complete = complete
     self.netboot = netboot
     self.toolkit_config = toolkit_config
+    self.description = description
     self.setup_dir = setup_dir
     self.server_url = server_url
 
@@ -896,6 +897,10 @@ class ChromeOSFactoryBundle(object):
           '--toolkit_config', dest='toolkit_config',
           default='-toolkit/*.json', type=ArgTypes.GlobPath,
           help='path to a config file to override test list constants')
+      parser.add_argument(
+          '--description', dest='description',
+          default='-description/*.txt', type=ArgTypes.GlobPath,
+          help='path to a plain text description file')
       parser.add_argument(
           '--board',
           help='board name for dynamic installation')
@@ -2105,7 +2110,8 @@ class CreateRMAImageCommmand(SubCommand):
           firmware=self.args.firmware,
           hwid=self.args.hwid,
           complete=self.args.complete,
-          toolkit_config=self.args.toolkit_config)
+          toolkit_config=self.args.toolkit_config,
+          description=self.args.description)
       bundle.CreateRMAImage(self.args.output)
       print('OK: Generated %s RMA image at %s' %
             (bundle.board, self.args.output))
