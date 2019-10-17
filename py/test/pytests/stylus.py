@@ -62,6 +62,7 @@ from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
+from cros.factory.utils.type_utils import Enum
 
 
 class StylusMonitor(touch_monitor.SingleTouchMonitor):
@@ -75,11 +76,11 @@ class StylusMonitor(touch_monitor.SingleTouchMonitor):
   @sync_utils.Synchronized
   def OnMove(self):
     """See SingleTouchMonitor.OnMove."""
-    state = self.GetState()
-    if state.keys[evdev.ecodes.BTN_TOUCH]:
+    touch_state = self.GetState()
+    if touch_state.keys[evdev.ecodes.BTN_TOUCH]:
       # Instead of directly call JavaScript function 'handler' here, we buffer
       # the events to reduce the latency from CallJSFunction.
-      self._buffer.append([state.x, state.y])
+      self._buffer.append([touch_state.x, touch_state.y])
 
   @sync_utils.Synchronized
   def Flush(self):
@@ -122,7 +123,15 @@ class StylusTest(test_case.TestCase):
           default=False),
       Arg('flush_interval', float,
           'The time interval of flushing event buffers.',
-          default=0.1)
+          default=0.1),
+      Arg('angle_compensation', Enum([0, 90, 180, 270]),
+          'Specify one of the following angles to compensate UI orientation '
+          'in counter-clockwise direction: [0, 90, 180, 270].  '
+          'This is a special argument that should be changed only when '
+          'panel scanout orientation is different from default system '
+          'orientation, e.g. panel scanout is following portrait direction but '
+          'system default orientation is in landscape mode.',
+          default=0)
   ]
 
   def setUp(self):
@@ -174,10 +183,11 @@ class StylusTest(test_case.TestCase):
 
   def CheckRotation(self):
     last_rotation = None
+    angle_compensation = self.args.angle_compensation
     rotate_msg = {
-        90: _('clockwise'),
-        180: _('upside down'),
-        270: _('counterclockwise')
+        (90  + angle_compensation) % 360: _('clockwise'),
+        (180 + angle_compensation) % 360: _('upside down'),
+        (270 + angle_compensation) % 360: _('counterclockwise')
     }
 
     while True:
@@ -185,7 +195,7 @@ class StylusTest(test_case.TestCase):
 
       if last_rotation == rotation:
         pass
-      elif rotation in [90, 180, 270]:
+      elif rotation in rotate_msg:
         # Wrong rotation
         self.ui.CallJSFunction('hideStylusTest')
         self.ui.SetHTML(
