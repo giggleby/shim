@@ -53,6 +53,9 @@ KNOWN_RO_DATA_RE = {
 }
 
 KNOWN_RW_DATA = {
+    # This value is used to identify CfM devices.
+    'oem_device_requisition': ANY,
+
     # These VPD values will be generated later but should not exist when leaving
     # factory (but some may exist in RMA process).
     'ActivateDate': ANY,
