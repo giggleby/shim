@@ -9,7 +9,6 @@
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 DISPLAY_MESSAGE="${SCRIPT_DIR}/display_wipe_message.sh"
-CONFIRM="${SCRIPT_DIR}/confirm.sh"
 . "${SCRIPT_DIR}/options.sh"
 EC_PRESENT=0
 POWER_SUPPLY_PATH="/sys/class/power_supply"
@@ -216,10 +215,6 @@ main() {
     check_ac_state "$CUTOFF_AC_STATE" "${battery_path}"
   else
     echo "Battery not found."
-  fi
-
-  if [ "${CONFIRMATION}" = "true" ]; then
-    $CONFIRM
   fi
 
   $DISPLAY_MESSAGE "cutting_off"

@@ -162,7 +162,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
       'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
       'od', 'pango-view', 'pkill', 'pv', 'python', 'reboot', 'setterm', 'sh',
       'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof', 'jq', '/sbin/frecon',
-      'stressapptest', 'fuser', 'evtest']
+      'stressapptest', 'fuser']
 
   etc_issue = textwrap.dedent("""
     You are now in tmp file system created for in-place wiping.

@@ -22,7 +22,3 @@ SHOPFLOOR_URL=
 # Valid value: Any valid terminal like /run/frecon/vt0 or /dev/tty1.
 # This is rarely changed.
 # TTY=/run/frecon/vt0
-
-# Valid options: `true` or `false`
-# Set this to true if you want to press "ENTER" before cutoff
-CONFIRMATION=false
