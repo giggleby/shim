@@ -1,0 +1,8 @@
+{
+  "cellular": {
+    "cellular": {
+      "eval": "shell:lsusb -v -d 2cb7:0007"
+    }
+  }
+}
+

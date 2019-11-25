@@ -157,6 +157,48 @@
         "mode": "manual"
       }
     },
+    "CellularProbe": {
+      "pytest_name": "probe",
+      "label": "Cellular Probe",
+      "run_if": "device.component.has_cellular",
+      "args": {
+        "config_file": "probe_cellular.json"
+      }
+    },
+    "Cellular": {
+      "inherit": "TestGroup",
+      "run_if": "device.component.has_cellular",
+      "subtests": [
+        "CellularProbe",
+        {
+          "pytest_name": "exec_shell",
+          "label": "FWVersion",
+          "args": {
+            "commands": [
+              "connectivity show Devices | grep 'Cellular.FirmwareRevision: 18500.5001.17.02.22.86'"
+            ]
+          }
+        },
+        {
+          "pytest_name": "exec_shell",
+          "label": "HWVersion",
+          "args": {
+            "commands": [
+              "mbimcli -p -d /dev/cdc-wdm0 --query-device-caps | grep V1.0.4"
+            ]
+          }
+        },
+        {
+          "pytest_name": "exec_shell",
+          "label": "IMEI",
+          "args": {
+            "commands": [
+              "modem status | grep -E 'EquipmentIdentifier: ([0-9]{15})'"
+            ]
+          }
+        }
+      ]
+    },
     "ChargeDischargeCurrent": {
       "pytest_name": "battery_current",
       "label": "Charge Discharge Current",
@@ -173,6 +215,10 @@
     "ChargerTypeDetection": {
       "pytest_name": "ac_power",
       "label": "Charger Type Detection"
+    },
+    "CheckModemLockStatus": {
+      "run_if": "device.component.has_cellular",
+      "pytest_name": "verify_modem_security_status"
     },
     "CheckPoint": {
       "inherit": "Barrier",
@@ -434,6 +480,57 @@
     "ShopfloorService": {
       "pytest_name": "shopfloor_service",
       "run_if": "constants.enable_factory_server"
+    },
+    "SIM": {
+      "inherit": "TestGroup",
+      "run_if": "device.component.has_cellular",
+      "subtests": [
+        {
+          "inherit": "Message",
+          "label": "InsertSIM",
+          "args": {
+            "html": "i18n! Please insert the SIM card and press SPACE to continue"
+          }
+        },
+        {
+          "pytest_name": "exec_shell",
+          "label": "SIMPresent",
+          "__comment": "After inserting SIM card, the modem in ModemManager will be disappeared. After a while, modem will be shown up in the different index. We use retries to catch the show up of modem as early as possible instead of sleeping a long time once",
+          "retries": 10,
+          "args": {
+            "commands": [
+              "sleep 1; connectivity show Devices | grep 'Cellular.SIMPresent: true'"
+            ]
+          }
+        },
+        {
+          "pytest_name": "exec_shell",
+          "label": "ICCID",
+          "args": {
+            "commands": [
+              "connectivity show Devices | grep -E 'Cellular.ICCID: ([0-9*#]{20})'"
+            ]
+          }
+        },
+        {
+          "inherit": "Message",
+          "label": "RemoveSIM",
+          "args": {
+            "html": "i18n! Please remove the SIM card and press SPACE to continue"
+          }
+        },
+        {
+          "pytest_name": "exec_shell",
+          "label": "SIMNotPresent",
+          "__comment": "See comment in SIMPresent",
+          "retries": 10,
+          "args": {
+            "commands": [
+              "sleep 1; connectivity show Devices | grep 'Cellular.SIMPresent: false'"
+            ]
+          }
+        }
+      ]
     },
     "SpatialSensorCalibration": {
       "pytest_name": "spatial_sensor_calibration"

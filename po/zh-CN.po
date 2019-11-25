@@ -3251,6 +3251,50 @@ msgstr "无线网路"
 msgid "Write HWID"
 msgstr "硬体代号"
 
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Cellular Probe"
+msgstr "Cellular 侦测"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "FWVersion"
+msgstr "韧体版本"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "CarrierFWVersion"
+msgstr "电信商韧体版本"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HWVersion"
+msgstr "硬件版本"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "InsertSIM"
+msgstr "插入SIM"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "RemoveSIM"
+msgstr "移除SIM"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "SIMPresent"
+msgstr "SIM存在"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "SIMNotPresent"
+msgstr "SIM不存在"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Please insert the SIM card and press SPACE to continue"
+msgstr "插入SIM卡后, 请按空白键继续"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Please remove the SIM card and press SPACE to continue"
+msgstr "移除SIM卡后, 请按空白键继续"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "CheckModemLockStatus"
+msgstr "检查数据机锁定状况"
+
 #: ../py/test/test_lists/generic_fat.test_list.json
 msgid "FAT (Final Assembly Test)"
 msgstr "FAT (最终组装测试)"
