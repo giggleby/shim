@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2019-11-06 15:18+CST\n"
+"PO-Revision-Date: 2020-01-13 11:23+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -524,6 +524,10 @@ msgid "Update Firmware"
 msgstr "更新韧体"
 
 #: ../build/pytests_label_generated.json
+msgid "Update Fpmcu Firmware"
+msgstr "更新 Fpmcu 韧体"
+
+#: ../build/pytests_label_generated.json
 msgid "Update Kernel"
 msgstr "更新 Kernel"
 
@@ -590,6 +594,10 @@ msgstr "无线频宽"
 #: ../build/pytests_label_generated.json
 msgid "Wireless Antenna"
 msgstr "无线天线"
+
+#: ../build/pytests_label_generated.json
+msgid "Wireless Connect"
+msgstr "连线到无线网路"
 
 #: ../build/pytests_label_generated.json
 msgid "Write Device Data To VPD"

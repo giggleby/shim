@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2019-11-06 15:18+CST\n"
+"PO-Revision-Date: 2020-01-13 11:23+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -524,6 +524,10 @@ msgid "Update Firmware"
 msgstr "Cập nhật firmware"
 
 #: ../build/pytests_label_generated.json
+msgid "Update Fpmcu Firmware"
+msgstr "Cập nhật Fpmcu firmware"
+
+#: ../build/pytests_label_generated.json
 msgid "Update Kernel"
 msgstr "KernelCập nhật Kernel"
 
@@ -590,6 +594,10 @@ msgstr "Băng thông không dây"
 #: ../build/pytests_label_generated.json
 msgid "Wireless Antenna"
 msgstr "Ăng ten không dây"
+
+#: ../build/pytests_label_generated.json
+msgid "Wireless Connect"
+msgstr "Kết nối không dây"
 
 #: ../build/pytests_label_generated.json
 msgid "Write Device Data To VPD"
