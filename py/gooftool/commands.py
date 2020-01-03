@@ -345,6 +345,12 @@ def VerifySnBits(options):
     GetGooftool(options).VerifySnBits()
 
 
+@Command('verify_cros_config')
+def VerifyCrosConfig(options):
+  """Verify entries in cros config make sense."""
+  return GetGooftool(options).VerifyCrosConfig()
+
+
 @Command('write_protect')
 def EnableFwWp(options):
   """Enable then verify firmware write protection."""
@@ -541,6 +547,7 @@ def Verify(options):
   VerifyVPD(options)
   VerifyReleaseChannel(options)
   VerifySnBits(options)
+  VerifyCrosConfig(options)
 
 
 @Command('untar_stateful_files')
