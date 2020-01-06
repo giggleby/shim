@@ -453,7 +453,10 @@ def ClearFactoryVPDEntries(options):
 def GenerateStableDeviceSecret(options):
   """Generates a fresh stable device secret and stores it in the RO VPD."""
   secret = GetGooftool(options).GenerateStableDeviceSecret()
-  GetGooftool(options).UploadEnrollmentID(options.upload_method, secret)
+  if options.upload_method is None or options.upload_method == 'none':
+    logging.warning('ENROLLMENT ID UPLOAD SKIPPED')
+  else:
+    GetGooftool(options).UploadEnrollmentID(options.upload_method, secret)
   event_log.Log('generate_stable_device_secret')
 
 
