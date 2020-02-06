@@ -158,10 +158,17 @@ class WebSocketManager(object):
 
   def wait(self):
     """Waits for one socket to connect successfully."""
-    while not self.has_confirmed_socket.is_set():
-      # Wait at most 100 ms at a time; without a timeout, this seems
-      # to eat SIGINT signals.
-      self.has_confirmed_socket.wait(0.1)
+    count = 1
+    interval = 20
+    # Wait at most interval seconds at a time; without a timeout, this seems
+    # to eat SIGINT signals.
+    while not self.has_confirmed_socket.wait(interval):
+      # Hacks for sometimes chrome not coming up.
+      logging.info('Wait web socket for %f seconds, restart ui',
+                   interval * count)
+      process_utils.Spawn(['restart', 'ui'], check_call=True,
+                          log_stderr_on_error=True)
+      count += 1
 
   def _tail_console(self):
     """Tails the console log, generating an event whenever a new
