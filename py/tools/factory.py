@@ -30,6 +30,7 @@ import yaml
 import factory_common  # pylint: disable=unused-import
 from cros.factory.test import device_data
 from cros.factory.test.rules import phase
+from cros.factory.test.rules import privacy
 from cros.factory.test import state
 from cros.factory.test.state import TestState
 from cros.factory.test.test_lists import manager
@@ -41,7 +42,7 @@ from cros.factory.utils.process_utils import Spawn
 from cros.factory.external import setproctitle
 
 
-def Dump(data, dump_format, stream=sys.stdout, safe_dump=True):
+def Dump(data, dump_format, stream=sys.stdout, safe_dump=True, use_filter=True):
   """Dumps data to stream in given format.
 
   Args:
@@ -49,6 +50,8 @@ def Dump(data, dump_format, stream=sys.stdout, safe_dump=True):
     dump_format: a string describing format: json, yaml, pprint.
     stream: an file-like object, default to sys.stdout.
   """
+  if use_filter:
+    data = privacy.FilterDict(data)
   if dump_format == 'yaml':
     if safe_dump:
       yaml.safe_dump(data, stream, default_flow_style=False)
@@ -447,6 +450,9 @@ class DeviceDataCommand(Subcommand):
         '--delete', '-d', metavar='KEY', nargs='*',
         help='Deletes KEYs from device data. '
              '"factory device-data -d A B C" deletes A, B, C from device-data.')
+    self.subparser.add_argument(
+        '--no-filter', action='store_false', dest='use_filter',
+        help='Do not use filter when dumping device data.')
 
   def Run(self):
     if self.args.get:
@@ -489,7 +495,8 @@ class DeviceDataCommand(Subcommand):
         sys.exit('Expected a dict but got a %r' % type(update))
       device_data.UpdateDeviceData(update)
 
-    Dump(device_data.GetAllDeviceData(), self.args.format)
+    Dump(device_data.GetAllDeviceData(), self.args.format,
+         use_filter=self.args.use_filter)
 
 
 class ScreenshotCommand(Subcommand):
