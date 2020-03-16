@@ -39,7 +39,10 @@ add this in test list::
     "pytest_name": "fingerprint_mcu",
     "args": {
       "dead_pixel_max": 10,
-      "sensor_hwid": 5132,
+      "sensor_hwid": [
+        1234,
+        [5120, 65520]
+      ],
       "pixel_median": {
         "cb_type1" : [180, 220],
         "cb_type2" : [80, 120],
@@ -80,8 +83,13 @@ except ImportError:
 class FingerprintTest(unittest.TestCase):
   """Tests the fingerprint sensor."""
   ARGS = [
-      Arg('sensor_hwid', (int, list),
-          'The finger sensor Hardware ID exported in the model field.',
+      Arg('sensor_hwid', list,
+          'The list of rules of accepted finger sensor Hardware IDs. A rule in '
+          'sensor_hwid should be an integer or a list of two integers. If the '
+          'rule is an integer then it is an exact match. Otherwise the ID '
+          'masked by the second integer must match the first integer. If the '
+          'list is empty, the test do not check ID. Otherwise, The test fail '
+          'if all of the rules are not matched.',
           default=None),
       Arg('max_dead_pixels', int,
           'The maximum number of dead pixels on the fingerprint sensor.',
@@ -307,19 +315,34 @@ class FingerprintTest(unittest.TestCase):
       raise type_utils.TestFailure('Too many error reset pixels')
 
   def runTest(self):
+    # Check sensor_hwid arguments.
+    expected_hwid = self.args.sensor_hwid or []
+    for rule in expected_hwid:
+      if not (isinstance(rule, int) or
+              (isinstance(rule, list) and len(rule) == 2 and
+               isinstance(rule[0], int) and
+               isinstance(rule[1], int))):
+        raise type_utils.TestFailure(
+            'An element in sensor_hwid should be an integer or a list of two '
+            'integers. Get %r with type %s instead.'
+            % (rule, type(rule)))
+      if isinstance(rule, list) and (rule[0] | rule[1]) != rule[1]:
+        logging.info('Rule %r always fails and can be removed.', rule)
     # Verify communication with the FPMCU
     ro_ver, rw_ver = self._fpmcu.GetFpmcuFirmwareVersion()
     self.assertTrue(ro_ver is not None and rw_ver is not None,
                     'Unable to retrieve FPMCU version')
     logging.info("FPMCU version RO %s RW %s", ro_ver, rw_ver)
-
     # Retrieve the sensor identifier
     model = self._fpmcu.GetSensorId()
-    expected_hwid = type_utils.MakeList(self.args.sensor_hwid or [])
     testlog.UpdateParam(
         name='sensor_hwid', description='Sensor Hardware ID register')
     testlog.LogParam('sensor_hwid', model)
-    if expected_hwid and model not in expected_hwid:
+    def match(rule):
+      if isinstance(rule, int):
+        return model == rule
+      return (model & rule[1]) == rule[0]
+    if expected_hwid and not any(match(rule) for rule in expected_hwid):
       raise type_utils.TestFailure('Invalid sensor HWID: %r' % model)
 
     # checkerboard test patterns
