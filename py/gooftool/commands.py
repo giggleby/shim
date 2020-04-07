@@ -422,9 +422,24 @@ def GenerateStableDeviceSecret(options):
 
 @Command('cr50_set_sn_bits_and_board_id')
 def Cr50SetSnBitsAndBoardId(options):
+  """Deprecated: use Cr50WriteFlashInfo instead."""
+  logging.warning('This function is renamed to Cr50WriteFlashInfo')
+  Cr50WriteFlashInfo(options)
+
+
+@Command('cr50_write_flash_info',
+         CmdArg('--expect_zero_touch', action='store_true',
+                help='zero touch feature is expected, the command will fail '
+                     'immediately if required dependencies are not found.'))
+def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
-  GetGooftool(options).Cr50SetSnBitsAndBoardId()
-  event_log.Log('cr50_set_sn_bits_and_board_id')
+  # The '--expect_zero_touch' argument is for testing purpose, therefore, the
+  # argument can only be specified by directly using `cr50_write_flash_info`
+  # subcommand.  And the `expect_zero_touch` attribute won't exist when this
+  # function is invoked by other subcommands, e.g. `finalize`.
+  expect_zero_touch = getattr(options, 'expect_zero_touch', False)
+  GetGooftool(options).Cr50WriteFlashInfo(expect_zero_touch)
+  event_log.Log('cr50_write_flash_info')
 
 
 @Command('cr50_disable_factory_mode')
@@ -718,7 +733,7 @@ def Finalize(options):
   if not options.rma_mode:
     # Write VPD values related to RLZ ping into VPD.
     GetGooftool(options).WriteVPDForRLZPing(options.embargo_offset)
-  Cr50SetSnBitsAndBoardId(options)
+  Cr50WriteFlashInfo(options)
   Cr50DisableFactoryMode(options)
   Verify(options)
   LogSourceHashes(options)
