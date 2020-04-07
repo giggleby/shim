@@ -714,6 +714,10 @@ class Gooftool(object):
           'stable_device_secret_DO_NOT_SHARE': secret_bytes.encode('hex')}):
         raise Error
 
+  def CheckCr50SetSnBitsDependency(self):
+    script_path = '/usr/share/cros/cr50-set-sn-bits.sh'
+    return os.path.exists(script_path)
+
   def Cr50SetSnBits(self):
     """Set the serial number bits on the Cr50 chip.
 
@@ -728,9 +732,9 @@ class Gooftool(object):
 
     # If the script does not exist, that board is not able to do Zero-Touch.
 
-    if not os.path.exists(script_path):
-      logging.warn('The Cr50 script to set serial number bits is not found, '
-                   'those bits will not be set on this device.')
+    if not self.CheckCr50SetSnBitsDependency():
+      logging.warning('The Cr50 script to set serial number bits is not found, '
+                      'those bits will not be set on this device.')
       return
 
     if phase.GetPhase() >= phase.PVT_DOGFOOD:
@@ -809,8 +813,14 @@ class Gooftool(object):
       # Restart stopped service even if something went wrong.
       service_mgr.RestoreServices()
 
-  def Cr50SetSnBitsAndBoardId(self):
-    """Set the serial number its, board id and flags on the Cr50 chip."""
+  def Cr50WriteFlashInfo(self, expect_zero_touch=False):
+    """Write device info into cr50 flash."""
+    if expect_zero_touch and not self.CheckCr50SetSnBitsDependency():
+      logging.error('zero_touch feature is expected, but we cannot find '
+                    'required dependencies.  Please check if USE flag '
+                    '`zero_touch` is set when building the test image.')
+      return
+
     self.Cr50SetSnBits()
     self.Cr50SetBoardId()
 
