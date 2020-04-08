@@ -1523,6 +1523,14 @@ def _EcRoHash(image):
                                        _AddFirmwareIdTag(image))}
 
 
+def _NoEcRoHash():
+  return {
+      'hash': 'no_ec_hash',
+      'version': 'no_ec_version',
+      COMPACT_PROBE_STR: 'no_ec_compact_str'
+  }
+
+
 def _FwKeyHash(main_fw_file, key_name):
   """Hash specified GBB key, extracted by vbutil_key."""
   known_hashes = {
@@ -1760,6 +1768,8 @@ def Probe(target_comp_classes=None,
     ec_fw_file = crosfw.LoadEcFirmware().GetFileName()
     if ec_fw_file is not None:
       volatiles.update(CalculateFirmwareHashes(ec_fw_file))
+    else:
+      volatiles.update({'ro_ec_firmware': _NoEcRoHash()})
     pd_fw_file = crosfw.LoadPDFirmware().GetFileName()
     if pd_fw_file is not None:
       # Currently PD is using same FMAP layout as EC so we have to rename
