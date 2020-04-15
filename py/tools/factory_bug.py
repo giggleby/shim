@@ -180,7 +180,7 @@ def GenerateDRAMCalibrationLog(tmp_dir):
 
 
 def SaveLogs(output_dir, include_network_log=False, archive_id=None,
-             probe=False, dram=False, abt=False,
+             probe=False, dram=True, abt=False,
              var='/var', usr_local='/usr/local', etc='/etc'):
   """Saves dmesg and relevant log files to a new archive in output_dir.
 
@@ -414,8 +414,8 @@ def main():
                             'differentiate archives'))
   parser.add_argument('--probe', action='store_true',
                       help=('include probe result in the logs'))
-  parser.add_argument('--dram', action='store_true',
-                      help=('include DRAM calibration info in the logs'))
+  parser.add_argument('--no_dram', action='store_false', dest='dram',
+                      help=('exclude DRAM calibration logs'))
   parser.add_argument('--abt', action='store_true',
                       help=('create abt.txt for "Android Bug Tool"'))
   args = parser.parse_args()
