@@ -98,7 +98,7 @@ class ECToolThermal(Thermal):
 
   # Regular expressions used by thermal component.
   GET_FAN_SPEED_RE = re.compile(r'Fan (\d+) RPM: (\d+)')
-  TEMPERATURE_RE = re.compile(r'^(\d+): (\d+)$', re.MULTILINE)
+  TEMPERATURE_RE = re.compile(r'^(\d+): (\d+)(?: K)?$', re.MULTILINE)
   TEMPERATURE_INFO_RE = re.compile(r'^(\d+): \d+ (.+)$', re.MULTILINE)
 
   # MSR location for energy status.  See <http://lwn.net/Articles/444887/>.
