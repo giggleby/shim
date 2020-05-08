@@ -26,7 +26,8 @@ class TPMVerifyEK(unittest.TestCase):
   ARGS = [
       # Chromebooks and Chromeboxes should set this to False.
       Arg('is_cros_core', bool, 'Verify with ChromeOS Core endoresement',
-          default=False)
+          default=False),
+      Arg('tpm_version', str, 'Check tpm_version is equal or not', default=None)
   ]
 
   def setUp(self):
@@ -96,6 +97,11 @@ class TPMVerifyEK(unittest.TestCase):
         ['--cros_core'] if self.args.is_cros_core else []), log=True)
 
   def runTest(self):
+    if self.args.tpm_version:
+      # Check tpm_version on DUT equals to given tpm_version or not.
+      output = self.dut.CheckOutput(['tpm_version'], log=True)
+      self.assertTrue(self.args.tpm_version in output)
+
     # Always clear TPM on next boot, in case any problems arise.
     self.dut.CheckCall(['crossystem', 'clear_tpm_owner_request=1'], log=True)
 
