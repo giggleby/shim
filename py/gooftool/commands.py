@@ -335,6 +335,11 @@ def VerifyReleaseChannel(options):
       options.enforced_release_channels)
 
 
+@Command('verify-sn-bits')
+def VerifySnBits(options):
+  GetGooftool(options).VerifySnBits()
+
+
 @Command('write_protect')
 def EnableFwWp(options):
   """Enable then verify firmware write protection."""
@@ -497,6 +502,7 @@ def WipeInit(options):
       options.wipe_finish_token,
       options.keep_developer_mode_flag_after_clobber_state)
 
+
 @Command('verify',
          CmdArg('--no_write_protect', action='store_true',
                 help='Do not check write protection switch state.'),
@@ -539,6 +545,7 @@ def Verify(options):
   VerifyTPM(options)
   VerifyVPD(options)
   VerifyReleaseChannel(options)
+  VerifySnBits(options)
 
 
 @Command('untar_stateful_files')
