@@ -631,8 +631,6 @@ class Gooftool(object):
       raise Error('write protectioin switch of EC is disabled.')
 
   def VerifySnBits(self):
-    if not self.CheckCr50SetSnBitsDependency():
-      return
     # Add '-n' to dry run.
     result = self._util.shell(['/usr/share/cros/cr50-set-sn-bits.sh', '-n'])
     stdout = result.stdout.strip()
@@ -642,9 +640,6 @@ class Gooftool(object):
     logging.info('stderr: %s', stderr)
 
     if result.status != 0:
-      # TODO(b/157210082): In the future, it should be okay to have
-      # cr50-set-sn-bits.sh, but not enabling zero-touch.
-
       # Fail reason, either:
       # - attested_device_id is not set
       # - SN bits has been set differently
@@ -861,10 +856,6 @@ class Gooftool(object):
            codecs.encode(secret_bytes, 'hex').decode('utf-8')},
           partition=vpd.VPD_READONLY_PARTITION_NAME)
 
-  def CheckCr50SetSnBitsDependency(self):
-    script_path = '/usr/share/cros/cr50-set-sn-bits.sh'
-    return os.path.exists(script_path)
-
   def Cr50SetSnBits(self):
     """Set the serial number bits on the Cr50 chip.
 
@@ -877,12 +868,14 @@ class Gooftool(object):
 
     script_path = '/usr/share/cros/cr50-set-sn-bits.sh'
 
-    # If the script does not exist, that board is not able to do Zero-Touch.
+    vpd_key = 'attested_device_id'
+    has_vpd_key = self._vpd.GetValue(vpd_key) is not None
 
-    if not self.CheckCr50SetSnBitsDependency():
-      logging.warning('The Cr50 script to set serial number bits is not found, '
-                      'those bits will not be set on this device.')
-      return
+    # The script exists, Zero-Touch is enabled.
+    if not has_vpd_key:
+      # TODO(stimim): What if Zero-Touch is enabled on a program (e.g. hatch),
+      # but not expected for a project (e.g. kohaku).
+      raise Error('Zero-Touch is enabled, but %r is not set' % vpd_key)
 
     if phase.GetPhase() >= phase.PVT_DOGFOOD:
       arg_phase = 'pvt'
@@ -952,14 +945,8 @@ class Gooftool(object):
       logging.exception('Failed to set Cr50 Board ID.')
       raise
 
-  def Cr50WriteFlashInfo(self, expect_zero_touch=False):
+  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False):
     """Write device info into cr50 flash."""
-    if expect_zero_touch and not self.CheckCr50SetSnBitsDependency():
-      logging.error('zero_touch feature is expected, but we cannot find '
-                    'required dependencies.  Please check if USE flag '
-                    '`zero_touch` is set when building the test image.')
-      return
-
     cros_config = cros_config_module.CrosConfig(self._util.shell)
     is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
 
@@ -975,14 +962,14 @@ class Gooftool(object):
           # set explicitly, even if it is an empty string.
           raise Error('This is a whitelabel device, but whitelabel_tag is not '
                       'set in VPD.')
-        else:
-          # whitelabel_tag is set in VPD, but it is different from what is
-          # reported by cros_config.  We don't allow this, because whitelabel
-          # tag affects RLZ code, and RLZ code will be written to cr50 board ID.
-          raise Error('whitelabel_tag reported by cros_config and VPD does not '
-                      'match.  Have you reboot the device after updating VPD '
-                      'fields?')
-    self.Cr50SetSnBits()
+        # whitelabel_tag is set in VPD, but it is different from what is
+        # reported by cros_config.  We don't allow this, because whitelabel
+        # tag affects RLZ code, and RLZ code will be written to cr50 board ID.
+        raise Error('whitelabel_tag reported by cros_config and VPD does not '
+                    'match.  Have you reboot the device after updating VPD '
+                    'fields?')
+    if not rma_mode and enable_zero_touch:
+      self.Cr50SetSnBits()
     self.Cr50SetBoardId(is_whitelabel)
 
   def Cr50WriteWhitelabelFlags(self):
