@@ -258,6 +258,10 @@ def VerifyComponents(options):
 
   PrintVerifyComponentsResults(result)
 
+_enable_zero_touch_cmd_arg = CmdArg(
+    '--enable_zero_touch', action='store_true',
+    help='Set attested_device_id for zero-touch feature.')
+
 
 def PrintVerifyComponentsResults(result):
   """Prints out the results of VerifyComponents method call.
@@ -382,9 +386,11 @@ def VerifyReleaseChannel(options):
       options.enforced_release_channels)
 
 
-@Command('verify-sn-bits')
+@Command('verify-sn-bits',
+         _enable_zero_touch_cmd_arg)
 def VerifySnBits(options):
-  GetGooftool(options).VerifySnBits()
+  if options.enable_zero_touch:
+    GetGooftool(options).VerifySnBits()
 
 
 @Command('write_protect')
@@ -475,17 +481,11 @@ def Cr50SetSnBitsAndBoardId(options):
 
 @Command('cr50_write_flash_info',
          _rma_mode_cmd_arg,
-         CmdArg('--expect_zero_touch', action='store_true',
-                help='zero touch feature is expected, the command will fail '
-                     'immediately if required dependencies are not found.'))
+         _enable_zero_touch_cmd_arg)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
-  # The '--expect_zero_touch' argument is for testing purpose, therefore, the
-  # argument can only be specified by directly using `cr50_write_flash_info`
-  # subcommand.  And the `expect_zero_touch` attribute won't exist when this
-  # function is invoked by other subcommands, e.g. `finalize`.
-  expect_zero_touch = getattr(options, 'expect_zero_touch', False)
-  GetGooftool(options).Cr50WriteFlashInfo(expect_zero_touch, options.rma_mode)
+  GetGooftool(options).Cr50WriteFlashInfo(
+      options.enable_zero_touch, options.rma_mode)
   event_log.Log('cr50_write_flash_info')
 
 
@@ -558,7 +558,8 @@ def WipeInit(options):
          _firmware_path_cmd_arg,
          _enforced_release_channels_cmd_arg,
          _waive_list_cmd_arg,
-         _skip_list_cmd_arg)
+         _skip_list_cmd_arg,
+         _enable_zero_touch_cmd_arg)
 def Verify(options):
   """Verifies if whole factory process is ready for finalization.
 
@@ -751,7 +752,8 @@ def UploadReport(options):
          _station_port_cmd_arg,
          _wipe_finish_token_cmd_arg,
          _waive_list_cmd_arg,
-         _skip_list_cmd_arg)
+         _skip_list_cmd_arg,
+         _enable_zero_touch_cmd_arg)
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
 
