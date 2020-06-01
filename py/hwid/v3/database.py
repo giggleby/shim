@@ -980,7 +980,14 @@ class Components(object):
                               'is default component item (deprecated)', bool),
                           'status': schema.Scalar(
                               'item status', str,
-                              choices=common.COMPONENT_STATUS)}))},
+                              choices=common.COMPONENT_STATUS),
+                          'information': schema.AnyOf([
+                              schema.FixedDict(
+                                  'extra information',
+                                  optional_items={
+                                      'comp_group': schema.Scalar(
+                                          'component group name', str)}),
+                              schema.Scalar('none', type(None))])}))},
           optional_items={
               'probeable': schema.Scalar(
                   'is component probeable (deprecate)', bool)}))
