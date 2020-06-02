@@ -30,12 +30,14 @@ TESTDATA_DIR = os.path.join(
 
 class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
   def testTryGenerate(self):
+    self.maxDiff = None
     ps_gen = _vp_generator.GetAllProbeStatementGenerators()['battery'][0]
 
     ps = ps_gen.TryGenerate(
         'name1',
         {'manufacturer': 'foo',
          'model_name': hwid_rule.Value('bar', is_re=True),
+         'technology': 'cutting-edge-tech',
          'other_value': 'z'})
     self.assertEqual(
         ps,
@@ -44,7 +46,9 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                 'name1': {
                     'eval': {'generic_battery': {}},
                     'expect': {'manufacturer': [True, 'str', '!eq foo'],
-                               'model_name': [True, 'str', '!re bar']}
+                               'model_name': [True, 'str', '!re bar'],
+                               'technology': [True, 'str',
+                                              '!eq cutting-edge-tech']}
                 }
             }
         })
