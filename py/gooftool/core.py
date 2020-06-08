@@ -394,15 +394,27 @@ class Gooftool(object):
         return project
       if project not in reg_code_config:
         return project
+
       # Get the customization from mosys as device name for whitelabel device
-      customization = self._util.shell(
+      whitelabel = self._util.shell(
           ['mosys', 'platform', 'customization']).stdout.strip()
-      if not customization:
+      if not whitelabel:
         raise Error("No customization code found while checking VPD Reg code")
-      if customization not in reg_code_config[project]:
-        return project
-      if reg_code_config[project][customization]:
-        return customization
+
+      if whitelabel in reg_code_config[project]:
+        if reg_code_config[project][whitelabel]:
+          if reg_code_config[project][whitelabel] is True:
+            return whitelabel
+          return reg_code_config[project][whitelabel]
+
+      # Get the skuid from mosys to match the device name of that sku variant
+      skuid = self._util.shell(
+          ['mosys', 'platform', 'sku']).stdout.strip()
+      if not skuid:
+        raise Error("No skuid found while checking VPD Reg code")
+      if skuid in reg_code_config[project]:
+        assert isinstance(reg_code_config[project][skuid], (str, unicode))
+        return reg_code_config[project][skuid]
       return project
 
     # Check required data
