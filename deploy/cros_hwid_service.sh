@@ -144,7 +144,7 @@ ${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/configurations.yaml" \
 
   prepare_protobuf
   prepare_cros_regions
-  run_in_temp virtualenv env
+  run_in_temp python2 -m virtualenv env
   source "${TEMP_DIR}/env/bin/activate"
   add_temp "${TEMP_DIR}/env"
   run_in_temp \
