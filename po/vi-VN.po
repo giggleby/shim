@@ -2096,6 +2096,18 @@ msgstr ""
 "Bắt đầu trình tự cuối cùng, vui lòng đợi.<br>Không khởi động lại máy hoặc "
 "ngừng thử nghiệm.<br>Nếu không, máy sẽ không khởi động"
 
+#: ../py/test/pytests/fingerprint_mcu.py
+msgid "Fingerprint Manual Test"
+msgstr ""
+
+#: ../py/test/pytests/fingerprint_mcu.py
+msgid "Touch fingerprint sensor"
+msgstr ""
+
+#: ../py/test/pytests/fingerprint_mcu.py
+msgid "Fingerprint MQT Test"
+msgstr ""
+
 #: ../py/test/pytests/gyroscope.py
 msgid ""
 "Please put device on a horizontal plane then press space to start testing."
