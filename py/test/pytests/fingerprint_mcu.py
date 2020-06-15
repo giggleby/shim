@@ -31,18 +31,14 @@ properly and fits the default quality settings::
     "pytest_name": "fingerprint_mcu"
   }
 
-To check if the sensor has at most 10 dead pixels and its HWID is 0x140c,
+To check if the sensor has at most 10 dead pixels,
 with bounds for the pixel grayscale median values and finger detection zones,
-add this in test list::
+add this in test list, and then show ten captures on the screen::
 
   {
     "pytest_name": "fingerprint_mcu",
     "args": {
-      "dead_pixel_max": 10,
-      "sensor_hwid": [
-        1234,
-        [5120, 65520]
-      ],
+      "max_dead_pixels": 10,
       "pixel_median": {
         "cb_type1" : [180, 220],
         "cb_type2" : [80, 120],
@@ -54,18 +50,26 @@ add this in test list::
         [8, 66, 15, 73], [24, 66, 31, 73], [40, 66, 47, 73],
         [8, 118, 15, 125], [24, 118, 31, 125], [40, 118, 47, 125],
         [8, 168, 15, 175], [24, 168, 31, 175], [40, 168, 47, 175]
-      ]
+      ],
+      "number_of_manual_captures": 10
     }
   }
 """
 
 import logging
+import os
+import re
 import sys
-import unittest
 
 import numpy
 
 from cros.factory.device import device_utils
+from cros.factory.test.env import paths
+from cros.factory.test.i18n import _
+from cros.factory.test import session
+from cros.factory.test import test_case
+from cros.factory.test import test_ui
+from cros.factory.test import ui_templates
 from cros.factory.test.utils import fpmcu_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
@@ -107,8 +111,11 @@ _ARG_SENSOR_HWID_SCHEMA = schema.JSONSchemaDict(
             }
         ]
     })
+_IMAGE_DIR = 'images'
+_IMAGE_SIZE_RE = re.compile(r'Image: size (\d+)x(\d+).*', re.MULTILINE)
 
-class FingerprintTest(unittest.TestCase):
+
+class FingerprintTest(test_case.TestCase):
   """Tests the fingerprint sensor."""
   ARGS = [
       Arg('max_dead_pixels', int,
@@ -121,14 +128,13 @@ class FingerprintTest(unittest.TestCase):
           'The maximum deviation from the median for a pixel of a given type.',
           default=35),
       Arg('pixel_median', dict,
-          'Keys: "(cb|icb)_(type1|type2)", '
-          'Values: a list of [minimum, maximum] '
-          'Range constraints of the pixel median value of the checkerboards.',
+          ('Keys: "(cb|icb)_(type1|type2)", '
+           'Values: a list of [minimum, maximum] '
+           'Range constraints of the pixel median value of the checkerboards.'),
           default={}),
       Arg('detect_zones', list,
-          'a list of rectangles [x1, y1, x2, y2] defining '
-          'the finger detection zones on the sensor.',
-          default=[]),
+          ('a list of rectangles [x1, y1, x2, y2] defining '
+           'the finger detection zones on the sensor.'), default=[]),
       Arg('min_snr', float,
           'The minimum signal-to-noise ratio for the image quality.',
           default=0.0),
@@ -136,15 +142,18 @@ class FingerprintTest(unittest.TestCase):
           'A Rubber finger is pressed against the sensor for quality testing.',
           default=False),
       Arg('max_reset_pixel_dev', int,
-          'The maximum deviation from the median per column for a pixel from '
-          'test reset image.',
-          default=55),
+          ('The maximum deviation from the median per column for a pixel from '
+           'test reset image.'), default=55),
       Arg('max_error_reset_pixels', int,
           'The maximum number of error pixels in the test_reset image.',
           default=5),
       Arg('fpframe_retry_count', int,
-          'The maximum number of retry for fpframe.',
-          default=0),
+          'The maximum number of retry for fpframe.', default=0),
+      Arg('number_of_manual_captures', int,
+          ('The number of manual captures operators take. If it is not zero '
+           'then the operator must manually judge pass or fail.'), default=0),
+      Arg('timeout_secs', int, 'The timeout of captures in seconds.',
+          default=5),
   ]
 
   # MKBP index for Fingerprint sensor event
@@ -154,6 +163,18 @@ class FingerprintTest(unittest.TestCase):
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
     self._fpmcu = fpmcu_utils.FpmcuDevice(self._dut)
+    self._image_dir = os.path.join(self.ui.GetStaticDirectoryPath(), _IMAGE_DIR)
+    self._ui_table = ui_templates.Table(rows=2, cols=0,
+                                        element_id='fingerprint_table')
+    info = self._fpmcu.FpmcuCommand('fpinfo')
+    match = _IMAGE_SIZE_RE.search(info)
+    if match:
+      self._image_width = int(match.group(1))
+      self._image_height = int(match.group(2))
+    else:
+      # Use the default width and height defined in fputils.py.
+      self._image_width = 56
+      self._image_height = 192
 
   def tearDown(self):
     self._fpmcu.FpmcuCommand('fpmode', 'reset')
@@ -357,6 +378,59 @@ class FingerprintTest(unittest.TestCase):
         max=self.args.max_error_reset_pixels):
       raise type_utils.TestFailure('Too many error reset pixels')
 
+  def _ShowFingerprint(self, frame: bytes, filename_prefix: str):
+    """Show the capture image on the UI.
+
+    frame: The output of self.FpmcuGetFpframe('raw', encoding=None).
+    filename_prefix: The prefix of the filename.
+    """
+    rc, imgs = libfputils.get_image_buffers(frame)
+    if rc != 0:
+      self.FailTask('libfputils.get_image_buffers fails')
+
+    captures = []
+    for index, img in enumerate(imgs):
+      filename = f'{filename_prefix}.{index}.png'
+      with open(os.path.join(self._image_dir, filename), 'wb') as f:
+        f.write(
+            fputils.build_gray8_png(img, self._image_width, self._image_height))
+      captures.append(filename)
+
+    self._ui_table.SetContent(0, self._ui_table.cols, filename_prefix)
+    self._ui_table.SetContent(
+        1, self._ui_table.cols,
+        ''.join('<img src="%s">' % os.path.join(_IMAGE_DIR, filename)
+                for filename in captures))
+    self._ui_table.cols += 1
+    self.ui.SetState(
+        [self._ui_table.GenerateHTML(), test_ui.PASS_FAIL_KEY_LABEL])
+
+  def _ManualTest(self, iterations: int):
+    self.ui.SetTitle(_('Fingerprint Manual Test'))
+    self.ui.SetInstruction(_('Touch fingerprint sensor'))
+    self._dut.CheckCall(['mkdir', '-p', self._image_dir], log=True)
+    for iteration in range(iterations):
+      self._fpmcu.FpmcuCommand('fpmode', 'capture', 'vendor')
+      # wait for the end of capture (or timeout)
+      self.FpmcuTryWaitEvent(self.EC_MKBP_EVENT_FINGERPRINT,
+                             str(self.args.timeout_secs * 1000))
+      img = self.FpmcuGetFpframe('raw', encoding=None)
+      self._ShowFingerprint(img, 'capture%d' % (iteration + 1))
+
+    def _FailTask(unused_event):
+      self._dut.CheckCall([
+          'mv', self._image_dir,
+          os.path.join(paths.DATA_TESTS_DIR, session.GetCurrentTestPath())
+      ], log=True)
+      self.FailTask('Operator marked as fail')
+
+    self.ui.SetInstruction('')
+    self.ui.BindKey(test_ui.ESCAPE_KEY, _FailTask)
+    self.ui.WaitKeysOnce(test_ui.ENTER_KEY)
+    self.ui.UnbindKey(test_ui.ESCAPE_KEY)
+    self.ui.SetState([])
+    self._dut.CheckCall(['rm', '-rf', self._image_dir], log=True)
+
   def runTest(self):
     # Verify communication with the FPMCU
     ro_ver, rw_ver = self._fpmcu.GetFpmcuFirmwareVersion()
@@ -369,11 +443,20 @@ class FingerprintTest(unittest.TestCase):
     self.CheckerboardTest(inverted=True)
     self.ResetPixelTest()
 
+    if self.args.number_of_manual_captures:
+      if libfputils:
+        self._ManualTest(self.args.number_of_manual_captures)
+      else:
+        raise type_utils.TestFailure('libfputils is not available')
+
     if self.args.rubber_finger_present:
+      self.ui.SetTitle(_('Fingerprint MQT Test'))
+      self.ui.SetInstruction(_('Touch fingerprint sensor'))
       # Test sensor image quality
       self._fpmcu.FpmcuCommand('fpmode', 'capture', 'qual')
-      # wait for the end of capture (or timeout after 5s)
-      self.FpmcuTryWaitEvent(self.EC_MKBP_EVENT_FINGERPRINT, '5000')
+      # wait for the end of capture (or timeout)
+      self.FpmcuTryWaitEvent(self.EC_MKBP_EVENT_FINGERPRINT,
+                             str(self.args.timeout_secs * 1000))
       img = self.FpmcuGetFpframe('raw', encoding=None)
       # record the raw image file for quality evaluation
       testlog.AttachContent(
