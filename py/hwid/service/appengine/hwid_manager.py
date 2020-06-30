@@ -17,6 +17,8 @@ from six import iteritems
 from google.cloud import ndb
 
 from cros.factory.hwid.service.appengine import memcache_adapter
+from cros.factory.hwid.service.appengine import \
+    verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_utils
@@ -89,16 +91,20 @@ class LatestPayloadHash(ndb.Model):  # pylint: disable=no-init
 
 
 class Component(collections.namedtuple('Component', ['cls', 'name',
-                                                     'information'])):
+                                                     'information',
+                                                     'is_vp_related'])):
   """A single BOM component.
 
   Attributes:
     cls string The component-class.
     name string The canonical name.
     information dict (optional) The extra information bound with the component.
+    is_vp_related bool Whether this component is a source of the verification
+        payload.
   """
-  def __new__(cls, cls_, name, information=None):
-    return super(Component, cls).__new__(cls, cls_, name, information)
+  def __new__(cls, cls_, name, information=None, is_vp_related=False):
+    return super(Component, cls).__new__(
+        cls, cls_, name, information, is_vp_related)
 
 
 class Label(collections.namedtuple('Label', ['cls', 'name', 'value'])):
@@ -144,7 +150,7 @@ class Bom(object):
 
     return components
 
-  def AddComponent(self, cls, name=None, information=None):
+  def AddComponent(self, cls, name=None, information=None, is_vp_related=False):
     """Adds a component to this bom.
 
     The method must be supplied at least a component class.  If no name is
@@ -160,7 +166,8 @@ class Bom(object):
       self._components[cls] = []
 
     if name:
-      self._components[cls].append(Component(cls, name, information))
+      self._components[cls].append(
+          Component(cls, name, information, is_vp_related))
 
   def AddAllComponents(self, component_dict, comp_db=None):
     """Adds a dict of components to this bom.
@@ -177,18 +184,27 @@ class Bom(object):
     Raises:
       ValueError: if any of the classes are None.
     """
+    if comp_db:
+      vp_related_comps = set(
+          vpg_module.GetAllComponentVerificationPayloadPieces(comp_db, []))
+    else:
+      vp_related_comps = set()
+
     for component_class, component_val in component_dict.items():
       db_components = comp_db and comp_db.GetComponents(component_class)
       if isinstance(component_val, str):
         comp_info = db_components and db_components.get(component_val)
         self.AddComponent(component_class, component_dict[component_class],
-                          comp_info and comp_info.information)
+                          comp_info and comp_info.information,
+                          (component_class, component_val) in vp_related_comps)
       else:
         for component_name in component_val:
           if isinstance(component_name, str):
             comp_info = db_components and db_components.get(component_name)
-            self.AddComponent(component_class, component_name,
-                              comp_info and comp_info.information)
+            self.AddComponent(
+                component_class, component_name,
+                comp_info and comp_info.information,
+                (component_class, component_name) in vp_related_comps)
 
   def HasLabel(self, label):
     """Test whether the BOM has a label."""
