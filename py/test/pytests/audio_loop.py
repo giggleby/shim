@@ -186,9 +186,8 @@ from cros.factory.utils import process_utils
 # Default setting
 _DEFAULT_FREQ_HZ = 1000
 
-# the duration(secs) for sine tone to playback.
-# it must be long enough for record process.
-_DEFAULT_SINEWAV_DURATION = 10
+# the additional duration(secs) for sine tone to playback.
+_DEFAULT_SINEWAV_DURATION_MARGIN = 8
 
 # Regular expressions to match audiofuntest message.
 _AUDIOFUNTEST_MIC_CHANNEL_RE = re.compile(r'.*Microphone channels:\s*(.*)$')
@@ -632,6 +631,7 @@ class AudioLoopTest(test_case.TestCase):
     # Need to redesign the args to provide more flexbility.
     duration = self._current_test_args.get('duration',
                                            _DEFAULT_SINEWAV_TEST_DURATION)
+    wav_duration = duration + _DEFAULT_SINEWAV_DURATION_MARGIN
     input_channels = self._current_test_args.get('input_channels',
                                                  self._in_channel_map)
     if len(input_channels) != num_channels:
@@ -655,7 +655,7 @@ class AudioLoopTest(test_case.TestCase):
       # playback process after we finish recording.
       cmd = audio_utils.GetGenerateSineWavArgs(sine_wav_path, channel,
                                                self._freq,
-                                               _DEFAULT_SINEWAV_DURATION)
+                                               wav_duration)
       process_utils.Spawn(cmd.split(' '), log=True, check_call=True)
       self._dut.link.Push(sine_wav_path, dut_sine_wav_path)
 
