@@ -456,9 +456,9 @@ class TestInvocation:
       return log_tail
 
     def _HandleLogEndTestEventFail(orig_status, logger_name):
-      session.console.exception('Unable to log end_test event by %s. '
-                                'Change status from %s to FAILED',
-                                orig_status, logger_name)
+      session.console.exception(
+          'Unable to log end_test event by %s. '
+          'Change status from %s to FAILED', logger_name, orig_status)
       status = TestState.FAILED
       error_msg = 'Unable to log end_test event'
       return status, error_msg

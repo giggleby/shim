@@ -179,6 +179,7 @@ from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test.utils import audio_utils
 from cros.factory.testlog import testlog
+from cros.factory.testlog import testlog_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import file_utils
@@ -636,13 +637,14 @@ class AudioLoopTest(test_case.TestCase):
         return
 
     if self.args.keep_raw_logs:
-      for file_path in self._audio_file_path:
-        testlog.AttachFile(
-            path=file_path,
-            mime_type='audio/x-raw',
-            name=os.path.basename(file_path),
-            description='recorded audio of the test',
-            delete=True)
+      try:
+        for file_path in self._audio_file_path:
+          testlog.AttachFile(path=file_path, mime_type='audio/x-raw',
+                             name=os.path.basename(file_path),
+                             description='recorded audio of the test',
+                             delete=True)
+      except testlog_utils.TestlogError as err:
+        self.AppendErrorMessage(str(err))
     else:
       for file_path in self._audio_file_path:
         os.unlink(file_path)

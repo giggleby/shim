@@ -1350,6 +1350,10 @@ class StationTestRun(StationStatus):
 
   def AttachFile(self, path, mime_type, name, delete=True, description=None):
     """Attaches a file as specified in Testlog API."""
+    if 'serialNumbers' not in self._data:
+      raise testlog_utils.TestlogError(
+          'Test run event must call AddSerialNumber at least once before '
+          'AttachFile.')
     value = {'mimeType': mime_type,
              'path': path}
     if description:

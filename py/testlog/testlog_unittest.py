@@ -350,7 +350,11 @@ class TestlogEventTest(TestlogTestBase):
     CONTENT = 'Life is a maze and love is a riddle'
     DESCRIPTION = 'Unittest'
     TEST_FILENAME = 'TextFile.txt'
-    event = testlog.StationTestRun()
+    event = testlog.StationTestRun(
+        {'serialNumbers': {
+            'serial_number': 'TestlogDemo'
+        }})
+
     def CreateTextFile():
       path = os.path.join(self.tmp_dir, TEST_FILENAME)
       with open(path, 'w') as fd:
