@@ -208,6 +208,8 @@ _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS = [0, 1]
 _DEFAULT_AUDIOFUN_TEST_SAMPLE_RATE = 48000
 # Default audio gain used for audiofuntest.
 _DEFAULT_AUDIOFUN_TEST_VOLUME_GAIN = 100
+# Default channels of the input_dev to be tested.
+_DEFAULT_TEST_INPUT_CHANNELS = [0, 1]
 # Default duration to do the sinewav test, in seconds.
 _DEFAULT_SINEWAV_TEST_DURATION = 2
 # Default frequency tolerance, in Hz.
@@ -354,12 +356,17 @@ class AudioLoopTest(test_case.TestCase):
 
     # Transfer input and output device format
     self._in_card = self._dut.audio.GetCardIndexByName(self.args.input_dev[0])
+    self._in_channel_map = _DEFAULT_TEST_INPUT_CHANNELS
     if self.args.input_dev[1].isdigit():
       self._in_device = self.args.input_dev[1]
     else:
       # Detect _in_device from ucm config.
       self._in_device = self._dut.audio.config_mgr.GetPCMId(
           'CapturePCM', self.args.input_dev[1], self._in_card)
+      channels_from_ucm_config = self._dut.audio.config_mgr.GetChannelMap(
+          self.args.input_dev[1], self._in_card)
+      if channels_from_ucm_config is not None:
+        self._in_channel_map = channels_from_ucm_config
 
     self._out_card = self._dut.audio.GetCardIndexByName(self.args.output_dev[0])
     if self.args.output_dev[1].isdigit():
@@ -601,8 +608,8 @@ class AudioLoopTest(test_case.TestCase):
     session.console.info('Run audiofuntest from %r to %r',
                          self._alsa_output_device, self._alsa_input_device)
 
-    input_channels = self._current_test_args.get(
-        'input_channels', _DEFAULT_AUDIOFUN_TEST_INPUT_CHANNELS)
+    input_channels = self._current_test_args.get('input_channels',
+                                                 self._in_channel_map)
     output_channels = self._current_test_args.get(
         'output_channels', _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS)
     capture_rate = self._current_test_args.get(
@@ -625,6 +632,11 @@ class AudioLoopTest(test_case.TestCase):
     # Need to redesign the args to provide more flexbility.
     duration = self._current_test_args.get('duration',
                                            _DEFAULT_SINEWAV_TEST_DURATION)
+    input_channels = self._current_test_args.get('input_channels',
+                                                 self._in_channel_map)
+    if len(input_channels) != num_channels:
+      raise ValueError('len(input_channels) %d != num_channels %d' %
+                       (len(input_channels), num_channels))
 
     for channel in xrange(num_channels):
       # file path in host

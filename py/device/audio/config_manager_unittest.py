@@ -10,6 +10,7 @@ import mock
 
 import factory_common  # pylint: disable=unused-import
 from cros.factory.device.audio import config_manager
+from cros.factory.device import types
 
 
 class MockProcess:
@@ -41,13 +42,9 @@ class MockProcess:
   6: HDMI2
 ''', ''
 
-class UCMConfigManagerTest(unittest.TestCase):
-  @mock.patch('os.path.isdir')
-  def testGetCardNameMapFromAplay(self, mock_isdir):
-    device = mock.MagicMock()
-    mixer_controller = mock.MagicMock()
 
-    device.CallOutput = mock.MagicMock(return_value='''
+def MockInitialize(device, mock_isdir):
+  device.CallOutput = mock.MagicMock(return_value='''
 card 0: card_0 [card_0], device 0: Audio (*) []
   Subdevices: 1/1
   Subdevice #0: subdevice #0
@@ -61,10 +58,19 @@ card 2: card_2 [card_2], device 8: Audio (*) []
   Subdevices: 1/1
   Subdevice #0: subdevice #0
 ''')
-    device.Popen.side_effect = [MockProcess(), MockProcess()]
-    device.path = os.path
-    mock_isdir.side_effect = lambda path: (
-        os.path.basename(path) in ['card_0', 'card_2'])
+  device.Popen.side_effect = [MockProcess(), MockProcess()]
+  device.path = os.path
+  mock_isdir.side_effect = lambda path: (
+      os.path.basename(path) in ['card_0', 'card_2'])
+
+
+class UCMConfigManagerTest(unittest.TestCase):
+
+  @mock.patch('os.path.isdir')
+  def testGetCardNameMapFromAplay(self, mock_isdir):
+    device = mock.MagicMock()
+    mixer_controller = mock.MagicMock()
+    MockInitialize(device, mock_isdir)
 
     config_mgr = config_manager.UCMConfigManager(device, mixer_controller)
 
@@ -95,6 +101,54 @@ card 2: card_2 [card_2], device 8: Audio (*) []
             config_manager.AudioDeviceType.Speaker: "Speaker",
         },
     })
+
+  @mock.patch('os.path.isdir')
+  def testGetChannelMap(self, mock_isdir):
+    device = mock.MagicMock()
+    mixer_controller = mock.MagicMock()
+    MockInitialize(device, mock_isdir)
+
+    config_mgr = config_manager.UCMConfigManager(device, mixer_controller)
+
+    # A normal output looks like
+    # '\tCaptureChannelMap/Front Mic=0 1 -1 -1 -1 -1 -1 -1 -1 -1 -1\n'.
+    prefix = '\tCaptureChannelMap/'
+    # pylint: disable=protected-access
+    config_mgr._InvokeDeviceCommands = mock.MagicMock(
+        return_value='%sFront Mic=0 1 -1 -1 -1 -1 -1 -1 -1 -1 -1\n' % prefix)
+    return_value = config_mgr.GetChannelMap(config_manager.InputDevices.Dmic,
+                                            '2')
+    self.assertEqual(return_value, [0, 1])
+
+    config_mgr._InvokeDeviceCommands = mock.MagicMock(
+        return_value='%sRear Mic=2 3 -1 -1 -1 -1 -1 -1 -1\n' % prefix)
+    return_value = config_mgr.GetChannelMap(config_manager.InputDevices.Dmic2,
+                                            '2')
+    self.assertEqual(return_value, [2, 3])
+
+    # It's normal that there are no CaptureChannelMap defined. In this case, we
+    # should use default channels.
+    config_mgr._InvokeDeviceCommands = mock.MagicMock(
+        side_effect=types.CalledProcessError(1, cmd=[], output='Not exist'))
+    return_value = config_mgr.GetChannelMap(config_manager.InputDevices.Dmic,
+                                            '2')
+    self.assertEqual(return_value, None)
+
+    config_mgr._InvokeDeviceCommands = mock.MagicMock(
+        return_value='%sFront Mic=-1 -1 -1 -1\n' % prefix)
+    self.assertRaises(ValueError, config_mgr.GetChannelMap,
+                      config_manager.InputDevices.Dmic, '2')
+
+    config_mgr._InvokeDeviceCommands = mock.MagicMock(
+        return_value='%sFront Mic=1 2 3 evil\n' % prefix)
+    self.assertRaises(ValueError, config_mgr.GetChannelMap,
+                      config_manager.InputDevices.Dmic, '2')
+
+    config_mgr._InvokeDeviceCommands = mock.MagicMock(
+        return_value='%sEvil Mic=0 1 -1 -1 -1 -1 -1 -1 -1 -1 -1\n' % prefix)
+    self.assertRaises(ValueError, config_mgr.GetChannelMap,
+                      config_manager.InputDevices.Dmic, '2')
+
 
 if __name__ == '__main__':
   unittest.main()
