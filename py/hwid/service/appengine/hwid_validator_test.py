@@ -19,6 +19,8 @@ from cros.factory.utils import file_utils
 TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata')
 
+# TODO(clarkchung): remove `.decode('utf-8')` in Python 3 since
+# file_utils.ReadFile will default return str instead of bytes.
 GOLDEN_HWIDV3_DATA_BEFORE = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-golden-before.yaml')).decode('utf-8')
 GOLDEN_HWIDV3_DATA_AFTER_BAD = file_utils.ReadFile(

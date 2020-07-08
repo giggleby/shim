@@ -21,7 +21,8 @@ GOLDEN_HWIDV2_FILE = os.path.join(
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/v3-golden.yaml')
 
-GOLDEN_HWIDV2_DATA = open(GOLDEN_HWIDV2_FILE, 'r').read()
+# TODO(clarkchung): add `encoding=None` for reading bytes in Python 3.
+GOLDEN_HWIDV2_DATA = file_utils.ReadFile(GOLDEN_HWIDV2_FILE)
 
 TEST_V2_HWID = 'CHROMEBOOK BAKER A-A'
 TEST_V2_HWID_NO_VAR = 'CHROMEBOOK BAKER'
@@ -69,11 +70,13 @@ class HwidManagerTest(unittest.TestCase):
     def patch_blob(path):
       if path == 'live/v2':
         ret = mock.MagicMock()
+        # TODO(clarkchung): add `encoding=None` for reading bytes in Python 3.
         ret.download_as_string.return_value = file_utils.ReadFile(
             GOLDEN_HWIDV2_FILE)
         return ret
       if path == 'live/v3':
         ret = mock.MagicMock()
+        # TODO(clarkchung): add `encoding=None` for reading bytes in Python 3.
         ret.download_as_string.return_value = file_utils.ReadFile(
             GOLDEN_HWIDV3_FILE)
         return ret
@@ -238,7 +241,7 @@ class HwidManagerTest(unittest.TestCase):
 
   def testInvalidVersion(self):
     mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = 'junk data'
+    mock_storage.ReadFile.return_value = b'junk data'
 
     manager = self._GetManager(adapter=mock_storage, load_datastore=False)
 
@@ -288,7 +291,7 @@ class HwidManagerTest(unittest.TestCase):
   def testUpdateBoards(self):
     """Test the board updater adds a board."""
     mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = 'junk data'
+    mock_storage.ReadFile.return_value = b'junk data'
 
     manager = self._GetManager(adapter=mock_storage, load_datastore=False)
 
@@ -334,7 +337,7 @@ class HwidManagerTest(unittest.TestCase):
     most 30 options.
     """
     mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = 'junk data'
+    mock_storage.ReadFile.return_value = b'junk data'
     BOARD_COUNT = 40
 
     manager = self._GetManager(adapter=mock_storage, load_datastore=False)

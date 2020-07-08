@@ -27,8 +27,10 @@ class HwidValidator(object):
     Args:
       hwid_config_contents: the current HWID config.
     """
+    # TODO(clarkchung): remove .encode('utf8') in Python 3 since this function
+    # only accepts `hwid_config_contents` as a string.
     expected_checksum = database.Database.ChecksumForText(
-        hwid_config_contents.encode('utf8')).decode('utf8')
+        hwid_config_contents.encode('utf8'))
 
     try:
       # Validate config by loading it.
@@ -59,8 +61,10 @@ class HwidValidator(object):
       raise v3_validator.ValidationError(
           'Previous version of HWID config is not valid.')
 
+    # TODO(clarkchung): remove .encode('utf8') in Python 3 since this function
+    # only accepts `hwid_config_contents` as a string.
     expected_checksum = database.Database.ChecksumForText(
-        hwid_config_contents.encode('utf8')).decode('utf8')
+        hwid_config_contents.encode('utf8'))
 
     try:
       # Load and validate current config.
