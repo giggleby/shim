@@ -107,7 +107,8 @@ def IwSetAntenna(devname, phyname, tx_bitmap, rx_bitmap, max_retries=10,
   success = False
   while try_count < max_retries:
     process = process_utils.Spawn(
-        ['iw', 'phy', phyname, 'set', 'antenna', tx_bitmap, rx_bitmap],
+        ['iw', 'phy', phyname, 'set', 'antenna', str(tx_bitmap),
+         str(rx_bitmap)],
         read_stdout=True, log_stderr_on_error=True, log=True)
     retcode = process.returncode
     if retcode == 0:
@@ -175,9 +176,9 @@ def IwScan(iw_scan_group_checker, devname,
   raise IwException('Failed to iw scan for %s tries' % max_retries)
 
 
-_ANTENNA_CONFIG = {'main': ('1', '1'),
-                   'aux': ('2', '2'),
-                   'all': ('3', '3')}
+_DEFAULT_ANTENNA_CONFIG = {'main': (1, 1),
+                           'aux': (2, 2),
+                           'all': (3, 3)}
 
 
 class WirelessTest(test_case.TestCase):
@@ -210,6 +211,10 @@ class WirelessTest(test_case.TestCase):
           'antenna configurations in this dict.'),
       Arg('scan_count', int,
           'Number of scans to get average signal strength.', default=5),
+      Arg('switch_antenna_config', dict,
+          'A dict of ``{"main": (tx, rx), "aux": (tx, rx), "all": (tx, rx)}`` '
+          'for the config when switching the antenna.',
+          default=_DEFAULT_ANTENNA_CONFIG),
       Arg('switch_antenna_sleep_secs', int,
           'The sleep time after switchingantenna and ifconfig up. Need to '
           'decide this value carefully since itdepends on the platform and '
@@ -222,8 +227,9 @@ class WirelessTest(test_case.TestCase):
     self.ui.ToggleTemplateClass('font-large', True)
     self._phy_name = self.DetectPhyName()
     logging.info('phy name is %s.', self._phy_name)
+    self._switch_antenna_config = self.args.switch_antenna_config
     self._antenna_service_strength = {}
-    for antenna in _ANTENNA_CONFIG:
+    for antenna in self._switch_antenna_config:
       self._antenna_service_strength[antenna] = {}
     self._antenna = None
 
@@ -368,7 +374,7 @@ class WirelessTest(test_case.TestCase):
 
     Args:
       antenna: The target antenna config. This should be one of the keys in
-               _ANTENNA_CONFIG
+               self._switch_antenna_config
     """
     if self.args.disable_switch:
       logging.info('Switching antenna is disabled. Skipping setting antenna to'
@@ -377,7 +383,7 @@ class WirelessTest(test_case.TestCase):
       # antenna is switched.
       IfconfigUp(self.args.device_name, self.args.switch_antenna_sleep_secs)
       return
-    tx_bitmap, rx_bitmap = _ANTENNA_CONFIG[antenna]
+    tx_bitmap, rx_bitmap = self._switch_antenna_config[antenna]
     IwSetAntenna(self.args.device_name, self._phy_name,
                  tx_bitmap, rx_bitmap,
                  switch_antenna_sleep_secs=self.args.switch_antenna_sleep_secs)
