@@ -13,11 +13,14 @@ next boot).
 """
 
 import logging
+import os
 import tempfile
+import time
 import unittest
 
 import factory_common  # pylint: disable=W0611
 from cros.factory.device import device_utils
+from cros.factory.utils import sync_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.string_utils import ParseDict
 
@@ -96,10 +99,32 @@ class TPMVerifyEK(unittest.TestCase):
     self.dut.CheckCall(['tpm-manager', 'verify_endorsement'] + (
         ['--cros_core'] if self.args.is_cros_core else []), log=True)
 
+  def UpdateTpmFirmware(self):
+    tpm_tool_dir = '/usr/local/factory/third_party/'
+
+    self.dut.CheckCall(['crossystem', 'clear_tpm_owner_request=1'], log=True)
+    self.dut.CheckCall(['stop', 'tcsd'], log=True)
+    self.dut.CheckCall([os.path.join(tpm_tool_dir, 'TPMFactoryUpd'), '-update',
+                        'tpm12-takeownership', '-firmware',
+                        os.path.join(tpm_tool_dir, 'TPM12_133.32.80.0_to_TPM12_133.33.227.2.BIN')],
+                       log=True)
+    self.dut.CheckCall(['reboot'], log=True)
+
+    # Wait for DUT reboot.
+    time.sleep(5)
+    sync_utils.WaitFor(self.dut.IsReady, timeout_secs=60, poll_interval=1)
+
   def runTest(self):
     if self.args.tpm_version:
       # Check tpm_version on DUT equals to given tpm_version or not.
       output = self.dut.CheckOutput(['tpm_version'], log=True)
+
+      # If tpm_version on DUT is "1.2.133.32", should update tpm version.
+      if "1.2.133.32" in output:
+        self.UpdateTpmFirmware()
+
+        output = self.dut.CheckOutput(['tpm_version'], log=True)
+
       self.assertTrue(self.args.tpm_version in output)
 
     # Always clear TPM on next boot, in case any problems arise.
