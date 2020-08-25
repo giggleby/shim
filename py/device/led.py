@@ -63,9 +63,6 @@ class LED(device_types.DeviceComponent):
       brightness: LED brightness in percentage [0, 100].
           If color is 'auto' or 'off', brightness is ignored.
     """
-    logging.info('LED.SetColor(color: %r, led_name: %r, brightness: %r)',
-                 color, led_name, brightness)
-
     # Check parameters
     if led_name is not None and led_name.upper() not in self.Index:
       raise ValueError('Invalid led name: %r' % led_name)
