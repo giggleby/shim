@@ -117,6 +117,8 @@ don't show the image::
 """
 
 
+import codecs
+import logging
 import numbers
 import os
 import Queue
@@ -263,7 +265,7 @@ class CameraTest(test_case.TestCase):
     self.ShowInstruction(
         _('Press 0 if LED is constantly lit, 1 if LED is flickering,\n'
           'or ESC to fail.'))
-    self.ui.CallJSFunction('hideImage', True)
+    self.ui.CallJSFunction('hideImage')
 
     if flicker:
       while True:
@@ -326,29 +328,32 @@ class CameraTest(test_case.TestCase):
     return scanned_text == self.args.QR_string
 
   def ShowImage(self, cv_image):
-    resize_ratio = self.args.resize_ratio
     if self.e2e_mode:
-      self.RunJSPromiseBlocking('cameraTest.showImage(%s)' % resize_ratio)
-    else:
-      cv_image = cv2.resize(cv_image, None, fx=resize_ratio, fy=resize_ratio,
-                            interpolation=cv2.INTER_AREA)
-      if self.flip_image:
-        cv_image = cv2.flip(cv_image, 1)
+      # In e2e mode, the image is directly shown by frontend in a video
+      # element, independent to the calls to ShowImage here.
+      return
 
-      with tempfile.NamedTemporaryFile(suffix='.jpg') as img_buffer:
-        cv2.imwrite(img_buffer.name, cv_image,
-                    (cv.CV_IMWRITE_JPEG_QUALITY, _JPEG_QUALITY))
-        try:
-          # TODO(pihsun): Don't use CallJSFunction for transmitting image back
-          # to UI. Use URLForData instead, since event server actually
-          # broadcast to all client, and is not suitable for large amount of
-          # data.
-          self.ui.CallJSFunction(
-              'showImage',
-              'data:image/jpeg;base64,' + img_buffer.read().encode('base64'))
-        except AttributeError:
-          # The websocket is closed because test has passed/failed.
-          return
+    resize_ratio = self.args.resize_ratio
+    cv_image = cv.resize(cv_image, None, fx=resize_ratio, fy=resize_ratio,
+                         interpolation=cv.INTER_AREA)
+
+    if self.flip_image:
+      cv_image = cv.flip(cv_image, 1)
+
+    unused_retval, jpg_data = cv.imencode(
+        '.jpg', cv_image, (cv.IMWRITE_JPEG_QUALITY, _JPEG_QUALITY))
+    jpg_base64 = codecs.encode(jpg_data.tobytes(), 'base64')
+
+    try:
+      # TODO(pihsun): Don't use CallJSFunction for transmitting image back
+      # to UI. Use URLForData instead, since event server actually
+      # broadcast to all client, and is not suitable for large amount of
+      # data.
+      self.ui.CallJSFunction(
+          'showImage', 'data:image/jpeg;base64,' + jpg_base64.decode('utf-8'))
+    except AttributeError:
+      # The websocket is closed because test has passed/failed.
+      return
 
   def CaptureTest(self, mode):
     frame_count = 0
@@ -372,6 +377,9 @@ class CameraTest(test_case.TestCase):
     self.ShowInstruction(instructions[mode])
     if mode == TestModes.manual:
       self.ui.BindStandardKeys()
+
+    if not self.args.show_image:
+      self.ui.CallJSFunction('hideImage')
 
     self.EnableDevice()
     try:
@@ -418,6 +426,10 @@ class CameraTest(test_case.TestCase):
     if self.e2e_mode:
       if not self.dut.link.IsLocal():
         raise ValueError('e2e mode does not work on remote DUT.')
+      if self.mode == TestModes.frame_count:
+        logging.warning('frame count mode is NOT real frame count in e2e mode, '
+                        'consider using timeout instead.')
+
       camera_facing = ('front' if self.args.camera_facing is None else
                        self.args.camera_facing)
       options = {
