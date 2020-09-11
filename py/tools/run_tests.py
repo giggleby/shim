@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # Copyright 2012 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -109,7 +109,8 @@ class _TestProc(object):
     # This is used by net_utils.FindUnusedPort, to eliminate the chance of
     # collision of FindUnusedPort between different unittests.
     child_env['CROS_FACTORY_UNITTEST_PORT_DISTRIBUTE_SERVER'] = port_server
-    self.proc = process_utils.Spawn(self.test_name, stdout=self.log_file,
+    self.proc = process_utils.Spawn(['python2', self.test_name],
+                                    stdout=self.log_file,
                                     stderr=STDOUT, env=child_env)
     self.pid = self.proc.pid
 

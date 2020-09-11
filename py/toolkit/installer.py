@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # Copyright 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -347,7 +347,7 @@ def PackFactoryToolkit(src_root, output_path, initial_version):
     cmd = [os.path.join(src_root, 'makeself.sh'), '--bzip2', '--nox11',
            '--help-header', help_header.name,
            src_root, output_path, initial_version + modified_msg,
-           INSTALLER_PATH, '--in-exe']
+           'python2', INSTALLER_PATH, '--in-exe']
     Spawn(cmd, check_call=True, log=True)
   with file_utils.TempDirectory() as tmp_dir:
     version_path = os.path.join(tmp_dir, VERSION_PATH)
