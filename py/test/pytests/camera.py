@@ -157,13 +157,14 @@ TestModes = type_utils.Enum(['qr', 'face', 'timeout', 'frame_count', 'manual',
 class CameraTest(test_case.TestCase):
   """Main class for camera test."""
   ARGS = [
-      Arg('mode', TestModes,
-          'The test mode to test camera.', default='manual'),
-      Arg('num_frames_to_pass', int,
+      Arg('mode', TestModes, 'The test mode to test camera.', default='manual'),
+      Arg(
+          'num_frames_to_pass', int,
           'The number of frames with faces in mode "face", '
           'QR code presented in mode "qr", '
           'or any frames in mode "frame_count" to pass the test.', default=10),
-      Arg('process_rate', numbers.Real,
+      Arg(
+          'process_rate', numbers.Real,
           'The process rate of face recognition or '
           'QR code scanning in times per second.', default=5),
       Arg('QR_string', str, 'Encoded string in QR code.',
@@ -173,23 +174,28 @@ class CameraTest(test_case.TestCase):
       Arg('timeout_secs', int, 'Timeout value for the test.', default=20),
       Arg('resize_ratio', float,
           'The resize ratio of captured image on screen.', default=0.4),
-      Arg('show_image', bool,
-          'Whether to actually show the image on screen.', default=True),
+      Arg('show_image', bool, 'Whether to actually show the image on screen.',
+          default=True),
       Arg('e2e_mode', bool, 'Perform end-to-end test or not (for camera).',
           default=False),
-      Arg('camera_facing', type_utils.Enum(['front', 'rear', None]),
+      Arg(
+          'camera_facing', type_utils.Enum(['front', 'rear', None]),
           'String "front" or "rear" for the camera to test. '
           'If in normal mode, default is automatically searching one. '
-          'If in e2e mode, default is "front".',
-          default=None),
-      Arg('flip_image', bool,
+          'If in e2e mode, default is "front".', default=None),
+      Arg(
+          'flip_image', bool,
           'Whether to flip the image horizontally. This should be set to False'
           'for the rear facing camera so the displayed image looks correct.'
           'The default value is False if camera_facing is "rear", True '
-          'otherwise.',
-          default=None),
-      Arg('camera_args', dict, 'Dict of args used for enabling the camera '
-          'device. Only "resolution" is supported in e2e mode.', default={})]
+          'otherwise.', default=None),
+      Arg(
+          'camera_args', dict, 'Dict of args used for enabling the camera '
+          'device. Only "resolution" is supported in e2e mode.', default={}),
+      Arg('flicker_interval_secs', (int, float),
+          'The flicker interval in seconds in manual_led mode', default=0.5),
+      Arg('fullscreen', bool, 'Run the test in fullscreen', default=False)
+  ]
 
   def _Timeout(self):
     if self.mode == TestModes.timeout:
@@ -422,6 +428,9 @@ class CameraTest(test_case.TestCase):
     self.flip_image = self.args.flip_image
     if self.flip_image is None:
       self.flip_image = self.args.camera_facing != 'rear'
+
+    if self.args.fullscreen:
+      self.ui.RunJS('test.setFullScreen(true)')
 
     if self.e2e_mode:
       if not self.dut.link.IsLocal():
