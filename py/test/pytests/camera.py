@@ -281,35 +281,32 @@ class CameraTest(test_case.TestCase):
         self.Sleep(0.5)
 
   def DetectFaces(self, cv_image):
-    # This condition is currently always False since face detection API in
-    # Chrome is not ready.
-    # TODO(pihsun): Remove the 'and False' when shape detection API in Chrome
+    # TODO(pihsun): Use the shape detection API in Chrome in e2e mode when it
     # is ready.
-    if self.e2e_mode and False:
-      return self.RunJSPromiseBlocking('cameraTest.detectFaces()')
-    else:
-      storage = cv.CreateMemStorage()
-      cascade = cv.Load(_HAAR_CASCADE_PATH)
-      detected = cv.HaarDetectObjects(cv_image, cascade, storage, 1.2, 2,
-                                      cv.CV_HAAR_DO_CANNY_PRUNING, (20, 20))
-      if detected:
-        for loc, unused_n in detected:
-          x, y, w, h = loc
-          cv.Rectangle(cv_image, (x, y), (x + w, y + h), 255)
-      return bool(detected)
+    cascade = cv.CascadeClassifier(_HAAR_CASCADE_PATH)
+    detected_objs = cascade.detectMultiScale(
+        cv_image,
+        scaleFactor=1.2,
+        minNeighbors=2,
+        flags=cv.CASCADE_DO_CANNY_PRUNING,
+        minSize=(20, 20))
+    # pylint: disable=len-as-condition
+    # Detected_objs will be numpy array or an empty tuple. bool(numpy_array)
+    # will not work (will raise an exception).
+    detected = len(detected_objs) > 0
+    if detected:
+      for x, y, w, h in detected_objs:
+        cv.rectangle(cv_image, (x, y), (x + w, y + h), 255)
+    return detected
 
   def ScanQRCode(self, cv_image):
     scanned_text = None
-    # This condition is currently always False since barcode detection API in
-    # Chrome is not ready.
-    # TODO(pihsun): Remove the 'and False' when shape detection API in Chrome
+
+    # TODO(pihsun): Use the shape detection API in Chrome in e2e mode when it
     # is ready.
-    if self.e2e_mode and False:
-      scanned_text = self.RunJSPromiseBlocking('cameraTest.scanQRCode()')
-    else:
-      scan_results = barcode.ScanQRCode(cv_image)
-      if scan_results:
-        scanned_text = scan_results[0]
+    scan_results = barcode.ScanQRCode(cv_image)
+    if scan_results:
+      scanned_text = scan_results[0]
 
     if scanned_text:
       self.ShowInstruction(
