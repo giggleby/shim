@@ -78,6 +78,9 @@ SHOPFLOOR_NOT_CONFIGURED_STR = 'Shop floor server URL is not configured'
 SHOPFLOOR_TIMEOUT_SECS = 10  # Timeout for shopfloor connection.
 SHOPFLOOR_RETRY_INTERVAL_SECS = 10  # Seconds to wait between retries.
 
+# Default retry count for uploading aux logs.
+SHOPFLOOR_RETRY_COUNT = 3
+
 # Some tests refer to "shopfloor.Fault" so we need to export it from
 # shopfloor.
 Fault = xmlrpclib.Fault
@@ -556,14 +559,36 @@ def UploadAuxLogs(file_paths, ignore_on_fail=False, dir_name=None):
       if dir_name:
         log_name = os.path.join(dir_name, log_name)
       factory.console.info('Uploading %s', log_name)
-      start_time = time.time()
-      shopfloor_client.SaveAuxLog(log_name, Binary(chunk))
-      factory.console.info('Successfully synced %s in %.03f s',
-                           log_name, time.time() - start_time)
     except:  # pylint: disable=W0702
       if ignore_on_fail:
         factory.console.info(
-            'Failed to sync with shopfloor for [%s], ignored',
+            'Failed to prepare file for [%s], ignored',
             log_name)
+        continue
       else:
         raise
+
+    success = False
+    for iteration in range(SHOPFLOOR_RETRY_COUNT):
+      try:
+        shopfloor_client.Ping()
+      except: # pylint: disable=W0702
+        shopfloor_client = GetShopfloorConnection()
+
+      try:
+        start_time = time.time()
+        shopfloor_client.SaveAuxLog(log_name, Binary(chunk))
+        factory.console.info('Successfully synced %s in %.03f s',
+                             log_name, time.time() - start_time)
+        success = True
+        break
+      except:  # pylint: disable=W0702
+        factory.console.info(
+            'Failed to sync with shopfloor for [%s] in iteration %d',
+            log_name, iteration + 1)
+
+    if not success:
+      if ignore_on_fail:
+        factory.console.info('Failure can be ignored')
+      else:
+        raise Exception('Failed to sync with shopfloor due to timeout')
