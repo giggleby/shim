@@ -950,7 +950,7 @@ class Gooftool(object):
                     'fields?')
     if not rma_mode and enable_zero_touch:
       self.Cr50SetSnBits()
-    self.Cr50SetBoardId(is_whitelabel)
+    self.Cr50SetBoardId()
 
   def Cr50WriteWhitelabelFlags(self):
     cros_config = cros_config_module.CrosConfig(self._util.shell)
