@@ -863,6 +863,7 @@ def Finalize(options):
     GetGooftool(options).WriteVPDForRLZPing(options.embargo_offset)
     if options.generate_mfg_date:
       GetGooftool(options).WriteVPDForMFGDate()
+  FpmcuInitializeEntropy(options)
   Cr50Finalize(options)
   Verify(options)
   LogSourceHashes(options)
@@ -879,7 +880,6 @@ def Finalize(options):
     event_log.Log('wp', fw='both', status='skipped')
   else:
     EnableFwWp(options)
-  FpmcuInitializeEntropy(options)
   LogSystemDetails(options)
   UploadReport(options)
 
