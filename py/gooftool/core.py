@@ -885,7 +885,7 @@ class Gooftool(object):
     Verify entropy of FPMCU is not added yet and initialize the entropy in
     FPMCU.
     """
-    ROLLBACK_INFO_RE_EX = '^Rollback block id:\s*(\d)$'
+    ROLLBACK_INFO_RE_EX = r'^Rollback block id:\s*(\d)$'
 
     cmd_rbinfo = ['ectool', '--name=cros_fp', 'rollbackinfo']
     if '0' != re.search(ROLLBACK_INFO_RE_EX,
