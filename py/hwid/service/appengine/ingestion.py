@@ -32,7 +32,6 @@ from cros.factory.utils import json_utils
 
 INTERNAL_REPO_URL = 'https://chrome-internal-review.googlesource.com'
 CHROMEOS_HWID_PROJECT = 'chromeos/chromeos-hwid'
-CHROMEOS_HWID_REPO_URL = INTERNAL_REPO_URL + '/' + CHROMEOS_HWID_PROJECT
 
 
 class PayloadGenerationException(Exception):
@@ -56,9 +55,11 @@ def _GetAuthCookie():
 
 
 def _GetHwidRepoFilesystemAdapter():
-  return git_util.GitFilesystemAdapter.FromGitUrl(CHROMEOS_HWID_REPO_URL,
-                                                  _GetAuthCookie(),
-                                                  CONFIG.hwid_repo_branch)
+  branch = CONFIG.hwid_repo_branch or git_util.GetCurrentBranch(
+      INTERNAL_REPO_URL, CHROMEOS_HWID_PROJECT, _GetAuthCookie())
+  repo_url = INTERNAL_REPO_URL + '/' + CHROMEOS_HWID_PROJECT
+  return git_util.GitFilesystemAdapter.FromGitUrl(repo_url, branch,
+                                                  _GetAuthCookie())
 
 
 class DevUploadHandler(flask.views.MethodView):
@@ -175,7 +176,6 @@ class RefreshHandler(flask.views.MethodView):
     self.hwid_manager = CONFIG.hwid_manager
     self.vpg_targets = CONFIG.vpg_targets
     self.dryrun_upload = CONFIG.dryrun_upload
-    self.hw_checker_mail = CONFIG.hw_checker_mail
 
   # Cron jobs are always GET requests, we are not acutally doing the work
   # here just queuing a task to be run in the background.
@@ -248,8 +248,8 @@ class RefreshHandler(flask.views.MethodView):
         logging.error('Cannot get board data from cache for %r', model_name)
     return db_lists
 
-  def GetMasterCommitIfChanged(self, force_update=False):
-    """Get master commit of repo if it differs from cached commit on datastore.
+  def GetMainCommitIfChanged(self, force_update=False):
+    """Get main commit of repo if it differs from cached commit on datastore.
 
     Args:
       force_update: True for always returning commit id for testing purpose.
@@ -257,15 +257,15 @@ class RefreshHandler(flask.views.MethodView):
       latest commit id if it differs from cached commit id, None if not
     """
 
-    hwid_master_commit = git_util.GetCommitId(
-        INTERNAL_REPO_URL, CHROMEOS_HWID_PROJECT, 'master', _GetAuthCookie())
-    latest_commit = self.hwid_manager.GetLatestHWIDMasterCommit()
+    hwid_main_commit = git_util.GetCommitId(
+        INTERNAL_REPO_URL, CHROMEOS_HWID_PROJECT, auth_cookie=_GetAuthCookie())
+    latest_commit = self.hwid_manager.GetLatestHWIDMainCommit()
 
-    if latest_commit == hwid_master_commit and not force_update:
-      logging.debug('The HWID master commit %s is already processed, skipped',
-                    hwid_master_commit)
+    if latest_commit == hwid_main_commit and not force_update:
+      logging.debug('The HWID main commit %s is already processed, skipped',
+                    hwid_main_commit)
       return None
-    return hwid_master_commit
+    return hwid_main_commit
 
   def ShouldUpdatePayload(self, board, result, force_update=False):
     """Get payload hash if it differs from cached hash on datastore.
@@ -289,7 +289,7 @@ class RefreshHandler(flask.views.MethodView):
     return True
 
   def TryCreateCL(self, service_account_name, board, new_files,
-                  hwid_master_commit):
+                  hwid_main_commit):
     """Try to create a CL if possible.
 
     Use git_util to create CL in repo for generated payloads.  If something goes
@@ -299,7 +299,7 @@ class RefreshHandler(flask.views.MethodView):
       service_account_name: Account name as email
       board: board name
       new_files: A path-content mapping of payload files
-      hwid_master_commit: Commit of master branch of target repo
+      hwid_main_commit: Commit of main branch of target repo
     Returns:
       None
     """
@@ -319,7 +319,8 @@ class RefreshHandler(flask.views.MethodView):
     repo_path = setting['repo_path']
     git_url = repo_host + repo_path
     project = setting['project']
-    branch = setting['branch']
+    branch = setting['branch'] or git_util.GetCurrentBranch(
+        review_host, project, _GetAuthCookie())
     prefix = setting['prefix']
     reviewers = self.hwid_manager.GetCLReviewers()
     ccs = self.hwid_manager.GetCLCCs()
@@ -328,10 +329,9 @@ class RefreshHandler(flask.views.MethodView):
       new_git_files.append((os.path.join(prefix, filepath),
                             git_util.NORMAL_FILE_MODE, filecontent))
 
-    commit_msg = (
-        'verification payload: update payload from hwid\n'
-        '\n'
-        'From chromeos/chromeos-hwid: %s\n' % (hwid_master_commit,))
+    commit_msg = ('verification payload: update payload from hwid\n'
+                  '\n'
+                  'From chromeos/chromeos-hwid: %s\n' % (hwid_main_commit, ))
 
     if dryrun_upload:
       # file_info = (file_path, mode, content)
@@ -374,7 +374,7 @@ class RefreshHandler(flask.views.MethodView):
   def UpdatePayloads(self, force_update=False):
     """Update generated payloads to repo.
 
-    Also return the hash of master commit and payloads to skip unnecessary
+    Also return the hash of main commit and payloads to skip unnecessary
     actions.
 
     Args:
@@ -387,8 +387,8 @@ class RefreshHandler(flask.views.MethodView):
 
     payload_hash_mapping = {}
     service_account_name, unused_token = _GetCredentials()
-    hwid_master_commit = self.GetMasterCommitIfChanged(force_update)
-    if hwid_master_commit is None and not force_update:
+    hwid_main_commit = self.GetMainCommitIfChanged(force_update)
+    if hwid_main_commit is None and not force_update:
       return None, payload_hash_mapping
 
     db_lists = self.GetPayloadDBLists()
@@ -401,17 +401,17 @@ class RefreshHandler(flask.views.MethodView):
       new_files = result.generated_file_contents
       if self.ShouldUpdatePayload(board, result, force_update):
         payload_hash_mapping[board] = result.payload_hash
-        self.TryCreateCL(
-            service_account_name, board, new_files, hwid_master_commit)
+        self.TryCreateCL(service_account_name, board, new_files,
+                         hwid_main_commit)
 
-    return hwid_master_commit, payload_hash_mapping
+    return hwid_main_commit, payload_hash_mapping
 
   def UpdatePayloadsAndSync(self, force_update=False):
     """Update generated payloads to private overlays.
 
     This method will handle the payload creation request as follows:
 
-      1. Check if the master commit of HWID DB is the same as cached one on
+      1. Check if the main commit of HWID DB is the same as cached one on
          Datastore and exit if they match.
       2. Generate a dict of board->payload_hash by vpg_module.
       3. Check if the cached payload hashs of boards in Datastore and generated
@@ -431,7 +431,7 @@ class RefreshHandler(flask.views.MethodView):
     response = ''
     commit_id, payload_hash_mapping = self.UpdatePayloads(force_update)
     if commit_id:
-      self.hwid_manager.SetLatestHWIDMasterCommit(commit_id)
+      self.hwid_manager.SetLatestHWIDMainCommit(commit_id)
     if force_update:
       response = json_utils.DumpStr(payload_hash_mapping, sort_keys=True)
     for board, payload_hash in payload_hash_mapping.items():
