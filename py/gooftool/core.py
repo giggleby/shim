@@ -751,7 +751,7 @@ class Gooftool(object):
     script_path = '/usr/share/cros/cr50-set-sn-bits.sh'
 
     vpd_key = 'attested_device_id'
-    has_vpd_key = self._vpd.GetValue(vpd_key) is not None
+    has_vpd_key = self._read_ro_vpd().get(vpd_key) is not None
 
     # The script exists, Zero-Touch is enabled.
     if not has_vpd_key:
