@@ -287,6 +287,14 @@ components:
           size: 500G
           serial: !re '^#123\d+$'
 
+      storage_3:
+        status: duplicate
+        values:
+          type: SSD
+          size: 16G
+          serial: !re '^#123\d+$'
+          emmc5_fw_ver: '1234 (abcd)'
+
   video:
     items:
       camera_0:

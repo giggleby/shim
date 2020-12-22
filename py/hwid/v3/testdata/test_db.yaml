@@ -1,5 +1,5 @@
 # Dummy line before checksum
-checksum: 3ba13057b33d9df01da5c88e7a92beeb3ed9c3a5
+checksum: b486f93323077b915f61ca4c8cdd575df4f3bb52
 # Dummy line after checksum
 project: CHROMEBOOK
 
@@ -287,6 +287,14 @@ components:
           type: HDD
           size: 500G
           serial: !re '^#123\d+$'
+
+      storage_3:
+        status: duplicate
+        values:
+          type: SSD
+          size: 16G
+          serial: !re '^#123\d+$'
+          emmc5_fw_ver: '1234 (abcd)'
 
   video:
     items:

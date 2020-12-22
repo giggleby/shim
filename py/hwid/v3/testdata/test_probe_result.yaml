@@ -29,6 +29,7 @@ found_probe_value_map:
     type: SSD
     size: 16G
     serial: '#123456'
+    emmc5_fw_ver: '1234 (abcd)'
   video:
     idVendor: '4567'
     idProduct: abcd

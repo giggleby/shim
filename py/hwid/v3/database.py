@@ -1002,6 +1002,8 @@ class Components(object):
         results[comp_name] = copy.deepcopy(comp_attrs)
       elif comp_attrs['values'] is None:
         continue
+      elif comp_attrs.get('status') == common.HWID.COMPONENT_STATUS.duplicate:
+        continue
       else:
         match = True
         keys_missing = set()

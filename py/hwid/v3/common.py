@@ -143,7 +143,8 @@ class HWID(object):
   HEADER_BITS = 5
   OPERATION_MODE = type_utils.Enum(['normal', 'rma', 'no_check'])
   COMPONENT_STATUS = type_utils.Enum(['supported', 'deprecated',
-                                      'unsupported', 'unqualified'])
+                                      'unsupported', 'unqualified',
+                                      'duplicate'])
   ENCODING_SCHEME = type_utils.Enum(['base32', 'base8192'])
 
   def __init__(self, database, bom, binary_string=None,
@@ -272,6 +273,9 @@ class HWID(object):
         elif status == HWID.COMPONENT_STATUS.unsupported:
           raise HWIDException('Found unsupported component of %r: %r' %
                               (comp_cls, comp_name))
+        elif status == HWID.COMPONENT_STATUS.duplicate:
+          raise HWIDException('Duplicate component %r: %r should not be matched'
+                              % (comp_cls, comp_name))
         elif status == HWID.COMPONENT_STATUS.deprecated:
           if self.mode != HWID.OPERATION_MODE.rma:
             raise HWIDException(
