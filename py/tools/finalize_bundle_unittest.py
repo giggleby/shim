@@ -593,5 +593,59 @@ class ExtractFirmwareInfoTest(FinalizeBundleTestBase):
         })
 
 
+class CreateRMAShimTest(FinalizeBundleTestBase):
+  """Unit tests for CreateRMAShim."""
+  default_manifest = {
+      'board': 'brya',
+      'project': 'brya',
+      'bundle_name': '20210107_evt',
+      'toolkit': '15003.0.0',
+      'test_image': '14909.124.0',
+      'release_image': '15003.0.0',
+      'firmware': 'release_image/15004.0.0',
+      'designs': finalize_bundle.BOXSTER_DESIGNS,
+  }
+
+  def _SetupBuilder(self, bundle_builder: finalize_bundle.FinalizeBundle):
+    bundle_builder.ProcessManifest()
+    bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
+
+  @mock.patch('os.path.getsize', mock.Mock(return_value=1))
+  @mock.patch(finalize_bundle.__name__ + '._GetImageTool',
+              mock.Mock(return_value=['image_tool']))
+  @mock.patch(finalize_bundle.__name__ + '.Spawn')
+  def testFlagIsSet_ImageToolIsCalled(self, spawn_mock: mock.Mock):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest=self.default_manifest, work_dir=self.temp_dir, rma_shim=True)
+    self._SetupBuilder(bundle_builder)
+
+    bundle_builder.CreateRMAShim()
+
+    spawn_mock.assert_called_with([
+        'image_tool',
+        'rma',
+        'create',
+        '-f',
+        '-o',
+        mock.ANY,
+        '--board',
+        'brya',
+        '--project',
+        'brya',
+        '--designs',
+        'test',
+    ], log=True, check_call=True, cwd=mock.ANY)
+
+  @mock.patch(finalize_bundle.__name__ + '.Spawn')
+  def testFlagIsNotSet_ImageToolIsNotCalled(self, spawn_mock: mock.Mock):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest=self.default_manifest, work_dir=self.temp_dir, rma_shim=False)
+    self._SetupBuilder(bundle_builder)
+
+    bundle_builder.CreateRMAShim()
+
+    spawn_mock.assert_not_called()
+
+
 if __name__ == '__main__':
   unittest.main()

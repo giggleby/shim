@@ -249,7 +249,7 @@ class FinalizeBundle:
   netboot_firmware_source: Optional[version_module.StrictVersion] = None
 
   def __init__(self, manifest, work_dir, download=True, archive=True,
-               bundle_record=None, jobs=1):
+               bundle_record=None, jobs=1, rma_shim=False):
     self.manifest = manifest
     self.work_dir = work_dir
     self.download = download
@@ -259,6 +259,7 @@ class FinalizeBundle:
     self.firmware_bios_names: List[str] = []
     self.timestamp = ''
     self.bundle_phase = 'mp'
+    self.rma_shim = rma_shim
 
   def Main(self):
     self.ProcessManifest()
@@ -275,6 +276,7 @@ class FinalizeBundle:
     self.UpdateReadme()
     self.Archive()
     self.BundleRecord()
+    self.CreateRMAShim()
 
   def ProcessManifest(self):
     try:
@@ -1461,6 +1463,21 @@ class FinalizeBundle:
     logging.info('\n\nUpdated %s; vital information:\n%s\n', self.readme_path,
                  vital_contents)
 
+  def BuildArchiveAndRMASharedArguments(self, args: List[str]):
+    args.extend([
+        '--board',
+        self.board,
+        '--project',
+        self.project,
+    ])
+    if self.designs:
+      args.append('--designs')
+      args.extend(self.designs)
+    if self.signed_shim_path:
+      args.extend(['--factory_shim', self.signed_shim_path])
+    if self.test_list_phase < phase.EVT:
+      args.append('--no_verify_cros_config')
+
   def Archive(self):
     if self.archive:
       # Done! tar it up, and encourage the poor shmuck who has to build
@@ -1483,22 +1500,12 @@ class FinalizeBundle:
           'bundle',
           '-o',
           self.work_dir,
-          '--board',
-          self.board,
           '--timestamp',
           self.timestamp,
           '--phase',
           self.bundle_phase,
-          '--project',
-          self.project,
       ]
-      if self.designs:
-        args += ['--designs']
-        args += self.designs
-      if self.signed_shim_path:
-        args += ['--factory_shim', self.signed_shim_path]
-      if self.test_list_phase < phase.EVT:
-        args += ['--no_verify_cros_config']
+      self.BuildArchiveAndRMASharedArguments(args)
       Spawn(_GetImageTool() + args,
             log=True, check_call=True, cwd=self.bundle_dir)
       if image_tool_output_file != output_file:
@@ -1519,6 +1526,34 @@ class FinalizeBundle:
         "IMPORTANT: If you modified the README or MANIFEST.yaml, don't forget "
         'to check your changes into %s.',
         factory_board_bundle_path)
+
+  def CreateRMAShim(self):
+    """Create a bootable RMA shim.
+
+    This is equivalent to changing directory to bundle_dir and then running
+    `image_tool rma create` with arguments filled.
+
+    We can call `image_tool rma replace` to further modify the RMA shim.
+
+    RMA shim creation haven't been exported to production yet.
+    """
+    if not self.rma_shim:
+      return
+    output_file = os.path.join(
+        self.work_dir,
+        f'factory_rma_{self.board}_{self.project}_{self.bundle_name}.bin')
+    args = [
+        'rma',
+        'create',
+        '-f',
+        '-o',
+        output_file,
+    ]
+    self.BuildArchiveAndRMASharedArguments(args)
+    Spawn(_GetImageTool() + args, log=True, check_call=True,
+          cwd=self.bundle_dir)
+    logging.info('Created %s (%.1f GiB).', output_file,
+                 os.path.getsize(output_file) / (1024 * 1024 * 1024))
 
   def BundleRecord(self):
     record = {
@@ -1750,7 +1785,7 @@ class FinalizeBundle:
       raise
     work_dir = args.dir or os.path.dirname(os.path.realpath(manifest_path))
     return cls(manifest, work_dir, args.download, args.archive,
-               args.bundle_record, args.jobs)
+               args.bundle_record, args.jobs, args.rma_shim)
 
   @classmethod
   def ParseArgs(cls):
@@ -1778,6 +1813,8 @@ class FinalizeBundle:
               'containing MANIFEST.yaml'))
     parser.add_argument('dir', metavar='DIR', nargs='?',
                         default=None, help='Working directory')
+    parser.add_argument('--rma-shim', action='store_true',
+                        help='Create a rma shim (for testing only)')
 
     args = parser.parse_args()
     assert args.jobs > 0
