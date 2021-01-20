@@ -740,7 +740,6 @@ def UploadReport(options):
          _wipe_finish_token_cmd_arg,
          _rlz_embargo_end_date_offset_cmd_arg,
          _waive_list_cmd_arg,
-         _skip_list_cmd_arg)
          _skip_list_cmd_arg,
          _enable_zero_touch_cmd_arg)
 def Finalize(options):
