@@ -26,10 +26,8 @@ GOLDEN_HWIDV3_DATA_AFTER_GOOD = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-golden-after-good.yaml'))
 SARIEN_DATA_GOOD = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'sarien-example.yaml'))
-GOLDEN_HWIDV3_DATA_AFTER_DRAM_BAD1 = file_utils.ReadFile(
-    os.path.join(TESTDATA_PATH, 'v3-golden-after-dram-bad1.yaml'))
-GOLDEN_HWIDV3_DATA_AFTER_DRAM_BAD2 = file_utils.ReadFile(
-    os.path.join(TESTDATA_PATH, 'v3-golden-after-dram-bad2.yaml'))
+GOLDEN_HWIDV3_DATA_AFTER_DRAM_BAD = file_utils.ReadFile(
+    os.path.join(TESTDATA_PATH, 'v3-golden-after-dram-bad.yaml'))
 GOLDEN_HWIDV3_DATA_AFTER_INVALID_NAME_PATTERN = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-golden-after-comp-bad.yaml'))
 GOLDEN_HWIDV3_DATA_AFTER_VALID_NAME_PATTERN = file_utils.ReadFile(
@@ -76,21 +74,13 @@ class HwidValidatorTest(unittest.TestCase):
           GOLDEN_HWIDV3_DATA_AFTER_GOOD,
           GOLDEN_HWIDV3_DATA_BEFORE)
 
-  def testValidateDramChange1(self):
+  def testValidateDramChange(self):
     with self.assertRaises(v3_validator.ValidationError) as error:
       hwid_validator.HwidValidator().ValidateChange(
-          GOLDEN_HWIDV3_DATA_AFTER_DRAM_BAD1, GOLDEN_HWIDV3_DATA_BEFORE)
-    self.assertEqual(
-        str(error.exception), ("'dram_type_256mb_and_real_is_512mb' does not "
-                               "match size property 1024M"))
-
-  def testValidateDramChange2(self):
-    with self.assertRaises(v3_validator.ValidationError) as error:
-      hwid_validator.HwidValidator().ValidateChange(
-          GOLDEN_HWIDV3_DATA_AFTER_DRAM_BAD2, GOLDEN_HWIDV3_DATA_BEFORE)
+          GOLDEN_HWIDV3_DATA_AFTER_DRAM_BAD, GOLDEN_HWIDV3_DATA_BEFORE)
     self.assertEqual(
         str(error.exception),
-        'Invalid DRAM: dram_type_not_mention_size')
+        "'dram_type_not_mention_size' does not contain size property")
 
   def testValidateComponentNameInvalid(self):
     with self.assertRaises(v3_validator.ValidationError):

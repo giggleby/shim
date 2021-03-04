@@ -215,7 +215,7 @@ def GetSKU(hwid):
   if status != hwid_api_messages_pb2.Status.UNSPECIFIED:
     return hwid_api_messages_pb2.SKUResponse(error=error, status=status)
 
-  bom, configless, status, error = _GetBomAndConfigless(hwid)
+  bom, configless, status, error = _GetBomAndConfigless(hwid, verbose=True)
   if status != hwid_api_messages_pb2.Status.UNSPECIFIED:
     return hwid_api_messages_pb2.SKUResponse(error=error, status=status)
 
