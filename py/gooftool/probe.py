@@ -1055,6 +1055,11 @@ def _ProbeSku():
   sku_id = _ShellOutput('mosys platform sku', None)
   return [{'id': sku_id}] if sku_id else []
 
+@_ComponentProbe('rlz')
+def _ProbeRlz():
+  """Returns the RLZ code."""
+  rlz_code = _ShellOutput('mosys platform brand', None)
+  return [{'rlz_code': rlz_code}] if rlz_code else []
 
 @_ComponentProbe('cpu', 'x86')
 def _ProbeCpuX86():
