@@ -377,6 +377,30 @@ class ExtDisplayTest(test_case.TestCase):
         _('Disconnect external display: {display}', display=args.display_label))
     self._WaitDisplayConnection(args, False)
 
+  def _IsDisplayConnected(self, args):
+    """Get connection status."""
+    if self.args.drm_sysfs_path is not None:
+      # Get display status from sysfs path.
+      card_name = os.path.basename(self.args.drm_sysfs_path.rstrip('/'))
+      status_file_path = self._dut.path.join(
+          self.args.drm_sysfs_path, '%s-%s' % (card_name, args.display_id),
+          'status')
+      try:
+        display_status = self._dut.ReadFile(status_file_path).strip()
+      except FileNotFoundError:
+        display_status = None
+
+      return (display_status is not None and
+              display_status.strip() == 'connected')
+
+    # Get display status from drm_utils.
+    port_info = self._dut.display.GetPortInfo()
+    if args.display_id not in port_info:
+      self.FailTask(
+          'Display "%s" not found. If this is an MST port, '
+          'drm_sysfs_path argument must have been set.' % args.display_id)
+    return port_info[args.display_id].connected
+
   def _WaitDisplayConnection(self, args, connect):
     if self._fixture and not (connect and self.args.already_connect):
       try:
@@ -386,48 +410,21 @@ class ExtDisplayTest(test_case.TestCase):
         self.FailTask('Detect display failed: %s' % e)
 
     while True:
-      # Check USBPD status before display info
-      if (args.usbpd_port is None or
-          self._dut.usb_c.GetPDStatus(args.usbpd_port)['connected'] == connect):
-
-        display_connected = False
-
-        # Access of display info via GetPortInfo() will fail if the display id
-        # is dynamically created for the following two cases:
-        # (1) Fail when args.display_id cannot be found in port_info.
-        # (2) Fail when cable is unplugged but the system fails to reflect
-        #     immediately.
-        if self.args.drm_sysfs_path is not None:
-          # Get display status from sysfs path.
-          card_name = os.path.basename(self.args.drm_sysfs_path.rstrip('/'))
-          # The MST display entry in sysfs path appears after the display is
-          # plugged in, and thus using self._dut.ReadFile leads to "No such
-          # file" exception. Therefore we use ``cat`` here.
-          display_status = self._dut.CallOutput(['cat', self._dut.path.join(
-              self.args.drm_sysfs_path,
-              '%s-%s' % (card_name, args.display_id),
-              'status')])
-          if display_status is not None and \
-              display_status.strip() == 'connected':
-            display_connected = True
+      if ((args.usbpd_port is None or
+           self._dut.usb_c.GetPDStatus(args.usbpd_port)['connected']
+           == connect) and
+          connect == self._IsDisplayConnected(args)):
+        display_info = state.GetInstance().DeviceGetDisplayInfo()
+        # display_info item, we assume the device's default mode is mirror
+        # mode and try to turn off mirror mode.
+        # On the other hand, in the case of disconnecting an external display,
+        # we can not check display info has no display with 'isInternal' False
+        # because any display for chromebox has 'isInternal' False.
+        if connect and all(x['isInternal'] for x in display_info):
+          err = state.GetInstance().DeviceSetDisplayMirrorMode({'mode': 'off'})
+          if err is not None:
+            logging.warning('Failed to turn off the mirror mode: %s', err)
         else:
-          # Get display status from drm_utils.
-          port_info = self._dut.display.GetPortInfo()
-          display_connected = port_info[args.display_id].connected
-
-        if connect == display_connected:
-          display_info = state.GetInstance().DeviceGetDisplayInfo()
-          # display_info item, we assume the device's default mode is mirror
-          # mode and try to turn off mirror mode.
-          # On the other hand, in the case of disconnecting an external display,
-          # we can not check display info has no display with 'isInternal' False
-          # because any display for chromebox has 'isInternal' False.
-          if connect and all(x['isInternal'] for x in display_info):
-            err = state.GetInstance().DeviceSetDisplayMirrorMode(
-                {'mode': 'off'})
-            if err is not None:
-              logging.warning('Failed to turn off the mirror mode: %s', err)
-          else:
-            logging.info('Get display info %r', display_info)
-            break
+          logging.info('Get display info %r', display_info)
+          break
       self.Sleep(_CONNECTION_CHECK_PERIOD_SECS)
