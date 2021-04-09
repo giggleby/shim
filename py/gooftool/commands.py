@@ -513,7 +513,10 @@ def Cr50Finalize(options):
   elif options.rma_mode:
     logging.warning('RMA mode. Skip setting RO hash.')
   else:
-    Cr50SetROHash(options)
+  # Dedede platform doesn't support cr50 RO verification. See b/161391833 for
+  # more details.
+  #   Cr50SetROHash(options)
+    logging.info('RO verification unsupported on Dedede. Skip setting RO hash.')
   Cr50WriteFlashInfo(options)
   Cr50DisableFactoryMode(options)
 
