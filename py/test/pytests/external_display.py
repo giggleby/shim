@@ -69,6 +69,7 @@ import collections
 import logging
 import os
 import random
+import re
 
 from cros.factory.device import device_utils
 from cros.factory.test.fixture import bft_fixture
@@ -151,6 +152,7 @@ class ExtDisplayTest(test_case.TestCase):
       self.do_disconnect = True
 
     self._toggle_timestamp = 0
+    self._muxinfo = {}
 
     # Setup tasks
     for info in self.args.display_info:
@@ -274,6 +276,64 @@ class ExtDisplayTest(test_case.TestCase):
               'Failed to see screen on external display after %d retries.' %
               retry_times)
 
+  def GetPDMuxInfo(self, args, log):
+    """Gets the USB PD Mux information.
+
+    Returns:
+      A dict that contains fields which 'ectool usbpdmuxinfo' outputs.
+    """
+    response = self._dut.CheckOutput(['ectool', 'usbpdmuxinfo'], log=log)
+    re_port = re.compile(r'^Port (\d+): ')
+    re_key_value = re.compile(r'\b(\w+)=(\w+)\b')
+
+    def MatchToPair(match):
+      return match.group(1), match.group(2)
+
+    for line in response.splitlines():
+      match = re_port.match(line)
+      if not match:
+        raise Exception('Unable to parse USB PD Mux from: %s' % response)
+      if int(match.group(1)) == args.usbpd_port:
+        return dict(map(MatchToPair, re_key_value.finditer(line)))
+    raise Exception(
+        'Unable to find port %d from: %s' % (args.usbpd_port, response))
+
+  def _SendTypecControl(self, args, log):
+    """Send typeccontrol control command."""
+    mode = {
+        'DP': '0',
+        'TBT': '1',
+        'USB4': '2'
+    }
+    try:
+      self._dut.CheckCall(
+          ['ectool', 'typeccontrol',
+           str(args.usbpd_port), '2', mode['DP']], log=log)
+    except Exception:
+      pass
+
+  def _CheckMuxinfo(self, args, log):
+    """Returns True if DP=1."""
+    fail_tag = 'GetPDMuxInfo'
+    try:
+      outputs = self.GetPDMuxInfo(args, log=log)
+    except Exception:
+      if fail_tag not in self._muxinfo:
+        logging.exception('%s failed. Please unplug and replug.', fail_tag)
+        self._muxinfo = {
+            fail_tag: True
+        }
+      return False
+    else:
+      if sorted(self._muxinfo.items()) != sorted(outputs.items()):
+        logging.info('%s %r', fail_tag, outputs)
+        self._muxinfo = outputs
+      if outputs.get('DP') == '1':
+        return True
+      if outputs.get('USB') == '1':
+        self._SendTypecControl(args, log=log)
+      return False
+
   def VerifyDisplayConfig(self):
     """Check display configuration.
 
@@ -359,7 +419,13 @@ class ExtDisplayTest(test_case.TestCase):
       except bft_fixture.BFTFixtureException as e:
         self.FailTask('Detect display failed: %s' % e)
 
+    first_step = True
     while True:
+      if (args.usbpd_port is not None and connect):
+        if not self._CheckMuxinfo(args=args, log=first_step):
+          self.Sleep(_CONNECTION_CHECK_PERIOD_SECS)
+          continue
+      first_step = False
       # Check USBPD status before display info
       if (args.usbpd_port is None or
           self._dut.usb_c.GetPDStatus(args.usbpd_port)['connected'] == connect):
