@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-const VIDEO_START_PLAY_TIMEOUT_MS = 5000;
 const imageDiv = document.getElementById('test-image');
 const promptDiv = document.getElementById('prompt');
 const overlayCanvas = document.getElementById('overlay');
@@ -55,6 +54,8 @@ class CameraTest {
     this.width = options.width;
     this.height = options.height;
     this.flipImage = options.flipImage;
+    this.videoStartPlayTimeoutMs = options.videoStartPlayTimeoutMs;
+    this.getUserMediaRetries = options.getUserMediaRetries;
     this.videoStream = null;
 
     // The width/height would be set to the true width/height in grabFrame.
@@ -86,15 +87,30 @@ class CameraTest {
     }
   }
 
-  async getVideoStreamTrack() {
-    const mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        width: this.width,
-        height: this.height,
-        facingMode: {exact: this.facingMode}
+  async getMediaStream() {
+    var i;
+    for (i = 0; i < this.getUserMediaRetries + 1; ++i) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            width: this.width,
+            height: this.height,
+            facingMode: { exact: this.facingMode }
+          }
+        });
+      } catch (error) {
+        if (error.name != "NotReadableError") {
+          throw error;
+        }
       }
-    });
+      await cros.factory.utils.delay(1000);
+    }
+    throw Error('NotReadableError: Fail all retries.');
+  }
+
+  async getVideoStreamTrack() {
+    const mediaStream = await this.getMediaStream();
     // Try to wait until |videoElem| starts to play so that |grabFrame|
     // can capture the data from it.
     // We expect the pytest invokes the API properly, this method shouldn't
@@ -107,7 +123,7 @@ class CameraTest {
           this.videoElemReadyForStreamCallback = null;
           reject(new Error('timeout from video element'));
         }
-      }, VIDEO_START_PLAY_TIMEOUT_MS);
+      }, this.videoStartPlayTimeoutMs);
       this.videoElemReadyForStreamCallback = () => {
         window.clearTimeout(timeoutId);
         resolve();

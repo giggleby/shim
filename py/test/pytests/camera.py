@@ -194,7 +194,14 @@ class CameraTest(test_case.TestCase):
           'device. Only "resolution" is supported in e2e mode.', default={}),
       Arg('flicker_interval_secs', (int, float),
           'The flicker interval in seconds in manual_led mode', default=0.5),
-      Arg('fullscreen', bool, 'Run the test in fullscreen', default=False)
+      Arg('fullscreen', bool, 'Run the test in fullscreen', default=False),
+      Arg('video_start_play_timeout_ms', int,
+          'The timeout between we open a stream and it starts to play.',
+          default=5000),
+      Arg('get_user_media_retries', int,
+          ('The times that we try to getUserMedia in camera.js. The '
+           'getUserMedia executes at most (1+get_user_media_retries) times.'),
+          default=0),
   ]
 
   def _Timeout(self):
@@ -445,7 +452,9 @@ class CameraTest(test_case.TestCase):
           'facingMode': {
               'front': 'user',
               'rear': 'environment'
-          }[camera_facing]
+          }[camera_facing],
+          'videoStartPlayTimeoutMs': self.args.video_start_play_timeout_ms,
+          'getUserMediaRetries': self.args.get_user_media_retries,
       }
       resolution = self.args.camera_args.get('resolution')
       if resolution:
