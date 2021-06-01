@@ -223,6 +223,8 @@ _DEFAULT_NOISE_TEST_DURATION = 1
 _DEFAULT_SOX_RMS_THRESHOLD = (0.08, None)
 # Default Amplitude thresholds when checking recorded file.
 _DEFAULT_SOX_AMPLITUDE_THRESHOLD = (None, None)
+# Default RMS thresholds when testing audiofuntest.
+_DEFAULT_AUDIOFUNTEST_RMS_THRESHOLD = 0.01
 # Default duration in seconds to trim in the beginning of recorded file.
 _DEFAULT_TRIM_SECONDS = 0.5
 # Default minimum frequency.
@@ -272,27 +274,38 @@ _ARG_OUTPUT_DEVICE_SCHEMA = JSONSchemaDict('output_dev schema object', {
     'maxItems': 2
 })
 
-_ARG_TESTS_TO_CONDUCT_SCHEMA = JSONSchemaDict('tests_to_conduct schema', {
-    'type': 'array',
-    'items': {
-        'type': 'object',
-        'oneOf': [
-            {
+_ARG_TESTS_TO_CONDUCT_SCHEMA = JSONSchemaDict(
+    'tests_to_conduct schema', {
+        'type': 'array',
+        'items': {
+            'type':
+                'object',
+            'oneOf': [{
                 'properties': {
                     'type': {
                         'type': 'string',
                         'enum': ['audiofun']
                     },
-                    'iteration': {'type': 'integer'},
-                    'threshold': {'type': 'number'},
-                    'input_channels': {'type': 'array'},
-                    'output_channels': {'type': 'array'},
+                    'iteration': {
+                        'type': 'integer'
+                    },
+                    'threshold': {
+                        'type': 'number'
+                    },
+                    'input_channels': {
+                        'type': 'array'
+                    },
+                    'output_channels': {
+                        'type': 'array'
+                    },
                     'volume_gain': {
                         'type': 'number',
                         'minimum': 0,
                         'maximum': 100
                     },
-                    'capture_rate': {'type': 'number'},
+                    'capture_rate': {
+                        'type': 'number'
+                    },
                     'sample_format': {
                         'type': 'string',
                         'enum': ['u8', 's16', 's24', 's32']
@@ -301,63 +314,84 @@ _ARG_TESTS_TO_CONDUCT_SCHEMA = JSONSchemaDict('tests_to_conduct schema', {
                         'type': 'string',
                         'enum': ['u8', 's16', 's24', 's32']
                     },
-                    'min_frequency': {'type': 'number'},
-                    'max_frequency': {'type': 'number'}
+                    'min_frequency': {
+                        'type': 'number'
+                    },
+                    'max_frequency': {
+                        'type': 'number'
+                    },
+                    'rms_threshold': {
+                        'type': 'number'
+                    }
                 },
                 'additionalProperties': False,
                 'required': ['type']
-            },
-            {
+            }, {
                 'properties': {
                     'type': {
                         'type': 'string',
                         'enum': ['sinewav']
                     },
-                    'duration': {'type': 'number',},
-                    'input_channels': {'type': 'array'},
-                    'freq_threshold': {'type': 'number'},
+                    'duration': {
+                        'type': 'number',
+                    },
+                    'input_channels': {
+                        'type': 'array'
+                    },
+                    'freq_threshold': {
+                        'type': 'number'
+                    },
                     'rms_threshold': {
                         'type': 'array',
-                        'items': {'type': ['number', 'null']},
+                        'items': {
+                            'type': ['number', 'null']
+                        },
                         'minItems': 2,
                         'maxItems': 2
                     },
                     'amplitude_threshold': {
                         'type': 'array',
-                        'items': {'type': ['number', 'null']},
+                        'items': {
+                            'type': ['number', 'null']
+                        },
                         'minItems': 2,
                         'maxItems': 2
                     }
                 },
                 'additionalProperties': False,
                 'required': ['type']
-            },
-            {
+            }, {
                 'properties': {
                     'type': {
                         'type': 'string',
                         'enum': ['noise']
                     },
-                    'duration': {'type': 'number'},
+                    'duration': {
+                        'type': 'number'
+                    },
                     'rms_threshold': {
                         'type': 'array',
-                        'items': {'type': ['number', 'null']},
+                        'items': {
+                            'type': ['number', 'null']
+                        },
                         'minItems': 2,
                         'maxItems': 2
                     },
                     'amplitude_threshold': {
                         'type': 'array',
-                        'items': {'type': ['number', 'null']},
+                        'items': {
+                            'type': ['number', 'null']
+                        },
                         'minItems': 2,
                         'maxItems': 2
                     }
                 },
                 'additionalProperties': False,
                 'required': ['type']
-            }
-        ]
-    }
-})
+            }]
+        }
+    })
+
 
 class AudioLoopTest(test_case.TestCase):
   """Audio Loop test to test two kind of situations.
@@ -748,19 +782,20 @@ class AudioLoopTest(test_case.TestCase):
     logging.info('player_cmd: %s', player_cmd)
     logging.info('recorder_cmd: %s', recorder_cmd)
 
-    process = self._dut.Popen(
-        [audio_utils.AUDIOFUNTEST_PATH,
-         '-P', player_cmd,
-         '-R', recorder_cmd,
-         '-t', audiofuntest_sample_format,
-         '-r', '%d' % capture_rate,
-         '-T', '%d' % iteration,
-         '-a', '%d' % output_channel,
-         '-c', '%d' % len(input_channels),
-         '-g', '%d' % volume_gain,
-         '-i', '%d' % min_frequency,
-         '-x', '%d' % max_frequency],
-        stdout=process_utils.PIPE, stderr=process_utils.PIPE)
+    rms_threshold = self._current_test_args.get(
+        'rms_threshold', _DEFAULT_AUDIOFUNTEST_RMS_THRESHOLD)
+    process = self._dut.Popen([
+        audio_utils.AUDIOFUNTEST_PATH, '-P', player_cmd, '-R', recorder_cmd,
+        '-t', audiofuntest_sample_format, '-r',
+        '%d' % capture_rate, '-T',
+        '%d' % iteration, '-a',
+        '%d' % output_channel, '-c',
+        '%d' % len(input_channels), '-g',
+        '%d' % volume_gain, '-i',
+        '%d' % min_frequency, '-x',
+        '%d' % max_frequency, '-p',
+        '%f' % rms_threshold
+    ], stdout=process_utils.PIPE, stderr=process_utils.PIPE)
 
     last_success_rate = None
     while self._MatchPatternLines(process.stdout,
