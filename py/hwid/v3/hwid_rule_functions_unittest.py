@@ -16,7 +16,6 @@ from cros.factory.hwid.v3.hwid_rule_functions import GetImageId
 from cros.factory.hwid.v3.hwid_rule_functions import GetOperationMode
 from cros.factory.hwid.v3.hwid_rule_functions import GetPhase
 from cros.factory.hwid.v3.hwid_rule_functions import GetVPDValue
-from cros.factory.hwid.v3.hwid_rule_functions import SetComponent
 from cros.factory.hwid.v3.hwid_rule_functions import SetImageId
 from cros.factory.hwid.v3.rule import Context
 from cros.factory.hwid.v3.rule import SetContext
@@ -58,13 +57,6 @@ class HWIDRuleTest(unittest.TestCase):
   def testComponentIn(self):
     self.assertTrue(ComponentIn('cpu', ['cpu_0', 'cpu_1', 'cpu_2']))
     self.assertFalse(ComponentIn('cpu', ['cpu_1', 'cpu_2']))
-
-  def testSetComponent(self):
-    SetComponent('cpu', 'cpu_3')
-    self.assertEqual(['cpu_3'], self.bom.components['cpu'])
-
-    SetComponent('cpu', None)
-    self.assertEqual(0, len(self.bom.components['cpu']))
 
   def testGetSetImageId(self):
     self.assertEqual(0, GetImageId())

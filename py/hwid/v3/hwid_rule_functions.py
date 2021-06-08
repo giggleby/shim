@@ -85,29 +85,6 @@ def ComponentIn(comp_cls, values):
 
 
 @RuleFunction(['bom', 'database'])
-def SetComponent(comp_cls, names):
-  """Set the component of the given component class recorded in the BOM object.
-
-  Args:
-    comp_cls: The component class to set.
-    names: The component name to set to the given component class.
-  """
-  context = GetContext()
-
-  if not isinstance(comp_cls, str):
-    raise HWIDException(
-        'Component class should be in string type, but got %r.' % comp_cls)
-
-  names = [] if names is None else type_utils.MakeList(names)
-  for name in names:
-    if not isinstance(name, str):
-      raise HWIDException(
-          'Component name should be in string type, but got %r.' % name)
-
-  context.bom.SetComponent(comp_cls, names)
-
-
-@RuleFunction(['bom', 'database'])
 def SetImageId(image_id_name):
   """A function to set the image id of the given HWID context.
 
