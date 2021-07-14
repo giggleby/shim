@@ -2499,6 +2499,10 @@ msgid "halt"
 msgstr "tắt máy"
 
 #: ../py/test/pytests/shutdown.py
+msgid "direct ec reboot"
+msgstr "EC Khởi động lại lạnh"
+
+#: ../py/test/pytests/shutdown.py
 msgid "Shutdown Test ({operation})"
 msgstr "thử Tắt máy ({operation})"
 
@@ -3280,6 +3284,7 @@ msgid "Halt"
 msgstr "Tắt máy"
 
 #: ../py/test/test_lists/base.test_list.json
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Reboot"
 msgstr "Khởi động lại"
 
