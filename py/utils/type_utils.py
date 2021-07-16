@@ -9,10 +9,12 @@ import functools
 import inspect
 import queue
 import re
+from typing import Callable, Generic, TypeVar, Union
 
 
 # The regular expression used by Overrides.
 _OVERRIDES_CLASS_RE = re.compile(r'^\s*class([^#]+)\(\s*([^\s#]+)\s*\)\s*\:')
+T = TypeVar('T')
 
 
 class Error(Exception):
@@ -362,10 +364,11 @@ def OverrideCacheableGetter(getter, value):
   getter.cached_value = value
 
 
-class LazyProperty:
+class LazyProperty(Generic[T]):
   """A decorator for lazy loading properties.
 
-  Example:
+  Example::
+
     class C:
       @LazyProperty
       def m(self):
@@ -375,15 +378,16 @@ class LazyProperty:
     c = C()
     print c.m  # see 'init!' then 3
     print c.m  # only see 3
+
   """
   PROP_NAME_PREFIX = '_lazyprop_'
 
-  def __init__(self, prop):
+  def __init__(self, prop: Callable[..., T]):
     self._init_func = prop
     self._prop_name = self.PROP_NAME_PREFIX + prop.__name__
     functools.update_wrapper(self, prop)
 
-  def __get__(self, obj, ignored_obj_type):
+  def __get__(self, obj, ignored_obj_type) -> Union['LazyProperty[T]', T]:
     if obj is None:
       return self
     if not hasattr(obj, self._prop_name):
