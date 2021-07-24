@@ -63,8 +63,7 @@ class ConnectionManager(plugin.Plugin):
     # when Goofy is terminating for factory_restart and wipe_in_place.
     name = self.__class__.__name__
     if self.goofy.status == goofy_module.Status.TERMINATING:
-      logging.info('%s: Leave network enabled for shutdown.', name)
-      self._connection_manager.EnableNetworking(reset=False)
+      logging.info('%s: Leave network untouched for shutdown.', name)
     else:
       logging.info('%s: Disable network.', name)
       self._connection_manager.DisableNetworking()
