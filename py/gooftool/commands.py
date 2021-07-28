@@ -180,6 +180,9 @@ _rma_mode_cmd_arg = CmdArg(
     '--rma_mode', action='store_true',
     help='Enable RMA mode, do not check for deprecated components.')
 
+_mlb_mode_cmd_arg = CmdArg('--mlb_mode', action='store_true',
+                           help='Enable MLB mode, only do cr50 finalize.')
+
 _cros_core_cmd_arg = CmdArg(
     '--cros_core', action='store_true',
     help='Finalize for ChromeOS Core devices (may add or remove few test '
@@ -480,19 +483,27 @@ def Cr50SetSnBitsAndBoardId(options):
   Cr50WriteFlashInfo(options)
 
 
-@Command('cr50_write_flash_info',
-         _rma_mode_cmd_arg,
+@Command('cr50_write_flash_info', _rma_mode_cmd_arg, _mlb_mode_cmd_arg,
          _enable_zero_touch_cmd_arg)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
-      options.enable_zero_touch, options.rma_mode)
+      enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
+      mlb_mode=options.mlb_mode)
   event_log.Log('cr50_write_flash_info')
 
 
-@Command('cr50_write_whitelabel_flags')
+@Command('cr50_write_whitelabel_flags', _enable_zero_touch_cmd_arg,
+         _rma_mode_cmd_arg)
 def Cr50WriteWhitelabelFlags(options):
-  GetGooftool(options).Cr50WriteWhitelabelFlags()
+  """Call this function to set the cr50 fields in SMT stage.
+
+  This is required if the MLB will leave factory after SMT stage, such as RMA
+  spare boards, local OEM projects.
+  """
+  GetGooftool(options).Cr50WriteFlashInfo(
+      enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
+      mlb_mode=True)
   event_log.Log('cr50_write_whitelabel_flags')
 
 
@@ -502,23 +513,26 @@ def Cr50DisableFactoryMode(options):
   return GetGooftool(options).Cr50DisableFactoryMode()
 
 
-@Command('cr50_finalize',
-         _no_write_protect_cmd_arg,
-         _rma_mode_cmd_arg,
-         _enable_zero_touch_cmd_arg)
+@Command('cr50_finalize', _no_write_protect_cmd_arg, _rma_mode_cmd_arg,
+         _mlb_mode_cmd_arg, _enable_zero_touch_cmd_arg)
 def Cr50Finalize(options):
   """Finalize steps for cr50."""
   if options.no_write_protect:
     logging.warning('SWWP is not enabled. Skip setting RO hash.')
   elif options.rma_mode:
     logging.warning('RMA mode. Skip setting RO hash.')
+  elif options.mlb_mode:
+    logging.warning('MLB mode. Skip setting RO hash.')
   else:
   # Dedede platform doesn't support cr50 RO verification. See b/161391833 for
   # more details.
   #   Cr50SetROHash(options)
     logging.info('RO verification unsupported on Dedede. Skip setting RO hash.')
   Cr50WriteFlashInfo(options)
-  Cr50DisableFactoryMode(options)
+  if options.mlb_mode:
+    logging.warning('MLB mode. Skip disabling factory mode.')
+  else:
+    Cr50DisableFactoryMode(options)
 
 
 @Command('enable_release_partition',
@@ -811,39 +825,42 @@ def UploadReport(options):
     raise Error('unknown report upload method %r' % method)
 
 
-@Command('finalize',
-         CmdArg('--fast', action='store_true',
-                help='use non-secure but faster wipe method.'),
-         _no_ectool_cmd_arg,
-         _shopfloor_url_args_cmd_arg,
-         _hwdb_path_cmd_arg,
-         _hwid_status_list_cmd_arg,
-         _upload_method_cmd_arg,
-         _upload_max_retry_times_arg,
-         _upload_retry_interval_arg,
-         _upload_allow_fail_arg,
-         _add_file_cmd_arg,
-         _probe_results_cmd_arg,
-         _hwid_cmd_arg,
-         _hwid_run_vpd_cmd_arg,
-         _hwid_vpd_data_file_cmd_arg,
-         _no_write_protect_cmd_arg,
-         _rma_mode_cmd_arg,
-         _cros_core_cmd_arg,
-         _has_ec_pubkey_cmd_arg,
-         _ec_pubkey_path_cmd_arg,
-         _ec_pubkey_hash_cmd_arg,
-         _release_rootfs_cmd_arg,
-         _firmware_path_cmd_arg,
-         _enforced_release_channels_cmd_arg,
-         _station_ip_cmd_arg,
-         _station_port_cmd_arg,
-         _wipe_finish_token_cmd_arg,
-         _rlz_embargo_end_date_offset_cmd_arg,
-         _waive_list_cmd_arg,
-         _skip_list_cmd_arg,
-         _no_generate_mfg_date_cmd_arg,
-         _enable_zero_touch_cmd_arg)
+@Command(
+    'finalize',
+    CmdArg('--fast', action='store_true',
+           help='use non-secure but faster wipe method.'),
+    _no_ectool_cmd_arg,
+    _shopfloor_url_args_cmd_arg,
+    _hwdb_path_cmd_arg,
+    _hwid_status_list_cmd_arg,
+    _upload_method_cmd_arg,
+    _upload_max_retry_times_arg,
+    _upload_retry_interval_arg,
+    _upload_allow_fail_arg,
+    _add_file_cmd_arg,
+    _probe_results_cmd_arg,
+    _hwid_cmd_arg,
+    _hwid_run_vpd_cmd_arg,
+    _hwid_vpd_data_file_cmd_arg,
+    _no_write_protect_cmd_arg,
+    _rma_mode_cmd_arg,
+    _mlb_mode_cmd_arg,
+    _cros_core_cmd_arg,
+    _has_ec_pubkey_cmd_arg,
+    _ec_pubkey_path_cmd_arg,
+    _ec_pubkey_hash_cmd_arg,
+    _release_rootfs_cmd_arg,
+    _firmware_path_cmd_arg,
+    _enforced_release_channels_cmd_arg,
+    _station_ip_cmd_arg,
+    _station_port_cmd_arg,
+    _wipe_finish_token_cmd_arg,
+    _rlz_embargo_end_date_offset_cmd_arg,
+    _waive_list_cmd_arg,
+    _skip_list_cmd_arg,
+    _no_generate_mfg_date_cmd_arg,
+    _enable_zero_touch_cmd_arg,
+)
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
 
@@ -859,6 +876,14 @@ def Finalize(options):
   - Uploads system logs & reports
   - Wipes the testing kernel, rootfs, and stateful partition
   """
+  if options.mlb_mode:
+    # MLB mode only do cr50 finalize.
+    Cr50Finalize(options)
+    LogSourceHashes(options)
+    LogSystemDetails(options)
+    UploadReport(options)
+    return
+
   if not options.rma_mode:
     # Write VPD values related to RLZ ping into VPD.
     GetGooftool(options).WriteVPDForRLZPing(options.embargo_offset)
