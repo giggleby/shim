@@ -225,7 +225,11 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
             '/root/.ssh',
             '/usr/share/chromeos-ssh-config',
             # /var/empty is required by openssh server.
-            '/var/empty'],
+            '/var/empty',
+            # /var/lib/ is required by dhcp client.
+            '/var/lib/shill',
+            '/var/lib/dhcpcd'
+            ],
         binary_list=binary_deps, etc_issue=etc_issue).PivotRoot(old_root):
       logging.debug(
           'lsof: %s',
