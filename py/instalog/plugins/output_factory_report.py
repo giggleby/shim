@@ -62,22 +62,26 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
           'account which is set to the environment variable '
           'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
           default=None),
+      Arg(
+          'archive_batch_size', int,
+          'Size in bytes of archives to process in parallel.  Default is '
+          '50GB.', default=50 * 1024**3),
   ]
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self._gcs = None
-    self._archive_path = None
     self._tmp_dir = None
-    self._process_pool = None
+    self._downloader = None
+    # TODO(chuntsen): Move process pool to Instalog core. GCS client instances
+    # should be created after multiprocessing.Pool or multiprocessing.Process
+    # invokes os.fork(). It may block other plugins with GCS client if we put
+    # this line in the SetUp function.
+    self._process_pool = multiprocessing.Pool(processes=_PROCESSES_NUMBER)  # pylint: disable=consider-using-with
 
   def SetUp(self):
     """Sets up the plugin."""
-    self._gcs = gcs_utils.CloudStorage(self.args.key_path)
-    self._archive_path = os.path.join(self.GetDataDir(), 'archive')
     self._tmp_dir = os.path.join(self.GetDataDir(), 'tmp')
-
-    self._process_pool = multiprocessing.Pool(processes=_PROCESSES_NUMBER)  # pylint: disable=consider-using-with
+    self._downloader = gcs_utils.ParallelDownloader(logger=self.logger)
 
   def TearDown(self):
     if os.path.exists(self._tmp_dir):
@@ -85,6 +89,8 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
 
     self._process_pool.close()
     self._process_pool.join()
+
+    self._downloader.Close()
 
   def Main(self):
     """Main thread of the plugin."""
@@ -94,74 +100,95 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       if not self.DownloadAndProcess():
         self.Sleep(1)
 
-  def EmitAndCommit(self, events, event_stream):
-    if self.Emit(events):
-      event_stream.Commit()
-    else:
-      event_stream.Abort()
-
   def DownloadAndProcess(self):
     """Download Archive file from GCS and process it."""
     event_stream = self.NewStream()
     if not event_stream:
       return False
 
-    event = event_stream.Next()
-    if not event:
-      event_stream.Commit()
-      return False
-
-    archive_process_event = datatypes.Event({
-        '__process__': True,
-        'status': [],
-        'time': 0,  # The partitioned table on BigQuery need this field.
-        'startTime': time.time(),
-        'message': []
-    })
-
-    gcs_path = event.get('objectId', None)
-
-    if not gcs_path:
-      SetProcessEventStatus(ERROR_CODE.EventNoObjectId, archive_process_event,
-                            event.Serialize())
-      self.EmitAndCommit([archive_process_event], event_stream)
-      return True
-
-    archive_process_event['uuid'] = gcs_path
-
+    if os.path.exists(self._tmp_dir):
+      shutil.rmtree(self._tmp_dir)
     file_utils.TryMakeDirs(self._tmp_dir)
-    file_utils.TryUnlink(self._archive_path)
 
-    # A log file may have multiple factory report files.
-    self.info('Download log file from Google Storage: %s', gcs_path)
-    if not self._gcs.DownloadFile(gcs_path, self._archive_path, overwrite=True):
-      self.error('Failed to download the file: %s', gcs_path)
-      event_stream.Abort()
-      return False
-    if self.IsStopping():
-      return True
-    self.info('Download succeed!')
+    total_archive_size = 0
+    event_dict = {}
+    download_list = []
+    for event in event_stream.iter(count=_PROCESSES_NUMBER):
+      archive_process_event = datatypes.Event({
+          '__process__': True,
+          'status': [],
+          'time': 0,  # The partitioned table on BigQuery need this field.
+          'startTime': 0,
+          'message': []
+      })
+      for key in ('objectId', 'time', 'size', 'md5'):
+        if key not in event:
+          SetProcessEventStatus(ERROR_CODE.EventInvalid, archive_process_event,
+                                event.Serialize())
+          self.PreEmit([archive_process_event])
+          self.error('Receive an invalid event: %s', event.Serialize())
+          continue
 
-    report_parsers = []
-    try:
-      report_parsers = self._CreateReportParsers(gcs_path, self._archive_path,
-                                                 self._tmp_dir)
-    except NotImplementedError:
-      SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
-                            archive_process_event)
-    except Exception as e:
-      self.exception('Exception encountered when creating report parsers')
-      SetProcessEventStatus(ERROR_CODE.ArchiveUnknownError,
-                            archive_process_event, e)
-    else:
-      if not report_parsers:
-        SetProcessEventStatus(ERROR_CODE.ArchiveReportNotFound,
+      gcs_path = event['objectId']
+      archive_path = os.path.join(
+          self._tmp_dir, 'archive_%d_%s' % (event['time'], event['md5']))
+      download_list.append((gcs_path, archive_path))
+
+      event['archive_path'] = archive_path
+      event['archive_process_event'] = archive_process_event
+      event_dict[event['objectId']] = event
+
+      total_archive_size += event['size']
+      if total_archive_size >= self.args.archive_batch_size:
+        break
+
+    downloader_results = self._downloader.Download(download_list)
+
+    for gcs_path, archive_path in downloader_results:
+      event = event_dict[gcs_path]
+      archive_process_event = event['archive_process_event']
+      archive_process_event['uuid'] = gcs_path
+      archive_process_event['startTime'] = time.time()
+
+      # If the downloader failed to download a file, the archive_path will be
+      # None.
+      if not archive_path:
+        self.error('Download failed and skip the archive: %s', gcs_path)
+        SetProcessEventStatus(ERROR_CODE.DownloadError, archive_process_event)
+        self.PreEmit([archive_process_event])
+        continue
+
+      assert archive_path == event['archive_path']
+
+      self.info('Download succeed and start processing: %s', gcs_path)
+      report_parsers = []
+      try:
+        report_parsers = self._CreateReportParsers(gcs_path, archive_path,
+                                                   self._tmp_dir)
+      except NotImplementedError:
+        SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
                               archive_process_event)
+      except Exception as e:
+        self.exception('Exception encountered when creating report parsers')
+        SetProcessEventStatus(ERROR_CODE.ArchiveUnknownError,
+                              archive_process_event, e)
       else:
-        for report_parser in report_parsers:
-          report_parser.ProcessArchive(archive_process_event,
-                                       self._process_pool, self.PreEmit)
-    self.EmitAndCommit([archive_process_event], event_stream)
+        if not report_parsers:
+          SetProcessEventStatus(ERROR_CODE.ArchiveReportNotFound,
+                                archive_process_event)
+        else:
+          for report_parser in report_parsers:
+            total_reports = report_parser.ProcessArchive(
+                archive_process_event, self._process_pool, self.PreEmit)
+            self.info('Parsed %d reports from %s (size=%d)', total_reports,
+                      gcs_path, event['size'])
+      self.PreEmit([archive_process_event])
+
+    self.info('Emit events to buffer.')
+    if self.Emit([]):
+      event_stream.Commit()
+    else:
+      event_stream.Abort()
     return True
 
   def _CreateReportParsers(self, gcs_path, archive_path, tmp_dir):
@@ -250,7 +277,7 @@ class ReportParser(log_utils.LoggerMixin):
         # We only support tar file and zip file.
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
                               archive_process_event)
-        return
+        return total_reports
       decompress_process.start()
 
       received_obj = args_queue.get()
@@ -303,6 +330,7 @@ class ReportParser(log_utils.LoggerMixin):
         archive_process_event['endTime'] - archive_process_event['startTime'])
 
     os.remove(self._archive_path)
+    return total_reports
 
   def DecompressZipArchive(self, args_queue):
     """Decompresses the ZIP format archive.
@@ -736,7 +764,8 @@ class ReportParser(log_utils.LoggerMixin):
 
 
 ERROR_CODE = type_utils.Obj(
-    EventNoObjectId=100,
+    EventInvalid=100,
+    DownloadError=101,
     ArchiveInvalidFormat=200,
     ArchiveReportNumNotMatch=201,
     ArchiveReportNotFound=202,
