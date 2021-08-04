@@ -779,6 +779,20 @@
         "flush_testlog": false
       }
     },
+    "UploadZeroTouchIds": {
+      "inherit": "SyncFactoryServer",
+      "label": "Upload Zero Touch Ids",
+      "run_if": "constants.grt.enable_zero_touch and constants.grt.collect_zero_touch_ids",
+      "args": {
+        "sync_event_logs": false,
+        "sync_time": true,
+        "update_toolkit": false,
+        "upload_report": false,
+        "upload_reg_codes": false,
+        "upload_zero_touch_ids": true,
+        "flush_testlog": false
+      }
+    },
     "VerifyRootPartition": {
       "pytest_name": "verify_root_partition",
       "args": {

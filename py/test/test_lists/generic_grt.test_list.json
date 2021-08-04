@@ -6,6 +6,7 @@
     "grt": {
       "force_write_protect": false,
       "__comment_force_write_protect": "*** Write protection is required for mass production and shippable devices. By default we enable write protection starting from PVT stages, but you can start trying write protection earlier by this option.",
+      "collect_zero_touch_ids": false,
       "ec_pubkey_path": null,
       "ec_pubkey_hash": null,
       "mlb_mode": false,
@@ -65,7 +66,8 @@
       "inherit": "FlattenGroup",
       "subtests": [
         "ReSignReleaseKernel",
-        "UploadRegCodes"
+        "UploadRegCodes",
+        "UploadZeroTouchIds"
       ]
     },
     "GRTStart": {
