@@ -8,6 +8,7 @@
       "__comment_force_write_protect": "*** Write protection is required for mass production and shippable devices. By default we enable write protection starting from PVT stages, but you can start trying write protection earlier by this option.",
       "cbi_eeprom_wp_status": "Locked",
       "__comment_cbi_eeprom_wp_status": "Set this to 'Absent' for board without CBI EEPROM. Set this to 'Unlocked' for MLB layouts which requires CBI WP being disabled in pre-PVT and enabled in PVT.",
+      "collect_zero_touch_ids": false,
       "ec_pubkey_path": null,
       "ec_pubkey_hash": null,
       "rma_mode": false,
@@ -72,6 +73,7 @@
         "CheckSecdataVersion",
         "ReSignReleaseKernel",
         "UploadRegCodes",
+        "UploadZeroTouchIds",
         "ClearTPMOwnerRequest",
         "RebootStep",
         "VerifyWidevineKeybox"

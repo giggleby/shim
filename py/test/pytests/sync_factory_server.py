@@ -26,6 +26,9 @@ This test will sync following items:
    ``registration_code_log.csv`` file on server. If the reg codes must be sent
    back to partner's shopfloor backend, please use shopfloor_service pytest
    and ActivateRegCode API instead.
+7. If ``upload_zero_touch_ids`` is enabled (default False), upload the attested
+   device ID and serial number pair using the ``UploadCSVEntry`` API.  The CSV
+   can be downloaded from Dome server in the Logs -> CSV page.
 
 Additionally, if argument ``server_url`` is specified, this test will update the
 stored 'default factory server URL' so all following tests connecting to factory
@@ -174,12 +177,12 @@ class Report:
 
 class SyncFactoryServer(test_case.TestCase):
   ARGS = [
-      Arg('first_retry_secs', int,
+      Arg(
+          'first_retry_secs', int,
           'Time to wait after the first attempt; this will increase '
           'exponentially up to retry_secs.  This is useful because '
           'sometimes the network may not be available by the time the '
-          'tests starts, but a full 10-second wait is unnecessary.',
-          1),
+          'tests starts, but a full 10-second wait is unnecessary.', 1),
       Arg('retry_secs', int, 'Maximum time to wait between retries.', 10),
       Arg('timeout_secs', int, 'Timeout for XML/RPC operations.', 10),
       Arg('update_toolkit', bool, 'Whether to check factory update.',
@@ -190,7 +193,10 @@ class SyncFactoryServer(test_case.TestCase):
           default=True),
       Arg('sync_event_logs', bool, 'Sync event logs to factory server.',
           default=True),
-      Arg('flush_testlog', bool, 'Flush test logs to factory server.',
+      Arg(
+          'flush_testlog',
+          bool,
+          'Flush test logs to factory server.',
           # TODO(hungte) Change flush_testlog to default True when Umpire is
           # officially deployed.
           default=False),
@@ -202,9 +208,11 @@ class SyncFactoryServer(test_case.TestCase):
       Arg('report_serial_number_name', str,
           'Name of serial number to use for report file name to use.',
           default=None),
-      Arg('server_url', (str, dict),
-          'Set and keep new factory server URL.',
+      Arg('server_url', (str, dict), 'Set and keep new factory server URL.',
           default=None),
+      Arg('upload_zero_touch_ids', bool,
+          'Upload attested_device_id and serial_number pair to server.',
+          default=False),
   ]
 
   def setUp(self):
@@ -382,6 +390,22 @@ class SyncFactoryServer(test_case.TestCase):
     entry = [board, ubind, gbind, timestamp, hwid]
     self.server.UploadCSVEntry('registration_code_log', entry)
 
+  def UploadZeroTouchIds(self):
+    """Uploads identifiers for zero touch enrollment.
+
+    The identifiers will be sent in format (serial_number, attested_device_id).
+    The CSV file can be downloaded from Dome server (Logs -> CSV).
+    """
+    attested_device_id = device_data.GetDeviceData(
+        device_data.JoinKeys(device_data.KEY_VPD_RO, 'attested_device_id'))
+    serial_number = device_data.GetSerialNumber()
+    if not attested_device_id:
+      raise Exception('attested_device_id is not set.')
+    if not serial_number:
+      raise Exception('serial_number is not set.')
+    entry = [serial_number, attested_device_id]
+    self.server.UploadCSVEntry('zero_touch_ids', entry)
+
   def UpdateToolkit(self):
     unused_toolkit_version, has_update = updater.CheckForUpdate(
         self.args.timeout_secs)
@@ -438,6 +462,9 @@ class SyncFactoryServer(test_case.TestCase):
 
     if self.args.upload_reg_codes:
       tasks += [(_('Upload Reg Codes'), self.UploadRegCodes)]
+
+    if self.args.upload_zero_touch_ids:
+      tasks += [(_('Upload Zero Touch Ids'), self.UploadZeroTouchIds)]
 
     if self.args.update_toolkit:
       tasks += [(_('Update Toolkit'), self.UpdateToolkit)]
