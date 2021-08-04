@@ -2712,7 +2712,12 @@ msgstr "上传生产报告"
 
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Upload Reg Codes"
-msgstr "上传"
+msgstr "上传注册码"
+
+#: ../py/test/pytests/sync_factory_server.py
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Upload Zero Touch Ids"
+msgstr "上传 Zero Touch Ids"
 
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Update Toolkit"

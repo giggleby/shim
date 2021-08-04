@@ -2769,7 +2769,12 @@ msgstr "Tải lên báo cáo sản xuất"
 
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Upload Reg Codes"
-msgstr "Tải lên"
+msgstr "Tải lên mã đăng ký"
+
+#: ../py/test/pytests/sync_factory_server.py
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Upload Zero Touch Ids"
+msgstr "Tải lên Zero Touch Ids"
 
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Update Toolkit"
