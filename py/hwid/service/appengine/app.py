@@ -56,6 +56,9 @@ def _InitLogging():
     client = gc_logging.Client()
     handler = gc_logging.handlers.AppEngineHandler(client)
     gc_logging.handlers.setup_logging(handler, log_level=logging.DEBUG)
+    if CONFIG.env == 'staging':
+      import googlecloudprofiler  # pylint: disable=import-error
+      googlecloudprofiler.start(verbose=3)
   else:
     logging.basicConfig(level=logging.DEBUG)
 
