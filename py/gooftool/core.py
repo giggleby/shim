@@ -36,6 +36,7 @@ from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test.rules import registration_codes
 from cros.factory.test.rules.registration_codes import RegistrationCode
 from cros.factory.test.utils import cbi_utils
+from cros.factory.test.utils import model_sku_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
@@ -1302,6 +1303,8 @@ class Gooftool:
           zero_touch.
       mlb_mode: This is just a MLB, not a full device.
     """
+    model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
+    custom_type = model_sku_config.get('custom_type', '')
     cros_config = cros_config_module.CrosConfig(self._util.shell)
     is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
 
@@ -1309,7 +1312,7 @@ class Gooftool:
       # If we can't find whitelabel_tag in VPD, this will be None.
       vpd_whitelabel_tag = self._vpd.GetValue('whitelabel_tag')
       if vpd_whitelabel_tag != whitelabel_tag:
-        if vpd_whitelabel_tag is None:
+        if vpd_whitelabel_tag is None and custom_type != 'rebrand':
           # whitelabel_tag is not set in VPD.  Technically, this is allowed by
           # cros_config. It would be equivalent to whitelabel_tag='' (empty
           # string).  However, it is ambiguous, we don't know if this is

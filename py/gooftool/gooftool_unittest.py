@@ -24,6 +24,7 @@ from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.utils import pygpt
+from cros.factory.test.utils import model_sku_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
@@ -166,6 +167,16 @@ class GooftoolTest(unittest.TestCase):
                           'xgZGhscHR4fEAEaCmNocm9tZWJvb2sQgdSQ-AI='),
       'rlz_embargo_end_date': '2018-03-09',
       'should_send_rlz_ping': '1',
+  }
+
+  _SIMPLE_MODEL_SKU_CONFIG_REBRAND = {
+      'custom_type': 'rebrand',
+      'fw_config': '90913',
+  }
+
+  _SIMPLE_MODEL_SKU_CONFIG_WHITELABEL = {
+      'custom_type': 'whitelabel',
+      'fw_config': '90913',
   }
 
   def setUp(self):
@@ -728,6 +739,32 @@ class GooftoolTest(unittest.TestCase):
             'platform_name', 'crossystem', 'modem_status', 'ec_wp_status',
             'bios_wp_status', 'cr50_board_id', 'cr50_sn_bits', 'cr50_fw_version'
         }, set(self._gooftool.GetSystemDetails().keys()))
+
+  def testCr50WriteFlashInfoWithCustomType(self):
+    """Test for checking whitelabel field exist in VPD only when custom type is
+    whitelabel"""
+
+    model_sku_utils.GetDesignConfig = mock.Mock()
+    self._gooftool.Cr50SetBoardId = mock.Mock()
+    self._gooftool._util.sys_interface = None
+
+    # custom type is whitelabel but no whitelabel field in VPD
+    config = self._SIMPLE_MODEL_SKU_CONFIG_WHITELABEL
+    model_sku_utils.GetDesignConfig.return_value = config
+    self._gooftool._util.shell.return_value = Obj(stdout='loema', success=True)
+    self._gooftool._vpd.GetValue.return_value = None
+
+    self.assertRaisesRegex(
+        Error, 'This is a whitelabel device, but '
+        'whitelabel_tag is not set in VPD.', self._gooftool.Cr50WriteFlashInfo)
+
+    # custom type is rebrand and no whitelabel field in VPD
+    config = self._SIMPLE_MODEL_SKU_CONFIG_REBRAND
+    model_sku_utils.GetDesignConfig.return_value = config
+    self.assertRaisesRegex(
+        Error, 'whitelabel_tag reported by cros_config and VPD does not '
+        'match.  Have you reboot the device after updating VPD '
+        'fields?', self._gooftool.Cr50WriteFlashInfo)
 
 
 if __name__ == '__main__':
