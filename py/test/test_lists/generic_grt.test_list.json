@@ -8,6 +8,8 @@
       "__comment_force_write_protect": "*** Write protection is required for mass production and shippable devices. By default we enable write protection starting from PVT stages, but you can start trying write protection earlier by this option.",
       "ec_pubkey_path": null,
       "ec_pubkey_hash": null,
+      "mlb_mode": false,
+      "__comment_mlb_mode": "The MLB will leave factory without assembly, for example, this is a RMA spare board or local OEM projects.",
       "enable_zero_touch": false,
       "gooftool_skip_list": [],
       "gooftool_waive_list": [],
@@ -53,6 +55,7 @@
         "hwid_need_vpd": "eval! constants.hwid_need_vpd",
         "is_chromebox": "eval! constants.is_chromebox",
         "rma_mode": "eval! constants.rma_mode",
+        "mlb_mode": "eval! constants.grt.mlb_mode",
         "secure_wipe": "eval! constants.grt.secure_wipe",
         "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
         "write_protection": "eval! constants.grt.force_write_protect or options.phase == 'PVT'"
