@@ -377,7 +377,11 @@
       ]
     },
     "Cr50WriteWhitelabelFlags": {
-      "pytest_name": "cr50_write_whitelabel_flags"
+      "pytest_name": "cr50_write_whitelabel_flags",
+      "args": {
+        "enable_zero_touch": "eval! constants.grt.enable_zero_touch",
+        "rma_mode": "eval! constants.rma_mode"
+      }
     },
     "DeprovisionCBI": {
       "inherit": "ExecShell",
