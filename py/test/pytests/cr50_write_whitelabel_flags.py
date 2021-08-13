@@ -21,6 +21,8 @@ Dependency
 - Command `cros_config` on DUT.
 - Script `cr50-set-board-id.sh` needs to support
   `cr50-set-board-id.sh whitelabel_<pvt|dev>_flags`
+- Script `cr50-set-sn-bits.sh` needs to be supported when `enable_zero_touch` is
+  set.
 
 Examples
 --------
@@ -45,6 +47,10 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
       Arg('enable_zero_touch', bool, (
           'Enable zero touch enrollment.  This will set the cr50 SN bits using '
           'VPD field attested_device_id.'), default=False),
+      Arg('rma_mode', bool,
+          ('Whether this MLB is for RMA purpose or not.  Note that currently, '
+           'rma_mode=false will override and DISABLE enable_zero_touch.'),
+          default=False),
   ]
 
   def setUp(self):
@@ -65,6 +71,9 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
     args = []
     if self.args.enable_zero_touch:
       args.append('--enable_zero_touch')
+
+    if self.args.rma_mode:
+      args.append('--rma_mode')
 
     factory_tools = deploy_utils.CreateFactoryTools(self.dut)
     try:
