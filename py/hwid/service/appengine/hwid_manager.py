@@ -494,7 +494,7 @@ class HwidManager:
       q = CLNotification.query(CLNotification.notification_type == "reviewer")
       reviewers = []
       for notification in list(q):
-        reviewers.append(notification.email.encode('utf-8'))
+        reviewers.append(notification.email)
       return reviewers
 
   def GetCLCCs(self):
@@ -502,7 +502,7 @@ class HwidManager:
       q = CLNotification.query(CLNotification.notification_type == "cc")
       ccs = []
       for notification in list(q):
-        ccs.append(notification.email.encode('utf-8'))
+        ccs.append(notification.email)
       return ccs
 
   def GetLatestHWIDMainCommit(self):

@@ -300,9 +300,9 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
 
   notification = []
   if reviewers:
-    notification += [b'r=' + email for email in reviewers]
+    notification += [b'r=' + _B(email) for email in reviewers]
   if cc:
-    notification += [b'cc=' + email for email in cc]
+    notification += [b'cc=' + _B(email) for email in cc]
   target_branch = b'refs/for/' + _B(branch)
   if notification:
     target_branch += b'%' + b','.join(notification)
