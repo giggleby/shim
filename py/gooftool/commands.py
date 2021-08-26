@@ -480,8 +480,6 @@ def Cr50Finalize(options):
     logging.warning('RMA mode. Skip setting RO hash.')
   elif options.mlb_mode:
     logging.warning('MLB mode. Skip setting RO hash.')
-  elif options.use_generic_tpm2:
-    logging.warning('Generic TPM2 device. Skip setting RO hash.')
   else:
     logging.warning('RO hash is not set on Octopus.')
   Cr50WriteFlashInfo(options)

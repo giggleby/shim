@@ -944,13 +944,15 @@ class Gooftool(object):
                    'Cr50 on this device.')
       return
 
-    if is_whitelabel:
-      # For whitelabel devices, the phase argument is always 'whitelabel'.
-      arg_phase = 'whitelabel'
     elif phase.GetPhase() >= phase.PVT_DOGFOOD:
       arg_phase = 'pvt'
     else:
       arg_phase = 'dev'
+
+    if is_whitelabel:
+      cmd = [script_path, 'whitelabel_' + arg_phase]
+    else:
+      cmd = [script_path, arg_phase]
 
     # TODO(hungte) Remove the service management once cr50-set-board-id.sh
     # has been changed to use '-a' (any) method.
@@ -959,7 +961,7 @@ class Gooftool(object):
     try:
       service_mgr.SetupServices(disable_services=disable_services)
 
-      result = self._util.shell([script_path, arg_phase])
+      result = self._util.shell(cmd)
       if result.status == 0:
         logging.info('Successfully set board ID on Cr50 with phase %s.',
                      arg_phase)
@@ -1041,8 +1043,15 @@ class Gooftool(object):
                    'Cr50 on this device.')
       return
 
+    if phase.GetPhase() >= phase.PVT_DOGFOOD:
+      arg_phase = 'pvt'
+    else:
+      arg_phase = 'dev'
+
+    cmd = [script_path, 'whitelabel_%s_flags' % arg_phase]
+
     try:
-      result = self._util.shell([script_path, 'whitelabel_flags'])
+      result = self._util.shell(cmd)
       if result.status == 0:
         logging.info('Successfully set whitelabel flags.')
       elif result.status == 2:
