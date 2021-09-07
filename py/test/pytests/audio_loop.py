@@ -192,6 +192,8 @@ _DEFAULT_NOISE_TEST_DURATION = 1
 _DEFAULT_SOX_RMS_THRESHOLD = (0.08, None)
 # Default Amplitude thresholds when checking recorded file.
 _DEFAULT_SOX_AMPLITUDE_THRESHOLD = (None, None)
+# Default RMS thresholds when testing audiofuntest.
+_DEFAULT_AUDIOFUNTEST_RMS_THRESHOLD = 0.01
 # Default duration in seconds to trim in the beginning of recorded file.
 _DEFAULT_TRIM_SECONDS = 0.5
 
@@ -514,6 +516,8 @@ class AudioLoopTest(test_case.TestCase):
         self._alsa_input_device, capture_rate,
         self.args.num_input_channels)
 
+    rms_threshold = self._current_test_args.get(
+        'rms_threshold', _DEFAULT_AUDIOFUNTEST_RMS_THRESHOLD)
     process = self._dut.Popen(
         [audio_utils.AUDIOFUNTEST_PATH,
          '-P', player_cmd,
@@ -523,7 +527,8 @@ class AudioLoopTest(test_case.TestCase):
          '-a', '%d' % output_channel,
          '-m', ','.join(map(str, input_channels)),
          '-c', '%d' % self.args.num_input_channels,
-         '-g', '%d' % volume_gain],
+         '-g', '%d' % volume_gain,
+         '-p', '%f' % rms_threshold],
         stdout=process_utils.PIPE, stderr=process_utils.PIPE)
 
     last_success_rate = None
