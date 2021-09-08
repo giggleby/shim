@@ -1147,6 +1147,7 @@ do_get_changes() {
       py/instalog
       py/multicast
       py/umpire
+      py/umpire_sync
       ':(exclude)py/umpire/client'
       go/src/overlord
   )
