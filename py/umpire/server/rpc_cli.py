@@ -262,7 +262,6 @@ class CLICommand(umpire_rpc.UmpireRPC):
     """
     self_payloads = self.env.GetActivePayload(
         self.daemon.env.active_config_file)
-    update_config = self_payloads
     need_update = False
     for payload_type, target_payload_content in target_payloads.items():
       if payload_type not in self_payloads or self_payloads[payload_type][
@@ -273,10 +272,9 @@ class CLICommand(umpire_rpc.UmpireRPC):
             url = f'{target_url}/res/{file_content}'
             path = f'/{umpire_env.DEFAULT_BASE_DIR}/resources/{file_content}'
             urllib.request.urlretrieve(url, path)
-      update_config[payload_type] = target_payload_content
     if need_update:
-      import_bundle.BundleImporter(self.daemon).UpdateBundle(
-          update_config, None, 'Update by the service.')
+      update.ResourceUpdater(self.daemon).UpdateFromConfig(
+          target_payloads, 'Update by the service.')
     return need_update
 
   @umpire_rpc.RPCCall
