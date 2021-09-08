@@ -246,6 +246,11 @@ class WiFi(device_types.DeviceComponent):
         elif key == 'RSN':
           ap.encryption_type = 'wpa2'
 
+        elif key == '* Authentication suites':
+          suites = set(value.split())
+          if 'SAE' in suites:
+            ap.encryption_type = 'wpa3-sae'
+
         elif key == 'freq':
           ap.frequency = int(value)
 
@@ -390,7 +395,7 @@ class AccessPoint:
     strength: Signal strength in dBm.
     quality: Link quality out of 100.
     encryption_type: Type of encryption used.  Can be one of:
-      None, 'wep', 'wpa', 'wpa2'.
+      None, 'wep', 'wpa', 'wpa2', 'wpa3-sae'.
   """
 
   def __init__(self):
@@ -523,11 +528,10 @@ class Connection:
   _CONN_STATUS_TX_BITRATE_RE = re.compile(r'^\s*tx bitrate:.*$')
   _CONN_STATUS_RX_BITRATE_RE = re.compile(r'^\s*rx bitrate:.*$')
 
-  def __init__(self, dut, interface, ap, passkey,
-               connect_timeout=None, connect_attempt_timeout=None,
-               dhcp_timeout=None,
-               tmp_dir=None, dhcp_method=DHCP_DHCLIENT,
-               dhclient_script_path=None):
+  def __init__(self, dut: device_types.DeviceInterface, interface: str,
+               ap: AccessPoint, passkey, connect_timeout=None,
+               connect_attempt_timeout=None, dhcp_timeout=None, tmp_dir=None,
+               dhcp_method=DHCP_DHCLIENT, dhclient_script_path=None):
     self._device = dut
     self.interface = interface
     self.ap = ap
@@ -613,7 +617,9 @@ class Connection:
     auth_fns = {
         'wep': self._AuthenticateWEP,
         'wpa': self._AuthenticateWPA,
-        'wpa2': self._AuthenticateWPA}
+        'wpa2': self._AuthenticateWPA,
+        'wpa3-sae': self._AuthenticateWPA,
+    }
     auth_process = auth_fns.get(
         self.ap.encryption_type, self._AuthenticateOpen)()
     next(auth_process)
@@ -842,6 +848,54 @@ class Connection:
 
     yield  # We have disconnected.
 
+  def _LaunchWPASupplicant(self, wpa_file, wpa_supplicant_command, use_h2e):
+    """Configures and launches a wpa_supplicant.
+
+    Args:
+      wpa_file: The path of the config file.
+      wpa_supplicant_command: The command to create a wpa_supplicant.
+      use_h2e: If it's true, enable H2E.
+
+    Returns:
+      If succeeds, returns True. If we should re-launch with use_h2e=False,
+      returns False.
+
+    Raises:
+      device_types.CalledProcessError if there is an error when creating
+      wpa_supplicant.
+    """
+    logging.info('Creating wpa.conf...')
+    # TODO(kitching): Escape quotes in ssid and passkey properly.
+    config_content = '\n'.join([
+        'sae_pwe=2' if use_h2e else '',
+        'network={',
+        '        ssid="{}"'.format(self.ap.ssid),
+        '        key_mgmt=WPA-PSK SAE',
+        '        ieee80211w=1',
+        '        psk="{}"'.format(self.passkey),
+        '}',
+    ])
+    logging.info('wpa.conf:\n%s', config_content)
+    self._device.WriteFile(wpa_file, config_content)
+
+    logging.info('Launching wpa_supplicant...')
+    process = self._device.Popen(wpa_supplicant_command,
+                                 stdout=self._device.PIPE,
+                                 stderr=self._device.PIPE)
+    stdout, stderr = process.communicate()
+    if stdout:
+      logging.info('stdout:\n%s', stdout)
+    if stderr:
+      logging.info('stderr:\n%s', stderr)
+    if process.returncode == 0:
+      return True
+    if use_h2e and stdout is not None and 'sae_pwe=2' in stdout:
+      logging.info('The current wpa_supplicant doesn\'t support H2E. This '
+                   'implies that you cannot connect to 6G networks.')
+      return False
+    raise device_types.CalledProcessError(
+        process.returncode, wpa_supplicant_command, stdout, stderr)
+
   def _AuthenticateWPA(self):
     """Authenticates and connect to a WPA network."""
     if self.passkey is None:
@@ -849,12 +903,6 @@ class Connection:
 
     PID_FILE = os.path.join(self._tmp_dir, 'wpa_supplicant.pid')
     WPA_FILE = os.path.join(self._tmp_dir, 'wpa.conf')
-    # TODO(kitching): Escape quotes in ssid and passkey properly.
-    wpa_passphrase_command = (
-        u'wpa_passphrase {ssid} {passkey} > {wpa_file}'.format(
-            ssid=self.ap.ssid,
-            passkey=self.passkey,
-            wpa_file=WPA_FILE))
     wpa_supplicant_command = (
         'wpa_supplicant '
         '-B '  # daemonize
@@ -875,11 +923,11 @@ class Connection:
     logging.info('Killing any existing wpa_command processes...')
     self._device.Call(force_kill_command)
 
-    logging.info('Creating wpa.conf...')
-    self._device.CheckCall(wpa_passphrase_command)
-
-    logging.info('Launching wpa_supplicant...')
-    self._device.CheckCall(wpa_supplicant_command)
+    # Try to enable H2E and fall back if there is an error.
+    h2e_success = self._LaunchWPASupplicant(WPA_FILE, wpa_supplicant_command,
+                                            use_h2e=True)
+    if not h2e_success:
+      self._LaunchWPASupplicant(WPA_FILE, wpa_supplicant_command, use_h2e=False)
 
     # Pause until connected.  Throws exception if failed.
     if not self._Connect():
