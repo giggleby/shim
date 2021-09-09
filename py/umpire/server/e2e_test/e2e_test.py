@@ -37,30 +37,14 @@ from cros.factory.utils import sync_utils
 
 
 DOCKER_IMAGE_NAME = 'cros/factory_server'
-# Add a timestamp to project name to avoid problem that sometimes container goes
-# dead.
-UMPIRE_PROJECT_NAME = 'test_' + time.strftime('%Y%m%d_%H%M%S')
-UMPIRE_CONTAINER_NAME = 'umpire_' + UMPIRE_PROJECT_NAME
-SECOND_UMPIRE_PROJECT_NAME = 'test2_' + time.strftime('%Y%m%d_%H%M%S')
-SECOND_UMPIRE_CONTAINER_NAME = 'umpire_' + SECOND_UMPIRE_PROJECT_NAME
 
 BASE_DIR = os.path.dirname(__file__)
 SETUP_DIR = os.path.abspath(
     os.path.join(BASE_DIR, '..', '..', '..', '..', 'setup'))
 SCRIPT_PATH = os.path.join(SETUP_DIR, 'cros_docker.sh')
-PORT = net_utils.FindUnusedPort(tcp_only=True, length=5)
-ADDR_BASE = 'http://localhost:%s' % PORT
-RPC_ADDR_BASE = 'http://localhost:%s' % (PORT + 2)
-SECOND_PORT = net_utils.FindUnusedPort(tcp_only=True, length=5)
-SECOND_ADDR_BASE = 'http://localhost:%s' % SECOND_PORT
-SECOND_RPC_ADDR_BASE = 'http://localhost:%s' % (SECOND_PORT + 2)
 
 HOST_BASE_DIR = os.environ.get('TMPDIR', '/tmp')
 HOST_SHARED_DIR = os.path.join(HOST_BASE_DIR, 'cros_docker')
-HOST_UMPIRE_DIR = os.path.join(HOST_SHARED_DIR, 'umpire', UMPIRE_PROJECT_NAME)
-HOST_RESOURCE_DIR = os.path.join(HOST_UMPIRE_DIR, 'resources')
-SECOND_UMPIRE_DIR = os.path.join(HOST_SHARED_DIR, 'umpire',
-                                 SECOND_UMPIRE_PROJECT_NAME)
 
 DOCKER_BASE_DIR = '/var/db/factory/umpire/'
 DOCKER_RESOURCE_DIR = os.path.join(DOCKER_BASE_DIR, 'resources')
@@ -93,9 +77,21 @@ class _UmpireReady():
       return False
 
 
-def _CopyTestData(umpire_dir):
+class _UmpireInformation():
+
+  def __init__(self, project_name):
+    self.port = net_utils.FindUnusedPort(tcp_only=True, length=5)
+    self.addr_base = 'http://localhost:%s' % self.port
+    self.rpc_addr_base = 'http://localhost:%s' % (self.port + 2)
+    self.project_name = project_name
+    self.container_name = 'umpire_' + project_name
+    self.umpire_dir = os.path.join(HOST_SHARED_DIR, 'umpire', self.project_name)
+    self.resource_dir = os.path.join(self.umpire_dir, 'resources')
+
+
+def _CopyTestData(umpire_dir, setup_shared_data):
   logging.info('Copying test data...')
-  if umpire_dir == HOST_UMPIRE_DIR:
+  if setup_shared_data:
     shutil.copytree(SHARED_TESTDATA_DIR, HOST_SHARED_DIR, symlinks=True)
   shutil.copytree(UMPIRE_TESTDATA_DIR, umpire_dir, symlinks=True)
   for sub_dir in ('conf', 'log', 'run', 'temp', 'umpire_data'):
@@ -109,11 +105,12 @@ def CleanUp(project_name, port):
   shutil.rmtree(HOST_SHARED_DIR, ignore_errors=True)
 
 
-def SetUpUmpire(project_name, port, umpire_dir, rpc_addr):
+def SetUpUmpire(project_name, port, umpire_dir, rpc_addr,
+                setup_shared_data=False):
   try:
     logging.info('Starting umpire container %s on port %s', project_name, port)
 
-    _CopyTestData(umpire_dir)
+    _CopyTestData(umpire_dir, setup_shared_data)
 
     logging.info('Starting umpire...')
     _RunCrosDockerCommand(project_name, port, 'umpire', 'run')
@@ -142,14 +139,17 @@ class UmpireDockerTestCase(unittest.TestCase):
   """
   @classmethod
   def setUpClass(cls):
-    del cls  # Unused.
-    SetUpUmpire(UMPIRE_PROJECT_NAME, PORT, HOST_UMPIRE_DIR, RPC_ADDR_BASE)
+    # Add a timestamp to project name to avoid problem that sometimes container
+    # goes dead.
+    project_name = 'test_' + time.strftime('%Y%m%d_%H%M%S')
+    cls.umpire = _UmpireInformation(project_name)
+    SetUpUmpire(cls.umpire.project_name, cls.umpire.port, cls.umpire.umpire_dir,
+                cls.umpire.rpc_addr_base, setup_shared_data=True)
 
   @classmethod
   def tearDownClass(cls):
-    del cls  # Unused.
-    PrintDockerLogs(UMPIRE_CONTAINER_NAME)
-    CleanUp(UMPIRE_PROJECT_NAME, PORT)
+    PrintDockerLogs(cls.umpire.container_name)
+    CleanUp(cls.umpire.project_name, cls.umpire.port)
 
   @contextlib.contextmanager
   def assertRPCRaises(self,
@@ -173,27 +173,30 @@ class TwoUmpireDockerTestCase(UmpireDockerTestCase):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
-    SetUpUmpire(SECOND_UMPIRE_PROJECT_NAME, SECOND_PORT, SECOND_UMPIRE_DIR,
-                SECOND_RPC_ADDR_BASE)
+    project_name = 'test2_' + time.strftime('%Y%m%d_%H%M%S')
+    cls.second_umpire = _UmpireInformation(project_name)
+    SetUpUmpire(cls.second_umpire.project_name, cls.second_umpire.port,
+                cls.second_umpire.umpire_dir, cls.second_umpire.rpc_addr_base)
 
   @classmethod
   def tearDownClass(cls):
     super().tearDownClass()
-    PrintDockerLogs(SECOND_UMPIRE_CONTAINER_NAME)
-    CleanUp(SECOND_UMPIRE_PROJECT_NAME, SECOND_PORT)
+    PrintDockerLogs(cls.second_umpire.container_name)
+    CleanUp(cls.second_umpire.project_name, cls.second_umpire.port)
 
 
 class ResourceMapTest(UmpireDockerTestCase):
   """Tests for Umpire /webapps/resourcemap and legacy /resourcemap."""
+
   def testResourceMap(self):
-    r = requests.get('%s/webapps/resourcemap' % ADDR_BASE,
+    r = requests.get('%s/webapps/resourcemap' % self.umpire.addr_base,
                      headers={'X-Umpire-DUT': 'mac=00:11:22:33:44:55'})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
         re.search(r'^payloads: .*\.json$', r.text, re.MULTILINE))
 
   def testLegacyResourceMap(self):
-    r = requests.get('%s/resourcemap' % ADDR_BASE,
+    r = requests.get('%s/resourcemap' % self.umpire.addr_base,
                      headers={'X-Umpire-DUT': 'mac=00:11:22:33:44:55'})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
@@ -202,25 +205,24 @@ class ResourceMapTest(UmpireDockerTestCase):
 
 class DownloadSlotsManagerTest(UmpireDockerTestCase):
   """Tests for Umpire /webapps/download_slots."""
+
   def testCanRequestSlot(self):
-    r = requests.get('%s/webapps/download_slots' % ADDR_BASE,
+    r = requests.get('%s/webapps/download_slots' % self.umpire.addr_base,
                      headers={'X-Umpire-DUT': 'uuid='})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
         re.search(r'^UUID: [\w-]+',
                   r.text, re.MULTILINE))
-    self.assertIsNotNone(
-        re.search(r'^N_PLACE: 0$', r.text, re.MULTILINE))
+    self.assertIsNotNone(re.search(r'^N_PLACE: 0$', r.text, re.MULTILINE))
 
   def testExtendAliveTimeSlot(self):
-    r = requests.get('%s/webapps/download_slots' % ADDR_BASE,
+    r = requests.get('%s/webapps/download_slots' % self.umpire.addr_base,
                      headers={'X-Umpire-DUT': 'uuid='})
     self.assertEqual(200, r.status_code)
-    res = re.search(r'^UUID: ([\w-]+)$',
-                    r.text, re.MULTILINE)
+    res = re.search(r'^UUID: ([\w-]+)$', r.text, re.MULTILINE)
     self.assertIsNotNone(res)
 
-    r = requests.get('%s/webapps/download_slots' % ADDR_BASE,
+    r = requests.get('%s/webapps/download_slots' % self.umpire.addr_base,
                      headers={'X-Umpire-DUT': 'uuid=%s' % res.group(1)})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
@@ -229,9 +231,10 @@ class DownloadSlotsManagerTest(UmpireDockerTestCase):
 
 class UmpireRPCTest(UmpireDockerTestCase):
   """Tests for Umpire RPC."""
+
   def setUp(self):
     super(UmpireRPCTest, self).setUp()
-    self.proxy = xmlrpc.client.ServerProxy(RPC_ADDR_BASE)
+    self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
     self.default_config = json.loads(
         self.ReadConfigTestdata('umpire_default.json'))
     # Deploy an empty default config.
@@ -249,7 +252,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
     self.assertIn('IsDeploying', self.proxy.system.listMethods())
 
   def testEndingSlashInProxyAddress(self):
-    proxy = xmlrpc.client.ServerProxy(RPC_ADDR_BASE + '/')
+    proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
     self.assertIn('IsDeploying', proxy.system.listMethods())
 
   def testGetActiveConfig(self):
@@ -259,8 +262,9 @@ class UmpireRPCTest(UmpireDockerTestCase):
   def testAddConfigFromBlob(self):
     test_add_config_blob = 'test config blob'
     conf = self.proxy.AddConfigFromBlob(test_add_config_blob, 'umpire_config')
-    self.assertEqual(test_add_config_blob, file_utils.ReadFile(
-        os.path.join(HOST_RESOURCE_DIR, conf)))
+    self.assertEqual(
+        test_add_config_blob,
+        file_utils.ReadFile(os.path.join(self.umpire.resource_dir, conf)))
 
   def testValidateConfig(self):
     with self.assertRPCRaises('json.decoder.JSONDecodeError'):
@@ -299,7 +303,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
     # TODO(pihsun): Figure out a better way to detect if services are restarted
     # without reading docker logs.
     docker_logs = process_utils.CheckOutput(
-        ['docker', 'logs', UMPIRE_CONTAINER_NAME],
+        ['docker', 'logs', self.umpire.container_name],
         stderr=subprocess.STDOUT).splitlines()
     restarted_services = []
     for log_line in reversed(docker_logs):
@@ -328,8 +332,8 @@ class UmpireRPCTest(UmpireDockerTestCase):
     self.assertEqual(self.default_config, active_config)
 
   def testStopStartService(self):
-    test_rsync_cmd = (
-        'rsync rsync://localhost:%d/system_logs >/dev/null 2>&1' % (PORT + 4))
+    test_rsync_cmd = ('rsync rsync://localhost:%d/system_logs >/dev/null 2>&1' %
+                      (self.umpire.port + 4))
 
     self.proxy.StopServices(['rsync'])
     self.assertNotEqual(0, subprocess.call(test_rsync_cmd, shell=True))
@@ -340,7 +344,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
   def testAddPayload(self):
     payload = self.proxy.AddPayload('/mnt/hwid.gz', 'hwid')
     resource = payload['hwid']['file']
-    resource_path = os.path.join(HOST_RESOURCE_DIR, resource)
+    resource_path = os.path.join(self.umpire.resource_dir, resource)
 
     self.assertRegex(resource, r'hwid\..*\.gz')
     with gzip.open(os.path.join(SHARED_TESTDATA_DIR, 'hwid.gz')) as f1:
@@ -359,7 +363,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
         active_config['bundles'][0]['payloads'])
     self.assertEqual(resource, payload['hwid']['file'])
 
-    os.unlink(os.path.join(HOST_RESOURCE_DIR, resource))
+    os.unlink(os.path.join(self.umpire.resource_dir, resource))
 
   def testImportBundle(self):
     resources = {
@@ -379,7 +383,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
 
     for resource_type, resource in resources.items():
       self.assertTrue(
-          os.path.exists(os.path.join(HOST_RESOURCE_DIR, resource)))
+          os.path.exists(os.path.join(self.umpire.resource_dir, resource)))
       self.assertEqual(new_payload[resource_type]['file'], resource)
 
     self.assertEqual('umpire_test', active_config['active_bundle_id'])
@@ -392,7 +396,7 @@ class UmpireHTTPTest(UmpireDockerTestCase):
   """Tests for Umpire http features."""
   def setUp(self):
     super(UmpireHTTPTest, self).setUp()
-    self.proxy = xmlrpc.client.ServerProxy(RPC_ADDR_BASE)
+    self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
 
   def testReverseProxy(self):
     to_deploy_config = file_utils.ReadFile(
@@ -400,8 +404,8 @@ class UmpireHTTPTest(UmpireDockerTestCase):
     conf = self.proxy.AddConfigFromBlob(to_deploy_config, 'umpire_config')
     self.proxy.Deploy(conf)
 
-    response = requests.get(
-        'http://localhost:%d/res/test' % PORT, allow_redirects=False)
+    response = requests.get('http://localhost:%d/res/test' % self.umpire.port,
+                            allow_redirects=False)
     self.assertEqual(307, response.status_code)
     self.assertEqual('http://11.22.33.44/res/test',
                      response.headers['Location'])
@@ -411,39 +415,45 @@ class RPCDUTTest(UmpireDockerTestCase):
   """Tests for Umpire DUT RPC."""
   def setUp(self):
     super(RPCDUTTest, self).setUp()
-    self.proxy = xmlrpc.client.ServerProxy(ADDR_BASE)
+    self.proxy = xmlrpc.client.ServerProxy(self.umpire.addr_base)
 
   def testPing(self):
     version = self.proxy.Ping()
-    self.assertEqual({'version': 3, 'project': UMPIRE_PROJECT_NAME}, version)
+    self.assertEqual({
+        'version': 3,
+        'project': self.umpire.project_name
+    }, version)
 
   def testEndingSlashInProxyAddress(self):
-    proxy = xmlrpc.client.ServerProxy(ADDR_BASE + '/')
-    self.assertEqual({'version': 3, 'project': UMPIRE_PROJECT_NAME},
-                     proxy.Ping())
+    proxy = xmlrpc.client.ServerProxy(self.umpire.addr_base)
+    self.assertEqual({
+        'version': 3,
+        'project': self.umpire.project_name
+    }, proxy.Ping())
 
   def testGetTime(self):
     t = self.proxy.GetTime()
     self.assertAlmostEqual(t, time.time(), delta=1)
 
   def testAlternateURL(self):
-    proxy = xmlrpc.client.ServerProxy('%s/umpire' % ADDR_BASE)
+    proxy = xmlrpc.client.ServerProxy('%s/umpire' % self.umpire.addr_base)
     version = proxy.Ping()
-    self.assertEqual({'version': 3, 'project': UMPIRE_PROJECT_NAME}, version)
+    self.assertEqual({
+        'version': 3,
+        'project': self.umpire.project_name
+    }, version)
 
   def testGetFactoryLogPort(self):
-    self.assertEqual(PORT + 4, self.proxy.GetFactoryLogPort())
+    self.assertEqual(self.umpire.port + 4, self.proxy.GetFactoryLogPort())
 
   def testUploadReport(self):
     report = b'Stub report content for testing.'
     self.assertTrue(self.proxy.UploadReport('test_serial', report))
     # Report uses GMT time
     now = time.gmtime(time.time())
-    report_pattern = os.path.join(HOST_UMPIRE_DIR,
-                                  'umpire_data',
-                                  'report',
-                                  time.strftime('%Y%m%d', now),
-                                  'Unknown-test_serial-*.rpt.xz')
+    report_pattern = os.path.join(
+        self.umpire.umpire_dir, 'umpire_data', 'report',
+        time.strftime('%Y%m%d', now), 'Unknown-test_serial-*.rpt.xz')
     report_files = glob.glob(report_pattern)
     self.assertEqual(1, len(report_files))
     report_file = report_files[0]
@@ -453,9 +463,10 @@ class RPCDUTTest(UmpireDockerTestCase):
 class ServiceTest(TwoUmpireDockerTestCase):
 
   def setUp(self):
-    super(ServiceTest, self).setUp()
-    self.proxy = xmlrpc.client.ServerProxy(RPC_ADDR_BASE)
-    self.second_proxy = xmlrpc.client.ServerProxy(SECOND_RPC_ADDR_BASE)
+    super().setUp()
+    self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
+    self.second_proxy = xmlrpc.client.ServerProxy(
+        self.second_umpire.rpc_addr_base)
 
   def ReadConfigTestdata(self, name):
     return json_utils.LoadFile(os.path.join(CONFIG_TESTDATA_DIR, name))
@@ -466,23 +477,18 @@ class ServiceTest(TwoUmpireDockerTestCase):
     self.proxy.Deploy(conf)
     time.sleep(wait_time)
 
-  def testVersion(self):
-    self.assertEqual(common.UMPIRE_VERSION, self.proxy.GetVersion())
-    self.assertEqual(common.UMPIRE_VERSION, self.second_proxy.GetVersion())
-
   def testSyncService(self):
     to_deploy_config = self.ReadConfigTestdata('umpire_sync_service.json')
     to_deploy_config['services']['umpire_sync']['primary_information'][
-        'port'] = str(PORT)
+        'port'] = str(self.umpire.port)
     to_deploy_config['services']['umpire_sync']['secondary_information'][0][
-        'port'] = str(SECOND_PORT)
+        'port'] = str(self.second_umpire.port)
     self.StartService(to_deploy_config, wait_time=2)
-
     self.assertEqual(self.proxy.GetActivePayload(),
                      self.second_proxy.GetActivePayload())
     # The secondary ip is set in testdata/config/umpire_sync_service.json, which
     # is the default ip of docker0
-    second_url = 'http://172.17.0.1:%d' % SECOND_PORT
+    second_url = 'http://172.17.0.1:%d' % self.second_umpire.port
     self.assertEqual(self.proxy.GetUmpireSyncStatus()[second_url]['status'],
                      'Success')
 
