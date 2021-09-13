@@ -937,7 +937,6 @@ class Gooftool(object):
     """
 
     script_path = '/usr/share/cros/cr50-set-board-id.sh'
-    disable_services = ['trunksd']
 
     if not os.path.exists(script_path):
       logging.warn('The Cr50 script is not found, there should be no '
@@ -954,13 +953,7 @@ class Gooftool(object):
     else:
       cmd = [script_path, arg_phase]
 
-    # TODO(hungte) Remove the service management once cr50-set-board-id.sh
-    # has been changed to use '-a' (any) method.
-    service_mgr = service_utils.ServiceManager()
-
     try:
-      service_mgr.SetupServices(disable_services=disable_services)
-
       result = self._util.shell(cmd)
       if result.status == 0:
         logging.info('Successfully set board ID on Cr50 with phase %s.',
@@ -979,10 +972,6 @@ class Gooftool(object):
     except Exception:
       logging.exception('Failed to set Cr50 Board ID.')
       raise
-
-    finally:
-      # Restart stopped service even if something went wrong.
-      service_mgr.RestoreServices()
 
   def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
                          mlb_mode=False):
