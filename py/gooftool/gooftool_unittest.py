@@ -23,6 +23,7 @@ from cros.factory.gooftool import cros_config
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
+from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
@@ -222,7 +223,8 @@ class GooftoolTest(unittest.TestCase):
 
   @mock.patch.object(cros_config, 'CrosConfig', autospec=True)
   @mock.patch.object(sys_utils, 'MountPartition', autospec=True)
-  def testVerifyKey(self, mock_mount, mock_cros_config):
+  @mock.patch.object(pygpt, 'GPT', autospec=True)
+  def testVerifyKey(self, mock_pygpt, mock_mount, mock_cros_config):
     self._gooftool._util.GetReleaseKernelPathFromRootPartition.return_value = \
         '/dev/zero'
     self._gooftool._crosfw.LoadMainFirmware.side_effect = [
@@ -244,9 +246,18 @@ class GooftoolTest(unittest.TestCase):
       def GetWhiteLabelTag(self):
         return True, 'unittest'
 
+    class FakeGPT:
+
+      def LoadFromFile(self):
+        gpt = mock.Mock()
+        gpt.IsLastPartition = mock.Mock(return_value=True)
+        return gpt
+
     mock_mount.return_value = MockPath()
 
     mock_cros_config.return_value = FakeCrosConfigModule()
+
+    mock_pygpt.return_value = FakeGPT()
 
     self._gooftool.VerifyKeys('/dev/null', _tmpexec=fake_tmpexc)
     self._gooftool._crosfw.LoadMainFirmware.assert_called()

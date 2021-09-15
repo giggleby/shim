@@ -17,6 +17,7 @@ import time
 
 import yaml
 
+from cros.factory.device import device_utils
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import bmpblk
 from cros.factory.gooftool import cros_config as cros_config_module
@@ -38,6 +39,7 @@ from cros.factory.test.utils import cbi_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
+from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 
@@ -45,6 +47,8 @@ from cros.factory.utils.type_utils import Error
 Mismatch = namedtuple('Mismatch', ['expected', 'actual'])
 
 _FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
+
+_PART_TABLE_ERROR_TEMPLATE = "Please run partition_table pytest to fix it."
 
 
 class CrosConfigError(Error):
@@ -186,6 +190,80 @@ class Gooftool:
       firmware_path: A string for firmware image file path.
       _tmpexec: A function for overriding execution inside temp folder.
     """
+
+    def _VerifyMiniOS(is_dev_rootkey, key_recovery, dir_devkeys):
+      # disk_layout_v3.json adds two new partitions (MINIOS-A/B) to conduct
+      # network based recovery. MINIOS-A locates at the beginning of the disk,
+      # while MINIOS-B locates at the end of the disk. To determine whether a
+      # disk layout is disk_layout_v3, we check if the last partition is
+      # MINIOS-B.
+      gpt = pygpt.GPT.LoadFromFile(self._util.GetPrimaryDevicePath())
+      dut = device_utils.CreateDUTInterface()
+      minios_a_no = dut.partitions.MINIOS_A.index
+      minios_b_no = dut.partitions.MINIOS_B.index
+      minios_a_part = self._util.GetPrimaryDevicePath(minios_a_no)
+      minios_b_part = self._util.GetPrimaryDevicePath(minios_b_no)
+      is_disk_layout_v3 = gpt.IsLastPartition(minios_b_no)
+
+      # Check if minios is ready (see b/199021334#comment6).
+      is_minios_ready = False
+      if is_disk_layout_v3:
+        logging.info('The disk layout version is v3.')
+
+        logging.info(
+            'Checking if the size of partition MINIOS_A and MINIOS_B are the '
+            'same...')
+        if gpt.GetPartition(minios_a_no).blocks != gpt.GetPartition(
+            minios_b_no).blocks:
+          raise Error(
+              'The size of partition MINIOS_A and MINIOS_B are different. %s' %
+              _PART_TABLE_ERROR_TEMPLATE)
+
+        _TmpExec(
+            'check if the content of partition MINIOS_A and MINIOS_B are the '
+            'same', 'cmp %s %s' % (minios_a_part, minios_b_part),
+            'The content of partition MINIOS_A and MINIOS_B are different. %s' %
+            _PART_TABLE_ERROR_TEMPLATE)
+
+        try:
+          _TmpExec(
+              'check if minios is ready',
+              'futility dump_kernel_config %s' % minios_a_part,
+              'MINIOS partitions are not ready. Skip checking their keys.')
+        except Error as err:
+          logging.info(err)
+        else:
+          logging.info('MINIOS partitions are ready.')
+          is_minios_ready = True
+
+      check_minios_sign = is_disk_layout_v3 and is_minios_ready
+
+      if check_minios_sign:
+        if is_dev_rootkey:
+          # Dev-signed firmware is only allowed in early build phases. So we
+          # can simply skip checking the signing key of minios partitions and
+          # don't have to re-sign using dev-key.
+          logging.info('Firmware is dev-signed. Skip checking the signing key'
+                       'of minios partitions.')
+          return
+        logging.info('Checking the signing key of minios partitions...')
+        try:
+          # Check if minios is officially signed.
+          for minios_part in minios_a_part, minios_b_part:
+            _TmpExec(
+                'check recovery key signed minios image (%s)' % minios_part,
+                'futility vbutil_kernel --verify %s --signpubkey %s' %
+                (minios_part, key_recovery))
+        except Error:
+          # Check if minios is dev-signed.
+          for minios_part in minios_a_part, minios_b_part:
+            _TmpExec(
+                'check dev-signed minios image (%s)' % minios_part,
+                '! futility vbutil_kernel --verify %s --signpubkey %s/%s' %
+                (minios_part, dir_devkeys, key_recovery),
+                'YOU ARE USING A DEV-SIGNED MINIOS IMAGE. (%s)' % minios_part)
+          raise
+
     if release_rootfs is None:
       release_rootfs = self._util.GetReleaseRootPartitionPath()
 
@@ -285,6 +363,8 @@ class Gooftool:
                    'YOU ARE FINALIZING WITH DEV-SIGNED IMAGE <%s>' %
                    key)
         raise
+
+      _VerifyMiniOS(is_dev_rootkey, key_recovery, dir_devkeys)
 
       if not is_dev_rootkey:
         cros_config = cros_config_module.CrosConfig(self._util.shell)
