@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import Button from '@material-ui/core/Button';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
 import CardHeader from '@material-ui/core/CardHeader';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
 import Divider from '@material-ui/core/Divider';
 import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
@@ -56,11 +61,24 @@ type ProjectAppProps =
   ReturnType<typeof mapStateToProps> &
   DispatchProps<typeof mapDispatchToProps>;
 
-class ProjectsApp extends React.Component<ProjectAppProps> {
+interface DialogStates {
+  open: boolean;
+  name: string;
+}
+class ProjectsApp extends React.Component<ProjectAppProps, DialogStates> {
+  state: DialogStates = {
+    open: false,
+    name:''
+  };
+
   handleSubmit = ({name}: CreateProjectFormData) => {
     this.props.createProject(name);
     this.props.resetForm();
   }
+
+  handleClose = () => {
+    this.setState({open: false});
+  };
 
   componentDidMount() {
     this.props.fetchProjects();
@@ -70,6 +88,7 @@ class ProjectsApp extends React.Component<ProjectAppProps> {
     const {classes, projects, switchProject, deleteProject} = this.props;
     const projectNames = Object.keys(projects).sort();
     return (
+      <>
       <Card>
         {/* TODO(littlecvr): make a logo! */}
         <CardHeader
@@ -99,7 +118,7 @@ class ProjectsApp extends React.Component<ProjectAppProps> {
                     <Tooltip title="delete this project">
                       <IconButton
                         color="inherit"
-                        onClick={() => deleteProject(name)}
+                        onClick={() => {this.setState({open: true, name: name});}}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -121,6 +140,21 @@ class ProjectsApp extends React.Component<ProjectAppProps> {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={this.state.open} onClose={this.handleClose}>
+        <DialogTitle>Alert</DialogTitle>
+        <DialogContent>
+        All files (including images, toolkit, uploaded logs) will be deleted.
+        Do you want to continue?
+        </DialogContent>
+        <DialogActions>
+          <Button color="primary" onClick={() => {
+            deleteProject(this.state.name);
+            this.setState({open: false});}}>OK</Button>
+          <Button onClick={this.handleClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+    </>
     );
   }
 }

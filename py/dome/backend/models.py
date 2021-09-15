@@ -533,8 +533,13 @@ class Project(django.db.models.Model):
   def DeleteUmpireContainer(self):
     logger.info('Deleting Umpire container %r', self.name)
     container_name = Project.GetUmpireContainerName(self.name)
+    umpire_dir = os.path.join(UMPIRE_BASE_DIR, self.name)
+
+    # remove container and directory
     subprocess.call(['docker', 'stop', container_name])
     subprocess.call(['docker', 'rm', container_name])
+    if os.path.exists(umpire_dir):
+      shutil.rmtree(umpire_dir)
     self.umpire_enabled = False
     self.save()
     return self
