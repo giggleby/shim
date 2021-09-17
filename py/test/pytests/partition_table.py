@@ -105,6 +105,11 @@ class PartitionTableTest(test_case.TestCase):
         start_sector, sector_count, end_sector, device_size)
     logging.info('Stateful partition extends to %.3f%% of storage',
                  pct_used)
+
+    # In disk_layout_v3, minios_b is the last partition.
+    # We have to remove it if we would like to expand the stateful partition.
+    has_minios_b = self.gpt.IsLastPartition(minios_b_no)
+
     if pct_used < self.args.min_usage_pct:
       if not self.args.expand_stateful:
         self.FailTask('Stateful partition does not cover enough of storage '
@@ -113,9 +118,6 @@ class PartitionTableTest(test_case.TestCase):
       # Repair partition headers and tables
       self.gpt.Resize(pygpt.GPT.GetImageSize(dev))
 
-      # In disk_layout_v3, minios_b is the last partition.
-      # We have to remove it or we cannot expand the stateful partition.
-      has_minios_b = self.gpt.IsLastPartition(minios_b_no)
       # Calculate the size of minios_a and reserve space when expanding
       # stateful partition.
       reserved_blocks = minios_a_part.blocks if has_minios_b else 0
@@ -135,12 +137,28 @@ class PartitionTableTest(test_case.TestCase):
         return
 
       # Add back partition minios_b.
+      logging.info('Add back partition MINIOS-B.')
       add_cmd = pygpt.GPTCommands.Add()
       add_cmd.ExecuteCommandLine('-i', str(minios_b_no), '-t', 'minios', '-b',
                                  str(start_sector + new_blocks), '-s',
                                  str(reserved_blocks), '-l', 'MINIOS-B', dev)
+      # Reload partition minios_b since it has changed.
+      self.gpt = pygpt.GPT.LoadFromFile(dev)
 
-      # Write the content of minios_a to minios_b_part.
+    if has_minios_b:
+      # Make sure that the partition size of minios_a/b are the same.
+      minios_b_part = self.gpt.GetPartition(minios_b_no)
+      if minios_a_part.blocks != minios_b_part.blocks:
+        logging.info(
+            'The partition size of MINIOS-A is %d, and MINIOS-B is '
+            '%d. Resizing MINIOS-B so that their sizes are the same.',
+            minios_a_part.blocks, minios_b_part.blocks)
+        add_cmd = pygpt.GPTCommands.Add()
+        add_cmd.ExecuteCommandLine('-i', str(minios_b_no), '-s',
+                                   str(minios_a_part.blocks), dev)
+
+      # Copy the content of minios_a to minios_b partition.
+      logging.info('Copy the content of MINIOS-A to MINIOS-B.')
       src = '%sp%d' % (dev, minios_a_no)
       dst = '%sp%d' % (dev, minios_b_no)
       self.dut.CheckCall([
