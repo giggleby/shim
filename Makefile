@@ -74,6 +74,7 @@ DOC_TEMP_DIR = $(TEMP_DIR)/docsrc
 DOC_ARCHIVE_PATH = $(BUILD_DIR)/doc.zip
 DOC_OUTPUT_DIR = $(BUILD_DIR)/doc
 DOC_PUBLISH_URL = gs://chromeos-factory-docs/sdk
+DOC_MD_DIR = md
 
 EBUILD_TEMP_DIR = $(TEMP_DIR)/ebuild
 EBUILD_TEST_BLOCKED_LIST = \
@@ -384,6 +385,10 @@ doc:
 	rsync -a doc/ $(DOC_TEMP_DIR)
 	# Generate rst sources for test cases
 	bin/generate_rsts -o $(DOC_TEMP_DIR)
+	# Copy Markdown files to temp dir
+	rsync -am --include="*.png" --include="README.md" --exclude "build/" \
+	  --exclude "go/pkg"  --include="*/" --exclude="*" . \
+	  $(DOC_TEMP_DIR)/$(DOC_MD_DIR)
 	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) \
 	                     $(DOC_TEMP_DIR)
 	mkdir -p $(dir $(DOC_ARCHIVE_PATH))

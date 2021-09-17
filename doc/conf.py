@@ -14,6 +14,47 @@ import os
 import sys
 import time
 
+from recommonmark.parser import CommonMarkParser
+from sphinx.domains import Domain
+
+
+MD_DIR = 'md'
+SRC_URI_ROOT = (
+    'https://chromium.googlesource.com/chromiumos/platform/factory/+/re'
+    'fs/heads/main/')
+
+
+class MarkdownParser(CommonMarkParser):
+  """
+  Add prolog for markdown file
+  """
+
+  supported = ['md', 'markdown']
+
+  def parse(self, inputstring, document):
+    path = document.current_source.split(MD_DIR, 1)[-1]
+    path = path.lstrip('/').rstrip('README.md')
+    src_uri = os.path.join(SRC_URI_ROOT, path)
+    prolog = f'**source code:** [{path}]({src_uri})\n\n'
+    super(MarkdownParser, self).parse(prolog + inputstring, document)
+
+
+class ChromiumURLDomain(Domain):
+  """
+  Resolve certain links in markdown files to chromium source.
+  """
+
+  name = 'chromiumurl'
+
+  def resolve_any_xref(self, env, fromdocname, builder, target, node, contnode):
+    uri = os.path.join('/'.join(fromdocname.split('/')[1:-1]), target)
+    if os.path.exists(os.path.join(MD_DIR, uri + '.md')):
+      return []
+
+    contnode['refuri'] = os.path.join(SRC_URI_ROOT, uri)
+    return [(f'{self.name}:any', contnode)]
+
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -51,10 +92,7 @@ extensions = [
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
-}
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -267,3 +305,9 @@ texinfo_documents = [
 #texinfo_show_urls = 'footnote'
 
 autodoc_member_order = 'bysource'
+
+
+# app setup hook
+def setup(app):
+  app.add_domain(ChromiumURLDomain)
+  app.add_source_parser(MarkdownParser, override=True)

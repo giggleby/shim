@@ -20,6 +20,7 @@ Contents:
 APIs:
 
 .. toctree::
+   :maxdepth: 2
 
    device_api
    test_api
@@ -27,6 +28,15 @@ APIs:
    test_i18n_api
    test_list_api
    shopfloor_api
+
+READMEs:
+
+.. toctree::
+   :glob:
+   :titlesonly:
+
+   md/README.md
+   md/**
 
 
 About this documentation
