@@ -11,6 +11,7 @@
 # Shortcut to allow arbitrary format.
 ANY = r'.+'
 ANY_OR_EMPTY = r'.*'
+RE_SERIAL_NUMBER = r'[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?'
 
 # The data is described in a mapping as key_name: value_re_format.
 # Note value_re_format has implicit '^' and '$' (see MatchWhole in core.py).
@@ -21,7 +22,7 @@ ANY_OR_EMPTY = r'.*'
 # If you need a new value, please follow go/cros-new-vpd to register a new one.
 
 REQUIRED_RO_DATA = {
-    'serial_number': ANY,
+    'serial_number': RE_SERIAL_NUMBER,
     'region': ANY,  # Or regions.REGIONS.iterkeys
 }
 
@@ -37,7 +38,7 @@ KNOWN_RO_DATA = {
     'mfg_date': r'\d{4}-\d{2}-\d{2}',  # yyyy-mm-dd
 
     # Optional values.
-    'mlb_serial_number': ANY,
+    'mlb_serial_number': RE_SERIAL_NUMBER,
     'whitelabel_tag': ANY_OR_EMPTY,
     'System_UUID': ANY,
     'sku_number': ANY,
