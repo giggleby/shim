@@ -1322,25 +1322,22 @@ class Gooftool:
       logging.exception('Failed to set Cr50 Board ID.')
       raise
 
-  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
-                         mlb_mode=False):
-    """Write device info into cr50 flash.
-
-    Args:
-      enable_zero_touch: Will set SN-bits in cr50 if rma_mode is not set.
-      rma_mode: This device / MLB is for RMA purpose, this will disable
-          zero_touch.
-      mlb_mode: This is just a MLB, not a full device.
-    """
-    model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
-    custom_type = model_sku_config.get('custom_type', '')
-    is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
+  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False):
+    """Write device info into cr50 flash."""
+    cros_config = cros_config_module.CrosConfig(self._util.shell)
+    is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
+    model_sku_config = config_utils.LoadConfig('model_sku', validate_schema=False)
+    model = cros_config.GetModelName()
+    if model not in model_sku_config['model']:
+      custom_type = ''
+    else:
+      custom_type = model_sku_config['model'][model].get('custom_type', '')
 
     if is_whitelabel:
       # If we can't find whitelabel_tag in VPD, this will be None.
       vpd_whitelabel_tag = self._vpd.GetValue('whitelabel_tag')
       if vpd_whitelabel_tag != whitelabel_tag:
-        if vpd_whitelabel_tag is None and custom_type != 'rebrand':
+        if vpd_whitelabel_tag is None and custom_type == 'whitelabel':
           # whitelabel_tag is not set in VPD.  Technically, this is allowed by
           # cros_config. It would be equivalent to whitelabel_tag='' (empty
           # string).  However, it is ambiguous, we don't know if this is
