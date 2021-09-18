@@ -26,3 +26,7 @@ class CrosConfig(object):
     """
     result = self.GetValue('/identity', 'whitelabel-tag')
     return result.success, (result.stdout.strip() if result.stdout else '')
+
+  def GetModelName(self):
+    result = self.GetValue('/', 'name')
+    return result.stdout.strip() if result.stdout else ''

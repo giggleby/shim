@@ -899,12 +899,18 @@ class Gooftool(object):
     """Write device info into cr50 flash."""
     cros_config = cros_config_module.CrosConfig(self._util.shell)
     is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
+    model_sku_config = config_utils.LoadConfig('model_sku', validate_schema=False)
+    model = cros_config.GetModelName()
+    if model not in model_sku_config['model']:
+      custom_type = ''
+    else:
+      custom_type = model_sku_config['model'][model].get('custom_type', '')
 
     if is_whitelabel:
       # If we can't find whitelabel_tag in VPD, this will be None.
       vpd_whitelabel_tag = self._vpd.GetValue('whitelabel_tag')
       if vpd_whitelabel_tag != whitelabel_tag:
-        if vpd_whitelabel_tag is None:
+        if vpd_whitelabel_tag is None and custom_type == 'whitelabel':
           # whitelabel_tag is not set in VPD.  Technically, this is allowed by
           # cros_config. It would be equivalent to whitelabel_tag='' (empty
           # string).  However, it is ambiguous, we don't know if this is
