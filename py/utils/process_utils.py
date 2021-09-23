@@ -417,14 +417,19 @@ class CommandPipe:
     bufs = [b''] * len(out_pipes)
     try:
       while not self._is_done:
+        self._is_done = all(p.poll() is not None for p in self._processes)
+
         rlist, unused_wlist, unused_xlist = select.select(
             out_pipes, [], [], self._read_timeout)
         for i, pipe in enumerate(out_pipes):
           if pipe not in rlist:
             continue
-          bufs[i] += os.read(pipe.fileno(), 4096)
 
-        self._is_done = all(p.poll() is not None for p in self._processes)
+          # Read until the pipe is empty
+          pipe_buffer = os.read(pipe.fileno(), 4096)
+          while len(pipe_buffer) > 0:
+            bufs[i] += pipe_buffer
+            pipe_buffer = os.read(pipe.fileno(), 4096)
 
       self._stdout_data = self._GetDecodedStr(bufs[-1])
       self._stderr_data = self._GetDecodedStr(bufs[-2])
