@@ -18,3 +18,6 @@ Find specific folder below and copy corresponding files to specified path.
 ## Configuration files
 * `Factory Python development: src/platform/factory`:
     Copy factory_settings.json to src/platform/factory/.vscode/settings.json.
+* `Factory Python development: src/private-overlays/overlay-${BOARD}-private`:
+    Copy factory_private_overlay_settings.json to
+    src/private-overlays/overlay-${BOARD}-private/.vscode/settings.json.
