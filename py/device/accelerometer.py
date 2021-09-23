@@ -4,7 +4,6 @@
 
 import logging
 import re
-import time
 
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
@@ -108,30 +107,27 @@ class AccelerometerController(sensor_utils.BasicSensorController):
         '--channels=%s' % ' '.join(iioservice_channels),
         '--frequency=%f' % sample_rate,
         '--device_id=%d' % int(self._GetSysfsValue('dev').split(':')[1]),
-        '--samples=1'
+        '--samples=%d' % capture_count
     ]
     logging.info('iioservice_simpleclient command: %r', iioservice_cmd)
+
     # Reads the captured data.
-    data_captured = 0
-    while data_captured < capture_count:
-      time.sleep(1 / sample_rate)
-      proc = process_utils.CheckCall(iioservice_cmd, read_stderr=True)
-      for signal_name in self.signal_names:
-        channel_name = ToChannelName(signal_name)
-        match = re.search(r'(?<={}: )-?\d+'.format(channel_name),
-                          proc.stderr_data)
-        if not match:
-          logging.error(
-              'Failed to read channel "%s" from iioservice_simpleclient. '
-              'stderr:\n%s', channel_name, proc.stderr_data)
-          raise AccelerometerException
-        ret[signal_name] += int(match[0])
-        logging.info('(%d) Getting data on channel %s: %d', data_captured,
-                     channel_name, int(match[0]))
-      data_captured += 1
-    # Calculates average value and convert to SI unit.
-    for signal_name in ret:
-      ret[signal_name] = (ret[signal_name] / capture_count * self.scale)
+    proc = process_utils.CheckCall(iioservice_cmd, read_stderr=True)
+    for signal_name in self.signal_names:
+      channel_name = ToChannelName(signal_name)
+      matches = re.findall(r'(?<={}: )-?\d+'.format(channel_name),
+                           proc.stderr_data)
+      if len(matches) != capture_count:
+        logging.error(
+            'Failed to read channel "%s" from iioservice_simpleclient. Expect '
+            '%d data, but %d captured. stderr:\n%s', channel_name,
+            capture_count, len(matches), proc.stderr_data)
+        raise AccelerometerException
+      # Calculates average value and convert to SI unit.
+      ret[signal_name] = sum(map(int, matches)) / capture_count * self.scale
+      logging.info('Getting %d data on channel %s: %s', len(matches),
+                   channel_name, matches)
+
     logging.info('Average of %d data: %s', capture_count, ret)
     return ret
 
