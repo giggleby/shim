@@ -424,7 +424,7 @@ class AudioLoopTest(test_case.TestCase):
       Arg('check_cras', bool, 'Do we need to check if CRAS is running',
           default=True),
       Arg('cras_enabled', bool, 'Whether cras should be running or not',
-          default=False),
+          default=True),
       Arg('mic_source', base.InputDevices, 'Microphone source',
           default=base.InputDevices.Extmic),
       Arg(
