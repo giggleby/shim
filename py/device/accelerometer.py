@@ -4,6 +4,7 @@
 
 import logging
 import re
+import statistics
 
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
@@ -60,7 +61,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     for signal_name in self.signal_names:
       self._SetSysfsValue('%s_calibbias' % signal_name, '0')
 
-  def GetData(self, capture_count: int = 1, sample_rate: float = None):
+  def GetData(self, capture_count: int = 1, sample_rate: float = None,
+              average: bool = True):
     """Returns average values of the sensor data.
 
     Use `iioservice_simpleclient` to capture the sensor data.
@@ -69,13 +71,19 @@ class AccelerometerController(sensor_utils.BasicSensorController):
       capture_count: how many records to read to compute the average.
       sample_rate: sample rate in Hz to read data from accelerometers. If it is
         None, set to the maximum frequency.
+      average: return the average of data or not.
 
     Returns:
-      A dict of the format {'signal_name': average value}
+      A dict of the format {'signal_name': value}
       The output data is in m/s^2.
-      Ex, {'in_accel_x': 0,
-           'in_accel_y': 0,
-           'in_accel_z': 9.8}
+      if `average=True`, value will be a single number.
+      E.g., {'in_accel_x': 0,
+             'in_accel_y': 0,
+             'in_accel_z': 9.8}
+      if `average=False`, it will be a list with length of `capture_count`.
+      E.g., {'in_accel_x': [0.0, 0.0, -0.1],
+             'in_accel_y': [0.0, 0.1, 0.0],
+             'in_accel_z': [9.8, 9.7, 9.9]}
 
     Raises:
       Raises AccelerometerException if there is no calibration
@@ -123,12 +131,45 @@ class AccelerometerController(sensor_utils.BasicSensorController):
             '%d data, but %d captured. stderr:\n%s', channel_name,
             capture_count, len(matches), proc.stderr_data)
         raise AccelerometerException
-      # Calculates average value and convert to SI unit.
-      ret[signal_name] = sum(map(int, matches)) / capture_count * self.scale
       logging.info('Getting %d data on channel %s: %s', len(matches),
                    channel_name, matches)
 
-    logging.info('Average of %d data: %s', capture_count, ret)
+      ret[signal_name] = [int(value) * self.scale for value in matches]
+
+      # Calculates average value and convert to SI unit.
+      if average:
+        ret[signal_name] = statistics.mean(ret[signal_name])
+
+    if average:
+      logging.info('Average of %d data: %s', capture_count, ret)
+
+    return ret
+
+  @staticmethod
+  def IsVarianceOutOfRange(data: dict, threshold: float = 5.0):
+    """Checks whether the variance of sensor data is higher than the threshold.
+
+    Args:
+      data: a dict containing digital output for each signal, in m/s^2.
+        E.g., {'in_accel_x': [0.0, 0.0, -0.1],
+               'in_accel_y': [0.0, 0.1, 0.0],
+               'in_accel_z': [9.8. 9.7, 9.9]}
+      threshold: a float indicating maximum value of data variance.
+
+    Returns:
+      True if the data variance is higher than the threshold.
+    """
+    ret = False
+    for channel_name, values in data.items():
+      if not isinstance(values, list):
+        raise TypeError(
+            f'Expect a list of values in channel "{channel_name}". Please use '
+            'AccelerometerController.GetData(average=False) to get the data')
+      data_variance = statistics.variance(values)
+      if data_variance > threshold:
+        logging.error('data variance=%f too high in channel "%s".(expect < %f)',
+                      data_variance, channel_name, threshold)
+        ret = True
     return ret
 
   @staticmethod
@@ -139,15 +180,15 @@ class AccelerometerController(sensor_utils.BasicSensorController):
 
     Args:
       data: a dict containing digital output for each signal, in m/s^2.
-        Ex, {'in_accel_x': 0,
-             'in_accel_y': 0,
-             'in_accel_z': 9.8}
+        E.g., {'in_accel_x': 0,
+               'in_accel_y': 0,
+               'in_accel_z': 9.8}
 
       orientations: a dict indicating the orentation in gravity
         (either 0 or -/+1) of the signal.
-        Ex, {'in_accel_x': 0,
-             'in_accel_y': 0,
-             'in_accel_z': 1}
+        E.g., {'in_accel_x': 0,
+               'in_accel_y': 0,
+               'in_accel_z': 1}
       spec_offset: a tuple of two integers, ex: (0.5, 0.5) indicating the
         tolerance for the digital output of sensors under zero gravity and
         one gravity, respectively.
@@ -189,10 +230,10 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     """Update calibration bias to RO_VPD
 
     Args:
-      A dict of calibration bias, in m/s^2.
-      Ex, {'in_accel_x_base_calibbias': 0.1,
-           'in_accel_y_base_calibbias': -0.2,
-           'in_accel_z_base_calibbias': 0.3}
+      calib_bias: A dict of calibration bias, in m/s^2.
+        E.g., {'in_accel_x_base_calibbias': 0.1,
+               'in_accel_y_base_calibbias': -0.2,
+               'in_accel_z_base_calibbias': 0.3}
     """
     # Writes the calibration results into ro vpd.
     # The data is converted to 1/1024G unit before writing.

@@ -164,22 +164,33 @@ class BasicSensorController(device_types.DeviceComponent):
             f'frequency:{result[1]}.')
     return result
 
-  def GetData(self, capture_count=1, sample_rate=20):
-    """Reads several records of raw data and returns the average.
+  def GetData(self, capture_count=1, sample_rate=20, average=True):
+    """Reads several records of raw data and returns the values.
 
     Args:
       capture_count: how many records to read to compute the average.
       sample_rate: sample rate in Hz to read data from the sensor.
+      average: return average value or not.
 
     Returns:
-      A dict of the format {'signal_name': average value}
+      A dict of the format {'signal_name': value}
+      if `average=True`, value will be a single number.
+      E.g., {'in_accel_x': 0,
+             'in_accel_y': 0,
+             'in_accel_z': 9.8}
+      if `average=False`, it will be a list with length of `capture_count`.
+      E.g., {'in_accel_x': [0.0, 0.0, -0.1],
+             'in_accel_y': [0.0, 0.1, 0.0],
+             'in_accel_z': [9.8, 9.7, 9.9]}
     """
-    ret = {signal: 0 for signal in self.signal_names}
+    ret = {signal: []
+           for signal in self.signal_names}
     for unused_i in range(capture_count):
       time.sleep(1.0 / sample_rate)
       for signal_name in ret:
-        ret[signal_name] += float(self._GetSysfsValue(signal_name + '_raw'))
-    for signal_name in ret:
-      ret[signal_name] *= self.scale
-      ret[signal_name] /= capture_count
+        value = float(self._GetSysfsValue(signal_name + '_raw')) * self.scale
+        ret[signal_name].append(value)
+    if average:
+      ret = {k: (sum(v) / capture_count)
+             for k, v in ret.items()}
     return ret

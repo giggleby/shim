@@ -35,6 +35,25 @@ class AccelerometerTest(unittest.TestCase):
         {'x': 0, 'y': 0, 'z': -1},
         (0.3, 0.3)))
 
+  def testIsVarianceOutOfRange(self):
+    is_variance_out_of_range = (
+        accelerometer.AccelerometerController.IsVarianceOutOfRange)
+    self.assertFalse(
+        is_variance_out_of_range(
+            {
+                'x': [0.0] * 10,
+                'y': [0.0] * 10,
+                'z': [-10.0] * 10
+            }, 5.0))
+    # z out of range
+    self.assertTrue(
+        is_variance_out_of_range(
+            {
+                'x': [0.0] * 10,
+                'y': [0.0] * 10,
+                'z': [-10.0] * 9 + [0.0]
+            }, 5.0))
+
   @mock.patch.multiple(accelerometer.AccelerometerController,
                        __init__=MockControllerInit,
                        _GetSysfsValue=lambda self, path: '0')

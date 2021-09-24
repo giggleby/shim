@@ -109,6 +109,9 @@ class AccelerometersCalibration(test_case.TestCase):
           default=False),
       Arg('location', str, 'The location for the accelerometer',
           default='base'),
+      Arg(
+          'variance_threshold', float, 'The variance of capture data can not be'
+          'larger than the threshold.', default=5.0),
   ]
 
   def setUp(self):
@@ -153,9 +156,19 @@ class AccelerometersCalibration(test_case.TestCase):
     self.ui.SetState(
         _('Calibration is in progress, please do not move device.'))
     try:
-      raw_data = self.accelerometer_controller.GetData(self.args.capture_count)
+      raw_data = self.accelerometer_controller.GetData(self.args.capture_count,
+                                                       average=False)
     except accelerometer.AccelerometerException:
       self.FailTask('Read raw data failed.')
+
+    # Check the variance of raw_data
+    if self.accelerometer_controller.IsVarianceOutOfRange(
+        raw_data, self.args.variance_threshold):
+      self.FailTask('Variance out of range, the accelerometers may be damaged.')
+
+    # Calculate average value of raw_data
+    raw_data = {k: (sum(v) / len(v))
+                for k, v in raw_data.items()}
 
     # Checks accelerometer is normal or not before calibration.
     if not self.accelerometer_controller.IsWithinOffsetRange(
