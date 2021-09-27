@@ -44,8 +44,8 @@ REPORT_EVENT_FIELD = {
 }
 PATTERN_WP_STATUS = re.compile(r'WP: status: (\w+)')
 PATTERN_WP = re.compile(r'WP: write protect is (\w+)\.')
-PATTERN_SERIAL_NUMBER = re.compile(r'^\s*serial_number: .*$', re.M)
-PATTERN_MLB_SERIAL_NUMBER = re.compile(r'^\s*mlb_serial_number: .*$', re.M)
+PATTERN_SERIAL_NUMBER = re.compile(rb'^\s*serial_number: .*$', re.M)
+PATTERN_MLB_SERIAL_NUMBER = re.compile(rb'^\s*mlb_serial_number: .*$', re.M)
 yaml_loader = yaml.CBaseLoader if yaml.__with_libyaml__ else yaml.BaseLoader
 
 
@@ -386,17 +386,17 @@ class ReportParser(log_utils.LoggerMixin):
       if sn_value != 'null':
         report_event['serialNumbers'][sn_key] = sn_value
 
-    END_TOKEN = '---\n'
+    END_TOKEN = b'---\n'
 
     try:
-      data_lines = ''
-      for line in open(path, 'r'):
+      data_lines = b''
+      for line in open(path, 'rb'):
         if line != END_TOKEN:
           # If the log file is not sync to disk correctly, it may have null
           # characters. The data after the last null character should be the
           # first line of a new event.
-          if '\0' in line:
-            splited_line = line.split('\0')
+          if b'\0' in line:
+            splited_line = line.split(b'\0')
             data_lines += splited_line[0]
             SetProcessEventStatus(ERROR_CODE.EventlogNullCharactersExist,
                                   process_event, data_lines)
@@ -406,7 +406,7 @@ class ReportParser(log_utils.LoggerMixin):
             data_lines += line
         else:
           raw_event = data_lines
-          data_lines = ''
+          data_lines = b''
           event = None
           try:
             event = yaml.load(raw_event, yaml_loader)
@@ -516,7 +516,7 @@ class ReportParser(log_utils.LoggerMixin):
                               ('mlb_serial_number', PATTERN_MLB_SERIAL_NUMBER)]:
         if sn_key not in report_event['serialNumbers']:
           if not content:
-            content = file_utils.ReadFile(path)
+            content = file_utils.ReadFile(path, encoding=None)
           line_list = pattern.findall(content)
           sn_list = []
           for line in line_list:
@@ -627,7 +627,10 @@ def SetProcessEventStatus(code, process_event, message=None):
   if isinstance(message, str):
     process_event['message'].append(message)
   elif isinstance(message, bytes):
-    process_event['message'].append(message.decode('utf-8'))
+    try:
+      process_event['message'].append(message.decode('utf-8'))
+    except UnicodeDecodeError:
+      pass
   elif message:
     process_event['message'].append(str(message))
     if isinstance(message, Exception):
