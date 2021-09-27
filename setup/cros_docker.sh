@@ -287,12 +287,14 @@ do_umpire_run() {
   local p3=$((UMPIRE_PORT + 4))  # Rsync
   local p4=$((UMPIRE_PORT + 6))  # Instalog output_pull_socket plugin
   local p5=$((UMPIRE_PORT + 8))  # Instalog customized output plugin
+  local p6=$((UMPIRE_PORT + 9))  # DKPS
 
   local umpire_base_port=8080
   local umpire_cli_port=$((umpire_base_port + 2))
   local umpire_rsync_port=$((umpire_base_port + 4))
   local umpire_instalog_pull_socket_port=$((umpire_base_port + 6))
   local umpire_instalog_customized_output_port=$((umpire_base_port + 8))
+  local umpire_dkps_port=$((umpire_base_port + 9))
 
   ${DOCKER} run \
     --detach \
@@ -308,6 +310,7 @@ do_umpire_run() {
     --publish "${p3}:${umpire_rsync_port}" \
     --publish "${p4}:${umpire_instalog_pull_socket_port}" \
     --publish "${p5}:${umpire_instalog_customized_output_port}" \
+    --publish "${p6}:${umpire_dkps_port}" \
     --env "UMPIRE_PROJECT_NAME=${PROJECT}" \
     --env "UMPIRE_PROJECT_PORT=${UMPIRE_PORT}" \
     --privileged \

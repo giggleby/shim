@@ -61,8 +61,10 @@ class DKPSService(umpire_service.UmpireService):
     proc_config = {
         'executable': PYTHON_PATH,
         'name': 'dkps',
-        'args': global_opts + ['listen'],
-        'path': dkps_data_dir}
+        'args': global_opts + ['listen', '--port',
+                               str(env.umpire_dkps_port)],
+        'path': dkps_data_dir
+    }
     proc = umpire_service.ServiceProcess(self)
     proc.SetConfig(proc_config)
     return [proc]
