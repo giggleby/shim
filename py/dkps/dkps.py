@@ -439,7 +439,7 @@ class DRMKeysProvisioningServer:
     decrypted_obj = self.gpg.decrypt(encrypted_device_serial_number.data)
     project = self._FetchProjectByRequesterKeyFingerprint(
         decrypted_obj.fingerprint)
-    device_serial_number = decrypted_obj.data
+    device_serial_number = decrypted_obj.data.decode('utf-8')
 
     def FetchDRMKeyByDeviceSerialNumber(project_name, device_serial_number):
       self.db_cursor.execute(

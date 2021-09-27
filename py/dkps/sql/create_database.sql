@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS drm_keys (
     id INTEGER NOT NULL PRIMARY KEY,
     project_name TEXT NOT NULL,
     drm_key_hash TEXT NOT NULL,
-    encrypted_drm_key TEXT NOT NULL,
+    encrypted_drm_key BLOB NOT NULL,
     device_serial_number TEXT NULL,
     FOREIGN KEY(project_name) REFERENCES projects(name),
     UNIQUE(project_name, drm_key_hash),

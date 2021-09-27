@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -207,7 +208,7 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
         str(self.port), '--client_key_file_path', client_key_file_path,
         '--server_key_file_path', self.server_key_file_path,
         '--passphrase_file_path', self.passphrase_file_path, command
-    ] + extra_args, stderr=FNULL, encoding='utf-8')
+    ] + extra_args, stderr=sys.stderr, encoding='utf-8')
 
 
 if __name__ == '__main__':
