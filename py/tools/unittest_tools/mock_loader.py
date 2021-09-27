@@ -10,7 +10,8 @@ import shutil
 import tempfile
 
 
-_PY_DIR_PATH = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
+_PY_PKG_DIR_PATH = os.path.abspath(
+    os.path.join(os.path.realpath(__file__), '..', '..', '..', '..', 'py_pkg'))
 
 
 class Loader:
@@ -20,12 +21,12 @@ class Loader:
 
   def __enter__(self):
     self._tmp_dir_path = tempfile.mkdtemp()
-    fake_path = os.path.join(self._tmp_dir_path, 'cros', 'factory')
-    real_path = os.path.join(self._tmp_dir_path, 'real', 'cros', 'factory')
+    fake_path = self._tmp_dir_path
+    real_path = os.path.join(self._tmp_dir_path, 'real')
 
-    self._SetupFactoryDir(src_path=_PY_DIR_PATH, dst_path=fake_path,
+    self._SetupFactoryDir(src_path=_PY_PKG_DIR_PATH, dst_path=fake_path,
                           enable_mocking=True)
-    self._SetupFactoryDir(src_path=_PY_DIR_PATH, dst_path=real_path,
+    self._SetupFactoryDir(src_path=_PY_PKG_DIR_PATH, dst_path=real_path,
                           enable_mocking=False)
 
     # Update sys.path by filtering the current factory import path out and
@@ -35,11 +36,11 @@ class Loader:
     return self
 
   def __exit__(self, exc_type, exc_value, traceback):
-    """Remove the directory created by tempfile.mkdtemp()"""
+    """Removes the directory created by tempfile.mkdtemp()."""
     shutil.rmtree(self._tmp_dir_path)
 
   def _SymlinkFile(self, src, dst):
-    """Symlink a file from source to destination."""
+    """Symlinks a file from source to destination."""
     if not os.path.exists(src):
       raise FileNotFoundError(f'{src} not found')
     dir_path = os.path.dirname(dst)
@@ -48,7 +49,7 @@ class Loader:
     os.symlink(src, dst)
 
   def _SetupFactoryDir(self, src_path, dst_path, enable_mocking):
-    """Create a directory for module importing.
+    """Creates a directory for module importing.
 
     Args:
     enable_mocking: Determine whether we copy the mocked files
@@ -66,3 +67,7 @@ class Loader:
         self._SymlinkFile(mocked_file, dst_file)
       else:
         self._SymlinkFile(src_file, dst_file)
+
+  def GetMockedRoot(self):
+    """Returns the path of cros package created by this loader."""
+    return self._tmp_dir_path
