@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-09-09 17:40+CST\n"
+"PO-Revision-Date: 2021-10-01 12:10+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -628,6 +628,10 @@ msgstr "Băng thông không dây"
 #: ../build/pytests_label_generated.json
 msgid "Wireless Antenna"
 msgstr "Ăng ten không dây"
+
+#: ../build/pytests_label_generated.json
+msgid "Wireless Charge"
+msgstr "sạc không dây"
 
 #: ../build/pytests_label_generated.json
 msgid "Wireless Connect"
@@ -3358,6 +3362,14 @@ msgstr "Kiểm tra tần số..."
 msgid "Press space to start scanning."
 msgstr "Bấm phím trống để bắt đầu quét"
 
+#: ../py/test/pytests/wireless_charge.py
+msgid "Wireless Charge Port testing..."
+msgstr "Kiểm tra sạc không dây..."
+
+#: ../py/test/pytests/wireless_charge.py
+msgid "{instruction} then hit SPACE"
+msgstr "{instruction} sau nhấn nút trống để tiếp tục"
+
 #: ../py/test/pytests/write_device_data_to_vpd.py
 msgid "Writing device data to {vpd_section} VPD..."
 msgstr "Dữ liệu máy đang được ghi vào VPD {vpd_section} ..."
@@ -3686,6 +3698,18 @@ msgstr "Tải lên mã đăng ký (ECHO) để kích hoạt"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Wifi"
 msgstr "Mạng không dây"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Attach peripheral to charging port"
+msgstr "Kết nối các phụ kiện với khu vực sạc"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Remove peripheral from charging port"
+msgstr "Tháo phụ kiện khu vực sạc"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Wireless Charger"
+msgstr "Sạc không dây"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Write HWID"
