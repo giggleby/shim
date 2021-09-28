@@ -121,8 +121,6 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
 
     archive_process_event['uuid'] = gcs_path
 
-    if os.path.exists(self._tmp_dir):
-      shutil.rmtree(self._tmp_dir)
     file_utils.TryMakeDirs(self._tmp_dir)
     file_utils.TryUnlink(self._archive_path)
 
@@ -161,9 +159,6 @@ class ReportParser(log_utils.LoggerMixin):
     self._gcs_path = gcs_path
     self.logger = logger
 
-  def GetReportPath(self, report_id):
-    return os.path.join(self._tmp_dir, 'report_%d' % report_id)
-
   def ProcessArchive(self, archive_process_event, process_pool):
     """Processes the archive."""
     report_events = [archive_process_event]
@@ -189,25 +184,18 @@ class ReportParser(log_utils.LoggerMixin):
 
       received_obj = args_queue.get()
       # End the process when we receive None.
-      while received_obj is not None:
-        if isinstance(received_obj, Exception):
-          break
+      while not (received_obj is None or isinstance(received_obj, Exception)):
         async_results.append(
             process_pool.apply_async(self.ProcessReport, received_obj))
         received_obj = args_queue.get()
 
-      try:
-        if isinstance(received_obj, Exception):
-          raise received_obj
-        decompress_process.join(1)
-        decompress_process.close()
-        args_queue.close()
-        archive_process_event['decompressEndTime'] = time.time()
-      except Exception as e:
+      decompress_process.join()
+      decompress_process.close()
+      args_queue.close()
+      archive_process_event['decompressEndTime'] = time.time()
+      if isinstance(received_obj, Exception):
         SetProcessEventStatus(ERROR_CODE.ArchiveUnknownError,
-                              archive_process_event, e)
-        self.exception('Exception encountered when decompressing archive file')
-        return report_events
+                              archive_process_event, received_obj)
 
       total_reports = len(async_results)
       for async_result in async_results:
@@ -245,21 +233,20 @@ class ReportParser(log_utils.LoggerMixin):
                   arguments for ProcessReport(), exception or None.
     """
     try:
-      total_reports = 0
       with zipfile.ZipFile(self._archive_path, 'r') as archive_obj:
         for member_name in archive_obj.namelist():
           if not self.IsValidReportName(member_name):
             continue
 
-          report_path = self.GetReportPath(total_reports)
+          report_path = file_utils.CreateTemporaryFile(dir=self._tmp_dir)
           with open(report_path, 'wb') as dst_f:
             with archive_obj.open(member_name, 'r') as report_obj:
               shutil.copyfileobj(report_obj, dst_f)
           args_queue.put((member_name, report_path))
-          total_reports += 1
     except Exception as e:
+      self.exception('Exception encountered when decompressing archive file')
       args_queue.put(e)
-    finally:
+    else:
       args_queue.put(None)
 
   def DecompressTarArchive(self, args_queue):
@@ -270,7 +257,6 @@ class ReportParser(log_utils.LoggerMixin):
                   arguments for ProcessReport(), exception or None.
     """
     try:
-      total_reports = 0
       # The 'r|*' mode will process data as a stream of blocks, and it may
       # faster than normal 'r:*' mode.
       with tarfile.open(self._archive_path, 'r|*') as archive_obj:
@@ -279,15 +265,15 @@ class ReportParser(log_utils.LoggerMixin):
           if not self.IsValidReportName(member_name):
             continue
 
-          report_path = self.GetReportPath(total_reports)
+          report_path = file_utils.CreateTemporaryFile(dir=self._tmp_dir)
           with open(report_path, 'wb') as dst_f:
             report_obj = archive_obj.extractfile(archive_member)
             shutil.copyfileobj(report_obj, dst_f)
           args_queue.put((member_name, report_path))
-          total_reports += 1
     except Exception as e:
+      self.exception('Exception encountered when decompressing archive file')
       args_queue.put(e)
-    finally:
+    else:
       args_queue.put(None)
 
   def IsValidReportName(self, name):
