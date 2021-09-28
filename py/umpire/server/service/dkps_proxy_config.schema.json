@@ -1,0 +1,10 @@
+{
+  "server_ip": {
+    "description": "The server ip of DKPS.",
+    "type": "string"
+  },
+  "server_port": {
+    "description": "The server port of DKPS.",
+    "type": "string"
+  }
+}
