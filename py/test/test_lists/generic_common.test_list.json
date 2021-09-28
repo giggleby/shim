@@ -1126,6 +1126,15 @@
         "wifi_chip_type": "switch_antenna"
       }
     },
+    "WirelessCharger": {
+      "pytest_name": "wireless_charge",
+      "label": "Wireless Charger",
+      "run_if": "not constants.has_device_data or device.component.has_wireless_charger",
+      "args": {
+        "occupy_instruction": "i18n! Attach peripheral to charging port",
+        "release_instruction": "i18n! Remove peripheral from charging port"
+      }
+    },
     "WirelessRadiotap": {
       "pytest_name": "wireless_antenna",
       "exclusive_resources": [

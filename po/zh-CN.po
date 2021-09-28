@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-04-27 15:39+CST\n"
+"PO-Revision-Date: 2021-10-01 12:10+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -623,6 +623,10 @@ msgstr "无线频宽"
 #: ../build/pytests_label_generated.json
 msgid "Wireless Antenna"
 msgstr "无线天线"
+
+#: ../build/pytests_label_generated.json
+msgid "Wireless Charge"
+msgstr "无线充电"
 
 #: ../build/pytests_label_generated.json
 msgid "Wireless Connect"
@@ -3212,6 +3216,14 @@ msgstr "检查频率中..."
 msgid "Press space to start scanning."
 msgstr "请按空白键开始扫描。"
 
+#: ../py/test/pytests/wireless_charge.py
+msgid "Wireless Charge Port testing..."
+msgstr "开始无线充电测试..."
+
+#: ../py/test/pytests/wireless_charge.py
+msgid "{instruction} then hit SPACE"
+msgstr "{instruction}然后按下空白键"
+
 #: ../py/test/pytests/write_device_data_to_vpd.py
 msgid "Writing device data to {vpd_section} VPD..."
 msgstr "机器资料正在写入到 {vpd_section} VPD..."
@@ -3507,6 +3519,18 @@ msgstr "上传注册码(ECHO)以激活"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Wifi"
 msgstr "无线网路"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Attach peripheral to charging port"
+msgstr "连接配件至充电区"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Remove peripheral from charging port"
+msgstr "移除充电区配件"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Wireless Charger"
+msgstr "无线充电"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Write HWID"
