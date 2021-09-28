@@ -239,6 +239,28 @@ class GitUtilTest(unittest.TestCase):
         messages=[git_util.CLMessage('msg1', 'email1')])
     self.assertEqual(actual_cl_info, expected_cl_info)
 
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.porcelain')
+  def testCreateCLOptions(self, mock_porcelain):
+    file_name = 'README.md'
+    url = 'https://chromium.googlesource.com/chromiumos/platform/factory'
+    auth_cookie = ''
+    branch = 'stabilize-rust-13562.B'
+    author = 'Author <author@email.com>'
+    committer = 'Committer <committer@email.com>'
+    reviewers = ['reviewer@email.com']
+    ccs = ['cc@email.com']
+    commit_msg = 'commit msg'
+    repo = git_util.MemoryRepo(auth_cookie='')
+    repo.shallow_clone(url, branch=branch)
+    new_files = [(file_name, 0o100644, b'')]
+    git_util.CreateCL(url, auth_cookie, branch, new_files, author, committer,
+                      commit_msg, reviewers, ccs, True)
+    mock_porcelain.push.assert_called_once_with(
+        mock.ANY, url,
+        (f'HEAD:refs/for/{branch}%r=reviewer@email.com,cc=cc@email.com,'
+         f'l=Bot-Commit+1,l=Commit-Queue+2').encode('UTF-8'),
+        pool_manager=mock.ANY)
+
 
 class GitFilesystemAdapterTest(unittest.TestCase):
 

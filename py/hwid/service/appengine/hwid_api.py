@@ -629,7 +629,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
           request.project, change_info.new_hwid_db_contents, commit_msg,
-          request.reviewer_emails, request.cc_emails)
+          request.reviewer_emails, request.cc_emails, request.auto_approved)
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught unexpected exception while uploading a HWID CL.')

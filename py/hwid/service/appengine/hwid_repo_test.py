@@ -148,7 +148,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
     with self.assertRaises(ValueError):
       self._hwid_repo.CommitHWIDDB('no_such_board', 'unused_test_str',
-                                   'unused_test_str', [], [])
+                                   'unused_test_str', [], [], False)
 
   def testCommitHWIDDB_FailedToUploadCL(self):
     self._mock_git_fs.ReadFile.side_effect = {
@@ -158,7 +158,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo.CommitHWIDDB('SBOARD', 'unused_test_str',
-                                   'unused_test_str', [], [])
+                                   'unused_test_str', [], [], False)
 
   def testCommitHWIDDB_FailedToGetCLNumber(self):
     self._mock_git_fs.ReadFile.side_effect = {
@@ -169,7 +169,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo.CommitHWIDDB('SBOARD', 'unused_test_str',
-                                   'unused_test_str', [], [])
+                                   'unused_test_str', [], [], False)
 
   def testCommitHWIDDB_Succeed(self):
     self._mock_git_fs.ReadFile.side_effect = {
@@ -180,8 +180,8 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     self._mocked_get_cl_info.return_value = git_util.CLInfo(
         'change_id', expected_cl_number, git_util.CLStatus.NEW, [])
 
-    actual_cl_number = self._hwid_repo.CommitHWIDDB('SBOARD', 'unused_test_str',
-                                                    'unused_test_str', [], [])
+    actual_cl_number = self._hwid_repo.CommitHWIDDB(
+        'SBOARD', 'unused_test_str', 'unused_test_str', [], [], False)
     self.assertEqual(actual_cl_number, expected_cl_number)
 
 

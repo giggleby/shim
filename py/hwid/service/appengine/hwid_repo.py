@@ -118,8 +118,8 @@ class HWIDRepo:
       raise HWIDRepoError(
           f'failed to load the HWID DB (name={name}): {ex}') from None
 
-  def CommitHWIDDB(self, name, hwid_db_contents, commit_msg, reviewers,
-                   cc_list):
+  def CommitHWIDDB(self, name, hwid_db_contents, commit_msg, reviewers, cc_list,
+                   auto_approved):
     """Commit an HWID DB to the repo.
 
     Args:
@@ -129,6 +129,7 @@ class HWIDRepo:
       author: Author in form of "Name <email@domain>".
       reviewers: List of emails of reviewers.
       cc_list: List of emails of CC's.
+      auto_approved: A bool indicating if this CL should be auto-approved.
 
     Returns:
       A numeric ID of the created CL.
@@ -150,7 +151,8 @@ class HWIDRepo:
       change_id = git_util.CreateCL(self._repo_url,
                                     git_util.GetGerritAuthCookie(),
                                     self._repo_branch, new_files, author,
-                                    author, commit_msg, reviewers, cc_list)
+                                    author, commit_msg, reviewers, cc_list,
+                                    auto_approved)
       cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, change_id,
                                    auth_cookie=git_util.GetGerritAuthCookie())
     except git_util.GitUtilException as ex:

@@ -336,6 +336,8 @@ message CreateHwidDbEditableSectionChangeClRequest {
   int64 bug_number = 6;
   repeated string reviewer_emails = 7;
   repeated string cc_emails = 8;
+  // A bool indicating if this CL should be auto-approved.
+  bool auto_approved = 9;
 }
 
 message CreateHwidDbEditableSectionChangeClResponse {

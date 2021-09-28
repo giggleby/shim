@@ -266,7 +266,7 @@ def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
 
 
 def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
-             commit_msg, reviewers=None, cc=None):
+             commit_msg, reviewers=None, cc=None, auto_approved=False):
   """Create a CL from adding files in specified location.
 
   Args:
@@ -279,6 +279,7 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     commit_msg: Commit message
     reviewers: List of emails of reviewers
     cc: List of emails of cc's
+    auto_approved: A bool indicating if this CL should be auto-approved.
   Returns:
     change id
   """
@@ -298,18 +299,20 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
       _B(commit_msg + '\n\nChange-Id: {change_id}'.format(change_id=change_id)),
       author=_B(author), committer=_B(committer), tree=updated_tree.id)
 
-  notification = []
+  options = []
   if reviewers:
-    notification += [b'r=' + _B(email) for email in reviewers]
+    options += ['r=' + email for email in reviewers]
   if cc:
-    notification += [b'cc=' + _B(email) for email in cc]
-  target_branch = b'refs/for/' + _B(branch)
-  if notification:
-    target_branch += b'%' + b','.join(notification)
+    options += ['cc=' + email for email in cc]
+  if auto_approved:
+    options += ['l=Bot-Commit+1', 'l=Commit-Queue+2']
+  target_branch = 'refs/for/' + branch
+  if options:
+    target_branch += '%' + ','.join(options)
 
   pool_manager = PoolManager(ca_certs=certifi.where())
   pool_manager.headers['Cookie'] = repo.auth_cookie
-  porcelain.push(repo, git_url, HEAD + b':' + target_branch,
+  porcelain.push(repo, git_url, HEAD + b':' + _B(target_branch),
                  pool_manager=pool_manager)
   return change_id
 
