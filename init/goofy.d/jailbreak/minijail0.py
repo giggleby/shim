@@ -5,18 +5,25 @@
 
 import getopt
 import grp
+import logging
 import os
 import pwd
 import sys
-import traceback
 
-
-# copied from aosp/external/minijail/minijail0.c
+# derived from src/aosp/external/minijail/minijail0_cli.c
 OPT_STRING = 'u:g:sS:c:C:P:b:B:V:f:m::M::k:a:e::R:T:vrGhHinNplLt::IUKwyYzd'
 # TODO(pihsun): The uts argument is actually optional long option, but Python
 # getopt doesn't support optional long option. All usage seems to be not
 # passing a value to it, so we use 'uts' instead of 'uts=' here.
-LONG_OPTIONS = ['help', 'mount-dev', 'ambient', 'uts', 'logging=', 'profile=']
+LONG_OPTIONS = [
+    'help',
+    'mount-dev',
+    'ambient',
+    'uts',
+    'logging=',
+    'profile=',
+    'seccomp-bpf-binary',
+]
 
 # Only override these programs (find from /etc/init/*.conf)
 ALLOWLIST = ['/usr/sbin/sslh-fork']
@@ -26,9 +33,8 @@ JAILED_DIR = '/run/jailed'
 
 def minijail():
   opts, args = getopt.getopt(sys.argv[1:], OPT_STRING, LONG_OPTIONS)
-  assert args, "Need at least one param."
 
-  if args[0] not in ALLOWLIST:
+  if not args or args[0] not in ALLOWLIST:
     original = os.path.join(JAILED_DIR, os.path.basename(sys.argv[0]))
     args = [original] + sys.argv[1:]
     os.execvp(args[0], args)
@@ -47,15 +53,18 @@ def minijail():
     os.seteuid(uid)
 
   if '-i' in opts and os.fork() == 0:
-    exit(0)
+    sys.exit()
 
   os.execvp(args[0], args)
 
 
 if __name__ == '__main__':
+  logging.basicConfig(
+      filename='/var/log/minijail0.log', level=logging.INFO,
+      format='[%(levelname)s] %(asctime)s.%(msecs)03d %(message)s',
+      datefmt='%Y-%m-%d %H:%M:%S')
   try:
     minijail()
   except Exception:
-    with open('/var/log/minijail0.log','a') as f:
-      traceback.print_exc(file=f)
-      f.write('argument %s\n' % sys.argv)
+    logging.exception('argument: %r', sys.argv)
+    sys.exit(1)
