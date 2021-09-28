@@ -208,16 +208,13 @@ class ReportParser(log_utils.LoggerMixin):
         # TODO(chuntsen): Find a way to stop process pool.
         report_event, process_event = async_result.get()
 
-        report_time = report_event['time']
-        if (archive_process_event['time'] == 0 or
-            report_time < archive_process_event['time']):
-          archive_process_event['time'] = report_time
-
         if report_event:
+          report_time = report_event['time']
+          if (archive_process_event['time'] == 0 or
+              0 < report_time < archive_process_event['time']):
+            archive_process_event['time'] = report_time
           report_events.append(report_event)
           succeed += 1
-        process_event['duration'] = (
-            process_event['endTime'] - process_event['startTime'])
         report_events.append(process_event)
         if succeed % 1000 == 0:
           self.info('Parsed %d/%d reports', succeed, total_reports)
@@ -348,6 +345,9 @@ class ReportParser(log_utils.LoggerMixin):
       self.exception('Exception encountered when processing factory report')
     finally:
       file_utils.TryUnlink(report_path)
+    process_event['endTime'] = time.time()
+    process_event['duration'] = (
+        process_event['endTime'] - process_event['startTime'])
     return report_event, process_event
 
   def DecompressAndParse(self, report_path, report_event, process_event):
@@ -355,7 +355,6 @@ class ReportParser(log_utils.LoggerMixin):
     with file_utils.TempDirectory(dir=self._tmp_dir) as report_dir:
       if not tarfile.is_tarfile(report_path):
         SetProcessEventStatus(ERROR_CODE.ReportInvalidFormat, process_event)
-        process_event['endTime'] = time.time()
         return None, process_event
       report_tar = tarfile.open(report_path, 'r|xz')
       report_tar.extractall(report_dir)
@@ -379,7 +378,6 @@ class ReportParser(log_utils.LoggerMixin):
           report_event = testlog_report_event
       else:
         SetProcessEventStatus(ERROR_CODE.TestlogFileNotFound, process_event)
-      process_event['endTime'] = time.time()
       return report_event, process_event
 
   def ParseEventlogEvents(self, path, report_event, process_event):
