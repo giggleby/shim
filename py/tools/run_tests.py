@@ -24,6 +24,8 @@ from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
+from cros.factory.tools.unittest_tools import mock_loader
+
 
 TEST_PASSED_MARK = '.tests-passed'
 KILL_OLD_TESTS_TIMEOUT_SECS = 2
@@ -82,7 +84,7 @@ class _TestProc:
     log_name: path of log file for unittest.
   """
 
-  def __init__(self, test_name, log_name, port_server):
+  def __init__(self, test_name, log_name, port_server, python_path):
     self.test_name = test_name
     self.log_file = open(log_name, 'w')
     self.start_time = time.time()
@@ -91,6 +93,7 @@ class _TestProc:
     self.child_tmp_root = os.path.join(self.cros_factory_data_dir, 'tmp')
     os.mkdir(self.child_tmp_root)
     child_env = os.environ.copy()
+    child_env['PYTHONPATH'] = python_path
     child_env['CROS_FACTORY_DATA_DIR'] = self.cros_factory_data_dir
     # Set TEST_RUNNER_ENV_VAR so we know to kill it later if
     # re-running tests.
@@ -137,6 +140,7 @@ class _TestProc:
   def Close(self):
     if os.path.isdir(self.cros_factory_data_dir):
       shutil.rmtree(self.cros_factory_data_dir)
+    self.log_file.close()
 
 
 class PortDistributeHandler(socketserver.StreamRequestHandler):
@@ -155,6 +159,13 @@ class PortDistributeServer(socketserver.ThreadingUnixStreamServer):
     self.thread = None
     socketserver.ThreadingUnixStreamServer.__init__(self, self.socket_file,
                                                     PortDistributeHandler)
+
+  def __enter__(self):
+    self.Start()
+    return self
+
+  def __exit__(self, *args):
+    self.Close()
 
   def Start(self):
     self.thread = threading.Thread(target=self.serve_forever)
@@ -295,14 +306,11 @@ class RunTests:
       tests: list of unittest paths.
       max_jobs: maximum number of tests to run in parallel.
     """
-    port_server = PortDistributeServer()
-    port_server.Start()
-    try:
+    with PortDistributeServer() as port_server, mock_loader.Loader() as loader:
       for test_name in tests:
         try:
-          p = _TestProc(test_name,
-                        self._GetLogFilename(test_name),
-                        port_server.socket_file)
+          p = _TestProc(test_name, self._GetLogFilename(test_name),
+                        port_server.socket_file, loader.GetMockedRoot())
         except Exception:
           self._FailMessage('Error running test %r' % test_name)
           raise
@@ -310,8 +318,6 @@ class RunTests:
         self._WaitRunningProcessesFewerThan(max_jobs)
       # Wait for all running test.
       self._WaitRunningProcessesFewerThan(1)
-    finally:
-      port_server.Close()
 
   def _RecordTestResult(self, p):
     """Records test result.

@@ -46,7 +46,7 @@ main() {
   fi
 
   # Run tests with POSIX locale to avoid localized output.
-  LC_ALL=C  bin/factory_mocked_env "${TEST_RUNNER}" \
+  LC_ALL=C bin/factory_env "${TEST_RUNNER}" \
     --jobs "${MAX_TESTS}" --log "${logdir}" \
     ${TEST_EXTRA_FLAGS} ${tests}
 
