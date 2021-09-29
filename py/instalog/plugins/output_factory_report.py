@@ -553,17 +553,11 @@ class ReportParser(log_utils.LoggerMixin):
           EVENT_START = '{"payload":'
           new_event_index = line.rfind(EVENT_START)
           if new_event_index > 0:
-            SetProcessEventStatus(ERROR_CODE.TestlogBrokenEvent, process_event,
-                                  line)
+            SetProcessEventStatus(ERROR_CODE.TestlogBrokenEvent, process_event)
             line = line[new_event_index:]
 
           try:
             event = datatypes.Event.Deserialize(line)
-
-            if not isinstance(event, dict):
-              SetProcessEventStatus(ERROR_CODE.TestlogBrokenEvent,
-                                    process_event, line)
-              continue
 
             if 'serialNumbers' in event:
               for sn_key, sn_value in event['serialNumbers'].items():
