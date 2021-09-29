@@ -39,6 +39,7 @@ from cros.factory.instalog.utils import process_utils
 from cros.factory.instalog.utils import time_utils
 from cros.factory.instalog.utils import type_utils
 
+
 _PROCESSES_NUMBER = 20
 REPORT_EVENT_FIELD = {
     'apiVersion', 'dutDeviceId', 'stationDeviceId', 'stationInstallationId'
@@ -551,15 +552,28 @@ class ReportParser(log_utils.LoggerMixin):
                                       process_event, raw_event)
                 continue
 
-              def GetField(field, dct, key, is_string=True):
-                if key in dct:
-                  if not is_string or isinstance(dct[key], str):
-                    if dct[key] != 'null':
-                      report_event[field] = dct[key]
-                  else:
-                    SetProcessEventStatus(ERROR_CODE.EventlogWrongType,
-                                          process_event)
-                    report_event[field] = str(dct[key])
+              def GetField(field, dct, key, is_string=True, replace=True):
+                if not key in dct:
+                  return
+                data = dct[key]
+                if data == 'null':
+                  return
+
+                if is_string and not isinstance(data, str):
+                  SetProcessEventStatus(ERROR_CODE.EventlogWrongType,
+                                        process_event)
+                  data = str(dct[key])
+
+                if field in report_event:
+                  if not replace:
+                    return
+                  if report_event[field] != data:
+                    SetProcessEventStatus(
+                        ERROR_CODE.EventlogDataChange, process_event,
+                        'Field=%s, Old data=%s, New data=%s, Replace=%s' %
+                        (field, report_event[field], data, replace))
+
+                report_event[field] = data
 
               serial_numbers = event.get('serial_numbers', {})
               if not isinstance(serial_numbers, dict):
@@ -572,7 +586,8 @@ class ReportParser(log_utils.LoggerMixin):
               event_name = event.get('EVENT', None)
               if event_name == 'system_details':
                 crossystem = event.get('crossystem', {})
-                GetField('hwid', crossystem, 'hwid')
+                # The HWID in crossystem may be incorrect.
+                GetField('hwid', crossystem, 'hwid', replace=False)
                 if 'hwid' in report_event:
                   report_event['modelName'] = report_event['hwid'].split(' ')[0]
                 GetField('fwid', crossystem, 'fwid')
@@ -599,6 +614,10 @@ class ReportParser(log_utils.LoggerMixin):
                     report_event['biosWp'] = result[0]
                 GetField('modemStatus', event, 'modem_status')
                 GetField('platformName', event, 'platform_name')
+              elif event_name in ('write_hwid', 'verified_hwid'):
+                GetField('hwid', event, 'hwid')
+                if 'hwid' in report_event:
+                  report_event['modelName'] = report_event['hwid'].split(' ')[0]
               elif event_name == 'scan':
                 for sn_key in ['serial_number', 'mlb_serial_number']:
                   if event.get('key', None) == sn_key and 'value' in event:
@@ -701,11 +720,33 @@ class ReportParser(log_utils.LoggerMixin):
               if field in event:
                 report_event[field] = event[field]
 
+            def GetField(field, event, key, replace=True):
+              data_list = event.get('parameters', {}).get(key, {}).get(
+                  'data', [])
+              if len(data_list) != 1:
+                return
+
+              data = None
+              for data_type in ['numericValue', 'textValue', 'serializedValue']:
+                if data_type in data_list[0]:
+                  data = data_list[0][data_type]
+              if data is None:
+                return
+              if field in report_event:
+                if not replace:
+                  return
+                if report_event[field] != data:
+                  SetProcessEventStatus(
+                      ERROR_CODE.TestlogDataChange, process_event,
+                      'Field=%s, Old data=%s, New data=%s, Replace=%s' %
+                      (field, report_event[field], data, replace))
+              report_event[field] = data
+
             if event.get('testType', None) == 'hwid':
-              data = event.get('parameters', {}).get('phase', {}).get(
-                  'data', {})
-              if len(data) == 1 and 'textValue' in data[0]:
-                report_event['phase'] = data[0]['textValue']
+              GetField('phase', event, 'phase')
+              GetField('hwid', event, 'verified_hwid')
+              if 'hwid' in report_event:
+                report_event['modelName'] = report_event['hwid'].split(' ')[0]
           except json.JSONDecodeError as e:
             SetProcessEventStatus(ERROR_CODE.TestlogBrokenEvent, process_event,
                                   e)
@@ -776,11 +817,13 @@ ERROR_CODE = type_utils.Obj(
     EventlogNullCharactersExist=401,
     EventlogWrongType=402,
     EventlogBrokenEvent=403,
+    EventlogDataChange=404,
     EventlogUnknownError=499,
     TestlogFileNotFound=500,
     TestlogNullCharactersExist=501,
     TestlogWrongType=502,
     TestlogBrokenEvent=503,
+    TestlogDataChange=504,
     TestlogUnknownError=599,
     FactorylogFileNotFound=600,
     FactorylogNoHWID=601,
