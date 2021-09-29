@@ -261,6 +261,10 @@ class ReportParser(log_utils.LoggerMixin):
       # faster than normal 'r:*' mode.
       with tarfile.open(self._archive_path, 'r|*') as archive_obj:
         for archive_member in archive_obj:
+          # Some ReportArchives contain symlink, and it is not allow by using
+          # 'r|*' mode.
+          if archive_member.type != tarfile.REGTYPE:
+            continue
           member_name = archive_member.name
           if not self.IsValidReportName(member_name):
             continue
