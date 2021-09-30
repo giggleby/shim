@@ -1,13 +1,16 @@
 <?xml version="1.0"?>
 <Widevine>
-  <NumberOfKeyboxes>3</NumberOfKeyboxes>
-  <Keybox DeviceID="device01">
-    <Key>key01</Key><ID>id01</ID><Magic>magic01</Magic><CRC>crc01</CRC>
-  </Keybox>
-  <Keybox DeviceID="device02">
-    <Key>key02</Key><ID>id02</ID><Magic>magic02</Magic><CRC>crc02</CRC>
-  </Keybox>
-  <Keybox DeviceID="device03">
-    <Key>key03</Key><ID>id03</ID><Magic>magic03</Magic><CRC>crc03</CRC>
-  </Keybox>
+<NumberOfKeyboxes>2</NumberOfKeyboxes>
+<Keybox DeviceID="WidevineTestOnlyKeybox000">
+		<Key>e4ff574c322ef53426212cb3ed37f35e</Key>
+		<ID>0000000200001ee8ca1e717cfbe8a394520a6b7137d269fa5ac6b54c6b46639bbe803dbb4ff74c5f6f550e3d3d9acf81125d52e0478cda0bf4314113d0d52da05b209aed515d13d6</ID>
+    <Magic>6b626f78</Magic>
+    <CRC>39f294a7</CRC>
+</Keybox>
+<Keybox DeviceID="WidevineTestOnlyKeybox001">
+		<Key>76871bcafd8333332cf040c03c5421ca</Key>
+		<ID>0db0958013e7636212e389638759264916a6b63c3e271c2115f30b3496857de0c893e84dd712f6b944216afd271384761d7ddcf045b7827636212e389638754720835e583c0a64d4</ID>
+    <Magic>6b626f78</Magic>
+    <CRC>3ed12b9d</CRC>
+</Keybox>
 </Widevine>

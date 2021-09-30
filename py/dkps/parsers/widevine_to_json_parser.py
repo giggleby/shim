@@ -1,14 +1,13 @@
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-"""Module to parse Widevine keybox XML file content."""
+"""Module to parse Widevine keybox XML file content to JSON format."""
 
 from xml.etree import cElementTree as ET
 
 
 def Parse(serialized_drm_key_list):
-  """Parse the Widevine key XML file content.
+  """Parse the Widevine key XML file content to JSON format.
 
   This function turns each Widevine key into a dict that contains the following
   keys:
@@ -41,7 +40,9 @@ def Parse(serialized_drm_key_list):
 
   root = ET.fromstring(serialized_drm_key_list.strip())
   for child in root.iter('Keybox'):
-    widevine_key = {'DeviceID': child.attrib['DeviceID'].strip()}
+    widevine_key = {
+        'DeviceID': child.attrib['DeviceID']
+    }
     for key in ['Key', 'ID', 'Magic', 'CRC']:
       widevine_key[key] = child.find(key).text
     widevine_key_list.append(widevine_key)
