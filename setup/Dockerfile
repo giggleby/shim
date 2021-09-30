@@ -11,6 +11,7 @@ ENV PYTHONPATH="/usr/local/factory/py_pkg"
 ARG server_dir="/usr/local/factory"
 ARG dome_dir="${server_dir}/py/dome"
 ARG instalog_dir="${server_dir}/py/instalog"
+ARG dkps_dir="${server_dir}/py/dkps"
 ARG umpire_dir="${server_dir}/py/umpire"
 ARG umpire_dir_in_dome
 
@@ -83,13 +84,15 @@ ADD build/docker/uftp.tgz /usr/bin
 COPY py/umpire/server/requirements.txt "${umpire_dir}/"
 COPY py/dome/requirements.txt "${dome_dir}/"
 COPY py/instalog/requirements.txt "${instalog_dir}/"
+COPY py/dkps/requirements.txt "${dkps_dir}/"
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --upgrade setuptools && \
     pip3 install --no-cache-dir --upgrade wheel
 RUN pip3 install --no-cache-dir \
       -r "${umpire_dir}/requirements.txt" \
       -r "${dome_dir}/requirements.txt" \
-      -r "${instalog_dir}/requirements.txt"
+      -r "${instalog_dir}/requirements.txt" \
+      -r "${dkps_dir}/requirements.txt"
 
 # Create Umpire mount point. Normally we should mount this (and Docker will
 # create it for us) when calling the run command, but that's not the case for
