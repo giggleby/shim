@@ -22,7 +22,6 @@ Partitioned table updates limits:
 
 import datetime
 import os
-import time
 
 # pylint: disable=import-error, no-name-in-module
 from google.api_core import exceptions
@@ -37,7 +36,6 @@ from cros.factory.instalog.utils import gcs_utils
 
 _BIGQUERY_SCOPE = 'https://www.googleapis.com/auth/bigquery'
 _BIGQUERY_REQUEST_MAX_FAILURES = 20
-_JOB_NAME_PREFIX = 'instalog_'
 _JSON_MIMETYPE = 'NEWLINE_DELIMITED_JSON'
 _ROW_SIZE_LIMIT = 9.5 * 1024 * 1024  # To avoid error loop, we set 9.5 mb limit.
 _PARTITION_LIMIT = 500
@@ -76,6 +74,7 @@ class OutputBigQuery(plugin_base.OutputPlugin):
   ]
 
   def __init__(self, *args, **kwargs):
+    self.JOB_ID_PREFIX = None
     self.client = None
     self.table_ref = None
     self._gcs = None
@@ -83,6 +82,7 @@ class OutputBigQuery(plugin_base.OutputPlugin):
 
   def SetUp(self):
     """Builds the client object and the table object to run BigQuery calls."""
+    self.JOB_ID_PREFIX = 'instalog_' + self.__class__.__name__ + '_'
     self.client = self.BuildClient()
     self.CreateDatasetAndTable()
     self._gcs = gcs_utils.CloudStorage(self.args.key_path, self.logger)
@@ -249,8 +249,6 @@ class OutputBigQuery(plugin_base.OutputPlugin):
         event_stream.Abort()
         return False
 
-      job_id = '%s%d' % (_JOB_NAME_PREFIX, time.time() * 1e6)
-      self.info('Uploading %d rows into BigQuery (%s) ...', row_count, job_id)
       try:
         job = None
         with open(json_path, 'rb') as f:
@@ -259,12 +257,12 @@ class OutputBigQuery(plugin_base.OutputPlugin):
           # No need to run job.begin() since upload_from_file() takes care of
           # this.
           job = self.client.load_table_from_file(
-              file_obj=f,
-              destination=self.table_ref,
+              file_obj=f, destination=self.table_ref,
               size=os.path.getsize(json_path),
               num_retries=_BIGQUERY_REQUEST_MAX_FAILURES,
-              job_id=job_id,
-              job_config=job_config)
+              job_id_prefix=self.JOB_ID_PREFIX, job_config=job_config)
+          self.info('Uploading %d rows into BigQuery (%s) ...', row_count,
+                    job.job_id)
 
         # Wait for job to complete.
         job.result()
@@ -286,7 +284,3 @@ class OutputBigQuery(plugin_base.OutputPlugin):
         self.warning('Insert failed with errors: %s', job.errors)
         self.info('Abort %d events (%d rows)', event_count, row_count)
         return False
-
-
-if __name__ == '__main__':
-  plugin_base.main()
