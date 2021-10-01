@@ -58,10 +58,10 @@ class Loader:
     files = glob.glob(os.path.join(src_path, '**/*.*'), recursive=True)
     file_set = set(files)
     for src_file in files:
-      if src_file.endswith('_mocked.py'):
+      if src_file.endswith('_mocked.py') or os.path.isdir(src_file):
         continue
       dst_file = src_file.replace(src_path, dst_path)
-      src_file_name, _ = os.path.splitext(src_file)
+      src_file_name, unused_ext = os.path.splitext(src_file)
       mocked_file = src_file_name + '_mocked.py'
       if enable_mocking and mocked_file in file_set:
         self._SymlinkFile(mocked_file, dst_file)
