@@ -312,5 +312,15 @@
     "generic": {
       "eval": "chromeos_firmware:ro_pd_firmware"
     }
+  },
+  "sku_id": {
+    "generic": {
+      "eval": {
+        "shell": {
+          "command": "cros_config /identity sku-id",
+          "key": "sku_id"
+        }
+      }
+    }
   }
 }
