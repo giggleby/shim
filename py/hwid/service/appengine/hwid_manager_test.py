@@ -560,7 +560,7 @@ class HwidManagerTest(unittest.TestCase):
         # category name not in component name
         (('category2', 'category1_1357_2468'), 'category1_1357_2468'),
         # incorrect format (not enough splits)
-        (('category1', 'category1_1234'), 'category1_1234'),
+        (('category1', 'category1_1234'), 'comp_name1'),
         # incorrect format (too many splits)
         (('category1', 'category1_1234_5678_9012'), 'category1_1234_5678_9012')
     ]

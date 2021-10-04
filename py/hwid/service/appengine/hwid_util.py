@@ -6,7 +6,11 @@
 from collections import defaultdict
 import logging
 
+from cros.factory.hwid.service.appengine.config import CONFIG
 from cros.factory.hwid.v3 import bom as v3_bom
+
+
+_hwid_manager = CONFIG.hwid_manager
 
 
 class HWIDUtilException(Exception):
@@ -38,7 +42,8 @@ def GetSkuFromBom(bom, configless=None):
   cpus = GetComponentValueFromBom(bom, 'cpu')
   if cpus:
     cpus.sort()
-    cpu = '_'.join(cpus)
+    cpu = '_'.join(
+        _hwid_manager.GetAVLName('cpu', comp_name) for comp_name in cpus)
 
   if configless and 'memory' in configless:
     memory_str = str(configless['memory']) + 'GB'

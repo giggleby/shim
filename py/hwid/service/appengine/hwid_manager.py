@@ -23,6 +23,7 @@ from cros.factory.hwid.service.appengine import \
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_utils
+from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import type_utils
 
@@ -817,23 +818,19 @@ class HwidManager:
       comp_name if the name does not follow the <category>_<cid>_<qid>#<comment>
       rule, or the mapped name defined in datastore.
     """
-    # Trim the comment part after '#' if any
-    comp_name_wo_comment = comp_name.split('#')[0]
-    sp = comp_name_wo_comment.split('_')
-    if len(sp) != 3:  # <category>, <cid>, <qid>
+    np_adapter = name_pattern_adapter.NamePatternAdapter()
+    name_pattern = np_adapter.GetNamePattern(category)
+    ret = name_pattern.Matches(comp_name)
+    if ret is None:
       return comp_name
-    category_in_name, cid, qid = sp
-    if category != category_in_name or not cid.isdigit() or not qid.isdigit():
-      # does not match naming rule
-      return comp_name
+    cid, unused_qid = ret
 
     with self._ndb_client.context(global_cache=self._global_cache):
-      entry = AVLNameMapping.query(
-          AVLNameMapping.category == category,
-          AVLNameMapping.component_id == int(cid)).get()
+      entry = AVLNameMapping.query(AVLNameMapping.category == category,
+                                   AVLNameMapping.component_id == cid).get()
     if entry is None:
       logging.error(
-          'mapping not found for category "%s" and component name"%s"',
+          'mapping not found for category "%s" and component name "%s"',
           category, comp_name)
       return comp_name
     return entry.name
