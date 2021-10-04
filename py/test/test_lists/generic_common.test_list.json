@@ -86,6 +86,11 @@
     ]
   },
   "definitions": {
+    "APROVerification": {
+      "pytest_name": "ap_ro_verification",
+      "label": "AP RO Verification",
+      "allow_reboot": true
+    },
     "Accelerometers": {
       "pytest_name": "accelerometers"
     },

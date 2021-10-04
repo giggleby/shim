@@ -40,7 +40,8 @@
         "Barrier",
         "BadBlocks",
         "Barrier",
-        "FPSGroup"
+        "FPSGroup",
+        "APROVerification"
       ]
     },
     "FATStart": {

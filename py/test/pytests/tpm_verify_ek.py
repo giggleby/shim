@@ -63,6 +63,7 @@ class TPMVerifyEK(unittest.TestCase):
            'has_reset_lock_permissions': 'true'}
     """
 
+    # TODO(jasonchuang): Wrap tpm_manager_client as an util.
     status_txt = self.dut.CheckOutput(
         ['tpm_manager_client', 'status', '--nonsensitive'], log=True)
 

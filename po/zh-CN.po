@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-10-01 12:10+CST\n"
+"PO-Revision-Date: 2021-10-06 13:14+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -28,6 +28,10 @@ msgstr "加速度计校正"
 #: ../build/pytests_label_generated.json
 msgid "Accelerometers Lid Angle"
 msgstr "加速度计上盖角度"
+
+#: ../build/pytests_label_generated.json
+msgid "Ap Ro Verification"
+msgstr "检查 AP RO hash"
 
 #: ../build/pytests_label_generated.json
 msgid "Audio"
@@ -1237,6 +1241,10 @@ msgstr "请将上盖掀开到 {angle} 度。"
 #: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Checking angle..."
 msgstr "正在确认角度……"
+
+#: ../py/test/pytests/ap_ro_verification.py
+msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
+msgstr "请在{seconds}秒內按著电源並按Refresh键三次"
 
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
@@ -3333,6 +3341,10 @@ msgstr "有触控面板"
 #: ../py/test/test_lists/disable_factory_server.test_list.json
 msgid "Set DeviceInfo"
 msgstr "设定机器资讯"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "AP RO Verification"
+msgstr "检查 AP RO hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Activate Registration Code"

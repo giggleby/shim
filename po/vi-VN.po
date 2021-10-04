@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-10-01 12:10+CST\n"
+"PO-Revision-Date: 2021-10-06 13:14+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -28,6 +28,10 @@ msgstr "Điều chỉnh gia tốc kế"
 #: ../build/pytests_label_generated.json
 msgid "Accelerometers Lid Angle"
 msgstr "Góc gia tốc kế"
+
+#: ../build/pytests_label_generated.json
+msgid "Ap Ro Verification"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Audio"
@@ -1254,6 +1258,10 @@ msgstr ""
 #: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Checking angle..."
 msgstr "Góc được xác nhận"
+
+#: ../py/test/pytests/ap_ro_verification.py
+msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
+msgstr ""
 
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
@@ -3402,6 +3410,10 @@ msgstr "Với bảng điều khiển cảm ứng"
 #: ../py/test/test_lists/disable_factory_server.test_list.json
 msgid "Set DeviceInfo"
 msgstr "Cài đặt thông tin máy"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "AP RO Verification"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Activate Registration Code"
