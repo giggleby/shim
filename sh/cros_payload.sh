@@ -548,7 +548,8 @@ def get_fd(path):
 
 component_data = json.load(get_fd(sys.argv[2])).get(sys.argv[1], None)
 if component_data:
-  files = [component_data.get('part%d' % i, '') for i in range(1, 13)]
+  files = [component_data.get('crx_cache', '')]
+  files += [component_data.get('part%d' % i, '') for i in range(1, 13)]
   print('\n'.join(files))" "${component}" "${json_file}"
 }
 
