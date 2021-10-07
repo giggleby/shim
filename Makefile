@@ -470,8 +470,7 @@ else
 endif
 
 test:
-	@TEST_EXTRA_FLAGS=$(TEST_EXTRA_FLAGS) \
-	  $(MK_DIR)/test.sh $(UNITTESTS_ALLOWLIST)
+	bin/run_unittests $(UNITTESTS_ALLOWLIST)
 
 testall:
 	@$(MAKE) --no-print-directory test TEST_EXTRA_FLAGS=--nofilter

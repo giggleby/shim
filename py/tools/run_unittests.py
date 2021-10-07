@@ -19,6 +19,8 @@ import sys
 import tempfile
 import threading
 import time
+import datetime
+import multiprocessing
 
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import file_utils
@@ -27,7 +29,11 @@ from cros.factory.utils import process_utils
 from cros.factory.tools.unittest_tools import mock_loader
 
 
-TEST_PASSED_MARK = '.tests-passed'
+# TEST_PASSED_MARK is the .tests-passed file at factory root path
+TEST_PASSED_MARK = os.path.abspath(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), '..', '..',
+        '.tests-passed'))
 KILL_OLD_TESTS_TIMEOUT_SECS = 2
 TEST_RUNNER_ENV_VAR = 'CROS_FACTORY_TEST_RUNNER'
 
@@ -458,10 +464,14 @@ def KillOldTests():
 
 def main():
   parser = argparse.ArgumentParser(description='Runs unittests in parallel.')
-  parser.add_argument('--jobs', '-j', type=int, default=1,
+  parser.add_argument('--jobs', '-j', type=int,
+                      default=multiprocessing.cpu_count(),
                       help='Maximum number of tests to run in parallel.')
-  parser.add_argument('--log', '-l', default='',
-                      help='directory to place logs.')
+  parser.add_argument(
+      '--log-dir', '-l', default=os.path.join(
+          tempfile.gettempdir(),
+          'test.logs.' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')),
+      help='directory to place logs.')
   parser.add_argument('--isolated', '-i', nargs='*', default=[],
                       help='Isolated unittests which run sequentially.')
   parser.add_argument('--nofallback', action='store_true',
@@ -485,8 +495,10 @@ def main():
   if args.kill_old:
     KillOldTests()
 
-  runner = RunTests(test, args.jobs, args.log,
-                    isolated_tests=isolated, fallback=not args.nofallback)
+  os.makedirs(args.log_dir, exist_ok=True)
+
+  runner = RunTests(test, args.jobs, args.log_dir, isolated_tests=isolated,
+                    fallback=not args.nofallback)
   return_value = runner.Run()
   if return_value == 0:
     with open(TEST_PASSED_MARK, 'a'):
