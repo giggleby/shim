@@ -9,6 +9,8 @@ import difflib
 import enum
 import functools
 import itertools
+import logging
+import re
 from typing import List, Mapping, NamedTuple, Optional, Tuple
 
 import yaml
@@ -16,6 +18,7 @@ import yaml
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
+from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import schema
 
 
@@ -24,16 +27,6 @@ _BLOCKLIST_DRAM_TAG = set([
     'dram_placeholder',
     'a_fake_dram_0gb',
 ])
-
-
-def _GetComponentMagicPlaceholder(comp_cls, comp_name):
-  # Prefix "x" prevents yaml from quoting the string.
-  return f'x@@@@component@{comp_cls}@{comp_name}@@@@'
-
-
-def _GetSupportStatusMagicPlaceholder(comp_cls, comp_name):
-  # Prefix "x" prevents yaml from quoting the string.
-  return f'x@@@@support_status@{comp_cls}@{comp_name}@@@@'
 
 
 class ErrorCode(enum.Enum):
@@ -302,27 +295,22 @@ class ContentsAnalyzer:
     # find out the location of those fields.
 
     all_comps = self._ExtractHWIDComponents()
-    all_placeholders = []
+    all_placeholders = {}
     db_placeholder_options = database.MagicPlaceholderOptions({})
     for comp_cls, comps in all_comps.items():
       for comp in comps:
-        comp_name_replacer = _GetComponentMagicPlaceholder(comp_cls, comp.name)
-        comp_status_replacer = _GetSupportStatusMagicPlaceholder(
-            comp_cls, comp.name)
+        comp_name_replacer = _LineSplitter.GeneratePlaceholderKey(
+            f'component-{comp_cls}-{comp.name}')
+        comp_status_replacer = _LineSplitter.GeneratePlaceholderKey(
+            f'support_status-{comp_cls}-{comp.name}')
         db_placeholder_options.components[(comp_cls, comp.name)] = (
             database.MagicPlaceholderComponentOptions(comp_name_replacer,
                                                       comp_status_replacer))
 
-        all_placeholders.append(
-            (comp_name_replacer,
-             DBLineAnalysisResult.Part(
-                 DBLineAnalysisResult.Part.Type.COMPONENT_NAME,
-                 comp_name_replacer)))
-        all_placeholders.append(
-            (comp_status_replacer,
-             DBLineAnalysisResult.Part(
-                 DBLineAnalysisResult.Part.Type.COMPONENT_STATUS,
-                 comp_name_replacer)))
+        all_placeholders[comp_name_replacer] = DBLineAnalysisResult.Part(
+            DBLineAnalysisResult.Part.Type.COMPONENT_NAME, comp_name_replacer)
+        all_placeholders[comp_status_replacer] = DBLineAnalysisResult.Part(
+            DBLineAnalysisResult.Part.Type.COMPONENT_STATUS, comp_name_replacer)
 
         if (comp.extracted_seq_no is not None and
             comp.extracted_seq_no != str(comp.expected_seq_no)):
@@ -330,9 +318,10 @@ class ContentsAnalyzer:
               f'{comp.extracted_noseq_comp_name}#{comp.expected_seq_no}')
         else:
           comp_name_with_correct_seq_no = None
+        raw_comp_name = yaml.dump(comp.name).partition('\n')[0]
         report.hwid_components[comp_name_replacer] = (
             HWIDComponentAnalysisResult(
-                comp_cls, comp.name, comp.status, comp.is_newly_added,
+                comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
                 comp.extracted_avl_id, comp.expected_seq_no,
                 comp_name_with_correct_seq_no))
 
@@ -351,9 +340,10 @@ class ContentsAnalyzer:
       diff_view_line_it = itertools.repeat('  ', len(dumped_db_lines))
     else:
       prev_db_contents_lines = db_contents_patcher(
-          self._prev_db.instance.DumpData()).splitlines()
-      diff_view_line_it = difflib.ndiff(prev_db_contents_lines,
-                                        no_placeholder_dumped_db_lines)
+          self._prev_db.instance.DumpData(
+              suppress_support_status=False)).splitlines()
+      diff_view_line_it = difflib.ndiff(
+          prev_db_contents_lines, no_placeholder_dumped_db_lines, charjunk=None)
 
     removed_line_count = 0
 
@@ -365,7 +355,6 @@ class ContentsAnalyzer:
       while True:
         diff_view_line = next(diff_view_line_it)
         if diff_view_line.startswith('? '):
-          unused_next_line = next(diff_view_line_it)
           continue
         if not diff_view_line.startswith('- '):
           break
@@ -436,26 +425,40 @@ class ContentsAnalyzer:
 
 class _LineSplitter:
 
+  _PLACEHOLDER_KEY_MATCHER = re.compile(r'(x@@@@[^@]+@@y@)')
+
+  @classmethod
+  def GeneratePlaceholderKey(cls, placeholder_identity):
+    # Prefix "x" prevents yaml from quoting the string.  The "y" in the
+    # suffix part prevents the overlapped search result.
+    return f'x@@@@{placeholder_identity.replace("@", "<at>")}@@y@'
+
   def __init__(self, placeholders, text_part_factory):
     self._placeholders = placeholders
     self._text_part_factory = text_part_factory
 
   def SplitText(self, text):
-    return self._SplitTextRecursively(text, 0)
-
-  def _SplitTextRecursively(self, text, placeholder_idx):
-    # Split the given text with i-th placeholder.  Then for each piece,
-    # recursively split them with (i+1)-th placeholder.  This implementation
-    # is slow in term of worst case scenario.  However, in real case, each
-    # line often contains no more than two placeholders.
-    if placeholder_idx >= len(self._placeholders):
-      return [self._text_part_factory(text)] if text else []
-    placeholder_str, placeholder_sample = self._placeholders[placeholder_idx]
-    placeholder_idx += 1
-    text_parts = text.split(placeholder_str)
     parts = []
-    for i, text_part in enumerate(text_parts):
-      parts.extend(self._SplitTextRecursively(text_part, placeholder_idx))
-      if i + 1 < len(text_parts):
-        parts.append(copy.deepcopy(placeholder_sample))
+    curr_pos = re_curr_pos = 0
+    while True:
+      matched_result = self._PLACEHOLDER_KEY_MATCHER.search(
+          text, pos=re_curr_pos)
+      if not matched_result:
+        break
+      placeholder_key = matched_result[0]
+      try:
+        placeholder_sample = self._placeholders[placeholder_key]
+      except KeyError:
+        logging.warning(
+            'Matched unexpected placeholder string: %s, maybe the '
+            'prefix / suffix are not magical enough?', placeholder_key)
+        re_curr_pos = matched_result.end()
+        continue
+      if curr_pos < matched_result.start():
+        parts.append(
+            self._text_part_factory(text[curr_pos:matched_result.start()]))
+      parts.append(copy.deepcopy(placeholder_sample))
+      curr_pos = re_curr_pos = matched_result.end()
+    if curr_pos < len(text):
+      parts.append(self._text_part_factory(text[curr_pos:]))
     return parts

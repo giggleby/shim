@@ -110,7 +110,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
             LineModificationStatus.NOT_MODIFIED, [
                 LinePart(LinePartType.TEXT, '      display_panel: '),
                 LinePart(LinePartType.COMPONENT_NAME,
-                         'x@@@@component@display_panel@display_panel_A@@@@'),
+                         'x@@@@component-display_panel-display_panel_A@@y@'),
             ]),
         _CreateAddedLine('    1:'),
         contents_analyzer.DBLineAnalysisResult(
@@ -118,7 +118,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
                 LinePart(LinePartType.TEXT, '      display_panel: '),
                 LinePart(
                     LinePartType.COMPONENT_NAME,
-                    'x@@@@component@display_panel@display_panel_123_456#8@@@@'),
+                    'x@@@@component-display_panel-display_panel_123_456#8@@y@'),
             ]),
         _CreateNotModifiedLine(''),
         _CreateNotModifiedLine('components:'),
@@ -128,24 +128,24 @@ class ContentsAnalyzerTest(unittest.TestCase):
             LineModificationStatus.NOT_MODIFIED, [
                 LinePart(LinePartType.TEXT, '      '),
                 LinePart(LinePartType.COMPONENT_NAME,
-                         'x@@@@component@display_panel@display_panel_A@@@@'),
+                         'x@@@@component-display_panel-display_panel_A@@y@'),
                 LinePart(LinePartType.TEXT, ':'),
             ]),
         contents_analyzer.DBLineAnalysisResult(
             LineModificationStatus.MODIFIED, [
                 LinePart(LinePartType.TEXT, '        status: '),
                 LinePart(LinePartType.COMPONENT_STATUS,
-                         'x@@@@component@display_panel@display_panel_A@@@@'),
+                         'x@@@@component-display_panel-display_panel_A@@y@'),
             ]),
     ])
 
     self.assertEqual(
         report.hwid_components, {
-            'x@@@@component@display_panel@display_panel_A@@@@':
+            'x@@@@component-display_panel-display_panel_A@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
                     'display_panel', 'display_panel_A', 'deprecated', False,
                     None, 1, None),
-            'x@@@@component@display_panel@display_panel_123_456#8@@@@':
+            'x@@@@component-display_panel-display_panel_123_456#8@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
                     'display_panel', 'display_panel_123_456#8', 'supported',
                     True, (123, 456), 2, 'display_panel_123_456#2'),
