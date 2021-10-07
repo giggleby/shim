@@ -752,7 +752,7 @@ def _GetHWIDDBChangeInfo(live_hwid_repo, project, new_hwid_db_editable_section):
   curr_header, unused_curr_editable_section_lines = _SplitHWIDDBV3Sections(
       curr_hwid_db_contents)
   new_hwid_config_contents = update_checksum.ReplaceChecksum(
-      curr_header + new_hwid_db_editable_section)
+      f'{curr_header}\n{new_hwid_db_editable_section}')
   checksum = ''
   for contents in (curr_hwid_db_contents, new_hwid_config_contents):
     checksum = hashlib.sha1((checksum + contents).encode('utf-8')).hexdigest()
