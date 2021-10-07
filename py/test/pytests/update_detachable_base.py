@@ -17,7 +17,9 @@ Test Procedure
 1. Test will try to locate detachable base with the given USB device info.
    If the info is not provided from test lists, the test will try to get it
    from ``cros_config``.
-2. Hammerd is invoked to update base's EC and touch firmware.
+2. Hammerd is invoked to update base's EC and touch firmware. If the path to EC
+   or touch firmware is not specified, the test will extract the firmware from
+   the release or test rootfs depending on ``from_release``.
 3. Verify base is properly updated by probing base info and doing some
    preliminary checkings.
 
@@ -46,7 +48,8 @@ Dependency
 
 Examples
 --------
-If detachable base information is ready in cros_config::
+If detachable base information is ready in cros_config and user would like to
+update using the images extracted from release rootfs::
 
   {
     "pytest_name": "update_detachable_base"
@@ -57,6 +60,7 @@ If explicitly supplying detachable base info (Krane for example)::
   {
     "pytest_name": "update_detachable_base",
     "args": {
+      "from_release": false,
       "usb_path": "1-1.1",
       "product_id": 20540,
       "vendor_id": 6353,
@@ -67,7 +71,6 @@ If explicitly supplying detachable base info (Krane for example)::
 """
 
 import logging
-import os
 import re
 import time
 
@@ -78,6 +81,8 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
+from cros.factory.utils import sys_utils
+
 
 BASE_FW_DIR = '/lib/firmware'
 
@@ -87,20 +92,19 @@ VENDOR_IDS = (ELAN_VENDOR_ID, ST_VENDOR_ID)
 
 class UpdateDetachableBaseTest(test_case.TestCase):
   ARGS = [
+      Arg('from_release', bool, 'Find the firmwares from release rootfs.',
+          default=True),
       Arg('usb_path', str, 'USB path for searching the detachable base.',
           default=None),
-      Arg('product_id', int, 'Product ID of the USB device.',
-          default=None),
-      Arg('vendor_id', int, 'Vendor ID of the USB device.',
-          default=None),
+      Arg('product_id', int, 'Product ID of the USB device.', default=None),
+      Arg('vendor_id', int, 'Vendor ID of the USB device.', default=None),
       Arg('ec_image_path', str,
           'Path to the EC firmware image file under %s.' % BASE_FW_DIR,
           default=None),
       Arg('touchpad_image_path', str,
           'Path to the touchpad image file under %s.' % BASE_FW_DIR,
           default=None),
-      Arg('update', bool,
-          'Update detachable base FW (hammerd is needed)',
+      Arg('update', bool, 'Update detachable base FW (hammerd is needed)',
           default=True),
       Arg('verify', bool,
           'Verify base info after FW update. (usb_updater2 is needed)',
@@ -119,22 +123,17 @@ class UpdateDetachableBaseTest(test_case.TestCase):
     if self.args.vendor_id is None:
       self.args.vendor_id = int(self.CrosConfig('vendor-id'))
     if self.args.ec_image_path is None:
-      self.args.ec_image_path = os.path.join(
+      self.args.ec_image_path = self.dut.path.join(
           BASE_FW_DIR, self.CrosConfig('ec-image-name'))
     if self.args.touchpad_image_path is None:
-      self.args.touchpad_image_path = os.path.join(
+      self.args.touchpad_image_path = self.dut.path.join(
           BASE_FW_DIR, self.CrosConfig('touch-image-name'))
 
     self.device_id = '{:04x}:{:04x}'.format(self.args.vendor_id,
                                             self.args.product_id)
     self.usb_info = UsbInfo(self.device_id)
 
-  def runTest(self):
-    self.ui.SetState(_('Please connect the detachable base.'))
-    sync_utils.PollForCondition(poll_method=self.BaseIsReady,
-                                timeout_secs=60,
-                                poll_interval_secs=1)
-
+  def runDetachableTest(self):
     if self.args.update:
       self.ui.SetState(_('Updating base firmware. Do not remove the base.'))
       self.UpdateDetachableBase()
@@ -155,6 +154,23 @@ class UpdateDetachableBaseTest(test_case.TestCase):
 
       self.VerifyBaseInfo(ec=ec_info, tp=tp_info, fw=fw_info)
       session.console.info('Detachable base verification done.')
+
+  def runTest(self):
+    self.ui.SetState(_('Please connect the detachable base.'))
+    sync_utils.PollForCondition(poll_method=self.BaseIsReady, timeout_secs=60,
+                                poll_interval_secs=1)
+
+    if self.args.from_release:
+      with sys_utils.MountPartition(self.dut.partitions.RELEASE_ROOTFS.path,
+                                    dut=self.dut) as root:
+        logging.info('Get EC and touch FW images from the release rootfs.')
+        self.args.ec_image_path = self.dut.path.join(
+            root, self.args.ec_image_path[1:])
+        self.args.touchpad_image_path = self.dut.path.join(
+            root, self.args.touchpad_image_path[1:])
+        self.runDetachableTest()
+    else:
+      self.runDetachableTest()
 
   @staticmethod
   def CrosConfig(key):

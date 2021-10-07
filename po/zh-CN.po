@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-10-12 16:44+CST\n"
+"PO-Revision-Date: 2021-10-20 12:21+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3091,16 +3091,16 @@ msgid "Draw blocks in any order; Esc to fail."
 msgstr "用任意顺序画完全部格子; 按 Esc 键标记失败"
 
 #: ../py/test/pytests/update_detachable_base.py
-msgid "Please connect the detachable base."
-msgstr "请连接可拆式底座"
-
-#: ../py/test/pytests/update_detachable_base.py
 msgid "Updating base firmware. Do not remove the base."
 msgstr "更新韧体中，勿移除底座"
 
 #: ../py/test/pytests/update_detachable_base.py
 msgid "Verifying detachable base information..."
 msgstr "验证底座信息..."
+
+#: ../py/test/pytests/update_detachable_base.py
+msgid "Please connect the detachable base."
+msgstr "请连接可拆式底座"
 
 #: ../py/test/pytests/update_device_data.py
 msgid "Device Serial Number"

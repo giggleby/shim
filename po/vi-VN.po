@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-10-12 16:44+CST\n"
+"PO-Revision-Date: 2021-10-20 12:21+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3156,16 +3156,16 @@ msgstr ""
 "Vẽ tất cả các lưới theo thứ tự bất kỳ, nhấn Esc để đánh dấu sự thất bại"
 
 #: ../py/test/pytests/update_detachable_base.py
-msgid "Please connect the detachable base."
-msgstr "Vui lòng kết nối cơ sở có thể tháo rời."
-
-#: ../py/test/pytests/update_detachable_base.py
 msgid "Updating base firmware. Do not remove the base."
 msgstr "Cập nhật firmware. Không loại bỏ cơ sở."
 
 #: ../py/test/pytests/update_detachable_base.py
 msgid "Verifying detachable base information..."
 msgstr "Xác minh thông tin..."
+
+#: ../py/test/pytests/update_detachable_base.py
+msgid "Please connect the detachable base."
+msgstr "Vui lòng kết nối cơ sở có thể tháo rời."
 
 #: ../py/test/pytests/update_device_data.py
 msgid "Device Serial Number"
