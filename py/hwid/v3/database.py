@@ -1078,15 +1078,15 @@ class Components:
     """
     self._SCHEMA.Validate(components_expr)
 
-    self._components_expr = copy.deepcopy(components_expr)
-    self._components = {}
+    self._region_component_expr = copy.deepcopy(components_expr.get('region'))
+    self._components = yaml.Dict()
 
     self._can_encode = True
     self._default_components = set()
     self._non_probeable_component_classes = set()
 
-    for comp_cls, comps_data in self._components_expr.items():
-      self._components[comp_cls] = {}
+    for comp_cls, comps_data in components_expr.items():
+      self._components[comp_cls] = yaml.Dict()
       for comp_name, comp_attr in comps_data['items'].items():
         self._AddComponent(
             comp_cls, comp_name, comp_attr['values'],
@@ -1115,53 +1115,38 @@ class Components:
   def Export(self, suppress_support_status, magic_placeholder_options):
     """Exports into a serializable dictionary which can be stored into a HWID
     database file."""
-    # Apply the changes back to the original data for YAML, either adding a new
-    # component or updating the component status.
-    for comp_cls in self.component_classes:
-      components_dict = self._components_expr.setdefault(
-          comp_cls, {'items': yaml.Dict()})['items']
-      for comp_name, comp_info in self.GetComponents(comp_cls).items():
-        if comp_name not in components_dict:
-          components_dict[comp_name] = yaml.Dict()
-          if comp_info.status != common.COMPONENT_STATUS.supported:
-            components_dict[comp_name]['status'] = comp_info.status
-          components_dict[comp_name]['values'] = comp_info.values
-          if comp_info.information is not None:
-            components_dict[comp_name]['information'] = comp_info.information
-
-        else:
-          if comp_info.status != components_dict[comp_name].get(
-              'status', common.COMPONENT_STATUS.supported):
-            if comp_info.status == common.COMPONENT_STATUS.supported:
-              del components_dict[comp_name]['status']
-            else:
-              components_dict[comp_name]['status'] = comp_info.status
-    if suppress_support_status and magic_placeholder_options is None:
-      return self._components_expr
+    components_expr = yaml.Dict()
     magic_placeholder_comps = (
         magic_placeholder_options.components
         if magic_placeholder_options else {})
-    copied_components_expr = copy.deepcopy(self._components_expr)
-    for comp_cls, comp_cls_expr in copied_components_expr.items():
-      # Reconstruct the whole component dictionary to preserve the orders.
-      patched_comp_items = yaml.Dict()
-      for comp_name, comp_info_dict in comp_cls_expr['items'].items():
+    for comp_cls in self.component_classes:
+      if comp_cls == 'region':
+        components_expr[comp_cls] = self._region_component_expr
+        continue
+      components_expr[comp_cls] = yaml.Dict()
+      if comp_cls in self._non_probeable_component_classes:
+        components_expr[comp_cls]['probeable'] = False
+      components_dict = components_expr[comp_cls]['items'] = yaml.Dict()
+      for comp_name, comp_info in self.GetComponents(comp_cls).items():
         try:
-          option = magic_placeholder_comps[(comp_cls, comp_name)]
-          if option.magic_component_name is not None:
-            comp_name = option.magic_component_name
-          if option.magic_support_status is not None:
-            comp_info_dict['status'] = option.magic_support_status
+          replace_info = magic_placeholder_comps[(comp_cls, comp_name)]
         except KeyError:
-          if not suppress_support_status and 'status' not in comp_info_dict:
-            orig_comp_info_dict = comp_info_dict
-            comp_info_dict = {
-                'status': common.COMPONENT_STATUS.supported
-            }
-            comp_info_dict.update(orig_comp_info_dict)
-        patched_comp_items[comp_name] = comp_info_dict
-      comp_cls_expr['items'] = patched_comp_items
-    return copied_components_expr
+          comp_name_in_expr = comp_name
+          support_status = comp_info.status
+        else:
+          comp_name_in_expr = replace_info.magic_component_name
+          support_status = replace_info.magic_support_status
+        component_dict = yaml.Dict()
+        components_dict[comp_name_in_expr] = component_dict
+        if not suppress_support_status or (comp_info.status !=
+                                           common.COMPONENT_STATUS.supported):
+          component_dict['status'] = support_status
+        component_dict['values'] = comp_info.values
+        if (comp_cls, comp_name) in self._default_components:
+          component_dict['default'] = True
+        if comp_info.information:
+          component_dict['information'] = comp_info.information
+    return components_expr
 
   @property
   def can_encode(self):
