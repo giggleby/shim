@@ -825,6 +825,8 @@ def Finalize(options):
   if not options.rma_mode:
     # Write VPD values related to RLZ ping into VPD.
     GetGooftool(options).WriteVPDForRLZPing(options.embargo_offset)
+    if options.generate_mfg_date:
+      GetGooftool(options).WriteVPDForMFGDate()
   Cr50Finalize(options)
   Verify(options)
   LogSourceHashes(options)
