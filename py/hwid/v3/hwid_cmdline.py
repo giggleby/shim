@@ -148,6 +148,36 @@ class HWIDMaterial(NamedTuple):
 def ObtainHWIDMaterial(options):
   """Gets all material needed by the HWID framework according to options.
 
+  Running in Chroot:
+    When this function is called in host environment (chroot), all data will be
+    loaded from files.
+    1. If `material_file` is given, it will be used as the base object, the
+       previously collected contents will be loaded first.
+       - For backward compatibility, this function also accepts
+         `probed_results_file`. But in this case, the `device_info_file` is
+         mandatory.
+    2. Optionally, we can override device info with a file. In this case, the
+       file content of `device_info_file` will be loaded. Note that this works
+       even if `material_file` is specified.
+    3. Optionally, we can load VPD data from a file specified by
+       `vpd_data_file`.
+
+  Running on DUT:
+    In this case, the data can either be collected from device or loaded from
+    files.
+    First of all, `probed_results_file` should never be set.
+
+    If we are loading data from files, the logic is almost the same as running
+    in Chroot, except that `probed_results_file` is not supported.
+
+    If we are collecting data from the device, then,
+    1. `material_file` should not be set.
+    2. `device_info_file` is still optional. If it is not set, we load data from
+       goofy 'FactoryState' server.
+    3. If `run_vpd` is set, we load VPD data from `vpd` command.
+    4. If `vpd_data_file` is set, we load VPD data from the file. Note that (3)
+       and (4) are mutually exclusive.
+
   Args:
     options: The given options.
 
@@ -169,6 +199,8 @@ def ObtainHWIDMaterial(options):
       raise ValueError('`--probed_results_file` is deprecated.')
 
   else:
+    # We are on host machine (chroot), and the command is passed with old
+    # parameters.
     # Host (chroot) environment is often easier to be upgraded.  Hence, there
     # might be a chance that the source code version of the toolkit on DUT is
     # behind the ToT.  Therefore, we want to keep supporting the legacy usage
