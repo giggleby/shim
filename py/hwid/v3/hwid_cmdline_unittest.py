@@ -105,6 +105,11 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
     self._mock_in_cros_device = patcher.start()
     self.addCleanup(patcher.stop)
 
+    patcher = mock.patch(
+        'cros.factory.hwid.v3.hwid_utils.GetSkuIdsFromCrosConfig')
+    self._mock_get_sku_ids_from_cros_config = patcher.start()
+    self.addCleanup(patcher.stop)
+
     self._probed_results_file = file_utils.CreateTemporaryFile()
     self.addCleanup(lambda: file_utils.TryUnlink(self._probed_results_file))
     file_utils.WriteFile(self._probed_results_file, '{"storage": {}}')
@@ -119,7 +124,7 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
 
     self._options = type_utils.Obj(project='test_project',
                                    device_info_file=None, vpd_data_file=None,
-                                   run_vpd=False)
+                                   run_vpd=False, config_yaml=None)
 
   def testSpecifyBothRunVPDAndVPDDataFile(self):
     self._options.vpd_data_file = 'a_vpd_data_file'
@@ -172,6 +177,7 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
 
   def testNoBaseHWIDMaterialSucceed(self):
     self._mock_in_cros_device.return_value = True
+    self._mock_get_sku_ids_from_cros_config.return_value = [11, 22, 33, 44]
     self._options.device_info_file = 'a_device_info_file'
     self._options.run_vpd = True
 
@@ -186,6 +192,7 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
         probed_results=self._mock_get_probed_results.return_value,
         device_info=self._mock_get_device_info.return_value,
         vpd=self._mock_get_vpd_data.return_value,
+        sku_ids=self._mock_get_sku_ids_from_cros_config.return_value,
         framework_version=common.FRAMEWORK_VERSION)
     self.assertEqual(ret, expected_ret)
 
@@ -203,7 +210,20 @@ class ObtainHWIDMaterialTest(unittest.TestCase):
     self._mock_get_vpd_data.assert_called_once_with(infile=None, run_vpd=True)
     expected_ret = hwid_cmdline.HWIDMaterial(
         probed_results={}, device_info=self._mock_get_device_info.return_value,
-        vpd=self._mock_get_vpd_data.return_value,
+        vpd=self._mock_get_vpd_data.return_value, sku_ids=None,
+        framework_version=common.OLDEST_FRAMEWORK_VERSION)
+    self.assertEqual(ret, expected_ret)
+
+    sku_ids = [11, 22, 33, 44]
+    file_utils.WriteFile(
+        self._hwid_material_file,
+        hwid_cmdline.HWIDMaterial(
+            probed_results={}, device_info={}, vpd={}, sku_ids=sku_ids,
+            framework_version=common.OLDEST_FRAMEWORK_VERSION).DumpStr())
+    ret = hwid_cmdline.ObtainHWIDMaterial(self._options)
+    expected_ret = hwid_cmdline.HWIDMaterial(
+        probed_results={}, device_info=self._mock_get_device_info.return_value,
+        vpd=self._mock_get_vpd_data.return_value, sku_ids=sku_ids,
         framework_version=common.OLDEST_FRAMEWORK_VERSION)
     self.assertEqual(ret, expected_ret)
 

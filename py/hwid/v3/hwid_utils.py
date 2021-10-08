@@ -18,6 +18,7 @@ from cros.factory.hwid.v3.configless_fields import ConfiglessFields
 from cros.factory.hwid.v3 import transformer
 from cros.factory.hwid.v3 import verifier
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
+from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
@@ -472,3 +473,21 @@ def GetProbeStatementPath(project=None):
     logging.warning('Error while looking for project specific probe statement',
                     exc_info=True)
   return path
+
+
+def GetSkuIdsFromCrosConfig(project, config_yaml_path=None):
+  from cros.factory.utils import sys_utils
+  assert sys_utils.InCrOSDevice() or config_yaml_path
+
+  if not config_yaml_path:
+    config_yaml_path = '/usr/share/chromeos-config/yaml/config.yaml'
+
+  obj = yaml.load(file_utils.ReadFile(config_yaml_path))
+
+  sku_ids = []
+  for config in obj['chromeos']['configs']:
+    if config['name'] == project:
+      identity = config['identity']
+      sku_ids.append(identity['sku-id'])
+
+  return sku_ids
