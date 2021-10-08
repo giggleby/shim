@@ -256,7 +256,6 @@
         "bus_type",
         "idProduct",
         "idVendor",
-        "manufacturer",
         "module_id",
         "name",
         "product",
