@@ -1,5 +1,4 @@
-Images in Goofy
----------------
+# Images in Goofy
 
 Some public-domain images were obtained from http://openclipart.org:
 
