@@ -288,7 +288,9 @@ class DatabaseBuilder:
     """
     # Set old firmware components to deprecated.
     if comp_cls in ['ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware']:
-      for comp_name in self.database.GetComponents(comp_cls):
+      for comp_name, comp_info in self.database.GetComponents(comp_cls).items():
+        if comp_info.status == common.COMPONENT_STATUS.unsupported:
+          continue
         self.database.SetComponentStatus(
             comp_cls, comp_name, common.COMPONENT_STATUS.deprecated)
 
