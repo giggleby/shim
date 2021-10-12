@@ -50,20 +50,20 @@ To do this, simply add the file in private overlay as:
 
 (The file is already described in `installer.rsrc` as optional resource file.)
 
-# Toolkit resources
+### Toolkit resources
 If you want to put files only for toolkit (i.e., par won't have it), put it
 under `resources/` and create a `resources/toolkit-XXX.rsrc` description file
 to specify where to add the files.
 
-# PAR resources
+### PAR resources
 The `factory.par` may include additional resources. Create a resource as
 `resouces/par-XXX.rsrc` for it.
 
-# Generic resources
+### Generic resources
 If you name the resource definition (`*.rsrc`) file with `resource` or `factory`
 as prefix then all build generic targets (`toolkit`, `par`, but not `installer`)
 will have it. For example `resource-XXX.rsrc` or `factory-XXX.rsrc`.
 
-# Bundle resources
+### Bundle resources
 If there is something that should only appear in bundle (or the "factory ZIP")
 then it should be described in `bundle-XXX.rsrc` file.

@@ -1,11 +1,11 @@
 # Overlord Deployment Guide
 
-# Objective
+## Objective
 
 The goal of this document is to provide deployment guidance to the
 [Overlord][Overlord Design Doc] factory monitor system.
 
-# Deployment
+## Deployment
 
 ### Prerequisites
 
@@ -57,7 +57,7 @@ $ ./cros_docker.sh overlord run
 
 You can access the Overlord server at `https://${IP}:9000`.
 
-# Dashboard feature
+## Dashboard feature
 
 This feature integrates the DUT's testing framework into Overlord server. Long
 story short:
@@ -67,7 +67,7 @@ story short:
 Please refer to the [user manual guide][Dashboard User Manual] for more details.
 
 -----
-# Others
+## Others
 
 ### Ghost Clients
 

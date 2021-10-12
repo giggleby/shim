@@ -31,16 +31,16 @@ please follow the steps in
 Umpire can be configured using [Dome](../dome/README.md) which provides a web
 interface. Please follow Dome user guides to access Umpire.
 
-# Trouble shooting
+## Trouble shooting
 
 This section is for advanced developers, to access Umpire directly without using
 Dome.
 
-## Enter Docker instance shell
+### Enter Docker instance shell
 
     setup/cros_docker.sh umpire shell
 
-## Get logs
+### Get logs
 There are two places for logs of Umpire.
 
 1. Services hosted by Umpire, especially shop floor proxy. The logs are

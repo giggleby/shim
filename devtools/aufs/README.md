@@ -1,6 +1,7 @@
+# AUFS
 Scripts in this directory helps you working on private overlay more easily.
 
-# Why AUFS
+## Why AUFS
 aufs is a kind of unionfs, which allows you to union (or merge) multiple
 directories as one directory.  For Chromium OS Factory Software Platform, we
 need to union files in factory repo (chromiumos/platform/factory) with files in
@@ -14,7 +15,7 @@ With aufs, we create a **working directory** (`workspace`) for you, that both
 files from factory repo and board overlay exists in this directory.  There are
 also some utilities help you manage your modifications.
 
-# File System Structure
+## File System Structure
 The `workspace` is the union of three directories:
 * temp directory (readwrite)
 * board overlay (readonly)
@@ -28,8 +29,8 @@ delete a file, a **whiteout marker** is created in temp directory with the file
 name: `.wh.<deleted-filename>`.  For example, if you deleted `py/README.md`,
 `py/.wh.README.md` will be created under temp directory.
 
-# Utilities
-## `devtools/aufs/enter.sh`
+## Utilities
+### `devtools/aufs/enter.sh`
 Usage: `[WORKING_DIR=...] [BOARD=...] [OVERLAY_DIR=...] enter.sh`
 
 This will create a temp directory under `/tmp` and mount the aufs under
@@ -41,10 +42,10 @@ This will create a temp directory under `/tmp` and mount the aufs under
     board overlay directory.
 * `BOARD`: specify the board name to find `OVERLAY_DIR`.
 
-## `devtools/aufs/status.sh`
+### `devtools/aufs/status.sh`
 Usage: `[WORKING_DIR=...] status.sh`
 
-### Sample output
+#### Sample output
 ```
 Modified files:
 MF Makefile
@@ -59,14 +60,14 @@ DO py/test/test_lists/main.py
 * `F`: this file belongs to factory repo
 * `O`: this file belongs to board overlay
 
-## `devtools/aufs/diff.sh`
+### `devtools/aufs/diff.sh`
 Usage: `[WORKING_DIR=...] diff.sh [file1 file2 ...]`
 
 Similar to `git diff` command, this command shows changes that haven't been
 sync to factory repo or board overlay.  By providing a list of files to
 restrict the script only showing changes of those files.
 
-## `devtools/aufs/sync.sh [-i|--interactive]`
+### `devtools/aufs/sync.sh [-i|--interactive]`
 Usage: `[WORKING_DIR=...] sync.sh [file1 file2 ...]`
 
 Sync changed files to factory repo and board overlay.  Changes of existing
@@ -77,18 +78,18 @@ this file should go to.
 
 By providing a list of files, the script is restricted only syncing those files.
 
-## `devtools/aufs/revert.sh`
+### `devtools/aufs/revert.sh`
 Usage: `[WORKING_DIR=...] revert.sh [file1 file2 ...]`
 
 Discard unstaged changes.  By providing a list of files, the script is
 restricted only reverting those files.
 
-## `devtools/aufs/leave.sh`
+### `devtools/aufs/leave.sh`
 Usage: `[WORKING_DIR=...] leave.sh`
 
 Try to unmount working directory and clean up temp directory.  If there are
 unstaged files, this script will abort, working directory will not be unmounted.
 
-# References
+## References
 1. http://aufs.sourceforge.net/aufs.html
 2. http://www.thegeekstuff.com/2013/05/linux-aufs/

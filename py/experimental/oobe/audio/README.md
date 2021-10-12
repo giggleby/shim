@@ -1,4 +1,5 @@
-# How to use
+# OOBE Audio Test
+## How to use
 1. Copy files under this directory into a USB disk.
 2. Login a Chromebook in guest mode.
 3. Insert the USB disk.
@@ -13,10 +14,10 @@
    the checkbox on "speaker" to enable/disable left/right channels.
 10. Click the save icon to download recorded audio.
 
-# Misc
+## Misc
 1. This script is using default system audio input/output devices.  If there are
    multiple devices, you can make changes on audio settings panel.
 
-# Debugging Tips
+## Debugging Tips
 1. Open "Developer Console" (CTRL+SHIFT+I) and select "console" tab to check if
    there are error messages.
