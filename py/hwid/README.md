@@ -113,6 +113,7 @@ $ hwid build-database \
     [--add-null-component COMP [COMP ...]] \  # Add the null item
     [--region REGION [REGION ...]] \  # Add supported regions
     [--chassis ID1 [ID2 ...]] \  # Add supported chassis
+    [--config-yaml <path to config.yaml>] \  # Get SKU IDs config.yaml
 
 # Update the HWID database
 $ hwid update-database \
@@ -125,6 +126,7 @@ $ hwid update-database \
     [--add-null-component COMP [COMP ...]] \  # Add the null item
     [--region REGION [REGION ...]] \  # Add supported regions
     [--chassis ID1 [ID2 ...]] \  # Add supported chassis
+    [--config-yaml <path to config.yaml>] \  # Get SKU IDs config.yaml
 
 # the --hwid-db-path argument is only required if the HWID database is not
 # placed in /usr/local/factory/hwid/

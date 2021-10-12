@@ -314,7 +314,7 @@ def RunDatabaseBuilder(database_builder, options):
 
   database_builder.UpdateByProbedResults(
       hwid_material.probed_results, hwid_material.device_info,
-      hwid_material.vpd, image_name=options.image_id)
+      hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id)
 
 
 @Command('build-database',

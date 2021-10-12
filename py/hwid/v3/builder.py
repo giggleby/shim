@@ -83,6 +83,9 @@ def _DetermineComponentName(comp_cls, value):
       return 'firmware_keys_dev'
     return 'firmware_keys_non_dev'
 
+  if comp_cls == 'sku_id':
+    return f'sku_{value["sku_id"]}'
+
   # General components.
   if len(value) == 1:
     return FilterSpecialCharacter(str(next(iter(value.values()))))
@@ -232,7 +235,37 @@ class DatabaseBuilder:
           region_field_name, {'region': [new_region]})
     self._UpdatePattern()
 
-  def UpdateByProbedResults(self, probed_results, device_info, vpd,
+  def _AddSkuIds(self, sku_ids):
+    field_name = 'sku_id_field'
+    comp_cls = 'sku_id'
+    existed_comps = self.database.GetComponents(comp_cls)
+    existed_sku_ids = {int(e.values['sku_id'])
+                       for e in existed_comps.values()}
+    sku_ids = set(sku_ids)
+    new_sku_ids = sorted(sku_ids - existed_sku_ids)
+    if new_sku_ids:
+      new_probed_values = [{
+          'sku_id': str(sku_id)
+      } for sku_id in new_sku_ids]
+      self.AddNullComponent(comp_cls)
+      self._AddComponents(comp_cls, new_probed_values)
+
+    # Check if we need to update the encoded field.
+    comp_to_sku_id = {
+        comp_name: int(comp_info.values['sku_id'])
+        for comp_name, comp_info in self.database.GetComponents(
+            comp_cls).items()
+    }
+    for e in self.database.GetEncodedField(field_name).values():
+      if e[comp_cls]:
+        comp_to_sku_id.pop(e[comp_cls][0])
+
+    new_comps = sorted(comp_to_sku_id.keys(), key=lambda x: comp_to_sku_id[x])
+    for comp_name in new_comps:
+      self.database.AddEncodedFieldComponents(field_name,
+                                              {comp_cls: [comp_name]})
+
+  def UpdateByProbedResults(self, probed_results, device_info, vpd, sku_ids,
                             image_name=None):
     """Updates the database by a real probed results.
 
@@ -246,7 +279,7 @@ class DatabaseBuilder:
                       'DatabaseBuilder is creating the new database instead of '
                       'updating an existed database.')
 
-    bom = self._UpdateComponents(probed_results, device_info, vpd)
+    bom = self._UpdateComponents(probed_results, device_info, vpd, sku_ids)
     self._UpdateEncodedFields(bom)
     if not self._from_empty_database:
       self._MayAddNewPatternAndImage(image_name)
@@ -351,7 +384,7 @@ class DatabaseBuilder:
         comp_cls + '_field', self.database.encoded_fields)
     self.database.AddNewEncodedField(field_name, {comp_cls: comp_names})
 
-  def _UpdateComponents(self, probed_results, device_info, vpd):
+  def _UpdateComponents(self, probed_results, device_info, vpd, sku_ids):
     """Updates the component part of the database.
 
     This function update the database by trying to generate the BOM object
@@ -362,6 +395,11 @@ class DatabaseBuilder:
       device_info: The device info object.
       vpd: A dict stores the vpd values.
     """
+    # Add SKU IDs first.  If sku_ids is non-empty, it should contain the probed
+    # SKU ID in probed_results.
+    if sku_ids:
+      self._AddSkuIds(sku_ids)
+
     # Add extra components.
     existed_comp_classes = self.database.GetComponentClasses()
     for comp_cls, probed_comps in probed_results.items():

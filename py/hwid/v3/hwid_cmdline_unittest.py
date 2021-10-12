@@ -266,6 +266,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.probed_results,
           obtain_hwid_material_mock.return_value.device_info,
           obtain_hwid_material_mock.return_value.vpd,
+          obtain_hwid_material_mock.return_value.sku_ids,
           image_name=options.image_id)
 
 
@@ -303,6 +304,7 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.probed_results,
           obtain_hwid_material_mock.return_value.device_info,
           obtain_hwid_material_mock.return_value.vpd,
+          obtain_hwid_material_mock.return_value.sku_ids,
           image_name=options.image_id)
 
 
