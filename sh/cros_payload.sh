@@ -532,6 +532,7 @@ json_get_image_files() {
 
   if [ -n "${JQ}" ]; then
     local filter=".${component}.crx_cache"
+    filter="${filter},.${component}.dlc_factory_cache"
     for i in $(seq 1 12); do
       filter="${filter},.${component}.part${i}"
     done
@@ -549,6 +550,7 @@ def get_fd(path):
 component_data = json.load(get_fd(sys.argv[2])).get(sys.argv[1], None)
 if component_data:
   files = [component_data.get('crx_cache', '')]
+  files += [component_data.get('dlc_factory_cache', '')]
   files += [component_data.get('part%d' % i, '') for i in range(1, 13)]
   print('\n'.join(files))" "${component}" "${json_file}"
 }
@@ -644,6 +646,27 @@ commit_payload() {
   update_json "${json_path}" "${json}"
 }
 
+# Pack the resources under stateful partition
+pack_src_under_stateful() {
+  local component="$1"
+  local output_dir="$2"
+  local stateful_dir="$3"
+  local dir_to_be_packed="$4"
+  local subtype="$5"
+
+  if [ -d "${stateful_dir}/${dir_to_be_packed}" ]; then
+    local cache_file cache_md5
+    cache_file="$(mktemp -p "${output_dir}" \
+      tmp_XXXXXX."${CROS_PAYLOAD_FORMAT}")"
+    register_tmp_object "${cache_file}"
+    cache_md5="$(tar -cC "${stateful_dir}" "${dir_to_be_packed}" | \
+      do_compress "${CROS_PAYLOAD_FORMAT}" | tee "${cache_file}" | \
+      md5sum -b)"
+    commit_payload "${component}" "${subtype}" "${cache_md5%% *}" \
+      "${cache_file}" "${output_dir}"
+  fi
+}
+
 # Adds an image partition type payload.
 # Usage: add_image_part JSON_PATH COMPONENT FILE PART_NO START COUNT
 #  FILE is the disk image file.
@@ -697,19 +720,14 @@ add_image_part() {
     # Try to archive 'unencrypted' folder which contains CRX cache.
     local stateful_dir="$(mktemp -d)"
     local crx_cache_dir="unencrypted/import_extensions"
+    local dlc_factory_dir="unencrypted/dlc-factory-images"
     register_tmp_object "${stateful_dir}"
     if ${SUDO} mount "${file}" "${stateful_dir}" -o \
       ro,offset=$((start * bs)),sizelimit=$((count * bs)); then
-      if [ -d "${stateful_dir}/${crx_cache_dir}" ]; then
-        local crx_cache_file="$(mktemp -p "${output_dir}" \
-          tmp_XXXXXX."${CROS_PAYLOAD_FORMAT}")"
-        register_tmp_object "${crx_cache_file}"
-        local crx_cache_md5="$(tar -cC "${stateful_dir}" "${crx_cache_dir}" | \
-          do_compress "${CROS_PAYLOAD_FORMAT}" | tee "${crx_cache_file}" | \
-          md5sum -b)"
-        commit_payload "${component}" "crx_cache" "${crx_cache_md5%% *}" \
-          "${crx_cache_file}" "${output_dir}"
-      fi
+      pack_src_under_stateful "${component}" "${output_dir}" \
+        "${stateful_dir}" "${crx_cache_dir}" "crx_cache"
+      pack_src_under_stateful "${component}" "${output_dir}" \
+        "${stateful_dir}" "${dlc_factory_dir}" "dlc_factory_cache"
       ${SUDO} umount "${stateful_dir}"
     fi
   elif [ "${nr}" = 3 ]; then
