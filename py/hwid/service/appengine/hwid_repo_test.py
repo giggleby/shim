@@ -53,24 +53,6 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     self._hwid_repo = hwid_repo.HWIDRepo(self._mock_git_fs, 'test_repo',
                                          'test_branch')
 
-  def testIterNamePatterns(self):
-    self._mock_git_fs.ListFiles.side_effect = collections.defaultdict(
-        list, {
-            'name_pattern': ['pattern1.yaml', 'pattern2.yaml']
-        }).__getitem__
-    self._mock_git_fs.ReadFile.side_effect = {
-        'name_pattern/pattern1.yaml': b'pattern1',
-        'name_pattern/pattern2.yaml': b'pattern2',
-    }.__getitem__
-
-    actual_name_patterns = list(self._hwid_repo.IterNamePatterns())
-
-    expected_name_patterns = [
-        ('pattern1.yaml', 'pattern1'),
-        ('pattern2.yaml', 'pattern2'),
-    ]
-    self.assertCountEqual(actual_name_patterns, expected_name_patterns)
-
   def testIterAVLNameMappings(self):
     self._mock_git_fs.ListFiles.side_effect = collections.defaultdict(
         list, {

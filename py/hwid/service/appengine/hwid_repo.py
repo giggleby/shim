@@ -29,7 +29,6 @@ class HWIDRepoError(Exception):
 
 
 class HWIDRepo:
-  _NAME_PATTERN_FOLDER = 'name_pattern'
   _AVL_NAME_MAPPING_FOLDER = 'avl_name_mapping'
   _PROJECTS_YAML_PATH = 'projects.yaml'
 
@@ -44,24 +43,6 @@ class HWIDRepo:
     self._git_fs = git_fs
     self._repo_url = repo_url
     self._repo_branch = repo_branch
-
-  def IterNamePatterns(self):
-    """Iterate through the name patterns recorded in the HWID repo.
-
-    Yields:
-      A tuple of (pattern name, pattern content).
-
-    Raises:
-      HWIDRepoError
-    """
-    try:
-      for name in self._git_fs.ListFiles(self._NAME_PATTERN_FOLDER):
-        content = self._git_fs.ReadFile(
-            f'{self._NAME_PATTERN_FOLDER}/{name}').decode('utf-8')
-        yield name, content
-    except (KeyError, ValueError,
-            filesystem_adapter.FileSystemAdapterException) as ex:
-      raise HWIDRepoError(f'unable to retrieve name patterns: {ex}') from None
 
   def IterAVLNameMappings(self):
     """Iterate through the AVL name mappings recorded in the HWID repo.

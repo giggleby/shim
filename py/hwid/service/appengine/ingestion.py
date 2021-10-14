@@ -44,7 +44,6 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   SERVICE_DESCRIPTOR = ingestion_pb2.DESCRIPTOR.services_by_name[
       'HwidIngestion']
 
-  NAME_PATTERN_FOLDER = 'name_pattern'
   AVL_NAME_MAPPING_FOLDER = 'avl_name_mapping'
 
   def __init__(self, *args, **kwargs):
@@ -57,8 +56,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
-  def SyncNamePattern(self, request):
-    """Sync name pattern from chromeos-hwid repo
+  def SyncNameMapping(self, request):
+    """Sync name mapping from chromeos-hwid repo
 
     In normal circumstances the cron job triggers the refresh hourly, however it
     can be triggered by admins.  The actual work is done by the default
@@ -66,23 +65,12 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     The task queue POSTs back into this handler to do the actual work.
 
-    This handler will copy the name_pattern directory under chromeos-hwid dir to
-    cloud storage.
+    This handler will copy the avl_name_mapping directory under chromeos-hwid
+    dir to cloud storage.
     """
 
     del request  # unused
     live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo()
-
-    folder = self.NAME_PATTERN_FOLDER
-    existing_files = set(self.hwid_filesystem.ListFiles(folder))
-    for name, content in live_hwid_repo.IterNamePatterns():
-      self.hwid_filesystem.WriteFile(f'{folder}/{name}',
-                                     content.encode('utf-8'))
-      existing_files.discard(name)
-    # remove files not existed on repo but still on cloud storage
-    for name in existing_files:
-      self.hwid_filesystem.DeleteFile(f'{folder}/{name}')
-
     category_set = self.hwid_manager.ListExistingAVLCategories()
 
     for name, content in live_hwid_repo.IterAVLNameMappings():
@@ -93,7 +81,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     self.hwid_manager.RemoveAVLNameMappingCategories(category_set)
 
-    return ingestion_pb2.SyncNamePatternResponse()
+    return ingestion_pb2.SyncNameMappingResponse()
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck

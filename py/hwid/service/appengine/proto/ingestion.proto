@@ -17,10 +17,10 @@ message IngestDevicesVariantsRequest {
 message IngestDevicesVariantsResponse {
 }
 
-message SyncNamePatternRequest {
+message SyncNameMappingRequest {
 }
 
-message SyncNamePatternResponse {
+message SyncNameMappingResponse {
 }
 
 service HwidIngestion {
@@ -29,5 +29,5 @@ service HwidIngestion {
   rpc IngestDevicesVariants(IngestDevicesVariantsRequest)
       returns (IngestDevicesVariantsResponse);
 
-  rpc SyncNamePattern(SyncNamePatternRequest) returns (SyncNamePatternResponse);
+  rpc SyncNameMapping(SyncNameMappingRequest) returns (SyncNameMappingResponse);
 }

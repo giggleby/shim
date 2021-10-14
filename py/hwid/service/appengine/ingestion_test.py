@@ -5,7 +5,6 @@
 """Tests for ingestion."""
 
 import collections
-import os
 import unittest
 from unittest import mock
 
@@ -103,7 +102,6 @@ class IngestionTest(unittest.TestCase):
 
 class AVLNameTest(unittest.TestCase):
 
-  NAME_PATTERN_FOLDER = 'name_pattern'
   NAME_MAPPING_FOLDER = 'avl_name_mapping'
 
   def setUp(self):
@@ -153,39 +151,6 @@ class AVLNameTest(unittest.TestCase):
         for category, mapping in self.update_mapping_data.items()
     }
 
-  def testSyncNamePattern(self):
-    mock_name_pattern = {
-        'category1.yaml': ('- "pattern1\n"'
-                           '- "pattern2\n"'
-                           '- "pattern3\n"'),
-        'category2.yaml': ('- "pattern4\n"'
-                           '- "pattern5\n"'
-                           '- "pattern6\n"')
-    }
-
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
-    # pylint: disable=dict-items-not-iterating
-    live_hwid_repo.IterNamePatterns.return_value = mock_name_pattern.items()
-    # pylint: enable=dict-items-not-iterating
-
-    self.patch_hwid_filesystem.ListFiles.return_value = []
-
-    request = ingestion_pb2.SyncNamePatternRequest()
-    response = self.service.SyncNamePattern(request)
-    self.assertEqual(response, ingestion_pb2.SyncNamePatternResponse())
-
-    self.patch_hwid_filesystem.ListFiles.assert_has_calls(
-        [mock.call(self.NAME_PATTERN_FOLDER)])
-
-    expected_call_count = 0
-    for filename, content in mock_name_pattern.items():
-      path = os.path.join('name_pattern', filename)
-      expected_call_count += 1
-      self.patch_hwid_filesystem.WriteFile.assert_any_call(
-          path, content.encode('utf-8'))
-    self.assertEqual(self.patch_hwid_filesystem.WriteFile.call_count,
-                     expected_call_count)
-
   def testSyncNameMapping(self):
     """Perform two round sync and check the consistency."""
     live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
@@ -196,9 +161,9 @@ class AVLNameTest(unittest.TestCase):
         self.mock_init_mapping.items())
     # pylint: enable=dict-items-not-iterating
 
-    request = ingestion_pb2.SyncNamePatternRequest()
-    response = self.service.SyncNamePattern(request)
-    self.assertEqual(response, ingestion_pb2.SyncNamePatternResponse())
+    request = ingestion_pb2.SyncNameMappingRequest()
+    response = self.service.SyncNameMapping(request)
+    self.assertEqual(response, ingestion_pb2.SyncNameMappingResponse())
 
     mapping_in_datastore = collections.defaultdict(dict)
     with ndb.Client().context():
@@ -213,9 +178,9 @@ class AVLNameTest(unittest.TestCase):
         self.mock_update_mapping.items())
     # pylint: enable=dict-items-not-iterating
 
-    request = ingestion_pb2.SyncNamePatternRequest()
-    response = self.service.SyncNamePattern(request)
-    self.assertEqual(response, ingestion_pb2.SyncNamePatternResponse())
+    request = ingestion_pb2.SyncNameMappingRequest()
+    response = self.service.SyncNameMapping(request)
+    self.assertEqual(response, ingestion_pb2.SyncNameMappingResponse())
 
     mapping_in_datastore = collections.defaultdict(dict)
     with ndb.Client().context():
