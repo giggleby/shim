@@ -14,6 +14,7 @@ import shutil
 import signal
 import socketserver
 import struct
+import subprocess
 from subprocess import STDOUT
 import sys
 import tempfile
@@ -21,9 +22,9 @@ import threading
 import time
 import datetime
 import multiprocessing
+import contextlib
 
 from cros.factory.utils.debug_utils import SetupLogging
-from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.tools.unittest_tools import mock_loader
@@ -34,47 +35,8 @@ TEST_PASSED_MARK = os.path.abspath(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)), '..', '..',
         '.tests-passed'))
-KILL_OLD_TESTS_TIMEOUT_SECS = 2
-TEST_RUNNER_ENV_VAR = 'CROS_FACTORY_TEST_RUNNER'
-
 # Timeout for running any individual test program.
 TEST_TIMEOUT_SECS = 60
-
-
-def _MaybeSkipTest(tests, isolated_tests):
-  """Filters tests according to changed file.
-
-  Args:
-    tests: unittest paths.
-    isolated_tests: isolated unittest paths.
-
-  Returns:
-    A tuple (filtered_tests, filtered_isolated_tests) containing filtered
-    tests and isolated tests.
-  """
-  if not os.path.exists(TEST_PASSED_MARK):
-    return (tests, isolated_tests)
-
-  ls_tree = process_utils.CheckOutput(
-      ['git', 'ls-tree', '-r', 'HEAD']).split('\n')
-  files = [line.split()[3] for line in ls_tree if line]
-  last_test_time = os.path.getmtime(TEST_PASSED_MARK)
-
-  try:
-    # We can't use os.path.getmtime here, because we don't want it to follow
-    # symlink (for example, py_pkg/cros/factory, py/testlog/utils), and those
-    # directories would appear changed since we clear all .pyc before running
-    # this.
-    changed_files = [f for f in files if os.lstat(f).st_mtime > last_test_time]
-  except OSError:
-    # E.g., file renamed; just run everything
-    return (tests, isolated_tests)
-
-  if not changed_files:
-    # Nothing to test!
-    return ([], [])
-
-  return (tests, isolated_tests)
 
 
 class _TestProc:
@@ -88,65 +50,66 @@ class _TestProc:
   Args:
     test_name: unittest path.
     log_name: path of log file for unittest.
+    port_server: port server used by net_utils
+    python_path: factory module path to be imported in process
   """
 
   def __init__(self, test_name, log_name, port_server, python_path):
     self.test_name = test_name
-    self.log_file = open(log_name, 'w')
-    self.start_time = time.time()
+    self.log_file_name = log_name
+    self._port_server = port_server
+    self._python_path = python_path
+    self.cros_factory_data_dir = None
+    self.start_time = None
+    self.proc = None
+
+  def __enter__(self):
     self.cros_factory_data_dir = tempfile.mkdtemp(
         prefix='cros_factory_data_dir.')
-    self.child_tmp_root = os.path.join(self.cros_factory_data_dir, 'tmp')
-    os.mkdir(self.child_tmp_root)
+    child_tmp_root = os.path.join(self.cros_factory_data_dir, 'tmp')
+    os.mkdir(child_tmp_root)
+
     child_env = os.environ.copy()
-    child_env['PYTHONPATH'] = python_path
+    child_env['PYTHONPATH'] = self._python_path
     child_env['CROS_FACTORY_DATA_DIR'] = self.cros_factory_data_dir
-    # Set TEST_RUNNER_ENV_VAR so we know to kill it later if
-    # re-running tests.
-    child_env[TEST_RUNNER_ENV_VAR] = os.path.basename(__file__)
-    # Set SPT_NOENV so that setproctitle doesn't mess up with /proc/PID/environ,
-    # and we can kill old tests correctly.
-    child_env['SPT_NOENV'] = '1'
     # Since some tests using `make par` is sensitive to file changes inside py
     # directory, don't generate .pyc file.
     child_env['PYTHONDONTWRITEBYTECODE'] = '1'
     # Change child calls for tempfile.* to be rooted at directory inside
     # cros_factory_data_dir temporary directory, so it would be removed even if
     # the test is terminated.
-    child_env['TMPDIR'] = self.child_tmp_root
+    child_env['TMPDIR'] = child_tmp_root
     # This is used by net_utils.FindUnusedPort, to eliminate the chance of
     # collision of FindUnusedPort between different unittests.
-    child_env['CROS_FACTORY_UNITTEST_PORT_DISTRIBUTE_SERVER'] = port_server
-    self.proc = process_utils.Spawn(self.test_name, stdout=self.log_file,
-                                    stderr=STDOUT, env=child_env)
-    self.pid = self.proc.pid
-
+    child_env[
+        'CROS_FACTORY_UNITTEST_PORT_DISTRIBUTE_SERVER'] = self._port_server
+    with open(self.log_file_name, 'w') as log_file:
+      self.start_time = time.time()
+      self.proc = process_utils.Spawn(self.test_name, stdout=log_file,
+                                      stderr=STDOUT, env=child_env)
     process_utils.StartDaemonThread(target=self._WatchTest)
-    self.returncode = None
+    return self
+
+  def __exit__(self, exc_type, exc_value, traceback):
+    if os.path.isdir(self.cros_factory_data_dir):
+      shutil.rmtree(self.cros_factory_data_dir)
+    self._ForceKillProcess()
 
   def _WatchTest(self):
     """Watches a test, killing it if it times out."""
-    while True:
-      time.sleep(1)
-      if self.returncode is not None:
-        # Test complete!
-        return
-      if time.time() > self.start_time + TEST_TIMEOUT_SECS:
-        break  # Timeout
-
-    logging.error('Test %s still alive after %d secs: killing it',
-                  self.test_name, TEST_TIMEOUT_SECS)
     try:
-      os.kill(self.proc.pid, signal.SIGKILL)
-    except OSError:
-      # E.g., it went away... no big deal
-      logging.exception('Unable to kill %s', self.test_name)
-    return
+      self.proc.wait(TEST_TIMEOUT_SECS)
+    except subprocess.TimeoutExpired:
+      logging.error('Test %s still alive after %d secs: killing it',
+                    self.test_name, TEST_TIMEOUT_SECS)
+      self.proc.send_signal(signal.SIGINT)
+      time.sleep(1)
+      self._ForceKillProcess()
 
-  def Close(self):
-    if os.path.isdir(self.cros_factory_data_dir):
-      shutil.rmtree(self.cros_factory_data_dir)
-    self.log_file.close()
+  def _ForceKillProcess(self):
+    """Force kill process without raising any attention."""
+    self.proc.kill()
+    self.proc.wait()
 
 
 class PortDistributeHandler(socketserver.StreamRequestHandler):
@@ -228,11 +191,10 @@ class RunTests:
 
     def AbortHandler(sig, frame):
       del sig, frame  # Unused.
-      if self._abort_event.isSet():
-        # Ignore cleanup and force exit if ctrl-c is pressed twice
-        print('\033[22;31mGot ctrl-c twice, force shutdown!\033[22;0m')
-        raise KeyboardInterrupt
-      print('\033[1;33mGot ctrl-c, gracefully shutdown.\033[22;0m')
+      if not self._abort_event.isSet():
+        print('\033[1;33mGot ctrl-c, gracefully shutdown.\033[22;0m')
+      else:
+        print('\033[1;33mTerminating runner and all subprocess...\033[22;0m')
       self._abort_event.set()
 
     signal.signal(signal.SIGINT, AbortHandler)
@@ -275,8 +237,9 @@ class RunTests:
     if self._failed_tests:
       self._FailMessage('Logs of %d failed tests:' % len(self._failed_tests))
       # Log all the values in the dict (i.e., the log file paths)
-      for test in sorted(self._failed_tests.values()):
-        self._FailMessage(test)
+      for test_name, log_path in sorted(self._failed_tests.items()):
+        with open(log_path) as f:
+          self._FailMessage(f'{log_path} ({test_name}):\n{f.read()}')
       return 1
     return 0
 
@@ -312,15 +275,17 @@ class RunTests:
       tests: list of unittest paths.
       max_jobs: maximum number of tests to run in parallel.
     """
-    with PortDistributeServer() as port_server, mock_loader.Loader() as loader:
+    with PortDistributeServer() as port_server, mock_loader.Loader(
+    ) as loader, contextlib.ExitStack() as stack:
       for test_name in tests:
         try:
-          p = _TestProc(test_name, self._GetLogFilename(test_name),
-                        port_server.socket_file, loader.GetMockedRoot())
+          p = stack.enter_context(
+              _TestProc(test_name, self._GetLogFilename(test_name),
+                        port_server.socket_file, loader.GetMockedRoot()))
         except Exception:
           self._FailMessage('Error running test %r' % test_name)
           raise
-        self._running_proc[p.pid] = (p, os.path.basename(test_name))
+        self._running_proc[p.proc.pid] = (p, os.path.basename(test_name))
         self._WaitRunningProcessesFewerThan(max_jobs)
       # Wait for all running test.
       self._WaitRunningProcessesFewerThan(1)
@@ -335,29 +300,24 @@ class RunTests:
       p: _TestProc object.
     """
     duration = time.time() - p.start_time
-    if p.returncode == 0:
+    if p.proc.returncode == 0:
       self._PassMessage('*** PASS [%.2f s] %s' % (duration, p.test_name))
       self._passed_tests.add(p.test_name)
     else:
       self._FailMessage('*** FAIL [%.2f s] %s (return:%d)' %
-                        (duration, p.test_name, p.returncode))
-      self._failed_tests[p.test_name] = p.log_file.name
+                        (duration, p.test_name, p.proc.returncode))
+      self._failed_tests[p.test_name] = p.log_file_name
 
   def _TerminateAndCleanupAll(self):
     """Terminate all running process and cleanup temporary directories.
 
     Doing terminate gracefully by sending SIGINT to all process first, wait for
-    1 second, and then send SIGKILL to process that is still alive.
+    1 second, and then raise interrupt to force leave. The cleanup of all
+    process are handled by the context manager.
     """
-    for pid in self._running_proc:
-      os.kill(pid, signal.SIGINT)
+    for test_proc, unused_name in self._running_proc.values():
+      test_proc.proc.send_signal(signal.SIGINT)
     time.sleep(1)
-    for pid, (proc, unused_test_name) in self._running_proc.items():
-      if os.waitpid(pid, os.WNOHANG)[0] == 0:
-        # Test still alive, kill with SIGKILL
-        os.kill(pid, signal.SIGKILL)
-        os.waitpid(pid, 0)
-      proc.Close()
     raise KeyboardInterrupt
 
   def _WaitRunningProcessesFewerThan(self, threshold):
@@ -369,20 +329,21 @@ class RunTests:
     Args:
       threshold: if #running process is fewer than this, the call returns.
     """
+    self._ShowRunningTest()
     while len(self._running_proc) >= threshold:
       if self._abort_event.isSet():
         # Ctrl-c got, cleanup and exit.
         self._TerminateAndCleanupAll()
 
-      pid, status = os.waitpid(-1, os.WNOHANG)
-      if pid != 0:
-        p = self._running_proc.pop(pid)[0]
-        p.returncode = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -1
-        p.Close()
-        self._RecordTestResult(p)
+      terminated_procs = [
+          test_proc for test_proc, unused_name in self._running_proc.values()
+          if test_proc.proc.returncode is not None
+      ]
+      for test_proc in terminated_procs:
+        del self._running_proc[test_proc.proc.pid]
+        self._RecordTestResult(test_proc)
         self._ShowRunningTest()
-      else:
-        self._abort_event.wait(0.05)
+      self._abort_event.wait(0.05)
 
   def _PassMessage(self, message):
     self._ClearLine()
@@ -406,60 +367,9 @@ class RunTests:
     running_tests = ', '.join([p[1] for p in self._running_proc.values()])
     if len(status) + 3 + len(running_tests) > 80:
       running_tests = running_tests[:80 - len(status) - 6] + '...'
-    sys.stderr.write('%s [%s]' %
-                     (status, running_tests))
+    self._ClearLine()
+    sys.stderr.write('%s [%s]' % (status, running_tests))
     sys.stderr.flush()
-
-
-def KillOldTests():
-  """Kills stale test processes.
-
-  Looks for processes that have CROS_FACTORY_TEST_RUNNER=run_tests.py in
-  their environment, mercilessly kills them, and waits for them
-  to die.  If it can't kill all the processes within
-  KILL_OLD_TESTS_TIMEOUT_SECS, returns anyway.
-  """
-  env_signature = '%s=%s' % (TEST_RUNNER_ENV_VAR, os.path.basename(__file__))
-
-  pids_to_kill = []
-  user_id = (os.environ.get('USER') or
-             process_utils.CheckOutput(['id', '-un']).strip())
-  for pid in process_utils.CheckOutput(['pgrep', '-U', user_id]).splitlines():
-    pid = int(pid)
-    try:
-      environ = file_utils.ReadFile('/proc/%d/environ' % pid)
-    except IOError:
-      # No worries, maybe the process already disappeared
-      continue
-
-    if env_signature in environ.split('\0'):
-      pids_to_kill.append(pid)
-
-  if not pids_to_kill:
-    return
-
-  logging.warning('Killing stale test processes %s', pids_to_kill)
-  for pid in pids_to_kill:
-    try:
-      os.kill(pid, signal.SIGKILL)
-    except OSError:
-      if os.path.exists('/proc/%d' % pid):
-        # It's still there.  We should have been able to kill it!
-        logging.exception('Unable to kill stale test process %s', pid)
-
-  start_time = time.time()
-  while True:
-    pids_to_kill = [pid for pid in pids_to_kill
-                    if os.path.exists('/proc/%d' % pid)]
-    if not pids_to_kill:
-      logging.warning('Killed all stale test processes')
-      return
-
-    if time.time() - start_time > KILL_OLD_TESTS_TIMEOUT_SECS:
-      logging.warning('Unable to kill %s', pids_to_kill)
-      return
-
-    time.sleep(0.1)
 
 
 def main():
@@ -476,29 +386,18 @@ def main():
                       help='Isolated unittests which run sequentially.')
   parser.add_argument('--nofallback', action='store_true',
                       help='Do not re-run failed test sequentially.')
-  parser.add_argument('--nofilter', action='store_true',
-                      help='Do not filter tests.')
-  parser.add_argument('--no-kill-old', action='store_false', dest='kill_old',
-                      help='Do not kill old tests.')
   parser.add_argument('test', nargs='+', help='Unittest filename.')
   args = parser.parse_args()
 
   SetupLogging()
 
-  test, isolated = ((args.test, args.isolated)
-                    if args.nofilter
-                    else _MaybeSkipTest(args.test, args.isolated))
-
   if os.path.exists(TEST_PASSED_MARK):
     os.remove(TEST_PASSED_MARK)
 
-  if args.kill_old:
-    KillOldTests()
-
   os.makedirs(args.log_dir, exist_ok=True)
 
-  runner = RunTests(test, args.jobs, args.log_dir, isolated_tests=isolated,
-                    fallback=not args.nofallback)
+  runner = RunTests(args.test, args.jobs, args.log_dir,
+                    isolated_tests=args.isolated, fallback=not args.nofallback)
   return_value = runner.Run()
   if return_value == 0:
     with open(TEST_PASSED_MARK, 'a'):
