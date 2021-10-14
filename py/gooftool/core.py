@@ -50,6 +50,14 @@ _FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
 
 _PART_TABLE_ERROR_TEMPLATE = "Please run partition_table pytest to fix it."
 
+_DLCVERIFY = 'dlcverify'
+
+# TODO: factory installed DLC images haven't enabled on recovery image.
+# Will change the version once it is enabled.
+_DLC_ENABLED_VERSION = LooseVersion('0000')
+
+_DLC_ERROR_TEMPLATE = 'Please run check_image_version.py to do re-imaging.'
+
 
 class CrosConfigError(Error):
   message_template = '%s. Identity may be misconfigured.\n%s\n%s'
@@ -115,6 +123,72 @@ class Gooftool:
       # accidentally loading the DB multiple times.
       del self._db_creator
     return self._db
+
+  def VerifyDLCImages(self):
+    """Verify if the hashes of the factory installed DLC images are correct.
+
+    The hashes of the factory installed DLC images must match with the DLC
+    metadata in release rootfs under `/opt/google/dlc`. We enumerate all the
+    factory installed DLC images under stateful partition and compare their
+    hashes using `dlcverify`.
+    """
+
+    def _ListSubDirectories(dir_path):
+      sub_dir_names = []
+      for name in os.listdir(dir_path):
+        if os.path.isdir(os.path.join(dir_path, name)):
+          sub_dir_names.append(name)
+
+      return sub_dir_names
+
+    release_image_version = LooseVersion(self._util.GetReleaseImageVersion())
+    if release_image_version < _DLC_ENABLED_VERSION:
+      logging.info(
+          'Factory installed DLC images are enabled in release image '
+          'version %s. Current version is %s. Skip checking.',
+          _DLC_ENABLED_VERSION, release_image_version)
+      return
+
+    dlc_cache_path = os.path.join(wipe.STATEFUL_PARTITION_PATH,
+                                  wipe.DLC_CACHE_PAYLOAD_NAME)
+    file_utils.CheckPath(dlc_cache_path,
+                         '%s. %s' % (dlc_cache_path, _DLC_ERROR_TEMPLATE))
+
+    with file_utils.TempDirectory() as tmpdir:
+      # The DLC images are stored as compressed format.
+      decompress_command = 'tar -xpvf %s -C %s' % (dlc_cache_path, tmpdir)
+      logging.info(decompress_command)
+      decompress_out = self._util.shell(decompress_command)
+
+      if not decompress_out.success:
+        raise Error('DLC images decompressing failed: %s. %s' %
+                    (decompress_out.stderr, _DLC_ERROR_TEMPLATE))
+
+      dlc_image_path = os.path.join(tmpdir, 'unencrypted', 'dlc-factory-images')
+
+      # Enumerate all the DLC sub-directories under dlc_image_path.
+      sub_dir_names = _ListSubDirectories(dlc_image_path)
+      if len(sub_dir_names) == 0:
+        logging.info('No DLC images under %s. Skip checking.', dlc_image_path)
+        return
+
+      # Mount the release rootfs and check the hashes of the images
+      error_messages = {}
+      with sys_utils.MountPartition(
+          self._util.GetReleaseRootPartitionPath()) as root:
+        for sub_dir_name in sub_dir_names:
+          image_path = os.path.join(dlc_image_path, sub_dir_name, 'package',
+                                    'dlc.img')
+          verify_command = '%s --id=%s --image=%s --rootfs_mount=%s' % \
+                           (_DLCVERIFY, sub_dir_name, image_path, root)
+          logging.info(verify_command)
+          check_hash_out = self._util.shell(verify_command)
+
+          if not check_hash_out.success:
+            error_messages[image_path] = check_hash_out.stderr
+
+      if error_messages:
+        raise Error('%r. %s' % (error_messages, _DLC_ERROR_TEMPLATE))
 
   def VerifyECKey(self, pubkey_path=None, pubkey_hash=None):
     """Verify EC public key.

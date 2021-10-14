@@ -35,8 +35,14 @@ STATEFUL_PARTITION_PATH = '/mnt/stateful_partition/'
 
 WIPE_MARK_FILE = 'wipe_mark_file'
 
-CRX_CACHE_PAYLOAD_NAME = 'dev_image/opt/cros_payloads/release_image.crx_cache'
+_CROS_PAYLOADS_PATH = 'dev_image/opt/cros_payloads'
+
+CRX_CACHE_PAYLOAD_NAME = '%s/release_image.crx_cache' % _CROS_PAYLOADS_PATH
 CRX_CACHE_TAR_PATH = '/tmp/crx_cache.tar'
+
+DLC_CACHE_PAYLOAD_NAME = '%s/release_image.dlc_factory_cache' % \
+                         _CROS_PAYLOADS_PATH
+
 
 class WipeError(Exception):
   """Failed to complete wiping."""

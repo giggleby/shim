@@ -290,6 +290,12 @@ _use_generic_tpm2_arg = CmdArg(
           'if failed to write.'))
 
 
+@Command('verify_dlc_images')
+def VerifyDLCImages(options):
+  """Verify the hash of the factory installed DLC."""
+  return GetGooftool(options).VerifyDLCImages()
+
+
 @Command(
     'verify_ec_key',
     _ec_pubkey_path_cmd_arg,
@@ -673,6 +679,7 @@ def Verify(options):
     VerifyFpKey(options)
   VerifyKeys(options)
   VerifyRootFs(options)
+  VerifyDLCImages(options)
   VerifyTPM(options)
   VerifyVPD(options)
   VerifyReleaseChannel(options)
