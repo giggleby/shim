@@ -166,10 +166,12 @@ for your sound card. Otherwise the test will use audio.json instead of ucm::
     }
 """
 
+import io
 import logging
 import os
 import re
 import time
+from typing import Optional
 
 from cros.factory.device.audio import base
 from cros.factory.device import device_utils
@@ -1078,7 +1080,7 @@ class AudioLoopTest(test_case.TestCase):
     self._dut.audio.DisableAllAudioInputs(self._in_card)
     self._dut.audio.EnableDevice(self.args.mic_source, self._in_card)
 
-  def _ParseConformanceOutput(self, conformance_output):
+  def _ParseConformanceOutput(self, conformance_output: io.TextIOBase):
     """Parse a conformance output from alsa_conformance_test.py
 
     Sample output:
@@ -1092,43 +1094,52 @@ class AudioLoopTest(test_case.TestCase):
       ValueError: Can not get alsa_conformance_test.py output or wrong format.
 
     Returns:
-      is_all_passed, error_msg
+      A boolean indicates the test passes or not.
     """
 
     m = self._MatchPatternLines(
         conformance_output,
-        re.compile(r'^([0-9])*\s*passed,\s*([0-9]*)\s*failed$'))
+        re.compile(r'^[0-9]+\s*passed,\s*([0-9]+)\s*failed$'))
     if m is None:
       raise ValueError(
           'Failed to get expected output from alsa_conformance_test.py')
 
-    passed_times = int(m.group(1))
-    failed_times = int(m.group(2))
-    if failed_times > 0:
-      return False, 'alsa_conformance_test: %d passed, %d failed' % (
-          passed_times, failed_times)
+    failed_times = int(m.group(1))
+    return failed_times == 0
 
-    return True, ''
+  def _CheckDeviceConformance(self, input_device: Optional[str],
+                              output_device: Optional[str]):
+    """Run a sub-test of the conformance test.
+
+    Args:
+      input_device: The capture device.
+      output_device: The playback device.
+    """
+
+    commands = [audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates']
+    if input_device:
+      commands.extend(['-C', input_device])
+    if output_device:
+      commands.extend(['-P', output_device])
+    process = self._dut.Popen(commands, stdout=process_utils.PIPE,
+                              stderr=process_utils.PIPE, log=True)
+    stdout, stderr = process.communicate()
+    if stdout:
+      logging.info('stdout:\n%s', stdout)
+    if stderr:
+      logging.info('stderr:\n%s', stderr)
+    is_all_passed = self._ParseConformanceOutput(io.StringIO(stdout))
+    if not is_all_passed:
+      error_messages = 'alsa_conformance_test.py failed for'
+      if input_device:
+        error_messages += f' Input device {input_device}'
+      if output_device:
+        error_messages += f' Output device {output_device}'
+      self.AppendErrorMessage(error_messages)
 
   def CheckConformance(self):
     """Run conformance test program and check the result."""
 
-    process = self._dut.Popen([
-        audio_utils.CONFORMANCETEST_PATH, '-C', self._alsa_input_device,
-        '--test-suites', 'test_rates'
-    ], stdout=process_utils.PIPE, stderr=process_utils.PIPE)
-    process.wait()
-    is_all_passed, error_msg = self._ParseConformanceOutput(process.stdout)
-    if not is_all_passed:
-      self.FailTask(
-          'Input device %s: %s' % (self._alsa_input_device, error_msg))
-
-    process = self._dut.Popen([
-        audio_utils.CONFORMANCETEST_PATH, '-P', self._alsa_output_device,
-        '--test-suites', 'test_rates'
-    ], stdout=process_utils.PIPE, stderr=process_utils.PIPE)
-    process.wait()
-    is_all_passed, error_msg = self._ParseConformanceOutput(process.stdout)
-    if not is_all_passed:
-      self.FailTask(
-          'Output device %s: %s' % (self._alsa_output_device, error_msg))
+    # TODO(cyueh) Add simultaneous test when b/201381252 is complete.
+    self._CheckDeviceConformance(self._alsa_input_device, None)
+    self._CheckDeviceConformance(None, self._alsa_output_device)
