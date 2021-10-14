@@ -1819,7 +1819,10 @@ class ChromeOSFactoryBundle:
     part.ResizeFileSystem(
         part.GetFileSystemSize() + stateful_free_space * MEGABYTE)
     with GPT.Partition.MapAll(output) as output_dev:
-      targets = ['release_image.crx_cache', 'hwid', 'project_config', 'toolkit']
+      targets = [
+          'release_image.crx_cache', 'release_image.dlc_factory_cache', 'hwid',
+          'project_config', 'toolkit'
+      ]
       CrosPayloadUtils.InstallComponents(
           json_path, output_dev, targets, optional=True)
 
