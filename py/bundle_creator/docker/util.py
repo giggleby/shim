@@ -5,8 +5,6 @@
 import datetime
 import logging
 import os
-import random
-import string
 import subprocess
 import yaml
 
@@ -25,19 +23,6 @@ SERVICE_ACCOUNT_JSON = '/service_account.json'
 
 class CreateBundleException(Exception):
   pass
-
-
-def RandomString(length):
-  """Returns a randomly generated string of ascii letters.
-
-  Args:
-    length: The length for the returned string.
-
-  Returns:
-    A random ascii letters string.
-  """
-  return ''.join([random.choice(string.ascii_letters)
-                  for unused_i in range(length)])
 
 
 def CreateBundle(req):
@@ -92,7 +77,8 @@ def CreateBundle(req):
         req.project, bundle_name)
     bucket = storage_client.get_bucket(config.BUNDLE_BUCKET)
     blob_filename = 'factory_bundle_{}_{:%Y%m%d_%H%M}_{}_{}.tar.bz2'.format(
-        req.project, current_datetime, req.phase, RandomString(6))
+        req.project, current_datetime, req.phase,
+        '{:%S%f}'.format(current_datetime)[:-3])
     blob_path = '{}/{}/{}'.format(req.board, req.project, blob_filename)
     blob = bucket.blob(blob_path, chunk_size=100 * 1024 * 1024)
 
