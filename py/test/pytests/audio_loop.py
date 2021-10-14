@@ -1116,7 +1116,12 @@ class AudioLoopTest(test_case.TestCase):
       output_device: The playback device.
     """
 
-    commands = [audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates']
+    # rate-criteria-diff-pct and rate-err-criteria are defined in
+    # alsa_conformance.go.
+    commands = [
+        audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates',
+        '--rate-criteria-diff-pct', '0.1', '--rate-err-criteria', '100'
+    ]
     if input_device:
       commands.extend(['-C', input_device])
     if output_device:
