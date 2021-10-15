@@ -58,7 +58,7 @@ def PullTask():
           message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_IN_PROGRESS)
       firestore_conn.UpdateUserRequestStartTime(message_proto.doc_id)
 
-      gs_path = util.CreateBundle(message_proto.request)
+      gs_path = util.CreateBundle(message_proto)
 
       firestore_conn.UpdateUserRequestStatus(
           message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_SUCCEEDED)

@@ -25,8 +25,18 @@ class CreateBundleException(Exception):
   pass
 
 
-def CreateBundle(req):
+def CreateBundle(create_bundle_message_proto):
+  """Creates a factory bundle with the specific manifest from a user.
+
+  Args:
+    create_bundle_message_proto: A CreateBundleMessage proto message fetched
+        from a Pub/Sub subscription..
+
+  Returns:
+    A string of the google storage path.
+  """
   logger = logging.getLogger('util.create_bundle')
+  req = create_bundle_message_proto.request
   storage_client = storage.Client.from_service_account_json(
       SERVICE_ACCOUNT_JSON, project=config.GCLOUD_PROJECT)
   firestore_conn = firestore_connector.FirestoreConnector(config.GCLOUD_PROJECT)
@@ -94,9 +104,11 @@ def CreateBundle(req):
     created_timestamp_s = blob.time_created.timestamp()
     metadata = {
         'Bundle-Creator': req.email,
+        'Phase': req.phase,
         'Tookit-Version': req.toolkit_version,
         'Test-Image-Version': req.test_image_version,
         'Release-Image-Version': req.release_image_version,
+        'User-Request-Doc-Id': create_bundle_message_proto.doc_id,
         'Time-Created': created_timestamp_s,
     }
     if req.HasField('firmware_source'):
