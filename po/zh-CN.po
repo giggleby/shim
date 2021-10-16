@@ -381,6 +381,10 @@ msgid "Probe SIM Card Tray"
 msgstr "探測 SIM 卡卡盘"
 
 #: ../build/pytests_label_generated.json
+msgid "Provision DRM Key"
+msgstr "提供 DRM 密钥"
+
+#: ../build/pytests_label_generated.json
 msgid "Proximity Sensor"
 msgstr "距离感测器"
 
