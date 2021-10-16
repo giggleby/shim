@@ -63,6 +63,7 @@ def PullTask():
       firestore_conn.UpdateUserRequestStatus(
           message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_SUCCEEDED)
       firestore_conn.UpdateUserRequestEndTime(message_proto.doc_id)
+      firestore_conn.UpdateUserRequestGsPath(message_proto.doc_id, gs_path)
 
       response_proto = factorybundle_pb2.WorkerResult()
       response_proto.status = factorybundle_pb2.WorkerResult.NO_ERROR
