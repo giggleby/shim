@@ -387,8 +387,8 @@ doc:
 	bin/generate_rsts -o $(DOC_TEMP_DIR)
 	# Copy Markdown files to temp dir
 	rsync -am --include="*.png" --include="README.md" --exclude "build/" \
-	  --exclude "go/pkg"  --include="*/" --exclude="*" . \
-	  $(DOC_TEMP_DIR)/$(DOC_MD_DIR)
+	  --exclude "go/pkg" --exclude "node_modules/" --include="*/" \
+	  --exclude="*" . $(DOC_TEMP_DIR)/$(DOC_MD_DIR)
 	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) \
 	                     $(DOC_TEMP_DIR)
 	mkdir -p $(dir $(DOC_ARCHIVE_PATH))
