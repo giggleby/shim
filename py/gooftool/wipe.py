@@ -21,6 +21,7 @@ from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool.common import Util
 from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
+from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
@@ -170,7 +171,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
       'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
       'od', 'pango-view', 'pkill', 'pv', 'python', 'reboot', 'setterm', 'sh',
       'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof', 'jq', '/sbin/frecon',
-      'stressapptest', 'fuser', 'login'
+      'stressapptest', 'fuser', 'login', 'dhclient'
   ]
 
   etc_issue = textwrap.dedent("""
@@ -587,6 +588,18 @@ def _Cutoff():
   process_utils.Spawn([cutoff_script], check_call=True)
 
 
+def _RestoreNetwork():
+  interfaces = net_utils.GetEthernetInterfaces()
+  if interfaces:
+    for interface in interfaces:
+      if net_utils.GetEthernetIp(interface)[0] is not None:
+        continue
+      process_utils.CheckCall([
+          'dhclient', '-sf', '/usr/local/factory/sh/dhclient-script', '-lf',
+          '/var/factory/state/dhclient.leases', interface
+      ])
+
+
 def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
              root_disk, old_root, station_ip, station_port, finish_token,
              keep_developer_mode_flag, test_umount):
@@ -616,8 +629,6 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
         'failsafe',
         # Keep dbus to make sure we can shutdown the device.
         'dbus',
-        # Keep shill for connecting to shopfloor or stations.
-        'shill',
         # Keep wpasupplicant since shopfloor may connect over WiFi.
         'wpasupplicant',
         # Keep openssh-server for debugging purpose.
@@ -625,6 +636,8 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
         # sslh is a service in ARC++ for muxing between ssh and adb.
         'sslh'
     ])
+
+    _RestoreNetwork()
     _UnmountStatefulPartition(old_root, state_dev, test_umount)
 
     # When testing, stop the wiping process with no error. In normal
