@@ -42,6 +42,7 @@ CRX_CACHE_TAR_PATH = '/tmp/crx_cache.tar'
 
 DLC_CACHE_PAYLOAD_NAME = '%s/release_image.dlc_factory_cache' % \
                          _CROS_PAYLOADS_PATH
+DLC_CACHE_TAR_PATH = '/tmp/dlc_cache.tar'
 
 
 class WipeError(Exception):
@@ -347,6 +348,12 @@ def _CollectMountPointsToUmount(state_dev):
 
 
 def _UnmountStatefulPartition(root, state_dev, test_umount):
+
+  def _BackupIfExist(path_to_file, path_to_backup):
+    if os.path.exists(path_to_file):
+      logging.info('Backup file %s to %s.', path_to_file, path_to_backup)
+      shutil.copyfile(path_to_file, path_to_backup)
+
   logging.debug('Unmount stateful partition.')
 
   # Expected stateful partition mount point.
@@ -357,11 +364,12 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
   if not test_umount:
     file_utils.WriteFile(os.path.join(state_dir, WIPE_MARK_FILE), '')
 
-  # Backup extension cache (crx_cache) if available (will be restored after
-  # wiping by clobber-state).
+  # Backup extension cache (crx_cache) and dlc image cache (dlc_factory_cache)
+  # if available (will be restored after wiping by clobber-state).
   crx_cache_path = os.path.join(state_dir, CRX_CACHE_PAYLOAD_NAME)
-  if os.path.exists(crx_cache_path):
-    shutil.copyfile(crx_cache_path, CRX_CACHE_TAR_PATH)
+  dlc_cache_path = os.path.join(state_dir, DLC_CACHE_PAYLOAD_NAME)
+  _BackupIfExist(crx_cache_path, CRX_CACHE_TAR_PATH)
+  _BackupIfExist(dlc_cache_path, DLC_CACHE_TAR_PATH)
 
   mount_point_list, namespace_list = _CollectMountPointsToUmount(state_dev)
 
@@ -505,6 +513,15 @@ def _InformStation(ip, port, token, wipe_init_log=None,
 
 def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
                   keep_developer_mode_flag):
+
+  def _RestoreIfExist(path_to_file):
+    logging.info('Checking %s...', path_to_file)
+    if os.path.exists(path_to_file):
+      logging.info('Restoring %s...', path_to_file)
+      process_utils.Spawn(
+          ['tar', '-xpvf', path_to_file, '-C', STATEFUL_PARTITION_PATH],
+          check_call=True, log=True)
+
   clobber_state_env = os.environ.copy()
   clobber_state_env.update(ROOT_DEV=release_rootfs,
                            ROOT_DISK=root_disk)
@@ -520,15 +537,12 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
                         check_call=True, log=True)
 
   logging.info('Checking wipe mark file %s...', WIPE_MARK_FILE)
-  if os.path.exists(
-      os.path.join(STATEFUL_PARTITION_PATH, WIPE_MARK_FILE)):
+  if os.path.exists(os.path.join(STATEFUL_PARTITION_PATH, WIPE_MARK_FILE)):
     raise WipeError(WIPE_MARK_FILE + ' still exists')
 
-  # Restore CRX cache.
-  logging.info('Checking CRX cache %s...', CRX_CACHE_TAR_PATH)
-  if os.path.exists(CRX_CACHE_TAR_PATH):
-    process_utils.Spawn(['tar', '-xpvf', CRX_CACHE_TAR_PATH, '-C',
-                         STATEFUL_PARTITION_PATH], check_call=True, log=True)
+  # Restore CRX and DLC cache.
+  _RestoreIfExist(CRX_CACHE_TAR_PATH)
+  _RestoreIfExist(DLC_CACHE_TAR_PATH)
 
   try:
     if not keep_developer_mode_flag:
