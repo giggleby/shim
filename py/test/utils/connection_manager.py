@@ -38,10 +38,10 @@ _SLEEP_INTERVAL_SECS = 0.5
 _SCAN_INTERVAL_SECS = 10
 
 # The dependency of network manager in current ChromeOS is:
-#    wpasupplicant +-> shill -> shill_respawn
+#    wpasupplicant +-> shill
 #                  \-> modemmanager
 # So the right order to stop network is:
-#    shill_respawn -> shill -> wpasupplicant.
+#                     shill -> wpasupplicant.
 #              modemmanager /
 
 _UNKNOWN_PROC = 'unknown'
@@ -50,7 +50,7 @@ _DEFAULT_PROC_NAME = 'shill'
 _MANAGER_LIST = ['flimflam', 'shill']
 _PROC_NAME_LIST = [_UNKNOWN_PROC, 'flimflamd', 'shill']
 _DEPSERVICE_LIST = ['wpasupplicant']
-_SUBSERVICE_LIST = ['shill_respawn', 'modemmanager']
+_SUBSERVICE_LIST = ['modemmanager']
 
 # %s is the network manager process name, i.e. flimflam or shill.
 _PROFILE_LOCATION = '/var/cache/%s/default.profile'
