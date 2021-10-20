@@ -24,7 +24,7 @@ memory size for kernel.
 
 Usually firmware has to reserve some memory, for example ACPI tables, DMA,
 I/O port mappings, so the kernel is expected to get less memory. This is
-specified by argument ``max_diff_gb``.
+specified by argument ``max_diff_ratio``.
 
 Meanwhile, for virtual SPD, it is possible that both firmware and ``mosys`` have
 out-dated information of memory straps, so optionally we support a third source,
@@ -58,7 +58,7 @@ in test list::
 
 To read device data from Shopfloor Service then compare and check the memory
 size from ``mosys``, kernel, and device data ``component.memory_size``, with
-difference up to 300MB::
+difference up to 20 percent::
 
   {
     "pytest_name": "shopfloor_service",
@@ -71,7 +71,7 @@ difference up to 300MB::
     "pytest_name": "memory_size",
     "args": {
       "device_data_key": "component.memory_size",
-      "max_diff_gb": 0.3
+      "max_diff_ratio": 0.2
     }
   }
 """
@@ -88,12 +88,10 @@ from cros.factory.utils import process_utils
 class MemorySize(test_case.TestCase):
   ARGS = [
       Arg('device_data_key', str,
-          'Device data key for getting memory size in GB.',
-          default=None),
-      Arg('max_diff_gb', float,
+          'Device data key for getting memory size in GB.', default=None),
+      Arg('max_diff_ratio', float,
           ('Maximum tolerance difference between memory size detected by '
-           'kernel and mosys in GB.'),
-          default=0.5),
+           'kernel and mosys within a ratio.'), default=0.2),
   ]
 
   def runTest(self):
@@ -103,23 +101,21 @@ class MemorySize(test_case.TestCase):
     ret = process_utils.CheckOutput(
         ['mosys', '-k', 'memory', 'spd', 'print', 'geometry'])
     mosys_mem_mb = sum([int(x) for x in re.findall('size_mb="([^"]*)"', ret)])
-    mosys_mem_gb = round(mosys_mem_mb / 1024.0, 1)
 
     # Get kernel meminfo.
     with open('/proc/meminfo', 'r') as f:
-      kernel_mem_kb = int(re.search(r'^MemTotal:\s*([0-9]+)\s*kB',
-                                    f.read()).group(1))
-    kernel_mem_gb = round(kernel_mem_kb / 1024.0 / 1024.0, 1)
+      kernel_mem_mb = int(
+          re.search(r'^MemTotal:\s*([0-9]+)\s*kB', f.read()).group(1)) // 1024
 
-    diff = abs(kernel_mem_gb - mosys_mem_gb)
-    if diff > self.args.max_diff_gb:
-      self.fail('Memory size detected by kernel is different from mosys by '
-                '%.1f GB' % diff)
+    if abs(1.0 - kernel_mem_mb / mosys_mem_mb) > self.args.max_diff_ratio:
+      self.fail('Kernel and mosys report different memory sizes: mosys=%dmb, '
+                'kernel=%dmb.' % (mosys_mem_mb, kernel_mem_mb))
       return
 
     if not self.args.device_data_key:
       return
 
+    mosys_mem_gb = round(mosys_mem_mb / 1024.0, 1)
     sf_mem_gb = round(float(device_data.GetDeviceData(
         self.args.device_data_key)), 1)
 
