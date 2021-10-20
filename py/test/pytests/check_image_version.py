@@ -8,9 +8,10 @@ Description
 -----------
 This test checks if Chrome OS test image or release image version in
 '/etc/lsb-release' are greater than or equal to the value of argument
-``min_version``. If the version is too old and argument ``reimage`` is set to
-True, download and apply either remote netboot firmware or cros_payload
-components from factory server.
+``min_version``, and/or checks if the version are smaller or equal to
+``max_version``. If the version is too old or too new and argument
+``reimage`` is set to True, download and apply either remote netboot
+firmware or cros_payload components from factory server.
 
 Note when use_netboot is specified, the DUT will reboot into netboot firmware
 and start network image installation process to re-image.
@@ -19,7 +20,8 @@ Test Procedure
 --------------
 1. This test will first check if test image (when ``check_release_image`` is
    False) or release image (when ``check_release_image`` is True) version >=
-   ``min_version``. If so, this test will pass.
+   ``min_version``, and/or version <= ``max_version`` If so, this test will
+   pass.
 2. If ``reimage`` is set to False, this test will fail.
 3. If ``require_space`` is set to True, this test will wait for the user presses
    spacebar.
@@ -47,6 +49,18 @@ test list::
     "pytest_name": "check_image_version",
     "args": {
       "min_version": "9876.5.4",
+      "reimage": false
+    }
+  }
+
+To check test image version is exact the same as 9876.5.4, add this in test
+list::
+
+  {
+    "pytest_name": "check_image_version",
+    "args": {
+      "min_version": "9876.5.4",
+      "max_version": "9876.5.4",
       "reimage": false
     }
   }
@@ -103,9 +117,16 @@ from cros.factory.utils.arg_utils import Arg
 
 class CheckImageVersionTest(test_case.TestCase):
   ARGS = [
-      Arg('min_version', str, (
-          'Minimum allowed test or release image version.'
-          'None to follow the version on factory server.'), default=None),
+      Arg('min_version', str,
+          ('Minimum allowed test or release image version.'
+           'None to skip the check. If both min_version and max_version are set'
+           'to None, the check will follow the version on factory server.'),
+          default=None),
+      Arg('max_version', str,
+          ('Maximum allowed test or release image version.'
+           'None to skip the check. If both min_version and max_version are set'
+           'to None, the check will follow the version on factory server.'),
+          default=None),
       Arg('loose_version', bool, 'Allow any version number representation.',
           default=False),
       Arg('reimage', bool, 'True to re-image when image version mismatch.',
@@ -114,11 +135,11 @@ class CheckImageVersionTest(test_case.TestCase):
           'True to require a space key press before re-imaging.', default=True),
       Arg('check_release_image', bool,
           'True to check release image instead of test image.', default=False),
-      Arg('verify_rootfs', bool,
-          'True to verify rootfs before install image.',
+      Arg('verify_rootfs', bool, 'True to verify rootfs before install image.',
           default=True),
       Arg('use_netboot', bool,
-          'True to image with netboot, otherwise cros_payload.', default=True)]
+          'True to image with netboot, otherwise cros_payload.', default=True)
+  ]
 
   ui_class = test_ui.ScrollableLogUI
 
@@ -191,22 +212,38 @@ class CheckImageVersionTest(test_case.TestCase):
     updater.PerformUpdate(destination=destination, callback=callback)
 
   def CheckImageVersion(self):
-    if self.args.min_version is None:
+
+    def _GetExpectedVersion(expected_ver, cur_match, pattern, reimage):
+      if not expected_ver:
+        return expected_ver
+
+      expected_match = pattern.match(expected_ver)
+      if expected_match:
+        expected_ver = expected_match.group(1)
+
+      if reimage and bool(cur_match) ^ bool(expected_match):
+        logging.info('Attempt to re-image between different branch')
+
+      return expected_ver
+
+    if self.args.min_version is None and self.args.max_version is None:
       # TODO(hungte) In future if we find it useful to reflash netboot for
       # updating test image, we can add test_image to update_utils and enable
       # fetching version here.
       self.assertTrue(
           self.args.check_release_image,
-          'Empty min_version only allowed for check_release_image.')
+          'Empty min_version and max_version only allowed for '
+          'check_release_image.')
 
       self.WaitNetworkReady()
       updater = update_utils.Updater(update_utils.COMPONENTS.release_image)
       # The 'release_image' component in cros_payload is using
       # CHROMEOS_RELEASE_DESCRIPTION for version string so we have to strip it
       # in future when supporting "re-image if remote is different".
-      self.args.min_version = updater.GetUpdateVersion().split()[0]
+      self.args.min_version = self.args.max_version = \
+        updater.GetUpdateVersion().split()[0]
 
-      if not self.args.min_version:
+      if not self.args.min_version or not self.args.max_version:
         self.FailTask('Release image not available on factory server.')
 
     if self.args.check_release_image:
@@ -221,22 +258,39 @@ class CheckImageVersionTest(test_case.TestCase):
       return False
 
     testlog.LogParam(name=name, value=ver)
-    expected = self.args.min_version
+    expected_min = self.args.min_version
+    expected_max = self.args.max_version
     version_format = (version.LooseVersion if self.args.loose_version else
                       version.StrictVersion)
     logging.info('Using version format: %r', version_format.__name__)
-    logging.info('current version: %r, expected: %r', ver, expected)
-    re_branched_image_version = re.compile(r'^R\d+-(\d+\.\d+\.\d+)$')
+    logging.info(
+        'current version: %r, expected min version: %r, '
+        'expected max version %r', ver, expected_min, expected_max)
+    # For image built by tryjob, the image version will look like this:
+    # `R89-13600.271.0-b5006899`. We do not compare the sub-verion of tryjob
+    # image, which is `5006899` in this example, since it is meaningless.
+    re_branched_image_version = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*$')
     ver_match = re_branched_image_version.match(ver)
     if ver_match:
       ver = ver_match.group(1)
-    expected_match = re_branched_image_version.match(expected)
-    if expected_match:
-      expected = expected_match.group(1)
-    if self.args.reimage and bool(ver_match) ^ bool(expected_match):
-      logging.info('Attempt to re-image between different branch')
-    # TODO(hungte) In future we may want 'exact' match more than min_version.
-    return version_format(ver) >= version_format(expected)
+
+    expected_min = _GetExpectedVersion(
+        expected_min, ver_match, re_branched_image_version, self.args.reimage)
+    expected_max = _GetExpectedVersion(
+        expected_max, ver_match, re_branched_image_version, self.args.reimage)
+
+    if expected_min and expected_max:
+      if version_format(expected_min) > version_format(expected_max):
+        self.FailTask(
+            'Expected min version is greater than expected max version!')
+
+    if expected_min and version_format(ver) < version_format(expected_min):
+      return False
+
+    if expected_max and version_format(ver) > version_format(expected_max):
+      return False
+
+    return True
 
   def VerifyRootFs(self):
     if self.args.check_release_image and self.args.verify_rootfs:
