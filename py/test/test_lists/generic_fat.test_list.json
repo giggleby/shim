@@ -33,6 +33,7 @@
         "CheckSecdataVersion",
         "ModelSKU",
         "ChargerTypeDetection",
+        "MemorySize",
         "Barrier",
         "ThermalSensors",
         "Barrier",

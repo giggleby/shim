@@ -605,6 +605,10 @@
         }
       ]
     },
+    "MemorySize": {
+      "pytest_name": "memory_size",
+      "label": "Memory Size"
+    },
     "Message": {
       "pytest_name": "message",
       "allow_reboot": true

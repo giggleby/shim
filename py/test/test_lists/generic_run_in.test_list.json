@@ -105,7 +105,9 @@
         "Barrier",
         "VerifyRootPartition",
         "Barrier",
-        "RunInBlockingCharge"
+        "RunInBlockingCharge",
+        "Barrier",
+        "MemorySize"
       ]
     },
     "RunInRebootSequence": {
