@@ -2546,6 +2546,10 @@ msgid "Shutdown Test ({operation})"
 msgstr "关机测试 ({operation})"
 
 #: ../py/test/pytests/shutdown.py
+msgid "Warming up the system for {delay} seconds."
+msgstr "系统暖机{delay}秒."
+
+#: ../py/test/pytests/shutdown.py
 msgid "Remote DUT is performing {operation}, timeout in {delay} seconds."
 msgstr "远端测试装置将于 {delay} 秒内{operation}."
 

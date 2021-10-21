@@ -137,7 +137,10 @@ class ShutdownTest(test_case.TestCase):
           ('Check total number of audio devices. None for non-check.'),
           default=None),
       Arg('check_gpt', bool, 'Check GPT info before shutdown/reboot.',
-          default=True)
+          default=True),
+      Arg('warmup_post_shutdown', int,
+          'Number of seconds to wait after reboot for warming up the system',
+          default=0)
   ]
 
   def setUp(self):
@@ -292,6 +295,11 @@ class ShutdownTest(test_case.TestCase):
     LogAndEndTest(status=state.TestState.PASSED,
                   duration=(now - last_shutdown_time),
                   error_msg=None)
+    if self.args.warmup_post_shutdown > 0:
+      self.ui.SetState(
+          _('Warming up the system for {delay} seconds.',
+            delay=self.args.warmup_post_shutdown))
+      self.Sleep(self.args.warmup_post_shutdown)
 
   def RemoteShutdown(self):
     DUT_READY_CHECKPOINT = Checkpoint(
