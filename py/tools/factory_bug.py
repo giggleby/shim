@@ -444,7 +444,7 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
     files = [
         Run('crossystem', filename='crossystem', include_stderr=True),
         Run('dmesg', filename='dmesg'),
-        Run(['mosys', 'eventlog', 'list'], filename='mosys_eventlog',
+        Run(['elogtool', 'list'], filename='firmware_eventlog',
             check_call=False, include_stderr=True),
         Run('audio_diagnostics', filename='audio_diagnostics', check_call=False,
             include_stderr=True),

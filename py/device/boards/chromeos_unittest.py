@@ -19,13 +19,13 @@ class ChromeOSBoardTest(unittest.TestCase):
     self.dut = chromeos.ChromeOSBoard(self.link)
 
   @mock.patch('cros.factory.device.boards.chromeos.ChromeOSBoard.CallOutput',
-              return_value='mosys_log_value')
+              return_value='eventlog_value')
   @mock.patch(
       'cros.factory.device.boards.linux.LinuxBoard.GetStartupMessages',
       return_value={'aaa': 'bbb'})
   def testGetStartupMessages(self, *unused_mocked_funcs):
     self.assertEqual(self.dut.GetStartupMessages(),
-                     {'aaa': 'bbb', 'mosys_log': 'mosys_log_value'})
+                     {'aaa': 'bbb', 'firmware_eventlog': 'eventlog_value'})
 
 
 if __name__ == '__main__':

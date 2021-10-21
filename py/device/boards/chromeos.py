@@ -57,10 +57,10 @@ class ChromeOSBoard(linux.LinuxBoard):
   def GetStartupMessages(self):
     res = super(ChromeOSBoard, self).GetStartupMessages()
 
-    mosys_log = self.CallOutput(
-        ['mosys', 'eventlog', 'list'], stderr=self.STDOUT)
+    eventlog = self.CallOutput(
+        ['elogtool', 'list'], stderr=self.STDOUT)
 
-    if mosys_log:
-      res['mosys_log'] = mosys_log
+    if eventlog:
+      res['firmware_eventlog'] = eventlog
 
     return res
