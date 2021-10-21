@@ -52,9 +52,8 @@ _PART_TABLE_ERROR_TEMPLATE = "Please run partition_table pytest to fix it."
 
 _DLCVERIFY = 'dlcverify'
 
-# TODO: factory installed DLC images haven't enabled on recovery image.
-# Will change the version once it is enabled.
-_DLC_ENABLED_VERSION = LooseVersion('0000')
+# Factory installed DLC images are enabled in https://crrev.com/c/3232844.
+_DLC_ENABLED_VERSION = LooseVersion('14296.0.0')
 
 _DLC_ERROR_TEMPLATE = 'Please run check_image_version.py to do re-imaging.'
 
