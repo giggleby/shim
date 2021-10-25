@@ -5,7 +5,8 @@
   "constants": {
     "run_in": {
       "sat_duration_secs": 28800,
-      "dozing_sat_duration_secs": 600
+      "dozing_sat_duration_secs": 600,
+      "reboot_warmup_secs": 30
     }
   },
   "definitions": {
@@ -82,7 +83,7 @@
       "subtests": [
         "StationEnd",
         "CheckPoint",
-        "RebootStep"
+        "RunInRebootStep"
       ]
     },
     "RunInItems": {
@@ -91,13 +92,13 @@
       "subtests": [
         "TPMVerifyEK",
         "MRCCache",
-        "RebootStep",
+        "RunInRebootStep",
         "Fan",
         "RunInStressGroupWithFrontCamera",
         "Barrier",
         "RunInStressGroupWithRearCamera",
         "Barrier",
-        "RebootStep",
+        "RunInRebootStep",
         "Barrier",
         "RunInDozingStress",
         "Barrier",
@@ -111,8 +112,14 @@
       ]
     },
     "RunInRebootSequence": {
-      "inherit": "RebootStep",
+      "inherit": "RunInRebootStep",
       "iterations": 15
+    },
+    "RunInRebootStep": {
+      "inherit": "RebootStep",
+      "args": {
+        "warmup_post_shutdown": "eval! constants.run_in.reboot_warmup_secs"
+      }
     },
     "RunInStart": {
       "inherit": "TestGroup",
