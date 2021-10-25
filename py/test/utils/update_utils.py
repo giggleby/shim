@@ -45,6 +45,9 @@ from cros.factory.utils import type_utils
 COMPONENTS = type_utils.Enum([
     'firmware', 'hwid', 'netboot_firmware', 'project_config', 'release_image',
     'toolkit'])
+OPTIONAL_COMPONENTS = [
+    'release_image.crx_cache', 'release_image.dlc_factory_cache'
+]
 MATCH_METHOD = type_utils.Enum(['exact', 'substring'])
 
 
@@ -138,6 +141,12 @@ class Updater:
     self.GetUpdateInfo()
     self._spawn(
         ['cros_payload', 'install', self._url, destination, self._component])
+    if self._component == 'release_image':
+      # Install crx_cache and factory installed DLC images if they exist.
+      for optional in OPTIONAL_COMPONENTS:
+        self._spawn([
+            'cros_payload', 'install_optional', self._url, destination, optional
+        ])
     if not callback:
       callback = self.UpdateCallback
     return callback(self._component, destination, self._url)
