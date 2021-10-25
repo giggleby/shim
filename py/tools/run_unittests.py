@@ -23,20 +23,42 @@ import time
 import datetime
 import multiprocessing
 import contextlib
+import glob
 
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 from cros.factory.tools.unittest_tools import mock_loader
 
 
+FACTORY_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..'))
+# Directories to search unit test files starting from factory repository root.
+DIRECTORIES_TO_SEARCH = [
+    'py',
+    'po',
+    'go',
+]
+# Tests exclude starting from factory repository root. Content can be either
+# directory or filename.
+TESTS_TO_EXCLUDE = [
+    'py/probe_info_service',
+    'py/dome',
+    'py/umpire',
+    # TODO (b/204134192)
+    'py/test/utils/media_utils_unittest.py',
+    'py/test_list_editor',
+    # symbolic link folders
+    'py/testlog/utils',
+    'py/instalog/testlog',
+]
 # TEST_PASSED_MARK is the .tests-passed file at factory root path
-TEST_PASSED_MARK = os.path.abspath(
-    os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), '..', '..',
-        '.tests-passed'))
+TEST_PASSED_MARK = os.path.join(FACTORY_ROOT, '.tests-passed')
 # Timeout for running any individual test program.
 TEST_TIMEOUT_SECS = 60
+TEST_FILE_SUFFIX = '_unittest.py'
+TEST_FILE_USE_MOCK_SUFFIX = '_unittest_mocked.py'
 
 
 class _TestProc:
@@ -278,10 +300,12 @@ class RunTests:
     with PortDistributeServer() as port_server, mock_loader.Loader(
     ) as loader, contextlib.ExitStack() as stack:
       for test_name in tests:
+        python_path = loader.GetMockedRoot() if test_name.endswith(
+            TEST_FILE_USE_MOCK_SUFFIX) else os.getenv('PYTHONPATH', '')
         try:
           p = stack.enter_context(
               _TestProc(test_name, self._GetLogFilename(test_name),
-                        port_server.socket_file, loader.GetMockedRoot()))
+                        port_server.socket_file, python_path))
         except Exception:
           self._FailMessage('Error running test %r' % test_name)
           raise
@@ -372,6 +396,34 @@ class RunTests:
     sys.stderr.flush()
 
 
+def FindTests(directory):
+  """Returns a set of test filenames starting from the given directory.
+
+  filenames ending with TEST_FILE_SUFFIX or TEST_FILE_USE_MOCK_SUFFIX are
+  treated as test.
+  """
+  return set(glob.glob(
+      f'{directory}/**/*{TEST_FILE_SUFFIX}', recursive=True)) | set(
+          glob.glob(f'{directory}/**/*{TEST_FILE_USE_MOCK_SUFFIX}',
+                    recursive=True))
+
+
+def GetUnitTestFilenames():
+  """Searches and returns list of test filenames starting from factory root."""
+  test_files = set()
+  for d in DIRECTORIES_TO_SEARCH:
+    test_files |= FindTests(os.path.join(FACTORY_ROOT, d))
+
+  for item in TESTS_TO_EXCLUDE:
+    full_path = os.path.join(FACTORY_ROOT, item)
+    if os.path.isdir(full_path):
+      test_files -= FindTests(full_path)
+    else:
+      test_files.remove(full_path)
+
+  return [os.path.relpath(p, FACTORY_ROOT) for p in test_files]
+
+
 def main():
   parser = argparse.ArgumentParser(description='Runs unittests in parallel.')
   parser.add_argument('--jobs', '-j', type=int,
@@ -386,7 +438,10 @@ def main():
                       help='Isolated unittests which run sequentially.')
   parser.add_argument('--nofallback', action='store_true',
                       help='Do not re-run failed test sequentially.')
-  parser.add_argument('test', nargs='+', help='Unittest filename.')
+  parser.add_argument('--no-informational', action='store_false',
+                      dest='informational',
+                      help='Run informational tests as well.')
+  parser.add_argument('test', nargs='*', help='Unittest filename.')
   args = parser.parse_args()
 
   SetupLogging()
@@ -394,7 +449,11 @@ def main():
   if os.path.exists(TEST_PASSED_MARK):
     os.remove(TEST_PASSED_MARK)
 
+  args.test = args.test if args.test else GetUnitTestFilenames()
+
   os.makedirs(args.log_dir, exist_ok=True)
+
+  label_utils.SetSkipInformational(not args.informational)
 
   runner = RunTests(args.test, args.jobs, args.log_dir,
                     isolated_tests=args.isolated, fallback=not args.nofallback)

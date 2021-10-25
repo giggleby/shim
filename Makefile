@@ -119,12 +119,6 @@ LINT_BLOCKLIST=$(shell cat $(MK_DIR)/pylint.blocklist | grep -v '^\#')
 LINT_FILES=$(shell find py go po devtools -name '*.py' -type f | sort)
 LINT_ALLOWLIST=$(filter-out $(LINT_BLOCKLIST),$(wildcard $(LINT_FILES)))
 
-UNITTESTS=$(shell find py go po -name '*_unittest.py' | sort)
-UNITTESTS_BLOCKLIST=$(shell cat $(MK_DIR)/unittests.blocklist)
-UNITTESTS_ALLOWLIST= \
-  $(filter-out $(UNITTESTS_BLOCKLIST),$(wildcard $(UNITTESTS)))
-TEST_EXTRA_FLAGS=
-
 # Substitute PRESUBMIT_FILES to relative path (similar to
 # GNU realpath "--relative-to=.", but works on non-GNU realpath).
 PRESUBMIT_FILES := \
@@ -470,7 +464,7 @@ else
 endif
 
 test:
-	bin/run_unittests $(UNITTESTS_ALLOWLIST)
+	bin/run_unittests
 
 testall:
 	@$(MAKE) --no-print-directory test TEST_EXTRA_FLAGS=--nofilter
