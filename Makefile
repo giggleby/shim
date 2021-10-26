@@ -452,7 +452,7 @@ presubmit-test:
 	@$(MK_DIR)/$@.py $(PRESUBMIT_FILES)
 
 presubmit:
-ifeq ($(wildcard /etc/debian_chroot),)
+ifeq ($(wildcard /etc/cros_chroot_version),)
 	$(info Running presubmit checks inside chroot...)
 	@cros_sdk \
 		PRESUBMIT_PROJECT="$(PRESUBMIT_PROJECT)" \

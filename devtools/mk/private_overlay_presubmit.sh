@@ -25,7 +25,7 @@ if [ -z "$test_list_ids" ]; then
   exit 0
 fi
 
-if [ -f /etc/debian_chroot ]; then
+if [ -f /etc/cros_chroot_version ]; then
   factory_dir="$(dirname "$(dirname " $(dirname "$(readlink -f "$0")")")")"
   test_list_checker_path="${factory_dir}/bin/test_list_checker"
 
