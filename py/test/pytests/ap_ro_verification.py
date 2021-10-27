@@ -75,6 +75,7 @@ class APROVerficationTest(test_case.TestCase):
     # TODO(jasonchuang): Wrap tpm_manager_client as an util.
     status_txt = self.dut.CheckOutput(
         ['tpm_manager_client', 'get_ro_verification_status'], log=True)
+    logging.info('RO verification status: %s.', status_txt)
     status_lines = status_txt.splitlines()
     return string_utils.ParseDict(status_lines[1:-1])['ro_verification_status']
 
@@ -99,12 +100,14 @@ class APROVerficationTest(test_case.TestCase):
       if status != 'RO_STATUS_PASS':
         self.HandleError(status)
     else:
+      logging.info('Start setting RO hash.')
       self.gooftool.Cr50SetROHash()
       device_data.UpdateDeviceData({self.device_data_key: True})
       self.ui.SetState(
           _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
             seconds=self.args.timeout_secs))
       self.Sleep(self.args.timeout_secs)
+      logging.info('Reboot not triggered.')
       raise OperationError
 
   def tearDown(self):
