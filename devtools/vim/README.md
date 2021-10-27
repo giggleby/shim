@@ -35,7 +35,10 @@ you can use `DOT_VIM=... VIMRC=... ./setup.sh` to change it.
     - a sample setting file for [coc.nvim](https://github.com/neoclide/coc.nvim)
       plugin.
     - to use coc.nvim
+      * if the owner of `~/.config` is root then
+        `sudo chown $(whoami) ~/.config`
       * install the plugin by following the instructions on github.
-      * in vim, `:CocInstall coc-python` to install python extension.
+      * in vim, `:CocInstall coc-json coc-pyright coc-sh` to install json,
+        python, and shell extension.
       * copy or symlink this file to `platform/factory/.vim/` folder (already
         added by default).

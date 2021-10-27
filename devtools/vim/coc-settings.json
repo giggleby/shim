@@ -1,14 +1,24 @@
 {
   /* To use this file, make a symbolic link at .vim/coc-settings.json in */
   /* factory folder to this file. */
-  "python.jediEnabled": false,
+  "json.schemas": [
+    {
+        "fileMatch": [
+            "*.test_list.json"
+        ],
+        "url": "./py_pkg/cros/factory/test/test_lists/test_list.schema.json"
+    }
+  ],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/py_pkg"
+  ],
+  "python.formatting.provider": "yapf",
+  "python.formatting.yapfArgs": ["--style", "./devtools/mk/style.yapf"],
+  "python.linting.enabled": true,
   "python.linting.pylintArgs": [
     "--rcfile",
     "./devtools/mk/pylint.rc"
   ],
   "python.linting.pylintEnabled": true,
-  "python.linting.enabled": true,
-  "sh.enable": true,
-  "python.formatting.provider": "yapf",
-  "python.formatting.yapfArgs": ["--style", "./devtools/mk/style.yapf"]
+  "sh.enable": true
 }
