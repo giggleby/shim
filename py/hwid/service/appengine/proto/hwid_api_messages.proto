@@ -278,6 +278,8 @@ message DutLabelsResponse {
 message GetHwidDbEditableSectionRequest {
   // The project as a string.
   string project = 1;
+  // The email of user who makes this request.
+  string user_email = 2;
 }
 
 message GetHwidDbEditableSectionResponse {
