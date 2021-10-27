@@ -2,6 +2,65 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "description": "reference: http://goto/cros-factory-test-list, ./TEST_LIST.md, ./JSON_TEST_LIST.md",
   "definitions": {
+    "eval_expression": {
+      "type": "string",
+      "pattern": "eval! .*",
+      "description": "String prefix to indicate this value needs to be evaluated in runtime."
+    },
+    "eval_boolean": {
+      "oneOf":[
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/eval_expression"
+        }
+      ]
+    },
+    "eval_integer": {
+      "oneOf":[
+        {
+          "type": "integer"
+        },
+        {
+          "$ref": "#/definitions/eval_expression"
+        }
+      ]
+    },
+    "eval_optional_integer": {
+      "oneOf":[
+        {
+          "type": ["integer", "null"]
+        },
+        {
+          "$ref": "#/definitions/eval_expression"
+        }
+      ]
+    },
+    "eval_array": {
+      "oneOf":[
+        {
+          "type": "array"
+        },
+        {
+          "$ref": "#/definitions/eval_expression"
+        }
+      ]
+    },
+    "eval_object": {
+      "oneOf":[
+        {
+          "type": "object"
+        },
+        {
+          "$ref": "#/definitions/eval_expression"
+        }
+      ]
+    },
+    "test_comment": {
+      "description": "this field will be completely ignored by test list loader.",
+      "type": "string"
+    },
     "test_object": {
       "type": ["object", "string"],
       "properties": {
@@ -90,10 +149,11 @@
           "items": {
             "type": "string"
           }
-        },
-        "__comment": {
-          "description": "this field will be completely ignored by test list loader.",
-          "type": "string"
+        }
+      },
+      "patternProperties": {
+        "^__comment[A-Za-z0-9_-]*$": {
+          "$ref": "#/definitions/test_comment"
         }
       },
       "dependencies": {
@@ -108,14 +168,125 @@
       },
       "additionalProperties": false
     },
+    "test_allow_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "test_phase_allow_list": {
+      "type": "object",
+      "properties": {
+        "PROTO" : {
+          "$ref": "#/definitions/test_allow_list"
+        },
+        "EVT" : {
+          "$ref": "#/definitions/test_allow_list"
+        },
+        "DVT" : {
+          "$ref": "#/definitions/test_allow_list"
+        },
+        "PVT_DOGFOOD" : {
+          "$ref": "#/definitions/test_allow_list"
+        },
+        "PVT" : {
+          "$ref": "#/definitions/test_allow_list"
+        }
+      },
+      "patternProperties": {
+        "^__comment[A-Za-z0-9_-]*$": {
+          "$ref": "#/definitions/test_comment"
+        },
+        "^[^_].*$": {
+          "$ref": "#/definitions/test_allow_list"
+        }
+      },
+      "additionalProperties": false
+    },
     "test_options": {
       "__comment": "please see cros.factory.test.test_lists.test_list.Options",
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "auto_run_on_start": {
+          "$ref": "#/definitions/eval_boolean",
+          "default": true
+        },
+        "retry_failed_on_start": {
+          "$ref": "#/definitions/eval_boolean",
+          "default": false
+        },
+        "clear_state_on_start": {
+          "$ref": "#/definitions/eval_boolean",
+          "default": false
+        },
+        "auto_run_on_keypress": {
+          "$ref": "#/definitions/eval_boolean",
+          "default": false
+        },
+        "ui_locale": {
+          "type": "string",
+          "default": "en-US"
+        },
+        "engineering_password_sha1": {
+          "type": ["string", "null"]
+        },
+        "sync_event_log_period_secs": {
+          "$ref": "#/definitions/eval_optional_integer"
+        },
+        "update_period_secs": {
+          "$ref": "#/definitions/eval_optional_integer"
+        },
+        "stop_on_failure": {
+          "$ref": "#/definitions/eval_boolean",
+          "default": false
+        },
+        "hooks_class": {
+          "type": "string",
+          "default": "cros.factory.goofy.hooks.Hooks"
+        },
+        "testlog_hooks": {
+          "type": "string",
+          "default": "cros.factory.testlog.hooks.Hooks"
+        },
+        "phase": {
+          "oneOf":[
+            {
+              "enum": ["PROTO", "EVT", "DVT", "PVT_DOGFOOD", "PVT", null]
+            },
+            {
+              "$ref": "#/definitions/eval_expression"
+            }
+          ]
+        },
+        "dut_options": {
+          "$ref": "#/definitions/eval_object"
+        },
+        "plugin_config_name": {
+          "type": ["string", "null"],
+          "default": "goofy_plugin_chromeos"
+        },
+        "read_device_data_from_vpd_on_init": {
+          "$ref": "#/definitions/eval_boolean",
+          "default": true
+        },
+        "skipped_tests": {
+          "$ref": "#/definitions/test_phase_allow_list"
+        },
+        "waived_tests": {
+          "$ref": "#/definitions/test_phase_allow_list"
+        }
+      },
+      "patternProperties": {
+        "^__comment[A-Za-z0-9_-]*$": {
+          "$ref": "#/definitions/test_comment"
+        }
+      },
+      "additionalProperties": false
     },
     "test_constants": {
       "type": "object",
       "patternProperties": {
-        "^__comment_[A-Za-z0-9_-]+$": {
+        "^__comment[A-Za-z0-9_-]*$": {
           "type": "string"
         },
         "^[A-Za-z0-9][A-Za-z0-9_-]*$": {
@@ -189,10 +360,11 @@
     "override_args": {
       "__comment": "To override argument of a test in 'tests', maps the test path to a dictionary",
       "type": "object"
-    },
-    "__comment": {
-      "description": "this field will be completely ignored by test list loader",
-      "type": "string"
+    }
+  },
+  "patternProperties": {
+    "^__comment[A-Za-z0-9_-]*$": {
+      "$ref": "#/definitions/test_comment"
     }
   },
   "required": [
