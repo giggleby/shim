@@ -16,6 +16,7 @@ from ws4py.client import WebSocketBaseClient
 
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
+from cros.factory.unittest_utils import label_utils
 
 
 _HOST = '127.0.0.1'
@@ -30,6 +31,8 @@ class CloseWebSocket(Exception):
   pass
 
 
+# TODO (b/204836653)
+@label_utils.Informational
 class TestOverlord(unittest.TestCase):
   @classmethod
   def setUpClass(cls):

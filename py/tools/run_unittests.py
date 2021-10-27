@@ -193,11 +193,12 @@ class RunTests:
     fallback: True to re-run failed test sequentially.
   """
 
-  def __init__(self, tests, max_jobs, log_dir, isolated_tests=None,
+  def __init__(self, tests, max_jobs, log_dir, plain_log, isolated_tests=None,
                fallback=True):
     self._tests = tests if tests else []
     self._max_jobs = max_jobs
     self._log_dir = log_dir
+    self._plain_log = plain_log
     self._isolated_tests = isolated_tests if isolated_tests else []
     self._fallback = fallback
     self._start_time = time.time()
@@ -371,21 +372,22 @@ class RunTests:
 
   def _PassMessage(self, message):
     self._ClearLine()
-    print('\033[22;32m%s\033[22;0m' % message)
+    print(message if self._plain_log else f'\033[22;32m{message}\033[22;0m')
 
   def _FailMessage(self, message):
     self._ClearLine()
-    print('\033[22;31m%s\033[22;0m' % message)
+    print(message if self._plain_log else f'\033[22;31m{message}\033[22;0m')
 
   def _InfoMessage(self, message):
     self._ClearLine()
     print(message)
 
   def _ClearLine(self):
-    sys.stderr.write('\r\033[K')
+    if not self._plain_log:
+      sys.stderr.write('\r\033[K')
 
   def _ShowRunningTest(self):
-    if not self._running_proc:
+    if not self._running_proc or self._plain_log:
       return
     status = '-> %d tests running' % len(self._running_proc)
     running_tests = ', '.join([p[1] for p in self._running_proc.values()])
@@ -440,14 +442,19 @@ def main():
                       help='Do not re-run failed test sequentially.')
   parser.add_argument('--no-informational', action='store_false',
                       dest='informational',
-                      help='Run informational tests as well.')
+                      help='Do not run informational tests.')
+  parser.add_argument('--no-pass-mark', action='store_false', dest='pass_mark',
+                      help='Neither output nor update test pass mark file.')
+  parser.add_argument('--plain-log', action='store_true',
+                      help='disable color and progress in log.')
   parser.add_argument('test', nargs='*', help='Unittest filename.')
   args = parser.parse_args()
 
   SetupLogging()
 
-  if os.path.exists(TEST_PASSED_MARK):
-    os.remove(TEST_PASSED_MARK)
+  # If not run all test, pass mark should be false
+  if args.test or not args.informational:
+    args.pass_mark = False
 
   args.test = args.test if args.test else GetUnitTestFilenames()
 
@@ -455,10 +462,10 @@ def main():
 
   label_utils.SetSkipInformational(not args.informational)
 
-  runner = RunTests(args.test, args.jobs, args.log_dir,
+  runner = RunTests(args.test, args.jobs, args.log_dir, args.plain_log,
                     isolated_tests=args.isolated, fallback=not args.nofallback)
   return_value = runner.Run()
-  if return_value == 0:
+  if return_value == 0 and args.pass_mark:
     with open(TEST_PASSED_MARK, 'a'):
       os.utime(TEST_PASSED_MARK, None)
   sys.exit(return_value)

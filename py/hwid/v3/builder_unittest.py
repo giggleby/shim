@@ -13,6 +13,7 @@ from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import probe
 from cros.factory.test.l10n import regions
 from cros.factory.utils import file_utils
+from cros.factory.unittest_utils import label_utils
 
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
@@ -75,6 +76,8 @@ class BuilderMethodTest(unittest.TestCase):
       self.assertFalse(function('This is the question.', default_answer=True))
       self.assertFalse(function('This is the question.', default_answer=False))
 
+  # TODO (b/204729913)
+  @label_utils.Informational
   def testChecksumUpdater(self):
     checksum_updater = builder.ChecksumUpdater()
     self.assertIsNotNone(checksum_updater)
@@ -445,6 +448,8 @@ class DatabaseBuilderTest(unittest.TestCase):
         _GetSkuIds(),
         ['sku_0', 'sku_1', 'sku_2', 'sku_50', 'sku_10', 'sku_30', 'sku_40'])
 
+  # TODO (b/204729913)
+  @label_utils.Informational
   def testRender(self):
     db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
     path = file_utils.CreateTemporaryFile()

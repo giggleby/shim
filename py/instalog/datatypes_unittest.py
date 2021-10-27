@@ -19,6 +19,7 @@ from cros.factory.instalog import json_utils
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils import time_utils
+from cros.factory.unittest_utils import label_utils
 
 
 class RuntimeBound:
@@ -249,6 +250,8 @@ class TestEventStream(unittest.TestCase):
       event_stream.Abort()
 
 
+# TODO (b/204830411)
+@label_utils.Informational
 class TestEventStreamIterator(unittest.TestCase):
   """Tests for the EventStreamIterator class."""
 

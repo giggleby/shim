@@ -15,6 +15,7 @@ import tempfile
 import unittest
 
 from cros.factory.tools import image_tool
+from cros.factory.unittest_utils import label_utils
 
 
 DEBUG = False
@@ -24,6 +25,8 @@ The major difference is all output will be preserved in /tmp/t.
 """
 
 
+# TODO (b/204726360)
+@label_utils.Informational
 class ImageToolRMATest(unittest.TestCase):
   """Unit tests for image_tool RMA related commands."""
 

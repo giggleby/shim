@@ -17,6 +17,7 @@ import unittest
 from cros.factory.test.i18n import translation
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 SCRIPT_DIR = os.path.dirname(__file__)
@@ -169,6 +170,9 @@ class PoCheckTest(unittest.TestCase):
         ' lines are unused and remove those lines.'
         % ', '.join('%s at line %d' % file_line for file_line in bad_lines))
 
+
+# TODO (b/204837218)
+@label_utils.Informational
 class PoUpdateTest(unittest.TestCase):
   """Check that po update have been run."""
   def runTest(self):

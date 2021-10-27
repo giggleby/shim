@@ -11,6 +11,7 @@ import unittest
 from cros.factory.test import event
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 EventType = event.Event.Type
@@ -19,6 +20,8 @@ PING = 'PING'
 PONG = 'PONG'
 
 
+# TODO (b/204839009)
+@label_utils.Informational
 class EventTest(unittest.TestCase):
   def testConvertJSON(self):
     event1 = event.Event(EventType.SET_HTML, html='abc')
@@ -37,6 +40,9 @@ class EventTest(unittest.TestCase):
 # We add an additional layer of class, so the unittest TestCase finder won't
 # find the base class EventServerClientTest.
 class Tests:
+
+  # TODO (b/204839009)
+  @label_utils.Informational
   class EventServerClientTestBase(unittest.TestCase):
     has_pong_client = True
 

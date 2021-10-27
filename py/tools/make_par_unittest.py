@@ -16,8 +16,11 @@ import unittest
 
 from cros.factory.tools import make_par
 from cros.factory.utils.process_utils import Spawn
+from cros.factory.unittest_utils import label_utils
 
 
+# TODO (b/204949280)
+@label_utils.Informational
 class MakePARTest(unittest.TestCase):
 
   def setUp(self):

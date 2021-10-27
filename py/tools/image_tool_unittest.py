@@ -18,6 +18,7 @@ from unittest import mock
 
 from cros.factory.tools import image_tool
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 DEBUG = False
@@ -27,6 +28,8 @@ The major difference is all output will be preserved in /tmp/t.
 """
 
 
+# TODO (b/204831113)
+@label_utils.Informational
 class ImageToolTest(unittest.TestCase):
   """Unit tests for image_tool."""
 
@@ -225,6 +228,8 @@ class ImageToolTest(unittest.TestCase):
          './test_image/image.bin', './toolkit/', './toolkit/toolkit.run'])
 
 
+# TODO (b/204831113)
+@label_utils.Informational
 class UserInputTest(unittest.TestCase):
   """Unit tests for image_tool.UserInput."""
 

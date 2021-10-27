@@ -35,6 +35,7 @@ from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 _PytestInfo = collections.namedtuple('_PytestInfo',
@@ -70,6 +71,8 @@ def MockPytest(pytest_info_mapping, spawn_mock):
   spawn_mock.side_effect = SideEffect
 
 
+# TODO (b/204838104)
+@label_utils.Informational
 class GoofyTest(unittest.TestCase):
   """Base class for Goofy test cases."""
   test_list = {}  # Overridden by subclasses

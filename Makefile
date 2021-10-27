@@ -94,6 +94,7 @@ CLOSURE_OUTPUT_DIR ?= \
   $(abspath $(if $(OUTOFTREE_BUILD),$(BUILD_DIR)/closure,$(CLOSURE_DIR)))
 
 CROS_REGIONS_DATABASE ?= $(SYSROOT)/usr/share/misc/cros-regions.json
+TEST_RUNNER = bin/run_unittests
 
 # External dependency.
 OVERLORD_DEPS_URL ?= \
@@ -134,7 +135,7 @@ PRESUBMIT_TARGETS := \
 .PHONY: \
   .phony default clean closure proto overlord ovl-bin par doc resource toolkit \
   bundle presubmit presubmit-chroot $(PRESUBMIT_TARGETS) \
-  lint smartlint smart_lint test testall overlay publish-docs po \
+  lint smartlint smart_lint test test-critical overlay publish-docs po \
   test-list-check ebuild-test project-toolkits
 
 # This must be the first rule.
@@ -474,10 +475,10 @@ else
 endif
 
 test:
-	bin/run_unittests
+	$(TEST_RUNNER)
 
-testall:
-	@$(MAKE) --no-print-directory test TEST_EXTRA_FLAGS=--nofilter
+test-critical:
+	$(TEST_RUNNER) --no-informational --no-pass-mark
 
 # Builds an overlay of the given board.  Use "private" to overlay
 # factory-private (e.g., to build private API docs).

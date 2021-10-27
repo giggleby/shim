@@ -8,8 +8,11 @@
 import unittest
 
 from cros.factory.utils.cros_board_utils import BuildBoard
+from cros.factory.unittest_utils import label_utils
 
 
+# TODO (b/204839190)
+@label_utils.Informational
 class BuildBoardTest(unittest.TestCase):
   """Unit tests for BuildBoard class."""
   def runTest(self):

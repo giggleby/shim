@@ -13,6 +13,7 @@ import unittest
 
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 SCRIPT_DIR = os.path.dirname(__file__)
@@ -37,6 +38,8 @@ MOCK_MSGSTR = '__mocked_msgstr_e2e_unittest'
 NONEXIST_LOCALE = 'nonexist_locale'
 
 
+# TODO (b/204949605)
+@label_utils.Informational
 class MakeTest(unittest.TestCase):
   """Integration test for Makefile of po file."""
 

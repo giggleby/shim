@@ -12,11 +12,14 @@ import subprocess
 import unittest
 
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
+# TODO (b/204838120)
+@label_utils.Informational
 class GoofyJSTest(unittest.TestCase):
   def runTest(self):
     static_dir = os.path.join(SCRIPT_DIR, '..', 'static')
