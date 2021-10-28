@@ -361,15 +361,22 @@ define func-build-project-toolkit
 	  "$(BOARD) $(1) Factory Toolkit $(TOOLKIT_VERSION)")
 endef
 
+project-toolkits-%: .phony
+	$(if $(BOARD),,$(error "You must specify a board to build project-toolkits."))
+	$(call func-build-project-toolkit,$*)
+
+# A helper target that should not be made externally.
+parallel-build-project-toolkits: $(foreach file,\
+	$(wildcard $(BOARD_RESOURCES_DIR)/project-$(BOARD)-*-overlay.tar),\
+	project-toolkits-$(word 3,$(subst -, ,$(file))))
+
 # Builds factory project toolkits from resources.
 project-toolkits: $(WEBGL_AQUARIUM_DIR) resource par
 	$(if $(BOARD),,$(error "You must specify a board to build project-toolkits."))
 	rm -rf $(TOOLKIT_OUTPUT_DIR)/*_$(TOOLKIT_FILENAME)
 	mkdir -p $(TOOLKIT_OUTPUT_DIR)
 	$(call func-prepare-toolkit)
-	$(foreach file,\
-	  $(wildcard $(BOARD_RESOURCES_DIR)/project-$(BOARD)-*-overlay.tar),\
-	  $(call func-build-project-toolkit,$(word 3,$(subst -, ,$(file))))${\n})
+	$(MAKE) --output-sync=target parallel-build-project-toolkits
 
 # Creates build/doc and build/doc.zip, containing the factory SDK docs.
 doc:
