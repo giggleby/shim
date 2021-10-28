@@ -128,7 +128,7 @@ class ProjectElementView(mixins.DestroyModelMixin,
 
   def perform_destroy(self, instance):
     """Override parent's method."""
-    instance.DeleteUmpireContainer().delete()
+    instance.DeleteUmpireContainer(delete_umpire_dir=True).delete()
 
 
 class BundleCollectionView(generics.ListCreateAPIView):
