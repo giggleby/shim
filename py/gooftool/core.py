@@ -53,8 +53,7 @@ _PART_TABLE_ERROR_TEMPLATE = "Please run partition_table pytest to fix it."
 
 _DLCVERIFY = 'dlcverify'
 
-# Factory installed DLC images are enabled in https://crrev.com/c/3232844.
-_DLC_ENABLED_VERSION = LooseVersion('14296.0.0')
+_DLCMETADATADIR = 'opt/google/dlc'
 
 _DLC_ERROR_TEMPLATE = 'Please run check_image_version.py to do re-imaging.'
 
@@ -141,18 +140,38 @@ class Gooftool:
 
       return sub_dir_names
 
-    release_image_version = LooseVersion(self._util.GetReleaseImageVersion())
-    if release_image_version < _DLC_ENABLED_VERSION:
-      logging.info(
-          'Factory installed DLC images are enabled in release image '
-          'version %s. Current version is %s. Skip checking.',
-          _DLC_ENABLED_VERSION, release_image_version)
-      return
+    def _GetNumDLCToBeVerified():
+      num_dlcs = 0
+      with sys_utils.MountPartition(
+          self._util.GetReleaseRootPartitionPath()) as root:
+        dlc_metadata_path = os.path.join(root, _DLCMETADATADIR)
+        # Enumerate all the possible paths to factory installed DLC metadata.
+        sub_dir_names = _ListSubDirectories(dlc_metadata_path)
+        for sub_dir_name in sub_dir_names:
+          metadata_path = os.path.join(dlc_metadata_path, sub_dir_name,
+                                       'package', 'imageloader.json')
+          if os.path.exists(metadata_path):
+            metadata = json_utils.LoadFile(metadata_path)
+            # A DLC is a factory installed DLC if `factory-install` is true.
+            if metadata['factory-install']:
+              num_dlcs += 1
+
+      return num_dlcs
 
     dlc_cache_path = os.path.join(wipe.STATEFUL_PARTITION_PATH,
                                   wipe.DLC_CACHE_PAYLOAD_NAME)
-    file_utils.CheckPath(dlc_cache_path,
-                         '%s. %s' % (dlc_cache_path, _DLC_ERROR_TEMPLATE))
+    expected_num_dlcs = _GetNumDLCToBeVerified()
+
+    try:
+      file_utils.CheckPath(dlc_cache_path)
+    except IOError:
+      if expected_num_dlcs == 0:
+        logging.info(
+            'Cannot find %s. Factory installed DLC images are not enabled. '
+            'Skip checking.', dlc_cache_path)
+        return
+      raise Error('No factory installed DLC images found! Expected number of'
+                  ' DLCs: %d! %s' % (expected_num_dlcs, _DLC_ERROR_TEMPLATE))
 
     with file_utils.TempDirectory() as tmpdir:
       # The DLC images are stored as compressed format.
@@ -168,7 +187,14 @@ class Gooftool:
 
       # Enumerate all the DLC sub-directories under dlc_image_path.
       sub_dir_names = _ListSubDirectories(dlc_image_path)
-      if len(sub_dir_names) == 0:
+      cur_num_dlcs = len(sub_dir_names)
+
+      if cur_num_dlcs != expected_num_dlcs:
+        raise Error(
+            'Current number of factory installed DLCs: %d, expected: '
+            '%d. %s' % (cur_num_dlcs, expected_num_dlcs, _DLC_ERROR_TEMPLATE))
+
+      if cur_num_dlcs == 0:
         logging.info('No DLC images under %s. Skip checking.', dlc_image_path)
         return
 
