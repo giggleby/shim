@@ -159,6 +159,29 @@ class Util:
     """
     return ('%sp%s' if device[-1].isdigit() else '%s%s') % (device, partition)
 
+  def GetLVMStateful(self, state_dev):
+    """Returns a device path string to LVM stateful partition.
+
+    Args:
+      state_dev: The device path to physical stateful partition.
+
+    Returns:
+      The device path string to LVM stateful partition.
+      Return `None` if not exists.
+    """
+    has_pvdisplay = self.shell('which pvdisplay')
+    if not has_pvdisplay.success:
+      logging.info('pvdisplay binary not found. Skip getting device path '
+                   'string to LVM stateful partition.')
+      return None
+
+    result = self.shell('pvdisplay -C --quiet --noheadings --separator "|" '
+                        '-o vg_name %s | tr -d "[:space:]"' % state_dev)
+
+    if result.stdout:
+      return '/dev/%s/unencrypted' % result.stdout
+
+    return None
 
   def FindScript(self, script_name):
     """Finds the script under /usr/local/factory/sh

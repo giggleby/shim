@@ -167,11 +167,11 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
   binary_deps = [
       'activate_date', 'backlight_tool', 'bash', 'busybox', 'cgpt', 'cgpt.bin',
       'clobber-log', 'clobber-state', 'coreutils', 'crossystem', 'dd',
-      'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom', 'halt',
-      'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
-      'od', 'pango-view', 'pkill', 'pv', 'python', 'reboot', 'setterm', 'sh',
-      'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof', 'jq', '/sbin/frecon',
-      'stressapptest', 'fuser', 'login', 'dhclient'
+      'dhclient', 'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom',
+      'halt', 'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount',
+      'mount-encrypted', 'od', 'pango-view', 'pkill', 'pv', 'pvdisplay',
+      'python', 'reboot', 'setterm', 'sh', 'shutdown', 'stop', 'umount', 'vpd',
+      'curl', 'lsof', 'jq', '/sbin/frecon', 'stressapptest', 'fuser', 'login'
   ]
 
   etc_issue = textwrap.dedent("""
@@ -531,6 +531,12 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
   process_utils.Spawn(['clobber-state', wipe_args], env=clobber_state_env,
                       check_call=True, log=True)
 
+  # clobber-state will build LVM stateful partition if
+  # `USE_LVM_STATEFUL_PARTITION=1` in `chromeos_startup`.
+  lvm_stateful = Util().GetLVMStateful(state_dev)
+  if lvm_stateful:
+    logging.info('Switching to LVM stateful partition: %s', lvm_stateful)
+    state_dev = lvm_stateful
   logging.info('Checking if stateful partition is mounted...')
   # Check if the stateful partition is wiped.
   if not _IsStateDevMounted(state_dev):
