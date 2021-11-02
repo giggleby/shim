@@ -93,6 +93,13 @@ def CalculateFirmwareHashes(fw_file_path):
   return None
 
 
+def GetFirmwareKeys(fw_file_path):
+  return {
+      'key_recovery': _FwKeyHash(fw_file_path, 'recoverykey'),
+      'key_root': _FwKeyHash(fw_file_path, 'rootkey')
+  }
+
+
 class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
   # pylint: disable=line-too-long
   """Get firmware information from a flash chip.
@@ -186,9 +193,7 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
     if category == FIELDS.firmware_keys:
       fw_file_path = crosfw.LoadMainFirmware().GetFileName(
           sections=['RO_SECTION'])
-      return {
-          'key_recovery': _FwKeyHash(fw_file_path, 'recoverykey'),
-          'key_root': _FwKeyHash(fw_file_path, 'rootkey')}
+      return GetFirmwareKeys(fw_file_path)
 
     if category == FIELDS.ro_main_firmware:
       fw_file_path = crosfw.LoadMainFirmware().GetFileName(

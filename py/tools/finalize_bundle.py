@@ -22,6 +22,7 @@ import urllib.parse
 
 import yaml
 
+from cros.factory.probe.functions import chromeos_firmware
 from cros.factory.tools import get_version
 from cros.factory.tools import gsutil
 from cros.factory.utils import cros_board_utils
@@ -71,6 +72,13 @@ FIRMWARE_IMAGE_SOURCE_DIR = 'firmware_image_source'
 # When version is fixed, we'll try to find the resource in the following order.
 RESOURCE_CHANNELS = ['stable', 'beta', 'dev', 'canary']
 
+# Mapping firmware updater manifest to the firmware type
+FIRMWARE_MANIFEST_MAP = {
+    'host': 'main',
+    'ec': 'ec',
+    'pd': 'pd'
+}
+
 PROJECT_TOOLKIT_PACKAGES = 'factory_project_toolkits.tar.gz'
 
 
@@ -117,6 +125,28 @@ def _GetImageTool():
   if os.path.exists(os.path.join(SCRIPT_DIR, 'image_tool.py')):
     return [os.path.join(SCRIPT_DIR, 'image_tool.py')]
   raise FinalizeBundleException('Cannot find image_tool')
+
+
+def _PackFirmwareUpdater(updater_path, dirpath, operation='repack'):
+  """
+  Unpack/Repack firmware updater.
+
+  Args:
+    updater_path: path of firmware updater.
+    dirpath: directory to unpack/repack.
+    operation: which operation to do. Must be "repack" or "unpack".
+  """
+  if operation not in ['repack', 'unpack']:
+    raise ValueError('operation must be "repack" or "unpack": %s' % operation)
+
+  process = Spawn(['sh', updater_path, f'--{operation}', dirpath], log=True,
+                  call=True)
+  # TODO(cyueh) Remove sb_extract after we dropping support for legacy
+  # firmware updater.
+  if process.returncode != 0:
+    operation_legacy = 'extract' if operation == 'unpack' else operation
+    Spawn(['sh', updater_path, f'--sb_{operation_legacy}', dirpath], log=True,
+          check_call=True)
 
 
 USAGE = """
@@ -175,6 +205,7 @@ class FinalizeBundle:
         'release_image/xxxx.yy.zz') of the firmware.
     firmware_image_source: Path to the release image which contains
         the firmware.
+    firmware_record: Firmware information including keys, checksums and signer.
   """
   bundle_dir = None
   bundle_name = None
@@ -202,13 +233,16 @@ class FinalizeBundle:
   archive = None
   firmware_source = None
   firmware_image_source = None
+  firmware_record = {}
 
-  def __init__(self, manifest, work_dir, download=True, archive=True, jobs=1):
+  def __init__(self, manifest, work_dir, download=True, archive=True,
+               bundle_record=None, jobs=1):
     self.manifest = manifest
     self.work_dir = work_dir
     self.download = download
     self.archive = archive
     self.jobs = jobs
+    self.bundle_record = bundle_record
 
   def Main(self):
     self.ProcessManifest()
@@ -224,6 +258,7 @@ class FinalizeBundle:
     self.RemoveUnnecessaryFiles()
     self.UpdateReadme()
     self.Archive()
+    self.BundleRecord()
 
   def ProcessManifest(self):
     try:
@@ -639,6 +674,7 @@ class FinalizeBundle:
     firmware_src = self.manifest.get('firmware', 'release_image')
     firmware_dir = os.path.join(self.bundle_dir, FIRMWARE_SEARCH_DIR)
     file_utils.TryMakeDirs(firmware_dir)
+    # TODO(wyuang): retrieve firmwarm channel from image path
     if firmware_src.startswith('release_image'):
       with MountPartition(self.release_image_path, 3) as f:
         shutil.copy(os.path.join(f, FIRMWARE_UPDATER_PATH), firmware_dir)
@@ -661,23 +697,56 @@ class FinalizeBundle:
     file_utils.TryMakeDirs(firmware_images_dir)
 
     with file_utils.TempDirectory() as temp_dir:
-      process = Spawn(['sh', updater_path, '--unpack', temp_dir], log=True,
-                      call=True)
-      # TODO(cyueh) Remove sb_extract after we dropping support for legacy
-      # firmware updater.
-      if process.returncode != 0:
-        Spawn(['sh', updater_path, '--sb_extract', temp_dir], log=True,
-              check_call=True)
-
+      _PackFirmwareUpdater(updater_path, temp_dir, 'unpack')
       for root, unused_dirs, files in os.walk(temp_dir):
         for filename in files:
           if filename.endswith('.bin'):
             shutil.copy(os.path.join(root, filename),
                         firmware_images_dir)
 
+      # Collect firmware information
+      # 1) signer:
+      signer_path = os.path.join(temp_dir, 'VERSION.signer')
+      if os.path.exists(signer_path):
+        with open(signer_path, 'r') as f:
+          signer_output = f.read()
+          match = re.search(r'.*/cros/keys/([^\s]+)', signer_output)
+          signer = match.group(1)
+          self.firmware_record['firmware_signer'] = signer
+      else:
+        logging.warning(
+            'Finalize bundle with an unsigned(dev signed) firmware.')
+
+      manifest = json_utils.LoadFile(os.path.join(temp_dir, 'manifest.json'))
+      models = [self.project] if self.designs is None else self.designs
+      self.firmware_record['firmware_info'] = {}
+
+      missing_models = set(models) - set(manifest.keys())
+      if missing_models and self.designs:
+        raise KeyError("No firmware models '%s' in chromeos-firmwareupdate" %
+                       missing_models)
+
+      for model in models:
+        if model in missing_models:
+          continue
+        record = {}
+        # 2) root/recovery keys:
+        bios_path = os.path.join(temp_dir, manifest[model]['host']['image'])
+        record['keys'] = chromeos_firmware.GetFirmwareKeys(bios_path)
+
+        # 3) RO version/checksum:
+        for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
+          if firmware_key not in manifest[model]:
+            continue
+          image_path = os.path.join(temp_dir,
+                                    manifest[model][firmware_key]['image'])
+          record[f'ro_{firmware_type}_firmware'] = \
+              chromeos_firmware.CalculateFirmwareHashes(image_path)
+
+        self.firmware_record['firmware_info'][model] = record
+
       # Collect only the desired firmware
       if self.designs is not None:
-        manifest = json_utils.LoadFile(os.path.join(temp_dir, 'manifest.json'))
         keep_list = set()
         for design in manifest:
           if design in self.designs:
@@ -690,19 +759,12 @@ class FinalizeBundle:
         for f in os.listdir(os.path.join(temp_dir, 'images')):
           if os.path.join('images', f) not in keep_list:
             os.remove(os.path.join(temp_dir, 'images', f))
-        process = Spawn(['sh', updater_path, '--repack', temp_dir], log=True,
-                        call=True)
-        # TODO(cyueh) Remove sb_repack after we dropping support for legacy
-        # firmware updater.
-        if process.returncode != 0:
-          Spawn(['sh', updater_path, '--sb_repack', temp_dir], log=True,
-                check_call=True)
+        _PackFirmwareUpdater(updater_path, temp_dir)
 
     # Try to use "chromeos-firmwareupdate --mode=output" to extract bios/ec
     # firmware. This option is available for updaters extracted from image
     # version >= 9962.0.0. This also checks that the firmwares that we care
     # exist.
-    models = [self.project] if self.designs is None else self.designs
     for model in models:
       Spawn([
           'sudo', 'sh', updater_path, '--mode', 'output', '--model', model,
@@ -1090,6 +1152,20 @@ class FinalizeBundle:
         'to check your changes into %s.',
         factory_board_bundle_path)
 
+  def BundleRecord(self):
+    record = {
+        'board': self.board,
+        'project': self.project
+    }
+    record.update(self.firmware_record)
+    record = json_utils.DumpStr(record, pretty=True)
+    logging.info('bundle record:\n %s', record)
+
+    if self.bundle_record:
+      with open(self.bundle_record, 'w+') as f:
+        f.write(record)
+      logging.info('bundle record save in %s', self.bundle_record)
+
   @contextlib.contextmanager
   def _DownloadResource(self, possible_urls, resource_name=None, version=None):
     """Downloads a resource file from given URLs.
@@ -1303,7 +1379,7 @@ class FinalizeBundle:
       raise
     work_dir = args.dir or os.path.dirname(os.path.realpath(manifest_path))
     return FinalizeBundle(manifest, work_dir, args.download, args.archive,
-                          args.jobs)
+                          args.bundle_record, args.jobs)
 
   @staticmethod
   def _ParseArgs():
@@ -1314,9 +1390,10 @@ class FinalizeBundle:
     parser.add_argument(
         '--no-download', dest='download', action='store_false',
         help="Don't download files from Google Storage (for testing only)")
-    parser.add_argument(
-        '--no-archive', dest='archive', action='store_false',
-        help="Don't make a tarball (for testing only)")
+    parser.add_argument('--no-archive', dest='archive', action='store_false',
+                        help="Don't make a tarball (for testing only)")
+    parser.add_argument('--bundle-record', type=str, default=None,
+                        help="Create a record file at the target path.")
     parser.add_argument('--jobs', dest='jobs', type=int, default=1,
                         help='How many workers to work at maximum.')
 
