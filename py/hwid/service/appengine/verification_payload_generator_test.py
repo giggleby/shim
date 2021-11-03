@@ -308,7 +308,9 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'stylus', 'name1', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'stylus'
+                    }
                 },
                 'expect': {
                     'name': [True, 'str', '!eq foo'],
@@ -328,7 +330,9 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'touchpad', 'name1', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'touchpad'
+                    }
                 },
                 'expect': {
                     'name': [True, 'str', '!eq foo'],
@@ -351,7 +355,9 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'touchscreen', 'name1', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'touchscreen'
+                    }
                 },
                 'expect': {
                     'name': [True, 'str', '!eq foo'],
@@ -373,7 +379,9 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'touchscreen', 'name1', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'touchscreen'
+                    }
                 },
                 'expect': {
                     'name': [True, 'str', '!eq foo'],
@@ -397,7 +405,9 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'touchscreen', 'name1', {
                 'eval': {
-                    'input_device': {}
+                    'input_device': {
+                        'device_type': 'touchscreen'
+                    }
                 },
                 'expect': {
                     'name': [True, 'str', '!eq foo'],

@@ -38,7 +38,8 @@ class GenericProbeStatementInfoRecord:
         they will be fed to the probe statement generator.
   """
 
-  def __init__(self, probe_category, probe_func_name, allowlist_fields):
+  def __init__(self, probe_category, probe_func_name, allowlist_fields,
+               probe_function_argument=None):
     """Constructor.
 
     Args:
@@ -46,6 +47,8 @@ class GenericProbeStatementInfoRecord:
       probe_func_name: The name of the probe function.
       allowlist_fields: Either a list of allowed fields in the output or
           a dictionary of allowed fields with values for filtering.
+      probe_function_argument: A dictionary which will be passed to the probe
+          function.
     """
     self.probe_category = probe_category
     self.probe_func_name = probe_func_name
@@ -53,11 +56,13 @@ class GenericProbeStatementInfoRecord:
         allowlist_fields if isinstance(allowlist_fields, dict) else
         {fn: None
          for fn in allowlist_fields})
+    self.probe_function_argument = probe_function_argument
 
   def GenerateProbeStatement(self):
     return probe_config_definition.GetProbeStatementDefinition(
         self.probe_category).GenerateProbeStatement(
-            'generic', self.probe_func_name, self.allowlist_fields)
+            'generic', self.probe_func_name, self.allowlist_fields,
+            probe_function_argument=self.probe_function_argument)
 
 
 # TODO(yhong): Remove the expect field when runtime_probe converts the output
@@ -99,6 +104,27 @@ def _GetAllGenericProbeStatementInfoRecords():
           }),
       GenericProbeStatementInfoRecord(
           'display_panel', 'edid', ['height', 'product_id', 'vendor', 'width']),
+      GenericProbeStatementInfoRecord(
+          'touchpad', 'input_device', [
+              'name',
+              'product',
+              'vendor',
+              'fw_version',
+          ], probe_function_argument={'device_type': 'touchpad'}),
+      GenericProbeStatementInfoRecord(
+          'touchscreen', 'input_device', [
+              'name',
+              'product',
+              'vendor',
+              'fw_version',
+          ], probe_function_argument={'device_type': 'touchscreen'}),
+      GenericProbeStatementInfoRecord(
+          'stylus', 'input_device', [
+              'name',
+              'product',
+              'vendor',
+              'fw_version',
+          ], probe_function_argument={'device_type': 'stylus'}),
   ]
 
 
@@ -346,7 +372,6 @@ def GetAllProbeStatementGenerators():
       _ProbeStatementGenerator('dram', 'memory', dram_fields),
   ]
 
-  # TODO(kevinptt): Support "device_type" argument in runtime_probe.
   input_device_fields = [
       same_name_field_converter('name', HWIDValueToStr),
       _FieldRecord(
@@ -362,14 +387,19 @@ def GetAllProbeStatementGenerators():
           is_optional=True),
   ]
   all_probe_statement_generators['stylus'] = [
-      _ProbeStatementGenerator('stylus', 'input_device', input_device_fields),
+      _ProbeStatementGenerator(
+          'stylus', 'input_device', input_device_fields,
+          probe_function_argument={'device_type': 'stylus'}),
   ]
   all_probe_statement_generators['touchpad'] = [
-      _ProbeStatementGenerator('touchpad', 'input_device', input_device_fields),
+      _ProbeStatementGenerator(
+          'touchpad', 'input_device', input_device_fields,
+          probe_function_argument={'device_type': 'touchpad'}),
   ]
   all_probe_statement_generators['touchscreen'] = [
-      _ProbeStatementGenerator('touchscreen', 'input_device',
-                               input_device_fields),
+      _ProbeStatementGenerator(
+          'touchscreen', 'input_device', input_device_fields,
+          probe_function_argument={'device_type': 'touchscreen'}),
   ]
 
   # This is the old name for video_codec + camera.
