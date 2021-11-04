@@ -136,7 +136,7 @@ PRESUBMIT_TARGETS := \
   .phony default clean closure proto overlord ovl-bin par doc resource toolkit \
   bundle presubmit presubmit-chroot $(PRESUBMIT_TARGETS) \
   lint smartlint smart_lint test test-critical overlay publish-docs po \
-  test-list-check ebuild-test project-toolkits
+  test-list-check ebuild-unit-test ebuild-test project-toolkits
 
 # This must be the first rule.
 default: closure
@@ -521,10 +521,13 @@ test-list-check:
 	  $(basename $(basename $(notdir $(wildcard \
 	    $(TOOLKITPATH)/py/test/test_lists/*.test_list.json))))
 
+ebuild-unit-test:
+	$(TEST_RUNNER) --no-informational --no-pass-mark --plain-log
+
 # Only run this test if factory-board is overlayed and the board name does not
 # contain '-' as a substring since we want to skip *-arc and *-kernelnext
 # overlays.
-ebuild-test:
+ebuild-test: ebuild-unit-test
 ifeq ($(findstring third_party/chromiumos-overlay,$(BOARD_EBUILD)),)
 ifeq ($(findstring -,$(BOARD)),)
 ifneq ($(filter-out $(EBUILD_TEST_BLOCKED_LIST), $(BOARD)),)
