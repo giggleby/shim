@@ -33,7 +33,7 @@ COPY docker/requirements.txt /root/
 RUN pip install -r /root/requirements.txt
 
 # Install gcloud command.
-ARG gcloud_archive_name="google-cloud-sdk-245.0.0-linux-x86_64.tar.gz"
+ARG gcloud_archive_name="google-cloud-sdk-363.0.0-linux-x86_64.tar.gz"
 RUN cd /usr/src/ && \
   wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/${gcloud_archive_name}" && \
   tar xvf "${gcloud_archive_name}" && \
