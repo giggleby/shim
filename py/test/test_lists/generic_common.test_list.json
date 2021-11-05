@@ -281,6 +281,9 @@
         "use_netboot": false
       }
     },
+    "CheckReleaseLVMStateful": {
+      "pytest_name": "check_release_lvm_stateful"
+    },
     "CheckRetimerFirmware": {
       "pytest_name": "check_retimer_firmware",
       "args": {

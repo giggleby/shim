@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-10-20 14:07+CST\n"
+"PO-Revision-Date: 2021-11-08 16:32+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -140,6 +140,10 @@ msgstr "检查 CR50 版号"
 #: ../build/pytests_label_generated.json
 msgid "Check Image Version"
 msgstr "检查映像版本"
+
+#: ../build/pytests_label_generated.json
+msgid "Check Release LVM Stateful"
+msgstr "检查出厂系统是否为 LVM"
 
 #: ../build/pytests_label_generated.json
 msgid "Check Retimer Firmware"
