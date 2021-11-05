@@ -183,6 +183,20 @@ class Util:
 
     return None
 
+  def UseLVMStatefulPartition(self, rootfs_path):
+    """Checks if `USE_LVM_STATEFUL_PARTITION` equals to 1.
+
+    Args:
+      rootfs_path: Path to release/test rootfs.
+
+    Returns:
+      True if `USE_LVM_STATEFUL_PARTITION=1`, otherwise, return false.
+    """
+    chromeos_startup_path = os.path.join(rootfs_path, 'sbin',
+                                         'chromeos_startup')
+    return self.shell('grep -q USE_LVM_STATEFUL_PARTITION=1 %s' %
+                      chromeos_startup_path).success
+
   def FindScript(self, script_name):
     """Finds the script under /usr/local/factory/sh
 

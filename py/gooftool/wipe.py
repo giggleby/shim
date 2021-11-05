@@ -528,6 +528,13 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
                            ROOT_DISK=root_disk)
   logging.debug('clobber-state: root_dev=%s, root_disk=%s',
                 release_rootfs, root_disk)
+  # We cannot mount the release_rootfs and call the clobber-state in it, since
+  # its shared library locates under release_rootfs mount point. Instead, we
+  # read the LVM flag from release_rootfs and manually add it to clobber-state.
+  with sys_utils.MountPartition(release_rootfs) as root:
+    if Util().UseLVMStatefulPartition(root):
+      wipe_args += ' setup_lvm'
+
   process_utils.Spawn(['clobber-state', wipe_args], env=clobber_state_env,
                       check_call=True, log=True)
 
