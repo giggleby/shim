@@ -13,6 +13,7 @@ SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator/"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/bundle_creator/config.sh" || exit 1
+. "${FACTORY_PRIVATE_DIR}/config/bundle_creator/send_request.sh" || exit 1
 
 # Following variables will be assigned by `load_config <DEPLOYMENT_TYPE>`
 GCLOUD_PROJECT=
@@ -26,6 +27,7 @@ PUBSUB_SUBSCRIPTION=
 ALLOWED_LOAS_PEER_USERNAMES=
 NOREPLY_EMAIL=
 FAILURE_EMAIL=
+APPENGINE_ID=
 
 load_config_by_deployment_type() {
   local deployment_type="$1"
@@ -174,10 +176,25 @@ create_vm() {
     --size 1
 }
 
+ssh_vm() {
+  load_config_by_deployment_type "$1"
+
+  vm_name=$(gcloud compute instances list --project "${GCLOUD_PROJECT}" \
+    | sed -n "s/\(${INSTANCE_GROUP_NAME}-\S*\).*$/\1/p")
+  gcloud --project "${GCLOUD_PROJECT}" compute ssh "${vm_name}"
+}
+
 deploy_vm() {
   build_docker "$1"
   deploy_docker "$1"
   create_vm "$1"
+}
+
+request() {
+  load_config_by_deployment_type "$1"
+
+  send_request "${APPENGINE_ID}" \
+    "${FACTORY_DIR}/py/bundle_creator/proto/factorybundle.proto"
 }
 
 print_usage() {
@@ -211,6 +228,12 @@ commands:
 
   $0 deploy-vm [prod|staging|dev|dev2]
       Do \`build-docker\`, \`deploy-docker\` and \`create-vm\` commands.
+
+  $0 ssh-vm [prod|staging|dev|dev2]
+      Ssh connect to the compute engine instance.
+
+  $0 request [prod|staging|dev|dev2]
+      Send \`CreateBundleAsync\` request to the app engine.
 __EOF__
 }
 
@@ -242,6 +265,12 @@ main() {
         ;;
       deploy-vm)
         deploy_vm "$2"
+        ;;
+      ssh-vm)
+        ssh_vm "$2"
+        ;;
+      request)
+        request "$2"
         ;;
       *)
         die "Unknown sub-command: \"${subcmd}\".  Run \`${0} help\` to print" \

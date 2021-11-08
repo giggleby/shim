@@ -7,6 +7,8 @@
 Easy Bundle Creation is a backend service that accepts RPC calls, creates the
 factory bundles and supports downloading the created bundles.
 
+To see the full prerequisites and setup, check go/cros-bundle-creator-setup.
+
 ## File location
 
 ### ChromeOS repository
@@ -17,7 +19,20 @@ factory bundles and supports downloading the created bundles.
 * `$(factory-private-repo)/config/bundle_creator` contains all the
   confidential configurations.
 
-## Build & Deploy
+
+## Development Guide
+
+### Prerequisites
+
+Install Docker
+  - go/installdocker
+
+Install dependencies:
+```
+sudo apt-get install protobuf-compiler google-cloud-sdk
+```
+
+### Build & Deploy
 
 To deploy the app engine, run:
 
@@ -32,4 +47,28 @@ To deploy the compute engine, run:
 (factory-repo)$ ./deploy/bundle_creator.sh build-docker ${deployment_type}
 (factory-repo)$ ./deploy/bundle_creator.sh deploy-docker ${deployment_type}
 (factory-repo)$ ./deploy/bundle_creator.sh create-vm ${deployment_type}
+```
+
+To access the VM, run:
+```
+# SSH ino the VM
+(factory-repo)$ ./deploy/bundle_creator.sh ssh-vm ${deployment_type}
+
+# Login the docker
+(inside VM)$ docker exec -it bundle-docker-1 sh
+```
+
+### Sending request
+
+```
+(factory-repo)$ cat > /tmp/create_bundle.txt << EOF
+board: "cherry"
+project: "tomato"
+phase: "pvt"
+toolkit_version: "14195.0.0"
+test_image_version: "14195.0.0"
+release_image_version: "14195.0.0"
+email: "$(whoami)@google.com"
+EOF
+(factory-repo)$ ./deploy/bundle_creator.sh request ${deployment_type} < /tmp/create_bundle.txt
 ```
