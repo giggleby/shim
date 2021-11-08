@@ -112,7 +112,7 @@ do_make_build_folder() {
   mkdir -p "${TEMP_DIR}"
   add_temp "${TEMP_DIR}"
   # Change symlink to hard link due to b/70037640.
-  local cp_files=(cron.yaml requirements.txt .gcloudignore)
+  local cp_files=(cron.yaml requirements.txt .gcloudignore gunicorn.conf.py)
   for file in "${cp_files[@]}"; do
     cp -l "${APPENGINE_DIR}/${file}" "${TEMP_DIR}"
   done
