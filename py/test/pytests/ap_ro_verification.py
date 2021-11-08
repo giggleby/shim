@@ -109,3 +109,4 @@ class APROVerficationTest(test_case.TestCase):
 
   def tearDown(self):
     device_data.DeleteDeviceData(self.device_data_key)
+    self.gooftool.Cr50ClearRoHash()

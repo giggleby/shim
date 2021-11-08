@@ -1171,6 +1171,10 @@ class Gooftool:
       raise Error('RLZ does not match Board ID.')
     return True
 
+  def Cr50ClearRoHash(self):
+    gsctool = gsctool_module.GSCTool(self._util.shell)
+    gsctool.ClearROHash()
+
   def Cr50SetROHash(self):
     """Set the AP-RO hash on the Cr50 chip.
 
@@ -1188,8 +1192,7 @@ class Gooftool:
 
     # We cannot set AP-RO hash if it's already set, so always try to clear it
     # before we set the AP-RO hash.
-    gsctool = gsctool_module.GSCTool(self._util.shell)
-    gsctool.ClearROHash()
+    self.Cr50ClearRoHash()
 
     firmware_image = self._crosfw.LoadMainFirmware().GetFirmwareImage()
     ro_offset, ro_size = firmware_image.get_section_area('RO_SECTION')
