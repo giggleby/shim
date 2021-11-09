@@ -74,3 +74,14 @@ target (``make test``).
 
 You can put unit tests in the board overlay as well; these tests can
 be run by :samp:`make overlay-{board}-test`.
+
+``make test`` invokes a test runner to run all test it found in the repository
+except some `excluded directories and tests <https://chromium.googlesource.com/chromiumos/platform/factory/+/refs/heads/main/py/tools/run_unittests.py#45>`_,
+and runs tests with our mocking system.
+
+A decorator `Informational <https://chromium.googlesource.com/chromiumos/platform/factory/+/refs/heads/main/py/unittest_utils/label_utils.py#15>`_
+should be applied to tests which are not able, not suitable or unstable to run
+in CQ.
+
+The runner can also be trigger by calling ``bin/run_unittests`` with a list of
+unit test file path as arguments to run user specified tests only.
