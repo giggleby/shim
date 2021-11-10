@@ -18,9 +18,12 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog.plugins import buffer_priority_file
 from cros.factory.instalog.utils import file_utils
+from cros.factory.unittest_utils import label_utils
 
 
 # pylint: disable=protected-access
+# TODO (b/205776055)
+@label_utils.Informational
 class TestBufferPriorityFile(unittest.TestCase):
 
   def _CreateBuffer(self, config=None):

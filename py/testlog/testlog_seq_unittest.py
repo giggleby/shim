@@ -19,8 +19,11 @@ import unittest
 
 from cros.factory.testlog import testlog_seq
 from cros.factory.testlog.utils import file_utils
+from cros.factory.unittest_utils import label_utils
 
 
+# TODO (b/205776617)
+@label_utils.Informational
 class BootSequenceTest(unittest.TestCase):
   """Unittests for SeqGenerator."""
 
