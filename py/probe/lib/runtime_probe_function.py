@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from cros.factory.probe import function
+from cros.factory.probe.lib import probe_function
 from cros.factory.probe.runtime_probe import runtime_probe_adapter
 
 
-class RuntimeProbeFunction(function.Function):
+class RuntimeProbeFunction(probe_function.ProbeFunction):
   """The base class of runtime probe functions.
 
   While evaluation, the function proxies the argument to runtime probe and
@@ -17,7 +17,7 @@ class RuntimeProbeFunction(function.Function):
   CATEGORY_NAME = None
   FUNCTION_NAME = None
 
-  def Apply(self, data):
+  def Probe(self):
     if not self.CATEGORY_NAME or not self.FUNCTION_NAME:
       raise NotImplementedError
     return runtime_probe_adapter.RunProbeFunction(self.CATEGORY_NAME,
