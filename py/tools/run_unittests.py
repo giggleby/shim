@@ -24,6 +24,7 @@ import datetime
 import multiprocessing
 import contextlib
 import glob
+import re
 
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import net_utils
@@ -59,6 +60,46 @@ TEST_PASSED_MARK = os.path.join(FACTORY_ROOT, '.tests-passed')
 TEST_TIMEOUT_SECS = 60
 TEST_FILE_SUFFIX = '_unittest.py'
 TEST_FILE_USE_MOCK_SUFFIX = '_unittest_mocked.py'
+
+# TODO(lschyi): this list should be removed after resource warning from these tests are
+# fixed.
+RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
+    'go/src/overlord/test/overlord_e2e_unittest.py',
+    'py/device/boards/linux_unittest.py',
+    'py/dkps/dkps_unittest.py',
+    'py/goofy/goofy_rpc_unittest.py',
+    'py/goofy/goofy_unittest.py',
+    'py/instalog/plugins/http_e2e_unittest.py',
+    'py/instalog/plugins/input_pull_socket_unittest.py',
+    'py/instalog/plugins/input_socket_unittest.py',
+    'py/instalog/plugins/output_http_unittest.py',
+    'py/instalog/plugins/pull_socket_e2e_unittest.py',
+    'py/instalog/plugins/socket_e2e_unittest.py',
+    'py/instalog/utils/file_utils_unittest.py',
+    'py/instalog/utils/jsonrpc_utils_unittest.py',
+    'py/instalog/utils/net_utils_unittest.py',
+    'py/instalog/utils/pygpt_unittest.py',
+    'py/instalog/utils/sys_utils_unittest.py',
+    'py/instalog/utils/webservice_utils_unittest.py',
+    'py/test/event_log_unittest.py',
+    'py/test/event_log_watcher_unittest.py',
+    'py/test/rf/lan_scpi_unittest.py',
+    'py/test/rf/n1914a_unittest.py',
+    'py/test/session_unittest.py',
+    'py/test/utils/connection_manager_unittest.py',
+    'py/testlog/testlog_seq_unittest.py',
+    'py/testlog/testlog_unittest.py',
+    'py/tools/image_tool_rma_unittest.py',
+    'py/tools/image_tool_unittest.py',
+    'py/tools/make_par_unittest.py',
+    'py/tools/time_sanitizer_unittest.py',
+    'py/utils/file_utils_unittest.py',
+    'py/utils/jsonrpc_utils_unittest.py',
+    'py/utils/net_utils_unittest.py',
+    'py/utils/pygpt_unittest.py',
+    'py/utils/sys_utils_unittest.py',
+    'py/utils/webservice_utils_unittest.py',
+]
 
 
 class _TestProc:
@@ -101,6 +142,7 @@ class _TestProc:
     # cros_factory_data_dir temporary directory, so it would be removed even if
     # the test is terminated.
     child_env['TMPDIR'] = child_tmp_root
+    child_env['PYTHONWARNINGS'] = 'error::ResourceWarning'
     # This is used by net_utils.FindUnusedPort, to eliminate the chance of
     # collision of FindUnusedPort between different unittests.
     child_env[
@@ -315,6 +357,34 @@ class RunTests:
       # Wait for all running test.
       self._WaitRunningProcessesFewerThan(1)
 
+  def _CheckTestFailedReason(self, p):
+    """Returns fail reason or None if test passed.
+
+    Not only checks the return code of the test process, but also examines is
+    any ResourceWarning presents in the test log.
+
+    Args:
+      p: _TestProc instance
+
+    Returns:
+      A string of failed message or None if test passed.
+    """
+    if p.proc.returncode != 0:
+      return f'return code is not 0 (return:{p.proc.returncode})'
+
+    # TODO(lschyi): skip resource warning check on some test should be removed after
+    # RESOURCE_WARNING_CHECK_TO_EXCLUDE list is clear.
+    if p.test_name not in RESOURCE_WARNING_CHECK_TO_EXCLUDE:
+      # Due to resourceWarning such as file not closed can only be determined
+      # when GC is going to delete that object, CPython can not throw exception
+      # at that time to mark test is failed, we have to manually check the log.
+      with open(p.log_file_name) as f:
+        if re.search(r'Exception ignored in: .*\nResourceWarning: .*',
+                     f.read()):
+          return 'ResourceWarning found'
+
+    return None
+
   def _RecordTestResult(self, p):
     """Records test result.
 
@@ -325,13 +395,14 @@ class RunTests:
       p: _TestProc object.
     """
     duration = time.time() - p.start_time
-    if p.proc.returncode == 0:
+    failedReason = self._CheckTestFailedReason(p)
+    if failedReason:
+      self._FailMessage(
+          '*** FAIL [%.2f s] %s (%s)' % (duration, p.test_name, failedReason))
+      self._failed_tests[p.test_name] = p.log_file_name
+    else:
       self._PassMessage('*** PASS [%.2f s] %s' % (duration, p.test_name))
       self._passed_tests.add(p.test_name)
-    else:
-      self._FailMessage('*** FAIL [%.2f s] %s (return:%d)' %
-                        (duration, p.test_name, p.proc.returncode))
-      self._failed_tests[p.test_name] = p.log_file_name
 
   def _TerminateAndCleanupAll(self):
     """Terminate all running process and cleanup temporary directories.
