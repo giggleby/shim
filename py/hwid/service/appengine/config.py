@@ -11,6 +11,7 @@ import yaml
 
 # pylint: disable=import-error
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
+from cros.factory.hwid.service.appengine.data import verification_payload_data
 from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
@@ -92,6 +93,9 @@ class _Config:
         for k, v in conf.get('vpg_targets', {}).items()
     }
     self._ndb_connector = ndbc_module.NDBConnector()
+    self.vp_data_manager = (
+        verification_payload_data.VerificationPayloadDataManager(
+            self._ndb_connector))
     self.hwid_manager = hwid_manager.HwidManager(self.hwid_filesystem,
                                                  self.vpg_targets,
                                                  self._ndb_connector)

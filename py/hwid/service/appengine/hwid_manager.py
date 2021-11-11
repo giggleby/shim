@@ -73,25 +73,6 @@ class HwidMetadata(ndb.Model):  # pylint: disable=no-init
   project = ndb.StringProperty()
 
 
-class CLNotification(ndb.Model):  # pylint: disable=no-init
-  """Emails of CL notification recipients."""
-
-  notification_type = ndb.StringProperty()
-  email = ndb.StringProperty()
-
-
-class LatestHWIDMainCommit(ndb.Model):  # pylint: disable=no-init
-  """Latest main commit of private overlay repo with generated payloads."""
-
-  commit = ndb.StringProperty()
-
-
-class LatestPayloadHash(ndb.Model):  # pylint: disable=no-init
-  """Latest hash of payload generated from verification_payload_generator."""
-
-  payload_hash = ndb.StringProperty()
-
-
 class AVLNameMapping(ndb.Model):
 
   category = ndb.StringProperty()
@@ -456,49 +437,6 @@ class HwidManager:
     hwid_data = self._LoadHwidData(project)
 
     return hwid_data.GetComponents(project, with_classes)
-
-  def GetCLReviewers(self):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = CLNotification.query(CLNotification.notification_type == "reviewer")
-      reviewers = []
-      for notification in list(q):
-        reviewers.append(notification.email)
-      return reviewers
-
-  def GetCLCCs(self):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = CLNotification.query(CLNotification.notification_type == "cc")
-      ccs = []
-      for notification in list(q):
-        ccs.append(notification.email)
-      return ccs
-
-  def GetLatestHWIDMainCommit(self):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      key = ndb.Key(LatestHWIDMainCommit, 'commit')
-      entry = LatestHWIDMainCommit.query(LatestHWIDMainCommit.key == key).get()
-      return entry.commit
-
-  def SetLatestHWIDMainCommit(self, commit):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      key = ndb.Key(LatestHWIDMainCommit, 'commit')
-      entity = LatestHWIDMainCommit.query(LatestHWIDMainCommit.key == key).get()
-      entity.commit = commit
-      entity.put()
-
-  def GetLatestPayloadHash(self, board):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      key = ndb.Key(LatestPayloadHash, board)
-      entity = LatestPayloadHash.query(LatestPayloadHash.key == key).get()
-      if entity is not None:
-        return entity.payload_hash
-      return None
-
-  def SetLatestPayloadHash(self, board, payload_hash):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      latest_hash = LatestPayloadHash.get_or_insert(board)
-      latest_hash.payload_hash = payload_hash
-      latest_hash.put()
 
   def _LoadHwidData(self, project):
     """Retrieves the HWID data for a given project, caching as necessary.

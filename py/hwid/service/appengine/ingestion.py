@@ -50,6 +50,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     super(ProtoRPCService, self).__init__(*args, **kwargs)
     self.hwid_filesystem = CONFIG.hwid_filesystem
     self.hwid_manager = CONFIG.hwid_manager
+    self.vp_data_manager = CONFIG.vp_data_manager
     self.vpg_targets = CONFIG.vpg_targets
     self.dryrun_upload = CONFIG.dryrun_upload
     self.hwid_repo_manager = CONFIG.hwid_repo_manager
@@ -205,7 +206,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """
 
     hwid_main_commit = self.hwid_repo_manager.GetMainCommitID()
-    latest_commit = self.hwid_manager.GetLatestHWIDMainCommit()
+    latest_commit = self.vp_data_manager.GetLatestHWIDMainCommit()
 
     if latest_commit == hwid_main_commit and not force_update:
       logging.debug('The HWID main commit %s is already processed, skipped',
@@ -228,7 +229,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       logging.info('Forcing an update as hash %s', result.payload_hash)
       return True
 
-    latest_hash = self.hwid_manager.GetLatestPayloadHash(board)
+    latest_hash = self.vp_data_manager.GetLatestPayloadHash(board)
     if latest_hash == result.payload_hash:
       logging.debug('Payload is not changed as %s, skipped', latest_hash)
       return False
@@ -263,8 +264,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     git_url = setting.repo_host + setting.repo_path
     branch = setting.branch or git_util.GetCurrentBranch(
         setting.review_host, setting.project, git_util.GetGerritAuthCookie())
-    reviewers = self.hwid_manager.GetCLReviewers()
-    ccs = self.hwid_manager.GetCLCCs()
+    reviewers = self.vp_data_manager.GetCLReviewers()
+    ccs = self.vp_data_manager.GetCLCCs()
     new_git_files = []
     for filepath, filecontent in new_files.items():
       new_git_files.append((os.path.join(
@@ -370,9 +371,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     commit_id, payload_hash_mapping = self._UpdatePayloads(
         force_push, force_update)
     if commit_id:
-      self.hwid_manager.SetLatestHWIDMainCommit(commit_id)
+      self.vp_data_manager.SetLatestHWIDMainCommit(commit_id)
     if force_update:
       response.payload_hash.update(payload_hash_mapping)
     for board, payload_hash in payload_hash_mapping.items():
-      self.hwid_manager.SetLatestPayloadHash(board, payload_hash)
+      self.vp_data_manager.SetLatestPayloadHash(board, payload_hash)
     return response
