@@ -11,6 +11,7 @@ import yaml
 
 # pylint: disable=import-error
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
+from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import verification_payload_data
 from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -96,6 +97,8 @@ class _Config:
     self.vp_data_manager = (
         verification_payload_data.VerificationPayloadDataManager(
             self._ndb_connector))
+    self.decoder_data_manager = decoder_data.DecoderDataManager(
+        self._ndb_connector)
     self.hwid_manager = hwid_manager.HwidManager(self.hwid_filesystem,
                                                  self.vpg_targets,
                                                  self._ndb_connector)

@@ -54,6 +54,7 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
 }
 
 _hwid_manager = CONFIG.hwid_manager
+_decoder_data_manager = CONFIG.decoder_data_manager
 _hwid_validator = hwid_validator.HwidValidator()
 _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
     namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
@@ -170,7 +171,7 @@ def _BatchGetBom(hwids, verbose=False) -> Dict[str, BomEntry]:
                          status=hwid_api_messages_pb2.Status.SUCCESS)
 
     for component in bom.GetComponents():
-      name = _hwid_manager.GetAVLName(component.cls, component.name)
+      name = _decoder_data_manager.GetAVLName(component.cls, component.name)
       fields = []
       if verbose:
         for fname, fvalue in component.fields.items():
@@ -536,9 +537,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     # runtime probe
     for component in bom.GetComponents():
       if component.name and component.is_vp_related:
-        name = _hwid_manager.GetPrimaryIdentifier(bom.project, component.cls,
-                                                  component.name)
-        name = _hwid_manager.GetAVLName(component.cls, name)
+        name = _decoder_data_manager.GetPrimaryIdentifier(
+            bom.project, component.cls, component.name)
+        name = _decoder_data_manager.GetAVLName(component.cls, name)
         if component.information is not None:
           name = component.information.get('comp_group', name)
         response.labels.add(name="hwid_component",

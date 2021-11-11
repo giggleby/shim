@@ -65,6 +65,10 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_manager = patcher.start()
     self.addCleanup(patcher.stop)
 
+    patcher = mock.patch('__main__.hwid_api._decoder_data_manager')
+    self.patch_decoder_data_manager = patcher.start()
+    self.addCleanup(patcher.stop)
+
     patcher = mock.patch('__main__.hwid_api._goldeneye_memcache_adapter')
     self.patch_goldeneye_memcache_adapter = patcher.start()
     self.addCleanup(patcher.stop)
@@ -188,8 +192,8 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
         TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
@@ -224,8 +228,8 @@ class HwidApiTest(unittest.TestCase):
         hwid1: hwid_manager.BomAndConfigless(bom1, None, None),
         hwid2: hwid_manager.BomAndConfigless(bom2, None, None),
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
@@ -280,8 +284,8 @@ class HwidApiTest(unittest.TestCase):
         hwid4:
             hwid_manager.BomAndConfigless(bom, None, None),
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
@@ -331,8 +335,8 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
         TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
@@ -376,8 +380,8 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
         TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID, verbose=True)
@@ -459,8 +463,8 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
         TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID, verbose=True)
@@ -862,8 +866,8 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
         TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
     }
-    self.patch_hwid_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_hwid_manager.GetPrimaryIdentifier.side_effect = (
+    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
+    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
         _MockGetPrimaryIdentifier)
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)

@@ -51,6 +51,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     self.hwid_filesystem = CONFIG.hwid_filesystem
     self.hwid_manager = CONFIG.hwid_manager
     self.vp_data_manager = CONFIG.vp_data_manager
+    self.decoder_data_manager = CONFIG.decoder_data_manager
     self.vpg_targets = CONFIG.vpg_targets
     self.dryrun_upload = CONFIG.dryrun_upload
     self.hwid_repo_manager = CONFIG.hwid_repo_manager
@@ -72,15 +73,15 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     del request  # unused
     live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo()
-    category_set = self.hwid_manager.ListExistingAVLCategories()
+    category_set = self.decoder_data_manager.ListExistingAVLCategories()
 
     for name, content in live_hwid_repo.IterAVLNameMappings():
       category, unused_ext = os.path.splitext(name)
       mapping = yaml.load(content)
-      self.hwid_manager.SyncAVLNameMapping(category, mapping)
+      self.decoder_data_manager.SyncAVLNameMapping(category, mapping)
       category_set.discard(category)
 
-    self.hwid_manager.RemoveAVLNameMappingCategories(category_set)
+    self.decoder_data_manager.RemoveAVLNameMappingCategories(category_set)
 
     return ingestion_pb2.SyncNameMappingResponse()
 
@@ -340,7 +341,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         payload_hash_mapping[board] = result.payload_hash
         self._TryCreateCL(force_push, service_account_name, board, new_files,
                           hwid_main_commit)
-      self.hwid_manager.UpdatePrimaryIdentifiers(result.primary_identifiers)
+      self.decoder_data_manager.UpdatePrimaryIdentifiers(
+          result.primary_identifiers)
 
     return hwid_main_commit, payload_hash_mapping
 

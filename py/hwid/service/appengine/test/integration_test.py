@@ -2,7 +2,6 @@
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Tests for AppEngine Integration."""
 
 import argparse
@@ -31,23 +30,32 @@ def _PrepareTests(test_names):
 
   Args:
     test_names: A list of test names to run. None for returning all tests.
+
   Returns:
-    A list a test path in docker image.
+    A list of test paths in docker image.
   """
+
   def _CanonicalizeTestName(test_name):
-    test_name = test_name.rstrip('.py')
-    test_path = os.path.join(HOST_APPENGINE_DIR, test_name + '.py')
-    if not os.path.isfile(test_path):
-      raise ValueError('Test %s not exists')
-    return APPENGINE_MODULE_PREFIX + test_name
+    fullpath = os.path.join(HOST_APPENGINE_DIR, test_name)
+    if not os.path.isfile(fullpath):
+      raise ValueError(f'Test {test_name} not exists (path: {fullpath})')
+    return APPENGINE_MODULE_PREFIX + test_name.rstrip('.py').replace('/', '.')
 
   def _ListAllTests():
-    return [
-        _CanonicalizeTestName(tn)
-        for tn in os.listdir(HOST_APPENGINE_DIR)
-        if os.path.isfile(os.path.join(HOST_APPENGINE_DIR, tn)) and
-        tn.endswith('_test.py')
-    ]
+    all_files = []
+    for base_path, unused_dir_names, file_names in os.walk(HOST_APPENGINE_DIR):
+      if base_path == HOST_APPENGINE_DIR:
+        rel_base_path = ''
+      else:
+        rel_base_path = os.path.relpath(base_path, HOST_APPENGINE_DIR)
+      if rel_base_path == 'test':
+        continue
+      all_files.extend([
+          os.path.join(rel_base_path, fn)
+          for fn in file_names
+          if fn.endswith('_test.py')
+      ])
+    return [_CanonicalizeTestName(tn) for tn in all_files]
 
   if test_names:
     return [_CanonicalizeTestName(tn) for tn in test_names]
@@ -76,10 +84,8 @@ def RunTest(image, test_names):
   failed_tests = []
   for tn in test_names:
     p = process_utils.Spawn(
-        ['docker', 'exec', container_id, 'python', '-m', tn],
-        read_stdout=True,
-        read_stderr=True,
-        log=True)
+        ['docker', 'exec', container_id, 'python', '-m', tn], read_stdout=True,
+        read_stderr=True, log=True)
     if p.returncode != 0:
       with open(file_utils.CreateTemporaryFile(), 'w') as f:
         f.write('stdout:\n' + p.stdout_data)
@@ -101,10 +107,12 @@ def main():
   logging.getLogger().setLevel(int(os.environ.get('LOG_LEVEL') or logging.INFO))
   parser = argparse.ArgumentParser(description='AppEngine Interation Test')
   parser.add_argument(
-      '--no-build',
-      action='store_true',
+      '--no-build', action='store_true',
       help='Not building latest docker image, use default image.')
-  parser.add_argument('test_names', nargs='*', default=[])
+  parser.add_argument(
+      'test_names', nargs='*', default=[],
+      help=("Path names, relative to the HWID Server's appengine source code "
+            'folder, of tests to run.'))
   args = parser.parse_args()
 
   image = DEFAULT_DOCKER_IMAGE_NAME if args.no_build else _BuildDockerImage()

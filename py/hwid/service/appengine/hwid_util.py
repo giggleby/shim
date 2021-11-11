@@ -11,6 +11,7 @@ from cros.factory.hwid.v3 import bom as v3_bom
 
 
 _hwid_manager = CONFIG.hwid_manager
+_decoder_data_manager = CONFIG.decoder_data_manager
 
 
 class HWIDUtilException(Exception):
@@ -43,7 +44,8 @@ def GetSkuFromBom(bom, configless=None):
   if cpus:
     cpus.sort()
     cpu = '_'.join(
-        _hwid_manager.GetAVLName('cpu', comp_name) for comp_name in cpus)
+        _decoder_data_manager.GetAVLName('cpu', comp_name)
+        for comp_name in cpus)
 
   if configless and 'memory' in configless:
     memory_str = str(configless['memory']) + 'GB'

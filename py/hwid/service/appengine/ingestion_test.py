@@ -13,6 +13,7 @@ from google.cloud import ndb
 import yaml
 # pylint: enable=import-error, wrong-import-order, no-name-in-module
 
+from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ingestion
@@ -167,7 +168,7 @@ class AVLNameTest(unittest.TestCase):
 
     mapping_in_datastore = collections.defaultdict(dict)
     with ndb.Client().context():
-      for entry in hwid_manager.AVLNameMapping.query():
+      for entry in decoder_data.AVLNameMapping.query():
         self.assertIn(entry.category, self.init_mapping_data)
         mapping_in_datastore[entry.category][entry.component_id] = entry.name
     self.assertDictEqual(mapping_in_datastore, self.init_mapping_data)
@@ -184,7 +185,7 @@ class AVLNameTest(unittest.TestCase):
 
     mapping_in_datastore = collections.defaultdict(dict)
     with ndb.Client().context():
-      for entry in hwid_manager.AVLNameMapping.query():
+      for entry in decoder_data.AVLNameMapping.query():
         self.assertIn(entry.category, self.update_mapping_data)
         mapping_in_datastore[entry.category][entry.component_id] = entry.name
     self.assertDictEqual(mapping_in_datastore, self.update_mapping_data)
