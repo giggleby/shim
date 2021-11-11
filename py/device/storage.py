@@ -161,17 +161,50 @@ class Storage(device_types.DeviceComponent):
     return True
 
   def _GetMainStorageDeviceMountPoint(self):
-    """Path that is used to find main storage device."""
-    return '/usr/local'
+    """Path that is used to find main storage device.
+
+    The device path should not point to the stateful partition, since DUT may
+    have LVM stateful partition rather than EXT4. For LVM stateful partition,
+    its path looks like `/dev/xxxx/unencrypted` rather than `/dev/nvme0n1p1`.
+    """
+    return '/usr/share/oem'
 
   def GetMainStorageDevice(self):
+    """Get the main storage device.
+
+    We do not call `rootdev -s -d` to get the main storage device, since this
+    command does not support on devices such as Android.
+    """
     main_storage_device_mount_point = self._GetMainStorageDeviceMountPoint()
     partition = self.GetMountPoint(main_storage_device_mount_point)[1]
     if not partition:
       raise IOError('Unable to find main storage device (%s)' %
                     main_storage_device_mount_point)
     # remove partition suffix to get device path.
-    return re.sub(r'p?(\d+)$', '', partition)
+    device_path = re.sub(r'p?(\d+)$', '', partition)
+    logging.info('Found main storage device path: %s', device_path)
+    return device_path
+
+  def GetStatefulLogicalDevicePath(self):
+    state_dev = '%sp%d' % (self.GetMainStorageDevice(),
+                           self._device.partitions.STATEFUL.index)
+
+    # Check if the stateful partition is LVM format.
+    try:
+      self._device.CheckOutput(['which', 'pvdisplay'], log=True)
+    except device_types.CalledProcessError:
+      logging.info('pvdisplay binary not found. Assume that stateful partition'
+                   ' is EXT4 format.')
+      return state_dev
+
+    try:
+      result = self._device.CheckOutput([
+          'pvdisplay', '-C', '--quiet', '--noheadings', '--separator', '"|"',
+          '-o', 'vg_name', state_dev
+      ], log=True)
+      return '/dev/%s/unencrypted' % result.strip()
+    except device_types.CalledProcessError:
+      return state_dev
 
 
 class AndroidStorage(Storage):

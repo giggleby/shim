@@ -196,14 +196,12 @@ class BadBlocksTest(test_case.TestCase):
                    'last block %d.', self.args.device_path, self.args.max_bytes,
                    sector_size, last_block)
     elif self.args.mode == _TestModes.stateful_partition_free_space:
-      part_prefix = 'p' if self.args.device_path[-1].isdigit() else ''
-      # Always partition 1
-      partition_path = '%s%s1' % (self.args.device_path, part_prefix)
-
       # Determine total length of the FS
+      partition_path = self.dut.storage.GetStatefulLogicalDevicePath()
+      logging.info('Stateful partition path: %s', partition_path)
       dumpe2fs = self.dut.CheckOutput(['dumpe2fs', '-h', partition_path],
                                       log=True)
-      logging.info('Filesystem info for  header:\n%s', dumpe2fs)
+      logging.info('Filesystem info for header:\n%s', dumpe2fs)
 
       fields = dict(re.findall(r'^(.+):\s+(.+)$', dumpe2fs, re.MULTILINE))
       fs_first_block = int(fields['First block'])
@@ -211,7 +209,7 @@ class BadBlocksTest(test_case.TestCase):
       fs_block_size = int(fields['Block size'])
 
       partitions = sys_utils.PartitionManager(self.args.device_path, self.dut)
-      partition_index = 1
+      partition_index = self.dut.partitions.STATEFUL.index
       start_sector = partitions.GetPartitionOffsetInSector(partition_index)
       sector_count = partitions.GetPartitionSizeInSector(partition_index)
       sector_size = partitions.GetSectorSize()
