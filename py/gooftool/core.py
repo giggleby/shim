@@ -17,7 +17,6 @@ import time
 
 import yaml
 
-from cros.factory.device import device_utils
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import bmpblk
 from cros.factory.gooftool import cros_config as cros_config_module
@@ -298,9 +297,8 @@ class Gooftool:
       # disk layout is disk_layout_v3, we check if the last partition is
       # MINIOS-B.
       gpt = pygpt.GPT.LoadFromFile(self._util.GetPrimaryDevicePath())
-      dut = device_utils.CreateDUTInterface()
-      minios_a_no = dut.partitions.MINIOS_A.index
-      minios_b_no = dut.partitions.MINIOS_B.index
+      minios_a_no = self._util.MINIOS_A
+      minios_b_no = self._util.MINIOS_B
       minios_a_part = self._util.GetPrimaryDevicePath(minios_a_no)
       minios_b_part = self._util.GetPrimaryDevicePath(minios_b_no)
       is_disk_layout_v3 = gpt.IsLastPartition(minios_b_no)

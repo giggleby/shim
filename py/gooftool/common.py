@@ -68,6 +68,13 @@ def ExecFactoryPar(*args):
 
 class Util:
   """A collection of util functions that Gooftool needs."""
+  STATEFUL = 1
+  FACTORY_KERNEL = 2
+  FACTORY_ROOTFS = 3
+  RELEASE_KERNEL = 4
+  RELEASE_ROOTFS = 5
+  MINIOS_A = 9
+  MINIOS_B = 10
 
   def __init__(self):
     self.shell = Shell
@@ -251,12 +258,12 @@ class Util:
   def GetReleaseRootPartitionPath(self):
     """Gets the path for release root partition."""
 
-    return self.GetPrimaryDevicePath(5)
+    return self.GetPrimaryDevicePath(self.RELEASE_ROOTFS)
 
   def GetReleaseKernelPartitionPath(self):
     """Gets the path for release kernel partition."""
 
-    return self.GetPrimaryDevicePath(4)
+    return self.GetPrimaryDevicePath(self.RELEASE_KERNEL)
 
   def GetReleaseKernelPathFromRootPartition(self, rootfs_path):
     """Gets the path for release kernel from given rootfs path.
