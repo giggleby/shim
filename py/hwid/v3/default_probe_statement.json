@@ -162,6 +162,16 @@
       ]
     }
   },
+  "smart_card_reader": {
+    "usb": {
+      "eval": "smart_card_usb",
+      "keys": [
+        "idVendor",
+        "idProduct",
+        "bcdDevice"
+      ]
+    }
+  },
   "stylus": {
     "generic": {
       "eval": {
