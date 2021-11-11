@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import os.path
+import textwrap
 
 # pylint: disable=no-name-in-module, import-error, wrong-import-order
 import urllib3
@@ -17,7 +18,6 @@ import yaml
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
 from cros.factory.hwid.service.appengine import git_util
-from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine import \
@@ -259,21 +259,16 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     author = 'chromeoshwid <{account_name}>'.format(
         account_name=service_account_name)
 
-    setting = hwid_manager.HwidManager.GetVerificationPayloadSettings(board)
-    review_host = setting['review_host']
-    repo_host = setting['repo_host']
-    repo_path = setting['repo_path']
-    git_url = repo_host + repo_path
-    project = setting['project']
-    branch = setting['branch'] or git_util.GetCurrentBranch(
-        review_host, project, git_util.GetGerritAuthCookie())
-    prefix = setting['prefix']
+    setting = CONFIG.GetVerificationPayloadSettings(board)
+    git_url = setting.repo_host + setting.repo_path
+    branch = setting.branch or git_util.GetCurrentBranch(
+        setting.review_host, setting.project, git_util.GetGerritAuthCookie())
     reviewers = self.hwid_manager.GetCLReviewers()
     ccs = self.hwid_manager.GetCLCCs()
     new_git_files = []
     for filepath, filecontent in new_files.items():
       new_git_files.append((os.path.join(
-          prefix, filepath), git_util.NORMAL_FILE_MODE, filecontent))
+          setting.prefix, filepath), git_util.NORMAL_FILE_MODE, filecontent))
 
     commit_msg = ('verification payload: update payload from hwid\n'
                   '\n'
@@ -281,20 +276,18 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     if dryrun_upload:
       # file_info = (file_path, mode, content)
-      file_paths = ['  ' + file_info[0] for file_info in new_git_files]
-      dryrun_upload_info = ('Dryrun upload to {project}\n'
-                            'git_url: {git_url}\n'
-                            'branch: {branch}\n'
-                            'reviewers: {reviewers}\n'
-                            'ccs: {ccs}\n'
-                            'commit msg:\n'
-                            '{commit_msg}\n'
-                            'update file paths:\n'
-                            '{file_paths}\n').format(
-                                project=project, git_url=git_url, branch=branch,
-                                reviewers=reviewers, ccs=ccs,
-                                commit_msg=commit_msg,
-                                file_paths='\n'.join(file_paths))
+      file_paths = '\n'.join('  ' + file_info[0] for file_info in new_git_files)
+      dryrun_upload_info = textwrap.dedent(f"""\
+          Dryrun upload to {setting.project}
+          git_url: {git_url}
+          branch: {branch}
+          reviewers: {reviewers}
+          ccs: {ccs}
+          commit msg:
+          {commit_msg}
+          update file paths:
+          {file_paths}
+      """)
       logging.debug(dryrun_upload_info)
     else:
       auth_cookie = git_util.GetGerritAuthCookie()
@@ -304,7 +297,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
                                       reviewers, ccs)
         if CONFIG.env != 'prod':  # Abandon the test CL to prevent confusion
           try:
-            git_util.AbandonCL(review_host, auth_cookie, change_id)
+            git_util.AbandonCL(setting.review_host, auth_cookie, change_id)
           except (git_util.GitUtilException,
                   urllib3.exceptions.HTTPError) as ex:
             logging.error('Cannot abandon CL for %r: %r', change_id, str(ex))

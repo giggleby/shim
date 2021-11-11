@@ -13,6 +13,7 @@ import google.cloud.exceptions  # pylint: disable=no-name-in-module, import-erro
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
 from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.v3 import rule
 from cros.factory.utils import file_utils
 
@@ -51,10 +52,11 @@ class HwidManagerTest(unittest.TestCase):
                          'cloudstorage_adapter.storage')
     self.mock_storage = patcher.start()
     self.addCleanup(patcher.stop)
+    self.ndb_connector = ndbc_module.NDBConnector()
 
-  def _LoadTestDataStore(self, manager):
+  def _LoadTestDataStore(self):
     """Loads up the datastore with metadata about one project."""
-    with manager._ndb_client.context():
+    with self.ndb_connector.CreateClientContext():
       hwid_manager.HwidMetadata(board='CHROMEBOOK', path='v2', version='2',
                                 project='CHROMEBOOK').put()
       hwid_manager.AVLNameMapping(category='category1', component_id=1234,
@@ -64,8 +66,8 @@ class HwidManagerTest(unittest.TestCase):
       hwid_manager.AVLNameMapping(category='category2', component_id=1357,
                                   name='comp_name3').put()
 
-  def _ClearDataStore(self, manager):
-    with manager._ndb_client.context():
+  def _ClearDataStore(self):
+    with self.ndb_connector.CreateClientContext():
       # clear all entities
       for key in hwid_manager.HwidMetadata.query().iter(keys_only=True):
         key.delete()
@@ -105,11 +107,12 @@ class HwidManagerTest(unittest.TestCase):
     vpg_target_info = mock.Mock()
     vpg_target_info.waived_comp_categories = ['battery']
     manager = hwid_manager.HwidManager(adapter, {'CHROMEBOOK': vpg_target_info},
+                                       self.ndb_connector,
                                        mem_adapter=mem_adapter)
 
-    self._ClearDataStore(manager)
+    self._ClearDataStore()
     if load_datastore:
-      self._LoadTestDataStore(manager)
+      self._LoadTestDataStore()
     manager._ClearMemcache()
     return manager
 
@@ -395,7 +398,7 @@ class HwidManagerTest(unittest.TestCase):
     manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 2, 'v2')
     manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 2, 'v2')
 
-    with manager._ndb_client.context():
+    with self.ndb_connector.CreateClientContext():
       self.assertEqual(1, hwid_manager.HwidMetadata.query().count())
 
   def testReloadCache(self):
@@ -436,7 +439,7 @@ class HwidManagerTest(unittest.TestCase):
 
     manager = self._GetManager(adapter=mock_storage, load_datastore=False)
 
-    with manager._ndb_client.context():
+    with self.ndb_connector.CreateClientContext():
       hwid_manager.HwidMetadata(board='old', path='old_file', version='2',
                                 project='old').put()
       hwid_manager.HwidMetadata(board='update', path='update_file', version='2',
@@ -447,7 +450,7 @@ class HwidManagerTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('new', 'new file - unused', 2, 'path2'),
     ])
 
-    with manager._ndb_client.context():
+    with self.ndb_connector.CreateClientContext():
       self.assertIsNone(
           hwid_manager.HwidMetadata.query(
               hwid_manager.HwidMetadata.path == 'old_file').get())
@@ -481,7 +484,7 @@ class HwidManagerTest(unittest.TestCase):
     MORE_PROJECT_COUNT = 50
 
     manager = self._GetManager(adapter=mock_storage, load_datastore=False)
-    with manager._ndb_client.context():
+    with self.ndb_connector.CreateClientContext():
       for i in range(PROJECT_COUNT):
         hwid_manager.HwidMetadata(board='old_file' + str(i),
                                   path='old' + str(i), version='2',
@@ -511,7 +514,7 @@ class HwidManagerTest(unittest.TestCase):
 
     manager.UpdateProjects(mock_hwid_repo, project_data)
 
-    with manager._ndb_client.context():
+    with self.ndb_connector.CreateClientContext():
       for i in range(PROJECT_COUNT):
         self.assertIsNone(
             hwid_manager.HwidMetadata.query(

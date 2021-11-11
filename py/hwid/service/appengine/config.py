@@ -5,6 +5,7 @@
 
 import collections
 import os
+from typing import NamedTuple, Optional
 
 import yaml
 
@@ -12,6 +13,7 @@ import yaml
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
 from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
@@ -40,10 +42,18 @@ _RESOURCE_DIR = os.path.join(
 _PATH_TO_APP_CONFIGURATIONS_FILE = os.path.join(_RESOURCE_DIR,
                                                 'configurations.yaml')
 
-
 _VerificationPayloadGenerationTargetInfo = collections.namedtuple(
     '_VerificationPayloadGenerationTargetInfo',
     ['board', 'waived_comp_categories'])
+
+
+class VerificationPayloadSettings(NamedTuple):
+  review_host: str
+  repo_host: str
+  repo_path: str
+  project: str
+  prefix: str
+  branch: Optional[str]
 
 
 class _Config:
@@ -79,9 +89,12 @@ class _Config:
     self.vpg_targets = {
         k: _VerificationPayloadGenerationTargetInfo(
             v['board'], v.get('waived_comp_categories', []))
-        for k, v in conf.get('vpg_targets', {}).items()}
+        for k, v in conf.get('vpg_targets', {}).items()
+    }
+    self._ndb_connector = ndbc_module.NDBConnector()
     self.hwid_manager = hwid_manager.HwidManager(self.hwid_filesystem,
-                                                 self.vpg_targets)
+                                                 self.vpg_targets,
+                                                 self._ndb_connector)
     self.dryrun_upload = conf.get('dryrun_upload', True)
     self.project_region = conf['project_region']
     self.queue_name = conf['queue_name']
@@ -89,6 +102,22 @@ class _Config:
     self.hwid_repo_branch = conf['hwid_repo_branch']
     self.client_allowlist = conf.get('client_allowlist', [])
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch)
+
+  def GetVerificationPayloadSettings(self, board):
+    """Get repo settings for specific board.
+
+    Args:
+      board: The board name
+
+    Returns:
+      A dictionary with corresponding settings
+    """
+    return VerificationPayloadSettings(
+        review_host='https://chrome-internal-review.googlesource.com',
+        repo_host='https://chrome-internal.googlesource.com',
+        repo_path=f'/chromeos/overlays/overlay-{board}-private',
+        project=f'chromeos/overlays/overlay-{board}-private',
+        prefix=f'chromeos-base/racc-config-{board}/files/', branch=None)
 
 
 CONFIG = type_utils.LazyObject(_Config)

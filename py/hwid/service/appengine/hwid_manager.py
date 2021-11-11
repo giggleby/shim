@@ -25,7 +25,6 @@ from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
-from cros.factory.utils import type_utils
 
 
 class ProjectNotFoundError(KeyError):
@@ -329,47 +328,15 @@ class HwidManager:
   information.
   """
 
-  def __init__(self, fs_adapter, vpg_targets, mem_adapter=None):
+  def __init__(self, fs_adapter, vpg_targets, ndb_connector, mem_adapter=None):
     self._fs_adapter = fs_adapter
     self._vpg_targets = vpg_targets
+    self._ndb_connector = ndb_connector
     if mem_adapter is not None:
       self._memcache_adapter = mem_adapter
     else:
       self._memcache_adapter = memcache_adapter.MemcacheAdapter(
           namespace='HWIDObject')
-
-  @type_utils.LazyProperty
-  def _ndb_client(self):
-    return ndb.Client()
-
-  @type_utils.LazyProperty
-  def _global_cache(self):
-    return ndb.RedisCache.from_environment()
-
-  @staticmethod
-  def GetVerificationPayloadSettings(board):
-    """Get repo settings for specific board.
-
-    Args:
-      board: The board name
-
-    Returns:
-      A dictionary with corresponding settings
-    """
-    return {
-        'review_host':
-            'https://chrome-internal-review.googlesource.com',
-        'repo_host':
-            'https://chrome-internal.googlesource.com',
-        'repo_path':
-            '/chromeos/overlays/overlay-{board}-private'.format(board=board),
-        'project': ('chromeos/overlays/'
-                    'overlay-{board}-private').format(board=board),
-        'prefix': ('chromeos-base/'
-                   'racc-config-{board}/files/').format(board=board),
-        'branch':
-            None
-    }
 
   def GetProjects(self, versions=None):
     """Get a list of supported projects.
@@ -382,7 +349,7 @@ class HwidManager:
     """
     logging.debug('Getting projects for versions: {0}'
                   .format(versions) if versions else 'Getting projects')
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       if versions:
         return set(metadata.project
                    for metadata in HwidMetadata.query()
@@ -491,7 +458,7 @@ class HwidManager:
     return hwid_data.GetComponents(project, with_classes)
 
   def GetCLReviewers(self):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = CLNotification.query(CLNotification.notification_type == "reviewer")
       reviewers = []
       for notification in list(q):
@@ -499,7 +466,7 @@ class HwidManager:
       return reviewers
 
   def GetCLCCs(self):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = CLNotification.query(CLNotification.notification_type == "cc")
       ccs = []
       for notification in list(q):
@@ -507,20 +474,20 @@ class HwidManager:
       return ccs
 
   def GetLatestHWIDMainCommit(self):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       key = ndb.Key(LatestHWIDMainCommit, 'commit')
       entry = LatestHWIDMainCommit.query(LatestHWIDMainCommit.key == key).get()
       return entry.commit
 
   def SetLatestHWIDMainCommit(self, commit):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       key = ndb.Key(LatestHWIDMainCommit, 'commit')
       entity = LatestHWIDMainCommit.query(LatestHWIDMainCommit.key == key).get()
       entity.commit = commit
       entity.put()
 
   def GetLatestPayloadHash(self, board):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       key = ndb.Key(LatestPayloadHash, board)
       entity = LatestPayloadHash.query(LatestPayloadHash.key == key).get()
       if entity is not None:
@@ -528,7 +495,7 @@ class HwidManager:
       return None
 
   def SetLatestPayloadHash(self, board, payload_hash):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       latest_hash = LatestPayloadHash.get_or_insert(board)
       latest_hash.payload_hash = payload_hash
       latest_hash.put()
@@ -558,7 +525,7 @@ class HwidManager:
       logging.debug('Found cached data for %r.', project)
       return hwid_data
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = HwidMetadata.query(HwidMetadata.project == project)
 
       if q.count() == 0:
@@ -624,7 +591,7 @@ class HwidManager:
 
     project = _NormalizeString(project)
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = HwidMetadata.query(HwidMetadata.path == path)
       metadata = q.get()
 
@@ -645,7 +612,7 @@ class HwidManager:
       mapping: The {cid: avl_name} dictionary for updating datastore.
     """
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       cids_to_create = set(mapping)
 
       q = AVLNameMapping.query(AVLNameMapping.category == category)
@@ -665,7 +632,7 @@ class HwidManager:
     logging.info('AVL name mapping of category "%s" is synced.', category)
 
   def ListExistingAVLCategories(self):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       category_set = set()
       for entry in AVLNameMapping.query(
           projection=['category'], distinct_on=['category']):
@@ -674,7 +641,7 @@ class HwidManager:
       return category_set
 
   def RemoveAVLNameMappingCategories(self, category_set):
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       keys_to_delete = []
       for category in category_set:
         logging.info('Add category "%s" to remove', category)
@@ -702,7 +669,7 @@ class HwidManager:
                                 for m in hwid_db_metadata_list}
 
     # Discard the names for the entries, indexing only by path.
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = HwidMetadata.query()
       existing_metadata = list(q)
       old_files = set(m.project for m in existing_metadata)
@@ -728,7 +695,7 @@ class HwidManager:
       new_data = hwid_db_metadata_of_name[project]
       board = new_data.board_name
       version = str(new_data.version)
-      with self._ndb_client.context(global_cache=self._global_cache):
+      with self._ndb_connector.CreateClientContextWithGlobalCache():
         metadata = HwidMetadata(board=board, version=version, path=path,
                                 project=project)
         self._ActivateFile(live_hwid_repo, project, path)
@@ -741,7 +708,7 @@ class HwidManager:
       limit_models: List of names of models which will be updated.
     """
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = HwidMetadata.query()
       if limit_models:
         q = q.filter(HwidMetadata.project.IN(limit_models))
@@ -825,7 +792,7 @@ class HwidManager:
       return comp_name
     cid, unused_qid = ret
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       entry = AVLNameMapping.query(AVLNameMapping.category == category,
                                    AVLNameMapping.component_id == cid).get()
     if entry is None:
@@ -848,7 +815,7 @@ class HwidManager:
           mappings.
     """
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       for model, mapping in mapping_per_model.items():
         q = PrimaryIdentifier.query(PrimaryIdentifier.model == model)
         for entry in list(q):
@@ -860,7 +827,7 @@ class HwidManager:
   def GetPrimaryIdentifier(self, model, category, comp_name):
     """Look up existing DUT label mappings from Datastore."""
 
-    with self._ndb_client.context(global_cache=self._global_cache):
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = PrimaryIdentifier.query(PrimaryIdentifier.model == model,
                                   PrimaryIdentifier.category == category,
                                   PrimaryIdentifier.comp_name == comp_name)
