@@ -5,15 +5,15 @@
 """Tests for HwidManager and related classes."""
 
 import os
+import tempfile
 import unittest
 from unittest import mock
 
-import google.cloud.exceptions  # pylint: disable=no-name-in-module, import-error
-
-from cros.factory.hwid.service.appengine import cloudstorage_adapter
+from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_manager
-from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
+from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.hwid.v3 import rule
 from cros.factory.utils import file_utils
 
@@ -39,124 +39,100 @@ TEST_V3_HWID_2 = 'CHROMEBOOK AA5B-YAI'
 TEST_V3_HWID_WITH_CONFIGLESS = 'CHROMEBOOK-BRAND 0-8-74-180 AA5C-YNQ'
 
 
+class FakeMemcacheAdapter:
+
+  def __init__(self):
+    self._cached_data = {}
+
+  def ClearAll(self):
+    self._cached_data.clear()
+
+  def Put(self, key, value):
+    self._cached_data[key] = value
+
+  def Get(self, key):
+    return self._cached_data.get(key)
+
+
 # pylint: disable=protected-access
 class HwidManagerTest(unittest.TestCase):
   """Tests the HwidManager class."""
 
   def setUp(self):
-    super(HwidManagerTest, self).setUp()
+    super().setUp()
 
-    self.filesystem_adapter = cloudstorage_adapter.CloudStorageAdapter(
-        'test-bucket')
-    patcher = mock.patch('cros.factory.hwid.service.appengine.'
-                         'cloudstorage_adapter.storage')
-    self.mock_storage = patcher.start()
-    self.addCleanup(patcher.stop)
     self.ndb_connector = ndbc_module.NDBConnector()
+    self.fs_adapter = filesystem_adapter.LocalFileSystemAdapter(
+        tempfile.mkdtemp())
+    self.memcache_adapter = mock.Mock(memcache_adapter.MemcacheAdapter,
+                                      wraps=FakeMemcacheAdapter())
+    self.hwid_db_data_manager = mock.Mock(
+        hwid_db_data.HWIDDBDataManager, wraps=hwid_db_data.HWIDDBDataManager(
+            self.ndb_connector, self.fs_adapter))
 
-  def _LoadTestDataStore(self):
-    """Loads up the datastore with metadata about one project."""
-    with self.ndb_connector.CreateClientContext():
-      hwid_manager.HwidMetadata(board='CHROMEBOOK', path='v2', version='2',
-                                project='CHROMEBOOK').put()
+  def tearDown(self):
+    super().tearDown()
+    self.hwid_db_data_manager.CleanAllForTest()
 
-  def _ClearDataStore(self):
-    with self.ndb_connector.CreateClientContext():
-      # clear all entities
-      for key in hwid_manager.HwidMetadata.query().iter(keys_only=True):
-        key.delete()
-
-  def _LoadTestBlobStore(self):
-    """Loads up the blobstore with two files, one for each version supported."""
-
-    def patch_blob(path):
-      if path == 'live/v2':
-        ret = mock.MagicMock()
-        ret.download_as_string.return_value = file_utils.ReadFile(
-            GOLDEN_HWIDV2_FILE, encoding=None)
-        return ret
-      if path == 'live/v3':
-        ret = mock.MagicMock()
-        ret.download_as_string.return_value = file_utils.ReadFile(
-            GOLDEN_HWIDV3_FILE, encoding=None)
-        return ret
-      raise google.cloud.exceptions.NotFound
-
-    mock_blob = self.mock_storage.Client().bucket().blob
-    mock_blob.side_effect = patch_blob
-
-  def _GetManager(self, adapter=None, load_blobstore=True, load_datastore=True,
-                  mem_adapter=None):
+  def _GetManager(self):
     """Returns a HwidManager object, optionally loading mock data."""
-    if load_blobstore:
-      self._LoadTestBlobStore()
-    else:
-      mock_blob = self.mock_storage.Client().bucket().blob()
-      mock_blob.download_as_string.side_effect = \
-          google.cloud.exceptions.NotFound('Not Found')
-
-    if adapter is None:
-      adapter = self.filesystem_adapter
-
     vpg_target_info = mock.Mock()
     vpg_target_info.waived_comp_categories = ['battery']
-    manager = hwid_manager.HwidManager(adapter, {'CHROMEBOOK': vpg_target_info},
-                                       self.ndb_connector,
-                                       mem_adapter=mem_adapter)
-
-    self._ClearDataStore()
-    if load_datastore:
-      self._LoadTestDataStore()
-    manager._ClearMemcache()
+    manager = hwid_manager.HwidManager({'CHROMEBOOK': vpg_target_info},
+                                       self.hwid_db_data_manager,
+                                       mem_adapter=self.memcache_adapter)
     return manager
 
-  def testGetProjectsWithoutExistingProjects(self):
-    """Test for no existing projects, an empty set is returned."""
-    manager = self._GetManager(load_blobstore=False, load_datastore=False)
+  def testGetProjects(self):
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
 
-    self.assertEqual(set(), manager.GetProjects())
-
-  def testGetProjectsWithExistingProjects(self):
-    """Test that a if there are existing projects, they are returned."""
     manager = self._GetManager()
-    projects = set()
-    projects.add('CHROMEBOOK')
-    self.assertEqual(projects, manager.GetProjects())
+    projects = manager.GetProjects()
 
-  def testGetProjectsVersions(self):
-    """Test that the correct projects are returned when versions are listed."""
-    manager = self._GetManager()
-
-    self.assertEqual(set(), manager.GetProjects(['3']))
-
-    self.assertEqual({'CHROMEBOOK'}, manager.GetProjects(['2']))
-    self.assertEqual({'CHROMEBOOK'}, manager.GetProjects(['2', '3']))
+    self.assertCountEqual(['CHROMEBOOK'], projects)
 
   def testGetBomInvalidFormat(self):
     """Test that an invalid HWID raises a InvalidHwidError."""
-    manager = self._GetManager()
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
 
+    manager = self._GetManager()
     bc_dict = manager.BatchGetBomAndConfigless(['CHROMEBOOK'])
     bom_configless = bc_dict['CHROMEBOOK']
+
     self.assertIsInstance(bom_configless.error, hwid_manager.InvalidHwidError)
 
   def testGetBomNonexistentProject(self):
     """Test that a non-existent project raises a HwidNotFoundError."""
-    manager = self._GetManager(load_blobstore=False, load_datastore=False)
+    manager = self._GetManager()
     bc_dict = manager.BatchGetBomAndConfigless(['CHROMEBOOK FOO A-A'])
     bom_configless = bc_dict['CHROMEBOOK FOO A-A']
+
     self.assertIsInstance(bom_configless.error,
                           hwid_manager.ProjectNotFoundError)
 
   def testGetBomMissingHWIDFile(self):
-    """Test that when the hwid file is missing we get a MetadataError."""
-    manager = self._GetManager(load_blobstore=False)
+    """Test that when the hwid file is missing we get a
+    ProjectUnavailableError."""
+    self.hwid_db_data_manager.RegisterProjectForTest('CHROMEBOOK', 'CHROMEBOOK',
+                                                     '2', None)
+
+    manager = self._GetManager()
     bc_dict = manager.BatchGetBomAndConfigless(['CHROMEBOOK FOO A-A'])
     bom_configless = bc_dict['CHROMEBOOK FOO A-A']
-    self.assertIsInstance(bom_configless.error, hwid_manager.MetadataError)
+
+    self.assertIsInstance(bom_configless.error,
+                          hwid_manager.ProjectUnavailableError)
 
   def testGetBomInvalidBOM(self):
     """Test that an invalid BOM name raises a HwidNotFoundError."""
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
+
     manager = self._GetManager()
 
     hwid = 'CHROMEBOOK FOO A-A'
@@ -165,53 +141,42 @@ class HwidManagerTest(unittest.TestCase):
 
   def testGetBomExistingProject(self):
     """Test that a valid HWID returns a result."""
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
     manager = self._GetManager()
 
     bc_dict = manager.BatchGetBomAndConfigless([TEST_V2_HWID])
     bom = bc_dict[TEST_V2_HWID].bom
+
     self.assertIsNotNone(bom)
-
-  def testGetBomMultipleFiles(self):
-    """Test when fetching from multiple files, both are supported."""
-    manager = self._GetManager()
-
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 2, 'v2')
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 3, 'v3')
-
-    self.assertRaises(hwid_manager.TooManyProjectsFound,
-                      manager.BatchGetBomAndConfigless, [TEST_V2_HWID])
 
   def testBatchGetBomCache(self):
     """Test BatchGetBom method and check if the local hwid_data cache works."""
-    mock_cache = {}
-    mock_mem_adapter = mock.Mock()
-    mock_mem_adapter.Put.side_effect = mock_cache.__setitem__
-    mock_mem_adapter.Get.side_effect = mock_cache.__getitem__
-    manager = self._GetManager(mem_adapter=mock_mem_adapter)
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '3',
+        file_utils.ReadFile(GOLDEN_HWIDV3_FILE))
 
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 3, 'v3')
-    manager.ReloadMemcacheCacheFromFiles()
-
+    manager = self._GetManager()
     bc_dict = manager.BatchGetBomAndConfigless([
         TEST_V3_HWID_1,
         TEST_V3_HWID_2,
     ])
+
     # The memcache is called once since the projects of the HWID are both
     # "CHROMEBOOK".
-    self.assertEqual(mock_mem_adapter.Get.call_count, 1)
+    # TODO(yhong): Insteading of checking if it gets the data from the cache,
+    #     we should verify if `hwid_manager._HwidData` constructs only once.
+    self.assertEqual(self.memcache_adapter.Get.call_count, 1)
     self.assertCountEqual([TEST_V3_HWID_1, TEST_V3_HWID_2], bc_dict)
 
   def testBatchGetBomData(self):
     """Test BatchGetBom and check the correctness of the data returned."""
-    mock_cache = {}
-    mock_mem_adapter = mock.Mock()
-    mock_mem_adapter.Put.side_effect = mock_cache.__setitem__
-    mock_mem_adapter.Get.side_effect = mock_cache.__getitem__
-    manager = self._GetManager(mem_adapter=mock_mem_adapter)
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '3',
+        file_utils.ReadFile(GOLDEN_HWIDV3_FILE))
 
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 3, 'v3')
-    manager.ReloadMemcacheCacheFromFiles()
-
+    manager = self._GetManager()
     bc_dict = manager.BatchGetBomAndConfigless([
         TEST_V3_HWID_1,
         TEST_V3_HWID_2,
@@ -267,11 +232,11 @@ class HwidManagerTest(unittest.TestCase):
 
   def testGetBomWithVerboseFlag(self):
     """Test BatchGetBom with the detail fields returned."""
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '3',
+        file_utils.ReadFile(GOLDEN_HWIDV3_FILE))
+
     manager = self._GetManager()
-
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 3, 'v3')
-    manager.ReloadMemcacheCacheFromFiles()
-
     bc_dict = manager.BatchGetBomAndConfigless([TEST_V3_HWID_1], verbose=True)
     bom_configless = bc_dict[TEST_V3_HWID_1]
     bom = bom_configless.bom
@@ -307,27 +272,36 @@ class HwidManagerTest(unittest.TestCase):
 
   def testGetHwidsNonExistentProject(self):
     """Test that a non-existent project raises a ProjectNotFoundError."""
-    manager = self._GetManager(load_blobstore=False, load_datastore=False)
+    manager = self._GetManager()
 
     self.assertRaises(hwid_manager.ProjectNotFoundError, manager.GetHwids,
                       'CHROMEBOOK', None, None, None, None)
 
   def testGetHwidsExistingProject(self):
     """Test that a valid project returns a result."""
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
+
     manager = self._GetManager()
-    hwids = {'BAKER', 'BAXTER', 'BLANCA', 'BRIDGE'}
-    self.assertEqual(
-        hwids, set(manager.GetHwids('CHROMEBOOK', None, None, None, None)))
+    actual_hwids = manager.GetHwids('CHROMEBOOK', None, None, None, None)
+
+    expected_hwids = ['BAKER', 'BAXTER', 'BLANCA', 'BRIDGE']
+    self.assertCountEqual(expected_hwids, actual_hwids)
 
   def testGetComponentClassesNonExistentProject(self):
     """Test that a non-existent project raises a ProjectNotFoundError."""
-    manager = self._GetManager(load_blobstore=False, load_datastore=False)
+    manager = self._GetManager()
 
     self.assertRaises(hwid_manager.ProjectNotFoundError,
                       manager.GetComponentClasses, 'CHROMEBOOK')
 
   def testGetComponentClassesExistingProject(self):
     """Test that a valid project returns a result."""
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
+
     manager = self._GetManager()
 
     self.assertIn('audio_codec', manager.GetComponentClasses('CHROMEBOOK'))
@@ -337,13 +311,17 @@ class HwidManagerTest(unittest.TestCase):
 
   def testGetComponentsNonExistentProject(self):
     """Test that a non-existent project raises a ProjectNotFoundError."""
-    manager = self._GetManager(load_blobstore=False, load_datastore=False)
+    manager = self._GetManager()
 
     self.assertRaises(hwid_manager.ProjectNotFoundError, manager.GetComponents,
                       'CHROMEBOOK', None)
 
   def testGetComponentsExistingProject(self):
     """Test that a valid project returns a result."""
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
+
     manager = self._GetManager()
 
     self.assertIn(('audio_codec', {'max98095'}),
@@ -359,194 +337,53 @@ class HwidManagerTest(unittest.TestCase):
 
   def testCache(self):
     """Test that caching limits the number of files read to one."""
-    mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = GOLDEN_HWIDV2_DATA
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
 
-    manager = self._GetManager(adapter=mock_storage)
-
-    self.assertIsNone(manager.GetProjectDataFromCache('CHROMEBOOK'))
+    manager = self._GetManager()
     self.assertIsNotNone(
         manager.BatchGetBomAndConfigless([TEST_V2_HWID])[TEST_V2_HWID].bom)
-    self.assertIsNotNone(manager.GetProjectDataFromCache('CHROMEBOOK'))
     self.assertIsNotNone(
         manager.BatchGetBomAndConfigless([TEST_V2_HWID])[TEST_V2_HWID].bom)
-    self.assertIsNotNone(manager.GetProjectDataFromCache('CHROMEBOOK'))
-    mock_storage.ReadFile.assert_called_once_with('live/v2')
+    self.assertIsNotNone(
+        manager.BatchGetBomAndConfigless([TEST_V2_HWID])[TEST_V2_HWID].bom)
+
+    self.assertEqual(self.hwid_db_data_manager.LoadHWIDDB.call_count, 1)
 
   def testInvalidVersion(self):
-    mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = b'junk data'
+    self.hwid_db_data_manager.RegisterProjectForTest('CHROMEBOOK', 'CHROMEBOOK',
+                                                     '10', 'junk data')
 
-    manager = self._GetManager(adapter=mock_storage, load_datastore=False)
-
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 10, 'v10')
+    manager = self._GetManager()
 
     bc_dict = manager.BatchGetBomAndConfigless(['CHROMEBOOK FOOBAR'])
     bom_configless = bc_dict['CHROMEBOOK FOOBAR']
-    self.assertIsInstance(bom_configless.error, hwid_manager.MetadataError)
-    mock_storage.ReadFile.assert_called_once_with('live/v10')
 
-  def testRegisterTwice(self):
-    manager = self._GetManager()
-
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 2, 'v2')
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 2, 'v2')
-
-    with self.ndb_connector.CreateClientContext():
-      self.assertEqual(1, hwid_manager.HwidMetadata.query().count())
+    self.assertIsInstance(bom_configless.error,
+                          hwid_manager.ProjectNotSupportedError)
 
   def testReloadCache(self):
     """Test that reloading re-reads the data."""
-    mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = GOLDEN_HWIDV2_DATA
-
-    manager = self._GetManager(adapter=mock_storage)
-
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '2',
+        file_utils.ReadFile(GOLDEN_HWIDV2_FILE))
+    manager = self._GetManager()
     self.assertIsNone(manager.GetProjectDataFromCache('CHROMEBOOK'))
 
     manager.ReloadMemcacheCacheFromFiles()
 
     self.assertIsNotNone(manager.GetProjectDataFromCache('CHROMEBOOK'))
-    mock_storage.ReadFile.assert_called_once_with('live/v2')
-
-  def testReloadCacheMultipleFiles(self):
-    """When reloading and there are multiple files then both get read."""
-    manager = self._GetManager()
-
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 2, 'v2')
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 3, 'v3')
-
-    manager.ReloadMemcacheCacheFromFiles()
-
-    # We no longer allow composite HWID objects that have v2 and v3 definitions
-    # last RegisterProject command wins, so check that a V3 HWID is available.
-    self.assertIsNotNone(manager.GetProjectDataFromCache('CHROMEBOOK'))
-    bc_dict = manager.BatchGetBomAndConfigless([TEST_V3_HWID_1])
-    self.assertIsNotNone(bc_dict[TEST_V3_HWID_1].bom)
-
-  def testUpdateProjects(self):
-    """Test the project updater adds a project."""
-    mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = b'junk data'
-    mock_hwid_repo = mock.create_autospec(hwid_repo.HWIDRepo, instance=True)
-    mock_hwid_repo.LoadHWIDDBByName.return_value = 'junk data'
-
-    manager = self._GetManager(adapter=mock_storage, load_datastore=False)
-
-    with self.ndb_connector.CreateClientContext():
-      hwid_manager.HwidMetadata(board='old', path='old_file', version='2',
-                                project='old').put()
-      hwid_manager.HwidMetadata(board='update', path='update_file', version='2',
-                                project='update').put()
-
-    manager.UpdateProjects(mock_hwid_repo, [
-        hwid_repo.HWIDDBMetadata('update', 'update_file - updated', 2, 'path1'),
-        hwid_repo.HWIDDBMetadata('new', 'new file - unused', 2, 'path2'),
-    ])
-
-    with self.ndb_connector.CreateClientContext():
-      self.assertIsNone(
-          hwid_manager.HwidMetadata.query(
-              hwid_manager.HwidMetadata.path == 'old_file').get())
-      self.assertIsNotNone(
-          hwid_manager.HwidMetadata.query(
-              hwid_manager.HwidMetadata.path == 'update_file').get())
-      self.assertIsNotNone(
-          hwid_manager.HwidMetadata.query(
-              hwid_manager.HwidMetadata.path == 'new').get())
-      mock_storage.DeleteFile.assert_called_once_with('live/old_file')
-      mock_storage.WriteFile.assert_has_calls([
-          mock.call('live/update_file', mock.ANY),
-          mock.call('live/new', mock.ANY)
-      ], any_order=True)
-      self.assertEqual(mock_storage.WriteFile.call_count, 2)
-      mock_hwid_repo.LoadHWIDDBByName.assert_has_calls(
-          [mock.call('update'), mock.call('new')], any_order=True)
-      self.assertEqual(mock_hwid_repo.LoadHWIDDBByName.call_count, 2)
-
-  def testUpdateProjectsWithManyProjects(self):
-    """Tests that the updating logic can handle many projects.
-
-    There is a limit on datastore that it can only handle IN queries with at
-    most 30 options.
-    """
-    mock_storage = mock.Mock()
-    mock_storage.ReadFile.return_value = b'junk data'
-    mock_hwid_repo = mock.create_autospec(hwid_repo.HWIDRepo, instance=True)
-    mock_hwid_repo.LoadHWIDDBByName.return_value = 'junk data'
-    PROJECT_COUNT = 40
-    MORE_PROJECT_COUNT = 50
-
-    manager = self._GetManager(adapter=mock_storage, load_datastore=False)
-    with self.ndb_connector.CreateClientContext():
-      for i in range(PROJECT_COUNT):
-        hwid_manager.HwidMetadata(board='old_file' + str(i),
-                                  path='old' + str(i), version='2',
-                                  project='old_file' + str(i)).put()
-
-        hwid_manager.HwidMetadata(board='update_file' + str(i),
-                                  path='update' + str(i), version='2',
-                                  project='update_file' + str(i)).put()
-
-      deletefile_calls = [
-          mock.call('live/old' + str(i)) for i in range(PROJECT_COUNT)
-      ]
-      # For projects not existed in HwidMetadata, the file path will be the same
-      # as the project name.
-      writefile_calls = [
-          mock.call('live/update' + str(i), mock.ANY)
-          for i in range(PROJECT_COUNT)
-      ] + [
-          mock.call('live/update_file' + str(i), mock.ANY)
-          for i in range(PROJECT_COUNT, MORE_PROJECT_COUNT)
-      ]
-
-      project_data = [
-          hwid_repo.HWIDDBMetadata(f'update_file{i}', f'update_board_{i}', 2,
-                                   'v2') for i in range(MORE_PROJECT_COUNT)
-      ]
-
-    manager.UpdateProjects(mock_hwid_repo, project_data)
-
-    with self.ndb_connector.CreateClientContext():
-      for i in range(PROJECT_COUNT):
-        self.assertIsNone(
-            hwid_manager.HwidMetadata.query(
-                hwid_manager.HwidMetadata.path == 'old' + str(i)).get())
-        self.assertIsNotNone(hwid_manager.HwidMetadata.query().filter(
-            hwid_manager.HwidMetadata.path == 'update' + str(i)).get())
-        self.assertIsNone(hwid_manager.HwidMetadata.query().filter(
-            hwid_manager.HwidMetadata.path == 'update_file' + str(i)).get())
-      for i in range(PROJECT_COUNT, MORE_PROJECT_COUNT):
-        self.assertIsNotNone(hwid_manager.HwidMetadata.query().filter(
-            hwid_manager.HwidMetadata.path == 'update_file' + str(i)).get())
-
-      mock_storage.DeleteFile.assert_has_calls(deletefile_calls, any_order=True)
-      self.assertEqual(PROJECT_COUNT, mock_storage.DeleteFile.call_count)
-      mock_storage.WriteFile.assert_has_calls(writefile_calls, any_order=True)
-      self.assertEqual(MORE_PROJECT_COUNT, mock_storage.WriteFile.call_count)
-      mock_hwid_repo.LoadHWIDDBByName.assert_has_calls(
-          [mock.call(f'update_file{i}') for i in range(MORE_PROJECT_COUNT)],
-          any_order=True)
-      self.assertEqual(MORE_PROJECT_COUNT,
-                       mock_hwid_repo.LoadHWIDDBByName.call_count)
-
-  def testUpdateProjectsWithBadData(self):
-    manager = self._GetManager(load_blobstore=False, load_datastore=False)
-    mock_hwid_repo = mock.create_autospec(hwid_repo.HWIDRepo, instance=True)
-    mock_hwid_repo.LoadHWIDDBByName.side_effect = hwid_repo.HWIDRepoError
-
-    self.assertRaises(hwid_manager.MetadataError, manager.UpdateProjects,
-                      mock_hwid_repo,
-                      [hwid_repo.HWIDDBMetadata('test', 'test', 3, 'test')])
+    self.assertEqual(self.hwid_db_data_manager.LoadHWIDDB.call_count, 1)
 
   def testGetBomAndConfiglessWithVpgWaivedComponentCategory(self):
     """Test if GetBomAndConfigless follows the waived_comp_categories defined in
     vpg_targets."""
-    manager = self._GetManager()
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'CHROMEBOOK', 'CHROMEBOOK', '3',
+        file_utils.ReadFile(GOLDEN_HWIDV3_FILE))
 
-    manager.RegisterProject('B_CHROMEBOOK', 'CHROMEBOOK', 3, 'v3')
-    manager.ReloadMemcacheCacheFromFiles()
+    manager = self._GetManager()
 
     bc_dict = manager.BatchGetBomAndConfigless([TEST_V3_HWID_1],
                                                require_vp_info=True)
@@ -567,7 +404,7 @@ class HwidDataTest(unittest.TestCase):
     self.data = hwid_manager._HwidData()
 
   def testNoConfig(self):
-    self.assertRaises(hwid_manager.MetadataError, self.data._Seed)
+    self.assertRaises(hwid_manager.ProjectUnavailableError, self.data._Seed)
 
   def testSeedWithFile(self):
     with mock.patch.object(self.data, '_SeedFromRawYaml') as _mock:
@@ -575,7 +412,7 @@ class HwidDataTest(unittest.TestCase):
     _mock.assert_called_once_with(mock.ANY)
 
   def testSeedWithBadFile(self):
-    self.assertRaises(hwid_manager.MetadataError, self.data._Seed,
+    self.assertRaises(hwid_manager.ProjectUnavailableError, self.data._Seed,
                       hwid_file='non/existent/file')
 
   def testSeedWithString(self):
@@ -642,8 +479,9 @@ class HwidV2DataTest(unittest.TestCase):
   def testInvalidSeedData(self):
     """Tests that loading invalid data throws an error."""
 
-    self.assertRaises(hwid_manager.MetadataError, hwid_manager._HwidV2Data,
-                      'CHROMEBOOK', raw_hwid_yaml='{}')
+    self.assertRaises(hwid_manager.ProjectUnavailableError,
+                      hwid_manager._HwidV2Data, 'CHROMEBOOK',
+                      raw_hwid_yaml='{}')
 
   def testGetBom(self):
     """Tests fetching a BOM."""

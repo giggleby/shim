@@ -51,6 +51,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     self.hwid_filesystem = CONFIG.hwid_filesystem
     self.hwid_manager = CONFIG.hwid_manager
     self.vp_data_manager = CONFIG.vp_data_manager
+    self.hwid_db_data_manager = CONFIG.hwid_db_data_manager
     self.decoder_data_manager = CONFIG.decoder_data_manager
     self.vpg_targets = CONFIG.vpg_targets
     self.dryrun_upload = CONFIG.dryrun_upload
@@ -117,8 +118,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         hwid_db_metadata_list = [
             x for x in hwid_db_metadata_list if x.name in limit_models
         ]
-      self.hwid_manager.UpdateProjects(live_hwid_repo, hwid_db_metadata_list,
-                                       delete_missing=not do_limit)
+      self.hwid_db_data_manager.UpdateProjects(
+          live_hwid_repo, hwid_db_metadata_list, delete_missing=not do_limit)
 
     except hwid_repo.HWIDRepoError as ex:
       logging.error('Got exception from HWID repo: %r.', ex)
@@ -127,7 +128,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
           detail='Got exception from HWID repo.') from None
 
     self.hwid_manager.ReloadMemcacheCacheFromFiles(
-        limit_models=list(limit_models))
+        limit_models=list(limit_models) if limit_models else None)
 
     # Skip if env is local (dev)
     if CONFIG.env == 'dev':

@@ -1,7 +1,6 @@
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Classes for managing and querying HWID information.
 
 This module should provide a unified interface for querying HWID information
@@ -12,11 +11,11 @@ import collections
 import copy
 import logging
 import re
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 from google.cloud import ndb  # pylint: disable=no-name-in-module, import-error
 
-from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine import \
     verification_payload_generator as vpg_module
@@ -30,8 +29,12 @@ class ProjectNotFoundError(KeyError):
   """Indicates that the specified project was not found."""
 
 
-class TooManyProjectsFound(Exception):
-  """There is more than one entry for a particular project in datastore."""
+class ProjectNotSupportedError(ValueError):
+  """Indicates the HWID DB version of the specified project is not supported."""
+
+
+class ProjectUnavailableError(Exception):
+  """Indicates that the specified project has unexpected malformed HWID data."""
 
 
 class HwidNotFoundError(KeyError):
@@ -51,25 +54,6 @@ class ProjectMismatchError(ValueError):
   def __init__(self, expected, actual):
     super(ProjectMismatchError, self).__init__(
         'HWID %r does not match project %r.', (actual, expected))
-
-
-class MetadataError(ValueError):
-  """Indicates an error occurred while loading or parsing HWID metadata."""
-
-
-class HwidMetadata(ndb.Model):  # pylint: disable=no-init
-  """Metadata about HWID projects and information.
-
-  This tracks the information about HWID file for a given project.  It is unique
-  per path, as each file is assumed to apply to only one project (the same file
-  can be uploaded multiple times, but will be uploaded as separate files).  The
-  path thus acts as the unique key.
-  """
-
-  board = ndb.StringProperty()
-  path = ndb.StringProperty()
-  version = ndb.StringProperty()
-  project = ndb.StringProperty()
 
 
 class BomAndConfigless(NamedTuple):
@@ -125,8 +109,8 @@ class Bom:
   def HasComponent(self, component):
     """Tests whether the bom has a component."""
     return (component.cls in self._components and
-            any(component.name == comp.name for comp in
-                self._components[component.cls]))
+            any(component.name == comp.name
+                for comp in self._components[component.cls]))
 
   def GetComponents(self, cls=None):
     """Gets the components of this bom, optionally filtered by class."""
@@ -285,17 +269,16 @@ class HwidManager:
   information.
   """
 
-  def __init__(self, fs_adapter, vpg_targets, ndb_connector, mem_adapter=None):
-    self._fs_adapter = fs_adapter
+  def __init__(self, vpg_targets, hwid_db_data_manager, mem_adapter=None):
     self._vpg_targets = vpg_targets
-    self._ndb_connector = ndb_connector
+    self._hwid_db_data_manager = hwid_db_data_manager
     if mem_adapter is not None:
       self._memcache_adapter = mem_adapter
     else:
       self._memcache_adapter = memcache_adapter.MemcacheAdapter(
           namespace='HWIDObject')
 
-  def GetProjects(self, versions=None):
+  def GetProjects(self, versions: Optional[List[str]] = None) -> List[str]:
     """Get a list of supported projects.
 
     Args:
@@ -304,14 +287,9 @@ class HwidManager:
     Returns:
       A list of projects.
     """
-    logging.debug('Getting projects for versions: {0}'
-                  .format(versions) if versions else 'Getting projects')
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      if versions:
-        return set(metadata.project
-                   for metadata in HwidMetadata.query()
-                   if metadata.version in versions)
-      return set(metadata.project for metadata in HwidMetadata.query())
+    metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
+        versions=versions)
+    return [m.project for m in metadata_list]
 
   def BatchGetBomAndConfigless(
       self, hwid_strings, verbose=False,
@@ -349,7 +327,7 @@ class HwidManager:
 
         bom, configless = hwid_data.GetBomAndConfigless(
             hwid_string, verbose, waived_comp_categories, require_vp_info)
-      except (ValueError, KeyError) as ex:
+      except (ProjectUnavailableError, ValueError, KeyError) as ex:
         error = ex
       result[hwid_string] = BomAndConfigless(bom, configless, error)
     return result
@@ -370,7 +348,10 @@ class HwidManager:
       A list of HWIDs.
 
     Raises:
-      InvalidHwidError: If the project is invalid.
+      ProjectNotFoundError: The HWID DB of the given project doesn't exists.
+      ProjectNotSupportedError: If HWID DB version is not supported.
+      ProjectUnavailableError: Fails to load the project's HWID DB.
+      ProjectMismatchError: The project is invalid.
     """
     logging.debug('Getting filtered list of HWIDs for %r.', project)
     hwid_data = self._LoadHwidData(project)
@@ -389,7 +370,10 @@ class HwidManager:
       A list of component classes.
 
     Raises:
-      InvalidHwidError: If the project is invalid.
+      ProjectNotFoundError: The HWID DB of the given project doesn't exists.
+      ProjectNotSupportedError: If HWID DB version is not supported.
+      ProjectUnavailableError: Fails to load the project's HWID DB.
+      ProjectMismatchError: The project is invalid.
     """
     logging.debug('Getting list of component classes for %r.', project)
     hwid_data = self._LoadHwidData(project)
@@ -407,7 +391,10 @@ class HwidManager:
       A dict of components.
 
     Raises:
-      InvalidHwidError: If the project is invalid.
+      ProjectNotFoundError: The HWID DB of the given project doesn't exists.
+      ProjectNotSupportedError: If HWID DB version is not supported.
+      ProjectUnavailableError: Fails to load the project's HWID DB.
+      ProjectMismatchError: The project is invalid.
     """
     logging.debug('Getting list of components for %r.', project)
     hwid_data = self._LoadHwidData(project)
@@ -424,9 +411,10 @@ class HwidManager:
       A HwidData object for the project.
 
     Raises:
-      ProjectNotFoundError: If no metadata is found for the given project.
-      TooManyProjectsFound: If we have more than one metadata entry for the
-        given project.
+      ProjectNotFoundError: If the given project is unknown.
+      ProjectNotSupportedError: If HWID DB version is not supported.
+      ProjectUnavailableError: The given project is known, but it encounters
+        an error while loading the project's HWID DB.
     """
 
     logging.debug('Loading data for %r.', project)
@@ -439,43 +427,35 @@ class HwidManager:
       logging.debug('Found cached data for %r.', project)
       return hwid_data
 
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = HwidMetadata.query(HwidMetadata.project == project)
-
-      if q.count() == 0:
-        raise ProjectNotFoundError(
-            'No metadata present for the requested project: %r' % project)
-
-      if q.count() != 1:
-        raise TooManyProjectsFound(
-            'Too many projects present for : %r' % project)
-
-      hwid_data = self._LoadHwidFile(q.get())
-
+    try:
+      metadata = self._hwid_db_data_manager.GetHWIDDBMetadataOfProject(project)
+    except hwid_db_data.HWIDDBNotFoundError as ex:
+      raise ProjectNotFoundError(str(ex)) from ex
+    except hwid_db_data.TooManyHWIDDBError as ex:
+      raise ProjectUnavailableError(str(ex)) from ex
+    hwid_data = self._LoadHWIDDB(metadata)
     self.SaveProjectDataToCache(project, hwid_data)
 
     return hwid_data
 
-  def _LoadHwidFile(self, metadata):
+  def _LoadHWIDDB(self, metadata):
     """Load hwid data from a file.
 
     Args:
-      metadata: A HwidMetadata object.
+      metadata: A `hwid_db_data.HWIDDBMetadata` object.
 
     Returns:
       The HwidData object loaded based on the metadata.
 
     Raises:
-      MetadataError: If the metadata references an invalid path or invalid
-      version.
+      ProjectUnavailableError: The HWID DB data to load doesn't exist or error
+        occurs while loading it.
+      ProjectNotSupportedError: If HWID DB version is not supported.
     """
-
     try:
-      logging.debug('Reading file %s from live path.', metadata.path)
-      raw_hwid_yaml = self._fs_adapter.ReadFile(self._LivePath(metadata.path))
-    except Exception as e:
-      logging.exception('Missing HWID file: %r', metadata.path)
-      raise MetadataError('HWID file missing for the requested project: %r' % e)
+      raw_hwid_yaml = self._hwid_db_data_manager.LoadHWIDDB(metadata)
+    except hwid_db_data.HWIDDBNotFoundError as ex:
+      raise ProjectUnavailableError(str(ex)) from ex
 
     if metadata.version == "2":
       logging.debug("Processing as version 2 file.")
@@ -484,89 +464,10 @@ class HwidManager:
       logging.debug("Processing as version 3 file.")
       hwid_data = _HwidV3Data(metadata.project, raw_hwid_yaml=raw_hwid_yaml)
     else:
-      raise MetadataError('Project %r has invalid version %r.' %
-                          (metadata.project, metadata.version))
+      raise ProjectNotSupportedError('Project %r has invalid version %r.' %
+                                     (metadata.project, metadata.version))
 
     return hwid_data
-
-  def RegisterProject(self, board, project, version, path):
-    """Registers a project with the system.
-
-    This method only registers the metadata.  The hwid data is not loaded until
-    requested.
-
-    Args:
-      project: The project name
-      version: version, e.g. '2'
-      path: Path to the file within the filesystem adapter.
-    """
-    logging.info('Registering project %r at version %r with file %r.', project,
-                 version, path)
-
-    project = _NormalizeString(project)
-
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = HwidMetadata.query(HwidMetadata.path == path)
-      metadata = q.get()
-
-      if metadata:
-        metadata.project = project
-        metadata.version = str(version)
-      else:
-        metadata = HwidMetadata(board=board, version=str(version), path=path,
-                                project=project)
-
-      metadata.put()
-
-  def UpdateProjects(self, live_hwid_repo, hwid_db_metadata_list,
-                     delete_missing=True):
-    """Updates the set of supported projects to be exactly the list provided.
-
-    Args:
-      live_hwid_repo: A HWIDRepo instance that provides access to chromeos-hwid
-          repo.
-      hwid_db_metadata_list: A list of HWIDDBMetadata containing path, version
-          and name.
-      delete_missing: bool to indicate whether missing metadata should be
-          deleted.
-    Raises:
-      MetadataError: If the metadata is malformed.
-    """
-    hwid_db_metadata_of_name = {m.name: m
-                                for m in hwid_db_metadata_list}
-
-    # Discard the names for the entries, indexing only by path.
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = HwidMetadata.query()
-      existing_metadata = list(q)
-      old_files = set(m.project for m in existing_metadata)
-      new_files = set(hwid_db_metadata_of_name)
-
-      files_to_delete = old_files - new_files
-      files_to_create = new_files - old_files
-
-      for hwid_metadata in existing_metadata:
-        if hwid_metadata.project in files_to_delete:
-          if delete_missing:
-            hwid_metadata.key.delete()
-            self._fs_adapter.DeleteFile(self._LivePath(hwid_metadata.path))
-        else:
-          new_data = hwid_db_metadata_of_name[hwid_metadata.project]
-          hwid_metadata.version = str(new_data.version)
-          hwid_metadata.board = new_data.board_name
-          self._ActivateFile(live_hwid_repo, new_data.name, hwid_metadata.path)
-          hwid_metadata.put()
-
-    for project in files_to_create:
-      path = project  # Use the project name as the file path.
-      new_data = hwid_db_metadata_of_name[project]
-      board = new_data.board_name
-      version = str(new_data.version)
-      with self._ndb_connector.CreateClientContextWithGlobalCache():
-        metadata = HwidMetadata(board=board, version=version, path=path,
-                                project=project)
-        self._ActivateFile(live_hwid_repo, project, path)
-        metadata.put()
 
   def ReloadMemcacheCacheFromFiles(self, limit_models=None):
     """For every known project, load its info into the cache.
@@ -574,38 +475,22 @@ class HwidManager:
     Args:
       limit_models: List of names of models which will be updated.
     """
-
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      q = HwidMetadata.query()
-      if limit_models:
-        q = q.filter(HwidMetadata.project.IN(limit_models))
-
-      for metadata in list(q):
-        try:
-          self._memcache_adapter.Put(metadata.project,
-                                     self._LoadHwidFile(metadata))
-        except Exception:  # pylint: disable=broad-except
-          # Catch any exception and continue with other files.  The reason for
-          # the broad exception is that the various exceptions we could catch
-          # are large and from libraries out of our control.  For example, the
-          # HWIDv3 library can throw various unknown errors.  We could have IO
-          # errors, errors with Google Cloud Storage, or YAML parsing errors.
-          #
-          # This may catch some exceptions we do not wish it to, such as SIGINT,
-          # but we expect that to be unlikely in this context and not adversely
-          # affect the system.
-          logging.exception('Exception encountered while reloading cache.')
-
-  def _LivePath(self, file_id):
-    return 'live/%s' % file_id
-
-  def _ActivateFile(self, live_hwid_repo, hwid_db_name, live_file_id):
-    try:
-      project_data = live_hwid_repo.LoadHWIDDBByName(hwid_db_name)
-    except hwid_repo.HWIDRepoError as ex:
-      raise MetadataError from ex
-    self._fs_adapter.WriteFile(
-        self._LivePath(live_file_id), project_data.encode('utf-8'))
+    metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
+        projects=limit_models)
+    for metadata in metadata_list:
+      try:
+        self._memcache_adapter.Put(metadata.project, self._LoadHWIDDB(metadata))
+      except Exception:  # pylint: disable=broad-except
+        # Catch any exception and continue with other files.  The reason for
+        # the broad exception is that the various exceptions we could catch
+        # are large and from libraries out of our control.  For example, the
+        # HWIDv3 library can throw various unknown errors.  We could have IO
+        # errors, errors with Google Cloud Storage, or YAML parsing errors.
+        #
+        # This may catch some exceptions we do not wish it to, such as SIGINT,
+        # but we expect that to be unlikely in this context and not adversely
+        # affect the system.
+        logging.exception('Exception encountered while reloading cache.')
 
   def _ClearMemcache(self):
     """Clear all cache items via memcache_adapter.
@@ -653,7 +538,7 @@ class _HwidData:
     elif hwid_data:
       self._SeedFromData(hwid_data)
     else:
-      raise MetadataError('No HWID configuration supplied.')
+      raise ProjectUnavailableError('No HWID configuration supplied.')
 
   def _SeedFromYamlFile(self, hwid_file):
     """Seeds the object from a path to a file containing hwid definitions."""
@@ -661,7 +546,7 @@ class _HwidData:
       with open(hwid_file, 'r') as fh:
         return self._SeedFromRawYaml(fh.read())
     except IOError as ioe:
-      raise MetadataError('Error loading YAML file.', ioe)
+      raise ProjectUnavailableError('Error loading YAML file.', ioe)
 
   def _SeedFromRawYaml(self, raw_hwid_yaml):
     """Seeds the object from a yaml string of hwid definitions."""
@@ -769,16 +654,16 @@ class _HwidV2Data(_HwidData):
 
   def _SeedFromRawYaml(self, raw_hwid_yaml):
     from cros.factory.hwid.v2 import yaml_datastore
-    return self._SeedFromData(yaml_datastore.YamlRead(
-        raw_hwid_yaml, yaml.SafeLoader))
+    return self._SeedFromData(
+        yaml_datastore.YamlRead(raw_hwid_yaml, yaml.SafeLoader))
 
   def _SeedFromData(self, hwid_data):
     for field in [
         'boms', 'variants', 'volatiles', 'hwid_status', 'volatile_values'
     ]:
       if field not in hwid_data:
-        raise MetadataError('Invalid HWIDv2 file supplied, missing required ' +
-                            'field %r' % field)
+        raise ProjectUnavailableError(
+            f'Invalid HWIDv2 file supplied, missing required field {field!r}')
 
     for (local_map, data) in [(self._bom_map, hwid_data['boms']),
                               (self._variant_map, hwid_data['variants']),
@@ -1060,8 +945,11 @@ class _HwidV3Data(_HwidData):
     return self._SeedFromData(raw_hwid_yaml)
 
   def _SeedFromData(self, hwid_data):
-    self.database = database.Database.LoadData(
-        hwid_data, expected_checksum=None)
+    try:
+      self.database = database.Database.LoadData(hwid_data,
+                                                 expected_checksum=None)
+    except common.HWIDException as ex:
+      raise ProjectUnavailableError(str(ex)) from ex
 
   def GetBomAndConfigless(self, hwid_string, verbose=False,
                           waived_comp_categories=None, require_vp_info=False):

@@ -221,8 +221,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   def GetProjects(self, request):
     """Return all of the supported projects in sorted order."""
 
-    versions = request.versions
-    projects = _hwid_manager.GetProjects(versions)
+    versions = list(request.versions) if request.versions else None
+    projects = _hwid_manager.GetProjects(versions=versions)
 
     logging.debug('Found projects: %r', projects)
     response = hwid_api_messages_pb2.ProjectsResponse(

@@ -78,16 +78,19 @@ class LocalFileSystemAdapter(FileSystemAdapter):
   def GetExceptionMapper(cls):
     return cls.EXCEPTION_MAPPER
 
-  def __init__(self, base):
+  def __init__(self, base, encoding='utf-8'):
     super(LocalFileSystemAdapter, self).__init__()
     self._base = base
+    self._encoding = encoding
 
   def _ReadFile(self, path):
-    return file_utils.ReadFile(os.path.join(self._base, path))
+    return file_utils.ReadFile(
+        os.path.join(self._base, path), encoding=self._encoding)
 
   def _WriteFile(self, path, content):
     filepath = os.path.join(self._base, path)
-    file_utils.WriteFile(filepath, content)
+    file_utils.TryMakeDirs(os.path.dirname(filepath))
+    file_utils.WriteFile(filepath, content, encoding=self._encoding)
 
   def _DeleteFile(self, path):
     filepath = os.path.join(self._base, path)

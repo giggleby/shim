@@ -9,9 +9,9 @@ from typing import NamedTuple, Optional
 
 import yaml
 
-# pylint: disable=import-error
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
 from cros.factory.hwid.service.appengine.data import decoder_data
+from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.data import verification_payload_data
 from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -99,9 +99,10 @@ class _Config:
             self._ndb_connector))
     self.decoder_data_manager = decoder_data.DecoderDataManager(
         self._ndb_connector)
-    self.hwid_manager = hwid_manager.HwidManager(self.hwid_filesystem,
-                                                 self.vpg_targets,
-                                                 self._ndb_connector)
+    self.hwid_db_data_manager = hwid_db_data.HWIDDBDataManager(
+        self._ndb_connector, self.hwid_filesystem)
+    self.hwid_manager = hwid_manager.HwidManager(self.vpg_targets,
+                                                 self.hwid_db_data_manager)
     self.dryrun_upload = conf.get('dryrun_upload', True)
     self.project_region = conf['project_region']
     self.queue_name = conf['queue_name']
