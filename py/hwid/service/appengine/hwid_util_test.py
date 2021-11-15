@@ -41,7 +41,7 @@ class HwidUtilTest(unittest.TestCase):
                                                verify_checksum=False)
 
   def testGetSkuFromBom(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents(
         {
             'dram': EXAMPLE_MEMORY_STR,
@@ -58,7 +58,7 @@ class HwidUtilTest(unittest.TestCase):
     self.assertEqual(4294967296, sku['total_bytes'])
 
   def testGetSkuFromBomWithConfigless(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents(
         {
             'dram': EXAMPLE_MEMORY_STR,
@@ -76,7 +76,7 @@ class HwidUtilTest(unittest.TestCase):
     self.assertEqual(8589934592, sku['total_bytes'])
 
   def testGetComponentValueFromBom(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({'bar': 'baz', 'null': []})
 
     value = hwid_util.GetComponentValueFromBom(bom, 'bar')

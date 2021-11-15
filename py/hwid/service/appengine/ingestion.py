@@ -190,7 +190,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     db_lists = collections.defaultdict(list)
     for model_name, model_info in self.vpg_targets.items():
-      hwid_data = self.hwid_manager.GetProjectDataFromCache(model_name)
+      hwid_data = self.hwid_manager.GetHWIDPreprocDataFromCache(model_name)
       if hwid_data is not None:
         db_lists[model_info.board].append(
             (hwid_data.database, model_info.waived_comp_categories))

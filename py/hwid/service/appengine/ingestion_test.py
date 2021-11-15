@@ -14,7 +14,6 @@ import yaml
 # pylint: enable=import-error, wrong-import-order, no-name-in-module
 
 from cros.factory.hwid.service.appengine.data import decoder_data
-from cros.factory.hwid.service.appengine import hwid_manager
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ingestion
 # pylint: disable=import-error, no-name-in-module

@@ -158,7 +158,7 @@ class HwidApiTest(unittest.TestCase):
         msg)
 
   def testGetBomEmpty(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     configless = None
     self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
         TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
@@ -183,7 +183,7 @@ class HwidApiTest(unittest.TestCase):
             status=hwid_api_messages_pb2.Status.SERVER_ERROR), msg)
 
   def testGetBomComponents(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({
         'foo': 'bar',
         'baz': ['qux', 'rox']
@@ -212,14 +212,14 @@ class HwidApiTest(unittest.TestCase):
 
   def testBatchGetBom(self):
     hwid1 = 'TEST HWID 1'
-    bom1 = hwid_manager.Bom()
+    bom1 = hwid_manager.BOM()
     bom1.AddAllComponents({
         'foo1': 'bar1',
         'baz1': ['qux1', 'rox1']
     })
 
     hwid2 = 'TEST HWID 2'
-    bom2 = hwid_manager.Bom()
+    bom2 = hwid_manager.BOM()
     bom2.AddAllComponents({
         'foo2': 'bar2',
         'baz2': ['qux2', 'rox2']
@@ -267,7 +267,7 @@ class HwidApiTest(unittest.TestCase):
     hwid2 = 'TEST HWID 2'
     hwid3 = 'TEST HWID 3'
     hwid4 = 'TEST HWID 4'
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({
         'foo': 'bar',
         'baz': ['qux', 'rox']
@@ -321,7 +321,7 @@ class HwidApiTest(unittest.TestCase):
             error='value error'), msg)
 
   def testGetDutLabelsCheckIsVPRelated(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents(
         {
             'battery': 'battery_small',
@@ -368,7 +368,7 @@ class HwidApiTest(unittest.TestCase):
         msg)
 
   def testGetBomComponentsWithVerboseFlag(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents(
         {
             'battery': 'battery_small',
@@ -425,7 +425,7 @@ class HwidApiTest(unittest.TestCase):
             ]), msg)
 
   def testGetBomLabels(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllLabels({
         'foo': {
             'bar': None
@@ -454,7 +454,7 @@ class HwidApiTest(unittest.TestCase):
             ]), msg)
 
   def testGetBomAvlInfo(self):
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents(
         {'dram': ['dram_1234_5678', 'dram_1234_5678#4', 'not_dram_1234_5678']},
         comp_db=database.Database.LoadFile(GOLDEN_HWIDV3_FILE,
@@ -759,7 +759,7 @@ class HwidApiTest(unittest.TestCase):
   @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
   def testGetSku(self, mock_get_total_ram):
     mock_get_total_ram.return_value = '1Mb', 100000000
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({
         'cpu': ['bar1', 'bar2'],
         'dram': ['foo']
@@ -782,7 +782,7 @@ class HwidApiTest(unittest.TestCase):
   @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
   def testGetSkuWithConfigless(self, mock_get_total_ram):
     mock_get_total_ram.return_value = '1Mb', 100000000
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({
         'cpu': ['bar1', 'bar2'],
         'dram': ['foo']
@@ -807,7 +807,7 @@ class HwidApiTest(unittest.TestCase):
   @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
   def testGetSkuBadDRAM(self, mock_get_total_ram):
     mock_get_total_ram.side_effect = hwid_util.HWIDUtilException('X')
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({
         'cpu': 'bar',
         'dram': ['fail']
@@ -827,7 +827,7 @@ class HwidApiTest(unittest.TestCase):
   @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
   def testGetSkuMissingCPU(self, mock_get_total_ram):
     mock_get_total_ram.return_value = ('2Mb', 2000000)
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddAllComponents({'dram': ['some_memory_chip', 'other_memory_chip']})
     bom.project = 'foo'
     configless = None
@@ -849,7 +849,7 @@ class HwidApiTest(unittest.TestCase):
     self.patch_goldeneye_memcache_adapter.Get.return_value = [
         ('r1.*', 'b1', []), ('^Fo.*', 'found_device', [])
     ]
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
     bom.project = 'foo'
     bom.phase = 'bar'
@@ -919,7 +919,7 @@ class HwidApiTest(unittest.TestCase):
     self.patch_goldeneye_memcache_adapter.Get.return_value = [
         ('r1.*', 'b1', []), ('^Fo.*', 'found_device', [])
     ]
-    bom = hwid_manager.Bom()
+    bom = hwid_manager.BOM()
     bom.project = 'foo'
     bom.phase = 'bar'
     configless = {

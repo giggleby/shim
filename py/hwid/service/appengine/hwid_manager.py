@@ -7,22 +7,15 @@ This module should provide a unified interface for querying HWID information
 regardless of the source of that information or the version.
 """
 
-import collections
-import copy
 import logging
-import re
 from typing import Dict, List, NamedTuple, Optional
 
-from google.cloud import ndb  # pylint: disable=no-name-in-module, import-error
-
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import hwid_action
+from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.service.appengine import hwid_v2_action
+from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine import memcache_adapter
-from cros.factory.hwid.service.appengine import \
-    verification_payload_generator as vpg_module
-from cros.factory.hwid.v3 import common
-from cros.factory.hwid.v3 import database
-from cros.factory.hwid.v3 import hwid_utils
-from cros.factory.hwid.v3 import yaml_wrapper as yaml
 
 
 class ProjectNotFoundError(KeyError):
@@ -37,23 +30,9 @@ class ProjectUnavailableError(Exception):
   """Indicates that the specified project has unexpected malformed HWID data."""
 
 
-class HwidNotFoundError(KeyError):
-  """Indicates a HWID does not map to a valid value.
-
-  The HWID is still in a valid format.
-  """
-
-
-class InvalidHwidError(ValueError):
-  """Indicates a HWID is malformed."""
-
-
-class ProjectMismatchError(ValueError):
-  """Indicates that a HWID does does not match the expected project."""
-
-  def __init__(self, expected, actual):
-    super(ProjectMismatchError, self).__init__(
-        'HWID %r does not match project %r.', (actual, expected))
+HWIDDecodeError = hwid_action.HWIDDecodeError
+InvalidHWIDError = hwid_action.InvalidHWIDError
+MethodNotSupportedError = hwid_action.NotSupportedError
 
 
 class BomAndConfigless(NamedTuple):
@@ -64,202 +43,9 @@ class BomAndConfigless(NamedTuple):
   error: Optional[Exception]
 
 
-class Component(
-    collections.namedtuple(
-        'Component',
-        ['cls', 'name', 'information', 'is_vp_related', 'fields'])):
-  """A single BOM component.
-
-  Attributes:
-    cls string The component-class.
-    name string The canonical name.
-    information dict (optional) The extra information bound with the component.
-    is_vp_related bool Whether this component is a source of the verification
-        payload.
-    fields dict (optional) The detail fields of the component.
-  """
-
-  def __new__(cls, cls_, name, information=None, is_vp_related=False,
-              fields=None):
-    if fields is None:
-      fields = {}
-    return super(Component, cls).__new__(cls, cls_, name, information,
-                                         is_vp_related, fields)
-
-
-class Label(collections.namedtuple('Label', ['cls', 'name', 'value'])):
-  """A BOM label.
-
-  Attributes:
-    cls string The component-class.
-    name string The label name.
-    value string The value for this label, if any.
-  """
-
-
-class Bom:
-  """An abstraction of a BOM with both components and labels."""
-
-  def __init__(self):
-    self._components = {}
-    self._labels = {}
-    self.phase = ''
-    self.project = None
-
-  def HasComponent(self, component):
-    """Tests whether the bom has a component."""
-    return (component.cls in self._components and
-            any(component.name == comp.name
-                for comp in self._components[component.cls]))
-
-  def GetComponents(self, cls=None):
-    """Gets the components of this bom, optionally filtered by class."""
-    if cls:
-      if cls not in self._components:
-        return []
-      if not self._components[cls]:
-        return [Component(cls, None, None)]
-      return copy.deepcopy(self._components[cls])
-
-    components = []
-    for comp_class, comps in self._components.items():
-      if comps == list():
-        components.append(Component(comp_class, None, None))
-      else:
-        components.extend(copy.deepcopy(comps))
-
-    return components
-
-  def AddComponent(self, cls, name=None, information=None, is_vp_related=False,
-                   fields=None):
-    """Adds a component to this bom.
-
-    The method must be supplied at least a component class.  If no name is
-    specified then the component class will be present but empty.
-
-    Args:
-      cls: The component class.
-      name: The name of the bom.
-      information: (optional) The extra information bound with the
-                   component.
-      fields dict (optional) The detail fields of the component.
-    """
-    if cls not in self._components:
-      self._components[cls] = []
-
-    if name:
-      self._components[cls].append(
-          Component(cls, name, information, is_vp_related, fields))
-
-  def AddAllComponents(self, component_dict, comp_db=None, verbose=False,
-                       waived_comp_categories=None, require_vp_info=False):
-    """Adds a dict of components to this bom.
-
-    This dict should be of the form class -> name and can take either a single
-    name or list of names in each entry.  This makes it easy to add all
-    components as extract from a YAML file or similar.
-
-    Args:
-      component_dict: A dictionary of components to add.
-      comp_db: The database for additional component information retrieval.
-      verbose: Adds all fields of the component detail if set to True.
-      waived_comp_categories: List of waived component categories which means
-      they are not verification-payload-related.
-      require_vp_info: A bool to indicate if the is_vp_related field of
-          each component is required.
-    Returns:
-      self
-    Raises:
-      ValueError: if any of the classes are None.
-    """
-    if waived_comp_categories is None:
-      waived_comp_categories = []
-    if comp_db and require_vp_info:
-      vp_related_comps = set(
-          vpg_module.GetAllComponentVerificationPayloadPieces(
-              comp_db, waived_comp_categories))
-    else:
-      vp_related_comps = set()
-
-    for component_class, component_val in component_dict.items():
-      db_components = comp_db and comp_db.GetComponents(component_class)
-      if isinstance(component_val, str):
-        comp_info = db_components and db_components.get(component_val)
-        fields = comp_info.values if verbose and comp_info else None
-        self.AddComponent(component_class, component_dict[component_class],
-                          comp_info and comp_info.information,
-                          (component_class, component_val) in vp_related_comps,
-                          fields)
-      else:
-        for component_name in component_val:
-          if isinstance(component_name, str):
-            comp_info = db_components and db_components.get(component_name)
-            fields = comp_info.values if verbose and comp_info else None
-            self.AddComponent(component_class, component_name, comp_info and
-                              comp_info.information,
-                              (component_class, component_name)
-                              in vp_related_comps, fields)
-
-  def HasLabel(self, label):
-    """Test whether the BOM has a label."""
-    return label.cls in self._labels and label.name in self._labels[label.cls]
-
-  def GetLabels(self, cls=None):
-    """Gets the labels of this bom, optionally filtered by class."""
-    if cls:
-      if cls in self._labels:
-        return [
-            Label(cls, name, value)
-            for name, values in self._labels[cls].items()
-            for value in values
-        ]
-      return []
-    return [
-        Label(cls, name, value) for cls in self._labels
-        for name, values in self._labels[cls].items() for value in values
-    ]
-
-  def AddLabel(self, cls, name, value=None):
-    """Adds a label to this bom.
-
-    The method must be supplied at least a label name.  If no class is
-    specified then the label is assumed to be on the BOM as a whole.
-
-    Args:
-      cls: The component class.
-      name: The name of the label.
-      value: (optional) The label value or True for a valueless label.
-    Returns:
-      self
-    Raises:
-      ValueError: when no name is specified.
-    """
-    if not cls or not name:
-      raise ValueError('Labels must have a class and name.')
-
-    if cls not in self._labels:
-      self._labels[cls] = {}
-
-    if name in self._labels[cls]:
-      self._labels[cls][name].append(value)
-    else:
-      self._labels[cls][name] = [value]
-
-  def AddAllLabels(self, label_dict):
-    """Adds a dict of labels to this bom.
-
-    Args:
-      label_dict: A dictionary with {class: {name: value}} mappings.
-    Returns:
-      self
-    Raises:
-      ValueError: if any of the values are None.
-    """
-
-    for cls in label_dict:
-      for name in label_dict[cls]:
-        value = label_dict[cls][name]
-        self.AddLabel(cls, name, value)
+Component = hwid_action.Component
+Label = hwid_action.Label
+BOM = hwid_action.BOM
 
 
 class HwidManager:
@@ -309,7 +95,7 @@ class HwidManager:
       exception will also be provided in the instance.
     """
 
-    hwid_data_cache = {}
+    action_cache = {}
     result = {}
     for hwid_string in hwid_strings:
       logging.debug('Getting BOM for %r.', hwid_string)
@@ -320,14 +106,15 @@ class HwidManager:
       waived_comp_categories = model_info and model_info.waived_comp_categories
 
       bom = configless = error = None
-      hwid_data = hwid_data_cache.get(project)
+      action = action_cache.get(project)
       try:
-        if hwid_data is None:
-          hwid_data_cache[project] = hwid_data = self._LoadHwidData(project)
+        if action is None:
+          action_cache[project] = action = self._GetHWIDAction(project)
 
-        bom, configless = hwid_data.GetBomAndConfigless(
+        bom, configless = action.GetBOMAndConfigless(
             hwid_string, verbose, waived_comp_categories, require_vp_info)
-      except (ProjectUnavailableError, ValueError, KeyError) as ex:
+      except (ProjectUnavailableError, ValueError, KeyError,
+              MethodNotSupportedError) as ex:
         error = ex
       result[hwid_string] = BomAndConfigless(bom, configless, error)
     return result
@@ -351,14 +138,16 @@ class HwidManager:
       ProjectNotFoundError: The HWID DB of the given project doesn't exists.
       ProjectNotSupportedError: If HWID DB version is not supported.
       ProjectUnavailableError: Fails to load the project's HWID DB.
-      ProjectMismatchError: The project is invalid.
+      InvalidHWIDError: If the project is invalid.
+      MethodNotSupportedError: If the HWID version of the project doesn't
+        support this method.
     """
     logging.debug('Getting filtered list of HWIDs for %r.', project)
-    hwid_data = self._LoadHwidData(project)
+    action = self._GetHWIDAction(project)
 
     return list(
-        hwid_data.GetHwids(project, with_classes, without_classes,
-                           with_components, without_components))
+        action.EnumerateHWIDs(with_classes, without_classes, with_components,
+                              without_components))
 
   def GetComponentClasses(self, project):
     """Get a list of all component classes for the given project.
@@ -373,12 +162,14 @@ class HwidManager:
       ProjectNotFoundError: The HWID DB of the given project doesn't exists.
       ProjectNotSupportedError: If HWID DB version is not supported.
       ProjectUnavailableError: Fails to load the project's HWID DB.
-      ProjectMismatchError: The project is invalid.
+      InvalidHWIDError: If the project is invalid.
+      MethodNotSupportedError: If the HWID version of the project doesn't
+        support this method.
     """
     logging.debug('Getting list of component classes for %r.', project)
-    hwid_data = self._LoadHwidData(project)
+    action = self._GetHWIDAction(project)
 
-    return list(hwid_data.GetComponentClasses(project))
+    return list(action.GetComponentClasses())
 
   def GetComponents(self, project, with_classes=None):
     """Get a filtered dict of components for the given project.
@@ -394,14 +185,16 @@ class HwidManager:
       ProjectNotFoundError: The HWID DB of the given project doesn't exists.
       ProjectNotSupportedError: If HWID DB version is not supported.
       ProjectUnavailableError: Fails to load the project's HWID DB.
-      ProjectMismatchError: The project is invalid.
+      InvalidHWIDError: If the project is invalid.
+      MethodNotSupportedError: If the HWID version of the project doesn't
+        support this method.
     """
     logging.debug('Getting list of components for %r.', project)
-    hwid_data = self._LoadHwidData(project)
+    action = self._GetHWIDAction(project)
 
-    return hwid_data.GetComponents(project, with_classes)
+    return action.GetComponents(with_classes)
 
-  def _LoadHwidData(self, project):
+  def _GetHWIDAction(self, project):
     """Retrieves the HWID data for a given project, caching as necessary.
 
     Args:
@@ -416,29 +209,31 @@ class HwidManager:
       ProjectUnavailableError: The given project is known, but it encounters
         an error while loading the project's HWID DB.
     """
-
     logging.debug('Loading data for %r.', project)
-
     project = _NormalizeString(project)
 
-    hwid_data = self.GetProjectDataFromCache(project)
-
+    hwid_data = self.GetHWIDPreprocDataFromCache(project)
     if hwid_data:
       logging.debug('Found cached data for %r.', project)
-      return hwid_data
+    else:
+      try:
+        metadata = self._hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+            project)
+        hwid_data = self._LoadHWIDPreprocData(metadata)
+      except hwid_db_data.HWIDDBNotFoundError as ex:
+        raise ProjectNotFoundError(str(ex)) from ex
+      except hwid_db_data.TooManyHWIDDBError as ex:
+        raise ProjectUnavailableError(str(ex)) from ex
+      self._SaveHWIDPreprocDataToCache(project, hwid_data)
 
-    try:
-      metadata = self._hwid_db_data_manager.GetHWIDDBMetadataOfProject(project)
-    except hwid_db_data.HWIDDBNotFoundError as ex:
-      raise ProjectNotFoundError(str(ex)) from ex
-    except hwid_db_data.TooManyHWIDDBError as ex:
-      raise ProjectUnavailableError(str(ex)) from ex
-    hwid_data = self._LoadHWIDDB(metadata)
-    self.SaveProjectDataToCache(project, hwid_data)
+    if isinstance(hwid_data, hwid_preproc_data.HWIDV2PreprocData):
+      return hwid_v2_action.HWIDV2Action(hwid_data)
+    if isinstance(hwid_data, hwid_preproc_data.HWIDV3PreprocData):
+      return hwid_v3_action.HWIDV3Action(hwid_data)
+    raise ProjectUnavailableError(
+        f'unexpected HWID version: {hwid_data.__class__.__name__}')
 
-    return hwid_data
-
-  def _LoadHWIDDB(self, metadata):
+  def _LoadHWIDPreprocData(self, metadata):
     """Load hwid data from a file.
 
     Args:
@@ -457,15 +252,21 @@ class HwidManager:
     except hwid_db_data.HWIDDBNotFoundError as ex:
       raise ProjectUnavailableError(str(ex)) from ex
 
-    if metadata.version == "2":
-      logging.debug("Processing as version 2 file.")
-      hwid_data = _HwidV2Data(metadata.project, raw_hwid_yaml=raw_hwid_yaml)
-    elif metadata.version == "3":
-      logging.debug("Processing as version 3 file.")
-      hwid_data = _HwidV3Data(metadata.project, raw_hwid_yaml=raw_hwid_yaml)
-    else:
-      raise ProjectNotSupportedError('Project %r has invalid version %r.' %
-                                     (metadata.project, metadata.version))
+    try:
+      if metadata.version == '2':
+        logging.debug('Processing as version 2 file.')
+        hwid_data = hwid_preproc_data.HWIDV2PreprocData(metadata.project,
+                                                        raw_hwid_yaml)
+      elif metadata.version == '3':
+        logging.debug('Processing as version 3 file.')
+        hwid_data = hwid_preproc_data.HWIDV3PreprocData(metadata.project,
+                                                        raw_hwid_yaml)
+      else:
+        raise ProjectNotSupportedError(
+            f'Project {metadata.project!r} has invalid version '
+            f'{metadata.version!r}.')
+    except hwid_preproc_data.PreprocHWIDError as ex:
+      raise ProjectUnavailableError(str(ex)) from ex
 
     return hwid_data
 
@@ -479,7 +280,8 @@ class HwidManager:
         projects=limit_models)
     for metadata in metadata_list:
       try:
-        self._memcache_adapter.Put(metadata.project, self._LoadHWIDDB(metadata))
+        self._SaveHWIDPreprocDataToCache(metadata.project,
+                                         self._LoadHWIDPreprocData(metadata))
       except Exception:  # pylint: disable=broad-except
         # Catch any exception and continue with other files.  The reason for
         # the broad exception is that the various exceptions we could catch
@@ -500,7 +302,7 @@ class HwidManager:
     """
     self._memcache_adapter.ClearAll()
 
-  def GetProjectDataFromCache(self, project):
+  def GetHWIDPreprocDataFromCache(self, project):
     """Get the HWID file data from cache.
 
     There is a two level caching strategy for hwid_data object, first check is
@@ -518,537 +320,22 @@ class HwidManager:
        HWIDData object that was cached or null if not found in memory or in the
        memcache.
     """
-    hwid_data = self._memcache_adapter.Get(project)
+    try:
+      hwid_data = self._memcache_adapter.Get(project)
+    except Exception as ex:
+      logging.info('Memcache read miss %s: caught exception: %s.', project, ex)
+      return None
     if not hwid_data:
-      logging.info('Memcache read miss %s', project)
+      logging.info('Memcache read miss %s.', project)
+      return None
+    if (not isinstance(hwid_data, hwid_preproc_data.HWIDPreprocData) or
+        hwid_data.is_out_of_date):
+      logging.info('Memcache read miss %s: got legacy cache value.', project)
+      return None
     return hwid_data
 
-  def SaveProjectDataToCache(self, project, hwid_data):
+  def _SaveHWIDPreprocDataToCache(self, project, hwid_data):
     self._memcache_adapter.Put(project, hwid_data)
-
-
-class _HwidData:
-  """Superclass for HWID data classes."""
-
-  def _Seed(self, hwid_file=None, raw_hwid_yaml=None, hwid_data=None):
-    if hwid_file:
-      self._SeedFromYamlFile(hwid_file)
-    elif raw_hwid_yaml:
-      self._SeedFromRawYaml(raw_hwid_yaml)
-    elif hwid_data:
-      self._SeedFromData(hwid_data)
-    else:
-      raise ProjectUnavailableError('No HWID configuration supplied.')
-
-  def _SeedFromYamlFile(self, hwid_file):
-    """Seeds the object from a path to a file containing hwid definitions."""
-    try:
-      with open(hwid_file, 'r') as fh:
-        return self._SeedFromRawYaml(fh.read())
-    except IOError as ioe:
-      raise ProjectUnavailableError('Error loading YAML file.', ioe)
-
-  def _SeedFromRawYaml(self, raw_hwid_yaml):
-    """Seeds the object from a yaml string of hwid definitions."""
-    raise NotImplementedError()
-
-  def _SeedFromData(self, hwid_data):
-    """Seeds the object from a dict of hwid definitions."""
-    raise NotImplementedError()
-
-  def GetBomAndConfigless(self, hwid_string, verbose=False,
-                          waived_comp_categories=None, require_vp_info=False):
-    """Get the BOM and configless field for a given HWID.
-
-    Args:
-      hwid_string: The HWID.
-      verbose: Returns all fields in component detail if set to True.
-      waived_comp_categories: List of waived component categories which means
-      they are not verification-payload-related.
-      require_vp_info: A bool to indicate if the is_vp_related field of
-          each component is required.
-
-    Returns:
-      A bom dict and configless field dict.
-      If there is no configless field in given HWID, return Bom dict and None.
-
-    Raises:
-      HwidNotFoundError: If a portion of the HWID is not found.
-      InvalidHwidError: If the HWID is invalid.
-    """
-    raise NotImplementedError()
-
-  def GetHwids(self, project, with_classes=None, without_classes=None,
-               with_components=None, without_components=None):
-    """Get a filtered set of HWIDs for the given project.
-
-    Args:
-      project: The project that you want the HWIDs of.
-      with_classes: Filter for component classes that the HWIDs include.
-      without_classes: Filter for component classes that the HWIDs don't
-        include.
-      with_components: Filter for components that the HWIDs include.
-      without_components: Filter for components that the HWIDs don't include.
-
-    Returns:
-      A set of HWIDs.
-
-    Raises:
-      InvalidHwidError: If the project is invalid.
-    """
-    raise NotImplementedError()
-
-  def GetComponentClasses(self, project):
-    """Get a set of all component classes for the given project.
-
-    Args:
-      project: The project that you want the component classes of.
-
-    Returns:
-      A set of component classes.
-
-    Raises:
-      InvalidHwidError: If the project is invalid.
-    """
-    raise NotImplementedError()
-
-  def GetComponents(self, project, with_classes=None):
-    """Get a filtered dict of all components for the given project.
-
-    Args:
-      project: The project that you want the components of.
-      with_classes: Filter for component classes that the dict include.
-
-    Returns:
-      A dict of components.
-
-    Raises:
-      InvalidHwidError: If the project is invalid.
-    """
-    raise NotImplementedError()
-
-
-class _HwidV2Data(_HwidData):
-  """Wrapper for HWIDv2 data."""
-
-  def __init__(self, project, hwid_file=None, raw_hwid_yaml=None,
-               hwid_data=None):
-    """Constructor.
-
-    Requires one of hwid_file, hwid_yaml or hwid_data.
-
-    Args:
-      project: The project name
-      hwid_file: the path to a file containing the HWID data.
-      hwid_yaml: the raw YAML string of HWID data.
-      hwid_data: parsed HWID data from a HWID file.
-    """
-    self.project = project
-    self._bom_map = {}
-    self._variant_map = {}
-    self._volatile_map = {}
-    self._hwid_status_map = {}
-    self._volatile_value_map = {}
-
-    self._Seed(hwid_file, raw_hwid_yaml, hwid_data)
-
-  def _SeedFromRawYaml(self, raw_hwid_yaml):
-    from cros.factory.hwid.v2 import yaml_datastore
-    return self._SeedFromData(
-        yaml_datastore.YamlRead(raw_hwid_yaml, yaml.SafeLoader))
-
-  def _SeedFromData(self, hwid_data):
-    for field in [
-        'boms', 'variants', 'volatiles', 'hwid_status', 'volatile_values'
-    ]:
-      if field not in hwid_data:
-        raise ProjectUnavailableError(
-            f'Invalid HWIDv2 file supplied, missing required field {field!r}')
-
-    for (local_map, data) in [(self._bom_map, hwid_data['boms']),
-                              (self._variant_map, hwid_data['variants']),
-                              (self._volatile_map, hwid_data['volatiles'])]:
-      for name in data:
-        normalized_name = _NormalizeString(name)
-        local_map[normalized_name] = data[name]
-    for (local_map, data) in [(self._hwid_status_map, hwid_data['hwid_status']),
-                              (self._volatile_value_map,
-                               hwid_data['volatile_values'])]:
-      for name in data:
-        local_map[name] = data[name]
-
-  def _SplitHwid(self, hwid_string):
-    """Splits a HWIDv2 string into component parts.
-
-    Examples matched (project, bom, variant, volatile):
-      FOO BAR -> ('FOO', 'BAR', None, None)
-      FOO BAR BAZ-QUX -> ('FOO', 'BAR', 'BAZ', 'QUX')
-      FOO BAR BAZ-QUX 1234 -> ('FOO', 'BAR', 'BAZ', 'QUX')
-      FOO BAR-BAZ -> ('FOO', 'BAR-BAZ', None, None)
-      FOO BAR-BAZ QUX -> ('FOO', 'BAR-BAZ', 'QUX', None)
-      FOO BAR-BAZ-QUX -> ('FOO', 'BAR-BAZ-QUX', None, None)
-
-    Args:
-      hwid_string: The HWIDv2 string in question
-
-    Returns:
-      A tuple of the BOM name, variant and volatile.
-
-    Raises:
-      InvalidHwidError: if the string is in an invalid format.
-    """
-
-    match = re.match(
-        r'\s*(?P<project>\w+)\s+(?P<name>\w+\S+)'
-        r'(\s+(?P<variant>\w+)(-(?P<volatile>\w+))?)?.*', hwid_string)
-
-    if match:
-      groups = match.groupdict()
-      project = _NormalizeString(groups['project'])
-      name = _NormalizeString(groups['name'])
-      variant = _NormalizeString(groups['variant'])
-      volatile = _NormalizeString(groups['volatile'])
-
-      return (project, name, variant, volatile)
-
-    raise InvalidHwidError('Invalid HWIDv2 format: %r' % hwid_string)
-
-  def GetBomAndConfigless(self, hwid_string, verbose=False,
-                          waived_comp_categories=None, require_vp_info=False):
-    """Get the BOM and configless field for a given HWID.
-
-    Overrides superclass method.
-
-    Args:
-      hwid_string: The HWID string
-      verbose: Returns all fields in component detail if set to True.
-      waived_comp_categories: List of waived component categories which means
-      they are not verification-payload-related.
-      require_vp_info: A bool to indicate if the is_vp_related field of
-          each component is required.
-
-    Returns:
-      A Bom object and None since HWID v2 doesn't support configless field.
-
-    Raises:
-      HwidNotFoundError: If a portion of the HWID is not found.
-      InvalidHwidError: If the HWID is invalid.
-      ProjectMismatchError: If the project is invalid.
-    """
-    project, name, variant, volatile = self._SplitHwid(hwid_string)
-
-    if project != self.project:
-      raise ProjectMismatchError(hwid_string, project)
-
-    bom = Bom()
-    bom.project = self.project
-
-    if name in self._bom_map:
-      bom.AddAllComponents(self._bom_map[name]['primary']['components'],
-                           verbose=verbose)
-    else:
-      raise HwidNotFoundError(
-          'BOM %r not found for project %r.' % (bom, self.project))
-
-    if variant:
-      if variant in self._variant_map:
-        bom.AddAllComponents(self._variant_map[variant]['components'],
-                             verbose=verbose)
-      else:
-        raise HwidNotFoundError(
-            'variant %r not found for project %r.' % (variant, self.project))
-
-    if volatile:
-      if volatile in self._volatile_map:
-        bom.AddAllComponents(self._volatile_map[volatile], verbose=verbose)
-      else:
-        raise HwidNotFoundError(
-            'volatile %r not found for project %r.' % (volatile, self.project))
-
-    return bom, None
-
-  def GetHwids(self, project, with_classes=None, without_classes=None,
-               with_components=None, without_components=None):
-    """Get a filtered set of HWIDs for the given project.
-
-    Overrides superclass method.
-
-    Args:
-      project: The project that you want the HWIDs of.
-      with_classes: Filter for component classes that the HWIDs include.
-      without_classes: Filter for component classes that the HWIDs don't
-        include.
-      with_components: Filter for components that the HWIDs include.
-      without_components: Filter for components that the HWIDs don't include.
-
-    Returns:
-      A set of HWIDs.
-
-    Raises:
-      InvalidHwidError: If the project is invalid.
-      ProjectMismatchError: If the project is invalid.
-    """
-    project_string = _NormalizeString(project)
-
-    if project_string != self.project:
-      raise ProjectMismatchError(project, project_string)
-
-    hwids_set = set()
-    for hw in self._bom_map:
-      miss_list = self._bom_map[hw]['primary']['classes_missing']
-      vol_ltrs = set()
-      status_fields = ['deprecated', 'eol', 'qualified', 'supported']
-      for field in status_fields:
-        for hw_vol in self._hwid_status_map[field]:
-          if hw in hw_vol:
-            if hw_vol[-1] == '*':
-              vol_ltrs.update(self._volatile_map)
-            else:
-              vol_ltrs.add(hw_vol.rpartition('-')[2])
-      items = list(self._bom_map[hw]['primary']['components'].items())
-      for var in self._bom_map[hw]['variants']:
-        items += list(self._variant_map[var]['components'].items())
-      for vol in vol_ltrs:
-        for cls, comp in self._volatile_map[vol].items():
-          items.append((cls, comp))
-          items.append((comp, self._volatile_value_map[comp]))
-
-      # Populate the class set and component set with data from items
-      all_classes = set()
-      all_components = set()
-      for cls, comp in items:
-        all_classes.add(cls)
-        if isinstance(comp, list):
-          all_components.update(comp)
-        else:
-          all_components.add(comp)
-
-      valid = True
-      if with_classes:
-        for cls in with_classes:
-          if cls in miss_list or cls not in all_classes:
-            valid = False
-      if without_classes:
-        for cls in without_classes:
-          if cls not in miss_list and cls in all_classes:
-            valid = False
-      if with_components:
-        for comp in with_components:
-          if comp not in all_components:
-            valid = False
-      if without_components:
-        for comp in without_components:
-          if comp in all_components:
-            valid = False
-      if valid:
-        hwids_set.add(hw)
-    return hwids_set
-
-  def GetComponentClasses(self, project):
-    """Get a set of all component classes for the given project.
-
-    Overrides superclass method.
-
-    Args:
-      project: The project that you want the component classes of.
-
-    Returns:
-      A set of component classes.
-
-    Raises:
-      ProjectMismatchError: If the project is invalid.
-    """
-    project_string = _NormalizeString(project)
-
-    if project_string != self.project:
-      raise ProjectMismatchError(project, project_string)
-
-    classes_set = set()
-    for hw in self._bom_map:
-      classes_set.update(self._bom_map[hw]['primary']['components'].keys())
-    for var in self._variant_map:
-      classes_set.update(self._variant_map[var]['components'].keys())
-    for vol in self._volatile_map:
-      classes_set.update(self._volatile_map[vol].keys())
-    classes_set.update(self._volatile_value_map.keys())
-    return classes_set
-
-  def GetComponents(self, project, with_classes=None):
-    """Get a filtered dict of all components for the given project.
-
-    Overrides superclass method.
-
-    Args:
-      project: The project that you want the components of.
-      with_classes: Filter for component classes that the dict include.
-
-    Returns:
-      A dict of components.
-
-    Raises:
-      ProjectMismatchError: If the project is invalid.
-    """
-    project_string = _NormalizeString(project)
-
-    if project_string != self.project:
-      raise ProjectMismatchError(project, project_string)
-
-    components = {}
-    all_comps = list()
-    for bom in self._bom_map.values():
-      if bom['primary']['components']:
-        all_comps.extend(bom['primary']['components'].items())
-    for var in self._variant_map.values():
-      if var['components']:
-        all_comps.extend(var['components'].items())
-    for vol in self._volatile_map.values():
-      if vol:
-        for cls, comp in vol.items():
-          all_comps.append((cls, comp))
-          all_comps.append((comp, self._volatile_value_map[comp]))
-
-    for cls, comp in all_comps:
-      if with_classes and cls not in with_classes:
-        continue
-      if cls not in components:
-        components[cls] = set()
-      if isinstance(comp, list):
-        components[cls].update(comp)
-      else:
-        components[cls].add(comp)
-
-    return components
-
-
-class _HwidV3Data(_HwidData):
-  """Wrapper for HWIDv3 data."""
-
-  def __init__(self, project, hwid_file=None, raw_hwid_yaml=None,
-               hwid_data=None):
-    """Constructor.
-
-    Requires one of hwid_file, hwid_yaml or hwid_data.
-
-    Args:
-      project: The project name
-      hwid_file: the path to a file containing the HWID data.
-      raw_hwid_yaml: the raw YAML string of HWID data.
-      hwid_data: parsed HWID data from a HWID file.
-    """
-    self.project = project
-    self.database = None
-
-    self._Seed(hwid_file, raw_hwid_yaml, hwid_data)
-
-  def _SeedFromRawYaml(self, raw_hwid_yaml):
-    """Seeds the object from a yaml string of hwid definitions."""
-    return self._SeedFromData(raw_hwid_yaml)
-
-  def _SeedFromData(self, hwid_data):
-    try:
-      self.database = database.Database.LoadData(hwid_data,
-                                                 expected_checksum=None)
-    except common.HWIDException as ex:
-      raise ProjectUnavailableError(str(ex)) from ex
-
-  def GetBomAndConfigless(self, hwid_string, verbose=False,
-                          waived_comp_categories=None, require_vp_info=False):
-    """Get the BOM and configless field for a given HWID.
-
-    Overrides superclass method.
-
-    Args:
-      hwid_string: The HWID.
-      verbose: Returns all fields in component detail if set to True.
-      waived_comp_categories: List of waived component categories which means
-      they are not verification-payload-related.
-      require_vp_info: A bool to indicate if the is_vp_related field of
-          each component is required.
-
-    Returns:
-      A bom dict and configless field dict.
-      If there is no configless field in given HWID, return Bom dict and None.
-
-    Raises:
-      HwidNotFoundError: If a portion of the HWID is not found or the HWID is
-      invalid.  Note that the V3 library does not distinguish between the two.
-    """
-
-    try:
-      hwid, _bom, configless = hwid_utils.DecodeHWID(
-          self.database, _NormalizeString(hwid_string))
-    except common.HWIDException as e:
-      logging.info('Unable to decode a valid HWID. %s', hwid_string)
-      raise HwidNotFoundError('HWID not found %s' % hwid_string, e)
-
-    bom = Bom()
-
-    bom.AddAllComponents(_bom.components, self.database, verbose=verbose,
-                         waived_comp_categories=waived_comp_categories,
-                         require_vp_info=require_vp_info)
-    bom.phase = self.database.GetImageName(hwid.image_id)
-    bom.project = hwid.project
-
-    return bom, configless
-
-  def GetHwids(self, project, with_classes=None, without_classes=None,
-               with_components=None, without_components=None):
-    """Get a filtered set of HWIDs for the given project.
-
-    Overrides superclass method.
-
-    Args:
-      project: The project that you want the HWIDs of.
-      with_classes: Filter for component classes that the HWIDs include.
-      without_classes: Filter for component classes that the HWIDs don't
-        include.
-      with_components: Filter for components that the HWIDs include.
-      without_components: Filter for components that the HWIDs don't include.
-
-    Returns:
-      A set of HWIDs.
-
-    Raises:
-      ProjectMismatchError: If the project is invalid.
-    """
-    raise NotImplementedError('This method is not supported for v3')
-
-  def GetComponentClasses(self, project):
-    """Get a set of all component classes for the given project.
-
-    This function is supported, but has not yet been implemented.
-
-    Overrides superclass method.
-
-    Args:
-      project: The project that you want the component classes of.
-
-    Returns:
-      A set of component classes.
-
-    Raises:
-      ProjectMismatchError: If the project is invalid.
-    """
-    raise NotImplementedError('This method is not implemented for v3')
-
-  def GetComponents(self, project, with_classes=None):
-    """Get a filtered dict of all components for the given project.
-
-    This function is supported, but has not yet been implemented.
-
-    Overrides superclass method.
-
-    Args:
-      project: The project that you want the components of.
-      with_classes: Filter for component classes that the dict include.
-
-    Returns:
-      A dict of components.
-
-    Raises:
-      ProjectMismatchError: If the project is invalid.
-    """
-    raise NotImplementedError('This method is not implemented for v3')
 
 
 def _NormalizeString(string):
