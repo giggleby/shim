@@ -42,32 +42,25 @@ RUN cd /usr/src/ && \
   ln -s /usr/src/google-cloud-sdk/bin/gcloud /usr/bin/gcloud && \
   ln -s /usr/src/google-cloud-sdk/bin/gsutil /usr/bin/gsutil
 
-# Install factory toolkit.
-ARG GS_BASE="gs://chromeos-releases/dev-channel"
-ARG BOARD="grunt"
-ARG VERSION="14163.0.0"
-ARG TOOLKIT="${GS_BASE}/${BOARD}/${VERSION}/*-factory-*.zip"
-COPY docker/service_account.json /
 COPY docker/install_factory_toolkit.run /tmp
+# Use `docker/factory.zip*` here to prevent the interruption when the file
+# doesn't exist.
+COPY docker/factory.zip* /tmp
 COPY docker/setup/ /tmp/setup
 # We install toolkit, cgpt, and futility here. If `make bundle` is executed,
 # then use the local bundle. Otherwise, download the bundle from gs bucket.
-RUN gcloud auth activate-service-account --key-file=/service_account.json && \
-    (/tmp/install_factory_toolkit.run -- --non-cros --yes || \
-     (gsutil cp "${TOOLKIT}" /tmp/factory.zip && \
-      unzip -o /tmp/factory.zip setup/cgpt setup/futility setup/libx64/* \
+RUN (/tmp/install_factory_toolkit.run -- --non-cros --yes || \
+     (unzip -o /tmp/factory.zip setup/cgpt setup/futility setup/libx64/* \
         toolkit/install_factory_toolkit.run -d /tmp && \
       /tmp/toolkit/install_factory_toolkit.run -- --non-cros --yes)) && \
      cd /tmp/setup && \
      cp -rf libx64 cgpt futility /usr/bin
 
 ENV PYTHONPATH=/usr/local/factory/py_pkg
-ENV GOOGLE_APPLICATION_CREDENTIALS=/service_account.json
 
 # Set user name for finalize_bundle.
 ENV USER bundle_creator
 
 COPY . /usr/local/factory/py/bundle_creator/
 
-CMD gcloud auth activate-service-account --key-file=/service_account.json && \
-    python /usr/local/factory/py/bundle_creator/docker/worker.py
+CMD python /usr/local/factory/py/bundle_creator/docker/worker.py

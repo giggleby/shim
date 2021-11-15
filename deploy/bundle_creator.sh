@@ -9,6 +9,9 @@ FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 LOCAL_BUILD_BUNDLE="${FACTORY_DIR}/build/bundle"
 TOOLKIT_NAME="install_factory_toolkit.run"
 LOCAL_BUILD_TOOLKIT="${LOCAL_BUILD_BUNDLE}/toolkit/${TOOLKIT_NAME}"
+REMOTE_TOOLKIT_VERSION="14163.0.0"
+REMOTE_TOOLKIT_PATH="gs://chromeos-releases/dev-channel/grunt/\
+${REMOTE_TOOLKIT_VERSION}/*-factory-*.zip"
 SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator/"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
@@ -28,6 +31,7 @@ ALLOWED_LOAS_PEER_USERNAMES=
 NOREPLY_EMAIL=
 FAILURE_EMAIL=
 APPENGINE_ID=
+SERVICE_ACCOUNT=
 
 load_config_by_deployment_type() {
   local deployment_type="$1"
@@ -46,13 +50,12 @@ build_docker() {
 
   rsync -avr --exclude="app_engine*" --exclude="proto" "${SOURCE_DIR}"/* \
       "${temp_dir}"
-  cp "${FACTORY_PRIVATE_DIR}/config/bundle_creator/service_account.json" \
-      "${temp_dir}/docker"
   if [ -f "${LOCAL_BUILD_TOOLKIT}" ]; then
     cp "${LOCAL_BUILD_TOOLKIT}" "${temp_dir}/docker"
     cp -rf "${LOCAL_BUILD_BUNDLE}/setup" "${temp_dir}/docker"
   else
     cp -f "/bin/false" "${temp_dir}/docker/${TOOLKIT_NAME}"
+    gsutil cp "${REMOTE_TOOLKIT_PATH}" "${temp_dir}/docker/factory.zip"
     mkdir -p "${temp_dir}/docker/setup"
   fi
   # Fill in env vars in docker/config.py
@@ -137,8 +140,14 @@ deploy_appengine_legacy() {
 
 create_vm() {
   load_config_by_deployment_type "$1"
+
   {
-    gcloud beta compute instance-templates --project="${GCLOUD_PROJECT}" \
+    gcloud compute instance-templates list --project="${GCLOUD_PROJECT}" \
+      --filter="${INSTANCE_TEMPLATE_NAME}" | \
+      grep "${INSTANCE_TEMPLATE_NAME}" && \
+    echo "The specific instance template ${INSTANCE_TEMPLATE_NAME} was created."
+  } || {
+    gcloud compute instance-templates --project="${GCLOUD_PROJECT}" \
       create-with-container "${INSTANCE_TEMPLATE_NAME}" \
       --machine-type=custom-8-16384 \
       --network-tier=PREMIUM --maintenance-policy=MIGRATE \
@@ -147,13 +156,9 @@ create_vm() {
       --boot-disk-device-name="${INSTANCE_TEMPLATE_NAME}" \
       --container-image="${CONTAINER_IMAGE}" \
       --container-restart-policy=always --container-privileged \
-      --labels=container-vm=cos-stable-63-10032-71-0
-  } || {
-    # The vm instance is managed by the instance group, we usually delete a vm
-    # instance by deleting the instance group. And we won't delete the instance
-    # template once it is created. So output the message to ignore the error
-    # message from the creating template command.
-    echo "The specific instance template was created."
+      --labels=container-vm=cos-stable-63-10032-71-0 \
+      --service-account="${SERVICE_ACCOUNT}" \
+      --scopes=cloud-platform
   }
 
   local zone

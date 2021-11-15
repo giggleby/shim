@@ -18,9 +18,6 @@ from cros.factory.bundle_creator.connector import firestore_connector
 from cros.factory.bundle_creator.docker import config
 
 
-SERVICE_ACCOUNT_JSON = '/service_account.json'
-
-
 class CreateBundleException(Exception):
   pass
 
@@ -37,8 +34,7 @@ def CreateBundle(create_bundle_message_proto):
   """
   logger = logging.getLogger('util.create_bundle')
   req = create_bundle_message_proto.request
-  storage_client = storage.Client.from_service_account_json(
-      SERVICE_ACCOUNT_JSON, project=config.GCLOUD_PROJECT)
+  storage_client = storage.Client(project=config.GCLOUD_PROJECT)
   firestore_conn = firestore_connector.FirestoreConnector(config.GCLOUD_PROJECT)
 
   logger.info(text_format.MessageToString(req, as_utf8=True, as_one_line=True))
