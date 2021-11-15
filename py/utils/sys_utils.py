@@ -170,11 +170,10 @@ def MountDeviceAndReadFile(device, path, dut=None):
   with MountPartition(device, dut=dut) as mount_point:
     logging.debug('Mounted at %s.', mount_point)
     if dut is None:
-      content = open(
-          os.path.join(mount_point, path)).read()
+      with open(os.path.join(mount_point, path)) as f:
+        return f.read()
     else:
-      content = dut.ReadSpecialFile(dut.path.join(mount_point, path))
-  return content
+      return dut.ReadSpecialFile(dut.path.join(mount_point, path))
 
 
 def LoadKernelModule(name, error_on_fail=True):

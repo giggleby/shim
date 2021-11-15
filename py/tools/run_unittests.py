@@ -92,7 +92,6 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'py/utils/jsonrpc_utils_unittest.py',
     'py/utils/net_utils_unittest.py',
     'py/utils/pygpt_unittest.py',
-    'py/utils/sys_utils_unittest.py',
     'py/utils/webservice_utils_unittest.py',
 ]
 
