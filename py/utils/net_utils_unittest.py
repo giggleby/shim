@@ -34,7 +34,7 @@ class TimeoutXMLRPCTest(unittest.TestCase):
     self.thread.start()
 
   def tearDown(self):
-    self.server.shutdown()
+    self.server.server_close()
 
   def MakeProxy(self, timeout):
     return net_utils.TimeoutXMLRPCServerProxy(

@@ -164,12 +164,15 @@ class TimeoutXMLRPCTransport(xmlrpc.client.Transport):
   """Transport subclass supporting timeout."""
 
   def __init__(self, *args, timeout=DEFAULT_TIMEOUT, **kwargs):
-    xmlrpc.client.Transport.__init__(self, *args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.timeout = timeout
 
   def make_connection(self, host):
-    conn = http.client.HTTPConnection(host, timeout=self.timeout)
-    return conn
+    if self._connection and self._connection[0]:
+      self.close()
+    self._connection = (host,
+                        http.client.HTTPConnection(host, timeout=self.timeout))
+    return self._connection[1]
 
 
 class TimeoutXMLRPCServerProxy(xmlrpc.client.ServerProxy):
@@ -179,7 +182,7 @@ class TimeoutXMLRPCServerProxy(xmlrpc.client.ServerProxy):
     if timeout:
       kwargs['transport'] = TimeoutXMLRPCTransport(
           timeout=timeout)
-    xmlrpc.client.ServerProxy.__init__(self, uri, *args, **kwargs)
+    super().__init__(uri, *args, **kwargs)
 
 
 def FindUsableEthDevice(raise_exception=False,
