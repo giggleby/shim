@@ -137,6 +137,7 @@ def _GetAllProbeStatementDefinitions():
     builder.AddHexOutputField('product', 'Product ID.')
     builder.AddHexOutputField('vendor', 'Vendor ID.', num_value_digits=4)
     builder.AddStrOutputField('fw_version', 'Firmware version.')
+    builder.AddStrOutputField('device_type', 'Device type.')
     probe_statement_definitions[category] = builder.Build()
 
   builder = probe_config_types.ProbeStatementDefinitionBuilder('camera')

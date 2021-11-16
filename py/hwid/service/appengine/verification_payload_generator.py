@@ -110,6 +110,7 @@ def _GetAllGenericProbeStatementInfoRecords():
               'product',
               'vendor',
               'fw_version',
+              'device_type',
           ], probe_function_argument={'device_type': 'touchpad'}),
       GenericProbeStatementInfoRecord(
           'touchscreen', 'input_device', [
@@ -117,6 +118,7 @@ def _GetAllGenericProbeStatementInfoRecords():
               'product',
               'vendor',
               'fw_version',
+              'device_type',
           ], probe_function_argument={'device_type': 'touchscreen'}),
       GenericProbeStatementInfoRecord(
           'stylus', 'input_device', [
@@ -124,6 +126,7 @@ def _GetAllGenericProbeStatementInfoRecords():
               'product',
               'vendor',
               'fw_version',
+              'device_type',
           ], probe_function_argument={'device_type': 'stylus'}),
   ]
 

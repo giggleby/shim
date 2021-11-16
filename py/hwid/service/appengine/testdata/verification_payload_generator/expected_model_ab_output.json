@@ -197,7 +197,8 @@
           "name",
           "product",
           "vendor",
-          "fw_version"
+          "fw_version",
+          "device_type"
         ]
       },
       {
@@ -206,7 +207,8 @@
           "name",
           "product",
           "vendor",
-          "fw_version"
+          "fw_version",
+          "device_type"
         ]
       },
       {
@@ -215,7 +217,8 @@
           "name",
           "product",
           "vendor",
-          "fw_version"
+          "fw_version",
+          "device_type"
         ]
       }
     ]
@@ -580,6 +583,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -607,6 +614,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -682,6 +693,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1163,6 +1178,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1190,6 +1209,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1217,6 +1240,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1561,6 +1588,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1588,6 +1619,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1615,6 +1650,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1959,6 +1998,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -1986,6 +2029,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -2013,6 +2060,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -2461,6 +2512,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -2488,6 +2543,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
@@ -2515,6 +2574,10 @@
           }
         },
         "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
           "fw_version": [
             false,
             "str"
