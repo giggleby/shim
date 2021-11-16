@@ -118,6 +118,16 @@ def Command(cmd_name, *args, **kwargs):
   return Decorate
 
 
+@Command('get_release_fs_type')
+def GetReleaseFSType(options):
+  """Get the FS type of the stateful partition of the release image."""
+
+  if GetGooftool(options).IsReleaseLVM():
+    print('Release image has LVM stateful partition.')
+  else:
+    print('Release image has EXT4 stateful partition.')
+
+
 @Command('write_hwid',
          CmdArg('hwid', metavar='HWID', help='HWID string'))
 def WriteHWID(options):

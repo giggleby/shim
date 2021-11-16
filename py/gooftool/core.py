@@ -112,6 +112,13 @@ class Gooftool:
     self._named_temporary_file = tempfile.NamedTemporaryFile
     self._db = None
 
+  def IsReleaseLVM(self):
+    """Check if release image has LVM stateful partition."""
+
+    with sys_utils.MountPartition(
+        self._util.GetReleaseRootPartitionPath()) as root:
+      return self._util.UseLVMStatefulPartition(root)
+
   @property
   def db(self):
     """Lazy loader for the HWID database."""
