@@ -53,6 +53,7 @@ TESTS_TO_EXCLUDE = [
     # symbolic link folders
     'py/testlog/utils',
     'py/instalog/testlog',
+    'py/instalog/utils/',
 ]
 # TEST_PASSED_MARK is the .tests-passed file at factory root path
 TEST_PASSED_MARK = os.path.join(FACTORY_ROOT, '.tests-passed')
@@ -75,12 +76,6 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'py/instalog/plugins/output_http_unittest.py',
     'py/instalog/plugins/pull_socket_e2e_unittest.py',
     'py/instalog/plugins/socket_e2e_unittest.py',
-    'py/instalog/utils/file_utils_unittest.py',
-    'py/instalog/utils/jsonrpc_utils_unittest.py',
-    'py/instalog/utils/net_utils_unittest.py',
-    'py/instalog/utils/pygpt_unittest.py',
-    'py/instalog/utils/sys_utils_unittest.py',
-    'py/instalog/utils/webservice_utils_unittest.py',
     'py/test/event_log_unittest.py',
     'py/test/event_log_watcher_unittest.py',
     'py/test/rf/lan_scpi_unittest.py',
