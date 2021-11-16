@@ -105,6 +105,11 @@ deploy/cros_hwid_service.sh deploy prod
 6. Open the AppEngine management page, and watch the traffics are not blocked.
 
 ### Invoking API
+Before invoking the API, you should add your LDAP to `client_allowlist` in
+`$factory-private/config/hwid/service/appengine/configurations.yaml`, and deploy
+the app engine again.
+
+
 Example request for local environment:
 ```bash
 # Before invoking local API, you have to deploy local env
@@ -115,13 +120,22 @@ curl --data '{ "hwidConfigContents": "\n\nchecksum: test\n\n" }' \
 --dump-header - http://localhost:8080/api/chromeoshwid/v1/validateConfig
 ```
 
-Example request for staging/prod environment, using HWID `CHROMEBOOK B2A-M5N`:
+Example request for staging/e2e/prod environment:
 ```bash
-curl "${ENDPOINT_URL}/bom/CHROMEBOOK%20B2A-M5N?key=${APIKEY}"
-```
+# usage:
+#   deploy/cros_hwid_service.sh request [prod|e2e|staging] ${proto_file} ${api}
+#
+# The input should be in prototxt format. See the definition in
+# `py/hwid/service/appengine/proto`
 
-Where **${APIKEY}** can be created from **AppEngine Management Page** ->
-**APIs & Services** -> **Credentials**.
+$ cat > /tmp/request.txt << EOF
+hwid: "AKALI C5B-A4B-E3K-62Q-A8E"
+verbose: true
+EOF
+
+$ ./deploy/cros_hwid_service.sh request staging hwid_api_messages \
+  HwidService.GetBom < /tmp/request.txt
+```
 
 
 ### Test

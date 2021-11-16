@@ -20,9 +20,13 @@ FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/config.sh" || exit 1
+. "${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/test/send_request.sh" \
+  || exit 1
 
 # Following variables will be assigned by `load_config <DEPLOYMENT_TYPE>`
 GCP_PROJECT=
+APP_ID=
+APP_HOSTNAME=
 
 check_docker() {
   if ! type docker >/dev/null 2>&1; then
@@ -157,7 +161,10 @@ do_deploy() {
 
   case "${deployment_type}" in
     "${DEPLOYMENT_LOCAL}")
-      run_in_temp dev_appserver.py "${@}" app.yaml
+      # TODO(wyuang): Update `deploy local` command. (b/206377837)
+      echo \`deploy local\` is no longer available now. Please test \
+        on staging env.
+      exit 1
       ;;
     "${DEPLOYMENT_E2E}")
       run_in_temp gcloud --project="${GCP_PROJECT}" app deploy --no-promote \
@@ -203,6 +210,19 @@ do_test() {
   done
 }
 
+request() {
+  local deployment_type="$2"
+  local proto_file="${FACTORY_DIR}/py/hwid/service/appengine/proto/${3}.proto"
+  local proto_package_prefix="cros.factory.hwid.service.appengine.proto"
+  local rpc_prefix="${proto_package_prefix}.${3}_pb2"
+  local api="${rpc_prefix}.${4}"
+  if ! load_config "${deployment_type}" ; then
+    usage
+    die "Unsupported deployment type: \"${deployment_type}\"."
+  fi
+  send_request "${proto_file}" "${api}" "${APP_ID}" "${APP_HOSTNAME}"
+}
+
 usage() {
   cat << __EOF__
 Chrome OS HWID Service Deployment Script
@@ -214,6 +234,9 @@ commands:
 
   $0 deploy [prod|staging]
       Deploys HWID Service to the given environment by gcloud command.
+
+  $0 request [prod|e2e|staging] \${proto_file} \${api}
+      Send request to HWID Service AppEngine.
 
   $0 deploy local [args...]
       Deploys HWID Service locally via dep_appserver.py tool.  Arguments will
@@ -251,6 +274,9 @@ main() {
       ;;
     test)
       do_test
+      ;;
+    request)
+      request "${@}"
       ;;
     *)
       usage
