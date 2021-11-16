@@ -66,10 +66,11 @@ class SuspendStressTest(test_case.TestCase):
           'Max time in sec during resume per cycle', default=10),
       Arg('resume_delay_min_secs', int,
           'Min time in sec during resume per cycle', default=5),
-      Arg('resume_early_margin_secs', int,
-          'The allowable margin for the DUT to wake early', default=0),
-      Arg('resume_worst_case_secs', int,
-          'The worst case time a device is expected to take to resume',
+      Arg('suspend_time_margin_min_secs', int,
+          'Min seconds of the (actual - expected) suspended time diff',
+          default=0),
+      Arg('suspend_time_margin_max_secs', int,
+          'Max seconds of the (actual - expected) suspended time diff',
           default=30),
       Arg('ignore_wakeup_source', str, 'Wakeup source to ignore', default=None),
       Arg('backup_rtc', bool, 'Use second rtc if present for backup',
@@ -118,8 +119,8 @@ class SuspendStressTest(test_case.TestCase):
         '--suspend_min', str(self.args.suspend_delay_min_secs),
         '--wake_max', str(self.args.resume_delay_max_secs),
         '--wake_min', str(self.args.resume_delay_min_secs),
-        '--wake_early_margin', str(self.args.resume_early_margin_secs),
-        '--wake_worst_case', str(self.args.resume_worst_case_secs),
+        '--suspend_time_margin_min', str(self.args.suspend_time_margin_min_secs),
+        '--suspend_time_margin_max', str(self.args.suspend_time_margin_max_secs),
     ]
     if self.args.ignore_wakeup_source:
       command += ['--ignore_wakeup_source', self.args.ignore_wakeup_source]

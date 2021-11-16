@@ -78,12 +78,12 @@ class SuspendResumeTest(test_case.TestCase):
           'Max time in sec during resume per cycle', default=10),
       Arg('resume_delay_min_secs', int,
           'Min time in sec during resume per cycle', default=5),
-      Arg('resume_early_margin_secs', int,
-          'The allowable margin for the '
-          'DUT to wake early', default=0),
-      Arg('resume_worst_case_secs', int,
-          'The worst case time a device is '
-          'expected to take to resume', default=30),
+      Arg('suspend_time_margin_min_secs', int,
+          'Min seconds of the (actual - expected) suspended time diff',
+          default=0),
+      Arg('suspend_time_margin_max_secs', int,
+          'Max seconds of the (actual - expected) suspended time diff',
+          default=30),
       Arg('suspend_worst_case_secs', int,
           'The worst case time a device is '
           'expected to take to suspend', default=60),
@@ -355,13 +355,13 @@ class SuspendResumeTest(test_case.TestCase):
       Boolean, True if suspend was valid, False if not.
     """
     self.assertGreaterEqual(
-        wake_time, resume_at - self.args.resume_early_margin_secs,
+        wake_time, resume_at + self.args.suspend_time_margin_min_secs,
         'Premature wake detected (%d s early, source=%s), spurious event? '
         '(got touched?)' % (resume_at - wake_time, wake_source or 'unknown'))
     self.assertLessEqual(
-        wake_time, resume_at + self.args.resume_worst_case_secs,
+        wake_time, resume_at + self.args.suspend_time_margin_max_secs,
         'Late wake detected (%ds > %ds delay, source=%s), timer failure?' % (
-            wake_time - resume_at, self.args.resume_worst_case_secs,
+            wake_time - resume_at, self.args.suspend_time_margin_max_secs,
             wake_source or 'unknown'))
 
     actual_count = self._ReadSuspendCount()
