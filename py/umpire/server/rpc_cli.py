@@ -292,6 +292,8 @@ class CLICommand(umpire_rpc.UmpireRPC):
       if 'umpire_sync' in self_active_config:
         if self_active_config['umpire_sync']['active'] is False:
           return {}
+        if not self_active_config['umpire_sync']['secondary_information']:
+          return {}
       umpire_data_dir = f'/{umpire_env.DEFAULT_BASE_DIR}/umpire_data'
       status_file = f'{umpire_data_dir}/{umpire_sync.STATUS_FILENAME}'
       return json_utils.LoadFile(status_file)
