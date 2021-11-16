@@ -478,14 +478,16 @@ class FileHashTest(unittest.TestCase):
 
   def testLegacyMatchesMD5InHex(self):
     # Legacy method calculates the hash all at once.
-    old_hash = hashlib.md5(open(self.temp_file, 'rb').read()).hexdigest()
+    with open(self.temp_file, 'rb') as f:
+      old_hash = hashlib.md5(f.read()).hexdigest()
     new_hash = file_utils.MD5InHex(self.temp_file)
     self.assertEqual(old_hash, new_hash)
 
   def testLegacyMatchesSHA1InBase64(self):
     # Legacy method calculates the hash all at once.
-    old_hash = base64.standard_b64encode(hashlib.sha1(
-        open(self.temp_file, 'rb').read()).digest()).decode('utf-8')
+    with open(self.temp_file, 'rb') as f:
+      old_hash = base64.standard_b64encode(hashlib.sha1(
+          f.read()).digest()).decode('utf-8')
     new_hash = file_utils.SHA1InBase64(self.temp_file)
     self.assertEqual(old_hash, new_hash)
 
