@@ -136,8 +136,6 @@ class ConnectionManager:
       depservices = _DEPSERVICE_LIST
     if subservices is None:
       subservices = _SUBSERVICE_LIST
-    # Black hole for those useless outputs.
-    self.fnull = open(os.devnull, 'w')
 
     assert network_manager in _MANAGER_LIST
     assert process_name in _PROC_NAME_LIST
@@ -172,8 +170,8 @@ class ConnectionManager:
     """Tries to auto-detect the network manager process name."""
     # Try to detects the network manager process with pgrep.
     for process_name in _PROC_NAME_LIST[1:]:
-      if not subprocess.call('pgrep %s' % process_name,
-                             shell=True, stdout=self.fnull):
+      if not subprocess.call('pgrep %s' % process_name, shell=True,
+                             stdout=subprocess.DEVNULL):
         self.process_name = process_name
         return
     raise ConnectionManagerException("Can't find the network manager process")
@@ -299,8 +297,8 @@ class ConnectionManager:
     # Turn on drivers for interfaces.
     for dev in self._GetInterfaces():
       logging.info('ifconfig %s up', dev)
-      subprocess.call('ifconfig %s up' % dev, shell=True, stdout=self.fnull,
-                      stderr=self.fnull)
+      subprocess.call('ifconfig %s up' % dev, shell=True,
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Start network manager.
     for service in self.depservices + [self.network_manager] + self.subservices:
@@ -310,7 +308,8 @@ class ConnectionManager:
         cmd += ' BLOCKED_DEVICES="%s"' % (
             ','.join(self.override_blocklisted_devices))
       logging.info('Call cmd: %s', cmd)
-      subprocess.call(cmd, shell=True, stdout=self.fnull, stderr=self.fnull)
+      subprocess.call(cmd, shell=True, stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL)
 
     # Configure the network manager to auto-connect wireless networks.
     try:
@@ -351,12 +350,12 @@ class ConnectionManager:
     # Stop network manager.
     for service in self.subservices + [self.network_manager] + self.depservices:
       subprocess.call('stop %s' % service, shell=True,
-                      stdout=self.fnull, stderr=self.fnull)
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Turn down drivers for interfaces to really stop the network.
     for dev in self._GetInterfaces():
-      subprocess.call('ifconfig %s down' % dev, shell=True, stdout=self.fnull,
-                      stderr=self.fnull)
+      subprocess.call('ifconfig %s down' % dev, shell=True,
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Delete the configured profiles
     if clear:
