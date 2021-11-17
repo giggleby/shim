@@ -128,7 +128,7 @@ PRESUBMIT_FILES := \
 
 PRESUBMIT_TARGETS := \
   presubmit-deps presubmit-format presubmit-lint presubmit-shebang \
-  presubmit-test presubmit-readme
+  presubmit-test presubmit-markdown
 
 # Virtual targets. The '.phony' is a special hack to allow making targets with
 # wildchar (for instance, overlay-%) to be treated as .PHONY.
@@ -388,7 +388,7 @@ doc:
 	# Generate rst sources for test cases
 	bin/generate_rsts -o $(DOC_TEMP_DIR)
 	# Copy Markdown files to temp dir
-	rsync -am --include="*.png" --include="README.md" --exclude="*"\
+	rsync -am --include="*.png" --include="*.md" --exclude="*"\
 	  --files-from=<(git ls-tree -r HEAD --name-only) . \
 	  $(DOC_TEMP_DIR)/$(DOC_MD_DIR)
 	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) \
@@ -456,8 +456,8 @@ presubmit-deps:
 	    "Please read py/tools/deps.conf for more information." ; \
 	fi
 
-presubmit-readme:
-	@$(MK_DIR)/presubmit_readme.py $(PRESUBMIT_FILES)
+presubmit-markdown:
+	@$(MK_DIR)/presubmit_markdown.py $(PRESUBMIT_FILES)
 
 presubmit-test:
 	@$(MK_DIR)/$@.py $(PRESUBMIT_FILES)

@@ -7,6 +7,7 @@
 #
 
 import os
+import re
 import sys
 import time
 
@@ -22,16 +23,26 @@ SRC_URI_ROOT = (
 
 class MarkdownParser(CommonMarkParser):
   """
-  Add prolog for markdown file
+  Custom parser for Markdown documents.
   """
 
   supported = ['md', 'markdown']
 
   def parse(self, inputstring, document):
     path = document.current_source.split(MD_DIR, 1)[-1]
-    path = path.lstrip('/').rstrip('README.md')
+    path = path.lstrip('/')
     src_uri = os.path.join(SRC_URI_ROOT, path)
+
+    # Add source code link in prolog
     prolog = f'**source code:** [{path}]({src_uri})\n\n'
+
+    # The note syntax is not standard Markdown syntax, replace with bold font:
+    # *** note
+    # SOMTHING
+    # ***
+    # -> **SOMETHING**
+    inputstring = re.sub(r'\*\*\* note *\n(?P<text>.*?)\n\*\*\*',
+                         r'**\g<text>**', inputstring, flags=re.DOTALL)
     super(MarkdownParser, self).parse(prolog + inputstring, document)
 
 
@@ -44,6 +55,12 @@ class ChromiumURLDomain(Domain):
 
   def resolve_any_xref(self, env, fromdocname, builder, target, node, contnode):
     uri = os.path.join('/'.join(fromdocname.split('/')[1:-1]), target)
+
+    # recommonmark will auto trim .md in the links, check if the link refer
+    # to a .md link not in the document page.
+    #
+    # If uri is a .md file, ignore the link and it will automatic refer to
+    # the document page.
     if os.path.exists(os.path.join(MD_DIR, uri + '.md')):
       return []
 

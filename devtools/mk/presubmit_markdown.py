@@ -14,15 +14,20 @@ def main():
   args = parser.parse_args()
 
   def CheckTitleValid(filepath):
-    rawinput = open(filepath, 'r').readlines()
+    rawinput = open(filepath, 'r').read().splitlines()
     codeblock = False
     titles = []
     for i, line in enumerate(rawinput):
       # Skip titles in codeblock.
-      line = line.strip()
-      if not codeblock and line.startswith('```'):
+      # Do strip line only when checking code block syntax to avoid:
+      # "(some spaces)# TEXT"
+      # and
+      # (some spaces)```
+      # # TEXT
+      # (some spaces)```
+      if not codeblock and line.strip().startswith('```'):
         codeblock = True
-      elif codeblock and line == '```':
+      elif codeblock and line.strip() == '```':
         codeblock = False
       if codeblock or len(line) == 0:
         continue
@@ -48,11 +53,11 @@ def main():
   if all([
       CheckTitleValid(filepath)
       for filepath in args.files
-      if filepath.endswith('README.md')
+      if filepath.endswith('.md')
   ]):
     print('Your code looks great, everything is awesome!')
   else:
-    print('README file should contain exactly one title line(h1 header).')
+    print('Markdown file should contain exactly one title line(h1 header).')
     sys.exit(1)
 
 
