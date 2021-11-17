@@ -52,8 +52,14 @@ yaml_loader = yaml.CBaseLoader if yaml.__with_libyaml__ else yaml.BaseLoader
 class OutputFactoryReport(plugin_base.OutputPlugin):
 
   ARGS = [
-      Arg('key_path', str,
-          'Path to BigQuery/CloudStorage service account JSON key file.'),
+      # TODO(chuntsen): Remove key_path argument since we don't use it anymore.
+      Arg(
+          'key_path', str,
+          'Path to BigQuery/CloudStorage service account JSON key file.  If '
+          'set to None, the Google Cloud client will use the default service '
+          'account which is set to the environment variable '
+          'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
+          default=None),
   ]
 
   def __init__(self, *args, **kwargs):

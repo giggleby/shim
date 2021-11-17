@@ -36,11 +36,16 @@ _CHUNK_SIZE = 4 * 1024 * 1024  # 4MB
 class CloudStorage:
   """Wrapper to access Google Cloud Storage."""
 
-  def __init__(self, json_key_path, logger=logging, chunk_size=_CHUNK_SIZE):
+  # TODO(chuntsen): Remove json_key_path argument since we don't use it anymore.
+  def __init__(self, json_key_path=None, logger=logging,
+               chunk_size=_CHUNK_SIZE):
     """Authenticates the connection to Cloud Storage.
 
     Args:
-      json_key_path: Path to the private key (in JSON format) on disk.
+      json_key_path: Path to the private key (in JSON format) on disk. If set to
+                     None, the Google Cloud client will use the default service
+                     account which is set to the environment variable
+                     GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.
       logger: A logging.logger object to record messages.
       chunk_size: Files uploaded to GCS are sent in chunks. Must be a multiple
                   of _CHUNK_SIZE_MULTIPLE.
@@ -51,8 +56,11 @@ class CloudStorage:
 
     self.logger = logger
 
-    credentials = service_account.Credentials.from_service_account_file(
-        json_key_path, scopes=(_GCS_SCOPE,))
+    if json_key_path:
+      credentials = service_account.Credentials.from_service_account_file(
+          json_key_path, scopes=[_GCS_SCOPE])
+    else:
+      credentials = None
     # Google Cloud Storage is depend on bucket instead of project, so we don't
     # need to put project name to arguments. However, this client is general
     # Google Cloud client, so the project can't be None; instead it can be an

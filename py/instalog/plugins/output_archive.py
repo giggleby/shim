@@ -42,17 +42,22 @@ class OutputArchive(output_file.OutputFile):
           Arg('enable_disk', bool,
               'Whether or not to save the archive to disk.  True by default.',
               default=True),
-          Arg('enable_gcs', bool,
+          Arg(
+              'enable_gcs', bool,
               'Whether or not to upload the archive to Google Cloud Storage.  '
-              'False by default.',
-              default=False),
-          Arg('key_path', str,
-              'Path to Cloud Storage service account JSON key file.',
+              'False by default.', default=False),
+          # TODO(chuntsen): Remove key_path argument since we don't use it.
+          Arg(
+              'key_path', str,
+              'Path to Cloud Storage service account JSON key file.  If set to '
+              'None, the Google Cloud client will use the default service '
+              'account which is set to the environment variable '
+              'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
               default=None),
-          Arg('gcs_target_dir', str,
+          Arg(
+              'gcs_target_dir', str,
               'Path to the target bucket and directory on Google Cloud '
-              'Storage.',
-              default=None),
+              'Storage.', default=None),
       ])
 
   def __init__(self, *args, **kwargs):
@@ -75,9 +80,9 @@ class OutputArchive(output_file.OutputFile):
         raise ValueError('If specifying a "key_path" or "gcs_target_dir", '
                          '"enable_gcs" must be set to True')
     if self.args.enable_gcs:
-      if not self.args.key_path or not self.args.gcs_target_dir:
-        raise ValueError('If "enable_gcs" is True, "key_path" and '
-                         '"gcs_target_dir" must be provided')
+      if not self.args.gcs_target_dir:
+        raise ValueError('If "enable_gcs" is True, "gcs_target_dir" must be '
+                         'provided')
 
       from cros.factory.instalog.utils import gcs_utils
       self._gcs = gcs_utils.CloudStorage(self.args.key_path)

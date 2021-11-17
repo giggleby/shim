@@ -18,23 +18,28 @@ _DEFAULT_INTERVAL = 5
 class OutputCloudStorage(plugin_base.OutputPlugin):
 
   ARGS = [
-      Arg('interval', (int, float),
+      Arg(
+          'interval', (int, float),
           'Frequency to re-emit events, if no attachments are encountered. '
           'When attachments are encountered, events are re-emitted right '
-          'after upload.',
-          default=_DEFAULT_INTERVAL),
-      Arg('key_path', str,
-          'Path to Cloud Storage service account JSON key file.'),
+          'after upload.', default=_DEFAULT_INTERVAL),
+      # TODO(chuntsen): Remove key_path argument since we don't use it anymore.
+      Arg(
+          'key_path', str,
+          'Path to Cloud Storage service account JSON key file.  If set to '
+          'None, the Google Cloud client will use the default service account '
+          'which is set to the environment variable '
+          'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
+          default=None),
       Arg('target_dir', str,
           'Path to the target bucket and directory on Google Cloud.'),
-      Arg('use_sha1', bool,
+      Arg(
+          'use_sha1', bool,
           'Use the attachment\'s SHA1 hex-encoded hash as its filename.  '
           'Note that this means multiple attachments may point to the same '
           'file on Cloud Storage.  If set to False, the attachment ID will '
-          'be used as its filename.',
-          default=False),
-      Arg('enable_emit', bool,
-          'Strip events of their attachments and re-emit.',
+          'be used as its filename.', default=False),
+      Arg('enable_emit', bool, 'Strip events of their attachments and re-emit.',
           default=False),
   ]
 

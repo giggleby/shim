@@ -57,8 +57,14 @@ class OutputBigQuery(plugin_base.OutputPlugin):
           default=_DEFAULT_INTERVAL),
       Arg('batch_size', int, 'How many events to queue before transmitting.',
           default=_DEFAULT_BATCH_SIZE),
-      Arg('key_path', str,
-          'Path to BigQuery/CloudStorage service account JSON key file.'),
+      # TODO(chuntsen): Remove key_path argument since we don't use it anymore.
+      Arg(
+          'key_path', str,
+          'Path to BigQuery/CloudStorage service account JSON key file.  If '
+          'set to None, the Google Cloud client will use the default service '
+          'account which is set to the environment variable '
+          'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
+          default=None),
       Arg(
           'gcs_target_dir', str,
           'Path to the target bucket and directory on Google Cloud Storage.  '
@@ -91,8 +97,11 @@ class OutputBigQuery(plugin_base.OutputPlugin):
 
   def BuildClient(self):
     """Builds a BigQuery client object."""
-    credentials = service_account.Credentials.from_service_account_file(
-        self.args.key_path, scopes=(_BIGQUERY_SCOPE,))
+    if self.args.key_path:
+      credentials = service_account.Credentials.from_service_account_file(
+          self.args.key_path, scopes=[_BIGQUERY_SCOPE])
+    else:
+      credentials = None
     return bigquery.Client(project=self.args.project_id,
                            credentials=credentials)
 
