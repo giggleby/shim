@@ -168,7 +168,7 @@ class ReportParser(log_utils.LoggerMixin):
   def ProcessArchive(self, archive_process_event, process_pool):
     """Processes the archive."""
     report_events = [archive_process_event]
-    succeed = 0
+    processed = 0
     async_results = []
     args_queue = multiprocessing.Queue()
     decompress_process = None
@@ -208,18 +208,17 @@ class ReportParser(log_utils.LoggerMixin):
         # TODO(chuntsen): Find a way to stop process pool.
         report_event, process_event = async_result.get()
 
-        if report_event:
-          report_time = report_event['time']
-          if (archive_process_event['time'] == 0 or
-              0 < report_time < archive_process_event['time']):
-            archive_process_event['time'] = report_time
-          report_events.append(report_event)
-          succeed += 1
+        report_time = report_event['time']
+        if (archive_process_event['time'] == 0 or
+            0 < report_time < archive_process_event['time']):
+          archive_process_event['time'] = report_time
+        report_events.append(report_event)
         report_events.append(process_event)
-        if succeed % 1000 == 0:
-          self.info('Parsed %d/%d reports', succeed, total_reports)
+        processed += 1
+        if processed % 1000 == 0:
+          self.info('Parsed %d/%d reports', processed, total_reports)
 
-      self.info('Parsed %d/%d reports', succeed, total_reports)
+      self.info('Parsed %d/%d reports', processed, total_reports)
     except Exception:
       self.exception('Exception encountered')
 
@@ -338,8 +337,7 @@ class ReportParser(log_utils.LoggerMixin):
                 report_basename.rpartition('-')[-1], '%Y%m%dT%H%M%SZ.rpt.xz'))
       report_event['time'] = report_time
       process_event['time'] = report_time
-      report_event, process_event = self.DecompressAndParse(
-          report_path, report_event, process_event)
+      self.DecompressAndParse(report_path, report_event, process_event)
     except Exception as e:
       SetProcessEventStatus(ERROR_CODE.ReportUnknownError, process_event, e)
       self.exception('Exception encountered when processing factory report')
@@ -355,30 +353,30 @@ class ReportParser(log_utils.LoggerMixin):
     with file_utils.TempDirectory(dir=self._tmp_dir) as report_dir:
       if not tarfile.is_tarfile(report_path):
         SetProcessEventStatus(ERROR_CODE.ReportInvalidFormat, process_event)
-        return None, process_event
+        return
       report_tar = tarfile.open(report_path, 'r|xz')
       report_tar.extractall(report_dir)
       process_event['decompressEndTime'] = time.time()
 
       eventlog_path = os.path.join(report_dir, 'events')
       if os.path.exists(eventlog_path):
-        eventlog_report_event, process_event = self.ParseEventlogEvents(
-            eventlog_path, copy.deepcopy(report_event), process_event)
-        if eventlog_report_event:
-          report_event = eventlog_report_event
+        eventlog_report_event = copy.deepcopy(report_event)
+        if self.ParseEventlogEvents(eventlog_path, eventlog_report_event,
+                                    process_event):
+          report_event.payload = eventlog_report_event.payload
       else:
         SetProcessEventStatus(ERROR_CODE.EventlogFileNotFound, process_event)
 
       testlog_path = os.path.join(report_dir, 'var', 'factory', 'testlog',
                                   'events.json')
       if os.path.exists(testlog_path):
-        testlog_report_event, process_event = self.ParseTestlogEvents(
-            testlog_path, copy.deepcopy(report_event), process_event)
-        if testlog_report_event:
-          report_event = testlog_report_event
+        testlog_report_event = copy.deepcopy(report_event)
+        if self.ParseTestlogEvents(testlog_path, testlog_report_event,
+                                   process_event):
+          report_event.payload = testlog_report_event.payload
       else:
         SetProcessEventStatus(ERROR_CODE.TestlogFileNotFound, process_event)
-      return report_event, process_event
+      return
 
   def ParseEventlogEvents(self, path, report_event, process_event):
     """Parses Eventlog file."""
@@ -535,11 +533,11 @@ class ReportParser(log_utils.LoggerMixin):
             sn_value = max(set(sn_list), key=sn_list.count)
             SetSerialNumber(sn_key, sn_value)
 
-      return report_event, process_event
+      return True
     except Exception as e:
       SetProcessEventStatus(ERROR_CODE.EventlogUnknownError, process_event, e)
       self.exception('Failed to parse eventlog events')
-      return None, process_event
+      return False
 
   def ParseTestlogEvents(self, path, report_event, process_event):
     """Parses Testlog file."""
@@ -588,11 +586,11 @@ class ReportParser(log_utils.LoggerMixin):
           except Exception as e:
             SetProcessEventStatus(ERROR_CODE.TestlogUnknownError, process_event,
                                   e)
-      return report_event, process_event
+      return True
     except Exception as e:
       SetProcessEventStatus(ERROR_CODE.TestlogUnknownError, process_event, e)
       self.exception('Failed to parse testlog events')
-      return None, process_event
+      return False
 
 
 ERROR_CODE = type_utils.Obj(
