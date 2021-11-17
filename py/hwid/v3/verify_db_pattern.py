@@ -40,6 +40,11 @@ def _TestDatabase(targs):
   if project_name not in projects_info:
     logging.info('Removing %s in this commit, skipped', project_name)
     return None
+  db_path_in_proj_info = projects_info[project_name]['path']
+  if db_path != db_path_in_proj_info:
+    logging.info('File path %r mismatch DB path in project info %r, skipped',
+                 db_path, db_path_in_proj_info)
+    return None
   try:
     title = '%s %s:%s' % (project_name, commit, db_path)
     logging.info('Checking %s', title)
@@ -84,8 +89,8 @@ class HWIDDBsPatternTest(unittest.TestCase):
     else:
       files = os.environ.get('PRESUBMIT_FILES')
       if files:
-        test_args = [(f.partition('/platform/chromeos-hwid/')[-1],
-                      projects_info, target_commit, hwid_dir)
+        test_args = [(os.path.relpath(
+            f, hwid_dir), projects_info, target_commit, hwid_dir)
                      for f in files.splitlines()]
       else:
         # If PRESUBMIT_FILES is not found, defaults to test all v3 projects in

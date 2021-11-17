@@ -128,9 +128,17 @@ class ValidHWIDDBsTest(unittest.TestCase):
         db_path = os.path.relpath(db_path, hwid_dir)
         project_name = os.path.basename(db_path)
         project_info = projects_info.get(project_name)
-        if ((project_info and project_info.get('version') == 3) or
-            ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.search(db_path)):
-          target_dbs.append((project_name, db_path, project_info))
+        if project_info and project_info.get('version') == 3:
+          if db_path == project_info['path']:
+            if not ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.match(
+                project_info['path']):
+              raise ValueError(
+                  ('Unexpected db path %r.  Expected db path should follow '
+                   'regex pattern %r') %
+                  (db_path,
+                   ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.pattern))
+
+            target_dbs.append((project_name, db_path, project_info))
     else:
       # Verify all HWID v3 databases in unittest.
       target_dbs = [(k, v['path'], v) for k, v in projects_info.items()
