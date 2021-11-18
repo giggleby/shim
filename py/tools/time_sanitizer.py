@@ -153,7 +153,8 @@ class TimeSanitizer:
     minimum_time = self.base_time  # May be None
     if os.path.exists(self.state_file):
       try:
-        state_file_time = float(open(self.state_file).read().strip())
+        with open(self.state_file) as f:
+          state_file_time = float(f.read().strip())
         minimum_time = max(time for time in [minimum_time, state_file_time]
                            if time is not None)
       except Exception:

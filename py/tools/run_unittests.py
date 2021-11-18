@@ -83,7 +83,6 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'py/tools/image_tool_rma_unittest.py',
     'py/tools/image_tool_unittest.py',
     'py/tools/make_par_unittest.py',
-    'py/tools/time_sanitizer_unittest.py',
 ]
 
 
