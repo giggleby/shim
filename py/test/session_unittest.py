@@ -73,8 +73,8 @@ class SessionTest(unittest.TestCase):
     for i in range(-1, 5):
       self.assertEqual(i, session.GetInitCount())
       session.IncrementInitCount()
-      self.assertEqual(str(i + 1),
-                       open(session.INIT_COUNT_PATH).read())
+      with open(session.INIT_COUNT_PATH) as f:
+        self.assertEqual(str(i + 1), f.read())
 
 
 if __name__ == '__main__':
