@@ -69,7 +69,7 @@ class MockServerHandler(socketserver.StreamRequestHandler):
 
   def __init__(self, *args, **kwargs):
     self.lookup = list(self.responses_lookup)
-    socketserver.StreamRequestHandler.__init__(self, *args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def handle(self):
     while True:
@@ -251,7 +251,8 @@ class N1914ATest(unittest.TestCase):
 
   def tearDown(self):
     self.n1914a.Close()
-    self.mock_server.shutdown()  # pylint: disable=no-member
+    self.mock_server.server_close()
+
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)

@@ -79,7 +79,6 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'py/test/event_log_unittest.py',
     'py/test/event_log_watcher_unittest.py',
     'py/test/rf/lan_scpi_unittest.py',
-    'py/test/rf/n1914a_unittest.py',
     'py/testlog/testlog_seq_unittest.py',
     'py/testlog/testlog_unittest.py',
     'py/tools/image_tool_rma_unittest.py',
