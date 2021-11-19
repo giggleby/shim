@@ -109,17 +109,55 @@ Before invoking the API, you should add your LDAP to `client_allowlist` in
 `$factory-private/config/hwid/service/appengine/configurations.yaml`, and deploy
 the app engine again.
 
-
-Example request for local environment:
+#### Local Server
+Run local server:
 ```bash
-# Before invoking local API, you have to deploy local env
-deploy/cros_hwid_service.sh deploy local
-# Now you can test HWID Service locally.
-curl http://localhost:8080/api/chromeoshwid/v1/boards
-curl --data '{ "hwidConfigContents": "\n\nchecksum: test\n\n" }' \
---dump-header - http://localhost:8080/api/chromeoshwid/v1/validateConfig
+deploy/cros_hwid_service.sh build local
+deploy/cros_hwid_service.sh deploy local ${redis_rdb}
 ```
 
+Example request for local server:
+
+* Shell:
+```bash
+HWID_API_MESSAGES_PACKAGE="cros.factory.hwid.service.appengine.proto.hwid_api_messages_pb2"
+PROTO_PATH="${FACTORY_REPO}/py/hwid/service/appengine/proto"
+PROTO_FILE="${PROTO_PATH}/hwid_api_messages.proto"
+
+bom_request() {
+  local request="$(echo -e "hwid: 'DRALLION360-ZZCR A3B-A3G-D4Y-Q8I-A9W'\nverbose: true" | \
+    protoc --encode "${HWID_API_MESSAGES_PACKAGE}.BomRequest" \
+    --proto_path="${PROTO_PATH}" "${PROTO_FILE}" | base64)"
+
+  echo "${request}" | base64 -d | \
+    curl -s -XPOST localhost:5000/_ah/stubby/HwidService.GetBom \
+      --data-binary @- | \
+    protoc --decode "${HWID_API_MESSAGES_PACKAGE}.BomResponse" \
+      --proto_path="${PROTO_PATH}" "${PROTO_FILE}"
+}
+```
+
+* Python:
+```python
+# Copy the generated hwid_api_messages_pb2.py to local
+import hwid_api_messages_pb2
+import urllib.request
+
+
+def get_bom():
+  msg = hwid_api_messages_pb2.BomRequest(
+      hwid='DRALLION360-ZZCR A3B-A3G-D4Y-Q8I-A9W',
+      verbose=True)
+  payload = msg.SerializeToString()
+  req = urllib.request.Request('http://localhost:5000/_ah/stubby/HwidService.GetBom', data=payload)
+  with urllib.request.urlopen(req) as fp:
+    resp = hwid_api_messages_pb2.BomResponse()
+    resp.ParseFromString(fp.read())
+    print(resp)
+```
+
+
+#### AppEngine
 Example request for staging/e2e/prod environment:
 ```bash
 # usage:

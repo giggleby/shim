@@ -64,7 +64,8 @@ def _PrepareTests(test_names):
 
 def _BuildDockerImage():
   """Builds docker image and returns the image tag."""
-  out = process_utils.CheckOutput([DEPLOY_SCRIPT, 'build'], log=True)
+  out = process_utils.CheckOutput([DEPLOY_SCRIPT, 'build', 'integration_test'],
+                                  log=True)
   return re.search(r'^Successfully tagged (\w+:\w+)', out,
                    re.MULTILINE).group(1)
 

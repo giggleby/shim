@@ -12,7 +12,7 @@ tests over it. The image contains several python packges, including:
 
 ### Test Procedure
 1. Integration test driver `integration_test.py` builds an AppEngine integrated
-   docker image by calling `deploy/cros_hwid_service.sh build`.
+   docker image by calling `deploy/cros_hwid_service.sh build integration_test`.
 2. Runs the docker image.
 3. After the docker image starts up, it then runs all tests
   `py/hwid/service/appengine/*_test.py`.
@@ -40,8 +40,8 @@ The factory root is at `/usr/src/cros/factory`
 Running end-to-end tests.
 
 ### Test Procedure
-Before running the e2e_test, you have to deploy HWID Service staging by
-`cros_hwid_service.sh deploy staging`.
+Before running the e2e\_test, you have to deploy HWID Service staging by
+`cros_hwid_service.sh deploy e2e`.
 1. Loads the test config in [factory-private][1] repository.
 2. Runs the tests described in the config.
 

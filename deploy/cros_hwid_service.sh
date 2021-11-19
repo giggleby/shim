@@ -161,10 +161,39 @@ do_deploy() {
 
   case "${deployment_type}" in
     "${DEPLOYMENT_LOCAL}")
-      # TODO(wyuang): Update `deploy local` command. (b/206377837)
-      echo \`deploy local\` is no longer available now. Please test \
-        on staging env.
-      exit 1
+      check_docker
+
+      local redis_rdb="$1"
+      local redis_mount=()
+      if [ -f "${redis_rdb}" ]; then
+        redis_mount+=(--volume "${redis_rdb}:/dump.rdb")
+      else
+        echo "WARNING: redis DB not found or not provided. Will use an empty DB"
+      fi
+
+      # NOTE: we don't need to add `/build:/build/protobuf_out` in `PYTHONPATH`
+      # manually since
+      # 1. `/build` will be add by `flask run`[1].
+      # 2. `/build/protobuf_out` is added by
+      #    `/py/hwid/service/appengine/__init__.py`
+      #
+      # [1]https://github.com/pallets/flask/blob/6b0c8cdac1fb9bbec88de3a514907c1
+      # 9e372c72a/src/flask/cli.py#L191
+
+      # TODO(wyuang): load datastore in docker container
+      ${DOCKER} run --tty --interactive --publish "127.0.0.1:5000:5000" \
+        "${redis_mount[@]}" \
+        --volume "${TEMP_DIR}:/build:ro" \
+        --env CROS_REGIONS_DATABASE="/build/resource/cros-regions.json" \
+        --env FLASK_APP="/build/cros/factory/hwid/service/appengine/app.py" \
+        --env FLASK_ENV="development" \
+        --env PYTHONPATH="/usr/src/lib" \
+        "hwid_service_local" \
+        bash -c "redis-server & \
+          /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
+          start --consistency=1 & \
+          python -m flask run --host 0.0.0.0"
+
       ;;
     "${DEPLOYMENT_E2E}")
       run_in_temp gcloud --project="${GCP_PROJECT}" app deploy --no-promote \
@@ -183,13 +212,26 @@ do_deploy() {
 do_build() {
   check_docker
 
+  local deployment_type="$1"
   local dockerfile="${TEST_DIR}/Dockerfile"
+
+  case "${deployment_type}" in
+    integration_test)
+      local docker_tag="appengine_integration"
+      ;;
+    local)
+      local docker_tag="hwid_service_local"
+      ;;
+    *)
+      usage
+      die "Unsupported deployment type: ${deployment_type}"
+  esac
 
   do_make_build_folder
 
   ${DOCKER} build \
     --file "${dockerfile}" \
-    --tag "appengine_integration" \
+    --tag "${docker_tag}" \
     "${TEMP_DIR}"
 }
 
@@ -211,15 +253,17 @@ do_test() {
 }
 
 request() {
-  local deployment_type="$2"
-  local proto_file="${FACTORY_DIR}/py/hwid/service/appengine/proto/${3}.proto"
+  local deployment_type="$1"
+  local proto_file="${FACTORY_DIR}/py/hwid/service/appengine/proto/${2}.proto"
   local proto_package_prefix="cros.factory.hwid.service.appengine.proto"
-  local rpc_prefix="${proto_package_prefix}.${3}_pb2"
-  local api="${rpc_prefix}.${4}"
+  local rpc_prefix="${proto_package_prefix}.${2}_pb2"
+  local api="${rpc_prefix}.${3}"
+
   if ! load_config "${deployment_type}" ; then
     usage
     die "Unsupported deployment type: \"${deployment_type}\"."
   fi
+
   send_request "${proto_file}" "${api}" "${APP_ID}" "${APP_HOSTNAME}"
 }
 
@@ -238,17 +282,17 @@ commands:
   $0 request [prod|e2e|staging] \${proto_file} \${api}
       Send request to HWID Service AppEngine.
 
-  $0 deploy local [args...]
-      Deploys HWID Service locally via dep_appserver.py tool.  Arguments will
-      be delegated to the tool.
+  $0 deploy local \${redis_rdb}
+      Deploys HWID Service locally in a docker container. If \${redis_rdb} is
+      not provided, it will initialize an empty DB.
 
   $0 deploy e2e
       Deploys HWID Service to the staging server with specific version
       "e2e-test" which would not be affected with versions under development
       but just for end-to-end testing purpose.
 
-  $0 build
-      Builds docker image for AppEngine integration test.
+  $0 build [local|integration_test]
+      Builds docker image for AppEngine integrationor test or local server.
 
   $0 test
       Runs all executables in the test directory.
@@ -268,14 +312,16 @@ main() {
         die "Unsupported deployment type: \"${deployment_type}\"."
       fi
       do_deploy "${deployment_type}" "${@}"
-       ;;
+      ;;
     build)
-      do_build
+      shift
+      do_build "${@}"
       ;;
     test)
       do_test
       ;;
     request)
+      shift
       request "${@}"
       ;;
     *)
