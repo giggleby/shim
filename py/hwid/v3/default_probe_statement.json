@@ -238,8 +238,7 @@
       "keys": [
         "name",
         "product",
-        "vendor",
-        "fw_version"
+        "vendor"
       ]
     }
   },
