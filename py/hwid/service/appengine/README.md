@@ -53,6 +53,27 @@ There are three environments to deploy to:
 
 ### AppEngine Deployment Flow
 
+#### Run Local Server
+Download database:
+  * Redis:
+    1. GCP console -> Memorystore -> Redis -> Export -> Select bucket -> Export
+    2. GCP console -> Cloud Storage -> Select bucket -> Download redis rdb
+
+  * Datastore:
+    1. GCP console -> memorystore -> Export
+    2. Select namespace="all namespace" -> Select bucket -> Export
+    3. GCP console -> Cloud Storage -> Select bucket -> Download Datastore folder
+
+Run local server:
+```bash
+export REDIS_RDB=${redis_rdb}
+export DATASTORE=${datastore}
+
+deploy/cros_hwid_service.sh build local
+deploy/cros_hwid_service.sh deploy local
+```
+
+#### Deploy Staging/Prod
 1. Make sure the contents of three repos is what you want:
   - [chromeos-hwid](http://go/chromeos-hwid-git/)
   - [factory](http://go/factory-git/)
@@ -109,13 +130,7 @@ Before invoking the API, you should add your LDAP to `client_allowlist` in
 `$factory-private/config/hwid/service/appengine/configurations.yaml`, and deploy
 the app engine again.
 
-#### Local Server
-Run local server:
-```bash
-deploy/cros_hwid_service.sh build local
-deploy/cros_hwid_service.sh deploy local ${redis_rdb}
-```
-
+#### Local
 Example request for local server:
 
 * Shell:

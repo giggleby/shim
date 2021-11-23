@@ -17,6 +17,10 @@ DEPLOYMENT_STAGING="staging"
 DEPLOYMENT_LOCAL="local"
 DEPLOYMENT_E2E="e2e"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
+# shellcheck disable=SC2269
+REDIS_RDB="${REDIS_RDB}"
+# shellcheck disable=SC2269
+DATASTORE="${DATASTORE}"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/config.sh" || exit 1
@@ -163,37 +167,47 @@ do_deploy() {
     "${DEPLOYMENT_LOCAL}")
       check_docker
 
-      local redis_rdb="$1"
+      cp -l "${APPENGINE_DIR}/deploy_local.sh" "${TEMP_DIR}"
+
+      # Mount redis db in docker
       local redis_mount=()
-      if [ -f "${redis_rdb}" ]; then
-        redis_mount+=(--volume "${redis_rdb}:/dump.rdb")
+      if [ -f "${REDIS_RDB}" ]; then
+        redis_mount+=(--volume "${REDIS_RDB}:/dump.rdb")
       else
         echo "WARNING: redis DB not found or not provided. Will use an empty DB"
       fi
 
+      # Mount datastore db in docker
+      local datastore_mount=()
+      local datastore_dir
+      local entity_file
+      if [ -f "${DATASTORE}" ]; then
+        datastore_dir=$(dirname "${DATASTORE}")
+        entity_file=$(basename "${DATASTORE}" )
+        datastore_mount+=(--volume "${datastore_dir}:/datastore")
+        datastore_mount+=(--env ENTITY_FILE="${entity_file}")
+      else
+        echo \
+          "WARNING: Datastore not found or not provided. Will use an empty DB"
+      fi
+
+      # Run docker
       # NOTE: we don't need to add `/build:/build/protobuf_out` in `PYTHONPATH`
       # manually since
       # 1. `/build` will be add by `flask run`[1].
       # 2. `/build/protobuf_out` is added by
       #    `/py/hwid/service/appengine/__init__.py`
       #
-      # [1]https://github.com/pallets/flask/blob/6b0c8cdac1fb9bbec88de3a514907c1
-      # 9e372c72a/src/flask/cli.py#L191
-
-      # TODO(wyuang): load datastore in docker container
+      # [1]https://github.com/pallets/flask/blob/6b0c8cda/src/flask/cli.py#L191
       ${DOCKER} run --tty --interactive --publish "127.0.0.1:5000:5000" \
-        "${redis_mount[@]}" \
+        "${redis_mount[@]}" "${datastore_mount[@]}" \
         --volume "${TEMP_DIR}:/build:ro" \
         --env CROS_REGIONS_DATABASE="/build/resource/cros-regions.json" \
         --env FLASK_APP="/build/cros/factory/hwid/service/appengine/app.py" \
         --env FLASK_ENV="development" \
         --env PYTHONPATH="/usr/src/lib" \
         "hwid_service_local" \
-        bash -c "redis-server & \
-          /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
-          start --consistency=1 & \
-          python -m flask run --host 0.0.0.0"
-
+        bash "/build/deploy_local.sh"
       ;;
     "${DEPLOYMENT_E2E}")
       run_in_temp gcloud --project="${GCP_PROJECT}" app deploy --no-promote \
@@ -282,9 +296,10 @@ commands:
   $0 request [prod|e2e|staging] \${proto_file} \${api}
       Send request to HWID Service AppEngine.
 
-  $0 deploy local \${redis_rdb}
-      Deploys HWID Service locally in a docker container. If \${redis_rdb} is
-      not provided, it will initialize an empty DB.
+  $0 deploy local
+      Deploys HWID Service locally in a docker container. It will load the
+      database from environment variables \$REDIS_RDB and \$DATASTORE. If the
+      database is not provided, it will initialize an empty DB.
 
   $0 deploy e2e
       Deploys HWID Service to the staging server with specific version

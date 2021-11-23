@@ -41,8 +41,6 @@ def _CronJobHandler(service, method):
 def _CreateApp():
   app = flask.Flask(__name__)
   app.url_map.strict_slashes = False
-  import sys
-  print(sys.path)
 
   app.route('/cron/<service>.<method>', methods=('GET', ))(_CronJobHandler)
 
