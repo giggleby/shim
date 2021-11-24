@@ -525,7 +525,7 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
       logging.info('Restoring %s...', path_to_file)
       process_utils.Spawn(
           ['tar', '-xpvf', path_to_file, '-C', STATEFUL_PARTITION_PATH],
-          check_call=True, log=True)
+          check_call=True, log=True, log_stderr_on_error=True)
 
   clobber_state_env = os.environ.copy()
   clobber_state_env.update(ROOT_DEV=release_rootfs,
@@ -540,7 +540,7 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
       wipe_args += ' setup_lvm'
 
   process_utils.Spawn(['clobber-state', wipe_args], env=clobber_state_env,
-                      check_call=True, log=True)
+                      check_call=True, log=True, log_stderr_on_error=True)
 
   # clobber-state will build LVM stateful partition if
   # `USE_LVM_STATEFUL_PARTITION=1` in `chromeos_startup`.

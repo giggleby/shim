@@ -99,8 +99,8 @@ class TmpChroot:
     files_dirs = list(filter(os.path.exists, files_dirs))
     process_utils.Spawn(('tar -h -c %s | '
                          'tar -C %s -x --skip-old-files' %
-                         (' '.join(files_dirs), self.new_root)),
-                        shell=True, call=True, log=True)
+                         (' '.join(files_dirs), self.new_root)), shell=True,
+                        call=True, log=True, log_stderr_on_error=True)
 
     self.logger.debug('copy necessary binaries')
     bin_deps = self.binary_list + ['python3', 'busybox']
@@ -113,16 +113,17 @@ class TmpChroot:
     # remove binaries that are not found
     bin_paths = {k: v for (k, v) in bin_paths if v}
     # copy binaries and their dependencies
-    process_utils.Spawn(
-        ('tar -ch $(lddtree -l %s 2>/dev/null | sort -u) | '
-         'tar -C %s -x --skip-old-files' %
-         (' '.join(bin_paths.values()), self.new_root)),
-        check_call=True, shell=True, log=True)
+    process_utils.Spawn(('tar -ch $(lddtree -l %s 2>/dev/null | sort -u) | '
+                         'tar -C %s -x --skip-old-files' %
+                         (' '.join(bin_paths.values()), self.new_root)),
+                        check_call=True, shell=True, log=True,
+                        log_stderr_on_error=True)
 
     # install busybox for common utilities
-    process_utils.Spawn(
-        [os.path.join(self.new_root, 'bin', 'busybox'), '--install',
-         os.path.join(self.new_root, 'bin')], check_call=True, log=True)
+    process_utils.Spawn([
+        os.path.join(self.new_root, 'bin', 'busybox'), '--install',
+        os.path.join(self.new_root, 'bin')
+    ], check_call=True, log=True, log_stderr_on_error=True)
 
     # create /etc/issue
     open(os.path.join(self.new_root, 'etc', 'issue'), 'w').write(self.etc_issue)
