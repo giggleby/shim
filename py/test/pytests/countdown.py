@@ -262,7 +262,9 @@ class CountDownTest(test_case.TestCase):
 
     if not self.args.allow_invalid_temp:
       for sensor, temp in status.temperatures.items():
-        if temp <= 0:
+        if temp is None:
+          warnings.append('Cannot read temperature sensor %s.' % sensor)
+        elif temp <= 0:
           warnings.append('Thermal zone %s reports abnormal temperature %d'
                           % (sensor, temp))
 
