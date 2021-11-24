@@ -339,6 +339,13 @@ class Goofy:
     self.goofy_server.AddHTTPGetHandler(
         '/event', self.web_socket_manager.handle_web_socket)
 
+  def SaveDataForNextBoot(self):
+    # Save pending test list in the state server
+    self.state_instance.DataShelfSetValue(TESTS_AFTER_SHUTDOWN,
+                                          self.test_list_iterator)
+    # Save shutdown time
+    self.state_instance.DataShelfSetValue('shutdown_time', time.time())
+
   def Shutdown(self, operation):
     """Starts shutdown procedure.
 
@@ -375,11 +382,7 @@ class Goofy:
       return
 
     logging.info('Start Goofy shutdown (%s)', operation)
-    # Save pending test list in the state server
-    self.state_instance.DataShelfSetValue(
-        TESTS_AFTER_SHUTDOWN, self.test_list_iterator)
-    # Save shutdown time
-    self.state_instance.DataShelfSetValue('shutdown_time', time.time())
+    self.SaveDataForNextBoot()
 
     with self.env.lock:
       self.event_log.Log('shutdown', operation=operation)
@@ -395,10 +398,10 @@ class Goofy:
       self.event_client.post_event(Event(Event.Type.PENDING_SHUTDOWN))
 
   def _HandleShutdownComplete(self, test):
-    """Handles the case where a shutdown was detected during a shutdown step.
+    """Handles the case where a shutdown/reboot was detected as expected.
 
     Args:
-      test: The ShutdownStep.
+      test: The test which is allowed reboot.
     """
     test_state = test.UpdateState(increment_shutdown_count=1)
     logging.info('Detected shutdown (%d of %d)',
@@ -407,8 +410,8 @@ class Goofy:
     tests_after_shutdown = self.state_instance.DataShelfGetValue(
         TESTS_AFTER_SHUTDOWN, optional=True)
 
-    # Make this shutdown test the next test to run.  This is to continue on
-    # post-shutdown verification in the shutdown step.
+    # The test should handle the following execution after shutdown/reboot.
+    # Re-run the test for post-shutdown verification.
     if not tests_after_shutdown:
       goofy_error = 'TESTS_AFTER_SHUTDOWN is not set'
       self.state_instance.DataShelfSetValue(
@@ -447,18 +450,9 @@ class Goofy:
       test_state = test.GetState()
       if test_state.status != TestState.ACTIVE:
         continue
-      if isinstance(test, test_object.ShutdownStep):
-        # Shutdown while the test was active - that's good.
+      if test.allow_reboot:
+        # Shutdown/Reboot while the test was active - that's good.
         self._HandleShutdownComplete(test)
-      elif test.allow_reboot:
-        is_unexpected_shutdown = True
-        test.UpdateState(status=TestState.UNTESTED)
-        # For "allow_reboot" tests (such as "Start"), don't cancel
-        # pending tests, since reboot is expected.
-        session.console.info('Unexpected shutdown while test %s was running. '
-                             'The test is marked as allow_reboot, continuing '
-                             'on pending tests.',
-                             test.path)
       else:
         def GetUnexpectedShutdownTestRun():
           """Returns a StationTestRun for test not collected properly"""

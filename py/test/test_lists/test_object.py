@@ -671,6 +671,10 @@ class ShutdownStep(FactoryTest):
         REBOOT, HALT, or DIRECT_EC_REBOOT).
   """
 
+  # TODO(jasonchuang): Considered to remove or rewrite. Reboot might not be
+  # an independent step in some tests. We should find a more gerneal way.
+  # Look ap_ro_verification.py as an example.
+
   ShutdownTypes = type_utils.Enum(
       ['reboot', 'full_reboot', 'halt', 'direct_ec_reboot'])
 

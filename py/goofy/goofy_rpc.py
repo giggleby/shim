@@ -345,6 +345,9 @@ class GoofyRPC:
     """Cancels all pending tests."""
     self._InRunQueue(self.goofy.CancelPendingTests, timeout_secs=timeout_secs)
 
+  def SaveDataForNextBoot(self, timeout_secs=DEFAULT_GOOFY_RPC_TIMEOUT_SECS):
+    self._InRunQueue(self.goofy.SaveDataForNextBoot, timeout_secs=timeout_secs)
+
   def Shutdown(self, operation):
     """Starts a shutdown operation through Goofy.
 

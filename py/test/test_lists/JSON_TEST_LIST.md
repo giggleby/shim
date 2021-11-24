@@ -100,9 +100,8 @@ when running the test.
 More specifically, when goofy starts up, it checks if the last running test is
 marked as `allow_reboot` or not. If it's `false`, it means an unexpected
 shutdown just happened, so it stops all pending tests and waits for further
-manual inspection. If it's `true`, it means the shutdown is allowed. The test
-will be marked as `UNTESTED`, and re-run this test if `auto_run_on_start`
-is set to `true` on the test list.
+manual inspection. If it's `true`, it means the shutdown is allowed or expected,
+and the test will be re-run.
 
 Please use this option with care. The rule of thumb is to properly shutdown the
 DUT whenever possible, by using the shutdown test. One usage of this option is

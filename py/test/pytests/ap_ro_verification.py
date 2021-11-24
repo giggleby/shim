@@ -41,12 +41,14 @@ To test AP RO verification, add this to test list::
 """
 
 import logging
+
 from cros.factory.device import device_utils
-from cros.factory.test.i18n import _
-from cros.factory.test import test_case
 from cros.factory.gooftool.core import Gooftool
-from cros.factory.utils.arg_utils import Arg
 from cros.factory.test import device_data
+from cros.factory.test.i18n import _
+from cros.factory.test import state
+from cros.factory.test import test_case
+from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import string_utils
 
 
@@ -69,6 +71,7 @@ class APROVerficationTest(test_case.TestCase):
       raise Exception('Please run this test without setting board id.')
     self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
+    self.goofy = state.GetInstance()
     self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
 
   def GetStatus(self):
@@ -100,6 +103,8 @@ class APROVerficationTest(test_case.TestCase):
       if status != 'RO_STATUS_PASS':
         self.HandleError(status)
     else:
+      self.goofy.SaveDataForNextBoot()
+
       logging.info('Start setting RO hash.')
       self.gooftool.Cr50SetROHash()
       device_data.UpdateDeviceData({self.device_data_key: True})
