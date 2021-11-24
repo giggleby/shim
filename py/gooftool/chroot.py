@@ -22,7 +22,7 @@ class TmpChroot:
   """
 
   def __init__(self, new_root, binary_list=None, file_dir_list=None,
-               etc_issue=None, logfile=None, size='1024M'):
+               etc_issue=None, logfile=None, size='2048M'):
     """The constructor.
 
     Args:
@@ -36,7 +36,7 @@ class TmpChroot:
           in this list.
       etc_issue: A string that will be saved in `<new_root>/etc/issue`.
       logfile: Path to the log file, default will be '/tmp/gooftool.chroot.log'
-      size: A string for size of the tmpfs, default '1024M'
+      size: A string for size of the tmpfs, default '2048M'
     """
     self.new_root = os.path.realpath(new_root)
     assert self.new_root != '/', 'new root cannot be /'
