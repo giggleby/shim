@@ -44,7 +44,6 @@ KNOWN_RO_DATA = {
     'sku_number': ANY,
     'model_name': ANY,
     'service_tag': ANY,
-    'dsm_calib': r'[0-9a-f ]*',
     'oem_device_requisition': ANY,
     'attested_device_id': ANY,
     # See util/vpd_icc in https://crrev.com/c/2058225
@@ -100,4 +99,7 @@ DEPRECATED_RO_DATA = {
     # This is moved to CBFS, please check with RF eng if this really needs to be
     # added to your project.
     r'wifi_sar[0-9]*': ANY,
+    # dsm_calib is deprecated, please use dsm_calib_r0_N and dsm_calib_temp_N
+    # instead.
+    'dsm_calib': r'[0-9a-f ]*',
 }

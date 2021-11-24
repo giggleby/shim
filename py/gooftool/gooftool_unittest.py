@@ -192,6 +192,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._cros_config.GetWhiteLabelTag.return_value = (True,
                                                                  'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
+    self._gooftool._cros_config.GetSpeakerAmp.return_value = ''
 
   def testVerifyECKeyWithPubkeyHash(self):
     f = MockFile()
@@ -514,6 +515,20 @@ class GooftoolTest(unittest.TestCase):
         partition=vpd.VPD_READONLY_PARTITION_NAME)
     self._gooftool._vpd.GetAllData.assert_any_call(
         partition=vpd.VPD_READWRITE_PARTITION_NAME)
+
+  def testVerifyVPD_SmartAmpNoDSM(self):
+    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
+                        rw=self._SIMPLE_VALID_RW_VPD_DATA)
+    self._gooftool._util.shell.return_value = Obj(
+        stdout=' INTERNAL_SPEAKER 2*Speaker', success=True)
+    self._gooftool._cros_config.GetSpeakerAmp.return_value = 'MAX98373'
+    # Should fail, since dsm calib is missing.
+    # Since the dictionary ordering is not deterministic, we use regex to parse
+    # the error messages.
+    dsm_string_regex = 'dsm_calib_(?:temp|r0)_[0-1]'
+    self.assertRaisesRegex(
+        Error, 'Missing required RO VPD values: (?:%s,){3}%s' %
+        (dsm_string_regex, dsm_string_regex), self._gooftool.VerifyVPD)
 
   def testVerifyVPD_NoRegion(self):
     ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()

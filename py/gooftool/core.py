@@ -56,6 +56,12 @@ _DLCMETADATADIR = 'opt/google/dlc'
 
 _DLC_ERROR_TEMPLATE = 'Please run check_image_version.py to do re-imaging.'
 
+# These are the amplifiers which should output VPD values dsm_calib_temp_* and
+# dsm_calib_r0_* after calibration. We update this list according to
+# `src/third_party/adhd/sound_card_init/amp/src/lib.rs`. See b/185076767 for
+# more information.
+_AMP_LIST = ('ALC1011', 'MAX98373', 'MAX98390')
+
 
 class CrosConfigError(Error):
   message_template = '%s. Identity may be misconfigured.\n%s\n%s'
@@ -605,6 +611,53 @@ class Gooftool:
   def VerifyVPD(self):
     """Verify that VPD values are set properly."""
 
+    def GetNumberOfInternalSpeaker():
+      """Get the number of internal speaker via cras_test_client."""
+      result = self._util.shell('cras_test_client')
+      if not result.success:
+        raise Error(
+            'Failed to get the number of internal speaker: ' % result.stdout)
+      match_result = re.search(r'^.+?INTERNAL_SPEAKER\s+([0-9]+)\*Speaker',
+                               result.stdout, re.MULTILINE)
+      if not match_result:
+        raise Error('No internal speaker found!')
+
+      logging.info('Number of internal speaker found: %s',
+                   match_result.group(1))
+
+      return int(match_result.group(1))
+
+    def GetRequriedVPDROData():
+      """Return the required VPD RO data.
+
+      If a DUT comes with a smart amplifier, it must be calibrated in factory
+      and the DSM-related VPD values must be set.
+      """
+      vpd_ro_data = vpd_data.REQUIRED_RO_DATA.copy()
+      amp_name = self._cros_config.GetSpeakerAmp()
+      if amp_name not in _AMP_LIST:
+        logging.info('No smart amplifier found! '
+                     'Skip checking DSM VPD value.')
+        return vpd_ro_data
+
+      dsm_vpd_ro_data = dict()
+      logging.info('The DUT is expected to have smart amplifier %s', amp_name)
+      # The number of internal speaker is equals to the number of amplifier
+      # channels.
+      num_channels = GetNumberOfInternalSpeaker()
+      if num_channels < 1:
+        raise Error('The number of internal speaker should be greater or '
+                    'equal to 1!')
+      logging.info(
+          'The VPD RO should contain `dsm_calib_r0_N` and '
+          '`dsm_calib_temp_N` where N ranges from 0 ~ %d.', num_channels - 1)
+      for channel in range(num_channels):
+        dsm_vpd_ro_data['dsm_calib_r0_%d' % channel] = r'[0-9]*'
+        dsm_vpd_ro_data['dsm_calib_temp_%d' % channel] = r'[0-9]*'
+
+      vpd_ro_data.update(dsm_vpd_ro_data)
+      return vpd_ro_data
+
     def MatchWhole(key, pattern, value, raise_exception=True):
       if re.match(r'^' + pattern + r'$', value):
         return key
@@ -668,12 +721,13 @@ class Gooftool:
         return whitelabel_tag
       return project
 
+    required_vpd_ro_data = GetRequriedVPDROData()
+
     # Check required data
     ro_vpd = self._vpd.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
     rw_vpd = self._vpd.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
-    CheckVPDFields(
-        'RO', ro_vpd, vpd_data.REQUIRED_RO_DATA, vpd_data.KNOWN_RO_DATA,
-        vpd_data.KNOWN_RO_DATA_RE)
+    CheckVPDFields('RO', ro_vpd, required_vpd_ro_data, vpd_data.KNOWN_RO_DATA,
+                   vpd_data.KNOWN_RO_DATA_RE)
 
     CheckVPDFields(
         'RW', rw_vpd, vpd_data.REQUIRED_RW_DATA, vpd_data.KNOWN_RW_DATA,
