@@ -218,9 +218,9 @@ class EventLogWatcherTest(unittest.TestCase):
       return s.replace(event_log.SYNC_MARKER_SEARCH,
                        event_log.SYNC_MARKER_REPLACE)
 
-    # We should have replaced '#s' with '#S' in the preamble.
-    self.assertEqual(ReplaceSyncMarker(MOCK_PREAMBLE(0, True)),
-                     open(path).read())
+    with open(path) as f:
+      # We should have replaced '#s' with '#S' in the preamble.
+      self.assertEqual(ReplaceSyncMarker(MOCK_PREAMBLE(0, True)), f.read())
 
     if unexpected_restart:
       # Re-create the event log watcher to zap its state.
@@ -244,12 +244,12 @@ class EventLogWatcherTest(unittest.TestCase):
         [Chunk(MOCK_LOG_NAME(0), MOCK_EVENT(0, True) + MOCK_EVENT(1, True),
                len(MOCK_PREAMBLE(0, True)))], False)
 
-    # We should have replaced '#s' with '#S' in the preamble and the
-    # second real event.
-    self.assertEqual(ReplaceSyncMarker(MOCK_PREAMBLE(0, True)) +
-                     MOCK_EVENT(0, True) +
-                     ReplaceSyncMarker(MOCK_EVENT(1, True)),
-                     open(path).read())
+    with open(path) as f:
+      # We should have replaced '#s' with '#S' in the preamble and the
+      # second real event.
+      self.assertEqual(
+          ReplaceSyncMarker(MOCK_PREAMBLE(0, True)) + MOCK_EVENT(0, True) +
+          ReplaceSyncMarker(MOCK_EVENT(1, True)), f.read())
 
   def testHandleEventLogsFail(self):
     handle_event_log = mock.MagicMock(side_effect=Exception('Bar'))
