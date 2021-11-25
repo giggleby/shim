@@ -103,7 +103,9 @@ class SeqGenerator:
       max_seq = 0
       seq = None
       last_line = ''
-      for l in open(self.log_file_path).readlines():
+      with open(self.log_file_path) as f:
+        lines = f.readlines()
+      for l in lines:
         # Attempt to load the JSON to get the seq.
         try:
           seq = int(json.loads(l)['seq'])
