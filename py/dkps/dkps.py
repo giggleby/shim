@@ -351,8 +351,15 @@ class DRMKeysProvisioningServer:
     Raises:
       InvalidUploaderException if the signature of the uploader can not be
       verified.
+      RuntimeError if the server failed to decrypt the DRM keys.
     """
     decrypted_obj = self.gpg.decrypt(encrypted_serialized_drm_keys.data)
+    if not decrypted_obj.ok:
+      raise RuntimeError(
+          'Failed to decrypt the DRM keys: %s' % decrypted_obj.status)
+    if decrypted_obj.fingerprint is None:
+      raise InvalidUploaderException('The DRM keys was not signed properly. '
+                                     'Please check your uploader key.')
     project = self._FetchProjectByUploaderKeyFingerprint(
         decrypted_obj.fingerprint)
     serialized_drm_keys = decrypted_obj.data
@@ -437,6 +444,13 @@ class DRMKeysProvisioningServer:
       verified. RuntimeError if no available keys left in the database.
     """
     decrypted_obj = self.gpg.decrypt(encrypted_device_serial_number.data)
+    if not decrypted_obj.ok:
+      raise RuntimeError(
+          'Failed to decrypt the serial number: %s' % decrypted_obj.status)
+    if decrypted_obj.fingerprint is None:
+      raise InvalidRequesterException(
+          'The serial number was not signed properly. '
+          'Please check your requester key.')
     project = self._FetchProjectByRequesterKeyFingerprint(
         decrypted_obj.fingerprint)
     device_serial_number = decrypted_obj.data.decode('utf-8')

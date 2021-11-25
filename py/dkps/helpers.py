@@ -89,6 +89,9 @@ class BaseHelper:
     signed_obj = self.gpg.sign(
         uuid.uuid4().hex, keyid=self.client_key_fingerprint,
         passphrase=self.passphrase)
+    if signed_obj.status != 'signature created':
+      raise ValueError('Failed to sign the UUID: %s.' % signed_obj.status)
+
     return self.dkps.AvailableKeyCount(signed_obj.data)
 
 
@@ -127,6 +130,10 @@ class RequesterHelper(BaseHelper):
     encrypted_obj = self.gpg.encrypt(
         device_serial_number, self.server_key_fingerprint, always_trust=True,
         sign=self.client_key_fingerprint, passphrase=self.passphrase)
+
+    if not encrypted_obj.ok:
+      raise ValueError('Failed to encrypt and sign the serial number: %s.' %
+                       encrypted_obj.status)
 
     encrypted_drm_key = self.dkps.Request(encrypted_obj.data)
 
@@ -195,6 +202,10 @@ class UploaderHelper(BaseHelper):
     encrypted_obj = self.gpg.encrypt(
         serialized_drm_keys, self.server_key_fingerprint, always_trust=True,
         sign=self.client_key_fingerprint, passphrase=self.passphrase)
+
+    if not encrypted_obj.ok:
+      raise ValueError(
+          'Failed to encrypt and sign the DRM keys: %s.' % encrypted_obj.status)
 
     self.dkps.Upload(encrypted_obj.data)
 

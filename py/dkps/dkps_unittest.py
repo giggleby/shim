@@ -9,7 +9,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 
@@ -36,6 +35,7 @@ encrypted_vpd_list = [
     'asdfghjkl;']
 
 
+# TODO(treapking): Run each test case in a separate function.
 class DRMKeysProvisioningServerTest(unittest.TestCase):
 
   def setUp(self):
@@ -46,9 +46,12 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     self.server_gnupg_homedir = os.path.join(self.temp_dir, 'gnupg', 'server')
     uploader_gnupg_homedir = os.path.join(self.temp_dir, 'gnupg', 'uploader')
     requester_gnupg_homedir = os.path.join(self.temp_dir, 'gnupg', 'requester')
+    wrong_user_gnupg_homedir = os.path.join(self.temp_dir, 'gnupg',
+                                            'wrong_user')
     os.makedirs(self.server_gnupg_homedir)
     os.makedirs(uploader_gnupg_homedir)
     os.makedirs(requester_gnupg_homedir)
+    os.makedirs(wrong_user_gnupg_homedir)
 
     self.dkps = dkps.DRMKeysProvisioningServer(self.database_file_path,
                                                self.server_gnupg_homedir)
@@ -71,16 +74,26 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     self.server_key_file_path = os.path.join(self.temp_dir, 'server.pub')
     with open(self.server_key_file_path, 'w') as f:
       f.write(exported_server_key)
+
+    # TODO(treapking): Extract common procedures into functions or a class.
     self.uploader_gpg = gnupg.GPG(gnupghome=uploader_gnupg_homedir)
     self.uploader_gpg.import_keys(exported_server_key)
     self.requester_gpg = gnupg.GPG(gnupghome=requester_gnupg_homedir)
     self.requester_gpg.import_keys(exported_server_key)
+    self.wrong_user_gpg = gnupg.GPG(gnupghome=wrong_user_gnupg_homedir)
+    self.wrong_user_gpg.import_keys(exported_server_key)
 
     # Passphrase for uploader and requester private keys.
     self.passphrase = 'taiswanleba'
     self.passphrase_file_path = os.path.join(self.temp_dir, 'passphrase')
     with open(self.passphrase_file_path, 'w') as f:
       f.write(self.passphrase)
+
+    self.wrong_passphrase = '_wrong_passphrase_'
+    self.wrong_passphrase_file_path = os.path.join(self.temp_dir,
+                                                   'wrong_passphrase')
+    with open(self.wrong_passphrase_file_path, 'w') as f:
+      f.write(self.wrong_passphrase)
 
     # Import uploader key.
     with open(os.path.join(SCRIPT_DIR, 'testdata', 'uploader.key')) as f:
@@ -113,6 +126,25 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
       f.write(
           self.requester_gpg.export_keys(self.requester_key_fingerprint, True,
                                          passphrase=self.passphrase))
+
+    # Import wrong_user key.
+    # Note that the passphrase for wrong_user key is "taiswanleba", not
+    # "_wrong_passphrase_".
+
+    with open(os.path.join(SCRIPT_DIR, 'testdata', 'wrong_user.key')) as f:
+      self.wrong_user_key_fingerprint = (
+          self.wrong_user_gpg.import_keys(f.read()).fingerprints[0])
+    # Output wrong_user key to a file for DKPS.AddProject().
+    self.wrong_user_public_key_file_path = os.path.join(self.temp_dir,
+                                                        'wrong_user.pub')
+    with open(self.wrong_user_public_key_file_path, 'w') as f:
+      f.write(self.wrong_user_gpg.export_keys(self.wrong_user_key_fingerprint))
+    self.wrong_user_private_key_file_path = os.path.join(
+        self.temp_dir, 'wrong_user')
+    with open(self.wrong_user_private_key_file_path, 'w') as f:
+      f.write(
+          self.wrong_user_gpg.export_keys(self.wrong_user_key_fingerprint, True,
+                                          passphrase=self.passphrase))
 
     self.server_process = None
     self.port = net_utils.FindUnusedTCPPort()
@@ -151,15 +183,50 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     self._Upload(drm_keys_file_path)
 
     # Test upload duplicate DRM keys.
-    with self.assertRaises(subprocess.CalledProcessError):
+    with self.assertRaisesRegex(RuntimeError, 'UNIQUE constraint failed'):
       self._Upload(drm_keys_file_path)
+
+    # Test upload with wrong encryption key.
+    with self.assertRaisesRegex(
+        RuntimeError, 'Failed to decrypt the DRM keys: decryption failed'):
+      self._Upload(drm_keys_file_path,
+                   server_key_file_path=self.wrong_user_public_key_file_path)
+
+    # Test upload with wrong signing key.
+    with self.assertRaisesRegex(RuntimeError,
+                                'The DRM keys was not signed properly'):
+      self._Upload(drm_keys_file_path,
+                   client_key_file_path=self.wrong_user_private_key_file_path)
+
+    # Test upload with wrong passphrase.
+    with self.assertRaisesRegex(
+        RuntimeError,
+        'Failed to encrypt and sign the DRM keys: bad passphrase'):
+      self._Upload(drm_keys_file_path,
+                   passphrase_file_path=self.wrong_passphrase_file_path)
+
+    # Test checking available keys with wrong passphrase.
+    with self.assertRaisesRegex(RuntimeError, 'bad passphrase'):
+      self._CallHelper(self.requester_private_key_file_path,
+                       self.server_key_file_path,
+                       self.wrong_passphrase_file_path, 'available')
+
+    # Test checking available keys with wrong signing key.
+    with self.assertRaisesRegex(RuntimeError,
+                                'Invalid requester, check your signing key'):
+      self._CallHelper(self.wrong_user_private_key_file_path,
+                       self.server_key_file_path, self.passphrase_file_path,
+                       'available')
+
 
     # Request and finalize DRM keys.
     for i, mock_key in enumerate(MOCK_KEY_LIST):
       # Check available key count.
       expected_available_key_count = len(MOCK_KEY_LIST) - i
-      available_key_count = int(self._CallHelper(
-          self.requester_private_key_file_path, 'available'))
+      available_key_count = int(
+          self._CallHelper(self.requester_private_key_file_path,
+                           self.server_key_file_path, self.passphrase_file_path,
+                           'available'))
       self.assertEqual(expected_available_key_count, available_key_count)
 
       # Request.
@@ -168,8 +235,27 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
       self.assertEqual(mock_key, json.loads(serialized_key))
 
     # Test request but insufficient keys left.
-    with self.assertRaises(subprocess.CalledProcessError):
+    with self.assertRaisesRegex(RuntimeError, 'Insufficient DRM keys'):
       self._Request('INSUFFICIENT_KEY')
+
+    # Test request with wrong encryption key.
+    with self.assertRaisesRegex(
+        RuntimeError, 'Failed to decrypt the serial number: decryption failed'):
+      self._Request('WRONG_SERVER_KEY',
+                    server_key_file_path=self.wrong_user_public_key_file_path)
+
+    # Test request with wrong signing key.
+    with self.assertRaisesRegex(RuntimeError,
+                                'The serial number was not signed properly'):
+      self._Request('WRONG_CLIENT_KEY',
+                    client_key_file_path=self.wrong_user_private_key_file_path)
+
+    # Test request with wrong passphrase.
+    with self.assertRaisesRegex(
+        RuntimeError,
+        'Failed to encrypt and sign the serial number: bad passphrase'):
+      self._Request('WRONG_PASSPHRASE',
+                    passphrase_file_path=self.wrong_passphrase_file_path)
 
     self.dkps.RemoveProject('TestProject')
 
@@ -189,24 +275,50 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     if os.path.exists(self.temp_dir):
       shutil.rmtree(self.temp_dir)
 
-  def _Upload(self, drm_keys_file_path):
-    return self._CallHelper(
-        self.uploader_private_key_file_path, 'upload', [drm_keys_file_path])
+  def _Upload(self, drm_keys_file_path, client_key_file_path=None,
+              server_key_file_path=None, passphrase_file_path=None):
+    if client_key_file_path is None:
+      client_key_file_path = self.uploader_private_key_file_path
+    if server_key_file_path is None:
+      server_key_file_path = self.server_key_file_path
+    if passphrase_file_path is None:
+      passphrase_file_path = self.passphrase_file_path
 
-  def _Request(self, device_serial_number):
-    return self._CallHelper(
-        self.requester_private_key_file_path, 'request', [device_serial_number])
+    return self._CallHelper(client_key_file_path, server_key_file_path,
+                            passphrase_file_path, 'upload',
+                            [drm_keys_file_path])
 
-  def _CallHelper(self, client_key_file_path, command, extra_args=None):
+  def _Request(self, device_serial_number, client_key_file_path=None,
+               server_key_file_path=None, passphrase_file_path=None):
+    if client_key_file_path is None:
+      client_key_file_path = self.requester_private_key_file_path
+    if server_key_file_path is None:
+      server_key_file_path = self.server_key_file_path
+    if passphrase_file_path is None:
+      passphrase_file_path = self.passphrase_file_path
+
+    return self._CallHelper(client_key_file_path, server_key_file_path,
+                            passphrase_file_path, 'request',
+                            [device_serial_number])
+
+  def _CallHelper(self, client_key_file_path, server_key_file_path,
+                  passphrase_file_path, command, extra_args=None):
+    # TODO(treapking): Load helper module instead so we can have a better error
+    # handling.
     extra_args = extra_args if extra_args else []
-    return subprocess.check_output([
-        'python3',
-        os.path.join(SCRIPT_DIR,
-                     'helpers.py'), '--server_ip', 'localhost', '--server_port',
-        str(self.port), '--client_key_file_path', client_key_file_path,
-        '--server_key_file_path', self.server_key_file_path,
-        '--passphrase_file_path', self.passphrase_file_path, command
-    ] + extra_args, stderr=sys.stderr, encoding='utf-8')
+    try:
+      return subprocess.check_output([
+          'python3',
+          os.path.join(SCRIPT_DIR, 'helpers.py'), '--server_ip', 'localhost',
+          '--server_port',
+          str(self.port), '--client_key_file_path', client_key_file_path,
+          '--server_key_file_path', server_key_file_path,
+          '--passphrase_file_path', passphrase_file_path, command, *extra_args
+      ], stderr=subprocess.PIPE, encoding='utf-8')
+    except subprocess.CalledProcessError as e:
+      # Re-raise the error as RuntimeError as CalledProcessError does not
+      # include the exception message.
+      raise RuntimeError(e.stderr)
 
 
 if __name__ == '__main__':
