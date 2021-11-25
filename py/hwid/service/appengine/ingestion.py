@@ -49,7 +49,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   def __init__(self, *args, **kwargs):
     super(ProtoRPCService, self).__init__(*args, **kwargs)
     self.hwid_filesystem = CONFIG.hwid_filesystem
-    self.hwid_manager = CONFIG.hwid_manager
+    self.hwid_action_manager = CONFIG.hwid_action_manager
     self.vp_data_manager = CONFIG.vp_data_manager
     self.hwid_db_data_manager = CONFIG.hwid_db_data_manager
     self.decoder_data_manager = CONFIG.decoder_data_manager
@@ -127,7 +127,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL,
           detail='Got exception from HWID repo.') from None
 
-    self.hwid_manager.ReloadMemcacheCacheFromFiles(
+    self.hwid_action_manager.ReloadMemcacheCacheFromFiles(
         limit_models=list(limit_models) if limit_models else None)
 
     # Skip if env is local (dev)
@@ -190,12 +190,13 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     db_lists = collections.defaultdict(list)
     for model_name, model_info in self.vpg_targets.items():
-      hwid_data = self.hwid_manager.GetHWIDPreprocDataFromCache(model_name)
-      if hwid_data is not None:
-        db_lists[model_info.board].append(
-            (hwid_data.database, model_info.waived_comp_categories))
-      else:
-        logging.error('Cannot get board data from cache for %r', model_name)
+      try:
+        hwid_action = self.hwid_action_manager.GetHWIDAction(model_name)
+        db = hwid_action.GetDBV3()
+      except (KeyError, ValueError, RuntimeError) as ex:
+        logging.error('Cannot get board data for %r: %r', model_name, ex)
+        continue
+      db_lists[model_info.board].append((db, model_info.waived_comp_categories))
     return db_lists
 
   def _GetMainCommitIfChanged(self, force_update):

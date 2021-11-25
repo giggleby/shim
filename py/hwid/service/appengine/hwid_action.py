@@ -5,10 +5,11 @@
 
 import collections
 import copy
-from typing import List, NamedTuple, Optional
+from typing import List, NamedTuple, Optional, Set
 
 from cros.factory.hwid.service.appengine \
     import verification_payload_generator as vpg_module
+from cros.factory.hwid.v3 import database as v3_database
 
 
 class HWIDDecodeError(KeyError):
@@ -253,10 +254,10 @@ class HWIDAction:
     raise NotSupportedError(
         f'`GetBOMAndConfigless` is not supported in HWID v{self.HWID_VERSION}')
 
-  def EnumerateHWIDs(self, with_classes: Optional[List[str]] = None,
-                     without_classes: Optional[List[str]] = None,
-                     with_components: Optional[List[str]] = None,
-                     without_components: Optional[List[str]] = None):
+  def EnumerateHWIDs(self, with_classes: Optional[Set[str]] = None,
+                     without_classes: Optional[Set[str]] = None,
+                     with_components: Optional[Set[str]] = None,
+                     without_components: Optional[Set[str]] = None):
     """Get a filtered set of HWIDs for the given project.
 
     Args:
@@ -272,6 +273,24 @@ class HWIDAction:
     Raises:
       NotSupportedError: If this function is not supported by the HWID version.
     """
+    if (with_classes and without_classes and
+        with_classes.intersection(without_classes)):
+      raise ValueError(
+          'One or more component classes specified for both with and without.')
+
+    if (with_components and without_components and
+        with_components.intersection(without_components)):
+      raise ValueError(
+          'One or more components specified for both with and without.')
+
+    return self._EnumerateHWIDs(with_classes, without_classes, with_components,
+                                without_components)
+
+  def _EnumerateHWIDs(self, with_classes: Optional[Set[str]],
+                      without_classes: Optional[Set[str]],
+                      with_components: Optional[Set[str]],
+                      without_components: Optional[Set[str]]):
+    """Actual implementation of `EnumerateHWIDs()`."""
     raise NotSupportedError(
         f'`EnumerateHWIDs` is not supported in HWID v{self.HWID_VERSION}')
 
@@ -301,3 +320,15 @@ class HWIDAction:
     """
     raise NotSupportedError(
         f'`GetComponents` is not supported in HWID v{self.HWID_VERSION}')
+
+  def GetDBV3(self) -> v3_database.Database:
+    """Get the `cros.factory.hwid.v3.database.Database` instance if possible.
+
+    Returns:
+      The database instance.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+    """
+    raise NotSupportedError(
+        f'`GetDBV3` is not supported in HWID v{self.HWID_VERSION}')

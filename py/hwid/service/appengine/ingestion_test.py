@@ -29,8 +29,8 @@ class IngestionTest(unittest.TestCase):
     self.patch_hwid_filesystem = patcher.start()
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch('__main__.ingestion.CONFIG.hwid_manager')
-    self.patch_hwid_manager = patcher.start()
+    patcher = mock.patch('__main__.ingestion.CONFIG.hwid_action_manager')
+    self.patch_hwid_action_manager = patcher.start()
     self.addCleanup(patcher.stop)
 
     patcher = mock.patch('__main__.ingestion.CONFIG.hwid_db_data_manager')

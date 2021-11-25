@@ -40,6 +40,9 @@ class HWIDV3Action(hwid_action.HWIDAction):
 
     return bom, configless
 
+  def GetDBV3(self):
+    return self._preproc_data.database
+
 
 def _NormalizeString(string):
   """Normalizes a string to account for things like case."""

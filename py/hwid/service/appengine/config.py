@@ -13,8 +13,9 @@ from cros.factory.hwid.service.appengine import cloudstorage_adapter
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.data import verification_payload_data
-from cros.factory.hwid.service.appengine import hwid_manager
+from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
@@ -67,8 +68,8 @@ class _Config:
         on CloudStorage.
     hwid_filesystem: A FileSystemAdapter object, the HWID filesystem on
         CloudStorage.
-    hwid_manager: A HwidManager object. HwidManager manipulates HWIDs in
-        hwid_filesystem.
+    hwid_action_manager: A HWIDActionManager object. The object maintains
+        HWIDAction objects, which provide HWID DB related operations.
     hwid_repo_manager: A HWIDRepoManager object, which provides functionalities
         to manipulate the HWID repository.
   """
@@ -101,8 +102,10 @@ class _Config:
         self._ndb_connector)
     self.hwid_db_data_manager = hwid_db_data.HWIDDBDataManager(
         self._ndb_connector, self.hwid_filesystem)
-    self.hwid_manager = hwid_manager.HwidManager(self.vpg_targets,
-                                                 self.hwid_db_data_manager)
+    self.hwid_preproc_data_memcache_adapter = memcache_adapter.MemcacheAdapter(
+        namespace='HWIDObject')
+    self.hwid_action_manager = hwid_action_manager.HWIDActionManager(
+        self.hwid_db_data_manager, self.hwid_preproc_data_memcache_adapter)
     self.dryrun_upload = conf.get('dryrun_upload', True)
     self.project_region = conf['project_region']
     self.queue_name = conf['queue_name']

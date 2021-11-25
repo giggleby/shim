@@ -15,13 +15,13 @@ from cros.factory.hwid.v3 import filesystem_adapter
 
 
 class HWIDDBDataManagerTest(unittest.TestCase):
-  """Tests the HwidManager class."""
 
   def setUp(self):
     super().setUp()
 
-    self.fs_adapter = filesystem_adapter.LocalFileSystemAdapter(
-        tempfile.mkdtemp())
+    tmpdir = tempfile.TemporaryDirectory()
+    self.fs_adapter = filesystem_adapter.LocalFileSystemAdapter(tmpdir.name)
+    self.addCleanup(tmpdir.cleanup)
     self.ndb_connector = ndbc_module.NDBConnector()
     self.hwid_db_data_manager = hwid_db_data.HWIDDBDataManager(
         self.ndb_connector, self.fs_adapter)
@@ -29,13 +29,6 @@ class HWIDDBDataManagerTest(unittest.TestCase):
   def tearDown(self):
     super().tearDown()
     self.hwid_db_data_manager.CleanAllForTest()
-
-  def _PutHWIDToDatastore(self, board, project, version, payload):
-    path = f'v{version}/{project}'
-    with self.ndb_connector.CreateClientContext():
-      hwid_db_data.HWIDDBMetadata(board=board, path=path, version=version,
-                                  project=project).put()
-    self.fs_adapter.WriteFile(f'live/{path}', payload)
 
   def testListHWIDDBMetadataWithoutExistingProjects(self):
     metadata_list = self.hwid_db_data_manager.ListHWIDDBMetadata()

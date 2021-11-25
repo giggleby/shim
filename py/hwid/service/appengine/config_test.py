@@ -7,7 +7,7 @@
 import os
 import unittest
 
-from cros.factory.hwid.service.appengine import hwid_manager
+from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.v3 import filesystem_adapter
 
 
@@ -40,8 +40,8 @@ class ConfigTest(unittest.TestCase):
   def testHwidManagerType(self):
     from cros.factory.hwid.service.appengine import config
     self.assertTrue(
-        issubclass(config.CONFIG.hwid_manager.__class__,
-                   hwid_manager.HwidManager))
+        issubclass(config.CONFIG.hwid_action_manager.__class__,
+                   hwid_action_manager.HWIDActionManager))
 
 
 if __name__ == '__main__':

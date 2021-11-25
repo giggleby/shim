@@ -6,33 +6,27 @@
 This file is also the place that all the binding is done for various components.
 """
 
-import functools
-import gzip
 import hashlib
 import logging
-import operator
-import re
 import textwrap
 import time
-from typing import Dict, List, NamedTuple, Optional, Tuple
-
-# pylint: disable=no-name-in-module, import-error, wrong-import-order
-import flask
-import flask.views
-# pylint: enable=no-name-in-module, import-error, wrong-import-order
+from typing import List, NamedTuple, Tuple
 
 from cros.chromeoshwid import update_checksum
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
+from cros.factory.hwid.service.appengine.hwid_api_helpers \
+    import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers \
+    import dut_label_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import hwid_repo
-from cros.factory.hwid.service.appengine import hwid_util
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import contents_analyzer
-from cros.factory.hwid.v3 import name_pattern_adapter
-from cros.factory.hwid.v3.rule import Value
 # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
 # pylint: enable=import-error, no-name-in-module
@@ -53,7 +47,8 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.ABANDONED,
 }
 
-_hwid_manager = CONFIG.hwid_manager
+_hwid_action_manager = CONFIG.hwid_action_manager
+_hwid_db_data_manager = CONFIG.hwid_db_data_manager
 _decoder_data_manager = CONFIG.decoder_data_manager
 _hwid_validator = hwid_validator.HwidValidator()
 _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
@@ -61,43 +56,7 @@ _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
 _hwid_repo_manager = CONFIG.hwid_repo_manager
 
 
-def _FastFailKnownBadHwid(hwid):
-  if hwid in KNOWN_BAD_HWIDS:
-    return (hwid_api_messages_pb2.Status.KNOWN_BAD_HWID,
-            'No metadata present for the requested project: %s' % hwid)
-
-  for regexp in KNOWN_BAD_SUBSTR:
-    if re.search(regexp, hwid):
-      return (hwid_api_messages_pb2.Status.KNOWN_BAD_HWID,
-              'No metadata present for the requested project: %s' % hwid)
-  return (hwid_api_messages_pb2.Status.SUCCESS, '')
-
-
-def _GetBomAndConfiglessStatusAndError(bom_configless):
-  if isinstance(bom_configless.error, KeyError):
-    return (hwid_api_messages_pb2.Status.NOT_FOUND, str(bom_configless.error))
-  if isinstance(bom_configless.error, ValueError):
-    return (hwid_api_messages_pb2.Status.BAD_REQUEST, str(bom_configless.error))
-  if bom_configless.error is not None:
-    return (hwid_api_messages_pb2.Status.SERVER_ERROR, str(
-        bom_configless.error))
-  if bom_configless.bom is None:
-    return (hwid_api_messages_pb2.Status.NOT_FOUND, 'HWID not found.')
-  return (hwid_api_messages_pb2.Status.SUCCESS, None)
-
-
-def _HandleGzipRequests(method):
-
-  @functools.wraps(method)
-  def _MethodWrapper(*args, **kwargs):
-    if flask.request.content_encoding == 'gzip':
-      flask.request.stream = gzip.GzipFile(fileobj=flask.request.stream)
-    return method(*args, **kwargs)
-
-  return _MethodWrapper
-
-
-def _MapException(ex, cls):
+def _MapValidationException(ex, cls):
   msgs = [er.message for er in ex.errors]
   if any(er.code == hwid_validator.ErrorCode.SCHEMA_ERROR for er in ex.errors):
     return cls(
@@ -137,104 +96,38 @@ class _HWIDDBChangeInfo(NamedTuple):
   new_hwid_db_contents: str
 
 
-class BomEntry(NamedTuple):
-  """A class containing fields of BomResponse."""
-  components: Optional[List['hwid_api_messages_pb2.Component']]
-  labels: Optional[List['hwid_api_messages_pb2.Label']]
-  phase: str
-  error: str
-  status: 'hwid_api_messages_pb2.Status'
-
-
-def _BatchGetBom(hwids, verbose=False) -> Dict[str, BomEntry]:
-  result = {}
-  batch_request = []
-  # filter out bad HWIDs
-  for hwid in hwids:
-    status, error = _FastFailKnownBadHwid(hwid)
-    if status != hwid_api_messages_pb2.Status.SUCCESS:
-      result[hwid] = BomEntry(None, None, '', error, status)
-    else:
-      batch_request.append(hwid)
-
-  np_adapter = name_pattern_adapter.NamePatternAdapter()
-  for hwid, bom_configless in _hwid_manager.BatchGetBomAndConfigless(
-      batch_request, verbose).items():
-    status, error = _GetBomAndConfiglessStatusAndError(bom_configless)
-
-    if status != hwid_api_messages_pb2.Status.SUCCESS:
-      result[hwid] = BomEntry(None, None, '', error, status)
-      continue
-    bom = bom_configless.bom
-
-    bom_entry = BomEntry([], [], bom.phase, '',
-                         status=hwid_api_messages_pb2.Status.SUCCESS)
-
-    for component in bom.GetComponents():
-      name = _decoder_data_manager.GetAVLName(component.cls, component.name)
-      fields = []
-      if verbose:
-        for fname, fvalue in component.fields.items():
-          field = hwid_api_messages_pb2.Field()
-          field.name = fname
-          if isinstance(fvalue, Value):
-            field.value = ('!re ' + fvalue.raw_value
-                           if fvalue.is_re else fvalue.raw_value)
-          else:
-            field.value = str(fvalue)
-          fields.append(field)
-
-      fields.sort(key=lambda field: field.name)
-
-      name_pattern = np_adapter.GetNamePattern(component.cls)
-      ret = name_pattern.Matches(component.name)
-      if ret:
-        cid, qid = ret
-        avl_info = hwid_api_messages_pb2.AvlInfo(cid=cid, qid=qid)
-      else:
-        avl_info = None
-
-      bom_entry.components.append(
-          hwid_api_messages_pb2.Component(
-              component_class=component.cls, name=name, fields=fields,
-              avl_info=avl_info, has_avl=bool(avl_info)))
-
-    bom_entry.components.sort(
-        key=operator.attrgetter('component_class', 'name'))
-
-    for label in bom.GetLabels():
-      bom_entry.labels.append(
-          hwid_api_messages_pb2.Label(component_class=label.cls,
-                                      name=label.name, value=label.value))
-    bom_entry.labels.sort(key=operator.attrgetter('name', 'value'))
-
-    result[hwid] = bom_entry
-  return result
-
-
 class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   SERVICE_DESCRIPTOR = hwid_api_messages_pb2.DESCRIPTOR.services_by_name[
       'HwidService']
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self._sku_helper = sku_helper.SKUHelper(_decoder_data_manager)
+    self._bc_helper = (
+        bc_helper.BOMAndConfiglessHelper(
+            _hwid_action_manager, CONFIG.vpg_targets, _decoder_data_manager))
+    self._dut_label_helper = dut_label_helper.DUTLabelHelper(
+        _decoder_data_manager, _goldeneye_memcache_adapter, self._bc_helper,
+        self._sku_helper)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def GetProjects(self, request):
     """Return all of the supported projects in sorted order."""
-
     versions = list(request.versions) if request.versions else None
-    projects = _hwid_manager.GetProjects(versions=versions)
+    metadata_list = _hwid_db_data_manager.ListHWIDDBMetadata(versions=versions)
+    projects = [m.project for m in metadata_list]
 
-    logging.debug('Found projects: %r', projects)
     response = hwid_api_messages_pb2.ProjectsResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS, projects=sorted(projects))
-
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def GetBom(self, request):
     """Return the components of the BOM identified by the HWID."""
-    bom_entry_dict = _BatchGetBom([request.hwid], request.verbose)
+    bom_entry_dict = self._bc_helper.BatchGetBOMEntry([request.hwid],
+                                                      request.verbose)
     bom_entry = bom_entry_dict.get(request.hwid)
     if bom_entry is None:
       return hwid_api_messages_pb2.BomResponse(
@@ -250,7 +143,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """Return the components of the BOM identified by the batch HWIDs."""
     response = hwid_api_messages_pb2.BatchGetBomResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS)
-    bom_entry_dict = _BatchGetBom(request.hwid, request.verbose)
+    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(request.hwid,
+                                                      request.verbose)
     for hwid, bom_entry in bom_entry_dict.items():
       response.boms.get_or_create(hwid).CopyFrom(
           hwid_api_messages_pb2.BatchGetBomResponse.Bom(
@@ -269,26 +163,26 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetSku(self, request):
     """Return the components of the SKU identified by the HWID."""
-    status, error = _FastFailKnownBadHwid(request.hwid)
+    status, error = common_helper.FastFailKnownBadHWID(request.hwid)
     if status != hwid_api_messages_pb2.Status.SUCCESS:
       return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
 
-    bc_dict = _hwid_manager.BatchGetBomAndConfigless([request.hwid],
-                                                     verbose=True)
+    bc_dict = self._bc_helper.BatchGetBOMAndConfigless([request.hwid],
+                                                       verbose=True)
     bom_configless = bc_dict.get(request.hwid)
     if bom_configless is None:
       return hwid_api_messages_pb2.SkuResponse(
           error='Internal error',
           status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-    status, error = _GetBomAndConfiglessStatusAndError(bom_configless)
+    status, error = bc_helper.GetBOMAndConfiglessStatusAndError(bom_configless)
     if status != hwid_api_messages_pb2.Status.SUCCESS:
       return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
     bom = bom_configless.bom
     configless = bom_configless.configless
 
     try:
-      sku = hwid_util.GetSkuFromBom(bom, configless)
-    except hwid_util.HWIDUtilException as e:
+      sku = self._sku_helper.GetSKUFromBOM(bom, configless)
+    except sku_helper.SKUDeductionError as e:
       return hwid_api_messages_pb2.SkuResponse(
           error=str(e), status=hwid_api_messages_pb2.Status.BAD_REQUEST)
 
@@ -301,37 +195,17 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetHwids(self, request):
     """Return a filtered list of HWIDs for the given project."""
-
-    project = request.project
-
-    with_classes = set(filter(None, request.with_classes))
-    without_classes = set(filter(None, request.without_classes))
-    with_components = set(filter(None, request.with_components))
-    without_components = set(filter(None, request.without_components))
-
-    if (with_classes and without_classes and
-        with_classes.intersection(without_classes)):
-      return hwid_api_messages_pb2.HwidsResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-          error=('One or more component classes specified for both with and '
-                 'without'))
-
-    if (with_components and without_components and
-        with_components.intersection(without_components)):
-      return hwid_api_messages_pb2.HwidsResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-          error='One or more components specified for both with and without')
-
+    parse_filter_field = lambda value: set(filter(None, value)) or None
     try:
-      hwids = _hwid_manager.GetHwids(project, with_classes, without_classes,
-                                     with_components, without_components)
-    except ValueError:
-      logging.exception('ValueError -> bad input')
+      hwid_action = _hwid_action_manager.GetHWIDAction(request.project)
+      hwids = hwid_action.EnumerateHWIDs(
+          with_classes=parse_filter_field(request.with_classes),
+          without_classes=parse_filter_field(request.without_classes),
+          with_components=parse_filter_field(request.with_components),
+          without_components=parse_filter_field(request.without_components))
+    except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.HwidsResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-          error='Invalid input: %s' % project)
-
-    logging.debug('Found HWIDs: %r', hwids)
+          status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
 
     return hwid_api_messages_pb2.HwidsResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS, hwids=hwids)
@@ -340,17 +214,12 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetComponentClasses(self, request):
     """Return a list of all component classes for the given project."""
-
     try:
-      project = request.project
-      classes = _hwid_manager.GetComponentClasses(project)
-    except ValueError:
-      logging.exception('ValueError -> bad input')
+      hwid_action = _hwid_action_manager.GetHWIDAction(request.project)
+      classes = hwid_action.GetComponentClasses()
+    except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.ComponentClassesResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-          error='Invalid input: %s' % project)
-
-    logging.debug('Found component classes: %r', classes)
+          status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
 
     return hwid_api_messages_pb2.ComponentClassesResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS, component_classes=classes)
@@ -359,21 +228,15 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetComponents(self, request):
     """Return a filtered list of components for the given project."""
-
-    project = request.project
-    with_classes = set(filter(None, request.with_classes))
-
     try:
-      components = _hwid_manager.GetComponents(project, with_classes)
-    except ValueError:
-      logging.exception('ValueError -> bad input')
+      hwid_action = _hwid_action_manager.GetHWIDAction(request.project)
+      components = hwid_action.GetComponents(
+          with_classes=set(filter(None, request.with_classes)) or None)
+    except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.ComponentsResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-          error='Invalid input: %s' % project)
+          status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
 
-    logging.debug('Found component classes: %r', components)
-
-    components_list = list()
+    components_list = []
     for cls, comps in components.items():
       for comp in comps:
         components_list.append(
@@ -400,7 +263,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       _hwid_validator.Validate(hwid_config_contents)
     except hwid_validator.ValidationError as e:
       logging.exception('Validation failed')
-      return _MapException(e, hwid_api_messages_pb2.ValidateConfigResponse)
+      return _MapValidationException(
+          e, hwid_api_messages_pb2.ValidateConfigResponse)
 
     return hwid_api_messages_pb2.ValidateConfigResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS)
@@ -430,7 +294,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     except hwid_validator.ValidationError as e:
       logging.exception('Validation failed')
-      return _MapException(
+      return _MapValidationException(
           e, hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse)
 
     resp = hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
@@ -451,113 +315,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def GetDutLabels(self, request):
-    """Return the components of the SKU identified by the HWID."""
-    hwid = request.hwid
-
-    # If you add any labels to the list of returned labels, also add to
-    # the list of possible labels.
-    possible_labels = [
-        'hwid_component',
-        'phase',
-        'sku',
-        'stylus',
-        'touchpad',
-        'touchscreen',
-        'variant',
-    ]
-
-    if not hwid:  # Return possible labels.
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          possible_labels=possible_labels,
-          status=hwid_api_messages_pb2.Status.SUCCESS)
-
-    status, error = _FastFailKnownBadHwid(hwid)
-    if status != hwid_api_messages_pb2.Status.SUCCESS:
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          error=error, possible_labels=possible_labels, status=status)
-
-    bc_dict = _hwid_manager.BatchGetBomAndConfigless([hwid], verbose=True,
-                                                     require_vp_info=True)
-    bom_configless = bc_dict.get(hwid)
-    if bom_configless is None:
-      return hwid_api_messages_pb2.DutLabelResponse(
-          error='Internal error',
-          status=hwid_api_messages_pb2.Status.SERVER_ERROR,
-          possible_labels=possible_labels)
-    bom = bom_configless.bom
-    configless = bom_configless.configless
-    status, error = _GetBomAndConfiglessStatusAndError(bom_configless)
-
-    if status != hwid_api_messages_pb2.Status.SUCCESS:
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          status=status, error=error, possible_labels=possible_labels)
-
-    try:
-      sku = hwid_util.GetSkuFromBom(bom, configless)
-    except hwid_util.HWIDUtilException as e:
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST, error=str(e),
-          possible_labels=possible_labels)
-
-    response = hwid_api_messages_pb2.DutLabelsResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS)
-    response.labels.add(name='sku', value=sku['sku'])
-
-    regexp_to_device = _goldeneye_memcache_adapter.Get('regexp_to_device')
-
-    if not regexp_to_device:
-      # TODO(haddowk) Kick off the ingestion to ensure that the memcache is
-      # up to date.
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          error='Missing Regexp List', possible_labels=possible_labels,
-          status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-    for (regexp, device, unused_regexp_to_project) in regexp_to_device:
-      del unused_regexp_to_project  # unused
-      try:
-        if re.match(regexp, hwid):
-          response.labels.add(name='variant', value=device)
-      except re.error:
-        logging.exception('invalid regex pattern: %r', regexp)
-    if bom.phase:
-      response.labels.add(name='phase', value=bom.phase)
-
-    components = ['touchscreen', 'touchpad', 'stylus']
-    for component in components:
-      # The lab just want the existence of a component they do not care
-      # what type it is.
-      if configless and 'has_' + component in configless['feature_list']:
-        if configless['feature_list']['has_' + component]:
-          response.labels.add(name=component, value=None)
-      else:
-        component_value = hwid_util.GetComponentValueFromBom(bom, component)
-        if component_value and component_value[0]:
-          response.labels.add(name=component, value=None)
-
-    # cros labels in host_info store, which will be used in tast tests of
-    # runtime probe
-    for component in bom.GetComponents():
-      if component.name and component.is_vp_related:
-        name = _decoder_data_manager.GetPrimaryIdentifier(
-            bom.project, component.cls, component.name)
-        name = _decoder_data_manager.GetAVLName(component.cls, name)
-        if component.information is not None:
-          name = component.information.get('comp_group', name)
-        response.labels.add(name="hwid_component",
-                            value=component.cls + '/' + name)
-
-    unexpected_labels = set(
-        label.name for label in response.labels) - set(possible_labels)
-
-    if unexpected_labels:
-      logging.error('unexpected labels: %r', unexpected_labels)
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          error='Possible labels are out of date',
-          possible_labels=possible_labels,
-          status=hwid_api_messages_pb2.Status.SERVER_ERROR)
-
-    response.labels.sort(key=operator.attrgetter('name', 'value'))
-    response.possible_labels[:] = possible_labels
-    return response
+    return self._dut_label_helper.GetDUTLabels(request)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck

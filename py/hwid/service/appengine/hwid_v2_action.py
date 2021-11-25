@@ -57,10 +57,8 @@ class HWIDV2Action(hwid_action.HWIDAction):
 
     return bom, None
 
-  def EnumerateHWIDs(self, with_classes: Optional[List[str]] = None,
-                     without_classes: Optional[List[str]] = None,
-                     with_components: Optional[List[str]] = None,
-                     without_components: Optional[List[str]] = None):
+  def _EnumerateHWIDs(self, with_classes, without_classes, with_components,
+                      without_components):
     hwids_set = set()
     for hw in self._preproc_data.bom_map:
       miss_list = self._preproc_data.bom_map[hw]['primary']['classes_missing']

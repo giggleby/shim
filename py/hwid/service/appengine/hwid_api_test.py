@@ -10,14 +10,16 @@ import unittest
 from unittest import mock
 
 from cros.chromeoshwid import update_checksum
+from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_api
-from cros.factory.hwid.service.appengine import hwid_manager
+from cros.factory.hwid.service.appengine.hwid_api_helpers \
+    import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import hwid_repo
-from cros.factory.hwid.service.appengine import hwid_util
 from cros.factory.hwid.service.appengine import hwid_validator
+from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
-from cros.factory.hwid.v3 import database
 # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
 # pylint: enable=import-error, no-name-in-module
@@ -47,30 +49,31 @@ HWIDV3_CONTENT_SCHEMA_ERROR_CHANGE = file_utils.ReadFile(
 TEST_PREV_HWID_DB_CONTENT = 'prefix\nchecksum: 1234\nimage_id:\nsuffix_v0\n'
 TEST_HWID_DB_EDITABLE_SECTION_CONTENT = 'image_id:\nsuffix_v1\n'
 
-
-def _MockGetAVLName(unused_category, comp_name):
-  return comp_name
-
-
-def _MockGetPrimaryIdentifier(unused_model, unused_category, comp_name):
-  return comp_name
+ComponentMsg = hwid_api_messages_pb2.Component
+StatusMsg = hwid_api_messages_pb2.Status
 
 
 # pylint: disable=protected-access
-class HwidApiTest(unittest.TestCase):
+class ProtoRPCServiceTest(unittest.TestCase):
 
   def setUp(self):
-    super(HwidApiTest, self).setUp()
-    patcher = mock.patch('__main__.hwid_api._hwid_manager')
-    self.patch_hwid_manager = patcher.start()
+    super().setUp()
+
+    self._modules = test_utils.FakeModuleCollection()
+
+    patcher = mock.patch('__main__.hwid_api._hwid_action_manager',
+                         new=self._modules.fake_hwid_action_manager)
+    self.fake_hwid_action_manager = patcher.start()
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch('__main__.hwid_api._decoder_data_manager')
-    self.patch_decoder_data_manager = patcher.start()
+    patcher = mock.patch('__main__.hwid_api._decoder_data_manager',
+                         new=self._modules.fake_decoder_data_manager)
+    self.fake_decoder_data_manager = patcher.start()
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch('__main__.hwid_api._goldeneye_memcache_adapter')
-    self.patch_goldeneye_memcache_adapter = patcher.start()
+    patcher = mock.patch('__main__.hwid_api._goldeneye_memcache_adapter',
+                         new=self._modules.fake_goldeneye_memcache)
+    self.fake_goldeneye_memcache_adapter = patcher.start()
     self.addCleanup(patcher.stop)
 
     patcher = mock.patch('__main__.hwid_api._hwid_repo_manager')
@@ -81,551 +84,303 @@ class HwidApiTest(unittest.TestCase):
     self.patch_hwid_validator = patcher.start()
     self.addCleanup(patcher.stop)
 
+    patcher = mock.patch('__main__.hwid_api._hwid_db_data_manager',
+                         new=self._modules.fake_hwid_db_data_manager)
+    self.fake_hwid_db_data_manager = patcher.start()
+    self.addCleanup(patcher.stop)
+
     self.service = hwid_api.ProtoRPCService()
 
+  def tearDown(self):
+    super().tearDown()
+
+    self._modules.ClearAll()
+
   def testGetProjects(self):
-    projects = {'ALPHA', 'BRAVO', 'CHARLIE'}
-    self.patch_hwid_manager.GetProjects.return_value = projects
+    self._modules.ConfigHWID('ALPHA', '2', 'db1')
+    self._modules.ConfigHWID('BRAVO', '3', 'db2')
+    self._modules.ConfigHWID('CHARLIE', '3', 'db3')
 
     req = hwid_api_messages_pb2.ProjectsRequest()
     msg = self.service.GetProjects(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.ProjectsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS,
-            projects=sorted(projects)), msg)
+            status=StatusMsg.SUCCESS,
+            projects=sorted(['ALPHA', 'BRAVO', 'CHARLIE'])), msg)
 
-  def testGetProjectsEmpty(self):
-    projects = set()
-    self.patch_hwid_manager.GetProjects.return_value = projects
+  def testGetBom_InternalError(self):
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMEntry.return_value = {}
 
-    req = hwid_api_messages_pb2.ProjectsRequest()
-    msg = self.service.GetProjects(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.ProjectsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS), msg)
-
-  def testGetBomNone(self):
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(None, None, None)
-    }
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
+      req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
+      msg = self.service.GetBom(req)
 
     self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.NOT_FOUND,
-            error='HWID not found.'), msg)
+        hwid_api_messages_pb2.BomResponse(error='Internal error',
+                                          status=StatusMsg.SERVER_ERROR), msg)
 
-    self.patch_hwid_manager.BatchGetBomAndConfigless.assert_called_with(
-        [TEST_HWID], False)
+  def testGetBom_Success(self):
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMEntry.return_value = {
+          TEST_HWID:
+              bc_helper.BOMEntry([
+                  ComponentMsg(name='qux', component_class='baz'),
+              ], [], '', '', StatusMsg.SUCCESS)
+      }
 
-  def testGetBomFastKnownBad(self):
-    bad_hwid = "FOO TEST"
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=bad_hwid)
-    msg = self.service.GetBom(req)
+      req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
+      msg = self.service.GetBom(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.KNOWN_BAD_HWID,
-            error='No metadata present for the requested project: %s' %
-            bad_hwid), msg)
-
-  def testGetBomValueError(self):
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(None, None, ValueError('foo'))
-    }
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST, error='foo'), msg)
-
-  def testGetBomKeyError(self):
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(None, None, KeyError('foo'))
-    }
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.NOT_FOUND, error='\'foo\''),
-        msg)
-
-  def testGetBomEmpty(self):
-    bom = hwid_manager.BOM()
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS), msg)
-
-  def testGetBomInternalError(self):
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {}
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            error='Internal error',
-            status=hwid_api_messages_pb2.Status.SERVER_ERROR), msg)
-
-  def testGetBomComponents(self):
-    bom = hwid_manager.BOM()
-    bom.AddAllComponents({
-        'foo': 'bar',
-        'baz': ['qux', 'rox']
-    })
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, components=[
-                hwid_api_messages_pb2.Component(name='qux',
-                                                component_class='baz'),
-                hwid_api_messages_pb2.Component(name='rox',
-                                                component_class='baz'),
-                hwid_api_messages_pb2.Component(name='bar',
-                                                component_class='foo'),
+            status=StatusMsg.SUCCESS, components=[
+                ComponentMsg(name='qux', component_class='baz'),
             ]), msg)
+
+  def testGetBom_WithError(self):
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMEntry.return_value = {
+          TEST_HWID:
+              bc_helper.BOMEntry([], [], '', 'bad hwid', StatusMsg.BAD_REQUEST)
+      }
+
+      req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
+      msg = self.service.GetBom(req)
+
+    self.assertEqual(
+        hwid_api_messages_pb2.BomResponse(status=StatusMsg.BAD_REQUEST,
+                                          error='bad hwid'), msg)
 
   def testBatchGetBom(self):
     hwid1 = 'TEST HWID 1'
-    bom1 = hwid_manager.BOM()
-    bom1.AddAllComponents({
-        'foo1': 'bar1',
-        'baz1': ['qux1', 'rox1']
-    })
-
     hwid2 = 'TEST HWID 2'
-    bom2 = hwid_manager.BOM()
-    bom2.AddAllComponents({
-        'foo2': 'bar2',
-        'baz2': ['qux2', 'rox2']
-    })
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        hwid1: hwid_manager.BomAndConfigless(bom1, None, None),
-        hwid2: hwid_manager.BomAndConfigless(bom2, None, None),
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMEntry.return_value = {
+          hwid1:
+              bc_helper.BOMEntry([
+                  ComponentMsg(name='qux1', component_class='baz1'),
+                  ComponentMsg(name='rox1', component_class='baz1'),
+              ], [], '', '', StatusMsg.SUCCESS),
+          hwid2:
+              bc_helper.BOMEntry([
+                  ComponentMsg(name='qux2', component_class='baz2'),
+                  ComponentMsg(name='rox2', component_class='baz2'),
+              ], [], '', '', StatusMsg.SUCCESS),
+      }
 
-    req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
-    msg = self.service.BatchGetBom(req)
+      req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
+      msg = self.service.BatchGetBom(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.BatchGetBomResponse(
             boms={
                 hwid1:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=hwid_api_messages_pb2.Status.SUCCESS,
-                        components=[
-                            hwid_api_messages_pb2.Component(
-                                name='qux1', component_class='baz1'),
-                            hwid_api_messages_pb2.Component(
-                                name='rox1', component_class='baz1'),
-                            hwid_api_messages_pb2.Component(
-                                name='bar1', component_class='foo1'),
+                        status=StatusMsg.SUCCESS, components=[
+                            ComponentMsg(name='qux1', component_class='baz1'),
+                            ComponentMsg(name='rox1', component_class='baz1'),
                         ]),
                 hwid2:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=hwid_api_messages_pb2.Status.SUCCESS,
-                        components=[
-                            hwid_api_messages_pb2.Component(
-                                name='qux2', component_class='baz2'),
-                            hwid_api_messages_pb2.Component(
-                                name='rox2', component_class='baz2'),
-                            hwid_api_messages_pb2.Component(
-                                name='bar2', component_class='foo2'),
+                        status=StatusMsg.SUCCESS, components=[
+                            ComponentMsg(name='qux2', component_class='baz2'),
+                            ComponentMsg(name='rox2', component_class='baz2'),
                         ]),
-            }, status=hwid_api_messages_pb2.Status.SUCCESS), msg)
+            }, status=StatusMsg.SUCCESS), msg)
 
-  def testBatchGetBomWithError(self):
+  def testBatchGetBom_WithError(self):
     hwid1 = 'TEST HWID 1'
     hwid2 = 'TEST HWID 2'
     hwid3 = 'TEST HWID 3'
     hwid4 = 'TEST HWID 4'
-    bom = hwid_manager.BOM()
-    bom.AddAllComponents({
-        'foo': 'bar',
-        'baz': ['qux', 'rox']
-    })
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        hwid1:
-            hwid_manager.BomAndConfigless(None, None,
-                                          ValueError('value error')),
-        hwid2:
-            hwid_manager.BomAndConfigless(None, None, KeyError('Invalid key')),
-        hwid3:
-            hwid_manager.BomAndConfigless(None, None,
-                                          IndexError('index error')),
-        hwid4:
-            hwid_manager.BomAndConfigless(bom, None, None),
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMEntry.return_value = {
+          hwid1:
+              bc_helper.BOMEntry([], [], '', 'value error',
+                                 StatusMsg.BAD_REQUEST),
+          hwid2:
+              bc_helper.BOMEntry([], [], '', "'Invalid key'",
+                                 StatusMsg.NOT_FOUND),
+          hwid3:
+              bc_helper.BOMEntry([], [], '', 'index error',
+                                 StatusMsg.SERVER_ERROR),
+          hwid4:
+              bc_helper.BOMEntry([
+                  ComponentMsg(name='qux', component_class='baz'),
+                  ComponentMsg(name='rox', component_class='baz'),
+                  ComponentMsg(name='bar', component_class='foo'),
+              ], [], '', '', StatusMsg.SUCCESS),
+      }
 
-    req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
-    msg = self.service.BatchGetBom(req)
+      req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
+      msg = self.service.BatchGetBom(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.BatchGetBomResponse(
             boms={
                 hwid1:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-                        error='value error'),
+                        status=StatusMsg.BAD_REQUEST, error='value error'),
                 hwid2:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=hwid_api_messages_pb2.Status.NOT_FOUND,
-                        error='\'Invalid key\''),
+                        status=StatusMsg.NOT_FOUND, error="'Invalid key'"),
                 hwid3:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=hwid_api_messages_pb2.Status.SERVER_ERROR,
-                        error='index error'),
+                        status=StatusMsg.SERVER_ERROR, error='index error'),
                 hwid4:
                     hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-                        status=hwid_api_messages_pb2.Status.SUCCESS,
-                        components=[
-                            hwid_api_messages_pb2.Component(
-                                name='qux', component_class='baz'),
-                            hwid_api_messages_pb2.Component(
-                                name='rox', component_class='baz'),
-                            hwid_api_messages_pb2.Component(
-                                name='bar', component_class='foo'),
+                        status=StatusMsg.SUCCESS, components=[
+                            ComponentMsg(name='qux', component_class='baz'),
+                            ComponentMsg(name='rox', component_class='baz'),
+                            ComponentMsg(name='bar', component_class='foo'),
                         ]),
-            }, status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error='value error'), msg)
+            }, status=StatusMsg.BAD_REQUEST, error='value error'), msg)
 
-  def testGetDutLabelsCheckIsVPRelated(self):
-    bom = hwid_manager.BOM()
-    bom.AddAllComponents(
-        {
-            'battery': 'battery_small',
-            'camera': 'camera_0',
-            'cpu': ['cpu_0', 'cpu_1'],
-        }, comp_db=database.Database.LoadFile(
-            GOLDEN_HWIDV3_FILE, verify_checksum=False), require_vp_info=True)
-    bom.project = 'foo'
-    bom.phase = 'bar'
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
+  def testGetHwids_ProjectNotFound(self):
+    # There's no project in the backend datastore by default.
 
-    req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self.service.GetDutLabels(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.DutLabelsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS,
-            labels=[
-                # Only components with 'is_vp_related=True' will be reported as
-                # hwid_component.
-                hwid_api_messages_pb2.DutLabel(name='hwid_component',
-                                               value='battery/battery_small'),
-                hwid_api_messages_pb2.DutLabel(name='hwid_component',
-                                               value='camera/camera_0'),
-                hwid_api_messages_pb2.DutLabel(name='phase', value='bar'),
-                hwid_api_messages_pb2.DutLabel(name='sku',
-                                               value='foo_cpu_0_cpu_1_0B'),
-            ],
-            possible_labels=[
-                'hwid_component',
-                'phase',
-                'sku',
-                'stylus',
-                'touchpad',
-                'touchscreen',
-                'variant',
-            ]),
-        msg)
-
-  def testGetBomComponentsWithVerboseFlag(self):
-    bom = hwid_manager.BOM()
-    bom.AddAllComponents(
-        {
-            'battery': 'battery_small',
-            'cpu': ['cpu_0', 'cpu_1'],
-            'camera': 'camera_0',
-        }, comp_db=database.Database.LoadFile(
-            GOLDEN_HWIDV3_FILE, verify_checksum=False), verbose=True)
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID, verbose=True)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, components=[
-                hwid_api_messages_pb2.Component(
-                    name='battery_small', component_class='battery', fields=[
-                        hwid_api_messages_pb2.Field(name='manufacturer',
-                                                    value='manufacturer1'),
-                        hwid_api_messages_pb2.Field(name='model_name',
-                                                    value='model1'),
-                        hwid_api_messages_pb2.Field(name='technology',
-                                                    value='Battery Li-ion')
-                    ]),
-                hwid_api_messages_pb2.Component(
-                    name='camera_0', component_class='camera', fields=[
-                        hwid_api_messages_pb2.Field(name='idProduct',
-                                                    value='abcd'),
-                        hwid_api_messages_pb2.Field(name='idVendor',
-                                                    value='4567'),
-                        hwid_api_messages_pb2.Field(name='name', value='Camera')
-                    ], avl_info=hwid_api_messages_pb2.AvlInfo(cid=0),
-                    has_avl=True),
-                hwid_api_messages_pb2.Component(
-                    name='cpu_0', component_class='cpu', fields=[
-                        hwid_api_messages_pb2.Field(name='cores', value='4'),
-                        hwid_api_messages_pb2.Field(name='name',
-                                                    value='CPU @ 1.80GHz')
-                    ], avl_info=hwid_api_messages_pb2.AvlInfo(cid=0),
-                    has_avl=True),
-                hwid_api_messages_pb2.Component(
-                    name='cpu_1', component_class='cpu', fields=[
-                        hwid_api_messages_pb2.Field(name='cores', value='4'),
-                        hwid_api_messages_pb2.Field(name='name',
-                                                    value='CPU @ 2.00GHz')
-                    ], avl_info=hwid_api_messages_pb2.AvlInfo(cid=1),
-                    has_avl=True)
-            ]), msg)
-
-  def testGetBomLabels(self):
-    bom = hwid_manager.BOM()
-    bom.AddAllLabels({
-        'foo': {
-            'bar': None
-        },
-        'baz': {
-            'qux': '1',
-            'rox': '2'
-        }
-    })
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, labels=[
-                hwid_api_messages_pb2.Label(component_class='foo', name='bar'),
-                hwid_api_messages_pb2.Label(component_class='baz', name='qux',
-                                            value='1'),
-                hwid_api_messages_pb2.Label(component_class='baz', name='rox',
-                                            value='2'),
-            ]), msg)
-
-  def testGetBomAvlInfo(self):
-    bom = hwid_manager.BOM()
-    bom.AddAllComponents(
-        {'dram': ['dram_1234_5678', 'dram_1234_5678#4', 'not_dram_1234_5678']},
-        comp_db=database.Database.LoadFile(GOLDEN_HWIDV3_FILE,
-                                           verify_checksum=False), verbose=True)
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
-
-    req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID, verbose=True)
-    msg = self.service.GetBom(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.BomResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, components=[
-                hwid_api_messages_pb2.Component(
-                    name='dram_1234_5678', component_class='dram', fields=[
-                        hwid_api_messages_pb2.Field(name='part', value='part2'),
-                        hwid_api_messages_pb2.Field(name='size', value='4G'),
-                    ], avl_info=hwid_api_messages_pb2.AvlInfo(
-                        cid=1234, qid=5678), has_avl=True),
-                hwid_api_messages_pb2.Component(
-                    name='dram_1234_5678#4', component_class='dram', fields=[
-                        hwid_api_messages_pb2.Field(name='part', value='part2'),
-                        hwid_api_messages_pb2.Field(name='size', value='4G'),
-                        hwid_api_messages_pb2.Field(name='slot', value='3'),
-                    ], avl_info=hwid_api_messages_pb2.AvlInfo(
-                        cid=1234, qid=5678), has_avl=True),
-                hwid_api_messages_pb2.Component(
-                    name='not_dram_1234_5678', component_class='dram', fields=[
-                        hwid_api_messages_pb2.Field(name='part', value='part3'),
-                        hwid_api_messages_pb2.Field(name='size', value='4G'),
-                    ]),
-            ]), msg)
-
-  def testGetHwids(self):
-    hwids = ['alfa', 'bravo', 'charlie']
-    self.patch_hwid_manager.GetHwids.return_value = hwids
-
-    req = hwid_api_messages_pb2.HwidsRequest(project=TEST_HWID)
+    req = hwid_api_messages_pb2.HwidsRequest(project='no_such_project')
     msg = self.service.GetHwids(req)
+
+    self.assertEqual(msg.status, StatusMsg.NOT_FOUND)
+
+  def testGetHwids_InternalError(self):
+    self._modules.ConfigHWID('FOO', '3', 'db data', None)
+
+    req = hwid_api_messages_pb2.HwidsRequest(project='foo')
+    msg = self.service.GetHwids(req)
+
+    self.assertEqual(msg.status, StatusMsg.SERVER_ERROR)
+
+  def testGetHwids_BadRequestError(self):
+    hwid_action_inst = hwid_action.HWIDAction()
+    with mock.patch.object(hwid_action_inst, '_EnumerateHWIDs') as method:
+      method.return_value = ['alfa', 'bravo', 'charlie']
+      self._modules.ConfigHWID('FOO', '3', 'db data', hwid_action_inst)
+
+      req = hwid_api_messages_pb2.HwidsRequest(project='foo',
+                                               with_classes=['foo', 'bar'],
+                                               without_classes=['bar', 'baz'])
+      msg = self.service.GetHwids(req)
+
+    self.assertEqual(msg.status, StatusMsg.BAD_REQUEST)
+
+  def testGetHwids_Success(self):
+    hwid_action_inst = hwid_action.HWIDAction()
+    with mock.patch.object(hwid_action_inst, '_EnumerateHWIDs') as method:
+      method.return_value = ['alfa', 'bravo', 'charlie']
+      self._modules.ConfigHWID('FOO', '3', 'db data', hwid_action_inst)
+
+      req = hwid_api_messages_pb2.HwidsRequest(project='foo')
+      msg = self.service.GetHwids(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.HwidsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS,
-            hwids=['alfa', 'bravo', 'charlie']), msg)
+            status=StatusMsg.SUCCESS, hwids=['alfa', 'bravo', 'charlie']), msg)
 
-  def testGetHwidsEmpty(self):
-    hwids = list()
-    self.patch_hwid_manager.GetHwids.return_value = hwids
+  def testGetComponentClasses_ProjectNotFoundError(self):
+    # There's no project in the backend datastore by default.
 
-    req = hwid_api_messages_pb2.HwidsRequest(project=TEST_HWID)
-    msg = self.service.GetHwids(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.HwidsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS), msg)
-
-  def testGetHwidsErrors(self):
-    self.patch_hwid_manager.GetHwids.side_effect = ValueError('foo')
-
-    req = hwid_api_messages_pb2.HwidsRequest(project=TEST_HWID)
-    msg = self.service.GetHwids(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.HwidsResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error='Invalid input: %s' % TEST_HWID), msg)
-
-    req = hwid_api_messages_pb2.HwidsRequest(project=TEST_HWID,
-                                             with_classes=['foo', 'bar'],
-                                             without_classes=['bar', 'baz'])
-    msg = self.service.GetHwids(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.HwidsResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error='One or more component classes specified for both with and '
-            'without'), msg)
-
-    req = hwid_api_messages_pb2.HwidsRequest(project=TEST_HWID,
-                                             with_components=['foo', 'bar'],
-                                             without_components=['bar', 'baz'])
-    msg = self.service.GetHwids(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.HwidsResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error='One or more components specified for both with and without'),
-        msg)
-
-  def testGetComponentClasses(self):
-    classes = ['alfa', 'bravo', 'charlie']
-    self.patch_hwid_manager.GetComponentClasses.return_value = classes
-
-    req = hwid_api_messages_pb2.ComponentClassesRequest(project=TEST_HWID)
+    req = hwid_api_messages_pb2.ComponentClassesRequest(project='nosuchproject')
     msg = self.service.GetComponentClasses(req)
 
-    self.assertEqual(
-        hwid_api_messages_pb2.ComponentClassesResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS,
-            component_classes=['alfa', 'bravo', 'charlie']), msg)
+    self.assertEqual(msg.status, StatusMsg.NOT_FOUND)
 
-  def testGetComponentClassesEmpty(self):
-    classes = list()
-    self.patch_hwid_manager.GetComponentClasses.return_value = classes
+  def testGetComponentClasses_ProjectUnavailableError(self):
+    self._modules.ConfigHWID('FOO', '3', 'db data', None)
 
-    req = hwid_api_messages_pb2.ComponentClassesRequest(project=TEST_HWID)
+    req = hwid_api_messages_pb2.ComponentClassesRequest(project='foo')
     msg = self.service.GetComponentClasses(req)
 
-    self.assertEqual(
-        hwid_api_messages_pb2.ComponentClassesResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS), msg)
+    self.assertEqual(msg.status, StatusMsg.SERVER_ERROR)
 
-  def testGetComponentClassesErrors(self):
-    self.patch_hwid_manager.GetComponentClasses.side_effect = ValueError('foo')
-    req = hwid_api_messages_pb2.ComponentClassesRequest(project=TEST_HWID)
+  def testGetComponentClasses_Success(self):
+    fake_hwid_action = mock.create_autospec(hwid_action.HWIDAction,
+                                            instance=True)
+    fake_hwid_action.GetComponentClasses.return_value = ['dram', 'storage']
+    self._modules.ConfigHWID('FOO', '3', 'db data', fake_hwid_action)
+
+    req = hwid_api_messages_pb2.ComponentClassesRequest(project='foo')
     msg = self.service.GetComponentClasses(req)
 
-    self.assertEqual(
-        hwid_api_messages_pb2.ComponentClassesResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error='Invalid input: %s' % TEST_HWID), msg)
+    self.assertEqual(msg.status, StatusMsg.SUCCESS)
+    self.assertCountEqual(list(msg.component_classes), ['dram', 'storage'])
 
-  def testGetComponents(self):
-    components = dict(uno=['alfa'], dos=['bravo'], tres=['charlie', 'delta'])
+  def testGetComponents_ProjectNotFoundError(self):
+    # There's no project in the backend datastore by default.
 
-    self.patch_hwid_manager.GetComponents.return_value = components
-
-    req = hwid_api_messages_pb2.ComponentsRequest(project=TEST_HWID)
+    req = hwid_api_messages_pb2.ComponentsRequest(project='nosuchproject')
     msg = self.service.GetComponents(req)
 
-    self.assertEqual(
-        hwid_api_messages_pb2.ComponentsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, components=[
-                hwid_api_messages_pb2.Component(component_class='uno',
-                                                name='alfa'),
-                hwid_api_messages_pb2.Component(component_class='dos',
-                                                name='bravo'),
-                hwid_api_messages_pb2.Component(component_class='tres',
-                                                name='charlie'),
-                hwid_api_messages_pb2.Component(component_class='tres',
-                                                name='delta'),
-            ]), msg)
+    self.assertEqual(msg.status, StatusMsg.NOT_FOUND)
 
-  def testGetComponentsEmpty(self):
-    components = dict()
+  def testGetComponents_ProjectUnavailableError(self):
+    self._modules.ConfigHWID('FOO', '3', 'db data', None)
 
-    self.patch_hwid_manager.GetComponents.return_value = components
-
-    req = hwid_api_messages_pb2.ComponentsRequest(project=TEST_HWID)
+    req = hwid_api_messages_pb2.ComponentsRequest(project='foo')
     msg = self.service.GetComponents(req)
 
-    self.assertEqual(
-        hwid_api_messages_pb2.ComponentsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS), msg)
+    self.assertEqual(msg.status, StatusMsg.SERVER_ERROR)
 
-  def testGetComponentsErrors(self):
-    self.patch_hwid_manager.GetComponents.side_effect = ValueError('foo')
+  def testGetComponents_SuccessWithAllComponentClasses(self):
+    sampled_components = {
+        'dram': ['dram1', 'dram2'],
+        'storage': ['storage1', 'storage2'],
+    }
 
-    req = hwid_api_messages_pb2.ComponentsRequest(project=TEST_HWID)
+    def FakeGetComponents(with_classes=None):
+      return {
+          k: v
+          for k, v in sampled_components.items()
+          if with_classes is None or k in with_classes
+      }
+
+    fake_hwid_action = mock.create_autospec(hwid_action.HWIDAction,
+                                            instance=True)
+    fake_hwid_action.GetComponents.side_effect = FakeGetComponents
+    self._modules.ConfigHWID('FOO', '3', 'db data', fake_hwid_action)
+
+    req = hwid_api_messages_pb2.ComponentsRequest(project='foo')
     msg = self.service.GetComponents(req)
 
-    self.assertEqual(
-        hwid_api_messages_pb2.ComponentsResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error='Invalid input: %s' % TEST_HWID,
-        ), msg)
+    self.assertEqual(msg.status, StatusMsg.SUCCESS)
+    self.assertCountEqual(
+        list(msg.components), [
+            ComponentMsg(component_class='dram', name='dram1'),
+            ComponentMsg(component_class='dram', name='dram2'),
+            ComponentMsg(component_class='storage', name='storage1'),
+            ComponentMsg(component_class='storage', name='storage2'),
+        ])
+
+  def testGetComponents_SuccessWithLimitedComponentClasses(self):
+    sampled_components = {
+        'dram': ['dram1', 'dram2'],
+        'storage': ['storage1', 'storage2'],
+    }
+
+    def FakeGetComponents(with_classes=None):
+      return {
+          k: v
+          for k, v in sampled_components.items()
+          if with_classes is None or k in with_classes
+      }
+
+    fake_hwid_action = mock.create_autospec(hwid_action.HWIDAction,
+                                            instance=True)
+    fake_hwid_action.GetComponents.side_effect = FakeGetComponents
+    self._modules.ConfigHWID('FOO', '3', 'db data', fake_hwid_action)
+
+    req = hwid_api_messages_pb2.ComponentsRequest(project='foo',
+                                                  with_classes=['dram'])
+    msg = self.service.GetComponents(req)
+
+    self.assertEqual(msg.status, StatusMsg.SUCCESS)
+    self.assertCountEqual(
+        list(msg.components), [
+            ComponentMsg(component_class='dram', name='dram1'),
+            ComponentMsg(component_class='dram', name='dram2'),
+        ])
 
   def testValidateConfig(self):
     req = hwid_api_messages_pb2.ValidateConfigRequest(
@@ -633,8 +388,8 @@ class HwidApiTest(unittest.TestCase):
     msg = self.service.ValidateConfig(req)
 
     self.assertEqual(
-        hwid_api_messages_pb2.ValidateConfigResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS), msg)
+        hwid_api_messages_pb2.ValidateConfigResponse(status=StatusMsg.SUCCESS),
+        msg)
 
   def testValidateConfigErrors(self):
     self.patch_hwid_validator.Validate.side_effect = (
@@ -648,8 +403,7 @@ class HwidApiTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error_message='msg'), msg)
+            status=StatusMsg.BAD_REQUEST, error_message='msg'), msg)
 
   def testValidateConfigAndUpdateChecksum(self):
     self.patch_hwid_validator.ValidateChange.return_value = (TEST_MODEL, {})
@@ -660,7 +414,7 @@ class HwidApiTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS,
+            status=StatusMsg.SUCCESS,
             new_hwid_config_contents=EXPECTED_REPLACE_RESULT, model=TEST_MODEL),
         msg)
 
@@ -688,7 +442,7 @@ class HwidApiTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS,
+            status=StatusMsg.SUCCESS,
             new_hwid_config_contents=EXPECTED_REPLACE_RESULT,
             name_changed_components_per_category={
                 'wireless':
@@ -720,8 +474,7 @@ class HwidApiTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error_message='msg'), msg)
+            status=StatusMsg.BAD_REQUEST, error_message='msg'), msg)
 
   def testValidateConfigAndUpdateChecksumSchemaError(self):
     validation_error = hwid_validator.ValidationError(
@@ -734,8 +487,7 @@ class HwidApiTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-            status=hwid_api_messages_pb2.Status.SCHEMA_ERROR,
-            error_message='msg'), msg)
+            status=StatusMsg.SCHEMA_ERROR, error_message='msg'), msg)
 
   def testValidateConfigAndUpdateChecksumUnknwonStatus(self):
     self.patch_hwid_validator.ValidateChange.return_value = (TEST_MODEL, {
@@ -753,36 +505,37 @@ class HwidApiTest(unittest.TestCase):
 
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
+            status=StatusMsg.BAD_REQUEST,
             error_message='Unknown status: \'new_status\''), msg)
 
-  @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
-  def testGetSku(self, mock_get_total_ram):
-    mock_get_total_ram.return_value = '1Mb', 100000000
-    bom = hwid_manager.BOM()
+  def testGetSku(self):
+    bom = hwid_action.BOM()
     bom.AddAllComponents({
         'cpu': ['bar1', 'bar2'],
         'dram': ['foo']
     })
     bom.project = 'foo'
     configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMAndConfigless.return_value = {
+          TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
+      }
 
-    req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-    msg = self.service.GetSku(req)
+      with mock.patch.object(self.service._sku_helper,
+                             'GetTotalRAMFromHWIDData') as mock_func:
+        mock_func.return_value = ('1MB', 100000000)
+
+        req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+        msg = self.service.GetSku(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, project='foo',
-            cpu='bar1_bar2', memory='1Mb', memory_in_bytes=100000000,
-            sku='foo_bar1_bar2_1Mb'), msg)
+            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
+            memory='1MB', memory_in_bytes=100000000, sku='foo_bar1_bar2_1MB'),
+        msg)
 
-  @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
-  def testGetSkuWithConfigless(self, mock_get_total_ram):
-    mock_get_total_ram.return_value = '1Mb', 100000000
-    bom = hwid_manager.BOM()
+  def testGetSku_WithConfigless(self):
+    bom = hwid_action.BOM()
     bom.AddAllComponents({
         'cpu': ['bar1', 'bar2'],
         'dram': ['foo']
@@ -791,184 +544,58 @@ class HwidApiTest(unittest.TestCase):
     configless = {
         'memory': 4
     }
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMAndConfigless.return_value = {
+          TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
+      }
 
-    req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-    msg = self.service.GetSku(req)
+      with mock.patch.object(self.service._sku_helper,
+                             'GetTotalRAMFromHWIDData') as mock_func:
+        mock_func.return_value = ('1MB', 100000000)
+
+        req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+        msg = self.service.GetSku(req)
 
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, project='foo',
-            cpu='bar1_bar2', memory='4GB', memory_in_bytes=4294967296,
-            sku='foo_bar1_bar2_4GB'), msg)
+            status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
+            memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB'),
+        msg)
 
-  @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
-  def testGetSkuBadDRAM(self, mock_get_total_ram):
-    mock_get_total_ram.side_effect = hwid_util.HWIDUtilException('X')
-    bom = hwid_manager.BOM()
+  def testGetSku_BadDRAM(self):
+    bom = hwid_action.BOM()
     bom.AddAllComponents({
         'cpu': 'bar',
         'dram': ['fail']
     })
-    configless = None
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-
-    req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-    msg = self.service.GetSku(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.SkuResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST, error='X'), msg)
-
-  @mock.patch.object(hwid_util, 'GetTotalRamFromHwidData')
-  def testGetSkuMissingCPU(self, mock_get_total_ram):
-    mock_get_total_ram.return_value = ('2Mb', 2000000)
-    bom = hwid_manager.BOM()
-    bom.AddAllComponents({'dram': ['some_memory_chip', 'other_memory_chip']})
     bom.project = 'foo'
     configless = None
+    with mock.patch.object(self.service, '_bc_helper') as mock_helper:
+      mock_helper.BatchGetBOMAndConfigless.return_value = {
+          TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
+      }
 
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
+      with mock.patch.object(self.service._sku_helper,
+                             'GetTotalRAMFromHWIDData') as mock_func:
+        mock_func.side_effect = sku_helper.SKUDeductionError('X')
 
-    req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-    msg = self.service.GetSku(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.SkuResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, project='foo',
-            memory_in_bytes=2000000, memory='2Mb', sku='foo_None_2Mb'), msg)
-
-  @mock.patch.object(hwid_util, 'GetSkuFromBom')
-  def testGetDutLabels(self, mock_get_sku_from_bom):
-    self.patch_goldeneye_memcache_adapter.Get.return_value = [
-        ('r1.*', 'b1', []), ('^Fo.*', 'found_device', [])
-    ]
-    bom = hwid_manager.BOM()
-    bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
-    bom.project = 'foo'
-    bom.phase = 'bar'
-    configless = None
-
-    mock_get_sku_from_bom.return_value = {
-        'sku': 'TestSku',
-        'project': None,
-        'cpu': None,
-        'memory_str': None,
-        'total_bytes': None
-    }
-
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-    self.patch_decoder_data_manager.GetAVLName.side_effect = _MockGetAVLName
-    self.patch_decoder_data_manager.GetPrimaryIdentifier.side_effect = (
-        _MockGetPrimaryIdentifier)
-
-    req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self.service.GetDutLabels(req)
-
-    self.assertTrue(self.CheckForLabelValue(msg, 'phase', 'bar'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'hwid_component'))
-    self.assertEqual(5, len(msg.labels))
-
-    self.patch_goldeneye_memcache_adapter.Get.return_value = None
-
-    req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self.service.GetDutLabels(req)
+        req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+        msg = self.service.GetSku(req)
 
     self.assertEqual(
-        hwid_api_messages_pb2.DutLabelsResponse(
-            status=hwid_api_messages_pb2.Status.SERVER_ERROR,
-            error='Missing Regexp List', possible_labels=[
-                'hwid_component',
-                'phase',
-                'sku',
-                'stylus',
-                'touchpad',
-                'touchscreen',
-                'variant',
-            ]), msg)
+        hwid_api_messages_pb2.SkuResponse(status=StatusMsg.BAD_REQUEST,
+                                          error='X'), msg)
 
-  def testGetPossibleDutLabels(self):
-    req = hwid_api_messages_pb2.DutLabelsRequest(hwid='')
-    msg = self.service.GetDutLabels(req)
+  def testGetDutLabels(self):
+    with mock.patch.object(self.service, '_dut_label_helper') as mock_helper:
+      mock_helper.GetDUTLabels.return_value = (
+          hwid_api_messages_pb2.DutLabelsResponse())
 
-    self.assertEqual(
-        hwid_api_messages_pb2.DutLabelsResponse(
-            status=hwid_api_messages_pb2.Status.SUCCESS, possible_labels=[
-                'hwid_component',
-                'phase',
-                'sku',
-                'stylus',
-                'touchpad',
-                'touchscreen',
-                'variant',
-            ]), msg)
+      req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
+      msg = self.service.GetDutLabels(req)
 
-  @mock.patch.object(hwid_util, 'GetSkuFromBom')
-  def testGetDutLabelsWithConfigless(self, mock_get_sku_from_bom):
-    self.patch_goldeneye_memcache_adapter.Get.return_value = [
-        ('r1.*', 'b1', []), ('^Fo.*', 'found_device', [])
-    ]
-    bom = hwid_manager.BOM()
-    bom.project = 'foo'
-    bom.phase = 'bar'
-    configless = {
-        'feature_list': {
-            'has_touchscreen': 1
-        }
-    }
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-
-    mock_get_sku_from_bom.return_value = {
-        'sku': 'TestSku',
-        'project': None,
-        'cpu': None,
-        'memory_str': None,
-        'total_bytes': None
-    }
-
-    self.patch_hwid_manager.BatchGetBomAndConfigless.return_value = {
-        TEST_HWID: hwid_manager.BomAndConfigless(bom, configless, None)
-    }
-
-    req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self.service.GetDutLabels(req)
-
-    self.assertTrue(self.CheckForLabelValue(msg, 'phase', 'bar'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
-    self.assertEqual(4, len(msg.labels))
-
-    self.patch_goldeneye_memcache_adapter.Get.return_value = None
-
-    req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
-    msg = self.service.GetDutLabels(req)
-
-    self.assertEqual(
-        hwid_api_messages_pb2.DutLabelsResponse(
-            status=hwid_api_messages_pb2.Status.SERVER_ERROR,
-            error='Missing Regexp List', possible_labels=[
-                'hwid_component',
-                'phase',
-                'sku',
-                'stylus',
-                'touchpad',
-                'touchscreen',
-                'variant',
-            ]), msg)
+    mock_helper.GetDUTLabels.assert_called_once_with(req)
+    self.assertEqual(msg, mock_helper.GetDUTLabels.return_value)
 
   def testGetHwidDbEditableSectionProjectDoesntExist(self):
     live_hwid_repo = self.patch_hwid_repo_manager.GetLiveHWIDRepo.return_value
@@ -1247,7 +874,7 @@ class HwidApiTest(unittest.TestCase):
     return False
 
   @mock.patch('cros.factory.hwid.v3.contents_analyzer.ContentsAnalyzer')
-  def test_AnalyzeHwidDbEditableSection_PreconditionErrors(
+  def testAnalyzeHwidDbEditableSection_PreconditionErrors(
       self, mock_contents_analyzer_constructor):
     live_hwid_repo = self.patch_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.GetHWIDDBMetadataByName.return_value = (
@@ -1276,8 +903,8 @@ class HwidApiTest(unittest.TestCase):
         ])
 
   @mock.patch('cros.factory.hwid.v3.contents_analyzer.ContentsAnalyzer')
-  def test_AnalyzeHwidDbEditableSection_Pass(
-      self, mock_contents_analyzer_constructor):
+  def testAnalyzeHwidDbEditableSection_Pass(self,
+                                            mock_contents_analyzer_constructor):
     live_hwid_repo = self.patch_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.GetHWIDDBMetadataByName.return_value = (
         hwid_repo.HWIDDBMetadata('test_project', 'test_project', 3,

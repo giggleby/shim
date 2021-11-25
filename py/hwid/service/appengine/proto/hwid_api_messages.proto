@@ -480,8 +480,12 @@ service HwidService {
 
   rpc GetComponents(ComponentsRequest) returns (ComponentsResponse);
 
+  // Deprecated.
+  // TODO(yhong): Remove this RPC when all clients are migrated.
   rpc ValidateConfig(ValidateConfigRequest) returns (ValidateConfigResponse);
 
+  // Deprecated.
+  // TODO(yhong): Remove this RPC when all clients are migrated.
   rpc ValidateConfigAndUpdateChecksum(ValidateConfigAndUpdateChecksumRequest)
       returns (ValidateConfigAndUpdateChecksumResponse);
 
