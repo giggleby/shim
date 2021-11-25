@@ -256,8 +256,10 @@ class Testlog:
         'Not able to find environment variable %r' % TESTLOG_ENV_VARIABLE_NAME)
     # Read to load metadata.
     metadata = None
-    with file_utils.FileLockContextManager(session_json_path, 'r') as fd:
+    manager = file_utils.FileLockContextManager(session_json_path, 'r')
+    with manager as fd:
       last_test_run = json.loads(fd.read())
+    manager.Close()
     metadata = last_test_run.pop(
         Testlog.FIELDS._METADATA)  # pylint: disable=protected-access
     return {
@@ -349,10 +351,12 @@ def InitSubSession(log_root, uuid, station_test_run=None):
           os.path.join(log_root, _DEFAULT_ATTACHMENTS_FOLDER),
       Testlog.FIELDS.UUID: uuid
   }
-  with file_utils.FileLockContextManager(session_log_path, 'w') as fd:
+  manager = file_utils.FileLockContextManager(session_log_path, 'w')
+  with manager as fd:
     fd.write(station_test_run.ToJSON())
     fd.flush()
     os.fsync(fd.fileno())
+  manager.Close()
   return session_log_path
 
 
@@ -373,32 +377,36 @@ def LogTestRun(session_json_path, station_test_run=None):
   """
   # TODO(itspeter): Check the file is already closed properly. (i.e.
   #                 no lock exists or other process using it)
-  with file_utils.FileLockContextManager(session_json_path, 'r+') as fd:
-    content = fd.read()
-    try:
-      session_json = json.loads(content)
-      test_run = StationTestRun()
-      test_run.Populate(session_json)
-      # Merge the station_test_run information.
-      if station_test_run:
-        test_run.Populate(station_test_run.ToDict())
-      if 'startTime' in test_run and 'endTime' in test_run:
-        test_run['duration'] = test_run['endTime'] - test_run['startTime']
-      Log(test_run)
-      # pylint: disable=protected-access
-      test_run[Testlog.FIELDS._METADATA] = (
-          session_json[Testlog.FIELDS._METADATA])
-      fd.seek(0)
-      fd.truncate()
-      fd.write(test_run.ToJSON())
-      fd.flush()
-      os.fsync(fd.fileno())
-    except Exception:
-      # Not much we can do here.
-      logging.exception('Not able to collect %s. Last read: %s',
-                        session_json_path, content)
-      # We should stop the pytest if it failed to log Testlog event.
-      raise
+  manager = file_utils.FileLockContextManager(session_json_path, 'r+')
+  try:
+    with manager as fd:
+      content = fd.read()
+      try:
+        session_json = json.loads(content)
+        test_run = StationTestRun()
+        test_run.Populate(session_json)
+        # Merge the station_test_run information.
+        if station_test_run:
+          test_run.Populate(station_test_run.ToDict())
+        if 'startTime' in test_run and 'endTime' in test_run:
+          test_run['duration'] = test_run['endTime'] - test_run['startTime']
+        Log(test_run)
+        # pylint: disable=protected-access
+        test_run[Testlog.FIELDS._METADATA] = (
+            session_json[Testlog.FIELDS._METADATA])
+        fd.seek(0)
+        fd.truncate()
+        fd.write(test_run.ToJSON())
+        fd.flush()
+        os.fsync(fd.fileno())
+      except Exception:
+        # Not much we can do here.
+        logging.exception('Not able to collect %s. Last read: %s',
+                          session_json_path, content)
+        # We should stop the pytest if it failed to log Testlog event.
+        raise
+  finally:
+    manager.Close()
 
 
 def LogFinalTestRun(session_json_path, station_test_run=None):

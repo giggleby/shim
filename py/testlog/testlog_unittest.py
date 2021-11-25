@@ -414,7 +414,8 @@ class TestlogEventTest(TestlogTestBase):
       description = att_dict['description']
       self.assertEqual(DESCRIPTION, description)
       path = att_dict['path']
-      text = open(path, 'r').read()
+      with open(path) as f:
+        text = f.read()
       self.assertEqual(CONTENT, text)
       self.assertTrue(att_name in path)
       paths.add(path)
@@ -519,7 +520,8 @@ class TestlogEventTest(TestlogTestBase):
     paths = set()
     for att_name, att_dict in event['attachments'].items():
       path = att_dict['path']
-      text = open(path, 'r').read()
+      with open(path) as f:
+        text = f.read()
       self.assertEqual(CONTENT, text)
       self.assertTrue(att_name in path)
       paths.add(path)
@@ -639,7 +641,8 @@ class TestlogE2ETest(TestlogTestBase):
         env=env_additions)
     p.wait()
     logging.info(OUT_TAG)
-    session_json = json.loads(open(session_json_path).read())
+    with open(session_json_path) as f:
+      session_json = json.loads(f.read())
     # Collect the session log
     testlog.LogFinalTestRun(session_json_path)
     primary_json = file_utils.ReadLines(
