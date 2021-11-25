@@ -64,6 +64,10 @@ Download database:
     2. Select namespace="all namespace" -> Select bucket -> Export
     3. GCP console -> Cloud Storage -> Select bucket -> Download Datastore folder
 
+Impersonated service account (For gerrit access):
+  * GCP console -> IAM -> Add your LDAP as "Service Account Token Creator"
+
+
 Run local server:
 ```bash
 export REDIS_RDB=${redis_rdb}

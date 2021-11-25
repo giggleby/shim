@@ -32,7 +32,7 @@ _DEFAULT_CONFIGURATION = {
             'waived_comp_categories': ['ethernet']
         }
     },
-    'hwid_repo_branch': 'no_such_branch',
+    'hwid_repo_branch': 'stabilize-13360.B',
     'project_region': '',
     'queue_name': ''
 }

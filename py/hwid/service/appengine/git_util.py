@@ -22,6 +22,7 @@ from dulwich import porcelain
 from dulwich.refs import strip_peeled_refs
 from dulwich.repo import MemoryRepo as _MemoryRepo
 import google.auth
+from google.auth import impersonated_credentials
 import google.auth.transport.requests
 import urllib3.exceptions
 from urllib3 import PoolManager
@@ -38,6 +39,8 @@ REF_REMOTES_PREFIX = b'refs/remotes/'
 NORMAL_FILE_MODE = 0o100644
 EXEC_FILE_MODE = 0o100755
 DIR_MODE = 0o040000
+GERRIT_SCOPE = 'https://www.googleapis.com/auth/gerritcodereview'
+IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
 
 
 def _B(s):
@@ -508,8 +511,16 @@ def AbandonCL(review_host, auth_cookie, change_id):
 
 
 def GetGerritCredentials():
-  credential, unused_project_id = google.auth.default(
-      scopes=['https://www.googleapis.com/auth/gerritcodereview'])
+  credential, unused_project_id = google.auth.default(scopes=[GERRIT_SCOPE])
+
+  # If not running on AppEngine env, use impersonated credential.
+  # Require `gcloud auth application-default login`
+  if IMPERSONATED_SERVICE_ACCOUNT:
+    credential = impersonated_credentials.Credentials(
+        source_credentials=credential,
+        target_principal=IMPERSONATED_SERVICE_ACCOUNT,
+        target_scopes=[GERRIT_SCOPE])
+
   credential.refresh(google.auth.transport.requests.Request())
   service_account_name = credential.service_account_email
   token = credential.token

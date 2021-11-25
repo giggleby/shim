@@ -9,6 +9,13 @@ ENTITY_FILE="${ENTITY_FILE}"
 DATASTORE_PROJECT_ID="${DATASTORE_PROJECT_ID}"
 
 start_server() {
+  echo "INFO: If you need the local server able to access gerrit," \
+    "please login for impersonated credential."
+  read -r -p "      Run \`gcloud auth application-default login\`? [y/N]" opt
+  if [[ "${opt}" =~ [yY] ]]; then
+    /usr/src/google-cloud-sdk/bin/gcloud auth application-default login
+  fi
+
   redis-server &
   /usr/src/google-cloud-sdk/bin/gcloud \
     beta emulators datastore start --consistency=1 &

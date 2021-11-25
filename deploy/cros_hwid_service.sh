@@ -31,6 +31,7 @@ DATASTORE="${DATASTORE}"
 GCP_PROJECT=
 APP_ID=
 APP_HOSTNAME=
+IMPERSONATED_SERVICE_ACCOUNT=
 
 check_docker() {
   if ! type docker >/dev/null 2>&1; then
@@ -206,6 +207,7 @@ do_deploy() {
         --env FLASK_APP="/build/cros/factory/hwid/service/appengine/app.py" \
         --env FLASK_ENV="development" \
         --env PYTHONPATH="/usr/src/lib" \
+        --env IMPERSONATED_SERVICE_ACCOUNT="${IMPERSONATED_SERVICE_ACCOUNT}" \
         "hwid_service_local" \
         bash "/build/deploy_local.sh"
       ;;
