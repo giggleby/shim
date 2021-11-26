@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import pathlib
 
 from cros.factory.test.env import paths
 from cros.factory.utils.process_utils import Spawn
@@ -226,11 +227,11 @@ def main(argv=None):
 
     # Add empty __init__.py files so Python realizes these directories
     # are modules.
-    open(os.path.join(cros_dir, '__init__.py'), 'w')
-    open(os.path.join(cros_dir, 'factory', '__init__.py'), 'w')
+    pathlib.Path(os.path.join(cros_dir, '__init__.py')).touch()
+    pathlib.Path(os.path.join(cros_dir, 'factory', '__init__.py')).touch()
 
     # Indicate that whether the .par file is expanded or not.
-    open(os.path.join(par_build, 'expanded'), 'w')
+    pathlib.Path(os.path.join(par_build, 'expanded')).touch()
 
     if args.compiled:
       Spawn(['python3', '-m', 'compileall', par_build], check_call=True)
@@ -270,10 +271,10 @@ def main(argv=None):
 
     logging.info('modules: %r', modules)
     # Concatenate the header and the par file.
-    with open(args.output, 'wb') as out:
+    with open(args.output, 'wb') as out, open(factory_par, 'rb') as f:
       out.write(
           HEADER_TEMPLATE.replace('MODULES', repr(modules)).encode('utf-8'))
-      shutil.copyfileobj(open(factory_par, 'rb'), out)
+      shutil.copyfileobj(f, out)
       os.fchmod(out.fileno(), 0o755)
 
     # Done!
