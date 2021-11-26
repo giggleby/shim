@@ -763,7 +763,8 @@ class GoofyRPC:
                                       path + '-*',
                                       'testlog.json')):
         try:
-          ret.append(yaml.load(open(f)))
+          with open(f) as fd:
+            ret.append(yaml.load(fd))
         except Exception:
           logging.exception('Unable to load test metadata %s', f)
 
@@ -775,7 +776,8 @@ class GoofyRPC:
     test_dir = os.path.join(paths.DATA_TESTS_DIR,
                             '%s-%s' % (path, invocation))
 
-    testlog = json.load(open(os.path.join(test_dir, 'testlog.json')))
+    with open(os.path.join(test_dir, 'testlog.json')) as f:
+      testlog = json.load(f)
 
     log_file = os.path.join(test_dir, 'log')
     try:

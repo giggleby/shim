@@ -66,7 +66,6 @@ TEST_FILE_USE_MOCK_SUFFIX = '_unittest_mocked.py'
 # tests are fixed.
 RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'go/src/overlord/test/overlord_e2e_unittest.py',
-    'py/goofy/goofy_rpc_unittest.py',
     'py/goofy/goofy_unittest.py',
     'py/instalog/plugins/http_e2e_unittest.py',
     'py/instalog/plugins/input_pull_socket_unittest.py',
