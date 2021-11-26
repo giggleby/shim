@@ -206,9 +206,12 @@ class ImageToolTest(unittest.TestCase):
     image_tool.Partition('disk.bin', 1).CopyFile('tag', 'tag.1')
     image_tool.Partition('disk.bin', 3).CopyFile('tag', 'tag.3')
     image_tool.Partition('disk.bin', 5).CopyFile('tag', 'tag.5')
-    self.assertEqual(open('tag.1').read().strip(), 'test_image')
-    self.assertEqual(open('tag.3').read().strip(), 'test_image')
-    self.assertEqual(open('tag.5').read().strip(), 'release_image')
+    with open('tag.1') as f:
+      self.assertEqual(f.read().strip(), 'test_image')
+    with open('tag.3') as f:
+      self.assertEqual(f.read().strip(), 'test_image')
+    with open('tag.5') as f:
+      self.assertEqual(f.read().strip(), 'release_image')
     image_tool.Partition('disk.bin', 1).CopyFile(
         image_tool.PATH_PREFLASH_PAYLOADS_JSON, 'preflash.json')
     with open('preflash.json') as f:

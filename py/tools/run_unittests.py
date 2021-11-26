@@ -77,7 +77,6 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'py/instalog/plugins/pull_socket_e2e_unittest.py',
     'py/instalog/plugins/socket_e2e_unittest.py',
     'py/tools/image_tool_rma_unittest.py',
-    'py/tools/image_tool_unittest.py',
 ]
 
 
