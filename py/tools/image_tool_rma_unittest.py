@@ -206,8 +206,10 @@ class ImageToolRMATest(unittest.TestCase):
         os.path.join(DIR_CROS_PAYLOADS, 'test1.json'), self.temp_dir)
     image_tool.Partition('rma1.bin', 1).CopyFile(
         PATH_CROS_RMA_METADATA, self.temp_dir)
-    self.assertEqual(open('tag.1').read().strip(), 'factory_shim')
-    self.assertEqual(open('tag.3').read().strip(), 'factory_shim')
+    with open('tag.1') as f:
+      self.assertEqual(f.read().strip(), 'factory_shim')
+    with open('tag.3') as f:
+      self.assertEqual(f.read().strip(), 'factory_shim')
     with open('test1.json') as f:
       data = json.load(f)
     self.assertEqual(data['toolkit']['version'], u'Toolkit Version 1.0')
@@ -233,7 +235,8 @@ class ImageToolRMATest(unittest.TestCase):
         'rma', 'merge', '-f', '-o', 'rma12_new.bin',
         '-i', 'rma12.bin', 'rma2.bin', '--auto_select')
     image_tool.Partition('rma12_new.bin', 5).CopyFile('tag', 'tag.5')
-    self.assertEqual(open('tag.5').read().strip(), 'factory_shim_2')
+    with open('tag.5') as f:
+      self.assertEqual(f.read().strip(), 'factory_shim_2')
 
     # `rma extract` to extract a board from a universal shim.
     self.ImageTool('rma', 'extract', '-f', '-o', 'extract.bin',
@@ -258,7 +261,8 @@ class ImageToolRMATest(unittest.TestCase):
         'rma', 'replace', '-i', 'rma12.bin', '--board', 'test2',
         '--factory_shim', factory_shim2_path, '--toolkit', toolkit2_path)
     image_tool.Partition('rma12.bin', 5).CopyFile('tag', 'tag.5')
-    self.assertEqual(open('tag.5').read().strip(), 'factory_shim_3')
+    with open('tag.5') as f:
+      self.assertEqual(f.read().strip(), 'factory_shim_3')
     image_tool.Partition('rma12.bin', 1).CopyFile(
         os.path.join(DIR_CROS_PAYLOADS, 'test2.json'), self.temp_dir)
     with open('test2.json') as f:
