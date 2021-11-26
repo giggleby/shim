@@ -53,7 +53,8 @@ class LinuxTargetTest(unittest.TestCase):
   def testWriteFile(self):
     def fakePush(local, remote):
       self.assertEqual(remote, '/non-exist')
-      self.assertEqual(open(local).read(), 'TEST')
+      with open(local) as f:
+        self.assertEqual(f.read(), 'TEST')
 
     self.link.Push = mock.MagicMock(side_effect=fakePush)
     self.dut.WriteFile('/non-exist', 'TEST')
