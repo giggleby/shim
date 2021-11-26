@@ -20,8 +20,6 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 
 
-FNULL = open(os.devnull, 'w')  # for hiding unnecessary messages from subprocess
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Mock key list for testing.
@@ -135,13 +133,13 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     # TODO(littlecvr): Test dkps.UpdateProject().
 
     # Start the server.
-    self.server_process = subprocess.Popen(
-        ['python3', os.path.join(SCRIPT_DIR, 'dkps.py'),
-         '--log_file_path', self.log_file_path,
-         '--database_file_path', self.database_file_path,
-         '--gnupg_homedir', self.server_gnupg_homedir,
-         'listen', '--port', str(self.port)],
-        stdout=FNULL, stderr=FNULL)
+    self.server_process = subprocess.Popen([
+        'python3',
+        os.path.join(SCRIPT_DIR, 'dkps.py'), '--log_file_path',
+        self.log_file_path, '--database_file_path', self.database_file_path,
+        '--gnupg_homedir', self.server_gnupg_homedir, 'listen', '--port',
+        str(self.port)
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     sync_utils.WaitFor(lambda: net_utils.ProbeTCPPort(net_utils.LOCALHOST,
                                                       self.port), 2)
