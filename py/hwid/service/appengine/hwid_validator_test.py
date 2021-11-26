@@ -40,8 +40,7 @@ GOLDEN_HWIDV3_DATA_AFTER_VALID_NAME_PATTERN_WITH_NOTE = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-golden-after-comp-note-good.yaml'))
 
 
-@mock.patch(('cros.factory.hwid.service.appengine'
-             '.hwid_validator.CONFIG.hwid_filesystem'),
+@mock.patch('cros.factory.hwid.service.appengine.config.CONFIG.hwid_filesystem',
             filesystem_adapter.LocalFileSystemAdapter(TESTDATA_PATH))
 class HwidValidatorTest(unittest.TestCase):
   """Test for HwidValidator."""

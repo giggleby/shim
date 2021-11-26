@@ -40,7 +40,7 @@ class HWIDPreprocData:
 class HWIDV2PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv2 data."""
 
-  CACHE_VERSION = '1'
+  CACHE_VERSION = '2'
 
   def __init__(self, project, raw_hwid_yaml):
     """Constructor.
@@ -87,7 +87,7 @@ class HWIDV2PreprocData(HWIDPreprocData):
 class HWIDV3PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv3 data."""
 
-  CACHE_VERSION = '2'
+  CACHE_VERSION = '3'
 
   def __init__(self, project, raw_hwid_yaml):
     """Constructor.
@@ -102,6 +102,7 @@ class HWIDV3PreprocData(HWIDPreprocData):
       PreprocHWIDError: Fails to load the given HWIDv3 DB contents.
     """
     super().__init__(project)
+    self.raw_database = raw_hwid_yaml
     try:
       self.database = v3_database.Database.LoadData(raw_hwid_yaml,
                                                     expected_checksum=None)

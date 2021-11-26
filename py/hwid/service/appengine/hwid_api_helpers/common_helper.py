@@ -8,6 +8,8 @@ import re
 # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
 # pylint: enable=import-error, no-name-in-module
+from cros.factory.probe_info_service.app_engine import protorpc_utils
+
 
 _KNOWN_BAD_HWIDS = ['DUMMY_HWID', 'dummy_hwid']
 _KNOWN_BAD_SUBSTR = [
@@ -34,3 +36,14 @@ def ConvertExceptionToStatus(ex):
   if isinstance(ex, ValueError):
     return hwid_api_messages_pb2.Status.BAD_REQUEST
   return hwid_api_messages_pb2.Status.SERVER_ERROR
+
+
+def ConvertExceptionToProtoRPCException(ex):
+  if isinstance(ex, KeyError):
+    return protorpc_utils.ProtoRPCException(
+        protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND, str(ex))
+  if isinstance(ex, ValueError):
+    return protorpc_utils.ProtoRPCException(
+        protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT, str(ex))
+  return protorpc_utils.ProtoRPCException(
+      protorpc_utils.RPCCanonicalErrorCode.INTERNAL, str(ex))

@@ -7,6 +7,8 @@ import logging
 from typing import List, Optional
 
 from cros.factory.hwid.service.appengine import hwid_action
+from cros.factory.hwid.service.appengine.hwid_action_helpers \
+    import v3_self_service_helper as ss_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils
@@ -17,6 +19,8 @@ class HWIDV3Action(hwid_action.HWIDAction):
 
   def __init__(self, hwid_v3_preproc_data: hwid_preproc_data.HWIDV3PreprocData):
     self._preproc_data = hwid_v3_preproc_data
+    self._ss_helper = (
+        ss_helper_module.HWIDV3SelfServiceActionHelper(self._preproc_data))
 
   def GetBOMAndConfigless(self, hwid_string: str,
                           verbose: Optional[bool] = False,
@@ -42,6 +46,19 @@ class HWIDV3Action(hwid_action.HWIDAction):
 
   def GetDBV3(self):
     return self._preproc_data.database
+
+  def GetDBEditableSection(self):
+    return self._ss_helper.GetDBEditableSection()
+
+  def ReviewDraftDBEditableSection(self, draft_db_editable_section,
+                                   derive_fingerprint_only=False):
+    return self._ss_helper.ReviewDraftDBEditableSection(
+        draft_db_editable_section,
+        derive_fingerprint_only=derive_fingerprint_only)
+
+  def AnalyzeDraftDBEditableSection(self, draft_db_editable_section):
+    return self._ss_helper.AnalyzeDraftDBEditableSection(
+        draft_db_editable_section)
 
 
 def _NormalizeString(string):

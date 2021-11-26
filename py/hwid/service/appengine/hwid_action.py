@@ -5,10 +5,11 @@
 
 import collections
 import copy
-from typing import List, NamedTuple, Optional, Set
+from typing import Dict, List, NamedTuple, Optional, Set
 
 from cros.factory.hwid.service.appengine \
     import verification_payload_generator as vpg_module
+from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
 from cros.factory.hwid.v3 import database as v3_database
 
 
@@ -22,6 +23,10 @@ class InvalidHWIDError(ValueError):
 
 class NotSupportedError(ValueError):
   """Indicates that the method is not supported by the specific HWID version."""
+
+
+class HWIDActionError(RuntimeError):
+  """Indicates a server error."""
 
 
 class Component(
@@ -225,6 +230,35 @@ class BOM:
         self.AddLabel(cls, name, value)
 
 
+DBValidationErrorCode = v3_contents_analyzer.ErrorCode
+DBValidationError = v3_contents_analyzer.Error
+DBNameChangedComponentInfo = v3_contents_analyzer.NameChangedComponentInfo
+
+
+class DBEditableSectionChangeInfo(NamedTuple):
+  # An fingerprint value represents this change.  Same value implies that both
+  # the change source and destination are the same.
+  fingerprint: str
+
+  # The full HWID DB contents after change.
+  new_hwid_db_contents: str
+
+  # Reasons that this change is considered invalid.
+  invalid_reasons: Optional[List[DBValidationError]]
+
+  # Newly added HWID components, categorized by the component class.
+  new_hwid_comps: Optional[Dict[str, List[DBNameChangedComponentInfo]]]
+
+  @property
+  def is_change_valid(self):
+    return not self.invalid_reasons
+
+
+DBEditableSectionAnalysisReport = v3_contents_analyzer.ChangeAnalysisReport
+DBEditableSectionLineAnalysisResult = v3_contents_analyzer.DBLineAnalysisResult
+DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
+
+
 class HWIDAction:
   HWID_VERSION: int
 
@@ -332,3 +366,58 @@ class HWIDAction:
     """
     raise NotSupportedError(
         f'`GetDBV3` is not supported in HWID v{self.HWID_VERSION}')
+
+  def GetDBEditableSection(self) -> str:
+    """Get the editable section of the HWID DB.
+
+    Returns:
+      The text value of the HWID DB editable section.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+      HWIDActionError: An error occurs regarding internal data integrity issue.
+    """
+    raise NotSupportedError(
+        f'`GetDBEditableSection` is not supported in HWID v{self.HWID_VERSION}')
+
+  def ReviewDraftDBEditableSection(
+      self, draft_db_editable_section,
+      derive_fingerprint_only=False) -> DBEditableSectionChangeInfo:
+    """Validates the given HWID DB editable section and reports the changes.
+
+    Args:
+      draft_db_editable_section: The editable section to review.
+      derive_fingerprint_only: Only figure out the fingerprint of the change
+          and don't perform any further analysis.
+
+    Returns:
+      An instance of `DBEditableSectionChangeInfo` that contains the fingerprint
+      of the change as well as some analysis results (only when
+      `derive_fingerprint_only=False`) like newly added components.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+      HWIDActionError: An error occurs regarding internal data integrity issue.
+    """
+    raise NotSupportedError(
+        '`ReviewDraftDBEditableSection` is not supported in HWID '
+        f'v{self.HWID_VERSION}')
+
+  def AnalyzeDraftDBEditableSection(
+      self, draft_db_editable_section) -> DBEditableSectionAnalysisReport:
+    """Deep analyzes the given HWID DB editable section.
+
+    Args:
+      draft_db_editable_section: The editable section to analyze.
+
+    Returns:
+      An analysis report including information like line modification status
+      and which parts are referring to the same component.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+      HWIDActionError: An error occurs regarding internal data integrity issue.
+    """
+    raise NotSupportedError(
+        '`AnalyzeDraftDbEditableSection` is not supported in HWID '
+        f'v{self.HWID_VERSION}')

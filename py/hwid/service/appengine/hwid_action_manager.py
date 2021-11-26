@@ -159,6 +159,8 @@ class HWIDActionManager:
     Args:
       limit_models: List of names of models which will be updated.
     """
+    if limit_models is not None:
+      limit_models = [_NormalizeProjectString(m) for m in limit_models]
     metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
         projects=limit_models)
     for metadata in metadata_list:
@@ -175,7 +177,8 @@ class HWIDActionManager:
         # This may catch some exceptions we do not wish it to, such as SIGINT,
         # but we expect that to be unlikely in this context and not adversely
         # affect the system.
-        logging.exception('Exception encountered while reloading cache.')
+        logging.exception('Exception encountered while reloading cache for %r.',
+                          metadata.project)
 
   def _ClearMemcache(self):
     """Clear all cache items via memcache_adapter.
@@ -198,7 +201,7 @@ class HWIDActionManager:
     try:
       hwid_preproc_data_inst = self._memcache_adapter.Get(project)
     except Exception as ex:
-      logging.info('Memcache read miss %s: caught exception: %s.', project, ex)
+      logging.debug('Memcache read miss %s: caught exception: %s.', project, ex)
       return None
     if not hwid_preproc_data_inst:
       logging.info('Memcache read miss %s.', project)

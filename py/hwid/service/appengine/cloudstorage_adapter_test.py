@@ -13,22 +13,31 @@ import google.cloud.exceptions  # pylint: disable=no-name-in-module, import-erro
 
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
 
+
 TEST_BUCKET = 'test-bucket'
 TEST_FILE = 'foo'
-TEST_DATA = b'bar'
+TEST_DATA = 'bar'
 TEST_PATH = '/test-bucket/foo'
 
 
 def _CreateMockListBlobsWrapper(test_files):
   blob_class = collections.namedtuple('Blob', ['name', 'path'])
+
   def wrapper(bucket_name, prefix, delimiter):
     if bucket_name == TEST_BUCKET and delimiter == '/':
       if prefix == '':
-        return [blob_class(name=key, path=None) for key in test_files
-                if os.path.dirname(key) == prefix]
-      return [blob_class(name=key, path=None) for key in test_files
-              if os.path.dirname(key) + '/' == prefix]
+        return [
+            blob_class(name=key, path=None)
+            for key in test_files
+            if os.path.dirname(key) == prefix
+        ]
+      return [
+          blob_class(name=key, path=None)
+          for key in test_files
+          if os.path.dirname(key) + '/' == prefix
+      ]
     return []
+
   return wrapper
 
 
@@ -48,18 +57,19 @@ class CloudStorageAdapterTest(unittest.TestCase):
 
     adapter.WriteFile(TEST_FILE, TEST_DATA)
     mock_blob = self.mock_storage.Client().bucket().blob
-    mock_blob.assert_has_calls([mock.call(TEST_FILE),
-                                mock.call().upload_from_string(TEST_DATA)])
-
+    mock_blob.assert_has_calls(
+        [mock.call(TEST_FILE),
+         mock.call().upload_from_string(TEST_DATA)])
 
   def testRead(self):
     """Tests reading a file."""
     adapter = cloudstorage_adapter.CloudStorageAdapter(TEST_BUCKET)
     mock_blob = self.mock_storage.Client().bucket().blob
-    mock_blob().download_as_string.return_value = TEST_DATA
+    mock_blob().download_as_text.return_value = TEST_DATA
     read_result = adapter.ReadFile(TEST_FILE)
-    mock_blob.assert_has_calls([mock.call(TEST_FILE),
-                                mock.call().download_as_string()])
+    mock_blob.assert_has_calls(
+        [mock.call(TEST_FILE),
+         mock.call().download_as_text()])
     self.assertEqual(TEST_DATA, read_result)
 
   def testDelete(self):
@@ -70,9 +80,8 @@ class CloudStorageAdapterTest(unittest.TestCase):
     mock_blob = self.mock_storage.Client().bucket().blob
     adapter.WriteFile(TEST_FILE, TEST_DATA)
     adapter.DeleteFile(TEST_FILE)
-    mock_blob.assert_has_calls([mock.call(TEST_FILE),
-                                mock.call().delete()])
-    mock_blob().download_as_string.side_effect = \
+    mock_blob.assert_has_calls([mock.call(TEST_FILE), mock.call().delete()])
+    mock_blob().download_as_text.side_effect = \
         google.cloud.exceptions.NotFound('Not found')
     self.assertRaises(KeyError, adapter.ReadFile, TEST_FILE)
 
@@ -83,7 +92,7 @@ class CloudStorageAdapterTest(unittest.TestCase):
     test_files = {
         'foo': b'bar',
         'baz': b'qux',
-        }
+    }
 
     mock_client = self.mock_storage.Client()
     mock_client.list_blobs.side_effect = _CreateMockListBlobsWrapper(test_files)
@@ -106,7 +115,7 @@ class CloudStorageAdapterTest(unittest.TestCase):
         'foo/file1': b'bar',
         'foo1': b'bar',
         'baz': b'qux',
-        }
+    }
 
     mock_client = self.mock_storage.Client()
     mock_client.list_blobs.side_effect = _CreateMockListBlobsWrapper(test_files)

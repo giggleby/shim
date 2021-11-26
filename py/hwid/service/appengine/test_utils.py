@@ -39,20 +39,26 @@ class FakeHWIDInstanceFactory(hwid_action_manager.InstanceFactory):
 
   def __init__(self):
     self._hwid_actions = {}
+    self._hwid_action_factories = {}
 
   def CreateHWIDAction(self, hwid_data):
     if not isinstance(hwid_data, FakeHWIDPreprocData):
       raise hwid_action_manager.ProjectUnavailableError()
     registered_hwid_action = self._hwid_actions.get(hwid_data.project)
-    if registered_hwid_action is None:
-      raise hwid_action_manager.ProjectUnavailableError()
-    return registered_hwid_action
+    if registered_hwid_action is not None:
+      return registered_hwid_action
+    registered_hwid_action_factory = self._hwid_action_factories.get(
+        hwid_data.project)
+    if registered_hwid_action_factory is not None:
+      return registered_hwid_action_factory(hwid_data)
+    raise hwid_action_manager.ProjectUnavailableError()
 
   def CreateHWIDPreprocData(self, metadata, raw_db):
     return FakeHWIDPreprocData(metadata.project, raw_db)
 
-  def SetHWIDActionForProject(self, project, hwid_action):
+  def SetHWIDActionForProject(self, project, hwid_action, hwid_action_factory):
     self._hwid_actions[project] = hwid_action
+    self._hwid_action_factories[project] = hwid_action_factory
 
 
 class FakeModuleCollection:
@@ -80,17 +86,24 @@ class FakeModuleCollection:
     self.fake_hwid_db_data_manager.CleanAllForTest()
     self._tmpdir_for_hwid_db_data.cleanup()
 
-  def ConfigHWID(self, project, version, raw_db, hwid_action=None):
+  def ConfigHWID(self, project, version, raw_db, hwid_action=None,
+                 hwid_action_factory=None):
     """Specifies the behavior of the fake modules.
+
+    This method lets caller assign the HWIDAction instance to return for the
+    given HWID project.  Or the user can also make the project unavailable by
+    specify both `hwid_action` and `hwid_action_factory` to `None`.
 
     Args:
       project: The project to configure.
       version: Specify the HWID version of the specific project.
       raw_db: Specify the HWID DB contents.
-      hwid_action: Specify the corresponding HWIDAction instance.  `None` to
-          make the project unavailable.
+      hwid_action: Specify the corresponding HWIDAction instance.
+      hwid_action_factory: Specify the factory function to create the HWIDAction
+          instance.  The given callable function should accept one positional
+          argument -- the `FakeHWIDPreprocData` instance.
     """
     self.fake_hwid_db_data_manager.RegisterProjectForTest(
         project, project, str(version), raw_db)
     self._fake_hwid_instance_factory.SetHWIDActionForProject(
-        project, hwid_action)
+        project, hwid_action, hwid_action_factory)

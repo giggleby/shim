@@ -22,6 +22,7 @@ class RPCCanonicalErrorCode(enum.Enum):
   FAILED_PRECONDITION = (9, http.HTTPStatus.BAD_REQUEST)
   ABORTED = (10, http.HTTPStatus.CONFLICT)
   UNIMPLEMENTED = (12, http.HTTPStatus.NOT_IMPLEMENTED)
+  INVALID_ARGUMENT = (3, http.HTTPStatus.BAD_REQUEST)
 
 
 class ProtoRPCException(Exception):
@@ -29,7 +30,7 @@ class ProtoRPCException(Exception):
   requests."""
 
   def __init__(self, code, detail=None):
-    super(ProtoRPCException, self).__init__()
+    super().__init__(code, detail)
     self.code = code
     self.detail = detail
 
@@ -88,10 +89,12 @@ def ProtoRPCServiceMethod(method):
 
   def wrapper(self, request):
     assert isinstance(request, wrapper.rpc_method_spec.request_type)
-    logging.info("Request:\n%s", request)
+    logging.debug('Request(%r): %r', wrapper.rpc_method_spec.request_type,
+                  request)
     response = method(self, request)
     assert isinstance(response, wrapper.rpc_method_spec.response_type)
-    logging.info("Response:\n%s", response)
+    logging.debug('Response(%r): %r', wrapper.rpc_method_spec.response_type,
+                  response)
     return response
 
   # Since the service's descriptor will be parsed when the class is created,
@@ -111,7 +114,7 @@ class _ProtoRPCServiceFlaskAppViewFunc:
     method = getattr(self._service_inst, method_name, None)
     rpc_method_spec = getattr(method, 'rpc_method_spec', None)
     if not rpc_method_spec:
-      return flask.Response(status=404)
+      return flask.Response(status=http.HTTPStatus.NOT_FOUND)
 
     try:
       request_msg = rpc_method_spec.request_type.FromString(
@@ -119,6 +122,7 @@ class _ProtoRPCServiceFlaskAppViewFunc:
       response_msg = method(request_msg)
       response_raw_body = response_msg.SerializeToString()
     except ProtoRPCException as ex:
+      logging.debug('RPCException: %r', ex)
       rpc_code, http_code = ex.code.value
       resp = flask.Response(status=http_code)
       resp.headers['RPC-Canonical-Code'] = rpc_code
@@ -152,3 +156,5 @@ def RegisterProtoRPCServiceToFlaskApp(app_inst, path, service_inst,
   app_inst.add_url_rule('%s/%s.<method_name>' % (path, service_name),
                         endpoint=endpoint_name, view_func=view_func,
                         methods=['POST'])
+  logging.info('Registered the ProtoRPCService %r under URL path %r.',
+               service_name, path)

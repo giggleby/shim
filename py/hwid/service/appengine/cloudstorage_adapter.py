@@ -50,7 +50,7 @@ class CloudStorageAdapter(filesystem_adapter.FileSystemAdapter):
   def _ReadFile(self, path):
     """Read a file from the backing storage system."""
     blob = self._storage_bucket.blob(path)
-    return blob.download_as_string()
+    return blob.download_as_text()
 
   def _WriteFile(self, path, content):
     """Create a file in the backing storage system."""
