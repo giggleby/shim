@@ -248,7 +248,8 @@ def GetReimageId():
     global _reimage_id  # pylint: disable=global-statement
     if not _reimage_id:
       if os.path.exists(REIMAGE_ID_PATH):
-        _reimage_id = open(REIMAGE_ID_PATH).read().strip()
+        with open(REIMAGE_ID_PATH) as f:
+          _reimage_id = f.read().strip()
       if not _reimage_id:
         _reimage_id = str(uuid.uuid4())
         logging.info('No reimage_id available yet: generated %s', _reimage_id)

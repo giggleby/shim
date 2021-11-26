@@ -114,7 +114,9 @@ class GlobalSeqTest(unittest.TestCase):
     self.assertEqual(1, seq.Next())
     # Log an event (preamble will have sequence number 2; main
     # event will have 3).
-    event_log.EventLog('test:foo').Log('bar')
+    log = event_log.EventLog('test:foo')
+    log.Log('bar')
+    log.Close()
     assert 'SEQ: 3\n' in file_utils.ReadLines(event_log.EVENTS_PATH)
 
     # Delete the sequence file to simulate corruption.
@@ -128,7 +130,9 @@ class GlobalSeqTest(unittest.TestCase):
     # simulate a reboot.  We'll do this a few times.
     for i in range(3):
       # Log an event to record the new sequence number for "reboot"
-      event_log.EventLog('test:foo').Log('bar')
+      log = event_log.EventLog('test:foo')
+      log.Log('bar')
+      log.Close()
 
       del seq
       os.unlink(event_log.SEQUENCE_PATH)
@@ -203,6 +207,7 @@ class EventLogTest(unittest.TestCase):
       Reset()
       log = event_log.EventLog('test:test', suppress=suppress)
       log.Log('test')
+      log.Close()
       self.assertEqual(suppress, not os.path.exists(event_log.EVENTS_PATH))
 
   def testEventLogDefer(self):
@@ -240,8 +245,8 @@ class EventLogTest(unittest.TestCase):
     except Exception:
       pass
 
-    log_data = list(yaml.load_all(open(event_log.EVENTS_PATH, 'r',
-                                       encoding='utf-8')))
+    with open(event_log.EVENTS_PATH, 'r') as f:
+      log_data = list(yaml.load_all(f))
     self.assertEqual(6, len(log_data))
     # The last one should be empty; remove it
     self.assertIsNone(None, log_data[-1])
