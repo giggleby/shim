@@ -213,7 +213,12 @@ class ECToolTemperatureSensors(ThermalSensorSource):
   ECTOOL_TEMPSINFO_ALL_RE = re.compile(r'^(\d+): \d+ (.+)$', re.MULTILINE)
   """ectool 'tempsinfo all' output format: <id: type name>"""
 
-  ECTOOL_TEMPS_ALL_RE = re.compile(r'^(\d+): (\d+)(?: K)?$', re.MULTILINE)
+  ECTOOL_TEMPS_ALL_RE = re.compile(r'^(.*?)\d+ K \(= (\d+) C\)', re.MULTILINE)
+  """ectool 'temps all' output format: <name temp fanspeed>"""
+
+  # Legacy ectool output for image version < 14339.0.0.
+  ECTOOL_TEMPS_ALL_LEGACY_RE = re.compile(r'^(\d+): (\d+)(?: K)?$',
+                                          re.MULTILINE)
   """ectool 'temps all' output format: <id: value>"""
 
   ECTOOL_TEMPS_SENSORID_RE = re.compile(r'(\d+)(?: K)?$')
@@ -243,12 +248,31 @@ class ECToolTemperatureSensors(ThermalSensorSource):
     ectool has a quick command 'temps all' that is faster then iterating all
     sensor with GetValue, so we want to implement GetAllValues explicitly.
     """
-    raw_values = dict(self.ECTOOL_TEMPS_ALL_RE.findall(
-        self._device.CallOutput('ectool temps all')))
 
-    # Remap ID to cached names.
-    return {name: self._ConvertRawValue(raw_values.get(sensor_id))
-            for name, sensor_id in self.GetSensors().items()}
+    def ParseECToolTemps(ectool_output):
+      raw_values = self.ECTOOL_TEMPS_ALL_RE.findall(ectool_output)
+
+      ret = {}
+      for raw_name, raw_temp in raw_values:
+        ret['ectool ' + raw_name.strip()] = int(raw_temp)
+
+      return ret
+
+    def ParseLegacyECToolTemps(ectool_output):
+      raw_values = dict(self.ECTOOL_TEMPS_ALL_LEGACY_RE.findall(ectool_output))
+
+      # Remap ID to cached names.
+      return {
+          name: self._ConvertRawValue(raw_values.get(sensor_id))
+          for name, sensor_id in self.GetSensors().items()
+      }
+
+    ectool_output = self._device.CallOutput('ectool temps all')
+    parsed_output = ParseECToolTemps(ectool_output)
+    if not parsed_output:
+      parsed_output = ParseLegacyECToolTemps(ectool_output)
+
+    return parsed_output
 
   def GetCriticalValue(self, sensor):
     raise NotImplementedError
