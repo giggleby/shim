@@ -14,5 +14,8 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}/py_pkg"
   ],
-  "python.formatting.provider": "yapf"
+  "python.formatting.provider": "yapf",
+  "python.sortImports.args": [
+    "--settings-path=${workspaceFolder}/devtools/vscode/.isort.cfg"
+  ]
 }

@@ -8,6 +8,8 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 set -e
 . "${SCRIPT_DIR}/../mk/common.sh"
 
+isort .isort.cfg
+
 CODE_DIR="${SCRIPT_DIR}/../../.vscode"
 mkdir -p "${CODE_DIR}"
 cp -f "${SCRIPT_DIR}/factory_settings.json" "${CODE_DIR}/settings.json"
