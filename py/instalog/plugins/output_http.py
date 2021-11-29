@@ -185,7 +185,8 @@ class OutputHTTP(plugin_base.OutputPlugin):
         att_seq += 1
         if self._gpg:
           att_path = self._EncryptFile(att_path, tmp_dir)
-        request_body.append((att_newname, open(att_path, 'rb')))
+        with open(att_path, 'rb') as f:
+          request_body.append((att_newname, f.read()))
         event.attachments[att_id] = att_newname
       serialized_event = datatypes.Event.Serialize(event)
       if self._gpg:

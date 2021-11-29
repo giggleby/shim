@@ -133,6 +133,7 @@ class TestOutputHTTP(unittest.TestCase):
     self.assertEqual(q.get(), [b'!' * 10])
     self.assertEqual(q.get(), [b'@' * 10])
     httpd.shutdown()
+    httpd.server_close()
 
 
 if __name__ == '__main__':
