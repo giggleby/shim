@@ -106,10 +106,10 @@ class InputSocket(plugin_base.InputPlugin):
       self.info('Closing socket and shutting down accept thread...')
       # Initiate a fake connection in order to break a blocking sock.accept
       # call.
-      socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-          (self.args.hostname, self.args.port))
-      self._sock.shutdown(socket.SHUT_RDWR)
-      self._sock.close()
+      with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((self.args.hostname, self.args.port))
+        self._sock.shutdown(socket.SHUT_RDWR)
+        self._sock.close()
       if self._accept_thread:
         self._accept_thread.join()
       else:
@@ -211,11 +211,12 @@ class InputSocketReceiver(log_utils.LoggerMixin):
   def Close(self):
     """Shuts down and closes the socket stream."""
     try:
-      self.debug('Closing socket')
+      self.debug('Shutting down socket')
       self._conn.shutdown(socket.SHUT_RDWR)
-      self._conn.close()
     except Exception:
-      self.exception('Error closing socket')
+      self.exception('Error shutting down socket')
+    finally:
+      self._conn.close()
 
   def RecvItem(self):
     """Returns the next item in socket stream."""

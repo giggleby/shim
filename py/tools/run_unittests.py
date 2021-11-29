@@ -69,10 +69,8 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'py/goofy/goofy_unittest.py',
     'py/instalog/plugins/http_e2e_unittest.py',
     'py/instalog/plugins/input_pull_socket_unittest.py',
-    'py/instalog/plugins/input_socket_unittest.py',
     'py/instalog/plugins/output_http_unittest.py',
     'py/instalog/plugins/pull_socket_e2e_unittest.py',
-    'py/instalog/plugins/socket_e2e_unittest.py',
 ]
 
 

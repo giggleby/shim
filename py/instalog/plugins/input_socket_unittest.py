@@ -54,6 +54,7 @@ class TestInputSocket(unittest.TestCase):
   def tearDown(self):
     self.sandbox.Stop(True)
     self.assertTrue(self.core.AllStreamsExpired())
+    self.sock.close()
     self.core.Close()
 
   def testInvalidHeader(self):
@@ -83,7 +84,6 @@ class TestInputSocket(unittest.TestCase):
     # Don't confirm the transaction.  Simulate network failure by shutting
     # down the socket.
     self.sock.shutdown(socket.SHUT_RDWR)
-    self.sock.close()
     time.sleep(0.2)
     self.assertFalse(self.core.emit_calls)
 
