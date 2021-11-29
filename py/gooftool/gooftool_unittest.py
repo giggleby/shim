@@ -19,7 +19,6 @@ from unittest import mock
 from cros.factory.gooftool.bmpblk import unpack_bmpblock
 from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
-from cros.factory.gooftool import cros_config
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
@@ -189,6 +188,10 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._unpack_bmpblock = mock.Mock(unpack_bmpblock)
     self._gooftool._vpd = mock.Mock(self._gooftool._vpd)
     self._gooftool._named_temporary_file = mock.Mock(NamedTemporaryFile)
+    self._gooftool._cros_config = mock.Mock(self._gooftool._cros_config)
+    self._gooftool._cros_config.GetWhiteLabelTag.return_value = (True,
+                                                                 'unittest')
+    self._gooftool._cros_config.GetModelName.return_value = 'unittest'
 
   def testVerifyECKeyWithPubkeyHash(self):
     f = MockFile()
@@ -232,10 +235,9 @@ class GooftoolTest(unittest.TestCase):
     # Assure loading DB multiple times is prevented.
     self.assertIs(self._gooftool.db, db)
 
-  @mock.patch.object(cros_config, 'CrosConfig', autospec=True)
   @mock.patch.object(sys_utils, 'MountPartition', autospec=True)
   @mock.patch.object(pygpt, 'GPT', autospec=True)
-  def testVerifyKey(self, mock_pygpt, mock_mount, mock_cros_config):
+  def testVerifyKey(self, mock_pygpt, mock_mount):
     self._gooftool._util.GetReleaseKernelPathFromRootPartition.return_value = \
         '/dev/zero'
     self._gooftool._crosfw.LoadMainFirmware.side_effect = [
@@ -249,14 +251,6 @@ class GooftoolTest(unittest.TestCase):
     def fake_tmpexc(*unused_args, **unused_kargs):
       return ''
 
-    class FakeCrosConfigModule:
-
-      def GetModelName(self):
-        return 'unittest'
-
-      def GetWhiteLabelTag(self):
-        return True, 'unittest'
-
     class FakeGPT:
 
       def LoadFromFile(self):
@@ -265,8 +259,6 @@ class GooftoolTest(unittest.TestCase):
         return gpt
 
     mock_mount.return_value = MockPath()
-
-    mock_cros_config.return_value = FakeCrosConfigModule()
 
     mock_pygpt.return_value = FakeGPT()
 
@@ -751,7 +743,6 @@ class GooftoolTest(unittest.TestCase):
     # custom type is whitelabel but no whitelabel field in VPD
     config = self._SIMPLE_MODEL_SKU_CONFIG_WHITELABEL
     model_sku_utils.GetDesignConfig.return_value = config
-    self._gooftool._util.shell.return_value = Obj(stdout='loema', success=True)
     self._gooftool._vpd.GetValue.return_value = None
 
     self.assertRaisesRegex(

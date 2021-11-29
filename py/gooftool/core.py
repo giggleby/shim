@@ -111,6 +111,7 @@ class Gooftool:
     self._unpack_bmpblock = bmpblk.unpack_bmpblock
     self._named_temporary_file = tempfile.NamedTemporaryFile
     self._db = None
+    self._cros_config = cros_config_module.CrosConfig(self._util.shell)
 
   def IsReleaseLVM(self):
     """Check if release image has LVM stateful partition."""
@@ -257,10 +258,9 @@ class Gooftool:
     used to sign the fingerprint firmware binary in the release rootfs
     partition.
     """
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
-    fp_board = cros_config.GetFingerPrintBoard()
+    fp_board = self._cros_config.GetFingerPrintBoard()
     if not fp_board:
-      db_identity, cur_identity = self.GetIdentity(cros_config)
+      db_identity, cur_identity = self.GetIdentity()
       raise CrosConfigError(
           'Failed to probe fingerprint board from cros_config', db_identity,
           cur_identity)
@@ -472,9 +472,8 @@ class Gooftool:
       _VerifyMiniOS(is_dev_rootkey, key_recovery, dir_devkeys)
 
       if not is_dev_rootkey:
-        cros_config = cros_config_module.CrosConfig(self._util.shell)
-        model_name = cros_config.GetModelName()
-        is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
+        model_name = self._cros_config.GetModelName()
+        is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
         if is_whitelabel and whitelabel_tag:
           model_name = model_name + "-" + whitelabel_tag
         with sys_utils.MountPartition(release_rootfs) as root:
@@ -662,8 +661,7 @@ class Gooftool:
         return project
 
       # Get the whitelabel-tag for whitelabel device
-      cros_config = cros_config_module.CrosConfig(self._util.shell)
-      is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
+      is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
       if not is_whitelabel or whitelabel_tag not in reg_code_config[project]:
         return project
       if reg_code_config[project][whitelabel_tag]:
@@ -724,16 +722,15 @@ class Gooftool:
 
   def VerifyCrosConfig(self):
     """Verify that entries in cros config make sense."""
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
     if phase.GetPhase() >= phase.PVT_DOGFOOD:
-      rlz = cros_config.GetBrandCode()
+      rlz = self._cros_config.GetBrandCode()
       if not rlz or rlz == 'ZZCR':
         # this is incorrect...
         raise Error('RLZ code "%s" is not allowed in PVT' % rlz)
 
-    model = cros_config.GetModelName()
+    model = self._cros_config.GetModelName()
     if not model:
-      db_identity, cur_identity = self.GetIdentity(cros_config)
+      db_identity, cur_identity = self.GetIdentity()
       raise CrosConfigError('Model name is empty', db_identity, cur_identity)
 
     def _ParseCrosConfig(config_path):
@@ -1014,13 +1011,12 @@ class Gooftool:
           {Name_of_the_detail: "result of the detail"}
       Note that the outputs could be multi-line strings.
     """
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
 
     # Note: Handle the shell commands with care since unit tests cannot
     # ensure the correctness of commands executed in shell.
     return {
         'platform_name':
-            cros_config.GetPlatformName(),
+            self._cros_config.GetPlatformName(),
         'crossystem':
             self._util.GetCrosSystem(),
         'modem_status':
@@ -1159,7 +1155,6 @@ class Gooftool:
       different from RLZ.
     """
     gsctool = gsctool_module.GSCTool(self._util.shell)
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
 
     try:
       board_id = gsctool.GetBoardID()
@@ -1168,9 +1163,9 @@ class Gooftool:
     if board_id.type == 0xffffffff:
       return False
 
-    RLZ = cros_config.GetBrandCode()
+    RLZ = self._cros_config.GetBrandCode()
     if RLZ == '':
-      db_identity, cur_identity = self.GetIdentity(cros_config)
+      db_identity, cur_identity = self.GetIdentity()
       raise CrosConfigError('RLZ code is empty', db_identity, cur_identity)
     if board_id.type != int(codecs.encode(RLZ.encode('ascii'), 'hex'), 16):
       raise Error('RLZ does not match Board ID.')
@@ -1339,8 +1334,7 @@ class Gooftool:
     """
     model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
     custom_type = model_sku_config.get('custom_type', '')
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
-    is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
+    is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
 
     if is_whitelabel:
       # If we can't find whitelabel_tag in VPD, this will be None.
@@ -1377,8 +1371,7 @@ class Gooftool:
     The brand-code (cr50 board id) won't be set.  This should be called for
     spare MLBs of whitelabel devices.
     """
-    cros_config = cros_config_module.CrosConfig(self._util.shell)
-    is_whitelabel, unused_whitelabel_tag = cros_config.GetWhiteLabelTag()
+    is_whitelabel, unused_whitelabel_tag = self._cros_config.GetWhiteLabelTag()
     if not is_whitelabel:
       raise Error('This is not a whitelabel device.')
 
@@ -1498,7 +1491,7 @@ class Gooftool:
                   'Log of %r:\n%s' % (BIOWASH_CMD, biowash.stderr))
     logging.info('FPMCU entropy initialized successfully.')
 
-  def GetIdentity(self, cros_config):
+  def GetIdentity(self):
     """Return identities in cros_config database and current identities.
 
     cros_config is a database and uses `identity` as key to query the
@@ -1506,9 +1499,6 @@ class Gooftool:
     return either false or empty configuration. We print identities in
     cros_config database and current identities to help identify the wrong
     settings.
-
-    Args:
-      cros_config: instance of CrosConfig
 
     Returns:
       Strings which contain identities in cros_config and current identities.
@@ -1530,10 +1520,12 @@ class Gooftool:
     def get_vpd_val(tag_name):
       return self._vpd.GetValue(tag_name, 'empty')
 
-    db_product_name = get_cros_config_val(cros_config.GetProductName())
-    db_sku_id = get_cros_config_val(cros_config.GetSkuID())
-    db_customization_id = get_cros_config_val(cros_config.GetCustomizationId())
-    db_whitelabel_tag = get_cros_config_val(cros_config.GetWhiteLabelTag()[1])
+    db_product_name = get_cros_config_val(self._cros_config.GetProductName())
+    db_sku_id = get_cros_config_val(self._cros_config.GetSkuID())
+    db_customization_id = get_cros_config_val(
+        self._cros_config.GetCustomizationId())
+    db_whitelabel_tag = get_cros_config_val(
+        self._cros_config.GetWhiteLabelTag()[1])
 
     db_identity = (
         'In cros_config:\nproduct name: %s\nsku id: %s\n'
