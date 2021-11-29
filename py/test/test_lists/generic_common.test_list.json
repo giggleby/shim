@@ -901,7 +901,8 @@
       }
     },
     "TBTLoopback": {
-      "pytest_name": "thunderbolt_loopback"
+      "pytest_name": "thunderbolt_loopback",
+      "run_if": "False"
     },
     "TPMVerifyEK": {
       "pytest_name": "tpm_verify_ek"
@@ -1102,7 +1103,6 @@
         },
         {
           "inherit": "TBTLoopback",
-          "run_if": "locals.usb.tbt_controller_port != ''",
           "args": {
             "controller_port": "eval! locals.usb.tbt_controller_port",
             "usbpd_spec": {
