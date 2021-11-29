@@ -68,7 +68,6 @@ RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
     'go/src/overlord/test/overlord_e2e_unittest.py',
     'py/goofy/goofy_unittest.py',
     'py/instalog/plugins/http_e2e_unittest.py',
-    'py/instalog/plugins/input_pull_socket_unittest.py',
     'py/instalog/plugins/output_http_unittest.py',
     'py/instalog/plugins/pull_socket_e2e_unittest.py',
 ]

@@ -22,8 +22,8 @@ from cros.factory.instalog.utils.arg_utils import Arg
 
 _CONNECT_INTERVAL = 1
 _CONNECT_LOG_INTERVAL = 60  # interval
-                            #     = _CONNECT_INTERVAL * _CONNECT_LOG_INTERVAL
-                            #     = 60s
+#     = _CONNECT_INTERVAL * _CONNECT_LOG_INTERVAL
+#     = 60s
 
 
 class ChecksumError(Exception):
@@ -63,6 +63,7 @@ class InputPullSocket(plugin_base.InputPlugin):
         return False
       return True
     except Exception:
+      self._sock.close()
       return False
 
   def Main(self):
@@ -73,6 +74,7 @@ class InputPullSocket(plugin_base.InputPlugin):
         for unused_i in range(_CONNECT_LOG_INTERVAL):
           success = self.GetSocket()
           if self.IsStopping():
+            self._sock.close()
             return
           if success:
             break

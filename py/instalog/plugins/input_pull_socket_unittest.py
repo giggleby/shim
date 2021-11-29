@@ -66,6 +66,7 @@ class TestInputPullSocket(unittest.TestCase):
   def tearDown(self):
     self.sandbox.Stop(True)
     self.assertTrue(self.core.AllStreamsExpired())
+    self.sock.close()
     self.core.Close()
 
   def testInvalidQong(self):
