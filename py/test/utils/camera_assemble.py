@@ -2,14 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import logging
+
 from cros.factory.external import cv2 as cv
 from cros.factory.external import numpy as np
 
 
-# different kinds of grids
-GRID_SHAPES = [[40, 40], [20, 20], [10, 30], [30, 10]]
-# MAX_GRID_SIZE is used to draw the approximate detection region on UI.
-MAX_GRID_SIZE = [max(x for x, _ in GRID_SHAPES), max(y for _, y in GRID_SHAPES)]
+# Instead of using fix-length grid, we specify the grid ratio.
+# This way the boundary area is fixed under different camera resolutions.
+# We also use different shapes of grid to detect black edges.
+GRID_RATIO = ((0.05, 0.03), (0.025, 0.015), (0.0125, 0.0225), (0.0375, 0.0075))
+# MAX_GRID_RATIO is used to draw the approximate detection region on UI.
+MAX_GRID_RATIO = (max(x for x, _ in GRID_RATIO), max(y for _, y in GRID_RATIO))
 
 
 class DetectCameraAssemblyIssue:
@@ -31,23 +35,22 @@ class DetectCameraAssemblyIssue:
     """
     self.cv_image = cv.cvtColor(cv_image, cv.COLOR_BGR2GRAY)
     self.cv_color_image = cv_image
+    self.img_height, self.img_width = self.cv_image.shape
     self.min_luminance_ratio = min_luminance_ratio
 
   def _AveragePooling(self, grid_height, grid_width):
     """Map N*M image to n*m grids by averaging the pixel values in the grids.
     """
-    img_height, img_width = self.cv_image.shape
-
     # Calculate the ceiling of (img_width / grid_width)
-    num_horizontal_grid = (img_width // grid_width) + (
-        img_width % grid_width != 0)
-    num_vertical_grid = (img_height // grid_height) + (
-        img_height % grid_height != 0)
+    num_horizontal_grid = (self.img_width // grid_width) + (
+        self.img_width % grid_width != 0)
+    num_vertical_grid = (self.img_height // grid_height) + (
+        self.img_height % grid_height != 0)
 
     # Calculate which pixel belongs to which grid
-    grid_row_idx = np.arange(0, img_height) // grid_height
+    grid_row_idx = np.arange(0, self.img_height) // grid_height
     grid_row_idx = np.clip(grid_row_idx, None, num_vertical_grid - 1)
-    grid_col_idx = np.arange(0, img_width) // grid_width
+    grid_col_idx = np.arange(0, self.img_width) // grid_width
     grid_col_idx = np.clip(grid_col_idx, None, num_horizontal_grid - 1)
 
     # We use bin count to calculate the sum of pixel values in each grid.
@@ -61,7 +64,7 @@ class DetectCameraAssemblyIssue:
     sum_grid_vals = np.bincount(one_d_idx, weights=self.cv_image.flatten())
 
     # Calculate the number of pixels in each grid
-    one_d_ones_array = np.ones((img_height * img_width), dtype=int)
+    one_d_ones_array = np.ones((self.img_height * self.img_width), dtype=int)
     num_pixels_each_grid = np.bincount(one_d_idx, weights=one_d_ones_array)
 
     avg_grid_vals = sum_grid_vals / num_pixels_each_grid
@@ -70,16 +73,77 @@ class DetectCameraAssemblyIssue:
 
     return avg_grid_vals
 
-  def IsBoundaryRegionTooDark(self):
+  def _CalculateBrightThresByKMeans(self, avg_grid_vals):
+    """Calculate the `bright` threshold value by K-means.
+
+    K-means method splits the pixel values into 2 groups, one for bright
+    group another for dark group. We pick the center of bright group as
+    `bright` threshold value.
+    K-means is slower since it needs to run several iterations to converge.
+    Therefore, instead of using raw pixels, we use averaged grid values to
+    speed up the process.
+
+    Args:
+      avg_grid_vals: The average grid pixel value for the input image.
+
+    Returns:
+      The `bright` threshold value.
+    """
+    img_flatten = avg_grid_vals.astype('float32').flatten()
+    criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 0.1)
+    _, _, centers = cv.kmeans(img_flatten, 2, None, criteria, 10,
+                              cv.KMEANS_RANDOM_CENTERS)
+
+    return int(max(centers))
+
+  def _CalculateBrightThresByCenter(self, avg_grid_vals):
+    """Calculate the `bright` threshold value by center grid.
+
+    For center grid method, we average the pixel value of the center grid
+    and output as `bright` threshold value. The intuition is that the
+    center region is usually the brightest among all other regions.
+
+    Args:
+      avg_grid_vals: The average grid pixel value for the input image.
+
+    Returns:
+      The `bright` threshold value.
+    """
+    num_vertical_grid, num_horizontal_grid = avg_grid_vals.shape
+
+    # Calculate the average pixel value of the center grid.
+    center_vertical_grid = num_vertical_grid // 2
+    center_horizontal_grid = num_horizontal_grid // 2
+
+    # Calculate the average grid values if grid num is even.
+    vertical_grid_start = center_vertical_grid - (num_vertical_grid % 2 == 0)
+    horizontal_grid_start = center_horizontal_grid - (
+        num_horizontal_grid % 2 == 0)
+    center_grid_avg_val = 0
+    num_grids = 0
+    for i in range(vertical_grid_start, center_vertical_grid + 1):
+      for j in range(horizontal_grid_start, center_horizontal_grid + 1):
+        center_grid_avg_val += avg_grid_vals[i][j]
+        num_grids += 1
+    center_grid_avg_val //= num_grids
+
+    return center_grid_avg_val
+
+  def IsBoundaryRegionTooDark(self, use_center=True):
     """Check whether the luminance of the boundary grids are too low.
 
     We divide the image into different kinds of n*m grids and averaging the
     pixel value of each grid. If the pixel value of the boundary grids is lower
-    than or equal to min_luminance_ratio multiplied by the brightest grid, which
-    is the center grid, then the image is likely to contain black edges, and
-    thus the camera is badly assembled. For instance, if the luminance value of
-    the center grid is 150 and the min_luminance_ratio is 0.5, then boundary
-    grids lower than or equal to 75 are rejected.
+    than or equal to `min_luminance_value`, then the image is likely to contain
+    black edges, and thus the camera is badly assembled.
+    The `min_luminance_value` is calculated by multiplying `bright` threshold
+    with `min_luminance_ratio`. For instance, if the `bright` threshold is 150
+    and the min_luminance_ratio is 0.5, then boundary grids lower than or equal
+    to 75 are rejected.
+
+    Args:
+      use_center: use center grid to calculate the `bright` threshold or not.
+        If set to false, the `bright` threshold is calculated by K-means.
 
     Returns:
       A tuple of boolean, 2d array and a tuple
@@ -87,27 +151,20 @@ class DetectCameraAssemblyIssue:
       2d array: n*m bool grids which represents each grid is too dark or not
       tuple: The width and height of each grid
     """
-    for grid_height, grid_width in GRID_SHAPES:
+    for grid_height_ratio, grid_width_ratio in GRID_RATIO:
+      grid_height = int(grid_height_ratio * self.img_height)
+      grid_width = int(grid_width_ratio * self.img_width)
       avg_grid_vals = self._AveragePooling(grid_height, grid_width)
-      num_vertical_grid, num_horizontal_grid = avg_grid_vals.shape
 
-      # We calculate the average pixel value of the center grid
-      center_vertical_grid = num_vertical_grid // 2
-      center_horizontal_grid = num_horizontal_grid // 2
+      if use_center:
+        bright_luminance_value = \
+          self._CalculateBrightThresByCenter(avg_grid_vals)
+      else:
+        bright_luminance_value = \
+          self._CalculateBrightThresByKMeans(avg_grid_vals)
 
-      # Calculate the average grid values if grid num is even
-      vertical_grid_start = center_vertical_grid - (num_vertical_grid % 2 == 0)
-      horizontal_grid_start = center_horizontal_grid - (
-          num_horizontal_grid % 2 == 0)
-      center_grid_avg_val = 0
-      num_grids = 0
-      for i in range(vertical_grid_start, center_vertical_grid + 1):
-        for j in range(horizontal_grid_start, center_horizontal_grid + 1):
-          center_grid_avg_val += avg_grid_vals[i][j]
-          num_grids += 1
-      center_grid_avg_val //= num_grids
-
-      min_luminance_value = self.min_luminance_ratio * center_grid_avg_val
+      min_luminance_value = bright_luminance_value * self.min_luminance_ratio
+      logging.info('Luminance value threshold %d', min_luminance_value)
       grid_is_too_dark = avg_grid_vals <= min_luminance_value
       # We mask out the center region since we only check if the boundary
       # region is too dark.
@@ -125,8 +182,9 @@ def GetQRCodeDetectionRegion(img_height, img_width):
   Returns:
     The x, y coordinates, width and height of the detection region.
   """
-  y_pos, x_pos = MAX_GRID_SIZE
-  width = (img_width // 2) - x_pos
+  y_pos = int(MAX_GRID_RATIO[0] * img_height)
+  x_pos = int(MAX_GRID_RATIO[1] * img_width)
+  width = img_width - x_pos * 2
   height = img_height - y_pos * 2
 
   return x_pos, y_pos, width, height

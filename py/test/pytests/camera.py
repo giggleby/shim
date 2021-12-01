@@ -492,12 +492,19 @@ class CameraTest(test_case.TestCase):
       self.RunJSBlocking(draw_rect_js)
     return detected
 
-  def DetectAssemblyIssue(self, cv_image):
+  def DetectAssemblyIssue(self, cv_image, use_center=True):
+    """Detect camera assembly issue by checking if the boundaries are black.
+
+    Args:
+      cv_image: The input opencv image.
+      use_center: use the pixel value of the center grid to calculate `bright`
+         criteria. Set to false to use K-means.
+    """
     camera_assemble_issue = camera_assemble.DetectCameraAssemblyIssue(
         cv_image, self.min_luminance_ratio)
 
     is_too_dark, grid, grid_size = \
-      camera_assemble_issue.IsBoundaryRegionTooDark()
+      camera_assemble_issue.IsBoundaryRegionTooDark(use_center)
     if is_too_dark:
       grid_width, grid_height = grid_size
       height, width = cv_image.shape[:2]
@@ -539,7 +546,15 @@ class CameraTest(test_case.TestCase):
     return _('Success!') if result else _('Failure')
 
   def DetectAssemblyIssueAndScanQRCode(self, cv_image):
-    camera_well_assembled = self.DetectAssemblyIssue(cv_image)
+    """Detect camera assembly issue and scan QR code at the same time.
+
+    For `DetectAssemblyIssue`, instead of using the pixel values of center
+    region as `bright` criteria, we use K-means. Since the center grid method
+    will use the center region, QR code shouldn't appear there. This will
+    be inconvenient for partners to set up such test. Therefore, we use K-means
+    here.
+    """
+    camera_well_assembled = self.DetectAssemblyIssue(cv_image, False)
 
     img_height, img_width = cv_image.shape[:2]
     x_pos, y_pos, qr_width, qr_height = \
