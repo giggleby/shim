@@ -306,3 +306,13 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def AnalyzeHwidDbEditableSection(self, request):
     return self._ss_helper.AnalyzeHWIDDBEditableSection(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def GetHwidBundleResourceInfo(self, request):
+    return self._ss_helper.GetHWIDBundleResourceInfo(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidBundle(self, request):
+    return self._ss_helper.CreateHWIDBundle(request)

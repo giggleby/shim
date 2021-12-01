@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import os.path
+import tempfile
 import unittest
 
 from cros.factory.hwid.service.appengine import hwid_action
@@ -11,6 +13,7 @@ from cros.factory.hwid.service.appengine.hwid_action_helpers \
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
+from cros.factory.utils import process_utils
 
 
 _TESTDATA_PATH = os.path.join(
@@ -120,6 +123,28 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         'invalid hwid db contents')
 
     self.assertGreater(len(analysis_report.precondition_errors), 0)
+
+  def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
+    ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')
+    ss_helper2 = self._LoadSSHelper('v3-golden-after-good.yaml')
+
+    resource_info1 = ss_helper1.GetHWIDBundleResourceInfo(True)
+    resource_info2 = ss_helper2.GetHWIDBundleResourceInfo(True)
+    self.assertNotEqual(resource_info1.fingerprint, resource_info2.fingerprint)
+
+  def testBundleHWIDDB_BundleInstallationWorks(self):
+    data, helper_inst = self._LoadPreprocDataAndSSHelper('v3-golden.yaml')
+
+    payload = helper_inst.BundleHWIDDB().bundle_contents
+
+    # Verify the created bundle payload by trying to install it.
+    with file_utils.UnopenedTemporaryFile() as bundle_path:
+      os.chmod(bundle_path, 0o755)
+      file_utils.WriteFile(bundle_path, payload, encoding=None)
+      with tempfile.TemporaryDirectory() as dest_dir:
+        process_utils.CheckCall([bundle_path, dest_dir])
+        db_path = os.path.join(dest_dir, data.project.upper())
+        self.assertEqual(file_utils.ReadFile(db_path), data.raw_database)
 
   def _LoadPreprocDataAndSSHelper(self, testdata_name):
     preproc_data = hwid_preproc_data.HWIDV3PreprocData(

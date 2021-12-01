@@ -259,6 +259,15 @@ DBEditableSectionLineAnalysisResult = v3_contents_analyzer.DBLineAnalysisResult
 DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
 
 
+class BundleResourceInfo(NamedTuple):
+  fingerprint: str
+
+
+class BundleInfo(NamedTuple):
+  bundle_contents: bytes
+  bundle_file_ext: str
+
+
 class HWIDAction:
   HWID_VERSION: int
 
@@ -421,3 +430,37 @@ class HWIDAction:
     raise NotSupportedError(
         '`AnalyzeDraftDbEditableSection` is not supported in HWID '
         f'v{self.HWID_VERSION}')
+
+  def GetHWIDBundleResourceInfo(self,
+                                fingerprint_only=False) -> BundleResourceInfo:
+    """Returns the resource info. to be bundled into the HWID bundle.
+
+    Args:
+      fingerprint_only: Specify the method only to calculate the fingerprint
+          field of bundle resource info.
+
+    Returns:
+      An instance of `BundleResourceInfo` that include everything the bundle
+      creation requester need to know to collect external resources.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+      HWIDActionError: An error occurs regarding internal data integrity issue.
+    """
+    raise NotSupportedError(
+        '`GetHWIDBundleResourceInfo` is not supported in HWID '
+        f'v{self.HWID_VERSION}')
+
+  def BundleHWIDDB(self) -> BundleInfo:
+    """Bundles the HWID DB.
+
+    Returns:
+      An instance of `BundleInfo` that contains the payload in bytes as well
+      as the suggested file name extension.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+      HWIDActionError: An error occurs regarding internal data integrity issue.
+    """
+    raise NotSupportedError(
+        f'`BundleHWIDDB` is not supported in HWID v{self.HWID_VERSION}')

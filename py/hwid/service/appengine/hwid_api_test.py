@@ -643,6 +643,23 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
+  def testGetHwidBundleResourceInfo_ProjectNotFound(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
+          project='foo')
+      self.service.GetHwidBundleResourceInfo(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testCreateHwidBundle_ProjectNotFound(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.CreateHwidBundleRequest(project='foo')
+      self.service.CreateHwidBundle(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
 
 if __name__ == '__main__':
   unittest.main()

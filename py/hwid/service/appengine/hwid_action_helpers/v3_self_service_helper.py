@@ -5,6 +5,7 @@
 import functools
 import hashlib
 import logging
+import textwrap
 from typing import List, Tuple
 
 from cros.chromeoshwid import update_checksum
@@ -12,6 +13,24 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.v3 import contents_analyzer
+from cros.factory.probe_info_service.app_engine import bundle_builder
+
+
+_HWID_BUNDLE_INSTALLER_NAME = 'install.py'
+_HWID_BUNDLE_INSTALLER_SCRIPT = textwrap.dedent(f"""\
+    #!/usr/bin/env python
+    import os
+    import os.path
+    import shutil
+    import sys
+    srcdir = os.path.dirname(__file__)
+    dstdir = sys.argv[1] if len(sys.argv) > 1 else '/usr/local/factory/hwid'
+    os.makedirs(dstdir, exist_ok=True)
+    for f in os.listdir(srcdir):
+      if f == '{_HWID_BUNDLE_INSTALLER_NAME}':
+        continue
+      shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
+    """)
 
 
 def _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents,
@@ -89,3 +108,18 @@ class HWIDV3SelfServiceActionHelper:
       return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)
 
     return analyzer.AnalyzeChange(_RemoveHeader)
+
+  def GetHWIDBundleResourceInfo(self, fingerprint_only):
+    del fingerprint_only
+    return hwid_action.BundleResourceInfo(
+        fingerprint=hashlib.sha1(
+            self._preproc_data.raw_database.encode('utf-8')).hexdigest())
+
+  def BundleHWIDDB(self):
+    builder = bundle_builder.BundleBuilder()
+    builder.AddRegularFile(self._preproc_data.project.upper(),
+                           self._preproc_data.raw_database.encode('utf-8'))
+    builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
+                              _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
+    builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)
+    return hwid_action.BundleInfo(builder.Build(), builder.FILE_NAME_EXT[1:])

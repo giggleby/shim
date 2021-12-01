@@ -112,7 +112,7 @@ message BatchGetBomRequest {
 // The response to BatchGetBOMRequest.
 message BatchGetBomResponse {
   // The response to a BOM request.
-  message Bom{
+  message Bom {
     // A list of the components in the BOM.
     repeated Component components = 1;
     // A list of labels of the BOM.
@@ -466,6 +466,40 @@ message HwidDbEditableSectionAnalysisReport {
   map<string, ComponentInfo> component_infos = 4;
 }
 
+message HwidBundleResourceInfo {
+  // TODO(b/209362238): Append fields that represent the metadata of the
+  // required resource to put into the HWID bundle.
+}
+
+message HwidBundleResource {
+  // TODO(b/209362238): Append fields that represent the required resource to
+  //     put into the HWID bundle.
+}
+
+message HwidBundle {
+  bytes contents = 1;
+  string name_ext = 2;
+}
+
+message GetHwidBundleResourceInfoRequest {
+  string project = 1;
+}
+
+message GetHwidBundleResourceInfoResponse {
+  string bundle_creation_token = 1;
+  HwidBundleResourceInfo resource_info = 2;
+}
+
+message CreateHwidBundleRequest {
+  string project = 1;
+  string bundle_creation_token = 2;
+  HwidBundleResource resource = 3;
+}
+
+message CreateHwidBundleResponse {
+  HwidBundle hwid_bundle = 1;
+}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -527,4 +561,12 @@ service HwidService {
       returns (AnalyzeHwidDbEditableSectionResponse);
 
   rpc BatchGetBom(BatchGetBomRequest) returns (BatchGetBomResponse);
+
+  // Get the metadata of resources that will be included in the HWID bundle.
+  rpc GetHwidBundleResourceInfo(GetHwidBundleResourceInfoRequest)
+      returns (GetHwidBundleResourceInfoResponse);
+
+  // Create the HWID bundle for specific project.
+  rpc CreateHwidBundle(CreateHwidBundleRequest)
+      returns (CreateHwidBundleResponse);
 }

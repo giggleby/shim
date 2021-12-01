@@ -60,6 +60,12 @@ class HWIDV3Action(hwid_action.HWIDAction):
     return self._ss_helper.AnalyzeDraftDBEditableSection(
         draft_db_editable_section)
 
+  def GetHWIDBundleResourceInfo(self, fingerprint_only=False):
+    return self._ss_helper.GetHWIDBundleResourceInfo(fingerprint_only)
+
+  def BundleHWIDDB(self):
+    return self._ss_helper.BundleHWIDDB()
+
 
 def _NormalizeString(string):
   """Normalizes a string to account for things like case."""

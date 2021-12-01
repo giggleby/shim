@@ -117,7 +117,8 @@ class SelfServiceHelper:
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     try:
       metadata = live_hwid_repo.GetHWIDDBMetadataByName(request.project)
-      self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata])
+      self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata],
+                                                delete_missing=False)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
           limit_models=[request.project])
 
@@ -248,4 +249,48 @@ class SelfServiceHelper:
           np.GenerateAVLName(mat.avl_cid,
                              qid=mat.avl_qid if mat.avl_qid else None,
                              seq_no=mat.seq_no))
+    return response
+
+  def GetHWIDBundleResourceInfo(self, request):
+    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    try:
+      try:
+        metadata = live_hwid_repo.GetHWIDDBMetadataByName(request.project)
+      except ValueError as ex:
+        # Treat the invalid project name as a project-not-found case.
+        raise KeyError from ex
+      self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata],
+                                                delete_missing=False)
+      self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+          limit_models=[request.project])
+
+      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      resource_info = action.GetHWIDBundleResourceInfo()
+    except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+    response = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
+        bundle_creation_token=resource_info.fingerprint)
+    return response
+
+  def CreateHWIDBundle(self, request):
+    try:
+      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      resource_info = action.GetHWIDBundleResourceInfo(fingerprint_only=True)
+    except (KeyError, ValueError, RuntimeError) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+    if resource_info.fingerprint != request.bundle_creation_token:
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.ABORTED,
+          'Invalid resource info token.')
+
+    try:
+      bundle_info = action.BundleHWIDDB()
+    except (KeyError, ValueError, RuntimeError) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+    response = hwid_api_messages_pb2.CreateHwidBundleResponse(
+        hwid_bundle=hwid_api_messages_pb2.HwidBundle(
+            contents=bundle_info.bundle_contents,
+            name_ext=bundle_info.bundle_file_ext))
     return response

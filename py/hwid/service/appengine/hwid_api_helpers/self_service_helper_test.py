@@ -427,6 +427,44 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertEqual(resp, expected_resp)
 
+  def testGetHWIDBundleResourceInfo_RefreshDatastoreFirst(self):
+
+    def CreateMockHWIDAction(hwid_data):
+      # Configure the mocked HWIDAction so that it returns the resource info
+      # fingerprint based on the contents of the HWID DB.
+      action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+      action.GetHWIDBundleResourceInfo.return_value = (
+          hwid_action.BundleResourceInfo(hwid_data.raw_db))
+      return action
+
+    self._modules.ConfigHWID('PROJ', '3', '',
+                             hwid_action_factory=CreateMockHWIDAction)
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 1')
+    req1 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
+        project='proj')
+    resp1 = self._ss_helper.GetHWIDBundleResourceInfo(req1)
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 2')
+    req2 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
+        project='proj')
+    resp2 = self._ss_helper.GetHWIDBundleResourceInfo(req2)
+
+    self.assertNotEqual(resp1.bundle_creation_token,
+                        resp2.bundle_creation_token)
+
+  def testCreateHWIDBundle_ResourceInfoTokenInvalid(self):
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetHWIDBundleResourceInfo.return_value = (
+        hwid_action.BundleResourceInfo('fingerprint_value_1'))
+    self._modules.ConfigHWID('PROJ', '3', 'db data ver 1', hwid_action=action)
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.CreateHwidBundleRequest(
+          project='proj', bundle_creation_token='fingerprint_value_2')
+      self._ss_helper.CreateHWIDBundle(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.ABORTED)
+
   def _ConfigLiveHWIDRepo(self, project, version, db_contents):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
