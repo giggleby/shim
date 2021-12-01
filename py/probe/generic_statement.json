@@ -82,6 +82,11 @@
       "eval": "flash_chip:main"
     }
   },
+  "nfc_reader": {
+    "generic": {
+      "eval": "nfc_reader"
+    }
+  },
   "pmic": {
     "generic": {
       "eval": {
