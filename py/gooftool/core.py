@@ -1229,6 +1229,13 @@ class Gooftool:
     gsctool = gsctool_module.GSCTool(self._util.shell)
     gsctool.ClearROHash()
 
+  def IsCr50ROHashSet(self):
+    # The result is defined in process_get_apro_hash in
+    # platform/cr50/extra/usb_updater/gsctool.c
+    cmd = 'gsctool -a -A'
+    result = self._util.shell(cmd)
+    return result.stdout.startswith('digest:')
+
   def Cr50SetROHash(self):
     """Set the AP-RO hash on the Cr50 chip.
 

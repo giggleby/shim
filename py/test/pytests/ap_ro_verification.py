@@ -5,24 +5,23 @@
 
 Description
 -----------
-The test updates RO hash, and asks operator to trigger verification manually.
-Device will reboot during the test. If reboot/verification is not triggered,
-there will be an operation error to ask for a retry.
+The test asks operator to trigger verification manually, and device will reboot
+during the test. If reboot/verification is not triggered, there will be an
+operation error to ask for a retry.
 
 If the verification failed, then the device won't be bootable.
 
 Test Procedure
 --------------
-First round
-  1. Update RO hash which to be verified. (`rebooted` flag should be None)
-  2. Wait operator to press power and (refresh*3)
-  3. After the combo, device will reboot with verifying RO hash
-Second round
-  4. Deal with the verification result. (`rebooted` flag should be true)
+First round (`rebooted` flag should be None)
+  1. Wait operator to press power and (refresh*3).
+  2. After the combo, device will reboot with verifying RO hash.
+Second round (`rebooted` flag should be true)
+  3. Deal with the verification result.
 
 Dependency
 ----------
-- The test updates RO hash, which needs board id not being set on the device.
+- The test needs to be run after setting AP RO hash by ap_ro_hash.py.
 - OS version >= 14196.0.0 (`tpm_manager_client get_ro_verification_status`)
 - cr50 version >= 0.5.40 (vendor command to get RO verification status)
 
@@ -67,8 +66,9 @@ class APROVerficationTest(test_case.TestCase):
 
   def setUp(self):
     self.gooftool = Gooftool()
-    if self.gooftool.IsCr50BoardIDSet():
-      raise Exception('Please run this test without setting board id.')
+    if not self.gooftool.IsCr50ROHashSet():
+      raise Exception('Please set ro hash first.')
+
     self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
     self.goofy = state.GetInstance()
@@ -104,9 +104,6 @@ class APROVerficationTest(test_case.TestCase):
         self.HandleError(status)
     else:
       self.goofy.SaveDataForNextBoot()
-
-      logging.info('Start setting RO hash.')
-      self.gooftool.Cr50SetROHash()
       device_data.UpdateDeviceData({self.device_data_key: True})
       self.ui.SetState(
           _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
@@ -117,4 +114,3 @@ class APROVerficationTest(test_case.TestCase):
 
   def tearDown(self):
     device_data.DeleteDeviceData(self.device_data_key)
-    self.gooftool.Cr50ClearRoHash()

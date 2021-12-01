@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-11-08 16:32+CST\n"
+"PO-Revision-Date: 2021-12-01 11:13+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -28,6 +28,10 @@ msgstr "加速度计校正"
 #: ../build/pytests_label_generated.json
 msgid "Accelerometers Lid Angle"
 msgstr "加速度计上盖角度"
+
+#: ../build/pytests_label_generated.json
+msgid "Ap Ro Hash"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Ap Ro Verification"
@@ -3408,6 +3412,10 @@ msgid "Check Release Image"
 msgstr "检查出厂系统"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Clear AP RO Hash"
+msgstr "清除 AP RO Hash"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Clear factory VPD entries"
 msgstr "清除工厂 VPD 资讯"
 
@@ -3533,6 +3541,10 @@ msgstr "SD 效能"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Screen Rotation"
 msgstr "屏幕旋转"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Set AP RO Hash"
+msgstr "写入 AP RO Hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Shopfloor Service (NotifyEnd)"
