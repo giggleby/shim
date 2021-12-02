@@ -167,11 +167,11 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
   binary_deps = [
       'activate_date', 'backlight_tool', 'bash', 'busybox', 'cgpt', 'cgpt.bin',
       'clobber-log', 'clobber-state', 'coreutils', 'crossystem', 'dd',
-      'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom', 'halt',
-      'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
-      'od', 'pango-view', 'pkill', 'pv', 'pvdisplay', 'python', 'reboot',
-      'setterm', 'sh', 'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof',
-      'jq', '/sbin/frecon', 'stressapptest', 'fuser', 'login'
+      'dhclient', 'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom',
+      'halt', 'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount',
+      'mount-encrypted', 'od', 'pango-view', 'pkill', 'pv', 'pvdisplay',
+      'python', 'reboot', 'setterm', 'sh', 'shutdown', 'stop', 'umount', 'vpd',
+      'curl', 'lsof', 'jq', '/sbin/frecon', 'stressapptest', 'fuser', 'login'
   ]
 
   etc_issue = textwrap.dedent("""
@@ -601,28 +601,16 @@ def _Cutoff():
   process_utils.Spawn([cutoff_script], check_call=True)
 
 
-def _DumpNetworkIPs():
-  """_DumpNetworkIPs dumps IPs for interface with valid IP
-
-  Returns:
-    A dict of iface name to (IP, prefix number) pairs
-  """
-  ips = {}
-  for iface in net_utils.GetEthernetInterfaces():
-    ip = net_utils.GetEthernetIp(iface)
-    if ip[0] and ip[1]:
-      ips[iface] = ip
-  return ips
-
-
-def _SetNetworkIPs(ips):
-  """_SetNetworkIPs sets IP and netmask to interfaces
-
-  Args:
-    ips: A dict of iface name to (IP, prefix number) pairs
-  """
-  for iface, ip in ips.items():
-    net_utils.SetEthernetIp(ip[0], iface, ip[1], force=True)
+def _RestoreNetwork():
+  interfaces = net_utils.GetEthernetInterfaces()
+  if interfaces:
+    for interface in interfaces:
+      if net_utils.GetEthernetIp(interface)[0] is not None:
+        continue
+      process_utils.CheckCall([
+          'dhclient', '-sf', '/usr/local/factory/sh/dhclient-script', '-lf',
+          '/var/factory/state/dhclient.leases', interface
+      ])
 
 
 def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
@@ -642,8 +630,6 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
   logging.debug('test_umount: %s', test_umount)
 
   try:
-    ips = _DumpNetworkIPs()
-
     # Enable upstart log under /var/log/upstart.log for Tast.
     process_utils.Spawn(['initctl', 'log-priority', 'info'],
                         log=True,
@@ -664,10 +650,7 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
         'sslh'
     ])
 
-    # b/205203541: Should be ok to simply restore with the previous IP as long
-    # as the DHCP leases haven't expired, and we will reboot at the end so the
-    # network manager will take care of the connection afterwards.
-    _SetNetworkIPs(ips)
+    _RestoreNetwork()
     _UnmountStatefulPartition(old_root, state_dev, test_umount)
 
     # When testing, stop the wiping process with no error. In normal
