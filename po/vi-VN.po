@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-12-01 11:13+CST\n"
+"PO-Revision-Date: 2021-12-08 11:38+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3453,6 +3453,10 @@ msgid "Barrier"
 msgstr "Kiểm tra mức độ"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Base Accelerometers Calibration"
+msgstr "Điều chỉnh gia tốc kế"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Camera Tests"
 msgstr "Máy ảnh"
 
@@ -3554,6 +3558,10 @@ msgstr "Kiểm tra nút"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Idle"
 msgstr "Chờ đợi nhàn rỗi"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Lid Accelerometers Calibration"
+msgstr "Điều chỉnh gia tốc kế nắp trên"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Create Cache"
