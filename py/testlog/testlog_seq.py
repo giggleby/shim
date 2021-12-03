@@ -27,7 +27,8 @@ from .utils import file_utils
 # sync event #1000055 again. But this is much more unlikely than the
 # above scenario.
 SEQ_INCREMENT_ON_BOOT = 1000000
-FILELOCK_WAITSECS = 0.5
+FILELOCK_WAITSECS = 10
+
 
 class SeqGenerator:
   """Maintains a monotonically increasing sequence in best effort.
