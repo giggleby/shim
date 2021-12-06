@@ -16,14 +16,14 @@ DATA_FILE_WARNING_MESSAGE_HEADER = '''
 '''.strip()
 
 
-def YamlWrite(structured_data, dumper):
-  """Wrap yaml.dump to make calling convention consistent."""
-  return yaml.dump(structured_data, default_flow_style=False, Dumper=dumper)
+def YamlWrite(structured_data):
+  """Wrap yaml.safe_dump to make calling convention consistent."""
+  return yaml.safe_dump(structured_data, default_flow_style=False)
 
 
-def YamlRead(serialized_data, loader):
-  """Wrap yaml.load to make calling convention consistent."""
-  return yaml.load(serialized_data, Loader=loader)
+def YamlRead(serialized_data):
+  """Wrap yaml.safe_load to make calling convention consistent."""
+  return yaml.safe_load(serialized_data)
 
 
 class InvalidDataError(ValueError):
@@ -64,13 +64,13 @@ class _DatastoreBase:
     """The object YAML representation is just its field_dict data."""
     return yaml_representer.represent_data(self.__dict__)
 
-  def Encode(self, dumper=yaml.Dumper, loader=yaml.SafeLoader):
+  def Encode(self):
     """Return the YAML string for this object and check its schema.
 
     After generating the output data, run decode on that to validate.
     """
-    yaml_data = YamlWrite(self, dumper)
-    self.Decode(yaml_data, loader)
+    yaml_data = YamlWrite(self)
+    self.Decode(yaml_data)
     return yaml_data
 
   @classmethod
@@ -87,7 +87,7 @@ class _DatastoreBase:
     return cls(**field_dict)
 
   @classmethod
-  def Decode(cls, data, loader=yaml.SafeLoader):
+  def Decode(cls, data):
     """Given YAML string, creates corresponding object and check its schema."""
     def NestedDecode(elt_type, elt_data):
       """Apply appropriate constructors to nested object data."""
@@ -114,7 +114,7 @@ class _DatastoreBase:
         return elt_data
       raise InvalidDataError
     try:
-      field_dict = YamlRead(data, loader)
+      field_dict = YamlRead(data)
     except yaml.YAMLError as e:
       raise InvalidDataError('YAML deserialization error: %s' % e)
     cls.ValidateSchema(field_dict)

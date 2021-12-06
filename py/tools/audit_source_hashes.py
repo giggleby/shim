@@ -88,7 +88,7 @@ def GetHashes(path):
   for e in reversed(events):
     if not e.startswith('EVENT: source_hashes'):
       continue
-    data = yaml.load(e)
+    data = yaml.safe_load(e)
 
     hash_function = data.get('hash_function')
     if hash_function != file_utils.SOURCE_HASH_FUNCTION_NAME:

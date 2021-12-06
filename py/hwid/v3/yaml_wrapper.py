@@ -22,14 +22,6 @@ from cros.factory.utils import schema
 from cros.factory.utils import yaml_utils
 
 
-class V3Loader(SafeLoader):
-  """A HWID v3 yaml Loader for patch separation."""
-
-
-class V3Dumper(SafeDumper):
-  """A HWID v3 yaml Dumper for patch separation."""
-
-
 # Because PyYaml can only represent scalar, sequence, mapping object, the
 # customized output format must be one of this:
 #   !custom_scalar_tag STRING
@@ -49,17 +41,11 @@ def _RemoveDummyStringWrapper(func):
   return wrapper
 
 
-# Overwrite the globals from the yaml module
-Loader = V3Loader
-Dumper = V3Dumper
-
-# Patch functions to use V3Loader and V3Dumper
-load = functools.partial(load, Loader=Loader)
-load_all = functools.partial(load_all, Loader=Loader)
-add_constructor = functools.partial(add_constructor, Loader=Loader)
-dump = _RemoveDummyStringWrapper(functools.partial(dump, Dumper=Dumper))
-dump_all = _RemoveDummyStringWrapper(functools.partial(dump_all, Dumper=Dumper))
-add_representer = functools.partial(add_representer, Dumper=Dumper)
+# Patch global functions in yaml.
+add_constructor = functools.partial(add_constructor, Loader=SafeLoader)
+safe_dump = _RemoveDummyStringWrapper(safe_dump)
+safe_dump_all = _RemoveDummyStringWrapper(safe_dump_all)
+add_representer = functools.partial(add_representer, Dumper=SafeDumper)
 
 
 # Override existing YAML tags to disable some auto type conversion.
@@ -85,7 +71,7 @@ def RestrictedBoolConstructor(self, node):
   return self.construct_yaml_str(node)
 
 
-add_constructor(u'tag:yaml.org,2002:bool', RestrictedBoolConstructor)
+add_constructor('tag:yaml.org,2002:bool', RestrictedBoolConstructor)
 
 
 # Override existing YAML representer for strings to switch the representing
@@ -101,8 +87,8 @@ add_representer(str, _HWIDStrPresenter)
 
 # pylint: disable=abstract-method
 class _HWIDV3YAMLTagHandler(yaml_utils.BaseYAMLTagHandler):
-  LOADER = Loader
-  DUMPER = Dumper
+  LOADER = SafeLoader
+  DUMPER = SafeDumper
 
 
 # The dictionary class for the HWID database object.

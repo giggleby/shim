@@ -539,7 +539,7 @@ class AudioQualityTest(test_case.TestCase):
 
       with file_utils.UnopenedTemporaryFile() as path:
         with open(path, 'w') as f:
-          yaml.dump(test_result, f)
+          yaml.safe_dump(test_result, f)
         testlog.AttachFile(
             path=path,
             name='audio_quality_test_%s' % test_index,
@@ -554,7 +554,7 @@ class AudioQualityTest(test_case.TestCase):
 
       with file_utils.UnopenedTemporaryFile() as path:
         with open(path, 'w') as f:
-          yaml.dump(final_result, f)
+          yaml.safe_dump(final_result, f)
         testlog.AttachFile(
             path=path,
             name='audio_quality_final_result',

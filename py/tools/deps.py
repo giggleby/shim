@@ -243,7 +243,7 @@ def LoadRules(path):
     A dictionary of {package: imports} describing "'package' can only import
     from 'imports'".
   """
-  config = yaml.load(open(path))
+  config = yaml.safe_load(open(path))
   if (CONFIG_GROUPS not in config) or (CONFIG_RULES not in config):
     raise ValueError('Syntax error in %s' % path)
 

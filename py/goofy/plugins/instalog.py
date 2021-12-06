@@ -151,7 +151,7 @@ class Instalog(plugin.Plugin):
 
     logging.info('Instalog: Saving config YAML to: %s', self._config_path)
     with open(self._config_path, 'w') as f:
-      yaml.dump(config, f, default_flow_style=False)
+      yaml.safe_dump(config, f, default_flow_style=False)
 
   def _GetLastSeqProcessed(self):
     """Retrieves the last sequence number processed by Testlog input plugin.

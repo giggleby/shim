@@ -58,7 +58,7 @@ def InstallSymlinks(target, dest, mode, sudo=False, symlinks=None):
   if not symlinks:
     with open(os.path.join(paths.FACTORY_DIR,
                            'misc/symlinks.yaml')) as f:
-      symlinks = yaml.load(f)
+      symlinks = yaml.safe_load(f)
 
   SYMLINKS_SCHEMA.Validate(symlinks)
 
@@ -105,7 +105,7 @@ def UninstallSymlinks(dest, mode, sudo=False, symlinks=None):
 
   if not symlinks:
     with open(os.path.join(paths.FACTORY_DIR, 'misc/symlinks.yaml')) as f:
-      symlinks = yaml.load(f)
+      symlinks = yaml.safe_load(f)
 
   SYMLINKS_SCHEMA.Validate(symlinks)
 

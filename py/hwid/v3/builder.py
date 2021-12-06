@@ -428,16 +428,15 @@ class DatabaseBuilder:
           continue
 
         add_null = PromptAndAsk(
-            'Found probed values of [%s] component\n' % comp_cls +
-            ''.join(['\n' + yaml.dump(probed_value, default_flow_style=False)
-                     for probed_value in probed_values]).replace('\n', '\n  ') +
-            '\n' +
+            'Found probed values of [%s] component\n' % comp_cls + ''.join([
+                '\n' + yaml.safe_dump(probed_value, default_flow_style=False)
+                for probed_value in probed_values
+            ]).replace('\n', '\n  ') + '\n' +
             'to be added to the database, please confirm that:\n' +
             'If the device has a SKU without %s component, ' % comp_cls +
             'please enter "Y".\n' +
             'If the device always has %s component, ' % comp_cls +
-            'please enter "N".\n',
-            default_answer=True)
+            'please enter "N".\n', default_answer=True)
 
         if add_null:
           self.AddNullComponent(comp_cls)

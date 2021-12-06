@@ -246,7 +246,7 @@ class EventLogTest(unittest.TestCase):
       pass
 
     with open(event_log.EVENTS_PATH, 'r') as f:
-      log_data = list(yaml.load_all(f))
+      log_data = list(yaml.safe_load_all(f))
     self.assertEqual(6, len(log_data))
     # The last one should be empty; remove it
     self.assertIsNone(None, log_data[-1])

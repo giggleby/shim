@@ -435,7 +435,7 @@ def main():
   }
   if os.path.exists(args.config):
     with open(args.config, 'r') as config_file:
-      fixture_param = yaml.load(config_file)
+      fixture_param = yaml.safe_load(config_file)
 
   logging.info('CreateBFTFixture(%r, %r)', fixture_param['class_name'],
                fixture_param['params'])

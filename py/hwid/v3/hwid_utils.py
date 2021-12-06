@@ -318,7 +318,7 @@ def GetDeviceInfo(infile=None):
   """
   if infile:
     with open(infile, 'r') as f:
-      return yaml.load(f.read())
+      return yaml.safe_load(f.read())
 
   try:
     from cros.factory.test import device_data
@@ -482,7 +482,7 @@ def GetSkuIdsFromCrosConfig(project, config_yaml_path=None):
   if not config_yaml_path:
     config_yaml_path = '/usr/share/chromeos-config/yaml/config.yaml'
 
-  obj = yaml.load(file_utils.ReadFile(config_yaml_path))
+  obj = yaml.safe_load(file_utils.ReadFile(config_yaml_path))
 
   sku_ids = []
   for config in obj['chromeos']['configs']:

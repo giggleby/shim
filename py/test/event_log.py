@@ -129,7 +129,7 @@ class FloatDigit:
 
   This class has customized __repr__ so it can be used in yaml representer.
   Usage is like:
-  print yaml.dump(FloatDigit(0.12345, 4))
+  print yaml.safe_dump(FloatDigit(0.12345, 4))
   0.1235
   """
 
@@ -165,11 +165,9 @@ CustomDumper.add_multi_representer(object, YamlObjectRepresenter)
 
 
 def YamlDump(structured_data):
-  """Wraps yaml.dump to make calling convention consistent."""
-  return yaml.dump(structured_data,
-                   default_flow_style=False,
-                   allow_unicode=True,
-                   Dumper=CustomDumper)
+  """Wraps yaml.safe_dump to make calling convention consistent."""
+  return yaml.safe_dump(structured_data, default_flow_style=False,
+                        allow_unicode=True)
 
 
 def Log(event_name, **kwargs):

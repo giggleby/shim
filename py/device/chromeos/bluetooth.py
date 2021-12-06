@@ -641,7 +641,7 @@ class BluetoothTest:
     """Scans once."""
     result = self.btmgmt.FindDevices()
     if self.args.properties:
-      logging.info(yaml.dump(result, default_flow_style=False))
+      logging.info(yaml.safe_dump(result, default_flow_style=False))
 
 
 if __name__ == '__main__':

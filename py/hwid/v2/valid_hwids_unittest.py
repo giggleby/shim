@@ -38,8 +38,9 @@ class ValidHWIDsTest(unittest.TestCase):
 
     target_commit = os.environ.get('PRESUBMIT_COMMIT') or 'cros-internal/main'
 
-    projects_info = yaml.load(process_utils.CheckOutput(
-        ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
+    projects_info = yaml.safe_load(
+        process_utils.CheckOutput(
+            ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
 
     # Check the checksum of *all* HWID v2 databases.
     for proj_info in projects_info.values():

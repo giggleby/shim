@@ -146,12 +146,12 @@ class AVLNameTest(unittest.TestCase):
     }
 
     self.mock_init_mapping = {
-        category + '.yaml': yaml.dump(mapping, default_flow_style=False)
+        category + '.yaml': yaml.safe_dump(mapping, default_flow_style=False)
         for category, mapping in self.init_mapping_data.items()
     }
 
     self.mock_update_mapping = {
-        category + '.yaml': yaml.dump(mapping, default_flow_style=False)
+        category + '.yaml': yaml.safe_dump(mapping, default_flow_style=False)
         for category, mapping in self.update_mapping_data.items()
     }
 

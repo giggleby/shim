@@ -79,7 +79,7 @@ class _Config:
     self.cloud_project = os.environ.get('GOOGLE_CLOUD_PROJECT')
     self.gae_env = os.environ.get('GAE_ENV')
     try:
-      confs = yaml.load(file_utils.ReadFile(config_path))
+      confs = yaml.safe_load(file_utils.ReadFile(config_path))
       conf = confs[self.cloud_project]
     except (KeyError, OSError, IOError):
       conf = _DEFAULT_CONFIGURATION

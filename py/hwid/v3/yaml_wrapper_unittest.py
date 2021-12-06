@@ -19,7 +19,7 @@ _REGIONS_DATABASE_PATH = os.path.join(
 class ParseRegionFieldUnittest(unittest.TestCase):
   def testDecodeYAMLTag(self):
     doc = 'foo: !region_field'
-    decoded = yaml.load(doc)
+    decoded = yaml.safe_load(doc)
     self.assertEqual({'region': 'us'}, decoded['foo'][29])
     self.assertEqual({'region': 'sa'}, decoded['foo'][128])
     self.assertFalse(127 in decoded['foo'])  # region 'zw' is not confirmed yet.
@@ -27,7 +27,7 @@ class ParseRegionFieldUnittest(unittest.TestCase):
 
     # "no" should not be parsed as "false" (boolean) here.
     doc = 'foo: !region_field [us, gb, no]'
-    decoded = yaml.load(doc)
+    decoded = yaml.safe_load(doc)
     self.assertFalse(decoded['foo'].is_legacy_style)
     self.assertEqual(decoded['foo'], {
         0: {'region': []},
@@ -45,13 +45,13 @@ class ParseRegionFieldUnittest(unittest.TestCase):
 
   def testDumpRegionField(self):
     doc = 'foo: !region_field [us, gb]'
-    decoded = yaml.load(doc)
-    dump_str = yaml.dump(decoded).strip()
+    decoded = yaml.safe_load(doc)
+    dump_str = yaml.safe_dump(decoded).strip()
     self.assertEqual(doc, dump_str)
 
     doc = 'foo: !region_field'
-    decoded = yaml.load(doc)
-    dump_str = yaml.dump(decoded, default_flow_style=False).strip()
+    decoded = yaml.safe_load(doc)
+    dump_str = yaml.safe_dump(decoded, default_flow_style=False).strip()
     self.assertEqual(doc, dump_str)
 
 
@@ -65,7 +65,7 @@ class ParseRegionComponentUnittest(unittest.TestCase):
 
   def testLoadRegionComponent(self):
     for s in ('region: !region_component', 'region: !region_component {}'):
-      obj = yaml.load(s)['region']
+      obj = yaml.safe_load(s)['region']
       self.assertEqual(dict(obj), {
           'items': {
               'aa': {'values': {'region_code': 'aa'}},
@@ -74,9 +74,9 @@ class ParseRegionComponentUnittest(unittest.TestCase):
                      'status': 'unsupported'}}})
 
   def testLoadRegionComponentStatusLists(self):
-    obj = yaml.load('region: !region_component\n'
-                    '  unqualified: [aa]\n'
-                    '  deprecated: [zz]\n')['region']
+    obj = yaml.safe_load('region: !region_component\n'
+                         '  unqualified: [aa]\n'
+                         '  deprecated: [zz]\n')['region']
     self.assertEqual(dict(obj), {
         'items': {
             'aa': {'values': {'region_code': 'aa'},
@@ -86,51 +86,49 @@ class ParseRegionComponentUnittest(unittest.TestCase):
                    'status': 'deprecated'}}})
 
   def testLoadRegionComponentError(self):
-    self.assertRaises(Exception, yaml.load, 'region: !region_component 123')
-    self.assertRaises(Exception, yaml.load,
-                      'region: !region_component\n'
+    self.assertRaises(Exception, yaml.safe_load,
+                      'region: !region_component 123')
+    self.assertRaises(Exception, yaml.safe_load, 'region: !region_component\n'
                       '  bad_key: []\n')
-    self.assertRaises(Exception, yaml.load,
-                      'region: !region_component\n'
+    self.assertRaises(Exception, yaml.safe_load, 'region: !region_component\n'
                       '  unqualified: tw\n')
-    self.assertRaises(Exception, yaml.load,
-                      'region: !region_component\n'
+    self.assertRaises(Exception, yaml.safe_load, 'region: !region_component\n'
                       '  unqualified: []\n')
-    self.assertRaises(Exception, yaml.load,
-                      'region: !region_component\n'
-                      '  unqualified: [tw, us]\n'
-                      '  deprecated: [us, gb]\n')
+    self.assertRaises(
+        Exception, yaml.safe_load, 'region: !region_component\n'
+        '  unqualified: [tw, us]\n'
+        '  deprecated: [us, gb]\n')
 
   def testDumpRegionComponent(self):
-    load2 = lambda doc: yaml.load(yaml.dump(yaml.load(doc),
-                                            default_flow_style=False))
+    load2 = lambda doc: yaml.safe_load(
+        yaml.safe_dump(yaml.safe_load(doc), default_flow_style=False))
     doc = 'region: !region_component\n'
-    self.assertEqual(yaml.load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), load2(doc))
     doc = 'region: !region_component {}\n'
-    self.assertEqual(yaml.load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), load2(doc))
 
     doc = 'region: !region_component\n  unqualified: [zz]\n'
-    self.assertEqual(yaml.load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), load2(doc))
     doc = 'region: !region_component\n  unqualified: [zz]\n  unsupported: [aa]'
-    self.assertEqual(yaml.load(doc), load2(doc))
+    self.assertEqual(yaml.safe_load(doc), load2(doc))
 
 
 class StandardizeUnittest(unittest.TestCase):
   def testParseBool(self):
-    self.assertEqual(yaml.load('true'), True)
-    self.assertEqual(yaml.load('TRUE'), True)
-    self.assertEqual(yaml.load('false'), False)
-    self.assertEqual(yaml.load('FALSE'), False)
+    self.assertEqual(yaml.safe_load('true'), True)
+    self.assertEqual(yaml.safe_load('TRUE'), True)
+    self.assertEqual(yaml.safe_load('false'), False)
+    self.assertEqual(yaml.safe_load('FALSE'), False)
 
-    self.assertEqual(yaml.load('no'), 'no')
-    self.assertEqual(yaml.load('NO'), 'NO')
-    self.assertEqual(yaml.load('yes'), 'yes')
-    self.assertEqual(yaml.load('YES'), 'YES')
+    self.assertEqual(yaml.safe_load('no'), 'no')
+    self.assertEqual(yaml.safe_load('NO'), 'NO')
+    self.assertEqual(yaml.safe_load('yes'), 'yes')
+    self.assertEqual(yaml.safe_load('YES'), 'YES')
 
-    self.assertEqual(yaml.load('on'), 'on')
-    self.assertEqual(yaml.load('ON'), 'ON')
-    self.assertEqual(yaml.load('off'), 'off')
-    self.assertEqual(yaml.load('OFF'), 'OFF')
+    self.assertEqual(yaml.safe_load('on'), 'on')
+    self.assertEqual(yaml.safe_load('ON'), 'ON')
+    self.assertEqual(yaml.safe_load('off'), 'off')
+    self.assertEqual(yaml.safe_load('OFF'), 'OFF')
 
 
 @rule.RuleFunction(['string'])
@@ -147,10 +145,11 @@ def AssertStrLen(length):
 
 class ValueYAMLTagTest(unittest.TestCase):
   def testYAMLParsing(self):
-    self.assertEqual(yaml.load('!re abc'), rule.Value('abc', is_re=True))
-    self.assertEqual(yaml.load(yaml.dump(rule.Value('abc', is_re=False))),
-                     'abc')
-    self.assertEqual(yaml.dump(rule.Value('abc', is_re=True)), "!re 'abc'\n")
+    self.assertEqual(yaml.safe_load('!re abc'), rule.Value('abc', is_re=True))
+    self.assertEqual(
+        yaml.safe_load(yaml.safe_dump(rule.Value('abc', is_re=False))), 'abc')
+    self.assertEqual(
+        yaml.safe_dump(rule.Value('abc', is_re=True)), "!re 'abc'\n")
 
 
 if __name__ == '__main__':

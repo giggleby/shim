@@ -1376,7 +1376,7 @@ class FinalizeBundle:
     else:
       manifest_path = args.manifest
     try:
-      manifest = yaml.load(file_utils.ReadFile(manifest_path))
+      manifest = yaml.safe_load(file_utils.ReadFile(manifest_path))
     except Exception:
       logging.exception('Failed to load manifest: %s', manifest_path)
       logging.error('Please refer to setup/BUNDLE.md (https://goo.gl/pM1pxo)')

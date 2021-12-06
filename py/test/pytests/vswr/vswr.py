@@ -188,7 +188,7 @@ class VSWR(test_case.TestCase):
   def _LoadConfig(self, config_content):
     """Reads the configuration from a file."""
     logging.info('Loading config')
-    self._config = yaml.load(config_content)
+    self._config = yaml.safe_load(config_content)
 
     self.log['config']['file_path'] = self.args.config_path
     self.log['config']['content'] = self._config
@@ -349,9 +349,8 @@ class VSWR(test_case.TestCase):
 
     if self.args.keep_raw_logs:
       testlog.AttachContent(
-          content=yaml.dump(self.log, default_flow_style=False),
-          name='vswr.yaml',
-          description='plain text log of vswr')
+          content=yaml.safe_dump(self.log, default_flow_style=False),
+          name='vswr.yaml', description='plain text log of vswr')
 
   def _SetUpNetwork(self, host_config):
     """Sets up the local network.

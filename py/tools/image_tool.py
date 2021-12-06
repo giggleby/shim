@@ -2540,7 +2540,7 @@ class ChromeOSFactoryBundle:
     if os.path.exists(config_path):
       print('%s found.' % config_path)
       with open(config_path) as f:
-        obj = yaml.load(f)['chromeos']['configs']
+        obj = yaml.safe_load(f)['chromeos']['configs']
     else:
       print('%s not found.' % config_path)
       return {}

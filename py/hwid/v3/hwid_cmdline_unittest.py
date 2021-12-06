@@ -49,7 +49,7 @@ class OutputObjectTest(TestCaseBaseWithFakeOutput):
             'xxx': 3
         })
     self.assertEqual(
-        yaml.load(hwid_cmdline.Output.data), {
+        yaml.safe_load(hwid_cmdline.Output.data), {
             'aaa': ['bbb', 'ccc'],
             'xxx': 3
         })

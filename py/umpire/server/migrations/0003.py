@@ -8,6 +8,7 @@ import os
 
 import yaml
 
+
 _ENV_DIR = '/var/db/factory/umpire'
 _OLD_SYMLINK = os.path.join(_ENV_DIR, 'active_umpire.yaml')
 _NEW_SYMLINK = os.path.join(_ENV_DIR, 'active_umpire.json')
@@ -16,7 +17,8 @@ _NEW_SYMLINK = os.path.join(_ENV_DIR, 'active_umpire.json')
 def Migrate():
   with open(_OLD_SYMLINK) as f:
     json_config = json.dumps(
-        yaml.load(f), indent=2, separators=(',', ': '), sort_keys=True) + '\n'
+        yaml.safe_load(f), indent=2, separators=(',', ': '),
+        sort_keys=True) + '\n'
 
     json_name = 'umpire.%s.json' % (
         hashlib.md5(json_config.encode('utf-8')).hexdigest())

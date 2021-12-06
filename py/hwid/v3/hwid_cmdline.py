@@ -139,11 +139,11 @@ class HWIDMaterial(NamedTuple):
   sku_ids: Optional[List[int]] = None
 
   def DumpStr(self):
-    return yaml.dump(self.ConvertToDict())
+    return yaml.safe_dump(self.ConvertToDict())
 
   @classmethod
   def LoadStr(cls, source):
-    yaml_obj = yaml.load(source)
+    yaml_obj = yaml.safe_load(source)
     yaml_obj.setdefault('framework_version', common.OLDEST_FRAMEWORK_VERSION)
     return cls(**yaml_obj)
 

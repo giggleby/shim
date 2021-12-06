@@ -117,8 +117,9 @@ class ValidHWIDDBsTest(unittest.TestCase):
       return
 
     target_commit = (os.environ.get('PRESUBMIT_COMMIT') or 'cros-internal/main')
-    projects_info = yaml.load(process_utils.CheckOutput(
-        ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
+    projects_info = yaml.safe_load(
+        process_utils.CheckOutput(
+            ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
 
     presubmit_files = os.environ.get('PRESUBMIT_FILES')
     if presubmit_files:

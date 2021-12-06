@@ -21,4 +21,4 @@ if __name__ == '__main__':
   args = parser.parse_args()
   python_obj = csv_reader.ReadCsv(args.input)
   with open(args.output, 'w') as fd:
-    fd.write(yaml.dump(python_obj, default_flow_style=False))
+    fd.write(yaml.safe_dump(python_obj, default_flow_style=False))

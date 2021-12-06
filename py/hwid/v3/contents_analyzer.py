@@ -329,7 +329,7 @@ class ContentsAnalyzer:
               f'{comp.extracted_noseq_comp_name}#{comp.expected_seq_no}')
         else:
           comp_name_with_correct_seq_no = None
-        raw_comp_name = yaml.dump(comp.name).partition('\n')[0]
+        raw_comp_name = yaml.safe_dump(comp.name).partition('\n')[0]
         report.hwid_components[comp_name_replacer] = (
             HWIDComponentAnalysisResult(
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,

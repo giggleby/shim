@@ -177,7 +177,7 @@ class Database:
       HWIDException if there is missing field in the database, or database
       integrity verification fails.
     """
-    yaml_obj = yaml.load(raw_data)
+    yaml_obj = yaml.safe_load(raw_data)
 
     if not isinstance(yaml_obj, dict):
       raise common.HWIDException('Invalid HWID database')
@@ -230,7 +230,7 @@ class Database:
       all_parts.append(('framework_version', self._framework_version))
 
     return '\n'.join([
-        yaml.dump({key: value}, default_flow_style=False)
+        yaml.safe_dump({key: value}, default_flow_style=False)
         for key, value in all_parts
     ])
 

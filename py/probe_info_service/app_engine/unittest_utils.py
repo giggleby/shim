@@ -60,7 +60,7 @@ def LoadProbedOutcome(testdata_name):
 class FakeProbedOutcomeInfo:
   def __init__(self, testdata_name):
     testdata_filename = 'fake_probed_outcome_info-%s.yaml' % testdata_name
-    raw_data = yaml.load(_ReadTestdataFile(testdata_filename))
+    raw_data = yaml.safe_load(_ReadTestdataFile(testdata_filename))
     self.component_testdata_names: typing.List[str] = raw_data[
         'component_testdata_names']
     self.envs: typing.Mapping[str, str] = raw_data['envs']

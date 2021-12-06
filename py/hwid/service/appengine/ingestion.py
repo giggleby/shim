@@ -78,7 +78,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     for name, content in live_hwid_repo.IterAVLNameMappings():
       category, unused_ext = os.path.splitext(name)
-      mapping = yaml.load(content)
+      mapping = yaml.safe_load(content)
       self.decoder_data_manager.SyncAVLNameMapping(category, mapping)
       category_set.discard(category)
 

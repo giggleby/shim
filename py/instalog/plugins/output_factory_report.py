@@ -411,7 +411,7 @@ class ReportParser(log_utils.LoggerMixin):
           data_lines = b''
           event = None
           try:
-            event = yaml.load(raw_event, yaml_loader)
+            event = yaml.load(raw_event, Loader=yaml_loader)
 
             if not isinstance(event, dict):
               SetProcessEventStatus(ERROR_CODE.EventlogBrokenEvent,
@@ -523,7 +523,7 @@ class ReportParser(log_utils.LoggerMixin):
           sn_list = []
           for line in line_list:
             try:
-              sn = yaml.load(line, yaml_loader)[sn_key]
+              sn = yaml.load(line, Loader=yaml_loader)[sn_key]
               if sn != 'null':
                 sn_list.append(sn)
             except Exception:

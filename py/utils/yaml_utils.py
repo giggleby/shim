@@ -21,8 +21,8 @@ class BaseYAMLTagHandlerMetaclass(type):
 class BaseYAMLTagHandler(metaclass=BaseYAMLTagHandlerMetaclass):
   YAML_TAG = None
   TARGET_CLASS = None
-  LOADER = yaml.Loader
-  DUMPER = yaml.Dumper
+  LOADER = yaml.SafeLoader
+  DUMPER = yaml.SafeDumper
 
   @classmethod
   def YAMLConstructor(cls, loader, node, deep=False):
@@ -33,9 +33,8 @@ class BaseYAMLTagHandler(metaclass=BaseYAMLTagHandlerMetaclass):
     raise NotImplementedError
 
 
-def ParseMappingAsOrderedDict(enable=True,
-                              loader=yaml.Loader,
-                              dumper=yaml.Dumper):
+def ParseMappingAsOrderedDict(enable=True, loader=yaml.SafeLoader,
+                              dumper=yaml.SafeDumper):
   """Treat OrderedDict as the default mapping instance.
 
   While we load a yaml file to a object, modify the object, and dump to a yaml

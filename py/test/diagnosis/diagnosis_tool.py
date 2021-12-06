@@ -384,7 +384,7 @@ def _ImportConfigFiles():
     for filename in (x for x in filenames if x[-5:] == '.yaml'):
       try:
         opened_file = open(os.path.join(dirpath, filename), 'r')
-        new_configs = yaml.load(opened_file)
+        new_configs = yaml.safe_load(opened_file)
       except Exception:
         logging.exception('Cought an exception while reading and parsing '
                           'the yaml config file %r.', filename)

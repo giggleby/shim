@@ -41,7 +41,7 @@ from cros.factory.utils import sys_interface
 from cros.factory.external import setproctitle
 
 
-def Dump(data, dump_format, stream=sys.stdout, safe_dump=True, use_filter=True):
+def Dump(data, dump_format, stream=sys.stdout, use_filter=True):
   """Dumps data to stream in given format.
 
   Args:
@@ -52,10 +52,7 @@ def Dump(data, dump_format, stream=sys.stdout, safe_dump=True, use_filter=True):
   if use_filter:
     data = privacy.FilterDict(data)
   if dump_format == 'yaml':
-    if safe_dump:
-      yaml.safe_dump(data, stream, default_flow_style=False)
-    else:
-      yaml.dump(data, stream)
+    yaml.safe_dump(data, stream, default_flow_style=False)
   elif dump_format == 'json':
     json.dump(data, stream, indent=2, sort_keys=True, separators=(',', ': '))
   elif dump_format == 'pprint':
@@ -348,8 +345,7 @@ class DumpTestListCommand(Subcommand):
 
           writer.writerow((t.path, module))
     else:
-      Dump(test_list.ToTestListConfig(), dump_format=self.args.format,
-           safe_dump=False)
+      Dump(test_list.ToTestListConfig(), dump_format=self.args.format)
 
 
 class TestListCommand(Subcommand):
@@ -542,10 +538,10 @@ class DeviceDataCommand(Subcommand):
 
     if self.args.set_yaml:
       if self.args.set_yaml == '-':
-        update = yaml.load(sys.stdin)
+        update = yaml.safe_load(sys.stdin)
       else:
         with open(self.args.set_yaml) as f:
-          update = yaml.load(f)
+          update = yaml.safe_load(f)
       if not isinstance(update, dict):
         sys.exit('Expected a dict but got a %r' % type(update))
       device_data.UpdateDeviceData(update)

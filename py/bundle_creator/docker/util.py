@@ -63,7 +63,7 @@ def CreateBundle(create_bundle_message_proto):
       manifest['has_firmware'] = has_firmware_setting
 
     with open(os.path.join(temp_dir, 'MANIFEST.yaml'), 'w') as f:
-      yaml.dump(manifest, f)
+      yaml.safe_dump(manifest, f)
     process = subprocess.Popen([
         '/usr/local/factory/factory.par', 'finalize_bundle',
         os.path.join(temp_dir, 'MANIFEST.yaml'), '--jobs', '7'

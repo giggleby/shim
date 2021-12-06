@@ -77,8 +77,9 @@ class HWIDDBsPatternTest(unittest.TestCase):
     target_commit = (
         self.commit or os.environ.get('PRESUBMIT_COMMIT') or
         'cros-internal/main')
-    projects_info = yaml.load(process_utils.CheckOutput(
-        ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
+    projects_info = yaml.safe_load(
+        process_utils.CheckOutput(
+            ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
 
 
     if self.project:

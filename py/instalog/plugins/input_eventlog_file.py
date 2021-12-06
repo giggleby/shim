@@ -102,7 +102,7 @@ class InputEventlogFile(input_log_file.InputLogFile):
 
     output = None
     try:
-      output = yaml.load(event_str)
+      output = yaml.safe_load(event_str)
     except yaml.error.YAMLError:
       # Try recovering.  Was the event cut off in the middle?  Attempt to parse
       # from the last occurence of 'EVENT:' until the end of the string.
@@ -110,7 +110,7 @@ class InputEventlogFile(input_log_file.InputLogFile):
       if recover_event_index > 0:
         try:
           # Dropping event(s) that were cut off mid-stream.
-          output = yaml.load(event_str[recover_event_index:])
+          output = yaml.safe_load(event_str[recover_event_index:])
 
           # Log this error.
           recover_event_line_num = event_str.count(

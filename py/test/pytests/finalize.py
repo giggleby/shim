@@ -260,7 +260,7 @@ class Finalize(test_case.TestCase):
         state.GetInstance().GetTestStates())
     file_utils.TryMakeDirs(os.path.dirname(self.test_states_path))
     with open(self.test_states_path, 'w') as f:
-      yaml.dump(test_states, f)
+      yaml.safe_dump(test_states, f)
     event_log.Log('test_states', test_states=test_states)
     testlog.LogParam('test_states', test_states)
 

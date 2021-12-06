@@ -33,12 +33,12 @@ class BaseYAMLTagHandlerUnittest(unittest.TestCase):
         return dumper.represent_scalar(cls.YAML_TAG, data.content)
 
     # Test load YAML tag.
-    value = yaml.load('!foo foo_bar')
+    value = yaml.safe_load('!foo foo_bar')
     self.assertIsInstance(value, FooTag)
     self.assertEqual('foo_bar', value.content)
 
     # Test dump YAML tag.
-    result = yaml.dump(value)
+    result = yaml.safe_dump(value)
     self.assertEqual("!foo 'foo_bar'\n", result)
 
 
@@ -51,34 +51,34 @@ class ParseMappingAsOrderedDictUnittest(unittest.TestCase):
 
   def testLoadAndDump(self):
     YAML_DOC = '{foo: foo1, bar: 234}'
-    obj = yaml.load(YAML_DOC)
+    obj = yaml.safe_load(YAML_DOC)
     self.assertEqual(obj['foo'], 'foo1')
     self.assertEqual(obj['bar'], 234)
     self.assertEqual(list(obj), ['foo', 'bar'])
     self.assertIsInstance(obj, collections.OrderedDict)
 
-    yaml_str = yaml.dump(obj).strip()
+    yaml_str = yaml.safe_dump(obj).strip()
     self.assertEqual(YAML_DOC, yaml_str)
 
   def testDisable(self):
     YAML_DOC = '{foo: foo1, bar: 234}'
-    obj = yaml.load(YAML_DOC)
+    obj = yaml.safe_load(YAML_DOC)
     self.assertIsInstance(obj, collections.OrderedDict)
 
     yaml_utils.ParseMappingAsOrderedDict(False)
-    obj = yaml.load(YAML_DOC)
+    obj = yaml.safe_load(YAML_DOC)
     self.assertNotIsInstance(obj, collections.OrderedDict)
     self.assertIsInstance(obj, dict)
 
   def testModifyDict(self):
     YAML_DOC = '{foo: foo1, bar: 234, buzz: null}'
     EXPECT_YAML_DOC = '{foo: foo1, bar: bar, new_item: new}'
-    obj = yaml.load(YAML_DOC)
+    obj = yaml.safe_load(YAML_DOC)
     obj['bar'] = 'bar'
     obj['new_item'] = 'new'
     del obj['buzz']
 
-    yaml_str = yaml.dump(obj).strip()
+    yaml_str = yaml.safe_dump(obj).strip()
     self.assertEqual(EXPECT_YAML_DOC, yaml_str)
 
 if __name__ == '__main__':
