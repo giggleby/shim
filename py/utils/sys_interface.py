@@ -10,11 +10,23 @@ import pipes
 import shutil
 import subprocess
 import tempfile
+from typing import List, Union
 
 from . import process_utils
 
 # Use process_utils.CalledProcessError for invocation exceptions.
 CalledProcessError = process_utils.CalledProcessError
+
+
+def CommandsToShell(command: Union[str, List[str]]):
+  """Joins commands to a shell command.
+
+  Args:
+    command: See the description of command of SystemInterface.Popen.
+  """
+  if isinstance(command, str):
+    return command
+  return ' '.join(pipes.quote(param) for param in command)
 
 
 class SystemInterface:
@@ -23,6 +35,7 @@ class SystemInterface:
   # Special values to make Popen work like subprocess.
   PIPE = subprocess.PIPE
   STDOUT = subprocess.STDOUT
+
 
   def ReadFile(self, path, count=None, skip=None):
     """Returns file contents on target device.
@@ -141,12 +154,10 @@ class SystemInterface:
     Returns:
       An object similar to subprocess.Popen.
     """
+    command = CommandsToShell(command)
     if log:
       logger = logging.info if log is True else log
       logger('%s Running: %r', type(self), command)
-
-    if not isinstance(command, str):
-      command = ' '.join(pipes.quote(param) for param in command)
     return subprocess.Popen(command, cwd=cwd, shell=True, close_fds=True,
                             stdin=stdin, stdout=stdout, stderr=stderr,
                             encoding=encoding)

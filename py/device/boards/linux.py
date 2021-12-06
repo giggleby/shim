@@ -333,7 +333,8 @@ class LinuxBoard(device_types.DeviceBoard):
     """
     if log:
       logger = logging.info if log is True else log
-      logger('%s Running: %r', type(self), command)
+      logger('%s Running: %r', type(self),
+             device_types.CommandsToShell(command))
     return self.link.Shell(command, cwd=cwd, stdin=stdin, stdout=stdout,
                            stderr=stderr, encoding=encoding)
 

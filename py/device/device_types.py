@@ -17,6 +17,8 @@ Overrides = type_utils.Overrides
 # Use sys_interface.CalledProcessError for invocation exceptions.
 CalledProcessError = sys_interface.CalledProcessError
 
+CommandsToShell = sys_interface.CommandsToShell
+
 
 class DeviceException(Exception):
   """Common exception for all components."""
