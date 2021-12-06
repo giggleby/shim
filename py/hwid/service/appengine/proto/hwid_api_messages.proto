@@ -432,6 +432,23 @@ message HwidDbEditableSectionAnalysisReport {
     repeated HwidDbLinePart parts = 2;
   }
 
+  // A message that summarizes the component change.
+  message DiffStatus {
+    // True if the component is unchanged.  This value should be equals to
+    // not (name_changed or support_status_changed or values_changed).
+    bool unchanged = 1;
+    // True if the name is changed.
+    bool name_changed = 2;
+    // True if the support status is changed.
+    bool support_status_changed = 3;
+    // True if the fields of this component are changed.
+    bool values_changed = 4;
+    // The component name before this change.
+    string prev_comp_name = 5;
+    // The support status before this change.
+    string prev_support_status = 6;
+  }
+
   message ComponentInfo {
     // The component type.
     string component_class = 1;
@@ -452,6 +469,8 @@ message HwidDbEditableSectionAnalysisReport {
     int32 seq_no = 7;
     // The expected component name if the original sequential number is invalid.
     string component_name_with_correct_seq_no = 8;
+    // The component change summary.  Null means that this component is new.
+    DiffStatus diff_prev = 9;
   }
 
   // A list of support status values that is available no matter the AVL entry

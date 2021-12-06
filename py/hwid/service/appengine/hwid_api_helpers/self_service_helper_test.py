@@ -17,10 +17,14 @@ from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
-ErrorMsg = (
+_ErrorMsg = (
     hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult.Error)
-ErrorCodeMsg = (
+_ErrorCodeMsg = (
     hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult.ErrorCode)
+_AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
+_DiffStatus = hwid_action.DBHWIDComponentDiffStatus
+_DiffStatusMsg = _AnalysisReportMsg.DiffStatus
+_ComponentInfoMsg = _AnalysisReportMsg.ComponentInfo
 
 
 class SelfServiceHelperTest(unittest.TestCase):
@@ -112,8 +116,10 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertCountEqual(
         list(resp.validation_result.errors), [
-            ErrorMsg(code=ErrorCodeMsg.SCHEMA_ERROR, message='a schema error'),
-            ErrorMsg(code=ErrorCodeMsg.CONTENTS_ERROR, message='a data error'),
+            _ErrorMsg(code=_ErrorCodeMsg.SCHEMA_ERROR,
+                      message='a schema error'),
+            _ErrorMsg(code=_ErrorCodeMsg.CONTENTS_ERROR,
+                      message='a data error'),
         ])
 
   def testValidateHWIDDBEditableSectionChange_Passed(self):
@@ -364,24 +370,21 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                        2, None),
+                        2, None, None),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls2', 'comp_cls2_111_222#9', 'unqualified', True,
-                        (111, 222), 1, 'comp_cls2_111_222#1'),
+                        (111, 222), 1, 'comp_cls2_111_222#1', None),
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents')
     resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
 
-    AnalysisReportMsg = (
-        hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport)
-    LineMsg = AnalysisReportMsg.HwidDbLine
-    LinePartMsg = AnalysisReportMsg.HwidDbLinePart
-    ComponentInfoMsg = AnalysisReportMsg.ComponentInfo
+    LineMsg = _AnalysisReportMsg.HwidDbLine
+    LinePartMsg = _AnalysisReportMsg.HwidDbLinePart
     expected_resp = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse(
-        analysis_report=AnalysisReportMsg(
+        analysis_report=_AnalysisReportMsg(
             unqualified_support_status=[
                 'deprecated', 'unsupported', 'unqualified', 'duplicate'
             ], qualified_support_status=['supported'], hwid_config_lines=[
@@ -402,7 +405,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                 ),
             ], component_infos={
                 'comp1':
-                    ComponentInfoMsg(
+                    _ComponentInfoMsg(
                         component_class='comp_cls1',
                         original_name='comp_name1',
                         original_status='unqualified',
@@ -411,7 +414,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                         seq_no=2,
                     ),
                 'comp2':
-                    ComponentInfoMsg(
+                    _ComponentInfoMsg(
                         component_class='comp_cls2',
                         original_name='comp_cls2_111_222#9',
                         original_status='unqualified',
@@ -464,6 +467,78 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
+
+  def testAnalyzeHWIDDBEditableSection_DiffStatus(self):
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+    action.AnalyzeDraftDBEditableSection.return_value = (
+        hwid_action.DBEditableSectionAnalysisReport(
+            [], [], {
+                'comp1':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        'comp_cls1', 'comp_name1', 'unqualified', False, None,
+                        2, None,
+                        _DiffStatus(unchanged=True, name_changed=False,
+                                    support_status_changed=False,
+                                    values_changed=False,
+                                    prev_comp_name='comp_name1',
+                                    prev_support_status='unqualified')),
+                'comp2':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        'comp_cls2', 'comp_cls2_111_222#9', 'unqualified', True,
+                        (111, 222), 1, 'comp_cls2_111_222#1',
+                        _DiffStatus(unchanged=False, name_changed=True,
+                                    support_status_changed=False,
+                                    values_changed=False,
+                                    prev_comp_name='old_comp_name',
+                                    prev_support_status='unqualified')),
+                'comp3':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        'comp_cls2', 'comp_name3', 'unqualified', True, None, 2,
+                        None, None),
+            }))
+
+    req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+        project='proj', hwid_db_editable_section='editable contents')
+    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+
+    expected_resp = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse(
+        analysis_report=_AnalysisReportMsg(
+            unqualified_support_status=[
+                'deprecated', 'unsupported', 'unqualified', 'duplicate'
+            ], qualified_support_status=['supported'], hwid_config_lines=[],
+            component_infos={
+                'comp1':
+                    _ComponentInfoMsg(
+                        component_class='comp_cls1', original_name='comp_name1',
+                        original_status='unqualified', is_newly_added=False,
+                        has_avl=False, seq_no=2, diff_prev=_DiffStatusMsg(
+                            unchanged=True, name_changed=False,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='comp_name1',
+                            prev_support_status='unqualified')),
+                'comp2':
+                    _ComponentInfoMsg(
+                        component_class='comp_cls2',
+                        original_name='comp_cls2_111_222#9',
+                        original_status='unqualified', is_newly_added=True,
+                        has_avl=True, avl_info=hwid_api_messages_pb2.AvlInfo(
+                            cid=111, qid=222), seq_no=1,
+                        component_name_with_correct_seq_no=(
+                            'comp_cls2_111_222#1'
+                        ), diff_prev=_DiffStatusMsg(
+                            unchanged=False, name_changed=True,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='old_comp_name',
+                            prev_support_status='unqualified')),
+                'comp3':
+                    _ComponentInfoMsg(
+                        component_class='comp_cls2', original_name='comp_name3',
+                        original_status='unqualified', is_newly_added=True,
+                        has_avl=False, seq_no=2),
+            }))
+
+    self.assertEqual(resp, expected_resp)
 
   def _ConfigLiveHWIDRepo(self, project, version, db_contents):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value

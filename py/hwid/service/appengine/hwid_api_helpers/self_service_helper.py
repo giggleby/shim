@@ -31,6 +31,7 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
     hwid_repo.HWIDDBCLStatus.ABANDONED:
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.ABANDONED,
 }
+_AnalysisReport = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
 
 class HWIDStatusConversionError(Exception):
@@ -333,6 +334,17 @@ Info Update
       if comp_info.comp_name_with_correct_seq_no is not None:
         response_comp_info.component_name_with_correct_seq_no = (
             comp_info.comp_name_with_correct_seq_no)
+      if comp_info.diff_prev is not None:
+        diff = comp_info.diff_prev
+        response_comp_info.diff_prev.CopyFrom(
+            _AnalysisReport.DiffStatus(
+                unchanged=diff.unchanged,
+                name_changed=diff.name_changed,
+                support_status_changed=diff.support_status_changed,
+                values_changed=diff.values_changed,
+                prev_comp_name=diff.prev_comp_name,
+                prev_support_status=diff.prev_support_status,
+            ))
     return response
 
   def BatchGenerateAVLComponentName(self, request):

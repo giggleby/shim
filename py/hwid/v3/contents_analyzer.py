@@ -87,6 +87,16 @@ class DBLineAnalysisResult(NamedTuple):
   parts: List[Part]
 
 
+class DiffStatus(NamedTuple):
+  """Diff stats with the corresponding component in the previous DB."""
+  unchanged: bool
+  name_changed: bool
+  support_status_changed: bool
+  values_changed: bool
+  prev_comp_name: str
+  prev_support_status: str
+
+
 class HWIDComponentAnalysisResult(NamedTuple):
   comp_cls: str
   comp_name: str
@@ -95,6 +105,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   avl_id: Optional[Tuple[int, int]]
   seq_no: int
   comp_name_with_correct_seq_no: Optional[str]
+  diff_prev: Optional[DiffStatus]
 
 
 class ChangeAnalysisReport(NamedTuple):
@@ -323,7 +334,7 @@ class ContentsAnalyzer:
             HWIDComponentAnalysisResult(
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
                 comp.extracted_avl_id, comp.expected_seq_no,
-                comp_name_with_correct_seq_no))
+                comp_name_with_correct_seq_no, comp.diff_prev))
 
     dumped_db_lines = db_contents_patcher(
         self._curr_db.instance.DumpData(
@@ -380,16 +391,26 @@ class ContentsAnalyzer:
     extracted_avl_id: Optional[Tuple[int, int]]
     expected_seq_no: int
     is_newly_added: bool
+    diff_prev: Optional[DiffStatus]
 
   def _ExtractHWIDComponents(
-      self) -> Mapping[str, List[_HWIDComponentMetadata]]:
+      self) -> Mapping[str, List['_HWIDComponentMetadata']]:
     ret = {}
     adapter = name_pattern_adapter.NamePatternAdapter()
     for comp_cls in self._curr_db.instance.GetActiveComponentClasses():
       ret[comp_cls] = []
       name_pattern = adapter.GetNamePattern(comp_cls)
-      for expected_seq, (comp_name, comp_info) in enumerate(
-          self._curr_db.instance.GetComponents(comp_cls).items(), 1):
+      prev_items = (() if
+                    (self._prev_db is None or self._prev_db.instance is None)
+                    else self._prev_db.instance.GetComponents(comp_cls).items())
+      curr_items = self._curr_db.instance.GetComponents(comp_cls).items()
+
+      for expected_seq, (curr_item, prev_item) in enumerate(
+          itertools.zip_longest(curr_items, prev_items, fillvalue=None), 1):
+        if curr_item is None:
+          logging.debug('Remove components (more comps in prev db)')
+          break
+        comp_name, comp_info = curr_item
         avl_id = name_pattern.Matches(comp_name)
         noseq_comp_name, sep, actual_seq = comp_name.partition('#')
         is_newly_added = False
@@ -402,11 +423,25 @@ class ContentsAnalyzer:
             is_newly_added = True
           elif avl_id is not None and prev_comp.status != comp_info.status:
             is_newly_added = True
+
+        diffstatus = None
+        if prev_item:
+          prev_comp_name, prev_comp_info = prev_item
+          prev_support_status = prev_comp_info.status
+          name_changed = prev_comp_name != comp_name
+          support_status_changed = prev_support_status != comp_info.status
+          values_changed = prev_comp_info.values != comp_info.values
+          unchanged = not (name_changed or support_status_changed or
+                           values_changed)
+          diffstatus = DiffStatus(unchanged, name_changed,
+                                  support_status_changed, values_changed,
+                                  prev_comp_name, prev_support_status)
+
         ret[comp_cls].append(
-            self._HWIDComponentMetadata(comp_name, comp_info.status,
-                                        noseq_comp_name,
-                                        actual_seq if sep else None, avl_id,
-                                        expected_seq, is_newly_added))
+            self._HWIDComponentMetadata(
+                comp_name, comp_info.status, noseq_comp_name,
+                actual_seq if sep else None, avl_id, expected_seq,
+                is_newly_added, diffstatus))
     return ret
 
   @classmethod

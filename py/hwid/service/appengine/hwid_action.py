@@ -257,6 +257,7 @@ class DBEditableSectionChangeInfo(NamedTuple):
 DBEditableSectionAnalysisReport = v3_contents_analyzer.ChangeAnalysisReport
 DBEditableSectionLineAnalysisResult = v3_contents_analyzer.DBLineAnalysisResult
 DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
+DBHWIDComponentDiffStatus = v3_contents_analyzer.DiffStatus
 
 
 class BundleResourceInfo(NamedTuple):

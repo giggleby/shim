@@ -144,11 +144,16 @@ class ContentsAnalyzerTest(unittest.TestCase):
             'x@@@@component-display_panel-display_panel_A@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
                     'display_panel', 'display_panel_A', 'deprecated', False,
-                    None, 1, None),
+                    None, 1, None,
+                    contents_analyzer.DiffStatus(
+                        unchanged=False, name_changed=False,
+                        support_status_changed=True, values_changed=False,
+                        prev_comp_name='display_panel_A',
+                        prev_support_status='unqualified')),
             'x@@@@component-display_panel-display_panel_123_456#8@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
                     'display_panel', 'display_panel_123_456#8', 'supported',
-                    True, (123, 456), 2, 'display_panel_123_456#2'),
+                    True, (123, 456), 2, 'display_panel_123_456#2', None),
         })
 
 
