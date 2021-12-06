@@ -8,8 +8,6 @@ import os
 import unittest
 from unittest import mock
 
-import yaml
-
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_cmdline
@@ -325,7 +323,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
               0: {
                   'region': []
               }
-          }}), database.Components(yaml.load('region: !region_component')),
+          }}), database.Components(yaml.safe_load('region: !region_component')),
           database.Rules([]), None, db.framework_version)
 
       self.assertEqual(expected_db, db)
