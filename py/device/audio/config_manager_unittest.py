@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import re
 import unittest
 from unittest import mock
 
@@ -11,16 +12,24 @@ from cros.factory.device.audio import config_manager
 from cros.factory.device import device_types
 
 
+_RE_CARD_NAME_FROM_COMMANDS = re.compile(r'^open \"(.*)\"$')
+"""The pattern captures card name from alsaucm commands.
+
+See config_manager._InvokeAlsaUCM for more detail about alsaucm commands."""
+
+
 class MockProcess:
   """A mock class of the return type of Popen."""
-  def __init__(self):
+
+  def __init__(self, card_name):
     self.returncode = 0
+    self.card_name = card_name
 
   def wait(self):
     pass
 
-  def communicate(self, commands):
-    if 'card_0' in commands:
+  def communicate(self):
+    if self.card_name == 'card_0':
       return '''
   0: Speaker
   1: Headphone
@@ -41,7 +50,7 @@ class MockProcess:
 ''', ''
 
 
-def MockInitialize(device, mock_isdir):
+def MockInitialize(device: mock.MagicMock, mock_isdir):
   device.CallOutput = mock.MagicMock(return_value='''
 card 0: card_0 [card_0], device 0: Audio (*) []
   Subdevices: 1/1
@@ -56,7 +65,15 @@ card 2: card_2 [card_2], device 8: Audio (*) []
   Subdevices: 1/1
   Subdevice #0: subdevice #0
 ''')
-  device.Popen.side_effect = [MockProcess(), MockProcess()]
+  processes = []
+
+  def MockWriteFile(unused_path: str, content: str):
+    match = _RE_CARD_NAME_FROM_COMMANDS.match(content.splitlines()[0])
+    card_name = match.group(1)
+    processes.append(MockProcess(card_name))
+
+  device.WriteFile.side_effect = MockWriteFile
+  device.Popen.side_effect = processes
   device.path = os.path
   mock_isdir.side_effect = lambda path: (
       os.path.basename(path) in ['card_0', 'card_2'])

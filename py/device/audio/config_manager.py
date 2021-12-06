@@ -397,7 +397,7 @@ class UCMConfigManager(BaseConfigManager):
   _DefaultVerb = 'HiFi'
   _RE_CARD_NAME = re.compile(r'^card (\d+):.*?\[(.+?)\]')
 
-  def __init__(self, device, mixer_controller,
+  def __init__(self, device: device_types.DeviceBoard, mixer_controller,
                card_map=None, card_device_map=None, verb=None):
     """Construct from a UCM config.
 
@@ -606,22 +606,28 @@ class UCMConfigManager(BaseConfigManager):
     Also refer to third_party/adhd/cras/src/server/cras_alsa_ucm.c for usages.
     The interface 'ucm_get_sections' demonstrates how UCM configs are used.
     """
-    process = self._device.Popen(
-        ['alsaucm', '-n', '-b', '-'],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
-    out_msg, err_msg = process.communicate('\n'.join(commands))
+
+    content = '\n'.join(commands)
+    logging.info('Running \'printf \'\'\'%s\'\'\' | alsaucm -n -b -\'', content)
+    with self._device.temp.TempFile() as bash_path:
+      self._device.WriteFile(bash_path, content)
+
+      process = self._device.Popen(['alsaucm', '-n', '-b', bash_path],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+      out_msg, err_msg = process.communicate()
+
+    if out_msg:
+      logging.info('stdout:\n%s', out_msg)
+    if err_msg:
+      logging.info('stderr:\n%s', err_msg)
 
     process.wait()
     rc = process.returncode
 
     if rc != 0:
-      logging.error(
-          'Failed to run alsaucm. Commands: [%s] Output: [%s] Error: [%s]',
-          commands, out_msg, err_msg)
-      raise device_types.CalledProcessError(
-          returncode=rc, cmd=str(commands), output=str(out_msg))
+      raise device_types.CalledProcessError(returncode=rc, cmd=str(commands),
+                                            output=out_msg)
     return out_msg
 
   def _InvokeCardCommands(self, card, *commands):

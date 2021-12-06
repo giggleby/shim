@@ -813,9 +813,6 @@ class AudioLoopTest(test_case.TestCase):
                        ' '.join(str(x+1) for x in input_channels),
                        input_gain)
 
-    logging.info('player_cmd: %s', player_cmd)
-    logging.info('recorder_cmd: %s', recorder_cmd)
-
     default_rms_threshold = max(
         volume_gain *
         _DEFAULT_AUDIOFUNTEST_RMS_THRESHOLD_RATIO_RELATIVE_TO_VOLUME_GAIN,
@@ -834,13 +831,20 @@ class AudioLoopTest(test_case.TestCase):
         '%d' % min_frequency, '-x',
         '%d' % max_frequency, '-p',
         '%f' % rms_threshold
-    ], stdout=process_utils.PIPE, stderr=process_utils.PIPE)
+    ], stdout=process_utils.PIPE, stderr=process_utils.PIPE, log=True)
+
+    stdout, stderr = process.communicate()
+    if stdout:
+      logging.info('stdout:\n%s', stdout)
+    if stderr:
+      logging.info('stderr:\n%s', stderr)
 
     last_success_rate = None
-    while self._MatchPatternLines(process.stdout,
+    stdout_stream = io.StringIO(stdout)
+    while self._MatchPatternLines(stdout_stream,
                                   _AUDIOFUNTEST_RUN_START_RE) is not None:
       last_success_rate = self._ParseSingleRunOutput(
-          process.stdout, list(range(len(input_channels))))
+          stdout_stream, list(range(len(input_channels))))
       if last_success_rate is None:
         break
       rate_msg = ', '.join('Mic %d: %.1f%%' % (input_channels[channel], rate)
