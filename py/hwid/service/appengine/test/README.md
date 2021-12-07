@@ -12,7 +12,7 @@ tests over it. The image contains several python packges, including:
 
 ### Test Procedure
 1. Integration test driver `integration_test.py` builds an AppEngine integrated
-   docker image by calling `deploy/cros_hwid_service.sh build integration_test`.
+   docker image by calling `deploy/cros_hwid_service.sh build`.
 2. Runs the docker image.
 3. After the docker image starts up, it then runs all tests
   `py/hwid/service/appengine/*_test.py`.

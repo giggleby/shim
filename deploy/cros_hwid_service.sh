@@ -16,6 +16,7 @@ DEPLOYMENT_PROD="prod"
 DEPLOYMENT_STAGING="staging"
 DEPLOYMENT_LOCAL="local"
 DEPLOYMENT_E2E="e2e"
+DOCKER_TAG="hwid_service"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 # shellcheck disable=SC2269
 REDIS_RDB="${REDIS_RDB}"
@@ -121,7 +122,8 @@ do_make_build_folder() {
   mkdir -p "${TEMP_DIR}"
   add_temp "${TEMP_DIR}"
   # Change symlink to hard link due to b/70037640.
-  local cp_files=(cron.yaml requirements.txt .gcloudignore gunicorn.conf.py)
+  local cp_files=(cron.yaml requirements.txt .gcloudignore gunicorn.conf.py \
+    start_server.sh)
   for file in "${cp_files[@]}"; do
     cp -l "${APPENGINE_DIR}/${file}" "${TEMP_DIR}"
   done
@@ -168,8 +170,6 @@ do_deploy() {
     "${DEPLOYMENT_LOCAL}")
       check_docker
 
-      cp -l "${APPENGINE_DIR}/deploy_local.sh" "${TEMP_DIR}"
-
       # Mount redis db in docker
       local redis_mount=()
       if [ -f "${REDIS_RDB}" ]; then
@@ -208,8 +208,8 @@ do_deploy() {
         --env FLASK_ENV="development" \
         --env PYTHONPATH="/usr/src/lib" \
         --env IMPERSONATED_SERVICE_ACCOUNT="${IMPERSONATED_SERVICE_ACCOUNT}" \
-        "hwid_service_local" \
-        bash "/build/deploy_local.sh"
+        --env DEPLOYMENT_TYPE="local" \
+        "${DOCKER_TAG}"
       ;;
     "${DEPLOYMENT_E2E}")
       run_in_temp gcloud --project="${GCP_PROJECT}" app deploy --no-promote \
@@ -228,26 +228,13 @@ do_deploy() {
 do_build() {
   check_docker
 
-  local deployment_type="$1"
   local dockerfile="${TEST_DIR}/Dockerfile"
-
-  case "${deployment_type}" in
-    integration_test)
-      local docker_tag="appengine_integration"
-      ;;
-    local)
-      local docker_tag="hwid_service_local"
-      ;;
-    *)
-      usage
-      die "Unsupported deployment type: ${deployment_type}"
-  esac
 
   do_make_build_folder
 
   ${DOCKER} build \
     --file "${dockerfile}" \
-    --tag "${docker_tag}" \
+    --tag "${DOCKER_TAG}" \
     "${TEMP_DIR}"
 }
 
@@ -308,8 +295,8 @@ commands:
       "e2e-test" which would not be affected with versions under development
       but just for end-to-end testing purpose.
 
-  $0 build [local|integration_test]
-      Builds docker image for AppEngine integrationor test or local server.
+  $0 build
+      Builds docker image for AppEngine integration test or local server.
 
   $0 test
       Runs all executables in the test directory.

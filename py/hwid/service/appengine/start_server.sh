@@ -8,7 +8,13 @@ ENTITY_FILE="${ENTITY_FILE}"
 # shellcheck disable=SC2269
 DATASTORE_PROJECT_ID="${DATASTORE_PROJECT_ID}"
 
-start_server() {
+setup_integration_test() {
+  /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
+    start --consistency=1 &
+  bash
+}
+
+setup_local_server() {
   echo "INFO: If you need the local server able to access gerrit," \
     "please login for impersonated credential."
   read -r -p "      Run \`gcloud auth application-default login\`? [y/N]" opt
@@ -38,4 +44,20 @@ start_server() {
   python -m flask run --host 0.0.0.0
 }
 
-start_server
+start_server() {
+  local deployment_type="$1"
+  case "${deployment_type}" in
+    "local")
+      setup_local_server
+      ;;
+    "integration_test")
+      setup_integration_test
+      ;;
+    *)
+      echo "Invalid deployment type: ${deployment_type}"
+      exit 1
+      ;;
+  esac
+}
+
+start_server "$1"

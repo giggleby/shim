@@ -73,7 +73,7 @@ Run local server:
 export REDIS_RDB=${redis_rdb}
 export DATASTORE=${datastore}
 
-deploy/cros_hwid_service.sh build local
+deploy/cros_hwid_service.sh build
 deploy/cros_hwid_service.sh deploy local
 ```
 

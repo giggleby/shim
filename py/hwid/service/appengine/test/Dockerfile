@@ -4,7 +4,7 @@
 
 FROM python:3.7
 
-ARG workdir="/usr/src/"
+ARG workdir="/usr/src"
 ARG gcloud_archive_name="google-cloud-sdk-353.0.0-linux-x86_64.tar.gz"
 
 RUN cd "${workdir}" && \
@@ -18,6 +18,7 @@ RUN cd "${workdir}" && \
   rm "${gcloud_archive_name}"
 
 ADD requirements.txt "${workdir}/requirements.txt"
+ADD start_server.sh "${workdir}/start_server.sh"
 
 RUN pip install \
       --target "${workdir}"/lib \
@@ -33,7 +34,7 @@ ENV DATASTORE_EMULATOR_HOST="localhost:8081"
 ENV DATASTORE_EMULATOR_HOST_PATH="localhost:8081/datastore"
 ENV DATASTORE_HOST="http://localhost:8081"
 ENV DATASTORE_PROJECT_ID="chromeos-hwid-local-docker"
+ENV DEPLOYMENT_TYPE="integration_test"
+ENV START_SERVER_SCRIPT="${workdir}/start_server.sh"
 
-CMD redis-server & \
-  /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
-  start --consistency=1 & bash
+CMD bash "${START_SERVER_SCRIPT}" "${DEPLOYMENT_TYPE}"

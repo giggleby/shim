@@ -22,7 +22,7 @@ HOST_FACTORY_DIR = os.path.abspath(
 HOST_DEPLOY_DIR = os.path.join(HOST_FACTORY_DIR, 'deploy')
 GUEST_FACTORY_DIR = '/usr/src/cros/factory'
 DEPLOY_SCRIPT = os.path.join(HOST_DEPLOY_DIR, 'cros_hwid_service.sh')
-DEFAULT_DOCKER_IMAGE_NAME = 'appengine_integration:latest'
+DEFAULT_DOCKER_IMAGE_NAME = 'hwid_service:latest'
 
 
 def _PrepareTests(test_names):
@@ -64,8 +64,7 @@ def _PrepareTests(test_names):
 
 def _BuildDockerImage():
   """Builds docker image and returns the image tag."""
-  out = process_utils.CheckOutput([DEPLOY_SCRIPT, 'build', 'integration_test'],
-                                  log=True)
+  out = process_utils.CheckOutput([DEPLOY_SCRIPT, 'build'], log=True)
   return re.search(r'^Successfully tagged (\w+:\w+)', out,
                    re.MULTILINE).group(1)
 
