@@ -499,7 +499,7 @@ class DatabaseBuilder:
     # Although the database allows a component recorded but not encoded by
     # any of the encoded fields, this builder always ensures that all components
     # will be encoded into the HWID string.
-    for comp_cls in self.database.GetComponentClasses():
+    for comp_cls in sorted(self.database.GetComponentClasses()):
       if comp_cls not in covered_comp_classes:
         self._AddNewEncodedField(comp_cls, bom.components[comp_cls])
 

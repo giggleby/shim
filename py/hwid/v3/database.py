@@ -314,6 +314,9 @@ class Database:
     If `encoded_field_name` is not specified, this function returns all
     component classes recorded by the database.
 
+    Note that the iteration order of the return value may differ between two
+    python script runs.
+
     Args:
       encoded_field_name: None of a string of the name of the encoded field.
 
