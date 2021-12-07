@@ -130,7 +130,6 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     # Import wrong_user key.
     # Note that the passphrase for wrong_user key is "taiswanleba", not
     # "_wrong_passphrase_".
-
     with open(os.path.join(SCRIPT_DIR, 'testdata', 'wrong_user.key')) as f:
       self.wrong_user_key_fingerprint = (
           self.wrong_user_gpg.import_keys(f.read()).fingerprints[0])
@@ -185,6 +184,19 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     # Test upload duplicate DRM keys.
     with self.assertRaisesRegex(RuntimeError, 'UNIQUE constraint failed'):
       self._Upload(drm_keys_file_path)
+
+    # Test upload with `--skip_encryption`.
+    encrypted_drm_keys_file_path = os.path.join(self.temp_dir,
+                                                'encrypted_mock_drm_keys')
+    with open(encrypted_drm_keys_file_path, 'w') as f:
+      encrypted_mock_drm_keys = self.uploader_gpg.encrypt(
+          bytes(json.dumps(MOCK_KEY_LIST),
+                'utf-8'), self.server_key_fingerprint, always_trust=True,
+          sign=self.uploader_key_fingerprint, passphrase=self.passphrase,
+          armor=True)
+      f.write(encrypted_mock_drm_keys.data.decode('ascii'))
+    with self.assertRaisesRegex(RuntimeError, 'UNIQUE constraint failed'):
+      self._Upload(encrypted_drm_keys_file_path, skip_encryption=True)
 
     # Test upload with wrong encryption key.
     with self.assertRaisesRegex(
@@ -276,17 +288,19 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
       shutil.rmtree(self.temp_dir)
 
   def _Upload(self, drm_keys_file_path, client_key_file_path=None,
-              server_key_file_path=None, passphrase_file_path=None):
+              server_key_file_path=None, passphrase_file_path=None,
+              skip_encryption=False):
     if client_key_file_path is None:
       client_key_file_path = self.uploader_private_key_file_path
     if server_key_file_path is None:
       server_key_file_path = self.server_key_file_path
     if passphrase_file_path is None:
       passphrase_file_path = self.passphrase_file_path
+    skip_encryption_args = ['--skip_encryption'] if skip_encryption else []
 
     return self._CallHelper(client_key_file_path, server_key_file_path,
                             passphrase_file_path, 'upload',
-                            [drm_keys_file_path])
+                            skip_encryption_args + [drm_keys_file_path])
 
   def _Request(self, device_serial_number, client_key_file_path=None,
                server_key_file_path=None, passphrase_file_path=None):

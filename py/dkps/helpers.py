@@ -181,7 +181,8 @@ class UploaderHelper(BaseHelper):
 
     return serialized_drm_keys
 
-  def Upload(self, serialized_drm_keys=None, drm_keys_file_path=None):
+  def Upload(self, serialized_drm_keys=None, drm_keys_file_path=None,
+             skip_encryption=False):
     """Upload a list of serialized DRM keys to DKPS.
 
     Either serialized_drm_keys or drm_keys_file_path must be given, but not
@@ -199,15 +200,20 @@ class UploaderHelper(BaseHelper):
     serialized_drm_keys = self._GetSerializedDRMKeys(serialized_drm_keys,
                                                      drm_keys_file_path)
 
-    encrypted_obj = self.gpg.encrypt(
-        serialized_drm_keys, self.server_key_fingerprint, always_trust=True,
-        sign=self.client_key_fingerprint, passphrase=self.passphrase)
+    if skip_encryption:
+      # Assume the DRM key file is already signed and encrypted.
+      encrypted_data = bytes(serialized_drm_keys, encoding='ascii')
+    else:
+      encrypted_obj = self.gpg.encrypt(
+          serialized_drm_keys, self.server_key_fingerprint, always_trust=True,
+          sign=self.client_key_fingerprint, passphrase=self.passphrase)
+      if not encrypted_obj.ok:
+        raise ValueError('Failed to encrypt and sign the DRM keys: %s.' %
+                         encrypted_obj.status)
 
-    if not encrypted_obj.ok:
-      raise ValueError(
-          'Failed to encrypt and sign the DRM keys: %s.' % encrypted_obj.status)
+      encrypted_data = encrypted_obj.data
 
-    self.dkps.Upload(encrypted_obj.data)
+    self.dkps.Upload(encrypted_data)
 
   def MockUpload(self, serialized_drm_keys=None, drm_keys_file_path=None):
     """A mock Upload() function for testing purpose.
@@ -250,6 +256,10 @@ def _ParseArguments():
   parser_upload = subparsers.add_parser('upload', help='upload DRM keys')
   parser_upload.add_argument('drm_keys_file_path',
                              help='path to the DRM keys file')
+  parser_upload.add_argument(
+      '--skip_encryption', action='store_true',
+      help='upload without additional encryption and signing '
+      '(the DRM keys should be already encrypted and signed)')
 
   parser_request = subparsers.add_parser('request', help='request a DRM key')
   parser_request.add_argument('serial_number', help='device serial number')
@@ -276,7 +286,8 @@ def main():
     if args.mock:
       helper.MockUpload(drm_keys_file_path=args.drm_keys_file_path)
     else:
-      helper.Upload(drm_keys_file_path=args.drm_keys_file_path)
+      helper.Upload(drm_keys_file_path=args.drm_keys_file_path,
+                    skip_encryption=args.skip_encryption)
 
   elif args.command == 'request':
     helper = RequesterHelper(
