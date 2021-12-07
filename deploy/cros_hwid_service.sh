@@ -18,6 +18,8 @@ DEPLOYMENT_LOCAL="local"
 DEPLOYMENT_E2E="e2e"
 DOCKER_TAG="hwid_service"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
+REQUEST_SCRIPT="${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/test/\
+send_request.sh"
 # shellcheck disable=SC2269
 REDIS_RDB="${REDIS_RDB}"
 # shellcheck disable=SC2269
@@ -25,8 +27,6 @@ DATASTORE="${DATASTORE}"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/config.sh" || exit 1
-. "${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/test/send_request.sh" \
-  || exit 1
 
 # Following variables will be assigned by `load_config <DEPLOYMENT_TYPE>`
 GCP_PROJECT=
@@ -257,17 +257,15 @@ do_test() {
 
 request() {
   local deployment_type="$1"
-  local proto_file="${FACTORY_DIR}/py/hwid/service/appengine/proto/${2}.proto"
-  local proto_package_prefix="cros.factory.hwid.service.appengine.proto"
-  local rpc_prefix="${proto_package_prefix}.${2}_pb2"
-  local api="${rpc_prefix}.${3}"
+  local proto_file="$2"
+  local api="$3"
 
   if ! load_config "${deployment_type}" ; then
     usage
     die "Unsupported deployment type: \"${deployment_type}\"."
   fi
 
-  send_request "${proto_file}" "${api}" "${APP_ID}" "${APP_HOSTNAME}"
+  "${REQUEST_SCRIPT}" "${proto_file}" "${api}" "${APP_ID}" "${APP_HOSTNAME}"
 }
 
 usage() {
@@ -283,7 +281,9 @@ commands:
       Deploys HWID Service to the given environment by gcloud command.
 
   $0 request [prod|e2e|staging] \${proto_file} \${api}
-      Send request to HWID Service AppEngine.
+      Send request to HWID Service AppEngine. The \$proto_file should be the
+      file basename in py/hwid/service/appengine/proto.
+      (e.g. proto_file="hwid_api_messages")
 
   $0 deploy local
       Deploys HWID Service locally in a docker container. It will load the

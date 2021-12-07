@@ -42,20 +42,11 @@ class E2ETest(unittest.TestCase):
   def setUp(self):
     self.config = config_utils.LoadConfig(DEFAULT_CONFIG_PATH, 'e2e_test')
     self.test_cmd = self.config['test_cmd']
-    self._SetupEnv(self.config['check_env_cmd'], self.config['setup_env_cmd'])
-
-  def _SetupEnv(self, check_env_cmd, setup_env_cmd):
-    check_ret = process_utils.Spawn(check_env_cmd, call=True).returncode
-    if check_ret:
-      logging.info("Setting up environment with command: %s", setup_env_cmd)
-      setup_ret = process_utils.Spawn(setup_env_cmd, call=True).returncode
-      if setup_ret:
-        self.fail('Environment is not ready')
 
   def _GenerateCommand(self, test):
     return [
         os.path.join(TEST_DIR, self.test_cmd), test['proto_filename'],
-        test['api']
+        test['api'], self.config['app_id'], self.config['host_name']
     ]
 
   def testAll(self):

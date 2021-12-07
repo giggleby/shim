@@ -11,34 +11,20 @@
         "https://chromeos-hwid-dev.appspot.com"
       ]
     },
+    "app_id": {
+      "type": "string",
+      "title": "The GCP APP ID of the API",
+      "default": "",
+      "examples": [
+        "chromeos-hwid-dev"
+      ]
+    },
     "test_cmd": {
       "type": "string",
       "title": "The test command.",
       "default": "",
       "examples": [
         "run.sh"
-      ]
-    },
-    "check_env_cmd": {
-      "type": "array",
-      "title": "The command to check if the environment is ready for test.",
-      "default": [""],
-      "items": {
-        "type": "string"
-      },
-      "examples": [
-        ["check.sh", "--opt1", "true"]
-      ]
-    },
-    "setup_env_cmd": {
-      "type": "array",
-      "title": "The command to setup environment for test.",
-      "default": [""],
-      "items": {
-        "type": "string"
-      },
-      "examples": [
-        ["setup.sh", "--opt1", "true"]
       ]
     },
     "tests": {
