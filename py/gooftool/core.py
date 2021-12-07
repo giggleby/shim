@@ -36,6 +36,7 @@ from cros.factory.test.rules import registration_codes
 from cros.factory.test.rules.registration_codes import RegistrationCode
 from cros.factory.test.utils import cbi_utils
 from cros.factory.test.utils import model_sku_utils
+from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
@@ -55,12 +56,6 @@ _DLCVERIFY = 'dlcverify'
 _DLCMETADATADIR = 'opt/google/dlc'
 
 _DLC_ERROR_TEMPLATE = 'Please run check_image_version.py to do re-imaging.'
-
-# These are the amplifiers which should output VPD values dsm_calib_temp_* and
-# dsm_calib_r0_* after calibration. We update this list according to
-# `src/third_party/adhd/sound_card_init/amp/src/lib.rs`. See b/185076767 for
-# more information.
-_AMP_LIST = ('ALC1011', 'MAX98373', 'MAX98390')
 
 
 class CrosConfigError(Error):
@@ -611,52 +606,29 @@ class Gooftool:
   def VerifyVPD(self):
     """Verify that VPD values are set properly."""
 
-    def GetNumberOfInternalSpeaker():
-      """Get the number of internal speaker via cras_test_client."""
-      result = self._util.shell('cras_test_client')
-      if not result.success:
-        raise Error(
-            'Failed to get the number of internal speaker: ' % result.stdout)
-      match_result = re.search(r'^.+?INTERNAL_SPEAKER\s+([0-9]+)\*Speaker',
-                               result.stdout, re.MULTILINE)
-      if not match_result:
-        raise Error('No internal speaker found!')
-
-      logging.info('Number of internal speaker found: %s',
-                   match_result.group(1))
-
-      return int(match_result.group(1))
-
-    def GetRequriedVPDROData():
-      """Return the required VPD RO data.
+    def GetAudioVPDROData():
+      """Return the required audio VPD RO data.
 
       If a DUT comes with a smart amplifier, it must be calibrated in factory
       and the DSM-related VPD values must be set.
       """
-      vpd_ro_data = vpd_data.REQUIRED_RO_DATA.copy()
-      amp_name = self._cros_config.GetSpeakerAmp()
-      if amp_name not in _AMP_LIST:
+      speaker_amp, _, channel_names = self.GetSmartAmpInfo()
+      if not speaker_amp:
         logging.info('No smart amplifier found! '
                      'Skip checking DSM VPD value.')
-        return vpd_ro_data
+        return dict()
 
-      dsm_vpd_ro_data = dict()
-      logging.info('The DUT is expected to have smart amplifier %s', amp_name)
-      # The number of internal speaker is equals to the number of amplifier
-      # channels.
-      num_channels = GetNumberOfInternalSpeaker()
-      if num_channels < 1:
-        raise Error('The number of internal speaker should be greater or '
-                    'equal to 1!')
+      logging.info('The DUT is expected to have amplifier %s', speaker_amp)
+      num_channels = len(channel_names)
       logging.info(
           'The VPD RO should contain `dsm_calib_r0_N` and '
           '`dsm_calib_temp_N` where N ranges from 0 ~ %d.', num_channels - 1)
+      dsm_vpd_ro_data = dict()
       for channel in range(num_channels):
         dsm_vpd_ro_data['dsm_calib_r0_%d' % channel] = r'[0-9]*'
         dsm_vpd_ro_data['dsm_calib_temp_%d' % channel] = r'[0-9]*'
 
-      vpd_ro_data.update(dsm_vpd_ro_data)
-      return vpd_ro_data
+      return dsm_vpd_ro_data
 
     def MatchWhole(key, pattern, value, raise_exception=True):
       if re.match(r'^' + pattern + r'$', value):
@@ -721,7 +693,9 @@ class Gooftool:
         return whitelabel_tag
       return project
 
-    required_vpd_ro_data = GetRequriedVPDROData()
+    required_vpd_ro_data = vpd_data.REQUIRED_RO_DATA.copy()
+    audio_vpd_ro_data = GetAudioVPDROData()
+    required_vpd_ro_data.update(audio_vpd_ro_data)
 
     # Check required data
     ro_vpd = self._vpd.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
@@ -1611,3 +1585,8 @@ class Gooftool:
                      cur_whitelabel_tag))
 
     return db_identity, cur_identity
+
+  def GetSmartAmpInfo(self):
+    """Returns the smart amp info by parsing sound-card-init-conf."""
+
+    return smart_amp_utils.GetSmartAmpInfo(shell=self._util.shell)

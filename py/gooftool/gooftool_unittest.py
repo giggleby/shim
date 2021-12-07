@@ -19,11 +19,13 @@ from unittest import mock
 from cros.factory.gooftool.bmpblk import unpack_bmpblock
 from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
+from cros.factory.gooftool import cros_config
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.utils import pygpt
 from cros.factory.test.utils import model_sku_utils
+from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
@@ -192,7 +194,9 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._cros_config.GetWhiteLabelTag.return_value = (True,
                                                                  'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
-    self._gooftool._cros_config.GetSpeakerAmp.return_value = ''
+
+    self._smart_amp_info = self._gooftool.GetSmartAmpInfo
+    self._gooftool.GetSmartAmpInfo = mock.Mock(return_value=[None, None, None])
 
   def testVerifyECKeyWithPubkeyHash(self):
     f = MockFile()
@@ -516,12 +520,20 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._vpd.GetAllData.assert_any_call(
         partition=vpd.VPD_READWRITE_PARTITION_NAME)
 
-  def testVerifyVPD_SmartAmpNoDSM(self):
+  @mock.patch.object(cros_config, 'CrosConfig')
+  @mock.patch.object(file_utils, 'CheckPath')
+  @mock.patch.object(file_utils, 'ReadFile')
+  def testVerifyVPD_SmartAmpNoDSM(self, mock_file_reader, mock_path_checker,
+                                  mock_cros_config):
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
                         rw=self._SIMPLE_VALID_RW_VPD_DATA)
-    self._gooftool._util.shell.return_value = Obj(
-        stdout=' INTERNAL_SPEAKER 2*Speaker', success=True)
-    self._gooftool._cros_config.GetSpeakerAmp.return_value = 'MAX98373'
+    mock_cros_config.return_value.GetSmartAmp.return_value = 'MAX98373'
+    mock_cros_config.return_value.GetSoundCardInit.return_value = 'factory.yaml'
+    mock_path_checker.return_value = True
+    mock_file_reader.return_value = \
+      '  temp_ctrl: ["Left ADC TEMP", "Right ADC TEMP"]'
+    self._gooftool.GetSmartAmpInfo = self._smart_amp_info
+
     # Should fail, since dsm calib is missing.
     # Since the dictionary ordering is not deterministic, we use regex to parse
     # the error messages.

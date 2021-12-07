@@ -1040,6 +1040,19 @@ def FpmcuInitializeEntropy(options):
     logging.info('No FPS on this board.')
 
 
+@Command('get_smart_amp_info')
+def GetSmartAmpInfo(options):
+  """Get the information about the smart amplifier."""
+  speaker_amp, sound_card_init_path, channels = \
+    GetGooftool(options).GetSmartAmpInfo()
+  if speaker_amp:
+    print('Speaker Amp:', speaker_amp)
+    print('Sound card init conf path:', sound_card_init_path)
+    print('Channels:', channels)
+  else:
+    print('No smart amplifier found on DUT!')
+
+
 def main():
   """Run sub-command specified by the command line args."""
 
