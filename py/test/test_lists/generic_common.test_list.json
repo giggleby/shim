@@ -599,6 +599,7 @@
       "run_if": "not constants.has_device_data or device.component.has_tabletmode",
       "subtests": [
         "TabletMode",
+        "TabletRotationAll",
         "TabletRotationBase",
         "TabletRotationLid",
         "NotebookMode"
@@ -743,37 +744,96 @@
     "TabletRotation": {
       "pytest_name": "tablet_rotation"
     },
-    "TabletRotationBase": {
+    "TabletRotationAll": {
       "pytest_name": "tablet_rotation",
-      "label": "Tablet Rotation Base-Accel",
-      "run_if": "not constants.has_device_data or device.component.has_base_accelerometer",
+      "label": "Tablet Rotation Accelerometers",
+      "run_if": "not constants.has_device_data or (device.component.has_base_accelerometer and device.component.has_lid_accelerometer)",
       "args": {
-        "accelerometer_location": "base",
         "spec_offset": [
           1.5,
           1.5
         ],
         "timeout_secs": 3600,
         "degrees_to_orientations": {
-          "0": {
-            "in_accel_x": 0,
-            "in_accel_y": -1,
-            "in_accel_z": 0
+          "base": {
+            "0": {
+              "in_accel_x": 0,
+              "in_accel_y": -1,
+              "in_accel_z": 0
+            },
+            "90": {
+              "in_accel_x": 1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            },
+            "180": {
+              "in_accel_x": 0,
+              "in_accel_y": 1,
+              "in_accel_z": 0
+            },
+            "270": {
+              "in_accel_x": -1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            }
           },
-          "90": {
-            "in_accel_x": 1,
-            "in_accel_y": 0,
-            "in_accel_z": 0
-          },
-          "180": {
-            "in_accel_x": 0,
-            "in_accel_y": 1,
-            "in_accel_z": 0
-          },
-          "270": {
-            "in_accel_x": -1,
-            "in_accel_y": 0,
-            "in_accel_z": 0
+          "lid": {
+            "0": {
+              "in_accel_x": 0,
+              "in_accel_y": 1,
+              "in_accel_z": 0
+            },
+            "90": {
+              "in_accel_x": 1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            },
+            "180": {
+              "in_accel_x": 0,
+              "in_accel_y": -1,
+              "in_accel_z": 0
+            },
+            "270": {
+              "in_accel_x": -1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            }
+          }
+        }
+      }
+    },
+    "TabletRotationBase": {
+      "pytest_name": "tablet_rotation",
+      "label": "Tablet Rotation Base-Accel",
+      "run_if": "constants.has_device_data and device.component.has_base_accelerometer and not device.component.has_lid_accelerometer",
+      "args": {
+        "spec_offset": [
+          1.5,
+          1.5
+        ],
+        "timeout_secs": 3600,
+        "degrees_to_orientations": {
+          "base": {
+            "0": {
+              "in_accel_x": 0,
+              "in_accel_y": -1,
+              "in_accel_z": 0
+            },
+            "90": {
+              "in_accel_x": 1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            },
+            "180": {
+              "in_accel_x": 0,
+              "in_accel_y": 1,
+              "in_accel_z": 0
+            },
+            "270": {
+              "in_accel_x": -1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            }
           }
         }
       }
@@ -781,34 +841,35 @@
     "TabletRotationLid": {
       "pytest_name": "tablet_rotation",
       "label": "Tablet Rotation Lid-Accel",
-      "run_if": "not constants.has_device_data or device.component.has_lid_accelerometer",
+      "run_if": "constants.has_device_data and not device.component.has_base_accelerometer and device.component.has_lid_accelerometer",
       "args": {
-        "accelerometer_location": "lid",
         "spec_offset": [
           1.5,
           1.5
         ],
         "timeout_secs": 3600,
         "degrees_to_orientations": {
-          "0": {
-            "in_accel_x": 0,
-            "in_accel_y": 1,
-            "in_accel_z": 0
-          },
-          "90": {
-            "in_accel_x": 1,
-            "in_accel_y": 0,
-            "in_accel_z": 0
-          },
-          "180": {
-            "in_accel_x": 0,
-            "in_accel_y": -1,
-            "in_accel_z": 0
-          },
-          "270": {
-            "in_accel_x": -1,
-            "in_accel_y": 0,
-            "in_accel_z": 0
+          "lid": {
+            "0": {
+              "in_accel_x": 0,
+              "in_accel_y": 1,
+              "in_accel_z": 0
+            },
+            "90": {
+              "in_accel_x": 1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            },
+            "180": {
+              "in_accel_x": 0,
+              "in_accel_y": -1,
+              "in_accel_z": 0
+            },
+            "270": {
+              "in_accel_x": -1,
+              "in_accel_y": 0,
+              "in_accel_z": 0
+            }
           }
         }
       }

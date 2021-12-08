@@ -9,6 +9,16 @@
   background-color: #afa;
 }
 
-#picture {
-  font-size: 15em;
+#template {
+  text-align: center;
+}
+
+.accelerometer {
+  width: 50%;
+  float: left;
+  display: none;
+}
+
+.picture {
+  font-size: 10em;
 }

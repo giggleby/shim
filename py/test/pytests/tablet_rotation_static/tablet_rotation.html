@@ -1,5 +1,14 @@
 <test-template id='template'>
-  <div id="picture"></div>
+  <div style="width: 100%;">
+    <div id="base" class="accelerometer">
+      <div class="picture">☎</div>
+      <div class="status">base</div>
+    </div>
+    <div id="lid" class="accelerometer">
+      <div class="picture">☺</div>
+      <div class="status">lid</div>
+    </div>
+  </div>
   <test-view id="success" slot="extra-views">
     <i18n-label>Success!</i18n-label>
   </test-view>

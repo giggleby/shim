@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-04-23 16:33+CST\n"
+"PO-Revision-Date: 2021-12-09 15:31+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3378,6 +3378,10 @@ msgstr "压力测试"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Stylus And Garage"
 msgstr "触控笔与插槽"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Tablet Rotation Accelerometers"
+msgstr "平版旋转-加速度计"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Tablet Rotation Base-Accel"

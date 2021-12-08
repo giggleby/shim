@@ -47,28 +47,29 @@ To provide more parameters for accelerometer when testing::
   {
     "pytest_name": "tablet_rotation",
     "args": {
-      "accelerometer_location": "lid",
       "spec_offset": [0.5, 0.5],
       "degrees_to_orientations": {
-        "0": {
-          "in_accel_x": 0,
-          "in_accel_y": 1,
-          "in_accel_z": 0
-        },
-        "90": {
-          "in_accel_x": 1,
-          "in_accel_y": 0,
-          "in_accel_z": 0
-        },
-        "180": {
-          "in_accel_x": 0,
-          "in_accel_y": -1,
-          "in_accel_z": 0
-        },
-        "270": {
-          "in_accel_x": -1,
-          "in_accel_y": 0,
-          "in_accel_z": 0
+        "base": {
+          "0": {
+            "in_accel_x": 0,
+            "in_accel_y": 1,
+            "in_accel_z": 0
+          },
+          "90": {
+            "in_accel_x": 1,
+            "in_accel_y": 0,
+            "in_accel_z": 0
+          },
+          "180": {
+            "in_accel_x": 0,
+            "in_accel_y": -1,
+            "in_accel_z": 0
+          },
+          "270": {
+            "in_accel_x": -1,
+            "in_accel_y": 0,
+            "in_accel_z": 0
+          }
         }
       }
     }
@@ -98,8 +99,6 @@ the test::
   }
 """
 
-import random
-
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
 from cros.factory.test import state
@@ -108,18 +107,26 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 
 
-_UNICODE_PICTURES = u'☃☺☎'
-_TEST_DEGREES = [90, 180, 270, 0]
+_TEST_DEGREES = ['90', '180', '270', '0']
 _POLL_ROTATION_INTERVAL = 0.1
+_VALID_LOCATIONS = ['base', 'lid']
 
 _ARG_DEGREES_TO_ORIENTATION_SCHEMA = JSONSchemaDict(
     'degrees_to_orientation schema object', {
         'type': 'object',
         'patternProperties': {
-            '(0|90|180|270)': {
+            '(base|lid)': {
                 'type': 'object',
                 'patternProperties': {
-                    'in_accel_(x|y|z)': {'enum': [0, 1, -1]}
+                    '(0|90|180|270)': {
+                        'type': 'object',
+                        'patternProperties': {
+                            'in_accel_(x|y|z)': {
+                                'enum': [0, 1, -1]
+                            }
+                        },
+                        'additionalProperties': False
+                    }
                 },
                 'additionalProperties': False
             }
@@ -132,40 +139,81 @@ class TabletRotationTest(test_case.TestCase):
   """Tablet rotation factory test."""
   ARGS = [
       Arg('timeout_secs', int, 'Timeout value for the test.', default=30),
-      Arg('accelerometer_location', str,
-          'The location of accelerometer that should be checked. '
-          'Should be either "lid" or "base".',
-          default='lid'),
-      Arg('degrees_to_orientations', dict,
-          'A dict of (key, value) pairs. '
+      Arg(
+          'degrees_to_orientations', dict,
+          'The keys should be "base" or "lid", which are the locations of the '
+          'accelerometer. And each value is a dict of (key, value) pair as '
+          'follows: '
           'Keys: degrees of the orientations, ["0", "90", "180", "270"]. '
           'Values: a dictionary containing orientation configuration.  Keys '
           'should be the name of the accelerometer signal. The possible keys '
           'are "in_accel_(x|y|z)". Values should be one of [0, 1, -1], '
           'representing the ideal value for gravity under such orientation.',
           default={
-              '0': {'in_accel_x': 0, 'in_accel_y': 1, 'in_accel_z': 0},
-              '90': {'in_accel_x': 1, 'in_accel_y': 0, 'in_accel_z': 0},
-              '180': {'in_accel_x': 0, 'in_accel_y': -1, 'in_accel_z': 0},
-              '270': {'in_accel_x': -1, 'in_accel_y': 0, 'in_accel_z': 0}},
-          schema=_ARG_DEGREES_TO_ORIENTATION_SCHEMA),
-      Arg('spec_offset', list,
-          'Two numbers, ex: [1.5, 1.5] '
+              'base': {
+                  '0': {
+                      'in_accel_x': 0,
+                      'in_accel_y': -1,
+                      'in_accel_z': 0
+                  },
+                  '90': {
+                      'in_accel_x': 1,
+                      'in_accel_y': 0,
+                      'in_accel_z': 0
+                  },
+                  '180': {
+                      'in_accel_x': 0,
+                      'in_accel_y': 1,
+                      'in_accel_z': 0
+                  },
+                  '270': {
+                      'in_accel_x': -1,
+                      'in_accel_y': 0,
+                      'in_accel_z': 0
+                  }
+              },
+              'lid': {
+                  '0': {
+                      'in_accel_x': 0,
+                      'in_accel_y': 1,
+                      'in_accel_z': 0
+                  },
+                  '90': {
+                      'in_accel_x': 1,
+                      'in_accel_y': 0,
+                      'in_accel_z': 0
+                  },
+                  '180': {
+                      'in_accel_x': 0,
+                      'in_accel_y': -1,
+                      'in_accel_z': 0
+                  },
+                  '270': {
+                      'in_accel_x': -1,
+                      'in_accel_y': 0,
+                      'in_accel_z': 0
+                  }
+              }
+          }, schema=_ARG_DEGREES_TO_ORIENTATION_SCHEMA),
+      Arg(
+          'spec_offset', list, 'Two numbers, ex: [1.5, 1.5] '
           'indicating the tolerance for the digital output of sensors under '
           'zero gravity and one gravity.', default=[1, 1]),
-      Arg('sample_rate_hz', int,
-          'The sample rate in Hz to get raw data from '
+      Arg('sample_rate_hz', int, 'The sample rate in Hz to get raw data from '
           'accelerometers.', default=20),
   ]
 
   def setUp(self):
-    self.degrees_to_orientations = {
-        int(k): v for k, v in self.args.degrees_to_orientations.items()}
-    if not set(self.degrees_to_orientations).issubset(set(_TEST_DEGREES)):
-      self.fail('Please provide proper arguments for degrees_to_orientations.')
+    self.accel_controllers = {}
     self.dut = device_utils.CreateDUTInterface()
-    self.accel_controller = self.dut.accelerometer.GetController(
-        location=self.args.accelerometer_location)
+    for location, dic in self.args.degrees_to_orientations.items():
+      self.accel_controllers[location] = self.dut.accelerometer.GetController(
+          location=location)
+      if (not set(dic).issubset(set(_TEST_DEGREES)) or
+          location not in _VALID_LOCATIONS):
+        self.fail(
+            'Please provide proper arguments for degrees_to_orientations.')
+
     self.state = state.GetInstance()
     self._SetInternalDisplayRotation(0)
 
@@ -184,32 +232,47 @@ class TabletRotationTest(test_case.TestCase):
     display_id = self._GetInternalDisplayInfo()['id']
     self.state.DeviceSetDisplayProperties(display_id, {"rotation": degree})
 
-  def _PromptAndWaitForRotation(self, degree_target):
-    while True:
+  def _SetStyle(self, div_id, key, value):
+    self.ui.RunJS(f'document.getElementById("{div_id}")'
+                  f'.style.{key} = "{value}"')
+
+  def _PromptAndWaitForRotation(self, degree, need_test_locations):
+    while need_test_locations:
       self.Sleep(_POLL_ROTATION_INTERVAL)
       if not self._GetInternalDisplayInfo()['isInTabletPhysicalState']:
         self.fail('Device not in tablet mode.')
-      orientations = self.degrees_to_orientations[degree_target]
-      cal_data = self.accel_controller.GetData(
-          sample_rate=self.args.sample_rate_hz)
-      if self.accel_controller.IsWithinOffsetRange(
-          cal_data, orientations, self.args.spec_offset):
-        return
+
+      for loc, dic in self.args.degrees_to_orientations.items():
+        if loc not in need_test_locations:
+          continue
+        orientations = dic[degree]
+        cal_data = self.accel_controllers[loc].GetData(
+            sample_rate=self.args.sample_rate_hz)
+        if self.accel_controllers[loc].IsWithinOffsetRange(
+            cal_data, orientations, self.args.spec_offset):
+          need_test_locations.remove(loc)
+          self._SetStyle(loc, 'color', 'green')
 
   def runTest(self):
     self.ui.StartFailingCountdownTimer(self.args.timeout_secs)
-    picture = random.choice(_UNICODE_PICTURES)
-    self.ui.SetHTML(picture, id='picture')
     self.ui.SetInstruction(
         _('Rotate the tablet to correctly align the picture, holding it at '
           'an upright 90-degree angle.'))
 
-    for degree_target in _TEST_DEGREES:
-      if degree_target not in self.degrees_to_orientations:
+    for degree in _TEST_DEGREES:
+      need_test_locations = set()
+      for loc, dic in self.args.degrees_to_orientations.items():
+        if degree not in dic:
+          self._SetStyle(loc, 'display', 'none')
+          continue
+        need_test_locations.add(loc)
+        self._SetStyle(loc, 'color', '')
+        self._SetStyle(loc, 'transform', f'rotate({degree}deg)')
+        self._SetStyle(loc, 'display', 'block')
+      if not need_test_locations:
         continue
-      self.ui.RunJS('document.getElementById("picture").style.transform = '
-                    '"rotate(%ddeg)"' % degree_target)
+
       self.ui.SetView('main')
-      self._PromptAndWaitForRotation(degree_target)
+      self._PromptAndWaitForRotation(degree, need_test_locations)
       self.ui.SetView('success')
       self.Sleep(1)
