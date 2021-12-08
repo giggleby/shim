@@ -120,6 +120,16 @@
       "eval": "flash_chip:main"
     }
   },
+  "nfc_reader": {
+    "usb": {
+      "eval": "nfc_reader",
+      "keys": [
+        "idVendor",
+        "idProduct",
+        "bcdDevice"
+      ]
+    }
+  },
   "pmic": {
     "generic": {
       "eval": {
