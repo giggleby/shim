@@ -82,8 +82,10 @@ class Database:
     _framework_version: An integer of the framework version.
   """
 
-  def __init__(self, project, encoding_patterns, image_id, pattern,
-               encoded_fields, components, rules, checksum, framework_version):
+  def __init__(self, project: str, encoding_patterns: 'EncodingPatterns',
+               image_id: 'ImageId', pattern: 'Pattern',
+               encoded_fields: 'EncodedFields', components: 'Components',
+               rules: 'Rules', checksum: Optional[str], framework_version: int):
     """Constructor.
 
     This constructor should not be called by other modules.
