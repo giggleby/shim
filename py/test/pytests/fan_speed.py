@@ -32,6 +32,8 @@ from cros.factory.utils.arg_utils import Arg
 
 
 def _Average(numbers):
+  """Returns the average of given numbers. Caller should take care the case
+  when the numbers are empty."""
   return sum(numbers, 0) / len(numbers)
 
 
@@ -90,6 +92,13 @@ class FanSpeedTest(test_case.TestCase):
     """
     observed_rpm = self._fan.GetFanRPM(self.args.fan_id)
     fan_count = len(observed_rpm)
+    # TODO(lschyi): separate errors after the concern of handling single fan or
+    # multiple fans of SetAndGetFanSpeed is separated.
+    if fan_count == 0:
+      if self.args.fan_id is None:
+        self.FailTask('Can not find any fan')
+      else:
+        self.FailTask(f'Fan {self.args.fan_id} does not report any RPM')
     spin_up = target_rpm > _Average(observed_rpm)
 
     status = _(
@@ -127,7 +136,17 @@ class FanSpeedTest(test_case.TestCase):
                     'Use latest one instead.')
       num_samples = 1
     # Average the latest #num_samples readings as stabilized fan speed.
-    return [_Average(samples[-num_samples:]) for samples in ith_fan_samples]
+    ret = []
+    for i, samples in enumerate(ith_fan_samples):
+      if not samples:
+        self.FailTask(f'Fan {i} does not report any RPM')
+
+      fan_rpm_avg = _Average(samples[-num_samples:])
+      if fan_rpm_avg == 0:
+        self.FailTask(f'RPM read for Fan {i} is all zero')
+
+      ret.append(fan_rpm_avg)
+    return ret
 
   def VerifyResult(self, observed_rpm, target_rpm):
     """Verify observed rpms are in the range
@@ -156,9 +175,8 @@ class FanSpeedTest(test_case.TestCase):
     if self.args.spin_max_then_half:
       logging.info('Spinning fan up to get max fan speed...')
       max_rpm = self.SetAndGetFanSpeed(self.args.max_rpm)
-      for i, rpm in enumerate(max_rpm):
-        if rpm == 0:
-          self.FailTask('Fan %d is not reporting any RPM' % i)
+      if not max_rpm:
+        self.FailTask('No fan RPM is reported')
       target_rpm = _Average(max_rpm) / 2
       observed_rpm = self.SetAndGetFanSpeed(target_rpm)
       self.VerifyResult(observed_rpm, target_rpm)
