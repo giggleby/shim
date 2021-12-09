@@ -82,6 +82,7 @@ message ComponentIdentity {
   int64 qual_id = 1;  // Required.
   string device_id = 2;
   string readable_label = 3;
+  int64 component_id = 4;
 }
 
 message ComponentProbeInfo {
@@ -104,6 +105,20 @@ message ProbeMetadata {
   bool is_proved_ready_for_overridden = 3;
   ProbeStatementType probe_statement_type = 4;
   string probe_statement_preview = 5;
+}
+
+message ComponentHwidInfo {
+  ProbeMetadata metadata = 1;
+  ComponentProbeInfo component_probe_info = 2;
+}
+
+message HwidResult {
+  string justification_payload = 1;
+}
+
+message ComponentHwidResult {
+  HwidResult hwid_result = 1;
+  ComponentProbeInfo component_probe_info = 2;
 }
 
 message GetProbeSchemaRequest {}
@@ -218,6 +233,22 @@ message GetProbeMetadataResponse {
   repeated ProbeMetadata probe_metadatas = 1;  // Required.
 }
 
+message GetDeviceComponentHwidInfoRequest {
+  repeated ComponentIdentity component_identities = 1;
+}
+
+message GetDeviceComponentHwidInfoResponse {
+  repeated ComponentHwidInfo component_hwid_infos = 1;
+}
+
+message UploadDeviceComponentHwidResultRequest {
+  repeated ComponentHwidResult results = 1;
+}
+
+message UploadDeviceComponentHwidResultResponse {
+  repeated ProbeMetadata probe_metadatas = 1;
+}
+
 service ProbeInfoService {
   rpc GetProbeSchema(GetProbeSchemaRequest) returns (GetProbeSchemaResponse) {}
 
@@ -241,4 +272,10 @@ service ProbeInfoService {
 
   rpc GetProbeMetadata(GetProbeMetadataRequest)
       returns (GetProbeMetadataResponse) {}
+
+  rpc GetDeviceComponentHwidInfo(GetDeviceComponentHwidInfoRequest)
+      returns (GetDeviceComponentHwidInfoResponse) {}
+
+  rpc UploadDeviceComponentHwidResult(UploadDeviceComponentHwidResultRequest)
+      returns (UploadDeviceComponentHwidResultResponse) {}
 }
