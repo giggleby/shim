@@ -102,12 +102,7 @@ class HWIDV3SelfServiceActionHelper:
 
     analyzer = contents_analyzer.ContentsAnalyzer(new_hwid_db_contents, None,
                                                   curr_hwid_db_contents)
-
-    def _RemoveHeader(hwid_db_contents):
-      unused_header, lines = _SplitHWIDDBV3Sections(hwid_db_contents)
-      return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)
-
-    return analyzer.AnalyzeChange(_RemoveHeader)
+    return analyzer.AnalyzeChange(self.RemoveHeader)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only):
     del fingerprint_only
@@ -123,3 +118,8 @@ class HWIDV3SelfServiceActionHelper:
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)
     return hwid_action.BundleInfo(builder.Build(), builder.FILE_NAME_EXT[1:])
+
+  @staticmethod
+  def RemoveHeader(hwid_db_contents):
+    unused_header, lines = _SplitHWIDDBV3Sections(hwid_db_contents)
+    return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)

@@ -23,7 +23,7 @@ from cros.factory.utils import type_utils
 
 _DEFAULT_CONFIGURATION = {
     'env': 'dev',
-    'bucket': 'chromeoshwid-dev',
+    'bucket': 'chromeoshwid-staging',
     # Allow unauthenticated access when running a local dev server and
     # during tests.
     'ge_bucket': 'chromeos-build-release-console-staging',

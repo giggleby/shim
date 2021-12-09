@@ -500,6 +500,65 @@ message CreateHwidBundleResponse {
   HwidBundle hwid_bundle = 1;
 }
 
+// Record generated during finalizing factory bundle.
+message FactoryBundleRecord {
+  // Board name for the facory bundle.
+  string board = 1;
+  // Project name for the facory bundle.
+  string project = 2;
+  // Firmware image channel downloaded from CPFE.
+  string channel = 3;
+  // Firmware signer extracted from the firmware-updater.
+  string firmware_signer = 4;
+
+  message FirmwareRecord {
+    message FirmwareInfo {
+      string hash = 1;
+      string version = 2;
+    }
+    message FirmwareKeys {
+      string key_recovery = 1;
+      string key_root = 2;
+    }
+
+    // Model name of firmware info.
+    string model = 1;
+    // Firmware keys
+    FirmwareKeys firmware_keys = 2;
+    // RO AP firmware info
+    FirmwareInfo ro_main_firmware = 3;
+    // RO EC firmware info
+    FirmwareInfo ro_ec_firmware = 4;
+    // RO PD firmware info
+    FirmwareInfo ro_pd_firmware = 5;
+  }
+
+  // Firmware record of each model.
+  // One project may have different model designs.
+  repeated FirmwareRecord firmware_records = 5;
+}
+
+// The request for create HWID DB firmware info update CL.
+message CreateHwidDbFirmwareInfoUpdateClRequest {
+  // Record generated during finalizing factory bundle.
+  FactoryBundleRecord bundle_record = 1;
+  // Original requester from Easy Bundle Creation.
+  string original_requester = 2;
+  // Additional description to be commented on CL.
+  string description = 3;
+}
+
+message HwidDbCommit {
+  // CL number for the corresponding commit.
+  int64 cl_number = 1;
+}
+
+// The response contains firmware info update CLs.
+message CreateHwidDbFirmwareInfoUpdateClResponse {
+  // Map project name to the commit created.
+  map<string, HwidDbCommit> commits = 1;
+}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -569,4 +628,14 @@ service HwidService {
   // Create the HWID bundle for specific project.
   rpc CreateHwidBundle(CreateHwidBundleRequest)
       returns (CreateHwidBundleResponse);
+
+  // Create CL to update HWID firmware info
+  //
+  // This API is designed to be requested by Easy Bundle Creation. Ease Bundle
+  // Creation service will derive firmware info and send request to auto update
+  // HWID DB without being approved.
+  rpc CreateHwidDbFirmwareInfoUpdateCl(
+      CreateHwidDbFirmwareInfoUpdateClRequest)
+      returns (CreateHwidDbFirmwareInfoUpdateClResponse);
+
 }

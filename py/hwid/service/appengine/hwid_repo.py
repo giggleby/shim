@@ -211,3 +211,7 @@ class HWIDRepoManager:
     """Fetch the latest commit ID of the main branch on the upstream."""
     return git_util.GetCommitId(_INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
                                 auth_cookie=git_util.GetGerritAuthCookie())
+
+  def AbandonCL(self, cl_number):
+    return git_util.AbandonCL(_INTERNAL_REPO_URL,
+                              git_util.GetGerritAuthCookie(), cl_number)

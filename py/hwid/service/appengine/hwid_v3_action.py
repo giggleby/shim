@@ -66,6 +66,9 @@ class HWIDV3Action(hwid_action.HWIDAction):
   def BundleHWIDDB(self):
     return self._ss_helper.BundleHWIDDB()
 
+  def RemoveHeader(self, hwid_db_contents):
+    return self._ss_helper.RemoveHeader(hwid_db_contents)
+
 
 def _NormalizeString(string):
   """Normalizes a string to account for things like case."""

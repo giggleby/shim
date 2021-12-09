@@ -39,8 +39,14 @@ class CloudStorageAdapter(filesystem_adapter.FileSystemAdapter):
     self._bucket_name = bucket
     self._chunk_size = chunk_size or self.CHUNK_SIZE
 
+    # Get the dummy project id from env if running on local server, otherwise
+    # use the default parameter for staging/prod.
+    self._project = os.getenv('CLOUDSDK_CORE_PROJECT')
+
   @type_utils.LazyProperty
   def _storage_client(self):
+    if self._project:
+      return storage.Client(project=self._project)
     return storage.Client()
 
   @type_utils.LazyProperty

@@ -316,3 +316,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def CreateHwidBundle(self, request):
     return self._ss_helper.CreateHWIDBundle(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateHwidDbFirmwareInfoUpdateCl(self, request):
+    return self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(request)

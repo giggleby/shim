@@ -144,25 +144,36 @@ class DatabaseBuilder:
 
   _DEFAULT_COMPONENT_SUFFIX = '_default'
 
-  def __init__(self, database_path=None, project=None, image_name=None):
+  def __init__(self, database_path=None, project=None, image_name=None,
+               database=None):
     """Constructor.
 
-    If the `database_path` is given, this class will load the existed database;
-    otherwise this class will create an new empty database which project and
-    the image name of image id 0 meets the given arguments `project` and
-    `image_name`.
+    If the `database_path` or `database` is given, this class will load the
+    existed database; otherwise this class will create an new empty database
+    which project and the image name of image id 0 meets the given arguments
+    `project` and `image_name`.
 
     Args:
       database_path: A path to the database to be loaded.
       project: A string of the project name.
       image_name: A string of the default image name.
+      database: An cros.factory.hwid.v3.database.Database Object.
     """
+
+    if database_path and database:
+      raise ValueError('Both `database_path` and `database_content` are given. '
+                       'Please initalize DatabaseBuilder with only one source.')
+
     if database_path:
       self.database = Database.LoadFile(database_path, verify_checksum=False)
       self._from_empty_database = False
       if not self.database.can_encode:
         raise ValueError('The given HWID database %r is legacy and not '
                          'supported by DatabaseBuilder.' % database_path)
+    elif database:
+      self.database = database
+      self._from_empty_database = False
+
     else:
       if project is None or image_name is None:
         raise ValueError('No project name.')
@@ -248,7 +259,7 @@ class DatabaseBuilder:
           'sku_id': str(sku_id)
       } for sku_id in new_sku_ids]
       self.AddNullComponent(comp_cls)
-      self._AddComponents(comp_cls, new_probed_values)
+      self.AddComponents(comp_cls, new_probed_values)
 
     # Check if we need to update the encoded field.
     comp_to_sku_id = {
@@ -319,12 +330,14 @@ class DatabaseBuilder:
         '  region: !region_component\n' +
         'rules: []\n')
 
-  def _AddComponent(self, comp_cls, probed_value):
+  def AddComponent(self, comp_cls, probed_value, set_comp_name=None):
     """Tries to add a item into the component.
 
     Args:
       comp_cls: The component class.
       probed_value: The probed value of the component.
+      set_comp_name: Set component name for the item. If None is given, it will
+        be determined automatically.
     """
     # Set old firmware components to deprecated.
     if comp_cls in ['ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware']:
@@ -334,7 +347,7 @@ class DatabaseBuilder:
         self.database.SetComponentStatus(
             comp_cls, comp_name, common.COMPONENT_STATUS.deprecated)
 
-    comp_name = DetermineComponentName(
+    comp_name = set_comp_name or DetermineComponentName(
         comp_cls, probed_value, list(self.database.GetComponents(comp_cls)))
 
     logging.info('Component %s: add an item "%s".', comp_cls, comp_name)
@@ -347,7 +360,7 @@ class DatabaseBuilder:
       self.database.SetComponentStatus(
           comp_cls, default_comp_name, common.COMPONENT_STATUS.unsupported)
 
-  def _AddComponents(self, comp_cls, probed_values):
+  def AddComponents(self, comp_cls, probed_values):
     """Adds a list of components to the database.
 
     Args:
@@ -371,7 +384,7 @@ class DatabaseBuilder:
           any(_IsSubset(probed_value_i, probed_values[j])
               for j in range(i + 1, len(probed_values)))):
         continue
-      self._AddComponent(comp_cls, probed_value_i)
+      self.AddComponent(comp_cls, probed_value_i)
 
   def _AddNewEncodedField(self, comp_cls, comp_names):
     """Adds a new encoded field for the specific component class.
@@ -409,7 +422,7 @@ class DatabaseBuilder:
         if not probed_values:
           continue
 
-        self._AddComponents(comp_cls, probed_values)
+        self.AddComponents(comp_cls, probed_values)
 
         if self._from_empty_database:
           continue
@@ -436,7 +449,7 @@ class DatabaseBuilder:
 
     if mismatched_probed_results:
       for comp_cls, probed_comps in mismatched_probed_results.items():
-        self._AddComponents(
+        self.AddComponents(
             comp_cls, [probed_comp['values'] for probed_comp in probed_comps])
 
       bom = probe.GenerateBOMFromProbedResults(

@@ -3,8 +3,11 @@
 # found in the LICENSE file.
 
 import logging
+import re
 import textwrap
 import time
+
+from google.protobuf import json_format
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
@@ -14,6 +17,7 @@ from cros.factory.hwid.service.appengine import hwid_repo
 # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
 # pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
@@ -154,6 +158,103 @@ class SelfServiceHelper:
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
     resp = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClResponse(
         cl_number=cl_number)
+    return resp
+
+  def CreateHWIDDBFirmwareInfoUpdateCL(self, request):
+    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    bundle_record = request.bundle_record
+    all_commits = []
+    for firmware_record in bundle_record.firmware_records:
+      # Load HWID DB
+      try:
+        metadata = live_hwid_repo.GetHWIDDBMetadataByName(firmware_record.model)
+        self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata],
+                                                  delete_missing=False)
+        self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+            limit_models=[firmware_record.model])
+        action = self._hwid_action_manager.GetHWIDAction(firmware_record.model)
+      except (KeyError, ValueError, RuntimeError,
+              hwid_repo.HWIDRepoError) as ex:
+        raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+      # Derive firmware key component name
+      keys_comp_name = None
+      if bundle_record.firmware_signer:
+        match = re.match(
+            f'^{bundle_record.board}(mp|premp)keys(?:-(v[0-9]+))?$',
+            bundle_record.firmware_signer.lower())
+        if match is None:
+          raise ValueError('Cannot derive firmware key name from signer: %s' %
+                           bundle_record.firmware_signer)
+        keys_comp_name = f'firmware_keys_{match.group(1)}'
+        if match.group(2):
+          keys_comp_name += f'_{match.group(2)}'
+
+      # Add component to DB
+      db_builder = v3_builder.DatabaseBuilder(database=action.GetDBV3())
+      changed = False
+      for field, value in firmware_record.ListFields():
+        if field.message_type is None:
+          continue
+        value = json_format.MessageToDict(value,
+                                          preserving_proto_field_name=True)
+
+        if field.message_type.name == 'FirmwareInfo':
+          comp_name = v3_builder.DetermineComponentName(field.name, value)
+        elif field.message_type.name == 'FirmwareKeys':
+          comp_name = keys_comp_name
+        else:
+          continue
+
+        if comp_name in db_builder.database.GetComponents(field.name):
+          logging.info('Skip existed component: %s', comp_name)
+        else:
+          db_builder.AddComponent(field.name, value, comp_name)
+          changed = True
+
+      if not changed:
+        logging.info('No component is added to DB: %s', firmware_record.model)
+        continue
+
+      # Create commit
+      editable_section = action.RemoveHeader(db_builder.database.DumpData())
+      change_info = action.ReviewDraftDBEditableSection(
+          editable_section, derive_fingerprint_only=True)
+      commit_msg = textwrap.dedent(f"""\
+          ({int(time.time())}) {db_builder.database.project}: HWID Firmware \
+Info Update
+
+          Requested by: {request.original_requester}
+          Warning: all posted comments will be sent back to the requester.
+
+          {request.description}
+          """)
+      all_commits.append((firmware_record.model, change_info, commit_msg))
+
+    # Create CLs and rollback on exception
+    resp = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClResponse()
+    try:
+      for model_name, change_info, commit_msg in all_commits:
+        try:
+          cl_number = live_hwid_repo.CommitHWIDDB(
+              name=model_name,
+              hwid_db_contents=change_info.new_hwid_db_contents,
+              commit_msg=commit_msg, reviewers=[],
+              cc_list=[request.original_requester], auto_approved=True)
+        except hwid_repo.HWIDRepoError:
+          logging.exception(
+              'Caught unexpected exception while uploading a HWID CL.')
+          raise protorpc_utils.ProtoRPCException(
+              protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
+        resp.commits[model_name].cl_number = cl_number
+    except Exception as ex:
+      # Abandon all committed CLs on exception
+      logging.exception('Rollback to abandon commited CLs.')
+      for model_name, commit in resp.commits.items():
+        self._hwid_repo_manager.AbandonCL(commit.cl_number)
+        logging.info('Abdandon CL: %d', commit.cl_number)
+      raise ex
+
     return resp
 
   def BatchGetHWIDDBEditableSectionChangeCLInfo(self, request):
