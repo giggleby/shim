@@ -550,7 +550,16 @@ class ExtDisplayTest(test_case.TestCase):
               display_status.strip() == 'connected')
 
     # Get display status from drm_utils.
-    port_info = self._dut.display.GetPortInfo()
+    try:
+      port_info = self._dut.display.GetPortInfo()
+    except ValueError as e:
+      if str(e) == 'NULL pointer access':
+        url = ('https://storage.googleapis.com/chromeos-factory-docs/'
+               'sdk/pytests/external_display.html?highlight=drm_sysfs')
+        self.FailTask('drm_sysfs_path argument is NULL. To resolve this, '
+                      'please configure drm_sysfs_path. '
+                      'See "%s" for more information.' % url)
+      raise
     if args.display_id not in port_info:
       self.FailTask(
           'Display "%s" not found. If this is an MST port, '
