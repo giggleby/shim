@@ -59,6 +59,7 @@ class OutputPullSocket(plugin_base.OutputPlugin):
       self._accept_sock.bind((self.args.hostname, self.args.port))
     except socket.error as e:
       self.exception('Bind failed. Error : %s' % e)
+      self._accept_sock.close()
       raise
     self.debug('Socket bind complete')
 
@@ -87,6 +88,9 @@ class OutputPullSocket(plugin_base.OutputPlugin):
       self._sock.sendall(socket_common.QING_RESPONSE)
       return True
     except Exception:
+      self._accept_sock.close()
+      if self._sock:
+        self._sock.close()
       return False
 
   def Main(self):
@@ -117,6 +121,8 @@ class OutputPullSocket(plugin_base.OutputPlugin):
           success = self.GetSocket()
           if self.IsStopping():
             event_stream.Abort()
+            if self._sock:
+              self._sock.close()
             return
           if success:
             break
