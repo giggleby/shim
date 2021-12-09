@@ -325,13 +325,6 @@
       "pytest_name": "check_serial_number",
       "label": "Check Serial Number"
     },
-    "ClearAPROHash": {
-      "pytest_name": "ap_ro_hash",
-      "label": "Clear AP RO Hash",
-      "args": {
-        "action": "clear"
-      }
-    },
     "ClearFactoryVPDEntries": {
       "inherit": "TestGroup",
       "label": "Clear factory VPD entries",
@@ -776,11 +769,8 @@
       ]
     },
     "SetAPROHash": {
-      "pytest_name": "ap_ro_hash",
-      "label": "Set AP RO Hash",
-      "args": {
-        "action": "set"
-      }
+      "pytest_name": "set_ap_ro_hash",
+      "label": "Set AP RO Hash"
     },
     "ShopfloorNotifyEnd": {
       "inherit": "ShopfloorService",
