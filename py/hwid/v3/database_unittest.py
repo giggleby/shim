@@ -363,8 +363,10 @@ class ComponentsTest(unittest.TestCase):
         'a': 'b',
         'c': 'd'
     }, 'deprecated')
-    c.AddComponent('cls1', 'comp_default', None, 'supported',
-                   {'comp_group': 'hello'})
+    c.AddComponent('cls1', 'comp_default', None, 'supported', {
+        'comp_group': 'hello',
+        'alias': 'alias-comp'
+    })
     self.assertEqual(
         Unordered(c.Export(True, None)), {
             'cls1': {
@@ -385,7 +387,8 @@ class ComponentsTest(unittest.TestCase):
                     'comp_default': {
                         'values': None,
                         'information': {
-                            'comp_group': 'hello'
+                            'comp_group': 'hello',
+                            'alias': 'alias-comp'
                         }
                     }
                 }
@@ -465,7 +468,8 @@ class ComponentsTest(unittest.TestCase):
                         'c': 'd'
                     },
                     'information': {
-                        'comp_group': 'comp5'
+                        'comp_group': 'comp5',
+                        'alias': 'cls2_vendor_a-part-number'
                     }
                 }
             }
@@ -480,8 +484,11 @@ class ComponentsTest(unittest.TestCase):
     self.assertEqual(c.GetComponents('cls1')['comp2'].status, 'supported')
 
     self.assertEqual(len(c.GetComponents('cls2')), 2)
-    self.assertEqual(
-        c.GetComponents('cls2')['comp4'].information['comp_group'], 'comp5')
+    self.assertDictEqual(
+        c.GetComponents('cls2')['comp4'].information, {
+            'comp_group': 'comp5',
+            'alias': 'cls2_vendor_a-part-number'
+        })
 
 
 class EncodedFieldsTest(unittest.TestCase):

@@ -947,6 +947,7 @@ class Components:
           status: unsupported|deprecated|unqualified|supported|duplicate
           information:
             comp_group: other_group_name
+            alias: component name alias
         ...
     ...
   ```
@@ -969,6 +970,7 @@ class Components:
             size: '123456789'
           information:
             comp_group: battery_regular
+            alias: battery_vendor_a
 
     cellular:
       items:
@@ -1059,13 +1061,12 @@ class Components:
                                       choices=common.COMPONENT_STATUS),
                               'information':
                                   schema.AnyOf([
-                                      schema.FixedDict(
-                                          'extra information', optional_items={
-                                              'comp_group':
-                                                  schema.Scalar(
-                                                      'component group name',
-                                                      str)
-                                          }),
+                                      schema.Dict(
+                                          'extra information',
+                                          key_type=schema.Scalar(
+                                              'info key',
+                                              str), value_type=schema.Scalar(
+                                                  'info value', str)),
                                       schema.Scalar('none', type(None))
                                   ])
                           }))
