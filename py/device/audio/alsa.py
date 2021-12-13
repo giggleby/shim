@@ -6,6 +6,7 @@
 
 import logging
 import re
+import traceback
 
 from cros.factory.device.audio import base
 from cros.factory.device.audio import config_manager
@@ -110,23 +111,37 @@ class AlsaAudioControl(base.BaseAudioControl):
     super(AlsaAudioControl, self).__init__(dut, config_name, mixer_controller)
 
   def _CreateAudioConfigManager(self, config_name):
+    exceptions = []
     try:
-      # If a factory audio config is there, use it.
-      config_mgr = config_manager.JSONAudioConfigManager(
-          self.mixer_controller, config_name)
-      # Ignore if the config is empty.
-      if config_mgr.audio_config:
+      if config_name:
+        # If a factory json audio config is there, use it.
+        config_mgr = config_manager.JSONAudioConfigManager(
+            self.mixer_controller, config_name)
+        logging.info('Json audio config is used.')
         return config_mgr
-    except Exception:
-      logging.exception('config %s is not valid', config_name)
+    except Exception as e:
+      exceptions.append(e)
 
-    # Factory audio config does not exist. Use UCM config manager.
-    return config_manager.UCMConfigManager(
-        self._device,
-        self.mixer_controller,
-        self.ucm_card_map,
-        self.ucm_device_map,
-        self.ucm_verb)
+    # Factory json audio config does not exist. Use UCM config manager.
+    try:
+      config_mgr = config_manager.UCMConfigManager(
+          self._device, self.mixer_controller, self.ucm_card_map,
+          self.ucm_device_map, self.ucm_verb)
+      if exceptions:
+        logging.info(
+            'Json audio config %s is not valid. Fallback to UCM audio '
+            'config.', config_name)
+      else:
+        logging.info('UCM audio config is used.')
+      return config_mgr
+    except Exception as e:
+      exceptions.append(e)
+
+    joined_exceptions = (''.join(
+        traceback.format_exception(None, e, e.__traceback__))
+                         for e in exceptions)
+    raise RuntimeError('Failed to create audio config manager.\n\n' +
+                       '\n'.join(joined_exceptions))
 
   def _PlaybackWavFile(self, path, card, device):
     """See BaseAudioControl._PlaybackWavFile"""
