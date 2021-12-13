@@ -50,7 +50,7 @@ class DeviceManager(plugin.Plugin):
 
   @staticmethod
   def _ReadUptime():
-    return open('/proc/uptime').read()
+    return file_utils.ReadFile('/proc/uptime')
 
   def GetDmesg(self):
     """Returns the contents of dmesg.
@@ -193,7 +193,8 @@ class DeviceManager(plugin.Plugin):
           os.path.join('/sys/block/',
                        os.path.basename(boot_device),
                        'removable'))
-      boot_device_removable = open(boot_device_removable_path).read().strip()
+      boot_device_removable = file_utils.ReadFile(
+          boot_device_removable_path).strip()
 
       if boot_device.startswith('/dev/sd'):
         boot_device_type = (
@@ -215,8 +216,8 @@ class DeviceManager(plugin.Plugin):
       # TPM device path has been changed in kernel 3.18.
       if not os.path.exists(tpm_root):
         tpm_root = legacy_tpm_root
-      tpm_status = (open(os.path.join(tpm_root, 'enabled')).read(),
-                    open(os.path.join(tpm_root, 'owned')).read())
+      tpm_status = (file_utils.ReadFile(os.path.join(tpm_root, 'enabled')),
+                    file_utils.ReadFile(os.path.join(tpm_root, 'owned')))
       tpm_stat = (
           ('Enabled: %s\nOwned: %s\n' % tpm_status) +
           process_utils.CheckOutput('crossystem | grep tpm_owner', shell=True))
@@ -256,7 +257,7 @@ class DeviceManager(plugin.Plugin):
       except subprocess.CalledProcessError:
         ec_version = 'EC not available.'
 
-      image_version = ''.join(open('/etc/lsb-release', 'r').readlines())
+      image_version = ''.join(file_utils.ReadLines('/etc/lsb-release', 'r'))
 
       return DeviceNodeString(
           'version', 'AP Firmware(BIOS)/EC/Image Version',
@@ -285,7 +286,7 @@ class DeviceManager(plugin.Plugin):
           re.compile(r'N: Name=".*(%s).*"' % ('|'.join(device_name_list))))
       re_device_sysfs = re.compile(r'S: Sysfs=(.*)')
 
-      device_list = open('/proc/bus/input/devices').read().split('\n\n')
+      device_list = file_utils.ReadFile('/proc/bus/input/devices').split('\n\n')
 
       for device_data in device_list:
         match_device_name = re_device_name.findall(device_data)
@@ -298,7 +299,7 @@ class DeviceManager(plugin.Plugin):
         for path_pattern in firmware_path_patterns:
           device_firmware_path = os.path.join(device_path, path_pattern)
           if os.path.exists(device_firmware_path):
-            return open(device_firmware_path).read().strip()
+            return file_utils.ReadFile(device_firmware_path).strip()
         return 'unknown'
 
       return 'unknown'

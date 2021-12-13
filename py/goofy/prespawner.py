@@ -118,6 +118,8 @@ class Prespawner:
           pickle.dump((None, None), process.stdin)
           process.stdin.close()
           process.wait()
+          if process.stdout:
+            process.stdout.close()
       self.thread.join()
       self.thread = None
 

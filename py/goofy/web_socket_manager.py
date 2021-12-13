@@ -88,6 +88,7 @@ class WebSocketManager:
     if self.tail_process:
       self.tail_process.kill()
       self.tail_process.wait()
+      self.tail_process.stdout.close()
     if self.tail_thread:
       self.tail_thread.join()
 
