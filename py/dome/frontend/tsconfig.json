@@ -14,7 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
     "jsx": "react",
-    "target": "esNext",
+    "target": "es2020",
     "module": "es2015",
     "moduleResolution": "node",
     "noEmitHelpers": true,

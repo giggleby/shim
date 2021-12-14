@@ -11,7 +11,7 @@ import formDialog from '@app/form_dialog';
 import project from '@app/project';
 import task from '@app/task';
 import {Dispatch, RootState} from '@app/types';
-import {authorizedAxios} from '@common/utils';
+import {authorizedAxios, isAxiosError} from '@common/utils';
 
 import {UPDATE_RESOURCE_FORM, UPLOAD_BUNDLE_FORM} from './constants';
 import {getBundles} from './selectors';
@@ -78,9 +78,13 @@ export const fetchBundles = () =>
       const response = await authorizedAxios().get<Bundle[]>(
         `${baseURL(getState)}/bundles.json`);
       dispatch(receiveBundles(response.data));
-    } catch (err) {
-      dispatch(error.actions.setAndShowErrorDialog(
-        `error fetching bundle list\n\n${err.message}`));
+    } catch (err: unknown) {
+      if(isAxiosError(err)) {
+        dispatch(error.actions.setAndShowErrorDialog(
+          `error fetching bundle list\n\n${err.message}`));
+      } else {
+        throw err;
+      }
     }
   };
 

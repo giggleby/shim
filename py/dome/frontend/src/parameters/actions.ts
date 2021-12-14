@@ -10,7 +10,7 @@ import project from '@app/project';
 import task from '@app/task';
 import {Dispatch, RootState} from '@app/types';
 
-import {authorizedAxios} from '@common/utils';
+import {authorizedAxios, isAxiosError} from '@common/utils';
 
 import {
   CREATE_DIRECTORY_FORM,
@@ -163,8 +163,12 @@ export const fetchParameters = () =>
       const directories = await authorizedAxios().get<ParameterDirectory[]>(
         `${baseURL(getState)}/parameters/dirs.json`);
       dispatch(receiveParameterDirs(directories.data));
-    } catch (err) {
-      dispatch(error.actions.setAndShowErrorDialog(
-        `error fetching parameters or dirs\n\n${err.message}`));
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        dispatch(error.actions.setAndShowErrorDialog(
+          `error fetching parameters or dirs\n\n${err.message}`));
+      } else {
+        throw err;
+      }
     }
   };

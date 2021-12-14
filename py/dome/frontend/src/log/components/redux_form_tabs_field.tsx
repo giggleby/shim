@@ -36,7 +36,7 @@ type ReduxFormTabsFieldProps =
 
 const ReduxFormTabsField: React.SFC<ReduxFormTabsFieldProps> =
   (props) => (
-    <Field {...props} component={renderTabsField} />
+    <Field<RenderTabsFieldProps> {...props} component={renderTabsField} />
   );
 
 export default ReduxFormTabsField;

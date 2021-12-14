@@ -50,9 +50,10 @@ type RenameParameterFormProps =
 class RenameParameterForm extends React.Component<RenameParameterFormProps> {
   render() {
     const {open, cancelRename, renameParameter, submitForm} = this.props;
+    const payload = this.props.payload as RenameRequest;
     const initialValues = {
-      id: this.props.payload.id,
-      name: this.props.payload.name,
+      id: payload.id,
+      name: payload.name,
     };
     return (
       <Dialog open={open} onClose={cancelRename}>

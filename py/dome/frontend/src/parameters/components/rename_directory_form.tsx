@@ -50,9 +50,10 @@ type RenameDirectoryFormProps =
 class RenameDirectoryForm extends React.Component<RenameDirectoryFormProps> {
   render() {
     const {open, cancelRename, renameDirectory, submitForm} = this.props;
+    const payload = this.props.payload as RenameRequest;
     const initialValues = {
-      id: this.props.payload.id,
-      name: this.props.payload.name,
+      id: payload.id,
+      name: payload.name,
     };
     return (
       <Dialog open={open} onClose={cancelRename}>

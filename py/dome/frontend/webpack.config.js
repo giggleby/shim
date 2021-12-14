@@ -34,11 +34,11 @@ const config = {
     publicPath: '/static/',
   },
   optimization: {
-    noEmitOnErrors: true,
+    emitOnErrors: false,
   },
   performance: {hints: false},
   plugins: [new forkTsCheckerWebpackPlugin(
-      {workers: forkTsCheckerWebpackPlugin.TWO_CPUS_FREE, async: false})],
+      {async: false})],
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
     plugins: [new tsconfigPathsWebpackPlugin()],

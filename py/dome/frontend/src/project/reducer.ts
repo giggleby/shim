@@ -16,7 +16,7 @@ export interface ProjectState {
 
 type ProjectAction = ActionType<typeof actions>;
 
-const projectsReducer = produce((draft: ProjectMap, action: ProjectAction) => {
+const projectsReducer = produce<ProjectMap, ProjectAction>((draft: ProjectMap, action: ProjectAction) => {
   switch (action.type) {
     case getType(actions.deleteProjectImpl):
       delete draft[action.payload.project];
@@ -25,8 +25,8 @@ const projectsReducer = produce((draft: ProjectMap, action: ProjectAction) => {
     case getType(actions.receiveProjects):
       return action.payload.projects.reduce((projectMap, project) => {
         projectMap[project.name] = {
-          umpireReady: project.umpireEnabled,
           ...project,
+          umpireReady: project.umpireEnabled,
         };
         return projectMap;
       }, {} as ProjectMap);

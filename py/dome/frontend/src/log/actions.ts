@@ -6,7 +6,7 @@ import {createAction} from 'typesafe-actions';
 
 import error from '@app/error';
 import {Dispatch, RootState} from '@app/types';
-import {authorizedAxios} from '@common/utils';
+import {authorizedAxios, isAxiosError} from '@common/utils';
 
 import {
   getOverallDownloadStateFromStateMap,
@@ -105,13 +105,17 @@ export const exportLog = (projectName: string,
         },
       });
       dispatch(setCompressState(pileKey, 'SUCCEEDED'));
-    } catch (axiosError) {
-      dispatch(setCompressState(pileKey, 'FAILED'));
-      console.log(axiosError);
-      const message = axiosError.response.data.detail;
-      dispatch(error.actions.setAndShowErrorDialog(
-          `error compressing log\n\n${message}`));
-      return;
+    } catch (axiosError: unknown) {
+      if (isAxiosError(axiosError)) {
+        dispatch(setCompressState(pileKey, 'FAILED'));
+        console.log(axiosError);
+        const message = axiosError.response?.data.detail;
+        dispatch(error.actions.setAndShowErrorDialog(
+            `error compressing log\n\n${message}`));
+        return;
+      } else {
+        throw axiosError;
+      }
     }
     const {
       logPaths,

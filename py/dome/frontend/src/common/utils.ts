@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import axios, {AxiosInstance, AxiosRequestConfig} from 'axios';
+import axios, {AxiosInstance, AxiosRequestConfig, AxiosError} from 'axios';
 
 // add authentication token to header, if exists.
 export const authorizedAxios = (): AxiosInstance => {
@@ -18,4 +18,8 @@ export const authorizedAxios = (): AxiosInstance => {
 
 export const assertNotReachable = (x: never): never => {
   throw new Error('assertNotReachable fired.');
+};
+
+export const isAxiosError = (error: any): error is AxiosError => {
+  return error && error.isAxiosError;
 };

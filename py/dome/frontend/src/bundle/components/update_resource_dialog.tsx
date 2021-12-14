@@ -21,6 +21,7 @@ import {getBundleNames} from '../selectors';
 import UpdateResourceForm, {
   UpdateResourceFormData,
 } from './update_resource_form';
+import { UpdateResourceFormPayload } from '../types';
 
 type UpdateResourceDialogProps =
   ReturnType<typeof mapStateToProps> & DispatchProps<typeof mapDispatchToProps>;
@@ -38,7 +39,9 @@ class UpdateResourceDialog extends React.Component<
   static getDerivedStateFromProps(
     props: UpdateResourceDialogProps, state: UpdateResourceDialogStates) {
     // replace the timestamp in the old bundle name with current timestamp
-    const {project, payload: {bundleName, resourceType}} = props;
+    const {project, payload} = props;
+    const thisPayload = payload as UpdateResourceFormPayload;
+    const {bundleName, resourceType} = thisPayload;
     const regexp = /\d{14}$/;
     const note = `Updated "${resourceType}" type resource`;
     let name = bundleName;
@@ -63,8 +66,10 @@ class UpdateResourceDialog extends React.Component<
     const {
       project,
       startUpdate,
-      payload: {bundleName, resourceKey, resourceType},
+      payload,
     } = this.props;
+    const thisPayload = payload as UpdateResourceFormPayload;
+    const {bundleName, resourceKey, resourceType} = thisPayload;
     const data = {
       project,
       name: bundleName,

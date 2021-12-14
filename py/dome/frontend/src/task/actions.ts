@@ -13,7 +13,7 @@ import {
   resetOptimisticUpdate,
   setOptimisticUpdating,
 } from '@common/optimistic_update';
-import {authorizedAxios} from '@common/utils';
+import {authorizedAxios, isAxiosError} from '@common/utils';
 
 import {CancelledTaskError} from './constants';
 import {getAllTasks} from './selectors';
@@ -47,7 +47,7 @@ export const basicActions = {
 
 const filterFileFields = (obj: any): string[][] => {
   const result: string[][] = [];
-  for (const [key, value] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries<any>(obj)) {
     if (value == null) {
       continue;
     } else if (value.constructor === Object) {
@@ -256,22 +256,26 @@ const runTaskImpl = (taskId: string) =>
       if (nextTask) {
         dispatch(runTaskImpl(nextTask.taskId));
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // if any sub-task above failed, display the error message
-      const {response} = err;
-      if (response) {
-        const {data} = response;
-        const responseText = typeof data === 'string' ? data : safeDump(data);
-        dispatch(error.actions.setAndShowErrorDialog(
-          `${err.message}\n\n${responseText}`));
+      if (isAxiosError(err)) {
+        const {response} = err;
+        if (response) {
+          const {data} = response;
+          const responseText = typeof data === 'string' ? data : safeDump(data);
+          dispatch(error.actions.setAndShowErrorDialog(
+            `${err.message}\n\n${responseText}`));
+        } else {
+          // Some unexpected error that is not server-side happened, probably a
+          // bug in the task code.
+          console.error(err);
+          dispatch(error.actions.setAndShowErrorDialog(
+            `Unexpected Dome error: ${err}`));
+        }
+        // mark the task as failed
+        dispatch(changeTaskState(taskId, 'FAILED'));
       } else {
-        // Some unexpected error that is not server-side happened, probably a
-        // bug in the task code.
-        console.error(err);
-        dispatch(error.actions.setAndShowErrorDialog(
-          `Unexpected Dome error: ${err}`));
+        throw err;
       }
-      // mark the task as failed
-      dispatch(changeTaskState(taskId, 'FAILED'));
     }
   };

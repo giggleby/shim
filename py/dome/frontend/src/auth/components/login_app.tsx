@@ -17,6 +17,7 @@ import {RootState} from '@app/types';
 
 import {toReduxFormError} from '@common/form';
 import {DispatchProps} from '@common/types';
+import {isAxiosError} from '@common/utils';
 
 import {testAuthToken, tryLogin} from '../actions';
 import {isLoggedIn} from '../selectors';
@@ -45,8 +46,12 @@ class LoginApp extends React.Component<LoginAppProps> {
   handleSubmit = async (data: AuthData) => {
     try {
       await this.props.tryLogin(data);
-    } catch (err) {
-      throw toReduxFormError(err);
+    } catch (err: unknown) {
+      if(isAxiosError(err)) {
+        throw toReduxFormError(err);
+      } else {
+        throw err;
+      }
     }
   }
 

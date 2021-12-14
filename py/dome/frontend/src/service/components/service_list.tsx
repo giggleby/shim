@@ -70,7 +70,7 @@ class ServiceList extends React.Component<ServiceListProps, ServiceListStates> {
               </ListItem>
               <Collapse in={expanded} timeout="auto">
                 <ServiceForm
-                  onSubmit={(values) => updateService(k, values)}
+                  onSubmit={(values: any) => updateService(k, values)}
                   form={k}
                   schema={schema}
                   initialValues={service}

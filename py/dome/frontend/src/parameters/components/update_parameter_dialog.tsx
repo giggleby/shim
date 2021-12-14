@@ -17,6 +17,7 @@ import {DispatchProps} from '@common/types';
 
 import {startUpdateParameter} from '../actions';
 import {UPDATE_PARAMETER_FORM} from '../constants';
+import {UpdateParameterFormPayload} from '../types';
 
 import UpdateParameterForm from './update_parameter_form';
 
@@ -36,15 +37,16 @@ class UpdateParameterDialog extends React.Component<
       startUpdate,
       payload,
     } = this.props;
+    const thisPayload = payload as UpdateParameterFormPayload;
     const data = {
       project,
-      id: payload.id,
-      dirId: payload.dirId,
+      id: thisPayload.id,
+      dirId: thisPayload.dirId,
     };
-    if (payload.id == null) {
+    if (thisPayload.id == null) {
       startUpdate({...data, name: file.name, file});
     } else {
-      startUpdate({...data, name: payload.name, file});
+      startUpdate({...data, name: thisPayload.name, file});
     }
   }
 
@@ -54,10 +56,11 @@ class UpdateParameterDialog extends React.Component<
       startUpdate,
       payload,
     } = this.props;
+    const thisPayload = payload as UpdateParameterFormPayload;
     const data = {
       project,
-      id: payload.id,
-      dirId: payload.dirId,
+      id: thisPayload.id,
+      dirId: thisPayload.dirId,
     };
     for (const f of files) {
       startUpdate({...data, name: f.name, file: f});
@@ -66,7 +69,7 @@ class UpdateParameterDialog extends React.Component<
 
   render() {
     const {open, submitForm, payload} = this.props;
-    const {multiple} = payload;
+    const {multiple} = payload as UpdateParameterFormPayload;
     const selectProps: SelectProps =
       multiple ? {multiple, onSubmit: this.handleSubmitMultiple} :
         {multiple, onSubmit: this.handleSubmitOne};

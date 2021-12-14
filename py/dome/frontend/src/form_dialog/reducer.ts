@@ -32,7 +32,7 @@ export default produce<FormDialogState, FormDialogAction>(
       case getType(actions.openFormImpl):
         const {payload} = action;
         draft.visibility[payload.formName] = true;
-        draft.payload[payload.formName] = payload.formPayload;
+        draft.payload[payload.formName] = payload.formPayload as any;
         return;
 
       case getType(actions.closeForm):
