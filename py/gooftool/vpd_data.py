@@ -59,6 +59,7 @@ KNOWN_RO_DATA_RE = {
     r'als_cal_(slope|slope_color|intercept)': ANY,
     r'dsm_calib_r0_[0-9]+': r'[0-9]*',
     r'dsm_calib_temp_[0-9]+': r'[0-9]*',
+    r'hdcp_key\w*': ANY,
 }
 
 KNOWN_RW_DATA = {
