@@ -1,7 +1,6 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A yaml module wrapper for HWID v3.
 
 This module overwrites the functions we are interested in to make a separation
@@ -22,6 +21,7 @@ from cros.factory.test.l10n import regions
 from cros.factory.utils import schema
 from cros.factory.utils import yaml_utils
 
+
 class V3Loader(SafeLoader):
   """A HWID v3 yaml Loader for patch separation."""
 
@@ -41,9 +41,11 @@ _YAML_DUMMY_STRING = 'YAML_DUMMY_STRING'
 
 
 def _RemoveDummyStringWrapper(func):
+
   def wrapper(*args, **kwargs):
     """Remove the dummy string in the yaml result."""
     return func(*args, **kwargs).replace(" '%s'" % _YAML_DUMMY_STRING, '')
+
   return wrapper
 
 
@@ -58,6 +60,7 @@ add_constructor = functools.partial(add_constructor, Loader=Loader)
 dump = _RemoveDummyStringWrapper(functools.partial(dump, Dumper=Dumper))
 dump_all = _RemoveDummyStringWrapper(functools.partial(dump_all, Dumper=Dumper))
 add_representer = functools.partial(add_representer, Dumper=Dumper)
+
 
 # Override existing YAML tags to disable some auto type conversion.
 def RestrictedBoolConstructor(self, node):
@@ -81,9 +84,20 @@ def RestrictedBoolConstructor(self, node):
     return False
   return self.construct_yaml_str(node)
 
+
 add_constructor(u'tag:yaml.org,2002:bool', RestrictedBoolConstructor)
 
-# Register customized YAML tags
+
+# Override existing YAML representer for strings to switch the representing
+# style automatically.
+def _hwid_str_presenter(yaml_dumper, data):
+  return yaml_dumper.represent_scalar('tag:yaml.org,2002:str', data,
+                                      style='>' if '\n' in data else None)
+
+
+add_representer(str, _hwid_str_presenter)
+
+# The following register customized YAML tags.
 
 # pylint: disable=abstract-method
 class _HWIDV3YAMLTagHandler(yaml_utils.BaseYAMLTagHandler):
@@ -134,20 +148,26 @@ class RegionField(dict):
     if region_names is None:
       self._is_legacy_style = True
       fields_dict = dict(
-          (i, {'region': code}) for (i, code) in
-          enumerate(regions.LEGACY_REGIONS_LIST, 1) if code in regions.REGIONS)
+          (i, {
+              'region': code
+          })
+          for (i, code) in enumerate(regions.LEGACY_REGIONS_LIST, 1)
+          if code in regions.REGIONS)
     else:
       self._is_legacy_style = False
       # The numeric ids of valid regions start from 1.
       # crbug.com/624257: If no explicit regions defined, populate with only the
       # legacy list.
-      fields_dict = dict(
-          (i, {'region': n}) for i, n in enumerate(region_names, 1))
+      fields_dict = dict((i, {
+          'region': n
+      }) for i, n in enumerate(region_names, 1))
 
     # 0 is a reserved field and is set to {region: []}, so that previous HWIDs
     # which do not have region encoded will not return a bogus region component
     # when being decoded.
-    fields_dict[0] = {'region': []}
+    fields_dict[0] = {
+        'region': []
+    }
 
     super(RegionField, self).__init__(fields_dict)
 
@@ -197,11 +217,18 @@ class _RegionComponent(dict):
 
   The instance of this class is expected to be frozen after constructing.
   """
+
   def __init__(self, status_lists=None):
     # Load system regions.
-    components_dict = {'items': {}}
+    components_dict = {
+        'items': {}
+    }
     for code, region in regions.BuildRegionsDict(include_all=True).items():
-      region_comp = {'values': {'region_code': region.region_code}}
+      region_comp = {
+          'values': {
+              'region_code': region.region_code
+          }
+      }
       if code not in regions.REGIONS:
         region_comp['status'] = common.COMPONENT_STATUS.unsupported
       components_dict['items'][code] = region_comp
@@ -229,10 +256,12 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
   YAML_TAG = '!region_component'
   TARGET_CLASS = _RegionComponent
 
-  _STATUS_LISTS_SCHEMA = schema.FixedDict('status lists', optional_items={
-      s: schema.List('regions', element_type=schema.Scalar('region', str),
-                     min_length=1)
-      for s in common.COMPONENT_STATUS})
+  _STATUS_LISTS_SCHEMA = schema.FixedDict(
+      'status lists', optional_items={
+          s: schema.List('regions', element_type=schema.Scalar('region', str),
+                         min_length=1)
+          for s in common.COMPONENT_STATUS
+      })
 
   @classmethod
   def YAMLConstructor(cls, loader, node, deep=False):
