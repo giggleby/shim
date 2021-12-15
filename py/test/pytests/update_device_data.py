@@ -221,6 +221,10 @@ class DataEntry:
 
     if isinstance(value_check, str):
       self.re_checker = re.compile(value_check)
+    elif isinstance(value_check, list):
+      # TODO(b/210802746): list is a valid type for value_check. Add this check
+      # to fix regression first.
+      pass
     elif value_check is None:
       self.value_check = value_check
     else:
