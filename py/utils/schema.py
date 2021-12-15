@@ -63,7 +63,24 @@ except ImportError:
 
 
 class SchemaException(Exception):
-  pass
+  """An exception raised by utils.schema."""
+
+
+class SchemaInvalidException(SchemaException):
+  """An exception indicates that an object doesn't match a schema."""
+
+  def __init__(self, value, schema, exception) -> None:
+    super().__init__()
+    self._value = value
+    self._schema = schema
+    self._exception = exception
+
+  def __str__(self) -> str:
+    return ', '.join((f'value={self._value!r}', f'schema={self._schema!r}',
+                      f'exception={self._exception!r}'))
+
+  def __repr__(self) -> str:
+    return f'{self.__class__.__name__}({self})'
 
 
 class BaseType:
@@ -353,6 +370,8 @@ class JSONSchemaDict(BaseType):
     if _HAVE_JSONSCHEMA:
       try:
         jsonschema.validate(data, self.schema)
+      except jsonschema.ValidationError as e:
+        raise SchemaInvalidException(e.instance, e.schema, e)
       except Exception as e:
         raise SchemaException('Fail to validate %r with JSON schema %r: %r' %
                               (data, self.schema, e))
