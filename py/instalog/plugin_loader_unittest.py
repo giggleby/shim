@@ -19,6 +19,7 @@
 
 import logging
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -187,9 +188,10 @@ class TestPluginLoader(unittest.TestCase):
         ''')
     # Invalid, since `explode` is a required argument.
     pl = plugin_loader.PluginLoader(pname, _plugin_prefix='')
-    with self.assertRaisesRegex(
-        plugin_base.LoadPluginError,
-        r'Error parsing arguments: Required argument explode'):
+    error_pattern = re.compile(
+        (r'Error parsing arguments: .*explode.*The argument is required but '
+         r'isn\'t specified.'), re.DOTALL)
+    with self.assertRaisesRegex(plugin_base.LoadPluginError, error_pattern):
       pl.Create()
 
   def testArgs(self):

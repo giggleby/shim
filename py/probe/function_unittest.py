@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import re
 import unittest
 
 from cros.factory.probe import function
@@ -39,8 +40,9 @@ class InterpretFunctionTest(unittest.TestCase):
         function.FunctionException,
         'Invalid argument: .* should be string or dict.'):
       function.InterpretFunction({'mock': ['key', 'foo']})
-    with self.assertRaisesRegex(
-        arg_utils.ArgError, 'Required argument value not specified'):
+    error_pattern = re.compile(
+        r'.*value.*The argument is required but isn\'t specified.', re.DOTALL)
+    with self.assertRaisesRegex(arg_utils.ArgError, error_pattern):
       function.InterpretFunction({'mock': {'key': 'foo'}})
     with self.assertRaisesRegex(
         arg_utils.ArgError, r"Extra arguments \['extra'\]"):

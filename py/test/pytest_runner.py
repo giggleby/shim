@@ -17,7 +17,7 @@ from cros.factory.test.state import TestState
 from cros.factory.test.utils import pytest_utils
 from cros.factory.test.utils.pytest_utils import PytestExecutionResult
 from cros.factory.testlog import testlog
-from cros.factory.utils.arg_utils import Args
+from cros.factory.utils import arg_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import type_utils
@@ -57,7 +57,7 @@ def RunPytest(test_info):
           device_utils.ENV_DUT_OPTIONS: str(test_info.dut_options)})
     arg_spec = getattr(test, 'ARGS', None)
     if arg_spec:
-      test.args = Args(*arg_spec).Parse(test_info.args)
+      test.args = arg_utils.Args(*arg_spec).Parse(test_info.args)
 
     test_case_result = pytest_utils.RunTestCase(test)
 
@@ -67,7 +67,10 @@ def RunPytest(test_info):
           TestState.FAILED, test_case_result.failure_details)
     else:
       result = PytestExecutionResult(TestState.PASSED)
-  except Exception:
+  except Exception as err:
+    if isinstance(err, arg_utils.ArgValidationError):
+      logging.error('Some argument in the test list is invalid.')
+
     logging.exception('Unable to run pytest')
     result = PytestExecutionResult.GenerateFromException(TestState.FAILED)
 

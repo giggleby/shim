@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-
+import re
 import unittest
 
 from cros.factory.test.i18n import arg_utils as i18n_arg_utils
@@ -33,8 +33,9 @@ class ArgUtilsTest(unittest_test_case.I18nTestCase):
     test.Parse({'text': 'text 1'})
     self.assertEqual({'en-US': 'text 1', 'zh-CN': 'text-1'}, test.args.text)
 
-    self.assertRaisesRegex(ValueError, 'Required argument text not specified',
-                           test.Parse, {})
+    error_pattern = re.compile(
+        r'.*text.*The argument is required but isn\'t specified.', re.DOTALL)
+    self.assertRaisesRegex(ValueError, error_pattern, test.Parse, {})
 
   def testI18nArgWithDefault(self):
     test = MockPyTest([

@@ -34,7 +34,32 @@ _DEFAULT_NOT_SET = object()
 
 
 class ArgError(ValueError):
-  """Represents a problem with Arg specification or validation."""
+  """Represents a problem with Arg specification."""
+
+
+class ArgValidationError(ArgError):
+  """Represents a problem with Arg validation."""
+
+  def __init__(self, errors_by_name: dict, extra_args: list) -> None:
+    super().__init__()
+    self._errors_by_name = errors_by_name
+    self._extra_args = extra_args
+
+  def __str__(self) -> str:
+    summary = []
+    for name, errors in self._errors_by_name.items():
+      summary.append(f'Argument {name!r} is invalid:')
+      summary.extend(errors)
+
+    if self._extra_args:
+      summary.append(f'Extra arguments {self._extra_args!r}')
+
+    invalid_arguments = list(self._errors_by_name) + self._extra_args
+    return '\n' + '\n'.join(summary) + (
+        f'\nTo resolve this, modify {invalid_arguments!r}.')
+
+  def __repr__(self) -> str:
+    return f'{self.__class__.__name__}({self})'
 
 
 class Arg:
@@ -175,11 +200,11 @@ class Dargs:
 class Args:
   """A class to hold a list of argument specs for an argument parser."""
 
-  def __init__(self, *args):
+  def __init__(self, *args: Arg):
     """Constructs an argument parser.
 
     Args:
-      args: A list of Arg objects.
+      args: A tuple of Arg objects.
     """
     self.args = args
 
@@ -202,18 +227,19 @@ class Args:
       An object containing an attribute for each argument.
     """
     attributes = {}
-
-    errors = []
+    errors_by_name = {}
     for arg in self.args:
+      errors = []
+      errors_by_name[arg.name] = errors
       if arg.name not in dargs and not arg.IsOptional():
-        errors.append('Required argument %s not specified' % arg.name)
+        errors.append('The argument is required but isn\'t specified.')
         continue
 
       value = dargs.get(arg.name, arg.default)
       if not arg.ValueMatchesType(value):
-        errors.append('Argument %s should have type %r, not %r' % (
-            arg.name, arg.type, type(value)))
         errors.append('Argument %s=%r' % (arg.name, value))
+        errors.append('The argument should have type %r, not %r' %
+                      (arg.type, type(value)))
         continue
 
       if not unresolvable_type or not isinstance(value, unresolvable_type):
@@ -221,19 +247,20 @@ class Args:
           try:
             arg.schema.Validate(value)
           except Exception as e:
+            errors.append('Argument %s=%r' % (arg.name, value))
             errors.append(repr(e))
+            continue
 
         if arg.transform:
           value = arg.transform(value)
 
+      errors_by_name.pop(arg.name)
       attributes[arg.name] = value
 
     extra_args = sorted(set(dargs.keys()) - set(self.args_by_name.keys()))
-    if extra_args:
-      errors.append('Extra arguments %r' % extra_args)
 
-    if errors:
-      raise ArgError('; '.join(errors))
+    if errors_by_name or extra_args:
+      raise ArgValidationError(errors_by_name, extra_args)
 
     return Dargs(**attributes)
 

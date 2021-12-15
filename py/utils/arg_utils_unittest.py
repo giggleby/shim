@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import re
 import unittest
 
 from cros.factory.utils.arg_utils import Arg
@@ -88,9 +89,11 @@ class ArgsTest(unittest.TestCase):
          'int_typed': 3,
          'enum_typed': 'a'},
         self.Parse(dict(required='x', int_typed=3, enum_typed='a')))
-    self.assertRaisesRegex(ValueError,
-                           r'Argument enum_typed should have type \(Enum',
-                           self.Parse, dict(required='x', enum_typed='c'))
+
+    error_pattern = re.compile(
+        r'.*enum_typed.*The argument should have type \(Enum', re.DOTALL)
+    self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
+                           dict(required='x', enum_typed='c'))
 
   def testIntOrString(self):
     for value in (3, 'x'):
