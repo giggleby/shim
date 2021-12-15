@@ -295,6 +295,8 @@ class Ghost:
       raise
     except Exception:
       return False  # For whatever reason above failed, assume False
+    finally:
+      sock.close()
 
   def Upgrade(self):
     logging.info('Upgrade: initiating upgrade sequence...')
@@ -1252,6 +1254,7 @@ class Ghost:
         s.bind(('0.0.0.0', _OVERLORD_LAN_DISCOVERY_PORT))
       except socket.error as e:
         logging.error('LAN discovery: %s, abort', e)
+        s.close()
         return
 
       logging.info('LAN Discovery: started')

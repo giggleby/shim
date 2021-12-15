@@ -6,6 +6,7 @@
 import json
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import unittest
@@ -29,6 +30,27 @@ class TestError(Exception):
 
 class CloseWebSocket(Exception):
   pass
+
+
+class TestBaseClient(WebSocketBaseClient):
+
+  def handshake_ok(self):
+    pass
+
+  # This is a bug in ws4py.WebSocketBaseClient, override this method to fix
+  # it. This happens when the remote initiate the connection termination,
+  # thus close_connection is called. The WebSocketBaseClient calls shutdown,
+  # raises an exception due to connection is closed, skips the socket close
+  # and thus causes resource warning.
+  def close_connection(self):
+    if self.sock:
+      try:
+        self.sock.shutdown(socket.SHUT_RDWR)
+      except:  # pylint: disable=bare-except
+        pass
+      finally:
+        self.sock.close()
+        self.sock = None
 
 
 # TODO (b/204836653)
@@ -96,10 +118,11 @@ class TestOverlord(unittest.TestCase):
   def tearDown(self):
     self.ovl.kill()
     self.goghost.kill()
-
-    # Python implementation uses process instead of goroutine, also kill those
-    subprocess.Popen('pkill -P %d' % self.pyghost.pid, shell=True).wait()
     self.pyghost.kill()
+
+    self.ovl.wait()
+    self.goghost.wait()
+    self.pyghost.wait()
 
   def _GetJSON(self, path):
     return json.loads(urllib.request.urlopen(
@@ -126,13 +149,12 @@ class TestOverlord(unittest.TestCase):
           '/api/agent/properties/%s' % client['mid']) is not None
 
   def testShellCommand(self):
-    class TestClient(WebSocketBaseClient):
+
+    class TestClient(TestBaseClient):
+
       def __init__(self, *args, **kwargs):
         super(TestClient, self).__init__(*args, **kwargs)
         self.message = b''
-
-      def handshake_ok(self):
-        pass
 
       def received_message(self, message):
         self.message += message.data
@@ -150,7 +172,8 @@ class TestOverlord(unittest.TestCase):
       self.assertEqual(ws.message, answer)
 
   def testTerminalCommand(self):
-    class TestClient(WebSocketBaseClient):
+
+    class TestClient(TestBaseClient):
       NONE, PROMPT, RESPONSE = range(0, 3)
 
       def __init__(self, *args, **kwargs):
@@ -159,9 +182,6 @@ class TestOverlord(unittest.TestCase):
         self.answer = 0
         self.test_run = False
         self.buffer = b''
-
-      def handshake_ok(self):
-        pass
 
       def closed(self, code, reason=None):
         if not self.test_run:

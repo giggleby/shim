@@ -65,7 +65,6 @@ TEST_FILE_USE_MOCK_SUFFIX = '_unittest_mocked.py'
 # TODO(lschyi): this list should be removed after resource warning from these
 # tests are fixed.
 RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
-    'go/src/overlord/test/overlord_e2e_unittest.py',
 ]
 
 
