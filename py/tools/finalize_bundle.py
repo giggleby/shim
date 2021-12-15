@@ -705,6 +705,8 @@ class FinalizeBundle:
                         firmware_images_dir)
 
       # Collect firmware information
+      # The format follows HWID API message in
+      # `py/hwid/service/appengine/proto/hwid_api_messages.proto`
       # 1) signer:
       signer_path = os.path.join(temp_dir, 'VERSION.signer')
       if os.path.exists(signer_path):
@@ -719,7 +721,7 @@ class FinalizeBundle:
 
       manifest = json_utils.LoadFile(os.path.join(temp_dir, 'manifest.json'))
       models = [self.project] if self.designs is None else self.designs
-      self.firmware_record['firmware_info'] = {}
+      self.firmware_record['firmware_records'] = []
 
       missing_models = set(models) - set(manifest.keys())
       if missing_models and self.designs:
@@ -729,10 +731,12 @@ class FinalizeBundle:
       for model in models:
         if model in missing_models:
           continue
-        record = {}
+        record = {
+            'model': model
+        }
         # 2) root/recovery keys:
         bios_path = os.path.join(temp_dir, manifest[model]['host']['image'])
-        record['keys'] = chromeos_firmware.GetFirmwareKeys(bios_path)
+        record['firmware_keys'] = chromeos_firmware.GetFirmwareKeys(bios_path)
 
         # 3) RO version/checksum:
         for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
@@ -743,7 +747,7 @@ class FinalizeBundle:
           record[f'ro_{firmware_type}_firmware'] = \
               chromeos_firmware.CalculateFirmwareHashes(image_path)
 
-        self.firmware_record['firmware_info'][model] = record
+        self.firmware_record['firmware_records'].append(record)
 
       # Collect only the desired firmware
       if self.designs is not None:
