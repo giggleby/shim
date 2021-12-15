@@ -62,11 +62,6 @@ TEST_TIMEOUT_SECS = 60
 TEST_FILE_SUFFIX = '_unittest.py'
 TEST_FILE_USE_MOCK_SUFFIX = '_unittest_mocked.py'
 
-# TODO(lschyi): this list should be removed after resource warning from these
-# tests are fixed.
-RESOURCE_WARNING_CHECK_TO_EXCLUDE = [
-]
-
 
 class _TestProc:
   """Creates and runs a subprocess to run an unittest.
@@ -338,16 +333,12 @@ class RunTests:
     if p.proc.returncode != 0:
       return f'return code is not 0 (return:{p.proc.returncode})'
 
-    # TODO(lschyi): skip resource warning check on some test should be removed
-    # after RESOURCE_WARNING_CHECK_TO_EXCLUDE list is clear.
-    if p.test_name not in RESOURCE_WARNING_CHECK_TO_EXCLUDE:
-      # Due to resourceWarning such as file not closed can only be determined
-      # when GC is going to delete that object, CPython can not throw exception
-      # at that time to mark test is failed, we have to manually check the log.
-      with open(p.log_file_name) as f:
-        if re.search(r'Exception ignored in: .*\nResourceWarning: .*',
-                     f.read()):
-          return 'ResourceWarning found'
+    # Due to resourceWarning such as file not closed can only be determined
+    # when GC is going to delete that object, CPython can not throw exception
+    # at that time to mark test is failed, we have to manually check the log.
+    with open(p.log_file_name) as f:
+      if re.search(r'Exception ignored in: .*\nResourceWarning: .*', f.read()):
+        return 'ResourceWarning found'
 
     return None
 
