@@ -11,6 +11,11 @@ operation error to ask for a retry.
 
 If the verification failed, then the device won't be bootable. And we should
 clear RO hash after verifying, to avoid the risk of bricking the DUT.
+To make sure RO hash is set correctly, it's recommended to set RO hash by
+set_ap_ro_hash.py.
+
+We decided to skip this test when RO hash is unable to set. This might happen
+when re-flowing in pre-PVT. Details are in set_ap_ro_hash.py.
 
 Test Procedure
 --------------
@@ -23,7 +28,7 @@ Second round (`rebooted` flag should be true)
 
 Dependency
 ----------
-- The test needs to be run after setting AP RO hash by set_ap_ro_hash.py.
+- The verification needs AP RO hash set, or it won't do anything.
 - OS version >= 14196.0.0 (`tpm_manager_client get_ro_verification_status`)
 - cr50 version >= 0.5.40 (vendor command to get RO verification status)
 
@@ -47,6 +52,7 @@ from cros.factory.device import device_utils
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.test import device_data
 from cros.factory.test.i18n import _
+from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
@@ -68,9 +74,6 @@ class APROVerficationTest(test_case.TestCase):
 
   def setUp(self):
     self.gooftool = Gooftool()
-    if not self.gooftool.IsCr50ROHashSet():
-      raise Exception('Please set ro hash first.')
-
     self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
     self.goofy = state.GetInstance()
@@ -99,6 +102,12 @@ class APROVerficationTest(test_case.TestCase):
       raise Exception(f'Unknown status {status}.')
 
   def runTest(self):
+    if not self.gooftool.IsCr50ROHashSet():
+      if self.gooftool.IsCr50BoardIDSet():
+        session.console.warn('Unable to verify RO hash, test skipped.')
+        return
+      raise Exception('Please set ro hash first.')
+
     rebooted = device_data.GetDeviceData(self.device_data_key)
     if rebooted:
       status = self.GetStatus()
@@ -115,5 +124,6 @@ class APROVerficationTest(test_case.TestCase):
       raise OperationError
 
   def tearDown(self):
-    device_data.DeleteDeviceData(self.device_data_key)
-    self.gooftool.Cr50ClearRoHash()
+    device_data.DeleteDeviceData(self.device_data_key, True)
+    if not self.gooftool.IsCr50BoardIDSet():
+      self.gooftool.Cr50ClearRoHash()
