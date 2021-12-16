@@ -478,17 +478,25 @@ class ServiceTest(TwoUmpireDockerTestCase):
     time.sleep(wait_time)
 
   def testSyncService(self):
+    docker_bridge_gateway_ip = process_utils.CheckOutput([
+        'docker', 'network', 'inspect', '--format',
+        '{{(index .IPAM.Config 0).Gateway}}', 'bridge'
+    ]).strip()
+    # The secondary ip should be the ip of `docker0` gateway interface.
     to_deploy_config = self.ReadConfigTestdata('umpire_sync_service.json')
-    to_deploy_config['services']['umpire_sync']['primary_information'][
-        'port'] = str(self.umpire.port)
-    to_deploy_config['services']['umpire_sync']['secondary_information'][0][
-        'port'] = str(self.second_umpire.port)
+    to_deploy_config['services']['umpire_sync']['primary_information'] = {
+        'ip': docker_bridge_gateway_ip,
+        'port': str(self.umpire.port)
+    }
+    to_deploy_config['services']['umpire_sync']['secondary_information'][0] = {
+        'ip': docker_bridge_gateway_ip,
+        'port': str(self.second_umpire.port)
+    }
     self.StartService(to_deploy_config, wait_time=2)
     self.assertEqual(self.proxy.GetActivePayload(),
                      self.second_proxy.GetActivePayload())
-    # The secondary ip is set in testdata/config/umpire_sync_service.json, which
-    # is the default ip of docker0
-    second_url = 'http://172.17.0.1:%d' % self.second_umpire.port
+    second_url = 'http://%s:%d' % (docker_bridge_gateway_ip,
+                                   self.second_umpire.port)
     self.assertEqual(self.proxy.GetUmpireSyncStatus()[second_url]['status'],
                      'Success')
 
