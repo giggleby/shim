@@ -14,9 +14,8 @@ class ChromeOSBoard(linux.LinuxBoard):
 
   @device_types.DeviceProperty
   def audio(self):
-    from cros.factory.device.audio import utils as audio_utils
-    return audio_utils.CreateAudioControl(
-        self, controller=audio_utils.CONTROLLERS.ALSA)
+    from cros.factory.device.audio import alsa
+    return alsa.AlsaAudioControl(self)
 
   @device_types.DeviceProperty
   def bluetooth(self):

@@ -11,13 +11,12 @@ from cros.factory.utils import type_utils
 CONTROLLERS = type_utils.Enum(['ALSA', 'TINYALSA'])
 
 
-def CreateAudioControl(dut, config_path=None, controller=None):
+def CreateAudioControl(dut, config_path=None):
   """Creates an AudioControl instance.
 
   Args:
     dut: a DUT instance to be passed into audio component.
     config_path: a string of file path to config file to load.
-    controller: a string for the audio system to use.
   """
   controllers = {
       CONTROLLERS.ALSA: alsa.AlsaAudioControl,
@@ -25,16 +24,16 @@ def CreateAudioControl(dut, config_path=None, controller=None):
   }
   constructor = None
 
-  if controller is None:
+  controller = None
 
-    # Auto-detect right controller..
-    alsa_commands = ['amixer', 'aplay', 'arecord']
-    tinyalsa_commands = ['tinymix', 'tinyplay', 'tinycap']
+  # Auto-detect right controller..
+  alsa_commands = ['amixer', 'aplay', 'arecord']
+  tinyalsa_commands = ['tinymix', 'tinyplay', 'tinycap']
 
-    if all(dut.Call(['which', command]) == 0 for command in alsa_commands):
-      controller = CONTROLLERS.ALSA
-    if all(dut.Call(['which', command]) == 0 for command in tinyalsa_commands):
-      controller = CONTROLLERS.TINYALSA
+  if all(dut.Call(['which', command]) == 0 for command in alsa_commands):
+    controller = CONTROLLERS.ALSA
+  if all(dut.Call(['which', command]) == 0 for command in tinyalsa_commands):
+    controller = CONTROLLERS.TINYALSA
 
   # Read from controllers.
   constructor = controllers.get(controller)
