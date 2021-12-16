@@ -320,7 +320,9 @@ def RunDatabaseBuilder(database_builder, options):
 @Command('build-database',
          CmdArg('--image-id', default='EVT',
                 help="Name of image_id. Default is 'EVT'\n"),
-         *_HWID_MATERIAL_COMMON_ARGS, *_DATABASE_BUILDER_COMMON_ARGS)
+         CmdArg('--minimal', default=False, action='store_true',
+                help="Create a minimal DB."), *_HWID_MATERIAL_COMMON_ARGS,
+         *_DATABASE_BUILDER_COMMON_ARGS)
 def BuildDatabaseWrapper(options):
   '''Build the HWID database from probed result.'''
   if not os.path.isdir(options.hwid_db_path):
@@ -330,7 +332,25 @@ def BuildDatabaseWrapper(options):
 
   database_builder = builder.DatabaseBuilder(project=options.project,
                                              image_name=options.image_id)
-  RunDatabaseBuilder(database_builder, options)
+  if options.minimal:
+    logging.info('Create a minimal DB with region component class only.')
+    if any([
+        options.add_default_comp,
+        options.add_null_comp,
+        options.add_regions,
+        options.material_file,
+        options.probed_results_file,
+        options.device_info_file,
+        options.run_vpd,
+        options.vpd_data_file,
+        options.config_yaml,
+    ]):
+      raise ValueError(('The argument --minimal should not be set with '
+                        'material related options and database builder '
+                        'options.'))
+  else:
+    RunDatabaseBuilder(database_builder, options)
+
   database_builder.Render(database_path)
 
   logging.info('Output the database to %s', database_path)

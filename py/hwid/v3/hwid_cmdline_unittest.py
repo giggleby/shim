@@ -11,7 +11,9 @@ from unittest import mock
 import yaml
 
 from cros.factory.hwid.v3 import common
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_cmdline
+from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
@@ -241,6 +243,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       options.add_null_comp = ['c', 'd']
       options.add_regions = ['us', 'tw', 'jp']
       options.region_field_name = 'test_region_field'
+      options.minimal = False
 
       hwid_cmdline.BuildDatabaseWrapper(options)
 
@@ -269,6 +272,64 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.sku_ids,
           image_name=options.image_id)
 
+  def testBuildMinimalHWIDDBConflictOptions(self):
+    with file_utils.TempDirectory() as path:
+      options = type_utils.Obj(
+          project='FOO',
+          image_id='EVT',
+          add_default_comp=None,
+          add_null_comp=None,
+          add_regions=None,
+          material_file='/path/to/material.yaml',
+          probed_results_file=None,
+          hwid_db_path=path,
+          minimal=True,
+          device_info_file=None,
+          vpd_data_file=None,
+          run_vpd=False,
+          config_yaml=None,
+      )
+      with self.assertRaises(ValueError):
+        hwid_cmdline.BuildDatabaseWrapper(options)
+
+  @mock.patch('cros.factory.hwid.v3.builder.ChecksumUpdater', return_value=None)
+  def testBuildMinimalHWIDDBFile(self, unused_checksum_updater):
+    with file_utils.TempDirectory() as path:
+      options = type_utils.Obj(
+          project='FOO',
+          image_id='EVT',
+          add_default_comp=None,
+          add_null_comp=None,
+          add_regions=None,
+          material_file=None,
+          probed_results_file=None,
+          hwid_db_path=path,
+          minimal=True,
+          device_info_file=None,
+          vpd_data_file=None,
+          run_vpd=False,
+          config_yaml=None,
+      )
+      hwid_cmdline.BuildDatabaseWrapper(options)
+
+      db_file_path = os.path.join(path, 'FOO')
+      db = database.Database.LoadFile(db_file_path, verify_checksum=False)
+      expected_db = database.Database(
+          'FOO', database.EncodingPatterns({0: 'default'}),
+          database.ImageId({0: 'EVT'}),
+          database.Pattern([{
+              'encoding_scheme': 'base8192',
+              'fields': [],
+              'image_ids': [0],
+          }]), database.EncodedFields({'region_field': {
+              0: {
+                  'region': []
+              }
+          }}), database.Components(yaml.load('region: !region_component')),
+          database.Rules([]), None, db.framework_version)
+
+      self.assertEqual(expected_db, db)
+
 
 class UpdateDatabaseWrapperTest(unittest.TestCase):
 
@@ -283,6 +344,7 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
       options.add_regions = ['us', 'tw', 'jp']
       options.region_field_name = 'test_region_field'
       options.project = 'proj'
+      options.minimal = False
 
       hwid_cmdline.UpdateDatabaseWrapper(options)
 
