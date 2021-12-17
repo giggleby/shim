@@ -164,7 +164,7 @@ class AlsaAudioControl(base.BaseAudioControl):
       RuntimeError if no supported arguments.
     """
     # Some formats may not be supported by sox. Only list the formats we used.
-    SOX_SUPPORTED_FORMATS = ['S16_LE', 'S32_LE']
+    SOX_SUPPORTED_FORMATS = ['S16_LE', 'S24_3LE', 'S32_LE']
 
     output = self._device.CheckOutput([
         'alsa_conformance_test', '--dev_info_only', '-C', f'hw:{card},{device}'
