@@ -632,6 +632,8 @@ class UCMConfigManager(BaseConfigManager):
     # 'set _verb' resets devices state to initial state for some sound card but
     # we can not 'set _enadev' without 'set _verb' first. So we just reset all
     # devices here.
+    enable_commands = []
+    disable_commands = []
     for device, state in self._card_device_state[card].items():
       if state == DEVICE_STATE.Initial:
         continue
@@ -639,10 +641,16 @@ class UCMConfigManager(BaseConfigManager):
       # The ucm config expects enable before disable so we always enable it
       # after reset. The quotes are used to pass device name with space, such as
       # "Internal Mic".
-      commands.append('set _enadev "%s"' % device_name)
       if state == DEVICE_STATE.Disabled:
-        commands.append('set _disdev "%s"' % device_name)
-    return self._InvokeCardCommands(card, *commands, *suffix_commands)
+        disable_commands.append('set _enadev "%s"' % device_name)
+        disable_commands.append('set _disdev "%s"' % device_name)
+      elif state == DEVICE_STATE.Enabled:
+        enable_commands.append('set _enadev "%s"' % device_name)
+    # Always run disable commands before enable. In some case there will have a
+    # mutex between different devices, and it will disable devices unexpectedly
+    # if we do not specify the order. (b/211533075)
+    return self._InvokeCardCommands(card, *commands, *disable_commands,
+                                    *enable_commands, *suffix_commands)
 
   def Initialize(self, card='0'):
     """Initialize the sound card."""
