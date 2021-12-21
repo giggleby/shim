@@ -567,9 +567,12 @@ message CreateHwidDbFirmwareInfoUpdateClRequest {
   string description = 3;
 }
 
+// HWID DB Commit info
 message HwidDbCommit {
   // CL number for the corresponding commit.
   int64 cl_number = 1;
+  // New HWID DB contents to be committed
+  string new_hwid_db_contents = 2;
 }
 
 // The response contains firmware info update CLs.

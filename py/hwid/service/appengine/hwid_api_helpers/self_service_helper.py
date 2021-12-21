@@ -248,6 +248,8 @@ Info Update
           raise protorpc_utils.ProtoRPCException(
               protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
         resp.commits[model_name].cl_number = cl_number
+        resp.commits[model_name].new_hwid_db_contents = (
+            change_info.new_hwid_db_contents)
     except Exception as ex:
       # Abandon all committed CLs on exception
       logging.exception('Rollback to abandon commited CLs.')
