@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import fnmatch
 import json
 import multiprocessing.pool
 import os
@@ -92,18 +93,20 @@ def main():
       os.path.join(VENV_BIN, 'yapf'), '--in-place' if args.fix else '--quiet',
       '--style', YAPF_STYLE_PATH
   ]
-  for pattern in exclude_patterns:
-    base_cmd += ['--exclude', pattern]
 
   line_diffs = presubmit_common.ComputeDiffRange(args.commit, args.files)
+
+  def ShouldExclude(file_path):
+    return any(
+        fnmatch.fnmatch(file_path, pattern) for pattern in exclude_patterns)
 
   with multiprocessing.pool.ThreadPool() as pool:
     # Only check filenames end with '.py'.  We filter these again in case
     # args.files is an empty list, in this case, line_diffs will be all files
     # changed by args.commit.
-    proc_args = [
-        (base_cmd, f, line_diffs[f]) for f in line_diffs if f.endswith('.py')
-    ]
+    proc_args = [(base_cmd, f, line_diffs[f])
+                 for f in line_diffs
+                 if f.endswith('.py') and not ShouldExclude(f)]
     failed_files = list(filter(None, pool.imap(_ProcessOneFile, proc_args)))
 
   if failed_files:
