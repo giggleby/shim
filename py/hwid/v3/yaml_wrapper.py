@@ -90,12 +90,12 @@ add_constructor(u'tag:yaml.org,2002:bool', RestrictedBoolConstructor)
 
 # Override existing YAML representer for strings to switch the representing
 # style automatically.
-def _hwid_str_presenter(yaml_dumper, data):
+def _HWIDStrPresenter(yaml_dumper, data):
   return yaml_dumper.represent_scalar('tag:yaml.org,2002:str', data,
                                       style='>' if '\n' in data else None)
 
 
-add_representer(str, _hwid_str_presenter)
+add_representer(str, _HWIDStrPresenter)
 
 # The following register customized YAML tags.
 
