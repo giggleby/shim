@@ -224,7 +224,10 @@ class GoofyUITest(GoofyTest):
 
       def received_message(socket_self, message):
         event = Event.from_json(str(message))
-        logging.info('Test client received %s', event)
+        # (TODO: b/211528927) as the client is running in different threads,
+        # this log could run after goofy.Destroy is called, which triggers
+        # logger to re-open log file without further closing.
+        # logging.info('Test client received %s', event)
         self.events.append(event)
         if event.type == Event.Type.HELLO:
           socket_self.send(Event(Event.Type.KEEPALIVE,
