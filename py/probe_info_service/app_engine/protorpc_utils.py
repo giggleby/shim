@@ -2,13 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import base64
 import enum
 import http
 import logging
+from typing import Optional
 import uuid
 
 # pylint: disable=wrong-import-order
 import flask
+from google.protobuf import any_pb2
+from google.protobuf import message
 from google.protobuf import symbol_database
 
 # pylint: enable=wrong-import-order
@@ -29,10 +33,19 @@ class ProtoRPCException(Exception):
   """RPC exceptions with addition information to set error status/code in stubby
   requests."""
 
-  def __init__(self, code, detail=None):
+  def __init__(self, code: RPCCanonicalErrorCode, detail: Optional[str] = None,
+               detail_ext: Optional[message.Message] = None):
+    """Initializer.
+
+    Args:
+      code: The canonical code of the error.
+      detail: A developer facing error message.
+      detail_ext: Additional detail of the error in a protobuf message.
+    """
     super().__init__(code, detail)
     self.code = code
     self.detail = detail
+    self.detail_ext = detail_ext
 
 
 class _ProtoRPCServiceBaseMeta(type):
@@ -128,6 +141,11 @@ class _ProtoRPCServiceFlaskAppViewFunc:
       resp.headers['RPC-Canonical-Code'] = rpc_code
       if ex.detail:
         resp.headers['RPC-Error-Detail'] = ex.detail
+      if ex.detail_ext:
+        any_msg_holder = any_pb2.Any()
+        any_msg_holder.Pack(ex.detail_ext)
+        resp.headers['RPC-Status-Metadata'] = base64.b64encode(
+            any_msg_holder.SerializeToString())
       return resp
     except Exception:
       logging.exception('Caught exception from RPC method %r.', method_name)
