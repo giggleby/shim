@@ -9,7 +9,7 @@ FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 LOCAL_BUILD_BUNDLE="${FACTORY_DIR}/build/bundle"
 TOOLKIT_NAME="install_factory_toolkit.run"
 LOCAL_BUILD_TOOLKIT="${LOCAL_BUILD_BUNDLE}/toolkit/${TOOLKIT_NAME}"
-REMOTE_TOOLKIT_VERSION="14163.0.0"
+REMOTE_TOOLKIT_VERSION="14402.0.0"
 REMOTE_TOOLKIT_PATH="gs://chromeos-releases/dev-channel/grunt/\
 ${REMOTE_TOOLKIT_VERSION}/*-factory-*.zip"
 SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator/"
