@@ -1796,8 +1796,8 @@ msgid "Please connect to ethernet."
 msgstr "Vui lòng kết nối với Ethernet."
 
 #: ../py/test/pytests/check_image_version.py
-msgid "Image version is incorrect. Press space to re-image."
-msgstr "Phiên bản hình ảnh không đúng. Vui lòng nhấn nút trống để cài đặt lại."
+msgid "{reason}. Press space to re-image."
+msgstr "{reason}. Vui lòng nhấn nút trống để cài đặt lại."
 
 #: ../py/test/pytests/check_image_version.py
 msgid "Flashing {component}..."

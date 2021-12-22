@@ -1765,8 +1765,8 @@ msgid "Please connect to ethernet."
 msgstr "请连接到以太网。"
 
 #: ../py/test/pytests/check_image_version.py
-msgid "Image version is incorrect. Press space to re-image."
-msgstr "映像版本不正确，请按空白键重新安装。"
+msgid "{reason}. Press space to re-image."
+msgstr "{reason}。请按空白键重新安装。"
 
 #: ../py/test/pytests/check_image_version.py
 msgid "Flashing {component}..."

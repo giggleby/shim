@@ -84,7 +84,7 @@ Reimage if test image version is greater than or equal to 9876.5.2012_12_21_2359
     "pytest_name": "check_image_version",
     "args": {
       "min_version": "9876.5.2012_12_21_2359",
-      "loose_version": true,
+      "loose_version": true
     }
   }
 
@@ -95,7 +95,17 @@ server using cros_payload::
     "pytest_name": "check_image_version",
     "args": {
       "check_release_image": true,
-      "use_netboot": false,
+      "use_netboot": false
+    }
+  }
+
+To force reimaging release image regardless of the version::
+
+  {
+    "pytest_name": "check_image_version",
+    "args": {
+      "check_release_image": true,
+      "force_reimage": true
     }
   }
 """
@@ -138,13 +148,22 @@ class CheckImageVersionTest(test_case.TestCase):
       Arg('verify_rootfs', bool, 'True to verify rootfs before install image.',
           default=True),
       Arg('use_netboot', bool,
-          'True to image with netboot, otherwise cros_payload.', default=True)
+          'True to image with netboot, otherwise cros_payload.', default=True),
+      Arg('force_reimage', bool,
+          'True to force re-imaging regardless of the image version.',
+          default=False)
   ]
 
   ui_class = test_ui.ScrollableLogUI
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
+    if self.args.force_reimage:
+      self.reimage_reason = 'force_reimage is set to true'
+    else:
+      self.reimage_reason = 'Image version is incorrect'
+    self.dut_image_version = None
+    self.server_image_version = None
 
   def WaitNetworkReady(self):
     while not self.dut.status.eth_on:
@@ -152,21 +171,34 @@ class CheckImageVersionTest(test_case.TestCase):
       self.Sleep(0.5)
 
   def runTest(self):
-    # If this test stop unexpectedly during installing new image, we need to
-    # check image version and verify Root FS to ensure the DUT is successfully
-    # installed or not. The partition of Root FS is the last one to be written,
-    # so the image version from lsb-release and the verification of Root FS can
-    # ensure the result of installation.
-    if self.CheckImageVersion() and self.VerifyRootFs():
-      return
+    self.dut_image_version = \
+      self.GetAndLogDUTImageVersion()
 
-    if not self.args.reimage:
-      self.FailTask('Image version is incorrect. Please re-image this device.')
+    if self.args.force_reimage:
+      logging.info('Force re-imaging...')
+    else:
+      # If this test stop unexpectedly during installing new image, we need to
+      # check image version and verify Root FS to ensure the DUT is
+      # successfully installed or not. The partition of Root FS is the last one
+      # to be written, so the image version from lsb-release and the
+      # verification of Root FS can ensure the result of installation.
+      if self.CheckImageVersion() and self.VerifyRootFs():
+        return
 
-    self.WaitNetworkReady()
+      if not self.args.reimage:
+        self.FailTask('Image version is incorrect. '
+                      'Please re-image this device.')
+
+    if not self.args.use_netboot:
+      self.assertTrue(
+          self.args.check_release_image,
+          'Please use netboot if you would like to re-image test image!')
+
+    self.GetAndLogServerReleaseImageVersion()
+
     if self.args.require_space:
       self.ui.SetInstruction(
-          _('Image version is incorrect. Press space to re-image.'))
+          _('{reason}. Press space to re-image.', reason=self.reimage_reason))
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
 
     if self.args.use_netboot:
@@ -174,8 +206,6 @@ class CheckImageVersionTest(test_case.TestCase):
       destination = None
       callback = self.NetbootCallback
     else:
-      self.assertTrue(
-          self.args.check_release_image, 'Only release_image is supported.')
       component = update_utils.COMPONENTS.release_image
       destination = self.dut.partitions.rootdev
       callback = None
@@ -200,7 +230,7 @@ class CheckImageVersionTest(test_case.TestCase):
     except Exception:
       self.FailTask('Error flashing netboot firmware!')
     else:
-      self.FailTask('Incorrect image version, DUT is rebooting to reimage.')
+      self.FailTask('%s. DUT is rebooting to reimage.' % self.reimage_reason)
 
   def ReImage(self, component, destination, callback):
     updater = update_utils.Updater(
@@ -234,34 +264,17 @@ class CheckImageVersionTest(test_case.TestCase):
           self.args.check_release_image,
           'Empty min_version and max_version only allowed for '
           'check_release_image.')
-
-      self.WaitNetworkReady()
-      updater = update_utils.Updater(update_utils.COMPONENTS.release_image)
-      # The 'release_image' component in cros_payload is using
-      # CHROMEOS_RELEASE_DESCRIPTION for version string so we have to strip it
-      # in future when supporting "re-image if remote is different".
       self.args.min_version = self.args.max_version = \
-        updater.GetUpdateVersion().split()[0]
+        self.GetAndLogServerReleaseImageVersion()
 
       if not self.args.min_version or not self.args.max_version:
         self.FailTask('Release image not available on factory server.')
 
-    if self.args.check_release_image:
-      ver = self.dut.info.release_image_version
-      name = 'release_image'
-    else:
-      ver = self.dut.info.factory_image_version
-      name = 'test_image'
-
-    if ver is None:
-      logging.warning('Can\'t find current version')
-      return False
-
-    testlog.LogParam(name=name, value=ver)
     expected_min = self.args.min_version
     expected_max = self.args.max_version
     version_format = (version.LooseVersion if self.args.loose_version else
                       version.StrictVersion)
+    ver = self.dut_image_version
     logging.info('Using version format: %r', version_format.__name__)
     logging.info(
         'current version: %r, expected min version: %r, '
@@ -300,3 +313,39 @@ class CheckImageVersionTest(test_case.TestCase):
            self.dut.partitions.RELEASE_ROOTFS.path])
       return exit_code == 0
     return True
+
+  def GetAndLogDUTImageVersion(self):
+    if self.args.check_release_image:
+      ver = self.dut.info.release_image_version
+      name = 'release_image'
+    else:
+      ver = self.dut.info.factory_image_version
+      name = 'test_image'
+
+    if ver is None:
+      logging.warning('Can\'t find %s version on DUT!', name)
+    else:
+      logging.info('Current DUT %s version: %s', name, ver)
+      testlog.LogParam(name=name, value=ver)
+
+    return ver
+
+  def GetAndLogServerReleaseImageVersion(self):
+    if not self.args.check_release_image:
+      return None
+
+    if self.server_image_version:
+      return self.server_image_version
+
+    self.WaitNetworkReady()
+    updater = update_utils.Updater(update_utils.COMPONENTS.release_image)
+
+    # The 'release_image' components in cros_payload are using
+    # CHROMEOS_RELEASE_DESCRIPTION for version string.
+    # The version format looks like this:
+    #   'xxxxx.x.x (Official Build) dev-channel board'
+    ver = updater.GetUpdateVersion()
+    logging.info('Get image version from server: %s', ver)
+
+    # Return only the numeric part.
+    return ver.split()[0]
