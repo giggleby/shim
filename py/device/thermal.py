@@ -250,15 +250,47 @@ class ECToolTemperatureSensors(ThermalSensorSource):
     """
 
     def ParseECToolTemps(ectool_output):
-      raw_values = self.ECTOOL_TEMPS_ALL_RE.findall(ectool_output)
+      """Returns parsed output according to the ECTOOL_TEMPS_ALL_RE.
 
-      ret = {}
+      If we can't parse the input, return None to rollback to the legacy parser.
+      Otherwise, we need to keep entries for all sensors first, since it might
+      fail due to the limitation of sensors (Please read b/205808570#comment6).
+      If there are no entries for these faulty sensors, it will cause the key
+      not found (KeyError) issues.
+
+      Args:
+        ectool_output: Raw output from the ectool command
+
+      Returns:
+        Success: A dictionary {name: value} that contains the name and the value
+        from sensors.
+        Failed: None (should rollback to the legacy parser)
+      """
+
+      raw_values = self.ECTOOL_TEMPS_ALL_RE.findall(ectool_output)
+      # If we can't parse it, return None and fallback to legacy parser.
+      if not raw_values:
+        return None
+
+      # Keep entries for all sensors.
+      ret = {name: None
+             for name in self.GetSensors()}
       for raw_name, raw_temp in raw_values:
         ret['ectool ' + raw_name.strip()] = int(raw_temp)
 
       return ret
 
     def ParseLegacyECToolTemps(ectool_output):
+      """Returns parsed output according to the ECTOOL_TEMPS_ALL_LEGACY_RE.
+
+      Args:
+        ectool_output: Raw output from the ectool command
+
+      Returns:
+        A dictionary {name: value} that contains the name and the value (if
+        it fails, the value is None from the converter) from sensors.
+      """
+
       raw_values = dict(self.ECTOOL_TEMPS_ALL_LEGACY_RE.findall(ectool_output))
 
       # Remap ID to cached names.

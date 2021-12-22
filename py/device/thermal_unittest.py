@@ -179,6 +179,71 @@ class ECToolTemperatureSensors(unittest.TestCase):
 
   def testGetAllValues(self):
     call_output_mapping = {
+        'ectool tempsinfo all':
+            '\n'.join([
+                '0: 0 TMP432_Internal', '1: 1 TMP432_Sensor_1',
+                '2: 2 TMP432_Sensor_2'
+            ]),
+        'ectool temps all':
+            '\n'.join([
+                'TMP432_Internal 329 K (= 56 C) 0%',
+                'TMP432_Sensor_1 327 K (= 54 C) 0%',
+                'TMP432_Sensor_2 273 K (= 0 C) 0%'
+            ])
+    }
+
+    def CallOutputSideEffect(*args, **unused_kwargs):
+      return call_output_mapping[args[0]]
+
+    self.board.CallOutput.side_effect = CallOutputSideEffect
+
+    self.assertEqual(
+        self.sensor.GetSensors(), {
+            'ectool TMP432_Internal': '0',
+            'ectool TMP432_Sensor_1': '1',
+            'ectool TMP432_Sensor_2': '2',
+        })
+    self.assertEqual(
+        self.sensor.GetAllValues(), {
+            'ectool TMP432_Internal': 56,
+            'ectool TMP432_Sensor_1': 54,
+            'ectool TMP432_Sensor_2': 0
+        })
+
+  def testGetAllValuesWithErrors(self):
+    call_output_mapping = {
+        'ectool tempsinfo all':
+            '\n'.join([
+                '0: 0 TMP432_Internal', '1: 1 TMP432_Sensor_1',
+                '2: 2 TMP432_Sensor_2'
+            ]),
+        'ectool temps all':
+            '\n'.join([
+                'TMP432_Internal 329 K (= 56 C) 0%', 'Sensor 1 disabled',
+                'TMP432_Sensor_2 273 K (= 0 C) 0%'
+            ])
+    }
+
+    def CallOutputSideEffect(*args, **unused_kwargs):
+      return call_output_mapping[args[0]]
+
+    self.board.CallOutput.side_effect = CallOutputSideEffect
+
+    self.assertEqual(
+        self.sensor.GetSensors(), {
+            'ectool TMP432_Internal': '0',
+            'ectool TMP432_Sensor_1': '1',
+            'ectool TMP432_Sensor_2': '2',
+        })
+    self.assertEqual(
+        self.sensor.GetAllValues(), {
+            'ectool TMP432_Internal': 56,
+            'ectool TMP432_Sensor_1': None,
+            'ectool TMP432_Sensor_2': 0
+        })
+
+  def testGetAllValuesLegacy(self):
+    call_output_mapping = {
         'ectool tempsinfo all': '\n'.join([
             '0: 0 TMP432_Internal',
             '1: 1 TMP432_Sensor_1',
