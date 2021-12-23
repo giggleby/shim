@@ -63,6 +63,7 @@ class CrosConfig:
 
   def GetBrandCode(self):
     result = self.GetValue('/', 'brand-code')
+    return result.stdout.strip() if result.stdout else ''
 
   def GetModelName(self):
     result = self.GetValue('/', 'name')
