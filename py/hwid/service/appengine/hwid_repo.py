@@ -32,17 +32,19 @@ class HWIDRepo:
   _AVL_NAME_MAPPING_FOLDER = 'avl_name_mapping'
   _PROJECTS_YAML_PATH = 'projects.yaml'
 
-  def __init__(self, git_fs, repo_url, repo_branch):
+  def __init__(self, repo, repo_url, repo_branch):
     """Constructor.
 
     Args:
-      git_fs: The git file system adapter to the HWID repo.
+      repo: The local cloned git repo.
       repo_url: URL of the HWID repo.
       repo_branch: Branch name to track in the HWID repo.
     """
-    self._git_fs = git_fs
+    self._repo = repo
     self._repo_url = repo_url
     self._repo_branch = repo_branch
+
+    self._git_fs = git_util.GitFilesystemAdapter(self._repo)
 
   def IterAVLNameMappings(self):
     """Iterate through the AVL name mappings recorded in the HWID repo.
@@ -132,11 +134,10 @@ class HWIDRepo:
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
       author = f'chromeoshwid <{author_email}>'
-      change_id = git_util.CreateCL(self._repo_url,
-                                    git_util.GetGerritAuthCookie(),
-                                    self._repo_branch, new_files, author,
-                                    author, commit_msg, reviewers, cc_list,
-                                    auto_approved)
+      change_id = git_util.CreateCL(
+          self._repo_url, git_util.GetGerritAuthCookie(), self._repo_branch,
+          new_files, author, author, commit_msg, reviewers=reviewers,
+          cc=cc_list, auto_approved=auto_approved, repo=self._repo)
       cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, change_id,
                                    auth_cookie=git_util.GetGerritAuthCookie())
     except git_util.GitUtilException as ex:
@@ -193,9 +194,9 @@ class HWIDRepoManager:
     else:
       repo_branch = self._repo_branch
     repo_url = f'{_INTERNAL_REPO_URL}/{_CHROMEOS_HWID_PROJECT}'
-    git_fs = git_util.GitFilesystemAdapter.FromGitUrl(
-        repo_url, repo_branch, git_util.GetGerritAuthCookie())
-    return HWIDRepo(git_fs, repo_url, repo_branch)
+    repo = git_util.MemoryRepo(git_util.GetGerritAuthCookie())
+    repo.shallow_clone(repo_url, repo_branch)
+    return HWIDRepo(repo, repo_url, repo_branch)
 
   def GetHWIDDBCLInfo(self, cl_number):
     try:

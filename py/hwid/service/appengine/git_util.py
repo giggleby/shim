@@ -72,12 +72,6 @@ class GitFilesystemAdapter(filesystem_adapter.FileSystemAdapter):
   EXCEPTION_MAPPER = ExceptionMapper()
 
   @classmethod
-  def FromGitUrl(cls, url, branch, auth_cookie=''):
-    repo = MemoryRepo(auth_cookie)
-    repo.shallow_clone(url, branch)
-    return cls(repo)
-
-  @classmethod
   def GetExceptionMapper(cls):
     return cls.EXCEPTION_MAPPER
 
@@ -269,7 +263,8 @@ def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
 
 
 def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
-             commit_msg, reviewers=None, cc=None, auto_approved=False):
+             commit_msg, reviewers=None, cc=None, auto_approved=False,
+             repo=None):
   """Create a CL from adding files in specified location.
 
   Args:
@@ -283,13 +278,15 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     reviewers: List of emails of reviewers
     cc: List of emails of cc's
     auto_approved: A bool indicating if this CL should be auto-approved.
+    repo: The `MemoryRepo` instance to create the commit.  If not specified,
+        this function clones the repository from `git_url:branch`.
   Returns:
     change id
   """
-
-  repo = MemoryRepo(auth_cookie=auth_cookie)
-  # only fetches last commit
-  repo.shallow_clone(git_url, branch=_B(branch))
+  if repo is None:
+    repo = MemoryRepo(auth_cookie=auth_cookie)
+    # only fetches last commit
+    repo.shallow_clone(git_url, branch=_B(branch))
   head_commit = repo[HEAD]
   original_tree_id = head_commit.tree
   updated_tree = repo.add_files(new_files)

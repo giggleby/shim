@@ -8,7 +8,12 @@ import tempfile
 import textwrap
 import unittest
 
+# pylint: disable=wrong-import-order, import-error
+from dulwich import objects as dulwich_objects
+# pylint: enable=wrong-import-order, import-error
+
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -105,11 +110,10 @@ class HWIDDBDataManagerTest(unittest.TestCase):
                                                      'will be updated')
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDB', 'PROJECTB', '3',
                                                      'will be deleted')
-    git_fs = filesystem_adapter.LocalFileSystemAdapter(tempfile.mkdtemp(),
-                                                       encoding=None)
-    git_fs.WriteFile(
-        'projects.yaml',
-        textwrap.dedent("""\
+    repo = git_util.MemoryRepo('')
+    tree = repo.add_files([
+        ('projects.yaml', 0o100644,
+         textwrap.dedent("""\
             PROJECTA:
               board: BOARDA
               branch: main
@@ -120,10 +124,12 @@ class HWIDDBDataManagerTest(unittest.TestCase):
               branch: main
               version: 3
               path: v3/PROJECTC
-        """).encode('utf-8'))
-    git_fs.WriteFile('v3/PROJECTA', b'updated data')
-    git_fs.WriteFile('v3/PROJECTC', b'newly added data')
-    hwid_repo_inst = hwid_repo.HWIDRepo(git_fs, '', '')
+        """).encode('utf-8')),
+        ('v3/PROJECTA', 0o100644, b'updated data'),
+        ('v3/PROJECTC', 0o100644, b'newly added data'),
+    ], tree=dulwich_objects.Tree())
+    repo.do_commit(message=b'the head commit', tree=tree.id)
+    hwid_repo_inst = hwid_repo.HWIDRepo(repo, '', '')
 
     self.hwid_db_data_manager.UpdateProjects(
         hwid_repo_inst, hwid_repo_inst.ListHWIDDBMetadata())

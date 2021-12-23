@@ -3,10 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import collections
 import os
+from typing import Dict
 import unittest
 from unittest import mock
+
+# pylint: disable=wrong-import-order, import-error
+from dulwich import objects as dulwich_objects
+# pylint: enable=wrong-import-order, import-error
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -48,20 +52,19 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
   def setUp(self):
     super().setUp()
-    self._mock_git_fs = mock.create_autospec(git_util.GitFilesystemAdapter,
-                                             instance=True)
-    self._hwid_repo = hwid_repo.HWIDRepo(self._mock_git_fs, 'test_repo',
+    self._fake_repo = git_util.MemoryRepo('')
+    tree = dulwich_objects.Tree()
+    self._fake_repo.object_store.add_object(tree)
+    self._fake_repo.do_commit(message=b'initial commit', tree=tree.id)
+
+    self._hwid_repo = hwid_repo.HWIDRepo(self._fake_repo, 'test_repo',
                                          'test_branch')
 
   def testIterAVLNameMappings(self):
-    self._mock_git_fs.ListFiles.side_effect = collections.defaultdict(
-        list, {
-            'avl_name_mapping': ['comp_category1.yaml', 'comp_category2.yaml']
-        }).__getitem__
-    self._mock_git_fs.ReadFile.side_effect = {
+    self._AddFilesToFakeRepo({
         'avl_name_mapping/comp_category1.yaml': b'pattern1',
         'avl_name_mapping/comp_category2.yaml': b'pattern2',
-    }.__getitem__
+    })
 
     actual_avl_name_mappings = list(self._hwid_repo.IterAVLNameMappings())
 
@@ -72,9 +75,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     self.assertCountEqual(actual_avl_name_mappings, expected_avl_name_mappings)
 
   def testListHWIDDBMetadata_Success(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': _SERVER_BOARDS_DATA
-    }.__getitem__
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
 
     actual_hwid_db_metadata_list = self._hwid_repo.ListHWIDDBMetadata()
 
@@ -90,52 +91,46 @@ class HWIDRepoTest(HWIDRepoBaseTest):
                           expected_hwid_db_metadata_list)
 
   def testListHWIDDBMetadata_InvalidProjectYaml(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': ':this_is_not_an_invalid_data ^.<'
-    }.__getitem__
+    self._AddFilesToFakeRepo({
+        'projects.yaml': b':this_is_not_an_invalid_data ^.<',
+    })
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo.ListHWIDDBMetadata()
 
   def testLoadHWIDDBByName_Success(self):
-    self._mock_git_fs.ReadFile.side_effect = {
+    self._AddFilesToFakeRepo({
         'projects.yaml': _SERVER_BOARDS_DATA,
-        'SBOARD': b'sboard data'
-    }.__getitem__
+        'SBOARD': b'sboard data',
+    })
 
     actual_hwid_db = self._hwid_repo.LoadHWIDDBByName('SBOARD')
     self.assertCountEqual(actual_hwid_db, 'sboard data')
 
   def testLoadHWIDDBByName_InvalidName(self):
-    self._mock_git_fs.ReadFile.side_effect = {
+    self._AddFilesToFakeRepo({
         'projects.yaml': _SERVER_BOARDS_DATA,
-        'SBOARD': b'sboard data'
-    }.__getitem__
+        'SBOARD': b'sboard data',
+    })
 
     with self.assertRaises(ValueError):
       self._hwid_repo.LoadHWIDDBByName('NO_SUCH_BOARD')
 
   def testLoadHWIDDBByName_ValidNameButDbNotFound(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': _SERVER_BOARDS_DATA,
-    }.__getitem__
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo.LoadHWIDDBByName('SBOARD')
 
   def testCommitHWIDDB_InvalidHWIDDBName(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': _SERVER_BOARDS_DATA,
-    }.__getitem__
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
 
     with self.assertRaises(ValueError):
       self._hwid_repo.CommitHWIDDB('no_such_board', 'unused_test_str',
                                    'unused_test_str', [], [], False)
 
   def testCommitHWIDDB_FailedToUploadCL(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': _SERVER_BOARDS_DATA,
-    }.__getitem__
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
     self._mocked_create_cl.side_effect = git_util.GitUtilException
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
@@ -143,9 +138,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
                                    'unused_test_str', [], [], False)
 
   def testCommitHWIDDB_FailedToGetCLNumber(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': _SERVER_BOARDS_DATA,
-    }.__getitem__
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
     self._mocked_create_cl.return_value = 'Ithis_is_change_id'
     self._mocked_get_cl_info.side_effect = git_util.GitUtilException
 
@@ -154,9 +147,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
                                    'unused_test_str', [], [], False)
 
   def testCommitHWIDDB_Succeed(self):
-    self._mock_git_fs.ReadFile.side_effect = {
-        'projects.yaml': _SERVER_BOARDS_DATA,
-    }.__getitem__
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
     expected_cl_number = 123
     self._mocked_create_cl.return_value = 'Ithis_is_change_id'
     self._mocked_get_cl_info.return_value = git_util.CLInfo(
@@ -165,6 +156,11 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     actual_cl_number = self._hwid_repo.CommitHWIDDB(
         'SBOARD', 'unused_test_str', 'unused_test_str', [], [], False)
     self.assertEqual(actual_cl_number, expected_cl_number)
+
+  def _AddFilesToFakeRepo(self, contents_of_pathname: Dict[str, bytes]):
+    updated_tree = self._fake_repo.add_files(
+        [(p, 0o100644, c) for p, c in contents_of_pathname.items()])
+    self._fake_repo.do_commit(message=b'add test files', tree=updated_tree.id)
 
 
 class HWIDRepoManagerTest(HWIDRepoBaseTest):
