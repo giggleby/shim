@@ -48,6 +48,51 @@ class DetermineComponentNameTest(unittest.TestCase):
     expected = 'ABCD_2048mb_0'
     self.assertEqual(expected, builder.DetermineComponentName(comp_cls, value))
 
+  def testHashSuffix(self):
+    comp_cls = 'usb_hosts'
+    value = {
+        'device': '0x4567',
+        'revision_id': '0x00',
+        'vendor': '0x0123',
+        'NaN': float('NaN'),
+        'bignum': 12345678901234567890,
+        'negativeBignum': -12345678901234567890,
+        'None': None,
+        'bool': [False, True],
+        'recursive': {
+            '1': {
+                '3': '7',
+                '4': '8'
+            },
+            '2': {
+                '5': '9',
+                '6': '10'
+            }
+        }
+    }
+    expected = 'usb_hosts_721f4481'
+    self.assertEqual(expected, builder.DetermineComponentName(comp_cls, value))
+
+  def testHashSuffixOrder(self):
+    comp_cls = 'usb_hosts'
+    value = {
+        '0': '9',
+        '1': '8',
+        '2': '7',
+        '3': '6',
+        '4': '5',
+    }
+    base_hash = builder.DetermineComponentName(comp_cls, value)
+    value = {
+        '4': '5',
+        '3': '6',
+        '2': '7',
+        '1': '8',
+        '0': '9',
+    }
+    reversed_hash = builder.DetermineComponentName(comp_cls, value)
+    self.assertEqual(base_hash, reversed_hash)
+
 
 class BuilderMethodTest(unittest.TestCase):
 

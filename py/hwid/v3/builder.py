@@ -3,16 +3,18 @@
 # found in the LICENSE file.
 
 from collections import OrderedDict
+import hashlib
 import itertools
 import logging
 import math
 import re
-import uuid
+from typing import Dict, List, Union
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import probe
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
+from cros.factory.utils import json_utils
 
 
 # The components that are always be created at the front of the pattern,
@@ -31,6 +33,23 @@ PRIORITY_COMPS = OrderedDict([
     ('ro_ec_firmware', 5)])
 
 
+ProbedValueType = Dict[str, Union[List, None, 'ProbedValueType', bool, float,
+                                  int, str]]
+
+
+def GetDeterministicHash(value: ProbedValueType) -> bytes:
+  """Returns a hash value of value.
+
+  Args:
+    value: An object of type ProbedValueType.
+
+  Returns:
+    A bytes object with length hashlib.sha256().digest_size.
+  """
+  json_value = json_utils.DumpStr(value, sort_keys=True)
+  return hashlib.sha256(json_value.encode()).digest()
+
+
 def FilterSpecialCharacter(string):
   """Filters special cases and converts all seperation characters to underlines.
   """
@@ -43,7 +62,8 @@ def FilterSpecialCharacter(string):
   return string
 
 
-def DetermineComponentName(comp_cls, value, name_list=None):
+def DetermineComponentName(comp_cls: str, value: ProbedValueType,
+                           name_list=None):
   comp_name = _DetermineComponentName(comp_cls, value)
   if name_list is None:
     name_list = []
@@ -62,13 +82,13 @@ def HandleCollisionName(comp_name, name_list):
   return comp_name
 
 
-def _DetermineComponentName(comp_cls, value):
+def _DetermineComponentName(comp_cls: str, value: ProbedValueType):
   """Determines the componenet name by the value.
 
   For some specific components, we can determine a meaningful name by the
   component value. For example the value contains the vendor name, or the part
   number. But some components value don't, so we just use UUID.
-  Note that the function doen't ganrantee the name is deterministic and unique.
+  Note that the function doesn't ganrantee the name is unique.
 
   Args:
     comp_cls: the component class name.
@@ -97,7 +117,9 @@ def _DetermineComponentName(comp_cls, value):
               'compact_str']:
     if key in value:
       return FilterSpecialCharacter(str(value[key]))
-  return comp_cls + '_' + str(uuid.uuid4())[:8]
+
+  suffix = GetDeterministicHash(value)[:4].hex()
+  return f'{comp_cls}_{suffix}'
 
 
 def PromptAndAsk(question_str, default_answer=True):
@@ -330,7 +352,8 @@ class DatabaseBuilder:
         '  region: !region_component\n' +
         'rules: []\n')
 
-  def AddComponent(self, comp_cls, probed_value, set_comp_name=None):
+  def AddComponent(self, comp_cls: str, probed_value: ProbedValueType,
+                   set_comp_name=None):
     """Tries to add a item into the component.
 
     Args:
@@ -360,7 +383,7 @@ class DatabaseBuilder:
       self.database.SetComponentStatus(
           comp_cls, default_comp_name, common.COMPONENT_STATUS.unsupported)
 
-  def AddComponents(self, comp_cls, probed_values):
+  def AddComponents(self, comp_cls: str, probed_values: List[ProbedValueType]):
     """Adds a list of components to the database.
 
     Args:
