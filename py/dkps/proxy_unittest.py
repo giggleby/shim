@@ -10,8 +10,8 @@ import unittest
 from unittest import mock
 import xmlrpc.client
 
+from cros.factory.dkps import helpers
 from cros.factory.dkps import proxy as proxy_module
-from cros.factory.dkps.proxy import DKPSProxy
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
@@ -35,27 +35,33 @@ class DKPSProxyTest(unittest.TestCase):
   def setUp(self):
     self.helper = mock.Mock()
     self.helper.Request.return_value = json.dumps(FAKE_KEYBOX)
+    self.proxy = proxy_module.DKPSProxy(self.helper)
 
   def testRequest(self):
-    proxy = DKPSProxy(self.helper)
 
     # Request with fake device serial, SoC serial, and SoC model ID.
     # TODO(treapking): This makes the unit test work in chroot. Remove this if
     # we can run unit test in the factory server container.
     if Crypto:
-      encrypted_keybox = proxy.Request('SN000000', '7f' * 32, 16)
+      encrypted_keybox = self.proxy.Request('SN000000', '7f' * 32, 16)
     else:
       with mock.patch('cros.factory.dkps.proxy._EncryptWithTransportKey',
                       return_value=ENCRYPTED_KEYBOX):
-        encrypted_keybox = proxy.Request('SN000000', '7f' * 32, 16)
+        encrypted_keybox = self.proxy.Request('SN000000', '7f' * 32, 16)
 
     self.assertEqual(encrypted_keybox, ENCRYPTED_KEYBOX)
 
+  def testRequestError(self):
+    self.helper.Request.side_effect = xmlrpc.client.Fault
+    with self.assertRaisesRegex(
+        Exception, 'The proxy server failed to request keyboxes from DKPS'):
+      self.proxy.Request('SN000000', '7f' * 32, 16)
+
   def testListenForever(self):
-    proxy = DKPSProxy(self.helper)
     ip = net_utils.LOCALHOST
     port = net_utils.FindUnusedTCPPort()
-    process_utils.StartDaemonThread(target=proxy.ListenForever, args=(ip, port))
+    process_utils.StartDaemonThread(target=self.proxy.ListenForever,
+                                    args=(ip, port))
     sync_utils.WaitFor(lambda: net_utils.ProbeTCPPort(ip, port), 2)
 
     rpc_proxy = xmlrpc.client.ServerProxy('http://%s:%d' % (ip, port))
@@ -74,7 +80,7 @@ class ProxyMainFunctionTest(unittest.TestCase):
     self.log_path = '/tmp/dkps_proxy.log'
     file_utils.TryUnlink(self.log_path)
 
-  @mock.patch('helpers.RequesterHelper')
+  @mock.patch.object(helpers, 'RequesterHelper')
   @mock.patch('cros.factory.dkps.proxy.DKPSProxy')
   def testMain(self, mock_proxy_class, mock_requester_helper):
     mock_requester_helper.return_value = 'DUMMY_HELPER'

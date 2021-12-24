@@ -49,7 +49,7 @@ class DKPSProxyServiceTest(unittest.TestCase):
         '/cros_docker/umpire/<project>/umpire_data/dkps_proxy')
 
     expected_config = {
-        'executable': '/usr/bin/python3',
+        'executable': '/usr/local/factory/bin/factory_env',
         'name': 'dkps_proxy',
         'args': [
             '/usr/local/factory/py/dkps/proxy.py', '--server_ip',

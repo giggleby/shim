@@ -4,14 +4,13 @@
 """A service DKPS proxy server."""
 
 import os
-import sys
 
 from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
 
-PYTHON_PATH = sys.executable
+FACTORY_ENV = '/usr/local/factory/bin/factory_env'
 
 
 def IsDKPSServiceEnabled(umpire_config):
@@ -77,7 +76,7 @@ class DKPSProxyService(umpire_service.UmpireService):
       cmd += ['--passphrase', 'passphrase']
 
     proc_config = {
-        'executable': PYTHON_PATH,
+        'executable': FACTORY_ENV,
         'name': 'dkps_proxy',
         'args': cmd,
         'path': proxy_data_dir

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2021 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -16,8 +17,7 @@ import logging.config
 import os
 import xmlrpc.server
 
-# Use relative import to make this script portable
-import helpers
+from cros.factory.dkps import helpers
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -85,7 +85,6 @@ def _EncryptWithTransportKey(keybox, transport_key):
   cipher = AES.new(transport_key, AES.MODE_CBC, b'\0' * 16)
   return cipher.encrypt(bytes.fromhex(keybox)).hex()
 
-
 class DKPSProxy:
 
   def __init__(self, helper):
@@ -104,7 +103,12 @@ class DKPSProxy:
       The encrypted DRM key in hex string format.
     """
     logging.info('Request DRM key from DKPS.')
-    keybox = json.loads(self.helper.Request(device_serial_number))
+    try:
+      keybox = self.helper.Request(device_serial_number)
+    except Exception as e:
+      raise RuntimeError(
+          'The proxy server failed to request keyboxes from DKPS: %r' % e)
+    keybox = json.loads(keybox)
 
     # Re-encrypt the keybox with the transport key
     logging.info('Re-encrypt DRM key with transport key.')
