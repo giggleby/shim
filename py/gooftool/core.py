@@ -1322,10 +1322,18 @@ class Gooftool:
       logging.exception('Failed to set Cr50 Board ID.')
       raise
 
-  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False):
-    """Write device info into cr50 flash."""
+  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
+                         mlb_mode=False):
+    """Write device info into cr50 flash.
+
+    Args:
+      enable_zero_touch: Will set SN-bits in cr50 if rma_mode is not set.
+      rma_mode: This device / MLB is for RMA purpose, this will disable
+          zero_touch.
+      mlb_mode: This is just a MLB, not a full device.
+    """
     cros_config = cros_config_module.CrosConfig(self._util.shell)
-    is_whitelabel, whitelabel_tag = cros_config.GetWhiteLabelTag()
+    is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
     model_sku_config = config_utils.LoadConfig('model_sku', validate_schema=False)
     model = cros_config.GetModelName()
     if model not in model_sku_config['model']:
