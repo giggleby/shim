@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-12-09 15:31+CST\n"
+"PO-Revision-Date: 2021-12-27 16:06+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -313,6 +313,7 @@ msgstr "Chuột máy tính"
 
 #: ../build/pytests_label_generated.json
 #: ../py/test/test_lists/generic_common.test_list.json
+#: ../py/test/test_lists/generic_run_in.test_list.json
 msgid "MRC Cache"
 msgstr "MRC Cache"
 
@@ -3560,10 +3561,12 @@ msgid "Lid Accelerometers Calibration"
 msgstr "Điều chỉnh gia tốc kế nắp trên"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+#: ../py/test/test_lists/generic_run_in.test_list.json
 msgid "Create Cache"
 msgstr "Tạo bộ nhớ cache"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+#: ../py/test/test_lists/generic_run_in.test_list.json
 msgid "Verify Cache"
 msgstr "Xác minh bộ nhớ cache"
 
