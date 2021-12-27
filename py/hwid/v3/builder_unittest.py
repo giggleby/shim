@@ -91,6 +91,8 @@ class BuilderMethodTest(unittest.TestCase):
 
 class DatabaseBuilderTest(unittest.TestCase):
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testInit(self):
     self.assertRaises(ValueError, builder.DatabaseBuilder)
 
@@ -107,6 +109,8 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertEqual(db.database.project, 'PROJ')
     self.assertEqual(db.database.GetImageName(0), 'PROTO')
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testAddDefaultComponent(self):
     db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
 
@@ -129,6 +133,8 @@ class DatabaseBuilderTest(unittest.TestCase):
     # One component class can have at most one default component.
     self.assertRaises(ValueError, db.AddDefaultComponent, 'comp_cls_1')
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testAddNullComponent(self):
     db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
 
@@ -152,6 +158,8 @@ class DatabaseBuilderTest(unittest.TestCase):
     # more than one class of components.
     self.assertRaises(ValueError, db.AddNullComponent, 'comp_cls_2')
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk',
               return_value=False)
   def testUpdateByProbedResultsAddFirmware(self, unused_prompt_and_ask_mock):
@@ -169,6 +177,8 @@ class DatabaseBuilderTest(unittest.TestCase):
         db.database.GetComponents('ro_main_firmware')['firmware0'].status,
         common.COMPONENT_STATUS.deprecated)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
   def testUpdateByProbedResultsWithExtraComponentClasses(self,
                                                          prompt_and_ask_mock):
@@ -218,6 +228,8 @@ class DatabaseBuilderTest(unittest.TestCase):
           {'comp_cls_100': []} in db.database.GetEncodedField(
               'comp_cls_100_field').values())
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsWithExtraComponents(
       self, unused_prompt_and_ask_mock):
@@ -248,6 +260,8 @@ class DatabaseBuilderTest(unittest.TestCase):
                   list(db.database.GetEncodedField('comp_cls_1_field')
                        .values()))
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
   def testUpdateByProbedResultsMissingEssentialComponents(self,
                                                           prompt_and_ask_mock):
@@ -274,6 +288,8 @@ class DatabaseBuilderTest(unittest.TestCase):
                     list(db.database.GetEncodedField(comp_cls + '_field')
                          .values()))
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsUpdateEncodedFieldsAndPatternCorrectly(
       self, unused_prompt_and_ask_mock):
@@ -355,6 +371,8 @@ class DatabaseBuilderTest(unittest.TestCase):
                       'comp_cls_23_field': 2,
                       'comp_cls_100_field': 0})
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsNoNeedNewPattern(
       self, unused_prompt_and_ask_mock):
@@ -374,6 +392,8 @@ class DatabaseBuilderTest(unittest.TestCase):
       self.assertEqual(db.database.GetBitMapping(0),
                        db.database.GetBitMapping(db.database.max_image_id))
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsNeedNewPattern(self, unused_prompt_and_ask_mock):
     # New pattern is required if new encoded fields are added.
@@ -405,6 +425,8 @@ class DatabaseBuilderTest(unittest.TestCase):
                           }
                       }]}, {}, {}, [])
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testAddRegions(self):
     db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
     self.assertEqual(db.database.GetEncodedFieldsBitLength()['region_field'], 5)
@@ -423,6 +445,8 @@ class DatabaseBuilderTest(unittest.TestCase):
     db.AddRegions(regions.LEGACY_REGIONS_LIST[:40])
     self.assertEqual(db.database.GetEncodedFieldsBitLength()['region_field'], 6)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testAddSkuIds(self):
     db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
 

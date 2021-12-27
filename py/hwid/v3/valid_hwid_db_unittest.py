@@ -35,6 +35,7 @@ from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 BLOCKLIST_PROJECT = []
@@ -106,6 +107,8 @@ def _CheckProject(args):
     return (title, traceback.format_exception(*sys.exc_info()))
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class ValidHWIDDBsTest(unittest.TestCase):
   """Unit test for HWID database."""
   V3_HWID_DATABASE_PATH_REGEXP = re.compile('v3/[A-Z0-9]+$')

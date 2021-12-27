@@ -29,6 +29,8 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
+from cros.factory.unittest_utils import label_utils
+
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -510,6 +512,8 @@ class GooftoolTest(unittest.TestCase):
 
     self._gooftool._vpd.GetAllData.side_effect = GetAllDataSideEffect
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testVerifyVPD_AllValid(self):
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
                         rw=self._SIMPLE_VALID_RW_VPD_DATA)
@@ -568,6 +572,8 @@ class GooftoolTest(unittest.TestCase):
                            'Unexpected RO VPD: wifi_mac=00:11:de:ad:be:ef.',
                            self._gooftool.VerifyVPD)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testVerifyVPD_InvalidRegistrationCode(self):
     rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
     rw_vpd_value['gbind_attribute'] = 'badvalue'
@@ -576,6 +582,8 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaisesRegex(ValueError, 'gbind_attribute is invalid:',
                            self._gooftool.VerifyVPD)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.test.rules.phase.GetPhase')
   def testVerifyVPD_InvalidTestingRegistrationCodePVT_DOGFOOD(
       self, get_phase_mock):
@@ -589,6 +597,8 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaisesRegex(ValueError, 'gbind_attribute is invalid: ',
                            self._gooftool.VerifyVPD)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.test.rules.phase.GetPhase')
   def testVerifyVPD_InvalidTestingRegistrationCodeDVT(self, get_phase_mock):
     get_phase_mock.return_value = phase.DVT
@@ -670,6 +680,8 @@ class GooftoolTest(unittest.TestCase):
                            self._gooftool.VerifyReleaseChannel,
                            enforced_channels)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testSetFirmwareBitmapLocalePass(self):
     """Test for a normal process of setting firmware bitmap locale."""
 
@@ -692,6 +704,8 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
     self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testSetFirmwareBitmapLocaleNoCbfs(self):
     """Test for legacy firmware, which stores locale in bmpblk."""
 
@@ -717,6 +731,8 @@ class GooftoolTest(unittest.TestCase):
     self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
     self._gooftool._unpack_bmpblock.assert_called_once_with(f.read())
 
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testSetFirmwareBitmapLocaleNoMatch(self):
     """Test for setting firmware bitmap locale without matching default locale.
     """

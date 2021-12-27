@@ -20,6 +20,7 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.test.env import paths
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
+from cros.factory.unittest_utils import label_utils
 
 
 _FREEZED_DB_CHECKSUM_FILE = os.path.join(
@@ -27,6 +28,8 @@ _FREEZED_DB_CHECKSUM_FILE = os.path.join(
     'freezed_db_checksums.json')
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class ValidHWIDsTest(unittest.TestCase):
   def runTest(self):
     hwid_dir = hwid_utils.GetHWIDRepoPath()

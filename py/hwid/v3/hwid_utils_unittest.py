@@ -13,6 +13,7 @@ from cros.factory.hwid.v3.bom import BOM
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
+from cros.factory.unittest_utils import label_utils
 
 
 _TEST_DATABASE_PATH = os.path.join(
@@ -46,6 +47,8 @@ class _HWIDTestCaseBase(unittest.TestCase):
         infile=_TEST_PROBED_RESULTS_PATH)
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class GenerateHWIDTest(_HWIDTestCaseBase):
   def testNormal(self):
     identity = hwid_utils.GenerateHWID(
@@ -67,6 +70,8 @@ class GenerateHWIDTest(_HWIDTestCaseBase):
                       None)
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class DecodeHWIDTest(_HWIDTestCaseBase):
   def testNormal(self):
     identity, bom, configless = hwid_utils.DecodeHWID(
@@ -107,6 +112,9 @@ class DecodeHWIDTest(_HWIDTestCaseBase):
                                       'is_convertible': 0,
                                       'is_rma_device': 0}})
 
+
+# TODO (b/212216855)
+@label_utils.Informational
 class VerifyHWIDTest(_HWIDTestCaseBase):
   def testNormal(self):
     hwid_utils.VerifyHWID(self.database, _TEST_ENCODED_STRING_GOOD,
@@ -146,6 +154,8 @@ class VerifyHWIDTest(_HWIDTestCaseBase):
                       allow_mismatched_components=False)
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class ListComponentsTest(_HWIDTestCaseBase):
   def _TestListComponents(self, comp_cls, expected_results):
     def _ConvertToSets(orig_dict):
@@ -165,6 +175,8 @@ class ListComponentsTest(_HWIDTestCaseBase):
     self.assertIn('region', result)
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class EnumerateHWIDTest(_HWIDTestCaseBase):
   def testSupported(self):
     results = hwid_utils.EnumerateHWID(self.database, status='supported')

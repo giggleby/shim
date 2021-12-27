@@ -10,6 +10,7 @@ from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.test.l10n import regions
+from cros.factory.unittest_utils import label_utils
 
 
 _REGIONS_DATABASE_PATH = os.path.join(
@@ -17,6 +18,8 @@ _REGIONS_DATABASE_PATH = os.path.join(
 
 
 class ParseRegionFieldUnittest(unittest.TestCase):
+  # TODO (b/212216855)
+  @label_utils.Informational
   def testDecodeYAMLTag(self):
     doc = 'foo: !region_field'
     decoded = yaml.safe_load(doc)

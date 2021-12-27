@@ -11,6 +11,7 @@ from cros.factory.hwid.v3 import configless_fields
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import probe
+from cros.factory.unittest_utils import label_utils
 
 
 _TEST_DATABASE_PATH = os.path.join(
@@ -23,6 +24,8 @@ _TEST_PROBED_RESULTS_PATH = os.path.join(
 _CF = configless_fields.ConfiglessFields
 
 
+# TODO (b/212216855)
+@label_utils.Informational
 class ConfiglessFieldsTest(unittest.TestCase):
   def setUp(self):
     self.database = database.Database.LoadFile(
