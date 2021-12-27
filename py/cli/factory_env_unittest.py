@@ -55,7 +55,7 @@ class FactoryEnvUnittest(unittest.TestCase):
   def testPythonInterpreter(self):
     output = process_utils.CheckOutput(
         [FACTORY_ENV_TOOL, 'python', '-c', 'import sys; print(sys.path)'])
-    self.assertIn('factory/py_pkg', output)
+    self.assertIn(os.path.join(FACTORY_ROOT, 'py_pkg'), output)
 
 
 class SymlinkUnittest(unittest.TestCase):
