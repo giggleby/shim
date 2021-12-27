@@ -6,7 +6,6 @@
 from cros.factory.hwid.v2 import yaml_datastore as v2_yaml_datastore
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import database as v3_database
-from cros.factory.hwid.v3 import yaml_wrapper as yaml
 
 
 class PreprocHWIDError(Exception):
@@ -61,8 +60,7 @@ class HWIDV2PreprocData(HWIDPreprocData):
     self.hwid_status_map = {}
     self.volatile_value_map = {}
 
-    self._SeedFromData(
-        v2_yaml_datastore.YamlRead(raw_hwid_yaml, yaml.SafeLoader))
+    self._SeedFromData(v2_yaml_datastore.YamlRead(raw_hwid_yaml))
 
   def _SeedFromData(self, hwid_data):
     fields = ['boms', 'variants', 'volatiles', 'hwid_status', 'volatile_values']
