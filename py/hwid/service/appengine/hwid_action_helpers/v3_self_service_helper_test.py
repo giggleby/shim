@@ -4,6 +4,7 @@
 
 import os
 import os.path
+import re
 import tempfile
 import unittest
 
@@ -145,6 +146,19 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         process_utils.CheckCall([bundle_path, dest_dir])
         db_path = os.path.join(dest_dir, data.project.upper())
         self.assertEqual(file_utils.ReadFile(db_path), data.raw_database)
+
+  # TODO(b/211957606) modify this test to ensure that the checksum information
+  # is embedded in the generated bundle.
+  def testBundleHWIDDB_ChecksumShownInInstallerScript(self):
+    data, helper_inst = self._LoadPreprocDataAndSSHelper('v3-golden.yaml')
+
+    payload = helper_inst.BundleHWIDDB().bundle_contents
+
+    checksum_pattern = re.compile(f'^checksum: {data.database.checksum}$',
+                                  re.MULTILINE)
+    self.assertIsNotNone(
+        checksum_pattern.search(payload.decode('utf-8')),
+        'checksum line was not displayed in payload.')
 
   def _LoadPreprocDataAndSSHelper(self, testdata_name):
     preproc_data = hwid_preproc_data.HWIDV3PreprocData(

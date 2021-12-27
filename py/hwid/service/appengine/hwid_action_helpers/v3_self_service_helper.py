@@ -117,6 +117,12 @@ class HWIDV3SelfServiceActionHelper:
     builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)
+
+    # TODO(b/211957606) remove this stopgap which shows the HWID DB checksum for
+    # cros_payload.sh to parse.
+    # pylint: disable=protected-access
+    builder._SetStopGapHWIDDBChecksum(self._preproc_data.database.checksum)
+    # pylint: enable=protected-access
     return hwid_action.BundleInfo(builder.Build(), builder.FILE_NAME_EXT[1:])
 
   @staticmethod

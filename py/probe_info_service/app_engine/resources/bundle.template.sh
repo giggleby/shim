@@ -11,6 +11,13 @@
 # exclamation marks are the placeholders for template arguments.
 
 
+# TODO(b/211957606) remove this stopgap which shows the HWID DB checksum for
+# cros_payload.sh to parse.
+: '
+checksum: !!hwid_db_checksum
+'
+
+
 set -e
 
 

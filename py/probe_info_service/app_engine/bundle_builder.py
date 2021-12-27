@@ -47,6 +47,7 @@ class BundleBuilder:
   def __init__(self):
     self._file_entries = []
     self._runner_path = None
+    self._stopgap_checksum = ''
 
   def AddRegularFile(self, path, data: bytes):
     """Adds a regular file into the probe config bundle.
@@ -74,6 +75,12 @@ class BundleBuilder:
     """
     self._runner_path = path
 
+
+  # TODO(b/211957606) remove this stopgap which shows the HWID DB checksum for
+  # cros_payload.sh to parse.
+  def _SetStopGapHWIDDBChecksum(self, checksum):
+    self._stopgap_checksum = checksum
+
   def Build(self) -> bytes:
     """Archives all the resources and returns the result in bytes."""
     tarfile_buf = io.BytesIO()
@@ -86,5 +93,5 @@ class BundleBuilder:
         tarfile_obj.addfile(tarinfo, fileobj=buf)
     payload_data = base64.b64encode(tarfile_buf.getvalue()).decode('utf-8')
     return _GetBundleTemplate().substitute(
-        payload_data=payload_data,
+        payload_data=payload_data, hwid_db_checksum=self._stopgap_checksum,
         runner_relpath=self._runner_path).encode('utf-8')
