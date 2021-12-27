@@ -89,6 +89,7 @@ disable=
     too-many-public-methods,
     too-many-return-statements,
     too-many-statements,
+    wrong-import-order,
 
 [REPORTS]
 
@@ -130,6 +131,7 @@ max-line-length=80
 
 # Maximum number of lines in a module
 #max-module-lines=1000
+ignore-long-lines=^(\s*(# )?<?https?://\S+>?|from\s.+\simport\s.+)$
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
