@@ -184,6 +184,24 @@ message ComponentsResponse {
   Status status = 3;
 }
 
+
+// A message that summarizes the component change.
+message DiffStatus {
+  // True if the component is unchanged.  This value should be equals to
+  // not (name_changed or support_status_changed or values_changed).
+  bool unchanged = 1;
+  // True if the name is changed.
+  bool name_changed = 2;
+  // True if the support status is changed.
+  bool support_status_changed = 3;
+  // True if the fields of this component are changed.
+  bool values_changed = 4;
+  // The component name before this change.
+  string prev_comp_name = 5;
+  // The support status before this change.
+  string prev_support_status = 6;
+}
+
 message NameChangedComponent {
   enum SupportStatus {
     SUPPORT_STATUS_UNSPECIFIED = 0;
@@ -200,6 +218,8 @@ message NameChangedComponent {
   string component_name = 4;
   // True if this component name has AVL information.
   bool has_cid_qid = 5;
+  // The component change summary.  Null means that this component is new.
+  DiffStatus diff_prev = 6;
 }
 
 message NameChangedComponents {
@@ -430,23 +450,6 @@ message HwidDbEditableSectionAnalysisReport {
     }
     HwidDbLineModificationStatus modification_status = 1;
     repeated HwidDbLinePart parts = 2;
-  }
-
-  // A message that summarizes the component change.
-  message DiffStatus {
-    // True if the component is unchanged.  This value should be equals to
-    // not (name_changed or support_status_changed or values_changed).
-    bool unchanged = 1;
-    // True if the name is changed.
-    bool name_changed = 2;
-    // True if the support status is changed.
-    bool support_status_changed = 3;
-    // True if the fields of this component are changed.
-    bool values_changed = 4;
-    // The component name before this change.
-    string prev_comp_name = 5;
-    // The support status before this change.
-    string prev_support_status = 6;
   }
 
   message ComponentInfo {

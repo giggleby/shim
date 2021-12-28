@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 704842bb0e09ff6f02d9b42828814877dd1267e7
+checksum: e980c0e1e49a7bd77f0b3a04d39a533748aa5918
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -56,6 +56,10 @@ components:
         values:
           cores: '8'
           model: 'ghi'
+      display_panel_123_456:
+        values:
+          cores: '9'
+          model: 'new display panel'
 
 rules:
 - name: device_info.set_image_id

@@ -48,12 +48,36 @@ class ContentsAnalyzerTest(unittest.TestCase):
     report = inst.ValidateChange()
     self.assertEqual(
         {
-            'display_panel': [('display_panel_9_10', 9, 10,
-                               common.COMPONENT_STATUS.supported, True),
-                              ('display_panel_still_invalid2', 0, 0,
-                               common.COMPONENT_STATUS.supported, False),
-                              ('display_panel_100_200', 100, 200,
-                               common.COMPONENT_STATUS.supported, True)]
+            'display_panel': [
+                contents_analyzer.NameChangedComponentInfo(
+                    comp_name='display_panel_9_10', cid=9, qid=10,
+                    status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
+                    diff_prev=contents_analyzer.DiffStatus(
+                        unchanged=False, name_changed=True,
+                        support_status_changed=False, values_changed=True,
+                        prev_comp_name='display_panel_invalid1',
+                        prev_support_status=common.COMPONENT_STATUS.supported)),
+                contents_analyzer.NameChangedComponentInfo(
+                    comp_name='display_panel_still_invalid2', cid=0, qid=0,
+                    status=common.COMPONENT_STATUS.supported, has_cid_qid=False,
+                    diff_prev=contents_analyzer.DiffStatus(
+                        unchanged=False, name_changed=True,
+                        support_status_changed=False, values_changed=False,
+                        prev_comp_name='display_panel_invalid2',
+                        prev_support_status=common.COMPONENT_STATUS.supported)),
+                contents_analyzer.NameChangedComponentInfo(
+                    comp_name='display_panel_100_200', cid=100, qid=200,
+                    status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
+                    diff_prev=contents_analyzer.DiffStatus(
+                        unchanged=False, name_changed=False,
+                        support_status_changed=True, values_changed=False,
+                        prev_comp_name='display_panel_100_200',
+                        prev_support_status=common.COMPONENT_STATUS.unqualified)
+                ),
+                contents_analyzer.NameChangedComponentInfo(
+                    comp_name='display_panel_123_456', cid=123, qid=456,
+                    status='supported', has_cid_qid=True, diff_prev=None),
+            ]
         }, report.name_changed_components)
 
   def test_AnalyzeChange_PreconditionErrors(self):

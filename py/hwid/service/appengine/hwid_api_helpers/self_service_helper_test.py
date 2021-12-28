@@ -23,7 +23,7 @@ _ErrorCodeMsg = (
     hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult.ErrorCode)
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 _DiffStatus = hwid_action.DBHWIDComponentDiffStatus
-_DiffStatusMsg = _AnalysisReportMsg.DiffStatus
+_DiffStatusMsg = hwid_api_messages_pb2.DiffStatus
 _ComponentInfoMsg = _AnalysisReportMsg.ComponentInfo
 
 
@@ -145,13 +145,13 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'wireless': [
                     hwid_action.DBNameChangedComponentInfo(
                         'wireless_1234_5678', 1234, 5678,
-                        v3_common.COMPONENT_STATUS.supported, True),
+                        v3_common.COMPONENT_STATUS.supported, True, None),
                     hwid_action.DBNameChangedComponentInfo(
                         'wireless_1111_2222', 1111, 2222,
-                        v3_common.COMPONENT_STATUS.unqualified, True),
+                        v3_common.COMPONENT_STATUS.unqualified, True, None),
                     hwid_action.DBNameChangedComponentInfo(
                         'wireless_hello_world', 0, 0,
-                        v3_common.COMPONENT_STATUS.supported, False),
+                        v3_common.COMPONENT_STATUS.supported, False, None),
                 ]
             }))
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
@@ -187,9 +187,10 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'wireless': [
                     hwid_action.DBNameChangedComponentInfo(
                         'wireless_1234_5678', 1234, 5678,
-                        v3_common.COMPONENT_STATUS.supported, True),
+                        v3_common.COMPONENT_STATUS.supported, True, None),
                     hwid_action.DBNameChangedComponentInfo(
-                        'wireless_1111_2222', 1111, 2222, 'new_status', True),
+                        'wireless_1111_2222', 1111, 2222, 'new_status', True,
+                        None),
                 ]
             }))
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)

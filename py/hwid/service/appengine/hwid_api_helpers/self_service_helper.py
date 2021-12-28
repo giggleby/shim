@@ -31,7 +31,6 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
     hwid_repo.HWIDDBCLStatus.ABANDONED:
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.ABANDONED,
 }
-_AnalysisReport = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
 
 class HWIDStatusConversionError(Exception):
@@ -53,7 +52,17 @@ def ConvertToNameChangedComponent(name_changed_comp_info):
       cid=name_changed_comp_info.cid, qid=name_changed_comp_info.qid,
       support_status=status_val.number,
       component_name=name_changed_comp_info.comp_name,
-      has_cid_qid=name_changed_comp_info.has_cid_qid)
+      has_cid_qid=name_changed_comp_info.has_cid_qid,
+      diff_prev=name_changed_comp_info.diff_prev and
+      hwid_api_messages_pb2.DiffStatus(
+          unchanged=name_changed_comp_info.diff_prev.unchanged,
+          name_changed=name_changed_comp_info.diff_prev.name_changed,
+          support_status_changed=name_changed_comp_info.diff_prev
+          .support_status_changed,
+          values_changed=name_changed_comp_info.diff_prev.values_changed,
+          prev_comp_name=name_changed_comp_info.diff_prev.prev_comp_name,
+          prev_support_status=name_changed_comp_info.diff_prev
+          .prev_support_status))
 
 
 def _ConvertValidationErrorCode(code):
@@ -339,7 +348,7 @@ Info Update
       if comp_info.diff_prev is not None:
         diff = comp_info.diff_prev
         response_comp_info.diff_prev.CopyFrom(
-            _AnalysisReport.DiffStatus(
+            hwid_api_messages_pb2.DiffStatus(
                 unchanged=diff.unchanged,
                 name_changed=diff.name_changed,
                 support_status_changed=diff.support_status_changed,

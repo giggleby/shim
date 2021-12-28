@@ -54,10 +54,10 @@ class HwidValidatorTest(unittest.TestCase):
             'dram': [
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='dram_type_4g_0', cid=0, qid=0,
-                    status='supported', has_cid_qid=False),
+                    status='supported', has_cid_qid=False, diff_prev=None),
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='dram_allow_no_size_info_in_name', cid=0, qid=0,
-                    status='supported', has_cid_qid=False)
+                    status='supported', has_cid_qid=False, diff_prev=None)
             ]
         }, ret)
 
@@ -94,10 +94,10 @@ class HwidValidatorTest(unittest.TestCase):
               'dram': [
                   contents_analyzer.NameChangedComponentInfo(
                       comp_name='dram_type_4g_0', cid=0, qid=0,
-                      status='supported', has_cid_qid=False),
+                      status='supported', has_cid_qid=False, diff_prev=None),
                   contents_analyzer.NameChangedComponentInfo(
                       comp_name='dram_allow_no_size_info_in_name', cid=0, qid=0,
-                      status='supported', has_cid_qid=False)
+                      status='supported', has_cid_qid=False, diff_prev=None)
               ]
           })
 
@@ -115,9 +115,14 @@ class HwidValidatorTest(unittest.TestCase):
     self.assertEqual(
         {
             'cpu': [('cpu_1234_5678', 1234, 5678,
-                     common.COMPONENT_STATUS.supported, True),
+                     common.COMPONENT_STATUS.supported, True,
+                     contents_analyzer.DiffStatus(
+                         unchanged=False, name_changed=True,
+                         support_status_changed=False, values_changed=False,
+                         prev_comp_name='cpu_original_1',
+                         prev_support_status='supported')),
                     ('cpu_12345678', 12345678, 0,
-                     common.COMPONENT_STATUS.unqualified, True)]
+                     common.COMPONENT_STATUS.unqualified, True, None)]
         }, ret)
 
   def testValidateComponentNameInvalidWithNote(self):
@@ -139,10 +144,14 @@ class HwidValidatorTest(unittest.TestCase):
     self.assertEqual(model, GOLDEN_MODEL_NAME)
     self.assertEqual(
         {
-            'cpu': [
-                ('cpu_2_3#3', 2, 3, common.COMPONENT_STATUS.supported, True),
-                ('cpu_3_4#5', 3, 4, common.COMPONENT_STATUS.unsupported, True)
-            ]
+            'cpu': [('cpu_2_3#3', 2, 3, common.COMPONENT_STATUS.supported, True,
+                     contents_analyzer.DiffStatus(
+                         unchanged=False, name_changed=True,
+                         support_status_changed=False, values_changed=False,
+                         prev_comp_name='cpu_original_1',
+                         prev_support_status='supported')),
+                    ('cpu_3_4#5', 3, 4, common.COMPONENT_STATUS.unsupported,
+                     True, None)]
         }, ret)
 
   @classmethod

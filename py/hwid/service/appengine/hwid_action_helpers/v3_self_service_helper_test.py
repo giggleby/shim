@@ -93,12 +93,12 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertTrue(change_info.is_change_valid)
     self.assertEqual(list(change_info.new_hwid_comps), ['dram'])
     self.assertCountEqual(change_info.new_hwid_comps['dram'], [
-        hwid_action.DBNameChangedComponentInfo(comp_name='dram_type_4g_0',
-                                               cid=0, qid=0, status='supported',
-                                               has_cid_qid=False),
+        hwid_action.DBNameChangedComponentInfo(
+            comp_name='dram_type_4g_0', cid=0, qid=0, status='supported',
+            has_cid_qid=False, diff_prev=None),
         hwid_action.DBNameChangedComponentInfo(
             comp_name='dram_allow_no_size_info_in_name', cid=0, qid=0,
-            status='supported', has_cid_qid=False)
+            status='supported', has_cid_qid=False, diff_prev=None)
     ])
     db_after_change = database.Database.LoadData(
         change_info.new_hwid_db_contents,

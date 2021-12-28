@@ -13,8 +13,6 @@ import logging
 import re
 from typing import List, Mapping, NamedTuple, Optional, Tuple
 
-import yaml
-
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
@@ -43,6 +41,16 @@ class Error(NamedTuple):
   message: str
 
 
+class DiffStatus(NamedTuple):
+  """Diff stats with the corresponding component in the previous DB."""
+  unchanged: bool
+  name_changed: bool
+  support_status_changed: bool
+  values_changed: bool
+  prev_comp_name: str
+  prev_support_status: str
+
+
 class NameChangedComponentInfo(NamedTuple):
   """A data structure to collect the component info of added/updated names."""
   comp_name: str
@@ -50,6 +58,7 @@ class NameChangedComponentInfo(NamedTuple):
   qid: int
   status: str
   has_cid_qid: bool
+  diff_prev: Optional[DiffStatus]
 
 
 class ValidationReport(NamedTuple):
@@ -85,16 +94,6 @@ class DBLineAnalysisResult(NamedTuple):
 
   modification_status: ModificationStatus
   parts: List[Part]
-
-
-class DiffStatus(NamedTuple):
-  """Diff stats with the corresponding component in the previous DB."""
-  unchanged: bool
-  name_changed: bool
-  support_status_changed: bool
-  values_changed: bool
-  prev_comp_name: str
-  prev_support_status: str
 
 
 class HWIDComponentAnalysisResult(NamedTuple):
@@ -282,7 +281,8 @@ class ContentsAnalyzer:
         if comp.is_newly_added:
           report.name_changed_components.setdefault(comp_cls, []).append(
               NameChangedComponentInfo(comp.name, cid, qid, comp.status,
-                                       bool(comp.extracted_avl_id)))
+                                       bool(comp.extracted_avl_id),
+                                       comp.diff_prev))
 
   def AnalyzeChange(self, db_contents_patcher) -> ChangeAnalysisReport:
     """Analyzes the HWID DB change.
