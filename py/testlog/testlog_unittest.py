@@ -22,6 +22,7 @@ from cros.factory.testlog.utils import file_utils
 from cros.factory.testlog.utils import json_utils
 from cros.factory.testlog.utils import schema
 from cros.factory.testlog.utils import time_utils
+from cros.factory.unittest_utils import label_utils
 
 
 SAMPLE_DATETIME_FLOAT = 618538088.888888
@@ -97,6 +98,8 @@ class TestlogTestBase(unittest.TestCase):
     })
 
 
+# TODO(lschyi): Disable this unittest temporarily. (b/212324599)
+@label_utils.Informational
 class TestlogTest(TestlogTestBase):
 
   def testDisallowRecursiveLogging(self):
@@ -111,6 +114,8 @@ class TestlogTest(TestlogTestBase):
     self.assertEqual(logged_events[0]['message'], 'testing 123')
 
 
+# TODO(lschyi): Disable this unittest temporarily. (b/212324599)
+@label_utils.Informational
 class TestlogEventTest(TestlogTestBase):
 
   def testDisallowInitializeFakeEventClasses(self):
@@ -568,6 +573,8 @@ class TestlogEventTest(TestlogTestBase):
       _unused_invalid_event = testlog.EventBase.FromDict(example_dict)
 
 
+# TODO(lschyi): Disable this unittest temporarily. (b/212324599)
+@label_utils.Informational
 class TestlogE2ETest(TestlogTestBase):
 
   def SimulatedTestInAnotherProcess(self):
