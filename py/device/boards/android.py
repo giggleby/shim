@@ -37,7 +37,7 @@ class AndroidBoard(linux.LinuxBoard):
   @device_types.DeviceProperty
   def audio(self):
     from cros.factory.device.audio import tinyalsa
-    return tinyalsa.TinyAlsaAudioControl(self)
+    return tinyalsa.TinyalsaAudioControl(self)
 
   @device_types.DeviceProperty
   def memory(self):
