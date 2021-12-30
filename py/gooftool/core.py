@@ -1204,8 +1204,16 @@ class Gooftool:
     return True
 
   def Cr50ClearRoHash(self):
+    if self.IsCr50BoardIDSet():
+      logging.warning('Cr50 boardID is already set. Skip clearing RO hash.')
+      return
+    if not self.IsCr50ROHashSet():
+      logging.info('AP-RO hash is already cleared, do nothing.')
+      return
+
     gsctool = gsctool_module.GSCTool(self._util.shell)
     gsctool.ClearROHash()
+    logging.info('Successfully clear AP-RO hash on Cr50.')
 
   def IsCr50ROHashSet(self):
     # The result is defined in process_get_apro_hash in

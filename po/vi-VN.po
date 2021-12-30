@@ -30,6 +30,10 @@ msgid "Accelerometers Lid Angle"
 msgstr "Góc gia tốc kế"
 
 #: ../build/pytests_label_generated.json
+msgid "Ap Ro Hash"
+msgstr ""
+
+#: ../build/pytests_label_generated.json
 msgid "Ap Ro Verification"
 msgstr ""
 
@@ -431,10 +435,6 @@ msgstr "Tùy chọn lấy mẫu"
 
 #: ../build/pytests_label_generated.json
 msgid "Serial Echo"
-msgstr ""
-
-#: ../build/pytests_label_generated.json
-msgid "Set Ap Ro Hash"
 msgstr ""
 
 #: ../build/pytests_label_generated.json
@@ -3484,6 +3484,10 @@ msgstr "Mức xác nhận"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Release Image"
 msgstr "Kiểm tra hệ thống nhà máy"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Clear AP RO Hash"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Clear factory VPD entries"

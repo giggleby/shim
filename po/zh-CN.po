@@ -30,6 +30,10 @@ msgid "Accelerometers Lid Angle"
 msgstr "加速度计上盖角度"
 
 #: ../build/pytests_label_generated.json
+msgid "Ap Ro Hash"
+msgstr ""
+
+#: ../build/pytests_label_generated.json
 msgid "Ap Ro Verification"
 msgstr "检查 AP RO hash"
 
@@ -432,10 +436,6 @@ msgstr "採样选择"
 #: ../build/pytests_label_generated.json
 msgid "Serial Echo"
 msgstr ""
-
-#: ../build/pytests_label_generated.json
-msgid "Set Ap Ro Hash"
-msgstr "写入 AP RO Hash"
 
 #: ../build/pytests_label_generated.json
 msgid "Shopfloor Service"
@@ -3415,6 +3415,10 @@ msgstr "确认关卡"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Release Image"
 msgstr "检查出厂系统"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Clear AP RO Hash"
+msgstr "清除 AP RO Hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Clear factory VPD entries"

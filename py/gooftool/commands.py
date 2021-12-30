@@ -569,6 +569,13 @@ def Cr50DisableFactoryMode(options):
          _mlb_mode_cmd_arg, _enable_zero_touch_cmd_arg, _use_generic_tpm2_arg)
 def Cr50Finalize(options):
   """Finalize steps for cr50."""
+
+  if (not GetGooftool(options).IsCr50BoardIDSet() and
+      GetGooftool(options).IsCr50ROHashSet()):
+    # Avoid setting RO hash accidentally in pytest.
+    logging.warning('AP RO hash is set before finalize, '
+                    'clear the unexpected hash.')
+    GetGooftool(options).Cr50ClearRoHash()
   if options.no_write_protect:
     logging.warning('SWWP is not enabled. Skip setting RO hash.')
   elif options.rma_mode:

@@ -10,12 +10,12 @@ during the test. If reboot/verification is not triggered, there will be an
 operation error to ask for a retry.
 
 If the verification failed, then the device won't be bootable. And we should
-clear RO hash after verifying, to avoid the risk of bricking the DUT.
+try to clear RO hash after verifying, to avoid the risk of bricking the DUT.
 To make sure RO hash is set correctly, it's recommended to set RO hash by
-set_ap_ro_hash.py.
+ap_ro_hash.py.
 
 We decided to skip this test when RO hash is unable to set. This might happen
-when re-flowing in pre-PVT. Details are in set_ap_ro_hash.py.
+when re-flowing in pre-PVT. Details are in ap_ro_hash.py.
 
 Test Procedure
 --------------
@@ -24,7 +24,6 @@ First round (`rebooted` flag should be None)
   2. After the combo, device will reboot with verifying RO hash.
 Second round (`rebooted` flag should be true)
   3. Deal with the verification result.
-  4. Clear RO hash
 
 Dependency
 ----------
@@ -125,5 +124,3 @@ class APROVerficationTest(test_case.TestCase):
 
   def tearDown(self):
     device_data.DeleteDeviceData(self.device_data_key, True)
-    if not self.gooftool.IsCr50BoardIDSet():
-      self.gooftool.Cr50ClearRoHash()

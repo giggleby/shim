@@ -1,7 +1,7 @@
 # Copyright 2021 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""A test to set AP RO hash.
+"""A test to set/clear AP RO hash.
 
 Description
 -----------
@@ -25,35 +25,49 @@ These steps describe the whole procedure of AP RO verification test.
 
 Dependency
 ----------
-- The test will set RO hash, which needs board id not being set on DUT.
+- The test will set/clear RO hash, which needs board id not being set on DUT.
 
 Examples
 --------
-To set AP RO hash, add this to test list::
+To set/clear AP RO hash, add this to test list::
 
   {
-    "pytest_name": "set_ap_ro_hash",
+    "pytest_name": "ap_ro_hash",
+    "args": {
+      "action": "set"
+    }
+  }
+
+  {
+    "pytest_name": "ap_ro_hash",
+    "args": {
+      "action": "clear"
+    }
   }
 
 """
 
-import logging
-
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.test import session
 from cros.factory.test import test_case
+from cros.factory.utils.arg_utils import Arg
 
 
 class APROHashTest(test_case.TestCase):
+  ARGS = [Arg('action', str, "The action for AP RO hash ('set', 'clear').")]
 
   def setUp(self):
     self.gooftool = Gooftool()
 
   def runTest(self):
     if self.gooftool.IsCr50BoardIDSet():
-      if not self.gooftool.IsCr50ROHashSet():
-        session.console.warn('Unable to set RO hash, test skipped.')
-    else:
-      logging.info('Setting RO hash.')
+      session.console.warn('Unable to modify RO hash, test skipped.')
+      return
+
+    action = self.args.action
+    if action == 'set':
       self.gooftool.Cr50SetROHash()
-      logging.info('Finish setting RO hash.')
+    elif action == 'clear':
+      self.gooftool.Cr50ClearRoHash()
+    else:
+      raise Exception(f'Unknown action: {action}')
