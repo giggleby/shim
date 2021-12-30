@@ -8,11 +8,14 @@
 import http
 import logging
 
-# pylint: disable=no-name-in-module, import-error, wrong-import-order
+# pylint: disable=no-name-in-module, import-error
 import flask
 import google.cloud.logging as gc_logging
 from google.cloud import tasks
-# pylint: enable=no-name-in-module, import-error, wrong-import-order
+
+
+# pylint: enable=no-name-in-module, import-error
+# isort: split
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG

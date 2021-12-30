@@ -5,6 +5,7 @@
 from cros.factory.external import cv2 as cv
 from cros.factory.external import numpy as np
 
+
 # different kinds of grids
 GRID_SHAPES = [[40, 40], [20, 20], [10, 30], [30, 10]]
 # MAX_GRID_SIZE is used to draw the approximate detection region on UI.

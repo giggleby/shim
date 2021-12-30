@@ -8,6 +8,7 @@ import unittest
 
 from cros.factory.gooftool import gbb
 
+
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_GBB_PATH = os.path.join(_TEST_DATA_PATH, 'test_gbb')
 

@@ -8,6 +8,7 @@ import logging
 import os
 import threading
 import time
+
 import _strptime  # pylint: disable=unused-import
 
 from cros.factory.instalog import flow_policy

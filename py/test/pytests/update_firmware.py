@@ -77,6 +77,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
+
 _FIRMWARE_UPDATER_NAME = 'chromeos-firmwareupdate'
 _FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
 

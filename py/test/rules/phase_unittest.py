@@ -10,8 +10,8 @@ import tempfile
 import unittest
 
 from cros.factory.test.rules import phase
-from cros.factory.test.rules.phase import Phase
 from cros.factory.test.rules.phase import PHASE_NAMES
+from cros.factory.test.rules.phase import Phase
 from cros.factory.test.rules.phase import PhaseAssertionError
 
 

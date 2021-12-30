@@ -28,6 +28,7 @@ from cros.factory.test.diagnosis import sanitizer
 from cros.factory.test.diagnosis import task
 from cros.factory.test import event
 
+
 _BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 

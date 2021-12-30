@@ -2,21 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os.path
 import unittest
 from unittest import mock
-import os.path
 
-from cros.factory.hwid.v3 import database
 from cros.factory.hwid.service.appengine import hwid_action
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import bom_and_configless_helper as bc_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import dut_label_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
-# pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.v3 import database
+
 
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',

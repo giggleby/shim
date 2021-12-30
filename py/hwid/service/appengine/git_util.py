@@ -13,7 +13,7 @@ import time
 from typing import List, NamedTuple, Optional
 import urllib.parse
 
-# pylint: disable=wrong-import-order, import-error, no-name-in-module
+# pylint: disable=import-error, no-name-in-module
 import certifi
 from dulwich.client import HttpGitClient
 from dulwich.objects import Blob
@@ -24,9 +24,13 @@ from dulwich.repo import MemoryRepo as _MemoryRepo
 import google.auth
 from google.auth import impersonated_credentials
 import google.auth.transport.requests
-import urllib3.exceptions
+
+
+# pylint: enable=import-error, no-name-in-module
+# isort: split
+
 from urllib3 import PoolManager
-# pylint: enable=wrong-import-order, import-error, no-name-in-module
+import urllib3.exceptions
 
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import json_utils

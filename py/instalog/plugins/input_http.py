@@ -27,8 +27,8 @@ $ curl -i -X POST \
 
 import cgi
 import http.server
-from io import StringIO
 from io import BytesIO
+from io import StringIO
 import logging
 import shutil
 import tempfile
@@ -42,6 +42,7 @@ from cros.factory.instalog.plugins import http_common
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import net_utils
+
 from cros.factory.instalog.external import gnupg
 
 

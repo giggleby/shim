@@ -10,9 +10,7 @@ Subclasses OutputBigQuery to create table rows for HWID events.
 
 import json
 
-# pylint: disable=import-error, no-name-in-module
-from google.cloud.bigquery.schema import SchemaField
-# pylint: enable=import-error, no-name-in-module
+from google.cloud.bigquery.schema import SchemaField  # pylint: disable=import-error, no-name-in-module
 
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import output_bigquery

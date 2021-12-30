@@ -8,6 +8,7 @@ import os
 
 from cros.factory.utils import sys_utils
 
+
 DEFAULT_CRASH_PATH = '/var/factory/crash'
 
 

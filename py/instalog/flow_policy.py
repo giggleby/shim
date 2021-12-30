@@ -9,6 +9,7 @@ Decides whether or not a plugin should process an Event.
 
 import logging
 
+
 # Name of the key used to specify the rule type in the config dictionary.
 _RULE_TYPE_KEY = 'rule'
 

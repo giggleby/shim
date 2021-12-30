@@ -6,6 +6,7 @@
 
 from cros.factory.device import device_types
 
+
 DeviceComponent = device_types.DeviceComponent
 DeviceException = device_types.DeviceException
 DeviceProperty = device_types.DeviceProperty

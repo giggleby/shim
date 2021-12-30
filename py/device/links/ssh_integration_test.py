@@ -15,6 +15,7 @@ from cros.factory.device.links import local
 from cros.factory.device.links import ssh
 from cros.factory.test.env import paths
 
+
 dut_options = dict(
     identity=os.path.join(paths.FACTORY_DIR, 'setup', 'sshkeys',
                           'testing_rsa'))

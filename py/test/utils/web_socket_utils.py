@@ -9,7 +9,6 @@ import hashlib
 import http.client
 import logging
 
-
 from cros.factory.external import ws4py
 
 

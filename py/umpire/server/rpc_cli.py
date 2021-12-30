@@ -5,6 +5,7 @@
 """Umpired RPC command class."""
 
 import urllib.request
+
 from cros.factory.umpire import common
 from cros.factory.umpire.server.commands import deploy
 from cros.factory.umpire.server.commands import export_log
@@ -12,11 +13,11 @@ from cros.factory.umpire.server.commands import export_payload
 from cros.factory.umpire.server.commands import import_bundle
 from cros.factory.umpire.server.commands import update
 from cros.factory.umpire.server import config
-from cros.factory.umpire.server import umpire_rpc
+from cros.factory.umpire.server.service import umpire_sync
 from cros.factory.umpire.server import umpire_env
+from cros.factory.umpire.server import umpire_rpc
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
-from cros.factory.umpire.server.service import umpire_sync
 
 
 class CLICommand(umpire_rpc.UmpireRPC):

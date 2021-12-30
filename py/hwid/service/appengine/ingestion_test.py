@@ -8,17 +8,13 @@ import collections
 import unittest
 from unittest import mock
 
-# pylint: disable=import-error, wrong-import-order, no-name-in-module
-from google.cloud import ndb
+from google.cloud import ndb  # pylint: disable=import-error, no-name-in-module
 import yaml
-# pylint: enable=import-error, wrong-import-order, no-name-in-module
 
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ingestion
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import ingestion_pb2
-# pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 

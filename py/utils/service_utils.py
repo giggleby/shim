@@ -5,9 +5,9 @@
 import logging
 import threading
 
+from . import process_utils
 from . import sync_utils
 from . import type_utils
-from . import process_utils
 
 
 START_TEXT = 'start/running'

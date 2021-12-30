@@ -92,8 +92,10 @@ from cros.factory.test.utils import goofy_plugin_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
-from cros.factory.utils.process_utils import LogAndCheckCall, CheckOutput
+from cros.factory.utils.process_utils import CheckOutput
+from cros.factory.utils.process_utils import LogAndCheckCall
 from cros.factory.utils import type_utils
+
 
 _DEFAULT_TARGET_CHARGE = 78
 

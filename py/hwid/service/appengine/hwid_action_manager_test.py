@@ -8,8 +8,8 @@ import unittest
 from unittest import mock
 
 from cros.factory.hwid.service.appengine import hwid_action
-from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_action_manager
+from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import test_utils
 
 

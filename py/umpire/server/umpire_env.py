@@ -21,12 +21,12 @@ from cros.factory.umpire.server import config
 from cros.factory.umpire.server import resource
 from cros.factory.umpire.server import utils
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 from cros.factory.utils import webservice_utils
-from cros.factory.utils import json_utils
 
 
 CROS_PAYLOAD = os.path.join(

@@ -21,6 +21,7 @@ from cros.factory.test import state
 from cros.factory.utils import debug_utils
 from cros.factory.utils import file_utils
 
+
 # Mocks CatchException decorator since it will suppress exception in
 # SystemLogManager.
 CatchExceptionImpl = debug_utils.CatchException
@@ -31,9 +32,8 @@ def CatchExceptionDisabled(*args, **kwargs):
   return CatchExceptionImpl(*args, **kwargs)
 debug_utils.CatchException = CatchExceptionDisabled
 
-# pylint: disable=wrong-import-position
-from cros.factory.goofy.plugins import system_log_manager
-# pylint: enable=wrong-import-position
+from cros.factory.goofy.plugins import system_log_manager  # pylint: disable=wrong-import-position
+
 
 TEST_DIRECTORY = '/tmp/system_log_manager_unittest_%s_/' % os.getpid()
 mock_file_prefix = 'system_log_manager_unittest_%s_' % os.getpid()

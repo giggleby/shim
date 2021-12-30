@@ -10,6 +10,7 @@ from cros.factory.device.boards import chromeos
 from cros.factory.device import device_types
 from cros.factory.test.utils import deploy_utils
 
+
 # pylint: disable=protected-access
 class FactoryPythonArchiveUnittest(unittest.TestCase):
   def setUp(self):

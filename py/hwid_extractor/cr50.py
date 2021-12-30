@@ -10,6 +10,7 @@ import time
 
 import serial
 
+
 # Timeout for the unresponding serial console.
 SERIAL_CONSOLE_TIMEOUT = 1
 # Buffer size for each read of cr50 uart console.

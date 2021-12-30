@@ -7,6 +7,7 @@ import os
 
 from google.protobuf import json_format
 
+
 try:
   from chromiumos.config.payload import config_bundle_pb2
   MODULE_READY = True

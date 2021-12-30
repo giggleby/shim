@@ -10,22 +10,17 @@ import os
 import os.path
 import textwrap
 
-# pylint: disable=no-name-in-module, import-error, wrong-import-order
 import urllib3
 import yaml
-# pylint: enable=no-name-in-module, import-error, wrong-import-order
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
-from cros.factory.hwid.service.appengine import \
-    verification_payload_generator as vpg_module
+from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import filesystem_adapter
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import ingestion_pb2
-# pylint: enable=import-error, no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 

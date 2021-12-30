@@ -66,8 +66,8 @@ from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test.fixture import bft_fixture
 from cros.factory.test.i18n import _
 from cros.factory.test.i18n import arg_utils as i18n_arg_utils
-from cros.factory.test.utils import button_utils
 from cros.factory.test import test_case
+from cros.factory.test.utils import button_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils

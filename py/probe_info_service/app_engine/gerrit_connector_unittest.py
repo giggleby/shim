@@ -7,9 +7,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-# pylint: disable=wrong-import-order, import-error, no-name-in-module
 import urllib3.exceptions
-# pylint: enable=wrong-import-order, import-error, no-name-in-module
 
 from cros.factory.probe_info_service.app_engine import gerrit_connector
 

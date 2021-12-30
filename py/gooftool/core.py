@@ -17,8 +17,8 @@ import time
 
 import yaml
 
-from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import bmpblk
+from cros.factory.gooftool.common import Util
 from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import gbb
@@ -43,6 +43,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
+
 
 # The mismatch result tuple.
 Mismatch = namedtuple('Mismatch', ['expected', 'actual'])

@@ -9,6 +9,7 @@ import textwrap
 from typing import List, Tuple
 
 from cros.chromeoshwid import update_checksum
+
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_validator

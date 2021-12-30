@@ -14,9 +14,7 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine import hwid_repo
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
-# pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import name_pattern_adapter

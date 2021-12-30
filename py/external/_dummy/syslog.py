@@ -6,6 +6,7 @@
 
 import logging
 
+
 def openlog(unused_name):
   pass
 

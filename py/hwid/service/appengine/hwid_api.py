@@ -9,15 +9,13 @@ This file is also the place that all the binding is done for various components.
 import logging
 
 from cros.chromeoshwid import update_checksum
+
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import dut_label_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import self_service_helper as ss_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.service.appengine import ingestion

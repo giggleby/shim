@@ -16,6 +16,7 @@ import time
 
 from cros.factory.device.audio import base
 
+
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
 # Configuration file is using YAML nested collections format.

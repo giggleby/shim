@@ -13,6 +13,7 @@ from cros.factory.test import event_log
 from cros.factory.utils import debug_utils
 from cros.factory.utils import shelve_utils
 
+
 EVENT_SEPARATOR = '\n---\n'
 KEY_OFFSET = 'offset'
 EVENT_LOG_DB_FILE = os.path.join(paths.DATA_STATE_DIR, 'event_log_db')

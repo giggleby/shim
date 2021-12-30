@@ -5,8 +5,8 @@
 
 import glob
 import os
-import sys
 import shutil
+import sys
 import tempfile
 
 

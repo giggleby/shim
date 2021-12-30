@@ -4,19 +4,15 @@
 
 import os
 import os.path
-import unittest
 import tempfile
+import unittest
 
 from google.protobuf import text_format
 
-# pylint: disable=no-name-in-module
-from cros.factory.probe_info_service.app_engine import client_payload_pb2
-# pylint: enable=no-name-in-module
+from cros.factory.probe_info_service.app_engine import client_payload_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import probe_tool_manager
 from cros.factory.probe_info_service.app_engine import stubby_handler
-# pylint: disable=no-name-in-module
-from cros.factory.probe_info_service.app_engine import stubby_pb2
-# pylint: enable=no-name-in-module
+from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import unittest_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils

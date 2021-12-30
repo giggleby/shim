@@ -75,10 +75,10 @@ from cros.factory.device import usb_c
 from cros.factory.test import device_data
 from cros.factory.test.env import paths
 from cros.factory.test.i18n import _
-from cros.factory.testlog import testlog
 from cros.factory.test import server_proxy
 from cros.factory.test import session
 from cros.factory.test import test_case
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils

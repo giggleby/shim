@@ -10,8 +10,8 @@ import logging
 import os
 import time
 
-from cros.factory.utils import log_utils
 from cros.factory.utils import json_utils
+from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 
 

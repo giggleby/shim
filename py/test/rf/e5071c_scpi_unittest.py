@@ -15,6 +15,7 @@ import unittest
 from cros.factory.test.rf.e5071c_scpi import CheckTraceValid
 from cros.factory.test.rf.e5071c_scpi import Interpolate
 
+
 X_VALUES = [10, 10, 15, 18, 20, 20, 30, 30, 40]
 Y_VALUES = [0.5, 0.7, 0.9, 1.2, 0.6, 0.7, 0.1, 1.1, 9.1]
 

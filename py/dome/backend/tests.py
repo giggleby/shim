@@ -9,10 +9,9 @@ import os
 from unittest import mock
 import xmlrpc.client
 
+from backend import models
 import rest_framework.status
 import rest_framework.test
-
-from backend import models
 
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))

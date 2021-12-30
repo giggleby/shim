@@ -331,6 +331,7 @@ class BluetoothTest(test_case.TestCase):
       # A base SMT test station does not need to use the charge fixture.
       # pylint: disable=no-name-in-module
       from cros.factory.test.fixture import base_charge_fixture
+
       # Note: only reset the fixture in InitializeFixture test.
       #       This will stop charging and disable the magnet initially.
       #       For the following tests, do not reset the fixture so that

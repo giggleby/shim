@@ -3,12 +3,15 @@
 # found in the LICENSE file.
 
 import datetime
-import flask
 
-# pylint: disable=import-error,no-name-in-module,wrong-import-order
+# pylint: disable=import-error,no-name-in-module
+import flask
 from google.cloud import pubsub_v1
 from google.cloud import storage
-# pylint: enable=import-error,no-name-in-module,wrong-import-order
+
+
+# pylint: enable=import-error,no-name-in-module
+# isort: split
 
 from cros.factory.bundle_creator.app_engine import config
 from cros.factory.bundle_creator.app_engine import factorybundle_pb2  # pylint: disable=no-name-in-module

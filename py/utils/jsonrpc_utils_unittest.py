@@ -13,8 +13,8 @@ import time
 import unittest
 
 import jsonrpclib
-from jsonrpclib import jsonrpc
 from jsonrpclib import SimpleJSONRPCServer
+from jsonrpclib import jsonrpc
 
 from cros.factory.utils import jsonrpc_utils
 from cros.factory.utils import net_utils

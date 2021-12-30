@@ -29,7 +29,6 @@ import copy
 import fcntl
 import struct
 
-
 # pylint: disable=no-name-in-module
 from cros.factory.external.evdev import ecodes
 

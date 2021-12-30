@@ -11,6 +11,7 @@ import unittest
 
 from cros.factory.testlog import testlog_utils
 
+
 SAMPLE_UNIX_TIME = 618566888.888888
 SAMPLE_DATETIME_STRING = '618566888.888888'
 SAMPLE_DATETIME = datetime.datetime(1989, 8, 8, 8, 8, 8, 888888)

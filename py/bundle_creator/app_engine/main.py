@@ -4,8 +4,8 @@
 
 import flask
 
-from cros.factory.bundle_creator.app_engine import stubby_handler
 from cros.factory.bundle_creator.app_engine import protorpc_utils
+from cros.factory.bundle_creator.app_engine import stubby_handler
 
 
 app = flask.Flask(__name__)

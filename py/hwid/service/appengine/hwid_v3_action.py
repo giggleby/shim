@@ -7,8 +7,7 @@ import logging
 from typing import List, Optional
 
 from cros.factory.hwid.service.appengine import hwid_action
-from cros.factory.hwid.service.appengine.hwid_action_helpers \
-    import v3_self_service_helper as ss_helper_module
+from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils

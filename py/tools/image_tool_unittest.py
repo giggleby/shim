@@ -17,8 +17,8 @@ import unittest
 from unittest import mock
 
 from cros.factory.tools import image_tool
-from cros.factory.utils import process_utils
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import process_utils
 
 
 DEBUG = False

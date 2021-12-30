@@ -5,6 +5,8 @@
 import datetime
 
 from cros.factory.device import device_utils
+
+
 try:
   from cros.factory.goofy.plugins import plugin_controller
   _HAS_PLUGIN_CONTROLLER = True

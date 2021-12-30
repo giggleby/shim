@@ -6,9 +6,7 @@ import functools
 import http
 import logging
 
-# pylint: disable=no-name-in-module, import-error, wrong-import-order
-import flask
-# pylint: enable=no-name-in-module, import-error, wrong-import-order
+import flask  # pylint: disable=no-name-in-module, import-error
 
 from cros.factory.hwid.service.appengine.config import CONFIG
 from cros.factory.probe_info_service.app_engine import protorpc_utils

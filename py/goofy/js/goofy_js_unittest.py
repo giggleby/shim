@@ -11,8 +11,8 @@ import os
 import subprocess
 import unittest
 
-from cros.factory.utils import process_utils
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import process_utils
 
 
 SCRIPT_DIR = os.path.dirname(__file__)

@@ -22,6 +22,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import ssh_utils
 from cros.factory.utils import type_utils
 
+
 ActionType = type_utils.Enum(['PUSH_NEEDLE', 'FIXTURE_STARTED'])
 
 def TimeClassMethodDebug(func):

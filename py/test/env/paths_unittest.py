@@ -9,6 +9,7 @@ from unittest import mock
 
 from cros.factory.test.env import paths
 
+
 class GetFactoryPythonArchivePathUnittest(unittest.TestCase):
   def setUp(self):
     pass

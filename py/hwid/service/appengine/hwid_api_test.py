@@ -9,18 +9,16 @@ import unittest
 from unittest import mock
 
 from cros.chromeoshwid import update_checksum
+
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_api
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import hwid_validator
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
-# pylint: enable=import-error, no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import file_utils
 

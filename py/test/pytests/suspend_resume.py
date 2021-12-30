@@ -56,6 +56,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 
+
 _MIN_SUSPEND_MARGIN_SECS = 5
 
 _MESSAGES = '/var/log/messages'

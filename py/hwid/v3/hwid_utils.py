@@ -10,11 +10,11 @@ import os
 
 from cros.factory.hwid.v3.bom import BOM
 from cros.factory.hwid.v3 import common
+from cros.factory.hwid.v3.configless_fields import ConfiglessFields
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import identity as identity_utils
 from cros.factory.hwid.v3.identity import Identity
 from cros.factory.hwid.v3.rule import Context
-from cros.factory.hwid.v3.configless_fields import ConfiglessFields
 from cros.factory.hwid.v3 import transformer
 from cros.factory.hwid.v3 import verifier
 from cros.factory.hwid.v3 import yaml_wrapper as yaml

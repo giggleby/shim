@@ -6,6 +6,7 @@ from jsonrpclib import jsonrpc
 
 from cros.factory.utils import net_utils
 
+
 # Default address and port that goofy server will bind on.
 DEFAULT_GOOFY_PORT = 0x0FAC
 DEFAULT_GOOFY_ADDRESS = net_utils.LOCALHOST

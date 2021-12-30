@@ -7,9 +7,7 @@ import copy
 import logging
 import typing
 
-# pylint: disable=no-name-in-module,import-error
-from google.cloud import datastore
-# pylint: enable=no-name-in-module,import-error
+from google.cloud import datastore  # pylint: disable=no-name-in-module,import-error
 
 from cros.factory.probe_info_service.app_engine import config
 from cros.factory.utils import type_utils

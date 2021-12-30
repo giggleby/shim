@@ -12,9 +12,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-# pylint: disable=wrong-import-order, import-error
-from dulwich.objects import Tree
-# pylint: enable=wrong-import-order, import-error
+from dulwich.objects import Tree  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter

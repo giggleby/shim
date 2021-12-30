@@ -6,8 +6,8 @@
 
 try:
   import cv2 as cv
-  import zbar
   import numpy as np
+  import zbar
 except ImportError:
   pass
 

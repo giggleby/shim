@@ -50,10 +50,10 @@ def _RunPytestGoofy(pytest, args, dut_options):
   """
   # Unless this function is called, we would like to avoid these extra
   # dependencies.
-  from cros.factory.utils import file_utils
   from cros.factory.goofy import invocation
   from cros.factory.test import pytest_runner
   from cros.factory.test import state
+  from cros.factory.utils import file_utils
 
   with file_utils.UnopenedTemporaryFile(prefix='results') as results:
     info = invocation.PytestInfo(None, None, pytest, args, results,

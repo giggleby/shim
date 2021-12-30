@@ -8,13 +8,11 @@ from unittest import mock
 
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_action_manager
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import bom_and_configless_helper as bc_helper_module
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
-# pylint: enable=import-error, no-name-in-module
+
 
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',

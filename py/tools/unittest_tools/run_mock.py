@@ -14,8 +14,8 @@ def RunPytest(pytest, args):
   # We should import utils.arg_utils and test.utils.pytest_utils
   # after importing mock_loader since these two files might import
   # other files under cros.factory
-  from cros.factory.utils.arg_utils import Args
   from cros.factory.test.utils import pytest_utils
+  from cros.factory.utils.arg_utils import Args
   test = pytest_utils.LoadPytest(pytest)()
   arg_spec = test.ARGS or []
   test.args = Args(*arg_spec).Parse(args or {})

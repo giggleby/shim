@@ -44,11 +44,11 @@ import logging
 import pprint
 import uuid
 
-from twisted.internet.protocol import connectionDone
 from twisted.internet.protocol import Factory
 from twisted.internet.protocol import Protocol
-from twisted.internet import reactor
 from twisted.internet.protocol import ReconnectingClientFactory
+from twisted.internet.protocol import connectionDone
+from twisted.internet import reactor
 
 
 class ClientProtocol(Protocol):

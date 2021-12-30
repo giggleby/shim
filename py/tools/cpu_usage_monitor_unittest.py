@@ -9,6 +9,7 @@ from unittest import mock
 
 from cros.factory.tools.cpu_usage_monitor import CPUUsageMonitor
 
+
 MOCK_TOP_OUTPUT = \
     """top - 11:46:54 up  3:25,  0 users,  load average: 0.33, 2.32, 2.79
 Tasks: 224 total,   1 running, 223 sleeping,   0 stopped,   0 zombie

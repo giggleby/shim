@@ -6,13 +6,10 @@ import logging
 import operator
 import re
 
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers \
-    import bom_and_configless_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
-# pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 
 
 class DUTLabelHelper:

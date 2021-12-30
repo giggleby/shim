@@ -62,10 +62,10 @@ One can also pass parameters to the classes specified in `robot_fixture` and
 import logging
 
 from cros.factory.device import device_utils
-from cros.factory.test import session
 from cros.factory.test.fixture import utils as fixture_utils
 from cros.factory.test.i18n import _
 from cros.factory.test import server_proxy
+from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg

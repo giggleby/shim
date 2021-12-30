@@ -71,9 +71,10 @@ from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
-from cros.factory.utils import type_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
+from cros.factory.utils import type_utils
+
 
 _ARG_SERVICES_SCHEMA = JSONSchemaDict('services schema object', {
     'type': 'array',

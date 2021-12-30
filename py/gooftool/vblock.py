@@ -20,6 +20,7 @@
 import struct
 import sys
 
+
 # Constant Definition
 KEY_BLOCK_MAGIC = 'CHROMEOS'
 KEY_BLOCK_MAGIC_SIZE = 8

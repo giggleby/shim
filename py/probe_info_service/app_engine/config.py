@@ -9,9 +9,7 @@ import os
 import yaml
 
 from cros.factory.utils import file_utils
-# TODO(yhong): Stop disabling unused-import check once the issue
-#     https://github.com/PyCQA/pylint/issues/1630 is solved.
-from cros.factory.utils import type_utils  # pylint: disable=unused-import
+from cros.factory.utils import type_utils
 
 
 _CONFIGURATIONS_YAML_PATH = os.path.join(

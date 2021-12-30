@@ -9,13 +9,11 @@ import typing
 
 from google.protobuf import text_format
 
-from cros.factory.probe_info_service.app_engine import bundle_builder
-# pylint: disable=no-name-in-module
-from cros.factory.probe_info_service.app_engine import client_payload_pb2
-from cros.factory.probe_info_service.app_engine import stubby_pb2
-# pylint: enable=no-name-in-module
 from cros.factory.probe.runtime_probe import probe_config_definition
 from cros.factory.probe.runtime_probe import probe_config_types
+from cros.factory.probe_info_service.app_engine import bundle_builder
+from cros.factory.probe_info_service.app_engine import client_payload_pb2  # pylint: disable=no-name-in-module
+from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils

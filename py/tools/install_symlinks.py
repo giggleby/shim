@@ -23,6 +23,7 @@ from cros.factory.utils.schema import Dict
 from cros.factory.utils.schema import FixedDict
 from cros.factory.utils.schema import Scalar
 
+
 # Valid modes.
 MODE_FULL = 'full'  # Install all binaries
 MODE_MINI = 'mini'  # Install only factory-mini binaries

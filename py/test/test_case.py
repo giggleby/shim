@@ -11,9 +11,9 @@ import time
 import unittest
 
 from cros.factory.test import event as test_event
+from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_ui
-from cros.factory.test import session
 from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils

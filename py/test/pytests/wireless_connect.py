@@ -47,6 +47,7 @@ from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 
+
 class WirelessConnectTest(test_case.TestCase):
   """Basic wireless test class."""
   ARGS = [

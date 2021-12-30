@@ -11,6 +11,7 @@ import serial
 
 from cros.factory.utils import type_utils
 
+
 _COMMAND_RETRY_TIMES = 5
 _RECEIVE_RETRY_TIMES = 10
 

@@ -4,6 +4,7 @@
 
 """Syncronization-related utilities (waiting for state change)."""
 
+import _thread
 from contextlib import contextmanager
 import functools
 import inspect
@@ -12,11 +13,11 @@ import queue
 import signal
 import threading
 import time
-import _thread
 
 from . import thread_utils
 from . import time_utils
 from . import type_utils
+
 
 _HAVE_CTYPES = True
 try:

@@ -19,6 +19,7 @@ import unittest
 from cros.factory.test.rf.n1914a import N1914A
 from cros.factory.utils import net_utils
 
+
 NORMAL_ERR_RESPONSE = b'+0,"No error"\n'
 NORMAL_ESR_REGISTER = b'+0\n'
 NORMAL_OPC_RESPONSE = b'+1\n'

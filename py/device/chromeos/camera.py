@@ -11,11 +11,10 @@ import os
 import re
 
 from cros.factory.device import camera
+from cros.factory.test.utils.camera_utils import CVCameraReader
 from cros.factory.test.utils.camera_utils import CameraDevice
 from cros.factory.test.utils.camera_utils import CameraError
-from cros.factory.test.utils.camera_utils import CVCameraReader
 from cros.factory.test.utils.camera_utils import GetValidCameraPaths
-
 from cros.factory.utils import type_utils
 
 

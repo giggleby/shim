@@ -9,6 +9,7 @@ import os
 
 from cros.factory.utils import process_utils
 
+
 DEFAULT_ETC_ISSUE = """
 You are now in tmp file system created by gooftool.chroot.Chroot.
 Log files can be found under /tmp, /mnt/stateful_partition/unencrypted.

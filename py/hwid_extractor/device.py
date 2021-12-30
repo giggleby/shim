@@ -12,6 +12,7 @@ from cros.factory.hwid_extractor import cr50
 from cros.factory.hwid_extractor import rlz
 from cros.factory.hwid_extractor import servod
 
+
 # SuzyQ usb device id.
 CR50_USB = '18d1:5014'
 CR50_LSUSB_CMD = ['lsusb', '-vd', CR50_USB]

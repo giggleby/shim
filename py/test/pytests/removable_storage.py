@@ -111,10 +111,10 @@ import threading
 from cros.factory.device import device_utils
 from cros.factory.device import usb_c
 from cros.factory.test.event_log import Log
-from cros.factory.test import session
 from cros.factory.test.fixture import bft_fixture
 from cros.factory.test.i18n import _
 from cros.factory.test.i18n import arg_utils as i18n_arg_utils
+from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
@@ -122,6 +122,7 @@ from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 from cros.factory.external import pyudev
+
 
 # The GPT ( http://en.wikipedia.org/wiki/GUID_Partition_Table )
 # occupies the first 34 and the last 33 512-byte blocks.

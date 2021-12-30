@@ -9,6 +9,7 @@ import pipes
 from cros.factory.device.boards import linux
 from cros.factory.device import device_types
 
+
 # pylint: disable=abstract-method
 class AndroidBoard(linux.LinuxBoard):
   """Common interface for Android boards."""

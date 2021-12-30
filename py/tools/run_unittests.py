@@ -7,9 +7,14 @@
 """Runs unittests in parallel."""
 
 import argparse
+import contextlib
+import datetime
+import glob
 import logging
+import multiprocessing
 import os
 import random
+import re
 import shutil
 import signal
 import socketserver
@@ -20,17 +25,12 @@ import sys
 import tempfile
 import threading
 import time
-import datetime
-import multiprocessing
-import contextlib
-import glob
-import re
 
+from cros.factory.tools.unittest_tools import mock_loader
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
-from cros.factory.tools.unittest_tools import mock_loader
 
 
 FACTORY_ROOT = os.path.abspath(

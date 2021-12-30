@@ -11,6 +11,7 @@ from unittest import mock
 from cros.factory.device import device_utils
 from cros.factory.device import temp as temp_module
 
+
 class TemporaryFilesTest(unittest.TestCase):
 
   def setUp(self):

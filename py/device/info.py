@@ -295,6 +295,7 @@ class SystemInfo(device_types.DeviceComponent):
 
 def main():
   import pprint
+
   from cros.factory.device import device_utils
   logging.basicConfig()
   info = SystemInfo(device_utils.CreateDUTInterface())

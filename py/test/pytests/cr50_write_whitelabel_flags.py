@@ -34,8 +34,8 @@ import logging
 from cros.factory.device import device_utils
 from cros.factory.gooftool import common as gooftool_common
 from cros.factory.gooftool import cros_config as cros_config_module
-from cros.factory.test.utils import deploy_utils
 from cros.factory.test import test_case
+from cros.factory.test.utils import deploy_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 

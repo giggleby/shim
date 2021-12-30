@@ -9,11 +9,9 @@ import logging
 from typing import List, NamedTuple, Optional
 import urllib.parse
 
-# pylint: disable=wrong-import-order, import-error, no-name-in-module
 import certifi
-import google.auth
+import google.auth  # pylint: disable=import-error, no-name-in-module
 import urllib3
-# pylint: enable=wrong-import-order, import-error, no-name-in-module
 
 from cros.factory.utils import json_utils
 

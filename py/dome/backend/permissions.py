@@ -7,9 +7,8 @@
 
 import logging
 
-from rest_framework import permissions as drf_permissions
-
 from backend import common
+from rest_framework import permissions as drf_permissions
 
 from cros.factory.utils import net_utils
 

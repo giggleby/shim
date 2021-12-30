@@ -145,11 +145,11 @@ import numpy as np
 
 from cros.factory.device import ambient_light_sensor
 from cros.factory.device import device_utils
-from cros.factory.test import session
 from cros.factory.test.fixture import fixture_connection
 from cros.factory.test.fixture.light_sensor import light_chamber
 from cros.factory.test import i18n
 from cros.factory.test.i18n import _
+from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test.utils import kbd_leds
 from cros.factory.test.utils import media_utils

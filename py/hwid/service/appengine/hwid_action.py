@@ -7,8 +7,7 @@ import collections
 import copy
 from typing import Dict, List, NamedTuple, Optional, Set
 
-from cros.factory.hwid.service.appengine \
-    import verification_payload_generator as vpg_module
+from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
 from cros.factory.hwid.v3 import database as v3_database
 

@@ -181,9 +181,10 @@ from cros.factory.test.utils import audio_utils
 from cros.factory.testlog import testlog
 from cros.factory.testlog import testlog_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.utils.schema import JSONSchemaDict
+
 
 # Default setting
 _DEFAULT_FREQ_HZ = 1000

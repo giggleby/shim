@@ -62,6 +62,7 @@ from cros.factory.test import test_case
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
+
 _PROBE_TIMES_ID = 'probed_times'
 _AC_STATUS_ID = 'ac_status'
 _AC_POWER_ID = 'ac_power'

@@ -7,9 +7,7 @@ import unittest
 from cros.factory.probe_info_service.app_engine import probe_metainfo_connector
 from cros.factory.probe_info_service.app_engine import ps_storage_connector
 from cros.factory.probe_info_service.app_engine import stubby_handler
-# pylint: disable=no-name-in-module
-from cros.factory.probe_info_service.app_engine import stubby_pb2
-# pylint: enable=no-name-in-module
+from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import unittest_utils
 
 

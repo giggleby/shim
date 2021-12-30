@@ -10,8 +10,8 @@ import json
 import logging
 import os
 
-from cros.factory.utils import config_utils
 from cros.factory.device import device_types
+from cros.factory.utils import config_utils
 
 
 DEVICE_MODULE_BASE = 'cros.factory.device'

@@ -12,6 +12,7 @@ for ryu board.
 import glob
 import os
 
+
 try:
   from cros.factory.utils import type_utils
 except ImportError:

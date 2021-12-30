@@ -6,9 +6,9 @@
 import os
 import unittest
 
+from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_v2_action
-from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.utils import file_utils
 
 

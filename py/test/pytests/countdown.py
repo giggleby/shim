@@ -55,6 +55,7 @@ import os
 import time
 
 from cros.factory.device import device_utils
+from cros.factory.goofy.plugins import plugin_controller
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test import session
 from cros.factory.test import state
@@ -65,7 +66,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
-from cros.factory.goofy.plugins import plugin_controller
 
 
 _WARNING_TEMP_RATIO = 0.95

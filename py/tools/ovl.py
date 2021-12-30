@@ -35,8 +35,8 @@ import urllib.parse
 import urllib.request
 
 import jsonrpclib
-from jsonrpclib import config
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+from jsonrpclib import config
 from ws4py.client import WebSocketBaseClient
 import yaml
 

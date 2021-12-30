@@ -29,6 +29,7 @@ from cros.factory.umpire.server import utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 # A list of all available umpire services
 _SERVICE_LIST = [
     'umpire_http', 'rsync', 'shop_floor', 'instalog', 'dkps', 'multicast',

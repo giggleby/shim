@@ -9,9 +9,9 @@ import time
 import unittest
 
 from cros.factory.test import event
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
 
 
 EventType = event.Event.Type

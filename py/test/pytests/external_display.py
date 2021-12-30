@@ -126,9 +126,9 @@ from cros.factory.device import usb_c
 from cros.factory.test.fixture import bft_fixture
 from cros.factory.test.i18n import _
 from cros.factory.test.pytests import audio
-from cros.factory.test.utils import button_utils
 from cros.factory.test import state
 from cros.factory.test import test_case
+from cros.factory.test.utils import button_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils

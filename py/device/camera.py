@@ -8,8 +8,8 @@ This module provides accessing camera devices.
 """
 
 from cros.factory.device import device_types
-from cros.factory.test.utils.camera_utils import CameraDevice
 from cros.factory.test.utils.camera_utils import CVCameraReader
+from cros.factory.test.utils.camera_utils import CameraDevice
 
 
 class Camera(device_types.DeviceComponent):

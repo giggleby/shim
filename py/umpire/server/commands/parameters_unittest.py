@@ -7,8 +7,8 @@ import os
 import shutil
 import unittest
 
-from cros.factory.umpire.server.commands import parameters
 from cros.factory.umpire import common
+from cros.factory.umpire.server.commands import parameters
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import file_utils
 

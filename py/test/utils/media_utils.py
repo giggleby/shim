@@ -10,6 +10,7 @@ import tempfile
 
 from cros.factory.external import pyudev
 
+
 # udev constants
 _UDEV_ACTION_INSERT = 'add'
 _UDEV_ACTION_REMOVE = 'remove'

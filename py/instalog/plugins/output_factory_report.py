@@ -15,8 +15,8 @@ the following things:
 """
 
 import copy
-import logging
 import json
+import logging
 import multiprocessing
 import os
 import re

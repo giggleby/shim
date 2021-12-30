@@ -16,6 +16,8 @@ import mmap
 import os
 
 from cros.factory.external import PIL
+
+
 if PIL.MODULE_READY:
   from cros.factory.external.PIL import Image  # pylint: disable=no-name-in-module
 

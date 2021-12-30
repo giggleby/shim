@@ -4,8 +4,8 @@
 
 import unittest
 
-from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.service.appengine.data import decoder_data
+from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 
 
 class DecoderDataManagerTest(unittest.TestCase):

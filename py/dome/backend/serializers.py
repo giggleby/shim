@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import django
-from rest_framework import exceptions  # pylint: disable=wrong-import-order
-from rest_framework import serializers
-from rest_framework import validators
-
 from backend import common
 from backend.models import Bundle
 from backend.models import DomeConfig
@@ -16,6 +11,10 @@ from backend.models import Project
 from backend.models import Resource
 from backend.models import Service
 from backend.models import TemporaryUploadedFile
+import django
+from rest_framework import exceptions
+from rest_framework import serializers
+from rest_framework import validators
 
 
 class ConfigSerializer(serializers.ModelSerializer):

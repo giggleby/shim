@@ -20,7 +20,7 @@ import sys
 import time
 import xmlrpc.server
 
-from cros.factory.test.pytests.touchscreen_calibration import touchscreen_calibration_utils as utils  # pylint: disable=line-too-long
+from cros.factory.test.pytests.touchscreen_calibration import touchscreen_calibration_utils as utils
 
 
 # List the supported boards below

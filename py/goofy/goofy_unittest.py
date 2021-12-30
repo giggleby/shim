@@ -32,10 +32,10 @@ from cros.factory.test import state
 from cros.factory.test.state import TestState
 from cros.factory.test.test_lists import manager
 from cros.factory.test.utils import pytest_utils
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
 
 
 _PytestInfo = collections.namedtuple('_PytestInfo',

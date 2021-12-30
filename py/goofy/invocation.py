@@ -27,12 +27,13 @@ from cros.factory.testlog import testlog
 from cros.factory.testlog import testlog_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import sys_utils
 from cros.factory.utils.service_utils import ServiceManager
 from cros.factory.utils.string_utils import DecodeUTF8
+from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 
 from cros.factory.external import syslog
+
 
 # Number of bytes to include from the log of a failed test.
 ERROR_LOG_TAIL_LENGTH = 8 * 1024

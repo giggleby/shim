@@ -16,7 +16,8 @@ import stat
 import sys
 
 from cros.factory.utils import file_utils
-from cros.factory.utils.process_utils import CalledProcessError, Spawn
+from cros.factory.utils.process_utils import CalledProcessError
+from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
 

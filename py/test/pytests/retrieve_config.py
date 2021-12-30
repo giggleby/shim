@@ -68,8 +68,8 @@ import threading
 import time
 import unittest
 
-from cros.factory.test import session
 from cros.factory.test import server_proxy
+from cros.factory.test import session
 from cros.factory.test.utils import media_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils

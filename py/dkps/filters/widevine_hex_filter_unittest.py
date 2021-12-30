@@ -3,12 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import unittest
 from unittest import mock
 
-import os
-
 from cros.factory.dkps.filters import widevine_hex_filter
+
 
 try:
   # pylint: disable=import-error

@@ -100,8 +100,8 @@ from cros.factory.test.utils import kbd_leds
 from cros.factory.testlog import testlog
 from cros.factory.utils import arg_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import net_utils
+from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 

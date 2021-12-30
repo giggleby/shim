@@ -18,8 +18,8 @@ import logging
 import re
 
 from cros.factory.hwid.v3 import common
-from cros.factory.test.rules import phase
 from cros.factory.hwid.v3.configless_fields import ConfiglessFields
+from cros.factory.test.rules import phase
 
 
 def VerifyComponentStatus(database, bom, mode, current_phase=None):

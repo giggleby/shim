@@ -52,6 +52,7 @@ import copy
 
 from .type_utils import MakeList
 
+
 # To simplify portability issues, validating JSON schema is optional.
 try:
   # pylint: disable=wrong-import-order

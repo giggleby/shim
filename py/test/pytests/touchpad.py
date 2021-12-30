@@ -48,15 +48,16 @@ If you want to change the time limit to 100 seconds::
 
 import logging
 
-from cros.factory.external import evdev
-from cros.factory.test import session
 from cros.factory.test.i18n import _
+from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.test.utils import evdev_utils
 from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
+
+from cros.factory.external import evdev
 
 
 class TouchpadMonitor(touch_monitor.MultiTouchMonitor):

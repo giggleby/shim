@@ -11,6 +11,7 @@ import re
 from cros.factory.test.diagnosis import common
 from cros.factory.utils import process_utils
 
+
 _DEFAULT_INPUT_BOOL_VALUE = True
 _DEFAULT_INPUT_FILE_PATTERN = '.*'
 _DEFAULT_INPUT_FILE_TYPE = 'regular-file'

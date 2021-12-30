@@ -7,17 +7,10 @@
 
 import os
 
-from django.http import StreamingHttpResponse
-from rest_framework import generics
-from rest_framework import mixins
-from rest_framework import permissions
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import views
-
 from backend import common
 from backend.models import Bundle
 from backend.models import DomeConfig
+from backend.models import GetUmpireSyncStatus
 from backend.models import Log
 from backend.models import ParameterComponent
 from backend.models import ParameterDirectory
@@ -25,7 +18,6 @@ from backend.models import Project
 from backend.models import Resource
 from backend.models import Service
 from backend.models import TemporaryUploadedFile
-from backend.models import GetUmpireSyncStatus
 from backend.serializers import BundleSerializer
 from backend.serializers import ConfigSerializer
 from backend.serializers import LogDeleteSerializer
@@ -37,6 +29,13 @@ from backend.serializers import ProjectSerializer
 from backend.serializers import ResourceSerializer
 from backend.serializers import ServiceSerializer
 from backend.serializers import UploadedFileSerializer
+from django.http import StreamingHttpResponse
+from rest_framework import generics
+from rest_framework import mixins
+from rest_framework import permissions
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework import views
 
 
 class InfoView(views.APIView):

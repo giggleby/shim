@@ -11,9 +11,9 @@ The test is simply just make sure the recorded HWID databases stay not
 changed.
 """
 
+import hashlib
 import os
 import unittest
-import hashlib
 
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import yaml_wrapper as yaml

@@ -14,11 +14,8 @@ import os
 import subprocess
 import sys
 
+import client_payload_pb2  # pylint: disable=import-error
 from google.protobuf import text_format
-
-# pylint: disable=import-error
-import client_payload_pb2
-# pylint: enable=import-error
 
 
 _BUNDLE_ROOT_DIR = os.path.dirname(os.path.realpath(__file__))

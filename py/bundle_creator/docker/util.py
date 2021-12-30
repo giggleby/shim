@@ -6,16 +6,14 @@ import datetime
 import logging
 import os
 import subprocess
+
+from google.cloud import storage  # pylint: disable=import-error, no-name-in-module
+from google.protobuf import text_format
 import yaml
 
-# pylint: disable=import-error, no-name-in-module
-from google.cloud import storage
-# pylint: enable=import-error, no-name-in-module
-from google.protobuf import text_format
-
-from cros.factory.utils import file_utils
 from cros.factory.bundle_creator.connector import firestore_connector
 from cros.factory.bundle_creator.docker import config
+from cros.factory.utils import file_utils
 
 
 class CreateBundleException(Exception):

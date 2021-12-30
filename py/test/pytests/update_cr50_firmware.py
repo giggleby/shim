@@ -90,8 +90,8 @@ import os
 from cros.factory.device import device_utils
 from cros.factory.gooftool import common as gooftool_common
 from cros.factory.gooftool import gsctool
-from cros.factory.test.rules import phase
 from cros.factory.test import device_data
+from cros.factory.test.rules import phase
 from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.testlog import testlog

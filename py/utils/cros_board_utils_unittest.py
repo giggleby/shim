@@ -7,8 +7,8 @@
 
 import unittest
 
-from cros.factory.utils.cros_board_utils import BuildBoard
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils.cros_board_utils import BuildBoard
 
 
 # TODO (b/204839190)

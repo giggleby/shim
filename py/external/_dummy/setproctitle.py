@@ -6,5 +6,6 @@
 
 import logging
 
+
 def setproctitle(message):
   logging.info('Dummy setproctitle: %s', message)

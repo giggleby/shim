@@ -6,8 +6,7 @@
 from typing import List
 
 from cros.factory.hwid.service.appengine import config
-from cros.factory.hwid.service.appengine import \
-    verification_payload_generator as vpg_module
+from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 

@@ -15,6 +15,7 @@ import xmlrpc.server
 
 from cros.factory.test.fixture.whale import serial_server
 
+
 # server address
 DEFAULT_PORT = 9997
 DEFAULT_HOST = 'localhost'
