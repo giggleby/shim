@@ -19,20 +19,18 @@ Depend on the sysfs driver to read information from the battery.
 
 Examples
 --------
-To perform a basic battery test, add this in test list::
-
-  {
-    "pytest_name": "battery_sysfs"
-  }
-
-To restrict the limitation of battery cycle count to 5::
+To perform a battery test, add this in test list::
 
   {
     "pytest_name": "battery_sysfs",
     "args": {
-      "maxmum_cycle_count": 5
+      "maximum_cycle_count": 10,
+      "percent_battery_wear_allowed": 5
     }
   }
+
+To disable max cycle count check, set ``maximum_cycle_count`` to ``-1``.
+To disable wear level check, set ``percent_battery_wear_allowed`` to ``-1``.
 """
 
 import unittest
@@ -46,9 +44,9 @@ class SysfsBatteryTest(unittest.TestCase):
   """Checks battery status."""
   ARGS = [
       Arg('maximum_cycle_count', int,
-          'Maximum cycle count allowed to pass test', default=None),
+          'Maximum cycle count allowed to pass test', default=10),
       Arg('percent_battery_wear_allowed', int,
-          'Maximum pecent battery wear allowed to pass test', default=100),
+          'Maximum pecent battery wear allowed to pass test', default=5),
   ]
 
   def setUp(self):
@@ -66,7 +64,7 @@ class SysfsBatteryTest(unittest.TestCase):
       msg = 'Cannot find battery path'
     elif power.GetChargePct() is None:
       msg = 'Cannot get charge percentage'
-    elif wearAllowedPct < 100:
+    elif 0 <= wearAllowedPct < 100:
       wearPct = power.GetWearPct()
       if wearPct is None:
         msg = 'Cannot get wear percentage'
@@ -79,7 +77,7 @@ class SysfsBatteryTest(unittest.TestCase):
 
     if battery_present:
       cycleCount = power.GetBatteryCycleCount()
-      if success and self.args.maximum_cycle_count is not None:
+      if success and self.args.maximum_cycle_count >= 0:
         if cycleCount > self.args.maximum_cycle_count:
           msg = 'Battery cycle count is too high: %d' % cycleCount
           success = False

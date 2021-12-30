@@ -38,13 +38,20 @@
         "SMTEnd"
       ]
     },
+    "SMTBatterySysfs": {
+      "inherit": "BatterySysfs",
+      "args": {
+        "maximum_cycle_count": -1,
+        "percent_battery_wear_allowed": -1
+      }
+    },
     "SMTComponents": {
       "label": "Parallel Test",
       "parallel": true,
       "subtests": [
         "SMTProbe",
         "SpeakerDMic",
-        "BatterySysfs",
+        "SMTBatterySysfs",
         "SMTWifiSSIDList",
         "ChargerTypeDetection",
         "ChargeDischargeCurrent",
