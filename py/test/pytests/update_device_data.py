@@ -173,8 +173,14 @@ from cros.factory.utils import sync_utils
 
 
 # Known regions to be listed first.
-_KNOWN_REGIONS = (
-    'us', 'gb', 'de', 'fr', 'ch', 'nordic', 'latam-es-419',
+_COMMONLY_USED_REGIONS = (
+    'us',
+    'gb',
+    'de',
+    'fr',
+    'ch',
+    'nordic',
+    'latam-es-419',
 )
 
 _KNOWN_KEY_LABELS = {
@@ -186,144 +192,6 @@ _KNOWN_KEY_LABELS = {
 }
 
 _SELECTION_PER_PAGE = 10
-
-
-class DataEntry:
-  """Quick access to an entry in DeviceData.
-
-  Properties:
-    key: A string as Device Data key.
-    value: Default value to be set.
-    label: A I18N label to display on UI.
-    value_check: A regular expression string or list of values or None for
-      validation of new value.
-    re_checker: The compiled regular expression to validate input value.
-    codes: A list of string for UI to use as reference to selected values.
-    options: A list of strings for UI to display as option to select from.
-  """
-
-  def __init__(self, key, value=None, display_name=None, value_check=None):
-    device_data.CheckValidDeviceDataKey(key)
-    self.key = key
-    self.value = device_data.GetDeviceData(key) if value is None else value
-    if display_name is None and key in _KNOWN_KEY_LABELS:
-      display_name = _KNOWN_KEY_LABELS[key]
-    self.label = (i18n.StringFormat('{name} ({key})', name=display_name,
-                                    key=key) if display_name else key)
-
-    self.re_checker = None
-    self.value_check = None
-    self.codes = None
-    self.options = None
-
-    if isinstance(value, bool) and value_check is None:
-      value_check = [True, False]
-
-    if isinstance(value_check, str):
-      self.re_checker = re.compile(value_check)
-    elif isinstance(value_check, list):
-      # TODO(b/210802746): list is a valid type for value_check. Add this check
-      # to fix regression first.
-      pass
-    elif value_check is None:
-      self.value_check = value_check
-    else:
-      raise TypeError('value_check (%r) for %s must be either regex, sequence, '
-                      'or None.' % (value_check, key))
-
-    # Region should be processed differently.
-    if key == device_data.KEY_VPD_REGION:
-      all_regions = list(regions.REGIONS)
-      if not value_check:
-        ordered_values = [v for v in _KNOWN_REGIONS if v in all_regions]
-        other_values = sorted(set(all_regions) - set(ordered_values))
-        value_check = ordered_values + other_values
-
-      if not isinstance(value_check, list):
-        raise ValueError(f'`value_check` for {key} must be a list of strings')
-      if not set(value_check).issubset(set(all_regions)):
-        raise ValueError(f'`value_check` for {key} must be '
-                         'a subset of known regions')
-      self.value_check = value_check
-      self.codes = value_check
-      self.options = [
-          '%d - %s; %s' % (i + 1, v, regions.REGIONS[v].description)
-          for i, v in enumerate(self.codes)]
-      return
-
-    # When value_check is a list, UI will render a list of options.
-    if isinstance(value_check, list):
-      value_check = self._NormalizeListValueCheck(value_check)
-      self.value_check = []
-      self.codes = []
-      self.options = []
-
-      for v, option in value_check:
-        self.value_check.append(v)
-        self.codes.append(str(v))
-        self.options.append(option)
-
-  @staticmethod
-  def _NormalizeListValueCheck(value_check):
-    """Normalize `value_check` to list of (value, option) tuples."""
-    assert isinstance(value_check, list)
-
-    for i, e in enumerate(value_check):
-      if isinstance(e, (str, int, bool)):
-        value_check[i] = (e, f'{i + 1} - {e}')
-        continue
-      if isinstance(e, list):
-        if len(e) == 0:
-          raise ValueError(
-              'Each element of `value_check` must not be an empty list')
-        if len(e) == 1:
-          e = e[0]
-          value_check[i] = (e, f'{i + 1} - {e}')
-        elif len(e) == 2:
-          value_check[i] = (e[0], f'{i + 1} - {e[1]}')
-        else:
-          logging.warning('Each element of value_check is either a single '
-                          'value or a two value tuple. Extra values will be '
-                          'truncated.')
-          value_check[i] = (e[0], f'{i + 1} - {e[1]}')
-    return value_check
-
-  def GetInputList(self):
-    """Returns the list of allowed input, or None for raw input."""
-    return self.codes
-
-  def GetOptionList(self):
-    """Returns the options to display if the allowed input is a list."""
-    return self.options
-
-  def GetValueIndex(self):
-    """Returns the index of current value in input list.
-
-    Raises:
-      ValueError if current value is not in known list.
-    """
-    return self.value_check.index(self.value)
-
-  def IsValidInput(self, input_data):
-    """Checks if input data is valid.
-
-    The input data may be a real string or one of the value in self.codes.
-    """
-    if self.re_checker:
-      logging.info('trying re_checker')
-      return self.re_checker.match(input_data)
-    if self.value_check is None:
-      return True
-    if self.codes:
-      return input_data in self.codes
-    raise ValueError('Unknown value_check: %r' % self.value_check)
-
-  def GetValue(self, input_data):
-    """Returns the real value from input data."""
-    if self.codes:
-      return self.value_check[self.codes.index(input_data)]
-    return input_data
-
 
 class UpdateDeviceData(test_case.TestCase):
   ARGS = [
@@ -358,8 +226,8 @@ class UpdateDeviceData(test_case.TestCase):
     # Syntax sugar: If the sequence was replaced by a simple string, consider
     # that as data_key only.
     self.entries = [
-        DataEntry(args) if isinstance(args, str) else DataEntry(*args)
-        for args in fields
+        CreateDataEntry(args)
+        if isinstance(args, str) else CreateDataEntry(*args) for args in fields
     ]
 
     # Setup UI and update accordingly.
@@ -377,7 +245,7 @@ class UpdateDeviceData(test_case.TestCase):
     event_subtype = 'devicedata-' + entry.key
     event_queue = queue.Queue()
 
-    if entry.GetInputList():
+    if isinstance(entry, SelectionDataEntry):
       self._RenderSelectBox(entry)
       self.ui.BindKeyJS(test_ui.ENTER_KEY, 'window.sendSelectValue(%r, %r)' %
                         (entry.key, event_subtype))
@@ -399,13 +267,12 @@ class UpdateDeviceData(test_case.TestCase):
         self._SetErrorMsg(
             _('No valid data on machine for {label}.', label=entry.label))
       else:
-        data = event.data
-        if entry.IsValidInput(data):
-          value = entry.GetValue(data)
-          if value is not None:
-            device_data.UpdateDeviceData({entry.key: value})
+        try:
+          entry.SetValueFromString(event.data)
+          device_data.UpdateDeviceData({entry.key: entry.GetValue()})
           break
-        self._SetErrorMsg(_('Invalid value for {label}.', label=entry.label))
+        except ValueError:
+          self._SetErrorMsg(_('Invalid value for {label}.', label=entry.label))
 
     self.ui.UnbindAllKeys()
     self.event_loop.ClearHandlers()
@@ -417,12 +284,11 @@ class UpdateDeviceData(test_case.TestCase):
   def _RenderSelectBox(self, entry):
     # Renders a select box to list all the possible values.
     select_box = ui_templates.SelectBox(entry.key, _SELECTION_PER_PAGE)
-    for value, option in zip(entry.GetInputList(),
-                             entry.GetOptionList()):
+    for value, option in entry.GetOptions():
       select_box.AppendOption(value, option)
 
     try:
-      select_box.SetSelectedIndex(entry.GetValueIndex())
+      select_box.SetSelectedIndex(entry.GetSelectedIndex())
     except ValueError:
       pass
 
@@ -451,3 +317,238 @@ class UpdateDeviceData(test_case.TestCase):
     self.ui.SetState(html)
     self.ui.SetSelected(entry.key)
     self.ui.SetFocus(entry.key)
+
+
+class DataEntry:
+  """A simple data store for storing DeviceData"""
+
+  def __init__(self, key, value, label):
+    self.key = key
+    self.value = value
+    self.label = label
+
+  def GetValue(self):
+    return self.value
+
+  def SetValueFromString(self, value):
+    raise NotImplementedError
+
+
+class TextDataEntry(DataEntry):
+  """A data store holding DeviceData as string type field.
+
+  Raises:
+    Generic Exception if the pattern_check cannot compile.
+  """
+
+  def __init__(self, key, value, label, pattern_check):
+    super().__init__(key, value, label)
+    self._pattern_check = pattern_check
+    self._regex_check = None if pattern_check is None else re.compile(
+        pattern_check)
+
+  def SetValueFromString(self, value):
+    """Sets the value in data store with validation with string type.
+
+    Raises:
+      ValueError if the value does not mat ch regex pattern check.
+    """
+    if self._regex_check is not None and not self._regex_check.match(value):
+      raise ValueError(
+          f'Cannot use value {value} for key {self.key}: not matching pattern '
+          f'{self._pattern_check}')
+    self.value = value
+
+
+class SelectionDataEntry(DataEntry):
+  """A data store holding DeviceData which value can only be in a set.
+
+  Args:
+    key: device data key.
+    value: default value for device data key.
+    options: list of (option_value, option_text) tuples options, where the
+      option_value is the dedicated type of the option, and the option_text is a
+      pure string.
+  """
+
+  def __init__(self, key, value, label, options):
+    super().__init__(key, value, label)
+    self._option_values = [option[0] for option in options]
+    self._option_texts = [option[1] for option in options]
+
+  def SetValueFromString(self, value):
+    """Sets the value in data store with validation with string type.
+
+    Args:
+      value: string of the option value.
+
+    Raises:
+      ValueError if the value is not in options.
+    """
+    for option_value in self._option_values:
+      if str(option_value) == value:
+        self.value = option_value
+        return
+    raise ValueError(
+        f'Cannot use value {value} for key {self.key}: not in options')
+
+  def GetOptions(self):
+    """Returns valid options.
+
+    Returns:
+      A list of tuples corresponding to the HTML select option, i.e. (option
+      value, display text), where both display text and option is string, option
+      value is the dedicated type of that option.
+    """
+    return list(zip(self._option_values, self._option_texts))
+
+  def GetSelectedIndex(self):
+    """Returns index of current value.
+
+    Returns:
+      An integer for the index.
+
+    Raises:
+      ValueError if current value is not in options.
+    """
+    return self._option_values.index(self.value)
+
+
+def CreateDataEntry(key, value_arg=None, display_name=None,
+                    value_check_arg=None):
+  """CreateDataEntry is the factory function for creating a DataEntry.
+
+  Args:
+    key: a string which is the name of the Device Data key.
+    value_arg: a predefined value to use. Should match the field type for the
+      key.
+    display_name: a string to show when passing to UI component and logs.
+    value_check_arg: used to limit the value, can be one of:
+      1. None: no limitation.
+      2. regex string: value will be validated against this regex check.
+      3. an option list: see SelectionDataEntry.
+
+  Returns:
+    Either a TextDataEntry or SelectionDataEntry instance.
+
+  Raises:
+    ValueError if key is invalid, or invalid arguments for creating different
+      kinds of DataEntry.
+    TypeError if value_check is invalid.
+  """
+  # CheckValidDeviceDataKey raises exception if key is invalid.
+  device_data.CheckValidDeviceDataKey(key)
+  value = value_arg if value_arg is not None else device_data.GetDeviceData(key)
+  label = (
+      i18n.StringFormat('{name} ({key})', name=GetDisplayNameWithKey(
+          key, display_name), key=key))
+
+  if isinstance(value, bool) and value_check_arg is None:
+    value_check = [True, False]
+  else:
+    value_check = value_check_arg
+
+  if key == device_data.KEY_VPD_REGION:
+    return SelectionDataEntry(key, value, label,
+                              CreateRegionOptions(value_check))
+  if isinstance(value_check, list):
+    return SelectionDataEntry(key, value, label,
+                              CreateSelectOptions(value_check))
+  if isinstance(value_check, str) or value_check is None:
+    return TextDataEntry(key, value, label, value_check)
+
+  raise TypeError(
+      f'value_check ({value_check}) for {key} must be either regex, sequence, '
+      'or None.')
+
+
+def GetDisplayNameWithKey(key, name=None):
+  """Gets display name.
+
+  Returns the name if it is given, or use predefined name if key is in
+  _KNOWN_KEY_LABELS; otherwise use key as display name.
+
+  Args:
+    key: a string which is the name of the Device Data key.
+    name: string as display name.
+
+  Returns:
+    A string of display name.
+  """
+  if name is not None:
+    return name
+  if key in _KNOWN_KEY_LABELS:
+    return _KNOWN_KEY_LABELS[key]
+  return key
+
+
+def CreateRegionOptions(allowed_regions=None):
+  """Creates region options.
+
+  Args:
+    allowed_regions: list of regions. None to use all regions.
+
+  Returns:
+    A list of (region_value, region_description) tuples.
+
+  Raises:
+    ValueError if any region in allowed_regions is not in all regions.
+  """
+  all_regions = list(regions.REGIONS)
+  if allowed_regions is not None:
+    assert isinstance(allowed_regions, list)
+    if not set(allowed_regions).issubset(set(all_regions)):
+      raise ValueError(
+          f'value of options for {device_data.KEY_VPD_REGION} must be a subset '
+          'of known regions')
+    region_to_use = allowed_regions
+  else:
+    # Put commonly used regions at the beginning.
+    commonly_used_regions = [
+        v for v in _COMMONLY_USED_REGIONS if v in all_regions
+    ]
+    rest_regions = sorted(set(all_regions) - set(commonly_used_regions))
+    region_to_use = commonly_used_regions + rest_regions
+
+  region_options = []
+  for idx, region in enumerate(region_to_use):
+    region_description = regions.REGIONS[region].description
+    option_display_text = f'{idx+1} - {region}: {region_description}'
+    region_options.append((region, option_display_text))
+  return region_options
+
+
+def CreateSelectOptions(value_check):
+  """Creates a list of options.
+
+  Args:
+    value_check: list of value_check items, where items can be str, int, bool,
+      or list.
+
+  Returns:
+    A list of (option_value, option_text) tuples.
+
+  Raises:
+    ValueError if item is invalid.
+  """
+  options = []
+  for i, e in enumerate(value_check):
+    if isinstance(e, (str, int, bool)):
+      options.append((e, f'{i + 1} - {e}'))
+    elif isinstance(e, list):
+      if len(e) == 0:
+        raise ValueError(
+            'Each element of `value_check` must not be an empty list')
+
+      if len(e) == 1:
+        options.append((e[0], f'{i + 1} - {e[0]}'))
+      elif len(e) == 2:
+        options.append((e[0], f'{i + 1} - {e[1]}'))
+      else:
+        logging.warning('Each element of value_check is either a single '
+                        'value or a two value tuple. Extra values will be '
+                        'truncated.')
+        options.append((e[0], f'{i + 1} - {e[1]}'))
+    else:
+      raise ValueError(f'Unsupported value_check {value_check}')
+  return options
