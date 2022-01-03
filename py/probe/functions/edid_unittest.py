@@ -54,10 +54,35 @@ class EDIDFunctionTest(unittest.TestCase):
   # Mocks edid.LoadFromFile and edid.LoadFromI2C by creating sysfs paths and I2C
   # paths in a new root, and read the parsed EDID directly from the files.
   FAKE_EDID = [
-      {'vendor': 'IBM', 'product_id': '001', 'width': '111'},
-      {'vendor': 'IBN', 'product_id': '002', 'width': '222'},
+      {
+          'vendor': 'IBM',
+          'product_id': '001',
+          'width': '111'
+      },
+      {
+          'vendor': 'IBN',
+          'product_id': '002',
+          'width': '222'
+      },
+      {
+          'vendor': 'IBX',
+          'product_id': '003',
+          'width': '333'
+      },
   ]
-  FAKE_SYSFS_PATHS = ['sys/class/drm/A/edid', 'sys/class/drm/BB/edid']
+  FAKE_EDID_NO_MAIN_DISPLAY = [
+      {
+          'vendor': 'HDMI',
+          'product_id': '004',
+          'width': '444'
+      },
+  ]
+
+  FAKE_SYSFS_PATHS = [
+      'sys/class/drm/card0-eDP-A/edid', 'sys/class/drm/card1-eDP-B/edid',
+      'sys/class/drm/card0-DP-C/edid'
+  ]
+  FAKE_SYSFS_PATHS_NO_MAIN_DISPLAY = ['sys/class/drm/card0-HDMI-A-1/edid']
   FAKE_I2C_PATHS = ['dev/i2c-1', 'dev/i2c-22']
 
   def setUp(self):
@@ -95,24 +120,31 @@ class EDIDFunctionTest(unittest.TestCase):
   def SetupSysfsEDID(self):
     self.WriteEDIDToRootDir(self.FAKE_SYSFS_PATHS, self.FAKE_EDID)
 
+  def SetupSysfsEDIDNoMainDisplay(self):
+    self.WriteEDIDToRootDir(self.FAKE_SYSFS_PATHS_NO_MAIN_DISPLAY,
+                            self.FAKE_EDID_NO_MAIN_DISPLAY)
+
   def SetupI2CEDID(self):
     self.WriteEDIDToRootDir(self.FAKE_I2C_PATHS, self.FAKE_EDID)
 
   def InitEDIDFunction(self):
     edid.EDIDFunction.path_to_identity = {}
     edid.EDIDFunction.identity_to_edid = {}
+    edid.EDIDFunction.identity_to_edid_main_display = {}
+    edid.EDIDFunction.probe_sysfs_success = False
 
-  def testSysfs(self, *unused_mocks):
+  def testSysfsOnlyMainDisplay(self, *unused_mocks):
     # Set up both sysfs and I2C EDID. The probe function should only read from
-    # sysfs.
+    # sysfs and output only main display.
     self.SetupSysfsEDID()
     self.SetupI2CEDID()
 
     expected_result = [
-        dict(self.FAKE_EDID[0],
-             sysfs_path=os.path.join(self.root_dir, self.FAKE_SYSFS_PATHS[0])),
-        dict(self.FAKE_EDID[1],
-             sysfs_path=os.path.join(self.root_dir, self.FAKE_SYSFS_PATHS[1]))]
+        dict(self.FAKE_EDID[0], sysfs_path=os.path.join(
+            self.root_dir, self.FAKE_SYSFS_PATHS[0])),
+        dict(self.FAKE_EDID[1], sysfs_path=os.path.join(
+            self.root_dir, self.FAKE_SYSFS_PATHS[1]))
+    ]
 
     result = edid.EDIDFunction()()
     self.assertCountEqual(result, expected_result)
@@ -121,6 +153,27 @@ class EDIDFunctionTest(unittest.TestCase):
       result = edid.EDIDFunction(
           path=os.path.join(self.root_dir, self.FAKE_SYSFS_PATHS[i]))()
       self.assertCountEqual(result, [expected_result[i]])
+
+    # This is not a main display, shouldn't output anything.
+    result = edid.EDIDFunction(
+        path=os.path.join(self.root_dir, self.FAKE_SYSFS_PATHS[2]))()
+    self.assertCountEqual(result, [])
+
+  def testSysfsNoMainDisplay(self, *unused_mocks):
+    # Set up both sysfs and I2C EDID. The probe function should only read from
+    # sysfs and output nothing.
+    self.SetupSysfsEDIDNoMainDisplay()
+    self.SetupI2CEDID()
+
+    expected_result = []
+
+    result = edid.EDIDFunction()()
+    self.assertCountEqual(result, expected_result)
+
+    result = edid.EDIDFunction(
+        path=os.path.join(self.root_dir,
+                          self.FAKE_SYSFS_PATHS_NO_MAIN_DISPLAY[0]))()
+    self.assertCountEqual(result, expected_result)
 
   def testI2C(self, *unused_mocks):
     # Don't set up sysfs EDID. The probe function will read from I2C.
