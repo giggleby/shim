@@ -23,9 +23,13 @@ _HWID_BUNDLE_INSTALLER_SCRIPT = textwrap.dedent(f"""\
     import os.path
     import shutil
     import sys
-    srcdir = os.path.dirname(__file__)
+    srcdir = os.path.dirname(os.path.join(os.getcwd(), __file__))
     dstdir = sys.argv[1] if len(sys.argv) > 1 else '/usr/local/factory/hwid'
-    os.makedirs(dstdir, exist_ok=True)
+    if os.path.exists(dstdir):
+      if not os.path.isdir(dstdir):
+        sys.exit('The destination %r is not a directory.' % dstdir)
+    else:
+      os.makedirs(dstdir)
     for f in os.listdir(srcdir):
       if f == '{_HWID_BUNDLE_INSTALLER_NAME}':
         continue
