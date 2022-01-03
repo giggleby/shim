@@ -193,8 +193,8 @@ class EDIDFunction(probe_function.ProbeFunction):
 
   Description
   -----------
-  This function tries to search for exported edid files in sysfs matching the
-  pattern ``/sys/class/drm/*/edid``. If no edid files are found in sysfs, it
+  This function tries to search for exported main display edid files in sysfs
+  under ``/sys/class/drm/*/edid``. If no edid files are found in sysfs, it
   probes all i2c buses for EDID blobs.
 
   Once this function finds an EDID data, this function parses the data to
@@ -223,14 +223,14 @@ class EDIDFunction(probe_function.ProbeFunction):
         "product_id": "abcd",
         "width": "19200",
         "height": "10800",
-        "sysfs_path": "/sys/class/drm/aa/edid"
+        "sysfs_path": "/sys/class/drm/card0-eDP-a/edid"
       },
       {
         "vendor": "IBX",
         "product_id": "1234",
         "width": "192",
         "height": "108",
-        "sysfs_path": "/sys/class/drm/bb/edid"
+        "sysfs_path": "/sys/class/drm/card0-eDP-b/edid"
       }
     ]
 
@@ -256,27 +256,43 @@ class EDIDFunction(probe_function.ProbeFunction):
   """
   path_to_identity = {}
   identity_to_edid = {}
+  # The convention sysfs paths for different displays are:
+  #   Main display: /sys/class/drm/card*-eDP-*/edid
+  #   External display: sys/class/drm/card*-DP-*/edid
+  #   HDMI display with type A connector: sys/class/drm/card*-HDMI-A-*/edid
+  #   etc.
+  # We only want to probe main display and ignore the rest.
+  identity_to_edid_main_display = {}
+  probe_sysfs_success = False
 
   ARGS = [
-      Arg('path', str,
+      Arg(
+          'path', str,
           'EDID file path or the number of I2C bus or the path of the i2c '
-          'bus (i.e. "/dev/i2c-<bus_number>").',
-          default=None),
+          'bus (i.e. "/dev/i2c-<bus_number>").', default=None),
   ]
 
   ROOT_PATH = '/'
   I2C_DEVICE_PREFIX = 'dev/i2c-'
   SYSFS_PATH_PATTERN = 'sys/class/drm/*/edid'
+  SYSFS_EXTERNAL_DISPLAY_PATTERNS = ('card.*-DP-.*', 'card.*-HDMI-.*')
   DEV_PATH_PATTERN = I2C_DEVICE_PREFIX + '[0-9]*'
 
   def Probe(self):
     self.MayInitCachedData()
 
     if not self.args.path:
+      # Probe from sysfs success.
+      if self.probe_sysfs_success:
+        return list(self.identity_to_edid_main_display.values())
+      # Otherwise, probe from i2c.
       return list(self.identity_to_edid.values())
 
     if self.args.path in self.path_to_identity:
-      return self.identity_to_edid[self.path_to_identity[self.args.path]]
+      identity = self.path_to_identity[self.args.path]
+      if self.probe_sysfs_success:
+        return self.identity_to_edid_main_display.get(identity, None)
+      return self.identity_to_edid[identity]
 
     if self.args.path.isdigit():
       path = os.path.join(self.ROOT_PATH,
@@ -306,6 +322,16 @@ class EDIDFunction(probe_function.ProbeFunction):
 
         cls.identity_to_edid.setdefault(identity, result)
         cls.identity_to_edid[identity][pattern_type] = path
+
+        if pattern_type == 'sysfs_path':
+          cls.probe_sysfs_success = True
+          # We don't want to record external display.
+          for external_display_pattern in cls.SYSFS_EXTERNAL_DISPLAY_PATTERNS:
+            if re.search(external_display_pattern, path):
+              break
+          else:
+            cls.identity_to_edid_main_display.setdefault(identity, result)
+            cls.identity_to_edid_main_display[identity][pattern_type] = path
 
       # If we already get results from sysfs, we don't need to probe i2c.
       if cls.path_to_identity:
