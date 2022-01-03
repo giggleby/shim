@@ -2768,6 +2768,11 @@ cros.factory.Goofy = class {
         `Received test list: ${goog.debug.expose(testList)}`);
     document.getElementById('goofy-loading').style.display = 'none';
 
+    // Makes UItitle show current test list name.
+    const UItitle = document.getElementById('goofy-logo-text');
+    UItitle.innerText = '';
+    UItitle.appendChild(cros.factory.i18n.i18nLabelNode(testList.label));
+
     this.rootPath = testList.path;
     this.addToNode(null, testList);
     // expandAll is necessary to get all the elements to actually be created
