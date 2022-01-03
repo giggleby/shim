@@ -1765,7 +1765,7 @@ msgid "Please connect to ethernet."
 msgstr "请连接到以太网。"
 
 #: ../py/test/pytests/check_image_version.py
-msgid "{reason}. Press space to re-image."
+msgid "{reason}. Press space to reinstall."
 msgstr "{reason}。请按空白键重新安装。"
 
 #: ../py/test/pytests/check_image_version.py

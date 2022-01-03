@@ -99,13 +99,14 @@ server using cros_payload::
     }
   }
 
-To force reimaging release image regardless of the version::
+To re-install the DLCs extracted from a release image::
 
   {
     "pytest_name": "check_image_version",
     "args": {
       "check_release_image": true,
-      "force_reimage": true
+      "use_netboot": false,
+      "reinstall_only_dlc": true
     }
   }
 """
@@ -123,6 +124,11 @@ from cros.factory.test.utils import deploy_utils
 from cros.factory.test.utils import update_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import type_utils
+
+
+_RE_CROS_PAYLOAD_ERROR = re.compile(r'ERROR: .*')
+_RE_BRANCHED_IMAGE_VERSION = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*$')
 
 
 class CheckImageVersionTest(test_case.TestCase):
@@ -149,21 +155,22 @@ class CheckImageVersionTest(test_case.TestCase):
           default=True),
       Arg('use_netboot', bool,
           'True to image with netboot, otherwise cros_payload.', default=True),
-      Arg('force_reimage', bool,
-          'True to force re-imaging regardless of the image version.',
-          default=False)
+      Arg(
+          'reinstall_only_dlc', bool,
+          'True to reinstall only DLCs from the release image on factory '
+          'server. The release image version on factory server must match '
+          'with the release image version on DUT.', default=False)
   ]
 
   ui_class = test_ui.ScrollableLogUI
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
-    if self.args.force_reimage:
-      self.reimage_reason = 'force_reimage is set to true'
+    if self.args.reinstall_only_dlc:
+      self.reinstall_reason = 'reinstall_only_dlc is set to true'
     else:
-      self.reimage_reason = 'Image version is incorrect'
+      self.reinstall_reason = 'Image version is incorrect'
     self.dut_image_version = None
-    self.server_image_version = None
 
   def WaitNetworkReady(self):
     while not self.dut.status.eth_on:
@@ -171,11 +178,10 @@ class CheckImageVersionTest(test_case.TestCase):
       self.Sleep(0.5)
 
   def runTest(self):
-    self.dut_image_version = \
-      self.GetAndLogDUTImageVersion()
+    self.dut_image_version = self.GetAndLogDUTImageVersion()
 
-    if self.args.force_reimage:
-      logging.info('Force re-imaging...')
+    if self.args.reinstall_only_dlc:
+      logging.info('Reinstall only DLCs...')
     else:
       # If this test stop unexpectedly during installing new image, we need to
       # check image version and verify Root FS to ensure the DUT is
@@ -194,11 +200,19 @@ class CheckImageVersionTest(test_case.TestCase):
           self.args.check_release_image,
           'Please use netboot if you would like to re-image test image!')
 
-    self.GetAndLogServerReleaseImageVersion()
+    if self.args.reinstall_only_dlc:
+      self.args.min_version = self.server_image_version
+      self.args.max_version = self.server_image_version
+
+      if not self.CheckImageVersion():
+        self.FailTask('The release image version on factory server must match '
+                      'with the release image version on DUT! Otherwise, '
+                      'finalize will fail when verifying the DLCs.')
 
     if self.args.require_space:
       self.ui.SetInstruction(
-          _('{reason}. Press space to re-image.', reason=self.reimage_reason))
+          _('{reason}. Press space to reinstall.',
+            reason=self.reinstall_reason))
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
 
     if self.args.use_netboot:
@@ -206,7 +220,11 @@ class CheckImageVersionTest(test_case.TestCase):
       destination = None
       callback = self.NetbootCallback
     else:
-      component = update_utils.COMPONENTS.release_image
+      if self.args.reinstall_only_dlc:
+        component = update_utils.COMPONENTS.__getattr__(
+            'release_image.dlc_factory_cache')
+      else:
+        component = update_utils.COMPONENTS.release_image
       destination = self.dut.partitions.rootdev
       callback = None
     self.ReImage(component, destination, callback)
@@ -230,11 +248,18 @@ class CheckImageVersionTest(test_case.TestCase):
     except Exception:
       self.FailTask('Error flashing netboot firmware!')
     else:
-      self.FailTask('%s. DUT is rebooting to reimage.' % self.reimage_reason)
+      self.FailTask('%s. DUT is rebooting to reimage.' % self.reinstall_reason)
 
   def ReImage(self, component, destination, callback):
+
+    def ReInstallCallBack(line):
+      # Check the output of the `cros_payload`.
+      if _RE_CROS_PAYLOAD_ERROR.match(line):
+        raise Exception('Installation failed! Reason: %s' % line)
+
     updater = update_utils.Updater(
-        component, spawn=self.ui.PipeProcessOutputToUI)
+        component, spawn=lambda cmd: self.ui.PipeProcessOutputToUI(
+            cmd, callback=ReInstallCallBack))
     if not updater.IsUpdateAvailable():
       self.FailTask('%s not available on factory server.' % component)
 
@@ -264,8 +289,9 @@ class CheckImageVersionTest(test_case.TestCase):
           self.args.check_release_image,
           'Empty min_version and max_version only allowed for '
           'check_release_image.')
-      self.args.min_version = self.args.max_version = \
-        self.GetAndLogServerReleaseImageVersion()
+
+      self.args.min_version = self.server_image_version
+      self.args.max_version = self.server_image_version
 
       if not self.args.min_version or not self.args.max_version:
         self.FailTask('Release image not available on factory server.')
@@ -282,15 +308,14 @@ class CheckImageVersionTest(test_case.TestCase):
     # For image built by tryjob, the image version will look like this:
     # `R89-13600.271.0-b5006899`. We do not compare the sub-verion of tryjob
     # image, which is `5006899` in this example, since it is meaningless.
-    re_branched_image_version = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*$')
-    ver_match = re_branched_image_version.match(ver)
+    ver_match = _RE_BRANCHED_IMAGE_VERSION.match(ver)
     if ver_match:
       ver = ver_match.group(1)
 
     expected_min = _GetExpectedVersion(
-        expected_min, ver_match, re_branched_image_version, self.args.reimage)
+        expected_min, ver_match, _RE_BRANCHED_IMAGE_VERSION, self.args.reimage)
     expected_max = _GetExpectedVersion(
-        expected_max, ver_match, re_branched_image_version, self.args.reimage)
+        expected_max, ver_match, _RE_BRANCHED_IMAGE_VERSION, self.args.reimage)
 
     if expected_min and expected_max:
       if version_format(expected_min) > version_format(expected_max):
@@ -330,12 +355,10 @@ class CheckImageVersionTest(test_case.TestCase):
 
     return ver
 
-  def GetAndLogServerReleaseImageVersion(self):
+  @type_utils.LazyProperty
+  def server_image_version(self):
     if not self.args.check_release_image:
       return None
-
-    if self.server_image_version:
-      return self.server_image_version
 
     self.WaitNetworkReady()
     updater = update_utils.Updater(update_utils.COMPONENTS.release_image)

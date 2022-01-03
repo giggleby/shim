@@ -31,6 +31,7 @@ To directly install 'release_image' (block device component)::
 import json
 import logging
 import os
+import re
 import urllib.request
 
 from cros.factory.device import device_utils
@@ -44,10 +45,10 @@ from cros.factory.utils import type_utils
 # A list of known components.
 COMPONENTS = type_utils.Enum([
     'firmware', 'hwid', 'netboot_firmware', 'project_config', 'release_image',
-    'toolkit'])
-OPTIONAL_COMPONENTS = [
-    'release_image.crx_cache', 'release_image.dlc_factory_cache'
-]
+    'toolkit', 'release_image.crx_cache', 'release_image.dlc_factory_cache'
+])
+OPTIONAL_COMPONENTS = type_utils.Enum(
+    ['release_image.crx_cache', 'release_image.dlc_factory_cache'])
 MATCH_METHOD = type_utils.Enum(['exact', 'substring'])
 
 
@@ -67,6 +68,13 @@ class Updater:
 
   def GetUpdateInfo(self, force_reload=False):
     """Gets raw information of updates on server."""
+
+    def GetParentComponent(component):
+      match = re.match(r'(.*)\..*', component)
+      if match:
+        return match.group(1)
+      return component
+
     if self._loaded and not force_reload:
       return self._payload
 
@@ -82,7 +90,7 @@ class Updater:
     if url:
       payloads = json.loads(urllib.request.urlopen(url).read())
     self._url = url
-    self._payload = payloads.get(self._component, {})
+    self._payload = payloads.get(GetParentComponent(self._component), {})
     self._loaded = True
     return self._payload
 

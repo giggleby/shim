@@ -60,7 +60,8 @@ _DLC_ERROR_TEMPLATE = 'If you install the images via network, please make ' \
                       'sure you use docker image version >= `20211102181209`' \
                       '. To re-install the DLC images, please run pytest ' \
                       '`check_image_version.py` with argument ' \
-                      '`force_reimage` set to true.'
+                      '`reinstall_only_dlc` set to true. For more ' \
+                      'information about DLCs, please read b/212643784.'
 
 
 class CrosConfigError(Error):
