@@ -47,6 +47,7 @@ To request the keybox from a given DKPS proxy URL::
 
 import logging
 import urllib.parse
+import uuid
 import xmlrpc.client
 import zlib
 
@@ -59,6 +60,21 @@ from cros.factory.utils.arg_utils import Arg
 
 KEYBOX_VPD_KEY = 'widevine_keybox'
 UMPIRE_DKPS_PORT_OFFSET = 9
+
+
+def GetDeviceSerial(device_info):
+  """Get the device serial for requesting keyboxes from DKPS.
+
+  Use `mlb_serial_number` if possible because:
+  (1) The Widevine keybox is designed to be paired with MLB.
+  (2) `serial_number` won't exist in replacement_mlb mode."""
+  if device_info.mlb_serial_number is not None:
+    return device_info.mlb_serial_number
+  if device_info.serial_number is not None:
+    return device_info.serial_number
+  logging.warning('No serial numbers available on the device. '
+                  'Use random string to request the keybox.')
+  return uuid.uuid4().hex
 
 
 class ProvisionDRMKey(test_case.TestCase):
@@ -102,11 +118,10 @@ class ProvisionDRMKey(test_case.TestCase):
     self.dut = device_utils.CreateDUTInterface()
 
   def runTest(self):
-    device_serial = self.dut.info.serial_number
     soc_id, soc_serial = self.oemcrypto_client.GetFactoryTransportKeyMaterial()
 
-    encrypted_keybox = self.dkps_proxy.Request(device_serial, soc_serial,
-                                               soc_id)
+    encrypted_keybox = self.dkps_proxy.Request(
+        GetDeviceSerial(self.dut.info), soc_serial, soc_id)
     wrapped_keybox = self.oemcrypto_client.WrapFactoryKeybox(encrypted_keybox)
     wrapped_keybox += format(zlib.crc32(bytes.fromhex(wrapped_keybox)), '08x')
 
