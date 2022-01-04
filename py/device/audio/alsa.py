@@ -199,8 +199,12 @@ class AlsaAudioControl(base.BaseAudioControl):
     for line in output.splitlines():
       tokens = [x.strip() for x in line.split(':')]
       if tokens[0] == 'available channels':
+        if not isinstance(orig_channel, int):
+          raise TypeError(
+              'Channel should be an integer: %s' % type(orig_channel))
         #  The values of channels are increased.
-        channel = int(GetElementFromList(tokens[1].split(' '), orig_channel))
+        channel = GetElementFromList(
+            list(map(int, tokens[1].split(' '))), orig_channel)
       if tokens[0] == 'available formats':
         alsa_formats = tokens[1].split(' ')
         for try_format in SOX_SUPPORTED_FORMATS:
@@ -208,8 +212,12 @@ class AlsaAudioControl(base.BaseAudioControl):
             data_format = try_format
             break
       if tokens[0] == 'available rates':
+        if not isinstance(orig_rate, int):
+          raise TypeError(
+              'Sample rate should be an integer: %s' % type(orig_rate))
         #  The values of rates are increased.
-        rate = int(GetElementFromList(tokens[1].split(' '), orig_rate))
+        rate = GetElementFromList(
+            list(map(int, tokens[1].split(' '))), orig_rate)
     if channel is None or data_format is None or rate is None:
       raise RuntimeError("Device doesn't support recording.")
     return channel, data_format, rate
