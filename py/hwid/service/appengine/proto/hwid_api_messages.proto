@@ -416,12 +416,19 @@ message AnalyzeHwidDbEditableSectionRequest {
   string project = 1;
   // The HWID DB as a string.
   string hwid_db_editable_section = 2;
+  // A bool indicating if HWID DB lines are required.
+  bool require_hwid_db_lines = 3;
 }
 
 // The response for analyzing the HWID config.
 message AnalyzeHwidDbEditableSectionResponse {
+  // The result of the validation.
   HwidDbEditableSectionChangeValidationResult validation_result = 1;
+  // An analysis report for a HWID config.
   HwidDbEditableSectionAnalysisReport analysis_report = 2;
+  // An unique identifier to this round of validation.  This ID is required
+  // to be attached on other RPCs that needs to be invoke after validation.
+  string validation_token = 3;
 }
 
 // An analysis report for a HWID config.

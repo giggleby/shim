@@ -6,7 +6,6 @@
 import os.path
 import unittest
 
-from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.utils import file_utils
 
@@ -50,31 +49,6 @@ class ContentsAnalyzerTest(unittest.TestCase):
         {
             'display_panel': [
                 contents_analyzer.NameChangedComponentInfo(
-                    comp_name='display_panel_9_10', cid=9, qid=10,
-                    status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
-                    diff_prev=contents_analyzer.DiffStatus(
-                        unchanged=False, name_changed=True,
-                        support_status_changed=False, values_changed=True,
-                        prev_comp_name='display_panel_invalid1',
-                        prev_support_status=common.COMPONENT_STATUS.supported)),
-                contents_analyzer.NameChangedComponentInfo(
-                    comp_name='display_panel_still_invalid2', cid=0, qid=0,
-                    status=common.COMPONENT_STATUS.supported, has_cid_qid=False,
-                    diff_prev=contents_analyzer.DiffStatus(
-                        unchanged=False, name_changed=True,
-                        support_status_changed=False, values_changed=False,
-                        prev_comp_name='display_panel_invalid2',
-                        prev_support_status=common.COMPONENT_STATUS.supported)),
-                contents_analyzer.NameChangedComponentInfo(
-                    comp_name='display_panel_100_200', cid=100, qid=200,
-                    status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
-                    diff_prev=contents_analyzer.DiffStatus(
-                        unchanged=False, name_changed=False,
-                        support_status_changed=True, values_changed=False,
-                        prev_comp_name='display_panel_100_200',
-                        prev_support_status=common.COMPONENT_STATUS.unqualified)
-                ),
-                contents_analyzer.NameChangedComponentInfo(
                     comp_name='display_panel_123_456', cid=123, qid=456,
                     status='supported', has_cid_qid=True, diff_prev=None),
             ]
@@ -85,10 +59,10 @@ class ContentsAnalyzerTest(unittest.TestCase):
     curr_db_contents = 'some invalid text for HWID DB.'
     inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
                                               prev_db_contents)
-    report = inst.AnalyzeChange(lambda s: s)
+    report = inst.AnalyzeChange(lambda s: s, True)
     self.assertTrue(report.precondition_errors)
 
-  def test_AnalyzeChange_Normal(self):
+  def test_AnalyzeChange_WithLines(self):
     LineModificationStatus = (
         contents_analyzer.DBLineAnalysisResult.ModificationStatus)
     LinePart = contents_analyzer.DBLineAnalysisResult.Part
@@ -118,7 +92,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
         os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_after.yaml'))
     inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
                                               prev_db_contents)
-    report = inst.AnalyzeChange(_HWIDDBHeaderPatcher)
+    report = inst.AnalyzeChange(_HWIDDBHeaderPatcher, True)
     self.assertFalse(report.precondition_errors)
 
     # The full report is too big, let's verify only some key parts of them.
@@ -179,6 +153,26 @@ class ContentsAnalyzerTest(unittest.TestCase):
                     'display_panel', 'display_panel_123_456#8', 'supported',
                     True, (123, 456), 2, 'display_panel_123_456#2', None),
         })
+
+  def test_AnalyzeChange_WithoutLines(self):
+
+    def _HWIDDBHeaderPatcher(contents):
+      # Remove everything before the checksum line.
+      lines = contents.splitlines()
+      for i, line in enumerate(lines):
+        if line.startswith('checksum:'):
+          return '\n'.join(lines[i + 1:])
+      return contents
+
+    prev_db_contents = file_utils.ReadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_before.yaml'))
+    curr_db_contents = file_utils.ReadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_after.yaml'))
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    analysis = inst.AnalyzeChange(_HWIDDBHeaderPatcher, False)
+    self.assertFalse(analysis.precondition_errors)
+    self.assertFalse(analysis.lines)
 
 
 if __name__ == '__main__':

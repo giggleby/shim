@@ -99,15 +99,30 @@ class HWIDV3SelfServiceActionHelper:
     return change_info_factory([], new_hwid_comps)
 
   def AnalyzeDraftDBEditableSection(
-      self,
-      draft_db_editable_section) -> hwid_action.DBEditableSectionAnalysisReport:
+      self, draft_db_editable_section, derive_fingerprint_only,
+      require_hwid_db_lines) -> hwid_action.DBEditableSectionAnalysisReport:
     curr_hwid_db_contents = self._preproc_data.raw_database
-    new_hwid_db_contents, unused_fp = _GetFullHWIDDBAndChangeFingerprint(
+    new_hwid_db_contents, fingerprint = _GetFullHWIDDBAndChangeFingerprint(
         curr_hwid_db_contents, draft_db_editable_section)
+
+    report_factory = functools.partial(
+        hwid_action.DBEditableSectionAnalysisReport, fingerprint,
+        new_hwid_db_contents)
+
+    if derive_fingerprint_only:
+      return report_factory([], [], [], {})
+
+    try:
+      self._hwid_validator.ValidateChange(new_hwid_db_contents,
+                                          curr_hwid_db_contents)
+    except hwid_validator.ValidationError as ex:
+      return report_factory(ex.errors, [], [], {})
 
     analyzer = contents_analyzer.ContentsAnalyzer(new_hwid_db_contents, None,
                                                   curr_hwid_db_contents)
-    return analyzer.AnalyzeChange(self.RemoveHeader)
+    analysis = analyzer.AnalyzeChange(self.RemoveHeader, require_hwid_db_lines)
+    return report_factory([], analysis.precondition_errors, analysis.lines,
+                          analysis.hwid_components)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only):
     del fingerprint_only

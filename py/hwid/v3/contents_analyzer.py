@@ -107,7 +107,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   diff_prev: Optional[DiffStatus]
 
 
-class ChangeAnalysisReport(NamedTuple):
+class ChangeAnalysis(NamedTuple):
   precondition_errors: List[Error]
   lines: List[DBLineAnalysisResult]
   hwid_components: Mapping[str, HWIDComponentAnalysisResult]
@@ -284,17 +284,69 @@ class ContentsAnalyzer:
                                        bool(comp.extracted_avl_id),
                                        comp.diff_prev))
 
-  def AnalyzeChange(self, db_contents_patcher) -> ChangeAnalysisReport:
+  def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
+                      db_placeholder_options):
+    dumped_db_lines = db_contents_patcher(
+        self._curr_db.instance.DumpData(
+            suppress_support_status=False,
+            magic_placeholder_options=db_placeholder_options)).splitlines()
+
+    no_placeholder_dumped_db_lines = db_contents_patcher(
+        self._curr_db.instance.DumpData(
+            suppress_support_status=False)).splitlines()
+    if len(dumped_db_lines) != len(no_placeholder_dumped_db_lines):
+      # Unexpected case, skip deriving the line diffs.
+      diff_view_line_it = itertools.repeat('  ', len(dumped_db_lines))
+    elif not self._prev_db or not self._prev_db.instance:
+      diff_view_line_it = itertools.repeat('  ', len(dumped_db_lines))
+    else:
+      prev_db_contents_lines = db_contents_patcher(
+          self._prev_db.instance.DumpData(
+              suppress_support_status=False)).splitlines()
+      diff_view_line_it = difflib.ndiff(
+          prev_db_contents_lines, no_placeholder_dumped_db_lines, charjunk=None)
+
+    removed_line_count = 0
+
+    splitter = _LineSplitter(
+        all_placeholders,
+        functools.partial(DBLineAnalysisResult.Part,
+                          DBLineAnalysisResult.Part.Type.TEXT))
+    line_analysis_result = []
+    for line in dumped_db_lines:
+      while True:
+        diff_view_line = next(diff_view_line_it)
+        if diff_view_line.startswith('? '):
+          continue
+        if not diff_view_line.startswith('- '):
+          break
+        removed_line_count += 1
+      if diff_view_line.startswith('  '):
+        removed_line_count = 0
+        mod_status = DBLineAnalysisResult.ModificationStatus.NOT_MODIFIED
+      elif removed_line_count > 0:
+        removed_line_count -= 1
+        mod_status = DBLineAnalysisResult.ModificationStatus.MODIFIED
+      else:
+        mod_status = DBLineAnalysisResult.ModificationStatus.NEWLY_ADDED
+
+      parts = splitter.SplitText(line)
+      line_analysis_result.append(DBLineAnalysisResult(mod_status, parts))
+    return line_analysis_result
+
+  def AnalyzeChange(self, db_contents_patcher,
+                    require_hwid_db_lines: bool) -> ChangeAnalysis:
     """Analyzes the HWID DB change.
 
     Args:
       db_contents_patcher: A function that patches / removes the header of the
           given HWID DB contents.
+      require_hwid_db_lines: A flag indicating if DB line analysis is required.
 
     Returns:
-      An instance of `ChangeAnalysisReport`.
+      An instance of `ChangeAnalysis`.
     """
-    report = ChangeAnalysisReport([], [], {})
+    report = ChangeAnalysis([], [], {})
     if not self._curr_db.instance:
       report.precondition_errors.append(
           Error(ErrorCode.SCHEMA_ERROR, str(self._curr_db.load_error)))
@@ -336,51 +388,10 @@ class ContentsAnalyzer:
                 comp.extracted_avl_id, comp.expected_seq_no,
                 comp_name_with_correct_seq_no, comp.diff_prev))
 
-    dumped_db_lines = db_contents_patcher(
-        self._curr_db.instance.DumpData(
-            suppress_support_status=False,
-            magic_placeholder_options=db_placeholder_options)).splitlines()
-
-    no_placeholder_dumped_db_lines = db_contents_patcher(
-        self._curr_db.instance.DumpData(
-            suppress_support_status=False)).splitlines()
-    if len(dumped_db_lines) != len(no_placeholder_dumped_db_lines):
-      # Unexpected case, skip deriving the line diffs.
-      diff_view_line_it = itertools.repeat('  ', len(dumped_db_lines))
-    elif not self._prev_db or not self._prev_db.instance:
-      diff_view_line_it = itertools.repeat('  ', len(dumped_db_lines))
-    else:
-      prev_db_contents_lines = db_contents_patcher(
-          self._prev_db.instance.DumpData(
-              suppress_support_status=False)).splitlines()
-      diff_view_line_it = difflib.ndiff(
-          prev_db_contents_lines, no_placeholder_dumped_db_lines, charjunk=None)
-
-    removed_line_count = 0
-
-    splitter = _LineSplitter(
-        all_placeholders,
-        functools.partial(DBLineAnalysisResult.Part,
-                          DBLineAnalysisResult.Part.Type.TEXT))
-    for line in dumped_db_lines:
-      while True:
-        diff_view_line = next(diff_view_line_it)
-        if diff_view_line.startswith('? '):
-          continue
-        if not diff_view_line.startswith('- '):
-          break
-        removed_line_count += 1
-      if diff_view_line.startswith('  '):
-        removed_line_count = 0
-        mod_status = DBLineAnalysisResult.ModificationStatus.NOT_MODIFIED
-      elif removed_line_count > 0:
-        removed_line_count -= 1
-        mod_status = DBLineAnalysisResult.ModificationStatus.MODIFIED
-      else:
-        mod_status = DBLineAnalysisResult.ModificationStatus.NEWLY_ADDED
-
-      parts = splitter.SplitText(line)
-      report.lines.append(DBLineAnalysisResult(mod_status, parts))
+    if require_hwid_db_lines:
+      report.lines.extend(
+          self._AnalyzeDBLines(db_contents_patcher, all_placeholders,
+                               db_placeholder_options))
     return report
 
   class _HWIDComponentMetadata(NamedTuple):
@@ -413,16 +424,6 @@ class ContentsAnalyzer:
         comp_name, comp_info = curr_item
         avl_id = name_pattern.Matches(comp_name)
         noseq_comp_name, sep, actual_seq = comp_name.partition('#')
-        is_newly_added = False
-        if self._prev_db is None or self._prev_db.instance is None:
-          is_newly_added = True
-        else:
-          prev_comp = self._prev_db.instance.GetComponents(comp_cls).get(
-              comp_name)
-          if prev_comp is None:
-            is_newly_added = True
-          elif avl_id is not None and prev_comp.status != comp_info.status:
-            is_newly_added = True
 
         diffstatus = None
         if prev_item:
@@ -436,6 +437,9 @@ class ContentsAnalyzer:
           diffstatus = DiffStatus(unchanged, name_changed,
                                   support_status_changed, values_changed,
                                   prev_comp_name, prev_support_status)
+          is_newly_added = False
+        else:
+          is_newly_added = True
 
         ret[comp_cls].append(
             self._HWIDComponentMetadata(

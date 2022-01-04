@@ -288,18 +288,27 @@ Info Update
 
   def AnalyzeHWIDDBEditableSection(self, request):
     response = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse()
+    require_hwid_db_lines = request.require_hwid_db_lines
 
     try:
       action = self._hwid_action_manager.GetHWIDAction(request.project)
       report = action.AnalyzeDraftDBEditableSection(
-          request.hwid_db_editable_section)
+          request.hwid_db_editable_section, False, require_hwid_db_lines)
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+    response.validation_token = report.fingerprint
 
     if report.precondition_errors:
       for error in report.precondition_errors:
         response.validation_result.errors.add(
             code=_ConvertValidationErrorCode(error.code), message=error.message)
+
+    if report.validation_errors:
+      for error in report.validation_errors:
+        response.validation_result.errors.add(
+            code=_ConvertValidationErrorCode(error.code), message=error.message)
+
+    if response.validation_result.errors:
       return response
 
     # TODO(yhong): Don't add the status `duplicate` if the project is too old.
@@ -312,21 +321,23 @@ Info Update
     response.analysis_report.qualified_support_status.append(
         v3_common.COMPONENT_STATUS.supported)
 
-    for line in report.lines:
-      response_line = response.analysis_report.hwid_config_lines.add()
-      if line.modification_status == line.ModificationStatus.MODIFIED:
-        response_line.modification_status = response_line.MODIFIED
-      elif line.modification_status == line.ModificationStatus.NEWLY_ADDED:
-        response_line.modification_status = response_line.NEWLY_ADDED
-      else:
-        response_line.modification_status = response_line.NOT_MODIFIED
-      for part in line.parts:
-        if part.type == part.Type.COMPONENT_NAME:
-          response_line.parts.add(component_name_field_id=part.reference_id)
-        elif part.type == part.Type.COMPONENT_STATUS:
-          response_line.parts.add(support_status_field_id=part.reference_id)
+    if require_hwid_db_lines:
+      for line in report.lines:
+        response_line = response.analysis_report.hwid_config_lines.add()
+        if line.modification_status == line.ModificationStatus.MODIFIED:
+          response_line.modification_status = response_line.MODIFIED
+        elif line.modification_status == line.ModificationStatus.NEWLY_ADDED:
+          response_line.modification_status = response_line.NEWLY_ADDED
         else:
-          response_line.parts.add(fixed_text=part.text)
+          response_line.modification_status = response_line.NOT_MODIFIED
+        for part in line.parts:
+          if part.type == part.Type.COMPONENT_NAME:
+            response_line.parts.add(component_name_field_id=part.reference_id)
+          elif part.type == part.Type.COMPONENT_STATUS:
+            response_line.parts.add(support_status_field_id=part.reference_id)
+          else:
+            response_line.parts.add(fixed_text=part.text)
+
     for reference_id, comp_info in report.hwid_components.items():
       response_comp_info = (
           response.analysis_report.component_infos.get_or_create(reference_id))

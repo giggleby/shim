@@ -5,7 +5,7 @@
 
 import collections
 import copy
-from typing import Dict, List, NamedTuple, Optional, Set
+from typing import Dict, List, MutableMapping, NamedTuple, Optional, Set
 
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
@@ -229,8 +229,10 @@ class BOM:
         self.AddLabel(cls, name, value)
 
 
-DBValidationErrorCode = v3_contents_analyzer.ErrorCode
 DBValidationError = v3_contents_analyzer.Error
+DBValidationErrorCode = v3_contents_analyzer.ErrorCode
+DBPreconditionError = v3_contents_analyzer.Error
+DBPreconditionErrorCode = v3_contents_analyzer.ErrorCode
 DBNameChangedComponentInfo = v3_contents_analyzer.NameChangedComponentInfo
 
 
@@ -253,10 +255,18 @@ class DBEditableSectionChangeInfo(NamedTuple):
     return not self.invalid_reasons
 
 
-DBEditableSectionAnalysisReport = v3_contents_analyzer.ChangeAnalysisReport
 DBEditableSectionLineAnalysisResult = v3_contents_analyzer.DBLineAnalysisResult
 DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
 DBHWIDComponentDiffStatus = v3_contents_analyzer.DiffStatus
+
+
+class DBEditableSectionAnalysisReport(NamedTuple):
+  fingerprint: str
+  new_hwid_db_contents: str
+  validation_errors: List[DBValidationError]
+  precondition_errors: List[DBPreconditionError]
+  lines: List[DBEditableSectionLineAnalysisResult]
+  hwid_components: MutableMapping[str, DBHWIDComponentAnalysisResult]
 
 
 class BundleResourceInfo(NamedTuple):
@@ -413,7 +423,8 @@ class HWIDAction:
         f'v{self.HWID_VERSION}')
 
   def AnalyzeDraftDBEditableSection(
-      self, draft_db_editable_section) -> DBEditableSectionAnalysisReport:
+      self, draft_db_editable_section, derive_fingerprint_only,
+      require_hwid_db_lines) -> DBEditableSectionAnalysisReport:
     """Deep analyzes the given HWID DB editable section.
 
     Args:

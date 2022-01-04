@@ -39,35 +39,41 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         "      ComponentEq('storage', ['HDD', '500G'])",
     ])
 
-  def testReviewDraftDBEditableSection_FPChangesForDifferentSource(self):
+  def testAnalyzeDraftDBEditableSection_FPChangesForDifferentSource(self):
     helper_inst1 = self._LoadSSHelper('v3-golden-before.yaml')
     helper_inst2 = self._LoadSSHelper('v3-golden-after-good.yaml')
 
-    change_info1 = helper_inst1.ReviewDraftDBEditableSection(
-        'the same editable section', derive_fingerprint_only=True)
-    change_info2 = helper_inst2.ReviewDraftDBEditableSection(
-        'the same editable section', derive_fingerprint_only=True)
+    change_info1 = helper_inst1.AnalyzeDraftDBEditableSection(
+        'the same editable section', derive_fingerprint_only=True,
+        require_hwid_db_lines=False)
+    change_info2 = helper_inst2.AnalyzeDraftDBEditableSection(
+        'the same editable section', derive_fingerprint_only=True,
+        require_hwid_db_lines=False)
 
     self.assertNotEqual(change_info1.fingerprint, change_info2.fingerprint)
 
-  def testReviewDraftDBEditableSection_FPChangesForDifferentDest(self):
+  def testAnalyzeDraftDBEditableSection_FPChangesForDifferentDest(self):
     helper_inst = self._LoadSSHelper('v3-golden.yaml')
 
-    change_info1 = helper_inst.ReviewDraftDBEditableSection(
-        'editable section 1', derive_fingerprint_only=True)
-    change_info2 = helper_inst.ReviewDraftDBEditableSection(
-        'editable section 2', derive_fingerprint_only=True)
+    change_info1 = helper_inst.AnalyzeDraftDBEditableSection(
+        'editable section 1', derive_fingerprint_only=True,
+        require_hwid_db_lines=False)
+    change_info2 = helper_inst.AnalyzeDraftDBEditableSection(
+        'editable section 2', derive_fingerprint_only=True,
+        require_hwid_db_lines=False)
 
     self.assertNotEqual(change_info1.fingerprint, change_info2.fingerprint)
 
-  def testReviewDraftDBEditableSection_FPNotChangeIfSourceAndDestAreNotChanged(
+  def testAnalyzeDraftDBEditableSection_FPNotChangeIfSourceAndDestAreNotChanged(
       self):
     helper_inst = self._LoadSSHelper('v3-golden.yaml')
 
-    change_info1 = helper_inst.ReviewDraftDBEditableSection(
-        'the same editable section', derive_fingerprint_only=True)
-    change_info2 = helper_inst.ReviewDraftDBEditableSection(
-        'the same editable section', derive_fingerprint_only=True)
+    change_info1 = helper_inst.AnalyzeDraftDBEditableSection(
+        'the same editable section', derive_fingerprint_only=True,
+        require_hwid_db_lines=False)
+    change_info2 = helper_inst.AnalyzeDraftDBEditableSection(
+        'the same editable section', derive_fingerprint_only=True,
+        require_hwid_db_lines=False)
 
     self.assertEqual(change_info1.fingerprint, change_info2.fingerprint)
 
@@ -111,18 +117,33 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     editable_section = helper_inst_after.GetDBEditableSection()
 
     analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(
-        editable_section)
+        editable_section, False, True)
 
     self.assertEqual(analysis_report.precondition_errors, [])
+    self.assertEqual(analysis_report.validation_errors, [])
     self.assertGreater(len(analysis_report.lines), 0)
+
+  def testAnalyzeDraftDbEditableSection_FingerprintOnly(self):
+    helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
+    helper_inst_after = self._LoadSSHelper('v3-golden-after-good.yaml')
+    editable_section = helper_inst_after.GetDBEditableSection()
+
+    analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(
+        editable_section, True, False)
+
+    self.assertEqual(analysis_report.precondition_errors, [])
+    self.assertEqual(analysis_report.validation_errors, [])
+    self.assertEqual(len(analysis_report.lines), 0)
+    self.assertEqual(analysis_report.fingerprint,
+                     '2b3d9c38037212e6bf3819abfe5ad24d899cb6b0')
 
   def testAnalyzeDraftDbEditableSection_SyntaxError(self):
     helper_inst = self._LoadSSHelper('v3-golden-before.yaml')
 
     analysis_report = helper_inst.AnalyzeDraftDBEditableSection(
-        'invalid hwid db contents')
+        'invalid hwid db contents', False, True)
 
-    self.assertGreater(len(analysis_report.precondition_errors), 0)
+    self.assertGreater(len(analysis_report.validation_errors), 0)
 
   def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
     ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')

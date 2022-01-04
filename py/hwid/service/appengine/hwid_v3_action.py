@@ -55,9 +55,12 @@ class HWIDV3Action(hwid_action.HWIDAction):
         draft_db_editable_section,
         derive_fingerprint_only=derive_fingerprint_only)
 
-  def AnalyzeDraftDBEditableSection(self, draft_db_editable_section):
+  def AnalyzeDraftDBEditableSection(self, draft_db_editable_section,
+                                    derive_fingerprint_only,
+                                    require_hwid_db_lines):
     return self._ss_helper.AnalyzeDraftDBEditableSection(
-        draft_db_editable_section)
+        draft_db_editable_section, derive_fingerprint_only,
+        require_hwid_db_lines)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only=False):
     return self._ss_helper.GetHWIDBundleResourceInfo(fingerprint_only)

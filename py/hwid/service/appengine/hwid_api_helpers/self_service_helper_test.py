@@ -326,11 +326,16 @@ class SelfServiceHelperTest(unittest.TestCase):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionAnalysisReport([
-            hwid_action.DBValidationError(
-                hwid_action.DBValidationErrorCode.SCHEMA_ERROR,
-                'some_schema_error')
-        ], [], {}))
+        hwid_action.DBEditableSectionAnalysisReport(
+            'fingerprint', 'new_db_content', [
+                hwid_action.DBValidationError(
+                    hwid_action.DBValidationErrorCode.SCHEMA_ERROR,
+                    'some_schema_error')
+            ], [
+                hwid_action.DBPreconditionError(
+                    hwid_action.DBPreconditionErrorCode.CONTENTS_ERROR,
+                    'some_contents_error')
+            ], [], {}))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents')
@@ -341,7 +346,9 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertCountEqual(
         list(resp.validation_result.errors), [
             ValidationResultMsg.Error(code=ValidationResultMsg.SCHEMA_ERROR,
-                                      message='some_schema_error')
+                                      message='some_schema_error'),
+            ValidationResultMsg.Error(code=ValidationResultMsg.CONTENTS_ERROR,
+                                      message='some_contents_error'),
         ])
 
   def testAnalyzeHWIDDBEditableSection_Pass(self):
@@ -352,7 +359,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     Part = hwid_action.DBEditableSectionLineAnalysisResult.Part
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            [], [
+            'fingerprint', 'new_db_content', [], [], [
                 hwid_action.DBEditableSectionLineAnalysisResult(
                     ModificationStatus.NOT_MODIFIED,
                     [Part(Part.Type.TEXT, 'text1')]),
@@ -376,7 +383,8 @@ class SelfServiceHelperTest(unittest.TestCase):
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
-        project='proj', hwid_db_editable_section='editable contents')
+        project='proj', hwid_db_editable_section='editable contents',
+        require_hwid_db_lines=True)
     resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
 
     LineMsg = _AnalysisReportMsg.HwidDbLine
@@ -424,8 +432,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                         component_name_with_correct_seq_no=(
                             'comp_cls2_111_222#1'),
                     ),
-            }))
-
+            }), validation_token='fingerprint')
     self.assertEqual(resp, expected_resp)
 
   def testGetHWIDBundleResourceInfo_RefreshDatastoreFirst(self):
@@ -471,7 +478,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            [], [], {
+            'fingerprint', 'new_db_content', [], [], [], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls1', 'comp_name1', 'unqualified', False, None,
@@ -497,7 +504,8 @@ class SelfServiceHelperTest(unittest.TestCase):
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
-        project='proj', hwid_db_editable_section='editable contents')
+        project='proj', hwid_db_editable_section='editable contents',
+        require_hwid_db_lines=False)
     resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
 
     expected_resp = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse(
@@ -523,18 +531,18 @@ class SelfServiceHelperTest(unittest.TestCase):
                         has_avl=True, avl_info=hwid_api_messages_pb2.AvlInfo(
                             cid=111, qid=222), seq_no=1,
                         component_name_with_correct_seq_no=(
-                            'comp_cls2_111_222#1'
-                        ), diff_prev=_DiffStatusMsg(
-                            unchanged=False, name_changed=True,
-                            support_status_changed=False, values_changed=False,
-                            prev_comp_name='old_comp_name',
-                            prev_support_status='unqualified')),
+                            'comp_cls2_111_222#1'), diff_prev=_DiffStatusMsg(
+                                unchanged=False, name_changed=True,
+                                support_status_changed=False,
+                                values_changed=False,
+                                prev_comp_name='old_comp_name',
+                                prev_support_status='unqualified')),
                 'comp3':
                     _ComponentInfoMsg(
                         component_class='comp_cls2', original_name='comp_name3',
                         original_status='unqualified', is_newly_added=True,
                         has_avl=False, seq_no=2),
-            }))
+            }), validation_token='fingerprint')
 
     self.assertEqual(resp, expected_resp)
 
