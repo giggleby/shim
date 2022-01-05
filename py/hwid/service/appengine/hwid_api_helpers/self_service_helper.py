@@ -153,10 +153,11 @@ class SelfServiceHelper:
         Requested by: {request.original_requester}
         Warning: all posted comments will be sent back to the requester.
 
-        {request.description}
+        %s
 
         BUG=b:{request.bug_number}
-        """)
+        """) % request.description
+
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
           request.project, change_info.new_hwid_db_contents, commit_msg,
@@ -237,8 +238,8 @@ Info Update
           Requested by: {request.original_requester}
           Warning: all posted comments will be sent back to the requester.
 
-          {request.description}
-          """)
+          %s
+          """) % request.description
       all_commits.append((firmware_record.model, change_info, commit_msg))
 
     # Create CLs and rollback on exception
