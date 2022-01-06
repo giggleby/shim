@@ -11,7 +11,6 @@ import unittest
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_preproc_data
-from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
@@ -77,40 +76,6 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
 
     self.assertEqual(change_info1.fingerprint, change_info2.fingerprint)
 
-  def testReviewDraftDBEditableSection_WithValidationError(self):
-    helper_inst = self._LoadSSHelper('v3-golden-before.yaml')
-
-    change_info = helper_inst.ReviewDraftDBEditableSection('not a valid data')
-
-    self.assertFalse(change_info.is_change_valid)
-    self.assertEqual(change_info.invalid_reasons[0].code,
-                     hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
-
-  def testReviewDraftDBEditableSection_ValidationPassed(self):
-    helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
-    preproc_data_after, helper_inst_after = self._LoadPreprocDataAndSSHelper(
-        'v3-golden-after-good.yaml')
-    editable_section = helper_inst_after.GetDBEditableSection()
-
-    change_info = helper_inst_before.ReviewDraftDBEditableSection(
-        editable_section)
-
-    self.assertTrue(change_info.is_change_valid)
-    self.assertEqual(list(change_info.new_hwid_comps), ['dram'])
-    self.assertCountEqual(change_info.new_hwid_comps['dram'], [
-        hwid_action.DBNameChangedComponentInfo(
-            comp_name='dram_type_4g_0', cid=0, qid=0, status='supported',
-            has_cid_qid=False, diff_prev=None),
-        hwid_action.DBNameChangedComponentInfo(
-            comp_name='dram_allow_no_size_info_in_name', cid=0, qid=0,
-            status='supported', has_cid_qid=False, diff_prev=None)
-    ])
-    db_after_change = database.Database.LoadData(
-        change_info.new_hwid_db_contents,
-        expected_checksum=database.Database.ChecksumForText(
-            change_info.new_hwid_db_contents))
-    self.assertEqual(db_after_change, preproc_data_after.database)
-
   def testAnalyzeDraftDbEditableSection(self):
     helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
     helper_inst_after = self._LoadSSHelper('v3-golden-after-good.yaml')
@@ -143,7 +108,8 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     analysis_report = helper_inst.AnalyzeDraftDBEditableSection(
         'invalid hwid db contents', False, True)
 
-    self.assertGreater(len(analysis_report.validation_errors), 0)
+    self.assertEqual(analysis_report.validation_errors[0].code,
+                     hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
 
   def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
     ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')

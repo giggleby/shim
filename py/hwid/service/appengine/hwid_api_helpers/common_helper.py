@@ -45,5 +45,8 @@ def ConvertExceptionToProtoRPCException(ex):
   if isinstance(ex, ValueError):
     return protorpc_utils.ProtoRPCException(
         protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT, str(ex))
+  if isinstance(ex, NotImplementedError):
+    return protorpc_utils.ProtoRPCException(
+        protorpc_utils.RPCCanonicalErrorCode.UNIMPLEMENTED, str(ex))
   return protorpc_utils.ProtoRPCException(
       protorpc_utils.RPCCanonicalErrorCode.INTERNAL, str(ex))

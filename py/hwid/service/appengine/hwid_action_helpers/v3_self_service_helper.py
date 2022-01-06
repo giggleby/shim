@@ -78,26 +78,6 @@ class HWIDV3SelfServiceActionHelper:
     unused_header, lines = _SplitHWIDDBV3Sections(full_hwid_db_contents)
     return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)
 
-  def ReviewDraftDBEditableSection(
-      self, draft_db_editable_section,
-      derive_fingerprint_only=False) -> hwid_action.DBEditableSectionChangeInfo:
-    curr_hwid_db_contents = self._preproc_data.raw_database
-    new_hwid_db_contents, fingerprint = _GetFullHWIDDBAndChangeFingerprint(
-        curr_hwid_db_contents, draft_db_editable_section)
-    change_info_factory = functools.partial(
-        hwid_action.DBEditableSectionChangeInfo, fingerprint,
-        new_hwid_db_contents)
-    if derive_fingerprint_only:
-      return change_info_factory(None, None)
-
-    try:
-      unused_model, new_hwid_comps = self._hwid_validator.ValidateChange(
-          new_hwid_db_contents, curr_hwid_db_contents)
-    except hwid_validator.ValidationError as ex:
-      return change_info_factory(ex.errors, None)
-
-    return change_info_factory([], new_hwid_comps)
-
   def AnalyzeDraftDBEditableSection(
       self, draft_db_editable_section, derive_fingerprint_only,
       require_hwid_db_lines) -> hwid_action.DBEditableSectionAnalysisReport:

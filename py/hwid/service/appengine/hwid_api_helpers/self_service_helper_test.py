@@ -10,7 +10,6 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_he
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
-from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
@@ -81,7 +80,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertEqual(resp.hwid_db_editable_section, 'aa\nbb')
 
-  def testValidateHWIDDBEditableSectionChange_ProjectNotV3(self):
+  def testGetHWIDDBEditableSectionChange_ProjectNotV3(self):
     action = hwid_action.HWIDAction()  # Default doesn't support any operations.
     action.HWID_VERSION = 0
     self._modules.ConfigHWID('PROJ', '0', 'db data', hwid_action=action)
@@ -93,120 +92,14 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def testValidateHWIDDBEditableSectionChange_WithValidationError(self):
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.ReviewDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionChangeInfo(
-            'fpvalue', 'db data after change', [
-                hwid_action.DBValidationError(
-                    hwid_action.DBValidationErrorCode.SCHEMA_ERROR,
-                    'a schema error'),
-                hwid_action.DBValidationError(
-                    hwid_action.DBValidationErrorCode.CONTENTS_ERROR,
-                    'a data error'),
-            ], {}))
-    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-
-    req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest(
-        project='proj', new_hwid_db_editable_section='db data2')
-    resp = self._ss_helper.ValidateHWIDDBEditableSectionChange(req)
-
-    self.assertCountEqual(
-        list(resp.validation_result.errors), [
-            _ErrorMsg(code=_ErrorCodeMsg.SCHEMA_ERROR,
-                      message='a schema error'),
-            _ErrorMsg(code=_ErrorCodeMsg.CONTENTS_ERROR,
-                      message='a data error'),
-        ])
-
-  def testValidateHWIDDBEditableSectionChange_Passed(self):
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.ReviewDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionChangeInfo('validation-token-value',
-                                                'db data after change', [], {}))
-    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-
-    req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest(
-        project='proj', new_hwid_db_editable_section='db data2')
-    resp = self._ss_helper.ValidateHWIDDBEditableSectionChange(req)
-
-    self.assertEqual(resp.validation_token, 'validation-token-value')
-    self.assertFalse(resp.validation_result.errors)
-
-  def testValidateHWIDDBEditableSectionChange_PassedWithNameChangedComponents(
-      self):
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.ReviewDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionChangeInfo(
-            'validation-token-value', 'db data after change', [], {
-                'wireless': [
-                    hwid_action.DBNameChangedComponentInfo(
-                        'wireless_1234_5678', 1234, 5678,
-                        v3_common.COMPONENT_STATUS.supported, True, None),
-                    hwid_action.DBNameChangedComponentInfo(
-                        'wireless_1111_2222', 1111, 2222,
-                        v3_common.COMPONENT_STATUS.unqualified, True, None),
-                    hwid_action.DBNameChangedComponentInfo(
-                        'wireless_hello_world', 0, 0,
-                        v3_common.COMPONENT_STATUS.supported, False, None),
-                ]
-            }))
-    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-
-    req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest(
-        project='proj', new_hwid_db_editable_section='db data2')
-    resp = self._ss_helper.ValidateHWIDDBEditableSectionChange(req)
-
-    self.assertFalse(resp.validation_result.errors)
-    self.assertCountEqual(
-        list(resp.validation_result
-             .name_changed_components_per_category['wireless'].entries), [
-                 hwid_api_messages_pb2.NameChangedComponent(
-                     cid=1234, qid=5678, support_status=hwid_api_messages_pb2
-                     .NameChangedComponent.SUPPORTED,
-                     component_name='wireless_1234_5678', has_cid_qid=True),
-                 hwid_api_messages_pb2.NameChangedComponent(
-                     cid=1111, qid=2222, support_status=hwid_api_messages_pb2
-                     .NameChangedComponent.UNQUALIFIED,
-                     component_name='wireless_1111_2222', has_cid_qid=True),
-                 hwid_api_messages_pb2.NameChangedComponent(
-                     cid=0, qid=0, support_status=hwid_api_messages_pb2
-                     .NameChangedComponent.SUPPORTED,
-                     component_name='wireless_hello_world', has_cid_qid=False)
-             ])
-
-  def testValidateHWIDDBEditableSectionChange_WithUnknownHWIDComponentStatus(
-      self):
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.ReviewDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionChangeInfo(
-            'validation-token-value', 'db data after change', [], {
-                'wireless': [
-                    hwid_action.DBNameChangedComponentInfo(
-                        'wireless_1234_5678', 1234, 5678,
-                        v3_common.COMPONENT_STATUS.supported, True, None),
-                    hwid_action.DBNameChangedComponentInfo(
-                        'wireless_1111_2222', 1111, 2222, 'new_status', True,
-                        None),
-                ]
-            }))
-    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-
-    req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest(
-        project='proj', new_hwid_db_editable_section='db data2')
-    resp = self._ss_helper.ValidateHWIDDBEditableSectionChange(req)
-
-    self.assertEqual(len(resp.validation_result.errors), 1)
-    self.assertEqual(resp.validation_result.errors[0].code,
-                     resp.validation_result.CONTENTS_ERROR)
-
   def testCreateHWIDDBEditableSectionChangeCL_InvalidValidationToken(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.ReviewDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionChangeInfo(
-            'validation-token-value-2', 'db data after change 2', [], {}))
+    action.AnalyzeDraftDBEditableSection.return_value = (
+        hwid_action.DBEditableSectionAnalysisReport('validation-token-value-2',
+                                                    'db data after change 2',
+                                                    [], [], [], {}))
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', new_hwid_db_editable_section='db data after change 1',
@@ -224,9 +117,10 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.CommitHWIDDB.return_value = 123
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.ReviewDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionChangeInfo(
-            'validation-token-value-1', 'db data after change 1', [], {}))
+    action.AnalyzeDraftDBEditableSection.return_value = (
+        hwid_action.DBEditableSectionAnalysisReport('validation-token-value-1',
+                                                    'db data after change 1',
+                                                    [], [], [], {}))
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', new_hwid_db_editable_section='db data after change',
@@ -243,15 +137,16 @@ class SelfServiceHelperTest(unittest.TestCase):
       # Configure the mocked HWIDAction so that it returns the change
       # fingerprint based on the contents of the HWID DB.
       action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-      action.ReviewDraftDBEditableSection.return_value = (
-          hwid_action.DBEditableSectionChangeInfo(hwid_data.raw_db, '', [], {}))
+      action.AnalyzeDraftDBEditableSection.return_value = (
+          hwid_action.DBEditableSectionAnalysisReport(hwid_data.raw_db, '', [],
+                                                      [], [], {}))
       return action
 
     self._modules.ConfigHWID('PROJ', '3', 'db data ver 1',
                              hwid_action_factory=CreateMockHWIDAction)
-    req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest(
-        project='proj', new_hwid_db_editable_section='db data after change')
-    resp = self._ss_helper.ValidateHWIDDBEditableSectionChange(req)
+    req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+        project='proj', hwid_db_editable_section='db data after change')
+    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
     token_that_will_become_expired = resp.validation_token
 
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 2')

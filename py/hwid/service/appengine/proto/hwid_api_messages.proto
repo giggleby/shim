@@ -619,6 +619,7 @@ service HwidService {
   rpc GetHwidDbEditableSection(GetHwidDbEditableSectionRequest)
       returns (GetHwidDbEditableSectionResponse);
 
+  // Deprecated.  Use AnalyzeHwidDbEditableSection instead.
   // Validates a change of HWID DB.
   //
   // This RPC compares the given updated HWID DB contents with the

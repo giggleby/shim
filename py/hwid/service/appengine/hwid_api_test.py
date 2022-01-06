@@ -613,14 +613,22 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
-  def testValidateHwidDbEditableSectionChange_ProjectNotFound(self):
+  def testAnalyzeHwidDbEditableSectionChange_ProjectNotFound(self):
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
-      req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest(
+      req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
           project='foo')
-      self.service.ValidateHwidDbEditableSectionChange(req)
+      self.service.AnalyzeHwidDbEditableSection(req)
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testValidateHwidDbEditableSectionChange_Deprecated(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeRequest()
+      self.service.ValidateHwidDbEditableSectionChange(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.UNIMPLEMENTED)
 
   def testCreateHwidDbEditableSectionChangeCl_InvalidRequest(self):
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:

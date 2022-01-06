@@ -93,37 +93,9 @@ class SelfServiceHelper:
     return response
 
   def ValidateHWIDDBEditableSectionChange(self, request):
-    try:
-      action = self._hwid_action_manager.GetHWIDAction(request.project)
-      change_info = action.ReviewDraftDBEditableSection(
-          request.new_hwid_db_editable_section)
-    except (KeyError, ValueError, RuntimeError) as ex:
-      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
-
-    response = (
-        hwid_api_messages_pb2.ValidateHwidDbEditableSectionChangeResponse(
-            validation_token=change_info.fingerprint))
-    if not change_info.is_change_valid:
-      logging.info('validation failed')
-      for error in change_info.invalid_reasons:
-        response.validation_result.errors.add(
-            code=_ConvertValidationErrorCode(error.code), message=error.message)
-      return response
-
-    try:
-      name_changed_comps = {
-          comp_cls: [ConvertToNameChangedComponent(c) for c in comps]
-          for comp_cls, comps in change_info.new_hwid_comps.items()
-      }
-    except HWIDStatusConversionError as ex:
-      response.validation_result.errors.add(
-          code=response.validation_result.CONTENTS_ERROR, message=str(ex))
-      return response
-
-    field = response.validation_result.name_changed_components_per_category
-    for comp_cls, name_changed_comps in name_changed_comps.items():
-      field.get_or_create(comp_cls).entries.extend(name_changed_comps)
-    return response
+    raise common_helper.ConvertExceptionToProtoRPCException(
+        NotImplementedError(('Deprecated. Use AnalyzeHwidDbEditableSection '
+                             'instead')))
 
   def CreateHWIDDBEditableSectionChangeCL(self, request):
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
@@ -135,12 +107,13 @@ class SelfServiceHelper:
           limit_models=[request.project])
 
       action = self._hwid_action_manager.GetHWIDAction(request.project)
-      change_info = action.ReviewDraftDBEditableSection(
-          request.new_hwid_db_editable_section, derive_fingerprint_only=True)
+      analysis = action.AnalyzeDraftDBEditableSection(
+          request.new_hwid_db_editable_section, derive_fingerprint_only=True,
+          require_hwid_db_lines=False)
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
-    if change_info.fingerprint != request.validation_token:
+    if analysis.fingerprint != request.validation_token:
       raise protorpc_utils.ProtoRPCException(
           protorpc_utils.RPCCanonicalErrorCode.ABORTED,
           detail='The validation token is expired.')
@@ -158,7 +131,7 @@ class SelfServiceHelper:
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
-          request.project, change_info.new_hwid_db_contents, commit_msg,
+          request.project, analysis.new_hwid_db_contents, commit_msg,
           request.reviewer_emails, request.cc_emails, request.auto_approved)
     except hwid_repo.HWIDRepoError:
       logging.exception(
@@ -227,8 +200,9 @@ class SelfServiceHelper:
 
       # Create commit
       editable_section = action.RemoveHeader(db_builder.database.DumpData())
-      change_info = action.ReviewDraftDBEditableSection(
-          editable_section, derive_fingerprint_only=True)
+      analysis = action.AnalyzeDraftDBEditableSection(
+          editable_section, derive_fingerprint_only=True,
+          require_hwid_db_lines=False)
       commit_msg = textwrap.dedent(f"""\
           ({int(time.time())}) {db_builder.database.project}: HWID Firmware \
 Info Update
@@ -238,16 +212,15 @@ Info Update
 
           %s
           """) % request.description
-      all_commits.append((firmware_record.model, change_info, commit_msg))
+      all_commits.append((firmware_record.model, analysis, commit_msg))
 
     # Create CLs and rollback on exception
     resp = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClResponse()
     try:
-      for model_name, change_info, commit_msg in all_commits:
+      for model_name, analysis, commit_msg in all_commits:
         try:
           cl_number = live_hwid_repo.CommitHWIDDB(
-              name=model_name,
-              hwid_db_contents=change_info.new_hwid_db_contents,
+              name=model_name, hwid_db_contents=analysis.new_hwid_db_contents,
               commit_msg=commit_msg, reviewers=[],
               cc_list=[request.original_requester], auto_approved=True)
         except hwid_repo.HWIDRepoError:
@@ -257,7 +230,7 @@ Info Update
               protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
         resp.commits[model_name].cl_number = cl_number
         resp.commits[model_name].new_hwid_db_contents = (
-            change_info.new_hwid_db_contents)
+            analysis.new_hwid_db_contents)
     except Exception as ex:
       # Abandon all committed CLs on exception
       logging.exception('Rollback to abandon commited CLs.')
