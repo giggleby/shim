@@ -85,11 +85,15 @@ class _IdentityGeneratorTestBase:
     for sample in _SAMPLES:
       self.CheckMatch(sample)
 
-  def doTestInvalid(self, reference_sample, **kwargs):
+  def doTestInvalid(self, reference_sample, expected_regex=None, **kwargs):
     sample = {key: reference_sample[key]
               for key in reference_sample if key in self.NEEDED_ARGS}
     sample.update(kwargs)
-    self.assertRaises(common.HWIDException, self.GenerateIdentity, **sample)
+    if expected_regex:
+      self.assertRaisesRegex(common.HWIDException, expected_regex,
+                             self.GenerateIdentity, **sample)
+    else:
+      self.assertRaises(common.HWIDException, self.GenerateIdentity, **sample)
 
   def CheckMatch(self, sample):
     reference_identity = Identity(
@@ -168,6 +172,13 @@ class IdentityGenerateFromEncodedStringTest(unittest.TestCase,
 
     # components_bitset not ends with 1.
     self.doTestInvalid(_SAMPLES[0], encoded_string='PROJ-ZZCR XACO')
+
+  def testMistypeEncodedString(self):
+    encoded_string = 'PROJ-ZZCR E6N-07X'
+    expected_regex = (r'HWID encoded string only allows \[A-Z2-9\]\. Do you '
+                      r'mean "PROJ-ZZCR E6N-O7X"\?')
+    self.doTestInvalid(_SAMPLES[2], expected_regex=expected_regex,
+                       encoded_string=encoded_string)
 
 
 if __name__ == '__main__':

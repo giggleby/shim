@@ -147,6 +147,16 @@ class _IdentityConverter:
     else:
       raise common.HWIDException('Invalid HWID string: %r' % encoded_string)
 
+    if '0' in encoded_components_and_checksum or \
+       '1' in encoded_components_and_checksum:
+      suggested_string = encoded_components_and_checksum
+      suggested_string = suggested_string.replace('0', 'O').replace('1', 'I')
+      suggested_string = encoded_string.replace(encoded_components_and_checksum,
+                                                suggested_string)
+      raise common.HWIDException(
+          'HWID encoded string only allows [A-Z2-9]. Do you mean "%s"?' %
+          suggested_string)
+
     project, _, brand_code = project_and_brand_code.partition('-')
     # An old HWID string might not have brand code.
     brand_code = brand_code or None
