@@ -32,6 +32,7 @@ NOREPLY_EMAIL=
 FAILURE_EMAIL=
 APPENGINE_ID=
 SERVICE_ACCOUNT=
+HWID_API_ENDPOINT=
 
 load_config_by_deployment_type() {
   local deployment_type="$1"
@@ -62,6 +63,7 @@ build_docker() {
   env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
     BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
     PUBSUB_SUBSCRIPTION="${PUBSUB_SUBSCRIPTION}" \
+    HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > "${temp_dir}/docker/config.py"
 
   protoc -I "${SOURCE_DIR}/proto/" --python_out "${temp_dir}/docker" \
@@ -158,7 +160,7 @@ create_vm() {
       --container-restart-policy=always --container-privileged \
       --labels=container-vm=cos-stable-63-10032-71-0 \
       --service-account="${SERVICE_ACCOUNT}" \
-      --scopes=cloud-platform
+      --scopes="https://www.googleapis.com/auth/chromeoshwid,cloud-platform"
   }
 
   local zone

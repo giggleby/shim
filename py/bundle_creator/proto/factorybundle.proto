@@ -15,6 +15,7 @@ message CreateBundleRpcRequest {
   optional string release_image_version = 6;
   optional string email = 7;
   optional string firmware_source = 8;
+  optional bool update_hwid_db_firmware_info = 9;
 }
 
 message CreateBundleRpcResponse {
@@ -33,11 +34,13 @@ message WorkerResult {
   enum Status {
     NO_ERROR = 0;
     FAILED = 1;
+    CREATE_CL_FAILED = 2;
   }
   optional Status status = 1 [default = NO_ERROR];
   optional CreateBundleRpcRequest original_request = 2;
   optional string error_message = 3;
   optional string gs_path = 4;
+  repeated string cl_url = 5;
 }
 
 // TODO(b/178182522): Remove `BundleHistoryProject` and use `FactoryBundleBoard`

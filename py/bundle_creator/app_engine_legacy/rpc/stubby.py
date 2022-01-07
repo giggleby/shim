@@ -29,7 +29,7 @@ class FactoryBundleService(remote.Service):  # pylint: disable=no-init
   def ResponseCallback(self, worker_result):
     mail_list = [worker_result.original_request.email]
 
-    if worker_result.status == proto.WorkerResult.Status.NO_ERROR:
+    if worker_result.status != proto.WorkerResult.Status.FAILED:
       subject = 'Bundle creation success'
       match = re.match(
           r'^gs://{}/(.*)$'.format(config.BUNDLE_BUCKET), worker_result.gs_path)
@@ -45,9 +45,23 @@ class FactoryBundleService(remote.Service):  # pylint: disable=no-init
           'Test Image Version: {}\n'.format(request.test_image_version))
       items.append(
           'Release Image Version: {}\n'.format(request.release_image_version))
+
       if request.firmware_source:
         items.append('Firmware Source: {}\n'.format(request.firmware_source))
+
       items.append('\nDownload link: {}\n'.format(download_link))
+
+      if worker_result.status == proto.WorkerResult.Status.CREATE_CL_FAILED:
+        items.append('\nCannot create HWID DB CL:\n')
+        items.append('{}\n'.format(worker_result.error_message))
+      if request.update_hwid_db_firmware_info:
+        if worker_result.cl_url:
+          items.append('\nHWID CL created:\n')
+          for url in worker_result.cl_url:
+            items.append('<a href="{0}">{0}</a>\n'.format(url))
+        else:
+          items.append('\nNo HWID CL is created.\n')
+
       plain_content = ''.join(items)
       unprocessed_html_content = plain_content.replace(
           download_link,

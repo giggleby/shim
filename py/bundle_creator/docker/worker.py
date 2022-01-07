@@ -58,7 +58,7 @@ def PullTask():
           message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_IN_PROGRESS)
       firestore_conn.UpdateUserRequestStartTime(message_proto.doc_id)
 
-      gs_path = util.CreateBundle(message_proto)
+      gs_path, cl_url, error_msg = util.CreateBundle(message_proto)
 
       firestore_conn.UpdateUserRequestStatus(
           message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_SUCCEEDED)
@@ -69,6 +69,10 @@ def PullTask():
       response_proto.status = factorybundle_pb2.WorkerResult.NO_ERROR
       response_proto.original_request.MergeFrom(message_proto.request)
       response_proto.gs_path = gs_path
+      response_proto.cl_url.extend(cl_url)
+      if error_msg:
+        response_proto.status = factorybundle_pb2.WorkerResult.CREATE_CL_FAILED
+        response_proto.error_message = str(error_msg)
       ResponseResult(tasks, response_proto)
   except util.CreateBundleException as e:
     logger.error(e)
