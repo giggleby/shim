@@ -5,6 +5,4 @@
 GCLOUD_PROJECT = '${GCLOUD_PROJECT}'
 BUNDLE_BUCKET = '${BUNDLE_BUCKET}'
 PUBSUB_SUBSCRIPTION = '${PUBSUB_SUBSCRIPTION}'
-RESPONSE_QUEUE = ('projects/${GCLOUD_PROJECT}'
-                  '/locations/us-central1/queues/bundle-tasks-result')
 HWID_API_ENDPOINT = '${HWID_API_ENDPOINT}'

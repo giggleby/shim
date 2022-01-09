@@ -1,103 +1,102 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+#
+# TODO(b/214528226): Add a unit test for this file.
 
-import base64
 import logging
 import time
+from typing import Optional
 
-from google.cloud import pubsub_v1  # pylint: disable=no-name-in-module,import-error
-from googleapiclient import discovery  # pylint: disable=import-error
-
+from cros.factory.bundle_creator.connector import cloudtasks_connector
 from cros.factory.bundle_creator.connector import firestore_connector
+from cros.factory.bundle_creator.connector import pubsub_connector
 from cros.factory.bundle_creator.docker import config
-from cros.factory.bundle_creator.docker import factorybundle_pb2  # pylint: disable=no-name-in-module
 from cros.factory.bundle_creator.docker import util
-
-RESPONSE_CALLBACK = '/_ah/stubby/FactoryBundleService.ResponseCallback'
-ACK_DEADLINE = 600
+from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
-def ResponseResult(tasks, response_proto):
-  tasks.create(
-      parent=config.RESPONSE_QUEUE,
-      body={
-          'task': {
-              'app_engine_http_request': {
-                  'http_method': 'POST',
-                  'app_engine_routing': {
-                      'service': 'cloud-mail',
-                  },
-                  'relative_uri': RESPONSE_CALLBACK,
-                  'body': base64.b64encode(
-                      response_proto.SerializeToString()).decode('utf-8'),
-              },
-          },
-      }).execute()
+class EasyBundleCreationWorker:
+  """Easy Bundle Creation worker."""
 
+  def __init__(self):
+    self._logger = logging.getLogger('EasyBundleCreationWorker')
+    self._cloudtasks_connector = cloudtasks_connector.CloudTasksConnector(
+        config.GCLOUD_PROJECT)
+    self._firestore_connector = firestore_connector.FirestoreConnector(
+        config.GCLOUD_PROJECT)
+    self._pubsub_connector = pubsub_connector.PubSubConnector(
+        config.GCLOUD_PROJECT)
 
-def PullTask():
-  logger = logging.getLogger('worker.pull_task')
-  cloudtasks = discovery.build('cloudtasks', 'v2beta3', cache_discovery=False)
-  tasks = cloudtasks.projects().locations().queues().tasks()
-  subscriber = pubsub_v1.SubscriberClient()
-  subscription_path = subscriber.subscription_path(
-      config.GCLOUD_PROJECT, config.PUBSUB_SUBSCRIPTION)
-  firestore_conn = firestore_connector.FirestoreConnector(config.GCLOUD_PROJECT)
-  message_proto = None
-  try:
-    response = subscriber.pull(subscription_path, max_messages=1)
-    if response and response.received_messages:
-      received_message = response.received_messages[0]
-      subscriber.acknowledge(subscription_path, [received_message.ack_id])
-      message_proto = factorybundle_pb2.CreateBundleMessage.FromString(
-          received_message.message.data)
+  def MainLoop(self):
+    """The main loop tries to process a request per 30 seconds."""
+    while True:
+      try:
+        worker.TryProcessRequest()
+      except Exception as e:
+        self._logger.error(e)
+      time.sleep(30)
 
-      firestore_conn.UpdateUserRequestStatus(
-          message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_IN_PROGRESS)
-      firestore_conn.UpdateUserRequestStartTime(message_proto.doc_id)
+  def TryProcessRequest(self):
+    """Tries to pull the first task and process the request."""
+    task_proto = self._PullTask()
+    if task_proto:
+      try:
+        self._firestore_connector.UpdateUserRequestStatus(
+            task_proto.doc_id,
+            self._firestore_connector.USER_REQUEST_STATUS_IN_PROGRESS)
+        self._firestore_connector.UpdateUserRequestStartTime(task_proto.doc_id)
 
-      gs_path, cl_url, error_msg = util.CreateBundle(message_proto)
+        gs_path, cl_url, cl_error_msg = util.CreateBundle(task_proto)
 
-      firestore_conn.UpdateUserRequestStatus(
-          message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_SUCCEEDED)
-      firestore_conn.UpdateUserRequestEndTime(message_proto.doc_id)
-      firestore_conn.UpdateUserRequestGsPath(message_proto.doc_id, gs_path)
+        self._firestore_connector.UpdateUserRequestStatus(
+            task_proto.doc_id,
+            self._firestore_connector.USER_REQUEST_STATUS_SUCCEEDED)
+        self._firestore_connector.UpdateUserRequestEndTime(task_proto.doc_id)
+        self._firestore_connector.UpdateUserRequestGsPath(
+            task_proto.doc_id, gs_path)
 
-      response_proto = factorybundle_pb2.WorkerResult()
-      response_proto.status = factorybundle_pb2.WorkerResult.NO_ERROR
-      response_proto.original_request.MergeFrom(message_proto.request)
-      response_proto.gs_path = gs_path
-      response_proto.cl_url.extend(cl_url)
-      if error_msg:
-        response_proto.status = factorybundle_pb2.WorkerResult.CREATE_CL_FAILED
-        response_proto.error_message = str(error_msg)
-      ResponseResult(tasks, response_proto)
-  except util.CreateBundleException as e:
-    logger.error(e)
+        worker_result = factorybundle_pb2.WorkerResult()
+        worker_result.status = factorybundle_pb2.WorkerResult.NO_ERROR
+        worker_result.original_request.MergeFrom(task_proto.request)
+        worker_result.gs_path = gs_path
+        worker_result.cl_url.extend(cl_url)
+        if cl_error_msg:
+          worker_result.status = (
+              factorybundle_pb2.WorkerResult.CREATE_CL_FAILED)
+          worker_result.error_message = str(cl_error_msg)
+        self._cloudtasks_connector.ResponseWorkerResult(worker_result)
+      except util.CreateBundleException as e:
+        self._logger.error(e)
 
-    firestore_conn.UpdateUserRequestStatus(
-        message_proto.doc_id, firestore_conn.USER_REQUEST_STATUS_FAILED)
-    firestore_conn.UpdateUserRequestEndTime(message_proto.doc_id)
-    firestore_conn.UpdateUserRequestErrorMessage(message_proto.doc_id, str(e))
+        self._firestore_connector.UpdateUserRequestStatus(
+            task_proto.doc_id,
+            self._firestore_connector.USER_REQUEST_STATUS_FAILED)
+        self._firestore_connector.UpdateUserRequestEndTime(task_proto.doc_id)
+        self._firestore_connector.UpdateUserRequestErrorMessage(
+            task_proto.doc_id, str(e))
 
-    response_proto = factorybundle_pb2.WorkerResult()
-    response_proto.status = factorybundle_pb2.WorkerResult.FAILED
-    response_proto.original_request.MergeFrom(message_proto.request)
-    response_proto.error_message = str(e)
-    ResponseResult(tasks, response_proto)
+        worker_result = factorybundle_pb2.WorkerResult()
+        worker_result.status = factorybundle_pb2.WorkerResult.FAILED
+        worker_result.original_request.MergeFrom(task_proto.request)
+        worker_result.error_message = str(e)
+        self._cloudtasks_connector.ResponseWorkerResult(worker_result)
 
+  def _PullTask(self) -> Optional[factorybundle_pb2.CreateBundleMessage]:
+    """Pulls one task from the Pub/Sub subscription.
 
-def main():
-  logging.basicConfig(level=logging.INFO)
-  logger = logging.getLogger('worker.main')
-  while True:
-    try:
-      PullTask()
-    except Exception as e:
-      logger.error(e)
-    time.sleep(30)
+    Returns:
+      A CreateBundleMessage proto message if it exists.  Otherwise `None` is
+      returned.
+    """
+    message_data = self._pubsub_connector.PullFirstMessage(
+        config.PUBSUB_SUBSCRIPTION)
+    if message_data:
+      return factorybundle_pb2.CreateBundleMessage.FromString(message_data)
+    return None
 
 
 if __name__ == '__main__':
-  main()
+  logging.basicConfig(level=logging.INFO)
+  worker = EasyBundleCreationWorker()
+  worker.MainLoop()

@@ -63,8 +63,7 @@ build_docker() {
   fi
   add_temp "${temp_dir}"
 
-  rsync -avr --exclude="app_engine*" --exclude="proto" "${SOURCE_DIR}"/* \
-      "${temp_dir}"
+  rsync -avr --exclude="app_engine*" "${SOURCE_DIR}"/* "${temp_dir}"
   if [ -f "${LOCAL_BUILD_TOOLKIT}" ]; then
     cp "${LOCAL_BUILD_TOOLKIT}" "${temp_dir}/docker"
     cp -rf "${LOCAL_BUILD_BUNDLE}/setup" "${temp_dir}/docker"
@@ -80,7 +79,7 @@ build_docker() {
     HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > "${temp_dir}/docker/config.py"
 
-  protoc -I "${SOURCE_DIR}/proto/" --python_out "${temp_dir}/docker" \
+  protoc -I "${SOURCE_DIR}/proto/" --python_out "${temp_dir}/proto" \
     "${SOURCE_DIR}/proto/factorybundle.proto"
   docker build -t "${DOCKER_IMAGENAME}" --file "${temp_dir}/docker/Dockerfile" \
     "${temp_dir}"
