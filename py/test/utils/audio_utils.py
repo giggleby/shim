@@ -6,7 +6,6 @@
 
 import re
 
-from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 from cros.factory.external import dbus
@@ -38,17 +37,18 @@ CONFORMANCETEST_PATH = 'alsa_conformance_test.py'
 SOX_PATH = 'sox'
 DEFAULT_NUM_CHANNELS = 2
 
-_DEFAULT_SOX_FORMAT = '-t raw -b 16 -e signed -r 48000 -L'
+_DEFAULT_SOX_FORMAT = '-t raw -b 16 -e signed -L'
 
 # SOX related utilities
 
 
-def GetPlaySineArgs(channel, odev='default', freq=1000, duration_secs=10,
-                    sample_size=16):
+def GetPlaySineArgs(channel, sample_rate, odev='default', freq=1000,
+                    duration_secs=10, sample_size=16):
   """Gets the command args to generate a sine wav to play to odev.
 
   Args:
-    channel: 0 for left, 1 for right; otherwize, mono.
+    channel: 0 for left, 1 for right; otherwise, mono.
+    sample_rate: Sample rate of the audio file.
     odev: ALSA output device.
     freq: Frequency of the generated sine tone.
     duration_secs: Duration of the generated sine tone.
@@ -57,8 +57,12 @@ def GetPlaySineArgs(channel, odev='default', freq=1000, duration_secs=10,
   Returns:
     A command string to generate a sine wav
   """
-  cmdargs = [SOX_PATH, '-b', '%d' % sample_size, '-n', '-t', 'alsa',
-             odev, 'synth', '%d' % duration_secs]
+  cmdargs = [
+      SOX_PATH, '-r',
+      '%d' % sample_rate, '-b',
+      '%d' % sample_size, '-n', '-t', 'alsa', odev, 'synth',
+      '%d' % duration_secs
+  ]
   if channel == 0:
     cmdargs += ['sine', '%d' % freq, 'sine', '0']
   elif channel == 1:
@@ -68,19 +72,20 @@ def GetPlaySineArgs(channel, odev='default', freq=1000, duration_secs=10,
   return cmdargs
 
 
-def GetGenerateSineWavArgs(path, channel, freq=1000, duration_secs=10,
-                           sample_size=16):
+def GetGenerateSineWavArgs(path, channel, sample_rate, freq=1000,
+                           duration_secs=10, sample_size=16):
   """Gets the command args to generate a sine .wav file.
 
   Args:
     path: The generated path of the sine .wav file.
-    channel: 0 for left, 1 for right; otherwize, mono.
+    channel: 0 for left, 1 for right; otherwise, mono.
+    sample_rate: Sample rate of the audio file.
     freq: Frequency of the generated sine tone.
     duration_secs: Duration of the generated sine tone.
     sample_size: Output audio sample size. Default to 16.
   """
-  cmdargs = '%s -b %d -n %s synth %d' % (
-      SOX_PATH, sample_size, path, duration_secs)
+  cmdargs = '%s -r %d -b %d -n %s synth %d' % (SOX_PATH, sample_rate,
+                                               sample_size, path, duration_secs)
   if channel == 0:
     cmdargs += ' sine %d sine 0' % freq
   elif channel == 1:
@@ -90,7 +95,7 @@ def GetGenerateSineWavArgs(path, channel, freq=1000, duration_secs=10,
   return cmdargs
 
 
-def TrimAudioFile(in_path, out_path, start, end, num_channels,
+def TrimAudioFile(in_path, out_path, start, end, num_channels, sample_rate,
                   sox_format=_DEFAULT_SOX_FORMAT):
   """Trims an audio file using sox command.
 
@@ -101,18 +106,19 @@ def TrimAudioFile(in_path, out_path, start, end, num_channels,
     end: The ending time in seconds of specified range.
          Sets to None for the end of audio file.
     num_channels: The number of channels in input file.
+    sample_rate: Sample rate of the audio file.
     sox_format: Format to generate sox command.
   """
-  cmd = '%s -c %s %s %s -c %s %s %s trim %s' % (
-      SOX_PATH, str(num_channels), sox_format, in_path, str(num_channels),
-      sox_format, out_path, str(start))
+  cmd = (f'{SOX_PATH} -c {num_channels} -r {sample_rate} {sox_format} {in_path}'
+         f' -c {num_channels} -r {sample_rate} {sox_format} {out_path} trim '
+         f'{start}')
   if end is not None:
     cmd += str(end)
 
   process_utils.Spawn(cmd.split(' '), log=True, check_call=True)
 
 
-def SoxStatOutput(in_file, num_channels, channel,
+def SoxStatOutput(in_file, num_channels, channel, sample_rate,
                   sox_format=_DEFAULT_SOX_FORMAT):
   """Get sox stat from one of the channels.
 
@@ -120,15 +126,17 @@ def SoxStatOutput(in_file, num_channels, channel,
     in_file: Input file name.
     num_channels: Number of channels of the in_file.
     channel: The index of the channel to get the stat. 0-based.
+    sample_rate: Sample rate of the audio file.
     sox_format: Format to generate sox command.
 
   Returns:
     The output of sox stat command.
   """
   # Remix and output to stdout. Note that the channel index is 1-based.
-  remix_cmd = (f'{SOX_PATH} -c{num_channels} {sox_format} {in_file}'
-               f' -c1 {sox_format} - remix {channel + 1}')
-  stat_cmd = f'{SOX_PATH} -c1 {sox_format} - -n stat'
+  remix_cmd = (f'{SOX_PATH} -c{num_channels} -r {sample_rate} {sox_format} '
+               f'{in_file} -c1 -r {sample_rate} {sox_format} - remix '
+               f'{channel + 1}')
+  stat_cmd = f'{SOX_PATH} -c1 -r {sample_rate} {sox_format} - -n stat'
   p = process_utils.CommandPipe()
   p.Pipe(remix_cmd.split(' ')).Pipe(stat_cmd.split(' ')).Communicate()
   return p.stderr_data
@@ -209,29 +217,6 @@ def GetRoughFreq(sox_output):
     if m is not None:
       return int(m.group(1))
   return None
-
-
-def NoiseReduceFile(in_file, noise_file, out_file,
-                    sox_format=_DEFAULT_SOX_FORMAT):
-  """Runs the sox command to noise-reduce in_file using
-     the noise profile from noise_file.
-
-  Args:
-    in_file: The file to noise reduce.
-    noise_file: The file containing the noise profile.
-        This can be created by recording silence.
-    out_file: The file contains the noise reduced sound.
-    sox_format: The  sox format to generate sox command.
-  """
-  with file_utils.UnopenedTemporaryFile() as temp_file:
-    prof_cmd = '%s -c 2 %s %s -n noiseprof %s' % (SOX_PATH, sox_format,
-                                                  noise_file, temp_file)
-    process_utils.Spawn(prof_cmd.split(' '), check_call=True)
-
-    reduce_cmd = (
-        '%s -c 2 %s %s -c 2 %s %s noisered %s' %
-        (SOX_PATH, sox_format, in_file, sox_format, out_file, temp_file))
-    process_utils.Spawn(reduce_cmd.split(' '), check_call=True)
 
 
 def GetCardIndexByName(card_name):
