@@ -437,6 +437,13 @@ class AudioLoopTest(test_case.TestCase):
       Arg('sample_rate', int,
           ('The sample rate for audio test. The value should be determined by '
            'output device.'), default=48000),
+      Arg('check_conformance', bool, 'Check conformance or not.', default=True),
+      Arg('conformance_rate_criteria', float,
+          ('The pass criteria of rate. The value is a percentage of rate. See m'
+           'ore detail in `alsa_conformance.go`.'), default=0.1),
+      Arg('conformance_rate_err_criteria', int,
+          ('The pass criteria of rate error.  See more detail in `alsa_conforma'
+           'nce.go`.'), default=100),
       Arg(
           'tests_to_conduct', list,
           'A list of dicts. A dict should contain at least one key named\n'
@@ -603,7 +610,14 @@ class AudioLoopTest(test_case.TestCase):
 
     self.CheckDongleStatus()
     self.SetupAudio()
-    self.CheckConformance()
+    if self.args.check_conformance:
+      self.CheckConformance()
+
+    if not self.args.tests_to_conduct:
+      logging.info('No audio loop test to be conducted because the argument '
+                   '\'tests_to_conduct\' is empty')
+      return
+
 
     # Run each tests to conduct under each output volume candidate.
     for self._output_volume_index, output_volume in enumerate(
@@ -1117,11 +1131,10 @@ class AudioLoopTest(test_case.TestCase):
       output_device: The playback device.
     """
 
-    # rate-criteria-diff-pct and rate-err-criteria are defined in
-    # alsa_conformance.go.
     commands = [
         audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates',
-        '--rate-criteria-diff-pct', '0.1', '--rate-err-criteria', '100',
+        '--rate-criteria-diff-pct', f'{self.args.conformance_rate_criteria:f}',
+        '--rate-err-criteria', f'{self.args.conformance_rate_err_criteria}',
         '--allow-rate', f'{self.args.sample_rate}'
     ]
     if input_device:

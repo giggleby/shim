@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2021-12-27 16:06+CST\n"
+"PO-Revision-Date: 2022-01-12 15:21+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3450,6 +3450,10 @@ msgid "Audio Jack"
 msgstr "Lỗ nguồn âm thanh"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Audio Jack Conformance"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Barrier"
 msgstr "Kiểm tra mức độ"
 
@@ -3637,6 +3641,10 @@ msgstr "Dịch vụ Shopfloor (NotifyStart)"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Speaker/Microphone"
 msgstr "Loa / micrô"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Speaker/Microphone Conformance"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Stress App Test"
