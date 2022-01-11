@@ -45,10 +45,10 @@ const styles = (theme: Theme) => createStyles({
     // definition for jss plugins is not completed yet. Manually adding the
     // 'px' for now. We probably can use jss-expand after
     // https://github.com/cssinjs/jss/issues/776 is resolved.
-    padding: `0 ${theme.spacing.unit}px`,
+    padding: `0 ${theme.spacing(1)}px`,
   },
   title: {
-    padding: `0 ${theme.spacing.unit}px`,
+    padding: `0 ${theme.spacing(1)}px`,
     flex: 1,
   },
 });

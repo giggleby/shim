@@ -24,7 +24,7 @@ import DomeAppMenuItem from './dome_app_menu_item';
 const styles = (theme: Theme) => createStyles({
   toolbarSpace: theme.mixins.toolbar,
   nested: {
-    paddingLeft: theme.spacing.unit * 4,
+    paddingLeft: theme.spacing(4),
   },
 });
 

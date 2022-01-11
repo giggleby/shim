@@ -26,7 +26,7 @@ const INITIAL_STATE = {
   },
 };
 
-export default produce<FormDialogState, FormDialogAction>(
+export default produce(
   (draft: FormDialogState, action: FormDialogAction) => {
     switch (action.type) {
       case getType(actions.openFormImpl):

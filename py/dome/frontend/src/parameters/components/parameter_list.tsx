@@ -64,7 +64,7 @@ const styles = (theme: Theme) => createStyles({
     width: '100%',
   },
   cell: {
-    padding: theme.spacing.unit,
+    padding: theme.spacing(1),
     display: 'flex',
     alignItems: 'center',
     borderBottom: `1px solid ${grey[300]}`,

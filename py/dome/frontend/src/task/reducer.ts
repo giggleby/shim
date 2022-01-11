@@ -19,7 +19,7 @@ const findTaskIndex = (tasks: Task[], taskId: string) => {
   return tasks.findIndex((task) => task.taskId === taskId);
 };
 
-const tasksReducer = produce<Task[], TaskAction>(
+const tasksReducer = produce(
   (draft: Task[], action: TaskAction) => {
     switch (action.type) {
       case getType(actions.createTaskImpl): {
@@ -71,6 +71,6 @@ const tasksReducer = produce<Task[], TaskAction>(
     }
   }, []);
 
-export default combineReducers<TaskState, TaskAction>({
+export default combineReducers({
   tasks: tasksReducer,
 });

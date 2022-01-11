@@ -5,7 +5,7 @@
 import {indigo} from '@material-ui/core/colors';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import {
-  createMuiTheme,
+  createTheme,
   MuiThemeProvider,
 } from '@material-ui/core/styles';
 import React from 'react';
@@ -27,9 +27,6 @@ import rootReducer from './root_reducer';
 const THEME = {
   palette: {
     primary: indigo,
-  },
-  typography: {
-    useNextVariants: true,
   },
 };
 
@@ -65,7 +62,7 @@ window.addEventListener('unhandledrejection', (event) => {
 ReactDOM.render(
   <>
     <CssBaseline />
-    <MuiThemeProvider theme={createMuiTheme(THEME)}>
+    <MuiThemeProvider theme={createTheme(THEME)}>
       <Provider store={store}>
         <DomeApp />
       </Provider>

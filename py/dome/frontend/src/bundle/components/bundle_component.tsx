@@ -51,7 +51,7 @@ const DragHandle = SortableHandle(() => (
 
 const styles = (theme: Theme) => createStyles({
   root: {
-    marginBottom: theme.spacing.unit * 2,
+    marginBottom: theme.spacing(2),
   },
   inactive: {
     opacity: 0.3,
@@ -66,7 +66,7 @@ const styles = (theme: Theme) => createStyles({
   },
   activeSwitch: {
     marginLeft: 0,
-    marginRight: theme.spacing.unit * 2,
+    marginRight: theme.spacing(2),
   },
 });
 

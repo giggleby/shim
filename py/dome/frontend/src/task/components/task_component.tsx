@@ -29,7 +29,7 @@ export const styles = (theme: Theme) => createStyles({
     fill: green[700],
   },
   description: {
-    padding: theme.spacing.unit,
+    padding: theme.spacing(1),
     gridColumnStart: 1,
   },
 });

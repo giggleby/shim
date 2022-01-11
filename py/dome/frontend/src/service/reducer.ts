@@ -26,7 +26,7 @@ export default combineReducers<ServiceState, ServiceAction>({
         return state;
     }
   },
-  services: produce<ServiceMap, ServiceAction>((draft: ServiceMap, action: ServiceAction) => {
+  services: produce((draft: ServiceMap, action: ServiceAction) => {
     switch (action.type) {
       case getType(actions.receiveServices):
         return action.payload.services;

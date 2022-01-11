@@ -57,7 +57,7 @@ const TaskListHeader: React.SFC<TaskListHeaderProps> = ({
   return (
     <>
       <div className={classes.description}>
-        <Typography variant="subheading">Tasks</Typography>
+        <Typography variant="subtitle1">Tasks</Typography>
         <Typography variant="caption" color="textSecondary">
           {taskSummary}
         </Typography>

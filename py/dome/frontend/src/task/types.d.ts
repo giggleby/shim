@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {AxiosResponse} from 'axios';
+import {AxiosResponse, Method} from 'axios';
 
 export type TaskState =
   'WAITING' |
@@ -22,7 +22,7 @@ export interface Task {
   taskId: string;
   state: TaskState;
   description: string;
-  method: string;
+  method: Method;
   url: string;
   progress: TaskProgress;
 }

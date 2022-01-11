@@ -28,7 +28,7 @@ const styles = (theme: Theme) => createStyles({
     display: 'grid',
     gridTemplateColumns: 'minmax(25em, 1fr) 48px 48px 48px',
     alignItems: 'center',
-    padding: `0 ${theme.spacing.unit}px`,
+    padding: `0 ${theme.spacing(1)}px`,
   },
   // TODO(pihsun): We should be using CSS subgrid instead when browser support
   // it, since the current implementation relies on having fixed width for

@@ -18,12 +18,12 @@ const styles = (theme: Theme) => createStyles({
   subtitle: {
     ...theme.typography.subtitle1,
     color: theme.palette.grey[500],
-    fontWeight: theme.typography.fontWeightMedium,
+    fontWeight: theme.typography.fontWeightMedium as any,
   },
 });
 
 type MenuSubheaderProps =
-  Omit<MenuItemProps, 'classes'> & WithStyles<typeof styles>;
+  Omit<MenuItemProps<'li', { button?: true }>, 'classes'> & WithStyles<typeof styles>;
 
 class MenuSubheader extends React.Component<MenuSubheaderProps> {
   menuItemRef: React.RefObject<HTMLLIElement>;
@@ -50,7 +50,7 @@ class MenuSubheader extends React.Component<MenuSubheaderProps> {
     const {classes, ...other} = this.props;
     return (
       <RootRef rootRef={this.menuItemRef}>
-        <MenuItem button={false} className={classes.subtitle} {...other} />
+        <MenuItem className={classes.subtitle} {...other} />
       </RootRef>
     );
   }

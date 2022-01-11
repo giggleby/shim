@@ -49,7 +49,7 @@ const style = (theme: Theme) => createStyles({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    padding: theme.spacing.unit * 2,
+    padding: theme.spacing(2),
   },
   appShift: {
     marginLeft: APP_MENU_WIDTH,
@@ -63,11 +63,11 @@ const style = (theme: Theme) => createStyles({
     position: 'fixed',
     bottom: 0,
     right: 0,
-    padding: theme.spacing.unit * 4,
+    padding: theme.spacing(4),
     display: 'grid',
     placeItems: 'end end',
     // jss-default-unit doesn't recognize this attribute...
-    gridRowGap: `${theme.spacing.unit * 2}px`,
+    gridRowGap: `${theme.spacing(2)}px`,
     pointerEvents: 'none',
     '& *': {
       pointerEvents: 'auto',

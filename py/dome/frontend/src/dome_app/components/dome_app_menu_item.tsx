@@ -33,7 +33,7 @@ interface DomeAppMenuItemOwnProps {
 
 type DomeAppMenuItemProps =
   DomeAppMenuItemOwnProps &
-  Omit<MenuItemProps, 'classes'> &
+  Omit<MenuItemProps<'li', { button?: true }>, 'classes'> &
   WithStyles<typeof styles> &
   ReturnType<typeof mapStateToProps> &
   DispatchProps<typeof mapDispatchToProps>;

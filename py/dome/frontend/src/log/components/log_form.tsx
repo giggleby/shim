@@ -48,7 +48,7 @@ interface LogFormOwnProps {
 
 const styles = (theme: Theme) => createStyles({
   root: {
-    marginBottom: theme.spacing.unit * 4,
+    marginBottom: theme.spacing(4),
   },
 });
 

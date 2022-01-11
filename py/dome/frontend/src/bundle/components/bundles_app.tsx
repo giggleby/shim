@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Button from '@material-ui/core/Button';
+import Fab from '@material-ui/core/Fab';
 import Portal from '@material-ui/core/Portal';
 import AddIcon from '@material-ui/icons/Add';
 import React from 'react';
@@ -38,14 +38,13 @@ const BundlesApp: React.SFC<BundlesAppProps> =
       {overlay &&
         <>
           <Portal container={overlay}>
-            <Button
-              variant="fab"
+            <Fab
               color="primary"
               title="Upload Factory Bundle (zip or {gzip|bzip2|xz} compressed tarball)"
               onClick={openUploadNewBundleForm}
             >
               <AddIcon />
-            </Button>
+            </Fab>
           </Portal>
           <Portal container={overlay}>
             <ResourcesGarbageCollectionButton />

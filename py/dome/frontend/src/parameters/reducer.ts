@@ -20,7 +20,7 @@ const INITIAL_STATE = {
   dirs: [],
 };
 
-export default produce<ParameterState, ParameterAction>((draft, action) => {
+export default produce((draft: ParameterState, action: ParameterAction) => {
   switch (action.type) {
     case getType(actions.receiveParameters): {
       const {parameters} = action.payload;

@@ -24,7 +24,7 @@ const INITIAL_STATE = {
   deletedResources: null,
 };
 
-export default produce<BundleState, BundleAction>((draft, action) => {
+export default produce((draft: BundleState, action: BundleAction) => {
   switch (action.type) {
     case getType(actions.addBundle): {
       const {bundle} = action.payload;

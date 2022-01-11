@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Button from '@material-ui/core/Button';
+import Fab from '@material-ui/core/Fab';
 import Snackbar from '@material-ui/core/Snackbar';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import React from 'react';
@@ -37,12 +37,9 @@ class ResourcesGarbageCollectionButton
     const {resources} = this.props;
     return (
       <>
-        <Button
-          variant="fab"
-          onClick={this.props.startGarbageCollection}
-        >
+        <Fab onClick={this.props.startGarbageCollection}>
           <DeleteSweepIcon />
-        </Button>
+        </Fab>
         <Snackbar
           open={resources != null}
           onClose={this.props.closeSnackbar}

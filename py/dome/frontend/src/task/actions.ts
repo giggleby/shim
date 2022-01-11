@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import {Method} from 'axios';
 import produce from 'immer';
 import {safeDump} from 'js-yaml';
 import {createAction} from 'typesafe-actions';
@@ -23,7 +24,7 @@ const createTaskImpl = createAction('CREATE_TASK', (resolve) =>
   (
     taskId: string,
     description: string,
-    method: string,
+    method: Method,
     url: string,
     debugBody: any,
   ) => resolve({taskId, description, method, url, debugBody}));
@@ -65,7 +66,7 @@ const getIn = (obj: any, path: string[]): any => (
 );
 
 const setIn = (obj: any, path: string[], value: any): any => (
-  produce(obj, (draft) => {
+  produce(obj, (draft: any) => {
     const prefix = [...path];
     const key = prefix.pop()!;
     getIn(draft, prefix)[key] = value;
@@ -97,7 +98,7 @@ const taskOptimisticUpdate: {[id: string]: (() => void) | null} = {};
 export const runTask =
   <T>(
     description: string,
-    method: string,
+    method: Method,
     url: string,
     body: any,
     // The optimisticUpdate function may be replay many times.
@@ -215,7 +216,7 @@ const runTaskImpl = (taskId: string) =>
             }));
           },
         });
-        data = produce(data, (draft) => {
+        data = produce(data, (draft: any) => {
           const prefix = [...path];
           const key = prefix.pop()!;
           const obj = getIn(draft, prefix);
