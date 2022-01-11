@@ -83,13 +83,13 @@ Audiofuntest on 'mlb' mics of input_dev and speaker channel 0 of output_dev::
         "require_dongle": false,
         "check_dongle": true,
         "mic_source": "MLBDmic",
+        "sample_rate": 16000,
         "initial_actions": [
           ["1", "init_speakerdmic"]
         ],
         "tests_to_conduct": [
           {
             "threshold": 80,
-            "capture_rate": 16000,
             "type": "audiofun",
             "output_channels": [0]
           }
@@ -205,8 +205,6 @@ _DEFAULT_AUDIOFUN_TEST_ITERATION = 10
 _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS = [0, 1]
 # Default audio gain used for audiofuntest.
 _DEFAULT_AUDIOFUN_TEST_VOLUME_GAIN = 100
-# Default capture sample rate used for audiofuntest.
-_DEFAULT_AUDIOFUN_TEST_SAMPLE_RATE = 48000
 # Default sample format used by audiofuntest, s16 = Signed 16 Bit.
 _DEFAULT_AUDIOFUN_TEST_SAMPLE_FORMAT = 's16'
 # Default sample format used to play audio, s16 = Signed 16 Bit.
@@ -324,9 +322,6 @@ _ARG_TESTS_TO_CONDUCT_SCHEMA = JSONSchemaDict(
                     'input_gain': {
                         'type': 'number'
                     },
-                    'capture_rate': {
-                        'type': 'number'
-                    },
                     'sample_format': {
                         'type': 'string',
                         'enum': ['u8', 's16', 's24', 's32']
@@ -438,6 +433,9 @@ class AudioLoopTest(test_case.TestCase):
           default='nocheck'),
       Arg('audiofuntest_run_delay', (int, float),
           'Delay between consecutive calls to audiofuntest', default=None),
+      Arg('sample_rate', int,
+          ('The sample rate for audio test. The value should be determined by '
+           'output device.'), default=48000),
       Arg(
           'tests_to_conduct', list,
           'A list of dicts. A dict should contain at least one key named\n'
@@ -457,8 +455,6 @@ class AudioLoopTest(test_case.TestCase):
           '        suggested by CRAS with command \n'
           '        `cras_test_client --dump_sever_info`, check the "Gain" \n'
           '        column.'
-          '  - **capture_rate**: The capturing sample rate use for testing. \n'
-          '        The value should be determined by output device.\n'
           '  - **sample_format**: The sample format for audiofuntest. \n'
           '        See -t section in audiofuntest manual.\n'
           '  - **player_format**: The sample format for output device.\n'
@@ -863,8 +859,7 @@ class AudioLoopTest(test_case.TestCase):
                                                  self._in_channel_map)
     output_channels = self._current_test_args.get(
         'output_channels', _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS)
-    capture_rate = self._current_test_args.get(
-        'capture_rate', _DEFAULT_AUDIOFUN_TEST_SAMPLE_RATE)
+    capture_rate = self.args.sample_rate
     self.CheckChannelArgs(output_channels)
 
     for output_channel in output_channels:
@@ -878,6 +873,7 @@ class AudioLoopTest(test_case.TestCase):
     """
     with file_utils.UnopenedTemporaryFile(suffix='.wav') as file_path:
       cmd = audio_utils.GetGenerateSineWavArgs(file_path, channel,
+                                               self.args.sample_rate,
                                                _DEFAULT_FREQ_HZ, wav_duration)
       process_utils.Spawn(cmd.split(' '), log=True, check_call=True)
       self._dut.link.Push(file_path, dut_file_path)
@@ -937,7 +933,8 @@ class AudioLoopTest(test_case.TestCase):
     for channel in input_channels:
       session.console.info(f'Checking channel {channel} of {file_path}')
       self.CheckRecordedAudio(
-          audio_utils.SoxStatOutput(file_path, num_channels, channel))
+          audio_utils.SoxStatOutput(file_path, num_channels, channel,
+                                    self.args.sample_rate))
     self._audio_file_path.append(file_path)
 
   def RecordFile(self, duration, num_channels, file_path):
@@ -955,11 +952,12 @@ class AudioLoopTest(test_case.TestCase):
          self._dut.temp.TempFile() as dut_record_path:
       self._dut.audio.RecordRawFile(dut_record_path, self._in_card,
                                     self._in_device, duration, num_channels,
-                                    48000)
+                                    self.args.sample_rate)
       self._dut.link.Pull(dut_record_path, record_path)
       audio_utils.TrimAudioFile(in_path=record_path, out_path=file_path,
                                 start=_DEFAULT_TRIM_SECONDS, end=None,
-                                num_channels=num_channels)
+                                num_channels=num_channels,
+                                sample_rate=self.args.sample_rate)
 
   def CheckRecordedAudio(self, sox_output):
     rms_value = audio_utils.GetAudioRms(sox_output)
@@ -1122,7 +1120,8 @@ class AudioLoopTest(test_case.TestCase):
     # alsa_conformance.go.
     commands = [
         audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates',
-        '--rate-criteria-diff-pct', '0.1', '--rate-err-criteria', '100'
+        '--rate-criteria-diff-pct', '0.1', '--rate-err-criteria', '100',
+        '--allow-rate', f'{self.args.sample_rate}'
     ]
     if input_device:
       commands.extend(['-C', input_device])

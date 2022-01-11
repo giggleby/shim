@@ -73,8 +73,8 @@ class DSMCalibrationTest(unittest.TestCase):
 
   def runTest(self):
     device = 'hw:%s,%s' % tuple(self.args.output_dev)
-    sox_args = audio_utils.GetPlaySineArgs(2, device,
-                                           freq=100, duration_secs=1000)
+    sox_args = audio_utils.GetPlaySineArgs(2, 48000, device, freq=100,
+                                           duration_secs=1000)
     self._sox_process = process_utils.Spawn(sox_args)
     time.sleep(0.5)
 
