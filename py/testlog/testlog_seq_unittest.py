@@ -22,8 +22,6 @@ from cros.factory.testlog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
 
 
-# TODO (b/205776617)
-@label_utils.Informational
 class BootSequenceTest(unittest.TestCase):
   """Unittests for SeqGenerator."""
 
@@ -51,6 +49,9 @@ class BootSequenceTest(unittest.TestCase):
     self.assertEqual(
         next_seq, 1 + first_seq + testlog_seq.SEQ_INCREMENT_ON_BOOT)
 
+  # TODO(lschyi): This functionality requires time at runtime, which is not a
+  # stable test to run under CQ.
+  @label_utils.Informational
   def testAllCorrupt(self):
     """Tests seq recovery functionality.  Should use current time."""
     with open(self.json_path, 'w') as fd:
@@ -133,6 +134,8 @@ class BootSequenceTest(unittest.TestCase):
     self.assertEqual(list(range(len(values))), values)
     return values
 
+  # Performance test
+  @label_utils.Informational
   def testThreadsWithSleep(self):
     values = self._testThreads(after_read=lambda: time.sleep(.05),
                                filelock_waitsecs=2.0)
@@ -144,6 +147,8 @@ class BootSequenceTest(unittest.TestCase):
     self.assertTrue(len(values) > 10, values)
     self.assertTrue(len(values) < 30, values)
 
+  # Performance test
+  @label_utils.Informational
   def testThreadsWithoutSleep(self):
     values = self._testThreads(filelock_waitsecs=2.0)
     logging.info('testThreadsWithoutSleep exercises %d writes', len(values))
