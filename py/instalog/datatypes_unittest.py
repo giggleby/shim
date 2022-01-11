@@ -250,21 +250,17 @@ class TestEventStream(unittest.TestCase):
       event_stream.Abort()
 
 
-# TODO (b/204830411)
-@label_utils.Informational
-class TestEventStreamIterator(unittest.TestCase):
-  """Tests for the EventStreamIterator class."""
+class TestEventStreamIteratorBase(unittest.TestCase):
+  """Base tests for the EventStreamIterator class."""
 
   def setUp(self):
     self.q = queue.Queue()
     self.plugin_api = FakePluginAPI(self.q)
     self.event_stream = datatypes.EventStream(None, self.plugin_api)
 
-  def testTimeoutSmallerThanInterval(self):
-    """Tests correct behaviour when timeout is smaller than interval."""
-    with RuntimeBound(max=0.5), self.assertRaises(StopIteration):
-      next(self.event_stream.iter(
-          blocking=True, timeout=0.1, interval=1))
+
+class TestEventStreamIterator(TestEventStreamIteratorBase):
+  """Tests for the EventStreamIterator class."""
 
   def testWaitRetryLoop(self):
     """Stress tests wait-retry loop."""
@@ -274,6 +270,20 @@ class TestEventStreamIterator(unittest.TestCase):
     with RuntimeBound(min=0.5), self.assertRaises(StopIteration):
       next(self.event_stream.iter(timeout=0.5, interval=0.00001))
 
+
+@label_utils.Informational
+class TestEventStreamIteratorWithPerformance(TestEventStreamIteratorBase):
+  """Tests for the EventStreamIterator class with performance requirement."""
+
+  # Test requires processor to have certain power so that test can finish within
+  # 0.5 seconds. Should not run in CQ.
+  def testTimeoutSmallerThanInterval(self):
+    """Tests correct behaviour when timeout is smaller than interval."""
+    with RuntimeBound(max=0.5), self.assertRaises(StopIteration):
+      next(self.event_stream.iter(blocking=True, timeout=0.1, interval=1))
+
+  # Test requires processor to have certain power so that each with block can
+  # finish within 0.1 seconds. Should not run in CQ.
   def testNonBlockingWithoutEvent(self):
     """Tests non-blocking operations with no events in the queue."""
     with RuntimeBound(max=0.1), self.assertRaises(StopIteration):
@@ -285,6 +295,8 @@ class TestEventStreamIterator(unittest.TestCase):
     with RuntimeBound(max=0.1), self.assertRaises(StopIteration):
       next(self.event_stream.iter(blocking=False))
 
+  # Test requires processor to have certain power so that each with block can
+  # finish within 0.1 seconds. Should not run in CQ.
   def testNonBlockingWithEvent(self):
     """Tests non-blocking operations with finite events in the queue."""
     self.q.put(1)
@@ -307,6 +319,9 @@ class TestEventStreamIterator(unittest.TestCase):
       results = list(self.event_stream.iter(blocking=False))
       self.assertEqual(results, [1])
 
+  # Test requires processor to have certain power so that each with block can
+  # finish within 0.1 and 1.5 seconds. This is also a performance test, thus
+  # should not run in CQ.
   def testInfiniteItems(self):
     """Tests operations with infinite events in the queue."""
     with mock.patch.object(self.q, 'empty', return_value=False):
@@ -341,6 +356,8 @@ class TestEventStreamIterator(unittest.TestCase):
           # results.  Tone this down to the safe amount of 5000.
           self.assertGreater(len(results), 5000)
 
+  # Test requires processor to have certain power so that test can finish within
+  # 1.2 seconds. Should not run in CQ.
   def testBlockUntilWaitException(self):
     """Tests that iterator aborts before its timeout on WaitException."""
     wait_exception_begin = time_utils.MonotonicTime() + 1
@@ -357,6 +374,8 @@ class TestEventStreamIterator(unittest.TestCase):
         results = list(self.event_stream.iter(timeout=2, interval=0.1, count=1))
         self.assertEqual(results, [])
 
+  # Test requires processor to have certain power so that test can finish within
+  # 1.2 seconds. Should not run in CQ.
   def testBlockUntilCountFulfilled(self):
     """Tests that an iterator ends when its count is fulfilled."""
     wait_event_begin = time_utils.MonotonicTime() + 1
