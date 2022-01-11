@@ -158,12 +158,34 @@ class NetworkDevices:
     return [dev for dev in cls.cached_dev_list
             if devtype is None or dev.devtype == devtype]
 
+  @staticmethod
+  def GetPCIPath(devtype, path):
+    """Returns the PCI path of a device.
+
+    `realpath /sys/class/net/wwan0/device` may be
+    `/sys/devices/pci0123:45/6789:ab:cd.e/wwan/wwan0`. We need to map this to
+    `/sys/devices/pci0123:45/6789:ab:cd.e` before passing it into PCIFunction.
+
+    Args:
+      devtype: The type of the device.
+      path: The real path of the device.
+    """
+    if devtype == 'cellular':
+      basename = os.path.basename(path)
+      match = re.search(r'^wwan\d+$', basename)
+      if match:
+        dirname = os.path.dirname(path)
+        if os.path.basename(dirname) == 'wwan':
+          return os.path.dirname(dirname)
+    return path
+
   @classmethod
   def ReadSysfsDeviceIds(cls, devtype, ignore_others=False):
     """Return _ReadSysfsDeviceId result for each device of specified type."""
     def ProbeSysfsDevices(path, ignore_others):
       path = os.path.abspath(os.path.realpath(path))
-      ret = function.InterpretFunction({'pci': path})()
+      pci_path = cls.GetPCIPath(devtype, path)
+      ret = function.InterpretFunction({'pci': pci_path})()
       if ret:
         return ret
       if not ignore_others:
