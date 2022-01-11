@@ -697,7 +697,7 @@ class AudioQualityTest(test_case.TestCase):
     self.RestoreConfiguration()
     self.SetMessage(_LABEL_PLAYTONE_LEFT)
     self._dut.audio.MuteLeftHeadphone(self._out_card)
-    cmdargs = audio_utils.GetPlaySineArgs(1, self._alsa_output_device)
+    cmdargs = audio_utils.GetPlaySineArgs(1, 48000, self._alsa_output_device)
     self._tone_process = process_utils.Spawn(cmdargs)
     self.SendResponse(None, args)
 
@@ -706,7 +706,7 @@ class AudioQualityTest(test_case.TestCase):
     self.RestoreConfiguration()
     self.SetMessage(_LABEL_PLAYTONE_RIGHT)
     self._dut.audio.MuteRightHeadphone(self._out_card)
-    cmdargs = audio_utils.GetPlaySineArgs(0, self._alsa_output_device)
+    cmdargs = audio_utils.GetPlaySineArgs(0, 48000, self._alsa_output_device)
     self._tone_process = process_utils.Spawn(cmdargs)
     self.SendResponse(None, args)
 
