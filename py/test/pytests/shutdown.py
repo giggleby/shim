@@ -145,6 +145,7 @@ class ShutdownTest(test_case.TestCase):
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
+    self.power = self.dut.power
     self.ui.ToggleTemplateClass('font-large', True)
     self.operation_label = _DICT_OPERATION_LABEL.get(self.args.operation,
                                                      self.args.operation)
@@ -257,13 +258,14 @@ class ShutdownTest(test_case.TestCase):
 
     now = time.time()
     logging.info('%.03f s passed since reboot', now - last_shutdown_time)
-    if (self.args.operation in (SHUTDOWN_TYPES.reboot, SHUTDOWN_TYPES.halt) and
-        last_shutdown_time > now):
-      # We only check this for reboot and halt. Running fullreboot and
-      # direct_ec_reboot on a Chromebook with no battery resets time
-      # and thus triggers the 'time moving backward' error. Since this
-      # is an expected result, we skip this check for fullreboot and
-      # direct_ec_reboot.
+    if (last_shutdown_time > now and
+        (self.power.CheckBatteryPresent() or
+         self.args.operation == SHUTDOWN_TYPES.reboot or
+         self.args.operation == SHUTDOWN_TYPES.halt)):
+      # Running fullreboot and direct_ec_reboot on a Chromebook with
+      # no battery resets time and thus triggers the 'time moving backward'
+      # error. Since this is an expected result, we do this check for fullreboot
+      # and direct_ec_reboot only when battery is present.
       LogAndEndTest(status=state.TestState.FAILED,
                     error_msg=('Time moved backward during reboot '
                                '(before=%s, after=%s)' %
