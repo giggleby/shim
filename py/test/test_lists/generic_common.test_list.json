@@ -158,6 +158,15 @@
         ]
       }
     },
+    "AudioJackConformance": {
+      "inherit": "AudioJack",
+      "label": "Audio Jack Conformance",
+      "args": {
+        "autostart": true,
+        "check_dongle": false,
+        "tests_to_conduct": []
+      }
+    },
     "Backlight": {
       "pytest_name": "backlight"
     },
@@ -815,6 +824,15 @@
             "volume_gain": 50
           }
         ]
+      }
+    },
+    "SpeakerDMicConformance": {
+      "inherit": "SpeakerDMic",
+      "label": "Speaker/Microphone Conformance",
+      "args": {
+        "autostart": true,
+        "check_dongle": false,
+        "tests_to_conduct": []
       }
     },
     "Start": {
