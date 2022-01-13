@@ -17,7 +17,6 @@ import unittest
 from cros.factory.test.i18n import translation
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
 
 
 SCRIPT_DIR = os.path.dirname(__file__)
@@ -169,60 +168,6 @@ class PoCheckTest(unittest.TestCase):
         'Translations without file reference found in %s, please check if those'
         ' lines are unused and remove those lines.'
         % ', '.join('%s at line %d' % file_line for file_line in bad_lines))
-
-
-# TODO (b/204837218)
-@label_utils.Informational
-class PoUpdateTest(unittest.TestCase):
-  """Check that po update have been run."""
-  def runTest(self):
-    try:
-      temp_dir = tempfile.mkdtemp(prefix='po_update_test.')
-      po_dir = os.path.join(temp_dir, 'po')
-
-      po_files = glob.glob(os.path.join(SCRIPT_DIR, '*.po'))
-      os.makedirs(po_dir)
-      for po_file in po_files:
-        shutil.copy(po_file, po_dir)
-
-      env = {'PO_DIR': po_dir}
-      process_utils.Spawn(['make', '-C', SCRIPT_DIR, 'update'],
-                          ignore_stdout=True, ignore_stderr=True,
-                          env=env, check_call=True)
-
-      err_files = []
-      for po_file in po_files:
-        new_po_file = os.path.join(po_dir, os.path.basename(po_file))
-
-        # Compare two contents except the line of PO-Revision-Date
-        old_content = file_utils.ReadLines(po_file)
-        new_content = file_utils.ReadLines(new_po_file)
-
-        if len(old_content) != len(new_content):
-          err_files.append(os.path.basename(po_file))
-          continue
-
-        for old_line, new_line in zip(old_content, new_content):
-          if old_line == new_line:
-            continue
-
-          # Ignore the line of PO-Revision-Date since the date
-          # will be updated by `make update`
-          if 'PO-Revision-Date' in old_line and \
-             'PO-Revision-Date' in new_line:
-            continue
-
-          err_files.append(os.path.basename(po_file))
-          break
-
-      self.assertFalse(
-          err_files,
-          "Files %r are not updated, please run 'make -C po update' inside "
-          'chroot and check the translations.' % err_files)
-
-    finally:
-      if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
 
 
 if __name__ == '__main__':

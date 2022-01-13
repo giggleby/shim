@@ -127,8 +127,13 @@ PRESUBMIT_FILES := \
     $(shell realpath $$PRESUBMIT_FILES | sed "s'^$$(realpath $$(pwd))/''g"))
 
 PRESUBMIT_TARGETS := \
-  presubmit-deps presubmit-format presubmit-lint presubmit-shebang \
-  presubmit-markdown presubmit-test
+  presubmit-deps \
+  presubmit-format \
+  presubmit-lint \
+  presubmit-shebang \
+  presubmit-markdown \
+  presubmit-po \
+  presubmit-test
 
 # Virtual targets. The '.phony' is a special hack to allow making targets with
 # wildchar (for instance, overlay-%) to be treated as .PHONY.
@@ -458,6 +463,9 @@ presubmit-deps:
 
 presubmit-markdown:
 	@$(MK_DIR)/presubmit_markdown.py $(PRESUBMIT_FILES)
+
+presubmit-po:
+	@$(MK_DIR)/presubmit_po.py po
 
 presubmit-test:
 	@$(MK_DIR)/$@.py $(PRESUBMIT_FILES)
