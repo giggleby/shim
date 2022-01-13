@@ -11,7 +11,7 @@ import functools
 import itertools
 import logging
 import re
-from typing import List, Mapping, NamedTuple, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional, Tuple
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
@@ -64,7 +64,7 @@ class NameChangedComponentInfo(NamedTuple):
 class ValidationReport(NamedTuple):
   errors: List[Error]
   warnings: List[str]
-  name_changed_components: Mapping[str, List[NameChangedComponentInfo]]
+  name_changed_components: Dict[str, List[NameChangedComponentInfo]]
 
   @classmethod
   def CreateEmpty(cls):
@@ -110,7 +110,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
 class ChangeAnalysis(NamedTuple):
   precondition_errors: List[Error]
   lines: List[DBLineAnalysisResult]
-  hwid_components: Mapping[str, HWIDComponentAnalysisResult]
+  hwid_components: Dict[str, HWIDComponentAnalysisResult]
 
 
 class ContentsAnalyzer:
@@ -334,13 +334,14 @@ class ContentsAnalyzer:
       line_analysis_result.append(DBLineAnalysisResult(mod_status, parts))
     return line_analysis_result
 
-  def AnalyzeChange(self, db_contents_patcher,
+  def AnalyzeChange(self, db_contents_patcher: Optional[Callable[[str], str]],
                     require_hwid_db_lines: bool) -> ChangeAnalysis:
     """Analyzes the HWID DB change.
 
     Args:
-      db_contents_patcher: A function that patches / removes the header of the
-          given HWID DB contents.
+      db_contents_patcher: An optional function that patches / removes the
+          header of the given HWID DB contents.  This argument is ignored when
+          require_hwid_db_lines is False.
       require_hwid_db_lines: A flag indicating if DB line analysis is required.
 
     Returns:
@@ -389,6 +390,9 @@ class ContentsAnalyzer:
                 comp_name_with_correct_seq_no, comp.diff_prev))
 
     if require_hwid_db_lines:
+      if db_contents_patcher is None:
+        raise ValueError(('db_contents_patcher should not be None when '
+                          'require_hwid_db_lines is set to True'))
       report.lines.extend(
           self._AnalyzeDBLines(db_contents_patcher, all_placeholders,
                                db_placeholder_options))
@@ -404,8 +408,7 @@ class ContentsAnalyzer:
     is_newly_added: bool
     diff_prev: Optional[DiffStatus]
 
-  def _ExtractHWIDComponents(
-      self) -> Mapping[str, List['_HWIDComponentMetadata']]:
+  def _ExtractHWIDComponents(self) -> Dict[str, List['_HWIDComponentMetadata']]:
     ret = {}
     adapter = name_pattern_adapter.NamePatternAdapter()
     for comp_cls in self._curr_db.instance.GetActiveComponentClasses():

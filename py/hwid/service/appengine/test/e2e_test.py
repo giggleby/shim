@@ -27,8 +27,7 @@ from cros.factory.utils import process_utils
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 APPENGINE_DIR = os.path.dirname(TEST_DIR)
 PROTO_DIR = os.path.join(APPENGINE_DIR, 'proto')
-FACTORY_DIR = os.path.abspath(
-    os.path.join(APPENGINE_DIR, '../../../..'))
+FACTORY_DIR = os.path.abspath(os.path.join(APPENGINE_DIR, '../../../../../..'))
 FACTORY_PRIVATE_DIR = os.path.abspath(
     os.path.join(FACTORY_DIR, '../factory-private'))
 TEST_DIR = os.path.join(FACTORY_PRIVATE_DIR,

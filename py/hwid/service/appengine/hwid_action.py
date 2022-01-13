@@ -5,7 +5,7 @@
 
 import collections
 import copy
-from typing import List, MutableMapping, NamedTuple, Optional, Set
+from typing import Dict, List, NamedTuple, Optional, Set
 
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
@@ -245,7 +245,7 @@ class DBEditableSectionAnalysisReport(NamedTuple):
   validation_errors: List[DBValidationError]
   precondition_errors: List[DBPreconditionError]
   lines: List[DBEditableSectionLineAnalysisResult]
-  hwid_components: MutableMapping[str, DBHWIDComponentAnalysisResult]
+  hwid_components: Dict[str, DBHWIDComponentAnalysisResult]
 
   @property
   def is_change_valid(self):
@@ -254,6 +254,7 @@ class DBEditableSectionAnalysisReport(NamedTuple):
 
 class BundleResourceInfo(NamedTuple):
   fingerprint: str
+  hwid_components: Optional[Dict[str, DBHWIDComponentAnalysisResult]]
 
 
 class BundleInfo(NamedTuple):

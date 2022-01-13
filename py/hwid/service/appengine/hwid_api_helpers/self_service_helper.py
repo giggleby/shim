@@ -30,6 +30,8 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.ABANDONED,
 }
 
+_AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
+
 
 class HWIDStatusConversionError(Exception):
   """Indicate a failure to convert HWID component status to
@@ -69,6 +71,37 @@ def _ConvertValidationErrorCode(code):
   if code == hwid_action.DBValidationErrorCode.SCHEMA_ERROR:
     return ValidationResultMessage.ErrorCode.SCHEMA_ERROR
   return ValidationResultMessage.ErrorCode.CONTENTS_ERROR
+
+
+def _ConvertCompInfoToMsg(
+    comp_info: hwid_action.DBHWIDComponentAnalysisResult
+) -> _AnalysisReportMsg.ComponentInfo:
+  comp_info_msg = _AnalysisReportMsg.ComponentInfo()
+  comp_info_msg.component_class = comp_info.comp_cls
+  comp_info_msg.original_name = comp_info.comp_name
+  comp_info_msg.original_status = comp_info.support_status
+  comp_info_msg.is_newly_added = comp_info.is_newly_added
+  if comp_info.avl_id is not None:
+    comp_info_msg.avl_info.cid, comp_info_msg.avl_info.qid = comp_info.avl_id
+    comp_info_msg.has_avl = True
+  else:
+    comp_info_msg.has_avl = False
+  comp_info_msg.seq_no = comp_info.seq_no
+  if comp_info.comp_name_with_correct_seq_no is not None:
+    comp_info_msg.component_name_with_correct_seq_no = (
+        comp_info.comp_name_with_correct_seq_no)
+  if comp_info.diff_prev is not None:
+    diff = comp_info.diff_prev
+    comp_info_msg.diff_prev.CopyFrom(
+        hwid_api_messages_pb2.DiffStatus(
+            unchanged=diff.unchanged,
+            name_changed=diff.name_changed,
+            support_status_changed=diff.support_status_changed,
+            values_changed=diff.values_changed,
+            prev_comp_name=diff.prev_comp_name,
+            prev_support_status=diff.prev_support_status,
+        ))
+  return comp_info_msg
 
 
 class SelfServiceHelper:
@@ -312,33 +345,8 @@ Info Update
             response_line.parts.add(fixed_text=part.text)
 
     for reference_id, comp_info in report.hwid_components.items():
-      response_comp_info = (
-          response.analysis_report.component_infos.get_or_create(reference_id))
-      response_comp_info.component_class = comp_info.comp_cls
-      response_comp_info.original_name = comp_info.comp_name
-      response_comp_info.original_status = comp_info.support_status
-      response_comp_info.is_newly_added = comp_info.is_newly_added
-      if comp_info.avl_id is not None:
-        response_comp_info.avl_info.cid, response_comp_info.avl_info.qid = (
-            comp_info.avl_id)
-        response_comp_info.has_avl = True
-      else:
-        response_comp_info.has_avl = False
-      response_comp_info.seq_no = comp_info.seq_no
-      if comp_info.comp_name_with_correct_seq_no is not None:
-        response_comp_info.component_name_with_correct_seq_no = (
-            comp_info.comp_name_with_correct_seq_no)
-      if comp_info.diff_prev is not None:
-        diff = comp_info.diff_prev
-        response_comp_info.diff_prev.CopyFrom(
-            hwid_api_messages_pb2.DiffStatus(
-                unchanged=diff.unchanged,
-                name_changed=diff.name_changed,
-                support_status_changed=diff.support_status_changed,
-                values_changed=diff.values_changed,
-                prev_comp_name=diff.prev_comp_name,
-                prev_support_status=diff.prev_support_status,
-            ))
+      response.analysis_report.component_infos[reference_id].CopyFrom(
+          _ConvertCompInfoToMsg(comp_info))
     return response
 
   def BatchGenerateAVLComponentName(self, request):
@@ -378,6 +386,9 @@ Info Update
 
     response = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
         bundle_creation_token=resource_info.fingerprint)
+    # TODO(b/209362238): Put resource info only if Factory HWID Consultant
+    # requires them to create a bundle.  e.g. explicitly mentioning the probe
+    # values of components are from AVL.
     return response
 
   def CreateHWIDBundle(self, request):

@@ -1,6 +1,8 @@
 syntax = "proto3";
 package cros.factory.hwid.service.appengine.proto.hwid_api_messages_pb2;
 
+import "cros/factory/probe_info_service/app_engine/stubby.proto";
+
 enum Status {
   STATUS_UNSPECIFIED = 0;
   SUCCESS = 1;
@@ -360,11 +362,19 @@ message CreateHwidDbEditableSectionChangeClRequest {
   repeated string cc_emails = 8;
   // A bool indicating if this CL should be auto-approved.
   bool auto_approved = 9;
+  // The external resource required for creating HWID DB changes.
+  HwidDbExternalResource db_external_resource = 10;
 }
 
 message CreateHwidDbEditableSectionChangeClResponse {
   // The CL number to the created HWID change request.
   int64 cl_number = 1;
+}
+
+// External resources that HWID DB can refer to.
+message HwidDbExternalResource {
+  // Component probe info from AVL.
+  repeated cros.factory.probe_info_service.app_engine.stubby_pb2.ComponentProbeInfo component_probe_infos = 1;
 }
 
 message BatchGetHwidDbEditableSectionChangeClInfoRequest {
@@ -496,13 +506,14 @@ message HwidDbEditableSectionAnalysisReport {
 }
 
 message HwidBundleResourceInfo {
-  // TODO(b/209362238): Append fields that represent the metadata of the
-  // required resource to put into the HWID bundle.
+  // Resource info that HWID Server used to look up bundle resources for
+  // Factory HWID Consultant to create HWID bundles.
+  HwidDbEditableSectionAnalysisReport db_info = 1;
 }
 
 message HwidBundleResource {
-  // TODO(b/209362238): Append fields that represent the required resource to
-  //     put into the HWID bundle.
+  // External resources for Factory HWID Consultant to create HWID bundles.
+  HwidDbExternalResource db_external_resource = 1;
 }
 
 message HwidBundle {

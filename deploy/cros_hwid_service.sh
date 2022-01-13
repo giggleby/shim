@@ -5,7 +5,8 @@
 
 DEPLOY_DIR="$(dirname "$(readlink -f "$0")")"
 FACTORY_DIR="$(readlink -f "${DEPLOY_DIR}/..")"
-APPENGINE_DIR="${FACTORY_DIR}/py/hwid/service/appengine"
+PY_PKG_DIR="${FACTORY_DIR}/py_pkg"
+APPENGINE_DIR="${PY_PKG_DIR}/cros/factory/hwid/service/appengine"
 HW_VERIFIER_DIR="${FACTORY_DIR}/../../platform2/hardware_verifier/proto"
 RT_PROBE_DIR="${FACTORY_DIR}/../../platform2/system_api/dbus/runtime_probe"
 TEST_DIR="${APPENGINE_DIR}/test"
@@ -110,12 +111,12 @@ prepare_protobuf() {
     "${RT_PROBE_DIR}/runtime_probe.proto"
 
   protobuf_out="${TEMP_DIR}/cros/factory/hwid/service/appengine/proto/"
-  mkdir -p "${protobuf_out}"
   protoc \
-    -I="${APPENGINE_DIR}/proto" \
-    --python_out="${protobuf_out}" \
-    "${APPENGINE_DIR}/proto/hwid_api_messages.proto" \
-    "${APPENGINE_DIR}/proto/ingestion.proto"
+    -I="${TEMP_DIR}" \
+    --python_out="${TEMP_DIR}" \
+    "cros/factory/hwid/service/appengine/proto/hwid_api_messages.proto" \
+    "cros/factory/hwid/service/appengine/proto/ingestion.proto" \
+    "cros/factory/probe_info_service/app_engine/stubby.proto"
 }
 
 do_make_build_folder() {
@@ -127,7 +128,7 @@ do_make_build_folder() {
   for file in "${cp_files[@]}"; do
     cp -l "${APPENGINE_DIR}/${file}" "${TEMP_DIR}"
   done
-  cp -lr "${FACTORY_DIR}/py_pkg/cros" "${TEMP_DIR}"
+  cp -lr "${PY_PKG_DIR}/cros" "${TEMP_DIR}"
   if [ -d "${FACTORY_PRIVATE_DIR}" ]; then
     mkdir -p "${TEMP_DIR}/resource"
     cp -l "\
@@ -241,12 +242,17 @@ do_build() {
 do_test() {
   # Compile proto to *_pb2.py for e2e test.
   protoc \
-    -I="${APPENGINE_DIR}/proto" \
-    --python_out="${APPENGINE_DIR}/proto" \
-    "${APPENGINE_DIR}/proto/hwid_api_messages.proto" \
-    "${APPENGINE_DIR}/proto/ingestion.proto"
-  add_temp "${APPENGINE_DIR}/proto/hwid_api_messages_pb2.py"
-  add_temp "${APPENGINE_DIR}/proto/ingestion_pb2.py"
+    -I="${PY_PKG_DIR}" \
+    --python_out="${PY_PKG_DIR}" \
+    "cros/factory/hwid/service/appengine/proto/hwid_api_messages.proto" \
+    "cros/factory/hwid/service/appengine/proto/ingestion.proto" \
+    "cros/factory/probe_info_service/app_engine/stubby.proto"
+  add_temp "${PY_PKG_DIR}/cros/factory/hwid/service/appengine/proto/\
+hwid_api_messages_pb2.py"
+  add_temp "${PY_PKG_DIR}/cros/factory/hwid/service/appengine/proto/\
+ingestion_pb2.py"
+  add_temp "${PY_PKG_DIR}/cros/factory/probe_info_service/app_engine/\
+stubby_pb2.py"
 
   # Runs all executables in the test folder.
   for test_exec in $(find "${TEST_DIR}" -executable -type f); do

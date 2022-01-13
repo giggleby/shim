@@ -104,11 +104,17 @@ class HWIDV3SelfServiceActionHelper:
     return report_factory([], analysis.precondition_errors, analysis.lines,
                           analysis.hwid_components)
 
-  def GetHWIDBundleResourceInfo(self, fingerprint_only):
-    del fingerprint_only
-    return hwid_action.BundleResourceInfo(
-        fingerprint=hashlib.sha1(
-            self._preproc_data.raw_database.encode('utf-8')).hexdigest())
+  def GetHWIDBundleResourceInfo(
+      self, fingerprint_only) -> hwid_action.BundleResourceInfo:
+    fingerprint = hashlib.sha1(
+        self._preproc_data.raw_database.encode('utf-8')).hexdigest()
+    if fingerprint_only:
+      return hwid_action.BundleResourceInfo(fingerprint, None)
+    curr_hwid_db_contents = self._preproc_data.raw_database
+    analyzer = contents_analyzer.ContentsAnalyzer(curr_hwid_db_contents, None,
+                                                  None)
+    analysis = analyzer.AnalyzeChange(None, False)
+    return hwid_action.BundleResourceInfo(fingerprint, analysis.hwid_components)
 
   def BundleHWIDDB(self):
     builder = bundle_builder.BundleBuilder()

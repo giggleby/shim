@@ -337,7 +337,8 @@ class SelfServiceHelperTest(unittest.TestCase):
       # fingerprint based on the contents of the HWID DB.
       action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
       action.GetHWIDBundleResourceInfo.return_value = (
-          hwid_action.BundleResourceInfo(hwid_data.raw_db))
+          hwid_action.BundleResourceInfo('fingerprint of ' + hwid_data.raw_db,
+                                         {}))
       return action
 
     self._modules.ConfigHWID('PROJ', '3', '',
@@ -354,10 +355,41 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertNotEqual(resp1.bundle_creation_token,
                         resp2.bundle_creation_token)
 
+  def testGetHWIDBundleResourceInfo_Pass(self):
+
+    def CreateMockHWIDAction(hwid_data):
+      # Configure the mocked HWIDAction so that it returns the resource info
+      # fingerprint based on the contents of the HWID DB.
+      action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+      action.GetHWIDBundleResourceInfo.return_value = (
+          hwid_action.BundleResourceInfo(
+              'fingerprint of ' + hwid_data.raw_db, {
+                  'comp1':
+                      hwid_action.DBHWIDComponentAnalysisResult(
+                          'comp_cls1', 'comp_name1', 'unqualified', False, None,
+                          2, None, None),
+                  'comp2':
+                      hwid_action.DBHWIDComponentAnalysisResult(
+                          'comp_cls2', 'comp_cls2_111_222#9', 'unqualified',
+                          False, (111, 222), 1, 'comp_cls2_111_222#1', None),
+              }))
+      return action
+
+    self._modules.ConfigHWID('PROJ', '3', 'db data',
+                             hwid_action_factory=CreateMockHWIDAction)
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(project='proj')
+    resp = self._ss_helper.GetHWIDBundleResourceInfo(req)
+    # TODO(b/209362238): add selected components which require the AVL
+    # information.
+    expected_resp = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
+        bundle_creation_token='fingerprint of db data')
+    self.assertEqual(resp, expected_resp)
+
   def testCreateHWIDBundle_ResourceInfoTokenInvalid(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     action.GetHWIDBundleResourceInfo.return_value = (
-        hwid_action.BundleResourceInfo('fingerprint_value_1'))
+        hwid_action.BundleResourceInfo('fingerprint_value_1', {}))
     self._modules.ConfigHWID('PROJ', '3', 'db data ver 1', hwid_action=action)
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
