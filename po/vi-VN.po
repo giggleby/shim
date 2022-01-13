@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-01-12 15:21+CST\n"
+"PO-Revision-Date: 2022-01-19 15:21+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3628,6 +3628,10 @@ msgstr "Xoay màn hình"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set AP RO Hash"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Set Widevine Keybox"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json

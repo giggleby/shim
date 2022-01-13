@@ -795,6 +795,13 @@
         "action": "set"
       }
     },
+    "SetWidevineKeybox": {
+      "pytest_name": "provision_drm_key",
+      "label": "Set Widevine Keybox",
+      "args": {
+        "proxy_server_url": ""
+      }
+    },
     "ShopfloorNotifyEnd": {
       "inherit": "ShopfloorService",
       "label": "Shopfloor Service (NotifyEnd)",

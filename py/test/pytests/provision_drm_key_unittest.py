@@ -42,9 +42,8 @@ class GetDeviceSerialTest(unittest.TestCase):
 
 class FakeArgs:
 
-  def __init__(self, ip, port):
-    self.proxy_server_ip = ip
-    self.proxy_server_port = port
+  def __init__(self, url_spec=None):
+    self.proxy_server_url = url_spec
 
 
 class MockProxy:
@@ -72,47 +71,27 @@ class ProvisionDRMKeyTest(unittest.TestCase):
     self.test = provision_drm_key.ProvisionDRMKey()
     self.test.dut = mock.Mock()
     self.test.oemcrypto_client = MockOEMCryptoClient()
+    self.test.args = FakeArgs()
     patcher = mock.patch(
         'cros.factory.test.utils.oemcrypto_utils.OEMCryptoClient')
     patcher.start()
 
+  @mock.patch('cros.factory.test.utils.url_spec.URLSpec.FindServerURL')
   @mock.patch('xmlrpc.client.ServerProxy')
-  def testSetUpWithURLArgs(self, mock_proxy):
-    self.test.args = FakeArgs('123.45.67.89', 3456)
+  def testConnectToServer(self, mock_proxy, mock_find_url):
+    mock_find_url.return_value = 'http://123.45.67.89:3456'
+
     self.test.setUp()
 
     mock_proxy.assert_called_with('http://123.45.67.89:3456')
 
-  @mock.patch('cros.factory.test.server_proxy.GetServerURL')
-  @mock.patch('xmlrpc.client.ServerProxy')
-  def testSetUpWithoutURLArgs(self, mock_proxy, mock_get_url):
-    mock_get_url.return_value = 'http://102.30.40.50:8080'
+  @mock.patch('cros.factory.test.utils.url_spec.URLSpec.FindServerURL')
+  def testUrlNotFound(self, mock_find_url):
+    mock_find_url.side_effect = mock.Mock(side_effect=ValueError())
 
-    self.test.args = FakeArgs(None, None)
-    self.test.setUp()
-
-    mock_proxy.assert_called_with('http://102.30.40.50:8089')
-
-  @mock.patch('logging.exception')
-  @mock.patch('cros.factory.test.server_proxy.GetServerURL')
-  def testSetUpInvalidServerURL(self, mock_get_url, mock_logging_exception):
-    mock_get_url.return_value = ''
-
-    self.test.args = FakeArgs(None, None)
-    with self.assertRaises(TypeError):
-      self.test.setUp()
-
-    mock_logging_exception.assert_called_once()
-
-  def testSetUpMissingServerIP(self):
-    self.test.args = FakeArgs(None, 3456)
-    with self.assertRaises(ValueError):
-      self.test.setUp()
-
-  def testSetUpMissingServerPort(self):
-    self.test.args = FakeArgs('123.45.67.89', None)
-    with self.assertRaises(ValueError):
-      self.test.setUp()
+    self.assertRaisesRegex(ValueError,
+                           'Server Url not found, please check arguments.',
+                           self.test.setUp)
 
   def testRunTest(self):
     self.test.dkps_proxy = MockProxy()

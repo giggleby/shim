@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-01-12 15:21+CST\n"
+"PO-Revision-Date: 2022-01-19 15:21+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3560,6 +3560,10 @@ msgstr "屏幕旋转"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set AP RO Hash"
 msgstr "写入 AP RO Hash"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Set Widevine Keybox"
+msgstr "写入 Widevine Keybox"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Shopfloor Service (NotifyEnd)"

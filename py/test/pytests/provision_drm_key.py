@@ -27,39 +27,43 @@ Dependency
 
 Examples
 --------
-To request the keybox from the DKPS proxy on the factory server::
-
-  {
-    "pytest_name": "provision_drm_key"
-  }
 
 To request the keybox from a given DKPS proxy URL::
 
   {
     "pytest_name": "provision_drm_key",
     "args": {
-      "proxy_server_ip": "111.2.3.4",
-      "proxy_server_ip": 5438
+      "proxy_server_url": "http://30.20.1.47:11000"
+    }
+  }
+
+To request the keybox by different domains of dut::
+
+  {
+    "pytest_name": "provision_drm_key",
+    "args": {
+      "proxy_server_url": {
+        "30.20.0.0/16": "http://30.20.1.47:11000",
+        "40.20.0.0/16": "http://40.20.1.48:11000"
+      }
     }
   }
 
 """
 
 import logging
-import urllib.parse
 import uuid
 import xmlrpc.client
 import zlib
 
 from cros.factory.device import device_utils
-from cros.factory.test import server_proxy
 from cros.factory.test import test_case
 from cros.factory.test.utils import oemcrypto_utils
+from cros.factory.test.utils.url_spec import URLSpec
 from cros.factory.utils.arg_utils import Arg
 
 
 KEYBOX_VPD_KEY = 'widevine_keybox'
-UMPIRE_DKPS_PORT_OFFSET = 9
 
 
 def GetDeviceSerial(device_info):
@@ -81,41 +85,22 @@ class ProvisionDRMKey(test_case.TestCase):
 
   ARGS = [
       Arg(
-          'proxy_server_ip', str, 'IP address of DKPS server. Read from '
-          '`server_proxy.GetServerURL()` when omitted.', default=None),
-      Arg(
-          'proxy_server_port', int, 'Port of DKPS server. Derive the Umpire '
-          'DKPS proxy service port from `server_proxy.GetServerURL()` when '
-          'omitted.', default=None)
+          'proxy_server_url', (str, dict),
+          'A URL or a map from dut domain to URL, to config the URL of'
+          'DKPS proxy server.')
   ]
 
   def setUp(self):
-    proxy_server_ip = self.args.proxy_server_ip
-    proxy_server_port = self.args.proxy_server_port
+    self.dut = device_utils.CreateDUTInterface()
+    try:
+      server_url = URLSpec.FindServerURL(self.args.proxy_server_url, self.dut)
+    except ValueError as e:
+      raise ValueError('Server Url not found, please check arguments.', e)
 
-    if (proxy_server_ip is None) ^ (proxy_server_port is None):
-      raise ValueError('`proxy_server_ip` and `proxy_server_port` should both '
-                       'be provided or both be `None`.')
-    if proxy_server_ip is None:
-      server_url = server_proxy.GetServerURL()
-      try:
-        url = urllib.parse.urlparse(server_url)
-        proxy_server_ip = url.hostname
-        proxy_server_port = url.port + UMPIRE_DKPS_PORT_OFFSET
-      except Exception:
-        logging.exception(
-            'Failed to parse the server URL from config: %s. You need to run'
-            'SyncFactoryServer before this test to set the factory server URL.',
-            server_url)
-        raise
-
-    logging.info('Proxy server URL: http://%s:%d', proxy_server_ip,
-                 proxy_server_port)
-    self.dkps_proxy = xmlrpc.client.ServerProxy(
-        'http://%s:%d' % (proxy_server_ip, proxy_server_port))
+    logging.info('Proxy server URL: %s', server_url)
+    self.dkps_proxy = xmlrpc.client.ServerProxy(server_url)
 
     self.oemcrypto_client = oemcrypto_utils.OEMCryptoClient()
-    self.dut = device_utils.CreateDUTInterface()
 
   def runTest(self):
     soc_id, soc_serial = self.oemcrypto_client.GetFactoryTransportKeyMaterial()

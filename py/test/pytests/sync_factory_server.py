@@ -148,6 +148,7 @@ from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.test.utils import time_utils
+from cros.factory.test.utils.url_spec import URLSpec
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import debug_utils
 from cros.factory.utils import log_utils
@@ -283,18 +284,20 @@ class SyncFactoryServer(test_case.TestCase):
     label_status = _('Expected network: {networks}', networks=expected_networks)
 
     while True:
-      new_url = self.FindServerURL(self.args.server_url)
-      if new_url:
+      try:
+        new_url = URLSpec.FindServerURL(self.args.server_url, self.station)
         break
-      # Collect current networks. The output format is DEV STATUS NETWORK.
-      output = self.station.CallOutput(['ip', '-f', 'inet', '-br', 'addr'])
-      networks = [entry.split()[2] for entry in output.splitlines()
-                  if ' UP ' in entry]
-      self.ui.SetState([
-          label_connect, label_status,
-          _('Current networks: {networks}', networks=networks)
-      ])
-      self.Sleep(0.5)
+      except ValueError:
+        # Collect current networks. The output format is DEV STATUS NETWORK.
+        output = self.station.CallOutput(['ip', '-f', 'inet', '-br', 'addr'])
+        networks = [
+            entry.split()[2] for entry in output.splitlines() if ' UP ' in entry
+        ]
+        self.ui.SetState([
+            label_connect, label_status,
+            _('Current networks: {networks}', networks=networks)
+        ])
+        self.Sleep(0.5)
 
     self.ChangeServerURL(new_url)
     self.do_setup_url.clear()
@@ -400,39 +403,6 @@ class SyncFactoryServer(test_case.TestCase):
     # updateFactory is running.
     self.WaitTaskEnd()
 
-  @staticmethod
-  def IsDynamicServer(url_spec):
-    """Returns if the url_spec is something to be dynamically configured."""
-    return isinstance(url_spec, dict) and url_spec
-
-  def FindServerURL(self, url_spec):
-    """Try to return a single normalized URL from given specification.
-
-    It is very often that partner may want to deploy multiple servers with
-    different IP, and expect DUT to connect right server according to the DHCP
-    IP it has received.
-
-    This function tries to parse argument url_spec and find a "best match
-    URL" for it.
-
-    Args:
-      url_spec: a simple string as URL or a mapping from IP/CIDR to URL.
-
-    Returns:
-      A single URL string that best matches given spec.
-    """
-    if not self.IsDynamicServer(url_spec):
-      return url_spec
-
-    # Sort by CIDR so smaller network matches first.
-    networks = sorted(
-        url_spec, reverse=True, key=lambda k: int(k.partition('/')[-1] or 0))
-    for ip_cidr in networks:
-      # The command returned zero even if no interfaces match.
-      if self.station.CallOutput(['ip', 'addr', 'show', 'to', ip_cidr]):
-        return url_spec[ip_cidr]
-
-    return url_spec.get('default', '')
 
   def runTest(self):
     self.ui.SetInstruction(_('Preparing...'))
@@ -476,7 +446,8 @@ class SyncFactoryServer(test_case.TestCase):
 
     # Setup new server URL
     server_proxy.ValidateServerConfig()
-    self.ChangeServerURL(self.FindServerURL(self.args.server_url))
+    self.ChangeServerURL(
+        URLSpec.FindServerURL(self.args.server_url, self.station))
 
     # It's very often that a DUT under FA is left without network connected for
     # hours to days, so we should not log (which will increase TestLog events)
