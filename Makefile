@@ -128,7 +128,7 @@ PRESUBMIT_FILES := \
 
 PRESUBMIT_TARGETS := \
   presubmit-deps presubmit-format presubmit-lint presubmit-shebang \
-  presubmit-test presubmit-markdown
+  presubmit-markdown presubmit-test
 
 # Virtual targets. The '.phony' is a special hack to allow making targets with
 # wildchar (for instance, overlay-%) to be treated as .PHONY.
