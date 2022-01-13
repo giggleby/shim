@@ -615,7 +615,7 @@ class PowerDaemonPowerInfoMixin(PowerInfoMixinBase):
 
   def _GetPowerAttribute(self, key_name, item_type=str):
     re_object = re.findall(
-        r'^%s ?(\S*)$' % key_name, self._GetDumpPowerStatus(), re.MULTILINE)
+        r'^%s ?(.*)$' % key_name, self._GetDumpPowerStatus(), re.MULTILINE)
     if re_object:
       return item_type(re_object[0])
     raise self.Error('Cannot find key "%s" in dump_power_status' % key_name)
