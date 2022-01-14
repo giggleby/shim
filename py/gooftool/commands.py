@@ -676,6 +676,7 @@ def WipeInit(options):
     _no_ectool_cmd_arg,
     _enable_zero_touch_cmd_arg,
     _cbi_eeprom_wp_status_cmd_arg,
+    _use_generic_tpm2_arg,
 )
 def Verify(options):
   """Verifies if whole factory process is ready for finalization.
