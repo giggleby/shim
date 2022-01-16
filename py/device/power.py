@@ -60,7 +60,9 @@ class PowerBase(device_types.DeviceComponent):
   # - ``IDLE``: Do not charge the device, even if connected to mains.
   # - ``DISCHARGE``: Force the device to discharge.
   # - ``FULL``: Full charge states.
-  ChargeState = type_utils.Enum(['CHARGE', 'IDLE', 'DISCHARGE', 'FULL'])
+  # - ``NOT CHARGING``: The device is not charging.
+  ChargeState = type_utils.Enum(
+      ['CHARGE', 'IDLE', 'DISCHARGE', 'FULL', 'NOT_CHARGING'])
 
   def __init__(self, dut, pd_name=None):
     super(PowerBase, self).__init__(dut)
@@ -107,7 +109,8 @@ class PowerInfoMixinBase:
       'Charging': PowerBase.ChargeState.CHARGE,
       'Idle': PowerBase.ChargeState.IDLE,
       'Discharging': PowerBase.ChargeState.DISCHARGE,
-      'Full': PowerBase.ChargeState.FULL
+      'Full': PowerBase.ChargeState.FULL,
+      'Not charging': PowerBase.ChargeState.NOT_CHARGING
   }
 
   def CheckACPresent(self):
