@@ -58,6 +58,13 @@ To access the VM, run:
 (inside VM)$ docker exec -it bundle-docker-1 sh
 ```
 
+### Testing
+
+To run `docker/worker.py` in local, run:
+```
+(factory-repo)$ ./deploy/bundle_creator.sh run-docker ${deployment_type}
+```
+
 ### Sending request
 
 ```

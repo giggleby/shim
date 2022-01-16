@@ -9,10 +9,15 @@ FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 LOCAL_BUILD_BUNDLE="${FACTORY_DIR}/build/bundle"
 TOOLKIT_NAME="install_factory_toolkit.run"
 LOCAL_BUILD_TOOLKIT="${LOCAL_BUILD_BUNDLE}/toolkit/${TOOLKIT_NAME}"
+REMOTE_TOOLKIT_BOARD="grunt"
 REMOTE_TOOLKIT_VERSION="14402.0.0"
-REMOTE_TOOLKIT_PATH="gs://chromeos-releases/dev-channel/grunt/\
-${REMOTE_TOOLKIT_VERSION}/*-factory-*.zip"
+REMOTE_TOOLKIT_PATH="gs://chromeos-releases/dev-channel/\
+${REMOTE_TOOLKIT_BOARD}/${REMOTE_TOOLKIT_VERSION}/*-factory-*.zip"
+CACHED_REMOTE_TOOLKIT_DIR="/tmp/bundle_creator/toolkit/${REMOTE_TOOLKIT_BOARD}/\
+${REMOTE_TOOLKIT_VERSION}"
+CACHED_REMOTE_TOOLKIT_PATH="${CACHED_REMOTE_TOOLKIT_DIR}/factory.zip"
 SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator/"
+ZONE="us-central1-a"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/bundle_creator/config.sh" || exit 1
@@ -41,9 +46,18 @@ load_config_by_deployment_type() {
   fi
 }
 
+download_remote_toolkit() {
+  mkdir -p "${CACHED_REMOTE_TOOLKIT_DIR}"
+  if [ ! -f "${CACHED_REMOTE_TOOLKIT_PATH}" ]; then
+    gsutil cp "${REMOTE_TOOLKIT_PATH}" "${CACHED_REMOTE_TOOLKIT_PATH}"
+  fi
+  cp "${CACHED_REMOTE_TOOLKIT_PATH}" "$1"
+}
+
 build_docker() {
   load_config_by_deployment_type "$1"
-  local temp_dir="$(mktemp -d)"
+  local temp_dir
+  temp_dir="$(mktemp -d)"
   if [ ! -d "${temp_dir}" ]; then
     die "Failed to create a temporary placeholder for files to deploy."
   fi
@@ -56,7 +70,7 @@ build_docker() {
     cp -rf "${LOCAL_BUILD_BUNDLE}/setup" "${temp_dir}/docker"
   else
     cp -f "/bin/false" "${temp_dir}/docker/${TOOLKIT_NAME}"
-    gsutil cp "${REMOTE_TOOLKIT_PATH}" "${temp_dir}/docker/factory.zip"
+    download_remote_toolkit "${temp_dir}/docker/factory.zip"
     mkdir -p "${temp_dir}/docker/setup"
   fi
   # Fill in env vars in docker/config.py
@@ -82,7 +96,8 @@ deploy_docker() {
 
 deploy_appengine() {
   load_config_by_deployment_type "$1"
-  local temp_dir="$(mktemp -d)"
+  local temp_dir
+  temp_dir="$(mktemp -d)"
   if [ ! -d "${temp_dir}" ]; then
     die "Failed to create a temporary placeholder for files to deploy."
   fi
@@ -94,7 +109,8 @@ deploy_appengine() {
 
   cp -r "${SOURCE_DIR}/app_engine" "${package_dir}"
   cp -r "${SOURCE_DIR}/connector" "${package_dir}"
-  local allowed_array=$(printf ", \'%s\'" "${ALLOWED_LOAS_PEER_USERNAMES[@]}")
+  local allowed_array
+  allowed_array=$(printf ", \'%s\'" "${ALLOWED_LOAS_PEER_USERNAMES[@]}")
   allowed_array="${allowed_array:3:$((${#allowed_array}-4))}"
   # Fill in env vars in rpc/config.py
   env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
@@ -117,7 +133,8 @@ deploy_appengine() {
 
 deploy_appengine_legacy() {
   load_config_by_deployment_type "$1"
-  local temp_dir=$(mktemp -d)
+  local temp_dir
+  temp_dir=$(mktemp -d)
   if [ ! -d "${temp_dir}" ]; then
     die "Failed to create a temporary placeholder for files to deploy."
   fi
@@ -138,6 +155,20 @@ deploy_appengine_legacy() {
     "${temp_dir}/app.yaml" --quiet
   gcloud --project="${GCLOUD_PROJECT}" app deploy \
     "${temp_dir}/queue.yaml" --quiet
+}
+
+try_delete_existing_vm() {
+  local filter="zone:${ZONE} name:${INSTANCE_GROUP_NAME}"
+  {
+    gcloud compute instance-groups managed list --project "${GCLOUD_PROJECT}" \
+      --filter="${filter}" | grep "${INSTANCE_GROUP_NAME}"
+  } && {
+    gcloud compute instance-groups managed delete "${INSTANCE_GROUP_NAME}" \
+      --project "${GCLOUD_PROJECT}" \
+      --zone "${ZONE}" \
+      --quiet
+  }
+  return 0
 }
 
 create_vm() {
@@ -163,23 +194,11 @@ create_vm() {
       --scopes="https://www.googleapis.com/auth/chromeoshwid,cloud-platform"
   }
 
-  local zone
-  zone="us-central1-a"
-  local filter
-  filter="zone:${zone} name:${INSTANCE_GROUP_NAME}"
-  {
-    gcloud compute instance-groups managed list --project "${GCLOUD_PROJECT}" \
-      --filter="${filter}" | grep "${INSTANCE_GROUP_NAME}"
-  } && {
-    gcloud compute instance-groups managed delete "${INSTANCE_GROUP_NAME}" \
-      --project "${GCLOUD_PROJECT}" \
-      --zone "${zone}" \
-      --quiet
-  }
+  try_delete_existing_vm
   gcloud compute instance-groups managed create "${INSTANCE_GROUP_NAME}" \
     --project "${GCLOUD_PROJECT}" \
     --template "${INSTANCE_TEMPLATE_NAME}" \
-    --zone "${zone}" \
+    --zone "${ZONE}" \
     --size 1
 }
 
@@ -202,6 +221,25 @@ request() {
 
   send_request "${APPENGINE_ID}" \
     "${FACTORY_DIR}/py/bundle_creator/proto/factorybundle.proto"
+}
+
+run_docker() {
+  if [[ "$1" == "prod" || "$1" == "staging" ]]; then
+    die "Unsupported deployment type for \`run-docker\` command: \"$1\"."
+  fi
+  load_config_by_deployment_type "$1"
+
+  # Delete the existing vm instance on the corresponding cloud project to
+  # prevent processing a request twice.
+  try_delete_existing_vm
+  build_docker "$1"
+
+  # Bind the personal gcloud credentials to the docker container so that the
+  # worker can use the credentials to access gcloud services.
+  docker run --tty --interactive --privileged \
+    --volume "${HOME}/.config/gcloud:/root/.config/gcloud" \
+    --env GOOGLE_CLOUD_PROJECT="${GCLOUD_PROJECT}" \
+    "${CONTAINER_IMAGE}" || true
 }
 
 print_usage() {
@@ -241,6 +279,10 @@ commands:
 
   $0 request [prod|staging|dev|dev2]
       Send \`CreateBundleAsync\` request to the app engine.
+
+  $0 run-docker [dev|dev2]
+      Run \`py/bundle_creator/docker/worker.py\` in local with the specific
+      deployment type.  The worker connects to the real Cloud Project services.
 __EOF__
 }
 
@@ -278,6 +320,9 @@ main() {
         ;;
       request)
         request "$2"
+        ;;
+      run-docker)
+        run_docker "$2"
         ;;
       *)
         die "Unknown sub-command: \"${subcmd}\".  Run \`${0} help\` to print" \
