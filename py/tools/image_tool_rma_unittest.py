@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 
 from cros.factory.tools import image_tool
@@ -25,15 +26,10 @@ The major difference is all output will be preserved in /tmp/t.
 """
 
 
-# TODO (b/204726360)
-@label_utils.Informational
-class ImageToolRMATest(unittest.TestCase):
-  """Unit tests for image_tool RMA related commands."""
-
+class EnvBuilder:
   UPDATER_CONTENT = ('#!/bin/sh\n'
                      'echo \'{"project": {"host": {"versions": '
                      '{"ro": "RO", "rw": "RW"}}}}\'\n')
-  LSB_CONTENT = 'CHROMEOS_RELEASE_VERSION=1.0\nCHROMEOS_RELEASE_BOARD=%s\n'
 
   PARTITION_COMMANDS = [
       '%(command)s create %(file)s',
@@ -52,33 +48,23 @@ class ImageToolRMATest(unittest.TestCase):
       '%(command)s add -i 1 -s 16384 -b 6185 -t data %(file)s',
   ]
 
-  def CheckCall(self, command):
-    return subprocess.check_call(command, shell=True, cwd=self.temp_dir)
+  def __init__(self, name, lsb_content):
+    self.name = name
+    self.temp_dir = None
+    self.lsb_content = lsb_content
 
-  def ImageTool(self, *args):
-    command = args[0]
-    if command == image_tool.CMD_NAMESPACE_RMA:
-      command = args[1]
-      self.assertIn(command, self.rma_map, 'Unknown command: %s' % command)
-      cmd = self.rma_map[command](*self.rma_parsers)
-    else:
-      self.assertIn(command, self.cmd_map, 'Unknown command: %s' % command)
-      cmd = self.cmd_map[command](*self.cmd_parsers)
-    cmd.Init()
-    cmd_args = self.cmd_parsers[0].parse_args(args)
-    cmd_args.verbose = 0
-    cmd_args.subcommand.args = cmd_args
-    cmd_args.subcommand.Run()
+  def Build(self):
+    self.temp_dir = tempfile.mkdtemp()
+    self.CreateDiskImage(self.lsb_content)
+    self.SetupBundleEnvironment(os.path.join(self.temp_dir, self.name))
 
-  def CreateDiskImage(self, name, lsb_content):
+  def CreateDiskImage(self, lsb_content):
     cgpt = image_tool.SysUtils.FindCGPT()
-    image_path = os.path.join(self.temp_dir, name)
-    dir_path = os.path.dirname(image_path)
-    if not os.path.exists(dir_path):
-      os.makedirs(dir_path)
-    self.CheckCall('truncate -s %s %s' % (16 * 1048576, name))
+    image_path = os.path.join(self.temp_dir, self.name)
+    self.CheckCall('truncate -s %s %s' % (16 * 1048576, self.name))
+
     for command in self.PARTITION_COMMANDS:
-      self.CheckCall(command % dict(command=cgpt, file=name))
+      self.CheckCall(command % dict(command=cgpt, file=self.name))
     with image_tool.GPT.Partition.MapAll(image_path) as f:
       self.CheckCall('sudo mkfs -F %sp3' % f)
       self.CheckCall('sudo mkfs -F %sp5' % f)
@@ -129,8 +115,7 @@ class ImageToolRMATest(unittest.TestCase):
     for dir_name in ['factory_shim', 'test_image', 'release_image',
                      'toolkit', 'hwid', 'complete', 'firmware']:
       dir_path = os.path.join(self.temp_dir, dir_name)
-      if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
+      os.makedirs(dir_path)
     for name in ['release_image', 'test_image', 'factory_shim']:
       dest_path = os.path.join(self.temp_dir, name, 'image.bin')
       shutil.copy(image_path, dest_path)
@@ -145,12 +130,70 @@ class ImageToolRMATest(unittest.TestCase):
       f.write('#!/bin/sh\necho Toolkit Version 1.0\n')
     os.chmod(toolkit_path, 0o755)
 
-  def RemoveBundleEnvironment(self):
-    for dir_name in ['factory_shim', 'test_image', 'release_image',
-                     'toolkit', 'hwid', 'complete', 'firmware']:
-      dir_path = os.path.join(self.temp_dir, dir_name)
-      if os.path.exists(dir_path):
-        shutil.rmtree(dir_path)
+  def Cleanup(self):
+    shutil.rmtree(self.temp_dir)
+
+  def CheckCall(self, command):
+    return subprocess.check_call(command, shell=True, cwd=self.temp_dir,
+                                 stderr=subprocess.DEVNULL)
+
+  def GetToolkitPath(self):
+    return os.path.join(self.temp_dir, 'toolkit', 'toolkit.run')
+
+  def GetReleaseImagePath(self):
+    return os.path.join(self.temp_dir, 'release_image', 'image.bin')
+
+  def GetTestImagePath(self):
+    return os.path.join(self.temp_dir, 'test_image', 'image.bin')
+
+  def GetFactoryShimPath(self):
+    return os.path.join(self.temp_dir, 'factory_shim', 'image.bin')
+
+
+class RMACreateThread(threading.Thread):
+
+  def __init__(self, fn, args):
+    super().__init__()
+    self.fn = fn
+    self.args = args
+    self.exception = None
+
+  def run(self):
+    try:
+      self.fn(*self.args)
+    except BaseException as e:
+      self.exception = e
+
+  def join(self, timeout=None):
+    threading.Thread.join(self)
+    if self.exception:
+      raise self.exception
+
+
+# TODO (b/204726360)
+@label_utils.Informational
+class ImageToolRMATest(unittest.TestCase):
+  """Unit tests for image_tool RMA related commands."""
+
+  LSB_CONTENT = 'CHROMEOS_RELEASE_VERSION=1.0\nCHROMEOS_RELEASE_BOARD=%s\n'
+
+  def CheckCall(self, command):
+    return subprocess.check_call(command, shell=True, cwd=self.temp_dir)
+
+  def ImageTool(self, *args):
+    command = args[0]
+    if command == image_tool.CMD_NAMESPACE_RMA:
+      command = args[1]
+      self.assertIn(command, self.rma_map, 'Unknown command: %s' % command)
+      cmd = self.rma_map[command](*self.rma_parsers)
+    else:
+      self.assertIn(command, self.cmd_map, 'Unknown command: %s' % command)
+      cmd = self.cmd_map[command](*self.cmd_parsers)
+    cmd.Init()
+    cmd_args = self.cmd_parsers[0].parse_args(args)
+    cmd_args.verbose = 0
+    cmd_args.subcommand.args = cmd_args
+    cmd_args.subcommand.Run()
 
   def setUp(self):
     if DEBUG:
@@ -183,19 +226,39 @@ class ImageToolRMATest(unittest.TestCase):
     To speed up execution time (CreateDiskImage takes ~2s while shutil.copy only
     takes 0.1s) we are testing all commands in one single test case.
     """
-    self.CreateDiskImage('test1.bin', self.LSB_CONTENT % 'test1')
-    self.CreateDiskImage('test2.bin', self.LSB_CONTENT % 'test2')
-    image1_path = os.path.join(self.temp_dir, 'test1.bin')
-    image2_path = os.path.join(self.temp_dir, 'test2.bin')
-    os.chdir(self.temp_dir)
 
-    # `rma create` to create 2 RMA shims.
-    self.SetupBundleEnvironment(image1_path)
-    self.ImageTool('rma', 'create', '-o', 'rma1.bin')
-    self.SetupBundleEnvironment(image2_path)
-    self.ImageTool('rma', 'create', '-o', 'rma2.bin',
-                   '--active_test_list', 'test')
-    self.RemoveBundleEnvironment()
+    def BuildRMAImage(env_builder, rma_name, active_test_list=None):
+      env_builder.Build()
+      create_args = [
+          'rma',
+          'create',
+          '--factory_shim',
+          env_builder.GetFactoryShimPath(),
+          '--test_image',
+          env_builder.GetTestImagePath(),
+          '--release_image',
+          env_builder.GetReleaseImagePath(),
+          '--toolkit',
+          env_builder.GetToolkitPath(),
+          '-o',
+          rma_name,
+      ]
+      if active_test_list:
+        create_args += ['--active_test_list', active_test_list]
+      self.ImageTool(*create_args)
+
+    os.chdir(self.temp_dir)
+    b1 = EnvBuilder('test1.bin', self.LSB_CONTENT % 'test1')
+    b2 = EnvBuilder('test2.bin', self.LSB_CONTENT % 'test2')
+
+    t1 = RMACreateThread(BuildRMAImage, (b1, 'rma1.bin'))
+    t2 = RMACreateThread(BuildRMAImage, (b2, 'rma2.bin', 'test'))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    image2_path = os.path.join(b2.temp_dir, b2.name)
 
     # Verify content of RMA shim.
     DIR_CROS_PAYLOADS = image_tool.CrosPayloadUtils.GetCrosPayloadsDir()
@@ -268,6 +331,9 @@ class ImageToolRMATest(unittest.TestCase):
     with open('test2.json') as f:
       data = json.load(f)
     self.assertEqual(data['toolkit']['version'], u'Toolkit Version 2.0')
+
+    b1.Cleanup()
+    b2.Cleanup()
 
 
 if __name__ == '__main__':
