@@ -175,6 +175,7 @@ from typing import Optional
 
 from cros.factory.device.audio import base
 from cros.factory.device import device_utils
+from cros.factory.test.env import paths
 from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test.utils import audio_utils
@@ -656,8 +657,7 @@ class AudioLoopTest(test_case.TestCase):
         for file_path in self._audio_file_path:
           testlog.AttachFile(path=file_path, mime_type='audio/x-raw',
                              name=os.path.basename(file_path),
-                             description='recorded audio of the test',
-                             delete=True)
+                             description='audio of the test', delete=True)
       except testlog_utils.TestlogError as err:
         self.AppendErrorMessage(str(err))
     else:
@@ -823,7 +823,11 @@ class AudioLoopTest(test_case.TestCase):
         _DEFAULT_AUDIOFUNTEST_MINIMUM_RMS_THRESHOLD)
     rms_threshold = self._current_test_args.get('rms_threshold',
                                                 default_rms_threshold)
-    process = self._dut.Popen([
+    help_process = self._dut.Popen([audio_utils.AUDIOFUNTEST_PATH, '-h'],
+                                   stdout=process_utils.PIPE,
+                                   stderr=process_utils.PIPE, log=True)
+    unused_help_stdout, help_stderr = help_process.communicate()
+    audiofun_cmd = [
         audio_utils.AUDIOFUNTEST_PATH, '-P', player_cmd, '-R', recorder_cmd,
         '-t', audiofuntest_sample_format, '-r',
         '%d' % capture_rate, '-T',
@@ -835,8 +839,22 @@ class AudioLoopTest(test_case.TestCase):
         '%d' % min_frequency, '-x',
         '%d' % max_frequency, '-p',
         '%f' % rms_threshold
-    ], stdout=process_utils.PIPE, stderr=process_utils.PIPE, log=True)
+    ]
+    match = re.search(r'--played-file-path\b', help_stderr)
+    if match:
+      audio_name = f'audiofun_generated_{capture_rate}_{output_channel}.raw'
+      played_audio_path = self._dut.path.join(self._dut_temp_dir, audio_name)
+      local_played_audio_path = os.path.join(paths.DATA_TESTS_DIR,
+                                             session.GetCurrentTestPath(),
+                                             audio_name)
+      audiofun_cmd.extend(['--played-file-path', played_audio_path])
+    else:
+      played_audio_path = None
+      local_played_audio_path = None
+      logging.warning("audiofuntest doesn't support '--played-file-path'")
 
+    process = self._dut.Popen(audiofun_cmd, stdout=process_utils.PIPE,
+                              stderr=process_utils.PIPE, log=True)
     stdout, stderr = process.communicate()
     if stdout:
       logging.info('stdout:\n%s', stdout)
@@ -845,6 +863,7 @@ class AudioLoopTest(test_case.TestCase):
 
     last_success_rate = None
     stdout_stream = io.StringIO(stdout)
+    rate_msg = None
     while self._MatchPatternLines(stdout_stream,
                                   _AUDIOFUNTEST_RUN_START_RE) is not None:
       last_success_rate = self._ParseSingleRunOutput(
@@ -855,18 +874,25 @@ class AudioLoopTest(test_case.TestCase):
                            for channel, rate in last_success_rate.items())
       self.ui.CallJSFunction('testInProgress', rate_msg)
 
+    threshold = self._current_test_args.get('threshold',
+                                            _DEFAULT_AUDIOFUN_TEST_THRESHOLD)
+
+    success = True
     if last_success_rate is None:
       self.AppendErrorMessage('Failed to parse audiofuntest output')
-      return
-
-    threshold = self._current_test_args.get(
-        'threshold', _DEFAULT_AUDIOFUN_TEST_THRESHOLD)
-    if any(rate < threshold for rate in last_success_rate.values()):
+      success = False
+    elif any(rate < threshold for rate in last_success_rate.values()):
       self.AppendErrorMessage(
           'For output device channel %s, the success rate is "'
           '%s", too low!' % (output_channel, rate_msg))
       self.ui.CallJSFunction('testFailResult', rate_msg)
-    self.Sleep(1)
+      success = False
+      self.Sleep(1)
+
+    if not success:
+      if played_audio_path and self._dut.path.exists(played_audio_path):
+        self._dut.link.Pull(played_audio_path, local_played_audio_path)
+        self._audio_file_path.append(local_played_audio_path)
 
   def CheckChannelArgs(self, output_channels):
     if self.args.num_output_channels < max(output_channels):
