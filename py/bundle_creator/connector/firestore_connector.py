@@ -4,6 +4,7 @@
 
 import datetime
 import logging
+from typing import Any, Dict
 
 from google.cloud import firestore  # pylint: disable=no-name-in-module,import-error
 
@@ -24,6 +25,7 @@ class FirestoreConnector:
     Args:
       cloud_project_id: A cloud project id.
     """
+    self._logger = logging.getLogger('FirestoreConnector')
     self._client = firestore.Client(project=cloud_project_id)
     self._user_request_col_ref = self._client.collection(
         self.COLLECTION_USER_REQUESTS)
@@ -38,14 +40,13 @@ class FirestoreConnector:
       An array contains the firmware names if it exists.  Otherwise `None` is
       returned.
     """
-    logger = logging.getLogger('firestore_connector.get')
     doc = self._client.collection(
         self.COLLECTION_HAS_FIRMWARE_SETTINGS).document(project).get()
     if doc.exists:
       try:
         return doc.get('has_firmware')
       except KeyError:
-        logger.info(
+        self._logger.info(
             'No `has_firmware` attribute found in the existing document.')
     return None
 
@@ -82,7 +83,7 @@ class FirestoreConnector:
       doc_id: The document id of the document to be updated.
       status: The value used to update.
     """
-    self._GetUserRequestDocRef(doc_id).update({'status': status})
+    self._TryUpdateUserRequestDocRef(doc_id, {'status': status})
 
   def UpdateUserRequestStartTime(self, doc_id):
     """Update `start_time` of the specific user request document.
@@ -107,8 +108,8 @@ class FirestoreConnector:
       doc_id: The document id of the document to be updated.
       field_name: The field name used to be updated with the current datetime.
     """
-    self._GetUserRequestDocRef(doc_id).update(
-        {field_name: datetime.datetime.now()})
+    self._TryUpdateUserRequestDocRef(doc_id,
+                                     {field_name: datetime.datetime.now()})
 
   def UpdateUserRequestErrorMessage(self, doc_id, error_msg):
     """Update an error message to the specific user request document.
@@ -117,7 +118,7 @@ class FirestoreConnector:
       doc_id: The document id of the document to be updated.
       error_msg: The string value used to update.
     """
-    self._GetUserRequestDocRef(doc_id).update({'error_message': error_msg})
+    self._TryUpdateUserRequestDocRef(doc_id, {'error_message': error_msg})
 
   def UpdateUserRequestGsPath(self, doc_id, gs_path):
     """Update a created bundle's gs path to the specific user request document.
@@ -126,7 +127,7 @@ class FirestoreConnector:
       doc_id: The document id of the document to be updated.
       gs_path: The path of the created bundle.
     """
-    self._GetUserRequestDocRef(doc_id).update({'gs_path': gs_path})
+    self._TryUpdateUserRequestDocRef(doc_id, {'gs_path': gs_path})
 
   def GetUserRequestsByEmail(self, email):
     """Returns user requests with the specific email.
@@ -148,3 +149,11 @@ class FirestoreConnector:
     # If doc_id is None, it returns a new document reference with a random 20
     # character string.
     return self._user_request_col_ref.document(doc_id)
+
+  def _TryUpdateUserRequestDocRef(self, doc_id: str, data: Dict[str, Any]):
+    try:
+      # TODO(b/190484469): Ensure the updating operation will be done
+      #     successfully.
+      self._GetUserRequestDocRef(doc_id).update(data)
+    except Exception as e:
+      self._logger.error(e)
