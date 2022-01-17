@@ -5,7 +5,6 @@
 """Methods to generate the verification payload from the HWID database."""
 
 import collections
-import functools
 import hashlib
 import re
 import typing
@@ -131,16 +130,95 @@ def _GetAllGenericProbeStatementInfoRecords():
   ]
 
 
-class _FieldRecord:
+class ValueConverter:
 
-  def __init__(self, hwid_field_names, probe_statement_field_name,
-               value_converters, is_optional=False):
-    if not isinstance(hwid_field_names, list):
-      hwid_field_names = [hwid_field_names]
-    self.hwid_field_names = hwid_field_names
+  def __call__(self, value):
+    raise NotImplementedError
+
+
+class StrValueConverter(ValueConverter):
+
+  def __call__(self, value):
+    if isinstance(value, hwid_rule.Value):
+      return re.compile(value.raw_value) if value.is_re else value.raw_value
+    return str(value)
+
+
+class IntValueConverter(ValueConverter):
+
+  def __call__(self, value):
+    return int(value)
+
+
+class HexToHexValueConverter(ValueConverter):
+
+  def __init__(self, num_digits, has_prefix=True):
+    self._num_digits = num_digits
+    self._has_prefix = has_prefix
+
+  def __call__(self, value):
+    prefix = '0x' if self._has_prefix else ''
+    if not re.match('%s0*[0-9a-fA-F]{1,%d}$' %
+                    (prefix, self._num_digits), value):
+      raise ValueError(
+          f'Not a regular string of {self._num_digits} digits hex number.')
+    # Regulate the output to the fixed-digit hex string with upper cases.
+    return value.upper()[len(prefix):][-self._num_digits:].zfill(
+        self._num_digits)
+
+
+class IntToHexValueConverter(ValueConverter):
+
+  def __init__(self, num_digits):
+    self._num_digits = num_digits
+    self._hex_to_hex_converter = HexToHexValueConverter(self._num_digits,
+                                                        has_prefix=False)
+
+  def __call__(self, value):
+    value = '%04x' % int(value)
+    return self._hex_to_hex_converter(value)
+
+
+class FloatToHexValueConverter(ValueConverter):
+
+  def __init__(self, num_digits):
+    self._num_digits = num_digits
+    self._hex_to_hex_converter = HexToHexValueConverter(self._num_digits,
+                                                        has_prefix=False)
+
+  def __call__(self, value):
+    value = '%04x' % int(float(value))
+    return self._hex_to_hex_converter(value)
+
+
+class _FieldRecord:
+  """Record to describe the expected field and corresponding conversion method.
+
+  Attributes:
+    hwid_field_names: The name or a list of names of HWID field(s) to be
+        converted from.
+    probe_statement_field_name: The probe statement field name.
+    value_converters: The converter or a list of converters converting HWID
+        values.
+    is_optional: Whether this record is optional.
+  """
+
+  def __init__(self, hwid_field_names: typing.Union[str, typing.List[str]],
+               probe_statement_field_name: str,
+               value_converters: typing.Union[ValueConverter,
+                                              typing.List[ValueConverter]],
+               is_optional: bool = False):
+    self.hwid_field_names = type_utils.MakeList(hwid_field_names)
     self.probe_statement_field_name = probe_statement_field_name
     self.value_converters = type_utils.MakeList(value_converters)
     self.is_optional = is_optional
+
+
+class _SameNameFieldRecord(_FieldRecord):
+  """FieldRecord with same HWID field name and probe statement field name."""
+
+  def __init__(self, n, c, *args, **kwargs):
+    super().__init__(n, n, c, *args, **kwargs)
 
 
 class MissingComponentValueError(Exception):
@@ -246,108 +324,80 @@ class _ProbeStatementGenerator:
 @type_utils.CachedGetter
 def GetAllProbeStatementGenerators():
 
-  def HWIDValueToStr(value):
-    if isinstance(value, hwid_rule.Value):
-      return re.compile(value.raw_value) if value.is_re else value.raw_value
-    return value
-
-  def StrToNum(value):
-    if not re.match('-?[0-9]+$', value):
-      raise ValueError('not a regular string of number')
-    return int(value)
-
-  def HWIDHexStrToHexStr(num_digits, has_prefix, value):
-    prefix = '0x' if has_prefix else ''
-    if not re.match('%s0*[0-9a-fA-F]{1,%d}$' % (prefix, num_digits), value):
-      raise ValueError(
-          'not a regular string of %d digits hex number' % num_digits)
-    # Regulate the output to the fixed-digit hex string with upper cases.
-    return value.upper()[len(prefix):][-num_digits:].zfill(num_digits)
-
-  def GetHWIDHexStrToHexStrConverter(num_digits, has_prefix=True):
-    return functools.partial(HWIDHexStrToHexStr, num_digits, has_prefix)
-
-  def SimplyForwardValue(value):
-    return value
-
-  def same_name_field_converter(n, c, *args, **kwargs):
-    return _FieldRecord(n, n, c, *args, **kwargs)
+  str_converter = StrValueConverter()
+  int_converter = IntValueConverter()
 
   all_probe_statement_generators = {}
 
   all_probe_statement_generators['battery'] = [
       _ProbeStatementGenerator('battery', 'generic_battery', [
-          same_name_field_converter('manufacturer', HWIDValueToStr),
-          same_name_field_converter('model_name', HWIDValueToStr),
-          same_name_field_converter('technology', HWIDValueToStr),
+          _SameNameFieldRecord('manufacturer', str_converter),
+          _SameNameFieldRecord('model_name', str_converter),
+          _SameNameFieldRecord('technology', str_converter),
       ])
   ]
 
-  storage_shared_fields = [same_name_field_converter('sectors', StrToNum)]
+  storage_shared_fields = [_SameNameFieldRecord('sectors', int_converter)]
   all_probe_statement_generators['storage'] = [
       # eMMC
       _ProbeStatementGenerator(
           'storage', 'generic_storage', storage_shared_fields + [
               _FieldRecord(['hwrev', 'mmc_hwrev'], 'mmc_hwrev',
-                           GetHWIDHexStrToHexStrConverter(1), is_optional=True),
-              _FieldRecord(['name', 'mmc_name'], 'mmc_name',
-                           SimplyForwardValue),
+                           HexToHexValueConverter(1), is_optional=True),
+              _FieldRecord(['name', 'mmc_name'], 'mmc_name', str_converter),
               _FieldRecord(['manfid', 'mmc_manfid'], 'mmc_manfid',
-                           GetHWIDHexStrToHexStrConverter(2)),
+                           HexToHexValueConverter(2)),
               _FieldRecord(['oemid', 'mmc_oemid'], 'mmc_oemid',
-                           GetHWIDHexStrToHexStrConverter(4)),
+                           HexToHexValueConverter(4)),
               _FieldRecord(['prv', 'mmc_prv'], 'mmc_prv',
-                           GetHWIDHexStrToHexStrConverter(2), is_optional=True),
+                           HexToHexValueConverter(2), is_optional=True),
               _FieldRecord(['serial', 'mmc_serial'], 'mmc_serial',
-                           GetHWIDHexStrToHexStrConverter(8), is_optional=True),
+                           HexToHexValueConverter(8), is_optional=True),
           ]),
       # NVMe
       _ProbeStatementGenerator(
           'storage', 'generic_storage', storage_shared_fields + [
               _FieldRecord(['vendor', 'pci_vendor'], 'pci_vendor',
-                           GetHWIDHexStrToHexStrConverter(4)),
+                           HexToHexValueConverter(4)),
               _FieldRecord(['device', 'pci_device'], 'pci_device',
-                           GetHWIDHexStrToHexStrConverter(4)),
+                           HexToHexValueConverter(4)),
               _FieldRecord(['class', 'pci_class'], 'pci_class',
-                           GetHWIDHexStrToHexStrConverter(6)),
-              same_name_field_converter('nvme_model', HWIDValueToStr,
-                                        is_optional=True),
+                           HexToHexValueConverter(6)),
+              _SameNameFieldRecord('nvme_model', str_converter,
+                                   is_optional=True),
           ]),
       # ATA
       _ProbeStatementGenerator(
           'storage', 'generic_storage', storage_shared_fields + [
               _FieldRecord(['vendor', 'ata_vendor'], 'ata_vendor',
-                           HWIDValueToStr),
-              _FieldRecord(['model', 'ata_model'], 'ata_model', HWIDValueToStr),
+                           str_converter),
+              _FieldRecord(['model', 'ata_model'], 'ata_model', str_converter),
           ]),
   ]
 
   # TODO(yhong): Also convert SDIO network component probe statements.
   network_pci_fields = [
-      _FieldRecord('vendor', 'pci_vendor_id',
-                   GetHWIDHexStrToHexStrConverter(4)),
+      _FieldRecord('vendor', 'pci_vendor_id', HexToHexValueConverter(4)),
       # TODO(yhong): Set `pci_device_id` to non optional field when b/150914933
       #     is resolved.
-      _FieldRecord('device', 'pci_device_id', GetHWIDHexStrToHexStrConverter(4),
+      _FieldRecord('device', 'pci_device_id', HexToHexValueConverter(4),
                    is_optional=True),
-      _FieldRecord('revision_id', 'pci_revision',
-                   GetHWIDHexStrToHexStrConverter(2), is_optional=True),
+      _FieldRecord('revision_id', 'pci_revision', HexToHexValueConverter(2),
+                   is_optional=True),
       _FieldRecord('subsystem_device', 'pci_subsystem',
-                   GetHWIDHexStrToHexStrConverter(4), is_optional=True),
+                   HexToHexValueConverter(4), is_optional=True),
   ]
   network_sdio_fields = [
-      _FieldRecord('vendor', 'sdio_vendor_id',
-                   GetHWIDHexStrToHexStrConverter(4)),
-      _FieldRecord('device', 'sdio_device_id',
-                   GetHWIDHexStrToHexStrConverter(4)),
+      _FieldRecord('vendor', 'sdio_vendor_id', HexToHexValueConverter(4)),
+      _FieldRecord('device', 'sdio_device_id', HexToHexValueConverter(4)),
   ]
   usb_fields = [
       _FieldRecord('idVendor', 'usb_vendor_id',
-                   GetHWIDHexStrToHexStrConverter(4, has_prefix=False)),
+                   HexToHexValueConverter(4, has_prefix=False)),
       _FieldRecord('idProduct', 'usb_product_id',
-                   GetHWIDHexStrToHexStrConverter(4, has_prefix=False)),
+                   HexToHexValueConverter(4, has_prefix=False)),
       _FieldRecord('bcdDevice', 'usb_bcd_device',
-                   GetHWIDHexStrToHexStrConverter(4, has_prefix=False),
+                   HexToHexValueConverter(4, has_prefix=False),
                    is_optional=True),
   ]
   all_probe_statement_generators['cellular'] = [
@@ -367,27 +417,26 @@ def GetAllProbeStatementGenerators():
   ]
 
   dram_fields = [
-      same_name_field_converter('part', HWIDValueToStr),
-      same_name_field_converter('size', StrToNum),
-      same_name_field_converter('slot', StrToNum, is_optional=True),
+      _SameNameFieldRecord('part', str_converter),
+      _SameNameFieldRecord('size', int_converter),
+      _SameNameFieldRecord('slot', int_converter, is_optional=True),
   ]
   all_probe_statement_generators['dram'] = [
       _ProbeStatementGenerator('dram', 'memory', dram_fields),
   ]
 
   input_device_fields = [
-      same_name_field_converter('name', HWIDValueToStr),
+      _SameNameFieldRecord('name', str_converter),
       _FieldRecord(
           ['hw_version', 'product'],
           'product',
           [
-              GetHWIDHexStrToHexStrConverter(4, has_prefix=False),
+              HexToHexValueConverter(4, has_prefix=False),
               # raydium_ts
-              GetHWIDHexStrToHexStrConverter(8, has_prefix=True),
+              HexToHexValueConverter(8, has_prefix=True),
           ]),
-      same_name_field_converter(
-          'vendor', GetHWIDHexStrToHexStrConverter(4, has_prefix=False),
-          is_optional=True),
+      _SameNameFieldRecord('vendor', HexToHexValueConverter(
+          4, has_prefix=False), is_optional=True),
   ]
   all_probe_statement_generators['stylus'] = [
       _ProbeStatementGenerator(
@@ -414,11 +463,11 @@ def GetAllProbeStatementGenerators():
   ]
 
   display_panel_fields = [
-      same_name_field_converter('height', StrToNum),
-      same_name_field_converter(
-          'product_id', GetHWIDHexStrToHexStrConverter(4, has_prefix=False)),
-      same_name_field_converter('vendor', HWIDValueToStr),
-      same_name_field_converter('width', StrToNum),
+      _SameNameFieldRecord('height', int_converter),
+      _SameNameFieldRecord('product_id',
+                           HexToHexValueConverter(4, has_prefix=False)),
+      _SameNameFieldRecord('vendor', str_converter),
+      _SameNameFieldRecord('width', int_converter),
   ]
   all_probe_statement_generators['display_panel'] = [
       _ProbeStatementGenerator('display_panel', 'edid', display_panel_fields),
