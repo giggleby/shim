@@ -270,6 +270,8 @@ message SkuResponse {
   // A human readable string representing the memory on the device.
   string memory = 6;
   Status status = 7;
+  // Strings of warnings as a note of potential issues in the SKU.
+  repeated string warnings = 8;
 }
 
 // A label of a DUT.
@@ -295,6 +297,8 @@ message DutLabelsResponse {
   // Possible labels in the labels field.
   repeated string possible_labels = 3;
   Status status = 4;
+  // Strings of warnings as a note of potential issues in the DUTLabel.
+  repeated string warnings = 5;
 }
 
 message GetHwidDbEditableSectionRequest {

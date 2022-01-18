@@ -137,16 +137,12 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     bom = bom_configless.bom
     configless = bom_configless.configless
 
-    try:
-      sku = self._sku_helper.GetSKUFromBOM(bom, configless)
-    except sku_helper.SKUDeductionError as e:
-      return hwid_api_messages_pb2.SkuResponse(
-          error=str(e), status=hwid_api_messages_pb2.Status.BAD_REQUEST)
+    sku = self._sku_helper.GetSKUFromBOM(bom, configless)
 
     return hwid_api_messages_pb2.SkuResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS, project=sku['project'],
-        cpu=sku['cpu'], memory_in_bytes=sku['total_bytes'],
-        memory=sku['memory_str'], sku=sku['sku'])
+        status=hwid_api_messages_pb2.Status.SUCCESS, project=sku.project,
+        cpu=sku.cpu, memory_in_bytes=sku.total_bytes, memory=sku.memory_str,
+        sku=sku.sku_str, warnings=sku.warnings)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck

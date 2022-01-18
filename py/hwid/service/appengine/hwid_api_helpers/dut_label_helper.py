@@ -8,7 +8,6 @@ import re
 
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 
 
@@ -64,16 +63,11 @@ class DUTLabelHelper:
       return hwid_api_messages_pb2.DutLabelsResponse(
           status=status, error=error, possible_labels=possible_labels)
 
-    try:
-      sku = self._sku_helper.GetSKUFromBOM(bom, configless)
-    except sku_helper.SKUDeductionError as e:
-      return hwid_api_messages_pb2.DutLabelsResponse(
-          status=hwid_api_messages_pb2.Status.BAD_REQUEST, error=str(e),
-          possible_labels=possible_labels)
-
+    sku = self._sku_helper.GetSKUFromBOM(bom, configless)
     response = hwid_api_messages_pb2.DutLabelsResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS)
-    response.labels.add(name='sku', value=sku['sku'])
+    response.labels.add(name='sku', value=sku.sku_str)
+    response.warnings.extend(sku.warnings)
 
     regexp_to_device = self._goldeneye_memcache_adapter.Get('regexp_to_device')
 

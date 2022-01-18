@@ -13,7 +13,6 @@ from cros.chromeoshwid import update_checksum
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_api
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
@@ -531,7 +530,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
 
       with mock.patch.object(self.service._sku_helper,
                              'GetTotalRAMFromHWIDData') as mock_func:
-        mock_func.return_value = ('1MB', 100000000)
+        mock_func.return_value = ('1MB', 100000000, [])
 
         req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
         msg = self.service.GetSku(req)
@@ -559,7 +558,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
 
       with mock.patch.object(self.service._sku_helper,
                              'GetTotalRAMFromHWIDData') as mock_func:
-        mock_func.return_value = ('1MB', 100000000)
+        mock_func.return_value = ('1MB', 100000000, [])
 
         req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
         msg = self.service.GetSku(req)
@@ -570,7 +569,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
             memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB'),
         msg)
 
-  def testGetSku_BadDRAM(self):
+  def testGetSku_DramWithoutSize(self):
     bom = hwid_action.BOM()
     bom.AddAllComponents({
         'cpu': 'bar',
@@ -583,16 +582,14 @@ class ProtoRPCServiceTest(unittest.TestCase):
           TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
       }
 
-      with mock.patch.object(self.service._sku_helper,
-                             'GetTotalRAMFromHWIDData') as mock_func:
-        mock_func.side_effect = sku_helper.SKUDeductionError('X')
-
-        req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
-        msg = self.service.GetSku(req)
+      req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
+      msg = self.service.GetSku(req)
 
     self.assertEqual(
-        hwid_api_messages_pb2.SkuResponse(status=StatusMsg.BAD_REQUEST,
-                                          error='X'), msg)
+        hwid_api_messages_pb2.SkuResponse(
+            project='foo', cpu='bar', memory_in_bytes=0, sku='foo_bar_0B',
+            memory='0B', status=StatusMsg.SUCCESS,
+            warnings=["'fail' does not contain size field"]), msg)
 
   def testGetDutLabels(self):
     with mock.patch.object(self.service, '_dut_label_helper') as mock_helper:

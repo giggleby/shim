@@ -54,13 +54,9 @@ class DUTLabelHelperTest(unittest.TestCase):
     bom.project = 'foo'
     bom.phase = 'bar'
     configless = None
-    self._sku_helper.GetSKUFromBOM.return_value = {
-        'sku': 'TestSku',
-        'project': None,
-        'cpu': None,
-        'memory_str': None,
-        'total_bytes': None,
-    }
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+        sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
+        warnings=[])
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
@@ -73,6 +69,31 @@ class DUTLabelHelperTest(unittest.TestCase):
     self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
     self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
     self.assertTrue(self.CheckForLabelValue(msg, 'hwid_component'))
+    self.assertFalse(msg.warnings)
+    self.assertEqual(5, len(msg.labels))
+
+  def testGetDUTLabels_WithWarnings(self):
+    bom = hwid_action.BOM()
+    bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
+    bom.project = 'foo'
+    bom.phase = 'bar'
+    configless = None
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+        sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
+        warnings=['warning1', 'warning2'])
+    self._bc_helper.BatchGetBOMAndConfigless.return_value = {
+        TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
+    }
+
+    req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
+    msg = self._dl_helper.GetDUTLabels(req)
+
+    self.assertTrue(self.CheckForLabelValue(msg, 'phase', 'bar'))
+    self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
+    self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
+    self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
+    self.assertTrue(self.CheckForLabelValue(msg, 'hwid_component'))
+    self.assertCountEqual(['warning1', 'warning2'], msg.warnings)
     self.assertEqual(5, len(msg.labels))
 
   def testGetDUTLabels_MissingRegexpList(self):
@@ -85,13 +106,9 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
-    self._sku_helper.GetSKUFromBOM.return_value = {
-        'sku': 'TestSku',
-        'project': None,
-        'cpu': None,
-        'memory_str': None,
-        'total_bytes': None,
-    }
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+        sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
+        warnings=[])
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
     msg = self._dl_helper.GetDUTLabels(req)
@@ -137,13 +154,9 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
-    self._sku_helper.GetSKUFromBOM.return_value = {
-        'sku': 'TestSku',
-        'project': None,
-        'cpu': None,
-        'memory_str': None,
-        'total_bytes': None,
-    }
+    self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
+        sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
+        warnings=[])
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
     msg = self._dl_helper.GetDUTLabels(req)
@@ -152,6 +165,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
     self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
     self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
+    self.assertFalse(msg.warnings)
     self.assertEqual(4, len(msg.labels))
 
   def testGetDUTLabels_CheckIsVPRelated(self):

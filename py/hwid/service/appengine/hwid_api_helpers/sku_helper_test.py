@@ -30,8 +30,8 @@ EXAMPLE_MEMORY_COMPONENTS = [
 
 EXAMPLE_MEMORY_COMPONENT_WITH_SIZE = hwid_action.Component(
     cls_='dram', name='simple_tag', fields={'size': '1024'})
-INVALID_MEMORY_COMPONENT = hwid_action.Component(
-    cls_='dram', name='no_size_in_fields_is_invalid_2GB')
+MEMORY_COMPONENT_WITHOUT_SIZE_FIELD = hwid_action.Component(
+    cls_='dram', name='no_size_in_fields_2GB')
 
 
 class SKUHelperTest(unittest.TestCase):
@@ -61,11 +61,11 @@ class SKUHelperTest(unittest.TestCase):
 
     sku = self._sku_helper.GetSKUFromBOM(bom)
 
-    self.assertEqual('testprojectname_longstringwithcpu_4GB', sku['sku'])
-    self.assertEqual('testprojectname', sku['project'])
-    self.assertEqual('longstringwithcpu', sku['cpu'])
-    self.assertEqual('4GB', sku['memory_str'])
-    self.assertEqual(4294967296, sku['total_bytes'])
+    self.assertEqual('testprojectname_longstringwithcpu_4GB', sku.sku_str)
+    self.assertEqual('testprojectname', sku.project)
+    self.assertEqual('longstringwithcpu', sku.cpu)
+    self.assertEqual('4GB', sku.memory_str)
+    self.assertEqual(4294967296, sku.total_bytes)
 
   def testGetSKUFromBOM_WithConfigless(self):
     bom = hwid_action.BOM()
@@ -81,11 +81,11 @@ class SKUHelperTest(unittest.TestCase):
     }
     sku = self._sku_helper.GetSKUFromBOM(bom, configless)
 
-    self.assertEqual('testprojectname_longstringwithcpu_8GB', sku['sku'])
-    self.assertEqual('testprojectname', sku['project'])
-    self.assertEqual('longstringwithcpu', sku['cpu'])
-    self.assertEqual('8GB', sku['memory_str'])
-    self.assertEqual(8589934592, sku['total_bytes'])
+    self.assertEqual('testprojectname_longstringwithcpu_8GB', sku.sku_str)
+    self.assertEqual('testprojectname', sku.project)
+    self.assertEqual('longstringwithcpu', sku.cpu)
+    self.assertEqual('8GB', sku.memory_str)
+    self.assertEqual(8589934592, sku.total_bytes)
 
   def testGetSKUFromBOM_MissingCPU(self):
     bom = hwid_action.BOM()
@@ -97,7 +97,7 @@ class SKUHelperTest(unittest.TestCase):
 
     sku = self._sku_helper.GetSKUFromBOM(bom, configless)
 
-    self.assertEqual(None, sku['cpu'])
+    self.assertEqual(None, sku.cpu)
 
   def testGetComponentValueFromBOM(self):
     bom = hwid_action.BOM()
@@ -116,38 +116,51 @@ class SKUHelperTest(unittest.TestCase):
     self.assertEqual(None, value)
 
   def testGetTotalRAMFromHWIDData_AllMemoryTypes(self):
-    result_str, total_bytes = self._sku_helper.GetTotalRAMFromHWIDData(
-        EXAMPLE_MEMORY_COMPONENTS)
+    result_str, total_bytes, warnings = (
+        self._sku_helper.GetTotalRAMFromHWIDData(EXAMPLE_MEMORY_COMPONENTS))
     self.assertEqual('3584MB', result_str)
     self.assertEqual(3758096384, total_bytes)
+    self.assertFalse(warnings)
 
   def testGetTotalRAMFromHWIDData_MemoryType1(self):
-    result_str, total_bytes = self._sku_helper.GetTotalRAMFromHWIDData(
-        [EXAMPLE_MEMORY_COMPONENT1])
+    result_str, total_bytes, warnings = (
+        self._sku_helper.GetTotalRAMFromHWIDData([EXAMPLE_MEMORY_COMPONENT1]))
     self.assertEqual('1GB', result_str)
     self.assertEqual(1073741824, total_bytes)
+    self.assertFalse(warnings)
 
   def testGetTotalRAMFromHWIDData_MemoryType2(self):
-    result_str, total_bytes = self._sku_helper.GetTotalRAMFromHWIDData(
-        [EXAMPLE_MEMORY_COMPONENT2])
+    result_str, total_bytes, warnings = (
+        self._sku_helper.GetTotalRAMFromHWIDData([EXAMPLE_MEMORY_COMPONENT2]))
     self.assertEqual('2GB', result_str)
     self.assertEqual(2147483648, total_bytes)
+    self.assertFalse(warnings)
 
   def testGetTotalRAMFromHWIDData_EmptyList(self):
-    result_str, total_bytes = self._sku_helper.GetTotalRAMFromHWIDData([])
+    result_str, total_bytes, warnings = (
+        self._sku_helper.GetTotalRAMFromHWIDData([]))
     self.assertEqual('0B', result_str)
     self.assertEqual(0, total_bytes)
+    self.assertFalse(warnings)
 
   def testGetTotalRAMFromHWIDData_MemoryFromSizeField(self):
-    result_str, total_bytes = self._sku_helper.GetTotalRAMFromHWIDData(
-        [EXAMPLE_MEMORY_COMPONENT_WITH_SIZE])
+    result_str, total_bytes, warnings = (
+        self._sku_helper.GetTotalRAMFromHWIDData(
+            [EXAMPLE_MEMORY_COMPONENT_WITH_SIZE]))
     self.assertEqual('1GB', result_str)
     self.assertEqual(1073741824, total_bytes)
+    self.assertFalse(warnings)
 
-  def testMemoryOnlySizeInName(self):
-    self.assertRaises(sku_helper.SKUDeductionError,
-                      self._sku_helper.GetTotalRAMFromHWIDData,
-                      [INVALID_MEMORY_COMPONENT])
+  def testGetTotalRAMFromHWIDData_NoSizeField(self):
+    result_str, total_bytes, warnings = (
+        self._sku_helper.GetTotalRAMFromHWIDData(
+            [MEMORY_COMPONENT_WITHOUT_SIZE_FIELD]))
+    self.assertEqual('0B', result_str)
+    self.assertEqual(0, total_bytes)
+    self.assertCountEqual([
+        f'{MEMORY_COMPONENT_WITHOUT_SIZE_FIELD.name!r} does not contain size '
+        'field'
+    ], warnings)
 
 
 if __name__ == '__main__':
