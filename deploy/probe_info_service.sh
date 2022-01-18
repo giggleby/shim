@@ -141,7 +141,7 @@ do_run_local() {
 
   info "Start the local instance."
   local_deployment_run_venv_python \
-      -m cros.factory.probe_info_service.app_engine.main
+      -m cros.factory.probe_info_service.app_engine.main || true
 
   local_deployment_stop
 }
