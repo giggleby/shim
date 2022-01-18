@@ -257,6 +257,18 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
 
     return response
 
+  @protorpc_utils.ProtoRPCServiceMethod
+  def GetDeviceComponentHwidInfo(
+      self, request: stubby_pb2.GetDeviceComponentHwidInfoRequest):
+    del request
+    return stubby_pb2.GetDeviceComponentHwidInfoResponse()
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  def UploadDeviceComponentHwidResult(
+      self, request: stubby_pb2.UploadDeviceComponentHwidResultRequest):
+    del request
+    return stubby_pb2.UploadDeviceComponentHwidResultResponse()
+
   def _GetQualProbeDataSourceFactory(self, qual_probe_info):
     component_name = GetProbeDataSourceComponentName(
         qual_probe_info.component_identity)
