@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-01-19 15:21+CST\n"
+"PO-Revision-Date: 2022-01-19 15:58+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -602,6 +602,10 @@ msgstr "USB"
 #: ../build/pytests_label_generated.json
 msgid "Verify Component"
 msgstr "验证元件"
+
+#: ../build/pytests_label_generated.json
+msgid "Verify Keybox"
+msgstr "验证 Keybox"
 
 #: ../build/pytests_label_generated.json
 msgid "Verify Root Partition"
@@ -3693,6 +3697,10 @@ msgstr "更新样式 ID"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Reg (ECHO) Codes to activate"
 msgstr "上传注册码(ECHO)以激活"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Verify Widevine Keybox"
+msgstr "验证 Widevine Keybox"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Wifi"

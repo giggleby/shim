@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-01-19 15:21+CST\n"
+"PO-Revision-Date: 2022-01-19 15:58+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -602,6 +602,10 @@ msgstr "USB"
 #: ../build/pytests_label_generated.json
 msgid "Verify Component"
 msgstr "Xác minh bộ nhớ cache"
+
+#: ../build/pytests_label_generated.json
+msgid "Verify Keybox"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Verify Root Partition"
@@ -3762,6 +3766,10 @@ msgstr "Cập nhật SKU ID"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Reg (ECHO) Codes to activate"
 msgstr "Tải lên mã đăng ký (ECHO) để kích hoạt"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Verify Widevine Keybox"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Wifi"

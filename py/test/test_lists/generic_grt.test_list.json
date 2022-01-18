@@ -73,7 +73,8 @@
         "ReSignReleaseKernel",
         "UploadRegCodes",
         "ClearTPMOwnerRequest",
-        "RebootStep"
+        "RebootStep",
+        "VerifyWidevineKeybox"
       ]
     },
     "GRTStart": {

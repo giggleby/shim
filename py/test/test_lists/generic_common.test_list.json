@@ -15,6 +15,7 @@
     "__comment_has_device_data": "When setting to true, some test objects will use the info from device data to decide to run or not.",
     "has_ec_pubkey": false,
     "has_fan": true,
+    "has_keybox": false,
     "hwid_need_vpd": false,
     "__comment_hwid_need_vpd": "Set to true if some rules in the HWID database rely on VPD data",
     "overlord": {
@@ -798,6 +799,7 @@
     "SetWidevineKeybox": {
       "pytest_name": "provision_drm_key",
       "label": "Set Widevine Keybox",
+      "run_if": "constants.has_keyboxy",
       "args": {
         "proxy_server_url": ""
       }
@@ -1364,6 +1366,11 @@
       "args": {
         "max_bytes": 1048576
       }
+    },
+    "VerifyWidevineKeybox": {
+      "pytest_name": "verify_keybox",
+      "label": "Verify Widevine Keybox",
+      "run_if": "constants.has_keybox"
     },
     "WebGLAquarium": {
       "pytest_name": "webgl_aquarium"
