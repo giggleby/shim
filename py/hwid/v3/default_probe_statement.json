@@ -341,5 +341,15 @@
         }
       }
     }
+  },
+  "tcpc": {
+    "generic": {
+      "eval": "tcpc",
+      "keys": [
+        "device_id",
+        "product_id",
+        "vendor_id"
+      ]
+    }
   }
 }

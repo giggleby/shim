@@ -167,6 +167,14 @@ def _GetAllProbeStatementDefinitions():
   builder.AddIntOutputField('width', 'The width of the device.')
   probe_statement_definitions['display_panel'] = builder.Build()
 
+  # Create tcpc builder
+  builder = probe_config_types.ProbeStatementDefinitionBuilder('tcpc')
+  builder.AddProbeFunction('tcpc', 'Probe tcpc info from ec.')
+  builder.AddIntOutputField('device_id', 'The device id of tcpc.')
+  builder.AddIntOutputField('product_id', 'The product id of tcpc.')
+  builder.AddIntOutputField('vendor_id', 'The vendor id of tcpc.')
+  probe_statement_definitions['tcpc'] = builder.Build()
+
   return probe_statement_definitions
 
 
