@@ -50,7 +50,8 @@ class ContentsAnalyzerTest(unittest.TestCase):
             'display_panel': [
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='display_panel_123_456', cid=123, qid=456,
-                    status='supported', has_cid_qid=True, diff_prev=None),
+                    status='supported', has_cid_qid=True, null_values=False,
+                    diff_prev=None),
             ]
         }, report.name_changed_components)
 
@@ -142,7 +143,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
             'x@@@@component-display_panel-display_panel_A@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
                     'display_panel', 'display_panel_A', 'deprecated', False,
-                    None, 1, None,
+                    None, 1, None, False,
                     contents_analyzer.DiffStatus(
                         unchanged=False, name_changed=False,
                         support_status_changed=True, values_changed=False,
@@ -151,7 +152,8 @@ class ContentsAnalyzerTest(unittest.TestCase):
             'x@@@@component-display_panel-display_panel_123_456#8@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
                     'display_panel', 'display_panel_123_456#8', 'supported',
-                    True, (123, 456), 2, 'display_panel_123_456#2', None),
+                    True,
+                    (123, 456), 2, 'display_panel_123_456#2', False, None),
         })
 
   def test_AnalyzeChange_WithoutLines(self):

@@ -414,7 +414,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
         'wireless': [
             contents_analyzer.NameChangedComponentInfo(
                 'wireless_1234_5678', 1234, 5678,
-                common.COMPONENT_STATUS.supported, True,
+                common.COMPONENT_STATUS.supported, True, False,
                 contents_analyzer.DiffStatus(
                     unchanged=False,
                     name_changed=True,
@@ -425,10 +425,10 @@ class ProtoRPCServiceTest(unittest.TestCase):
                 )),
             contents_analyzer.NameChangedComponentInfo(
                 'wireless_1111_2222', 1111, 2222,
-                common.COMPONENT_STATUS.unqualified, True, None),
+                common.COMPONENT_STATUS.unqualified, True, False, None),
             contents_analyzer.NameChangedComponentInfo(
                 'wireless_hello_world', 0, 0, common.COMPONENT_STATUS.supported,
-                False, None)
+                False, True, None)
         ]
     })
 
@@ -501,9 +501,10 @@ class ProtoRPCServiceTest(unittest.TestCase):
         'wireless': [
             contents_analyzer.NameChangedComponentInfo(
                 'wireless_1234_5678', 1234, 5678,
-                common.COMPONENT_STATUS.supported, True, None),
-            contents_analyzer.NameChangedComponentInfo(
-                'wireless_1111_2222', 1111, 2222, 'new_status', True, None)
+                common.COMPONENT_STATUS.supported, True, False, None),
+            contents_analyzer.NameChangedComponentInfo('wireless_1111_2222',
+                                                       1111, 2222, 'new_status',
+                                                       True, False, None)
         ]
     })
     req = hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumRequest(

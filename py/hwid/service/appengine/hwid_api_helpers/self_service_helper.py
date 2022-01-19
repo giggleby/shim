@@ -90,6 +90,7 @@ def _ConvertCompInfoToMsg(
   if comp_info.comp_name_with_correct_seq_no is not None:
     comp_info_msg.component_name_with_correct_seq_no = (
         comp_info.comp_name_with_correct_seq_no)
+  comp_info_msg.null_values = comp_info.null_values
   if comp_info.diff_prev is not None:
     diff = comp_info.diff_prev
     comp_info_msg.diff_prev.CopyFrom(

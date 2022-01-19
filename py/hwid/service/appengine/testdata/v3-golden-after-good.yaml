@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 1754ef4e63cabedbbf3b7f50b181ea316441de18
+checksum: c34d041da0d6a383ddb8e796ac657aded3cd4d40
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -27,7 +27,7 @@ pattern:
     encoding_scheme: base8192
     fields:
     - cpu_field: 1
-    - dram_field: 1
+    - dram_field: 2
 
 encoded_fields:
   cpu_field:
@@ -36,6 +36,7 @@ encoded_fields:
   dram_field:
     0: { dram: dram_type_4g_0 }
     1: { dram: dram_allow_no_size_info_in_name }
+    2: { dram: dram_default }
 
 components:
   cpu:
@@ -68,6 +69,9 @@ components:
           part: whatever
           size: '512'
           slot: '0'
+      dram_default:
+        status: unsupported
+        values: null
 
 rules:
 - name: device_info.set_image_id

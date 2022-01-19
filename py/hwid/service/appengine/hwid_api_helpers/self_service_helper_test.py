@@ -270,11 +270,11 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                        2, None, None),
+                        2, None, True, None),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls2', 'comp_cls2_111_222#9', 'unqualified', True,
-                        (111, 222), 1, 'comp_cls2_111_222#1', None),
+                        (111, 222), 1, 'comp_cls2_111_222#1', False, None),
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
@@ -313,6 +313,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                         is_newly_added=False,
                         has_avl=False,
                         seq_no=2,
+                        null_values=True,
                     ),
                 'comp2':
                     _ComponentInfoMsg(
@@ -367,11 +368,12 @@ class SelfServiceHelperTest(unittest.TestCase):
                   'comp1':
                       hwid_action.DBHWIDComponentAnalysisResult(
                           'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                          2, None, None),
+                          2, None, True, None),
                   'comp2':
                       hwid_action.DBHWIDComponentAnalysisResult(
                           'comp_cls2', 'comp_cls2_111_222#9', 'unqualified',
-                          False, (111, 222), 1, 'comp_cls2_111_222#1', None),
+                          False,
+                          (111, 222), 1, 'comp_cls2_111_222#1', True, None),
               }))
       return action
 
@@ -409,7 +411,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                        2, None,
+                        2, None, False,
                         _DiffStatus(unchanged=True, name_changed=False,
                                     support_status_changed=False,
                                     values_changed=False,
@@ -418,7 +420,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls2', 'comp_cls2_111_222#9', 'unqualified', True,
-                        (111, 222), 1, 'comp_cls2_111_222#1',
+                        (111, 222), 1, 'comp_cls2_111_222#1', False,
                         _DiffStatus(unchanged=False, name_changed=True,
                                     support_status_changed=False,
                                     values_changed=False,
@@ -427,7 +429,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         'comp_cls2', 'comp_name3', 'unqualified', True, None, 2,
-                        None, None),
+                        None, True, None),
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
@@ -468,7 +470,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                     _ComponentInfoMsg(
                         component_class='comp_cls2', original_name='comp_name3',
                         original_status='unqualified', is_newly_added=True,
-                        has_avl=False, seq_no=2),
+                        has_avl=False, seq_no=2, null_values=True),
             }), validation_token='fingerprint')
 
     self.assertEqual(resp, expected_resp)

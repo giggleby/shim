@@ -58,6 +58,7 @@ class NameChangedComponentInfo(NamedTuple):
   qid: int
   status: str
   has_cid_qid: bool
+  null_values: bool
   diff_prev: Optional[DiffStatus]
 
 
@@ -104,6 +105,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   avl_id: Optional[Tuple[int, int]]
   seq_no: int
   comp_name_with_correct_seq_no: Optional[str]
+  null_values: bool
   diff_prev: Optional[DiffStatus]
 
 
@@ -282,7 +284,7 @@ class ContentsAnalyzer:
           report.name_changed_components.setdefault(comp_cls, []).append(
               NameChangedComponentInfo(comp.name, cid, qid, comp.status,
                                        bool(comp.extracted_avl_id),
-                                       comp.diff_prev))
+                                       comp.null_values, comp.diff_prev))
 
   def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
                       db_placeholder_options):
@@ -387,7 +389,8 @@ class ContentsAnalyzer:
             HWIDComponentAnalysisResult(
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
                 comp.extracted_avl_id, comp.expected_seq_no,
-                comp_name_with_correct_seq_no, comp.diff_prev))
+                comp_name_with_correct_seq_no, comp.null_values,
+                comp.diff_prev))
 
     if require_hwid_db_lines:
       if db_contents_patcher is None:
@@ -406,6 +409,7 @@ class ContentsAnalyzer:
     extracted_avl_id: Optional[Tuple[int, int]]
     expected_seq_no: int
     is_newly_added: bool
+    null_values: bool
     diff_prev: Optional[DiffStatus]
 
   def _ExtractHWIDComponents(self) -> Dict[str, List['_HWIDComponentMetadata']]:
@@ -427,6 +431,7 @@ class ContentsAnalyzer:
         comp_name, comp_info = curr_item
         avl_id = name_pattern.Matches(comp_name)
         noseq_comp_name, sep, actual_seq = comp_name.partition('#')
+        null_values = comp_info.values is None
 
         diffstatus = None
         if prev_item:
@@ -448,7 +453,7 @@ class ContentsAnalyzer:
             self._HWIDComponentMetadata(
                 comp_name, comp_info.status, noseq_comp_name,
                 actual_seq if sep else None, avl_id, expected_seq,
-                is_newly_added, diffstatus))
+                is_newly_added, null_values, diffstatus))
     return ret
 
   @classmethod

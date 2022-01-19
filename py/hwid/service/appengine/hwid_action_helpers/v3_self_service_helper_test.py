@@ -100,7 +100,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertEqual(analysis_report.validation_errors, [])
     self.assertEqual(len(analysis_report.lines), 0)
     self.assertEqual(analysis_report.fingerprint,
-                     '2b3d9c38037212e6bf3819abfe5ad24d899cb6b0')
+                     '8180ed506737784ac481a5cccd81a05835a6c6c3')
 
   def testAnalyzeDraftDbEditableSection_SyntaxError(self):
     helper_inst = self._LoadSSHelper('v3-golden-before.yaml')
