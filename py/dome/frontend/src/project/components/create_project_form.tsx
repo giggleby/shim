@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Button from '@material-ui/core/Button';
+import Button from '@mui/material/Button';
 import React from 'react';
 import {InjectedFormProps, reduxForm} from 'redux-form';
 

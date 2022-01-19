@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import AppBar from '@material-ui/core/AppBar';
-import {amber} from '@material-ui/core/colors';
-import IconButton from '@material-ui/core/IconButton';
+import AppBar from '@mui/material/AppBar';
+import {amber} from '@mui/material/colors';
+import IconButton from '@mui/material/IconButton';
 import {
   createStyles,
-  Theme,
-  WithStyles,
   withStyles,
-} from '@material-ui/core/styles';
-import Toolbar from '@material-ui/core/Toolbar';
-import Typography from '@material-ui/core/Typography';
-import MenuIcon from '@material-ui/icons/Menu';
+  WithStyles,
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import MenuIcon from '@mui/icons-material/Menu';
 import React from 'react';
 import {connect} from 'react-redux';
 

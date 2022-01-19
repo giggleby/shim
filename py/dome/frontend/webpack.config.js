@@ -42,6 +42,7 @@ const config = {
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
     plugins: [new tsconfigPathsWebpackPlugin()],
+    fallback: {buffer: require.resolve("buffer/")},
   },
 };
 

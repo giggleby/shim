@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import IconButton from '@material-ui/core/IconButton';
+import IconButton from '@mui/material/IconButton';
 import {
   createStyles,
-  Theme,
-  WithStyles,
   withStyles,
-} from '@material-ui/core/styles';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
-import DismissIcon from '@material-ui/icons/CheckCircle';
-import DeleteIcon from '@material-ui/icons/Delete';
-import CollapseIcon from '@material-ui/icons/ExpandLess';
-import ExpandIcon from '@material-ui/icons/ExpandMore';
+  WithStyles,
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import DismissIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CollapseIcon from '@mui/icons-material/ExpandLess';
+import ExpandIcon from '@mui/icons-material/ExpandMore';
 import React from 'react';
 
 import {isCancellable, isRunning} from '../constants';
@@ -57,7 +57,7 @@ const TaskListHeader: React.SFC<TaskListHeaderProps> = ({
   return (
     <>
       <div className={classes.description}>
-        <Typography variant="subtitle1">Tasks</Typography>
+        <Typography variant="body1">Tasks</Typography>
         <Typography variant="caption" color="textSecondary">
           {taskSummary}
         </Typography>

@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {PropTypes} from '@material-ui/core';
-import {InputLabelProps} from '@material-ui/core/InputLabel';
-import TextField from '@material-ui/core/TextField';
+import {InputLabelProps} from '@mui/material/InputLabel';
+import TextField from '@mui/material/TextField';
 import React from 'react';
 import {BaseFieldProps, Field, WrappedFieldProps} from 'redux-form';
 
@@ -13,7 +12,7 @@ interface RenderTextFieldProps {
   type?: string;
   ignoreTouch?: boolean;
   placeholder?: string;
-  margin?: PropTypes.Margin;
+  margin?: 'dense' | 'normal' | 'none';
   InputLabelProps?: Partial<InputLabelProps>;
   select?: boolean;
   disabled?: boolean;

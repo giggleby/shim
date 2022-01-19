@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import MenuItem, {MenuItemProps} from '@material-ui/core/MenuItem';
+import MenuItem, {MenuItemProps} from '@mui/material/MenuItem';
 import {
   createStyles,
-  Theme,
-  WithStyles,
   withStyles,
-} from '@material-ui/core/styles';
+  WithStyles,
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 

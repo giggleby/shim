@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import MenuItem, {MenuItemProps} from '@material-ui/core/MenuItem';
-import RootRef from '@material-ui/core/RootRef';
+import MenuItem, {MenuItemProps} from '@mui/material/MenuItem';
 import {
   createStyles,
-  Theme,
-  WithStyles,
   withStyles,
-} from '@material-ui/core/styles';
+  WithStyles,
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
 import React from 'react';
 
 import {Omit} from '@common/types';
 
 const styles = (theme: Theme) => createStyles({
   subtitle: {
-    ...theme.typography.subtitle1,
+    ...theme.typography.body1,
     color: theme.palette.grey[500],
     fontWeight: theme.typography.fontWeightMedium as any,
   },
@@ -49,9 +48,7 @@ class MenuSubheader extends React.Component<MenuSubheaderProps> {
   render() {
     const {classes, ...other} = this.props;
     return (
-      <RootRef rootRef={this.menuItemRef}>
-        <MenuItem className={classes.subtitle} {...other} />
-      </RootRef>
+      <MenuItem ref={this.menuItemRef} className={classes.subtitle} {...other} />
     );
   }
 }

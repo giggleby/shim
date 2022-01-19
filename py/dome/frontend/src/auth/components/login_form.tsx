@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Button from '@material-ui/core/Button';
-import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
-import CardContent from '@material-ui/core/CardContent';
-import FormHelperText from '@material-ui/core/FormHelperText';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardActions from '@mui/material/CardActions';
+import CardContent from '@mui/material/CardContent';
+import FormHelperText from '@mui/material/FormHelperText';
 import {
   createStyles,
-  Theme,
-  WithStyles,
   withStyles,
-} from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
+  WithStyles,
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import React from 'react';
 import {InjectedFormProps, reduxForm} from 'redux-form';
 

@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import CardContent from '@material-ui/core/CardContent';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import green from '@material-ui/core/colors/green';
-import IconButton from '@material-ui/core/IconButton';
+import CardContent from '@mui/material/CardContent';
+import CircularProgress from '@mui/material/CircularProgress';
+import green from '@mui/material/colors/green';
+import IconButton from '@mui/material/IconButton';
 import {
   createStyles,
-  Theme,
   withStyles,
   WithStyles,
-} from '@material-ui/core/styles';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
-import RunningIcon from '@material-ui/icons/Autorenew';
-import SuccessIcon from '@material-ui/icons/CheckCircle';
-import DeleteIcon from '@material-ui/icons/Delete';
-import ErrorIcon from '@material-ui/icons/Error';
-import CollapseIcon from '@material-ui/icons/ExpandLess';
-import ExpandIcon from '@material-ui/icons/ExpandMore';
-import ReportIcon from '@material-ui/icons/ReportProblem';
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import RunningIcon from '@mui/icons-material/Autorenew';
+import SuccessIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ErrorIcon from '@mui/icons-material/Error';
+import CollapseIcon from '@mui/icons-material/ExpandLess';
+import ExpandIcon from '@mui/icons-material/ExpandMore';
+import ReportIcon from '@mui/icons-material/ReportProblem';
 import classNames from 'classnames';
 import React from 'react';
 

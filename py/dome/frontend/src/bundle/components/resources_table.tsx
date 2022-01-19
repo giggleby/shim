@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import grey from '@material-ui/core/colors/grey';
-import IconButton from '@material-ui/core/IconButton';
+import grey from '@mui/material/colors/grey';
+import IconButton from '@mui/material/IconButton';
 import {
   createStyles,
-  Theme,
   withStyles,
   WithStyles,
-} from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
-import Download from '@material-ui/icons/GetApp';
-import Update from '@material-ui/icons/Publish';
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import Download from '@mui/icons-material/GetApp';
+import Update from '@mui/icons-material/Publish';
 import classNames from 'classnames';
 import React from 'react';
 import {connect} from 'react-redux';

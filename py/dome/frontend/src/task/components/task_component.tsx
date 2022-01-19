@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import CircularProgress from '@material-ui/core/CircularProgress';
-import green from '@material-ui/core/colors/green';
-import IconButton from '@material-ui/core/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
+import green from '@mui/material/colors/green';
+import IconButton from '@mui/material/IconButton';
 import {
   createStyles,
-  Theme,
   withStyles,
   WithStyles,
-} from '@material-ui/core/styles';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
-import RunningIcon from '@material-ui/icons/Autorenew';
-import DismissIcon from '@material-ui/icons/CheckCircle';
-import DeleteIcon from '@material-ui/icons/Delete';
-import ErrorIcon from '@material-ui/icons/Error';
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import RunningIcon from '@mui/icons-material/Autorenew';
+import DismissIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ErrorIcon from '@mui/icons-material/Error';
 import React from 'react';
 
 import {assertNotReachable} from '@common/utils';
@@ -70,7 +70,7 @@ const Task: React.SFC<TaskProps> = ({
         <Tooltip title={formatProgress(progress)}>
           <IconButton>
             <CircularProgress
-              variant="static"
+              variant="determinate"
               value={progress.uploadedSize / progress.totalSize * 100}
               size={20}
             />

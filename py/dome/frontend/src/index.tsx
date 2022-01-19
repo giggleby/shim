@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {indigo} from '@material-ui/core/colors';
-import CssBaseline from '@material-ui/core/CssBaseline';
+import {indigo} from '@mui/material/colors';
+import CssBaseline from '@mui/material/CssBaseline';
 import {
   createTheme,
-  MuiThemeProvider,
-} from '@material-ui/core/styles';
+  ThemeProvider,
+} from '@mui/material/styles';
+import StyledEngineProvider from '@mui/material/StyledEngineProvider';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {Provider} from 'react-redux';
@@ -62,11 +63,13 @@ window.addEventListener('unhandledrejection', (event) => {
 ReactDOM.render(
   <>
     <CssBaseline />
-    <MuiThemeProvider theme={createTheme(THEME)}>
-      <Provider store={store}>
-        <DomeApp />
-      </Provider>
-    </MuiThemeProvider>
+    <StyledEngineProvider injectFirst>
+      <ThemeProvider theme={createTheme(THEME)}>
+        <Provider store={store}>
+          <DomeApp />
+        </Provider>
+      </ThemeProvider>
+    </StyledEngineProvider>
   </>,
   document.getElementById('app'),
 );

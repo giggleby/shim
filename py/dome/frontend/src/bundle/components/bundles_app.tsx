@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Fab from '@material-ui/core/Fab';
-import Portal from '@material-ui/core/Portal';
-import AddIcon from '@material-ui/icons/Add';
+import Fab from '@mui/material/Fab';
+import Portal from '@mui/material/Portal';
+import AddIcon from '@mui/icons-material/Add';
 import React from 'react';
 import {connect} from 'react-redux';
 

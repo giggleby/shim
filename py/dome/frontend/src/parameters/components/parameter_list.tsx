@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Button from '@material-ui/core/Button';
-import grey from '@material-ui/core/colors/grey';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import IconButton from '@material-ui/core/IconButton';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListSubheader from '@material-ui/core/ListSubheader';
+import Button from '@mui/material/Button';
+import grey from '@mui/material/colors/grey';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListSubheader from '@mui/material/ListSubheader';
 import {
   createStyles,
-  Theme,
   withStyles,
   WithStyles,
-} from '@material-ui/core/styles';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
-import ArrowBackIcon from '@material-ui/icons/ArrowBack';
-import BorderColorIcon from '@material-ui/icons/BorderColor';
-import CloudUploadIcon from '@material-ui/icons/CloudUpload';
-import UpdateIcon from '@material-ui/icons/Update';
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import BorderColorIcon from '@mui/icons-material/BorderColor';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import UpdateIcon from '@mui/icons-material/Update';
 import classNames from 'classnames';
 import React from 'react';
 import {connect} from 'react-redux';
@@ -302,7 +302,7 @@ class ParameterList extends
               <ArrowBackIcon />
             </IconButton>
           </ListItemIcon>
-          <Typography variant="subtitle1">
+          <Typography variant="body1">
             Current directory: {currentPath}
           </Typography>
         </ListItem>

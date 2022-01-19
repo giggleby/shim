@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Grid from '@material-ui/core/Grid';
+import Grid from '@mui/material/Grid';
 import {
   createStyles,
-  Theme,
-  WithStyles,
   withStyles,
-} from '@material-ui/core/styles';
+  WithStyles,
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
 import classNames from 'classnames';
 import React from 'react';
 import {hot} from 'react-hot-loader';
@@ -152,7 +152,7 @@ To visit Dome, please use Chrome/Chromium to avoid unnecessary issues.`);
           <div className={classes.overlay} ref={this.overlayRef}>
             <TaskList className={classes.taskList} />
           </div>
-          <Grid container justify="center">
+          <Grid container justifyContent="center">
             <Grid item xs={12} sm={9} md={6}>
               {app}
             </Grid>

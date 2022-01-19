@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import Card from '@material-ui/core/Card';
-import Collapse from '@material-ui/core/Collapse';
+import Card from '@mui/material/Card';
+import Collapse from '@mui/material/Collapse';
 import {
   createStyles,
-  Theme,
   withStyles,
   WithStyles,
-} from '@material-ui/core/styles';
+} from '@mui/styles';
+import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 import {createSelector} from 'reselect';
