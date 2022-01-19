@@ -199,21 +199,11 @@ class UpdateCBITest(test_case.TestCase):
                                   'firmware-config', int)
 
   def GetDeviceData(self, key, data_type):
-    assert data_type in (int, str), 'data_type should be either int or str.'
-    value = device_data.GetDeviceData(key)
-    if value is None:
-      self.FailTask('No device data (%s)' % key)
-      return None
-    if data_type == str:
-      return str(value)
-    if isinstance(value, int):
-      return value
-    if isinstance(value, str):
-      # This can convert both 10-based and 16-based starting with '0x'.
-      return int(value, 0)
-    self.FailTask('The value in device-data is not an integer nor a '
-                  'string representing an integer literal in radix base.')
-    return None
+    try:
+      return device_data.GetDeviceData(key, data_type=data_type,
+                                       throw_if_none=True)
+    except Exception as e:
+      self.FailTask('%s' % e)
 
   def CheckCbiData(self, data_name, expected_data):
     read_data = GetCbiData(self._dut, data_name)

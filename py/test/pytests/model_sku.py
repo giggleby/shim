@@ -145,7 +145,7 @@ class PlatformSKUModelTest(test_case.TestCase):
     self.ApplyConfig()
 
   def CheckByDeviceData(self):
-    value = device_data.GetDeviceData(_KEY_COMPONENT_SKU)
+    value = device_data.GetDeviceData(_KEY_COMPONENT_SKU, data_type=int)
     if value is None:
       return False
 

@@ -115,6 +115,7 @@ API Spec
 import collections.abc
 import logging
 import os
+from typing import Union
 
 # pylint: disable=wildcard-import,unused-wildcard-import
 from cros.factory.test.device_data_constants import *
@@ -167,21 +168,42 @@ def CheckValidDeviceDataKey(key, key_prefix=None):
   return True
 
 
-def GetDeviceData(key, default=None):
+def GetDeviceData(key: str, default=None, data_type: Union[int, str,
+                                                           None] = None,
+                  throw_if_none: bool = False):
   """Returns the device data associated by key.
 
   Args:
     key: A string of key to access device data.
     default: The default value if key does not exist.
+    data_type: The returned type of the function. We may save integer as an hex
+        string in the device data. Use data_type to convert it into int. Do no
+        conversion if data_type is None.
+    throw_if_none: If set, throw a KeyError if the key is not found.
 
   Returns:
     Associated value if key exists in device data, otherwise the value specified
     by default. Defaults to None.
   """
+  if data_type not in (int, str, None):
+    raise TypeError('data_type must be int, str, or None.')
   if not isinstance(key, str):
     raise KeyError('key must be a string')
 
-  return _GetInstance()[key].Get(default)
+  value = _GetInstance()[key].Get(default)
+  if throw_if_none and value is None:
+    raise KeyError('No device data (%s)' % key)
+  if data_type is None:
+    return value
+  if data_type == str:
+    return str(value)
+  if isinstance(value, int):
+    return value
+  if isinstance(value, str):
+    # This can convert both 10-based and 16-based starting with '0x'.
+    return int(value, 0)
+  raise ValueError('The value in device-data is not an integer nor a '
+                   'string representing an integer literal in radix base.')
 
 
 def GetAllDeviceData():
