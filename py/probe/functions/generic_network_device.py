@@ -23,6 +23,7 @@ except ImportError:
 
 
 KNOWN_DEVICE_TYPES = type_utils.Enum(['wireless', 'ethernet', 'cellular'])
+CELLULAR_PROBE_TIMEOUT_SECS = 30
 
 
 class NetworkDevices:
@@ -112,6 +113,50 @@ class NetworkDevices:
                         'ModelID', 'Manufacturer']
             if 'Cellular.%s' % key in properties)
       return result
+
+    def _ParseDbusArray(dbus_array):
+      if not dbus_array:
+        return None
+      # convert_dbus_value transform the dbus array into a string.
+      # E.g. dbus.Array([dbus.String('cellular'), dbus.String('wifi')])
+      # will transform into '[\n    cellular\n    wifi\n]'
+      dbus_value = flimflam.convert_dbus_value(dbus_array)
+      return [element.strip() for element in dbus_value.split('\n')[1:-1]]
+
+    def _HasCellular():
+      """Detect whether a DUT has cellular or not via flimflam API.
+
+      If a DUT has cellular, then we can see `cellular` in
+      `AvailableTechnologies` or `UninitializedTechnologies` from flimflam
+      GetManager().GetProperties() API.
+      """
+      # GetProperties() returns dbus dictionary type, which looks like this:
+      # dbus.Dictionary(...
+      #   dbus.String('AvailableTechnologies'):
+      #     dbus.Array([
+      #       dbus.String('cellular'),
+      #       dbus.String('ethernet'),
+      #       dbus.String('wifi')],
+      #     signature=dbus.Signature('s'), variant_level=1)...)
+      properties = flimflam.FlimFlam().GetManager().GetProperties()
+      # `AvailableTechnologies` or `UninitializedTechnologies` return dbus
+      # array type.
+      available_tech = properties.get('AvailableTechnologies', None)
+      uninitialize_tech = properties.get('UninitializedTechnologies', None)
+      if ('cellular' in _ParseDbusArray(available_tech) or
+          'cellular' in _ParseDbusArray(uninitialize_tech)):
+        logging.info('DUT has cellular. Might take some time to probe it...')
+        return True
+      logging.info('DUT does not have cellular.')
+      return False
+
+    if _HasCellular():
+      # Cellular related dbus takes 10~20 seconds to initialize after booting.
+      # We have to wait until it is available.
+      if not flimflam.FlimFlam().FindCellularDevice(
+          CELLULAR_PROBE_TIMEOUT_SECS):
+        raise RuntimeError('Call of flimflam.FlimFlam().FindCellularDevice() '
+                           'timeout!')
 
     return [_ProcessDevice(device) for device in
             flimflam.FlimFlam().GetObjectList('Device')]
