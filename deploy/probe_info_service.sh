@@ -204,7 +204,7 @@ commands:
   $0 help
       Shows this help message.
 
-  $0 deploy staging
+  $0 deploy [prod|staging]
       Deploys Probe Info Service to the given environment by gcloud command.
 
   $0 run [<args...>]
