@@ -7,6 +7,7 @@
 import json
 import logging
 import os
+import re
 import resource
 import shutil
 import signal
@@ -45,6 +46,24 @@ DLC_CACHE_PAYLOAD_NAME = '%s/release_image.dlc_factory_cache' % \
 DLC_CACHE_TAR_PATH = '/tmp/dlc_cache.tar'
 
 
+def GetLogicalStateful(state_dev, log_message=None):
+  """Get the logical stateful partition from the physical one.
+
+  Args:
+    state_dev: Path to physical stateful partition.
+    log_message: Log message if logical stateful partition is LVM format.
+
+  Returns:
+    Path to logical stateful partition.
+  """
+  lvm_stateful = Util().GetLVMStateful(state_dev)
+  if lvm_stateful:
+    if log_message:
+      logging.info(log_message)
+    return lvm_stateful
+  return state_dev
+
+
 class WipeError(Exception):
   """Failed to complete wiping."""
 
@@ -59,6 +78,7 @@ def _CopyLogFileToStateDev(state_dev, logfile):
 
 def _OnError(ip, port, token, state_dev, wipe_in_tmpfs_log=None,
              wipe_init_log=None):
+  state_dev = GetLogicalStateful(state_dev)
   if wipe_in_tmpfs_log:
     _CopyLogFileToStateDev(state_dev, wipe_in_tmpfs_log)
   if wipe_init_log:
@@ -336,7 +356,7 @@ def _CollectMountPointsToUmount(state_dev):
   namespace_list = []
   for line in mount_output.splitlines():
     fields = line.split()
-    if fields[0] == state_dev:
+    if fields[0] == state_dev or re.match(r'\/dev\/mapper\/', fields[0]):
       mount_point_list.append(fields[2])
     if fields[0] == 'nsfs':
       namespace_list.append(fields[2])
@@ -375,6 +395,9 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
   dlc_cache_path = os.path.join(state_dir, DLC_CACHE_PAYLOAD_NAME)
   _BackupIfExist(crx_cache_path, CRX_CACHE_TAR_PATH)
   _BackupIfExist(dlc_cache_path, DLC_CACHE_TAR_PATH)
+
+  state_dev = GetLogicalStateful(state_dev,
+                                 'Wiping using LVM stateful partition...')
 
   mount_point_list, namespace_list = _CollectMountPointsToUmount(state_dev)
 
@@ -544,11 +567,9 @@ def _WipeStateDev(release_rootfs, root_disk, wipe_args, state_dev,
 
   # clobber-state will build LVM stateful partition if
   # `USE_LVM_STATEFUL_PARTITION=1` in `chromeos_startup`.
-  lvm_stateful = Util().GetLVMStateful(state_dev)
-  if lvm_stateful:
-    logging.info('Switching to LVM stateful partition: %s', lvm_stateful)
-    state_dev = lvm_stateful
-  logging.info('Checking if stateful partition is mounted...')
+  state_dev = GetLogicalStateful(state_dev,
+                                 'Switching to LVM stateful partition...')
+  logging.info('Checking if stateful partition (%s) is mounted...', state_dev)
   # Check if the stateful partition is wiped.
   if not _IsStateDevMounted(state_dev):
     process_utils.Spawn(['mount', state_dev, STATEFUL_PARTITION_PATH],
