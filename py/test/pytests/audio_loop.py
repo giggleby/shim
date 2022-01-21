@@ -853,6 +853,19 @@ class AudioLoopTest(test_case.TestCase):
       local_played_audio_path = None
       logging.warning("audiofuntest doesn't support '--played-file-path'")
 
+    match = re.search(r'--recorded-file-path\b', help_stderr)
+    if match:
+      audio_name = f'audiofun_recorded_{capture_rate}_{output_channel}.raw'
+      recorded_audio_path = self._dut.path.join(self._dut_temp_dir, audio_name)
+      local_recorded_audio_path = os.path.join(paths.DATA_TESTS_DIR,
+                                               session.GetCurrentTestPath(),
+                                               audio_name)
+      audiofun_cmd.extend(['--recorded-file-path', recorded_audio_path])
+    else:
+      recorded_audio_path = None
+      local_recorded_audio_path = None
+      logging.warning("audiofuntest doesn't support '--recorded-file-path'")
+
     process = self._dut.Popen(audiofun_cmd, stdout=process_utils.PIPE,
                               stderr=process_utils.PIPE, log=True)
     stdout, stderr = process.communicate()
@@ -893,6 +906,10 @@ class AudioLoopTest(test_case.TestCase):
       if played_audio_path and self._dut.path.exists(played_audio_path):
         self._dut.link.Pull(played_audio_path, local_played_audio_path)
         self._audio_file_path.append(local_played_audio_path)
+
+      if recorded_audio_path and self._dut.path.exists(recorded_audio_path):
+        self._dut.link.Pull(recorded_audio_path, local_recorded_audio_path)
+        self._audio_file_path.append(local_recorded_audio_path)
 
   def CheckChannelArgs(self, output_channels):
     if self.args.num_output_channels < max(output_channels):
