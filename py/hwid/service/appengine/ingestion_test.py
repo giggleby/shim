@@ -56,7 +56,7 @@ class IngestionTest(unittest.TestCase):
 
     self.assertEqual(
         response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
-    self.patch_hwid_db_data_manager.UpdateProjects.assert_has_calls([
+    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
         mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
             hwid_repo.HWIDDBMetadata('KBOARD', 'KBOARD', 2, 'KBOARD'),
             hwid_repo.HWIDDBMetadata('KBOARD.old', 'KBOARD', 2, 'KBOARD.old'),
@@ -83,7 +83,7 @@ class IngestionTest(unittest.TestCase):
 
     self.assertEqual(
         response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
-    self.patch_hwid_db_data_manager.UpdateProjects.assert_has_calls([
+    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
         mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
             hwid_repo.HWIDDBMetadata('KBOARD', 'KBOARD', 2, 'KBOARD'),
             hwid_repo.HWIDDBMetadata('SBOARD', 'SBOARD', 3, 'SBOARD'),

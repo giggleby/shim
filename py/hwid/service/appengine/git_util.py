@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import base64
 import contextlib
 import datetime
 import enum
@@ -48,7 +49,7 @@ IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
 
 
 def _B(s):
-  """Convert str to bytes if needed."""
+  """Converts str to bytes if needed."""
   return s if isinstance(s, bytes) else s.encode()
 
 
@@ -143,7 +144,7 @@ class MemoryRepo(_MemoryRepo):
                       _B(branch)]
 
   def recursively_add_file(self, cur, path_splits, file_name, mode, blob):
-    """Add files in object store.
+    """Adds files in object store.
 
     Since we need to collect all tree objects with modified children, a
     recursively approach is applied
@@ -182,7 +183,7 @@ class MemoryRepo(_MemoryRepo):
     self.object_store.add_object(cur)
 
   def add_files(self, new_files, tree=None):
-    """Add files to repository.
+    """Adds files to repository.
 
     Args:
       new_files: List of (file path, mode, file content)
@@ -209,7 +210,7 @@ class MemoryRepo(_MemoryRepo):
     return tree
 
   def list_files(self, path):
-    """List files under specific path.
+    """Lists files under specific path.
 
     Args:
       path: the path of dir
@@ -234,7 +235,7 @@ class MemoryRepo(_MemoryRepo):
 
 
 def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
-  """Get change id from information of commit.
+  """Gets change id from information of commit.
 
   Implemented by referencing common .git/hooks/commit-msg script with some
   modification, this function is used to generate hash as a Change-Id based on
@@ -269,7 +270,7 @@ def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
 def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
              commit_msg, reviewers=None, cc=None, auto_approved=False,
              repo=None):
-  """Create a CL from adding files in specified location.
+  """Creates a CL from adding files in specified location.
 
   Args:
     git_url: HTTPS repo url
@@ -322,15 +323,15 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
 
 
 def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
-  '''Get the branch HEAD tracks.
+  """Gets the branch HEAD tracks.
 
-  Use the gerrit API to get the branch name HEAD tracks.
+  Uses the gerrit API to get the branch name HEAD tracks.
 
   Args:
     git_url_prefix: HTTPS repo url
     project: Project name
     auth_cookie: Auth cookie
-  '''
+  """
 
   git_url = '{git_url_prefix}/projects/{project}/HEAD'.format(
       git_url_prefix=git_url_prefix, project=urllib.parse.quote(
@@ -346,7 +347,7 @@ def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
     raise GitUtilException('Invalid url %r' % (git_url, ))
 
   if r.status != http.client.OK:
-    raise GitUtilException('Request unsuccessfully with code %s' % (r.status, ))
+    raise GitUtilException(f'Request unsuccessfully with code {r.status}')
 
   try:
     # the response starts with a magic prefix line for preventing XSSI which
@@ -362,16 +363,16 @@ def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
 
 
 def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
-  '''Get branch commit.
+  """Gets branch commit.
 
-  Use the gerrit API to get the commit id.
+  Uses the gerrit API to get the commit id.
 
   Args:
     git_url_prefix: HTTPS repo url
     project: Project name
     branch: Branch name, use the branch HEAD tracks if set to None.
     auth_cookie: Auth cookie
-  '''
+  """
   branch = branch or GetCurrentBranch(git_url_prefix, project, auth_cookie)
 
   git_url = '{git_url_prefix}/projects/{project}/branches/{branch}'.format(
@@ -379,7 +380,6 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
           project, safe=''), branch=urllib.parse.quote(branch, safe=''))
   pool_manager = PoolManager(ca_certs=certifi.where())
   pool_manager.headers['Cookie'] = auth_cookie
-  pool_manager.headers['Content-Type'] = 'application/json'
   # Suppress ResourceWarning
   pool_manager.headers['Connection'] = 'close'
   try:
@@ -388,7 +388,7 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
     raise GitUtilException('Invalid url %r' % (git_url, ))
 
   if r.status != http.client.OK:
-    raise GitUtilException('Request unsuccessfully with code %s' % (r.status, ))
+    raise GitUtilException(f'Request unsuccessfully with code {r.status}')
 
   try:
     # the response starts with a magic prefix line for preventing XSSI which
@@ -404,6 +404,44 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
     raise GitUtilException('KeyError: %r' % str(ex))
 
   return commit_hash
+
+
+def GetFileContent(git_url_prefix: str, project: str, path: str,
+                   branch: Optional[str] = None,
+                   auth_cookie: Optional[str] = None) -> bytes:
+  """Gets file content on Gerrit.
+
+  Uses the gerrit API to get the file content.
+
+  Args:
+    git_url_prefix: HTTPS repo url.
+    project: Project name.
+    path: Path to the file.
+    branch: Branch name, use the branch HEAD tracks if set to None.
+    auth_cookie: Auth cookie.
+  """
+  branch = branch or GetCurrentBranch(git_url_prefix, project, auth_cookie)
+  project, branch, path = map(lambda s: urllib.parse.quote(s, safe=''),
+                              (project, branch, path))
+  git_url = (f'{git_url_prefix}/projects/{project}/branches/{branch}/files/'
+             f'{path}/content')
+  pool_manager = PoolManager(ca_certs=certifi.where())
+  if auth_cookie:
+    pool_manager.headers['Cookie'] = auth_cookie
+  # Suppress ResourceWarning
+  pool_manager.headers['Connection'] = 'close'
+  try:
+    r = pool_manager.urlopen('GET', git_url)
+  except urllib3.exceptions.HTTPError:
+    raise GitUtilException('Invalid url %r' % (git_url, ))
+
+  if r.status != http.client.OK:
+    raise GitUtilException(f'Request unsuccessfully with code {r.status}')
+
+  try:
+    return base64.b64decode(r.data)
+  except Exception:
+    raise GitUtilException('Response format Error: %r' % (r.data, ))
 
 
 class CLStatus(enum.Enum):
@@ -433,7 +471,7 @@ class CLInfo(NamedTuple):
 
 def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
               include_detailed_accounts=False):
-  """Get the info of the specified CL by querying the Gerrit API.
+  """Gets the info of the specified CL by querying the Gerrit API.
 
   Args:
     review_host: Base URL to the API endpoint.
@@ -492,7 +530,7 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
 
 
 def AbandonCL(review_host, auth_cookie, change_id):
-  """Abandon a CL
+  """Abandons a CL
 
   Args:
     review_host: Review host of repo

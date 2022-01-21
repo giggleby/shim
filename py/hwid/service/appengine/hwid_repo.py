@@ -22,6 +22,17 @@ class HWIDDBMetadata(NamedTuple):
 
 _INTERNAL_REPO_URL = 'https://chrome-internal-review.googlesource.com'
 _CHROMEOS_HWID_PROJECT = 'chromeos/chromeos-hwid'
+_PROJECTS_YAML_PATH = 'projects.yaml'
+
+
+def _ParseMetadata(raw_metadata):
+  metadata_yaml = yaml.safe_load(raw_metadata)
+  hwid_db_metadata_of_name = {}
+  for name, hwid_db_info in metadata_yaml.items():
+    hwid_db_metadata_of_name[name] = HWIDDBMetadata(name, hwid_db_info['board'],
+                                                    hwid_db_info['version'],
+                                                    hwid_db_info['path'])
+  return hwid_db_metadata_of_name
 
 
 class HWIDRepoError(Exception):
@@ -30,7 +41,6 @@ class HWIDRepoError(Exception):
 
 class HWIDRepo:
   _AVL_NAME_MAPPING_FOLDER = 'avl_name_mapping'
-  _PROJECTS_YAML_PATH = 'projects.yaml'
 
   def __init__(self, repo, repo_url, repo_branch):
     """Constructor.
@@ -147,21 +157,15 @@ class HWIDRepo:
   @type_utils.LazyProperty
   def _hwid_db_metadata_of_name(self):
     try:
-      raw_metadata = self._git_fs.ReadFile(self._PROJECTS_YAML_PATH)
+      raw_metadata = self._git_fs.ReadFile(_PROJECTS_YAML_PATH)
     except (KeyError, ValueError,
             filesystem_adapter.FileSystemAdapterException) as ex:
       raise HWIDRepoError(
-          f'failed to load {self._PROJECTS_YAML_PATH}: {ex}') from None
+          f'failed to load {_PROJECTS_YAML_PATH}: {ex}') from None
     try:
-      metadata_yaml = yaml.safe_load(raw_metadata)
-      hwid_db_metadata_of_name = {}
-      for name, hwid_db_info in metadata_yaml.items():
-        hwid_db_metadata_of_name[name] = HWIDDBMetadata(
-            name, hwid_db_info['board'], hwid_db_info['version'],
-            hwid_db_info['path'])
-      return hwid_db_metadata_of_name
+      return _ParseMetadata(raw_metadata)
     except Exception as ex:
-      raise HWIDRepoError(f'invalid {self._PROJECTS_YAML_PATH}: {ex}') from None
+      raise HWIDRepoError(f'invalid {_PROJECTS_YAML_PATH}: {ex}') from None
 
 
 HWIDDBCLStatus = git_util.CLStatus
@@ -209,10 +213,25 @@ class HWIDRepoManager:
     return HWIDDBCLInfo(cl_info.status, cl_info.messages)
 
   def GetMainCommitID(self):
-    """Fetch the latest commit ID of the main branch on the upstream."""
+    """Fetches the latest commit ID of the main branch on the upstream."""
     return git_util.GetCommitId(_INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
                                 auth_cookie=git_util.GetGerritAuthCookie())
 
-  def AbandonCL(self, cl_number):
+  def GetHWIDDBMetadata(self, project: str) -> HWIDDBMetadata:
+    """Gets the metadata from HWID repo."""
+    project = project.upper()
+    metadata = _ParseMetadata(self.GetFileContent(_PROJECTS_YAML_PATH))
+    if project not in metadata:
+      raise KeyError(f'Project: "{project}" does not exist in the repo.')
+    return metadata[project]
+
+  def GetFileContent(self, path: str) -> str:
+    """Gets the file content from HWID repo."""
+    return git_util.GetFileContent(
+        _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
+        auth_cookie=git_util.GetGerritAuthCookie()).decode()
+
+  def AbandonCL(self, cl_number: int):
+    """Abandons the given CL number."""
     return git_util.AbandonCL(_INTERNAL_REPO_URL,
                               git_util.GetGerritAuthCookie(), cl_number)

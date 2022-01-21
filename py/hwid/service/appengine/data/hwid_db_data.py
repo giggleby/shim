@@ -90,6 +90,7 @@ class HWIDDBDataManager:
       TooManyHWIDDBError: If we have more than one metadata entry
           for the given project.
     """
+    project = project.upper()
     with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = HWIDDBMetadata.query(HWIDDBMetadata.project == project)
       if q.count() == 0:
@@ -121,10 +122,24 @@ class HWIDDBDataManager:
           'HWID file missing for the requested project: %r' % e)
     return raw_hwid_yaml
 
-  def UpdateProjects(self, live_hwid_repo: hwid_repo.HWIDRepo,
-                     hwid_db_metadata_list: List[hwid_repo.HWIDDBMetadata],
-                     delete_missing=True):
-    """Updates the set of supported projects to be exactly the list provided.
+  def UpdateProjectContent(self, project: str, content: str):
+    """Updates HWID DB content
+
+    Args:
+      project: Project name.
+      content: New HWID DB content.
+    """
+    project = project.upper()
+    self._fs_adapter.WriteFile(self._LivePath(project), content)
+
+  def UpdateProjectsByRepo(
+      self, live_hwid_repo: hwid_repo.HWIDRepo,
+      hwid_db_metadata_list: List[hwid_repo.HWIDDBMetadata],
+      delete_missing=True):
+    """Updates project contents with a live repo.
+
+    Updates the set of supported projects to be exactly the list provided with
+    a live HWID repo.
 
     Args:
       live_hwid_repo: A HWIDRepo instance that provides access to chromeos-hwid
@@ -185,7 +200,7 @@ class HWIDDBDataManager:
     except HWIDDBNotFoundError:
       with self._ndb_connector.CreateClientContextWithGlobalCache():
         metadata = HWIDDBMetadata(board=board, project=project, version=version,
-                                  path=f'v{version}/{project}')
+                                  path=project)
         metadata.put()
     else:
       with self._ndb_connector.CreateClientContextWithGlobalCache():

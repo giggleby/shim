@@ -135,8 +135,8 @@ class SelfServiceHelper:
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     try:
       metadata = live_hwid_repo.GetHWIDDBMetadataByName(request.project)
-      self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata],
-                                                delete_missing=False)
+      self._hwid_db_data_manager.UpdateProjectsByRepo(
+          live_hwid_repo, [metadata], delete_missing=False)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
           limit_models=[request.project])
 
@@ -184,8 +184,8 @@ class SelfServiceHelper:
       # Load HWID DB
       try:
         metadata = live_hwid_repo.GetHWIDDBMetadataByName(firmware_record.model)
-        self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata],
-                                                  delete_missing=False)
+        self._hwid_db_data_manager.UpdateProjectsByRepo(
+            live_hwid_repo, [metadata], delete_missing=False)
         self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
             limit_models=[firmware_record.model])
         action = self._hwid_action_manager.GetHWIDAction(firmware_record.model)
@@ -368,15 +368,10 @@ Info Update
     return response
 
   def GetHWIDBundleResourceInfo(self, request):
-    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     try:
-      try:
-        metadata = live_hwid_repo.GetHWIDDBMetadataByName(request.project)
-      except ValueError as ex:
-        # Treat the invalid project name as a project-not-found case.
-        raise KeyError from ex
-      self._hwid_db_data_manager.UpdateProjects(live_hwid_repo, [metadata],
-                                                delete_missing=False)
+      metadata = self._hwid_repo_manager.GetHWIDDBMetadata(request.project)
+      content = self._hwid_repo_manager.GetFileContent(metadata.path)
+      self._hwid_db_data_manager.UpdateProjectContent(request.project, content)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
           limit_models=[request.project])
 

@@ -113,7 +113,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         hwid_db_metadata_list = [
             x for x in hwid_db_metadata_list if x.name in limit_models
         ]
-      self.hwid_db_data_manager.UpdateProjects(
+      self.hwid_db_data_manager.UpdateProjectsByRepo(
           live_hwid_repo, hwid_db_metadata_list, delete_missing=not do_limit)
 
     except hwid_repo.HWIDRepoError as ex:

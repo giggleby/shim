@@ -8,9 +8,7 @@ import tempfile
 import textwrap
 import unittest
 
-# pylint: disable=wrong-import-order, import-error
-from dulwich import objects as dulwich_objects
-# pylint: enable=wrong-import-order, import-error
+from dulwich import objects as dulwich_objects  # pylint: disable=wrong-import-order, import-error
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import git_util
@@ -105,7 +103,16 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
     self.assertEqual(fetched_hwid_db_contents, sample_hwid_db_contents)
 
-  def testUpdateProjects(self):
+  def testUpdateProjectContent(self):
+    self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
+                                                     'will be updated')
+    self.hwid_db_data_manager.UpdateProjectContent('PROJECTA', 'updated data')
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadHWIDDB(
+            self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTA')),
+        'updated data')
+
+  def testUpdateProjectsByRepo(self):
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
                                                      'will be updated')
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDB', 'PROJECTB', '3',
@@ -131,7 +138,7 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     repo.do_commit(message=b'the head commit', tree=tree.id)
     hwid_repo_inst = hwid_repo.HWIDRepo(repo, '', '')
 
-    self.hwid_db_data_manager.UpdateProjects(
+    self.hwid_db_data_manager.UpdateProjectsByRepo(
         hwid_repo_inst, hwid_repo_inst.ListHWIDDBMetadata())
 
     projects = [

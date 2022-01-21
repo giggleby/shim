@@ -344,11 +344,11 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self._modules.ConfigHWID('PROJ', '3', '',
                              hwid_action_factory=CreateMockHWIDAction)
-    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 1')
+    self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 1')
     req1 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
         project='proj')
     resp1 = self._ss_helper.GetHWIDBundleResourceInfo(req1)
-    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 2')
+    self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 2')
     req2 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
         project='proj')
     resp2 = self._ss_helper.GetHWIDBundleResourceInfo(req2)
@@ -379,7 +379,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self._modules.ConfigHWID('PROJ', '3', 'db data',
                              hwid_action_factory=CreateMockHWIDAction)
-    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    self._ConfigHWIDRepoManager('PROJ', 3, 'db data')
     req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(project='proj')
     resp = self._ss_helper.GetHWIDBundleResourceInfo(req)
     # TODO(b/209362238): add selected components which require the AVL
@@ -483,6 +483,13 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.ListHWIDDBMetadata.return_value = [hwid_db_metadata]
     live_hwid_repo.LoadHWIDDBByName.return_value = db_contents
     live_hwid_repo.LoadHWIDDB.return_value = db_contents
+
+  def _ConfigHWIDRepoManager(self, project, version, db_contents):
+    hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
+                                                f'v{version}/{project}')
+    self._mock_hwid_repo_manager.GetFileContent.return_value = db_contents
+    self._mock_hwid_repo_manager.GetHWIDDBMetadata.return_value = (
+        hwid_db_metadata)
 
 
 if __name__ == '__main__':
