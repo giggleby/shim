@@ -41,12 +41,41 @@ document.
     config files might need to be changed according to your Linux distribution).
 
 ## Put Device Into Netboot Mode
-Find firmware blob `image-${MODEL}.net.bin` (which should be available in
-firmware archive, or you can build it locally).
 
+#### 1. Prepare netboot firmware
+
+Find firmware blob `image-${MODEL}.net.bin` which should be available in
+firmware archive, or you can build it locally.
+
+Local build netboot firmware:
 ```
-flashrom -p host -w image-${MODEL}.net.bin
+$ emerge-${BOARD} sys-boot/chromeos-bootimage
 ```
+
+You have to set the path to the `bootfile` and `argsfile` on local built netboot
+firmware with the following command:
+```
+$ bin/factory_env py/tools/netboot_firmware_settings.py \
+  -i /build/${BOARD}/firmware/image-${MODEL}.net.bin \
+  --bootfile chrome-bot/${MODEL}/vmlinuz \
+  --argsfile chrome-bot/${MODEL}/cmdline
+  -o image-${MODEL}.net.bin
+```
+
+#### 2. Flash netboot firmware
+
+You can use Servo to flash the netboot firmware:
+```
+(chroot)$ cros ap flash -b $BOARD -i image-${MODEL}.net.bin
+```
+
+or run `flashrom` on DUT:
+```
+(dut)$ flashrom -p host -w image-${MODEL}.net.bin
+```
+
+After flash netboot firmware,the device will boot into netboot mode
+automatically.
 
 Alternatively, you can also install **dev firmware** (`image-${MODEL}.dev.bin`)
 to the device, and press `Ctrl + N` in the developer screen to enter netboot
@@ -54,13 +83,16 @@ mode. This effectively runs the same netboot code as full netboot firmware.
 
 ## Setup TFTP server
 
+You can choose to use Dome or `dnsmasq` to setup the TFTP server.
+
 ### Setup TFTP server with Dome
 
 If your network infrastructure already has a DHCP server, you can setup the TFTP
 server from Dome UI with the following steps:
 
 1. Upload the `vmlinuz` kernel (and `netboot_cmdline` file if needed) to Umpire.
-2. Select the ☆ button (use this bundle's netboot resource) at the bundle.
+2. Select the "NETBOOT" button (use this bundle's netboot resource) at the
+bundle.
 3. Enable **TFTP server** in Dome config page.
 
 By default this will create a TFTP folder at `/cros_docker/tftp/`, and the
@@ -144,8 +176,7 @@ cp -r netboot/tftp/* /var/tftp/
 **Note:** Some boards might call vmlinuz as "vmlinux.bin".
 ***
 
-### Start DHCP & TFTP server
-
+Start DHCP & TFTP server
 ```
 sudo dnsmasq -d -C /var/tftp/dnsmasq.conf
 ```
@@ -166,8 +197,6 @@ As we mentioned above, you can extract netboot firmware and vmlinuz from
 factory.zip.  Or, if you'd like to use a specific version of firmware, you can
 download it by selecting `FIRMWARE_IMAGE_ARCHIVE` in above steps.
 
-### Build Netboot Kernel
-
 If you want to build the netboot kernel from source, do this inside chroot:
 
 ```
@@ -184,15 +213,12 @@ emerge-${BOARD} factory factory_installer
 cd ~/trunk/src/scripts
 ./build_images --board "${BOARD}"
 ./make_netboot.sh --board "${BOARD}"
-```
 
-*** note
-If you need to add any USE flags while building kernel, add USE flags to
-environment variables.
-```
+# If you need to add any USE flags while building kernel, add USE flags to
+# environment variables:
 USE="..." ./make_netboot.sh --board "${BOARD}"
 ```
-***
+
 
 And find the netboot kernel in
 `../build/images/${BOARD}/latest/netboot/vmlinuz`.
@@ -204,9 +230,12 @@ select your project and upload the images for deployment.
 
 To do that, you can create a complete [Bundle](BUNDLE.md), or deploy only files
 you need to testing and development.
-
-* Required resources are `test_image`, `release_image`, `toolkit`, and
-    `netboot_kernel`.
+* Required resources:
+  * `test_image`: Extracted from `TEST_IMAGE_ARCHIVE`
+  * `release_image`: `RECOVERY_IMAGE`
+  * `toolkit`: Extracted from `FACTORY_IMAGE_ARCHIVE/toolkit`
+  * `netboot_kernel`: Extracted from
+  `FACTORY_IMAGE_ARCHIVE/factory_shim/netboot`
 * `complete`, `project_config`, `hwid`, and `firmware` are optional resources,
     but `hwid` and `firmware` are required in typical factory scenarios.
 
@@ -214,7 +243,7 @@ you need to testing and development.
 This section introduces the settings during the netboot process and how to
 customize them.
 
-### Factory server IP
+#### Factory server IP
 The factory server (Umpire) IP (e.g., `http://192.168.200.1:8080`) for the
 netboot kernel to download the image files. To specify this, you can do one
 of the following approaches:
@@ -225,15 +254,16 @@ of the following approaches:
     ../py/tools/netboot_firmware_settings.py). This will append the argument
     (`omahaserver=`) in kernel boot options (`cmdline`) for you.
 * Create a `omahaserver_${BOARD}.conf` under the TFTP root (for example,
-    `/var/tftp/omahaserver_zork.conf`), and set its content to the factory
+    `${TFTP_ROOT}/omahaserver_zork.conf`), and set its content to the factory
     server IP (for example, `http://192.168.200.1:8080`). This will override the
     `omahaserver` settings in kernel boot options.
 
-The default value is `CHROMEOS_AUSERVER` (typically `http://10.0.0.1:8080`).
+Default value: `CHROMEOS_AUSERVER` (typically `http://10.0.0.1:8080`).
 
 **This is a required argument for netboot process.**
 
-### TFTP server IP for firmware
+#### TFTP server IP for firmware
+
 The TFTP server IP to download the netboot kernel and kernel boot option file
 (`cmdline`) from. To specify this, you can do one of the following approaches:
 
@@ -242,14 +272,15 @@ The TFTP server IP to download the netboot kernel and kernel boot option file
     ../py/tools/netboot_firmware_settings.py). This will override the setting
     in DHCP message.
 
-The default value is the IP address of DHCP server.
+Default value: IP address of DHCP server.
 
-**This is a required argument if you have separate DHCP server and TFTP server.
-**
+**This is a required argument if you have separate DHCP server and TFTP
+server.**
 
-### Board name
+
+#### Board name (Optional)
 The board name of the device. This changes the path to the factory server IP
-config file on TFTP server (`/var/tftp/omahaserver_${BOARD}.conf`), so you can
+config file on TFTP server (`${TFTP_ROOT}/omahaserver_${BOARD}.conf`), so you can
 override the board name to connect to different factory server. To specify this,
 you can do one of the following approaches:
 
@@ -258,9 +289,9 @@ you can do one of the following approaches:
     ../py/tools/netboot_firmware_settings.py). This will append the argument
     (`cros_board=`) in kernel boot options (`cmdline`) for you.
 
-The Default value is the board name (`CHROMEOS_RELEASE_BOARD`) of the device.
+Default value: board name (`CHROMEOS_RELEASE_BOARD`) of the device.
 
-### Netboot kernel boot options
+#### Netboot kernel boot options (Optional)
 The boot options (`cmdline`) for the netboot kernel. To specify this, you can do
 one of the following approaches:
 
@@ -271,23 +302,22 @@ one of the following approaches:
     [netboot_firmware_settings.py](../py/tools/netboot_firmware_settings.py).
     **
 
-The default value is
-```
-lsm.module_locking=0 cros_netboot_ramfs cros_factory_install cros_secure
-cros_netboot
-```
+Default value:
+
+`lsm.module_locking=0 cros_netboot_ramfs cros_factory_install cros_secure
+cros_netboot`
 
 See [Debugging](#debugging) and [Skip Complete Prompt](#skip-complete-prompt)
 section for more information on kernel boot options.
 
-### TFTP server IP for netboot kernel
+#### TFTP server IP for netboot kernel (Optional)
 If you want to specify a different TFTP server IP for downloading
 `omahaserver_${BOARD}.conf` in netboot kernel, you can append
-`tftpserverip=${TFTP_SERVER_IP}` into the kernel boot options (`cmdline`). The
-default value is the TFTP server
-IP for downloading the netboot kernel.
+`tftpserverip=${TFTP_SERVER_IP}` into the kernel boot options (`cmdline`).
 
-### Path to netboot kernel
+Default value: TFTP server IP
+
+#### Path to netboot kernel (Optional)
 The path to the netboot kernel on TFTP server. To Specify this, you can do one
 of the following approaches:
 
@@ -296,18 +326,18 @@ of the following approaches:
     ../py/tools/netboot_firmware_settings.py). This overrides the setting in
     the DHCP message.
 
-The default value is `chrome-bot/{MODEL}/vmlinuz`.
+Default value: `chrome-bot/{MODEL}/vmlinuz`.
 
-### Path to netboot kernel boot options file
+#### Path to netboot kernel boot options file (Optional)
 The path to the netboot kernel boot options file (`cmdline`) on TFTP server.
 You can specify this by `--argsfile` argument in [netboot_firmware_settings.py](
     ../py/tools/netboot_firmware_settings.py).
 
-The default value is `chrome-bot/{MODEL}/cmdline`.
+Default value: `chrome-bot/{MODEL}/cmdline`.
 
 ## Debugging
 Create an additional `cmdline` in TFTP model folder to override default kernel
-boot options.  For example, in `/var/tftp/chrome-bot/morphius/cmdline`:
+boot options.  For example, in `${TFTP_ROOT}/chrome-bot/morphius/cmdline`:
 
 ```
 lsm.module_locking=0 cros_netboot_ramfs cros_factory_install cros_secure
