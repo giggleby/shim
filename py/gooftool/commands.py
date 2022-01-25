@@ -55,6 +55,7 @@ from cros.factory.utils.type_utils import Error
 _global_gooftool = None
 _gooftool_lock = threading.Lock()
 _has_fpmcu = None
+WIPE_IN_PLACE = 'wipe_in_place'
 
 
 def GetGooftool(options):
@@ -604,14 +605,17 @@ def EnableReleasePartition(options):
   GetGooftool(options).EnableReleasePartition(options.release_rootfs)
 
 
-@Command('wipe_in_place',
-         CmdArg('--fast', action='store_true',
-                help='use non-secure but faster wipe method.'),
-         _shopfloor_url_args_cmd_arg,
-         _station_ip_cmd_arg,
-         _station_port_cmd_arg,
-         _wipe_finish_token_cmd_arg,
-         _test_umount_cmd_arg)
+@Command(
+    WIPE_IN_PLACE,
+    CmdArg('--fast', action='store_true',
+           help='use non-secure but faster wipe method.'),
+    _shopfloor_url_args_cmd_arg,
+    _skip_list_cmd_arg,
+    _station_ip_cmd_arg,
+    _station_port_cmd_arg,
+    _wipe_finish_token_cmd_arg,
+    _test_umount_cmd_arg,
+)
 def WipeInPlace(options):
   """Start factory wipe directly without reboot."""
 
@@ -980,7 +984,7 @@ def Finalize(options):
   LogSystemDetails(options)
   UploadReport(options)
 
-  event_log.Log('wipe_in_place')
+  event_log.Log(WIPE_IN_PLACE)
   wipe_args = []
   if options.shopfloor_url:
     wipe_args += ['--shopfloor_url', options.shopfloor_url]
@@ -992,7 +996,9 @@ def Finalize(options):
     wipe_args += ['--station_port', options.station_port]
   if options.wipe_finish_token:
     wipe_args += ['--wipe_finish_token', options.wipe_finish_token]
-  ExecFactoryPar('gooftool', 'wipe_in_place', *wipe_args)
+  if options.skip_list:
+    wipe_args += ['--skip_list'] + options.skip_list
+  ExecFactoryPar('gooftool', WIPE_IN_PLACE, *wipe_args)
 
 
 @Command('verify_hwid',

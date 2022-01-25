@@ -101,6 +101,7 @@ import yaml
 
 from cros.factory.device import device_utils
 from cros.factory.device.links import ssh
+from cros.factory.gooftool import commands
 from cros.factory.test import device_data
 from cros.factory.test.env import paths
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
@@ -399,7 +400,13 @@ class Finalize(test_case.TestCase):
 
   def _FinalizeWipeInPlace(self, command):
     if self.dut.link.IsLocal():
-      self._CallGoofTool(command)
+      success = self._CallGoofTool(command)
+      if not success:
+        raise type_utils.TestFailure(f'DUT Failed to run {command!r}')
+
+      if commands.WIPE_IN_PLACE in self.args.gooftool_skip_list:
+        return
+
       # Wipe-in-place will terminate all processes that are using stateful
       # partition, this test should be killed at here.
       self.Sleep(self.FINALIZE_TIMEOUT)
