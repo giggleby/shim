@@ -228,7 +228,7 @@ class HWIDRepoManager:
   def GetFileContent(self, path: str) -> str:
     """Gets the file content from HWID repo."""
     return git_util.GetFileContent(
-        _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
+        _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path, self._repo_branch,
         auth_cookie=git_util.GetGerritAuthCookie()).decode()
 
   def AbandonCL(self, cl_number: int):
