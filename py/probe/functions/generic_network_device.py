@@ -116,7 +116,7 @@ class NetworkDevices:
 
     def _ParseDbusArray(dbus_array):
       if not dbus_array:
-        return None
+        return []
       # convert_dbus_value transform the dbus array into a string.
       # E.g. dbus.Array([dbus.String('cellular'), dbus.String('wifi')])
       # will transform into '[\n    cellular\n    wifi\n]'
