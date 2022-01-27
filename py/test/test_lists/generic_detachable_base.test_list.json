@@ -1,0 +1,10 @@
+{
+  "inherit": [
+    "generic_common.test_list"
+  ],
+  "definitions": {
+    "UpdateDetachableBase": {
+      "pytest_name": "update_detachable_base"
+    }
+  }
+}

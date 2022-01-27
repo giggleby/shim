@@ -72,6 +72,7 @@ If explicitly supplying detachable base info (Krane for example)::
 
 import logging
 import re
+import subprocess
 import time
 
 from cros.factory.device import device_utils
@@ -151,9 +152,29 @@ class UpdateDetachableBaseTest(test_case.TestCase):
       tp_info = self.usb_info.GetTouchpadInfo()
       ec_info = self.usb_info.GetBaseInfo()
       fw_info = self.usb_info.GetFirmwareInfo(self.args.ec_image_path)
+      key_version = self.GetDetachableKeyVersion()
 
-      self.VerifyBaseInfo(ec=ec_info, tp=tp_info, fw=fw_info)
+      self.VerifyBaseInfo(ec=ec_info, tp=tp_info, fw=fw_info,
+                          key_version=key_version)
       session.console.info('Detachable base verification done.')
+
+  def GetDetachableKeyVersion(self, retry_times=3):
+    '''Gets the firmware version on the detachable base.
+
+    Gets the firmware version via hammer_info.py with retry.
+    '''
+    for unused_i in range(retry_times):
+      try:
+        key_version = process_utils.CheckOutput(
+            ['hammer_info.py', 'key_version'])
+        return int(key_version)
+      except subprocess.CalledProcessError as e:
+        if e.returncode != 3:
+          self.fail(
+              f'hammer_info.py failed (exit status {e.returncode}): {e.stderr}')
+        time.sleep(0.5)
+    self.fail(
+        f'Failed to get detachable base version over {retry_times} time(s)')
 
   def runTest(self):
     self.ui.SetState(_('Please connect the detachable base.'))
@@ -231,7 +252,7 @@ class UpdateDetachableBaseTest(test_case.TestCase):
       self.FailTask('Hammerd update failed (exit status %d). Please check '
                     '/var/log/hammerd.log for detail.' % e.returncode)
 
-  def VerifyBaseInfo(self, ec, tp, fw):
+  def VerifyBaseInfo(self, ec, tp, fw, key_version):
     """Verify base is updated properly by comparing its attributes with the
     target FW.
 
@@ -239,6 +260,7 @@ class UpdateDetachableBaseTest(test_case.TestCase):
       ec: A dictionary of the on-board EC info.
       tp: A dictionary of the on-board touchpad info.
       fw: A dictionary of the target EC FW info.
+      key_version: Int number represents the version of the signing key.
     """
     self.assertEqual(
         ec['ro_version'], fw['ro']['version'],
@@ -254,8 +276,12 @@ class UpdateDetachableBaseTest(test_case.TestCase):
         % (tp['tp_vendor'], [hex(x) for x in VENDOR_IDS]))
     self.assertNotEqual(
         tp['tp_fw_checksum'], '0x0000',
-        'Touchpad may not be properly updated: checksum %s (unexpected).'
-        % (tp['tp_fw_checksum']))
+        'Touchpad may not be properly updated: checksum %s (unexpected).' %
+        (tp['tp_fw_checksum']))
+    self.assertGreaterEqual(
+        key_version, 3,
+        'key version not greater or higher than MP (>= 3), used key version: %d'
+        % key_version)
 
   def BaseIsReady(self):
     try:
