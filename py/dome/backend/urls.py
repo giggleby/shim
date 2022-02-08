@@ -38,6 +38,7 @@ urlpatterns = [
     url(r'^config/(?P<id>\d+)/$', views.ConfigView.as_view()),
     url(r'^files/$', views.FileCollectionView.as_view()),
     url(r'^info$', views.InfoView.as_view()),
+    url(r'^project_ports/$', views.ProjectPortCollectionView.as_view()),
     url(r'^projects/$', views.ProjectCollectionView.as_view()),
     url(r'^projects/%s/$' % PROJECT_URL_ARG,
         views.ProjectElementView.as_view()),

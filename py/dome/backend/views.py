@@ -25,6 +25,7 @@ from backend.serializers import LogDownloadSerializer
 from backend.serializers import LogSerializer
 from backend.serializers import ParameterComponentSerializer
 from backend.serializers import ParameterDirectorySerializer
+from backend.serializers import ProjectPortSerializer
 from backend.serializers import ProjectSerializer
 from backend.serializers import ResourceSerializer
 from backend.serializers import ServiceSerializer
@@ -110,6 +111,21 @@ class ProjectCollectionView(generics.ListCreateAPIView):
 
   queryset = Project.objects.all()
   serializer_class = ProjectSerializer
+
+
+class ProjectPortCollectionView(generics.ListCreateAPIView):
+
+  serializer_class = ProjectPortSerializer
+
+  def get(self, request):
+    """Override parent's method."""
+    del request  # Unused.
+    project_list = Project.ListAllEnabledProject().all().order_by('umpire_port')
+    serializer = ProjectPortSerializer(project_list, many=True)
+    return Response({
+        'all_ports': serializer.data,
+        'max_port_offset': Project.GetMaxPortOffset(),
+    })
 
 
 class ProjectElementView(mixins.DestroyModelMixin,

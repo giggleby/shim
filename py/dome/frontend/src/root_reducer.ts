@@ -8,6 +8,7 @@ import {FormStateMap, reducer as reduxFormReducer} from 'redux-form';
 import auth from '@app/auth';
 import bundle from '@app/bundle';
 import config from '@app/config';
+import dashboard from '@app/dashboard';
 import domeApp from '@app/dome_app';
 import error from '@app/error';
 import formDialog from '@app/form_dialog';
@@ -25,6 +26,7 @@ const appReducer = wrapReducer(combineReducers({
   [auth.constants.NAME]: auth.reducer,
   [bundle.constants.NAME]: bundle.reducer,
   [config.constants.NAME]: config.reducer,
+  [dashboard.constants.NAME]: dashboard.reducer,
   [domeApp.constants.NAME]: domeApp.reducer,
   [error.constants.NAME]: error.reducer,
   [formDialog.constants.NAME]: formDialog.reducer,

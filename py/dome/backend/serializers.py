@@ -74,6 +74,13 @@ class ProjectSerializer(serializers.ModelSerializer):
     return Project.UpdateOne(instance, **validated_data)
 
 
+class ProjectPortSerializer(serializers.ModelSerializer):
+
+  class Meta:
+    model = Project
+    fields = ['name', 'umpire_port']
+
+
 class ResourceSerializer(serializers.Serializer):
 
   type = serializers.CharField()

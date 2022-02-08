@@ -47,6 +47,7 @@ UMPIRE_INSTALOG_PULL_SOCKET_PORT_OFFSET = 6
 UMPIRE_START_WAIT_SECS = 5
 UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET = 8
 UMPIRE_DKPS_PORT_OFFSET = 9
+UMPIRE_MAX_PORT_OFFSET = 19
 
 # TODO(littlecvr): use volume container instead of absolute path.
 # TODO(littlecvr): these constants are shared between here and cros_docker.sh,
@@ -394,6 +395,14 @@ class Project(django.db.models.Model):
   @staticmethod
   def GetProjectByName(project_name):
     return Project.objects.get(pk=project_name)
+
+  @staticmethod
+  def ListAllEnabledProject():
+    return Project.objects.filter(umpire_enabled=True)
+
+  @staticmethod
+  def GetMaxPortOffset():
+    return UMPIRE_MAX_PORT_OFFSET
 
   def UploadAndDeployConfig(self, config):
     """Upload and deploy config atomically."""

@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import {createAction} from 'typesafe-actions';
+
 import project from '@app/project';
 import {UmpireSetting} from '@app/project/types';
+import {Dispatch} from '@app/types';
+import {authorizedAxios} from '@common/utils';
+
+import {PortResponse} from './types';
 
 export const disableUmpire = (projectName: string) => (
   project.actions.updateProject(
@@ -19,3 +25,15 @@ export const enableUmpireWithSettings =
       {umpireEnabled: true, ...umpireSettings},
       `Enable Umpire for project "${projectName}"`)
   );
+
+const receivePorts = createAction('RECEIVE_PORTS', (resolve) =>
+  (ports: PortResponse[]) => resolve({ports}));
+
+export const basicActions = {
+  receivePorts
+};
+
+export const fetchPorts = () => async (dispatch: Dispatch) => {
+  const response = await authorizedAxios().get<PortResponse[]>('/project_ports');
+  dispatch(receivePorts(response.data));
+};

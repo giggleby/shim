@@ -21,7 +21,7 @@ import {RootState} from '@app/types';
 
 import {DispatchProps} from '@common/types';
 
-import {disableUmpire, enableUmpireWithSettings} from '../actions';
+import {disableUmpire, enableUmpireWithSettings, fetchPorts} from '../actions';
 import {ENABLE_UMPIRE_FORM} from '../constants';
 
 import EnableUmpireForm from './enable_umpire_form';
@@ -41,6 +41,10 @@ class DashboardApp extends React.Component<DashboardAppProps> {
     } else {
       openEnableUmpireForm();
     }
+  }
+
+  componentDidMount() {
+    this.props.fetchPorts();
   }
 
   render() {
@@ -103,6 +107,7 @@ const mapStateToProps = (state: RootState) => ({
 });
 
 const mapDispatchToProps = {
+  fetchPorts,
   disableUmpire,
   enableUmpireWithSettings,
   openEnableUmpireForm: () => formDialog.actions.openForm(ENABLE_UMPIRE_FORM),
