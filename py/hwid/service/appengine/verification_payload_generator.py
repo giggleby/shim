@@ -191,6 +191,16 @@ class FloatToHexValueConverter(ValueConverter):
     return self._hex_to_hex_converter(value)
 
 
+class MissingComponentValueError(Exception):
+  """Some required component values are missing so that they should not be
+  converted by this generator."""
+
+
+class ProbeStatementConversionError(Exception):
+  """The given component values are considered invalid so that it cannot be
+  converted by this generator."""
+
+
 class _FieldRecord:
   """Record to describe the expected field and corresponding conversion method.
 
@@ -213,22 +223,55 @@ class _FieldRecord:
     self.value_converters = type_utils.MakeList(value_converters)
     self.is_optional = is_optional
 
+  def GenerateExpectedFields(self, comp_values: dict) -> typing.Optional[str]:
+    """Generates the expected field from a given component.
+
+    This function generates the expected field from a given component using
+    predefined fields and value converters.
+
+    If there are not any HWID fields found in `comp_values`, this function will
+    raise `MissingComponentValueError` if `is_optional` is `False`, otherwise
+    return `None`.  If there are zero or multiple HWID fields covertible with
+    the converters, this function will raise `ProbeStatementConversionError`,
+    otherwise return the converted value.
+    """
+    expected_field = []
+    valid_hwid_field_names = [
+        name for name in self.hwid_field_names if name in comp_values
+    ]
+    err = None
+    for hwid_field_name in valid_hwid_field_names:
+      for value_converter in self.value_converters:
+        try:
+          expected_field.append(value_converter(comp_values[hwid_field_name]))
+          break
+        except Exception as e:
+          if err is None:
+            err = e
+
+    if not expected_field:
+      if self.is_optional:
+        return None
+      if not valid_hwid_field_names:
+        raise MissingComponentValueError(
+            'Missing component value field(s) for field %r : %r.' %
+            (self.probe_statement_field_name, self.hwid_field_names))
+      raise ProbeStatementConversionError(
+          'Unable to convert the value of field %r : %r.' %
+          (self.probe_statement_field_name, err))
+    for value in expected_field:
+      if value != expected_field[0]:
+        raise ProbeStatementConversionError(
+            'Found multiple valid component value fields for field %r.' %
+            self.probe_statement_field_name)
+    return expected_field[0]
+
 
 class _SameNameFieldRecord(_FieldRecord):
   """FieldRecord with same HWID field name and probe statement field name."""
 
   def __init__(self, n, c, *args, **kwargs):
     super().__init__(n, n, c, *args, **kwargs)
-
-
-class MissingComponentValueError(Exception):
-  """Some required component values is missing so that they should not be
-  converted by this generator."""
-
-
-class ProbeStatementConversionError(Exception):
-  """The given component values is consider invalid so that it cannot be
-  converted by this generator."""
 
 
 class _ProbeStatementGenerator:
@@ -248,77 +291,34 @@ class _ProbeStatementGenerator:
 
   def TryGenerate(self, comp_name, comp_values, information=None):
 
-    def GenerateExpectedFields(field_converters):
-      expected_fields = {}
-
-      # Extract the fields for probe statement from the component values.
-      # If any of the required field is missing, raise the case.
-      converters = collections.defaultdict(list)
-      optional_converters = []
-      for fc in field_converters:
-        found_hwid_field_names = [
-            name for name in fc.hwid_field_names if name in comp_values
-        ]
-        if not found_hwid_field_names:
-          if fc.is_optional:
-            optional_converters.append(fc)
-            continue
-          raise MissingComponentValueError(
-              'missing component value field(s) for field %r : %r' %
-              (fc.probe_statement_field_name, fc.hwid_field_names))
-        if len(found_hwid_field_names) > 1:
-          found_hwid_vals = [
-              comp_values[name] for name in found_hwid_field_names
-          ]
-          if found_hwid_vals.count(found_hwid_vals[0]) != len(found_hwid_vals):
-            raise ProbeStatementConversionError(
-                'found multiple valid component value fields for field %r : %r)'
-                % (fc.probe_statement_field_name, found_hwid_field_names))
-        converters[found_hwid_field_names[0]].append(fc)
-
-      # Convert the format of each fields for the probe statement.  Raises the
-      # error if it fails.
-      for hwid_field_name, fcs in converters.items():
+    expected_fields_list = []
+    err = None
+    for fcs in self._field_converters:
+      counter = collections.Counter(fc.probe_statement_field_name for fc in fcs)
+      repeated_keys = [k for k in counter if counter[k] > 1]
+      if repeated_keys:
+        raise ValueError('Repeated probe_statement_field_name in '
+                         f'field_converters: {repeated_keys}.')
+      try:
+        expected_fields = {}
         for fc in fcs:
-          expected_field = None
-          for value_converter in fc.value_converters:
-            try:
-              expected_field = value_converter(comp_values[hwid_field_name])
-              break
-            except Exception as e:
-              err = e
-          if expected_field is None:
-            raise ProbeStatementConversionError(
-                'unable to convert the value of field %r to %r: %r' %
-                (hwid_field_name, fc.probe_statement_field_name, err))
-          if expected_fields.setdefault(fc.probe_statement_field_name,
-                                        expected_field) != expected_field:
-            raise ProbeStatementConversionError(
-                'found multiple valid component value fields for field %r' %
-                fc.probe_statement_field_name)
-      for fc in optional_converters:
-        expected_fields.setdefault(fc.probe_statement_field_name)
-
-      return expected_fields
-
-    expected_fields = []
-
-    try:
-      expected_fields = list(
-          map(GenerateExpectedFields, self._field_converters))
-    except Exception as e:
-      err = e
-    if not expected_fields:
+          expected_fields[fc.probe_statement_field_name] = \
+              fc.GenerateExpectedFields(comp_values)
+        expected_fields_list.append(expected_fields)
+      except Exception as e:
+        if err is None:
+          err = e
+    if not expected_fields_list:
       raise err
 
     try:
       return self._probe_statement_generator.GenerateProbeStatement(
-          comp_name, self._probe_function_name, expected_fields,
+          comp_name, self._probe_function_name, expected_fields_list,
           probe_function_argument=self._probe_function_argument,
           information=information)
     except Exception as e:
       raise ProbeStatementConversionError(
-          'unable to convert to the probe statement : %r' % e)
+          f'Unable to convert to the probe statement : {e!r}.')
 
 
 @type_utils.CachedGetter
