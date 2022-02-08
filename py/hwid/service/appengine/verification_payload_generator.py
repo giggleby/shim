@@ -191,6 +191,24 @@ class FloatToHexValueConverter(ValueConverter):
     return self._hex_to_hex_converter(value)
 
 
+class InputDeviceVendorValueConverter(ValueConverter):
+  ELAN_VID = '04F3'
+  RAYD_VID = '27A3'
+
+  def __init__(self):
+    self._str_converter = StrValueConverter()
+    self._hex_to_hex_converter = HexToHexValueConverter(4, has_prefix=False)
+
+  def __call__(self, value):
+    value = self._str_converter(value)
+    if re.match('ELAN[0-9]{4}:[0-9]{2}$', value) or re.match(
+        'ekth[0-9]{4}$', value):
+      return self._hex_to_hex_converter(self.ELAN_VID)
+    if value == 'Raydium Touchscreen':
+      return self._hex_to_hex_converter(self.RAYD_VID)
+    raise ValueError(f'Unknown input device id {value}.')
+
+
 class MissingComponentValueError(Exception):
   """Some required component values are missing so that they should not be
   converted by this generator."""
@@ -438,19 +456,39 @@ def GetAllProbeStatementGenerators():
       _SameNameFieldRecord('vendor', HexToHexValueConverter(
           4, has_prefix=False), is_optional=True),
   ]
+  input_device_fields_old = [
+      _FieldRecord(
+          ['hw_version', 'product_id'],
+          'product',
+          [
+              HexToHexValueConverter(4, has_prefix=False),
+              # raydium_ts
+              HexToHexValueConverter(8, has_prefix=True),
+              FloatToHexValueConverter(4),
+          ],
+          is_optional=True),
+      _FieldRecord(['id', 'vendor_id'], 'vendor', [
+          HexToHexValueConverter(4, has_prefix=False),
+          InputDeviceVendorValueConverter(),
+      ]),
+  ]
+  input_device_converters = [
+      input_device_fields,
+      input_device_fields_old,
+  ]
   all_probe_statement_generators['stylus'] = [
       _ProbeStatementGenerator(
-          'stylus', 'input_device', input_device_fields,
+          'stylus', 'input_device', input_device_converters,
           probe_function_argument={'device_type': 'stylus'}),
   ]
   all_probe_statement_generators['touchpad'] = [
       _ProbeStatementGenerator(
-          'touchpad', 'input_device', input_device_fields,
+          'touchpad', 'input_device', input_device_converters,
           probe_function_argument={'device_type': 'touchpad'}),
   ]
   all_probe_statement_generators['touchscreen'] = [
       _ProbeStatementGenerator(
-          'touchscreen', 'input_device', input_device_fields,
+          'touchscreen', 'input_device', input_device_converters,
           probe_function_argument={'device_type': 'touchscreen'}),
   ]
 
