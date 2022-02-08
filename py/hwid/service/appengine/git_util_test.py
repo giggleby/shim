@@ -255,9 +255,9 @@ class GitUtilTest(unittest.TestCase):
                       commit_msg, reviewers, ccs, True)
     mock_porcelain.push.assert_called_once_with(
         mock.ANY, url,
-        (f'HEAD:refs/for/{branch}%r=reviewer@email.com,cc=cc@email.com,'
-         f'l=Bot-Commit+1,l=Commit-Queue+2').encode('UTF-8'),
-        pool_manager=mock.ANY)
+        (f'HEAD:refs/for/refs/heads/{branch}%'
+         'r=reviewer@email.com,cc=cc@email.com,l=Bot-Commit+1,l=Commit-Queue+2'
+        ).encode('UTF-8'), pool_manager=mock.ANY)
 
 
 class GitFilesystemAdapterTest(unittest.TestCase):

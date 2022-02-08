@@ -311,7 +311,7 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     options += ['cc=' + email for email in cc]
   if auto_approved:
     options += ['l=Bot-Commit+1', 'l=Commit-Queue+2']
-  target_branch = 'refs/for/' + branch
+  target_branch = 'refs/for/refs/heads/' + branch
   if options:
     target_branch += '%' + ','.join(options)
 
