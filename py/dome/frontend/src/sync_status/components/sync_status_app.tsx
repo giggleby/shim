@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import Alert from '@mui/material/Alert';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
@@ -87,18 +88,30 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
       <Card>
         <CardHeader title="Sync Status" />
         <CardContent>
-        <Table aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell>Secondary Umpire URL</TableCell>
-              <TableCell>Sync Status</TableCell>
-              <TableCell>Last Timestamp</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {this.renderUpdate()}
-          </TableBody>
-        </Table>
+        {
+          Object.keys(this.state).length == 0 ?
+          (
+            <Alert severity="info">
+              You haven't set up the secondary umpire.
+              You can go to the "Dashboard &#62; Services &#62; umpireSync" section to set up it.
+            </Alert>
+          )
+          :
+          (
+            <Table aria-label="simple table">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Secondary Umpire URL</TableCell>
+                  <TableCell>Sync Status</TableCell>
+                  <TableCell>Last Timestamp</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {this.renderUpdate()}
+              </TableBody>
+            </Table>
+          )
+        }
         </CardContent>
       </Card>
     )
