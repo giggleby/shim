@@ -2773,6 +2773,13 @@ cros.factory.Goofy = class {
     UItitle.innerText = '';
     UItitle.appendChild(cros.factory.i18n.i18nLabelNode(testList.label));
 
+    // Adds a tooltip to the UItitle showing the full test list label.
+    const tooltip = new goog.ui.AdvancedTooltip(UItitle);
+    const element = tooltip.getElement();
+    element.appendChild(cros.factory.i18n.i18nLabelNode(testList.label));
+    tooltip.setHideDelayMs(cros.factory.NON_FAILING_TEST_HOVER_DELAY_MSEC);
+    this.tooltips.push(tooltip);
+
     this.rootPath = testList.path;
     this.addToNode(null, testList);
     // expandAll is necessary to get all the elements to actually be created
