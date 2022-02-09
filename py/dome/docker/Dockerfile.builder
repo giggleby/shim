@@ -7,8 +7,18 @@
 # dependencies. The dependencies are really big and we don't want to pull them
 # all into the running image since they are useless after the build.
 
+# To enter the bash of the container, run the following commands,
+# 0. DOME_PATH=/path/to/platform/factory/py/dome
+# 1. sudo docker build \
+#      --file ${DOME_PATH}/docker/Dockerfile.builder \
+#      --tag cros/dome-builder \
+#      --build-arg workdir=${DOME_PATH}/frontend/ \
+#      ${DOME_PATH}
+# 2. sudo docker run -it --rm cros/dome-builder bash
+# 3. Check environment, e.g. "npm -v" or "node -v".
+
 FROM node:10-slim
-MAINTAINER Mao Huang <littlecvr@google.com>
+LABEL maintainer="ChromeOS Factory Eng <chromeos-factory-eng@google.com>"
 
 # mixing ARG and ENV to make CMD able to use the variable, this technique is
 # described here: https://docs.docker.com/engine/reference/builder/#arg
@@ -19,7 +29,7 @@ WORKDIR "${workdir}"
 
 # copy package.json and pull in dependencies first, so we don't need to do this
 # again if package.json hasn't been modified
-COPY frontend/package.json frontend/package-lock.json "${workdir}/"
+COPY frontend/package.json frontend/package-lock.json "${workdir}"/
 
 RUN npm install && npm dedupe
 
