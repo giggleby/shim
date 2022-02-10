@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import datetime
+from typing import Optional, Sequence
 import unittest
 from unittest import mock
 
@@ -161,19 +163,36 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
 
+  def _CreateHWIDDBCLWithDefaults(
+      self, cl_number: int, status: hwid_repo.HWIDDBCLStatus,
+      messages: Optional[Sequence[hwid_repo.HWIDDBCLMessage]] = None,
+      mergeable: Optional[bool] = None,
+      created_time: Optional[datetime.datetime] = None
+  ) -> hwid_repo.HWIDDBCLInfo:
+    change_id = str(cl_number)
+    if mergeable is None:
+      mergeable = status == hwid_repo.HWIDDBCLStatus.NEW
+    created_time = created_time or datetime.datetime.utcnow()
+    messages = messages or []
+    return hwid_repo.HWIDDBCLInfo(change_id, cl_number, status, messages,
+                                  mergeable, created_time)
+
   def testBatchGetHWIDDBEditableSectionChangeCLInfo(self):
     all_hwid_commit_infos = {
         1:
-            hwid_repo.HWIDDBCLInfo(hwid_repo.HWIDDBCLStatus.NEW, []),
+            self._CreateHWIDDBCLWithDefaults(1, hwid_repo.HWIDDBCLStatus.NEW),
         2:
-            hwid_repo.HWIDDBCLInfo(hwid_repo.HWIDDBCLStatus.MERGED, []),
+            self._CreateHWIDDBCLWithDefaults(2,
+                                             hwid_repo.HWIDDBCLStatus.MERGED),
         3:
-            hwid_repo.HWIDDBCLInfo(hwid_repo.HWIDDBCLStatus.ABANDONED, []),
+            self._CreateHWIDDBCLWithDefaults(
+                3, hwid_repo.HWIDDBCLStatus.ABANDONED),
         4:
-            hwid_repo.HWIDDBCLInfo(hwid_repo.HWIDDBCLStatus.NEW, [
-                hwid_repo.HWIDDBCLComment('msg1', 'user1@email'),
-                hwid_repo.HWIDDBCLComment('msg2', 'user2@email'),
-            ])
+            self._CreateHWIDDBCLWithDefaults(
+                4, hwid_repo.HWIDDBCLStatus.NEW, messages=[
+                    hwid_repo.HWIDDBCLMessage('msg1', 'user1@email'),
+                    hwid_repo.HWIDDBCLMessage('msg2', 'user2@email'),
+                ])
     }
 
     def _MockGetHWIDDBCLInfo(cl_number):
@@ -203,6 +222,31 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status.status = cl_status.PENDING
     cl_status.comments.add(email='user1@email', message='msg1')
     cl_status.comments.add(email='user2@email', message='msg2')
+    self.assertEqual(resp, expected_resp)
+
+  def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonLegacyCLs(self):
+    long_time_ago = datetime.datetime.utcnow() - datetime.timedelta(days=365 *
+                                                                    9)
+    orig_cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=True,
+        created_time=long_time_ago)
+    abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=long_time_ago)
+
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [
+        orig_cl_info, abandoned_cl_info
+    ]
+
+    req = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+            cl_numbers=[2]))
+    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    expected_resp = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
+        ))
+
+    cl_status = expected_resp.cl_status.get_or_create(2)
+    cl_status.status = cl_status.ABANDONED
     self.assertEqual(resp, expected_resp)
 
   def testBatchGenerateAVLComponentName(self):

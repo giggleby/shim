@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """Provide functionalities to access the HWID DB repository."""
 
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 import yaml
 
@@ -168,14 +168,9 @@ class HWIDRepo:
       raise HWIDRepoError(f'invalid {_PROJECTS_YAML_PATH}: {ex}') from None
 
 
+HWIDDBCLInfo = git_util.CLInfo
 HWIDDBCLStatus = git_util.CLStatus
-
-HWIDDBCLComment = git_util.CLMessage
-
-
-class HWIDDBCLInfo(NamedTuple):
-  status: HWIDDBCLStatus
-  comments: List[HWIDDBCLComment]
+HWIDDBCLMessage = git_util.CLMessage
 
 
 class HWIDRepoManager:
@@ -202,15 +197,14 @@ class HWIDRepoManager:
     repo.shallow_clone(repo_url, repo_branch)
     return HWIDRepo(repo, repo_url, repo_branch)
 
-  def GetHWIDDBCLInfo(self, cl_number):
+  def GetHWIDDBCLInfo(self, cl_number) -> HWIDDBCLInfo:
     try:
-      cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, cl_number,
-                                   auth_cookie=git_util.GetGerritAuthCookie(),
-                                   include_detailed_accounts=True,
-                                   include_messages=True)
+      return git_util.GetCLInfo(_INTERNAL_REPO_URL, cl_number,
+                                auth_cookie=git_util.GetGerritAuthCookie(),
+                                include_detailed_accounts=True,
+                                include_messages=True, include_mergeable=True)
     except git_util.GitUtilException as ex:
       raise HWIDRepoError from ex
-    return HWIDDBCLInfo(cl_info.status, cl_info.messages)
 
   def GetMainCommitID(self):
     """Fetches the latest commit ID of the main branch on the upstream."""

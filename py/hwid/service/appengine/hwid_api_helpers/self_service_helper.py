@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import datetime
 import logging
 import re
 import textwrap
@@ -29,6 +30,9 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
     hwid_repo.HWIDDBCLStatus.ABANDONED:
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.ABANDONED,
 }
+
+_MAX_OPENED_HWID_DB_CL_AGE = datetime.timedelta(
+    days=365 * 3)  # A rough estimation of 3 years.
 
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
@@ -275,20 +279,45 @@ Info Update
 
     return resp
 
+  def _GetActiveHWIDDBEditableSectionChangeCLInfo(self, cl_number):
+    try:
+      cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
+    except hwid_repo.HWIDRepoError as ex:
+      logging.error('Failed to load the HWID DB CL info: %r.', ex)
+      return None
+
+    # TODO(yhong): Consider triggering legacy CL deprecation routine by
+    # cronjobs instead.
+    cl_age = datetime.datetime.utcnow() - cl_info.created_time
+    if (cl_info.status == hwid_repo.HWIDDBCLStatus.NEW and
+        cl_age > _MAX_OPENED_HWID_DB_CL_AGE):
+      try:
+        self._hwid_repo_manager.AbandonCL(cl_number)
+        cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
+      except hwid_repo.HWIDRepoError as ex:
+        logging.error(
+            'Caught unexpected exception while abandoning the '
+            'expired HWID DB CL: %r.', ex)
+        return None
+      if cl_info.status != hwid_repo.HWIDDBCLStatus.ABANDONED:
+        logging.error('CL abandon seems failed.  The status flag in the '
+                      'refetched CL info are not changed.')
+        return None
+    return cl_info
+
   def BatchGetHWIDDBEditableSectionChangeCLInfo(self, request):
     response = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
     for cl_number in request.cl_numbers:
-      try:
-        commit_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
-      except hwid_repo.HWIDRepoError as ex:
-        logging.error('Failed to load the HWID DB CL info: %r.', ex)
+      cl_info = self._GetActiveHWIDDBEditableSectionChangeCLInfo(cl_number)
+      if cl_info is None:
         continue
+
       cl_status = response.cl_status.get_or_create(cl_number)
       cl_status.status = _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS.get(
-          commit_info.status, cl_status.STATUS_UNSPECIFIC)
-      for comment in commit_info.comments:
+          cl_info.status, cl_status.STATUS_UNSPECIFIC)
+      for comment in cl_info.messages:
         cl_status.comments.add(email=comment.author_email,
                                message=comment.message)
     return response

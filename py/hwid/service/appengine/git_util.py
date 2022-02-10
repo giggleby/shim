@@ -11,7 +11,7 @@ import http.client
 import logging
 import os
 import time
-from typing import List, NamedTuple, Optional
+from typing import NamedTuple, Optional, Sequence, Tuple
 import urllib.parse
 
 # pylint: disable=import-error, no-name-in-module
@@ -20,7 +20,7 @@ from dulwich.client import HttpGitClient
 from dulwich.objects import Blob
 from dulwich.objects import Tree
 from dulwich import porcelain
-from dulwich.refs import strip_peeled_refs
+from dulwich import refs
 from dulwich.repo import MemoryRepo as _MemoryRepo
 import google.auth
 from google.auth import impersonated_credentials
@@ -30,7 +30,7 @@ import google.auth.transport.requests
 # pylint: enable=import-error, no-name-in-module
 # isort: split
 
-from urllib3 import PoolManager
+import urllib3
 import urllib3.exceptions
 
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -55,6 +55,95 @@ def _B(s):
 
 class GitUtilException(Exception):
   pass
+
+
+def _CreatePoolManager(cookie: str = '', content_type: str = '',
+                       keep_alive: bool = False) -> urllib3.PoolManager:
+  """Helps creating a pool manager instance.
+
+  Args:
+    cookie: If not empty, it sets the header field "Cookie" to the value.
+    content_type: If not empty, it sets the header field "Content-Type" to the
+      value.
+    keep_alive: If `True`, it sets the header field "Connection" to
+      "keep-alive"; Otherwise it sets the field to "close".
+
+  Returns:
+    A pool manager instance with proper configured header fields.
+  """
+  pool_manager = urllib3.PoolManager(ca_certs=certifi.where())
+  for header_field, header_value in (
+      ('Cookie', cookie),
+      ('Content-Type', content_type),
+      ('Connection', 'keep-alive' if keep_alive else 'close'),
+  ):
+    if header_value:
+      pool_manager.headers[header_field] = header_value
+  return pool_manager
+
+
+def _InvokeGerritAPI(method: str, url: str,
+                     params: Optional[Sequence[Tuple[str, str]]] = None,
+                     auth_cookie: str = '', content_type: str = '') -> bytes:
+  """Invokes a Gerrit API endpoint and returns the response in bytes.
+
+  Args:
+    method: The HTTP method like "GET" or "POST".
+    url: The URL of the API without HTTP parameters.
+    params: A list of HTTP parameters.
+    auth_cookie: The auth cookie uses to create the pool manager.
+    content_type: Specifies the content type in the request header.
+
+  Returns:
+    The response in bytes.
+
+  Raises:
+    GitUtilException: If the invocation ends unsuccessfully.
+  """
+  if params:
+    url = f'{url}?{urllib.parse.urlencode(params)}'
+
+  pool_manager = _CreatePoolManager(cookie=auth_cookie,
+                                    content_type=content_type)
+
+  try:
+    resp = pool_manager.urlopen(method, url)
+  except urllib3.exceptions.HTTPError as ex:
+    raise GitUtilException(f'Invalid url {url!r}.') from ex
+  if resp.status != http.client.OK:
+    raise GitUtilException(
+        f'Request {url!r} unsuccessfully with code {resp.status!r}.')
+
+  return resp.data
+
+
+def _InvokeGerritAPIJSON(method: str, url: str,
+                         params: Optional[Sequence[Tuple[str, str]]] = None,
+                         auth_cookie: str = ''):
+  """Invokes a Gerrit API endpoint and returns the response payload in JSON.
+
+  Args:
+    method: See `_InvokeGerritAPI`.
+    url: See `_InvokeGerritAPI`.
+    params: See `_InvokeGerritAPI`.
+    auth_cookie: See `_InvokeGerritAPI`.
+
+  Returns:
+    The JSON-compatible response payload.
+
+  Raises:
+    GitUtilException: If the invocation ends unsuccessfully.
+  """
+  raw_data = _InvokeGerritAPI(method, url, params=params,
+                              auth_cookie=auth_cookie,
+                              content_type='application/json')
+  try:
+    # the response starts with a magic prefix line for preventing XSSI which
+    # should be stripped.
+    stripped_json_bytes = raw_data.split(b'\n', 1)[1]
+    return json_utils.LoadStr(stripped_json_bytes)
+  except Exception as ex:
+    raise GitUtilException(f'Response format error: {raw_data!r}.') from ex
 
 
 class GitUtilNoModificationException(GitUtilException):
@@ -85,7 +174,7 @@ class GitFilesystemAdapter(filesystem_adapter.FileSystemAdapter):
     root = self._memory_repo[head_commit.tree]
     mode, sha = root.lookup_path(self._memory_repo.get_object, _B(path))
     if mode != NORMAL_FILE_MODE:
-      raise GitUtilException('Path %r is not a file' % (path, ))
+      raise GitUtilException(f'Path {path!r} is not a file.')
     return self._memory_repo[sha].data
 
   def _WriteFile(self, path, content):
@@ -109,12 +198,12 @@ class MemoryRepo(_MemoryRepo):
   """Enhance MemoryRepo with push ability."""
 
   def __init__(self, auth_cookie, *args, **kwargs):
-    """Init with auth_cookie."""
+    """Initializes with auth_cookie."""
     _MemoryRepo.__init__(self, *args, **kwargs)
     self.auth_cookie = auth_cookie
 
   def shallow_clone(self, remote_location, branch):
-    """Shallow clone objects of a branch from a remote server.
+    """Shallow clones objects of a branch from a remote server.
 
     Args:
       remote_location: String identifying a remote server
@@ -123,17 +212,14 @@ class MemoryRepo(_MemoryRepo):
 
     parsed = urllib.parse.urlparse(remote_location)
 
-    pool_manager = PoolManager(ca_certs=certifi.where())
-    pool_manager.headers['Cookie'] = self.auth_cookie
-    # Suppress ResourceWarning
-    pool_manager.headers['Connection'] = 'close'
+    pool_manager = _CreatePoolManager(cookie=self.auth_cookie)
 
     client = HttpGitClient.from_parsedurl(
         parsed, config=self.get_config_stack(), pool_manager=pool_manager)
     fetch_result = client.fetch(
         parsed.path, self, determine_wants=lambda mapping:
         [mapping[REF_HEADS_PREFIX + _B(branch)]], depth=1)
-    stripped_refs = strip_peeled_refs(fetch_result.refs)
+    stripped_refs = refs.strip_peeled_refs(fetch_result.refs)
     branches = {
         n[len(REF_HEADS_PREFIX):]: v
         for (n, v) in stripped_refs.items()
@@ -204,8 +290,8 @@ class MemoryRepo(_MemoryRepo):
       try:
         self.recursively_add_file(tree, paths, _B(filename), mode,
                                   Blob.from_string(_B(content)))
-      except GitUtilException:
-        raise GitUtilException('Invalid filepath %r' % file_path)
+      except GitUtilException as ex:
+        raise GitUtilException(f'Invalid filepath {file_path!r}.') from ex
 
     return tree
 
@@ -223,10 +309,10 @@ class MemoryRepo(_MemoryRepo):
     root = self[head_commit.tree]
     try:
       mode, sha = root.lookup_path(self.get_object, _B(path))
-    except KeyError:
-      raise GitUtilException('Path %r not found' % (path, ))
+    except KeyError as ex:
+      raise GitUtilException(f'Path {path!r} not found.') from ex
     if mode not in (None, DIR_MODE):  # None for root directory
-      raise GitUtilException('Path %r is not a directory' % (path, ))
+      raise GitUtilException(f'Path {path!r} is not a directory.')
     tree = self[sha]
     for name, mode, file_sha in tree.items():
       obj = self[file_sha]
@@ -254,17 +340,14 @@ def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
   """
 
   now = int(time.mktime(datetime.datetime.now().timetuple()))
-  change_msg = ('tree {tree_id}\n'
-                'parent {parent_commit}\n'
-                'author {author} {now}\n'
-                'committer {committer} {now}\n'
+  change_msg = (f'tree {tree_id}\n'
+                f'parent {parent_commit}\n'
+                f'author {author} {now}\n'
+                f'committer {committer} {now}\n'
                 '\n'
-                '{commit_msg}').format(
-                    tree_id=tree_id, parent_commit=parent_commit, author=author,
-                    committer=committer, now=now, commit_msg=commit_msg)
-  change_id_input = 'commit {size}\x00{change_msg}'.format(
-      size=len(change_msg), change_msg=change_msg)
-  return 'I{}'.format(hashlib.sha1(change_id_input.encode('utf-8')).hexdigest())
+                f'{commit_msg}')
+  change_id_input = f'commit {len(change_msg)}\x00{change_msg}'.encode('utf-8')
+  return f'I{hashlib.sha1(change_id_input).hexdigest()}'
 
 
 def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
@@ -301,8 +384,8 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
   change_id = _GetChangeId(updated_tree.id, repo.head(), author, committer,
                            commit_msg)
   repo.do_commit(
-      _B(commit_msg + '\n\nChange-Id: {change_id}'.format(change_id=change_id)),
-      author=_B(author), committer=_B(committer), tree=updated_tree.id)
+      _B(commit_msg + f'\n\nChange-Id: {change_id}'), author=_B(author),
+      committer=_B(committer), tree=updated_tree.id)
 
   options = []
   if reviewers:
@@ -315,10 +398,8 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
   if options:
     target_branch += '%' + ','.join(options)
 
-  pool_manager = PoolManager(ca_certs=certifi.where())
-  pool_manager.headers['Cookie'] = repo.auth_cookie
   porcelain.push(repo, git_url, HEAD + b':' + _B(target_branch),
-                 pool_manager=pool_manager)
+                 pool_manager=_CreatePoolManager(cookie=repo.auth_cookie))
   return change_id
 
 
@@ -331,32 +412,13 @@ def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
     git_url_prefix: HTTPS repo url
     project: Project name
     auth_cookie: Auth cookie
+
+  Raises:
+    GitUtilException if error occurs while querying the Gerrit API.
   """
-
-  git_url = '{git_url_prefix}/projects/{project}/HEAD'.format(
-      git_url_prefix=git_url_prefix, project=urllib.parse.quote(
-          project, safe=''))
-  pool_manager = PoolManager(ca_certs=certifi.where())
-  pool_manager.headers['Cookie'] = auth_cookie
-  pool_manager.headers['Content-Type'] = 'application/json'
-  # Suppress ResourceWarning
-  pool_manager.headers['Connection'] = 'close'
-  try:
-    r = pool_manager.urlopen('GET', git_url)
-  except urllib3.exceptions.HTTPError:
-    raise GitUtilException('Invalid url %r' % (git_url, ))
-
-  if r.status != http.client.OK:
-    raise GitUtilException(f'Request unsuccessfully with code {r.status}')
-
-  try:
-    # the response starts with a magic prefix line for preventing XSSI which
-    # should be stripped.
-    stripped_json = r.data.split(b'\n', 1)[1]
-    branch_name = json_utils.LoadStr(stripped_json)
-  except Exception:
-    raise GitUtilException('Response format Error: %r' % (r.data, ))
-
+  quoted_project = urllib.parse.quote(project, safe='')
+  git_url = f'{git_url_prefix}/projects/{quoted_project}/HEAD'
+  branch_name = _InvokeGerritAPIJSON('GET', git_url, auth_cookie=auth_cookie)
   if branch_name.startswith(REF_HEADS_PREFIX.decode()):
     branch_name = branch_name[len(REF_HEADS_PREFIX.decode()):]
   return branch_name
@@ -372,38 +434,21 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
     project: Project name
     branch: Branch name, use the branch HEAD tracks if set to None.
     auth_cookie: Auth cookie
+
+  Raises:
+    GitUtilException if error occurs while querying the Gerrit API.
   """
   branch = branch or GetCurrentBranch(git_url_prefix, project, auth_cookie)
 
-  git_url = '{git_url_prefix}/projects/{project}/branches/{branch}'.format(
-      git_url_prefix=git_url_prefix, project=urllib.parse.quote(
-          project, safe=''), branch=urllib.parse.quote(branch, safe=''))
-  pool_manager = PoolManager(ca_certs=certifi.where())
-  pool_manager.headers['Cookie'] = auth_cookie
-  # Suppress ResourceWarning
-  pool_manager.headers['Connection'] = 'close'
+  quoted_proj = urllib.parse.quote(project, safe='')
+  quoted_branch = urllib.parse.quote(branch, safe='')
+  git_url = f'{git_url_prefix}/projects/{quoted_proj}/branches/{quoted_branch}'
+  branch_info = _InvokeGerritAPIJSON('GET', git_url, auth_cookie=auth_cookie)
   try:
-    r = pool_manager.urlopen('GET', git_url)
-  except urllib3.exceptions.HTTPError:
-    raise GitUtilException('Invalid url %r' % (git_url, ))
-
-  if r.status != http.client.OK:
-    raise GitUtilException(f'Request unsuccessfully with code {r.status}')
-
-  try:
-    # the response starts with a magic prefix line for preventing XSSI which
-    # should be stripped.
-    stripped_json = r.data.split(b'\n', 1)[1]
-    branch_info = json_utils.LoadStr(stripped_json)
-  except Exception:
-    raise GitUtilException('Response format Error: %r' % (r.data, ))
-
-  try:
-    commit_hash = branch_info['revision']
+    return branch_info['revision']
   except KeyError as ex:
-    raise GitUtilException('KeyError: %r' % str(ex))
-
-  return commit_hash
+    raise GitUtilException(
+        f'Commit ID not found in the branch info: {branch_info}.') from ex
 
 
 def GetFileContent(git_url_prefix: str, project: str, path: str,
@@ -425,23 +470,11 @@ def GetFileContent(git_url_prefix: str, project: str, path: str,
                               (project, branch, path))
   git_url = (f'{git_url_prefix}/projects/{project}/branches/{branch}/files/'
              f'{path}/content')
-  pool_manager = PoolManager(ca_certs=certifi.where())
-  if auth_cookie:
-    pool_manager.headers['Cookie'] = auth_cookie
-  # Suppress ResourceWarning
-  pool_manager.headers['Connection'] = 'close'
+  raw_data = _InvokeGerritAPI('GET', git_url, auth_cookie=auth_cookie)
   try:
-    r = pool_manager.urlopen('GET', git_url)
-  except urllib3.exceptions.HTTPError:
-    raise GitUtilException('Invalid url %r' % (git_url, ))
-
-  if r.status != http.client.OK:
-    raise GitUtilException(f'Request unsuccessfully with code {r.status}')
-
-  try:
-    return base64.b64decode(r.data)
-  except Exception:
-    raise GitUtilException('Response format Error: %r' % (r.data, ))
+    return base64.b64decode(raw_data)
+  except Exception as ex:
+    raise GitUtilException(f'Response format error: {raw_data!r}.') from ex
 
 
 class CLStatus(enum.Enum):
@@ -466,11 +499,13 @@ class CLInfo(NamedTuple):
   change_id: str
   cl_number: int
   status: CLStatus
-  messages: Optional[List[CLMessage]]
+  messages: Optional[Sequence[CLMessage]]
+  mergeable: Optional[bool]
+  created_time: datetime.datetime
 
 
 def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
-              include_detailed_accounts=False):
+              include_detailed_accounts=False, include_mergeable=False):
   """Gets the info of the specified CL by querying the Gerrit API.
 
   Args:
@@ -480,6 +515,7 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
     include_messages: Whether to pull and return the CL messages.
     include_detailed_accounts: Whether to pull and return the email of users
         in CL messages.
+    include_mergeable: Whether to pull the mergeable status of the CL.
 
   Returns:
     An instance of `CLInfo`.  Optional fields might be `None`.
@@ -487,46 +523,51 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
   Raises:
     GitUtilException if error occurs while querying the Gerrit API.
   """
-  url = f'{review_host}/changes/{change_id}'
+  base_url = f'{review_host}/changes/{change_id}'
+  gerrit_resps = []
+
+  def GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]]):
+    resp = _InvokeGerritAPIJSON('GET', f'{base_url}{scope}', params,
+                                auth_cookie=auth_cookie)
+    gerrit_resps.append(resp)
+    return resp
+
   params = []
   if include_messages:
     params.append(('o', 'MESSAGES'))
   if include_detailed_accounts:
     params.append(('o', 'DETAILED_ACCOUNTS'))
-  if params:
-    url = url + '?' + urllib.parse.urlencode(params)
-  pool_manager = PoolManager(ca_certs=certifi.where())
-  pool_manager.headers['Cookie'] = auth_cookie
-  pool_manager.headers['Content-Type'] = 'application/json'
-  pool_manager.headers['Connection'] = 'close'
-  try:
-    r = pool_manager.urlopen('GET', url)
-  except urllib3.exceptions.HTTPError:
-    raise GitUtilException(f'invalid url {url}')
-  if r.status != http.client.OK:
-    raise GitUtilException(f'request unsuccessfully with code {r.status}')
+  cl_info_json = GetChangeInfo('', params)
 
-  try:
-    # the response starts with a magic prefix line for preventing XSSI which
-    # should be stripped.
-    stripped_json = r.data.split(b'\n', 1)[1]
-    json_data = json_utils.LoadStr(stripped_json)
-  except Exception:
-    raise GitUtilException('Response format Error: %r' % (r.data, ))
-
-  def _ConvertGerritCLMessage(json_data):
+  def ConvertGerritCLMessage(cl_message_info_json):
     return CLMessage(
-        json_data['message'],
-        json_data['author']['email'] if include_detailed_accounts else None)
+        cl_message_info_json['message'], cl_message_info_json['author']['email']
+        if include_detailed_accounts else None)
+
+  def ConvertGerritTimestamp(timestamp):
+    return datetime.datetime.strptime(timestamp[:-3], '%Y-%m-%d %H:%M:%S.%f')
+
+  def GetCLMergeableInfo(cl_status):
+    if cl_status != CLStatus.NEW:
+      return False
+    cl_mergeable_info_json = GetChangeInfo('/revisions/current/mergeable', [])
+    return cl_mergeable_info_json['mergeable']
 
   try:
-    return CLInfo(json_data['change_id'], json_data['_number'],
-                  _GERRIT_CL_STATUS_TO_CL_STATUS[json_data['status']],
-                  [_ConvertGerritCLMessage(x) for x in json_data['messages']]
-                  if include_messages else None)
+    cl_status = _GERRIT_CL_STATUS_TO_CL_STATUS[cl_info_json['status']]
+    cl_info_messages = (
+        list(map(ConvertGerritCLMessage, cl_info_json['messages']))
+        if include_messages else None)
+    cl_info_created_time = ConvertGerritTimestamp(cl_info_json['created'])
+    cl_info_mergeable = (
+        GetCLMergeableInfo(cl_status) if include_mergeable else None)
+    return CLInfo(cl_info_json['change_id'], cl_info_json['_number'], cl_status,
+                  cl_info_messages, cl_info_mergeable, cl_info_created_time)
+  except GitUtilException:
+    raise
   except Exception as ex:
-    logging.debug('Unexpected Gerrit API response for CL info: %r', json_data)
-    raise GitUtilException('failed to parse the Gerrit API response') from ex
+    logging.debug('Unexpected Gerrit API response for CL: %r.', gerrit_resps)
+    raise GitUtilException('Failed to parse the Gerrit API response.') from ex
 
 
 def AbandonCL(review_host, auth_cookie, change_id):
@@ -537,16 +578,12 @@ def AbandonCL(review_host, auth_cookie, change_id):
     auth_cookie: Auth cookie
     change_id: Change ID
   """
-
-  git_url = '{review_host}/a/changes/{change_id}/abandon'.format(
-      review_host=review_host, change_id=change_id)
-
-  pool_manager = PoolManager(ca_certs=certifi.where())
-  pool_manager.headers['Cookie'] = auth_cookie
-  fp = pool_manager.urlopen(method='POST', url=git_url)
-  if fp.status != http.client.OK:
-    logging.error('HTTP Status: %d', fp.status)
-    raise GitUtilException('Abandon failed for change id: %r' % (change_id, ))
+  try:
+    _InvokeGerritAPIJSON('POST', f'{review_host}/a/changes/{change_id}/abandon',
+                         auth_cookie=auth_cookie)
+  except GitUtilException as ex:
+    raise GitUtilException(
+        f'Abandon failed for change id: {change_id}.') from ex
 
 
 def GetGerritCredentials():
@@ -568,5 +605,4 @@ def GetGerritCredentials():
 
 def GetGerritAuthCookie():
   service_account_name, token = GetGerritCredentials()
-  return 'o=git-{service_account_name}={token}'.format(
-      service_account_name=service_account_name, token=token)
+  return f'o=git-{service_account_name}={token}'

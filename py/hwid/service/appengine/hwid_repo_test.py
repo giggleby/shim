@@ -3,14 +3,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import datetime
 import os
 from typing import Dict
 import unittest
 from unittest import mock
 
-# pylint: disable=wrong-import-order, import-error
-from dulwich import objects as dulwich_objects
-# pylint: enable=wrong-import-order, import-error
+from dulwich import objects as dulwich_objects  # pylint: disable=wrong-import-order, import-error
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -151,7 +150,8 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     expected_cl_number = 123
     self._mocked_create_cl.return_value = 'Ithis_is_change_id'
     self._mocked_get_cl_info.return_value = git_util.CLInfo(
-        'change_id', expected_cl_number, git_util.CLStatus.NEW, [])
+        'change_id', expected_cl_number, git_util.CLStatus.NEW, [], True,
+        datetime.datetime.utcnow())
 
     actual_cl_number = self._hwid_repo.CommitHWIDDB(
         'SBOARD', 'unused_test_str', 'unused_test_str', [], [], False)
@@ -175,19 +175,17 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
       self._hwid_repo_manager.GetHWIDDBCLInfo(123)
 
   def testGetHWIDDBCLInfo_Succeed(self):
-    self._mocked_get_cl_info.return_value = git_util.CLInfo(
-        'unused_change_id', 123, git_util.CLStatus.MERGED, [
-            git_util.CLMessage('msg1', 'email1'),
-            git_util.CLMessage('msg2', 'email2')
-        ])
+    cl_mergeable = False
+    cl_created_time = datetime.datetime.utcnow()
+    returned_cl_info = git_util.CLInfo('unused_change_id', 123,
+                                       git_util.CLStatus.MERGED, [
+                                           git_util.CLMessage('msg1', 'email1'),
+                                           git_util.CLMessage('msg2', 'email2')
+                                       ], cl_mergeable, cl_created_time)
+    self._mocked_get_cl_info.return_value = returned_cl_info
 
-    actual_commit_info = self._hwid_repo_manager.GetHWIDDBCLInfo(123)
-    expected_commit_info = hwid_repo.HWIDDBCLInfo(
-        hwid_repo.HWIDDBCLStatus.MERGED, [
-            hwid_repo.HWIDDBCLComment('msg1', 'email1'),
-            hwid_repo.HWIDDBCLComment('msg2', 'email2')
-        ])
-    self.assertEqual(actual_commit_info, expected_commit_info)
+    actual_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(123)
+    self.assertEqual(actual_cl_info, returned_cl_info)
 
 
 if __name__ == '__main__':

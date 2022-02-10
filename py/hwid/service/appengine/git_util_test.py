@@ -16,6 +16,7 @@ from dulwich.objects import Tree  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
+from cros.factory.utils import type_utils
 
 
 # pylint: disable=protected-access
@@ -72,7 +73,7 @@ class GitUtilTest(unittest.TestCase):
     tree = Tree()
     with self.assertRaises(git_util.GitUtilException) as ex:
       repo.add_files(new_files, tree)
-    self.assertEqual(str(ex.exception), "Invalid filepath 'a/b/c/d'")
+    self.assertEqual(str(ex.exception), "Invalid filepath 'a/b/c/d'.")
 
   def testInvalidFileStructure2(self):
     new_files = [
@@ -83,7 +84,7 @@ class GitUtilTest(unittest.TestCase):
     tree = Tree()
     with self.assertRaises(git_util.GitUtilException) as ex:
       repo.add_files(new_files, tree)
-    self.assertEqual(str(ex.exception), "Invalid filepath 'a/b/c'")
+    self.assertEqual(str(ex.exception), "Invalid filepath 'a/b/c'.")
 
   def testGetCommitId(self):
     git_url_prefix = 'https://chromium-review.googlesource.com'
@@ -94,7 +95,7 @@ class GitUtilTest(unittest.TestCase):
     commit = git_util.GetCommitId(git_url_prefix, project, branch, auth_cookie)
     self.assertRegex(commit, '^[0-9a-f]{40}$')
 
-  @mock.patch('cros.factory.hwid.service.appengine.git_util.PoolManager')
+  @mock.patch('urllib3.PoolManager')
   def testGetCommitIdFormatError(self, mocked_poolmanager):
     """Mock response and status to test if exceptions are raised."""
     git_url_prefix = 'dummy'
@@ -169,7 +170,7 @@ class GitUtilTest(unittest.TestCase):
          ('d', git_util.NORMAL_FILE_MODE, b'content of a/b/d'),
          ('e', git_util.DIR_MODE, None)])
 
-  @mock.patch('cros.factory.hwid.service.appengine.git_util.PoolManager')
+  @mock.patch('urllib3.PoolManager')
   def testGetCLInfo_BasicInfo(self, mocked_pool_manager):
     instance = mocked_pool_manager.return_value  # pool_manager instance
     instance.urlopen.return_value.status = http.client.OK
@@ -178,15 +179,17 @@ class GitUtilTest(unittest.TestCase):
         {
             "change_id": "change_id_value",
             "_number": 123,
-            "status": "MERGED"
+            "status": "MERGED",
+            "created": "2022-02-10 18:06:06.000000000"
         }
         """).encode('utf-8')
     actual_cl_info = git_util.GetCLInfo('unused_review_host', 'change_id_value')
-    expected_cl_info = git_util.CLInfo('change_id_value', 123,
-                                       git_util.CLStatus.MERGED, None)
+    expected_cl_info = git_util.CLInfo(
+        'change_id_value', 123, git_util.CLStatus.MERGED, None, None,
+        datetime.datetime(2022, 2, 10, 18, 6, 6, 0))
     self.assertEqual(actual_cl_info, expected_cl_info)
 
-  @mock.patch('cros.factory.hwid.service.appengine.git_util.PoolManager')
+  @mock.patch('urllib3.PoolManager')
   def testGetCLInfo_WithCLMessages(self, mocked_pool_manager):
     instance = mocked_pool_manager.return_value  # pool_manager instance
     instance.urlopen.return_value.status = http.client.OK
@@ -201,17 +204,19 @@ class GitUtilTest(unittest.TestCase):
                     "message": "msg1",
                     "author": { "_account_id": 123 }
                 }
-            ]
+            ],
+            "created": "2022-02-10 18:06:06.000000000"
         }
         """).encode('utf-8')
     actual_cl_info = git_util.GetCLInfo('unused_review_host', 'change_id_value',
                                         include_messages=True)
     expected_cl_info = git_util.CLInfo(
         'change_id_value', 123, git_util.CLStatus.MERGED,
-        messages=[git_util.CLMessage('msg1', None)])
+        messages=[git_util.CLMessage('msg1', None)], mergeable=None,
+        created_time=datetime.datetime(2022, 2, 10, 18, 6, 6, 0))
     self.assertEqual(actual_cl_info, expected_cl_info)
 
-  @mock.patch('cros.factory.hwid.service.appengine.git_util.PoolManager')
+  @mock.patch('urllib3.PoolManager')
   def testGetCLInfo_WithCLMessagesAndEmails(self, mocked_pool_manager):
     instance = mocked_pool_manager.return_value  # pool_manager instance
     instance.urlopen.return_value.status = http.client.OK
@@ -226,7 +231,8 @@ class GitUtilTest(unittest.TestCase):
                     "message": "msg1",
                     "author": { "email": "email1" }
                 }
-            ]
+            ],
+            "created": "2022-02-10 18:06:06.000000000"
         }
         """).encode('utf-8')
     actual_cl_info = git_util.GetCLInfo('unused_review_host', 'change_id_value',
@@ -234,7 +240,40 @@ class GitUtilTest(unittest.TestCase):
                                         include_detailed_accounts=True)
     expected_cl_info = git_util.CLInfo(
         'change_id_value', 123, git_util.CLStatus.MERGED,
-        messages=[git_util.CLMessage('msg1', 'email1')])
+        messages=[git_util.CLMessage('msg1', 'email1')], mergeable=None,
+        created_time=datetime.datetime(2022, 2, 10, 18, 6, 6, 0))
+    self.assertEqual(actual_cl_info, expected_cl_info)
+
+  @mock.patch('urllib3.PoolManager')
+  def testGetCLInfo_WithMergeableInfo(self, mocked_pool_manager):
+    instance = mocked_pool_manager.return_value  # pool_manager instance
+    cl_info_textdata = textwrap.dedent("""\
+        )]}
+        {
+            "change_id": "change_id_value",
+            "_number": 123,
+            "status": "NEW",
+            "created": "2022-02-10 18:06:06.000000000"
+        }
+        """)
+    cl_mergeable_info_text_data = textwrap.dedent("""\
+        )]}
+        {
+            "mergeable": true
+        }
+        """)
+    instance.urlopen.side_effect = [
+        type_utils.Obj(status=http.client.OK,
+                       data=cl_info_textdata.encode('utf-8')),
+        type_utils.Obj(status=http.client.OK,
+                       data=cl_mergeable_info_text_data.encode('utf-8')),
+    ]
+    actual_cl_info = git_util.GetCLInfo('unused_review_host', 'change_id_value',
+                                        include_mergeable=True)
+    expected_cl_info = git_util.CLInfo(
+        'change_id_value', 123, git_util.CLStatus.NEW,
+        messages=None, mergeable=True, created_time=datetime.datetime(
+            2022, 2, 10, 18, 6, 6, 0))
     self.assertEqual(actual_cl_info, expected_cl_info)
 
   @mock.patch('cros.factory.hwid.service.appengine.git_util.porcelain')
