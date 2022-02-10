@@ -2770,7 +2770,6 @@ cros.factory.Goofy = class {
 
     // Makes UItitle show current test list name.
     const UItitle = document.getElementById('goofy-logo-text');
-    UItitle.innerText = '';
     UItitle.appendChild(cros.factory.i18n.i18nLabelNode(testList.label));
 
     // Adds a tooltip to the UItitle showing the full test list label.
