@@ -1,19 +1,31 @@
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-"""Write cr50 whitelabel flags if this is a whitelabel device.
+"""Write cr50 flash info in SMT stage.
 
 Description
 -----------
-This test checks if current device is a whitelabel device.  If it is, the test
-writes cr50 whitelabel flags to cr50 flash.  Otherwise, the test does nothing.
+There are a few parameters:
+
+1. Is this MLB going to leave current factory, and be assembled in another
+   location?  Such as RMA centers or local OEM factories?  This is specified by
+   argument `mlb_mode`, default false.
+2. Is this an RMA spare board? This is specified by argument `rma_mode`, default
+   false.
+3. Is this a whitelabel device?  This is auto detected via `cros_config`.
+
+If `rma_mode=False`, `mlb_mode=False`, and it's not whitelabel device, this test
+does nothing. The cr50 flash info will be set in GRT stage.
+
+Otherwise, `gooftool cr50_smt_write_flash_info` is called. The command falls
+back to regular cr50 Board ID setting when the device is not a whitelabel
+device.
 
 Test Procedure
 --------------
 1. Call `cros_config` to check if current device is a whitelabel device.
 2. Log `is_whitelabel` and `whitelabel_tag`.
-3. If `is_whitelabel`, call `gooftool cr50_write_whitelabel_flags`.
+3. If `is_whitelabel` or `mlb_mode`, call `gooftool cr50_smt_write_flash_info`.
 
 Dependency
 ----------
@@ -28,6 +40,9 @@ Examples
 --------
 This test is added to SMTEnd test group by default.  If you want to place it at
 different timing, add "Cr50WriteWhitelabelFlags" test item to your test group.
+
+If you are manufacturing MLBs for RMA parts or LOEM projects, please set test
+list constant "mlb_mode" to true.
 """
 
 import functools
@@ -51,6 +66,10 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
           ('Whether this MLB is for RMA purpose or not.  Note that currently, '
            'rma_mode=false will override and DISABLE enable_zero_touch.'),
           default=False),
+      Arg('mlb_mode', bool,
+          ('Whether this MLB will be assembled in a different factory or not. '
+           'For example, original ODMs in an LOEM project should set this to '
+           'True.'), default=False)
   ]
 
   def setUp(self):
@@ -65,7 +84,7 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
     testlog.LogParam('is_whitelabel', is_whitelabel)
     testlog.LogParam('whitelabel_tag', whitelabel_tag)
 
-    if not is_whitelabel:
+    if not self.args.mlb_mode and not self.args.rma_mode and not is_whitelabel:
       return
 
     args = []
@@ -75,10 +94,11 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
     if self.args.rma_mode:
       args.append('--rma_mode')
 
+    # cr50_smt_write_flash_info implies mlb_mode, no need to set the argument.
+
     factory_tools = deploy_utils.CreateFactoryTools(self.dut)
     try:
-      factory_tools.CheckCall(
-          ['gooftool', 'cr50_write_whitelabel_flags', *args])
+      factory_tools.CheckCall(['gooftool', 'cr50_smt_write_flash_info', *args])
     except Exception:
       logging.exception('Failed to set cr50 whitelabel flags.')
       raise

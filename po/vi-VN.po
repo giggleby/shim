@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-03-15 18:14+CST\n"
+"PO-Revision-Date: 2022-02-17 14:17+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -172,8 +172,8 @@ msgid "Countdown"
 msgstr "Đếm ngược"
 
 #: ../build/pytests_label_generated.json
-msgid "CR50 Write Whitelabel Flags"
-msgstr "Viết CR50 Whitelabel Flags"
+msgid "CR50 SMT Write Flash Info"
+msgstr "SMT Viết CR50 Whitelabel Flags"
 
 #: ../build/pytests_label_generated.json
 msgid "Display"

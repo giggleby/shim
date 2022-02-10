@@ -561,9 +561,9 @@ def Cr50WriteFlashInfo(options):
   event_log.Log('cr50_write_flash_info')
 
 
-@Command('cr50_write_whitelabel_flags', _enable_zero_touch_cmd_arg,
+@Command('cr50_smt_write_flash_info', _enable_zero_touch_cmd_arg,
          _rma_mode_cmd_arg)
-def Cr50WriteWhitelabelFlags(options):
+def Cr50SMTWriteFlashInfo(options):
   """Call this function to set the cr50 fields in SMT stage.
 
   This is required if the MLB will leave factory after SMT stage, such as RMA
@@ -572,7 +572,7 @@ def Cr50WriteWhitelabelFlags(options):
   GetGooftool(options).Cr50WriteFlashInfo(
       enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
       mlb_mode=True)
-  event_log.Log('cr50_write_whitelabel_flags')
+  event_log.Log('cr50_smt_write_flash_info')
 
 
 @Command('cr50_disable_factory_mode')
