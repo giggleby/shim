@@ -134,6 +134,24 @@ class StandardizeUnittest(unittest.TestCase):
     self.assertEqual(yaml.safe_load('OFF'), 'OFF')
 
 
+class LinkAVLTest(unittest.TestCase):
+
+  def testAVLProbeValue_Load(self):
+    obj = yaml.safe_load('!link_avl {key: value}')
+    self.assertIsInstance(obj, rule.AVLProbeValue)
+    self.assertDictEqual({'key': 'value'}, obj)
+
+  def testAVLProbeValue_Dump(self):
+    obj = rule.AVLProbeValue({'key': 'value'})
+    dump_str = yaml.safe_dump(obj)
+    self.assertEqual('{key: value}\n', dump_str)
+
+  def testAVLProbeValue_DumpInternal(self):
+    obj = rule.AVLProbeValue({'key': 'value'})
+    dump_str = yaml.safe_dump(obj, internal=True)
+    self.assertEqual('!link_avl {key: value}\n', dump_str)
+
+
 @rule.RuleFunction(['string'])
 def StrLen():
   return len(rule.GetContext().string)

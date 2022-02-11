@@ -374,6 +374,10 @@ class Value:
         self.__class__.__name__, self.raw_value, self.is_re)
 
 
+class AVLProbeValue(dict):
+  """A class which holds the probe values linked with the ones on AVL"""
+
+
 def _Eval(expr, local):
   # Lazy import to avoid circular import problems.
   # These imports are needed to make sure all the rule functions needed by

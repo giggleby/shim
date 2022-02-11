@@ -30,6 +30,10 @@ class V3Dumper(SafeDumper):
   """A HWID v3 yaml Dumper for patch separation."""
 
 
+class V3DumperInternal(SafeDumper):
+  """A HWID v3 yaml Dumper for dumping unexposed tags for internal use."""
+
+
 # Because PyYaml can only represent scalar, sequence, mapping object, the
 # customized output format must be one of this:
 #   !custom_scalar_tag STRING
@@ -49,15 +53,24 @@ def _RemoveDummyStringWrapper(func):
   return wrapper
 
 
+def _OptionalInternalDumpers(func):
+
+  @functools.wraps(func)
+  def wrapper(*args, internal=False, **kwargs):
+    return func(*args, Dumper=V3DumperInternal if internal else V3Dumper,
+                **kwargs)
+
+  return wrapper
+
+
 # Patch functions to use V3Loader and V3Dumper.  safe_load does not accept the
 # argument Loader, so we have to achieve this by customizing yaml.load.
 safe_load = functools.partial(load, Loader=V3Loader)
 safe_load_all = functools.partial(load_all, Loader=V3Loader)
 add_constructor = functools.partial(add_constructor, Loader=V3Loader)
-safe_dump = _RemoveDummyStringWrapper(functools.partial(dump, Dumper=V3Dumper))
-safe_dump_all = _RemoveDummyStringWrapper(
-    functools.partial(dump_all, Dumper=V3Dumper))
-add_representer = functools.partial(add_representer, Dumper=V3Dumper)
+safe_dump = _RemoveDummyStringWrapper(_OptionalInternalDumpers(dump))
+safe_dump_all = _RemoveDummyStringWrapper(_OptionalInternalDumpers(dump_all))
+add_representer = _OptionalInternalDumpers(add_representer)
 
 
 # Override existing YAML tags to disable some auto type conversion.
@@ -94,13 +107,18 @@ def _HWIDStrPresenter(yaml_dumper, data):
 
 
 add_representer(str, _HWIDStrPresenter)
+add_representer(str, _HWIDStrPresenter, internal=True)
+
 
 # The following register customized YAML tags.
-
 # pylint: disable=abstract-method
 class _HWIDV3YAMLTagHandler(yaml_utils.BaseYAMLTagHandler):
-  LOADER = V3Loader
-  DUMPER = V3Dumper
+  LOADERS = (V3Loader, )
+  DUMPERS = (V3Dumper, V3DumperInternal)
+
+  @classmethod
+  def IsDumperInternal(cls, dumper):
+    return isinstance(dumper, V3DumperInternal)
 
 
 # The dictionary class for the HWID database object.
@@ -115,7 +133,7 @@ class _DefaultMappingHandler(_HWIDV3YAMLTagHandler):
   def YAMLConstructor(cls, loader, node, deep=False):
     if not isinstance(node, nodes.MappingNode):
       raise constructor.ConstructorError(
-          None, None, 'expected a mapping node, but found %s' % node.id,
+          None, None, 'Expected a mapping node, but found %s.' % node.id,
           node.start_mark)
     mapping = cls.TARGET_CLASS()
     for key_node, value_node in node.value:
@@ -124,13 +142,13 @@ class _DefaultMappingHandler(_HWIDV3YAMLTagHandler):
         hash(key)
       except TypeError:
         raise constructor.ConstructorError(
-            'while constructing a mapping', node.start_mark,
-            'found unacceptable key (%s)' % key, key_node.start_mark)
+            'While constructing a mapping', node.start_mark,
+            'found unacceptable key (%s).' % key, key_node.start_mark)
       value = loader.construct_object(value_node, deep=deep)
       if key in mapping:
         raise constructor.ConstructorError(
-            'while constructing a mapping', node.start_mark,
-            'found duplicated key (%s)' % key, key_node.start_mark)
+            'While constructing a mapping', node.start_mark,
+            'found duplicated key (%s).' % key, key_node.start_mark)
       mapping[key] = value
     return mapping
 
@@ -266,7 +284,7 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
     if isinstance(node, nodes.ScalarNode):
       if node.value:
         raise constructor.ConstructorError(
-            'expected empty scalar node, but got %r' % node.value)
+            'Expected empty scalar node, but got %r.' % node.value)
       return cls.TARGET_CLASS()
 
     status_lists = _DefaultMappingHandler.YAMLConstructor(
@@ -315,3 +333,26 @@ class _RegexpYAMLTagHandler(_HWIDV3YAMLTagHandler):
     if data.is_re:
       return dumper.represent_scalar(cls.YAML_TAG, data.raw_value)
     return dumper.represent_data(data.raw_value)
+
+
+class _LinkAVLYAMLTagHandler(_HWIDV3YAMLTagHandler):
+  YAML_TAG = '!link_avl'
+  TARGET_CLASS = rule.AVLProbeValue
+
+  @classmethod
+  def YAMLConstructor(cls, loader, node, deep=False):
+    # TODO(clarkchung): Consider creating another customized loader
+    # (e.g. V3LoaderInternal) here and keep V3Loader unaware of this syntax.
+    if not isinstance(node, nodes.MappingNode):
+      raise constructor.ConstructorError(
+          f'Expected an mapping node, but got {node.value!r}.')
+
+    existing_values = _DefaultMappingHandler.YAMLConstructor(
+        loader, node, deep=True)
+    return cls.TARGET_CLASS(existing_values)
+
+  @classmethod
+  def YAMLRepresenter(cls, dumper, data):
+    if cls.IsDumperInternal(dumper):
+      return dumper.represent_mapping(cls.YAML_TAG, data)
+    return dumper.represent_mapping('tag:yaml.org,2002:map', data)

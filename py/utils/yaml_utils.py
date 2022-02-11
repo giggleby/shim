@@ -12,17 +12,19 @@ import yaml
 class BaseYAMLTagHandlerMetaclass(type):
   def __init__(cls, *args, **kwargs):
     if cls.YAML_TAG is not None and cls.TARGET_CLASS is not None:
-      yaml.add_constructor(cls.YAML_TAG, cls.YAMLConstructor, Loader=cls.LOADER)
-      yaml.add_representer(cls.TARGET_CLASS, cls.YAMLRepresenter,
-                           Dumper=cls.DUMPER)
+      for loader in cls.LOADERS:
+        yaml.add_constructor(cls.YAML_TAG, cls.YAMLConstructor, Loader=loader)
+      for dumper in cls.DUMPERS:
+        yaml.add_representer(cls.TARGET_CLASS, cls.YAMLRepresenter,
+                             Dumper=dumper)
     super(BaseYAMLTagHandlerMetaclass, cls).__init__(*args, **kwargs)
 
 
 class BaseYAMLTagHandler(metaclass=BaseYAMLTagHandlerMetaclass):
   YAML_TAG = None
   TARGET_CLASS = None
-  LOADER = yaml.SafeLoader
-  DUMPER = yaml.SafeDumper
+  LOADERS = (yaml.SafeLoader, )
+  DUMPERS = (yaml.SafeDumper, )
 
   @classmethod
   def YAMLConstructor(cls, loader, node, deep=False):
