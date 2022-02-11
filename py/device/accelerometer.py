@@ -83,14 +83,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
         scale=True)
     self.num_signals = 3  # (x, y, z).
     self.location = location
-    self.trigger_path = None
 
     self.iio_bus_id = self._device.path.basename(self._iio_path)
-
-    trigger_name = self._GetSysfsValue('trigger/current_trigger')
-    self.trigger_path = sensor_utils.FindDevice(
-        self._device, self._device.path.join(_IIO_DEVICES_PATH, 'trigger*'),
-        name=trigger_name)
 
     scan_elements_path = os.path.join(
         _IIO_DEVICES_PATH, self.iio_bus_id, 'scan_elements')
@@ -119,8 +113,17 @@ class AccelerometerController(sensor_utils.BasicSensorController):
   def GetData(self, capture_count=1, sample_rate=20):
     """Returns average values of the sensor data.
 
-    First, trigger the capture:
-      echo 1 > /sys/bus/iio/devices/trigger0/trigger_now
+    First, disable the buffer and write settings:
+      echo 0 > /sys/bus/iio/devices/iio:devicesX/buffer/enable
+      echo 1 > /sys/bus/iio/devices/iio:devicesX/scan_elements/in_accel_x_en
+      echo 1 > /sys/bus/iio/devices/iio:devicesX/scan_elements/in_accel_y_en
+      echo 1 > /sys/bus/iio/devices/iio:devicesX/scan_elements/in_accel_z_en
+      echo 0 > /sys/bus/iio/devices/iio:devicesX/scan_elements/in_timestamp_en
+      echo <rate> > /sys/bus/iio/devices/iio:devicesX/sampling_frequency
+      echo <interval> > /sys/bus/iio/devices/iio:devicesX/buffer/hwfifo_timeout
+
+    then enable the buffer:
+      echo 1 > /sys/bus/iio/devices/iio:devicesX/buffer/enable
 
     Then get the captured data from /dev/iio:deviceX.
 
@@ -139,6 +142,19 @@ class AccelerometerController(sensor_utils.BasicSensorController):
       Raises AccelerometerException if there is no calibration
       value in VPD.
     """
+    self._SetSysfsValue('buffer/enable', '0')
+    settings_to_write = {
+        'scan_elements/in_accel_x_en': '1',
+        'scan_elements/in_accel_y_en': '1',
+        'scan_elements/in_accel_z_en': '1',
+        'scan_elements/in_timestamp_en': '0',
+        'sampling_frequency': str(sample_rate),
+        'buffer/hwfifo_timeout': str(1 / sample_rate),
+    }
+    for file, value in settings_to_write.items():
+      self._SetSysfsValue(file, value)
+    self._SetSysfsValue('buffer/enable', '1')
+
     # Each accelerometer data is 2 bytes and there are
     # 3 signals, so the buffer lenght of one record is 6 bytes.
     # The default order is in_accel_(x|y|z).
@@ -160,7 +176,6 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     retry_count_per_record = 0
     max_retry_count_per_record = 3
     while data_captured < capture_count:
-      self._SetSysfsValue('trigger_now', '1', path=self.trigger_path)
       # To prevent obtaining repeated data, add delay between each capture.
       # In addition, need to wait some time after set trigger_now to get
       # the raw data.
