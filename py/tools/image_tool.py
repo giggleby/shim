@@ -208,7 +208,8 @@ class SysUtils:
 
     process = subprocess.run(commands, check=False, **kargs)
     if process.returncode != 0 and log_stderr_on_error:
-      print('command: %r stderr:\n%s' % (commands, process.stderr))
+      print('command: %r stdout:\n %s\nstderr:\n%s' %
+            (commands, process.stdout, process.stderr))
     if check:
       process.check_returncode()
     return process.stdout if output else process.returncode
@@ -1933,33 +1934,41 @@ class ChromeOSFactoryBundle:
 
     # Set active test_list
     if active_test_list:
-      with tempfile.NamedTemporaryFile('w') as config_file:
+      with SysUtils.TempDirectory() as config_dir:
+        config_file_name = os.path.join(config_dir, 'config_file')
         try:
-          CrosPayloadUtils.InstallComponents(
-              json_path, config_file.name, PAYLOAD_TYPE_TOOLKIT_CONFIG,
-              silent=True)
-          config = json.load(config_file)
+          CrosPayloadUtils.InstallComponents(json_path, config_file_name,
+                                             PAYLOAD_TYPE_TOOLKIT_CONFIG,
+                                             silent=True)
+          with open(config_file_name, 'r') as config_file:
+            config = json.load(config_file)
         except Exception:
           config = {}
         config.update({'active_test_list': {'id': active_test_list}})
-        SysUtils.WriteFile(config_file,
-                           json.dumps(config, indent=2, separators=(',', ': ')))
+        new_config_file_name = os.path.join(config_dir, 'new_config_file')
+        with open(new_config_file_name, 'w') as config_file:
+          SysUtils.WriteFile(
+              config_file, json.dumps(config, indent=2, separators=(',', ': ')))
         CrosPayloadUtils.ReplaceComponent(
-            json_path, PAYLOAD_TYPE_TOOLKIT_CONFIG, config_file.name)
+            json_path, PAYLOAD_TYPE_TOOLKIT_CONFIG, new_config_file_name)
 
     # Update lsb_factory payload.
-    with tempfile.NamedTemporaryFile('w') as lsb_file:
-      CrosPayloadUtils.InstallComponents(
-          json_path, lsb_file.name, PAYLOAD_TYPE_LSB_FACTORY, silent=True)
+    with SysUtils.TempDirectory() as lsb_dir:
+      lsb_file_name = os.path.join(lsb_dir, 'lsb_file')
+      CrosPayloadUtils.InstallComponents(json_path, lsb_file_name,
+                                         PAYLOAD_TYPE_LSB_FACTORY, silent=True)
 
-      lsb = LSBFile(lsb_file.name)
+      lsb = LSBFile(lsb_file_name)
       lsb.SetValue('FACTORY_INSTALL_FROM_USB', '1')
       lsb.SetValue('FACTORY_INSTALL_ACTION_COUNTDOWN', 'true')
       lsb.SetValue('FACTORY_INSTALL_COMPLETE_PROMPT', 'true')
       lsb.SetValue('RMA_AUTORUN', 'true')
-      SysUtils.WriteFile(lsb_file, lsb.AsRawData() + '\n')
-      CrosPayloadUtils.ReplaceComponent(
-          json_path, PAYLOAD_TYPE_LSB_FACTORY, lsb_file.name)
+
+      new_lsb_file_name = os.path.join(lsb_dir, 'new_lsb_file')
+      with open(new_lsb_file_name, 'w') as lsb_file:
+        SysUtils.WriteFile(lsb_file, lsb.AsRawData() + '\n')
+      CrosPayloadUtils.ReplaceComponent(json_path, PAYLOAD_TYPE_LSB_FACTORY,
+                                        new_lsb_file_name)
 
     payloads_size = SysUtils.GetDiskUsage(payloads_dir)
     print('cros_payloads size: %s M' % (payloads_size // MEGABYTE))
