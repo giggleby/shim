@@ -58,7 +58,6 @@ from cros.factory.test import test_ui
 from cros.factory.test.utils import evdev_utils
 from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils.type_utils import Enum
 
@@ -94,45 +93,42 @@ class StylusTest(test_case.TestCase):
 
   ARGS = [
       Arg('device_filter', (int, str, list), 'Stylus input event id, evdev '
-          'name, or evdev events.',
-          default=None),
+          'name, or evdev events.', default=None),
       Arg('error_margin', int,
           'Maximum tolerable distance to the diagonal line (in pixel).',
           default=25),
-      Arg('begin_ratio', float,
+      Arg(
+          'begin_ratio', float,
           'The beginning position of the diagonal line segment to check. '
-          'Should be in (0, 1).',
-          default=0.01),
-      Arg('end_ratio', float,
+          'Should be in (0, 1).', default=0.01),
+      Arg(
+          'end_ratio', float,
           'The ending position of the diagonal line segment to check. '
-          'Should be in (0, 1).',
-          default=0.99),
-      Arg('step_ratio', float,
+          'Should be in (0, 1).', default=0.99),
+      Arg(
+          'step_ratio', float,
           'If the distance between an input event to the latest accepted '
           'input event is larger than this size, it would be ignored. '
-          'Should be in (0, 1).',
-          default=0.01),
-      Arg('endpoints_ratio', list,
+          'Should be in (0, 1).', default=0.01),
+      Arg(
+          'endpoints_ratio', list,
           'A list of two pairs, each pair contains the X and Y coordinates '
           'ratio of an endpoint of the line segment for operator to draw. '
           'Both endpoints must be on the border '
-          '(e.g., X=0 or X=1 or Y=0 or Y=1).',
-          default=[[0, 1], [1, 0]]),
-      Arg('autostart', bool,
+          '(e.g., X=0 or X=1 or Y=0 or Y=1).', default=[[0, 1], [1, 0]]),
+      Arg(
+          'autostart', bool,
           'Starts the test automatically without prompting.  Operators can '
-          'still press ESC to fail the test.',
-          default=False),
+          'still press ESC to fail the test.', default=False),
       Arg('flush_interval', float,
-          'The time interval of flushing event buffers.',
-          default=0.1),
-      Arg('angle_compensation', Enum([0, 90, 180, 270]),
-          'Specify one of the following angles to compensate UI orientation '
-          'in counter-clockwise direction: [0, 90, 180, 270].  '
-          'This is a special argument that should be changed only when '
-          'panel scanout orientation is different from default system '
-          'orientation, e.g. panel scanout is following portrait direction but '
-          'system default orientation is in landscape mode.',
-          default=0)
+          'The time interval of flushing event buffers.', default=0.1),
+      Arg(
+          'angle_compensation', Enum([0, 90, 180, 270]),
+          'Specify a degree to compensate the orientation difference between '
+          'panel and system in counter-clockwise direction. It is used when '
+          'panel scanout is different from default system orientation, i.e., '
+          'a angle difference between the instruction line displayed on '
+          'screen and the position read from evdev.', default=0)
   ]
 
   def setUp(self):
@@ -165,6 +161,7 @@ class StylusTest(test_case.TestCase):
     if self._dispatcher is not None:
       self._dispatcher.close()
     self._device.ungrab()
+    self._SetInternalDisplayRotation(-1)
 
   def runTest(self):
     self.ui.BindStandardFailKeys()
@@ -176,7 +173,12 @@ class StylusTest(test_case.TestCase):
           id='msg')
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
 
-    self._daemon = process_utils.StartDaemonThread(target=self.CheckRotation)
+    self._SetInternalDisplayRotation(self.args.angle_compensation)
+    # Waits the screen rotates, then starts the test.
+    self.Sleep(1)
+    self.ui.CallJSFunction('setupStylusTest', self.args.error_margin,
+                           self.args.begin_ratio, self.args.end_ratio,
+                           self.args.step_ratio, self.args.endpoints_ratio)
     self._device = evdev_utils.DeviceReopen(self._device)
     self._device.grab()
     self._monitor = StylusMonitor(self._device, self.ui)
@@ -187,31 +189,14 @@ class StylusTest(test_case.TestCase):
       self._monitor.Flush()
       self.Sleep(self.args.flush_interval)
 
-  def CheckRotation(self):
-    last_rotation = None
-    angle_compensation = self.args.angle_compensation
-    rotate_msg = {
-        (90  + angle_compensation) % 360: _('clockwise'),
-        (180 + angle_compensation) % 360: _('upside down'),
-        (270 + angle_compensation) % 360: _('counterclockwise')
-    }
+  def _SetInternalDisplayRotation(self, degree):
+    # degree should be one of [0, 90, 180, 270, -1], where -1 means auto-rotate
+    display_id = self._GetInternalDisplayInfo()['id']
+    self._state.DeviceSetDisplayProperties(display_id, {"rotation": degree})
 
-    while True:
-      rotation = self._state.DeviceGetDisplayInfo()[0]['rotation']
-
-      if last_rotation == rotation:
-        pass
-      elif rotation in rotate_msg:
-        # Wrong rotation
-        self.ui.CallJSFunction('hideStylusTest')
-        self.ui.SetHTML(
-            _('Please rotate the device: {msg}', msg=rotate_msg[rotation]),
-            id='msg')
-      else:
-        self.ui.CallJSFunction('setupStylusTest',
-                               self.args.error_margin, self.args.begin_ratio,
-                               self.args.end_ratio, self.args.step_ratio,
-                               self.args.endpoints_ratio)
-
-      last_rotation = rotation
-      self.Sleep(0.5)
+  def _GetInternalDisplayInfo(self):
+    display_info = self._state.DeviceGetDisplayInfo()
+    display_info = [info for info in display_info if info['isInternal']]
+    if len(display_info) != 1:
+      self.fail('Failed to get internal display.')
+    return display_info[0]
