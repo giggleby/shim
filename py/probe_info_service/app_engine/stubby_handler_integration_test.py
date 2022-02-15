@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import unittest
+from unittest import mock
 
+from cros.factory.probe_info_service.app_engine import probe_info_storage_connector
 from cros.factory.probe_info_service.app_engine import probe_metainfo_connector
 from cros.factory.probe_info_service.app_engine import ps_storage_connector
 from cros.factory.probe_info_service.app_engine import stubby_handler
@@ -13,6 +15,7 @@ from cros.factory.probe_info_service.app_engine import unittest_utils
 
 class StubbyHandlerTest(unittest.TestCase):
   def setUp(self):
+    probe_info_storage_connector.GetProbeInfoStorageConnector().Clean()
     probe_metainfo_connector.GetProbeMetaInfoConnectorInstance().Clean()
     ps_storage_connector.GetProbeStatementStorageConnector().Clean()
 
@@ -69,6 +72,65 @@ class StubbyHandlerTest(unittest.TestCase):
     resp = self._stubby_handler.GetProbeMetadata(req)
     self.assertEqual(resp.probe_metadatas[0].probe_statement_preview,
                      overridden_ps)
+
+  def test_UpdateComponentProbeInfo_ReturnsExpectedResponse(self):
+    req = stubby_pb2.UpdateComponentProbeInfoRequest(component_probe_infos=[
+        unittest_utils.LoadComponentProbeInfo('1-valid')
+    ])
+
+    resp = self._stubby_handler.UpdateComponentProbeInfo(req)
+
+    self.assertEqual(len(resp.probe_info_parsed_results), 1)
+    self.assertEqual(resp.probe_info_parsed_results[0].result_type,
+                     stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED)
+
+  def test_UpdateComponentProbeInfo_VerifyComponentProbeInfoIsStored(self):
+    comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
+    req = stubby_pb2.UpdateComponentProbeInfoRequest(
+        component_probe_infos=[comp_probe_info])
+
+    self._stubby_handler.UpdateComponentProbeInfo(req)
+
+    connector = probe_info_storage_connector.GetProbeInfoStorageConnector()
+    stored_comp_probe_info = connector.GetComponentProbeInfo(
+        comp_probe_info.component_identity.component_id,
+        comp_probe_info.component_identity.qual_id)
+    self.assertEqual(stored_comp_probe_info, comp_probe_info)
+
+  @mock.patch('cros.factory.probe_info_service.app_engine'
+              '.probe_tool_manager.ProbeToolManager')
+  def test_UpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsNotZero(
+      self, mock_probe_tool_manager_class):
+    mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
+    mock_probe_tool_manager.ValidateProbeInfo.return_value = (
+        stubby_pb2.ProbeInfoParsedResult(
+            result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
+    comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
+    req = stubby_pb2.UpdateComponentProbeInfoRequest(
+        component_probe_infos=[comp_probe_info])
+
+    stubby_handler.ProbeInfoService().UpdateComponentProbeInfo(req)
+
+    mock_probe_tool_manager.ValidateProbeInfo.assert_called_once_with(
+        comp_probe_info.probe_info, False)
+
+  @mock.patch('cros.factory.probe_info_service.app_engine'
+              '.probe_tool_manager.ProbeToolManager')
+  def test_UpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsZero(
+      self, mock_probe_tool_manager_class):
+    mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
+    mock_probe_tool_manager.ValidateProbeInfo.return_value = (
+        stubby_pb2.ProbeInfoParsedResult(
+            result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
+    comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
+    comp_probe_info.component_identity.qual_id = 0
+    req = stubby_pb2.UpdateComponentProbeInfoRequest(
+        component_probe_infos=[comp_probe_info])
+
+    stubby_handler.ProbeInfoService().UpdateComponentProbeInfo(req)
+
+    mock_probe_tool_manager.ValidateProbeInfo.assert_called_once_with(
+        comp_probe_info.probe_info, True)
 
   def test_StatefulAPIs_Scenario1(self):
     # 1. The user validates the probe info and finds format error.

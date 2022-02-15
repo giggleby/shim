@@ -5,6 +5,7 @@
 import functools
 import typing
 
+from cros.factory.probe_info_service.app_engine import probe_info_storage_connector
 from cros.factory.probe_info_service.app_engine import probe_metainfo_connector
 from cros.factory.probe_info_service.app_engine import probe_tool_manager
 from cros.factory.probe_info_service.app_engine import protorpc_utils
@@ -37,6 +38,8 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
         probe_metainfo_connector.GetProbeMetaInfoConnectorInstance())
     self._ps_storage_connector = (
         ps_storage_connector.GetProbeStatementStorageConnector())
+    self._probe_info_storage_connector = (
+        probe_info_storage_connector.GetProbeInfoStorageConnector())
 
   @protorpc_utils.ProtoRPCServiceMethod
   def GetProbeSchema(self, request):
@@ -268,6 +271,20 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
       self, request: stubby_pb2.UploadDeviceComponentHwidResultRequest):
     del request
     return stubby_pb2.UploadDeviceComponentHwidResultResponse()
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  def UpdateComponentProbeInfo(
+      self, request: stubby_pb2.UpdateComponentProbeInfoRequest):
+    response = stubby_pb2.UpdateComponentProbeInfoResponse()
+    for comp_probe_info in request.component_probe_infos:
+      probe_info_parsed_result = self._probe_tool_manager.ValidateProbeInfo(
+          comp_probe_info.probe_info,
+          not comp_probe_info.component_identity.qual_id)
+      response.probe_info_parsed_results.append(probe_info_parsed_result)
+      self._probe_info_storage_connector.SaveComponentProbeInfo(
+          comp_probe_info.component_identity.component_id,
+          comp_probe_info.component_identity.qual_id, comp_probe_info)
+    return response
 
   def _GetQualProbeDataSourceFactory(self, qual_probe_info):
     component_name = GetProbeDataSourceComponentName(

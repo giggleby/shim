@@ -249,6 +249,14 @@ message UploadDeviceComponentHwidResultResponse {
   repeated ProbeMetadata probe_metadatas = 1;
 }
 
+message UpdateComponentProbeInfoRequest {
+  repeated ComponentProbeInfo component_probe_infos = 1;
+}
+
+message UpdateComponentProbeInfoResponse {
+  repeated ProbeInfoParsedResult probe_info_parsed_results = 1;
+}
+
 service ProbeInfoService {
   rpc GetProbeSchema(GetProbeSchemaRequest) returns (GetProbeSchemaResponse) {}
 
@@ -278,4 +286,7 @@ service ProbeInfoService {
 
   rpc UploadDeviceComponentHwidResult(UploadDeviceComponentHwidResultRequest)
       returns (UploadDeviceComponentHwidResultResponse) {}
+
+  rpc UpdateComponentProbeInfo(UpdateComponentProbeInfoRequest)
+      returns (UpdateComponentProbeInfoResponse) {}
 }
