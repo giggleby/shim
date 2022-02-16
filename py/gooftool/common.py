@@ -200,7 +200,7 @@ class Util:
       True if `USE_LVM_STATEFUL_PARTITION=1`, otherwise, return false.
     """
     chromeos_startup_path = os.path.join(rootfs_path, 'sbin',
-                                         'chromeos_startup')
+                                         'chromeos_startup.sh')
     return self.shell('grep -q USE_LVM_STATEFUL_PARTITION=1 %s' %
                       chromeos_startup_path).success
 
