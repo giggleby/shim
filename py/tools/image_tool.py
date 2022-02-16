@@ -949,7 +949,7 @@ def ExpandPartition(image, number, size):
                        'must be the last one in LBA layout.' % number)
 
   old_size = gpt.GetSize()
-  new_size = old_size + Aligned(int(size * 1.05), part.block_size)
+  new_size = Aligned(int((old_size + size) * 1.15), part.block_size)
   print('Changing size: %d M => %d M' %
         (old_size // MEGABYTE, new_size // MEGABYTE))
 
