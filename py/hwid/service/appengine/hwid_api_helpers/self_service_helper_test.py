@@ -338,12 +338,18 @@ class SelfServiceHelperTest(unittest.TestCase):
             ], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
-                        'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                        2, None, True, None),
+                        comp_cls='comp_cls1', comp_name='comp_name1',
+                        support_status='unqualified', is_newly_added=False,
+                        avl_id=None, seq_no=2,
+                        comp_name_with_correct_seq_no=None, null_values=True,
+                        diff_prev=None, link_avl=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
-                        'comp_cls2', 'comp_cls2_111_222#9', 'unqualified', True,
-                        (111, 222), 1, 'comp_cls2_111_222#1', False, None),
+                        comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
+                        support_status='unqualified', is_newly_added=True,
+                        avl_id=(111, 222), seq_no=1,
+                        comp_name_with_correct_seq_no='comp_cls2_111_222#1',
+                        null_values=False, diff_prev=None, link_avl=False),
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
@@ -436,13 +442,18 @@ class SelfServiceHelperTest(unittest.TestCase):
               'fingerprint of ' + hwid_data.raw_db, {
                   'comp1':
                       hwid_action.DBHWIDComponentAnalysisResult(
-                          'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                          2, None, True, None),
+                          comp_cls='comp_cls1', comp_name='comp_name1',
+                          support_status='unqualified', is_newly_added=False,
+                          avl_id=None, seq_no=2,
+                          comp_name_with_correct_seq_no=None, null_values=True,
+                          diff_prev=None, link_avl=False),
                   'comp2':
                       hwid_action.DBHWIDComponentAnalysisResult(
-                          'comp_cls2', 'comp_cls2_111_222#9', 'unqualified',
-                          False,
-                          (111, 222), 1, 'comp_cls2_111_222#1', True, None),
+                          comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
+                          support_status='unqualified', is_newly_added=False,
+                          avl_id=(111, 222), seq_no=1,
+                          comp_name_with_correct_seq_no='comp_cls2_111_222#1',
+                          null_values=True, diff_prev=None, link_avl=True),
               }))
       return action
 
@@ -451,10 +462,30 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ConfigHWIDRepoManager('PROJ', 3, 'db data')
     req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(project='proj')
     resp = self._ss_helper.GetHWIDBundleResourceInfo(req)
-    # TODO(b/209362238): add selected components which require the AVL
-    # information.
     expected_resp = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
-        bundle_creation_token='fingerprint of db data')
+        bundle_creation_token='fingerprint of db data',
+        resource_info=hwid_api_messages_pb2.HwidBundleResourceInfo(
+            db_info=_AnalysisReportMsg(
+                component_infos={
+                    'comp1':
+                        _ComponentInfoMsg(
+                            component_class='comp_cls1',
+                            original_name='comp_name1',
+                            original_status='unqualified', is_newly_added=False,
+                            avl_info=None, has_avl=False, seq_no=2,
+                            component_name_with_correct_seq_no=None,
+                            diff_prev=None, null_values=True),
+                    'comp2':
+                        _ComponentInfoMsg(
+                            component_class='comp_cls2',
+                            original_name='comp_cls2_111_222#9',
+                            original_status='unqualified', is_newly_added=False,
+                            avl_info=hwid_api_messages_pb2.AvlInfo(
+                                cid=111, qid=222), has_avl=True, seq_no=1,
+                            component_name_with_correct_seq_no=(
+                                'comp_cls2_111_222#1'
+                            ), diff_prev=None, null_values=True)
+                })))
     self.assertEqual(resp, expected_resp)
 
   def testCreateHWIDBundle_ResourceInfoTokenInvalid(self):
@@ -479,26 +510,33 @@ class SelfServiceHelperTest(unittest.TestCase):
             'fingerprint', 'new_db_content', [], [], [], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
-                        'comp_cls1', 'comp_name1', 'unqualified', False, None,
-                        2, None, False,
-                        _DiffStatus(unchanged=True, name_changed=False,
-                                    support_status_changed=False,
-                                    values_changed=False,
-                                    prev_comp_name='comp_name1',
-                                    prev_support_status='unqualified')),
+                        comp_cls='comp_cls1', comp_name='comp_name1',
+                        support_status='unqualified', is_newly_added=False,
+                        avl_id=None, seq_no=2,
+                        comp_name_with_correct_seq_no=None,
+                        null_values=False, diff_prev=_DiffStatus(
+                            unchanged=True, name_changed=False,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='comp_name1',
+                            prev_support_status='unqualified'), link_avl=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
-                        'comp_cls2', 'comp_cls2_111_222#9', 'unqualified', True,
-                        (111, 222), 1, 'comp_cls2_111_222#1', False,
-                        _DiffStatus(unchanged=False, name_changed=True,
-                                    support_status_changed=False,
-                                    values_changed=False,
-                                    prev_comp_name='old_comp_name',
-                                    prev_support_status='unqualified')),
+                        comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
+                        support_status='unqualified', is_newly_added=True,
+                        avl_id=(111, 222), seq_no=1,
+                        comp_name_with_correct_seq_no='comp_cls2_111_222#1',
+                        null_values=False, diff_prev=_DiffStatus(
+                            unchanged=False, name_changed=True,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='old_comp_name',
+                            prev_support_status='unqualified'), link_avl=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
-                        'comp_cls2', 'comp_name3', 'unqualified', True, None, 2,
-                        None, True, None),
+                        comp_cls='comp_cls2', comp_name='comp_name3',
+                        support_status='unqualified', is_newly_added=True,
+                        avl_id=None, seq_no=2,
+                        comp_name_with_correct_seq_no=None, null_values=True,
+                        diff_prev=None, link_avl=False),
             }))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(

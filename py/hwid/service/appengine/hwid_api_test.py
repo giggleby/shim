@@ -413,22 +413,24 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.patch_hwid_validator.ValidateChange.return_value = (TEST_MODEL, {
         'wireless': [
             contents_analyzer.NameChangedComponentInfo(
-                'wireless_1234_5678', 1234, 5678,
-                common.COMPONENT_STATUS.supported, True, False,
-                contents_analyzer.DiffStatus(
+                comp_name='wireless_1234_5678', cid=1234, qid=5678,
+                status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
+                null_values=False, diff_prev=contents_analyzer.DiffStatus(
                     unchanged=False,
                     name_changed=True,
                     support_status_changed=False,
                     values_changed=False,
                     prev_comp_name='wireless_1234_5677',
                     prev_support_status=common.COMPONENT_STATUS.supported,
-                )),
+                ), link_avl=False),
             contents_analyzer.NameChangedComponentInfo(
-                'wireless_1111_2222', 1111, 2222,
-                common.COMPONENT_STATUS.unqualified, True, False, None),
+                comp_name='wireless_1111_2222', cid=1111, qid=2222,
+                status=common.COMPONENT_STATUS.unqualified, has_cid_qid=True,
+                null_values=False, diff_prev=None, link_avl=False),
             contents_analyzer.NameChangedComponentInfo(
-                'wireless_hello_world', 0, 0, common.COMPONENT_STATUS.supported,
-                False, True, None)
+                comp_name='wireless_hello_world', cid=0, qid=0,
+                status=common.COMPONENT_STATUS.supported, has_cid_qid=False,
+                null_values=True, diff_prev=None, link_avl=False),
         ]
     })
 
@@ -500,11 +502,13 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.patch_hwid_validator.ValidateChange.return_value = (TEST_MODEL, {
         'wireless': [
             contents_analyzer.NameChangedComponentInfo(
-                'wireless_1234_5678', 1234, 5678,
-                common.COMPONENT_STATUS.supported, True, False, None),
-            contents_analyzer.NameChangedComponentInfo('wireless_1111_2222',
-                                                       1111, 2222, 'new_status',
-                                                       True, False, None)
+                comp_name='wireless_1234_5678', cid=1234, qid=5678,
+                status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
+                null_values=False, diff_prev=None, link_avl=False),
+            contents_analyzer.NameChangedComponentInfo(
+                comp_name='wireless_1111_2222', cid=1111, qid=2222,
+                status='new_status', has_cid_qid=True, null_values=False,
+                diff_prev=None, link_avl=False),
         ]
     })
     req = hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumRequest(

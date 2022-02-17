@@ -55,15 +55,15 @@ class HwidValidatorTest(unittest.TestCase):
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='dram_type_4g_0', cid=0, qid=0,
                     status='supported', has_cid_qid=False, null_values=False,
-                    diff_prev=None),
+                    diff_prev=None, link_avl=False),
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='dram_allow_no_size_info_in_name', cid=0, qid=0,
                     status='supported', has_cid_qid=False, null_values=False,
-                    diff_prev=None),
+                    diff_prev=None, link_avl=False),
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='dram_default', cid=0, qid=0,
                     status='unsupported', has_cid_qid=False, null_values=True,
-                    diff_prev=None)
+                    diff_prev=None, link_avl=False)
             ]
         }, ret)
 
@@ -101,15 +101,15 @@ class HwidValidatorTest(unittest.TestCase):
                   contents_analyzer.NameChangedComponentInfo(
                       comp_name='dram_type_4g_0', cid=0, qid=0,
                       status='supported', has_cid_qid=False, null_values=False,
-                      diff_prev=None),
+                      diff_prev=None, link_avl=False),
                   contents_analyzer.NameChangedComponentInfo(
                       comp_name='dram_allow_no_size_info_in_name', cid=0, qid=0,
                       status='supported', has_cid_qid=False, null_values=False,
-                      diff_prev=None),
+                      diff_prev=None, link_avl=False),
                   contents_analyzer.NameChangedComponentInfo(
                       comp_name='dram_default', cid=0, qid=0,
                       status='unsupported', has_cid_qid=False, null_values=True,
-                      diff_prev=None)
+                      diff_prev=None, link_avl=False),
               ]
           })
 
@@ -126,8 +126,13 @@ class HwidValidatorTest(unittest.TestCase):
     self.assertEqual(model, GOLDEN_MODEL_NAME)
     self.assertEqual(
         {
-            'cpu': [('cpu_12345678', 12345678, 0,
-                     common.COMPONENT_STATUS.unqualified, True, False, None)]
+            'cpu': [
+                contents_analyzer.NameChangedComponentInfo(
+                    comp_name='cpu_12345678', cid=12345678, qid=0,
+                    status=common.COMPONENT_STATUS.unqualified,
+                    has_cid_qid=True, null_values=False, diff_prev=None,
+                    link_avl=False)
+            ]
         }, ret)
 
   def testValidateComponentNameInvalidWithNote(self):
@@ -149,8 +154,13 @@ class HwidValidatorTest(unittest.TestCase):
     self.assertEqual(model, GOLDEN_MODEL_NAME)
     self.assertEqual(
         {
-            'cpu': [('cpu_3_4#5', 3, 4, common.COMPONENT_STATUS.unsupported,
-                     True, False, None)]
+            'cpu': [
+                contents_analyzer.NameChangedComponentInfo(
+                    comp_name='cpu_3_4#5', cid=3, qid=4,
+                    status=common.COMPONENT_STATUS.unsupported,
+                    has_cid_qid=True, null_values=False, diff_prev=None,
+                    link_avl=False)
+            ]
         }, ret)
 
   @classmethod

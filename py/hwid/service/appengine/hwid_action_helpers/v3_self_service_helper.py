@@ -14,6 +14,7 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.v3 import contents_analyzer
+from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import bundle_builder
 
 
@@ -114,12 +115,22 @@ class HWIDV3SelfServiceActionHelper:
     analyzer = contents_analyzer.ContentsAnalyzer(curr_hwid_db_contents, None,
                                                   None)
     analysis = analyzer.AnalyzeChange(None, False)
-    return hwid_action.BundleResourceInfo(fingerprint, analysis.hwid_components)
+    hwid_components = {
+        key: component
+        for (key, component) in analysis.hwid_components.items()
+        if component.link_avl
+    }
+    return hwid_action.BundleResourceInfo(fingerprint, hwid_components)
 
   def BundleHWIDDB(self):
     builder = bundle_builder.BundleBuilder()
-    builder.AddRegularFile(self._preproc_data.project.upper(),
-                           self._preproc_data.raw_database.encode('utf-8'))
+    internal_db = self._preproc_data.database
+    tag_trimmed_raw_db = update_checksum.ReplaceChecksum(
+        internal_db.DumpDataWithoutChecksum(internal=False))
+    checksum = database.Database.ChecksumForText(tag_trimmed_raw_db)
+
+    builder.AddRegularFile(internal_db.project.upper(),
+                           tag_trimmed_raw_db.encode('utf-8'))
     builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)
@@ -127,7 +138,7 @@ class HWIDV3SelfServiceActionHelper:
     # TODO(b/211957606) remove this stopgap which shows the HWID DB checksum for
     # cros_payload.sh to parse.
     # pylint: disable=protected-access
-    builder._SetStopGapHWIDDBChecksum(self._preproc_data.database.checksum)
+    builder._SetStopGapHWIDDBChecksum(checksum)
     # pylint: enable=protected-access
     return hwid_action.BundleInfo(builder.Build(), builder.FILE_NAME_EXT[1:])
 

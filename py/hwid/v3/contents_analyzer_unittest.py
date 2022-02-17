@@ -51,7 +51,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
                 contents_analyzer.NameChangedComponentInfo(
                     comp_name='display_panel_123_456', cid=123, qid=456,
                     status='supported', has_cid_qid=True, null_values=False,
-                    diff_prev=None),
+                    diff_prev=None, link_avl=False),
             ]
         }, report.name_changed_components)
 
@@ -142,18 +142,22 @@ class ContentsAnalyzerTest(unittest.TestCase):
         report.hwid_components, {
             'x@@@@component-display_panel-display_panel_A@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
-                    'display_panel', 'display_panel_A', 'deprecated', False,
-                    None, 1, None, False,
-                    contents_analyzer.DiffStatus(
+                    comp_cls='display_panel', comp_name='display_panel_A',
+                    support_status='deprecated', is_newly_added=False,
+                    avl_id=None, seq_no=1, comp_name_with_correct_seq_no=None,
+                    null_values=False, diff_prev=contents_analyzer.DiffStatus(
                         unchanged=False, name_changed=False,
                         support_status_changed=True, values_changed=False,
                         prev_comp_name='display_panel_A',
-                        prev_support_status='unqualified')),
+                        prev_support_status='unqualified'), link_avl=False),
             'x@@@@component-display_panel-display_panel_123_456#8@@y@':
                 contents_analyzer.HWIDComponentAnalysisResult(
-                    'display_panel', 'display_panel_123_456#8', 'supported',
-                    True,
-                    (123, 456), 2, 'display_panel_123_456#2', False, None),
+                    comp_cls='display_panel',
+                    comp_name='display_panel_123_456#8',
+                    support_status='supported', is_newly_added=True,
+                    avl_id=(123, 456), seq_no=2,
+                    comp_name_with_correct_seq_no='display_panel_123_456#2',
+                    null_values=False, diff_prev=None, link_avl=False),
         })
 
   def test_AnalyzeChange_WithoutLines(self):

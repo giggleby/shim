@@ -119,8 +119,29 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     resource_info2 = ss_helper2.GetHWIDBundleResourceInfo(True)
     self.assertNotEqual(resource_info1.fingerprint, resource_info2.fingerprint)
 
-  def testBundleHWIDDB_BundleInstallationWorks(self):
-    data, helper_inst = self._LoadPreprocDataAndSSHelper('v3-golden.yaml')
+  def testGetHWIDBundleResourceInfo_FilterLinkAvl(self):
+    helper = self._LoadSSHelper('v3-golden-internal-tags.yaml')
+
+    resource_info = helper.GetHWIDBundleResourceInfo(False)
+    self.assertEqual(
+        {
+            'x@@@@component-storage-storage_0@@y@':
+                hwid_action.DBHWIDComponentAnalysisResult(
+                    comp_cls='storage', comp_name='storage_0',
+                    support_status='supported', is_newly_added=True,
+                    avl_id=(0, 0), seq_no=1, comp_name_with_correct_seq_no=None,
+                    null_values=False, diff_prev=None, link_avl=True),
+            'x@@@@component-storage-storage_2@@y@':
+                hwid_action.DBHWIDComponentAnalysisResult(
+                    comp_cls='storage', comp_name='storage_2',
+                    support_status='supported', is_newly_added=True,
+                    avl_id=(2, 0), seq_no=3, comp_name_with_correct_seq_no=None,
+                    null_values=False, diff_prev=None, link_avl=True)
+        }, resource_info.hwid_components)
+
+  def testBundleHWIDDB_BundleInstallationWorks_NoInternalTags(self):
+    data, helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-no-internal-tags.yaml')
 
     payload = helper_inst.BundleHWIDDB().bundle_contents
 
@@ -133,10 +154,29 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         db_path = os.path.join(dest_dir, data.project.upper())
         self.assertEqual(file_utils.ReadFile(db_path), data.raw_database)
 
+  def testBundleHWIDDB_BundleInstallationWorks_InternalTags(self):
+    data, helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-internal-tags.yaml')
+    trimmed_data, unused_helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-no-internal-tags.yaml')
+
+    payload = helper_inst.BundleHWIDDB().bundle_contents
+
+    # Verify the created bundle payload by trying to install it.
+    with file_utils.UnopenedTemporaryFile() as bundle_path:
+      os.chmod(bundle_path, 0o755)
+      file_utils.WriteFile(bundle_path, payload, encoding=None)
+      with tempfile.TemporaryDirectory() as dest_dir:
+        process_utils.CheckCall([bundle_path, dest_dir])
+        db_path = os.path.join(dest_dir, data.project.upper())
+        self.assertEqual(
+            file_utils.ReadFile(db_path), trimmed_data.raw_database)
+
   # TODO(b/211957606) modify this test to ensure that the checksum information
   # is embedded in the generated bundle.
   def testBundleHWIDDB_ChecksumShownInInstallerScript(self):
-    data, helper_inst = self._LoadPreprocDataAndSSHelper('v3-golden.yaml')
+    data, helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-no-internal-tags.yaml')
 
     payload = helper_inst.BundleHWIDDB().bundle_contents
 

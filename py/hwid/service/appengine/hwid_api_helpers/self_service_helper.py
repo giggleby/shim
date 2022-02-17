@@ -436,9 +436,10 @@ Info Update
 
     response = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
         bundle_creation_token=resource_info.fingerprint)
-    # TODO(b/209362238): Put resource info only if Factory HWID Consultant
-    # requires them to create a bundle.  e.g. explicitly mentioning the probe
-    # values of components are from AVL.
+
+    for reference_id, comp_info in resource_info.hwid_components.items():
+      response.resource_info.db_info.component_infos[reference_id].CopyFrom(
+          _ConvertCompInfoToMsg(comp_info))
     return response
 
   def CreateHWIDBundle(self, request):
@@ -453,6 +454,8 @@ Info Update
           'Invalid resource info token.')
 
     try:
+      # TODO(b/209362238): pass request.bundle_resource into BundleHWIDDB to
+      # validate if the AVL link still holds.
       bundle_info = action.BundleHWIDDB()
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None

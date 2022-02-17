@@ -16,6 +16,7 @@ from typing import Callable, Dict, List, NamedTuple, Optional, Tuple
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
+from cros.factory.hwid.v3 import rule
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import schema
 
@@ -60,6 +61,7 @@ class NameChangedComponentInfo(NamedTuple):
   has_cid_qid: bool
   null_values: bool
   diff_prev: Optional[DiffStatus]
+  link_avl: bool
 
 
 class ValidationReport(NamedTuple):
@@ -107,6 +109,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   comp_name_with_correct_seq_no: Optional[str]
   null_values: bool
   diff_prev: Optional[DiffStatus]
+  link_avl: bool
 
 
 class ChangeAnalysis(NamedTuple):
@@ -284,7 +287,8 @@ class ContentsAnalyzer:
           report.name_changed_components.setdefault(comp_cls, []).append(
               NameChangedComponentInfo(comp.name, cid, qid, comp.status,
                                        bool(comp.extracted_avl_id),
-                                       comp.null_values, comp.diff_prev))
+                                       comp.null_values, comp.diff_prev,
+                                       comp.link_avl))
 
   def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
                       db_placeholder_options):
@@ -389,8 +393,8 @@ class ContentsAnalyzer:
             HWIDComponentAnalysisResult(
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
                 comp.extracted_avl_id, comp.expected_seq_no,
-                comp_name_with_correct_seq_no, comp.null_values,
-                comp.diff_prev))
+                comp_name_with_correct_seq_no, comp.null_values, comp.diff_prev,
+                comp.link_avl))
 
     if require_hwid_db_lines:
       if db_contents_patcher is None:
@@ -411,6 +415,7 @@ class ContentsAnalyzer:
     is_newly_added: bool
     null_values: bool
     diff_prev: Optional[DiffStatus]
+    link_avl: bool
 
   def _ExtractHWIDComponents(self) -> Dict[str, List['_HWIDComponentMetadata']]:
     ret = {}
@@ -432,6 +437,7 @@ class ContentsAnalyzer:
         avl_id = name_pattern.Matches(comp_name)
         noseq_comp_name, sep, actual_seq = comp_name.partition('#')
         null_values = comp_info.values is None
+        link_avl = isinstance(comp_info.values, rule.AVLProbeValue)
 
         diffstatus = None
         if prev_item:
@@ -453,7 +459,7 @@ class ContentsAnalyzer:
             self._HWIDComponentMetadata(
                 comp_name, comp_info.status, noseq_comp_name,
                 actual_seq if sep else None, avl_id, expected_seq,
-                is_newly_added, null_values, diffstatus))
+                is_newly_added, null_values, diffstatus, link_avl))
     return ret
 
   @classmethod
