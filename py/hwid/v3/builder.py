@@ -324,7 +324,7 @@ class DatabaseBuilder:
     Args:
       database_path: the path of the output HWID database file.
     """
-    self.database.DumpFile(database_path)
+    self.database.DumpFileWithoutChecksum(database_path, internal=True)
 
     checksum_updater = ChecksumUpdater()
     if checksum_updater is None:

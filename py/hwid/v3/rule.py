@@ -374,8 +374,15 @@ class Value:
         self.__class__.__name__, self.raw_value, self.is_re)
 
 
-class AVLProbeValue(dict):
+class InternalTags:
+  """A parent class of internal tags."""
+
+
+class AVLProbeValue(collections.OrderedDict, InternalTags):
   """A class which holds the probe values linked with the ones on AVL"""
+
+  def __eq__(self, rhs):
+    return self.__class__ is rhs.__class__ and super().__eq__(rhs)
 
 
 def _Eval(expr, local):

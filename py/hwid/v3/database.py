@@ -43,12 +43,16 @@ import re
 from typing import Mapping, NamedTuple, Optional, Tuple
 
 from cros.factory.hwid.v3 import common
+from cros.factory.hwid.v3.rule import AVLProbeValue
 from cros.factory.hwid.v3.rule import Rule
 from cros.factory.hwid.v3.rule import Value
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
+
+
+_DUMMY_CHECKSUM = 'DUMMY'
 
 
 class MagicPlaceholderComponentOptions(NamedTuple):
@@ -109,7 +113,6 @@ class Database:
             self._image_id == rhs._image_id and
             self._encoded_fields == rhs._encoded_fields and
             self._components == rhs._components and
-            self._checksum == rhs._checksum and
             self._framework_version == rhs._framework_version)
 
   def __ne__(self, rhs):
@@ -211,10 +214,10 @@ class Database:
         yaml_obj.get('checksum'),
         yaml_obj.get('framework_version', common.OLDEST_FRAMEWORK_VERSION))
 
-  def DumpData(self, include_checksum=False, suppress_support_status=True,
-               magic_placeholder_options=None):
+  def DumpDataWithoutChecksum(self, suppress_support_status=True,
+                              magic_placeholder_options=None, internal=False):
     all_parts = [
-        ('checksum', self._checksum if include_checksum else None),
+        ('checksum', _DUMMY_CHECKSUM),
         ('project', self._project),
         ('encoding_patterns', self._encoding_patterns.Export()),
         ('image_id', self._image_id.Export()),
@@ -230,13 +233,12 @@ class Database:
       all_parts.append(('framework_version', self._framework_version))
 
     return '\n'.join([
-        yaml.safe_dump({key: value}, default_flow_style=False)
-        for key, value in all_parts
+        yaml.safe_dump({key: value}, default_flow_style=False,
+                       internal=internal) for key, value in all_parts
     ])
 
-  def DumpFile(self, path, include_checksum=False):
-    with open(path, 'w') as f:
-      f.write(self.DumpData(include_checksum=include_checksum))
+  def DumpFileWithoutChecksum(self, path, internal=False):
+    file_utils.WriteFile(path, self.DumpDataWithoutChecksum(internal=internal))
 
   @property
   def can_encode(self):
@@ -383,6 +385,9 @@ class Database:
 
   def SetComponentStatus(self, comp_cls, comp_name, status):
     return self._components.SetComponentStatus(comp_cls, comp_name, status)
+
+  def SetLinkAVLProbeValue(self, comp_cls, comp_name):
+    return self._components.SetLinkAVLProbeValue(comp_cls, comp_name)
 
   @property
   def device_info_rules(self):
@@ -1270,6 +1275,27 @@ class Components:
     self._components.setdefault(comp_cls, yaml.Dict())
     self._components[comp_cls][comp_name] = ComponentInfo(
         values, status, information)
+
+  def SetLinkAVLProbeValue(self, comp_cls, comp_name):
+    """Sets the tag of the component as !link_avl
+
+    Args:
+      comp_cls: The component class name.
+      comp_name: The component name.
+    """
+    if comp_cls == 'region':
+      raise common.HWIDException('Region component class is not modifiable.')
+
+    if comp_name not in self._components.get(comp_cls, {}):
+      raise common.HWIDException(
+          f'Component ({comp_cls!r}, {comp_name!r}) is not recorded.')
+
+    values = self._components[comp_cls][comp_name].values
+    if values is None:
+      raise common.HWIDException(
+          f'No probe values in Component ({comp_cls!r}, {comp_name!r})')
+
+    self._components[comp_cls][comp_name].values = AVLProbeValue(values)
 
 
 _PatternDatum = collections.namedtuple('_PatternDatum',

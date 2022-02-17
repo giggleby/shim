@@ -15,6 +15,7 @@ from cros.factory.hwid.v3.database import MagicPlaceholderComponentOptions
 from cros.factory.hwid.v3.database import MagicPlaceholderOptions
 from cros.factory.hwid.v3.database import Pattern
 from cros.factory.hwid.v3.database import Rules
+from cros.factory.hwid.v3 import rule
 from cros.factory.utils import file_utils
 
 
@@ -50,18 +51,52 @@ class DatabaseTest(unittest.TestCase):
           os.path.join(_TEST_DATA_PATH, 'test_database_db_%s.yaml' % case),
           verify_checksum=False)
 
+  def testLoadInternal(self):
+    internal_db = Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
+
+    self.assertIsInstance(
+        internal_db.GetComponents('cls4')['comp6'].values, rule.AVLProbeValue)
+
+    self.assertNotIsInstance(
+        internal_db.GetComponents('cls3')['comp5'].values, rule.AVLProbeValue)
+
+  def testSetLinkAVLProbeValue(self):
+    db = Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+
+    db.SetLinkAVLProbeValue('cls4', 'comp7')
+
+    loaded_db = Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
+    self.assertIsInstance(
+        loaded_db.GetComponents('cls4')['comp7'].values, rule.AVLProbeValue)
+
   def testLoadDump(self):
     db = Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
-    db2 = Database.LoadData(db.DumpData(include_checksum=True))
+    db2 = Database.LoadData(db.DumpDataWithoutChecksum())
 
     self.assertEqual(db, db2)
 
     db = Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
     with file_utils.UnopenedTemporaryFile() as path:
-      db.DumpFile(path, include_checksum=True)
+      db.DumpFileWithoutChecksum(path)
       Database.LoadFile(path, verify_checksum=False)
+
+  def testLoadInternalDumpExternal(self):
+    db = Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
+    db2 = Database.LoadData(db.DumpDataWithoutChecksum())
+
+    self.assertNotEqual(db, db2)
+
+  def testLoadInternalDumpInternal(self):
+    db = Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
+    db2 = Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
+
+    self.assertEqual(db, db2)
 
 
 class ImageIdTest(unittest.TestCase):

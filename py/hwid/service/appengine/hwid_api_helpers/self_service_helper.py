@@ -251,7 +251,8 @@ class SelfServiceHelper:
         continue
 
       # Create commit
-      editable_section = action.RemoveHeader(db_builder.database.DumpData())
+      editable_section = action.RemoveHeader(
+          db_builder.database.DumpDataWithoutChecksum(internal=True))
       analysis = action.AnalyzeDraftDBEditableSection(
           editable_section, derive_fingerprint_only=True,
           require_hwid_db_lines=False)

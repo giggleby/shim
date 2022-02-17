@@ -289,12 +289,12 @@ class ContentsAnalyzer:
   def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
                       db_placeholder_options):
     dumped_db_lines = db_contents_patcher(
-        self._curr_db.instance.DumpData(
+        self._curr_db.instance.DumpDataWithoutChecksum(
             suppress_support_status=False,
             magic_placeholder_options=db_placeholder_options)).splitlines()
 
     no_placeholder_dumped_db_lines = db_contents_patcher(
-        self._curr_db.instance.DumpData(
+        self._curr_db.instance.DumpDataWithoutChecksum(
             suppress_support_status=False)).splitlines()
     if len(dumped_db_lines) != len(no_placeholder_dumped_db_lines):
       # Unexpected case, skip deriving the line diffs.
@@ -303,7 +303,7 @@ class ContentsAnalyzer:
       diff_view_line_it = itertools.repeat('  ', len(dumped_db_lines))
     else:
       prev_db_contents_lines = db_contents_patcher(
-          self._prev_db.instance.DumpData(
+          self._prev_db.instance.DumpDataWithoutChecksum(
               suppress_support_status=False)).splitlines()
       diff_view_line_it = difflib.ndiff(
           prev_db_contents_lines, no_placeholder_dumped_db_lines, charjunk=None)
