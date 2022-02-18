@@ -514,7 +514,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
             status=StatusMsg.BAD_REQUEST,
-            error_message='Unknown status: \'new_status\''), msg)
+            error_message="Unknown status: 'new_status'."), msg)
 
   def testGetSku(self):
     bom = hwid_action.BOM()

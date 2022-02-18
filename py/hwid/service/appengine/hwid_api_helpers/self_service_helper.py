@@ -33,6 +33,8 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
 
 _MAX_OPENED_HWID_DB_CL_AGE = datetime.timedelta(
     days=365 * 3)  # A rough estimation of 3 years.
+_MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(
+    days=365 * 3 // 4)  # A rough estimation of 3 quarters.
 
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
@@ -51,7 +53,7 @@ def ConvertToNameChangedComponent(name_changed_comp_info):
       name_changed_comp_info.status.upper())
   if status_val is None:
     raise HWIDStatusConversionError(
-        "Unknown status: '%s'" % name_changed_comp_info.status)
+        f'Unknown status: {name_changed_comp_info.status!r}.')
   return hwid_api_messages_pb2.NameChangedComponent(
       cid=name_changed_comp_info.cid, qid=name_changed_comp_info.qid,
       support_status=status_val.number,
@@ -107,6 +109,17 @@ def _ConvertCompInfoToMsg(
             prev_support_status=diff.prev_support_status,
         ))
   return comp_info_msg
+
+
+def _IsCLExpired(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
+  """Returns whether the CL specified by `cl_info` is considered expired."""
+  if cl_info.status == hwid_repo.HWIDDBCLStatus.NEW:
+    cl_age = datetime.datetime.utcnow() - cl_info.created_time
+    cl_max_age = (
+        _MAX_OPENED_HWID_DB_CL_AGE
+        if cl_info.mergeable else _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE)
+    return cl_age > cl_max_age
+  return False
 
 
 class SelfServiceHelper:
@@ -204,8 +217,8 @@ class SelfServiceHelper:
             f'^{bundle_record.board}(mp|premp)keys(?:-(v[0-9]+))?$',
             bundle_record.firmware_signer.lower())
         if match is None:
-          raise ValueError('Cannot derive firmware key name from signer: %s' %
-                           bundle_record.firmware_signer)
+          raise ValueError('Cannot derive firmware key name from signer: '
+                           f'{bundle_record.firmware_signer}.')
         keys_comp_name = f'firmware_keys_{match.group(1)}'
         if match.group(2):
           keys_comp_name += f'_{match.group(2)}'
@@ -288,9 +301,7 @@ Info Update
 
     # TODO(yhong): Consider triggering legacy CL deprecation routine by
     # cronjobs instead.
-    cl_age = datetime.datetime.utcnow() - cl_info.created_time
-    if (cl_info.status == hwid_repo.HWIDDBCLStatus.NEW and
-        cl_age > _MAX_OPENED_HWID_DB_CL_AGE):
+    if _IsCLExpired(cl_info):
       try:
         self._hwid_repo_manager.AbandonCL(cl_number)
         cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
