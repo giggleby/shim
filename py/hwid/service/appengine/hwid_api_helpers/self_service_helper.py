@@ -11,6 +11,7 @@ import time
 from google.protobuf import json_format
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
@@ -286,8 +287,12 @@ Info Update
       # Abandon all committed CLs on exception
       logging.exception('Rollback to abandon commited CLs.')
       for model_name, commit in resp.commits.items():
-        self._hwid_repo_manager.AbandonCL(commit.cl_number)
-        logging.info('Abdandon CL: %d', commit.cl_number)
+        try:
+          logging.info('Abdandon CL: %d', commit.cl_number)
+          self._hwid_repo_manager.AbandonCL(commit.cl_number)
+        except git_util.GitUtilException as git_ex:
+          logging.error('Failed to abandon CL: %d, error: %r.',
+                        commit.cl_number, git_ex)
       raise ex
 
     return resp
@@ -301,19 +306,27 @@ Info Update
 
     # TODO(yhong): Consider triggering legacy CL deprecation routine by
     # cronjobs instead.
-    if _IsCLExpired(cl_info):
-      try:
-        self._hwid_repo_manager.AbandonCL(cl_number)
-        cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
-      except hwid_repo.HWIDRepoError as ex:
-        logging.error(
-            'Caught unexpected exception while abandoning the '
-            'expired HWID DB CL: %r.', ex)
-        return None
-      if cl_info.status != hwid_repo.HWIDDBCLStatus.ABANDONED:
-        logging.error('CL abandon seems failed.  The status flag in the '
-                      'refetched CL info are not changed.')
-        return None
+    if not _IsCLExpired(cl_info):
+      return cl_info
+
+    try:
+      self._hwid_repo_manager.AbandonCL(cl_number)
+    except git_util.GitUtilException as ex:
+      logging.warning(
+          'Caught exception while abandoning the expired HWID DB CL: %r.', ex)
+      return cl_info
+
+    try:
+      cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
+    except hwid_repo.HWIDRepoError as ex:
+      logging.error(
+          'Failed to refetch CL info after the abandon operation, '
+          'caught exception: %r.', ex)
+      return None
+    if cl_info.status != hwid_repo.HWIDDBCLStatus.ABANDONED:
+      logging.error('CL abandon seems failed.  The status flag in the '
+                    'refetched CL info are not changed.')
+      return None
     return cl_info
 
   def BatchGetHWIDDBEditableSectionChangeCLInfo(self, request):
