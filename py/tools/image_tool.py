@@ -1804,6 +1804,39 @@ class ChromeOSFactoryBundle:
       stateful_free_space: extra free space to claim in MB.
       verbose: provide more verbose output when initializing disk image.
     """
+
+    def _CalculateDLCManifestSize(manifests_dir):
+      total_size = 0
+      for subdir in os.listdir(manifests_dir):
+        manifest = os.path.join(manifests_dir, subdir, 'package',
+                                'imageloader.json')
+        if not os.path.exists(manifest):
+          continue
+        with open(manifest) as f:
+          data = json.load(f)
+          if data['factory-install']:
+            # We need to preserve `2 * preallocated size`.
+            # (See b/219670647#comment13)
+            total_size = total_size + int(data['pre-allocated-size']) * 2
+
+      return total_size
+
+    def _CalculateDLCRuntimeSize(dev):
+      """Calculate the size we need for factory installed DLC in runtime."""
+      total_size = 0
+      part = Partition(dev, PART_CROS_ROOTFS_A)
+      with part.MountAsCrOSRootfs() as rootfs:
+        manifests_dir = os.path.join(rootfs, 'opt', 'google', 'dlc')
+        if os.path.exists(manifests_dir):
+          total_size = _CalculateDLCManifestSize(manifests_dir)
+
+      if not total_size:
+        logging.debug('No factory installed DLC found. Do nothing.')
+      else:
+        logging.debug('Preallocate %d M for factory installed DLC...',
+                      (total_size // MEGABYTE))
+      return total_size
+
     new_size = self.InitDiskImage(output, sectors, sector_size, verbose)
     DIR_CROS_PAYLOADS = CrosPayloadUtils.GetCrosPayloadsDir()
     payloads_dir = os.path.join(self._temp_dir, DIR_CROS_PAYLOADS)
@@ -1818,8 +1851,22 @@ class ChromeOSFactoryBundle:
     # output_dev (via /dev/loopX) needs root permission so we have to leave
     # previous context and resize using the real disk image file.
     part = Partition(output, PART_CROS_STATEFUL)
-    part.ResizeFileSystem(
-        part.GetFileSystemSize() + stateful_free_space * MEGABYTE)
+
+    # Additional amount of file system size we need to reserve:
+    #   1. The free space required by user (stateful_free_space).
+    #   2. The preallocated size for factory installed DLC.
+    reserve_size = stateful_free_space * MEGABYTE + \
+                   _CalculateDLCRuntimeSize(output)
+    logging.debug('Will reserve additional space (%d M) for runtime overhead.',
+                  (reserve_size // MEGABYTE))
+    # Reserve additional 5% for root.
+    total_fs_size = int((part.GetFileSystemSize() + reserve_size) * 1.05)
+    logging.debug('Total reserved space: %d M', (total_fs_size // MEGABYTE))
+    if total_fs_size >= part.size:
+      raise RuntimeError(
+          'Stateful partition is too small! Please increase the'
+          ' size of preflash image! Current: %d M' % (part.size // MEGABYTE))
+    part.ResizeFileSystem(total_fs_size)
     with GPT.Partition.MapAll(output) as output_dev:
       targets = [
           'release_image.crx_cache', 'release_image.dlc_factory_cache', 'hwid',
@@ -2914,7 +2961,11 @@ class CreatePreflashImageCommand(SubCommand):
         '--sector-size', type=int, default=DEFAULT_BLOCK_SIZE,
         help='size of each sector. default: %(default)s')
     self.subparser.add_argument(
-        '--stateful_free_space', type=int, default=1024,
+        # Allocate 1G for toolkit and another 1G for run time overhead.
+        # (see b/219670647#comment32)
+        '--stateful_free_space',
+        type=int,
+        default=2048,
         help=('extra space to claim in stateful partition in MB. '
               'default: %(default)s'))
     self.subparser.add_argument(

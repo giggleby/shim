@@ -196,6 +196,10 @@ class ImageToolTest(unittest.TestCase):
     part = image_tool.Partition(image_path, 1)
     self.assertEqual(part.GetFileSystemSize(), 7340032)
 
+    # Resize the file system to its original size.
+    self.ImageTool('resize', '-i', image_path, '-p', '1', '-s', '2',
+                   '--no-append')
+
     # Prepare the environment to run bundle commands, which need to run inside
     # the temp folder.
     self.SetupBundleEnvironment(image_path)
