@@ -136,6 +136,7 @@ from cros.factory.utils import sync_utils
 
 # Interval (seconds) of probing connection state.
 _CONNECTION_CHECK_PERIOD_SECS = 1
+_DEFAULT_DRM_GLOB_PATH = '/sys/class/drm/card?'
 
 
 ExtDisplayTaskArg = collections.namedtuple('ExtDisplayTaskArg', [
@@ -249,7 +250,8 @@ class ExtDisplayTest(test_case.TestCase):
           ('Path of drm sysfs entry. When given this arg, the pytest will '
            'directly get connection status from sysfs path rather than calling '
            'drm_utils. This is needed when the port is running under MST and '
-           'thus the display id is dynamic generated.'), default=None),
+           'thus the display id is dynamic generated.'),
+          default=_DEFAULT_DRM_GLOB_PATH),
       Arg(
           'timeout_secs', int,
           'Timeout in seconds when we ask operator to complete the challenge. '
@@ -297,6 +299,7 @@ class ExtDisplayTest(test_case.TestCase):
       self.do_disconnect = True
 
     self._toggle_timestamp = 0
+    self._last_status = (None, None)
 
     # Setup tasks
     for info in self.args.display_info:
@@ -536,18 +539,24 @@ class ExtDisplayTest(test_case.TestCase):
   def _IsDisplayConnected(self, args):
     """Get connection status."""
     if self.args.drm_sysfs_path is not None:
+      candidates = self._dut.Glob(self.args.drm_sysfs_path)
       # Get display status from sysfs path.
-      card_name = os.path.basename(self.args.drm_sysfs_path.rstrip('/'))
-      status_file_path = self._dut.path.join(
-          self.args.drm_sysfs_path, '%s-%s' % (card_name, args.display_id),
-          'status')
-      try:
-        display_status = self._dut.ReadFile(status_file_path).strip()
-      except FileNotFoundError:
-        display_status = None
+      new_status = (None, None)
+      for candidate in candidates:
+        card_name = os.path.basename(candidate.rstrip('/'))
+        status_file_path = self._dut.path.join(
+            candidate, '%s-%s' % (card_name, args.display_id), 'status')
+        try:
+          new_status = (status_file_path,
+                        self._dut.ReadFile(status_file_path).strip())
+          break
+        except FileNotFoundError:
+          pass
 
-      return (display_status is not None and
-              display_status.strip() == 'connected')
+      if self._last_status != new_status:
+        self._last_status = new_status
+        logging.info('`cat "%s"` outputs %r', new_status[0], new_status[1])
+      return new_status[1] == 'connected'
 
     # Get display status from drm_utils.
     try:
