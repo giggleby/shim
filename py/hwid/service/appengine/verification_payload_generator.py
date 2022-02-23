@@ -320,8 +320,8 @@ class _ProbeStatementGenerator:
       try:
         expected_fields = {}
         for fc in fcs:
-          expected_fields[fc.probe_statement_field_name] = \
-              fc.GenerateExpectedFields(comp_values)
+          expected_fields[fc.probe_statement_field_name] = (
+              fc.GenerateExpectedFields(comp_values))
         expected_fields_list.append(expected_fields)
       except Exception as e:
         if err is None:
@@ -472,23 +472,28 @@ def GetAllProbeStatementGenerators():
           InputDeviceVendorValueConverter(),
       ]),
   ]
-  input_device_converters = [
-      input_device_fields,
-      input_device_fields_old,
-  ]
   all_probe_statement_generators['stylus'] = [
       _ProbeStatementGenerator(
-          'stylus', 'input_device', input_device_converters,
+          'stylus', 'input_device', input_device_fields,
+          probe_function_argument={'device_type': 'stylus'}),
+      _ProbeStatementGenerator(
+          'stylus', 'input_device', input_device_fields_old,
           probe_function_argument={'device_type': 'stylus'}),
   ]
   all_probe_statement_generators['touchpad'] = [
       _ProbeStatementGenerator(
-          'touchpad', 'input_device', input_device_converters,
+          'touchpad', 'input_device', input_device_fields,
+          probe_function_argument={'device_type': 'touchpad'}),
+      _ProbeStatementGenerator(
+          'touchpad', 'input_device', input_device_fields_old,
           probe_function_argument={'device_type': 'touchpad'}),
   ]
   all_probe_statement_generators['touchscreen'] = [
       _ProbeStatementGenerator(
-          'touchscreen', 'input_device', input_device_converters,
+          'touchscreen', 'input_device', input_device_fields,
+          probe_function_argument={'device_type': 'touchscreen'}),
+      _ProbeStatementGenerator(
+          'touchscreen', 'input_device', input_device_fields_old,
           probe_function_argument={'device_type': 'touchscreen'}),
   ]
 
@@ -574,29 +579,32 @@ def GetAllComponentVerificationPayloadPieces(db, waived_categories):
     for comp_name, comp_info in comps.items():
       unique_comp_name = model_prefix + '_' + comp_name
 
+      err = None
       error_msg = None
       all_suitable_generator_and_ps = []
-      try:
-        for ps_gen in ps_gens:
-          try:
-            ps = ps_gen.TryGenerate(unique_comp_name, comp_info.values,
-                                    comp_info.information)
-          except MissingComponentValueError:
-            continue
-          else:
-            all_suitable_generator_and_ps.append((ps_gen, ps))
-      except ProbeStatementConversionError as e:
-        error_msg = ('Failed to generate the probe statement for component '
-                     '%r: %r.' % (unique_comp_name, e))
+      for ps_gen in ps_gens:
+        try:
+          ps = ps_gen.TryGenerate(unique_comp_name, comp_info.values,
+                                  comp_info.information)
+        except MissingComponentValueError:
+          continue
+        except Exception as e:
+          if err is None:
+            err = e
+        else:
+          all_suitable_generator_and_ps.append((ps_gen, ps))
 
-      if not all_suitable_generator_and_ps and not error_msg:
-        # Ignore this component if no any generator are suitable for it.
-        continue
-
-      if len(all_suitable_generator_and_ps) > 1:
-        assert False, ("The code shouldn't reach here because we expect "
-                       'only one generator can handle the given component '
-                       'by design.')
+      if not all_suitable_generator_and_ps:
+        if isinstance(err, ProbeStatementConversionError):
+          error_msg = ('Failed to generate the probe statement for component '
+                       f'{unique_comp_name!r}: {err!r}.')
+        else:
+          # Ignore this component if no any generator are suitable for it.
+          continue
+      elif len(all_suitable_generator_and_ps) > 1:
+        assert False, ("The code shouldn't reach here because we expect only "
+                       'one generator can handle the given component by '
+                       'design.')
 
       is_duplicate = comp_info.status == hwid_common.COMPONENT_STATUS.duplicate
       if is_duplicate or error_msg:
