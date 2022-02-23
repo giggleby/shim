@@ -803,7 +803,7 @@
     "SetWidevineKeybox": {
       "pytest_name": "provision_drm_key",
       "label": "Set Widevine Keybox",
-      "run_if": "constants.has_keyboxy",
+      "run_if": "constants.has_keybox",
       "args": {
         "proxy_server_url": ""
       }
