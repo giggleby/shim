@@ -83,7 +83,8 @@ Audiofuntest on 'mlb' mics of input_dev and speaker channel 0 of output_dev::
         "require_dongle": false,
         "check_dongle": true,
         "mic_source": "MLBDmic",
-        "sample_rate": 16000,
+        "input_rate": 16000,
+        "output_rate": 48000,
         "initial_actions": [
           ["1", "init_speakerdmic"]
         ],
@@ -435,9 +436,12 @@ class AudioLoopTest(test_case.TestCase):
           default='nocheck'),
       Arg('audiofuntest_run_delay', (int, float),
           'Delay between consecutive calls to audiofuntest', default=None),
-      Arg('sample_rate', int,
-          ('The sample rate for audio test. The value should be determined by '
-           'output device.'), default=48000),
+      Arg('input_rate', int,
+          ('The input sample rate for audio test. The value should be '
+           'determined by input device.'), default=48000),
+      Arg('output_rate', int,
+          ('The output sample rate for audio test. The value should be '
+           'determined by output device.'), default=48000),
       Arg('check_conformance', bool, 'Check conformance or not.', default=True),
       Arg('conformance_rate_criteria', float,
           ('The pass criteria of rate. The value is a percentage of rate. See m'
@@ -724,8 +728,8 @@ class AudioLoopTest(test_case.TestCase):
       all_channel_rate[expected_channel] = float(m.group(2))
     return all_channel_rate
 
-  def AudioFunTestWithOutputChannel(self, capture_rate, input_channels,
-                                    output_channel):
+  def AudioFunTestWithOutputChannel(self, input_rate, output_rate,
+                                    input_channels, output_channel):
     """Runs audiofuntest program to get the frequency from microphone
     immediately according to speaker and microphone setting.
 
@@ -754,7 +758,8 @@ class AudioLoopTest(test_case.TestCase):
     X: channel =  1, success =   1, fail =   1, rate = 50.0
 
     Args:
-      capture_rate: bit rate for output device and input device
+      input_rate: bit rate for input device
+      output_rate: bit rate for output device
       input_channels: a list of mic channels used for testing
       output_channel: output device channel used for testing
     """
@@ -800,7 +805,7 @@ class AudioLoopTest(test_case.TestCase):
                      audiofuntest_bits,
                      self.args.num_output_channels,
                      audiofuntest_encoding,
-                     capture_rate,
+                     output_rate,
                      player_bits,
                      player_encoding,
                      self._alsa_output_device)
@@ -813,7 +818,7 @@ class AudioLoopTest(test_case.TestCase):
                        audiofuntest_bits,
                        len(input_channels),
                        audiofuntest_encoding,
-                       capture_rate,
+                       input_rate,
                        ' '.join(str(x+1) for x in input_channels),
                        input_gain)
 
@@ -829,8 +834,9 @@ class AudioLoopTest(test_case.TestCase):
     unused_help_stdout, help_stderr = help_process.communicate()
     audiofun_cmd = [
         audio_utils.AUDIOFUNTEST_PATH, '-P', player_cmd, '-R', recorder_cmd,
-        '-t', audiofuntest_sample_format, '-r',
-        '%d' % capture_rate, '-T',
+        '-t', audiofuntest_sample_format, '-I',
+        '%d' % input_rate, '-O',
+        '%d' % output_rate, '-T',
         '%d' % iteration, '-a',
         '%d' % output_channel, '-c',
         '%d' % len(input_channels), '-C',
@@ -842,7 +848,7 @@ class AudioLoopTest(test_case.TestCase):
     ]
     match = re.search(r'--played-file-path\b', help_stderr)
     if match:
-      audio_name = f'audiofun_generated_{capture_rate}_{output_channel}.raw'
+      audio_name = f'audiofun_generated_{output_rate}_{output_channel}.raw'
       played_audio_path = self._dut.path.join(self._dut_temp_dir, audio_name)
       local_played_audio_path = os.path.join(paths.DATA_TESTS_DIR,
                                              session.GetCurrentTestPath(),
@@ -855,7 +861,7 @@ class AudioLoopTest(test_case.TestCase):
 
     match = re.search(r'--recorded-file-path\b', help_stderr)
     if match:
-      audio_name = f'audiofun_recorded_{capture_rate}_{output_channel}.raw'
+      audio_name = f'audiofun_recorded_{input_rate}_{output_channel}.raw'
       recorded_audio_path = self._dut.path.join(self._dut_temp_dir, audio_name)
       local_recorded_audio_path = os.path.join(paths.DATA_TESTS_DIR,
                                                session.GetCurrentTestPath(),
@@ -925,11 +931,12 @@ class AudioLoopTest(test_case.TestCase):
                                                  self._in_channel_map)
     output_channels = self._current_test_args.get(
         'output_channels', _DEFAULT_AUDIOFUN_TEST_OUTPUT_CHANNELS)
-    capture_rate = self.args.sample_rate
+
     self.CheckChannelArgs(output_channels)
 
     for output_channel in output_channels:
-      self.AudioFunTestWithOutputChannel(capture_rate, input_channels,
+      self.AudioFunTestWithOutputChannel(self.args.input_rate,
+                                         self.args.output_rate, input_channels,
                                          output_channel)
       if self.args.audiofuntest_run_delay is not None:
         self.Sleep(self.args.audiofuntest_run_delay)
@@ -939,7 +946,7 @@ class AudioLoopTest(test_case.TestCase):
     """
     with file_utils.UnopenedTemporaryFile(suffix='.wav') as file_path:
       cmd = audio_utils.GetGenerateSineWavArgs(file_path, channel,
-                                               self.args.sample_rate,
+                                               self.args.output_rate,
                                                _DEFAULT_FREQ_HZ, wav_duration)
       process_utils.Spawn(cmd.split(' '), log=True, check_call=True)
       self._dut.link.Push(file_path, dut_file_path)
@@ -1000,7 +1007,7 @@ class AudioLoopTest(test_case.TestCase):
       session.console.info(f'Checking channel {channel} of {file_path}')
       self.CheckRecordedAudio(
           audio_utils.SoxStatOutput(file_path, num_channels, channel,
-                                    self.args.sample_rate))
+                                    self.args.input_rate))
     self._audio_file_path.append(file_path)
 
   def RecordFile(self, duration, num_channels, file_path):
@@ -1018,12 +1025,11 @@ class AudioLoopTest(test_case.TestCase):
          self._dut.temp.TempFile() as dut_record_path:
       self._dut.audio.RecordRawFile(dut_record_path, self._in_card,
                                     self._in_device, duration, num_channels,
-                                    self.args.sample_rate)
+                                    self.args.input_rate)
       self._dut.link.Pull(dut_record_path, record_path)
-      audio_utils.TrimAudioFile(in_path=record_path, out_path=file_path,
-                                start=_DEFAULT_TRIM_SECONDS, end=None,
-                                num_channels=num_channels,
-                                sample_rate=self.args.sample_rate)
+      audio_utils.TrimAudioFile(
+          in_path=record_path, out_path=file_path, start=_DEFAULT_TRIM_SECONDS,
+          end=None, num_channels=num_channels, sample_rate=self.args.input_rate)
 
   def CheckRecordedAudio(self, sox_output):
     rms_value = audio_utils.GetAudioRms(sox_output)
@@ -1173,11 +1179,12 @@ class AudioLoopTest(test_case.TestCase):
     failed_times = int(m.group(1))
     return failed_times == 0
 
-  def _CheckDeviceConformance(self, input_device: Optional[str],
+  def _CheckDeviceConformance(self, sample_rate, input_device: Optional[str],
                               output_device: Optional[str]):
     """Run a sub-test of the conformance test.
 
     Args:
+      sample_rate: The sample rate to test.
       input_device: The capture device.
       output_device: The playback device.
     """
@@ -1186,7 +1193,7 @@ class AudioLoopTest(test_case.TestCase):
         audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates',
         '--rate-criteria-diff-pct', f'{self.args.conformance_rate_criteria:f}',
         '--rate-err-criteria', f'{self.args.conformance_rate_err_criteria}',
-        '--allow-rate', f'{self.args.sample_rate}'
+        '--allow-rate', f'{sample_rate}'
     ]
     if input_device:
       commands.extend(['-C', input_device])
@@ -1199,18 +1206,35 @@ class AudioLoopTest(test_case.TestCase):
       logging.info('stdout:\n%s', stdout)
     if stderr:
       logging.info('stderr:\n%s', stderr)
-    is_all_passed = self._ParseConformanceOutput(io.StringIO(stdout))
-    if not is_all_passed:
-      error_messages = 'alsa_conformance_test.py failed for'
+    try:
+      is_all_passed = self._ParseConformanceOutput(io.StringIO(stdout))
+      if not is_all_passed:
+        error_messages = 'alsa_conformance_test.py failed for'
+        if input_device:
+          error_messages += f' Input device {input_device}'
+        if output_device:
+          error_messages += f' Output device {output_device}'
+        self.AppendErrorMessage(error_messages)
+    except ValueError as err:
+      dev_info_commands = [audio_utils.CONFORMANCETOOL_PATH, '--dev_info_only']
       if input_device:
-        error_messages += f' Input device {input_device}'
+        dev_info_commands.extend(['-C', input_device])
       if output_device:
-        error_messages += f' Output device {output_device}'
-      self.AppendErrorMessage(error_messages)
+        dev_info_commands.extend(['-P', output_device])
+      dev_info_process = self._dut.Popen(dev_info_commands,
+                                         stdout=process_utils.PIPE,
+                                         stderr=process_utils.PIPE, log=True)
+      dev_info_stdout, unused_dev_info_stderr = dev_info_process.communicate()
+      error_messages = str(err)
+      error_messages += '; Please check parameters with the device info: '
+      error_messages += dev_info_stdout
+      raise ValueError(error_messages)
 
   def CheckConformance(self):
     """Run conformance test program and check the result."""
 
     # TODO(cyueh) Add simultaneous test when b/201381252 is complete.
-    self._CheckDeviceConformance(self._alsa_input_device, None)
-    self._CheckDeviceConformance(None, self._alsa_output_device)
+    self._CheckDeviceConformance(self.args.input_rate, self._alsa_input_device,
+                                 None)
+    self._CheckDeviceConformance(self.args.output_rate, None,
+                                 self._alsa_output_device)
