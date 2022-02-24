@@ -11,7 +11,7 @@ import http.client
 import logging
 import os
 import time
-from typing import NamedTuple, Optional, Sequence, Tuple
+from typing import Any, NamedTuple, Optional, Sequence, Tuple
 import urllib.parse
 
 # pylint: disable=import-error, no-name-in-module
@@ -84,7 +84,8 @@ def _CreatePoolManager(cookie: str = '', content_type: str = '',
 
 def _InvokeGerritAPI(method: str, url: str,
                      params: Optional[Sequence[Tuple[str, str]]] = None,
-                     auth_cookie: str = '', content_type: str = '') -> bytes:
+                     auth_cookie: str = '', content_type: str = '',
+                     body: bytes = b'') -> bytes:
   """Invokes a Gerrit API endpoint and returns the response in bytes.
 
   Args:
@@ -92,7 +93,8 @@ def _InvokeGerritAPI(method: str, url: str,
     url: The URL of the API without HTTP parameters.
     params: A list of HTTP parameters.
     auth_cookie: The auth cookie uses to create the pool manager.
-    content_type: Specifies the content type in the request header.
+    content_type: The Content-type field in the request header.
+    body: The HTTP request body in bytes.
 
   Returns:
     The response in bytes.
@@ -107,7 +109,7 @@ def _InvokeGerritAPI(method: str, url: str,
                                     content_type=content_type)
 
   try:
-    resp = pool_manager.urlopen(method, url)
+    resp = pool_manager.urlopen(method, url, body=body)
   except urllib3.exceptions.HTTPError as ex:
     raise GitUtilException(f'Invalid url {url!r}.') from ex
   if resp.status != http.client.OK:
@@ -117,9 +119,9 @@ def _InvokeGerritAPI(method: str, url: str,
   return resp.data
 
 
-def _InvokeGerritAPIJSON(method: str, url: str,
-                         params: Optional[Sequence[Tuple[str, str]]] = None,
-                         auth_cookie: str = ''):
+def _InvokeGerritAPIJSON(
+    method: str, url: str, params: Optional[Sequence[Tuple[str, str]]] = None,
+    auth_cookie: str = '', json_body: Optional[Any] = None):
   """Invokes a Gerrit API endpoint and returns the response payload in JSON.
 
   Args:
@@ -127,6 +129,7 @@ def _InvokeGerritAPIJSON(method: str, url: str,
     url: See `_InvokeGerritAPI`.
     params: See `_InvokeGerritAPI`.
     auth_cookie: See `_InvokeGerritAPI`.
+    json_body: The JSON-seralizable object to be attached in the HTTP body.
 
   Returns:
     The JSON-compatible response payload.
@@ -134,9 +137,15 @@ def _InvokeGerritAPIJSON(method: str, url: str,
   Raises:
     GitUtilException: If the invocation ends unsuccessfully.
   """
-  raw_data = _InvokeGerritAPI(method, url, params=params,
-                              auth_cookie=auth_cookie,
-                              content_type='application/json')
+  kwargs = {
+      'params': params,
+      'auth_cookie': auth_cookie
+  }
+  if json_body is not None:
+    kwargs['content_type'] = 'application/json'
+    kwargs['body'] = json_utils.DumpStr(json_body).encode('utf-8')
+
+  raw_data = _InvokeGerritAPI(method, url, **kwargs)
   try:
     # the response starts with a magic prefix line for preventing XSSI which
     # should be stripped.
@@ -570,17 +579,20 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
     raise GitUtilException('Failed to parse the Gerrit API response.') from ex
 
 
-def AbandonCL(review_host, auth_cookie, change_id):
+def AbandonCL(review_host, auth_cookie, change_id,
+              reason: Optional[str] = None):
   """Abandons a CL
 
   Args:
     review_host: Review host of repo
     auth_cookie: Auth cookie
     change_id: Change ID
+    reason: An optional string message as the reason to abandon the CL.
   """
   try:
     _InvokeGerritAPIJSON('POST', f'{review_host}/a/changes/{change_id}/abandon',
-                         auth_cookie=auth_cookie)
+                         auth_cookie=auth_cookie,
+                         json_body={'message': reason} if reason else None)
   except GitUtilException as ex:
     raise GitUtilException(
         f'Abandon failed for change id: {change_id}.') from ex

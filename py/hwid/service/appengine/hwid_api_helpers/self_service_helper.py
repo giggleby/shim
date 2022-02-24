@@ -7,6 +7,7 @@ import logging
 import re
 import textwrap
 import time
+from typing import Optional, Tuple
 
 from google.protobuf import json_format
 
@@ -112,15 +113,27 @@ def _ConvertCompInfoToMsg(
   return comp_info_msg
 
 
-def _IsCLExpired(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
-  """Returns whether the CL specified by `cl_info` is considered expired."""
+def _IsCLExpired(cl_info: hwid_repo.HWIDDBCLInfo) -> Tuple[bool, Optional[str]]:
+  """Determines whether a CL is considered expired.
+
+  Args:
+    cl_info: The information of the CL to check.
+
+  Returns:
+    The expiration check result in a 2-value tuple.  The first value is
+    `True` iff the CL is expired.  If the CL is considered expired,
+    the second tuple value is a string message of the reason.
+    If the CL is not expired, the second tuple value is `None`.
+  """
   if cl_info.status == hwid_repo.HWIDDBCLStatus.NEW:
     cl_age = datetime.datetime.utcnow() - cl_info.created_time
-    cl_max_age = (
-        _MAX_OPENED_HWID_DB_CL_AGE
-        if cl_info.mergeable else _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE)
-    return cl_age > cl_max_age
-  return False
+    if cl_info.mergeable:
+      if cl_age > _MAX_OPENED_HWID_DB_CL_AGE:
+        return True, ('The CL is expired for not getting merged in time '
+                      f'({_MAX_OPENED_HWID_DB_CL_AGE.days} days).')
+    elif cl_age > _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE:
+      return True, 'The CL is expired because the contents are out-of-date.'
+  return False, None
 
 
 class SelfServiceHelper:
@@ -307,11 +320,12 @@ Info Update
 
     # TODO(yhong): Consider triggering legacy CL deprecation routine by
     # cronjobs instead.
-    if not _IsCLExpired(cl_info):
+    is_cl_expired, cl_expiration_reason = _IsCLExpired(cl_info)
+    if not is_cl_expired:
       return cl_info
 
     try:
-      self._hwid_repo_manager.AbandonCL(cl_number)
+      self._hwid_repo_manager.AbandonCL(cl_number, reason=cl_expiration_reason)
     except git_util.GitUtilException as ex:
       logging.warning(
           'Caught exception while abandoning the expired HWID DB CL: %r.', ex)

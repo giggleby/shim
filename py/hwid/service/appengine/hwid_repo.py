@@ -225,7 +225,8 @@ class HWIDRepoManager:
         _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path, self._repo_branch,
         auth_cookie=git_util.GetGerritAuthCookie()).decode()
 
-  def AbandonCL(self, cl_number: int):
+  def AbandonCL(self, cl_number: int, reason=None):
     """Abandons the given CL number."""
     return git_util.AbandonCL(_INTERNAL_REPO_URL,
-                              git_util.GetGerritAuthCookie(), cl_number)
+                              git_util.GetGerritAuthCookie(), cl_number,
+                              reason=reason)
