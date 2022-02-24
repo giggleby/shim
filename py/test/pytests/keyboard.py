@@ -93,6 +93,7 @@ import os
 import re
 import struct
 import time
+from typing import Dict, List, Tuple
 
 from cros.factory.test.l10n import regions
 from cros.factory.test import session
@@ -242,10 +243,11 @@ class KeyboardTest(test_case.TestCase):
     if self.args.has_numpad:
       self.numpad_keys = self.ReadKeyOrder(_NUMPAD)
 
-    replacement_keymap = {}
+    vivaldi_keymap = {}
     if self.args.vivaldi_keyboard:
-      replacement_keymap = self.GetVivaldiKeyboardActionKeys()
+      vivaldi_keymap = self.GetVivaldiKeyboardActionKeys()
 
+    replacement_keymap = vivaldi_keymap.copy()
     # Apply any replacement keymap
     if self.args.replacement_keymap:
       replacement_keymap.update({
@@ -254,11 +256,24 @@ class KeyboardTest(test_case.TestCase):
       })
 
     if replacement_keymap:
+      extra_block_size = 50
+      extra_left = min(
+          min(block[0]
+              for block in blocks)
+          for blocks in self.bindings.values())
+      extra_top = min(
+          min(block[1]
+              for block in blocks)
+          for blocks in self.bindings.values()) - extra_block_size
       new_bind = {key: value for key, value in self.bindings.items()
                   if key not in replacement_keymap}
       for old_key, new_key in replacement_keymap.items():
         if old_key in self.bindings:
           new_bind[new_key] = self.bindings[old_key]
+        elif old_key in vivaldi_keymap:
+          new_bind[new_key] = [(extra_left, extra_top, extra_block_size,
+                                extra_block_size)]
+          extra_left += extra_block_size
       self.bindings = new_bind
 
       if self.args.has_numpad:
@@ -393,7 +408,7 @@ class KeyboardTest(test_case.TestCase):
     region = process_utils.CheckOutput(['vpd', '-g', 'region']).strip()
     return regions.REGIONS[region].keyboard_mechanical_layout
 
-  def ReadBindings(self, layout):
+  def ReadBindings(self, layout) -> Dict[int, List[Tuple]]:
     """Reads in key bindings and their associates figure regions."""
     bindings_filename = os.path.join(self.ui.GetStaticDirectoryPath(),
                                      layout + '.bindings')
