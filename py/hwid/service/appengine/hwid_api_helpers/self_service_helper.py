@@ -35,8 +35,7 @@ _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
 
 _MAX_OPENED_HWID_DB_CL_AGE = datetime.timedelta(
     days=365 * 3)  # A rough estimation of 3 years.
-_MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(
-    days=365 * 3 // 4)  # A rough estimation of 3 quarters.
+_MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(days=7)
 
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
@@ -113,8 +112,9 @@ def _ConvertCompInfoToMsg(
   return comp_info_msg
 
 
-def _IsCLExpired(cl_info: hwid_repo.HWIDDBCLInfo) -> Tuple[bool, Optional[str]]:
-  """Determines whether a CL is considered expired.
+def _CheckIfHWIDDBCLShouldBeAbandoned(
+    cl_info: hwid_repo.HWIDDBCLInfo) -> Tuple[bool, Optional[str]]:
+  """Determines whether a HWID DB CL should be abandoned.
 
   Args:
     cl_info: The information of the CL to check.
@@ -126,6 +126,8 @@ def _IsCLExpired(cl_info: hwid_repo.HWIDDBCLInfo) -> Tuple[bool, Optional[str]]:
     If the CL is not expired, the second tuple value is `None`.
   """
   if cl_info.status == hwid_repo.HWIDDBCLStatus.NEW:
+    if cl_info.review_status == hwid_repo.HWIDDBCLReviewStatus.REJECTED:
+      return True, 'The CL is rejected by the reviewer.'
     cl_age = datetime.datetime.utcnow() - cl_info.created_time
     if cl_info.mergeable:
       if cl_age > _MAX_OPENED_HWID_DB_CL_AGE:
@@ -311,7 +313,7 @@ Info Update
 
     return resp
 
-  def _GetActiveHWIDDBEditableSectionChangeCLInfo(self, cl_number):
+  def _GetHWIDDBCLInfo(self, cl_number):
     try:
       cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
     except hwid_repo.HWIDRepoError as ex:
@@ -320,7 +322,8 @@ Info Update
 
     # TODO(yhong): Consider triggering legacy CL deprecation routine by
     # cronjobs instead.
-    is_cl_expired, cl_expiration_reason = _IsCLExpired(cl_info)
+    is_cl_expired, cl_expiration_reason = _CheckIfHWIDDBCLShouldBeAbandoned(
+        cl_info)
     if not is_cl_expired:
       return cl_info
 
@@ -349,7 +352,7 @@ Info Update
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
         ))
     for cl_number in request.cl_numbers:
-      cl_info = self._GetActiveHWIDDBEditableSectionChangeCLInfo(cl_number)
+      cl_info = self._GetHWIDDBCLInfo(cl_number)
       if cl_info is None:
         continue
 

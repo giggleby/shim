@@ -170,6 +170,7 @@ class HWIDRepo:
 
 HWIDDBCLInfo = git_util.CLInfo
 HWIDDBCLStatus = git_util.CLStatus
+HWIDDBCLReviewStatus = git_util.CLReviewStatus
 HWIDDBCLMessage = git_util.CLMessage
 
 
@@ -202,7 +203,8 @@ class HWIDRepoManager:
       return git_util.GetCLInfo(_INTERNAL_REPO_URL, cl_number,
                                 auth_cookie=git_util.GetGerritAuthCookie(),
                                 include_detailed_accounts=True,
-                                include_messages=True, include_mergeable=True)
+                                include_messages=True, include_mergeable=True,
+                                include_review_status=True)
     except git_util.GitUtilException as ex:
       raise HWIDRepoError from ex
 

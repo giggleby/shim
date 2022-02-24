@@ -150,7 +150,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     expected_cl_number = 123
     self._mocked_create_cl.return_value = 'Ithis_is_change_id'
     self._mocked_get_cl_info.return_value = git_util.CLInfo(
-        'change_id', expected_cl_number, git_util.CLStatus.NEW, [], True,
+        'change_id', expected_cl_number, git_util.CLStatus.NEW, None, [], True,
         datetime.datetime.utcnow())
 
     actual_cl_number = self._hwid_repo.CommitHWIDDB(
@@ -178,7 +178,8 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     cl_mergeable = False
     cl_created_time = datetime.datetime.utcnow()
     returned_cl_info = git_util.CLInfo('unused_change_id', 123,
-                                       git_util.CLStatus.MERGED, [
+                                       git_util.CLStatus.MERGED,
+                                       git_util.CLReviewStatus.APPROVED, [
                                            git_util.CLMessage('msg1', 'email1'),
                                            git_util.CLMessage('msg2', 'email2')
                                        ], cl_mergeable, cl_created_time)

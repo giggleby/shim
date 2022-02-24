@@ -492,6 +492,15 @@ class CLStatus(enum.Enum):
   ABANDONED = enum.auto()
 
 
+class CLReviewStatus(enum.Enum):
+  AMBIGUOUS = enum.auto()
+  NEUTRAL = enum.auto()
+  APPROVED = enum.auto()
+  RECOMMENDED = enum.auto()
+  DISLIKED = enum.auto()
+  REJECTED = enum.auto()
+
+
 _GERRIT_CL_STATUS_TO_CL_STATUS = {
     'NEW': CLStatus.NEW,
     'MERGED': CLStatus.MERGED,
@@ -508,13 +517,15 @@ class CLInfo(NamedTuple):
   change_id: str
   cl_number: int
   status: CLStatus
+  review_status: Optional[CLReviewStatus]
   messages: Optional[Sequence[CLMessage]]
   mergeable: Optional[bool]
   created_time: datetime.datetime
 
 
 def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
-              include_detailed_accounts=False, include_mergeable=False):
+              include_detailed_accounts=False, include_mergeable=False,
+              include_review_status=False):
   """Gets the info of the specified CL by querying the Gerrit API.
 
   Args:
@@ -525,6 +536,7 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
     include_detailed_accounts: Whether to pull and return the email of users
         in CL messages.
     include_mergeable: Whether to pull the mergeable status of the CL.
+    include_review_status: Whether to pull the CL review status.
 
   Returns:
     An instance of `CLInfo`.  Optional fields might be `None`.
@@ -546,6 +558,8 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
     params.append(('o', 'MESSAGES'))
   if include_detailed_accounts:
     params.append(('o', 'DETAILED_ACCOUNTS'))
+  if include_review_status:
+    params.append(('o', 'LABELS'))
   cl_info_json = GetChangeInfo('', params)
 
   def ConvertGerritCLMessage(cl_message_info_json):
@@ -562,6 +576,31 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
     cl_mergeable_info_json = GetChangeInfo('/revisions/current/mergeable', [])
     return cl_mergeable_info_json['mergeable']
 
+  def GetCLReviewStatus(labels):
+    code_review_labels = labels.get('Code-Review')
+    if code_review_labels is None:
+      raise GitUtilException('The Code-Review labels are missing.')
+    is_approved = bool(code_review_labels.get('approved'))
+    is_recommended = bool(code_review_labels.get('recommended'))
+    is_rejected = bool(code_review_labels.get('rejected'))
+    is_disliked = bool(code_review_labels.get('disliked'))
+
+    # If some review votes are positive while some are negative, return
+    # ambiguous.
+    if (is_approved or is_recommended) and (is_rejected or is_disliked):
+      return CLReviewStatus.AMBIGUOUS
+
+    # Approved and rejected takes the priority.
+    if is_approved:
+      return CLReviewStatus.APPROVED
+    if is_rejected:
+      return CLReviewStatus.REJECTED
+    if is_recommended:
+      return CLReviewStatus.RECOMMENDED
+    if is_disliked:
+      return CLReviewStatus.DISLIKED
+    return CLReviewStatus.NEUTRAL
+
   try:
     cl_status = _GERRIT_CL_STATUS_TO_CL_STATUS[cl_info_json['status']]
     cl_info_messages = (
@@ -570,8 +609,12 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
     cl_info_created_time = ConvertGerritTimestamp(cl_info_json['created'])
     cl_info_mergeable = (
         GetCLMergeableInfo(cl_status) if include_mergeable else None)
+    cl_review_status = (
+        GetCLReviewStatus(cl_info_json['labels'])
+        if include_review_status else None)
     return CLInfo(cl_info_json['change_id'], cl_info_json['_number'], cl_status,
-                  cl_info_messages, cl_info_mergeable, cl_info_created_time)
+                  cl_review_status, cl_info_messages, cl_info_mergeable,
+                  cl_info_created_time)
   except GitUtilException:
     raise
   except Exception as ex:
