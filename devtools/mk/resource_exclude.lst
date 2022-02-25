@@ -5,7 +5,6 @@ bundle
 bin/generate_rsts
 bin/list_dir_as_yaml
 py/bundle_creator
-py/dkps
 py/doc
 py/dome
 py/hwid/service/appengine

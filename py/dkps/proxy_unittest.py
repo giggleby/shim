@@ -18,12 +18,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 
 
-try:
-  # pylint: disable=import-error
-  import Crypto
-except Exception:
-  Crypto = None
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 # Copied from Widevine website.
 FAKE_KEYBOX = '5769646576696e65546573744f6e6c794b6579626f7830303000000000000000e4ff574c322ef53426212cb3ed37f35e0000000200001ee8ca1e717cfbe8a394520a6b7137d269fa5ac6b54c6b46639bbe803dbb4ff74c5f6f550e3d3d9acf81125d52e0478cda0bf4314113d0d52da05b209aed515d13d66b626f7839f294a7'  # pylint: disable=line-too-long
@@ -39,16 +33,8 @@ class DKPSProxyTest(unittest.TestCase):
     self.proxy = proxy_module.DKPSProxy(self.helper)
 
   def testRequest(self):
-
     # Request with fake device serial, SoC serial, and SoC model ID.
-    # TODO(treapking): This makes the unit test work in chroot. Remove this if
-    # we can run unit test in the factory server container.
-    if Crypto:
-      encrypted_keybox = self.proxy.Request('SN000000', '7f' * 32, 16)
-    else:
-      with mock.patch('cros.factory.dkps.proxy._EncryptWithTransportKey',
-                      return_value=ENCRYPTED_KEYBOX):
-        encrypted_keybox = self.proxy.Request('SN000000', '7f' * 32, 16)
+    encrypted_keybox = self.proxy.Request('SN000000', '7f' * 32, 16)
 
     self.assertEqual(encrypted_keybox, ENCRYPTED_KEYBOX)
 

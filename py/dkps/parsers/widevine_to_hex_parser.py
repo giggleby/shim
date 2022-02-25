@@ -5,12 +5,7 @@
 
 from xml.etree import cElementTree as ET
 
-
-def FormatDeviceID(device_id):
-  """Encode device ID to hex string, and pad it to 32 bytes with NULL bytes."""
-  device_id = device_id.encode('ascii').hex()
-  device_id = device_id.ljust(64, '0')
-  return device_id
+from cros.factory.dkps.widevine_utils import FormatDeviceID
 
 
 def Parse(serialized_drm_key_list):

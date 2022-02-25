@@ -5,16 +5,9 @@
 
 import os
 import unittest
-from unittest import mock
 
 from cros.factory.dkps.filters import widevine_hex_filter
 
-
-try:
-  # pylint: disable=import-error
-  import crcmod
-except Exception:
-  crcmod = None
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -26,14 +19,6 @@ SHORT_KEYBOX = ['deadbeef']
 
 
 class WidevineHexFilterTest(unittest.TestCase):
-
-  def setUp(self):
-    # TODO(treapking): This makes the unit test work in chroot. Remove this if
-    # we can run unit test in container.
-    if not crcmod:
-      patcher = mock.patch(widevine_hex_filter.__name__ + '.ComputeCRC',
-                           return_value='39f294a7')
-      patcher.start()
 
   def testFilter(self):
     filtered_list = widevine_hex_filter.Filter(CORRECT_CRC_KEYBOX)

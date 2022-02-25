@@ -32,19 +32,6 @@ EXPECTED_PARSED_MOCK_WIDEVINE_KEY_LIST = [
 
 class WidevineToHexParserTest(unittest.TestCase):
 
-  def testFormatDeviceIDNormal(self):
-    device_id = widevine_to_hex_parser.FormatDeviceID('abcd0000')
-
-    # '6162636430303030' == 'abcd0000'.encode('ascii').hex()
-    self.assertEqual(device_id, '6162636430303030' + '00' * 24)
-
-  def testFormatDeviceIDNoPadding(self):
-    device_id = widevine_to_hex_parser.FormatDeviceID(
-        '_this_is_a_32_bytes_long_string_')
-
-    self.assertEqual(device_id,
-                     '_this_is_a_32_bytes_long_string_'.encode('ascii').hex())
-
   def testParse(self):
     with open(MOCK_WIDEVINE_FILE_PATH) as f:
       self.assertEqual(EXPECTED_PARSED_MOCK_WIDEVINE_KEY_LIST,

@@ -10,7 +10,6 @@ detailed design.
 """
 
 import argparse
-import hashlib
 import json
 import logging
 import logging.config
@@ -18,6 +17,7 @@ import os
 import xmlrpc.server
 
 from cros.factory.dkps import helpers
+from cros.factory.dkps import widevine_utils
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -56,35 +56,6 @@ DEFAULT_LOGGING_CONFIG = {
     }
 }
 
-
-def _TransportKeyKDF(soc_serial: str, soc_id: int):
-  """Generate 128-bit transport key from 32-bit soc_id and 256-bit soc_serial.
-
-  Args:
-    soc_serial: SoC serial in hex string format.
-    soc_id: SoC model ID.
-
-  Returns:
-    The derived transport key in bytes format.
-  """
-
-  soc_serial = bytes.fromhex(soc_serial)
-  soc_id = soc_id.to_bytes(4, 'little')
-
-  return hashlib.sha256(soc_id + soc_serial).digest()[:16]
-
-
-def _EncryptWithTransportKey(keybox, transport_key):
-  # TODO(treapking): Currently the chroot environment doesn't have pycryptodome
-  # installed by default, so we have to import it here to run the unit test in
-  # chroot. We should create a docker instance and run factory-server-related
-  # unit tests in the future.
-  # pylint: disable=import-error
-  from Crypto.Cipher import AES
-
-  cipher = AES.new(transport_key, AES.MODE_CBC, b'\0' * 16)
-  return cipher.encrypt(bytes.fromhex(keybox)).hex()
-
 class DKPSProxy:
 
   def __init__(self, helper):
@@ -112,8 +83,9 @@ class DKPSProxy:
 
     # Re-encrypt the keybox with the transport key
     logging.info('Re-encrypt DRM key with transport key.')
-    transport_key = _TransportKeyKDF(soc_serial_number, soc_model_id)
-    keybox = _EncryptWithTransportKey(keybox, transport_key)
+    transport_key = widevine_utils.TransportKeyKDF(soc_serial_number,
+                                                   soc_model_id)
+    keybox = widevine_utils.EncryptKeyboxWithTransportKey(keybox, transport_key)
 
     return keybox
 
