@@ -175,8 +175,8 @@ def CopyAttachmentsToTempDir(att_paths, tmp_dir, logger_name=None):
       target_path = os.path.join(tmp_dir, att_path.replace('/', '_'))
       logger.debug('Copying attachment: %s --> %s',
                    att_path, target_path)
-      with open(target_path, 'w') as dst_f:
-        with open(att_path, 'r') as src_f:
+      with open(target_path, 'wb') as dst_f:
+        with open(att_path, 'rb') as src_f:
           shutil.copyfileobj(src_f, dst_f)
         # Fsync the file and the containing directory to make sure it
         # is flushed to disk.
