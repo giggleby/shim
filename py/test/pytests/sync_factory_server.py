@@ -292,20 +292,19 @@ class SyncFactoryServer(test_case.TestCase):
     label_status = _('Expected network: {networks}', networks=expected_networks)
 
     while True:
-      try:
-        new_url = URLSpec.FindServerURL(self.args.server_url, self.station)
+      new_url = URLSpec.FindServerURL(self.args.server_url, self.station)
+      if new_url:
         break
-      except ValueError:
-        # Collect current networks. The output format is DEV STATUS NETWORK.
-        output = self.station.CallOutput(['ip', '-f', 'inet', '-br', 'addr'])
-        networks = [
-            entry.split()[2] for entry in output.splitlines() if ' UP ' in entry
-        ]
-        self.ui.SetState([
-            label_connect, label_status,
-            _('Current networks: {networks}', networks=networks)
-        ])
-        self.Sleep(0.5)
+      # Collect current networks. The output format is DEV STATUS NETWORK.
+      output = self.station.CallOutput(['ip', '-f', 'inet', '-br', 'addr'])
+      networks = [
+          entry.split()[2] for entry in output.splitlines() if ' UP ' in entry
+      ]
+      self.ui.SetState([
+          label_connect, label_status,
+          _('Current networks: {networks}', networks=networks)
+      ])
+      self.Sleep(0.5)
 
     self.ChangeServerURL(new_url)
     self.do_setup_url.clear()

@@ -37,4 +37,4 @@ class URLSpec:
 
     if isinstance(url, str) and url:
       return url
-    raise ValueError(f'Invalid url {url_spec}.')
+    return ''
