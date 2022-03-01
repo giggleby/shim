@@ -62,8 +62,8 @@ class URLSpecTest(unittest.TestCase):
         'matched_domain': ''
     }]:
       with self.subTest(param=param):
-        with self.assertRaises(ValueError):
-          URLSpec.FindServerURL(param, self.dut)
+        actual = URLSpec.FindServerURL(param, self.dut)
+        self.assertEqual(actual, '')
 
 
 if __name__ == '__main__':
