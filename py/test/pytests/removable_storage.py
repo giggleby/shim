@@ -191,6 +191,9 @@ class RemovableStorageTest(test_case.TestCase):
       Arg('timeout_secs', int,
           'Timeout in seconds for the test to wait before it fails',
           default=20),
+      Arg('detect_timeout_secs', int,
+          'Timeout in seconds for the removable storage to be detected',
+          default=5),
       Arg('bft_fixture', dict, bft_fixture.TEST_ARG_HELP, default=None),
       Arg('skip_insert_remove', bool,
           'Skip the step of device insertion and removal', default=False),
@@ -427,6 +430,10 @@ class RemovableStorageTest(test_case.TestCase):
     """
     if self.args.media == _MediaType.NVME:
       block_dirs = self._dut.Glob('/sys/block/nvme*')
+    elif self.args.media == _MediaType.SD:
+      # Depends on the type of the card reader, paths could be mmcblk* or sd*
+      block_dirs = (self._dut.Glob('/sys/block/mmcblk*') +
+                    self._dut.Glob('/sys/block/sd*'))
     else:
       block_dirs = self._dut.Glob('/sys/block/sd*')
     for block_dir in block_dirs:
@@ -741,7 +748,7 @@ class RemovableStorageTest(test_case.TestCase):
     if self.args.skip_insert_remove:
       device_node = sync_utils.WaitFor(
           lambda: self.GetDeviceNodeBySysPath(self.args.sysfs_path),
-          self.args.timeout_secs)
+          self.args.detect_timeout_secs)
       path = self._dut.path.join(self._dut.udev.GetDevBlockPath(), device_node)
       context = pyudev.Context()
       device = pyudev.Device.from_device_file(context, path)
