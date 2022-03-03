@@ -427,14 +427,26 @@ table + .goofy-history-header {
   flex: none;
 }
 .goofy-plugin {
-  height: 24px; width: 100%;
+  height: 100%; width: 100%;
   flex: none;
-  border-top: 1px solid lightgray;
   position: relative;
 }
 .goofy-plugin iframe {
   height: 100%; width: 100%;
-  background-color: white;
+}
+/* For plugin `qrcode_manager` */
+#goofy-plugin-area-goofy-fullscreen {
+  position: fixed;
+  height: 100%; width: 100%;
+  /* Set z-index to 4 so that it is not covered by test-ui.*/
+  z-index: 4;
+  pointer-events: none;
+}
+/* For plugin `status_monitor` */
+#goofy-plugin-area-goofy-full {
+  background-color:white;
+  border-top: 1px solid lightgray;
+  height: 24px;
 }
 
 /* Dialogs. */

@@ -190,7 +190,7 @@ cros.factory.PluginMenuReturnData;
 
 /**
  * Config for goofy plugin frontend UI.
- * @typedef {{url: string, location: string}}
+ * @typedef {{url: string, location: string, iframe_id: string}}
  */
 cros.factory.PluginFrontendConfig;
 
@@ -3247,6 +3247,16 @@ cros.factory.Goofy = class {
         this.logToConsole(message.message);
         break;
       }
+      case 'goofy:update_qrcode': {
+        const message =
+           /** @type {{args: !Object}} */(
+              untypedMessage);
+        this.logToConsole('qrcode_manager: ' + JSON.stringify(message.message));
+        const iframe = document.getElementById(
+          'qrcode_manager-qrcode_manager-iframe');
+        iframe.contentWindow['updateQRCode'](message.message);
+        break;
+      }
       case 'goofy:state_change': {
         const message =
             /** @type {{path: string, state: !cros.factory.TestState}} */ (
@@ -3538,13 +3548,14 @@ cros.factory.Goofy = class {
    * @param {!Array<!cros.factory.PluginFrontendConfig>} configs
    */
   setPluginUI(configs) {
-    for (const {location, url} of configs) {
+    for (const {location, url, iframe_id} of configs) {
       const pluginArea =
           document.getElementById(`goofy-plugin-area-${location}`);
       const newPlugin = goog.dom.createDom('div', 'goofy-plugin');
       const iframe = goog.asserts.assertInstanceof(
           goog.dom.createDom(
-              'iframe', {'class': 'goofy-plugin-iframe', 'src': url}),
+              'iframe', {'class': 'goofy-plugin-iframe', 'src': url,
+              'id': iframe_id}),
           HTMLIFrameElement);
       pluginArea.appendChild(newPlugin);
       newPlugin.appendChild(iframe);
