@@ -83,7 +83,7 @@ class Tests:
       end_time = time.time() + 1
       for thread in extra_threads:
         thread.join(timeout=end_time - time.time())
-        self.assertFalse(thread.isAlive(),
+        self.assertFalse(thread.is_alive(),
                          "Thread %r still alive after 1 second." % thread)
 
   class EventServerClientTest(EventServerClientTestBase):

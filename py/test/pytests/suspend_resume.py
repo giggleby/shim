@@ -169,7 +169,8 @@ class SuspendResumeTest(test_case.TestCase):
     self.done = True
     if self.alarm_thread:
       self.alarm_thread.join(5)
-      self.assertFalse(self.alarm_thread.isAlive(), 'Alarm thread failed join.')
+      self.assertFalse(self.alarm_thread.is_alive(),
+                       'Alarm thread failed join.')
     # Clear any active wake alarms
     self._SetWakealarm('0')
 
@@ -531,7 +532,7 @@ class SuspendResumeTest(test_case.TestCase):
                    self.run, self.args.cycles, resume_time)
       self.Sleep(resume_time)
 
-      while self.alarm_thread.isAlive():
+      while self.alarm_thread.is_alive():
         alarm_suspend_delays += 1
         logging.warning('alarm thread is taking a while to return, waiting 1s.')
         self.Sleep(1)

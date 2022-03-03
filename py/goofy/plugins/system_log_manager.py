@@ -125,7 +125,7 @@ class SystemLogManager(plugin.Plugin):
 
   def IsThreadRunning(self):
     """Returns True if _main_thread is running."""
-    return self._main_thread and self._main_thread.isAlive()
+    return self._main_thread and self._main_thread.is_alive()
 
   def KickToClear(self):
     """Kicks _main_thread to clear logs.

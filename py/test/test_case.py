@@ -153,7 +153,7 @@ class TestCase(unittest.TestCase):
       # wait for 3 more seconds for (possible) cleanup to run, and just ignore
       # the thread. (Even if the thread doesn't terminate in time.)
       thread.join(1)
-      if thread.isAlive():
+      if thread.is_alive():
         try:
           sync_utils.TryRaiseExceptionInThread(thread.ident, TaskEndException)
         except ValueError:

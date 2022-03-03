@@ -693,7 +693,7 @@ class TouchscreenCalibration(test_case.TestCase):
       event: the event that triggers this callback function
     """
 
-    if self._calibration_thread and self._calibration_thread.isAlive():
+    if self._calibration_thread and self._calibration_thread.is_alive():
       self.ui.Alert(_('Current calibration has not completed yet'))
       return
 

@@ -431,7 +431,7 @@ class TestBufferSimpleFile(unittest.TestCase):
       t.start()
 
     for t in threads:
-      while t.isAlive():
+      while t.is_alive():
         # Add a small sleep to prevent occupying read_lock
         time.sleep(0.01)
         self.sf.buffer_file.Truncate()
