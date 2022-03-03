@@ -126,6 +126,7 @@ class PluginController:
         if location is True:
           location = 'testlist'
         self._frontend_configs.append({
+            'iframe_id': '%s-iframe' % name.replace('.', '-'),
             'url': '%s/%s.html' % (url_base_path, plugin_paths[-1]),
             'location': location
         })

@@ -194,7 +194,8 @@ Goofy would link the `<iframe>` to URL
 `/plugin/<plugin_name>/<plugin_python_name>.html` as the entry point.
 
 The UI location can be changed by returning one of `'testlist'`, `'console'`,
-`'goofy-full'`.  Returning `True` has same effect as `'testlist'`.
+`'goofy-full'`, `'goofy-fullscreen'`.  Returning `True` has same effect as
+`'testlist'`.
 
 Plugin can have its own Javascript file. During the plugin `<iframe>` creation,
 the namespace `cros` and `goog` is set by Goofy. Therefore, plugin Javascript

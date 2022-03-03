@@ -1,0 +1,12 @@
+body {
+  padding: 0px;
+  margin: 0px;
+}
+
+#qrcode-container {
+  height: 100%; width: 100%;
+}
+
+.qrcode {
+  position: relative;
+}
