@@ -136,17 +136,20 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             FieldMsg(name='idProduct', value='abcd'),
                             FieldMsg(name='idVendor', value='4567'),
                             FieldMsg(name='name', value='Camera')
-                        ], avl_info=AvlInfoMsg(cid=0), has_avl=True),
+                        ], avl_info=AvlInfoMsg(cid=0, avl_name=''),
+                        has_avl=True),
                     ComponentMsg(
                         name='cpu_0', component_class='cpu', fields=[
                             FieldMsg(name='cores', value='4'),
                             FieldMsg(name='name', value='CPU @ 1.80GHz')
-                        ], avl_info=AvlInfoMsg(cid=0), has_avl=True),
+                        ], avl_info=AvlInfoMsg(cid=0, avl_name=''),
+                        has_avl=True),
                     ComponentMsg(
                         name='cpu_1', component_class='cpu', fields=[
                             FieldMsg(name='cores', value='4'),
                             FieldMsg(name='name', value='CPU @ 2.00GHz')
-                        ], avl_info=AvlInfoMsg(cid=1), has_avl=True)
+                        ], avl_info=AvlInfoMsg(cid=1, avl_name=''),
+                        has_avl=True)
                 ], [], '', '', Status.SUCCESS),
         })
 
@@ -187,6 +190,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         comp_db=database.Database.LoadFile(GOLDEN_HWIDV3_FILE,
                                            verify_checksum=False), verbose=True)
     configless = None
+    self._module_collection.AddAVLNameMapping('dram', 1234, 'avl_name_1')
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {
           TEST_HWID: BOMAndConfigless(bom, configless, None),
@@ -202,7 +206,8 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                         name='dram_1234_5678', component_class='dram', fields=[
                             FieldMsg(name='part', value='part2'),
                             FieldMsg(name='size', value='4G'),
-                        ], avl_info=AvlInfoMsg(cid=1234, qid=5678),
+                        ], avl_info=AvlInfoMsg(cid=1234, qid=5678,
+                                               avl_name='avl_name_1'),
                         has_avl=True),
                     ComponentMsg(
                         name='dram_1234_5678#4', component_class='dram',
@@ -210,8 +215,9 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             FieldMsg(name='part', value='part2'),
                             FieldMsg(name='size', value='4G'),
                             FieldMsg(name='slot', value='3'),
-                        ], avl_info=AvlInfoMsg(cid=1234,
-                                               qid=5678), has_avl=True),
+                        ], avl_info=AvlInfoMsg(cid=1234, qid=5678,
+                                               avl_name='avl_name_1'),
+                        has_avl=True),
                     ComponentMsg(
                         name='not_dram_1234_5678', component_class='dram',
                         fields=[

@@ -20,6 +20,8 @@ message AvlInfo {
   int64 cid = 1;
   // Qualification id.
   int64 qid = 2;
+  // Displayed AVL component name.
+  string avl_name = 3;
 }
 
 // A component of a BOM.

@@ -115,8 +115,8 @@ class BOMAndConfiglessHelper:
                            status=hwid_api_messages_pb2.Status.SUCCESS)
 
       for component in bom.GetComponents():
-        name = self._decoder_data_manager.GetAVLName(component.cls,
-                                                     component.name)
+        avl_name = self._decoder_data_manager.GetAVLName(
+            component.cls, component.name, fallback=False)
         fields = []
         if verbose:
           for fname, fvalue in component.fields.items():
@@ -135,14 +135,15 @@ class BOMAndConfiglessHelper:
         ret = name_pattern.Matches(component.name)
         if ret:
           cid, qid = ret
-          avl_info = hwid_api_messages_pb2.AvlInfo(cid=cid, qid=qid)
+          avl_info = hwid_api_messages_pb2.AvlInfo(cid=cid, qid=qid,
+                                                   avl_name=avl_name)
         else:
           avl_info = None
 
         bom_entry.components.append(
             hwid_api_messages_pb2.Component(
-                component_class=component.cls, name=name, fields=fields,
-                avl_info=avl_info, has_avl=bool(avl_info)))
+                component_class=component.cls, name=component.name,
+                fields=fields, avl_info=avl_info, has_avl=bool(avl_info)))
 
       bom_entry.components.sort(
           key=operator.attrgetter('component_class', 'name'))

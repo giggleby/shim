@@ -87,22 +87,24 @@ class DecoderDataManager:
       ndb.delete_multi(keys_to_delete)
       logging.info('Extra categories are Removed')
 
-  def GetAVLName(self, category, comp_name):
+  def GetAVLName(self, category, comp_name, fallback=True):
     """Get AVL Name from hourly updated mapping data.
 
     Args:
       category: Component category.
       comp_name: Component name defined in HWID DB.
+      fallback: whether to fallback to comp_name if fail to query AVL name.
 
     Returns:
-      comp_name if the name does not follow the <category>_<cid>_<qid>#<comment>
-      rule, or the mapped name defined in datastore.
+      If the name follows the policy and can be queries from datastore, the AVL
+      name is returned.  Otherwise, return comp_name if fallback=True or an
+      empty string instead.
     """
     np_adapter = name_pattern_adapter.NamePatternAdapter()
     name_pattern = np_adapter.GetNamePattern(category)
     ret = name_pattern.Matches(comp_name)
     if ret is None:
-      return comp_name
+      return comp_name if fallback else ''
     cid, unused_qid = ret
 
     with self._ndb_connector.CreateClientContextWithGlobalCache():
@@ -112,7 +114,7 @@ class DecoderDataManager:
       logging.error(
           'mapping not found for category "%s" and component name "%s"',
           category, comp_name)
-      return comp_name
+      return comp_name if fallback else ''
     return entry.name
 
   def UpdatePrimaryIdentifiers(self, mapping_per_model):
