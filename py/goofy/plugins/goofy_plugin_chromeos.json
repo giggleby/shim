@@ -76,6 +76,13 @@
       "args": {
         "disable_rotation": true
       }
+    },
+    "qrcode_manager.qrcode_manager": {
+      "args": {
+        "pos": [[100, 200], [300, 400]],
+        "size": [200, 300],
+        "content": "Hello ChromeOS!"
+      }
     }
   }
 }

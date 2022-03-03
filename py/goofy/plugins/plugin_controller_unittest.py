@@ -40,10 +40,11 @@ class PluginControllerTest(unittest.TestCase):
     self.assertCountEqual(
         list(controller._plugins),
         [self.BASE_PLUGIN_MODULE])
-    self.assertCountEqual(
-        controller._frontend_configs,
-        [{'url': '/plugin/mock_plugin_mock_plugin/mock_plugin.html',
-          'location': 'testlist'}])
+    self.assertCountEqual(controller._frontend_configs, [{
+        'url': '/plugin/mock_plugin_mock_plugin/mock_plugin.html',
+        'location': 'testlist',
+        'iframe_id': 'mock_plugin-mock_plugin-iframe'
+    }])
     self._goofy.goofy_server.RegisterPath.assert_called_once_with(
         '/plugin/mock_plugin_mock_plugin',
         os.path.join(paths.FACTORY_PYTHON_PACKAGE_DIR,
@@ -117,7 +118,11 @@ class PluginControllerTest(unittest.TestCase):
   def testGetFrontendConfigs(self):
     controller = self.CreateController()
     url = '/plugin/mock_plugin_mock_plugin/mock_plugin.html'
-    config = {'url': url, 'location': 'testlist'}
+    config = {
+        'url': url,
+        'location': 'testlist',
+        'iframe_id': 'mock_plugin-mock_plugin-iframe'
+    }
     controller._frontend_configs = [config]
     self.assertEqual([config], controller.GetFrontendConfigs())
 

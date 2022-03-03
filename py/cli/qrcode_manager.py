@@ -1,0 +1,1 @@
+../tools/qrcode_manager.py
