@@ -9,8 +9,10 @@ import enum
 import functools
 import hashlib
 import http.client
+import io
 import logging
 import os
+import re
 import time
 from typing import Any, NamedTuple, Optional, Sequence, Tuple, Type
 import urllib.parse
@@ -409,7 +411,8 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     repo: The `MemoryRepo` instance to create the commit.  If not specified,
         this function clones the repository from `git_url:branch`.
   Returns:
-    change id
+    A tuple of (change id, cl number).
+    cl number will be None if fail to parse git-push output.
   """
   if repo is None:
     repo = MemoryRepo(auth_cookie=auth_cookie)
@@ -438,9 +441,18 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
   if options:
     target_branch += '%' + ','.join(options)
 
+  stderr = io.BytesIO()
   porcelain.push(repo, git_url, HEAD + b':' + _B(target_branch),
+                 errstream=stderr,
                  pool_manager=_CreatePoolManager(cookie=repo.auth_cookie))
-  return change_id
+
+  def _ParseCLNumber(message):
+    pattern = re.sub(r'googlesource\.com/', 'googlesource.com/c/', git_url)
+    pattern = re.escape(pattern) + r'/\+/(\d+)'
+    matches = re.findall(pattern, message)
+    return int(matches[0]) if matches else None
+
+  return change_id, _ParseCLNumber(stderr.getvalue().decode())
 
 
 @RetryOnException(retry_value=(GitUtilException, ))

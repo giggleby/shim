@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 """Provide functionalities to access the HWID DB repository."""
 
+import logging
 from typing import NamedTuple
 
 import yaml
@@ -144,15 +145,20 @@ class HWIDRepo:
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
       author = f'chromeoshwid <{author_email}>'
-      change_id = git_util.CreateCL(
+      change_id, cl_number = git_util.CreateCL(
           self._repo_url, git_util.GetGerritAuthCookie(), self._repo_branch,
           new_files, author, author, commit_msg, reviewers=reviewers,
           cc=cc_list, auto_approved=auto_approved, repo=self._repo)
-      cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, change_id,
-                                   auth_cookie=git_util.GetGerritAuthCookie())
+      if cl_number is None:
+        logging.warning(
+            'Failed to parse CL number from change_id=%s. Get CL number from '
+            'Gerrit.', change_id)
+        cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, change_id,
+                                     auth_cookie=git_util.GetGerritAuthCookie())
+        cl_number = cl_info.cl_number
     except git_util.GitUtilException as ex:
       raise HWIDRepoError from ex
-    return cl_info.cl_number
+    return cl_number
 
   @type_utils.LazyProperty
   def _hwid_db_metadata_of_name(self):

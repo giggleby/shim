@@ -138,7 +138,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
   def testCommitHWIDDB_FailedToGetCLNumber(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
-    self._mocked_create_cl.return_value = 'Ithis_is_change_id'
+    self._mocked_create_cl.return_value = 'Ithis_is_change_id', None
     self._mocked_get_cl_info.side_effect = git_util.GitUtilException
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
@@ -148,10 +148,8 @@ class HWIDRepoTest(HWIDRepoBaseTest):
   def testCommitHWIDDB_Succeed(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
     expected_cl_number = 123
-    self._mocked_create_cl.return_value = 'Ithis_is_change_id'
-    self._mocked_get_cl_info.return_value = git_util.CLInfo(
-        'change_id', expected_cl_number, git_util.CLStatus.NEW, None, [], True,
-        datetime.datetime.utcnow())
+    self._mocked_create_cl.return_value = ('Ithis_is_change_id',
+                                           expected_cl_number)
 
     actual_cl_number = self._hwid_repo.CommitHWIDDB(
         'SBOARD', 'unused_test_str', 'unused_test_str', [], [], False)

@@ -291,9 +291,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     else:
       auth_cookie = git_util.GetGerritAuthCookie()
       try:
-        change_id = git_util.CreateCL(git_url, auth_cookie, branch,
-                                      new_git_files, author, author, commit_msg,
-                                      reviewers, ccs)
+        change_id, _ = git_util.CreateCL(git_url, auth_cookie, branch,
+                                         new_git_files, author, author,
+                                         commit_msg, reviewers, ccs)
         if CONFIG.env != 'prod':  # Abandon the test CL to prevent confusion
           try:
             git_util.AbandonCL(setting.review_host, auth_cookie, change_id)
