@@ -3579,12 +3579,10 @@ cros.factory.Goofy = class {
         this.focusInvocation();
       });
     }
-    if (configs.some(({location}) => location === 'goofy-full')) {
-      // We need to trigger a window resize event if there's a UI with full
-      // width, so the top level splitpane would be sized properly.
-      goog.events.fireListeners(
-          window, goog.events.EventType.RESIZE, false, null);
-    }
+    // We need to trigger a window resize event if there's a UI with full
+    // width, so the top level splitpane would be sized properly.
+    goog.events.fireListeners(
+        window, goog.events.EventType.RESIZE, false, null);
   }
 };
 

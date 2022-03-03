@@ -185,9 +185,9 @@ class Plugin:
     """Returns where the plugin UI components should be at.
 
     The return value should be one of [False, True, 'testlist', 'console',
-    'goofy-full'], where False means there's no UI, True is same as 'testlist',
-    and 'testlist', 'console', 'goofy-full' indicates the location of the UI on
-    Goofy.
+    'status-monitor', 'goofy-fullscreen'], where False means there's no UI,
+    True is same as 'testlist', and 'testlist', 'console', 'status-monitor',
+    'goofy-fullscreen' indicates the location of the UI on Goofy.
 
     The default implementation returns False. Subclass should implement this
     if it has frontend UI. The static files should be in a folder name 'static'

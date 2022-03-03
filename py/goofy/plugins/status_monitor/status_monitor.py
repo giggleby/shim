@@ -15,7 +15,7 @@ class StatusMonitor(plugin.Plugin):
 
   @type_utils.Overrides
   def GetUILocation(self):
-    return 'goofy-full'
+    return 'status-monitor'
 
   @plugin.RPCFunction
   def UpdateDeviceInfo(self):

@@ -443,7 +443,7 @@ table + .goofy-history-header {
   pointer-events: none;
 }
 /* For plugin `status_monitor` */
-#goofy-plugin-area-goofy-full {
+#goofy-plugin-area-status-monitor {
   background-color:white;
   border-top: 1px solid lightgray;
   height: 24px;
