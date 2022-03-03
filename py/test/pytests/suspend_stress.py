@@ -112,6 +112,12 @@ class SuspendStressTest(test_case.TestCase):
       time.sleep(interval_sec)
 
   def runTest(self):
+
+    def GetLogPath(suffix):
+      path = 'suspend_stress_test.' + suffix
+      return os.path.join(paths.DATA_TESTS_DIR, session.GetCurrentTestPath(),
+                          path)
+
     command = [
         'suspend_stress_test',
         '--count', str(self.args.cycles),
@@ -121,6 +127,7 @@ class SuspendStressTest(test_case.TestCase):
         '--wake_min', str(self.args.resume_delay_min_secs),
         '--suspend_time_margin_min', str(self.args.suspend_time_margin_min_secs),
         '--suspend_time_margin_max', str(self.args.suspend_time_margin_max_secs),
+        '--record_dmesg_dir', os.path.dirname(GetLogPath('')),
     ]
     if self.args.ignore_wakeup_source:
       command += ['--ignore_wakeup_source', self.args.ignore_wakeup_source]
@@ -133,11 +140,6 @@ class SuspendStressTest(test_case.TestCase):
 
     logging.info('command: %r', command)
     testlog.LogParam('command', command)
-
-    def GetLogPath(suffix):
-      path = 'suspend_stress_test.' + suffix
-      return os.path.join(paths.DATA_TESTS_DIR, session.GetCurrentTestPath(),
-                          path)
 
     logging.info('Log path is %s', GetLogPath('*'))
     result_path = GetLogPath('result')
