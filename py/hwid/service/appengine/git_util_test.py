@@ -19,6 +19,30 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
 
+class RetryOnExceptionTest(unittest.TestCase):
+
+  class _FakeException(Exception):
+    pass
+
+  def setUp(self):
+    self.retried = 0
+
+  @git_util.RetryOnException(
+      retry_value=(_FakeException, ), delay_sec=0.5, num_retries=3)
+  def _FakeFunction(self, succeed_on):
+    if succeed_on == self.retried:
+      return
+    self.retried += 1
+    raise self._FakeException()
+
+  def testRetryOnException_RetryThreeTimesSucceed(self):
+    self._FakeFunction(succeed_on=3)
+
+  def testRetryOnException_RetryThreeTimesFailed(self):
+    with self.assertRaises(self._FakeException):
+      self._FakeFunction(succeed_on=4)
+
+
 # pylint: disable=protected-access
 class MemoryRepoTest(unittest.TestCase):
 

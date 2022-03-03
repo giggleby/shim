@@ -6,12 +6,13 @@ import base64
 import contextlib
 import datetime
 import enum
+import functools
 import hashlib
 import http.client
 import logging
 import os
 import time
-from typing import Any, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, NamedTuple, Optional, Sequence, Tuple, Type
 import urllib.parse
 
 # pylint: disable=import-error, no-name-in-module
@@ -46,6 +47,36 @@ EXEC_FILE_MODE = 0o100755
 DIR_MODE = 0o040000
 GERRIT_SCOPE = 'https://www.googleapis.com/auth/gerritcodereview'
 IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
+
+
+def RetryOnException(retry_value: Tuple[Type[Exception], ...] = (Exception, ),
+                     delay_sec: int = 1, num_retries: int = 5):
+  """Retries when fail to request to Gerrit server.
+
+  Args:
+    retry_value: Tuple of The expected exceptions to trigger retries.
+    delay_sec: Delay seconds between retries.
+    num_retries: Max number of retries.
+
+  Returns:
+    A wrapper function which can be used as a decorator.
+  """
+
+  def RetryDecorator(func):
+
+    @functools.wraps(func)
+    def RetryFunction(*args, **kwargs):
+      for retried in range(1, num_retries + 1):
+        try:
+          return func(*args, **kwargs)
+        except retry_value as ex:
+          logging.info('%s failed: %s. Retry: %d', func.__name__, ex, retried)
+          time.sleep(delay_sec)
+      return func(*args, **kwargs)
+
+    return RetryFunction
+
+  return RetryDecorator
 
 
 def _B(s):
@@ -412,6 +443,7 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
   return change_id
 
 
+@RetryOnException(retry_value=(GitUtilException, ))
 def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
   """Gets the branch HEAD tracks.
 
@@ -433,6 +465,7 @@ def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
   return branch_name
 
 
+@RetryOnException(retry_value=(GitUtilException, ))
 def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
   """Gets branch commit.
 
@@ -460,6 +493,7 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
         f'Commit ID not found in the branch info: {branch_info}.') from ex
 
 
+@RetryOnException(retry_value=(GitUtilException, ))
 def GetFileContent(git_url_prefix: str, project: str, path: str,
                    branch: Optional[str] = None,
                    auth_cookie: Optional[str] = None) -> bytes:
@@ -547,6 +581,7 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
   base_url = f'{review_host}/changes/{change_id}'
   gerrit_resps = []
 
+  @RetryOnException(retry_value=(GitUtilException, ))
   def GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]]):
     resp = _InvokeGerritAPIJSON('GET', f'{base_url}{scope}', params,
                                 auth_cookie=auth_cookie)
