@@ -808,6 +808,26 @@ class WirelessTest(test_case.TestCase):
                       'Available frequencies are %r.' %
                       (service.freq, service.ssid, ssid_freqs[service.ssid]))
 
+  def _TrySetRegionUSFor6G(self):
+    """Set region for testing 6G in the factory."""
+    LOWEST_6G_FREQ = 5955
+    HIGHEST_6G_FREQ = 7115
+    has_6G = any(LOWEST_6G_FREQ <= service.freq <= HIGHEST_6G_FREQ
+                 for service in self._services)
+    if not has_6G:
+      return
+    # factory_iw is the binary which sets region.
+    factory_iw = 'factory_iw'
+    if self._dut.Call(['which', factory_iw], log=True) == 0:
+      self._dut.wifi.BringsUpInterface(self._device_name)
+      # Set region to US.
+      self._dut.CheckCall(
+          [factory_iw, self._device_name, 'iwl', 'country', 'US'], log=True)
+      self.Sleep(5)
+    else:
+      session.console.info('%r is not installed. Cannot set region.',
+                           factory_iw)
+
   def runTest(self):
     self._device_name = self._dut.wifi.SelectInterface(self.args.device_name)
     session.console.info('Selected device_name is %s.', self._device_name)
@@ -819,6 +839,8 @@ class WirelessTest(test_case.TestCase):
       # Prompts a message to tell operator to press space key when ready.
       self.ui.SetState(_('Press space to start scanning.'))
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
+
+    self._TrySetRegionUSFor6G()
 
     self._ScanAllServices()
 
