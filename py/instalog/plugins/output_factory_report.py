@@ -153,11 +153,10 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       event_stream.Commit()
       return False
 
-    report_events = []
     for report_parser in report_parsers:
-      report_events += report_parser.ProcessArchive(archive_process_event,
-                                                    self._process_pool)
-    self.EmitAndCommit(report_events, event_stream)
+      report_parser.ProcessArchive(archive_process_event, self._process_pool,
+                                   self.PreEmit)
+    self.EmitAndCommit([archive_process_event], event_stream)
     return True
 
   def _CreateReportParsers(self, gcs_path, archive_path, tmp_dir):
@@ -216,12 +215,13 @@ class ReportParser(log_utils.LoggerMixin):
     self._report_path_parent_dir = report_path_parent_dir
     self.logger = logger
 
-  def ProcessArchive(self, archive_process_event, process_pool):
+  def ProcessArchive(self, archive_process_event, process_pool,
+                     processed_callback):
     """Processes the archive and remove it after processing it."""
-    report_events = [archive_process_event]
     processed = 0
-    async_results = []
     args_queue = multiprocessing.Queue()
+    result_queue = multiprocessing.Manager().Queue()
+    total_reports = 0
     decompress_process = None
 
     try:
@@ -236,14 +236,15 @@ class ReportParser(log_utils.LoggerMixin):
         # We only support tar file and zip file.
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
                               archive_process_event)
-        return report_events
+        return
       decompress_process.start()
 
       received_obj = args_queue.get()
-      # End the process when we receive None.
+      # End the process when we receive None or exception.
       while not (received_obj is None or isinstance(received_obj, Exception)):
-        async_results.append(
-            process_pool.apply_async(self.ProcessReport, received_obj))
+        process_report_args = received_obj + (result_queue, )
+        process_pool.apply_async(self.ProcessReport, process_report_args)
+        total_reports += 1
         received_obj = args_queue.get()
 
       decompress_process.join()
@@ -254,20 +255,18 @@ class ReportParser(log_utils.LoggerMixin):
         SetProcessEventStatus(ERROR_CODE.ArchiveUnknownError,
                               archive_process_event, received_obj)
 
-      total_reports = len(async_results)
-      for async_result in async_results:
+      for unused_i in range(total_reports):
         # TODO(chuntsen): Find a way to stop process pool.
-        report_event, process_event = async_result.get()
+        report_event, process_event = result_queue.get()
 
         report_time = report_event['time']
         if (archive_process_event['time'] == 0 or
             0 < report_time < archive_process_event['time']):
           archive_process_event['time'] = report_time
-        report_events.append(report_event)
-        report_events.append(process_event)
         processed += 1
         if processed % 1000 == 0:
           self.info('Parsed %d/%d reports', processed, total_reports)
+        processed_callback([report_event, process_event])
 
       self.info('Parsed %d/%d reports', processed, total_reports)
     except Exception:
@@ -278,8 +277,6 @@ class ReportParser(log_utils.LoggerMixin):
         archive_process_event['endTime'] - archive_process_event['startTime'])
 
     os.remove(self._archive_path)
-
-    return report_events
 
   def DecompressZipArchive(self, args_queue):
     """Decompresses the ZIP format archive.
@@ -351,16 +348,18 @@ class ReportParser(log_utils.LoggerMixin):
         pass
     return False
 
-  def ProcessReport(self, report_file_path, report_path):
+  def ProcessReport(self, report_file_path, report_path, result_queue):
     """Processes the factory report.
+
+    The report are processed into (report_event, process_event) and put into the
+    result_queue, where:
+      report_event: A report event with information in the factory report.
+      process_event: A process event with process information.
 
     Args:
       report_file_path: Path to the factory report in archive.
       report_path: Path to the factory report on disk.
-
-    Returns:
-      report_event: A report event with information in the factory report.
-      process_event: A process event with process information.
+      result_queue: A shared queue to store processed result.
     """
     uuid = time_utils.TimedUUID()
     report_file_path = os.path.join(self._report_path_parent_dir,
@@ -403,7 +402,7 @@ class ReportParser(log_utils.LoggerMixin):
     process_event['endTime'] = time.time()
     process_event['duration'] = (
         process_event['endTime'] - process_event['startTime'])
-    return report_event, process_event
+    result_queue.put((report_event, process_event))
 
   def DecompressAndParse(self, report_path, report_event, process_event):
     """Decompresses the factory report and parse it."""
