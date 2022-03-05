@@ -1,8 +1,11 @@
-flask==1.1.1
+flask==1.1.4
 google-auth==1.27.0
 google-cloud-datastore==1.12.0
 google-cloud-logging==1.15.0
 gunicorn==20.0.4
+# Uses `MarkupSafe` with version 2.0.1 here to prevent `ImportError`, see
+# https://github.com/pallets/markupsafe/issues/284 for details.
+MarkupSafe==2.0.1
 protobuf==3.12.2
 PyYAML==5.3.1
 urllib3==1.24.2
