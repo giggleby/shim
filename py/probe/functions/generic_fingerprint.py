@@ -4,6 +4,7 @@
 
 import glob
 import os
+import subprocess
 import tempfile
 
 from cros.factory.gooftool import cros_config as cros_config_module
@@ -97,5 +98,5 @@ def GetDumpedROHash(ro_offset, ro_size):
         'ectool', '--name=cros_fp', 'flashread',
         str(ro_offset),
         str(ro_size), dump_path
-    ])
+    ], stdout=subprocess.DEVNULL)
     return file_utils.FileHash(dump_path, 'sha256').hexdigest()
