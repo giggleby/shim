@@ -66,7 +66,9 @@ class CheckCr50FirmwareBoardIDTest(test_case.TestCase):
       'PHASE_UNKNOWN': 0x0000ff00,
       'PHASE_PREPVT': 0x00007f7f,
       'PHASE_PVT': 0x00007f80,
-      # Whitelabel devices have different flags to distinguish with PVT.
+      # Customlabel devices have different flags to distinguish with PVT.
+      # In cr50 scripts, it's still called "WHITELABEL".
+      # TODO(b/169766857): rename it when cr50 scripts are updated.
       'PHASE_WHITELABEL': 0x00003f80,
   }
 

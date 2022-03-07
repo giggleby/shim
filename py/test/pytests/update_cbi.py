@@ -170,10 +170,15 @@ class UpdateCBITest(test_case.TestCase):
         product_name=self.args.product_name, sku_id=sku_id,
         config_name=model_sku_path, schema_name='model_sku')
 
-  def GetCrosConfigData(self, sku_id, whitelabel_tag, path, name, return_type):
+  def GetCrosConfigData(self, sku_id, custom_label_tag, path, name,
+                        return_type):
     command = ['cros_config_mock', '--sku-id', str(sku_id)]
-    if whitelabel_tag:
-      command += ['--whitelabel-tag', whitelabel_tag]
+    if custom_label_tag:
+      help_message = self._dut.CallOutput(['cros_config_mock', '--help'])
+      if help_message and '--custom-label-tag' in help_message:
+        command += ['--custom-label-tag', custom_label_tag]
+      else:
+        command += ['--whitelabel-tag', custom_label_tag]
     command += [path, name]
     output = self._dut.CallOutput(command)
     if output:
@@ -194,8 +199,8 @@ class UpdateCBITest(test_case.TestCase):
       raise
 
   def GetFirmwareConfigFromCrosConfig(self, sku_id):
-    whitelabel_tag = self._dut.vpd.ro.get('whitelabel_tag')
-    return self.GetCrosConfigData(sku_id, whitelabel_tag, '/firmware',
+    custom_label_tag = self._dut.vpd.ro.get('custom_label_tag')
+    return self.GetCrosConfigData(sku_id, custom_label_tag, '/firmware',
                                   'firmware-config', int)
 
   def GetDeviceData(self, key, data_type):

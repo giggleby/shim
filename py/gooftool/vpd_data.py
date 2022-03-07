@@ -39,7 +39,7 @@ KNOWN_RO_DATA = {
 
     # Optional values.
     'mlb_serial_number': RE_SERIAL_NUMBER,
-    'whitelabel_tag': ANY_OR_EMPTY,
+    'custom_label_tag': ANY_OR_EMPTY,
     'System_UUID': ANY,
     'sku_number': ANY,
     'model_name': ANY,
@@ -104,4 +104,5 @@ DEPRECATED_RO_DATA = {
     # dsm_calib is deprecated, please use dsm_calib_r0_N and dsm_calib_temp_N
     # instead.
     'dsm_calib': r'[0-9a-f ]*',
+    'whitelabel_tag': ANY_OR_EMPTY,  # See b/169766857.
 }

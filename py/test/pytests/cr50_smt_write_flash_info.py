@@ -12,20 +12,21 @@ There are a few parameters:
    argument `mlb_mode`, default false.
 2. Is this an RMA spare board? This is specified by argument `rma_mode`, default
    false.
-3. Is this a whitelabel device?  This is auto detected via `cros_config`.
+3. Is this a custom label device?  This is auto detected via `cros_config`.
 
-If `rma_mode=False`, `mlb_mode=False`, and it's not whitelabel device, this test
-does nothing. The cr50 flash info will be set in GRT stage.
+If `rma_mode=False`, `mlb_mode=False`, and it's not custom label device, this
+test does nothing. The cr50 flash info will be set in GRT stage.
 
 Otherwise, `gooftool cr50_smt_write_flash_info` is called. The command falls
-back to regular cr50 Board ID setting when the device is not a whitelabel
+back to regular cr50 Board ID setting when the device is not a custom label
 device.
 
 Test Procedure
 --------------
-1. Call `cros_config` to check if current device is a whitelabel device.
-2. Log `is_whitelabel` and `whitelabel_tag`.
-3. If `is_whitelabel` or `mlb_mode`, call `gooftool cr50_smt_write_flash_info`.
+1. Call `cros_config` to check if current device is a custom label device.
+2. Log `is_custom_label` and `custom_label_tag`.
+3. If `is_custom_label` or `mlb_mode`, call `gooftool
+   cr50_smt_write_flash_info`.
 
 Dependency
 ----------
@@ -39,7 +40,7 @@ Dependency
 Examples
 --------
 This test is added to SMTEnd test group by default.  If you want to place it at
-different timing, add "Cr50WriteWhitelabelFlags" test item to your test group.
+different timing, add "Cr50WriteCustomLabelFlags" test item to your test group.
 
 If you are manufacturing MLBs for RMA parts or LOEM projects, please set test
 list constant "mlb_mode" to true.
@@ -57,7 +58,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
 
-class Cr50WriteWhitelabelFlags(test_case.TestCase):
+class Cr50WriteCustomLabelFlags(test_case.TestCase):
   ARGS = [
       Arg('enable_zero_touch', bool, (
           'Enable zero touch enrollment.  This will set the cr50 SN bits using '
@@ -79,12 +80,13 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
     self.cros_config = cros_config_module.CrosConfig(dut_shell)
 
   def runTest(self):
-    is_whitelabel, whitelabel_tag = self.cros_config.GetWhiteLabelTag()
+    is_custom_label, custom_label_tag = self.cros_config.GetCustomLabelTag()
 
-    testlog.LogParam('is_whitelabel', is_whitelabel)
-    testlog.LogParam('whitelabel_tag', whitelabel_tag)
+    testlog.LogParam('is_custom_label', is_custom_label)
+    testlog.LogParam('custom_label_tag', custom_label_tag)
 
-    if not self.args.mlb_mode and not self.args.rma_mode and not is_whitelabel:
+    if (not self.args.mlb_mode and not self.args.rma_mode and
+        not is_custom_label):
       return
 
     args = []
@@ -100,5 +102,5 @@ class Cr50WriteWhitelabelFlags(test_case.TestCase):
     try:
       factory_tools.CheckCall(['gooftool', 'cr50_smt_write_flash_info', *args])
     except Exception:
-      logging.exception('Failed to set cr50 whitelabel flags.')
+      logging.exception('Failed to set cr50 custom label flags.')
       raise

@@ -488,9 +488,10 @@ class Gooftool:
 
       if not is_dev_rootkey:
         model_name = self._cros_config.GetModelName()
-        is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
-        if is_whitelabel and whitelabel_tag:
-          model_name = model_name + "-" + whitelabel_tag
+        is_custom_label, custom_label_tag = (
+            self._cros_config.GetCustomLabelTag())
+        if is_custom_label and custom_label_tag:
+          model_name = model_name + "-" + custom_label_tag
         with sys_utils.MountPartition(release_rootfs) as root:
           release_updater_path = os.path.join(root, _FIRMWARE_RELATIVE_PATH)
           _TmpExec('unpack firmware updater from release rootfs partition',
@@ -692,22 +693,38 @@ class Gooftool:
         raise Error('Missing required %s VPD values: %s' %
                     (section, ','.join(missing_keys)))
 
-    def GetDeviceNameForRegistrationCode(project,
-                                         config='whitelabel_reg_code'):
+    def GetDeviceNameForRegistrationCode(project):
+
+      def _LoadConfigJsonFile(_config):
+        try:
+          return config_utils.LoadConfig(_config, validate_schema=False)
+        except Exception:
+          return None
+
+      config = 'custom_label_reg_code'
       # Load config json file
-      try:
-        reg_code_config = config_utils.LoadConfig(config, validate_schema=False)
-      except Exception:
+      reg_code_config = _LoadConfigJsonFile(config)
+      if reg_code_config is None:
+        # Fallback to the legacy name.
+        reg_code_config = _LoadConfigJsonFile('whitelabel_reg_code')
+        if reg_code_config:
+          logging.warning(
+              '"whitelabel_reg_code.json is deprecated, please rename it to %s',
+              config)
+
+      if reg_code_config is None:
         return project
+
       if project not in reg_code_config:
         return project
 
-      # Get the whitelabel-tag for whitelabel device
-      is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
-      if not is_whitelabel or whitelabel_tag not in reg_code_config[project]:
+      # Get the custom-label-tag for custom label device
+      is_custom_label, custom_label_tag = self._cros_config.GetCustomLabelTag()
+      if (not is_custom_label or
+          custom_label_tag not in reg_code_config[project]):
         return project
-      if reg_code_config[project][whitelabel_tag]:
-        return whitelabel_tag
+      if reg_code_config[project][custom_label_tag]:
+        return custom_label_tag
       return project
 
     required_vpd_ro_data = vpd_data.REQUIRED_RO_DATA.copy()
@@ -1378,7 +1395,7 @@ class Gooftool:
       raise Error('Failed to set serial number bits on Cr50. '
                   '(args=%s)' % arg_phase)
 
-  def Cr50SetBoardId(self, is_whitelabel):
+  def Cr50SetBoardId(self, is_custom_label):
     """Set the board id and flags on the Cr50 chip.
 
     The Cr50 image need to be lock down for a certain subset of devices for
@@ -1403,7 +1420,7 @@ class Gooftool:
     else:
       arg_phase = 'dev'
 
-    if is_whitelabel:
+    if is_custom_label:
       cmd = [script_path, f'whitelabel_{arg_phase}']
     else:
       cmd = [script_path, arg_phase]
@@ -1440,46 +1457,48 @@ class Gooftool:
     """
     model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
     custom_type = model_sku_config.get('custom_type', '')
-    is_whitelabel, whitelabel_tag = self._cros_config.GetWhiteLabelTag()
+    is_custom_label, custom_label_tag = self._cros_config.GetCustomLabelTag()
 
-    if is_whitelabel:
-      # If we can't find whitelabel_tag in VPD, this will be None.
-      vpd_whitelabel_tag = self._vpd.GetValue('whitelabel_tag')
-      if vpd_whitelabel_tag != whitelabel_tag:
-        if vpd_whitelabel_tag is None and custom_type != 'rebrand':
-          # whitelabel_tag is not set in VPD.  Technically, this is allowed by
-          # cros_config. It would be equivalent to whitelabel_tag='' (empty
+    if is_custom_label:
+      # If we can't find custom_label_tag in VPD, this will be None.
+      vpd_custom_label_tag = self._vpd.GetValue('custom_label_tag')
+      if vpd_custom_label_tag != custom_label_tag:
+        if vpd_custom_label_tag is None and custom_type != 'rebrand':
+          # custom_label_tag is not set in VPD.  Technically, this is allowed by
+          # cros_config. It would be equivalent to custom_label_tag='' (empty
           # string).  However, it is ambiguous, we don't know if this is
-          # intended or not.  Therefore, we enforce the whitelabel_tag should be
-          # set explicitly, even if it is an empty string.
-          raise Error('This is a whitelabel device, but whitelabel_tag is not '
-                      'set in VPD.')
-        # whitelabel_tag is set in VPD, but it is different from what is
-        # reported by cros_config.  We don't allow this, because whitelabel
-        # tag affects RLZ code, and RLZ code will be written to cr50 board ID.
-        raise Error('whitelabel_tag reported by cros_config and VPD does not '
+          # intended or not.  Therefore, we enforce the custom_label_tag should
+          # be set explicitly, even if it is an empty string.
+          raise Error('This is a custom label device, but custom_label_tag is '
+                      'not set in VPD.')
+        # custom_label_tag is set in VPD, but it is different from what is
+        # reported by cros_config.  We don't allow this, because
+        # custom_label_tag affects RLZ code, and RLZ code will be written to
+        # cr50 board ID.
+        raise Error('custom_label_tag reported by cros_config and VPD does not '
                     'match.  Have you reboot the device after updating VPD '
                     'fields?')
 
     set_sn_bits = enable_zero_touch and not rma_mode
-    write_whitelabel_flags = mlb_mode and is_whitelabel
+    write_custom_label_flags = mlb_mode and is_custom_label
 
     if set_sn_bits:
       self.Cr50SetSnBits()
-    if write_whitelabel_flags:
-      self.Cr50WriteWhitelabelFlags()
+    if write_custom_label_flags:
+      self.Cr50WriteCustomlabelFlags()
     else:
-      self.Cr50SetBoardId(is_whitelabel)
+      self.Cr50SetBoardId(is_custom_label)
 
-  def Cr50WriteWhitelabelFlags(self):
-    """Write the flags for whitelabel devices.
+  def Cr50WriteCustomlabelFlags(self):
+    """Write the flags for custom label devices.
 
     The brand-code (cr50 board id) won't be set.  This should be called for
-    spare MLBs of whitelabel devices.
+    spare MLBs of custom label devices.
     """
-    is_whitelabel, unused_whitelabel_tag = self._cros_config.GetWhiteLabelTag()
-    if not is_whitelabel:
-      raise Error('This is not a whitelabel device.')
+    is_custom_label, unused_custom_label_tag = (
+        self._cros_config.GetCustomLabelTag())
+    if not is_custom_label:
+      raise Error('This is not a custom label device.')
 
     script_path = '/usr/share/cros/cr50-set-board-id.sh'
     if not os.path.exists(script_path):
@@ -1496,16 +1515,16 @@ class Gooftool:
     try:
       result = self._util.shell(cmd)
       if result.status == 0:
-        logging.info('Successfully set whitelabel flags.')
+        logging.info('Successfully set custom label flags.')
       elif result.status == 2:
-        logging.error('Whitelabel flags has already been set.')
+        logging.error('Custom label flags has already been set.')
       elif result.status == 3:
         error_msg = 'Board ID and/or flag has been set DIFFERENTLY on Cr50!'
         raise Error(error_msg)
       else:  # General errors.
-        raise Error('Failed to set whitelabel flags.')
+        raise Error('Failed to set custom label flags.')
     except Exception:
-      logging.exception('Failed to set Cr50 whitelabel flags.')
+      logging.exception('Failed to set Cr50 custom label flags.')
       raise
 
   def Cr50DisableFactoryMode(self):
@@ -1630,13 +1649,13 @@ class Gooftool:
     db_sku_id = get_cros_config_val(self._cros_config.GetSkuID())
     db_customization_id = get_cros_config_val(
         self._cros_config.GetCustomizationId())
-    db_whitelabel_tag = get_cros_config_val(
-        self._cros_config.GetWhiteLabelTag()[1])
+    db_custom_label_tag = get_cros_config_val(
+        self._cros_config.GetCustomLabelTag()[1])
 
     db_identity = (
         'In cros_config:\nproduct name: %s\nsku id: %s\n'
-        'customization id: %s\nwhitelabel tag: %s\n' %
-        (db_product_name, db_sku_id, db_customization_id, db_whitelabel_tag))
+        'customization id: %s\ncustom label tag: %s\n' %
+        (db_product_name, db_sku_id, db_customization_id, db_custom_label_tag))
 
     # one for x86 device another for ARM device
     cur_product_name = get_file_if_exist(
@@ -1648,12 +1667,12 @@ class Gooftool:
         cros_config_module.PRODUCT_SKU_ID_PATH) or get_file_if_exist(
             cros_config_module.DEVICE_TREE_SKU_ID_PATH, True) or 'empty'
     cur_customization_id = get_vpd_val('customization_id')
-    cur_whitelabel_tag = get_vpd_val('whitelabel_tag')
+    cur_custom_label_tag = get_vpd_val('custom_label_tag')
 
     cur_identity = ('Current:\nproduct name: %s\nsku id: %s\n'
-                    'customization id: %s\nwhitelabel tag: %s\n' %
+                    'customization id: %s\ncustom label tag: %s\n' %
                     (cur_product_name, cur_sku_id, cur_customization_id,
-                     cur_whitelabel_tag))
+                     cur_custom_label_tag))
 
     return db_identity, cur_identity
 
