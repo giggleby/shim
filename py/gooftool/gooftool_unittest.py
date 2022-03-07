@@ -24,13 +24,12 @@ from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
-from cros.factory.unittest_utils import label_utils
-
 
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
@@ -178,8 +177,8 @@ class GooftoolTest(unittest.TestCase):
       'fw_config': '90913',
   }
 
-  _SIMPLE_MODEL_SKU_CONFIG_WHITELABEL = {
-      'custom_type': 'whitelabel',
+  _SIMPLE_MODEL_SKU_CONFIG_CUSTOM_LABEL = {
+      'custom_type': 'custom_label',
       'fw_config': '90913',
   }
 
@@ -194,8 +193,8 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._vpd = mock.Mock(self._gooftool._vpd)
     self._gooftool._named_temporary_file = mock.Mock(NamedTemporaryFile)
     self._gooftool._cros_config = mock.Mock(self._gooftool._cros_config)
-    self._gooftool._cros_config.GetWhiteLabelTag.return_value = (True,
-                                                                 'unittest')
+    self._gooftool._cros_config.GetCustomLabelTag.return_value = (True,
+                                                                  'unittest')
     self._gooftool._cros_config.GetModelName.return_value = 'unittest'
 
     self._smart_amp_info = self._gooftool.GetSmartAmpInfo
@@ -777,27 +776,30 @@ class GooftoolTest(unittest.TestCase):
         }, set(self._gooftool.GetSystemDetails().keys()))
 
   def testCr50WriteFlashInfoWithCustomType(self):
-    """Test for checking whitelabel field exist in VPD only when custom type is
-    whitelabel"""
+    """Test for custom label field.
+
+    Custom label field should only exist in VPD when custom type is custom
+    label.
+    """
 
     model_sku_utils.GetDesignConfig = mock.Mock()
     self._gooftool.Cr50SetBoardId = mock.Mock()
     self._gooftool._util.sys_interface = None
 
-    # custom type is whitelabel but no whitelabel field in VPD
-    config = self._SIMPLE_MODEL_SKU_CONFIG_WHITELABEL
+    # custom type is 'custom_label' but no custom label field in VPD
+    config = self._SIMPLE_MODEL_SKU_CONFIG_CUSTOM_LABEL
     model_sku_utils.GetDesignConfig.return_value = config
     self._gooftool._vpd.GetValue.return_value = None
 
     self.assertRaisesRegex(
-        Error, 'This is a whitelabel device, but '
-        'whitelabel_tag is not set in VPD.', self._gooftool.Cr50WriteFlashInfo)
+        Error, 'This is a custom label device, but custom_label_tag is not set '
+        'in VPD.', self._gooftool.Cr50WriteFlashInfo)
 
-    # custom type is rebrand and no whitelabel field in VPD
+    # custom type is rebrand and no custom label field in VPD
     config = self._SIMPLE_MODEL_SKU_CONFIG_REBRAND
     model_sku_utils.GetDesignConfig.return_value = config
     self.assertRaisesRegex(
-        Error, 'whitelabel_tag reported by cros_config and VPD does not '
+        Error, 'custom_label_tag reported by cros_config and VPD does not '
         'match.  Have you reboot the device after updating VPD '
         'fields?', self._gooftool.Cr50WriteFlashInfo)
 

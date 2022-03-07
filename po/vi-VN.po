@@ -173,7 +173,7 @@ msgstr "Đếm ngược"
 
 #: ../build/pytests_label_generated.json
 msgid "CR50 SMT Write Flash Info"
-msgstr "SMT Viết CR50 Whitelabel Flags"
+msgstr "SMT Viết CR50 Flash Info"
 
 #: ../build/pytests_label_generated.json
 msgid "Display"

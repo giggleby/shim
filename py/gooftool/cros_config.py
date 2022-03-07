@@ -24,16 +24,19 @@ class CrosConfig:
   def GetValue(self, path, key):
     return self._shell(['cros_config', path, key], sys_interface=self._dut)
 
-  def GetWhiteLabelTag(self):
-    """Get whitelabel-tag value of this device.
+  def GetCustomLabelTag(self):
+    """Get custom-label-tag value of this device.
 
     Returns:
-      A tuple of (|is_whitelabel|, |whitelabel_tag|).
-      |is_whitelabel| indicates if this device is whitelabel or not.
-      |whitelabel_tag| is the value of whitelabel-tag if |is_whitelabel| is
-      True.
+      A tuple of (|is_custom_label|, |custom_label_tag|).
+      |is_custom_label| indicates if this device is custom label or not.
+      |custom_label_tag| is the value of custom-label-tag if |is_custom_label|
+      is True.
     """
-    result = self.GetValue('/identity', 'whitelabel-tag')
+    result = self.GetValue('/identity', 'custom-label-tag')
+    if not result.success:
+      # Fallback to whitelabel-tag and try again.
+      result = self.GetValue('/identity', 'whitelabel-tag')
     return result.success, (result.stdout.strip() if result.stdout else '')
 
   def GetPlatformName(self):

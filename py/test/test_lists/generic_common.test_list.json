@@ -387,7 +387,7 @@
         "rma_mode": "eval! constants.rma_mode"
       }
     },
-    "Cr50WriteWhitelabelFlags": {
+    "Cr50WriteCustomlabelFlags": {
       "inherit": "Cr50SMTWriteFlashInfo",
       "__comment": "Make old definition as an alias of the new definition for backward compatibility"
     },
