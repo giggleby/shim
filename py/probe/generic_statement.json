@@ -82,6 +82,11 @@
       "eval": "flash_chip:main"
     }
   },
+  "hps": {
+    "generic": {
+      "eval": "generic_hps"
+    }
+  },
   "nfc_reader": {
     "generic": {
       "eval": "nfc_reader"
