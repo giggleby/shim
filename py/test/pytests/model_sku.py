@@ -145,7 +145,11 @@ class PlatformSKUModelTest(test_case.TestCase):
     self.ApplyConfig()
 
   def CheckByDeviceData(self):
-    value = device_data.GetDeviceData(_KEY_COMPONENT_SKU, data_type=int)
+    try:
+      value = device_data.GetDeviceData(_KEY_COMPONENT_SKU, data_type=int,
+                                        throw_if_none=True)
+    except KeyError:
+      return False
     if value is None:
       return False
 
