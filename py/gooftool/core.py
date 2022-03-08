@@ -119,6 +119,26 @@ class Gooftool:
     self._db = None
     self._cros_config = cros_config_module.CrosConfig(self._util.shell)
 
+  def GetLogicalBlockSize(self):
+    """Get the logical block size of a DUT by reading file under /sys/block.
+
+    Returns:
+      The logical block size of a primary device.
+
+    Raises:
+      Error will be raised if the primary device is removable.
+    """
+    # GetPrimaryDevicePath() returns the device path under /dev.
+    # For instance, on DUT with NVMe, it returns `/dev/nvme0n1`.
+    # However, we only want its basename.
+    dev_basename = os.path.basename(self._util.GetPrimaryDevicePath())
+    # This is the same as `lsblk -d -n -r -o log-sec ${dev}`.
+    logical_block_size_file = os.path.join(os.sep, 'sys', 'block', dev_basename,
+                                           'queue', 'logical_block_size')
+    logical_block_size = file_utils.ReadFile(logical_block_size_file)
+
+    return int(logical_block_size)
+
   def IsReleaseLVM(self):
     """Check if release image has LVM stateful partition."""
 

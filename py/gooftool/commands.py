@@ -1093,6 +1093,12 @@ def GetSmartAmpInfo(options):
     print('No smart amplifier found on DUT!')
 
 
+@Command('get_logical_block_size')
+def GetLogicalBlockSize(options):
+  """Get the logical block size of the primary device on DUT."""
+  print('Logical block size:', GetGooftool(options).GetLogicalBlockSize())
+
+
 def main():
   """Run sub-command specified by the command line args."""
 
