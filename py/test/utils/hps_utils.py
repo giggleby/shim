@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 """HPS utilities"""
 
-from typing import Optional
+import re
+from typing import Optional, Tuple
 
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
@@ -11,6 +12,13 @@ from cros.factory.utils import sys_interface
 
 DEFAULT_HPS_FACTORY_PATH = 'hps-factory'
 IOTOOLS_PATH = 'iotools'
+MCU_ID_RE = re.compile(r'^MCU ID:\s*(\S+)\s*$', re.MULTILINE)
+CAMERA_ID_RE = re.compile(r'^Camera ID:\s*(\S+)\s*$', re.MULTILINE)
+SPI_FLASH_RE = re.compile(r'^SPI flash:\s*(\S+)\s*$', re.MULTILINE)
+
+
+class HPSError(Exception):
+  """HPS device exception class."""
 
 
 class HPSDevice:
@@ -29,3 +37,35 @@ class HPSDevice:
     cmd.append('factory')
     # TODO(cyueh) Add timeout to sys_interface.SystemInterface.Popen
     process_utils.Spawn(cmd, timeout=timeout_secs, log=True, check_call=True)
+
+  def GetHPSInfo(self) -> Tuple[str, str, str]:
+    """Retrieves the HPS identifiers.
+
+    Returns:
+      An tuple (MCU_ID, CAMERA_ID, SPI_FLASH_ID) of three strings.
+    """
+    cmd = [self._hps_factory_path, '--verbose']
+    if self._dev is not None:
+      cmd.extend(['--dev', self._dev])
+    cmd.append('print-part-ids')
+    process = self._dut.Popen(cmd, stdout=self._dut.PIPE, stderr=self._dut.PIPE,
+                              log=True)
+    output, stderr = process.communicate()
+    errors = []
+    results = []
+    for pattern in (MCU_ID_RE, CAMERA_ID_RE, SPI_FLASH_RE):
+      match = pattern.search(output)
+      if match is None:
+        errors.append(f"output doesn't match {pattern.pattern!r}")
+        results.append(None)
+      else:
+        results.append(match.group(1))
+
+    if process.returncode != 0 or errors:
+      messages = ['output:', output, 'stderr:', stderr] + errors
+      if 'Failed to execute stage1' in stderr:
+        messages.append(
+            f"run '{self._hps_factory_path} write-stage0' before probe")
+      raise HPSError('\n'.join(messages))
+
+    return (results[0], results[1], results[2])
