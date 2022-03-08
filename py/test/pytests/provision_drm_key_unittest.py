@@ -121,7 +121,7 @@ class ProvisionDRMKeyTest(unittest.TestCase):
 
   @mock.patch('cros.factory.test.utils.url_spec.URLSpec.FindServerURL')
   def testUrlNotFound(self, mock_find_url):
-    mock_find_url.side_effect = mock.Mock(side_effect=ValueError())
+    mock_find_url.return_value = ''
 
     self.assertRaisesRegex(ValueError,
                            'Server Url not found, please check arguments.',

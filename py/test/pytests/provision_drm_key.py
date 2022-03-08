@@ -113,10 +113,9 @@ class ProvisionDRMKey(test_case.TestCase):
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
     if not self.args.from_device_data:
-      try:
-        server_url = URLSpec.FindServerURL(self.args.proxy_server_url, self.dut)
-      except ValueError as e:
-        raise ValueError('Server Url not found, please check arguments.', e)
+      server_url = URLSpec.FindServerURL(self.args.proxy_server_url, self.dut)
+      if not server_url:
+        raise ValueError('Server Url not found, please check arguments.')
 
       logging.info('Proxy server URL: %s', server_url)
       self.dkps_proxy = xmlrpc.client.ServerProxy(server_url)
