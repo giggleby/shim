@@ -216,6 +216,12 @@ class HWIDActionManager:
   def _SaveHWIDPreprocDataToCache(self, project, hwid_preproc_data_inst):
     self._memcache_adapter.Put(project, hwid_preproc_data_inst)
 
+  def ListProjects(self):
+    """Lists all available projects in a set."""
+    metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata()
+    return {m.project
+            for m in metadata_list}
+
 
 def _NormalizeProjectString(string):
   """Normalizes a string to account for things like case."""

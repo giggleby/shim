@@ -41,7 +41,6 @@ class HWIDRepoError(Exception):
 
 
 class HWIDRepo:
-  _AVL_NAME_MAPPING_FOLDER = 'avl_name_mapping'
 
   def __init__(self, repo, repo_url, repo_branch):
     """Constructor.
@@ -57,24 +56,6 @@ class HWIDRepo:
 
     self._git_fs = git_util.GitFilesystemAdapter(self._repo)
 
-  def IterAVLNameMappings(self):
-    """Iterate through the AVL name mappings recorded in the HWID repo.
-
-    Yields:
-      A tuple of (mapping file name, mapping file content).
-
-    Raises:
-      HWIDRepoError
-    """
-    try:
-      for name in self._git_fs.ListFiles(self._AVL_NAME_MAPPING_FOLDER):
-        content = self._git_fs.ReadFile(
-            f'{self._AVL_NAME_MAPPING_FOLDER}/{name}').decode('utf-8')
-        yield name, content
-    except (KeyError, ValueError,
-            filesystem_adapter.FileSystemAdapterException) as ex:
-      raise HWIDRepoError(
-          f'unable to retrive AVL name mappings: {ex}') from None
 
   def ListHWIDDBMetadata(self):
     """Returns a list of metadata of HWID DBs recorded in the HWID repo."""

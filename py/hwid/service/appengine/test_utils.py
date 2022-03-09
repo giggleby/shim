@@ -108,7 +108,6 @@ class FakeModuleCollection:
     self._fake_hwid_instance_factory.SetHWIDActionForProject(
         project, hwid_action, hwid_action_factory)
 
-  def AddAVLNameMapping(self, category, component_id, name):
+  def AddAVLNameMapping(self, component_id, name):
     with self._ndb_connector.CreateClientContext():
-      decoder_data.AVLNameMapping(category=category, component_id=component_id,
-                                  name=name).put()
+      decoder_data.AVLNameMapping(component_id=component_id, name=name).put()

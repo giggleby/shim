@@ -141,6 +141,13 @@ class HWIDActionManagerTest(unittest.TestCase):
 
     self.assertEqual(actual_hwid_action, expected_hwid_action)
 
+  def testListsProjects(self):
+    self._RegisterProjectWithAction('PROJ1', 'theuid1')
+    self._RegisterProjectWithAction('PROJ2', 'theuid2')
+    self._RegisterProjectWithAction('PROJ3', 'theuid3')
+    self.assertEqual(self._hwid_action_manager.ListProjects(),
+                     {'PROJ1', 'PROJ2', 'PROJ3'})
+
   def testReloadMemcacheCacheFromFiles(self):
     self._RegisterProjectWithAction('PROJ1', 'theuid1')
     self._RegisterProjectWithAction('PROJ2', 'theuid2')
@@ -162,7 +169,8 @@ class HWIDActionManagerTest(unittest.TestCase):
     self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count,
                      load_db_base_call_cnt + 1)
 
-  def _RegisterProjectWithAction(self, project, action_uid: Optional[str]):
+  def _RegisterProjectWithAction(self, project,
+                                 action_uid: Optional[str] = None):
     self._hwid_db_data_manager.RegisterProjectForTest(project, project, '3',
                                                       'db data')
     opt_hwid_action_inst = HWIDActionForTest(

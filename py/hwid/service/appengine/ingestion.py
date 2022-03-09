@@ -11,18 +11,21 @@ import os.path
 import textwrap
 
 import urllib3
-import yaml
 
+from cros.factory.hwid.service.appengine import api_connector
 from cros.factory.hwid.service.appengine import auth
-from cros.factory.hwid.service.appengine.config import CONFIG
+from cros.factory.hwid.service.appengine import config
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import filesystem_adapter
+from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
+
+CONFIG = config.CONFIG
 
 GOLDENEYE_MEMCACHE_NAMESPACE = 'SourceGoldenEye'
 
@@ -39,11 +42,13 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   SERVICE_DESCRIPTOR = ingestion_pb2.DESCRIPTOR.services_by_name[
       'HwidIngestion']
 
-  AVL_NAME_MAPPING_FOLDER = 'avl_name_mapping'
+  @classmethod
+  def CreateInstance(cls):
+    """Creates RPC service instance."""
+    return cls(api_connector.HWIDAPIConnector())
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, hwid_api_connector, *args, **kwargs):
     super(ProtoRPCService, self).__init__(*args, **kwargs)
-    self.hwid_filesystem = CONFIG.hwid_filesystem
     self.hwid_action_manager = CONFIG.hwid_action_manager
     self.vp_data_manager = CONFIG.vp_data_manager
     self.hwid_db_data_manager = CONFIG.hwid_db_data_manager
@@ -51,6 +56,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     self.vpg_targets = CONFIG.vpg_targets
     self.dryrun_upload = CONFIG.dryrun_upload
     self.hwid_repo_manager = CONFIG.hwid_repo_manager
+    self.hwid_api_connector = hwid_api_connector
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -63,21 +69,17 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     The task queue POSTs back into this handler to do the actual work.
 
-    This handler will copy the avl_name_mapping directory under chromeos-hwid
-    dir to cloud storage.
+    This handler will scan all component IDs in HWID DB and query HWID API to
+    get AVL name mapping, then store them to datastore.
     """
 
     del request  # unused
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo()
-    category_set = self.decoder_data_manager.ListExistingAVLCategories()
 
-    for name, content in live_hwid_repo.IterAVLNameMappings():
-      category, unused_ext = os.path.splitext(name)
-      mapping = yaml.safe_load(content)
-      self.decoder_data_manager.SyncAVLNameMapping(category, mapping)
-      category_set.discard(category)
+    comp_ids = list(self._ListComponentIDs())
+    avl_name_mapping = self.hwid_api_connector.GetAVLNameMapping(comp_ids)
 
-    self.decoder_data_manager.RemoveAVLNameMappingCategories(category_set)
+    logging.info('Got %d AVL names from HWID API.', len(avl_name_mapping))
+    self.decoder_data_manager.SyncAVLNameMapping(avl_name_mapping)
 
     return ingestion_pb2.SyncNameMappingResponse()
 
@@ -376,3 +378,29 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     for board, payload_hash in payload_hash_mapping.items():
       self.vp_data_manager.SetLatestPayloadHash(board, payload_hash)
     return response
+
+  def _ListComponentIDs(self):
+    """Lists all component IDs in HWID database.
+
+    Returns:
+      A set of component Ids.
+    """
+    all_comp_ids = set()
+    np_adapter = name_pattern_adapter.NamePatternAdapter()
+
+    def _ResolveComponentIds(comp_cls, comps):
+      comp_ids = set()
+      pattern = np_adapter.GetNamePattern(comp_cls)
+      for comp_name in comps:
+        ret = pattern.Matches(comp_name)
+        if ret:
+          cid, _ = ret
+          comp_ids.add(cid)
+      return comp_ids
+
+    for project in self.hwid_action_manager.ListProjects():
+      action = self.hwid_action_manager.GetHWIDAction(project)
+      for comp_cls, comps in action.GetComponents().items():
+        all_comp_ids |= _ResolveComponentIds(comp_cls, comps)
+
+    return all_comp_ids

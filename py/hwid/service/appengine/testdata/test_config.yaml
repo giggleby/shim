@@ -6,6 +6,7 @@
   project_region: "prod-project-region"
   queue_name: "prod-queue-name"
   hwid_repo_branch: null  # Use the branch HEAD tracks.
+  hwid_api_endpoint: "https://prod-endpoint"
 
 "staging-project-name":
   env: "staging"
@@ -15,4 +16,5 @@
   project_region: "staging-project-region"
   queue_name: "staging-queue-name"
   hwid_repo_branch: null  # Use the branch HEAD tracks.
+  hwid_api_endpoint: "https://staging-endpoint"
 

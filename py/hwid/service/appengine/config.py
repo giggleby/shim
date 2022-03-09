@@ -35,7 +35,8 @@ _DEFAULT_CONFIGURATION = {
     },
     'hwid_repo_branch': 'stabilize-13360.B',
     'project_region': '',
-    'queue_name': ''
+    'queue_name': '',
+    'hwid_api_endpoint': ''
 }
 
 _RESOURCE_DIR = os.path.join(
@@ -80,7 +81,7 @@ class _Config:
     self.gae_env = os.environ.get('GAE_ENV')
     try:
       confs = yaml.safe_load(file_utils.ReadFile(config_path))
-      conf = confs[self.cloud_project]
+      conf = confs[self.cloud_project or 'local']
     except (KeyError, OSError, IOError):
       conf = _DEFAULT_CONFIGURATION
 
@@ -113,6 +114,7 @@ class _Config:
     self.hwid_repo_branch = conf['hwid_repo_branch']
     self.client_allowlist = conf.get('client_allowlist', [])
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch)
+    self.hwid_api_endpoint = conf['hwid_api_endpoint']
 
   def GetVerificationPayloadSettings(self, board):
     """Get repo settings for specific board.

@@ -65,6 +65,14 @@ class HWIDV3Action(hwid_action.HWIDAction):
   def RemoveHeader(self, hwid_db_contents):
     return self._ss_helper.RemoveHeader(hwid_db_contents)
 
+  def GetComponents(self, with_classes: Optional[List[str]] = None):
+    comps = {}
+    database = self.GetDBV3()
+    with_classes = with_classes or database.GetComponentClasses()
+    for comp_cls in with_classes:
+      comps[comp_cls] = database.GetComponents(comp_cls)
+    return comps
+
 
 def _NormalizeString(string):
   """Normalizes a string to account for things like case."""

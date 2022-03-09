@@ -190,7 +190,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         comp_db=database.Database.LoadFile(GOLDEN_HWIDV3_FILE,
                                            verify_checksum=False), verbose=True)
     configless = None
-    self._module_collection.AddAVLNameMapping('dram', 1234, 'avl_name_1')
+    self._module_collection.AddAVLNameMapping(1234, 'avl_name_1')
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {
           TEST_HWID: BOMAndConfigless(bom, configless, None),

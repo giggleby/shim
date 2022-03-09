@@ -59,20 +59,6 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     self._hwid_repo = hwid_repo.HWIDRepo(self._fake_repo, 'test_repo',
                                          'test_branch')
 
-  def testIterAVLNameMappings(self):
-    self._AddFilesToFakeRepo({
-        'avl_name_mapping/comp_category1.yaml': b'pattern1',
-        'avl_name_mapping/comp_category2.yaml': b'pattern2',
-    })
-
-    actual_avl_name_mappings = list(self._hwid_repo.IterAVLNameMappings())
-
-    expected_avl_name_mappings = [
-        ('comp_category1.yaml', 'pattern1'),
-        ('comp_category2.yaml', 'pattern2'),
-    ]
-    self.assertCountEqual(actual_avl_name_mappings, expected_avl_name_mappings)
-
   def testListHWIDDBMetadata_Success(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
 

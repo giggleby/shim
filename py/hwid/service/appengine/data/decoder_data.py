@@ -13,7 +13,6 @@ from cros.factory.hwid.v3 import name_pattern_adapter
 
 class AVLNameMapping(ndb.Model):
 
-  category = ndb.StringProperty()
   component_id = ndb.IntegerProperty()
   name = ndb.StringProperty()
 
@@ -40,18 +39,17 @@ class DecoderDataManager:
   def __init__(self, ndb_connector: ndbc_module):
     self._ndb_connector = ndb_connector
 
-  def SyncAVLNameMapping(self, category, mapping):
+  def SyncAVLNameMapping(self, mapping):
     """Sync the set of AVL name mapping to be exactly the mapping provided.
 
     Args:
-      category: The component category
       mapping: The {cid: avl_name} dictionary for updating datastore.
     """
 
     with self._ndb_connector.CreateClientContextWithGlobalCache():
       cids_to_create = set(mapping)
 
-      q = AVLNameMapping.query(AVLNameMapping.category == category)
+      q = AVLNameMapping.query()
       for entry in list(q):
         # Discard the entries indexed by cid.
         if entry.component_id not in mapping:
@@ -63,29 +61,9 @@ class DecoderDataManager:
 
       for cid in cids_to_create:
         name = mapping[cid]
-        entry = AVLNameMapping(component_id=cid, name=name, category=category)
+        entry = AVLNameMapping(component_id=cid, name=name)
         entry.put()
-    logging.info('AVL name mapping of category "%s" is synced.', category)
-
-  def ListExistingAVLCategories(self):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      category_set = set()
-      for entry in AVLNameMapping.query(projection=['category'],
-                                        distinct_on=['category']):
-        category_set.add(entry.category)
-      logging.debug('category_set: %s', category_set)
-      return category_set
-
-  def RemoveAVLNameMappingCategories(self, category_set):
-    with self._ndb_connector.CreateClientContextWithGlobalCache():
-      keys_to_delete = []
-      for category in category_set:
-        logging.info('Add category "%s" to remove', category)
-        keys_to_delete += AVLNameMapping.query(
-            AVLNameMapping.category == category).fetch(keys_only=True)
-      logging.debug('keys_to_delete: %s', keys_to_delete)
-      ndb.delete_multi(keys_to_delete)
-      logging.info('Extra categories are Removed')
+    logging.info('AVL name mapping is synced.')
 
   def GetAVLName(self, category, comp_name, fallback=True):
     """Get AVL Name from hourly updated mapping data.
@@ -108,8 +86,7 @@ class DecoderDataManager:
     cid, unused_qid = ret
 
     with self._ndb_connector.CreateClientContextWithGlobalCache():
-      entry = AVLNameMapping.query(AVLNameMapping.category == category,
-                                   AVLNameMapping.component_id == cid).get()
+      entry = AVLNameMapping.query(AVLNameMapping.component_id == cid).get()
     if entry is None:
       logging.error(
           'mapping not found for category "%s" and component name "%s"',

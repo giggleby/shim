@@ -5,7 +5,7 @@
 
 import collections
 import copy
-from typing import Dict, List, NamedTuple, Optional, Set
+from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
@@ -343,7 +343,9 @@ class HWIDAction:
     raise NotSupportedError(
         f'`GetComponentsClasses` is not supported in HWID v{self.HWID_VERSION}')
 
-  def GetComponents(self, with_classes: List[Optional[str]] = None):
+  def GetComponents(
+      self,
+      with_classes: Optional[List[str]] = None) -> Mapping[str, Collection]:
     """Get a filtered dict of all components for the given project.
 
     Args:
