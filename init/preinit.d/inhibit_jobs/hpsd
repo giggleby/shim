@@ -1,0 +1,3 @@
+hpsd communicates with the hps peripheral, including flashing firmware.
+hps-factory is used in the factory environment, hpsd would interfere with the
+hps-factory tests.
