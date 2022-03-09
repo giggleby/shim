@@ -154,46 +154,74 @@ manual post-processing.
 Below, we will list some common use cases of HWID database change, and provide
 the recommendation way to do it.
 
-### 1. Create A New HWID Database
-At the beginning of the project, we need to create a new HWID database. The
-easiest way is using the database builder with a valid probe result. The steps
-of generating HWID database are:
+### 1. Create a Minimal HWID Database
 
-1. Confirm the categories of the components that should be encoded into HWID.
-2. Collect materials (probed results, for example) to build the HWID DB.
-3. Confirm the project name and the phase.
-4. (Optional) Check if there are missing components in the probe result. If so,
+At the beginning of the project, we need to create a new HWID database.  Since
+Jan 2022, one is encouraged to create a minimal HWID DB and add probed
+components in later changes with system validations.
+
+The steps of generating a minimal HWID database are:
+
+1. Create a minimal DB with the project name and corresponding phase.
+```shell
+# Create a minimal DB
+$ hwid build-database --minimal --project <proj_name> --image-id <initial_phase>
+```
+an example HWID DB will look like:
+```yaml
+checksum: <hash>
+
+project: GOOGLE
+
+encoding_patterns:
+  0: default
+
+image_id:
+  0: EVT
+
+pattern:
+- image_ids:
+  - 0
+  encoding_scheme: base8192
+  fields: []
+
+encoded_fields:
+  region_field: !region_field []
+
+components:
+  region: !region_component
+
+rules: []
+```
+
+2. Add the project info in `projects.yaml` manifest file.
+```yaml
+GOOGLE:
+    board: GOOGLE
+    branch: main
+    version: 3
+    path: v3/GOOGLE
+```
+3. Submit the change of the two files.
+
+### 2. Add Probed Value, Second Source, or Update Firmware
+This is the most common update in HWID database. When we have the initial HWID
+DB, we can start to add the probed values, introduce second source, or update
+firmware version.  We need to add new component item into HWID database. Just
+append the new item in the component field and check if the encoding bit is
+enough or not.  If we update the firmware version, we should mark the old one
+as "deprecated" to ensure all DUTs in the factory use the latest firmware.
+
+There are two types of unprobeable components we can use while updating the HWID
+DB.
+
+1. (Optional) Check if there are missing components in the probe result. If so,
    add a default item with the argument "--add-default-component". Please refer
    [Add a Default Item](#add_default_item) for more details.
-5. (Optional) Check if there are components that do not exist in some SKU. For
+2. (Optional) Check if there are components that do not exist in some SKU. For
    example, one SKU has cellular and another SKU does not. If so, add a null
    item with the argument "--add-null-component". Please refer
    [Add a Null Item](#add_null_item) for more details.
-
-Here is an example to create a product named `GOOGLE` with the phase `EVT`, add
-a default item for `battery` component, and add a null item for `cellular`
-component.
-
-```shell
-# Get the probe result.
-$ hwid collect-material --output-file /tmp/material.yaml
-
-# Create the database at /usr/local/factory/hwid/GOOGLE
-$ hwid build-database \
-    --material-file /tmp/material.yaml \
-    --project GOOGLE \
-    --image-id EVT \
-    --add-default-component battery \
-    --add-null-component cellular
-```
-
-### 2. Add Second Source and Update Firmware
-This is the most common update in HWID database. When we introduce second source
-or update firmware version, we need to add new supported component item into
-HWID database. Just append the new item in the component field and check if the
-encoding bit is enough or not. If we update the firmware version, we should mark
-the old one as "deprecated" to ensure all DUTs in the factory use the latest
-firmware.
 
 The command for this scenario is:
 ```shell
@@ -203,7 +231,9 @@ $ hwid collect-material --output-file /tmp/material.yaml
 # Update the database at /usr/local/factory/hwid/GOOGLE
 $ hwid update-database \
     --material-file /tmp/material.yaml \
-    --project GOOGLE
+    --project GOOGLE \
+    --add-default-component battery \
+    --add-null-component cellular
 ```
 
 ### 3. Add a Default Item {#add_default_item}
