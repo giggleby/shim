@@ -410,6 +410,9 @@
         "max_point_count": 5
       }
     },
+    "EDPPanelTiming": {
+      "pytest_name": "edp_panel_timing"
+    },
     "EnableECWriteProtect": {
       "inherit": "TestGroup",
       "label": "Enable EC Write Protect",

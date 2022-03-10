@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-03-15 18:14+CST\n"
+"PO-Revision-Date: 2022-03-21 09:37+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -190,6 +190,10 @@ msgstr "Các điểm hiển thị"
 #: ../build/pytests_label_generated.json
 msgid "DSM Calibration"
 msgstr "DSM Hiệu chỉnh"
+
+#: ../build/pytests_label_generated.json
+msgid "Edp Panel Timing"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Ethernet"

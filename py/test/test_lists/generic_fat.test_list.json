@@ -34,6 +34,7 @@
         "ModelSKU",
         "ChargerTypeDetection",
         "MemorySize",
+        "EDPPanelTiming",
         "Barrier",
         "ThermalSensors",
         "Barrier",
