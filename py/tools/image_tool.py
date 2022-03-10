@@ -1845,7 +1845,7 @@ class ChromeOSFactoryBundle:
     self.CreatePayloads(payloads_dir)
     json_path = CrosPayloadUtils.GetJSONPath(payloads_dir, self.board)
 
-    with GPT.Partition.MapAll(output) as output_dev:
+    with GPT.Partition.MapAll(output, block_size=sector_size) as output_dev:
       CrosPayloadUtils.InstallComponents(
           json_path, output_dev, ['test_image', 'release_image'])
 
@@ -1868,7 +1868,7 @@ class ChromeOSFactoryBundle:
           'Stateful partition is too small! Please increase the'
           ' size of preflash image! Current: %d M' % (part.size // MEGABYTE))
     part.ResizeFileSystem(total_fs_size)
-    with GPT.Partition.MapAll(output) as output_dev:
+    with GPT.Partition.MapAll(output, block_size=sector_size) as output_dev:
       targets = [
           'release_image.crx_cache', 'release_image.dlc_factory_cache', 'hwid',
           'project_config', 'toolkit'
