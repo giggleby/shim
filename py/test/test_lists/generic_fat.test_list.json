@@ -33,6 +33,7 @@
         "CheckSecdataVersion",
         "ModelSKU",
         "ChargerTypeDetection",
+        "EDPPanelTiming",
         "Barrier",
         "ThermalSensors",
         "Barrier",
