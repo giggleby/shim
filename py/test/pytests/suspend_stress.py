@@ -80,6 +80,10 @@ class SuspendStressTest(test_case.TestCase):
       Arg('memory_check_size', int,
           'Amount of memory to allocate (0 means as much as possible)',
           default=0),
+      Arg('premature_wake_fatal', bool,
+          'Abort on any premature wakes from suspend', default=True),
+      Arg('late_wake_fatal', bool, 'Abort on any late wakes from suspend',
+          default=True),
   ]
 
   ui_class = test_ui.ScrollableLogUI
@@ -120,14 +124,26 @@ class SuspendStressTest(test_case.TestCase):
 
     command = [
         'suspend_stress_test',
-        '--count', str(self.args.cycles),
-        '--suspend_max', str(self.args.suspend_delay_max_secs),
-        '--suspend_min', str(self.args.suspend_delay_min_secs),
-        '--wake_max', str(self.args.resume_delay_max_secs),
-        '--wake_min', str(self.args.resume_delay_min_secs),
-        '--suspend_time_margin_min', str(self.args.suspend_time_margin_min_secs),
-        '--suspend_time_margin_max', str(self.args.suspend_time_margin_max_secs),
-        '--record_dmesg_dir', os.path.dirname(GetLogPath('')),
+        '--count',
+        str(self.args.cycles),
+        '--suspend_max',
+        str(self.args.suspend_delay_max_secs),
+        '--suspend_min',
+        str(self.args.suspend_delay_min_secs),
+        '--wake_max',
+        str(self.args.resume_delay_max_secs),
+        '--wake_min',
+        str(self.args.resume_delay_min_secs),
+        '--suspend_time_margin_min',
+        str(self.args.suspend_time_margin_min_secs),
+        '--suspend_time_margin_max',
+        str(self.args.suspend_time_margin_max_secs),
+        '--premature_wake_fatal',
+        str(self.args.premature_wake_fatal),
+        '--late_wake_fatal',
+        str(self.args.late_wake_fatal),
+        '--record_dmesg_dir',
+        os.path.dirname(GetLogPath('')),
     ]
     if self.args.ignore_wakeup_source:
       command += ['--ignore_wakeup_source', self.args.ignore_wakeup_source]
