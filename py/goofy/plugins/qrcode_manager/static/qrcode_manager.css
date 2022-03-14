@@ -8,5 +8,5 @@ body {
 }
 
 .qrcode {
-  position: relative;
+  position: absolute;
 }
