@@ -79,6 +79,10 @@ class SuspendStressTest(test_case.TestCase):
       Arg('memory_check_size', int,
           'Amount of memory to allocate (0 means as much as possible)',
           default=0),
+      Arg('premature_wake_fatal', bool,
+          'Abort on any premature wakes from suspend', default=True),
+      Arg('late_wake_fatal', bool, 'Abort on any late wakes from suspend',
+          default=True),
   ]
 
   ui_class = test_ui.ScrollableLogUI
@@ -111,6 +115,7 @@ class SuspendStressTest(test_case.TestCase):
       time.sleep(interval_sec)
 
   def runTest(self):
+
     command = [
         'suspend_stress_test',
         '--count', str(self.args.cycles),
@@ -120,6 +125,10 @@ class SuspendStressTest(test_case.TestCase):
         '--wake_min', str(self.args.resume_delay_min_secs),
         '--wake_early_margin', str(self.args.resume_early_margin_secs),
         '--wake_worst_case', str(self.args.resume_worst_case_secs),
+        '--premature_wake_fatal',
+        str(self.args.premature_wake_fatal),
+        '--late_wake_fatal',
+        str(self.args.late_wake_fatal),
     ]
     if self.args.ignore_wakeup_source:
       command += ['--ignore_wakeup_source', self.args.ignore_wakeup_source]
