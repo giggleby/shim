@@ -20,68 +20,35 @@ Examples
 To test HPS, add this into test list::
 
   {
-    "pytest_name": "hps",
-    "args": {
-      "dev": "/dev/i2c-15"
-    }
+    "pytest_name": "hps"
   }
 
-The dev argument may be different for different models.
 """
 
-import os
-
+from cros.factory.device import device_utils
 from cros.factory.test import test_case
+from cros.factory.test.utils import hps_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import process_utils
 
 
-DEFAULT_HPS_FACTORY_PATH = os.path.join(os.sep, 'usr', 'bin', 'hps-factory')
-IOTOOLS_PATH = 'iotools'
+DEFAULT_HPS_FACTORY_TIMEOUT = 3600
 
 
 class HPSTest(test_case.TestCase):
   ARGS = [
       Arg('hps_factory_path', str, 'The path of the hps-factory binary.',
-          default=DEFAULT_HPS_FACTORY_PATH),
-      Arg('dev', str, 'The path of the HPS device.',
-          default='/dev/i2c-hps-controller'),
-      Arg('timeout_secs', int, 'The timeout of the test command.', default=10),
-      Arg('power_cycle', bool, 'Power-cycle the HPS.', default=True),
+          default=hps_utils.DEFAULT_HPS_FACTORY_PATH),
+      Arg('dev', str,
+          ('The path of the HPS device. If not set, use the default value in '
+           f'{hps_utils.DEFAULT_HPS_FACTORY_PATH!r}'), default=None),
+      Arg('timeout_secs', int, 'The timeout of the test command.',
+          default=DEFAULT_HPS_FACTORY_TIMEOUT),
   ]
 
-  def PowerCycle(self):
-    """Should be equivalent to the below command.
-
-    iotools mmio_write32 0xfd6a0ae0 \
-      $(iotools btr $(iotools mmio_read32 0xfd6a0ae0) 0) && \
-    iotools mmio_write32 0xfd6a0ae0 \
-      $(iotools bts $(iotools mmio_read32 0xfd6a0ae0) 0)
-    """
-    index = '0xfd6a0ae0'
-
-    output = process_utils.CheckOutput([IOTOOLS_PATH, 'mmio_read32', index],
-                                       log=True).strip()
-    output = process_utils.CheckOutput([IOTOOLS_PATH, 'btr', output, '0'],
-                                       log=True).strip()
-    process = process_utils.Spawn([IOTOOLS_PATH, 'mmio_write32', index, output],
-                                  log=True, call=True)
-
-    if process.returncode == 0:
-      output = process_utils.CheckOutput([IOTOOLS_PATH, 'mmio_read32', index],
-                                         log=True).strip()
-      output = process_utils.CheckOutput([IOTOOLS_PATH, 'bts', output, '0'],
-                                         log=True).strip()
-      process_utils.Spawn([IOTOOLS_PATH, 'mmio_write32', index, output],
-                          log=True, call=True)
-
-    self.Sleep(1)
+  def setUp(self):
+    self._dut = device_utils.CreateDUTInterface()
+    self._hps_device = hps_utils.HPSDevice(
+        self._dut, self.args.hps_factory_path, self.args.dev)
 
   def runTest(self):
-    if self.args.power_cycle:
-      self.PowerCycle()
-    process = process_utils.Spawn(
-        [self.args.hps_factory_path, '--dev', self.args.dev, 'factory'],
-        timeout=self.args.timeout_secs, log=True, call=True)
-    if process.returncode != 0:
-      self.FailTask('Test failed.')
+    self._hps_device.RunFactoryProcess(timeout_secs=self.args.timeout_secs)
