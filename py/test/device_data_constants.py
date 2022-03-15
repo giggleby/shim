@@ -53,6 +53,7 @@ KEY_COMPONENT_ALLOWLIST = [
     'component.has_daughter_board_usb_c',
     'component.has_fingerprint',
     'component.has_front_camera',
+    'component.has_hps',
     'component.has_keyboard_backlight',
     'component.has_lid_accelerometer',
     'component.has_lid_gyroscope',
