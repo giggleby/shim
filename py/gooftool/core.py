@@ -567,8 +567,8 @@ class Gooftool:
     cbmem_result = self._util.shell('cbmem -1')
     if not cbmem_result.success:
       raise Error('cbmem fails.')
-    match = re.search(r'^ME:\s+HFSTS3\s+:\s+(.*)$', cbmem_result.stdout,
-                      re.MULTILINE)
+    match = re.search(r'^(?:\[DEBUG\]\s+)?ME:\s+HFSTS3\s+:\s+(.*)$',
+                      cbmem_result.stdout, re.MULTILINE)
     if not match:
       raise Error('HFSTS3 is not found')
     # Readable check
@@ -589,8 +589,10 @@ class Gooftool:
       raise Error('HFSTS3 indicates that this is an unknown SKU')
     # Manufacturing Mode check
     rules = {
-        'Manufacturing Mode': (r'^ME:\s+Manufacturing Mode\s+:\s+(.*)$', 'NO'),
-        'FW Partition Table': (r'^ME:\s+FW Partition Table\s+:\s+(.*)$', 'OK'),
+        'Manufacturing Mode': (
+            r'^(?:\[DEBUG\]\s+)?ME:\s+Manufacturing Mode\s+:\s+(.*)$', 'NO'),
+        'FW Partition Table': (
+            r'^(?:\[DEBUG\]\s+)?ME:\s+FW Partition Table\s+:\s+(.*)$', 'OK'),
     }
     errors = []
     for key, rule in rules.items():
