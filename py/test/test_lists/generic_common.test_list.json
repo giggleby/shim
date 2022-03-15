@@ -16,6 +16,7 @@
     "has_ec_pubkey": false,
     "has_fan": true,
     "has_keybox": false,
+    "__comment_has_keybox": "Set to true if factory provisioning for Widevine keyboxes is needed. Note that the provisioning process is only available in AMD project.",
     "hwid_need_vpd": false,
     "__comment_hwid_need_vpd": "Set to true if some rules in the HWID database rely on VPD data",
     "mlb_mode": false,
