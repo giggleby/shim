@@ -556,6 +556,13 @@
       "label": "Gyroscope Calibration",
       "run_if": "not constants.has_device_data or device.component.has_base_gyroscope"
     },
+    "HPS": {
+      "pytest_name": "hps",
+      "run_if": "device.component.has_hps",
+      "args": {
+        "timeout_secs": 3600
+      }
+    },
     "HWButton": {
       "inherit": "TestGroup",
       "label": "Hardware Button",
