@@ -107,6 +107,7 @@ from cros.factory.utils import schema
 
 from cros.factory.external import evdev
 
+
 _POWER_KEY_CODE = 116
 
 _NUMPAD = 'numpad'
