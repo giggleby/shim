@@ -86,9 +86,12 @@ into test list::
   }
 """
 
+import array
 import ast
+import fcntl
 import os
 import re
+import struct
 import time
 
 from cros.factory.test.l10n import regions
@@ -124,30 +127,26 @@ _REPLACEMENT_KEYMAP_SCHEMA = schema.JSONSchemaDict(
         }
     })
 
-# Please check:
-#   ~/trunk/src/third_party/coreboot/src/acpi/acpigen_ps2_keybd.c
-#   ~/trunk/src/third_party/coreboot/src/include/input-event-codes.h
-_ACTION_KEYS_SCANCODE_TO_KEYCODE = {
-    0xea: 158,  # KEY_BACK
-    0xe9: 159,  # KEY_FORWARD
-    0xe7: 173,  # KEY_REFRESH
-    0x91: 0x174,  # KEY_FULL_SCREEN
-    0x92: 120,  # KEY_SCALE
-    0xa0: 113,  # KEY_MUTE
-    0xae: 114,  # KEY_VOLUMEDOWN
-    0xb0: 115,  # KEY_VOLUMEUP
-    0x9a: 164,  # KEY_PLAYPAUSE
-    0x99: 163,  # KEY_NEXTSONG
-    0x90: 165,  # KEY_PREVIOUSSONG
-    0x93: 99,  # KEY_SYSRQ
-    0x94: 224,  # KEY_BRIGHTNESSDOWN
-    0x95: 225,  # KEY_BRIGHTNESSUP
-    0x97: 229,  # KEY_KBDILLUMDOWN
-    0x98: 230,  # KEY_KBDILLUMUP
-    0x96: 0x279,  # KEY_PRIVACY_SCREEN_TOGGLE
-    0x9b: 248,  # KEY_MICMUTE
-    0x9e: 228,  # KEY_KBDILLUMTOGGLE
-}
+"""
+Defined in "uapi/linux/input.h":
+  struct input_keymap_entry {
+  #define INPUT_KEYMAP_BY_INDEX (1 << 0)
+    __u8 flags;
+    __u8 len;
+    __u16 index;
+    __u32 keycode;
+    __u8 scancode[32];
+  };
+"""
+_INPUT_KEYMAP_ENTRY = 'BBHI32B'
+"""
+Defined in "uapi/linux/input.h":
+ #define EVIOCGKEYCODE_V2 _IOR('E', 0x04, struct input_keymap_entry)
+
+See more details in "uapi/asm-generic/ioctl.h"
+"""
+_EVIOCGKEYCODE_V2 = ((2 << 30) | (struct.calcsize(_INPUT_KEYMAP_ENTRY) << 16) |
+                     (ord('E') << 8) | 0x04)
 
 
 class KeyboardTest(test_case.TestCase):
@@ -325,6 +324,42 @@ class KeyboardTest(test_case.TestCase):
     self.dispatcher.close()
     self.keyboard_device.ungrab()
 
+  def GetKeyboardMapping(self):
+    """Gets the scancode to keycode mapping.
+
+    Repeatedly request EVIOCGKEYCODE_V2 ioctl on device node with flag
+    INPUT_KEYMAP_BY_INDEX to fetch scancode keycode translation table for an
+    input device. Sequetially increase index until it returns error.
+    """
+    mapping = {}
+    buf = array.array('b', [0] * struct.calcsize(_INPUT_KEYMAP_ENTRY))
+
+    # NOTE:
+    # 1. index is a __u16.
+    # 2. INPUT_KEYMAP_BY_INDEX = (1 << 0)
+    # See more details in the definition of input_keymap_entry.
+    for i in range(1 << 16):
+      struct.pack_into(_INPUT_KEYMAP_ENTRY, buf, 0, 1, 0, i, 0, *([0] * 32))
+      try:
+        ret_no = fcntl.ioctl(self.keyboard_device, _EVIOCGKEYCODE_V2, buf)
+        if ret_no != 0:
+          session.console.warning(
+              'Failed to fetch keymap at index %d: return_code=%d', i, ret_no)
+          continue
+      except OSError:
+        break
+
+      keymap_entry = struct.unpack(_INPUT_KEYMAP_ENTRY, buf)
+      scancode_len = keymap_entry[1]
+      keycode = keymap_entry[3]
+      scancode = int.from_bytes(keymap_entry[4:4 + scancode_len],
+                                byteorder='little')
+
+      # Mapping to KEY_RESERVED (0) means the scancode is not used.
+      if keycode != 0:
+        mapping[scancode] = keycode
+    return mapping
+
   def GetVivaldiKeyboardActionKeys(self):
     match = re.search(r'\d+$', self.keyboard_device.path)
     if not match:
@@ -338,9 +373,11 @@ class KeyboardTest(test_case.TestCase):
       session.console.warning(
           f'There are {len(scancodes)} function keys, normally it should be 10.'
           ' Please check if this pytest actually tests all function keys.')
+
+    scancode_to_keycode = self.GetKeyboardMapping()
     for (key, scancode) in enumerate(scancodes, 59):
       try:
-        replacement_keymap[key] = _ACTION_KEYS_SCANCODE_TO_KEYCODE[scancode]
+        replacement_keymap[key] = scancode_to_keycode[scancode]
       except KeyError:
         session.console.exception(f'Cannot find keycode of {scancode}')
         raise
