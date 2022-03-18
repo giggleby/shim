@@ -439,7 +439,7 @@ class SyncFactoryServer(test_case.TestCase):
     # Setup tasks to perform.
     tasks = [(_('Ping'), self.Ping)]
 
-    if not (isinstance(self.args.server_url, str) and self.args.server_url):
+    if isinstance(self.args.server_url, dict) and self.args.server_url:
       # Server URL must be confirmed before Ping.
       tasks = [(_('Detect Server URL'), self.DetectServerURL)] + tasks
 
