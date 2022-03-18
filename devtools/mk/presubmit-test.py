@@ -20,16 +20,19 @@ def CheckTestsPassedInDirectory(folder, files, instruction):
   """Checks if all given files are older than previous execution of tests."""
   files_in_folder = FilterFiles(folder, files)
   if not files_in_folder:
-    return
+    return True
   tests_file_path = os.path.join(folder, '.tests-passed')
   if not os.path.exists(tests_file_path):
-    sys.exit('Tests have not passed.\n%s' % instruction)
+    print('Tests have not passed.\n%s' % instruction)
+    return False
   mtime = os.path.getmtime(tests_file_path)
   newer_files = [file_path for file_path in files_in_folder
                  if os.path.getmtime(file_path) > mtime]
   if newer_files:
-    sys.exit('Files have changed since last time tests have passed:\n%s\n%s' %
-             ('\n'.join('  ' + file for file in newer_files), instruction))
+    print('Files have changed since last time tests have passed:\n%s\n%s' %
+          ('\n'.join('  ' + file for file in newer_files), instruction))
+    return False
+  return True
 
 
 def CheckFactoryRepo(files):
@@ -52,10 +55,9 @@ def CheckDome(files):
 def CheckPytestDoc(files):
   all_pytests = json.loads(
       subprocess.check_output(['bin/list_pytests']))
-  allow_list = ['py/test/pytests/' + pytest for pytest in all_pytests]
+  allow_list = {'py/test/pytests/' + pytest
+                for pytest in all_pytests}
   pytests = [file_path for file_path in files if file_path in allow_list]
-  if not pytests:
-    return
 
   # Check if pytest docs follow new template
   bad_files = []
@@ -74,9 +76,11 @@ def CheckPytestDoc(files):
       bad_files.append(test_file)
 
   if bad_files:
-    sys.exit('Python Factory Tests (pytests) must be properly documented:\n%s\n'
-             'Please read py/test/pytests/README.md for more information.' %
-             '\n'.join('  ' + test_file for test_file in bad_files))
+    print('Python Factory Tests (pytests) must be properly documented:\n%s\n'
+          'Please read py/test/pytests/README.md for more information.' %
+          '\n'.join('  ' + test_file for test_file in bad_files))
+    return False
+  return True
 
 
 def CheckPyImport(files):
@@ -87,29 +91,39 @@ def CheckPyImport(files):
 
   pyFiles = [file for file in files if file.endswith('.py')]
   if not pyFiles:
-    return
+    return True
+
   ret = subprocess.run(
       ['isort', '--check', '--diff', '--sp', 'devtools/vscode/.isort.cfg'] +
       pyFiles, check=False, stderr=subprocess.PIPE, encoding='utf-8')
-  bad_files = [
-      ParseFileName(line) for line in ret.stderr.split('\n') if line.strip()
-  ]
-  if bad_files:
+  if ret.returncode == 0:
+    return True
+
+  if ret.returncode == 1:
+    bad_files = [
+        ParseFileName(line) for line in ret.stderr.split('\n') if line.strip()
+    ]
     print('Please sort the imports before submitting for review.')
     print('Please run (in chroot): `isort --sp devtools/vscode/.isort.cfg ' +
           ' '.join(bad_files) + '`')
-    sys.exit(1)
-  ret.check_returncode()
+  else:
+    print(ret.stdout)
+    print(ret.stderr)
+  return False
 
 
 def main():
   files = sys.argv[1:]
-  CheckPyImport(files)
-  CheckFactoryRepo(files)
-  CheckPytestDoc(files)
-  CheckUmpire(files)
-  CheckDome(files)
-  print('All presubmit test passed.')
+  all_passed = True
+  all_passed &= CheckPyImport(files)
+  all_passed &= CheckFactoryRepo(files)
+  all_passed &= CheckPytestDoc(files)
+  all_passed &= CheckUmpire(files)
+  all_passed &= CheckDome(files)
+  if all_passed:
+    print('All presubmit test passed.')
+  else:
+    sys.exit(1)
 
 
 if __name__ == '__main__':
