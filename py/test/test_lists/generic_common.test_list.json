@@ -826,6 +826,21 @@
         "proxy_server_url": ""
       }
     },
+    "SetWidevineKeyboxGroup": {
+      "label": "Widevine Keybox provisioning Test Group",
+      "run_if": "constants.has_keybox",
+      "subtests": [
+        {
+          "inherit": "ExecShell",
+          "label": "Reset Widevine keyboxes",
+          "args": {
+            "commands": "vpd -d widevine_keybox; rm /var/lib/oemcrypto/wrapped_amd_keybox || true"
+          }
+        },
+        "RebootStep",
+        "SetWidevineKeybox"
+      ]
+    },
     "ShopfloorNotifyEnd": {
       "inherit": "ShopfloorService",
       "label": "Shopfloor Service (NotifyEnd)",

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-03-21 09:37+CST\n"
+"PO-Revision-Date: 2022-03-21 18:20+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3633,6 +3633,14 @@ msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set Widevine Keybox"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Reset Widevine keyboxes"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Widevine Keybox provisioning Test Group"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
