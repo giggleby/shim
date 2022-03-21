@@ -5,6 +5,7 @@
 import logging
 
 from cros.factory.device import device_utils
+from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
 
@@ -92,3 +93,23 @@ class ChargeManager:
         self.StopCharging()
     except Exception as e:
       logging.error('Unable to set charge state: %s', e)
+
+  def EnableDPS(self):
+    """Enable dynamic PDO selection."""
+    try:
+      process_utils.CheckCall(['ectool', 'usbpddps', 'enable'])
+    except process_utils.CalledProcessError as ex:
+      # TODO(wyuang): throw a warning because ectool currently cannot
+      # distinguish if DPS can be enable. If you encounter error here, please
+      # check with EC team.
+      logging.warning('Failed to enable DPS: %s', ex)
+
+  def DisableDPS(self):
+    """Disable dynamic PDO selection."""
+    try:
+      process_utils.CheckCall(['ectool', 'usbpddps', 'disable'])
+    except process_utils.CalledProcessError as ex:
+      # TODO(wyuang): throw a warning because ectool currently cannot
+      # distinguish if DPS can be enable. If you encounter error here, please
+      # check with EC team.
+      logging.warning('Failed to disable DPS: %s', ex)
