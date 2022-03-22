@@ -20,6 +20,7 @@ class HPSFunction(cached_probe_function.CachedProbeFunction):
     if not os.path.exists('/dev/i2c-hps-controller'):
       return None
     hps_device = hps_utils.HPSDevice(sys_interface.SystemInterface())
+    hps_device.PowerCycle()
     mcu_id, camera_id, spi_flash_id = hps_device.GetHPSInfo()
     results = [{
         'mcu_id': mcu_id,

@@ -51,4 +51,6 @@ class HPSTest(test_case.TestCase):
         self._dut, self.args.hps_factory_path, self.args.dev)
 
   def runTest(self):
+    self._hps_device.PowerCycle()
+    self.Sleep(1)
     self._hps_device.RunFactoryProcess(timeout_secs=self.args.timeout_secs)

@@ -38,6 +38,30 @@ class HPSDevice:
     # TODO(cyueh) Add timeout to sys_interface.SystemInterface.Popen
     process_utils.Spawn(cmd, timeout=timeout_secs, log=True, check_call=True)
 
+  def PowerCycle(self):
+    """Should be equivalent to the below command.
+
+    iotools mmio_write32 0xfd6a0ae0 \
+      $(iotools btr $(iotools mmio_read32 0xfd6a0ae0) 0) && \
+    iotools mmio_write32 0xfd6a0ae0 \
+      $(iotools bts $(iotools mmio_read32 0xfd6a0ae0) 0)
+    """
+    index = '0xfd6a0ae0'
+
+    output = self._dut.CheckOutput([IOTOOLS_PATH, 'mmio_read32', index],
+                                   log=True).strip()
+    output = self._dut.CheckOutput([IOTOOLS_PATH, 'btr', output, '0'],
+                                   log=True).strip()
+    returncode = self._dut.Call([IOTOOLS_PATH, 'mmio_write32', index, output],
+                                log=True)
+
+    if returncode == 0:
+      output = self._dut.CheckOutput([IOTOOLS_PATH, 'mmio_read32', index],
+                                     log=True).strip()
+      output = self._dut.CheckOutput([IOTOOLS_PATH, 'bts', output, '0'],
+                                     log=True).strip()
+      self._dut.Call([IOTOOLS_PATH, 'mmio_write32', index, output], log=True)
+
   def GetHPSInfo(self) -> Tuple[str, str, str]:
     """Retrieves the HPS identifiers.
 
