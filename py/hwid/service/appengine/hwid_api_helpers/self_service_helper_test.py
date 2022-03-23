@@ -12,6 +12,7 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_he
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
+from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 
@@ -609,6 +610,47 @@ class SelfServiceHelperTest(unittest.TestCase):
             }), validation_token='fingerprint')
 
     self.assertEqual(resp, expected_resp)
+
+  def testCreateHWIDDBInitCL_Succeed(self):
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
+    checksum_updater = v3_builder.ChecksumUpdater()
+
+    req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
+        project='proj', board='board', phase='EVT', bug_number=12345)
+    resp = self._ss_helper.CreateHWIDDBInitCL(req)
+
+    self.assertEqual(resp.commit.cl_number, 123)
+    self.assertEqual(
+        resp.commit.new_hwid_db_contents,
+        checksum_updater.ReplaceChecksum(resp.commit.new_hwid_db_contents))
+
+  def testCreateHWIDDBInitCL_ProjectExists(self):
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+
+    req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
+        project='proj', board='board', phase='EVT', bug_number=12345)
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.CreateHWIDDBInitCL(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+
+  def testCreateHWIDDBInitCL_NoBugNumber(self):
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
+
+    req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
+        project='proj', board='board', phase='EVT')
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.CreateHWIDDBInitCL(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
   def _ConfigLiveHWIDRepo(self, project, version, db_contents):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value

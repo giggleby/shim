@@ -610,6 +610,26 @@ message CreateHwidDbFirmwareInfoUpdateClResponse {
   map<string, HwidDbCommit> commits = 1;
 }
 
+// The request of create initial HWID DB CL.
+message CreateHwidDbInitClRequest {
+  // Project name of HWID DB to be initialized.
+  string project = 1;
+  // Board name of the project.
+  string board = 2;
+  // Initial build phase.
+  string phase = 3;
+  // ID of related bug.
+  int64 bug_number = 4;
+  // Original initialization requester.
+  string original_requester = 5;
+}
+
+// The response of create initial HWID DB CL.
+message CreateHwidDbInitClResponse {
+  // Commit created.
+  HwidDbCommit commit = 1;
+}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -690,4 +710,7 @@ service HwidService {
       CreateHwidDbFirmwareInfoUpdateClRequest)
       returns (CreateHwidDbFirmwareInfoUpdateClResponse);
 
+  // Create initial HWID DB.
+  rpc CreateHwidDbInitCl(CreateHwidDbInitClRequest)
+      returns (CreateHwidDbInitClResponse);
 }

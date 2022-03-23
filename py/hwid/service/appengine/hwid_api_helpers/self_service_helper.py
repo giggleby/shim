@@ -202,7 +202,7 @@ class SelfServiceHelper:
           request.reviewer_emails, request.cc_emails, request.auto_approved)
     except hwid_repo.HWIDRepoError:
       logging.exception(
-          'Caught unexpected exception while uploading a HWID CL.')
+          'Caught an unexpected exception while uploading a HWID CL.')
       raise protorpc_utils.ProtoRPCException(
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
     resp = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClResponse(
@@ -293,7 +293,7 @@ Info Update
               cc_list=[request.original_requester], auto_approved=True)
         except hwid_repo.HWIDRepoError:
           logging.exception(
-              'Caught unexpected exception while uploading a HWID CL.')
+              'Caught an unexpected exception while uploading a HWID CL.')
           raise protorpc_utils.ProtoRPCException(
               protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
         resp.commits[model_name].cl_number = cl_number
@@ -331,7 +331,8 @@ Info Update
       self._hwid_repo_manager.AbandonCL(cl_number, reason=cl_expiration_reason)
     except git_util.GitUtilException as ex:
       logging.warning(
-          'Caught exception while abandoning the expired HWID DB CL: %r.', ex)
+          'Caught an exception while abandoning the expired HWID DB CL: %r.',
+          ex)
       return cl_info
 
     try:
@@ -482,3 +483,54 @@ Info Update
             contents=bundle_info.bundle_contents,
             name_ext=bundle_info.bundle_file_ext))
     return response
+
+  def CreateHWIDDBInitCL(self, request):
+    project = request.project.upper()
+    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    if not request.bug_number:
+      raise common_helper.ConvertExceptionToProtoRPCException(
+          ValueError('Bug number is required.'))
+    try:
+      live_hwid_repo.GetHWIDDBMetadataByName(project)
+    except ValueError:
+      pass
+    else:
+      raise common_helper.ConvertExceptionToProtoRPCException(
+          ValueError(f'Project: {request.project} already exists.'))
+
+    init_db = v3_builder.DatabaseBuilder(project=project,
+                                         image_name=request.phase).database
+    db_content = init_db.DumpDataWithoutChecksum(internal=True)
+    checksum_updater = v3_builder.ChecksumUpdater()
+    db_content = checksum_updater.ReplaceChecksum(db_content)
+
+    expected_db_content = checksum_updater.ReplaceChecksum(db_content)
+
+    if expected_db_content != db_content:
+      logging.error('Checksummed text is not stable.')
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
+
+    commit_msg = textwrap.dedent(f"""\
+        ({int(time.time())}) {project}: Initialize HWID Config
+
+        Requested by: {request.original_requester}
+        Warning: all posted comments will be sent back to the requester.
+
+        BUG=b:{request.bug_number}
+        """)
+    new_metadata = hwid_repo.HWIDDBMetadata(project, request.board.upper(), 3,
+                                            f'v3/{project}')
+    try:
+      cl_number = live_hwid_repo.CommitHWIDDB(project, db_content, commit_msg,
+                                              [], [request.original_requester],
+                                              True, new_metadata)
+    except hwid_repo.HWIDRepoError:
+      logging.exception(
+          'Caught an unexpected exception while uploading a HWID CL.')
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
+    resp = hwid_api_messages_pb2.CreateHwidDbInitClResponse()
+    resp.commit.cl_number = cl_number
+    resp.commit.new_hwid_db_contents = db_content
+    return resp

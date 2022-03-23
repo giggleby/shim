@@ -3,13 +3,13 @@
 # found in the LICENSE file.
 """Provide functionalities to access the HWID DB repository."""
 
+import collections
 import logging
 from typing import NamedTuple
 
-import yaml
-
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
+from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import type_utils
 
 
@@ -28,12 +28,26 @@ _PROJECTS_YAML_PATH = 'projects.yaml'
 
 def _ParseMetadata(raw_metadata):
   metadata_yaml = yaml.safe_load(raw_metadata)
-  hwid_db_metadata_of_name = {}
+  hwid_db_metadata_of_name = collections.OrderedDict()
   for name, hwid_db_info in metadata_yaml.items():
     hwid_db_metadata_of_name[name] = HWIDDBMetadata(name, hwid_db_info['board'],
                                                     hwid_db_info['version'],
                                                     hwid_db_info['path'])
   return hwid_db_metadata_of_name
+
+
+def _DumpMetadata(hwid_db_metadata_of_name):
+  # TODO(wyuang): field `branch` is not used anymore. Check is there any other
+  # internal service is still using this field.
+  return yaml.safe_dump(
+      collections.OrderedDict(
+          [(name,
+            collections.OrderedDict([('board', metadata.board_name),
+                                     ('branch', 'main'),
+                                     ('version', metadata.version),
+                                     ('path', metadata.path)]))
+           for name, metadata in hwid_db_metadata_of_name.items()]), indent=4,
+      default_flow_style=False)
 
 
 class HWIDRepoError(Exception):
@@ -96,7 +110,7 @@ class HWIDRepo:
           f'failed to load the HWID DB (name={name}): {ex}') from None
 
   def CommitHWIDDB(self, name, hwid_db_contents, commit_msg, reviewers, cc_list,
-                   auto_approved):
+                   auto_approved, update_metadata=None):
     """Commit an HWID DB to the repo.
 
     Args:
@@ -107,6 +121,7 @@ class HWIDRepo:
       reviewers: List of emails of reviewers.
       cc_list: List of emails of CC's.
       auto_approved: A bool indicating if this CL should be auto-approved.
+      update_metadata: A HWIDDBMetadata object to update for the project.
 
     Returns:
       A numeric ID of the created CL.
@@ -115,14 +130,19 @@ class HWIDRepo:
       ValueError if the given HWID DB name is invalid.
       HWIDRepoError for other unexpected errors.
     """
+    new_files = []
     name = name.upper()
+    if update_metadata:
+      self._hwid_db_metadata_of_name[name] = update_metadata
+      new_raw_metadata = _DumpMetadata(self._hwid_db_metadata_of_name)
+      new_files.append((_PROJECTS_YAML_PATH, git_util.NORMAL_FILE_MODE,
+                        new_raw_metadata.encode('utf-8')))
     try:
       path = self._hwid_db_metadata_of_name[name].path
     except KeyError:
       raise ValueError(f'invalid HWID DB name: {name}') from None
-    new_files = [
-        (path, git_util.NORMAL_FILE_MODE, hwid_db_contents.encode('utf-8')),
-    ]
+    new_files.append(
+        (path, git_util.NORMAL_FILE_MODE, hwid_db_contents.encode('utf-8')))
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
       author = f'chromeoshwid <{author_email}>'
