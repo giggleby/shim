@@ -1030,3 +1030,15 @@ class Log:
       return 'Deleted directory: {}'.format(tmp_dir)
     except OSError as e:
       raise DomeServerException(detail=e)
+
+  @staticmethod
+  def DeleteFiles(project_name, delete_params):
+    umpire_server = GetUmpireServer(project_name)
+    try:
+      response = umpire_server.DeleteLog(delete_params['log_type'],
+                                         delete_params['start_date'],
+                                         delete_params['end_date'])
+      return response
+    except Exception as e:
+      logger.error('Downloading failed. Error message: %r', e)
+      raise DomeServerException(detail=e)

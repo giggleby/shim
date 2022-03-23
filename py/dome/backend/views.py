@@ -22,6 +22,7 @@ from backend.serializers import BundleSerializer
 from backend.serializers import ConfigSerializer
 from backend.serializers import LogDeleteSerializer
 from backend.serializers import LogDownloadSerializer
+from backend.serializers import LogFileDeleteSerializer
 from backend.serializers import LogSerializer
 from backend.serializers import ParameterComponentSerializer
 from backend.serializers import ParameterDirectorySerializer
@@ -202,6 +203,17 @@ class LogDownloadView(views.APIView):
     log_file = Log.Download(download_params)
     return StreamingHttpResponse(log_file,
                                  content_type='application/octet-stream')
+
+
+class LogFileDeleteView(views.APIView):
+
+  def get(self, request, *args, **kwargs):
+    del args
+    serializer = LogFileDeleteSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
+    delete_params = serializer.data
+    response = Log.DeleteFiles(kwargs['project_name'], delete_params)
+    return Response(response)
 
 
 class LogExportView(views.APIView):

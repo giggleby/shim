@@ -35,7 +35,8 @@ class LogApp extends React.Component<LogAppProps> {
                 archive.archiveSize,
                 archive.archiveUnit,
                 archive.startDate,
-                archive.endDate);
+                archive.endDate,
+                archive.actionType);
     };
 
     return (

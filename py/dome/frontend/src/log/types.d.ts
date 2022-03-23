@@ -20,6 +20,7 @@ export interface LogFormData {
   archiveUnit: string;
   startDate: string;
   endDate: string;
+  actionType: string;
 }
 
 export interface Pile {
@@ -28,7 +29,10 @@ export interface Pile {
   projectName: string;
   compressState: ComponentState;
   compressReports: string[];
+  cleanupState: ComponentState;
+  cleanupReports: string[];
   downloadStateMap: DownloadStateMap;
+  actionType: string;
 }
 
 export interface ExpansionMap {

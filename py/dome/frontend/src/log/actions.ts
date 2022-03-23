@@ -40,11 +40,15 @@ const setDefaultDownloadDate =
 
 const addLogPile =
   createAction('ADD_DOWNLOAD_PILE', (resolve) =>
-    (key: string, title: string, projectName: string) =>
-      resolve({key, title, projectName}));
+    (key: string, title: string, projectName: string, actionType: string) =>
+      resolve({key, title, projectName, actionType}));
 
 const setCompressState =
   createAction('SET_COMPRESS_STATE', (resolve) =>
+    (key: string, newState: ComponentState) => resolve({key, newState}));
+
+const setCleanupState =
+  createAction('SET_CLEANUP_STATE', (resolve) =>
     (key: string, newState: ComponentState) => resolve({key, newState}));
 
 const addDownloadFile =
@@ -64,6 +68,10 @@ const setReportMessages =
   createAction('SET_REPORT_MESSAGES', (resolve) =>
     (key: string, messages: string[]) => resolve({key, messages}));
 
+const setCleanupReportMessages =
+  createAction('SET_CLEANUP_REPORT_MESSAGES', (resolve) =>
+    (key: string, messages: string[]) => resolve({key, messages}));
+
 export const basicActions = {
   setDefaultDownloadDate,
   expandLogPile,
@@ -71,12 +79,14 @@ export const basicActions = {
   addLogPile,
   removeLogPile,
   setCompressState,
+  setCleanupState,
   addDownloadFile,
   removeDownloadFile,
   removeDownloadFiles,
   setDownloadState,
   setTempDir,
   setReportMessages,
+  setCleanupReportMessages,
 };
 
 export const exportLog = (projectName: string,
@@ -84,48 +94,78 @@ export const exportLog = (projectName: string,
                           archiveSize: number,
                           archiveUnit: string,
                           startDate: string,
-                          endDate: string) =>
+                          endDate: string,
+                          actionType: string) =>
   async (dispatch: Dispatch) => {
     let response;
     const pileKey = `${logType}-${startDate}-${endDate}-${Math.random()}`;
     const dates = (startDate === endDate) ?
         startDate : `${startDate} ~ ${endDate}`;
     const title = (logType === 'csv') ? logType : `${logType} ${dates}`;
-    dispatch(addLogPile(pileKey, title, projectName));
-    try {
-      dispatch(setCompressState(pileKey, 'PROCESSING'));
-      response = await authorizedAxios().get(
-          `projects/${projectName}/log/compress/`, {
-        params: {
-          log_type: logType,
-          size: archiveSize,
-          size_unit: archiveUnit,
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
-      dispatch(setCompressState(pileKey, 'SUCCEEDED'));
-    } catch (unknownError: unknown) {
-      if (isAxiosError(unknownError)) {
-        dispatch(setCompressState(pileKey, 'FAILED'));
-        console.log(unknownError);
-        const message = unknownError.response?.data.detail;
-        dispatch(error.actions.setAndShowErrorDialog(
-            `error compressing log\n\n${message}`));
-        return;
-      } else {
-        throw unknownError;
-      }
+    switch(actionType) {
+      case 'download':
+        dispatch(addLogPile(pileKey, title, projectName, actionType));
+        try {
+          dispatch(setCompressState(pileKey, 'PROCESSING'));
+          response = await authorizedAxios().get(
+              `projects/${projectName}/log/compress/`, {
+            params: {
+              log_type: logType,
+              size: archiveSize,
+              size_unit: archiveUnit,
+              start_date: startDate,
+              end_date: endDate,
+            },
+          });
+          dispatch(setCompressState(pileKey, 'SUCCEEDED'));
+        } catch (unknownError: unknown) {
+          if (isAxiosError(unknownError)) {
+            dispatch(setCompressState(pileKey, 'FAILED'));
+            const message = unknownError.response?.data.detail;
+            dispatch(error.actions.setAndShowErrorDialog(
+                `error compressing log\n\n${message}`));
+            return;
+          } else {
+            throw unknownError;
+          }
+        }
+        const {
+          logPaths,
+          tmpDir,
+          messages,
+        } = response.data;
+        dispatch(setReportMessages(pileKey, messages));
+        dispatch(setTempDir(pileKey, tmpDir));
+        dispatch(downloadLogs(projectName, tmpDir, logPaths, pileKey));
+        dispatch(setDefaultDownloadDate(endDate));
+        break;
+      case 'cleanup':
+        dispatch(addLogPile(pileKey, title, projectName, actionType));
+        try {
+          dispatch(setCleanupState(pileKey, 'PROCESSING'));
+          response = await authorizedAxios().get(
+              `projects/${projectName}/log/delete_files/`, {
+            params: {
+              log_type: logType,
+              start_date: startDate,
+              end_date: endDate,
+            },
+          });
+          dispatch(setCleanupState(pileKey, 'SUCCEEDED'));
+        } catch (unknownError: unknown) {
+          if (isAxiosError(unknownError)) {
+            dispatch(setCleanupState(pileKey, 'FAILED'));
+            const message = unknownError.response?.data.detail;
+            dispatch(error.actions.setAndShowErrorDialog(
+                `error compressing log\n\n${message}`));
+            return;
+          } else {
+            throw unknownError;
+          }
+        }
+        dispatch(setCleanupReportMessages(pileKey, response.data.messages));
+        break;
     }
-    const {
-      logPaths,
-      tmpDir,
-      messages,
-    } = response.data;
-    dispatch(setReportMessages(pileKey, messages));
-    dispatch(setTempDir(pileKey, tmpDir));
-    dispatch(downloadLogs(projectName, tmpDir, logPaths, pileKey));
-    dispatch(setDefaultDownloadDate(endDate));
   };
 
 export const downloadLogs = (projectName: string,

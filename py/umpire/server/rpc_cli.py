@@ -7,6 +7,7 @@
 import urllib.request
 
 from cros.factory.umpire import common
+from cros.factory.umpire.server.commands import delete_log
 from cros.factory.umpire.server.commands import deploy
 from cros.factory.umpire.server.commands import export_log
 from cros.factory.umpire.server.commands import export_payload
@@ -38,6 +39,25 @@ class CLICommand(umpire_rpc.UmpireRPC):
   def GetVersion(self):
     """Get the umpire image version."""
     return common.UMPIRE_VERSION
+
+  @umpire_rpc.RPCCall
+  def DeleteLog(self, log_type, start_date, end_date):
+    """Delete a specific log, such as factory log, DUT report,
+    or csv files.
+
+    Args:
+      log_type: download type of the log, e.g. log, report, csv.
+      start_date: start date (format: yyyymmdd)
+      end_date: end date (format: yyyymmdd)
+
+    Returns:
+      {
+        'messages': array (messages of DeleteLog)
+        'log_paths': array (files paths of compressed files)
+      }
+    """
+    deleter = delete_log.LogDeleter(self.env)
+    return deleter.DeleteLog(log_type, start_date, end_date)
 
   @umpire_rpc.RPCCall
   def ExportLog(self, dst_dir, log_type, split_size, start_date, end_date):

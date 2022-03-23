@@ -56,14 +56,17 @@ const pileReducer = produce(
   (draft: PileMap, action: LogAction) => {
     switch (action.type) {
       case getType(actions.addLogPile): {
-        const {key, title, projectName} = action.payload;
+        const {key, title, projectName, actionType} = action.payload;
         draft[key] = {
           title,
           tempDir: '',
           projectName,
           compressState: 'WAITING',
           compressReports: [],
+          cleanupState: 'WAITING',
+          cleanupReports: [],
           downloadStateMap: {},
+          actionType,
         };
         return;
       }
@@ -77,6 +80,12 @@ const pileReducer = produce(
       case getType(actions.setCompressState): {
         const {key, newState} = action.payload;
         draft[key].compressState = newState;
+        return;
+      }
+
+      case getType(actions.setCleanupState): {
+        const {key, newState} = action.payload;
+        draft[key].cleanupState = newState;
         return;
       }
 
@@ -113,6 +122,12 @@ const pileReducer = produce(
       case getType(actions.setReportMessages): {
         const {key, messages} = action.payload;
         draft[key].compressReports = messages;
+        return;
+      }
+
+      case getType(actions.setCleanupReportMessages): {
+        const {key, messages} = action.payload;
+        draft[key].cleanupReports = messages;
         return;
       }
 

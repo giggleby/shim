@@ -189,6 +189,13 @@ class LogDownloadSerializer(serializers.Serializer):
   tmp_dir = serializers.CharField()
 
 
+class LogFileDeleteSerializer(serializers.Serializer):
+
+  log_type = serializers.CharField()
+  start_date = serializers.DateField(format='%Y%m%d')
+  end_date = serializers.DateField(format='%Y%m%d')
+
+
 class LogDeleteSerializer(serializers.Serializer):
 
   tmp_dir = serializers.CharField()

@@ -145,7 +145,10 @@ class LogPile extends React.Component<LogPileProps> {
         title,
         compressState,
         compressReports,
+        cleanupState,
+        cleanupReports,
         downloadStateMap,
+        actionType,
       },
       tempDir,
       pileKey,
@@ -166,45 +169,67 @@ class LogPile extends React.Component<LogPileProps> {
           expanded={expanded}
         />
         <Collapse in={expanded}>
-          <LogComponent
-            message="compress"
-            componentType="item"
-            componentState={compressState}
-          />
-
-          {compressReports.map((report) => (
+          {(actionType === 'download') ? (
+            <>
               <LogComponent
-                key={report}
-                message={report}
-                componentType="list-item"
-                componentState="REPORT"
+                message="compress"
+                componentType="item"
+                componentState={compressState}
               />
-            ))
-          }
 
-          <LogComponent
-            message="download"
-            componentType="item"
-            progress={downloadProgress}
-            componentState={overallDownloadState}
-            retry={this.retryDownloadAll}
-            remove={this.checkAndRemoveDownloadFiles}
-          />
+              {compressReports.map((report) => (
+                  <LogComponent
+                    key={report}
+                    message={report}
+                    componentType="list-item"
+                    componentState="REPORT"
+                  />
+                ))
+              }
 
-          {Object.keys(downloadStateMap).map((file) => (
               <LogComponent
-                key={file}
-                message={`${projectName}-${file}`}
-                componentType="list-item"
-                componentState={downloadStateMap[file]}
-                retry={() => downloadLog(projectName,
-                                         tempDir,
-                                         file,
-                                         pileKey)}
-                remove={() => this.checkAndRemoveDownloadFile(file)}
+                message="download"
+                componentType="item"
+                progress={downloadProgress}
+                componentState={overallDownloadState}
+                retry={this.retryDownloadAll}
+                remove={this.checkAndRemoveDownloadFiles}
               />
-            ))
-          }
+
+              {Object.keys(downloadStateMap).map((file) => (
+                  <LogComponent
+                    key={file}
+                    message={`${projectName}-${file}`}
+                    componentType="list-item"
+                    componentState={downloadStateMap[file]}
+                    retry={() => downloadLog(projectName,
+                                            tempDir,
+                                            file,
+                                            pileKey)}
+                    remove={() => this.checkAndRemoveDownloadFile(file)}
+                  />
+                ))
+              }
+            </>
+          ) : (
+            <>
+              <LogComponent
+                message="status"
+                componentType="item"
+                componentState={cleanupState}
+              />
+
+              {cleanupReports.map((report) => (
+                  <LogComponent
+                    key={report}
+                    message={report}
+                    componentType="list-item"
+                    componentState={cleanupState}
+                  />
+                ))
+              }
+            </>
+          )}
         </Collapse>
       </Card>
     );
