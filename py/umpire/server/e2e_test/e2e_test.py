@@ -274,7 +274,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
       self.proxy.ValidateConfig(
           self.ReadConfigTestdata('umpire_no_service.json'))
 
-    with self.assertRPCRaises('SchemaException'):
+    with self.assertRPCRaises('SchemaInvalidException'):
       self.proxy.ValidateConfig(
           self.ReadConfigTestdata('umpire_wrong_schema.json'))
 

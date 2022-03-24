@@ -6,6 +6,7 @@
 import re
 import unittest
 
+from cros.factory.utils import schema as schema_module
 from cros.factory.utils.schema import AnyOf
 from cros.factory.utils.schema import Dict
 from cros.factory.utils.schema import FixedDict
@@ -320,6 +321,24 @@ class SchemaTest(unittest.TestCase):
     }
     self.assertEqual(None, schema.Validate(data))
 
+
+class JSONSchemaDictTest(unittest.TestCase):
+  """Test for JSONSchemaDict."""
+
+  def testValidate(self):
+    json_schema = schema_module.JSONSchemaDict('test', {'type': 'string'})
+    self.assertRaisesRegex(schema_module.SchemaInvalidException,
+                           r'.*ValidationError.*', json_schema.Validate, 1)
+    # The name of this exception is used in
+    # cros.factory.umpire.server.e2e_test.e2e_test.UmpireRPCTest.
+    # Need to update that if the name is changed.
+    # TODO(cyueh) Trigger `setup/cros_docker.sh umpire test` when modifying
+    # this file in pre-submit.
+    # We check the exception is not a derived class here.
+    try:
+      json_schema.Validate(1)
+    except schema_module.SchemaInvalidException as err:
+      self.assertEqual(type(err), schema_module.SchemaInvalidException)
 
 if __name__ == '__main__':
   unittest.main()
