@@ -11,7 +11,7 @@ import functools
 import itertools
 import logging
 import re
-from typing import Callable, Dict, List, NamedTuple, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
@@ -51,13 +51,14 @@ class DiffStatus(NamedTuple):
   prev_support_status: str
 
 
+ComponentNameInfo = name_pattern_adapter.NameInfo
+
+
 class NameChangedComponentInfo(NamedTuple):
   """A data structure to collect the component info of added/updated names."""
   comp_name: str
-  cid: int
-  qid: int
+  comp_name_info: Optional[ComponentNameInfo]
   status: str
-  has_cid_qid: bool
   null_values: bool
   diff_prev: Optional[DiffStatus]
   link_avl: bool
@@ -103,7 +104,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   comp_name: str
   support_status: str
   is_newly_added: bool
-  avl_id: Optional[Tuple[int, int]]
+  comp_name_info: Optional[ComponentNameInfo]
   seq_no: int
   comp_name_with_correct_seq_no: Optional[str]
   null_values: bool
@@ -283,13 +284,11 @@ class ContentsAnalyzer:
                     'Invalid component name with sequence number, please '
                     f'modify it from {comp.name!r} to {expected_comp_name!r}'
                     '.'))
-        cid, qid = comp.extracted_avl_id or (0, 0)
         if comp.is_newly_added:
           report.name_changed_components.setdefault(comp_cls, []).append(
-              NameChangedComponentInfo(comp.name, cid, qid, comp.status,
-                                       bool(comp.extracted_avl_id),
-                                       comp.null_values, comp.diff_prev,
-                                       comp.link_avl))
+              NameChangedComponentInfo(comp.name, comp.extracted_name_info,
+                                       comp.status, comp.null_values,
+                                       comp.diff_prev, comp.link_avl))
 
   def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
                       db_placeholder_options):
@@ -395,7 +394,7 @@ class ContentsAnalyzer:
         report.hwid_components[comp_name_replacer] = (
             HWIDComponentAnalysisResult(
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
-                comp.extracted_avl_id, comp.expected_seq_no,
+                comp.extracted_name_info, comp.expected_seq_no,
                 comp_name_with_correct_seq_no, comp.null_values, comp.diff_prev,
                 comp.link_avl))
 
@@ -413,7 +412,7 @@ class ContentsAnalyzer:
     status: str
     extracted_noseq_comp_name: str
     extracted_seq_no: Optional[str]
-    extracted_avl_id: Optional[Tuple[int, int]]
+    extracted_name_info: Optional[ComponentNameInfo]
     expected_seq_no: int
     is_newly_added: bool
     null_values: bool
@@ -438,7 +437,6 @@ class ContentsAnalyzer:
           break
         comp_name, comp_info = curr_item
         name_info = name_pattern.Matches(comp_name)
-        avl_id = (name_info.cid, name_info.qid) if name_info else None
         noseq_comp_name, sep, actual_seq = comp_name.partition(
             name_pattern_adapter.SEQ_SEP)
         null_values = comp_info.values is None
@@ -463,7 +461,7 @@ class ContentsAnalyzer:
         ret[comp_cls].append(
             self._HWIDComponentMetadata(
                 comp_name, comp_info.status, noseq_comp_name,
-                actual_seq if sep else None, avl_id, expected_seq,
+                actual_seq if sep else None, name_info, expected_seq,
                 is_newly_added, null_values, diffstatus, link_avl))
     return ret
 

@@ -110,6 +110,8 @@ encoded_fields:
       dram: dram_1234_5678#4
     4:
       dram: not_dram_1234_5678
+    5:
+      dram: dram_subcomp_2468
   ec_flash_chip:
     0:
       ec_flash_chip: ec_flash_chip_0
@@ -285,6 +287,11 @@ components:
       not_dram_1234_5678:
         values:
           part: part3
+          size: 4G
+
+      dram_subcomp_2468:
+        values:
+          part: part4
           size: 4G
 
   ec_flash_chip:

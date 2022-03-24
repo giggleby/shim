@@ -372,14 +372,16 @@ class SelfServiceHelperTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
                         support_status='unqualified', is_newly_added=False,
-                        avl_id=None, seq_no=2,
+                        comp_name_info=None, seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                         support_status='unqualified', is_newly_added=True,
-                        avl_id=(111, 222), seq_no=1,
+                        comp_name_info=(
+                            hwid_action.DBHWIDComponentNameInfo.from_comp(
+                                111, 222)), seq_no=1,
                         comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                         null_values=False, diff_prev=None, link_avl=False),
             }))
@@ -476,14 +478,16 @@ class SelfServiceHelperTest(unittest.TestCase):
                       hwid_action.DBHWIDComponentAnalysisResult(
                           comp_cls='comp_cls1', comp_name='comp_name1',
                           support_status='unqualified', is_newly_added=False,
-                          avl_id=None, seq_no=2,
+                          comp_name_info=None, seq_no=2,
                           comp_name_with_correct_seq_no=None, null_values=True,
                           diff_prev=None, link_avl=False),
                   'comp2':
                       hwid_action.DBHWIDComponentAnalysisResult(
                           comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                           support_status='unqualified', is_newly_added=False,
-                          avl_id=(111, 222), seq_no=1,
+                          comp_name_info=(
+                              hwid_action.DBHWIDComponentNameInfo.from_comp(
+                                  111, 222)), seq_no=1,
                           comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                           null_values=True, diff_prev=None, link_avl=True),
               }))
@@ -544,7 +548,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
                         support_status='unqualified', is_newly_added=False,
-                        avl_id=None, seq_no=2,
+                        comp_name_info=None, seq_no=2,
                         comp_name_with_correct_seq_no=None,
                         null_values=False, diff_prev=_DiffStatus(
                             unchanged=True, name_changed=False,
@@ -555,7 +559,9 @@ class SelfServiceHelperTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
                         support_status='unqualified', is_newly_added=True,
-                        avl_id=(111, 222), seq_no=1,
+                        comp_name_info=(
+                            hwid_action.DBHWIDComponentNameInfo.from_comp(
+                                111, 222)), seq_no=1,
                         comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                         null_values=False, diff_prev=_DiffStatus(
                             unchanged=False, name_changed=True,
@@ -566,7 +572,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
                         support_status='unqualified', is_newly_added=True,
-                        avl_id=None, seq_no=2,
+                        comp_name_info=None, seq_no=2,
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False),
             }))

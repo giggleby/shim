@@ -8,8 +8,10 @@ import unittest
 
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
+_TEST_DATA_PREFIX = 'contents_analyzer_test'
 
 DB_DRAM_GOOD_PATH = os.path.join(_TEST_DATA_PATH,
                                  'test_database_db_good_dram.yaml')
@@ -19,6 +21,9 @@ DB_COMP_BEFORE_PATH = os.path.join(_TEST_DATA_PATH,
                                    'test_database_db_comp_before.yaml')
 DB_COMP_AFTER_GOOD_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_good_change.yaml')
+
+_NameChangedComponentInfo = contents_analyzer.NameChangedComponentInfo
+_ComponentNameInfo = contents_analyzer.ComponentNameInfo
 
 
 class ContentsAnalyzerTest(unittest.TestCase):
@@ -47,10 +52,16 @@ class ContentsAnalyzerTest(unittest.TestCase):
     self.assertEqual(
         {
             'display_panel': [
-                contents_analyzer.NameChangedComponentInfo(
-                    comp_name='display_panel_123_456', cid=123, qid=456,
-                    status='supported', has_cid_qid=True, null_values=False,
+                _NameChangedComponentInfo(
+                    comp_name='display_panel_123_456',
+                    comp_name_info=_ComponentNameInfo.from_comp(
+                        123, 456), status='supported', null_values=False,
                     diff_prev=None, link_avl=False),
+                _NameChangedComponentInfo(
+                    comp_name='display_panel_subcomp_234',
+                    comp_name_info=_ComponentNameInfo.from_subcomp(234),
+                    status='supported', null_values=False, diff_prev=None,
+                    link_avl=False),
             ]
         }, report.name_changed_components)
 
@@ -63,10 +74,6 @@ class ContentsAnalyzerTest(unittest.TestCase):
     self.assertTrue(report.precondition_errors)
 
   def test_AnalyzeChange_WithLines(self):
-    LineModificationStatus = (
-        contents_analyzer.DBLineAnalysisResult.ModificationStatus)
-    LinePart = contents_analyzer.DBLineAnalysisResult.Part
-    LinePartType = contents_analyzer.DBLineAnalysisResult.Part.Type
 
     def _HWIDDBHeaderPatcher(contents):
       # Remove everything before the checksum line.
@@ -76,88 +83,18 @@ class ContentsAnalyzerTest(unittest.TestCase):
           return '\n'.join(lines[i + 1:])
       return contents
 
-    def _CreateNotModifiedLine(text):
-      return contents_analyzer.DBLineAnalysisResult(
-          LineModificationStatus.NOT_MODIFIED,
-          [LinePart(LinePartType.TEXT, text)] if text else [])
-
-    def _CreateAddedLine(text):
-      return contents_analyzer.DBLineAnalysisResult(
-          LineModificationStatus.NEWLY_ADDED,
-          [LinePart(LinePartType.TEXT, text)] if text else [])
-
-    prev_db_contents = file_utils.ReadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_before.yaml'))
-    curr_db_contents = file_utils.ReadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_after.yaml'))
+    prev_db_contents = self._ReadTestData('test_analyze_change_db_before.yaml')
+    curr_db_contents = self._ReadTestData('test_analyze_change_db_after.yaml')
     inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
                                               prev_db_contents)
     report = inst.AnalyzeChange(_HWIDDBHeaderPatcher, True)
-    self.assertFalse(report.precondition_errors)
 
-    # The full report is too big, let's verify only some key parts of them.
-    self.assertEqual(len(report.lines), 38)
-    self.assertEqual(report.lines[:5], [
-        _CreateNotModifiedLine(x) for x in
-        ['', 'project: CHROMEBOOK', '', 'encoding_patterns:', '  0: default']
-    ])
-    self.assertEqual(report.lines[17:28], [
-        _CreateNotModifiedLine('  display_panel_field:'),
-        _CreateNotModifiedLine('    0:'),
-        contents_analyzer.DBLineAnalysisResult(
-            LineModificationStatus.NOT_MODIFIED, [
-                LinePart(LinePartType.TEXT, '      display_panel: '),
-                LinePart(LinePartType.COMPONENT_NAME,
-                         'x@@@@component-display_panel-display_panel_A@@y@'),
-            ]),
-        _CreateAddedLine('    1:'),
-        contents_analyzer.DBLineAnalysisResult(
-            LineModificationStatus.NEWLY_ADDED, [
-                LinePart(LinePartType.TEXT, '      display_panel: '),
-                LinePart(
-                    LinePartType.COMPONENT_NAME,
-                    'x@@@@component-display_panel-display_panel_123_456#8@@y@'),
-            ]),
-        _CreateNotModifiedLine(''),
-        _CreateNotModifiedLine('components:'),
-        _CreateNotModifiedLine('  display_panel:'),
-        _CreateNotModifiedLine('    items:'),
-        contents_analyzer.DBLineAnalysisResult(
-            LineModificationStatus.NOT_MODIFIED, [
-                LinePart(LinePartType.TEXT, '      '),
-                LinePart(LinePartType.COMPONENT_NAME,
-                         'x@@@@component-display_panel-display_panel_A@@y@'),
-                LinePart(LinePartType.TEXT, ':'),
-            ]),
-        contents_analyzer.DBLineAnalysisResult(
-            LineModificationStatus.MODIFIED, [
-                LinePart(LinePartType.TEXT, '        status: '),
-                LinePart(LinePartType.COMPONENT_STATUS,
-                         'x@@@@component-display_panel-display_panel_A@@y@'),
-            ]),
-    ])
-
-    self.assertEqual(
-        report.hwid_components, {
-            'x@@@@component-display_panel-display_panel_A@@y@':
-                contents_analyzer.HWIDComponentAnalysisResult(
-                    comp_cls='display_panel', comp_name='display_panel_A',
-                    support_status='deprecated', is_newly_added=False,
-                    avl_id=None, seq_no=1, comp_name_with_correct_seq_no=None,
-                    null_values=False, diff_prev=contents_analyzer.DiffStatus(
-                        unchanged=False, name_changed=False,
-                        support_status_changed=True, values_changed=False,
-                        prev_comp_name='display_panel_A',
-                        prev_support_status='unqualified'), link_avl=False),
-            'x@@@@component-display_panel-display_panel_123_456#8@@y@':
-                contents_analyzer.HWIDComponentAnalysisResult(
-                    comp_cls='display_panel',
-                    comp_name='display_panel_123_456#8',
-                    support_status='supported', is_newly_added=True,
-                    avl_id=(123, 456), seq_no=2,
-                    comp_name_with_correct_seq_no='display_panel_123_456#2',
-                    null_values=False, diff_prev=None, link_avl=False),
-        })
+    test_name = 'test_analyze_change_with_lines'
+    expected_report_txt = file_utils.ReadFile(
+        os.path.join(_TEST_DATA_PATH,
+                     f'{_TEST_DATA_PREFIX}-{test_name}-expected_report.json'))
+    actual_report_txt = self._DumpRecordClass(report)
+    self.assertEqual(actual_report_txt, expected_report_txt)
 
   def test_AnalyzeChange_WithoutLines(self):
 
@@ -169,15 +106,22 @@ class ContentsAnalyzerTest(unittest.TestCase):
           return '\n'.join(lines[i + 1:])
       return contents
 
-    prev_db_contents = file_utils.ReadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_before.yaml'))
-    curr_db_contents = file_utils.ReadFile(
-        os.path.join(_TEST_DATA_PATH, 'test_analyze_change_db_after.yaml'))
+    prev_db_contents = self._ReadTestData('test_analyze_change_db_before.yaml')
+    curr_db_contents = self._ReadTestData('test_analyze_change_db_after.yaml')
     inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
                                               prev_db_contents)
     analysis = inst.AnalyzeChange(_HWIDDBHeaderPatcher, False)
     self.assertFalse(analysis.precondition_errors)
     self.assertFalse(analysis.lines)
+
+  def _ReadTestData(self, test_data_name: str) -> str:
+    return file_utils.ReadFile(os.path.join(_TEST_DATA_PATH, test_data_name))
+
+  def _DumpRecordClass(self, inst) -> str:
+    serializer = json_utils.Serializer(
+        [json_utils.ConvertEnumToStr, json_utils.ConvertNamedTupleToDict])
+    return json_utils.DumpStr(
+        serializer.Serialize(inst), pretty=True, sort_keys=False)
 
 
 if __name__ == '__main__':

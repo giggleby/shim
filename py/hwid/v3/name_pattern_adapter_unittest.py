@@ -33,6 +33,18 @@ class NamePatternTest(unittest.TestCase):
     self.assertEqual(name_info,
                      name_pattern_adapter.NameInfo.from_comp(cid=123))
 
+  def testMatches_Subcomp(self):
+    name_info = self._name_pattern.Matches('mycomp_subcomp_123')
+
+    self.assertEqual(name_info,
+                     name_pattern_adapter.NameInfo.from_subcomp(cid=123))
+
+  def testMatches_SubcompWithSeqNo(self):
+    name_info = self._name_pattern.Matches('mycomp_subcomp_123#3')
+
+    self.assertEqual(name_info,
+                     name_pattern_adapter.NameInfo.from_subcomp(cid=123))
+
   def testGenerateAVLName_NoQid(self):
     name_info = name_pattern_adapter.NameInfo.from_comp(cid=123)
     avl_name = self._name_pattern.GenerateAVLName(name_info)
@@ -59,6 +71,12 @@ class NamePatternTest(unittest.TestCase):
     avl_name = self._name_pattern.GenerateAVLName(name_info, seq='3')
 
     self.assertEqual(avl_name, 'mycomp_123_5#3')
+
+  def testGenerateAVLName_SubComp(self):
+    name_info = name_pattern_adapter.NameInfo.from_subcomp(cid=123)
+    avl_name = self._name_pattern.GenerateAVLName(name_info)
+
+    self.assertEqual(avl_name, 'mycomp_subcomp_123')
 
 
 if __name__ == '__main__':

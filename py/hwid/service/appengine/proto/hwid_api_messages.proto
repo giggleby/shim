@@ -429,6 +429,7 @@ message BatchGenerateAvlComponentNameRequest {
     int64 avl_cid = 2;
     int64 avl_qid = 3;
     int32 seq_no = 4;
+    bool is_subcomp = 5;
   }
 
   repeated ComponentNameMaterial component_name_materials = 1;

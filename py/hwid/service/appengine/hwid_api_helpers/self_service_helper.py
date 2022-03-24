@@ -69,17 +69,19 @@ def ConvertToNameChangedComponent(name_changed_comp_info):
         prev_comp_name=diff_prev.prev_comp_name,
         prev_support_status=diff_prev.prev_support_status)
 
-  if name_changed_comp_info.has_cid_qid:
+  if name_changed_comp_info.comp_name_info:
     proto_fields.update({
         'has_cid_qid':
             True,
         'cid':
-            name_changed_comp_info.cid,
+            name_changed_comp_info.comp_name_info.cid,
         'qid':
-            name_changed_comp_info.qid,
+            name_changed_comp_info.comp_name_info.qid or 0,
         'avl_info':
-            hwid_api_messages_pb2.AvlInfo(cid=name_changed_comp_info.cid,
-                                          qid=name_changed_comp_info.qid)
+            hwid_api_messages_pb2.AvlInfo(
+                cid=name_changed_comp_info.comp_name_info.cid,
+                qid=name_changed_comp_info.comp_name_info.qid or 0,
+                is_subcomp=name_changed_comp_info.comp_name_info.is_subcomp),
     })
 
   return hwid_api_messages_pb2.NameChangedComponent(**proto_fields)
@@ -101,8 +103,10 @@ def _ConvertCompInfoToMsg(
   comp_info_msg.original_name = comp_info.comp_name
   comp_info_msg.original_status = comp_info.support_status
   comp_info_msg.is_newly_added = comp_info.is_newly_added
-  if comp_info.avl_id is not None:
-    comp_info_msg.avl_info.cid, comp_info_msg.avl_info.qid = comp_info.avl_id
+  if comp_info.comp_name_info is not None:
+    comp_info_msg.avl_info.cid = comp_info.comp_name_info.cid
+    comp_info_msg.avl_info.qid = comp_info.comp_name_info.qid or 0
+    comp_info_msg.avl_info.is_subcomp = comp_info.comp_name_info.is_subcomp
     comp_info_msg.has_avl = True
   else:
     comp_info_msg.has_avl = False
@@ -455,8 +459,11 @@ Info Update
         np = nps[mat.component_class] = np_adapter.GetNamePattern(
             mat.component_class)
 
-      name_info = name_pattern_adapter.NameInfo.from_comp(
-          mat.avl_cid, qid=mat.avl_qid)
+      if mat.is_subcomp:
+        name_info = name_pattern_adapter.NameInfo.from_subcomp(mat.avl_cid)
+      else:
+        name_info = name_pattern_adapter.NameInfo.from_comp(
+            mat.avl_cid, qid=mat.avl_qid)
       response.component_names.append(
           np.GenerateAVLName(name_info, seq=str(mat.seq_no)))
     return response

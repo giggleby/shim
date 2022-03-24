@@ -60,6 +60,10 @@ components:
         values:
           cores: '9'
           model: 'new display panel'
+      display_panel_subcomp_234:
+        values:
+          cores: '10'
+          model: 'new display panel (subcomp)'
 
 rules:
 - name: device_info.set_image_id

@@ -412,8 +412,9 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.patch_hwid_validator.ValidateChange.return_value = (TEST_MODEL, {
         'wireless': [
             contents_analyzer.NameChangedComponentInfo(
-                comp_name='wireless_1234_5678', cid=1234, qid=5678,
-                status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
+                comp_name='wireless_1234_5678',
+                comp_name_info=contents_analyzer.ComponentNameInfo.from_comp(
+                    1234, 5678), status=common.COMPONENT_STATUS.supported,
                 null_values=False, diff_prev=contents_analyzer.DiffStatus(
                     unchanged=False,
                     name_changed=True,
@@ -423,13 +424,14 @@ class ProtoRPCServiceTest(unittest.TestCase):
                     prev_support_status=common.COMPONENT_STATUS.supported,
                 ), link_avl=False),
             contents_analyzer.NameChangedComponentInfo(
-                comp_name='wireless_1111_2222', cid=1111, qid=2222,
-                status=common.COMPONENT_STATUS.unqualified, has_cid_qid=True,
+                comp_name='wireless_1111_2222',
+                comp_name_info=contents_analyzer.ComponentNameInfo.from_comp(
+                    1111, 2222), status=common.COMPONENT_STATUS.unqualified,
                 null_values=False, diff_prev=None, link_avl=False),
             contents_analyzer.NameChangedComponentInfo(
-                comp_name='wireless_hello_world', cid=0, qid=0,
-                status=common.COMPONENT_STATUS.supported, has_cid_qid=False,
-                null_values=True, diff_prev=None, link_avl=False),
+                comp_name='wireless_hello_world', comp_name_info=None,
+                status=common.COMPONENT_STATUS.supported, null_values=True,
+                diff_prev=None, link_avl=False),
         ]
     })
 
@@ -501,12 +503,14 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.patch_hwid_validator.ValidateChange.return_value = (TEST_MODEL, {
         'wireless': [
             contents_analyzer.NameChangedComponentInfo(
-                comp_name='wireless_1234_5678', cid=1234, qid=5678,
-                status=common.COMPONENT_STATUS.supported, has_cid_qid=True,
+                comp_name='wireless_1234_5678',
+                comp_name_info=contents_analyzer.ComponentNameInfo.from_comp(
+                    1234, 5678), status=common.COMPONENT_STATUS.supported,
                 null_values=False, diff_prev=None, link_avl=False),
             contents_analyzer.NameChangedComponentInfo(
-                comp_name='wireless_1111_2222', cid=1111, qid=2222,
-                status='new_status', has_cid_qid=True, null_values=False,
+                comp_name='wireless_1111_2222',
+                comp_name_info=contents_analyzer.ComponentNameInfo.from_comp(
+                    1111, 2222), status='new_status', null_values=False,
                 diff_prev=None, link_avl=False),
         ]
     })

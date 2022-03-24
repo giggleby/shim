@@ -134,8 +134,10 @@ class BOMAndConfiglessHelper:
         name_pattern = np_adapter.GetNamePattern(component.cls)
         name_info = name_pattern.Matches(component.name)
         if name_info:
+          qid = 0 if name_info.is_subcomp else name_info.qid
           avl_info = hwid_api_messages_pb2.AvlInfo(
-              cid=name_info.cid, qid=name_info.qid, avl_name=avl_name)
+              cid=name_info.cid, qid=qid, avl_name=avl_name,
+              is_subcomp=name_info.is_subcomp)
         else:
           avl_info = None
 

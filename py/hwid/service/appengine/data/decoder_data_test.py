@@ -34,6 +34,11 @@ class DecoderDataManagerTest(unittest.TestCase):
                                         'category1_1234_5678#hello-world')
     self.assertEqual(avl_name, 'comp_name1')
 
+  def testGetAVLName_NormalMatchOfSubcomp(self):
+    self._AddAVLNameMapping(1234, 'comp_name1')
+    avl_name = self._manager.GetAVLName('category1', 'category1_subcomp_1234')
+    self.assertEqual(avl_name, 'comp_name1')
+
   def testGetAVLName_NoMatchWithComment(self):
     self._AddAVLNameMapping(1234, 'comp_name1')
     avl_name = self._manager.GetAVLName('category1',

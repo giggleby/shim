@@ -185,9 +185,13 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
   def testBatchGetBOMEntry_WithAvlInfo(self):
     bom = hwid_action.BOM()
     bom.AddAllComponents(
-        {'dram': ['dram_1234_5678', 'dram_1234_5678#4', 'not_dram_1234_5678']},
-        comp_db=database.Database.LoadFile(GOLDEN_HWIDV3_FILE,
-                                           verify_checksum=False), verbose=True)
+        {
+            'dram': [
+                'dram_1234_5678', 'dram_1234_5678#4', 'not_dram_1234_5678',
+                'dram_subcomp_2468'
+            ]
+        }, comp_db=database.Database.LoadFile(
+            GOLDEN_HWIDV3_FILE, verify_checksum=False), verbose=True)
     configless = None
     self._module_collection.AddAVLNameMapping(1234, 'avl_name_1')
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
@@ -217,6 +221,13 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                         ], avl_info=AvlInfoMsg(cid=1234, qid=5678,
                                                avl_name='avl_name_1'),
                         has_avl=True),
+                    ComponentMsg(
+                        name='dram_subcomp_2468', component_class='dram',
+                        fields=[
+                            FieldMsg(name='part', value='part4'),
+                            FieldMsg(name='size', value='4G'),
+                        ], avl_info=AvlInfoMsg(cid=2468,
+                                               is_subcomp=True), has_avl=True),
                     ComponentMsg(
                         name='not_dram_1234_5678', component_class='dram',
                         fields=[

@@ -14,6 +14,7 @@ pattern:
   encoding_scheme: base8192
   fields:
   - display_panel_field: 1
+  - display_panel_field: 1
 
 encoded_fields:
   display_panel_field:
@@ -21,6 +22,8 @@ encoded_fields:
       display_panel: display_panel_A
     1:
       display_panel: display_panel_123_456#8
+    2:
+      display_panel: display_panel_subcomp_234
 
 components:
   display_panel:
@@ -33,6 +36,10 @@ components:
       display_panel_123_456#8:
         values:
           cores: '4'
+          model: abc
+      display_panel_subcomp_234:
+        values:
+          cores: '8'
           model: abc
 
 rules: []

@@ -1,0 +1,485 @@
+{
+  "precondition_errors": [],
+  "lines": [
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "project: CHROMEBOOK"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "encoding_patterns:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  0: default"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "image_id:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  0: TEST"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "pattern:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "- image_ids:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  - 0"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  encoding_scheme: base8192"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  fields:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  - display_panel_field: 1"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  - display_panel_field: 1"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "encoded_fields:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  display_panel_field:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "    0:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      display_panel: "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_A@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "    1:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      display_panel: "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_123_456#8@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "    2:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      display_panel: "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_subcomp_234@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "components:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "  display_panel:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "    items:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_A@@y@"
+        },
+        {
+          "type": "TEXT",
+          "text": ":"
+        }
+      ]
+    },
+    {
+      "modification_status": "MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        status: "
+        },
+        {
+          "type": "COMPONENT_STATUS",
+          "text": "x@@@@component-display_panel-display_panel_A@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        values:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          cores: '1'"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          model: x"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_123_456#8@@y@"
+        },
+        {
+          "type": "TEXT",
+          "text": ":"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        status: "
+        },
+        {
+          "type": "COMPONENT_STATUS",
+          "text": "x@@@@component-display_panel-display_panel_123_456#8@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        values:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          cores: '4'"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          model: abc"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_subcomp_234@@y@"
+        },
+        {
+          "type": "TEXT",
+          "text": ":"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        status: "
+        },
+        {
+          "type": "COMPONENT_STATUS",
+          "text": "x@@@@component-display_panel-display_panel_subcomp_234@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        values:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          cores: '8'"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          model: abc"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": []
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "rules: []"
+        }
+      ]
+    }
+  ],
+  "hwid_components": {
+    "x@@@@component-display_panel-display_panel_A@@y@": {
+      "comp_cls": "display_panel",
+      "comp_name": "display_panel_A",
+      "support_status": "deprecated",
+      "is_newly_added": false,
+      "comp_name_info": null,
+      "seq_no": 1,
+      "comp_name_with_correct_seq_no": null,
+      "null_values": false,
+      "diff_prev": {
+        "unchanged": false,
+        "name_changed": false,
+        "support_status_changed": true,
+        "values_changed": false,
+        "prev_comp_name": "display_panel_A",
+        "prev_support_status": "unqualified"
+      },
+      "link_avl": false
+    },
+    "x@@@@component-display_panel-display_panel_123_456#8@@y@": {
+      "comp_cls": "display_panel",
+      "comp_name": "display_panel_123_456#8",
+      "support_status": "supported",
+      "is_newly_added": true,
+      "comp_name_info": {
+        "cid": 123,
+        "qid": 456,
+        "is_subcomp": false
+      },
+      "seq_no": 2,
+      "comp_name_with_correct_seq_no": "display_panel_123_456#2",
+      "null_values": false,
+      "diff_prev": null,
+      "link_avl": false
+    },
+    "x@@@@component-display_panel-display_panel_subcomp_234@@y@": {
+      "comp_cls": "display_panel",
+      "comp_name": "display_panel_subcomp_234",
+      "support_status": "supported",
+      "is_newly_added": true,
+      "comp_name_info": {
+        "cid": 234,
+        "qid": null,
+        "is_subcomp": true
+      },
+      "seq_no": 3,
+      "comp_name_with_correct_seq_no": null,
+      "null_values": false,
+      "diff_prev": null,
+      "link_avl": false
+    }
+  }
+}
