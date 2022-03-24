@@ -4,34 +4,90 @@
 
 import io
 import re
-from typing import Optional
+from typing import Callable, Match, NamedTuple, Optional, TypeVar, Union
+
+
+SEQ_SEP = '#'  # Separator between the component name and the sequential suffix.
+
+
+class NameInfo(NamedTuple):
+  """A collection of information embedded in a HWID component name.
+
+  Attributes:
+    cid: Component ID of the corresponding AVL entry.
+    qid: An integer of qualification ID (or 0) of the corresponding AVL entry if
+        it is a regular component.
+  """
+  cid: int
+  qid: int
+
+  @classmethod
+  def from_comp(cls, cid: int, qid: int = 0) -> 'NameInfo':
+    """Creates an instance that represents a regular component."""
+    return cls(cid, qid)
+
+  # TODO(yhong): Provide another named intiailizer for sub-components.
+
+
+_GroupValueType = TypeVar('_GroupValueType')
+
+
+def _GetTypedMatchGroup(
+    match: Match[str], group_id: Union[int, str],
+    group_value_converter: Callable[..., _GroupValueType],
+    default: Optional[_GroupValueType] = None) -> _GroupValueType:
+  """Helps convert the specified regexp matched group to certain value type.
+
+  Args:
+    match: The regexp match object that provides groups.
+    group_id: The identity of the target group.
+    group_value_converter: A callable object with 1 parameter that converts
+      the obtained raw group value to the value to return.
+    default: If specified, this function returns the specified default value
+      when the un-converted group value is `None`.
+
+  Returns:
+    The converted group value, or `default`.
+  """
+  raw_group_value = match.group(group_id)
+  if default is not None and raw_group_value is None:
+    return default
+  return group_value_converter(raw_group_value)
 
 
 class NamePattern:
 
-  def __init__(self, comp_cls):
-    self.comp_cls = comp_cls
-    self.pattern = re.compile(r'{comp_cls}_(\d+)(?:_(\d+))?(?:#.*)?$'.format(
-        comp_cls=re.escape(comp_cls)))
+  assert len(SEQ_SEP) == 1
+  _COMP_VALUE_PATTERN = (
+      r'_(?P<cid>\d+)(_(?P<qid>\d+))?({sep}[^{sep}]+)?'.format(
+          sep=re.escape(SEQ_SEP)))
 
-  def Matches(self, tag):
-    ret = self.pattern.match(tag)
-    if ret:
-      return int(ret.group(1)), int(ret.group(2) or 0)
+  def __init__(self, comp_cls: str):
+    self._comp_cls = comp_cls
+    comp_cls_in_re = re.escape(comp_cls)
+    self._comp_pattern = re.compile(comp_cls_in_re + self._COMP_VALUE_PATTERN)
+
+  def Matches(self, tag: str) -> Optional[NameInfo]:
+    matched_result = self._comp_pattern.fullmatch(tag)
+    if matched_result:
+      return NameInfo.from_comp(
+          _GetTypedMatchGroup(matched_result, 'cid', int),
+          _GetTypedMatchGroup(matched_result, 'qid', int, default=0),
+      )
+
     return None
 
-  def GenerateAVLName(self, cid: int, qid: int = 0,
-                      seq_no: Optional[int] = None):
+  def GenerateAVLName(self, name_info: NameInfo, seq: Optional[str] = None):
     name_buf = io.StringIO()
-    name_buf.write(self.comp_cls)
+    name_buf.write(self._comp_cls)
     name_buf.write('_')
-    name_buf.write(str(cid))
-    if qid:
+    name_buf.write(str(name_info.cid))
+    if name_info.qid:
       name_buf.write('_')
-      name_buf.write(str(qid))
-    if seq_no is not None:
-      name_buf.write('#')
-      name_buf.write(str(seq_no))
+      name_buf.write(str(name_info.qid))
+    if seq:
+      name_buf.write(SEQ_SEP)
+      name_buf.write(seq)
     return name_buf.getvalue()
 
 

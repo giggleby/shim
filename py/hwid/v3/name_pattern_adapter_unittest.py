@@ -15,27 +15,48 @@ class NamePatternTest(unittest.TestCase):
     self._name_pattern = (
         name_pattern_adapter.NamePatternAdapter().GetNamePattern('mycomp'))
 
-  def testGenerateAVLName_NoQid(self):
-    avl_name1 = self._name_pattern.GenerateAVLName(123)
-    avl_name2 = self._name_pattern.GenerateAVLName(123, 0)
+  def testMatches_RegularComponent(self):
+    name_info = self._name_pattern.Matches('mycomp_123')
 
-    self.assertEqual(avl_name1, 'mycomp_123')
-    self.assertEqual(avl_name2, 'mycomp_123')
+    self.assertEqual(name_info,
+                     name_pattern_adapter.NameInfo.from_comp(cid=123))
+
+  def testMatches_RegularComponentWithQid(self):
+    name_info = self._name_pattern.Matches('mycomp_123_456')
+
+    self.assertEqual(name_info,
+                     name_pattern_adapter.NameInfo.from_comp(cid=123, qid=456))
+
+  def testMatches_RegularComponentWithSeqNo(self):
+    name_info = self._name_pattern.Matches('mycomp_123#3')
+
+    self.assertEqual(name_info,
+                     name_pattern_adapter.NameInfo.from_comp(cid=123))
+
+  def testGenerateAVLName_NoQid(self):
+    name_info = name_pattern_adapter.NameInfo.from_comp(cid=123)
+    avl_name = self._name_pattern.GenerateAVLName(name_info)
+
+    self.assertEqual(avl_name, 'mycomp_123')
 
   def testGenerateAVLName_HasQid(self):
-    avl_name = self._name_pattern.GenerateAVLName(123, 5)
+    name_info = name_pattern_adapter.NameInfo.from_comp(cid=123, qid=5)
+    avl_name = self._name_pattern.GenerateAVLName(name_info)
 
     self.assertEqual(avl_name, 'mycomp_123_5')
 
   def testGenerateAVLName_HasSeqNo(self):
-    avl_name1 = self._name_pattern.GenerateAVLName(123, seq_no=0)
-    avl_name2 = self._name_pattern.GenerateAVLName(123, seq_no=3)
+    name_info = name_pattern_adapter.NameInfo.from_comp(cid=123)
+    avl_name1 = self._name_pattern.GenerateAVLName(name_info, seq='0')
+    name_info = name_pattern_adapter.NameInfo.from_comp(cid=123)
+    avl_name2 = self._name_pattern.GenerateAVLName(name_info, seq='3')
 
     self.assertEqual(avl_name1, 'mycomp_123#0')
     self.assertEqual(avl_name2, 'mycomp_123#3')
 
   def testGenerateAVLName_HasQidAndSeqNo(self):
-    avl_name = self._name_pattern.GenerateAVLName(123, 5, seq_no=3)
+    name_info = name_pattern_adapter.NameInfo.from_comp(cid=123, qid=5)
+    avl_name = self._name_pattern.GenerateAVLName(name_info, seq='3')
 
     self.assertEqual(avl_name, 'mycomp_123_5#3')
 

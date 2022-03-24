@@ -80,13 +80,13 @@ class DecoderDataManager:
     """
     np_adapter = name_pattern_adapter.NamePatternAdapter()
     name_pattern = np_adapter.GetNamePattern(category)
-    ret = name_pattern.Matches(comp_name)
-    if ret is None:
+    name_info = name_pattern.Matches(comp_name)
+    if not name_info:
       return comp_name if fallback else ''
-    cid, unused_qid = ret
 
     with self._ndb_connector.CreateClientContextWithGlobalCache():
-      entry = AVLNameMapping.query(AVLNameMapping.component_id == cid).get()
+      entry = AVLNameMapping.query(
+          AVLNameMapping.component_id == name_info.cid).get()
     if entry is None:
       logging.error(
           'mapping not found for category "%s" and component name "%s"',

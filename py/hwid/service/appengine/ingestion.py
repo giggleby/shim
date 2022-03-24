@@ -392,10 +392,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       comp_ids = set()
       pattern = np_adapter.GetNamePattern(comp_cls)
       for comp_name in comps:
-        ret = pattern.Matches(comp_name)
-        if ret:
-          cid, _ = ret
-          comp_ids.add(cid)
+        name_info = pattern.Matches(comp_name)
+        if name_info:
+          comp_ids.add(name_info.cid)
       return comp_ids
 
     for project in self.hwid_action_manager.ListProjects():

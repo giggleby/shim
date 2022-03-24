@@ -273,8 +273,10 @@ class ContentsAnalyzer:
     for comp_cls, comps in self._ExtractHWIDComponents().items():
       for comp in comps:
         if comp.extracted_seq_no is not None:
-          expected_comp_name = (
-              f'{comp.extracted_noseq_comp_name}#{comp.expected_seq_no}')
+          expected_comp_name = ''.join([
+              comp.extracted_noseq_comp_name, name_pattern_adapter.SEQ_SEP,
+              str(comp.expected_seq_no)
+          ])
           if expected_comp_name != comp.name:
             report.errors.append(
                 Error(
@@ -384,8 +386,10 @@ class ContentsAnalyzer:
 
         if (comp.extracted_seq_no is not None and
             comp.extracted_seq_no != str(comp.expected_seq_no)):
-          comp_name_with_correct_seq_no = (
-              f'{comp.extracted_noseq_comp_name}#{comp.expected_seq_no}')
+          comp_name_with_correct_seq_no = ''.join([
+              comp.extracted_noseq_comp_name, name_pattern_adapter.SEQ_SEP,
+              str(comp.expected_seq_no)
+          ])
         else:
           comp_name_with_correct_seq_no = None
         raw_comp_name = yaml.safe_dump(comp.name).partition('\n')[0]
@@ -434,8 +438,10 @@ class ContentsAnalyzer:
           logging.debug('Remove components (more comps in prev db)')
           break
         comp_name, comp_info = curr_item
-        avl_id = name_pattern.Matches(comp_name)
-        noseq_comp_name, sep, actual_seq = comp_name.partition('#')
+        name_info = name_pattern.Matches(comp_name)
+        avl_id = (name_info.cid, name_info.qid) if name_info else None
+        noseq_comp_name, sep, actual_seq = comp_name.partition(
+            name_pattern_adapter.SEQ_SEP)
         null_values = comp_info.values is None
         link_avl = isinstance(comp_info.values, rule.AVLProbeValue)
 

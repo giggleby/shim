@@ -132,11 +132,10 @@ class BOMAndConfiglessHelper:
         fields.sort(key=lambda field: field.name)
 
         name_pattern = np_adapter.GetNamePattern(component.cls)
-        ret = name_pattern.Matches(component.name)
-        if ret:
-          cid, qid = ret
-          avl_info = hwid_api_messages_pb2.AvlInfo(cid=cid, qid=qid,
-                                                   avl_name=avl_name)
+        name_info = name_pattern.Matches(component.name)
+        if name_info:
+          avl_info = hwid_api_messages_pb2.AvlInfo(
+              cid=name_info.cid, qid=name_info.qid, avl_name=avl_name)
         else:
           avl_info = None
 

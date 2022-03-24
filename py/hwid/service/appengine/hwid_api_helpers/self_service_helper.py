@@ -433,10 +433,10 @@ Info Update
         np = nps[mat.component_class] = np_adapter.GetNamePattern(
             mat.component_class)
 
+      name_info = name_pattern_adapter.NameInfo.from_comp(
+          mat.avl_cid, qid=mat.avl_qid)
       response.component_names.append(
-          np.GenerateAVLName(mat.avl_cid,
-                             qid=mat.avl_qid if mat.avl_qid else None,
-                             seq_no=mat.seq_no))
+          np.GenerateAVLName(name_info, seq=str(mat.seq_no)))
     return response
 
   def GetHWIDBundleResourceInfo(self, request):
