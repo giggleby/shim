@@ -1,15 +1,19 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """JSON utilities.
 
 This module provides utilities to serialize or deserialize Python objects
 to/from JSON strings or JSON files.
 """
 
+import collections
+import enum
 import json
 import os
+from typing import Any, Callable, NamedTuple, Sequence
+
+from cros.factory.utils import file_utils
 
 LoadStr = json.loads
 
@@ -23,8 +27,7 @@ def LoadFile(file_path):
   Returns:
     The deserialized Python object.
   """
-  with open(file_path) as f:
-    return LoadStr(f.read())
+  return LoadStr(file_utils.ReadFile(file_path))
 
 
 def DumpStr(obj, pretty=False, newline=None, **json_dumps_kwargs):
@@ -67,8 +70,9 @@ def DumpFile(file_path, obj, pretty=True, newline=None, **json_dumps_kwargs):
       previous argument ``pretty``.
     json_dumps_kwargs: Any allowable arguments to json.dumps.
   """
-  with open(file_path, 'w') as f:
-    f.write(DumpStr(obj, pretty=pretty, newline=newline, **json_dumps_kwargs))
+  file_utils.WriteFile(
+      file_path,
+      DumpStr(obj, pretty=pretty, newline=newline, **json_dumps_kwargs))
 
 
 class JSONDatabase(dict):
@@ -107,3 +111,77 @@ class JSONDatabase(dict):
         of initialization.
     """
     DumpFile(file_path or self._file_path, self)
+
+
+class TypeConversionResult(NamedTuple):
+  """Holds the result of converting one value to a JSON-supported type of value.
+
+  If the result value is a dictionary or a list, the items might not be in type
+  of a JSON-supported one.
+
+  Attributes:
+    is_converted: Whether the conversion succeed or not.
+    converted_value: The result value that is in type of a JSON-supported one.
+  """
+  is_converted: bool
+  converted_value: Any
+
+  @classmethod
+  def from_type_not_convered(cls) -> 'TypeConversionResult':
+    return cls(False, None)
+
+  @classmethod
+  def from_converted_value(cls, converted_value) -> 'TypeConversionResult':
+    return cls(True, converted_value)
+
+
+class Serializer:
+  """Serializes an instance to JSON-serializable object.
+
+  This class takes a list of type-converter functions as a config.  Then, while
+  serializing the given object, the class method first tries to convert the
+  value type into a JSON-supported one (i.e. none type, bool, int, str, dict,
+  list) by invoking each converter function in order and adapting the result
+  from the first success one.  Then, if the value is either a list or a
+  dictionary, the method recursively serializes the contents.
+  """
+
+  def __init__(self, type_converters: Sequence[Callable[[Any],
+                                                        TypeConversionResult]]):
+    """Initializer.
+
+    Args:
+      type_converters: A list of converters, each covers certain types of
+        values and convert them to a value in type of a JSON-supported one.
+    """
+    self._type_converters = type_converters
+
+  def Serialize(self, inst):
+    """Serializes the given `instance` to a JSON-serializable object."""
+    for type_converter in self._type_converters:
+      result = type_converter(inst)
+      if result.is_converted:
+        inst = result.converted_value
+        break
+    if isinstance(inst, (type(None), int, float, bool, str)):
+      return inst
+    if isinstance(inst, (list, tuple)):
+      return [self.Serialize(item) for item in inst]
+    if isinstance(inst, dict):
+      return collections.OrderedDict(
+          [(k, self.Serialize(v)) for k, v in inst.items()])
+    raise TypeError(f'Unable to serialize the type {type(inst)}.')
+
+
+def ConvertNamedTupleToDict(input_value) -> TypeConversionResult:
+  """Try to convert the nametuple value to a dictionary."""
+  if isinstance(input_value, tuple) and hasattr(input_value, '_asdict'):
+    return TypeConversionResult.from_converted_value(input_value._asdict())
+  return TypeConversionResult.from_type_not_convered()
+
+
+def ConvertEnumToStr(input_value) -> TypeConversionResult:
+  """Try to convert the enum value to string of the enum name."""
+  if isinstance(input_value, enum.Enum):
+    return TypeConversionResult.from_converted_value(input_value.name)
+  return TypeConversionResult.from_type_not_convered()
