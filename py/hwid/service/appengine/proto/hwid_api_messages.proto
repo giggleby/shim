@@ -20,8 +20,11 @@ message AvlInfo {
   int64 cid = 1;
   // Qualification id.
   int64 qid = 2;
-  // Displayed AVL component name.
+  // Displayed AVL component name, this field will be empty in self-service
+  // related APIs.
   string avl_name = 3;
+  // Whether this AVL info refers to a sub-component.
+  bool is_subcomp = 4;
 }
 
 // A component of a BOM.
@@ -188,7 +191,6 @@ message ComponentsResponse {
   Status status = 3;
 }
 
-
 // A message that summarizes the component change.
 message DiffStatus {
   // True if the component is unchanged.  This value should be equals to
@@ -216,14 +218,15 @@ message NameChangedComponent {
     DUPLICATE = 5;
   }
 
-  int64 cid = 1;
-  int64 qid = 2;
+  int64 cid = 1 [deprecated = true];
+  int64 qid = 2 [deprecated = true];
   SupportStatus support_status = 3;
   string component_name = 4;
   // True if this component name has AVL information.
   bool has_cid_qid = 5;
   // The component change summary.  Null means that this component is new.
   DiffStatus diff_prev = 6;
+  AvlInfo avl_info = 7;
 }
 
 message NameChangedComponents {
@@ -380,7 +383,9 @@ message CreateHwidDbEditableSectionChangeClResponse {
 // External resources that HWID DB can refer to.
 message HwidDbExternalResource {
   // Component probe info from AVL.
-  repeated cros.factory.probe_info_service.app_engine.stubby_pb2.ComponentProbeInfo component_probe_infos = 1;
+  repeated
+      cros.factory.probe_info_service.app_engine.stubby_pb2.ComponentProbeInfo
+          component_probe_infos = 1;
 }
 
 message BatchGetHwidDbEditableSectionChangeClInfoRequest {
@@ -706,8 +711,7 @@ service HwidService {
   // This API is designed to be requested by Easy Bundle Creation. Ease Bundle
   // Creation service will derive firmware info and send request to auto update
   // HWID DB without being approved.
-  rpc CreateHwidDbFirmwareInfoUpdateCl(
-      CreateHwidDbFirmwareInfoUpdateClRequest)
+  rpc CreateHwidDbFirmwareInfoUpdateCl(CreateHwidDbFirmwareInfoUpdateClRequest)
       returns (CreateHwidDbFirmwareInfoUpdateClResponse);
 
   // Create initial HWID DB.

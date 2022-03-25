@@ -55,21 +55,35 @@ def ConvertToNameChangedComponent(name_changed_comp_info):
   if status_val is None:
     raise HWIDStatusConversionError(
         f'Unknown status: {name_changed_comp_info.status!r}.')
-  return hwid_api_messages_pb2.NameChangedComponent(
-      cid=name_changed_comp_info.cid, qid=name_changed_comp_info.qid,
-      support_status=status_val.number,
-      component_name=name_changed_comp_info.comp_name,
-      has_cid_qid=name_changed_comp_info.has_cid_qid,
-      diff_prev=name_changed_comp_info.diff_prev and
-      hwid_api_messages_pb2.DiffStatus(
-          unchanged=name_changed_comp_info.diff_prev.unchanged,
-          name_changed=name_changed_comp_info.diff_prev.name_changed,
-          support_status_changed=name_changed_comp_info.diff_prev
-          .support_status_changed,
-          values_changed=name_changed_comp_info.diff_prev.values_changed,
-          prev_comp_name=name_changed_comp_info.diff_prev.prev_comp_name,
-          prev_support_status=name_changed_comp_info.diff_prev
-          .prev_support_status))
+
+  proto_fields = {
+      'support_status': status_val.number,
+      'component_name': name_changed_comp_info.comp_name,
+  }
+
+  if name_changed_comp_info.diff_prev:
+    diff_prev = name_changed_comp_info.diff_prev
+    proto_fields['diff_prev'] = hwid_api_messages_pb2.DiffStatus(
+        unchanged=diff_prev.unchanged, name_changed=diff_prev.name_changed,
+        support_status_changed=diff_prev.support_status_changed,
+        values_changed=diff_prev.values_changed,
+        prev_comp_name=diff_prev.prev_comp_name,
+        prev_support_status=diff_prev.prev_support_status)
+
+  if name_changed_comp_info.has_cid_qid:
+    proto_fields.update({
+        'has_cid_qid':
+            True,
+        'cid':
+            name_changed_comp_info.cid,
+        'qid':
+            name_changed_comp_info.qid,
+        'avl_info':
+            hwid_api_messages_pb2.AvlInfo(cid=name_changed_comp_info.cid,
+                                          qid=name_changed_comp_info.qid)
+    })
+
+  return hwid_api_messages_pb2.NameChangedComponent(**proto_fields)
 
 
 def _ConvertValidationErrorCode(code):

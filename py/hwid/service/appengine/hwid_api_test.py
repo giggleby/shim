@@ -441,34 +441,34 @@ class ProtoRPCServiceTest(unittest.TestCase):
     supported = hwid_api_messages_pb2.NameChangedComponent.SUPPORTED
     unqualified = hwid_api_messages_pb2.NameChangedComponent.UNQUALIFIED
 
+    expected_wireless_comps = [
+        hwid_api_messages_pb2.NameChangedComponent(
+            cid=1234, qid=5678, support_status=supported,
+            component_name='wireless_1234_5678', has_cid_qid=True,
+            diff_prev=hwid_api_messages_pb2.DiffStatus(
+                unchanged=False,
+                name_changed=True,
+                support_status_changed=False,
+                values_changed=False,
+                prev_comp_name='wireless_1234_5677',
+                prev_support_status='supported',
+            ), avl_info=hwid_api_messages_pb2.AvlInfo(cid=1234, qid=5678)),
+        hwid_api_messages_pb2.NameChangedComponent(
+            cid=1111, qid=2222, support_status=unqualified,
+            component_name='wireless_1111_2222', has_cid_qid=True,
+            avl_info=hwid_api_messages_pb2.AvlInfo(cid=1111, qid=2222)),
+        hwid_api_messages_pb2.NameChangedComponent(
+            support_status=supported, component_name='wireless_hello_world',
+            has_cid_qid=False)
+    ]
     self.assertEqual(
         hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
             status=StatusMsg.SUCCESS,
             new_hwid_config_contents=EXPECTED_REPLACE_RESULT,
             name_changed_components_per_category={
                 'wireless':
-                    hwid_api_messages_pb2.NameChangedComponents(entries=[
-                        hwid_api_messages_pb2.NameChangedComponent(
-                            cid=1234, qid=5678, support_status=supported,
-                            component_name='wireless_1234_5678',
-                            has_cid_qid=True,
-                            diff_prev=hwid_api_messages_pb2.DiffStatus(
-                                unchanged=False,
-                                name_changed=True,
-                                support_status_changed=False,
-                                values_changed=False,
-                                prev_comp_name='wireless_1234_5677',
-                                prev_support_status='supported',
-                            )),
-                        hwid_api_messages_pb2.NameChangedComponent(
-                            cid=1111, qid=2222, support_status=unqualified,
-                            component_name='wireless_1111_2222',
-                            has_cid_qid=True),
-                        hwid_api_messages_pb2.NameChangedComponent(
-                            cid=0, qid=0, support_status=supported,
-                            component_name='wireless_hello_world',
-                            has_cid_qid=False)
-                    ])
+                    hwid_api_messages_pb2.NameChangedComponents(
+                        entries=expected_wireless_comps)
             }, model=TEST_MODEL), msg)
 
   def testValidateConfigAndUpdateChecksumErrors(self):
