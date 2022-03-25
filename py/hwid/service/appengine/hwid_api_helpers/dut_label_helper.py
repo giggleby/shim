@@ -34,6 +34,8 @@ class DUTLabelHelper:
         'touchpad',
         'touchscreen',
         'variant',
+        'wireless',
+        'cellular',
     ]
 
     if not hwid:  # Return possible labels.
@@ -87,18 +89,17 @@ class DUTLabelHelper:
     if bom.phase:
       response.labels.add(name='phase', value=bom.phase)
 
-    components = ['touchscreen', 'touchpad', 'stylus']
-    for component in components:
+    comp_classes = ['touchscreen', 'touchpad', 'stylus']
+    for comp_cls in comp_classes:
       # The lab just want the existence of a component they do not care
       # what type it is.
-      if configless and 'has_' + component in configless['feature_list']:
-        if configless['feature_list']['has_' + component]:
-          response.labels.add(name=component, value=None)
+      if configless and 'has_' + comp_cls in configless['feature_list']:
+        if configless['feature_list']['has_' + comp_cls]:
+          response.labels.add(name=comp_cls, value=None)
       else:
-        component_value = self._sku_helper.GetComponentValueFromBOM(
-            bom, component)
-        if component_value and component_value[0]:
-          response.labels.add(name=component, value=None)
+        components = self._sku_helper.GetComponentValueFromBOM(bom, comp_cls)
+        if components and components[0]:
+          response.labels.add(name=comp_cls, value=None)
 
     # cros labels in host_info store, which will be used in tast tests of
     # runtime probe
@@ -106,11 +107,19 @@ class DUTLabelHelper:
       if component.name and component.is_vp_related:
         name = self._decoder_data_manager.GetPrimaryIdentifier(
             bom.project, component.cls, component.name)
-        name = self._decoder_data_manager.GetAVLName(component.cls, name)
         if component.information is not None:
           name = component.information.get('comp_group', name)
         response.labels.add(name="hwid_component",
                             value=component.cls + '/' + name)
+
+    # Labels to provide the identifier used in AVL.
+    avl_comp_classes = ['wireless', 'cellular']
+    for comp_cls in avl_comp_classes:
+      components = self._sku_helper.GetComponentValueFromBOM(bom, comp_cls)
+      if components and components[0]:
+        comp_name = components[0]
+        avl_name = self._decoder_data_manager.GetAVLName(comp_cls, comp_name)
+        response.labels.add(name=comp_cls, value=avl_name)
 
     unexpected_labels = set(
         label.name for label in response.labels) - set(possible_labels)

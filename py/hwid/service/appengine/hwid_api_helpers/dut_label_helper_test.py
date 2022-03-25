@@ -49,8 +49,11 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._module_collection.ClearAll()
 
   def testGetDUTLabels_Success(self):
+    self._module_collection.AddAVLNameMapping(10, 'AVL_CELLULAR')
     bom = hwid_action.BOM()
     bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
+    bom.AddComponent('wireless', name='wireless_11_21', is_vp_related=True)
+    bom.AddComponent('cellular', name='cellular_10_20', is_vp_related=True)
     bom.project = 'foo'
     bom.phase = 'bar'
     configless = None
@@ -64,13 +67,26 @@ class DUTLabelHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
     msg = self._dl_helper.GetDUTLabels(req)
 
-    self.assertTrue(self.CheckForLabelValue(msg, 'phase', 'bar'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'variant', 'found_device'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
-    self.assertTrue(self.CheckForLabelValue(msg, 'hwid_component'))
-    self.assertFalse(msg.warnings)
-    self.assertEqual(5, len(msg.labels))
+    self.assertCountEqual(
+        msg.labels,
+        [
+            hwid_api_messages_pb2.DutLabel(name='hwid_component',
+                                           value='cellular/cellular_10_20'),
+            hwid_api_messages_pb2.DutLabel(name='hwid_component',
+                                           value='wireless/wireless_11_21'),
+            hwid_api_messages_pb2.DutLabel(name='hwid_component',
+                                           value='touchscreen/testscreen'),
+            hwid_api_messages_pb2.DutLabel(name='cellular',
+                                           value='AVL_CELLULAR'),
+            hwid_api_messages_pb2.DutLabel(name='phase', value='bar'),
+            hwid_api_messages_pb2.DutLabel(name='sku', value='TestSku'),
+            hwid_api_messages_pb2.DutLabel(name='touchscreen'),
+            hwid_api_messages_pb2.DutLabel(name='variant',
+                                           value='found_device'),
+            # Fallback due to no AVL name existed.
+            hwid_api_messages_pb2.DutLabel(name='wireless',
+                                           value='wireless_11_21'),
+        ])
 
   def testGetDUTLabels_WithWarnings(self):
     bom = hwid_action.BOM()
@@ -124,6 +140,8 @@ class DUTLabelHelperTest(unittest.TestCase):
                 'touchpad',
                 'touchscreen',
                 'variant',
+                'wireless',
+                'cellular',
             ]), msg)
 
   def testGetPossibleDUTLabels(self):
@@ -140,6 +158,8 @@ class DUTLabelHelperTest(unittest.TestCase):
                 'touchpad',
                 'touchscreen',
                 'variant',
+                'wireless',
+                'cellular',
             ]), msg)
 
   def testGetDUTLabels_WithConfigless(self):
@@ -211,6 +231,8 @@ class DUTLabelHelperTest(unittest.TestCase):
                 'touchpad',
                 'touchscreen',
                 'variant',
+                'wireless',
+                'cellular',
             ]),
         msg)
 

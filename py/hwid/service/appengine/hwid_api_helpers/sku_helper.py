@@ -67,12 +67,12 @@ class SKUHelper:
     return SKU(sku_str=sku_str, project=project, cpu=cpu, memory_str=memory_str,
                total_bytes=total_bytes, warnings=warnings)
 
-  def GetComponentValueFromBOM(self, bom, component_name):
+  def GetComponentValueFromBOM(self, bom, component_cls):
     components = collections.defaultdict(list)
     for component in bom.GetComponents():
       components[component.cls].append(component.name)
 
-    if components[component_name]:
-      return components[component_name]
+    if components[component_cls]:
+      return components[component_cls]
 
     return None
