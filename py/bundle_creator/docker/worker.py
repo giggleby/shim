@@ -4,16 +4,28 @@
 #
 # TODO(b/214528226): Add a unit test for this file.
 
+import datetime
 import logging
+import os
 import time
-from typing import Optional
+from typing import List, Optional, Tuple
+
+from google.protobuf import text_format
+import yaml
 
 from cros.factory.bundle_creator.connector import cloudtasks_connector
 from cros.factory.bundle_creator.connector import firestore_connector
+from cros.factory.bundle_creator.connector import hwid_api_connector
 from cros.factory.bundle_creator.connector import pubsub_connector
+from cros.factory.bundle_creator.connector import storage_connector
 from cros.factory.bundle_creator.docker import config
-from cros.factory.bundle_creator.docker import util
 from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
+from cros.factory.utils import file_utils
+from cros.factory.utils import process_utils
+
+
+class CreateBundleException(Exception):
+  """An Exception raised when fail to create factory bundle."""
 
 
 class EasyBundleCreationWorker:
@@ -25,8 +37,12 @@ class EasyBundleCreationWorker:
         config.GCLOUD_PROJECT)
     self._firestore_connector = firestore_connector.FirestoreConnector(
         config.GCLOUD_PROJECT)
+    self._hwid_api_connector = hwid_api_connector.HWIDAPIConnector(
+        config.HWID_API_ENDPOINT)
     self._pubsub_connector = pubsub_connector.PubSubConnector(
         config.GCLOUD_PROJECT)
+    self._storage_connector = storage_connector.StorageConnector(
+        config.GCLOUD_PROJECT, config.BUNDLE_BUCKET)
 
   def MainLoop(self):
     """The main loop tries to process a request per 30 seconds."""
@@ -47,7 +63,7 @@ class EasyBundleCreationWorker:
             self._firestore_connector.USER_REQUEST_STATUS_IN_PROGRESS)
         self._firestore_connector.UpdateUserRequestStartTime(task_proto.doc_id)
 
-        gs_path, cl_url, cl_error_msg = util.CreateBundle(task_proto)
+        gs_path, cl_url, cl_error_msg = self._CreateBundle(task_proto)
 
         self._firestore_connector.UpdateUserRequestStatus(
             task_proto.doc_id,
@@ -66,7 +82,7 @@ class EasyBundleCreationWorker:
               factorybundle_pb2.WorkerResult.CREATE_CL_FAILED)
           worker_result.error_message = str(cl_error_msg)
         self._cloudtasks_connector.ResponseWorkerResult(worker_result)
-      except util.CreateBundleException as e:
+      except CreateBundleException as e:
         self._logger.error(e)
 
         self._firestore_connector.UpdateUserRequestStatus(
@@ -81,6 +97,94 @@ class EasyBundleCreationWorker:
         worker_result.original_request.MergeFrom(task_proto.request)
         worker_result.error_message = str(e)
         self._cloudtasks_connector.ResponseWorkerResult(worker_result)
+
+  def _CreateBundle(
+      self, create_bundle_message: factorybundle_pb2.CreateBundleMessage
+  ) -> Tuple[str, List[str], Optional[str]]:
+    """Creates a factory bundle with the specific manifest from a user.
+
+    If `update_hwid_db_firmware_info` is set, this function will send request to
+    HWID API server to create HWID DB change for firmware info.
+
+    Args:
+      create_bundle_message: A CreateBundleMessage proto message fetched
+          from a Pub/Sub subscription.
+
+    Returns:
+      A tuple of the following:
+        - A string of the google storage path.
+        - A list contains created HWID CL url.
+        - A string of error message when requesting HWID API failed.
+
+    Raises:
+      CreateBundleException: If it fails to run `finalize_bundle` command.
+    """
+    request = create_bundle_message.request
+    self._logger.info(
+        text_format.MessageToString(request, as_utf8=True, as_one_line=True))
+
+    with file_utils.TempDirectory() as temp_dir:
+      os.chdir(temp_dir)
+
+      bundle_name = '{:%Y%m%d}_{}'.format(datetime.datetime.now(),
+                                          request.phase)
+      firmware_source = ('release_image/' + request.firmware_source
+                         if request.HasField('firmware_source') else
+                         'release_image')
+      manifest = {
+          'board': request.board,
+          'project': request.project,
+          # TODO(b/204853206): Add 'designs' to CreateBundleRpcRequest and
+          # update UI.
+          'designs': 'boxster_designs',
+          'bundle_name': bundle_name,
+          'toolkit': request.toolkit_version,
+          'test_image': request.test_image_version,
+          'release_image': request.release_image_version,
+          'firmware': firmware_source,
+      }
+      has_firmware_setting = (
+          self._firestore_connector.GetHasFirmwareSettingByProject(
+              request.project))
+      if has_firmware_setting:
+        manifest['has_firmware'] = has_firmware_setting
+      with open(os.path.join(temp_dir, 'MANIFEST.yaml'), 'w') as f:
+        yaml.safe_dump(manifest, f)
+
+      finalize_bundle_command = [
+          '/usr/local/factory/factory.par', 'finalize_bundle',
+          os.path.join(temp_dir, 'MANIFEST.yaml'), '--jobs', '7'
+      ]
+      bundle_record_path = os.path.join(temp_dir, 'bundle_record.json')
+      if request.update_hwid_db_firmware_info:
+        finalize_bundle_command += ['--bundle-record', bundle_record_path]
+      output = None
+      try:
+        output = process_utils.LogAndCheckOutput(finalize_bundle_command,
+                                                 stderr=process_utils.STDOUT)
+      except process_utils.CalledProcessError as e:
+        raise CreateBundleException(e.stdout)
+      self._logger.info(output)
+
+      bundle_path = os.path.join(
+          temp_dir, 'factory_bundle_{}_{}.tar.bz2'.format(
+              request.project, bundle_name))
+      gs_path = self._storage_connector.UploadCreatedBundle(
+          bundle_path, create_bundle_message)
+
+      cl_url = []
+      cl_error_msg = None
+      if request.update_hwid_db_firmware_info:
+        with open(bundle_record_path, 'r') as f:
+          bundle_record = f.read()
+        try:
+          cl_url += self._hwid_api_connector.CreateHWIDFirmwareInfoCL(
+              bundle_record, request.email)
+        except hwid_api_connector.HWIDAPIRequestException as e:
+          cl_error_msg = str(e)
+          self._logger.error(cl_error_msg)
+
+    return gs_path, cl_url, cl_error_msg
 
   def _PullTask(self) -> Optional[factorybundle_pb2.CreateBundleMessage]:
     """Pulls one task from the Pub/Sub subscription.
