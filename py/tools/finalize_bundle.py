@@ -8,6 +8,7 @@
 import argparse
 import concurrent.futures
 import contextlib
+from distutils import version as version_module
 import errno
 import glob
 import logging
@@ -17,7 +18,7 @@ import shutil
 import sys
 import textwrap
 import time
-from typing import Set
+from typing import Dict, Optional, Set
 import urllib.parse
 
 import yaml
@@ -233,6 +234,7 @@ class FinalizeBundle:
   firmware_source = None
   firmware_image_source = None
   firmware_record = {}
+  netboot_firmware_source: Optional[version_module.StrictVersion] = None
 
   def __init__(self, manifest, work_dir, download=True, archive=True,
                bundle_record=None, jobs=1):
@@ -242,6 +244,7 @@ class FinalizeBundle:
     self.archive = archive
     self.jobs = jobs
     self.bundle_record = bundle_record
+    self.model_to_firmware_bios_name: Dict[str, str] = {}
 
   def Main(self):
     self.ProcessManifest()
@@ -273,6 +276,7 @@ class FinalizeBundle:
           'hwid',
           'has_firmware',
           'designs',
+          'netboot_firmware',
       ])
     except ValueError as e:
       logging.error(str(e))
@@ -325,6 +329,10 @@ class FinalizeBundle:
     self.release_image_source = self.manifest.get('release_image')
     self.toolkit_source = self.manifest.get('toolkit')
     self.firmware_source = self.manifest.get('firmware', 'release_image')
+    netboot_firmware_source = self.manifest.get('netboot_firmware')
+    if netboot_firmware_source:
+      self.netboot_firmware_source = version_module.StrictVersion(
+          netboot_firmware_source)
 
     self.readme_path = os.path.join(self.bundle_dir, 'README')
     self.has_firmware = self.manifest.get('has_firmware', DEFAULT_FIRMWARES)
@@ -790,8 +798,57 @@ class FinalizeBundle:
           '--output_dir', firmware_images_dir
       ], log=True, call=True)
 
-  def PrepareNetboot(self):
-    """Prepares netboot resource for TFTP setup."""
+    if self.is_boxster_project:
+      model_to_ro_version: Dict[str, version_module.StrictVersion] = {}
+      model_to_firmware_bios_name: Dict[str, str] = {}
+      for model, info in manifest.items():
+        ro_version, firmware_bios_name = self.GetRoInfoFromHostImageName(
+            info['host']['image'])
+        if ro_version:
+          model_to_ro_version[model] = ro_version
+          model_to_firmware_bios_name[model] = firmware_bios_name
+
+      if model_to_ro_version:
+        if not self.netboot_firmware_source:
+          self.netboot_firmware_source = max(model_to_ro_version.values())
+        self.model_to_firmware_bios_name = model_to_firmware_bios_name
+        logging.info('model_to_ro_version:\n%r', model_to_ro_version)
+        logging.info('model_to_firmware_bios_name:\n%r',
+                     model_to_firmware_bios_name)
+        logging.info('netboot_firmware_source: %r',
+                     self.netboot_firmware_source)
+
+  @staticmethod
+  def GetRoInfoFromHostImageName(name: str):
+    """Extracts the info from the image name.
+
+    Returns:
+      A tuple of (ro_version, firmware_bios_name).
+    """
+    pattern = re.compile(r'bios-(\S+)\.ro-(\d+)-(\d+)-(\d+)\..*\.bin')
+    match = pattern.search(name)
+    if not match:
+      logging.info('%r does not match %r.', name, pattern.pattern)
+      return (None, None)
+    version_str = '%s.%s.%s' % (match.group(2), match.group(3), match.group(4))
+    try:
+      firmware_bios_name: str = match.group(1)
+      return (version_module.StrictVersion(version_str), firmware_bios_name)
+    except Exception:
+      logging.info('%r is not a strict version.', version_str)
+      return (None, None)
+
+  def GetNetbootFirmwareSet(self):
+    """Returns the set of used netboot firmware."""
+    if not self.is_boxster_project:
+      raise ValueError('Call GetNetbootFirmwareSet for a non-boxster project.')
+    return {
+        f'image-{self.model_to_firmware_bios_name.get(design, design)}.net.bin'
+        for design in self.designs
+    }
+
+  def DownloadNetbootFromFactoryArchive(self):
+    """Downloads netboot firmware from the factory archive."""
     # TODO(hungte) Change factory_shim/netboot/ to be netboot/ in factory.zip.
     orig_netboot_dir = os.path.join(self.bundle_dir, 'factory_shim', 'netboot')
     netboot_dir = os.path.join(self.bundle_dir, 'netboot')
@@ -808,9 +865,59 @@ class FinalizeBundle:
       for f in glob.glob(os.path.join(netboot_backup_dir, '*')):
         shutil.move(f, netboot_dir)
 
-    if not os.path.exists(netboot_dir):
-      logging.info('No netboot resources.')
+  def DownloadNetbootFromFirmwareArchive(self):
+    """Downloads netboot firmware from the firmware archive."""
+    version_str = '%s.%s.%s' % self.netboot_firmware_source.version
+    resource_name = 'unsigned_firmware_archive'
+    urls = [
+        '%s/ChromeOS-firmware-*.tar.bz2' %
+        gsutil.BuildResourceBaseURL(gsutil.GSUtil.CHANNELS.dev,
+                                    self.build_board.gsutil_name, version_str)
+    ]
+    netboot_dir = os.path.join(self.bundle_dir, 'netboot')
+    file_utils.TryMakeDirs(netboot_dir)
+
+    netboot_firmware_set = self.GetNetbootFirmwareSet()
+    missing_netboot_firmware_list = []
+    firmware_version_pattern = re.compile(r'.*\.(\d+\.\d+\.\d+)')
+    for netboot_firmware in netboot_firmware_set:
+      target_path = os.path.join(netboot_dir, netboot_firmware)
+
+      if os.path.exists(target_path):
+        full_version = get_version.GetFirmwareBinaryVersion(target_path)
+        match = firmware_version_pattern.search(full_version)
+        version = match.group(1) if match else None
+        if self.netboot_firmware_source == version:
+          logging.info('The cached %r is version %r.', netboot_firmware,
+                       version)
+          continue
+        logging.info('The cached %r is version %r != expect version %r.',
+                     netboot_firmware, version, self.netboot_firmware_source)
+      else:
+        logging.info('%r has not been downloaded yet.', netboot_firmware)
+
+      missing_netboot_firmware_list.append(netboot_firmware)
+
+    if not missing_netboot_firmware_list:
+      # Skip download if there is no missing files.
       return
+
+    with self._DownloadResource(urls, resource_name,
+                                version_str) as (downloaded_path, unused_url):
+      file_utils.ExtractFile(downloaded_path, netboot_dir,
+                             only_extracts=missing_netboot_firmware_list,
+                             use_parallel=True, ignore_errors=True)
+
+  def PrepareNetboot(self):
+    """Prepares netboot resource for TFTP setup."""
+    # crrev.com/c/3406490 landed in 14489.0.0.
+    if (not self.netboot_firmware_source or self.netboot_firmware_source <
+        version_module.StrictVersion('14489.0.0')):
+      self.DownloadNetbootFromFactoryArchive()
+    else:
+      self.DownloadNetbootFromFirmwareArchive()
+    netboot_dir = os.path.join(self.bundle_dir, 'netboot')
+    netboot_backup_dir = os.path.join(self.bundle_dir, 'netboot_backup')
 
     # Try same convention that sys-boot/chromeos-bootimage is doing:
     # bootfile=${PORTAGE_USERNAME}/${BOARD_USE}/vmlinuz
@@ -827,11 +934,11 @@ class FinalizeBundle:
         glob.glob(os.path.join(netboot_dir, 'image*.net.bin')))
     useful_images = netboot_firmware_images
     if self.is_boxster_project:
-      useful_images = useful_images & set(
-          [os.path.join(netboot_dir, 'image.net.bin')] + [
-              os.path.join(netboot_dir, 'image-%s.net.bin' % design)
-              for design in self.designs
-          ])
+      netboot_firmware_set = self.GetNetbootFirmwareSet()
+      useful_images = useful_images & {
+          os.path.join(netboot_dir, netboot_firmware)
+          for netboot_firmware in netboot_firmware_set
+      }
     not_useful_images = netboot_firmware_images - useful_images
     if not_useful_images:
       file_utils.TryMakeDirs(netboot_backup_dir)
