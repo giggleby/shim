@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-06-01 16:24+CST\n"
+"PO-Revision-Date: 2022-06-10 15:29+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3565,6 +3565,22 @@ msgstr "后相机组装和扫描QR码"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Rear Camera LED"
 msgstr "后相机 LED"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Unload Driver"
+msgstr "卸载驱动程序"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Recovery Button"
+msgstr "恢复按钮"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Load Driver"
+msgstr "加载驱动程序"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Recovery Button Group"
+msgstr "恢复按钮群组"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "SD Performance"
