@@ -422,20 +422,32 @@ class FinalizeBundle:
       search_dir: the directory under self.bundle_dir to search.
 
     Returns:
-      Path to the resource if its version matches, otherwise returns None.
+      Path to the resource if its version matches. None if no signed shim
+      exists.
     """
     resource_name = 'signed factory shim'
     abs_search_dir = os.path.join(self.bundle_dir, search_dir)
 
     logging.info('Searching %s in %s', resource_name, search_dir)
-    for signed_factory_shim in glob.glob(os.path.join(
-        abs_search_dir, 'chromeos_*_factory*.bin')):
+    found_entries = glob.glob(
+        os.path.join(abs_search_dir, 'chromeos_*_factory*.bin'))
+    len_found_entries = len(found_entries)
+
+    if len_found_entries == 1:
+      resource_path = found_entries[0]
       pattern = 'chromeos_(.*)_{board}_factory'.format(board=self.board)
-      version_match = re.search(pattern, signed_factory_shim)
+      version_match = re.search(pattern, resource_path)
       if version_match and version_match.group(1) == resource_source:
         logging.info('A local copy of %s is found at %r', resource_name,
-                     signed_factory_shim)
-        return signed_factory_shim
+                     resource_path)
+        return resource_path
+      raise FinalizeBundleException(
+          'Requested %s version is %r but found a local one with different '
+          'version at %r' % (resource_name, resource_source, resource_path))
+    if len_found_entries > 1:
+      raise FinalizeBundleException(
+          'There should be only one %s in %r but found multiple: %r' %
+          (resource_name, abs_search_dir, found_entries))
 
     return None
 
@@ -1343,14 +1355,13 @@ class FinalizeBundle:
         logging.info('Moving %r to %r', downloaded_path, dst_path)
         file_utils.TryMakeDirs(target_dir)
         shutil.move(downloaded_path, dst_path)
+      return dst_path
     except FinalizeBundleException as e:
       # If the signed factory shim isn't found, there is still an unsigned
       # factory shim extracted from the factory.zip.  So ignore this exception
       # here.
       logging.info(e)
-
-    return self._LocateSignedFactoryShim(
-        requested_version, FACTORY_SHIM_SEARCH_DIR)
+      return None
 
   @staticmethod
   def _ListAllFilesIn(search_dirs):
