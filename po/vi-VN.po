@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-02-17 14:17+CST\n"
+"PO-Revision-Date: 2022-06-10 15:29+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3629,6 +3629,22 @@ msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Rear Camera LED"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Unload Driver"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Recovery Button"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Load Driver"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Recovery Button Group"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json

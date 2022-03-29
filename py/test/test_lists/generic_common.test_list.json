@@ -774,6 +774,33 @@
         "timeout_secs": 2000
       }
     },
+    "RecoveryButtonGroup": {
+      "label": "Recovery Button Group",
+      "subtests": [
+        {
+          "pytest_name": "exec_shell",
+          "label": "Unload Driver",
+          "args": {
+            "commands": "echo GOOG0007:00 > /sys/bus/platform/drivers/cros-ec-keyb/unbind || true"
+          }
+        },
+        {
+          "inherit": "Button",
+          "label": "Recovery Button",
+          "args": {
+            "button_key_name": "ectool:-H1_EC_RECOVERY_BTN_ODL",
+            "button_name": "i18n! Recovery Button"
+          }
+        },
+        {
+          "pytest_name": "exec_shell",
+          "label": "Load Driver",
+          "args": {
+            "commands": "sleep 3 && echo GOOG0007:00 > /sys/bus/platform/drivers/cros-ec-keyb/bind || true"
+          }
+        }
+      ]
+    },
     "RemovableStorage": {
       "pytest_name": "removable_storage",
       "args": {
