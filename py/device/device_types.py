@@ -246,7 +246,7 @@ class DeviceInterface(sys_interface.SystemInterface):
 
   @DeviceProperty
   def i2c(self):
-    """Module for accessing to peripheral devices on I2C bus."""
+    """Module for accessing to target devices on I2C bus."""
     raise NotImplementedError
 
   @DeviceProperty
