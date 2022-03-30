@@ -10,6 +10,7 @@ import os
 import time
 from typing import List, Optional, Tuple
 
+from google.cloud import logging as gc_logging  # pylint: disable=import-error,no-name-in-module
 from google.protobuf import text_format
 import yaml
 
@@ -201,6 +202,9 @@ class EasyBundleCreationWorker:
 
 
 if __name__ == '__main__':
-  logging.basicConfig(level=logging.INFO)
+  if config.ENV_TYPE == 'local':
+    logging.basicConfig(level=logging.INFO)
+  else:
+    gc_logging.Client().setup_logging(log_level=logging.INFO)
   worker = EasyBundleCreationWorker()
   worker.MainLoop()

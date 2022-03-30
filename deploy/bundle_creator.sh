@@ -56,6 +56,11 @@ download_remote_toolkit() {
 
 build_docker() {
   load_config_by_deployment_type "$1"
+  local env_type="$2"
+  if [ -z "${env_type}" ]; then
+    env_type="$1"
+  fi
+
   local temp_dir
   temp_dir="$(mktemp -d)"
   if [ ! -d "${temp_dir}" ]; then
@@ -77,6 +82,7 @@ build_docker() {
     BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
     PUBSUB_SUBSCRIPTION="${PUBSUB_SUBSCRIPTION}" \
     HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
+    ENV_TYPE="${env_type}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > "${temp_dir}/docker/config.py"
 
   protoc -I "${SOURCE_DIR}/proto/" --python_out "${temp_dir}/proto" \
@@ -231,7 +237,7 @@ run_docker() {
   # Delete the existing vm instance on the corresponding cloud project to
   # prevent processing a request twice.
   try_delete_existing_vm
-  build_docker "$1"
+  build_docker "$1" "local"
 
   # Bind the personal gcloud credentials to the docker container so that the
   # worker can use the credentials to access gcloud services.
