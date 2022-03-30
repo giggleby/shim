@@ -1425,7 +1425,9 @@ class FinalizeBundle:
 
 
 if __name__ == '__main__':
-  logging.basicConfig(level=logging.INFO)
+  log_format = (
+      '[%(levelname)s] %(asctime)s %(filename)s:%(lineno)d %(message)s')
+  logging.basicConfig(level=logging.INFO, format=log_format)
   try:
     FinalizeBundle.FromArgs().Main()
   except Exception:
