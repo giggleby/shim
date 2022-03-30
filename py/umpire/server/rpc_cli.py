@@ -247,18 +247,19 @@ class CLICommand(umpire_rpc.UmpireRPC):
     return self.daemon.StopServices(services)
 
   @umpire_rpc.RPCCall
-  def UpdateParameterComponent(self, comp_id, dir_id, comp_name, using_ver,
-                               file_path=None):
-    return self.env.parameters.UpdateParameterComponent(
+  def UpdateFactoryDriveComponent(self, comp_id, dir_id, comp_name, using_ver,
+                                  file_path=None):
+    return self.env.factory_drives.UpdateFactoryDriveComponent(
         comp_id, dir_id, comp_name, using_ver, file_path)
 
   @umpire_rpc.RPCCall
-  def GetParameterInfo(self):
-    return self.env.parameters.GetParameterInfo()
+  def GetFactoryDriveInfo(self):
+    return self.env.factory_drives.GetFactoryDriveInfo()
 
   @umpire_rpc.RPCCall
-  def UpdateParameterDirectory(self, dir_id, parent_id, name):
-    return self.env.parameters.UpdateParameterDirectory(dir_id, parent_id, name)
+  def UpdateFactoryDriveDirectory(self, dir_id, parent_id, name):
+    return self.env.factory_drives.UpdateFactoryDriveDirectory(
+        dir_id, parent_id, name)
 
   @umpire_rpc.RPCCall
   def GetActivePayload(self):

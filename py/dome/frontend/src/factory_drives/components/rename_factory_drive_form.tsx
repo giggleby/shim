@@ -23,8 +23,8 @@ import ReduxFormTextField from '@common/components/redux_form_text_field';
 import {HiddenSubmitButton} from '@common/form';
 import {DispatchProps} from '@common/types';
 
-import {startRenameParameter} from '../actions';
-import {RENAME_PARAMETER_FORM} from '../constants';
+import {startRenameFactoryDrive} from '../actions';
+import {RENAME_FACTORY_DRIVE_FORM} from '../constants';
 import {RenameRequest} from '../types';
 
 const InnerFormComponent: React.SFC<InjectedFormProps<RenameRequest>> =
@@ -40,16 +40,16 @@ const InnerFormComponent: React.SFC<InjectedFormProps<RenameRequest>> =
   );
 
 const InnerForm = reduxForm<RenameRequest>({
-  form: RENAME_PARAMETER_FORM,
+  form: RENAME_FACTORY_DRIVE_FORM,
 })(InnerFormComponent);
 
-type RenameParameterFormProps =
+type RenameFactoryDriveFormProps =
   ReturnType<typeof mapStateToProps> &
   DispatchProps<typeof mapDispatchToProps>;
 
-class RenameParameterForm extends React.Component<RenameParameterFormProps> {
+class RenameFactoryDriveForm extends React.Component<RenameFactoryDriveFormProps> {
   render() {
-    const {open, cancelRename, renameParameter, submitForm} = this.props;
+    const {open, cancelRename, renameFactoryDrive, submitForm} = this.props;
     const payload = this.props.payload as RenameRequest;
     const initialValues = {
       id: payload.id,
@@ -57,10 +57,10 @@ class RenameParameterForm extends React.Component<RenameParameterFormProps> {
     };
     return (
       <Dialog open={open} onClose={cancelRename}>
-        <DialogTitle>Rename Parameter</DialogTitle>
+        <DialogTitle>Rename Factory Drive</DialogTitle>
         <DialogContent>
           <InnerForm
-            onSubmit={renameParameter}
+            onSubmit={renameFactoryDrive}
             initialValues={initialValues}
           />
         </DialogContent>
@@ -74,9 +74,9 @@ class RenameParameterForm extends React.Component<RenameParameterFormProps> {
 }
 
 const isFormVisible =
-  formDialog.selectors.isFormVisibleFactory(RENAME_PARAMETER_FORM);
+  formDialog.selectors.isFormVisibleFactory(RENAME_FACTORY_DRIVE_FORM);
 const getFormPayload =
-  formDialog.selectors.getFormPayloadFactory(RENAME_PARAMETER_FORM);
+  formDialog.selectors.getFormPayloadFactory(RENAME_FACTORY_DRIVE_FORM);
 
 const mapStateToProps = (state: RootState) => ({
   open: isFormVisible(state),
@@ -85,10 +85,10 @@ const mapStateToProps = (state: RootState) => ({
 });
 
 const mapDispatchToProps = {
-  submitForm: () => submit(RENAME_PARAMETER_FORM),
-  cancelRename: () => formDialog.actions.closeForm(RENAME_PARAMETER_FORM),
-  renameParameter: startRenameParameter,
+  submitForm: () => submit(RENAME_FACTORY_DRIVE_FORM),
+  cancelRename: () => formDialog.actions.closeForm(RENAME_FACTORY_DRIVE_FORM),
+  renameFactoryDrive: startRenameFactoryDrive,
 };
 
 export default connect(
-  mapStateToProps, mapDispatchToProps)(RenameParameterForm);
+  mapStateToProps, mapDispatchToProps)(RenameFactoryDriveForm);

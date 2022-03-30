@@ -1,12 +1,11 @@
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-"""Retrieve parameter files from factory server.
+"""Retrieve factory drive files from factory server.
 
 Description
 -----------
-This pytest retrieves files uploaded to parameter space on factory server.
+This pytest retrieves files uploaded to factory drive space on factory server.
 Pytests with freuquenly modified config files can use this test to download
 latest configs before running tests.
 
@@ -39,7 +38,7 @@ The JSON config with main pytest can be::
   {
     "subtests": [
       {
-        "pytest_name": "retrieve_parameter",
+        "pytest_name": "download_from_factory_drive",
         "args": {
           "source_namespace": "/graphyte",
           "source_file": "testplan.csv",
@@ -60,7 +59,7 @@ The JSON config with main pytest can be::
   {
     "subtests": [
       {
-        "pytest_name": "retrieve_parameter",
+        "pytest_name": "download_from_factory_drive",
         "args": {
           "source_namespace": "/dut1/vswr",
           "destination_namespace": "/usr/local/factory/py/test/pytests/vswr"
@@ -89,18 +88,14 @@ class RetrieveParameterError(Exception):
 class RetrieveParameter(test_case.TestCase):
 
   ARGS = [
-      Arg('source_namespace',
-          str,
-          'The path to retrieve parameter files.',
+      Arg('source_namespace', str, 'The path to retrieve parameter files.',
           default='/'),
-      Arg('source_file',
-          str, 'Target parameter file name; '
+      Arg(
+          'source_file', str, 'Target parameter file name; '
           '``None`` if targeting all files under given namespace.',
           default=None),
-      Arg('destination_namespace',
-          str,
-          'The path on DUT to save parameter files to.',
-          default='/tmp'),
+      Arg('destination_namespace', str,
+          'The path on DUT to save parameter files to.', default='/tmp'),
   ]
 
   def setUp(self):
@@ -120,8 +115,8 @@ class RetrieveParameter(test_case.TestCase):
 
     self._frontend_proxy.DisplayStatus('Try downloading files...')
     try:
-      content = self._server.GetParameters(self.args.source_namespace,
-                                           self.args.source_file).data
+      content = self._server.GetFactoryDrives(self.args.source_namespace,
+                                              self.args.source_file).data
     except Exception:
       logging.exception('Retrieve Parameter')
       self._handleError('Namespace or file not found')

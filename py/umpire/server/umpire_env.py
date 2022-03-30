@@ -16,7 +16,7 @@ import tempfile
 import urllib.parse
 
 from cros.factory.umpire import common
-from cros.factory.umpire.server.commands import parameters
+from cros.factory.umpire.server.commands import factory_drives
 from cros.factory.umpire.server import config
 from cros.factory.umpire.server import resource
 from cros.factory.umpire.server import utils
@@ -37,13 +37,13 @@ DEFAULT_BASE_DIR = os.path.join('var', 'db', 'factory', 'umpire')
 DEFAULT_SERVER_DIR = os.path.join('usr', 'local', 'factory')
 
 SESSION_JSON_FILE = 'session.json'
-PARAMETER_JSON_FILE = 'parameters.json'
+FACTORY_DRIVE_JSON_FILE = 'factory_drives.json'
 
 # File name under base_dir
 _ACTIVE_UMPIRE_CONFIG = 'active_umpire.json'
 _UMPIRE_DATA_DIR = 'umpire_data'
 _RESOURCES_DIR = 'resources'
-_PARAMETERS_DIR = 'parameters'
+_FACTORY_DRIVES_DIR = 'factory_drives'
 _CONFIG_DIR = 'conf'
 _LOG_DIR = 'log'
 _PID_DIR = 'run'
@@ -90,8 +90,8 @@ class UmpireEnv:
     return os.path.join(self.base_dir, _RESOURCES_DIR)
 
   @property
-  def parameters_dir(self):
-    return os.path.join(self.base_dir, _PARAMETERS_DIR)
+  def factory_drives_dir(self):
+    return os.path.join(self.base_dir, _FACTORY_DRIVES_DIR)
 
   @property
   def config_dir(self):
@@ -118,8 +118,8 @@ class UmpireEnv:
     return os.path.join(self.base_dir, _ACTIVE_UMPIRE_CONFIG)
 
   @property
-  def parameter_json_file(self):
-    return os.path.join(self.parameters_dir, PARAMETER_JSON_FILE)
+  def factory_drive_json_file(self):
+    return os.path.join(self.factory_drives_dir, FACTORY_DRIVE_JSON_FILE)
 
   @property
   def umpire_base_port(self):
@@ -209,8 +209,8 @@ class UmpireEnv:
     return int(os.environ.get(PROJECT_PORT_ENV_KEY))
 
   @type_utils.LazyProperty
-  def parameters(self):
-    return parameters.Parameters(self)
+  def factory_drives(self):
+    return factory_drives.FactoryDrives(self)
 
   def LoadConfig(self, custom_path=None, validate=True):
     """Loads Umpire config file and validates it.
@@ -432,8 +432,9 @@ class UmpireEnvForTest(UmpireEnv):
         self.pid_dir,
         self.resources_dir,
         self.temp_dir,
-        self.parameters_dir,
-        self.umpire_data_dir):
+        self.factory_drives_dir,
+        self.umpire_data_dir,
+    ):
       os.makedirs(fundamental_subdir)
     self.AddConfigFromBlob('{}', resource.ConfigTypeNames.payload_config)
 

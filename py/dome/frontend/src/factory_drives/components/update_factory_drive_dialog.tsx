@@ -15,17 +15,17 @@ import FileUploadDialog, {
 } from '@common/components/file_upload_dialog';
 import {DispatchProps} from '@common/types';
 
-import {startUpdateParameter} from '../actions';
-import {UPDATE_PARAMETER_FORM} from '../constants';
-import {UpdateParameterFormPayload} from '../types';
+import {startUpdateFactoryDrive} from '../actions';
+import {UPDATE_FACTORY_DRIVE_FORM} from '../constants';
+import {UpdateFactoryDriveFormPayload} from '../types';
 
-import UpdateParameterForm from './update_parameter_form';
+import UpdateFactoryDriveForm from './update_factory_drive_form';
 
-type UpdateParameterDialogProps =
+type UpdateFactoryDriveDialogProps =
   ReturnType<typeof mapStateToProps> & DispatchProps<typeof mapDispatchToProps>;
 
-class UpdateParameterDialog extends React.Component<
-  UpdateParameterDialogProps> {
+class UpdateFactoryDriveDialog extends React.Component<
+  UpdateFactoryDriveDialogProps> {
 
   handleCancel = () => {
     this.props.cancelUpdate();
@@ -37,7 +37,7 @@ class UpdateParameterDialog extends React.Component<
       startUpdate,
       payload,
     } = this.props;
-    const thisPayload = payload as UpdateParameterFormPayload;
+    const thisPayload = payload as UpdateFactoryDriveFormPayload;
     const data = {
       project,
       id: thisPayload.id,
@@ -56,7 +56,7 @@ class UpdateParameterDialog extends React.Component<
       startUpdate,
       payload,
     } = this.props;
-    const thisPayload = payload as UpdateParameterFormPayload;
+    const thisPayload = payload as UpdateFactoryDriveFormPayload;
     const data = {
       project,
       id: thisPayload.id,
@@ -69,28 +69,28 @@ class UpdateParameterDialog extends React.Component<
 
   render() {
     const {open, submitForm, payload} = this.props;
-    const {multiple} = payload as UpdateParameterFormPayload;
+    const {multiple} = payload as UpdateFactoryDriveFormPayload;
     const selectProps: SelectProps =
       multiple ? {multiple, onSubmit: this.handleSubmitMultiple} :
         {multiple, onSubmit: this.handleSubmitOne};
     return (
       <FileUploadDialog
         open={open}
-        title="Update Parameter"
+        title="Update Factory Drive"
         onCancel={this.handleCancel}
         submitForm={submitForm}
         {...selectProps}
       >
-        <UpdateParameterForm />
+        <UpdateFactoryDriveForm />
       </FileUploadDialog>
     );
   }
 }
 
 const isFormVisible =
-  formDialog.selectors.isFormVisibleFactory(UPDATE_PARAMETER_FORM);
+  formDialog.selectors.isFormVisibleFactory(UPDATE_FACTORY_DRIVE_FORM);
 const getFormPayload =
-  formDialog.selectors.getFormPayloadFactory(UPDATE_PARAMETER_FORM);
+  formDialog.selectors.getFormPayloadFactory(UPDATE_FACTORY_DRIVE_FORM);
 
 const mapStateToProps = (state: RootState) => ({
   open: isFormVisible(state),
@@ -99,10 +99,10 @@ const mapStateToProps = (state: RootState) => ({
 });
 
 const mapDispatchToProps = {
-  startUpdate: startUpdateParameter,
-  cancelUpdate: () => formDialog.actions.closeForm(UPDATE_PARAMETER_FORM),
-  submitForm: () => submit(UPDATE_PARAMETER_FORM),
+  startUpdate: startUpdateFactoryDrive,
+  cancelUpdate: () => formDialog.actions.closeForm(UPDATE_FACTORY_DRIVE_FORM),
+  submitForm: () => submit(UPDATE_FACTORY_DRIVE_FORM),
 };
 
 export default connect(
-  mapStateToProps, mapDispatchToProps)(UpdateParameterDialog);
+  mapStateToProps, mapDispatchToProps)(UpdateFactoryDriveDialog);

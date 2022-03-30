@@ -20,8 +20,8 @@ import BundlesApp from '@app/bundle/components/bundles_app';
 import ConfigApp from '@app/config/components/config_app';
 import DashboardApp from '@app/dashboard/components/dashboard_app';
 import ErrorDialog from '@app/error/components/error_dialog';
+import FactoryDriveApp from '@app/factory_drives/components/factory_drive_app';
 import LogApp from '@app/log/components/log_app';
-import ParameterApp from '@app/parameters/components/parameter_app';
 import ProjectsApp from '@app/project/components/projects_app';
 import SyncStatusApp from '@app/sync_status/components/sync_status_app';
 import TaskList from '@app/task/components/task_list';
@@ -131,8 +131,8 @@ To visit Dome, please use Chrome/Chromium to avoid unnecessary issues.`);
       app = <DashboardApp />;
     } else if (appName === 'BUNDLES_APP') {
       app = <BundlesApp overlay={this.overlayRef.current} />;
-    } else if (appName === 'PARAMETER_APP') {
-      app = <ParameterApp />;
+    } else if (appName === 'FACTORY_DRIVE_APP') {
+      app = <FactoryDriveApp />;
     } else if (appName === 'LOG_APP') {
       app = <LogApp />;
     } else if (appName === 'SYNC_STATUS_APP') {

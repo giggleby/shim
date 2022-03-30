@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-export interface UpdateParameterRequest {
+export interface UpdateFactoryDriveRequest {
   project: string;
   id: number | null;
   dirId: number | null;
@@ -10,14 +10,14 @@ export interface UpdateParameterRequest {
   file: File;
 }
 
-export interface UpdateParameterFormPayload {
+export interface UpdateFactoryDriveFormPayload {
   id: number | null;
   dirId: number | null;
   name: string;
   multiple: boolean;
 }
 
-export interface UpdateParameterVersionRequest {
+export interface UpdateFactoryDriveVersionRequest {
   id: number;
   name: string;
   usingVer: number;
@@ -28,7 +28,7 @@ export interface RenameRequest {
   name: string;
 }
 
-export interface Parameter {
+export interface FactoryDrive {
   id: number;
   dirId: number | null;
   name: string;
@@ -36,7 +36,7 @@ export interface Parameter {
   revisions: string[];
 }
 
-export interface ParameterDirectory {
+export interface FactoryDriveDirectory {
   id: number;
   parentId: number | null;
   name: string;

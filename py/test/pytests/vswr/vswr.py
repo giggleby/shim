@@ -80,19 +80,21 @@ LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 class VSWR(test_case.TestCase):
   """A test for antennas using Agilent E5017C Network Analyzer (ENA)."""
   ARGS = [
-      Arg('event_log_name', str, 'Name of the event_log, like '
+      Arg(
+          'event_log_name', str, 'Name of the event_log, like '
           '"vswr_prepressed" or "vswr_postpressed".'),
-      Arg('config_path', str, 'Configuration path relative to the root of '
+      Arg(
+          'config_path', str, 'Configuration path relative to the root of '
           'pytest vswr folder. E.g. path/to/config_file_name. Can use '
-          '``retrieve_parameter`` pytest for downloading latest config files.',
-          default=None),
+          '``download_from_factory_drive`` pytest for downloading latest '
+          'config files.', default=None),
       Arg('timezone', str, 'Timezone of shopfloor.', default='Asia/Taipei'),
-      Arg('serial_number_key', str, 'The key referring to the serial number in '
+      Arg(
+          'serial_number_key', str, 'The key referring to the serial number in '
           'question. This key will be used to retrieve the serial number from '
           'the shared data. Default key is `serial_number`.',
           default='serial_number'),
-      Arg('keep_raw_logs', bool,
-          'Whether to attach the log by Testlog',
+      Arg('keep_raw_logs', bool, 'Whether to attach the log by Testlog',
           default=True)
   ]
 

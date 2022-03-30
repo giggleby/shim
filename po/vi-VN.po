@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-04-12 18:09+CST\n"
+"PO-Revision-Date: 2022-04-14 05:08+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -186,6 +186,10 @@ msgstr "Hiển thị hình ảnh"
 #: ../build/pytests_label_generated.json
 msgid "Display Point"
 msgstr "Các điểm hiển thị"
+
+#: ../build/pytests_label_generated.json
+msgid "Download From Factory Drive"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "DSM Calibration"
@@ -416,10 +420,6 @@ msgstr "Thiết bị lưu trữ di động"
 #: ../build/pytests_label_generated.json
 msgid "Retrieve Config"
 msgstr "Tải cài đặt"
-
-#: ../build/pytests_label_generated.json
-msgid "Retrieve Parameter"
-msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "RF Graphyte"

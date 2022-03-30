@@ -926,7 +926,7 @@ class Service:
     return project.UploadAndDeployConfig(config)
 
 
-class ParameterDirectory:
+class FactoryDriveDirectory:
 
   def __init__(self, id, parent_id, name):
     # pylint: disable=redefined-builtin
@@ -938,17 +938,17 @@ class ParameterDirectory:
   def CreateOne(project_name, id, parent_id, name):
     # pylint: disable=redefined-builtin
     umpire_server = GetUmpireServer(project_name)
-    directory = umpire_server.UpdateParameterDirectory(id, parent_id, name)
-    return ParameterDirectory(**directory)
+    directory = umpire_server.UpdateFactoryDriveDirectory(id, parent_id, name)
+    return FactoryDriveDirectory(**directory)
 
   @staticmethod
   def ListAll(project_name):
     umpire_server = GetUmpireServer(project_name)
-    parameters = umpire_server.GetParameterInfo()
-    return [ParameterDirectory(**p) for p in parameters['dirs']]
+    factory_drives = umpire_server.GetFactoryDriveInfo()
+    return [FactoryDriveDirectory(**p) for p in factory_drives['dirs']]
 
 
-class ParameterComponent:
+class FactoryDriveComponent:
 
   def __init__(self, id, dir_id, name, using_ver, revisions):
     # pylint: disable=redefined-builtin
@@ -966,12 +966,12 @@ class ParameterComponent:
       component = None
       if file_id:
         with UploadedFile(file_id) as file_path:
-          component = umpire_server.UpdateParameterComponent(
+          component = umpire_server.UpdateFactoryDriveComponent(
               id, dir_id, name, using_ver, file_path)
       else:
-        component = umpire_server.UpdateParameterComponent(
+        component = umpire_server.UpdateFactoryDriveComponent(
             id, dir_id, name, using_ver)
-      return ParameterComponent(**component)
+      return FactoryDriveComponent(**component)
     except xmlrpc.client.Fault as e:
       raise DomeServerException(detail=e.faultString)
     return None
@@ -979,8 +979,8 @@ class ParameterComponent:
   @staticmethod
   def ListAll(project_name):
     umpire_server = GetUmpireServer(project_name)
-    parameters = umpire_server.GetParameterInfo()
-    return [ParameterComponent(**p) for p in parameters['files']]
+    factory_drives = umpire_server.GetFactoryDriveInfo()
+    return [FactoryDriveComponent(**p) for p in factory_drives['files']]
 
 
 class Log:

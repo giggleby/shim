@@ -7,7 +7,7 @@ export type AppName =
   'BUNDLES_APP' |
   'CONFIG_APP' |
   'DASHBOARD_APP' |
-  'PARAMETER_APP' |
+  'FACTORY_DRIVE_APP' |
   'LOG_APP' |
   'SYNC_STATUS_APP';
 

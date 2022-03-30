@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-04-12 18:09+CST\n"
+"PO-Revision-Date: 2022-04-14 05:08+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -186,6 +186,10 @@ msgstr "显示图像"
 #: ../build/pytests_label_generated.json
 msgid "Display Point"
 msgstr "显示点"
+
+#: ../build/pytests_label_generated.json
+msgid "Download From Factory Drive"
+msgstr "从云端硬盘下载档案"
 
 #: ../build/pytests_label_generated.json
 msgid "DSM Calibration"
@@ -416,10 +420,6 @@ msgstr "可移除储存装置"
 #: ../build/pytests_label_generated.json
 msgid "Retrieve Config"
 msgstr "载入设定"
-
-#: ../build/pytests_label_generated.json
-msgid "Retrieve Parameter"
-msgstr "下载档案"
 
 #: ../build/pytests_label_generated.json
 msgid "RF Graphyte"

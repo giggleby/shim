@@ -56,7 +56,7 @@ class DownloadSlotsManager:
     # be configured from DOME by users.
     self.max_slots_num = _SLOTS_NUMBER
 
-  def _CheckRequestParameters(self, identity, drop_slot):
+  def _CheckRequestFactoryDrives(self, identity, drop_slot):
     if identity:
       if identity not in self.slots and identity not in self.wait_queue:
         logging.error('Identity - %s is shown but is unknown.', identity)
@@ -123,7 +123,7 @@ class DownloadSlotsManager:
     drop_slot = 'drop_slot' in dut_info
 
     # do error handling first.
-    if not self._CheckRequestParameters(identity, drop_slot):
+    if not self._CheckRequestFactoryDrives(identity, drop_slot):
       return None
 
     # start to process the request.

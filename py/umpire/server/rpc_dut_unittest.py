@@ -95,13 +95,13 @@ class DUTRPCTest(unittest.TestCase):
     d.addCallback(CheckTime)
     return d
 
-  def testListParameters(self):
+  def testListFactoryDrives(self):
     def CheckList(result):
       logging.debug('list parameters = %s', str(result))
       self.assertEqual(result, [])
       return result
 
-    d = self.Call('ListParameters', 'parameters_*')
+    d = self.Call('ListFactoryDrives', 'parameters_*')
     d.addCallback(CheckList)
     return d
 

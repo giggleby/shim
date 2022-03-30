@@ -10,22 +10,22 @@ import os
 from backend import common
 from backend.models import Bundle
 from backend.models import DomeConfig
+from backend.models import FactoryDriveComponent
+from backend.models import FactoryDriveDirectory
 from backend.models import GetUmpireSyncStatus
 from backend.models import Log
-from backend.models import ParameterComponent
-from backend.models import ParameterDirectory
 from backend.models import Project
 from backend.models import Resource
 from backend.models import Service
 from backend.models import TemporaryUploadedFile
 from backend.serializers import BundleSerializer
 from backend.serializers import ConfigSerializer
+from backend.serializers import FactoryDriveComponentSerializer
+from backend.serializers import FactoryDriveDirectorySerializer
 from backend.serializers import LogDeleteSerializer
 from backend.serializers import LogDownloadSerializer
 from backend.serializers import LogFileDeleteSerializer
 from backend.serializers import LogSerializer
-from backend.serializers import ParameterComponentSerializer
-from backend.serializers import ParameterDirectorySerializer
 from backend.serializers import ProjectPortSerializer
 from backend.serializers import ProjectSerializer
 from backend.serializers import ResourceSerializer
@@ -252,23 +252,24 @@ class ResourceGarbageCollectionView(views.APIView):
     del request, args  # unused
     return Response(Resource.GarbageCollection(kwargs['project_name']))
 
-class ParameterComponentsView(generics.ListCreateAPIView):
 
-  serializer_class = ParameterComponentSerializer
+class FactoryDriveComponentsView(generics.ListCreateAPIView):
+
+  serializer_class = FactoryDriveComponentSerializer
 
   def get_queryset(self):
-    return ParameterComponent.ListAll(self.kwargs['project_name'])
+    return FactoryDriveComponent.ListAll(self.kwargs['project_name'])
 
   def perform_create(self, serializer):
     serializer.save(project_name=self.kwargs['project_name'])
 
 
-class ParameterDirectoriesView(generics.ListCreateAPIView):
+class FactoryDriveDirectoriesView(generics.ListCreateAPIView):
 
-  serializer_class = ParameterDirectorySerializer
+  serializer_class = FactoryDriveDirectorySerializer
 
   def get_queryset(self):
-    return ParameterDirectory.ListAll(self.kwargs['project_name'])
+    return FactoryDriveDirectory.ListAll(self.kwargs['project_name'])
 
   def perform_create(self, serializer):
     serializer.save(project_name=self.kwargs['project_name'])

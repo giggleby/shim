@@ -171,7 +171,7 @@ class UmpireDaemon:
 
     Args:
       restart_all: restarts all services, even if previous one was started
-                   with same parameters.
+                   with same factory drives.
 
     Returns:
       Deferred object that relays success or failure. Caller should take

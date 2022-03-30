@@ -33,9 +33,9 @@ def ValidateConfig(config):
   """Validates Umpire config dict.
 
   ValidateConfig() imports service modules. Validates configuration schema
-  and service parameters.
+  and service factory drives.
 
-  Parameter:
+  Args:
     config: Umpire config dict.
 
   Raises:

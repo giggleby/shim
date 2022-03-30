@@ -35,17 +35,17 @@ import {RootState} from '@app/types';
 import {thinScrollBarX} from '@common/styles';
 import {DispatchProps} from '@common/types';
 
-import {fetchParameters, startUpdateComponentVersion} from '../actions';
+import {fetchFactoryDrives, startUpdateComponentVersion} from '../actions';
 import {
   RENAME_DIRECTORY_FORM,
-  RENAME_PARAMETER_FORM,
-  UPDATE_PARAMETER_FORM,
+  RENAME_FACTORY_DRIVE_FORM,
+  UPDATE_FACTORY_DRIVE_FORM,
 } from '../constants';
-import {getParameterDirs, getParameters} from '../selector';
-import {Parameter} from '../types';
+import {getFactoryDriveDirs, getFactoryDrives} from '../selector';
+import {FactoryDrive} from '../types';
 
 import RenameDirectoryForm from './rename_directory_form';
-import RenameParameterForm from './rename_parameter_form';
+import RenameFactoryDriveForm from './rename_factory_drive_form';
 
 const styles = (theme: Theme) => createStyles({
   directoryTable: {
@@ -96,23 +96,23 @@ const styles = (theme: Theme) => createStyles({
   },
 });
 
-interface ParameterListState {
+interface FactoryDriveListState {
   openedComponentId: number | null;
 }
 
-interface ParameterListOwnProps {
+interface FactoryDriveListOwnProps {
   currentDirId: number | null;
   dirClicked: (id: number | null) => any;
 }
 
-type ParameterListProps =
-  ParameterListOwnProps &
+type FactoryDriveListProps =
+  FactoryDriveListOwnProps &
   WithStyles<typeof styles> &
   ReturnType<typeof mapStateToProps> &
   DispatchProps<typeof mapDispatchToProps>;
 
-class ParameterList extends
-  React.Component<ParameterListProps, ParameterListState> {
+class FactoryDriveList extends
+  React.Component<FactoryDriveListProps, FactoryDriveListState> {
 
   state = {openedComponentId: null};
 
@@ -124,7 +124,7 @@ class ParameterList extends
     if (dirId == null) {
       return;
     }
-    this.handleClickDir(this.props.parameterDirs[dirId].parentId);
+    this.handleClickDir(this.props.factoryDriveDirs[dirId].parentId);
   }
 
   handleClickVersion = (compId: number) => {
@@ -135,29 +135,29 @@ class ParameterList extends
     this.setState({openedComponentId: null});
   }
 
-  handleRenameParameter = (compId: number) => {
-    this.props.renameParameter(compId, this.props.parameters[compId].name);
+  handleRenameFactoryDrive = (compId: number) => {
+    this.props.renameFactoryDrive(compId, this.props.factoryDrives[compId].name);
   }
 
   handleRenameDirectory = (dirId: number) => {
-    this.props.renameDirectory(dirId, this.props.parameterDirs[dirId].name);
+    this.props.renameDirectory(dirId, this.props.factoryDriveDirs[dirId].name);
   }
 
   componentDidMount() {
-    this.props.fetchParameters();
+    this.props.fetchFactoryDrives();
   }
 
   render() {
-    const {currentDirId, classes, parameters, parameterDirs} = this.props;
+    const {currentDirId, classes, factoryDrives, factoryDriveDirs} = this.props;
     const {openedComponentId} = this.state;
     const openedComponent =
-      openedComponentId == null ? null : parameters[openedComponentId];
+      openedComponentId == null ? null : factoryDrives[openedComponentId];
 
     const getPath = (dirId: number | null): string => {
       if (dirId == null) {
         return '/';
       }
-      const dir = parameterDirs[dirId];
+      const dir = factoryDriveDirs[dirId];
       return `${getPath(dir.parentId)}${dir.name}/`;
     };
     const currentPath = getPath(currentDirId);
@@ -171,23 +171,23 @@ class ParameterList extends
         <div className={classNames(classes.cell)}>
           <Typography variant="caption">actions</Typography>
         </div>
-        {parameterDirs
+        {factoryDriveDirs
           .filter((dir) => dir.parentId === currentDirId)
-          .map((parameterDir) => (
-            <React.Fragment key={parameterDir.id}>
+          .map((factoryDriveDir) => (
+            <React.Fragment key={factoryDriveDir.id}>
               <div className={classNames(classes.cell, classes.padLeft)}>
                 <Button
                   classes={{root: classes.directoryLabel}}
                   fullWidth
-                  onClick={() => this.handleClickDir(parameterDir.id)}
+                  onClick={() => this.handleClickDir(factoryDriveDir.id)}
                 >
-                  {parameterDir.name}
+                  {factoryDriveDir.name}
                 </Button>
               </div>
               <div className={classes.cell}>
                 <Tooltip title="Rename">
                   <IconButton
-                    onClick={() => this.handleRenameDirectory(parameterDir.id)}
+                    onClick={() => this.handleRenameDirectory(factoryDriveDir.id)}
                   >
                     <BorderColorIcon />
                   </IconButton>
@@ -199,24 +199,24 @@ class ParameterList extends
 
     const componentTable = (
       <div className={classes.componentTable}>
-        <RenameParameterForm />
+        <RenameFactoryDriveForm />
         <div className={classNames(classes.cell, classes.padLeft)}>
           <Typography variant="caption">name</Typography>
         </div>
         <div className={classNames(classes.cell, classes.actionColumn)}>
           <Typography variant="caption">actions</Typography>
         </div>
-        {parameters
-          .filter((parameter) => parameter.dirId === currentDirId)
-          .map((parameter) => (
-            <React.Fragment key={parameter.id}>
+        {factoryDrives
+          .filter((factoryDrive) => factoryDrive.dirId === currentDirId)
+          .map((factoryDrive) => (
+            <React.Fragment key={factoryDrive.id}>
               <div className={classNames(classes.cell, classes.padLeft)}>
-                {parameter.name}
+                {factoryDrive.name}
               </div>
               <div className={classes.cell}>
                 <Tooltip title="Rename">
                   <IconButton
-                    onClick={() => this.handleRenameParameter(parameter.id)}
+                    onClick={() => this.handleRenameFactoryDrive(factoryDrive.id)}
                   >
                     <BorderColorIcon />
                   </IconButton>
@@ -225,7 +225,7 @@ class ParameterList extends
               <div className={classes.cell}>
                 <Tooltip title="Versions">
                   <IconButton
-                    onClick={() => this.handleClickVersion(parameter.id)}
+                    onClick={() => this.handleClickVersion(factoryDrive.id)}
                   >
                     <UpdateIcon />
                   </IconButton>
@@ -235,7 +235,7 @@ class ParameterList extends
                 <Tooltip title="Update" className={classes.cell}>
                   <IconButton
                     onClick={() => this.props.updateComponent(
-                      parameter.id, parameter.dirId, parameter.name, false)}
+                      factoryDrive.id, factoryDrive.dirId, factoryDrive.name, false)}
                   >
                     <CloudUploadIcon />
                   </IconButton>
@@ -246,7 +246,7 @@ class ParameterList extends
       </div>);
 
     // TODO(pihsun): Move revision dialog into another component.
-    const revisionTable = (component: Parameter) => (
+    const revisionTable = (component: FactoryDrive) => (
       <div className={classes.revisionTable}>
         <div className={classes.cell}>
           <Typography variant="caption">ID</Typography>
@@ -340,23 +340,23 @@ class ParameterList extends
 }
 
 const mapStateToProps = (state: RootState) => ({
-  parameters: getParameters(state),
-  parameterDirs: getParameterDirs(state),
+  factoryDrives: getFactoryDrives(state),
+  factoryDriveDirs: getFactoryDriveDirs(state),
 });
 
 const mapDispatchToProps = {
-  fetchParameters,
+  fetchFactoryDrives,
   updateComponent:
     (id: number, dirId: number | null, name: string, multiple: boolean) =>
       formDialog.actions.openForm(
-        UPDATE_PARAMETER_FORM, {id, dirId, name, multiple}),
+        UPDATE_FACTORY_DRIVE_FORM, {id, dirId, name, multiple}),
   updateComponentVersion: (id: number, name: string, usingVer: number) =>
     startUpdateComponentVersion({id, name, usingVer}),
-  renameParameter: (id: number, name: string) =>
-    formDialog.actions.openForm(RENAME_PARAMETER_FORM, {id, name}),
+  renameFactoryDrive: (id: number, name: string) =>
+    formDialog.actions.openForm(RENAME_FACTORY_DRIVE_FORM, {id, name}),
   renameDirectory: (id: number, name: string) =>
     formDialog.actions.openForm(RENAME_DIRECTORY_FORM, {id, name}),
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(
-  withStyles(styles)(ParameterList));
+  withStyles(styles)(FactoryDriveList));

@@ -1,10 +1,9 @@
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+"""Action on factory drive.
 
-"""Action on parameter.
-
-See Parameters for detail.
+See FactoryDrives for detail.
 """
 
 import logging
@@ -16,14 +15,15 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
 
-class _ParameterObject:
-  """Provides operation on parameter objects.
+class _FactoryDriveObject:
+  """Provides operation on factory drive objects.
 
   Properties:
     data: including files and dirs.
-    files: parmeter component files.
-    dirs: parameter directory.
+    files: factory drive component files.
+    dirs: factory drive directory.
   """
+
   def __init__(self, data):
     self.data = data
 
@@ -73,7 +73,8 @@ class _ParameterObject:
       # rollback component to existed version
       if not 0 <= using_ver < len(component['revisions']):
         raise common.UmpireError(
-            'Intend to use invalid version of parameter %d.' % component['id'])
+            'Intend to use invalid version of factory drive %d.' %
+            component['id'])
       component['using_ver'] = using_ver
     elif rename is not None:
       # rename component
@@ -94,7 +95,7 @@ class _ParameterObject:
     return component
 
   def UpdateComponent(self, comp_id, dir_id, comp_name, using_ver, dst_path):
-    """See UmpireEnv.UpdateParameterComponent for detail"""
+    """See UmpireEnv.UpdateFactoryDriveComponent for detail"""
     if comp_id is not None:
       component = self._FindComponentById(comp_id)
       rename = comp_name if comp_name != component['name'] else None
@@ -107,8 +108,8 @@ class _ParameterObject:
     existed_comp = self._FindComponentsByName(dir_id, comp_name)
     if existed_comp:
       # create file but name existed in same dir, view as updating version
-      return self._UpdateExistingComponent(existed_comp[0], None,
-                                           using_ver, dst_path)
+      return self._UpdateExistingComponent(existed_comp[0], None, using_ver,
+                                           dst_path)
     if using_ver is not None:
       raise common.UmpireError(
           'Intend to create component but assigned using_ver.')
@@ -132,7 +133,7 @@ class _ParameterObject:
     return new_dir
 
   def UpdateDirectory(self, dir_id, parent_id, dir_name):
-    """See UmpireEnv.UpdateParameterDirectory for detail."""
+    """See UmpireEnv.UpdateFactoryDriveDirectory for detail."""
     if dir_id is not None:
       directory = self._FindDirectoryById(dir_id)
       rename = dir_name if dir_name != directory['name'] else None
@@ -160,7 +161,7 @@ class _ParameterObject:
     return current_id
 
   def GetComponentsAbsPath(self, namespace, name):
-    """See UmpireEnv.QueryParameters for detail."""
+    """See UmpireEnv.QueryFactoryDrives for detail."""
     try:
       dir_id = self._GetDirIdByNameSpace(namespace)
     except common.UmpireError:
@@ -170,38 +171,39 @@ class _ParameterObject:
     return [(f['name'], f['revisions'][f['using_ver']]) for f in fs]
 
 
-class Parameters:
-  """Wraps ParameterObject and synchronize the data to parameter_json_file.
+class FactoryDrives:
+  """Wraps FactoryDriveObject and synchronize the data to
+     factory_drive_json_file.
 
   Properties:
     env: UmpireEnv object.
   """
 
   def __init__(self, env):
-    self._parameter_json_file = env.parameter_json_file
-    self._parameters_dir = env.parameters_dir
-    self._parameter = _ParameterObject(
-        json_utils.LoadFile(self._parameter_json_file))
+    self._factory_drive_json_file = env.factory_drive_json_file
+    self._factory_drives_dir = env.factory_drives_dir
+    self._factory_drive = _FactoryDriveObject(
+        json_utils.LoadFile(self._factory_drive_json_file))
 
-  def _DumpParameter(self):
-    """Dump parameter to json file."""
-    json_utils.DumpFile(self._parameter_json_file, self._parameter.data)
+  def _DumpFactoryDrive(self):
+    """Dump factory drive to json file."""
+    json_utils.DumpFile(self._factory_drive_json_file, self._factory_drive.data)
 
-  def GetParameterDstPath(self, src_path):
+  def GetFactoryDriveDstPath(self, src_path):
     """Prepend file MD5 sum to file path"""
     original_filename = os.path.basename(src_path)
     md5sum = file_utils.MD5InHex(src_path)
     new_filemame = '.'.join([original_filename, md5sum])
-    return os.path.join(self._parameters_dir, new_filemame)
+    return os.path.join(self._factory_drives_dir, new_filemame)
 
-  def _AddParameter(self, src_path):
-    dst_path = self.GetParameterDstPath(src_path)
+  def _AddFactoryDrive(self, src_path):
+    dst_path = self.GetFactoryDriveDstPath(src_path)
     utils.CheckAndMoveFile(src_path, dst_path, False)
     return dst_path
 
-  def UpdateParameterComponent(self, comp_id, dir_id, comp_name, using_ver,
-                               src_path):
-    """Update a parameter component file.
+  def UpdateFactoryDriveComponent(self, comp_id, dir_id, comp_name, using_ver,
+                                  src_path):
+    """Update a factory drive component file.
 
     Support following types of actions:
       1) Create new component.
@@ -220,17 +222,17 @@ class Parameters:
     Returns:
       Updated component dictionary.
     """
-    dst_path = self._AddParameter(src_path) if src_path else None
-    component = self._parameter.UpdateComponent(comp_id, dir_id, comp_name,
-                                                using_ver, dst_path)
-    self._DumpParameter()
+    dst_path = self._AddFactoryDrive(src_path) if src_path else None
+    component = self._factory_drive.UpdateComponent(comp_id, dir_id, comp_name,
+                                                    using_ver, dst_path)
+    self._DumpFactoryDrive()
     return component
 
-  def GetParameterInfo(self):
-    """Dump parameter info.
+  def GetFactoryDriveInfo(self):
+    """Dump factory drive info.
 
     Returns:
-      Parameter dictionary, which contains component files and directories.
+      Factory drive dictionary, which contains component files and directories.
       {
         "files": FileComponent[],
         "dirs": Directory[]
@@ -248,10 +250,10 @@ class Parameters:
         "name": string, // directory name
       }
     """
-    return self._parameter.data
+    return self._factory_drive.data
 
-  def UpdateParameterDirectory(self, dir_id, parent_id, name):
-    """Update a parameter directory.
+  def UpdateFactoryDriveDirectory(self, dir_id, parent_id, name):
+    """Update a factory drive directory.
 
     Support following types of actions:
       1) Create new directory.
@@ -265,11 +267,11 @@ class Parameters:
     Returns:
       Updated directory dictionary.
     """
-    directory = self._parameter.UpdateDirectory(dir_id, parent_id, name)
-    self._DumpParameter()
+    directory = self._factory_drive.UpdateDirectory(dir_id, parent_id, name)
+    self._DumpFactoryDrive()
     return directory
 
-  def QueryParameters(self, namespace, name):
+  def QueryFactoryDrives(self, namespace, name):
     """Gets file path of queried component(s).
 
     Args:
@@ -281,4 +283,4 @@ class Parameters:
     Returns:
       List of tuple(component name, file path)
     """
-    return self._parameter.GetComponentsAbsPath(namespace, name)
+    return self._factory_drive.GetComponentsAbsPath(namespace, name)

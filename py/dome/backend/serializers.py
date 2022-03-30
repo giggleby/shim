@@ -5,8 +5,8 @@
 from backend import common
 from backend.models import Bundle
 from backend.models import DomeConfig
-from backend.models import ParameterComponent
-from backend.models import ParameterDirectory
+from backend.models import FactoryDriveComponent
+from backend.models import FactoryDriveDirectory
 from backend.models import Project
 from backend.models import Resource
 from backend.models import Service
@@ -138,7 +138,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 
-class ParameterComponentSerializer(serializers.Serializer):
+class FactoryDriveComponentSerializer(serializers.Serializer):
 
   id = serializers.IntegerField(allow_null=True)
   dir_id = serializers.IntegerField(required=False, allow_null=True)
@@ -156,10 +156,10 @@ class ParameterComponentSerializer(serializers.Serializer):
             'name': validated_data.pop('name'),
             'using_ver': validated_data.pop('using_ver', None),
             'file_id': validated_data.pop('file_id', None)}
-    return ParameterComponent.CreateOne(project_name, **data)
+    return FactoryDriveComponent.CreateOne(project_name, **data)
 
 
-class ParameterDirectorySerializer(serializers.Serializer):
+class FactoryDriveDirectorySerializer(serializers.Serializer):
 
   id = serializers.IntegerField(required=False)
   parent_id = serializers.IntegerField(required=False, allow_null=True)
@@ -171,7 +171,7 @@ class ParameterDirectorySerializer(serializers.Serializer):
     data = {'id': validated_data.pop('id', None),
             'parent_id': validated_data.pop('parent_id', None),
             'name': validated_data.pop('name')}
-    return ParameterDirectory.CreateOne(project_name, **data)
+    return FactoryDriveDirectory.CreateOne(project_name, **data)
 
 
 class LogSerializer(serializers.Serializer):

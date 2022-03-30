@@ -75,12 +75,12 @@ class UmpireDUTCommands(umpire_rpc.UmpireRPC):
   def GetTime(self):
     return time.time()
 
-  # TODO(hsinyi): Remove ListParameters and GetParameter and modify related
-  #               pytest codes.
+  # TODO(hsinyi): Remove ListFactoryDrives and GetFactoryDrive and modify
+  #               related pytest codes.
   @umpire_rpc.RPCCall
   @utils.Deprecate
-  def ListParameters(self, pattern):
-    """Lists files that match the pattern in parameters directory.
+  def ListFactoryDrives(self, pattern):
+    """Lists files that match the pattern in factory drives directory.
 
      Args:
        pattern: A pattern string for glob to list matched files.
@@ -89,38 +89,39 @@ class UmpireDUTCommands(umpire_rpc.UmpireRPC):
        A list of matched files.
 
      Raises:
-       ValueError if caller is trying to query outside parameters directory.
+       ValueError if caller is trying to query outside factory drives directory.
     """
-    parameters_dir = os.path.join(self.env.base_dir, 'parameters')
-    glob_pathname = os.path.abspath(os.path.join(parameters_dir, pattern))
-    if not glob_pathname.startswith(parameters_dir):
-      raise ValueError('ListParameters is limited to parameter directory')
+    factory_drives_dir = os.path.join(self.env.base_dir, 'factory_drives')
+    glob_pathname = os.path.abspath(os.path.join(factory_drives_dir, pattern))
+    if not glob_pathname.startswith(factory_drives_dir):
+      raise ValueError(
+          'ListFactoryDrives is limited to factory drive directory')
 
     matched_file = glob.glob(glob_pathname)
     # Only return files.
     matched_file = list(filter(os.path.isfile, matched_file))
-    return [os.path.relpath(x, parameters_dir) for x in matched_file]
+    return [os.path.relpath(x, factory_drives_dir) for x in matched_file]
 
   @umpire_rpc.RPCCall
   @utils.Deprecate
-  def GetParameter(self, path):
-    """Gets the assigned parameter file.
+  def GetFactoryDrive(self, path):
+    """Gets the assigned factory drive file.
 
      Args:
-       path: A relative path for locating the parameter.
+       path: A relative path for locating the factory drive.
 
      Returns:
-       Content of the parameter. It is always wrapped in a shopfloor.Binary
+       Content of the factory drive. It is always wrapped in a shopfloor.Binary
        object to provides best flexibility.
 
      Raises:
-       ValueError if the parameter does not exist or is not under
-       parameters folder.
+       ValueError if the factory drive does not exist or is not under
+       factory drives folder.
     """
-    parameters_dir = os.path.join(self.env.base_dir, 'parameters')
-    abspath = os.path.abspath(os.path.join(parameters_dir, path))
-    if not abspath.startswith(parameters_dir):
-      raise ValueError('GetParameter is limited to parameter directory')
+    factory_drives_dir = os.path.join(self.env.base_dir, 'factory_drives')
+    abspath = os.path.abspath(os.path.join(factory_drives_dir, path))
+    if not abspath.startswith(factory_drives_dir):
+      raise ValueError('GetFactoryDrive is limited to factory drive directory')
 
     if not os.path.isfile(abspath):
       raise ValueError('File does not exist or it is not a file')
@@ -128,8 +129,8 @@ class UmpireDUTCommands(umpire_rpc.UmpireRPC):
     return twisted_xmlrpc.Binary(file_utils.ReadFile(abspath, encoding=None))
 
   @umpire_rpc.RPCCall
-  def GetParameters(self, namespace=None, name=None):
-    """Gets parameter components by querying namespace and component name.
+  def GetFactoryDrives(self, namespace=None, name=None):
+    """Gets factory drive components by querying namespace and component name.
 
     Args:
       namespace: relative directory path of queried component(s). None if
@@ -138,13 +139,13 @@ class UmpireDUTCommands(umpire_rpc.UmpireRPC):
             components under namespace.
 
     Returns:
-      Content of the parameter. It is always wrapped in a shopfloor.Binary
+      Content of the factory drive. It is always wrapped in a shopfloor.Binary
       object to provides best flexibility.
 
     Raises:
-      ValueError if the parameter does not exist.
+      ValueError if the factory drive does not exist.
     """
-    abspaths = self.env.parameters.QueryParameters(namespace, name)
+    abspaths = self.env.factory_drives.QueryFactoryDrives(namespace, name)
 
     if not abspaths:
       raise ValueError('File does not exist or it is not a file')

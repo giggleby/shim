@@ -17,7 +17,7 @@ def RPCCall(method):
         pass
 
       @RPCCall
-      def RPCFunction(parameter, ...):
+      def RPCFunction(factory_drive, ...):
         pass
   """
   method.is_rpc_method = True

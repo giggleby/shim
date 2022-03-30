@@ -5,11 +5,11 @@
 import bundle from '@app/bundle';
 import {UpdateResourceFormPayload} from '@app/bundle/types';
 import dashboard from '@app/dashboard';
-import parameter from '@app/parameters';
+import factoryDrive from '@app/factory_drives';
 import {
-  UpdateParameterFormPayload,
+  UpdateFactoryDriveFormPayload,
   RenameRequest,
-} from '@app/parameters/types';
+} from '@app/factory_drives/types';
 
 import {Unionize} from '@common/types';
 
@@ -17,10 +17,10 @@ export interface FormPayloadTypeMap {
   [dashboard.constants.ENABLE_UMPIRE_FORM]: {};
   [bundle.constants.UPLOAD_BUNDLE_FORM]: {};
   [bundle.constants.UPDATE_RESOURCE_FORM]: UpdateResourceFormPayload;
-  [parameter.constants.UPDATE_PARAMETER_FORM]: UpdateParameterFormPayload;
-  [parameter.constants.CREATE_DIRECTORY_FORM]: {};
-  [parameter.constants.RENAME_DIRECTORY_FORM]: RenameRequest;
-  [parameter.constants.RENAME_PARAMETER_FORM]: RenameRequest;
+  [factoryDrive.constants.UPDATE_FACTORY_DRIVE_FORM]: UpdateFactoryDriveFormPayload;
+  [factoryDrive.constants.CREATE_DIRECTORY_FORM]: {};
+  [factoryDrive.constants.RENAME_DIRECTORY_FORM]: RenameRequest;
+  [factoryDrive.constants.RENAME_FACTORY_DRIVE_FORM]: RenameRequest;
 }
 
 export type FormNames = keyof FormPayloadTypeMap;

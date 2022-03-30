@@ -75,12 +75,12 @@ const DomeAppMenu: React.SFC<DomeAppMenuProps> = ({
                 !project.umpireReady && '(activating...)'}
             </DomeAppMenuItem>,
             <DomeAppMenuItem
-              app="PARAMETER_APP"
-              key="PARAMETER_APP"
+              app="FACTORY_DRIVE_APP"
+              key="FACTORY_DRIVE_APP"
               className={classes.nested}
               disabled={!project.umpireReady}
             >
-              Parameters {project.umpireEnabled &&
+              Factory Drives {project.umpireEnabled &&
                 !project.umpireReady && '(activating...)'}
             </DomeAppMenuItem>,
             <DomeAppMenuItem

@@ -8,9 +8,9 @@ import {
   reduxForm,
 } from 'redux-form';
 
-import {UPDATE_PARAMETER_FORM} from '../constants';
+import {UPDATE_FACTORY_DRIVE_FORM} from '../constants';
 
-class UpdateParameterForm extends React.Component<
+class UpdateFactoryDriveForm extends React.Component<
   InjectedFormProps> {
 
   render() {
@@ -22,5 +22,5 @@ class UpdateParameterForm extends React.Component<
 }
 
 export default reduxForm<{}, {}>({
-  form: UPDATE_PARAMETER_FORM,
-})(UpdateParameterForm);
+  form: UPDATE_FACTORY_DRIVE_FORM,
+})(UpdateFactoryDriveForm);

@@ -21,11 +21,11 @@ import {connect} from 'react-redux';
 import formDialog from '@app/form_dialog';
 import {DispatchProps} from '@common/types';
 
-import {CREATE_DIRECTORY_FORM, UPDATE_PARAMETER_FORM} from '../constants';
+import {CREATE_DIRECTORY_FORM, UPDATE_FACTORY_DRIVE_FORM} from '../constants';
 
 import CreateDirectoryForm from './create_directory_form';
-import ParameterList from './parameter_list';
-import UpdateParameterDialog from './update_parameter_dialog';
+import FactoryDriveList from './factory_drive_list';
+import UpdateFactoryDriveDialog from './update_factory_drive_dialog';
 
 const styles = (theme: Theme) => createStyles({
   header: {
@@ -39,15 +39,15 @@ const styles = (theme: Theme) => createStyles({
   },
 });
 
-interface ParameterState {
+interface FactoryDriveState {
   currentDirId: number | null;
 }
 
-type ParameterAppProps =
+type FactoryDriveAppProps =
   WithStyles<typeof styles> &
   DispatchProps<typeof mapDispatchToProps>;
 
-class ParameterApp extends React.Component<ParameterAppProps, ParameterState> {
+class FactoryDriveApp extends React.Component<FactoryDriveAppProps, FactoryDriveState> {
 
   state = {currentDirId: null};
 
@@ -60,11 +60,11 @@ class ParameterApp extends React.Component<ParameterAppProps, ParameterState> {
     const {classes} = this.props;
     return (
       <>
-        <UpdateParameterDialog />
+        <UpdateFactoryDriveDialog />
         <CreateDirectoryForm dirId={currentDirId}/>
         <Card>
           <CardContent className={classes.header}>
-            <Typography variant="h5">Parameter</Typography>
+            <Typography variant="h5">Factory Drive</Typography>
             <div className={classes.headerButtonGroup}>
               <Tooltip title="Create Files">
                 <IconButton
@@ -86,7 +86,7 @@ class ParameterApp extends React.Component<ParameterAppProps, ParameterState> {
             </div>
           </CardContent>
           <CardContent>
-            <ParameterList
+            <FactoryDriveList
               currentDirId={currentDirId}
               dirClicked={this.setCurrentDirId}
             />
@@ -102,9 +102,9 @@ const mapDispatchToProps = {
   updateComponent:
       (dirId: number | null, name: string, multiple: boolean) =>
           (formDialog.actions.openForm(
-              UPDATE_PARAMETER_FORM, {id: null, dirId, name, multiple})),
+            UPDATE_FACTORY_DRIVE_FORM, {id: null, dirId, name, multiple})),
   createDirectory: () => formDialog.actions.openForm(CREATE_DIRECTORY_FORM),
 };
 
 export default connect(null, mapDispatchToProps)(
-  withStyles(styles)(ParameterApp));
+  withStyles(styles)(FactoryDriveApp));

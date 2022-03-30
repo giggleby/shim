@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-export const NAME = 'parameters';
+export const NAME = 'factoryDrives';
 
-export const UPDATE_PARAMETER_FORM = 'UpdateParameterForm';
+export const UPDATE_FACTORY_DRIVE_FORM = 'UpdateFactoryDriveForm';
 export const CREATE_DIRECTORY_FORM = 'CreateDirectoryForm';
-export const RENAME_PARAMETER_FORM = 'RenameParameterForm';
+export const RENAME_FACTORY_DRIVE_FORM = 'RenameFactoryDriveForm';
 export const RENAME_DIRECTORY_FORM = 'RenameDirectoryForm';

@@ -62,7 +62,7 @@ class CommandTest(unittest.TestCase):
     def SideEffect(*args, **unused_kwargs):
       if args == umpire_cli_func_args:
         return self.MockResultFunction[success]()
-      raise Exception('Wrong parameters')
+      raise Exception('Wrong factory_drives')
 
     setattr(self.umpire_cli, umpire_cli_func, mock.Mock(
         getattr(self.umpire_cli, umpire_cli_func),
