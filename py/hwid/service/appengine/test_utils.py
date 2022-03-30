@@ -87,7 +87,7 @@ class FakeModuleCollection:
     self._tmpdir_for_hwid_db_data.cleanup()
 
   def ConfigHWID(self, project, version, raw_db, hwid_action=None,
-                 hwid_action_factory=None):
+                 hwid_action_factory=None, commit_id='TEST-COMMIT-ID'):
     """Specifies the behavior of the fake modules.
 
     This method lets caller assign the HWIDAction instance to return for the
@@ -104,7 +104,7 @@ class FakeModuleCollection:
           argument -- the `FakeHWIDPreprocData` instance.
     """
     self.fake_hwid_db_data_manager.RegisterProjectForTest(
-        project, project, str(version), raw_db)
+        project, project, str(version), raw_db, commit_id)
     self._fake_hwid_instance_factory.SetHWIDActionForProject(
         project, hwid_action, hwid_action_factory)
 

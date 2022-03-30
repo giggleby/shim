@@ -24,7 +24,7 @@ class HWIDV3ActionTest(unittest.TestCase):
     super().setUp()
 
     self.preproc_data = hwid_preproc_data.HWIDV3PreprocData(
-        'CHROMEBOOK', file_utils.ReadFile(GOLDEN_HWIDV3_FILE))
+        'CHROMEBOOK', file_utils.ReadFile(GOLDEN_HWIDV3_FILE), 'COMMIT-ID')
     self.action = hwid_v3_action.HWIDV3Action(self.preproc_data)
 
   def testGetBOM(self):

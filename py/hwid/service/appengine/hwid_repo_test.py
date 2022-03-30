@@ -140,6 +140,10 @@ class HWIDRepoTest(HWIDRepoBaseTest):
         'SBOARD', 'unused_test_str', 'unused_test_str', [], [], False)
     self.assertEqual(actual_cl_number, expected_cl_number)
 
+  def testHWIDRepoHasCommitProperty(self):
+    self.assertEqual(self._hwid_repo.hwid_db_commit_id,
+                     self._fake_repo.head().decode('utf-8'))
+
   def _AddFilesToFakeRepo(self, contents_of_pathname: Dict[str, bytes]):
     updated_tree = self._fake_repo.add_files(
         [(p, 0o100644, c) for p, c in contents_of_pathname.items()])

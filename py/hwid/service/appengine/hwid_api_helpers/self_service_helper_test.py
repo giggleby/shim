@@ -655,7 +655,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  def _ConfigLiveHWIDRepo(self, project, version, db_contents):
+  def _ConfigLiveHWIDRepo(self, project, version, db_contents,
+                          commit_id='TEST-COMMIT-ID'):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
                                                 f'v{version}/{project}')
@@ -663,11 +664,14 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.ListHWIDDBMetadata.return_value = [hwid_db_metadata]
     live_hwid_repo.LoadHWIDDBByName.return_value = db_contents
     live_hwid_repo.LoadHWIDDB.return_value = db_contents
+    live_hwid_repo.hwid_db_commit_id = commit_id
 
-  def _ConfigHWIDRepoManager(self, project, version, db_contents):
+  def _ConfigHWIDRepoManager(self, project, version, db_contents,
+                             commit_id='TEST-COMMIT-ID'):
     hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
                                                 f'v{version}/{project}')
-    self._mock_hwid_repo_manager.GetFileContent.return_value = db_contents
+    self._mock_hwid_repo_manager.GetFileContent.return_value = (commit_id,
+                                                                db_contents)
     self._mock_hwid_repo_manager.GetHWIDDBMetadata.return_value = (
         hwid_db_metadata)
 

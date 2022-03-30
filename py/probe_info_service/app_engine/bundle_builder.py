@@ -47,6 +47,7 @@ class BundleBuilder:
     self._file_entries = []
     self._runner_path = None
     self._stopgap_checksum = ''
+    self.hwid_db_commit_id = ''
 
   def AddRegularFile(self, path, data: bytes):
     """Adds a regular file into the probe config bundle.
@@ -93,4 +94,5 @@ class BundleBuilder:
     payload_data = base64.b64encode(tarfile_buf.getvalue()).decode('utf-8')
     return _GetBundleTemplate().substitute(
         payload_data=payload_data, hwid_db_checksum=self._stopgap_checksum,
-        runner_relpath=self._runner_path).encode('utf-8')
+        runner_relpath=self._runner_path,
+        hwid_db_commit_id=self.hwid_db_commit_id).encode('utf-8')

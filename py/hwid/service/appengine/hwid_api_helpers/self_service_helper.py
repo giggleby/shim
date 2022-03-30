@@ -464,8 +464,9 @@ Info Update
   def GetHWIDBundleResourceInfo(self, request):
     try:
       metadata = self._hwid_repo_manager.GetHWIDDBMetadata(request.project)
-      content = self._hwid_repo_manager.GetFileContent(metadata.path)
-      self._hwid_db_data_manager.UpdateProjectContent(request.project, content)
+      commit_id, content = self._hwid_repo_manager.GetFileContent(metadata.path)
+      self._hwid_db_data_manager.UpdateProjectContent(metadata, request.project,
+                                                      content, commit_id)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
           limit_models=[request.project])
 

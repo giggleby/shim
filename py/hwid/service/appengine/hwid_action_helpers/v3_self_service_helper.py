@@ -125,7 +125,8 @@ class HWIDV3SelfServiceActionHelper:
   def BundleHWIDDB(self):
     builder = bundle_builder.BundleBuilder()
     internal_db = self._preproc_data.database
-    tag_trimmed_raw_db = internal_db.DumpDataWithoutChecksum(internal=False)
+    tag_trimmed_raw_db = internal_db.DumpDataWithoutChecksum(
+        suppress_support_status=True, internal=False)
     editable_section = self.RemoveHeader(tag_trimmed_raw_db)
     external_raw_db, unused_checksum = _GetFullHWIDDBAndChangeFingerprint(
         self._preproc_data.raw_database, editable_section)
@@ -142,6 +143,7 @@ class HWIDV3SelfServiceActionHelper:
     # pylint: disable=protected-access
     builder._SetStopGapHWIDDBChecksum(checksum)
     # pylint: enable=protected-access
+    builder.hwid_db_commit_id = self._preproc_data.hwid_db_commit_id
     return hwid_action.BundleInfo(builder.Build(), builder.FILE_NAME_EXT[1:])
 
   @staticmethod

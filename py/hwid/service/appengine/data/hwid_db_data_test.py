@@ -62,13 +62,17 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
   def testGetHWIDDBMetadataOfProject(self):
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
-                                                     'sample data')
+                                                     'sample data', 'commit1')
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDB', 'PROJECTB', '3',
-                                                     'sample data 2')
+                                                     'sample data 2', 'commit2')
 
     metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTA')
 
+    self.assertEqual(metadata.board, 'BOARDA')
+    self.assertEqual(metadata.path, 'PROJECTA')
+    self.assertEqual(metadata.version, '3')
     self.assertEqual(metadata.project, 'PROJECTA')
+    self.assertEqual(metadata.commit, 'commit1')
 
   def testListHWIDDBMetadataOfVersion(self):
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '1',
@@ -104,13 +108,25 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     self.assertEqual(fetched_hwid_db_contents, sample_hwid_db_contents)
 
   def testUpdateProjectContent(self):
-    self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
-                                                     'will be updated')
-    self.hwid_db_data_manager.UpdateProjectContent('PROJECTA', 'updated data')
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'BOARDA', 'PROJECTA', '3', 'will be updated', 'OLD-COMMIT-ID')
+
+    old_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        project='PROJECTA')
+    self.assertEqual('OLD-COMMIT-ID', old_metadata.commit)
+
+    repo_metadata = hwid_repo.HWIDDBMetadata(
+        name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
+
+    self.hwid_db_data_manager.UpdateProjectContent(
+        repo_metadata, 'PROJECTA', 'updated data', 'NEW-COMMIT-ID')
+
+    updated_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        project='PROJECTA')
+    self.assertEqual('NEW-COMMIT-ID', updated_metadata.commit)
+
     self.assertEqual(
-        self.hwid_db_data_manager.LoadHWIDDB(
-            self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTA')),
-        'updated data')
+        self.hwid_db_data_manager.LoadHWIDDB(updated_metadata), 'updated data')
 
   def testUpdateProjectsByRepo(self):
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
@@ -136,6 +152,8 @@ class HWIDDBDataManagerTest(unittest.TestCase):
         ('v3/PROJECTC', 0o100644, b'newly added data'),
     ], tree=dulwich_objects.Tree())
     repo.do_commit(message=b'the head commit', tree=tree.id)
+    expected_commit_id = repo.head().decode()
+
     hwid_repo_inst = hwid_repo.HWIDRepo(repo, '', '')
 
     self.hwid_db_data_manager.UpdateProjectsByRepo(
@@ -145,14 +163,19 @@ class HWIDDBDataManagerTest(unittest.TestCase):
         m.project for m in self.hwid_db_data_manager.ListHWIDDBMetadata()
     ]
     self.assertCountEqual(projects, ['PROJECTA', 'PROJECTC'])
+    metadata_a = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        'PROJECTA')
+    metadata_c = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        'PROJECTC')
+
+    self.assertEqual(metadata_a.commit, expected_commit_id)
+    self.assertEqual(metadata_c.commit, expected_commit_id)
+
     self.assertEqual(
-        self.hwid_db_data_manager.LoadHWIDDB(
-            self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTA')),
-        'updated data')
+        self.hwid_db_data_manager.LoadHWIDDB(metadata_a), 'updated data')
     self.assertEqual(
-        self.hwid_db_data_manager.LoadHWIDDB(
-            self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTC')),
-        'newly added data')
+        self.hwid_db_data_manager.LoadHWIDDB(metadata_c), 'newly added data')
+
     with self.assertRaises(hwid_db_data.HWIDDBNotFoundError):
       self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTB')
 

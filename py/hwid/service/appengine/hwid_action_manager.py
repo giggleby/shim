@@ -69,7 +69,8 @@ class InstanceFactoryImpl(InstanceFactory):
 
     if metadata.version == '3':
       logging.debug('Processing as version 3 file.')
-      return hwid_preproc_data.HWIDV3PreprocData(metadata.project, raw_db)
+      return hwid_preproc_data.HWIDV3PreprocData(metadata.project, raw_db,
+                                                 metadata.commit)
 
     raise ProjectNotSupportedError(
         f'Project {metadata.project!r} has invalid version '
@@ -128,7 +129,7 @@ class HWIDActionManager:
 
     return self._instance_factory.CreateHWIDAction(hwid_preproc_data_inst)
 
-  def _LoadHWIDPreprocData(self, metadata):
+  def _LoadHWIDPreprocData(self, metadata: hwid_db_data.HWIDDBMetadata):
     """Load preprocessed HWID DB from the backend datastore.
 
     Args:

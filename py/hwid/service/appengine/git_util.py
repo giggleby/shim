@@ -515,24 +515,33 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
 
 @RetryOnException(retry_value=(GitUtilException, ))
 def GetFileContent(git_url_prefix: str, project: str, path: str,
+                   commit_id: Optional[str] = None,
                    branch: Optional[str] = None,
                    auth_cookie: Optional[str] = None) -> bytes:
   """Gets file content on Gerrit.
 
-  Uses the gerrit API to get the file content.
+  Uses the gerrit API to get the file content.  If commit_id is specified
 
   Args:
     git_url_prefix: HTTPS repo url.
     project: Project name.
     path: Path to the file.
+    commit_id: The commit id which is the version of the file.
     branch: Branch name, use the branch HEAD tracks if set to None.
     auth_cookie: Auth cookie.
   """
-  branch = branch or GetCurrentBranch(git_url_prefix, project, auth_cookie)
-  project, branch, path = map(lambda s: urllib.parse.quote(s, safe=''),
-                              (project, branch, path))
-  git_url = (f'{git_url_prefix}/projects/{project}/branches/{branch}/files/'
-             f'{path}/content')
+  project, path = map(lambda s: urllib.parse.quote(s, safe=''), (project, path))
+  if commit_id:
+    if branch:
+      logging.warning('Commit id is already specified, ignore branch %r.',
+                      branch)
+    git_url = (f'{git_url_prefix}/projects/{project}/commits/{commit_id}/files/'
+               f'{path}/content')
+  else:
+    branch = branch or urllib.parse.quote(
+        GetCurrentBranch(git_url_prefix, project, auth_cookie), safe='')
+    git_url = (f'{git_url_prefix}/projects/{project}/branches/{branch}/files/'
+               f'{path}/content')
   raw_data = _InvokeGerritAPI('GET', git_url, auth_cookie=auth_cookie)
   try:
     return base64.b64decode(raw_data)

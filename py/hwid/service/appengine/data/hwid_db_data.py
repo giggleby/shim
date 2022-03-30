@@ -26,6 +26,7 @@ class HWIDDBMetadata(ndb.Model):
   path = ndb.StringProperty()
   version = ndb.StringProperty()
   project = ndb.StringProperty()
+  commit = ndb.StringProperty()
 
   @classmethod
   def _get_kind(cls):
@@ -122,15 +123,27 @@ class HWIDDBDataManager:
           'HWID file missing for the requested project: %r' % e)
     return raw_hwid_yaml
 
-  def UpdateProjectContent(self, project: str, content: str):
+  def UpdateProjectContent(self, repo_metadata: hwid_repo.HWIDDBMetadata,
+                           project: str, content: str, commit_id: str):
     """Updates HWID DB content
 
     Args:
+      repo_metadata: HWID DB metadata.
       project: Project name.
       content: New HWID DB content.
+      commit_id: The commit id of the HWID DB.
     """
     project = project.upper()
     self._fs_adapter.WriteFile(self._LivePath(project), content)
+    metadata = self.GetHWIDDBMetadataOfProject(project)
+    if metadata:
+      metadata.commit = commit_id
+    else:
+      metadata = HWIDDBMetadata(
+          board=repo_metadata.board_name, path=repo_metadata.path, version=str(
+              repo_metadata.version), project=project, commit=commit_id)
+    with self._ndb_connector.CreateClientContextWithGlobalCache():
+      metadata.put()
 
   def UpdateProjectsByRepo(
       self, live_hwid_repo: hwid_repo.HWIDRepo,
@@ -151,6 +164,7 @@ class HWIDDBDataManager:
     """
     hwid_db_metadata_of_name = {m.name: m
                                 for m in hwid_db_metadata_list}
+    hwid_db_commit_id = live_hwid_repo.hwid_db_commit_id
 
     # Discard the names for the entries, indexing only by path.
     with self._ndb_connector.CreateClientContextWithGlobalCache():
@@ -171,6 +185,7 @@ class HWIDDBDataManager:
           new_data = hwid_db_metadata_of_name[hwid_metadata.project]
           hwid_metadata.version = str(new_data.version)
           hwid_metadata.board = new_data.board_name
+          hwid_metadata.commit = hwid_db_commit_id
           self._ActivateFile(live_hwid_repo, new_data.name, hwid_metadata.path)
           hwid_metadata.put()
 
@@ -181,12 +196,13 @@ class HWIDDBDataManager:
       version = str(new_data.version)
       with self._ndb_connector.CreateClientContextWithGlobalCache():
         metadata = HWIDDBMetadata(board=board, version=version, path=path,
-                                  project=project)
+                                  project=project, commit=hwid_db_commit_id)
         self._ActivateFile(live_hwid_repo, project, path)
         metadata.put()
 
   def RegisterProjectForTest(self, board: str, project: str, version: str,
-                             hwid_db: Optional[HWIDDBData]):
+                             hwid_db: Optional[HWIDDBData],
+                             commit_id: str = 'TEST-COMMIT-ID'):
     """Append a HWID data into the datastore.
 
     Args:
@@ -194,13 +210,14 @@ class HWIDDBDataManager:
       project: The project name.
       version: The HWID version.
       hwid_db: The HWID DB contents in string.
+      commit_id: The commit id of the HWID DB.
     """
     try:
       metadata = self.GetHWIDDBMetadataOfProject(project)
     except HWIDDBNotFoundError:
       with self._ndb_connector.CreateClientContextWithGlobalCache():
         metadata = HWIDDBMetadata(board=board, project=project, version=version,
-                                  path=project)
+                                  path=project, commit=commit_id)
         metadata.put()
     else:
       with self._ndb_connector.CreateClientContextWithGlobalCache():

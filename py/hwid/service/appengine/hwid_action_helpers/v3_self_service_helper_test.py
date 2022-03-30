@@ -186,6 +186,14 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         checksum_pattern.search(payload.decode('utf-8')),
         'checksum line was not displayed in payload.')
 
+  def testBundleHWIDDB_CommitShownInInstallerScript(self):
+    unused_data, helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-no-internal-tags.yaml', 'SHOW_THIS_COMMIT')
+
+    payload = helper_inst.BundleHWIDDB().bundle_contents
+
+    self.assertIn('hwid_commit_id: SHOW_THIS_COMMIT', payload.decode('utf-8'))
+
   def testBundleHWIDDB_PreserveLegacyFormat(self):
     legacy_data, helper_inst_legacy = self._LoadPreprocDataAndSSHelper(
         'v3-golden.yaml')  # with legacy format
@@ -216,10 +224,11 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         self.assertNotIn('board', tot_yaml)
         self.assertIn('project', tot_yaml)
 
-  def _LoadPreprocDataAndSSHelper(self, testdata_name):
+  def _LoadPreprocDataAndSSHelper(self, testdata_name, commit_id='COMMIT-ID'):
     preproc_data = hwid_preproc_data.HWIDV3PreprocData(
         'CHROMEBOOK',
-        file_utils.ReadFile(os.path.join(_TESTDATA_PATH, testdata_name)))
+        file_utils.ReadFile(os.path.join(_TESTDATA_PATH, testdata_name)),
+        commit_id)
     helper_inst = ss_helper.HWIDV3SelfServiceActionHelper(preproc_data)
     return preproc_data, helper_inst
 

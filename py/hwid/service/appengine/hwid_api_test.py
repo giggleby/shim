@@ -667,6 +667,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
   def testGetHwidBundleResourceInfo_ProjectNotFound(self):
+    self.patch_hwid_repo_manager.GetHWIDDBMetadata.side_effect = KeyError
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
           project='foo')

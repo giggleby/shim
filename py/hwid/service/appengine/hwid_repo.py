@@ -5,7 +5,7 @@
 
 import collections
 import logging
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -81,6 +81,10 @@ class HWIDRepo:
       return self._hwid_db_metadata_of_name[name]
     except KeyError:
       raise ValueError(f'invalid HWID DB name: {name}') from None
+
+  @property
+  def hwid_db_commit_id(self) -> str:
+    return self._repo.head().decode()
 
   def LoadHWIDDBByName(self, name):
     """Reads out the specific HWID DB content.
@@ -240,16 +244,21 @@ class HWIDRepoManager:
   def GetHWIDDBMetadata(self, project: str) -> HWIDDBMetadata:
     """Gets the metadata from HWID repo."""
     project = project.upper()
-    metadata = _ParseMetadata(self.GetFileContent(_PROJECTS_YAML_PATH))
+    unused_commit_id, file_content = self.GetFileContent(_PROJECTS_YAML_PATH)
+    metadata = _ParseMetadata(file_content)
     if project not in metadata:
       raise KeyError(f'Project: "{project}" does not exist in the repo.')
     return metadata[project]
 
-  def GetFileContent(self, path: str) -> str:
-    """Gets the file content from HWID repo."""
-    return git_util.GetFileContent(
-        _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path, self._repo_branch,
+  def GetFileContent(self, path: str) -> Tuple[str, str]:
+    """Gets the file content as well as the commit id from HWID repo."""
+    commit_id = git_util.GetCommitId(_INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
+                                     branch=self._repo_branch,
+                                     auth_cookie=git_util.GetGerritAuthCookie())
+    content = git_util.GetFileContent(
+        _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path, commit_id=commit_id,
         auth_cookie=git_util.GetGerritAuthCookie()).decode()
+    return commit_id, content
 
   def AbandonCL(self, cl_number: int, reason=None):
     """Abandons the given CL number."""

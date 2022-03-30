@@ -15,6 +15,7 @@
 # cros_payload.sh to parse.
 : '
 checksum: !!hwid_db_checksum
+hwid_commit_id: !!hwid_db_commit_id
 '
 
 
