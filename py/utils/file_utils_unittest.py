@@ -242,7 +242,7 @@ class CopyFileSkipBytesTest(unittest.TestCase):
 class ExtractFileTest(unittest.TestCase):
   """Unit tests for ExtractFile."""
   @mock.patch.object(process_utils, 'Spawn', return_value=True)
-  def testExtractZip(self, mock_spawn):
+  def testExtractZip(self, mock_spawn: mock.MagicMock):
     with file_utils.TempDirectory() as temp_dir:
       zipfile = os.path.join(temp_dir, 'foo.zip')
       file_utils.TouchFile(zipfile)
@@ -250,26 +250,28 @@ class ExtractFileTest(unittest.TestCase):
 
       file_utils.ExtractFile(zipfile, output_dir)
       mock_spawn.assert_called_with(['unzip', '-o', zipfile, '-d', output_dir],
-                                    log=True, check_call=True)
+                                    log=True, call=True, check_call=True)
 
       file_utils.ExtractFile(zipfile, output_dir, quiet=True)
       mock_spawn.assert_called_with(
-          ['unzip', '-o', '-qq', zipfile, '-d', output_dir],
-          log=True, check_call=True)
+          ['unzip', '-o', '-qq', zipfile, '-d', output_dir], log=True,
+          call=True, check_call=True)
 
       file_utils.ExtractFile(zipfile, output_dir, only_extracts=['bar', 'buz'])
-      mock_spawn.assert_called_with(['unzip', '-o', zipfile, '-d', output_dir,
-                                     'bar', 'buz'], log=True, check_call=True)
+      mock_spawn.assert_called_with(
+          ['unzip', '-o', zipfile, '-d', output_dir, 'bar', 'buz'], log=True,
+          call=True, check_call=True)
 
       file_utils.ExtractFile(zipfile, output_dir, only_extracts=['bar', 'buz'],
                              overwrite=False)
       mock_spawn.assert_called_with(
-          ['unzip', zipfile, '-d', output_dir, 'bar', 'buz'],
-          log=True, check_call=True)
+          ['unzip', zipfile, '-d', output_dir, 'bar', 'buz'], log=True,
+          call=True, check_call=True)
 
   @mock.patch.object(os, 'system', return_value=0)
   @mock.patch.object(process_utils, 'Spawn', return_value=True)
-  def testExtractTar(self, mock_spawn, mock_system):
+  def testExtractTar(self, mock_spawn: mock.MagicMock,
+                     mock_system: mock.MagicMock):
     with file_utils.TempDirectory() as temp_dir:
       output_dir = os.path.join(temp_dir, 'extracted')
 
@@ -277,35 +279,35 @@ class ExtractFileTest(unittest.TestCase):
       file_utils.TouchFile(targz)
       file_utils.ExtractFile(targz, output_dir)
       mock_spawn.assert_called_with(
-          ['tar', '-xf', targz, '-C', output_dir, '-vv'],
-          log=True, check_call=True)
+          ['tar', '-xf', targz, '-C', output_dir, '-vv'], log=True, call=True,
+          check_call=True)
 
       file_utils.ExtractFile(targz, output_dir, quiet=True)
       mock_spawn.assert_called_with(['tar', '-xf', targz, '-C', output_dir],
-                                    log=True, check_call=True)
+                                    log=True, call=True, check_call=True)
 
       tbz2 = os.path.join(temp_dir, 'foo.tbz2')
       file_utils.TouchFile(tbz2)
       file_utils.ExtractFile(tbz2, output_dir, only_extracts=['bar', 'buz'])
       mock_spawn.assert_called_with(
-          ['tar', '-xf', tbz2, '-C', output_dir, '-vv', 'bar', 'buz'],
-          log=True, check_call=True)
+          ['tar', '-xf', tbz2, '-C', output_dir, '-vv', 'bar', 'buz'], log=True,
+          call=True, check_call=True)
 
       xz = os.path.join(temp_dir, 'foo.tar.xz')
       file_utils.TouchFile(xz)
       file_utils.ExtractFile(xz, output_dir, only_extracts='bar',
                              overwrite=False)
-      mock_spawn.assert_called_with(
-          ['tar', '-xf', xz, '-C', output_dir, '--keep-old-files', '-vv',
-           'bar'],
-          log=True, check_call=True)
+      mock_spawn.assert_called_with([
+          'tar', '-xf', xz, '-C', output_dir, '--keep-old-files', '-vv', 'bar'
+      ], log=True, call=True, check_call=True)
 
       file_utils.ExtractFile(tbz2, output_dir, use_parallel=True)
       mock_system.assert_called_with('type lbzip2 >/dev/null 2>&1')
       mock_spawn.assert_has_calls([
           mock.call(
               ['tar', '-xf', tbz2, '-C', output_dir, '-vv', '-I', 'lbzip2'],
-              log=True, check_call=True)])
+              log=True, call=True, check_call=True)
+      ])
 
   def testMissingCompressFile(self):
     self.assertRaisesRegex(
@@ -324,6 +326,18 @@ class ExtractFileTest(unittest.TestCase):
             file_utils.ExtractFile, targz, output_dir)
       finally:
         os.chmod(targz, 0o600)
+
+  @mock.patch.object(process_utils, 'Spawn')
+  def testExtractIgnoreErrors(self, mock_spawn: mock.MagicMock):
+    with file_utils.TempDirectory() as temp_dir:
+      output_dir = os.path.join(temp_dir, 'extracted')
+
+      targz = os.path.join(temp_dir, 'foo.tar.gz')
+      file_utils.TouchFile(targz)
+      file_utils.ExtractFile(targz, output_dir, ignore_errors=True)
+      mock_spawn.assert_called_with(
+          ['tar', '-xf', targz, '-C', output_dir, '-vv'], log=True, call=True,
+          check_call=False)
 
 
 class ForceSymlinkTest(unittest.TestCase):

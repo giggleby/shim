@@ -423,9 +423,9 @@ def GetCompressor(file_format, allow_parallel=True):
   return None
 
 
-def ExtractFile(compressed_file, output_dir, only_extracts=None,
-                overwrite=True, quiet=False, use_parallel=False,
-                exclude=None):
+def ExtractFile(compressed_file, output_dir, only_extracts=None, overwrite=True,
+                quiet=False, use_parallel=False, exclude=None,
+                ignore_errors=False):
   """Extracts compressed file to output folder.
 
   Args:
@@ -438,6 +438,7 @@ def ExtractFile(compressed_file, output_dir, only_extracts=None,
     quiet: Whether to suppress output.
     use_parallel: Allow using parallel compressor to shorten execution time.
     exclude: a list of file patterns to exclude.
+    ignore_errors: Ignore errors from the extracting command.
 
   Raises:
     ExtractFileError if the method fails to extract the file.
@@ -486,7 +487,8 @@ def ExtractFile(compressed_file, output_dir, only_extracts=None,
       raise ExtractFileError('Unsupported compressed file: %s' %
                              compressed_file)
 
-  return process_utils.Spawn(cmd, log=True, check_call=True)
+  return process_utils.Spawn(cmd, log=True, call=True,
+                             check_call=not ignore_errors)
 
 
 def ForceSymlink(target, link_name):
