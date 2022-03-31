@@ -56,7 +56,7 @@ class EDPPanelTimingTest(test_case.TestCase):
 
   def _IsAnyDevicesOnDPAuxBus(self):
     """Check dp-aux bus has devices."""
-    return len(self._dut.Glob('/sys/bus/dp-aux/devices/')) != 0
+    return len(self._dut.Glob('/sys/bus/dp-aux/devices/*')) != 0
 
   def _IsUsingPanelSimpleDPAuxDriver(self):
     """Check the panel is using panel-simple-dp-aux driver."""
