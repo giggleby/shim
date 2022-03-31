@@ -148,9 +148,14 @@ class ThunderboltLoopbackTest(test_case.TestCase):
           schema=usb_c.USB_PD_SPEC_SCHEMA, _transform=usb_c.MigrateUSBPDSpec),
       Arg('load_module', bool, 'Load test module.', default=True),
       Arg('check_muxinfo_only', bool, 'Check muxinfo only.', default=False),
-      Arg('lane_margining', bool, 'Collet lane margining data.', default=False),
+      Arg('lane_margining', bool, 'Collect lane margining data.', default=True),
       Arg('lane_margining_timeout_secs', (int, float),
-          'Timeout for colleting lane margining data.', default=10),
+          'Timeout for collecting lane margining data.', default=10),
+      Arg('lane_margining_csv', bool,
+          ('If set, will upload the lane margining data to the factory server '
+           'at the end of the test. Thus, DUT needs to connect to the server. '
+           'If not set, we can only collect the data in the factory report.'),
+          default=False),
       Arg('check_card_removal', bool,
           'If set, require removing the card after DMA test.', default=True),
   ]
@@ -368,8 +373,8 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       return self.ui.StartFailingCountdownTimer(self.args.timeout_secs)
     return None
 
-  def _UploadLaneMargining(self, log_result: dict):
-    """Uploads the result of lane margining."""
+  def _UploadLaneMarginingViaCSV(self, log_result: dict):
+    """Uploads the result of lane margining via UploadCSVEntry."""
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
     csv_entries = [device_data.GetSerialNumber(), timestamp]
     csv_entries.extend(log_result[key] for key in self.LOG_KEYS)
@@ -386,9 +391,18 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       messages = 'Unable to sync with server %s' % server_proxy.GetServerURL()
       logging.exception(messages)
       self._errors.append(messages)
+
+  def _UploadLaneMarginingViaTestlog(self, log_result: dict):
+    """Uploads the result of lane margining via Testlog."""
     with self._group_checker:
       for key, value in log_result.items():
         testlog.LogParam(key, value)
+
+  def _UploadLaneMargining(self, log_result: dict):
+    """Uploads the result of lane margining."""
+    if self.args.lane_margining_csv:
+      self._UploadLaneMarginingViaCSV(log_result)
+    self._UploadLaneMarginingViaTestlog(log_result)
 
   def _WaitMuxInfoBecomingTBT(self):
     """Waits until Mux info becomes TBT=1."""
