@@ -59,7 +59,6 @@ from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 
-
 FWUPDTOOL = 'fwupdtool'
 
 

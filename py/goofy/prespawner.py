@@ -41,7 +41,6 @@ import subprocess
 from cros.factory.test.env import paths
 from cros.factory.utils import process_utils
 
-
 NUM_PRESPAWNED_PROCESSES = 1
 PYTEST_PRESPAWNER_PATH = os.path.join(paths.FACTORY_DIR,
                                       'py/test/pytest_runner.py')

@@ -25,7 +25,6 @@ from cros.factory.umpire.server.web import xmlrpc as umpire_xmlrpc
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
-
 # Forward to the correct executer with additional arguments.
 if __name__ == '__main__':
   unittest_helper.ExecScriptWithTrial()

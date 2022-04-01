@@ -26,7 +26,6 @@ from cros.factory.external.dbus.mainloop.glib import DBusGMainLoop
 from cros.factory.external.dbus import service  # pylint: disable=unused-import
 from cros.factory.external import gobject
 
-
 BUS_NAME = 'org.bluez'
 SERVICE_NAME = 'org.bluez'
 ADAPTER_INTERFACE = SERVICE_NAME + '.Adapter1'

@@ -20,7 +20,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils.string_utils import ParseUrl
 from cros.factory.utils.type_utils import Error
 
-
 # Constants
 DEFAULT_MAX_RETRY_TIMES = 0
 DEFAULT_RETRY_INTERVAL = 60

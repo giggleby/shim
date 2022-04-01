@@ -17,7 +17,6 @@ import signal
 import sys
 import time
 
-
 CHILD = 0
 PARENT = 1
 

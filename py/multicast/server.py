@@ -14,7 +14,6 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 
-
 LOG_FILE = 'uftp.log'
 MCAST_CONFIG_NAME = 'multicast_config.json'
 UMPIRE_CONFIG_NAME = 'active_umpire.json'

@@ -5,6 +5,5 @@
 import os
 import sys
 
-
 sys.path.append(os.environ.get("SYSROOT", "/usr/local/") +
                 "lib/flimflam/test")

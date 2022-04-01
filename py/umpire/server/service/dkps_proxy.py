@@ -9,7 +9,6 @@ from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
-
 FACTORY_ENV = '/usr/local/factory/bin/factory_env'
 
 

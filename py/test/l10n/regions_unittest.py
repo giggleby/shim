@@ -16,7 +16,6 @@ import unittest
 
 from cros.factory.test.l10n import regions
 
-
 # pylint: disable=protected-access
 
 

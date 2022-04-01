@@ -16,7 +16,6 @@ import os
 from cros.factory.utils.cros_board_utils import BuildBoard
 from cros.factory.utils.process_utils import CheckOutput
 
-
 NUM_COMMITS_PER_REPO = 50
 
 SRC = os.path.join(os.environ['CROS_WORKON_SRCROOT'], 'src')

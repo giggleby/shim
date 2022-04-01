@@ -15,7 +15,6 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 HWIDException = common.HWIDException
 
 

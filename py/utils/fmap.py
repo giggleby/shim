@@ -32,7 +32,6 @@ import pprint
 import struct
 import sys
 
-
 # constants imported from lib/fmap.h
 FMAP_SIGNATURE = b'__FMAP__'
 FMAP_VER_MAJOR = 1

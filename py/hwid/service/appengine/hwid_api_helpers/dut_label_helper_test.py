@@ -14,7 +14,6 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
-
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',
     'v3-golden.yaml')

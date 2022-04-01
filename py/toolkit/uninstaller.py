@@ -20,7 +20,6 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
-
 HELP_HEADER = """
 Uninstall the factory toolkit on a CrOS device.
 """

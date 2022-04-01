@@ -5,7 +5,6 @@
 from cros.factory.test.i18n import string_utils
 from cros.factory.test.i18n import translation
 
-
 _ = string_utils._
 HTMLEscape = string_utils.HTMLEscape
 NoTranslation = translation.NoTranslation

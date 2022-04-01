@@ -7,7 +7,6 @@
 from cros.factory.utils import sys_interface
 from cros.factory.utils import type_utils
 
-
 # Default component property - using lazy loaded property implementation.
 DeviceProperty = type_utils.LazyProperty
 # TODO(hungte) Change DeviceProperty to also check if it has overridden an

@@ -12,7 +12,6 @@ from cros.factory.proto import reg_code_pb2
 from cros.factory.proto.reg_code_pb2 import RegCode
 from cros.factory.utils import type_utils
 
-
 # Registration code length in characters.
 LEGACY_REGISTRATION_CODE_LENGTH = 72
 

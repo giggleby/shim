@@ -41,7 +41,6 @@ import tempfile
 
 from cros.factory.utils.process_utils import Spawn
 
-
 # A pattern in TEMPLATE to be replaced with real module list.
 MODULES_PATTERN = '__MODULES_HERE__'
 

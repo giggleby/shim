@@ -34,7 +34,6 @@ from cros.factory.utils import time_utils
 
 from cros.factory.external import syslog
 
-
 # Number of bytes to include from the log of a failed test.
 ERROR_LOG_TAIL_LENGTH = 8 * 1024
 

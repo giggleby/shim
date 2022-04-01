@@ -18,7 +18,6 @@ from cros.factory.instalog.plugins import buffer_file_common
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 
-
 _TEMPORARY_ATTACHMENT_DIR = 'attachments_tmp_dir'
 _DEFAULT_TRUNCATE_INTERVAL = 0  # truncating disabled
 _DEFAULT_COPY_ATTACHMENTS = False  # use move instead of copy by default

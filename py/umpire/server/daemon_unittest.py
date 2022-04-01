@@ -26,7 +26,6 @@ from cros.factory.umpire.server.web import wsgi
 from cros.factory.utils import net_utils
 from cros.factory.utils import type_utils
 
-
 # Forward to the correct executer with additional arguments.
 if __name__ == '__main__':
   unittest_helper.ExecScriptWithTrial()

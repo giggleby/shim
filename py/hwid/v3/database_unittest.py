@@ -18,7 +18,6 @@ from cros.factory.hwid.v3.database import Rules
 from cros.factory.hwid.v3 import rule
 from cros.factory.utils import file_utils
 
-
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
 

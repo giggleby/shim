@@ -95,7 +95,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
 
-
 _EXTERNAL_DIR = '/run/factory/external'
 
 # Usually external tests will take a long time to run so check duration can be

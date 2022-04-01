@@ -4,7 +4,6 @@
 
 from cros.factory.device import device_types
 
-
 # Forward the exception for easy access to all device (component, interface,
 # board) exceptions.
 DeviceException = device_types.DeviceException

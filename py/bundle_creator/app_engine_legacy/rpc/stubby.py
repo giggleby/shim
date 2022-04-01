@@ -11,13 +11,11 @@ from protorpc import definition  # pylint: disable=import-error
 from protorpc import remote  # pylint: disable=import-error
 from protorpc.wsgi import service  # pylint: disable=import-error
 
-
 definition.import_file_set('rpc/factorybundle.proto.def')
 # The config is imported from factory-private repo.
 import config  # pylint: disable=import-error,wrong-import-order,wrong-import-position
 
 from cros.factory import proto  # pylint: disable=import-error,wrong-import-position
-
 
 _SERVICE_PATH = '/_ah/stubby/FactoryBundleService'
 

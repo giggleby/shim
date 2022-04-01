@@ -49,7 +49,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 _MIN_SUSPEND_MARGIN_SECS = 5
 
 

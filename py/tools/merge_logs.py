@@ -10,7 +10,6 @@ import itertools
 import re
 import sys
 
-
 MAX_TIMESTAMP = datetime.datetime(datetime.MAXYEAR, 12, 31)
 
 # Recognizable timestamp formats.

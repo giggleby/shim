@@ -14,7 +14,6 @@ from cros.factory.probe_info_service.app_engine import stubby_pb2
 # pylint: enable=no-name-in-module
 from cros.factory.utils import file_utils
 
-
 TESTDATA_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata')
 

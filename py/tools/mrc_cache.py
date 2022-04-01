@@ -11,7 +11,6 @@ import logging
 from cros.factory.device import device_utils
 from cros.factory.utils.type_utils import Enum
 
-
 ARCH = Enum(['x86', 'arm'])
 MRC_CACHE_SECTIONS = (
     'RECOVERY_MRC_CACHE',  # For x86 recovery mode

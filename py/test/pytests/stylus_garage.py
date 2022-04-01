@@ -58,7 +58,6 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import evdev
 
-
 STYLUS_STATUS = type_utils.Enum(['inserted', 'ejected'])
 
 

@@ -29,7 +29,6 @@ import google.auth
 from google.auth import impersonated_credentials
 import google.auth.transport.requests
 
-
 # pylint: enable=import-error, no-name-in-module
 # isort: split
 
@@ -38,7 +37,6 @@ import urllib3.exceptions
 
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import json_utils
-
 
 HEAD = b'HEAD'
 DEFAULT_REMOTE_NAME = b'origin'

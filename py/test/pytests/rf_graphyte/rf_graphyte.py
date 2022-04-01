@@ -79,7 +79,6 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
-
 # The Graphyte config files (pathloss, test plan, port config) should be placed
 # in the config_files folder in Graphyte framework.
 RELATIVE_CONFIG_DIR = 'config_files/'

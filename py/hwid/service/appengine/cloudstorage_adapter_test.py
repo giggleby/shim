@@ -13,7 +13,6 @@ import google.cloud.exceptions  # pylint: disable=no-name-in-module, import-erro
 
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
 
-
 TEST_BUCKET = 'test-bucket'
 TEST_FILE = 'foo'
 TEST_DATA = 'bar'

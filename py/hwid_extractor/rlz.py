@@ -5,7 +5,6 @@
 import json
 import os
 
-
 RLZ_JSON = os.path.join(os.path.dirname(__file__), 'rlz.json')
 
 

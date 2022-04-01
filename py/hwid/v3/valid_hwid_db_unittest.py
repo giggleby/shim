@@ -33,10 +33,9 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
-
 
 BLOCKLIST_PROJECT = []
 

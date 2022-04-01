@@ -25,7 +25,6 @@ from cros.factory.utils.ssh_utils import SpawnSSHToDUT
 from cros.factory.utils.sync_utils import Retry
 from cros.factory.utils.sys_utils import InChroot
 
-
 SRCROOT = os.environ.get('CROS_WORKON_SRCROOT')
 
 

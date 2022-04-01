@@ -122,7 +122,6 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 MSG_BUILD_PHASE = _('Build Phase')
 MSG_WRITE_PROTECTION = _('Write Protection')
 MSG_FACTORY_SERVER = _('Factory Server')

@@ -76,7 +76,6 @@ from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 DATA_METHOD = type_utils.Enum(['USB', 'FACTORY_SERVER'])
 
 

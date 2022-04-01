@@ -12,7 +12,6 @@ import os
 
 from cros.factory.umpire.server.service import umpire_service
 
-
 LOG_FILENAME = 'umpire_sync_log'
 SERVICE_NAME = 'umpire_sync'
 STATUS_FILENAME = 'umpire_sync_status.json'

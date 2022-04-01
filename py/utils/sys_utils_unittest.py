@@ -16,7 +16,6 @@ from cros.factory.device import device_utils
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
-
 SAMPLE_INTERRUPTS = """           CPU0       CPU1       CPU2       CPU3
   0:        124          0          0          0   IO-APIC-edge      timer
   1:         19        683          7         14   IO-APIC-edge      i8042

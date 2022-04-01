@@ -11,7 +11,6 @@ testing_rsa identity.
 import logging
 import os
 
-
 try:
   from chromite.lib import remote_access
   _HAS_REMOTE_ACCESS = True
@@ -21,7 +20,6 @@ except ImportError:
 from . import file_utils
 from . import net_utils
 from . import process_utils
-
 
 # The path to the testing_rsa identity file.
 testing_rsa = None

@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 from cros.factory.probe.functions import generic_fingerprint
 
-
 _BOARD_NAME = 'dartmonkey'
 _RO_VERSION = 'v2.0.2887-311310808-RO'
 _RW_VERSION = 'v2.0.7304-441100b93-RW'

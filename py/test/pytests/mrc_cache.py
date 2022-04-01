@@ -51,7 +51,6 @@ from cros.factory.tools import mrc_cache
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.type_utils import Enum
 
-
 TestMode = Enum(['create', 'verify'])
 
 

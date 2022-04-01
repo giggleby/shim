@@ -14,7 +14,6 @@ import sys
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import json_utils
 
-
 _ENV_DIR = os.path.join('/', umpire_env.DEFAULT_BASE_DIR)
 _SESSION_JSON_PATH = os.path.join(_ENV_DIR, umpire_env.SESSION_JSON_FILE)
 

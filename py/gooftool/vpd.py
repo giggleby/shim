@@ -7,7 +7,6 @@ import subprocess
 
 from cros.factory.gooftool import common as gooftool_common
 
-
 # ChromeOS firmware VPD partition names.
 VPD_READONLY_PARTITION_NAME = 'RO_VPD'
 VPD_READWRITE_PARTITION_NAME = 'RW_VPD'

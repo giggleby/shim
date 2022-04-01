@@ -15,7 +15,6 @@ import time
 
 from cros.factory.test.rf.n1914a import N1914A
 
-
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description=('This tool will use REAL format to measure the reading/sec '

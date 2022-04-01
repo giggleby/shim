@@ -13,7 +13,6 @@ import unittest
 
 from cros.factory.test.test_lists import test_object
 
-
 SRCROOT = os.environ.get('CROS_WORKON_SRCROOT')
 
 

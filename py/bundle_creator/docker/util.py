@@ -21,7 +21,6 @@ from cros.factory.bundle_creator.connector import firestore_connector
 from cros.factory.bundle_creator.docker import config
 from cros.factory.utils import file_utils
 
-
 HWID_API_SCOPE = "https://www.googleapis.com/auth/chromeoshwid"
 GERRIT_URL = 'https://chrome-internal-review.googlesource.com'
 GERRIT_HWID_URI = GERRIT_URL + '/c/chromeos/chromeos-hwid/+/%(clNumber)s'

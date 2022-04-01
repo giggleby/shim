@@ -22,7 +22,6 @@ import xmlrpc.server
 
 import gnupg
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 FILTERS_DIR = os.path.join(SCRIPT_DIR, 'filters')
 PARSERS_DIR = os.path.join(SCRIPT_DIR, 'parsers')

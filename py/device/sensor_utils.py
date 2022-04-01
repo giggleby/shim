@@ -8,7 +8,6 @@ import typing
 
 from cros.factory.device import device_types
 
-
 IIO_DEVICES_PATTERN = '/sys/bus/iio/devices/iio:device*'
 
 

@@ -16,7 +16,6 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import file_utils
 
-
 TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata')
 

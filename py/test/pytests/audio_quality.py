@@ -77,7 +77,6 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 # Host test machine crossover connected to DUT, fix local ip and port for
 # communication in between.
 _HOST = ''

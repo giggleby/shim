@@ -23,7 +23,6 @@ from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
 from cros.factory.instalog.utils import time_utils
 
-
 _DEFAULT_INTERVAL = 60
 
 

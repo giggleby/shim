@@ -15,7 +15,6 @@ from cros.factory.test import test_ui
 from cros.factory.unittest_utils import mock_time_utils
 from cros.factory.utils import type_utils
 
-
 _EventType = test_event.Event.Type
 
 

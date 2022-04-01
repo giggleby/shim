@@ -15,7 +15,6 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
 
-
 _BIGQUERY_SCOPE = 'https://www.googleapis.com/auth/bigquery'
 _DEFAULT_INTERVAL = 86400
 

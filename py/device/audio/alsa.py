@@ -13,7 +13,6 @@ from cros.factory.device.audio import config_manager
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
 # Configuration file is using YAML nested collections format.

@@ -11,7 +11,6 @@ import unittest
 
 from cros.factory.tools import get_version
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 

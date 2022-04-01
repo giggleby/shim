@@ -8,7 +8,6 @@ from cros.factory.goofy.plugins import periodic_plugin
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 CLEANUP_LOGS_PAUSED = '/var/lib/cleanup_logs_paused'
 
 

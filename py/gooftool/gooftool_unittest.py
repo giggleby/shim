@@ -31,7 +31,6 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
 
-
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
 # A stub for stdout

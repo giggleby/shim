@@ -32,7 +32,6 @@ from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
-
 FACTORY_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..'))
 # Directories to search unit test files starting from factory repository root.

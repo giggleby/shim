@@ -47,7 +47,6 @@ from cros.factory.instalog.plugins import buffer_simple_file
 from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
 
-
 # pylint: disable=protected-access
 
 

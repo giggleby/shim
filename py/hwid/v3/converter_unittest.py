@@ -11,7 +11,6 @@ from cros.factory.hwid.v3 import converter
 from cros.factory.hwid.v3.database import Database
 from cros.factory.utils import json_utils
 
-
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
 

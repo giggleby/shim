@@ -24,7 +24,6 @@ from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
-
 CONFIG = config.CONFIG
 
 GOLDENEYE_MEMCACHE_NAMESPACE = 'SourceGoldenEye'

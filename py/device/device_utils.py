@@ -13,7 +13,6 @@ import os
 from cros.factory.device import device_types
 from cros.factory.utils import config_utils
 
-
 DEVICE_MODULE_BASE = 'cros.factory.device'
 DEVICE_CONFIG_NAME = 'devices'
 # Config types must match the config.json file.

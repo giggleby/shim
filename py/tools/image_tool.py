@@ -32,7 +32,6 @@ import urllib.parse  # pylint: disable=import-error,no-name-in-module
 
 import yaml
 
-
 # The edit_lsb command works better if readline enabled, but will still work if
 # that is not available.
 try:
@@ -51,7 +50,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
 from cros.factory.tools import netboot_firmware_settings  # pylint: disable=wrong-import-position
 from cros.factory.utils import fmap  # pylint: disable=wrong-import-position
 from cros.factory.utils import pygpt  # pylint: disable=wrong-import-position
-
 
 # Partition index for Chrome OS stateful partition.
 PART_CROS_STATEFUL = 1

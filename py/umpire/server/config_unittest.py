@@ -15,7 +15,6 @@ from cros.factory.umpire.server import resource
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import file_utils
 
-
 TESTDATA_DIR = os.path.join(os.path.dirname(__file__), 'testdata')
 MINIMAL_CONFIG = os.path.join(TESTDATA_DIR, 'minimal_umpire.json')
 EMPTY_SERVICES_CONFIG = os.path.join(TESTDATA_DIR,

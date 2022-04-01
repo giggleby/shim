@@ -11,7 +11,6 @@ import serial
 
 from cros.factory.test.fixture.robot import six_dof_calibration_robot
 
-
 Robot = six_dof_calibration_robot.SixDoFCalibrationRobot
 
 

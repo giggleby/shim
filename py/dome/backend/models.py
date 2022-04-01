@@ -37,7 +37,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 
-
 # TODO(littlecvr): pull out the common parts between umpire and dome, and put
 #                  them into a config file (using the new config API).
 UMPIRE_BASE_PORT = 8080

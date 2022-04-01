@@ -8,7 +8,6 @@ import os
 from cros.factory.probe.lib import probe_function
 from cros.factory.utils.arg_utils import Arg
 
-
 DEFAULT_KEY = 'path'
 
 

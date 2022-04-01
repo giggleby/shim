@@ -19,7 +19,6 @@ from cros.factory.instalog import plugin_sandbox
 # pylint: disable=no-name-in-module
 from cros.factory.instalog.external.jsonrpclib import SimpleJSONRPCServer
 
-
 # Possible daemon states.
 STARTING = 'STARTING'
 UP = 'UP'

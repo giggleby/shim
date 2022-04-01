@@ -78,7 +78,6 @@ from cros.factory.test import ui_templates
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.utils.arg_utils import Arg
 
-
 _KEY_COMPONENT_SKU = device_data.JoinKeys(device_data.KEY_COMPONENT, 'sku')
 
 _PLATFORM_DATA = ['model', 'sku', 'brand']

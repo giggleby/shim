@@ -9,7 +9,6 @@ import unittest
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.utils import file_utils
 
-
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
 DB_DRAM_GOOD_PATH = os.path.join(_TEST_DATA_PATH,

@@ -29,7 +29,6 @@ from cros.factory.utils import json_utils
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
-
 PYTHONPATH = 'usr/local/factory/py_pkg'
 INSTALLER_MODULE = 'cros.factory.toolkit.installer'
 VERSION_PATH = 'usr/local/factory/TOOLKIT_VERSION'

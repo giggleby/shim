@@ -9,7 +9,6 @@ import collections
 import logging
 import os
 
-
 # Stub for mockability.
 _Open = open
 

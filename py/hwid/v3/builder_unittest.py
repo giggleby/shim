@@ -15,7 +15,6 @@ from cros.factory.test.l10n import regions
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 
-
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_DATABASE_PATH = os.path.join(_TEST_DATA_PATH, 'test_builder_db.yaml')
 

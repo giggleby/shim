@@ -78,7 +78,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 _SOUND_DIRECTORY = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..', '..', 'goofy',
     'static', 'sounds')

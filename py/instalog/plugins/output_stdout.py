@@ -12,7 +12,6 @@ A sample output plugin that writes events to stdout.
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
 
-
 _DEFAULT_BATCH_SIZE = 5
 _DEFAULT_TIMEOUT = 5
 

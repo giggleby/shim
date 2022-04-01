@@ -45,7 +45,6 @@ don't want to add arguments for all utility functions, so instead we can use
 import contextlib
 import threading
 
-
 _local_env = threading.local()
 
 

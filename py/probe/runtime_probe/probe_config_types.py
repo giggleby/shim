@@ -9,7 +9,6 @@ import re
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
-
 ValueType = type_utils.Enum(['INT', 'STRING'])
 
 class OutputFieldDefinition:

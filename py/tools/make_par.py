@@ -21,7 +21,6 @@ from cros.factory.test.env import paths
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils.process_utils import SpawnOutput
 
-
 DESCRIPTION = """Creates a self-extracting Python executable.
 
 The generated executable contains a copy of the entire factory code

@@ -32,7 +32,6 @@ from cros.factory.utils import shelve_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 DEFAULT_FACTORY_STATE_FILE_DIR = paths.DATA_STATE_DIR
 
 KEY_POST_SHUTDOWN = '%s.post_shutdown'

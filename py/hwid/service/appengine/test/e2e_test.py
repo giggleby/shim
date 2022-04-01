@@ -23,7 +23,6 @@ from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 APPENGINE_DIR = os.path.dirname(TEST_DIR)
 PROTO_DIR = os.path.join(APPENGINE_DIR, 'proto')

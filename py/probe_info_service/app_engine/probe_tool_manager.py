@@ -18,7 +18,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
-
 _RESOURCE_PATH = os.path.join(os.path.realpath(os.path.dirname(__file__)),
                               'resources')
 

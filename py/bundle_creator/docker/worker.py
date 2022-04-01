@@ -14,7 +14,6 @@ from cros.factory.bundle_creator.docker import config
 from cros.factory.bundle_creator.docker import factorybundle_pb2  # pylint: disable=no-name-in-module
 from cros.factory.bundle_creator.docker import util
 
-
 RESPONSE_CALLBACK = '/_ah/stubby/FactoryBundleService.ResponseCallback'
 ACK_DEADLINE = 600
 

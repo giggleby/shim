@@ -21,7 +21,6 @@ import uuid
 
 from twisted.internet import reactor
 
-
 _SLOTS_NUMBER = 10
 # Expects that client side will send heart beat in every 60 seconds
 _SLOT_ALIVE_TIME = 80.0

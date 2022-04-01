@@ -15,7 +15,6 @@ from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
-
 _ErrorMsg = (
     hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult.Error)
 _ErrorCodeMsg = (

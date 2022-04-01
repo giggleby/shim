@@ -13,7 +13,6 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import evdev
 
-
 INPUT_DEVICE_PATH = '/proc/bus/input/devices'
 KNOWN_DEVICE_TYPES = type_utils.Enum(['touchscreen', 'touchpad', 'stylus'])
 

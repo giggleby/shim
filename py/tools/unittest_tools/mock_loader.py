@@ -9,7 +9,6 @@ import shutil
 import sys
 import tempfile
 
-
 _PY_PKG_DIR_PATH = os.path.abspath(
     os.path.join(os.path.realpath(__file__), '..', '..', '..', '..', 'py_pkg'))
 

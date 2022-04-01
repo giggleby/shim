@@ -9,7 +9,6 @@ import json
 
 from cros.factory.goofy.plugins import plugin_controller
 
-
 DESCRIPTION = 'Factory QR Code Manager'
 EXAMPLES = """
   This is a command line interface which interacts with the `qrcode_manager`

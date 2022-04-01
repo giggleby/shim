@@ -20,7 +20,6 @@ from cros.factory.hwid.v3 import rule
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import schema
 
-
 _BLOCKLIST_DRAM_TAG = set([
     'dram_default',
     'dram_placeholder',

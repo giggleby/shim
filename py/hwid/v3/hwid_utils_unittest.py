@@ -15,7 +15,6 @@ from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.unittest_utils import label_utils
 
-
 _TEST_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'TEST_PROJECT')
 

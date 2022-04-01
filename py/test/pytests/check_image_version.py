@@ -126,7 +126,6 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
-
 _RE_CROS_PAYLOAD_ERROR = re.compile(r'ERROR: .*')
 _RE_BRANCHED_IMAGE_VERSION = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*$')
 

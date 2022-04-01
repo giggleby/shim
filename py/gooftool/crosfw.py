@@ -22,7 +22,6 @@ import tempfile
 from cros.factory.gooftool import common
 from cros.factory.utils import fmap
 
-
 # Names to select target bus.
 TARGET_MAIN = 'main'
 TARGET_EC = 'ec'

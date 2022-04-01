@@ -53,7 +53,6 @@ from .utils import sys_utils
 from .utils import time_utils
 from .utils import type_utils
 
-
 TESTLOG_API_VERSION = '0.21'
 TESTLOG_ENV_VARIABLE_NAME = 'TESTLOG'
 

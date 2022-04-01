@@ -11,7 +11,6 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
-
 EXAMPLE_MEMORY_STR = ['hynix_2gb_dimm0', 'hynix_0gb_dimm1']
 SKU_TEST_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata', 'v3-sku.yaml')

@@ -105,7 +105,6 @@ from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 _WIFI_TIMEOUT_SECS = 20
 _DEFAULT_POLL_INTERVAL_SECS = 1
 _IPERF_TIMEOUT_SECS = 5

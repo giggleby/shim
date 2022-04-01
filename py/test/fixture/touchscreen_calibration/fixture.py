@@ -11,7 +11,6 @@ from cros.factory.test.i18n import _
 from cros.factory.test import session
 from cros.factory.test.utils import serial_utils
 
-
 # Define the driver name and the interface protocols to find the arduino ports.
 # NATIVE_USB_PORT:  used to monitor the internal state of test fixture.
 # PROGRAMMING_PORT: used to upload the firmware from host to the arduino and

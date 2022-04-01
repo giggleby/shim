@@ -15,7 +15,6 @@ from cros.factory.probe import probe_utils
 from cros.factory.probe import search
 from cros.factory.utils import json_utils
 
-
 _sub_cmd_list = []
 
 

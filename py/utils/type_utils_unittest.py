@@ -9,7 +9,6 @@ import unittest
 
 from cros.factory.utils import type_utils
 
-
 # Jon's favorite character for Unicode testing: 囧
 JIONG_UTF8 = '\xe5\x9b\xa7'
 

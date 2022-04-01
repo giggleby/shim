@@ -160,7 +160,6 @@ from cros.factory.test import ui_templates
 from cros.factory.test.utils import deploy_utils
 from cros.factory.utils.arg_utils import Arg
 
-
 # The config files should be placed in the py/test/pytests/probe/ folder.
 LOCAL_CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
 OPERATOR_MAP = {

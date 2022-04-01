@@ -15,7 +15,6 @@ from unittest import mock
 from cros.factory.device import device_types
 from cros.factory.device import thermal
 
-
 _CORETEMP_PREFIX = '/sys/devices/platform/coretemp.'
 
 

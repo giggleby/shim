@@ -7,7 +7,6 @@ import os
 import sys
 import unittest
 
-
 from cros.factory.test.env import paths
 
 

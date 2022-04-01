@@ -10,7 +10,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
-
 RUNTIME_PROBE_BIN = os.path.join(
     os.path.dirname(__file__), '../../../bin/runtime_probe_invoker')
 COMPONENT_NAME = 'adaptor_component'

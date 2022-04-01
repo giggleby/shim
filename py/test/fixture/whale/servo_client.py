@@ -37,7 +37,6 @@ from cros.factory.test.fixture.whale import servo_config
 from cros.factory.utils.net_utils import TimeoutXMLRPCServerProxy
 from cros.factory.utils.type_utils import AttrDict
 
-
 # Whale's buttons. Can get its value ('on'/'off').
 WHALE_BUTTON = AttrDict(dict(
     BUG_FILING='whale_bug_filing_btn',

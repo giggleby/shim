@@ -11,7 +11,6 @@ from cros.factory.test.l10n.regions import REGIONS
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils.process_utils import Spawn
 
-
 DESCRIPTION = """Re-runs OOBE on a remote device with the given region.
 
 This tool is useful for manually testing how OOBE behaves with VPD

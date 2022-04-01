@@ -11,7 +11,6 @@ import queue
 import re
 from typing import Callable, Generic, TypeVar, Union
 
-
 # The regular expression used by Overrides.
 _OVERRIDES_CLASS_RE = re.compile(r'^\s*class([^#]+)\(\s*([^\s#]+)\s*\)\s*\:')
 T = TypeVar('T')

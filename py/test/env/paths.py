@@ -8,7 +8,6 @@ import tempfile
 
 from cros.factory.utils import sys_utils
 
-
 SCRIPT_PATH = os.path.realpath(__file__)
 # Path to factory environment (code and resources)
 FACTORY_DIR = os.path.realpath(

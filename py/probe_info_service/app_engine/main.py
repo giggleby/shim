@@ -12,7 +12,6 @@ from cros.factory.probe_info_service.app_engine import config
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import stubby_handler
 
-
 # Setup logging framework based on the environment as early as possible.
 _config = config.Config()
 if _config.env_type == config.EnvType.LOCAL:

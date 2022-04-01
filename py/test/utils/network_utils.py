@@ -26,7 +26,6 @@ from cros.factory.external import dpkt
 from cros.factory.external import netifaces
 from cros.factory.external import pexpect
 
-
 INSERT_ETHERNET_DONGLE_TIMEOUT = 30
 
 

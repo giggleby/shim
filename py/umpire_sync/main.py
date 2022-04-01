@@ -14,7 +14,6 @@ import xmlrpc.client
 from cros.factory.umpire_sync import utils
 from cros.factory.utils import net_utils
 
-
 RPC_PORT_OFFSET = 2
 RPC_TIMEOUT = 1
 UPDATE_TIMEOUT = 600

@@ -53,7 +53,6 @@ import zipimport
 
 from . import file_utils
 
-
 # To simplify portability issues, validating JSON schema is optional.
 try:
   # pylint: disable=wrong-import-order

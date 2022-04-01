@@ -19,7 +19,6 @@ from cros.factory.test.env import paths
 from cros.factory.utils import cros_board_utils
 from cros.factory.utils import process_utils
 
-
 try:
   DEPOT_TOOLS_PATH = os.path.join(
       os.path.dirname(os.environ.get('CROS_WORKON_SRCROOT',

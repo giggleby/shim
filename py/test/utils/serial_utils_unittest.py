@@ -13,7 +13,6 @@ from cros.factory.test.utils import serial_utils
 
 from cros.factory.external import serial
 
-
 _DEFAULT_DRIVER = 'pl2303'
 _DEFAULT_INDEX = '1-1'
 _DEFAULT_PORT = '/dev/ttyUSB0'

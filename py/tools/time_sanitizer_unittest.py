@@ -15,7 +15,6 @@ from unittest import mock
 from cros.factory.tools import time_sanitizer
 from cros.factory.utils import file_utils
 
-
 BASE_TIME = float(
     calendar.timegm(time.strptime('Sat Jun  9 00:00:00 2012')))
 

@@ -52,7 +52,6 @@ from cros.factory.test.utils import audio_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
-
 _VPD_KEY = 'dsm_calib'
 
 

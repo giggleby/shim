@@ -10,7 +10,6 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.v3 import database as v3_database
 from cros.factory.hwid.v3 import rule as v3_rule
 
-
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/v3-golden.yaml')
 

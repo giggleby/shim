@@ -8,7 +8,6 @@ import time
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 SERVOD_BIN = 'servod'
 DUT_CONTROL_TIMEOUT = 10
 SERVOD_INIT_TIMEOUT_SEC = 10

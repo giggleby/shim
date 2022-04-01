@@ -19,7 +19,6 @@ from cros.factory.instalog.plugins import input_socket
 from cros.factory.instalog.plugins import socket_common
 from cros.factory.instalog.utils.arg_utils import Arg
 
-
 _CONNECT_INTERVAL = 1
 _CONNECT_LOG_INTERVAL = 60  # interval
 #     = _CONNECT_INTERVAL * _CONNECT_LOG_INTERVAL

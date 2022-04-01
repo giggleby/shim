@@ -9,7 +9,6 @@ import os.path
 import site
 import sys
 
-
 _APPENGINE_SRC_ROOT = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', '..', '..', '..')

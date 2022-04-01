@@ -17,7 +17,6 @@
 import struct
 import sys
 
-
 # Constant Definition
 BMPBLOCK_SIGNATURE = '$BMP'
 BMPBLOCK_SIGNATURE_SIZE = 4

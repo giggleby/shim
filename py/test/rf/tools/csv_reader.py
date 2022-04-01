@@ -17,7 +17,6 @@ import csv
 import logging
 import os
 
-
 KEY = '__key__'
 VALUE = '__value__'
 

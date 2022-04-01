@@ -27,7 +27,6 @@ from cros.factory.utils.process_utils import TerminateOrKillProcess
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
-
 KickRequest = namedtuple('KickRequest',
                          ['extra_files', 'callback', 'clear_only'])
 

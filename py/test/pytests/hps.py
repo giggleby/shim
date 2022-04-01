@@ -30,7 +30,6 @@ from cros.factory.test import test_case
 from cros.factory.test.utils import hps_utils
 from cros.factory.utils.arg_utils import Arg
 
-
 DEFAULT_HPS_FACTORY_TIMEOUT = 3600
 
 

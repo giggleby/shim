@@ -53,7 +53,6 @@ from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 
-
 _DEFAULT_ADJUST_LEVEL = 0.05
 _DEFAULT_RESET_LEVEL = 0.5
 _DEFAULT_MIN_LEVEL = 0.0

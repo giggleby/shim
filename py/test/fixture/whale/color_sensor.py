@@ -9,7 +9,6 @@ import logging
 
 from cros.factory.test.fixture import bft_fixture as bft
 
-
 # shortcut
 BFT = bft.BFTFixture
 

@@ -10,7 +10,6 @@ import os
 from cros.factory.test.env import paths
 from cros.factory.utils import process_utils
 
-
 DEVICE_GOOFY_GHOST_PROPERTIES_FILE = os.path.join(paths.DATA_DIR, 'config',
                                                   'goofy_ghost.json')
 GOOFY_GHOST_PROPERTIES_FILE = os.path.join(paths.RUNTIME_VARIABLE_DATA_DIR,

@@ -17,7 +17,6 @@ import sys
 import client_payload_pb2  # pylint: disable=import-error
 from google.protobuf import text_format
 
-
 _BUNDLE_ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 _METADATA_RELPATH = 'metadata.prototxt'
 

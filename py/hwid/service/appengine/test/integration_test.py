@@ -13,7 +13,6 @@ import sys
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 HOST_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 HOST_APPENGINE_DIR = os.path.dirname(HOST_TEST_DIR)
 APPENGINE_MODULE_PREFIX = 'cros.factory.hwid.service.appengine.'

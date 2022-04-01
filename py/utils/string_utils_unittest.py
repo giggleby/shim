@@ -17,7 +17,6 @@ from cros.factory.utils.string_utils import ParseDict
 from cros.factory.utils.string_utils import ParseString
 from cros.factory.utils.string_utils import ParseUrl
 
-
 _LINES = ['TPM Enabled: true',
           'TPM Owned: false',
           'TPM Being Owned: false',

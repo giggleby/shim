@@ -45,7 +45,6 @@ from cros.factory.instalog.utils import net_utils
 
 from cros.factory.instalog.external import gnupg
 
-
 _DEFAULT_HOSTNAME = '0.0.0.0'
 
 

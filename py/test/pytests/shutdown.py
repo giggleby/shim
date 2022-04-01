@@ -72,7 +72,6 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
-
 # File that suppresses reboot if present (e.g., for development).
 NO_REBOOT_FILE = '/var/log/factory.noreboot'
 

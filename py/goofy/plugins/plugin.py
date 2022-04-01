@@ -10,7 +10,6 @@ import uuid
 from cros.factory.utils import debug_utils
 from cros.factory.utils import type_utils
 
-
 # Type of resources that can be used by plugins.
 RESOURCE = type_utils.Enum([
     'CPU',

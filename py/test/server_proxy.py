@@ -27,7 +27,6 @@ from cros.factory.test import event
 from cros.factory.utils import config_utils
 from cros.factory.utils import net_utils
 
-
 Fault = xmlrpc.client.Fault
 
 FACTORY_SERVER_CONFIG_NAME = 'factory_server'

@@ -8,7 +8,6 @@ import re
 from cros.factory.device import device_types
 from cros.factory.utils import schema
 
-
 USB_PD_SPEC_SCHEMA_V1 = schema.JSONSchemaDict('USB PD specification schema v1',
                                               {'type': 'integer'})
 

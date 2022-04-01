@@ -10,7 +10,6 @@ from cros.factory.hwid.service.appengine import verification_payload_generator a
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 
-
 ErrorCode = contents_analyzer.ErrorCode
 Error = contents_analyzer.Error
 

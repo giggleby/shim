@@ -24,7 +24,6 @@ from cros.factory.utils import debug_utils
 from cros.factory.utils import shelve_utils
 from cros.factory.utils import type_utils
 
-
 # String prefix to indicate this value needs to be evaluated
 EVALUATE_PREFIX = 'eval! '
 

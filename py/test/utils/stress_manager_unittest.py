@@ -14,7 +14,6 @@ from cros.factory.device import memory
 from cros.factory.device import temp
 from cros.factory.test.utils import stress_manager
 
-
 STRESSAPPTEST_PATH = stress_manager.STRESSAPPTEST_PATH
 
 

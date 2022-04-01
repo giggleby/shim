@@ -11,7 +11,6 @@ import time
 
 from . import file_utils
 
-
 DEFAULT_LOG_FORMAT = '[%(levelname)s] %(message)s'
 
 _inited_logging = False

@@ -91,7 +91,6 @@ from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
-
 # The _() is necessary for pygettext to get translatable strings correctly.
 _ALL_ITEMS = [
     _('solid-gray-170'),

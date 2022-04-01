@@ -13,7 +13,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 MTD_PATH = '/sys/kernel/debug/mtd/mtd0/'
 
 class FlashChipFunction(cached_probe_function.LazyCachedProbeFunction):

@@ -37,7 +37,6 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
-
 _PytestInfo = collections.namedtuple('_PytestInfo',
                                      ['test_state', 'error_msg', 'func'])
 

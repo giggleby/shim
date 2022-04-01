@@ -37,7 +37,6 @@ from cros.factory.instalog.utils import gcs_utils
 from cros.factory.instalog.utils import time_utils
 from cros.factory.instalog.utils import type_utils
 
-
 _PROCESSES_NUMBER = 20
 REPORT_EVENT_FIELD = {
     'apiVersion', 'dutDeviceId', 'stationDeviceId', 'stationInstallationId'

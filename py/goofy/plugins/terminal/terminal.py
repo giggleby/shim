@@ -18,7 +18,6 @@ from cros.factory.goofy.plugins import plugin
 from cros.factory.test.utils.web_socket_utils import WebSocketHandshake
 from cros.factory.utils import type_utils
 
-
 _SHELL = os.getenv('SHELL', '/bin/bash')
 _BUFSIZ = 8192
 _CONTROL_START = 128

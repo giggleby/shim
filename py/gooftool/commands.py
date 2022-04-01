@@ -49,7 +49,6 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils.type_utils import Error
 
-
 # TODO(tammo): Replace calls to sys.exit with raise Exit, and maybe
 # treat that specially (as a smoot exit, as opposed to the more
 # verbose output for generic Error).

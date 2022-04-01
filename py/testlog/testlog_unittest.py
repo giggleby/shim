@@ -24,7 +24,6 @@ from cros.factory.testlog.utils import schema
 from cros.factory.testlog.utils import time_utils
 from cros.factory.unittest_utils import label_utils
 
-
 SAMPLE_DATETIME_FLOAT = 618538088.888888
 SAMPLE_DATETIME = datetime.datetime(1989, 8, 8, 8, 8, 8, 888888)
 SAMPLE_DATETIME_STRING = '618538088.888888'

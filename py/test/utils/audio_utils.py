@@ -10,7 +10,6 @@ from cros.factory.utils import process_utils
 
 from cros.factory.external import dbus
 
-
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
 # Configuration file is using YAML nested collections format.

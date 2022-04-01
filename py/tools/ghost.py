@@ -46,7 +46,6 @@ from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Enum
 
-
 _GHOST_RPC_PORT = int(os.getenv('GHOST_RPC_PORT', '4499'))
 
 _OVERLORD_PORT = int(os.getenv('OVERLORD_PORT', '4455'))

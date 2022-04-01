@@ -11,7 +11,6 @@ import sys
 
 from cros.factory.umpire.server.service import umpire_service
 
-
 PYTHON_PATH = sys.executable
 
 

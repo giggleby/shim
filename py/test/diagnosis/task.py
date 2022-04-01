@@ -24,7 +24,6 @@ import time
 from cros.factory.test.diagnosis import common
 from cros.factory.utils import process_utils
 
-
 _WAIT_TIMEOUT = 0.1
 
 

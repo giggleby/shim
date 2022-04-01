@@ -13,7 +13,6 @@ import os
 import sys
 import threading
 
-
 # Constants from /usr/include/linux/kd.h.
 KDSETLED = 0x4B32
 LED_SCR = 1

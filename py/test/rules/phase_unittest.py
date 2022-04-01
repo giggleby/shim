@@ -14,7 +14,6 @@ from cros.factory.test.rules.phase import PHASE_NAMES
 from cros.factory.test.rules.phase import Phase
 from cros.factory.test.rules.phase import PhaseAssertionError
 
-
 # Allow access to protected members _state_root_for_testing and _current_phase
 # for white-box testing.
 # pylint: disable=protected-access

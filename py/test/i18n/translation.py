@@ -12,7 +12,6 @@ import os
 from cros.factory.test.env import paths
 from cros.factory.utils import string_utils
 
-
 DOMAIN = 'factory'
 
 DEFAULT_LOCALE = 'en-US'

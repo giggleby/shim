@@ -23,7 +23,6 @@ from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
-
 _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
     hwid_repo.HWIDDBCLStatus.NEW:
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.PENDING,

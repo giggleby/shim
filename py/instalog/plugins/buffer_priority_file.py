@@ -29,7 +29,6 @@ from cros.factory.instalog.plugins import buffer_file_common
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 
-
 _PRIORITY_LEVEL = 4
 # emit timeout in 10 seconds =
 # (_LOCK_ACQUIRE_LOOP_TIMES * _PARTITION * _LOCK_ACQUIRE_TIMEOUT)

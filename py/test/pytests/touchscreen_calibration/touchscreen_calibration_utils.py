@@ -20,7 +20,6 @@ import subprocess
 from subprocess import PIPE
 from subprocess import STDOUT
 
-
 _SYSFS_I2C_PATH = '/sys/bus/i2c/devices'
 _DEBUG_PATH = '/sys/kernel/debug'
 

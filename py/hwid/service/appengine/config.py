@@ -20,7 +20,6 @@ from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 _DEFAULT_CONFIGURATION = {
     'env': 'dev',
     'bucket': 'chromeoshwid-staging',

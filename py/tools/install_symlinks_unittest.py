@@ -11,7 +11,6 @@ import unittest
 
 from cros.factory.tools import install_symlinks
 
-
 FAKE_SYMLINKS = {'binaries': {'fullbin': 'full', 'minibin': 'mini'}}
 
 

@@ -107,7 +107,6 @@ from cros.factory.utils import schema
 
 from cros.factory.external import evdev
 
-
 _RE_EVTEST_EVENT = re.compile(
     r'^Event: time .*?, type .*? \((.*?)\), code (.*?) \(.*?\), value (.*?)$')
 

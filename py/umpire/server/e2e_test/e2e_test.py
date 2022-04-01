@@ -35,7 +35,6 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 
-
 DOCKER_IMAGE_NAME = 'cros/factory_server'
 
 BASE_DIR = os.path.dirname(__file__)

@@ -36,7 +36,6 @@ import yaml
 
 from cros.factory.utils import type_utils
 
-
 TEST_ARG_HELP = """A dictionary with the following items:
 
   ``class_name``

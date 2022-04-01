@@ -13,7 +13,6 @@ import unittest
 from cros.factory.test.utils.pytest_utils import LoadPytestModule
 from cros.factory.utils import file_utils
 
-
 _PYTEST_MODULES = ['cros', 'factory', 'test', 'pytests']
 
 

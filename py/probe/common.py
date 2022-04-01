@@ -13,7 +13,6 @@ from cros.factory.probe.functions.approx_match import ApproxMatchFunction
 from cros.factory.probe.functions.match import MatchFunction
 from cros.factory.utils import config_utils
 
-
 GENERIC_STATEMENT_FILE = 'generic_statement'
 VOLATILE_STATEMENT_FILE = 'volatile_statement'
 GENERIC_STATEMENT_SCHEMA_FILE = 'generic_statement'

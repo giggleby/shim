@@ -8,7 +8,6 @@ import os
 import platform
 import time
 
-
 # Cache to speed up.
 _CURRENT_PLATFORM_SYSTEM = platform.system()
 

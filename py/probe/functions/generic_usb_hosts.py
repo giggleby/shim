@@ -9,7 +9,6 @@ from cros.factory.probe import function
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils import process_utils
 
-
 USB_SYSFS_PATH = '/sys/bus/usb/devices/usb*'
 
 

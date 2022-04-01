@@ -26,7 +26,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
 
-
 CUTOFF_SCRIPT_DIR = '/usr/local/factory/sh/cutoff'
 """Directory of scripts for device cut-off"""
 

@@ -13,7 +13,6 @@ import sys
 from . import file_utils
 from . import process_utils
 
-
 BACKUP_DIRECTORY = 'backup'
 
 

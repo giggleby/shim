@@ -41,7 +41,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 # A list of known components.
 COMPONENTS = type_utils.Enum([
     'firmware', 'hwid', 'netboot_firmware', 'project_config', 'release_image',

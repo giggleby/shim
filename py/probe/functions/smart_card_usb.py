@@ -11,7 +11,6 @@ from cros.factory.probe.functions import sysfs
 from cros.factory.probe.functions import usb
 from cros.factory.probe.lib import cached_probe_function
 
-
 _INTERFACE_CLASS_VALUE = 0x0b
 _INTERFACE_CLASS_FIELD = 'bInterfaceClass'
 

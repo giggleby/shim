@@ -33,7 +33,6 @@ from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import type_utils
 
-
 DEFAULT_CLASSIFIERS = ['__DAY__', 'deviceId']
 
 

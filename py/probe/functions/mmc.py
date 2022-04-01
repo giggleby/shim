@@ -5,7 +5,6 @@
 from cros.factory.probe.functions import sysfs
 from cros.factory.probe.lib import cached_probe_function
 
-
 REQUIRED_FIELDS = ['cid', 'csd', 'manfid', 'oemid', 'name', 'serial']
 OPTIONAL_FIELDS = ['fwrev', 'hwrev']
 

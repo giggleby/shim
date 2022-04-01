@@ -9,7 +9,6 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import identity
 from cros.factory.hwid.v3.identity import Identity
 
-
 _BASE32 = common.ENCODING_SCHEME.base32
 _BASE8192 = common.ENCODING_SCHEME.base8192
 

@@ -12,7 +12,6 @@ from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.utils import file_utils
 
-
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/v3-golden.yaml')
 TEST_V3_HWID_1 = 'CHROMEBOOK AA5A-Y6L'

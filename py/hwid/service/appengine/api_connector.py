@@ -15,7 +15,6 @@ from google.auth.transport import requests as ga_requests
 # pylint: enable=import-error, no-name-in-module
 from cros.factory.hwid.service.appengine import config
 
-
 CONFIG = config.CONFIG
 HWID_API_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'
 IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')

@@ -10,7 +10,6 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import probe
 
-
 TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 TEST_DATABASE_PATH = os.path.join(TEST_DATA_PATH, 'test_probe_db.yaml')
 

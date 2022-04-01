@@ -7,7 +7,6 @@ import os
 from cros.factory.test.env import paths
 from cros.factory.utils import config_utils
 
-
 # Directory for test lists.
 TEST_LISTS_RELPATH = os.path.join('py', 'test', 'test_lists')
 TEST_LISTS_PATH = os.path.join(paths.FACTORY_DIR, TEST_LISTS_RELPATH)

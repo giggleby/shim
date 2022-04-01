@@ -22,7 +22,6 @@ from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import socket_common
 from cros.factory.instalog.utils.arg_utils import Arg
 
-
 _DEFAULT_BATCH_SIZE = 500
 _DEFAULT_TIMEOUT = 5
 _FAILED_CONNECTION_INTERVAL = 60

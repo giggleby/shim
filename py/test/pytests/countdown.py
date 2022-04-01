@@ -67,7 +67,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
-
 _WARNING_TEMP_RATIO = 0.95
 _CRITICAL_TEMP_RATIO = 0.98
 

@@ -18,7 +18,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 _DEV_NULL = open(os.devnull, 'wb')
 _DEFAULT_FLUSH_TIMEOUT = 5  # 5sec
 _SHOPFLOOR_TIMEOUT = 10  # 10sec

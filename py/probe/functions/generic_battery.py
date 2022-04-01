@@ -7,7 +7,6 @@ import re
 from cros.factory.probe.lib import probe_function
 from cros.factory.utils import process_utils
 
-
 ECTOOL_BATTERY_INFO_RE = re.compile(
     r'Battery (\d+ )?info:\n'
     r'  OEM name:               (?P<manufacturer>.*)\n'

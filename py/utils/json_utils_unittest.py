@@ -12,7 +12,6 @@ import unittest
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
-
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__),
                                'testdata', 'json_utils_unittest.json')
 

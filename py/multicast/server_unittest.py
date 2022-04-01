@@ -12,7 +12,6 @@ from cros.factory.multicast import server
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 FAKE_UFTP_ARGS = server.UftpArgs('/path/to/resources/fake_file',
                                  '224.1.1.1:8093', '/path/to/log_dir',
                                  '192.168.1.1')

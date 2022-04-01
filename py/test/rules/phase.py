@@ -9,7 +9,6 @@ import os
 from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
 
-
 PHASE_NAMES = ['PROTO', 'EVT', 'DVT', 'PVT_DOGFOOD', 'PVT']
 PHASE_NAME_TO_INDEX_MAP = dict(
     (name, index)

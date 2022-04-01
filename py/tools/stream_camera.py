@@ -13,7 +13,6 @@ import struct
 import subprocess
 import sys
 
-
 _SERVER_PORT = 8080
 _BUFSIZ = 8192
 _DEFAULT_DEVICE = '/dev/video0'

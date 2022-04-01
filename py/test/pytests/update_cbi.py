@@ -70,7 +70,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import type_utils
 
-
 _DEFAULT_SKU_ID = 0x7fffffff
 _KEY_COMPONENT_SKU = device_data.JoinKeys(
     device_data.KEY_COMPONENT, 'sku')

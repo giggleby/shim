@@ -51,7 +51,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
 
-
 _DUMMY_CHECKSUM = 'DUMMY'
 
 

@@ -18,7 +18,6 @@ from . import thread_utils
 from . import time_utils
 from . import type_utils
 
-
 _HAVE_CTYPES = True
 try:
   # pylint: disable=wrong-import-order,wrong-import-position

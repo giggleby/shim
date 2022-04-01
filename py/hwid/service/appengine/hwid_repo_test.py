@@ -15,7 +15,6 @@ from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.utils import file_utils
 
-
 _SERVER_BOARDS_YAML = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/boards_server.yaml')
 _SERVER_BOARDS_DATA = file_utils.ReadFile(_SERVER_BOARDS_YAML, encoding=None)

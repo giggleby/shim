@@ -14,7 +14,6 @@ from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 _BASIC_ARG_TYPE = type_utils.Enum((
     'NONE', 'BOOL', 'INT', 'FLOAT', 'STR', 'LIST', 'DICT'
 ))

@@ -25,7 +25,6 @@ from django.views.generic import TemplateView
 from rest_framework.authtoken import views as drf_views
 from rest_framework.urlpatterns import format_suffix_patterns
 
-
 # TODO(littlecvr): move to common config with umpire.
 PROJECT_URL_ARG = r'(?P<project_name>%s)' % common.PROJECT_NAME_RE
 BUNDLE_URL_ARG = r'(?P<bundle_name>[^/]+)'  # anything but slash

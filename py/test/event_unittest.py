@@ -13,7 +13,6 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
-
 EventType = event.Event.Type
 
 PING = 'PING'

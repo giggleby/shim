@@ -21,7 +21,6 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import file_utils
 
-
 TEST_MODEL = 'FOO'
 TEST_HWID = 'Foo'
 TEST_HWID_CONTENT = 'prefix\nchecksum: 1234\nsuffix\n'

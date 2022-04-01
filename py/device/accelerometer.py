@@ -10,7 +10,6 @@ from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 from cros.factory.utils import process_utils
 
-
 _GRAVITY = 9.80665
 
 class AccelerometerException(Exception):

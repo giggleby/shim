@@ -21,7 +21,6 @@ from cros.factory.hwid.v3.rule import Context
 from cros.factory.hwid.v3.rule import SetContext
 from cros.factory.test.rules import phase
 
-
 _TEST_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_hwid_rule_functions_db.yaml')
 

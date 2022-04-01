@@ -20,7 +20,6 @@ from cros.factory.tools import image_tool
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import process_utils
 
-
 DEBUG = False
 """Set DEBUG to True to debug this unit test itself.
 

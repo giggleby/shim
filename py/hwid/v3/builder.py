@@ -16,7 +16,6 @@ from cros.factory.hwid.v3 import probe
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import json_utils
 
-
 # The components that are always be created at the front of the pattern,
 # even if they don't exist in the probe results.
 ESSENTIAL_COMPS = [

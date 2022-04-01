@@ -13,7 +13,6 @@ from cros.factory.test.env import paths
 from cros.factory.utils import config_utils
 from cros.factory.utils import type_utils
 
-
 # PRC URL prefix used by plugin.
 PLUGIN_PREFIX = '/plugin'
 

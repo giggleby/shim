@@ -11,7 +11,6 @@ from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_v2_action
 from cros.factory.utils import file_utils
 
-
 GOLDEN_HWIDV2_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/v2-golden.yaml')
 

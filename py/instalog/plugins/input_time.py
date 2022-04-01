@@ -17,7 +17,6 @@ from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 
-
 _DEFAULT_INTERVAL = 1
 _DEFAULT_NUM_EVENTS = 2
 _DEFAULT_EVENT_NAME = 'instalog'

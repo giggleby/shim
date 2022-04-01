@@ -8,7 +8,6 @@ import logging
 
 from cros.factory.instalog.external import gnupg
 
-
 DEFAULT_PORT = 8899
 DEFAULT_MAX_BYTES = 2 * 1024 * 1024 * 1024  # 2gb
 REQUESTED_GNUPG_VERSION = '0.4.3'

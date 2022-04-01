@@ -17,7 +17,6 @@ from cros.factory.utils import process_utils
 
 from cros.factory.external import cv2 as cv
 
-
 # sysfs camera paths.
 GLOB_CAMERA_PATH = '/sys/bus/usb/drivers/uvcvideo/*/video4linux/video*'
 RE_CAMERA_INDEX = r'/sys/bus/usb/drivers/uvcvideo/.*/video4linux/video(\d+)'

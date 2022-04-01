@@ -16,7 +16,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 
-
 _FIRMWARE_DIR = 'opt/google/biod/fw'
 _EC_RO = 'EC_RO'
 

@@ -72,7 +72,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
 
-
 # use the fingerprint image processing library if available
 sys.path.extend(['/usr/local/opt/fpc', '/opt/fpc'])
 try:

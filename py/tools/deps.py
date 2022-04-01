@@ -23,7 +23,6 @@ import sys
 
 import yaml
 
-
 # Constants for config file.
 CONFIG_GROUPS = r'groups'
 CONFIG_RULES = r'rules'

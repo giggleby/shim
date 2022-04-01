@@ -7,7 +7,6 @@ import os
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 
-
 IN_COUNT = 'in_count_raw'
 FREQUENCY = 'frequency'
 DEFAULT_LOCATION = 'camera'

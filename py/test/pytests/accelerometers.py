@@ -60,7 +60,6 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
-
 DEFAULT_LIMITS = {
     'x': [-0.5, 0.5],
     'y': [-0.5, 0.5],

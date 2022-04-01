@@ -133,7 +133,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
 
-
 # Interval (seconds) of probing connection state.
 _CONNECTION_CHECK_PERIOD_SECS = 1
 _DEFAULT_DRM_GLOB_PATH = '/sys/class/drm/card?'

@@ -11,7 +11,6 @@ import unittest
 from cros.factory.umpire.server import umpire_env
 from cros.factory.umpire.server import webapp_resourcemap
 
-
 TESTDIR = os.path.abspath(os.path.join(os.path.split(__file__)[0], 'testdata'))
 TESTCONFIG = os.path.join(TESTDIR, 'minimal_empty_services_umpire.json')
 

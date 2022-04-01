@@ -10,7 +10,6 @@ from typing import Optional, Tuple
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
 
-
 DEFAULT_HPS_FACTORY_PATH = 'hps-factory'
 IOTOOLS_PATH = 'iotools'
 MCU_ID_RE = re.compile(r'^MCU ID:\s*(\S+)\s*$', re.MULTILINE)

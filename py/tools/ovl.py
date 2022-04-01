@@ -43,7 +43,6 @@ import yaml
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
-
 _CERT_DIR = os.path.expanduser('~/.config/ovl')
 
 _ESCAPE = '~'

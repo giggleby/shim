@@ -13,7 +13,6 @@ from cros.factory.test import session
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 MODEM_STATUS = ['modem', 'status']
 MODEM_IMEI_REG_EX = 'imei: ([0-9]*)'
 

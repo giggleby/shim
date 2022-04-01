@@ -20,7 +20,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import string_utils
 
-
 # Number of lines to buffer for new clients.
 TAIL_BUFFER_SIZE = 10
 

@@ -12,7 +12,6 @@ located for the command. After env is set, it runs the command directly.
 import os
 import sys
 
-
 HELP_MSG = """
 Usage :
     1. Make bin/xxx a symbolic link to py/cli/factory_env.py, and make

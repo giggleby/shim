@@ -67,7 +67,6 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 
-
 LEDColor = led_module.LED.Color
 LEDIndex = led_module.LED.CrOSIndexes
 _COLOR_LABEL = {

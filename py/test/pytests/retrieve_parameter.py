@@ -79,7 +79,6 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
-
 _DISPLAY_MSG_PERIOD = 0.5
 
 

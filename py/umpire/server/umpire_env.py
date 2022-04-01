@@ -28,7 +28,6 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 from cros.factory.utils import webservice_utils
 
-
 CROS_PAYLOAD = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', '..', 'bin', 'cros_payload')

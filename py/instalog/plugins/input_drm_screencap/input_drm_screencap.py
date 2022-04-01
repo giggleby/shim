@@ -17,7 +17,6 @@ from cros.factory.instalog.plugins.input_drm_screencap import drm
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 
-
 _DEFAULT_INTERVAL = 60
 
 

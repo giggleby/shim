@@ -6,7 +6,6 @@
 
 import os
 
-
 INSTALOG_DIR = os.path.dirname(
     os.path.realpath(__file__.replace('.pyc', '.py')))
 INSTALOG_PARENT_DIR = os.path.realpath(os.path.join(INSTALOG_DIR, '..'))

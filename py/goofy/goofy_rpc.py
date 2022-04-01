@@ -38,7 +38,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-
 DEFAULT_GOOFY_RPC_TIMEOUT_SECS = 15
 REBOOT_AFTER_UPDATE_DELAY_SECS = 5
 PING_SERVER_TIMEOUT_SECS = 2

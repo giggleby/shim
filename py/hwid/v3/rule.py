@@ -21,7 +21,6 @@ import time
 
 from cros.factory.utils import type_utils
 
-
 _rule_functions = {}
 
 

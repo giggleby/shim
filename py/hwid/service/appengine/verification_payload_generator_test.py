@@ -17,7 +17,6 @@ from cros.factory.hwid.v3 import rule as hwid_rule
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
 
-
 _vp_generator = verification_payload_generator
 
 MissingComponentValueError = _vp_generator.MissingComponentValueError

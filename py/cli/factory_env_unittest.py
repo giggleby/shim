@@ -11,7 +11,6 @@ import unittest
 from cros.factory.cli import factory_env
 from cros.factory.utils import process_utils
 
-
 FACTORY_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 

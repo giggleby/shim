@@ -11,7 +11,6 @@ import yaml
 
 from cros.factory.test.rf.tools import csv_reader
 
-
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--input', action='store', type=str, required=True,

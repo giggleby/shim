@@ -26,7 +26,6 @@ from cros.factory.instalog.utils import sync_utils
 from cros.factory.instalog.utils import time_utils
 from cros.factory.instalog.utils import type_utils
 
-
 # The maximum number of unexpected accesses to store for debugging purposes.
 # This is for both unittests and debugging purposes (assuming that the
 # PluginSandbox instance can be accessed during runtime).

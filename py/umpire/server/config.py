@@ -16,7 +16,6 @@ from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import json_utils
 from cros.factory.utils.schema import JSONSchemaDict
 
-
 # Single bundle validator.
 # A valid configuration can contain multiple bundles. At any time, one device
 # state (mac, sn, mlb_sn) can map to one bundle only.

@@ -4,7 +4,6 @@
 
 import os
 
-
 PORT = 4013
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))

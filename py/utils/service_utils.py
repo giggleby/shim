@@ -9,7 +9,6 @@ from . import process_utils
 from . import sync_utils
 from . import type_utils
 
-
 START_TEXT = 'start/running'
 STOP_TEXT = 'stop/waiting'
 Status = type_utils.Enum(['START', 'STOP', 'UNKNOWN'])

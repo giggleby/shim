@@ -13,7 +13,6 @@ import unittest
 from cros.factory.instalog import json_utils
 from cros.factory.instalog import log_utils
 
-
 _SAMPLE_DATETIME = datetime.datetime(1989, 12, 12, 12, 12, 12, 120)
 _SAMPLE_DATE = _SAMPLE_DATETIME.date()
 _SAMPLE_TIME = _SAMPLE_DATETIME.time()

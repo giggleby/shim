@@ -75,7 +75,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import type_utils
 
-
 _ARG_SERVICES_SCHEMA = JSONSchemaDict('services schema object', {
     'type': 'array',
     'items': {

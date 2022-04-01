@@ -53,7 +53,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 
-
 _RECORD_SEC = 3
 _RECORD_RATE = 48000
 _SOUND_DIRECTORY = os.path.join(

@@ -21,7 +21,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 _DEVICE_DATA_KEY = 'DYNAMIC_SSH_TARGET_IP'
 
 

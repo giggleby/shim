@@ -20,7 +20,6 @@ from cros.factory.utils.process_utils import CalledProcessError
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
-
 # The candidate of device names which the ChromeOS may mount on rootfs.
 # Assume that ChromeOS has only one device, and always has a smaller index.
 # That is, it should always be `sda`, `nvme0n1`... not `sdb`, `nvme0n2`...

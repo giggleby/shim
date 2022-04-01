@@ -6,7 +6,6 @@
 import os
 import unittest
 
-
 SKIP_INFORMATIONAL_ENV = 'SKIP_INFORMATIONAL'
 ENV_TRUE = str(True)
 ENV_FALSE = str(False)

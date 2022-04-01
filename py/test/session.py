@@ -18,7 +18,6 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 # Environment variable names.
 ENV_TEST_PATH = 'CROS_FACTORY_TEST_PATH'
 ENV_TEST_INVOCATION = 'CROS_FACTORY_TEST_INVOCATION'

@@ -13,7 +13,6 @@ import flask
 import google.cloud.logging as gc_logging
 from google.cloud import tasks
 
-
 # pylint: enable=no-name-in-module, import-error
 # isort: split
 

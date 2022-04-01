@@ -9,7 +9,6 @@ import os
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 
-
 IN_ILLUMINANCE_BIAS = "in_illuminance_calibbias"
 IN_ILLUMINANCE_SCALE = "in_illuminance_calibscale"
 

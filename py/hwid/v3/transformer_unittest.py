@@ -12,7 +12,6 @@ from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3.identity import Identity
 from cros.factory.hwid.v3 import transformer
 
-
 _TEST_DATABASE_FILENAME = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_transformer_db.yaml')
 

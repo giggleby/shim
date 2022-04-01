@@ -12,7 +12,6 @@ import dbus
 from cros.factory.test.utils import connection_manager
 from cros.factory.utils.net_utils import WLAN
 
-
 _FAKE_MANAGER = 'flimflam'
 _FAKE_PROC_NAME = 'shill'
 _FAKE_SCAN_INTERVAL_SECS = 10

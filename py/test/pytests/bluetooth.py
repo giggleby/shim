@@ -96,7 +96,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
 
-
 INPUT_MAX_RETRY_TIMES = 10
 INPUT_RETRY_INTERVAL = 1
 RESET_ADAPTER_SLEEP_TIME = 5

@@ -15,7 +15,6 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 _TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata')
 

@@ -13,7 +13,6 @@ from cros.factory.device import device_types
 
 from cros.factory.external import netifaces
 
-
 # Static list of known properties in SystemStatus.
 _PROP_LIST = []
 

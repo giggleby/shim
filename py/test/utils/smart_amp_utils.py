@@ -9,7 +9,6 @@ from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.utils import file_utils
 from cros.factory.utils.type_utils import Error
 
-
 _RE_MAX98390_CHANNEL_NAME = re.compile(r'"(.+?) DSM Rdc"', re.MULTILINE)
 
 _RE_MAX98373_CHANNEL_NAME = re.compile(r'"(.+?) ADC TEMP"', re.MULTILINE)

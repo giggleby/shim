@@ -123,7 +123,6 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import pyudev
 
-
 # The GPT ( http://en.wikipedia.org/wiki/GUID_Partition_Table )
 # occupies the first 34 and the last 33 512-byte blocks.
 #

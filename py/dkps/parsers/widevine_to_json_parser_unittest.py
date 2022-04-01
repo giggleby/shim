@@ -9,7 +9,6 @@ import unittest
 
 from cros.factory.dkps.parsers import widevine_to_json_parser
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 MOCK_WIDEVINE_FILE_PATH = os.path.join(SCRIPT_DIR, 'testdata', 'widevine.xml')

@@ -8,7 +8,6 @@ import re
 from cros.factory.probe.functions import sysfs
 from cros.factory.probe.lib import cached_probe_function
 
-
 REQUIRED_FIELDS = ['idVendor', 'idProduct']
 OPTIONAL_FIELDS = ['manufacturer', 'product', 'bcdDevice']
 

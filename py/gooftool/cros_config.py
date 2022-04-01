@@ -4,7 +4,6 @@
 
 from cros.factory.gooftool import common as gooftool_common
 
-
 # Path to the product name and sku id of the device.
 # ARM devices: DEVICE_TREE_COMPATIBLE_PATH and DEVICE_TREE_SKU_ID_PATH
 # x86 devices: PRODUCT_NAME_PATH and PRODUCT_SKU_ID_PATH

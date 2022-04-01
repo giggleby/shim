@@ -157,7 +157,6 @@ from cros.factory.utils import debug_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import sync_utils
 
-
 ID_TEXT_INPUT_URL = 'text_input_url'
 ID_BUTTON_EDIT_URL = 'button_edit_url'
 

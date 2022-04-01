@@ -28,7 +28,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 # Key values
 ENTER_KEY = 'ENTER'
 ESCAPE_KEY = 'ESCAPE'

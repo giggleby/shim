@@ -7,7 +7,6 @@
 
 import copy
 
-
 BLOCKLIST_KEYS = [
     'ubind_attribute',
     'gbind_attribute',

@@ -38,7 +38,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 DEFAULT_CAPTURE_NUMBER = 10
 
 

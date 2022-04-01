@@ -12,7 +12,6 @@ from cros.factory.goofy import test_list_iterator
 from cros.factory.test import state
 from cros.factory.test.test_lists import manager
 
-
 PLAY_BUTTON_STATUS_FILTER = [
     'UNTESTED', 'ACTIVE', 'FAILED', 'FAILED_AND_WAIVED',
 ]

@@ -83,7 +83,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 _LOOPBACK_TEST_PATH = '/sys/kernel/debug/thunderbolt'
 _CONTROLLER_PORTS = ('0-1.*', '0-3.*', '1-1.*', '1-3.*')
 _RE_ADP_DOMAIN = re.compile(r'^.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+$')

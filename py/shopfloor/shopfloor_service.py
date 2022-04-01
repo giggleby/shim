@@ -12,7 +12,6 @@ import socket
 import socketserver
 import xmlrpc.server
 
-
 DEFAULT_SERVER_PORT = 8090
 DEFAULT_SERVER_ADDRESS = '0.0.0.0'
 

@@ -21,7 +21,6 @@ from ctypes import c_ushort
 from ctypes import cdll
 import os
 
-
 GPIO_DIRECTION_IN = 'in'
 GPIO_DIRECTION_OUT = 'out'
 

@@ -17,7 +17,6 @@ from cros.factory.test.utils.camera_utils import CameraError
 from cros.factory.test.utils.camera_utils import GetValidCameraPaths
 from cros.factory.utils import type_utils
 
-
 CAMERA_CONFIG_PATH = '/etc/camera/camera_characteristics.conf'
 ALLOWED_FACING = type_utils.Enum(['front', 'rear', None])
 

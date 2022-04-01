@@ -15,7 +15,6 @@ import collections
 import struct
 import sys
 
-
 GBBContent = collections.namedtuple(
     'GBBContent', ['hwid', 'hwid_digest', 'rootkey', 'recovery_key'])
 GBBField = collections.namedtuple('GBBField', ['value', 'offset', 'size'])

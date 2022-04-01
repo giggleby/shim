@@ -15,7 +15,6 @@ from google.protobuf import any_pb2
 from google.protobuf import message
 from google.protobuf import symbol_database
 
-
 # pylint: enable=wrong-import-order
 
 

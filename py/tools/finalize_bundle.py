@@ -33,7 +33,6 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.sys_utils import MountPartition
 from cros.factory.utils.type_utils import CheckDictKeys
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 REQUIRED_GSUTIL_VERSION = [3, 32]  # 3.32

@@ -9,7 +9,6 @@ import flask
 from google.cloud import pubsub_v1
 from google.cloud import storage
 
-
 # pylint: enable=import-error,no-name-in-module
 # isort: split
 

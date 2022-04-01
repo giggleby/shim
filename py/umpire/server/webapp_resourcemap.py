@@ -12,7 +12,6 @@ import logging
 
 from cros.factory.umpire.server.web import wsgi
 
-
 PATH_INFO = '/webapps/resourcemap'
 
 

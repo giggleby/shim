@@ -11,7 +11,6 @@ import array
 import fcntl
 import struct
 
-
 IO_WRITE = 0x40000000
 IO_READ = 0x80000000
 IO_READ_WRITE = 0xC0000000

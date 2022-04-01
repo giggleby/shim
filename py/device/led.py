@@ -11,7 +11,6 @@ import re
 from cros.factory.device import device_types
 from cros.factory.utils.type_utils import Enum
 
-
 _PATTERN = re.compile(r'\t([a-z]+)\t: (0x[0-9A-Fa-f]+)\n')
 """The pattern of entries of output of 'ectool led <name> query'"""
 

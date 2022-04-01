@@ -12,7 +12,6 @@ from unittest import mock
 
 from cros.factory.tools import disk_space
 
-
 FakeStatVFSResult = collections.namedtuple(
     'FakeStatVFSResult',
     ['f_bavail', 'f_blocks', 'f_favail', 'f_files'])

@@ -19,7 +19,6 @@ import xmlrpc.server
 from cros.factory.dkps import helpers
 from cros.factory.dkps import widevine_utils
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_BIND_ADDR = '0.0.0.0'  # all addresses
 DEFAULT_BIND_PORT = 5439

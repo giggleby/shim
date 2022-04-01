@@ -11,7 +11,6 @@ import traceback
 from cros.factory.utils import file_utils
 from cros.factory.utils import service_utils
 
-
 _RETRY_COUNT = 3
 
 CPUX_CPUFREQ_PATH = '/sys/devices/system/cpu/cpu%d/cpufreq'

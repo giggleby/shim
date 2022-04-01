@@ -5,7 +5,6 @@
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
-
 STATUS = type_utils.Enum(['Waiting', 'Updating', 'Success', 'Failure'])
 
 

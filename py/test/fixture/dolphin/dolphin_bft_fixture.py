@@ -18,7 +18,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils.type_utils import Enum
 
-
 _RE_INA_VOLTAGE = re.compile(r'^\s*Bus voltage\s+:\s+\w+\s+=>\s+(-?\d+)\s+mV',
                              re.MULTILINE)
 _RE_INA_CURRENT = re.compile(r'^\s*Current\s+:\s+\w+\s+=>\s+(-?\d+)\s+mA',

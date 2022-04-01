@@ -11,7 +11,6 @@ from cros.factory.device.audio import config_manager
 from cros.factory.device import device_types
 from cros.factory.utils import process_utils
 
-
 # The bytes of the WAV header
 WAV_HEADER_SIZE = 44
 

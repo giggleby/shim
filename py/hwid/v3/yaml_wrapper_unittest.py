@@ -12,7 +12,6 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.test.l10n import regions
 from cros.factory.unittest_utils import label_utils
 
-
 _REGIONS_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_yaml_wrapper_regions.json')
 

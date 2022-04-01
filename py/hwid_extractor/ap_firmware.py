@@ -14,7 +14,6 @@ import time
 from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 
-
 FLASHROM_BIN = '/usr/sbin/flashrom'
 FUTILITY_BIN = '/usr/bin/futility'
 VPD_BIN = '/usr/sbin/vpd'

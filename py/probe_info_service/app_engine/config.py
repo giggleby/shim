@@ -11,7 +11,6 @@ import yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 _CONFIGURATIONS_YAML_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'configurations.yaml')
 

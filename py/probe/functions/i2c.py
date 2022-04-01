@@ -11,7 +11,6 @@ from cros.factory.probe.lib import probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
-
 SYSFS_I2C_DIR_PATH = '/sys/bus/i2c/devices'
 I2C_BUS_PREFIX = 'i2c-'
 EC_BUS_PREFIX = 'EC-'

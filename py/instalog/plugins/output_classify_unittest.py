@@ -19,7 +19,6 @@ from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog.plugins import output_file
 from cros.factory.instalog import testing
 
-
 EVENT_FILE_NAME = output_file.EVENT_FILE_NAME
 ATT_DIR_NAME = output_file.ATT_DIR_NAME
 SAMPLE_TODAY = datetime.date(1989, 12, 12)

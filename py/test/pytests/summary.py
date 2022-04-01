@@ -94,7 +94,6 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.type_utils import Obj
 
-
 _EXTERNAL_DIR = '/run/factory/external'
 
 # The following test states are considered passed

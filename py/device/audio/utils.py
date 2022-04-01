@@ -6,7 +6,6 @@ from cros.factory.device.audio import alsa
 from cros.factory.device.audio import tinyalsa
 from cros.factory.utils import type_utils
 
-
 # Known controllers.
 CONTROLLERS = type_utils.Enum(['ALSA', 'TINYALSA'])
 

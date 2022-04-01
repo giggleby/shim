@@ -16,7 +16,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import fmap
 from cros.factory.utils import process_utils
 
-
 FIRMWARE_LABELS = ('BIOS', 'EC', 'PD')
 EMPTY_FIRMWARE_TUPLE = tuple([None] * len(FIRMWARE_LABELS))
 

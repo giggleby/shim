@@ -17,7 +17,6 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import bundle_builder
 
-
 _HWID_BUNDLE_INSTALLER_NAME = 'install.py'
 _HWID_BUNDLE_INSTALLER_SCRIPT = textwrap.dedent(f"""\
     #!/usr/bin/env python

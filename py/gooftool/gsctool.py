@@ -7,7 +7,6 @@ import re
 from cros.factory.gooftool import common as gooftool_common
 from cros.factory.utils import type_utils
 
-
 # Path to the relied `gsctool` command line utility.
 GSCTOOL_PATH = '/usr/sbin/gsctool'
 

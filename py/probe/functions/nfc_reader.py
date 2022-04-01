@@ -11,7 +11,6 @@ from cros.factory.probe.functions import usb
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils import type_utils
 
-
 RemovableResult = type_utils.Enum(('fixed', 'removable', 'unknown'))
 
 _INTERFACE_CLASS_VALUE = 0x03

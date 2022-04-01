@@ -11,7 +11,6 @@ from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
-
 FACTORY_ENV = '/usr/local/factory/bin/factory_env'
 
 MCAST_CONFIG_NAME = 'multicast_config.json'

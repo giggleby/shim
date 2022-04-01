@@ -27,7 +27,6 @@ from . import platform_utils
 from . import process_utils
 from . import type_utils
 
-
 # Block size in bytes for iteratively generating hashes of files.
 _HASH_FILE_READ_BLOCK_SIZE = 1024 * 64  # 64kb
 

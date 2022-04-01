@@ -4,7 +4,6 @@
 
 import os
 
-
 SCRIPT_FILE_NAME = 'test.sh'
 """Filename of the generated test script."""
 

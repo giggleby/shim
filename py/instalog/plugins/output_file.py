@@ -27,7 +27,6 @@ from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import time_utils
 
-
 _PROCESS_MESSAGE_INTERVAL = 60  # 60sec
 _DEFAULT_INTERVAL = 1 * 60 * 60  # 1hr
 _DEFAULT_BATCH_SIZE = float('inf')  # Infinity. Only change when needed.

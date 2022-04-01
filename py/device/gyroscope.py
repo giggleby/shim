@@ -10,7 +10,6 @@ import re
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 
-
 _RADIAN_TO_DEGREE = 180 / math.pi
 
 

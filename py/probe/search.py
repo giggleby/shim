@@ -15,7 +15,6 @@ from cros.factory.hwid.v3 import builder
 from cros.factory.probe import common
 from cros.factory.probe import function
 
-
 _generic_statement = None
 
 

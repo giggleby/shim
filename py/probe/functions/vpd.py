@@ -7,7 +7,6 @@ from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
-
 PARTITION = type_utils.Enum(['ro', 'rw'])
 
 _PARTITION_NAME_MAP = {PARTITION.ro: vpd.VPD_READONLY_PARTITION_NAME,

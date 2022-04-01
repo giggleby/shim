@@ -109,7 +109,6 @@ from cros.factory.test import state
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
-
 ENUM_ACTION = type_utils.Enum(['APPEND', 'POP', 'COPY', 'MERGE'])
 
 ENUM_ROLE = type_utils.Enum(['STATION', 'DUT'])

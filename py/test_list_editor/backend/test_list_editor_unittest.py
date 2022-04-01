@@ -12,7 +12,6 @@ from unittest import mock
 from cros.factory.test_list_editor.backend import common
 from cros.factory.test_list_editor.backend import test_list_editor
 
-
 _APO = test_list_editor._AddPrivateOverlay  # pylint: disable=protected-access
 
 _FAKE_REPO_SCHEMA = {

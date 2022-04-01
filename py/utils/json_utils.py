@@ -11,7 +11,6 @@ to/from JSON strings or JSON files.
 import json
 import os
 
-
 LoadStr = json.loads
 
 

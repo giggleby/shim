@@ -23,7 +23,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 
-
 # Constants lifted from EDID documentation.
 VERSION = 0x01
 MAGIC = b'\x00\xff\xff\xff\xff\xff\xff\x00'

@@ -23,7 +23,6 @@ from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import time_utils
 
-
 # If Ctrl+C is hit two times in this time interval, a Stop signal will be sent
 # to the plugin.  Otherwise, it will be paused/unpaused.
 _DOUBLE_SIGINT_INTERVAL = 0.5

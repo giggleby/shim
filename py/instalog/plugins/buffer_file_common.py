@@ -84,7 +84,6 @@ from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils import file_utils
 
-
 # The number of bytes to buffer when retrieving events from a file.
 _BUFFER_SIZE_BYTES = 4 * 1024  # 4kb
 

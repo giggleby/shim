@@ -25,7 +25,6 @@ use the args attribute to access the attribute values.
 
 from .type_utils import Enum
 
-
 # Save the 'type' function (since we'll be overloading it in Arg.__init__).
 TYPE = type
 

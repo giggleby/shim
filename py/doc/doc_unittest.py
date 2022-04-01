@@ -18,7 +18,6 @@ from cros.factory.test.env import paths
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils.process_utils import Spawn
 
-
 # Files allowed to have errors now.
 BLOCKLIST = []
 RSTS_BLOCKLIST = []

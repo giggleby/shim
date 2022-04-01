@@ -6,10 +6,9 @@
 import unittest
 from unittest import mock
 
-from cros.factory.test.l10n import regions
 from cros.factory.test import device_data
+from cros.factory.test.l10n import regions
 from cros.factory.test.pytests import update_device_data
-
 
 _KNOWN_KEY_LABELS = update_device_data._KNOWN_KEY_LABELS  # pylint: disable=protected-access
 _COMMONLY_USED_REGIONS = update_device_data._COMMONLY_USED_REGIONS  # pylint: disable=protected-access

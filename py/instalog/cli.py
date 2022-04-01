@@ -23,7 +23,6 @@ from cros.factory.instalog.utils import type_utils
 from cros.factory.instalog.external import jsonrpclib
 from cros.factory.instalog.external import yaml
 
-
 # The default number of seconds to wait before giving up on a flush.
 _DEFAULT_FLUSH_TIMEOUT = 30
 _DEFAULT_STOP_TIMEOUT = 10

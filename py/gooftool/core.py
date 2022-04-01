@@ -44,7 +44,6 @@ from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 
-
 # The mismatch result tuple.
 Mismatch = namedtuple('Mismatch', ['expected', 'actual'])
 

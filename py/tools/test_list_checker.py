@@ -18,7 +18,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-
 ERROR_LEVEL = type_utils.Obj(NONE=0, CONVENTION=1, WARNING=2, ERROR=3, FATAL=4)
 ERROR_LEVEL_SHORT = {
     'N': ERROR_LEVEL.NONE,

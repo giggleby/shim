@@ -82,7 +82,6 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Enum
 from cros.factory.utils.type_utils import Error
 
-
 FLASHTOOL = '/usr/local/bin/flash_fp_mcu'
 FPMCU_FW_DIR_UNDER_ROOTFS = 'opt/google/biod/fw'
 

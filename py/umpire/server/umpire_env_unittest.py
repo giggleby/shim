@@ -11,7 +11,6 @@ from cros.factory.umpire.server import resource
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import file_utils
 
-
 TESTDATA_DIR = os.path.join(os.path.dirname(__file__), 'testdata')
 TEST_CONFIG = os.path.join(TESTDATA_DIR, 'minimal_empty_services_umpire.json')
 TOOLKIT_DIR = os.path.join(TESTDATA_DIR, 'install_factory_toolkit.run')

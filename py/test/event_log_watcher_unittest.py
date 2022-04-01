@@ -16,7 +16,6 @@ from cros.factory.test import event_log_watcher
 from cros.factory.test.event_log_watcher import Chunk
 from cros.factory.test.event_log_watcher import EventLogWatcher
 
-
 MOCK_LOG_NAME = lambda x: 'mylog12345%d' % x
 
 

@@ -18,7 +18,6 @@ from cros.factory.dkps import dkps
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Mock key list for testing.

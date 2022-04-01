@@ -17,7 +17,6 @@ from unittest import mock
 
 from cros.factory.test import session
 
-
 UUID_RE = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'
                      '[a-f0-9]{4}-[a-f0-9]{12}$')
 

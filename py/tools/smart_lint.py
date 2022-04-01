@@ -16,7 +16,6 @@ from cros.factory.utils import cros_board_utils
 from cros.factory.utils.process_utils import CheckOutput
 from cros.factory.utils.process_utils import Spawn
 
-
 RE_PACKAGE_FILES = re.compile(r'.*?files/')
 
 

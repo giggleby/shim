@@ -12,7 +12,6 @@ from cros.factory.umpire.server.commands import parameters
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import file_utils
 
-
 TESTDATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), 'testdata')
 TEST_PARAMETER = os.path.join(TESTDATA_DIR, 'test_parameter.json')

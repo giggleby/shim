@@ -22,7 +22,6 @@ from cros.factory.test.fixture.dolphin import plankton_hdmi
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-
 DOLPHIN_RAIDEN_CONF = {
     # A dict of USB Type-A serial parameters.
     'usb_serial_params': {

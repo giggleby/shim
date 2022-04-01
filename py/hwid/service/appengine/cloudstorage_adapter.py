@@ -11,7 +11,6 @@ import os.path
 import google.cloud.exceptions
 from google.cloud import storage
 
-
 # pylint: enable=no-name-in-module, import-error
 # isort: split
 

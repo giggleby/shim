@@ -13,7 +13,6 @@ from cros.factory.device import device_types
 from cros.factory.utils import config_utils
 from cros.factory.utils import type_utils
 
-
 # Strings for key in audio.conf
 HP_JACK_NAME = 'headphone_jack'
 MIC_JACK_NAME = 'mic_jack'

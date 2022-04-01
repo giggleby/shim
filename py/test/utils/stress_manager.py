@@ -8,7 +8,6 @@ import re
 import tempfile
 import threading
 
-
 DEFAULT_MAX_ERRORS = 1000
 STRESSAPPTEST_PATH = 'factory_stressapptest'
 

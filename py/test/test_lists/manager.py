@@ -19,7 +19,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
-
 # Default test list.
 DEFAULT_TEST_LIST_ID = 'main'
 

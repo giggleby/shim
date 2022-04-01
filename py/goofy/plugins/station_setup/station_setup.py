@@ -20,7 +20,6 @@ from cros.factory.tools.goofy_ghost import ghost_prop
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 _DEFAULT_STATION_KEYS = [('station_name', _('Station Name')),
                          ('line_number', _('Manufacture Line Number')),
                          ('station_number', _('Station Number'))]

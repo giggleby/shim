@@ -12,7 +12,6 @@ from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import arg_utils
 from cros.factory.utils import type_utils
 
-
 _EVALUATE_PREFIX = test_list_module.EVALUATE_PREFIX
 
 

@@ -8,7 +8,6 @@ import json
 import logging
 import xmlrpc.client
 
-
 # This is a top level helper so it can't use cros.factory.external.
 try:
   import zeep

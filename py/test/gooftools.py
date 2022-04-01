@@ -18,7 +18,6 @@ from cros.factory.test import session
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
 GOOFTOOL_HOME = '/usr/local/factory'
 
 

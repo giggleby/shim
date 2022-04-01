@@ -13,7 +13,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
-
 FIELDS = type_utils.Enum(
     ['firmware_keys', 'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware'])
 

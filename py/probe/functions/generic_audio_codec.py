@@ -6,7 +6,6 @@ import os
 
 from cros.factory.probe.lib import cached_probe_function
 
-
 RESULT_KEY = 'name'
 
 

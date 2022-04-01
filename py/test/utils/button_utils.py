@@ -8,7 +8,6 @@ from cros.factory.test.utils import evdev_utils
 
 from cros.factory.external import evdev
 
-
 _KEY_GPIO = 'gpio:'
 _KEY_CROSSYSTEM = 'crossystem:'
 _KEY_ECTOOL = 'ectool:'

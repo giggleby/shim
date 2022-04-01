@@ -99,7 +99,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-
 DEFAULT_FIRMWARE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
 PREPVT_FLAG_MASK = 0x7F
 KEY_ATTEMPT_CR50_UPDATE_RO_VERSION = device_data.JoinKeys(

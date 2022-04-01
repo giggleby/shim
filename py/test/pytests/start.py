@@ -82,7 +82,6 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
 _LSB_FACTORY_PATH = '/usr/local/etc/lsb-factory'
 _AC_CHECK_PERIOD = 0.5
 _KEY_TYPE = type_utils.Enum(['NONE', 'SPACE', 'HW_BUTTON'])

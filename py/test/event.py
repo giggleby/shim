@@ -23,7 +23,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
-
 # Environment variable storing the path to the endpoint.
 CROS_FACTORY_EVENT = 'CROS_FACTORY_EVENT'
 

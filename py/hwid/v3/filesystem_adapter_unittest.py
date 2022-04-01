@@ -12,7 +12,6 @@ import unittest
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import file_utils
 
-
 TEST_FILE = 'foo'
 TEST_DATA = 'bar'
 

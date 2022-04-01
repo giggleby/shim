@@ -16,7 +16,6 @@ import sys
 import threading
 import time
 
-
 _CTRL_C_EXIT_CODE = 130
 
 

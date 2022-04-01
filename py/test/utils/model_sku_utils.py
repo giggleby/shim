@@ -11,7 +11,6 @@ from cros.factory.gooftool import cros_config
 from cros.factory.test.env import paths
 from cros.factory.utils import config_utils
 
-
 BOXSTER = 'boxster'
 PROJECT_CONFIG_PATH = os.path.join(paths.FACTORY_DIR, 'project_config')
 DEVICE_TREE_COMPATIBLE_PATH = cros_config.DEVICE_TREE_COMPATIBLE_PATH

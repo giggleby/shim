@@ -14,7 +14,6 @@ from urllib import parse as urlparse
 from cros.factory.hwid_extractor import ap_firmware
 from cros.factory.hwid_extractor import device
 
-
 WWW_ROOT_DIR = os.path.join(os.path.dirname(__file__), 'www')
 CONFIG_JSON = os.path.join(WWW_ROOT_DIR, 'config.json')
 

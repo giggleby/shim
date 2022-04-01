@@ -33,7 +33,6 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import qrcode
 
-
 _POS_SCHEMA = schema.JSONSchemaDict(
     'position schema object',
     {

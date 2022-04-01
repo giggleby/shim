@@ -13,7 +13,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
-
 CMD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         'probe_cmdline.py')
 

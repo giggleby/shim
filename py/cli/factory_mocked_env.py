@@ -15,7 +15,6 @@ import sys
 
 from cros.factory.tools.unittest_tools import mock_loader
 
-
 HELP_MSG = """
 Usage :
        bin/factory_mocked_env program args...

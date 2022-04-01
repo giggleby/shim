@@ -13,7 +13,6 @@ from unittest import mock
 
 from cros.factory.tools import gsutil
 
-
 # pylint: disable=line-too-long
 FAKE_GS_LS_OUTPUT = (
     """gs://chromeos-releases/canary-channel/daisy-spring/4262.1.0/

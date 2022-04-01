@@ -13,7 +13,6 @@ from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import verifier
 from cros.factory.test.rules import phase
 
-
 _TEST_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_verifier_db.yaml')
 

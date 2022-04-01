@@ -76,7 +76,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-
 _TestModes = type_utils.Enum(['file', 'raw', 'stateful_partition_free_space'])
 
 

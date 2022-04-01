@@ -220,7 +220,6 @@ from cros.factory.utils import type_utils
 from cros.factory.external import cv2 as cv
 from cros.factory.external import numpy as np
 
-
 # Set JPEG image compression quality to 70 so that the image can be transferred
 # through websocket.
 _JPEG_QUALITY = 70

@@ -13,7 +13,6 @@ import sys
 
 from cros.factory.utils import fmap
 
-
 # Values to encode netboot settings.
 CODE_TFTP_SERVER_IP = 1
 CODE_KERNEL_ARGS = 2

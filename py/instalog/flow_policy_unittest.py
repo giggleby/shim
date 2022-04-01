@@ -13,7 +13,6 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import flow_policy
 from cros.factory.instalog import log_utils
 
-
 _SAMPLE_TIME = 629467932.000012
 
 _SAMPLE_PROCESS_STAGE1 = datatypes.ProcessStage(

@@ -97,7 +97,6 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
-
 _DEFAULT_SUBTEST_LIST = ['Light sensor dark',
                          'Light sensor exact',
                          'Light sensor light']

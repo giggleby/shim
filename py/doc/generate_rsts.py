@@ -32,7 +32,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils.type_utils import Enum
 
-
 DOC_GENERATORS = {}
 SRC_URL_BASE = ("https://chromium.googlesource.com/chromiumos/platform/factory/"
                 "+/refs/heads/main/py/test/pytests/")

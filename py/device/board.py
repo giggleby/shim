@@ -6,7 +6,6 @@
 
 from cros.factory.device import device_types
 
-
 CalledProcessError = device_types.CalledProcessError
 DeviceBoard = device_types.DeviceBoard
 DeviceComponent = device_types.DeviceComponent

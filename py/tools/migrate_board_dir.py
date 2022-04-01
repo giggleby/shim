@@ -14,7 +14,6 @@ import sys
 
 from cros.factory.utils.file_utils import UnopenedTemporaryFile
 
-
 ReplacePattern = namedtuple('ReplacePattern',
                             ['old_substring', 'new_substring'])
 

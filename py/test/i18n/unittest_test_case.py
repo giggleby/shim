@@ -13,7 +13,6 @@ from cros.factory.test.env import paths
 from cros.factory.test.i18n import translation
 from cros.factory.utils import process_utils
 
-
 SCRIPT_DIR = os.path.dirname(__file__)
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, 'testdata')
 PO_DIR = os.path.join(paths.FACTORY_DIR, 'po')

@@ -10,7 +10,6 @@ import shutil
 from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 
-
 HTTP_BIN = '/usr/sbin/nginx'
 HTTP_SERVICE_NAME = 'httpsvc'
 

@@ -25,7 +25,6 @@ import time
 from cros.factory.utils.file_utils import UnopenedTemporaryFile
 from cros.factory.utils.process_utils import Spawn
 
-
 DEFAULT_NETBOOT_FIRMWARE_PATH = '/usr/local/factory/board/image.net.bin'
 
 

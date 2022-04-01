@@ -10,7 +10,6 @@ import unittest
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.v3 import filesystem_adapter
 
-
 _TEST_CONFIG_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_config.yaml')
 

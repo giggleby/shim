@@ -22,7 +22,6 @@ from . import file_utils
 from . import process_utils
 from .type_utils import Error
 
-
 DEFAULT_TIMEOUT = 10
 # Some systems map 'localhost' to its IPv6 equivalent ::1.  Sometimes this
 # causes unexpected behaviour.  We want to force the numerical IPv4 address, so

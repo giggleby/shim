@@ -20,7 +20,6 @@ from cros.factory.test.i18n import translation
 from cros.factory.test.state import TestState
 from cros.factory.utils import type_utils
 
-
 # Regexp that all IDs should match.  Note that this allows leading digits
 # (for tests like '3G').
 ID_REGEXP = re.compile(r'^[a-zA-Z0-9]+$')

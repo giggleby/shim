@@ -158,7 +158,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
 from cros.factory.utils import type_utils
 
-
 # LED pattern.
 LED_PATTERN = ((kbd_leds.LED_NUM | kbd_leds.LED_CAP, 0.05), (0, 0.05))
 

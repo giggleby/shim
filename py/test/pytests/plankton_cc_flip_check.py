@@ -89,7 +89,6 @@ from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 
-
 _CC_UNCONNECT = 'UNCONNECTED'
 
 

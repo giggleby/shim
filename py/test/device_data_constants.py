@@ -4,7 +4,6 @@
 
 from cros.factory.utils import shelve_utils
 
-
 # Helper utility for manipulating keys.
 JoinKeys = shelve_utils.DictKey.Join
 

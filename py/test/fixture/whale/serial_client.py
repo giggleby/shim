@@ -13,7 +13,6 @@ import xmlrpc.client
 from cros.factory.test.fixture.whale.host import dolphin_server
 from cros.factory.utils import type_utils
 
-
 __all__ = ['SerialClientError', 'SerialClient']
 FUNCTIONS = type_utils.Enum(['send', 'receive', 'get_serial_num'])
 

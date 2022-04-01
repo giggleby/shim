@@ -9,7 +9,6 @@ from cros.factory.probe.lib import probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
-
 DEFAULT_KEY = 'shell_raw'
 
 

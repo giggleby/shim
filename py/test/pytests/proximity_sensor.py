@@ -84,7 +84,6 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
-
 IIO_GET_EVENT_FD_IOCTL = 0x80046990
 
 PROXIMITY_EVENT_TYPE = type_utils.Enum(['close', 'far'])

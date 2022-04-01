@@ -33,7 +33,6 @@ from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
 
-
 _BIGQUERY_SCOPE = 'https://www.googleapis.com/auth/bigquery'
 _BIGQUERY_REQUEST_MAX_FAILURES = 20
 _JSON_MIMETYPE = 'NEWLINE_DELIMITED_JSON'

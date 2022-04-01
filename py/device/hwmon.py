@@ -6,7 +6,6 @@ import pipes
 
 from cros.factory.device import device_types
 
-
 _HWMON_PATH = '/sys/class/hwmon'
 
 

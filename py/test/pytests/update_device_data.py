@@ -171,7 +171,6 @@ from cros.factory.test import ui_templates
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 
-
 # Known regions to be listed first.
 _COMMONLY_USED_REGIONS = (
     'us',

@@ -84,7 +84,6 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
 
-
 BASE_FW_DIR = '/lib/firmware'
 
 ELAN_VENDOR_ID = 0x04f3

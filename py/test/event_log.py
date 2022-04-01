@@ -20,7 +20,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import platform_utils
 from cros.factory.utils import time_utils
 
-
 FileLock = platform_utils.GetProvider('FileLock')
 
 # A global event logger to log all events for a test. Since each

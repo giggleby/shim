@@ -14,7 +14,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-
 DeviceProperty = device_types.DeviceProperty
 Overrides = type_utils.Overrides
 

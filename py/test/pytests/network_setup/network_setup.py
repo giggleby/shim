@@ -75,7 +75,6 @@ from cros.factory.test.utils import connection_manager
 from cros.factory.utils import arg_utils
 from cros.factory.utils import sync_utils
 
-
 _ID_SUBTITLE_DIV = 'subtitle'
 _ID_MESSAGE_DIV = 'message'
 _ID_INSTRUCTION_DIV = 'instruction'

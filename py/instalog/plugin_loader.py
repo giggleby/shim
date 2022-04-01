@@ -18,7 +18,6 @@ import sys
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils import arg_utils
 
-
 _DEFAULT_PLUGIN_PREFIX = 'cros.factory.instalog.plugins.'
 
 

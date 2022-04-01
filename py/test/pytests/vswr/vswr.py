@@ -72,7 +72,6 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import net_utils
 
-
 # The root of the pytests vswr folder. The config path is relative to this when
 # we load the config file locally.
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))

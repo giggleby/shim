@@ -30,7 +30,6 @@ from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import time_utils
 
-
 _DEFAULT_NEW_FILE_POLL_INTERVAL = 60
 _DEFAULT_POLL_INTERVAL = 2
 _DEFAULT_ERROR_PAUSE_TIME = 60

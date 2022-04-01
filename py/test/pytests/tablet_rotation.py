@@ -106,7 +106,6 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 
-
 _TEST_DEGREES = ['90', '180', '270', '0']
 _POLL_ROTATION_INTERVAL = 0.1
 _VALID_LOCATIONS = ['base', 'lid']

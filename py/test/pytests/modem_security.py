@@ -36,7 +36,6 @@ import re
 from cros.factory.test import test_case
 from cros.factory.test.utils import serial_utils
 
-
 MODEM_SERIAL_PORT = '/dev/ttyACM0'
 ACCESS_LEVEL_RE = re.compile('^access_level = [0-9]', re.MULTILINE)
 

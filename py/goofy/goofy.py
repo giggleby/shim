@@ -59,7 +59,6 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import syslog
 
-
 HWID_CFG_PATH = '/usr/local/share/chromeos-hwid/cfg'
 CACHES_DIR = os.path.join(paths.DATA_STATE_DIR, 'caches')
 

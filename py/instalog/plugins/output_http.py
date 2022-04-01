@@ -24,7 +24,6 @@ from cros.factory.instalog.utils import time_utils
 
 from cros.factory.instalog.external import gnupg
 
-
 _DEFAULT_BATCH_SIZE = 1024
 _DEFAULT_URL_PATH = ''
 _DEFAULT_TIMEOUT = 5

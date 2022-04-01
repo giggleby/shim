@@ -6,7 +6,6 @@
 
 from cros.factory.device import device_types
 
-
 DeviceLink = device_types.DeviceLink
 
 print('You have imported cros.factory.device.link, which is deprecated by '

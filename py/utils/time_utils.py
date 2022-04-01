@@ -10,7 +10,6 @@ from uuid import uuid4
 
 from . import platform_utils
 
-
 MonotonicTime = platform_utils.GetProvider('MonotonicTime')
 
 

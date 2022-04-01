@@ -18,10 +18,9 @@ import unittest
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.test.env import paths
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
-
 
 _FREEZED_DB_CHECKSUM_FILE = os.path.join(
     paths.FACTORY_DIR, '..', 'factory-private', 'hwid_v2_testdata',
