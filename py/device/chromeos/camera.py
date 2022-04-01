@@ -186,3 +186,34 @@ class ChromeOSCamera(camera.Camera):
     return self._devices.setdefault(facing, CameraDevice(
         dut=self._device, sn_format=None,
         reader=CVCameraReader(device_index, self._device)))
+
+  def GetCameraDeviceByUsbVidPid(self, vid, pid):
+    """Get the camera device with the given USB vendor and device id.
+
+    Args:
+      vid: The USB vendor id of the external video device to open.
+      pid: The USB product id of the external video device to open.
+
+    Returns:
+      Camera device object that implements
+      cros.factory.test.utils.camera_utils.CameraDevice.
+    """
+    camera_paths = GetValidCameraPaths(self._device)
+    match_index = -1
+    for path, index in camera_paths:
+      dev_vid = self._device.ReadFile(
+          os.path.join(path, 'device', '..', 'idVendor')).strip()
+      dev_pid = self._device.ReadFile(
+          os.path.join(path, 'device', '..', 'idProduct')).strip()
+      if vid.lower() == dev_vid and pid.lower() == dev_pid:
+        if match_index != -1:
+          raise CameraError(
+              'Found multiple cameras with VID:PID %s:%s' % (vid, pid))
+        match_index = index
+    if match_index == -1:
+      raise CameraError('Did not find camera with VID:PID %s:%s' % (vid, pid))
+
+    return self._devices.setdefault(
+        None,
+        CameraDevice(dut=self._device, sn_format=None, reader=CVCameraReader(
+            match_index, self._device)))
