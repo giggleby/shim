@@ -40,3 +40,11 @@ export const toReduxFormError = (err: AxiosError) => {
   }
   return new SubmissionError(data);
 };
+
+export const validateDirectoryName = (string: string) => {
+  const reg = /^[a-zA-Z0-9_-]+$/;
+  if (reg.test(string)) {
+    return true;
+  }
+  return false;
+}

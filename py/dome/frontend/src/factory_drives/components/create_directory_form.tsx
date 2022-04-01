@@ -10,6 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import React from 'react';
 import {connect} from 'react-redux';
 import {
+  FormErrors,
   InjectedFormProps,
   reduxForm,
   submit,
@@ -20,12 +21,20 @@ import project from '@app/project';
 import {RootState} from '@app/types';
 
 import ReduxFormTextField from '@common/components/redux_form_text_field';
-import {HiddenSubmitButton} from '@common/form';
+import {HiddenSubmitButton, validateDirectoryName} from '@common/form';
 import {DispatchProps} from '@common/types';
 
 import {startCreateDirectory} from '../actions';
 import {CREATE_DIRECTORY_FORM} from '../constants';
 import {CreateDirectoryRequest} from '../types';
+
+const validate = (values: CreateDirectoryRequest) => {
+  const errors: FormErrors<CreateDirectoryRequest> = {};
+  if (!validateDirectoryName(values.name)) {
+    errors['name'] = 'Invalid directory name. It should only contain: A-Z, a-z, 0-9, -, _';
+  }
+  return errors;
+};
 
 const InnerFormComponent: React.SFC<InjectedFormProps<CreateDirectoryRequest>> =
   ({handleSubmit}) => (
@@ -41,6 +50,7 @@ const InnerFormComponent: React.SFC<InjectedFormProps<CreateDirectoryRequest>> =
 
 const InnerForm = reduxForm<CreateDirectoryRequest>({
   form: CREATE_DIRECTORY_FORM,
+  validate,
 })(InnerFormComponent);
 
 interface CreateDirectoryFormOwnProps {

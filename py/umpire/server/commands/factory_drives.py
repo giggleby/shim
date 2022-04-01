@@ -8,6 +8,7 @@ See FactoryDrives for detail.
 
 import logging
 import os
+import re
 
 from cros.factory.umpire import common
 from cros.factory.umpire.server import utils
@@ -151,6 +152,8 @@ class _FactoryDriveObject:
     """Retrieve directory by given namespace."""
     if namespace is None:
       return None
+    namespace = namespace.strip('/')
+    namespace = re.sub('/[/]+', '/', namespace)
     namespace = namespace.split('/')
     current_id = None
     for name in namespace:
