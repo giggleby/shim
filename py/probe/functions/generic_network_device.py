@@ -23,7 +23,6 @@ except ImportError:
 
 
 KNOWN_DEVICE_TYPES = type_utils.Enum(['wireless', 'ethernet', 'cellular'])
-CELLULAR_PROBE_TIMEOUT_SECS = 30
 
 
 class NetworkDevices:
@@ -153,8 +152,7 @@ class NetworkDevices:
     if _HasCellular():
       # Cellular related dbus takes 10~20 seconds to initialize after booting.
       # We have to wait until it is available.
-      if not flimflam.FlimFlam().FindCellularDevice(
-          CELLULAR_PROBE_TIMEOUT_SECS):
+      if not flimflam.FlimFlam().FindCellularDevice():
         raise RuntimeError('Call of flimflam.FlimFlam().FindCellularDevice() '
                            'timeout!')
 
