@@ -188,3 +188,17 @@ class ChromeOSCamera(camera.Camera):
     return self._devices.setdefault(facing, CameraDevice(
         dut=self._device, sn_format=None,
         reader=CVCameraReader(device_index, self._device)))
+
+  def GetCameraDeviceById(self, index):
+    """Get the camera device with the given index
+
+    Args:
+      index: The index of the video device to open, /dev/videoX
+
+    Returns:
+      Camera device object that implements
+      cros.factory.test.utils.camera_utils.CameraDevice.
+    """
+    return self._devices.setdefault(None, CameraDevice(
+        dut=self._device, sn_format=None,
+        reader=CVCameraReader(index, self._device)))
