@@ -70,7 +70,6 @@ class HWIDRepo:
 
     self._git_fs = git_util.GitFilesystemAdapter(self._repo)
 
-
   def ListHWIDDBMetadata(self):
     """Returns a list of metadata of HWID DBs recorded in the HWID repo."""
     return list(self._hwid_db_metadata_of_name.values())
@@ -178,7 +177,8 @@ class HWIDRepo:
 HWIDDBCLInfo = git_util.CLInfo
 HWIDDBCLStatus = git_util.CLStatus
 HWIDDBCLReviewStatus = git_util.CLReviewStatus
-HWIDDBCLMessage = git_util.CLMessage
+HWIDDBCLCommentThread = git_util.CLCommentThread
+HWIDDBCLComment = git_util.CLComment
 
 
 class HWIDRepoManager:
@@ -206,12 +206,29 @@ class HWIDRepoManager:
     return HWIDRepo(repo, repo_url, repo_branch)
 
   def GetHWIDDBCLInfo(self, cl_number) -> HWIDDBCLInfo:
+    """Returns the CL info of the given HWID DB CL number.
+
+    Args:
+      cl_number: The CL number.
+
+    Returns:
+      The detailed info of the queried CL, including the review status,
+      mergeable status and comment threads for commit message and touched
+      files.
+
+    Raises:
+      HWIDRepoError: Failed to fetch the CL info from Gerrit.
+    """
     try:
-      return git_util.GetCLInfo(_INTERNAL_REPO_URL, cl_number,
-                                auth_cookie=git_util.GetGerritAuthCookie(),
-                                include_detailed_accounts=True,
-                                include_messages=True, include_mergeable=True,
-                                include_review_status=True)
+      cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, cl_number,
+                                   auth_cookie=git_util.GetGerritAuthCookie(),
+                                   include_comment_thread=True,
+                                   include_mergeable=True,
+                                   include_review_status=True)
+      kwargs = cl_info._asdict()
+      kwargs['comment_threads'] = list(
+          filter(lambda t: t.path, kwargs['comment_threads']))
+      return HWIDDBCLInfo(**kwargs)
     except git_util.GitUtilException as ex:
       raise HWIDRepoError from ex
 

@@ -166,8 +166,8 @@ class SelfServiceHelperTest(unittest.TestCase):
   def _CreateHWIDDBCLWithDefaults(
       self, cl_number: int, status: hwid_repo.HWIDDBCLStatus,
       review_status: Optional[hwid_repo.HWIDDBCLReviewStatus] = (
-          hwid_repo.HWIDDBCLReviewStatus.NEUTRAL),
-      messages: Optional[Sequence[hwid_repo.HWIDDBCLMessage]] = None,
+          hwid_repo.HWIDDBCLReviewStatus.NEUTRAL), comment_threads: Optional[
+              Sequence[hwid_repo.HWIDDBCLCommentThread]] = None,
       mergeable: Optional[bool] = None,
       created_time: Optional[datetime.datetime] = None
   ) -> hwid_repo.HWIDDBCLInfo:
@@ -175,9 +175,9 @@ class SelfServiceHelperTest(unittest.TestCase):
     if mergeable is None:
       mergeable = status == hwid_repo.HWIDDBCLStatus.NEW
     created_time = created_time or datetime.datetime.utcnow()
-    messages = messages or []
+    comment_threads = comment_threads or []
     return hwid_repo.HWIDDBCLInfo(change_id, cl_number, status, review_status,
-                                  messages, mergeable, created_time)
+                                  mergeable, created_time, comment_threads)
 
   def testBatchGetHWIDDBEditableSectionChangeCLInfo(self):
     all_hwid_commit_infos = {
@@ -191,9 +191,11 @@ class SelfServiceHelperTest(unittest.TestCase):
                 3, hwid_repo.HWIDDBCLStatus.ABANDONED),
         4:
             self._CreateHWIDDBCLWithDefaults(
-                4, hwid_repo.HWIDDBCLStatus.NEW, messages=[
-                    hwid_repo.HWIDDBCLMessage('msg1', 'user1@email'),
-                    hwid_repo.HWIDDBCLMessage('msg2', 'user2@email'),
+                4, hwid_repo.HWIDDBCLStatus.NEW, comment_threads=[
+                    hwid_repo.HWIDDBCLCommentThread(
+                        'v3/file1', context='v3/file1:123:text123', comments=[
+                            hwid_repo.HWIDDBCLComment('user1@email', 'msg1')
+                        ])
                 ])
     }
 
@@ -223,7 +225,9 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status = expected_resp.cl_status.get_or_create(4)
     cl_status.status = cl_status.PENDING
     cl_status.comments.add(email='user1@email', message='msg1')
-    cl_status.comments.add(email='user2@email', message='msg2')
+    expected_comment_thread = cl_status.comment_threads.add(
+        file_path='v3/file1', context='v3/file1:123:text123')
+    expected_comment_thread.comments.add(email='user1@email', message='msg1')
     self.assertEqual(resp, expected_resp)
 
   def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonLegacyCLs(self):

@@ -260,43 +260,6 @@ class GetCLInfoTest(unittest.TestCase):
     self.assertEqual(new_cl_info.status, git_util.CLStatus.NEW)
     self.assertEqual(abandoned_cl_info.status, git_util.CLStatus.ABANDONED)
 
-  def testGetCLInfo_WithCLMessages(self):
-    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.return_value = self._BuildGetChangeSuccResponseWithDefaults(
-        messages=[
-            {
-                'message': 'msg1',
-                'author': {
-                    '_account_id': 123,
-                },
-            },
-        ])
-
-    actual_cl_info = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_messages=True)
-
-    expected_messages = [git_util.CLMessage('msg1', None)]
-    self.assertEqual(actual_cl_info.messages, expected_messages)
-
-  def testGetCLInfo_WithCLMessagesAndEmails(self):
-    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.return_value = (
-        self._BuildGetChangeSuccResponseWithDefaults(messages=[
-            {
-                'message': 'msg1',
-                'author': {
-                    "email": 'email1',
-                },
-            },
-        ]))
-
-    actual_cl_info = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_messages=True,
-        include_detailed_accounts=True)
-
-    expected_messages = [git_util.CLMessage('msg1', 'email1')]
-    self.assertEqual(actual_cl_info.messages, expected_messages)
-
   def testGetCLInfo_WithMergeableInfo(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
     mock_urlopen.side_effect = [
@@ -451,6 +414,116 @@ class GetCLInfoTest(unittest.TestCase):
 
     self.assertEqual(actual_cl_info.review_status,
                      git_util.CLReviewStatus.NEUTRAL)
+
+  def testGetCLInfo_WithPatchsetLevelComment(self):
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(),
+        self._BuildGerritSuccResponse({
+            '/PATCHSET_LEVEL': [{
+                'id': 'comment_id_1',
+                'message': 'This is comment 1.',
+                'author': {
+                    'email': 'somebody@not_google.com',
+                }
+            }, ],
+        }),
+    ]
+    actual_cl_info = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_comment_thread=True)
+
+    self.assertEqual(actual_cl_info.comment_threads, [
+        git_util.CLCommentThread(
+            path=None, context=None, comments=[
+                git_util.CLComment('somebody@not_google.com',
+                                   'This is comment 1.'),
+            ])
+    ])
+
+  def testGetCLInfo_WithFileComment(self):
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(),
+        self._BuildGerritSuccResponse({
+            'file1': [{
+                'id':
+                    'comment_id_1',
+                'message':
+                    'This is comment 1.',
+                'author': {
+                    'email': 'somebody@not_google.com',
+                },
+                'context_lines': [
+                    {
+                        'line_number': 123,
+                        'context_line': 'The source code line 123.',
+                    },
+                    {
+                        'line_number': 124,
+                        'context_line': 'The source code line 124.',
+                    },
+                ],
+            }],
+        }),
+    ]
+
+    actual_cl_info = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_comment_thread=True)
+
+    expected_context = ('file1:123:The source code line 123.\n'
+                        'file1:124:The source code line 124.')
+    self.assertEqual(actual_cl_info.comment_threads, [
+        git_util.CLCommentThread(
+            path='file1', context=expected_context, comments=[
+                git_util.CLComment('somebody@not_google.com',
+                                   'This is comment 1.'),
+            ])
+    ])
+
+  def testGetCLInfo_WithCommentThreads(self):
+
+    def _CreateCommentInfoJSONFromTemplate(numeric_id, in_reply_to=None):
+      json_obj = {
+          'id': f'id{numeric_id}',
+          'message': f'Message {numeric_id}.',
+          'author': {
+              'email': f'author{numeric_id}@not_google.com',
+          },
+      }
+      if in_reply_to is not None:
+        json_obj['in_reply_to'] = f'id{in_reply_to}'
+      return json_obj
+
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(),
+        self._BuildGerritSuccResponse({
+            '/PATCHSET_LEVEL': [
+                _CreateCommentInfoJSONFromTemplate(1),
+                _CreateCommentInfoJSONFromTemplate(2, in_reply_to=1),
+                _CreateCommentInfoJSONFromTemplate(3, in_reply_to=1),
+                _CreateCommentInfoJSONFromTemplate(4, in_reply_to=2),
+                _CreateCommentInfoJSONFromTemplate(5),
+            ],
+        }),
+    ]
+
+    actual_cl_info = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_comment_thread=True)
+
+    self.assertCountEqual(actual_cl_info.comment_threads, [
+        git_util.CLCommentThread(
+            path=None, context=None, comments=[
+                git_util.CLComment('author1@not_google.com', 'Message 1.'),
+                git_util.CLComment('author2@not_google.com', 'Message 2.'),
+                git_util.CLComment('author3@not_google.com', 'Message 3.'),
+                git_util.CLComment('author4@not_google.com', 'Message 4.'),
+            ]),
+        git_util.CLCommentThread(
+            path=None, context=None, comments=[
+                git_util.CLComment('author5@not_google.com', 'Message 5.'),
+            ]),
+    ])
 
 
 class CreateCLTest(unittest.TestCase):

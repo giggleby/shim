@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import base64
+import collections
 import contextlib
 import datetime
 import enum
@@ -28,15 +29,13 @@ from dulwich.repo import MemoryRepo as _MemoryRepo
 import google.auth
 from google.auth import impersonated_credentials
 import google.auth.transport.requests
-
 # pylint: enable=import-error, no-name-in-module
-# isort: split
-
 import urllib3
 import urllib3.exceptions
 
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import json_utils
+from cros.factory.utils import schema
 
 HEAD = b'HEAD'
 DEFAULT_REMOTE_NAME = b'origin'
@@ -150,9 +149,10 @@ def _InvokeGerritAPI(method: str, url: str,
   return resp.data
 
 
-def _InvokeGerritAPIJSON(
-    method: str, url: str, params: Optional[Sequence[Tuple[str, str]]] = None,
-    auth_cookie: str = '', json_body: Optional[Any] = None):
+def _InvokeGerritAPIJSON(method: str, url: str,
+                         params: Optional[Sequence[Tuple[str, str]]] = None,
+                         auth_cookie: str = '', json_body: Optional[Any] = None,
+                         response_schema: Optional[schema.BaseType] = None):
   """Invokes a Gerrit API endpoint and returns the response payload in JSON.
 
   Args:
@@ -161,6 +161,7 @@ def _InvokeGerritAPIJSON(
     params: See `_InvokeGerritAPI`.
     auth_cookie: See `_InvokeGerritAPI`.
     json_body: The JSON-seralizable object to be attached in the HTTP body.
+    response_schema: If specified, validates the schema response JSON value.
 
   Returns:
     The JSON-compatible response payload.
@@ -181,7 +182,10 @@ def _InvokeGerritAPIJSON(
     # the response starts with a magic prefix line for preventing XSSI which
     # should be stripped.
     stripped_json_bytes = raw_data.split(b'\n', 1)[1]
-    return json_utils.LoadStr(stripped_json_bytes)
+    json_obj = json_utils.LoadStr(stripped_json_bytes)
+    if response_schema:
+      response_schema.Validate(json_obj)
+    return json_obj
   except Exception as ex:
     raise GitUtilException(f'Response format error: {raw_data!r}.') from ex
 
@@ -469,10 +473,19 @@ def GetCurrentBranch(git_url_prefix, project, auth_cookie=''):
   """
   quoted_project = urllib.parse.quote(project, safe='')
   git_url = f'{git_url_prefix}/projects/{quoted_project}/HEAD'
-  branch_name = _InvokeGerritAPIJSON('GET', git_url, auth_cookie=auth_cookie)
+  branch_name = _InvokeGerritAPIJSON(
+      'GET', git_url, auth_cookie=auth_cookie, response_schema=schema.Scalar(
+          'refs head', str))
   if branch_name.startswith(REF_HEADS_PREFIX.decode()):
     branch_name = branch_name[len(REF_HEADS_PREFIX.decode()):]
   return branch_name
+
+
+_BRANCH_INFO_SCHEMA = schema.FixedDict(
+    'BranchInfo', items={
+        'ref': schema.Scalar('ref', str),
+        'revision': schema.Scalar('revision', str),
+    }, allow_undefined_keys=True)
 
 
 @RetryOnException(retry_value=(GitUtilException, ))
@@ -495,12 +508,9 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
   quoted_proj = urllib.parse.quote(project, safe='')
   quoted_branch = urllib.parse.quote(branch, safe='')
   git_url = f'{git_url_prefix}/projects/{quoted_proj}/branches/{quoted_branch}'
-  branch_info = _InvokeGerritAPIJSON('GET', git_url, auth_cookie=auth_cookie)
-  try:
-    return branch_info['revision']
-  except KeyError as ex:
-    raise GitUtilException(
-        f'Commit ID not found in the branch info: {branch_info}.') from ex
+  branch_info = _InvokeGerritAPIJSON('GET', git_url, auth_cookie=auth_cookie,
+                                     response_schema=_BRANCH_INFO_SCHEMA)
+  return branch_info['revision']
 
 
 @RetryOnException(retry_value=(GitUtilException, ))
@@ -552,9 +562,31 @@ _GERRIT_CL_STATUS_TO_CL_STATUS = {
 }
 
 
-class CLMessage(NamedTuple):
+class CLComment(NamedTuple):
+  """Holds one single comment on Gerrit.
+
+  Attributes:
+    email: The comment author if the server provides such info.
+    message: The raw comment message.
+  """
+  email: Optional[str]
   message: str
-  author_email: Optional[str]
+
+
+class CLCommentThread(NamedTuple):
+  """Holds one comment thread on Gerrit.
+
+  Attributes:
+    path: `None` if the comment thread targets the patch set.  `"/COMMIT_MSG"`
+      if the comment thread targets to the commit message.  The file path name
+      in the git repo if the comment thread targets to a touched file.
+    context: The source context of the comment.  `None` if the comment thread
+      targets the patch set.
+    comments: The comment thread.
+  """
+  path: Optional[str]
+  context: Optional[str]
+  comments: Sequence[CLComment]
 
 
 class CLInfo(NamedTuple):
@@ -562,25 +594,115 @@ class CLInfo(NamedTuple):
   cl_number: int
   status: CLStatus
   review_status: Optional[CLReviewStatus]
-  messages: Optional[Sequence[CLMessage]]
   mergeable: Optional[bool]
   created_time: datetime.datetime
+  comment_threads: Optional[Sequence[CLCommentThread]]
 
 
-def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
-              include_detailed_accounts=False, include_mergeable=False,
-              include_review_status=False):
+def _ConvertGerritTimestamp(timestamp):
+  return datetime.datetime.strptime(timestamp[:-3], '%Y-%m-%d %H:%M:%S.%f')
+
+
+_ACCOUNT_INFO_SCHEMA = schema.FixedDict(
+    'AccountInfo', optional_items={
+        'display_name': schema.Scalar('display_name', str),
+        'email': schema.Scalar('email', str),
+    }, allow_undefined_keys=True)
+_LABEL_INFO_SCHEMA = schema.FixedDict(
+    'LabelInfo', optional_items={
+        'approved': _ACCOUNT_INFO_SCHEMA,
+        'rejected': _ACCOUNT_INFO_SCHEMA,
+        'recommended': _ACCOUNT_INFO_SCHEMA,
+        'disliked': _ACCOUNT_INFO_SCHEMA,
+    }, allow_undefined_keys=True)
+_CHANGE_INFO_SCHEMA = schema.FixedDict(
+    'ChangeInfo', items={
+        'status': schema.Scalar('status', str),
+        'created': schema.Scalar('created', str),
+        'change_id': schema.Scalar('change_id', str),
+        '_number': schema.Scalar('_number', int),
+    }, optional_items={
+        'labels':
+            schema.Dict('labels', schema.Scalar('label_name', str),
+                        _LABEL_INFO_SCHEMA),
+    }, allow_undefined_keys=True)
+_MERGEABLE_INFO = schema.FixedDict(
+    'MergeableInfo', items={'mergeable': schema.Scalar('mergeable', bool)},
+    allow_undefined_keys=True)
+_CONTEXT_LINE_SCHEMA = schema.FixedDict(
+    'ContextLine', items={
+        'line_number': schema.Scalar('line_number', int),
+        'context_line': schema.Scalar('context_line', str),
+    })
+_COMMENT_INFO = schema.FixedDict(
+    'CommentInfo', items={
+        'id': schema.Scalar('id', str),
+    }, optional_items={
+        'path': schema.Scalar('path', str),
+        'message': schema.Scalar('message', str),
+        'author': _ACCOUNT_INFO_SCHEMA,
+        'in_reply_to': schema.Scalar('in_reply_to', str),
+        'context_lines': schema.List('context_lines', _CONTEXT_LINE_SCHEMA),
+    }, allow_undefined_keys=True)
+
+
+def _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels):
+  is_approved = bool(code_review_labels.get('approved'))
+  is_recommended = bool(code_review_labels.get('recommended'))
+  is_rejected = bool(code_review_labels.get('rejected'))
+  is_disliked = bool(code_review_labels.get('disliked'))
+
+  # If some review votes are positive while some are negative, return
+  # ambiguous.
+  if (is_approved or is_recommended) and (is_rejected or is_disliked):
+    return CLReviewStatus.AMBIGUOUS
+
+  # Approved and rejected takes the priority.
+  if is_approved:
+    return CLReviewStatus.APPROVED
+  if is_rejected:
+    return CLReviewStatus.REJECTED
+  if is_recommended:
+    return CLReviewStatus.RECOMMENDED
+  if is_disliked:
+    return CLReviewStatus.DISLIKED
+  return CLReviewStatus.NEUTRAL
+
+
+_PATCHSET_LEVEL_COMMENT_PATH = '/PATCHSET_LEVEL'
+
+
+def _ConvertCommentInfoJSONToContext(comment_info_json) -> Optional[str]:
+  path = comment_info_json.get('path')
+  if not path:
+    return None
+  context_lines_json_or_none = comment_info_json.get('context_lines')
+  if not context_lines_json_or_none:
+    return path
+  return '\n'.join([
+      f'{path}:{context_line_json["line_number"]}:'
+      f'{context_line_json["context_line"]}'
+      for context_line_json in context_lines_json_or_none
+  ])
+
+
+def GetCLInfo(
+    review_host,
+    change_id,
+    auth_cookie='',
+    include_mergeable=False,
+    include_review_status=False,
+    include_comment_thread=False,
+):
   """Gets the info of the specified CL by querying the Gerrit API.
 
   Args:
     review_host: Base URL to the API endpoint.
     change_id: Identity of the CL to query.
     auth_cookie: Auth cookie if the API is not public.
-    include_messages: Whether to pull and return the CL messages.
-    include_detailed_accounts: Whether to pull and return the email of users
-        in CL messages.
     include_mergeable: Whether to pull the mergeable status of the CL.
     include_review_status: Whether to pull the CL review status.
+    include_comment_thread: Whether to pull comments of the CL.
 
   Returns:
     An instance of `CLInfo`.  Optional fields might be `None`.
@@ -592,74 +714,101 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_messages=False,
   gerrit_resps = []
 
   @RetryOnException(retry_value=(GitUtilException, ))
-  def GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]]):
+  def GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]],
+                    response_schema: schema.BaseType):
     resp = _InvokeGerritAPIJSON('GET', f'{base_url}{scope}', params,
-                                auth_cookie=auth_cookie)
+                                auth_cookie=auth_cookie,
+                                response_schema=response_schema)
     gerrit_resps.append(resp)
     return resp
-
-  params = []
-  if include_messages:
-    params.append(('o', 'MESSAGES'))
-  if include_detailed_accounts:
-    params.append(('o', 'DETAILED_ACCOUNTS'))
-  if include_review_status:
-    params.append(('o', 'LABELS'))
-  cl_info_json = GetChangeInfo('', params)
-
-  def ConvertGerritCLMessage(cl_message_info_json):
-    return CLMessage(
-        cl_message_info_json['message'], cl_message_info_json['author']['email']
-        if include_detailed_accounts else None)
-
-  def ConvertGerritTimestamp(timestamp):
-    return datetime.datetime.strptime(timestamp[:-3], '%Y-%m-%d %H:%M:%S.%f')
 
   def GetCLMergeableInfo(cl_status):
     if cl_status != CLStatus.NEW:
       return False
-    cl_mergeable_info_json = GetChangeInfo('/revisions/current/mergeable', [])
+    cl_mergeable_info_json = GetChangeInfo('/revisions/current/mergeable', [],
+                                           _MERGEABLE_INFO)
     return cl_mergeable_info_json['mergeable']
 
-  def GetCLReviewStatus(labels):
-    code_review_labels = labels.get('Code-Review')
+  def _GetCLReviewStatus(change_info_json):
+    if not include_review_status:
+      return None
+    code_review_labels = change_info_json.get('labels', {}).get('Code-Review')
     if code_review_labels is None:
       raise GitUtilException('The Code-Review labels are missing.')
-    is_approved = bool(code_review_labels.get('approved'))
-    is_recommended = bool(code_review_labels.get('recommended'))
-    is_rejected = bool(code_review_labels.get('rejected'))
-    is_disliked = bool(code_review_labels.get('disliked'))
+    return _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels)
 
-    # If some review votes are positive while some are negative, return
-    # ambiguous.
-    if (is_approved or is_recommended) and (is_rejected or is_disliked):
-      return CLReviewStatus.AMBIGUOUS
+  def GetCLCommentThread():
+    comment_json_of_path = GetChangeInfo(
+        'comments', [('enable-context', 'true')],
+        schema.Dict('comment_map', schema.Scalar('path', str),
+                    schema.List('comments', _COMMENT_INFO)))
 
-    # Approved and rejected takes the priority.
-    if is_approved:
-      return CLReviewStatus.APPROVED
-    if is_rejected:
-      return CLReviewStatus.REJECTED
-    if is_recommended:
-      return CLReviewStatus.RECOMMENDED
-    if is_disliked:
-      return CLReviewStatus.DISLIKED
-    return CLReviewStatus.NEUTRAL
+    comment_json_list_of_reply_id = collections.defaultdict(list)
+    comment_id_queue = collections.deque()
+    root_comment_threads = []
+    comment_thread_of_comment_id = {}
+    for path, comment_json_list in comment_json_of_path.items():
+      if path == _PATCHSET_LEVEL_COMMENT_PATH:
+        path = None
+      for comment_info_json in comment_json_list:
+        # From
+        # https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#comment-info
+        # , we should backfill the path because the response message from Gerrit
+        # is a dictionary that maps the file path to the comment info instance.
+        comment_info_json['path'] = path
+
+        reply_id = comment_info_json.get('in_reply_to')
+        if reply_id:
+          comment_json_list_of_reply_id[reply_id].append(comment_info_json)
+        else:
+          comment_id = comment_info_json['id']
+          root_comment_thread = CLCommentThread(
+              path, _ConvertCommentInfoJSONToContext(comment_info_json), [
+                  CLComment(comment_info_json['author'].get('email'),
+                            comment_info_json.get('message', '')),
+              ])
+          comment_thread_of_comment_id[comment_id] = root_comment_thread
+          comment_id_queue.append(comment_id)
+          root_comment_threads.append(root_comment_thread)
+
+    while comment_id_queue:
+      comment_id = comment_id_queue.popleft()
+      comment_thread = comment_thread_of_comment_id[comment_id]
+      replying_comment_json_list = comment_json_list_of_reply_id.pop(
+          comment_id, [])
+      for replying_comment_json in replying_comment_json_list:
+        comment_thread.comments.append(
+            CLComment(replying_comment_json['author'].get('email'),
+                      replying_comment_json.get('message', '')))
+        replying_comment_id = replying_comment_json['id']
+        comment_thread_of_comment_id[replying_comment_id] = comment_thread
+        comment_id_queue.append(replying_comment_id)
+    if comment_json_list_of_reply_id:
+      logging.error(
+          'Got unexpected reply comments (review host = %r, '
+          'change_id = %r).', review_host, change_id)
+
+    return root_comment_threads
+
+  change_info_json = GetChangeInfo(
+      '', [('o', 'LABELS')] if include_review_status else [],
+      _CHANGE_INFO_SCHEMA)
 
   try:
-    cl_status = _GERRIT_CL_STATUS_TO_CL_STATUS[cl_info_json['status']]
-    cl_info_messages = (
-        list(map(ConvertGerritCLMessage, cl_info_json['messages']))
-        if include_messages else None)
-    cl_info_created_time = ConvertGerritTimestamp(cl_info_json['created'])
-    cl_info_mergeable = (
+    cl_status = _GERRIT_CL_STATUS_TO_CL_STATUS[change_info_json['status']]
+    mergeable_or_none = (
         GetCLMergeableInfo(cl_status) if include_mergeable else None)
-    cl_review_status = (
-        GetCLReviewStatus(cl_info_json['labels'])
-        if include_review_status else None)
-    return CLInfo(cl_info_json['change_id'], cl_info_json['_number'], cl_status,
-                  cl_review_status, cl_info_messages, cl_info_mergeable,
-                  cl_info_created_time)
+    comment_threads_or_none = (
+        GetCLCommentThread() if include_comment_thread else None)
+    return CLInfo(
+        change_id=change_info_json['change_id'],
+        cl_number=change_info_json['_number'],
+        status=cl_status,
+        review_status=_GetCLReviewStatus(change_info_json),
+        mergeable=mergeable_or_none,
+        created_time=_ConvertGerritTimestamp(change_info_json['created']),
+        comment_threads=comment_threads_or_none,
+    )
   except GitUtilException:
     raise
   except Exception as ex:

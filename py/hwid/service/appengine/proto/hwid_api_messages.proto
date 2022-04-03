@@ -407,7 +407,15 @@ message HwidDbEditableSectionChangeClInfo {
     string email = 1;
     string message = 2;
   }
-  repeated Comment comments = 2;
+
+  repeated Comment comments = 2 [deprecated = true];
+
+  message CommentThread {
+    string file_path = 1;
+    string context = 2;
+    repeated Comment comments = 3;
+  }
+  repeated CommentThread comment_threads = 3;
 }
 
 message BatchGetHwidDbEditableSectionChangeClInfoResponse {

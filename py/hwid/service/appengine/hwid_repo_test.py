@@ -160,16 +160,28 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
   def testGetHWIDDBCLInfo_Succeed(self):
     cl_mergeable = False
     cl_created_time = datetime.datetime.utcnow()
-    returned_cl_info = git_util.CLInfo('unused_change_id', 123,
-                                       git_util.CLStatus.MERGED,
-                                       git_util.CLReviewStatus.APPROVED, [
-                                           git_util.CLMessage('msg1', 'email1'),
-                                           git_util.CLMessage('msg2', 'email2')
-                                       ], cl_mergeable, cl_created_time)
+    cl_patchset_comment_thread = git_util.CLCommentThread(
+        path=None, context=None, comments=[
+            git_util.CLComment('somebody@notgoogle.com', 'msg1'),
+        ])
+    cl_file_comment_thread = git_util.CLCommentThread(
+        path='v3/THE_HWID_DB', context='v3/THE_HWID_DB:123:  text123',
+        comments=[
+            git_util.CLComment('somebody@notgoogle.com', 'msg2'),
+        ])
+    returned_cl_info = git_util.CLInfo(
+        'unused_change_id', 123, git_util.CLStatus.MERGED,
+        git_util.CLReviewStatus.APPROVED, cl_mergeable, cl_created_time,
+        [cl_patchset_comment_thread, cl_file_comment_thread])
     self._mocked_get_cl_info.return_value = returned_cl_info
 
     actual_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(123)
-    self.assertEqual(actual_cl_info, returned_cl_info)
+
+    expected_cl_info = hwid_repo.HWIDDBCLInfo(
+        'unused_change_id', 123, git_util.CLStatus.MERGED,
+        git_util.CLReviewStatus.APPROVED, cl_mergeable, cl_created_time,
+        [cl_file_comment_thread])
+    self.assertEqual(actual_cl_info, expected_cl_info)
 
 
 if __name__ == '__main__':

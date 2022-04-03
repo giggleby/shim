@@ -373,9 +373,18 @@ Info Update
       cl_status = response.cl_status.get_or_create(cl_number)
       cl_status.status = _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS.get(
           cl_info.status, cl_status.STATUS_UNSPECIFIC)
-      for comment in cl_info.messages:
-        cl_status.comments.add(email=comment.author_email,
-                               message=comment.message)
+      for comment_thread in cl_info.comment_threads:
+        comment_thread_msg = cl_status.comment_threads.add(
+            file_path=comment_thread.path or '',
+            context=comment_thread.context or '')
+        for comment in comment_thread.comments:
+          kwargs = {
+              'email': comment.email,
+              'message': comment.message
+          }
+          cl_status.comments.add(**kwargs)
+          comment_thread_msg.comments.add(**kwargs)
+
     return response
 
   def AnalyzeHWIDDBEditableSection(self, request):
