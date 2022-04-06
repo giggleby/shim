@@ -36,6 +36,7 @@ from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test import state
 from cros.factory.test.utils.cbi_utils import CbiEepromWpStatus
+from cros.factory.test.utils import hps_utils
 from cros.factory.utils import argparse_utils
 from cros.factory.utils.argparse_utils import CmdArg
 from cros.factory.utils.argparse_utils import ParseCmdline
@@ -43,6 +44,7 @@ from cros.factory.utils.argparse_utils import VERBOSITY_CMD_ARG
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils import file_utils
 from cros.factory.utils.process_utils import Spawn
+from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils.type_utils import Error
@@ -438,7 +440,7 @@ def VerifyCBIEEPROMWPStatus(options):
 
 @Command('write_protect')
 def EnableFwWp(options):
-  """Enable then verify firmware write protection."""
+  """Enable then verify firmware software write protection."""
   del options  # Unused.
 
   def WriteProtect(fw):
@@ -495,6 +497,22 @@ def EnableFwWp(options):
       continue
     WriteProtect(fw)
     event_log.Log('wp', fw=fw.target)
+
+
+@Command('lock_hps')
+def LockHPS(options):
+  """Enable permanent write-protection of the HPS.
+
+  Once this is done, it can never be undone short of removing the MCU and
+  soldering on a new one.
+  """
+  del options
+  logging.warning(
+      'Enable permanent write-protection of the HPS. Once this is done, it '
+      'can never be undone short of removing the MCU and soldering on a new '
+      'one.')
+  hps = hps_utils.HPSDevice(dut=sys_interface.SystemInterface())
+  hps.EnableWriteProtection()
 
 
 @Command('clear_gbb_flags')
@@ -962,6 +980,12 @@ def Finalize(options):
     GetGooftool(options).WriteVPDForRLZPing(options.embargo_offset)
     if options.generate_mfg_date:
       GetGooftool(options).WriteVPDForMFGDate()
+
+  if hps_utils.HasHPS():
+    if not options.no_write_protect:
+      # We cannot lock HPS after HWWP is enabled.
+      LockHPS(options)
+
   Cr50Finalize(options)
   Verify(options)
   LogSourceHashes(options)
@@ -974,7 +998,7 @@ def Finalize(options):
   GenerateStableDeviceSecret(options)
   ClearGBBFlags(options)
   if options.no_write_protect:
-    logging.warning('WARNING: Firmware Write Protection is SKIPPED.')
+    logging.warning('WARNING: Firmware Software Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
   else:
     EnableFwWp(options)

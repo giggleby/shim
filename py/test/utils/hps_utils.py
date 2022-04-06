@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 """HPS utilities"""
 
+import os
 import re
 from typing import Optional, Tuple
 
@@ -21,6 +22,10 @@ class HPSError(Exception):
   """HPS device exception class."""
 
 
+def HasHPS():
+  return os.path.exists('/dev/i2c-hps-controller')
+
+
 class HPSDevice:
 
   def __init__(self, dut: sys_interface.SystemInterface,
@@ -30,10 +35,16 @@ class HPSDevice:
     self._hps_factory_path = hps_factory_path or DEFAULT_HPS_FACTORY_PATH
     self._dev = dev
 
-  def RunFactoryProcess(self, timeout_secs):
-    cmd = [self._hps_factory_path, '--verbose']
+  def GetCommandPrefix(self):
+    """Returns the common command prefix."""
+    cmd = [self._hps_factory_path]
     if self._dev is not None:
       cmd.extend(['--dev', self._dev])
+    return cmd
+
+  def RunFactoryProcess(self, timeout_secs):
+    """Runs factory process without enabling permanent write-protection."""
+    cmd = self.GetCommandPrefix()
     cmd.append('factory')
     # TODO(cyueh) Add timeout to sys_interface.SystemInterface.Popen
     process_utils.Spawn(cmd, timeout=timeout_secs, log=True, check_call=True)
@@ -62,15 +73,24 @@ class HPSDevice:
                                      log=True).strip()
       self._dut.Call([IOTOOLS_PATH, 'mmio_write32', index, output], log=True)
 
+  def EnableWriteProtection(self):
+    """Enables permanent write-protection of the HPS.
+
+    Once this is done, it can never be undone short of removing the MCU and
+    soldering on a new one.
+    """
+    cmd = self.GetCommandPrefix()
+    cmd.append('write-stage0')
+    cmd.append('--permanent-lock')
+    self._dut.CheckCall(cmd, log=True)
+
   def GetHPSInfo(self) -> Tuple[str, str, str]:
     """Retrieves the HPS identifiers.
 
     Returns:
       An tuple (MCU_ID, CAMERA_ID, SPI_FLASH_ID) of three strings.
     """
-    cmd = [self._hps_factory_path, '--verbose']
-    if self._dev is not None:
-      cmd.extend(['--dev', self._dev])
+    cmd = self.GetCommandPrefix()
     cmd.append('print-part-ids')
     process = self._dut.Popen(cmd, stdout=self._dut.PIPE, stderr=self._dut.PIPE,
                               log=True)
