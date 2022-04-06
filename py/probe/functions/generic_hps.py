@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import os
-
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.test.utils import hps_utils
 from cros.factory.utils import sys_interface
@@ -17,7 +15,7 @@ class HPSFunction(cached_probe_function.CachedProbeFunction):
 
   @classmethod
   def ProbeAllDevices(cls):
-    if not os.path.exists('/dev/i2c-hps-controller'):
+    if not hps_utils.HasHPS():
       return None
     hps_device = hps_utils.HPSDevice(sys_interface.SystemInterface())
     mcu_id, camera_id, spi_flash_id = hps_device.GetHPSInfo()
