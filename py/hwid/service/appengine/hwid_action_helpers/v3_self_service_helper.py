@@ -74,6 +74,7 @@ class HWIDV3SelfServiceActionHelper:
 
     self._hwid_validator = hwid_validator.HwidValidator()
 
+  # TODO(clarkchung): add internal flag
   def GetDBEditableSection(self) -> str:
     full_hwid_db_contents = self._preproc_data.raw_database
     unused_header, lines = _SplitHWIDDBV3Sections(full_hwid_db_contents)
@@ -125,12 +126,14 @@ class HWIDV3SelfServiceActionHelper:
   def BundleHWIDDB(self):
     builder = bundle_builder.BundleBuilder()
     internal_db = self._preproc_data.database
-    tag_trimmed_raw_db = update_checksum.ReplaceChecksum(
-        internal_db.DumpDataWithoutChecksum(internal=False))
-    checksum = database.Database.ChecksumForText(tag_trimmed_raw_db)
+    tag_trimmed_raw_db = internal_db.DumpDataWithoutChecksum(internal=False)
+    editable_section = self.RemoveHeader(tag_trimmed_raw_db)
+    external_raw_db, unused_checksum = _GetFullHWIDDBAndChangeFingerprint(
+        self._preproc_data.raw_database, editable_section)
+    checksum = database.Database.ChecksumForText(external_raw_db)
 
     builder.AddRegularFile(internal_db.project.upper(),
-                           tag_trimmed_raw_db.encode('utf-8'))
+                           external_raw_db.encode('utf-8'))
     builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)

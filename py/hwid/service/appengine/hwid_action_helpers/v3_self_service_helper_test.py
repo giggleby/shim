@@ -11,6 +11,7 @@ import unittest
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
@@ -185,6 +186,36 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertIsNotNone(
         checksum_pattern.search(payload.decode('utf-8')),
         'checksum line was not displayed in payload.')
+
+  def testBundleHWIDDB_PreserveLegacyFormat(self):
+    legacy_data, helper_inst_legacy = self._LoadPreprocDataAndSSHelper(
+        'v3-golden.yaml')  # with legacy format
+    tot_data, helper_inst_tot = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-internal-tags.yaml')  # with tot format
+
+    payload_legacy = helper_inst_legacy.BundleHWIDDB().bundle_contents
+
+    with file_utils.UnopenedTemporaryFile() as bundle_path:
+      os.chmod(bundle_path, 0o755)
+      file_utils.WriteFile(bundle_path, payload_legacy, encoding=None)
+      with tempfile.TemporaryDirectory() as dest_dir:
+        process_utils.CheckCall([bundle_path, dest_dir])
+        db_path = os.path.join(dest_dir, legacy_data.project.upper())
+        legacy_yaml = yaml.safe_load(file_utils.ReadFile(db_path))
+        self.assertIn('board', legacy_yaml)
+        self.assertNotIn('project', legacy_yaml)
+
+    payload_tot = helper_inst_tot.BundleHWIDDB().bundle_contents
+
+    with file_utils.UnopenedTemporaryFile() as bundle_path:
+      os.chmod(bundle_path, 0o755)
+      file_utils.WriteFile(bundle_path, payload_tot, encoding=None)
+      with tempfile.TemporaryDirectory() as dest_dir:
+        process_utils.CheckCall([bundle_path, dest_dir])
+        db_path = os.path.join(dest_dir, tot_data.project.upper())
+        tot_yaml = yaml.safe_load(file_utils.ReadFile(db_path))
+        self.assertNotIn('board', tot_yaml)
+        self.assertIn('project', tot_yaml)
 
   def _LoadPreprocDataAndSSHelper(self, testdata_name):
     preproc_data = hwid_preproc_data.HWIDV3PreprocData(
