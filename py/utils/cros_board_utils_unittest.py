@@ -31,10 +31,9 @@ class BuildBoardTest(unittest.TestCase):
         BuildBoard('hatch').__dict__)
 
   def testBoardArch(self):
-    self.assertEqual('arm', BuildBoard('beaglebone').arch)
     self.assertEqual('arm', BuildBoard('kukui').arch)
-    self.assertEqual('arm', BuildBoard('veyron_mickey').arch)
-    self.assertEqual('amd64', BuildBoard('rambi').arch)
+    # The Factory Support Date of grunt is 2022-12.
+    self.assertEqual('amd64', BuildBoard('grunt').arch)
     self.assertEqual('amd64', BuildBoard('hatch').arch)
 
 
