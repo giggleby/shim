@@ -46,15 +46,30 @@ load_config_by_deployment_type() {
   fi
 }
 
+# Prints the path of the temporary directory created by this command.
+create_temp_dir() {
+  info "Create a temporary directory to hold files."
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  if [ ! -d "${temp_dir}" ]; then
+    die "Failed to create a temporary placeholder for files to deploy."
+  fi
+  add_temp "${temp_dir}"
+  echo "${temp_dir}"
+}
+
 download_remote_toolkit() {
   mkdir -p "${CACHED_REMOTE_TOOLKIT_DIR}"
   if [ ! -f "${CACHED_REMOTE_TOOLKIT_PATH}" ]; then
+    info "Download the toolkit from \`${REMOTE_TOOLKIT_PATH}\`."
     gsutil cp "${REMOTE_TOOLKIT_PATH}" "${CACHED_REMOTE_TOOLKIT_PATH}"
+  else
+    info "Use the cached toolkit file \`${CACHED_REMOTE_TOOLKIT_PATH}\`."
   fi
   cp "${CACHED_REMOTE_TOOLKIT_PATH}" "$1"
 }
 
-build_docker() {
+build_docker_image() {
   load_config_by_deployment_type "$1"
   local env_type="$2"
   if [ -z "${env_type}" ]; then
@@ -62,14 +77,12 @@ build_docker() {
   fi
 
   local temp_dir
-  temp_dir="$(mktemp -d)"
-  if [ ! -d "${temp_dir}" ]; then
-    die "Failed to create a temporary placeholder for files to deploy."
-  fi
-  add_temp "${temp_dir}"
+  temp_dir="$(create_temp_dir)"
 
+  info "Prepare files for building a docker image."
   rsync -avr --exclude="app_engine*" "${SOURCE_DIR}"/* "${temp_dir}"
   if [ -f "${LOCAL_BUILD_TOOLKIT}" ]; then
+    info "Use the local build toolkit \`${LOCAL_BUILD_TOOLKIT}\`."
     cp "${LOCAL_BUILD_TOOLKIT}" "${temp_dir}/docker"
     cp -rf "${LOCAL_BUILD_BUNDLE}/setup" "${temp_dir}/docker"
   else
@@ -87,27 +100,75 @@ build_docker() {
 
   protoc -I "${SOURCE_DIR}/proto/" --python_out "${temp_dir}/proto" \
     "${SOURCE_DIR}/proto/factorybundle.proto"
+
+  info "Start building the docker image."
   docker build -t "${DOCKER_IMAGENAME}" --file "${temp_dir}/docker/Dockerfile" \
     "${temp_dir}"
 }
 
-deploy_docker() {
+upload_docker_image() {
   load_config_by_deployment_type "$1"
 
+  info "Push the docker image to Container Registry."
   gcloud --project="${GCLOUD_PROJECT}" docker -- push "${DOCKER_IMAGENAME}"
   gcloud --project="${GCLOUD_PROJECT}" compute project-info \
     add-metadata --metadata bundle-creator-docker="${DOCKER_IMAGENAME}"
 }
 
-deploy_appengine() {
+try_delete_existing_vm() {
+  info "Try deleting the existing VM instance."
+  local filter="zone:${ZONE} name:${INSTANCE_GROUP_NAME}"
+  {
+    gcloud compute instance-groups managed list --project "${GCLOUD_PROJECT}" \
+      --filter="${filter}" | grep "${INSTANCE_GROUP_NAME}"
+  } && {
+    gcloud compute instance-groups managed delete "${INSTANCE_GROUP_NAME}" \
+      --project "${GCLOUD_PROJECT}" \
+      --zone "${ZONE}" \
+      --quiet
+  }
+  return 0
+}
+
+create_vm() {
+  load_config_by_deployment_type "$1"
+
+  {
+    gcloud compute instance-templates list --project="${GCLOUD_PROJECT}" \
+      --filter="${INSTANCE_TEMPLATE_NAME}" | \
+      grep "${INSTANCE_TEMPLATE_NAME}" && \
+    info "The specific instance template ${INSTANCE_TEMPLATE_NAME} was created."
+  } || {
+    info "Create a Compute Engine instance template."
+    gcloud compute instance-templates --project="${GCLOUD_PROJECT}" \
+      create-with-container "${INSTANCE_TEMPLATE_NAME}" \
+      --machine-type=custom-8-16384 \
+      --network-tier=PREMIUM --maintenance-policy=MIGRATE \
+      --image=cos-stable-63-10032-71-0 --image-project=cos-cloud \
+      --boot-disk-size=200GB --boot-disk-type=pd-standard \
+      --boot-disk-device-name="${INSTANCE_TEMPLATE_NAME}" \
+      --container-image="${CONTAINER_IMAGE}" \
+      --container-restart-policy=always --container-privileged \
+      --labels=container-vm=cos-stable-63-10032-71-0 \
+      --service-account="${SERVICE_ACCOUNT}" \
+      --scopes="https://www.googleapis.com/auth/chromeoshwid,cloud-platform"
+  }
+
+  try_delete_existing_vm
+  info "Create an instance group and start the VM instance."
+  gcloud compute instance-groups managed create "${INSTANCE_GROUP_NAME}" \
+    --project "${GCLOUD_PROJECT}" \
+    --template "${INSTANCE_TEMPLATE_NAME}" \
+    --zone "${ZONE}" \
+    --size 1
+}
+
+do_deploy_appengine() {
   load_config_by_deployment_type "$1"
   local temp_dir
-  temp_dir="$(mktemp -d)"
-  if [ ! -d "${temp_dir}" ]; then
-    die "Failed to create a temporary placeholder for files to deploy."
-  fi
-  add_temp "${temp_dir}"
+  temp_dir="$(create_temp_dir)"
 
+  info "Prepare files for deploying."
   local factory_dir="${temp_dir}/cros/factory"
   local package_dir="${factory_dir}/bundle_creator"
   mkdir -p "${package_dir}"
@@ -132,19 +193,17 @@ deploy_appengine() {
   protoc --python_out="${package_dir}/app_engine" -I "${SOURCE_DIR}/proto" \
       "${SOURCE_DIR}/proto/factorybundle.proto"
 
+  info "Start deploying the App Engine."
   gcloud --project="${GCLOUD_PROJECT}" app deploy \
     "${temp_dir}/app.yaml" --quiet
 }
 
-deploy_appengine_legacy() {
+do_deploy_appengine_legacy() {
   load_config_by_deployment_type "$1"
   local temp_dir
-  temp_dir=$(mktemp -d)
-  if [ ! -d "${temp_dir}" ]; then
-    die "Failed to create a temporary placeholder for files to deploy."
-  fi
-  add_temp "${temp_dir}"
+  temp_dir="$(create_temp_dir)"
 
+  info "Prepare files for deploying."
   cp -r "${SOURCE_DIR}"/app_engine_legacy/* "${temp_dir}"
   # Fill in env vars in rpc/config.py
   env BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
@@ -156,79 +215,21 @@ deploy_appengine_legacy() {
   protoc -o "${temp_dir}/rpc/factorybundle.proto.def" \
     -I "${SOURCE_DIR}" "${SOURCE_DIR}/proto/factorybundle.proto"
 
+  info "Start deploying the legacy App Engine."
   gcloud --project="${GCLOUD_PROJECT}" app deploy \
     "${temp_dir}/app.yaml" --quiet
+  info "Update the Cloud Tasks queue configuration."
   gcloud --project="${GCLOUD_PROJECT}" app deploy \
     "${temp_dir}/queue.yaml" --quiet
 }
 
-try_delete_existing_vm() {
-  local filter="zone:${ZONE} name:${INSTANCE_GROUP_NAME}"
-  {
-    gcloud compute instance-groups managed list --project "${GCLOUD_PROJECT}" \
-      --filter="${filter}" | grep "${INSTANCE_GROUP_NAME}"
-  } && {
-    gcloud compute instance-groups managed delete "${INSTANCE_GROUP_NAME}" \
-      --project "${GCLOUD_PROJECT}" \
-      --zone "${ZONE}" \
-      --quiet
-  }
-  return 0
-}
-
-create_vm() {
-  load_config_by_deployment_type "$1"
-
-  {
-    gcloud compute instance-templates list --project="${GCLOUD_PROJECT}" \
-      --filter="${INSTANCE_TEMPLATE_NAME}" | \
-      grep "${INSTANCE_TEMPLATE_NAME}" && \
-    echo "The specific instance template ${INSTANCE_TEMPLATE_NAME} was created."
-  } || {
-    gcloud compute instance-templates --project="${GCLOUD_PROJECT}" \
-      create-with-container "${INSTANCE_TEMPLATE_NAME}" \
-      --machine-type=custom-8-16384 \
-      --network-tier=PREMIUM --maintenance-policy=MIGRATE \
-      --image=cos-stable-63-10032-71-0 --image-project=cos-cloud \
-      --boot-disk-size=200GB --boot-disk-type=pd-standard \
-      --boot-disk-device-name="${INSTANCE_TEMPLATE_NAME}" \
-      --container-image="${CONTAINER_IMAGE}" \
-      --container-restart-policy=always --container-privileged \
-      --labels=container-vm=cos-stable-63-10032-71-0 \
-      --service-account="${SERVICE_ACCOUNT}" \
-      --scopes="https://www.googleapis.com/auth/chromeoshwid,cloud-platform"
-  }
-
-  try_delete_existing_vm
-  gcloud compute instance-groups managed create "${INSTANCE_GROUP_NAME}" \
-    --project "${GCLOUD_PROJECT}" \
-    --template "${INSTANCE_TEMPLATE_NAME}" \
-    --zone "${ZONE}" \
-    --size 1
-}
-
-ssh_vm() {
-  load_config_by_deployment_type "$1"
-
-  vm_name=$(gcloud compute instances list --project "${GCLOUD_PROJECT}" \
-    | sed -n "s/\(${INSTANCE_GROUP_NAME}-\S*\).*$/\1/p")
-  gcloud --project "${GCLOUD_PROJECT}" compute ssh "${vm_name}"
-}
-
-deploy_vm() {
-  build_docker "$1"
-  deploy_docker "$1"
+do_deploy_docker() {
+  build_docker_image "$1"
+  upload_docker_image "$1"
   create_vm "$1"
 }
 
-request() {
-  load_config_by_deployment_type "$1"
-
-  send_request "${APPENGINE_ID}" \
-    "${FACTORY_DIR}/py/bundle_creator/proto/factorybundle.proto"
-}
-
-run_docker() {
+do_run_docker() {
   if [[ "$1" == "prod" || "$1" == "staging" ]]; then
     die "Unsupported deployment type for \`run-docker\` command: \"$1\"."
   fi
@@ -237,57 +238,62 @@ run_docker() {
   # Delete the existing vm instance on the corresponding cloud project to
   # prevent processing a request twice.
   try_delete_existing_vm
-  build_docker "$1" "local"
+  build_docker_image "$1" "local"
 
   # Bind the personal gcloud credentials to the docker container so that the
   # worker can use the credentials to access gcloud services.
+  info "Run the docker image."
   docker run --tty --interactive --privileged \
     --volume "${HOME}/.config/gcloud:/root/.config/gcloud" \
     --env GOOGLE_CLOUD_PROJECT="${GCLOUD_PROJECT}" \
     "${CONTAINER_IMAGE}" || true
 }
 
+do_ssh_vm() {
+  load_config_by_deployment_type "$1"
+
+  vm_name=$(gcloud compute instances list --project "${GCLOUD_PROJECT}" \
+    | sed -n "s/\(${INSTANCE_GROUP_NAME}-\S*\).*$/\1/p")
+  gcloud --project "${GCLOUD_PROJECT}" compute ssh "${vm_name}"
+}
+
+do_request() {
+  load_config_by_deployment_type "$1"
+
+  send_request "${APPENGINE_ID}" \
+    "${FACTORY_DIR}/py/bundle_creator/proto/factorybundle.proto"
+}
+
 print_usage() {
   cat << __EOF__
 Easy Bundle Creation Service Deployment Script
 
-commands:
-  $0 build-docker [prod|staging|dev|dev2]
-      Build the image from the \`Dockerfile\` located at
-      \`factory/py/bundle_creator/docker/Dockerfile\`.
-
-  $0 deploy [prod|staging|dev|dev2]
-      Do \`deploy-appengine\`, \`deploy-appengine-legacy\` and \`deploy-vm\`
-      commands.
-
-  $0 deploy-docker [prod|staging|dev|dev2]
-      Push the docker image built from the command \`build-docker\` to the
-      Container Registry.
-
+commands
   $0 deploy-appengine [prod|staging|dev|dev2]
-      Deploy the code and configuration under
-      \`factory/py/bundle_creator/app_engine\` to App Engine.
+      Deploys the code and configuration under \`py/bundle_creator/app_engine\`
+      to App Engine.
 
   $0 deploy-appengine-legacy [prod|staging|dev|dev2]
-      Deploy the code and configuration under
-      \`factory/py/bundle_creator/app_engine_legacy\` to App Engine.
+      Deploys the code and configuration under
+      \`py/bundle_creator/app_engine_legacy\` to App Engine.
 
-  $0 create-vm [prod|staging|dev|dev2]
-      Create a compute engine instance which use the docker image deployed by
-      the command \`deploy-docker\`.
+  $0 deploy-docker [prod|staging|dev|dev2]
+      Builds a docker image from the \`py/bundle_creator/docker/Dockerfile\` and
+      creates a compute engine instance which uses the docker image.
 
-  $0 deploy-vm [prod|staging|dev|dev2]
-      Do \`build-docker\`, \`deploy-docker\` and \`create-vm\` commands.
+  $0 deploy-all [prod|staging|dev|dev2]
+      Does \`deploy-appengine\`, \`deploy-appengine-legacy\` and
+      \`deploy-docker\` commands.
+
+  $0 run-docker [dev|dev2]
+      Runs \`py/bundle_creator/docker/worker.py\` in local with the specific
+      deployment type.  The worker connects to the real Cloud Project services.
 
   $0 ssh-vm [prod|staging|dev|dev2]
       Ssh connect to the compute engine instance.
 
   $0 request [prod|staging|dev|dev2]
-      Send \`CreateBundleAsync\` request to the app engine.
-
-  $0 run-docker [dev|dev2]
-      Run \`py/bundle_creator/docker/worker.py\` in local with the specific
-      deployment type.  The worker connects to the real Cloud Project services.
+      Sends \`CreateBundleAsync\` request to the app engine.
 __EOF__
 }
 
@@ -297,37 +303,28 @@ main() {
     print_usage
   else
     case "${subcmd}" in
-      build-docker)
-        build_docker "$2"
-        ;;
-      deploy)
-        deploy_appengine "$2"
-        deploy_appengine_legacy "$2"
-        deploy_vm "$2"
-        ;;
-      deploy-docker)
-        deploy_docker "$2"
-        ;;
       deploy-appengine)
-        deploy_appengine "$2"
+        do_deploy_appengine "$2"
         ;;
       deploy-appengine-legacy)
-        deploy_appengine_legacy "$2"
+        do_deploy_appengine_legacy "$2"
         ;;
-      create-vm)
-        create_vm "$2"
+      deploy-docker)
+        do_deploy_docker "$2"
         ;;
-      deploy-vm)
-        deploy_vm "$2"
-        ;;
-      ssh-vm)
-        ssh_vm "$2"
-        ;;
-      request)
-        request "$2"
+      deploy-all)
+        do_deploy_appengine "$2"
+        do_deploy_appengine_legacy "$2"
+        do_deploy_docker "$2"
         ;;
       run-docker)
-        run_docker "$2"
+        do_run_docker "$2"
+        ;;
+      ssh-vm)
+        do_ssh_vm "$2"
+        ;;
+      request)
+        do_request "$2"
         ;;
       *)
         die "Unknown sub-command: \"${subcmd}\".  Run \`${0} help\` to print" \

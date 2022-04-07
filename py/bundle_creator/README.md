@@ -44,9 +44,7 @@ To deploy the app engine, run:
 To deploy the compute engine, run:
 
 ```
-(factory-repo)$ ./deploy/bundle_creator.sh build-docker ${deployment_type}
 (factory-repo)$ ./deploy/bundle_creator.sh deploy-docker ${deployment_type}
-(factory-repo)$ ./deploy/bundle_creator.sh create-vm ${deployment_type}
 ```
 
 To access the VM, run:
