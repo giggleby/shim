@@ -25,6 +25,7 @@ import xmlrpc.client
 
 from cros.factory.gooftool.common import ExecFactoryPar
 from cros.factory.gooftool.common import Shell
+from cros.factory.gooftool import core
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import report_upload
@@ -160,10 +161,6 @@ _hwdb_path_cmd_arg = CmdArg(
     '--hwdb_path', metavar='PATH',
     default=hwid_utils.GetDefaultDataPath(),
     help='Path to the HWID database.')
-
-_hwid_status_list_cmd_arg = CmdArg(
-    '--status', nargs='*', default=['supported'],
-    help='allow only HWIDs with these status values')
 
 # TODO(yhong): Replace this argument with `--hwid-material-file` when
 # `cros.factory.hwid.v3.hwid_utils` provides methods to parse such file.
@@ -682,45 +679,33 @@ def WipeInit(options):
 
 
 @Command(
-    'verify',
-    _hwid_status_list_cmd_arg,
-    _hwdb_path_cmd_arg,
-    _project_cmd_arg,
-    _probe_results_cmd_arg,
-    _hwid_cmd_arg,
-    _hwid_run_vpd_cmd_arg,
-    _hwid_vpd_data_file_cmd_arg,
-    _no_write_protect_cmd_arg,
-    _rma_mode_cmd_arg,
-    _cros_core_cmd_arg,
-    _has_ec_pubkey_cmd_arg,
-    _ec_pubkey_path_cmd_arg,
-    _ec_pubkey_hash_cmd_arg,
-    _release_rootfs_cmd_arg,
-    _firmware_path_cmd_arg,
-    _enforced_release_channels_cmd_arg,
-    _waive_list_cmd_arg,
-    _skip_list_cmd_arg,
-    _no_ectool_cmd_arg,
-    _enable_zero_touch_cmd_arg,
-    _cbi_eeprom_wp_status_cmd_arg,
-    _use_generic_tpm2_arg,
+    'verify_before_cr50_finalize',
+    _hwdb_path_cmd_arg,  # GetGooftool
+    _project_cmd_arg,  # GetGooftool
+    _probe_results_cmd_arg,  # VerifyHWID
+    _hwid_cmd_arg,  # VerifyHWID
+    _hwid_run_vpd_cmd_arg,  # VerifyHWID
+    _hwid_vpd_data_file_cmd_arg,  # VerifyHWID
+    _no_write_protect_cmd_arg,  # this
+    _rma_mode_cmd_arg,  # VerifyHWID, VerifySystemTime
+    _has_ec_pubkey_cmd_arg,  # this
+    _ec_pubkey_path_cmd_arg,  # VerifyECKey
+    _ec_pubkey_hash_cmd_arg,  # VerifyECKey
+    _release_rootfs_cmd_arg,  # VerifyKeys, VerifySystemTime, VerifyRootFs
+    _firmware_path_cmd_arg,  # VerifyKeys
+    _enforced_release_channels_cmd_arg,  # VerifyReleaseChannel
+    _waive_list_cmd_arg,  # CommandWithWaiveSkipCheck
+    _skip_list_cmd_arg,  # CommandWithWaiveSkipCheck
 )
-def Verify(options):
-  """Verifies if whole factory process is ready for finalization.
+def VerifyBeforeCr50Finalize(options):
+  """Verifies if the device is ready for finalization before Cr50Finalize.
 
   This routine performs all the necessary checks to make sure the
-  device is ready to be finalized, but does not modify state.  These
-  checks include dev switch, firmware write protection switch, hwid,
-  system time, keys, and root file system.
+  device is ready to be finalized before Cr50Finalize, but does not modify
+  state.
   """
-
   if not options.no_write_protect:
-    VerifyWPSwitch(options)
     VerifyManagementEngineLocked(options)
-  if not options.use_generic_tpm2:
-    # Verify this after EnableFwWp for use_generic_tpm2
-    VerifyCBIEEPROMWPStatus(options)
   VerifyHWID(options)
   VerifySystemTime(options)
   if options.has_ec_pubkey:
@@ -734,6 +719,31 @@ def Verify(options):
   VerifyVPD(options)
   VerifyReleaseChannel(options)
   VerifyCrosConfig(options)
+
+
+@Command(
+    'verify_after_cr50_finalize',
+    _hwdb_path_cmd_arg,  # GetGooftool
+    _project_cmd_arg,  # GetGooftool
+    _no_write_protect_cmd_arg,  # this
+    _waive_list_cmd_arg,  # CommandWithWaiveSkipCheck
+    _skip_list_cmd_arg,  # CommandWithWaiveSkipCheck
+    _no_ectool_cmd_arg,  # VerifyWPSwitch
+    _enable_zero_touch_cmd_arg,  # VerifySnBits
+    _cbi_eeprom_wp_status_cmd_arg,  # VerifyCBIEEPROMWPStatus
+    _use_generic_tpm2_arg,  # this, VerifyCBIEEPROMWPStatus
+)
+def VerifyAfterCr50Finalize(options):
+  """Verifies if the device is ready for finalization after Cr50Finalize.
+
+  This routine performs all the necessary checks to make sure the
+  device is ready to be finalized after Cr50Finalize, but does not modify state.
+  """
+  if not options.no_write_protect:
+    VerifyWPSwitch(options)
+  if not options.use_generic_tpm2:
+    # Verify this after EnableFwWp for use_generic_tpm2
+    VerifyCBIEEPROMWPStatus(options)
   VerifySnBits(options)
 
 
@@ -932,7 +942,6 @@ def UploadReport(options):
     _no_ectool_cmd_arg,
     _shopfloor_url_args_cmd_arg,
     _hwdb_path_cmd_arg,
-    _hwid_status_list_cmd_arg,
     _upload_method_cmd_arg,
     _upload_max_retry_times_arg,
     _upload_retry_interval_arg,
@@ -997,8 +1006,9 @@ def Finalize(options):
       # We cannot lock HPS after HWWP is enabled.
       LockHPS(options)
 
+  VerifyBeforeCr50Finalize(options)
   Cr50Finalize(options)
-  Verify(options)
+  VerifyAfterCr50Finalize(options)
   LogSourceHashes(options)
   UntarStatefulFiles(options)
   if options.cros_core:
@@ -1049,6 +1059,21 @@ def VerifyHWID(options):
   This is mainly for Gooftool to verify v3 HWID during finalize.  For testing
   and development purposes, please use `hwid` command.
   """
+  ignore_errors = False
+  if hps_utils.HasHPS():
+    # We cannot probe HPS after HWWP is enabled.
+    try:
+      # If has_ectool is set, the VerifyWPSwitch will test SWWP (firmware
+      # software write protection). Skip testing SWWP with has_ectool=False.
+      GetGooftool(options).VerifyWPSwitch(has_ectool=False)
+    except core.HWWPError:
+      logging.info('HWWP is disabled as expected.')
+    else:
+      logging.info(
+          'Ignore HWID verification failure, because HPS cannot be probed when'
+          ' HWWP is enabled.')
+      ignore_errors = True
+
   database = GetGooftool(options).db
 
   encoded_string = options.hwid or GetGooftool(options).ReadHWID()
@@ -1060,8 +1085,16 @@ def VerifyHWID(options):
 
   event_log.Log('probed_results', probed_results=FilterDict(probed_results))
 
-  hwid_utils.VerifyHWID(database, encoded_string, probed_results,
-                        device_info, vpd_data, options.rma_mode)
+  try:
+    hwid_utils.VerifyHWID(database, encoded_string, probed_results, device_info,
+                          vpd_data, options.rma_mode)
+  except Exception:
+    # TODO(cyueh) Make this only accept HPS HWID validation error.
+    if not ignore_errors:
+      raise
+    logging.exception(
+        'Failed to verify HWID but it is fine since we believe that the device '
+        'passed VerifyHWID once before Cr50Finalize.')
 
   event_log.Log('verified_hwid', hwid=encoded_string)
 

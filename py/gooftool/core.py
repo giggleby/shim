@@ -77,6 +77,10 @@ class CrosConfigError(Error):
                                                self.cur_identity)
 
 
+class HWWPError(Error):
+  pass
+
+
 class Gooftool:
   """A class to perform hardware probing and verification and to implement
   Google required tests.
@@ -974,7 +978,7 @@ class Gooftool:
     """
 
     if self._util.shell('crossystem wpsw_cur').stdout.strip() != '1':
-      raise Error(
+      raise HWWPError(
           'write protection switch of AP is disabled. Please attach '
           'the battery or insert the write protect screw to enable HWWP.')
 
