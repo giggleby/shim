@@ -63,8 +63,8 @@ main() {
   # Verify that the system is locked.
   rm -rf /tmp/fp.raw || true
   rm -rf /tmp/error_msg.txt || true
-  ! fpcmd fpframe raw >/tmp/fp.raw 2>/tmp/error_msg.txt
-  cat /tmp/error_msg.txt | check_pattern 'ACCESS_DENIED'
+  fpcmd fpframe raw >/tmp/fp.raw 2>/tmp/error_msg.txt && exit 1
+  check_pattern 'ACCESS_DENIED\|Permission denied' < /tmp/error_msg.txt
 }
 
 
