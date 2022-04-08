@@ -43,6 +43,7 @@ DIRECTORIES_TO_SEARCH = [
 # Tests exclude starting from factory repository root. Content can be either
 # directory or filename.
 TESTS_TO_EXCLUDE = [
+    'py/bundle_creator',
     'py/probe_info_service',
     'py/dome',
     'py/umpire',

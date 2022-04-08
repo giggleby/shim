@@ -58,6 +58,21 @@ To access the VM, run:
 
 ### Testing
 
+#### Unittest
+
+`make -C $(factory-repo) test` ignores all unittest modules related to Easy
+Bundle Creation. Instead, developers should trigger the tests by the helper
+script as follow:
+
+```
+(factory-repo)$ ./deploy/bundle_creator.sh test-docker
+```
+
+The `test-docker` command trigger the tests under `./py/bundle_creator/docker`
+and `./py/bundle_creator/connector`.
+
+#### Manual test
+
 To run `docker/worker.py` in local, run:
 ```
 (factory-repo)$ ./deploy/bundle_creator.sh run-docker ${deployment_type}

@@ -6,6 +6,18 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 FACTORY_DIR="$(readlink -f "${SCRIPT_DIR}/..")"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
+SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator"
+
+LOCAL_DEPLOYMENT_DIR="/tmp/bundle_creator"
+LOCAL_DEPLOYMENT_VENV_DIR="${LOCAL_DEPLOYMENT_DIR}/venv"
+VENV_PYTHON_NAME="python3"
+LOCAL_DEPLOYMENT_VENV_PYTHON_PATH="${LOCAL_DEPLOYMENT_DIR}/venv/bin/\
+${VENV_PYTHON_NAME}"
+LOCAL_DEPLOYMENT_SOURCE_DIR="${LOCAL_DEPLOYMENT_DIR}/src"
+LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR="${LOCAL_DEPLOYMENT_SOURCE_DIR}/cros/\
+factory/bundle_creator"
+LOCAL_DEPLOYMENT_LOG_DIR="${LOCAL_DEPLOYMENT_DIR}/log"
+
 LOCAL_BUILD_BUNDLE="${FACTORY_DIR}/build/bundle"
 TOOLKIT_NAME="install_factory_toolkit.run"
 LOCAL_BUILD_TOOLKIT="${LOCAL_BUILD_BUNDLE}/toolkit/${TOOLKIT_NAME}"
@@ -13,10 +25,10 @@ REMOTE_TOOLKIT_BOARD="grunt"
 REMOTE_TOOLKIT_VERSION="14402.0.0"
 REMOTE_TOOLKIT_PATH="gs://chromeos-releases/dev-channel/\
 ${REMOTE_TOOLKIT_BOARD}/${REMOTE_TOOLKIT_VERSION}/*-factory-*.zip"
-CACHED_REMOTE_TOOLKIT_DIR="/tmp/bundle_creator/toolkit/${REMOTE_TOOLKIT_BOARD}/\
-${REMOTE_TOOLKIT_VERSION}"
+CACHED_REMOTE_TOOLKIT_DIR="${LOCAL_DEPLOYMENT_DIR}/toolkit/\
+${REMOTE_TOOLKIT_BOARD}/${REMOTE_TOOLKIT_VERSION}"
 CACHED_REMOTE_TOOLKIT_PATH="${CACHED_REMOTE_TOOLKIT_DIR}/factory.zip"
-SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator/"
+
 ZONE="us-central1-a"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
@@ -58,6 +70,26 @@ create_temp_dir() {
   echo "${temp_dir}"
 }
 
+prepare_docker_files() {
+  local destiation_dir="$1"
+  local env_type="$2"
+
+  info "Prepare files for building a docker image."
+  rsync -avr --exclude="app_engine*" "${SOURCE_DIR}"/* "${destiation_dir}"
+
+  # Fill in env vars in docker/config.py
+  env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
+    BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
+    PUBSUB_SUBSCRIPTION="${PUBSUB_SUBSCRIPTION}" \
+    HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
+    ENV_TYPE="${env_type}" \
+    envsubst < "${SOURCE_DIR}/docker/config.py" > \
+      "${destiation_dir}/docker/config.py"
+
+  protoc -I "${SOURCE_DIR}/proto/" --python_out "${destiation_dir}/proto" \
+    "${SOURCE_DIR}/proto/factorybundle.proto"
+}
+
 download_remote_toolkit() {
   mkdir -p "${CACHED_REMOTE_TOOLKIT_DIR}"
   if [ ! -f "${CACHED_REMOTE_TOOLKIT_PATH}" ]; then
@@ -79,8 +111,7 @@ build_docker_image() {
   local temp_dir
   temp_dir="$(create_temp_dir)"
 
-  info "Prepare files for building a docker image."
-  rsync -avr --exclude="app_engine*" "${SOURCE_DIR}"/* "${temp_dir}"
+  prepare_docker_files "${temp_dir}" "${env_type}"
   if [ -f "${LOCAL_BUILD_TOOLKIT}" ]; then
     info "Use the local build toolkit \`${LOCAL_BUILD_TOOLKIT}\`."
     cp "${LOCAL_BUILD_TOOLKIT}" "${temp_dir}/docker"
@@ -90,16 +121,6 @@ build_docker_image() {
     download_remote_toolkit "${temp_dir}/docker/factory.zip"
     mkdir -p "${temp_dir}/docker/setup"
   fi
-  # Fill in env vars in docker/config.py
-  env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
-    BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
-    PUBSUB_SUBSCRIPTION="${PUBSUB_SUBSCRIPTION}" \
-    HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
-    ENV_TYPE="${env_type}" \
-    envsubst < "${SOURCE_DIR}/docker/config.py" > "${temp_dir}/docker/config.py"
-
-  protoc -I "${SOURCE_DIR}/proto/" --python_out "${temp_dir}/proto" \
-    "${SOURCE_DIR}/proto/factorybundle.proto"
 
   info "Start building the docker image."
   docker build -t "${DOCKER_IMAGENAME}" --file "${temp_dir}/docker/Dockerfile" \
@@ -161,6 +182,48 @@ create_vm() {
     --template "${INSTANCE_TEMPLATE_NAME}" \
     --zone "${ZONE}" \
     --size 1
+}
+
+prepare_python_venv() {
+  local requirements_path="$1"
+  if [ ! -d "${LOCAL_DEPLOYMENT_VENV_DIR}" ]; then
+    info "Initialize a new venv \`${LOCAL_DEPLOYMENT_VENV_DIR}\`."
+    virtualenv --python="${VENV_PYTHON_NAME}" "${LOCAL_DEPLOYMENT_VENV_DIR}"
+  else
+    info "Use the existing venv \`${LOCAL_DEPLOYMENT_VENV_DIR}\`."
+  fi
+
+  info "Install dependent python modules with \`${requirements_path}\`."
+  "${LOCAL_DEPLOYMENT_VENV_PYTHON_PATH}" -m pip install -r \
+      "${requirements_path}"
+}
+
+# Print the path of the test log directory created by this command, and link
+# the latest directory to the new created log directory.
+create_test_log_dir() {
+  local test_type="$1"
+  local timestamp
+  timestamp="$(date +%Y%m%d_%H%M%S)"
+  local log_dir
+  log_dir="${LOCAL_DEPLOYMENT_LOG_DIR}/logs.test.${test_type}.${timestamp}.d"
+  local log_linkpath
+  log_linkpath="${LOCAL_DEPLOYMENT_LOG_DIR}/logs.test.${test_type}.latest.d"
+
+  mkdir -p "${log_dir}"
+  rm "${log_linkpath}" || true
+  ln -s "$(basename "${log_dir}")" "${log_linkpath}"
+  echo "${log_dir}"
+}
+
+# Print all test modules found under the specific directory.
+find_test_modules() {
+  local target_dir="$1"
+  find_output="$(find "${target_dir}" -type f \
+      -name "*_*test.py" -printf "%P\\n")"
+  for path_name in ${find_output}; do
+    local path_name_no_ext="${path_name%.py}"
+    echo "${path_name_no_ext//\//.}"
+  done
 }
 
 do_deploy_appengine() {
@@ -264,6 +327,42 @@ do_request() {
     "${FACTORY_DIR}/py/bundle_creator/proto/factorybundle.proto"
 }
 
+do_test_docker() {
+  rm -rf "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}"
+  mkdir -p "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}"
+
+  prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
+  prepare_python_venv "${SOURCE_DIR}/docker/requirements.txt"
+
+  local test_modules
+  mapfile -t test_modules < \
+      <(find_test_modules "${LOCAL_DEPLOYMENT_SOURCE_DIR}")
+  info "Found ${#test_modules[@]} test modules."
+
+  local log_dir
+  log_dir="$(create_test_log_dir "docker")"
+  local failed_test_modules=()
+  cd "${LOCAL_DEPLOYMENT_SOURCE_DIR}" || exit
+  for test_module in "${test_modules[@]}"; do
+    info "Run test \`${test_module}\`."
+    local logfile_path="${log_dir}/${test_module}.log"
+    if ! "${LOCAL_DEPLOYMENT_VENV_PYTHON_PATH}" -m "${test_module}" \
+        >"${logfile_path}" 2>&1; then
+      failed_test_modules+=("${test_module}")
+    fi
+  done
+
+  if [ ${#failed_test_modules[@]} -eq 0 ]; then
+    info "All tests are passed!"
+  else
+    error "Following ${#failed_test_modules[@]} test(s) are failed:"
+    for test_module in "${failed_test_modules[@]}"; do
+      local logfile_path="${log_dir}/${test_module}.log"
+      echo " - ${test_module}, logfile path: ${logfile_path}"
+    done
+  fi
+}
+
 print_usage() {
   cat << __EOF__
 Easy Bundle Creation Service Deployment Script
@@ -294,6 +393,10 @@ commands
 
   $0 request [prod|staging|dev|dev2]
       Sends \`CreateBundleAsync\` request to the app engine.
+
+  $0 test-docker
+      Run all tests under \`py/bundler_creator/connector\` and
+      \`py/bundler_creator/docker\`.
 __EOF__
 }
 
@@ -325,6 +428,9 @@ main() {
         ;;
       request)
         do_request "$2"
+        ;;
+      test-docker)
+        do_test_docker
         ;;
       *)
         die "Unknown sub-command: \"${subcmd}\".  Run \`${0} help\` to print" \
