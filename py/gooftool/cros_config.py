@@ -34,8 +34,14 @@ class CrosConfig:
     """
     result = self.GetValue('/identity', 'custom-label-tag')
     if not result.success:
-      # Fallback to whitelabel-tag and try again.
-      result = self.GetValue('/identity', 'whitelabel-tag')
+      whitelabel_result = self.GetValue('/identity', 'whitelabel-tag')
+      if whitelabel_result.success:
+        # It means that an old test image that only supports whitelabel-tag is
+        # used.  The partner needs to either upgrade the test image
+        # (>= 14675.0.0), or downgrade the factory toolkit (< 14680.0.0).
+        raise RuntimeError(
+            'custom-label-tag is not supported by this image, please upgrade '
+            'the test image to version higher than "14675.0.0".')
     return result.success, (result.stdout.strip() if result.stdout else '')
 
   def GetPlatformName(self):
