@@ -144,33 +144,23 @@ class PortDistributeHandler(socketserver.StreamRequestHandler):
 
 
 class PortDistributeServer(socketserver.ThreadingUnixStreamServer):
-  def __init__(self):
+
+  def __init__(self, socket_file):
+    super().__init__(socket_file, PortDistributeHandler)
     self.lock = threading.RLock()
     self.unused_ports = set(
         range(net_utils.UNUSED_PORT_LOW, net_utils.UNUSED_PORT_HIGH))
-    self.socket_file = tempfile.mktemp(prefix='random_port_socket')
     self.thread = None
-    socketserver.ThreadingUnixStreamServer.__init__(self, self.socket_file,
-                                                    PortDistributeHandler)
 
   def __enter__(self):
-    self.Start()
-    return self
-
-  def __exit__(self, *args):
-    self.Close()
-
-  def Start(self):
     self.thread = threading.Thread(target=self.serve_forever)
     self.thread.start()
 
-  def Close(self):
+  def __exit__(self, *args):
     self.server_close()
     if self.thread:
       net_utils.ShutdownTCPServer(self)
       self.thread.join()
-    if self.socket_file and os.path.exists(self.socket_file):
-      os.unlink(self.socket_file)
 
   def RequestPort(self, length):
     with self.lock:
@@ -182,6 +172,16 @@ class PortDistributeServer(socketserver.ThreadingUnixStreamServer):
           self.unused_ports.difference_update(port_range)
           break
       return port
+
+
+@contextlib.contextmanager
+def CreatePortDistributeServer():
+  # Set the temp dir to /tmp to prevent the socket path longer than 108
+  # characters (the unix socket file name length limit in linux).
+  with tempfile.TemporaryDirectory(dir='/tmp') as temp_dir:
+    socket_file = os.path.join(temp_dir, 'sock')
+    with PortDistributeServer(socket_file):
+      yield socket_file
 
 
 class RunTests:
@@ -300,15 +300,16 @@ class RunTests:
       tests: list of unittest paths.
       max_jobs: maximum number of tests to run in parallel.
     """
-    with PortDistributeServer() as port_server, mock_loader.Loader(
-    ) as loader, contextlib.ExitStack() as stack:
+    with CreatePortDistributeServer() as port_server_socket_file, \
+         mock_loader.Loader() as loader, \
+         contextlib.ExitStack() as stack:
       for test_name in tests:
         python_path = loader.GetMockedRoot() if test_name.endswith(
             TEST_FILE_USE_MOCK_SUFFIX) else os.getenv('PYTHONPATH', '')
         try:
           p = stack.enter_context(
               _TestProc(test_name, self._GetLogFilename(test_name),
-                        port_server.socket_file, python_path))
+                        port_server_socket_file, python_path))
         except Exception:
           self._FailMessage('Error running test %r' % test_name)
           raise
