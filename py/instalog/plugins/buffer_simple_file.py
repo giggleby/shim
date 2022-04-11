@@ -78,7 +78,7 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
                 self.args.truncate_interval)
       self.Sleep(self.args.truncate_interval)
 
-  def Produce(self, events):
+  def Produce(self, producer, events, consumable):
     """See BufferPlugin.Produce.
 
     Note the careful edge cases with attachment files.  We want them *all* to

@@ -21,6 +21,9 @@ from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
 
 
+_TEST_PRODUCER = 'test_producer'
+
+
 # pylint: disable=protected-access
 # TODO (b/205776055)
 @label_utils.Informational
@@ -59,7 +62,8 @@ class TestBufferPriorityFile(unittest.TestCase):
       for file_num, file_num_lock in enumerate(self.sf._file_num_lock):
         if file_num != target_file_num:
           file_num_lock.acquire()
-    result = self.sf.Produce([copy.deepcopy(self.e[pri_level])])
+    result = self.sf.Produce(_TEST_PRODUCER, [copy.deepcopy(self.e[pri_level])],
+                             True)
     assert result, 'Emit failed!'
     if target_file_num is not None:
       for file_num, file_num_lock in enumerate(self.sf._file_num_lock):
@@ -122,8 +126,9 @@ class TestBufferPriorityFile(unittest.TestCase):
     random.shuffle(events)
     threads = []
     for i in range(0, 2000 * self.pri_level_max, 1000):
-      threads.append(threading.Thread(target=self.sf.Produce,
-                                      args=(events[i:i+1000],)))
+      threads.append(
+          threading.Thread(target=self.sf.Produce,
+                           args=(_TEST_PRODUCER, events[i:i + 1000], True)))
     for t in threads:
       t.start()
     for t in threads:

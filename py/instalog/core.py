@@ -346,7 +346,12 @@ class Instalog(plugin_sandbox.CoreAPI):
     Raises:
       PluginCallError if Buffer fails unexpectedly.
     """
-    return self._buffer.CallPlugin('Produce', events)
+    return self._buffer.CallPlugin('Produce', plugin.plugin_id, events, True)
+
+  def PreEmit(self, plugin, events):
+    """PreEmits given events from the specified plugin."""
+    return self._buffer.CallPlugin('Produce', plugin.plugin_id, events, False)
+
 
   def NewStream(self, plugin):
     """Creates a new BufferEventStream for the specified plugin.

@@ -231,7 +231,7 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
           return file_num
     return False
 
-  def Produce(self, events):
+  def Produce(self, producer, events, consumable):
     """See BufferPlugin.Produce.
 
     Note the careful edge cases with attachment files.  We want them *all* to

@@ -46,6 +46,9 @@ from cros.factory.instalog.plugins import buffer_simple_file
 from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
 
+
+_TEST_PRODUCER = 'test_producer'
+
 # pylint: disable=protected-access
 
 
@@ -129,7 +132,7 @@ class TestBufferSimpleFile(unittest.TestCase):
 
   def testWriteRead(self):
     """Tests writing and reading back an Event."""
-    self.sf.Produce([self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
     self.sf.AddConsumer('a')
     stream = self.sf.Consume('a')
     self.assertEqual(self.e1, stream.Next())
@@ -141,12 +144,12 @@ class TestBufferSimpleFile(unittest.TestCase):
     e = datatypes.Event(
         {'data':
          'x' * buffer_simple_file.buffer_file_common._BUFFER_SIZE_BYTES})
-    self.sf.Produce([e])
+    self.sf.Produce(_TEST_PRODUCER, [e], True)
     # Purposely corrupt the data file.
     with open(self.sf.buffer_file.data_path, 'r+', encoding='utf8') as f:
       f.seek(1)
       f.write('x')
-    self.sf.Produce([self.e2])
+    self.sf.Produce(_TEST_PRODUCER, [self.e2], True)
     self.sf.AddConsumer('a')
     stream = self.sf.Consume('a')
     self.assertEqual(self.e2, stream.Next())
@@ -177,9 +180,9 @@ class TestBufferSimpleFile(unittest.TestCase):
     included in the stored "length" of any event in the buffer.  E.g. in this
     case, the length of e2(GARBAGE) would be included in the length of event e.
     """
-    self.sf.Produce([self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
     e1_end = os.path.getsize(self.sf.buffer_file.data_path)
-    self.sf.Produce([self.e2])
+    self.sf.Produce(_TEST_PRODUCER, [self.e2], True)
     e2_end = os.path.getsize(self.sf.buffer_file.data_path)
 
     # Corrupt event e2 by writing garbage at the end.
@@ -193,9 +196,9 @@ class TestBufferSimpleFile(unittest.TestCase):
     bytes_left = (buffer_simple_file.buffer_file_common._BUFFER_SIZE_BYTES -
                   (e1_end * 3) + 1)
     e = datatypes.Event({'test1': 'event' + ('x' * bytes_left)})
-    self.sf.Produce([e])
-    self.sf.Produce([self.e1])
-    self.sf.Produce([self.e3])
+    self.sf.Produce(_TEST_PRODUCER, [e], True)
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
+    self.sf.Produce(_TEST_PRODUCER, [self.e3], True)
 
     self.sf.AddConsumer('a')
     stream = self.sf.Consume('a')
@@ -206,11 +209,11 @@ class TestBufferSimpleFile(unittest.TestCase):
 
   def testAppendedJunkStore(self):
     """Tests reading from a data store that has appended junk."""
-    self.sf.Produce([self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
     # Purposely append junk to the data store
     with open(self.sf.buffer_file.data_path, 'a', encoding='utf8') as f:
       f.write('xxxxxxxx')
-    self.sf.Produce([self.e2])
+    self.sf.Produce(_TEST_PRODUCER, [self.e2], True)
     self.sf.AddConsumer('a')
     stream = self.sf.Consume('a')
     self.assertEqual(self.e1, stream.Next())
@@ -251,14 +254,14 @@ class TestBufferSimpleFile(unittest.TestCase):
     first_seq, _ = self.sf.buffer_file._GetFirstUnconsumedRecord()
     self.assertEqual(first_seq, 1)
 
-    self.sf.Produce([self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
     self.assertEqual(self.sf.buffer_file.first_seq, 1)
     self.assertEqual(self.sf.buffer_file.last_seq, 1)
 
     first_seq, _ = self.sf.buffer_file._GetFirstUnconsumedRecord()
     self.assertEqual(first_seq, 2)
 
-    self.sf.Produce([self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
     self.assertEqual(self.sf.buffer_file.first_seq, 1)
     self.assertEqual(self.sf.buffer_file.last_seq, 2)
 
@@ -271,7 +274,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     self.assertEqual(self.sf.buffer_file.first_seq, 1)
     self.assertEqual(self.sf.buffer_file.last_seq, 0)
 
-    self.sf.Produce([self.e1, self.e2])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2], True)
     self.assertEqual(self.sf.buffer_file.first_seq, 1)
     self.assertEqual(self.sf.buffer_file.last_seq, 2)
 
@@ -292,14 +295,14 @@ class TestBufferSimpleFile(unittest.TestCase):
     self.sf.AddConsumer('a')
 
     self.sf.buffer_file.Truncate()
-    self.sf.Produce([self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
     stream = self.sf.Consume('a')
     seq, _ = stream._Next()
     self.assertEqual(seq, 1)
     stream.Commit()
 
     self.sf.buffer_file.Truncate()
-    self.sf.Produce([self.e1, self.e1])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e1], True)
     stream = self.sf.Consume('a')
     seq, _ = stream._Next()
     self.assertEqual(seq, 2)
@@ -311,7 +314,7 @@ class TestBufferSimpleFile(unittest.TestCase):
   def testReloadBufferAfterTruncate(self):
     """Tests re-loading buffer of a BufferEventStream after Truncate."""
     self.sf.AddConsumer('a')
-    self.sf.Produce([self.e1, self.e2, self.e3])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2, self.e3], True)
     stream1 = self.sf.Consume('a')
     self.assertEqual(self.e1, stream1.Next())
     stream1.Commit()
@@ -327,7 +330,7 @@ class TestBufferSimpleFile(unittest.TestCase):
 
   def testRecreateConsumer(self):
     """Tests for same position after removing and recreating Consumer."""
-    self.sf.Produce([self.e1, self.e2, self.e3])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2, self.e3], True)
     self.sf.AddConsumer('a')
     stream1 = self.sf.Consume('a')
     self.assertEqual(self.e1, stream1.Next())
@@ -340,7 +343,7 @@ class TestBufferSimpleFile(unittest.TestCase):
 
   def testRecreateConsumerAfterTruncate(self):
     """Tests that recreated Consumer updates position after truncate."""
-    self.sf.Produce([self.e1, self.e2, self.e3])
+    self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2, self.e3], True)
 
     self.sf.AddConsumer('a')
     stream1 = self.sf.Consume('a')
@@ -371,7 +374,7 @@ class TestBufferSimpleFile(unittest.TestCase):
       # Random sleep so that each thread produce isn't in sync.
       time.sleep(random.randrange(3) * 0.1)
       for unused_i in range(10):
-        self.sf.Produce([self.e1, self.e2, self.e3])
+        self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2, self.e3], True)
     threads = []
     for unused_i in range(10):
       t = threading.Thread(target=ProducerThread)
@@ -418,7 +421,7 @@ class TestBufferSimpleFile(unittest.TestCase):
       stream.Commit()
       record_count_queue.put(record_count)
 
-    self.sf.Produce([self.e1, self.e2, self.e3] * 25)
+    self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2, self.e3] * 25, True)
     for i in range(2):
       self.sf.AddConsumer(str(i))
 
@@ -453,7 +456,7 @@ class TestBufferSimpleFile(unittest.TestCase):
       file_utils.WriteFile(path, FILE_STRING)
       self.assertTrue(os.path.isfile(path))
       event = datatypes.Event({}, {'a': path})
-      self.assertEqual(True, self.sf.Produce([event]))
+      self.assertEqual(True, self.sf.Produce(_TEST_PRODUCER, [event], True))
       self.assertTrue(os.path.isfile(path) == with_copy)
 
       # Get the event out of buffer to verify that the internal
@@ -478,7 +481,7 @@ class TestBufferSimpleFile(unittest.TestCase):
   def testNonExistentAttachment(self):
     """Tests behaviour when a non-existent attachment is provided."""
     event = datatypes.Event({}, {'a': '/tmp/non_existent_file'})
-    self.assertEqual(False, self.sf.Produce([event]))
+    self.assertEqual(False, self.sf.Produce(_TEST_PRODUCER, [event], True))
     self.assertEqual(0, self._CountAttachmentsInBuffer(self.sf))
 
   def testPartFailMoveAttachmentTwoEvents(self):
@@ -487,7 +490,9 @@ class TestBufferSimpleFile(unittest.TestCase):
     with file_utils.UnopenedTemporaryFile() as path:
       real_event = datatypes.Event({}, {'a': path})
       fake_event = datatypes.Event({}, {'a': '/tmp/non_existent_file'})
-      self.assertEqual(False, self.sf.Produce([real_event, fake_event]))
+      self.assertEqual(
+          False, self.sf.Produce(_TEST_PRODUCER, [real_event, fake_event],
+                                 True))
       # Make sure source file still exists since Produce failed.
       self.assertTrue(os.path.isfile(path))
       # Make sure attachments_dir is empty.
@@ -499,8 +504,9 @@ class TestBufferSimpleFile(unittest.TestCase):
     with file_utils.UnopenedTemporaryFile() as path:
       event = datatypes.Event({}, {
           'a': path,
-          'b': '/tmp/non_existent_file'})
-      self.assertEqual(False, self.sf.Produce([event]))
+          'b': '/tmp/non_existent_file'
+      })
+      self.assertEqual(False, self.sf.Produce(_TEST_PRODUCER, [event], True))
       # Make sure source file still exists since Produce failed.
       self.assertTrue(os.path.isfile(path))
       # Make sure attachments_dir is empty.
@@ -512,7 +518,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     with file_utils.UnopenedTemporaryFile() as path:
       file_utils.WriteFile(path, FILE_STRING)
       event = datatypes.Event({}, {'a': path})
-      self.sf.Produce([event])
+      self.sf.Produce(_TEST_PRODUCER, [event], True)
     self.assertEqual(1, self._CountAttachmentsInBuffer(self.sf))
     self.sf.buffer_file.Truncate(truncate_attachments=False)
     self.assertEqual(1, self._CountAttachmentsInBuffer(self.sf))

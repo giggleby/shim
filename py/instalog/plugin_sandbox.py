@@ -53,6 +53,10 @@ class CoreAPI:
     """See Core.Emit."""
     raise NotImplementedError
 
+  def PreEmit(self, plugin, events):
+    """See Core.PreEmit."""
+    raise NotImplementedError
+
   def NewStream(self, plugin):
     """See Core.NewStream."""
     raise NotImplementedError
@@ -577,10 +581,10 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
         return False
     return True
 
-  def Emit(self, plugin, events):
-    """See PluginAPI.Emit."""
+  def _EmitCommonProcedure(self, plugin, events, emit_type):
+    """The common procedure for Emit and PreEmit."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_UP)
-    self.debug('Emit called with state=%s', self._state)
+    self.debug('%s called with state=%s', emit_type, self._state)
 
     # TODO(kitching): Relocate the ProcessStage annotation into Core.
     process_stage = datatypes.ProcessStage(
@@ -592,7 +596,16 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
     for event in events:
       # Add the current step in this event's processing history.
       event.AppendStage(process_stage)
+
+  def Emit(self, plugin, events):
+    """See PluginAPI.Emit."""
+    self._EmitCommonProcedure(plugin, events, 'Emit')
     return self._core_api.Emit(self, events)
+
+  def PreEmit(self, plugin, events):
+    """See PluginAPI.PreEmit."""
+    self._EmitCommonProcedure(plugin, events, 'PreEmit')
+    return self._core_api.PreEmit(self, events)
 
   def NewStream(self, plugin):
     """See PluginAPI.NewStream."""

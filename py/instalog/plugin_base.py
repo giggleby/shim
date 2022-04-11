@@ -70,6 +70,10 @@ class PluginAPI:
     """See InputPlugin.Emit."""
     raise NotImplementedError
 
+  def PreEmit(self, plugin, events):
+    """See InputPlugin.PreEmit."""
+    raise NotImplementedError
+
   def NewStream(self, plugin):
     """See OutputPlugin.NewStream."""
     raise NotImplementedError
@@ -255,11 +259,17 @@ class BufferPlugin(Plugin):
     """
     raise NotImplementedError
 
-  def Produce(self, events):
+  def Produce(self, producer, events, consumable):
     """Produces events to be stored into the buffer.
 
     Args:
+      producer: The ID of the plugin which produces events.
       events: List of Event objects to be inserted into the buffer.
+      consumable: Boolean to mark whether events are consumable. If False, the
+        list of events provided are sent to buffered plugin and is not available
+        to consumers via the Consume call. If True, not only the provided
+        events, but also all previous events are available to consumers via
+        the Consume call.
 
     Returns:
       True if successful, False otherwise.
@@ -332,6 +342,29 @@ class InputPlugin(Plugin):
     """
     try:
       return self._plugin_api.Emit(self, events)
+    except WaitException:
+      return False
+
+  def PreEmit(self, events):
+    """Pre-emits a set of Event objects.
+
+    The pre-emitted Events are passed to the buffer plugin of Instalog and will
+    be consumable after Emit is called.
+
+    Args:
+      events: Either a single Event or a list of Event objects to be emitted.
+
+    Returns:
+      True on success, False on failure.  In either case, the plugin is
+      expected to deal appropriately with retrying, or letting its source know
+      that a failure occurred.
+
+    Raises:
+      UnexpectedAccess if the plugin instance is in some unexpected state and
+      is trying to access core functionality that it should not.
+    """
+    try:
+      return self._plugin_api.PreEmit(self, events)
     except WaitException:
       return False
 
