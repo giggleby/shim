@@ -71,6 +71,7 @@ Versioning:
   the "new" metadata can be used.
 """
 
+import contextlib
 import copy
 import json
 import logging
@@ -87,10 +88,16 @@ from cros.factory.instalog.utils import json_utils
 
 # The number of bytes to buffer when retrieving events from a file.
 _BUFFER_SIZE_BYTES = 4 * 1024  # 4kb
+# The sub-directory for storing pre-emitted events json from each producer.
+_NON_CONSUMABLE_FILE_DIR = 'non_consumable_dir'
 
 
 class SimpleFileException(Exception):
   """General exception type for this plugin."""
+
+
+class NoAttachmentForCopying(Exception):
+  """No attachment for copying to the buffer."""
 
 
 def GetChecksumLegacy(data):
@@ -192,8 +199,13 @@ def CopyAttachmentsToTempDir(att_paths, tmp_dir, logger_name=None):
     return False
 
 
-def MoveAndWrite(config_dct, events):
-  """Moves the atts, serializes the events and writes them to the data_path."""
+def MoveAndWrite(config_dct, event_iter_factory):
+  """Moves the atts, serializes events and writes them to the data_path.
+
+  Args:
+    config_dct: dictionary for metadata.
+    event_iter_factory: factory to get the iterable EventIter.
+  """
   logger = logging.getLogger(config_dct['logger_name'])
   metadata_dct = RestoreMetadata(config_dct)
   cur_seq = metadata_dct['last_seq'] + 1
@@ -203,44 +215,59 @@ def MoveAndWrite(config_dct, events):
   with open(config_dct['data_path'], 'a', encoding='utf8') as f:
     f.truncate(cur_pos)
 
-  with open(config_dct['data_path'], 'a', encoding='utf8') as f:
+  with open(config_dct['data_path'], 'a', encoding='utf8') as f, \
+       event_iter_factory.GetEventIter() as event_iter:
     # On some machines, the file handle offset isn't set to EOF until
     # a write occurs.  Thus we must manually seek to the end to ensure
     # that f.tell() will return useful results.
     f.seek(0, 2)  # 2 means use EOF as the reference point.
     assert f.tell() == cur_pos
-    for event in events:
-      for att_id, att_path in event.attachments.items():
-        target_name = '%s_%s' % (cur_seq, att_id)
-        target_path = os.path.join(config_dct['attachments_dir'], target_name)
-        event.attachments[att_id] = target_name
-        logger.debug('Relocating attachment %s: %s --> %s',
-                     att_id, att_path, target_path)
-        # Note: This could potentially overwrite an existing file that got
-        # written just before Instalog process stopped unexpectedly.
-        os.rename(att_path, target_path)
+    copied_paths = []
+    cur_pos_backup = cur_pos
+    try:
+      for event in event_iter:
+        for att_id, att_path in event.attachments.items():
+          target_name = '%s_%s' % (cur_seq, att_id)
+          target_path = os.path.join(config_dct['attachments_dir'], target_name)
+          event.attachments[att_id] = target_name
+          logger.debug('Relocating attachment %s: %s --> %s', att_id, att_path,
+                       target_path)
+          # Note: This could potentially overwrite an existing file that got
+          # written just before Instalog process stopped unexpectedly.
+          os.rename(att_path, target_path)
+          copied_paths.append(target_path)
 
-      logger.debug('Writing event with cur_seq=%d, cur_pos=%d',
-                   cur_seq, cur_pos)
-      output = FormatRecord(cur_seq, event.Serialize())
+        logger.debug('Writing event with cur_seq=%d, cur_pos=%d', cur_seq,
+                     cur_pos)
+        output = FormatRecord(cur_seq, event.Serialize())
 
-      # Store the version for SaveMetadata to use.
-      if cur_pos == 0:
-        metadata_dct['version'] = GetChecksum(output)
+        # Store the version for SaveMetadata to use.
+        if cur_pos == 0:
+          metadata_dct['version'] = GetChecksum(output)
 
-      f.write(output)
-      cur_seq += 1
-      cur_pos += len(output)
+        f.write(output)
+        cur_seq += 1
+        cur_pos += len(output)
 
-    if config_dct['args'].enable_fsync:
-      # Fsync the file and the containing directory to make sure it
-      # is flushed to disk.
-      f.flush()
-      os.fdatasync(f)
-      dirfd = os.open(os.path.dirname(config_dct['data_path']),
-                      os.O_DIRECTORY)
-      os.fsync(dirfd)
-      os.close(dirfd)
+      if config_dct['args'].enable_fsync:
+        # Fsync the file and the containing directory to make sure it
+        # is flushed to disk.
+        f.flush()
+        os.fdatasync(f)
+        dirfd = os.open(
+            os.path.dirname(config_dct['data_path']), os.O_DIRECTORY)
+        os.fsync(dirfd)
+        os.close(dirfd)
+    except Exception as e:
+      f.truncate(cur_pos_backup)
+      # Do its best to try to remove copied attachment, if failed to delete the
+      # attachment, only output an log as the exception is re-raised.
+      for path in copied_paths:
+        try:
+          os.unlink(path)
+        except Exception:
+          logger.error('failed to clean up copied attachment: %s', path)
+      raise e
   metadata_dct['last_seq'] = cur_seq - 1
   metadata_dct['end_pos'] = metadata_dct['start_pos'] + cur_pos
   SaveMetadata(config_dct, metadata_dct)
@@ -479,7 +506,7 @@ class BufferFile(log_utils.LoggerMixin):
             'consumer_path_format': self.consumer_path_format,
             'attachments_dir': self.attachments_dir}
 
-  def ProduceEvents(self, events, process_pool=None):
+  def ProduceEvents(self, event_iter_factory, process_pool=None):
     """Moves attachments, serializes events and writes them to the data_path."""
     with self.data_write_lock:
       # If we are going to write the first line which will change the version,
@@ -493,13 +520,17 @@ class BufferFile(log_utils.LoggerMixin):
             consumer.read_lock.acquire()
 
         if process_pool is None:
-          MoveAndWrite(self.ConfigToDict(), events)
+          MoveAndWrite(self.ConfigToDict(), event_iter_factory)
         else:
-          process_pool.apply(MoveAndWrite, (self.ConfigToDict(), events))
+          # Passes a factory object to create event iterator due to some members
+          # and objects can not be pickled and thus can not be send to different
+          # processes.
+          process_pool.apply(MoveAndWrite,
+                             (self.ConfigToDict(), event_iter_factory))
 
-      except Exception:
+      except Exception as e:
         self.exception('Exception occurred during ProduceEvents operation')
-        raise
+        raise e
       finally:
         # Ensure that regardless of any errors, locks are released.
         if first_line:
@@ -792,3 +823,190 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
       # TODO(kitching): Instalog core or PluginSandbox should catch this
       #                 exception and attempt to safely shut down.
       self.exception('Abort: Internal error occurred')
+
+
+class NonConsumableEventsManager:
+  """Manages pre-emitted events and files storing these events.
+
+  The NonConsumableEventsManager is responsible for managing and providing
+  NonConsumableFile, an object that stores and provides the pre-emitted events
+  by each producer. Each producer has its own pre-emit json file,
+  and all pre-emit json files are stored under the _NON_CONSUMABLE_FILE_DIR.
+  The `SetUp` function call is required for setting up this manager with the
+  path provided, which is for storing pre-emit json files. The directory is
+  created, or cleaned up while calling the `SetUp` function. The access of
+  NonConsumableFile of for each producer is thread-safe.
+  """
+
+  def __init__(self):
+    self._dir_path = ''
+    self._logger_name = None
+    self._producers_lock = None
+    self._producers = {}
+
+  def SetUp(self, root_path, logger_name, dir_suffix=''):
+    """Sets up the manager with creating or cleaning up the directory."""
+    self._logger_name = logger_name
+    # _producers maps the string key `plugin_id` to the NonConsumableFile object
+    # for each producer, with the _producers_lock to prevent from getting race
+    # condition while creating/accessing a key.
+    self._producers_lock = lock_utils.Lock(self._logger_name)
+    self._producers = {}
+    dir_name = _NON_CONSUMABLE_FILE_DIR
+    if dir_suffix != '':
+      dir_name = dir_name + '_' + dir_suffix
+    self._dir_path = os.path.join(root_path, dir_name)
+    if os.path.exists(self._dir_path):
+      shutil.rmtree(self._dir_path)
+    file_utils.TryMakeDirs(self._dir_path)
+
+  def GetNonConsumableFile(self, producer):
+    """Gets a NonConsumableFile object by the producer thread-safely.
+
+    If the producer does not exist, a new NonConsumableFile is created, updated
+    to the _producers, then is returned.
+    """
+    with self._producers_lock:
+      if producer not in self._producers:
+        self._producers[producer] = NonConsumableFile(self._dir_path, producer,
+                                                      self._logger_name)
+      return self._producers[producer]
+
+
+class NonConsumableFile:
+  """Interacts with the file storing pre-emitted events from a producer.
+
+  NonConsumableFile is in charge of storing/moving pre-emitted events to/from a
+  {plugin_id}.pre_emit.json file for one producer. The access of events is
+  thread-safe.
+  """
+
+  def __init__(self, dir_root_path, producer, logger_name):
+    self._file_path = os.path.join(dir_root_path, f'{producer}.pre_emit.json')
+    # Use Lock to safely lock every file-related critical methods with the
+    # context manager.
+    self._file_lock = lock_utils.Lock(logger_name)
+    if not os.path.exists(self._file_path):
+      file_utils.TouchFile(self._file_path)
+
+  def StoreEvents(self, events):
+    """Stores events to a pre-emit json file.
+
+    The file is created if not exists.
+    """
+    with self._file_lock, open(self._file_path, 'a',
+                               encoding='utf8') as event_file:
+      for event in events:
+        event_file.write(event.Serialize() + '\n')
+
+  @contextlib.contextmanager
+  def MoveFile(self):
+    """Moves events and return the file path of the pre_emit file.
+
+    The pre_emit file is replaced to an empty file after the function call.
+    """
+    with self._file_lock:
+      yield self._file_path
+      os.remove(self._file_path)
+      file_utils.TouchFile(self._file_path)
+
+
+class EventIterFactory:
+  """Factory class to build a EventIter.
+
+  The EventIterFactory defers the creation of the EventIter, which combines pre-
+  emit events stored in the file and a list of events. This class provides a
+  context manager fashion to open the file storing the pre-emit events and close
+  it properly. The returned EventIter is equipped with a pre-process function,
+  which copies attachments in a event, and update the attachment path in the
+  event as well.
+
+  Args:
+    logger_name: Name used for logging.
+    pre_emit_file_path: The file path to the pre-emit data file.
+    events: list of events that to be iterated after events in pre-emitted
+      events.
+    attachments_tmp_dir_path: Directory path for storing attachments.
+    keep_source_attachment: Boolean value for whether to keep the source
+      attachment.
+  """
+
+  def __init__(self, logger_name, pre_emit_file_path, events,
+               attachments_tmp_dir_path, keep_source_attachment):
+    self._logger_name = logger_name
+    self._file_path = pre_emit_file_path
+    self._events = events
+    self._attachments_tmp_dir_path = attachments_tmp_dir_path
+    self._keep_source_attachment = keep_source_attachment
+    self._attachment_sources = []
+
+  @contextlib.contextmanager
+  def GetEventIter(self):
+    with open(self._file_path,
+              encoding='utf8') as pre_emit_file, file_utils.TempDirectory(
+                  dir=self._attachments_tmp_dir_path) as tmp_dir:
+      yield EventIter(pre_emit_file, self._events,
+                      self._GetPreProcessEventFn(tmp_dir))
+      if not self._keep_source_attachment:
+        logger = logging.getLogger(self._logger_name)
+        for path in self._attachment_sources:
+          try:
+            os.unlink(path)
+          except Exception:
+            logger.exception(
+                'Some of source attachment files (%s) could not '
+                'be deleted; silently ignoring', path)
+
+  def _GetPreProcessEventFn(self, copied_dir_path):
+
+    def PreProcessEventFn(event):
+      for att_id, att_path in event.attachments.items():
+        event.attachments[att_id] = os.path.join(copied_dir_path,
+                                                 att_path.replace('/', '_'))
+        if not CopyAttachmentsToTempDir([att_path], copied_dir_path,
+                                        self._logger_name):
+          raise NoAttachmentForCopying
+        if not self._keep_source_attachment:
+          self._attachment_sources.append(att_path)
+      return event
+
+    return PreProcessEventFn
+
+
+class EventIter:
+  """Iterator to output next event combined from the file and list of events.
+
+  Args:
+    pre_emit_file: The file descriptor to read events.
+    pre_process_fn: A function to manipulate event called before outputting a
+      event to the iteration loop.
+  """
+
+  def __init__(self, pre_emit_file, events, pre_process_fn):
+    self._file = pre_emit_file
+    self._events = events
+    self._cur_events_idx = 0
+    self._pre_process_fn = pre_process_fn
+
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    event = self._NextEvent()
+    if event is None:
+      raise StopIteration
+    return self._pre_process_fn(event)
+
+  def _NextEvent(self):
+    line = self._file.readline()
+    # Reads non empty contents from file, deserialize and return it as an event.
+    if line != '':
+      return datatypes.Event.Deserialize(line)
+
+    # Reads to the end of the file, iterating from the list
+    # Reads all event in the self._events, reset status for the next iterating.
+    if self._cur_events_idx >= len(self._events):
+      return None
+    ret = self._events[self._cur_events_idx]
+    self._cur_events_idx += 1
+    return ret

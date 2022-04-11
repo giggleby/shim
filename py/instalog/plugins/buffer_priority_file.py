@@ -65,6 +65,9 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
                         for unused_i in range(_PRIORITY_LEVEL)]
     self.attachments_tmp_dir = None
     self.metadata_tmp_dir = None
+    self.non_consumable_events_mgrs = [
+        buffer_file_common.NonConsumableEventsManager()
+    ] * _PRIORITY_LEVEL
 
     self.consumers = {}
     self._file_num_lock = [None] * _PARTITION
@@ -95,6 +98,10 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
           self.RecoverTemporaryMetadata(file_path)
     else:
       os.makedirs(self.metadata_tmp_dir)
+
+    for pri_level in range(_PRIORITY_LEVEL):
+      mgr = self.non_consumable_events_mgrs[pri_level]
+      mgr.SetUp(self.GetDataDir(), self.logger.name, str(pri_level))
 
     for pri_level in range(_PRIORITY_LEVEL):
       for file_num in range(_PARTITION):
@@ -232,66 +239,57 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
     return False
 
   def Produce(self, producer, events, consumable):
-    """See BufferPlugin.Produce.
+    """Processes attachment files in the events.
 
     Note the careful edge cases with attachment files.  We want them *all* to
     be either moved or copied into the buffer's database, or *none* at all.
     """
-    file_num = None
-    tmp_metadata_path = ''
-    with file_utils.TempDirectory(dir=self.attachments_tmp_dir) as tmp_dir:
+    prioritized_event_buckets = self.PrioritizeEvents(events)
+    file_num = self.AcquireLock()
+    if file_num is None or file_num is False:
+      return False
+
+    try:
+      tmp_metadata_path = self.SaveTemporaryMetadata(file_num)
+
+      for pri_level in range(_PRIORITY_LEVEL):
+        prioritized_events = prioritized_event_buckets[pri_level]
+        if not consumable and len(prioritized_events) == 0:
+          continue
+        non_consumable_mgr = self.non_consumable_events_mgrs[pri_level]
+        non_consumable_file = non_consumable_mgr.GetNonConsumableFile(producer)
+        self._ProducePrioritizedEvents(pri_level, file_num, prioritized_events,
+                                       non_consumable_file, consumable)
+      os.unlink(tmp_metadata_path)
+      return True
+    except Exception:
+      self.exception('Exception encountered in Produce')
       try:
-        # Step 1: Copy attachments.
-        source_paths = []
-        for event in events:
-          for att_id, att_path in event.attachments.items():
-            source_paths.append(att_path)
-            event.attachments[att_id] = os.path.join(
-                tmp_dir, att_path.replace('/', '_'))
-        if not self.process_pool.apply(
-            buffer_file_common.CopyAttachmentsToTempDir,
-            (source_paths, tmp_dir, self.logger.name)):
-          return False
-
-        # Step 2: Acquire a lock.
-        file_num = self.AcquireLock()
-        if file_num is None:
-          return False
-
-        tmp_metadata_path = self.SaveTemporaryMetadata(file_num)
-
-        priority_events = self.PrioritizeEvents(events)
-        # Step 3: Write the new events to the file.
-        for pri_level in range(_PRIORITY_LEVEL):
-          if not priority_events[pri_level]:
-            continue
-          self.buffer_file[pri_level][file_num].ProduceEvents(
-              priority_events[pri_level], self.process_pool)
-        # Step 4: Remove source attachment files if necessary.
-        if not self.args.copy_attachments:
-          for path in source_paths:
-            try:
-              os.unlink(path)
-            except Exception:
-              self.exception('One of source attachment files (%s) could not be '
-                             'deleted; silently ignoring', path)
-        os.unlink(tmp_metadata_path)
-        return True
-      except Exception:
-        self.exception('Exception encountered in Produce')
-        try:
-          if os.path.isfile(tmp_metadata_path):
-            self.RecoverTemporaryMetadata(tmp_metadata_path)
-          if file_num is not None:
-            for pri_level in range(_PRIORITY_LEVEL):
-              self.buffer_file[pri_level][file_num].RestoreMetadata()
-        except Exception:
-          self.exception('Exception encountered in RecoverTemporaryMetadata '
-                         '(%s)', tmp_metadata_path)
-        return False
-      finally:
+        if os.path.isfile(tmp_metadata_path):
+          self.RecoverTemporaryMetadata(tmp_metadata_path)
         if file_num is not None:
-          self._file_num_lock[file_num].CheckAndRelease()
+          for pri_level in range(_PRIORITY_LEVEL):
+            self.buffer_file[pri_level][file_num].RestoreMetadata()
+      except Exception:
+        self.exception(
+            'Exception encountered in RecoverTemporaryMetadata '
+            '(%s)', tmp_metadata_path)
+      return False
+    finally:
+      self._file_num_lock[file_num].CheckAndRelease()
+
+  def _ProducePrioritizedEvents(self, pri_level, file_num, events,
+                                non_consumable_file, consumable):
+    if not consumable:
+      non_consumable_file.StoreEvents(events)
+      return
+
+    with non_consumable_file.MoveFile() as pre_emit_file_path:
+      event_iter_factory = buffer_file_common.EventIterFactory(
+          self.logger.name, pre_emit_file_path, events,
+          self.attachments_tmp_dir, self.args.copy_attachments)
+      self.buffer_file[pri_level][file_num].ProduceEvents(
+          event_iter_factory, self.process_pool)
 
   def AddConsumer(self, consumer_id):
     """See BufferPlugin.AddConsumer."""

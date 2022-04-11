@@ -44,6 +44,8 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
   def __init__(self, *args, **kwargs):
     self.buffer_file = None
     self.attachments_tmp_dir = None
+    self.non_consumable_event_manager = \
+        buffer_file_common.NonConsumableEventsManager()
     super().__init__(*args, **kwargs)
 
   def SetUp(self):
@@ -53,6 +55,7 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
 
     self.attachments_tmp_dir = os.path.join(self.GetDataDir(),
                                             _TEMPORARY_ATTACHMENT_DIR)
+    self.non_consumable_event_manager.SetUp(self.GetDataDir(), self.logger.name)
     # Remove the attachments tmp dir, if Instalog terminated last time.
     if os.path.exists(self.attachments_tmp_dir):
       shutil.rmtree(self.attachments_tmp_dir)
@@ -79,37 +82,33 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
       self.Sleep(self.args.truncate_interval)
 
   def Produce(self, producer, events, consumable):
-    """See BufferPlugin.Produce.
+    """See BufferPlugin.Produce."""
+    non_consumable_file = \
+        self.non_consumable_event_manager.GetNonConsumableFile(producer)
+    if not consumable:
+      non_consumable_file.StoreEvents(events)
+      return True
+
+    with non_consumable_file.MoveFile() as pre_emit_file_path:
+      event_iter_factory = buffer_file_common.EventIterFactory(
+          self.logger.name, pre_emit_file_path, events,
+          self.attachments_tmp_dir, self.args.copy_attachments)
+      return self._ProduceConsumableEvents(event_iter_factory)
+
+  def _ProduceConsumableEvents(self, event_iter_factory):
+    """Processes attachment files in the events.
 
     Note the careful edge cases with attachment files.  We want them *all* to
     be either moved or copied into the buffer's database, or *none* at all.
     """
-    with file_utils.TempDirectory(dir=self.attachments_tmp_dir) as tmp_dir:
-      try:
-        # Step 1: Copy attachments.
-        source_paths = []
-        for event in events:
-          for att_id, att_path in event.attachments.items():
-            source_paths.append(att_path)
-            event.attachments[att_id] = os.path.join(
-                tmp_dir, att_path.replace('/', '_'))
-        if not buffer_file_common.CopyAttachmentsToTempDir(
-            source_paths, tmp_dir, self.logger.name):
-          return False
-        # Step 2: Write the new events to the file.
-        self.buffer_file.ProduceEvents(events)
-        # Step 3: Remove source attachment files if necessary.
-        if not self.args.copy_attachments:
-          for path in source_paths:
-            try:
-              os.unlink(path)
-            except Exception:
-              self.exception('Some of source attachment files (%s) could not '
-                             'be deleted; silently ignoring', path)
-        return True
-      except Exception:
-        self.exception('Exception encountered when producing events')
-        return False
+    try:
+      self.buffer_file.ProduceEvents(event_iter_factory)
+      return True
+    except buffer_file_common.NoAttachmentForCopying:
+      return False
+    except Exception:
+      self.exception('Exception encountered when producing events')
+      return False
 
   def AddConsumer(self, consumer_id):
     """See BufferPlugin.AddConsumer."""

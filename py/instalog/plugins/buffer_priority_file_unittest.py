@@ -14,12 +14,13 @@ import tempfile
 import threading
 import unittest
 
+import psutil
+
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog.plugins import buffer_priority_file
 from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
-
 
 _TEST_PRODUCER = 'test_producer'
 
@@ -55,15 +56,16 @@ class TestBufferPriorityFile(unittest.TestCase):
   def tearDown(self):
     shutil.rmtree(self.data_dir)
 
-  def _ProducePriorityEvent(self, pri_level, target_file_num=None):
+  def _ProducePriorityEvent(self, pri_level, target_file_num=None,
+                            consumable=True, producer=_TEST_PRODUCER):
     """Produces a priority event to a specific data buffer."""
     assert pri_level < self.pri_level_max
     if target_file_num is not None:
       for file_num, file_num_lock in enumerate(self.sf._file_num_lock):
         if file_num != target_file_num:
           file_num_lock.acquire()
-    result = self.sf.Produce(_TEST_PRODUCER, [copy.deepcopy(self.e[pri_level])],
-                             True)
+    result = self.sf.Produce(producer, [copy.deepcopy(self.e[pri_level])],
+                             consumable)
     assert result, 'Emit failed!'
     if target_file_num is not None:
       for file_num, file_num_lock in enumerate(self.sf._file_num_lock):
@@ -248,6 +250,87 @@ class TestBufferPriorityFile(unittest.TestCase):
       self.e[pri_level].attachments['att'] = path
     self.testRecoverTemporaryMetadata()
 
+  def testProduceNonConsumableEvents(self):
+    self._ProducePriorityEvent(0, 0, consumable=False)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(None, stream.Next())
+
+  def testProduceConsumableEventsAfterNonConsumable(self):
+    self._ProducePriorityEvent(0, 0, consumable=False)
+    self._ProducePriorityEvent(1, 1)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e[0], stream.Next())
+    self.assertEqual(self.e[1], stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testProduceConsumableEventsMultipleTimesAfterNonConsumable(self):
+    self._ProducePriorityEvent(0, 0, consumable=False)
+    self._ProducePriorityEvent(1, 1)
+    self._ProducePriorityEvent(2, 2)
+    self._ProducePriorityEvent(3, 3)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    for pri_level in range(self.pri_level_max):
+      self.assertEqual(self.e[pri_level], stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testRestartDropNonConsumableEvents(self):
+    self._ProducePriorityEvent(0, 0, consumable=False)
+    self.sf.SetUp()
+    self._ProducePriorityEvent(1, 1)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e[1], stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testProduceNonConsumableEventsWithDifferentProducer(self):
+    alt_producer = _TEST_PRODUCER + '_alt'
+    self._ProducePriorityEvent(0, 0, consumable=False)
+    self._ProducePriorityEvent(0, 0, consumable=False, producer=alt_producer)
+    self._ProducePriorityEvent(1, 1)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e[0], stream.Next())
+    self.assertEqual(self.e[1], stream.Next())
+    self.assertEqual(None, stream.Next())
+
+    self._ProducePriorityEvent(1, 1, producer=alt_producer)
+    self.assertEqual(self.e[0], stream.Next())
+    self.assertEqual(self.e[1], stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testNonConsumableEventsMemoryUsage(self):
+    PASS_CRITERIA_DIVIDER = 10
+    EVENT_NUM = 500
+    # Count virtual memory as we care about the total memory used by objects,
+    # not the occupied size on the physical memory.
+    memory_before_creating_events = psutil.Process().memory_info().vms
+    events = [
+        datatypes.Event({
+            'test1': 'event',
+            'priority': 0
+        }) for unused_i in range(EVENT_NUM)
+    ]
+    memory_after_creating_events = psutil.Process().memory_info().vms
+    del events
+    rough_memory_for_events = \
+        memory_after_creating_events - memory_before_creating_events
+
+    memory_before_produce = psutil.Process().memory_info().vms
+    for unused_i in range(EVENT_NUM):
+      self.sf.Produce(_TEST_PRODUCER,
+                      [datatypes.Event({
+                          'test1': 'event',
+                          'priority': 0
+                      })], False)
+    memory_after_produce = psutil.Process().memory_info().vms
+    rough_memory_for_non_consumable = \
+        memory_after_produce - memory_before_produce
+
+    self.assertLess(rough_memory_for_non_consumable,
+                    rough_memory_for_events / PASS_CRITERIA_DIVIDER)
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO, format=log_utils.LOG_FORMAT)

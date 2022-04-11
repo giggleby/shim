@@ -27,6 +27,7 @@
 # TODO(kitching): Add tests for failure during Truncate operation.
 
 import collections
+import contextlib
 import functools
 import logging
 import os
@@ -38,6 +39,8 @@ import threading
 import time
 import unittest
 
+import psutil
+
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
@@ -45,7 +48,6 @@ from cros.factory.instalog.plugins import buffer_file_common
 from cros.factory.instalog.plugins import buffer_simple_file
 from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
-
 
 _TEST_PRODUCER = 'test_producer'
 
@@ -375,6 +377,7 @@ class TestBufferSimpleFile(unittest.TestCase):
       time.sleep(random.randrange(3) * 0.1)
       for unused_i in range(10):
         self.sf.Produce(_TEST_PRODUCER, [self.e1, self.e2, self.e3], True)
+
     threads = []
     for unused_i in range(10):
       t = threading.Thread(target=ProducerThread)
@@ -524,6 +527,112 @@ class TestBufferSimpleFile(unittest.TestCase):
     self.assertEqual(1, self._CountAttachmentsInBuffer(self.sf))
     self.sf.buffer_file.Truncate()
     self.assertEqual(0, self._CountAttachmentsInBuffer(self.sf))
+
+  def testProduceNonConsumableEvents(self):
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], False)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(None, stream.Next())
+
+  def testProduceConsumableEventsAfterNonConsumable(self):
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], False)
+    self.sf.Produce(_TEST_PRODUCER, [self.e2], True)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e1, stream.Next())
+    self.assertEqual(self.e2, stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testProduceConsumableEventsMultipleTimesAfterNonConsumable(self):
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], False)
+    self.sf.Produce(_TEST_PRODUCER, [self.e2], True)
+    self.sf.Produce(_TEST_PRODUCER, [self.e3], True)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e1, stream.Next())
+    self.assertEqual(self.e2, stream.Next())
+    self.assertEqual(self.e3, stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testRestartDropNonConsumableEvents(self):
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], False)
+    self.sf.SetUp()
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], True)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e1, stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  def testProduceNonConsumableEventsWithDifferentProducer(self):
+    alt_producer = _TEST_PRODUCER + '_alt'
+    self.sf.Produce(_TEST_PRODUCER, [self.e1], False)
+    self.sf.Produce(alt_producer, [self.e3], False)
+    self.sf.Produce(_TEST_PRODUCER, [self.e2], True)
+    self.sf.AddConsumer('a')
+    stream = self.sf.Consume('a')
+    self.assertEqual(self.e1, stream.Next())
+    self.assertEqual(self.e2, stream.Next())
+    self.assertEqual(None, stream.Next())
+
+    self.sf.Produce(alt_producer, [], True)
+    self.assertEqual(self.e3, stream.Next())
+    self.assertEqual(None, stream.Next())
+
+  @contextlib.contextmanager
+  def _SetUpAttachmentEvent(self):
+    with file_utils.UnopenedTemporaryFile() as path:
+      with open(path, 'w', encoding='utf8') as f:
+        f.write('random string')
+      event = datatypes.Event({}, {'a': path})
+      yield event
+
+  def testAttachmentWithNonConsumableEvent(self):
+    self._CreateBuffer({'copy_attachments': True})
+    with self._SetUpAttachmentEvent() as evt1, self._SetUpAttachmentEvent(
+    ) as evt2:
+      self.sf.Produce(_TEST_PRODUCER, [evt1], False)
+      self.assertEqual(0, self._CountAttachmentsInBuffer(self.sf))
+      self.sf.Produce(_TEST_PRODUCER, [evt2], True)
+      self.assertEqual(2, self._CountAttachmentsInBuffer(self.sf))
+
+  def testAttachmentWithNonConsumableEventFromDifferentProducer(self):
+    alt_producer = _TEST_PRODUCER + '_alt'
+    self._CreateBuffer({'copy_attachments': True})
+    with self._SetUpAttachmentEvent() as evt1, self._SetUpAttachmentEvent(
+    ) as evt2, self._SetUpAttachmentEvent() as evt3:
+      self.sf.Produce(_TEST_PRODUCER, [evt1], False)
+      self.assertEqual(0, self._CountAttachmentsInBuffer(self.sf))
+      self.sf.Produce(alt_producer, [evt2], False)
+      self.assertEqual(0, self._CountAttachmentsInBuffer(self.sf))
+      self.sf.Produce(_TEST_PRODUCER, [evt3], True)
+      self.assertEqual(2, self._CountAttachmentsInBuffer(self.sf))
+      self.sf.Produce(alt_producer, [], True)
+      self.assertEqual(3, self._CountAttachmentsInBuffer(self.sf))
+
+  def testNonConsumableEventsMemoryUsage(self):
+    PASS_CRITERIA_DIVIDER = 10
+    EVENT_NUM = 500
+    # Count virtual memory as we care about the total memory used by objects,
+    # not the occupied size on the physical memory.
+    memory_before_creating_events = psutil.Process().memory_info().vms
+    events = [
+        datatypes.Event({'test1': 'event'}) for unused_i in range(EVENT_NUM)
+    ]
+    memory_after_creating_events = psutil.Process().memory_info().vms
+    del events
+    rough_memory_for_events = \
+        memory_after_creating_events - memory_before_creating_events
+
+    memory_before_produce = psutil.Process().memory_info().vms
+    for unused_i in range(EVENT_NUM):
+      self.sf.Produce(_TEST_PRODUCER, [datatypes.Event({'test1': 'event'})],
+                      False)
+    memory_after_produce = psutil.Process().memory_info().vms
+    rough_memory_for_non_consumable = \
+        memory_after_produce - memory_before_produce
+
+    self.assertLess(rough_memory_for_non_consumable,
+                    rough_memory_for_events / PASS_CRITERIA_DIVIDER)
 
 
 if __name__ == '__main__':
