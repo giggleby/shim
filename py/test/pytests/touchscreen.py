@@ -112,11 +112,13 @@ If seeing unexpected touch events in `evtest`, here are some thoughts:
 4. Flash touchscreen firmware to a different version. Maybe it's too sensitive.
 """
 
+from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.test.utils import evdev_utils
 from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils.type_utils import Enum
 
 # pylint: disable=no-name-in-module
 from cros.factory.external.evdev import ecodes
@@ -141,8 +143,9 @@ class StylusMonitor(touch_monitor.SingleTouchMonitor):
     self._flag = self._state.keys[code]
 
   def _EmitEvent(self, receiver):
-    state = self.GetState()
-    self._frontend_proxy.GoofyTouchListener(receiver, state.x, state.y)
+    event_state = self.GetState()
+    self._frontend_proxy.GoofyTouchListener(receiver, event_state.x,
+                                            event_state.y)
 
   def OnKey(self, key_event_code):
     """Called by Handler after state of a key changed."""
@@ -201,23 +204,28 @@ class TouchscreenTest(test_case.TestCase):
       Arg('x_segments', int, 'Number of segments in x-axis.', default=5),
       Arg('y_segments', int, 'Number of segments in y-axis.', default=5),
       Arg('retries', int, 'Number of retries (for spiral_mode).', default=5),
-      Arg('demo_interval_ms', int,
+      Arg(
+          'demo_interval_ms', int,
           'Interval (ms) to show drawing pattern (for spiral mode). '
-          '<= 0 means no demo.',
-          default=150),
+          '<= 0 means no demo.', default=150),
       Arg('stylus', bool, 'Testing stylus or not.', default=False),
-      Arg('e2e_mode', bool,
-          'Perform end-to-end test or not (for touchscreen).',
+      Arg('e2e_mode', bool, 'Perform end-to-end test or not (for touchscreen).',
           default=False),
       Arg('spiral_mode', bool,
-          'Do blocks need to be drawn in spiral order or not.',
-          default=True),
+          'Do blocks need to be drawn in spiral order or not.', default=True),
       Arg('device_filter', (int, str), 'Evdev input event id or name.',
           default=None),
       Arg('hover_mode', bool, 'Test hovering or touching (for stylus).',
           default=False),
       Arg('timeout_secs', (int, type(None)),
           'Timeout for the test. None for no time limit.', default=20),
+      Arg(
+          'angle_compensation', Enum([0, 90, 180, 270]),
+          'Specify a degree to compensate the orientation difference between '
+          'panel and system in counter-clockwise direction. It is used when '
+          'panel scanout is different from default system orientation, i.e., '
+          'a angle difference between the instruction line displayed on '
+          'screen and the position read from evdev.', default=0)
   ]
 
   def setUp(self):
@@ -232,6 +240,10 @@ class TouchscreenTest(test_case.TestCase):
                                               evdev_utils.IsTouchscreenDevice)
     self._dispatcher = None
     self._monitor = None
+    self._state = state.GetInstance()
+    self._SetInternalDisplayRotation(self.args.angle_compensation)
+    # Waits the screen rotates, then starts the test.
+    self.Sleep(1)
 
     self._frontend_proxy = self.ui.InitJSTestObject(
         'TouchscreenTest', self.args.x_segments, self.args.y_segments,
@@ -243,6 +255,7 @@ class TouchscreenTest(test_case.TestCase):
       self._dispatcher.close()
     if self._device is not None:
       self._device.ungrab()
+    self._SetInternalDisplayRotation(-1)
 
   def runTest(self):
     if self.args.timeout_secs:
@@ -265,3 +278,15 @@ class TouchscreenTest(test_case.TestCase):
     self.ui.BindKey(test_ui.ESCAPE_KEY,
                     lambda unused_event: self._frontend_proxy.FailTest())
     self.WaitTaskEnd()
+
+  def _SetInternalDisplayRotation(self, degree):
+    # degree should be one of [0, 90, 180, 270, -1], where -1 means auto-rotate
+    display_id = self._GetInternalDisplayInfo()['id']
+    self._state.DeviceSetDisplayProperties(display_id, {"rotation": degree})
+
+  def _GetInternalDisplayInfo(self):
+    display_info = self._state.DeviceGetDisplayInfo()
+    display_info = [info for info in display_info if info['isInternal']]
+    if len(display_info) != 1:
+      self.fail('Failed to get internal display.')
+    return display_info[0]
