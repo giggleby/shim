@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-03-21 18:20+CST\n"
+"PO-Revision-Date: 2022-04-12 18:09+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -1288,10 +1288,6 @@ msgstr ""
 #: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Checking angle..."
 msgstr "Góc được xác nhận"
-
-#: ../py/test/pytests/ap_ro_verification.py
-msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
-msgstr ""
 
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
@@ -3436,6 +3432,10 @@ msgstr "Cài đặt thông tin máy"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "AP RO Verification"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "AP RO Verification Group"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json

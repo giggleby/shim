@@ -5,14 +5,14 @@
 
 Description
 -----------
-The test asks operator to trigger verification manually, and device will reboot
-during the test. If reboot/verification is not triggered, there will be an
-operation error to ask for a retry.
+The test is to verify the functionality of AP RO verification in early phase
+(The hash is usually written in PVT), but not the correctness of the hash.
 
-If the verification failed, then the device won't be bootable. And we should
-try to clear RO hash after verifying, to avoid the risk of bricking the DUT.
-To make sure RO hash is set correctly, it's recommended to set RO hash by
-ap_ro_hash.py.
+If the verification failed, then the device won't be bootable. Reinsert the
+battery or cr50 reboot to recover.
+To avoid the risk of bricking the DUT, we should try to clear RO hash after
+verifying. And it's recommended to set RO hash by ap_ro_hash.py to make sure
+RO hash is set correctly, .
 
 We decided to skip this test when RO hash is unable to set. This might happen
 when re-flowing in pre-PVT. Details are in ap_ro_hash.py.
@@ -20,16 +20,16 @@ when re-flowing in pre-PVT. Details are in ap_ro_hash.py.
 Test Procedure
 --------------
 First round (`rebooted` flag should be None)
-  1. Wait operator to press power and (refresh*3).
-  2. After the combo, device will reboot with verifying RO hash.
+  1. Trigger the AP RO verification, and the device will reboot.
 Second round (`rebooted` flag should be true)
-  3. Deal with the verification result.
+  2. Deal with the verification result.
 
 Dependency
 ----------
 - The verification needs AP RO hash set, or it won't do anything.
 - OS version >= 14196.0.0 (`tpm_manager_client get_ro_verification_status`)
-- cr50 version >= 0.5.40 (vendor command to get RO verification status)
+- cr50 version >= 0.5.100 (vendor command to trigger RO verification)
+- In cr50 factory mode (enable the vendor command to trigger RO verification)
 
 Examples
 --------
@@ -38,9 +38,6 @@ To test AP RO verification, add this to test list::
   {
     "pytest_name": "ap_ro_verification",
     "allow_reboot": true
-    "args": {
-      "timeout_secs": 5
-    }
   }
 
 """
@@ -50,30 +47,16 @@ import logging
 from cros.factory.device import device_utils
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.test import device_data
-from cros.factory.test.i18n import _
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
-from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import string_utils
 
 
-class OperationError(Exception):
-
-  def __init__(self):
-    super().__init__('Please retry the test.')
-
-
 class APROVerficationTest(test_case.TestCase):
-  ARGS = [
-      Arg('timeout_secs', int,
-          'How many seconds to wait for the RO verification key combo.',
-          default=5)
-  ]
 
   def setUp(self):
     self.gooftool = Gooftool()
-    self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
     self.goofy = state.GetInstance()
     self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
@@ -88,12 +71,15 @@ class APROVerficationTest(test_case.TestCase):
 
   def HandleError(self, status):
     if status == 'RO_STATUS_NOT_TRIGGERED':
-      raise OperationError
-    if status == 'RO_STATUS_UNSUPPORTED':
-      raise Exception('AP RO verification is not supported by this device. '
-                      '(require cr50 version >= 0.5.40)')
-
-    if status == 'RO_STATUS_FAIL':
+      # Since the verification is triggered by command, the only case that the
+      # the verification won't be triggered is the reboot to recover from brick
+      # when the verification failed.
+      self.FailTask('The verification is failed.')
+    elif status == 'RO_STATUS_UNSUPPORTED':
+      # If AP RO verification is not supported, the test should fail in the
+      # first round.
+      raise Exception('Unexpected error, please retry the test.')
+    elif status == 'RO_STATUS_FAIL':
       logging.exception(
           'Should not be here, device is expected to be not bootable.')
       self.FailTask('The verification is failed.')
@@ -115,12 +101,15 @@ class APROVerficationTest(test_case.TestCase):
     else:
       self.goofy.SaveDataForNextBoot()
       device_data.UpdateDeviceData({self.device_data_key: True})
-      self.ui.SetState(
-          _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
-            seconds=self.args.timeout_secs))
-      self.Sleep(self.args.timeout_secs)
-      logging.info('Reboot not triggered.')
-      raise OperationError
+      try:
+        # TODO(jasonchuang): Use gsctool command b/195693537
+        self.dut.CheckOutput(
+            ['trunks_send', '--raw', '80010000000c20000000003a'], log=True)
+      finally:
+        # If the command works properly, the device will reboot and won't
+        # execute this line.
+        self.FailTask('CR50 version should >= 0.5.100, '
+                      'and check if you are in CR50 factory mode.')
 
   def tearDown(self):
     device_data.DeleteDeviceData(self.device_data_key, True)
