@@ -65,7 +65,7 @@ class HWIDAPIConnector:
         'Content-Type': 'application/x-www-form-urlencoded',
         'X-HTTP-Method-Override': 'GET'
     }
-    url = CONFIG.hwid_api_endpoint + '/v2/AvlNameMappings:batchGet'
+    url = CONFIG.hwid_api_endpoint + '/v2/avlNameMappings:batchGet'
     avl_name_mapping = {}
     for start_index in range(0, len(comp_ids), batch_size):
       batch_comp_ids = comp_ids[start_index:start_index + batch_size]

@@ -8,8 +8,8 @@
 A plugin to call HWID service API and decode HWID to component data.
 """
 
-import json
 import time
+import urllib
 
 # pylint: disable=import-error, no-name-in-module
 from google.auth import default
@@ -23,7 +23,7 @@ from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
 
 _CHROMEOS_HWID_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'
-_HWID_API_URL = 'https://chromeoshwid-pa.googleapis.com/v2/batchBom'
+_HWID_API_URL = 'https://chromeoshwid-pa.googleapis.com/v2/boms:batchGet'
 _DEFAULT_INTERVAL = 10
 # The BatchGetBom feature on HWID service cannot process more than 20 HWID in
 # RPC deadline.
@@ -70,8 +70,14 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
 
   def SendRequest(self, data):
     """Sends requests to HWID service."""
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-HTTP-Method-Override': 'GET'
+    }
+    data = urllib.parse.urlencode(data, doseq=True)
     try:
-      response = self.authed_session.post(_HWID_API_URL, data=data)
+      response = self.authed_session.post(_HWID_API_URL, data=data,
+                                          headers=headers)
       if response.status_code == 200:
         return response.json()
       self.error('Data: %s, receive status: %d, content: %s', data,
@@ -115,10 +121,10 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
       return True
 
     # Use verbose=True to get details of components.
-    data = json.dumps({
+    data = {
         'hwid': list(hwids),
         "verbose": True
-    })
+    }
 
     # If we didn't receive response, we still call Commit() to avoid the plugin
     # suspend.
