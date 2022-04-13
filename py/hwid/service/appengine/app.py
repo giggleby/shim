@@ -40,11 +40,17 @@ def _CronJobHandler(service, method):
   return flask.Response(status=http.HTTPStatus.OK)
 
 
+def _WarmupHandler():
+  """Do nothing, just to ensure the request handler is ready."""
+  return flask.Response(status=http.HTTPStatus.NO_CONTENT)
+
+
 def _CreateApp():
   app = flask.Flask(__name__)
   app.url_map.strict_slashes = False
 
   app.route('/cron/<service>.<method>', methods=('GET', ))(_CronJobHandler)
+  app.route('/_ah/warmup', methods=('GET', ))(_WarmupHandler)
 
   protorpc_utils.RegisterProtoRPCServiceToFlaskApp(app, '/_ah/stubby',
                                                    hwid_api.ProtoRPCService())

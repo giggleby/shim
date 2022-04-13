@@ -20,9 +20,15 @@ automatic_scaling:
   min_pending_latency: automatic
   max_pending_latency: 1s
 
+inbound_services:
+- warmup
+
 # Endpoints handler.
 handlers:
 - url: /_ah/stubby/.*
+  script: auto
+
+- url: /_ah/warmup
   script: auto
 
 - url: /ingestion/.*
