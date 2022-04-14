@@ -5,7 +5,7 @@
 import logging
 import os
 
-import flask
+import flask  # pylint: disable=import-error
 from google.cloud import logging as gc_logging  # pylint: disable=import-error,no-name-in-module
 
 from cros.factory.probe_info_service.app_engine import config

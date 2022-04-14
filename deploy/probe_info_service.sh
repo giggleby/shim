@@ -76,7 +76,8 @@ local_deployment_prepare() {
 
   if [ ! -f "${LOCAL_DEPLOYMENT_VENV_PYTHON_PATH}" ]; then
     info "Initialize venv for local instance."
-    virtualenv --python="${VENV_PYTHON_NAME}" "${LOCAL_DEPLOYMENT_VENV_PATH}"
+    python3 -m virtualenv \
+        --python="${VENV_PYTHON_NAME}" "${LOCAL_DEPLOYMENT_VENV_PATH}"
   fi
 
   info "Copy resources into venv path."

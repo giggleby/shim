@@ -14,7 +14,7 @@ from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: dis
 
 
 def GetProbeDataSourceComponentName(component_identity):
-  return 'AVL_%d' % component_identity.qual_id
+  return f'AVL_{component_identity.qual_id}'
 
 
 class _ProbeDataSourceFactory(typing.NamedTuple):
@@ -57,14 +57,14 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod
-  def GetQualProbeTestBundle(
-      self, request: stubby_pb2.GetQualProbeTestBundleRequest):
+  def GetQualProbeTestBundle(self,
+                             request: stubby_pb2.GetQualProbeTestBundleRequest):
     response = stubby_pb2.GetQualProbeTestBundleResponse()
 
     probe_data_source_factory = self._GetQualProbeDataSourceFactory(
         request.qual_probe_info)
-    gen_result = self._probe_tool_manager.GenerateProbeBundlePayload([
-        probe_data_source_factory.probe_data_source_generator()])
+    gen_result = self._probe_tool_manager.GenerateProbeBundlePayload(
+        [probe_data_source_factory.probe_data_source_generator()])
 
     response.probe_info_parsed_result.CopyFrom(
         gen_result.probe_info_parsed_results[0])
@@ -94,8 +94,8 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
       response.uploaded_payload_error_msg = str(e)
       return response
 
-    if (probe_data_source_factory.probe_statement_type
-        != stubby_pb2.ProbeMetadata.AUTO_GENERATED):
+    if (probe_data_source_factory.probe_statement_type !=
+        stubby_pb2.ProbeMetadata.AUTO_GENERATED):
       if result.result_type == result.PASSED:
         self._ps_storage_connector.MarkOverriddenProbeStatementTested(
             request.qual_probe_info.component_identity.qual_id, '')
@@ -118,8 +118,8 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod
-  def GetDeviceProbeConfig(
-      self, request: stubby_pb2.GetDeviceProbeConfigRequest):
+  def GetDeviceProbeConfig(self,
+                           request: stubby_pb2.GetDeviceProbeConfigRequest):
     response = stubby_pb2.GetDeviceProbeConfigResponse()
 
     probe_data_sources = []
@@ -150,9 +150,11 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
 
     probe_data_source_factories = [
         self._GetProbeDataSourceFactory(comp_probe_info)
-        for comp_probe_info in request.component_probe_infos]
+        for comp_probe_info in request.component_probe_infos
+    ]
     probe_data_sources = [
-        f.probe_data_source_generator() for f in probe_data_source_factories]
+        f.probe_data_source_generator() for f in probe_data_source_factories
+    ]
 
     try:
       analyzed_result = (
@@ -169,8 +171,8 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
       return response
 
     for i, probe_data_source_factory in enumerate(probe_data_source_factories):
-      if (analyzed_result.probe_info_test_results[i].result_type
-          == stubby_pb2.ProbeInfoParsedResult.PASSED):
+      if (analyzed_result.probe_info_test_results[i].result_type ==
+          stubby_pb2.ProbeInfoParsedResult.PASSED):
         ps_type = probe_data_source_factory.probe_statement_type
         qual_id = request.component_probe_infos[i].component_identity.qual_id
         device_id = request.component_probe_infos[
@@ -263,8 +265,15 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
   @protorpc_utils.ProtoRPCServiceMethod
   def GetDeviceComponentHwidInfo(
       self, request: stubby_pb2.GetDeviceComponentHwidInfoRequest):
-    del request
-    return stubby_pb2.GetDeviceComponentHwidInfoResponse()
+    response = stubby_pb2.GetDeviceComponentHwidInfoResponse()
+    for comp_identity in request.component_identities:
+      comp_probe_info = (
+          self._probe_info_storage_connector.GetComponentProbeInfo(
+              comp_identity.component_id, comp_identity.qual_id))
+      if comp_probe_info:
+        # TODO(yhong): Load the metadata.
+        response.component_hwid_infos.add(component_probe_info=comp_probe_info)
+    return response
 
   @protorpc_utils.ProtoRPCServiceMethod
   def UploadDeviceComponentHwidResult(
@@ -298,8 +307,7 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
     return _ProbeDataSourceFactory(
         stubby_pb2.ProbeMetadata.AUTO_GENERATED,
         functools.partial(self._probe_tool_manager.CreateProbeDataSource,
-                          component_name, qual_probe_info.probe_info),
-        None)
+                          component_name, qual_probe_info.probe_info), None)
 
   def _GetProbeDataSourceFactory(self, comp_probe_info):
     component_name = GetProbeDataSourceComponentName(

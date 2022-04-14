@@ -4,47 +4,41 @@
 
 import unittest
 
-from google.cloud import datastore  # pylint: disable=no-name-in-module
-
 from cros.factory.probe_info_service.app_engine import probe_info_storage_connector
 from cros.factory.probe_info_service.app_engine import unittest_utils
 
 
 class DataStoreProbeInfoStorageConnector(unittest.TestCase):
 
-  _qual_id = 1
-  _component_id = 2
-
   def setUp(self):
-    self._component_probe_info = unittest_utils.LoadComponentProbeInfo(
-        '1-valid')
-    self._datastore_client = datastore.Client()
-    self._entity_key = self._datastore_client.key(
-        'component_probe_info', '%s-%s' % (self._component_id, self._qual_id))
+    super().setUp()
+
     # pylint: disable=protected-access
     self._connector = (
-        probe_info_storage_connector._DataStoreProbeInfoStorageConnector())
+        probe_info_storage_connector._DataStoreProbeInfoStorageConnector(
+            probe_info_storage_connector._ProdEntityConverter()))
     # pylint: enable=protected-access
+
+  def tearDown(self):
+    super().tearDown()
     self._connector.Clean()
 
-  def testSaveComponentProbeInfo(self):
-    self._connector.SaveComponentProbeInfo(self._component_id, self._qual_id,
-                                           self._component_probe_info)
+  def testLoadAndSave(self):
+    """Save some data and load it back to verify the functionalities."""
+    comp_id = 1
+    qual_id = 2
+    comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
 
-    data = self._datastore_client.get(self._entity_key)
-    self.assertIn('bytes', data)
-    self.assertEqual(self._component_probe_info.SerializeToString(),
-                     data['bytes'])
+    self._connector.SaveComponentProbeInfo(comp_id, qual_id, comp_probe_info)
+    loaded_comp_probe_info = self._connector.GetComponentProbeInfo(
+        comp_id, qual_id)
 
-  def testGetComponentProbeInfo(self):
-    entity = datastore.Entity(self._entity_key)
-    entity.update({'bytes': self._component_probe_info.SerializeToString()})
-    self._datastore_client.put(entity)
+    self.assertEqual(comp_probe_info, loaded_comp_probe_info)
 
-    returned_component_probe_info = self._connector.GetComponentProbeInfo(
-        self._component_id, self._qual_id)
+  def testGetComponentProbeInfo_WhenNotFoundThenReturnNone(self):
+    comp_probe_info = self._connector.GetComponentProbeInfo(123, 456)
 
-    self.assertEqual(self._component_probe_info, returned_component_probe_info)
+    self.assertIsNone(comp_probe_info)
 
 
 if __name__ == '__main__':
