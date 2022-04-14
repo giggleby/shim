@@ -748,7 +748,7 @@ def GetCLInfo(
 
   def GetCLCommentThread():
     comment_json_of_path = GetChangeInfo(
-        'comments', [('enable-context', 'true')],
+        '/comments', [('enable-context', 'true')],
         schema.Dict('comment_map', schema.Scalar('path', str),
                     schema.List('comments', _COMMENT_INFO)))
 
