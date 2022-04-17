@@ -128,6 +128,20 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(updated_metadata), 'updated data')
 
+  def testUpdateProjectContent_CreateNewMetadata(self):
+    repo_metadata = hwid_repo.HWIDDBMetadata(
+        name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
+
+    self.hwid_db_data_manager.UpdateProjectContent(
+        repo_metadata, 'PROJECTA', 'updated data', 'NEW-COMMIT-ID')
+
+    created_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        project='PROJECTA')
+    self.assertEqual('NEW-COMMIT-ID', created_metadata.commit)
+
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadHWIDDB(created_metadata), 'updated data')
+
   def testUpdateProjectsByRepo(self):
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
                                                      'will be updated')

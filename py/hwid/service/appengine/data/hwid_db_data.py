@@ -135,13 +135,14 @@ class HWIDDBDataManager:
     """
     project = project.upper()
     self._fs_adapter.WriteFile(self._LivePath(project), content)
-    metadata = self.GetHWIDDBMetadataOfProject(project)
-    if metadata:
+    try:
+      metadata = self.GetHWIDDBMetadataOfProject(project)
       metadata.commit = commit_id
-    else:
-      metadata = HWIDDBMetadata(
-          board=repo_metadata.board_name, path=repo_metadata.path, version=str(
-              repo_metadata.version), project=project, commit=commit_id)
+    except HWIDDBNotFoundError:
+      path = project  # Use the project name as the file path.
+      metadata = HWIDDBMetadata(board=repo_metadata.board_name, path=path,
+                                version=str(repo_metadata.version),
+                                project=project, commit=commit_id)
     with self._ndb_connector.CreateClientContextWithGlobalCache():
       metadata.put()
 
