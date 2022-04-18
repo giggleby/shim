@@ -166,7 +166,7 @@ class DatabaseBuilder:
   _DEFAULT_COMPONENT_SUFFIX = '_default'
 
   def __init__(self, database_path=None, project=None, image_name=None,
-               database=None):
+               database=None, auto_decline_essential_prompt=None):
     """Constructor.
 
     If the `database_path` or `database` is given, this class will load the
@@ -179,6 +179,8 @@ class DatabaseBuilder:
       project: A string of the project name.
       image_name: A string of the default image name.
       database: An cros.factory.hwid.v3.database.Database Object.
+      auto_decline_essential_prompt: A list of essential components that will
+        automatically decline the prompt if an essential component is absent.
     """
 
     if database_path and database:
@@ -200,6 +202,9 @@ class DatabaseBuilder:
         raise ValueError('No project name.')
       self.database = self._BuildEmptyDatabase(project.upper(), image_name)
       self._from_empty_database = True
+
+    self.auto_decline_essential_prompt = set(auto_decline_essential_prompt or
+                                             [])
 
   def UprevFrameworkVersion(self, new_framework_version):
     if new_framework_version < self.database.framework_version:
@@ -492,13 +497,16 @@ class DatabaseBuilder:
           # acceptable.
           continue
 
-        # Ask user to add a default item or a null item.
-        add_default = PromptAndAsk(
-            'Component [%s] is essential but the probe result is missing. '
-            'Do you want to add a default item?\n'
-            'If the probed code is not ready yet, please enter "Y".\n'
-            'If the device does not have the component, please enter "N".'
-            % comp_cls, default_answer=True)
+        if comp_cls in self.auto_decline_essential_prompt:
+          add_default = False
+        else:
+          # Ask user to add a default item or a null item.
+          add_default = PromptAndAsk(
+              'Component [%s] is essential but the probe result is missing. '
+              'Do you want to add a default item?\n'
+              'If the probed code is not ready yet, please enter "Y".\n'
+              'If the device does not have the component, please enter "N".' %
+              comp_cls, default_answer=True)
 
         if add_default:
           self.AddDefaultComponent(comp_cls)

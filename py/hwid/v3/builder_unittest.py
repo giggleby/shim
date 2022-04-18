@@ -334,6 +334,31 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
+  def testUpdateByProbedResultsNoEssentialComponentsWithAutoDecline(self):
+    db = builder.DatabaseBuilder(
+        database_path=_TEST_DATABASE_PATH,
+        auto_decline_essential_prompt=builder.ESSENTIAL_COMPS)
+    db.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+    # The test will fail due to timeout without adding unittest assertion.
+
+  # TODO (b/212216855)
+  @label_utils.Informational
+  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
+  def testUpdateByProbedResultsNoEssentialComponentsWithoutAutoDecline(
+      self, prompt_and_ask_mock):
+    prompt_and_ask_mock.return_value = True
+    no_auto_decline_components = set(('mainboard', 'dram'))
+    auto_decline_components = set(
+        builder.ESSENTIAL_COMPS) - no_auto_decline_components
+    db = builder.DatabaseBuilder(
+        database_path=_TEST_DATABASE_PATH,
+        auto_decline_essential_prompt=list(auto_decline_components))
+    db.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+    self.assertEqual(
+        len(no_auto_decline_components), prompt_and_ask_mock.call_count)
+
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsUpdateEncodedFieldsAndPatternCorrectly(
       self, unused_prompt_and_ask_mock):

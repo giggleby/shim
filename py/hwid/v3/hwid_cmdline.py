@@ -320,8 +320,11 @@ def RunDatabaseBuilder(database_builder, options):
          CmdArg('--image-id', default='EVT',
                 help="Name of image_id. Default is 'EVT'\n"),
          CmdArg('--minimal', default=False, action='store_true',
-                help="Create a minimal DB."), *_HWID_MATERIAL_COMMON_ARGS,
-         *_DATABASE_BUILDER_COMMON_ARGS)
+                help="Create a minimal DB."),
+         CmdArg(
+             '--auto-decline-essential-components', nargs='?', default=[],
+             help="Auto decline the prompt for specified essential components"),
+         *_HWID_MATERIAL_COMMON_ARGS, *_DATABASE_BUILDER_COMMON_ARGS)
 def BuildDatabaseWrapper(options):
   '''Build the HWID database from probed result.'''
   if not os.path.isdir(options.hwid_db_path):
@@ -329,8 +332,9 @@ def BuildDatabaseWrapper(options):
     file_utils.TryMakeDirs(options.hwid_db_path)
   database_path = os.path.join(options.hwid_db_path, options.project.upper())
 
-  database_builder = builder.DatabaseBuilder(project=options.project,
-                                             image_name=options.image_id)
+  database_builder = builder.DatabaseBuilder(
+      project=options.project, image_name=options.image_id,
+      auto_decline_essential_prompt=options.auto_decline_essential_prompt)
   if options.minimal:
     logging.info('Create a minimal DB with region component class only.')
     if any([

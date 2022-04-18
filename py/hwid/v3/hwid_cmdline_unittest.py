@@ -241,12 +241,14 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       options.add_regions = ['us', 'tw', 'jp']
       options.region_field_name = 'test_region_field'
       options.minimal = False
+      options.auto_decline_essential_prompt = []
 
       hwid_cmdline.BuildDatabaseWrapper(options)
 
       # Constructor.
-      build_database_mock.assert_called_with(project=options.project,
-                                             image_name=options.image_id)
+      build_database_mock.assert_called_with(
+          project=options.project, image_name=options.image_id,
+          auto_decline_essential_prompt=options.auto_decline_essential_prompt)
       instance = build_database_mock.return_value
 
       # Uprev the framework version.
@@ -285,6 +287,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           vpd_data_file=None,
           run_vpd=False,
           config_yaml=None,
+          auto_decline_essential_prompt=[],
       )
       with self.assertRaises(ValueError):
         hwid_cmdline.BuildDatabaseWrapper(options)
@@ -306,6 +309,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           vpd_data_file=None,
           run_vpd=False,
           config_yaml=None,
+          auto_decline_essential_prompt=[],
       )
       hwid_cmdline.BuildDatabaseWrapper(options)
 
