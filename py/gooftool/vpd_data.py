@@ -49,6 +49,7 @@ KNOWN_RO_DATA = {
     # See util/vpd_icc in https://crrev.com/c/2058225
     'display_profiles': r'[0-9a-fA-F]{8}:.+',
     'widevine_keybox': r'[0-9a-f]+',
+    'oem_name': ANY,
 }
 
 # Variable key names in regular expression.
