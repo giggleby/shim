@@ -79,6 +79,7 @@ class SuspendStressTest(test_case.TestCase):
       Arg('memory_check_size', int,
           'Amount of memory to allocate (0 means as much as possible)',
           default=0),
+      Arg('fw_errors_fatal', bool, 'Abort on firmware errors', default=True),
       Arg('premature_wake_fatal', bool,
           'Abort on any premature wakes from suspend', default=True),
       Arg('late_wake_fatal', bool, 'Abort on any late wakes from suspend',
@@ -137,10 +138,10 @@ class SuspendStressTest(test_case.TestCase):
         str(self.args.suspend_time_margin_min_secs),
         '--suspend_time_margin_max',
         str(self.args.suspend_time_margin_max_secs),
-        '--premature_wake_fatal',
-        str(self.args.premature_wake_fatal),
-        '--late_wake_fatal',
-        str(self.args.late_wake_fatal),
+        '--%sfw_errors_fatal' % ('' if self.args.fw_errors_fatal else 'no'),
+        '--%spremature_wake_fatal' %
+        ('' if self.args.premature_wake_fatal else 'no'),
+        '--%slate_wake_fatal' % ('' if self.args.late_wake_fatal else 'no'),
         '--record_dmesg_dir',
         os.path.dirname(GetLogPath('')),
     ]
@@ -188,7 +189,16 @@ class SuspendStressTest(test_case.TestCase):
       errors.append('Suspend stress test failed: returncode:%d' % returncode)
     match = re.findall(r'Premature wake detected', stdout)
     if match:
-      errors.append('Premature wake detected:%d' % len(match))
+      if self.args.premature_wake_fatal:
+        errors.append('Premature wake detected:%d' % len(match))
+      else:
+        logging.warning('Premature wake detected:%d', len(match))
+    match = re.findall(r'Late wake detected', stdout)
+    if match:
+      if self.args.late_wake_fatal:
+        errors.append('Late wake detected:%d' % len(match))
+      else:
+        logging.warning('Late wake detected:%d', len(match))
     match = re.search(r'Finished (\d+) iterations', stdout)
     if match and match.group(1) != str(self.args.cycles):
       errors.append('Only finished %r cycles instead of %d cycles' %
@@ -201,7 +211,10 @@ class SuspendStressTest(test_case.TestCase):
       errors.append(match.group(0))
     match = re.search(r'Firmware log errors: (\d+)', stdout)
     if match and match.group(1) != '0':
-      errors.append(match.group(0))
+      if self.args.fw_errors_fatal:
+        errors.append(match.group(0))
+      else:
+        logging.warning(match.group(0))
     match = re.search(r's0ix errors: (\d+)', stdout)
     if match and match.group(1) != '0':
       errors.append(match.group(0))
