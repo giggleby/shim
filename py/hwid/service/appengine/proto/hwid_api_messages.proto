@@ -607,6 +607,12 @@ message CreateHwidDbFirmwareInfoUpdateClRequest {
   string original_requester = 2;
   // Additional description to be commented on CL.
   string description = 3;
+  // Reviewer list for this CL.
+  repeated string reviewer_emails = 4;
+  // CC list for this CL.
+  repeated string cc_emails = 5;
+  // A bool indicating if this CL should be auto-approved.
+  bool auto_approved = 6;
 }
 
 // HWID DB Commit info
@@ -635,6 +641,12 @@ message CreateHwidDbInitClRequest {
   int64 bug_number = 4;
   // Original initialization requester.
   string original_requester = 5;
+  // Reviewer list for this CL.
+  repeated string reviewer_emails = 6;
+  // CC list for this CL.
+  repeated string cc_emails = 7;
+  // A bool indicating if this CL should be auto-approved.
+  bool auto_approved = 8;
 }
 
 // The response of create initial HWID DB CL.
