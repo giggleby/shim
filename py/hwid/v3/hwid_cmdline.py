@@ -322,7 +322,7 @@ def RunDatabaseBuilder(database_builder, options):
          CmdArg('--minimal', default=False, action='store_true',
                 help="Create a minimal DB."),
          CmdArg(
-             '--auto-decline-essential-components', nargs='?', default=[],
+             '--auto-decline-essential-prompt', nargs='*', default=[],
              help="Auto decline the prompt for specified essential components"),
          *_HWID_MATERIAL_COMMON_ARGS, *_DATABASE_BUILDER_COMMON_ARGS)
 def BuildDatabaseWrapper(options):
