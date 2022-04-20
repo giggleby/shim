@@ -300,13 +300,10 @@ Info Update
     try:
       for model_name, analysis, commit_msg in all_commits:
         try:
-          # TODO(wyuang): to make this API more flexible, we should make the
-          # request able to decide reviewers and CC list. Change the arguments
-          # after client side code updated.
           cl_number = live_hwid_repo.CommitHWIDDB(
               name=model_name, hwid_db_contents=analysis.new_hwid_db_contents,
-              commit_msg=commit_msg, reviewers=[],
-              cc_list=[request.original_requester], auto_approved=True)
+              commit_msg=commit_msg, reviewers=request.reviewer_emails,
+              cc_list=request.cc_emails, auto_approved=request.auto_approved)
         except hwid_repo.HWIDRepoError:
           logging.exception(
               'Caught an unexpected exception while uploading a HWID CL.')
@@ -548,12 +545,9 @@ Info Update
     new_metadata = hwid_repo.HWIDDBMetadata(project, request.board.upper(), 3,
                                             f'v3/{project}')
     try:
-      # TODO(wyuang): to make this API more flexible, we should make the
-      # request able to decide reviewers and CC list. Change the arguments after
-      # client side code updated.
       cl_number = live_hwid_repo.CommitHWIDDB(
           project, db_content, commit_msg, request.reviewer_emails,
-          [request.original_requester], True, new_metadata)
+          request.cc_emails, request.auto_approved, new_metadata)
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')
