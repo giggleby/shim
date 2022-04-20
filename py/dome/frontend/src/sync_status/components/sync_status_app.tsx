@@ -53,7 +53,7 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
         `projects/${this.props.projectName}/sync/status/`
       );
       this.setState(response.data);
-    } catch (axiosError) {
+    } catch (unknownError: unknown) {
       this.setState({});
     }
   }

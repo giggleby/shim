@@ -105,16 +105,16 @@ export const exportLog = (projectName: string,
         },
       });
       dispatch(setCompressState(pileKey, 'SUCCEEDED'));
-    } catch (axiosError: unknown) {
-      if (isAxiosError(axiosError)) {
+    } catch (unknownError: unknown) {
+      if (isAxiosError(unknownError)) {
         dispatch(setCompressState(pileKey, 'FAILED'));
-        console.log(axiosError);
-        const message = axiosError.response?.data.detail;
+        console.log(unknownError);
+        const message = unknownError.response?.data.detail;
         dispatch(error.actions.setAndShowErrorDialog(
             `error compressing log\n\n${message}`));
         return;
       } else {
-        throw axiosError;
+        throw unknownError;
       }
     }
     const {
@@ -167,7 +167,7 @@ export const downloadLog = (projectName: string,
       link.click();
       window.URL.revokeObjectURL(link.href);
       dispatch(setDownloadState(pileKey, logPath, 'SUCCEEDED'));
-    } catch (axiosError) {
+    } catch (unknownError: unknown) {
       dispatch(setDownloadState(pileKey, logPath, 'FAILED'));
     }
   };

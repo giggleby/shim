@@ -245,13 +245,13 @@ export const downloadResource = (projectName: string,
       link.download = resourceType;
       link.click();
       window.URL.revokeObjectURL(link.href);
-    }, (axiosError) => {
+    }, (unknownError) => {
       const reader = new FileReader();
       reader.onload = () => {
         const message = JSON.parse(reader.result as string);
         dispatch(error.actions.setAndShowErrorDialog(
             `error downloading resource\n\n${message.detail}`));
       };
-      reader.readAsText(axiosError.response.data);
+      reader.readAsText(unknownError.response.data);
     });
   };
