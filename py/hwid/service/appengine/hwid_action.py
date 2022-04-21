@@ -372,8 +372,13 @@ class HWIDAction:
     raise NotSupportedError(
         f'`GetDBV3` is not supported in HWID v{self.HWID_VERSION}')
 
-  def GetDBEditableSection(self) -> str:
+  def GetDBEditableSection(self, suppress_support_status=False,
+                           internal=False) -> str:
     """Get the editable section of the HWID DB.
+
+    Args:
+      suppress_support_status: True if the supported status is suppressed.
+      internal: True if the internal tags are required.
 
     Returns:
       The text value of the HWID DB editable section.

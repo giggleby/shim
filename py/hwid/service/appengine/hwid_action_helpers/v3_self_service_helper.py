@@ -73,11 +73,11 @@ class HWIDV3SelfServiceActionHelper:
 
     self._hwid_validator = hwid_validator.HwidValidator()
 
-  # TODO(clarkchung): add internal flag
-  def GetDBEditableSection(self) -> str:
-    full_hwid_db_contents = self._preproc_data.raw_database
-    unused_header, lines = _SplitHWIDDBV3Sections(full_hwid_db_contents)
-    return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)
+  def GetDBEditableSection(self, suppress_support_status=False,
+                           internal=False) -> str:
+    dumped_db = self._preproc_data.database.DumpDataWithoutChecksum(
+        suppress_support_status=suppress_support_status, internal=internal)
+    return self.RemoveHeader(dumped_db)
 
   def AnalyzeDraftDBEditableSection(
       self, draft_db_editable_section, derive_fingerprint_only,

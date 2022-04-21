@@ -33,9 +33,11 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         'image_id:',
         '  0: EVT',
         '  1: DVT',
-        "      ComponentEq('battery', 'battery_medium') and",
-        "      ComponentEq('keyboard', 'GB') and",
-        "      ComponentEq('storage', ['HDD', '500G'])",
+        ("    ComponentEq('audio_codec', ['hdmi_1', 'codec_1']) and "
+         "ComponentEq('cpu', 'cpu_4')"),
+        ("    and ComponentEq('battery', 'battery_medium') and ComponentEq("
+         "'keyboard', 'GB')"),
+        "    and ComponentEq('storage', ['HDD', '500G'])",
     ])
 
   def testAnalyzeDraftDBEditableSection_FPChangesForDifferentSource(self):
@@ -100,7 +102,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertEqual(analysis_report.validation_errors, [])
     self.assertEqual(len(analysis_report.lines), 0)
     self.assertEqual(analysis_report.fingerprint,
-                     '8180ed506737784ac481a5cccd81a05835a6c6c3')
+                     '22e990e315e68acd94537c5aa85eeaf2f99044bc')
 
   def testAnalyzeDraftDbEditableSection_SyntaxError(self):
     helper_inst = self._LoadSSHelper('v3-golden-before.yaml')
