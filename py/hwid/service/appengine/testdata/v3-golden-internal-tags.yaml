@@ -11,7 +11,7 @@
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: f5bb347227d39a6788d7003a35b22d942891c3f5
+checksum: 9c3727bbdea9a172af7bc8cefca90246b18ab2f7
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -310,10 +310,12 @@ components:
     items:
       storage_0:
         values: !link_avl
-          model: model0
-          sectors: '0'
-          serial: !re '^#123\d+$'
-          vendor: vendor0
+          converter: test-converter1
+          original_values:
+            model: model0
+            sectors: '0'
+            serial: !re '^#123\d+$'
+            vendor: vendor0
       storage_1:
         values:
           model: model1
@@ -322,9 +324,11 @@ components:
           serial: !re '^#123\d+$'
       storage_2:
         values: !link_avl
-          model: model2
-          sectors: '200'
-          vendor: vendor2
+          converter: test-converter1
+          original_values:
+            model: model2
+            sectors: '200'
+            vendor: vendor2
         information:
           comp_group: storage_0
   hash_gbb:

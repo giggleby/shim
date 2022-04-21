@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import textwrap
 import unittest
 
 from cros.factory.hwid.v3 import database
@@ -136,19 +137,30 @@ class StandardizeUnittest(unittest.TestCase):
 class LinkAVLTest(unittest.TestCase):
 
   def testAVLProbeValue_Load(self):
-    obj = yaml.safe_load('!link_avl {key: value}')
+    obj = yaml.safe_load(
+        textwrap.dedent('''\
+            !link_avl
+            converter: converter1
+            original_values: {key: value}
+            '''))
     self.assertIsInstance(obj, rule.AVLProbeValue)
     self.assertDictEqual({'key': 'value'}, obj)
+    self.assertEqual('converter1', obj.converter_identifier)
 
   def testAVLProbeValue_Dump(self):
-    obj = rule.AVLProbeValue({'key': 'value'})
+    obj = rule.AVLProbeValue('converter', {'key': 'value'})
     dump_str = yaml.safe_dump(obj)
     self.assertEqual('{key: value}\n', dump_str)
 
   def testAVLProbeValue_DumpInternal(self):
-    obj = rule.AVLProbeValue({'key': 'value'})
+    obj = rule.AVLProbeValue('converter', {'key': 'value'})
     dump_str = yaml.safe_dump(obj, internal=True)
-    self.assertEqual('!link_avl {key: value}\n', dump_str)
+    self.assertEqual(
+        textwrap.dedent('''\
+            !link_avl
+            converter: converter
+            original_values: {key: value}
+            '''), dump_str)
 
 
 @rule.RuleFunction(['string'])

@@ -64,11 +64,15 @@ class DatabaseTest(unittest.TestCase):
     db = Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
 
-    db.SetLinkAVLProbeValue('cls4', 'comp7')
+    db.SetLinkAVLProbeValue('cls4', 'comp7', 'converter-identifier')
 
     loaded_db = Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
     self.assertIsInstance(
         loaded_db.GetComponents('cls4')['comp7'].values, rule.AVLProbeValue)
+
+    self.assertEqual(
+        'converter-identifier',
+        loaded_db.GetComponents('cls4')['comp7'].values.converter_identifier)
 
   def testLoadDump(self):
     db = Database.LoadFile(

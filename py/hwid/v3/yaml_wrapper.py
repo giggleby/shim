@@ -349,10 +349,15 @@ class _LinkAVLYAMLTagHandler(_HWIDV3YAMLTagHandler):
 
     existing_values = _DefaultMappingHandler.YAMLConstructor(
         loader, node, deep=True)
-    return cls.TARGET_CLASS(existing_values)
+    converter_identifier = existing_values['converter']
+    values = existing_values['original_values']
+    return cls.TARGET_CLASS(converter_identifier, values)
 
   @classmethod
   def YAMLRepresenter(cls, dumper, data):
     if cls.IsDumperInternal(dumper):
-      return dumper.represent_mapping(cls.YAML_TAG, data)
+      return dumper.represent_mapping(cls.YAML_TAG, {
+          'converter': data.converter_identifier,
+          'original_values': Dict(data)
+      })
     return dumper.represent_mapping('tag:yaml.org,2002:map', data)

@@ -385,8 +385,9 @@ class Database:
   def SetComponentStatus(self, comp_cls, comp_name, status):
     return self._components.SetComponentStatus(comp_cls, comp_name, status)
 
-  def SetLinkAVLProbeValue(self, comp_cls, comp_name):
-    return self._components.SetLinkAVLProbeValue(comp_cls, comp_name)
+  def SetLinkAVLProbeValue(self, comp_cls, comp_name, converter_identifier):
+    return self._components.SetLinkAVLProbeValue(comp_cls, comp_name,
+                                                 converter_identifier)
 
   @property
   def device_info_rules(self):
@@ -1275,12 +1276,13 @@ class Components:
     self._components[comp_cls][comp_name] = ComponentInfo(
         values, status, information)
 
-  def SetLinkAVLProbeValue(self, comp_cls, comp_name):
+  def SetLinkAVLProbeValue(self, comp_cls, comp_name, converter_identifier):
     """Sets the tag of the component as !link_avl
 
     Args:
       comp_cls: The component class name.
       comp_name: The component name.
+      converter_identifier: The AVL converter identifier.
     """
     if comp_cls == 'region':
       raise common.HWIDException('Region component class is not modifiable.')
@@ -1294,7 +1296,8 @@ class Components:
       raise common.HWIDException(
           f'No probe values in Component ({comp_cls!r}, {comp_name!r})')
 
-    self._components[comp_cls][comp_name].values = AVLProbeValue(values)
+    self._components[comp_cls][comp_name].values = AVLProbeValue(
+        converter_identifier, values)
 
 
 _PatternDatum = collections.namedtuple('_PatternDatum',
