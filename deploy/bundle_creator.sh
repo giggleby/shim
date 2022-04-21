@@ -30,6 +30,7 @@ ${REMOTE_TOOLKIT_BOARD}/${REMOTE_TOOLKIT_VERSION}"
 CACHED_REMOTE_TOOLKIT_PATH="${CACHED_REMOTE_TOOLKIT_DIR}/factory.zip"
 
 ZONE="us-central1-a"
+EMULATOR_SIDS=()
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1
 . "${FACTORY_PRIVATE_DIR}/config/bundle_creator/config.sh" || exit 1
@@ -226,6 +227,41 @@ find_test_modules() {
   done
 }
 
+start_emulator() {
+  local emulator_name="$1"
+  local port="$2"
+  {
+    gcloud components list --filter="${emulator_name}"-emulator \
+      2>/dev/null | grep "Not Installed" >/dev/null
+  } && {
+    stop_all_emulators
+    die "${emulator_name}-emulator isn't installed, please run" \
+      "\`sudo apt-get install google-cloud-sdk-${emulator_name}-emulator\`" \
+      "before testing."
+  }
+
+  local sid
+  sid="$(setsid bash -c "gcloud beta emulators ${emulator_name} start \
+    --host-port=localhost:${port} \
+    2>/dev/null >/dev/null & echo \$\$")"
+  EMULATOR_SIDS+=("${sid}")
+}
+
+start_all_emulators() {
+  info "Start all emulators."
+  start_emulator "pubsub" "8080"
+  eval "$(gcloud beta emulators pubsub env-init)"
+
+  sleep 3  # Ensure the emulator is ready.
+}
+
+stop_all_emulators() {
+  info "Stop all emulators."
+  for sid in "${EMULATOR_SIDS[@]}"; do
+    pkill -s "${sid}"
+  done
+}
+
 do_deploy_appengine() {
   load_config_by_deployment_type "$1"
   local temp_dir
@@ -334,6 +370,8 @@ do_test_docker() {
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
   prepare_python_venv "${SOURCE_DIR}/docker/requirements.txt"
 
+  start_all_emulators
+
   local test_modules
   mapfile -t test_modules < \
       <(find_test_modules "${LOCAL_DEPLOYMENT_SOURCE_DIR}")
@@ -361,6 +399,8 @@ do_test_docker() {
       echo " - ${test_module}, logfile path: ${logfile_path}"
     done
   fi
+
+  stop_all_emulators
 }
 
 print_usage() {
