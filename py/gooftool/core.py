@@ -520,6 +520,12 @@ class Gooftool:
         # part of identity info.  We shouldn't check it.
         config['identity'].pop('platform-name', None)
 
+        # Per b/169766857, whitelabel-tag is renamed to custom-label-tag.
+        # Normalize the dictionary keys to 'whitelabel-tag'.
+        if 'custom-label-tag' in config['identity']:
+          tag = config['identity'].pop('custom-label-tag', None)
+          config['identity']['whitelabel-tag'] = tag
+
         # Per b/245588383, 'device-tree-compatible-match' is renamed to 'frid'.
         # Normalize the dictionary keys to 'device-tree-compatible-match'.
         if 'frid' in config['identity']:
