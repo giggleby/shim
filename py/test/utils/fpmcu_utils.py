@@ -29,26 +29,29 @@ class FpmcuDevice:
   def __init__(self, dut):
     self._dut = dut
 
-  def FpmcuCommand(self, command, *args, encoding='utf-8'):
+  def FpmcuCommand(self, command, *args, encoding='utf-8', full_info=False):
     """Execute a host command on the fingerprint MCU
 
     Args:
       command: the name of the ectool command.
+      full_info: A boolean indicating to return stederr and returncode or not.
 
     Returns:
-      Command text output.
+      (stdout, stdin, return_code) if full_info is True otherwise stdout.
     """
     cmdline = ['ectool', self.CROS_FP_ARG, command] + list(args)
     process = self._dut.Popen(
         cmdline, encoding=encoding,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
+    return_code = process.returncode
     if encoding is not None:
       stdout = stdout.strip()
-    if process.returncode != 0:
-      raise FpmcuError('cmd: %r, returncode: %d, stdout: %r, stderr: %r' % (
-          cmdline, process.returncode, stdout, stderr.strip()))
-    return stdout
+      stderr = stderr.strip()
+    if not full_info and return_code != 0:
+      raise FpmcuError('cmd: %r, returncode: %d, stdout: %r, stderr: %r' %
+                       (cmdline, return_code, stdout, stderr))
+    return (stdout, stderr, return_code) if full_info else stdout
 
   def GetFpmcuName(self):
     """Get fingerprint MCU name

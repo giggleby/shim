@@ -38,6 +38,7 @@ from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test import state
 from cros.factory.test.utils.cbi_utils import CbiEepromWpStatus
+from cros.factory.test.utils import fpmcu_utils
 from cros.factory.test.utils import hps_utils
 from cros.factory.utils import argparse_utils
 from cros.factory.utils.argparse_utils import CmdArg
@@ -442,6 +443,89 @@ def EnableFwWp(options):
   """Enable then verify firmware software write protection."""
   del options  # Unused.
 
+  def EnableFpmcuWriteProtection():
+    board = Shell('cros_config /fingerprint board').stdout
+    fpmcu = fpmcu_utils.FpmcuDevice(sys_interface.SystemInterface())
+
+    # TODO(b/149590275): Update once they match
+    if board == 'bloonchipper':
+      flashprotect_hw_and_sw_write_protect_enabled_before_reboot = (
+          '^Flash protect flags: 0x0000000b wp_gpio_asserted ro_at_boot '
+          'ro_now$')
+      flashprotect_hw_and_sw_write_protect_enabled = (
+          '^Flash protect flags: 0x0000040f wp_gpio_asserted ro_at_boot '
+          'ro_now rollback_now all_now$')
+    elif board == 'dartmonkey':
+      flashprotect_hw_and_sw_write_protect_enabled_before_reboot = (
+          '^Flash protect flags: 0x00000009 wp_gpio_asserted ro_at_boot$')
+      flashprotect_hw_and_sw_write_protect_enabled = (
+          r'^Flash protect flags:\s*0x0000000b wp_gpio_asserted ro_at_boot '
+          'ro_now$')
+    else:
+      raise Error(f'Unrecognized FPMCU board: {board}')
+
+    def CheckPattern(pattern, text):
+      if not re.search(pattern, text, re.MULTILINE):
+        raise Error(
+            f'Pattern not found in text.\nPattern={pattern}\nText={text}')
+
+    # Reset the FPMCU state.
+    try:
+      fpmcu.FpmcuCommand('reboot_ec')
+    except fpmcu_utils.FpmcuError:
+      pass
+    time.sleep(2)
+
+    # Check if SWWP is disabled but HWWP is enabled.
+    CheckPattern(r'^Flash protect flags:\s*0x00000008 wp_gpio_asserted$',
+                 fpmcu.FpmcuCommand('flashprotect'))
+    if os.path.exists('/tmp/fp.raw'):
+      os.remove('/tmp/fp.raw')
+    fp_frame = fpmcu.FpmcuCommand('fpframe', 'raw')
+    f = open('/tmp/fp.raw', 'w')
+    f.write(fp_frame)
+    f.close()
+
+    # Enable SWWP.
+    try:
+      fpmcu.FpmcuCommand('flashprotect', 'enable')
+    except fpmcu_utils.FpmcuError:
+      pass
+    time.sleep(2)
+    CheckPattern(flashprotect_hw_and_sw_write_protect_enabled_before_reboot,
+                 fpmcu.FpmcuCommand('flashprotect'))
+    try:
+      fpmcu.FpmcuCommand('reboot_ec')
+    except fpmcu_utils.FpmcuError:
+      pass
+    time.sleep(2)
+
+    # Make sure the flag is correct.
+    CheckPattern(flashprotect_hw_and_sw_write_protect_enabled,
+                 fpmcu.FpmcuCommand('flashprotect'))
+
+    # Make sure the RW image is active.
+    CheckPattern(r'^Firmware copy:\s*RW$', fpmcu.FpmcuCommand('version'))
+
+    # Verify that the system is locked.
+    if os.path.exists('/tmp/fp.raw'):
+      os.remove('/tmp/fp.raw')
+    if os.path.exists('/tmp/error_msg.txt'):
+      os.remove('/tmp/error_msg.txt')
+    stdout, stderr, return_code = fpmcu.FpmcuCommand('fpframe', 'raw',
+                                                     full_info=True)
+    f = open('/tmp/fp.raw', 'w')
+    f.write(stdout)
+    f.close()
+
+    f = open('/tmp/error_msg.txt', 'w')
+    f.write(stderr)
+    f.close()
+
+    if return_code == 0:
+      raise Error('System is not locked.')
+    CheckPattern('ACCESS_DENIED|Permission denied', stderr)
+
   def WriteProtect(fw):
     """Calculate protection size, then invoke flashrom.
 
@@ -466,14 +550,7 @@ def EnableFwWp(options):
     crosfw.Flashrom(fw.target).EnableWriteProtection(ro_offset, ro_size)
 
   if HasFpmcu():
-    # TODO(b/143991572): Implement enable_fpmcu_write_protection in gooftool.
-    cmd = os.path.join(
-        paths.FACTORY_DIR, 'sh', 'enable_fpmcu_write_protection.sh')
-    cmd_result = Shell(cmd)
-    if not cmd_result.success:
-      raise Error(
-          'Failed to enable FPMCU write protection, stdout=%r, stderr=%r' %
-          (cmd_result.stdout, cmd_result.stderr))
+    EnableFpmcuWriteProtection()
 
   WriteProtect(crosfw.LoadMainFirmware())
   event_log.Log('wp', fw='main')
