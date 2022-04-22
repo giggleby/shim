@@ -781,10 +781,16 @@ class Gooftool:
       with open(config_path) as f:
         obj = yaml.safe_load(f)
 
-      # According to https://crbug.com/1070692, 'platform-name' is not a part of
-      # identity info.  We shouldn't check it.
       for config in obj['chromeos']['configs']:
+        # According to https://crbug.com/1070692, 'platform-name' is not a part
+        # of identity info.  We shouldn't check it.
         config['identity'].pop('platform-name', None)
+
+        # Per b/169766857, whitelabel-tag is renamed to custom-label-tag.
+        # Normalize the dictionary keys to 'whitelabel-tag'.
+        if 'custom-label-tag' in config['identity']:
+          tag = config['identity'].pop('custom-label-tag', None)
+          config['identity']['whitelabel-tag'] = tag
 
       fields = ['name', 'identity', 'brand-code']
       configs = [
