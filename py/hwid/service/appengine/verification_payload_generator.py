@@ -202,10 +202,9 @@ class InputDeviceVendorValueConverter(ValueConverter):
 
   def __call__(self, value):
     value = self._str_converter(value)
-    if re.match('ELAN[0-9]{4}:[0-9]{2}$', value) or re.match(
-        'ekth[0-9]{4}$', value):
+    if re.match(r'ELAN\d{4}:\d{2}$', value) or re.match(r'ekth\d{4}$', value):
       return self._hex_to_hex_converter(self.ELAN_VID)
-    if value == 'Raydium Touchscreen':
+    if value == 'Raydium Touchscreen' or re.match(r'RAYD\d{4}:\d{2}$', value):
       return self._hex_to_hex_converter(self.RAYD_VID)
     raise ValueError(f'Unknown input device id {value}.')
 
@@ -445,8 +444,7 @@ def GetAllProbeStatementGenerators():
 
   input_device_fields = [
       _SameNameFieldRecord('name', str_converter),
-      _FieldRecord(
-          ['hw_version', 'product'],
+      _SameNameFieldRecord(
           'product',
           [
               HexToHexValueConverter(4, has_prefix=False),
@@ -454,20 +452,19 @@ def GetAllProbeStatementGenerators():
               HexToHexValueConverter(8, has_prefix=True),
           ]),
       _SameNameFieldRecord('vendor', HexToHexValueConverter(
-          4, has_prefix=False), is_optional=True),
+          4, has_prefix=False)),
   ]
   input_device_fields_old = [
       _FieldRecord(
-          ['hw_version', 'product_id'],
+          ['product_id', 'hw_version'],
           'product',
           [
               HexToHexValueConverter(4, has_prefix=False),
               # raydium_ts
               HexToHexValueConverter(8, has_prefix=True),
               FloatToHexValueConverter(4),
-          ],
-          is_optional=True),
-      _FieldRecord(['id', 'vendor_id'], 'vendor', [
+          ]),
+      _FieldRecord(['vendor_id', 'id', 'name'], 'vendor', [
           HexToHexValueConverter(4, has_prefix=False),
           InputDeviceVendorValueConverter(),
       ]),
@@ -604,10 +601,6 @@ def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
         else:
           # Ignore this component if no any generator are suitable for it.
           continue
-      elif len(all_suitable_generator_and_ps) > 1:
-        assert False, ("The code shouldn't reach here because we expect only "
-                       'one generator can handle the given component by '
-                       'design.')
 
       is_duplicate = comp_info.status == hwid_common.COMPONENT_STATUS.duplicate
       if is_duplicate or error_msg:

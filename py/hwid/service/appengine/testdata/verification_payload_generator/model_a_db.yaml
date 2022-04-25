@@ -99,7 +99,7 @@ components:
           fw_version: '1234'
       touchscreen_2:
         values:
-          name: Touchscreen 2
+          name: ELAN0000:00
           fw_version: '1234'
           hw_version: 12ab
 

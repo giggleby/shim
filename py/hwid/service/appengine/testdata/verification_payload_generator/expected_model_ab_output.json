@@ -770,19 +770,15 @@
           }
         },
         "expect": {
-          "name": [
-            true,
-            "str",
-            "!eq Touchscreen 2"
-          ],
           "product": [
             true,
             "hex",
             "!eq 0x12AB"
           ],
           "vendor": [
-            false,
-            "hex"
+            true,
+            "hex",
+            "!eq 0x04F3"
           ]
         }
       }

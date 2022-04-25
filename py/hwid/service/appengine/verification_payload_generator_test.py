@@ -367,10 +367,10 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
             }))
 
   def testTouchscreenAlternativeHwidField(self):
-    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['touchscreen'][0]
+    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['touchscreen'][1]
 
     ps = ps_gen.TryGenerate('name1', {
-        'name': 'foo',
+        'name': 'ELAN0000:00',
         'hw_version': '1122',
         'fw_version': '1.1'
     })
@@ -384,22 +384,22 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
                     }
                 },
                 'expect': {
-                    'name': [True, 'str', '!eq foo'],
                     'product': [True, 'hex', '!eq 0x1122'],
-                    'vendor': [False, 'hex'],
+                    'vendor': [True, 'hex', '!eq 0x04F3'],
                 }
             }))
 
   def testTouchscreenComponentValueRepetition(self):
-    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['touchscreen'][0]
+    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['touchscreen'][1]
 
-    # Same values between `hw_version` and `product`.
-    ps = ps_gen.TryGenerate('name1', {
-        'name': 'foo',
-        'hw_version': '1122',
-        'product': '1122',
-        'fw_version': '1.1'
-    })
+    # Same values between `hw_version` and `product_id`.
+    ps = ps_gen.TryGenerate(
+        'name1', {
+            'name': 'ELAN0000:00',
+            'hw_version': '1122',
+            'product_id': '1122',
+            'fw_version': '1.1'
+        })
     self.assertEqual(
         ps,
         probe_config_types.ComponentProbeStatement(
@@ -410,23 +410,22 @@ class InputDeviceProbeStatementGeneratorTest(unittest.TestCase):
                     }
                 },
                 'expect': {
-                    'name': [True, 'str', '!eq foo'],
                     'product': [True, 'hex', '!eq 0x1122'],
-                    'vendor': [False, 'hex'],
+                    'vendor': [True, 'hex', '!eq 0x04F3'],
                 }
             }))
 
   def testTouchscreenComponentValueInconsistent(self):
-    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['touchscreen'][0]
+    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['touchscreen'][1]
 
-    # Inconsistent values between `hw_version` and `product`.
-    self.assertRaises(ProbeStatementConversionError, ps_gen.TryGenerate,
-                      'name1', {
-                          'name': 'foo',
-                          'hw_version': '1122',
-                          'product': '3344',
-                          'fw_version': '1.1'
-                      })
+    # Inconsistent values between `hw_version` and `product_id`.
+    self.assertRaises(
+        ProbeStatementConversionError, ps_gen.TryGenerate, 'name1', {
+            'name': 'ELAN0000:00',
+            'hw_version': '1122',
+            'product_id': '3344',
+            'fw_version': '1.1'
+        })
 
 
 class EdidProbeStatementGeneratorTest(unittest.TestCase):
