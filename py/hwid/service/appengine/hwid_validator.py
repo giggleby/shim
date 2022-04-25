@@ -73,7 +73,7 @@ class HwidValidator:
     vpg_target = config.CONFIG.vpg_targets.get(db.project)
     if vpg_target:
       errors = vpg_module.GenerateVerificationPayload(
-          [(db, vpg_target.waived_comp_categories)]).error_msgs
+          [(db, vpg_target)]).error_msgs
       if errors:
         raise ValidationError(
             [Error(ErrorCode.CONTENTS_ERROR, err) for err in errors])

@@ -8,6 +8,7 @@ import os
 import unittest
 
 from cros.factory.hwid.service.appengine import hwid_action_manager
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import filesystem_adapter
 
 _TEST_CONFIG_PATH = os.path.join(
@@ -41,6 +42,15 @@ class ConfigTest(unittest.TestCase):
     self.assertTrue(
         issubclass(config.CONFIG.hwid_action_manager.__class__,
                    hwid_action_manager.HWIDActionManager))
+
+  def testVpgTargets(self):
+    os.environ['GOOGLE_CLOUD_PROJECT'] = 'staging-project-name'
+    from cros.factory.hwid.service.appengine import config
+    _config = config._Config(_TEST_CONFIG_PATH)
+    self.assertEqual(
+        _config.vpg_targets['BAR'],
+        vpg_config_module.VerificationPayloadGeneratorConfig.Create(
+            board='foo', waived_comp_categories=['display_panel']))
 
 
 if __name__ == '__main__':

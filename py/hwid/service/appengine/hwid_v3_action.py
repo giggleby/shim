@@ -9,6 +9,7 @@ from typing import List, Optional
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils
 
@@ -21,10 +22,11 @@ class HWIDV3Action(hwid_action.HWIDAction):
     self._ss_helper = (
         ss_helper_module.HWIDV3SelfServiceActionHelper(self._preproc_data))
 
-  def GetBOMAndConfigless(self, hwid_string: str,
-                          verbose: Optional[bool] = False,
-                          waived_comp_categories: Optional[List[str]] = None,
-                          require_vp_info: Optional[bool] = False):
+  def GetBOMAndConfigless(
+      self, hwid_string: str, verbose: Optional[bool] = False,
+      vpg_config: Optional[
+          vpg_config_module.VerificationPayloadGeneratorConfig] = None,
+      require_vp_info: Optional[bool] = False):
     try:
       hwid, _bom, configless = hwid_utils.DecodeHWID(
           self._preproc_data.database, _NormalizeString(hwid_string))
@@ -35,8 +37,7 @@ class HWIDV3Action(hwid_action.HWIDAction):
     bom = hwid_action.BOM()
 
     bom.AddAllComponents(_bom.components, self._preproc_data.database,
-                         verbose=verbose,
-                         waived_comp_categories=waived_comp_categories,
+                         verbose=verbose, vpg_config=vpg_config,
                          require_vp_info=require_vp_info)
     bom.phase = self._preproc_data.database.GetImageName(hwid.image_id)
     bom.project = hwid.project

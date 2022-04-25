@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 """Cloud stoarge buckets and service environment configuration."""
 
-import collections
 import os
 from typing import NamedTuple, Optional
 
@@ -17,6 +16,7 @@ from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
@@ -44,11 +44,6 @@ _RESOURCE_DIR = os.path.join(
 
 _PATH_TO_APP_CONFIGURATIONS_FILE = os.path.join(_RESOURCE_DIR,
                                                 'configurations.yaml')
-
-_VerificationPayloadGenerationTargetInfo = collections.namedtuple(
-    '_VerificationPayloadGenerationTargetInfo',
-    ['board', 'waived_comp_categories'])
-
 
 class VerificationPayloadSettings(NamedTuple):
   review_host: str
@@ -90,8 +85,7 @@ class _Config:
     self.hwid_filesystem = cloudstorage_adapter.CloudStorageAdapter(
         conf['bucket'])
     self.vpg_targets = {
-        k: _VerificationPayloadGenerationTargetInfo(
-            v['board'], v.get('waived_comp_categories', []))
+        k: vpg_config_module.VerificationPayloadGeneratorConfig.Create(**v)
         for k, v in conf.get('vpg_targets', {}).items()
     }
     self._ndb_connector = ndbc_module.NDBConnector()

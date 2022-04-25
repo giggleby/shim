@@ -9,6 +9,7 @@ import unittest
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_v3_action
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.utils import file_utils
 
@@ -120,9 +121,10 @@ class HWIDV3ActionTest(unittest.TestCase):
     ])
 
   def testGetBOMAndConfiglessWithVpgWaivedComponentCategory(self):
-    bom, unused_configless = self.action.GetBOMAndConfigless(
-        TEST_V3_HWID_1, require_vp_info=True,
+    vpg_config = vpg_config_module.VerificationPayloadGeneratorConfig.Create(
         waived_comp_categories=['battery'])
+    bom, unused_configless = self.action.GetBOMAndConfigless(
+        TEST_V3_HWID_1, require_vp_info=True, vpg_config=vpg_config)
 
     for comp in bom.GetComponents(cls='battery'):
       self.assertFalse(comp.is_vp_related)

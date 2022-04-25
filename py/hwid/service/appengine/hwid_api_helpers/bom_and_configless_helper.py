@@ -72,8 +72,7 @@ class BOMAndConfiglessHelper:
       project_and_brand, unused_sep, unused_part = hwid_string.partition(' ')
       project, unused_sep, unused_part = project_and_brand.partition('-')
 
-      model_info = self._vpg_targets.get(project)
-      waived_comp_categories = model_info and model_info.waived_comp_categories
+      vpg_config = self._vpg_targets.get(project)
 
       bom = configless = error = None
       action = action_cache.get(project)
@@ -84,7 +83,7 @@ class BOMAndConfiglessHelper:
                   project)
 
         bom, configless = action.GetBOMAndConfigless(
-            hwid_string, verbose, waived_comp_categories, require_vp_info)
+            hwid_string, verbose, vpg_config, require_vp_info)
       except (ValueError, KeyError, RuntimeError) as ex:
         error = ex
       result[hwid_string] = BOMAndConfigless(bom, configless, error)

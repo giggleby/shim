@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 
 
 class HWIDV2Action(hwid_action.HWIDAction):
@@ -16,10 +17,11 @@ class HWIDV2Action(hwid_action.HWIDAction):
   def __init__(self, hwid_v2_preproc_data: hwid_preproc_data.HWIDV2PreprocData):
     self._preproc_data = hwid_v2_preproc_data
 
-  def GetBOMAndConfigless(self, hwid_string: str,
-                          verbose: Optional[bool] = False,
-                          waived_comp_categories: Optional[List[str]] = None,
-                          require_vp_info: Optional[bool] = False):
+  def GetBOMAndConfigless(
+      self, hwid_string: str, verbose: Optional[bool] = False,
+      vpg_config: Optional[
+          vpg_config_module.VerificationPayloadGeneratorConfig] = None,
+      require_vp_info: Optional[bool] = False):
     project, name, variant, volatile = self._SplitHWID(hwid_string)
 
     if project != self._preproc_data.project:

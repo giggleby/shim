@@ -1,3 +1,9 @@
+vpg_targets: &vpg_targets
+  BAR:
+    board: "foo"
+    waived_comp_categories:
+      - display_panel
+
 "prod-project-name":
   env: "prod"
   bucket: "prod-bucket"
@@ -17,4 +23,5 @@
   queue_name: "staging-queue-name"
   hwid_repo_branch: null  # Use the branch HEAD tracks.
   hwid_api_endpoint: "https://staging-endpoint"
+  vpg_targets: *vpg_targets
 

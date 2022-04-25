@@ -7,13 +7,14 @@
 import collections
 import hashlib
 import re
-import typing
+from typing import DefaultDict, Dict, List, NamedTuple, Optional, Union
 
 # pylint: disable=import-error, no-name-in-module
 from google.protobuf import text_format
 import hardware_verifier_pb2
 import runtime_probe_pb2
 
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule as hwid_rule
@@ -231,17 +232,16 @@ class _FieldRecord:
     is_optional: Whether this record is optional.
   """
 
-  def __init__(self, hwid_field_names: typing.Union[str, typing.List[str]],
+  def __init__(self, hwid_field_names: Union[str, List[str]],
                probe_statement_field_name: str,
-               value_converters: typing.Union[ValueConverter,
-                                              typing.List[ValueConverter]],
+               value_converters: Union[ValueConverter, List[ValueConverter]],
                is_optional: bool = False):
     self.hwid_field_names = type_utils.MakeList(hwid_field_names)
     self.probe_statement_field_name = probe_statement_field_name
     self.value_converters = type_utils.MakeList(value_converters)
     self.is_optional = is_optional
 
-  def GenerateExpectedFields(self, comp_values: dict) -> typing.Optional[str]:
+  def GenerateExpectedFields(self, comp_values: dict) -> Optional[str]:
     """Generates the expected field from a given component.
 
     This function generates the expected field from a given component using
@@ -519,7 +519,7 @@ def GetAllProbeStatementGenerators():
   return all_probe_statement_generators
 
 
-class VerificationPayloadGenerationResult(typing.NamedTuple):
+class VerificationPayloadGenerationResult(NamedTuple):
   """
   Attributes:
     generated_file_contents: A string-to-string dictionary which represents the
@@ -533,7 +533,7 @@ class VerificationPayloadGenerationResult(typing.NamedTuple):
   generated_file_contents: dict
   error_msgs: list
   payload_hash: str
-  primary_identifiers: typing.DefaultDict[str, typing.Dict]
+  primary_identifiers: DefaultDict[str, Dict]
 
 
 ComponentVerificationPayloadPiece = collections.namedtuple(
@@ -550,7 +550,8 @@ _STATUS_MAP = {
 _ProbeRequestSupportCategory = runtime_probe_pb2.ProbeRequest.SupportCategory
 
 
-def GetAllComponentVerificationPayloadPieces(db, waived_categories):
+def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
+    vpg_config_module.VerificationPayloadGeneratorConfig] = None):
   """Generates materials for verification payload from each components in HWID.
 
   This function goes over each component in HWID one-by-one, and attempts to
@@ -559,7 +560,7 @@ def GetAllComponentVerificationPayloadPieces(db, waived_categories):
 
   Args:
     db: An instance of HWID database.
-    waived_categories: A list of component categories to ignore.
+    vpg_config: Config for the generator.
 
   Returns:
     A dictionary that maps the HWID component to the corresponding material.
@@ -572,8 +573,10 @@ def GetAllComponentVerificationPayloadPieces(db, waived_categories):
   ret = {}
 
   model_prefix = db.project.lower()
+  if vpg_config is None:
+    vpg_config = vpg_config_module.VerificationPayloadGeneratorConfig.Create()
   for hwid_comp_category, ps_gens in GetAllProbeStatementGenerators().items():
-    if hwid_comp_category in waived_categories:
+    if hwid_comp_category in vpg_config.waived_comp_categories:
       continue
     comps = db.GetComponents(hwid_comp_category, include_default=False)
     for comp_name, comp_info in comps.items():
@@ -632,7 +635,8 @@ def GenerateVerificationPayload(dbs):
   exception to indicate a failure.
 
   Args:
-    dbs: A list of tuple of the HWID database object and the waived categories.
+    dbs: A list of tuple of the HWID database object and the config for the
+        generator.
 
   Returns:
     Instance of `VerificationPayloadGenerationResult`.
@@ -691,10 +695,10 @@ def GenerateVerificationPayload(dbs):
   grouped_comp_vp_piece_per_model = {}
   grouped_primary_comp_name_per_model = {}
   hw_verification_spec = hardware_verifier_pb2.HwVerificationSpec()
-  for db, waived_categories in dbs:
+  for db, vpg_config in dbs:
     model_prefix = db.project.lower()
     probe_config = probe_config_types.ProbeConfigPayload()
-    all_pieces = GetAllComponentVerificationPayloadPieces(db, waived_categories)
+    all_pieces = GetAllComponentVerificationPayloadPieces(db, vpg_config)
     grouped_comp_vp_piece = collections.defaultdict(list)
     grouped_primary_comp_name = {}
     for comp_vp_piece in all_pieces.values():
@@ -715,7 +719,7 @@ def GenerateVerificationPayload(dbs):
 
     # Append the generic probe statements.
     for ps_gen in _GetAllGenericProbeStatementInfoRecords():
-      if ps_gen.probe_category not in waived_categories:
+      if ps_gen.probe_category not in vpg_config.waived_comp_categories:
         probe_config.AddComponentProbeStatement(ps_gen.GenerateProbeStatement())
 
     probe_config_pathname = 'runtime_probe/%s/probe_config.json' % model_prefix
@@ -779,18 +783,21 @@ def main():
 
   logging.basicConfig(level=logging.INFO)
 
+  waived_categories = collections.defaultdict(list)
+  for waived_category in args.waived_categories:
+    model_name, unused_sep, category_name = waived_category.partition('.')
+    waived_categories[model_name.lower()].append(category_name)
+
   dbs = []
   for hwid_db_path in args.hwid_db_paths:
     logging.info('Load the HWID database file (%s).', hwid_db_path)
-    dbs.append((database.Database.LoadFile(
-        hwid_db_path, verify_checksum=args.verify_checksum), []))
-  for waived_category in args.waived_categories:
-    model_name, unused_sep, category_name = waived_category.partition('.')
-    for db_obj, waived_list in dbs:
-      if db_obj.project.lower() == model_name.lower():
-        logging.info('Will ignore the component category %r for %r.',
-                     category_name, db_obj.project)
-        waived_list.append(category_name)
+    db = database.Database.LoadFile(hwid_db_path,
+                                    verify_checksum=args.verify_checksum)
+    vpg_config = vpg_config_module.VerificationPayloadGeneratorConfig.Create(
+        waived_comp_categories=waived_categories[db.project.lower()])
+    logging.info('Waived component category: %r',
+                 vpg_config.waived_comp_categories)
+    dbs.append((db, vpg_config))
 
   logging.info('Generate the verification payload data.')
   result = GenerateVerificationPayload(dbs)

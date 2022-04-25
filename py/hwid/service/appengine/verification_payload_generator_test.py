@@ -12,6 +12,7 @@ from google.protobuf import text_format
 import hardware_verifier_pb2
 
 from cros.factory.hwid.service.appengine import verification_payload_generator
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule as hwid_rule
 from cros.factory.probe.runtime_probe import probe_config_types
@@ -457,7 +458,8 @@ class GenerateVerificationPayloadTest(unittest.TestCase):
 
   def testSucc(self):
     dbs = [(database.Database.LoadFile(
-        os.path.join(TESTDATA_DIR, name), verify_checksum=False), [])
+        os.path.join(TESTDATA_DIR, name), verify_checksum=False),
+            vpg_config_module.VerificationPayloadGeneratorConfig.Create())
            for name in ('model_a_db.yaml', 'model_b_db.yaml', 'model_c_db.yaml',
                         'model_d_db.yaml', 'model_e_db.yaml')]
     expected_outputs = json_utils.LoadFile(
@@ -495,8 +497,9 @@ class GenerateVerificationPayloadTest(unittest.TestCase):
   def testHasUnsupportedComps(self):
     # The database bad_model_db.yaml contains an unknown storage, which is not
     # allowed.
-    dbs = [(database.Database.LoadFile(os.path.join(TESTDATA_DIR, name),
-                                       verify_checksum=False), [])
+    dbs = [(database.Database.LoadFile(
+        os.path.join(TESTDATA_DIR, name), verify_checksum=False),
+            vpg_config_module.VerificationPayloadGeneratorConfig.Create())
            for name in ('model_a_db.yaml', 'model_b_db.yaml',
                         'bad_model_db.yaml')]
     report = _vp_generator.GenerateVerificationPayload(dbs)

@@ -8,6 +8,7 @@ import copy
 from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
+from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
 from cros.factory.hwid.v3 import database as v3_database
 
@@ -119,7 +120,7 @@ class BOM:
           Component(cls, name, information, is_vp_related, fields))
 
   def AddAllComponents(self, component_dict, comp_db=None, verbose=False,
-                       waived_comp_categories=None, require_vp_info=False):
+                       vpg_config=None, require_vp_info=False):
     """Adds a dict of components to this bom.
 
     This dict should be of the form class -> name and can take either a single
@@ -130,8 +131,7 @@ class BOM:
       component_dict: A dictionary of components to add.
       comp_db: The database for additional component information retrieval.
       verbose: Adds all fields of the component detail if set to True.
-      waived_comp_categories: List of waived component categories which means
-      they are not verification-payload-related.
+      vpg_config: Config for verification payload generator.
       require_vp_info: A bool to indicate if the is_vp_related field of
           each component is required.
     Returns:
@@ -139,12 +139,10 @@ class BOM:
     Raises:
       ValueError: if any of the classes are None.
     """
-    if waived_comp_categories is None:
-      waived_comp_categories = []
     if comp_db and require_vp_info:
       vp_related_comps = set(
           vpg_module.GetAllComponentVerificationPayloadPieces(
-              comp_db, waived_comp_categories))
+              comp_db, vpg_config))
     else:
       vp_related_comps = set()
 
@@ -266,17 +264,17 @@ class BundleInfo(NamedTuple):
 class HWIDAction:
   HWID_VERSION: int
 
-  def GetBOMAndConfigless(self, hwid_string: str,
-                          verbose: Optional[bool] = False,
-                          waived_comp_categories: Optional[List[str]] = None,
-                          require_vp_info: Optional[bool] = False):
+  def GetBOMAndConfigless(
+      self, hwid_string: str, verbose: Optional[bool] = False,
+      vpg_config: Optional[
+          vpg_config_module.VerificationPayloadGeneratorConfig] = None,
+      require_vp_info: Optional[bool] = False):
     """Get the BOM and configless field for a given HWID.
 
     Args:
       hwid_string: The HWID.
       verbose: Returns all fields in component detail if set to True.
-      waived_comp_categories: List of waived component categories which means
-          they are not verification-payload-related.
+      vpg_config: Config for verification payload generator.
       require_vp_info: A bool to indicate if the is_vp_related field of
           each component is required.
 

@@ -185,14 +185,14 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """
 
     db_lists = collections.defaultdict(list)
-    for model_name, model_info in self.vpg_targets.items():
+    for model_name, vpg_config in self.vpg_targets.items():
       try:
         hwid_action = self.hwid_action_manager.GetHWIDAction(model_name)
         db = hwid_action.GetDBV3()
       except (KeyError, ValueError, RuntimeError) as ex:
         logging.error('Cannot get board data for %r: %r', model_name, ex)
         continue
-      db_lists[model_info.board].append((db, model_info.waived_comp_categories))
+      db_lists[vpg_config.board].append((db, vpg_config))
     return db_lists
 
   def _GetMainCommitIfChanged(self, force_update):
