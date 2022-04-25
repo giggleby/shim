@@ -619,6 +619,8 @@ def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
             component_category=_ProbeRequestSupportCategory.Value(
                 ps_gen.probe_category), component_uuid=unique_comp_name,
             qualification_status=_STATUS_MAP[comp_info.status])
+      if hwid_comp_category in vpg_config.ignore_error:
+        error_msg = None
       ret[(hwid_comp_category, comp_name)] = ComponentVerificationPayloadPiece(
           is_duplicate, error_msg, probe_statement, component_info)
   return ret
@@ -706,9 +708,9 @@ def GenerateVerificationPayload(dbs):
         continue
       if comp_vp_piece.error_msg:
         error_msgs.append(comp_vp_piece.error_msg)
-        continue
-      grouped_comp_vp_piece[
-          comp_vp_piece.probe_statement.statement_hash].append(comp_vp_piece)
+      if comp_vp_piece.probe_statement:
+        grouped_comp_vp_piece[
+            comp_vp_piece.probe_statement.statement_hash].append(comp_vp_piece)
 
     for hash_val, comp_vp_piece_list in grouped_comp_vp_piece.items():
       comp_vp_piece = min(comp_vp_piece_list, key=_ComponentSortKey)
@@ -776,6 +778,10 @@ def main():
                   help="Don't verify the checksum in the HWID databases.",
                   dest='verify_checksum')
   ap.add_argument(
+      '--ignore_error', nargs='*', default=[], dest='ignore_error',
+      help=('Ignore error messages for component category, must specify in '
+            'format of `<model_name>.<category_name>`.'))
+  ap.add_argument(
       '--waived_comp_category', nargs='*', default=[], dest='waived_categories',
       help=('Waived component category, must specify in format of '
             '`<model_name>.<category_name>`.'))
@@ -788,15 +794,23 @@ def main():
     model_name, unused_sep, category_name = waived_category.partition('.')
     waived_categories[model_name.lower()].append(category_name)
 
+  ignore_error = collections.defaultdict(list)
+  for category in args.ignore_error:
+    model_name, unused_sep, category_name = category.partition('.')
+    ignore_error[model_name.lower()].append(category_name)
+
   dbs = []
   for hwid_db_path in args.hwid_db_paths:
     logging.info('Load the HWID database file (%s).', hwid_db_path)
     db = database.Database.LoadFile(hwid_db_path,
                                     verify_checksum=args.verify_checksum)
     vpg_config = vpg_config_module.VerificationPayloadGeneratorConfig.Create(
+        ignore_error=ignore_error[db.project.lower()],
         waived_comp_categories=waived_categories[db.project.lower()])
     logging.info('Waived component category: %r',
                  vpg_config.waived_comp_categories)
+    logging.info('Ignore exception component category: %r',
+                 vpg_config.ignore_error)
     dbs.append((db, vpg_config))
 
   logging.info('Generate the verification payload data.')

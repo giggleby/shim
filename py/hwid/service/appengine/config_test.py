@@ -50,7 +50,8 @@ class ConfigTest(unittest.TestCase):
     self.assertEqual(
         _config.vpg_targets['BAR'],
         vpg_config_module.VerificationPayloadGeneratorConfig.Create(
-            board='foo', waived_comp_categories=['display_panel']))
+            board='foo', ignore_error=['stylus'],
+            waived_comp_categories=['display_panel']))
 
 
 if __name__ == '__main__':
