@@ -27,6 +27,7 @@ clear secdata and let the system regenerate it again. It can be done by
 Dependency
 ----------
 - `tpmc`
+- `trunksd` not running.
 
 Examples
 --------
