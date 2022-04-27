@@ -1,0 +1,55 @@
+component_probe_infos {
+  component_identity {
+  }
+  probe_info {
+    probe_function_name: "storage_func"
+    probe_parameters {
+      name: "pi_model"
+      string_value: "model0"
+    }
+    probe_parameters {
+      name: "pi_vendor"
+      string_value: "vendor0"
+    }
+    probe_parameters {
+      name: "pi_sectors"
+      int_value: 0
+    }
+  }
+}
+component_probe_infos {
+  component_identity {
+    component_id: 2
+  }
+  probe_info {
+    probe_function_name: "storage_func"
+    probe_parameters {
+      name: "pi_model"
+      string_value: "model2"
+    }
+    probe_parameters {
+      name: "pi_vendor"
+      string_value: "vendor2"
+    }
+    probe_parameters {
+      name: "pi_sectors"
+      int_value: 201
+    }
+  }
+}
+component_probe_infos {
+  component_identity {
+    component_id: 3
+  }
+  probe_info {
+    probe_function_name: "storage_func"
+    probe_parameters {
+      name: "pi_vendor"
+      string_value: "vendor3"
+    }
+    probe_parameters {
+      name: "pi_sectors"
+      int_value: 300
+    }
+  }
+}

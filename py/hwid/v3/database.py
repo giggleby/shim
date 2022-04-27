@@ -386,7 +386,7 @@ class Database:
     return self._components.SetComponentStatus(comp_cls, comp_name, status)
 
   def SetLinkAVLProbeValue(self, comp_cls: str, comp_name: str,
-                           converter_identifier: str,
+                           converter_identifier: Optional[str],
                            probe_value_matched: bool):
     return self._components.SetLinkAVLProbeValue(
         comp_cls, comp_name, converter_identifier, probe_value_matched)
@@ -1279,14 +1279,15 @@ class Components:
         values, status, information)
 
   def SetLinkAVLProbeValue(self, comp_cls: str, comp_name: str,
-                           converter_identifier: str,
+                           converter_identifier: Optional[str],
                            probe_value_matched: bool):
     """Sets the tag of the component as !link_avl
 
     Args:
       comp_cls: The component class name.
       comp_name: The component name.
-      converter_identifier: The AVL converter identifier.
+      converter_identifier: The AVL converter identifier, None if no converter
+          is available.
       probe_value_matched: A bool indicating whether the probe value of the
           component matches the values in AVL.
     """

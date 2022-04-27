@@ -245,7 +245,8 @@ DBHWIDTouchCase = v3_contents_analyzer.HWIDSectionTouchCase
 
 class DBEditableSectionAnalysisReport(NamedTuple):
   fingerprint: str
-  new_hwid_db_contents: str
+  new_hwid_db_contents_external: hwid_db_data.HWIDDBData
+  new_hwid_db_contents_internal: Optional[hwid_db_data.HWIDDBData]
   validation_errors: List[DBValidationError]
   precondition_errors: List[DBPreconditionError]
   lines: List[DBEditableSectionLineAnalysisResult]

@@ -8,15 +8,27 @@ import re
 import tempfile
 import unittest
 
+from google.protobuf import text_format  # pylint: disable=import-error, no-name-in-module
+
+from cros.factory.hwid.service.appengine.data.converter import converter
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 _TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata')
+
+
+class _TestAVLAttrs(converter.AVLAttrs):
+  MODEL = 'pi_model'
+  VENDOR = 'pi_vendor'
+  SECTORS = 'pi_sectors'
 
 
 class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
@@ -112,6 +124,34 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
 
     self.assertEqual(analysis_report.validation_errors[0].code,
                      hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
+
+  def testAnalyzeDraftDbEditableSection_AVLProbeInfo(self):
+    helper_inst = self._LoadSSHelper('v3-golden-no-internal-tags.yaml')
+    editable_section = helper_inst.GetDBEditableSection()
+    collection = converter.ConverterCollection('storage')
+    collection.AddConverter(
+        converter.FieldNameConverter.FromFieldMap(
+            'test-converter1', {
+                _TestAVLAttrs.MODEL: 'model',
+                _TestAVLAttrs.VENDOR: 'vendor',
+                _TestAVLAttrs.SECTORS: 'sectors',
+            }))
+    avl_converter_manager = converter_utils.ConverterManager(
+        {'storage': collection})
+    avl_resource = self._LoadAVLResource('v3-golden-internal.prototxt')
+    report = helper_inst.AnalyzeDraftDBEditableSection(
+        draft_db_editable_section=editable_section,
+        derive_fingerprint_only=False, require_hwid_db_lines=False,
+        internal=True, avl_converter_manager=avl_converter_manager,
+        avl_resource=avl_resource)
+    converted_db = database.Database.LoadData(
+        report.new_hwid_db_contents_internal)
+
+    preproc_data, unused_helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden-internal-tags.yaml')
+    expected_db = database.Database.LoadData(preproc_data.raw_database_internal)
+
+    self.assertEqual(expected_db, converted_db)
 
   def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
     ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')
@@ -219,6 +259,13 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     unused_preproc_data, action = self._LoadPreprocDataAndSSHelper(
         testdata_name)
     return action
+
+  def _LoadAVLResource(self, resource_name):
+    resource_content = file_utils.ReadFile(
+        os.path.join(_TESTDATA_PATH, 'avl_resource', resource_name))
+    resource_msg = hwid_api_messages_pb2.HwidDbExternalResource()
+    text_format.Parse(resource_content, resource_msg)
+    return resource_msg
 
 
 if __name__ == '__main__':

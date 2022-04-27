@@ -11,7 +11,7 @@
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 9e78ba5501aa1550ffb045787a23bb9853b5fa64
+checksum: dcf688eb68533da89e9c6b71f4a06043505d34cd
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -147,6 +147,8 @@ encoded_fields:
       storage: storage_1
     2:
       storage: storage_2
+    3:
+      storage: storage_3
   firmware:
     0:
       hash_gbb: hash_gbb_0
@@ -327,6 +329,11 @@ components:
           vendor: vendor2
         information:
           comp_group: storage_0
+      storage_3:
+        values:
+          model: model3
+          sectors: '300'
+          vendor: vendor3
   hash_gbb:
     items:
       hash_gbb_0:

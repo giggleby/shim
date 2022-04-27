@@ -82,9 +82,7 @@ class HWIDV3SelfServiceActionHelper:
         suppress_support_status=suppress_support_status, internal=internal)
     return self.RemoveHeader(dumped_db)
 
-  # TODO(b/209362238): use AVL converter and AVL resource to generate
-  # AVL-embedded format of internal HWID DB.
-  def AnalyzeDraftDBEditableSection(  # pylint: disable=unused-argument
+  def AnalyzeDraftDBEditableSection(
       self, draft_db_editable_section: hwid_db_data.HWIDDBData,
       derive_fingerprint_only: bool, require_hwid_db_lines: bool,
       internal: bool = False,
@@ -92,13 +90,28 @@ class HWIDV3SelfServiceActionHelper:
       avl_resource: Optional[
           hwid_api_messages_pb2.HwidDbExternalResource] = None
   ) -> hwid_action.DBEditableSectionAnalysisReport:
-    curr_hwid_db_contents = self._preproc_data.raw_database
-    new_hwid_db_contents, fingerprint = _GetFullHWIDDBAndChangeFingerprint(
-        curr_hwid_db_contents, draft_db_editable_section)
+    curr_hwid_db_contents_external = self._preproc_data.raw_database
+    curr_hwid_db_contents_internal = self._preproc_data.raw_database_internal
+
+    new_hwid_db_contents_external, fingerprint = (
+        _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
+                                           draft_db_editable_section))
+    new_hwid_db_contents_internal = None
+
+    if internal:
+      new_hwid_db_contents_with_avl = avl_converter_manager.LinkAVL(
+          new_hwid_db_contents_external, avl_resource)
+      new_hwid_db_contents_internal = self.PatchHeader(
+          new_hwid_db_contents_with_avl)
+      new_hwid_db_contents = new_hwid_db_contents_internal
+      curr_hwid_db_contents = curr_hwid_db_contents_internal
+    else:
+      new_hwid_db_contents = new_hwid_db_contents_external
+      curr_hwid_db_contents = curr_hwid_db_contents_external
 
     report_factory = functools.partial(
         hwid_action.DBEditableSectionAnalysisReport, fingerprint,
-        new_hwid_db_contents)
+        new_hwid_db_contents_external, new_hwid_db_contents_internal)
 
     if derive_fingerprint_only:
       return report_factory([], [], [], {})
@@ -129,9 +142,7 @@ class HWIDV3SelfServiceActionHelper:
     internal_db = self._preproc_data.database
     tag_trimmed_raw_db = internal_db.DumpDataWithoutChecksum(
         suppress_support_status=True, internal=False)
-    editable_section = self.RemoveHeader(tag_trimmed_raw_db)
-    external_raw_db, unused_checksum = _GetFullHWIDDBAndChangeFingerprint(
-        self._preproc_data.raw_database, editable_section)
+    external_raw_db = self.PatchHeader(tag_trimmed_raw_db)
     checksum = database.Database.ChecksumForText(external_raw_db)
 
     builder.AddRegularFile(internal_db.project, external_raw_db.encode('utf-8'))
@@ -146,6 +157,15 @@ class HWIDV3SelfServiceActionHelper:
     # pylint: enable=protected-access
     builder.hwid_db_commit_id = self._preproc_data.hwid_db_commit_id
     return hwid_action.BundleInfo(builder.Build(), builder.FILE_NAME_EXT[1:])
+
+  def PatchHeader(
+      self,
+      hwid_db_content: hwid_db_data.HWIDDBData) -> hwid_db_data.HWIDDBData:
+    hwid_db_editable_section = self.RemoveHeader(hwid_db_content)
+    patched_hwid_db_content, unused_checksum = (
+        _GetFullHWIDDBAndChangeFingerprint(self._preproc_data.raw_database,
+                                           hwid_db_editable_section))
+    return patched_hwid_db_content
 
   @staticmethod
   def RemoveHeader(hwid_db_contents):

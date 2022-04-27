@@ -18,6 +18,7 @@ import logging
 import re
 import threading
 import time
+from typing import Optional
 
 from cros.factory.utils import type_utils
 
@@ -380,8 +381,8 @@ class InternalTags:
 class AVLProbeValue(collections.OrderedDict, InternalTags):
   """A class which holds the probe values linked with the ones on AVL"""
 
-  def __init__(self, identifier: str, probe_value_matched: bool, *args,
-               **kwargs):
+  def __init__(self, identifier: Optional[str], probe_value_matched: bool,
+               *args, **kwargs):
     super().__init__(*args, **kwargs)
     self._converter_identifier = identifier
     self._probe_value_matched = probe_value_matched
@@ -392,7 +393,7 @@ class AVLProbeValue(collections.OrderedDict, InternalTags):
             self.probe_value_matched == rhs.probe_value_matched)
 
   @property
-  def converter_identifier(self):
+  def converter_identifier(self) -> Optional[str]:
     return self._converter_identifier
 
   @property

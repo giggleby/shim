@@ -235,9 +235,10 @@ class SelfServiceHelper:
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
-          name=project, hwid_db_contents=analysis.new_hwid_db_contents,
+          name=project, hwid_db_contents=analysis.new_hwid_db_contents_external,
           commit_msg=commit_msg, reviewers=request.reviewer_emails,
-          cc_list=request.cc_emails, auto_approved=request.auto_approved)
+          cc_list=request.cc_emails, auto_approved=request.auto_approved,
+          hwid_db_contents_internal=analysis.new_hwid_db_contents_internal)
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')
@@ -310,11 +311,10 @@ class SelfServiceHelper:
         continue
 
       # Create commit
-      editable_section = action.RemoveHeader(
+      hwid_db_contents_internal = action.PatchHeader(
           db_builder.database.DumpDataWithoutChecksum(internal=True))
-      analysis = action.AnalyzeDraftDBEditableSection(
-          editable_section, derive_fingerprint_only=True,
-          require_hwid_db_lines=False)
+      hwid_db_contents_external = action.PatchHeader(
+          db_builder.database.DumpDataWithoutChecksum(internal=False))
       commit_msg = textwrap.dedent(f"""\
           ({int(time.time())}) {db_builder.database.project}: HWID Firmware \
 Info Update
@@ -324,24 +324,28 @@ Info Update
 
           %s
           """) % request.description
-      all_commits.append((firmware_record.model, analysis, commit_msg))
+      all_commits.append((firmware_record.model, hwid_db_contents_external,
+                          hwid_db_contents_internal, commit_msg))
 
     # Create CLs and rollback on exception
     resp = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClResponse()
     try:
-      for model_name, analysis, commit_msg in all_commits:
+      for model_name, external_db, internal_db, commit_msg in all_commits:
         try:
           cl_number = live_hwid_repo.CommitHWIDDB(
-              name=model_name, hwid_db_contents=analysis.new_hwid_db_contents,
+              name=model_name, hwid_db_contents=external_db,
               commit_msg=commit_msg, reviewers=request.reviewer_emails,
-              cc_list=request.cc_emails, auto_approved=request.auto_approved)
+              cc_list=request.cc_emails, auto_approved=request.auto_approved,
+              hwid_db_contents_internal=internal_db)
         except hwid_repo.HWIDRepoError:
           logging.exception(
               'Caught an unexpected exception while uploading a HWID CL.')
           raise protorpc_utils.ProtoRPCException(
               protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
         resp.commits[model_name].cl_number = cl_number
-        resp.commits[model_name].new_hwid_db_contents = editable_section
+        resp.commits[model_name].new_hwid_db_contents = (
+            v3_action_helper.HWIDV3SelfServiceActionHelper.RemoveHeader(
+                external_db))
     except Exception as ex:
       # Abandon all committed CLs on exception
       logging.exception('Rollback to abandon commited CLs.')

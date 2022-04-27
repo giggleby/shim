@@ -106,9 +106,9 @@ class SelfServiceHelperTest(unittest.TestCase):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionAnalysisReport('validation-token-value-2',
-                                                    'db data after change 2',
-                                                    [], [], [], {}))
+        hwid_action.DBEditableSectionAnalysisReport(
+            'validation-token-value-2', 'db data after change 2',
+            'db data after change 2 (internal)', [], [], [], {}))
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', new_hwid_db_editable_section='db data after change 1',
@@ -128,7 +128,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'validation-token-value-1', 'db data after change 1', [], [], [], {
+            'validation-token-value-1', 'db data after change 1',
+            'db data after change 1 (internal)', [], [], [], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
@@ -223,6 +224,10 @@ class SelfServiceHelperTest(unittest.TestCase):
                     seq_no=2, null_values=True, probe_value_alignment_status=(
                         _PVAlignmentStatusMsg.NO_PROBE_INFO)),
         }, resp.analysis_report.component_infos)
+    unused_args, kwargs = live_hwid_repo.CommitHWIDDB.call_args
+    self.assertEqual('db data after change 1', kwargs['hwid_db_contents'])
+    self.assertEqual('db data after change 1 (internal)',
+                     kwargs['hwid_db_contents_internal'])
 
   def testCreateHWIDDBEditableSectionChangeCL_ValidationExpired(self):
     """Test that the validation token becomes expired once the live HWID repo is
@@ -233,8 +238,8 @@ class SelfServiceHelperTest(unittest.TestCase):
       # fingerprint based on the contents of the HWID DB.
       action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
       action.AnalyzeDraftDBEditableSection.return_value = (
-          hwid_action.DBEditableSectionAnalysisReport(hwid_data.raw_db, '', [],
-                                                      [], [], {}))
+          hwid_action.DBEditableSectionAnalysisReport(hwid_data.raw_db, '', '',
+                                                      [], [], [], {}))
       return action
 
     self._modules.ConfigHWID('PROJ', '3', 'db data ver 1',
@@ -416,7 +421,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'fingerprint', 'new_db_content', [
+            'fingerprint', 'new_db_content', None, [
                 hwid_action.DBValidationError(
                     hwid_action.DBValidationErrorCode.SCHEMA_ERROR,
                     'some_schema_error')
@@ -448,7 +453,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     Part = hwid_action.DBEditableSectionLineAnalysisResult.Part
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'fingerprint', 'new_db_content', [], [], [
+            'fingerprint', 'new_db_content', None, [], [], [
                 hwid_action.DBEditableSectionLineAnalysisResult(
                     ModificationStatus.NOT_MODIFIED,
                     [Part(Part.Type.TEXT, 'text1')]),
@@ -670,7 +675,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'fingerprint', 'new_db_content', [], [], [], {
+            'fingerprint', 'new_db_content', None, [], [], [], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
