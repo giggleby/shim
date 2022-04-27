@@ -34,6 +34,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
+from cros.factory.utils import time_utils
 
 DOCKER_IMAGE_NAME = 'cros/factory_server'
 
@@ -449,7 +450,13 @@ class RPCDUTTest(UmpireDockerTestCase):
     report = b'Stub report content for testing.'
     self.assertTrue(self.proxy.UploadReport('test_serial', report))
     # Report uses GMT time
-    now = time.gmtime(time.time())
+    timezone = None
+    service_config = ServiceTest().ReadConfigTestdata(
+        'umpire_timezone_service.json')['services']
+    if 'umpire_timezone' in service_config:
+      if service_config['umpire_timezone']['active']:
+        timezone = service_config['umpire_timezone']['timezone']
+    now = time_utils.GetNowWithTimezone(timezone)
     report_pattern = os.path.join(
         self.umpire.umpire_dir, 'umpire_data', 'report',
         time.strftime('%Y%m%d', now), 'Unknown-test_serial-*.rpt.xz')

@@ -5,6 +5,7 @@
 """Time-related utilities."""
 
 import datetime
+import os
 import time
 from uuid import uuid4
 
@@ -105,3 +106,26 @@ def DatetimeToUnixtime(obj):
   if obj.tzinfo is not None:
     return (obj - EPOCH_ZERO_WITH_TZINFO).total_seconds()
   return (obj - EPOCH_ZERO).total_seconds()
+
+
+def GetNowWithTimezone(timezone=None):
+  """Returns the umpire current time with timezone.
+
+  Args:
+    timezone: type is integer, limit range from -12 to 12.
+
+  Returns:
+    When timezone is None, it will return current time with umpire server local
+    time zone. Otherwise it will return current time with a specific timezone.
+  """
+  if timezone is not None:
+    if timezone == 0:
+      new_timezone = 'UTC'
+    else:
+      new_timezone = f'{(timezone*-1):+d}'
+    os.environ['TZ'] = new_timezone
+    time.tzset()
+  elif 'TZ' in os.environ:
+    del os.environ['TZ']
+    time.tzset()
+  return time.localtime()

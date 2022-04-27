@@ -20,6 +20,8 @@ from cros.factory.umpire.server import umpire_env
 from cros.factory.umpire.server import umpire_rpc
 from cros.factory.umpire.server import utils
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
+from cros.factory.utils import time_utils
 from cros.factory.utils import webservice_utils
 
 
@@ -275,6 +277,16 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
     """Gets current time."""
     return time.gmtime(time.time())
 
+  def _GetTimezone(self):
+    """Gets current time with timezone."""
+    timezone = None
+    self_active_config = json_utils.LoadFile(
+        self.daemon.env.active_config_file)['services']
+    if 'umpire_timezone' in self_active_config:
+      if self_active_config['umpire_timezone']['active']:
+        timezone = self_active_config['umpire_timezone']['timezone']
+    return timezone
+
   def _SaveUpload(self, upload_type, file_name, content, mode='wb'):
     """Saves log file.
 
@@ -296,8 +308,11 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
     with file_utils.UnopenedTemporaryFile() as temp_path:
       # To support paths in file_name, the save_dir will be splitted after
       # concatenate to full save_path.
-      save_path = os.path.join(self.env.umpire_data_dir, upload_type,
-                               time.strftime('%Y%m%d', self._Now()), file_name)
+      save_path = os.path.join(
+          self.env.umpire_data_dir, upload_type,
+          time.strftime('%Y%m%d',
+                        time_utils.GetNowWithTimezone(self._GetTimezone())),
+          file_name)
       save_dir = os.path.dirname(os.path.abspath(save_path))
       file_utils.TryMakeDirs(save_dir)
       if mode == 'ab' and os.path.isfile(save_path):

@@ -1,0 +1,8 @@
+{
+  "timezone": {
+    "description": "Specific timezone.",
+    "type": "integer",
+    "minimum": -12,
+    "maximum": 12
+  }
+}
