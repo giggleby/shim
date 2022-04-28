@@ -23,8 +23,7 @@ def RunProbeFunction(category, probe_function_name, args):
   payload.AddComponentProbeStatement(probe_statement)
 
   with file_utils.UnopenedTemporaryFile() as config_file:
-    with open(config_file, 'w') as f:
-      f.write(payload.DumpToString())
+    file_utils.WriteFile(config_file, payload.DumpToString())
     output = process_utils.CheckOutput(
         [RUNTIME_PROBE_BIN, f'--config_file_path={config_file}', '--to_stdout'])
   res = json_utils.LoadStr(output)
