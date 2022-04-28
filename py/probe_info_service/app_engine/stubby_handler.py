@@ -12,6 +12,8 @@ from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import ps_storage_connector
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
+_ProbeInfoParsedResult = stubby_pb2.ProbeInfoParsedResult
+
 
 def GetProbeDataSourceComponentName(component_identity):
   return f'AVL_{component_identity.qual_id}'
@@ -285,14 +287,18 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
   def UpdateComponentProbeInfo(
       self, request: stubby_pb2.UpdateComponentProbeInfoRequest):
     response = stubby_pb2.UpdateComponentProbeInfoResponse()
+
     for comp_probe_info in request.component_probe_infos:
-      probe_info_parsed_result = self._probe_tool_manager.ValidateProbeInfo(
+      parsed_result = self._probe_tool_manager.ValidateProbeInfo(
           comp_probe_info.probe_info,
           not comp_probe_info.component_identity.qual_id)
-      response.probe_info_parsed_results.append(probe_info_parsed_result)
-      self._probe_info_storage_connector.SaveComponentProbeInfo(
-          comp_probe_info.component_identity.component_id,
-          comp_probe_info.component_identity.qual_id, comp_probe_info)
+      if parsed_result.result_type == _ProbeInfoParsedResult.ResultType.PASSED:
+        self._probe_info_storage_connector.SaveComponentProbeInfo(
+            comp_probe_info.component_identity.component_id,
+            comp_probe_info.component_identity.qual_id, comp_probe_info)
+
+      response.probe_info_parsed_results.append(parsed_result)
+
     return response
 
   def _GetQualProbeDataSourceFactory(self, qual_probe_info):
