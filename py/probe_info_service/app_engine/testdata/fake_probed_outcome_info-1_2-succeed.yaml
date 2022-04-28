@@ -13,7 +13,7 @@ probed_outcome_prototxt: '
   }
   probe_statement_metadatas: {
     component_name: "AVL_2"
-    fingerprint: "24d1820bd20551c8126dbe44c0abdafb2ccce1e7"
+    fingerprint: "2cd2506509d14a865e6296cc6869b27d1c22196c"
   }
   rp_invocation_result: {
     result_type: FINISHED
@@ -37,7 +37,7 @@ probe_config_payload: '
           "pci_vendor": [true, "hex", "!eq 0x01AB"],
           "pci_device": [true, "hex", "!eq 0x23CD"],
           "pci_class": [true, "hex", "!eq 0x012ABC"],
-          "sectors": [true, "int", "!eq 456"]
+          "nvme_model": [true, "str", "!eq PN_1234"]
         }
       }
     }

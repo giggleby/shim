@@ -64,7 +64,7 @@ class _ParamValueConverter:
     """
     which_one_of = probe_parameter.WhichOneof('value')
     if which_one_of not in (None, self._probe_param_field_name):
-      raise _IncompatibleError('unexpected type %r' % which_one_of)
+      raise _IncompatibleError(f'Unexpected type {which_one_of!r}.')
 
     return self._value_converter(
         getattr(probe_parameter, self._probe_param_field_name))
@@ -154,8 +154,8 @@ class ProbeFunc:
     try:
       for index, probe_param in enumerate(probe_params):
         if probe_param.name in ps_expected_fields:
-          raise _IncompatibleError('found duplicated probe parameter: %r' %
-                                   probe_param.name)
+          raise _IncompatibleError(
+              f'Found duplicate probe parameter: {probe_param.name}.')
         try:
           value = self._ConvertProbeParamToProbeStatementValue(probe_param)
         except ValueError as e:
@@ -168,8 +168,8 @@ class ProbeFunc:
       missing_param_names = (
           set(self._probe_param_infos.keys()) - set(ps_expected_fields.keys()))
       if missing_param_names and not allow_missing_params:
-        raise _IncompatibleError('missing probe parameters: %r' %
-                                 ', '.join(missing_param_names))
+        raise _IncompatibleError(
+            f'Missing probe parameters: {", ".join(missing_param_names)}.')
     except _IncompatibleError as e:
       return (
           ProbeInfoParsedResult(
@@ -214,13 +214,13 @@ class ProbeFunc:
     """
     probe_param_info = self._probe_param_infos.get(probe_param.name)
     if probe_param_info is None:
-      raise _IncompatibleError('unknown probe parameter: %r' % probe_param.name)
+      raise _IncompatibleError(f'Unknown probe parameter: {probe_param.name}.')
 
     try:
       value = probe_param_info.value_converter.ConvertValue(probe_param)
     except _IncompatibleError as e:
-      raise _IncompatibleError('got improper probe parameter %r: %r' %
-                               (probe_param.name, e))
+      raise _IncompatibleError(
+          f'Got improper probe parameter {probe_param.name!r}: {e}.') from e
 
     # Attempt to trigger the probe statement generator directly to see if
     # it's convertable.
@@ -251,7 +251,7 @@ def _GetAllProbeFuncs() -> typing.List[ProbeFunc]:
                  for n in ['mmc_manfid', 'mmc_name']}),
       ProbeFunc('storage', 'nvme_storage', {
           n: None
-          for n in ['pci_vendor', 'pci_device', 'pci_class', 'sectors']
+          for n in ['pci_vendor', 'pci_device', 'pci_class', 'nvme_model']
       }),
   ]
 
@@ -530,7 +530,7 @@ class ProbeToolManager:
         preproc_conclusion.probed_outcome.probe_statement_metadatas)
     if num_ps_metadatas != 1:
       raise PayloadInvalidError(
-          'Incorrect number of probe statements: %r.' % num_ps_metadatas)
+          f'Incorrect number of probe statements: {num_ps_metadatas}.')
 
     ps_metadata = preproc_conclusion.probed_outcome.probe_statement_metadatas[0]
     if ps_metadata.component_name != probe_data_source.component_name:
@@ -576,9 +576,8 @@ class ProbeToolManager:
     unknown_comp_names = set(
         ps_metadata_of_comp_name.keys()) - set(pds_of_comp_name.keys())
     if unknown_comp_names:
-      raise PayloadInvalidError(
-          'the probe result payload contains unknown components: %r' %
-          unknown_comp_names)
+      raise PayloadInvalidError('The probe result payload contains unknown '
+                                f'components: {unknown_comp_names}.')
     if preproc_conclusion.intrivial_error_msg:
       return DeviceProbeResultAnalyzedResult(
           intrivial_error_msg=preproc_conclusion.intrivial_error_msg,
@@ -668,21 +667,17 @@ class ProbeToolManager:
       probed_outcome = client_payload_pb2.ProbedOutcome()
       text_format.Parse(probe_result_payload, probed_outcome)
     except text_format.ParseError as e:
-      raise PayloadInvalidError('Unable to load and parse the content: %s.' % e)
+      raise PayloadInvalidError('Unable to load and parse the content.') from e
 
     rp_invocation_result = probed_outcome.rp_invocation_result
     if rp_invocation_result.result_type != rp_invocation_result.FINISHED:
       return _ProbedOutcomePreprocessConclusion(
-          probed_outcome,
-          ('The invocation of runtime_probe is abnormal: type=%r.' %
-           rp_invocation_result.result_type),
-          None)
+          probed_outcome, ('The invocation of runtime_probe is abnormal: '
+                           f'type={rp_invocation_result.result_type}.'), None)
     if rp_invocation_result.return_code != 0:
       return _ProbedOutcomePreprocessConclusion(
-          probed_outcome,
-          ('The return code of runtime probe is non-zero: %r.' %
-           rp_invocation_result.return_code),
-          None)
+          probed_outcome, ('The return code of runtime probe is non-zero: '
+                           f'{rp_invocation_result.return_code}.'), None)
 
     known_component_names = set(
         m.component_name for m in probed_outcome.probe_statement_metadatas)
@@ -693,12 +688,11 @@ class ProbeToolManager:
       for category_probed_results in probed_result.values():
         for probed_component in category_probed_results:
           if probed_component['name'] not in known_component_names:
-            raise ValueError('unexpected component: %r' % (probed_component,))
+            raise ValueError(f'Unexpected component: {probed_component}.')
           probed_components.append(probed_component['name'])
     except Exception as e:
       return _ProbedOutcomePreprocessConclusion(
-          probed_outcome, 'The output of runtime_probe is invalid: %r.' % e,
-          None)
+          probed_outcome, f'The output of runtime_probe is invalid: {e}.', None)
 
     return _ProbedOutcomePreprocessConclusion(
         probed_outcome, None, probed_components=probed_components)
