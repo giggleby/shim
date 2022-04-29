@@ -515,7 +515,14 @@ def Cr50Finalize(options):
   elif options.rma_mode:
     logging.warning('RMA mode. Skip setting RO hash.')
   else:
-    Cr50SetROHash(options)
+    # Since the hash range includes GBB flags, we need to calculate hash with
+    # the same GBB flags as in release/shipping state.
+    gbb_flags_in_factory = GetGooftool(options).GetGBBFlags()
+    GetGooftool(options).ClearGBBFlags()
+    try:
+      Cr50SetROHash(options)
+    finally:
+      GetGooftool(options).SetGBBFlags(gbb_flags_in_factory)
   Cr50WriteFlashInfo(options)
   Cr50DisableFactoryMode(options)
 
