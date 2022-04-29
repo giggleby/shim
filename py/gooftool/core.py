@@ -550,6 +550,22 @@ class Gooftool:
       error += ['\t' + config for config in release_configs]
       raise Error('\n'.join(error))
 
+  def GetGBBFlags(self):
+    result = self._util.shell('/usr/share/vboot/bin/get_gbb_flags.sh')
+    if result.success:
+      for line in result.stdout.split('\n'):
+        match = re.match(r'.*GBB set flags: (\S*)', line)
+        if match:
+          return int(match.group(1), 16)
+
+    raise Error('Failed getting GBB flags %s' % result.stdout)
+
+  def SetGBBFlags(self, flags):
+    result = self._util.shell(
+        f'/usr/share/vboot/bin/set_gbb_flags.sh {flags} 2>&1')
+    if not result.success:
+      raise Error('Failed setting GBB flags %s' % result.stdout)
+
   def ClearGBBFlags(self):
     """Zero out the GBB flags, in preparation for transition to release state.
 
@@ -557,9 +573,7 @@ class Gooftool:
     for factory/development.  See "futility gbb --flags" for details.
     """
 
-    result = self._util.shell('/usr/share/vboot/bin/set_gbb_flags.sh 0 2>&1')
-    if not result.success:
-      raise Error('Failed setting GBB flags: %s' % result.stdout)
+    self.SetGBBFlags(0)
 
   def EnableReleasePartition(self, release_rootfs=None):
     """Enables a release image partition on the disk.
