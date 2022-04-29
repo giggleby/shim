@@ -503,7 +503,8 @@ def ClearGBBFlags(options):
   No GBB flags are set in release/shipping state, but they are useful
   for factory/development.  See "futility gbb --flags" for details.
   """
-
+  gbb_flags_in_factory = GetGooftool(options).GetGBBFlags()
+  event_log.Log(f'GBB flags {gbb_flags_in_factory} is removed')
   GetGooftool(options).ClearGBBFlags()
   event_log.Log('clear_gbb_flags')
 
