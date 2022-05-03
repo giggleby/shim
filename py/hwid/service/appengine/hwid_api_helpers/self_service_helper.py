@@ -14,6 +14,7 @@ from google.protobuf import json_format
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
+from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine import hwid_repo
@@ -314,8 +315,7 @@ Info Update
           raise protorpc_utils.ProtoRPCException(
               protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
         resp.commits[model_name].cl_number = cl_number
-        resp.commits[model_name].new_hwid_db_contents = (
-            analysis.new_hwid_db_contents)
+        resp.commits[model_name].new_hwid_db_contents = editable_section
     except Exception as ex:
       # Abandon all committed CLs on exception
       logging.exception('Rollback to abandon commited CLs.')
@@ -541,6 +541,9 @@ Info Update
       raise protorpc_utils.ProtoRPCException(
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
 
+    action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper
+    editable_section = action_helper_cls.RemoveHeader(db_content)
+
     commit_msg = textwrap.dedent(f"""\
         ({int(time.time())}) {project}: Initialize HWID Config
 
@@ -562,5 +565,5 @@ Info Update
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
     resp = hwid_api_messages_pb2.CreateHwidDbInitClResponse()
     resp.commit.cl_number = cl_number
-    resp.commit.new_hwid_db_contents = db_content
+    resp.commit.new_hwid_db_contents = editable_section
     return resp

@@ -8,6 +8,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.hwid.service.appengine import hwid_action
+from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
@@ -624,16 +625,18 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
     live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
-    checksum_updater = v3_builder.ChecksumUpdater()
+
+    builder = v3_builder.DatabaseBuilder(project='proj', image_name='EVT')
+    db_content = builder.database.DumpDataWithoutChecksum(internal=True)
+    action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper
+    expected_db_content = action_helper_cls.RemoveHeader(db_content)
 
     req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
         project='proj', board='board', phase='EVT', bug_number=12345)
     resp = self._ss_helper.CreateHWIDDBInitCL(req)
 
     self.assertEqual(resp.commit.cl_number, 123)
-    self.assertEqual(
-        resp.commit.new_hwid_db_contents,
-        checksum_updater.ReplaceChecksum(resp.commit.new_hwid_db_contents))
+    self.assertEqual(expected_db_content, resp.commit.new_hwid_db_contents)
 
   def testCreateHWIDDBInitCL_ProjectExists(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
