@@ -216,8 +216,9 @@ class SelfServiceHelper:
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
-          request.project, analysis.new_hwid_db_contents, commit_msg,
-          request.reviewer_emails, request.cc_emails, request.auto_approved)
+          name=request.project, hwid_db_contents=analysis.new_hwid_db_contents,
+          commit_msg=commit_msg, reviewers=request.reviewer_emails,
+          cc_list=request.cc_emails, auto_approved=request.auto_approved)
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')
@@ -556,8 +557,9 @@ Info Update
                                             f'v3/{project}')
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
-          project, db_content, commit_msg, request.reviewer_emails,
-          request.cc_emails, request.auto_approved, new_metadata)
+          name=project, hwid_db_contents=db_content, commit_msg=commit_msg,
+          reviewers=request.reviewer_emails, cc_list=request.cc_emails,
+          auto_approved=request.auto_approved, update_metadata=new_metadata)
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')

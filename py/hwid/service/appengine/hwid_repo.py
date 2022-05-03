@@ -5,7 +5,7 @@
 
 import collections
 import logging
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Optional, Sequence, Tuple
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -55,6 +55,8 @@ class HWIDRepoError(Exception):
 
 
 class HWIDRepo:
+
+  INTERNAL_DB_NAME_SUFFIX = '.internal'
 
   def __init__(self, repo, repo_url, repo_branch):
     """Constructor.
@@ -112,8 +114,11 @@ class HWIDRepo:
       raise HWIDRepoError(
           f'failed to load the HWID DB (name={name}): {ex}') from None
 
-  def CommitHWIDDB(self, name, hwid_db_contents, commit_msg, reviewers, cc_list,
-                   auto_approved, update_metadata=None):
+  def CommitHWIDDB(self, name: str, hwid_db_contents: str, commit_msg: str,
+                   reviewers: Sequence[str], cc_list: Sequence[str],
+                   auto_approved: bool,
+                   update_metadata: Optional[HWIDDBMetadata] = None,
+                   hwid_db_contents_internal: Optional[str] = None):
     """Commit an HWID DB to the repo.
 
     Args:
@@ -125,6 +130,7 @@ class HWIDRepo:
       cc_list: List of emails of CC's.
       auto_approved: A bool indicating if this CL should be auto-approved.
       update_metadata: A HWIDDBMetadata object to update for the project.
+      hwid_db_contents_internal: The contents of the HWID DB in internal format.
 
     Returns:
       A numeric ID of the created CL.
@@ -146,12 +152,21 @@ class HWIDRepo:
       raise ValueError(f'invalid HWID DB name: {name}') from None
     new_files.append(
         (path, git_util.NORMAL_FILE_MODE, hwid_db_contents.encode('utf-8')))
+
+    if not hwid_db_contents_internal:
+      hwid_db_contents_internal = hwid_db_contents
+
+    internal_path = self.InternalDBPath(path)
+    new_files.append((internal_path, git_util.NORMAL_FILE_MODE,
+                      hwid_db_contents_internal.encode('utf-8')))
+
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
       author = f'chromeoshwid <{author_email}>'
       change_id, cl_number = git_util.CreateCL(
-          self._repo_url, git_util.GetGerritAuthCookie(), self._repo_branch,
-          new_files, author, author, commit_msg, reviewers=reviewers,
+          git_url=self._repo_url, auth_cookie=git_util.GetGerritAuthCookie(),
+          branch=self._repo_branch, new_files=new_files, author=author,
+          committer=author, commit_msg=commit_msg, reviewers=reviewers,
           cc=cc_list, auto_approved=auto_approved, repo=self._repo)
       if cl_number is None:
         logging.warning(
@@ -176,6 +191,10 @@ class HWIDRepo:
       return _ParseMetadata(raw_metadata)
     except Exception as ex:
       raise HWIDRepoError(f'invalid {_PROJECTS_YAML_PATH}: {ex}') from None
+
+  @classmethod
+  def InternalDBPath(cls, path):
+    return f'{path}{cls.INTERNAL_DB_NAME_SUFFIX}'
 
 
 HWIDDBCLInfo = git_util.CLInfo
