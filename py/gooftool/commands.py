@@ -12,6 +12,7 @@ provides all of the Google required test functionality and must be run
 on each device as part of the assembly process.
 """
 
+import functools
 import logging
 import os
 import pipes
@@ -97,6 +98,8 @@ def Command(cmd_name, *args, **kwargs):
   --waive_list or --skip_list option.
   """
   def Decorate(fun):
+
+    @functools.wraps(fun)
     def CommandWithWaiveSkipCheck(options):
       waive_list = vars(options).get('waive_list', [])
       skip_list = vars(options).get('skip_list', [])
