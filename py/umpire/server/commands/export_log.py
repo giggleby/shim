@@ -7,6 +7,7 @@
 See LogExporter comments for usage.
 """
 
+from collections import defaultdict
 import datetime
 import os
 
@@ -35,42 +36,60 @@ class LogExporter:
       return size * 1024**3
     raise ValueError('This is not a valid unit')
 
-  def CompressFilesFromListToPath(self, src_dir, dst_path, filenames):
-    cmd = ['tar', '-cjf', dst_path, '-C', src_dir]
-    cmd.extend(filenames)
+  def CompressFilesFromListToPath(self, src_dir_with_files, dst_path):
+    cmd = ['tar', '-cjf', dst_path]
+    for src_dir, file_list in src_dir_with_files.items():
+      cmd.append('-C')
+      cmd.append(src_dir)
+      cmd.extend(file_list)
     process_utils.Spawn(cmd, check_call=True, log=True)
 
-  def CompressFilesFromList(self, index, date, src_dir, dst_dir, filenames):
+  def CompressFilesFromList(self, index, date, src_dir_with_files, dst_dir):
     tar_file = '{}-{}.tar.bz2'.format(date, index)
     dst_path = os.path.join(dst_dir, tar_file)
-    self.CompressFilesFromListToPath(src_dir, dst_path, filenames)
+    self.CompressFilesFromListToPath(src_dir_with_files, dst_path)
     return tar_file
 
-  def CompressFilesLimitedMaxSize(
-      self, date, src_dir, dst_dir, max_archive_size):
-    filenames = []
+  def CompressFilesLimitedMaxSize(self, start_date, end_date, root_dir, dst_dir,
+                                  max_archive_size):
+    file_list = []
     current_archive_size = 0
     tar_files = []
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    date_str = start_date_str + '-' + end_date_str
+    src_dir_with_files = defaultdict(list)
+    for date in self.DateRange(start_date, end_date):
+      sub_str = date.strftime('%Y%m%d')
+      src_dir = os.path.join(root_dir, sub_str)
+      if not os.path.isdir(src_dir) or not os.listdir(src_dir):
+        continue
+      for (root, unused_dirs, src_files) in os.walk(src_dir):
+        for src_filename in src_files:
+          src_filepath = os.path.join(root, src_filename)
+          relpath = os.path.relpath(src_filepath, src_dir)
+          file_size = os.path.getsize(src_filepath)
+          if current_archive_size + file_size > max_archive_size:
+            if not file_list:
+              raise common.UmpireError(
+                  'Failed to export: Your file size large than maximum archive'
+                  'size, please enlarge the maximum archive size.')
+            tar_files.append(
+                self.CompressFilesFromList(
+                    len(tar_files), date_str, src_dir_with_files, dst_dir))
+            current_archive_size = file_size
+            file_list = [relpath]
+            src_dir_with_files = defaultdict(list)
+            src_dir_with_files[src_dir] = [relpath]
+          else:
+            current_archive_size += file_size
+            file_list.append(relpath)
+            src_dir_with_files[src_dir].append(relpath)
 
-    for (root, unused_dirs, files) in os.walk(src_dir):
-      for filename in files:
-        filepath = os.path.join(root, filename)
-        relpath = os.path.relpath(filepath, src_dir)
-        file_size = os.path.getsize(filepath)
-        if current_archive_size + file_size > max_archive_size:
-          if not filenames:
-            continue
-          tar_files.append(self.CompressFilesFromList(
-              len(tar_files), date, src_dir, dst_dir, filenames))
-          current_archive_size = file_size
-          filenames = [relpath]
-        else:
-          current_archive_size += file_size
-          filenames.append(relpath)
-
-    if filenames:
-      tar_files.append(self.CompressFilesFromList(
-          len(tar_files), date, src_dir, dst_dir, filenames))
+    if file_list:
+      tar_files.append(
+          self.CompressFilesFromList(
+              len(tar_files), date_str, src_dir_with_files, dst_dir))
 
     return tar_files
 
@@ -106,7 +125,7 @@ class LogExporter:
       if log_type == 'csv':
         compressed_file_name = 'csv.tar.bz2'
         dst_path = os.path.join(dst_dir, compressed_file_name)
-        self.CompressFilesFromListToPath(umpire_data_dir, dst_path, [sub_dir])
+        self.CompressFilesFromListToPath({umpire_data_dir: [sub_dir]}, dst_path)
 
         if os.path.isfile(dst_path):
           return {
@@ -123,19 +142,13 @@ class LogExporter:
       if log_type in ('report', 'log'):
         start_date = datetime.datetime.strptime(start_date_str, '%Y%m%d').date()
         end_date = datetime.datetime.strptime(end_date_str, '%Y%m%d').date()
+        root_dir = os.path.join(umpire_data_dir, sub_dir)
         tar_files_list = []
         no_logs = True
-        for date in self.DateRange(start_date, end_date):
-          date_str = date.strftime('%Y%m%d')
-          src_dir = os.path.join(umpire_data_dir,
-                                 sub_dir,
-                                 date_str)
-          if not os.path.isdir(src_dir) or not os.listdir(src_dir):
-            continue
+        if os.path.isdir(root_dir) and os.listdir(root_dir):
           no_logs = False
-          tar_files = self.CompressFilesLimitedMaxSize(
-              date_str, src_dir, dst_dir, split_bytes)
-          tar_files_list.extend(tar_files)
+          tar_files_list = self.CompressFilesLimitedMaxSize(
+              start_date, end_date, root_dir, dst_dir, split_bytes)
         if no_logs:
           messages.append('no {}s for {} ~ {}'.format(log_type,
                                                       start_date,
