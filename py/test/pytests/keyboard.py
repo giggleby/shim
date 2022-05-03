@@ -347,7 +347,9 @@ class KeyboardTest(test_case.TestCase):
     event_id = match.group(0)
     file_content = file_utils.ReadFile(
         f'/sys/class/input/event{event_id}/device/device/function_row_physmap')
-    scancodes = [int(s, 16) for s in file_content.strip().split()]
+    scancodes = [
+        int(s, 16) for s in file_content.strip().split() if int(s, 16) != 0
+    ]
     replacement_keymap = {}
     if len(scancodes) > 10:
       session.console.warning(
