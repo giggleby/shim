@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import tempfile
+from typing import Optional
 
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -30,9 +31,10 @@ class FakeMemcacheAdapter:
 class FakeHWIDPreprocData(hwid_preproc_data.HWIDPreprocData):
   CACHE_VERSION = '1'
 
-  def __init__(self, project, raw_db):
+  def __init__(self, project, raw_db, raw_db_internal):
     super().__init__(project)
     self.raw_db = raw_db
+    self.raw_db_internal = raw_db_internal
 
 
 class FakeHWIDInstanceFactory(hwid_action_manager.InstanceFactory):
@@ -53,8 +55,9 @@ class FakeHWIDInstanceFactory(hwid_action_manager.InstanceFactory):
       return registered_hwid_action_factory(hwid_data)
     raise hwid_action_manager.ProjectUnavailableError()
 
-  def CreateHWIDPreprocData(self, metadata, raw_db):
-    return FakeHWIDPreprocData(metadata.project, raw_db)
+  def CreateHWIDPreprocData(self, metadata, raw_db,
+                            raw_db_internal: Optional[str] = None):
+    return FakeHWIDPreprocData(metadata.project, raw_db, raw_db_internal)
 
   def SetHWIDActionForProject(self, project, hwid_action, hwid_action_factory):
     self._hwid_actions[project] = hwid_action

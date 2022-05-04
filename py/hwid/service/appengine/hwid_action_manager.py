@@ -3,12 +3,19 @@
 # found in the LICENSE file.
 
 import logging
+from typing import Optional, Sequence, Set
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_v2_action
 from cros.factory.hwid.service.appengine import hwid_v3_action
+from cros.factory.hwid.service.appengine import memcache_adapter
+
+# Shorter identifiers to type definition.
+_HWIDDBData = hwid_db_data.HWIDDBData
+_HWIDDBMetadata = hwid_db_data.HWIDDBMetadata
+_HWIDPreprocData = hwid_preproc_data.HWIDPreprocData
 
 
 class ProjectNotFoundError(KeyError):
@@ -25,8 +32,9 @@ class ProjectUnavailableError(RuntimeError):
 
 class InstanceFactory:
 
-  def CreateHWIDPreprocData(self, metadata,
-                            raw_db) -> hwid_preproc_data.HWIDPreprocData:
+  def CreateHWIDPreprocData(
+      self, metadata: _HWIDDBMetadata, raw_db: _HWIDDBData,
+      raw_db_internal: Optional[_HWIDDBData] = None) -> _HWIDPreprocData:
     """Creates the correct instance of `HWIDPreprocData` for the given DB info.
 
     Args:
@@ -43,7 +51,7 @@ class InstanceFactory:
     """
     raise NotImplementedError
 
-  def CreateHWIDAction(self, hwid_data) -> hwid_action.HWIDAction:
+  def CreateHWIDAction(self, hwid_data: _HWIDDBData) -> hwid_action.HWIDAction:
     """Creates the correct instance of `HWIDAction` for the given DB data.
 
     Args:
@@ -62,21 +70,23 @@ class InstanceFactory:
 
 class InstanceFactoryImpl(InstanceFactory):
 
-  def CreateHWIDPreprocData(self, metadata, raw_db):
+  def CreateHWIDPreprocData(
+      self, metadata: _HWIDDBMetadata, raw_db: _HWIDDBData,
+      raw_db_internal: Optional[_HWIDDBData] = None) -> _HWIDPreprocData:
     if metadata.version == '2':
       logging.debug('Processing as version 2 file.')
       return hwid_preproc_data.HWIDV2PreprocData(metadata.project, raw_db)
 
     if metadata.version == '3':
       logging.debug('Processing as version 3 file.')
-      return hwid_preproc_data.HWIDV3PreprocData(metadata.project, raw_db,
-                                                 metadata.commit)
+      return hwid_preproc_data.HWIDV3PreprocData(
+          metadata.project, raw_db, raw_db_internal, metadata.commit)
 
     raise ProjectNotSupportedError(
         f'Project {metadata.project!r} has invalid version '
         f'{metadata.version!r}.')
 
-  def CreateHWIDAction(self, hwid_data):
+  def CreateHWIDAction(self, hwid_data: _HWIDPreprocData):
     if isinstance(hwid_data, hwid_preproc_data.HWIDV2PreprocData):
       return hwid_v2_action.HWIDV2Action(hwid_data)
 
@@ -90,12 +100,14 @@ class InstanceFactoryImpl(InstanceFactory):
 class HWIDActionManager:
   """The canonical portal to get HWID action instances for given projects."""
 
-  def __init__(self, hwid_db_data_manager, mem_adapter, instance_factory=None):
+  def __init__(self, hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
+               mem_adapter: memcache_adapter.MemcacheAdapter,
+               instance_factory: Optional[InstanceFactory] = None):
     self._hwid_db_data_manager = hwid_db_data_manager
     self._memcache_adapter = mem_adapter
     self._instance_factory = instance_factory or InstanceFactoryImpl()
 
-  def GetHWIDAction(self, project) -> hwid_action.HWIDAction:
+  def GetHWIDAction(self, project: str) -> hwid_action.HWIDAction:
     """Retrieves the HWID action for a given project, caching as necessary.
 
     Args:
@@ -129,7 +141,7 @@ class HWIDActionManager:
 
     return self._instance_factory.CreateHWIDAction(hwid_preproc_data_inst)
 
-  def _LoadHWIDPreprocData(self, metadata: hwid_db_data.HWIDDBMetadata):
+  def _LoadHWIDPreprocData(self, metadata: _HWIDDBMetadata) -> _HWIDPreprocData:
     """Load preprocessed HWID DB from the backend datastore.
 
     Args:
@@ -149,12 +161,19 @@ class HWIDActionManager:
       raise ProjectUnavailableError(str(ex)) from ex
 
     try:
+      raw_hwid_yaml_internal = self._hwid_db_data_manager.LoadHWIDDB(
+          metadata, internal=True)
+    except hwid_db_data.HWIDDBNotFoundError as ex:
+      raise ProjectUnavailableError(str(ex)) from ex
+
+    try:
       return self._instance_factory.CreateHWIDPreprocData(
-          metadata, raw_hwid_yaml)
+          metadata, raw_hwid_yaml, raw_hwid_yaml_internal)
     except hwid_preproc_data.PreprocHWIDError as ex:
       raise ProjectUnavailableError(str(ex)) from ex
 
-  def ReloadMemcacheCacheFromFiles(self, limit_models=None):
+  def ReloadMemcacheCacheFromFiles(
+      self, limit_models: Optional[Sequence[str]] = None):
     """For every known project, load its info into the cache.
 
     Args:
@@ -189,7 +208,7 @@ class HWIDActionManager:
     """
     self._memcache_adapter.ClearAll()
 
-  def _GetHWIDPreprocDataFromCache(self, project):
+  def _GetHWIDPreprocDataFromCache(self, project: str) -> _HWIDPreprocData:
     """Get the HWID file data from memcache.
 
     Args:
@@ -207,23 +226,23 @@ class HWIDActionManager:
     if not hwid_preproc_data_inst:
       logging.info('Memcache read miss %s.', project)
       return None
-    if (not isinstance(hwid_preproc_data_inst,
-                       hwid_preproc_data.HWIDPreprocData) or
+    if (not isinstance(hwid_preproc_data_inst, _HWIDPreprocData) or
         hwid_preproc_data_inst.is_out_of_date):
       logging.info('Memcache read miss %s: got legacy cache value.', project)
       return None
     return hwid_preproc_data_inst
 
-  def _SaveHWIDPreprocDataToCache(self, project, hwid_preproc_data_inst):
+  def _SaveHWIDPreprocDataToCache(self, project: str,
+                                  hwid_preproc_data_inst: _HWIDPreprocData):
     self._memcache_adapter.Put(project, hwid_preproc_data_inst)
 
-  def ListProjects(self):
+  def ListProjects(self) -> Set[str]:
     """Lists all available projects in a set."""
     metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata()
     return {m.project
             for m in metadata_list}
 
 
-def _NormalizeProjectString(string):
+def _NormalizeProjectString(string: str) -> Optional[str]:
   """Normalizes a string to account for things like case."""
   return string.strip().upper() if string else None

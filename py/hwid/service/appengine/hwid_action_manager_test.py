@@ -16,9 +16,10 @@ from cros.factory.hwid.service.appengine import test_utils
 class HWIDPreprocDataForTest(hwid_preproc_data.HWIDPreprocData):
   CACHE_VERSION = '1'
 
-  def __init__(self, project, raw_db, hwid_action_inst):
+  def __init__(self, project, raw_db, raw_db_internal, hwid_action_inst):
     super().__init__(project)
     self.raw_db = raw_db
+    self.raw_db_internal = raw_db_internal
     self.hwid_action = hwid_action_inst
 
   @classmethod
@@ -32,7 +33,7 @@ class HWIDActionForTest(hwid_action.HWIDAction):
     self._uid = uid
 
   def __eq__(self, rhs):
-    return isinstance(rhs, HWIDActionForTest) and self._uid == rhs._uid
+    return isinstance(rhs, HWIDActionForTest) and self._uid == rhs._uid  # pylint: disable=protected-access
 
   def __ne__(self, rhs):
     return not self.__eq__(rhs)
@@ -50,12 +51,14 @@ class InstanceFactoryForTest(hwid_action_manager.InstanceFactory):
       self, project, hwid_action_inst: Optional[HWIDActionForTest] = None):
     self._known_project_to_hwid_action[project] = hwid_action_inst
 
-  def CreateHWIDPreprocData(self, metadata, raw_db):
+  def CreateHWIDPreprocData(self, metadata, raw_db,
+                            raw_db_internal: Optional[str] = None):
     try:
       hwid_action_inst = self._known_project_to_hwid_action[metadata.project]
     except KeyError:
       raise hwid_action_manager.ProjectNotSupportedError
-    return HWIDPreprocDataForTest(metadata.project, raw_db, hwid_action_inst)
+    return HWIDPreprocDataForTest(metadata.project, raw_db, raw_db_internal,
+                                  hwid_action_inst)
 
   def CreateHWIDAction(self, hwid_data):
     hwid_action_inst = (
@@ -119,7 +122,7 @@ class HWIDActionManagerTest(unittest.TestCase):
 
     self.assertEqual(actual_hwid_action, expected_hwid_action)
 
-  def testGetHWIDAction_SuccessWithCatchHit(self):
+  def testGetHWIDAction_SuccessWithCacheHit(self):
     expected_hwid_action = self._RegisterProjectWithAction('PROJ', 'theuid')
     self._hwid_action_manager.GetHWIDAction('proj')
 
@@ -127,9 +130,9 @@ class HWIDActionManagerTest(unittest.TestCase):
 
     self.assertEqual(actual_hwid_action, expected_hwid_action)
     self.assertEqual(self._instance_factory.CreateHWIDPreprocData.call_count, 1)
-    self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 1)
+    self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 2)
 
-  def testGetHWIDAction_SuccessWithCatchHitLegacyData(self):
+  def testGetHWIDAction_SuccessWithCacheHitLegacyData(self):
     self._RegisterProjectWithAction('PROJ', 'theuid')
     self._hwid_action_manager.ReloadMemcacheCacheFromFiles()
     HWIDPreprocDataForTest.FlipCacheVersion()
@@ -155,19 +158,17 @@ class HWIDActionManagerTest(unittest.TestCase):
 
     self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
         limit_models=['PROJ1', 'PROJ2'])
-    load_db_base_call_cnt = self._hwid_db_data_manager.LoadHWIDDB.call_count
 
     # If `ReloadMemcacheCacheFromFiles()` works, `GetHWIDAction()` should
     # hit the cache for PROJ1 and PROJ2.
+    self._hwid_db_data_manager.LoadHWIDDB.reset_mock()
     self._hwid_action_manager.GetHWIDAction('proj1')
     self._hwid_action_manager.GetHWIDAction('proj2')
-    self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count,
-                     load_db_base_call_cnt)
+    self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 0)
     # Then since we set `limit_models` to PROJ1 and PROJ2 only, `GetHWIDAction`
     # should load the HWID DB data from the datastore for PROJ3.
     self._hwid_action_manager.GetHWIDAction('proj3')
-    self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count,
-                     load_db_base_call_cnt + 1)
+    self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 2)
 
   def _RegisterProjectWithAction(self, project,
                                  action_uid: Optional[str] = None):

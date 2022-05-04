@@ -85,9 +85,10 @@ class HWIDV2PreprocData(HWIDPreprocData):
 class HWIDV3PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv3 data."""
 
-  CACHE_VERSION = '3'
+  CACHE_VERSION = '4'
 
-  def __init__(self, project: str, raw_hwid_yaml: str, hwid_db_commit_id: str):
+  def __init__(self, project: str, raw_hwid_yaml: str,
+               raw_hwid_yaml_internal: str, hwid_db_commit_id: str):
     """Constructor.
 
     Requires one of hwid_file, hwid_yaml or hwid_data.
@@ -95,23 +96,37 @@ class HWIDV3PreprocData(HWIDPreprocData):
     Args:
       project: The project name
       raw_hwid_yaml: the raw YAML string of HWID data.
+      raw_hwid_yaml_internal: the internal format of HWID data.
       hwid_db_commit_id: the commit id of the HWIDB data.
 
     Raises:
       PreprocHWIDError: Fails to load the given HWIDv3 DB contents.
     """
     super().__init__(project)
-    self.raw_database = raw_hwid_yaml
+    self._raw_database = raw_hwid_yaml
+    self._raw_database_internal = raw_hwid_yaml_internal
     self._hwid_db_commit_id = hwid_db_commit_id
     try:
-      self.database = v3_database.Database.LoadData(raw_hwid_yaml,
-                                                    expected_checksum=None)
+      self._database = v3_database.Database.LoadData(raw_hwid_yaml_internal,
+                                                     expected_checksum=None)
     except v3_common.HWIDException as ex:
       raise PreprocHWIDError(f'fail to load HWIDv3 DB: {ex}') from ex
 
   @property
   def hwid_db_commit_id(self):
     return self._hwid_db_commit_id
+
+  @property
+  def raw_database(self):
+    return self._raw_database
+
+  @property
+  def raw_database_internal(self):
+    return self._raw_database_internal
+
+  @property
+  def database(self):
+    return self._database
 
 
 def _NormalizeString(string):

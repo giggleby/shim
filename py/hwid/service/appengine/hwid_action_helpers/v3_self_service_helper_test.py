@@ -233,6 +233,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     preproc_data = hwid_preproc_data.HWIDV3PreprocData(
         'CHROMEBOOK',
         file_utils.ReadFile(os.path.join(_TESTDATA_PATH, testdata_name)),
+        file_utils.ReadFile(os.path.join(_TESTDATA_PATH, testdata_name)),
         commit_id)
     helper_inst = ss_helper.HWIDV3SelfServiceActionHelper(preproc_data)
     return preproc_data, helper_inst
