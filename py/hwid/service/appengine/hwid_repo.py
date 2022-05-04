@@ -88,7 +88,7 @@ class HWIDRepo:
   def hwid_db_commit_id(self) -> str:
     return self._repo.head().decode()
 
-  def LoadHWIDDBByName(self, name):
+  def LoadHWIDDBByName(self, name: str, internal: bool = False):
     """Reads out the specific HWID DB content.
 
     Args:
@@ -105,6 +105,8 @@ class HWIDRepo:
     name = name.upper()
     try:
       path = self._hwid_db_metadata_of_name[name].path
+      if internal:
+        path = self.InternalDBPath(path)
     except KeyError:
       raise ValueError(f'invalid HWID DB name: {name}') from None
     try:

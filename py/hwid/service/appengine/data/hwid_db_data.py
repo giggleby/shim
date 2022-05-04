@@ -32,6 +32,9 @@ class HWIDDBMetadata(ndb.Model):
   def _get_kind(cls):
     return 'HwidMetadata'
 
+  def has_internal_format(self) -> bool:
+    return self.version == '3'
+
 
 # In the datastore, we store the raw HWID DB payload in string.
 HWIDDBData = str
@@ -101,11 +104,13 @@ class HWIDDBDataManager:
         raise TooManyHWIDDBError(f'too many projects present for {project!r}')
       return q.get()
 
-  def LoadHWIDDB(self, metadata: HWIDDBMetadata) -> HWIDDBData:
+  def LoadHWIDDB(self, metadata: HWIDDBMetadata,
+                 internal: bool = False) -> HWIDDBData:
     """Load HWID DB data from a file.
 
     Args:
       metadata: The HWIDDBMetadata object of the target HWID DB.
+      internal: True if internal format is required.
 
     Returns:
       The raw HWID DB payload in string.
@@ -115,10 +120,12 @@ class HWIDDBDataManager:
           invalid version.
     """
     try:
-      logging.debug('Reading file %s from live path.', metadata.path)
-      raw_hwid_yaml = self._fs_adapter.ReadFile(self._LivePath(metadata.path))
+      logging.debug('Reading file of project %s%s from live path.',
+                    metadata.project, '(internal)' if internal else '')
+      path = self._LivePath(metadata.path, internal=internal)
+      raw_hwid_yaml = self._fs_adapter.ReadFile(path)
     except Exception as e:
-      logging.exception('Missing HWID file: %r', metadata.path)
+      logging.exception('Missing HWID file: %r', path)
       raise HWIDDBNotFoundError(
           'HWID file missing for the requested project: %r' % e)
     return raw_hwid_yaml
@@ -182,12 +189,15 @@ class HWIDDBDataManager:
           if delete_missing:
             hwid_metadata.key.delete()
             self._fs_adapter.DeleteFile(self._LivePath(hwid_metadata.path))
+            if hwid_metadata.has_internal_format():
+              self._fs_adapter.DeleteFile(
+                  self._LivePath(hwid_metadata.path, internal=True))
         else:
           new_data = hwid_db_metadata_of_name[hwid_metadata.project]
           hwid_metadata.version = str(new_data.version)
           hwid_metadata.board = new_data.board_name
           hwid_metadata.commit = hwid_db_commit_id
-          self._ActivateFile(live_hwid_repo, new_data.name, hwid_metadata.path)
+          self._ActivateProjectFile(live_hwid_repo, hwid_metadata)
           hwid_metadata.put()
 
     for project in files_to_create:
@@ -198,12 +208,13 @@ class HWIDDBDataManager:
       with self._ndb_connector.CreateClientContextWithGlobalCache():
         metadata = HWIDDBMetadata(board=board, version=version, path=path,
                                   project=project, commit=hwid_db_commit_id)
-        self._ActivateFile(live_hwid_repo, project, path)
+        self._ActivateProjectFile(live_hwid_repo, metadata)
         metadata.put()
 
   def RegisterProjectForTest(self, board: str, project: str, version: str,
                              hwid_db: Optional[HWIDDBData],
-                             commit_id: str = 'TEST-COMMIT-ID'):
+                             commit_id: str = 'TEST-COMMIT-ID',
+                             hwid_db_internal: Optional[HWIDDBData] = None):
     """Append a HWID data into the datastore.
 
     Args:
@@ -212,6 +223,7 @@ class HWIDDBDataManager:
       version: The HWID version.
       hwid_db: The HWID DB contents in string.
       commit_id: The commit id of the HWID DB.
+      hwid_db_internal: The internal HWID DB contents in string.
     """
     try:
       metadata = self.GetHWIDDBMetadataOfProject(project)
@@ -227,16 +239,33 @@ class HWIDDBDataManager:
         metadata.put()
     if hwid_db is not None:
       self._fs_adapter.WriteFile(self._LivePath(metadata.path), hwid_db)
+      if hwid_db_internal is None:
+        hwid_db_internal = hwid_db
+      self._fs_adapter.WriteFile(
+          self._LivePath(metadata.path, internal=True), hwid_db_internal)
 
   def CleanAllForTest(self):
     with self._ndb_connector.CreateClientContext():
       for key in HWIDDBMetadata.query().iter(keys_only=True):
         self._fs_adapter.DeleteFile(self._LivePath(key.get().path))
+        self._fs_adapter.DeleteFile(
+            self._LivePath(key.get().path, internal=True))
         key.delete()
 
-  def _LivePath(self, file_id):
-    return 'live/%s' % file_id
+  def _LivePath(self, file_id: str, internal: bool = False):
+    path = f'live/{file_id}'
+    if internal:
+      return hwid_repo.HWIDRepo.InternalDBPath(path)
+    return path
 
-  def _ActivateFile(self, live_hwid_repo, hwid_db_name, live_file_id):
+  def _ActivateProjectFile(self, live_hwid_repo: hwid_repo.HWIDRepo,
+                           hwid_metadata: HWIDDBMetadata):
+    hwid_db_name = hwid_metadata.project
+    live_file_id = hwid_metadata.path
     project_data = live_hwid_repo.LoadHWIDDBByName(hwid_db_name)
     self._fs_adapter.WriteFile(self._LivePath(live_file_id), project_data)
+    if hwid_metadata.has_internal_format():
+      project_data_internal = live_hwid_repo.LoadHWIDDBByName(
+          hwid_db_name, internal=True)
+      self._fs_adapter.WriteFile(
+          self._LivePath(live_file_id, internal=True), project_data_internal)

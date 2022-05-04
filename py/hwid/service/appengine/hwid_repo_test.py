@@ -86,10 +86,15 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     self._AddFilesToFakeRepo({
         'projects.yaml': _SERVER_BOARDS_DATA,
         'SBOARD': b'sboard data',
+        'SBOARD.internal': b'sboard data (internal)',
     })
 
     actual_hwid_db = self._hwid_repo.LoadHWIDDBByName('SBOARD')
-    self.assertCountEqual(actual_hwid_db, 'sboard data')
+    self.assertEqual('sboard data', actual_hwid_db)
+
+    actual_hwid_db_internal = self._hwid_repo.LoadHWIDDBByName(
+        'SBOARD', internal=True)
+    self.assertEqual('sboard data (internal)', actual_hwid_db_internal)
 
   def testLoadHWIDDBByName_InvalidName(self):
     self._AddFilesToFakeRepo({

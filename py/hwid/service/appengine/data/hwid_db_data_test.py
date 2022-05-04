@@ -99,13 +99,19 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
   def testLoadHWIDDB(self):
     sample_hwid_db_contents = 'sample data'
-    self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
-                                                     sample_hwid_db_contents)
+    sample_hwid_db_contents_internal = 'sample data internal'
+    self.hwid_db_data_manager.RegisterProjectForTest(
+        'BOARDA', 'PROJECTA', '3', sample_hwid_db_contents,
+        hwid_db_internal=sample_hwid_db_contents_internal)
     metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTA')
 
     fetched_hwid_db_contents = self.hwid_db_data_manager.LoadHWIDDB(metadata)
+    self.assertEqual(sample_hwid_db_contents, fetched_hwid_db_contents)
 
-    self.assertEqual(fetched_hwid_db_contents, sample_hwid_db_contents)
+    fetched_hwid_db_contents_internal = self.hwid_db_data_manager.LoadHWIDDB(
+        metadata, internal=True)
+    self.assertEqual(sample_hwid_db_contents_internal,
+                     fetched_hwid_db_contents_internal)
 
   def testUpdateProjectContent(self):
     self.hwid_db_data_manager.RegisterProjectForTest(
@@ -163,7 +169,9 @@ class HWIDDBDataManagerTest(unittest.TestCase):
               path: v3/PROJECTC
         """).encode('utf-8')),
         ('v3/PROJECTA', 0o100644, b'updated data'),
+        ('v3/PROJECTA.internal', 0o100644, b'updated data (internal)'),
         ('v3/PROJECTC', 0o100644, b'newly added data'),
+        ('v3/PROJECTC.internal', 0o100644, b'newly added data (internal)'),
     ], tree=dulwich_objects.Tree())
     repo.do_commit(message=b'the head commit', tree=tree.id)
     expected_commit_id = repo.head().decode()
@@ -188,7 +196,13 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(metadata_a), 'updated data')
     self.assertEqual(
+        self.hwid_db_data_manager.LoadHWIDDB(metadata_a, internal=True),
+        'updated data (internal)')
+    self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(metadata_c), 'newly added data')
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadHWIDDB(metadata_c, internal=True),
+        'newly added data (internal)')
 
     with self.assertRaises(hwid_db_data.HWIDDBNotFoundError):
       self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTB')
