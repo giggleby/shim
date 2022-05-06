@@ -38,6 +38,14 @@ _MAX_OPENED_HWID_DB_CL_AGE = datetime.timedelta(
 _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(days=7)
 
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
+_PROBE_VALUE_ALIGNMENT_STATUS = {
+    hwid_action.DBHWIDPVAlignmentStatus.NO_PROBE_INFO:
+        hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case.NO_PROBE_INFO,
+    hwid_action.DBHWIDPVAlignmentStatus.ALIGNED:
+        hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case.ALIGNED,
+    hwid_action.DBHWIDPVAlignmentStatus.NOT_ALIGNED:
+        hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case.NOT_ALIGNED,
+}
 
 _APPROVAL_CASE = {
     hwid_api_messages_pb2.ClAction.ApprovalCase.APPROVED: (
@@ -91,13 +99,17 @@ def _ConvertCompInfoToMsg(
     diff = comp_info.diff_prev
     comp_info_msg.diff_prev.CopyFrom(
         hwid_api_messages_pb2.DiffStatus(
-            unchanged=diff.unchanged,
-            name_changed=diff.name_changed,
+            unchanged=diff.unchanged, name_changed=diff.name_changed,
             support_status_changed=diff.support_status_changed,
             values_changed=diff.values_changed,
             prev_comp_name=diff.prev_comp_name,
             prev_support_status=diff.prev_support_status,
-        ))
+            probe_value_alignment_status_changed=(
+                diff.probe_value_alignment_status_changed),
+            prev_probe_value_alignment_status=_PROBE_VALUE_ALIGNMENT_STATUS[
+                diff.prev_probe_value_alignment_status]))
+  comp_info_msg.probe_value_alignment_status = _PROBE_VALUE_ALIGNMENT_STATUS[
+      comp_info.probe_value_alignment_status]
   return comp_info_msg
 
 

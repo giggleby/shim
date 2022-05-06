@@ -235,6 +235,7 @@ DBEditableSectionLineAnalysisResult = v3_contents_analyzer.DBLineAnalysisResult
 DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
 DBHWIDComponentDiffStatus = v3_contents_analyzer.DiffStatus
 DBHWIDComponentNameInfo = v3_contents_analyzer.ComponentNameInfo
+DBHWIDPVAlignmentStatus = v3_contents_analyzer.ProbeValueAlignmentStatus
 
 
 class DBEditableSectionAnalysisReport(NamedTuple):

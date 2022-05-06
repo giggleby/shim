@@ -191,10 +191,21 @@ message ComponentsResponse {
   Status status = 3;
 }
 
+message ProbeValueAlignmentStatus {
+  enum Case {
+    CASE_UNSPECIFIED = 0;
+
+    NO_PROBE_INFO = 1;
+    ALIGNED = 2;
+    NOT_ALIGNED = 3;
+  }
+}
+
 // A message that summarizes the component change.
 message DiffStatus {
   // True if the component is unchanged.  This value should be equals to
-  // not (name_changed or support_status_changed or values_changed).
+  // not (name_changed or support_status_changed or values_changed or
+  // probe_value_alignment_status_changed).
   bool unchanged = 1;
   // True if the name is changed.
   bool name_changed = 2;
@@ -206,6 +217,10 @@ message DiffStatus {
   string prev_comp_name = 5;
   // The support status before this change.
   string prev_support_status = 6;
+  // True if the probe value alignment (w/ the probe info from P.I.S.) status
+  // has changed.
+  bool probe_value_alignment_status_changed = 7;
+  ProbeValueAlignmentStatus.Case prev_probe_value_alignment_status = 8;
 }
 
 message NameChangedComponent {
@@ -512,6 +527,11 @@ message HwidDbEditableSectionAnalysisReport {
     DiffStatus diff_prev = 9;
     // True if this component is a null one (default component).
     bool null_values = 10;
+    // If the component probe info is not provided in the context, i.e. during
+    // the RPC AnalyzeHwidDbEditableSectionChange, this value will be preserved
+    // from the previous status for existing components, and will be unspecified
+    // for new components.
+    ProbeValueAlignmentStatus.Case probe_value_alignment_status = 11;
   }
 
   // A list of support status values that is available no matter the AVL entry

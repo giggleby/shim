@@ -41,6 +41,18 @@ class Error(NamedTuple):
   message: str
 
 
+class ProbeValueAlignmentStatus(enum.Enum):
+  NO_PROBE_INFO = enum.auto()
+  ALIGNED = enum.auto()
+  NOT_ALIGNED = enum.auto()
+
+  @classmethod
+  def FromProbeValues(cls, values):
+    if not isinstance(values, rule.AVLProbeValue):
+      return cls.NO_PROBE_INFO
+    return cls.ALIGNED if values.probe_value_matched else cls.NOT_ALIGNED
+
+
 class DiffStatus(NamedTuple):
   """Diff stats with the corresponding component in the previous DB."""
   unchanged: bool
@@ -49,6 +61,8 @@ class DiffStatus(NamedTuple):
   values_changed: bool
   prev_comp_name: str
   prev_support_status: str
+  probe_value_alignment_status_changed: bool
+  prev_probe_value_alignment_status: ProbeValueAlignmentStatus
 
 
 ComponentNameInfo = name_pattern_adapter.NameInfo
@@ -99,6 +113,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   null_values: bool
   diff_prev: Optional[DiffStatus]
   link_avl: bool
+  probe_value_alignment_status: ProbeValueAlignmentStatus
 
 
 class ChangeAnalysis(NamedTuple):
@@ -380,7 +395,7 @@ class ContentsAnalyzer:
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
                 comp.extracted_name_info, comp.expected_seq_no,
                 comp_name_with_correct_seq_no, comp.null_values, comp.diff_prev,
-                comp.link_avl))
+                comp.link_avl, comp.probe_value_alignment_status))
 
     if require_hwid_db_lines:
       if db_contents_patcher is None:
@@ -402,6 +417,7 @@ class ContentsAnalyzer:
     null_values: bool
     diff_prev: Optional[DiffStatus]
     link_avl: bool
+    probe_value_alignment_status: ProbeValueAlignmentStatus
 
   def _ExtractHWIDComponents(self) -> Dict[str, List['_HWIDComponentMetadata']]:
     ret = {}
@@ -425,6 +441,8 @@ class ContentsAnalyzer:
             name_pattern_adapter.SEQ_SEP)
         null_values = comp_info.values is None
         link_avl = isinstance(comp_info.values, rule.AVLProbeValue)
+        curr_alignment_status = (
+            ProbeValueAlignmentStatus.FromProbeValues(comp_info.values))
 
         diffstatus = None
         if prev_item:
@@ -432,12 +450,23 @@ class ContentsAnalyzer:
           prev_support_status = prev_comp_info.status
           name_changed = prev_comp_name != comp_name
           support_status_changed = prev_support_status != comp_info.status
-          values_changed = prev_comp_info.values != comp_info.values
-          unchanged = not (name_changed or support_status_changed or
-                           values_changed)
-          diffstatus = DiffStatus(unchanged, name_changed,
-                                  support_status_changed, values_changed,
-                                  prev_comp_name, prev_support_status)
+          # Compare the values instead of the values instance.
+          values_changed = not dict.__eq__(prev_comp_info.values,
+                                           comp_info.values)
+
+          prev_alignment_status = (
+              ProbeValueAlignmentStatus.FromProbeValues(prev_comp_info.values))
+          probe_value_alignment_status_changed = (
+              curr_alignment_status != prev_alignment_status)
+
+          unchanged = not any([
+              name_changed, support_status_changed, values_changed,
+              probe_value_alignment_status_changed
+          ])
+          diffstatus = DiffStatus(
+              unchanged, name_changed, support_status_changed, values_changed,
+              prev_comp_name, prev_support_status,
+              probe_value_alignment_status_changed, prev_alignment_status)
           is_newly_added = False
         else:
           is_newly_added = True
@@ -446,7 +475,8 @@ class ContentsAnalyzer:
             self._HWIDComponentMetadata(
                 comp_name, comp_info.status, noseq_comp_name,
                 actual_seq if sep else None, name_info, expected_seq,
-                is_newly_added, null_values, diffstatus, link_avl))
+                is_newly_added, null_values, diffstatus, link_avl,
+                curr_alignment_status))
     return ret
 
   @classmethod
