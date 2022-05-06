@@ -54,24 +54,13 @@ class DiffStatus(NamedTuple):
 ComponentNameInfo = name_pattern_adapter.NameInfo
 
 
-class NameChangedComponentInfo(NamedTuple):
-  """A data structure to collect the component info of added/updated names."""
-  comp_name: str
-  comp_name_info: Optional[ComponentNameInfo]
-  status: str
-  null_values: bool
-  diff_prev: Optional[DiffStatus]
-  link_avl: bool
-
-
 class ValidationReport(NamedTuple):
   errors: List[Error]
   warnings: List[str]
-  name_changed_components: Dict[str, List[NameChangedComponentInfo]]
 
   @classmethod
   def CreateEmpty(cls):
-    return cls([], [], {})
+    return cls([], [])
 
 
 class DBLineAnalysisResult(NamedTuple):
@@ -270,7 +259,7 @@ class ContentsAnalyzer:
 
   def _ValidateChangeOfComponents(self, report: ValidationReport):
     """Check if modified (created) component names are valid."""
-    for comp_cls, comps in self._ExtractHWIDComponents().items():
+    for comps in self._ExtractHWIDComponents().values():
       for comp in comps:
         if comp.extracted_seq_no is not None:
           expected_comp_name = ''.join([
@@ -284,11 +273,6 @@ class ContentsAnalyzer:
                     'Invalid component name with sequence number, please '
                     f'modify it from {comp.name!r} to {expected_comp_name!r}'
                     '.'))
-        if comp.is_newly_added:
-          report.name_changed_components.setdefault(comp_cls, []).append(
-              NameChangedComponentInfo(comp.name, comp.extracted_name_info,
-                                       comp.status, comp.null_values,
-                                       comp.diff_prev, comp.link_avl))
 
   def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
                       db_placeholder_options):

@@ -52,10 +52,6 @@ class HwidValidator:
     Args:
       hwid_config_contents: the current HWID config as a string.
       prev_hwid_config_contents: the previous HWID config as a string.
-    Returns:
-      A tuple (project, new_comps) where new_comps is a dict in the form of
-      {category: [(ciq, qid, status),...]} which collects created/updated
-      component names in the ${category}_${cid}_${qid} pattern.
     """
     expected_checksum = database.Database.ChecksumForText(hwid_config_contents)
     analyzer = contents_analyzer.ContentsAnalyzer(
@@ -77,4 +73,3 @@ class HwidValidator:
       if errors:
         raise ValidationError(
             [Error(ErrorCode.CONTENTS_ERROR, err) for err in errors])
-    return db.project, report_of_change.name_changed_components

@@ -231,7 +231,6 @@ DBValidationError = v3_contents_analyzer.Error
 DBValidationErrorCode = v3_contents_analyzer.ErrorCode
 DBPreconditionError = v3_contents_analyzer.Error
 DBPreconditionErrorCode = v3_contents_analyzer.ErrorCode
-DBNameChangedComponentInfo = v3_contents_analyzer.NameChangedComponentInfo
 DBEditableSectionLineAnalysisResult = v3_contents_analyzer.DBLineAnalysisResult
 DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
 DBHWIDComponentDiffStatus = v3_contents_analyzer.DiffStatus

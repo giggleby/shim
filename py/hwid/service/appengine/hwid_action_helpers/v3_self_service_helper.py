@@ -107,20 +107,12 @@ class HWIDV3SelfServiceActionHelper:
 
   def GetHWIDBundleResourceInfo(
       self, fingerprint_only) -> hwid_action.BundleResourceInfo:
+    # TODO: Remove entire method along with GetHwidBundleResourceInfo API
     fingerprint = hashlib.sha1(
         self._preproc_data.raw_database.encode('utf-8')).hexdigest()
     if fingerprint_only:
       return hwid_action.BundleResourceInfo(fingerprint, None)
-    curr_hwid_db_contents = self._preproc_data.raw_database
-    analyzer = contents_analyzer.ContentsAnalyzer(curr_hwid_db_contents, None,
-                                                  None)
-    analysis = analyzer.AnalyzeChange(None, False)
-    hwid_components = {
-        key: component
-        for (key, component) in analysis.hwid_components.items()
-        if component.link_avl
-    }
-    return hwid_action.BundleResourceInfo(fingerprint, hwid_components)
+    return hwid_action.BundleResourceInfo(fingerprint, {})
 
   def BundleHWIDDB(self):
     builder = bundle_builder.BundleBuilder()

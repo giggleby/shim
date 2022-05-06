@@ -22,7 +22,6 @@ DB_COMP_BEFORE_PATH = os.path.join(_TEST_DATA_PATH,
 DB_COMP_AFTER_GOOD_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_good_change.yaml')
 
-_NameChangedComponentInfo = contents_analyzer.NameChangedComponentInfo
 _ComponentNameInfo = contents_analyzer.ComponentNameInfo
 
 
@@ -48,22 +47,7 @@ class ContentsAnalyzerTest(unittest.TestCase):
     curr_db_contents = file_utils.ReadFile(DB_COMP_AFTER_GOOD_PATH)
     inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
                                               prev_db_contents)
-    report = inst.ValidateChange()
-    self.assertEqual(
-        {
-            'display_panel': [
-                _NameChangedComponentInfo(
-                    comp_name='display_panel_123_456',
-                    comp_name_info=_ComponentNameInfo.from_comp(
-                        123, 456), status='supported', null_values=False,
-                    diff_prev=None, link_avl=False),
-                _NameChangedComponentInfo(
-                    comp_name='display_panel_subcomp_234',
-                    comp_name_info=_ComponentNameInfo.from_subcomp(234),
-                    status='supported', null_values=False, diff_prev=None,
-                    link_avl=False),
-            ]
-        }, report.name_changed_components)
+    inst.ValidateChange()
 
   def test_AnalyzeChange_PreconditionErrors(self):
     prev_db_contents = 'some invalid text for HWID DB.'

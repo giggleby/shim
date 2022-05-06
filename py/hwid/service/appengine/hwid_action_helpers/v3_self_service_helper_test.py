@@ -121,29 +121,6 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     resource_info2 = ss_helper2.GetHWIDBundleResourceInfo(True)
     self.assertNotEqual(resource_info1.fingerprint, resource_info2.fingerprint)
 
-  def testGetHWIDBundleResourceInfo_FilterLinkAvl(self):
-    helper = self._LoadSSHelper('v3-golden-internal-tags.yaml')
-
-    resource_info = helper.GetHWIDBundleResourceInfo(False)
-    comp_name_info_cls = hwid_action.DBHWIDComponentNameInfo
-    self.assertEqual(
-        {
-            'x@@@@component-storage-storage_0@@y@':
-                hwid_action.DBHWIDComponentAnalysisResult(
-                    comp_cls='storage', comp_name='storage_0',
-                    support_status='supported', is_newly_added=True,
-                    comp_name_info=comp_name_info_cls.from_comp(0), seq_no=1,
-                    comp_name_with_correct_seq_no=None, null_values=False,
-                    diff_prev=None, link_avl=True),
-            'x@@@@component-storage-storage_2@@y@':
-                hwid_action.DBHWIDComponentAnalysisResult(
-                    comp_cls='storage', comp_name='storage_2',
-                    support_status='supported', is_newly_added=True,
-                    comp_name_info=comp_name_info_cls.from_comp(2), seq_no=3,
-                    comp_name_with_correct_seq_no=None, null_values=False,
-                    diff_prev=None, link_avl=True)
-        }, resource_info.hwid_components)
-
   def testBundleHWIDDB_BundleInstallationWorks_NoInternalTags(self):
     data, helper_inst = self._LoadPreprocDataAndSSHelper(
         'v3-golden-no-internal-tags.yaml')

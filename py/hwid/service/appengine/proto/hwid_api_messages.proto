@@ -335,8 +335,7 @@ message HwidDbEditableSectionChangeValidationResult {
   // detected by the validation process.
   repeated Error errors = 1;
 
-  // Name-changed components per category.
-  map<string, NameChangedComponents> name_changed_components_per_category = 3;
+  reserved 2, 3;
 }
 
 message ValidateHwidDbEditableSectionChangeRequest {
@@ -554,8 +553,8 @@ message GetHwidBundleResourceInfoResponse {
 
 message CreateHwidBundleRequest {
   string project = 1;
-  string bundle_creation_token = 2;
-  HwidBundleResource resource = 3;
+  string bundle_creation_token = 2  [deprecated = true];
+  HwidBundleResource resource = 3  [deprecated = true];
 }
 
 message CreateHwidBundleResponse {

@@ -50,49 +50,6 @@ class HWIDStatusConversionError(Exception):
   `hwid_api_messages_pb2.SupportStatus`."""
 
 
-def ConvertToNameChangedComponent(name_changed_comp_info):
-  """Converts an instance of `NameChangedComponentInfo` to
-  hwid_api_messages_pb2.NameChangedComponent message."""
-  support_status_descriptor = (
-      hwid_api_messages_pb2.NameChangedComponent.SupportStatus.DESCRIPTOR)
-  status_val = support_status_descriptor.values_by_name.get(
-      name_changed_comp_info.status.upper())
-  if status_val is None:
-    raise HWIDStatusConversionError(
-        f'Unknown status: {name_changed_comp_info.status!r}.')
-
-  proto_fields = {
-      'support_status': status_val.number,
-      'component_name': name_changed_comp_info.comp_name,
-  }
-
-  if name_changed_comp_info.diff_prev:
-    diff_prev = name_changed_comp_info.diff_prev
-    proto_fields['diff_prev'] = hwid_api_messages_pb2.DiffStatus(
-        unchanged=diff_prev.unchanged, name_changed=diff_prev.name_changed,
-        support_status_changed=diff_prev.support_status_changed,
-        values_changed=diff_prev.values_changed,
-        prev_comp_name=diff_prev.prev_comp_name,
-        prev_support_status=diff_prev.prev_support_status)
-
-  if name_changed_comp_info.comp_name_info:
-    proto_fields.update({
-        'has_cid_qid':
-            True,
-        'cid':
-            name_changed_comp_info.comp_name_info.cid,
-        'qid':
-            name_changed_comp_info.comp_name_info.qid or 0,
-        'avl_info':
-            hwid_api_messages_pb2.AvlInfo(
-                cid=name_changed_comp_info.comp_name_info.cid,
-                qid=name_changed_comp_info.comp_name_info.qid or 0,
-                is_subcomp=name_changed_comp_info.comp_name_info.is_subcomp),
-    })
-
-  return hwid_api_messages_pb2.NameChangedComponent(**proto_fields)
-
-
 def _ConvertValidationErrorCode(code):
   ValidationResultMessage = (
       hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult)

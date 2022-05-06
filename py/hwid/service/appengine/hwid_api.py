@@ -6,10 +6,7 @@
 This file is also the place that all the binding is done for various components.
 """
 
-import logging
 from typing import Optional
-
-from cros.chromeoshwid import update_checksum
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
@@ -208,7 +205,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
-  def ValidateConfig(self, request):
+  def ValidateConfig(self, request):  # pylint: disable=unused-argument
     """Validate the config.
 
     Args:
@@ -218,21 +215,13 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       A ValidateConfigAndUpdateResponse containing an error message if an error
       occurred.
     """
-    hwid_config_contents = request.hwid_config_contents
-
-    try:
-      _hwid_validator.Validate(hwid_config_contents)
-    except hwid_validator.ValidationError as e:
-      logging.exception('Validation failed')
-      return _MapValidationException(
-          e, hwid_api_messages_pb2.ValidateConfigResponse)
-
     return hwid_api_messages_pb2.ValidateConfigResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS)
+        status=hwid_api_messages_pb2.Status.SERVER_ERROR,
+        error_message='deprecated API')
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
-  def ValidateConfigAndUpdateChecksum(self, request):
+  def ValidateConfigAndUpdateChecksum(self, request):  # pylint: disable=unused-argument
     """Validate the config and update its checksum.
 
     Args:
@@ -243,36 +232,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       config or an error message.  Also the cid, qid, status will also be
       responded if the component name follows the naming rule.
     """
-
-    hwid_config_contents = request.hwid_config_contents
-    prev_hwid_config_contents = request.prev_hwid_config_contents
-
-    updated_contents = update_checksum.ReplaceChecksum(hwid_config_contents)
-
-    try:
-      model, new_hwid_comps = _hwid_validator.ValidateChange(
-          updated_contents, prev_hwid_config_contents)
-
-    except hwid_validator.ValidationError as e:
-      logging.exception('Validation failed')
-      return _MapValidationException(
-          e, hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse)
-
-    resp = hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-        status=hwid_api_messages_pb2.Status.SUCCESS,
-        new_hwid_config_contents=updated_contents, model=model)
-
-    for comp_cls, comps in new_hwid_comps.items():
-      entries = resp.name_changed_components_per_category.get_or_create(
-          comp_cls).entries
-      try:
-        entries.extend(
-            ss_helper.ConvertToNameChangedComponent(c) for c in comps)
-      except ss_helper.HWIDStatusConversionError as ex:
-        return hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
-            status=hwid_api_messages_pb2.Status.BAD_REQUEST,
-            error_message=str(ex))
-    return resp
+    return hwid_api_messages_pb2.ValidateConfigAndUpdateChecksumResponse(
+        status=hwid_api_messages_pb2.Status.SERVER_ERROR,
+        error_message='deprecated API')
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
