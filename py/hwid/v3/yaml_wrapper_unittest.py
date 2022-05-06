@@ -141,26 +141,31 @@ class LinkAVLTest(unittest.TestCase):
         textwrap.dedent('''\
             !link_avl
             converter: converter1
+            probe_value_matched: false
             original_values: {key: value}
             '''))
     self.assertIsInstance(obj, rule.AVLProbeValue)
     self.assertDictEqual({'key': 'value'}, obj)
     self.assertEqual('converter1', obj.converter_identifier)
+    self.assertFalse(obj.probe_value_matched)
 
   def testAVLProbeValue_Dump(self):
-    obj = rule.AVLProbeValue('converter', {'key': 'value'})
+    obj = rule.AVLProbeValue('converter', False, {'key': 'value'})
     dump_str = yaml.safe_dump(obj)
     self.assertEqual('{key: value}\n', dump_str)
 
   def testAVLProbeValue_DumpInternal(self):
-    obj = rule.AVLProbeValue('converter', {'key': 'value'})
-    dump_str = yaml.safe_dump(obj, internal=True)
-    self.assertEqual(
-        textwrap.dedent('''\
-            !link_avl
-            converter: converter
-            original_values: {key: value}
-            '''), dump_str)
+    obj1 = rule.AVLProbeValue('converter', True, {'key': 'value'})
+    dump_str = yaml.safe_dump(obj1, internal=True)
+    # Current version of PyYaml does not support sort_keys=False feature in
+    # represent_mapping method, so this test only ensures that loaded obj is the
+    # same as the original one.
+    obj2 = yaml.safe_load(dump_str)
+
+    self.assertIsInstance(obj2, rule.AVLProbeValue)
+    self.assertDictEqual(obj2, obj1)
+    self.assertEqual('converter', obj2.converter_identifier)
+    self.assertTrue(obj2.probe_value_matched)
 
 
 @rule.RuleFunction(['string'])

@@ -350,14 +350,17 @@ class _LinkAVLYAMLTagHandler(_HWIDV3YAMLTagHandler):
     existing_values = _DefaultMappingHandler.YAMLConstructor(
         loader, node, deep=True)
     converter_identifier = existing_values['converter']
+    probe_value_matched = existing_values['probe_value_matched']
     values = existing_values['original_values']
-    return cls.TARGET_CLASS(converter_identifier, values)
+    return cls.TARGET_CLASS(converter_identifier, probe_value_matched, values)
 
   @classmethod
   def YAMLRepresenter(cls, dumper, data):
     if cls.IsDumperInternal(dumper):
-      return dumper.represent_mapping(cls.YAML_TAG, {
-          'converter': data.converter_identifier,
-          'original_values': Dict(data)
-      })
-    return dumper.represent_mapping('tag:yaml.org,2002:map', data)
+      return dumper.represent_mapping(
+          cls.YAML_TAG, {
+              'converter': data.converter_identifier,
+              'probe_value_matched': data.probe_value_matched,
+              'original_values': Dict(data)
+          })
+    return dumper.represent_dict(data.items())

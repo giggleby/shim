@@ -1,4 +1,4 @@
-checksum: 902d6e3083d780e79ae8a7640374d324fad7b08b
+checksum: ad46b6fdc4710d287b13556bf9cb2fe35cfdf6e6
 
 project: CHROMEBOOK
 
@@ -55,7 +55,7 @@ components:
       comp5: {values: {zzz: xxx}}
   cls4:
     items:
-      comp6: {values: !link_avl {converter: converter1, original_values: {eee: fff}}}
+      comp6: {values: !link_avl {converter: converter1, probe_value_matched: true, original_values: {eee: fff}}}
       comp7: {values: {ggg: hhh}, information: {comp_group: comp6}}
 
 rules: []

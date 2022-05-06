@@ -11,7 +11,7 @@
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 9c3727bbdea9a172af7bc8cefca90246b18ab2f7
+checksum: d12feb22291bd0ee43084c70128eae024def08af
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -311,6 +311,7 @@ components:
       storage_0:
         values: !link_avl
           converter: test-converter1
+          probe_value_matched: true
           original_values:
             model: model0
             sectors: '0'
@@ -325,6 +326,7 @@ components:
       storage_2:
         values: !link_avl
           converter: test-converter1
+          probe_value_matched: false
           original_values:
             model: model2
             sectors: '200'

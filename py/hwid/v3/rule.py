@@ -380,16 +380,24 @@ class InternalTags:
 class AVLProbeValue(collections.OrderedDict, InternalTags):
   """A class which holds the probe values linked with the ones on AVL"""
 
-  def __init__(self, identifier, *args, **kwargs):
+  def __init__(self, identifier: str, probe_value_matched: bool, *args,
+               **kwargs):
     super().__init__(*args, **kwargs)
     self._converter_identifier = identifier
+    self._probe_value_matched = probe_value_matched
 
   def __eq__(self, rhs):
-    return self.__class__ is rhs.__class__ and super().__eq__(rhs)
+    return (self.__class__ is rhs.__class__ and super().__eq__(rhs) and
+            self.converter_identifier == rhs.converter_identifier and
+            self.probe_value_matched == rhs.probe_value_matched)
 
   @property
   def converter_identifier(self):
     return self._converter_identifier
+
+  @property
+  def probe_value_matched(self):
+    return self._probe_value_matched
 
 
 def _Eval(expr, local):
