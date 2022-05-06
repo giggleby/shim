@@ -84,6 +84,10 @@ class SuspendStressTest(test_case.TestCase):
           'Abort on any premature wakes from suspend', default=True),
       Arg('late_wake_fatal', bool, 'Abort on any late wakes from suspend',
           default=True),
+      Arg('pre_suspend_command', str, 'Command to run before each suspend',
+          default=''),
+      Arg('post_resume_command', str, 'Command to run after each resume',
+          default=''),
   ]
 
   ui_class = test_ui.ScrollableLogUI
@@ -144,6 +148,10 @@ class SuspendStressTest(test_case.TestCase):
         '--%slate_wake_fatal' % ('' if self.args.late_wake_fatal else 'no'),
         '--record_dmesg_dir',
         os.path.dirname(GetLogPath('')),
+        '--pre_suspend_command',
+        self.args.pre_suspend_command,
+        '--post_resume_command',
+        self.args.post_resume_command,
     ]
     if self.args.ignore_wakeup_source:
       command += ['--ignore_wakeup_source', self.args.ignore_wakeup_source]
