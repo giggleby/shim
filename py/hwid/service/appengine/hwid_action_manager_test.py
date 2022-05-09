@@ -170,9 +170,27 @@ class HWIDActionManagerTest(unittest.TestCase):
     self._hwid_action_manager.GetHWIDAction('PROJ3')
     self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 2)
 
-  def _RegisterProjectWithAction(self, project,
-                                 action_uid: Optional[str] = None):
-    self._hwid_db_data_manager.RegisterProjectForTest(project, project, '3',
+  def testReloadMemcacheFromFiles_LegacySkipInternal(self):
+    self._RegisterProjectWithAction('PROJ_V2', 'uid_v2', '2')
+    self._RegisterProjectWithAction('PROJ_V3', 'uid_v3', '3')
+
+    self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+        limit_models=['PROJ_V2', 'PROJ_V3'])
+    metadata_v2 = self._hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        'PROJ_V2')
+    metadata_v3 = self._hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        'PROJ_V3')
+
+    with self._modules.ndb_connector.CreateClientContextWithGlobalCache():
+      self.assertCountEqual([
+          mock.call(metadata_v2),
+          mock.call(metadata_v3),
+          mock.call(metadata_v3, internal=True),
+      ], self._hwid_db_data_manager.LoadHWIDDB.call_args_list)
+
+  def _RegisterProjectWithAction(
+      self, project, action_uid: Optional[str] = None, version: str = '3'):
+    self._hwid_db_data_manager.RegisterProjectForTest(project, project, version,
                                                       'db data')
     opt_hwid_action_inst = HWIDActionForTest(
         action_uid) if action_uid is not None else None

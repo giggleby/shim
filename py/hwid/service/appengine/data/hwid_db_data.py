@@ -130,16 +130,20 @@ class HWIDDBDataManager:
     return raw_hwid_yaml
 
   def UpdateProjectContent(self, repo_metadata: hwid_repo.HWIDDBMetadata,
-                           project: str, content: str, commit_id: str):
+                           project: str, content: str, content_internal: str,
+                           commit_id: str):
     """Updates HWID DB content
 
     Args:
       repo_metadata: HWID DB metadata.
       project: Project name.
       content: New HWID DB content.
+      content_internal: New HWID DB content in internal format.
       commit_id: The commit id of the HWID DB.
     """
     self._fs_adapter.WriteFile(self._LivePath(project), content)
+    self._fs_adapter.WriteFile(
+        self._LivePath(project, internal=True), content_internal)
     try:
       metadata = self.GetHWIDDBMetadataOfProject(project)
       metadata.commit = commit_id

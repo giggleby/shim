@@ -159,11 +159,14 @@ class HWIDActionManager:
     except hwid_db_data.HWIDDBNotFoundError as ex:
       raise ProjectUnavailableError(str(ex)) from ex
 
-    try:
-      raw_hwid_yaml_internal = self._hwid_db_data_manager.LoadHWIDDB(
-          metadata, internal=True)
-    except hwid_db_data.HWIDDBNotFoundError as ex:
-      raise ProjectUnavailableError(str(ex)) from ex
+    if metadata.has_internal_format():
+      try:
+        raw_hwid_yaml_internal = self._hwid_db_data_manager.LoadHWIDDB(
+            metadata, internal=True)
+      except hwid_db_data.HWIDDBNotFoundError as ex:
+        raise ProjectUnavailableError(str(ex)) from ex
+    else:
+      raw_hwid_yaml_internal = raw_hwid_yaml
 
     try:
       return self._instance_factory.CreateHWIDPreprocData(

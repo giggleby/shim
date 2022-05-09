@@ -84,13 +84,18 @@ class FakeModuleCollection:
         self._fake_memcache_for_hwid_preproc_data,
         instance_factory=self._fake_hwid_instance_factory)
 
+  @property
+  def ndb_connector(self):
+    return self._ndb_connector
+
   def ClearAll(self):
     self.fake_decoder_data_manager.CleanAllForTest()
     self.fake_hwid_db_data_manager.CleanAllForTest()
     self._tmpdir_for_hwid_db_data.cleanup()
 
   def ConfigHWID(self, project, version, raw_db, hwid_action=None,
-                 hwid_action_factory=None, commit_id='TEST-COMMIT-ID'):
+                 hwid_action_factory=None, commit_id='TEST-COMMIT-ID',
+                 raw_db_internal=None):
     """Specifies the behavior of the fake modules.
 
     This method lets caller assign the HWIDAction instance to return for the
@@ -105,9 +110,10 @@ class FakeModuleCollection:
       hwid_action_factory: Specify the factory function to create the HWIDAction
           instance.  The given callable function should accept one positional
           argument -- the `FakeHWIDPreprocData` instance.
+      raw_db_internal: Specify the internl HWID DB contents.
     """
     self.fake_hwid_db_data_manager.RegisterProjectForTest(
-        project, project, str(version), raw_db, commit_id)
+        project, project, str(version), raw_db, commit_id, raw_db_internal)
     self._fake_hwid_instance_factory.SetHWIDActionForProject(
         project, hwid_action, hwid_action_factory)
 

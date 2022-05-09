@@ -5,7 +5,7 @@
 
 import collections
 import logging
-from typing import NamedTuple, Optional, Sequence, Tuple
+from typing import NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -19,6 +19,11 @@ class HWIDDBMetadata(NamedTuple):
   board_name: str
   version: int
   path: str
+
+
+class RepoFileContents(NamedTuple):
+  commit_id: str
+  file_contents: Sequence[str]
 
 
 _INTERNAL_REPO_URL = 'https://chrome-internal-review.googlesource.com'
@@ -261,21 +266,25 @@ class HWIDRepoManager:
 
   def GetHWIDDBMetadata(self, project: str) -> HWIDDBMetadata:
     """Gets the metadata from HWID repo."""
-    unused_commit_id, file_content = self.GetFileContent(_PROJECTS_YAML_PATH)
-    metadata = _ParseMetadata(file_content)
+    repo_file_contents = self.GetRepoFileContents([_PROJECTS_YAML_PATH])
+    metadata = _ParseMetadata(repo_file_contents.file_contents[0])
     if project not in metadata:
       raise KeyError(f'Project: "{project}" does not exist in the repo.')
     return metadata[project]
 
-  def GetFileContent(self, path: str) -> Tuple[str, str]:
+  def GetRepoFileContents(self, paths: Sequence[str]) -> RepoFileContents:
     """Gets the file content as well as the commit id from HWID repo."""
     commit_id = git_util.GetCommitId(_INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
                                      branch=self._repo_branch,
                                      auth_cookie=git_util.GetGerritAuthCookie())
-    content = git_util.GetFileContent(
-        _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path, commit_id=commit_id,
-        auth_cookie=git_util.GetGerritAuthCookie()).decode()
-    return commit_id, content
+    file_contents = [
+        git_util.GetFileContent(
+            _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
+            commit_id=commit_id,
+            auth_cookie=git_util.GetGerritAuthCookie()).decode()
+        for path in paths
+    ]
+    return RepoFileContents(commit_id, file_contents)
 
   def AbandonCL(self, cl_number: int, reason=None):
     """Abandons the given CL number."""

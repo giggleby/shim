@@ -454,11 +454,13 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self._modules.ConfigHWID('PROJ', '3', '',
                              hwid_action_factory=CreateMockHWIDAction)
-    self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 1')
+    self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 1',
+                                'db data ver 1(internal)')
     req1 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
         project='proj')
     resp1 = self._ss_helper.GetHWIDBundleResourceInfo(req1)
-    self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 2')
+    self._ConfigHWIDRepoManager('PROJ', 3, 'db data ver 2',
+                                'db data ver 2(internal)')
     req2 = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(
         project='proj')
     resp2 = self._ss_helper.GetHWIDBundleResourceInfo(req2)
@@ -495,8 +497,9 @@ class SelfServiceHelperTest(unittest.TestCase):
       return action
 
     self._modules.ConfigHWID('PROJ', '3', 'db data',
-                             hwid_action_factory=CreateMockHWIDAction)
-    self._ConfigHWIDRepoManager('PROJ', 3, 'db data')
+                             hwid_action_factory=CreateMockHWIDAction,
+                             raw_db_internal='db data')
+    self._ConfigHWIDRepoManager('PROJ', 3, 'db data', 'db data(internal)')
     req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(project='proj')
     resp = self._ss_helper.GetHWIDBundleResourceInfo(req)
     expected_resp = hwid_api_messages_pb2.GetHwidBundleResourceInfoResponse(
@@ -676,11 +679,12 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.hwid_db_commit_id = commit_id
 
   def _ConfigHWIDRepoManager(self, project, version, db_contents,
-                             commit_id='TEST-COMMIT-ID'):
+                             db_contents_internal, commit_id='TEST-COMMIT-ID'):
     hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
                                                 f'v{version}/{project}')
-    self._mock_hwid_repo_manager.GetFileContent.return_value = (commit_id,
-                                                                db_contents)
+    self._mock_hwid_repo_manager.GetRepoFileContents.return_value = (
+        hwid_repo.RepoFileContents(commit_id,
+                                   [db_contents, db_contents_internal]))
     self._mock_hwid_repo_manager.GetHWIDDBMetadata.return_value = (
         hwid_db_metadata)
 

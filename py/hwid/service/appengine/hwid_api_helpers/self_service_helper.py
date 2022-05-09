@@ -481,9 +481,13 @@ Info Update
     project = _NormalizeProjectString(request.project)
     try:
       metadata = self._hwid_repo_manager.GetHWIDDBMetadata(project)
-      commit_id, content = self._hwid_repo_manager.GetFileContent(metadata.path)
-      self._hwid_db_data_manager.UpdateProjectContent(metadata, project,
-                                                      content, commit_id)
+      repo_file_contents = self._hwid_repo_manager.GetRepoFileContents(
+          [metadata.path,
+           hwid_repo.HWIDRepo.InternalDBPath(metadata.path)])
+      commit_id = repo_file_contents.commit_id
+      content, content_internal = repo_file_contents.file_contents
+      self._hwid_db_data_manager.UpdateProjectContent(
+          metadata, project, content, content_internal, commit_id)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
           limit_models=[project])
 

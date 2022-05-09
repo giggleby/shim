@@ -115,7 +115,8 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
   def testUpdateProjectContent(self):
     self.hwid_db_data_manager.RegisterProjectForTest(
-        'BOARDA', 'PROJECTA', '3', 'will be updated', 'OLD-COMMIT-ID')
+        'BOARDA', 'PROJECTA', '3', 'will be updated', 'OLD-COMMIT-ID',
+        'will be updated(internal)')
 
     old_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
         project='PROJECTA')
@@ -125,7 +126,8 @@ class HWIDDBDataManagerTest(unittest.TestCase):
         name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
 
     self.hwid_db_data_manager.UpdateProjectContent(
-        repo_metadata, 'PROJECTA', 'updated data', 'NEW-COMMIT-ID')
+        repo_metadata, 'PROJECTA', 'updated data', 'updated data(internal)',
+        'NEW-COMMIT-ID')
 
     updated_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
         project='PROJECTA')
@@ -133,13 +135,17 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(updated_metadata), 'updated data')
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadHWIDDB(updated_metadata, internal=True),
+        'updated data(internal)')
 
   def testUpdateProjectContent_CreateNewMetadata(self):
     repo_metadata = hwid_repo.HWIDDBMetadata(
         name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
 
     self.hwid_db_data_manager.UpdateProjectContent(
-        repo_metadata, 'PROJECTA', 'updated data', 'NEW-COMMIT-ID')
+        repo_metadata, 'PROJECTA', 'updated data', 'updated data(internal)',
+        'NEW-COMMIT-ID')
 
     created_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
         project='PROJECTA')
@@ -147,6 +153,9 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(created_metadata), 'updated data')
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadHWIDDB(created_metadata, internal=True),
+        'updated data(internal)')
 
   def testUpdateProjectsByRepo(self):
     self.hwid_db_data_manager.RegisterProjectForTest('BOARDA', 'PROJECTA', '3',
