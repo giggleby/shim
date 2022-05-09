@@ -91,6 +91,7 @@
       "__comment": "RunIn is a stage to stress all ports for checking system stability. This stage may have many test barriers to let it fail early and reduce wasted test time.",
       "subtests": [
         "TPMVerifyEK",
+        "ClearTPMOwnerRequest",
         "RunInMRCCache",
         "RunInRebootStep",
         "Fan",

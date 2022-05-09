@@ -74,8 +74,6 @@
         "ReSignReleaseKernel",
         "UploadRegCodes",
         "UploadZeroTouchIds",
-        "ClearTPMOwnerRequest",
-        "RebootStep",
         "VerifyWidevineKeybox"
       ]
     },
