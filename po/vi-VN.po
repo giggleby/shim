@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-04-14 05:08+UTC\n"
+"PO-Revision-Date: 2022-05-10 10:47+HKT\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3511,8 +3511,16 @@ msgid "Deprovision CBI"
 msgstr "từ chối CBI"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Disable Lid Switch"
+msgstr "Tắt chức năng công tắc Nắp"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Enable EC Write Protect"
 msgstr "EC Viết bảo vệ"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Enable Lid Switch"
+msgstr "Bật chức năng công tắc Nắp"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Fingerprint Test Group"
