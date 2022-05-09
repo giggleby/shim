@@ -78,7 +78,6 @@ class HWIDRepo:
 
   def GetHWIDDBMetadataByName(self, name):
     """Returns the metadata of the specific HWID DB in the HWID repo."""
-    name = name.upper()
     try:
       return self._hwid_db_metadata_of_name[name]
     except KeyError:
@@ -102,7 +101,6 @@ class HWIDRepo:
       ValueError if the given HWID DB name is invalid.
       HWIDRepoError for other unexpected errors.
     """
-    name = name.upper()
     try:
       path = self._hwid_db_metadata_of_name[name].path
       if internal:
@@ -142,7 +140,6 @@ class HWIDRepo:
       HWIDRepoError for other unexpected errors.
     """
     new_files = []
-    name = name.upper()
     if update_metadata:
       self._hwid_db_metadata_of_name[name] = update_metadata
       new_raw_metadata = _DumpMetadata(self._hwid_db_metadata_of_name)
@@ -264,7 +261,6 @@ class HWIDRepoManager:
 
   def GetHWIDDBMetadata(self, project: str) -> HWIDDBMetadata:
     """Gets the metadata from HWID repo."""
-    project = project.upper()
     unused_commit_id, file_content = self.GetFileContent(_PROJECTS_YAML_PATH)
     metadata = _ParseMetadata(file_content)
     if project not in metadata:

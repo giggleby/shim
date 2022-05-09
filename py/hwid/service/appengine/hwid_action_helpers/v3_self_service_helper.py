@@ -132,8 +132,7 @@ class HWIDV3SelfServiceActionHelper:
         self._preproc_data.raw_database, editable_section)
     checksum = database.Database.ChecksumForText(external_raw_db)
 
-    builder.AddRegularFile(internal_db.project.upper(),
-                           external_raw_db.encode('utf-8'))
+    builder.AddRegularFile(internal_db.project, external_raw_db.encode('utf-8'))
     builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)

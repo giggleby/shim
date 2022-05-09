@@ -29,7 +29,7 @@ class HWIDV3Action(hwid_action.HWIDAction):
       require_vp_info: Optional[bool] = False):
     try:
       hwid, _bom, configless = hwid_utils.DecodeHWID(
-          self._preproc_data.database, _NormalizeString(hwid_string))
+          self._preproc_data.database, hwid_string)
     except common.HWIDException as e:
       logging.info('Unable to decode a valid HWID. %s', hwid_string)
       raise hwid_action.InvalidHWIDError('HWID not found %s' % hwid_string, e)
@@ -73,8 +73,3 @@ class HWIDV3Action(hwid_action.HWIDAction):
     for comp_cls in with_classes:
       comps[comp_cls] = database.GetComponents(comp_cls)
     return comps
-
-
-def _NormalizeString(string):
-  """Normalizes a string to account for things like case."""
-  return string.strip().upper() if string else None

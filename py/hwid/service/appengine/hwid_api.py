@@ -7,6 +7,7 @@ This file is also the place that all the binding is done for various components.
 """
 
 import logging
+from typing import Optional
 
 from cros.chromeoshwid import update_checksum
 
@@ -37,6 +38,11 @@ _hwid_validator = hwid_validator.HwidValidator()
 _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
     namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
 _hwid_repo_manager = CONFIG.hwid_repo_manager
+
+
+def _NormalizeProjectString(string: str) -> Optional[str]:
+  """Normalizes a string to account for things like case."""
+  return string.strip().upper() if string else None
 
 
 def _MapValidationException(ex, cls):
@@ -147,9 +153,10 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetHwids(self, request):
     """Return a filtered list of HWIDs for the given project."""
+    project = _NormalizeProjectString(request.project)
     parse_filter_field = lambda value: set(filter(None, value)) or None
     try:
-      hwid_action = _hwid_action_manager.GetHWIDAction(request.project)
+      hwid_action = _hwid_action_manager.GetHWIDAction(project)
       hwids = hwid_action.EnumerateHWIDs(
           with_classes=parse_filter_field(request.with_classes),
           without_classes=parse_filter_field(request.without_classes),
@@ -166,8 +173,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetComponentClasses(self, request):
     """Return a list of all component classes for the given project."""
+    project = _NormalizeProjectString(request.project)
     try:
-      hwid_action = _hwid_action_manager.GetHWIDAction(request.project)
+      hwid_action = _hwid_action_manager.GetHWIDAction(project)
       classes = hwid_action.GetComponentClasses()
     except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.ComponentClassesResponse(
@@ -180,8 +188,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetComponents(self, request):
     """Return a filtered list of components for the given project."""
+    project = _NormalizeProjectString(request.project)
     try:
-      hwid_action = _hwid_action_manager.GetHWIDAction(request.project)
+      hwid_action = _hwid_action_manager.GetHWIDAction(project)
       components = hwid_action.GetComponents(
           with_classes=set(filter(None, request.with_classes)) or None)
     except (KeyError, ValueError, RuntimeError) as ex:

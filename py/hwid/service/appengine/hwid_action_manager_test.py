@@ -98,7 +98,7 @@ class HWIDActionManagerTest(unittest.TestCase):
     # By default there are no projects in the datastore.
 
     with self.assertRaises(hwid_action_manager.ProjectNotFoundError):
-      self._hwid_action_manager.GetHWIDAction('proj')
+      self._hwid_action_manager.GetHWIDAction('PROJ')
 
   def testGetHWIDAction_ProjectLoadError(self):
     self._hwid_db_data_manager.RegisterProjectForTest('PROJ', 'PROJ', '3',
@@ -106,27 +106,27 @@ class HWIDActionManagerTest(unittest.TestCase):
     self._instance_factory.SetHWIDPreprocDataNotSupported('PROJ')
 
     with self.assertRaises(hwid_action_manager.ProjectNotSupportedError):
-      self._hwid_action_manager.GetHWIDAction('proj')
+      self._hwid_action_manager.GetHWIDAction('PROJ')
 
   def testGetHWIDAction_ProjectCreateActionError(self):
     self._RegisterProjectWithAction('PROJ', None)
 
     with self.assertRaises(hwid_action_manager.ProjectUnavailableError):
-      self._hwid_action_manager.GetHWIDAction('proj')
+      self._hwid_action_manager.GetHWIDAction('PROJ')
 
   def testGetHWIDAction_SuccessWithCacheMiss(self):
     # The default memcache is empty.
     expected_hwid_action = self._RegisterProjectWithAction('PROJ', 'theuid')
 
-    actual_hwid_action = self._hwid_action_manager.GetHWIDAction('proj')
+    actual_hwid_action = self._hwid_action_manager.GetHWIDAction('PROJ')
 
     self.assertEqual(actual_hwid_action, expected_hwid_action)
 
   def testGetHWIDAction_SuccessWithCacheHit(self):
     expected_hwid_action = self._RegisterProjectWithAction('PROJ', 'theuid')
-    self._hwid_action_manager.GetHWIDAction('proj')
+    self._hwid_action_manager.GetHWIDAction('PROJ')
 
-    actual_hwid_action = self._hwid_action_manager.GetHWIDAction('proj')
+    actual_hwid_action = self._hwid_action_manager.GetHWIDAction('PROJ')
 
     self.assertEqual(actual_hwid_action, expected_hwid_action)
     self.assertEqual(self._instance_factory.CreateHWIDPreprocData.call_count, 1)
@@ -140,7 +140,7 @@ class HWIDActionManagerTest(unittest.TestCase):
     self._instance_factory.SetHWIDPreprocDataWithAction('PROJ',
                                                         expected_hwid_action)
 
-    actual_hwid_action = self._hwid_action_manager.GetHWIDAction('proj')
+    actual_hwid_action = self._hwid_action_manager.GetHWIDAction('PROJ')
 
     self.assertEqual(actual_hwid_action, expected_hwid_action)
 
@@ -162,12 +162,12 @@ class HWIDActionManagerTest(unittest.TestCase):
     # If `ReloadMemcacheCacheFromFiles()` works, `GetHWIDAction()` should
     # hit the cache for PROJ1 and PROJ2.
     self._hwid_db_data_manager.LoadHWIDDB.reset_mock()
-    self._hwid_action_manager.GetHWIDAction('proj1')
-    self._hwid_action_manager.GetHWIDAction('proj2')
+    self._hwid_action_manager.GetHWIDAction('PROJ1')
+    self._hwid_action_manager.GetHWIDAction('PROJ2')
     self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 0)
     # Then since we set `limit_models` to PROJ1 and PROJ2 only, `GetHWIDAction`
     # should load the HWID DB data from the datastore for PROJ3.
-    self._hwid_action_manager.GetHWIDAction('proj3')
+    self._hwid_action_manager.GetHWIDAction('PROJ3')
     self.assertEqual(self._hwid_db_data_manager.LoadHWIDDB.call_count, 2)
 
   def _RegisterProjectWithAction(self, project,

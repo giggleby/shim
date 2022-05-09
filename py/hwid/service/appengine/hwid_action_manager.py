@@ -123,7 +123,6 @@ class HWIDActionManager:
         an error while loading the project's HWID DB.
     """
     logging.debug('Loading data for %r.', project)
-    project = _NormalizeProjectString(project)
 
     hwid_preproc_data_inst = self._GetHWIDPreprocDataFromCache(project)
     if hwid_preproc_data_inst:
@@ -179,8 +178,6 @@ class HWIDActionManager:
     Args:
       limit_models: List of names of models which will be updated.
     """
-    if limit_models is not None:
-      limit_models = [_NormalizeProjectString(m) for m in limit_models]
     metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
         projects=limit_models)
     for metadata in metadata_list:
@@ -241,8 +238,3 @@ class HWIDActionManager:
     metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata()
     return {m.project
             for m in metadata_list}
-
-
-def _NormalizeProjectString(string: str) -> Optional[str]:
-  """Normalizes a string to account for things like case."""
-  return string.strip().upper() if string else None

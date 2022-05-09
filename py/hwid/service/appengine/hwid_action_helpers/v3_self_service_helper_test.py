@@ -156,7 +156,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
       file_utils.WriteFile(bundle_path, payload, encoding=None)
       with tempfile.TemporaryDirectory() as dest_dir:
         process_utils.CheckCall([bundle_path, dest_dir])
-        db_path = os.path.join(dest_dir, data.project.upper())
+        db_path = os.path.join(dest_dir, data.project)
         self.assertEqual(file_utils.ReadFile(db_path), data.raw_database)
 
   def testBundleHWIDDB_BundleInstallationWorks_InternalTags(self):
@@ -173,7 +173,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
       file_utils.WriteFile(bundle_path, payload, encoding=None)
       with tempfile.TemporaryDirectory() as dest_dir:
         process_utils.CheckCall([bundle_path, dest_dir])
-        db_path = os.path.join(dest_dir, data.project.upper())
+        db_path = os.path.join(dest_dir, data.project)
         self.assertEqual(
             file_utils.ReadFile(db_path), trimmed_data.raw_database)
 
@@ -212,7 +212,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
       file_utils.WriteFile(bundle_path, payload_legacy, encoding=None)
       with tempfile.TemporaryDirectory() as dest_dir:
         process_utils.CheckCall([bundle_path, dest_dir])
-        db_path = os.path.join(dest_dir, legacy_data.project.upper())
+        db_path = os.path.join(dest_dir, legacy_data.project)
         legacy_yaml = yaml.safe_load(file_utils.ReadFile(db_path))
         self.assertIn('board', legacy_yaml)
         self.assertNotIn('project', legacy_yaml)
@@ -224,7 +224,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
       file_utils.WriteFile(bundle_path, payload_tot, encoding=None)
       with tempfile.TemporaryDirectory() as dest_dir:
         process_utils.CheckCall([bundle_path, dest_dir])
-        db_path = os.path.join(dest_dir, tot_data.project.upper())
+        db_path = os.path.join(dest_dir, tot_data.project)
         tot_yaml = yaml.safe_load(file_utils.ReadFile(db_path))
         self.assertNotIn('board', tot_yaml)
         self.assertIn('project', tot_yaml)

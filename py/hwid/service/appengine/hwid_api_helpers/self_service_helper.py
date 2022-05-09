@@ -40,6 +40,11 @@ _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(days=7)
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
 
+def _NormalizeProjectString(string: str) -> Optional[str]:
+  """Normalizes a string to account for things like case."""
+  return string.strip().upper() if string else None
+
+
 class HWIDStatusConversionError(Exception):
   """Indicate a failure to convert HWID component status to
   `hwid_api_messages_pb2.SupportStatus`."""
@@ -167,8 +172,9 @@ class SelfServiceHelper:
     self._hwid_db_data_manager = hwid_db_data_manager
 
   def GetHWIDDBEditableSection(self, request):
+    project = _NormalizeProjectString(request.project)
     try:
-      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       editable_section = action.GetDBEditableSection()
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
@@ -183,15 +189,16 @@ class SelfServiceHelper:
                              'instead')))
 
   def CreateHWIDDBEditableSectionChangeCL(self, request):
+    project = _NormalizeProjectString(request.project)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     try:
-      metadata = live_hwid_repo.GetHWIDDBMetadataByName(request.project)
+      metadata = live_hwid_repo.GetHWIDDBMetadataByName(project)
       self._hwid_db_data_manager.UpdateProjectsByRepo(
           live_hwid_repo, [metadata], delete_missing=False)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
-          limit_models=[request.project])
+          limit_models=[project])
 
-      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       analysis = action.AnalyzeDraftDBEditableSection(
           request.new_hwid_db_editable_section, derive_fingerprint_only=True,
           require_hwid_db_lines=False)
@@ -204,7 +211,7 @@ class SelfServiceHelper:
           detail='The validation token is expired.')
 
     commit_msg = textwrap.dedent(f"""\
-        ({int(time.time())}) {request.project}: HWID Config Update
+        ({int(time.time())}) {project}: HWID Config Update
 
         Requested by: {request.original_requester}
         Warning: all posted comments will be sent back to the requester.
@@ -216,7 +223,7 @@ class SelfServiceHelper:
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
-          name=request.project, hwid_db_contents=analysis.new_hwid_db_contents,
+          name=project, hwid_db_contents=analysis.new_hwid_db_contents,
           commit_msg=commit_msg, reviewers=request.reviewer_emails,
           cc_list=request.cc_emails, auto_approved=request.auto_approved)
     except hwid_repo.HWIDRepoError:
@@ -393,11 +400,12 @@ Info Update
     return response
 
   def AnalyzeHWIDDBEditableSection(self, request):
+    project = _NormalizeProjectString(request.project)
     response = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse()
     require_hwid_db_lines = request.require_hwid_db_lines
 
     try:
-      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       report = action.AnalyzeDraftDBEditableSection(
           request.hwid_db_editable_section, False, require_hwid_db_lines)
     except (KeyError, ValueError, RuntimeError) as ex:
@@ -470,15 +478,16 @@ Info Update
     return response
 
   def GetHWIDBundleResourceInfo(self, request):
+    project = _NormalizeProjectString(request.project)
     try:
-      metadata = self._hwid_repo_manager.GetHWIDDBMetadata(request.project)
+      metadata = self._hwid_repo_manager.GetHWIDDBMetadata(project)
       commit_id, content = self._hwid_repo_manager.GetFileContent(metadata.path)
-      self._hwid_db_data_manager.UpdateProjectContent(metadata, request.project,
+      self._hwid_db_data_manager.UpdateProjectContent(metadata, project,
                                                       content, commit_id)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
-          limit_models=[request.project])
+          limit_models=[project])
 
-      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       resource_info = action.GetHWIDBundleResourceInfo()
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
@@ -492,8 +501,9 @@ Info Update
     return response
 
   def CreateHWIDBundle(self, request):
+    project = _NormalizeProjectString(request.project)
     try:
-      action = self._hwid_action_manager.GetHWIDAction(request.project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       resource_info = action.GetHWIDBundleResourceInfo(fingerprint_only=True)
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
@@ -516,7 +526,8 @@ Info Update
     return response
 
   def CreateHWIDDBInitCL(self, request):
-    project = request.project.upper()
+    project = _NormalizeProjectString(request.project)
+    board = _NormalizeProjectString(request.board)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     if not request.bug_number:
       raise common_helper.ConvertExceptionToProtoRPCException(
@@ -527,7 +538,7 @@ Info Update
       pass
     else:
       raise common_helper.ConvertExceptionToProtoRPCException(
-          ValueError(f'Project: {request.project} already exists.'))
+          ValueError(f'Project: {project} already exists.'))
 
     init_db = v3_builder.DatabaseBuilder(project=project,
                                          image_name=request.phase).database
@@ -553,8 +564,7 @@ Info Update
 
         BUG=b:{request.bug_number}
         """)
-    new_metadata = hwid_repo.HWIDDBMetadata(project, request.board.upper(), 3,
-                                            f'v3/{project}')
+    new_metadata = hwid_repo.HWIDDBMetadata(project, board, 3, f'v3/{project}')
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=db_content, commit_msg=commit_msg,

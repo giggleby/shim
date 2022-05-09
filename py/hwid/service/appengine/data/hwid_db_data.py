@@ -94,7 +94,6 @@ class HWIDDBDataManager:
       TooManyHWIDDBError: If we have more than one metadata entry
           for the given project.
     """
-    project = project.upper()
     with self._ndb_connector.CreateClientContextWithGlobalCache():
       q = HWIDDBMetadata.query(HWIDDBMetadata.project == project)
       if q.count() == 0:
@@ -140,7 +139,6 @@ class HWIDDBDataManager:
       content: New HWID DB content.
       commit_id: The commit id of the HWID DB.
     """
-    project = project.upper()
     self._fs_adapter.WriteFile(self._LivePath(project), content)
     try:
       metadata = self.GetHWIDDBMetadataOfProject(project)
