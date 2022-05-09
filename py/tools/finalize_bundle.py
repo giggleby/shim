@@ -678,6 +678,10 @@ class FinalizeBundle:
         self.bundle_dir, 'setup', 'complete_script_sample.sh')
     shutil.copy(default_complete_script, complete_dir)
 
+  @property
+  def is_boxster_project(self):
+    return self.designs is not None
+
   def AddFirmwareUpdaterAndImages(self):
     """Add firmware updater into bundle directory, and extract firmware images
     into firmware_images/."""
@@ -731,11 +735,11 @@ class FinalizeBundle:
             'Finalize bundle with an unsigned(dev signed) firmware.')
 
       manifest = json_utils.LoadFile(os.path.join(temp_dir, 'manifest.json'))
-      models = [self.project] if self.designs is None else self.designs
+      models = self.designs if self.is_boxster_project else [self.project]
       self.firmware_record['firmware_records'] = []
 
       missing_models = set(models) - set(manifest.keys())
-      if missing_models and self.designs:
+      if missing_models and self.is_boxster_project:
         raise KeyError("No firmware models '%s' in chromeos-firmwareupdate" %
                        missing_models)
 
@@ -761,7 +765,7 @@ class FinalizeBundle:
         self.firmware_record['firmware_records'].append(record)
 
       # Collect only the desired firmware
-      if self.designs is not None:
+      if self.is_boxster_project:
         keep_list = set()
         for design in manifest:
           if design in self.designs:
@@ -822,7 +826,7 @@ class FinalizeBundle:
     netboot_firmware_images = set(
         glob.glob(os.path.join(netboot_dir, 'image*.net.bin')))
     useful_images = netboot_firmware_images
-    if self.designs is not None:
+    if self.is_boxster_project:
       useful_images = useful_images & set(
           [os.path.join(netboot_dir, 'image.net.bin')] + [
               os.path.join(netboot_dir, 'image-%s.net.bin' % design)
@@ -1049,7 +1053,7 @@ class FinalizeBundle:
 
     # Get some vital information
     vitals = [('Board', self.board), ('Project', self.project)]
-    if self.designs is not None:
+    if self.is_boxster_project:
       vitals.append(('Designs', repr(self.designs)))
     vitals.append(
         ('Bundle',
@@ -1314,7 +1318,7 @@ class FinalizeBundle:
     Returns:
       The path of the package or None if the package is absent.
     """
-    if not self.designs:
+    if not self.is_boxster_project:
       return None
     branches = ['factory', 'release']
     possible_urls = [
