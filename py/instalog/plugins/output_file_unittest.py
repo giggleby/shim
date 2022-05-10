@@ -46,7 +46,7 @@ class TestOutputFile(unittest.TestCase):
     event = datatypes.Event({'plugin': 'file'})
     self.stream.Queue([event])
     plugin.PrepareAndProcess()
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:
@@ -70,7 +70,7 @@ class TestOutputFile(unittest.TestCase):
     event = datatypes.Event(payload={'key': 'data w/o history'})
     self.stream.Queue([event])
     plugin.PrepareAndProcess()
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:
@@ -102,7 +102,7 @@ class TestOutputFile(unittest.TestCase):
     event = datatypes.Event({'plugin': 'file'}, {'att': att_path})
     self.stream.Queue([event])
     plugin.PrepareAndProcess()
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:

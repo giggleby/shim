@@ -62,7 +62,7 @@ class TestOutputArchive(unittest.TestCase):
       events = [copy.deepcopy(big_event) for unused_j in range(10)]
       self.stream.Queue(events)
 
-    sandbox.Flush(1, False)  # trigger archive creation
+    sandbox.Flush(sync=False)  # trigger archive creation
     while not self.stream.Empty():
       mem_usage = self._GetMemoryUsage()
       logging.info('Current memory usage: %d/%d', mem_usage, mem_usage_max)
@@ -99,7 +99,7 @@ class TestOutputArchive(unittest.TestCase):
     plugin = sandbox._plugin
     self.stream.Queue([self.event])
     plugin.PrepareAndProcess()
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     # Inspect the disk archive.

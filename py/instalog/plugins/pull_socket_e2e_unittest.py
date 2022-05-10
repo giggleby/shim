@@ -51,9 +51,9 @@ class TestPullSocket(unittest.TestCase):
 
   def testOneEvent(self):
     self.stream.Queue([datatypes.Event({})])
-    self.output_sandbox.Flush(2, True)
+    self.output_sandbox.Flush()
     time.sleep(0.1)
-    self.input_sandbox.Flush(2, True)
+    self.input_sandbox.Flush()
     self.assertEqual(self.core.emit_calls, [[datatypes.Event({})]])
 
   def testOneEventOneAttachment(self):
@@ -62,9 +62,9 @@ class TestPullSocket(unittest.TestCase):
       f.flush()
       event = datatypes.Event({}, {'my_attachment': f.name})
       self.stream.Queue([event])
-      self.output_sandbox.Flush(2, True)
+      self.output_sandbox.Flush()
       time.sleep(0.1)
-      self.input_sandbox.Flush(2, True)
+      self.input_sandbox.Flush()
       self.assertEqual(1, len(self.core.emit_calls))
       event_list = self.core.emit_calls[0]
       self.assertEqual(1, len(event_list))

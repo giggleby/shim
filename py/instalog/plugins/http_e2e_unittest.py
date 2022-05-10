@@ -67,7 +67,7 @@ class TestHTTP(unittest.TestCase):
 
   def testOneEvent(self):
     self.stream.Queue([datatypes.Event({})])
-    self.output_sandbox.Flush(2, True)
+    self.output_sandbox.Flush()
     self.assertEqual(self.core.emit_calls, [[datatypes.Event({})]])
 
   def testMultiEvent(self):
@@ -85,7 +85,7 @@ class TestHTTP(unittest.TestCase):
         event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
         event3 = datatypes.Event({'CC': 'DD'}, {})
         self.stream.Queue([event1, event2, event3])
-        self.output_sandbox.Flush(10, True)
+        self.output_sandbox.Flush()
         self.assertEqual(1, len(self.core.emit_calls))
         self.assertEqual(3, len(self.core.emit_calls[0]))
         self.assertEqual(event1, self.core.emit_calls[0][0])
@@ -106,7 +106,7 @@ class TestHTTP(unittest.TestCase):
         event1 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path1})
         event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
         self.stream.Queue([event1, event2])
-        self.output_sandbox.Flush(10, True)
+        self.output_sandbox.Flush()
         self.assertEqual(2, len(self.core.emit_calls))
         self.assertEqual(1, len(self.core.emit_calls[0]))
         self.assertEqual(1, len(self.core.emit_calls[1]))
@@ -124,7 +124,8 @@ class TestHTTP(unittest.TestCase):
         f.write(att_data)
       event = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path})
       self.stream.Queue([event])
-      self.output_sandbox.Flush(2, True)
+      # This should always fail to emit, so we set a short timeout.
+      self.output_sandbox.Flush(1)
       self.assertEqual(0, len(self.core.emit_calls))
 
 
@@ -251,7 +252,7 @@ class TestHTTPAE(unittest.TestCase):
 
   def testOneEvent(self):
     self.stream.Queue([datatypes.Event({})])
-    self.output_sandbox.Flush(2, True)
+    self.output_sandbox.Flush()
     self.assertEqual(self.core.emit_calls, [[datatypes.Event({})]])
 
   def testMultiEvent(self):
@@ -269,7 +270,7 @@ class TestHTTPAE(unittest.TestCase):
         event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
         event3 = datatypes.Event({'CC': 'DD'}, {})
         self.stream.Queue([event1, event2, event3])
-        self.output_sandbox.Flush(10, True)
+        self.output_sandbox.Flush()
         self.assertEqual(1, len(self.core.emit_calls))
         self.assertEqual(3, len(self.core.emit_calls[0]))
         self.assertEqual(event1, self.core.emit_calls[0][0])

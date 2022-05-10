@@ -50,7 +50,7 @@ class TestOutputClassify(unittest.TestCase):
     sandbox.Start(True)
     event = datatypes.Event({'deviceId': 'TEST_ID'})
     self.stream.Queue([event])
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     base_dir = os.path.join(self.target_dir, SAMPLE_SUBDIR_NAME, 'TEST_ID')
@@ -84,7 +84,7 @@ class TestOutputClassify(unittest.TestCase):
     event2 = datatypes.Event({'a': 'A', 'b': {'c': 'CC'}})
     event3 = datatypes.Event({'a': 'A', 'b': {'c': 'C'}, 'd': 'D', 'event': 3})
     self.stream.Queue([event1, event2, event3])
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     base_dir = os.path.join(self.target_dir, 'A', 'C', SAMPLE_SUBDIR_NAME, 'D')
@@ -120,7 +120,7 @@ class TestOutputClassify(unittest.TestCase):
       f.write(att_data)
     event = datatypes.Event({'deviceId': 'TEST_ID'}, {'att': att_path})
     self.stream.Queue([event])
-    sandbox.Flush(2, True)
+    sandbox.Flush()
     sandbox.Stop()
 
     base_dir = os.path.join(self.target_dir, SAMPLE_SUBDIR_NAME, 'TEST_ID')

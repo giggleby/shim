@@ -26,6 +26,9 @@ from cros.factory.instalog.utils import sync_utils
 from cros.factory.instalog.utils import time_utils
 from cros.factory.instalog.utils import type_utils
 
+# Some unittests fail if they run on a really slow machine.  To not block the
+# Chromium Commit Queue, we set longer timeout by default.
+_DEFAULT_FLUSH_TIMEOUT = 600
 # The maximum number of unexpected accesses to store for debugging purposes.
 # This is for both unittests and debugging purposes (assuming that the
 # PluginSandbox instance can be accessed during runtime).
@@ -362,7 +365,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
     if sync:
       self.AdvanceState(sync)
 
-  def Flush(self, timeout, sync=False):
+  def Flush(self, timeout=_DEFAULT_FLUSH_TIMEOUT, sync=True):
     """Flushes the plugin.
 
     Returns:

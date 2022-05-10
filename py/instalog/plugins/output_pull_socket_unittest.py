@@ -83,7 +83,8 @@ class TestOutputPullSocket(unittest.TestCase):
         output_socket.OutputSocketSender, 'Ping', return_value=True):
       with mock.patch.object(self.sock, 'sendall', side_effect=Exception):
         self.stream.Queue([datatypes.Event({})])
-        self.sandbox.Flush(0.1, True)
+        # This should always fail to emit, so we set a short timeout.
+        self.sandbox.Flush(1)
         self.assertFalse(self.stream.Empty())
 
   def testInvalidPong(self):
@@ -98,7 +99,7 @@ class TestOutputPullSocket(unittest.TestCase):
     event = datatypes.Event({})
     with mock.patch.object(datatypes.Event, 'Serialize', return_value='EVENT'):
       self.stream.Queue([event])
-      self.sandbox.Flush(2, True)
+      self.sandbox.Flush()
       self.assertEqual(socket_common.QING_RESPONSE +  # qong
                        b'0\0'  # ping
                        b'1\0'
@@ -118,7 +119,7 @@ class TestOutputPullSocket(unittest.TestCase):
       with mock.patch.object(datatypes.Event, 'Serialize',
                              return_value='EVENT'):
         self.stream.Queue([event])
-        self.sandbox.Flush(2, True)
+        self.sandbox.Flush()
         self.assertEqual(socket_common.QING_RESPONSE +  # qong
                          b'0\0'  # ping
                          b'1\0'
