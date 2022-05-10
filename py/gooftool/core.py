@@ -1542,30 +1542,6 @@ class Gooftool:
     if is_factory_mode:
       raise Error('Failed to disable Cr50 factory mode.')
 
-  def Cr50VerifyAPRO(self):
-    """Trigger the AP RO verification.
-
-    This command only can be run in the factory mode.
-    The device will reboot after the command.
-    """
-    cmd = 'gsctool -aB start'
-    self._util.shell(cmd)
-
-  def Cr50GetAPROResult(self):
-    """Get the result of the AP RO verification.
-
-    ref: process_get_apro_boot_status in
-    platform/cr50/extra/usb_updater/gsctool.c
-    """
-    cmd = 'gsctool -aB'
-    result = self._util.shell(cmd)
-    if result.status == 0:
-      # An example of the result is "apro result (0) : not run".
-      match = re.match(r'apro result \((\d)\).*', result.stdout)
-      if match:
-        return gsctool_module.APROResult(int(match.group(1)))
-    raise Error(f'Unknown apro result {result}.')
-
   def FpmcuInitializeEntropy(self):
     """Initialze entropy of FPMCU.
 
