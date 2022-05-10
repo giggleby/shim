@@ -584,5 +584,27 @@ class GitFilesystemAdapterTest(unittest.TestCase):
                       self.git_fs.DeleteFile, self.file_path)
 
 
+class ApprovalCaseTest(unittest.TestCase):
+
+  def testConvertToVotes(self):
+    self.assertCountEqual([
+        git_util.ReviewVote('Bot-Commit', 1),
+        git_util.ReviewVote('Code-Review', 0),
+        git_util.ReviewVote('Commit-Queue', 2),
+    ], git_util.ApprovalCase.APPROVED.ConvertToVotes())
+
+    self.assertCountEqual([
+        git_util.ReviewVote('Bot-Commit', 0),
+        git_util.ReviewVote('Code-Review', -2),
+        git_util.ReviewVote('Commit-Queue', 0),
+    ], git_util.ApprovalCase.REJECTED.ConvertToVotes())
+
+    self.assertCountEqual([
+        git_util.ReviewVote('Bot-Commit', 0),
+        git_util.ReviewVote('Code-Review', 0),
+        git_util.ReviewVote('Commit-Queue', 0),
+    ], git_util.ApprovalCase.NEED_MANUAL_REVIEW.ConvertToVotes())
+
+
 if __name__ == '__main__':
   unittest.main()

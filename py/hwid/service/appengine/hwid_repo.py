@@ -26,7 +26,7 @@ class RepoFileContents(NamedTuple):
   file_contents: Sequence[str]
 
 
-_INTERNAL_REPO_URL = 'https://chrome-internal-review.googlesource.com'
+INTERNAL_REPO_URL = 'https://chrome-internal-review.googlesource.com'
 _CHROMEOS_HWID_PROJECT = 'chromeos/chromeos-hwid'
 _PROJECTS_YAML_PATH = 'projects.yaml'
 
@@ -176,7 +176,7 @@ class HWIDRepo:
         logging.warning(
             'Failed to parse CL number from change_id=%s. Get CL number from '
             'Gerrit.', change_id)
-        cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, change_id,
+        cl_info = git_util.GetCLInfo(INTERNAL_REPO_URL, change_id,
                                      auth_cookie=git_util.GetGerritAuthCookie())
         cl_number = cl_info.cl_number
     except git_util.GitUtilException as ex:
@@ -222,12 +222,12 @@ class HWIDRepoManager:
   def GetLiveHWIDRepo(self):
     """Returns an HWIDRepo instance for accessing the up-to-date HWID repo."""
     if self._repo_branch is None:
-      repo_branch = git_util.GetCurrentBranch(_INTERNAL_REPO_URL,
+      repo_branch = git_util.GetCurrentBranch(INTERNAL_REPO_URL,
                                               _CHROMEOS_HWID_PROJECT,
                                               git_util.GetGerritAuthCookie())
     else:
       repo_branch = self._repo_branch
-    repo_url = f'{_INTERNAL_REPO_URL}/{_CHROMEOS_HWID_PROJECT}'
+    repo_url = f'{INTERNAL_REPO_URL}/{_CHROMEOS_HWID_PROJECT}'
     repo = git_util.MemoryRepo(git_util.GetGerritAuthCookie())
     repo.shallow_clone(repo_url, repo_branch)
     return HWIDRepo(repo, repo_url, repo_branch)
@@ -247,7 +247,7 @@ class HWIDRepoManager:
       HWIDRepoError: Failed to fetch the CL info from Gerrit.
     """
     try:
-      cl_info = git_util.GetCLInfo(_INTERNAL_REPO_URL, cl_number,
+      cl_info = git_util.GetCLInfo(INTERNAL_REPO_URL, cl_number,
                                    auth_cookie=git_util.GetGerritAuthCookie(),
                                    include_comment_thread=True,
                                    include_mergeable=True,
@@ -261,7 +261,7 @@ class HWIDRepoManager:
 
   def GetMainCommitID(self):
     """Fetches the latest commit ID of the main branch on the upstream."""
-    return git_util.GetCommitId(_INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
+    return git_util.GetCommitId(INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
                                 auth_cookie=git_util.GetGerritAuthCookie())
 
   def GetHWIDDBMetadata(self, project: str) -> HWIDDBMetadata:
@@ -274,12 +274,12 @@ class HWIDRepoManager:
 
   def GetRepoFileContents(self, paths: Sequence[str]) -> RepoFileContents:
     """Gets the file content as well as the commit id from HWID repo."""
-    commit_id = git_util.GetCommitId(_INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
+    commit_id = git_util.GetCommitId(INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
                                      branch=self._repo_branch,
                                      auth_cookie=git_util.GetGerritAuthCookie())
     file_contents = [
         git_util.GetFileContent(
-            _INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
+            INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
             commit_id=commit_id,
             auth_cookie=git_util.GetGerritAuthCookie()).decode()
         for path in paths
@@ -288,6 +288,5 @@ class HWIDRepoManager:
 
   def AbandonCL(self, cl_number: int, reason=None):
     """Abandons the given CL number."""
-    return git_util.AbandonCL(_INTERNAL_REPO_URL,
-                              git_util.GetGerritAuthCookie(), cl_number,
-                              reason=reason)
+    return git_util.AbandonCL(INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
+                              cl_number, reason=reason)

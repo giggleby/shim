@@ -47,6 +47,43 @@ DIR_MODE = 0o040000
 GERRIT_SCOPE = 'https://www.googleapis.com/auth/gerritcodereview'
 IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
 
+_BOT_COMMIT = 'Bot-Commit'
+_CODE_REVIEW = 'Code-Review'
+_COMMIT_QUEUE = 'Commit-Queue'
+
+
+class ReviewVote(NamedTuple):
+  label: str
+  score: int
+
+
+class ApprovalCase(enum.Enum):
+  APPROVED = enum.auto()
+  REJECTED = enum.auto()
+  NEED_MANUAL_REVIEW = enum.auto()
+
+  def ConvertToVotes(self) -> Sequence[ReviewVote]:
+    return _REVIEW_VOTES_OF_CASE[self]
+
+
+_REVIEW_VOTES_OF_CASE = {
+    ApprovalCase.APPROVED: [
+        ReviewVote(_BOT_COMMIT, 1),
+        ReviewVote(_CODE_REVIEW, 0),
+        ReviewVote(_COMMIT_QUEUE, 2),
+    ],
+    ApprovalCase.REJECTED: [
+        ReviewVote(_BOT_COMMIT, 0),
+        ReviewVote(_CODE_REVIEW, -2),
+        ReviewVote(_COMMIT_QUEUE, 0),
+    ],
+    ApprovalCase.NEED_MANUAL_REVIEW: [
+        ReviewVote(_BOT_COMMIT, 0),
+        ReviewVote(_CODE_REVIEW, 0),
+        ReviewVote(_COMMIT_QUEUE, 0),
+    ],
+}
+
 
 def RetryOnException(retry_value: Tuple[Type[Exception], ...] = (Exception, ),
                      delay_sec: int = 1, num_retries: int = 5):
@@ -438,7 +475,7 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
   if cc:
     options += ['cc=' + email for email in cc]
   if auto_approved:
-    options += ['l=Bot-Commit+1', 'l=Commit-Queue+2']
+    options += [f'l={_BOT_COMMIT}+1', f'l={_COMMIT_QUEUE}+2']
   target_branch = 'refs/for/refs/heads/' + branch
   if options:
     target_branch += '%' + ','.join(options)
@@ -823,6 +860,40 @@ def GetCLInfo(
   except Exception as ex:
     logging.debug('Unexpected Gerrit API response for CL: %r.', gerrit_resps)
     raise GitUtilException('Failed to parse the Gerrit API response.') from ex
+
+
+def ReviewCL(review_host: str, auth_cookie: str, cl_number: int,
+             reasons: Sequence[str], approval_case: ApprovalCase,
+             reviewers: Sequence[str], ccs: Sequence[str]):
+  """Reviews a CL.
+
+  Args:
+    review_host: Review host of repo.
+    auth_cookie: Auth cookie.
+    cl_number: The CL number.
+    reasons: An optional list of string messages as the reason of the action.
+    approval_case: The approval case.
+    reviewers: The additional reviewers to be added.
+    ccs: The additional CC reviewers to be added.
+  """
+  votes = approval_case.ConvertToVotes()
+  try:
+    _InvokeGerritAPIJSON(
+        'POST', f'{review_host}/changes/{cl_number}/revisions/current/review',
+        auth_cookie=auth_cookie, json_body={
+            'message':
+                '\n'.join(reasons),
+            'labels': {vote.label: vote.score
+                       for vote in votes},
+            'reviewers': [{
+                'reviewer': reviewer
+            } for reviewer in reviewers] + [{
+                'reviewer': cc,
+                'state': 'CC'
+            } for cc in ccs],
+        })
+  except GitUtilException as ex:
+    raise GitUtilException(f'Review failed for CL number: {cl_number}.') from ex
 
 
 def AbandonCL(review_host, auth_cookie, change_id,

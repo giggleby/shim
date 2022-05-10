@@ -290,3 +290,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def CreateHwidDbInitCl(self, request):
     return self._ss_helper.CreateHWIDDBInitCL(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def SetChangeClBotApprovalStatus(self, request):
+    return self._ss_helper.SetChangeCLBotApprovalStatus(request)

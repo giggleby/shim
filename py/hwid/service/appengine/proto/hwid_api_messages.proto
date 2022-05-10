@@ -655,6 +655,34 @@ message CreateHwidDbInitClResponse {
   HwidDbCommit commit = 1;
 }
 
+// The action to a CL.
+message ClAction {
+  // Approval cases.
+  enum ApprovalCase {
+    APPROVAL_CASE_UNSPECIFIED = 0;
+    APPROVED = 1;
+    REJECTED = 2;
+    NEED_MANUAL_REVIEW = 3;
+  }
+  // The case of this action.
+  ApprovalCase approval_case = 1;
+  // The reasons of this action.
+  repeated string reasons = 2;
+  // The additional reviewers to be added.
+  repeated string reviewers = 3;
+  // The additional CC reviewers to be added.
+  repeated string ccs = 4;
+}
+
+// The request of setting CL approval status.
+message SetChangeClBotApprovalStatusRequest {
+  // A map of CL numbers to CL actions.
+  map<int64, ClAction> cl_actions = 1;
+}
+
+// The response of setting CL approval status.
+message SetChangeClBotApprovalStatusResponse {}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -702,6 +730,10 @@ service HwidService {
   rpc CreateHwidDbEditableSectionChangeCl(
       CreateHwidDbEditableSectionChangeClRequest)
       returns (CreateHwidDbEditableSectionChangeClResponse);
+
+  // Set review votes per CL.
+  rpc SetChangeClBotApprovalStatus(SetChangeClBotApprovalStatusRequest)
+      returns (SetChangeClBotApprovalStatusResponse);
 
   // Get the basic info of the CLs that change HWID DBs.
   rpc BatchGetHwidDbEditableSectionChangeClInfo(

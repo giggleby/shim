@@ -39,6 +39,15 @@ _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE = datetime.timedelta(days=7)
 
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 
+_APPROVAL_CASE = {
+    hwid_api_messages_pb2.ClAction.ApprovalCase.APPROVED: (
+        git_util.ApprovalCase.APPROVED),
+    hwid_api_messages_pb2.ClAction.ApprovalCase.REJECTED: (
+        git_util.ApprovalCase.REJECTED),
+    hwid_api_messages_pb2.ClAction.ApprovalCase.NEED_MANUAL_REVIEW: (
+        git_util.ApprovalCase.NEED_MANUAL_REVIEW),
+}
+
 
 def _NormalizeProjectString(string: str) -> Optional[str]:
   """Normalizes a string to account for things like case."""
@@ -540,3 +549,21 @@ Info Update
     resp.commit.cl_number = cl_number
     resp.commit.new_hwid_db_contents = editable_section
     return resp
+
+  def SetChangeCLBotApprovalStatus(self, request):
+    for cl_number, cl_action in request.cl_actions.items():
+      if cl_action.approval_case not in _APPROVAL_CASE:
+        logging.error('Approval case unspecified.')
+        raise protorpc_utils.ProtoRPCException(
+            protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT) from None
+      approval_case = _APPROVAL_CASE[cl_action.approval_case]
+      try:
+        git_util.ReviewCL(hwid_repo.INTERNAL_REPO_URL,
+                          git_util.GetGerritAuthCookie(), cl_number=cl_number,
+                          reasons=cl_action.reasons,
+                          approval_case=approval_case,
+                          reviewers=cl_action.reviewers, ccs=cl_action.ccs)
+      except git_util.GitUtilException as ex:
+        raise protorpc_utils.ProtoRPCException(
+            protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from ex
+    return hwid_api_messages_pb2.SetChangeClBotApprovalStatusResponse()

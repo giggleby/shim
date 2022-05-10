@@ -119,7 +119,7 @@ class _Config:
       A dictionary with corresponding settings
     """
     return VerificationPayloadSettings(
-        review_host='https://chrome-internal-review.googlesource.com',
+        review_host=hwid_repo.INTERNAL_REPO_URL,
         repo_host='https://chrome-internal.googlesource.com',
         repo_path=f'/chromeos/overlays/overlay-{board}-private',
         project=f'chromeos/overlays/overlay-{board}-private',
