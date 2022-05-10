@@ -1272,6 +1272,10 @@ msgstr "请将上盖掀开到 {angle} 度。"
 msgid "Checking angle..."
 msgstr "正在确认角度……"
 
+#: ../py/test/pytests/ap_ro_verification.py
+msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
+msgstr "请在{seconds}秒內按著电源並按Refresh键三次"
+
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
 msgstr "左声道"
@@ -3363,10 +3367,6 @@ msgstr "设定机器资讯"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "AP RO Verification"
-msgstr "检查 AP RO hash"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "AP RO Verification Group"
 msgstr "检查 AP RO hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
