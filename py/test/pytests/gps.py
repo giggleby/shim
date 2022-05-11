@@ -48,7 +48,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import time_utils
 
-
 START_GLGPS_TIMEOUT = 5
 DEFAULT_INIT_TIMEOUT = 10
 DEFAULT_TIMEOUT = 15
@@ -292,10 +291,6 @@ class GPS(unittest.TestCase):
     # Stop glgps if it's already running.
     self._KillGLGPS()
 
-    # Stop gpsd if it's already running.
-    session.console.info('Stopping gpsd...')
-    self.dut.Call('stop gpsd')
-
     # Run glgps for <args.timeout> seconds with <self.args.gps_config_job>.
     session.console.info('Starting %s job...', self.args.gps_config_job)
     def StartGLGPS():
@@ -353,15 +348,9 @@ class GPS(unittest.TestCase):
     if limit_failures_str:
       self.fail('\n'.join(limit_failures_str))
 
-
   def tearDown(self):
     # Kill glgps.
     self._KillGLGPS()
-
-    # Restart normal gpsd operation.
-    session.console.info('Restarting normal gpsd...')
-    self.dut.Call('start gpsd')
-
 
   def _KillGLGPS(self):
     # Stop the glgps with Factory_Test_Track.
