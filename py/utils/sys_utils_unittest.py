@@ -418,5 +418,84 @@ class TestGetRunningFactoryPythonArchivePath(unittest.TestCase):
       self.assertEqual(sys_utils.GetRunningFactoryPythonArchivePath(), None)
 
 
+CGPT_SAMPLE_OUTPUT = """
+Drive details:
+    Total Size (bytes): 127984992256
+    LBA Size (bytes): 4096
+    Drive Size (blocks): 31246336
+
+       start        size    part  contents
+           0           1          PMBR (Boot GUID: D5B4458A-B127-D34E-8820-1FBB3FEEAA88)
+           1           1          Pri GPT header
+                                  Sig: [EFI PART]
+                                  Rev: 0x00010000
+                                  Size: 92 (blocks)
+                                  Header CRC: 0x14c48cd5
+                                  My LBA: 1
+                                  Alternate LBA: 31246335
+                                  First LBA: 6
+                                  Last LBA: 31246330
+                                  Disk UUID: 39FE81ED-928D-0D41-AC4D-0F6B816F4D9A
+                                  Entries LBA: 2
+                                  Number of entries: 128
+                                  Size of entry: 128
+                                  Entries CRC: 0x921998af
+           2           4          Pri GPT table
+     2134528    29111802       1  Label: "STATE"
+                                  Type: Linux data
+                                  UUID: 8C610EB9-6A82-5C41-8CF5-1B1F7162923F
+          13        8192       2  Label: "KERN-A"
+                                  Type: ChromeOS kernel
+                                  UUID: EC401A47-F323-DC43-ACF8-5415F5842A32
+                                  Attr: priority=1 tries=0 successful=1
+     1085952     1048576       3  Label: "ROOT-A"
+                                  Type: ChromeOS rootfs
+                                  UUID: 4634AD6A-F583-3646-9A44-E20471C26FB5
+        8205        8192       4  Label: "KERN-B"
+                                  Type: ChromeOS kernel
+                                  UUID: 0F6AB729-FDFA-844D-AE42-DFD4920E2E13
+                                  Attr: priority=0 tries=15 successful=0
+       37376     1048576       5  Label: "ROOT-B"
+                                  Type: ChromeOS rootfs
+                                  UUID: D7C108B7-931C-684F-B252-AB3692F4EE34
+           9           1       6  Label: "KERN-C"
+                                  Type: ChromeOS kernel
+                                  UUID: 71BE9DF5-836A-5740-9083-E3039D250913
+                                  Attr: priority=0 tries=15 successful=0
+          10           1       7  Label: "ROOT-C"
+                                  Type: ChromeOS rootfs
+                                  UUID: 52A7CF50-31F8-B24D-8A00-E924908765C6
+       16896        4096       8  Label: "OEM"
+                                  Type: Linux data
+                                  UUID: 6ADE7ECA-B0F2-2842-BD5D-DD38D1D3A4BD
+          11           1       9  Label: "reserved"
+                                  Type: ChromeOS reserved
+                                  UUID: 5117BE06-FCA8-214E-B00A-0AC53AA64F1C
+          12           1      10  Label: "reserved"
+                                  Type: ChromeOS reserved
+                                  UUID: 5C2A7CBA-6B8E-374E-A774-6DDAE421EB3F
+           8           1      11  Label: "RWFW"
+                                  Type: ChromeOS firmware
+                                  UUID: 43FE83AA-3E7E-C446-8303-29FED184335C
+       20992       16384      12  Label: "EFI-SYSTEM"
+                                  Type: EFI System Partition
+                                  UUID: D5B4458A-B127-D34E-8820-1FBB3FEEAA88
+                                  Attr: legacy_boot=1
+    31246331           4          Sec GPT table
+    31246335           1          Sec GPT header
+"""
+
+
+class TestPartitionManagerGetSectorSize(unittest.TestCase):
+
+  @mock.patch('cros.factory.device.device_utils.CreateDUTInterface')
+  def testCGPT(self, mock_dut):
+    mock_dut.link.IsLocal.return_value = False
+    mock_dut.Call.return_value = 0
+    mock_dut.CheckOutput.return_value = CGPT_SAMPLE_OUTPUT
+    manager = sys_utils.PartitionManager('mock_dev', mock_dut)
+
+    self.assertEqual(manager.GetSectorSize(), 4096)
+
 if __name__ == '__main__':
   unittest.main()

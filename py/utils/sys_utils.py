@@ -425,8 +425,10 @@ class PartitionManager(_GPTTool):
 
     @type_utils.Overrides
     def GetSectorSize(self):
-      # Currently cgpt always assumes sector size = 512.
-      return 512
+      output = self.check_output([self.cgpt, 'show', '-v', self.path])
+      match = re.search(r'LBA Size \(bytes\): ([0-9]+)', output, re.MULTILINE)
+
+      return int(match.group(1))
 
     @type_utils.Overrides
     def GetTypeGUID(self, index):
