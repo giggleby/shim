@@ -774,11 +774,11 @@ class Gooftool:
 
   def VerifyCrosConfig(self):
     """Verify that entries in cros config make sense."""
-    if phase.GetPhase() >= phase.PVT_DOGFOOD:
+    if phase.GetPhase() >= phase.EVT:
       rlz = self._cros_config.GetBrandCode()
       if not rlz or rlz == 'ZZCR':
         # this is incorrect...
-        raise Error('RLZ code "%s" is not allowed in PVT' % rlz)
+        raise Error('RLZ code "%s" is not allowed in/after EVT' % rlz)
 
     model = self._cros_config.GetModelName()
     if not model:
