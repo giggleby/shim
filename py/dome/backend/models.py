@@ -989,8 +989,8 @@ class Log:
   def Export(project_name, compress_params):
     umpire_server = GetUmpireServer(project_name)
     split_size = {
-        'size': compress_params['size'],
-        'unit': compress_params['size_unit']
+        'size': compress_params['archive_size'],
+        'unit': compress_params['archive_size_unit']
     }
     try:
       tmp_dir = tempfile.mkdtemp(dir=SHARED_TMP_DIR)
@@ -1009,8 +1009,7 @@ class Log:
   @staticmethod
   def Download(download_params):
     try:
-      log_path = os.path.join(SHARED_TMP_DIR,
-                              download_params['tmp_dir'],
+      log_path = os.path.join(SHARED_TMP_DIR, download_params['temp_dir'],
                               download_params['log_file'])
       log_file = open(log_path, 'rb')
       return log_file
@@ -1020,14 +1019,14 @@ class Log:
       raise DomeServerException(detail=e)
 
   @staticmethod
-  def Delete(tmp_dir):
-    assert tmp_dir.startswith(SHARED_TMP_DIR + '/'), \
-        'tmp_dir should be under /tmp/shared'
-    if not os.path.isdir(tmp_dir):
-      return 'No directory: {}'.format(tmp_dir)
+  def Delete(temp_dir):
+    assert temp_dir.startswith(SHARED_TMP_DIR + '/'), \
+        'temp_dir should be under /tmp/shared'
+    if not os.path.isdir(temp_dir):
+      return 'No directory: {}'.format(temp_dir)
     try:
-      shutil.rmtree(tmp_dir)
-      return 'Deleted directory: {}'.format(tmp_dir)
+      shutil.rmtree(temp_dir)
+      return 'Deleted directory: {}'.format(temp_dir)
     except OSError as e:
       raise DomeServerException(detail=e)
 

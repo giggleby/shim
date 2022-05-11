@@ -178,8 +178,8 @@ class FactoryDriveDirectorySerializer(serializers.Serializer):
 class LogSerializer(serializers.Serializer):
 
   log_type = serializers.CharField()
-  size = serializers.IntegerField()
-  size_unit = serializers.RegexField(regex='^(M|G)B$')
+  archive_size = serializers.IntegerField()
+  archive_size_unit = serializers.RegexField(regex='^(M|G)B$')
   start_date = serializers.DateField(format='%Y%m%d')
   end_date = serializers.DateField(format='%Y%m%d')
 
@@ -187,7 +187,7 @@ class LogSerializer(serializers.Serializer):
 class LogDownloadSerializer(serializers.Serializer):
 
   log_file = serializers.CharField()
-  tmp_dir = serializers.CharField()
+  temp_dir = serializers.CharField()
 
 
 class LogFileDeleteSerializer(serializers.Serializer):
@@ -199,4 +199,4 @@ class LogFileDeleteSerializer(serializers.Serializer):
 
 class LogDeleteSerializer(serializers.Serializer):
 
-  tmp_dir = serializers.CharField()
+  temp_dir = serializers.CharField()

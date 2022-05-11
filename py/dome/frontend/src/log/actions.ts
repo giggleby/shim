@@ -92,7 +92,7 @@ export const basicActions = {
 export const exportLog = (projectName: string,
                           logType: string,
                           archiveSize: number,
-                          archiveUnit: string,
+                          archiveSizeUnit: string,
                           startDate: string,
                           endDate: string,
                           actionType: string) =>
@@ -107,16 +107,9 @@ export const exportLog = (projectName: string,
         dispatch(addLogPile(pileKey, title, projectName, actionType));
         try {
           dispatch(setCompressState(pileKey, 'PROCESSING'));
-          response = await authorizedAxios().get(
-              `projects/${projectName}/log/compress/`, {
-            params: {
-              log_type: logType,
-              size: archiveSize,
-              size_unit: archiveUnit,
-              start_date: startDate,
-              end_date: endDate,
-            },
-          });
+          response = await authorizedAxios().post(
+              `projects/${projectName}/log/compress/`,
+              {logType, archiveSize, archiveSizeUnit, startDate, endDate});
           dispatch(setCompressState(pileKey, 'SUCCEEDED'));
         } catch (unknownError: unknown) {
           if (isAxiosError(unknownError)) {
@@ -143,14 +136,9 @@ export const exportLog = (projectName: string,
         dispatch(addLogPile(pileKey, title, projectName, actionType));
         try {
           dispatch(setCleanupState(pileKey, 'PROCESSING'));
-          response = await authorizedAxios().get(
-              `projects/${projectName}/log/delete_files/`, {
-            params: {
-              log_type: logType,
-              start_date: startDate,
-              end_date: endDate,
-            },
-          });
+          response = await authorizedAxios().delete(
+              `projects/${projectName}/log/delete_files/`,
+              {data: {logType, startDate, endDate}});
           dispatch(setCleanupState(pileKey, 'SUCCEEDED'));
         } catch (unknownError: unknown) {
           if (isAxiosError(unknownError)) {
@@ -188,27 +176,27 @@ export const downloadLogs = (projectName: string,
 
 export const downloadLog = (projectName: string,
                             tempDir: string,
-                            logPath: string,
+                            logFile: string,
                             pileKey: string) =>
   async (dispatch: Dispatch) => {
-    dispatch(addDownloadFile(pileKey, logPath));
+    dispatch(addDownloadFile(pileKey, logFile));
     try {
       const response = await authorizedAxios().get(
           `projects/${projectName}/log/download/`, {
         responseType: 'blob',
         params: {
-          log_file: logPath,
-          tmp_dir: tempDir,
+          log_file: logFile,
+          temp_dir: tempDir,
         },
       });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(response.data);
-      link.download = `${projectName}-${logPath}`;
+      link.download = `${projectName}-${logFile}`;
       link.click();
       window.URL.revokeObjectURL(link.href);
-      dispatch(setDownloadState(pileKey, logPath, 'SUCCEEDED'));
+      dispatch(setDownloadState(pileKey, logFile, 'SUCCEEDED'));
     } catch (unknownError: unknown) {
-      dispatch(setDownloadState(pileKey, logPath, 'FAILED'));
+      dispatch(setDownloadState(pileKey, logFile, 'FAILED'));
     }
   };
 
@@ -216,7 +204,7 @@ export const deleteDirectory = async (projectName: string,
                                       tempDir: string) => {
   await authorizedAxios().delete(
     `projects/${projectName}/log/delete/`,
-    {data: {tmp_dir: tempDir}});
+    {data: {tempDir}});
 };
 
 const getOverallDownloadState =

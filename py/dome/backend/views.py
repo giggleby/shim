@@ -207,9 +207,9 @@ class LogDownloadView(views.APIView):
 
 class LogFileDeleteView(views.APIView):
 
-  def get(self, request, *args, **kwargs):
+  def delete(self, request, *args, **kwargs):
     del args
-    serializer = LogFileDeleteSerializer(data=request.query_params)
+    serializer = LogFileDeleteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     delete_params = serializer.data
     response = Log.DeleteFiles(kwargs['project_name'], delete_params)
@@ -218,9 +218,9 @@ class LogFileDeleteView(views.APIView):
 
 class LogExportView(views.APIView):
 
-  def get(self, request, *args, **kwargs):
+  def post(self, request, *args, **kwargs):
     del args
-    serializer = LogSerializer(data=request.query_params)
+    serializer = LogSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     compress_params = serializer.data
     response = Log.Export(kwargs['project_name'], compress_params)
@@ -233,8 +233,8 @@ class LogDeleteView(views.APIView):
     del args, kwargs
     serializer = LogDeleteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    discard_params = serializer.data
-    response = Log.Delete(discard_params['tmp_dir'])
+    delete_params = serializer.data
+    response = Log.Delete(delete_params['temp_dir'])
     return Response(response)
 
 
