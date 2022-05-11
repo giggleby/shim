@@ -392,6 +392,7 @@ message CreateHwidDbEditableSectionChangeClRequest {
 message CreateHwidDbEditableSectionChangeClResponse {
   // The CL number to the created HWID change request.
   int64 cl_number = 1;
+  HwidDbEditableSectionAnalysisReport analysis_report = 2;
 }
 
 // External resources that HWID DB can refer to.

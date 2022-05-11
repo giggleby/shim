@@ -26,6 +26,7 @@ _DiffStatusMsg = hwid_api_messages_pb2.DiffStatus
 _ComponentInfoMsg = _AnalysisReportMsg.ComponentInfo
 _PVAlignmentStatus = hwid_action.DBHWIDPVAlignmentStatus
 _PVAlignmentStatusMsg = hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case
+_AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
 
 
 class SelfServiceHelperTest(unittest.TestCase):
@@ -123,9 +124,52 @@ class SelfServiceHelperTest(unittest.TestCase):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
-        hwid_action.DBEditableSectionAnalysisReport('validation-token-value-1',
-                                                    'db data after change 1',
-                                                    [], [], [], {}))
+        hwid_action.DBEditableSectionAnalysisReport(
+            'validation-token-value-1', 'db data after change 1', [], [], [], {
+                'comp1':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        comp_cls='comp_cls1', comp_name='comp_name1',
+                        support_status='unqualified', is_newly_added=False,
+                        comp_name_info=None, seq_no=2,
+                        comp_name_with_correct_seq_no=None, null_values=False,
+                        diff_prev=_DiffStatus(
+                            unchanged=True, name_changed=False,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='comp_name1',
+                            prev_support_status='unqualified',
+                            probe_value_alignment_status_changed=False,
+                            prev_probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO)),
+                        link_avl=False, probe_value_alignment_status=(
+                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                'comp2':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
+                        support_status='unqualified', is_newly_added=True,
+                        comp_name_info=(
+                            hwid_action.DBHWIDComponentNameInfo.from_comp(
+                                111, 222)), seq_no=1,
+                        comp_name_with_correct_seq_no='comp_cls2_111_222#1',
+                        null_values=False, diff_prev=_DiffStatus(
+                            unchanged=False, name_changed=True,
+                            support_status_changed=False, values_changed=False,
+                            prev_comp_name='old_comp_name',
+                            prev_support_status='unqualified',
+                            probe_value_alignment_status_changed=True,
+                            prev_probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO)),
+                        link_avl=False, probe_value_alignment_status=(
+                            _PVAlignmentStatus.ALIGNED)),
+                'comp3':
+                    hwid_action.DBHWIDComponentAnalysisResult(
+                        comp_cls='comp_cls2', comp_name='comp_name3',
+                        support_status='unqualified', is_newly_added=True,
+                        comp_name_info=None, seq_no=2,
+                        comp_name_with_correct_seq_no=None, null_values=True,
+                        diff_prev=None, link_avl=False,
+                        probe_value_alignment_status=(
+                            _PVAlignmentStatus.NO_PROBE_INFO)),
+            }))
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', new_hwid_db_editable_section='db data after change',
@@ -133,6 +177,49 @@ class SelfServiceHelperTest(unittest.TestCase):
     resp = self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
 
     self.assertEqual(resp.cl_number, 123)
+    self.assertEqual(
+        {
+            'comp1':
+                _ComponentInfoMsg(
+                    component_class="comp_cls1", original_name="comp_name1",
+                    original_status="unqualified", is_newly_added=False,
+                    seq_no=2, null_values=False, diff_prev=_DiffStatusMsg(
+                        unchanged=True, name_changed=False,
+                        support_status_changed=False, values_changed=False,
+                        prev_comp_name="comp_name1",
+                        prev_support_status="unqualified",
+                        probe_value_alignment_status_changed=False,
+                        prev_probe_value_alignment_status=(
+                            _PVAlignmentStatusMsg.NO_PROBE_INFO)),
+                    probe_value_alignment_status=(
+                        _PVAlignmentStatusMsg.NO_PROBE_INFO)),
+            'comp2':
+                _ComponentInfoMsg(
+                    component_class="comp_cls2",
+                    original_name="comp_cls2_111_222#9",
+                    original_status="unqualified", is_newly_added=True,
+                    avl_info=_AvlInfoMsg(
+                        cid=111,
+                        qid=222,
+                    ), has_avl=True, seq_no=1,
+                    component_name_with_correct_seq_no="comp_cls2_111_222#1",
+                    null_values=False, diff_prev=_DiffStatusMsg(
+                        unchanged=False, name_changed=True,
+                        support_status_changed=False, values_changed=False,
+                        prev_comp_name="old_comp_name",
+                        prev_support_status="unqualified",
+                        probe_value_alignment_status_changed=True,
+                        prev_probe_value_alignment_status=(
+                            _PVAlignmentStatusMsg.NO_PROBE_INFO)),
+                    probe_value_alignment_status=(
+                        _PVAlignmentStatusMsg.ALIGNED)),
+            'comp3':
+                _ComponentInfoMsg(
+                    component_class="comp_cls2", original_name="comp_name3",
+                    original_status="unqualified", is_newly_added=True,
+                    seq_no=2, null_values=True, probe_value_alignment_status=(
+                        _PVAlignmentStatusMsg.NO_PROBE_INFO)),
+        }, resp.analysis_report.component_infos)
 
   def testCreateHWIDDBEditableSectionChangeCL_ValidationExpired(self):
     """Test that the validation token becomes expired once the live HWID repo is
@@ -435,8 +522,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                         original_status='unqualified',
                         is_newly_added=True,
                         has_avl=True,
-                        avl_info=hwid_api_messages_pb2.AvlInfo(
-                            cid=111, qid=222),
+                        avl_info=_AvlInfoMsg(cid=111, qid=222),
                         seq_no=1,
                         component_name_with_correct_seq_no=(
                             'comp_cls2_111_222#1'),
@@ -530,8 +616,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         _ComponentInfoMsg(
                             component_class='comp_cls2',
                             original_name='comp_cls2_111_222#9',
-                            original_status='unqualified', is_newly_added=False,
-                            avl_info=hwid_api_messages_pb2.AvlInfo(
+                            original_status='unqualified',
+                            is_newly_added=False, avl_info=_AvlInfoMsg(
                                 cid=111, qid=222), has_avl=True, seq_no=1,
                             component_name_with_correct_seq_no=(
                                 'comp_cls2_111_222#1'), diff_prev=None,
@@ -635,9 +721,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         component_class='comp_cls2',
                         original_name='comp_cls2_111_222#9',
                         original_status='unqualified', is_newly_added=True,
-                        has_avl=True, avl_info=hwid_api_messages_pb2.AvlInfo(
-                            cid=111, qid=222), seq_no=1,
-                        component_name_with_correct_seq_no=(
+                        has_avl=True, avl_info=_AvlInfoMsg(cid=111, qid=222),
+                        seq_no=1, component_name_with_correct_seq_no=(
                             'comp_cls2_111_222#1'),
                         diff_prev=_DiffStatusMsg(
                             unchanged=False, name_changed=True,

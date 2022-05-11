@@ -178,7 +178,7 @@ class SelfServiceHelper:
 
       action = self._hwid_action_manager.GetHWIDAction(project)
       analysis = action.AnalyzeDraftDBEditableSection(
-          request.new_hwid_db_editable_section, derive_fingerprint_only=True,
+          request.new_hwid_db_editable_section, derive_fingerprint_only=False,
           require_hwid_db_lines=False)
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
@@ -211,6 +211,9 @@ class SelfServiceHelper:
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
     resp = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClResponse(
         cl_number=cl_number)
+    for reference_id, comp_info in analysis.hwid_components.items():
+      resp.analysis_report.component_infos[reference_id].CopyFrom(
+          _ConvertCompInfoToMsg(comp_info))
     return resp
 
   def CreateHWIDDBFirmwareInfoUpdateCL(self, request):
