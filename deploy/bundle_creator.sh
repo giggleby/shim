@@ -256,7 +256,11 @@ start_all_emulators() {
   start_emulator "pubsub" "8080"
   eval "$(gcloud beta emulators pubsub env-init)"
 
-  sleep 3  # Ensure the emulator is ready.
+  local firestore_port="8081"
+  start_emulator "firestore" "${firestore_port}"
+  export FIRESTORE_EMULATOR_HOST=localhost:"${firestore_port}"
+
+  sleep 3  # Ensure the emulators are ready.
 }
 
 stop_all_emulators() {

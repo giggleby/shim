@@ -2,24 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import datetime
+from datetime import datetime
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from google.cloud import firestore
+
+from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
 class FirestoreConnector:
   """ The connector for accessing the Cloud Firestore database."""
 
-  COLLECTION_HAS_FIRMWARE_SETTINGS = 'has_firmware_settings'
-  COLLECTION_USER_REQUESTS = 'user_requests'
+  _COLLECTION_HAS_FIRMWARE_SETTINGS = 'has_firmware_settings'
+  _COLLECTION_USER_REQUESTS = 'user_requests'
+
   USER_REQUEST_STATUS_NOT_STARTED = 'NOT_STARTED'
   USER_REQUEST_STATUS_IN_PROGRESS = 'IN_PROGRESS'
   USER_REQUEST_STATUS_SUCCEEDED = 'SUCCEEDED'
   USER_REQUEST_STATUS_FAILED = 'FAILED'
 
-  def __init__(self, cloud_project_id):
+  def __init__(self, cloud_project_id: str):
     """Initialize the firestore client by a cloud project id.
 
     Args:
@@ -28,9 +31,9 @@ class FirestoreConnector:
     self._logger = logging.getLogger('FirestoreConnector')
     self._client = firestore.Client(project=cloud_project_id)
     self._user_request_col_ref = self._client.collection(
-        self.COLLECTION_USER_REQUESTS)
+        self._COLLECTION_USER_REQUESTS)
 
-  def GetHasFirmwareSettingByProject(self, project):
+  def GetHasFirmwareSettingByProject(self, project: str) -> Optional[List[str]]:
     """Get the has_firmware setting by a project name.
 
     Args:
@@ -41,16 +44,17 @@ class FirestoreConnector:
       returned.
     """
     doc = self._client.collection(
-        self.COLLECTION_HAS_FIRMWARE_SETTINGS).document(project).get()
+        self._COLLECTION_HAS_FIRMWARE_SETTINGS).document(project).get()
     if doc.exists:
       try:
         return doc.get('has_firmware')
       except KeyError:
-        self._logger.info(
+        self._logger.error(
             'No `has_firmware` attribute found in the existing document.')
     return None
 
-  def CreateUserRequest(self, request):
+  def CreateUserRequest(
+      self, request: factorybundle_pb2.CreateBundleRpcRequest) -> str:
     """Create a user request from the create bundle request.
 
     Args:
@@ -68,7 +72,7 @@ class FirestoreConnector:
         'test_image_version': request.test_image_version,
         'release_image_version': request.release_image_version,
         'status': self.USER_REQUEST_STATUS_NOT_STARTED,
-        'request_time': datetime.datetime.now(),
+        'request_time': datetime.now(),
     }
     if request.HasField('firmware_source'):
       doc_value['firmware_source'] = request.firmware_source
@@ -76,7 +80,7 @@ class FirestoreConnector:
     doc_ref.set(doc_value)
     return doc_ref.id
 
-  def UpdateUserRequestStatus(self, doc_id, status):
+  def UpdateUserRequestStatus(self, doc_id: str, status: str):
     """Update `status` of the specific user request document.
 
     Args:
@@ -85,33 +89,23 @@ class FirestoreConnector:
     """
     self._TryUpdateUserRequestDocRef(doc_id, {'status': status})
 
-  def UpdateUserRequestStartTime(self, doc_id):
+  def UpdateUserRequestStartTime(self, doc_id: str):
     """Update `start_time` of the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
     """
-    self.UpdateUserRequestWithCurrentTime(doc_id, 'start_time')
+    self._UpdateUserRequestWithCurrentTime(doc_id, 'start_time')
 
-  def UpdateUserRequestEndTime(self, doc_id):
+  def UpdateUserRequestEndTime(self, doc_id: str):
     """Update `end_time` of the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
     """
-    self.UpdateUserRequestWithCurrentTime(doc_id, 'end_time')
+    self._UpdateUserRequestWithCurrentTime(doc_id, 'end_time')
 
-  def UpdateUserRequestWithCurrentTime(self, doc_id, field_name):
-    """Update the specific field of the user request with the current time.
-
-    Args:
-      doc_id: The document id of the document to be updated.
-      field_name: The field name used to be updated with the current datetime.
-    """
-    self._TryUpdateUserRequestDocRef(doc_id,
-                                     {field_name: datetime.datetime.now()})
-
-  def UpdateUserRequestErrorMessage(self, doc_id, error_msg):
+  def UpdateUserRequestErrorMessage(self, doc_id: str, error_msg: str):
     """Update an error message to the specific user request document.
 
     Args:
@@ -120,7 +114,7 @@ class FirestoreConnector:
     """
     self._TryUpdateUserRequestDocRef(doc_id, {'error_message': error_msg})
 
-  def UpdateUserRequestGsPath(self, doc_id, gs_path):
+  def UpdateUserRequestGsPath(self, doc_id: str, gs_path: str):
     """Update a created bundle's gs path to the specific user request document.
 
     Args:
@@ -129,7 +123,7 @@ class FirestoreConnector:
     """
     self._TryUpdateUserRequestDocRef(doc_id, {'gs_path': gs_path})
 
-  def GetUserRequestsByEmail(self, email):
+  def GetUserRequestsByEmail(self, email: str) -> List[Dict]:
     """Returns user requests with the specific email.
 
     Args:
@@ -139,13 +133,35 @@ class FirestoreConnector:
       A list of dictionaries which represent the specific user requests in
       descending order of `request_time`.
     """
-    col_ref = self._client.collection(self.COLLECTION_USER_REQUESTS)
     return [
-        doc.to_dict() for doc in col_ref.where('email', '==', email).order_by(
-            'request_time', direction=firestore.Query.DESCENDING).stream()
+        doc.to_dict()
+        for doc in self._user_request_col_ref.where('email', '==', email).
+        order_by('request_time', direction=firestore.Query.DESCENDING).stream()
     ]
 
-  def _GetUserRequestDocRef(self, doc_id=None):
+  def ClearCollection(self, collection_name: str):
+    """Testing purpose.  Deletes all documents in the specific collection.
+
+    Args:
+      collection_name: The name of the collection to be cleared.
+    """
+    col_ref = self._client.collection(collection_name)
+    for doc_ref in col_ref.list_documents():
+      doc_ref.delete()
+
+  def GetUserRequestDocument(self, doc_id: str) -> Dict[str, Any]:
+    """Testing purpose.  Gets the specific document.
+
+    Args:
+      doc_id: The document id of the document to be fetched.
+    """
+    return self._GetUserRequestDocRef(doc_id).get().to_dict()
+
+  def _UpdateUserRequestWithCurrentTime(self, doc_id: str, field_name: str):
+    self._TryUpdateUserRequestDocRef(doc_id, {field_name: datetime.now()})
+
+  def _GetUserRequestDocRef(
+      self, doc_id: Optional[str] = None) -> firestore.DocumentReference:
     # If doc_id is None, it returns a new document reference with a random 20
     # character string.
     return self._user_request_col_ref.document(doc_id)
