@@ -283,6 +283,47 @@
       },
       "additionalProperties": false
     },
+    "grt_allow_list": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "clear_factory_vpd_entries",
+          "clear_gbb_flags",
+          "cr50_disable_factory_mode",
+          "cr50_finalize",
+          "cr50_set_ro_hash",
+          "cr50_smt_write_flash_info",
+          "cr50_write_flash_info",
+          "enable_release_partition",
+          "fpmcu_initialize_entropy",
+          "generate_stable_device_secret",
+          "log_source_hashes",
+          "log_system_details",
+          "set_fw_bitmap_locale",
+          "untar_stateful_files",
+          "upload_report",
+          "verify_cbi_eeprom_wp_status",
+          "verify_cros_config",
+          "verify_dlc_images",
+          "verify_ec_key",
+          "verify_fp_key",
+          "verify_hwid",
+          "verify_keys",
+          "verify_me_locked",
+          "verify_release_channel",
+          "verify_rlz_code",
+          "verify_rootfs",
+          "verify_switch_wp",
+          "verify_system_time",
+          "verify_tpm",
+          "verify_vpd",
+          "verify-sn-bits",
+          "wipe_in_place",
+          "write_protect"
+        ]
+      },
+      "default": []
+    },
     "test_constants": {
       "type": "object",
       "patternProperties": {
@@ -293,6 +334,71 @@
         }
       },
       "properties": {
+        "grt": {
+          "type": "object",
+          "properties": {
+            "force_write_protect": {
+              "type": "boolean",
+              "description": "*** Write protection is required for mass production and shippable devices. By default we enable write protection starting from PVT stages, but you can start trying write protection earlier by this option.",
+              "default": false
+            },
+            "cbi_eeprom_wp_status": {
+              "enum": ["Absent", "Locked", "Unlocked"],
+              "description": "Set this to 'Absent' for board without CBI EEPROM. Set this to 'Unlocked' for MLB layouts which requires CBI WP being disabled in pre-PVT and enabled in PVT.",
+              "default": "Locked"
+            },
+            "collect_zero_touch_ids": {
+              "type": "boolean",
+              "default": false
+            },
+            "ec_pubkey_path": {
+              "type": ["string", "null"],
+              "default": null
+            },
+            "ec_pubkey_hash": {
+              "type": ["string", "null"],
+              "default": null
+            },
+            "rma_mode": {
+              "type": "boolean",
+              "default": false
+            },
+            "mlb_mode": {
+              "type": "boolean",
+              "description": "The MLB will leave factory without assembly, for example, this is a RMA spare board or local OEM projects.",
+              "default": false
+            },
+            "enable_zero_touch": {
+              "type": "boolean",
+              "default": false
+            },
+            "gooftool_skip_list": {
+              "$ref": "#/definitions/grt_allow_list"
+            },
+            "gooftool_waive_list": {
+              "$ref": "#/definitions/grt_allow_list"
+            },
+            "re_sign_release_kernel": {
+              "type": "boolean",
+              "description": "Enable this if you want to finalize with a DEV signed kernel; go/cros-factory-fw-in-early-builds",
+              "default": false
+            },
+            "secure_wipe": {
+              "type": "boolean",
+              "default": true
+            },
+            "is_reference_board": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "patternProperties": {
+            "^__comment[A-Za-z0-9_-]*$": {
+              "$ref": "#/definitions/test_comment"
+            }
+          },
+          "additionalProperties": false
+        },
         "overlord": {
           "type": "object",
           "properties": {

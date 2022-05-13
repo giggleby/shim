@@ -4,21 +4,18 @@
   ],
   "constants": {
     "grt": {
+      "__comment": "See https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/py/test/test_lists/test_list.schema.json for the description of each attributes",
       "force_write_protect": false,
-      "__comment_force_write_protect": "*** Write protection is required for mass production and shippable devices. By default we enable write protection starting from PVT stages, but you can start trying write protection earlier by this option.",
       "cbi_eeprom_wp_status": "Locked",
-      "__comment_cbi_eeprom_wp_status": "Set this to 'Absent' for board without CBI EEPROM. Set this to 'Unlocked' for MLB layouts which requires CBI WP being disabled in pre-PVT and enabled in PVT.",
       "collect_zero_touch_ids": false,
       "ec_pubkey_path": null,
       "ec_pubkey_hash": null,
       "rma_mode": false,
       "mlb_mode": false,
-      "__comment_mlb_mode": "The MLB will leave factory without assembly, for example, this is a RMA spare board or local OEM projects.",
       "enable_zero_touch": false,
       "gooftool_skip_list": [],
       "gooftool_waive_list": [],
       "re_sign_release_kernel": false,
-      "__comment_re_sign_release_kernel": "Enable this if you want to finalize with a DEV signed kernel; go/cros-factory-fw-in-early-builds",
       "secure_wipe": true,
       "is_reference_board": false
     }
