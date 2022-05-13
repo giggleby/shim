@@ -11,7 +11,7 @@ import functools
 import itertools
 import logging
 import re
-from typing import Callable, Dict, List, NamedTuple, Optional
+from typing import Callable, Dict, List, MutableMapping, NamedTuple, Optional
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
@@ -116,10 +116,25 @@ class HWIDComponentAnalysisResult(NamedTuple):
   probe_value_alignment_status: ProbeValueAlignmentStatus
 
 
+class HWIDSectionTouchCase(enum.Enum):
+  TOUCHED = enum.auto()
+  UNTOUCHED = enum.auto()
+
+
+class TouchHWIDSections(NamedTuple):
+  image_id_change_status: HWIDSectionTouchCase
+  pattern_change_status: HWIDSectionTouchCase
+  encoded_fields_change_status: MutableMapping[str, HWIDSectionTouchCase]
+  components_change_status: HWIDSectionTouchCase
+  rules_change_status: HWIDSectionTouchCase
+  framework_version_change_status: HWIDSectionTouchCase
+
+
 class ChangeAnalysis(NamedTuple):
   precondition_errors: List[Error]
   lines: List[DBLineAnalysisResult]
   hwid_components: Dict[str, HWIDComponentAnalysisResult]
+  touched_sections: Optional[TouchHWIDSections] = None
 
 
 class ContentsAnalyzer:
@@ -339,6 +354,71 @@ class ContentsAnalyzer:
       line_analysis_result.append(DBLineAnalysisResult(mod_status, parts))
     return line_analysis_result
 
+  def _FillTouchedSections(self) -> Optional[TouchHWIDSections]:
+    if self._prev_db is None or self._prev_db.instance is None:
+      return None
+    prev_db = self._prev_db.instance
+    curr_db = self._curr_db.instance
+
+    image_id_change_status = HWIDSectionTouchCase.UNTOUCHED
+    pattern_change_status = HWIDSectionTouchCase.UNTOUCHED
+    components_change_status = HWIDSectionTouchCase.UNTOUCHED
+    rules_change_status = HWIDSectionTouchCase.UNTOUCHED
+    framework_version_change_status = HWIDSectionTouchCase.UNTOUCHED
+    encoded_fields_change_status = {}
+    if prev_db.image_ids != curr_db.image_ids:
+      image_id_change_status = HWIDSectionTouchCase.TOUCHED
+      pattern_change_status = HWIDSectionTouchCase.TOUCHED
+    else:
+      for image_id in prev_db.image_ids:
+        if prev_db.GetImageName(image_id) != curr_db.GetImageName(image_id):
+          image_id_change_status = HWIDSectionTouchCase.TOUCHED
+          break
+
+      for image_id in prev_db.image_ids:
+        if prev_db.GetEncodingScheme(image_id) != curr_db.GetEncodingScheme(
+            image_id):
+          pattern_change_status = HWIDSectionTouchCase.TOUCHED
+          break
+        if prev_db.GetBitMapping(image_id) != curr_db.GetBitMapping(image_id):
+          pattern_change_status = HWIDSectionTouchCase.TOUCHED
+          break
+
+    curr_encoded_fields = set(curr_db.encoded_fields)
+    prev_encoded_fields = set(prev_db.encoded_fields)
+    for encoded_field in curr_encoded_fields - prev_encoded_fields:
+      encoded_fields_change_status[encoded_field] = (
+          HWIDSectionTouchCase.TOUCHED)
+    for encoded_field in curr_encoded_fields & prev_encoded_fields:
+      if prev_db.GetEncodedField(encoded_field) != curr_db.GetEncodedField(
+          encoded_field):
+        encoded_fields_change_status[encoded_field] = (
+            HWIDSectionTouchCase.TOUCHED)
+      else:
+        encoded_fields_change_status[encoded_field] = (
+            HWIDSectionTouchCase.UNTOUCHED)
+
+    if prev_db.GetComponentClasses() != curr_db.GetComponentClasses():
+      components_change_status = HWIDSectionTouchCase.TOUCHED
+    else:
+      for comp_cls in prev_db.GetComponentClasses():
+        if prev_db.GetComponents(comp_cls) != curr_db.GetComponents(comp_cls):
+          components_change_status = HWIDSectionTouchCase.TOUCHED
+          break
+
+    if prev_db.device_info_rules != curr_db.device_info_rules:
+      rules_change_status = HWIDSectionTouchCase.TOUCHED
+    elif prev_db.verify_rules != curr_db.verify_rules:
+      rules_change_status = HWIDSectionTouchCase.TOUCHED
+
+    if prev_db.framework_version != curr_db.framework_version:
+      framework_version_change_status = HWIDSectionTouchCase.TOUCHED
+
+    return TouchHWIDSections(image_id_change_status, pattern_change_status,
+                             encoded_fields_change_status,
+                             components_change_status, rules_change_status,
+                             framework_version_change_status)
+
   def AnalyzeChange(self, db_contents_patcher: Optional[Callable[[str], str]],
                     require_hwid_db_lines: bool) -> ChangeAnalysis:
     """Analyzes the HWID DB change.
@@ -352,8 +432,8 @@ class ContentsAnalyzer:
     Returns:
       An instance of `ChangeAnalysis`.
     """
-    report = ChangeAnalysis([], [], {})
     if not self._curr_db.instance:
+      report = ChangeAnalysis([], [], {})
       report.precondition_errors.append(
           Error(ErrorCode.SCHEMA_ERROR, str(self._curr_db.load_error)))
       return report
@@ -366,6 +446,7 @@ class ContentsAnalyzer:
     all_comps = self._ExtractHWIDComponents()
     all_placeholders = {}
     db_placeholder_options = database.MagicPlaceholderOptions({})
+    hwid_components = {}
     for comp_cls, comps in all_comps.items():
       for comp in comps:
         comp_name_replacer = _LineSplitter.GeneratePlaceholderKey(
@@ -390,7 +471,7 @@ class ContentsAnalyzer:
         else:
           comp_name_with_correct_seq_no = None
         raw_comp_name = yaml.safe_dump(comp.name).partition('\n')[0]
-        report.hwid_components[comp_name_replacer] = (
+        hwid_components[comp_name_replacer] = (
             HWIDComponentAnalysisResult(
                 comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
                 comp.extracted_name_info, comp.expected_seq_no,
@@ -401,10 +482,13 @@ class ContentsAnalyzer:
       if db_contents_patcher is None:
         raise ValueError(('db_contents_patcher should not be None when '
                           'require_hwid_db_lines is set to True'))
-      report.lines.extend(
-          self._AnalyzeDBLines(db_contents_patcher, all_placeholders,
-                               db_placeholder_options))
-    return report
+      lines = self._AnalyzeDBLines(db_contents_patcher, all_placeholders,
+                                   db_placeholder_options)
+    else:
+      lines = []
+
+    touched_sections = self._FillTouchedSections()
+    return ChangeAnalysis([], lines, hwid_components, touched_sections)
 
   class _HWIDComponentMetadata(NamedTuple):
     name: str

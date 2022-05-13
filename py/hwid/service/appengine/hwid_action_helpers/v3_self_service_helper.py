@@ -103,7 +103,7 @@ class HWIDV3SelfServiceActionHelper:
                                                   curr_hwid_db_contents)
     analysis = analyzer.AnalyzeChange(self.RemoveHeader, require_hwid_db_lines)
     return report_factory([], analysis.precondition_errors, analysis.lines,
-                          analysis.hwid_components)
+                          analysis.hwid_components, analysis.touched_sections)
 
   def GetHWIDBundleResourceInfo(
       self, fingerprint_only) -> hwid_action.BundleResourceInfo:

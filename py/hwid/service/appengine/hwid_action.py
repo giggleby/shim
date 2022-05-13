@@ -236,6 +236,8 @@ DBHWIDComponentAnalysisResult = v3_contents_analyzer.HWIDComponentAnalysisResult
 DBHWIDComponentDiffStatus = v3_contents_analyzer.DiffStatus
 DBHWIDComponentNameInfo = v3_contents_analyzer.ComponentNameInfo
 DBHWIDPVAlignmentStatus = v3_contents_analyzer.ProbeValueAlignmentStatus
+DBHWIDTouchSections = v3_contents_analyzer.TouchHWIDSections
+DBHWIDTouchCase = v3_contents_analyzer.HWIDSectionTouchCase
 
 
 class DBEditableSectionAnalysisReport(NamedTuple):
@@ -245,6 +247,7 @@ class DBEditableSectionAnalysisReport(NamedTuple):
   precondition_errors: List[DBPreconditionError]
   lines: List[DBEditableSectionLineAnalysisResult]
   hwid_components: Dict[str, DBHWIDComponentAnalysisResult]
+  touched_sections: Optional[DBHWIDTouchSections] = None
 
   @property
   def is_change_valid(self):

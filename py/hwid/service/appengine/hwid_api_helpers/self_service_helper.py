@@ -57,6 +57,35 @@ _APPROVAL_CASE = {
 }
 
 
+_HWID_SECTION_CHANGE_STATUS = {
+    hwid_action.DBHWIDTouchCase.TOUCHED: (
+        _AnalysisReportMsg.HwidSectionChange.ChangeStatus.TOUCHED),
+    hwid_action.DBHWIDTouchCase.UNTOUCHED: (
+        _AnalysisReportMsg.HwidSectionChange.ChangeStatus.UNTOUCHED),
+}
+
+
+def _ConvertTouchedSectionToMsg(
+    touched_sections: Optional[hwid_action.DBHWIDTouchSections]
+) -> _AnalysisReportMsg.HwidSectionChange:
+  if not touched_sections:
+    return _AnalysisReportMsg.HwidSectionChange()
+  msg = _AnalysisReportMsg.HwidSectionChange()
+  msg.image_id_change_status = _HWID_SECTION_CHANGE_STATUS[
+      touched_sections.image_id_change_status]
+  msg.pattern_change_status = _HWID_SECTION_CHANGE_STATUS[
+      touched_sections.pattern_change_status]
+  msg.components_change_status = _HWID_SECTION_CHANGE_STATUS[
+      touched_sections.components_change_status]
+  msg.rules_change_status = _HWID_SECTION_CHANGE_STATUS[
+      touched_sections.rules_change_status]
+  msg.framework_version_change_status = _HWID_SECTION_CHANGE_STATUS[
+      touched_sections.framework_version_change_status]
+  for k, v in touched_sections.encoded_fields_change_status.items():
+    msg.encoded_fields_change_status[k] = _HWID_SECTION_CHANGE_STATUS[v]
+  return msg
+
+
 def _NormalizeProjectString(string: str) -> Optional[str]:
   """Normalizes a string to account for things like case."""
   return string.strip().upper() if string else None
@@ -214,6 +243,9 @@ class SelfServiceHelper:
     for reference_id, comp_info in analysis.hwid_components.items():
       resp.analysis_report.component_infos[reference_id].CopyFrom(
           _ConvertCompInfoToMsg(comp_info))
+
+    resp.analysis_report.touched_sections.CopyFrom(
+        _ConvertTouchedSectionToMsg(analysis.touched_sections))
     return resp
 
   def CreateHWIDDBFirmwareInfoUpdateCL(self, request):
@@ -436,6 +468,9 @@ Info Update
     for reference_id, comp_info in report.hwid_components.items():
       response.analysis_report.component_infos[reference_id].CopyFrom(
           _ConvertCompInfoToMsg(comp_info))
+
+    response.analysis_report.touched_sections.CopyFrom(
+        _ConvertTouchedSectionToMsg(report.touched_sections))
     return response
 
   def BatchGenerateAVLComponentName(self, request):

@@ -27,6 +27,8 @@ _ComponentInfoMsg = _AnalysisReportMsg.ComponentInfo
 _PVAlignmentStatus = hwid_action.DBHWIDPVAlignmentStatus
 _PVAlignmentStatusMsg = hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case
 _AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
+_HWIDSectionChangeMsg = _AnalysisReportMsg.HwidSectionChange
+_HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
 
 
 class SelfServiceHelperTest(unittest.TestCase):
@@ -478,7 +480,18 @@ class SelfServiceHelperTest(unittest.TestCase):
                         null_values=False, diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO)),
-            }))
+            },
+            hwid_action.DBHWIDTouchSections(
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                {
+                    'comp_cls1_fields': hwid_action.DBHWIDTouchCase.TOUCHED,
+                    'comp_cls2_fields': hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                },
+                hwid_action.DBHWIDTouchCase.TOUCHED,
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+            )))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents',
@@ -529,7 +542,18 @@ class SelfServiceHelperTest(unittest.TestCase):
                         probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO),
                     ),
-            }), validation_token='fingerprint')
+            }, touched_sections=_HWIDSectionChangeMsg(
+                image_id_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
+                pattern_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
+                encoded_fields_change_status={
+                    'comp_cls1_fields': _HWIDSectionChangeStatusMsg.TOUCHED,
+                    'comp_cls2_fields': _HWIDSectionChangeStatusMsg.UNTOUCHED,
+                },
+                components_change_status=_HWIDSectionChangeStatusMsg.TOUCHED,
+                rules_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
+                framework_version_change_status=(
+                    _HWIDSectionChangeStatusMsg.UNTOUCHED),
+            )), validation_token='fingerprint')
     self.assertEqual(resp, expected_resp)
 
   def testGetHWIDBundleResourceInfo_RefreshDatastoreFirst(self):
@@ -689,7 +713,19 @@ class SelfServiceHelperTest(unittest.TestCase):
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO)),
-            }))
+            },
+            hwid_action.DBHWIDTouchSections(
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                {
+                    'comp_cls1_fields': hwid_action.DBHWIDTouchCase.TOUCHED,
+                    'comp_cls2_fields': hwid_action.DBHWIDTouchCase.TOUCHED,
+                    'comp_cls3_fields': hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                },
+                hwid_action.DBHWIDTouchCase.TOUCHED,
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+                hwid_action.DBHWIDTouchCase.UNTOUCHED,
+            )))
 
     req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
         project='proj', hwid_db_editable_section='editable contents',
@@ -741,7 +777,19 @@ class SelfServiceHelperTest(unittest.TestCase):
                         has_avl=False, seq_no=2, null_values=True,
                         probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
-            }), validation_token='fingerprint')
+            }, touched_sections=_HWIDSectionChangeMsg(
+                image_id_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
+                pattern_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
+                encoded_fields_change_status={
+                    'comp_cls1_fields': _HWIDSectionChangeStatusMsg.TOUCHED,
+                    'comp_cls2_fields': _HWIDSectionChangeStatusMsg.TOUCHED,
+                    'comp_cls3_fields': _HWIDSectionChangeStatusMsg.UNTOUCHED,
+                },
+                components_change_status=_HWIDSectionChangeStatusMsg.TOUCHED,
+                rules_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
+                framework_version_change_status=(
+                    _HWIDSectionChangeStatusMsg.UNTOUCHED),
+            )), validation_token='fingerprint')
 
     self.assertEqual(resp, expected_resp)
 

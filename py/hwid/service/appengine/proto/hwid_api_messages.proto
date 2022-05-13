@@ -545,6 +545,25 @@ message HwidDbEditableSectionAnalysisReport {
 
   repeated HwidDbLine hwid_config_lines = 3;
   map<string, ComponentInfo> component_infos = 4;
+
+  // A message to indicate top-level HWID DB section changes.
+  message HwidSectionChange {
+    enum ChangeStatus {
+      CHANGE_STATUS_UNSPECIFIED = 0;
+      UNTOUCHED = 1;
+      TOUCHED = 2;
+    }
+
+    ChangeStatus image_id_change_status = 1;
+    ChangeStatus pattern_change_status = 2;
+    map<string, ChangeStatus> encoded_fields_change_status = 3;
+    ChangeStatus components_change_status = 4;
+    ChangeStatus rules_change_status = 5;
+    ChangeStatus framework_version_change_status = 6;
+  }
+
+  // A message to indicate top-level HWID DB section changes.
+  HwidSectionChange touched_sections = 5;
 }
 
 message HwidBundleResourceInfo {

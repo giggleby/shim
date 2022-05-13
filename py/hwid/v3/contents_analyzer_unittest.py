@@ -98,6 +98,34 @@ class ContentsAnalyzerTest(unittest.TestCase):
     self.assertFalse(analysis.precondition_errors)
     self.assertFalse(analysis.lines)
 
+  def test_AnalyzeChange_TouchedSections(self):
+    prev_db_contents = self._ReadTestData('test_database_db.yaml')
+    curr_db_contents = self._ReadTestData(
+        'test_database_db_touched_sections.yaml')
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    analysis = inst.AnalyzeChange(None, False)
+
+    self.assertEqual(
+        contents_analyzer.TouchHWIDSections(
+            image_id_change_status=(
+                contents_analyzer.HWIDSectionTouchCase.TOUCHED),
+            pattern_change_status=(
+                contents_analyzer.HWIDSectionTouchCase.TOUCHED),
+            encoded_fields_change_status={
+                'field1': contents_analyzer.HWIDSectionTouchCase.TOUCHED,
+                'field2': contents_analyzer.HWIDSectionTouchCase.UNTOUCHED,
+                'field3': contents_analyzer.HWIDSectionTouchCase.UNTOUCHED,
+                'field4': contents_analyzer.HWIDSectionTouchCase.UNTOUCHED,
+            },
+            components_change_status=(
+                contents_analyzer.HWIDSectionTouchCase.TOUCHED),
+            rules_change_status=(
+                contents_analyzer.HWIDSectionTouchCase.TOUCHED),
+            framework_version_change_status=(
+                contents_analyzer.HWIDSectionTouchCase.TOUCHED),
+        ), analysis.touched_sections)
+
   def _ReadTestData(self, test_data_name: str) -> str:
     return file_utils.ReadFile(os.path.join(_TEST_DATA_PATH, test_data_name))
 

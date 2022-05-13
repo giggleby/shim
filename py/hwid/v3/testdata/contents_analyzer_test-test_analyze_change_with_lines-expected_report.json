@@ -687,5 +687,15 @@
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO"
     }
+  },
+  "touched_sections": {
+    "image_id_change_status": "UNTOUCHED",
+    "pattern_change_status": "TOUCHED",
+    "encoded_fields_change_status": {
+      "display_panel_field": "TOUCHED"
+    },
+    "components_change_status": "TOUCHED",
+    "rules_change_status": "UNTOUCHED",
+    "framework_version_change_status": "UNTOUCHED"
   }
 }
