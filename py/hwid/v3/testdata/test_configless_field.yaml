@@ -215,6 +215,7 @@ components:
           oemid: '0x0100'
           prv: '0x2'
           sectors: '244277248'
+          size: '125069950976'
           type: MMC
       KLMBG2JETD-B041_0300000000000000:
         values:
@@ -225,6 +226,7 @@ components:
           oemid: '0x0100'
           prv: '0x3'
           sectors: '61071360'
+          size: '31268536320'
           type: MMC
       KLMBG2JETD-B041_0200000000000000:
         values:
@@ -235,6 +237,7 @@ components:
           oemid: '0x0100'
           prv: '0x2'
           sectors: '122142720'
+          size: '62537072640'
           type: MMC
       KLMCG2KCTA-B041_0200000000000000:
         values:
@@ -245,6 +248,7 @@ components:
           oemid: '0x0100'
           prv: '0x2'
           sectors: '122142720'
+          size: '62537072640'
           type: MMC
       H26T87001CMR_3030303300000000:
         values:
@@ -255,6 +259,7 @@ components:
           oemid: '0x014a'
           prv: '0x1'
           sectors: '244285440'
+          size: '125074145280'
           type: MMC
       H26M74002HMR_3030303200000000:
         values:
@@ -264,6 +269,7 @@ components:
           name: hC8aP>
           oemid: '0x014a'
           sectors: '122142720'
+          size: '62537072640'
           type: MMC
       H26M74002HMR_3030303100000000:
         values:
@@ -273,6 +279,7 @@ components:
           name: hC8aP>
           oemid: '0x014a'
           sectors: '122142720'
+          size: '62537072640'
           type: MMC
       KLMEG8UERM-C041_0100000000000000:
         values:
@@ -283,6 +290,7 @@ components:
           oemid: '0x0100'
           prv: '0x1'
           sectors: '488554496'
+          size: '250139901952'
           type: MMC
       H26M62002JPR_3030303200000000:
         values:
@@ -292,6 +300,7 @@ components:
           name: hB8aP>
           oemid: '0x014a'
           sectors: '61071360'
+          size: '31268536320'
           type: MMC
       KLMEG8UCTA-B041_0100000000000000:
         values:
@@ -302,6 +311,7 @@ components:
           oemid: '0x0100'
           prv: '0x1'
           sectors: '488554496'
+          size: '250139901952'
           type: MMC
   firmware_keys:
     items:

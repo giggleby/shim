@@ -103,6 +103,7 @@ components:
           oemid: '0x0100'
           prv: '0x2'
           sectors: '122142720'
+          size: '62537072640'
           type: MMC
 
   firmware_keys:

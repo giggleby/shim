@@ -214,10 +214,20 @@ class _ConfiglessFieldGetter:
       # might not be available until the spare board is mounted on device.  So
       # it's okay to omit this field.
       return 0
-    sectors = sum(int(self._db.GetComponents('storage')[comp].values['sectors'])
-                  for comp in self._bom.components['storage'])
-    # Assume sector size is 512 bytes
-    return sectors // 2 // 1024 // 1024
+
+    size_in_bytes = 0
+    for comp in self._bom.components['storage']:
+      values = self._db.GetComponents('storage')[comp].values
+      if 'size' in values:
+        # The unit of `size` is byte.
+        size_in_bytes += int(values['size'])
+      else:
+        # We should use `size` to calculate the storage size, since it is
+        # calculated by `sectors` * `logical_block_size` in runtime_probe.
+        # However, we still keep `sectors` * 512 as a fallback.
+        size_in_bytes += int(values['sectors']) * 512
+
+    return size_in_bytes // 1024 // 1024 // 1024
 
   @property
   def version(self):

@@ -14,11 +14,11 @@ from cros.factory.hwid.v3 import probe
 from cros.factory.unittest_utils import label_utils
 
 _TEST_DATABASE_PATH = os.path.join(
-    os.path.dirname(__file__), 'testdata', 'TEST_CONFIGLESS_FIELD')
+    os.path.dirname(__file__), 'testdata', 'test_configless_field.yaml')
 
 _TEST_PROBED_RESULTS_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata',
-    'TEST_CONFIGLESS_FIELD_probed_results')
+    'test_configless_field_probed_results.json')
 
 _CF = configless_fields.ConfiglessFields
 

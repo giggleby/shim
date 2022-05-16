@@ -16,10 +16,10 @@ from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.unittest_utils import label_utils
 
 _TEST_DATABASE_PATH = os.path.join(
-    os.path.dirname(__file__), 'testdata', 'TEST_PROJECT')
+    os.path.dirname(__file__), 'testdata', 'test_project.yaml')
 
 _TEST_PROBED_RESULTS_PATH = os.path.join(
-    os.path.dirname(__file__), 'testdata', 'TEST_PROJECT_probed_results')
+    os.path.dirname(__file__), 'testdata', 'test_project_probed_results.json')
 
 _TEST_ENCODED_STRING_GOOD = 'CHROMEBOOK B9M-A6P'
 

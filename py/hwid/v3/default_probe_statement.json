@@ -150,6 +150,7 @@
       "keys":[
         "type",
         "sectors",
+        "size",
         "mmc_hwrev",
         "mmc_manfid",
         "mmc_oemid",
