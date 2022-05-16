@@ -35,6 +35,7 @@ from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
+from cros.factory.instalog.utils import process_utils
 from cros.factory.instalog.utils import time_utils
 from cros.factory.instalog.utils import type_utils
 
@@ -219,6 +220,7 @@ class ReportParser(log_utils.LoggerMixin):
                      processed_callback):
     """Processes the archive and remove it after processing it."""
     processed = 0
+    report_num_by_external_tool = None
     args_queue = multiprocessing.Queue()
     result_queue = multiprocessing.Manager().Queue()
     total_reports = 0
@@ -229,9 +231,13 @@ class ReportParser(log_utils.LoggerMixin):
       if zipfile.is_zipfile(self._archive_path):
         decompress_process = multiprocessing.Process(
             target=self.DecompressZipArchive, args=(args_queue, ))
+        report_num_by_external_tool = self._GetReportNumInZip(
+            self._archive_path)
       elif tarfile.is_tarfile(self._archive_path):
         decompress_process = multiprocessing.Process(
             target=self.DecompressTarArchive, args=(args_queue, ))
+        report_num_by_external_tool = self._GetReportNumInTar(
+            self._archive_path)
       else:
         # We only support tar file and zip file.
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
@@ -269,6 +275,18 @@ class ReportParser(log_utils.LoggerMixin):
         processed_callback([report_event, process_event])
 
       self.info('Parsed %d/%d reports', processed, total_reports)
+      if report_num_by_external_tool is None:
+        error_msg = 'Cannot check processed report number due to not getting '\
+                    'the number with external tool'
+        self.error(error_msg)
+        SetProcessEventStatus(ERROR_CODE.ArchiveReportNumNotMatch,
+                              archive_process_event, error_msg)
+      elif report_num_by_external_tool != processed:
+        error_msg = f'Processed report number ({processed}) does not match to '\
+          f'the one reported by external tool ({report_num_by_external_tool})!'
+        self.error(error_msg)
+        SetProcessEventStatus(ERROR_CODE.ArchiveReportNumNotMatch,
+                              archive_process_event, error_msg)
     except Exception:
       self.exception('Exception encountered')
 
@@ -649,10 +667,43 @@ class ReportParser(log_utils.LoggerMixin):
       self.exception('Failed to parse testlog events')
       return False
 
+  def _GetReportNumInZip(self, zip_path):
+    """Returns the number of factory report in the zip archive via `unzip -l`.
+
+    Args:
+      zip_path: the string path of the zip archive.
+    Returns:
+      A non-negative number, or None if encounter exception.
+    """
+    try:
+      output = process_utils.CheckOutput(['unzip', '-l', zip_path])
+      lines = output.split('\n')
+      return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
+    except Exception:
+      self.exception('Cannot get number of reports in %s', zip_path)
+      return None
+
+  def _GetReportNumInTar(self, tar_path):
+    """Returns the number of factory report in the archive via `tar tvf`.
+
+    Args:
+      tar_path: the string path of the tar archive.
+    Returns:
+      A non-negative number, or None if encounter exception.
+    """
+    try:
+      output = process_utils.CheckOutput(['tar', 'tvf', tar_path])
+      lines = output.split('\n')
+      return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
+    except Exception:
+      self.exception('Cannot get number of reports in %s', tar_path)
+      return None
+
 
 ERROR_CODE = type_utils.Obj(
     EventNoObjectId=100,
     ArchiveInvalidFormat=200,
+    ArchiveReportNumNotMatch=201,
     ArchiveUnknownError=299,
     ReportInvalidFormat=300,
     ReportUnknownError=399,
