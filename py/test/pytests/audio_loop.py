@@ -595,8 +595,8 @@ class AudioLoopTest(test_case.TestCase):
     # If the test fails, attach the audio file; otherwise, remove it.
     self._audio_file_path = []
 
-    ucm_config_mgr = self._dut.audio.ucm_config_mgr
-    self._default_input_gain = ucm_config_mgr.GetDefaultInputGain(self._in_card)
+    # We only need to read & apply the input gain from ucm for audiofuntest.
+    self._default_input_gain = 0
 
   def tearDown(self):
     self._dut.audio.RestoreMixerControls()
@@ -636,6 +636,10 @@ class AudioLoopTest(test_case.TestCase):
       for test in self.args.tests_to_conduct:
         self._current_test_args = test
         if test['type'] == 'audiofun':
+          # Read input_gain from ucm for audiofuntest.
+          ucm_config_mgr = self._dut.audio.ucm_config_mgr
+          self._default_input_gain = ucm_config_mgr.GetDefaultInputGain(
+              self._in_card)
           self.AudioFunTest()
         elif test['type'] == 'sinewav':
           self.SinewavTest()
