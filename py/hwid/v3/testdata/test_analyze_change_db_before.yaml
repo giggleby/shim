@@ -28,5 +28,16 @@ components:
         values:
           cores: '1'
           model: 'x'
+      display_panel_B_both_null:
+        status: unqualified
+        values: null
+      display_panel_B_prev_null:
+        status: unqualified
+        values: null
+      display_panel_B_next_null:
+        status: unqualified
+        values:
+          cores: '5'
+          model: ghi
 
 rules: []

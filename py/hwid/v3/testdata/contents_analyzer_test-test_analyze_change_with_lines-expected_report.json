@@ -302,6 +302,141 @@
       ]
     },
     {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_B_both_null@@y@"
+        },
+        {
+          "type": "TEXT",
+          "text": ":"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        status: "
+        },
+        {
+          "type": "COMPONENT_STATUS",
+          "text": "x@@@@component-display_panel-display_panel_B_both_null@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        values: null"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_B_prev_null@@y@"
+        },
+        {
+          "type": "TEXT",
+          "text": ":"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        status: "
+        },
+        {
+          "type": "COMPONENT_STATUS",
+          "text": "x@@@@component-display_panel-display_panel_B_prev_null@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        values:"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          cores: '3'"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "          model: def"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "      "
+        },
+        {
+          "type": "COMPONENT_NAME",
+          "text": "x@@@@component-display_panel-display_panel_B_next_null@@y@"
+        },
+        {
+          "type": "TEXT",
+          "text": ":"
+        }
+      ]
+    },
+    {
+      "modification_status": "NOT_MODIFIED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        status: "
+        },
+        {
+          "type": "COMPONENT_STATUS",
+          "text": "x@@@@component-display_panel-display_panel_B_next_null@@y@"
+        }
+      ]
+    },
+    {
+      "modification_status": "NEWLY_ADDED",
+      "parts": [
+        {
+          "type": "TEXT",
+          "text": "        values: null"
+        }
+      ]
+    },
+    {
       "modification_status": "NEWLY_ADDED",
       "parts": [
         {
@@ -332,7 +467,7 @@
       ]
     },
     {
-      "modification_status": "NEWLY_ADDED",
+      "modification_status": "NOT_MODIFIED",
       "parts": [
         {
           "type": "TEXT",
@@ -341,7 +476,7 @@
       ]
     },
     {
-      "modification_status": "NEWLY_ADDED",
+      "modification_status": "MODIFIED",
       "parts": [
         {
           "type": "TEXT",
@@ -350,7 +485,7 @@
       ]
     },
     {
-      "modification_status": "NEWLY_ADDED",
+      "modification_status": "MODIFIED",
       "parts": [
         {
           "type": "TEXT",
@@ -452,6 +587,72 @@
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO"
     },
+    "x@@@@component-display_panel-display_panel_B_both_null@@y@": {
+      "comp_cls": "display_panel",
+      "comp_name": "display_panel_B_both_null",
+      "support_status": "unqualified",
+      "is_newly_added": false,
+      "comp_name_info": null,
+      "seq_no": 2,
+      "comp_name_with_correct_seq_no": null,
+      "null_values": true,
+      "diff_prev": {
+        "unchanged": true,
+        "name_changed": false,
+        "support_status_changed": false,
+        "values_changed": false,
+        "prev_comp_name": "display_panel_B_both_null",
+        "prev_support_status": "unqualified",
+        "probe_value_alignment_status_changed": false,
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+      },
+      "link_avl": false,
+      "probe_value_alignment_status": "NO_PROBE_INFO"
+    },
+    "x@@@@component-display_panel-display_panel_B_prev_null@@y@": {
+      "comp_cls": "display_panel",
+      "comp_name": "display_panel_B_prev_null",
+      "support_status": "unqualified",
+      "is_newly_added": false,
+      "comp_name_info": null,
+      "seq_no": 3,
+      "comp_name_with_correct_seq_no": null,
+      "null_values": false,
+      "diff_prev": {
+        "unchanged": false,
+        "name_changed": false,
+        "support_status_changed": false,
+        "values_changed": true,
+        "prev_comp_name": "display_panel_B_prev_null",
+        "prev_support_status": "unqualified",
+        "probe_value_alignment_status_changed": false,
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+      },
+      "link_avl": false,
+      "probe_value_alignment_status": "NO_PROBE_INFO"
+    },
+    "x@@@@component-display_panel-display_panel_B_next_null@@y@": {
+      "comp_cls": "display_panel",
+      "comp_name": "display_panel_B_next_null",
+      "support_status": "unqualified",
+      "is_newly_added": false,
+      "comp_name_info": null,
+      "seq_no": 4,
+      "comp_name_with_correct_seq_no": null,
+      "null_values": true,
+      "diff_prev": {
+        "unchanged": false,
+        "name_changed": false,
+        "support_status_changed": false,
+        "values_changed": true,
+        "prev_comp_name": "display_panel_B_next_null",
+        "prev_support_status": "unqualified",
+        "probe_value_alignment_status_changed": false,
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+      },
+      "link_avl": false,
+      "probe_value_alignment_status": "NO_PROBE_INFO"
+    },
     "x@@@@component-display_panel-display_panel_123_456#8@@y@": {
       "comp_cls": "display_panel",
       "comp_name": "display_panel_123_456#8",
@@ -462,8 +663,8 @@
         "qid": 456,
         "is_subcomp": false
       },
-      "seq_no": 2,
-      "comp_name_with_correct_seq_no": "display_panel_123_456#2",
+      "seq_no": 5,
+      "comp_name_with_correct_seq_no": "display_panel_123_456#5",
       "null_values": false,
       "diff_prev": null,
       "link_avl": false,
@@ -479,7 +680,7 @@
         "qid": null,
         "is_subcomp": true
       },
-      "seq_no": 3,
+      "seq_no": 6,
       "comp_name_with_correct_seq_no": null,
       "null_values": false,
       "diff_prev": null,

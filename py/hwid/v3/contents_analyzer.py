@@ -451,8 +451,8 @@ class ContentsAnalyzer:
           name_changed = prev_comp_name != comp_name
           support_status_changed = prev_support_status != comp_info.status
           # Compare the values instead of the values instance.
-          values_changed = not dict.__eq__(prev_comp_info.values,
-                                           comp_info.values)
+          values_changed = not dict.__eq__(prev_comp_info.values or {},
+                                           comp_info.values or {})
 
           prev_alignment_status = (
               ProbeValueAlignmentStatus.FromProbeValues(prev_comp_info.values))
