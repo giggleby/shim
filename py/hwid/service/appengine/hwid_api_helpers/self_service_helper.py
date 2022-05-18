@@ -11,6 +11,7 @@ from typing import Optional, Tuple
 
 from google.protobuf import json_format
 
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
@@ -173,10 +174,12 @@ class SelfServiceHelper:
   def __init__(self,
                hwid_action_manager_inst: hwid_action_manager.HWIDActionManager,
                hwid_repo_manager: hwid_repo.HWIDRepoManager,
-               hwid_db_data_manager: hwid_db_data.HWIDDBDataManager):
+               hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
+               avl_converter_manager: converter_utils.ConverterManager):
     self._hwid_action_manager = hwid_action_manager_inst
     self._hwid_repo_manager = hwid_repo_manager
     self._hwid_db_data_manager = hwid_db_data_manager
+    self._avl_converter_manager = avl_converter_manager
 
   def GetHWIDDBEditableSection(self, request):
     project = _NormalizeProjectString(request.project)
@@ -208,7 +211,9 @@ class SelfServiceHelper:
       action = self._hwid_action_manager.GetHWIDAction(project)
       analysis = action.AnalyzeDraftDBEditableSection(
           request.new_hwid_db_editable_section, derive_fingerprint_only=False,
-          require_hwid_db_lines=False)
+          require_hwid_db_lines=False, internal=True,
+          avl_converter_manager=self._avl_converter_manager,
+          avl_resource=request.db_external_resource)
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 

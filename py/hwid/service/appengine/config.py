@@ -9,6 +9,7 @@ from typing import NamedTuple, Optional
 import yaml
 
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.data import verification_payload_data
@@ -108,6 +109,7 @@ class _Config:
     self.client_allowlist = conf.get('client_allowlist', [])
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch)
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
+    self.avl_converter_manager = converter_utils.ConverterManager.FromDefault()
 
   def GetVerificationPayloadSettings(self, board):
     """Get repo settings for specific board.

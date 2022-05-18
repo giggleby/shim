@@ -7,6 +7,9 @@ import collections
 import copy
 from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
+from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
@@ -388,12 +391,24 @@ class HWIDAction:
         f'`GetDBEditableSection` is not supported in HWID v{self.HWID_VERSION}')
 
   def AnalyzeDraftDBEditableSection(
-      self, draft_db_editable_section, derive_fingerprint_only,
-      require_hwid_db_lines) -> DBEditableSectionAnalysisReport:
+      self, draft_db_editable_section: hwid_db_data.HWIDDBData,
+      derive_fingerprint_only: bool, require_hwid_db_lines: bool,
+      internal: bool = False,
+      avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
+      avl_resource: Optional[
+          hwid_api_messages_pb2.HwidDbExternalResource] = None
+  ) -> DBEditableSectionAnalysisReport:
     """Deep analyzes the given HWID DB editable section.
 
     Args:
       draft_db_editable_section: The editable section to analyze.
+      derive_fingerprint_only: Whether only fingerprint is required.
+      require_hwid_db_lines: A flag indicating if DB line analysis is required.
+      internal: Whether this report returns an internal format of HWID DB.
+      avl_converter_manager: A manager responsible for converting AVL probe
+          values to HWID probe values for comparison.
+      avl_resource: AVL resource for checking if HWID probe values align with
+          AVL probe values.
 
     Returns:
       An analysis report including information like line modification status

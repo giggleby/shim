@@ -6,9 +6,12 @@
 import logging
 from typing import List, Optional
 
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
+from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils
@@ -50,12 +53,17 @@ class HWIDV3Action(hwid_action.HWIDAction):
   def GetDBEditableSection(self):
     return self._ss_helper.GetDBEditableSection()
 
-  def AnalyzeDraftDBEditableSection(self, draft_db_editable_section,
-                                    derive_fingerprint_only,
-                                    require_hwid_db_lines):
+  def AnalyzeDraftDBEditableSection(
+      self, draft_db_editable_section: hwid_db_data.HWIDDBData,
+      derive_fingerprint_only: bool, require_hwid_db_lines: bool,
+      internal: bool = False,
+      avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
+      avl_resource: Optional[
+          hwid_api_messages_pb2.HwidDbExternalResource] = None
+  ) -> hwid_action.DBEditableSectionAnalysisReport:
     return self._ss_helper.AnalyzeDraftDBEditableSection(
         draft_db_editable_section, derive_fingerprint_only,
-        require_hwid_db_lines)
+        require_hwid_db_lines, internal, avl_converter_manager, avl_resource)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only=False):
     return self._ss_helper.GetHWIDBundleResourceInfo(fingerprint_only)

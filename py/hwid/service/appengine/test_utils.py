@@ -5,6 +5,7 @@
 import tempfile
 from typing import Optional
 
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action_manager
@@ -83,6 +84,7 @@ class FakeModuleCollection:
         self.fake_hwid_db_data_manager,
         self._fake_memcache_for_hwid_preproc_data,
         instance_factory=self._fake_hwid_instance_factory)
+    self.fake_avl_converter_manager = converter_utils.ConverterManager({})
 
   @property
   def ndb_connector(self):

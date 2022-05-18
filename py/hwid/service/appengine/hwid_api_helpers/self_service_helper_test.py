@@ -40,7 +40,8 @@ class SelfServiceHelperTest(unittest.TestCase):
         hwid_repo.HWIDRepoManager, instance=True)
     self._ss_helper = ss_helper.SelfServiceHelper(
         self._modules.fake_hwid_action_manager, self._mock_hwid_repo_manager,
-        self._modules.fake_hwid_db_data_manager)
+        self._modules.fake_hwid_db_data_manager,
+        self._modules.fake_avl_converter_manager)
 
   def tearDown(self):
     self._modules.ClearAll()

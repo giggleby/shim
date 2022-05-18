@@ -6,13 +6,16 @@ import functools
 import hashlib
 import logging
 import textwrap
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from cros.chromeoshwid import update_checksum
 
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
+from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_validator
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import bundle_builder
@@ -79,9 +82,16 @@ class HWIDV3SelfServiceActionHelper:
         suppress_support_status=suppress_support_status, internal=internal)
     return self.RemoveHeader(dumped_db)
 
-  def AnalyzeDraftDBEditableSection(
-      self, draft_db_editable_section, derive_fingerprint_only,
-      require_hwid_db_lines) -> hwid_action.DBEditableSectionAnalysisReport:
+  # TODO(b/209362238): use AVL converter and AVL resource to generate
+  # AVL-embedded format of internal HWID DB.
+  def AnalyzeDraftDBEditableSection(  # pylint: disable=unused-argument
+      self, draft_db_editable_section: hwid_db_data.HWIDDBData,
+      derive_fingerprint_only: bool, require_hwid_db_lines: bool,
+      internal: bool = False,
+      avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
+      avl_resource: Optional[
+          hwid_api_messages_pb2.HwidDbExternalResource] = None
+  ) -> hwid_action.DBEditableSectionAnalysisReport:
     curr_hwid_db_contents = self._preproc_data.raw_database
     new_hwid_db_contents, fingerprint = _GetFullHWIDDBAndChangeFingerprint(
         curr_hwid_db_contents, draft_db_editable_section)

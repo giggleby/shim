@@ -35,6 +35,7 @@ _hwid_validator = hwid_validator.HwidValidator()
 _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
     namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
 _hwid_repo_manager = CONFIG.hwid_repo_manager
+_avl_converter_manager = CONFIG.avl_converter_manager
 
 
 def _NormalizeProjectString(string: str) -> Optional[str]:
@@ -67,7 +68,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         _decoder_data_manager, _goldeneye_memcache_adapter, self._bc_helper,
         self._sku_helper)
     self._ss_helper = ss_helper.SelfServiceHelper(
-        _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager)
+        _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager,
+        _avl_converter_manager)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
