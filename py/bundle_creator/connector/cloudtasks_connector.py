@@ -18,6 +18,7 @@ class CloudTasksConnector:
 
   _CLOUD_MAIL_ROUTING_NAME = 'cloud-mail'
   _RESPONSE_CALLBACK_URI = '/_ah/stubby/FactoryBundleService.ResponseCallback'
+  _MAX_RETRY = 5
 
   def __init__(self, cloud_project_id: str):
     """Initializes a Cloud Tasks client by the cloud project id.
@@ -55,6 +56,6 @@ class CloudTasksConnector:
     }
     try:
       request = self._tasks.create(parent=self._queue_name, body=request_body)
-      request.execute()
+      request.execute(num_retries=self._MAX_RETRY)
     except HttpError as e:
       self._logger.error(e)
