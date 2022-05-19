@@ -150,7 +150,7 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
 
     flash_cmd = [FLASHTOOL, firmware_file]
 
-    session.console.debug(self._dut.CallOutput(flash_cmd))
+    session.console.debug(self._dut.CheckOutput(flash_cmd))
 
   def CheckFpmcuFirmwareVersion(self, firmware_file):
     cur_ro_ver, cur_rw_ver, bin_ro_ver, bin_rw_ver = \
