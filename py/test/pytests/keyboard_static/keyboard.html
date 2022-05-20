@@ -1,17 +1,35 @@
 <test-template>
-  <div id="keyboard">
-    <div id="keyboard-test-image">
-      <div id="keyboard-keys"></div>
+  <div>
+    <button onclick="displayText()">
+      Display by character
+    </button>
+    <button onclick="displayKeyCode()">
+      Display by keycode
+    </button>
+    <div id="keyboard">
+      <div id="fn-row" class="row row-sm"><div class="button-wrapper"></div></div>
+      <div id="row0" class="row"><div class="button-wrapper"></div></div>
+      <div id="row1" class="row"><div class="button-wrapper"></div></div>
+      <div id="row2" class="row"><div class="button-wrapper"></div></div>
+      <div id="row3" class="row"><div class="button-wrapper"></div></div>
+      <div id="row4" class="row"><div class="button-wrapper"></div></div>
     </div>
-    <div id="numpad"></div>
+    <div id="numpad">
+      <div id="numpad0" class="row row-sm"><div class="button-wrapper"></div></div>
+      <div id="numpad1" class="row"><div class="button-wrapper"></div></div>
+      <div id="numpad2" class="row"><div class="button-wrapper"></div></div>
+      <div id="numpad3" class="row"><div class="button-wrapper"></div></div>
+      <div id="numpad4" class="row"><div class="button-wrapper"></div></div>
+      <div id="numpad5" class="row"><div class="button-wrapper"></div></div>
+    </div>
+    <i18n-label id="instruction-sequential">
+      Press keys sequentially from top-left to bottom-right.
+    </i18n-label>
+    <i18n-label id="instruction-sequential-numpad">
+      Press main keyboards first before pressing the number pad keys.
+    </i18n-label>
+    <i18n-label id="instruction-single-key">
+      Press one key at a time.
+    </i18n-label>
   </div>
-  <i18n-label id="instruction-sequential">
-    Press keys sequentially from top-left to bottom-right.
-  </i18n-label>
-  <i18n-label id="instruction-sequential-numpad">
-    Press main keyboards first before pressing the number pad keys.
-  </i18n-label>
-  <i18n-label id="instruction-single-key">
-    Press one key at a time.
-  </i18n-label>
 </test-template>

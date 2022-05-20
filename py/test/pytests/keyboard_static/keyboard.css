@@ -1,81 +1,77 @@
-/*
- * Copyright 2017 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
-
-#keyboard {
-  display: flex;
-  position: relative;
-  align-items: center;
-  vertical-align: middle;
+.button {
   text-align: center;
-}
-
-#keyboard-test-image {
+  font-size: 1em;
+  border-radius: 10px;
+  background-color: lightgrey;
   position: relative;
+  float: left;
 }
 
-#keyboard-keys {
-  position: absolute;
+.button-margin {
+  margin-left: 5px;
+  margin-top: 5px;
 }
 
-#numpad {
-  display: none;
-  grid-template-rows: 30px repeat(5, 60px);
-  grid-template-columns: repeat(4, 60px);
-  grid-gap: 5px;
-  padding-left: 20px;
+.left-enter {
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
 }
 
-.numpad-key {
-  border: 2px solid grey;
+.right-enter {
+  border-top-left-radius: 0px;
+}
+
+.button .button-sm {
   border-radius: 5px;
 }
 
-/*
- * TODO(treapking): This approach will fail if the keycodes are overridden by
- *                  `replacement_keymap` argument.
- */
-/* 78: KEY_KPPLUS, 96: KEY_KPENTER*/
-.numpad-key[data-keycode="78"],
-.numpad-key[data-keycode="96"] {
-  grid-row: span 2;
-}
-
-/* 78: KEY_KP0*/
-.numpad-key[data-keycode="82"] {
-  grid-column: span 2;
-}
-
-.main-keyboard-key {
-  z-index: 2;
+.button-wrapper {
   position: absolute;
 }
 
-.keyboard-test-key {
-  opacity: 0.5;
+.row {
+  height: 57px;
+  width: 100%;
+  position: relative;
 }
 
-.keyboard-test-key:before {
-  content: "";
-  display: inline-block;
+.row-sm {
+  height: 35px;
+}
+
+.key-status {
+  position: absolute;
+  top: -25px;
+  left: -25px;
+  display: none;
+  background-color: black;
+  color: white;
+  width: 100%;
   height: 100%;
-  vertical-align: middle;
 }
 
-.keyboard-test-key.state-untested {
-  background-color: white;
+#keyboard {
+  height: 330px;
+  border: 1px black solid;
+  position: relative;
+  float: left;
 }
 
-.keyboard-test-key.state-tested {
-  background-color: green;
+#numpad {
+  height: 330px;
+  width: 225px;
+  border: 1px black solid;
+  position: relative;
+  float: left;
+  left: 10px;
+  display: none;
 }
 
-.keyboard-test-key.state-down {
-  background-color: yellow;
+button {
+  margin: 5px auto;
+  display: block;
 }
 
-.keyboard-test-key.state-skipped {
-  background-color: gray;
+i18n-label {
+  display: block;
 }
