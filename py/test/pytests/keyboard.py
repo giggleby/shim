@@ -93,7 +93,7 @@ import os
 import re
 import struct
 import time
-from typing import Dict, List, Tuple
+from typing import List
 
 from cros.factory.test.l10n import regions
 from cros.factory.test import session
@@ -103,47 +103,31 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import schema
 
 from cros.factory.external import evdev
 
-_POWER_KEY_CODE = 116
+# Defined in "uapi/linux/input.h":
+#   struct input_keymap_entry {
+#   #define INPUT_KEYMAP_BY_INDEX (1 << 0)
+#     __u8 flags;
+#     __u8 len;
+#     __u16 index;
+#     __u32 keycode;
+#     __u8 scancode[32];
+#   };
 
-_NUMPAD = 'numpad'
-
-_INTEGER_STRING_SCHEMA = {
-    'type': 'string',
-    'pattern': r'^(0[Bb][01]+|0[Oo][0-7]+|0[Xx][0-9A-Fa-f]+|[1-9][0-9]*|0)$'
-}
-_REPLACEMENT_KEYMAP_SCHEMA = schema.JSONSchemaDict(
-    'replacement_keymap schema object', {
-        'type': 'object',
-        'propertyNames': _INTEGER_STRING_SCHEMA,
-        'patternProperties': {
-            '^.*$': _INTEGER_STRING_SCHEMA
-        }
-    })
-
-"""
-Defined in "uapi/linux/input.h":
-  struct input_keymap_entry {
-  #define INPUT_KEYMAP_BY_INDEX (1 << 0)
-    __u8 flags;
-    __u8 len;
-    __u16 index;
-    __u32 keycode;
-    __u8 scancode[32];
-  };
-"""
 _INPUT_KEYMAP_ENTRY = 'BBHI32B'
-"""
-Defined in "uapi/linux/input.h":
- #define EVIOCGKEYCODE_V2 _IOR('E', 0x04, struct input_keymap_entry)
-
-See more details in "uapi/asm-generic/ioctl.h"
-"""
+# Defined in "uapi/linux/input.h":
+#  #define EVIOCGKEYCODE_V2 _IOR('E', 0x04, struct input_keymap_entry)
+# See more details in "uapi/asm-generic/ioctl.h"
 _EVIOCGKEYCODE_V2 = ((2 << 30) | (struct.calcsize(_INPUT_KEYMAP_ENTRY) << 16) |
                      (ord('E') << 8) | 0x04)
+
+# Check acpigen_ps2_keybd.c for the definition.
+_DEFAULT_FN_KEYCODES_IN_FIRST_ROW = [59, 60, 61, 62, 63, 64, 65, 66, 67, 68]
+_ESC_KEY_CODE = 1
+_POWER_KEY_CODE = 116
+_LOCK_KEY_CODE = 142
 
 
 class KeyboardTest(test_case.TestCase):
@@ -183,13 +167,21 @@ class KeyboardTest(test_case.TestCase):
           'device_filter', (int, str),
           'If present, the input event ID or a substring of the input device '
           'name specifying which keyboard to test.', default=None),
-      Arg('skip_power_key', bool, 'Skip power button testing', default=False),
-      Arg('skip_keycodes', list, 'Keycodes to skip', default=[]),
       Arg(
-          'replacement_keymap', dict, 'Dictionary mapping key codes to '
-          'replacement keycodes. The keycodes must be a string of an integer'
-          'since json does not support format like 0x10.', default={},
-          schema=_REPLACEMENT_KEYMAP_SCHEMA),
+          'key_order', list,
+          'Specify the sequential order of the keys to press. Will use the '
+          'order in .layout files if it is not specified.', default=[]),
+      Arg(
+          'fn_keycodes', list, 'The keycodes in the first row, esc and '
+          'power/lock key are excluded.', default=None),
+      Arg('replacement_keymap', dict, 'Deprecated, please use fn_keycodes',
+          default={}),
+      Arg(
+          'has_power_key', bool, 'If True, the last key in the first row will '
+          'be a power key, otherwise it will be a lock key.', default=True),
+      Arg('skip_keycodes', list, 'Keycodes to skip', default=[]),
+      Arg('skip_power_key', bool, 'Deprecated, please use skip_keycodes.',
+          default=False),
       Arg(
           'detect_long_press', bool, 'Detect long press event. Usually for '
           'detecting bluetooth keyboard disconnection.', default=False),
@@ -208,6 +200,12 @@ class KeyboardTest(test_case.TestCase):
   ]
 
   def setUp(self):
+    self.assertFalse(self.args.skip_power_key,
+                     'skip_power_key is deprecated, please use skip_keycodes.')
+    self.assertFalse(
+        self.args.replacement_keymap,
+        'replacement_keymap is deprecated, please use fn_keycodes.')
+
     self.assertFalse(self.args.allow_multi_keys and self.args.sequential_press,
                      'Sequential press requires one key at a time.')
     self.assertFalse(
@@ -218,6 +216,14 @@ class KeyboardTest(test_case.TestCase):
     if self.args.allow_multi_keys and self.args.multi_keys_delay > 0:
       session.console.warning('multi_keys_delay is not effective when '
                               'allow_multi_keys is set to True.')
+    if (not self.args.strict_sequential_press and
+        not self.args.sequential_press and self.args.key_order):
+      session.console.warning('key_order is not effective if it is not '
+                              'needed to press sequentially.')
+
+    if self.args.fn_keycodes and self.args.vivaldi_keyboard:
+      session.console.warning('the fn_keycodes will be '
+                              'overridden by vivaldi_keyboard.')
 
     # Get the keyboard input device.
     try:
@@ -228,76 +234,53 @@ class KeyboardTest(test_case.TestCase):
           "Please set the test argument 'device_filter' to one of the name.")
       raise
 
-    # Initialize keyboard layout and bindings
     layout = self.GetKeyboardLayout()
-    self.bindings = self.ReadBindings(layout)
-
+    first_row_keys = self.GetKeycodesInFirstRow()
+    main_keys = self.GetLayoutKeycodes(layout)
+    flatten_main_keys = [
+        key for keys_in_row in main_keys for key in keys_in_row
+    ]
     numpad_keys = []
     if self.args.has_numpad:
-      numpad_keys = self.ReadKeyOrder(_NUMPAD)
+      numpad_keys = self.GetLayoutKeycodes('numpad')
     else:
       self.ui.HideElement('instruction-sequential-numpad')
-
-    vivaldi_keymap = self.GetCustomKeyMapsInFirstRow()
-    replacement_keymap = vivaldi_keymap.copy()
-    # Apply any replacement keymap
-    if self.args.replacement_keymap:
-      replacement_keymap.update({
-          int(key, 0): int(value, 0)
-          for key, value in self.args.replacement_keymap.items()
-      })
-
-    if replacement_keymap:
-      extra_block_size = 50
-      extra_left = min(
-          min(block[0]
-              for block in blocks)
-          for blocks in self.bindings.values())
-      extra_top = min(
-          min(block[1]
-              for block in blocks)
-          for blocks in self.bindings.values()) - extra_block_size
-      new_bind = {key: value for key, value in self.bindings.items()
-                  if key not in replacement_keymap}
-      for old_key, new_key in replacement_keymap.items():
-        if old_key in self.bindings:
-          new_bind[new_key] = self.bindings[old_key]
-        elif old_key in vivaldi_keymap:
-          new_bind[new_key] = [(extra_left, extra_top, extra_block_size,
-                                extra_block_size)]
-          extra_left += extra_block_size
-      self.bindings = new_bind
-
-      if self.args.has_numpad:
-        numpad_keys = [replacement_keymap.get(x, x) for x in numpad_keys]
-
-    self.frontend_proxy = self.ui.InitJSTestObject('KeyboardTest', layout,
-                                                   self.bindings, numpad_keys)
-
-    keycodes_to_skip = set(self.args.skip_keycodes)
-    if self.args.skip_power_key:
-      keycodes_to_skip.add(_POWER_KEY_CODE)
+    flatten_numpad_keys = [
+        key for keys_in_row in numpad_keys for key in keys_in_row
+    ]
 
     self.hold_keys = set()
     self.last_press_time = 0
+    self.frontend_proxy = self.ui.InitJSTestObject(
+        'KeyboardTest', layout, first_row_keys, main_keys, numpad_keys)
 
-    self.need_press_keys = {}
     default_number_to_press = self.args.repeat_times.get('default', 1)
-    for key in set(self.bindings.keys()) | set(numpad_keys):
+    self.need_press_keys = {}
+    keycodes_to_skip = set(self.args.skip_keycodes)
+    for key in set(flatten_main_keys) | set(first_row_keys) | set(
+        flatten_numpad_keys):
       if key in keycodes_to_skip:
-        self.need_press_keys[key] = 0
-        self.MarkKeyState(key, 'skipped')
+        self.frontend_proxy.Skip(key)
       else:
         self.need_press_keys[key] = self.args.repeat_times.get(
             str(key), default_number_to_press)
-        self.MarkKeyState(key, 'untested')
 
     self.next_index = 0
     if self.args.sequential_press or self.args.strict_sequential_press:
-      self.key_order_list = [
-          key for key in self.ReadKeyOrder(layout)
-          if key in self.need_press_keys
-      ] + numpad_keys
+      if self.args.key_order:
+        self.key_order_list = self.args.key_order
+        invalid_key_order = [
+            key for key in self.key_order_list if key in keycodes_to_skip
+        ]
+        if invalid_key_order:
+          session.console.warning(
+              '%s is specified in both key_order and'
+              'skip_keycodes.', invalid_key_order)
+      else:
+        self.key_order_list = [
+            key for key in first_row_keys + flatten_main_keys +
+            flatten_numpad_keys if key not in keycodes_to_skip
+        ]
     else:
       self.key_order_list = []
       self.ui.HideElement('instruction-sequential')
@@ -312,7 +295,19 @@ class KeyboardTest(test_case.TestCase):
     testlog.UpdateParam('malfunction_key',
                         description='The keycode of malfunction keys')
 
-  def GetCustomKeyMapsInFirstRow(self):
+  def GetKeycodesInFirstRow(self) -> list:
+    if self.args.vivaldi_keyboard:
+      fn_keycodes = self.GetVivaldiKeycodes()
+    elif self.args.fn_keycodes:
+      fn_keycodes = self.args.fn_keycodes
+    else:
+      fn_keycodes = _DEFAULT_FN_KEYCODES_IN_FIRST_ROW
+
+    last_key = _POWER_KEY_CODE if self.args.has_power_key else _LOCK_KEY_CODE
+    return [_ESC_KEY_CODE] + fn_keycodes + [last_key]
+
+  def GetVivaldiKeycodes(self):
+    """Get the keycodes which are modifiable by partners, ESC is excluded."""
 
     def GetKeyboardMapping():
       """Gets the scancode to keycode mapping.
@@ -350,36 +345,21 @@ class KeyboardTest(test_case.TestCase):
           mapping[scancode] = keycode
       return mapping
 
-    if not self.args.vivaldi_keyboard:
-      return {}
     match = re.search(r'\d+$', self.keyboard_device.path)
     if not match:
       raise RuntimeError('Failed to get keyboard device ID')
     event_id = match.group(0)
     file_content = file_utils.ReadFile(
         f'/sys/class/input/event{event_id}/device/device/function_row_physmap')
-    scancodes = [
-        int(s, 16) for s in file_content.strip().split() if int(s, 16) != 0
-    ]
-    replacement_keymap = {}
-    if len(scancodes) > 10:
-      session.console.warning(
-          f'There are {len(scancodes)} function keys, normally it should be 10.'
-          ' Please check if this pytest actually tests all function keys.')
 
     scancode_to_keycode = GetKeyboardMapping()
-    for (key, scancode) in enumerate(scancodes, 59):
-      try:
-        replacement_keymap[key] = scancode_to_keycode[scancode]
-      except KeyError:
-        session.console.exception(f'Cannot find keycode of {scancode}')
-        raise
-    session.console.info(f'Vivaldi Keyboard Keys: {replacement_keymap}')
-    return replacement_keymap
+    return [
+        scancode_to_keycode[int(s, 16)] for s in file_content.strip().split()
+    ]
 
   def GetKeyboardLayout(self):
     """Uses the given keyboard layout or auto-detect from VPD."""
-    board = '_%s' % self.args.board if self.args.board else ''
+    board = f'_{self.args.board}' if self.args.board else ''
     if self.args.layout:
       return self.args.layout + board
 
@@ -387,27 +367,13 @@ class KeyboardTest(test_case.TestCase):
     region = process_utils.CheckOutput(['vpd', '-g', 'region']).strip()
     return regions.REGIONS[region].keyboard_mechanical_layout + board
 
-  def ReadBindings(self, layout) -> Dict[int, List[Tuple]]:
-    """Reads in key bindings and their associates figure regions."""
-    bindings_filename = os.path.join(self.ui.GetStaticDirectoryPath(),
-                                     layout + '.bindings')
-    bindings = ast.literal_eval(file_utils.ReadFile(bindings_filename))
-    for k in bindings:
-      # Convert single tuple to list of tuples
-      if not isinstance(bindings[k], list):
-        bindings[k] = [bindings[k]]
-    return bindings
+  def GetLayoutKeycodes(self, layout) -> List[List[int]]:
+    """Return a 2-D array for rendering the keyboard of different layout.
 
-  def ReadKeyOrder(self, layout):
-    """Reads in key order that must be followed when press key."""
-    key_order_list_filename = os.path.join(self.ui.GetStaticDirectoryPath(),
-                                           layout + '.key_order')
-    return ast.literal_eval(file_utils.ReadFile(key_order_list_filename))
-
-  def MarkKeyState(self, keycode, state):
-    """Call frontend JavaScript to update UI."""
-    self.frontend_proxy.MarkKeyState(keycode, state,
-                                     self.need_press_keys[keycode])
+    Each element represents the keycodes in a row."""
+    layout_filename = os.path.join(self.ui.GetStaticDirectoryPath(),
+                                   layout + '.layout')
+    return ast.literal_eval(file_utils.ReadFile(layout_filename))
 
   def HandleEvent(self, event):
     """Handler for evdev events."""
@@ -418,28 +384,30 @@ class KeyboardTest(test_case.TestCase):
     elif event.value == 0:
       self.OnKeyup(event.code)
     elif self.args.detect_long_press and event.value == 2:
-      fail_msg = 'Got events on keycode %d pressed too long.' % event.code
+      fail_msg = f'Got events on keycode {event.code} pressed too long.'
       session.console.error(fail_msg)
       self.FailTask(fail_msg)
 
   def OnKeydown(self, keycode):
     """Callback when got a keydown event from evdev."""
     if keycode not in self.need_press_keys:
+      session.console.warning('Got key down event on an excluded keycode %d',
+                              keycode)
       return
 
     if (not self.args.allow_multi_keys and self.hold_keys and
         time.time() - self.last_press_time < self.args.multi_keys_delay):
       self.FailTask(
-          'Got key down event on keycode %d but there are other key pressed: %d'
-          % (keycode, next(iter(self.hold_keys))))
+          f'Got key down event on keycode {keycode} but there are other key '
+          f'pressed: {next(iter(self.hold_keys))}.')
 
     if keycode in self.hold_keys:
-      self.FailTask('Got 2 key down events on keycode %d but didn\'t get key up'
-                    'event.')
+      self.FailTask(f'Got 2 key down events on keycode {keycode} but didn\'t '
+                    'get key up event.')
 
     self.last_press_time = time.time()
     self.hold_keys.add(keycode)
-    self.MarkKeyState(keycode, 'down')
+    self.frontend_proxy.Hold(keycode, self.need_press_keys[keycode])
 
   def OnKeyup(self, keycode):
     """Callback when got a keyup event from evdev."""
@@ -448,8 +416,8 @@ class KeyboardTest(test_case.TestCase):
 
     if keycode not in self.hold_keys:
       self.FailTask(
-          'Got key up event for keycode %d but did not get key down event' %
-          keycode)
+          f'Got key up event for keycode {keycode} but did not get key down '
+          'event.')
     self.hold_keys.remove(keycode)
 
     if (self.next_index < len(self.key_order_list) and
@@ -457,23 +425,17 @@ class KeyboardTest(test_case.TestCase):
       next_key = self.key_order_list[self.next_index]
       if keycode != next_key:
         if self.args.strict_sequential_press:
-          self.FailTask('Expect keycode %d but get %d' % (next_key, keycode))
+          self.FailTask(f'Expect keycode {next_key} but get {keycode}.')
         else:
-          if self.need_press_keys[keycode] > 0:
-            self.MarkKeyState(keycode, 'untested')
-          else:
-            self.MarkKeyState(keycode, 'tested')
+          self.frontend_proxy.Click(keycode, self.need_press_keys[keycode])
           return
       if self.need_press_keys[keycode] == 1:
         self.next_index += 1
 
     if self.need_press_keys[keycode] > 0:
       self.need_press_keys[keycode] -= 1
-    if self.need_press_keys[keycode] > 0:
-      self.MarkKeyState(keycode, 'untested')
-    else:
-      self.MarkKeyState(keycode, 'tested')
 
+    self.frontend_proxy.Click(keycode, self.need_press_keys[keycode])
     if max(self.need_press_keys.values()) == 0:
       self.PassTask()
 
@@ -484,7 +446,7 @@ class KeyboardTest(test_case.TestCase):
     ]
     for failed_key in failed_keys:
       testlog.LogParam('malfunction_key', failed_key)
-    self.FailTask('Keyboard test timed out. Malfunction keys: %r' % failed_keys)
+    self.FailTask(f'Keyboard test timed out. Malfunction keys: {failed_keys}.')
 
   def runTest(self):
     self.keyboard_device.grab()
