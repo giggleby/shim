@@ -305,6 +305,16 @@ class CameraTest(test_case.TestCase):
           ('String "front" or "rear" for the camera to test. '
            'If in normal mode, default is automatically searching one. '
            'If in e2e mode, default is "front".'), default=None),
+      Arg('camera_usb_vid', str,
+          ('The USB vendor id of the camera to test. '
+           'For testing an external USB camera. '
+           'Only valid in normal mode and if camera_facing is not selected. '),
+          default=None),
+      Arg('camera_usb_pid', str,
+          ('The USB product id of the camera to test. '
+           'For testing an external USB camera. '
+           'Only valid in normal mode and if camera_facing is not selected. '),
+          default=None),
       Arg(
           'flip_image', bool,
           'Whether to flip the image horizontally. This should be set to False'
@@ -722,8 +732,14 @@ class CameraTest(test_case.TestCase):
       ]:
         self.need_transmit_from_ui = True
     else:
-      self.camera_device = self.dut.camera.GetCameraDevice(
-          self.args.camera_facing)
+      if (self.args.camera_facing is None and
+          self.args.camera_usb_pid is not None and
+          self.args.camera_usb_vid is not None):
+        self.camera_device = self.dut.camera.GetCameraDeviceByUsbVidPid(
+            self.args.camera_usb_vid, self.args.camera_usb_pid)
+      else:
+        self.camera_device = self.dut.camera.GetCameraDevice(
+            self.args.camera_facing)
 
   def runTest(self):
     self.ui.StartCountdownTimer(self.args.timeout_secs, self._Timeout)
