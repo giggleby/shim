@@ -227,9 +227,14 @@ class NetworkDevices:
   @classmethod
   def ReadSysfsDeviceIds(cls, devtype, ignore_others=False):
     """Return _ReadSysfsDeviceId result for each device of specified type."""
+    visited_paths = set()
+
     def ProbeSysfsDevices(path, ignore_others):
       path = os.path.abspath(os.path.realpath(path))
       pci_path = cls.GetPCIPath(devtype, path)
+      if pci_path in visited_paths:
+        return []
+      visited_paths.add(pci_path)
       ret = function.InterpretFunction({'pci': pci_path})()
       if ret:
         return ret
