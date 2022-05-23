@@ -796,14 +796,15 @@ class Gooftool:
                   'Enforced channels are %s.' % (
                       release_channel, enforced_channels))
 
-  def VerifyCrosConfig(self):
-    """Verify that entries in cros config make sense."""
+  def VerifyRLZCode(self):
     if phase.GetPhase() >= phase.EVT:
       rlz = self._cros_config.GetBrandCode()
       if not rlz or rlz == 'ZZCR':
         # this is incorrect...
         raise Error('RLZ code "%s" is not allowed in/after EVT' % rlz)
 
+  def VerifyCrosConfig(self):
+    """Verify that entries in cros config make sense."""
     model = self._cros_config.GetModelName()
     if not model:
       db_identity, cur_identity = self.GetIdentity()
