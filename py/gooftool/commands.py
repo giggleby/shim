@@ -299,6 +299,10 @@ _use_generic_tpm2_arg = CmdArg(
           'CBI EEPROM write protect check and will return general error code '
           'if failed to write.'))
 
+_is_reference_board_cmd_arg = CmdArg(
+    '--is_reference_board', action='store_true', default=False,
+    help='Indicating this project is reference board.')
+
 
 @Command('verify_dlc_images')
 def VerifyDLCImages(options):
@@ -404,6 +408,11 @@ def VerifyReleaseChannel(options):
   return GetGooftool(options).VerifyReleaseChannel(
       options.enforced_release_channels)
 
+
+@Command('verify_rlz_code')
+def VerifyRLZCode(options):
+  """Verify RLZ code is not 'ZZCR' in/after EVT."""
+  return GetGooftool(options).VerifyRLZCode()
 
 @Command('verify_cros_config')
 def VerifyCrosConfig(options):
@@ -693,6 +702,7 @@ def WipeInit(options):
     _enforced_release_channels_cmd_arg,  # VerifyReleaseChannel
     _waive_list_cmd_arg,  # CommandWithWaiveSkipCheck
     _skip_list_cmd_arg,  # CommandWithWaiveSkipCheck
+    _is_reference_board_cmd_arg,  # this
 )
 def VerifyBeforeCr50Finalize(options):
   """Verifies if the device is ready for finalization before Cr50Finalize.
@@ -715,6 +725,8 @@ def VerifyBeforeCr50Finalize(options):
   VerifyTPM(options)
   VerifyVPD(options)
   VerifyReleaseChannel(options)
+  if not options.is_reference_board:
+    VerifyRLZCode(options)
   VerifyCrosConfig(options)
 
 

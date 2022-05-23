@@ -199,6 +199,8 @@ class Finalize(test_case.TestCase):
           ('Most Chromebooks are using Google security chips.  If this project '
            'is using a generic TPM (e.g. infineon), set this to true.  The '
            'steps in `cr50_finalize` will be adjusted'), default=False),
+      Arg('is_reference_board', bool, 'Is reference board or not. If yes, skip '
+          'the check for rlz code', default=False),
   ]
 
   FINALIZE_TIMEOUT = 180
@@ -394,6 +396,8 @@ class Finalize(test_case.TestCase):
       command += ' --skip_list ' + ' '.join(self.args.gooftool_skip_list)
     if self.args.enable_zero_touch:
       command += ' --enable_zero_touch'
+    if self.args.is_reference_board:
+      command += ' --is_reference_board'
     command += ' --phase "%s"' % phase.GetPhase()
 
     self._FinalizeWipeInPlace(command)

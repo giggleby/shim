@@ -19,7 +19,8 @@
       "gooftool_waive_list": [],
       "re_sign_release_kernel": false,
       "__comment_re_sign_release_kernel": "Enable this if you want to finalize with a DEV signed kernel; go/cros-factory-fw-in-early-builds",
-      "secure_wipe": true
+      "secure_wipe": true,
+      "is_reference_board": false
     }
   },
   "definitions": {
@@ -64,7 +65,8 @@
         "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
         "write_protection": "eval! constants.grt.force_write_protect or options.phase == 'PVT'",
         "cbi_eeprom_wp_status": "eval! 'Locked' if constants.grt.cbi_eeprom_wp_status != 'Absent' and options.phase == 'PVT' else constants.grt.cbi_eeprom_wp_status",
-        "use_generic_tpm2": "eval! constants.use_generic_tpm2"
+        "use_generic_tpm2": "eval! constants.use_generic_tpm2",
+        "is_reference_board": "eval! constants.grt.is_reference_board"
       }
     },
     "GRTItems": {
