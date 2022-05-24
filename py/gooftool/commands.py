@@ -608,9 +608,8 @@ def ClearGBBFlags(options):
   for factory/development.  See "futility gbb --flags" for details.
   """
   gbb_flags_in_factory = GetGooftool(options).GetGBBFlags()
-  event_log.Log(f'GBB flags {gbb_flags_in_factory} is removed')
   GetGooftool(options).ClearGBBFlags()
-  event_log.Log('clear_gbb_flags')
+  event_log.Log('clear_gbb_flags', old_value=gbb_flags_in_factory)
 
 
 @Command('clear_factory_vpd_entries')
