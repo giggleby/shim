@@ -27,7 +27,7 @@ Second round (`rebooted` flag should be true)
 Dependency
 ----------
 - The verification needs AP RO hash set, or it won't do anything.
-- OS version >= 14196.0.0 (`tpm_manager_client get_ro_verification_status`)
+- OS version >= 14704.0.0 (`gsctool -aB` and `gsctool -aB start`)
 - cr50 version >= 0.5.100 (vendor command to trigger RO verification)
 - In cr50 factory mode (enable the vendor command to trigger RO verification)
 
@@ -46,11 +46,11 @@ import logging
 
 from cros.factory.device import device_utils
 from cros.factory.gooftool.core import Gooftool
+from cros.factory.gooftool import gsctool
 from cros.factory.test import device_data
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
-from cros.factory.utils import string_utils
 
 
 class APROVerficationTest(test_case.TestCase):
@@ -61,25 +61,17 @@ class APROVerficationTest(test_case.TestCase):
     self.goofy = state.GetInstance()
     self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
 
-  def GetStatus(self):
-    # TODO(jasonchuang): Wrap tpm_manager_client as an util.
-    status_txt = self.dut.CheckOutput(
-        ['tpm_manager_client', 'get_ro_verification_status'], log=True)
-    logging.info('RO verification status: %s.', status_txt)
-    status_lines = status_txt.splitlines()
-    return string_utils.ParseDict(status_lines[1:-1])['ro_verification_status']
-
   def HandleError(self, status):
-    if status == 'RO_STATUS_NOT_TRIGGERED':
+    if status == gsctool.APROResult.AP_RO_NOT_RUN:
       # Since the verification is triggered by command, the only case that the
       # the verification won't be triggered is the reboot to recover from brick
       # when the verification failed.
       self.FailTask('The verification is failed.')
-    elif status == 'RO_STATUS_UNSUPPORTED':
+    elif status == gsctool.APROResult.AP_RO_UNSUPPORTED_NOT_TRIGGERED:
       # If AP RO verification is not supported, the test should fail in the
       # first round.
       raise Exception('Unexpected error, please retry the test.')
-    elif status == 'RO_STATUS_FAIL':
+    elif status == gsctool.APROResult.AP_RO_FAIL:
       logging.exception(
           'Should not be here, device is expected to be not bootable.')
       self.FailTask('The verification is failed.')
@@ -95,16 +87,14 @@ class APROVerficationTest(test_case.TestCase):
 
     rebooted = device_data.GetDeviceData(self.device_data_key)
     if rebooted:
-      status = self.GetStatus()
-      if status != 'RO_STATUS_PASS':
+      status = self.gooftool.Cr50GetAPROResult()
+      if status != gsctool.APROResult.AP_RO_PASS:
         self.HandleError(status)
     else:
       self.goofy.SaveDataForNextBoot()
       device_data.UpdateDeviceData({self.device_data_key: True})
       try:
-        # TODO(jasonchuang): Use gsctool command b/195693537
-        self.dut.CheckOutput(
-            ['trunks_send', '--raw', '80010000000c20000000003a'], log=True)
+        self.gooftool.Cr50VerifyAPRO()
       finally:
         # If the command works properly, the device will reboot and won't
         # execute this line.
