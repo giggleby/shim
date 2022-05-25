@@ -5,12 +5,15 @@
 
 Description
 -----------
-When re-flowing, RO hash can't be modified since board id is set.
+When re-flowing, RO hash can't be modified since board ID is set.
 We decided to skip this test with the following assumptions: (might hold in
 most cases, but not always)
-- If board id is set, then DUT must have been finalized.
+- If board ID is set, then DUT must have been finalized.
 - AP RO verification is always tested before finalization, and this feature
 won't be broken after that.
+- Even if the hash is set in cr50, the verification will always fail since
+the stored hash is calculated with gbb flags 0, which is not the same as the
+gbb flags we use in the factory.
 
 Test Procedure
 --------------
@@ -21,7 +24,7 @@ These steps describe the whole procedure of AP RO verification test.
 
 Dependency
 ----------
-- The test will set/clear RO hash, which needs board id not being set on DUT.
+- The test will set/clear RO hash, which needs board ID not being set on DUT.
 
 Examples
 --------
