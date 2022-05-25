@@ -42,7 +42,7 @@
         "BadBlocks",
         "Barrier",
         "FPSGroup",
-        "SetAPROHash"
+        "APROVerificationGroup"
       ]
     },
     "FATStart": {

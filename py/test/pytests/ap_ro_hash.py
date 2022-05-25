@@ -5,10 +5,6 @@
 
 Description
 -----------
-Currently we can't make ap_ro_verification.py run automatically, and the whole
-AP RO verification test takes much time. To minimize waiting time of operator,
-we split the automatic part into this file.
-
 When re-flowing, RO hash can't be modified since board id is set.
 We decided to skip this test with the following assumptions: (might hold in
 most cases, but not always)
