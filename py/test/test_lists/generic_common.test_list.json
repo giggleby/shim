@@ -96,6 +96,15 @@
       "label": "AP RO Verification",
       "allow_reboot": true
     },
+    "APROVerificationGroup": {
+      "inherit": "TestGroup",
+      "label": "AP RO Verification Group",
+      "subtests": [
+        "SetAPROHash",
+        "APROVerification",
+        "ClearAPROHash"
+      ]
+    },
     "Accelerometers": {
       "pytest_name": "accelerometers"
     },

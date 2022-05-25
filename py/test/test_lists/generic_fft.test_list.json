@@ -22,7 +22,6 @@
       "inherit": "TestGroup",
       "label": "Finish",
       "subtests": [
-        "ClearAPROHash",
         "StationEnd",
         "CheckPoint"
       ]
@@ -60,8 +59,7 @@
         "AccelerometersLidAngle",
         "ScreenRotation",
         "GyroscopeCalibration",
-        "Gyroscope",
-        "APROVerification"
+        "Gyroscope"
       ]
     },
     "FFTStart": {

@@ -1289,10 +1289,6 @@ msgstr ""
 msgid "Checking angle..."
 msgstr "Góc được xác nhận"
 
-#: ../py/test/pytests/ap_ro_verification.py
-msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
-msgstr ""
-
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
 msgstr "Kênh bên trái"
@@ -3436,6 +3432,10 @@ msgstr "Cài đặt thông tin máy"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "AP RO Verification"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "AP RO Verification Group"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
