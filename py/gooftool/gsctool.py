@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import re
 
 from cros.factory.gooftool import common as gooftool_common
@@ -29,6 +30,16 @@ class BoardID(type_utils.Obj):
 
 
 UpdateResult = type_utils.Enum(['NOOP', 'ALL_UPDATED', 'RW_UPDATED'])
+
+
+class APROResult(enum.Enum):
+  # ref: platform/cr50/include/ap_ro_integrity_check.h
+  AP_RO_NOT_RUN = 0
+  AP_RO_PASS = 1
+  AP_RO_FAIL = 2
+  AP_RO_UNSUPPORTED_UNKNOWN = 3  # Deprecated
+  AP_RO_UNSUPPORTED_NOT_TRIGGERED = 4
+  AP_RO_UNSUPPORTED_TRIGGERED = 5
 
 
 class GSCToolError(Exception):
