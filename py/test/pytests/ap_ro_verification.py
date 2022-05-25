@@ -14,8 +14,8 @@ To avoid the risk of bricking the DUT, we should try to clear RO hash after
 verifying. And it's recommended to set RO hash by ap_ro_hash.py to make sure
 RO hash is set correctly, .
 
-We decided to skip this test when RO hash is unable to set. This might happen
-when re-flowing in pre-PVT. Details are in ap_ro_hash.py.
+We decided to skip this test when Board ID has already been set. This might
+happen when re-flowing or RMA. Details are in ap_ro_hash.py.
 
 Test Procedure
 --------------
@@ -79,11 +79,12 @@ class APROVerficationTest(test_case.TestCase):
       raise Exception(f'Unknown status {status}.')
 
   def runTest(self):
+    if self.gooftool.IsCr50BoardIDSet():
+      session.console.warn('Unable to verify RO hash '
+                           'since the board ID is set, test skipped.')
+      return
     if not self.gooftool.IsCr50ROHashSet():
-      if self.gooftool.IsCr50BoardIDSet():
-        session.console.warn('Unable to verify RO hash, test skipped.')
-        return
-      raise Exception('Please set ro hash first.')
+      raise Exception('Please set RO hash first.')
 
     rebooted = device_data.GetDeviceData(self.device_data_key)
     if rebooted:
