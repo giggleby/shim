@@ -21,8 +21,9 @@ import {RootState} from '@app/types';
 
 import {DispatchProps} from '@common/types';
 
-import {disableUmpire, enableUmpireWithSettings, fetchPorts} from '../actions';
+import {disableUmpire, enableUmpireWithSettings, fetchPorts, removeProjectPort} from '../actions';
 import {ENABLE_UMPIRE_FORM} from '../constants';
+import {getPorts} from '../selectors';
 
 import EnableUmpireForm from './enable_umpire_form';
 
@@ -33,12 +34,17 @@ class DashboardApp extends React.Component<DashboardAppProps> {
   handleToggle = () => {
     const {
       project: {umpireEnabled, name},
+      ports,
       disableUmpire,
       openEnableUmpireForm,
+      fetchPorts,
+      removeProjectPort,
     } = this.props;
     if (umpireEnabled) {
       disableUmpire(name);
+      removeProjectPort(ports, name);
     } else {
+      fetchPorts();
       openEnableUmpireForm();
     }
   }
@@ -104,10 +110,12 @@ class DashboardApp extends React.Component<DashboardAppProps> {
 
 const mapStateToProps = (state: RootState) => ({
   project: project.selectors.getCurrentProjectObject(state)!,
+  ports: getPorts(state),
 });
 
 const mapDispatchToProps = {
   fetchPorts,
+  removeProjectPort,
   disableUmpire,
   enableUmpireWithSettings,
   openEnableUmpireForm: () => formDialog.actions.openForm(ENABLE_UMPIRE_FORM),

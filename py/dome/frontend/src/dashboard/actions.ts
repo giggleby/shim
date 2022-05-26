@@ -27,13 +27,21 @@ export const enableUmpireWithSettings =
   );
 
 const receivePorts = createAction('RECEIVE_PORTS', (resolve) =>
-  (ports: PortResponse[]) => resolve({ports}));
+  (ports: PortResponse) => resolve({ports}));
+
+const removePorts = createAction('REMOVE_PORTS', (resolve) =>
+  (ports: PortResponse, projectName: string) => resolve({ports, projectName}));
 
 export const basicActions = {
-  receivePorts
+  receivePorts,
+  removePorts,
 };
 
 export const fetchPorts = () => async (dispatch: Dispatch) => {
-  const response = await authorizedAxios().get<PortResponse[]>('/project_ports');
+  const response = await authorizedAxios().get<PortResponse>('/project_ports');
   dispatch(receivePorts(response.data));
+};
+
+export const removeProjectPort = (ports: PortResponse, projectName: string) => async (dispatch: Dispatch) => {
+  dispatch(removePorts(ports, projectName));
 };

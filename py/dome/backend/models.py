@@ -596,30 +596,36 @@ class Project(django.db.models.Model):
 
   @staticmethod
   def UpdateOne(project, **kwargs):
-    logger.info('Updating project %r', project.name)
-    # enable or disable Umpire if necessary
-    if ('umpire_enabled' in kwargs and
-        project.umpire_enabled != kwargs['umpire_enabled']):
-      if not kwargs['umpire_enabled']:
-        project.DeleteUmpireContainer()
-      else:
-        container_name = Project.GetUmpireContainerName(project.name)
-        if DoesContainerExist(container_name):
-          project.AddExistingUmpireContainer()
+    try:
+      logger.info('Updating project %r', project.name)
+      # enable or disable Umpire if necessary
+      if ('umpire_enabled' in kwargs and
+          project.umpire_enabled != kwargs['umpire_enabled']):
+        if not kwargs['umpire_enabled']:
+          project.DeleteUmpireContainer()
         else:
-          project.CreateUmpireContainer(kwargs['umpire_port'])
+          container_name = Project.GetUmpireContainerName(project.name)
+          if DoesContainerExist(container_name):
+            project.AddExistingUmpireContainer()
+          else:
+            project.CreateUmpireContainer(kwargs['umpire_port'])
 
-    # replace netboot resource in TFTP root
-    if ('netboot_bundle' in kwargs and
-        project.netboot_bundle != kwargs['netboot_bundle']):
-      project.MapNetbootResourceToTFTP(kwargs['netboot_bundle'])
+      # replace netboot resource in TFTP root
+      if ('netboot_bundle' in kwargs and
+          project.netboot_bundle != kwargs['netboot_bundle']):
+        project.MapNetbootResourceToTFTP(kwargs['netboot_bundle'])
 
-    # update attributes assigned in kwargs
-    for attr, value in kwargs.items():
-      if hasattr(project, attr):
-        setattr(project, attr, value)
-    project.save()
-
+      # update attributes assigned in kwargs
+      for attr, value in kwargs.items():
+        if hasattr(project, attr):
+          setattr(project, attr, value)
+      project.save()
+    except Exception as e:
+      error_message = 'Failed to create umpire server: The umpire port ' \
+                      'already has been used.\nYou should retry enable ' \
+                      'umpire or try another port.\n%r' % e
+      logger.error(error_message)
+      raise DomeServerException(detail=error_message)
     return project
 
 

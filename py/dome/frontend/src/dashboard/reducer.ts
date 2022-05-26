@@ -20,6 +20,13 @@ const portsReducer = produce((draft: PortState, action: PortAction) => {
     case getType(actions.receivePorts):
       return action.payload.ports;
 
+    case getType(actions.removePorts):
+      let ports = Object.assign({}, action.payload.ports);
+      ports.allPorts = action.payload.ports.allPorts.filter(function(port) {
+        return port.name !== action.payload.projectName;
+      });
+      return ports;
+
     default:
       return;
   }
