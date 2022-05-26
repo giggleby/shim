@@ -125,7 +125,6 @@ disable=
     bad-indentation,
     bad-option-value,
     cell-var-from-loop,
-    consider-iterating-dictionary,
     consider-using-dict-items,
     consider-using-enumerate,
     consider-using-f-string,

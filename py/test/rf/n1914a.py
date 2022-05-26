@@ -54,7 +54,7 @@ class N1914A(agilent_scpi.AgilentSCPI):
     mode_mapping = {'FAST': b'FAST',
                     'DOUBLE': b'DOUBle',
                     'NORMAL': b'NORMal'}
-    assert mode in mode_mapping.keys()
+    assert mode in mode_mapping
     self.Send(b'SENSe%d:MRATe %s' % (port, mode_mapping[mode]))
 
   # Range related methods.
