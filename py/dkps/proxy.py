@@ -98,7 +98,7 @@ class DKPSProxy:
         # happened in the log file.
         logging.info('%s called', method)
         try:
-          result = xmlrpc.server.SimpleXMLRPCServer._dispatch(
+          result = xmlrpc.server.SimpleXMLRPCServer._dispatch(  # pylint: disable=protected-access
               self, method, params)
           return result
         except BaseException as e:

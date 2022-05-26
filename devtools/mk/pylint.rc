@@ -130,7 +130,6 @@ disable=
     deprecated-decorator,
     deprecated-module,
     inconsistent-return-statements,
-    protected-access,
     raise-missing-from,
     redefined-outer-name,
     super-with-arguments,
