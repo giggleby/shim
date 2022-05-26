@@ -151,8 +151,8 @@ class WhaleBFTFixture(bft.BFTFixture):
 
     # Servo returns a string of list of integers
     adc = ast.literal_eval(self._servo.Get(self._WHALE_CONTROL.ADC))
-    for i in range(len(self._WHALE_ADC)):
-      result[self._WHALE_ADC[i][0]] = adc[i] * self._WHALE_ADC[i][1]
+    for i, v in enumerate(self._WHALE_ADC):
+      result[v[0]] = adc[i] * v[1]
 
     return result
 

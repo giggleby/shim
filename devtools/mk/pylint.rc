@@ -126,7 +126,6 @@ disable=
     bad-option-value,
     cell-var-from-loop,
     consider-using-dict-items,
-    consider-using-enumerate,
     consider-using-f-string,
     consider-using-in,
     consider-using-with,
