@@ -128,7 +128,7 @@ class HWIDV2Action(hwid_action.HWIDAction):
 
   def GetComponents(self, with_classes: List[Optional[str]] = None):
     components = {}
-    all_comps = list()
+    all_comps = []
     for bom in self._preproc_data.bom_map.values():
       if bom['primary']['components']:
         all_comps.extend(bom['primary']['components'].items())

@@ -94,7 +94,7 @@ class BOM:
 
     components = []
     for comp_class, comps in self._components.items():
-      if comps == list():
+      if not comps:
         components.append(Component(comp_class, None, None))
       else:
         components.extend(copy.deepcopy(comps))
