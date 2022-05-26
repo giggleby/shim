@@ -7,14 +7,14 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('backend', '0017_domeconfig_mroute_enabled'),
-    ]
+  dependencies = [
+      ('backend', '0017_domeconfig_mroute_enabled'),
+  ]
 
-    operations = [
-        migrations.RenameField(
-            model_name='domeconfig',
-            old_name='mroute_enabled',
-            new_name='mcast_enabled',
-        ),
-    ]
+  operations = [
+      migrations.RenameField(
+          model_name='domeconfig',
+          old_name='mroute_enabled',
+          new_name='mcast_enabled',
+      ),
+  ]
