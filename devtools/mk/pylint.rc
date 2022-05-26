@@ -126,7 +126,6 @@ disable=
     cell-var-from-loop,
     consider-using-dict-items,
     consider-using-f-string,
-    consider-using-in,
     consider-using-with,
     deprecated-decorator,
     deprecated-method,

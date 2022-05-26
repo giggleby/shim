@@ -1266,8 +1266,8 @@ class Components:
       # `cros.factory.hwid.v3.probe.GenerateBOMFromProbedResults` will raise an
       # exception when the probed result indeed matches two or more components.
       if values == existed_comp_values:
-        if (status != common.COMPONENT_STATUS.duplicate and
-            existed_comp_info.status != common.COMPONENT_STATUS.duplicate):
+        if common.COMPONENT_STATUS.duplicate not in (status,
+                                                     existed_comp_info.status):
           logging.warning('Probed values %r is ambiguous with %r', values,
                           existed_comp_name)
           logging.warning('Did you merge two components? You should set status '

@@ -161,8 +161,7 @@ class EventLoop:
     logging.debug('Received end test event %r', end_event)
     self.event_client.close()
 
-    if (end_event.status != state.TestState.PASSED and
-        end_event.status != state.TestState.FAILED):
+    if end_event.status not in (state.TestState.PASSED, state.TestState.FAILED):
       raise ValueError('Unexpected status in event %r' % end_event)
     return end_event
 
