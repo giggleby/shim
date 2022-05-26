@@ -25,7 +25,7 @@ except ImportError:
 
 try:
   # pylint: disable=unused-import, wrong-import-order
-  from cros.factory.test.utils import flimflam_test_path
+  from cros.factory.test.utils import flimflam_test_path  # isort: skip
   import dbus
   import flimflam
 except ImportError:
@@ -374,9 +374,9 @@ class ConnectionManager:
     Args:
       timeout: Timeout in seconds.
     """
-    t_start = time.clock()
+    t_start = time.perf_counter()
     while not self.IsConnected():
-      if time.clock() - t_start > timeout:
+      if time.perf_counter() - t_start > timeout:
         raise ConnectionManagerException('Not connected')
       time.sleep(_SLEEP_INTERVAL_SECS)
 

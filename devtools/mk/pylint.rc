@@ -128,7 +128,6 @@ disable=
     consider-using-f-string,
     consider-using-with,
     deprecated-decorator,
-    deprecated-method,
     deprecated-module,
     inconsistent-return-statements,
     protected-access,
