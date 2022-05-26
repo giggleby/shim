@@ -46,13 +46,14 @@ class UploadedFileSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
 
   name = serializers.ModelField(
-      model_field=Project._meta.get_field('name'),  # pylint: disable=W0212
+      model_field=Project._meta.get_field('name'),  # pylint: disable=protected-access
       required=False,
       validators=[
           validators.UniqueValidator(queryset=Project.objects.all()),
           django.core.validators.RegexValidator(
               regex=r'^%s$' % common.PROJECT_NAME_RE,
-              message='Invalid project name')])
+              message='Invalid project name')
+      ])
 
   has_existing_umpire = serializers.ReadOnlyField()
 

@@ -148,7 +148,6 @@ disable=
     useless-suppression,
     use-list-literal,
     use-maxsplit-arg,
-    use-symbolic-message-instead,
 
 [REPORTS]
 
