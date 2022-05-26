@@ -559,9 +559,10 @@ class Gooftool:
     # the release image. Currently "cgpt" is very close to the last step of
     # postinst so it may be OK, but we should seek for better method for this,
     # for example adding a "--nochange_boot_partition" to chromeos-postinst.
+
+    # Always rollback GPT changes.
+    curr_attrs = self._util.GetCgptAttributes(device)
     try:
-      # Always rollback GPT changes.
-      curr_attrs = self._util.GetCgptAttributes(device)
       self._util.InvokeChromeOSPostInstall(release_rootfs)
     finally:
       self._util.SetCgptAttributes(curr_attrs, device)

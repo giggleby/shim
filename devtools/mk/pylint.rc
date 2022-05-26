@@ -138,7 +138,6 @@ disable=
     unused-private-member,
     unused-variable,
     use-a-generator,
-    used-before-assignment,
     use-dict-literal,
     use-implicit-booleaness-not-comparison,
     useless-suppression,

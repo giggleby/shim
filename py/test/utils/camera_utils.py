@@ -449,6 +449,7 @@ class MIPICameraDevice(CameraDevice):
     self._sn_i2c_param = sn_i2c_param
 
   def GetSerialNumber(self):
+    fd = None
     try:
       # Power on camera so we can read from I2C
       fd = os.open(self._sn_i2c_param['dev_node'], os.O_RDWR)
@@ -459,4 +460,5 @@ class MIPICameraDevice(CameraDevice):
     except Exception as e:
       raise CameraError('Fail to read serial number: %r' % e)
     finally:
-      os.close(fd)
+      if fd is not None:
+        os.close(fd)
