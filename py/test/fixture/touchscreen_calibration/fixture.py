@@ -130,7 +130,7 @@ class FixutreNativeUSB(serial_utils.SerialDevice):
     new_state_list = self._ExtractStateList(self.state_string)
     return [(self.state_name_dict[i], new_state_list[i])
             for i in range(len(new_state_list))
-            if old_state_list == [] or new_state_list[i] != old_state_list[i]]
+            if not old_state_list or new_state_list[i] != old_state_list[i]]
 
   def CompleteState(self):
     """Get the complete state snap shot."""

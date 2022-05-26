@@ -817,7 +817,7 @@ class EventBase:
         'attachments' in self._data and 'serialNumbers' not in self._data):
       missing_fields.append('serialNumbers')
 
-    if missing_fields != []:
+    if missing_fields:
       raise testlog_utils.TestlogError('Missing fields: %s' % missing_fields)
 
     if self._data['apiVersion'] != TESTLOG_API_VERSION:
