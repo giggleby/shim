@@ -26,10 +26,9 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
-
 # __name__ looks like "cros.factory.test.pytests.touchscreen_calibration".
 # test_name is "touchscreen_calibration"
-test_name = __name__.split('.')[-1]
+test_name = __name__.rsplit('.', maxsplit=1)[-1]
 
 
 Event = collections.namedtuple('Event', ['data'])

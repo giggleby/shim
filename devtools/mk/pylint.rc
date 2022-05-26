@@ -140,7 +140,6 @@ disable=
     use-a-generator,
     use-dict-literal,
     useless-suppression,
-    use-maxsplit-arg,
 
 [REPORTS]
 

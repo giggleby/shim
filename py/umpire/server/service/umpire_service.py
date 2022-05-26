@@ -426,7 +426,7 @@ class UmpireService:
     # Update module map.
     self.classname = self.__class__.__name__
     full_modulename = self.__class__.__module__
-    self.modulename = full_modulename.split('.')[-1]
+    self.modulename = full_modulename.rsplit('.', maxsplit=1)[-1]
     if not hasattr(self, 'name'):
       self.name = self.modulename
       if '_unittest' in self.modulename or 'test_' in self.modulename:
