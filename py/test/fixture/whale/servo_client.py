@@ -64,7 +64,6 @@ PLANKTON_FEEDBACK = AttrDict(
     {'FB%d' % i: 'plankton_fb%d' % i for i in range(1, 9)})
 
 # Tuple of Whale's latchless feedback
-# pylint: disable=dict-values-not-iterating
 WHALE_FEEDBACKS = tuple(set(FIXTURE_FEEDBACK.values()).
                         union(PLANKTON_FEEDBACK.values()))
 

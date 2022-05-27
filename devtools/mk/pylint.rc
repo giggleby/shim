@@ -122,7 +122,6 @@ disable=
     # sources.  Either remove them to enable or leave them here to disable the
     # unexpected checks.
     arguments-renamed,
-    bad-option-value,
     cell-var-from-loop,
     consider-using-dict-items,
     consider-using-f-string,

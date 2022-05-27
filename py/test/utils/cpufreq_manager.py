@@ -264,7 +264,6 @@ class CpufreqManager:
     cpufreqs_str = re.findall(cpu_mhz_pattern, raw_output, re.MULTILINE)
     processors_str = re.findall(processor_pattern, raw_output, re.MULTILINE)
 
-    # pylint: disable=map-builtin-not-iterating
     cpufreqs_int = map(float, cpufreqs_str)
     processors_int = map(int, processors_str)
 

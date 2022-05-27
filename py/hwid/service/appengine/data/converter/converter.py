@@ -95,9 +95,9 @@ class FieldNameConverter(Converter):
     converted = self.Convert(probe_info)
     if not converted:
       return ProbeValueMatchStatus.INCONVERTIBLE
-    if not set(converted.keys()) <= set(comp_values.keys()):
+    if not converted.keys() <= comp_values.keys():
       return ProbeValueMatchStatus.KEY_UNMATCHED
-    if not converted.items() <= comp_values.items():  # pylint: disable=dict-items-not-iterating
+    if not converted.items() <= comp_values.items():
       return ProbeValueMatchStatus.VALUE_UNMATCHED
     return ProbeValueMatchStatus.ALL_MATCHED
 
