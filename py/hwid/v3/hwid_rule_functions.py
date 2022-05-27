@@ -23,8 +23,7 @@ def _ComponentCompare(comp_cls, values, op_for_values):
         all.
   """
   def _IsMatch(value):
-    return any(
-        [value.Matches(name) for name in context.bom.components[comp_cls]])
+    return any(value.Matches(name) for name in context.bom.components[comp_cls])
 
   context = GetContext()
 

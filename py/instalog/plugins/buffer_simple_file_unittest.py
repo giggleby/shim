@@ -395,7 +395,7 @@ class TestBufferSimpleFile(unittest.TestCase):
       cur_seq += 1
       record_count[record] += 1
     self.assertEqual(3, len(record_count))
-    self.assertTrue(all([x == 100 for x in record_count.values()]))
+    self.assertTrue(all(x == 100 for x in record_count.values()))
 
   @_WithBufferSize(80)  # Each line is around ~35 characters.
   def testMultiThreadConsumeTruncate(self):
@@ -441,7 +441,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     while not record_count_queue.empty():
       record_count = record_count_queue.get()
       self.assertEqual(3, len(record_count))
-      self.assertTrue(all([x == 25 for x in record_count.values()]))
+      self.assertTrue(all(x == 25 for x in record_count.values()))
 
   def _CountAttachmentsInBuffer(self, sf):
     return len(os.listdir(sf.buffer_file.attachments_dir))

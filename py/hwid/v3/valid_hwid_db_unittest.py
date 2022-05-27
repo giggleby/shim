@@ -85,7 +85,7 @@ def _CheckProject(args):
 
     # Load databases and verify checksum. For old factory branches that do not
     # have database checksum, the checksum verification will be skipped.
-    if any([re.match('^checksum: ', line) for line in db_raw.split('\n')]):
+    if any(re.match('^checksum: ', line) for line in db_raw.split('\n')):
       with file_utils.UnopenedTemporaryFile() as temp_db:
         file_utils.WriteFile(temp_db, db_raw)
         expected_checksum = Database.Checksum(temp_db)

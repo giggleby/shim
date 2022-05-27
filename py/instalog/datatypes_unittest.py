@@ -350,7 +350,7 @@ class TestEventStreamIteratorWithPerformance(TestEventStreamIteratorBase):
         with RuntimeBound(min=1, max=1.5):
           # No count argument; should run until timeout.
           results = list(self.event_stream.iter(timeout=1))
-          self.assertTrue(all([x == 1 for x in results]))
+          self.assertTrue(all(x == 1 for x in results))
           # Sanity check to make sure that the EventStreamIterator next() loop
           # is running fast enough.  On my machine I consistently get ~46000
           # results.  Tone this down to the safe amount of 5000.

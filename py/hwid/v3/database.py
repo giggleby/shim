@@ -1750,7 +1750,7 @@ class Rules:
       self._RULE_SCHEMA.Validate(rule_expr)
 
       rule = Rule.CreateFromDict(rule_expr)
-      if not any([rule.name.startswith(x + '.') for x in self._RULE_TYPES]):
+      if not any(rule.name.startswith(x + '.') for x in self._RULE_TYPES):
         raise common.HWIDException(
             'Invalid rule name %r; rule name must be prefixed with '
             '"device_info." (evaluated when generating HWID) '

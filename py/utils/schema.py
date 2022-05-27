@@ -501,7 +501,7 @@ class AnyOf(BaseType):
   def __init__(self, types, label=None):
     super(AnyOf, self).__init__(label)
     if (not isinstance(types, list) or
-        not all([isinstance(x, BaseType) for x in types])):
+        not all(isinstance(x, BaseType) for x in types)):
       raise SchemaException(
           'types in AnyOf(types=%r%s) should be a list of Schemas' %
           (types, '' if label is None else ', label=%r' % label))
@@ -517,7 +517,7 @@ class AnyOf(BaseType):
     Args:
       schema_type: The schema type to check against with.
     """
-    return all([isinstance(k, schema_type) for k in self.types])
+    return all(isinstance(k, schema_type) for k in self.types)
 
   def Validate(self, data):
     """Validates if the given data matches any schema in types

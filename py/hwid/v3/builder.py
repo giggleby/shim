@@ -395,8 +395,7 @@ class DatabaseBuilder:
       probed_values: A list of probed value from the device.
     """
     def _IsSubset(subset, superset):
-      return all([subset.get(key) == value
-                  for key, value in superset.items()])
+      return all(subset.get(key) == value for key, value in superset.items())
 
     # Only add the unique component to the database.
     # For example, if the given probed values are

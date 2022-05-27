@@ -130,7 +130,6 @@ disable=
     super-with-arguments,
     unspecified-encoding,
     unused-private-member,
-    use-a-generator,
     useless-suppression,
 
 [REPORTS]

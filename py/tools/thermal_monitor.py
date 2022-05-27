@@ -72,8 +72,9 @@ class TemperaturesMonitor:
         # delta is larger than we expected. The _sensor_array_changed
         # guaranteed that length will be the same to compare.
         worth_to_output = any(
-            [abs(self._last_temperatures[i] - current_temperatures[i]) >=
-             self._delta for i in self._sensor_array])
+            abs(self._last_temperatures[i] -
+                current_temperatures[i]) >= self._delta
+            for i in self._sensor_array)
 
       if worth_to_output:
         self._last_temperatures = current_temperatures

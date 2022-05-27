@@ -93,7 +93,7 @@ class Instalog(plugin_sandbox.CoreAPI):
   def _PreprocessConfigEntries(self, input_plugins, output_plugins):
     """Preprocesses config entries to allow the "targets" argument."""
     # Ensure that plugin IDs don't overlap across input and output.
-    if any([plugin_id in output_plugins for plugin_id in input_plugins]):
+    if any(plugin_id in output_plugins for plugin_id in input_plugins):
       raise ValueError
 
     # Next, convert 'targets' entries to corresponding allow policy rule.
@@ -212,8 +212,8 @@ class Instalog(plugin_sandbox.CoreAPI):
         # the STARTING state.  When this occurs, Instalog's state should change
         # to UP.
         if (self._state is STARTING and
-            all([state is not plugin_sandbox.STARTING
-                 for state in plugin_states.values()])):
+            all(state is not plugin_sandbox.STARTING
+                for state in plugin_states.values())):
           self._state = UP
         for plugin in self._plugins.values():
           plugin.AdvanceState()

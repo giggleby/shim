@@ -578,7 +578,7 @@ class FactoryTest:
     """Returns true if the test or any parent is marked 'no_host'."""
     if self.no_host:
       return True
-    return any([node.no_host for node in self.GetAncestorGroups()])
+    return any(node.no_host for node in self.GetAncestorGroups())
 
   def AsDict(self, state_map=None):
     """Returns this node and children in a dictionary suitable for

@@ -50,11 +50,10 @@ def main():
 
     return True
 
-  if all([
+  if all(
       CheckTitleValid(filepath)
       for filepath in args.files
-      if filepath.endswith('.md')
-  ]):
+      if filepath.endswith('.md')):
     print('Your code looks great, everything is awesome!')
   else:
     print('Markdown file should contain exactly one title line(h1 header).')

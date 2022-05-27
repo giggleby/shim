@@ -50,7 +50,7 @@ class MockCore(plugin_sandbox.CoreAPI):
 
   def AllStreamsExpired(self):
     """Returns True if all streams are currently expired."""
-    return all([stream.expired for stream in self.streams])
+    return all(stream.expired for stream in self.streams)
 
   def Emit(self, plugin, events):
     """Stores the events from this Emit call into self.emit_calls."""

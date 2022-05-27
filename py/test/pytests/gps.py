@@ -189,7 +189,7 @@ class GPS(unittest.TestCase):
 
       # Initialization.
       if not init:
-        if all([value != '' for value in values]):
+        if all(value != '' for value in values):
           # This is the first set of valid values we are getting.
           init = True
         else:

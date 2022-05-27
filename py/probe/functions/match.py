@@ -122,8 +122,9 @@ class MatchFunction(function.Function):
 
     if not self.is_dict:
       return len(item) == 1 and _Match(self.rule, next(iter(item.values())))
-    return all([key in item and _Match(rule, item[key])
-                for key, rule in self.rule.items()])
+    return all(
+        key in item and _Match(rule, item[key])
+        for key, rule in self.rule.items())
 
   @classmethod
   def ConstructRule(cls, rule):

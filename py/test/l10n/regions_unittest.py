@@ -67,7 +67,7 @@ class RegionTest(unittest.TestCase):
         paths.append(os.path.join(bmp_locale_dir, l))
         if '-' in l:
           paths.append(os.path.join(bmp_locale_dir, l.partition('-')[0]))
-        if any([os.path.exists(x) for x in paths]):
+        if any(os.path.exists(x) for x in paths):
           break
       else:
         self.fail('For region %r, none of %r exists' % (r.region_code, paths))
