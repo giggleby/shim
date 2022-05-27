@@ -21,7 +21,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
-
+# Constants.
 CHARGE_TOLERANCE = 0.001
 
 
@@ -135,7 +135,7 @@ class ChargerTest(test_case.TestCase):
     self.assertIsNotNone(charge, 'Error getting battery charge state.')
     return charge
 
-  def _GetBatteryCurrent(self):
+  def _GetBatteryCurrent(self):  # pylint: disable=inconsistent-return-statements
     """Gets battery current through board"""
     try:
       return self._power.GetBatteryCurrent()

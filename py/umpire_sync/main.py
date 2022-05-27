@@ -42,6 +42,7 @@ class PrimaryUmpire:
       logging.error(
           'Failed to get the active bundle from the primary umpire[%s]: %s',
           self.rpc_url, e)
+      return None
 
 
 class SecondaryUmpire:

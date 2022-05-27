@@ -157,7 +157,7 @@ class UpdateDetachableBaseTest(test_case.TestCase):
                           key_version=key_version)
       session.console.info('Detachable base verification done.')
 
-  def GetDetachableKeyVersion(self, retry_times=3):
+  def GetDetachableKeyVersion(self, retry_times=3):  # pylint: disable=inconsistent-return-statements
     '''Gets the firmware version on the detachable base.
 
     Gets the firmware version via hammer_info.py with retry.

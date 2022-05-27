@@ -100,6 +100,7 @@ def ShopFloorUpload(source_path, remote_spec, stage,
     except Exception:
       result['message'] = sys.exc_info()[1]
       result['abort'] = False
+    return False
 
   try:
     RetryCommand(ShopFloorCallback, 'ShopFloorUpload',

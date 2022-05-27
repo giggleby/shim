@@ -119,7 +119,7 @@ class WirelessChargeTest(test_case.TestCase):
       if GetPortStateFromChargeState(charge_state) == desired_state:
         break
 
-  def GetPortChargingState(self):
+  def GetPortChargingState(self):  # pylint: disable=inconsistent-return-statements
     cmd = f'ectool pchg {self.args.port}'
     output = self._dut.CheckOutput(cmd, log=True)
     parsed_dict = ParseDict(output.split('\n'))

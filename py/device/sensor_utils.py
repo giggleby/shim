@@ -108,7 +108,7 @@ class BasicSensorController(device_types.DeviceComponent):
     try:
       return self._device.ReadFile(os.path.join(path, filename)).strip()
     except Exception:
-      pass
+      return None
 
   def _SetSysfsValue(self, filename, value, check_call=True, path=None):
     """Assigns corresponding values to a list of sysfs.

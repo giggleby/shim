@@ -134,6 +134,7 @@ def CatchException(name, enable=True):
             '%s Exception: %s.', name,
             '\n'.join(traceback.format_exception_only(
                 *sys.exc_info()[:2])).strip())
+        return None
     return Wrap if enable else method
   return _CatchExceptionDecorator
 

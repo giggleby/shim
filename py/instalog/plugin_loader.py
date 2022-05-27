@@ -98,7 +98,7 @@ class PluginLoader:
           '%s%s' % (self._plugin_prefix, self.plugin_type)]
     return self._possible_module_names
 
-  def _LoadModule(self):
+  def _LoadModule(self):  # pylint: disable=inconsistent-return-statements
     """Locates the plugin's Python module and returns a reference.
 
     Returns:
@@ -199,7 +199,7 @@ class PluginLoader:
       return None
     return self.superclass
 
-  def Create(self):
+  def Create(self):  # pylint: disable=inconsistent-return-statements
     """Create an instance of the particular plugin class.
 
     Args:

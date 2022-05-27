@@ -126,7 +126,6 @@ disable=
     consider-using-f-string,
     consider-using-with,
     deprecated-module,
-    inconsistent-return-statements,
     raise-missing-from,
     super-with-arguments,
     unspecified-encoding,

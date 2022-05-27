@@ -78,7 +78,7 @@ class LidSwitchTest(test_case.TestCase):
         self.FailTask('Can not write %r into brightness. '
                       'Maybe the limit is wrong' % value)
 
-  def GetBrightness(self):
+  def GetBrightness(self):  # pylint: disable=inconsistent-return-statements
     """Gets the brightness value from sysfs."""
     with open(self.args.brightness_path, 'r') as f:
       try:

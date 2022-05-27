@@ -202,7 +202,7 @@ class UpdateCBITest(test_case.TestCase):
     return self.GetCrosConfigData(sku_id, custom_label_tag, '/firmware',
                                   'firmware-config', int)
 
-  def GetDeviceData(self, key, data_type):
+  def GetDeviceData(self, key, data_type):  # pylint: disable=inconsistent-return-statements
     try:
       return device_data.GetDeviceData(key, data_type=data_type,
                                        throw_if_none=True)

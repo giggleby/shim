@@ -186,7 +186,7 @@ class GattTool:
     except pexpect.TIMEOUT:
       self._RaiseError('connection timeout')
 
-  def CharReadUUID(self, uuid, spec_name):
+  def CharReadUUID(self, uuid, spec_name):  # pylint: disable=inconsistent-return-statements
     """Execute char-read-uuid and returns the value.
 
     Args:

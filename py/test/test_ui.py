@@ -209,6 +209,7 @@ class EventLoop:
         return func(*args, **kwargs)
       except Exception:
         self._handler_exception_hook()
+      return None
 
     return _Wrapper
 
