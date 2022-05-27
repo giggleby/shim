@@ -649,14 +649,14 @@ class Gooftool:
       if not speaker_amp:
         logging.info('No smart amplifier found! '
                      'Skip checking DSM VPD value.')
-        return dict()
+        return {}
 
       logging.info('The DUT is expected to have amplifier %s', speaker_amp)
       num_channels = len(channel_names)
       logging.info(
           'The VPD RO should contain `dsm_calib_r0_N` and '
           '`dsm_calib_temp_N` where N ranges from 0 ~ %d.', num_channels - 1)
-      dsm_vpd_ro_data = dict()
+      dsm_vpd_ro_data = {}
       for channel in range(num_channels):
         dsm_vpd_ro_data['dsm_calib_r0_%d' % channel] = r'[0-9]*'
         dsm_vpd_ro_data['dsm_calib_temp_%d' % channel] = r'[0-9]*'

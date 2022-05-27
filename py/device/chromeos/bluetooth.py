@@ -474,7 +474,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
       self.RemoveDevices(adapter, old_device_paths)
 
     # devices is a mapping from device path to device properties.
-    devices = dict()
+    devices = {}
     self._SwitchAdapterPower(adapter, True)
     logging.info('Powered on adapter')
 

@@ -63,7 +63,7 @@ class TinyalsaMixerController(base.BaseMixerController):
     """
     logging.info('Setting mixer control values on card %s, store %s',
                  card, store)
-    restore_mixer_settings = dict()
+    restore_mixer_settings = {}
     if store:
       new_mixer_settings_to_store = \
           self._GetMixerSettingsNotInStack(mixer_settings, card)

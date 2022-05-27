@@ -128,7 +128,7 @@ class ParseUrlTest(unittest.TestCase):
                           password='pass', host='host', port='2222',
                           path='/public'),
                      ParseUrl('smb://192.168.1.2/user:pass@host:2222/public'))
-    self.assertEqual(dict(), ParseUrl('invalid.com'))
+    self.assertEqual({}, ParseUrl('invalid.com'))
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)

@@ -133,7 +133,6 @@ disable=
     unspecified-encoding,
     unused-private-member,
     use-a-generator,
-    use-dict-literal,
     useless-suppression,
 
 [REPORTS]

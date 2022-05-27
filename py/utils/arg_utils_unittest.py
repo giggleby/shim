@@ -35,10 +35,8 @@ class ArgsTest(unittest.TestCase):
   def testIntOrNone(self):
     self.parser = Args(
         Arg('int_or_none', (int, type(None)), 'X', default=5))
-    self.assertEqual(dict(int_or_none=5),
-                     self.Parse(dict()))
-    self.assertEqual(dict(int_or_none=10),
-                     self.Parse(dict(int_or_none=10)))
+    self.assertEqual(dict(int_or_none=5), self.Parse({}))
+    self.assertEqual(dict(int_or_none=10), self.Parse(dict(int_or_none=10)))
     self.assertEqual(dict(int_or_none=None),
                      self.Parse(dict(int_or_none=None)))
 
@@ -50,7 +48,7 @@ class ArgsTest(unittest.TestCase):
                       'int_typed': None,
                       'enum_typed': None},
                      self.Parse(dict(required='x')))
-    self.assertRaises(ValueError, lambda: self.Parse(dict()))
+    self.assertRaises(ValueError, lambda: self.Parse({}))
     self.assertRaises(ValueError, lambda: self.Parse(dict(required=None)))
     self.assertRaises(ValueError, lambda: self.Parse(dict(required=3)))
 

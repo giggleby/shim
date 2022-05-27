@@ -66,7 +66,7 @@ class AlsaMixerController(base.BaseMixerController):
   def SetMixerControls(self, mixer_settings, card='0', store=True):
     """See BaseMixerController.SetMixerControls"""
     logging.debug('Setting mixer control values on card %s', card)
-    restore_mixer_settings = dict()
+    restore_mixer_settings = {}
     for name, value in mixer_settings.items():
       if store:
         old_value = self.GetMixerControls(name, card)

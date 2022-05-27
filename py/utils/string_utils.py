@@ -78,7 +78,7 @@ def ParseDict(lines, delimiter=':', recursive=False):
   if recursive:
     return _ParseDictRecursive(lines, delimiter)
 
-  ret = dict()
+  ret = {}
   for line in lines:
     try:
       key, value = line.split(delimiter, 1)

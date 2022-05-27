@@ -194,7 +194,7 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def eth_macs(self):
     """MAC addresses of ethernet devices."""
-    macs = dict()
+    macs = {}
     eth_paths = sum([self._device.Glob(os.path.join('/sys/class/net', pattern))
                      for pattern in net_utils.DEFAULT_ETHERNET_NAME_PATTERNS],
                     [])

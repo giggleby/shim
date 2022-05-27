@@ -65,7 +65,7 @@ class InterruptHandler:
   # _DUT_SENSOR_CHECK_LIST = dict([
   #  (_FIXTURE_FEEDBACK.FB8, True),
   #  (_FIXTURE_FEEDBACK.FB9, False)])
-  _DUT_SENSOR_CHECK_LIST = dict()
+  _DUT_SENSOR_CHECK_LIST = {}
 
   _INPUT_LIST = _BUTTON_LIST + _FEEDBACK_LIST
 

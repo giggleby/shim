@@ -135,7 +135,7 @@ def GetMaxStatefulPartitionUsage():
       and max_usage is the usage in percentage.
   """
   vfs_infos = GetAllVFSInfo()
-  stateful_usage = dict()
+  stateful_usage = {}
   for vfs_info in vfs_infos.values():
     if '/mnt/stateful_partition' in vfs_info.mount_points:
       stateful_usage['stateful'] = GetPartitionUsage(vfs_info)
