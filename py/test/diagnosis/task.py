@@ -161,13 +161,12 @@ class Task:
       input values with missing values begin filled.
     """
     ret = {}
-    for var_id in self._inputs:
+    for var_id, input_element in self._inputs.items():
       js_var_id = str(var_id)
       if js_var_id not in input_values:
         ret[var_id] = ''
       else:
         value = input_values[js_var_id]
-        input_element = self._inputs[var_id]
         if (input_element[common.TOKEN.TYPE] == common.INPUT_TYPE.STRING and
             input_element[common.TOKEN.REGEXP] is not None):
           (regexp, flags) = tuple(input_element[common.TOKEN.REGEXP])

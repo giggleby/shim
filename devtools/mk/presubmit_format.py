@@ -13,7 +13,7 @@ import sys
 
 import presubmit_common
 
-
+# Paths of venv and yapf.
 SCRIPT_DIR = os.path.dirname(__file__)
 VENV_DIR = os.path.join(SCRIPT_DIR, 'yapf.venv')
 VENV_REQUIREMNTS_FILE = os.path.join(SCRIPT_DIR, 'yapf.requirements.txt')
@@ -104,8 +104,8 @@ def main():
     # Only check filenames end with '.py'.  We filter these again in case
     # args.files is an empty list, in this case, line_diffs will be all files
     # changed by args.commit.
-    proc_args = [(base_cmd, f, line_diffs[f])
-                 for f in line_diffs
+    proc_args = [(base_cmd, f, diffs)
+                 for f, diffs in line_diffs.items()
                  if f.endswith('.py') and not ShouldExclude(f)]
     failed_files = list(filter(None, pool.imap(_ProcessOneFile, proc_args)))
 

@@ -837,16 +837,16 @@ class EventBase:
                 'The parameters length in the group(%s) are not the same' %
                 group)
 
-    for key in self._data:
+    for key, data in self._data.items():
       # Ignore keys that start with an underscore.
       if key.startswith('_'):
         continue
-      data_type = type(self._data[key])
+      data_type = type(data)
       if data_type == list:
-        if not self._data[key]:
+        if not data:
           raise testlog_utils.TestlogError('Empty list is invalid: %r' % key)
       elif data_type == dict:
-        if not self._data[key]:
+        if not data:
           raise testlog_utils.TestlogError('Empty dict is invalid: %r' % key)
 
   @classmethod

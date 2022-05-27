@@ -74,10 +74,8 @@ class TestListLoaderTest(unittest.TestCase):
         'sync_event_log_period_secs': 0,
     }
 
-    for key in options:
-      self.assertEqual(
-          options[key],
-          getattr(factory_test_list.options, key))
+    for key, option in options.items():
+      self.assertEqual(option, getattr(factory_test_list.options, key))
 
   @mock.patch.object(state, 'GetInstance')
   def testResolveTestArgs(self, state_get_instance):

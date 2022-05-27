@@ -254,11 +254,11 @@ class AudioQualityTest(test_case.TestCase):
       conn.send(instruction + '\x05' + 'Active' + '\x04\x03')
 
       match_command = False
-      for key in self._handlers:
+      for key, handler in self._handlers.items():
         if key.match(instruction):
           match_command = True
           session.console.info('match command %s', instruction)
-          self._handlers[key](conn, attr_list)
+          handler(conn, attr_list)
           break
       if not match_command:
         session.console.error('Command %s cannot find', instruction)

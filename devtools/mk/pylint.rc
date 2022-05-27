@@ -123,7 +123,6 @@ disable=
     # unexpected checks.
     arguments-renamed,
     cell-var-from-loop,
-    consider-using-dict-items,
     consider-using-f-string,
     consider-using-with,
     deprecated-module,

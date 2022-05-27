@@ -110,8 +110,9 @@ class WriteDeviceDataToVPD(test_case.TestCase):
           for vpd_name, data_key in (self.args.rw_key_map or {}).items()
       }
 
-    missing_keys = [k for section in data for k, v in data[section].items()
-                    if v is None]
+    missing_keys = [
+        k for section, d in data.items() for k, v in d.items() if v is None
+    ]
     if missing_keys:
       self.FailTask('Missing device data keys: %r' % sorted(missing_keys))
 

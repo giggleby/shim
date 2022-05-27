@@ -183,8 +183,8 @@ class BOM:
         ]
       return []
     return [
-        Label(cls, name, value) for cls in self._labels
-        for name, values in self._labels[cls].items() for value in values
+        Label(cls, name, value) for cls, labels in self._labels.items()
+        for name, values in labels.items() for value in values
     ]
 
   def AddLabel(self, cls, name, value=None):
