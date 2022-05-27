@@ -135,7 +135,6 @@ disable=
     unexpected-keyword-arg,
     unspecified-encoding,
     unused-private-member,
-    unused-variable,
     use-a-generator,
     use-dict-literal,
     useless-suppression,

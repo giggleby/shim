@@ -536,7 +536,7 @@ class RadiotapWiFiChip(wifi.WiFiChip):
       self._connection = self._device.wifi.Connect(
           self._ap, interface=self._interface, passkey=password,
           connect_timeout=self._connect_timeout)
-    except type_utils.TimeoutError as e:
+    except type_utils.TimeoutError:
       session.console.info('Unable to connect to the service %s' % service_name)
       return False
 

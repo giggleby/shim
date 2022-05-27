@@ -131,7 +131,7 @@ class PluginLoader:
           continue
         # Any other ImportError problem.
         self._ReportException()
-      except Exception as e:
+      except Exception:
         # Any other exception -- probably SyntaxError.
         self._ReportException()
     # Uses traceback from the last ImportError.

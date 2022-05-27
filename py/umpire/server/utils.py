@@ -60,7 +60,7 @@ def CreateLoopDevice(loop_path_prefix, start, end):
     mode = stat_result.st_mode
     uid = stat_result.st_uid
     gid = stat_result.st_gid
-  except OSError as e:
+  except OSError:
     logging.warning('Failed to stat /dev/loop0, try defalt value.',
                     exc_info=True)
 

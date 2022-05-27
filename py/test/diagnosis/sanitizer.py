@@ -335,7 +335,7 @@ def _GetCommandOutput(command, converter, converted_type_name=None):
     raise common.FormatError('Runs command %r failed, reason %r' % (command, e))
   try:
     return converter(output)
-  except Exception as e:
+  except Exception:
     raise common.FormatError('Cannot convert the output of %r to %s: %s' %
                              (command, converted_type_name, output))
 
