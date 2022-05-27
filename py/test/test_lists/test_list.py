@@ -418,7 +418,8 @@ class ITestList(metaclass=abc.ABCMeta):
     else:
       raise AttributeError('cannot set attribute %r' % name)
 
-  @abc.abstractproperty
+  @property
+  @abc.abstractmethod
   def modified(self):
     raise NotImplementedError
 
@@ -427,7 +428,8 @@ class ITestList(metaclass=abc.ABCMeta):
     # default behavior, does nothing
     return
 
-  @abc.abstractproperty
+  @property
+  @abc.abstractmethod
   def constants(self):
     raise NotImplementedError
 
@@ -614,7 +616,8 @@ class ITestList(metaclass=abc.ABCMeta):
       return default
 
   # the following properties are required by goofy
-  @abc.abstractproperty
+  @property
+  @abc.abstractmethod
   def state_instance(self):
     raise NotImplementedError
 
@@ -622,7 +625,8 @@ class ITestList(metaclass=abc.ABCMeta):
   def state_instance(self, state_instance):
     raise NotImplementedError
 
-  @abc.abstractproperty
+  @property
+  @abc.abstractmethod
   def state_change_callback(self):
     raise NotImplementedError
 

@@ -127,7 +127,6 @@ disable=
     consider-using-dict-items,
     consider-using-f-string,
     consider-using-with,
-    deprecated-decorator,
     deprecated-module,
     inconsistent-return-statements,
     raise-missing-from,
