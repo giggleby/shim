@@ -128,7 +128,6 @@ disable=
     deprecated-module,
     inconsistent-return-statements,
     raise-missing-from,
-    redefined-outer-name,
     super-with-arguments,
     unspecified-encoding,
     unused-private-member,
