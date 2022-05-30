@@ -18,12 +18,12 @@ Take [`start.py`](start.py) as an example, a pytest should contain 4 sections.
 
 Always add copyright header to the beginning of the file.
 ```python
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2022 The ChromiumOS Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 ```
 
-`2018` is year of file created date.
+`2022` is year of file created date.
 
 ### Test Documentation
 
