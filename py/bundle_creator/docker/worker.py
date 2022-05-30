@@ -1,10 +1,8 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-#
-# TODO(b/214528226): Add a unit test for this file.
 
-import datetime
+from datetime import datetime
 import logging
 import os
 import time
@@ -127,8 +125,7 @@ class EasyBundleCreationWorker:
     with file_utils.TempDirectory() as temp_dir:
       os.chdir(temp_dir)
 
-      bundle_name = '{:%Y%m%d}_{}'.format(datetime.datetime.now(),
-                                          request.phase)
+      bundle_name = '{:%Y%m%d}_{}'.format(datetime.now(), request.phase)
       firmware_source = ('release_image/' + request.firmware_source
                          if request.HasField('firmware_source') else
                          'release_image')

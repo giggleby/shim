@@ -375,8 +375,15 @@ do_test_docker() {
   rm -rf "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}"
   mkdir -p "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}"
 
+  # Assign fake values for generating the configuration.
+  GCLOUD_PROJECT="fake-gcloud-project"
+  BUNDLE_BUCKET="fake-bundle-bucket"
+  PUBSUB_SUBSCRIPTION="fake-sub"
+  HWID_API_ENDPOINT="https://fake_hwid_api_endpoint"
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
   prepare_python_venv "${SOURCE_DIR}/docker/requirements.txt"
+  rsync -avr --exclude="*test\.py" "${FACTORY_DIR}/py/utils"/* \
+    "${LOCAL_DEPLOYMENT_SOURCE_DIR}/cros/factory/utils"
 
   start_all_emulators
 
