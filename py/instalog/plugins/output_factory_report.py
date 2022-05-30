@@ -74,7 +74,7 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
     self._archive_path = os.path.join(self.GetDataDir(), 'archive')
     self._tmp_dir = os.path.join(self.GetDataDir(), 'tmp')
 
-    self._process_pool = multiprocessing.Pool(processes=_PROCESSES_NUMBER)
+    self._process_pool = multiprocessing.Pool(processes=_PROCESSES_NUMBER)  # pylint: disable=consider-using-with
 
   def TearDown(self):
     if os.path.exists(self._tmp_dir):

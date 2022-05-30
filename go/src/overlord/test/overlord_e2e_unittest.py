@@ -86,19 +86,22 @@ class TestOverlord(unittest.TestCase):
     env['GHOST_RPC_PORT'] = str(net_utils.FindUnusedPort())
 
     # Launch overlord
-    self.ovl = subprocess.Popen(
+    self.ovl = subprocess.Popen(  # pylint: disable=consider-using-with
         ['%s/overlordd' % bindir, '-no-auth', '-no-lan-disc'], env=env)
 
     # Launch go implementation of ghost
-    self.goghost = subprocess.Popen(['%s/ghost' % bindir,
-                                     '-rand-mid', '-no-lan-disc',
-                                     '-no-rpc-server', '-tls=n'], env=env)
+    self.goghost = subprocess.Popen(  # pylint: disable=consider-using-with
+        [
+            '%s/ghost' % bindir, '-rand-mid', '-no-lan-disc', '-no-rpc-server',
+            '-tls=n'
+        ], env=env)
 
     # Launch python implementation of ghost
-    self.pyghost = subprocess.Popen(['%s/py/tools/ghost.py' % factorydir,
-                                     '--rand-mid', '--no-lan-disc',
-                                     '--no-rpc-server', '--tls=n'],
-                                    env=env)
+    self.pyghost = subprocess.Popen(  # pylint: disable=consider-using-with
+        [
+            '%s/py/tools/ghost.py' % factorydir, '--rand-mid', '--no-lan-disc',
+            '--no-rpc-server', '--tls=n'
+        ], env=env)
 
     def CheckClient():
       try:

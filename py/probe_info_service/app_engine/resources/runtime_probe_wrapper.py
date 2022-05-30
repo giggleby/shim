@@ -51,8 +51,9 @@ def _InvokeRuntimeProbe(probe_config_file_relpath):
               '--verbosity_level=3']
   logging.debug('Run subcommand: %r.', cmd_args)
   try:
-    proc = subprocess.Popen(cmd_args, stdin=subprocess.DEVNULL,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+        cmd_args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
   except OSError as e:
     result.result_type = result.INVOCATION_ERROR
     result.error_msg = 'Unable to invoke %r: %r.' % (_RUNTIME_PROBE_PATH, e)

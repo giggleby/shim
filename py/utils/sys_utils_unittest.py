@@ -209,7 +209,7 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
 
   def setUp(self):
     # Creates a temp file and create file system on it as a mock device.
-    self.device = tempfile.NamedTemporaryFile(prefix='MountDeviceAndReadFile')
+    self.device = tempfile.NamedTemporaryFile(prefix='MountDeviceAndReadFile')  # pylint: disable=consider-using-with
     Spawn(['truncate', '-s', '1M', self.device.name], log=True,
           check_call=True)
 

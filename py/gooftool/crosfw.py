@@ -228,7 +228,7 @@ class FirmwareContent:
           sections is not None and sections.issubset(sections_in_file)):
         return fileref.name
 
-    fileref = tempfile.NamedTemporaryFile(prefix='fw_%s_' % self.target)
+    fileref = tempfile.NamedTemporaryFile(prefix='fw_%s_' % self.target)  # pylint: disable=consider-using-with
     self.flashrom.Read(filename=fileref.name, sections=sections)
     self.cached_files.append((fileref, sections))
     return fileref.name

@@ -19,9 +19,9 @@ from cros.factory.test.utils import core_dump_manager
 class CoreDumpManagerTest(unittest.TestCase):
 
   def CreateFiles(self):
-    self.watched_file = tempfile.NamedTemporaryFile(
+    self.watched_file = tempfile.NamedTemporaryFile(  # pylint: disable=consider-using-with
         prefix='watch', dir=self.crash_dir, delete=False)
-    self.other_file = tempfile.NamedTemporaryFile(
+    self.other_file = tempfile.NamedTemporaryFile(  # pylint: disable=consider-using-with
         prefix='other', dir=self.crash_dir, delete=False)
 
   def setUp(self):

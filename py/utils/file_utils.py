@@ -902,7 +902,7 @@ class FileLockContextManager:
     if self.opened:
       return
 
-    self.file = open(self.path, self.mode)
+    self.file = open(self.path, self.mode)  # pylint: disable=consider-using-with
     self.opened = True
 
 

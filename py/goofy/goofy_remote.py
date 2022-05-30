@@ -195,11 +195,13 @@ def main():
         os.path.dirname(paths.FACTORY_DIR), 'chromeos-hwid')
     Spawn(['./create_bundle', '--version', '3', project.upper()],
           cwd=chromeos_hwid_path, check_call=True, log=True)
-    SpawnSSHToDUT([args.host, 'bash'],
-                  stdin=open(os.path.join(
-                      chromeos_hwid_path,
-                      hwid_utils.GetHWIDBundleName(project))),
-                  check_call=True, log=True)
+    SpawnSSHToDUT(
+        [args.host, 'bash'],
+        stdin=open(  # pylint: disable=consider-using-with
+            os.path.join(chromeos_hwid_path,
+                         hwid_utils.GetHWIDBundleName(project))),
+        check_call=True,
+        log=True)
 
   # Make sure all the directories and files have correct permissions.  This is
   # essential for Chrome to load the factory test extension.

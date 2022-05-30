@@ -652,7 +652,7 @@ class Resource:
       try:
         umpire_server.ExportPayload(
             bundle_name, resource_type, resource_filepath)
-        resource_file = open(resource_filepath, 'rb')
+        resource_file = open(resource_filepath, 'rb')  # pylint: disable=consider-using-with
         return resource_file
       except xmlrpc.client.Fault as e:
         logger.error(
@@ -1012,7 +1012,7 @@ class Log:
     try:
       log_path = os.path.join(SHARED_TMP_DIR, download_params['temp_dir'],
                               download_params['log_file'])
-      log_file = open(log_path, 'rb')
+      log_file = open(log_path, 'rb')  # pylint: disable=consider-using-with
       return log_file
     except Exception as e:
       logger.error(

@@ -87,7 +87,7 @@ class EventLogWatcher:
 
   def IsScanning(self):
     """Returns True if currently scanning (i.e., the lock is held)."""
-    if self._scan_lock.acquire(blocking=False):
+    if self._scan_lock.acquire(blocking=False):  # pylint: disable=consider-using-with
       self._scan_lock.release()
       return False
     return True

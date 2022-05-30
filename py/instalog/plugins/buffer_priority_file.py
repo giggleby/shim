@@ -109,7 +109,7 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
     for name in self.buffer_file[0][0].consumers.keys():
       self.consumers[name] = Consumer(name, self)
 
-    self.process_pool = multiprocessing.Pool(processes=_PROCESSES_NUMBER)
+    self.process_pool = multiprocessing.Pool(processes=_PROCESSES_NUMBER)  # pylint: disable=consider-using-with
 
   def TearDown(self):
     """Tears down the plugin."""

@@ -390,7 +390,7 @@ class SSHLink(device_types.DeviceLink):
 
       def _CallTrue():
         sig, options = _GetLinkSignature(False)
-        proc = subprocess.Popen(['ssh'] + options + [sig, 'true'])
+        proc = subprocess.Popen(['ssh'] + options + [sig, 'true'])  # pylint: disable=consider-using-with
         time.sleep(1)
         returncode = proc.poll()
         if returncode != 0:

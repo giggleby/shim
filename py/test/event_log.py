@@ -511,7 +511,7 @@ class EventLog:
 
     logging.info("Logging events for %s into %s", self.prefix, EVENTS_PATH)
 
-    self.file = open(EVENTS_PATH, "a", encoding='utf-8')
+    self.file = open(EVENTS_PATH, "a", encoding='utf-8')  # pylint: disable=consider-using-with
     self._LogUnlocked("preamble",
                       boot_id=GetBootId(),
                       device_id=session.GetDeviceID(),

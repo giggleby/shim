@@ -687,9 +687,9 @@ class Ghost:
     # Execute shell command from HOME directory
     os.chdir(os.getenv('HOME', '/tmp'))
 
-    p = subprocess.Popen(self._shell_command, stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         shell=True, env=env)
+    p = subprocess.Popen(  # pylint: disable=consider-using-with
+        self._shell_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, shell=True, env=env)
 
     def make_non_block(fd):
       fl = fcntl.fcntl(fd, fcntl.F_GETFL)

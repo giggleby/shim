@@ -22,7 +22,7 @@ class HWIDDBDataManagerTest(unittest.TestCase):
   def setUp(self):
     super().setUp()
 
-    tmpdir = tempfile.TemporaryDirectory()
+    tmpdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
     self.fs_adapter = filesystem_adapter.LocalFileSystemAdapter(tmpdir.name)
     self.addCleanup(tmpdir.cleanup)
     self.ndb_connector = ndbc_module.NDBConnector()

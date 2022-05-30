@@ -69,7 +69,7 @@ class FakeModuleCollection:
 
   def __init__(self):
     self._ndb_connector = ndbc_module.NDBConnector()
-    self._tmpdir_for_hwid_db_data = tempfile.TemporaryDirectory()
+    self._tmpdir_for_hwid_db_data = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
     self._tempfs_for_hwid_db_data = filesystem_adapter.LocalFileSystemAdapter(
         self._tmpdir_for_hwid_db_data.name)
     self._fake_memcache_for_hwid_preproc_data = FakeMemcacheAdapter()
