@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-01-12 15:21+CST\n"
+"PO-Revision-Date: 2022-05-30 14:44+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3366,7 +3366,7 @@ msgstr "检查 AP RO hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "AP RO Verification Group"
-msgstr "检查 AP RO hash"
+msgstr "检查 AP RO hash 群組"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Activate Registration Code"

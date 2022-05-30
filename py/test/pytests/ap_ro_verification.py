@@ -20,16 +20,17 @@ happen when re-flowing or RMA. Details are in ap_ro_hash.py.
 Test Procedure
 --------------
 First round (`rebooted` flag should be None)
-  1. Trigger the AP RO verification, and the device will reboot.
+  1. ccd open.
+  2. Trigger the AP RO verification, and the device will reboot.
 Second round (`rebooted` flag should be true)
-  2. Deal with the verification result.
+  3. Deal with the verification result.
 
 Dependency
 ----------
 - The verification needs AP RO hash set, or it won't do anything.
 - OS version >= 14704.0.0 (`gsctool -aB` and `gsctool -aB start`)
-- cr50 version >= 0.5.100 (vendor command to trigger RO verification)
-- In cr50 factory mode (enable the vendor command to trigger RO verification)
+- cr50 version >= 0.5.111 (vendor commands to trigger RO verification)
+- In cr50 factory mode to ccd open without physical presence.
 
 Examples
 --------
@@ -95,12 +96,13 @@ class APROVerficationTest(test_case.TestCase):
       self.goofy.SaveDataForNextBoot()
       device_data.UpdateDeviceData({self.device_data_key: True})
       try:
+        self.dut.CheckOutput(['gsctool', '-ao'], log=True)
         self.gooftool.Cr50VerifyAPRO()
       finally:
         # If the command works properly, the device will reboot and won't
         # execute this line.
-        self.FailTask('CR50 version should >= 0.5.100, '
-                      'and check if you are in CR50 factory mode.')
+        self.FailTask('CR50 version should >= 0.5.111, '
+                      'and check if DUT is in CR50 factory mode.')
 
   def tearDown(self):
     device_data.DeleteDeviceData(self.device_data_key, True)
