@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 
-
+# Constants
 DATE_FORMAT = '%Y%m%d%H%M%S'
 HASH_FILE_READ_BLOCK_SIZE = 1024 * 64  # 64kb
 GSUTIL_TEST_PERMISSION_PATH = 'gs://chromeos-localmirror-private/testing/'
@@ -74,13 +74,11 @@ def RunQuery(args):
         'https://bigquery.cloud.google.com')
   print('-' * 37 + 'QUERY' + '-' * 38 + '\n' + query + '\n' + '-' * 80 + '\n')
 
-  p = subprocess.Popen(
-      [args.bq_path, 'query', '--max_rows', '1000000', '--nouse_legacy_sql',
-       '--format', 'json'],
-      stdin=subprocess.PIPE,
-      stdout=subprocess.PIPE,
-      encoding='utf-8')
-  result_json, stderrdata = p.communicate(query)
+  with subprocess.Popen([
+      args.bq_path, 'query', '--max_rows', '1000000', '--nouse_legacy_sql',
+      '--format', 'json'
+  ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, encoding='utf-8') as p:
+    result_json, stderrdata = p.communicate(query)
   if p.returncode:
     print('Query Failed!')
     print(stderrdata)

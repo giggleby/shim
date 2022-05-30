@@ -76,7 +76,8 @@ class ChromeRemoteDebugger:
     Returns:
       A list representing PageSet in Chrome remote debugging protocol.
     """
-    page_set = json.load(urllib.request.urlopen(self.debug_url + '/json'))
+    with urllib.request.urlopen(self.debug_url + '/json') as resp:
+      page_set = json.load(resp)
     if page_type is not self.ANY:
       return [page for page in page_set if page['type'] == page_type]
     return page_set

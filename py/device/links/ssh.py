@@ -172,12 +172,11 @@ class SSHLink(device_types.DeviceLink):
 
     def _TryOnce():
       with tempfile.TemporaryFile('w+') as stderr:
-        proc = subprocess.Popen(['scp'] + scp_options + [src, dest],
-                                stderr=stderr)
-        self._StartWatcher(proc)
-        returncode = proc.wait()
+        with subprocess.Popen(['scp'] + scp_options + [src, dest],
+                              stderr=stderr) as proc:
+          self._StartWatcher(proc)
 
-        if returncode != 0:
+        if proc.returncode != 0:
           # SCP returns error code "1" for SSH connection failure,
           # which means "generic error".
           # Therefore, we cannot tell the difference between connection failure

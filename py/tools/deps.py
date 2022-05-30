@@ -242,7 +242,8 @@ def LoadRules(path):
     A dictionary of {package: imports} describing "'package' can only import
     from 'imports'".
   """
-  config = yaml.safe_load(open(path))
+  with open(path) as fp:
+    config = yaml.safe_load(fp)
   if (CONFIG_GROUPS not in config) or (CONFIG_RULES not in config):
     raise ValueError('Syntax error in %s' % path)
 
@@ -399,16 +400,15 @@ def main():
 
   rules = LoadRules(os.path.join(os.path.dirname(__file__), 'deps.conf'))
 
-  pool = multiprocessing.Pool(multiprocessing.cpu_count()
-                              if args.parallel else 1)
+  with multiprocessing.Pool(
+      multiprocessing.cpu_count() if args.parallel else 1) as pool:
 
-  return_value = 0
-  for error_msg in pool.imap_unordered(
-      functools.partial(Check, rules=rules), args.sources):
-    if error_msg is not None:
-      print(error_msg)
-      return_value = 1
-  pool.close()
+    return_value = 0
+    for error_msg in pool.imap_unordered(
+        functools.partial(Check, rules=rules), args.sources):
+      if error_msg is not None:
+        print(error_msg)
+        return_value = 1
   sys.exit(return_value)
 
 

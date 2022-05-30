@@ -60,14 +60,16 @@ class ChromeRemoteDebuggerTest(unittest.TestCase):
     self.assertEqual(self.chrome.GetPages(), self.mock_pageset)
     urlopen_mock.assert_called_with(self.mock_pageset_url)
 
-    urlopen_mock.reset_mock()
-    self.mock_pageset_stream.seek(0)
+  @mock.patch('urllib.request.urlopen')
+  def testGetOnePage(self, urlopen_mock):
+    urlopen_mock.return_value = self.mock_pageset_stream
     self.assertEqual(self.chrome.GetPages("background_page"),
                      [self.mock_pageset[0]])
     urlopen_mock.assert_called_with(self.mock_pageset_url)
 
-    urlopen_mock.reset_mock()
-    self.mock_pageset_stream.seek(0)
+  @mock.patch('urllib.request.urlopen')
+  def testGetNoSuchPage(self, urlopen_mock):
+    urlopen_mock.return_value = self.mock_pageset_stream
     self.assertEqual(self.chrome.GetPages("no-such-page"), [])
     urlopen_mock.assert_called_with(self.mock_pageset_url)
 

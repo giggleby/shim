@@ -64,9 +64,9 @@ class TestStrptime(unittest.TestCase):
     if patched:
       test_args += ['patched']
     for unused_i in range(20):
-      p = subprocess.Popen([sys.executable, sys.argv[0]] + test_args,
-                           stderr=subprocess.PIPE)
-      p.communicate()
+      with subprocess.Popen([sys.executable, sys.argv[0]] + test_args,
+                            stderr=subprocess.PIPE) as p:
+        p.communicate()
       retcode |= p.returncode
     return not retcode
 

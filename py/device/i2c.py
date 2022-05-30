@@ -52,12 +52,12 @@ class I2CTarget(device_types.DeviceComponent):
     if not self._device.link.IsLocal():
       raise NotImplementedError('I2CBus currently supports only local targets')
 
-    bus = io.open(self._bus, mode='r+b', buffering=0)
-    fcntl.ioctl(bus.fileno(), self._I2C_TARGET_FORCE, self._target)
-    if write_data:
-      bus.write(write_data)
-    if read_count:
-      return bus.read(read_count)
+    with io.open(self._bus, mode='r+b', buffering=0) as bus:
+      fcntl.ioctl(bus.fileno(), self._I2C_TARGET_FORCE, self._target)
+      if write_data:
+        bus.write(write_data)
+      if read_count:
+        return bus.read(read_count)
     return None
 
   def Read(self, address, count):

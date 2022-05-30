@@ -833,12 +833,13 @@ class OverlordCLIClient:
     except Exception:
       pass
 
-    subprocess.Popen([
+    with subprocess.Popen([
         'ssh', '-Nf', '-M', '-S', control_file, '-L', '9000:localhost:9000',
         '-p',
         str(port),
         '%s%s' % (user + '@' if user else '', host)
-    ]).wait()
+    ]):
+      pass
 
     p = process_utils.Spawn([
         'ssh',
@@ -862,10 +863,11 @@ class OverlordCLIClient:
       raise RuntimeError('remote server disconnected, abort')
 
     if self._state.ssh_pid is not None:
-      ret = subprocess.Popen(['kill', '-0', str(self._state.ssh_pid)],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE).wait()
-      if ret != 0:
+      with subprocess.Popen(
+          ['kill', '-0', str(self._state.ssh_pid)], stdout=subprocess.PIPE,
+          stderr=subprocess.PIPE) as p:
+        pass
+      if p.returncode != 0:
         raise RuntimeError('ssh tunnel disconnected, please re-connect')
 
   def CheckClient(self):

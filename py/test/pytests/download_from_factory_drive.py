@@ -123,13 +123,13 @@ class RetrieveParameter(test_case.TestCase):
 
     with file_utils.UnopenedTemporaryFile() as tar_path:
       file_utils.WriteFile(tar_path, content)
-      tar_file = tarfile.open(tar_path)
-      file_utils.TryMakeDirs(self.args.destination_namespace)
-      self._frontend_proxy.DisplayStatus('Files downloaded:')
-      for member in tar_file:
-        tar_file.extract(member, self.args.destination_namespace)
-        logging.info('Donwload file: %s', member.name)
-        self._frontend_proxy.DisplayAppendFiles(member.name)
+      with tarfile.open(tar_path) as tar_file:
+        file_utils.TryMakeDirs(self.args.destination_namespace)
+        self._frontend_proxy.DisplayStatus('Files downloaded:')
+        for member in tar_file:
+          tar_file.extract(member, self.args.destination_namespace)
+          logging.info('Donwload file: %s', member.name)
+          self._frontend_proxy.DisplayAppendFiles(member.name)
 
     self.Sleep(_DISPLAY_MSG_PERIOD)
 

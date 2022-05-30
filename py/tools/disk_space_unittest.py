@@ -7,6 +7,7 @@
 
 import collections
 import os
+import textwrap
 import unittest
 from unittest import mock
 
@@ -26,14 +27,21 @@ class DiskSpaceTest(unittest.TestCase):
     self.media_stats = FakeStatVFSResult(f_blocks=497739, f_bavail=497699,
                                          f_files=497739, f_favail=497698)
 
-    disk_space._Open = mock.Mock(return_value=[
-        '/dev/sda1 /mnt/stateful_partition ext4 rw\n',
-        '/dev/sda1 /home ext4 rw\n',
-        '/dev/sdb1 /media/usb ext4 rw\n',
-        'none /root ext4 ro\n',
-        'tmp /tmp tmpfs rw\n',
-        'fusectl /sys/fs/fuse/connections fusectl rw\n'
-    ])
+    mocked_open = mock.mock_open(
+        read_data=textwrap.dedent('''\
+            /dev/sda1 /mnt/stateful_partition ext4 rw
+            /dev/sda1 /home ext4 rw
+            /dev/sdb1 /media/usb ext4 rw
+            none /root ext4 ro
+            tmp /tmp tmpfs rw
+            fusectl /sys/fs/fuse/connections fusectl rw
+        '''))
+    patcher = mock.patch('builtins.open', mocked_open)
+    self.patched_open = patcher.start()
+    # TODO(b/233844450): Remove this patch after migrating to Python 3.7 with
+    # __iter__ implemented in mock.mock_open().
+    self.patched_open.return_value.__iter__ = lambda f: iter(f.readline, '')
+    self.addCleanup(patcher.stop)
 
     def StatvfsSideEffect(*args, **unused_kwargs):
       if args[0] == '/mnt/stateful_partition':
@@ -49,7 +57,7 @@ class DiskSpaceTest(unittest.TestCase):
         mock.call('/mnt/stateful_partition'),
         mock.call('/media/usb')]
 
-    disk_space._Open.assert_called_once_with('/etc/mtab')
+    self.patched_open.assert_called_once_with('/etc/mtab')
     self.assertEqual(os.statvfs.call_args_list, statvfs_calls)
 
   def testGetAllVFSInfo(self):

@@ -48,9 +48,9 @@ def SimpleSystem(cmd):
 def SimpleSystemOutput(cmd):
   """Execute a system command and get its output."""
   try:
-    proc = subprocess.Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT,
-                            encoding='utf-8')
-    stdout, unused_stderr = proc.communicate()
+    with subprocess.Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT,
+                          encoding='utf-8') as proc:
+      stdout, unused_stderr = proc.communicate()
     return None if proc.returncode else stdout.strip()
   except Exception as e:
     logging.warning('Command (%s) failed (%s).', cmd, e)

@@ -308,5 +308,7 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     # a copy locally, we need to make another screenshot using ENA's HTTP
     # service (image.asp) which always puts the file publicly available as
     # "disp.png".
-    urllib.request.urlopen('http://%s/image.asp' % self.host).read()
-    return urllib.request.urlopen('http://%s/disp.png' % self.host).read()
+    with urllib.request.urlopen('http://%s/image.asp' % self.host) as resp:
+      resp.read()
+    with urllib.request.urlopen('http://%s/disp.png' % self.host) as resp:
+      return resp.read()

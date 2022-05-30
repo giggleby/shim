@@ -712,8 +712,8 @@ def ExtractFromPar(par_file, src, dest='.'):
       src: The file component to extract from the Python archive.
       dest: The destination path to extract file to.
   """
-  par = zipfile.ZipFile(par_file)
-  par.extract(src, dest)
+  with zipfile.ZipFile(par_file) as par:
+    par.extract(src, dest)
 
 
 def LoadModuleResource(path):

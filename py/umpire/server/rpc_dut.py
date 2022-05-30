@@ -154,10 +154,9 @@ class UmpireDUTCommands(umpire_rpc.UmpireRPC):
 
     # Pack files to tar
     with file_utils.UnopenedTemporaryFile() as tar_path:
-      tar = tarfile.open(tar_path, 'w')
-      for arcname, path in abspaths:
-        tar.add(path, arcname=arcname)
-      tar.close()
+      with tarfile.open(tar_path, 'w') as tar:
+        for arcname, path in abspaths:
+          tar.add(path, arcname=arcname)
       return twisted_xmlrpc.Binary(file_utils.ReadFile(tar_path, encoding=None))
 
   @umpire_rpc.RPCCall

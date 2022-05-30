@@ -99,8 +99,8 @@ class HWIDDBsPatternTest(unittest.TestCase):
         test_args = [(b['path'], projects_info, target_commit, hwid_dir) for b
                      in projects_info.values() if b['version'] == 3]
 
-    pool = multiprocessing.Pool()
-    exception_list = pool.map(_TestDatabase, test_args)
+    with multiprocessing.Pool() as pool:
+      exception_list = pool.map(_TestDatabase, test_args)
     exception_list = list(filter(None, exception_list))
 
     if exception_list:

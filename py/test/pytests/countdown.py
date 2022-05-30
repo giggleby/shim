@@ -314,34 +314,35 @@ class CountDownTest(test_case.TestCase):
     verbose_log_path = session.GetVerboseTestLogPath()
     file_utils.TryMakeDirs(os.path.dirname(verbose_log_path))
     logging.info('Raw verbose logs saved in %s', verbose_log_path)
-    self._verbose_log = open(verbose_log_path, 'a')
+    with open(verbose_log_path, 'a') as verbose_log:
+      self._verbose_log = verbose_log
 
-    last_status = self.SnapshotStatus()
+      last_status = self.SnapshotStatus()
 
-    self.UpdateLegend(self._sensors)
+      self.UpdateLegend(self._sensors)
 
-    # Loop until count-down ends.
-    while self._elapsed_secs < self.args.duration_secs:
-      self.UpdateTimeAndLoad()
+      # Loop until count-down ends.
+      while self._elapsed_secs < self.args.duration_secs:
+        self.UpdateTimeAndLoad()
 
-      current_time = time.time()
-      if (current_time >= self._next_log_time or
-          current_time >= self._next_ui_update_time):
-        sys_status = self.SnapshotStatus()
+        current_time = time.time()
+        if (current_time >= self._next_log_time or
+            current_time >= self._next_ui_update_time):
+          sys_status = self.SnapshotStatus()
 
-      if current_time >= self._next_log_time:
-        event_log.Log('system_status', elapsed_secs=self._elapsed_secs,
-                      **sys_status._asdict())
-        self.DetectAbnormalStatus(sys_status, last_status)
-        last_status = sys_status
-        self._next_log_time = current_time + self.args.log_interval
+        if current_time >= self._next_log_time:
+          event_log.Log('system_status', elapsed_secs=self._elapsed_secs,
+                        **sys_status._asdict())
+          self.DetectAbnormalStatus(sys_status, last_status)
+          last_status = sys_status
+          self._next_log_time = current_time + self.args.log_interval
 
-      if current_time >= self._next_ui_update_time:
-        self.UpdateUILog(sys_status)
-        self._next_ui_update_time = current_time + self.args.ui_update_interval
+        if current_time >= self._next_ui_update_time:
+          self.UpdateUILog(sys_status)
+          self._next_ui_update_time = (
+              current_time + self.args.ui_update_interval)
 
-      self.Sleep(1)
-      self._elapsed_secs = time.time() - self._start_secs
+        self.Sleep(1)
+        self._elapsed_secs = time.time() - self._start_secs
 
-    self._verbose_log.close()
     self.goofy.WaitForWebSocketUp()

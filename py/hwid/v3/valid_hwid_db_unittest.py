@@ -147,10 +147,11 @@ class ValidHWIDDBsTest(unittest.TestCase):
       target_dbs = [(k, v['path'], v) for k, v in projects_info.items()
                     if v['version'] == 3]
 
-    pool = multiprocessing.Pool()
-    exception_list = pool.map(
-        _CheckProject, [(project_name, db_path, project_info, hwid_dir)
-                        for project_name, db_path, project_info in target_dbs])
+    with multiprocessing.Pool() as pool:
+      exception_list = pool.map(
+          _CheckProject,
+          [(project_name, db_path, project_info, hwid_dir)
+           for project_name, db_path, project_info in target_dbs])
     exception_list = list(filter(None, exception_list))
 
     if exception_list:

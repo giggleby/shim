@@ -87,7 +87,8 @@ class Updater:
     dut_info = umpire_client.UmpireClientInfo().GetDUTInfoComponents()
     url = proxy.GetCROSPayloadURL(dut_info['x_umpire_dut'])
     if url:
-      payloads = json.loads(urllib.request.urlopen(url).read())
+      with urllib.request.urlopen(url) as resp:
+        payloads = json.loads(resp.read())
     self._url = url
     self._payload = payloads.get(GetParentComponent(self._component), {})
     self._loaded = True

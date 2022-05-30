@@ -19,7 +19,8 @@ def WipeFiles(parent_dir):
   for f in os.listdir(parent_dir):
     path = os.path.join(parent_dir, f)
     if os.path.isfile(path):
-      open(path, 'w').close()
+      with open(path, 'w'):
+        pass
 
 
 class ShelveUtilsTest(unittest.TestCase):
@@ -66,7 +67,8 @@ class ShelveUtilsTest(unittest.TestCase):
     self.assertFalse(shelve_utils.BackupShelfIfValid(self.shelf_path))
 
   def testIsShelfValid_EmptyFile(self):
-    open(self.shelf_path, 'w').close()
+    with open(self.shelf_path, 'w'):
+      pass
     self.assertFalse(shelve_utils.IsShelfValid(self.shelf_path))
     self.assertFalse(shelve_utils.BackupShelfIfValid(self.shelf_path))
 

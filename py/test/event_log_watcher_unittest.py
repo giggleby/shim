@@ -66,8 +66,8 @@ class EventLogWatcherTest(unittest.TestCase):
     """
     file_path = ''
     if file_name is None:
-      file_path = tempfile.NamedTemporaryFile(dir=self.events_dir,
-                                              delete=False).name
+      with tempfile.NamedTemporaryFile(dir=self.events_dir, delete=False) as tf:
+        file_path = tf.name
     else:
       file_path = os.path.join(self.events_dir, file_name)
     with open(file_path, 'a') as f:

@@ -18,7 +18,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-_DEV_NULL = open(os.devnull, 'wb')
+# Private constants
 _DEFAULT_FLUSH_TIMEOUT = 5  # 5sec
 _SHOPFLOOR_TIMEOUT = 10  # 10sec
 _CLI_HOSTNAME = '0.0.0.0'  # Allows remote connections.
@@ -265,8 +265,8 @@ class Instalog(plugin.Plugin):
   def OnStart(self):
     """Called when the plugin starts."""
     self._CreateInstalogConfig()
-    self._RunCommand(['start', '--no-daemon'],
-                     stdout=_DEV_NULL, stderr=_DEV_NULL)
+    self._RunCommand(['start', '--no-daemon'], stdout=process_utils.DEVNULL,
+                     stderr=process_utils.DEVNULL)
 
   @type_utils.Overrides
   def OnStop(self):

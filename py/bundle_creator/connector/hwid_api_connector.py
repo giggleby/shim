@@ -75,7 +75,8 @@ class HWIDAPIConnector:
 
     self._logger.info('Request HTTP POST to %s', url)
     try:
-      response = urllib.request.urlopen(request)
+      with urllib.request.urlopen(request) as r:
+        response = json.load(r)
     except urllib.error.HTTPError as ex:
       error_msg = ex.read()
       try:
@@ -84,7 +85,6 @@ class HWIDAPIConnector:
         pass
       raise HWIDAPIRequestException(error_msg)
 
-    response = json.load(response)
     self._logger.info('Response: %s', response)
 
     cl_url = []

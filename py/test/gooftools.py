@@ -45,32 +45,29 @@ def run(command, ignore_status=False):
   # a temporary file for the return code of first command.
   console_log_path = paths.CONSOLE_LOG_PATH
   file_utils.TryMakeDirs(os.path.dirname(console_log_path))
-  return_code_file = tempfile.NamedTemporaryFile()
-  system_cmd = ('(PATH=%s:$PATH %s %s || echo $? >"%s") | tee -a "%s"' %
-                (GOOFTOOL_HOME, command, swap_stdout_stderr,
-                 return_code_file.name, console_log_path))
-  proc = subprocess.Popen(system_cmd,
-                          stderr=subprocess.PIPE,
-                          stdout=subprocess.PIPE,
-                          shell=True,
-                          encoding='utf-8')
+  with tempfile.NamedTemporaryFile() as return_code_file:
+    system_cmd = ('(PATH=%s:$PATH %s %s || echo $? >"%s") | tee -a "%s"' %
+                  (GOOFTOOL_HOME, command, swap_stdout_stderr,
+                   return_code_file.name, console_log_path))
+    with subprocess.Popen(system_cmd, stderr=subprocess.PIPE,
+                          stdout=subprocess.PIPE, shell=True,
+                          encoding='utf-8') as proc:
 
-  # The order of output is reversed because we swapped stdout and stderr.
-  (err, out) = proc.communicate()
+      # The order of output is reversed because we swapped stdout and stderr.
+      (err, out) = proc.communicate()
 
-  # normalize output data
-  out = out or ''
-  err = err or ''
-  if out.endswith('\n'):
-    out = out[:-1]
-  if err.endswith('\n'):
-    err = err[:-1]
+      # normalize output data
+      out = out or ''
+      err = err or ''
+      if out.endswith('\n'):
+        out = out[:-1]
+      if err.endswith('\n'):
+        err = err[:-1]
 
-  # build return code and log results
-  return_code_file.seek(0)
-  return_code = int(return_code_file.read() or '0')
-  return_code_file.close()
-  return_code = proc.wait() or return_code
+      # build return code and log results
+      return_code_file.seek(0)
+      return_code = int(return_code_file.read() or '0')
+    return_code = proc.returncode or return_code
   message = ('gooftool result: %s (%s), message: %s' %
              (('FAILED' if return_code else 'SUCCESS'),
               return_code, '\n'.join([out, err]) or '(None)'))

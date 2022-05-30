@@ -319,10 +319,10 @@ class GPS(unittest.TestCase):
     session.console.info('Reading from NMEA output file...')
     # TODO(kitching): Move this into AdbTarget so we can use something like
     # self.dut.Popen() instead of calling adb directly.
-    cat_process = subprocess.Popen(
+    with subprocess.Popen(
         ['adb', 'shell', 'cat %s' % self.args.nmea_out_path],
-        stdout=subprocess.PIPE)
-    all_values = self._ParseNMEAStream(cat_process.stdout)
+        stdout=subprocess.PIPE) as cat_process:
+      all_values = self._ParseNMEAStream(cat_process.stdout)
     field_stats, limit_results, limit_failures_str = (
         self._CheckLimits(all_values))
 

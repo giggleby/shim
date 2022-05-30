@@ -9,10 +9,7 @@ import collections
 import logging
 import os
 
-# Stub for mockability.
-_Open = open
-
-
+# Classes holding structured data.
 VFSInfo = collections.namedtuple('VFSInfo', ['mount_points', 'statvfs'])
 DiskUsedPercentage = (
     collections.namedtuple(
@@ -35,14 +32,15 @@ def GetAllVFSInfo():
       'cgroup', 'debugfs', 'devpts', 'devtmpfs', 'fusectl', 'proc', 'pstore',
       'rootfs', 'selinuxfs', 'sysfs', 'tmpfs']
 
-  for line in _Open('/etc/mtab'):
-    device, path, fs_type, options = line.split()[0:4]
-    if fs_type in ignore_list or 'ro' in options.split(','):
-      continue
-    # Remove files from "mount --bind".
-    if os.path.isfile(path):
-      continue
-    device_to_path[device].append(path)
+  with open('/etc/mtab') as fp:
+    for line in fp:
+      device, path, fs_type, options = line.split()[0:4]
+      if fs_type in ignore_list or 'ro' in options.split(','):
+        continue
+      # Remove files from "mount --bind".
+      if os.path.isfile(path):
+        continue
+      device_to_path[device].append(path)
 
   ret = {}
   for k, v in sorted(device_to_path.items()):

@@ -641,11 +641,12 @@ class TestlogE2ETest(TestlogTestBase):
     env_additions = copy.deepcopy(os.environ)
     # Go with env_additions['TESTLOG']
     logging.info(IN_TAG)
-    p = subprocess.Popen(
-        ['python3', os.path.abspath(__file__),
-         'TestlogE2ETest.SimulatedTestInAnotherProcess'],
-        env=env_additions)
-    p.wait()
+    with subprocess.Popen([
+        'python3',
+        os.path.abspath(__file__),
+        'TestlogE2ETest.SimulatedTestInAnotherProcess'
+    ], env=env_additions):
+      pass
     logging.info(OUT_TAG)
     with open(session_json_path) as f:
       session_json = json.loads(f.read())
@@ -708,11 +709,12 @@ class TestlogE2ETest(TestlogTestBase):
     self._SimulateSubSession()
     env_additions = copy.deepcopy(os.environ)
     # Go with env_additions['TESTLOG']
-    p = subprocess.Popen(
-        ['python', os.path.abspath(__file__),
-         'TestlogE2ETest.SimulatedTestWithDebugInAnotherProcess'],
-        env=env_additions)
-    p.wait()
+    with subprocess.Popen([
+        'python',
+        os.path.abspath(__file__),
+        'TestlogE2ETest.SimulatedTestWithDebugInAnotherProcess'
+    ], env=env_additions) as p:
+      pass
     logging.getLogger().setLevel(logging.INFO)
     self.assertEqual(p.returncode, 0)
 

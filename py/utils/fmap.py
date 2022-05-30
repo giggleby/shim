@@ -312,7 +312,8 @@ def main(argv):
 
   if not opts.raw:
     print('Decoding FMAP from: %s' % opts.file)
-  blob = open(opts.file, 'rb').read()
+  with open(opts.file, 'rb', encoding=None) as f:
+    blob = f.read()
   obj = fmap_decode(blob)
   if opts.raw:
     print(obj)

@@ -66,8 +66,9 @@ class GoofyServerTest(unittest.TestCase):
   def setUp(self):
     def ServerReady():
       try:
-        urllib.request.urlopen(
-            'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, '/not_exists'))
+        with urllib.request.urlopen(
+            'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, '/not_exists')):
+          pass
       except urllib.error.HTTPError as err:
         if err.code == 404:
           return True
@@ -113,11 +114,10 @@ class GoofyServerTest(unittest.TestCase):
 
     self.server.AddHTTPGetHandler('/test', MyHandler)
 
-    response = urllib.request.urlopen(
-        'http://%s:%d/test' % (net_utils.LOCALHOST, self.port))
-    self.assertEqual(200, response.getcode())
-    self.assertEqual(data, response.read())
-    response.close()
+    with urllib.request.urlopen(
+        'http://%s:%d/test' % (net_utils.LOCALHOST, self.port)) as response:
+      self.assertEqual(200, response.getcode())
+      self.assertEqual(data, response.read())
 
   def testRegisterPath(self):
     data = b'<html><body><h1>Hello</h1></body></html>'
@@ -126,31 +126,28 @@ class GoofyServerTest(unittest.TestCase):
         f.write(data)
 
       self.server.RegisterPath('/', path)
-      response = urllib.request.urlopen(
-          'http://%s:%d/' % (net_utils.LOCALHOST, self.port))
-      self.assertEqual(200, response.getcode())
-      self.assertEqual(data, response.read())
-      response.close()
+      with urllib.request.urlopen(
+          'http://%s:%d/' % (net_utils.LOCALHOST, self.port)) as response:
+        self.assertEqual(200, response.getcode())
+        self.assertEqual(data, response.read())
 
       # Check svg mime type
       with open(os.path.join(path, 'test.svg'), 'wb') as f:
         f.write(data)
-      response = urllib.request.urlopen(
-          'http://%s:%d/test.svg' % (net_utils.LOCALHOST, self.port))
-      self.assertEqual(200, response.getcode())
-      self.assertEqual(data, response.read())
-      response.close()
+      with urllib.request.urlopen('http://%s:%d/test.svg' %
+                                  (net_utils.LOCALHOST, self.port)) as response:
+        self.assertEqual(200, response.getcode())
+        self.assertEqual(data, response.read())
 
   def testURLForData(self):
     data = b'<html><body><h1>Hello</h1></body></html>'
 
     url = self.server.URLForData('text/html', data)
 
-    response = urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
-    self.assertEqual(200, response.getcode())
-    self.assertEqual(data, response.read())
-    response.close()
+    with urllib.request.urlopen(
+        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+      self.assertEqual(200, response.getcode())
+      self.assertEqual(data, response.read())
 
   def testRegisterData(self):
     data = b'<html><body><h1>Hello</h1></body></html>'
@@ -158,11 +155,10 @@ class GoofyServerTest(unittest.TestCase):
     url = '/some/page.html'
     self.server.RegisterData(url, 'text/html', data)
 
-    response = urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
-    self.assertEqual(200, response.getcode())
-    self.assertEqual(data, response.read())
-    response.close()
+    with urllib.request.urlopen(
+        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+      self.assertEqual(200, response.getcode())
+      self.assertEqual(data, response.read())
 
   def testRegisterDataUnicode(self):
     data = u'<html><body><h1>Hello\u4e16\u754c</h1></body></html>'
@@ -170,11 +166,10 @@ class GoofyServerTest(unittest.TestCase):
     url = '/some/page.html'
     self.server.RegisterData(url, 'text/html', data)
 
-    response = urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
-    self.assertEqual(200, response.getcode())
-    self.assertEqual(data, response.read().decode('UTF-8'))
-    response.close()
+    with urllib.request.urlopen(
+        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+      self.assertEqual(200, response.getcode())
+      self.assertEqual(data, response.read().decode('UTF-8'))
 
   def testGoofyServerRPC(self):
     proxy = jsonrpc.ServerProxy(
@@ -190,11 +185,10 @@ class GoofyServerTest(unittest.TestCase):
 
     data = '<html><body><h1>Hello</h1></body></html>'
     url = proxy.URLForData('text/html', data)
-    response = urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
-    self.assertEqual(200, response.getcode())
-    self.assertEqual(data, response.read().decode('utf-8'))
-    response.close()
+    with urllib.request.urlopen(
+        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+      self.assertEqual(200, response.getcode())
+      self.assertEqual(data, response.read().decode('utf-8'))
 
   def testURLForFile(self):
     data = '<html><body><h1>Hello</h1></body></html>'
@@ -203,35 +197,34 @@ class GoofyServerTest(unittest.TestCase):
         f.write(data)
 
       url = self.server.URLForFile(path)
-      response = urllib.request.urlopen(
-          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
-      self.assertEqual(200, response.getcode())
-      self.assertEqual(data, response.read().decode('utf-8'))
-      response.close()
+      with urllib.request.urlopen(
+          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+        self.assertEqual(200, response.getcode())
+        self.assertEqual(data, response.read().decode('utf-8'))
 
   def testURLForDataExpire(self):
     data = '<html><body><h1>Hello</h1></body></html>'
 
     url = self.server.URLForData('text/html', data, 0.8)
 
-    response = urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
-    self.assertEqual(200, response.getcode())
-    self.assertEqual(data, response.read().decode('utf-8'))
-    response.close()
+    with urllib.request.urlopen(
+        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+      self.assertEqual(200, response.getcode())
+      self.assertEqual(data, response.read().decode('utf-8'))
 
     time.sleep(1)
 
     # The data should expired now.
     with self.assertRaises(urllib.error.HTTPError):
-      response = urllib.request.urlopen(
-          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url))
+      with urllib.request.urlopen(
+          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)):
+        pass
 
   def testURLNotFound(self):
     with self.assertRaisesRegex(urllib.error.HTTPError, '404: Not Found'):
-      response = urllib.request.urlopen(
-          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, '/not_exists'))
-      response.close()
+      with urllib.request.urlopen(
+          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, '/not_exists')):
+        pass
 
   def tearDown(self):
     self.server.shutdown()
