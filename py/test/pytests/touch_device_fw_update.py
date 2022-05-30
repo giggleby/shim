@@ -13,6 +13,7 @@ import unittest
 
 from cros.factory.test import session
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 FIRMWARE_UPDATER = '/opt/google/touch/scripts/chromeos-touch-firmware-update.sh'
@@ -41,15 +42,18 @@ class UpdateTouchDeviceFWTest(unittest.TestCase):
 
   def runTest(self):
     # Find the appropriate device sysfs file.
-    devices = [x for x in glob.glob('/sys/bus/i2c/devices/*/name')
-               if open(x).read().strip() == self.args.device_name]
+    devices = [
+        x for x in glob.glob('/sys/bus/i2c/devices/*/name')
+        if file_utils.ReadFile(x).strip() == self.args.device_name
+    ]
     self.assertEqual(
         1, len(devices),
         'Expected to find one device but found %s' % devices)
     device_path = os.path.dirname(devices[0])
 
     expected_ver = getattr(self.args, 'fw_version')
-    actual_ver = open(os.path.join(device_path, 'fw_version')).read().strip()
+    actual_ver = file_utils.ReadFile(os.path.join(device_path,
+                                                  'fw_version')).strip()
     if expected_ver != actual_ver:
       logging.info('Updating firmware from version %s to version %s',
                    actual_ver, expected_ver)

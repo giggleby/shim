@@ -20,6 +20,8 @@
 import struct
 import sys
 
+from cros.factory.utils import file_utils
+
 # Constant Definition
 KEY_BLOCK_MAGIC = 'CHROMEOS'
 KEY_BLOCK_MAGIC_SIZE = 8
@@ -125,4 +127,4 @@ def test_report_vblock_info(blob, offset=0):
 if __name__ == '__main__':
   # when running in command line, try to report blob in the parameters
   for filename in sys.argv[1:]:
-    test_report_vblock_info(open(filename, 'rb').read())
+    test_report_vblock_info(file_utils.ReadFile(filename, encoding=None))

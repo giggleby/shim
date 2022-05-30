@@ -491,9 +491,7 @@ def EnableFwWp(options):
     if os.path.exists('/tmp/fp.raw'):
       os.remove('/tmp/fp.raw')
     fp_frame = fpmcu.FpmcuCommand('fpframe', 'raw')
-    f = open('/tmp/fp.raw', 'w')
-    f.write(fp_frame)
-    f.close()
+    file_utils.WriteFile('/tmp/fp.raw', fp_frame)
 
     # Enable SWWP.
     try:
@@ -523,13 +521,8 @@ def EnableFwWp(options):
       os.remove('/tmp/error_msg.txt')
     stdout, stderr, return_code = fpmcu.FpmcuCommand('fpframe', 'raw',
                                                      full_info=True)
-    f = open('/tmp/fp.raw', 'w')
-    f.write(stdout)
-    f.close()
-
-    f = open('/tmp/error_msg.txt', 'w')
-    f.write(stderr)
-    f.close()
+    file_utils.WriteFile('/tmp/fp.raw', stdout)
+    file_utils.WriteFile('/tmp/error_msg.txt', stderr)
 
     if return_code == 0:
       raise Error('System is not locked.')

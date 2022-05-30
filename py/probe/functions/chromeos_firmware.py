@@ -10,6 +10,7 @@ import tempfile
 from cros.factory.gooftool import crosfw
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
@@ -80,7 +81,7 @@ def CalculateFirmwareHashes(fw_file_path):
   on what sections are present.  Then generate a dict containing the
   corresponding hash values.
   """
-  raw_image = open(fw_file_path, 'rb').read()
+  raw_image = file_utils.ReadFile(fw_file_path, encoding=None)
   try:
     image = crosfw.FirmwareImage(raw_image)
   except Exception:

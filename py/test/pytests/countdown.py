@@ -130,7 +130,7 @@ class CountDownTest(test_case.TestCase):
     self.ui.SetHTML(
         self.FormatSeconds(self.args.duration_secs - self._elapsed_secs),
         id='cd-remaining-time')
-    self.ui.SetHTML(' '.join(open('/proc/loadavg').read().split()[0:3]),
+    self.ui.SetHTML(' '.join(file_utils.ReadFile('/proc/loadavg').split()[0:3]),
                     id='cd-system-load')
 
   def UpdateUILog(self, sys_status):

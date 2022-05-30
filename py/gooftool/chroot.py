@@ -7,6 +7,7 @@ from distutils import sysconfig
 import logging
 import os
 
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 DEFAULT_ETC_ISSUE = """
@@ -126,7 +127,8 @@ class TmpChroot:
     ], check_call=True, log=True, log_stderr_on_error=True)
 
     # create /etc/issue
-    open(os.path.join(self.new_root, 'etc', 'issue'), 'w').write(self.etc_issue)
+    file_utils.WriteFile(
+        os.path.join(self.new_root, 'etc', 'issue'), self.etc_issue)
 
     self.logger.debug('rebind mount points')
     rebind_dirs = ['dev', 'proc', 'sys', 'run']

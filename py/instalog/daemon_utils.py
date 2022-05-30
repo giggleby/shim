@@ -17,6 +17,9 @@ import signal
 import sys
 import time
 
+from cros.factory.instalog.utils import file_utils
+
+# Constants
 CHILD = 0
 PARENT = 1
 
@@ -91,7 +94,7 @@ class Daemon:
   def _WritePID(self):
     """Writes the current process's PID to the pidfile."""
     pid = str(os.getpid())
-    open(self.pidfile, 'w+').write('%s\n' % pid)
+    file_utils.WriteFile(self.pidfile, f'{pid}\n')
 
   def _RemovePID(self):
     """Unlinks the pidfile."""

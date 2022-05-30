@@ -424,7 +424,7 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
   if sys_utils.InChroot():
     # Just save a dummy zip.
     with file_utils.TempDirectory() as d:
-      open(os.path.join(os.path.join(d, 'dummy-factory-bug')), 'w').close()
+      file_utils.WriteFile(os.path.join(d, 'dummy-factory-bug'), '')
       Spawn(['zip', os.path.join(d, output_file),
              os.path.join(d, 'dummy-factory-bug')], check_call=True)
     return output_file

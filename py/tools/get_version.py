@@ -34,7 +34,7 @@ def GetReleaseVersion(mount_point):
   if not os.path.isfile(lsb_release):
     return None
   match = re.search('^CHROMEOS_RELEASE_VERSION=(.+)$',
-                    open(lsb_release).read(), re.MULTILINE)
+                    file_utils.ReadFile(lsb_release), re.MULTILINE)
   if not match:
     return None
   return match.group(1)

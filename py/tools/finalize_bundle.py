@@ -1008,7 +1008,7 @@ class FinalizeBundle:
       lsb_factory_path = os.path.join(
           mount, 'dev_image', 'etc', 'lsb-factory')
       logging.info('Patching lsb-factory in %s', lsb_factory_path)
-      orig_lsb_factory = open(lsb_factory_path).read()
+      orig_lsb_factory = file_utils.ReadFile(lsb_factory_path)
       lsb_factory = orig_lsb_factory
 
       if server_url:

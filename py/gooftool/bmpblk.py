@@ -17,6 +17,8 @@
 import struct
 import sys
 
+from cros.factory.utils import file_utils
+
 # Constant Definition
 BMPBLOCK_SIGNATURE = '$BMP'
 BMPBLOCK_SIGNATURE_SIZE = 4
@@ -146,7 +148,7 @@ def main():
   # Only load pprint if we are in console (debug / test) mode
   import pprint
   for filename in sys.argv[1:]:
-    bmpblk = unpack_bmpblock(open(filename, 'rb').read(), 0)
+    bmpblk = unpack_bmpblock(file_utils.ReadFile(filename, encoding=None), 0)
     print(pprint.pformat(bmpblk))
 
 

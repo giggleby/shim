@@ -580,7 +580,7 @@ class Gooftool:
     if not os.path.exists(tpm_root):
       tpm_root = legacy_tpm_root
     for key, value in expected_status.items():
-      if open(os.path.join(tpm_root, key)).read().strip() != value:
+      if file_utils.ReadFile(os.path.join(tpm_root, key)).strip() != value:
         raise Error('TPM is not cleared.')
 
   def VerifyManagementEngineLocked(self):

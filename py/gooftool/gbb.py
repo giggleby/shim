@@ -15,6 +15,8 @@ import collections
 import struct
 import sys
 
+from cros.factory.utils import file_utils
+
 GBBContent = collections.namedtuple(
     'GBBContent', ['hwid', 'hwid_digest', 'rootkey', 'recovery_key'])
 GBBField = collections.namedtuple('GBBField', ['value', 'offset', 'size'])
@@ -124,7 +126,7 @@ def main():
   # Only load pprint if we are in console (debug / test) mode.
   import pprint
   for filename in sys.argv[1:]:
-    gbb = UnpackGBB(open(filename, 'rb').read(), 0)
+    gbb = UnpackGBB(file_utils.ReadFile(filename, encoding=None), 0)
     print(pprint.pformat(gbb))
 
 

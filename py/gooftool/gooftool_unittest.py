@@ -8,7 +8,6 @@
 """Unit tests for gooftool module."""
 
 from collections import namedtuple
-from io import StringIO
 import logging
 import os
 from tempfile import NamedTemporaryFile
@@ -306,10 +305,17 @@ class GooftoolTest(unittest.TestCase):
     # Mock os.path.exists to ensure that 3.18+ kernel TPM path does not exist.
     path_exists_mock.return_value = False
     open_mock_calls = [
-        mock.call('/sys/class/misc/tpm0/device/enabled'),
-        mock.call('/sys/class/misc/tpm0/device/owned')]
+        mock.call('/sys/class/misc/tpm0/device/enabled', encoding='utf-8',
+                  mode='r'),
+        mock.call('/sys/class/misc/tpm0/device/owned', encoding='utf-8',
+                  mode='r'),
+    ]
 
-    open_mock.side_effect = [StringIO('1'), StringIO('0')]
+    open_mock.side_effect = [
+        mock.mock_open(read_data='1').return_value,
+        mock.mock_open(read_data='0').return_value
+    ]
+
     self._gooftool.VerifyTPM()
     path_exists_mock.assert_called_with('/sys/class/tpm/tpm0/device')
     self.assertEqual(open_mock.call_args_list, open_mock_calls)
@@ -318,7 +324,10 @@ class GooftoolTest(unittest.TestCase):
     open_mock.reset_mock()
     path_exists_mock.reset_mock()
 
-    open_mock.side_effect = [StringIO('1'), StringIO('1')]
+    open_mock.side_effect = [
+        mock.mock_open(read_data='1').return_value,
+        mock.mock_open(read_data='1').return_value
+    ]
     self.assertRaises(Error, self._gooftool.VerifyTPM)
     path_exists_mock.assert_called_with('/sys/class/tpm/tpm0/device')
     self.assertEqual(open_mock.call_args_list, open_mock_calls)

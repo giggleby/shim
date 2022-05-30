@@ -15,6 +15,7 @@ import tempfile
 import time
 
 from cros.factory.device.audio import base
+from cros.factory.utils import file_utils
 
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
@@ -75,7 +76,7 @@ class TinyalsaMixerController(base.BaseMixerController):
                                                  card)
             get_sh_file.flush()
             self._PushAndExecute(get_sh_file.name, output.name)
-            lines = open(output.name).read()
+            lines = file_utils.ReadFile(output.name)
             for name in new_mixer_settings_to_store:
               old_value = self._GetMixerControlsByLines(name, lines)
               restore_mixer_settings[name] = old_value

@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 
+from . import file_utils
 from . import process_utils
 from . import sys_utils
 from . import type_utils
@@ -89,7 +90,7 @@ class BuildBoard:
         if not os.path.exists(default_path):
           raise BuildBoardException('Unable to read default board from %s' %
                                     default_path)
-        board_name = open(default_path).read().strip()
+        board_name = file_utils.ReadFile(default_path).strip()
 
       board_name = board_name.lower()
 

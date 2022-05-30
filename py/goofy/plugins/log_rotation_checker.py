@@ -26,7 +26,7 @@ class LogRotationChecker(periodic_plugin.PeriodicPlugin):
   def RunTask(self):
     try:
       if self.disable_rotation:
-        open(CLEANUP_LOGS_PAUSED, 'w').close()
+        file_utils.WriteFile(CLEANUP_LOGS_PAUSED, '')
       else:
         file_utils.TryUnlink(CLEANUP_LOGS_PAUSED)
     except Exception:
