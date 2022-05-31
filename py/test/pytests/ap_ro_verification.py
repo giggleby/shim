@@ -41,6 +41,16 @@ To test AP RO verification, add this to test list::
     "allow_reboot": true
   }
 
+To use manual test of AP RO verification, add this to test list::
+
+  {
+    "pytest_name": "ap_ro_verification",
+    "allow_reboot": true,
+    "args": {
+      "timeout_secs": 5,
+      "manual_test": true
+    }
+  }
 """
 
 import logging
@@ -49,15 +59,30 @@ from cros.factory.device import device_utils
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import gsctool
 from cros.factory.test import device_data
+from cros.factory.test.i18n import _
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
+from cros.factory.utils.arg_utils import Arg
 
+
+class OperationError(Exception):
+
+  def __init__(self):
+    super().__init__('Please retry the test.')
 
 class APROVerficationTest(test_case.TestCase):
+  ARGS = [
+      Arg('timeout_secs', int,
+          'How many seconds to wait for the RO verification key combo.',
+          default=5),
+      Arg('manual_test', bool, 'True to trigger the verification by key combo.',
+          default=False),
+  ]
 
   def setUp(self):
     self.gooftool = Gooftool()
+    self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
     self.goofy = state.GetInstance()
     self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
@@ -71,6 +96,8 @@ class APROVerficationTest(test_case.TestCase):
     elif status == gsctool.APROResult.AP_RO_UNSUPPORTED_NOT_TRIGGERED:
       # If AP RO verification is not supported, the test should fail in the
       # first round.
+      if self.args.manual_test:
+        raise OperationError
       raise Exception('Unexpected error, please retry the test.')
     elif status == gsctool.APROResult.AP_RO_FAIL:
       logging.exception(
@@ -95,6 +122,14 @@ class APROVerficationTest(test_case.TestCase):
     else:
       self.goofy.SaveDataForNextBoot()
       device_data.UpdateDeviceData({self.device_data_key: True})
+      if self.args.manual_test:
+        self.ui.SetState(
+            _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
+              seconds=self.args.timeout_secs))
+        self.Sleep(self.args.timeout_secs)
+        logging.info('Reboot not triggered.')
+        raise OperationError
+
       try:
         self.dut.CheckOutput(['gsctool', '-ao'], log=True)
         self.gooftool.Cr50VerifyAPRO()
