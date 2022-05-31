@@ -21,7 +21,7 @@ class DummyBFTFixture(bft_fixture.BFTFixture):
   # fixture's action.
   _delay_secs = 3
 
-  # pylint: disable=arguments-differ
+  # pylint: disable=arguments-renamed
   def GetSystemStatus(self, probe):
     del probe  # Unused.
     return bft_fixture.BFTFixture.Status.ON

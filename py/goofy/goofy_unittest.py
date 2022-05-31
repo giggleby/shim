@@ -217,10 +217,11 @@ class GoofyUITest(GoofyTest):
   def AfterInitGoofy(self):
     class MyClient(WebSocketBaseClient):
       """The web socket client class."""
-      # pylint: disable=no-self-argument
+      # pylint: disable=arguments-renamed, no-self-argument
       def handshake_ok(socket_self):
         pass
 
+      # pylint: disable=arguments-renamed, no-self-argument
       def received_message(socket_self, message):
         event = Event.from_json(str(message))
         # (TODO: b/211528927) as the client is running in different threads,

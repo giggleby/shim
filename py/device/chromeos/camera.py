@@ -170,7 +170,7 @@ class ChromeOSCamera(camera.Camera):
       }[camera_facing]
       self._index_mapping[camera_facing] = index
 
-  # pylint: disable=arguments-differ
+  # pylint: disable=arguments-renamed
   def GetCameraDevice(self, facing):
     """Get the camera device of the given direction the camera faces.
 

@@ -224,6 +224,7 @@ class WhaleBFTFixture(bft.BFTFixture):
   def SimulateKeystrokes(self):
     self._keyboard_emulator.SimulateKeystrokes()
 
+  # pylint: disable=arguments-renamed
   def SimulateKeyPress(self, bitmask, duration_secs):
     try:
       self._keyboard_emulator.KeyPress(int(bitmask, 0), float(duration_secs))

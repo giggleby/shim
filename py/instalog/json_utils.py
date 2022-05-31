@@ -53,7 +53,7 @@ def FastStringParseDatetime(date_string):
 
 class JSONEncoder(json.JSONEncoder):
 
-  def default(self, obj):  # pylint: disable=method-hidden, arguments-differ
+  def default(self, obj):  # pylint: disable=method-hidden, arguments-renamed
     """Handler for serializing objects during conversion to JSON.
 
     Outputs datetime, date, and time objects with enough metadata to restore

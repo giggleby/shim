@@ -121,7 +121,6 @@ disable=
     # TODO(b/233844450): Review the following messages which fail the current
     # sources.  Either remove them to enable or leave them here to disable the
     # unexpected checks.
-    arguments-renamed,
     cell-var-from-loop,
     consider-using-f-string,
     consider-using-with,

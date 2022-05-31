@@ -112,6 +112,7 @@ class WebSocketManager:
         self.send_lock = threading.Lock()
         super(MyWebSocket, self).__init__(**kwargs)
 
+      # pylint: disable=arguments-renamed
       def received_message(socket_self, message):
         # pylint: disable=no-self-argument
         event = Event.from_json(str(message))

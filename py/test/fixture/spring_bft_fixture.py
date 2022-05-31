@@ -74,7 +74,7 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
   # Fixture ID. Obtained from Init().
   fixture_id = 0
 
-  # pylint: disable=arguments-differ
+  # pylint: disable=arguments-renamed
   def GetSystemStatus(self, probe):
     """Reads internal status of a testing board.
 

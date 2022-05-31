@@ -37,7 +37,7 @@ class XMLRPCContainer(twisted_xmlrpc.XMLRPC):
     """
     return list(self.handlers)
 
-  # pylint: disable=arguments-differ
+  # pylint: disable=arguments-renamed
   def lookupProcedure(self, procedure_path):
     """Searches RPC procedure by name.
 
