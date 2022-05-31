@@ -222,16 +222,23 @@ class SelfServiceHelper:
           protorpc_utils.RPCCanonicalErrorCode.ABORTED,
           detail='The validation token is expired.')
 
-    commit_msg = textwrap.dedent(f"""\
-        ({int(time.time())}) {project}: HWID Config Update
+    commit_msg = [
+        textwrap.dedent(f"""\
+            ({int(time.time())}) {project}: HWID Config Update
 
-        Requested by: {request.original_requester}
-        Warning: all posted comments will be sent back to the requester.
+            Requested by: {request.original_requester}
+            Warning: all posted comments will be sent back to the requester.
 
-        %s
+            %s
+            """) % request.description
+    ]
 
-        BUG=b:{request.bug_number}
-        """) % request.description
+    if request.dlm_validation_exemption:
+      commit_msg.append(
+          f'DLM-VALIDATION-EXEMPTION={request.dlm_validation_exemption}')
+
+    commit_msg.append(f'BUG=b:{request.bug_number}')
+    commit_msg = '\n'.join(commit_msg)
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(

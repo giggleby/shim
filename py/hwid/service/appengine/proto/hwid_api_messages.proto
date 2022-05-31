@@ -387,6 +387,8 @@ message CreateHwidDbEditableSectionChangeClRequest {
   bool auto_approved = 9;
   // The external resource required for creating HWID DB changes.
   HwidDbExternalResource db_external_resource = 10;
+  // The exemption to skip DLM validation.
+  string dlm_validation_exemption = 11;
 }
 
 message CreateHwidDbEditableSectionChangeClResponse {
