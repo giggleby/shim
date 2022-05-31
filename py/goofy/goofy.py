@@ -6,6 +6,7 @@
 """The main factory flow that runs the factory test and finalizes a device."""
 
 import argparse
+import functools
 import logging
 import os
 import queue
@@ -475,7 +476,7 @@ class Goofy:
             status=TestState.FAILED,
             error_msg=error_msg)
         # Trigger the OnTestFailure callback.
-        self.RunEnqueue(lambda: self._TestFail(test))
+        self.RunEnqueue(functools.partial(self._TestFail, test))
 
         session.console.info('Unexpected shutdown while test %s '
                              'running; cancelling any pending tests',

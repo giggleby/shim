@@ -387,6 +387,13 @@ class ReportParser(log_utils.LoggerMixin):
       if sn_value != 'null':
         report_event['serialNumbers'][sn_key] = sn_value
 
+    def ParseTestStates(test_states, test_states_list):
+      if 'subtests' in test_states:
+        for subtest in test_states['subtests']:
+          ParseTestStates(subtest, test_states_list)
+      if 'status' in test_states:
+        test_states_list.append((test_states['path'], test_states['status']))
+
     END_TOKEN = b'---\n'
 
     try:
@@ -473,15 +480,6 @@ class ReportParser(log_utils.LoggerMixin):
             elif event_name == 'preamble':
               GetField('toolkitVersion', event, 'toolkit_version')
             elif event_name == 'test_states':
-
-              def ParseTestStates(test_states, test_states_list):
-                if 'subtests' in test_states:
-                  for subtest in test_states['subtests']:
-                    ParseTestStates(subtest, test_states_list)
-                if 'status' in test_states:
-                  test_states_list.append(
-                      (test_states['path'], test_states['status']))
-
               test_states_list = []
               testlist_name = None
               testlist_station_set = set()
