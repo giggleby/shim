@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-05-30 14:44+CST\n"
+"PO-Revision-Date: 2022-05-31 10:03+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -1259,6 +1259,10 @@ msgstr "请将上盖掀开到 {angle} 度。"
 #: ../py/test/pytests/accelerometers_lid_angle.py
 msgid "Checking angle..."
 msgstr "正在确认角度……"
+
+#: ../py/test/pytests/ap_ro_verification.py
+msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
+msgstr "请在{seconds}秒內按著电源並按Refresh键三次"
 
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
