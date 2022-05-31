@@ -8,7 +8,7 @@ import tempfile
 import textwrap
 import unittest
 
-from dulwich import objects as dulwich_objects  # pylint: disable=wrong-import-order, import-error
+from dulwich import objects as dulwich_objects
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import git_util

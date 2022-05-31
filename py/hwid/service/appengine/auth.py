@@ -6,7 +6,7 @@ import functools
 import http
 import logging
 
-import flask  # pylint: disable=no-name-in-module, import-error
+import flask
 
 from cros.factory.hwid.service.appengine.config import CONFIG
 from cros.factory.probe_info_service.app_engine import protorpc_utils

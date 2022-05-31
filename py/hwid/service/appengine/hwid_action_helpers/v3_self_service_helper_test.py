@@ -8,7 +8,7 @@ import re
 import tempfile
 import unittest
 
-from google.protobuf import text_format  # pylint: disable=import-error, no-name-in-module
+from google.protobuf import text_format
 
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_utils

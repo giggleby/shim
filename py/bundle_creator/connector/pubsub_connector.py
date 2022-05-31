@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from google.cloud import pubsub_v1  # pylint: disable=no-name-in-module,import-error
+from google.cloud import pubsub_v1
 
 
 class PubSubConnector:

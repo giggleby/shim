@@ -187,7 +187,7 @@ class HWIDActionManager:
       try:
         self._SaveHWIDPreprocDataToCache(metadata.project,
                                          self._LoadHWIDPreprocData(metadata))
-      except Exception:  # pylint: disable=broad-except
+      except Exception:
         # Catch any exception and continue with other files.  The reason for
         # the broad exception is that the various exceptions we could catch
         # are large and from libraries out of our control.  For example, the

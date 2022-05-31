@@ -18,9 +18,7 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine import memcache_adapter
-# pylint: disable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2
-# pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 KNOWN_BAD_HWIDS = ['DUMMY_HWID', 'dummy_hwid']

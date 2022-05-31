@@ -63,7 +63,7 @@ class ECToolFanControl(FanControl):
                                         else []))
       return [int(rpm[1])
               for rpm in self.GET_FAN_SPEED_RE.findall(ectool_output)]
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
       raise self.Error('Unable to get fan speed: %s' % e)
 
   def SetFanRPM(self, rpm, fan_id=None):
@@ -84,7 +84,7 @@ class ECToolFanControl(FanControl):
         self._device.CheckCall(
             (['ectool', 'pwmsetfanrpm'] +
              (['%d' % fan_id] if fan_id is not None else []) + ['%d' % rpm]))
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
       if rpm == self.AUTO:
         raise self.Error('Unable to set auto fan control: %s' % e)
       raise self.Error('Unable to set fan speed to %d RPM: %s' % (rpm, e))
@@ -138,7 +138,7 @@ class SysFSFanControl(FanControl):
               info['path'], info['get_speed_filename']))
           ret.append(info['get_speed_map'](buf))
       return ret
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
       raise self.Error('Unable to get fan speed: %s' % e)
 
   def SetFanRPM(self, rpm, fan_id=None):
@@ -155,7 +155,7 @@ class SysFSFanControl(FanControl):
             buf = info['set_speed_map'](rpm)
             self._device.WriteFile(self._device.path.join(
                 info['path'], info['set_speed_filename']), buf)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
       if rpm == self.AUTO:
         raise self.Error('Unable to set auto fan control: %s' % e)
       raise self.Error('Unable to set fan speed to %d RPM: %s' % (rpm, e))

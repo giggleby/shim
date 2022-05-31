@@ -24,7 +24,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-
+# Constants.
 PORTS = type_utils.Enum(['DP', 'HDMI'])
 EDIDS = {
     PORTS.DP: {
@@ -242,7 +242,6 @@ class ChameleonDisplayTest(test_case.TestCase):
     display_info = self.goofy_rpc.DeviceGetDisplayInfo()
     ext_display = None
     if len(display_info) == 2:
-      # pylint: disable=unpacking-non-sequence
       orig_display, ext_display = DoProbe()
       if not ext_display:
         # In case where these is no internal display (e.g. Chromebox), we cannot
@@ -259,7 +258,6 @@ class ChameleonDisplayTest(test_case.TestCase):
                    chameleon_port)
       self.chameleon.Plug(chameleon_port)
       sync_utils.WaitFor(lambda: DoProbe() is not None, 10, poll_interval=0.5)
-      # pylint: disable=unpacking-non-sequence
       orig_display, ext_display = DoProbe()
     else:
       self.fail('More than two displays detected; '

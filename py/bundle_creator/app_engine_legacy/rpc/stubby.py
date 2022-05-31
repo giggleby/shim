@@ -13,14 +13,14 @@ from protorpc.wsgi import service  # pylint: disable=import-error
 
 definition.import_file_set('rpc/factorybundle.proto.def')
 # The config is imported from factory-private repo.
-import config  # pylint: disable=import-error,wrong-import-order,wrong-import-position
+import config  # pylint: disable=wrong-import-position
 
-from cros.factory import proto  # pylint: disable=import-error,wrong-import-position
+from cros.factory import proto  # pylint: disable=wrong-import-position
 
 _SERVICE_PATH = '/_ah/stubby/FactoryBundleService'
 
 
-class FactoryBundleService(remote.Service):  # pylint: disable=no-init
+class FactoryBundleService(remote.Service):
   # pylint warns no-init because it can't found the definition of parent class.
 
   @remote.method(proto.WorkerResult, proto.CreateBundleRpcResponse)

@@ -311,6 +311,5 @@ if __name__ == '__main__':
     ServeHttpScreenshot()
   server_port = int(args.port)
   logging.info('Going to start E5071C mock at port %d', server_port)
-  # pylint: disable=no-member
   ena_host = MockTestServer(('0.0.0.0', server_port), MockServerHandler)
   ena_host.serve_forever()

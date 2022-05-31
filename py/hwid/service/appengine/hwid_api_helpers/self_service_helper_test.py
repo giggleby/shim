@@ -11,7 +11,7 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_repo
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.probe_info_service.app_engine import protorpc_utils

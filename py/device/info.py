@@ -111,13 +111,11 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def release_image_version(self):
     """Version of the image on release partition."""
-    # pylint: disable=unsubscriptable-object
     return self._release_lsb_data['GOOGLE_RELEASE']
 
   @InfoProperty
   def release_image_channel(self):
     """Channel of the image on release partition."""
-    # pylint: disable=unsubscriptable-object
     return self._release_lsb_data['CHROMEOS_RELEASE_TRACK']
 
   def ClearSerialNumbers(self):

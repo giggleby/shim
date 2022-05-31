@@ -7,11 +7,9 @@ import contextlib
 import logging
 import os.path
 
-# pylint: disable=no-name-in-module, import-error
 import google.cloud.exceptions
 from google.cloud import storage
 
-# pylint: enable=no-name-in-module, import-error
 # isort: split
 
 from cros.factory.hwid.v3 import filesystem_adapter

@@ -10,7 +10,6 @@ import os
 from . import file_utils
 
 try:
-  # pylint: disable=import-error, no-name-in-module
   from google.cloud import storage
   from google.oauth2 import service_account
 except ImportError as e:

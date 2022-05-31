@@ -23,7 +23,6 @@ Partitioned table updates limits:
 import datetime
 import os
 
-# pylint: disable=import-error, no-name-in-module
 from google.api_core import exceptions
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -33,6 +32,7 @@ from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
 
+# Constants.
 _BIGQUERY_SCOPE = 'https://www.googleapis.com/auth/bigquery'
 _BIGQUERY_REQUEST_MAX_FAILURES = 20
 _JSON_MIMETYPE = 'NEWLINE_DELIMITED_JSON'

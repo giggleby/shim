@@ -23,7 +23,7 @@ from cros.factory.external import dbus
 # pylint: disable=no-name-in-module,import-error
 from cros.factory.external.dbus import DBusException
 from cros.factory.external.dbus.mainloop.glib import DBusGMainLoop
-from cros.factory.external.dbus import service  # pylint: disable=unused-import
+from cros.factory.external.dbus import service
 from cros.factory.external import gobject
 
 BUS_NAME = 'org.bluez'

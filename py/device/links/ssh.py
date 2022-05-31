@@ -274,7 +274,6 @@ class SSHLink(device_types.DeviceLink):
     if state.DataShelfHasKey(_DEVICE_DATA_KEY):
       state.DataShelfDeleteKeys(_DEVICE_DATA_KEY)
 
-  # pylint: disable=arguments-differ
   @classmethod
   def PrepareLink(cls,
                   start_dhcp_server=True,
@@ -332,7 +331,7 @@ class SSHLink(device_types.DeviceLink):
       self._proc_queue = queue.Queue()
 
       self._user = self._link.user
-      self._host = self._link._host  # pylint: disable=protected-access
+      self._host = self._link._host
       self._port = self._link.port
       self._link_class_name = self._link.__class__.__name__
 

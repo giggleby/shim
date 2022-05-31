@@ -16,8 +16,6 @@ from cros.factory.test.fixture import arduino
 _DEFAULT_DRIVER = 'cdc_acm'
 _DEFAULT_READY_DELAY_SECS = 2.0
 
-# pylint: disable=no-value-for-parameter
-
 
 class ArduinoControllerTest(unittest.TestCase):
 

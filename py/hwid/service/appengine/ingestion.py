@@ -18,7 +18,7 @@ from cros.factory.hwid.service.appengine import config
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
-from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.hwid.v3 import name_pattern_adapter

@@ -202,7 +202,6 @@ class ToyboxTest(unittest.TestCase):
     self.dut.CheckOutput.assert_called_with(['toybox', 'whoami'])
 
   def testOverrideProvider(self):
-    # pylint: disable=protected-access
     # set default provider to toolbox
     _toybox = toybox.Toybox(self.dut, provider_map={'*': 'toolbox'})
     self.dut.CheckOutput = mock.MagicMock(return_value=None)

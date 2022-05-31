@@ -20,7 +20,6 @@ from . import type_utils
 
 _HAVE_CTYPES = True
 try:
-  # pylint: disable=wrong-import-order,wrong-import-position
   import ctypes
 except Exception:
   _HAVE_CTYPES = False

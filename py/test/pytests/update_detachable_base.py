@@ -324,7 +324,7 @@ class UsbInfo:
 
     logging.error('Failed to call %s after %d tries.', cmd, tries)
 
-    raise err  # pylint: disable=raising-bad-type
+    raise err
 
   def GetBaseInfo(self):
     """Retrieve and parse on-board EC info.

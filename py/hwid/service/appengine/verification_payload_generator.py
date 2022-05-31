@@ -9,10 +9,9 @@ import hashlib
 import re
 from typing import DefaultDict, Dict, List, NamedTuple, Optional, Union
 
-# pylint: disable=import-error, no-name-in-module
 from google.protobuf import text_format
-import hardware_verifier_pb2
-import runtime_probe_pb2
+import hardware_verifier_pb2  # pylint: disable=import-error
+import runtime_probe_pb2  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import common as hwid_common

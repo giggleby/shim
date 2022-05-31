@@ -360,8 +360,7 @@ class FactoryTestList(test_object_module.FactoryTest):
     """
     ret, changed = self.state_instance.UpdateTestState(path=path, **kwargs)
     if changed and self.state_change_callback:
-      self.state_change_callback(  # pylint: disable=not-callable
-          self.LookupPath(path), ret)
+      self.state_change_callback(self.LookupPath(path), ret)
     return ret
 
   def ToTestListConfig(self, recursive=True):
@@ -988,7 +987,7 @@ class TestList(ITestList):
     return self._state_instance
 
   @state_instance.setter
-  def state_instance(self, state_instance):  # pylint: disable=arguments-differ
+  def state_instance(self, state_instance):
     self._state_instance = state_instance
     self.ToFactoryTestList().state_instance = state_instance
 
@@ -996,7 +995,6 @@ class TestList(ITestList):
   def state_change_callback(self):
     return self.ToFactoryTestList().state_change_callback
 
-  # pylint: disable=arguments-differ
   @state_change_callback.setter
   def state_change_callback(self, state_change_callback):
     self._state_change_callback = state_change_callback

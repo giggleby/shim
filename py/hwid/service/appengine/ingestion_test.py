@@ -10,7 +10,7 @@ from unittest import mock
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ingestion
-from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 

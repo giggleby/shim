@@ -84,11 +84,10 @@ class StationSetup(plugin.Plugin):
     connect_cmd = [_OVL_BIN, 'connect']
 
     if self.overlord_login is not None:
-      # pylint: disable=unpacking-non-sequence
       username, password = self.overlord_login
       connect_cmd.extend(['-u', username, '-w', password])
 
-    ip, port = address  # pylint: disable=unpacking-non-sequence
+    ip, port = address
     connect_cmd.extend([ip, str(port)])
 
     output = process_utils.CheckOutput(connect_cmd, log=True)

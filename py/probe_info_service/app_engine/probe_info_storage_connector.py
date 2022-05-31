@@ -5,7 +5,7 @@
 import abc
 from typing import Optional
 
-from google.cloud import datastore  # pylint: disable=no-name-in-module
+from google.cloud import datastore
 from google.protobuf import text_format
 
 from cros.factory.probe_info_service.app_engine import config

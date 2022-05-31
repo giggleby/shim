@@ -18,7 +18,6 @@ class DKPSService(umpire_service.UmpireService):
   """DKPS service."""
 
   def CreateProcesses(self, umpire_config, env):
-    # pylint: disable=unused-argument
     """Creates list of processes via config.
 
     Args:

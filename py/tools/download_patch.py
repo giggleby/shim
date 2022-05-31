@@ -26,7 +26,7 @@ try:
       'depot_tools')
   if DEPOT_TOOLS_PATH not in sys.path:
     sys.path.append(DEPOT_TOOLS_PATH)
-  import gerrit_util  # pylint: disable=import-error
+  import gerrit_util
 except ImportError:
   logging.exception('cannot find module gerrit_util, which should be found '
                     'under %s, are you in chroot?', DEPOT_TOOLS_PATH)

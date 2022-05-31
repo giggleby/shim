@@ -10,7 +10,7 @@ from typing import List, NamedTuple, Optional
 import urllib.parse
 
 import certifi
-import google.auth  # pylint: disable=import-error, no-name-in-module
+import google.auth
 import urllib3
 
 from cros.factory.utils import json_utils

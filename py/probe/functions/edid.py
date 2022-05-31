@@ -187,7 +187,6 @@ def LoadFromFile(path):
 
 
 class EDIDFunction(probe_function.ProbeFunction):
-  # pylint: disable=line-too-long
   """Probe EDID information from file or I2C bus.
 
   Description

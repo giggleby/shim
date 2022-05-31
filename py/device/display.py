@@ -33,7 +33,6 @@ class PortInfo:
     self.top = top
 
 
-# pylint: disable=abstract-method
 class LinuxDisplay(device_types.DeviceComponent):
 
   # syspath for backlight control

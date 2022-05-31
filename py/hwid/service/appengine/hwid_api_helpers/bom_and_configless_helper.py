@@ -8,7 +8,7 @@ from typing import Dict, List, NamedTuple, Optional
 
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import rule as v3_rule
 

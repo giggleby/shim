@@ -14,7 +14,6 @@ from . import platform_utils
 MonotonicTime = platform_utils.GetProvider('MonotonicTime')
 
 
-# pylint: disable=unused-argument
 class TZUTC(datetime.tzinfo):
   """A tzinfo about UTC."""
 

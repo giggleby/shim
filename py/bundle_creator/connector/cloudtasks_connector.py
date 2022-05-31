@@ -5,8 +5,8 @@
 import base64
 import logging
 
-from googleapiclient import discovery  # pylint: disable=import-error
-from googleapiclient.errors import HttpError  # pylint: disable=import-error
+from googleapiclient import discovery
+from googleapiclient.errors import HttpError
 
 from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 

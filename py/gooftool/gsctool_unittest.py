@@ -140,7 +140,6 @@ class GSCToolTest(unittest.TestCase):
         success=status == 0, status=status, stdout=stdout, stderr='')
 
   def _CheckCalledCommand(self, cmd):
-    # pylint: disable=unsubscriptable-object
     self.assertEqual(self.shell.call_args[0][0], cmd)
 
 

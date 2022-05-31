@@ -10,7 +10,7 @@ import os
 import time
 from typing import List, Optional, Tuple
 
-from google.cloud import logging as gc_logging  # pylint: disable=import-error,no-name-in-module
+from google.cloud import logging as gc_logging
 from google.protobuf import text_format
 import yaml
 

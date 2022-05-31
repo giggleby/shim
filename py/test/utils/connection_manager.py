@@ -24,8 +24,7 @@ except ImportError:
   _HAS_PLUGIN_CONTROLLER = False
 
 try:
-  # pylint: disable=unused-import, wrong-import-order
-  from cros.factory.test.utils import flimflam_test_path  # isort: skip
+  from cros.factory.test.utils import flimflam_test_path  # isort: skip  # pylint: disable=unused-import
   import dbus
   import flimflam
 except ImportError:

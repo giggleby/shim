@@ -167,7 +167,6 @@ class _ExtendedPopen(Popen):
     """
     return GetLines(self.stderr_data, strip)
 
-  # pylint: disable=signature-differs
   def communicate(self, *args, **kwargs):
     if self.stdout_data is None and self.stderr_data is None:
       return super().communicate(*args, **kwargs)
@@ -588,7 +587,8 @@ def StartDaemonThread(*args, **kwargs):
 
 
 class DummyFile:
-  def write(self, x):  # pylint: disable=unused-argument
+
+  def write(self, x):
     pass
 
   def read(self, x):  # pylint: disable=unused-argument

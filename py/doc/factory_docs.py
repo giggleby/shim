@@ -13,18 +13,15 @@ from cros.factory.test.l10n import regions
 
 
 class regionslist(nodes.General, nodes.Element):
-  # pylint: disable=no-init
   pass
 
 
 class unconfirmed_regionslist(nodes.General, nodes.Element):
-  # pylint: disable=no-init
   pass
 
 
 class RegionsList(Directive):
   """List of regions from the regions and regions_overlay modules."""
-  # pylint: disable=no-init
   has_content = True
   required_arguments = 0
   optional_arguments = 0
@@ -48,7 +45,6 @@ class RegionsList(Directive):
 
     # Import the regions_overlay if available.
     try:
-      # pylint: disable=no-name-in-module
       from cros.factory.test.l10n import regions_overlay
       overlay = regions_overlay
     except ImportError:
@@ -94,7 +90,6 @@ class RegionsList(Directive):
 
 
 class UnconfirmedRegionsList(RegionsList):
-  # pylint: disable=no-init
   list_name = 'UNCONFIRMED_REGIONS_LIST'
   table_classes = ['factory-regions-list factory-unconfirmed-regions-list']
 

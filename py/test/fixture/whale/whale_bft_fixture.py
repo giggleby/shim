@@ -162,7 +162,6 @@ class WhaleBFTFixture(bft.BFTFixture):
   def GetFixtureId(self):
     raise NotImplementedError
 
-  # pylint: disable=arguments-differ
   def ScanBarcode(self, saved_barcode_path=None):
     _UNSPECIFIED_ERROR = 'unspecified %s in BFT params'
     if not self._nuc_host:

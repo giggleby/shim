@@ -45,7 +45,6 @@ class BootSequenceTest(unittest.TestCase):
     next_seq = seq.Next()
     current_seq = seq.Current()
     self.assertEqual(next_seq, current_seq)
-    # pylint: disable=protected-access
     self.assertEqual(
         next_seq, 1 + first_seq + testlog_seq.SEQ_INCREMENT_ON_BOOT)
 

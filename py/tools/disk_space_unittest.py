@@ -19,7 +19,6 @@ FakeStatVFSResult = collections.namedtuple(
 
 
 class DiskSpaceTest(unittest.TestCase):
-  # pylint: disable=protected-access
 
   def setUp(self):
     self.stateful_stats = FakeStatVFSResult(f_blocks=261305, f_bavail=60457,

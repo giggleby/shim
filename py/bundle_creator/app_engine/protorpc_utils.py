@@ -8,7 +8,7 @@
 import uuid
 
 import flask
-from google.protobuf import symbol_database  # pylint: disable=import-error,no-name-in-module
+from google.protobuf import symbol_database
 
 
 class ProtoRPCServiceBase:

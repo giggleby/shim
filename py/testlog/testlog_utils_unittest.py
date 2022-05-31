@@ -39,19 +39,16 @@ class TestlogUtilsTest(unittest.TestCase):
 
   def testJSONHandlerDateTime(self):
     obj = SAMPLE_DATETIME
-    # pylint: disable=protected-access
     output = testlog_utils.JSONHandler(obj)
     self.assertEqual(output, SAMPLE_DATETIME_STRING)
 
   def testJSONHandlerDate(self):
     obj = datetime.date(1989, 8, 8)
-    # pylint: disable=protected-access
     output = testlog_utils.JSONHandler(obj)
     self.assertEqual(output, '1989-08-08')
 
   def testJSONHandlerTime(self):
     obj = datetime.time(22, 10, 10)
-    # pylint: disable=protected-access
     output = testlog_utils.JSONHandler(obj)
     self.assertEqual(output, '22:10')
 
@@ -60,7 +57,6 @@ class TestlogUtilsTest(unittest.TestCase):
       1 // 0
     except Exception:
       _, ex, tb = sys.exc_info()
-      # pylint: disable=protected-access
       output = testlog_utils.JSONHandler(tb)
       self.assertTrue('1 // 0' in output)
       output = testlog_utils.JSONHandler(ex)

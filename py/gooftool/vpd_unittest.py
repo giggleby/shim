@@ -69,7 +69,6 @@ class VPDToolTest(unittest.TestCase):
     return type_utils.Obj(stdout='', stderr='', status=status, success=False)
 
   def _CheckMockedShellCmd(self, cmd):
-    # pylint: disable=unpacking-non-sequence
     args, unused_kwargs = self.mocked_shell.call_args
     self.assertTrue(len(args) > 0)
     self.assertEqual(args[0], cmd)

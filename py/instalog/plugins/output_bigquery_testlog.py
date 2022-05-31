@@ -13,7 +13,6 @@ import datetime
 import json
 import math
 
-# pylint: disable=import-error, no-name-in-module
 from google.cloud.bigquery.schema import SchemaField
 
 from cros.factory.instalog import plugin_base

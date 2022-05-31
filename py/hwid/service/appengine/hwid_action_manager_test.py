@@ -33,7 +33,7 @@ class HWIDActionForTest(hwid_action.HWIDAction):
     self._uid = uid
 
   def __eq__(self, rhs):
-    return isinstance(rhs, HWIDActionForTest) and self._uid == rhs._uid  # pylint: disable=protected-access
+    return isinstance(rhs, HWIDActionForTest) and self._uid == rhs._uid
 
   def __ne__(self, rhs):
     return not self.__eq__(rhs)

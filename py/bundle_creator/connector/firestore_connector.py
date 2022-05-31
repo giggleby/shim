@@ -6,7 +6,7 @@ import datetime
 import logging
 from typing import Any, Dict
 
-from google.cloud import firestore  # pylint: disable=no-name-in-module,import-error
+from google.cloud import firestore
 
 
 class FirestoreConnector:

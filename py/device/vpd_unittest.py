@@ -10,7 +10,6 @@ from cros.factory.device import device_utils
 
 
 class VPDTest(unittest.TestCase):
-  # pylint: disable=no-value-for-parameter
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()

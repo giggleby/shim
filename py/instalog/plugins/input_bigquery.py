@@ -8,7 +8,7 @@
 A plugin to query data in BigQuery.
 """
 
-from google.cloud import bigquery  # pylint: disable=no-name-in-module
+from google.cloud import bigquery
 from google.oauth2 import service_account
 
 from cros.factory.instalog import datatypes

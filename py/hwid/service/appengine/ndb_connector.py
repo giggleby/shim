@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """Provides an interface to access / use Google Cloud NDB."""
 
-from google.cloud import ndb  # pylint: disable=no-name-in-module, import-error
+from google.cloud import ndb
 
 from cros.factory.utils import type_utils
 

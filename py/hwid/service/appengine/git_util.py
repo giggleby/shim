@@ -18,7 +18,6 @@ import time
 from typing import Any, NamedTuple, Optional, Sequence, Tuple, Type, Union
 import urllib.parse
 
-# pylint: disable=import-error, no-name-in-module
 import certifi
 from dulwich.client import HttpGitClient
 from dulwich.objects import Blob
@@ -29,7 +28,6 @@ from dulwich.repo import MemoryRepo as _MemoryRepo
 import google.auth
 from google.auth import impersonated_credentials
 import google.auth.transport.requests
-# pylint: enable=import-error, no-name-in-module
 import urllib3
 import urllib3.exceptions
 
@@ -37,6 +35,7 @@ from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import json_utils
 from cros.factory.utils import schema
 
+# Constants.
 HEAD = b'HEAD'
 DEFAULT_REMOTE_NAME = b'origin'
 REF_HEADS_PREFIX = b'refs/heads/'

@@ -10,7 +10,7 @@ from typing import Dict
 import unittest
 from unittest import mock
 
-from dulwich import objects as dulwich_objects  # pylint: disable=wrong-import-order, import-error
+from dulwich import objects as dulwich_objects
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo

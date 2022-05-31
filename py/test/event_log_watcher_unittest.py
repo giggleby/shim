@@ -201,7 +201,6 @@ class EventLogWatcherTest(unittest.TestCase):
     self._testSyncMarkers(True)
 
   def _testSyncMarkers(self, unexpected_restart):
-    # pylint: disable=not-callable
     mock_callback = mock.MagicMock()
     path = os.path.join(self.events_dir, MOCK_LOG_NAME(0))
 

@@ -50,7 +50,6 @@ class TimeSanitizerTestBase(unittest.TestCase):
 class TimeSanitizerBaseTimeTest(TimeSanitizerTestBase):
 
   def runTest(self):
-    # pylint: disable=protected-access
     # (access to protected members)
     with tempfile.NamedTemporaryFile() as f:
       self.assertEqual(

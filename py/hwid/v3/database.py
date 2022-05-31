@@ -106,7 +106,6 @@ class Database:
     self._SanityChecks()
 
   def __eq__(self, rhs):
-    # pylint: disable=protected-access
     return (isinstance(rhs, Database) and self._project == rhs._project and
             self._encoding_patterns == rhs._encoding_patterns and
             self._image_id == rhs._image_id and
@@ -1118,7 +1117,6 @@ class Components:
         self._non_probeable_component_classes.add(comp_cls)
 
   def __eq__(self, rhs):
-    # pylint: disable=protected-access
     return isinstance(rhs, Components) and self._components == rhs._components
 
   def __ne__(self, rhs):
@@ -1429,7 +1427,6 @@ class Pattern:
         self._image_id_to_pattern[image_id] = pattern_obj
 
   def __eq__(self, rhs):
-    # pylint: disable=protected-access
     return (isinstance(rhs, Pattern) and
             self._image_id_to_pattern == rhs._image_id_to_pattern)
 
@@ -1758,7 +1755,6 @@ class Rules:
       self._rules.append(rule)
 
   def __eq__(self, rhs):
-    # pylint: disable=protected-access
     return isinstance(rhs, Rules) and self._rules == rhs._rules
 
   def __ne__(self, rhs):

@@ -41,7 +41,6 @@ import unittest
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
-# pylint: disable=no-name-in-module
 from cros.factory.instalog.plugins import buffer_file_common
 from cros.factory.instalog.plugins import buffer_simple_file
 from cros.factory.instalog.utils import file_utils

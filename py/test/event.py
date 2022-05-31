@@ -240,7 +240,6 @@ class EventServer(socketserver.ThreadingUnixStreamServer):
           If None, uses a temporary path and sets the CROS_FACTORY_EVENT
           environment variable for future clients to use.
     """
-    # pylint: disable=super-init-not-called
     # A set of queues listening to messages.
     self._queues = set()
     # A lock guarding the _queues variable.
@@ -388,7 +387,6 @@ class EventClientBase(metaclass=abc.ABCMeta):
                     self._truncate_event_for_debug_log(event))
     message = pickle.dumps(event)
     if len(message) > _MAX_MESSAGE_SIZE:
-      # pylint: disable=logging-too-many-args
       logging.error(b'Message too large (%d bytes): event type = %s, '
                     b'truncated message: %s', len(message), event.type,
                     message[:_MAX_MESSAGE_SIZE // 20] +

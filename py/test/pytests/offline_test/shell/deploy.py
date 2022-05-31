@@ -239,7 +239,6 @@ class ScriptBuilder:
 
     test.CheckArgs()
     params = test.DetermineParameters()
-    # pylint: disable=protected-access
     self._AddTask('bad_blocks.sh',
                   is_file=('true' if test.args.mode == 'file' else 'false'),
                   **params._asdict())

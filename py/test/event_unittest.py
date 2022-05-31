@@ -87,7 +87,6 @@ class Tests:
 
   class EventServerClientTest(EventServerClientTestBase):
     def testBasic(self):
-      # pylint: disable=unnecessary-lambda
       client_events = []
       pong_got = threading.Event()
       def _Callback(ev):

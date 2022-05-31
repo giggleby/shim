@@ -7,13 +7,11 @@ import os
 from typing import Mapping, Sequence
 import urllib
 
-# pylint: disable=import-error, no-name-in-module
 import google.auth
 from google.auth import impersonated_credentials
 from google.auth.transport import requests as ga_requests
 
-# pylint: enable=import-error, no-name-in-module
-from cros.factory.hwid.service.appengine import config
+from cros.factory.hwid.service.appengine import config  # pylint: enable=import-error, no-name-in-module
 
 CONFIG = config.CONFIG
 HWID_API_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'

@@ -108,7 +108,6 @@ class N1914ATest(unittest.TestCase):
     server_port = net_utils.FindUnusedTCPPort()
     mock_server = MockTestServer(
         (net_utils.LOCALHOST, server_port), MockServerHandler)
-    # pylint: disable=no-member
     server_thread = threading.Thread(target=mock_server.serve_forever)
     server_thread.daemon = True
     server_thread.start()

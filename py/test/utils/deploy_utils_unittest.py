@@ -11,7 +11,6 @@ from cros.factory.device import device_types
 from cros.factory.test.utils import deploy_utils
 
 
-# pylint: disable=protected-access
 class FactoryPythonArchiveUnittest(unittest.TestCase):
   def setUp(self):
     self.link = mock.Mock(spec=device_types.DeviceLink)

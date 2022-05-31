@@ -10,7 +10,7 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
-from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 

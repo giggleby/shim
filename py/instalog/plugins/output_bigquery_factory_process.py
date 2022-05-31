@@ -10,7 +10,7 @@ Subclasses OutputBigQuery to create table rows for factory process events.
 
 import json
 
-from google.cloud.bigquery.schema import SchemaField  # pylint: disable=import-error, no-name-in-module
+from google.cloud.bigquery.schema import SchemaField
 
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import output_bigquery

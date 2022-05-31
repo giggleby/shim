@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# pylint: disable=protected-access,redefined-builtin
 
 """A function to create a schema tree from the given schema expression.
 
@@ -54,7 +53,6 @@ from .type_utils import MakeList
 
 # To simplify portability issues, validating JSON schema is optional.
 try:
-  # pylint: disable=wrong-import-order
   import jsonschema
   _HAVE_JSONSCHEMA = True
 except ImportError:

@@ -9,7 +9,6 @@ import os
 import unittest
 from unittest import mock
 
-# pylint: disable=import-error
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import filesystem_adapter

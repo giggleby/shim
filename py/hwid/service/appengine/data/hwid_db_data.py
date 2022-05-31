@@ -6,7 +6,7 @@
 import logging
 from typing import List, Optional
 
-from google.cloud import ndb  # pylint: disable=no-name-in-module, import-error
+from google.cloud import ndb
 
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module

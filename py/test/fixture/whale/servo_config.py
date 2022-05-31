@@ -16,7 +16,6 @@ try:
   from cros.factory.utils import type_utils
 except ImportError:
   # BB might still using the old toolkit, try to be backward compatible.
-  # pylint: disable=no-name-in-module
   from cros.factory import common as type_utils
 
 

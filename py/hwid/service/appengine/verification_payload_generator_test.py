@@ -6,10 +6,9 @@
 import os
 import unittest
 
-# pylint: disable=import-error, no-name-in-module
 from google.protobuf import json_format
 from google.protobuf import text_format
-import hardware_verifier_pb2
+import hardware_verifier_pb2  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import verification_payload_generator
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 #
 # Python twisted's module creates definition dynamically,
-# pylint: disable=no-member
 
 import logging
 import time

@@ -477,7 +477,6 @@ class CameraTest(test_case.TestCase):
     detected_objs = cascade.detectMultiScale(
         cv_image, scaleFactor=1.2, minNeighbors=2,
         flags=cv.CASCADE_DO_CANNY_PRUNING, minSize=(width // 10, height // 10))
-    # pylint: disable=len-as-condition
     # Detected_objs will be numpy array or an empty tuple. bool(numpy_array)
     # will not work (will raise an exception).
     detected = len(detected_objs) > 0

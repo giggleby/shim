@@ -17,7 +17,7 @@ from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test.fixture.touchscreen_calibration import fixture
 from cros.factory.test.i18n import _
 from cros.factory.test.pytests.touchscreen_calibration import sensors_server
-from cros.factory.test.pytests.touchscreen_calibration import touchscreen_calibration_utils  # pylint: disable=line-too-long
+from cros.factory.test.pytests.touchscreen_calibration import touchscreen_calibration_utils
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case

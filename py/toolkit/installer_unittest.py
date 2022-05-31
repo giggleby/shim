@@ -43,7 +43,6 @@ class ToolkitInstallerTest(unittest.TestCase):
 
     # True if we are pretending to be running inside CrOS.
     self._override_in_cros_device = False
-    # pylint: disable=protected-access
     installer.sys_utils.InCrOSDevice = lambda: self._override_in_cros_device
 
   def tearDown(self):

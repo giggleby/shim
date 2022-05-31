@@ -26,7 +26,7 @@ import time
 import unittest
 import xmlrpc.client
 
-import requests  # pylint: disable=import-error
+import requests
 
 from cros.factory.umpire import common
 from cros.factory.utils import file_utils

@@ -28,7 +28,7 @@ import sys
 import tempfile
 import textwrap
 import time
-import urllib.parse  # pylint: disable=import-error,no-name-in-module
+import urllib.parse
 
 import yaml
 

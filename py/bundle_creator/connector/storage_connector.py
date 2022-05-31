@@ -5,7 +5,7 @@
 import datetime
 import logging
 
-from google.cloud import storage  # pylint: disable=import-error, no-name-in-module
+from google.cloud import storage
 
 from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 

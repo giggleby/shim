@@ -163,10 +163,8 @@ class Testlog:
     self.session_json = session_data.pop(self.FIELDS.SESSION_JSON, None)
     self.attachments_folder = session_data.pop(self.FIELDS.ATTACHMENTS_FOLDER)
     self.uuid = session_data.pop(self.FIELDS.UUID)
-    metadata = session_data.pop(
-        self.FIELDS._METADATA, None)  # pylint: disable=protected-access
+    metadata = session_data.pop(self.FIELDS._METADATA, None)
     if metadata:
-      # pylint: disable=protected-access
       self.last_test_run[self.FIELDS._METADATA] = metadata
     assert not session_data, 'Not all variable initialized.'
 
@@ -759,7 +757,7 @@ class EventBase:
   def __eq__(self, other):
     """Equals operator."""
     if isinstance(other, self.__class__):
-      return self._data == other._data  # pylint: disable=protected-access
+      return self._data == other._data
     return False
 
   def __ne__(self, other):

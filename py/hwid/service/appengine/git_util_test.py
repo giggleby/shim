@@ -11,7 +11,7 @@ import os.path
 import unittest
 from unittest import mock
 
-from dulwich.objects import Tree  # pylint: disable=import-error
+from dulwich.objects import Tree
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -43,7 +43,6 @@ class RetryOnExceptionTest(unittest.TestCase):
       self._FakeFunction(succeed_on=4)
 
 
-# pylint: disable=protected-access
 class MemoryRepoTest(unittest.TestCase):
 
   def testAddFiles(self):

@@ -19,7 +19,6 @@ def MockControllerInit(self, device, unused_name, location):
 
 
 class AccelerometerTest(unittest.TestCase):
-  # pylint: disable=protected-access
 
   def testIsWithinOffsetRange(self):
     is_within_offset_range = (

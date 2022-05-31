@@ -36,7 +36,7 @@ def StrptimeRun(strptime, patched):
     True on success, False on failure.
   """
   if patched:
-    import _strptime  # pylint: disable=unused-import
+    import _strptime
 
   def Target(fn):
     global error  # pylint: disable=global-statement

@@ -78,7 +78,7 @@ class IP:
     return self._ip
 
   def __eq__(self, obj):
-    return self._ip == obj._ip  # pylint: disable=protected-access
+    return self._ip == obj._ip
 
   def IsIn(self, cidr):
     """Checks the IP is contained in CIDR."""
@@ -658,7 +658,7 @@ def GetDefaultGatewayInterface():
   else:
     raise ValueError('Output of `route -n` is unexpected.\n%s' % output)
 
-  for line in lines[line_idx + 1:]:  # pylint: disable=undefined-loop-variable
+  for line in lines[line_idx + 1:]:
     data = line.split()
     if len(data) < max(flag_idx, iface_idx, dest_idx):
       continue
