@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-05-31 10:03+CST\n"
+"PO-Revision-Date: 2022-06-01 16:24+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -392,6 +392,10 @@ msgstr "Phát hiện"
 #: ../build/pytests_label_generated.json
 msgid "Probe Cellular Info"
 msgstr "Thông tin máy dữ liệu"
+
+#: ../build/pytests_label_generated.json
+msgid "Probe Device Info"
+msgstr "Phát hiện thông tin máy"
 
 #: ../build/pytests_label_generated.json
 msgid "Probe SIM"

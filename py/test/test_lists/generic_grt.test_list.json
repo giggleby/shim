@@ -83,6 +83,7 @@
       "inherit": "TestGroup",
       "label": "Prepare",
       "subtests": [
+        "ProbeDeviceInfo",
         "AllCheckPoint",
         "StationStart"
       ]
