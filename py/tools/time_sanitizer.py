@@ -126,9 +126,6 @@ class TimeSanitizer:
       self.base_time_files = DEFAULT_BASE_TIME_FILES
     self.base_time = GetBaseTimeFromFile(self.base_time_files)
 
-    # Whether to avoid re-raising exceptions from unsuccessful factory server
-    # operations.  Set to False for testing.
-    self.__exceptions = True
     # Set time object.  This may be mocked out.
     self._time = Time()
 
