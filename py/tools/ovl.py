@@ -468,13 +468,12 @@ class SSLEnabledWebSocketBaseClient(WebSocketBaseClient):
     }
     # ws4py does not allow you to specify SSLContext, but rather passing in the
     # argument of ssl.wrap_socket
-    super(SSLEnabledWebSocketBaseClient, self).__init__(
-        ssl_options=ssl_options, *args, **kwargs)
+    super().__init__(ssl_options=ssl_options, *args, **kwargs)
 
 
 class TerminalWebSocketClient(SSLEnabledWebSocketBaseClient):
   def __init__(self, state, mid, escape, *args, **kwargs):
-    super(TerminalWebSocketClient, self).__init__(state, *args, **kwargs)
+    super().__init__(state, *args, **kwargs)
     self._mid = mid
     self._escape = escape
     self._stdin_fd = sys.stdin.fileno()
@@ -551,7 +550,7 @@ class ShellWebSocketClient(SSLEnabledWebSocketBaseClient):
       output: output file object.
     """
     self.output = output
-    super(ShellWebSocketClient, self).__init__(state, *args, **kwargs)
+    super().__init__(state, *args, **kwargs)
 
   def handshake_ok(self):
     pass
@@ -584,7 +583,7 @@ class ShellWebSocketClient(SSLEnabledWebSocketBaseClient):
 
 class ForwarderWebSocketClient(SSLEnabledWebSocketBaseClient):
   def __init__(self, state, sock, *args, **kwargs):
-    super(ForwarderWebSocketClient, self).__init__(state, *args, **kwargs)
+    super().__init__(state, *args, **kwargs)
     self._sock = sock
     self._stop = threading.Event()
 

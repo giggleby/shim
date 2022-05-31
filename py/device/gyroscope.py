@@ -39,9 +39,9 @@ class GyroscopeController(sensor_utils.BasicSensorController):
   """
 
   def __init__(self, board, name, location, gyro_id, freq):
-    super(GyroscopeController, self).__init__(
-        board, name, location, ['in_anglvel_x', 'in_anglvel_y', 'in_anglvel_z'],
-        scale=True)
+    super().__init__(board, name, location,
+                     ['in_anglvel_x', 'in_anglvel_y', 'in_anglvel_z'],
+                     scale=True)
     self.location = location
     self.gyro_id = gyro_id
     self.freq = freq

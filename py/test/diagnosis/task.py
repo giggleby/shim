@@ -251,7 +251,7 @@ class _ConfirmStep(_Step):
 
   def __init__(self, title, content, options, timeout, expected_output,
                ui_start_confirm, ui_stop_confirm):
-    super(_ConfirmStep, self).__init__()
+    super().__init__()
     self._title = title
     self._content = content
     self._options = options
@@ -336,7 +336,7 @@ class _CommandStep(_Step):
   def __init__(self, command, expected_output,
                terminate_timeout, terminating_timeout, error_message,
                ui_append_output):
-    super(_CommandStep, self).__init__()
+    super().__init__()
     self._command = command
     self._expected_output = expected_output
     self._terminate_timeout = terminate_timeout

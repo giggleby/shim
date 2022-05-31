@@ -40,7 +40,7 @@ class InputPullSocket(plugin_base.InputPlugin):
 
   def __init__(self, *args, **kwargs):
     self._sock = None
-    super(InputPullSocket, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def GetSocket(self):
     """Creates and returns a new socket connection to the target host."""

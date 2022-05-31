@@ -37,7 +37,7 @@ class InputBigQuery(plugin_base.InputPlugin):
   def __init__(self, *args, **kwargs):
     self.JOB_ID_PREFIX = None
     self.client = None
-    super(InputBigQuery, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Builds the client object and the table object to run BigQuery calls."""

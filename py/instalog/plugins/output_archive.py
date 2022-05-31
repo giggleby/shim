@@ -61,12 +61,12 @@ class OutputArchive(output_file.OutputFile):
       ])
 
   def __init__(self, *args, **kwargs):
-    super(OutputArchive, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self._gcs = None
 
   def SetUp(self):
     """Sets up the plugin."""
-    super(OutputArchive, self).SetUp()
+    super().SetUp()
     if not self.args.enable_disk and not self.args.enable_gcs:
       raise ValueError('Please enable at least one of "enable_disk" or '
                        '"enable_gcs"')

@@ -340,7 +340,7 @@ class InputHTTP(plugin_base.InputPlugin):
 
   def __init__(self, *args, **kwargs):
     self._http_server = None
-    super(InputHTTP, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Sets up the plugin."""

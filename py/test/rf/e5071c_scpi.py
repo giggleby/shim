@@ -135,7 +135,7 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     # will be a success.
     kwargs_copy = dict(kwargs)
     kwargs_copy.setdefault('timeout', 10)
-    super(ENASCPI, self).__init__('E5071C', *args, **kwargs_copy)
+    super().__init__('E5071C', *args, **kwargs_copy)
 
   def SaveScreen(self, filename):
     """Saves the screenshot.

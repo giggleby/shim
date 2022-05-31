@@ -51,7 +51,7 @@ class WiFi(device_types.DeviceComponent):
   WiFiError = WiFiError
 
   def __init__(self, dut, tmp_dir=None):
-    super(WiFi, self).__init__(dut)
+    super().__init__(dut)
     self.tmp_dir = tmp_dir
 
   def _NewConnection(self, *args, **kwargs):
@@ -503,16 +503,14 @@ class ConnectionStatus(type_utils.Obj):
         computed: The signal strength the module sees/calculates.
         antenna: An array of the signal strengths of the antennas.
       """
-      super(ConnectionStatus.Signal, self).__init__(computed=computed,
-                                                    antenna=antenna)
+      super().__init__(computed=computed, antenna=antenna)
 
   def __init__(
       self, signal=None, avg_signal=None, tx_bitrate=None, rx_bitrate=None):
     signal = signal or self.Signal()
     avg_signal = avg_signal or self.Signal()
-    super(ConnectionStatus, self).__init__(
-        signal=signal, avg_signal=avg_signal, tx_bitrate=tx_bitrate,
-        rx_bitrate=rx_bitrate)
+    super().__init__(signal=signal, avg_signal=avg_signal,
+                     tx_bitrate=tx_bitrate, rx_bitrate=rx_bitrate)
 
 
 class Connection:
@@ -947,7 +945,7 @@ class Connection:
 
 class ServiceSpec(type_utils.Obj):
   def __init__(self, ssid, freq, password):
-    super(ServiceSpec, self).__init__(ssid=ssid, freq=freq, password=password)
+    super().__init__(ssid=ssid, freq=freq, password=password)
 
   def __hash__(self):
     return hash((self.ssid, self.freq, self.password))

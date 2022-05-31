@@ -51,7 +51,7 @@ class OutputDecodeHwid(plugin_base.OutputPlugin):
 
   def __init__(self, *args, **kwargs):
     self.authed_session = None
-    super(OutputDecodeHwid, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Builds the client object and the table object to run BigQuery calls."""

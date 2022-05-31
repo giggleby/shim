@@ -201,7 +201,7 @@ class GoofyTest(unittest.TestCase):
 
 class GoofyUITest(GoofyTest):
   def __init__(self, *args, **kwargs):
-    super(GoofyUITest, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.events = None
     self.ws_start = None
     self.ws_done = None
@@ -690,7 +690,7 @@ class WaivedTestTest(GoofyUITest):
   }
 
   def BeforeInitGoofy(self):
-    super(WaivedTestTest, self).BeforeInitGoofy()
+    super().BeforeInitGoofy()
     # 'G.waived' is already FAILED previously.
     self.state.UpdateTestState(path='test:G.waived', status=TestState.FAILED)
 

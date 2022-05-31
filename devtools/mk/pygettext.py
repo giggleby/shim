@@ -33,7 +33,7 @@ import subprocess
 import sys
 import tempfile
 
-
+# Example header.
 POT_HEADER = r"""# SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR ORGANIZATION
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
@@ -113,7 +113,7 @@ def WritePot(fp, messages, width):
 
 class PyAstVisitor(ast.NodeVisitor):
   def __init__(self, keywords):
-    super(PyAstVisitor, self).__init__()
+    super().__init__()
     self.messages = []
     self.keywords = keywords
 
@@ -132,7 +132,7 @@ class PyAstVisitor(ast.NodeVisitor):
         self.messages.append(first_arg.s)
 
     # Continue visit in all case.
-    super(PyAstVisitor, self).generic_visit(node)
+    super().generic_visit(node)
 
   @classmethod
   def ParseFile(cls, filename, options):
@@ -156,7 +156,7 @@ VOID_ELEMENTS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
 class HTMLMessageParser(html.parser.HTMLParser):
   # pylint: disable=abstract-method
   def __init__(self, html_tags):
-    super(HTMLMessageParser, self).__init__()
+    super().__init__()
     self.messages = []
     self.html_tags = set(html_tags)
     self.tags = []
@@ -216,7 +216,7 @@ class HTMLMessageParser(html.parser.HTMLParser):
       self.data.append('&#%s;' % name)
 
   def close(self):
-    super(HTMLMessageParser, self).close()
+    super().close()
     if self.tags:
       raise ValueError('Found unclosed tags: %r' % ([t[0] for t in self.tags]))
 

@@ -62,7 +62,7 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
   ]
 
   def __init__(self, *args, **kwargs):
-    super(OutputFactoryReport, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self._gcs = None
     self._archive_path = None
     self._tmp_dir = None

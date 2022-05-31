@@ -25,7 +25,7 @@ class GenericCPUFunction(probe_function.ProbeFunction):
   ]
 
   def __init__(self, **kwargs):
-    super(GenericCPUFunction, self).__init__(**kwargs)
+    super().__init__(**kwargs)
 
     if self.args.cpu_type is None:
       logging.info('cpu_type not specified. Determine by crossystem.')

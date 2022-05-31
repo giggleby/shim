@@ -62,7 +62,7 @@ class Hooks:
 class StationTestListHooks(Hooks):
   """Sample for station based test lists."""
   def OnUnexpectedReboot(self, goofy_instance):
-    super(StationTestListHooks, self).OnUnexpectedReboot(goofy_instance)
+    super().OnUnexpectedReboot(goofy_instance)
 
     # This is a test stations, when the station reboots unexpectedly, we should
     # restart from the beginning.  We cannot call

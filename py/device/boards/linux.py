@@ -228,8 +228,7 @@ class LinuxBoard(device_types.DeviceBoard):
       A string or bytes as file contents.
     """
     if self.link.IsLocal():
-      return super(LinuxBoard, self).ReadSpecialFile(path, count, skip,
-                                                     encoding)
+      return super().ReadSpecialFile(path, count, skip, encoding)
 
     args = ['dd', 'bs=1', 'if=%s' % path]
     if count is not None:
@@ -249,7 +248,7 @@ class LinuxBoard(device_types.DeviceBoard):
     """
     # If the link is local, we just open file and write content.
     if self.link.IsLocal():
-      super(LinuxBoard, self).WriteFile(path, content)
+      super().WriteFile(path, content)
       return
 
     with file_utils.UnopenedTemporaryFile() as temp_path:
@@ -267,7 +266,7 @@ class LinuxBoard(device_types.DeviceBoard):
     """
     # If the link is local, we just open file and write content.
     if self.link.IsLocal():
-      super(LinuxBoard, self).WriteSpecialFile(path, content)
+      super().WriteSpecialFile(path, content)
       return
 
     with file_utils.UnopenedTemporaryFile() as local_temp:
@@ -348,7 +347,7 @@ class LinuxBoard(device_types.DeviceBoard):
       A list of files matching pattern on target device.
     """
     if self.link.IsLocal():
-      return super(LinuxBoard, self).Glob(pattern)
+      return super().Glob(pattern)
 
     results = self.CallOutput('ls -d %s' % pattern)
     return results.splitlines() if results else []

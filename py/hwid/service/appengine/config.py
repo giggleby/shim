@@ -71,7 +71,7 @@ class _Config:
   """
 
   def __init__(self, config_path=_PATH_TO_APP_CONFIGURATIONS_FILE):
-    super(_Config, self).__init__()
+    super().__init__()
     self.cloud_project = os.environ.get('GOOGLE_CLOUD_PROJECT')
     self.gae_env = os.environ.get('GAE_ENV')
     try:

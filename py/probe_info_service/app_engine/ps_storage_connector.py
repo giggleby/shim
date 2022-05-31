@@ -109,7 +109,7 @@ class _InMemoryProbeStatementStorageConnector(IProbeStatementStorageConnector):
   """An in-memory implementation for unittesting purpose."""
 
   def __init__(self):
-    super(_InMemoryProbeStatementStorageConnector, self).__init__()
+    super().__init__()
     self._qual_probe_statement = {}
     self._overridden_probe_data = {}
 
@@ -160,7 +160,7 @@ class _DataStoreProbeStatementStorageConnector(IProbeStatementStorageConnector):
   _PROBE_STATEMENT_KEY = 'probe_statement'
 
   def __init__(self):
-    super(_DataStoreProbeStatementStorageConnector, self).__init__()
+    super().__init__()
     self._client = datastore.Client()
 
   def SaveQualProbeStatement(self, qual_id, probe_statement):

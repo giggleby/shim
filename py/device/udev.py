@@ -36,7 +36,7 @@ class UdevMonitorBase(device_types.DeviceComponent):
   Event = Enum(['INSERT', 'REMOVE'])
 
   def __init__(self, dut):
-    super(UdevMonitorBase, self).__init__(dut)
+    super().__init__(dut)
     self._handler = {}
     self._SYS_BLOCK_PATH = self._device.path.join('/sys', 'block')
     self._DEV_BLOCK_PATH = '/dev'
@@ -157,7 +157,7 @@ class LocalUdevMonitor(UdevMonitorBase):
                 _UDEV_ACTION_REMOVE: UdevMonitorBase.Event.REMOVE}
 
   def __init__(self, dut):
-    super(LocalUdevMonitor, self).__init__(dut)
+    super().__init__(dut)
     self._udev_observer = None
     context = pyudev.Context()
     self._monitor = pyudev.Monitor.from_netlink(context)
@@ -212,7 +212,7 @@ class PollingUdevMonitor(UdevMonitorBase):
   _PERIOD = 1
 
   def __init__(self, dut):
-    super(PollingUdevMonitor, self).__init__(dut)
+    super().__init__(dut)
     self._running = False
     self._devices = {}
     self._timer = None

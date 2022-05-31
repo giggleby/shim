@@ -125,7 +125,6 @@ disable=
     consider-using-with,
     deprecated-module,
     raise-missing-from,
-    super-with-arguments,
     unspecified-encoding,
     unused-private-member,
     useless-suppression,

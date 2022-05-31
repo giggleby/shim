@@ -28,7 +28,7 @@ class SensorSource(device_types.DeviceComponent):
 
   def __init__(self, device):
     """Constructor."""
-    super(SensorSource, self).__init__(device)
+    super().__init__(device)
     self._sensors = None
 
   def _Probe(self):
@@ -346,7 +346,7 @@ class Thermal(device_types.DeviceComponent):
 
   def __init__(self, dut):
     """Constructor."""
-    super(Thermal, self).__init__(dut)
+    super().__init__(dut)
     self._sensors = None
     self._main_sensor = None
     self._sources = []

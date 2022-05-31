@@ -35,8 +35,7 @@ class InstalogService(daemon_utils.Daemon):
     self._config = config
     self._logging_level = logging_level
     self._core = None
-    super(InstalogService, self).__init__(
-        pidfile=config['instalog']['pid_file'])
+    super().__init__(pidfile=config['instalog']['pid_file'])
 
   def _SignalHandler(self, signal_num, frame):
     """Signal handler to stop Instalog on SIGINT or SIGTERM."""

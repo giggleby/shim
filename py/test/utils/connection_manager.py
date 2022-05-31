@@ -77,7 +77,7 @@ class ConnectionManagerException(Exception):
       'NOT_SPECIFIED', ])
 
   def __init__(self, message, error_code=ErrorCode.NOT_SPECIFIED):
-    super(ConnectionManagerException, self).__init__(message)
+    super().__init__(message)
     self.error_code = error_code
     self.message = message
 

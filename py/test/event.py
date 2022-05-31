@@ -531,14 +531,14 @@ class ThreadingEventClient(EventClientBase):
       callback: See EventClientBase.__init__.
       name: An optional name for the receving thread.
     """
-    super(ThreadingEventClient, self).__init__(path, callback)
+    super().__init__(path, callback)
 
     self.recv_thread = process_utils.StartDaemonThread(
         target=self._run_recv_thread,
         name='EventServerRecvThread-%s' % (name or get_unique_id()))
 
   def close(self):
-    super(ThreadingEventClient, self).close()
+    super().close()
     if self.recv_thread:
       self.recv_thread.join()
       self.recv_thread = None

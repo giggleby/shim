@@ -424,7 +424,7 @@ class UmpireEnvForTest(UmpireEnv):
   def __init__(self, port=None):
     self._port = port
     self.root_dir = tempfile.mkdtemp()
-    super(UmpireEnvForTest, self).__init__(self.root_dir)
+    super().__init__(self.root_dir)
     os.makedirs(self.server_toolkit_dir)
     for fundamental_subdir in (
         self.config_dir,
@@ -440,7 +440,7 @@ class UmpireEnvForTest(UmpireEnv):
 
   @property
   def umpire_base_port(self):
-    return self._port or super(UmpireEnvForTest, self).umpire_base_port
+    return self._port or super().umpire_base_port
 
   def Close(self):
     shutil.rmtree(self.root_dir, ignore_errors=True)

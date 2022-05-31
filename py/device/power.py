@@ -65,7 +65,7 @@ class PowerBase(device_types.DeviceComponent):
       ['CHARGE', 'IDLE', 'DISCHARGE', 'FULL', 'NOT_CHARGING'])
 
   def __init__(self, dut, pd_name=None):
-    super(PowerBase, self).__init__(dut)
+    super().__init__(dut)
     self._pd_name = pd_name
 
 
@@ -673,7 +673,7 @@ class PowerDaemonPowerInfoMixin(PowerInfoMixinBase):
                     Change this function to use 'line_power_current' when the
                     issue is fixed.
     """
-    return super(PowerDaemonPowerInfoMixin, self).GetChargerCurrent()
+    return super().GetChargerCurrent()
 
   def GetBatteryCurrent(self):
     """See PowerInfoMixinBase.GetBatteryCurrent"""
@@ -698,7 +698,7 @@ class PowerDaemonPowerInfoMixin(PowerInfoMixinBase):
     TODO(chenghan): Change this function when `dump_power_status` supports
                     this field.
     """
-    return super(PowerDaemonPowerInfoMixin, self).GetBatteryCycleCount()
+    return super().GetBatteryCycleCount()
 
   # pylint: disable=useless-super-delegation
   def GetBatteryManufacturer(self):
@@ -707,7 +707,7 @@ class PowerDaemonPowerInfoMixin(PowerInfoMixinBase):
     TODO(chenghan): Change this function when `dump_power_status` supports
                     this field.
     """
-    return super(PowerDaemonPowerInfoMixin, self).GetBatteryManufacturer()
+    return super().GetBatteryManufacturer()
 
 
 class LinuxPower(DummyPowerControlMixin, SysfsPowerInfoMixin, PowerBase):

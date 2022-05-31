@@ -175,7 +175,7 @@ class AudioConfigManager(BaseConfigManager):
   """Loads config files which are defined by our factory toolkit."""
 
   def __init__(self, mixer_controller, config_name=None):
-    super(AudioConfigManager, self).__init__()
+    super().__init__()
     self._audio_config_sn = 0  # used for audio config logging.
     self._mixer_controller = mixer_controller
     self.audio_config = None
@@ -444,7 +444,7 @@ class UCMConfigManager(BaseConfigManager):
 
       verb: The verb string for UCM (e.g., 'HiFi')
     """
-    super(UCMConfigManager, self).__init__()
+    super().__init__()
 
     self._device = device
     self._mixer_controller = mixer_controller

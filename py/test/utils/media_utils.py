@@ -78,7 +78,7 @@ class MediaMonitor:
 class RemovableDiskMonitor(MediaMonitor):
   """MediaMonitor specifically used for monitoring removable storage devices."""
   def __init__(self):
-    super(RemovableDiskMonitor, self).__init__('block', 'disk')
+    super().__init__('block', 'disk')
 
 
 class MountedMedia:

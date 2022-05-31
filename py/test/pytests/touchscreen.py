@@ -136,7 +136,7 @@ class StylusMonitor(touch_monitor.SingleTouchMonitor):
       code: Which key to monitor: BTN_TOUCH (for touching) or BTN_TOOL_PEN
         (for hovering).
     """
-    super(StylusMonitor, self).__init__(device)
+    super().__init__(device)
     self._frontend_proxy = frontend_proxy
     self._code = code
     # A boolean flag indicating if BTN_TOUCH or BTN_TOOL_PEN is on.
@@ -172,7 +172,7 @@ class TouchscreenMonitor(touch_monitor.MultiTouchMonitor):
       device: evdev.InputDevice
       frontend_proxy: test_ui.JavaScriptProxy to frontend test
     """
-    super(TouchscreenMonitor, self).__init__(device)
+    super().__init__(device)
     self._frontend_proxy = frontend_proxy
 
   def _EmitEvent(self, receiver, slot_id):

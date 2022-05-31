@@ -61,7 +61,7 @@ class HWIDDBsPatternTest(unittest.TestCase):
   """Unit test for HWID database."""
 
   def __init__(self, project=None, commit=None):
-    super(HWIDDBsPatternTest, self).__init__()
+    super().__init__()
     self.project = project
     self.commit = commit
 

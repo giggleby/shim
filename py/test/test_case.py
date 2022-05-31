@@ -37,7 +37,7 @@ class TestCase(unittest.TestCase):
   ui_class = test_ui.StandardUI
 
   def __init__(self, methodName='runTest'):
-    super(TestCase, self).__init__(methodName='_RunTest')
+    super().__init__(methodName='_RunTest')
     self.event_loop = None
 
     self.__method_name = methodName
@@ -122,11 +122,11 @@ class TestCase(unittest.TestCase):
     # session.GetCurrentTestFilePath() used by UI is not set when __init__ is
     # called (It's set by invocation after the TestCase instance is created),
     # and initialize using setUp() means that all pytests inheriting this need
-    # to remember calling super(..., self).setUp(), which is a lot of
+    # to remember calling super().setUp(), which is a lot of
     # boilerplate code and easy to forget.
     self.event_loop = test_ui.EventLoop(self.__HandleException)
 
-    super(TestCase, self).run(result=result)
+    super().run(result=result)
 
   def _RunTest(self):
     """The main test procedure that would be run by unittest."""

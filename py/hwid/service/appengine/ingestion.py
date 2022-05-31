@@ -33,8 +33,7 @@ class PayloadGenerationException(protorpc_utils.ProtoRPCException):
   """Exception to group similar exceptions for error reporting."""
 
   def __init__(self, msg):
-    super(PayloadGenerationException, self).__init__(
-        protorpc_utils.RPCCanonicalErrorCode.INTERNAL, detail=msg)
+    super().__init__(protorpc_utils.RPCCanonicalErrorCode.INTERNAL, detail=msg)
 
 
 class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
@@ -47,7 +46,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     return cls(api_connector.HWIDAPIConnector())
 
   def __init__(self, hwid_api_connector, *args, **kwargs):
-    super(ProtoRPCService, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.hwid_action_manager = CONFIG.hwid_action_manager
     self.vp_data_manager = CONFIG.vp_data_manager
     self.hwid_db_data_manager = CONFIG.hwid_db_data_manager

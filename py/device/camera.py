@@ -23,7 +23,7 @@ class Camera(device_types.DeviceComponent):
 
   def __init__(self, dut):
     """System module for camera devices."""
-    super(Camera, self).__init__(dut)
+    super().__init__(dut)
     self._devices = {}
 
   def GetCameraDevice(self, index):

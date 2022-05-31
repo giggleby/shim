@@ -45,7 +45,7 @@ class CloudStorageAdapterTest(unittest.TestCase):
   """Tests for the CloudStorageAdapter class."""
 
   def setUp(self):
-    super(CloudStorageAdapterTest, self).setUp()
+    super().setUp()
     patcher = mock.patch('__main__.cloudstorage_adapter.storage')
     self.mock_storage = patcher.start()
     self.addCleanup(patcher.stop)

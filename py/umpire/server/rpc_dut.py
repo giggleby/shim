@@ -188,7 +188,7 @@ class ShopfloorServiceDUTCommands(umpire_rpc.UmpireRPC):
   """
 
   def __init__(self, daemon):
-    super(ShopfloorServiceDUTCommands, self).__init__(daemon)
+    super().__init__(daemon)
     # Reuse ServerProxy so that we don't need to create a new one for every
     # request.
     self._url = None

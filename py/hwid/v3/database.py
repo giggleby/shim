@@ -480,7 +480,7 @@ class _NamedNumber(dict):
   NAME_TAG = None
 
   def __init__(self, source):
-    super(_NamedNumber, self).__init__()
+    super().__init__()
 
     if not isinstance(source, dict):
       raise common.HWIDException(
@@ -501,7 +501,7 @@ class _NamedNumber(dict):
       common.HWIDException if the given number is not recorded.
     """
     try:
-      return super(_NamedNumber, self).__getitem__(number)
+      return super().__getitem__(number)
     except KeyError:
       raise common.HWIDException(
           'The %s %r is not recorded.' % (self.NUMBER_TAG, number))
@@ -529,7 +529,7 @@ class _NamedNumber(dict):
       raise common.HWIDException(
           'The %s %r is already in used.' % (self.NAME_TAG, name))
 
-    super(_NamedNumber, self).__setitem__(number, name)
+    super().__setitem__(number, name)
 
   def __delitem__(self, key):
     raise common.HWIDException(
@@ -930,8 +930,7 @@ class EncodedFields:
 class ComponentInfo(type_utils.Obj):
 
   def __init__(self, values, status, information=None):
-    super(ComponentInfo, self).__init__(values=values, status=status,
-                                        information=information)
+    super().__init__(values=values, status=status, information=information)
 
 
 class Components:

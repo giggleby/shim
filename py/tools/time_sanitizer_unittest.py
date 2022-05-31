@@ -40,7 +40,7 @@ class TimeSanitizerTestBase(unittest.TestCase):
         prefix='time_sanitizer_unittest.') as temp_dir:
       # pylint: disable=attribute-defined-outside-init
       self.state_file = os.path.join(temp_dir, 'state_file')
-      super(TimeSanitizerTestBase, self).run(result)
+      super().run(result)
 
   def _ReadStateFile(self):
     with open(self.state_file) as f:

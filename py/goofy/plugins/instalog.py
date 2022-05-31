@@ -46,7 +46,7 @@ class Instalog(plugin.Plugin):
           instead. If unable to properly retrieve the IP and port, fall back to
           uplink_hostname and uplink_port.
     """
-    super(Instalog, self).__init__(goofy)
+    super().__init__(goofy)
     self._instalog_process = None
     self._config_path = os.path.join(paths.RUNTIME_VARIABLE_DATA_DIR,
                                      'instalog.yaml')

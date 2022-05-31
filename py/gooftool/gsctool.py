@@ -14,18 +14,16 @@ GSCTOOL_PATH = '/usr/sbin/gsctool'
 
 class FirmwareVersion(type_utils.Obj):
   def __init__(self, ro_version, rw_version):
-    super(FirmwareVersion, self).__init__(ro_version=ro_version,
-                                          rw_version=rw_version)
+    super().__init__(ro_version=ro_version, rw_version=rw_version)
 
 class ImageInfo(type_utils.Obj):
   def __init__(self, ro_fw_version, rw_fw_version, board_id_flags):
-    super(ImageInfo, self).__init__(ro_fw_version=ro_fw_version,
-                                    rw_fw_version=rw_fw_version,
-                                    board_id_flags=board_id_flags)
+    super().__init__(ro_fw_version=ro_fw_version, rw_fw_version=rw_fw_version,
+                     board_id_flags=board_id_flags)
 
 class BoardID(type_utils.Obj):
   def __init__(self, type_, flags):
-    super(BoardID, self).__init__(type=type_, flags=flags)
+    super().__init__(type=type_, flags=flags)
 
 
 UpdateResult = type_utils.Enum(['NOOP', 'ALL_UPDATED', 'RW_UPDATED'])

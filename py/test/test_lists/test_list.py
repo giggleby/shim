@@ -262,7 +262,7 @@ class FactoryTestList(test_object_module.FactoryTest):
           'eval! ' dargs.  See test.test_lists.manager.ITestList.ResolveTestArgs
           for how it is used.
     """
-    super(FactoryTestList, self).__init__(_root=True, subtests=subtests)
+    super().__init__(_root=True, subtests=subtests)
     self.state_instance = state_instance
     self.subtests = list(filter(None, type_utils.FlattenList(subtests)))
     self.path_map = {}
@@ -646,7 +646,7 @@ class NodeTransformer_AddGet(ast.NodeTransformer):
   And `device.foo.bar.Get` will still be `device.foo.bar.Get`.
   """
   def __init__(self, name_list):
-    super(NodeTransformer_AddGet, self).__init__()
+    super().__init__()
     if not isinstance(name_list, list):
       name_list = [name_list]
     self.name_list = name_list
@@ -708,7 +708,7 @@ class TestList(ITestList):
   _cached_constants = None
 
   def __init__(self, config, checker, loader):
-    super(TestList, self).__init__(checker)
+    super().__init__(checker)
     self._loader = loader
     self._config = config
     self._cached_test_list = None

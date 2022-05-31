@@ -103,7 +103,7 @@ class MatchFunction(function.Function):
       Arg('rule', (str, dict), 'The matched rule.')]
 
   def __init__(self, **kwargs):
-    super(MatchFunction, self).__init__(**kwargs)
+    super().__init__(**kwargs)
 
     self.is_dict = isinstance(self.args.rule, dict)
     if self.is_dict:

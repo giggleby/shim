@@ -233,7 +233,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
   """Tests for Umpire RPC."""
 
   def setUp(self):
-    super(UmpireRPCTest, self).setUp()
+    super().setUp()
     self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
     self.default_config = json.loads(
         self.ReadConfigTestdata('umpire_default.json'))
@@ -395,7 +395,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
 class UmpireHTTPTest(UmpireDockerTestCase):
   """Tests for Umpire http features."""
   def setUp(self):
-    super(UmpireHTTPTest, self).setUp()
+    super().setUp()
     self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
 
   def testReverseProxy(self):
@@ -414,7 +414,7 @@ class UmpireHTTPTest(UmpireDockerTestCase):
 class RPCDUTTest(UmpireDockerTestCase):
   """Tests for Umpire DUT RPC."""
   def setUp(self):
-    super(RPCDUTTest, self).setUp()
+    super().setUp()
     self.proxy = xmlrpc.client.ServerProxy(self.umpire.addr_base)
 
   def testPing(self):

@@ -29,7 +29,7 @@ class LCDBacklightTest(brightness.BrightnessTest):
   def setUp(self):
     if self.args.levels is None:
       self.args.levels = [0.2, 0.4, 0.6, 0.8, 1.0]
-    super(LCDBacklightTest, self).setUp()
+    super().setUp()
 
   def tearDown(self):
     self.dut.display.SetBacklightBrightness(1.0)

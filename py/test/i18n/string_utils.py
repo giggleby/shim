@@ -14,7 +14,7 @@ from cros.factory.test.i18n import translation
 class SafeFormatter(string.Formatter):
   """A string formatter that would put a placeholder for unknown key."""
   def __init__(self, placeholder='[?]'):
-    super(SafeFormatter, self).__init__()
+    super().__init__()
     self.placeholder = placeholder
     self.current_format_string = None
 
@@ -24,7 +24,7 @@ class SafeFormatter(string.Formatter):
 
   def parse(self, format_string):
     self.current_format_string = format_string
-    return super(SafeFormatter, self).parse(format_string)
+    return super().parse(format_string)
 
   def get_value(self, key, args, kwargs):
     if isinstance(key, str):

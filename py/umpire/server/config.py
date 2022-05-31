@@ -129,7 +129,7 @@ class UmpireConfig(dict):
         config = json_utils.LoadStr(config)
     else:
       config = json_utils.LoadFile(file_path)
-    super(UmpireConfig, self).__init__(config)
+    super().__init__(config)
 
     if validate:
       ValidateConfig(config)

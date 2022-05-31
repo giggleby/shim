@@ -65,7 +65,7 @@ class Atmel1664sTouchController(TouchController):
   _FRAME_FILENAMES = ['refs', 'deltas']
 
   def __init__(self, dut, i2c_bus_id=None):
-    super(Atmel1664sTouchController, self).__init__(dut)
+    super().__init__(dut)
     if i2c_bus_id is None:
       i2c_bus_id = self._ProbeI2CBusId()
     i2c_device_path = dut.path.join(self._I2C_DEVICES_PATH, i2c_bus_id)

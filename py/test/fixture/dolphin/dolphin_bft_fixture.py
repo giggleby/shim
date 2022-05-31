@@ -100,7 +100,7 @@ class DolphinBFTFixture(bft_fixture.BFTFixture):
 
 
   def __init__(self):
-    super(DolphinBFTFixture, self).__init__()
+    super().__init__()
     # Plankton-raiden information. Obtained from Init()
     self._plankton_conn = None
     self._i2c_address = None

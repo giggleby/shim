@@ -80,7 +80,7 @@ class MockFixtureConnection(FixtureConnection):
     Args:
       script: A dictionary containing the mapping of command and response.
     """
-    super(MockFixtureConnection, self).__init__()
+    super().__init__()
 
     self._script = script
     self._curr_cmd = None
@@ -127,7 +127,7 @@ class SerialFixtureConnection(FixtureConnection):
       response_delay: delay time in seconds before reading the response
       retries: number of retires when write failed
     """
-    super(SerialFixtureConnection, self).__init__()
+    super().__init__()
 
     self._tty = None
     self._driver = driver

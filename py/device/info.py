@@ -64,7 +64,7 @@ class SystemInfo(device_types.DeviceComponent):
   _FLAG_VIRTUAL_DEV_MODE_ON = 0x02
 
   def __init__(self, device=None):
-    super(SystemInfo, self).__init__(device)
+    super().__init__(device)
     self._cached = {}
     self._overrides = {}
 

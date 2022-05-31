@@ -110,7 +110,7 @@ class Scalar(BaseType):
   """
 
   def __init__(self, label, element_type, choices=None):
-    super(Scalar, self).__init__(label)
+    super().__init__(label)
     if getattr(element_type, '__iter__', None) and element_type not in (
         str, bytes):
       raise SchemaException(
@@ -157,7 +157,7 @@ class RegexpStr(Scalar):
   """
 
   def __init__(self, label, regexp):
-    super(RegexpStr, self).__init__(label, str)
+    super().__init__(label, str)
     self.regexp = regexp
 
   def __repr__(self):
@@ -178,7 +178,7 @@ class RegexpStr(Scalar):
     Raises:
       SchemaException if validation fails.
     """
-    super(RegexpStr, self).Validate(data)
+    super().Validate(data)
     if not self.regexp.match(data):
       raise SchemaException("Value %r doesn't match regeular expression %s" %
                             (data, self.regexp.pattern))
@@ -204,7 +204,7 @@ class Dict(BaseType):
   """
 
   def __init__(self, label, key_type, value_type, min_size=0, max_size=None):
-    super(Dict, self).__init__(label)
+    super().__init__(label)
     if not (isinstance(key_type, Scalar) or
             (isinstance(key_type, AnyOf) and
              key_type.CheckTypeOfPossibleValues(Scalar))):
@@ -283,7 +283,7 @@ class FixedDict(BaseType):
 
   def __init__(self, label, items=None, optional_items=None,
                allow_undefined_keys=False):
-    super(FixedDict, self).__init__(label)
+    super().__init__(label)
     if items and not isinstance(items, dict):
       raise SchemaException('items of FixedDict %r should be a dict' %
                             self.label)
@@ -353,7 +353,7 @@ class JSONSchemaDict(BaseType):
     to validate data using the schema (ValidationError).
   """
   def __init__(self, label, schema):
-    super(JSONSchemaDict, self).__init__(label)
+    super().__init__(label)
     self.label = label
     if _HAVE_JSONSCHEMA:
       try:
@@ -401,7 +401,7 @@ class List(BaseType):
   """
 
   def __init__(self, label, element_type=None, min_length=0, max_length=None):
-    super(List, self).__init__(label)
+    super().__init__(label)
     if element_type and not isinstance(element_type, BaseType):
       raise SchemaException(
           'element_type %r of List %r is not a Schema object' %
@@ -458,7 +458,7 @@ class Tuple(BaseType):
   """
 
   def __init__(self, label, element_types=None):
-    super(Tuple, self).__init__(label)
+    super().__init__(label)
     if (element_types and
         (not isinstance(element_types, (tuple, list))) or
         (not all([isinstance(x, BaseType)] for x in element_types))):
@@ -499,7 +499,7 @@ class AnyOf(BaseType):
   """
 
   def __init__(self, types, label=None):
-    super(AnyOf, self).__init__(label)
+    super().__init__(label)
     if (not isinstance(types, list) or
         not all(isinstance(x, BaseType) for x in types)):
       raise SchemaException(
@@ -554,7 +554,7 @@ class Optional(AnyOf):
 
   def __init__(self, types, label=None):
     try:
-      super(Optional, self).__init__(MakeList(types), label=label)
+      super().__init__(MakeList(types), label=label)
     except SchemaException:
       raise SchemaException(
           'types in Optional(types=%r%s) should be a Schema or a list of '
@@ -577,7 +577,7 @@ class Optional(AnyOf):
     if data is None:
       return
     try:
-      super(Optional, self).Validate(data)
+      super().Validate(data)
     except SchemaException:
       raise SchemaException(
           '%r is not None and does not match any type in %r' % (data,

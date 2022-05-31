@@ -17,7 +17,7 @@ from cros.factory.hwid.service.appengine import memcache_adapter
 class MemcacheAdapterTest(unittest.TestCase):
 
   def setUp(self):
-    super(MemcacheAdapterTest, self).setUp()
+    super().setUp()
     memcache_adapter.MEMCACHE_CHUNKSIZE = 950000
     memcache_adapter.MAX_NUMBER_CHUNKS = 10
 

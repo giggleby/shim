@@ -220,7 +220,7 @@ class AttrDict(dict):
     return obj
 
   def __init__(self, *args, **kwargs):
-    super(AttrDict, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     for key, val in self.items():
       self[key] = self._Convert(val)
     self.__dict__ = self
@@ -244,7 +244,7 @@ class Singleton(type):
 
   def __call__(cls, *args, **kwargs):
     if cls not in cls._instances:
-      cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+      cls._instances[cls] = super().__call__(*args, **kwargs)
     return cls._instances[cls]
 
 

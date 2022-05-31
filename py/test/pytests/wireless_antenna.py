@@ -133,7 +133,7 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
 
   def __init__(self, device, interface, phy_name, services,
                switch_antenna_config, switch_antenna_sleep_secs, scan_timeout):
-    super(SwitchAntennaWiFiChip, self).__init__(device, interface, phy_name)
+    super().__init__(device, interface, phy_name)
     self._services = [(service.ssid, service.freq) for service in services]
     self._switch_antenna_config = switch_antenna_config
     self._signal_table = {antenna: {service: []
@@ -467,7 +467,7 @@ class RadiotapWiFiChip(wifi.WiFiChip):
 
   def __init__(self, device, interface, phy_name, services, connect_timeout,
                scan_timeout, keep_monitor):
-    super(RadiotapWiFiChip, self).__init__(device, interface, phy_name)
+    super().__init__(device, interface, phy_name)
     self._services = [(service.ssid, service.freq) for service in services]
     self._signal_table = {service: {antenna: []
                                     for antenna in self._ANTENNA_CONFIG}

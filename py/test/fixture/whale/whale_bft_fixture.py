@@ -58,7 +58,7 @@ class WhaleBFTFixture(bft.BFTFixture):
       bft.BFTFixture.StatusColor.OFF: ('off', 'off')}
 
   def __init__(self):
-    super(WhaleBFTFixture, self).__init__()
+    super().__init__()
     self._servo = None
     self._color_sensor1 = None
     self._keyboard_emulator = None

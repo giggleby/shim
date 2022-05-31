@@ -18,7 +18,7 @@ class CombinationFunction(function.Function):
   ]
 
   def __init__(self, **kwargs):
-    super(CombinationFunction, self).__init__(**kwargs)
+    super().__init__(**kwargs)
     # Interpret the function expressions to function instances.
     self.functions = [
         function.InterpretFunction(func) for func in self.args.functions]

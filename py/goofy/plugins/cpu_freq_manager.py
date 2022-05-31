@@ -11,7 +11,7 @@ from cros.factory.utils import type_utils
 class CPUFreqManager(plugin.Plugin):
 
   def __init__(self, goofy):
-    super(CPUFreqManager, self).__init__(goofy, [plugin.RESOURCE.CPU])
+    super().__init__(goofy, [plugin.RESOURCE.CPU])
     self._cpu_freq_manager = CpufreqManager(event_log=goofy.event_log)
 
   @type_utils.Overrides

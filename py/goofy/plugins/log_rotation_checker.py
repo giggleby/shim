@@ -19,7 +19,7 @@ class LogRotationChecker(periodic_plugin.PeriodicPlugin):
   """
 
   def __init__(self, goofy, disable_rotation, period_secs=15):
-    super(LogRotationChecker, self).__init__(goofy, period_secs)
+    super().__init__(goofy, period_secs)
     self.disable_rotation = disable_rotation
 
   @type_utils.Overrides

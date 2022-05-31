@@ -52,7 +52,7 @@ class InputGCSScan(plugin_base.InputPlugin):
     self.start_time = None
     self.end_time = None
     self.record_path = None
-    super(InputGCSScan, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Authenticates the connection to Cloud Storage."""

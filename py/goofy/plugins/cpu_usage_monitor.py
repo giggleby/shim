@@ -12,7 +12,7 @@ from cros.factory.utils import type_utils
 class CPUUsageMonitor(plugin.Plugin):
 
   def __init__(self, goofy, period_secs):
-    super(CPUUsageMonitor, self).__init__(goofy)
+    super().__init__(goofy)
     self._period_secs = period_secs
     self._cpu_usage_monitor = None
 

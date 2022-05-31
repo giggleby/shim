@@ -103,7 +103,7 @@ class FakeEvent(threading.Event().__class__):
   really block, but only advance the timeline.
   """
   def __init__(self, timeline):
-    super(FakeEvent, self).__init__()
+    super().__init__()
     self._timeline = timeline
 
   def wait(self, timeout=None):
@@ -121,14 +121,14 @@ class FakeQueue(queue.Queue):
   block.
   """
   def __init__(self, timeline):
-    super(FakeQueue, self).__init__()
+    super().__init__()
     self._timeline = timeline
 
   def get(self, block=True, timeout=None):
     if not block:
-      return super(FakeQueue, self).get(block, timeout)
+      return super().get(block, timeout)
     self._timeline.AdvanceTime(timeout, lambda: not self.empty())
-    return super(FakeQueue, self).get(False)
+    return super().get(False)
 
   def join(self):
     raise NotImplementedError

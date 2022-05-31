@@ -41,7 +41,7 @@ class LED(device_types.DeviceComponent):
 
   def __init__(self, device):
     """Probe all maximum brightnesses in advance."""
-    super(LED, self).__init__(device)
+    super().__init__(device)
     self.led_infoes = {}
     self._GetLEDInfo()
 

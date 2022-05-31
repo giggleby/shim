@@ -34,8 +34,7 @@ class VSyncSensorController(sensor_utils.BasicSensorController):
   """
 
   def __init__(self, board, name, location):
-    super(VSyncSensorController, self).__init__(
-        board, name, location, [IN_COUNT, FREQUENCY])
+    super().__init__(board, name, location, [IN_COUNT, FREQUENCY])
 
   def _GetSysfsValue(self, filename, path=None):
     """Read the content of given path.  Overriding the one from parent

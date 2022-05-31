@@ -41,7 +41,7 @@ class OutputSocket(plugin_base.OutputPlugin):
 
   def __init__(self, *args, **kwargs):
     self._sock = None
-    super(OutputSocket, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def Main(self):
     """Main thread of the plugin."""
@@ -96,7 +96,7 @@ class OutputSocketSender(log_utils.LoggerMixin):
     self.logger = logging.getLogger(logger_name)
     self._sock = sock
     self._plugin_api = plugin_api
-    super(OutputSocketSender, self).__init__()
+    super().__init__()
 
   def ProcessRequest(self, events):
     """Sends a request to an input socket plugin."""

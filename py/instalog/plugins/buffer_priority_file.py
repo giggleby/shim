@@ -74,7 +74,7 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
     self._produce_partition = 0
     self._consume_partition = 0
 
-    super(BufferPriorityFile, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Sets up the plugin."""

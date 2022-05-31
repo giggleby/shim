@@ -98,7 +98,7 @@ class ConfigNotFoundError(Exception):
 
 class _JsonFileInvalidError(Exception):
   def __init__(self, filename, detail):
-    super(_JsonFileInvalidError, self).__init__(filename, detail)
+    super().__init__(filename, detail)
     self.filename = filename
     self.detail = detail
 
@@ -117,7 +117,7 @@ class SchemaFileInvalidError(_JsonFileInvalidError):
 
 class ConfigInvalidError(Exception):
   def __init__(self, fail_reason, config_files):
-    super(ConfigInvalidError, self).__init__(fail_reason, config_files)
+    super().__init__(fail_reason, config_files)
     self.fail_reason = fail_reason
     self.config_files = config_files
 
@@ -583,7 +583,7 @@ class ResolvedConfig(dict):
   This class inherits dict so all dict operations should work on its instances.
   """
   def __init__(self, *args, **kwargs):
-    super(ResolvedConfig, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self._recipe = []
 
   def SetDepend(self, paths):

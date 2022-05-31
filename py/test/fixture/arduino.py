@@ -64,9 +64,8 @@ class ArduinoController(serial_utils.SerialDevice):
     Besides parameters in parent's ctor, it adds ready_delay_secs which is
     used to wait for Arduino to boot after reset.
     """
-    super(ArduinoController, self).__init__(
-        send_receive_interval_secs=send_receive_interval_secs,
-        retry_interval_secs=retry_interval_secs, log=log)
+    super().__init__(send_receive_interval_secs=send_receive_interval_secs,
+                     retry_interval_secs=retry_interval_secs, log=log)
     self._ready_delay_secs = ready_delay_secs
 
   def __del__(self):
@@ -92,7 +91,7 @@ class ArduinoController(serial_utils.SerialDevice):
     if 'driver' not in kwargs:
       kwargs['driver'] = 'cdc_acm'
 
-    super(ArduinoController, self).Connect(**kwargs)
+    super().Connect(**kwargs)
     time.sleep(self._ready_delay_secs)
 
     if not self.Ping():

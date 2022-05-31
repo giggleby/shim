@@ -190,7 +190,7 @@ class DeviceInterface(sys_interface.SystemInterface):
       link: A cros.factory.device.device_types.DeviceLink instance for accessing
             device.
     """
-    super(DeviceInterface, self).__init__()
+    super().__init__()
     self.link = link
 
   @DeviceProperty

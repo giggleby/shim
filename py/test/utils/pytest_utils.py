@@ -115,7 +115,7 @@ class TestResult(unittest.TestResult):
         corresponding traceback objects.
   """
   def __init__(self):
-    super(TestResult, self).__init__()
+    super().__init__()
     self.failure_details = []
 
   def DumpStr(self):
@@ -123,11 +123,11 @@ class TestResult(unittest.TestResult):
                             for exc, tb in self.failure_details)
 
   def addError(self, test, err):
-    super(TestResult, self).__init__(test, err)
+    super().__init__(test, err)
     self._RecordFailureDetail(err)
 
   def addFailure(self, test, err):
-    super(TestResult, self).__init__(test, err)
+    super().__init__(test, err)
     self._RecordFailureDetail(err)
 
   def _RecordFailureDetail(self, err):

@@ -135,7 +135,7 @@ class ServoClientError(Exception):
     else:
       message = '%s :: %s' % (text, e)
     # Pass the message to Exception class.
-    super(ServoClientError, self).__init__(message)
+    super().__init__(message)
 
 
 class ServoClient:
@@ -157,10 +157,11 @@ class ServoClient:
       verbose: Enables verbose messaging across xmlrpc.client.ServerProxy.
     """
     remote = 'http://%s:%s' % (host, port)
-    # __setattr__ of this class is overriden.
-    super(ServoClient, self).__setattr__(
-        '_server', TimeoutXMLRPCServerProxy(remote, timeout=timeout,
-                                            verbose=verbose, allow_none=True))
+    # __setattr__ of this class is overridden.
+    super().__setattr__(
+        '_server',
+        TimeoutXMLRPCServerProxy(remote, timeout=timeout, verbose=verbose,
+                                 allow_none=True))
 
   def Get(self, name):
     """Gets the value from servo for control name.
@@ -336,7 +337,7 @@ class ServoClient:
       ServoClientError: If error occurs when setting value.
     """
     if name in self.__dict__:  # existing attributes
-      super(ServoClient, self).__setattr__(name, value)
+      super().__setattr__(name, value)
     else:
       self.Set(name, value)
 

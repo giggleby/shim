@@ -12,7 +12,7 @@ class Lock(synchronize.Lock):
 
   def __init__(self, logger_name):
     # Lock initialize with a default context if ctx is None.
-    super(Lock, self).__init__(ctx=None)
+    super().__init__(ctx=None)
     self.logger = logging.getLogger(logger_name)
 
   def IsHolder(self):

@@ -48,7 +48,7 @@ class TerminalManager:
 
     class TerminalWebSocket(WebSocket):
       def __init__(self, fd, **kwargs):
-        super(TerminalWebSocket, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._fd = fd
         self._control_state = None
         self._control_string = ''

@@ -23,7 +23,7 @@ class CachedProbeFunctionTest(unittest.TestCase):
       called = False
 
       def __init__(self):
-        super(_SimpleCachedProbeFunction, self).__init__()
+        super().__init__()
         self.GetCategoryFromArgs = mock.MagicMock()
 
       @classmethod
@@ -76,7 +76,7 @@ class LazyCachedProbeFunctionTest(unittest.TestCase):
       called = set()
 
       def __init__(self):
-        super(_Function, self).__init__()
+        super().__init__()
         self.GetCategoryFromArgs = mock.MagicMock()
 
       @classmethod

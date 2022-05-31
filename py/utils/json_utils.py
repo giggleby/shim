@@ -86,7 +86,7 @@ class JSONDatabase(dict):
       allow_create: If True, the file will be automatically created if not
         exists.
     """
-    super(JSONDatabase, self).__init__()
+    super().__init__()
     self._file_path = file_path
     if not allow_create or os.path.exists(file_path):
       self.Load()

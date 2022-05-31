@@ -46,7 +46,7 @@ class InputSocket(plugin_base.InputPlugin):
     self._sock = None
     self._accept_thread = None
     self._threads = {}
-    super(InputSocket, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Sets up the plugin."""
@@ -132,7 +132,7 @@ class InputSocketReceiver(log_utils.LoggerMixin):
     self._conn = conn
     self._plugin_api = plugin_api
     self._tmp_dir = None
-    super(InputSocketReceiver, self).__init__()
+    super().__init__()
 
   def ProcessRequest(self):
     """Receives a request from an output socket plugin."""

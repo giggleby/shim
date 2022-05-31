@@ -79,7 +79,7 @@ class LocalFileSystemAdapter(FileSystemAdapter):
     return cls.EXCEPTION_MAPPER
 
   def __init__(self, base, encoding='utf-8'):
-    super(LocalFileSystemAdapter, self).__init__()
+    super().__init__()
     self._base = base
     self._encoding = encoding
 

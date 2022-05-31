@@ -54,7 +54,7 @@ class ChromeOSBoard(linux.LinuxBoard):
 
   @type_utils.Overrides
   def GetStartupMessages(self):
-    res = super(ChromeOSBoard, self).GetStartupMessages()
+    res = super().GetStartupMessages()
 
     eventlog = self.CallOutput(
         ['elogtool', 'list'], stderr=self.STDOUT)

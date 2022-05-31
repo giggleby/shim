@@ -46,9 +46,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     at the same time. So we use `iioservice_simpleclient` to query the
     sensor data.
     """
-    super(AccelerometerController, self).__init__(
-        board, name, location, ['in_accel_x', 'in_accel_y', 'in_accel_z'],
-        scale=True)
+    super().__init__(board, name, location,
+                     ['in_accel_x', 'in_accel_y', 'in_accel_z'], scale=True)
     self.location = location
 
   def CleanUpCalibrationValues(self):

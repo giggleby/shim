@@ -16,7 +16,7 @@ class HardwareMonitorException(Exception):
 class HardwareMonitorDevice(device_types.DeviceComponent):
   """A class representing a single hwmon device."""
   def __init__(self, dut, path):
-    super(HardwareMonitorDevice, self).__init__(dut)
+    super().__init__(dut)
     self._path = path
 
   def GetAttribute(self, name):
@@ -30,7 +30,7 @@ class HardwareMonitor(device_types.DeviceComponent):
   """Utility class for hardware monitor devices."""
 
   def __init__(self, dut, hwmon_path=_HWMON_PATH):
-    super(HardwareMonitor, self).__init__(dut)
+    super().__init__(dut)
     self._hwmon_path = hwmon_path
 
   def FindOneDevice(self, attr_name, attr_value):

@@ -96,7 +96,7 @@ class SystemStatus(device_types.DeviceComponent):
   """
 
   def __init__(self, device=None):
-    super(SystemStatus, self).__init__(device)
+    super().__init__(device)
     self._overrides = {}
 
   def Snapshot(self):

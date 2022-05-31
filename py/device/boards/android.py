@@ -31,9 +31,8 @@ class AndroidBoard(linux.LinuxBoard):
       command = ' '.join(pipes.quote(param) for param in command)
 
     command = ['TMPDIR=%s' % self.TMPDIR, 'sh', '-c', command]
-    return super(AndroidBoard, self).Popen(
-        command, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, log=log,
-        encoding=encoding)
+    return super().Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
+                         cwd=cwd, log=log, encoding=encoding)
 
   @device_types.DeviceProperty
   def audio(self):

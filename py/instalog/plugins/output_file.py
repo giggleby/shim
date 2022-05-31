@@ -77,7 +77,7 @@ class OutputFile(plugin_base.OutputPlugin):
   ]
 
   def __init__(self, *args, **kwargs):
-    super(OutputFile, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.target_dir = None
 
   def SetUp(self):

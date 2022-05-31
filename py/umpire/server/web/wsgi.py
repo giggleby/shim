@@ -47,7 +47,7 @@ class WSGISession(type_utils.AttrDict):
       environ: WSGI environ dictionary.
       start_response: WSGI start_response object.
     """
-    super(WSGISession, self).__init__(environ)
+    super().__init__(environ)
     for key, value in environ.items():
       if key.startswith('wsgi.'):
         key = 'wsgi_' + key[5:]

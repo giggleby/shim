@@ -151,7 +151,7 @@ class SingleTouchMonitor(TouchMonitorBase):
       y: float, normalized y coordinate in [0, 1].
     """
     def __init__(self):
-      super(SingleTouchMonitor.State, self).__init__()
+      super().__init__()
       self.x = 0.0
       self.y = 0.0
 
@@ -161,7 +161,7 @@ class SingleTouchMonitor(TouchMonitorBase):
     Args:
       device: evdev.InputDevice, the single-touch device to monitor.
     """
-    super(SingleTouchMonitor, self).__init__(device)
+    super().__init__(device)
     self._normalize_x = self._GetNormalizer(ecodes.ABS_X)
     self._normalize_y = self._GetNormalizer(ecodes.ABS_Y)
     self._state.x = self._normalize_x(self._absinfos[ecodes.ABS_X].value)
@@ -212,7 +212,7 @@ class MultiTouchMonitor(TouchMonitorBase):
       num_fingers: Number of slots activating now.
     """
     def __init__(self):
-      super(MultiTouchMonitor.State, self).__init__()
+      super().__init__()
       self.slots = []
       self.num_fingers = 0
 
@@ -235,7 +235,7 @@ class MultiTouchMonitor(TouchMonitorBase):
       out_buf = fcntl.ioctl(device.fileno(), EVIOCGMTSLOTS, in_buf)
       return struct.unpack(fmt, out_buf)[1:]
 
-    super(MultiTouchMonitor, self).__init__(device)
+    super().__init__(device)
     self._normalize_x = self._GetNormalizer(ecodes.ABS_MT_POSITION_X)
     self._normalize_y = self._GetNormalizer(ecodes.ABS_MT_POSITION_Y)
     num_slots = self._absinfos[ecodes.ABS_MT_SLOT].max + 1

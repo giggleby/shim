@@ -29,7 +29,7 @@ class TimeSanitizer(plugin.Plugin):
           no periodic task would be performed again.
       base_time_files: the based file for time reference.
     """
-    super(TimeSanitizer, self).__init__(goofy)
+    super().__init__(goofy)
 
     base_time_files = base_time_files or []
 

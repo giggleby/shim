@@ -24,7 +24,7 @@ class Error(Exception):
   """
 
   def __init__(self, msg, error_id=None, error_msg=None):
-    super(Error, self).__init__(msg)
+    super().__init__(msg)
     self.error_id = error_id
     self.error_msg = error_msg
 

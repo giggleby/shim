@@ -127,7 +127,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
 
   @classmethod
   def setUpClass(cls):
-    super(DomeAPITest, cls).setUpClass()
+    super().setUpClass()
 
     cls.PROJECT_WITHOUT_UMPIRE_NAME = 'project_without_umpire'
     cls.PROJECT_WITH_UMPIRE_NAME = 'project_with_umpire'

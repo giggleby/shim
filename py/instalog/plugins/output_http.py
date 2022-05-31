@@ -65,7 +65,7 @@ class OutputHTTP(plugin_base.OutputPlugin):
     self._max_bytes = http_common.DEFAULT_MAX_BYTES
     self._target_url = ''
     self._gpg = None
-    super(OutputHTTP, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Sets up the plugin."""

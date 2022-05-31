@@ -51,8 +51,7 @@ class Component(
               fields=None):
     if fields is None:
       fields = {}
-    return super(Component, cls).__new__(cls, cls_, name, information,
-                                         is_vp_related, fields)
+    return super().__new__(cls, cls_, name, information, is_vp_related, fields)
 
 
 class Label(NamedTuple):

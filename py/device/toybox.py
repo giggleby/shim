@@ -60,7 +60,7 @@ class Toybox(device_types.DeviceComponent):
       provider_map: override default provider map, see Toybox._PROVIDER_MAP for
         more details.
     """
-    super(Toybox, self).__init__(dut)
+    super().__init__(dut)
     self._sudo = sudo
     self._provider_map = provider_map or Toybox._PROVIDER_MAP
 

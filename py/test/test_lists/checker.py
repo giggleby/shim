@@ -57,7 +57,7 @@ class TestListExpressionVisitor(ast.NodeVisitor):
   ast_node should be a single ast.Expression.
   """
   def __init__(self):
-    super(TestListExpressionVisitor, self).__init__()
+    super().__init__()
     self.free_vars = set()
     self.bounded_vars = set()
 

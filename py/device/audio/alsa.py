@@ -108,7 +108,7 @@ class AlsaAudioControl(base.BaseAudioControl):
     self.ucm_card_map = ucm_card_map
     self.ucm_device_map = ucm_device_map
     self.ucm_verb = ucm_verb
-    super(AlsaAudioControl, self).__init__(dut, config_name, mixer_controller)
+    super().__init__(dut, config_name, mixer_controller)
 
   def _CreateAudioConfigManager(self, config_name):
     exceptions = []

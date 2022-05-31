@@ -74,7 +74,7 @@ class BasicSensorController(device_types.DeviceComponent):
       signal_names: A list of signals to read.
       scale: Whether to scale the return value.
     """
-    super(BasicSensorController, self).__init__(dut)
+    super().__init__(dut)
     self.signal_names = signal_names
     self._iio_path = FindDevice(self._device, IIO_DEVICES_PATTERN, name=name,
                                 location=location)

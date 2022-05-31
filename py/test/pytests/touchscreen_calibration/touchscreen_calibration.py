@@ -37,7 +37,7 @@ Event = collections.namedtuple('Event', ['data'])
 class Error(Exception):
   def __init__(self, msg):
     session.console.error(msg)
-    super(Error, self).__init__()
+    super().__init__()
 
 
 def _CreateXMLRPCSensorsClient(addr=('localhost', 8000)):

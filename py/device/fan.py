@@ -114,7 +114,7 @@ class SysFSFanControl(FanControl):
             content for "set_speed_filename" file with a given RPM. default is
             str.
     """
-    super(SysFSFanControl, self).__init__(dut)
+    super().__init__(dut)
     self._fans = []
     if fans_info is not None:
       for fan_info in fans_info:

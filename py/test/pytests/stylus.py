@@ -67,7 +67,7 @@ from cros.factory.external import evdev
 class StylusMonitor(touch_monitor.SingleTouchMonitor):
 
   def __init__(self, device, ui):
-    super(StylusMonitor, self).__init__(device)
+    super().__init__(device)
     self._ui = ui
     self._lock = threading.RLock()
     self._buffer = []

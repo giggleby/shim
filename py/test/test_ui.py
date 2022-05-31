@@ -629,7 +629,7 @@ class StandardUI(UI):
   default_html = '<test-template></test-template>'
 
   def __init__(self, event_loop=None):
-    super(StandardUI, self).__init__(event_loop=event_loop)
+    super().__init__(event_loop=event_loop)
     self.ImportHTML('/templates.html')
 
   def SetTitle(self, html):

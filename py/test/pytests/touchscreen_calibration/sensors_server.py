@@ -234,7 +234,7 @@ class SensorServiceSamus(BaseSensorService):
   """
 
   def __init__(self, log=None):
-    super(SensorServiceSamus, self).__init__(SAMUS, log=log)
+    super().__init__(SAMUS, log=log)
     self.num_rows = int(self.config.Read('TouchSensors', 'NUM_ROWS'))
     self.num_cols = int(self.config.Read('TouchSensors', 'NUM_COLS'))
 
@@ -373,8 +373,7 @@ class SensorServiceSamus(BaseSensorService):
     # There are 3 columns of metal fingers on the probe. The touched_cols are
     # derived through experiments. The values may vary from board to board.
     touched_cols = [1, 35, 69]
-    return super(SensorServiceSamus, self)._VerifyDeltasTouched(data,
-                                                                touched_cols)
+    return super()._VerifyDeltasTouched(data, touched_cols)
 
 
 class SensorServiceRyu(BaseSensorService):
@@ -396,7 +395,7 @@ class SensorServiceRyu(BaseSensorService):
   def __init__(self, ip, dut, remote_bin_root='', remote_data_dir='', tool='',
                fw_update_tool='', hid_tool='', fw_file='', install_flag=True,
                log=None):
-    super(SensorServiceRyu, self).__init__(RYU, log=log)
+    super().__init__(RYU, log=log)
     self.ip = ip
     self.dut = dut
     self.remote_bin_root = remote_bin_root
@@ -520,8 +519,7 @@ class SensorServiceRyu(BaseSensorService):
       True if the sensor data are legitimate.
     """
     touched_cols = list(range(self.num_cols))
-    return super(SensorServiceRyu, self)._VerifyDeltasTouched(data,
-                                                              touched_cols)
+    return super()._VerifyDeltasTouched(data, touched_cols)
 
   def ReadTRx(self, category):
     """Read TRx test data.

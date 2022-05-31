@@ -185,7 +185,7 @@ class RegionField(dict):
         'region': []
     }
 
-    super(RegionField, self).__init__(fields_dict)
+    super().__init__(fields_dict)
 
   @property
   def is_legacy_style(self):
@@ -255,12 +255,11 @@ class _RegionComponent(dict):
         for region in status_lists.get(status, []):
           components_dict['items'][region]['status'] = status
 
-    super(_RegionComponent, self).__init__(components_dict)
+    super().__init__(components_dict)
     self.status_lists = status_lists
 
   def __eq__(self, rhs):
-    return (isinstance(rhs, _RegionComponent) and
-            super(_RegionComponent, self).__eq__(rhs) and
+    return (isinstance(rhs, _RegionComponent) and super().__eq__(rhs) and
             self.status_lists == rhs.status_lists)
 
   def __ne__(self, rhs):

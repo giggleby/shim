@@ -126,5 +126,4 @@ class Prespawner:
 class PytestPrespawner(Prespawner):
 
   def __init__(self):
-    super(PytestPrespawner, self).__init__(
-        PYTEST_PRESPAWNER_PATH, [], pipe_stdout=True)
+    super().__init__(PYTEST_PRESPAWNER_PATH, [], pipe_stdout=True)

@@ -19,7 +19,7 @@ class N1914A(agilent_scpi.AgilentSCPI):
   """An Agilent EPM Series Power Meter (N1914A) device."""
 
   def __init__(self, *args, **kwargs):
-    super(N1914A, self).__init__('N1914A', *args, **kwargs)
+    super().__init__('N1914A', *args, **kwargs)
     self.timeout = 20  # Weak power will cause a relatively long run.
 
   # Format related methods.

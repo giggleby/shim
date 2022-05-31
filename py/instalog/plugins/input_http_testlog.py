@@ -74,7 +74,7 @@ class InputHTTPTestlog(input_http.InputHTTP):
   )
 
   def __init__(self, *args, **kwargs):
-    super(InputHTTPTestlog, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
     self.noisy_info = log_utils.NoisyLogger(
         self.info, suppress_timeout=3600,

@@ -20,7 +20,7 @@ from cros.factory.utils import process_utils
 class TimeoutXMLRPCTest(unittest.TestCase):
 
   def __init__(self, *args, **kwargs):
-    super(TimeoutXMLRPCTest, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.client = None
 
   def setUp(self):

@@ -60,7 +60,7 @@ class Watchdog:
   """Linux Kernel watchdog class."""
 
   def __init__(self, stop=True):
-    super(Watchdog, self).__init__()
+    super().__init__()
     self.fd = open(WATCHDOG_DEVICE, 'w', buffering=0)
     self.stop = stop
     if stop:

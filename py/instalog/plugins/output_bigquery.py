@@ -77,7 +77,7 @@ class OutputBigQuery(plugin_base.OutputPlugin):
     self.client = None
     self.table_ref = None
     self._gcs = None
-    super(OutputBigQuery, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Builds the client object and the table object to run BigQuery calls."""

@@ -31,5 +31,4 @@ class AllowLocalHostOrIsAuthenticated(drf_permissions.IsAuthenticated):
       return True
 
     # fallback to authentication
-    return super(
-        AllowLocalHostOrIsAuthenticated, self).has_permission(request, view)
+    return super().has_permission(request, view)

@@ -76,7 +76,7 @@ class UTF16StructField(StructField):
   def __init__(self, max_length, name):
     self.max_length = max_length
     fmt = '%ds' % max_length
-    super(UTF16StructField, self).__init__(fmt, name)
+    super().__init__(fmt, name)
 
   def Pack(self, value):
     new_value = value.encode(self.encoding)
@@ -94,7 +94,7 @@ class GUID(uuid.UUID):
 
   def __str__(self):
     """Returns GUID in upper case."""
-    return super(GUID, self).__str__().upper()
+    return super().__str__().upper()
 
   @staticmethod
   def Random():
@@ -105,7 +105,7 @@ class GUIDStructField(StructField):
   """A GUID field."""
 
   def __init__(self, name):
-    super(GUIDStructField, self).__init__('16s', name)
+    super().__init__('16s', name)
 
   def Pack(self, value):
     if value is None:

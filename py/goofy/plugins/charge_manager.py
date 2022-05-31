@@ -12,8 +12,7 @@ from cros.factory.utils import type_utils
 class ChargeManager(periodic_plugin.PeriodicPlugin):
 
   def __init__(self, goofy, period_secs, min_charge_pct, max_charge_pct):
-    super(ChargeManager, self).__init__(
-        goofy, period_secs, [plugin.RESOURCE.POWER])
+    super().__init__(goofy, period_secs, [plugin.RESOURCE.POWER])
     self._charge_manager = charge_manager.ChargeManager(min_charge_pct,
                                                         max_charge_pct)
 
@@ -23,11 +22,11 @@ class ChargeManager(periodic_plugin.PeriodicPlugin):
 
   @type_utils.Overrides
   def OnStop(self):
-    super(ChargeManager, self).OnStop()
+    super().OnStop()
     self._charge_manager.StartCharging()
     self._charge_manager.DisableDPS()
 
   @type_utils.Overrides
   def OnStart(self):
-    super(ChargeManager, self).OnStart()
+    super().OnStart()
     self._charge_manager.EnableDPS()

@@ -97,7 +97,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
   Error = BluetoothManagerException
 
   def __init__(self, dut):
-    super(ChromeOSBluetoothManager, self).__init__(dut)
+    super().__init__(dut)
     DBusGMainLoop(set_as_default=True)
     self._main_loop = None
     self._manager = None

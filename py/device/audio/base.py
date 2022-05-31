@@ -92,7 +92,7 @@ class BaseAudioControl(device_types.DeviceComponent):
   """An abstract class for different target audio utils"""
 
   def __init__(self, dut, config_name, mixer_controller):
-    super(BaseAudioControl, self).__init__(dut)
+    super().__init__(dut)
     self._playback_thread = None
     self.mixer_controller = mixer_controller
     self.LoadConfig(config_name)

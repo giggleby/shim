@@ -243,4 +243,4 @@ class AndroidStorage(Storage):
         except subprocess.CalledProcessError:
           logging.error('remount: failed to run adb remount.')
           return False
-    return super(AndroidStorage, self).Remount(path, options)
+    return super().Remount(path, options)

@@ -41,7 +41,7 @@ class TinyalsaMixerController(base.BaseMixerController):
   _RE_CARD_INDEX = re.compile(r'.*(\d+).*?\[(.+?)\]')
 
   def __init__(self, device, remote_directory):
-    super(TinyalsaMixerController, self).__init__(device)
+    super().__init__(device)
     self._remote_directory = remote_directory
 
   def GetMixerControls(self, name, card='0'):
@@ -194,8 +194,7 @@ class TinyalsaAudioControl(base.BaseAudioControl):
 
   def __init__(self, dut, config_name=None, remote_directory='/data'):
     mixer_controller = TinyalsaMixerController(dut, remote_directory)
-    super(TinyalsaAudioControl, self).__init__(
-        dut, config_name, mixer_controller)
+    super().__init__(dut, config_name, mixer_controller)
 
   def CreateAudioLoop(self, in_card, in_dev, out_card, out_dev):
     """Create an audio loop by tinyloop.

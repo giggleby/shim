@@ -20,7 +20,7 @@ class BatteryMonitor(periodic_plugin.PeriodicPlugin):
 
   def __init__(self, goofy, period_secs, critical_low_battery_pct=None,
                warning_low_battery_pct=False):
-    super(BatteryMonitor, self).__init__(goofy, period_secs)
+    super().__init__(goofy, period_secs)
 
     self._critical_low_battery_pct = critical_low_battery_pct
     self._warning_low_battery_pct = warning_low_battery_pct

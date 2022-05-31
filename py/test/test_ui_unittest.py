@@ -180,7 +180,7 @@ _PROBE_INTERVAL = 100
 class EventLoopRunTest(EventLoopTestBase):
 
   def setUp(self):
-    super(EventLoopRunTest, self).setUp()
+    super().setUp()
 
     self._fake_event_client_queue = mock_time_utils.FakeQueue(
         timeline=self._timeline)
@@ -191,7 +191,7 @@ class EventLoopRunTest(EventLoopTestBase):
     test_ui._EVENT_LOOP_PROBE_INTERVAL = _PROBE_INTERVAL
 
   def tearDown(self):
-    super(EventLoopRunTest, self).tearDown()
+    super().tearDown()
     # pylint: disable=protected-access
     test_ui._EVENT_LOOP_PROBE_INTERVAL = self._original_probe_interval
 
@@ -561,7 +561,7 @@ class UITestBase(unittest.TestCase):
 class UITest(UITestBase):
 
   def setUp(self):
-    super(UITest, self).setUp()
+    super().setUp()
     self._ui = test_ui.UI(event_loop=self._event_loop)
 
   def testSetHTML(self):
@@ -828,7 +828,7 @@ class UIKeyTest(unittest.TestCase):
 class StandardUITest(UITestBase):
 
   def setUp(self):
-    super(StandardUITest, self).setUp()
+    super().setUp()
     self._ui = test_ui.StandardUI(event_loop=self._event_loop)
 
     self._patchers = []
@@ -841,7 +841,7 @@ class StandardUITest(UITestBase):
     })
 
   def tearDown(self):
-    super(StandardUITest, self).tearDown()
+    super().tearDown()
     for patcher in self._patchers:
       patcher.stop()
 

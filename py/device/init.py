@@ -27,7 +27,7 @@ class FactoryInit(device_types.DeviceComponent):
   """
 
   def __init__(self, _dut=None):
-    super(FactoryInit, self).__init__(_dut)
+    super().__init__(_dut)
     self._factory_root = self._device.storage.GetFactoryRoot()
     self._init_dir = self._device.path.join(self._factory_root, 'init')
     self._init_script_dir = self._device.path.join(self._init_dir, 'main.d')

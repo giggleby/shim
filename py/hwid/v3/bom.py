@@ -78,7 +78,7 @@ class RamSize:
   _RE = re.compile(r'(^|_)(\d+X)?(\d+)([KMG])B?($|_)')
 
   def __init__(self, ram_size_str=None, byte_count=None):
-    super(RamSize, self).__init__()
+    super().__init__()
     if byte_count is not None:
       self.byte_count = byte_count
       return

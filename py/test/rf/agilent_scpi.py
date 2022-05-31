@@ -9,7 +9,7 @@ class AgilentSCPI(lan_scpi.LANSCPI):
   """An Agilent device that supports SCPI."""
 
   def __init__(self, expected_model, *args, **kwargs):
-    super(AgilentSCPI, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.id_fields = [x.strip() for x in self.id.split(b',')]
     model = self.id_fields[1].decode('utf-8')
     if model != expected_model:

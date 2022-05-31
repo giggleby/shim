@@ -45,7 +45,7 @@ class EvtestButton(GenericButton):
       return (evdev.ecodes.__dict__[self._name] in dev.capabilities().get(
           evdev.ecodes.EV_KEY, []))
 
-    super(EvtestButton, self).__init__(dut)
+    super().__init__(dut)
     self._name = name
     self._event_dev = evdev_utils.FindDevice(device_filter, dev_filter)
 
@@ -66,7 +66,7 @@ class GpioButton(GenericButton):
       number: An integer for GPIO number.
       is_active_high: Boolean flag for polarity of GPIO ("active" = "pressed").
     """
-    super(GpioButton, self).__init__(dut)
+    super().__init__(dut)
     gpio_base = '/sys/class/gpio'
     self._value_path = self._dut.path.join(gpio_base, 'gpio%d' % number,
                                            'value')
@@ -99,7 +99,7 @@ class CrossystemButton(GenericButton):
       :type dut: cros.factory.device.device_types.DeviceInterface
       name: A string as crossystem parameter that outputs 1 or 0.
     """
-    super(CrossystemButton, self).__init__(dut)
+    super().__init__(dut)
     self._name = name
 
   def IsPressed(self):
@@ -118,7 +118,7 @@ class ECToolButton(GenericButton):
       name: A string as button name.
       active_value: An int indicates the active value.
     """
-    super(ECToolButton, self).__init__(dut)
+    super().__init__(dut)
     self._name = name
     self._active_value = active_value
 

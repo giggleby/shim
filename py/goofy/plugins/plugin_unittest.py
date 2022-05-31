@@ -76,7 +76,7 @@ class PluginTest(unittest.TestCase):
     # the function is bound to the correct instance.
     class PluginA(plugin.Plugin):
       def __init__(self, goofy_instance):
-        super(PluginA, self).__init__(goofy_instance)
+        super().__init__(goofy_instance)
         self.data_a = 1
         self.data_b = 2
 
@@ -92,7 +92,7 @@ class PluginTest(unittest.TestCase):
     # is to ensure functions between classes won't be overrided.
     class PluginB(plugin.Plugin):
       def __init__(self, goofy_instance):
-        super(PluginB, self).__init__(goofy_instance)
+        super().__init__(goofy_instance)
         self.data_a = 3
         self.data_b = 4
 

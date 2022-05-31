@@ -34,7 +34,7 @@ class SysFSHygrometer(Hygrometer):
           indicated by "rh_filename_pattern" to relative humidity in
           percentage. Default is float.
     """
-    super(SysFSHygrometer, self).__init__(device)
+    super().__init__(device)
     candidates = self._device.Glob(rh_filename_pattern)
     assert len(candidates) == 1, 'Not having exactly one candidate.'
     self._rh_filename = candidates[0]

@@ -44,7 +44,7 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
   def __init__(self, *args, **kwargs):
     self.buffer_file = None
     self.attachments_tmp_dir = None
-    super(BufferSimpleFile, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Sets up the plugin."""

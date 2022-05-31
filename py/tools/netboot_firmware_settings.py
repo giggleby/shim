@@ -261,7 +261,7 @@ class IpAddressValue(BytesValue):
         val: A string representation of the IP address to be set to.
     """
     in_addr = socket.inet_pton(socket.AF_INET, val)
-    super(IpAddressValue, self).__init__(in_addr)
+    super().__init__(in_addr)
 
   @classmethod
   def unpack(cls, val):

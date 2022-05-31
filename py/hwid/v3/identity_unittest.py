@@ -49,8 +49,9 @@ class _Sample(dict):
            'encoded_configless']
 
   def __init__(self, *args):
-    super(_Sample, self).__init__({attr_name: args[idx]
-                                   for idx, attr_name in enumerate(self._ARGS)})
+    super().__init__(
+        {attr_name: args[idx]
+         for idx, attr_name in enumerate(self._ARGS)})
 
 # Encoding and decoding both work on following samples.
 _SAMPLES = [

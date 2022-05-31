@@ -45,7 +45,7 @@ class StationSetup(plugin.Plugin):
           server, in the form of (username, password).
       overlord_port: The port that ovl should be connecting to.
     """
-    super(StationSetup, self).__init__(goofy)
+    super().__init__(goofy)
 
     self.key_desc = key_desc
     self.check_overlord = check_overlord

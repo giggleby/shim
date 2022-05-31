@@ -18,7 +18,7 @@ class CoreDumpManager(periodic_plugin.PeriodicPlugin):
       period_secs: The period between each check of core dump files.
       core_dump_watchlist: The list of core dump pattern to watch for.
     """
-    super(CoreDumpManager, self).__init__(goofy, period_secs)
+    super().__init__(goofy, period_secs)
     core_dump_watchlist = core_dump_watchlist or []
     self._core_dump_manager = core_dump_manager.CoreDumpManager(
         core_dump_watchlist)

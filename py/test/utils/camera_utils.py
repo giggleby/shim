@@ -157,7 +157,7 @@ class CVCameraReader(CameraReaderBase):
   """Camera device reader via OpenCV V4L2 interface."""
 
   def __init__(self, device_index=None, dut=None):
-    super(CVCameraReader, self).__init__()
+    super().__init__()
 
     self._device_index = device_index
     if self._device_index is None:
@@ -228,7 +228,7 @@ class MockCameraReader(CameraReaderBase):
       resolution: (width, height) tuple of capture resolution.
       qr: Whether to show QR code.
     """
-    super(MockCameraReader, self).__init__()
+    super().__init__()
     if qr:
       image_name = _MOCK_IMAGE_QR
     elif resolution == (1280, 720):
@@ -271,7 +271,7 @@ class YavtaCameraReader(CameraReaderBase):
     Args:
       device_index: Index of video device.
     """
-    super(YavtaCameraReader, self).__init__()
+    super().__init__()
     self._device_index = device_index
     self._enabled = False
     self._resolution = None
@@ -331,7 +331,7 @@ class CameraDevice:
       sn_format: A regex string describes the camera's serial number format.
       reader: A CameraReader object, defaults to CVCameraReader()
     """
-    super(CameraDevice, self).__init__()
+    super().__init__()
     self._dut = dut
     self._reader = reader or CVCameraReader()
     self._sn_format = None if sn_format is None else re.compile(sn_format)
@@ -406,7 +406,7 @@ class USBCameraDevice(CameraDevice):
       sn_format: A regex string describes the camera's serial number format.
       sn_sysfs_path: A string represents the SN path in sysfs.
     """
-    super(USBCameraDevice, self).__init__(dut, sn_format, reader)
+    super().__init__(dut, sn_format, reader)
     self._sn_sysfs_path = sn_sysfs_path
 
   def GetSerialNumber(self):
@@ -445,7 +445,7 @@ class MIPICameraDevice(CameraDevice):
           'data_addr': A int represents the data addr, e.g. 0x3508
           'length': An int for the requested data length in bytes, e.g. 11
     """
-    super(MIPICameraDevice, self).__init__(dut, sn_format, reader)
+    super().__init__(dut, sn_format, reader)
     self._sn_i2c_param = sn_i2c_param
 
   def GetSerialNumber(self):

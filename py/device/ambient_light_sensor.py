@@ -27,8 +27,8 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
       name: The name attribute of sensor.
       location: The location attribute of sensor.
     """
-    super(AmbientLightSensorController, self).__init__(
-        dut, name, location, [IN_ILLUMINANCE_BIAS, IN_ILLUMINANCE_SCALE])
+    super().__init__(dut, name, location,
+                     [IN_ILLUMINANCE_BIAS, IN_ILLUMINANCE_SCALE])
     self.calib_signal_names = [IN_ILLUMINANCE_BIAS, IN_ILLUMINANCE_SCALE]
     self.location = location
     for input_entry in ['in_illuminance_input', 'in_illuminance_raw']:

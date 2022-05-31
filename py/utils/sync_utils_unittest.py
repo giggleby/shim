@@ -39,7 +39,7 @@ class PollForConditionTest(PollingTestBase):
     return self._Increment() > trigger
 
   def setUp(self):
-    super(PollForConditionTest, self).setUp()
+    super().setUp()
     self.counter = 1
 
   def testPollForCondition(self):
@@ -79,7 +79,7 @@ class WaitForTest(PollingTestBase):
 class QueueGetTest(PollingTestBase):
 
   def setUp(self):
-    super(QueueGetTest, self).setUp()
+    super().setUp()
     self._queue = queue.Queue()
 
   def testQueueGetEmpty(self):

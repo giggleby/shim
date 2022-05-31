@@ -82,7 +82,7 @@ class TimeLineTest(unittest.TestCase):
 
 class FakeEventTest(TimeLineTest):
   def setUp(self):
-    super(FakeEventTest, self).setUp()
+    super().setUp()
     self._event = mock_time_utils.FakeEvent(self._timeline)
 
   def testWait(self):
@@ -109,7 +109,7 @@ class FakeEventTest(TimeLineTest):
 
 class FakeQueueTest(TimeLineTest):
   def setUp(self):
-    super(FakeQueueTest, self).setUp()
+    super().setUp()
     self._queue = mock_time_utils.FakeQueue(self._timeline)
 
   def testGet(self):

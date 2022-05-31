@@ -76,7 +76,7 @@ class SystemLogManager(plugin.Plugin):
                scan_log_period_secs=120,
                rsync_io_timeout=20, polling_period=1, clear_log_paths=None,
                clear_log_excluded_paths=None, enable_foreground_sync=True):
-    super(SystemLogManager, self).__init__(goofy)
+    super().__init__(goofy)
     self._sync_log_paths = sync_log_paths
     self._sync_log_period_secs = sync_log_period_secs
     self._scan_log_period_secs = scan_log_period_secs

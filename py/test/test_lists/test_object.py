@@ -680,7 +680,7 @@ class ShutdownStep(FactoryTest):
   allow_reboot = True
 
   def __init__(self, operation=None, **kwargs):
-    super(ShutdownStep, self).__init__(**kwargs)
+    super().__init__(**kwargs)
     assert not self.pytest_name, 'Reboot/halt steps may not have an pytest'
     assert not self.subtests, 'Reboot/halt steps may not have subtests'
     if not operation:
@@ -695,8 +695,7 @@ class HaltStep(ShutdownStep):
 
   def __init__(self, **kw):
     kw.setdefault('id', 'Halt')
-    super(HaltStep, self).__init__(operation=ShutdownStep.ShutdownTypes.halt,
-                                   **kw)
+    super().__init__(operation=ShutdownStep.ShutdownTypes.halt, **kw)
 
 
 class RebootStep(ShutdownStep):
@@ -704,8 +703,7 @@ class RebootStep(ShutdownStep):
 
   def __init__(self, **kw):
     kw.setdefault('id', 'Reboot')
-    super(RebootStep, self).__init__(
-        operation=ShutdownStep.ShutdownTypes.reboot, **kw)
+    super().__init__(operation=ShutdownStep.ShutdownTypes.reboot, **kw)
 
 
 class FullRebootStep(ShutdownStep):
@@ -713,8 +711,7 @@ class FullRebootStep(ShutdownStep):
 
   def __init__(self, **kw):
     kw.setdefault('id', 'FullReboot')
-    super(FullRebootStep, self).__init__(
-        operation=ShutdownStep.ShutdownTypes.full_reboot, **kw)
+    super().__init__(operation=ShutdownStep.ShutdownTypes.full_reboot, **kw)
 
 
 AutomatedRebootSubTest = RebootStep

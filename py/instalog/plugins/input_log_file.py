@@ -71,7 +71,7 @@ class InputLogFile(plugin_base.InputPlugin):
 
   def __init__(self, *args, **kwargs):
     self.log_files = {}
-    super(InputLogFile, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def ScanLogFiles(self):
     """Updates the internal LogFile objects based on glob results.

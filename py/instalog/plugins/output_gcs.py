@@ -45,7 +45,7 @@ class OutputCloudStorage(plugin_base.OutputPlugin):
   def __init__(self, *args, **kwargs):
     self.target_dir = None
     self.gcs = None
-    super(OutputCloudStorage, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def SetUp(self):
     """Authenticates the connection to Cloud Storage."""

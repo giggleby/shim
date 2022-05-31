@@ -21,7 +21,7 @@ class ThermalMonitor(plugin.Plugin):
           delta observed.
       use_testlog: use testlog to log thermal data.
     """
-    super(ThermalMonitor, self).__init__(goofy)
+    super().__init__(goofy)
     self._period_secs = period_secs
     self._delta_threshold = delta_threshold
     self._thermal_watcher = None

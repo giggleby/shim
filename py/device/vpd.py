@@ -64,7 +64,7 @@ class CommandVPDPartition(Partition):
       name: The name of the partition (e.g., 'RO_VPD').
       raw_file: A raw format image to access.
     """
-    super(CommandVPDPartition, self).__init__(dut)
+    super().__init__(dut)
     self.name = name
     shell_func = functools.partial(gooftool_common.Shell, sys_interface=dut)
     self._vpd_tool = vpd.VPDTool(shell_func, raw_file=raw_file)
@@ -114,7 +114,7 @@ class ImmutableFileBasedPartition(Partition):
       device: Instance of cros.factory.device.device_types.DeviceInterface.
       path: The path of the partition (e.g., '/persist', '/sys/firmware/vpd').
     """
-    super(ImmutableFileBasedPartition, self).__init__(device)
+    super().__init__(device)
     self._path = path
 
   def get(self, key, default=None):
@@ -207,7 +207,7 @@ class FileBasedVPDSource(VPDSource):
   """A source to read VPD from files."""
 
   def __init__(self, dut, path):
-    super(FileBasedVPDSource, self).__init__(dut)
+    super().__init__(dut)
     self._path = path
     self._partition = MutableFileBasedPartition(self._device, self._path)
 
@@ -224,7 +224,7 @@ class SysFSVPDSource(VPDSource):
   """A source to read VPD from sysfs."""
 
   def __init__(self, dut, path=None):
-    super(SysFSVPDSource, self).__init__(dut)
+    super().__init__(dut)
     if path is None:
       path = '/sys/firmware/vpd'
     self._path = path
@@ -246,7 +246,7 @@ class SysRawVPDSource(VPDSource):
   """A source to read VPD from sysfs cached raw blob."""
 
   def __init__(self, dut, path=None):
-    super(SysRawVPDSource, self).__init__(dut)
+    super().__init__(dut)
     if path is None:
       path = '/sys/firmware/vpd'
     self._path = path
@@ -296,7 +296,7 @@ class ChromeOSVitalProductData(VitalProductData):
   """System module for Vital Product Data (VPD) on Chrome OS."""
 
   def __init__(self, dut, path=None):
-    super(ChromeOSVitalProductData, self).__init__(dut)
+    super().__init__(dut)
     self._sysfs_path = path
     if self._sysfs_path is None:
       self._sysfs_path = '/sys/firmware/vpd'
@@ -314,7 +314,7 @@ class AndroidVitalProductData(VitalProductData):
   """System module for Vital Product Data (VPD) on Andoird OS."""
 
   def __init__(self, dut, path=None):
-    super(AndroidVitalProductData, self).__init__(dut)
+    super().__init__(dut)
     self._path = path
     if self._path is None:
       self._path = '/persist'

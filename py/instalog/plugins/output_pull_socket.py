@@ -23,8 +23,8 @@ _DEFAULT_BATCH_SIZE = 500
 _DEFAULT_TIMEOUT = 5
 _DEFAULT_HOSTNAME = '0.0.0.0'
 _ACCEPT_TIMEOUT = 1
-_ACCEPT_LOG_INTERVAL = 60  # interval = _ACCEPT_TIMEOUT * _ACCEPT_LOG_INTERVAL =
-                           # 60s
+# interval = _ACCEPT_TIMEOUT * _ACCEPT_LOG_INTERVAL = 60s
+_ACCEPT_LOG_INTERVAL = 60
 
 
 # TODO(chuntsen): Encryption and authentication
@@ -44,7 +44,7 @@ class OutputPullSocket(plugin_base.OutputPlugin):
   def __init__(self, *args, **kwargs):
     self._sock = None
     self._accept_sock = None
-    super(OutputPullSocket, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
   def GetSocket(self):
     """Accepts a socket from input pull socket."""

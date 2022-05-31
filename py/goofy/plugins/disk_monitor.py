@@ -18,7 +18,7 @@ class DiskMonitor(periodic_plugin.PeriodicPlugin):
 
   def __init__(self, goofy, period_secs, stateful_usage_threshold=None,
                stateful_usage_above_threshold_action=None):
-    super(DiskMonitor, self).__init__(goofy, period_secs)
+    super().__init__(goofy, period_secs)
     self._stateful_usage_threshold = stateful_usage_threshold
     self._stateful_usage_above_threshold_action = (
         stateful_usage_above_threshold_action)

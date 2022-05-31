@@ -99,7 +99,7 @@ class DomeException(rest_framework.exceptions.APIException):
 
   def __init__(self, detail=None, status_code=None):
     self.status_code = status_code or self.status_code
-    super(DomeException, self).__init__(detail)
+    super().__init__(detail)
 
 
 class DomeClientException(DomeException):

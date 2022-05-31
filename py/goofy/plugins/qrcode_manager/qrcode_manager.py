@@ -60,7 +60,7 @@ class QRCodeManager(plugin.Plugin):
   """
 
   def __init__(self, goofy, pos: list, size: list, content: str):
-    super(QRCodeManager, self).__init__(goofy)
+    super().__init__(goofy)
     _POS_SCHEMA.Validate(pos)
     self._CheckSizeEqual(pos, size)
     self._default_pos = pos

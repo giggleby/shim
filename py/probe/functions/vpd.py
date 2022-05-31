@@ -128,13 +128,13 @@ class VPDFunction(cached_probe_function.LazyCachedProbeFunction):
   ]
 
   def __init__(self, **kwargs):
-    super(VPDFunction, self).__init__(**kwargs)
+    super().__init__(**kwargs)
 
     if self.args.key and len(self.args.fields) != 1:
       raise ValueError('Key remap is only available in single field mode.')
 
   def Probe(self):
-    vpd_data = super(VPDFunction, self).Probe()
+    vpd_data = super().Probe()
 
     if not self.args.fields:
       return [vpd_data]

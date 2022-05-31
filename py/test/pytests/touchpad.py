@@ -63,7 +63,7 @@ from cros.factory.external import evdev
 class TouchpadMonitor(touch_monitor.MultiTouchMonitor):
 
   def __init__(self, device, test):
-    super(TouchpadMonitor, self).__init__(device)
+    super().__init__(device)
     self.test = test
 
   def OnKey(self, key_event_code):

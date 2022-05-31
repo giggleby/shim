@@ -2768,7 +2768,7 @@ class SubCommand:
 class SubCommandNamespace(SubCommand):
   """A command namespace."""
   def __init__(self, parser, subparsers):
-    super(SubCommandNamespace, self).__init__(parser, subparsers)
+    super().__init__(parser, subparsers)
     title = '%s subcommands' % self.name
     namespace_subparser = self.subparser.add_subparsers(
         title=title, dest='namespace_subcommand')

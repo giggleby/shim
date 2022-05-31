@@ -25,7 +25,7 @@ class I2CTarget(device_types.DeviceComponent):
       target: 7 bit I2C target address.
       reg_width: Number of bits to write for register address.
     """
-    super(I2CTarget, self).__init__(dut)
+    super().__init__(dut)
     self._bus = bus
     self._target = target
     self._reg_width = reg_width

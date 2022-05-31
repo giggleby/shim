@@ -110,7 +110,7 @@ class WebSocketManager:
         # Add a per-socket lock to use for sending, since ws4py is not
         # thread-safe.
         self.send_lock = threading.Lock()
-        super(MyWebSocket, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
       # pylint: disable=arguments-renamed
       def received_message(socket_self, message):

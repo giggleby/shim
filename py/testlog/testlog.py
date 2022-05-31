@@ -569,7 +569,7 @@ class JSONLogFile(file_utils.FileLockContextManager):
       check_event: Boolean to indicate if we should check the validation of
           each event.
     """
-    super(JSONLogFile, self).__init__(path=path, mode=mode)
+    super().__init__(path=path, mode=mode)
     self._thread_data = thread_data
     self.test_run_id = uuid
     self.seq_generator = seq_generator
@@ -663,7 +663,7 @@ class TestlogLogHandler(logging.Handler):
   def __init__(self, callback):
     self._callback = callback
     self._thread_data = threading.local()
-    super(TestlogLogHandler, self).__init__()
+    super().__init__()
 
   def emit(self, record):
     """Formats and emits event record.

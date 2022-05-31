@@ -17,7 +17,7 @@ class BaseYAMLTagHandlerMetaclass(type):
       for dumper in cls.DUMPERS:
         yaml.add_representer(cls.TARGET_CLASS, cls.YAMLRepresenter,
                              Dumper=dumper)
-    super(BaseYAMLTagHandlerMetaclass, cls).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
 
 
 class BaseYAMLTagHandler(metaclass=BaseYAMLTagHandlerMetaclass):

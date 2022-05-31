@@ -60,12 +60,12 @@ class OutputClassify(output_file.OutputFile):
       ])
 
   def __init__(self, *args, **kwargs):
-    super(OutputClassify, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.subdir_path = None
 
   def SetUp(self):
     """Sets up the plugin."""
-    super(OutputClassify, self).SetUp()
+    super().SetUp()
     if self.args.batch_size != 1:
       self.warning('The batch_size should be 1 in classify plugin')
       self.args.batch_size = 1

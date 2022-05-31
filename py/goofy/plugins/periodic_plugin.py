@@ -31,7 +31,7 @@ class PeriodicPlugin(plugin.Plugin):
           set to False, exception in `RunTask()` would cause the running thread
           to crash, and the following periodic task would be stopped.
     """
-    super(PeriodicPlugin, self).__init__(goofy, used_resources)
+    super().__init__(goofy, used_resources)
     self._thread = None
     self._stop_event = threading.Event()
     self._period_secs = period_secs

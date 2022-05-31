@@ -41,7 +41,7 @@ class DUTEnvironment(Environment):
   """A real environment on a device under test."""
 
   def __init__(self):
-    super(DUTEnvironment, self).__init__()
+    super().__init__()
     self.goofy = None  # Must be assigned later by goofy.
 
   def shutdown(self, operation):

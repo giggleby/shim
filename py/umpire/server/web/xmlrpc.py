@@ -26,7 +26,7 @@ class XMLRPCContainer(twisted_xmlrpc.XMLRPC):
 
   def __init__(self):
     """Constructs Twisted twisted_xmlrpc.XMLRPC resource."""
-    super(XMLRPCContainer, self).__init__(allowNone=True)
+    super().__init__(allowNone=True)
     self.handlers = {}
 
   def listProcedures(self):
@@ -54,7 +54,7 @@ class XMLRPCContainer(twisted_xmlrpc.XMLRPC):
     """
     # Let base class process sub-handlers.
     try:
-      return super(XMLRPCContainer, self).lookupProcedure(procedure_path)
+      return super().lookupProcedure(procedure_path)
     except twisted_xmlrpc.NoSuchFunction:
       pass
 

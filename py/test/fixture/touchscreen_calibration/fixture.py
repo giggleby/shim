@@ -41,7 +41,7 @@ class FixutreNativeUSB(serial_utils.SerialDevice):
   def __init__(self, driver=ARDUINO_DRIVER,
                interface_protocol=interface_protocol_dict[NATIVE_USB_PORT],
                timeout=86400):
-    super(FixutreNativeUSB, self).__init__()
+    super().__init__()
     self.driver = driver
     self.interface_protocol = interface_protocol
     self.timeout = timeout
@@ -143,7 +143,7 @@ class BaseFixture(serial_utils.SerialDevice):
   """A base fixture class."""
 
   def __init__(self, state=None):
-    super(BaseFixture, self).__init__()
+    super().__init__()
     self.state = state
     self.native_usb = None
 
@@ -153,7 +153,7 @@ class FakeFixture(BaseFixture):
   TIMEOUT = 10
 
   def __init__(self, ui, state=None):
-    super(FakeFixture, self).__init__(state)
+    super().__init__(state)
     self.ui = ui
     self.final_calibration_lock = threading.Event()
 
@@ -193,7 +193,7 @@ class FixtureSerialDevice(BaseFixture):
   def __init__(self, driver=ARDUINO_DRIVER,
                interface_protocol=interface_protocol_dict[PROGRAMMING_PORT],
                timeout=20):
-    super(FixtureSerialDevice, self).__init__()
+    super().__init__()
     try:
       port = serial_utils.FindTtyByDriver(driver, interface_protocol)
       self.Connect(port=port, timeout=timeout)

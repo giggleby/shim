@@ -10,7 +10,7 @@ from cros.factory.utils import type_utils
 class StatusMonitor(plugin.Plugin):
 
   def __init__(self, goofy, used_resources=None):
-    super(StatusMonitor, self).__init__(goofy, used_resources)
+    super().__init__(goofy, used_resources)
     self._device = device_utils.CreateStationInterface()
 
   @type_utils.Overrides
