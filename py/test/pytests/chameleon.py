@@ -305,9 +305,9 @@ class ChameleonDisplayTest(test_case.TestCase):
     logging.info('Loading test image of size %sx%s...', width, height)
     image_template = os.path.join(
         self.ui.GetStaticDirectoryPath(), self.IMAGE_TEMPLATE_FILENAME)
-    with open(self.image_template_file, 'w') as output:
-      with open(image_template) as f:
-        output.write(f.read().format(
+    file_utils.WriteFile(
+        self.image_template_file,
+        file_utils.ReadFile(image_template).format(
             scale_width=width / self.IMAGE_TEMPLATE_WIDTH,
             scale_height=height / self.IMAGE_TEMPLATE_HEIGHT))
 
@@ -363,9 +363,9 @@ class ChameleonDisplayTest(test_case.TestCase):
     if not mode in EDIDS[chameleon_port]:
       self.fail('Invalid mode for %s: %s' % (chameleon_port, mode))
 
-    with open(os.path.join(
-        self.ui.GetStaticDirectoryPath(), EDIDS[chameleon_port][mode])) as f:
-      edid = f.read()
+    edid = file_utils.ReadFile(
+        os.path.join(self.ui.GetStaticDirectoryPath(),
+                     EDIDS[chameleon_port][mode]))
     with self.chameleon.PortEdid(chameleon_port, edid):
       original_display, external_display = self.ProbeDisplay(chameleon_port)
 

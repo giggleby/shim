@@ -12,6 +12,7 @@ import sys
 import jsonrpclib
 
 from cros.factory.test.utils import network_utils
+from cros.factory.utils import file_utils
 from cros.factory.utils import jsonrpc_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
@@ -214,8 +215,7 @@ class DHCPManager:
       if run_file.startswith(cls.PID_PREFIX):
         intf = run_file[len(cls.PID_PREFIX):]
         full_run_path = os.path.join(cls.RUN_DIR, run_file)
-        with open(full_run_path, 'r') as f:
-          pid = int(f.read())
+        pid = int(file_utils.ReadFile(full_run_path))
         try:
           os.kill(pid, signal.SIGKILL)
         except OSError:

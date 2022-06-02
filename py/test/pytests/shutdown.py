@@ -68,6 +68,7 @@ from cros.factory.test.test_lists import test_object
 from cros.factory.test.utils import audio_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
@@ -232,8 +233,7 @@ class ShutdownTest(test_case.TestCase):
     for path in files_to_check_not_exist:
       if os.path.exists(path):
         fail_shutdown = True
-        with open(path) as f:
-          content = f.read()
+        content = file_utils.ReadFile(path)
         logging.error('Reboot bad file path %s found:\n %s', path, content)
     return fail_shutdown
 

@@ -40,6 +40,8 @@ from cros.factory.test import device_data
 from cros.factory.test import state
 from cros.factory.test.state import TestState
 from cros.factory.test.test_lists import manager
+from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
@@ -373,8 +375,7 @@ class Ghost:
   def LoadProperties(self):
     try:
       if self._prop_file:
-        with open(self._prop_file, 'r') as f:
-          self._properties = json.loads(f.read())
+        self._properties = json_utils.LoadFile(self._prop_file)
       if self._ovl_path:
         self._properties['ovl_path'] = self._ovl_path
       if self._certificate_dir:
@@ -427,8 +428,7 @@ class Ghost:
         return [ret.group(1)]
       return []
     if self._platform == 'Linux':
-      with open('/proc/net/route', 'r') as f:
-        lines = f.readlines()
+      lines = file_utils.ReadLines('/proc/net/route')
 
       ips = []
       for line in lines:
@@ -494,8 +494,7 @@ class Ghost:
 
     # Try DMI product UUID
     try:
-      with open('/sys/class/dmi/id/product_uuid', 'r') as f:
-        return f.read().strip()
+      return file_utils.ReadFile('/sys/class/dmi/id/product_uuid').strip()
     except Exception:
       pass
 
@@ -507,8 +506,8 @@ class Ghost:
         if iface == 'lo':
           continue
 
-        with open('/sys/class/net/%s/address' % iface, 'r') as f:
-          macs.append(f.read().strip())
+        macs.append(
+            file_utils.ReadFile('/sys/class/net/%s/address' % iface).strip())
 
       return ';'.join(macs)
     except Exception:

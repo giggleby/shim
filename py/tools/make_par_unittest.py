@@ -16,6 +16,7 @@ import unittest
 
 from cros.factory.tools import make_par
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import file_utils
 from cros.factory.utils.process_utils import Spawn
 
 
@@ -78,10 +79,8 @@ class MakePARTest(unittest.TestCase):
     make_par_path = os.path.join(self.tmp, 'cros', 'factory', 'cli',
                                  'make_par.py')
     modified_usage = 'BOOYAH'
-    with open(make_par_path, 'r') as f:
-      data = f.read()
-    with open(make_par_path, 'w') as f:
-      f.write(data.replace(usage, modified_usage))
+    data = file_utils.ReadFile(make_par_path)
+    file_utils.WriteFile(make_par_path, data.replace(usage, modified_usage))
 
     # Run help again.
     process = Spawn([link, '--help'], log=True,

@@ -168,8 +168,7 @@ class RetrieveConfig(unittest.TestCase):
       proxy = server_proxy.GetServerProxy()
       content = proxy.GetParameter(
           self.args.config_retrieve_path).data
-      with open(self.config_save_path, 'w') as f:
-        f.write(content)
+      file_utils.WriteFile(self.config_save_path, content)
       logging.info('Saved config to %s.', self.config_save_path)
     except Exception as e:
       logging.exception('Failed to retrieve config from factory server.')

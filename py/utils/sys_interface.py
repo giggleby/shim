@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 from typing import List, Union
 
+from . import file_utils
 from . import process_utils
 
 # Use process_utils.CalledProcessError for invocation exceptions.
@@ -56,8 +57,7 @@ class SystemInterface:
       A string as file contents.
     """
     if count is None and skip is None:
-      with open(path) as f:
-        return f.read()
+      return file_utils.ReadFile(path)
     return self.ReadSpecialFile(path, count=count, skip=skip)
 
   def ReadSpecialFile(self, path, count=None, skip=None, encoding='utf-8'):
@@ -91,8 +91,7 @@ class SystemInterface:
       path: A string for file path on target device.
       content: A string to be written into file.
     """
-    with open(path, 'w') as f:
-      f.write(content)
+    file_utils.WriteFile(path, content)
 
   def WriteSpecialFile(self, path, content):
     """Writes some content into a special file on target device.

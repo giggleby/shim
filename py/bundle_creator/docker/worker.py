@@ -176,8 +176,7 @@ class EasyBundleCreationWorker:
       cl_url = []
       cl_error_msg = None
       if request.update_hwid_db_firmware_info:
-        with open(bundle_record_path, 'r') as f:
-          bundle_record = f.read()
+        bundle_record = file_utils.ReadFile(bundle_record_path)
         try:
           cl_url += self._hwid_api_connector.CreateHWIDFirmwareInfoCL(
               bundle_record, request.email)

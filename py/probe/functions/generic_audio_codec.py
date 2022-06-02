@@ -5,6 +5,7 @@
 import os
 
 from cros.factory.probe.lib import cached_probe_function
+from cros.factory.utils import file_utils
 
 RESULT_KEY = 'name'
 
@@ -37,8 +38,9 @@ class GenericAudioCodecFunction(cached_probe_function.CachedProbeFunction):
     ]
     for p in asoc_paths:
       if os.path.exists(p):
-        with open(p) as f:
-          results.extend([codec.strip()
-                          for codec in f.read().splitlines()
-                          if codec not in KNOWN_INVALID_CODEC_NAMES])
+        results.extend([
+            codec.strip()
+            for codec in file_utils.ReadFile(p).splitlines()
+            if codec not in KNOWN_INVALID_CODEC_NAMES
+        ])
     return [{RESULT_KEY: result} for result in results]

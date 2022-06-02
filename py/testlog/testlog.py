@@ -1371,8 +1371,7 @@ class StationTestRun(StationStatus):
   def AttachContent(self, content, name, description=None):
     """Attaches a file with content."""
     with file_utils.UnopenedTemporaryFile() as path:
-      with open(path, 'w') as f:
-        f.write(content)
+      file_utils.WriteFile(path, content)
       return self.AttachFile(
           path, 'text/plain', name, delete=False, description=description)
 

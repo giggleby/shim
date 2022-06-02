@@ -6,7 +6,6 @@
 
 import argparse
 import inspect
-import json
 import os
 import shutil
 import subprocess
@@ -18,6 +17,8 @@ from unittest import mock
 
 from cros.factory.tools import image_tool
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
 DEBUG = False
@@ -99,15 +100,16 @@ class ImageToolTest(unittest.TestCase):
       write_command = '\n'.join(
           cmd % dict(command=cgpt, file='$1')
           for cmd in self.PARTITION_COMMANDS)
-      with open(tmp_write_gpt_path, 'w') as f:
-        f.write('\n'.join([
-            '#!/bin/sh',
-            'GPT=""',
-            'GPT="%s"' % cgpt,  # Override for unit test.
-            'write_base_table() {',
-            write_command,
-            '}',
-        ]))
+      file_utils.WriteFile(
+          tmp_write_gpt_path,
+          '\n'.join([
+              '#!/bin/sh',
+              'GPT=""',
+              'GPT="%s"' % cgpt,  # Override for unit test.
+              'write_base_table() {',
+              write_command,
+              '}',
+          ]))
       self.CheckCall('sudo mv %s %s' % (tmp_write_gpt_path, write_gpt_path))
 
     with image_tool.Partition(image_path, 1).Mount(rw=True) as d:
@@ -134,8 +136,7 @@ class ImageToolTest(unittest.TestCase):
         self.CheckCall('echo "%s" | sudo dd of="%s"' %
                        (name, os.path.join(d, 'tag')))
     toolkit_path = os.path.join(self.temp_dir, 'toolkit', 'toolkit.run')
-    with open(toolkit_path, 'w') as f:
-      f.write('#!/bin/sh\necho Toolkit Version 1.0\n')
+    file_utils.WriteFile(toolkit_path, '#!/bin/sh\necho Toolkit Version 1.0\n')
     os.chmod(toolkit_path, 0o755)
 
   def setUp(self):
@@ -182,8 +183,7 @@ class ImageToolTest(unittest.TestCase):
 
     self.ImageTool('get_firmware', '-i', image_path, '-o', self.temp_dir)
     updater = os.path.join(self.temp_dir, 'chromeos-firmwareupdate')
-    with open(updater) as f:
-      self.assertEqual(self.UPDATER_CONTENT, f.read())
+    self.assertEqual(self.UPDATER_CONTENT, file_utils.ReadFile(updater))
 
     self.ImageTool('resize', '-i', image_path, '-p', '1', '-s', '2')
     part = image_tool.Partition(image_path, 1)
@@ -209,16 +209,12 @@ class ImageToolTest(unittest.TestCase):
     image_tool.Partition('disk.bin', 1).CopyFile('tag', 'tag.1')
     image_tool.Partition('disk.bin', 3).CopyFile('tag', 'tag.3')
     image_tool.Partition('disk.bin', 5).CopyFile('tag', 'tag.5')
-    with open('tag.1') as f:
-      self.assertEqual(f.read().strip(), 'test_image')
-    with open('tag.3') as f:
-      self.assertEqual(f.read().strip(), 'test_image')
-    with open('tag.5') as f:
-      self.assertEqual(f.read().strip(), 'release_image')
+    self.assertEqual(file_utils.ReadFile('tag.1').strip(), 'test_image')
+    self.assertEqual(file_utils.ReadFile('tag.3').strip(), 'test_image')
+    self.assertEqual(file_utils.ReadFile('tag.5').strip(), 'release_image')
     image_tool.Partition('disk.bin', 1).CopyFile(
         image_tool.PATH_PREFLASH_PAYLOADS_JSON, 'preflash.json')
-    with open('preflash.json') as f:
-      data = json.load(f)
+    data = json_utils.LoadFile('preflash.json')
     self.assertEqual(data['toolkit']['version'], u'Toolkit Version 1.0')
 
     self.ImageTool('bundle', '--no-firmware', '--timestamp', '20180101')

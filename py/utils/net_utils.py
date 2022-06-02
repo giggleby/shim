@@ -364,8 +364,7 @@ def GetWLANMACAddress():
   for dev in ['wlan0', 'mlan0']:
     path = '/sys/class/net/%s/address' % dev
     if os.path.exists(path):
-      with open(path) as f:
-        return f.read().strip()
+      return file_utils.ReadFile(path).strip()
 
   raise IOError('Unable to determine WLAN MAC address')
 

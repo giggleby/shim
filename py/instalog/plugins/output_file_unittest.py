@@ -49,12 +49,11 @@ class TestOutputFile(unittest.TestCase):
     sandbox.Flush()
     sandbox.Stop()
 
-    with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:
-      lines = f.readlines()
-      self.assertEqual(1, len(lines))
-      deserialized_event = datatypes.Event.Deserialize(lines[0])
-      self.assertEqual(event, deserialized_event)
-      self.assertEqual(1, len(deserialized_event.history))
+    lines = file_utils.ReadLines(os.path.join(self.target_dir, EVENT_FILE_NAME))
+    self.assertEqual(1, len(lines))
+    deserialized_event = datatypes.Event.Deserialize(lines[0])
+    self.assertEqual(event, deserialized_event)
+    self.assertEqual(1, len(deserialized_event.history))
 
   def testExcludeHistory(self):
     config = {
@@ -73,12 +72,11 @@ class TestOutputFile(unittest.TestCase):
     sandbox.Flush()
     sandbox.Stop()
 
-    with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:
-      lines = f.readlines()
-      self.assertEqual(1, len(lines))
-      deserialized_event = datatypes.Event.Deserialize(lines[0])
-      self.assertEqual(event, deserialized_event)
-      self.assertEqual([], deserialized_event.history)
+    lines = file_utils.ReadLines(os.path.join(self.target_dir, EVENT_FILE_NAME))
+    self.assertEqual(1, len(lines))
+    deserialized_event = datatypes.Event.Deserialize(lines[0])
+    self.assertEqual(event, deserialized_event)
+    self.assertEqual([], deserialized_event.history)
 
   def ChangeRelativePath(self, event, base_dir):
     for att_id, relative_path in event.attachments.items():
@@ -97,20 +95,18 @@ class TestOutputFile(unittest.TestCase):
     plugin = sandbox._plugin
     att_path = os.path.join(self.tmp_dir, 'att')
     att_data = '!@#$%^&*()1234567890QWERTYUIOP'
-    with open(att_path, 'w') as f:
-      f.write(att_data)
+    file_utils.WriteFile(att_path, att_data)
     event = datatypes.Event({'plugin': 'file'}, {'att': att_path})
     self.stream.Queue([event])
     plugin.PrepareAndProcess()
     sandbox.Flush()
     sandbox.Stop()
 
-    with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:
-      lines = f.readlines()
-      self.assertEqual(1, len(lines))
-      deserialized_event = datatypes.Event.Deserialize(lines[0])
-      self.ChangeRelativePath(deserialized_event, self.target_dir)
-      self.assertEqual(event, deserialized_event)
+    lines = file_utils.ReadLines(os.path.join(self.target_dir, EVENT_FILE_NAME))
+    self.assertEqual(1, len(lines))
+    deserialized_event = datatypes.Event.Deserialize(lines[0])
+    self.ChangeRelativePath(deserialized_event, self.target_dir)
+    self.assertEqual(event, deserialized_event)
 
   def testMoveAndMerge(self):
     event1 = datatypes.Event({'event_id': '1'})
@@ -124,8 +120,7 @@ class TestOutputFile(unittest.TestCase):
         f.write(event1.Serialize() + '\n')
         f.write(event2.Serialize() + '\n')
       att_path = os.path.join(src_dir, ATT_DIR_NAME, 'att_test')
-      with open(att_path, 'w') as f:
-        f.write(att_data)
+      file_utils.WriteFile(att_path, att_data)
       output_file.MoveAndMerge(src_dir, self.target_dir)
 
     with file_utils.TempDirectory(prefix='src_dir_') as src_dir:
@@ -134,17 +129,15 @@ class TestOutputFile(unittest.TestCase):
         f.write(event2.Serialize() + '\n')
         f.write(event1.Serialize() + '\n')
       att_path = os.path.join(src_dir, ATT_DIR_NAME, 'att_test')
-      with open(att_path, 'w') as f:
-        f.write(att_data)
+      file_utils.WriteFile(att_path, att_data)
       output_file.MoveAndMerge(src_dir, self.target_dir)
 
-    with open(os.path.join(self.target_dir, EVENT_FILE_NAME)) as f:
-      lines = f.readlines()
-      self.assertEqual(4, len(lines))
-      self.assertEqual(event1, datatypes.Event.Deserialize(lines[0]))
-      self.assertEqual(event2, datatypes.Event.Deserialize(lines[1]))
-      self.assertEqual(event2, datatypes.Event.Deserialize(lines[2]))
-      self.assertEqual(event1, datatypes.Event.Deserialize(lines[3]))
+    lines = file_utils.ReadLines(os.path.join(self.target_dir, EVENT_FILE_NAME))
+    self.assertEqual(4, len(lines))
+    self.assertEqual(event1, datatypes.Event.Deserialize(lines[0]))
+    self.assertEqual(event2, datatypes.Event.Deserialize(lines[1]))
+    self.assertEqual(event2, datatypes.Event.Deserialize(lines[2]))
+    self.assertEqual(event1, datatypes.Event.Deserialize(lines[3]))
 
 
 if __name__ == '__main__':

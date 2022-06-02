@@ -9,6 +9,7 @@ import subprocess
 from cros.factory.probe import function
 from cros.factory.probe.lib import probe_function
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
@@ -78,8 +79,7 @@ class GenericCPUFunction(probe_function.ProbeFunction):
     # In this case, we will use 'CPU architecture' to identify the ARM version.
 
     CPU_INFO_FILE = '/proc/cpuinfo'
-    with open(CPU_INFO_FILE, 'r') as f:
-      cpuinfo = f.read()
+    cpuinfo = file_utils.ReadFile(CPU_INFO_FILE)
 
     def _SearchCPUInfo(regex, name):
       matched = re.search(regex, cpuinfo, re.MULTILINE)

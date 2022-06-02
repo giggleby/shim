@@ -103,8 +103,7 @@ def GetPhase():
   # threads.  No big deal.
   path = GetPhaseStatePath()
   try:
-    with open(path, 'r') as f:
-      phase = Phase(f.read())
+    phase = Phase(file_utils.ReadFile(path))
 
     if (phase != strictest_phase and
         os.system('crossystem phase_enforcement?1 >/dev/null 2>&1') == 0):
@@ -178,8 +177,7 @@ def SetPersistentPhase(phase):
     phase = Phase(phase)  # Coerce to Phase object
     logging.info('Setting phase to %s in %s', phase, path)
     file_utils.TryMakeDirs(os.path.dirname(path))
-    with open(path, 'w') as f:
-      f.write(phase.name)
+    file_utils.WriteFile(path, phase.name)
   else:
     logging.info('Deleting phase in %s', path)
     file_utils.TryUnlink(path)

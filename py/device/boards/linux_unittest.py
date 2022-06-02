@@ -10,6 +10,7 @@ from unittest import mock
 
 from cros.factory.device.boards import linux
 from cros.factory.device import device_types
+from cros.factory.utils import file_utils
 
 
 class MockProcess:
@@ -53,8 +54,7 @@ class LinuxTargetTest(unittest.TestCase):
   def testWriteFile(self):
     def fakePush(local, remote):
       self.assertEqual(remote, '/non-exist')
-      with open(local) as f:
-        self.assertEqual(f.read(), 'TEST')
+      self.assertEqual(file_utils.ReadFile(local), 'TEST')
 
     self.link.Push = mock.MagicMock(side_effect=fakePush)
     self.dut.WriteFile('/non-exist', 'TEST')

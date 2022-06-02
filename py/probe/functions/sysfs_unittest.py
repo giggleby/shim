@@ -9,6 +9,7 @@ import tempfile
 import unittest
 
 from cros.factory.probe.functions import sysfs
+from cros.factory.utils import file_utils
 
 
 class SysfsFunctionTest(unittest.TestCase):
@@ -20,20 +21,17 @@ class SysfsFunctionTest(unittest.TestCase):
       shutil.rmtree(self.tmp_dir)
 
   def testNormal(self):
-    with open(os.path.join(self.tmp_dir, 'vendor'), 'w') as f:
-      f.write('google\n')
-    with open(os.path.join(self.tmp_dir, 'device'), 'w') as f:
-      f.write('chromebook\n')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'vendor'), 'google\n')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'device'), 'chromebook\n')
 
     func = sysfs.SysfsFunction(dir_path=self.tmp_dir, keys=['vendor', 'device'])
     result = func()
     self.assertEqual(result, [{'vendor': 'google', 'device': 'chromebook'}])
 
   def testOptionalKeys(self):
-    with open(os.path.join(self.tmp_dir, 'device'), 'w') as f:
-      f.write('chromebook\n')
-    with open(os.path.join(self.tmp_dir, 'optional_1'), 'w') as f:
-      f.write('OPTIONAL_1\n')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'device'), 'chromebook\n')
+    file_utils.WriteFile(
+        os.path.join(self.tmp_dir, 'optional_1'), 'OPTIONAL_1\n')
 
     func = sysfs.SysfsFunction(
         dir_path=self.tmp_dir, keys=['device'],
@@ -44,8 +42,7 @@ class SysfsFunctionTest(unittest.TestCase):
 
   def testFail(self):
     """Device is not found."""
-    with open(os.path.join(self.tmp_dir, 'vendor'), 'w') as f:
-      f.write('google\n')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'vendor'), 'google\n')
 
     func = sysfs.SysfsFunction(dir_path=self.tmp_dir, keys=['vendor', 'device'])
     result = func()
@@ -53,18 +50,17 @@ class SysfsFunctionTest(unittest.TestCase):
 
   def testMultipleResults(self):
     os.mkdir(os.path.join(self.tmp_dir, 'foo'))
-    with open(os.path.join(self.tmp_dir, 'foo', 'vendor'), 'w') as f:
-      f.write('google\n')
-    with open(os.path.join(self.tmp_dir, 'foo', 'device'), 'w') as f:
-      f.write('chromebook\n')
+    file_utils.WriteFile(
+        os.path.join(self.tmp_dir, 'foo', 'vendor'), 'google\n')
+    file_utils.WriteFile(
+        os.path.join(self.tmp_dir, 'foo', 'device'), 'chromebook\n')
     os.mkdir(os.path.join(self.tmp_dir, 'bar'))
-    with open(os.path.join(self.tmp_dir, 'bar', 'vendor'), 'w') as f:
-      f.write('apple\n')
-    with open(os.path.join(self.tmp_dir, 'bar', 'device'), 'w') as f:
-      f.write('macbook\n')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'bar', 'vendor'), 'apple\n')
+    file_utils.WriteFile(
+        os.path.join(self.tmp_dir, 'bar', 'device'), 'macbook\n')
 
-    with open(os.path.join(self.tmp_dir, 'NOT_DIR'), 'w') as f:
-      f.write('SHOULD NOT BE PROBED.')
+    file_utils.WriteFile(
+        os.path.join(self.tmp_dir, 'NOT_DIR'), 'SHOULD NOT BE PROBED.')
 
     func = sysfs.SysfsFunction(dir_path=os.path.join(self.tmp_dir, '*'),
                                keys=['vendor', 'device'])

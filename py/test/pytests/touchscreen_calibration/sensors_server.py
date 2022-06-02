@@ -21,6 +21,7 @@ import time
 import xmlrpc.server
 
 from cros.factory.test.pytests.touchscreen_calibration import touchscreen_calibration_utils as utils
+from cros.factory.utils import file_utils
 
 # List the supported boards below
 SAMUS = 'samus'
@@ -325,8 +326,7 @@ class SensorServiceSamus(BaseSensorService):
       content: the content to be written to sysfs
     """
     try:
-      with open(self.sysfs_entry, 'w') as f:
-        f.write(content)
+      file_utils.WriteFile(self.sysfs_entry, content)
     except Exception as e:
       self.log.info('WriteSysfs failed to write %s: %s' % (content, e))
       return False
@@ -450,8 +450,7 @@ class SensorServiceRyu(BaseSensorService):
       return True
 
     src_filepath = os.path.join(self.src_dir, filename)
-    with open(src_filepath) as f:
-      self.dut.WriteFile(dst_filepath, f.read())
+    self.dut.WriteFile(dst_filepath, file_utils.ReadFile(src_filepath))
     return True
 
   def CalibrateBaseline(self):

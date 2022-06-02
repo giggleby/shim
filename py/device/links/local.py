@@ -10,6 +10,7 @@ import shutil
 import subprocess
 
 from cros.factory.device import device_types
+from cros.factory.utils import file_utils
 
 
 class LocalLink(device_types.DeviceLink):
@@ -34,8 +35,7 @@ class LocalLink(device_types.DeviceLink):
   def Pull(self, remote, local=None):
     """See DeviceLink.Pull"""
     if local is None:
-      with open(remote) as f:
-        return f.read()
+      return file_utils.ReadFile(remote)
     shutil.copy(remote, local)
     return None
 

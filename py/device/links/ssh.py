@@ -222,8 +222,7 @@ class SSHLink(device_types.DeviceLink):
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
         self.Pull(remote, path)
-        with open(path) as f:
-          return f.read()
+        return file_utils.ReadFile(path)
 
     return self._DoSCP(remote, local, is_push=False)
 

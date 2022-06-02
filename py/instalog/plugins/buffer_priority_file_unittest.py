@@ -194,8 +194,7 @@ class TestBufferPriorityFile(unittest.TestCase):
     self._CreateBuffer({'copy_attachments': True})
     for pri_level in range(self.pri_level_max):
       path = file_utils.CreateTemporaryFile()
-      with open(path, 'w') as f:
-        f.write('Priority leve = %d' % pri_level)
+      file_utils.WriteFile(path, 'Priority leve = %d' % pri_level)
       self.e[pri_level].attachments['att'] = path
     self.testTruncate()
 
@@ -240,8 +239,7 @@ class TestBufferPriorityFile(unittest.TestCase):
     self._CreateBuffer({'copy_attachments': True})
     for pri_level in range(self.pri_level_max):
       path = file_utils.CreateTemporaryFile()
-      with open(path, 'w') as f:
-        f.write('Priority leve = %d' % pri_level)
+      file_utils.WriteFile(path, 'Priority leve = %d' % pri_level)
       self.e[pri_level].attachments['att'] = path
     self.testRecoverTemporaryMetadata()
 

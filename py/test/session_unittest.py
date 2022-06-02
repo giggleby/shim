@@ -16,6 +16,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.test import session
+from cros.factory.utils import file_utils
 
 UUID_RE = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'
                      '[a-f0-9]{4}-[a-f0-9]{12}$')
@@ -73,8 +74,7 @@ class SessionTest(unittest.TestCase):
     for i in range(-1, 5):
       self.assertEqual(i, session.GetInitCount())
       session.IncrementInitCount()
-      with open(session.INIT_COUNT_PATH) as f:
-        self.assertEqual(str(i + 1), f.read())
+      self.assertEqual(str(i + 1), file_utils.ReadFile(session.INIT_COUNT_PATH))
 
 
 if __name__ == '__main__':

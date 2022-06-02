@@ -52,6 +52,7 @@ import sys
 import zipimport
 
 from . import file_utils
+from . import json_utils
 
 # To simplify portability issues, validating JSON schema is optional.
 try:
@@ -201,8 +202,7 @@ def _LoadJsonFile(file_path, logger):
   if os.path.exists(file_path):
     logger('config_utils: Loading from %s', file_path)
     try:
-      with open(file_path) as f:
-        return json.load(f)
+      return json_utils.LoadFile(file_path)
     except Exception as e:
       raise _JsonFileInvalidError(file_path, str(e))
 

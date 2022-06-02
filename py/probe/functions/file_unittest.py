@@ -25,8 +25,7 @@ class FileFunctionTest(unittest.TestCase):
 
   def testSingleLineFile(self):
     content = 'hello, world.  \n'
-    with open(self.tmp_file, 'w') as f:
-      f.write(content)
+    file_utils.WriteFile(self.tmp_file, content)
 
     # Use default key.
     func = file_module.FileFunction(file_path=self.tmp_file)
@@ -40,8 +39,7 @@ class FileFunctionTest(unittest.TestCase):
 
   def testMultipleLinesFile(self):
     content = 'foo  \n  \nbar  \n'
-    with open(self.tmp_file, 'w') as f:
-      f.write(content)
+    file_utils.WriteFile(self.tmp_file, content)
 
     # Not split line, only return one result.
     func = file_module.FileFunction(file_path=self.tmp_file, key='idx')
@@ -57,12 +55,9 @@ class FileFunctionTest(unittest.TestCase):
                             key=lambda d: sorted(d.items())))
 
   def testMultipleFiles(self):
-    with open(os.path.join(self.tmp_dir, 'foo1'), 'w') as f:
-      f.write('FOO1')
-    with open(os.path.join(self.tmp_dir, 'foo2'), 'w') as f:
-      f.write('FOO2')
-    with open(os.path.join(self.tmp_dir, 'bar'), 'w') as f:
-      f.write('BAR')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'foo1'), 'FOO1')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'foo2'), 'FOO2')
+    file_utils.WriteFile(os.path.join(self.tmp_dir, 'bar'), 'BAR')
 
     func = file_module.FileFunction(
         file_path=os.path.join(self.tmp_dir, '*'), key='idx')

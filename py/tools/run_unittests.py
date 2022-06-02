@@ -29,6 +29,7 @@ import time
 from cros.factory.tools.unittest_tools import mock_loader
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils.debug_utils import SetupLogging
+from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
@@ -266,8 +267,8 @@ class RunTests:
       self._FailMessage('Logs of %d failed tests:' % len(self._failed_tests))
       # Log all the values in the dict (i.e., the log file paths)
       for test_name, log_path in sorted(self._failed_tests.items()):
-        with open(log_path) as f:
-          self._FailMessage(f'{log_path} ({test_name}):\n{f.read()}')
+        self._FailMessage(f'{log_path} ({test_name}):\n'
+                          f'{file_utils.ReadFile(log_path)}')
       return 1
     return 0
 
@@ -339,9 +340,9 @@ class RunTests:
     # Due to resourceWarning such as file not closed can only be determined
     # when GC is going to delete that object, CPython can not throw exception
     # at that time to mark test is failed, we have to manually check the log.
-    with open(p.log_file_name) as f:
-      if re.search(r'Exception ignored in: .*\nResourceWarning: .*', f.read()):
-        return 'ResourceWarning found'
+    if re.search(r'Exception ignored in: .*\nResourceWarning: .*',
+                 file_utils.ReadFile(p.log_file_name)):
+      return 'ResourceWarning found'
 
     return None
 

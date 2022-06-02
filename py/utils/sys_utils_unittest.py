@@ -13,6 +13,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.device import device_utils
+from cros.factory.utils import file_utils
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
@@ -227,8 +228,8 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
           log=True)
     self.content = 'file content'
     self.file_name = 'file'
-    with open(os.path.join(mount_point, self.file_name), 'w') as f:
-      f.write(self.content)
+    file_utils.WriteFile(
+        os.path.join(mount_point, self.file_name), self.content)
     Spawn(['umount', '-l', mount_point], sudo=True, check_call=True, log=True)
     os.rmdir(mount_point)
     self.dut = device_utils.CreateDUTInterface()

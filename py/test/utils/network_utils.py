@@ -123,8 +123,7 @@ def RenewDhcpLease(interface, timeout=3):
     True if a new lease is obtained; otherwise, False.
   """
   with file_utils.UnopenedTemporaryFile() as conf_file:
-    with open(conf_file, "w") as f:
-      f.write("timeout %d;" % timeout)
+    file_utils.WriteFile(conf_file, "timeout %d;" % timeout)
     try:
       p = process_utils.Spawn(['dhclient', '-1', '-d', '-cf', conf_file,
                                interface])
@@ -292,6 +291,5 @@ def GetDHCPInterfaceBlocklist(blocklist_file=None):
     blocklist_file = os.path.join(paths.FACTORY_DIR, 'board',
                                   'dhcp_interface_blocklist')
   if os.path.exists(blocklist_file):
-    with open(blocklist_file) as f:
-      return list(map(str.strip, f.readlines()))
+    return list(map(str.strip, file_utils.ReadLines(blocklist_file)))
   return []

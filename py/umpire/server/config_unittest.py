@@ -14,6 +14,7 @@ from cros.factory.umpire.server import config
 from cros.factory.umpire.server import resource
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 
 TESTDATA_DIR = os.path.join(os.path.dirname(__file__), 'testdata')
 MINIMAL_CONFIG = os.path.join(TESTDATA_DIR, 'minimal_umpire.json')
@@ -42,8 +43,7 @@ class UmpireConfigTest(unittest.TestCase):
         IOError, config.UmpireConfig, file_path='/path/to/no/where')
 
   def testLoadConfigFromDict(self):
-    with open(EMPTY_SERVICES_CONFIG) as f:
-      config_dict = json.load(f)
+    config_dict = json_utils.LoadFile(EMPTY_SERVICES_CONFIG)
     conf = config.UmpireConfig(config=config_dict)
     self._CheckConfig(conf)
 

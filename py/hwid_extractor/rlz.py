@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import json
 import os
 
+from cros.factory.utils import json_utils
+
+# RLZ json file.
 RLZ_JSON = os.path.join(os.path.dirname(__file__), 'rlz.json')
 
 
@@ -37,8 +39,7 @@ class RLZData:
   def __init__(self):
     self._rlz_data = {}
     if os.path.isfile(RLZ_JSON):
-      with open(RLZ_JSON, 'r') as f:
-        self._rlz_data = json.load(f)
+      self._rlz_data = json_utils.LoadFile(RLZ_JSON)
 
   def Get(self, *args, **kargs):
     return self._rlz_data.get(*args, **kargs)
@@ -59,7 +60,6 @@ class RLZData:
     rlz_data = ParseAllDevicesJSON(all_device)
     if not rlz_data:
       return False
-    with open(RLZ_JSON, 'w') as f:
-      json.dump(rlz_data, f)
+    json_utils.DumpFile(RLZ_JSON, rlz_data, pretty=False)
     self._rlz_data = rlz_data
     return True

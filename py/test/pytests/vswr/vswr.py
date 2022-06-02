@@ -70,6 +70,7 @@ from cros.factory.test import test_ui
 from cros.factory.test.utils import connection_manager
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
 # The root of the pytests vswr folder. The config path is relative to this when
@@ -200,8 +201,7 @@ class VSWR(test_case.TestCase):
   def _LoadParametersFromLocalDisk(self):
     """Loads parameters from local disk."""
     config_path = os.path.join(LOCAL_DIR, self.args.config_path)
-    with open(config_path, 'r') as f:
-      self._LoadConfig(f.read())
+    self._LoadConfig(file_utils.ReadFile(config_path))
 
   def _GetConfigForSerialNumber(self):
     """Searches the suitable config for this serial number.

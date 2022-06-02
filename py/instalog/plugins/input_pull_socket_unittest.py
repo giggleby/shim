@@ -18,6 +18,7 @@ from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog.plugins import socket_common
 from cros.factory.instalog import testing
+from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import net_utils
 
 
@@ -152,8 +153,9 @@ class TestInputPullSocket(unittest.TestCase):
     self.assertEqual({}, event_list[0].payload)
     self.assertEqual(1, len(event_list[0].attachments))
     self.assertEqual(b'my_attachment', list(event_list[0].attachments)[0])
-    with open(next(iter(event_list[0].attachments.values()))) as f:
-      self.assertEqual('XXXXXXXXXX', f.read())
+    self.assertEqual(
+        'XXXXXXXXXX',
+        file_utils.ReadFile(next(iter(event_list[0].attachments.values()))))
 
 
 if __name__ == '__main__':

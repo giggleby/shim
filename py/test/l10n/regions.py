@@ -17,6 +17,7 @@ import sys
 
 from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
@@ -247,8 +248,7 @@ def LoadRegionDatabase(path=None):
   unconfirmed = []
 
   if path:
-    with open(path) as f:
-      db = json.load(f)
+    db = json_utils.LoadFile(path)
   else:
     contents = FindDatabaseContents()
     if contents:

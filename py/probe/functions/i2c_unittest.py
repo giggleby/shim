@@ -10,6 +10,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.probe.functions import i2c
+from cros.factory.utils import file_utils
 
 
 class I2CFunctionTest(unittest.TestCase):
@@ -18,10 +19,10 @@ class I2CFunctionTest(unittest.TestCase):
     self.sysfs_i2c_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(self.sysfs_i2c_dir, 'i2c-0'))
     os.mkdir(os.path.join(self.sysfs_i2c_dir, 'i2c-1'))
-    with open(os.path.join(self.sysfs_i2c_dir, 'i2c-0', 'name'), 'w') as f:
-      f.write('I2C-0 NAME')
-    with open(os.path.join(self.sysfs_i2c_dir, 'i2c-1', 'name'), 'w') as f:
-      f.write('I2C-1 NAME')
+    file_utils.WriteFile(
+        os.path.join(self.sysfs_i2c_dir, 'i2c-0', 'name'), 'I2C-0 NAME')
+    file_utils.WriteFile(
+        os.path.join(self.sysfs_i2c_dir, 'i2c-1', 'name'), 'I2C-1 NAME')
 
     self.patchers = []
     self.patchers.append(mock.patch.object(i2c, 'SYSFS_I2C_DIR_PATH',

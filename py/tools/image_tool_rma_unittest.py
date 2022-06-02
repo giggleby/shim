@@ -6,7 +6,6 @@
 
 import argparse
 import inspect
-import json
 import os
 import shutil
 import subprocess
@@ -17,6 +16,8 @@ import unittest
 
 from cros.factory.tools import image_tool
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 
 DEBUG = False
 """Set DEBUG to True to debug this unit test itself.
@@ -72,8 +73,7 @@ class EnvBuilder:
       fw_path = os.path.join(d, 'usr', 'sbin', 'chromeos-firmwareupdate')
       self.CheckCall('sudo mkdir -p %s' % os.path.dirname(fw_path))
       tmp_fw_path = os.path.join(self.temp_dir, 'chromeos-firmwareupdate')
-      with open(tmp_fw_path, 'w') as f:
-        f.write(self.UPDATER_CONTENT)
+      file_utils.WriteFile(tmp_fw_path, self.UPDATER_CONTENT)
       self.CheckCall('sudo mv %s %s' % (tmp_fw_path, fw_path))
       self.CheckCall('sudo chmod a+rx %s' % fw_path)
       common_sh_path = os.path.join(
@@ -91,15 +91,16 @@ class EnvBuilder:
       write_command = '\n'.join(
           cmd % dict(command=cgpt, file='$1')
           for cmd in self.PARTITION_COMMANDS)
-      with open(tmp_write_gpt_path, 'w') as f:
-        f.write('\n'.join([
-            '#!/bin/sh',
-            'GPT=""',
-            'GPT="%s"' % cgpt,  # Override for unit test.
-            'write_base_table() {',
-            write_command,
-            '}',
-        ]))
+      file_utils.WriteFile(
+          tmp_write_gpt_path,
+          '\n'.join([
+              '#!/bin/sh',
+              'GPT=""',
+              'GPT="%s"' % cgpt,  # Override for unit test.
+              'write_base_table() {',
+              write_command,
+              '}',
+          ]))
       self.CheckCall('sudo mv %s %s' % (tmp_write_gpt_path, write_gpt_path))
 
     with image_tool.Partition(image_path, 1).Mount(rw=True) as d:
@@ -125,8 +126,7 @@ class EnvBuilder:
         self.CheckCall('echo "%s" | sudo dd of="%s"' %
                        (name, os.path.join(d, 'tag')))
     toolkit_path = os.path.join(self.temp_dir, 'toolkit', 'toolkit.run')
-    with open(toolkit_path, 'w') as f:
-      f.write('#!/bin/sh\necho Toolkit Version 1.0\n')
+    file_utils.WriteFile(toolkit_path, '#!/bin/sh\necho Toolkit Version 1.0\n')
     os.chmod(toolkit_path, 0o755)
 
   def Cleanup(self):
@@ -268,15 +268,11 @@ class ImageToolRMATest(unittest.TestCase):
         os.path.join(DIR_CROS_PAYLOADS, 'test1.json'), self.temp_dir)
     image_tool.Partition('rma1.bin', 1).CopyFile(
         PATH_CROS_RMA_METADATA, self.temp_dir)
-    with open('tag.1') as f:
-      self.assertEqual(f.read().strip(), 'factory_shim')
-    with open('tag.3') as f:
-      self.assertEqual(f.read().strip(), 'factory_shim')
-    with open('test1.json') as f:
-      data = json.load(f)
+    self.assertEqual(file_utils.ReadFile('tag.1').strip(), 'factory_shim')
+    self.assertEqual(file_utils.ReadFile('tag.3').strip(), 'factory_shim')
+    data = json_utils.LoadFile('test1.json')
     self.assertEqual(data['toolkit']['version'], u'Toolkit Version 1.0')
-    with open(os.path.basename(PATH_CROS_RMA_METADATA)) as f:
-      data = json.load(f)
+    data = json_utils.LoadFile(os.path.basename(PATH_CROS_RMA_METADATA))
     self.assertEqual(data, [{'board': 'test1', 'kernel': 2, 'rootfs': 3}])
 
     # `rma merge` to merge 2 different shims.
@@ -284,8 +280,7 @@ class ImageToolRMATest(unittest.TestCase):
         'rma', 'merge', '-f', '-o', 'rma12.bin', '-i', 'rma1.bin', 'rma2.bin')
     image_tool.Partition('rma12.bin', 1).CopyFile(
         PATH_CROS_RMA_METADATA, self.temp_dir)
-    with open(os.path.basename(PATH_CROS_RMA_METADATA)) as f:
-      data = json.load(f)
+    data = json_utils.LoadFile(os.path.basename(PATH_CROS_RMA_METADATA))
     self.assertEqual(data, [{'board': 'test1', 'kernel': 2, 'rootfs': 3},
                             {'board': 'test2', 'kernel': 4, 'rootfs': 5}])
 
@@ -297,16 +292,14 @@ class ImageToolRMATest(unittest.TestCase):
         'rma', 'merge', '-f', '-o', 'rma12_new.bin',
         '-i', 'rma12.bin', 'rma2.bin', '--auto_select')
     image_tool.Partition('rma12_new.bin', 5).CopyFile('tag', 'tag.5')
-    with open('tag.5') as f:
-      self.assertEqual(f.read().strip(), 'factory_shim_2')
+    self.assertEqual(file_utils.ReadFile('tag.5').strip(), 'factory_shim_2')
 
     # `rma extract` to extract a board from a universal shim.
     self.ImageTool('rma', 'extract', '-f', '-o', 'extract.bin',
                    '-i', 'rma12.bin', '-s', '2')
     image_tool.Partition('extract.bin', 1).CopyFile(
         PATH_CROS_RMA_METADATA, self.temp_dir)
-    with open(os.path.basename(PATH_CROS_RMA_METADATA)) as f:
-      data = json.load(f)
+    data = json_utils.LoadFile(os.path.basename(PATH_CROS_RMA_METADATA))
     self.assertEqual(data, [{'board': 'test2', 'kernel': 2, 'rootfs': 3}])
 
     # `rma replace` to replace the factory shim and toolkit.
@@ -316,19 +309,16 @@ class ImageToolRMATest(unittest.TestCase):
       self.CheckCall('echo "factory_shim_3" | sudo dd of="%s"' %
                      os.path.join(d, 'tag'))
     toolkit2_path = os.path.join(self.temp_dir, 'toolkit2.run')
-    with open(toolkit2_path, 'w') as f:
-      f.write('#!/bin/sh\necho Toolkit Version 2.0\n')
+    file_utils.WriteFile(toolkit2_path, '#!/bin/sh\necho Toolkit Version 2.0\n')
     os.chmod(toolkit2_path, 0o755)
     self.ImageTool(
         'rma', 'replace', '-i', 'rma12.bin', '--board', 'test2',
         '--factory_shim', factory_shim2_path, '--toolkit', toolkit2_path)
     image_tool.Partition('rma12.bin', 5).CopyFile('tag', 'tag.5')
-    with open('tag.5') as f:
-      self.assertEqual(f.read().strip(), 'factory_shim_3')
+    self.assertEqual(file_utils.ReadFile('tag.5').strip(), 'factory_shim_3')
     image_tool.Partition('rma12.bin', 1).CopyFile(
         os.path.join(DIR_CROS_PAYLOADS, 'test2.json'), self.temp_dir)
-    with open('test2.json') as f:
-      data = json.load(f)
+    data = json_utils.LoadFile('test2.json')
     self.assertEqual(data['toolkit']['version'], u'Toolkit Version 2.0')
 
     b1.Cleanup()

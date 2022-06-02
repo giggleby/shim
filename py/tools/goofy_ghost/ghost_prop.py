@@ -4,10 +4,10 @@
 
 """Methods to manipulate ghost properties file."""
 
-import json
 import os
 
 from cros.factory.test.env import paths
+from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
 DEVICE_GOOFY_GHOST_PROPERTIES_FILE = os.path.join(paths.DATA_DIR, 'config',
@@ -18,17 +18,13 @@ GOOFY_GHOST_BIN = os.path.join(paths.FACTORY_DIR, 'bin', 'goofy_ghost')
 
 
 def ReadProperties():
-  with open(GOOFY_GHOST_PROPERTIES_FILE, 'r') as fin:
-    return json.load(fin)
+  return json_utils.LoadFile(GOOFY_GHOST_PROPERTIES_FILE)
 
 
 def UpdateDeviceProperties(update):
   properties = {}
   if os.path.exists(DEVICE_GOOFY_GHOST_PROPERTIES_FILE):
-    with open(DEVICE_GOOFY_GHOST_PROPERTIES_FILE, 'r') as fin:
-      properties = json.load(fin)
+    properties = json_utils.LoadFile(DEVICE_GOOFY_GHOST_PROPERTIES_FILE)
   properties.update(update)
-  with open(DEVICE_GOOFY_GHOST_PROPERTIES_FILE, 'w') as fout:
-    json.dump(properties, fout, indent=2)
-
+  json_utils.DumpFile(DEVICE_GOOFY_GHOST_PROPERTIES_FILE, properties, indent=2)
   process_utils.Spawn([GOOFY_GHOST_BIN, 'reset'], check_call=True, log=True)

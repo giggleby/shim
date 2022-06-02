@@ -78,6 +78,8 @@ from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 
 # The Graphyte config files (pathloss, test plan, port config) should be placed
 # in the config_files folder in Graphyte framework.
@@ -186,14 +188,14 @@ class RFGraphyteTest(test_case.TestCase):
     # Parse result file.
     if not os.path.exists(self.result_file_path):
       self.fail('Result file is not found.')
-    with open(self.result_file_path) as result_file:
-      result_data = result_file.read()
-      logging.debug('Graphyte result: %s', result_data)
-      session.console.info('Graphyte result:\n%s', result_data)
-      failed_results = [result for result in result_data.splitlines()
-                        if 'FAIL' in result]
-      if failed_results:
-        session.console.error('Failed result:\n%s', '\n'.join(failed_results))
+    result_data = file_utils.ReadFile(self.result_file_path)
+    logging.debug('Graphyte result: %s', result_data)
+    session.console.info('Graphyte result:\n%s', result_data)
+    failed_results = [
+        result for result in result_data.splitlines() if 'FAIL' in result
+    ]
+    if failed_results:
+      session.console.error('Failed result:\n%s', '\n'.join(failed_results))
 
     # Upload the log by testlog.
     try:
@@ -238,8 +240,7 @@ class RFGraphyteTest(test_case.TestCase):
     will override the previous config, we directly patch the DHCP IP in the
     global config file. Please refer "Graphyte Use Manual" for detail.
     """
-    with open(self.config_file_path, 'r') as f:
-      global_config = json.load(f)
+    global_config = json_utils.LoadFile(self.config_file_path)
 
     # Override DUT link IP in the global config file.
     global_config.setdefault('dut_config', {})
@@ -248,8 +249,7 @@ class RFGraphyteTest(test_case.TestCase):
 
     # Write the patched config into new config file.
     self.config_file_path += '.patched'
-    with open(self.config_file_path, 'w') as f:
-      json.dump(global_config, f)
+    json_utils.DumpFile(self.config_file_path, global_config, pretty=False)
 
   def SaveParamsToTestlog(self):
     def _ConvertToNumber(value):

@@ -6,6 +6,7 @@ import glob
 import logging
 import os
 
+from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 
 DEFAULT_CRASH_PATH = '/var/factory/crash'
@@ -39,8 +40,8 @@ class CoreDumpManager:
       return
     if not os.path.exists(self._crash_dir):
       os.mkdir(self._crash_dir)
-    with open('/proc/sys/kernel/core_pattern', 'w') as f:
-      f.write(os.path.join(self._crash_dir, 'core.%p:%s:%u:%e'))
+    file_utils.WriteFile('/proc/sys/kernel/core_pattern',
+                         os.path.join(self._crash_dir, 'core.%p:%s:%u:%e'))
 
   def ScanFiles(self):
     """Scans the core dump directory and returns matched list of files.

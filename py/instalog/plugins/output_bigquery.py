@@ -210,8 +210,7 @@ class OutputBigQuery(plugin_base.OutputPlugin):
                                           big_event_filename)
             self.warning('Find a too big event (row size = %d bytes), and save '
                          'it to %s', len(json_row), big_event_path)
-            with open(big_event_path, 'w') as g:
-              g.write(event.Serialize() + '\n')
+            file_utils.Write(big_event_path, event.Serialize() + '\n')
           else:
             f.write(json_row + '\n')
             row_count += 1

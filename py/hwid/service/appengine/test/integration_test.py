@@ -86,10 +86,11 @@ def RunTest(image, test_names):
         ['docker', 'exec', container_id, 'python', '-m', tn], read_stdout=True,
         read_stderr=True, log=True)
     if p.returncode != 0:
-      with open(file_utils.CreateTemporaryFile(), 'w') as f:
-        f.write('stdout:\n' + p.stdout_data)
-        f.write('\nstderr:\n' + p.stderr_data)
-        failed_tests.append((tn, f.name))
+      temp_path = file_utils.CreateTemporaryFile()
+      file_utils.WriteFile(
+          temp_path,
+          'stdout:\n' + p.stdout_data + '\nstderr:\n' + p.stderr_data)
+      failed_tests.append((tn, temp_path))
 
   logging.info('[%s/%s] Passed',
                len(test_names) - len(failed_tests), len(test_names))

@@ -10,6 +10,7 @@ import argparse
 import yaml
 
 from cros.factory.test.rf.tools import csv_reader
+from cros.factory.utils import file_utils
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
@@ -19,5 +20,5 @@ if __name__ == '__main__':
                       help='the path of output file.')
   args = parser.parse_args()
   python_obj = csv_reader.ReadCsv(args.input)
-  with open(args.output, 'w') as fd:
-    fd.write(yaml.safe_dump(python_obj, default_flow_style=False))
+  file_utils.WriteFile(args.output,
+                       yaml.safe_dump(python_obj, default_flow_style=False))

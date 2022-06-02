@@ -37,8 +37,7 @@ class InputDeviceFunctionTest(unittest.TestCase):
     B: REL=103
     B: MSC=10
     """)
-    with open(self.tmp_file, 'w') as f:
-      f.write(mock_content)
+    file_utils.WriteFile(self.tmp_file, mock_content)
     self.original_path = input_device.INPUT_DEVICE_PATH
     input_device.INPUT_DEVICE_PATH = self.tmp_file
 

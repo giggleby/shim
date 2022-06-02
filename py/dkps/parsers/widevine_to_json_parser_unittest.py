@@ -8,6 +8,7 @@ import os
 import unittest
 
 from cros.factory.dkps.parsers import widevine_to_json_parser
+from cros.factory.utils import file_utils
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -44,9 +45,10 @@ EXPECTED_PARSED_MOCK_WIDEVINE_KEY_LIST = [
 class WidevineToJSONParserTest(unittest.TestCase):
 
   def runTest(self):
-    with open(MOCK_WIDEVINE_FILE_PATH) as f:
-      self.assertEqual(EXPECTED_PARSED_MOCK_WIDEVINE_KEY_LIST,
-                       widevine_to_json_parser.Parse(f.read()))
+    self.assertEqual(
+        EXPECTED_PARSED_MOCK_WIDEVINE_KEY_LIST,
+        widevine_to_json_parser.Parse(
+            file_utils.ReadFile(MOCK_WIDEVINE_FILE_PATH)))
 
 
 if __name__ == '__main__':

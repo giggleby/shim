@@ -36,8 +36,7 @@ class ProbeCmdTest(unittest.TestCase):
       shutil.rmtree(self.tmp_dir)
 
   def testNormal(self):
-    with open(self.tmp_file, 'w') as f:
-      f.write('asdf\n')
+    file_utils.WriteFile(self.tmp_file, 'asdf\n')
     expected = {
         'foo': [],
         'audio': [
@@ -76,8 +75,7 @@ class ProbeCmdTest(unittest.TestCase):
         }
     }
     statement_path = os.path.join(self.tmp_dir, 'statement.json')
-    with open(statement_path, 'w') as f:
-      json.dump(statement, f)
+    json_utils.DumpFile(statement_path, statement, pretty=False)
 
     # Output to file.
     output_file = os.path.join(self.tmp_dir, 'output_file.json')
@@ -110,8 +108,7 @@ class EvalFunctionCmdTest(unittest.TestCase):
       shutil.rmtree(self.tmp_dir)
 
   def testNormal(self):
-    with open(self.tmp_file, 'w') as f:
-      f.write('FOO\nBAR\n')
+    file_utils.WriteFile(self.tmp_file, 'FOO\nBAR\n')
     expected = [
         {'file_raw': 'FOO'},
         {'file_raw': 'BAR'}]
@@ -122,9 +119,7 @@ class EvalFunctionCmdTest(unittest.TestCase):
            'eval-function', 'file', self.tmp_file,
            '--key', 'file_raw', '--split-line']
     process_utils.CheckOutput(cmd)
-    with open(output_file, 'r') as f:
-      file_content = f.read()
-      results = json.loads(file_content)
+    results = json_utils.LoadFile(output_file)
     self.assertEqual(results, expected)
 
     # Output to stdout.

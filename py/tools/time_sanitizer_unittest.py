@@ -43,8 +43,7 @@ class TimeSanitizerTestBase(unittest.TestCase):
       super().run(result)
 
   def _ReadStateFile(self):
-    with open(self.state_file) as f:
-      return float(f.read().strip())
+    return float(file_utils.ReadFile(self.state_file).strip())
 
 
 class TimeSanitizerBaseTimeTest(TimeSanitizerTestBase):

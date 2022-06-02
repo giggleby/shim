@@ -521,9 +521,8 @@ class Project(django.db.models.Model):
       logger.info('Running command %r', cmd)
       subprocess.check_call(cmd)
       # Update default project for 'cros_docker.sh umpire' commands.
-      with open(
-          os.path.join(UMPIRE_BASE_DIR, UMPIRE_DEFAULT_PROJECT_FILE), 'w') as f:
-        f.write(self.name)
+      file_utils.WriteFile(
+          os.path.join(UMPIRE_BASE_DIR, UMPIRE_DEFAULT_PROJECT_FILE), self.name)
     except Exception:
       logger.error('Failed to create Umpire container %r', container_name)
       logger.exception(traceback.format_exc())

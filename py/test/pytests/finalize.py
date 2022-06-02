@@ -480,9 +480,11 @@ class Finalize(test_case.TestCase):
     # save log files in test data directory
     output_dir = os.path.join(
         paths.DATA_TESTS_DIR, session.GetCurrentTestPath())
-    with open(os.path.join(output_dir, 'wipe_in_tmpfs.log'), 'w') as f:
-      f.write(self.dut_response.get('wipe_in_tmpfs_log', ''))
-    with open(os.path.join(output_dir, 'wipe_init.log'), 'w') as f:
-      f.write(self.dut_response.get('wipe_init_log', ''))
+    file_utils.WriteFile(
+        os.path.join(output_dir, 'wipe_in_tmpfs.log'),
+        self.dut_response.get('wipe_in_tmpfs_log', ''))
+    file_utils.WriteFile(
+        os.path.join(output_dir, 'wipe_init.log'),
+        self.dut_response.get('wipe_init_log', ''))
 
     self.assertTrue(self.dut_response['success'])

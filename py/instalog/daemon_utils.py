@@ -103,8 +103,7 @@ class Daemon:
   def GetPID(self):
     """Returns the current PID of the daemon process, or None if not found."""
     try:
-      with open(self.pidfile, 'r') as f:
-        return int(f.read().strip())
+      return int(file_utils.ReadFile(self.pidfile).strip())
     except (IOError, ValueError):
       if os.path.exists(self.pidfile):
         os.remove(self.pidfile)

@@ -4,7 +4,6 @@
 
 import contextlib
 import functools
-import json
 import logging
 import os
 import re
@@ -12,6 +11,7 @@ import subprocess
 import time
 
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import schema
 
 FLASHROM_BIN = '/usr/sbin/flashrom'
@@ -66,8 +66,7 @@ def _GetBoardConfigurations():
   `chromite.lib.firmware.ap_firmware_config`. Those configs are dumped to
   `ap_config.json` through `cros ap dump-config`.
   """
-  with open(AP_CONFIG_JSON, 'r') as f:
-    boards = json.load(f)
+  boards = json_utils.LoadFile(AP_CONFIG_JSON)
   AP_CONFIG_SCHEMA.Validate(boards)
   return {k: v
           for k, v in boards.items()

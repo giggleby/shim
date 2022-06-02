@@ -252,8 +252,7 @@ class LinuxBoard(device_types.DeviceBoard):
       return
 
     with file_utils.UnopenedTemporaryFile() as temp_path:
-      with open(temp_path, 'w') as f:
-        f.write(content)
+      file_utils.WriteFile(temp_path, content)
       self.link.Push(temp_path, path)
 
   @type_utils.Overrides
@@ -270,8 +269,7 @@ class LinuxBoard(device_types.DeviceBoard):
       return
 
     with file_utils.UnopenedTemporaryFile() as local_temp:
-      with open(local_temp, 'w') as f:
-        f.write(content)
+      file_utils.WriteFile(local_temp, content)
       with self.temp.TempFile() as remote_temp:
         self.link.Push(local_temp, remote_temp)
         self.CheckOutput(['dd', 'if=%s' % remote_temp, 'of=%s' % path])

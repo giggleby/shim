@@ -104,8 +104,7 @@ class SeqGenerator:
       max_seq = 0
       seq = None
       last_line = ''
-      with open(self.log_file_path) as f:
-        lines = f.readlines()
+      lines = file_utils.ReadLines(self.log_file_path)
       for l in lines:
         # Attempt to load the JSON to get the seq.
         try:
@@ -163,8 +162,7 @@ class SeqGenerator:
     """Returns the last-used sequence number, or None on failure."""
     try:
       with file_utils.FileLock(self.path, self._filelock_waitsecs):
-        with open(self.path, 'r') as f:
-          value = int(f.read()) - 1
+        value = int(file_utils.ReadFile(self.path)) - 1
       return value
     except (IOError, OSError, ValueError):
       logging.exception('Unable to read global sequence number from %s; ',

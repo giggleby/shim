@@ -193,8 +193,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
     """
     if not os.path.isfile(store_path):
       return {}
-    with open(store_path) as f:
-      return json_utils.JSONDecoder().decode(f.read())
+    return json_utils.JSONDecoder().decode(file_utils.ReadFile(store_path))
 
   def GetSuperclass(self):
     """Get the superclass of the plugin class.

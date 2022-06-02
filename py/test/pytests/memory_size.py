@@ -82,6 +82,7 @@ from cros.factory.test import device_data
 from cros.factory.test.i18n import _
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 
@@ -103,9 +104,9 @@ class MemorySize(test_case.TestCase):
     mosys_mem_mb = sum([int(x) for x in re.findall('size_mb="([^"]*)"', ret)])
 
     # Get kernel meminfo.
-    with open('/proc/meminfo', 'r') as f:
-      kernel_mem_mb = int(
-          re.search(r'^MemTotal:\s*([0-9]+)\s*kB', f.read()).group(1)) // 1024
+    kernel_mem_mb = int(
+        re.search(r'^MemTotal:\s*([0-9]+)\s*kB',
+                  file_utils.ReadFile('/proc/meminfo')).group(1)) // 1024
 
     if abs(1.0 - kernel_mem_mb / mosys_mem_mb) > self.args.max_diff_ratio:
       self.fail('Kernel and mosys report different memory sizes: mosys=%dmb, '

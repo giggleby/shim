@@ -434,8 +434,7 @@ class LogFile(log_utils.LoggerMixin):
     """
     if not os.path.exists(self.offset_path):
       return 0
-    with open(self.offset_path) as f:
-      return int(f.read())
+    return int(file_utils.ReadFile(self.offset_path))
 
 
 if __name__ == '__main__':

@@ -24,6 +24,7 @@ from cros.factory.test import test_case
 from cros.factory.test.utils import media_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 # __name__ looks like "cros.factory.test.pytests.touchscreen_calibration".
@@ -142,8 +143,7 @@ class TouchscreenCalibration(test_case.TestCase):
     """Get the target board."""
     board_path = os.path.join(os.path.dirname(__file__), 'boards', 'board')
     if os.path.isfile(board_path):
-      with open(board_path) as f:
-        return f.read().strip()
+      return file_utils.ReadFile(board_path).strip()
     return None
 
   def _GetSensorService(self):
@@ -645,8 +645,10 @@ class TouchscreenCalibration(test_case.TestCase):
     Args:
       event: the event that triggers this callback function
     """
-    with open(os.path.join(self._local_log_dir, self.summary_file)) as f:
-      self._AttachLog('summary.log', f.read())
+    self._AttachLog(
+        'summary.log',
+        file_utils.ReadFile(
+            os.path.join(self._local_log_dir, self.summary_file)))
     self.sensors.PostTest()
     self.fixture.DriveProbeUpDone()
 

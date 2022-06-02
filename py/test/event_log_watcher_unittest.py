@@ -15,6 +15,7 @@ from cros.factory.test import event_log
 from cros.factory.test import event_log_watcher
 from cros.factory.test.event_log_watcher import Chunk
 from cros.factory.test.event_log_watcher import EventLogWatcher
+from cros.factory.utils import file_utils
 
 MOCK_LOG_NAME = lambda x: 'mylog12345%d' % x
 
@@ -217,9 +218,9 @@ class EventLogWatcherTest(unittest.TestCase):
       return s.replace(event_log.SYNC_MARKER_SEARCH,
                        event_log.SYNC_MARKER_REPLACE)
 
-    with open(path) as f:
-      # We should have replaced '#s' with '#S' in the preamble.
-      self.assertEqual(ReplaceSyncMarker(MOCK_PREAMBLE(0, True)), f.read())
+    # We should have replaced '#s' with '#S' in the preamble.
+    self.assertEqual(
+        ReplaceSyncMarker(MOCK_PREAMBLE(0, True)), file_utils.ReadFile(path))
 
     if unexpected_restart:
       # Re-create the event log watcher to zap its state.
@@ -243,12 +244,11 @@ class EventLogWatcherTest(unittest.TestCase):
         [Chunk(MOCK_LOG_NAME(0), MOCK_EVENT(0, True) + MOCK_EVENT(1, True),
                len(MOCK_PREAMBLE(0, True)))], False)
 
-    with open(path) as f:
-      # We should have replaced '#s' with '#S' in the preamble and the
-      # second real event.
-      self.assertEqual(
-          ReplaceSyncMarker(MOCK_PREAMBLE(0, True)) + MOCK_EVENT(0, True) +
-          ReplaceSyncMarker(MOCK_EVENT(1, True)), f.read())
+    # We should have replaced '#s' with '#S' in the preamble and the
+    # second real event.
+    self.assertEqual(
+        ReplaceSyncMarker(MOCK_PREAMBLE(0, True)) + MOCK_EVENT(0, True) +
+        ReplaceSyncMarker(MOCK_EVENT(1, True)), file_utils.ReadFile(path))
 
   def testHandleEventLogsFail(self):
     handle_event_log = mock.MagicMock(side_effect=Exception('Bar'))

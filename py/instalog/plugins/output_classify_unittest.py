@@ -18,6 +18,7 @@ from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog.plugins import output_file
 from cros.factory.instalog import testing
+from cros.factory.instalog.utils import file_utils
 
 EVENT_FILE_NAME = output_file.EVENT_FILE_NAME
 ATT_DIR_NAME = output_file.ATT_DIR_NAME
@@ -54,10 +55,9 @@ class TestOutputClassify(unittest.TestCase):
     sandbox.Stop()
 
     base_dir = os.path.join(self.target_dir, SAMPLE_SUBDIR_NAME, 'TEST_ID')
-    with open(os.path.join(base_dir, EVENT_FILE_NAME), 'r') as f:
-      lines = f.readlines()
-      self.assertEqual(1, len(lines))
-      self.assertEqual(event, datatypes.Event.Deserialize(lines[0]))
+    lines = file_utils.ReadLines(os.path.join(base_dir, EVENT_FILE_NAME))
+    self.assertEqual(1, len(lines))
+    self.assertEqual(event, datatypes.Event.Deserialize(lines[0]))
 
   def testInvalidClassifiers(self):
     config = {
@@ -88,18 +88,16 @@ class TestOutputClassify(unittest.TestCase):
     sandbox.Stop()
 
     base_dir = os.path.join(self.target_dir, 'A', 'C', SAMPLE_SUBDIR_NAME, 'D')
-    with open(os.path.join(base_dir, EVENT_FILE_NAME), 'r') as f:
-      lines = f.readlines()
-      self.assertEqual(2, len(lines))
-      self.assertEqual(event1, datatypes.Event.Deserialize(lines[0]))
-      self.assertEqual(event3, datatypes.Event.Deserialize(lines[1]))
+    lines = file_utils.ReadLines(os.path.join(base_dir, EVENT_FILE_NAME))
+    self.assertEqual(2, len(lines))
+    self.assertEqual(event1, datatypes.Event.Deserialize(lines[0]))
+    self.assertEqual(event3, datatypes.Event.Deserialize(lines[1]))
 
     base_dir = os.path.join(
         self.target_dir, 'A', 'CC', SAMPLE_SUBDIR_NAME, '__UNKNOWN__')
-    with open(os.path.join(base_dir, EVENT_FILE_NAME), 'r') as f:
-      lines = f.readlines()
-      self.assertEqual(1, len(lines))
-      self.assertEqual(event2, datatypes.Event.Deserialize(lines[0]))
+    lines = file_utils.ReadLines(os.path.join(base_dir, EVENT_FILE_NAME))
+    self.assertEqual(1, len(lines))
+    self.assertEqual(event2, datatypes.Event.Deserialize(lines[0]))
 
   def ChangeRelativePath(self, event, base_dir):
     for att_id, relative_path in event.attachments.items():
@@ -116,20 +114,18 @@ class TestOutputClassify(unittest.TestCase):
     sandbox.Start(True)
     att_path = os.path.join(self.tmp_dir, 'att')
     att_data = '!@#$%^&*()1234567890QWERTYUIOP'
-    with open(att_path, 'w') as f:
-      f.write(att_data)
+    file_utils.WriteFile(att_path, att_data)
     event = datatypes.Event({'deviceId': 'TEST_ID'}, {'att': att_path})
     self.stream.Queue([event])
     sandbox.Flush()
     sandbox.Stop()
 
     base_dir = os.path.join(self.target_dir, SAMPLE_SUBDIR_NAME, 'TEST_ID')
-    with open(os.path.join(base_dir, EVENT_FILE_NAME)) as f:
-      lines = f.readlines()
-      self.assertEqual(1, len(lines))
-      deserialized_event = datatypes.Event.Deserialize(lines[0])
-      self.ChangeRelativePath(deserialized_event, base_dir)
-      self.assertEqual(event, deserialized_event)
+    lines = file_utils.ReadLines(os.path.join(base_dir, EVENT_FILE_NAME))
+    self.assertEqual(1, len(lines))
+    deserialized_event = datatypes.Event.Deserialize(lines[0])
+    self.ChangeRelativePath(deserialized_event, base_dir)
+    self.assertEqual(event, deserialized_event)
 
 
 if __name__ == '__main__':

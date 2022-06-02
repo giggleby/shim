@@ -20,6 +20,9 @@ import subprocess
 from subprocess import PIPE
 from subprocess import STDOUT
 
+from cros.factory.utils import file_utils
+
+# Constants.
 _SYSFS_I2C_PATH = '/sys/bus/i2c/devices'
 _DEBUG_PATH = '/sys/kernel/debug'
 
@@ -117,8 +120,7 @@ def GetSysfsEntry(vendor=ATMEL):
     config_file = os.path.join(path, 'config_file')
     if not os.path.isfile(config_file):
       return False
-    with open(config_file) as f:
-      return f.read().strip() == _TOUCH_CONFIG.get(vendor)
+    return file_utils.ReadFile(config_file).strip() == _TOUCH_CONFIG.get(vendor)
 
   device_paths = []
   for path in glob.glob(os.path.join(_SYSFS_I2C_PATH, '*')):

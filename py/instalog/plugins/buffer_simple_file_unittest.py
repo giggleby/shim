@@ -450,8 +450,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     FILE_STRING = 'Hello World!'
     self._CreateBuffer({'copy_attachments': with_copy})
     with file_utils.UnopenedTemporaryFile() as path:
-      with open(path, 'w') as f:
-        f.write(FILE_STRING)
+      file_utils.WriteFile(path, FILE_STRING)
       self.assertTrue(os.path.isfile(path))
       event = datatypes.Event({}, {'a': path})
       self.assertEqual(True, self.sf.Produce([event]))
@@ -511,8 +510,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     """Tests that truncate removes attachments of truncated events."""
     FILE_STRING = 'Hello World!'
     with file_utils.UnopenedTemporaryFile() as path:
-      with open(path, 'w') as f:
-        f.write(FILE_STRING)
+      file_utils.WriteFile(path, FILE_STRING)
       event = datatypes.Event({}, {'a': path})
       self.sf.Produce([event])
     self.assertEqual(1, self._CountAttachmentsInBuffer(self.sf))

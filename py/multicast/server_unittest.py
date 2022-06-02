@@ -94,8 +94,7 @@ class GetLoggerTest(unittest.TestCase):
       # pylint: disable=protected-access
       logger = server.MulticastServer._GetLogger('fake_project', log_path)
       logger.Log('test logging')
-      with open(log_path, 'r') as fp:
-        log_content = fp.read()
+      log_content = file_utils.ReadFile(log_path)
       self.assertRegex(log_content, '.*:ERROR:fake_project:test logging$')
 
 

@@ -12,6 +12,7 @@ import tempfile
 import unittest
 
 from cros.factory.toolkit import installer
+from cros.factory.utils import file_utils
 
 
 class ToolkitInstallerTest(unittest.TestCase):
@@ -35,8 +36,8 @@ class ToolkitInstallerTest(unittest.TestCase):
     os.makedirs(os.path.join(self.src, 'usr/local/factory/py/umpire/client'))
 
     for install_file in self.FILES:
-      with open(os.path.join(self.src, install_file[0]), 'w') as f:
-        f.write(install_file[1])
+      file_utils.WriteFile(
+          os.path.join(self.src, install_file[0]), install_file[1])
 
     self.dest = tempfile.mkdtemp(prefix='ToolkitInstallerTest.')
     self._installer = None
@@ -75,8 +76,9 @@ class ToolkitInstallerTest(unittest.TestCase):
 
   def installLiveDevice(self):
     self._installer.Install()
-    with open(os.path.join(self.dest, 'usr/local', 'file1'), 'r') as f:
-      self.assertEqual(f.read(), 'install me!')
+    self.assertEqual(
+        file_utils.ReadFile(os.path.join(self.dest, 'usr/local', 'file1')),
+        'install me!')
     self.assertTrue(os.path.exists(
         os.path.join(self.dest, 'usr/local/factory/enabled')))
     self.assertEqual(
@@ -117,8 +119,9 @@ class ToolkitInstallerTest(unittest.TestCase):
     self.makeStatefulPartition()
     self.createInstaller()
     self._installer.Install()
-    with open(os.path.join(self.dest, 'dev_image', 'file1'), 'r') as f:
-      self.assertEqual(f.read(), 'install me!')
+    self.assertEqual(
+        file_utils.ReadFile(os.path.join(self.dest, 'dev_image', 'file1')),
+        'install me!')
     self.assertTrue(os.path.exists(
         os.path.join(self.dest, 'dev_image/factory/enabled')))
 
@@ -131,8 +134,9 @@ class ToolkitInstallerTest(unittest.TestCase):
     self._override_in_cros_device = True
     self.createInstaller(enabled_tag=False, system_root=self.dest)
     self._installer.Install()
-    with open(os.path.join(self.dest, 'usr/local', 'file1'), 'r') as f:
-      self.assertEqual(f.read(), 'install me!')
+    self.assertEqual(
+        file_utils.ReadFile(os.path.join(self.dest, 'usr/local', 'file1')),
+        'install me!')
     self.assertFalse(os.path.exists(
         os.path.join(self.dest, 'usr/local/factory/enabled')))
 

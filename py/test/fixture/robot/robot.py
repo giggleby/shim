@@ -24,10 +24,10 @@ For example::
 """
 
 import argparse
-import json
 import logging
 
 from cros.factory.test.fixture import utils as fixture_utils
+from cros.factory.utils import json_utils
 
 
 class RobotException(Exception):
@@ -144,9 +144,6 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
-  config = None
-
-  with open(args.config) as f:
-    config = json.loads(f.read())
+  config = json_utils.LoadFile(args.config)
 
   main(config['class_name'], config['params'])

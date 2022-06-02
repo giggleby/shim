@@ -6,12 +6,13 @@
 
 import ast
 import inspect
-import json
 import logging
 import os
 
 from cros.factory.device import device_types
 from cros.factory.utils import config_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 
 DEVICE_MODULE_BASE = 'cros.factory.device'
 DEVICE_CONFIG_NAME = 'devices'
@@ -108,11 +109,10 @@ def _ParseOptions(config_type, new_options):
   if env_dut_options.startswith('{'):
     dut_options = ast.literal_eval(env_dut_options)
   else:
-    with open(env_dut_options) as f:
-      if env_dut_options.endswith('.json'):
-        dut_options = json.load(f)
-      else:
-        dut_options = ast.literal_eval(f.read())
+    if env_dut_options.endswith('.json'):
+      dut_options = json_utils.LoadFile(env_dut_options)
+    else:
+      dut_options = ast.literal_eval(file_utils.ReadFile(env_dut_options))
 
   # Select target type.
   options = options[config_type]

@@ -18,6 +18,8 @@ import os
 import re
 import time
 
+from cros.factory.utils import file_utils
+
 from cros.factory.external import serial  # site-packages: dev-python/pyserial
 
 
@@ -130,8 +132,7 @@ def DeviceInterfaceProtocol(device_path):
   """
   interface_protocol_path = os.path.join(device_path, 'bInterfaceProtocol')
   try:
-    with open(interface_protocol_path) as f:
-      return f.read().strip()
+    return file_utils.ReadFile(interface_protocol_path).strip()
   except IOError:
     return ''
 

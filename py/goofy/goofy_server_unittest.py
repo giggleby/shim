@@ -193,8 +193,7 @@ class GoofyServerTest(unittest.TestCase):
   def testURLForFile(self):
     data = '<html><body><h1>Hello</h1></body></html>'
     with file_utils.UnopenedTemporaryFile() as path:
-      with open(path, 'w') as f:
-        f.write(data)
+      file_utils.WriteFile(path, data)
 
       url = self.server.URLForFile(path)
       with urllib.request.urlopen(

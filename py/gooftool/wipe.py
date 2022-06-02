@@ -527,12 +527,10 @@ def _InformStation(ip, port, token, wipe_init_log=None,
     response = dict(token=token, success=success)
 
     if wipe_init_log:
-      with open(wipe_init_log) as f:
-        response['wipe_init_log'] = f.read()
+      response['wipe_init_log'] = file_utils.ReadFile(wipe_init_log)
 
     if wipe_in_tmpfs_log:
-      with open(wipe_in_tmpfs_log) as f:
-        response['wipe_in_tmpfs_log'] = f.read()
+      response['wipe_in_tmpfs_log'] = file_utils.ReadFile(wipe_in_tmpfs_log)
 
     sock.sendall(json.dumps(response) + '\n')
     sock.close()

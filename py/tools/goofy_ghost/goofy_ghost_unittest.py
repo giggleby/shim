@@ -4,19 +4,19 @@
 # found in the LICENSE file.
 
 
-import json
 import os
 import unittest
 
 import jsonschema
+
+from cros.factory.utils import json_utils
 
 
 class GoofyGhostSchemaTest(unittest.TestCase):
 
   def loadJSON(self, name):
     parent_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(parent_dir, name), 'r') as fin:
-      return json.load(fin)
+    return json_utils.LoadFile(os.path.join(parent_dir, name))
 
   def runTest(self):
     schema = self.loadJSON('goofy_ghost.schema.json')

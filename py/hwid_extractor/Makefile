@@ -21,6 +21,7 @@ CLI_SOURCES := \
 UTILS_SOURCES := \
 	__init__.py \
 	file_utils.py \
+	json_utils.py \
 	platform_utils.py \
 	process_utils.py \
 	schema.py \

@@ -733,11 +733,10 @@ class FinalizeBundle:
       # 1) signer:
       signer_path = os.path.join(temp_dir, 'VERSION.signer')
       if os.path.exists(signer_path):
-        with open(signer_path, 'r') as f:
-          signer_output = f.read()
-          match = re.search(r'.*/cros/keys/([^\s]+)', signer_output)
-          signer = match.group(1)
-          self.firmware_record['firmware_signer'] = signer
+        signer_output = file_utils.ReadFile(signer_path)
+        match = re.search(r'.*/cros/keys/([^\s]+)', signer_output)
+        signer = match.group(1)
+        self.firmware_record['firmware_signer'] = signer
       else:
         logging.warning(
             'Finalize bundle with an unsigned(dev signed) firmware.')
@@ -1288,8 +1287,7 @@ class FinalizeBundle:
     logging.info('bundle record:\n %s', record)
 
     if self.bundle_record:
-      with open(self.bundle_record, 'w+') as f:
-        f.write(record)
+      file_utils.WriteFile(self.bundle_record, record)
       logging.info('bundle record save in %s', self.bundle_record)
 
   @contextlib.contextmanager

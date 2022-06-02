@@ -14,6 +14,7 @@ import time
 import xmlrpc.server
 
 from cros.factory.test.fixture.whale import serial_server
+from cros.factory.utils import file_utils
 
 # server address
 DEFAULT_PORT = 9997
@@ -67,8 +68,8 @@ def ParseArgs():
 def ModprobeFtdiDriver():
   """Modprobe FTDI driver on Plankton-Raiden manually."""
   subprocess.call(['modprobe', 'ftdi_sio'])
-  with open('/sys/bus/usb-serial/drivers/ftdi_sio/new_id', 'w') as f:
-    f.write('18d1 500c\n')
+  file_utils.WriteFile('/sys/bus/usb-serial/drivers/ftdi_sio/new_id',
+                       '18d1 500c\n')
   time.sleep(1)  # Wait after modprobe for TTY connection
 
 

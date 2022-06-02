@@ -78,9 +78,9 @@ class E2ETest(unittest.TestCase):
               'got': out_json
           })
 
-          with open(file_utils.CreateTemporaryFile(), 'w') as f:
-            f.write(err_msg)
-          self.fail('%s failed, see report at %s' % (test['name'], f.name))
+          temp_path = file_utils.CreateTemporaryFile()
+          file_utils.WriteFile(temp_path, err_msg)
+          self.fail('%s failed, see report at %s' % (test['name'], temp_path))
 
 
 if __name__ == '__main__':

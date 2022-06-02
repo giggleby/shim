@@ -40,6 +40,7 @@ from jsonrpclib import config
 from ws4py.client import WebSocketBaseClient
 import yaml
 
+from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
@@ -947,8 +948,7 @@ class OverlordCLIClient:
       args.cert = os.path.join(args.certificate_dir, 'rootCA.pem')
 
       ovl_password_file = os.path.join(args.certificate_dir, 'ovl_password')
-      with open(ovl_password_file, 'r') as f:
-        args.passwd = f.read().strip()
+      args.passwd = file_utils.ReadFile(ovl_password_file).strip()
       args.user = 'ovl'
 
     if args.cert and os.path.exists(args.cert):

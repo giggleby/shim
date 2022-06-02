@@ -19,6 +19,7 @@ from cros.factory.instalog import instalog_common
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog import testing
+from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import net_utils
 
 
@@ -77,10 +78,8 @@ class TestHTTP(unittest.TestCase):
         att_path2 = f2.name
         att_data1 = '!' * 10 * 1024 * 1024  # 10mb
         att_data2 = '!' * 10 * 1024 * 1024  # 10mb
-        with open(att_path1, 'w') as f:
-          f.write(att_data1)
-        with open(att_path2, 'w') as f:
-          f.write(att_data2)
+        file_utils.WriteFile(att_path1, att_data1)
+        file_utils.WriteFile(att_path2, att_data2)
         event1 = datatypes.Event({}, {'my_attachment': att_path1})
         event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
         event3 = datatypes.Event({'CC': 'DD'}, {})
@@ -99,10 +98,8 @@ class TestHTTP(unittest.TestCase):
         att_path2 = f2.name
         att_data1 = '!' * 20 * 1024 * 1024  # 20mb
         att_data2 = '!' * 20 * 1024 * 1024  # 20mb
-        with open(att_path1, 'w') as f:
-          f.write(att_data1)
-        with open(att_path2, 'w') as f:
-          f.write(att_data2)
+        file_utils.WriteFile(att_path1, att_data1)
+        file_utils.WriteFile(att_path2, att_data2)
         event1 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path1})
         event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
         self.stream.Queue([event1, event2])
@@ -120,8 +117,7 @@ class TestHTTP(unittest.TestCase):
     with tempfile.NamedTemporaryFile('w', dir=self._tmp_dir) as f:
       att_path = f.name
       att_data = '!' * 40 * 1024 * 1024  # 40mb
-      with open(att_path, 'w') as f:
-        f.write(att_data)
+      file_utils.WriteFile(att_path, att_data)
       event = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path})
       self.stream.Queue([event])
       # This should always fail to emit, so we set a short timeout.
@@ -148,8 +144,8 @@ class TestHTTPAE(unittest.TestCase):
 
     # Step 2. Import keys.
     gpg_input = gnupg.GPG(gnupghome=self.gpg_input_homedir)
-    with open(os.path.join(gpg_input_data, 'key.txt'), 'r') as f:
-      gpg_input.import_keys(f.read())
+    gpg_input.import_keys(
+        file_utils.ReadFile(os.path.join(gpg_input_data, 'key.txt')))
     self.assertEqual(len(gpg_input.list_keys()), 1)
     self.assertEqual(len(gpg_input.list_keys(True)), 1)
     self.assertEqual(gpg_input.list_keys()[0]['uids'],
@@ -157,8 +153,8 @@ class TestHTTPAE(unittest.TestCase):
     self.assertEqual(gpg_input.list_keys(True)[0]['uids'],
                      ['HTTP_Input (insecure!) <chuntsen@google.com>'])
     gpg_output = gnupg.GPG(gnupghome=self.gpg_output_homedir)
-    with open(os.path.join(gpg_output_data, 'key.txt'), 'r') as f:
-      gpg_output.import_keys(f.read())
+    gpg_output.import_keys(
+        file_utils.ReadFile(os.path.join(gpg_output_data, 'key.txt')))
     self.assertEqual(len(gpg_output.list_keys()), 1)
     self.assertEqual(len(gpg_output.list_keys(True)), 1)
     self.assertEqual(gpg_output.list_keys()[0]['uids'],
@@ -262,10 +258,8 @@ class TestHTTPAE(unittest.TestCase):
         att_path2 = f2.name
         att_data1 = '!' * 10 * 1024 * 1024  # 10mb
         att_data2 = '!' * 10 * 1024 * 1024  # 10mb
-        with open(att_path1, 'w') as f:
-          f.write(att_data1)
-        with open(att_path2, 'w') as f:
-          f.write(att_data2)
+        file_utils.WriteFile(att_path1, att_data1)
+        file_utils.WriteFile(att_path2, att_data2)
         event1 = datatypes.Event({}, {'my_attachment': att_path1})
         event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
         event3 = datatypes.Event({'CC': 'DD'}, {})

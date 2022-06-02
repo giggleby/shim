@@ -17,6 +17,7 @@ from cros.factory.test.utils import pytest_utils
 from cros.factory.test.utils import time_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.arg_utils import Args
+from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
 
@@ -31,18 +32,17 @@ def _FormatTemplate(template, *args, **kargs):
   """
   path = os.path.join(common.CURRENT_DIR, template)
 
-  with open(path) as f:
-    template = f.read()
+  template = file_utils.ReadFile(path)
 
-    # escape all braces
-    template = template.replace("{", "{{")
-    template = template.replace("}", "}}")
+  # escape all braces
+  template = template.replace("{", "{{")
+  template = template.replace("}", "}}")
 
-    # now {%...%} becomes {{%...%}}
-    template = template.replace("{{%", "{")
-    template = template.replace("%}}", "}")
+  # now {%...%} becomes {{%...%}}
+  template = template.replace("{{%", "{")
+  template = template.replace("%}}", "}")
 
-    return template.format(*args, **kargs)
+  return template.format(*args, **kargs)
 
 
 class FunctionMapper:

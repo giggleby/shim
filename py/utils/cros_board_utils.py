@@ -106,8 +106,8 @@ class BuildBoard:
               'Not in chroot and %r does not exist, unable to determine board' %
               LSB_RELEASE_FILE)
         try:
-          with open(LSB_RELEASE_FILE) as f:
-            self.full_name = LSB_BOARD_RE.findall(f.read())[0].lower()
+          self.full_name = LSB_BOARD_RE.findall(
+              file_utils.ReadFile(LSB_RELEASE_FILE))[0].lower()
         except IndexError:
           raise BuildBoardException(
               'Cannot determine board from %r' % LSB_RELEASE_FILE)

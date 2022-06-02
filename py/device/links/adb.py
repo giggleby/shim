@@ -89,8 +89,7 @@ class ADBLink(device_types.DeviceLink):
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
         self.Pull(remote, path)
-        with open(path) as f:
-          return f.read()
+        return file_utils.ReadFile(path)
 
     subprocess.check_output(['adb', 'pull', remote, local],
                             stderr=subprocess.STDOUT)

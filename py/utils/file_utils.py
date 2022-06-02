@@ -284,13 +284,14 @@ def TouchFile(path):
   Args:
     path: The path to touch.
   """
-  with open(path, 'a'):
+  with open(path, 'ab', encoding=None):
     os.utime(path, None)
 
 
-def ReadOneLine(filename):
+def ReadOneLine(filename, encoding='utf8'):
   """Returns the first line as a string from the given file."""
-  with open(filename, 'r') as f:
+  mode = 'rb' if encoding is None else 'r'
+  with open(filename, mode, encoding=encoding) as f:
     return f.readline().rstrip('\n')
 
 
@@ -902,7 +903,8 @@ class FileLockContextManager:
     if self.opened:
       return
 
-    self.file = open(self.path, self.mode)  # pylint: disable=consider-using-with
+    encoding = None if 'b' in self.mode else 'utf8'
+    self.file = open(self.path, self.mode, encoding=encoding)  # pylint: disable=consider-using-with
     self.opened = True
 
 
@@ -943,12 +945,13 @@ def AtomicWrite(path, binary=False, fsync=True):
   #                 although this relies on filesystem support and won't work
   #                 with FAT32.
   mode = 'wb' if binary else 'w'
+  encoding = None if binary else 'utf8'
   path_dir = os.path.abspath(os.path.dirname(path))
   path_file = os.path.basename(path)
   assert path_file != ''  # Make sure path contains a file.
   with UnopenedTemporaryFile(prefix='%s_atomicwrite_' % path_file,
                              dir=path_dir) as tmp_path:
-    with open(tmp_path, mode) as f:
+    with open(tmp_path, mode, encoding=encoding) as f:
       yield f
       if fsync:
         f.flush()

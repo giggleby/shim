@@ -9,7 +9,6 @@ import argparse
 import base64
 import glob
 import inspect
-import json
 import logging
 import os
 import queue
@@ -34,6 +33,7 @@ from cros.factory.test.test_lists import test_list
 from cros.factory.tools import factory_bug
 from cros.factory.utils import debug_utils
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
@@ -775,8 +775,7 @@ class GoofyRPC:
     test_dir = os.path.join(paths.DATA_TESTS_DIR,
                             '%s-%s' % (path, invocation))
 
-    with open(os.path.join(test_dir, 'testlog.json')) as f:
-      testlog = json.load(f)
+    testlog = json_utils.LoadFile(os.path.join(test_dir, 'testlog.json'))
 
     log_file = os.path.join(test_dir, 'log')
     try:

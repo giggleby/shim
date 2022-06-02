@@ -13,6 +13,7 @@ from urllib import parse as urlparse
 
 from cros.factory.hwid_extractor import ap_firmware
 from cros.factory.hwid_extractor import device
+from cros.factory.utils import json_utils
 
 WWW_ROOT_DIR = os.path.join(os.path.dirname(__file__), 'www')
 CONFIG_JSON = os.path.join(WWW_ROOT_DIR, 'config.json')
@@ -96,8 +97,7 @@ class RequestHandler(http_server.SimpleHTTPRequestHandler):
   def _UpdateConfig(self):
     """Save the extractor config file to config.json."""
     config = self._params
-    with open(CONFIG_JSON, 'w') as f:
-      json.dump(config, f)
+    json_utils.DumpFile(CONFIG_JSON, config, pretty=False)
     self._SendActionResult(True)
 
   def _EnableTestlab(self):

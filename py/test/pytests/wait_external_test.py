@@ -136,8 +136,7 @@ class WaitExternalTest(test_case.TestCase):
     # flushed.
     self.Sleep(_CHECK_PERIOD_SECS)
 
-    with open(self._file_path) as f:
-      result = f.read().strip()
+    result = file_utils.ReadFile(self._file_path).strip()
 
     self.assertEqual(result.lower(), 'pass',
                      'Test %s completed with failure: %s' %

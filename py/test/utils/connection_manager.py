@@ -404,10 +404,9 @@ def PingHost(host, timeout=_PING_TIMEOUT_SECS):
   Returns:
     True if host is successfully pinged.
   """
-  with open(os.devnull, 'w') as fnull:
-    return subprocess.call(
-        'ping %s -c 1 -w %d' % (host, int(timeout)),
-        shell=True, stdout=fnull, stderr=fnull)
+  return subprocess.call('ping %s -c 1 -w %d' % (host, int(timeout)),
+                         shell=True, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
 
 
 def LoadNetworkConfig(config_name):

@@ -52,8 +52,7 @@ def TweakTestLists(args):
     args: The arguments from argparse.
   """
   for path in glob.glob(os.path.join(test_list_common.TEST_LISTS_PATH, '*.py')):
-    with open(path) as f:
-      data = f.read()
+    data = file_utils.ReadFile(path)
 
     def SubLine(variable_re, new_value, string):
       """Replaces certain assignments in the test list with a new value.
@@ -92,9 +91,8 @@ def TweakTestLists(args):
 
     # Write out the file if anything has changed.
     if new_data != data:
-      with open(path, 'w') as f:
-        logging.info('Modified %s', path)
-        f.write(new_data)
+      logging.info('Modified %s', path)
+      file_utils.WriteFile(path, new_data)
 
   if args.test_list:
     manager.Manager.SetActiveTestList(args.test_list)

@@ -17,6 +17,7 @@ from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test import session
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 
 ANCHOR_FOR_LOW_BAND_CALIBRATION_DATA = 'calPierData2G'
 ANCHOR_FOR_HIGH_BAND_CALIBRATION_DATA = 'calPierData5G'
@@ -82,8 +83,7 @@ class CheckWifiCalibrationTest(unittest.TestCase):
   ]
 
   def ReadCalibrationTable(self, path, anchor_string):
-    with open(path) as f:
-      lines = f.readlines()
+    lines = file_utils.ReadLines(path)
     idx = 0
     # Find the anchor
     for line in lines:

@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 import binascii
-import json
 import os
 import shutil
 import tempfile
@@ -17,9 +16,7 @@ from cros.factory.utils import json_utils
 
 
 def LoadJSONFromFile(path):
-  with open(path) as f:
-    value = json.load(f)
-  return value
+  return json_utils.LoadFile(path)
 
 
 class EdidTest(unittest.TestCase):

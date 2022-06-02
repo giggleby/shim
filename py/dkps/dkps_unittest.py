@@ -15,6 +15,8 @@ import unittest
 import gnupg
 
 from cros.factory.dkps import dkps
+from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 
@@ -71,8 +73,7 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     exported_server_key = self.server_gpg.export_keys(
         self.server_key_fingerprint)
     self.server_key_file_path = os.path.join(self.temp_dir, 'server.pub')
-    with open(self.server_key_file_path, 'w') as f:
-      f.write(exported_server_key)
+    file_utils.WriteFile(self.server_key_file_path, exported_server_key)
 
     # TODO(treapking): Extract common procedures into functions or a class.
     self.uploader_gpg = gnupg.GPG(gnupghome=uploader_gnupg_homedir)
@@ -85,64 +86,68 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     # Passphrase for uploader and requester private keys.
     self.passphrase = 'taiswanleba'
     self.passphrase_file_path = os.path.join(self.temp_dir, 'passphrase')
-    with open(self.passphrase_file_path, 'w') as f:
-      f.write(self.passphrase)
+    file_utils.WriteFile(self.passphrase_file_path, self.passphrase)
 
     self.wrong_passphrase = '_wrong_passphrase_'
     self.wrong_passphrase_file_path = os.path.join(self.temp_dir,
                                                    'wrong_passphrase')
-    with open(self.wrong_passphrase_file_path, 'w') as f:
-      f.write(self.wrong_passphrase)
+    file_utils.WriteFile(self.wrong_passphrase_file_path, self.wrong_passphrase)
 
     # Import uploader key.
-    with open(os.path.join(SCRIPT_DIR, 'testdata', 'uploader.key')) as f:
-      self.uploader_key_fingerprint = (
-          self.uploader_gpg.import_keys(f.read()).fingerprints[0])
+    self.uploader_key_fingerprint = self.uploader_gpg.import_keys(
+        file_utils.ReadFile(
+            os.path.join(SCRIPT_DIR, 'testdata',
+                         'uploader.key'))).fingerprints[0]
     # Output uploader key to a file for DKPS.AddProject().
     self.uploader_public_key_file_path = os.path.join(self.temp_dir,
                                                       'uploader.pub')
-    with open(self.uploader_public_key_file_path, 'w') as f:
-      f.write(self.uploader_gpg.export_keys(self.uploader_key_fingerprint))
+    file_utils.WriteFile(
+        self.uploader_public_key_file_path,
+        self.uploader_gpg.export_keys(self.uploader_key_fingerprint))
     self.uploader_private_key_file_path = os.path.join(self.temp_dir,
                                                        'uploader')
-    with open(self.uploader_private_key_file_path, 'w') as f:
-      f.write(
-          self.uploader_gpg.export_keys(self.uploader_key_fingerprint, True,
-                                        passphrase=self.passphrase))
+    file_utils.WriteFile(
+        self.uploader_private_key_file_path,
+        self.uploader_gpg.export_keys(self.uploader_key_fingerprint, True,
+                                      passphrase=self.passphrase))
 
     # Import requester key.
-    with open(os.path.join(SCRIPT_DIR, 'testdata', 'requester.key')) as f:
-      self.requester_key_fingerprint = (
-          self.requester_gpg.import_keys(f.read()).fingerprints[0])
+    self.requester_key_fingerprint = self.requester_gpg.import_keys(
+        file_utils.ReadFile(
+            os.path.join(SCRIPT_DIR, 'testdata',
+                         'requester.key'))).fingerprints[0]
     # Output requester key to a file for DKPS.AddProject().
     self.requester_public_key_file_path = os.path.join(self.temp_dir,
                                                        'requester.pub')
-    with open(self.requester_public_key_file_path, 'w') as f:
-      f.write(self.requester_gpg.export_keys(self.requester_key_fingerprint))
+    file_utils.WriteFile(
+        self.requester_public_key_file_path,
+        self.requester_gpg.export_keys(self.requester_key_fingerprint))
     self.requester_private_key_file_path = os.path.join(self.temp_dir,
                                                         'requester')
-    with open(self.requester_private_key_file_path, 'w') as f:
-      f.write(
-          self.requester_gpg.export_keys(self.requester_key_fingerprint, True,
-                                         passphrase=self.passphrase))
+    file_utils.WriteFile(
+        self.requester_private_key_file_path,
+        self.requester_gpg.export_keys(self.requester_key_fingerprint, True,
+                                       passphrase=self.passphrase))
 
     # Import wrong_user key.
     # Note that the passphrase for wrong_user key is "taiswanleba", not
     # "_wrong_passphrase_".
-    with open(os.path.join(SCRIPT_DIR, 'testdata', 'wrong_user.key')) as f:
-      self.wrong_user_key_fingerprint = (
-          self.wrong_user_gpg.import_keys(f.read()).fingerprints[0])
+    self.wrong_user_key_fingerprint = self.wrong_user_gpg.import_keys(
+        file_utils.ReadFile(
+            os.path.join(SCRIPT_DIR, 'testdata',
+                         'wrong_user.key'))).fingerprints[0]
     # Output wrong_user key to a file for DKPS.AddProject().
     self.wrong_user_public_key_file_path = os.path.join(self.temp_dir,
                                                         'wrong_user.pub')
-    with open(self.wrong_user_public_key_file_path, 'w') as f:
-      f.write(self.wrong_user_gpg.export_keys(self.wrong_user_key_fingerprint))
+    file_utils.WriteFile(
+        self.wrong_user_public_key_file_path,
+        self.wrong_user_gpg.export_keys(self.wrong_user_key_fingerprint))
     self.wrong_user_private_key_file_path = os.path.join(
         self.temp_dir, 'wrong_user')
-    with open(self.wrong_user_private_key_file_path, 'w') as f:
-      f.write(
-          self.wrong_user_gpg.export_keys(self.wrong_user_key_fingerprint, True,
-                                          passphrase=self.passphrase))
+    file_utils.WriteFile(
+        self.wrong_user_private_key_file_path,
+        self.wrong_user_gpg.export_keys(self.wrong_user_key_fingerprint, True,
+                                        passphrase=self.passphrase))
 
     self.server_process = None
     self.port = net_utils.FindUnusedTCPPort()
@@ -177,8 +182,7 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
 
     # Upload DRM keys.
     drm_keys_file_path = os.path.join(self.temp_dir, 'mock_drm_keys')
-    with open(drm_keys_file_path, 'w') as f:
-      f.write(json.dumps(MOCK_KEY_LIST))
+    json_utils.DumpFile(drm_keys_file_path, MOCK_KEY_LIST, pretty=False)
     self._Upload(drm_keys_file_path)
 
     # Test upload duplicate DRM keys.
@@ -188,13 +192,12 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     # Test upload with `--skip_encryption`.
     encrypted_drm_keys_file_path = os.path.join(self.temp_dir,
                                                 'encrypted_mock_drm_keys')
-    with open(encrypted_drm_keys_file_path, 'w') as f:
-      encrypted_mock_drm_keys = self.uploader_gpg.encrypt(
-          bytes(json.dumps(MOCK_KEY_LIST),
-                'utf-8'), self.server_key_fingerprint, always_trust=True,
-          sign=self.uploader_key_fingerprint, passphrase=self.passphrase,
-          armor=True)
-      f.write(encrypted_mock_drm_keys.data.decode('ascii'))
+    encrypted_mock_drm_keys = self.uploader_gpg.encrypt(
+        bytes(json.dumps(MOCK_KEY_LIST), 'utf-8'), self.server_key_fingerprint,
+        always_trust=True, sign=self.uploader_key_fingerprint,
+        passphrase=self.passphrase, armor=True)
+    file_utils.WriteFile(encrypted_drm_keys_file_path,
+                         encrypted_mock_drm_keys.data.decode('ascii'))
     with self.assertRaisesRegex(RuntimeError, 'UNIQUE constraint failed'):
       self._Upload(encrypted_drm_keys_file_path, skip_encryption=True)
 

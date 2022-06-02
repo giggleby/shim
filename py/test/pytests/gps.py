@@ -45,6 +45,7 @@ from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test import session
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import time_utils
 
@@ -150,8 +151,7 @@ class GPS(unittest.TestCase):
           break
     if not config_path:
       self.fail('Config file %s could not be found' % self.args.gps_config_file)
-    with open(config_path) as f:
-      self.dut.WriteFile('/data/gps', f.read())
+    self.dut.WriteFile('/data/gps', file_utils.ReadFile(config_path))
 
   def _ParseNMEAStream(self, file_stream):
     """Parse NMEA stream and return values.

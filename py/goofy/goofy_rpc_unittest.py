@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 from contextlib import contextmanager
-import json
 import os
 import unittest
 from unittest import mock
@@ -14,6 +13,7 @@ from cros.factory.goofy import goofy_rpc
 from cros.factory.test.env import paths
 from cros.factory.test.test_lists import test_list as test_list_module
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 
 
 @contextmanager
@@ -53,9 +53,8 @@ class GoofyRPCTest(unittest.TestCase):
                           test_path + '-%s' % invocation,
                           'testlog.json')
       file_utils.TryMakeDirs(os.path.dirname(path))
-      with open(path, 'w') as f:
-        data['startTime'] = invocation
-        json.dump(data, f)
+      data['startTime'] = invocation
+      json_utils.DumpFile(path, data, pretty=False)
       expected.append(data.copy())
 
     self.assertEqual(expected, self.goofy_rpc.GetTestHistory(test_path))
@@ -76,14 +75,9 @@ class GoofyRPCTest(unittest.TestCase):
     testlog_file = os.path.join(test_dir, 'testlog.json')
     source_code_file = os.path.join(test_dir, 'source_code')
 
-    with open(log_file, 'w') as f:
-      f.write(log)
-
-    with open(testlog_file, 'w') as f:
-      json.dump(data, f)
-
-    with open(source_code_file, 'w') as f:
-      f.write(source_code)
+    file_utils.WriteFile(log_file, log)
+    json_utils.DumpFile(testlog_file, data, pretty=False)
+    file_utils.WriteFile(source_code_file, source_code)
 
     self.assertEqual(
         {'testlog': data,

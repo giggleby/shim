@@ -83,6 +83,7 @@ from cros.factory.instalog import lock_utils
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils import file_utils
+from cros.factory.instalog.utils import json_utils
 
 # The number of bytes to buffer when retrieving events from a file.
 _BUFFER_SIZE_BYTES = 4 * 1024  # 4kb
@@ -155,8 +156,7 @@ def TryLoadJSON(path, logger_name=None):
     logger.debug('%s: does not exist', path)
     return None
   try:
-    with open(path, 'r') as f:
-      return json.load(f)
+    return json_utils.LoadFile(path)
   except Exception:
     logger.exception('%s: Error reading disk or loading JSON', path)
     raise

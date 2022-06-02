@@ -479,10 +479,9 @@ class BadBlocksTest(test_case.TestCase):
 
     first_time = self.message_monitor is None
     if first_time:
-      self.message_monitor = self.dut.Popen(
-          ['tail', '-f', '/var/log/messages'],
-          stdin=open('/dev/null'),  # pylint: disable=consider-using-with
-          stdout=subprocess.PIPE)
+      self.message_monitor = self.dut.Popen(['tail', '-f', '/var/log/messages'],
+                                            stdin=subprocess.DEVNULL,
+                                            stdout=subprocess.PIPE)
 
     # List of dicts to log.
     link_info_events = []

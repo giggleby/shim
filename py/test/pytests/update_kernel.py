@@ -131,8 +131,8 @@ class UpdateKernel(unittest.TestCase):
 
     if self.args.kernel_image is not None:
       # Directly write into kernel partition.
-      with open(self.args.kernel_image, 'r') as f:
-        self._dut.WriteSpecialFile(kerndev.path, f.read())
+      self._dut.WriteSpecialFile(kerndev.path,
+                                 file_utils.ReadFile(self.args.kernel_image))
 
     config_suffix = ".%s" % kernel_id
     with self._dut.temp.TempFile(suffix=config_suffix) as config_file:

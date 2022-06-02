@@ -71,20 +71,18 @@ class LidSwitchTest(test_case.TestCase):
     Args:
       value: The targeted brightness value.
     """
-    with open(self.args.brightness_path, 'w') as f:
-      try:
-        f.write('%d' % value)
-      except IOError:
-        self.FailTask('Can not write %r into brightness. '
-                      'Maybe the limit is wrong' % value)
+    try:
+      file_utils.WriteFile(self.args.brightness_path, '%d' % value)
+    except IOError:
+      self.FailTask('Can not write %r into brightness. '
+                    'Maybe the limit is wrong' % value)
 
   def GetBrightness(self):  # pylint: disable=inconsistent-return-statements
     """Gets the brightness value from sysfs."""
-    with open(self.args.brightness_path, 'r') as f:
-      try:
-        return int(f.read())
-      except IOError:
-        self.FailTask('Can not read brightness.')
+    try:
+      return int(file_utils.ReadFile(self.args.brightness_path))
+    except IOError:
+      self.FailTask('Can not read brightness.')
 
   def setUp(self):
     self.event_dev = evdev_utils.FindDevice(self.args.device_filter,

@@ -20,6 +20,7 @@ from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog.plugins import output_http
 from cros.factory.instalog import testing
+from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import net_utils
 
 
@@ -112,10 +113,8 @@ class TestOutputHTTP(unittest.TestCase):
     att_path2 = os.path.join(self._tmp_dir, 'file1')
     att_data1 = '!' * 10
     att_data2 = '@' * 10
-    with open(att_path1, 'w') as f:
-      f.write(att_data1)
-    with open(att_path2, 'w') as f:
-      f.write(att_data2)
+    file_utils.WriteFile(att_path1, att_data1)
+    file_utils.WriteFile(att_path2, att_data2)
     event1 = datatypes.Event({}, {'my_attachment': att_path1})
     event2 = datatypes.Event({'AA': 'BB'}, {'my_attachment': att_path2})
     event3 = datatypes.Event({'CC': 'DD'}, {})

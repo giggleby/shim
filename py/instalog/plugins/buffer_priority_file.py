@@ -199,8 +199,7 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
           all_metadata[metadata_path] = file_utils.ReadFile(metadata_path)
         else:
           all_metadata[metadata_path] = None
-      with open(tmp_path, 'w') as f:
-        f.write(json_utils.encoder.encode(all_metadata))
+      file_utils.WriteFile(tmp_path, json_utils.encoder.encode(all_metadata))
       file_utils.AtomicCopy(tmp_path, tmp_metadata_path)
       file_utils.SyncDirectory(self.metadata_tmp_dir)
     return tmp_metadata_path

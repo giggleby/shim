@@ -10,6 +10,7 @@ from subprocess import PIPE
 from subprocess import Popen
 
 from cros.factory.test.env import paths
+from cros.factory.utils import file_utils
 from cros.factory.utils import sys_interface as sys_interface_module
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
@@ -94,7 +95,7 @@ class Util:
 
     sysfs_path = '/sys/block/%s/removable' % dev
     return (os.path.exists(sysfs_path) and
-            open(sysfs_path).read().strip() == '0')
+            file_utils.ReadFile(sysfs_path).strip() == '0')
 
   def GetKeyHashFromFutil(self, fw_file):
     """Gets the pubkey hash from `futility show` output.

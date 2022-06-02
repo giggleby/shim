@@ -13,6 +13,7 @@ from cros.factory.probe import function
 from cros.factory.probe.lib import probe_function
 from cros.factory.probe import probe_utils
 from cros.factory.probe import search
+from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
 _sub_cmd_list = []
@@ -198,8 +199,7 @@ def OutputResults(results, options):
   if options.output_file == '-':  # Output to stdout.
     print(output_str)
   else:
-    with open(options.output_file, 'w') as f:
-      f.write(output_str)
+    file_utils.WriteFile(options.output_file, output_str)
 
 
 def ParseOptions():

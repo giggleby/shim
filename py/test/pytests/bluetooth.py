@@ -314,8 +314,7 @@ class BluetoothTest(test_case.TestCase):
 
       if (self.args.test_host_id_file and
           os.path.isfile(self.args.test_host_id_file)):
-        with open(self.args.test_host_id_file) as f:
-          test_host_id = f.read().strip()
+        test_host_id = file_utils.ReadFile(self.args.test_host_id_file).strip()
       else:
         test_host_id = None
 

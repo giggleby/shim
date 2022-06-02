@@ -37,6 +37,7 @@ import socket
 import sys
 import time
 
+from . import file_utils
 from . import net_utils
 from . import sync_utils
 from . import type_utils
@@ -241,14 +242,12 @@ class Gpio:
     """Exports GPIO sysfs interface."""
     logging.debug('export GPIO port %d', self._port)
     if not os.path.exists(self._GetSysfsPath()):
-      with open(self._EXPORT_FILE, 'w') as f:
-        f.write(str(self._port))
+      file_utils.WriteFile(self._EXPORT_FILE, str(self._port))
 
   def _UnexportSysfs(self):
     """Unexports GPIO sysfs interface."""
     logging.debug('unexport GPIO port %d', self._port)
-    with open(self._UNEXPORT_FILE, 'w') as f:
-      f.write(str(self._port))
+    file_utils.WriteFile(self._UNEXPORT_FILE, str(self._port))
 
   def _AssignEdge(self, edge):
     """Writes edge value to GPIO sysfs interface.
@@ -257,8 +256,7 @@ class Gpio:
       edge: value in _EDGE_VALUES.
     """
     # for poll action, write edge value to /sys/class/gpio/gpioN/edge.
-    with open(self._GetSysfsPath('edge'), 'w') as f:
-      f.write(self._EDGE_VALUES[edge])
+    file_utils.WriteFile(self._GetSysfsPath('edge'), self._EDGE_VALUES[edge])
 
   def _ReadValue(self):
     """Reads the current GPIO value.
@@ -266,8 +264,7 @@ class Gpio:
     Returns:
       GPIO value. 1 for high and 0 for low.
     """
-    with open(self._GetSysfsPath('value'), 'r') as f:
-      return int(f.read().strip())
+    return int(file_utils.ReadFile(self._GetSysfsPath('value')).strip())
 
   def _WriteValue(self, value):
     """Writes the GPIO value.
@@ -276,10 +273,8 @@ class Gpio:
       value: GPIO value. 1 for high and 0 for low.
     """
     # set gpio direction to output mode
-    with open(self._GetSysfsPath('direction'), 'w') as f:
-      f.write('out')
-    with open(self._GetSysfsPath('value'), 'w') as f:
-      f.write(str(value))
+    file_utils.WriteFile(self._GetSysfsPath('direction'), 'out')
+    file_utils.WriteFile(self._GetSysfsPath('value'), str(value))
 
   def Poll(self, edge, timeout_secs=0):
     """Waits for a GPIO port being edge triggered.

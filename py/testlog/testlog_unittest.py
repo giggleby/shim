@@ -361,8 +361,7 @@ class TestlogEventTest(TestlogTestBase):
 
     def CreateTextFile():
       path = os.path.join(self.tmp_dir, TEST_FILENAME)
-      with open(path, 'w') as fd:
-        fd.write(CONTENT)
+      file_utils.WriteFile(path, CONTENT)
       return path
 
     # Move a file normally.
@@ -418,8 +417,7 @@ class TestlogEventTest(TestlogTestBase):
       description = att_dict['description']
       self.assertEqual(DESCRIPTION, description)
       path = att_dict['path']
-      with open(path) as f:
-        text = f.read()
+      text = file_utils.ReadFile(path)
       self.assertEqual(CONTENT, text)
       self.assertTrue(att_name in path)
       paths.add(path)
@@ -453,8 +451,7 @@ class TestlogEventTest(TestlogTestBase):
     TEST_FILENAME = 'TextFile.txt'
     def CreateTextFile():
       path = os.path.join(self.tmp_dir, TEST_FILENAME)
-      with open(path, 'w') as fd:
-        fd.write(CONTENT)
+      file_utils.WriteFile(path, CONTENT)
       return path
 
     # Move a file normally.
@@ -524,8 +521,7 @@ class TestlogEventTest(TestlogTestBase):
     paths = set()
     for att_name, att_dict in event['attachments'].items():
       path = att_dict['path']
-      with open(path) as f:
-        text = f.read()
+      text = file_utils.ReadFile(path)
       self.assertEqual(CONTENT, text)
       self.assertTrue(att_name in path)
       paths.add(path)
@@ -592,8 +588,7 @@ class TestlogE2ETest(TestlogTestBase):
       TEST_STR = 'I\'m just a little bit caught in the middle'
       TEST_FILENAME = 'TextFile.txt'
       path = os.path.join(tmp_dir, TEST_FILENAME)
-      with open(path, 'w') as fd:
-        fd.write(TEST_STR)
+      file_utils.WriteFile(path, TEST_STR)
       return path
 
     # Additional steps that because multiprocessing.Process doesn't provide
@@ -648,8 +643,7 @@ class TestlogE2ETest(TestlogTestBase):
     ], env=env_additions):
       pass
     logging.info(OUT_TAG)
-    with open(session_json_path) as f:
-      session_json = json.loads(f.read())
+    session_json = json_utils.LoadFile(session_json_path)
     # Collect the session log
     testlog.LogFinalTestRun(session_json_path)
     primary_json = file_utils.ReadLines(

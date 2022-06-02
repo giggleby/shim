@@ -5,7 +5,6 @@
 
 """Unit tests for rf_graphyte factory test."""
 
-import json
 import os
 import shutil
 import tempfile
@@ -13,6 +12,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.test.pytests.rf_graphyte import rf_graphyte
+from cros.factory.utils import json_utils
 
 
 class PatchSSHLinkConfigUnittest(unittest.TestCase):
@@ -42,11 +42,9 @@ class PatchSSHLinkConfigUnittest(unittest.TestCase):
         'dut_config': {
             'link_options': {
                 'host': self.mock_ip}}}
-    with open(self.test.config_file_path, 'w') as f:
-      json.dump(mock_config, f)
+    json_utils.DumpFile(self.test.config_file_path, mock_config, pretty=False)
     self.test.PatchSSHLinkConfig()
-    with open(self.test.config_file_path, 'r') as f:
-      patched_config = json.load(f)
+    patched_config = json_utils.LoadFile(self.test.config_file_path)
     self.assertEqual(expected_config, patched_config)
 
 
@@ -63,11 +61,9 @@ class PatchSSHLinkConfigUnittest(unittest.TestCase):
         'dut_config': {
             'link_options': {
                 'host': self.mock_ip}}}
-    with open(self.test.config_file_path, 'w') as f:
-      json.dump(mock_config, f)
+    json_utils.DumpFile(self.test.config_file_path, mock_config, pretty=False)
     self.test.PatchSSHLinkConfig()
-    with open(self.test.config_file_path, 'r') as f:
-      patched_config = json.load(f)
+    patched_config = json_utils.LoadFile(self.test.config_file_path)
     self.assertEqual(expected_config, patched_config)
 
 

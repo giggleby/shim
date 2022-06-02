@@ -13,6 +13,7 @@ from cros.factory.test.rules import phase
 from cros.factory.test.rules.phase import PHASE_NAMES
 from cros.factory.test.rules.phase import Phase
 from cros.factory.test.rules.phase import PhaseAssertionError
+from cros.factory.utils import file_utils
 
 # Allow access to protected members _state_root_for_testing and _current_phase
 # for white-box testing.
@@ -60,8 +61,10 @@ class PersistentPhaseTest(unittest.TestCase):
 
   def testSetGetPhase(self):
     phase.SetPersistentPhase(phase.EVT)
-    with open(os.path.join(phase._state_root_for_testing, 'PHASE')) as f:
-      self.assertEqual('EVT', f.read())
+    self.assertEqual(
+        'EVT',
+        file_utils.ReadFile(
+            os.path.join(phase._state_root_for_testing, 'PHASE')))
     self.assertEqual(phase.EVT, phase._current_phase)
 
     # Set current phase to None to force it to be re-read

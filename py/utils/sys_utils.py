@@ -170,10 +170,8 @@ def MountDeviceAndReadFile(device, path, dut=None):
   with MountPartition(device, dut=dut) as mount_point:
     logging.debug('Mounted at %s.', mount_point)
     if dut is None:
-      with open(os.path.join(mount_point, path)) as f:
-        return f.read()
-    else:
-      return dut.ReadSpecialFile(dut.path.join(mount_point, path))
+      return file_utils.ReadFile(os.path.join(mount_point, path))
+    return dut.ReadSpecialFile(dut.path.join(mount_point, path))
 
 
 def LoadKernelModule(name, error_on_fail=True):
@@ -518,13 +516,12 @@ def ResetCommitTime():
     return
 
   devices = set()
-  with open('/proc/mounts', 'r') as f:
-    for line in f.readlines():
-      cols = line.split(' ')
-      device = cols[0]
-      options = cols[3]
-      if 'commit=' in options:
-        devices.add(device)
+  for line in file_utils.ReadLines('/proc/mounts'):
+    cols = line.split(' ')
+    device = cols[0]
+    options = cols[3]
+    if 'commit=' in options:
+      devices.add(device)
 
   # Remount all devices in parallel, and wait.  Ignore errors.
   for process in [
@@ -593,15 +590,14 @@ def InFactoryPythonArchive():
 
 def InQEMU():
   """Returns True if running within QEMU."""
-  return 'QEMU' in open('/proc/cpuinfo').read()
+  return 'QEMU' in file_utils.ReadFile('/proc/cpuinfo')
 
 
 def InCrOSDevice():
   """Returns True if running on a Chrome OS device."""
   if not os.path.exists('/etc/lsb-release'):
     return False
-  with open('/etc/lsb-release') as f:
-    lsb_release = f.read()
+  lsb_release = file_utils.ReadFile('/etc/lsb-release')
   return re.match(r'^CHROMEOS_RELEASE', lsb_release, re.MULTILINE) is not None
 
 

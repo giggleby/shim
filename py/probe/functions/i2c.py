@@ -9,6 +9,7 @@ import subprocess
 
 from cros.factory.probe.lib import probe_function
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 SYSFS_I2C_DIR_PATH = '/sys/bus/i2c/devices'
@@ -48,8 +49,7 @@ def GetBusNumberByPath(bus_path):
 def GetBusNumberByName(bus_name):
   """Gets the I2C numbers by the I2C bus name."""
   def ConditionFunc(node):
-    with open(os.path.join(node, 'name'), 'r') as f:
-      return f.read().strip() == bus_name
+    return file_utils.ReadFile(os.path.join(node, 'name')).strip() == bus_name
   return _GetBusNumber(ConditionFunc)
 
 
@@ -66,8 +66,7 @@ def GetBusInfo(bus_number):
   if bus_number.startswith(EC_BUS_PREFIX) or not os.path.exists(node_path):
     return {}
 
-  with open(os.path.join(node_path, 'name'), 'r') as f:
-    bus_name = f.read().strip()
+  bus_name = file_utils.ReadFile(os.path.join(node_path, 'name')).strip()
   bus_path = os.path.dirname(os.path.realpath(node_path))
   return {
       'bus_name': bus_name,
