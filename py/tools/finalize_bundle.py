@@ -282,7 +282,7 @@ class FinalizeBundle:
       logging.error(str(e))
       raise FinalizeBundleException(
           'Invalid manifest content. '
-          'Please refer to setup/BUNDLE.md (https://goo.gl/pM1pxo)')
+          'Please refer to setup/BUNDLE.md (https://goo.gl/pM1pxo)') from None
 
     self.build_board = cros_board_utils.BuildBoard(self.manifest['board'])
     self.board = self.build_board.full_name

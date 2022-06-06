@@ -77,7 +77,8 @@ class DKPSProxy:
       keybox = self.helper.Request(device_serial_number)
     except Exception as e:
       raise RuntimeError(
-          'The proxy server failed to request keyboxes from DKPS: %r' % e)
+          'The proxy server failed to request keyboxes from DKPS: %r' %
+          e) from None
     keybox = json.loads(keybox)
 
     # Re-encrypt the keybox with the transport key

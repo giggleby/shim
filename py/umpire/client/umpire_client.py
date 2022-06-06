@@ -160,10 +160,10 @@ class UmpireClientInfo:
           info_dict['%s.%s' % (key_prefix, subkey)] = value
     except KeyError as e:
       raise UmpireClientInfoException(
-          'DUT info key not found in KEY_TRANSLATION: %s.' % e)
+          'DUT info key not found in KEY_TRANSLATION: %s.' % e) from None
     except AttributeError as e:
       raise UmpireClientInfoException(
-          'Property not found in UmpireClientInfo: %s.' % e)
+          'Property not found in UmpireClientInfo: %s.' % e) from None
 
     logging.debug('Client info_dict: %r', info_dict)
     return info_dict

@@ -109,7 +109,8 @@ def ShopFloorUpload(source_path, remote_spec, stage,
     if allow_fail:
       logging.info('ShopFloorUpload: skip uploading to: %s', remote_spec)
     else:
-      raise Error('ShopFloorUpload: fail to upload to: %s' % remote_spec)
+      raise Error(
+          'ShopFloorUpload: fail to upload to: %s' % remote_spec) from None
   else:
     logging.info('ShopFloorUpload: successfully uploaded to: %s', remote_spec)
 
@@ -184,7 +185,7 @@ def CurlCommand(curl_command, success_string=None, abort_string=None,
     if allow_fail:
       logging.info('CurlCommand: skipped, max retry times reached: %s', cmd)
     else:
-      raise Error('CurlCommand: failed to execute: %s' % cmd)
+      raise Error('CurlCommand: failed to execute: %s' % cmd) from None
   else:
     logging.info('CurlCommand: successfully executed: %s', cmd)
 
@@ -287,7 +288,7 @@ def FtpUpload(source_path, ftp_url,
     if allow_fail:
       logging.info('FtpUpload: skip uploading to %s', ftp_url)
     else:
-      raise Error('FtpUpload: fail to upload to %s' % ftp_url)
+      raise Error('FtpUpload: fail to upload to %s' % ftp_url) from None
   else:
     # Ready for copying files
     logging.debug('FtpUpload: connected, uploading to %s...', path)
@@ -329,7 +330,8 @@ def SmbUpload(source_path, smb_url,
   try:
     share_name, path = url['path'][1:].split('/', 1)
   except ValueError:
-    raise Error('SmbUpload: invalid smb url: %s. Missing dest path.' % smb_url)
+    raise Error('SmbUpload: invalid smb url: %s. Missing dest path.' %
+                smb_url) from None
 
   source_name = os.path.split(source_path)[1]
   dest_name = os.path.split(path)[1]
@@ -373,6 +375,6 @@ def SmbUpload(source_path, smb_url,
     if allow_fail:
       logging.info('SmbUpload: skip uploading to: %s', smb_url)
     else:
-      raise Error('SmbUpload: fail to upload to: %s' % smb_url)
+      raise Error('SmbUpload: fail to upload to: %s' % smb_url) from None
   else:
     logging.info('SmbUpload: successfully uploaded to %s', smb_url)

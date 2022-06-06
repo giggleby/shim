@@ -258,9 +258,9 @@ class SerialDevice:
           command, self._serial.write_timeout)
       if self.log:
         logging.warning(error_message)
-      raise serial.SerialTimeoutException(error_message)
+      raise serial.SerialTimeoutException(error_message) from None
     except serial.SerialException:
-      raise serial.SerialException('Serial disconnected')
+      raise serial.SerialException('Serial disconnected') from None
 
   def Receive(self, size=1):
     """Receives N bytes.

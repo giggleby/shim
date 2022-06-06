@@ -45,7 +45,7 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
       self._device.WriteSpecialFile(
           os.path.join(self._iio_path, filename), value)
     except Exception as e:
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
   def _GetSysfsValue(self, filename, path=None):
     del path  # Unused.
@@ -53,7 +53,7 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
       return self._device.ReadSpecialFile(os.path.join(
           self._iio_path, filename)).strip()
     except Exception as e:
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
   def CleanUpCalibrationValues(self):
     """Cleans up calibration values."""
@@ -74,21 +74,21 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
     try:
       self._SetSysfsValue(signal_name, value)
     except Exception as e:
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
   def SetCalibrationIntercept(self, value):
     """Sets the calibration bias to sysfs."""
     try:
       self._SetSysfsValue(IN_ILLUMINANCE_BIAS, str(value))
     except Exception as e:
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
   def SetCalibrationSlope(self, value):
     """Sets the calibration scale to sysfs."""
     try:
       self._SetSysfsValue(IN_ILLUMINANCE_SCALE, str(value))
     except Exception as e:
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
   def GetLuxValue(self):
     """Reads the LUX raw value from sysfs."""
@@ -96,7 +96,7 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
       return int(self._GetSysfsValue(self.input_entry))
     except Exception as e:
       logging.exception('Failed to get illuminance value')
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
   def ForceLightInit(self):
     """Froce als to apply the vpd value."""
@@ -107,7 +107,7 @@ class AmbientLightSensorController(sensor_utils.BasicSensorController):
     except Exception as e:
       logging.exception('Failed to invoke light-init.sh (%s, illuminance)',
                         device_name)
-      raise AmbientLightSensorException(str(e))
+      raise AmbientLightSensorException(str(e)) from None
 
 
 class AmbientLightSensor(device_types.DeviceComponent):

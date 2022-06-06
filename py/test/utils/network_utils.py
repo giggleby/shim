@@ -80,7 +80,8 @@ def _SendDhclientCommand(arguments, interface,
   except Exception:
     logging.info('dhclient output before timeout - %r', dhcp_process.before)
     raise type_utils.Error(
-        'Timeout when running DHCP command, check if cable is connected.')
+        'Timeout when running DHCP command, check if cable is connected.'
+    ) from None
   finally:
     dhcp_process.close()
 

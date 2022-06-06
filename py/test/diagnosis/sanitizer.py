@@ -337,7 +337,7 @@ def _GetCommandOutput(command, converter, converted_type_name=None):
     return converter(output)
   except Exception:
     raise common.FormatError('Cannot convert the output of %r to %s: %s' %
-                             (command, converted_type_name, output))
+                             (command, converted_type_name, output)) from None
 
 
 def _SanitizeDefaultValueAndType(ref, value_type_list):

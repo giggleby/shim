@@ -204,7 +204,7 @@ def _LoadJsonFile(file_path, logger):
     try:
       return json_utils.LoadFile(file_path)
     except Exception as e:
-      raise _JsonFileInvalidError(file_path, str(e))
+      raise _JsonFileInvalidError(file_path, str(e)) from None
 
   # file_path does not exist, but it may be a PAR virtual path.
   if '.par' in file_path.lower():
@@ -221,7 +221,7 @@ def _LoadJsonFile(file_path, logger):
     except IOError:
       logger('config_utils: PAR path %s does not exist. Ignore.', file_path)
     except Exception as e:
-      raise _JsonFileInvalidError(file_path, str(e))
+      raise _JsonFileInvalidError(file_path, str(e)) from None
   return None
 
 
@@ -236,7 +236,7 @@ def _LoadRawConfig(config_dir, config_name, logger=_DummyLogger):
     logger('config_utils: Checking %s', config_path)
     return _LoadJsonFile(config_path, logger)
   except _JsonFileInvalidError as e:
-    raise ConfigFileInvalidError(e.filename, e.detail)
+    raise ConfigFileInvalidError(e.filename, e.detail) from None
 
 
 def _LoadRawSchema(config_dir, schema_name, logger=_DummyLogger):
@@ -249,7 +249,7 @@ def _LoadRawSchema(config_dir, schema_name, logger=_DummyLogger):
     schema_path = os.path.join(config_dir, schema_name + SCHEMA_FILE_EXT)
     return _LoadJsonFile(schema_path, logger)
   except _JsonFileInvalidError as e:
-    raise SchemaFileInvalidError(e.filename, e.detail)
+    raise SchemaFileInvalidError(e.filename, e.detail) from None
 
 
 def _LoadConfigUtilsConfig():
@@ -506,7 +506,8 @@ def LoadConfig(config_name=None, schema_name=None, validate_schema=True,
       except Exception as e:
         # Only get the `message` property of the exception to prevent
         # from dumping whole schema data in the log.
-        raise ConfigInvalidError(str(e), raw_config_list.CollectDepend())
+        raise ConfigInvalidError(str(e),
+                                 raw_config_list.CollectDepend()) from None
 
     else:
       logger('Configuration schema <%s> not validated because jsonschema '

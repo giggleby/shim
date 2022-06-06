@@ -109,8 +109,9 @@ class GpioManager:
           return gpio.Poll(edge, timeout_secs)
     except Exception as e:
       exception_name = sys.exc_info()[0].__name__
-      raise GpioManagerError('Problem to poll GPIO %s %s: %s(%s)' %
-                             (str(port), edge, exception_name, str(e)))
+      raise GpioManagerError(
+          'Problem to poll GPIO %s %s: %s(%s)' %
+          (str(port), edge, exception_name, str(e))) from None
 
   def Read(self, port):
     """Reads data from GPIO by given port.
@@ -133,7 +134,7 @@ class GpioManager:
     except Exception as e:
       exception_name = sys.exc_info()[0].__name__
       raise GpioManagerError('Problem to read GPIO %s: %s(%s)' %
-                             (str(port), exception_name, str(e)))
+                             (str(port), exception_name, str(e))) from None
 
   def Write(self, port, value):
     """Writes data to GPIO by given port.
@@ -158,7 +159,7 @@ class GpioManager:
     except Exception as e:
       exception_name = sys.exc_info()[0].__name__
       raise GpioManagerError('Problem to write GPIO %s: %s(%s)' %
-                             (str(port), exception_name, str(e)))
+                             (str(port), exception_name, str(e))) from None
 
 
 class GpioError(Exception):
@@ -295,7 +296,8 @@ class Gpio:
       logging.debug('Gpio.Poll() assigns edge: %s', edge)
       self._AssignEdge(edge)
     except Exception as e:
-      raise GpioError('Fail to assign edge to GPIO %d %s' % (self._port, e))
+      raise GpioError(
+          'Fail to assign edge to GPIO %d %s' % (self._port, e)) from None
 
     try:
       logging.debug('Gpio.Poll() starts waiting')
@@ -327,7 +329,7 @@ class Gpio:
       logging.debug('Gpio.Poll() finishes waiting')
       return False
     except Exception as e:
-      raise GpioError('Fail to poll GPIO %d %s' % (self._port, e))
+      raise GpioError('Fail to poll GPIO %d %s' % (self._port, e)) from None
 
   def Read(self):
     """Reads current GPIO port value.
@@ -342,7 +344,7 @@ class Gpio:
       logging.debug('Gpio.Read() starts')
       return self._ReadValue()
     except Exception as e:
-      raise GpioError('Fail to read GPIO %d %s' % (self._port, e))
+      raise GpioError('Fail to read GPIO %d %s' % (self._port, e)) from None
 
   def Write(self, value):
     """Writes GPIO port value.
@@ -360,4 +362,4 @@ class Gpio:
       self._WriteValue(value)
     except Exception as e:
       raise GpioError(
-          'Fail to write %d to GPIO %d %s' % (value, self._port, e))
+          'Fail to write %d to GPIO %d %s' % (value, self._port, e)) from None

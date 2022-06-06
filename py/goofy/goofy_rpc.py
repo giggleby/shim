@@ -98,8 +98,8 @@ class GoofyRPC:
     try:
       ret, exc = result.get(block=True, timeout=timeout_secs)
     except queue.Empty:
-      raise GoofyRPCException('Time out waiting for %s to complete' %
-                              _GetFuncString())
+      raise GoofyRPCException(
+          'Time out waiting for %s to complete' % _GetFuncString()) from None
     if exc:
       raise exc
     return ret

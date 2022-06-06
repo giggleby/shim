@@ -503,7 +503,7 @@ class _NamedNumber(dict):
       return super().__getitem__(number)
     except KeyError:
       raise common.HWIDException(
-          'The %s %r is not recorded.' % (self.NUMBER_TAG, number))
+          'The %s %r is not recorded.' % (self.NUMBER_TAG, number)) from None
 
   def __setitem__(self, number, name):
     """Adds a new number or updates an existed number's name.

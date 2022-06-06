@@ -286,9 +286,9 @@ class SuspendResumeTest(test_case.TestCase):
         wake_sources = self._GetPossibleWakeupSources()
         raise IOError('EINVAL: Failed to write to wakeup_count. Maybe there is '
                       'another program trying to suspend at the same time?'
-                      'source=%r' % wake_sources)
+                      'source=%r' % wake_sources) from None
       raise IOError('Failed to write to wakeup_count: %s' %
-                    debug_utils.FormatExceptionOnly())
+                    debug_utils.FormatExceptionOnly()) from None
 
     try:
       # Suspend to memory. The write could fail with EBUSY if another wakeup
@@ -303,7 +303,7 @@ class SuspendResumeTest(test_case.TestCase):
           if retry_count == _MAX_EARLY_RESUME_RETRY_COUNT:
             raise RuntimeError('Maximum re-suspend retry exceeded for '
                                'ignored wakeup source %s' %
-                               self.args.ignore_wakeup_source)
+                               self.args.ignore_wakeup_source) from None
 
           logging.info('Wakeup source ignored, re-suspending...')
           self.Sleep(self.args.early_resume_retry_wait_secs)
@@ -311,11 +311,12 @@ class SuspendResumeTest(test_case.TestCase):
               self.args.wakeup_count_path).strip()
           self._Suspend(retry_count + 1)
           return
-        raise IOError('EBUSY: Early wake event when attempting suspend: %s, '
-                      'source=%r' %
-                      (debug_utils.FormatExceptionOnly(), wake_sources))
+        raise IOError(
+            'EBUSY: Early wake event when attempting suspend: %s, '
+            'source=%r' %
+            (debug_utils.FormatExceptionOnly(), wake_sources)) from None
       raise IOError('Failed to write to /sys/power/state: %s' %
-                    debug_utils.FormatExceptionOnly())
+                    debug_utils.FormatExceptionOnly()) from None
     logging.info('Returning from suspend at %d.', self._ReadCurrentTime())
 
   def _ReadSuspendCount(self):
@@ -401,7 +402,7 @@ class SuspendResumeTest(test_case.TestCase):
     except IOError:
       error_msg = 'Failed to write to wakealarm.'
       if raise_exception:
-        raise IOError(error_msg)
+        raise IOError(error_msg) from None
       logging.warning(error_msg)
 
   def _VerifyWakealarmCleared(self, raise_exception=True):

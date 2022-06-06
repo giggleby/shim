@@ -419,7 +419,7 @@ class Project(django.db.models.Model):
     except xmlrpc.client.Fault as e:
       logger.error(
           'Deploying failed. Error message from Umpire: %r', e.faultString)
-      raise DomeServerException(detail=e.faultString)
+      raise DomeServerException(detail=e.faultString) from None
 
   def GetActiveConfig(self):
     """Return active Umpire config."""
@@ -656,7 +656,7 @@ class Resource:
       except xmlrpc.client.Fault as e:
         logger.error(
             'Downloading failed. Error message from Umpire: %r', e.faultString)
-        raise DomeServerException(detail=e.faultString)
+        raise DomeServerException(detail=e.faultString) from None
 
 
 class Bundle:
@@ -740,7 +740,7 @@ class Bundle:
       logger.exception(traceback.format_exc())
       error_message = 'Bundle %r does not exist' % bundle_name
       logger.error(error_message)
-      raise DomeClientException(error_message)
+      raise DomeClientException(error_message) from None
 
     return Bundle._FromUmpireBundle(project_name, bundle, config)
 
@@ -787,7 +787,7 @@ class Bundle:
       logger.exception(traceback.format_exc())
       error_message = 'Bundle %r does not exist' % src_bundle_name
       logger.error(error_message)
-      raise DomeClientException(error_message)
+      raise DomeClientException(error_message) from None
 
     if not dst_bundle_name:
       # in-place update
@@ -869,7 +869,7 @@ class Bundle:
       try:
         umpire_server.Update([(type_name, p)], bundle_name)
       except xmlrpc.client.Fault as e:
-        raise DomeServerException(detail=e.faultString)
+        raise DomeServerException(detail=e.faultString) from None
 
   @staticmethod
   def UploadNew(project_name, bundle_name, bundle_note, bundle_file_id):
@@ -895,8 +895,8 @@ class Bundle:
         if 'already in use' in e.faultString:
           raise DomeClientException(
               detail='Bundle "%s" already exists' % bundle_name,
-              status_code=rest_framework.status.HTTP_409_CONFLICT)
-        raise DomeServerException(detail=e.faultString)
+              status_code=rest_framework.status.HTTP_409_CONFLICT) from None
+        raise DomeServerException(detail=e.faultString) from None
 
     # find and return the new bundle
     return Bundle.ListOne(project_name, bundle_name)
@@ -973,7 +973,7 @@ class FactoryDriveComponent:
             id, dir_id, name, using_ver)
       return FactoryDriveComponent(**component)
     except xmlrpc.client.Fault as e:
-      raise DomeServerException(detail=e.faultString)
+      raise DomeServerException(detail=e.faultString) from None
     return None
 
   @staticmethod
@@ -1004,7 +1004,7 @@ class Log:
     except xmlrpc.client.Fault as e:
       logger.error(
           'Downloading failed. Error message from Umpire: %r', e.faultString)
-      raise DomeServerException(detail=e.faultString)
+      raise DomeServerException(detail=e.faultString) from None
 
   @staticmethod
   def Download(download_params):
@@ -1016,7 +1016,7 @@ class Log:
     except Exception as e:
       logger.error(
           'Downloading failed. Error message: %r', e)
-      raise DomeServerException(detail=e)
+      raise DomeServerException(detail=e) from None
 
   @staticmethod
   def Delete(temp_dir):
@@ -1028,7 +1028,7 @@ class Log:
       shutil.rmtree(temp_dir)
       return 'Deleted directory: {}'.format(temp_dir)
     except OSError as e:
-      raise DomeServerException(detail=e)
+      raise DomeServerException(detail=e) from None
 
   @staticmethod
   def DeleteFiles(project_name, delete_params):
@@ -1040,4 +1040,4 @@ class Log:
       return response
     except Exception as e:
       logger.error('Downloading failed. Error message: %r', e)
-      raise DomeServerException(detail=e)
+      raise DomeServerException(detail=e) from None

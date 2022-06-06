@@ -71,7 +71,7 @@ class CoreDumpManager:
           os.rmdir(os.path.join(root, d))
     except Exception as e:
       logging.exception('Unable to remove unused core dump files')
-      raise CoreDumpManagerException(e)
+      raise CoreDumpManagerException(e) from None
     if watched_files:
       logging.warning('Found core dump files %s !', watched_files)
     return watched_files
@@ -96,6 +96,6 @@ class CoreDumpManager:
         os.unlink(f)
       except Exception as e:
         logging.exception('Unable to remove used core dump files')
-        raise CoreDumpManagerException(e)
+        raise CoreDumpManagerException(e) from None
       else:
         logging.info('Removed %s', f)

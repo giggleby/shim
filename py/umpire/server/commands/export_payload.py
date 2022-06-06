@@ -63,6 +63,6 @@ class PayloadExporter:
         ]
         process_utils.Spawn(cmd, check_call=True, log=True)
       except Exception:
-        raise common.UmpireError('Failed to export %s' % payload_type)
+        raise common.UmpireError('Failed to export %s' % payload_type) from None
     else:
       raise common.UmpireError('Payload not found: %s' % payload_type)

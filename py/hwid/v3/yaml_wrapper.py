@@ -143,7 +143,7 @@ class _DefaultMappingHandler(_HWIDV3YAMLTagHandler):
       except TypeError:
         raise constructor.ConstructorError(
             'While constructing a mapping', node.start_mark,
-            'found unacceptable key (%s).' % key, key_node.start_mark)
+            'found unacceptable key (%s).' % key, key_node.start_mark) from None
       value = loader.construct_object(value_node, deep=deep)
       if key in mapping:
         raise constructor.ConstructorError(

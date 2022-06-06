@@ -429,7 +429,7 @@ class Finalize(test_case.TestCase):
       except type_utils.TimeoutError:
         raise type_utils.TestFailure(
             'Remote DUT failed to finalize in %d seconds' %
-            self.FINALIZE_TIMEOUT)
+            self.FINALIZE_TIMEOUT) from None
 
   def _FinalizeRemoteSSHDUT(self, command):
     # generate a random token, so the response is different for every DUT.

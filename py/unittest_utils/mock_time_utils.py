@@ -82,7 +82,8 @@ class TimeLine:
           # Set time to inf so following AddEvent would fail.
           self._fake_time = float('inf')
           raise type_utils.TimeoutError(
-              'No events left when AdvanceTime(delta=None) is called.')
+              'No events left when AdvanceTime(delta=None) is called.'
+          ) from None
 
         self._fake_time = end_time
         break

@@ -335,7 +335,7 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
     except subprocess.CalledProcessError as e:
       # Re-raise the error as RuntimeError as CalledProcessError does not
       # include the exception message.
-      raise RuntimeError(e.stderr)
+      raise RuntimeError(e.stderr) from None
 
 
 if __name__ == '__main__':

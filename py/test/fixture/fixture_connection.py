@@ -157,7 +157,7 @@ class SerialFixtureConnection(FixtureConnection):
           time.sleep(self._serial_delay)
         except serial.SerialTimeoutException as e:
           if retries <= 0:
-            raise FixtureConnectionError(str(e))
+            raise FixtureConnectionError(str(e)) from None
           retries -= 1
         else:
           break

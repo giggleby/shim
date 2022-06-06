@@ -342,7 +342,7 @@ class WiFi(device_types.DeviceComponent):
           poll_interval_secs=0,
           condition_name='Attempting filter access points...')
     except type_utils.TimeoutError:
-      raise WiFiError('No matching access points found')
+      raise WiFiError('No matching access points found') from None
 
   def Connect(self, ap, interface=None, passkey=None,
               connect_timeout=None, connect_attempt_timeout=None,
@@ -657,7 +657,7 @@ class Connection:
         return ConnectionStatus.Signal(
             int(computed), [int(a) for a in antenna.split(',')])
       except Exception as e:
-        raise WiFiError('unexpected signal format: %r, %r' % (s, e))
+        raise WiFiError('unexpected signal format: %r, %r' % (s, e)) from None
 
     def _ParseBitRate(s):
       try:
@@ -666,12 +666,13 @@ class Connection:
         assert words[1] == 'MBit/s'
         return float(words[0])
       except Exception as e:
-        raise WiFiError('unexpected tx_bitrate format: %r, %r' % (s, e))
+        raise WiFiError(
+            'unexpected tx_bitrate format: %r, %r' % (s, e)) from None
 
     try:
       out = self._device.CheckOutput(['iw', self.interface, 'station', 'dump'])
     except device_types.CalledProcessError as e:
-      raise WiFiError('unable to fetch the connection status: %r' % e)
+      raise WiFiError('unable to fetch the connection status: %r' % e) from None
 
     ret = ConnectionStatus()
     cases = [('signal', _ParseSignal, self._CONN_STATUS_SIGNALS_RE),

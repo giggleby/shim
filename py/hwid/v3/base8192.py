@@ -106,7 +106,7 @@ class Base8192:
       except KeyError:
         raise KeyError(
             'Encoded string should be of format: ([A-Z2-7][2-9][A-Z2-7])+: %r' %
-            base8192_string)
+            base8192_string) from None
     return ''.join(result)
 
   @classmethod

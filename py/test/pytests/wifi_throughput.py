@@ -535,7 +535,7 @@ class _ServiceTest:
       exc_message = '%s: %s' % (exc.__class__.__name__, str(exc))
       new_exc = self._TestException('Unable to connect to %s: %s'
                                     % (ssid, exc_message))
-      raise new_exc.__class__(new_exc).with_traceback(tb)
+      raise new_exc.__class__(new_exc).with_traceback(tb) from None
     else:
       return 'Successfully connected to %s' % ssid
 

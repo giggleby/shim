@@ -53,25 +53,25 @@ class VSyncSensorController(sensor_utils.BasicSensorController):
     try:
       return self._device.ReadFile(os.path.join(path, filename)).strip()
     except Exception as e:
-      raise VSyncSensorException(str(e))
+      raise VSyncSensorException(str(e)) from None
 
   def GetCount(self):
     try:
       return int(self._GetSysfsValue(IN_COUNT))
     except Exception as e:
-      raise VSyncSensorException("Failed to read count: %s" % str(e))
+      raise VSyncSensorException("Failed to read count: %s" % str(e)) from None
 
   def GetFrequency(self):
     try:
       return int(self._GetSysfsValue(FREQUENCY))
     except Exception as e:
-      raise VSyncSensorException("Failed to read freq: %s" % str(e))
+      raise VSyncSensorException("Failed to read freq: %s" % str(e)) from None
 
   def SetFrequency(self, freq):
     try:
       self._SetSysfsValue(FREQUENCY, str(freq))
     except Exception as e:
-      raise VSyncSensorException("Failed to set freq: %s" % str(e))
+      raise VSyncSensorException("Failed to set freq: %s" % str(e)) from None
 
 
 class VSyncSensor(device_types.DeviceComponent):

@@ -178,7 +178,7 @@ class ServoClient:
     try:
       return self._server.get(name)
     except Exception as e:
-      raise ServoClientError('Problem getting %r' % name, e)
+      raise ServoClientError('Problem getting %r' % name, e) from None
 
   def MultipleGet(self, names):
     """Checks multiple controls' value.
@@ -197,7 +197,8 @@ class ServoClient:
     try:
       return dict(zip(names, self._server.set_get_all(names)))
     except Exception as e:
-      raise ServoClientError('Problem getting controls %s' % repr(names), e)
+      raise ServoClientError('Problem getting controls %s' % repr(names),
+                             e) from None
 
   @staticmethod
   def _OnOffToBool(name, value):
@@ -268,7 +269,8 @@ class ServoClient:
     try:
       self._server.set(name, value)
     except Exception as e:
-      raise ServoClientError('Problem setting %r to %r' % (name, value), e)
+      raise ServoClientError('Problem setting %r to %r' % (name, value),
+                             e) from None
 
   def MultipleSet(self, name_value_pairs):
     """Sets a list of (control_name, value) from servo.
@@ -289,7 +291,8 @@ class ServoClient:
     try:
       self._server.set_get_all(['%s:%s' % (n, v) for n, v in name_value_pairs])
     except Exception as e:
-      raise ServoClientError('Problem setting %r' % name_value_pairs, e)
+      raise ServoClientError('Problem setting %r' % name_value_pairs,
+                             e) from None
 
   def Enable(self, name):
     """Sets the control's value to 'on'.
@@ -350,4 +353,4 @@ class ServoClient:
     try:
       self._server.hwinit()
     except Exception as e:
-      raise ServoClientError('Problem on HWInit', e)
+      raise ServoClientError('Problem on HWInit', e) from None

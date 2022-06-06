@@ -62,7 +62,7 @@ class IP:
         try:
           socket.inet_pton(socket.AF_INET6, obj)
         except socket.error:
-          raise RuntimeError('invalid ip string')
+          raise RuntimeError('invalid ip string') from None
 
       self._ip = obj
       self.family = socket.AF_INET if '.' in self._ip else socket.AF_INET6

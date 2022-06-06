@@ -199,7 +199,7 @@ class GSCTool:
       bid_type_inv = int(result.BID_TYPE_INV, 16)
       bid_flags = int(result.BID_FLAGS, 16)
     except Exception as e:
-      raise GSCToolError(e)
+      raise GSCToolError(e) from None
 
     # The output of the gsctool command contains 4 fields, check if they are
     # not conflicted to each other.

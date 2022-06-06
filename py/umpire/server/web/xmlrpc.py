@@ -99,7 +99,7 @@ class XMLRPCContainer(twisted_xmlrpc.XMLRPC):
       return _WrapProcedure
     except KeyError:
       raise twisted_xmlrpc.NoSuchFunction(xmlrpc.client.METHOD_NOT_FOUND,
-                                          procedure_path)
+                                          procedure_path) from None
 
   def AddHandler(self, rpc_object):
     """Adds Umpire RPC object to this XMLRPC resource.

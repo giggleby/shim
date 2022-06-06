@@ -907,7 +907,7 @@ class EventBase:
       return cls._TypeClassMap()[data['type']]
     except (testlog_utils.TestlogError, KeyError):
       raise testlog_utils.TestlogError(
-          'Input event does not have a valid `type`.')
+          'Input event does not have a valid `type`.') from None
 
   @classmethod
   def FromJSON(cls, json_string, check_valid=True):

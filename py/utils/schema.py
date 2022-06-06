@@ -357,7 +357,8 @@ class JSONSchemaDict(BaseType):
       try:
         jsonschema.Draft4Validator.check_schema(schema)
       except Exception as e:
-        raise SchemaException('Schema %r is invalid: %r' % (schema, e))
+        raise SchemaException(
+            'Schema %r is invalid: %r' % (schema, e)) from None
     self.schema = schema
 
   def __repr__(self):
@@ -368,10 +369,10 @@ class JSONSchemaDict(BaseType):
       try:
         jsonschema.validate(data, self.schema)
       except jsonschema.ValidationError as e:
-        raise SchemaInvalidException(e.instance, e.schema, e)
+        raise SchemaInvalidException(e.instance, e.schema, e) from None
       except Exception as e:
         raise SchemaException('Fail to validate %r with JSON schema %r: %r' %
-                              (data, self.schema, e))
+                              (data, self.schema, e)) from None
 
   def CreateOptional(self):
     """Creates a new schema that accepts null and itself."""
@@ -556,7 +557,8 @@ class Optional(AnyOf):
     except SchemaException:
       raise SchemaException(
           'types in Optional(types=%r%s) should be a Schema or a list of '
-          'Schemas' % (types, '' if label is None else ', label=%r' % label))
+          'Schemas' %
+          (types, '' if label is None else ', label=%r' % label)) from None
 
   def __repr__(self):
     label = '' if self.label is None else ', label=%r' % self.label
@@ -577,6 +579,5 @@ class Optional(AnyOf):
     try:
       super().Validate(data)
     except SchemaException:
-      raise SchemaException(
-          '%r is not None and does not match any type in %r' % (data,
-                                                                self.types))
+      raise SchemaException('%r is not None and does not match any type in %r' %
+                            (data, self.types)) from None

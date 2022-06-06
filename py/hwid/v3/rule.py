@@ -276,9 +276,8 @@ class Rule:
           logger.Info('%s' % function)
           _Eval(function, {})
         except Exception as e:
-          raise RuleException(
-              'Evaluation of %r in rule %r failed: %r' %
-              (function, self.name, e))
+          raise RuleException('Evaluation of %r in rule %r failed: %r' %
+                              (function, self.name, e)) from None
     try:
       SetContext(context)
       logger.Info('Checking rule %r' % self.name)

@@ -1227,7 +1227,7 @@ class AudioLoopTest(test_case.TestCase):
       error_messages = str(err)
       error_messages += '; Please check parameters with the device info: '
       error_messages += dev_info_stdout
-      raise ValueError(error_messages)
+      raise ValueError(error_messages) from None
 
   def CheckConformance(self):
     """Run conformance test program and check the result."""

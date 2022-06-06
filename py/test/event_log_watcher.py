@@ -133,7 +133,7 @@ class EventLogWatcher:
       if suppress_error:
         logging.debug('Upload handler error')
       else:
-        raise ScanException(debug_utils.FormatExceptionOnly())
+        raise ScanException(debug_utils.FormatExceptionOnly()) from None
       return
 
     try:
@@ -148,7 +148,7 @@ class EventLogWatcher:
       if suppress_error:
         logging.debug('Upload handler error')
       else:
-        raise ScanException(debug_utils.FormatExceptionOnly())
+        raise ScanException(debug_utils.FormatExceptionOnly()) from None
 
   def ScanEventLogs(self, suppress_error=True, periodic=False):
     """Scans event logs.
@@ -192,7 +192,7 @@ class EventLogWatcher:
             if suppress_error:
               logging.info(msg)
             else:
-              raise ScanException(msg)
+              raise ScanException(msg) from None
         if (self._num_log_per_callback and
             len(chunks) >= self._num_log_per_callback):
           self._CallEventLogHandler(chunks, suppress_error, periodic)

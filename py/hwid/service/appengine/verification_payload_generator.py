@@ -334,7 +334,7 @@ class _ProbeStatementGenerator:
           information=information)
     except Exception as e:
       raise ProbeStatementConversionError(
-          f'Unable to convert to the probe statement : {e!r}.')
+          f'Unable to convert to the probe statement : {e!r}.') from None
 
 
 @type_utils.CachedGetter

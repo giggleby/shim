@@ -142,8 +142,8 @@ class PyAstVisitor(ast.NodeVisitor):
     try:
       node = ast.parse(source, filename)
     except SyntaxError as e:
-      raise RuntimeError('line %d, column %d: %s' %
-                         (e.lineno, e.offset, e.text))
+      raise RuntimeError(
+          'line %d, column %d: %s' % (e.lineno, e.offset, e.text)) from None
     visitor.visit(node)
     return visitor.messages
 

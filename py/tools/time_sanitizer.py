@@ -239,7 +239,7 @@ class TimeSanitizer:
       self._TouchBaseTimeFiles()
 
     except OSError:
-      raise Error('htpdate is not installed.')
+      raise Error('htpdate is not installed.') from None
 
 
 def GetBaseTimeFromFile(base_time_files):

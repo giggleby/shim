@@ -52,13 +52,13 @@ class SerialServer:
     try:
       conn = self._serials[serial_index]
     except IndexError:
-      raise SerialServerError('index %d out of range' % serial_index)
+      raise SerialServerError('index %d out of range' % serial_index) from None
 
     try:
       conn.Send(command + '\n', flush=False)
     except serial.SerialTimeoutException as e:
       raise SerialServerError('Serial index %d send command: %s fail: %s' %
-                              (serial_index, command, e))
+                              (serial_index, command, e)) from None
 
   def Receive(self, serial_index, num_bytes):
     """Receives N byte data from serial connection.
@@ -79,15 +79,15 @@ class SerialServer:
     try:
       conn = self._serials[serial_index]
     except IndexError:
-      raise SerialServerError('index %d out of range' % serial_index)
+      raise SerialServerError('index %d out of range' % serial_index) from None
 
     try:
       read_data = conn.Receive(num_bytes)
       logging.debug('Received: %s', read_data)
       return xmlrpc.client.Binary(read_data)
     except serial.SerialTimeoutException as e:
-      raise SerialServerError('Serial index %d receive fail: %s' %
-                              (serial_index, e))
+      raise SerialServerError(
+          'Serial index %d receive fail: %s' % (serial_index, e)) from None
 
   def GetSerialAmount(self):
     """Gets total serial amount on server.
@@ -104,7 +104,7 @@ class SerialServer:
     try:
       params = self._params_list[serial_index]
     except IndexError:
-      raise SerialServerError('index %d out of range' % serial_index)
+      raise SerialServerError('index %d out of range' % serial_index) from None
 
     # Disconnect old serial first
     if self._serials[serial_index]:
@@ -157,5 +157,5 @@ class SerialServer:
       conn.Connect(**serial_params)
       return conn
     except serial.SerialException as e:
-      raise SerialServerError('Connect to %s fail: %s' %
-                              (serial_params['port'], e))
+      raise SerialServerError(
+          'Connect to %s fail: %s' % (serial_params['port'], e)) from None

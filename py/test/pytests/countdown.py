@@ -207,7 +207,7 @@ class CountDownTest(test_case.TestCase):
         except NotImplementedError:
           raise type_utils.TestFailure(
               'Failed to get the critical temperature of %r, please explicitly '
-              'specify the value in the test arguments.' % name)
+              'specify the value in the test arguments.' % name) from None
         if warning_temp is None:
           warning_temp = sys_temp * _WARNING_TEMP_RATIO
         if critical_temp is None:

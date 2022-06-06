@@ -351,7 +351,7 @@ class EventStreamIterator:
         remaining_time = self._start + self.timeout - time_utils.MonotonicTime()
         ret = self.event_stream.Next(timeout=remaining_time)
       except plugin_base.WaitException:
-        raise StopIteration
+        raise StopIteration from None
 
       # We have a value, exit the loop.
       if ret is not None:

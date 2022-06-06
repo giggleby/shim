@@ -110,7 +110,7 @@ class BuildBoard:
               file_utils.ReadFile(LSB_RELEASE_FILE))[0].lower()
         except IndexError:
           raise BuildBoardException(
-              'Cannot determine board from %r' % LSB_RELEASE_FILE)
+              'Cannot determine board from %r' % LSB_RELEASE_FILE) from None
       else:
         self.full_name = re.sub('-', '_', board_name).lower()
 

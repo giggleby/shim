@@ -207,7 +207,7 @@ class Checker:
       syntax_tree = ast.parse(expression, filename=repr(expression),
                               mode='eval')
     except SyntaxError as e:
-      raise CheckerError(e)
+      raise CheckerError(e) from None
 
     collector = TestListExpressionVisitor()
     # collect all variables, might raise an exception if there are invalid nodes

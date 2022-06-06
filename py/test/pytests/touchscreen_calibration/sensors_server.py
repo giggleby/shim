@@ -71,7 +71,7 @@ class TSConfig:
       with open(config_filepath, encoding='utf8') as f:
         self.parser.read_file(f)
     except Exception:
-      raise Error('Failed to read config file: %s.' % config_filepath)
+      raise Error('Failed to read config file: %s.' % config_filepath) from None
 
   def Read(self, section, option):
     """Read config data."""

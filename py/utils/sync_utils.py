@@ -151,7 +151,7 @@ def QueueGet(q, timeout=None,
         timeout_secs=timeout,
         poll_interval_secs=poll_interval_secs)[1]
   except type_utils.TimeoutError:
-    raise queue.Empty
+    raise queue.Empty from None
 
 
 def EventWait(event, timeout=None,

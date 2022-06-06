@@ -21,7 +21,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
-
+# Constants.
 _INSERT_CHECK_PERIOD_SECS = 1
 _GPIO_PATH = '/sys/class/gpio'
 
@@ -116,14 +116,15 @@ class ProbeSimCardTrayTest(test_case.TestCase):
       logging.exception('Can not write %s into %s',
                         self.args.tray_detection_gpio, export_path)
       raise ProbeTrayException('Can not export detection gpio %s' %
-                               self.args.tray_detection_gpio)
+                               self.args.tray_detection_gpio) from None
 
     direction_path = os.path.join(self._detection_gpio_path, 'direction')
     try:
       file_utils.WriteFile(direction_path, 'out', log=True)
     except IOError:
       logging.exception('Can not write "out" into %s', direction_path)
-      raise ProbeTrayException('Can set detection gpio direction to out')
+      raise ProbeTrayException(
+          'Can set detection gpio direction to out') from None
 
   def GetDetection(self):
     """Returns tray status _TrayState.INSERTED or _TrayState.REMOVED."""

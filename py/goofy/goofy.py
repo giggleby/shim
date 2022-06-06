@@ -1093,8 +1093,8 @@ class Goofy:
       return self.test_lists[test_list_id]
     except KeyError:
       raise type_utils.TestListError(
-          '%r is not a valid test list ID (available IDs are %r)' % (
-              test_list_id, sorted(self.test_lists.keys())))
+          '%r is not a valid test list ID (available IDs are %r)' %
+          (test_list_id, sorted(self.test_lists.keys()))) from None
 
   def _RecordStartError(self, error_message):
     """Appends the startup error message into the shared data."""

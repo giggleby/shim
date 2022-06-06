@@ -172,7 +172,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       logging.exception('Missing all_devices.json file during refresh.')
       raise protorpc_utils.ProtoRPCException(
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL,
-          detail='Missing all_devices.json file during refresh.')
+          detail='Missing all_devices.json file during refresh.') from None
 
     return ingestion_pb2.IngestDevicesVariantsResponse()
 

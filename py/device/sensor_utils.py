@@ -149,7 +149,7 @@ class BasicSensorController(device_types.DeviceComponent):
     except ValueError:
       raise SensorError(
           f'Can not convert {node_name!r} to floating point numbers. '
-          f'{raw_frequencies!r}.')
+          f'{raw_frequencies!r}.') from None
     if len(frequencies) == 1:
       result = (frequencies[0], frequencies[0])
     elif len(frequencies) >= 2:

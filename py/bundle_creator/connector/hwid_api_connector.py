@@ -83,7 +83,7 @@ class HWIDAPIConnector:
         error_msg = json.dumps(json.loads(error_msg), indent=2)
       except json.decoder.JSONDecodeError:
         pass
-      raise HWIDAPIRequestException(error_msg)
+      raise HWIDAPIRequestException(error_msg) from None
 
     self._logger.info('Response: %s', response)
 

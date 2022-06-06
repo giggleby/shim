@@ -135,14 +135,16 @@ class GyroscopeController(sensor_utils.BasicSensorController):
       gyro.update(self._ParseGyroInfo(raw_info))
       self._CheckGyroAttr(gyro)
     except Exception as e:
-      raise MotionSensorException('Failed to preprocess gyro info.  %s' % e)
+      raise MotionSensorException(
+          'Failed to preprocess gyro info.  %s' % e) from None
 
     # Do the real motion sensor setup
     setup_cmd = base_cmd + ['odr', gyro['id'], gyro['freq']]
     try:
       self._device.CheckOutput(setup_cmd)
     except Exception as e:
-      raise MotionSensorException('Failed to set up motion sensor.  %s' % e)
+      raise MotionSensorException(
+          'Failed to set up motion sensor.  %s' % e) from None
 
     logging.info('Motion sensor setup done.')
 
@@ -168,7 +170,8 @@ class GyroscopeController(sensor_utils.BasicSensorController):
       for key, re_exp in re_dict.items():
         result[key] = re_exp.search(raw_info).group(1)
     except AttributeError as e:
-      raise MotionSensorException('Failed to parse key "%s": %s' % (key, e))
+      raise MotionSensorException(
+          'Failed to parse key "%s": %s' % (key, e)) from None
 
     return result
 

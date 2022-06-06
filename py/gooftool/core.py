@@ -210,8 +210,9 @@ class Gooftool:
             'Cannot find %s. Factory installed DLC images are not enabled. '
             'Skip checking.', dlc_cache_path)
         return
-      raise Error('No factory installed DLC images found! Expected number of'
-                  ' DLCs: %d! %s' % (expected_num_dlcs, _DLC_ERROR_TEMPLATE))
+      raise Error(
+          'No factory installed DLC images found! Expected number of'
+          ' DLCs: %d! %s' % (expected_num_dlcs, _DLC_ERROR_TEMPLATE)) from None
 
     with file_utils.TempDirectory() as tmpdir:
       # The DLC images are stored as compressed format.
@@ -604,7 +605,8 @@ class Gooftool:
     try:
       flag = int(flag_str, 0)
     except:
-      raise Error('HFSTS3 is %r and can not convert to an integer' % flag_str)
+      raise Error(
+          'HFSTS3 is %r and can not convert to an integer' % flag_str) from None
     if (flag & 0xF0) == 0x20:
       # For Consumer SKU, if ME is locked, it should contain only 0xFFs.
       data = mainfw.get_section('SI_ME').strip(b'\xff')
@@ -775,7 +777,7 @@ class Gooftool:
             rw_vpd[vpd_field_name], type=type_name, device=device_name,
             allow_dummy=(phase.GetPhase() < phase.PVT_DOGFOOD))
       except registration_codes.RegistrationCodeException as e:
-        raise ValueError('%s is invalid: %r' % (vpd_field_name, e))
+        raise ValueError('%s is invalid: %r' % (vpd_field_name, e)) from None
 
   def VerifyReleaseChannel(self, enforced_channels=None):
     """Verify that release image channel is correct.
@@ -1158,7 +1160,7 @@ class Gooftool:
         self._vpd.UpdateData({k: None for k in entries.keys()},
                              partition=vpd.VPD_READWRITE_PARTITION_NAME)
       except Exception as e:
-        raise Error('Failed to remove VPD entries: %r' % e)
+        raise Error('Failed to remove VPD entries: %r' % e) from None
 
     return entries
 
@@ -1219,7 +1221,7 @@ class Gooftool:
         # value as it may contain the device secret.
         (exc_type, _, exc_traceback) = sys.exc_info()
         cause = '%s: %s' % (operation, exc_type)
-        raise Error(cause).with_traceback(exc_traceback)
+        raise Error(cause).with_traceback(exc_traceback) from None
 
     with scrub_exceptions('Error generating device secret'):
       # Generate the stable device secret and write it to VPD. Turn off logging,
@@ -1254,7 +1256,8 @@ class Gooftool:
     try:
       board_id = gsctool.GetBoardID()
     except gsctool_module.GSCToolError as e:
-      raise Error('Failed to get boardID with gsctool command: %r' % e)
+      raise Error(
+          'Failed to get boardID with gsctool command: %r' % e) from None
     if board_id.type == 0xffffffff:
       return False
 
@@ -1557,10 +1560,10 @@ class Gooftool:
       is_factory_mode = gsctool.IsFactoryMode()
 
     except gsctool_module.GSCToolError as e:
-      raise Error('gsctool command fail: %r' % e)
+      raise Error('gsctool command fail: %r' % e) from None
 
     except Exception as e:
-      raise Error('Unknown exception from gsctool: %r' % e)
+      raise Error('Unknown exception from gsctool: %r' % e) from None
 
     if is_factory_mode:
       raise Error('Failed to disable Cr50 factory mode.')

@@ -107,7 +107,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
                                      'org.freedesktop.DBus.ObjectManager')
     except DBusException as e:
       raise BluetoothManagerException('DBus Exception in getting Manager'
-                                      'dbus Interface: %s.' % e)
+                                      'dbus Interface: %s.' % e) from None
 
   def _FindDeviceInterface(self, mac_addr, adapter):
     """Given a MAC address, returns the corresponding device dbus object
@@ -148,7 +148,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
       device = self._FindDeviceInterface(device_address, adapter)
     except DBusException as e:
       raise BluetoothManagerException('SetDeviceConnected: fail to find device'
-                                      ' %s: %s' % (device_address, e))
+                                      ' %s: %s' % (device_address, e)) from None
     try:
       if connect:
         device.Connect()
@@ -158,7 +158,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
           device.Disconnect()
     except DBusException as e:
       raise BluetoothManagerException('SetDeviceConnected: fail to switch'
-                                      'connection: %s' % e)
+                                      'connection: %s' % e) from None
     else:
       return True
 
@@ -184,7 +184,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
         adapter.RemoveDevice(device)
     except DBusException as e:
       raise BluetoothManagerException('RemovePairedDevice: fail to remove'
-                                      ' device: %s.' % e)
+                                      ' device: %s.' % e) from None
     else:
       logging.info('succesfully removed device.')
       return True
@@ -283,7 +283,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
       else:
         logging.exception('Fail to create agent.')
         raise BluetoothManagerException('CreatePairedDevice:'
-                                        'Fail to create agent.')
+                                        'Fail to create agent.') from None
     matching_device.Pair(reply_handler=_ReplyHandler,
                          error_handler=_ErrorHandler)
     self._main_loop.run()

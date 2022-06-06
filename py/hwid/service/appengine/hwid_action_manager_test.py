@@ -56,7 +56,7 @@ class InstanceFactoryForTest(hwid_action_manager.InstanceFactory):
     try:
       hwid_action_inst = self._known_project_to_hwid_action[metadata.project]
     except KeyError:
-      raise hwid_action_manager.ProjectNotSupportedError
+      raise hwid_action_manager.ProjectNotSupportedError from None
     return HWIDPreprocDataForTest(metadata.project, raw_db, raw_db_internal,
                                   hwid_action_inst)
 

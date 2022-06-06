@@ -650,7 +650,7 @@ class FileLock:
           if remaining_secs < 0:
             raise FileLockTimeoutError(
                 'Could not acquire file lock of %s in %s second(s)' %
-                (self._lockfile, self._timeout_secs))
+                (self._lockfile, self._timeout_secs)) from None
         else:
           raise
 

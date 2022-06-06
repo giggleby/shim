@@ -524,7 +524,7 @@ class UCMConfigManager(BaseConfigManager):
     try:
       return self._card_map[card]
     except KeyError:
-      raise KeyError('%s is not in %r' % (card, self._card_map))
+      raise KeyError('%s is not in %r' % (card, self._card_map)) from None
 
   def _GetDeviceName(self, card, device):
     """Get device name of the card index."""

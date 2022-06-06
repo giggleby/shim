@@ -232,6 +232,6 @@ def WalkJSONPath(json_path, data):
     if current.startswith('['):
       return WalkJSONPath(left, data[int(current[1:-1])])
   except (KeyError, TypeError):
-    raise ValueError('Could not access %s' % json_path)
+    raise ValueError('Could not access %s' % json_path) from None
   else:
     raise ValueError('Invalid syntax found at %s' % json_path)

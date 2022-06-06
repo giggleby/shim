@@ -165,7 +165,7 @@ class EasyBundleCreationWorker:
         output = process_utils.LogAndCheckOutput(finalize_bundle_command,
                                                  stderr=process_utils.STDOUT)
       except process_utils.CalledProcessError as e:
-        raise CreateBundleException(e.stdout)
+        raise CreateBundleException(e.stdout) from None
       self._logger.info(output)
 
       bundle_path = os.path.join(

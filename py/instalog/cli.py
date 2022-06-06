@@ -183,7 +183,7 @@ class InstalogCLI:
         # Perform the real check to see if Instalog is up internally.
         return self._core.IsUp()
       except Exception:
-        raise type_utils.TimeoutError('Could not call core IsUp')
+        raise type_utils.TimeoutError('Could not call core IsUp') from None
 
     try:
       print('Waiting for the core is up...')

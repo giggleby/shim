@@ -195,7 +195,7 @@ class FingerprintTest(unittest.TestCase):
       # strip header/footer
       pixel_lines = lines[3:-1]
     except (IndexError, ValueError):
-      raise type_utils.TestFailure('Corrupted image')
+      raise type_utils.TestFailure('Corrupted image') from None
 
     return pixel_lines
 

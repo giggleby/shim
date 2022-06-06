@@ -94,7 +94,7 @@ class UsbGpioGinkgo:
     try:
       self.ginkgo_lib = cdll.LoadLibrary(ginkgo_lib_path)
     except Exception as e:
-      raise UsbGpioError('load %s (%s)' % (ginkgo_lib_path, e))
+      raise UsbGpioError('load %s (%s)' % (ginkgo_lib_path, e)) from None
 
   def _GetGPIOPin(self, gpio_port):
     """Convert the GPIO port number to the physical GPIO pin number."""

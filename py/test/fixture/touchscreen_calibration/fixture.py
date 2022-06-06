@@ -202,7 +202,7 @@ class FixtureSerialDevice(BaseFixture):
       session.console.info('Wait up to %d seconds for arduino initialization.',
                            timeout)
     except Exception:
-      raise FixtureException('Failed to connect the test fixture.')
+      raise FixtureException('Failed to connect the test fixture.') from None
 
     self.AssertStateWithTimeout([STATE.INIT, STATE.STOP_UP,
                                  STATE.EMERGENCY_STOP], timeout)
@@ -217,7 +217,7 @@ class FixtureSerialDevice(BaseFixture):
     try:
       self.state = self.SendReceive(COMMAND.STATE)
     except Exception:
-      raise FixtureException('QueryState failed.')
+      raise FixtureException('QueryState failed.') from None
 
     return self.state
 
@@ -269,7 +269,7 @@ class FixtureSerialDevice(BaseFixture):
       session.console.info('Send COMMAND.DOWN(%s). Receive state(%s).',
                            COMMAND.DOWN, response)
     except Exception:
-      raise FixtureException('DriveProbeDown failed.')
+      raise FixtureException('DriveProbeDown failed.') from None
 
     self.AssertState(STATE.STOP_DOWN)
 
@@ -280,6 +280,6 @@ class FixtureSerialDevice(BaseFixture):
       session.console.info('Send COMMAND.UP(%s). Receive state(%s).',
                            COMMAND.UP, response)
     except Exception:
-      raise FixtureException('DriveProbeUp failed.')
+      raise FixtureException('DriveProbeUp failed.') from None
 
     self.AssertState(STATE.STOP_UP)

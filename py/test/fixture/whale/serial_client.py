@@ -54,7 +54,7 @@ class SerialClient:
       self._server.Send(serial_index, command)
     except Exception as e:
       raise SerialClientError('Fail to send command %s to serial_index %d: %s' %
-                              (command, serial_index, e))
+                              (command, serial_index, e)) from None
 
   def Receive(self, serial_index, num_bytes):
     """Receives N byte data through serial server.
@@ -77,7 +77,7 @@ class SerialClient:
     except Exception as e:
       raise SerialClientError(
           'Fail to receive %d bytes from serial_index %d: %s' %
-          (num_bytes, serial_index, e))
+          (num_bytes, serial_index, e)) from None
 
   def GetSerialAmount(self):
     """Gets total serial amount on server.
@@ -90,7 +90,7 @@ class SerialClient:
       logging.debug('Get total serial amount = %d', serial_amount)
       return serial_amount
     except Exception as e:
-      raise SerialClientError('Fail to get serial amount: %s' % e)
+      raise SerialClientError('Fail to get serial amount: %s' % e) from None
 
 
 def ParseArgs():
