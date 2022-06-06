@@ -586,6 +586,16 @@ class Gooftool:
       if file_utils.ReadFile(os.path.join(tpm_root, key)).strip() != value:
         raise Error('TPM is not cleared.')
 
+    expected_tpm_manager_status = {
+        'is_enabled': 'true',
+        'is_owned': 'false',
+        'is_owner_password_present': 'false'
+    }
+    tpm_manager_status = self._util.GetTPMManagerStatus()
+    for key, value in expected_tpm_manager_status.items():
+      if tpm_manager_status[key] != value:
+        raise Error('TPM manager status is not cleared.')
+
   def VerifyManagementEngineLocked(self):
     """Verify Management Engine is locked."""
     mainfw = self._crosfw.LoadMainFirmware().GetFirmwareImage()
