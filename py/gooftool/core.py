@@ -60,7 +60,8 @@ _DLC_ERROR_TEMPLATE = 'If you install the images via network, please make ' \
                       '. To re-install the DLC images, please run pytest ' \
                       '`check_image_version.py` with argument ' \
                       '`reinstall_only_dlc` set to true. For more ' \
-                      'information about DLCs, please read b/212643784.'
+                      'information about DLCs, please read the partner site ' \
+                      'document: factory-dlc-support.'
 
 
 class CrosConfigError(Error):
