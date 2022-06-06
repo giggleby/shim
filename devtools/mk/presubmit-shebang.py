@@ -24,7 +24,7 @@ def main():
       'files', metavar='FILE', nargs='*', help='File or directory to check.')
   args = parser.parse_args()
 
-  with open(args.rules_file) as f:
+  with open(args.rules_file, encoding='utf8') as f:
     rules = json.load(f)
   exclusion_set = set(rules['exclusion_list'])
   allow_list_set = set(rules['allow_list'])
@@ -41,7 +41,7 @@ def main():
     if not executable and not args.all:
       return
     try:
-      with open(filepath) as f:
+      with open(filepath, encoding='utf8') as f:
         if f.read(2) != '#!':
           return
         line = f.readline().rstrip('\n')

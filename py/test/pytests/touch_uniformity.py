@@ -39,7 +39,7 @@ from cros.factory.utils import file_utils
 
 from cros.factory.external import numpy
 
-
+# Private Constants.
 _LABEL_PASS = ['<span class="test-status-passed">', _('PASS'), '</span>']
 _LABEL_FAIL = ['<span class="test-status-failed">', _('FAIL'), '</span>']
 _MESSAGE_DELAY_SECS = 1
@@ -158,7 +158,7 @@ class TouchUniformity(test_case.TestCase):
 
     if self.args.keep_raw_logs:
       with file_utils.UnopenedTemporaryFile() as temp_path:
-        with open(temp_path, 'w') as f:
+        with open(temp_path, 'w', encoding='utf8') as f:
           for obj in to_log:
             f.write('%r\n' % obj)
         testlog.AttachFile(

@@ -111,7 +111,7 @@ class _TestProc:
     # collision of FindUnusedPort between different unittests.
     child_env[
         'CROS_FACTORY_UNITTEST_PORT_DISTRIBUTE_SERVER'] = self._port_server
-    with open(self.log_file_name, 'w') as log_file:
+    with open(self.log_file_name, 'w', encoding='utf8') as log_file:
       self.start_time = time.time()
       self.proc = process_utils.Spawn(self.test_name, stdout=log_file,
                                       stderr=STDOUT, env=child_env)
@@ -498,7 +498,7 @@ def main():
                     isolated_tests=args.isolated, fallback=not args.nofallback)
   return_value = runner.Run()
   if return_value == 0 and args.pass_mark:
-    with open(TEST_PASSED_MARK, 'a'):
+    with open(TEST_PASSED_MARK, 'a', encoding='utf8'):
       os.utime(TEST_PASSED_MARK, None)
   sys.exit(return_value)
 

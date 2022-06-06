@@ -316,7 +316,8 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
       file_utils.TryMakeDirs(save_dir)
       if mode == 'ab' and os.path.isfile(save_path):
         shutil.copy2(save_path, temp_path)
-      with open(temp_path, mode) as f:
+      encoding = None if 'b' in mode else 'utf8'
+      with open(temp_path, mode, encoding=encoding) as f:
         f.write(content)
       # Do not use os.rename() to move file. os.rename() behavior is OS
       # dependent.
@@ -329,7 +330,8 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
   def _AppendCSV(self, file_name, entry, mode='a'):
     """Saves an entry to CSV file."""
     file_utils.TryMakeDirs(os.path.dirname(file_name))
-    with open(file_name, mode) as f:
+    encoding = None if 'b' in mode else 'utf8'
+    with open(file_name, mode, encoding=encoding) as f:
       csv.writer(f, dialect=NewlineTerminatedCSVDialect).writerow(entry)
       os.fdatasync(f.fileno())
 

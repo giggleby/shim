@@ -149,7 +149,8 @@ class EasyBundleCreationWorker:
               request.project))
       if has_firmware_setting:
         manifest['has_firmware'] = has_firmware_setting
-      with open(os.path.join(temp_dir, 'MANIFEST.yaml'), 'w') as f:
+      with open(os.path.join(temp_dir, 'MANIFEST.yaml'), 'w',
+                encoding='utf8') as f:
         yaml.safe_dump(manifest, f)
 
       finalize_bundle_command = [

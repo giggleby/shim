@@ -189,7 +189,7 @@ class OutputBigQuery(plugin_base.OutputPlugin):
     event_count = 0
     row_count = 0
     partition_set = set()
-    with open(json_path, 'w') as f:
+    with open(json_path, 'w', encoding='utf8') as f:
       for event in event_stream.iter(timeout=self.args.interval,
                                      count=self.args.batch_size):
         event_count += 1

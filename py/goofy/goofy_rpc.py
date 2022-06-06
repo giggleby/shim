@@ -762,7 +762,7 @@ class GoofyRPC:
                                       path + '-*',
                                       'testlog.json')):
         try:
-          with open(f) as fd:
+          with open(f, encoding='utf8') as fd:
             ret.append(yaml.safe_load(fd))
         except Exception:
           logging.exception('Unable to load test metadata %s', f)

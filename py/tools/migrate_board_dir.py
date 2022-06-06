@@ -169,10 +169,10 @@ def ReplaceStringInFiles(root_dir, replace_patterns):
       # be processed.
       if os.path.islink(filepath):
         continue
-      with open(filepath, 'r') as old_file:
+      with open(filepath, 'r', encoding='utf8') as old_file:
         with UnopenedTemporaryFile() as new_filepath:
           shutil.copystat(filepath, new_filepath)
-          with open(new_filepath, 'w') as new_file:
+          with open(new_filepath, 'w', encoding='utf8') as new_file:
             for line in old_file:
               for replace_pattern in replace_patterns:
                 line = re.sub(replace_pattern.old_substring,

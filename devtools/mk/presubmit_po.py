@@ -51,7 +51,8 @@ def TryUpdate(po_path, test_po_dir, po_files):
 
 
 def IsPoFileUpToDate(old_path, new_path):
-  with open(old_path) as old_po_f, open(new_path) as new_po_f:
+  with open(old_path, encoding='utf8') as old_po_f, open(
+      new_path, encoding='utf8') as new_po_f:
     old_content = old_po_f.readlines()
     new_content = new_po_f.readlines()
 

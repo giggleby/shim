@@ -414,7 +414,7 @@ class CrosPayloadUtils:
       SysUtils.WriteFileToMountedDir(
           payloads_dir, os.path.basename(json_path), '{}')
     else:
-      with open(json_path, 'w') as f:
+      with open(json_path, 'w', encoding='utf8') as f:
         f.write('{}')
     return json_path
 
@@ -451,7 +451,7 @@ class CrosPayloadUtils:
     if not os.path.exists(json_path):
       logging.warning('Cannot find %s', json_path)
       return {}
-    with open(json_path) as f:
+    with open(json_path, encoding='utf8') as f:
       metadata = json.load(f)
       component_versions = {
           component: resource.get(PAYLOAD_SUBTYPE_VERSION, '<unknown>')
@@ -1015,7 +1015,7 @@ class LSBFile:
     if not path:
       return
 
-    with open(path) as f:
+    with open(path, encoding='utf8') as f:
       self._raw_data = f.read().strip()  # Remove trailing \n or \r
       self._dict = dict(RE_LSB.findall(self._raw_data))
 
@@ -1155,7 +1155,7 @@ def _ReadRMAMetadata(stateful):
   PATH_CROS_RMA_METADATA = os.path.join(
       stateful, CrosPayloadUtils.GetCrosRMAMetadata())
   if os.path.exists(PATH_CROS_RMA_METADATA):
-    with open(PATH_CROS_RMA_METADATA) as f:
+    with open(PATH_CROS_RMA_METADATA, encoding='utf8') as f:
       metadata = json.load(f)
       metadata = [
           RMAImageBoardInfo(board=e['board'],
@@ -1811,7 +1811,7 @@ class ChromeOSFactoryBundle:
                                 'imageloader.json')
         if not os.path.exists(manifest):
           continue
-        with open(manifest) as f:
+        with open(manifest, encoding='utf8') as f:
           data = json.load(f)
           if data['factory-install']:
             # We need to preserve `2 * preallocated size`.
@@ -1938,13 +1938,13 @@ class ChromeOSFactoryBundle:
           CrosPayloadUtils.InstallComponents(json_path, config_file_name,
                                              PAYLOAD_TYPE_TOOLKIT_CONFIG,
                                              silent=True)
-          with open(config_file_name, 'r') as config_file:
+          with open(config_file_name, 'r', encoding='utf8') as config_file:
             config = json.load(config_file)
         except Exception:
           config = {}
         config.update({'active_test_list': {'id': active_test_list}})
         new_config_file_name = os.path.join(config_dir, 'new_config_file')
-        with open(new_config_file_name, 'w') as config_file:
+        with open(new_config_file_name, 'w', encoding='utf8') as config_file:
           SysUtils.WriteFile(
               config_file, json.dumps(config, indent=2, separators=(',', ': ')))
         CrosPayloadUtils.ReplaceComponent(
@@ -1963,7 +1963,7 @@ class ChromeOSFactoryBundle:
       lsb.SetValue('RMA_AUTORUN', 'true')
 
       new_lsb_file_name = os.path.join(lsb_dir, 'new_lsb_file')
-      with open(new_lsb_file_name, 'w') as lsb_file:
+      with open(new_lsb_file_name, 'w', encoding='utf8') as lsb_file:
         SysUtils.WriteFile(lsb_file, lsb.AsRawData() + '\n')
       CrosPayloadUtils.ReplaceComponent(json_path, PAYLOAD_TYPE_LSB_FACTORY,
                                         new_lsb_file_name)
@@ -2049,7 +2049,7 @@ class ChromeOSFactoryBundle:
         json_path = CrosPayloadUtils.GetJSONPath(payloads_dir, self.board)
         json_file = os.path.basename(json_path)
         resources.append((json_file, SysUtils.GetDiskUsage(json_path)))
-        with open(json_path) as f:
+        with open(json_path, encoding='utf8') as f:
           metadata = json.load(f)
           for resource in metadata.values():
             for subtype, payload in resource.items():
@@ -2196,7 +2196,7 @@ class ChromeOSFactoryBundle:
             # Check if the board has lsb_factory payload.
             temp_metadata_path = CrosPayloadUtils.GetJSONPath(
                 temp_payloads_dir, entry.board)
-            with open(temp_metadata_path) as f:
+            with open(temp_metadata_path, encoding='utf8') as f:
               temp_metadata = json.load(f)
             if PAYLOAD_TYPE_LSB_FACTORY not in temp_metadata:
               lsb_path = os.path.join(src_dir, PATH_LSB_FACTORY)
@@ -2360,7 +2360,9 @@ class ChromeOSFactoryBundle:
 
   def GenerateTFTP(self, tftp_root):
     """Generates TFTP data in a given folder."""
-    with open(os.path.join(tftp_root, '..', 'dnsmasq.conf'), 'w') as f:
+    with open(
+        os.path.join(tftp_root, '..', 'dnsmasq.conf'), 'w',
+        encoding='utf8') as f:
       f.write(textwrap.dedent(
           '''\
           # This is a sample config, can be invoked by "dnsmasq -d -C FILE".
@@ -2376,12 +2378,12 @@ class ChromeOSFactoryBundle:
       tftp_server_ip = urllib.parse.urlparse(self.server_url).hostname
       server_url_config = os.path.join(
           tftp_root, 'omahaserver_%s.conf' % self.board)
-      with open(server_url_config, 'w') as f:
+      with open(server_url_config, 'w', encoding='utf8') as f:
         f.write(self.server_url)
 
     cmdline_sample = os.path.join(
         tftp_root, 'chrome-bot', self.board, 'cmdline.sample')
-    with open(cmdline_sample, 'w') as f:
+    with open(cmdline_sample, 'w', encoding='utf8') as f:
       config = (
           'lsm.module_locking=0 cros_netboot_ramfs cros_factory_install '
           'cros_secure cros_netboot earlyprintk cros_debug loglevel=7 '
@@ -2494,7 +2496,7 @@ class ChromeOSFactoryBundle:
         has_tftp = True
 
     readme_path = os.path.join(bundle_dir, 'README.md')
-    with open(readme_path, 'w') as f:
+    with open(readme_path, 'w', encoding='utf8') as f:
       fw_ver = self.GetFirmwareUpdaterVersion(self.firmware)
       fsi_fw_ver = self.GetFirmwareUpdaterVersion(release_firmware_updater)
       info = [
@@ -2595,7 +2597,7 @@ class ChromeOSFactoryBundle:
 
     if os.path.exists(config_path):
       print('%s found.' % config_path)
-      with open(config_path) as f:
+      with open(config_path, encoding='utf8') as f:
         obj = yaml.safe_load(f)['chromeos']['configs']
     else:
       print('%s not found.' % config_path)
@@ -3924,7 +3926,7 @@ class EditToolkitConfigCommand(SubCommand):
       try:
         cutoff_config_path = os.path.join(
             rootfs, 'usr', 'share', 'cutoff', 'cutoff.json')
-        with open(cutoff_config_path) as f:
+        with open(cutoff_config_path, encoding='utf8') as f:
           cutoff_config = json.load(f)
       except Exception:
         cutoff_config = {}

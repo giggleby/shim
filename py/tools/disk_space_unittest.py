@@ -56,7 +56,7 @@ class DiskSpaceTest(unittest.TestCase):
         mock.call('/mnt/stateful_partition'),
         mock.call('/media/usb')]
 
-    self.patched_open.assert_called_once_with('/etc/mtab')
+    self.patched_open.assert_called_once_with('/etc/mtab', encoding='utf8')
     self.assertEqual(os.statvfs.call_args_list, statvfs_calls)
 
   def testGetAllVFSInfo(self):

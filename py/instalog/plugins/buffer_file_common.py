@@ -200,10 +200,10 @@ def MoveAndWrite(config_dct, events):
   cur_pos = metadata_dct['end_pos'] - metadata_dct['start_pos']
   # Truncate the size of the file in case of a previously unfinished
   # transaction.
-  with open(config_dct['data_path'], 'a') as f:
+  with open(config_dct['data_path'], 'a', encoding='utf8') as f:
     f.truncate(cur_pos)
 
-  with open(config_dct['data_path'], 'a') as f:
+  with open(config_dct['data_path'], 'a', encoding='utf8') as f:
     # On some machines, the file handle offset isn't set to EOF until
     # a write occurs.  Thus we must manually seek to the end to ensure
     # that f.tell() will return useful results.
@@ -272,7 +272,7 @@ def RestoreMetadata(config_dct):
   data = TryLoadJSON(config_dct['metadata_path'], logger.name)
   if data is not None:
     try:
-      with open(config_dct['data_path'], 'r') as f:
+      with open(config_dct['data_path'], 'r', encoding='utf8') as f:
         metadata_dct['version'] = GetChecksum(f.readline())
     except Exception:
       logger.error('Data file unexpectedly missing; resetting metadata')
@@ -313,7 +313,7 @@ def RecoverMetadata(config_dct, metadata_dct):
   logger = logging.getLogger(config_dct['logger_name'])
   first_record = True
   cur_pos = 0
-  with open(config_dct['data_path'], 'r') as f:
+  with open(config_dct['data_path'], 'r', encoding='utf8') as f:
     for line in f:
       seq, _unused_record = ParseRecord(line, config_dct['logger_name'])
       if first_record and seq:
@@ -371,7 +371,7 @@ def Truncate(config_dct, min_seq, min_pos):
       # the real file (data_path), so we can open a "read" handle on data_path
       # without affecting AtomicWrite's handle.  Only when AtomicWrite's context
       # block ends will the temporary be moved to replace data_path.
-      with open(config_dct['data_path'], 'r') as old_f:
+      with open(config_dct['data_path'], 'r', encoding='utf8') as old_f:
         old_f.seek(min_pos - old_metadata_dct['start_pos'])
 
         # Deal with the first line separately to get the new version.
@@ -705,7 +705,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
       if not self.read_lock.acquire(timeout=0.5):
         return []
       metadata_dct = RestoreMetadata(self.simple_file.ConfigToDict())
-      with open(self.simple_file.data_path, 'r') as f:
+      with open(self.simple_file.data_path, 'r', encoding='utf8') as f:
         cur = self.new_pos - metadata_dct['start_pos']
         f.seek(cur)
         total_bytes = 0

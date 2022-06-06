@@ -22,7 +22,7 @@ def GetInputDevices():
   dataset = []
   data = {}
   entry = None
-  with open(INPUT_DEVICE_PATH) as f:
+  with open(INPUT_DEVICE_PATH, encoding='utf8') as f:
     for line in f:
       prefix = line[0]
       content = line[3:].strip()

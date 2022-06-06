@@ -192,7 +192,7 @@ class TimeSanitizer:
         used.
     """
     with self.lock:
-      with open(self.state_file, 'w') as f:
+      with open(self.state_file, 'w', encoding='utf8') as f:
         now = now or self._time.Time()
         logging.debug('Recording current time %s into %s',
                       _FormatTime(now), self.state_file)

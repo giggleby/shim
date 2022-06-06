@@ -68,7 +68,7 @@ class TSConfig:
 
     self.parser = configparser.ConfigParser()
     try:
-      with open(config_filepath) as f:
+      with open(config_filepath, encoding='utf8') as f:
         self.parser.read_file(f)
     except Exception:
       raise Error('Failed to read config file: %s.' % config_filepath)

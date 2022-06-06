@@ -272,7 +272,7 @@ def GetDHCPBootParameters(interface):
 
     p.wait()
 
-    with open(dump_file, 'r') as f:
+    with open(dump_file, 'r', encoding='utf8') as f:
       pcap = dpkt.pcap.Reader(f)
       for _, buf in pcap:
         eth = dpkt.ethernet.Ethernet(buf)

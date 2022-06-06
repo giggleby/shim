@@ -71,7 +71,7 @@ def IsProcessAlive(pid, ppid=None):
       another process, the function returns False in this case.
   """
   try:
-    with open('/proc/%d/stat' % pid) as f:
+    with open('/proc/%d/stat' % pid, encoding='utf8') as f:
       stat = f.readline().split()
       if ppid is not None and int(stat[3]) != ppid:
         return False

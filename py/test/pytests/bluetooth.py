@@ -154,7 +154,7 @@ def _AppendLog(log_file, data):
                  for line in data.splitlines())
   log_dir = os.path.dirname(log_file)
   file_utils.TryMakeDirs(log_dir)
-  with open(log_file, 'a') as log:
+  with open(log_file, 'a', encoding='utf8') as log:
     log.write(data)
 
 
@@ -541,7 +541,7 @@ class BluetoothTest(test_case.TestCase):
     _AppendLog(self.log_tmp_file, data)
 
     if self.args.battery_log:
-      with open(self.args.battery_log, 'a') as f:
+      with open(self.args.battery_log, 'a', encoding='utf8') as f:
         f.write('%s %s %s [%s]: %s\n' %
                 (GetCurrentTime(), self.args.base_enclosure_serial_number, mac,
                  step, battery_level))

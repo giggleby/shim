@@ -17,7 +17,7 @@ class CsvWriterTest(unittest.TestCase):
       csv_writer.WriteCsv(tmp_file,
                           [{'col_1': 1}, {'col_2': 2}, {'col_3': 3}],
                           ['col_2', 'col_1'])
-      with open(tmp_file, 'r') as fd:
+      with open(tmp_file, 'r', encoding='utf8') as fd:
         self.assertEqual(fd.readline().strip(), 'col_2,col_1,col_3')
         self.assertEqual(fd.readline().strip(), ',1,')
         self.assertEqual(fd.readline().strip(), '2,,')

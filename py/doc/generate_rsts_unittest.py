@@ -43,7 +43,7 @@ class GenerateDocsTest(unittest.TestCase):
           generate_rsts.GenerateTestDocs(
               generate_rsts.RSTWriter(out), 'pseudo_test')
 
-      with open(temp) as f:
+      with open(temp, encoding='utf8') as f:
         lines = f.read().splitlines()
 
         pseudo_url = ("https://chromium.googlesource.com/chromiumos/platform/fa"

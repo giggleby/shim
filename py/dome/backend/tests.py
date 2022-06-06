@@ -19,7 +19,8 @@ SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 @contextlib.contextmanager
 def TestData(file_name, deserialize=True):
   """Load a JSON file under the testdata folder using the with statement."""
-  with open(os.path.join(SCRIPT_DIR, 'testdata', file_name)) as f:
+  with open(os.path.join(SCRIPT_DIR, 'testdata', file_name),
+            encoding='utf8') as f:
     if deserialize:
       yield json.load(f)
     else:
@@ -29,7 +30,7 @@ def TestData(file_name, deserialize=True):
 class UploadedFileTest(rest_framework.test.APITestCase):
 
   def setUp(self):
-    with open(__file__) as f:
+    with open(__file__, encoding='utf8') as f:
       response = self.client.post('/files/', data={'file': f})
     self.uploaded_file_id = response.json()['id']
 
@@ -605,7 +606,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
                            data=bundle_name_list, format='json')
 
   def _UploadFile(self):
-    with open(__file__) as f:
+    with open(__file__, encoding='utf8') as f:
       response = self.client.post('/files/', data={'file': f})
     return response.json()
 

@@ -300,7 +300,7 @@ class Gpio:
     try:
       logging.debug('Gpio.Poll() starts waiting')
       if not self._poll_fd:
-        self._poll_fd = open(self._GetSysfsPath('value'), 'r')  # pylint: disable=consider-using-with
+        self._poll_fd = open(self._GetSysfsPath('value'), 'r', encoding='utf8')  # pylint: disable=consider-using-with
 
       poll = select.poll()
       # Poll for POLLPRI and POLLERR of 'value' file according to

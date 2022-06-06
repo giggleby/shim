@@ -261,7 +261,7 @@ class Finalize(test_case.TestCase):
     test_states = test_list.AsDict(
         state.GetInstance().GetTestStates())
     file_utils.TryMakeDirs(os.path.dirname(self.test_states_path))
-    with open(self.test_states_path, 'w') as f:
+    with open(self.test_states_path, 'w', encoding='utf8') as f:
       yaml.safe_dump(test_states, f)
     event_log.Log('test_states', test_states=test_states)
     testlog.LogParam('test_states', test_states)
@@ -302,7 +302,7 @@ class Finalize(test_case.TestCase):
       # append STDOUT and STDERR to console log.
       console_log_path = paths.CONSOLE_LOG_PATH
       file_utils.TryMakeDirs(os.path.dirname(console_log_path))
-      with open(console_log_path, 'a') as output:
+      with open(console_log_path, 'a', encoding='utf8') as output:
         returncode = self.factory_par.Call(command, stdout=output,
                                            stderr=subprocess.STDOUT)
     session.console.info('=========================')

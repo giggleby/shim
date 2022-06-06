@@ -277,7 +277,7 @@ def RunCommandAndSaveOutputToFile(command, filename, check_call=True,
   Returns:
     filename
   """
-  with open(filename, 'w') as f:
+  with open(filename, 'w', encoding='utf8') as f:
     options = {
         'stdout': f,
     }

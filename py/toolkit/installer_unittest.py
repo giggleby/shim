@@ -128,7 +128,9 @@ class ToolkitInstallerTest(unittest.TestCase):
   def testNoEnable(self):
     self.makeLiveDevice()
     os.makedirs(os.path.join(self.dest, 'usr/local/factory'))
-    with open(os.path.join(self.dest, 'usr/local/factory/enabled'), 'w') as f:
+    with open(
+        os.path.join(self.dest, 'usr/local/factory/enabled'), 'w',
+        encoding='utf8'):
       pass
     os.getuid = lambda: 0  # root
     self._override_in_cros_device = True

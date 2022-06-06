@@ -1217,7 +1217,7 @@ class FinalizeBundle:
     readme_sections[readme_section_index['VITAL INFORMATION']][1] = (
         vital_contents + '\n\n')
 
-    with open(self.readme_path, 'w') as f:
+    with open(self.readme_path, 'w', encoding='utf8') as f:
       for section in readme_sections:
         f.write('***\n'
                 '*\n'

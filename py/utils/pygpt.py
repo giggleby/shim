@@ -1598,7 +1598,7 @@ class GPTCommands:
 
       match_pattern = None
       if args.match_file:
-        with open(args.match_file) as f:
+        with open(args.match_file, encoding='utf8') as f:
           match_pattern = f.read()
 
       found = 0

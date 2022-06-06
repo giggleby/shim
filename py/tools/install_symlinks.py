@@ -56,8 +56,9 @@ def InstallSymlinks(target, dest, mode, sudo=False, symlinks=None):
   assert mode in VALID_MODES
 
   if not symlinks:
-    with open(os.path.join(paths.FACTORY_DIR,
-                           'misc/symlinks.yaml')) as f:
+    with open(
+        os.path.join(paths.FACTORY_DIR, 'misc/symlinks.yaml'),
+        encoding='utf8') as f:
       symlinks = yaml.safe_load(f)
 
   SYMLINKS_SCHEMA.Validate(symlinks)
@@ -104,7 +105,9 @@ def UninstallSymlinks(dest, mode, sudo=False, symlinks=None):
   assert mode in VALID_MODES
 
   if not symlinks:
-    with open(os.path.join(paths.FACTORY_DIR, 'misc/symlinks.yaml')) as f:
+    with open(
+        os.path.join(paths.FACTORY_DIR, 'misc/symlinks.yaml'),
+        encoding='utf8') as f:
       symlinks = yaml.safe_load(f)
 
   SYMLINKS_SCHEMA.Validate(symlinks)

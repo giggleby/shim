@@ -61,7 +61,8 @@ class SeqGenerator:
     file_utils.TryMakeDirs(os.path.dirname(self.path))
 
     with file_utils.FileLock(self.path, self._filelock_waitsecs):
-      with open(self.path, 'r+') as f:  # FileLock verified the existence.
+      with open(self.path, 'r+',
+                encoding='utf8') as f:  # FileLock verified the existence.
         contents = f.read()
         if contents:
           try:
@@ -146,7 +147,7 @@ class SeqGenerator:
   def _NextOrRaise(self):
     """Returns the next sequence number, raising an exception on failure."""
     with file_utils.FileLock(self.path, self._filelock_waitsecs):
-      with open(self.path, 'r+') as f:
+      with open(self.path, 'r+', encoding='utf8') as f:
         # The file will be closed, and the lock freed, as soon as this
         # block goes out of scope.
         value = int(f.read())

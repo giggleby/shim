@@ -815,7 +815,7 @@ class Gooftool:
       raise CrosConfigError('Model name is empty', db_identity, cur_identity)
 
     def _ParseCrosConfig(config_path):
-      with open(config_path) as f:
+      with open(config_path, encoding='utf8') as f:
         obj = yaml.safe_load(f)
 
       # According to https://crbug.com/1070692, 'platform-name' is not a part of

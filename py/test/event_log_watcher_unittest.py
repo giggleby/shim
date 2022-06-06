@@ -71,7 +71,7 @@ class EventLogWatcherTest(unittest.TestCase):
         file_path = tf.name
     else:
       file_path = os.path.join(self.events_dir, file_name)
-    with open(file_path, 'a') as f:
+    with open(file_path, 'a', encoding='utf8') as f:
       f.write(content)
 
   def testWatchThread(self):
@@ -135,7 +135,7 @@ class EventLogWatcherTest(unittest.TestCase):
     self.assertNotEqual(watcher.GetEventLog(MOCK_LOG_NAME(0)), 0)
 
     # Manually truncate db file.
-    with open(self.db, 'w') as f:
+    with open(self.db, 'w', encoding='utf8') as f:
       os.ftruncate(f.fileno(), 10)
 
     watcher = EventLogWatcher(MOCK_PERIOD, self.events_dir, self.db)

@@ -193,9 +193,9 @@ class TestListLoaderTest(unittest.TestCase):
     self.assertTrue(test_list.LookupPath('SMT'))
 
     # modified content
-    with open(self._GetTestListConfigPath('a'), 'r') as f:
+    with open(self._GetTestListConfigPath('a'), 'r', encoding='utf8') as f:
       json_object = json.load(f)
-    with open(self._GetTestListConfigPath('a'), 'w') as f:
+    with open(self._GetTestListConfigPath('a'), 'w', encoding='utf8') as f:
       json_object['constants']['timestamp'] = 123
       json_object['tests'] = [
           {
@@ -230,9 +230,9 @@ class TestListLoaderTest(unittest.TestCase):
     self.assertTrue(test_list.LookupPath('SMT'))
 
     # modified content
-    with open(self._GetTestListConfigPath('a'), 'r') as f:
+    with open(self._GetTestListConfigPath('a'), 'r', encoding='utf8') as f:
       json_object = json.load(f)
-    with open(self._GetTestListConfigPath('a'), 'w') as f:
+    with open(self._GetTestListConfigPath('a'), 'w', encoding='utf8') as f:
       json_object['constants']['timestamp'] = 123
       json_object['tests'] = [
           {

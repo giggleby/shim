@@ -44,7 +44,7 @@ def CheckVirtualEnv():
       VENV_REQUIREMNTS_FILE
   ],
                                             encoding='utf-8')
-  with open(VENV_REQUIREMNTS_FILE) as f:
+  with open(VENV_REQUIREMNTS_FILE, encoding='utf8') as f:
     expected_version = f.read()
   if current_version[:current_version.find('\n##') + 1] != expected_version:
     InstallRequirements()
@@ -85,7 +85,7 @@ def main():
 
   CheckVirtualEnv()
 
-  with open(args.rules_file) as f:
+  with open(args.rules_file, encoding='utf8') as f:
     rules = json.load(f)
   exclude_patterns = set(rules['exclude_patterns'])
 

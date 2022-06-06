@@ -169,7 +169,8 @@ class SuspendStressTest(test_case.TestCase):
     result_path = GetLogPath('result')
     stdout_path = GetLogPath('stdout')
     stderr_path = GetLogPath('stderr')
-    with open(stdout_path, 'w+', 1) as out, open(stderr_path, 'w', 1) as err:
+    with open(stdout_path, 'w+', 1, encoding='utf8') as out, open(
+        stderr_path, 'w', 1, encoding='utf8') as err:
       process = self.dut.Popen(command, stdout=out, stderr=err)
       thread = process_utils.StartDaemonThread(
           target=self.UpdateOutput, args=(out, ))

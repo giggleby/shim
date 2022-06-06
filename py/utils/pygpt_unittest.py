@@ -149,7 +149,7 @@ class GPTTest(unittest.TestCase):
     # It is possible to check if a disk with both GPT header at block size = 512
     # and 4096 will load from 512 first, but then integrity check and partition
     # (especially decoding UTF16 for Names) would fail, so let's skip that test.
-    with open(bin_file, 'r+') as f:
+    with open(bin_file, 'r+', encoding='utf8') as f:
       f.write('\x00' * 34 * 512)
 
     gpt = pygpt.GPT.Create(bin_file, os.path.getsize(bin_file), 4096, 1)

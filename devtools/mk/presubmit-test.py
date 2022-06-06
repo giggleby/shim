@@ -68,7 +68,7 @@ def CheckPytestDoc(files):
         'Dependency\n': 0,
         'Examples\n': 0,
     }
-    with open(test_file) as f:
+    with open(test_file, encoding='utf8') as f:
       for line in f:
         if line in templates:
           templates[line] += 1

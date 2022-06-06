@@ -533,7 +533,7 @@ def DRMFromPath(path):
   Returns:
     A DRM instance.
   """
-  return DRM(open(path))
+  return DRM(open(path, encoding='utf8'))
 
 
 def _LoadDRMLibrary():

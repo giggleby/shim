@@ -97,7 +97,8 @@ class Servod:
     stderr_file = self._exit_stack.enter_context(
         file_utils.UnopenedTemporaryFile())
 
-    with open(stdout_file, 'w') as stdout, open(stderr_file, 'w') as stderr:
+    with open(stdout_file, 'w', encoding='utf8') as stdout, open(
+        stderr_file, 'w', encoding='utf8') as stderr:
       servod_process = process_utils.Spawn(self._servod_cmd, stdout=stdout,
                                            stderr=stderr)
     self._exit_stack.callback(process_utils.TerminateOrKillProcess,

@@ -33,8 +33,8 @@ def main():
   out_file = sys.argv[2] if len(sys.argv) > 2 else (
       ConvertYAMLPathToJSONPath(in_file))
   print('%s => %s' % (in_file, out_file))
-  with open(in_file) as f_in:
-    with open(out_file, 'w') as f_out:
+  with open(in_file, encoding='utf8') as f_in:
+    with open(out_file, 'w', encoding='utf8') as f_out:
       f_out.write(ConvertYAMLToJSON(f_in.read()))
 
 

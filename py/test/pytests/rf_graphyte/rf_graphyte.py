@@ -259,7 +259,7 @@ class RFGraphyteTest(test_case.TestCase):
       except ValueError:
         return None
 
-    with open(self.result_file_path, 'r') as f:
+    with open(self.result_file_path, 'r', encoding='utf8') as f:
       for data in csv.DictReader(f):
         if data['test_item'] == 'TOTAL RESULT':
           continue

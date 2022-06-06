@@ -97,7 +97,7 @@ def main():
   parser.add_argument('test_list', help='The test list to be formatted.')
   options = parser.parse_args()
 
-  with open(options.test_list, 'r') as fp:
+  with open(options.test_list, 'r', encoding='utf8') as fp:
     input_test_list = json.load(fp, object_pairs_hook=collections.OrderedDict)
 
   output_test_list = Format(input_test_list)
@@ -108,7 +108,7 @@ def main():
     fp.write('\n')
 
   if options.inplace:
-    with open(options.test_list, 'w') as fp:
+    with open(options.test_list, 'w', encoding='utf8') as fp:
       _WriteTestList(fp, output_test_list)
   else:
     _WriteTestList(sys.stdout, output_test_list)

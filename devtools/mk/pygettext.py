@@ -378,7 +378,7 @@ def main():
   for filetype, files in input_files_by_type.items():
     messages.extend(PARSERS[filetype](files, options))
 
-  with open(options.output_file, 'w') as fp:
+  with open(options.output_file, 'w', encoding='utf8') as fp:
     WritePot(fp, messages, options.width)
 
 if __name__ == '__main__':

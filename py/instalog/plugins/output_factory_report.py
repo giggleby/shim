@@ -542,7 +542,7 @@ class ReportParser(log_utils.LoggerMixin):
   def ParseTestlogEvents(self, path, report_event, process_event):
     """Parses Testlog file."""
     try:
-      with open(path, 'r') as f:
+      with open(path, 'r', encoding='utf8') as f:
         for line in f:
           # If the log file is not sync to disk correctly, it may have null
           # characters.

@@ -22,12 +22,12 @@ _METADATA_RELPATH = 'metadata.prototxt'
 
 
 def _ReadFile(path):
-  with open(path, 'r') as f:
+  with open(path, 'r', encoding='utf8') as f:
     return f.read()
 
 
 def _WriteFile(path, data):
-  with open(path, 'w') as f:
+  with open(path, 'w', encoding='utf8') as f:
     f.write(data)
 
 

@@ -37,7 +37,7 @@ class BootSequenceTest(unittest.TestCase):
     """Tests seq recovery functionality.  Should use the maximum seq."""
     first_seq = 1986
     last_seq = 1105
-    with open(self.json_path, 'w') as fd:
+    with open(self.json_path, 'w', encoding='utf8') as fd:
       fd.write(json.dumps({'seq': first_seq}) + '\n')
       fd.write(json.dumps({'seq': last_seq}) + '\n')
 
@@ -53,7 +53,7 @@ class BootSequenceTest(unittest.TestCase):
   @label_utils.Informational
   def testAllCorrupt(self):
     """Tests seq recovery functionality.  Should use current time."""
-    with open(self.json_path, 'w') as fd:
+    with open(self.json_path, 'w', encoding='utf8') as fd:
       fd.write('corrupt\n')
       fd.write('corrupt\n')
       fd.write('\0' * 100)
@@ -68,7 +68,7 @@ class BootSequenceTest(unittest.TestCase):
     Should recover from biggest seq value."""
     last_seq = 1105
     last_valid_seq = last_seq - 10
-    with open(self.json_path, 'w') as fd:
+    with open(self.json_path, 'w', encoding='utf8') as fd:
       fd.write('\0' * 100)  # corrupt before last valid line should be ignored
       for i in reversed(range(5)):
         fd.write(json.dumps({'seq': last_valid_seq - i}) + '\n')
@@ -92,7 +92,7 @@ class BootSequenceTest(unittest.TestCase):
         seq.Current()
 
   def testBasic(self):
-    with open(self.json_path, 'w') as fd:
+    with open(self.json_path, 'w', encoding='utf8') as fd:
       # The context of JSON file for recovery is empty.
       seq = testlog_seq.SeqGenerator(self.seq_path, fd.name)
       for i in range(3):

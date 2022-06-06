@@ -76,7 +76,7 @@ class ChargerTest(test_case.TestCase):
     verbose_log_path = session.GetVerboseTestLogPath()
     file_utils.TryMakeDirs(os.path.dirname(verbose_log_path))
     logging.info('Raw verbose logs saved in %s', verbose_log_path)
-    self._verbose_log = open(verbose_log_path, 'a')  # pylint: disable=consider-using-with
+    self._verbose_log = open(verbose_log_path, 'a', encoding='utf8')  # pylint: disable=consider-using-with
 
     # Group checker for Testlog.
     self._group_checker = testlog.GroupParam(

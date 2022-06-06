@@ -197,7 +197,8 @@ def main():
         [args.host, 'bash'],
         stdin=open(  # pylint: disable=consider-using-with
             os.path.join(chromeos_hwid_path,
-                         hwid_utils.GetHWIDBundleName(project))),
+                         hwid_utils.GetHWIDBundleName(project)),
+            encoding='utf8'),
         check_call=True,
         log=True)
 

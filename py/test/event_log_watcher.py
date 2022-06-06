@@ -121,8 +121,9 @@ class EventLogWatcher:
           last_sync_marker = chunk.chunk.rfind(event_log.SYNC_MARKER_SEARCH)
           if not last_sync_marker:
             continue
-          with open(os.path.join(self._event_log_dir, chunk.log_name),
-                    'r+') as f:
+          with open(
+              os.path.join(self._event_log_dir, chunk.log_name), 'r+',
+              encoding='utf8') as f:
             f.seek(chunk.pos + last_sync_marker)
             f.write(event_log.SYNC_MARKER_REPLACE)
             f.flush()

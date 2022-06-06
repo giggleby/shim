@@ -165,7 +165,7 @@ def GetImportList(filename, module_name):
   current_sys_path = GetSysPathInDir(file_dir)
   import_list = []
 
-  with open(filename, 'r') as fin:
+  with open(filename, 'r', encoding='utf8') as fin:
     source = fin.read()
 
   root = ast.parse(source, filename)
@@ -242,7 +242,7 @@ def LoadRules(path):
     A dictionary of {package: imports} describing "'package' can only import
     from 'imports'".
   """
-  with open(path) as fp:
+  with open(path, encoding='utf8') as fp:
     config = yaml.safe_load(fp)
   if (CONFIG_GROUPS not in config) or (CONFIG_RULES not in config):
     raise ValueError('Syntax error in %s' % path)

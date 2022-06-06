@@ -61,7 +61,7 @@ class Watchdog:
 
   def __init__(self, stop=True):
     super().__init__()
-    self.fd = open(WATCHDOG_DEVICE, 'w', buffering=0)  # pylint: disable=consider-using-with
+    self.fd = open(WATCHDOG_DEVICE, 'w', buffering=0, encoding='utf8')  # pylint: disable=consider-using-with
     self.stop = stop
     if stop:
       self.Stop()

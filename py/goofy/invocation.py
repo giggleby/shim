@@ -448,7 +448,7 @@ class TestInvocation:
         try:
           log_size = os.path.getsize(self._log_path)
           offset = max(0, log_size - ERROR_LOG_TAIL_LENGTH)
-          with open(self._log_path) as f:
+          with open(self._log_path, encoding='utf8') as f:
             f.seek(offset)
             log_tail = DecodeUTF8(f.read())
         except Exception:

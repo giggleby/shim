@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 
-
+# Private constants.
 _ENV_DIR = '/var/db/factory/umpire'
 _CONFIG_PATH = os.path.join(_ENV_DIR, 'active_umpire.json')
 
@@ -18,7 +18,7 @@ def SaveNewActiveConfig(config):
   json_name = 'umpire.%s.json' % (
       hashlib.md5(json_config.encode('utf-8')).hexdigest())
   json_path = os.path.join('resources', json_name)
-  with open(os.path.join(_ENV_DIR, json_path), 'w') as f:
+  with open(os.path.join(_ENV_DIR, json_path), 'w', encoding='utf8') as f:
     f.write(json_config)
 
   os.unlink(_CONFIG_PATH)
@@ -32,7 +32,7 @@ def FindActiveBundle(config):
 
 
 def Migrate():
-  with open(_CONFIG_PATH) as f:
+  with open(_CONFIG_PATH, encoding='utf8') as f:
     config = json.load(f)
 
   active_bundle_id = FindActiveBundle(config)

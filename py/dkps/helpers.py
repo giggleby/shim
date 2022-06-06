@@ -53,17 +53,17 @@ class BaseHelper:
     self.gpg = gnupg.GPG(gnupghome=os.path.join(self.temp_dir, 'gnupg'))
 
     # Get server and client keys' fingerprints.
-    with open(server_key_file_path) as f:
+    with open(server_key_file_path, encoding='utf8') as f:
       self.server_key_fingerprint = (
           self.gpg.import_keys(f.read()).fingerprints[0])
-    with open(client_key_file_path) as f:
+    with open(client_key_file_path, encoding='utf8') as f:
       self.client_key_fingerprint = (
           self.gpg.import_keys(f.read()).fingerprints[0])
 
     # Get passphrase for client's key if needed.
     self.passphrase = None
     if passphrase_file_path is not None:
-      with open(passphrase_file_path) as f:
+      with open(passphrase_file_path, encoding='utf8') as f:
         # Read only the first line and remove the newline character at the end.
         # This complies with the behavior of GnuPG when reading passphrase from
         # a file. If the newline character is not removed, encryption and
@@ -176,7 +176,7 @@ class UploaderHelper(BaseHelper):
                        'be given, but not both.')
 
     if drm_keys_file_path is not None:
-      with open(drm_keys_file_path) as f:
+      with open(drm_keys_file_path, encoding='utf8') as f:
         serialized_drm_keys = f.read()
 
     return serialized_drm_keys

@@ -6,7 +6,7 @@ import json
 
 
 def Migrate():
-  with open('/var/db/factory/umpire/active_umpire.json') as f:
+  with open('/var/db/factory/umpire/active_umpire.json', encoding='utf8') as f:
     config = json.load(f)
   if 'ip' in config or 'port' in config:
     raise RuntimeError(

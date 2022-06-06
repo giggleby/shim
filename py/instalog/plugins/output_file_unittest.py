@@ -116,7 +116,8 @@ class TestOutputFile(unittest.TestCase):
 
     with file_utils.TempDirectory(prefix='src_dir_') as src_dir:
       os.makedirs(os.path.join(src_dir, ATT_DIR_NAME))
-      with open(os.path.join(src_dir, EVENT_FILE_NAME), 'w') as f:
+      with open(os.path.join(src_dir, EVENT_FILE_NAME), 'w',
+                encoding='utf8') as f:
         f.write(event1.Serialize() + '\n')
         f.write(event2.Serialize() + '\n')
       att_path = os.path.join(src_dir, ATT_DIR_NAME, 'att_test')
@@ -125,7 +126,8 @@ class TestOutputFile(unittest.TestCase):
 
     with file_utils.TempDirectory(prefix='src_dir_') as src_dir:
       os.makedirs(os.path.join(src_dir, ATT_DIR_NAME))
-      with open(os.path.join(src_dir, EVENT_FILE_NAME), 'w') as f:
+      with open(os.path.join(src_dir, EVENT_FILE_NAME), 'w',
+                encoding='utf8') as f:
         f.write(event2.Serialize() + '\n')
         f.write(event1.Serialize() + '\n')
       att_path = os.path.join(src_dir, ATT_DIR_NAME, 'att_test')

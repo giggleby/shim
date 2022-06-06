@@ -540,7 +540,7 @@ class DeviceDataCommand(Subcommand):
       if self.args.set_yaml == '-':
         update = yaml.safe_load(sys.stdin)
       else:
-        with open(self.args.set_yaml) as f:
+        with open(self.args.set_yaml, encoding='utf8') as f:
           update = yaml.safe_load(f)
       if not isinstance(update, dict):
         sys.exit('Expected a dict but got a %r' % type(update))

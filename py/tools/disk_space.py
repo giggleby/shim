@@ -32,7 +32,7 @@ def GetAllVFSInfo():
       'cgroup', 'debugfs', 'devpts', 'devtmpfs', 'fusectl', 'proc', 'pstore',
       'rootfs', 'selinuxfs', 'sysfs', 'tmpfs']
 
-  with open('/etc/mtab') as fp:
+  with open('/etc/mtab', encoding='utf8') as fp:
     for line in fp:
       device, path, fs_type, options = line.split()[0:4]
       if fs_type in ignore_list or 'ro' in options.split(','):

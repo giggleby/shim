@@ -426,7 +426,7 @@ class TouchscreenCalibration(test_case.TestCase):
     """
     def _AppendLog(log_dir, filename, content):
       """Append the content to the filename in the log_dir."""
-      with open(os.path.join(log_dir, filename), 'a') as f:
+      with open(os.path.join(log_dir, filename), 'a', encoding='utf8') as f:
         f.write(content)
       session.console.info('Log written to "%s/%s".', log_dir, filename)
 

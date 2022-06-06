@@ -383,7 +383,8 @@ def _ImportConfigFiles():
   for (dirpath, unused_dirnames, filenames) in os.walk(_BASE_PATH):
     for filename in (x for x in filenames if x[-5:] == '.yaml'):
       try:
-        with open(os.path.join(dirpath, filename), 'r') as opened_file:
+        with open(os.path.join(dirpath, filename), 'r',
+                  encoding='utf8') as opened_file:
           new_configs = yaml.safe_load(opened_file)
       except Exception:
         logging.exception('Cought an exception while reading and parsing '

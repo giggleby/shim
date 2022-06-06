@@ -132,7 +132,7 @@ class InstalogService(umpire_service.UmpireService):
     config_path = os.path.join(root_dir, 'instalog-%s.yaml' % config_hash)
     if os.path.exists(config_path):
       os.remove(config_path)
-    with open(config_path, 'w') as f:
+    with open(config_path, 'w', encoding='utf8') as f:
       yaml.safe_dump(instalog_config, f, default_flow_style=False)
     config_link = os.path.join(os.path.expanduser('~'), '.instalog.yaml')
     if not os.path.exists(config_link):

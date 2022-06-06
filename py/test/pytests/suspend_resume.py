@@ -441,7 +441,7 @@ class SuspendResumeTest(test_case.TestCase):
 
     def ReadMessages(messages_start):
       try:
-        with open(_MESSAGES) as f:
+        with open(_MESSAGES, encoding='utf8') as f:
           # Read from messages_start to the end of the file.
           f.seek(messages_start)
           last_messages[0] = messages = f.read()

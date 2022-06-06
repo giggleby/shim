@@ -245,7 +245,7 @@ class EventLogTest(unittest.TestCase):
     except Exception:
       pass
 
-    with open(event_log.EVENTS_PATH, 'r') as f:
+    with open(event_log.EVENTS_PATH, 'r', encoding='utf8') as f:
       log_data = list(yaml.safe_load_all(f))
     self.assertEqual(6, len(log_data))
     # The last one should be empty; remove it

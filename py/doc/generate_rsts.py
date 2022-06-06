@@ -206,7 +206,7 @@ def GeneratePyTestsDoc(pytests_output_dir):
                           pytest_name)
 
   index_rst = os.path.join(pytests_output_dir, 'index.rst')
-  with open(index_rst, 'a') as f:
+  with open(index_rst, 'a', encoding='utf8') as f:
     rst = RSTWriter(f)
     for k, v in sorted(pytest_info.items()):
       rst.WriteListTableRow((LinkToDoc(k, k), v))
@@ -250,7 +250,7 @@ def GenerateTestListDoc(output_dir):
   for test_list_id in manager_.GetTestListIDs():
     out_path = os.path.join(output_dir, test_list_id + '.test_list.rst')
 
-    with open(out_path, 'w') as out:
+    with open(out_path, 'w', encoding='utf8') as out:
       rst = RSTWriter(out)
 
       logging.warning('processing test list %s', test_list_id)
@@ -311,7 +311,9 @@ def GetModuleClassDoc(cls):
 def GenerateProbeFunctionDoc(functions_path, func_name, func_cls):
   short_desc, main_desc = GetModuleClassDoc(func_cls)
 
-  with open(os.path.join(functions_path, func_name + '.rst'), 'w') as f:
+  with open(
+      os.path.join(functions_path, func_name + '.rst'), 'w',
+      encoding='utf8') as f:
     rst = RSTWriter(f)
     rst.WriteTitle(func_name, '=')
     rst.WriteParagraph(short_desc)

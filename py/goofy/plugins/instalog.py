@@ -149,7 +149,7 @@ class Instalog(plugin.Plugin):
       del config['output'][self.OUTPUT_UPLOAD_ID]
 
     logging.info('Instalog: Saving config YAML to: %s', self._config_path)
-    with open(self._config_path, 'w') as f:
+    with open(self._config_path, 'w', encoding='utf8') as f:
       yaml.safe_dump(config, f, default_flow_style=False)
 
   def _GetLastSeqProcessed(self):

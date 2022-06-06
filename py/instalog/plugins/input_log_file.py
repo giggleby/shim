@@ -281,7 +281,7 @@ class LineReader(log_utils.LoggerMixin):
       A tuple, where the first element is the offset after reading the current
       line, and the second element is the current line.
     """
-    with open(self.path, 'r') as f:
+    with open(self.path, 'r', encoding='utf8') as f:
       f.seek(self.offset)
       for line in f:
         self.offset += len(line)
@@ -397,7 +397,7 @@ class LogFile(log_utils.LoggerMixin):
         # call outside of the FileLock.
         new_size = os.path.getsize(self.path)
         if self.cur_offset == new_size:
-          with open(self.path, 'w') as f:
+          with open(self.path, 'w', encoding='utf8') as f:
             f.flush()
             os.fsync(f)
       if self.cur_offset < new_size:

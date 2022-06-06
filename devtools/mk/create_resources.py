@@ -20,7 +20,7 @@ import os
 import sys
 import tarfile
 
-
+# RSRC file pattern.
 RSRC_FILES = '*.rsrc'
 
 
@@ -74,7 +74,7 @@ def CreateResource(resource, input_list, args):
   with tarfile.open(os.path.join(args.output_dir, resource + '.tar'), 'w',
                     dereference=True) as t:
     for input_file in input_list:
-      with open(input_file) as f:
+      with open(input_file, encoding='utf8') as f:
         for rule in f.readlines():
           rule = rule.strip()
           if rule.startswith('#') or not rule:

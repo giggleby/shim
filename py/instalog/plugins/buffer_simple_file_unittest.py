@@ -143,7 +143,7 @@ class TestBufferSimpleFile(unittest.TestCase):
          'x' * buffer_simple_file.buffer_file_common._BUFFER_SIZE_BYTES})
     self.sf.Produce([e])
     # Purposely corrupt the data file.
-    with open(self.sf.buffer_file.data_path, 'r+') as f:
+    with open(self.sf.buffer_file.data_path, 'r+', encoding='utf8') as f:
       f.seek(1)
       f.write('x')
     self.sf.Produce([self.e2])
@@ -183,7 +183,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     e2_end = os.path.getsize(self.sf.buffer_file.data_path)
 
     # Corrupt event e2 by writing garbage at the end.
-    with open(self.sf.buffer_file.data_path, 'r+') as f:
+    with open(self.sf.buffer_file.data_path, 'r+', encoding='utf8') as f:
       f.seek(e2_end - 10)
       f.write('x' * 5)
 
@@ -208,7 +208,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     """Tests reading from a data store that has appended junk."""
     self.sf.Produce([self.e1])
     # Purposely append junk to the data store
-    with open(self.sf.buffer_file.data_path, 'a') as f:
+    with open(self.sf.buffer_file.data_path, 'a', encoding='utf8') as f:
       f.write('xxxxxxxx')
     self.sf.Produce([self.e2])
     self.sf.AddConsumer('a')

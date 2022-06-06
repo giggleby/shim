@@ -11,11 +11,11 @@ import shutil
 import tempfile
 import unittest
 
+from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.unittest_utils import label_utils
 
-
+# Constants.
 SCRIPT_DIR = os.path.dirname(__file__)
 DOMAIN = 'factory'
 
@@ -117,7 +117,7 @@ class MakeTest(unittest.TestCase):
     for locale in self.locales + [NONEXIST_LOCALE]:
       po_path = os.path.join(self.board_po_dir, locale + '.po')
       file_utils.TryMakeDirs(os.path.dirname(po_path))
-      with open(po_path, 'a') as fp:
+      with open(po_path, 'a', encoding='utf8') as fp:
         fp.write('%s\n\nmsgid "%s"\nmsgstr "%s"\n' %
                  (MOCK_PO_HEADER, MOCK_MSGID, MOCK_MSGSTR))
 

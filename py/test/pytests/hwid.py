@@ -133,7 +133,7 @@ class HWIDV3Test(test_case.TestCase):
     device_info_file = self._dut.path.join(self.tmpdir, 'device_info')
     device_info = device_data.GetAllDeviceData()
     with file_utils.UnopenedTemporaryFile() as f:
-      with open(f, 'w') as fp:
+      with open(f, 'w', encoding='utf8') as fp:
         yaml.safe_dump(device_info, fp)
       self._dut.SendFile(f, device_info_file)
 

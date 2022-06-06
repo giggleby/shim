@@ -42,7 +42,7 @@ def SaveNewActiveConfig(config):
   json_name = 'umpire.%s.json' % (
       hashlib.md5(json_config.encode('utf-8')).hexdigest())
   json_path = os.path.join('resources', json_name)
-  with open(os.path.join(_ENV_DIR, json_path), 'w') as f:
+  with open(os.path.join(_ENV_DIR, json_path), 'w', encoding='utf8') as f:
     f.write(json_config)
 
   os.unlink(_CONFIG_PATH)
@@ -50,7 +50,7 @@ def SaveNewActiveConfig(config):
 
 
 def Migrate():
-  with open(_CONFIG_PATH) as f:
+  with open(_CONFIG_PATH, encoding='utf8') as f:
     config = json.load(f)
 
   if not MigrateConfig(config, MIGRATE_KEYS):

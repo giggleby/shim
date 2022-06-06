@@ -133,7 +133,7 @@ class InputGCSScan(plugin_base.InputPlugin):
 
   def RemoveProcessedBlob(self, blob_dict):
     """Removes the processed blobs from blob_dict."""
-    with open(self.record_path, 'r') as f:
+    with open(self.record_path, 'r', encoding='utf8') as f:
       for line in f:
         blob_event = datatypes.Event.Deserialize(line)
         processed_object_id = blob_event['objectId']

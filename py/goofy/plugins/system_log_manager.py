@@ -350,7 +350,7 @@ class SystemLogManager(plugin.Plugin):
           _, ext = os.path.splitext(path)
           if ext in ['.kcrash', '.meta']:
             ext = ext.replace('.', '')
-            with open(path) as f:
+            with open(path, encoding='utf8') as f:
               data = f.read(MAX_CRASH_FILE_SIZE)
               tell = f.tell()
             logging.info(

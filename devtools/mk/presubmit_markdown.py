@@ -14,7 +14,7 @@ def main():
   args = parser.parse_args()
 
   def CheckTitleValid(filepath):
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf8') as f:
       rawinput = f.read().splitlines()
     codeblock = False
     titles = []

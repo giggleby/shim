@@ -180,7 +180,7 @@ class DRMKeysProvisioningServer:
       server_key_fingerprint = self.gpg.gen_key(key_input_data).fingerprint
 
     # Create and set up the schema of the database.
-    with open(CREATE_DATABASE_SQL_FILE_PATH) as f:
+    with open(CREATE_DATABASE_SQL_FILE_PATH, encoding='utf8') as f:
       create_database_sql = f.read()
     with self.db_connection:
       self.db_cursor.executescript(create_database_sql)
@@ -526,7 +526,7 @@ class DRMKeysProvisioningServer:
       imported key's fingerprint, and the 2nd element is True if the key was
       already in the database before importing, False otherwise.
     """
-    with open(key_file_path) as f:
+    with open(key_file_path, encoding='utf8') as f:
       import_results = self.gpg.import_keys(f.read())
     key_already_exists = (import_results.imported == 0)
     key_fingerprint = import_results.fingerprints[0]

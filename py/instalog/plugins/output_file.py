@@ -46,8 +46,10 @@ def MoveAndMerge(src_dir, dst_dir):
       shutil.move(att_src_path, att_dst_path)
   file_utils.SyncDirectory(os.path.join(dst_dir, ATT_DIR_NAME))
 
-  with open(os.path.join(dst_dir, EVENT_FILE_NAME), 'a') as dst_f:
-    with open(os.path.join(src_dir, EVENT_FILE_NAME), 'r') as src_f:
+  with open(os.path.join(dst_dir, EVENT_FILE_NAME), 'a',
+            encoding='utf8') as dst_f:
+    with open(os.path.join(src_dir, EVENT_FILE_NAME), 'r',
+              encoding='utf8') as src_f:
       shutil.copyfileobj(src_f, dst_f)
       dst_f.flush()
       os.fdatasync(dst_f.fileno())
@@ -132,7 +134,8 @@ class OutputFile(plugin_base.OutputPlugin):
       os.mkdir(att_dir)
 
       # In order to save memory, write directly to a temp file on disk.
-      with open(os.path.join(base_dir, EVENT_FILE_NAME), 'w') as events_f:
+      with open(os.path.join(base_dir, EVENT_FILE_NAME), 'w',
+                encoding='utf8') as events_f:
         num_events = 0
         total_size = 0
         time_last = time_utils.MonotonicTime()

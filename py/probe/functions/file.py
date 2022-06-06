@@ -17,7 +17,8 @@ def ReadFile(path, binary_mode=False, skip=0, size=-1):
   if not os.path.isfile(path):
     return None
   mode = 'rb' if binary_mode else 'r'
-  with open(path, mode) as f:
+  encoding = None if binary_mode else 'utf8'
+  with open(path, mode, encoding=encoding) as f:
     f.seek(skip)
     data = f.read(size)
   if not binary_mode:

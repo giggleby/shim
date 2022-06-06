@@ -92,7 +92,7 @@ class InputArchive(plugin_base.InputPlugin):
     """
     events = []
     event_dir = os.path.dirname(path)
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf8') as f:
       for line in f:
         event = self.ParseEvent(path, line)
         for att_id, att_path in event.attachments.items():

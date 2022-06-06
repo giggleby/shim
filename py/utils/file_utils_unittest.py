@@ -203,7 +203,7 @@ class CopyFileSkipBytesTest(unittest.TestCase):
   def testNormal(self):
     self.PrepareFile('1234567890', '')
     file_utils.CopyFileSkipBytes(self.in_file.name, self.out_file.name, 3)
-    with open(self.out_file.name, 'r') as o:
+    with open(self.out_file.name, 'r', encoding='utf8') as o:
       result = o.read()
       self.assertEqual(result, '4567890')
 
@@ -212,7 +212,7 @@ class CopyFileSkipBytesTest(unittest.TestCase):
     # Skip too many bytes.
     self.assertRaises(ValueError, file_utils.CopyFileSkipBytes,
                       self.in_file.name, self.out_file.name, 100)
-    with open(self.out_file.name, 'r') as o:
+    with open(self.out_file.name, 'r', encoding='utf8') as o:
       self.assertEqual(len(o.read()), 0)
 
   def testNoInput(self):
@@ -223,7 +223,7 @@ class CopyFileSkipBytesTest(unittest.TestCase):
   def testOverrideOutput(self):
     self.PrepareFile('1234567890', 'abcde')
     file_utils.CopyFileSkipBytes(self.in_file.name, self.out_file.name, 3)
-    with open(self.out_file.name, 'r') as o:
+    with open(self.out_file.name, 'r', encoding='utf8') as o:
       result = o.read()
       self.assertEqual(result, '4567890')
 
@@ -231,7 +231,7 @@ class CopyFileSkipBytesTest(unittest.TestCase):
     # 10000 bytes input.
     self.PrepareFile('1234567890' * 1000, '')
     file_utils.CopyFileSkipBytes(self.in_file.name, self.out_file.name, 5)
-    with open(self.out_file.name, 'r') as o:
+    with open(self.out_file.name, 'r', encoding='utf8') as o:
       result = o.read()
       self.assertEqual(len(result), 10000 - 5)
       self.assertTrue(result.startswith('67890'))

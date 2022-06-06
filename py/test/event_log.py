@@ -252,7 +252,7 @@ def GetReimageId():
 
         # Save the reimage ID to REIMAGE_ID_PATH for future reloading.
         file_utils.TryMakeDirs(os.path.dirname(REIMAGE_ID_PATH))
-        with open(REIMAGE_ID_PATH, 'w') as f:
+        with open(REIMAGE_ID_PATH, 'w', encoding='utf8') as f:
           f.write(_reimage_id)
           f.flush()
           os.fsync(f)
@@ -318,7 +318,7 @@ class GlobalSeq:
 
   def _NextOrRaise(self):
     """Returns the next sequence number, raising an exception on failure."""
-    with open(self.path, "r+") as f:
+    with open(self.path, "r+", encoding='utf8') as f:
       # The file will be closed, and the lock freed, as soon as this
       # block goes out of scope.
       FileLock(f.fileno(), True)

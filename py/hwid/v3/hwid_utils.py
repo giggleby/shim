@@ -317,7 +317,7 @@ def GetDeviceInfo(infile=None):
     A dict of device info.
   """
   if infile:
-    with open(infile, 'r') as f:
+    with open(infile, 'r', encoding='utf8') as f:
       return yaml.safe_load(f.read())
 
   try:

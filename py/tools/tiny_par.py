@@ -108,7 +108,7 @@ def CollectFiles(pkg_dir, modules, output, init_modules):
       logging.debug('%s => %s (mkdir + init)', src_path, dest_path)
       os.mkdir(dest_path)
       for init in init_modules:
-        with open(os.path.join(dest_path, init + '.py'), 'a'):
+        with open(os.path.join(dest_path, init + '.py'), 'a', encoding='utf8'):
           pass
 
     # Copy the real module file.

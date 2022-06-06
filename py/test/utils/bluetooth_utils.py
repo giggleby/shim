@@ -151,7 +151,7 @@ class GattTool:
         logging.warning(msg, hci_device)
     self._gatttool = pexpect.spawn('gatttool %s -b %s -t random --interactive' %
                                    (hci_option, target_mac.upper()))
-    self._gatttool.logfile = open(logfile, 'w')  # pylint: disable=consider-using-with
+    self._gatttool.logfile = open(logfile, 'w', encoding='utf8')  # pylint: disable=consider-using-with
     if timeout is None:
       self._timeout = self.DEFAULT_TIMEOUT
     else:

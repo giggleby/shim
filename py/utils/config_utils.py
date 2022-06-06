@@ -351,7 +351,7 @@ def SaveRuntimeConfig(config_name, value):
   # want to have a dedicated implementation here to reduce dependency.
   tmp_path = save_path + '~'
   old_path = save_path + '.old'
-  with open(tmp_path, 'w') as output:
+  with open(tmp_path, 'w', encoding='utf8') as output:
     output.write(json.dumps(value))
     output.flush()
     os.fdatasync(output.fileno())

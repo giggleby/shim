@@ -69,7 +69,7 @@ def QueryV4L2Capability(video_idx):
   IOCTL_VIDIOC_QUERYCAP = 0x80685600
   dev_path = '/dev/video%d' % video_idx
   try:
-    with open(dev_path, 'r') as f:
+    with open(dev_path, 'r', encoding='utf8') as f:
       v4l2_capability = V4L2Capability()
       fcntl.ioctl(f.fileno(), IOCTL_VIDIOC_QUERYCAP, v4l2_capability)
       return v4l2_capability
