@@ -309,19 +309,62 @@ class GooftoolTest(unittest.TestCase):
         mock.call('/sys/class/misc/tpm0/device/enabled'),
         mock.call('/sys/class/misc/tpm0/device/owned')]
 
+    # It's correct tpm sysfs status: enabled = 1, owned = 0
     open_mock.side_effect = [StringIO('1'), StringIO('0')]
+
+    # It's correct tpm manager status.
+    self._gooftool._util.GetTPMManagerStatus.return_value = {
+        'is_enabled': 'true',
+        'is_owned': 'false',
+        'is_owner_password_present': 'false'
+    }
+
+    # Should pass w/ correct tpm sysfs status + correct tpm manager status.
     self._gooftool.VerifyTPM()
     path_exists_mock.assert_called_with('/sys/class/tpm/tpm0/device')
     self.assertEqual(open_mock.call_args_list, open_mock_calls)
 
-    # Clear previous call record
-    open_mock.reset_mock()
-    path_exists_mock.reset_mock()
+  @mock.patch('os.path.exists')
+  @mock.patch('builtins.open')
+  def testVerifyTPMWrongSysfsStatus(self, open_mock, path_exists_mock):
+    # Mock os.path.exists to ensure that 3.18+ kernel TPM path does not exist.
+    path_exists_mock.return_value = False
 
+    # It's wrong tpm sysfs status: enabled = 1, owned = 1
+    # The correct should be: enabled = 1, owned = 0
     open_mock.side_effect = [StringIO('1'), StringIO('1')]
+
+    # It's correct tpm manager status.
+    self._gooftool._util.GetTPMManagerStatus.return_value = {
+        'is_enabled': 'true',
+        'is_owned': 'false',
+        'is_owner_password_present': 'false'
+    }
+
+    # Should raise error w/ wrong tpm sysfs status.
     self.assertRaises(Error, self._gooftool.VerifyTPM)
     path_exists_mock.assert_called_with('/sys/class/tpm/tpm0/device')
-    self.assertEqual(open_mock.call_args_list, open_mock_calls)
+
+  @mock.patch('os.path.exists')
+  @mock.patch('builtins.open')
+  def testVerifyTPMWrongManagerStatus(self, open_mock, path_exists_mock):
+    # Mock os.path.exists to ensure that 3.18+ kernel TPM path does not exist.
+    path_exists_mock.return_value = False
+
+    # It's correct tpm sysfs status: enabled = 1, owned = 0
+    open_mock.side_effect = [StringIO('1'), StringIO('0')]
+
+    # It's wrong tpm manager status, the correct should be:
+    # is_enabled = true, is_owned = false, is_owner_password_present = false
+    self._gooftool._util.GetTPMManagerStatus.return_value = {
+        'is_enabled': 'false',
+        'is_owned': 'false',
+        'is_owner_password_present': 'false'
+    }
+
+    # Should raise error w/ wrong tpm manager status.
+    self.assertRaises(Error, self._gooftool.VerifyTPM)
+    path_exists_mock.assert_called_with('/sys/class/tpm/tpm0/device')
 
   def testVerifyManagementEngineLocked(self):
     data_no_me = {'RO_SECTION': b''}

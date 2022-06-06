@@ -10,6 +10,7 @@ from subprocess import PIPE
 from subprocess import Popen
 
 from cros.factory.test.env import paths
+from cros.factory.utils import string_utils
 from cros.factory.utils import sys_interface as sys_interface_module
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
@@ -332,6 +333,33 @@ class Util:
       output[key] = value.strip()
 
     return output
+
+  def GetTPMManagerStatus(self):
+    """Gets the output of 'tpm_manager_client status --nonsensitive'.
+
+    Returns:
+      A dict for key-value pairs for the output of
+      'tpm_manager_client status --nonsensitive'.
+      e.g. {'is_enabled': 'is_enabled_value',
+            'is_owned': 'is_owned_value',
+            'is_owner_password_present': 'is_owner_password_present_value'}
+    """
+
+    # sample result:
+    # Message Reply: [tpm_manager.GetTpmNonsensitiveStatusReply] {
+    #   status: STATUS_SUCCESS
+    #   is_enabled: true
+    #   is_owned: false
+    #   is_owner_password_present: false
+    #   has_reset_lock_permissions: false
+    #   is_srk_default_auth: true
+    # }
+    tpm_manager_status_result = self.shell(
+        'tpm_manager_client status --nonsensitive').stdout.strip().splitlines()
+    if len(tpm_manager_status_result) <= 2:
+      raise Error('Failed to get TPM manager status. Reboot and re-run.')
+
+    return string_utils.ParseDict(tpm_manager_status_result[1:-1])
 
   def GetCgptAttributes(self, device=None):
     if device is None:
