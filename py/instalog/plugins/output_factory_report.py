@@ -140,12 +140,49 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       return True
     self.info('Download succeed!')
 
-    report_parser = ReportParser(gcs_path, self._archive_path, self._tmp_dir,
-                                 self.logger)
-    report_events = report_parser.ProcessArchive(archive_process_event,
-                                                 self._process_pool)
+    try:
+      report_parsers = self._CreateReportParsers(gcs_path, self._archive_path,
+                                                 self._tmp_dir)
+    except NotImplementedError:
+      self.error('Unsupported archive format: %s', gcs_path)
+      event_stream.Commit()
+      return False
+    if len(report_parsers) == 0:
+      self.error('Cannot find valid archive in %s to create report parser',
+                 gcs_path)
+      event_stream.Commit()
+      return False
+
+    report_events = []
+    for report_parser in report_parsers:
+      report_events += report_parser.ProcessArchive(archive_process_event,
+                                                    self._process_pool)
     self.EmitAndCommit(report_events, event_stream)
     return True
+
+  def _CreateReportParsers(self, gcs_path, archive_path, tmp_dir):
+    with GetArchive(archive_path) as archive:
+      archives_in_archive = []
+      for name in archive.GetNonDirFileNames():
+        # Valid report name found, assume this archive is an one-level archive.
+        if ReportParser.IsValidReportName(name):
+          return [ReportParser(gcs_path, archive_path, tmp_dir, self.logger)]
+        archives_in_archive.append(name)
+
+      # Assume it is a two-level archive, decompress and check every archive
+      # files under this archive, see b/225278303.
+      report_parsers = []
+      for name in archives_in_archive:
+        dst = file_utils.CreateTemporaryFile(dir=self._tmp_dir)
+        archive.Extract(name, dst)
+        try:
+          GetArchive(dst)
+        except NotImplementedError:
+          # Extracted file is not a supported archive, clean up and skip.
+          os.remove(dst)
+          continue
+        report_parsers.append(ReportParser(gcs_path, dst, tmp_dir, self.logger))
+      return report_parsers
 
 
 class ReportParser(log_utils.LoggerMixin):
@@ -282,7 +319,8 @@ class ReportParser(log_utils.LoggerMixin):
     else:
       args_queue.put(None)
 
-  def IsValidReportName(self, name):
+  @staticmethod
+  def IsValidReportName(name):
     name = os.path.basename(name)
     # Report name format: {stage}{opt_name}-{serial}-{gmtime}.rpt.xz
     if name.endswith('.rpt.xz'):
