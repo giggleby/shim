@@ -14,6 +14,7 @@ the following things:
   5. Generate process events with process status during parsing
 """
 
+import abc
 import copy
 import json
 import logging
@@ -637,6 +638,86 @@ def SetProcessEventStatus(code, process_event, message=None):
     process_event['message'].append(str(message))
     if isinstance(message, Exception):
       process_event['message'].append(traceback.format_exc())
+
+
+class Archive(abc.ABC):
+
+  def __init__(self, archive_path):
+    self._archive_path = archive_path
+    self._file = None
+
+  def __enter__(self):
+    self._OpenArchive()
+    return self
+
+  def __exit__(self, exc_type, exc_value, exit_traceback):
+    self._CloseArchive()
+
+  @abc.abstractmethod
+  def GetNonDirFileNames(self):
+    """Get a list of all non-directory file path names in the archive.
+
+    Returns:
+      A list of string file path names.
+    """
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def Extract(self, member_name, dst_path):
+    """Extract a member in the archive to a specified path.
+
+    Args:
+      member_name: The string full path name of the target file to extract.
+      dst_path: A string path where the extracted file should store to.
+    """
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def _OpenArchive(self):
+    raise NotImplementedError
+
+  def _CloseArchive(self):
+    self._file.close()
+
+
+class ZipArchive(Archive):
+
+  def GetNonDirFileNames(self):
+    return [
+        info.filename for info in self._file.infolist() if not info.is_dir()
+    ]
+
+  def Extract(self, member_name, dst_path):
+    with self._file.open(member_name, 'r') as member, \
+         open(dst_path, 'wb') as dst_file:
+      shutil.copyfileobj(member, dst_file)
+
+  def _OpenArchive(self):
+    self._file = zipfile.ZipFile(self._archive_path, 'r')  # pylint: disable=consider-using-with
+
+
+class TarArchive(Archive):
+
+  def GetNonDirFileNames(self):
+    return [
+        member.name for member in self._file.getmembers() if not member.isdir()
+    ]
+
+  def Extract(self, member_name, dst_path):
+    with self._file.extractfile(member_name) as member, \
+         open(dst_path, 'wb') as dst_file:
+      shutil.copyfileobj(member, dst_file)
+
+  def _OpenArchive(self):
+    self._file = tarfile.open(self._archive_path, 'r')  # pylint: disable=consider-using-with
+
+
+def GetArchive(archive_path):
+  if zipfile.is_zipfile(archive_path):
+    return ZipArchive(archive_path)
+  if tarfile.is_tarfile(archive_path):
+    return TarArchive(archive_path)
+  raise NotImplementedError
 
 
 if __name__ == '__main__':
