@@ -53,3 +53,19 @@ component_probe_infos {
     }
   }
 }
+component_probe_infos {
+  component_identity {
+    component_id: 4
+  }
+  probe_info {
+    probe_function_name: "storage_func"
+    probe_parameters {
+      name: "pi_name"
+      string_value: "name4"
+    }
+    probe_parameters {
+      name: "pi_manfid"
+      string_value: "ab"
+    }
+  }
+}

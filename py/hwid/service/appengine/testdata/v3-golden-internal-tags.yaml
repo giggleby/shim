@@ -11,7 +11,7 @@
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: ea8b4d2d921b0a6cf8f7b228c5ec5e6b1bd0dd6b
+checksum: 0b164c76a6e2de962151c00c2aaba2861c1ca243
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -343,6 +343,13 @@ components:
             model: model3
             sectors: '300'
             vendor: vendor3
+      storage_4:
+        values: !link_avl
+          converter: test-converter2
+          probe_value_matched: true
+          original_values:
+            mmc_name: name4
+            mmc_manfid: '0x0000ab'
   hash_gbb:
     items:
       hash_gbb_0:

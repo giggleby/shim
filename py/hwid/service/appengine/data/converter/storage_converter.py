@@ -7,6 +7,9 @@ from typing import Sequence
 
 from cros.factory.hwid.service.appengine.data.converter import converter
 
+# Shorter identifiers.
+_ConvertedValueSpec = converter.ConvertedValueSpec
+
 
 class StorageAVLAttrs(converter.AVLAttrs):
   PCI_VENDOR = 'pci_vendor'
@@ -20,26 +23,34 @@ class StorageAVLAttrs(converter.AVLAttrs):
 _STORAGE_CONVERTERS: Sequence[converter.FieldNameConverter] = [
     converter.FieldNameConverter.FromFieldMap(
         'pci_no_prefix', {
-            StorageAVLAttrs.NVME_MODEL: 'nvme_model',
-            StorageAVLAttrs.PCI_CLASS: 'class',
-            StorageAVLAttrs.PCI_DEVICE: 'device',
-            StorageAVLAttrs.PCI_VENDOR: 'vendor',
+            StorageAVLAttrs.NVME_MODEL: _ConvertedValueSpec('nvme_model'),
+            StorageAVLAttrs.PCI_CLASS: _ConvertedValueSpec('class'),
+            StorageAVLAttrs.PCI_DEVICE: _ConvertedValueSpec('device'),
+            StorageAVLAttrs.PCI_VENDOR: _ConvertedValueSpec('vendor'),
         }),
     converter.FieldNameConverter.FromFieldMap(
         'pci_with_prefix', {
-            StorageAVLAttrs.NVME_MODEL: 'nvme_model',
-            StorageAVLAttrs.PCI_CLASS: 'pci_class',
-            StorageAVLAttrs.PCI_DEVICE: 'pci_device',
-            StorageAVLAttrs.PCI_VENDOR: 'pci_vendor',
+            StorageAVLAttrs.NVME_MODEL: _ConvertedValueSpec('nvme_model'),
+            StorageAVLAttrs.PCI_CLASS: _ConvertedValueSpec('pci_class'),
+            StorageAVLAttrs.PCI_DEVICE: _ConvertedValueSpec('pci_device'),
+            StorageAVLAttrs.PCI_VENDOR: _ConvertedValueSpec('pci_vendor'),
         }),
-    converter.FieldNameConverter.FromFieldMap('mmc_no_prefix', {
-        StorageAVLAttrs.MMC_NAME: 'name',
-        StorageAVLAttrs.MMC_MANFID: 'manfid',
-    }),
+    converter.FieldNameConverter.FromFieldMap(
+        'mmc_no_prefix', {
+            StorageAVLAttrs.MMC_NAME:
+                _ConvertedValueSpec('name'),
+            StorageAVLAttrs.MMC_MANFID:
+                _ConvertedValueSpec(
+                    'manfid', converter.MakeFixedWidthHexValueFactory(width=6))
+        }),
     converter.FieldNameConverter.FromFieldMap(
         'mmc_with_prefix', {
-            StorageAVLAttrs.MMC_NAME: 'mmc_name',
-            StorageAVLAttrs.MMC_MANFID: 'mmc_manfid',
+            StorageAVLAttrs.MMC_NAME:
+                _ConvertedValueSpec('mmc_name'),
+            StorageAVLAttrs.MMC_MANFID:
+                _ConvertedValueSpec(
+                    'mmc_manfid',
+                    converter.MakeFixedWidthHexValueFactory(width=6))
         }),
 ]
 

@@ -34,8 +34,10 @@ class ConverterTest(unittest.TestCase):
   def testFieldNameConverterConvert_Success(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
         })
     probe_info = _ProbeInfoFromMapping({
         'avl_attr_name1': 'value1',
@@ -52,8 +54,10 @@ class ConverterTest(unittest.TestCase):
   def testFieldNameConverterConvert_Missing(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
         })
     probe_info = _ProbeInfoFromMapping({
         'avl_attr_name1': 'value1',
@@ -66,8 +70,10 @@ class ConverterTest(unittest.TestCase):
   def testFieldNameConverterMatchAligned(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
         })
     probe_info = _ProbeInfoFromMapping({
         'avl_attr_name1': 'value1',
@@ -86,8 +92,10 @@ class ConverterTest(unittest.TestCase):
   def testFieldNameConverterMatchNotAligned(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
         })
     probe_info = _ProbeInfoFromMapping({
         'avl_attr_name1': 'value1',
@@ -107,8 +115,10 @@ class ConverterTest(unittest.TestCase):
   def testFieldNameConverterMatchNoProbeInfo_MissingHWIDValues(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
         })
     probe_info = _ProbeInfoFromMapping({
         'avl_attr_name1': 'value1',
@@ -125,8 +135,10 @@ class ConverterTest(unittest.TestCase):
   def testFieldNameConverterMatchNoProbeInfo_MissingProbeInfo(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
         })
     probe_info = _ProbeInfoFromMapping({
         'avl_attr_name1': 'value1',
@@ -153,13 +165,17 @@ class ConverterCollectionTest(unittest.TestCase):
   def testBasicOperation(self):
     converter1 = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2'),
         })
     converter2 = converter.FieldNameConverter.FromFieldMap(
         'converter2', {
-            TestAVLAttrs.AVL_ATTR1: 'another_converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'another_converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('another_converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('another_converted_key2'),
         })
     self.collection.AddConverter(converter1)
     self.collection.AddConverter(converter2)
@@ -171,8 +187,10 @@ class ConverterCollectionTest(unittest.TestCase):
     self.collection.AddConverter(
         converter.FieldNameConverter.FromFieldMap(
             'converter1', {
-                TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-                TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+                TestAVLAttrs.AVL_ATTR1:
+                    converter.ConvertedValueSpec('converted_key1'),
+                TestAVLAttrs.AVL_ATTR4:
+                    converter.ConvertedValueSpec('converted_key4'),
             }))
 
     self.assertRaisesRegex(
@@ -180,16 +198,20 @@ class ConverterCollectionTest(unittest.TestCase):
         self.collection.AddConverter,
         converter.FieldNameConverter.FromFieldMap(
             'converter1', {
-                TestAVLAttrs.AVL_ATTR2: 'converted_key2',
-                TestAVLAttrs.AVL_ATTR3: 'converted_key3',
+                TestAVLAttrs.AVL_ATTR2:
+                    converter.ConvertedValueSpec('converted_key2'),
+                TestAVLAttrs.AVL_ATTR3:
+                    converter.ConvertedValueSpec('converted_key3'),
             }))
 
   def testConflictAttrMapping(self):
     self.collection.AddConverter(
         converter.FieldNameConverter.FromFieldMap(
             'converter1', {
-                TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-                TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+                TestAVLAttrs.AVL_ATTR1:
+                    converter.ConvertedValueSpec('converted_key1'),
+                TestAVLAttrs.AVL_ATTR4:
+                    converter.ConvertedValueSpec('converted_key4'),
             }))
 
     self.assertRaisesRegex(
@@ -198,27 +220,36 @@ class ConverterCollectionTest(unittest.TestCase):
          "'converter1'."), self.collection.AddConverter,
         converter.FieldNameConverter.FromFieldMap(
             'converter2', {
-                TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-                TestAVLAttrs.AVL_ATTR3: 'converted_key3',
-                TestAVLAttrs.AVL_ATTR4: 'converted_key4',
+                TestAVLAttrs.AVL_ATTR1:
+                    converter.ConvertedValueSpec('converted_key1'),
+                TestAVLAttrs.AVL_ATTR3:
+                    converter.ConvertedValueSpec('converted_key3'),
+                TestAVLAttrs.AVL_ATTR4:
+                    converter.ConvertedValueSpec('converted_key4'),
             }))
 
     self.assertRaises(
         converter.ConverterConflictException, self.collection.AddConverter,
-        converter.FieldNameConverter.FromFieldMap('converter3', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-        }))
+        converter.FieldNameConverter.FromFieldMap(
+            'converter3', {
+                TestAVLAttrs.AVL_ATTR1:
+                    converter.ConvertedValueSpec('converted_key1'),
+            }))
 
   def testMatchProbeValues_Aligned(self):
     converter1 = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2'),
         })
     converter2 = converter.FieldNameConverter.FromFieldMap(
         'converter2', {
-            TestAVLAttrs.AVL_ATTR1: 'another_converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'another_converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('another_converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('another_converted_key2'),
         })
     self.collection.AddConverter(converter1)
     self.collection.AddConverter(converter2)
@@ -241,13 +272,17 @@ class ConverterCollectionTest(unittest.TestCase):
   def testMatchProbeValues_PreferKeyUnmatched(self):
     converter1 = converter.FieldNameConverter.FromFieldMap(
         'key_unmatched_converter', {
-            TestAVLAttrs.AVL_ATTR1: 'key_unmatched_converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'key_unmatched_converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('key_unmatched_converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('key_unmatched_converted_key2'),
         })
     converter2 = converter.FieldNameConverter.FromFieldMap(
         'inconvertible_converter', {
-            TestAVLAttrs.AVL_ATTR1: 'inconvertible_converted_key1',
-            TestAVLAttrs.AVL_ATTR3: 'inconvertible_converted_key3',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('inconvertible_converted_key1'),
+            TestAVLAttrs.AVL_ATTR3:
+                converter.ConvertedValueSpec('inconvertible_converted_key3'),
         })
     self.collection.AddConverter(converter1)
     self.collection.AddConverter(converter2)
@@ -269,18 +304,24 @@ class ConverterCollectionTest(unittest.TestCase):
   def testMatchProbeValues_PreferValueUnmatched(self):
     converter1 = converter.FieldNameConverter.FromFieldMap(
         'key_unmatched_converter', {
-            TestAVLAttrs.AVL_ATTR1: 'key_unmatched_converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'key_unmatched_converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('key_unmatched_converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('key_unmatched_converted_key2'),
         })
     converter2 = converter.FieldNameConverter.FromFieldMap(
         'value_unmatched_converter', {
-            TestAVLAttrs.AVL_ATTR1: 'value_unmatched_converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'value_unmatcehd_converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('value_unmatched_converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('value_unmatcehd_converted_key2'),
         })
     converter3 = converter.FieldNameConverter.FromFieldMap(
         'inconvertible_converter', {
-            TestAVLAttrs.AVL_ATTR1: 'inconvertible_converted_key1',
-            TestAVLAttrs.AVL_ATTR3: 'inconvertible_converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('inconvertible_converted_key1'),
+            TestAVLAttrs.AVL_ATTR3:
+                converter.ConvertedValueSpec('inconvertible_converted_key2'),
         })
     self.collection.AddConverter(converter1)
     self.collection.AddConverter(converter2)
@@ -303,13 +344,17 @@ class ConverterCollectionTest(unittest.TestCase):
   def testMatchProbeValues_AllConverterNotConvertible(self):
     converter1 = converter.FieldNameConverter.FromFieldMap(
         'converter1', {
-            TestAVLAttrs.AVL_ATTR1: 'converted_key1',
-            TestAVLAttrs.AVL_ATTR2: 'converted_key2',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2'),
         })
     converter2 = converter.FieldNameConverter.FromFieldMap(
         'converter2', {
-            TestAVLAttrs.AVL_ATTR1: 'another_converted_key1',
-            TestAVLAttrs.AVL_ATTR3: 'another_converted_key3',
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('another_converted_key1'),
+            TestAVLAttrs.AVL_ATTR3:
+                converter.ConvertedValueSpec('another_converted_key3'),
         })
     self.collection.AddConverter(converter1)
     self.collection.AddConverter(converter2)
@@ -327,6 +372,47 @@ class ConverterCollectionTest(unittest.TestCase):
     self.assertEqual(
         converter.CollectionMatchResult(_PVAlignmentStatus.NOT_ALIGNED, None),
         match_result)
+
+
+class FixedWidthHexValueTypeTest(unittest.TestCase):
+
+  def testHexOutputFormattedSuccess(self):
+    source = '0x123'
+
+    # width = 5, source_has_prefix=True, target_has_prefix=True
+    str_value = converter.MakeFixedWidthHexValueFactory(
+        width=5, source_has_prefix=True, target_has_prefix=True)(
+            source)
+    self.assertEqual(str_value, '0x00123')
+
+    # width = 5, source_has_prefix=True, target_has_prefix=False
+    str_value = converter.MakeFixedWidthHexValueFactory(
+        width=5, source_has_prefix=True, target_has_prefix=False)(
+            source)
+    self.assertEqual(str_value, '00123')
+
+    source = '123'
+    # width = 5, source_has_prefix=False, target_has_prefix=True
+    str_value = converter.MakeFixedWidthHexValueFactory(
+        width=5, source_has_prefix=False, target_has_prefix=True)(
+            source)
+    self.assertEqual(str_value, '0x00123')
+
+    # width = 5, source_has_prefix=False, target_has_prefix=False
+    str_value = converter.MakeFixedWidthHexValueFactory(
+        width=5, source_has_prefix=False, target_has_prefix=False)(
+            source)
+    self.assertEqual(str_value, '00123')
+
+  def testHexOutputFormattedInsufficientWidth(self):
+    source = '123'
+
+    str_value = converter.MakeFixedWidthHexValueFactory(width=2)(source)
+
+    with self.assertLogs() as cm:
+      self.assertNotEqual(str_value, '0x123')
+    self.assertEqual("ERROR:root:Invalid value '123' for str formatter.",
+                     cm.output[0].splitlines()[0])
 
 
 if __name__ == '__main__':

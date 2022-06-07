@@ -29,6 +29,8 @@ class _TestAVLAttrs(converter.AVLAttrs):
   MODEL = 'pi_model'
   VENDOR = 'pi_vendor'
   SECTORS = 'pi_sectors'
+  NAME = 'pi_name'
+  MANFID = 'pi_manfid'
 
 
 class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
@@ -132,9 +134,19 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     collection.AddConverter(
         converter.FieldNameConverter.FromFieldMap(
             'test-converter1', {
-                _TestAVLAttrs.MODEL: 'model',
-                _TestAVLAttrs.VENDOR: 'vendor',
-                _TestAVLAttrs.SECTORS: 'sectors',
+                _TestAVLAttrs.MODEL: converter.ConvertedValueSpec('model'),
+                _TestAVLAttrs.VENDOR: converter.ConvertedValueSpec('vendor'),
+                _TestAVLAttrs.SECTORS: converter.ConvertedValueSpec('sectors'),
+            }))
+    collection.AddConverter(
+        converter.FieldNameConverter.FromFieldMap(
+            'test-converter2', {
+                _TestAVLAttrs.NAME:
+                    converter.ConvertedValueSpec('mmc_name'),
+                _TestAVLAttrs.MANFID:
+                    converter.ConvertedValueSpec(
+                        'mmc_manfid',
+                        converter.MakeFixedWidthHexValueFactory(width=6)),
             }))
     avl_converter_manager = converter_utils.ConverterManager(
         {'storage': collection})
