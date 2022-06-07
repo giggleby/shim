@@ -15,7 +15,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, NamedTuple, Optional, Sequence, Tuple, Type
+from typing import Any, NamedTuple, Optional, Sequence, Tuple, Type, Union
 import urllib.parse
 
 # pylint: disable=import-error, no-name-in-module
@@ -149,10 +149,11 @@ def _CreatePoolManager(cookie: str = '', content_type: str = '',
   return pool_manager
 
 
-def _InvokeGerritAPI(method: str, url: str,
-                     params: Optional[Sequence[Tuple[str, str]]] = None,
-                     auth_cookie: str = '', content_type: str = '',
-                     body: bytes = b'') -> bytes:
+def _InvokeGerritAPI(
+    method: str, url: str, params: Optional[Sequence[Tuple[str, str]]] = None,
+    auth_cookie: str = '', content_type: str = '', body: bytes = b'',
+    json_body: Optional[Any] = None,
+    return_resp: bool = False) -> Union[bytes, http.client.HTTPResponse]:
   """Invokes a Gerrit API endpoint and returns the response in bytes.
 
   Args:
@@ -162,6 +163,9 @@ def _InvokeGerritAPI(method: str, url: str,
     auth_cookie: The auth cookie uses to create the pool manager.
     content_type: The Content-type field in the request header.
     body: The HTTP request body in bytes.
+    json_body: The JSON-seralizable object to be attached in the HTTP body. Will
+      override `content_type` and `body` if provided.
+    return_resp: Return the whole response body.
 
   Returns:
     The response in bytes.
@@ -172,6 +176,10 @@ def _InvokeGerritAPI(method: str, url: str,
   if params:
     url = f'{url}?{urllib.parse.urlencode(params)}'
 
+  if json_body is not None:
+    content_type = 'application/json'
+    body = json_utils.DumpStr(json_body).encode('utf-8')
+
   pool_manager = _CreatePoolManager(cookie=auth_cookie,
                                     content_type=content_type)
 
@@ -179,6 +187,10 @@ def _InvokeGerritAPI(method: str, url: str,
     resp = pool_manager.urlopen(method, url, body=body)
   except urllib3.exceptions.HTTPError as ex:
     raise GitUtilException(f'Invalid url {url!r}.') from ex
+
+  if return_resp:
+    return resp
+
   if resp.status != http.client.OK:
     raise GitUtilException(
         f'Request {url!r} unsuccessfully with code {resp.status!r}.')
@@ -208,12 +220,9 @@ def _InvokeGerritAPIJSON(method: str, url: str,
   """
   kwargs = {
       'params': params,
-      'auth_cookie': auth_cookie
+      'auth_cookie': auth_cookie,
+      'json_body': json_body,
   }
-  if json_body is not None:
-    kwargs['content_type'] = 'application/json'
-    kwargs['body'] = json_utils.DumpStr(json_body).encode('utf-8')
-
   raw_data = _InvokeGerritAPI(method, url, **kwargs)
   try:
     # the response starts with a magic prefix line for preventing XSSI which
@@ -553,6 +562,7 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
 @RetryOnException(retry_value=(GitUtilException, ))
 def GetFileContent(git_url_prefix: str, project: str, path: str,
                    commit_id: Optional[str] = None,
+                   change_id: Optional[str] = None,
                    branch: Optional[str] = None,
                    auth_cookie: Optional[str] = None) -> bytes:
   """Gets file content on Gerrit.
@@ -564,6 +574,7 @@ def GetFileContent(git_url_prefix: str, project: str, path: str,
     project: Project name.
     path: Path to the file.
     commit_id: The commit id which is the version of the file.
+    change_id: The identity of CL which is the version of the file.
     branch: Branch name, use the branch HEAD tracks if set to None.
     auth_cookie: Auth cookie.
   """
@@ -572,7 +583,17 @@ def GetFileContent(git_url_prefix: str, project: str, path: str,
     if branch:
       logging.warning('Commit id is already specified, ignore branch %r.',
                       branch)
+    if change_id:
+      logging.warning('Commit id is already specified, ignore change_id %s.',
+                      change_id)
+
     git_url = (f'{git_url_prefix}/projects/{project}/commits/{commit_id}/files/'
+               f'{path}/content')
+  elif change_id:
+    if branch:
+      logging.warning('Change ID is already specified, ignore branch %r.',
+                      branch)
+    git_url = (f'{git_url_prefix}/changes/{change_id}/revisions/current/files/'
                f'{path}/content')
   else:
     branch = branch or urllib.parse.quote(
@@ -638,11 +659,13 @@ class CLCommentThread(NamedTuple):
 class CLInfo(NamedTuple):
   change_id: str
   cl_number: int
+  subject: str
   status: CLStatus
   review_status: Optional[CLReviewStatus]
   mergeable: Optional[bool]
   created_time: datetime.datetime
   comment_threads: Optional[Sequence[CLCommentThread]]
+  bot_commit: Optional[bool]
 
 
 def _ConvertGerritTimestamp(timestamp):
@@ -667,6 +690,7 @@ _CHANGE_INFO_SCHEMA = schema.FixedDict(
         'created': schema.Scalar('created', str),
         'change_id': schema.Scalar('change_id', str),
         '_number': schema.Scalar('_number', int),
+        'subject': schema.Scalar('subject', str),
     }, optional_items={
         'labels':
             schema.Dict('labels', schema.Scalar('label_name', str),
@@ -732,14 +756,8 @@ def _ConvertCommentInfoJSONToContext(comment_info_json) -> Optional[str]:
   ])
 
 
-def GetCLInfo(
-    review_host,
-    change_id,
-    auth_cookie='',
-    include_mergeable=False,
-    include_review_status=False,
-    include_comment_thread=False,
-):
+def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
+              include_review_status=False, include_comment_thread=False):
   """Gets the info of the specified CL by querying the Gerrit API.
 
   Args:
@@ -778,10 +796,18 @@ def GetCLInfo(
   def _GetCLReviewStatus(change_info_json):
     if not include_review_status:
       return None
-    code_review_labels = change_info_json.get('labels', {}).get('Code-Review')
+    code_review_labels = change_info_json.get('labels', {}).get(_CODE_REVIEW)
     if code_review_labels is None:
       raise GitUtilException('The Code-Review labels are missing.')
     return _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels)
+
+  def _GetBotApprovalStatus(change_info_json):
+    if not include_review_status:
+      return None
+    bot_commit_labels = change_info_json.get('labels', {}).get(_BOT_COMMIT)
+    if bot_commit_labels is None:
+      return False
+    return bool(bot_commit_labels.get('approved'))
 
   def GetCLCommentThread():
     comment_json_of_path = GetChangeInfo(
@@ -849,12 +875,12 @@ def GetCLInfo(
     return CLInfo(
         change_id=change_info_json['change_id'],
         cl_number=change_info_json['_number'],
-        status=cl_status,
+        subject=change_info_json['subject'], status=cl_status,
         review_status=_GetCLReviewStatus(change_info_json),
-        mergeable=mergeable_or_none,
-        created_time=_ConvertGerritTimestamp(change_info_json['created']),
+        mergeable=mergeable_or_none, created_time=_ConvertGerritTimestamp(
+            change_info_json['created']),
         comment_threads=comment_threads_or_none,
-    )
+        bot_commit=_GetBotApprovalStatus(change_info_json))
   except GitUtilException:
     raise
   except Exception as ex:
@@ -864,7 +890,8 @@ def GetCLInfo(
 
 def ReviewCL(review_host: str, auth_cookie: str, cl_number: int,
              reasons: Sequence[str], approval_case: ApprovalCase,
-             reviewers: Sequence[str], ccs: Sequence[str]):
+             reviewers: Optional[Sequence[str]] = None,
+             ccs: Optional[Sequence[str]] = None):
   """Reviews a CL.
 
   Args:
@@ -876,11 +903,15 @@ def ReviewCL(review_host: str, auth_cookie: str, cl_number: int,
     reviewers: The additional reviewers to be added.
     ccs: The additional CC reviewers to be added.
   """
+  reviewers = reviewers or []
+  ccs = ccs or []
   votes = approval_case.ConvertToVotes()
   try:
     _InvokeGerritAPIJSON(
         'POST', f'{review_host}/changes/{cl_number}/revisions/current/review',
         auth_cookie=auth_cookie, json_body={
+            'ready':
+                True,
             'message':
                 '\n'.join(reasons),
             'labels': {vote.label: vote.score
@@ -913,6 +944,77 @@ def AbandonCL(review_host, auth_cookie, change_id,
   except GitUtilException as ex:
     raise GitUtilException(
         f'Abandon failed for change id: {change_id}.') from ex
+
+
+def RebaseCL(review_host: str, change_id: str, auth_cookie: str = '',
+             force=False) -> Optional[Sequence[str]]:
+  """Rebases a CL.
+
+
+  Args:
+    review_host: Review host of repo
+    change_id: Change ID
+    auth_cookie: Auth cookie
+    force: Force rebase if merge conflict. CL will be marked as WIP if conflict
+      exists.
+
+  Returns:
+    Path of merge conflict files if `force` is not set. else None
+  """
+  try:
+    resp = _InvokeGerritAPI(
+        'POST', f'{review_host}/changes/{change_id}/rebase',
+        auth_cookie=auth_cookie, return_resp=not force,
+        json_body={'allow_conflicts': force} if force else None)
+    if not force:
+      if resp.status == 409:
+        return resp.data.decode().split('merge conflict(s):\n')[-1].split()
+      if resp.status == http.client.Ok:
+        return []
+      raise GitUtilException
+
+  except GitUtilException as ex:
+    raise GitUtilException(f'Rebase failed for change id: {change_id}.') from ex
+  return None
+
+
+def PatchCL(review_host: str, change_id: str, path: str, content: bytes,
+            auth_cookie=''):
+  """Patches file content to a CL.
+
+  Args:
+    review_host: Review host of repo.
+    change_id: Change ID.
+    path: file path to be patched.
+    content: content to be patched.
+    auth_cookie: Auth cookie.
+  """
+  # Try to delete staged change edit if existing.
+  _InvokeGerritAPI('DELETE', f'{review_host}/changes/{change_id}/edit',
+                   auth_cookie=auth_cookie, return_resp=True)
+
+  # Add file to change edit.
+  path = urllib.parse.quote(path, safe='')
+  content = f'data:text/plain;base64,{base64.b64encode(content).decode()}'
+  resp = _InvokeGerritAPI(
+      'PUT', f'{review_host}/changes/{change_id}/edit/{path}',
+      auth_cookie=auth_cookie, json_body={"binary_content": content},
+      return_resp=True)
+  if resp.status == 409:
+    logging.warning("No file changed. Patch request aborted.")
+    return
+
+  if resp.status != 204:
+    raise GitUtilException(
+        f'Failed to patch change id: {change_id}. code={resp.status}')
+
+  # Publish change edit
+  resp = _InvokeGerritAPI('POST',
+                          f'{review_host}/changes/{change_id}/edit:publish',
+                          auth_cookie=auth_cookie, return_resp=True)
+  if resp.status != 204:
+    raise GitUtilException(
+        f'Failed to publish change id: {change_id}. code={resp.status}')
 
 
 def GetGerritCredentials():

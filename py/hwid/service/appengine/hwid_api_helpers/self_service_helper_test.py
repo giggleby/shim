@@ -263,19 +263,21 @@ class SelfServiceHelperTest(unittest.TestCase):
 
   def _CreateHWIDDBCLWithDefaults(
       self, cl_number: int, status: hwid_repo.HWIDDBCLStatus,
+      subject: str = 'subject',
       review_status: Optional[hwid_repo.HWIDDBCLReviewStatus] = (
           hwid_repo.HWIDDBCLReviewStatus.NEUTRAL), comment_threads: Optional[
               Sequence[hwid_repo.HWIDDBCLCommentThread]] = None,
       mergeable: Optional[bool] = None,
-      created_time: Optional[datetime.datetime] = None
-  ) -> hwid_repo.HWIDDBCLInfo:
+      created_time: Optional[datetime.datetime] = None,
+      bot_commit: Optional[bool] = None) -> hwid_repo.HWIDDBCLInfo:
     change_id = str(cl_number)
     if mergeable is None:
       mergeable = status == hwid_repo.HWIDDBCLStatus.NEW
     created_time = created_time or datetime.datetime.utcnow()
     comment_threads = comment_threads or []
-    return hwid_repo.HWIDDBCLInfo(change_id, cl_number, status, review_status,
-                                  mergeable, created_time, comment_threads)
+    return hwid_repo.HWIDDBCLInfo(change_id, cl_number, subject, status,
+                                  review_status, mergeable, created_time,
+                                  comment_threads, bot_commit)
 
   def testBatchGetHWIDDBEditableSectionChangeCLInfo(self):
     all_hwid_commit_infos = {
@@ -388,6 +390,45 @@ class SelfServiceHelperTest(unittest.TestCase):
     abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=now)
 
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [
+        orig_cl_info, abandoned_cl_info
+    ]
+
+    req = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+            cl_numbers=[2]))
+    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+    expected_resp = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
+        ))
+
+    cl_status = expected_resp.cl_status.get_or_create(2)
+    cl_status.status = cl_status.ABANDONED
+    self.assertEqual(resp, expected_resp)
+
+  def testBatchGetHWIDDBEditableSectionChangeCLInfo_RebaseMergeConflict(self):
+    now = datetime.datetime.utcnow()
+    cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=False, created_time=now,
+        bot_commit=True)
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.return_value = cl_info
+
+    req = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+            cl_numbers=[2]))
+    self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+
+    self._mock_hwid_repo_manager.RebaseCLMetadata.assert_called_once()
+
+  def testBatchGetHWIDDBEditableSectionChangeCLInfo_RebaseFailed(self):
+    now = datetime.datetime.utcnow()
+    orig_cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=False, created_time=now,
+        bot_commit=True)
+    abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=now)
+
+    self._mock_hwid_repo_manager.RebaseCLMetadata.side_effect = ValueError
     self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [
         orig_cl_info, abandoned_cl_info
     ]

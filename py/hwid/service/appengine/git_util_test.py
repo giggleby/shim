@@ -208,6 +208,7 @@ class GetCLInfoTest(unittest.TestCase):
   _THE_CHANGE_ID = 'the_change_id_value'
   _THE_CL_NUMBER = 123
   _THE_CL_STATUS = 'NEW'
+  _THE_CL_SUBJECT = 'SUBJECT'
 
   def setUp(self):
     super().setUp()
@@ -221,13 +222,14 @@ class GetCLInfoTest(unittest.TestCase):
 
   def _BuildGetChangeSuccResponseWithDefaults(
       self, change_id=None, cl_number=None, created_timestamp=None, status=None,
-      **other_fields):
+      subject=None, **other_fields):
     created_timestamp = created_timestamp or self._THE_CREATED_TIMESTAMP
     json_obj = {
         'change_id': change_id or self._THE_CHANGE_ID,
         '_number': cl_number or self._THE_CL_NUMBER,
         'created': created_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f000'),
         'status': status or self._THE_CL_STATUS,
+        'subject': subject or self._THE_CL_SUBJECT,
     }
     json_obj.update(other_fields)
     return self._BuildGerritSuccResponse(json_obj)
@@ -242,6 +244,7 @@ class GetCLInfoTest(unittest.TestCase):
     self.assertEqual(actual_cl_info.change_id, self._THE_CHANGE_ID)
     self.assertEqual(actual_cl_info.cl_number, self._THE_CL_NUMBER)
     self.assertEqual(actual_cl_info.created_time, self._THE_CREATED_TIMESTAMP)
+    self.assertEqual(actual_cl_info.subject, self._THE_CL_SUBJECT)
 
   def testGetCLInfo_WithStatus(self):
     pm_inst = self._mocked_pool_manager_cls.return_value

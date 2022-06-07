@@ -5,7 +5,8 @@
 
 import collections
 import logging
-from typing import NamedTuple, Optional, Sequence
+import re
+from typing import Mapping, NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -44,15 +45,16 @@ def _ParseMetadata(raw_metadata):
 def _DumpMetadata(hwid_db_metadata_of_name):
   # TODO(wyuang): field `branch` is not used anymore. Check is there any other
   # internal service is still using this field.
+  # yapf: disable
   return yaml.safe_dump(
       collections.OrderedDict(
-          [(name,
-            collections.OrderedDict([('board', metadata.board_name),
-                                     ('branch', 'main'),
-                                     ('version', metadata.version),
-                                     ('path', metadata.path)]))
-           for name, metadata in hwid_db_metadata_of_name.items()]), indent=4,
-      default_flow_style=False)
+          sorted((name,
+                   collections.OrderedDict([('board', metadata.board_name),
+                                            ('branch', 'main'),
+                                            ('version', metadata.version),
+                                            ('path', metadata.path)]))
+                  for name, metadata in hwid_db_metadata_of_name.items())),
+      indent=4, default_flow_style=False)
 
 
 class HWIDRepoError(Exception):
@@ -264,23 +266,33 @@ class HWIDRepoManager:
     return git_util.GetCommitId(INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
                                 auth_cookie=git_util.GetGerritAuthCookie())
 
-  def GetHWIDDBMetadata(self, project: str) -> HWIDDBMetadata:
-    """Gets the metadata from HWID repo."""
-    repo_file_contents = self.GetRepoFileContents([_PROJECTS_YAML_PATH])
-    metadata = _ParseMetadata(repo_file_contents.file_contents[0])
+  def GetHWIDDBMetadataByProject(self, project: str) -> HWIDDBMetadata:
+    """Gets the metadata from HWID repo tot by project name."""
+    metadata = self.GetHWIDDBMetadata()
     if project not in metadata:
       raise KeyError(f'Project: "{project}" does not exist in the repo.')
     return metadata[project]
 
-  def GetRepoFileContents(self, paths: Sequence[str]) -> RepoFileContents:
+  def GetHWIDDBMetadata(
+      self, cl_number: Optional[int] = None) -> Mapping[str, HWIDDBMetadata]:
+    """Gets the metadata from HWID repo."""
+    repo_file_contents = self.GetRepoFileContents([_PROJECTS_YAML_PATH],
+                                                  cl_number)
+    return _ParseMetadata(repo_file_contents.file_contents[0])
+
+  def GetRepoFileContents(self, paths: Sequence[str],
+                          cl_number: Optional[int] = None) -> RepoFileContents:
     """Gets the file content as well as the commit id from HWID repo."""
-    commit_id = git_util.GetCommitId(INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
-                                     branch=self._repo_branch,
-                                     auth_cookie=git_util.GetGerritAuthCookie())
+    commit_id = None
+    if cl_number is None:
+      commit_id = git_util.GetCommitId(
+          INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, branch=self._repo_branch,
+          auth_cookie=git_util.GetGerritAuthCookie())
+
     file_contents = [
         git_util.GetFileContent(
             INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
-            commit_id=commit_id,
+            commit_id=commit_id, change_id=str(cl_number),
             auth_cookie=git_util.GetGerritAuthCookie()).decode()
         for path in paths
     ]
@@ -290,3 +302,39 @@ class HWIDRepoManager:
     """Abandons the given CL number."""
     return git_util.AbandonCL(INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
                               cl_number, reason=reason)
+
+  def RebaseCLMetadata(self, cl_info: HWIDDBCLInfo):
+    """Rebases `projects.yaml` and try to resolve merge conflict for the CL."""
+    conflicts = git_util.RebaseCL(INTERNAL_REPO_URL, str(cl_info.cl_number),
+                                  git_util.GetGerritAuthCookie())
+
+    if not conflicts:
+      return
+
+    if conflicts != [_PROJECTS_YAML_PATH]:
+      raise HWIDRepoError(
+          f'Only {_PROJECTS_YAML_PATH} can be auto rebased: {conflicts}')
+
+    # Find project name from CL subject and append the new metadata to tot.
+    matches = re.search(r'(?:\(\d+\)\s*)?([A-Z0-9]+):', cl_info.subject)
+    if not matches:
+      raise ValueError('Unable to find project name from commit message.')
+
+    project = matches.group(1)
+
+    metadata = self.GetHWIDDBMetadata()
+    cl_metadata = self.GetHWIDDBMetadata(cl_number=cl_info.cl_number)
+    metadata[project] = cl_metadata[project]
+
+    # Force rebase and patch metadata when merge conflict on project.yaml.
+    git_util.RebaseCL(INTERNAL_REPO_URL, str(cl_info.cl_number),
+                      git_util.GetGerritAuthCookie(), force=True)
+    git_util.PatchCL(INTERNAL_REPO_URL, str(cl_info.cl_number),
+                     _PROJECTS_YAML_PATH,
+                     _DumpMetadata(metadata).encode(),
+                     git_util.GetGerritAuthCookie())
+    git_util.ReviewCL(
+        INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
+        cl_number=cl_info.cl_number, reasons=[
+            f'Auto resolved merge conflict for {_PROJECTS_YAML_PATH}'
+        ], approval_case=git_util.ApprovalCase.APPROVED)

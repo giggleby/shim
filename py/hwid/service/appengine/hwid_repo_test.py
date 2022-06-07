@@ -5,6 +5,7 @@
 
 import datetime
 import os
+import textwrap
 from typing import Dict
 import unittest
 from unittest import mock
@@ -43,6 +44,21 @@ class HWIDRepoBaseTest(unittest.TestCase):
     patcher = mock.patch(
         'cros.factory.hwid.service.appengine.git_util.GetCLInfo')
     self._mocked_get_cl_info = patcher.start()
+    self.addCleanup(patcher.stop)
+
+    patcher = mock.patch(
+        'cros.factory.hwid.service.appengine.git_util.GetFileContent')
+    self._mocked_get_file_content = patcher.start()
+    self.addCleanup(patcher.stop)
+
+    patcher = mock.patch(
+        'cros.factory.hwid.service.appengine.git_util.RebaseCL')
+    self._mocked_rebase_cl = patcher.start()
+    self.addCleanup(patcher.stop)
+
+    patcher = mock.patch(
+        'cros.factory.hwid.service.appengine.git_util.GetCommitId')
+    self._mocked_get_commit_id = patcher.start()
     self.addCleanup(patcher.stop)
 
 
@@ -162,6 +178,18 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
 
 class HWIDRepoManagerTest(HWIDRepoBaseTest):
+  _RAW_METADATA = textwrap.dedent("""\
+      PROJ1:
+          board: BOARD
+          branch: main
+          version: 3
+          path: v3/PROJ1
+      """).encode()
+  _METADATA = {
+      'PROJ1':
+          hwid_repo.HWIDDBMetadata(name='PROJ1', board_name='BOARD', version=3,
+                                   path='v3/PROJ1')
+  }
 
   def setUp(self):
     super().setUp()
@@ -171,6 +199,24 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     self._mocked_get_cl_info.side_effect = git_util.GitUtilException
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo_manager.GetHWIDDBCLInfo(123)
+
+  def testGetHWIDDBMetadata_Succeed(self):
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+    metadata = self._hwid_repo_manager.GetHWIDDBMetadata()
+    self.assertEqual(metadata, self._METADATA)
+
+  def testGetHWIDDBMetadataByProject_Succeed(self):
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+    metadata = self._hwid_repo_manager.GetHWIDDBMetadataByProject('PROJ1')
+    self.assertEqual(metadata, self._METADATA['PROJ1'])
+
+  def testGetHWIDDBMetadataByProject_NotFound(self):
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+    with self.assertRaises(KeyError):
+      self._hwid_repo_manager.GetHWIDDBMetadataByProject('PROJ2')
 
   def testGetHWIDDBCLInfo_Succeed(self):
     cl_mergeable = False
@@ -185,18 +231,63 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
             git_util.CLComment('somebody@notgoogle.com', 'msg2'),
         ])
     returned_cl_info = git_util.CLInfo(
-        'unused_change_id', 123, git_util.CLStatus.MERGED,
+        'unused_change_id', 123, 'subject', git_util.CLStatus.MERGED,
         git_util.CLReviewStatus.APPROVED, cl_mergeable, cl_created_time,
-        [cl_patchset_comment_thread, cl_file_comment_thread])
+        [cl_patchset_comment_thread, cl_file_comment_thread], None)
     self._mocked_get_cl_info.return_value = returned_cl_info
 
     actual_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(123)
 
     expected_cl_info = hwid_repo.HWIDDBCLInfo(
-        'unused_change_id', 123, git_util.CLStatus.MERGED,
+        'unused_change_id', 123, 'subject', git_util.CLStatus.MERGED,
         git_util.CLReviewStatus.APPROVED, cl_mergeable, cl_created_time,
-        [cl_file_comment_thread])
+        [cl_file_comment_thread], None)
     self.assertEqual(actual_cl_info, expected_cl_info)
+
+
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.PatchCL')
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.ReviewCL')
+  def testRebaseCLMetadata(self, review_cl, patch_cl):
+    self._mocked_rebase_cl.return_value = ['projects.yaml']
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    metadata = self._RAW_METADATA
+    cl_metadata = textwrap.dedent("""\
+        PROJ2:
+            board: BOARD
+            branch: main
+            version: 3
+            path: v3/PROJ2
+        """).encode()
+    expected_metadata = metadata + cl_metadata
+
+    self._mocked_get_file_content.side_effect = [metadata, cl_metadata]
+
+    cl_info = git_util.CLInfo('unused_change_id', 123, 'PROJ2: subject',
+                              git_util.CLStatus.NEW, None, None,
+                              datetime.datetime.utcnow(), None, None)
+    self._hwid_repo_manager.RebaseCLMetadata(cl_info)
+
+    patch_cl.assert_called_with(mock.ANY, mock.ANY, mock.ANY, expected_metadata,
+                                mock.ANY)
+    review_cl.assert_called_once()
+
+  def testRebaseCLMetadata_OtherFilesConflict(self):
+    self._mocked_rebase_cl.return_value = ['projects.yaml', 'not_project.yaml']
+    cl_info = git_util.CLInfo('unused_change_id', 123, 'PROJ: subject',
+                              git_util.CLStatus.NEW, None, None,
+                              datetime.datetime.utcnow(), None, None)
+
+    with self.assertRaises(hwid_repo.HWIDRepoError):
+      self._hwid_repo_manager.RebaseCLMetadata(cl_info)
+
+  def testRebaseCLMetadata_NoProjectNameInCommitMessage(self):
+    self._mocked_rebase_cl.return_value = ['projects.yaml']
+    cl_info = git_util.CLInfo('unused_change_id', 123, 'NO_PROJECT_NAME',
+                              git_util.CLStatus.NEW, None, None,
+                              datetime.datetime.utcnow(), None, None)
+
+    with self.assertRaises(ValueError):
+      self._hwid_repo_manager.RebaseCLMetadata(cl_info)
 
 
 if __name__ == '__main__':

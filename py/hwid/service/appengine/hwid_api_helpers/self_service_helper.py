@@ -374,29 +374,50 @@ Info Update
       logging.error('Failed to load the HWID DB CL info: %r.', ex)
       return None
 
-    # TODO(yhong): Consider triggering legacy CL deprecation routine by
-    # cronjobs instead.
-    is_cl_expired, cl_expiration_reason = _CheckIfHWIDDBCLShouldBeAbandoned(
-        cl_info)
-    if not is_cl_expired:
-      return cl_info
+    is_cl_expired, cl_expiration_reason = False, None
 
-    try:
-      self._hwid_repo_manager.AbandonCL(cl_number, reason=cl_expiration_reason)
-    except git_util.GitUtilException as ex:
-      logging.warning(
-          'Caught an exception while abandoning the expired HWID DB CL: %r.',
-          ex)
+    # Auto rebase metadata when bot commit merge conflict.
+    merge_conflict = (
+        cl_info.status == hwid_repo.HWIDDBCLStatus.NEW and
+        not cl_info.mergeable and cl_info.bot_commit)
+
+    if merge_conflict:
+      logging.info('CL %d merge conflict, perform auto rebase.', cl_number)
+      try:
+        self._hwid_repo_manager.RebaseCLMetadata(cl_info)
+      except (git_util.GitUtilException, hwid_repo.HWIDRepoError,
+              ValueError) as ex:
+        logging.warning(
+            'Caught an exception during resolving merge conflict: %s', ex)
+        is_cl_expired, cl_expiration_reason = (
+            True, 'Unable to resolve merge conflict. CL rejected.')
+    else:
+      # TODO(yhong): Consider triggering legacy CL deprecation routine by
+      # cronjobs instead.
+      is_cl_expired, cl_expiration_reason = _CheckIfHWIDDBCLShouldBeAbandoned(
+          cl_info)
+
+    if is_cl_expired:
+      try:
+        self._hwid_repo_manager.AbandonCL(cl_number,
+                                          reason=cl_expiration_reason)
+      except git_util.GitUtilException as ex:
+        logging.warning(
+            'Caught an exception while abandoning the expired HWID DB CL: %r.',
+            ex)
+        return cl_info
+
+    if not is_cl_expired and not merge_conflict:
       return cl_info
 
     try:
       cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
     except hwid_repo.HWIDRepoError as ex:
       logging.error(
-          'Failed to refetch CL info after the abandon operation, '
+          'Failed to refetch CL info after the abandon/rebase operation, '
           'caught exception: %r.', ex)
       return None
-    if cl_info.status != hwid_repo.HWIDDBCLStatus.ABANDONED:
+    if is_cl_expired and cl_info.status != hwid_repo.HWIDDBCLStatus.ABANDONED:
       logging.error('CL abandon seems failed.  The status flag in the '
                     'refetched CL info are not changed.')
       return None
@@ -512,7 +533,7 @@ Info Update
   def GetHWIDBundleResourceInfo(self, request):
     project = _NormalizeProjectString(request.project)
     try:
-      metadata = self._hwid_repo_manager.GetHWIDDBMetadata(project)
+      metadata = self._hwid_repo_manager.GetHWIDDBMetadataByProject(project)
       repo_file_contents = self._hwid_repo_manager.GetRepoFileContents(
           [metadata.path,
            hwid_repo.HWIDRepo.InternalDBPath(metadata.path)])
