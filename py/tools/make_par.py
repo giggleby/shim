@@ -1,10 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -s
 #
 # Copyright 2012 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Creates a self-extracting Python executable."""
+"""Creates a self-extracting Python executable.
+
+This script is run with the `-s` flag to preserve the consistency across
+different python environments with possible user-specific site-packages
+installed.
+"""
 
 import argparse
 import glob

@@ -99,6 +99,8 @@ class _TestProc:
     # Since some tests using `make par` is sensitive to file changes inside py
     # directory, don't generate .pyc file.
     child_env['PYTHONDONTWRITEBYTECODE'] = '1'
+    # Unittests should not be run with user-specific site-pacakges.
+    child_env['PYTHONNOUSERSITE'] = '1'
     # Change child calls for tempfile.* to be rooted at directory inside
     # cros_factory_data_dir temporary directory, so it would be removed even if
     # the test is terminated.
