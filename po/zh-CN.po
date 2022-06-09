@@ -3474,6 +3474,10 @@ msgid "Enable Lid Switch"
 msgstr "打开上盖功能"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Ethernet Test"
+msgstr "网路测试"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Fingerprint Test Group"
 msgstr "测试指纹群组"
 

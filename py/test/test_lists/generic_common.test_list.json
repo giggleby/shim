@@ -456,6 +456,15 @@
         "commands": "ectool forcelidopen 0"
       }
     },
+    "Ethernet": {
+      "pytest_name": "ethernet",
+      "label": "Ethernet Test",
+      "args": {
+        "auto_start": true,
+        "link_only": true,
+        "iface": "eth0"
+      }
+    },
     "ExecShell": {
       "pytest_name": "exec_shell"
     },

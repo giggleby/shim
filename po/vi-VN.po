@@ -3543,6 +3543,10 @@ msgid "Enable Lid Switch"
 msgstr "Bật chức năng công tắc Nắp"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Ethernet Test"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Fingerprint Test Group"
 msgstr ""
 
