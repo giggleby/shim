@@ -24,18 +24,7 @@ Dependency
 
 Examples
 --------
-The minimal working example::
-
-  {
-    "pytest_name": "thunderbolt_loopback",
-    "args": {
-      "usbpd_spec": {
-        "port": 0
-      }
-    }
-  }
-
-Test specific controller and test lane margining with 60 seconds timeout::
+Test controller 0-1 with port 0 with 60 seconds timeout::
 
   {
     "pytest_name": "thunderbolt_loopback"
@@ -44,8 +33,9 @@ Test specific controller and test lane margining with 60 seconds timeout::
         "port": 0
       },
       "timeout_secs": 60,
-      "controller_port": "0-1.*",
-      "lane_margining": true
+      "controller_patterns": [
+        "0-1.*"
+      ]
     }
   }
 
@@ -59,7 +49,9 @@ Test controller 0-3 with CC1 port 1 with 60 seconds timeout::
         "polarity": 1
       },
       "timeout_secs": 60,
-      "controller_port": "0-3.*"
+      "controller_patterns": [
+        "0-3.*"
+      ]
     }
   }
 """
@@ -69,6 +61,7 @@ import os
 import re
 import subprocess
 import time
+from typing import Set
 
 from cros.factory.device import device_utils
 from cros.factory.device import usb_c
@@ -84,7 +77,7 @@ from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 _LOOPBACK_TEST_PATH = '/sys/kernel/debug/thunderbolt'
-_CONTROLLER_PORTS = ('0-1.*', '0-3.*', '1-1.*', '1-3.*')
+_DEFAULT_CONTROLLER_PATTERNS = ('0-1.*', '0-3.*', '1-1.*', '1-3.*')
 _RE_ADP_DOMAIN = re.compile(r'^.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+$')
 _RE_MARGIN_LOOPBACK = re.compile(
     r'(RT\d+ L\d+ )(BOTTOM|LEFT),(TOP|RIGHT) = (\d+),(\d+)')
@@ -139,8 +132,12 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       Arg('packets_to_receive', int, 'Amount of packets to be received.',
           default=1000),
       Arg('debugfs_path', str, 'The path of debugfs to test.', default=None),
-      Arg('controller_port', str, 'The name of the controller port to test.',
+      Arg('controller_port', str, 'Please migrate to controller_patterns.',
           default=None),
+      Arg('controller_patterns', (list, tuple),
+          ('The list of the glob patterns of the controller port to test. '
+           'Choose a subset of {_DEFAULT_CONTROLLER_PATTERNS!r}.'),
+          default=_DEFAULT_CONTROLLER_PATTERNS),
       Arg('usbpd_spec', dict,
           ('A dict which must contain "port" and optionally specify "polarity".'
            ' For example, `{"port": 1, "polarity": 1}`.'),
@@ -186,9 +183,14 @@ class ThunderboltLoopbackTest(test_case.TestCase):
     if self._remove_module:
       self._dut.CheckCall(['modprobe', '-r', _TEST_MODULE], log=True)
 
-  def _GlobLoopbackPath(self, controller_ports):
+  def _GlobLoopbackPath(self, controller_patterns: Set[str]):
+    """Returns a list of loopback card paths from controller_patterns.
+
+    Args:
+      controller_patterns: The set of the glob patterns.
+    """
     devices = []
-    for name in controller_ports:
+    for name in controller_patterns:
       device_path = self._dut.path.join(_LOOPBACK_TEST_PATH, name, _DMA_TEST)
       devices.extend(
           self._dut.path.dirname(path) for path in self._dut.Glob(device_path))
@@ -252,6 +254,14 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       return False
 
   def _FindLoopbackPath(self):
+    """Returns the loopback card controller path.
+
+    Returns:
+      If self.args.debugfs_path is set, then just return it if it exists,
+      otherwise return None. If self.args.debugfs_path is not set, then use
+      self.args.controller_patterns to glob the path and return the result if
+      there is only one match, otherwise return None.
+    """
     if self.args.debugfs_path:
       if self._dut.path.exists(self.args.debugfs_path):
         return self.args.debugfs_path
@@ -259,35 +269,40 @@ class ThunderboltLoopbackTest(test_case.TestCase):
         logging.info('No loopback card exists.')
       return None
 
-    controller_ports = set([self.args.controller_port] if self.args
-                           .controller_port else _CONTROLLER_PORTS)
-    devices = self._GlobLoopbackPath(controller_ports)
-    if len(devices) > 1:
+    target_controller_patterns = set(
+        [self.args.controller_port] if self.args.controller_port else self.args
+        .controller_patterns)
+    target_controllers = self._GlobLoopbackPath(target_controller_patterns)
+    if len(target_controllers) > 1:
       if self._SetCardState(_CARD_STATE.Multiple):
         self.ui.SetState(_('Do not insert more than one loopback card.'))
-        logging.info('Multiple loopback cards exist: %r. controller_ports: %r',
-                     devices, controller_ports)
+        logging.info(
+            'Multiple loopback cards exist: %r with patterns: %r. '
+            'Set controller_patterns to be more specific.', target_controllers,
+            target_controller_patterns)
       return None
 
-    wrong_controller_ports = set(_CONTROLLER_PORTS) - controller_ports
-    wrong_devices = self._GlobLoopbackPath(wrong_controller_ports)
-    if wrong_devices:
+    if len(target_controllers) == 1:
+      return target_controllers[0]
+
+    non_target_controller_patterns = set(
+        _DEFAULT_CONTROLLER_PATTERNS) - target_controller_patterns
+    non_target_controllers = self._GlobLoopbackPath(
+        non_target_controller_patterns)
+    if non_target_controllers:
       if self._SetCardState(_CARD_STATE.Wrong):
         self.ui.SetState(
             _('The loopback card is inserted into the wrong port.'))
-        logging.info(('Wrong loopback cards exist: %r. '
-                      'wrong_controller_ports: %r'), wrong_devices,
-                     wrong_controller_ports)
-      return None
-
-    if not devices:
+        logging.info(
+            'The loopback card is inserted into the wrong port: '
+            '%r with patterns: %r', non_target_controllers,
+            non_target_controller_patterns)
+    else:
       if self._SetCardState(_CARD_STATE.Absent):
         self.ui.SetState(_('Insert the loopback card.'))
-        logging.info('No loopback card exists. controller_ports: %r',
-                     controller_ports)
-      return None
-
-    return devices[0]
+        logging.info('No loopback card exists with patterns: %r',
+                     target_controller_patterns)
+    return None
 
   def _LogAndWriteFile(self, filename, content):
     logging.info('echo %s > %s', content, filename)
