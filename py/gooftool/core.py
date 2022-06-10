@@ -55,13 +55,15 @@ _DLCVERIFY = 'dlcverify'
 
 _DLCMETADATADIR = 'opt/google/dlc'
 
+# pylint: disable=line-too-long
 _DLC_ERROR_TEMPLATE = 'If you install the images via network, please make ' \
                       'sure you use docker image version >= `20211102181209`' \
                       '. To re-install the DLC images, please run pytest ' \
                       '`check_image_version.py` with argument ' \
                       '`reinstall_only_dlc` set to true. For more ' \
                       'information about DLCs, please read the partner site ' \
-                      'document: factory-dlc-support.'
+                      'document: (Google partners only) ' \
+                      'https://chromeos.google.com/partner/dlm/docs/factory/factory-dlc-support.html.'
 
 
 class CrosConfigError(Error):
