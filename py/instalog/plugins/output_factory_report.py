@@ -189,6 +189,9 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
         archive_prefix = '(archive) ' + name
         report_parsers.append(
             ReportParser(gcs_path, dst, tmp_dir, archive_prefix, self.logger))
+      # Remove the two-level archive as every one-level archive is handled by
+      # each report parser.
+      os.remove(archive_path)
       return report_parsers
 
 
@@ -214,7 +217,7 @@ class ReportParser(log_utils.LoggerMixin):
     self.logger = logger
 
   def ProcessArchive(self, archive_process_event, process_pool):
-    """Processes the archive."""
+    """Processes the archive and remove it after processing it."""
     report_events = [archive_process_event]
     processed = 0
     async_results = []
@@ -273,6 +276,9 @@ class ReportParser(log_utils.LoggerMixin):
     archive_process_event['endTime'] = time.time()
     archive_process_event['duration'] = (
         archive_process_event['endTime'] - archive_process_event['startTime'])
+
+    os.remove(self._archive_path)
+
     return report_events
 
   def DecompressZipArchive(self, args_queue):
