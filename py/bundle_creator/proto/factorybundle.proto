@@ -16,6 +16,7 @@ message CreateBundleRpcRequest {
   optional string email = 7;
   optional string firmware_source = 8;
   optional bool update_hwid_db_firmware_info = 9;
+  optional int64 hwid_related_bug_number = 10;
 }
 
 message CreateBundleRpcResponse {

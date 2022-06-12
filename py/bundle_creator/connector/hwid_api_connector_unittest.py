@@ -26,6 +26,7 @@ class HWIDAPIConnectorTest(unittest.TestCase):
   _HWID_ENDPOINT = 'https://fake_hwid_endpoint'
   _ORIGINAL_REQUESTER = 'foo@bar'
   _BUNDLE_RECORD = '{"fake_key": "fake_value"}'
+  _BUG_NUMBER = 123456789
 
   def setUp(self):
     mock_urllib_request_patcher = mock.patch('urllib.request')
@@ -43,8 +44,8 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     self._urllib_request.urlopen.return_value.__enter__.return_value = (
         mock_response)
 
-    self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
-                                             self._ORIGINAL_REQUESTER)
+    self._connector.CreateHWIDFirmwareInfoCL(
+        self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER)
 
     self.assertEqual(
         self._urllib_request.Request.call_args.args[0],
@@ -55,21 +56,23 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     data = json.loads(self._urllib_request.Request.call_args.kwargs['data'])
     self.assertEqual(data['bundle_record'], self._BUNDLE_RECORD)
     self.assertEqual(data['original_requester'], self._ORIGINAL_REQUESTER)
+    self.assertEqual(data['bug_number'], self._BUG_NUMBER)
 
   def testCreateHWIDFirmwareInfoCL_succeed_returnsExpectedClUrl(self):
     cl_number = 1234567
     mock_response = mock.Mock()
-    mock_response.read.return_value = json.dumps(
-        {'commits': {
+    mock_response.read.return_value = json.dumps({
+        'commits': {
             'project': {
-                'clNumber': cl_number
-            }
-        }})
+                'clNumber': cl_number,
+            },
+        },
+    })
     self._urllib_request.urlopen.return_value.__enter__.return_value = (
         mock_response)
 
-    cl_url = self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
-                                                      self._ORIGINAL_REQUESTER)
+    cl_url = self._connector.CreateHWIDFirmwareInfoCL(
+        self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER)
 
     expected_url = (
         'https://chrome-internal-review.googlesource.com/c/chromeos/'
@@ -79,8 +82,8 @@ class HWIDAPIConnectorTest(unittest.TestCase):
   def testCreateHWIDFirmwareInfoCL_httpError_raisesExpectedException(self):
     error_msg = {
         'error': {
-            'code': 403
-        }
+            'code': 403,
+        },
     }
     forbidden_error = urllib.error.HTTPError(
         url='', code=403, msg='', hdrs={}, fp=io.StringIO(
@@ -88,8 +91,8 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     self._urllib_request.urlopen.side_effect = forbidden_error
 
     with self.assertRaises(hwid_api_connector.HWIDAPIRequestException) as e:
-      self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
-                                               self._ORIGINAL_REQUESTER)
+      self._connector.CreateHWIDFirmwareInfoCL(
+          self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER)
 
     self.assertEqual(json.loads(str(e.exception)), error_msg)
 

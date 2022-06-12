@@ -177,7 +177,7 @@ class EasyBundleCreationWorker:
         bundle_record = file_utils.ReadFile(bundle_record_path)
         try:
           cl_url += self._hwid_api_connector.CreateHWIDFirmwareInfoCL(
-              bundle_record, request.email)
+              bundle_record, request.email, request.hwid_related_bug_number)
         except hwid_api_connector.HWIDAPIRequestException as e:
           cl_error_msg = str(e)
           self._logger.error(cl_error_msg)

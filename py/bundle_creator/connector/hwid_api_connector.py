@@ -4,7 +4,6 @@
 
 import json
 import logging
-import textwrap
 from typing import List
 import urllib.error
 import urllib.request
@@ -34,13 +33,15 @@ class HWIDAPIConnector:
     self._hwid_api_endpoint = hwid_api_endpoint
 
   def CreateHWIDFirmwareInfoCL(self, bundle_record: str,
-                               original_requester: str) -> List[str]:
+                               original_requester: str,
+                               bug_number: int) -> List[str]:
     """Sends HTTP request to HWID API to create HWID firmware info change.
 
     Args:
-      bundle_record: A JSON string which created by finalize_bundle.
+      bundle_record: A JSON string created by finalize_bundle.
       original_requester: The email of original_requester from
-          EasyBundleCreation.
+          Easy Bundle Creation.
+      bug_number: The related bug number used to create HWID CL.
 
     Returns:
       A list contains created HWID CL url.
@@ -51,21 +52,13 @@ class HWIDAPIConnector:
     token = self._GetAuthToken()
     headers = {
         'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
     }
-    # TODO(b/232487900): Make `data` supports the field `bug_number`.
     data = {
-        'original_requester':
-            original_requester,
-        'description':
-            textwrap.dedent("""\
-            This CL is created by EasyBundleCreation service.
-
-            Please DO NOT submit this to CQ manually. It will be auto merged
-            without approval.
-            """),
-        'bundle_record':
-            bundle_record
+        'original_requester': original_requester,
+        'description': 'This CL is created by Easy Bundle Creation service.',
+        'bundle_record': bundle_record,
+        'bug_number': bug_number,
     }
     data = json.dumps(data).encode()
 

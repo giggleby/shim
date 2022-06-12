@@ -164,6 +164,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     cl_url = ['https://fake_cl_url']
     self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL.return_value = cl_url
     self._message.request.update_hwid_db_firmware_info = True
+    self._message.request.hwid_related_bug_number = 123456789
     self._PublishCreateBundleMessage()
 
     self._worker.TryProcessRequest()
@@ -181,6 +182,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL.side_effect = (
         hwid_api_connector.HWIDAPIRequestException(error_message))
     self._message.request.update_hwid_db_firmware_info = True
+    self._message.request.hwid_related_bug_number = 123456789
     self._PublishCreateBundleMessage()
 
     self._worker.TryProcessRequest()
@@ -247,13 +249,15 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
         'https://fake_cl_url'
     ]
     self._message.request.update_hwid_db_firmware_info = True
+    self._message.request.hwid_related_bug_number = 123456789
     self._PublishCreateBundleMessage()
 
     self._worker.TryProcessRequest()
 
     mock_method = self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL
-    mock_method.assert_called_once_with(_BUNDLE_RECORD,
-                                        self._message.request.email)
+    mock_method.assert_called_once_with(
+        _BUNDLE_RECORD, self._message.request.email,
+        self._message.request.hwid_related_bug_number)
 
   def _MockDatetime(self, module_name: str):
     mock_datetime_patcher = mock.patch(f'{module_name}.datetime')
