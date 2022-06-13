@@ -15,19 +15,6 @@
       ]
     }
   },
-  "bluetooth": {
-    "generic": {
-      "eval": "generic_bluetooth",
-      "keys": [
-        "device",
-        "idProduct",
-        "idVendor",
-        "bcdDevice",
-        "vendor",
-        "revision_id"
-      ]
-    }
-  },
   "mainboard": {
     "generic": {
       "eval": {
