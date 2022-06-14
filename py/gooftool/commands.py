@@ -1059,6 +1059,7 @@ def UploadReport(options):
     _enable_zero_touch_cmd_arg,
     _cbi_eeprom_wp_status_cmd_arg,
     _use_generic_tpm2_arg,
+    _is_reference_board_cmd_arg,
 )
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
