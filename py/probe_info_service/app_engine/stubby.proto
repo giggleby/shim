@@ -1,17 +1,18 @@
 syntax = "proto3";
 package cros.factory.probe_info_service.app_engine.stubby_pb2;
 
-enum ProbeParameterValueType {
-  UNKNOWN = 0;  // Reserved for forward compatibility.
-
-  STRING = 1;
-  INT = 2;
-}
-
 message ProbeParameterDefinition {
   string name = 1;                         // Required.
   string description = 2;                  // Required.
-  ProbeParameterValueType value_type = 3;  // Required.
+
+  enum ValueType {
+    UNKNOWN = 0;  // Reserved for forward compatibility.
+
+    STRING = 1;
+    INT = 2;
+  }
+
+  ValueType  value_type = 3;  // Required.
 }
 
 message ProbeFunctionDefinition {

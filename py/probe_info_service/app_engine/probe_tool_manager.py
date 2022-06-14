@@ -24,7 +24,7 @@ _RESOURCE_PATH = os.path.join(os.path.realpath(os.path.dirname(__file__)),
 
 ProbeSchema = stubby_pb2.ProbeSchema
 ProbeFunctionDefinition = stubby_pb2.ProbeFunctionDefinition
-ProbeParameterValueType = stubby_pb2.ProbeParameterValueType
+ProbeParameterValueType = stubby_pb2.ProbeParameterDefinition.ValueType
 ProbeInfo = stubby_pb2.ProbeInfo
 ProbeInfoParsedResult = stubby_pb2.ProbeInfoParsedResult
 ProbeParameterSuggestion = stubby_pb2.ProbeParameterSuggestion
