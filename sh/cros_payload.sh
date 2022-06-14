@@ -552,7 +552,7 @@ if component_data:
   files = [component_data.get('crx_cache', '')]
   files += [component_data.get('dlc_factory_cache', '')]
   files += [component_data.get('part%d' % i, '') for i in range(1, 13)]
-  print('\n'.join(files))" "${component}" "${json_file}"
+  print('\n'.join(files))" "${component}" "${json_file}" | grep -v "^$"
 }
 
 # Gets the file of a component from a given JSON file or stdin.
