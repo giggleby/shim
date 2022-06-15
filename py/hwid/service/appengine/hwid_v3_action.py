@@ -74,6 +74,9 @@ class HWIDV3Action(hwid_action.HWIDAction):
   def RemoveHeader(self, hwid_db_contents):
     return self._ss_helper.RemoveHeader(hwid_db_contents)
 
+  def PatchHeader(self, hwid_db_content: hwid_db_data.HWIDDBData):
+    return self._ss_helper.PatchHeader(hwid_db_content)
+
   def GetComponents(self, with_classes: Optional[List[str]] = None):
     comps = {}
     database = self.GetDBV3()
