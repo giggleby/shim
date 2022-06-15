@@ -132,25 +132,42 @@ class Flashrom:
 
     Returns: A named tuple with (enabled, offset, size).
     """
-    # flashrom(8) output: WP: status: 0x80
-    #                     WP: status.srp0: 1
-    #                     WP: write protect is %s. (disabled/enabled)
-    #                     WP: write protect range: start=0x%8x, len=0x%08x
+    # Depending on the flashrom version, `flashrom --wp-status` may
+    # print output in one of two formats:
+    #
+    # Old format:
+    #     WP: status: 0x80
+    #     WP: status.srp0: 1
+    #     WP: write protect is %s. (disabled/enabled)
+    #     WP: write protect range: start=0x%8x, len=0x%08x
+    #
+    # New format:
+    #     Protection mode: %s (disabled/hardware)
+    #     Protection range: start=0x%8x length=0x%08x [extra info]
+    #
+    # Note: 'hardware' in the new format is the same as to 'enabled'
+    # in the old format.
+
     results = self._InvokeCommand('--wp-status').stdout
+
     status = re.findall(r'WP: write protect is (\w+)\.', results)
+    if len(status) != 1:
+      status = re.findall(r'Protection mode: (\w+)', results)
     if len(status) != 1:
       raise IOError('Failed getting write protection status')
     status = status[0]
-    if status not in ('enabled', 'disabled'):
+    if status not in ('hardware', 'enabled', 'disabled'):
       raise ValueError('Unknown write protection status: %s' % status)
 
     wp_range = re.findall(r'WP: write protect range: start=(\w+), len=(\w+)',
                           results)
     if len(wp_range) != 1:
+      wp_range = re.findall(r'Protection range: start=(\w+) length=(\w+)',
+                            results)
+    if len(wp_range) != 1:
       raise IOError('Failed getting write protection range')
     wp_range = wp_range[0]
-    return WpStatus(status == 'enabled',
-                    int(wp_range[0], 0),
+    return WpStatus(status != 'disabled', int(wp_range[0], 0),
                     int(wp_range[1], 0))
 
   def EnableWriteProtection(self, offset, size, skip_check=False):
