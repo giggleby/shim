@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-07-18 12:39+UTC\n"
+"PO-Revision-Date: 2022-08-24 00:28+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -124,6 +124,10 @@ msgstr "蜂鸣器"
 #: ../build/pytests_label_generated.json
 msgid "Camera"
 msgstr "相机"
+
+#: ../build/pytests_label_generated.json
+msgid "Cec"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Cellular Switch Firmware"
@@ -3414,6 +3418,22 @@ msgid "Base Accelerometers Calibration"
 msgstr "基底加速度计校正"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI1 CEC Test"
+msgstr "HDMI1 CEC 测试"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI2 CEC Test"
+msgstr "HDMI2 CEC 测试"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Back USB TypeC"
+msgstr "后 USB TypeC Port"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Type C HDMI CEC Test"
+msgstr "Type C HDMI CEC 测试"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Camera Tests"
 msgstr "相机测试"
 
@@ -3507,6 +3527,18 @@ msgstr "前相机组装和扫描QR码"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Front Camera LED"
 msgstr "前相机 LED"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI External Display"
+msgstr "HDMI 外部显示器"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI External Display 1"
+msgstr "HDMI 外部显示器1"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI External Display 2"
+msgstr "HDMI 外部显示器2"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Volume Down"

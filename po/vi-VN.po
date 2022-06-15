@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-07-18 12:39+UTC\n"
+"PO-Revision-Date: 2022-08-24 00:28+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -124,6 +124,10 @@ msgstr "Buzzer"
 #: ../build/pytests_label_generated.json
 msgid "Camera"
 msgstr "Máy ảnh"
+
+#: ../build/pytests_label_generated.json
+msgid "Cec"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Cellular Switch Firmware"
@@ -3483,6 +3487,22 @@ msgid "Base Accelerometers Calibration"
 msgstr "Điều chỉnh gia tốc kế"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI1 CEC Test"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI2 CEC Test"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Back USB TypeC"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Type C HDMI CEC Test"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Camera Tests"
 msgstr "Máy ảnh"
 
@@ -3575,6 +3595,18 @@ msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Front Camera LED"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI External Display"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI External Display 1"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "HDMI External Display 2"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json

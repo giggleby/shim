@@ -243,6 +243,72 @@
         "timeout_secs": 120
       }
     },
+    "CEC": {
+      "pytest_name": "cec",
+      "args": {
+        "power_on": false,
+        "power_off": false
+      }
+    },
+    "CECHDMI1": {
+      "inherit": "TestGroup",
+      "label": "HDMI1 CEC Test",
+      "subtests": [
+        {
+          "inherit": "HDMI1",
+          "args": {
+            "start_output_only": false,
+            "stop_output_only": false,
+            "connect_only": true
+          }
+        },
+        {
+          "inherit": "CEC",
+          "args": {
+            "index": 1
+          }
+        }
+      ]
+    },
+    "CECHDMI2": {
+      "inherit": "TestGroup",
+      "label": "HDMI2 CEC Test",
+      "subtests": [
+        {
+          "inherit": "HDMI2",
+          "args": {
+            "start_output_only": false,
+            "stop_output_only": false,
+            "connect_only": true
+          }
+        },
+        "CEC"
+      ]
+    },
+    "CECUSBTypeCHDMI": {
+      "inherit": "TestGroup",
+      "label": "Type C HDMI CEC Test",
+      "locals": {
+        "usb": "eval! constants.typec_usb.back",
+        "usb_label": "i18n! Back USB TypeC"
+      },
+      "subtests": [
+        {
+          "inherit": "USBTypeCExternalDisplay",
+          "args": {
+            "start_output_only": false,
+            "stop_output_only": false,
+            "connect_only": true
+          }
+        },
+        {
+          "inherit": "CEC",
+          "args": {
+            "index": 1
+          }
+        }
+      ]
+    },
     "Camera": {
       "pytest_name": "camera"
     },
@@ -596,6 +662,32 @@
       "pytest_name": "gyroscope_calibration",
       "label": "Gyroscope Calibration",
       "run_if": "not constants.has_device_data or device.component.has_base_gyroscope"
+    },
+    "HDMI1": {
+      "inherit": "ExternalDisplay",
+      "label": "HDMI External Display 1",
+      "args": {
+        "drm_sysfs_path": "/sys/class/drm/card0",
+        "display_info": [
+          {
+            "display_label": "i18n! HDMI External Display",
+            "display_id": "HDMI-A-1"
+          }
+        ]
+      }
+    },
+    "HDMI2": {
+      "inherit": "ExternalDisplay",
+      "label": "HDMI External Display 2",
+      "args": {
+        "drm_sysfs_path": "/sys/class/drm/card0",
+        "display_info": [
+          {
+            "display_label": "i18n! HDMI External Display",
+            "display_id": "HDMI-A-2"
+          }
+        ]
+      }
     },
     "HPS": {
       "pytest_name": "hps",
