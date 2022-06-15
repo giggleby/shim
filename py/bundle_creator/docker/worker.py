@@ -70,6 +70,8 @@ class EasyBundleCreationWorker:
         self._firestore_connector.UpdateUserRequestEndTime(task_proto.doc_id)
         self._firestore_connector.UpdateUserRequestGsPath(
             task_proto.doc_id, gs_path)
+        self._firestore_connector.UpdateHWIDCLURLAndErrorMessage(
+            task_proto.doc_id, cl_url, cl_error_msg)
 
         worker_result = factorybundle_pb2.WorkerResult()
         worker_result.status = factorybundle_pb2.WorkerResult.NO_ERROR

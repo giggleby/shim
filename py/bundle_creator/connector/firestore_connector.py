@@ -12,7 +12,7 @@ from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disab
 
 
 class FirestoreConnector:
-  """ The connector for accessing the Cloud Firestore database."""
+  """The connector for accessing the Cloud Firestore database."""
 
   _COLLECTION_HAS_FIRMWARE_SETTINGS = 'has_firmware_settings'
   _COLLECTION_USER_REQUESTS = 'user_requests'
@@ -23,7 +23,7 @@ class FirestoreConnector:
   USER_REQUEST_STATUS_FAILED = 'FAILED'
 
   def __init__(self, cloud_project_id: str):
-    """Initialize the firestore client by a cloud project id.
+    """Initializes the firestore client by a cloud project id.
 
     Args:
       cloud_project_id: A cloud project id.
@@ -34,7 +34,7 @@ class FirestoreConnector:
         self._COLLECTION_USER_REQUESTS)
 
   def GetHasFirmwareSettingByProject(self, project: str) -> Optional[List[str]]:
-    """Get the has_firmware setting by a project name.
+    """Gets the `has_firmware` setting by a project name.
 
     Args:
       project: The project name as the document id.
@@ -55,7 +55,7 @@ class FirestoreConnector:
 
   def CreateUserRequest(
       self, request: factorybundle_pb2.CreateBundleRpcRequest) -> str:
-    """Create a user request from the create bundle request.
+    """Creates a user request from the create bundle request.
 
     Args:
       request: A CreateBundleRpcRequest message.
@@ -73,15 +73,18 @@ class FirestoreConnector:
         'release_image_version': request.release_image_version,
         'status': self.USER_REQUEST_STATUS_NOT_STARTED,
         'request_time': datetime.now(),
+        'update_hwid_db_firmware_info': request.update_hwid_db_firmware_info,
     }
     if request.HasField('firmware_source'):
       doc_value['firmware_source'] = request.firmware_source
+    if request.update_hwid_db_firmware_info:
+      doc_value['hwid_related_bug_number'] = request.hwid_related_bug_number
     doc_ref = self._GetUserRequestDocRef()
     doc_ref.set(doc_value)
     return doc_ref.id
 
   def UpdateUserRequestStatus(self, doc_id: str, status: str):
-    """Update `status` of the specific user request document.
+    """Updates `status` of the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
@@ -90,7 +93,7 @@ class FirestoreConnector:
     self._TryUpdateUserRequestDocRef(doc_id, {'status': status})
 
   def UpdateUserRequestStartTime(self, doc_id: str):
-    """Update `start_time` of the specific user request document.
+    """Updates `start_time` of the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
@@ -98,7 +101,7 @@ class FirestoreConnector:
     self._UpdateUserRequestWithCurrentTime(doc_id, 'start_time')
 
   def UpdateUserRequestEndTime(self, doc_id: str):
-    """Update `end_time` of the specific user request document.
+    """Updates `end_time` of the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
@@ -106,7 +109,7 @@ class FirestoreConnector:
     self._UpdateUserRequestWithCurrentTime(doc_id, 'end_time')
 
   def UpdateUserRequestErrorMessage(self, doc_id: str, error_msg: str):
-    """Update an error message to the specific user request document.
+    """Updates an error message to the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
@@ -115,7 +118,7 @@ class FirestoreConnector:
     self._TryUpdateUserRequestDocRef(doc_id, {'error_message': error_msg})
 
   def UpdateUserRequestGsPath(self, doc_id: str, gs_path: str):
-    """Update a created bundle's gs path to the specific user request document.
+    """Updates a created bundle's gs path to the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
@@ -138,6 +141,26 @@ class FirestoreConnector:
         for doc in self._user_request_col_ref.where('email', '==', email).
         order_by('request_time', direction=firestore.Query.DESCENDING).stream()
     ]
+
+  def UpdateHWIDCLURLAndErrorMessage(self, doc_id: str, cl_url: List[str],
+                                     cl_error_msg: Optional[str]):
+    """Updates HWID CL information to the specific user request document.
+
+    Updates the created HWID CL URLs if there is at least one.  And updates the
+    error message if it isn't `None`.
+
+    Args:
+      doc_id: The document id of the document to be updated.
+      cl_url: A list contains created HWID CL url.
+      cl_error_msg: A string of error message if it fails to call the HWID API.
+    """
+    value = {}
+    if cl_url:
+      value['hwid_cl_url'] = cl_url
+    if cl_error_msg:
+      value['hwid_cl_error_msg'] = cl_error_msg
+    if value:
+      self._TryUpdateUserRequestDocRef(doc_id, value)
 
   def ClearCollection(self, collection_name: str):
     """Testing purpose.  Deletes all documents in the specific collection.

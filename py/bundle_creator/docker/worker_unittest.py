@@ -169,12 +169,14 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
 
     self._worker.TryProcessRequest()
 
+    doc = self._firestore_connector.GetUserRequestDocument(self._message.doc_id)
     expected_worker_result = factorybundle_pb2.WorkerResult()
     expected_worker_result.status = factorybundle_pb2.WorkerResult.NO_ERROR
     expected_worker_result.original_request.MergeFrom(self._message.request)
     expected_worker_result.gs_path = self._GS_PATH
     expected_worker_result.cl_url.extend(cl_url)
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
+    self.assertEqual(doc['hwid_cl_url'], cl_url)
     mock_method.assert_called_once_with(expected_worker_result)
 
   def testTryProcessRequest_createHWIDCLFailed_verifiesResultHandling(self):
@@ -187,6 +189,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
 
     self._worker.TryProcessRequest()
 
+    doc = self._firestore_connector.GetUserRequestDocument(self._message.doc_id)
     expected_worker_result = factorybundle_pb2.WorkerResult()
     expected_worker_result.status = (
         factorybundle_pb2.WorkerResult.CREATE_CL_FAILED)
@@ -194,6 +197,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.gs_path = self._GS_PATH
     expected_worker_result.error_message = error_message
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
+    self.assertEqual(doc['hwid_cl_error_msg'], error_message)
     mock_method.assert_called_once_with(expected_worker_result)
 
   def testTryProcessRequest_withoutFirmwareSource_verifiesManifest(self):

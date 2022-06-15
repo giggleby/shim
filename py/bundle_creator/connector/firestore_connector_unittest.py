@@ -94,6 +94,8 @@ class FirestoreConnectorTest(unittest.TestCase):
             self._connector.USER_REQUEST_STATUS_NOT_STARTED,
         'request_time':
             self._FIRESTORE_CURRENT_DATETIME,
+        'update_hwid_db_firmware_info':
+            False,
     }
     doc = self._connector.GetUserRequestDocument(doc_id)
     self.assertEqual(doc, expected_doc)
@@ -106,6 +108,17 @@ class FirestoreConnectorTest(unittest.TestCase):
     doc = self._connector.GetUserRequestDocument(doc_id)
     self.assertEqual(doc['firmware_source'],
                      self._create_bundle_rpc_request.firmware_source)
+
+  def testCreateUserRequest_updateHWIDFirmwareInfo_verifiesRelatedValues(self):
+    self._create_bundle_rpc_request.update_hwid_db_firmware_info = True
+    self._create_bundle_rpc_request.hwid_related_bug_number = 123456789
+
+    doc_id = self._connector.CreateUserRequest(self._create_bundle_rpc_request)
+
+    doc = self._connector.GetUserRequestDocument(doc_id)
+    self.assertEqual(doc['update_hwid_db_firmware_info'], True)
+    self.assertEqual(doc['hwid_related_bug_number'],
+                     self._create_bundle_rpc_request.hwid_related_bug_number)
 
   def testUpdateUserRequestStatus_succeed_verifiesDocStatus(self):
     status = self._connector.USER_REQUEST_STATUS_SUCCEEDED
@@ -179,6 +192,37 @@ class FirestoreConnectorTest(unittest.TestCase):
         'request_time':
             DatetimeWithNanoseconds(2022, 5, 20, 0, 0, tzinfo=pytz.UTC)
     }])
+
+  def testUpdateHWIDCLURLAndErrorMessage_onlyCLURL_verifiesDocument(self):
+    cl_url = ['https://fake_cl_url']
+
+    self._connector.UpdateHWIDCLURLAndErrorMessage(
+        self._EMPTY_USER_REQUEST_DOC_ID, cl_url, None)
+
+    doc = self._connector.GetUserRequestDocument(
+        self._EMPTY_USER_REQUEST_DOC_ID)
+    self.assertEqual(doc['hwid_cl_url'], cl_url)
+    self.assertNotIn('hwid_cl_error_msg', doc)
+
+  def testUpdateHWIDCLURLAndErrorMessage_onlyCLErrorMsg_verifiesDocument(self):
+    cl_error_msg = '{"fake_error": "fake_message"}'
+
+    self._connector.UpdateHWIDCLURLAndErrorMessage(
+        self._EMPTY_USER_REQUEST_DOC_ID, [], cl_error_msg)
+
+    doc = self._connector.GetUserRequestDocument(
+        self._EMPTY_USER_REQUEST_DOC_ID)
+    self.assertNotIn('hwid_cl_url', doc)
+    self.assertEqual(doc['hwid_cl_error_msg'], cl_error_msg)
+
+  def testUpdateHWIDCLURLAndErrorMessage_bothEmpty_verifiesDocument(self):
+    self._connector.UpdateHWIDCLURLAndErrorMessage(
+        self._EMPTY_USER_REQUEST_DOC_ID, [], None)
+
+    doc = self._connector.GetUserRequestDocument(
+        self._EMPTY_USER_REQUEST_DOC_ID)
+    self.assertNotIn('hwid_cl_url', doc)
+    self.assertNotIn('hwid_cl_error_msg', doc)
 
 
 if __name__ == '__main__':
