@@ -282,6 +282,7 @@ do_deploy_appengine() {
 
   cp -r "${SOURCE_DIR}/app_engine" "${package_dir}"
   cp -r "${SOURCE_DIR}/connector" "${package_dir}"
+  cp -r "${SOURCE_DIR}/proto" "${package_dir}"
   local allowed_array
   allowed_array=$(printf ", \'%s\'" "${ALLOWED_LOAS_PEER_USERNAMES[@]}")
   allowed_array="${allowed_array:3:$((${#allowed_array}-4))}"
@@ -297,7 +298,7 @@ do_deploy_appengine() {
   mv "${package_dir}/app_engine/app.yaml" "${temp_dir}"
   mv "${package_dir}/app_engine/requirements.txt" "${temp_dir}"
 
-  protoc --python_out="${package_dir}/app_engine" -I "${SOURCE_DIR}/proto" \
+  protoc --python_out="${package_dir}/proto/" -I "${SOURCE_DIR}/proto" \
       "${SOURCE_DIR}/proto/factorybundle.proto"
 
   info "Start deploying the App Engine."

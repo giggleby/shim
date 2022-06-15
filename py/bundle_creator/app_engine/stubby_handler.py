@@ -11,9 +11,9 @@ from google.cloud import storage
 # isort: split
 
 from cros.factory.bundle_creator.app_engine import config
-from cros.factory.bundle_creator.app_engine import factorybundle_pb2  # pylint: disable=no-name-in-module
 from cros.factory.bundle_creator.app_engine import protorpc_utils
 from cros.factory.bundle_creator.connector import firestore_connector
+from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
 class AllowlistException(Exception):
