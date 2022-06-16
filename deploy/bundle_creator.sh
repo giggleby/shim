@@ -155,28 +155,32 @@ try_delete_existing_vm() {
 create_vm() {
   load_config_by_deployment_type "$1"
 
+  try_delete_existing_vm
   {
     gcloud compute instance-templates list --project="${GCLOUD_PROJECT}" \
       --filter="${INSTANCE_TEMPLATE_NAME}" | \
       grep "${INSTANCE_TEMPLATE_NAME}" && \
     info "The specific instance template ${INSTANCE_TEMPLATE_NAME} was created."
-  } || {
-    info "Create a Compute Engine instance template."
-    gcloud compute instance-templates --project="${GCLOUD_PROJECT}" \
-      create-with-container "${INSTANCE_TEMPLATE_NAME}" \
-      --machine-type=custom-8-16384 \
-      --network-tier=PREMIUM --maintenance-policy=MIGRATE \
-      --image=cos-stable-63-10032-71-0 --image-project=cos-cloud \
-      --boot-disk-size=200GB --boot-disk-type=pd-standard \
-      --boot-disk-device-name="${INSTANCE_TEMPLATE_NAME}" \
-      --container-image="${CONTAINER_IMAGE}" \
-      --container-restart-policy=always --container-privileged \
-      --labels=container-vm=cos-stable-63-10032-71-0 \
-      --service-account="${SERVICE_ACCOUNT}" \
-      --scopes="https://www.googleapis.com/auth/chromeoshwid,cloud-platform"
+  } && {
+    info "Try deleting the existing instance template."
+    gcloud compute instance-templates delete --project="${GCLOUD_PROJECT}" \
+      "${INSTANCE_TEMPLATE_NAME}"
   }
 
-  try_delete_existing_vm
+  info "Create a Compute Engine instance template."
+  gcloud compute instance-templates --project="${GCLOUD_PROJECT}" \
+    create-with-container "${INSTANCE_TEMPLATE_NAME}" \
+    --machine-type=custom-8-16384 \
+    --network-tier=PREMIUM --maintenance-policy=MIGRATE \
+    --image=cos-stable-63-10032-71-0 --image-project=cos-cloud \
+    --boot-disk-size=200GB --boot-disk-type=pd-standard \
+    --boot-disk-device-name="${INSTANCE_TEMPLATE_NAME}" \
+    --container-image="${CONTAINER_IMAGE}" \
+    --container-restart-policy=always --container-privileged \
+    --labels=container-vm=cos-stable-63-10032-71-0 \
+    --service-account="${SERVICE_ACCOUNT}" \
+    --scopes="https://www.googleapis.com/auth/chromeoshwid,cloud-platform"
+
   info "Create an instance group and start the VM instance."
   gcloud compute instance-groups managed create "${INSTANCE_GROUP_NAME}" \
     --project "${GCLOUD_PROJECT}" \
