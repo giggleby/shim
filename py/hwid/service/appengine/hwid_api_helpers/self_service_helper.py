@@ -266,14 +266,15 @@ class SelfServiceHelper:
     bundle_record = request.bundle_record
     all_commits = []
     for firmware_record in bundle_record.firmware_records:
+      model = _NormalizeProjectString(firmware_record.model)
       # Load HWID DB
       try:
-        metadata = live_hwid_repo.GetHWIDDBMetadataByName(firmware_record.model)
+        metadata = live_hwid_repo.GetHWIDDBMetadataByName(model)
         self._hwid_db_data_manager.UpdateProjectsByRepo(
             live_hwid_repo, [metadata], delete_missing=False)
         self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
-            limit_models=[firmware_record.model])
-        action = self._hwid_action_manager.GetHWIDAction(firmware_record.model)
+            limit_models=[model])
+        action = self._hwid_action_manager.GetHWIDAction(model)
       except (KeyError, ValueError, RuntimeError,
               hwid_repo.HWIDRepoError) as ex:
         raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
@@ -314,7 +315,7 @@ class SelfServiceHelper:
           changed = True
 
       if not changed:
-        logging.info('No component is added to DB: %s', firmware_record.model)
+        logging.info('No component is added to DB: %s', model)
         continue
 
       # Create commit
@@ -331,7 +332,7 @@ Info Update
 
           %s
           """) % request.description
-      all_commits.append((firmware_record.model, hwid_db_contents_external,
+      all_commits.append((model, hwid_db_contents_external,
                           hwid_db_contents_internal, commit_msg))
 
     # Create CLs and rollback on exception
