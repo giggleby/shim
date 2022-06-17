@@ -122,7 +122,6 @@ disable=
     # sources.  Either remove them to enable or leave them here to disable the
     # unexpected checks.
     consider-using-f-string,
-    deprecated-module,
 
 [REPORTS]
 

@@ -10,7 +10,7 @@ If this module is imported directly as `plugin_loader` instead of its full
 loaded.  Beware.
 """
 
-import imp
+import importlib
 import inspect
 import logging
 import sys
@@ -122,7 +122,7 @@ class PluginLoader:
           # Why?  In the case that the file no longer exists on re-import,
           # __import__ would silently ignore and pass a reference to the old
           # module, but reload throws an ImportError.
-          return imp.reload(sys.modules[search_name])
+          return importlib.reload(sys.modules[search_name])
 
         __import__(search_name)
         return sys.modules[search_name]

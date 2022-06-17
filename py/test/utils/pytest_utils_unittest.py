@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import imp
+import importlib
 import os
 import shutil
 import sys
@@ -49,10 +49,10 @@ class LoadPytestModuleTest(unittest.TestCase):
 
   def ReloadPytestModules(self):
     module = sys.modules[_PYTEST_MODULES[0]]
-    imp.reload(module)
+    importlib.reload(module)
     for submodule in _PYTEST_MODULES[1:]:
       module = getattr(module, submodule)
-      imp.reload(module)
+      importlib.reload(module)
 
 
   def setUp(self):

@@ -10,7 +10,8 @@
 
 import argparse
 import hashlib
-import imp
+import importlib.machinery
+import importlib.util
 import json
 import logging
 import logging.config
@@ -532,6 +533,13 @@ class DRMKeysProvisioningServer:
     key_fingerprint = import_results.fingerprints[0]
     return (key_fingerprint, key_already_exists)
 
+  def _LoadModuleFromSource(self, module_name, module_path):
+    loader = importlib.machinery.SourceFileLoader(module_name, module_path)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
   def _LoadFilterModule(self, filter_module_file_name):
     """Loads the filter module.
 
@@ -542,9 +550,9 @@ class DRMKeysProvisioningServer:
       The loaded filter module on success.
 
     Raises:
-      Exception if failed, see imp.load_source()'s doc for what could be raised.
+      Exception if failed, see importlib's doc for what could be raised.
     """
-    return imp.load_source(
+    return self._LoadModuleFromSource(
         'filter_module', os.path.join(FILTERS_DIR, filter_module_file_name))
 
   def _LoadParserModule(self, parser_module_file_name):
@@ -557,9 +565,9 @@ class DRMKeysProvisioningServer:
       The loaded parser module on success.
 
     Raises:
-      Exception if failed, see imp.load_source()'s doc for what could be raised.
+      Exception if failed, see importlib's doc for what could be raised.
     """
-    return imp.load_source(
+    return self._LoadModuleFromSource(
         'parser_module', os.path.join(PARSERS_DIR, parser_module_file_name))
 
   def _FetchServerKeyFingerprint(self):
