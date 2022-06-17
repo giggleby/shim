@@ -37,6 +37,15 @@ To run this test on DUT, add a test item in the test list::
       ]
     }
   }
+
+To disconnect to all WiFi services.::
+
+  {
+    "pytest_name": "wireless_connect",
+    "args": {
+      "service_name": []
+    }
+  }
 """
 
 import re
@@ -79,9 +88,15 @@ class WirelessConnectTest(test_case.TestCase):
     SSID_RE = re.compile('SSID: (.*)$', re.MULTILINE)
     ssid_list = [service.get('ssid') for service in services]
     for _ in range(self.args.retries):
-      result = self._dut.CheckOutput(['iw', 'dev', self._device_name, 'link'])
-      match = SSID_RE.search(result)
-      if match and match.group(1) in ssid_list:
-        self.PassTask()
+      result = self._dut.CheckOutput(['iw', 'dev', self._device_name, 'link'],
+                                     log=True)
+      if ssid_list:
+        match = SSID_RE.search(result)
+        if match and match.group(1) in ssid_list:
+          self.PassTask()
+      else:
+        if result.startswith('Not connected.'):
+          self.PassTask()
+
       self.Sleep(self.args.sleep_interval)
     self.FailTask('Reach maximum retries.')

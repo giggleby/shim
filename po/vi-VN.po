@@ -3813,6 +3813,10 @@ msgid "Wireless Charger"
 msgstr "Sạc không dây"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Disconnect from wireless networks"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Write HWID"
 msgstr "Mã phần cứng"
 

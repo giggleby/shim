@@ -1469,6 +1469,13 @@
         "release_instruction": "i18n! Remove peripheral from charging port"
       }
     },
+    "WirelessDisconnect": {
+      "pytest_name": "wireless_connect",
+      "label": "Disconnect from wireless networks",
+      "args": {
+        "service_name": []
+      }
+    },
     "WirelessRadiotap": {
       "pytest_name": "wireless_antenna",
       "exclusive_resources": [
