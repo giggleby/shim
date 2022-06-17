@@ -13,13 +13,15 @@ import argparse
 import ast
 from distutils import sysconfig
 import functools
-import imp
+import importlib.util
 import json
 import multiprocessing
 import os
+import os.path
 import re
 import subprocess
 import sys
+from typing import NamedTuple, Optional, Sequence
 
 import yaml
 
@@ -32,9 +34,12 @@ CONFIG_GROUP_PATTERN = re.compile(r'^<([^<>].*)>$')
 FACTORY_DIR = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
 PY_BASE_DIR = os.path.join(FACTORY_DIR, 'py')
 PY_PKG_BASE_DIR = os.path.join(FACTORY_DIR, 'py_pkg', 'cros', 'factory')
+PY_PKG_ROOT_DIR = os.path.join(FACTORY_DIR, 'py_pkg')
 
 STANDARD_LIB_DIR = sysconfig.get_python_lib(standard_lib=True) + '/'
 SITE_PACKAGES_DIR = sysconfig.get_python_lib(standard_lib=False) + '/'
+
+_KNOWN_STD_LIB_EXCEPTIONS = frozenset(['zipimport'])
 
 
 class ImportCollector(ast.NodeVisitor):
@@ -106,38 +111,80 @@ def GuessModule(filename):
   return None
 
 
-def FindModule(name, paths):
-  """Wrapper for imp.find_module, that returns (pathname, import_type)."""
+class _ModuleSpec(NamedTuple):
+  is_builtin: bool
+  origin: Optional[str] = None
+  submodule_search_locations: Optional[Sequence[str]] = None
+
+
+def FindModuleSpec(name, paths) -> Optional[_ModuleSpec]:
+  """Wrapper for importlib.util.find_spec, that returns the module spec."""
+
+  if name in sys.builtin_module_names:
+    # (Python 3.6) There are exceptions where some modules in
+    # sys.builtin_module_names but the origin of module spec is empty.  (e.g.
+    # sys, _imp, builtins).  Therefore we don't use spec.origin == 'built-in' as
+    # the builtin check.
+    return _ModuleSpec(True)
+
+  # importlib.util.find_spec supports recursively import for multi-level modules
+  # like x.y.z while importlib.machineary.PathFinder.find_spec does not.
+  # However, importlib.util.find_spec does not support custom paths to search
+  # modules, and we have to temporarily modify sys.path to make the lookup work.
   old_sys_path = list(sys.path)
   sys.path = paths
   try:
-    # We need to modify sys.path instead of passing paths to argument of
-    # find_module, since otherwise the builtin modules won't be found.
-    fp, pathname, description = imp.find_module(name)
-    if fp is not None:
-      fp.close()
-    return pathname, description[2]
+    try:
+      spec = importlib.util.find_spec(name)
+    except ModuleNotFoundError:
+      # Raised when trying to find spec for x.y but cannot find the
+      # module/package x.
+      # e.g. importlib.util.find_spec('nosuchpackage.module')
+      return None
+    if spec is None:
+      # Cannot get the spec of this module from given paths.
+      # e.g. importlib.util.find_spec('nosuchpackageormodule')
+      return None
+    origin = spec.origin
+    if spec.submodule_search_locations:  # The name is a package.
+      if not origin:
+        # Python 3.9 does not set origin = 'namespace' for namespace packages.
+        origin = 'namespace'
+      return _ModuleSpec(False, origin, list(spec.submodule_search_locations))
+    # The name is a module.
+    return _ModuleSpec(False, origin)
   finally:
     sys.path = old_sys_path
 
 
-def GuessIsBuiltin(module):
-  """Guess if a module is builtin module for Python.
+def GuessIsBuiltinOrStdlib(module):
+  """Guess if a module is builtin or standard lib module for Python.
 
-  A module is a builtin module for Python if either it's import type is
-  imp.C_BUILTIN, or it's module path is inside standard library directory, and
-  not inside site packages directory.
+  A module is a builtin module for Python if the module name is in
+  sys.builtin_module_names.  For standard library check, the origin of the
+  module spec should be under standard library directory but not under site
+  packages directory.
   """
-  top_module = module.split('.')[0]
-  try:
-    path, module_type = FindModule(top_module, sys.path)
-    if (module_type == imp.C_BUILTIN or
-        (path.startswith(STANDARD_LIB_DIR) and
-         not path.startswith(SITE_PACKAGES_DIR))):
-      return True
+  top_module = module.partition('.')[0]
+  if top_module in _KNOWN_STD_LIB_EXCEPTIONS:
+    # e.g. (Python3.8) The origin of 'zipimport' module spec is set to 'frozen'
+    # which we could not determine if it's a stdlib or not.
+    return True
+
+  module_spec = FindModuleSpec(top_module, sys.path)
+  if module_spec is None:  # Cannot import this module from sys.path
     return False
-  except Exception:
-    return False
+  if module_spec.is_builtin:
+    return True
+  # TODO: The stdlib check could be replaced with sys.stdlib_module_names check
+  # in Python 3.10.
+
+  # On some environment, the origin might be set as relative paths like
+  # /usr/lib/python-exec/python3.6/../../../lib64/python3.6/os.py, so we have to
+  # normalize it first.
+  origin = os.path.normpath(module_spec.origin)
+  return origin.startswith(
+      STANDARD_LIB_DIR) and not origin.startswith(SITE_PACKAGES_DIR)
 
 
 def GetSysPathInDir(file_dir, additional_script=''):
@@ -163,6 +210,7 @@ def GetImportList(filename, module_name):
   """Get a list of imported modules of the file."""
   file_dir = os.path.dirname(filename)
   current_sys_path = GetSysPathInDir(file_dir)
+  current_sys_path.append(PY_PKG_ROOT_DIR)
   import_list = []
 
   with open(filename, 'r', encoding='utf8') as fin:
@@ -174,7 +222,6 @@ def GetImportList(filename, module_name):
 
   for item in collector.import_list:
     module = item['module']
-    module_subpaths = module.split('.')
     import_item = item['import']
 
     if import_item is None:
@@ -186,35 +233,13 @@ def GetImportList(filename, module_name):
     else:
       # from x.y.z import foo
       # Try to import x.y.z to see if foo is a method or a module.
-      import_paths = current_sys_path
-      final_module = module
 
-      if item['level'] >= 1:
-        # relative import, resolve the correct import path and module name.
-        path = filename
-        final_module = module_name
-        for unused_i in range(item['level']):
-          path = os.path.dirname(path)
-          final_module, unused_sep, unused_tail = final_module.rpartition('.')
-        import_paths = [path]
-        if module:
-          final_module = final_module + '.' + module
+      # Resolve relative packages.
+      final_module = importlib.util.resolve_name('.' * item['level'] + module,
+                                                 module_name.rpartition('.')[0])
 
-      try:
-        module_subpaths.append(import_item)
-        for idx, subpath in enumerate(module_subpaths):
-          module_path, module_type = FindModule(subpath, import_paths)
-          if (idx != len(module_subpaths) - 1 and
-              module_type != imp.PKG_DIRECTORY):
-            # We successfully imported something that is not package on non-last
-            # part, so the last part is definitely not a module.
-            import_is_module = False
-            break
-          import_paths = [module_path]
-        else:
-          # All imports goes well, the last part is a module.
-          import_is_module = True
-      except ImportError:
+      module_spec = FindModuleSpec(final_module, current_sys_path)
+      if module_spec is None:
         # if import failed at any point, make some educated guess on whether
         # the last part is a module or method.
         # This can happen for external library dependency.
@@ -223,6 +248,13 @@ def GetImportList(filename, module_name):
         # functions or constants), underscore (private / protected members) or
         # '*' (wildcard import), "import_is_module" will be False.
         import_is_module = import_item[0].islower()
+      elif not module_spec.submodule_search_locations:
+        # final_module is not a package
+        import_is_module = False
+      else:
+        import_item_spec = FindModuleSpec(
+            import_item, module_spec.submodule_search_locations)
+        import_is_module = import_item_spec is not None
 
       if import_is_module:
         final_module = final_module + '.' + import_item
@@ -375,7 +407,7 @@ def Check(filename, rules):
       raise ValueError("%s is not in factory Python directory." % filename)
 
     import_list = GetImportList(filename, module_name)
-    import_list = [x for x in import_list if not GuessIsBuiltin(x)]
+    import_list = [x for x in import_list if not GuessIsBuiltinOrStdlib(x)]
 
     bad_imports = CheckDependencyList(rules, module_name, import_list)
     if bad_imports:
