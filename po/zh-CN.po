@@ -3776,6 +3776,10 @@ msgid "Wireless Charger"
 msgstr "无线充电"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Disconnect from wireless networks"
+msgstr "断开无线网络"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Write HWID"
 msgstr "硬体代号"
 
