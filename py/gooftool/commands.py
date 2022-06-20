@@ -62,6 +62,14 @@ _has_fpmcu = None
 WIPE_IN_PLACE = 'wipe_in_place'
 
 
+_project_cmd_arg = CmdArg('--project', metavar='PROJECT', default=None,
+                          help='Project name to test.')
+
+_hwdb_path_cmd_arg = CmdArg('--hwdb_path', metavar='PATH',
+                            default=hwid_utils.GetDefaultDataPath(),
+                            help='Path to the HWID database.')
+
+
 def GetGooftool(options):
   global _global_gooftool  # pylint: disable=global-statement
 
@@ -72,8 +80,14 @@ def GetGooftool(options):
         hwdb_path = getattr(options, 'hwdb_path', None)
         _global_gooftool = Gooftool(hwid_version=3, project=project,
                                     hwdb_path=hwdb_path)
-
   return _global_gooftool
+
+# Define __args__ to make it easier to propagate the arguments
+GetGooftool.__args__ = (
+    _hwdb_path_cmd_arg,
+    _project_cmd_arg,
+)
+
 
 def HasFpmcu():
   global _has_fpmcu  # pylint: disable=global-statement
@@ -92,6 +106,20 @@ def HasFpmcu():
 
   return _has_fpmcu
 
+
+_waive_list_cmd_arg = CmdArg(
+    '--waive_list', nargs='*', default=[], metavar='SUBCMD',
+    help=('A list of waived checks, separated by whitespace. '
+          'Each item should be a sub-command of gooftool. '
+          'e.g. "gooftool verify --waive_list verify_tpm clear_gbb_flags".'))
+
+_skip_list_cmd_arg = CmdArg(
+    '--skip_list', nargs='*', default=[], metavar='SUBCMD',
+    help=('A list of skipped checks, separated by whitespace. '
+          'Each item should be a sub-command of gooftool. '
+          'e.g. "gooftool verify --skip_list verify_tpm clear_gbb_flags".'))
+
+
 def Command(cmd_name, *args, **kwargs):
   """Decorator for commands in gooftool.
 
@@ -99,6 +127,8 @@ def Command(cmd_name, *args, **kwargs):
   can be waived during `gooftool finalize` or `gooftool verify` using
   --waive_list or --skip_list option.
   """
+  args = args + (_skip_list_cmd_arg, _waive_list_cmd_arg)
+
   def Decorate(fun):
 
     @functools.wraps(fun)
@@ -120,12 +150,14 @@ def Command(cmd_name, *args, **kwargs):
           else:
             raise
 
-    return argparse_utils.Command(cmd_name, *args, **kwargs)(
+    wrapped = argparse_utils.Command(cmd_name, *args, **kwargs)(
         CommandWithWaiveSkipCheck)
+    wrapped.__args__ = args
+    return wrapped
   return Decorate
 
 
-@Command('get_release_fs_type')
+@Command('get_release_fs_type', *GetGooftool.__args__)
 def GetReleaseFSType(options):
   """Get the FS type of the stateful partition of the release image."""
 
@@ -135,8 +167,10 @@ def GetReleaseFSType(options):
     print('Release image has EXT4 stateful partition.')
 
 
-@Command('write_hwid',
-         CmdArg('hwid', metavar='HWID', help='HWID string'))
+@Command(
+    'write_hwid',
+    CmdArg('hwid', metavar='HWID', help='HWID string'),  # this
+    *GetGooftool.__args__)
 def WriteHWID(options):
   """Write specified HWID value into the system BB."""
 
@@ -146,22 +180,13 @@ def WriteHWID(options):
   print('Wrote HWID: %r' % options.hwid)
 
 
-@Command('read_hwid')
+@Command('read_hwid', *GetGooftool.__args__)
 def ReadHWID(options):
   """Read the HWID string from GBB."""
 
   logging.info('reading the hwid string')
   print(GetGooftool(options).ReadHWID())
 
-
-_project_cmd_arg = CmdArg(
-    '--project', metavar='PROJECT',
-    default=None, help='Project name to test.')
-
-_hwdb_path_cmd_arg = CmdArg(
-    '--hwdb_path', metavar='PATH',
-    default=hwid_utils.GetDefaultDataPath(),
-    help='Path to the HWID database.')
 
 # TODO(yhong): Replace this argument with `--hwid-material-file` when
 # `cros.factory.hwid.v3.hwid_utils` provides methods to parse such file.
@@ -254,18 +279,6 @@ _keep_developer_mode_flag_after_clobber_state_cmd_arg = CmdArg(
     action='store_true', default=None,
     help='After clobber-state, do not delete .developer_mode')
 
-_waive_list_cmd_arg = CmdArg(
-    '--waive_list', nargs='*', default=[], metavar='SUBCMD',
-    help='A list of waived checks, separated by whitespace. '
-         'Each item should be a sub-command of gooftool. '
-         'e.g. "gooftool verify --waive_list verify_tpm clear_gbb_flags".')
-
-_skip_list_cmd_arg = CmdArg(
-    '--skip_list', nargs='*', default=[], metavar='SUBCMD',
-    help='A list of skipped checks, separated by whitespace. '
-         'Each item should be a sub-command of gooftool. '
-         'e.g. "gooftool verify --skip_list verify_tpm clear_gbb_flags".')
-
 _test_umount_cmd_arg = CmdArg(
     '--test_umount', action='store_true',
     help='(For testing only) Only umount rootfs and stateful partition '
@@ -306,8 +319,11 @@ _is_reference_board_cmd_arg = CmdArg(
     '--is_reference_board', action='store_true', default=False,
     help='Indicating this project is reference board.')
 
+_fast_cmd_arg = CmdArg('--fast', action='store_true',
+                       help='use non-secure but faster wipe method.')
 
-@Command('verify_dlc_images')
+
+@Command('verify_dlc_images', *GetGooftool.__args__)
 def VerifyDLCImages(options):
   """Verify the hash of the factory installed DLC."""
   return GetGooftool(options).VerifyDLCImages()
@@ -315,30 +331,33 @@ def VerifyDLCImages(options):
 
 @Command(
     'verify_ec_key',
-    _ec_pubkey_path_cmd_arg,
-    _ec_pubkey_hash_cmd_arg)
+    _ec_pubkey_path_cmd_arg,  # this
+    _ec_pubkey_hash_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifyECKey(options):
   """Verify EC key."""
   return GetGooftool(options).VerifyECKey(
       options.ec_pubkey_path, options.ec_pubkey_hash)
 
 
-@Command('verify_fp_key')
+@Command('verify_fp_key', *GetGooftool.__args__)
 def VerifyFpKey(options):
   """Verify fingerprint firmware key."""
   return GetGooftool(options).VerifyFpKey()
 
 
-@Command('verify_keys',
-         _release_rootfs_cmd_arg,
-         _firmware_path_cmd_arg)
+@Command(
+    'verify_keys',
+    _release_rootfs_cmd_arg,  # this
+    _firmware_path_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifyKeys(options):
   """Verify keys in firmware and SSD match."""
   return GetGooftool(options).VerifyKeys(
       options.release_rootfs, options.firmware_path)
 
 
-@Command('set_fw_bitmap_locale')
+@Command('set_fw_bitmap_locale', *GetGooftool.__args__)
 def SetFirmwareBitmapLocale(options):
   """Use VPD locale value to set firmware bitmap default language."""
 
@@ -347,9 +366,11 @@ def SetFirmwareBitmapLocale(options):
                index, locale)
 
 
-@Command('verify_system_time',
-         _release_rootfs_cmd_arg,
-         _rma_mode_cmd_arg)
+@Command(
+    'verify_system_time',
+    _release_rootfs_cmd_arg,  # this
+    _rma_mode_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifySystemTime(options):
   """Verify system time is later than release filesystem creation time."""
 
@@ -357,37 +378,41 @@ def VerifySystemTime(options):
                                                rma_mode=options.rma_mode)
 
 
-@Command('verify_rootfs',
-         _release_rootfs_cmd_arg)
+@Command(
+    'verify_rootfs',
+    _release_rootfs_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifyRootFs(options):
   """Verify rootfs on SSD is valid by checking hash."""
 
   return GetGooftool(options).VerifyRootFs(options.release_rootfs)
 
 
-@Command('verify_tpm')
+@Command('verify_tpm', *GetGooftool.__args__)
 def VerifyTPM(options):
   """Verify TPM is cleared."""
 
   return GetGooftool(options).VerifyTPM()
 
 
-@Command('verify_me_locked')
+@Command('verify_me_locked', *GetGooftool.__args__)
 def VerifyManagementEngineLocked(options):
   """Verify Management Engine is locked."""
 
   return GetGooftool(options).VerifyManagementEngineLocked()
 
 
-@Command('verify_switch_wp',
-         _no_ectool_cmd_arg)
+@Command(
+    'verify_switch_wp',
+    _no_ectool_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifyWPSwitch(options):
   """Verify hardware write protection switch is enabled."""
 
   GetGooftool(options).VerifyWPSwitch(options.has_ectool)
 
 
-@Command('verify_vpd')
+@Command('verify_vpd', *GetGooftool.__args__)
 def VerifyVPD(options):
   """Verify that VPD values are properly set.
 
@@ -399,8 +424,10 @@ def VerifyVPD(options):
   return GetGooftool(options).VerifyVPD()
 
 
-@Command('verify_release_channel',
-         _enforced_release_channels_cmd_arg)
+@Command(
+    'verify_release_channel',
+    _enforced_release_channels_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifyReleaseChannel(options):
   """Verify that release image channel is correct.
 
@@ -412,26 +439,32 @@ def VerifyReleaseChannel(options):
       options.enforced_release_channels)
 
 
-@Command('verify_rlz_code')
+@Command('verify_rlz_code', *GetGooftool.__args__)
 def VerifyRLZCode(options):
   """Verify RLZ code is not 'ZZCR' in/after EVT."""
   return GetGooftool(options).VerifyRLZCode()
 
-@Command('verify_cros_config')
+
+@Command('verify_cros_config', *GetGooftool.__args__)
 def VerifyCrosConfig(options):
   """Verify entries in cros config make sense."""
   return GetGooftool(options).VerifyCrosConfig()
 
 
-@Command('verify-sn-bits',
-         _enable_zero_touch_cmd_arg)
+@Command(
+    'verify-sn-bits',
+    _enable_zero_touch_cmd_arg,  # this
+    *GetGooftool.__args__)
 def VerifySnBits(options):
   if options.enable_zero_touch:
     GetGooftool(options).VerifySnBits()
 
 
-@Command('verify_cbi_eeprom_wp_status', _cbi_eeprom_wp_status_cmd_arg,
-         _use_generic_tpm2_arg)
+@Command(
+    'verify_cbi_eeprom_wp_status',
+    _cbi_eeprom_wp_status_cmd_arg,  # this
+    _use_generic_tpm2_arg,  # this
+    *GetGooftool.__args__)
 def VerifyCBIEEPROMWPStatus(options):
   """Verify CBI EEPROM status.
 
@@ -600,7 +633,7 @@ def LockHPS(options):
   hps.EnableWriteProtection()
 
 
-@Command('clear_gbb_flags')
+@Command('clear_gbb_flags', *GetGooftool.__args__)
 def ClearGBBFlags(options):
   """Zero out the GBB flags, in preparation for transition to release state.
 
@@ -612,35 +645,32 @@ def ClearGBBFlags(options):
   event_log.Log('clear_gbb_flags', old_value=gbb_flags_in_factory)
 
 
-@Command('clear_factory_vpd_entries')
+@Command('clear_factory_vpd_entries', *GetGooftool.__args__)
 def ClearFactoryVPDEntries(options):
   """Clears factory.* items in the RW VPD."""
   entries = GetGooftool(options).ClearFactoryVPDEntries()
   event_log.Log('clear_factory_vpd_entries', entries=FilterDict(entries))
 
 
-@Command('generate_stable_device_secret')
+@Command('generate_stable_device_secret', *GetGooftool.__args__)
 def GenerateStableDeviceSecret(options):
   """Generates a fresh stable device secret and stores it in the RO VPD."""
   GetGooftool(options).GenerateStableDeviceSecret()
   event_log.Log('generate_stable_device_secret')
 
 
-@Command('cr50_set_ro_hash')
+@Command('cr50_set_ro_hash', *GetGooftool.__args__)
 def Cr50SetROHash(options):
   GetGooftool(options).Cr50SetROHash()
   event_log.Log('cr50_set_ro_hash')
 
-@Command('cr50_set_sn_bits_and_board_id',
-         _rma_mode_cmd_arg)
-def Cr50SetSnBitsAndBoardId(options):
-  """Deprecated: use Cr50WriteFlashInfo instead."""
-  logging.warning('This function is renamed to Cr50WriteFlashInfo')
-  Cr50WriteFlashInfo(options)
 
-
-@Command('cr50_write_flash_info', _rma_mode_cmd_arg, _mlb_mode_cmd_arg,
-         _enable_zero_touch_cmd_arg)
+@Command(
+    'cr50_write_flash_info',
+    _rma_mode_cmd_arg,  # this
+    _mlb_mode_cmd_arg,  # this
+    _enable_zero_touch_cmd_arg,  # this
+    *GetGooftool.__args__)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
@@ -649,8 +679,18 @@ def Cr50WriteFlashInfo(options):
   event_log.Log('cr50_write_flash_info')
 
 
-@Command('cr50_smt_write_flash_info', _enable_zero_touch_cmd_arg,
-         _rma_mode_cmd_arg)
+@Command('cr50_set_sn_bits_and_board_id', *Cr50WriteFlashInfo.__args__)
+def Cr50SetSnBitsAndBoardId(options):
+  """Deprecated: use Cr50WriteFlashInfo instead."""
+  logging.warning('This function is renamed to Cr50WriteFlashInfo')
+  Cr50WriteFlashInfo(options)
+
+
+@Command(
+    'cr50_smt_write_flash_info',
+    _enable_zero_touch_cmd_arg,  # this
+    _rma_mode_cmd_arg,  # this
+    *GetGooftool.__args__)
 def Cr50SMTWriteFlashInfo(options):
   """Call this function to set the cr50 fields in SMT stage.
 
@@ -663,14 +703,23 @@ def Cr50SMTWriteFlashInfo(options):
   event_log.Log('cr50_smt_write_flash_info')
 
 
-@Command('cr50_disable_factory_mode')
+@Command('cr50_disable_factory_mode', *GetGooftool.__args__)
 def Cr50DisableFactoryMode(options):
   """Reset Cr50 state back to default state after RMA."""
   return GetGooftool(options).Cr50DisableFactoryMode()
 
 
-@Command('cr50_finalize', _no_write_protect_cmd_arg, _rma_mode_cmd_arg,
-         _mlb_mode_cmd_arg, _enable_zero_touch_cmd_arg, _use_generic_tpm2_arg)
+@Command(
+    'cr50_finalize',
+    _no_write_protect_cmd_arg,  # this
+    _rma_mode_cmd_arg,  # this
+    _mlb_mode_cmd_arg,  # this
+    _use_generic_tpm2_arg,  # this
+    *Cr50DisableFactoryMode.__args__,
+    *Cr50SetROHash.__args__,
+    *Cr50WriteFlashInfo.__args__,
+    *GetGooftool.__args__,
+)
 def Cr50Finalize(options):
   """Finalize steps for cr50."""
 
@@ -699,10 +748,10 @@ def Cr50Finalize(options):
     Cr50DisableFactoryMode(options)
 
 
-@Command('enable_release_partition',
-         CmdArg('--release_rootfs',
-                help=('path to the release rootfs device. If not specified, '
-                      'the default (5th) partition will be used.')))
+@Command(
+    'enable_release_partition',
+    _release_rootfs_cmd_arg,  # this
+    *GetGooftool.__args__)
 def EnableReleasePartition(options):
   """Enables a release image partition on the disk."""
   GetGooftool(options).EnableReleasePartition(options.release_rootfs)
@@ -710,14 +759,13 @@ def EnableReleasePartition(options):
 
 @Command(
     WIPE_IN_PLACE,
-    CmdArg('--fast', action='store_true',
-           help='use non-secure but faster wipe method.'),
-    _shopfloor_url_args_cmd_arg,
-    _skip_list_cmd_arg,
-    _station_ip_cmd_arg,
-    _station_port_cmd_arg,
-    _wipe_finish_token_cmd_arg,
-    _test_umount_cmd_arg,
+    _fast_cmd_arg,  # this
+    _shopfloor_url_args_cmd_arg,  # this
+    _station_ip_cmd_arg,  # this
+    _station_port_cmd_arg,  # this
+    _wipe_finish_token_cmd_arg,  # this
+    _test_umount_cmd_arg,  # this
+    *GetGooftool.__args__,
 )
 def WipeInPlace(options):
   """Start factory wipe directly without reboot."""
@@ -729,18 +777,21 @@ def WipeInPlace(options):
                                    options.wipe_finish_token,
                                    options.test_umount)
 
-@Command('wipe_init',
-         CmdArg('--wipe_args', help='arguments for clobber-state'),
-         CmdArg('--state_dev', help='path to stateful partition device'),
-         CmdArg('--root_disk', help='path to primary device'),
-         CmdArg('--old_root', help='path to old root'),
-         _shopfloor_url_args_cmd_arg,
-         _release_rootfs_cmd_arg,
-         _station_ip_cmd_arg,
-         _station_port_cmd_arg,
-         _wipe_finish_token_cmd_arg,
-         _keep_developer_mode_flag_after_clobber_state_cmd_arg,
-         _test_umount_cmd_arg)
+
+@Command(
+    'wipe_init',
+    CmdArg('--wipe_args', help='arguments for clobber-state'),  # this
+    CmdArg('--state_dev', help='path to stateful partition device'),  # this
+    CmdArg('--root_disk', help='path to primary device'),  # this
+    CmdArg('--old_root', help='path to old root'),  # this
+    _shopfloor_url_args_cmd_arg,  # this
+    _release_rootfs_cmd_arg,  # this
+    _station_ip_cmd_arg,  # this
+    _station_port_cmd_arg,  # this
+    _wipe_finish_token_cmd_arg,  # this
+    _keep_developer_mode_flag_after_clobber_state_cmd_arg,  # this
+    _test_umount_cmd_arg,  # this
+    *GetGooftool.__args__)
 def WipeInit(options):
   GetGooftool(options).WipeInit(
       options.wipe_args,
@@ -757,24 +808,78 @@ def WipeInit(options):
 
 
 @Command(
+    'verify_hwid',
+    _probe_results_cmd_arg,  # this
+    _hwid_cmd_arg,  # this
+    _hwid_run_vpd_cmd_arg,  # this
+    _hwid_vpd_data_file_cmd_arg,  # this
+    _rma_mode_cmd_arg,  # this
+    *GetGooftool.__args__)
+def VerifyHWID(options):
+  """A simple wrapper that calls out to HWID utils to verify version 3 HWID.
+
+  This is mainly for Gooftool to verify v3 HWID during finalize.  For testing
+  and development purposes, please use `hwid` command.
+  """
+  ignore_errors = False
+  if hps_utils.HasHPS():
+    # We cannot probe HPS after HWWP is enabled.
+    try:
+      # If has_ectool is set, the VerifyWPSwitch will test SWWP (firmware
+      # software write protection). Skip testing SWWP with has_ectool=False.
+      GetGooftool(options).VerifyWPSwitch(has_ectool=False)
+    except core.HWWPError:
+      logging.info('HWWP is disabled as expected.')
+    else:
+      logging.info(
+          'Ignore HWID verification failure, because HPS cannot be probed when'
+          ' HWWP is enabled.')
+      ignore_errors = True
+
+  database = GetGooftool(options).db
+
+  encoded_string = options.hwid or GetGooftool(options).ReadHWID()
+
+  probed_results = hwid_utils.GetProbedResults(infile=options.probe_results)
+  device_info = hwid_utils.GetDeviceInfo()
+  vpd_data = hwid_utils.GetVPDData(run_vpd=options.hwid_run_vpd,
+                                   infile=options.hwid_vpd_data_file)
+
+  event_log.Log('probed_results', probed_results=FilterDict(probed_results))
+
+  try:
+    hwid_utils.VerifyHWID(database, encoded_string, probed_results, device_info,
+                          vpd_data, options.rma_mode)
+  except Exception:
+    # TODO(cyueh) Make this only accept HPS HWID validation error.
+    if not ignore_errors:
+      raise
+    logging.exception(
+        'Failed to verify HWID but it is fine since we believe that the device '
+        'passed VerifyHWID once before Cr50Finalize.')
+
+  event_log.Log('verified_hwid', hwid=encoded_string)
+
+
+@Command(
     'verify_before_cr50_finalize',
-    _hwdb_path_cmd_arg,  # GetGooftool
-    _project_cmd_arg,  # GetGooftool
-    _probe_results_cmd_arg,  # VerifyHWID
-    _hwid_cmd_arg,  # VerifyHWID
-    _hwid_run_vpd_cmd_arg,  # VerifyHWID
-    _hwid_vpd_data_file_cmd_arg,  # VerifyHWID
     _no_write_protect_cmd_arg,  # this
-    _rma_mode_cmd_arg,  # VerifyHWID, VerifySystemTime
     _has_ec_pubkey_cmd_arg,  # this
-    _ec_pubkey_path_cmd_arg,  # VerifyECKey
-    _ec_pubkey_hash_cmd_arg,  # VerifyECKey
-    _release_rootfs_cmd_arg,  # VerifyKeys, VerifySystemTime, VerifyRootFs
-    _firmware_path_cmd_arg,  # VerifyKeys
-    _enforced_release_channels_cmd_arg,  # VerifyReleaseChannel
-    _waive_list_cmd_arg,  # CommandWithWaiveSkipCheck
-    _skip_list_cmd_arg,  # CommandWithWaiveSkipCheck
     _is_reference_board_cmd_arg,  # this
+    *GetGooftool.__args__,
+    *VerifyCrosConfig.__args__,
+    *VerifyDLCImages.__args__,
+    *VerifyECKey.__args__,
+    *VerifyFpKey.__args__,
+    *VerifyHWID.__args__,
+    *VerifyKeys.__args__,
+    *VerifyManagementEngineLocked.__args__,
+    *VerifyRLZCode.__args__,
+    *VerifyReleaseChannel.__args__,
+    *VerifyRootFs.__args__,
+    *VerifySystemTime.__args__,
+    *VerifyTPM.__args__,
+    *VerifyVPD.__args__,
 )
 def VerifyBeforeCr50Finalize(options):
   """Verifies if the device is ready for finalization before Cr50Finalize.
@@ -804,15 +909,12 @@ def VerifyBeforeCr50Finalize(options):
 
 @Command(
     'verify_after_cr50_finalize',
-    _hwdb_path_cmd_arg,  # GetGooftool
-    _project_cmd_arg,  # GetGooftool
     _no_write_protect_cmd_arg,  # this
-    _waive_list_cmd_arg,  # CommandWithWaiveSkipCheck
-    _skip_list_cmd_arg,  # CommandWithWaiveSkipCheck
-    _no_ectool_cmd_arg,  # VerifyWPSwitch
-    _enable_zero_touch_cmd_arg,  # VerifySnBits
-    _cbi_eeprom_wp_status_cmd_arg,  # VerifyCBIEEPROMWPStatus
-    _use_generic_tpm2_arg,  # this, VerifyCBIEEPROMWPStatus
+    _use_generic_tpm2_arg,  # this
+    *GetGooftool.__args__,
+    *VerifyCBIEEPROMWPStatus.__args__,
+    *VerifySnBits.__args__,
+    *VerifyWPSwitch.__args__,
 )
 def VerifyAfterCr50Finalize(options):
   """Verifies if the device is ready for finalization after Cr50Finalize.
@@ -829,12 +931,13 @@ def VerifyAfterCr50Finalize(options):
 
 
 @Command('untar_stateful_files')
-def UntarStatefulFiles(unused_options):
+def UntarStatefulFiles(options):
   """Untars stateful files from stateful_files.tar.xz on stateful partition.
 
   If that file does not exist (which should only be R30 and earlier),
   this is a no-op.
   """
+  del options
   # Path to stateful partition on device.
   device_stateful_path = '/mnt/stateful_partition'
   tar_file = os.path.join(device_stateful_path, 'stateful_files.tar.xz')
@@ -864,7 +967,7 @@ def LogSourceHashes(options):
         **file_utils.HashSourceTree(os.path.join(paths.FACTORY_DIR, 'py')))
 
 
-@Command('log_system_details')
+@Command('log_system_details', *GetGooftool.__args__)
 def LogSystemDetails(options):
   """Write miscellaneous system details to the event log."""
 
@@ -1016,43 +1119,47 @@ def UploadReport(options):
     raise Error('unknown report upload method %r' % method)
 
 
+@Command('fpmcu_initialize_entropy', *GetGooftool.__args__)
+def FpmcuInitializeEntropy(options):
+  """Initialize entropy of FPMCU."""
+
+  if HasFpmcu():
+    GetGooftool(options).FpmcuInitializeEntropy()
+  else:
+    logging.info('No FPS on this board.')
+
+
 @Command(
     'finalize',
-    CmdArg('--fast', action='store_true',
-           help='use non-secure but faster wipe method.'),
-    _no_ectool_cmd_arg,
-    _shopfloor_url_args_cmd_arg,
-    _hwdb_path_cmd_arg,
-    _upload_method_cmd_arg,
-    _upload_max_retry_times_arg,
-    _upload_retry_interval_arg,
-    _upload_allow_fail_arg,
-    _add_file_cmd_arg,
-    _probe_results_cmd_arg,
-    _hwid_cmd_arg,
-    _hwid_run_vpd_cmd_arg,
-    _hwid_vpd_data_file_cmd_arg,
-    _no_write_protect_cmd_arg,
-    _rma_mode_cmd_arg,
-    _mlb_mode_cmd_arg,
-    _cros_core_cmd_arg,
-    _has_ec_pubkey_cmd_arg,
-    _ec_pubkey_path_cmd_arg,
-    _ec_pubkey_hash_cmd_arg,
-    _release_rootfs_cmd_arg,
-    _firmware_path_cmd_arg,
-    _enforced_release_channels_cmd_arg,
-    _station_ip_cmd_arg,
-    _station_port_cmd_arg,
-    _wipe_finish_token_cmd_arg,
-    _rlz_embargo_end_date_offset_cmd_arg,
-    _waive_list_cmd_arg,
-    _skip_list_cmd_arg,
-    _no_generate_mfg_date_cmd_arg,
-    _enable_zero_touch_cmd_arg,
-    _cbi_eeprom_wp_status_cmd_arg,
-    _use_generic_tpm2_arg,
-    _is_reference_board_cmd_arg,
+    _fast_cmd_arg,  # this
+    _mlb_mode_cmd_arg,  # this
+    _rma_mode_cmd_arg,  # this
+    _rlz_embargo_end_date_offset_cmd_arg,  # this
+    _no_generate_mfg_date_cmd_arg,  # this
+    _cros_core_cmd_arg,  # this
+    _no_write_protect_cmd_arg,  # this
+    _use_generic_tpm2_arg,  # this
+    _shopfloor_url_args_cmd_arg,  # this
+    _station_ip_cmd_arg,  # this
+    _station_port_cmd_arg,  # this
+    _wipe_finish_token_cmd_arg,  # this
+    _skip_list_cmd_arg,  # this
+    *ClearFactoryVPDEntries.__args__,
+    *ClearGBBFlags.__args__,
+    *Cr50Finalize.__args__,
+    *EnableFwWp.__args__,
+    *FpmcuInitializeEntropy.__args__,
+    *GenerateStableDeviceSecret.__args__,
+    *GetGooftool.__args__,
+    *LockHPS.__args__,
+    *LogSourceHashes.__args__,
+    *LogSystemDetails.__args__,
+    *SetFirmwareBitmapLocale.__args__,
+    *UntarStatefulFiles.__args__,
+    *UploadReport.__args__,
+    *VerifyAfterCr50Finalize.__args__,
+    *VerifyBeforeCr50Finalize.__args__,
+    *VerifyCBIEEPROMWPStatus.__args__,
 )
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
@@ -1128,59 +1235,6 @@ def Finalize(options):
   ExecFactoryPar('gooftool', WIPE_IN_PLACE, *wipe_args)
 
 
-@Command('verify_hwid',
-         _probe_results_cmd_arg,
-         _hwdb_path_cmd_arg,
-         _hwid_cmd_arg,
-         _hwid_run_vpd_cmd_arg,
-         _hwid_vpd_data_file_cmd_arg,
-         _rma_mode_cmd_arg)
-def VerifyHWID(options):
-  """A simple wrapper that calls out to HWID utils to verify version 3 HWID.
-
-  This is mainly for Gooftool to verify v3 HWID during finalize.  For testing
-  and development purposes, please use `hwid` command.
-  """
-  ignore_errors = False
-  if hps_utils.HasHPS():
-    # We cannot probe HPS after HWWP is enabled.
-    try:
-      # If has_ectool is set, the VerifyWPSwitch will test SWWP (firmware
-      # software write protection). Skip testing SWWP with has_ectool=False.
-      GetGooftool(options).VerifyWPSwitch(has_ectool=False)
-    except core.HWWPError:
-      logging.info('HWWP is disabled as expected.')
-    else:
-      logging.info(
-          'Ignore HWID verification failure, because HPS cannot be probed when'
-          ' HWWP is enabled.')
-      ignore_errors = True
-
-  database = GetGooftool(options).db
-
-  encoded_string = options.hwid or GetGooftool(options).ReadHWID()
-
-  probed_results = hwid_utils.GetProbedResults(infile=options.probe_results)
-  device_info = hwid_utils.GetDeviceInfo()
-  vpd_data = hwid_utils.GetVPDData(run_vpd=options.hwid_run_vpd,
-                                   infile=options.hwid_vpd_data_file)
-
-  event_log.Log('probed_results', probed_results=FilterDict(probed_results))
-
-  try:
-    hwid_utils.VerifyHWID(database, encoded_string, probed_results, device_info,
-                          vpd_data, options.rma_mode)
-  except Exception:
-    # TODO(cyueh) Make this only accept HPS HWID validation error.
-    if not ignore_errors:
-      raise
-    logging.exception(
-        'Failed to verify HWID but it is fine since we believe that the device '
-        'passed VerifyHWID once before Cr50Finalize.')
-
-  event_log.Log('verified_hwid', hwid=encoded_string)
-
-
 @Command('get_firmware_hash',
          CmdArg('--file', required=True, metavar='FILE', help='Firmware File.'))
 def GetFirmwareHash(options):
@@ -1193,17 +1247,7 @@ def GetFirmwareHash(options):
     raise Error('File does not exist: %s' % options.file)
 
 
-@Command('fpmcu_initialize_entropy')
-def FpmcuInitializeEntropy(options):
-  """Initialze entropy of FPMCU."""
-
-  if HasFpmcu():
-    GetGooftool(options).FpmcuInitializeEntropy()
-  else:
-    logging.info('No FPS on this board.')
-
-
-@Command('get_smart_amp_info')
+@Command('get_smart_amp_info', *GetGooftool.__args__)
 def GetSmartAmpInfo(options):
   """Get the information about the smart amplifier."""
   speaker_amp, sound_card_init_path, channels = \
@@ -1216,7 +1260,7 @@ def GetSmartAmpInfo(options):
     print('No smart amplifier found on DUT!')
 
 
-@Command('get_logical_block_size')
+@Command('get_logical_block_size', *GetGooftool.__args__)
 def GetLogicalBlockSize(options):
   """Get the logical block size of the primary device on DUT."""
   print('Logical block size:', GetGooftool(options).GetLogicalBlockSize())
