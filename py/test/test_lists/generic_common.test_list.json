@@ -82,6 +82,8 @@
     "__comment_use_generic_tpm2": "If this device is not using Google security chip (H1), set this to true.",
     "use_prepvt_cr50_firmware": false,
     "__comment_use_prepvt_cr50_firmware": "Set this to true if the prepvt cr50 firmware in release image should be used.",
+    "use_prepvt_ti50_firmware": false,
+    "__comment_use_prepvt_ti50_firmware": "Set this to true if the prepvt ti50 firmware in release image should be used.",
     "wireless_services": [
       [
         "antenna_test",
@@ -1438,6 +1440,27 @@
           "SKU_ID"
         ]
       }
+    },
+    "UpdateTi50Firmware": {
+      "inherit": "TestGroup",
+      "label": "Update Ti50 Firmware",
+      "subtests": [
+        {
+          "pytest_name": "update_cr50_firmware",
+          "args": {
+            "firmware_file": "eval! constants.use_prepvt_ti50_firmware and '/opt/google/ti50/firmware/ti50.bin.prepvt' or None",
+            "skip_prepvt_flag_check": "eval! constants.phase != 'PVT'"
+          }
+        },
+        "RebootStep",
+        {
+          "pytest_name": "update_cr50_firmware",
+          "label": "Check Ti50 Firmware Version",
+          "args": {
+            "method": "CHECK_VERSION"
+          }
+        }
+      ]
     },
     "UploadRegCodes": {
       "inherit": "SyncFactoryServer",
