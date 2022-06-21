@@ -29,7 +29,7 @@ def _CronJobHandler(service, method):
                              CONFIG.queue_name)
   path = flask.request.path
   client.create_task(
-      parent, {
+      parent=parent, task={
           'app_engine_http_request': {
               'http_method': 'POST',
               'relative_uri': path.replace('/cron/', '/_ah/stubby/')
@@ -59,9 +59,7 @@ def _CreateApp():
 
 def _InitLogging():
   if CONFIG.cloud_project:  # in App Engine environment
-    client = gc_logging.Client()
-    handler = gc_logging.handlers.AppEngineHandler(client)
-    gc_logging.handlers.setup_logging(handler, log_level=logging.DEBUG)
+    gc_logging.Client().setup_logging(log_level=logging.DEBUG)
     if CONFIG.env == 'staging':
       import googlecloudprofiler  # pylint: disable=import-error
       googlecloudprofiler.start(verbose=3)
