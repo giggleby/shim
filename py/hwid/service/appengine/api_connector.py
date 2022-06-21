@@ -18,7 +18,7 @@ HWID_API_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'
 IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
 
 # Request will be timeout if query too many AVL names at once.
-AVL_NAME_BATCH_SIZE = 100
+AVL_NAME_BATCH_SIZE = 50
 
 
 class HWIDAPIRequestError(Exception):
