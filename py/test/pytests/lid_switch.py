@@ -131,7 +131,7 @@ class LidSwitchTest(test_case.TestCase):
     self._restore_brightness = None
 
   def tearDown(self):
-    self.dispatcher.close()
+    self.dispatcher.Close()
     file_utils.TryUnlink('/run/power_manager/lid_opened')
     if self.fixture:
       self.BFTLid(close=False, in_tear_down=True)

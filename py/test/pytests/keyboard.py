@@ -335,7 +335,7 @@ class KeyboardTest(test_case.TestCase):
   def tearDown(self):
     """Terminates the running process or we'll have trouble stopping the test.
     """
-    self.dispatcher.close()
+    self.dispatcher.Close()
     self.keyboard_device.ungrab()
 
   def GetKeyboardMapping(self):

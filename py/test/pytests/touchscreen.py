@@ -252,7 +252,7 @@ class TouchscreenTest(test_case.TestCase):
 
   def tearDown(self):
     if self._dispatcher is not None:
-      self._dispatcher.close()
+      self._dispatcher.Close()
     if self._device is not None:
       self._device.ungrab()
     self._SetInternalDisplayRotation(-1)

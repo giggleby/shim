@@ -21,7 +21,7 @@ Quick Start:
   dispatcher = evdev_utils.InputDeviceDispatcher(device, monitor.Handler)
   dispatcher.StartDaemon()
   ...
-  dispatcher.close()
+  dispatcher.Close()
   device.ungrab()
 """
 

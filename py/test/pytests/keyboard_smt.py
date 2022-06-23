@@ -87,7 +87,7 @@ class KeyboardSMTTest(test_case.TestCase):
     self.UpdateUI()
 
   def tearDown(self):
-    self.dispatcher.close()
+    self.dispatcher.Close()
     self.event_dev.ungrab()
 
   def UpdateUI(self):

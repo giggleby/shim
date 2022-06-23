@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import asyncore
+import select
+import threading
 
 from cros.factory.utils import process_utils
 
@@ -264,36 +265,47 @@ def DeviceReopen(dev):
   return evdev.InputDevice(dev.fn)
 
 
-class InputDeviceDispatcher(asyncore.file_dispatcher):
-  """Extends asyncore.file_dispatcher to read input device."""
+class InputDeviceDispatcher:
+  """Read events from an input device in a daemon thread.
+
+  For example::
+
+    device = evdev_utils.FindDevice(...)
+    ...
+    dispatcher = evdev_utils.InputDeviceDispatcher(device, event_handler)
+    dispatcher.StartDaemon()
+    ...
+    # When you no longer want to receive events.  Note that this only stops the
+    # event loop, you need to ungrab or close the input device by yourself.
+    dispatcher.Close()
+  """
 
   def __init__(self, device, event_handler):
-    self.device = device
-    self.event_handler = event_handler
-    asyncore.file_dispatcher.__init__(self, device)
+    self._device = device
+    self._fd = self._device.fileno()
+    self._event_handler = event_handler
+    self._should_stop = threading.Event()
 
-  def handle_read(self):
-    # Spec - https://docs.python.org/2/library/asyncore.html mentions about
-    # that recv() may raise socket.error with EAGAIN or EWOULDBLOCK, even
-    # though select.select() or select.poll() has reported the socket ready
-    # for reading.
-    #
-    # We have the similar issue here; the buffer might be still empty when
-    # reading from an input device even though asyncore calls handle_read().
-    # As a result, we call read_one() here because it will return None when
-    # buffer is empty. On the other hand, if we call read() and iterate the
-    # returned generator object then an IOError - EAGAIN might be thrown but
-    # this behavior is not documented so can't leverage on it.
-    while True:
-      event = self.device.read_one()
-      if event is None:
-        break
+  def _Loop(self):
+    _TIMEOUT = 1.0
+    while not self._should_stop.is_set():
+      rlist, _, _ = select.select([self._fd], [], [], _TIMEOUT)
+      if not rlist:
+        continue
 
-      self.event_handler(event)
-
-  def writable(self):
-    return False
+      # Read all available events at once, until there is no events in the
+      # queue.
+      while not self._should_stop.is_set():
+        event = self._device.read_one()
+        if event is None:
+          break
+        self._event_handler(event)
 
   def StartDaemon(self):
     """Start a daemon thread forwarding events to event_handler."""
-    process_utils.StartDaemonThread(target=asyncore.loop)
+    self._should_stop.clear()
+    process_utils.StartDaemonThread(target=self._Loop)
+
+  def Close(self):
+    """Stop the event loop."""
+    self._should_stop.set()
