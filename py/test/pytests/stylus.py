@@ -163,7 +163,7 @@ class StylusTest(test_case.TestCase):
 
   def tearDown(self):
     if self._dispatcher is not None:
-      self._dispatcher.close()
+      self._dispatcher.Close()
     self._device.ungrab()
 
   def runTest(self):

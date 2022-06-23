@@ -90,7 +90,7 @@ class StylusGarageTest(test_case.TestCase):
         self.event_dev, self.event_loop.CatchException(self.HandleEvent))
 
   def tearDown(self):
-    self.dispatcher.close()
+    self.dispatcher.Close()
 
   def HandleEvent(self, event):
     if (event.type == evdev.ecodes.EV_SW and

@@ -89,7 +89,7 @@ class MouseTest(test_case.TestCase):
     process_utils.CheckOutput(['ectool', 'forcelidopen', '1'])
 
   def tearDown(self):
-    self.dispatcher.close()
+    self.dispatcher.Close()
     self.mouse_device.ungrab()
     # Enable lid function.
     process_utils.CheckOutput(['ectool', 'forcelidopen', '0'])

@@ -147,9 +147,9 @@ class TabletModeTest(test_case.TestCase):
       self.AddTask(self.FlipNotebookMode)
 
   def tearDown(self):
-    self.lid_dispatcher.close()
+    self.lid_dispatcher.Close()
     if self.tablet_dispatcher:
-      self.tablet_dispatcher.close()
+      self.tablet_dispatcher.Close()
 
   def HandleSwitchEvent(self, event):
     if event.type == evdev.ecodes.EV_SW and event.code == evdev.ecodes.SW_LID:

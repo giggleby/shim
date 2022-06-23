@@ -187,7 +187,7 @@ class TouchpadTest(test_case.TestCase):
     test.
     """
     if self.dispatcher is not None:
-      self.dispatcher.close()
+      self.dispatcher.Close()
     self.touchpad_device.ungrab()
     # Enable lid function.
     process_utils.CheckOutput(['ectool', 'forcelidopen', '0'])
