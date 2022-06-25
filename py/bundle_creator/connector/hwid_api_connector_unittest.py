@@ -40,7 +40,8 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     mock_google_auth_default.side_effect = _MockGoogleAuthDefault
     mock_response = mock.Mock()
     mock_response.read.return_value = '{}'
-    self._urllib_request.urlopen.return_value = mock_response
+    self._urllib_request.urlopen.return_value.__enter__.return_value = (
+        mock_response)
 
     self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
                                              self._ORIGINAL_REQUESTER)
@@ -64,7 +65,8 @@ class HWIDAPIConnectorTest(unittest.TestCase):
                 'clNumber': cl_number
             }
         }})
-    self._urllib_request.urlopen.return_value = mock_response
+    self._urllib_request.urlopen.return_value.__enter__.return_value = (
+        mock_response)
 
     cl_url = self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
                                                       self._ORIGINAL_REQUESTER)
