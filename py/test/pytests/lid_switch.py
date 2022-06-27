@@ -2,7 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Tests lid switch functionality."""
+"""Tests lid switch functionality.
+
+Description
+-----------
+Test lid switch functionality by listening to lid switch event.
+
+Test Procedure
+--------------
+If a BFT fixture is set:
+- ask the fixture to simulate a lid close event
+- confirm the event is received
+- ask the fixture to simulate a lid open event
+- confirm the event is received
+
+If there is no BFT fixture, the operator should close and open the lid manually.
+
+Dependency
+----------
+- Depends on 'evdev' module to monitor events.
+- If ``ok_audio_path`` is set, depends on audio function to play a sound to
+  indicate the lid close event is received.
+
+Examples
+--------
+``LidSwitch`` is defined in the generic_common test list, it calls this test
+with default arguments.
+"""
 
 import datetime
 import os
@@ -24,7 +50,6 @@ from cros.factory.external import evdev
 
 
 _DEFAULT_TIMEOUT = 30
-_SERIAL_TIMEOUT = 1
 
 _BACKLIGHT_OFF_TIMEOUT = 12
 _TEST_TOLERANCE = 2
