@@ -133,20 +133,28 @@ class DisplayTest(test_case.TestCase):
     static_dir: string of static file directory.
   """
   ARGS = [
-      Arg('items', list,
+      Arg(
+          'items', list,
           'Set items to be shown on screen. Available items are:\n%s\n' %
-          '\n'.join('  * ``"%s"``' % x for x in _ALL_ITEMS),
-          default=['solid-gray-170', 'solid-gray-127', 'solid-gray-63',
-                   'solid-red', 'solid-green', 'solid-blue']),
-      Arg('idle_timeout', int,
+          '\n'.join('  * ``"%s"``' % x for x in _ALL_ITEMS), default=[
+              'solid-gray-170', 'solid-gray-127', 'solid-gray-63', 'solid-red',
+              'solid-green', 'solid-blue'
+          ]),
+      Arg(
+          'idle_timeout', int,
           'If given, the test would be start automatically, run for '
           'idle_timeout seconds, and pass itself. '
           'Note that items should contain exactly one item in this mode.',
           default=None),
-      Arg('quick_display', bool,
+      Arg(
+          'quick_display', bool,
           'If set to true, the next item will be shown automatically on '
           'enter pressed i.e. no additional space needed to toggle screen.',
-          default=True)
+          default=True),
+      Arg(
+          'hide_timer', bool,
+          'If set to true, the timer will be hidden even if idle_timeout'
+          'is set', default=True),
   ]
 
   def setUp(self):
@@ -182,12 +190,15 @@ class DisplayTest(test_case.TestCase):
       self.ui.BindKey(test_ui.ENTER_KEY, self.OnEnterPressed)
       self.event_loop.AddEventHandler('onFullscreenClicked',
                                       self.OnSpacePressed)
-      self.ui.HideElement('display-timer')
     else:
       # Automatically enter fullscreen mode in idle mode.
       self.ToggleFullscreen()
       self.event_loop.AddEventHandler('onFullscreenClicked', self.OnFailPressed)
       self.ui.StartCountdownTimer(self.idle_timeout, self.PassTask)
+
+    if self.idle_timeout is None or self.args.hide_timer:
+      self.ui.HideElement('display-timer')
+
     self.ui.BindKey(test_ui.ESCAPE_KEY, self.OnFailPressed)
     self.WaitTaskEnd()
 
