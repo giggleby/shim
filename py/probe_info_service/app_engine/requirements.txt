@@ -1,11 +1,23 @@
-flask==1.1.4
-google-auth==1.27.0
-google-cloud-datastore==1.12.0
-google-cloud-logging==1.15.0
+# 3-Clause BSD License
+flask==2.1.2
+
+# License: Apache License 2.0
+google-auth==2.8.0
+
+# License: Apache License 2.0
+google-cloud-datastore==2.7.1
+
+# License: Apache License 2.0
+google-cloud-logging==3.1.2
+
+# License: MIT
 gunicorn==20.0.4
-# Uses `MarkupSafe` with version 2.0.1 here to prevent `ImportError`, see
-# https://github.com/pallets/markupsafe/issues/284 for details.
-MarkupSafe==2.0.1
-protobuf==3.12.2
+
+# 3-Clause BSD License
+protobuf==3.19.0
+
+# License: MIT
 PyYAML==5.3.1
-urllib3==1.24.2
+
+# License: MIT
+urllib3==1.26.9
