@@ -4,9 +4,36 @@
 
 """Tests keyboard pin connectivity in SMT factory test.
 
+Description
+-----------
 Unlike keyboard test, it only expects a key sequence where keys are the keyboard
 scan lines' row-column crossing points. It also can trigger a SMT testing
 fixture to send out signals to simulate key presses on the key sequence.
+
+Test Procedure
+--------------
+- A ``keycode_sequence`` is required for the expected key sequence.
+- If ``bft_fixture`` is set the test calls the fixture to simulate key press
+  events.
+- Listen to keyboard events, the received keycode must match the expected
+  sequence.
+
+Dependency
+----------
+Depends on 'evdev' module to monitor key presses.
+
+Examples
+--------
+Here is an example::
+
+  {
+    "pytest_name": "keyboard_smt",
+    "args": {
+      "keycode_sequence": [1, 61, 19, 68, 27, 22, 42, 12, 67, 56, 57, 106, 29],
+      "timeout_secs": 10,
+      "bft_fixture": { ... }
+    }
+  }
 """
 
 from cros.factory.test.fixture import bft_fixture
