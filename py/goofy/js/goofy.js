@@ -3253,6 +3253,21 @@ cros.factory.Goofy = class {
         this.logToConsole(message.message);
         break;
       }
+      case 'goofy:update_camera_manager': {
+        const message =
+            /** @type {{facingMode: string, enable: boolean}} */ (
+                untypedMessage);
+        const logMessage = (
+            `camera_manager: facingMode: ${message.facingMode} ` +
+            `enable:${message.enable}`
+        );
+        this.logToConsole(logMessage);
+        const iframe = document.getElementById(
+            'camera_manager-camera_manager-iframe');
+        iframe.contentWindow['updateCamera'](
+            message.facingMode, message.enable);
+        break;
+      }
       case 'goofy:update_qrcode': {
         const message =
            /** @type {{args: !Object}} */(

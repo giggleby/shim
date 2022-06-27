@@ -20,6 +20,7 @@
         "warning_low_battery_pct": 10
       }
     },
+    "camera_manager.camera_manager": {},
     "charge_manager": {
       "args": {
         "period_secs": 120,

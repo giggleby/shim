@@ -434,6 +434,14 @@ table + .goofy-history-header {
 .goofy-plugin iframe {
   height: 100%; width: 100%;
 }
+/* For plugin `camera_manager` */
+#goofy-plugin-area-camera {
+  display: flex;
+  position: fixed;
+  height: 100%; width: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
 /* For plugin `qrcode_manager` */
 #goofy-plugin-area-goofy-fullscreen {
   position: fixed;

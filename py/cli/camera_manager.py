@@ -1,0 +1,1 @@
+../tools/camera_manager.py
