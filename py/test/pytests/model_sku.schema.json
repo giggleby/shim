@@ -18,6 +18,11 @@
             "id": "/properties/product_sku",
             "properties": {},
             "type": "object"
+        },
+        "oem_name": {
+            "id": "/properties/oem_name",
+            "properties": {},
+            "type": "object"
         }
     },
     "type": "object"

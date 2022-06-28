@@ -25,7 +25,7 @@ _DEFAULT_SCHEMA_NAME = os.path.join(paths.FACTORY_DIR, 'py', 'test', 'pytests',
 
 def GetDesignConfig(dut, product_name=None, sku_id=None,
                     default_config_dirs=None, config_name=BOXSTER,
-                    schema_name=_DEFAULT_SCHEMA_NAME):
+                    schema_name=_DEFAULT_SCHEMA_NAME, custom_label_tag=None):
   """Use product_name and sku_id as key to find the right config in boxster.
 
   Args:
@@ -38,6 +38,8 @@ def GetDesignConfig(dut, product_name=None, sku_id=None,
     config_name: Name of JSON config. If config_names is BOXSTER, searches
       config from PROJECT_CONFIG_PATH.
     schema_name: See config_utils.LoadConfig.
+    custom_label_tag: The custom-label-tag of the device. If not specified, read
+      from cros_config.CrosConfig(dut=dut).GetCustomLabelTag()[1].
   """
   if product_name is None:
     try:
@@ -64,6 +66,11 @@ def GetDesignConfig(dut, product_name=None, sku_id=None,
   # json file must use str as key.
   if isinstance(sku_id, int):
     sku_id = str(sku_id)
+  if custom_label_tag is None:
+    custom_label_tag = cros_config_object.GetCustomLabelTag()[1]
+  # Ensure it's an empty string rather than None so that it can later be matched
+  # with `oem_name` configurations in `model_sku`.
+  custom_label_tag = custom_label_tag or ''
   design = cros_config_object.GetModelName()
 
   matched_configs = []
@@ -105,6 +112,15 @@ def GetDesignConfig(dut, product_name=None, sku_id=None,
       design_common_config = {}
       design_matched = False
 
+    try:
+      oem_config = {
+          'oem_name': model_sku['oem_name'][design][custom_label_tag],
+      }
+      oem_matched = True
+    except Exception:
+      oem_config = {}
+      oem_matched = False
+
     match = _RE_GENERATED_MODELSKU.match(os.path.basename(config_name))
     if match:
       design_config.setdefault(_PROGRAM, match.group(1))
@@ -112,6 +128,8 @@ def GetDesignConfig(dut, product_name=None, sku_id=None,
 
     if sku_matched or design_matched:
       config_utils.OverrideConfig(design_common_config, design_config)
+      if oem_matched:
+        config_utils.OverrideConfig(design_common_config, oem_config)
       matched_configs.append(config_name)
       matched_design_config = design_common_config
 
