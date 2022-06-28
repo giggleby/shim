@@ -813,7 +813,8 @@ class WirelessTest(test_case.TestCase):
     LOWEST_6G_FREQ = 5955
     HIGHEST_6G_FREQ = 7115
     has_6G = any(LOWEST_6G_FREQ <= service.freq <= HIGHEST_6G_FREQ
-                 for service in self._services)
+                 for service in self._services
+                 if service.freq is not None)
     if not has_6G:
       return
     # factory_iw is the binary which sets region.
