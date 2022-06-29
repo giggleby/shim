@@ -39,6 +39,7 @@ import logging
 import unittest
 
 from cros.factory.device import device_utils
+from cros.factory.gooftool.common import Util as gooftool_util
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import string_utils
 
@@ -52,39 +53,6 @@ class TPMVerifyEK(unittest.TestCase):
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
-
-  def _TPMStatus(self):
-    """Returns TPM status as a dictionary.
-
-    e.g., {'status': 'STATUS_SUCCESS',
-           'is_enabled': 'true',
-           'is_owned': 'true',
-           'is_owner_password_present': 'true',
-           'has_reset_lock_permissions': 'true'}
-    """
-
-    # TODO(jasonchuang): Wrap tpm_manager_client as an util.
-    status_txt = self.dut.CheckOutput(
-        ['tpm_manager_client', 'status', '--nonsensitive'], log=True)
-
-    # The status_txt would look like this:
-    #
-    # Message Reply: [tpm_manager.GetTpmNonsensitiveStatusReply] {
-    #   status: STATUS_SUCCESS
-    #   is_enabled: true
-    #   is_owned: true
-    #   is_owner_password_present: true
-    #   has_reset_lock_permissions: true
-    # }
-
-    status_lines = status_txt.splitlines()
-    self.assertTrue(
-        len(status_lines) > 2, 'Failed to get TPM status. Reboot and re-run.')
-
-    # Trim the first and last lines.
-    status = string_utils.ParseDict(status_lines[1:-1])
-    logging.info('TPM status: %r', status)
-    return status
 
   def _AttestationVerifyEK(self):
     """Returns TPM EK status."""
@@ -113,7 +81,7 @@ class TPMVerifyEK(unittest.TestCase):
     """Verifies TPM endorsement by hardware security daemons."""
 
     # Make sure TPM is enabled.
-    status = self._TPMStatus()
+    status = gooftool_util().GetTPMManagerStatus()
     self.assertEqual('true', status['is_enabled'])
 
     # Check explicitly for the case where TPM is owned but password is
@@ -129,7 +97,7 @@ class TPMVerifyEK(unittest.TestCase):
     self.dut.CheckCall(['tpm_manager_client', 'take_ownership'], log=True)
 
     # Make sure TPM is owned.
-    self.assertEqual('true', self._TPMStatus()['is_owned'])
+    self.assertEqual('true', gooftool_util().GetTPMManagerStatus()['is_owned'])
 
     # Verify TPM endorsement.
     self.assertTrue(self._AttestationVerifyEK())
