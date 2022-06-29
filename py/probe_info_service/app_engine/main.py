@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import http
 import logging
 import os
 
@@ -12,18 +13,33 @@ from cros.factory.probe_info_service.app_engine import config
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import stubby_handler
 
+
+def _InitLogging():
+  _config = config.Config()
+  if _config.env_type == config.EnvType.LOCAL:
+    logging.basicConfig(level=_config.log_level)
+  else:
+    gc_logging.Client().setup_logging(log_level=_config.log_level)
+
+
 # Setup logging framework based on the environment as early as possible.
-_config = config.Config()
-if _config.env_type == config.EnvType.LOCAL:
-  logging.basicConfig(level=_config.log_level)
-else:
-  gc_logging.Client().setup_logging(log_level=_config.log_level)
+_InitLogging()
 
 
-# Initialize the `app` instance.
-app = flask.Flask(__name__)
-protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
-    app, '/_ah/stubby', stubby_handler.ProbeInfoService())
+def _WarmupHandler():
+  """Do nothing, just to ensure the request handler is ready."""
+  return flask.Response(status=http.HTTPStatus.NO_CONTENT)
+
+
+def _CreateApp():
+  flask_app = flask.Flask(__name__)
+  flask_app.route('/_ah/warmup', methods=('GET', ))(_WarmupHandler)
+  protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
+      flask_app, '/_ah/stubby', stubby_handler.ProbeInfoService())
+  return flask_app
+
+
+app = _CreateApp()
 
 
 # Start the server when this module is launched directly.
