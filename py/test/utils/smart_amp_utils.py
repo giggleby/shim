@@ -15,10 +15,14 @@ _RE_MAX98373_CHANNEL_NAME = re.compile(r'"(.+?) ADC TEMP"', re.MULTILINE)
 
 _RE_ALC1011_CHANNEL_NAME = re.compile(r'"(.+?) R0 Load Mode"', re.MULTILINE)
 
+_RE_CS35L41_CHANNEL_NAME = re.compile(r'"(.+?) DSP1 Protection cd CAL_R"',
+                                      re.MULTILINE)
+
 _REGEX_MAPPING = {
     'MAX98373': _RE_MAX98373_CHANNEL_NAME,
     'MAX98390': _RE_MAX98390_CHANNEL_NAME,
-    'ALC1011': _RE_ALC1011_CHANNEL_NAME
+    'ALC1011': _RE_ALC1011_CHANNEL_NAME,
+    'CS35L41': _RE_CS35L41_CHANNEL_NAME,
 }
 
 
