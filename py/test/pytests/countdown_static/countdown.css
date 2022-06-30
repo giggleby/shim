@@ -45,7 +45,8 @@ tbody tr:last-child * {
 }
 
 #cd-log-panel,
-#cd-legend-panel {
+#cd-legend-panel,
+#cd-wifi-panel {
   margin-top: 10px;
   margin-left: auto;
   margin-right: auto;
@@ -55,7 +56,8 @@ tbody tr:last-child * {
   width: 80%;
 }
 
-#cd-log-panel {
+#cd-log-panel,
+#cd-wifi-panel {
   overflow: scroll;
   padding: 10px;
   flex: 1;

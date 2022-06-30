@@ -114,14 +114,14 @@ class WiFi(device_types.DeviceComponent):
           'Please specify one from: %r' % interfaces)
     return interfaces[0]
 
-  def BringsUpInterface(self, interface, sleep_time_secs=1):
+  def BringsUpInterface(self, interface, sleep_time_secs=1, log=True):
     """Brings up interface.
 
     Args:
       interface: Interface name.
       sleep_time_secs: The sleeping time after bringing up.
     """
-    self._device.CheckCall(['ifconfig', interface, 'up'], log=True)
+    self._device.CheckCall(['ifconfig', interface, 'up'], log=log)
     time.sleep(sleep_time_secs)
 
   def BringsDownInterface(self, interface, sleep_time_secs=1):
@@ -157,7 +157,7 @@ class WiFi(device_types.DeviceComponent):
     # Arbitrarily choose first interface.
     return interfaces[0]
 
-  def _AllAccessPoints(self, interface, frequency):
+  def _AllAccessPoints(self, interface, frequency, log=True):
     """Retrieves a list of AccessPoint objects.
 
     Args:
@@ -172,9 +172,9 @@ class WiFi(device_types.DeviceComponent):
     try:
       # First, bring the device up.  If it is already up, this will succeed
       # anyways.
-      self.BringsUpInterface(interface, 0)
+      self.BringsUpInterface(interface, 0, log=log)
 
-      output = self._device.CheckOutput(command, log=True)
+      output = self._device.CheckOutput(command, log=log)
       return self._ParseScanResult(output)
     except device_types.CalledProcessError:
       return []
@@ -301,7 +301,7 @@ class WiFi(device_types.DeviceComponent):
 
   def FilterAccessPoints(self, ssid=None, frequency=None, active=None,
                          encrypted=None, interface=None,
-                         scan_timeout=_SCAN_TIMEOUT_SECS):
+                         scan_timeout=_SCAN_TIMEOUT_SECS, log=True):
     """Retrieves a list of AccessPoint objects matching criteria.
 
     Args:
@@ -326,11 +326,13 @@ class WiFi(device_types.DeviceComponent):
     def _TryGetAccessPoints():
       # Filter frequency again because iw scan may report other frequency even
       # if frequency is specified in the command.
-      return [ap for ap in self._AllAccessPoints(interface, frequency)
-              if ((ssid is None or ssid == ap.ssid) and
-                  (frequency is None or frequency == ap.frequency) and
-                  (active is None or active == ap.active) and
-                  (encrypted is None or encrypted == ap.encrypted))]
+      return [
+          ap for ap in self._AllAccessPoints(interface, frequency, log)
+          if ((ssid is None or ssid == ap.ssid) and
+              (frequency is None or frequency == ap.frequency) and
+              (active is None or active == ap.active) and
+              (encrypted is None or encrypted == ap.encrypted))
+      ]
 
     # Grab output from the iw 'scan' command on the requested interface.  This
     # sometimes fails if the device is busy, and the AP might be unstable to

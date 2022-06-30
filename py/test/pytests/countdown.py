@@ -52,9 +52,12 @@ exceeding 65 Celcius::
 import collections
 import logging
 import os
+import threading
 import time
+from typing import List, Optional
 
 from cros.factory.device import device_utils
+from cros.factory.device import wifi
 from cros.factory.goofy.plugins import plugin_controller
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test import session
@@ -86,6 +89,8 @@ class CountDownTest(test_case.TestCase):
       Arg('ui_update_interval', int,
           'Interval of time in seconds to update system status on UI.',
           default=10),
+      Arg('wifi_update_interval', int,
+          'Interval of time in seconds to scan wifi.', default=10),
       Arg('grace_secs', int,
           'Grace period before starting abnormal status detection.',
           default=120),
@@ -308,7 +313,9 @@ class CountDownTest(test_case.TestCase):
 
     self._start_secs = time.time()
     self._elapsed_secs = 0
+    self._last_wifi_thread: Optional[threading.Thread] = None
     self._verbose_log = None
+    self._event_loop_stop = False
     self.last_status = Status(None, None, None)
     self.goofy = state.GetInstance()
 
@@ -319,6 +326,39 @@ class CountDownTest(test_case.TestCase):
                   **sys_status._asdict())
     self.DetectAbnormalStatus(sys_status, self.last_status)
     self.last_status = sys_status
+
+  def ScanWiFi(self):
+    """Launch WiFi scan in another thread."""
+
+    WIFI_PANEL_ID = 'cd-wifi-panel'
+
+    def AsyncScanWiFi():
+      self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
+                      id=WIFI_PANEL_ID)
+      wifi_aps: List[wifi.AccessPoint] = (
+          self._dut.wifi.FilterAccessPoints(log=False))
+      self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
+                         id=WIFI_PANEL_ID)
+      for ap in wifi_aps:
+        self.ui.AppendHTML(
+            f'<div>ssid: {ap.ssid!r}, strength: {ap.strength!r}</div>',
+            id=WIFI_PANEL_ID)
+      if self._event_loop_stop:
+        logging.info('Stop in AsyncScanWiFi because event loop stopped.')
+      else:
+        self.event_loop.AddTimedHandler(self.ScanWiFi,
+                                        self.args.wifi_update_interval)
+
+    if self._last_wifi_thread:
+      self._last_wifi_thread.join()
+      self._last_wifi_thread = None
+
+    if self._event_loop_stop:
+      logging.info('Stop in ScanWiFi because event loop stopped.')
+      return
+
+    self._last_wifi_thread = threading.Thread(target=AsyncScanWiFi)
+    self._last_wifi_thread.start()
 
   def runTest(self):
     verbose_log_path = session.GetVerboseTestLogPath()
@@ -340,7 +380,12 @@ class CountDownTest(test_case.TestCase):
       self.event_loop.AddTimedHandler(self.UpdateUILog,
                                       self.args.ui_update_interval, repeat=True)
 
+      if self.args.wifi_update_interval:
+        self.event_loop.AddTimedHandler(self.ScanWiFi,
+                                        self.args.wifi_update_interval)
+
       self.Sleep(self.args.duration_secs)
+      self._event_loop_stop = True
       self.event_loop.RemoveTimedHandler()
       self._verbose_log = None
 
