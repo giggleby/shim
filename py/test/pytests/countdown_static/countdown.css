@@ -44,6 +44,7 @@ tbody tr:last-child * {
   padding: 5vh 0;
 }
 
+#cd-bluetooth-panel,
 #cd-log-panel,
 #cd-legend-panel,
 #cd-wifi-panel {
@@ -56,6 +57,7 @@ tbody tr:last-child * {
   width: 80%;
 }
 
+#cd-bluetooth-panel,
 #cd-log-panel,
 #cd-wifi-panel {
   overflow: scroll;

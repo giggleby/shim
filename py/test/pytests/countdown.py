@@ -54,7 +54,7 @@ import logging
 import os
 import threading
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from cros.factory.device import device_utils
 from cros.factory.device import wifi
@@ -64,6 +64,7 @@ from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
+from cros.factory.test.utils import bluetooth_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
@@ -91,6 +92,8 @@ class CountDownTest(test_case.TestCase):
           default=10),
       Arg('wifi_update_interval', int,
           'Interval of time in seconds to scan wifi.', default=10),
+      Arg('bluetooth_update_interval', int,
+          'Interval of time in seconds to scan bluetooth.', default=10),
       Arg('grace_secs', int,
           'Grace period before starting abnormal status detection.',
           default=120),
@@ -318,6 +321,9 @@ class CountDownTest(test_case.TestCase):
     self._event_loop_stop = False
     self.last_status = Status(None, None, None)
     self.goofy = state.GetInstance()
+    self.btmgmt = bluetooth_utils.BtMgmt()
+    self.btmgmt.PowerOn()
+    self._last_bluetooth_thread: Optional[threading.Thread] = None
 
   def Log(self):
     """Add event log and detects abnormal status."""
@@ -360,6 +366,40 @@ class CountDownTest(test_case.TestCase):
     self._last_wifi_thread = threading.Thread(target=AsyncScanWiFi)
     self._last_wifi_thread.start()
 
+  def ScanBluetooth(self):
+    """Launch bluetooth scan in another thread."""
+
+    BLUETOOTH_PANEL_ID = 'cd-bluetooth-panel'
+
+    def AsyncScanBluetooth():
+      self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
+                      id=BLUETOOTH_PANEL_ID)
+      # There may be hundreds of bluetooth device inside the factory and the
+      # scanning may be too long to be finished so we have to set a timeout.
+      devices: Dict[str, Dict] = self.btmgmt.FindDevices(
+          timeout_secs=self.args.bluetooth_update_interval, log=False)
+      self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
+                         id=BLUETOOTH_PANEL_ID)
+      for mac, data in devices.items():
+        self.ui.AppendHTML(f'<div>mac: {mac!r}, {data!r}</div>',
+                           id=BLUETOOTH_PANEL_ID)
+      if self._event_loop_stop:
+        logging.info('Stop in AsyncScanBluetooth because event loop stopped.')
+      else:
+        self.event_loop.AddTimedHandler(self.ScanBluetooth,
+                                        self.args.bluetooth_update_interval)
+
+    if self._last_bluetooth_thread:
+      self._last_bluetooth_thread.join()
+      self._last_bluetooth_thread = None
+
+    if self._event_loop_stop:
+      logging.info('Stop in ScanBluetooth because event loop stopped.')
+      return
+
+    self._last_bluetooth_thread = threading.Thread(target=AsyncScanBluetooth)
+    self._last_bluetooth_thread.start()
+
   def runTest(self):
     verbose_log_path = session.GetVerboseTestLogPath()
     file_utils.TryMakeDirs(os.path.dirname(verbose_log_path))
@@ -383,6 +423,10 @@ class CountDownTest(test_case.TestCase):
       if self.args.wifi_update_interval:
         self.event_loop.AddTimedHandler(self.ScanWiFi,
                                         self.args.wifi_update_interval)
+
+      if self.args.bluetooth_update_interval:
+        self.event_loop.AddTimedHandler(self.ScanBluetooth,
+                                        self.args.bluetooth_update_interval)
 
       self.Sleep(self.args.duration_secs)
       self._event_loop_stop = True

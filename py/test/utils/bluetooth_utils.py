@@ -86,7 +86,7 @@ class BtMgmt:
     """Get the HCI device of the bluetooth adapter."""
     return self._hci_device
 
-  def FindDevices(self, index=0, timeout_secs=None):
+  def FindDevices(self, index=0, timeout_secs=None, log=True):
     if self._hci_device:
       index = int(self._hci_device.lstrip('hci'))
 
@@ -97,7 +97,7 @@ class BtMgmt:
     if timeout_secs is not None:
       find_cmd.extend(['--timeout', str(timeout_secs)])
     find_cmd.append('find')
-    for line in process_utils.CheckOutput(find_cmd, log=True).splitlines():
+    for line in process_utils.CheckOutput(find_cmd, log=log).splitlines():
       if line.startswith('hci'):
         result = patt.match(line)
         if not result:
@@ -105,7 +105,8 @@ class BtMgmt:
 
         mac = result.group(1)
         rssi = int(result.group(2))
-        logging.info('Address: %s, RSSI: %d', mac, rssi)
+        if log:
+          logging.info('Address: %s, RSSI: %d', mac, rssi)
         if mac not in devices:
           devices[mac] = {}
         devices[mac]['RSSI'] = rssi
@@ -117,7 +118,7 @@ class BtMgmt:
     # The timeout just kill the interactive session but it may not stop
     # discovery. Use stop-find afterwards to guarantee discovery ends.
     process_utils.CheckOutput(
-        ['btmgmt', '--index', str(index), 'stop-find'], log=True)
+        ['btmgmt', '--index', str(index), 'stop-find'], log=log)
 
     return devices
 
