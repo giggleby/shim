@@ -721,16 +721,19 @@ def _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels):
   is_rejected = bool(code_review_labels.get('rejected'))
   is_disliked = bool(code_review_labels.get('disliked'))
 
+  # No matter what other votes are, once there's a CR-2 vote, the whole CL is
+  # considered rejected.
+  if is_rejected:
+    return CLReviewStatus.REJECTED
+
   # If some review votes are positive while some are negative, return
   # ambiguous.
-  if (is_approved or is_recommended) and (is_rejected or is_disliked):
+  if (is_approved or is_recommended) and is_disliked:
     return CLReviewStatus.AMBIGUOUS
 
   # Approved and rejected takes the priority.
   if is_approved:
     return CLReviewStatus.APPROVED
-  if is_rejected:
-    return CLReviewStatus.REJECTED
   if is_recommended:
     return CLReviewStatus.RECOMMENDED
   if is_disliked:

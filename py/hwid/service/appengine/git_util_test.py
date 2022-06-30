@@ -319,17 +319,6 @@ class GetCLInfoTest(unittest.TestCase):
         self._BuildGetChangeSuccResponseWithDefaults(
             labels={
                 'Code-Review': {
-                    'approved': {
-                        '_account_id': 12345
-                    },
-                    'rejected': {
-                        '_account_id': 12345
-                    },
-                },
-            }),
-        self._BuildGetChangeSuccResponseWithDefaults(
-            labels={
-                'Code-Review': {
                     'recommended': {
                         '_account_id': 12345
                     },
@@ -344,14 +333,10 @@ class GetCLInfoTest(unittest.TestCase):
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
     actual_cl_info2 = git_util.GetCLInfo(
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
-    actual_cl_info3 = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
 
     self.assertEqual(actual_cl_info1.review_status,
                      git_util.CLReviewStatus.AMBIGUOUS)
     self.assertEqual(actual_cl_info2.review_status,
-                     git_util.CLReviewStatus.AMBIGUOUS)
-    self.assertEqual(actual_cl_info3.review_status,
                      git_util.CLReviewStatus.AMBIGUOUS)
 
   def testGetCLInfo_WithDislikedReviewStatus(self):
@@ -392,16 +377,31 @@ class GetCLInfoTest(unittest.TestCase):
                 },
             },
         }),
+        self._BuildGetChangeSuccResponseWithDefaults(
+            labels={
+                'Code-Review': {
+                    'approved': {
+                        '_account_id': 12345
+                    },
+                    'rejected': {
+                        '_account_id': 12345
+                    },
+                },
+            }),
     ]
 
     actual_cl_info1 = git_util.GetCLInfo(
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
     actual_cl_info2 = git_util.GetCLInfo(
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
+    actual_cl_info3 = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
 
+    self.assertEqual(actual_cl_info1.review_status,
+                     git_util.CLReviewStatus.REJECTED)
     self.assertEqual(actual_cl_info2.review_status,
                      git_util.CLReviewStatus.REJECTED)
-    self.assertEqual(actual_cl_info1.review_status,
+    self.assertEqual(actual_cl_info3.review_status,
                      git_util.CLReviewStatus.REJECTED)
 
   def testGetCLInfo_WithNoReviewStatus(self):
