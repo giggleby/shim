@@ -193,10 +193,14 @@ class EventLoop:
     """
     self.AddTimedHandler(lambda: next(iterable), time_sec, repeat=True)
 
+  def RemoveTimedHandler(self):
+    """Remove all time event handlers."""
+    type_utils.DrainQueue(self._timed_handler_event_queue)
+
   def ClearHandlers(self):
     """Clear all event handlers."""
     self.event_handlers.clear()
-    type_utils.DrainQueue(self._timed_handler_event_queue)
+    self.RemoveTimedHandler()
 
   def CatchException(self, func):
     """Wraps function and pass exceptions to _handler_exception_hook.

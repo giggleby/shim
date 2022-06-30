@@ -124,6 +124,7 @@ class CountDownTest(test_case.TestCase):
     return '%02d:%02d:%02d' % (hours, minutes, seconds)
 
   def UpdateTimeAndLoad(self):
+    self._elapsed_secs = time.time() - self._start_secs
     self.ui.SetHTML(
         self.FormatSeconds(self._elapsed_secs),
         id='cd-elapsed-time')
@@ -133,7 +134,8 @@ class CountDownTest(test_case.TestCase):
     self.ui.SetHTML(' '.join(file_utils.ReadFile('/proc/loadavg').split()[0:3]),
                     id='cd-system-load')
 
-  def UpdateUILog(self, sys_status):
+  def UpdateUILog(self):
+    sys_status = self.SnapshotStatus()
     # Simplify thermal output by the order of self._sensors
     log_items = [
         time_utils.TimeString(),
@@ -143,8 +145,9 @@ class CountDownTest(test_case.TestCase):
         'CPU frequency (MHz): %s' % sys_status.cpu_freq
     ]
     log_str = '.  '.join(log_items)
-    self._verbose_log.write(log_str + os.linesep)
-    self._verbose_log.flush()
+    if self._verbose_log:
+      self._verbose_log.write(log_str + os.linesep)
+      self._verbose_log.flush()
     self.ui.AppendHTML(
         '<div>%s</div>' % test_ui.Escape(log_str),
         id='cd-log-panel',
@@ -305,10 +308,17 @@ class CountDownTest(test_case.TestCase):
 
     self._start_secs = time.time()
     self._elapsed_secs = 0
-    self._next_log_time = 0
-    self._next_ui_update_time = 0
     self._verbose_log = None
+    self.last_status = Status(None, None, None)
     self.goofy = state.GetInstance()
+
+  def Log(self):
+    """Add event log and detects abnormal status."""
+    sys_status = self.SnapshotStatus()
+    event_log.Log('system_status', elapsed_secs=self._elapsed_secs,
+                  **sys_status._asdict())
+    self.DetectAbnormalStatus(sys_status, self.last_status)
+    self.last_status = sys_status
 
   def runTest(self):
     verbose_log_path = session.GetVerboseTestLogPath()
@@ -317,32 +327,21 @@ class CountDownTest(test_case.TestCase):
     with open(verbose_log_path, 'a', encoding='utf8') as verbose_log:
       self._verbose_log = verbose_log
 
-      last_status = self.SnapshotStatus()
+      self.last_status = self.SnapshotStatus()
 
       self.UpdateLegend(self._sensors)
 
       # Loop until count-down ends.
-      while self._elapsed_secs < self.args.duration_secs:
-        self.UpdateTimeAndLoad()
+      self.event_loop.AddTimedHandler(self.UpdateTimeAndLoad, 0.5, repeat=True)
 
-        current_time = time.time()
-        if (current_time >= self._next_log_time or
-            current_time >= self._next_ui_update_time):
-          sys_status = self.SnapshotStatus()
+      self.event_loop.AddTimedHandler(self.Log, self.args.log_interval,
+                                      repeat=True)
 
-        if current_time >= self._next_log_time:
-          event_log.Log('system_status', elapsed_secs=self._elapsed_secs,
-                        **sys_status._asdict())
-          self.DetectAbnormalStatus(sys_status, last_status)
-          last_status = sys_status
-          self._next_log_time = current_time + self.args.log_interval
+      self.event_loop.AddTimedHandler(self.UpdateUILog,
+                                      self.args.ui_update_interval, repeat=True)
 
-        if current_time >= self._next_ui_update_time:
-          self.UpdateUILog(sys_status)
-          self._next_ui_update_time = (
-              current_time + self.args.ui_update_interval)
-
-        self.Sleep(1)
-        self._elapsed_secs = time.time() - self._start_secs
+      self.Sleep(self.args.duration_secs)
+      self.event_loop.RemoveTimedHandler()
+      self._verbose_log = None
 
     self.goofy.WaitForWebSocketUp()
