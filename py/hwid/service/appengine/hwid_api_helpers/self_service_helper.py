@@ -57,7 +57,6 @@ _APPROVAL_CASE = {
         git_util.ApprovalCase.NEED_MANUAL_REVIEW),
 }
 
-
 _HWID_SECTION_CHANGE_STATUS = {
     hwid_action.DBHWIDTouchCase.TOUCHED: (
         _AnalysisReportMsg.HwidSectionChange.ChangeStatus.TOUCHED),
@@ -198,15 +197,25 @@ class SelfServiceHelper:
         NotImplementedError(('Deprecated. Use AnalyzeHwidDbEditableSection '
                              'instead')))
 
+  def _UpdateHWIDDBDataIfNeed(self, live_hwid_repo: hwid_repo.HWIDRepo,
+                              project: str):
+    live_raw_db = live_hwid_repo.LoadHWIDDBByName(project)
+    curr_preproc_data = self._hwid_action_manager.GetHWIDPreprocDataFromCache(
+        project)
+    if (curr_preproc_data and
+        getattr(curr_preproc_data, 'raw_database', None) == live_raw_db):
+      return
+    metadata = live_hwid_repo.GetHWIDDBMetadataByName(project)
+    self._hwid_db_data_manager.UpdateProjectsByRepo(live_hwid_repo, [metadata],
+                                                    delete_missing=False)
+    self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+        limit_models=[project])
+
   def CreateHWIDDBEditableSectionChangeCL(self, request):
     project = _NormalizeProjectString(request.project)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     try:
-      metadata = live_hwid_repo.GetHWIDDBMetadataByName(project)
-      self._hwid_db_data_manager.UpdateProjectsByRepo(
-          live_hwid_repo, [metadata], delete_missing=False)
-      self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
-          limit_models=[project])
+      self._UpdateHWIDDBDataIfNeed(live_hwid_repo, project)
 
       action = self._hwid_action_manager.GetHWIDAction(project)
       analysis = action.AnalyzeDraftDBEditableSection(
@@ -269,11 +278,7 @@ class SelfServiceHelper:
       model = _NormalizeProjectString(firmware_record.model)
       # Load HWID DB
       try:
-        metadata = live_hwid_repo.GetHWIDDBMetadataByName(model)
-        self._hwid_db_data_manager.UpdateProjectsByRepo(
-            live_hwid_repo, [metadata], delete_missing=False)
-        self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
-            limit_models=[model])
+        self._UpdateHWIDDBDataIfNeed(live_hwid_repo, model)
         action = self._hwid_action_manager.GetHWIDAction(model)
       except (KeyError, ValueError, RuntimeError,
               hwid_repo.HWIDRepoError) as ex:

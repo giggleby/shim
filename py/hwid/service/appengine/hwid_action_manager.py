@@ -124,7 +124,7 @@ class HWIDActionManager:
     """
     logging.debug('Loading data for %r.', project)
 
-    hwid_preproc_data_inst = self._GetHWIDPreprocDataFromCache(project)
+    hwid_preproc_data_inst = self.GetHWIDPreprocDataFromCache(project)
     if hwid_preproc_data_inst:
       logging.debug('Found cached data for %r.', project)
     else:
@@ -208,7 +208,7 @@ class HWIDActionManager:
     """
     self._memcache_adapter.ClearAll()
 
-  def _GetHWIDPreprocDataFromCache(self, project: str) -> _HWIDPreprocData:
+  def GetHWIDPreprocDataFromCache(self, project: str) -> _HWIDPreprocData:
     """Get the HWID file data from memcache.
 
     Args:
