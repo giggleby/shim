@@ -220,8 +220,8 @@ class HWIDActionManager:
     """
     try:
       hwid_preproc_data_inst = self._memcache_adapter.Get(project)
-    except Exception as ex:
-      logging.debug('Memcache read miss %s: caught exception: %s.', project, ex)
+    except Exception:
+      logging.exception('Memcache read miss %s: caught exception.', project)
       return None
     if not hwid_preproc_data_inst:
       logging.info('Memcache read miss %s.', project)

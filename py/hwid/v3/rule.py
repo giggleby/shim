@@ -1,7 +1,6 @@
 # Copyright 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Base classes of rule language implementation.
 
 For metaclasses used to provide constructors and representers to the YAML
@@ -55,8 +54,8 @@ class RuleLogger:
     """
     if tag not in RuleLogger.VALID_TAGS:
       raise RuleException('Invalid logging tag: %r' % tag)
-    getattr(self, tag).append(RuleLogger.LogEntry(
-        time.time(), '%s: %s' % (tag.upper(), message)))
+    getattr(self, tag).append(
+        RuleLogger.LogEntry(time.time(), '%s: %s' % (tag.upper(), message)))
 
   def Info(self, message):
     self.Log('info', message)
@@ -144,15 +143,17 @@ def RuleFunction(ctx_list):
     ValueError if the Context object does not have all the required context
     attributes.
   """
+
   def Wrapped(fn):
+
     def RuleFunctionRepr(*args, **kwargs):
       """A method to dump a string to represent the rule function being called.
       """
       result = ''.join([
-          '%s(' % fn.__name__,
-          ', '.join(['%r' % arg for arg in args]),
+          '%s(' % fn.__name__, ', '.join(['%r' % arg for arg in args]),
           ', '.join(['%r=%r' % (key, value) for key, value in kwargs.items()]),
-          ')'])
+          ')'
+      ])
       return result
 
     @functools.wraps(fn)
@@ -170,6 +171,7 @@ def RuleFunction(ctx_list):
       raise KeyError('Re-defining rule function %r' % fn.__name__)
     _rule_functions[fn.__name__] = ContextAwareFunction
     return ContextAwareFunction
+
   return Wrapped
 
 
@@ -189,6 +191,7 @@ class Rule:
     otherwise: A list of Python expressions to evaluate if 'when' evaluates to
         False.
   """
+
   def __init__(self, name, evaluate, when=None, otherwise=None):
     if otherwise and not when:
       raise RuleException(
@@ -250,8 +253,9 @@ class Rule:
     return ret
 
   def Validate(self):
-    otherwise = (type_utils.MakeList(self.otherwise)
-                 if self.otherwise is not None else [])
+    otherwise = (
+        type_utils.MakeList(self.otherwise)
+        if self.otherwise is not None else [])
     for expr in (type_utils.MakeList(self.when) +
                  type_utils.MakeList(self.evaluate) + otherwise):
       try:
@@ -278,6 +282,7 @@ class Rule:
         except Exception as e:
           raise RuleException('Evaluation of %r in rule %r failed: %r' %
                               (function, self.name, e)) from None
+
     try:
       SetContext(context)
       logger.Info('Checking rule %r' % self.name)
@@ -332,6 +337,7 @@ class Value:
     is_re: If True, raw_value is treated as a regular expression in expression
         evaluation.
   """
+
   def __init__(self, raw_value, is_re=False):
     self.raw_value = raw_value
     self.is_re = is_re
@@ -369,8 +375,8 @@ class Value:
     return not self == operand
 
   def __repr__(self):
-    return '%s(%r, is_re=%r)' % (
-        self.__class__.__name__, self.raw_value, self.is_re)
+    return '%s(%r, is_re=%r)' % (self.__class__.__name__, self.raw_value,
+                                 self.is_re)
 
 
 class InternalTags:
@@ -398,6 +404,12 @@ class AVLProbeValue(collections.OrderedDict, InternalTags):
   @property
   def probe_value_matched(self):
     return self._probe_value_matched
+
+  def __reduce__(self):
+    state = list(super().__reduce__())
+    state[1] = (self._converter_identifier,
+                self._probe_value_matched) + state[1]
+    return tuple(state)
 
 
 def _Eval(expr, local):
