@@ -115,5 +115,30 @@ class StorageDictTest(unittest.TestCase):
     self.storage.SaveDict.assert_not_called()
 
 
+class StorageDevicePathTest(unittest.TestCase):
+
+  def setUp(self):
+    self.dut = mock.MagicMock()
+    self.storage = storage.Storage(self.dut)
+
+  def testEMMCStorage(self):
+    mount_point = ['/usr/share/oem', '/dev/mmcblk0p8']
+    self.storage.GetMountPoint = mock.Mock(return_value=mount_point)
+    dev = self.storage.GetMainStorageDevice()
+    part1_dev = self.storage.GetMainStorageDevice(partition=1)
+
+    self.assertEqual(dev, '/dev/mmcblk0')
+    self.assertEqual(part1_dev, '/dev/mmcblk0p1')
+
+  def testUFSStorage(self):
+    mount_point = ['/usr/share/oem', '/dev/sda8']
+    self.storage.GetMountPoint = mock.Mock(return_value=mount_point)
+    dev = self.storage.GetMainStorageDevice()
+    part1_dev = self.storage.GetMainStorageDevice(partition=1)
+
+    self.assertEqual(dev, '/dev/sda')
+    self.assertEqual(part1_dev, '/dev/sda1')
+
+
 if __name__ == '__main__':
   unittest.main()

@@ -169,25 +169,39 @@ class Storage(device_types.DeviceComponent):
     """
     return '/usr/share/oem'
 
-  def GetMainStorageDevice(self):
+  def GetMainStorageDevice(self, partition=None):
     """Get the main storage device.
 
     We do not call `rootdev -s -d` to get the main storage device, since this
     command does not support on devices such as Android.
+
+    Args:
+      partition: An integer which represents the partition number.
+
+    Returns:
+      If `partition` is not None, returns the storage device path for a certain
+      partition. Otherwise, returns the main storage device path.
     """
     main_storage_device_mount_point = self._GetMainStorageDeviceMountPoint()
-    partition = self.GetMountPoint(main_storage_device_mount_point)[1]
-    if not partition:
+    mnt_point_path = self.GetMountPoint(main_storage_device_mount_point)[1]
+    if not mnt_point_path:
       raise IOError('Unable to find main storage device (%s)' %
                     main_storage_device_mount_point)
-    # remove partition suffix to get device path.
-    device_path = re.sub(r'p?(\d+)$', '', partition)
-    logging.info('Found main storage device path: %s', device_path)
+    # For NVMe and eMMC, the device paths look like /dev/nvmen0pX and
+    # /dev/mmcblk0pX. For UFS, the device path looks like /dev/sdaX.
+    if partition:
+      device_path = re.sub(r'\d+$', str(partition), mnt_point_path)
+      logging.info('Found storage device path for partition %d: %s', partition,
+                   device_path)
+    else:
+      # Remove partition suffix to get device path.
+      device_path = re.sub(r'p?\d+$', '', mnt_point_path)
+      logging.info('Found main storage device path: %s', device_path)
     return device_path
 
   def GetStatefulLogicalDevicePath(self):
-    state_dev = '%sp%d' % (self.GetMainStorageDevice(),
-                           self._device.partitions.STATEFUL.index)
+    state_dev = self.GetMainStorageDevice(
+        self._device.partitions.STATEFUL.index)
 
     # Check if the stateful partition is LVM format.
     try:

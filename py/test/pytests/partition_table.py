@@ -159,8 +159,8 @@ class PartitionTableTest(test_case.TestCase):
 
       # Copy the content of minios_a to minios_b partition.
       logging.info('Copy the content of MINIOS-A to MINIOS-B.')
-      src = '%sp%d' % (dev, minios_a_no)
-      dst = '%sp%d' % (dev, minios_b_no)
+      src = self.dut.storage.GetMainStorageDevice(minios_a_no)
+      dst = self.dut.storage.GetMainStorageDevice(minios_b_no)
       self.dut.CheckCall([
           'dd', 'bs=1048576',
           'if=%s' % src,
