@@ -175,6 +175,15 @@ def _GetAllProbeStatementDefinitions():
   builder.AddHexOutputField('vendor_id', 'The vendor id of tcpc.')
   probe_statement_definitions['tcpc'] = builder.Build()
 
+  # Create GPU builder
+  builder = probe_config_types.ProbeStatementDefinitionBuilder('gpu')
+  builder.AddProbeFunction('gpu', 'Probe GPU info.')
+  builder.AddHexOutputField('vendor', 'The device id.')
+  builder.AddHexOutputField('device', 'The device id.')
+  builder.AddHexOutputField('subsystem_vendor', 'The subsystem vendor id.')
+  builder.AddHexOutputField('subsystem_device', 'The subsystem device id.')
+  probe_statement_definitions['gpu'] = builder.Build()
+
   return probe_statement_definitions
 
 

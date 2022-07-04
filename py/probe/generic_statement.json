@@ -82,6 +82,11 @@
       "eval": "flash_chip:main"
     }
   },
+  "gpu": {
+    "generic": {
+      "eval": "gpu"
+    }
+  },
   "hps": {
     "generic": {
       "eval": "generic_hps"

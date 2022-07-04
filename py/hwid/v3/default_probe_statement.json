@@ -342,5 +342,16 @@
         "vendor_id"
       ]
     }
+  },
+  "gpu": {
+    "generic": {
+      "eval": "gpu",
+      "keys": [
+        "vendor",
+        "device",
+        "subsystem_vendor",
+        "subsystem_device"
+      ]
+    }
   }
 }
