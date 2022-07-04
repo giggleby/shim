@@ -8,8 +8,10 @@ import fnmatch
 import json
 import multiprocessing.pool
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import presubmit_common
 
@@ -51,7 +53,7 @@ def CheckVirtualEnv():
 
 
 def _ProcessOneFile(args):
-  base_cmd, file_path, ranges = args
+  base_cmd, file_path, ranges, work_tree = args
   range_args = []
 
   has_formattable_lines = False
@@ -62,7 +64,11 @@ def _ProcessOneFile(args):
       range_args += ['-l', '{}-{}'.format(diff_start, diff_end)]
 
   if has_formattable_lines:
-    if subprocess.call(base_cmd + [file_path] + range_args) != 0:
+    if work_tree:
+      work_tree_file_path = os.path.join(work_tree, file_path)
+    else:
+      work_tree_file_path = file_path
+    if subprocess.call(base_cmd + [work_tree_file_path] + range_args) != 0:
       return file_path
   return None
 
@@ -89,6 +95,19 @@ def main():
     rules = json.load(f)
   exclude_patterns = set(rules['exclude_patterns'])
 
+  is_not_head_commit = False
+  if args.commit and args.commit != 'HEAD':
+    log_cmd = ['git', 'log', '-1', '--pretty=format:%H']
+    current_commit_hash = subprocess.check_output(log_cmd + [args.commit],
+                                                  encoding='utf-8')
+    head_commit_hash = subprocess.check_output(log_cmd, encoding='utf-8')
+    is_not_head_commit = current_commit_hash != head_commit_hash
+
+    if args.fix and is_not_head_commit:
+      print(f'Cannot fix non-HEAD commit. commit: {current_commit_hash!r} '
+            f'head: {head_commit_hash!r}')
+      sys.exit(1)
+
   base_cmd = [
       os.path.join(VENV_BIN, 'yapf'), '--in-place' if args.fix else '--quiet',
       '--style', YAPF_STYLE_PATH
@@ -100,21 +119,39 @@ def main():
     return any(
         fnmatch.fnmatch(file_path, pattern) for pattern in exclude_patterns)
 
+  # Only check filenames end with '.py'.  We filter these again in case
+  # args.files is an empty list, in this case, line_diffs will be all files
+  # changed by args.commit.
+  files = [f for f in line_diffs if f.endswith('.py') and not ShouldExclude(f)]
+
+  if is_not_head_commit:
+    # Checkout to the commit before we format.
+    work_tree = tempfile.mkdtemp(prefix='factory_pre_submit_format')
+    with subprocess.Popen(['git', 'archive', args.commit] + files,
+                          stdout=subprocess.PIPE) as ps:
+      subprocess.run(['tar', '-x', '-C', work_tree], check=True,
+                     stdin=ps.stdout)
+  else:
+    work_tree = None
+
+  proc_args = [(base_cmd, f, line_diffs[f], work_tree) for f in files]
   with multiprocessing.pool.ThreadPool() as pool:
-    # Only check filenames end with '.py'.  We filter these again in case
-    # args.files is an empty list, in this case, line_diffs will be all files
-    # changed by args.commit.
-    proc_args = [(base_cmd, f, diffs)
-                 for f, diffs in line_diffs.items()
-                 if f.endswith('.py') and not ShouldExclude(f)]
     failed_files = list(filter(None, pool.imap(_ProcessOneFile, proc_args)))
+
+  if is_not_head_commit:
+    shutil.rmtree(work_tree)
 
   if failed_files:
     print('Please format your code before submitting for review.')
     fix_cmd = ['make', 'format', 'FILES="{}"'.format(' '.join(failed_files))]
     if args.commit:
-      fix_cmd.append('COMMIT=' + args.commit)
-    print('Please run (in chroot): `%s`' % ' '.join(fix_cmd))
+      fix_cmd.append('COMMIT=HEAD')
+    fix_cmd = ' '.join(fix_cmd)
+    if is_not_head_commit:
+      print('Please run the following command (in chroot) and then rebase: '
+            f'`git checkout {args.commit} && {fix_cmd}`')
+    else:
+      print(f'Please run (in chroot): `{fix_cmd}`')
     sys.exit(1)
   else:
     print('Your code looks great, everything is awesome!')
