@@ -6,15 +6,8 @@
 import os
 import unittest
 
-from cros.factory.hwid.v3.common import HWIDException
-from cros.factory.hwid.v3.database import Components
-from cros.factory.hwid.v3.database import Database
-from cros.factory.hwid.v3.database import EncodedFields
-from cros.factory.hwid.v3.database import ImageId
-from cros.factory.hwid.v3.database import MagicPlaceholderComponentOptions
-from cros.factory.hwid.v3.database import MagicPlaceholderOptions
-from cros.factory.hwid.v3.database import Pattern
-from cros.factory.hwid.v3.database import Rules
+from cros.factory.hwid.v3 import common
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule
 from cros.factory.utils import file_utils
 
@@ -33,25 +26,26 @@ def Unordered(data):
 class DatabaseTest(unittest.TestCase):
 
   def testLoadFile(self):
-    Database.LoadFile(os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
-    Database.LoadFile(
+    database.Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+    database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db_bad_checksum.yaml'),
         verify_checksum=False)
 
     self.assertRaises(
-        HWIDException, Database.LoadFile,
+        common.HWIDException, database.Database.LoadFile,
         os.path.join(_TEST_DATA_PATH, 'test_database_db_bad_checksum.yaml'))
     for case in [
         'missing_pattern', 'missing_encoded_field', 'missing_component',
         'missing_encoded_field_bit'
     ]:
       self.assertRaises(
-          HWIDException, Database.LoadFile,
+          common.HWIDException, database.Database.LoadFile,
           os.path.join(_TEST_DATA_PATH, 'test_database_db_%s.yaml' % case),
           verify_checksum=False)
 
   def testLoadInternal(self):
-    internal_db = Database.LoadFile(
+    internal_db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
 
     self.assertIsInstance(
@@ -61,13 +55,14 @@ class DatabaseTest(unittest.TestCase):
         internal_db.GetComponents('cls3')['comp5'].values, rule.AVLProbeValue)
 
   def testSetLinkAVLProbeValue(self):
-    db = Database.LoadFile(
+    db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
 
     db.SetLinkAVLProbeValue('cls4', 'comp7', 'converter-identifier1', True)
     db.SetLinkAVLProbeValue('cls3', 'comp5', 'converter-identifier2', False)
 
-    loaded_db = Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
+    loaded_db = database.Database.LoadData(
+        db.DumpDataWithoutChecksum(internal=True))
     self.assertIsInstance(
         loaded_db.GetComponents('cls4')['comp7'].values, rule.AVLProbeValue)
 
@@ -84,29 +79,29 @@ class DatabaseTest(unittest.TestCase):
         loaded_db.GetComponents('cls3')['comp5'].values.probe_value_matched)
 
   def testLoadDump(self):
-    db = Database.LoadFile(
+    db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
-    db2 = Database.LoadData(db.DumpDataWithoutChecksum())
+    db2 = database.Database.LoadData(db.DumpDataWithoutChecksum())
 
     self.assertEqual(db, db2)
 
-    db = Database.LoadFile(
+    db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
     with file_utils.UnopenedTemporaryFile() as path:
       db.DumpFileWithoutChecksum(path)
-      Database.LoadFile(path, verify_checksum=False)
+      database.Database.LoadFile(path, verify_checksum=False)
 
   def testLoadInternalDumpExternal(self):
-    db = Database.LoadFile(
+    db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
-    db2 = Database.LoadData(db.DumpDataWithoutChecksum())
+    db2 = database.Database.LoadData(db.DumpDataWithoutChecksum())
 
     self.assertNotEqual(db, db2)
 
   def testLoadInternalDumpInternal(self):
-    db = Database.LoadFile(
+    db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db_internal.yaml'))
-    db2 = Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
+    db2 = database.Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
 
     self.assertEqual(db, db2)
 
@@ -120,14 +115,14 @@ class ImageIdTest(unittest.TestCase):
         2: 'PVT'
     }
     self.assertEqual(
-        Unordered(ImageId(expr).Export()), {
+        Unordered(database.ImageId(expr).Export()), {
             0: 'EVT',
             1: 'DVT',
             2: 'PVT'
         })
 
   def testSetItem(self):
-    image_id = ImageId({
+    image_id = database.ImageId({
         0: 'EVT',
         1: 'DVT',
         2: 'PVT'
@@ -146,13 +141,13 @@ class ImageIdTest(unittest.TestCase):
     def func(a, b):
       image_id[a] = b
 
-    self.assertRaises(HWIDException, func, 3, 'ZZZ')
-    self.assertRaises(HWIDException, func, 4, 4)
-    self.assertRaises(HWIDException, func, 'X', 'Y')
-    self.assertRaises(HWIDException, func, -1, 'Y')
+    self.assertRaises(common.HWIDException, func, 3, 'ZZZ')
+    self.assertRaises(common.HWIDException, func, 4, 4)
+    self.assertRaises(common.HWIDException, func, 'X', 'Y')
+    self.assertRaises(common.HWIDException, func, -1, 'Y')
 
   def testGettingMethods(self):
-    image_id = ImageId({
+    image_id = database.ImageId({
         0: 'EVT',
         1: 'DVT',
         2: 'PVT'
@@ -162,7 +157,7 @@ class ImageIdTest(unittest.TestCase):
     self.assertEqual(image_id[1], 'DVT')
     self.assertEqual(image_id.GetImageIdByName('EVT'), 0)
 
-    image_id = ImageId({
+    image_id = database.ImageId({
         0: 'EVT',
         1: 'DVT',
         2: 'PVT',
@@ -221,7 +216,7 @@ class ComponentsTest(unittest.TestCase):
             'probeable': False
         }
     }
-    c = Components(expr)
+    c = database.Components(expr)
     self.assertEqual(Unordered(c.Export(True, None)), expr)
 
   def testExportWithPlaceholders(self):
@@ -238,9 +233,10 @@ class ComponentsTest(unittest.TestCase):
             }
         }
     }
-    c = Components(expr)
-    placeholder_opts = MagicPlaceholderOptions({
-        ('cls1', 'comp11'): MagicPlaceholderComponentOptions('AAAAA', 'BBBBB')
+    c = database.Components(expr)
+    placeholder_opts = database.MagicPlaceholderOptions({
+        ('cls1', 'comp11'):
+            database.MagicPlaceholderComponentOptions('AAAAA', 'BBBBB')
     })
     self.assertEqual(
         Unordered(c.Export(False, placeholder_opts)), {
@@ -258,8 +254,8 @@ class ComponentsTest(unittest.TestCase):
         })
 
   def testSyntaxError(self):
-    self.assertRaises(Exception, Components, {'cls1': {}})
-    self.assertRaises(Exception, Components,
+    self.assertRaises(Exception, database.Components, {'cls1': {}})
+    self.assertRaises(Exception, database.Components,
                       {'cls1': {
                           'items': {
                               'comp1': {
@@ -267,7 +263,7 @@ class ComponentsTest(unittest.TestCase):
                               }
                           }
                       }})
-    self.assertRaises(Exception, Components,
+    self.assertRaises(Exception, database.Components,
                       {'cls1': {
                           'items': {
                               'comp1': {
@@ -276,7 +272,7 @@ class ComponentsTest(unittest.TestCase):
                           }
                       }})
     self.assertRaises(
-        Exception, Components,
+        Exception, database.Components,
         {'cls1': {
             'items': {
                 'comp1': {
@@ -290,7 +286,7 @@ class ComponentsTest(unittest.TestCase):
 
   def testCanEncode(self):
     self.assertTrue(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -302,7 +298,7 @@ class ComponentsTest(unittest.TestCase):
             }
         }).can_encode)
     self.assertTrue(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -313,7 +309,7 @@ class ComponentsTest(unittest.TestCase):
         }).can_encode)
 
     self.assertTrue(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -326,7 +322,7 @@ class ComponentsTest(unittest.TestCase):
             }
         }).can_encode)
     self.assertFalse(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -340,7 +336,7 @@ class ComponentsTest(unittest.TestCase):
         }).can_encode)
 
     self.assertTrue(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -361,7 +357,7 @@ class ComponentsTest(unittest.TestCase):
         }).can_encode)
 
     self.assertFalse(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -378,7 +374,7 @@ class ComponentsTest(unittest.TestCase):
             }
         }).can_encode)
     self.assertTrue(
-        Components({
+        database.Components({
             'cls1': {
                 'items': {
                     'c1': {
@@ -397,7 +393,7 @@ class ComponentsTest(unittest.TestCase):
         }).can_encode)
 
   def testAddComponent(self):
-    c = Components({})
+    c = database.Components({})
     c.AddComponent('cls1', 'comp1', {
         'a': 'b',
         'c': 'd'
@@ -453,7 +449,7 @@ class ComponentsTest(unittest.TestCase):
             }
         })
 
-    self.assertRaises(HWIDException, c.AddComponent, 'cls1', 'comp1',
+    self.assertRaises(common.HWIDException, c.AddComponent, 'cls1', 'comp1',
                       {'aa': 'bb'}, 'supported')
     c.AddComponent('cls1', 'compX1', {
         'a': 'b',
@@ -462,15 +458,16 @@ class ComponentsTest(unittest.TestCase):
     self.assertFalse(c.can_encode)
 
   def testSetComponentStatus(self):
-    c = Components({'cls1': {
-        'items': {
-            'comp1': {
-                'values': {
-                    'a': 'b'
+    c = database.Components(
+        {'cls1': {
+            'items': {
+                'comp1': {
+                    'values': {
+                        'a': 'b'
+                    }
                 }
             }
-        }
-    }})
+        }})
     c.SetComponentStatus('cls1', 'comp1', 'deprecated')
     self.assertEqual(
         Unordered(c.Export(True, None)), {
@@ -487,7 +484,7 @@ class ComponentsTest(unittest.TestCase):
         })
 
   def testGettingMethods(self):
-    c = Components({
+    c = database.Components({
         'cls1': {
             'items': {
                 'comp1': {
@@ -560,7 +557,7 @@ class EncodedFieldsTest(unittest.TestCase):
             }
         }
     }
-    encoded_fields = EncodedFields(expr)
+    encoded_fields = database.EncodedFields(expr)
     self.assertEqual(Unordered(encoded_fields.Export(None)), expr)
 
     expr = {
@@ -577,7 +574,7 @@ class EncodedFieldsTest(unittest.TestCase):
             }
         }
     }
-    encoded_fields = EncodedFields(expr)
+    encoded_fields = database.EncodedFields(expr)
     self.assertEqual(Unordered(encoded_fields.Export(None)), expr)
 
   def testExportWithPlaceholders(self):
@@ -600,10 +597,10 @@ class EncodedFieldsTest(unittest.TestCase):
             }
         }
     }
-    encoded_fields = EncodedFields(expr)
-    placeholder_options = MagicPlaceholderOptions({
-        ('x', 'xx'): MagicPlaceholderComponentOptions('@@xx@@', None),
-        ('b', 'b1'): MagicPlaceholderComponentOptions('@@b1@@', None),
+    encoded_fields = database.EncodedFields(expr)
+    placeholder_options = database.MagicPlaceholderOptions({
+        ('x', 'xx'): database.MagicPlaceholderComponentOptions('@@xx@@', None),
+        ('b', 'b1'): database.MagicPlaceholderComponentOptions('@@b1@@', None),
     })
     self.assertEqual(
         Unordered(encoded_fields.Export(placeholder_options)), {
@@ -640,20 +637,20 @@ class EncodedFieldsTest(unittest.TestCase):
             }
         }
     }
-    encoded_fields = EncodedFields(expr)
+    encoded_fields = database.EncodedFields(expr)
     self.assertEqual(Unordered(encoded_fields.Export(None)), expr)
 
   def testSyntaxError(self):
-    self.assertRaises(Exception, EncodedFields,
+    self.assertRaises(Exception, database.EncodedFields,
                       {'a': {
                           'bad_index': {
                               'a': None
                           }
                       }})
-    self.assertRaises(Exception, EncodedFields, {'a': {
+    self.assertRaises(Exception, database.EncodedFields, {'a': {
         0: {}
     }})
-    self.assertRaises(Exception, EncodedFields,
+    self.assertRaises(Exception, database.EncodedFields,
                       {'a': {
                           0: {
                               'a': '3'
@@ -665,7 +662,7 @@ class EncodedFieldsTest(unittest.TestCase):
 
   def testCannotEncode(self):
     self.assertFalse(
-        EncodedFields({
+        database.EncodedFields({
             'a': {
                 0: {
                     'a': '3'
@@ -677,7 +674,7 @@ class EncodedFieldsTest(unittest.TestCase):
         }).can_encode)
 
   def testAddFieldComponents(self):
-    e = EncodedFields({'e1': {
+    e = database.EncodedFields({'e1': {
         0: {
             'a': 'A',
             'b': 'B'
@@ -711,14 +708,14 @@ class EncodedFieldsTest(unittest.TestCase):
         })
 
     # `e1` should encode only component class `a` and `b`.
-    self.assertRaises(HWIDException, e.AddFieldComponents, 'e1', {
+    self.assertRaises(common.HWIDException, e.AddFieldComponents, 'e1', {
         'c': ['CC'],
         'a': ['AAAAAA'],
         'b': ['BB']
     })
 
   def testAddNewField(self):
-    e = EncodedFields({'e1': {
+    e = database.EncodedFields({'e1': {
         0: {
             'a': 'A',
             'b': 'B'
@@ -746,11 +743,12 @@ class EncodedFieldsTest(unittest.TestCase):
         })
 
     # `e2` already exists.
-    self.assertRaises(HWIDException, e.AddNewField, 'e2', {'xxx': ['yyy']})
-    self.assertRaises(HWIDException, e.AddNewField, 'e3', {})
+    self.assertRaises(common.HWIDException, e.AddNewField, 'e2',
+                      {'xxx': ['yyy']})
+    self.assertRaises(common.HWIDException, e.AddNewField, 'e3', {})
 
   def testGettingMethods(self):
-    e = EncodedFields({
+    e = database.EncodedFields({
         'e1': {
             0: {
                 'a': 'A',
@@ -817,7 +815,7 @@ class PatternTest(unittest.TestCase):
         'encoding_scheme': 'base8192',
         'fields': []
     }]
-    pattern = Pattern(expr)
+    pattern = database.Pattern(expr)
     self.assertEqual(Unordered(pattern.Export()), expr)
 
   def testGetImageId(self):
@@ -834,39 +832,39 @@ class PatternTest(unittest.TestCase):
         'encoding_scheme': 'base8192',
         'fields': []
     }]
-    pattern = Pattern(expr)
+    pattern = database.Pattern(expr)
     # pylint: disable=protected-access
     self.assertEqual(pattern._max_image_id, 2)
 
   def testSyntaxError(self):
     # missing "image_ids" field
-    self.assertRaises(Exception, Pattern, [{
+    self.assertRaises(Exception, database.Pattern, [{
         'image_id': [3],
         'encoding_scheme': 'base32',
         'fields': []
     }])
 
     # extra field "extra"
-    self.assertRaises(Exception, Pattern, [{
+    self.assertRaises(Exception, database.Pattern, [{
         'image_ids': [3],
         'extra': 'xxx',
         'encoding_scheme': 'base32',
         'fields': []
     }])
-    self.assertRaises(Exception, Pattern, [{
+    self.assertRaises(Exception, database.Pattern, [{
         'image_ids': [],
         'encoding_scheme': 'base32',
         'fields': []
     }])
 
     # encoding scheme is either "base32" or "base8192"
-    self.assertRaises(Exception, Pattern, [{
+    self.assertRaises(Exception, database.Pattern, [{
         'image_ids': [3],
         'encoding_scheme': 'base31',
         'fields': []
     }])
 
-    self.assertRaises(Exception, Pattern, [{
+    self.assertRaises(Exception, database.Pattern, [{
         'image_ids': [3],
         'encoding_scheme': 'base32',
         'fields': [{
@@ -875,7 +873,7 @@ class PatternTest(unittest.TestCase):
     }])
 
     # value of the "fields" field should be a list of dict of size 1
-    self.assertRaises(Exception, Pattern, [{
+    self.assertRaises(Exception, database.Pattern, [{
         'image_ids': [3],
         'encoding_scheme': 'base32',
         'fields': [{
@@ -885,7 +883,7 @@ class PatternTest(unittest.TestCase):
     }])
 
   def testAddEmptyPattern(self):
-    pattern = Pattern([{
+    pattern = database.Pattern([{
         'image_ids': [0],
         'encoding_scheme': 'base32',
         'fields': []
@@ -905,31 +903,59 @@ class PatternTest(unittest.TestCase):
     self.assertEqual(pattern.GetEncodingScheme(), 'base8192')
 
     # Image id `2` already exists.
-    self.assertRaises(HWIDException, pattern.AddEmptyPattern, 2, 'base8192')
+    self.assertRaises(common.HWIDException, pattern.AddEmptyPattern, 2,
+                      'base8192')
 
   def testAddImageIdTo(self):
-    pattern = Pattern([{
+    pattern = database.Pattern([{
         'image_ids': [0],
+        'encoding_scheme': 'base32',
+        'fields': []
+    }, {
+        'image_ids': [2],
         'encoding_scheme': 'base32',
         'fields': []
     }])
 
-    pattern.AddImageId(0, 3)
+    pattern.AddImageId(3, reference_image_id=0)
     self.assertEqual(
         Unordered(pattern.Export()), [{
             'image_ids': [0, 3],
             'encoding_scheme': 'base32',
             'fields': []
+        }, {
+            'image_ids': [2],
+            'encoding_scheme': 'base32',
+            'fields': []
+        }])
+    pattern.AddImageId(4, pattern_idx=1)
+    self.assertEqual(
+        Unordered(pattern.Export()), [{
+            'image_ids': [0, 3],
+            'encoding_scheme': 'base32',
+            'fields': []
+        }, {
+            'image_ids': [2, 4],
+            'encoding_scheme': 'base32',
+            'fields': []
         }])
 
     # `reference_image_id` should exist.
-    self.assertRaises(HWIDException, pattern.AddImageId, 2, 4)
+    self.assertRaisesRegex(common.HWIDException, r'No pattern for image id 1\.',
+                           pattern.AddImageId, 5, reference_image_id=1)
 
     # New `image_id` already exists.
-    self.assertRaises(HWIDException, pattern.AddImageId, 3, 0)
+    self.assertRaisesRegex(common.HWIDException,
+                           r'The image id 0 has already been in used\.',
+                           pattern.AddImageId, 0, reference_image_id=3)
+
+    # No such pattern at the index.
+    self.assertRaisesRegex(common.HWIDException,
+                           r'No such pattern at position 2\.',
+                           pattern.AddImageId, 5, pattern_idx=2)
 
   def testAppendField(self):
-    pattern = Pattern([{
+    pattern = database.Pattern([{
         'image_ids': [0],
         'encoding_scheme': 'base32',
         'fields': []
@@ -952,7 +978,7 @@ class PatternTest(unittest.TestCase):
         }])
 
   def testGettingMethods(self):
-    pattern = Pattern([{
+    pattern = database.Pattern([{
         'image_ids': [0],
         'encoding_scheme': 'base32',
         'fields': [{
@@ -980,11 +1006,86 @@ class PatternTest(unittest.TestCase):
                                                   ('a', 3), ('c', 2), ('c', 1),
                                                   ('c', 0)])
 
+  def testPatternCount(self):
+    pattern_0 = {
+        'image_ids': [0, 1, 2],
+        'encoding_scheme': 'base32',
+        'fields': [{
+            'a': 3
+        }, {
+            'b': 0
+        }, {
+            'a': 1
+        }, {
+            'c': 5
+        }]
+    }
+    pattern_1 = {
+        'image_ids': [3],
+        'encoding_scheme': 'base32',
+        'fields': [{
+            'a': 3
+        }, {
+            'b': 0
+        }]
+    }
+    patterns = database.Pattern([pattern_0, pattern_1])
+    self.assertEqual(2, patterns.num_patterns)
+    # Add new image id with a new pattern.
+    patterns.AddEmptyPattern(4, common.ENCODING_SCHEME.base8192)
+    self.assertEqual(3, patterns.num_patterns)
+    # Add new image id and reuse an existing pattern.
+    patterns.AddImageId(5, reference_image_id=1)
+    self.assertEqual(3, patterns.num_patterns)
+
+  def testGetPattern(self):
+    pattern_0 = {
+        'image_ids': [0, 1, 2],
+        'encoding_scheme': 'base32',
+        'fields': [{
+            'a': 3
+        }, {
+            'b': 0
+        }, {
+            'a': 1
+        }, {
+            'c': 5
+        }]
+    }
+
+    pattern_1 = {
+        'image_ids': [3],
+        'encoding_scheme': 'base32',
+        'fields': [{
+            'a': 3
+        }, {
+            'b': 0
+        }]
+    }
+
+    pattern_datum_0 = database.PatternDatum(0, common.ENCODING_SCHEME.base32, [
+        database.PatternField('a', 3),
+        database.PatternField('b', 0),
+        database.PatternField('a', 1),
+        database.PatternField('c', 5),
+    ])
+    pattern_datum_1 = database.PatternDatum(1, common.ENCODING_SCHEME.base32, [
+        database.PatternField('a', 3),
+        database.PatternField('b', 0),
+    ])
+
+    patterns = database.Pattern([pattern_0, pattern_1])
+    self.assertEqual(pattern_datum_0, patterns.GetPattern(image_id=0))
+    self.assertEqual(pattern_datum_1, patterns.GetPattern(image_id=3))
+
+    self.assertEqual(pattern_datum_0, patterns.GetPattern(pattern_idx=0))
+    self.assertEqual(pattern_datum_1, patterns.GetPattern(pattern_idx=1))
+
 
 class RulesTest(unittest.TestCase):
 
   def testNormal(self):
-    rules = Rules([{
+    rules = database.Rules([{
         'name': 'verify.1',
         'evaluate': 'a = 3',
         'when': 'True'
@@ -1019,7 +1120,7 @@ class RulesTest(unittest.TestCase):
     })
 
   def testAddDeviceInfoRule(self):
-    rules = Rules([])
+    rules = database.Rules([])
     rules.AddDeviceInfoRule('rule1', 'eval1')
     rules.AddDeviceInfoRule('rule3', 'eval3')
     rules.AddDeviceInfoRule('rule2', 'eval2', position=1)
@@ -1040,16 +1141,16 @@ class RulesTest(unittest.TestCase):
         }])
 
   def testSyntaxError(self):
-    self.assertRaises(Exception, Rules, 'abc')
+    self.assertRaises(Exception, database.Rules, 'abc')
 
     # Missing "name", "evaluate".
-    self.assertRaises(Exception, Rules, [{
+    self.assertRaises(Exception, database.Rules, [{
         'namr': '123'
     }])
 
     # The prefix of the value of name should be either "verify." or
     # "device_info."
-    self.assertRaises(Exception, Rules, [{
+    self.assertRaises(Exception, database.Rules, [{
         'name': 'xxx',
         'evaluate': 'a'
     }])

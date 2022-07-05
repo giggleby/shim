@@ -40,7 +40,7 @@ import hashlib
 import itertools
 import logging
 import re
-from typing import Mapping, NamedTuple, Optional, Tuple
+from typing import DefaultDict, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.rule import AVLProbeValue
@@ -277,7 +277,7 @@ class Database:
     if new_pattern:
       self._pattern.AddEmptyPattern(image_id, encoding_scheme)
     else:
-      self._pattern.AddImageId(self.max_image_id, image_id)
+      self._pattern.AddImageId(image_id, self.max_image_id)
     self._image_id[image_id] = image_name
 
   def GetImageIdByName(self, image_name):
@@ -294,6 +294,13 @@ class Database:
 
   def GetBitMapping(self, image_id=None, max_bit_length=None):
     return self._pattern.GetBitMapping(image_id, max_bit_length)
+
+  def GetPattern(self, image_id: Optional[int] = None,
+                 pattern_idx: Optional[int] = None):
+    return self._pattern.GetPattern(image_id=image_id, pattern_idx=pattern_idx)
+
+  def GetPatternCount(self):
+    return self._pattern.num_patterns
 
   def AppendEncodedFieldBit(self, field_name, bit_length, image_id=None):
     if field_name not in self.encoded_fields:
@@ -1304,9 +1311,15 @@ class Components:
         converter_identifier, probe_value_matched, values)
 
 
-_PatternDatum = collections.namedtuple('_PatternDatum',
-                                       ['encoding_scheme', 'fields'])
-_PatternField = collections.namedtuple('_PatternField', ['name', 'bit_length'])
+class PatternField(NamedTuple):
+  name: str
+  bit_length: int
+
+
+class PatternDatum(NamedTuple):
+  idx: int
+  encoding_scheme: str
+  fields: Sequence[PatternField]
 
 
 class Pattern:
@@ -1410,13 +1423,15 @@ class Pattern:
     """
     self._SCHEMA.Validate(pattern_list_expr)
 
-    self._image_id_to_pattern = {}
+    self._image_id_to_pattern: Mapping[int, int] = {}
+    self._patterns = []
 
     for pattern_expr in pattern_list_expr:
-      pattern_obj = _PatternDatum(pattern_expr['encoding_scheme'], [])
+      pattern_obj = PatternDatum(self.num_patterns,
+                                 pattern_expr['encoding_scheme'], [])
       for field_expr in pattern_expr['fields']:
         pattern_obj.fields.append(
-            _PatternField(list(field_expr)[0], next(iter(field_expr.values()))))
+            PatternField(list(field_expr)[0], next(iter(field_expr.values()))))
 
       for image_id in pattern_expr['image_ids']:
         if image_id in self._image_id_to_pattern:
@@ -1424,11 +1439,13 @@ class Pattern:
               'One image id should map to one pattern, but image id %r maps to '
               'multiple patterns.' % image_id)
 
-        self._image_id_to_pattern[image_id] = pattern_obj
+        self._image_id_to_pattern[image_id] = self.num_patterns
+      self._patterns.append(pattern_obj)
 
   def __eq__(self, rhs):
     return (isinstance(rhs, Pattern) and
-            self._image_id_to_pattern == rhs._image_id_to_pattern)
+            self._image_id_to_pattern == rhs._image_id_to_pattern and
+            self._patterns == rhs._patterns)
 
   def __ne__(self, rhs):
     return not self == rhs
@@ -1436,21 +1453,19 @@ class Pattern:
   def Export(self):
     """Exports this `pattern` part of HWID database into a serializable object
     which can be stored into a HWID database file."""
-    pattern_list = []
-    for image_id, pattern in sorted(self._image_id_to_pattern.items()):
-      for obj_to_export, existed_pattern in pattern_list:
-        if pattern is existed_pattern:
-          obj_to_export['image_ids'].append(image_id)
-          break
-      else:
-        obj_to_export = yaml.Dict([('image_ids', [image_id]),
-                                   ('encoding_scheme', pattern.encoding_scheme),
-                                   ('fields', [{
-                                       field.name: field.bit_length
-                                   } for field in pattern.fields])])
-        pattern_list.append((obj_to_export, pattern))
+    inverse_mapping: DefaultDict[int, List[int]] = collections.defaultdict(list)
+    for image_id, pattern_idx in self._image_id_to_pattern.items():
+      inverse_mapping[pattern_idx].append(image_id)
 
-    return [pattern for pattern, _ in pattern_list]
+    pattern_list = []
+    for seq, pattern in enumerate(self._patterns):
+      pattern_list.append(
+          yaml.Dict([('image_ids', inverse_mapping[seq]),
+                     ('encoding_scheme', pattern.encoding_scheme),
+                     ('fields', [{
+                         field.name: field.bit_length
+                     } for field in pattern.fields])]))
+    return pattern_list
 
   @property
   def all_image_ids(self):
@@ -1471,23 +1486,39 @@ class Pattern:
       raise common.HWIDException(
           'The image id %r is already in used.' % image_id)
 
-    self._image_id_to_pattern[image_id] = _PatternDatum(encoding_scheme, [])
+    new_pattern = PatternDatum(self.num_patterns, encoding_scheme, [])
+    self._image_id_to_pattern[image_id] = self.num_patterns
+    self._patterns.append(new_pattern)
 
-  def AddImageId(self, reference_image_id, image_id):
+  def AddImageId(self, image_id, reference_image_id: Optional[int] = None,
+                 pattern_idx: Optional[int] = None):
     """Adds an image id to a pattern by the specific image id.
 
     Args:
       reference_image_id: An integer of the image id.  If not given, the latest
           image id would be used.
       image_id: The image id to be added.
+      pattern_idx: The index of the pattern to be associated to image_id.
     """
     self._SCHEMA.element_type.items['image_ids'].element_type.Validate(image_id)
+
+    if (reference_image_id is None) == (pattern_idx is None):
+      raise common.HWIDException('Please specify exactly one of '
+                                 "'reference_image_id' and 'pattern_idx'")
 
     if image_id in self._image_id_to_pattern:
       raise common.HWIDException(
           'The image id %r has already been in used.' % image_id)
 
-    self._image_id_to_pattern[image_id] = self._GetPattern(reference_image_id)
+    if reference_image_id is not None:
+      if reference_image_id not in self._image_id_to_pattern:
+        raise common.HWIDException(
+            f'No pattern for image id {reference_image_id}.')
+      pattern_idx = self._image_id_to_pattern[reference_image_id]
+
+    if pattern_idx >= self.num_patterns:
+      raise common.HWIDException(f'No such pattern at position {pattern_idx}.')
+    self._image_id_to_pattern[image_id] = pattern_idx
 
   def AppendField(self, field_name, bit_length, image_id=None):
     """Append a field to the pattern.
@@ -1503,8 +1534,8 @@ class Pattern:
     self._SCHEMA.element_type.items['fields'].element_type.value_type.Validate(
         bit_length)
 
-    self._GetPattern(image_id).fields.append(
-        _PatternField(field_name, bit_length))
+    self.GetPattern(image_id).fields.append(
+        PatternField(field_name, bit_length))
 
   def GetEncodingScheme(self, image_id=None):
     """Gets the encoding scheme recorded in the pattern.
@@ -1516,7 +1547,7 @@ class Pattern:
     Returns:
       Either "base32" or "base8192".
     """
-    return self._GetPattern(image_id).encoding_scheme
+    return self.GetPattern(image_id).encoding_scheme
 
   def GetTotalBitLength(self, image_id=None):
     """Gets the total bit length defined by the pattern.
@@ -1528,8 +1559,7 @@ class Pattern:
     Returns:
       A int indicating the total bit length.
     """
-    return sum(
-        [field.bit_length for field in self._GetPattern(image_id).fields])
+    return sum([field.bit_length for field in self.GetPattern(image_id).fields])
 
   def GetFieldsBitLength(self, image_id=None):
     """Gets a map for the bit length of each encoded fields defined by the
@@ -1543,7 +1573,7 @@ class Pattern:
       A dict mapping each encoded field to its bit length.
     """
     ret = collections.defaultdict(int)
-    for field in self._GetPattern(image_id).fields:
+    for field in self.GetPattern(image_id).fields:
       ret[field.name] += field.bit_length
     return dict(ret)
 
@@ -1581,7 +1611,7 @@ class Pattern:
 
     ret = []
     field_offset_map = collections.defaultdict(int)
-    for name, bit_length in self._GetPattern(image_id).fields:
+    for name, bit_length in self.GetPattern(image_id).fields:
       # Normally when one wants to extend bit length of a field, one should
       # append new pattern field instead of expanding the last field.
       # However, for some project, we already have cases where last pattern
@@ -1603,27 +1633,39 @@ class Pattern:
 
     return ret
 
-  def _GetPattern(self, image_id=None):
+  def GetPattern(self, image_id: Optional[int] = None,
+                 pattern_idx: Optional[int] = None):
     """Get the pattern by a given image id.
 
     Args:
       image_id: An integer of the image id to query.  If not given, the latest
           image id would be used.
+      pattern_idx: The index of the pattern.
 
     Returns:
-      The `_PatternDatum` object.
+      The `PatternDatum` object.
     """
+    if pattern_idx is not None:
+      if pattern_idx >= self.num_patterns:
+        raise common.HWIDException(
+            f'No such pattern at position {pattern_idx}.')
+      return self._patterns[pattern_idx]
+
     if image_id is None:
-      return self._image_id_to_pattern[self._max_image_id]
+      return self._patterns[self._image_id_to_pattern[self._max_image_id]]
 
     if image_id not in self._image_id_to_pattern:
       raise common.HWIDException('No pattern for image id %r.' % image_id)
 
-    return self._image_id_to_pattern[image_id]
+    return self._patterns[self._image_id_to_pattern[image_id]]
 
   @property
   def _max_image_id(self):
     return ImageId.GetMaxImageIDFromList(list(self._image_id_to_pattern))
+
+  @property
+  def num_patterns(self):
+    return len(self._patterns)
 
 
 class Rules:
