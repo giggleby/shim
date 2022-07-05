@@ -14,6 +14,7 @@ from cros.factory.probe_info_service.app_engine import unittest_utils
 
 
 class StubbyHandlerTest(unittest.TestCase):
+
   def setUp(self):
     probe_info_storage_connector.GetProbeInfoStorageConnector().Clean()
     probe_metainfo_connector.GetProbeMetaInfoConnectorInstance().Clean()
@@ -26,9 +27,10 @@ class StubbyHandlerTest(unittest.TestCase):
     req = stubby_pb2.GetProbeSchemaRequest()
     resp = self._stubby_handler.GetProbeSchema(req)
     self.assertCountEqual(
-        [f.name for f in resp.probe_schema.probe_function_definitions],
-        ['battery.generic_battery', 'storage.mmc_storage',
-         'storage.nvme_storage'])
+        [f.name for f in resp.probe_schema.probe_function_definitions], [
+            'battery.generic_battery', 'storage.mmc_storage',
+            'storage.nvme_storage'
+        ])
 
   def test_GetProbeMetadata_IncludeProbeStatementPreviewOfValidInput(self):
     req = stubby_pb2.GetProbeMetadataRequest(
@@ -102,10 +104,11 @@ class StubbyHandlerTest(unittest.TestCase):
   def test_UpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsNotZero(
       self, mock_probe_tool_manager_class):
     mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
+    comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     mock_probe_tool_manager.ValidateProbeInfo.return_value = (
+        comp_probe_info.probe_info,
         stubby_pb2.ProbeInfoParsedResult(
             result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
-    comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     req = stubby_pb2.UpdateComponentProbeInfoRequest(
         component_probe_infos=[comp_probe_info])
 
@@ -119,13 +122,14 @@ class StubbyHandlerTest(unittest.TestCase):
   def test_UpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsZero(
       self, mock_probe_tool_manager_class):
     mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
-    mock_probe_tool_manager.ValidateProbeInfo.return_value = (
-        stubby_pb2.ProbeInfoParsedResult(
-            result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     comp_probe_info.component_identity.qual_id = 0
     req = stubby_pb2.UpdateComponentProbeInfoRequest(
         component_probe_infos=[comp_probe_info])
+    mock_probe_tool_manager.ValidateProbeInfo.return_value = (
+        comp_probe_info.probe_info,
+        stubby_pb2.ProbeInfoParsedResult(
+            result_type=stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED))
 
     stubby_handler.ProbeInfoService().UpdateComponentProbeInfo(req)
 
@@ -322,9 +326,11 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertEqual(resp.status, resp.SUCCEED)
 
     # 3. Downloads D1 probe bundle for Q1, Q2, Q3.
-    comp_probe_infos = [unittest_utils.LoadComponentProbeInfo('1-valid'),
-                        unittest_utils.LoadComponentProbeInfo('2-valid'),
-                        unittest_utils.LoadComponentProbeInfo('3-valid')]
+    comp_probe_infos = [
+        unittest_utils.LoadComponentProbeInfo('1-valid'),
+        unittest_utils.LoadComponentProbeInfo('2-valid'),
+        unittest_utils.LoadComponentProbeInfo('3-valid')
+    ]
     for comp_probe_info in comp_probe_infos:
       comp_probe_info.component_identity.device_id = 'device_one'
     req = stubby_pb2.GetDeviceProbeConfigRequest(
@@ -339,10 +345,11 @@ class StubbyHandlerTest(unittest.TestCase):
             '1_2_3-probed_2_3'))
     resp = self._stubby_handler.UploadDeviceProbeResult(req)
     self.assertEqual(resp.upload_status, resp.SUCCEED)
-    self.assertEqual([r.result_type for r in resp.probe_info_test_results],
-                     [stubby_pb2.ProbeInfoTestResult.NOT_PROBED,
-                      stubby_pb2.ProbeInfoTestResult.PASSED,
-                      stubby_pb2.ProbeInfoTestResult.PASSED])
+    self.assertEqual([r.result_type for r in resp.probe_info_test_results], [
+        stubby_pb2.ProbeInfoTestResult.NOT_PROBED,
+        stubby_pb2.ProbeInfoTestResult.PASSED,
+        stubby_pb2.ProbeInfoTestResult.PASSED
+    ])
 
     # 5. Queries the probe status of Q1, Q2 and Q3 for D2.  The expected
     #    response shows that Q1 overridden but not tested, Q2 tested and Q3 not
@@ -353,8 +360,7 @@ class StubbyHandlerTest(unittest.TestCase):
         component_probe_infos=comp_probe_infos)
     resp = self._stubby_handler.GetProbeMetadata(req)
     self.assertEqual(
-        [(m.probe_statement_type, m.is_tested) for m in resp.probe_metadatas],
-        [
+        [(m.probe_statement_type, m.is_tested) for m in resp.probe_metadatas], [
             (stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN, False),
             (stubby_pb2.ProbeMetadata.AUTO_GENERATED, True),
             (stubby_pb2.ProbeMetadata.AUTO_GENERATED, False),
@@ -392,8 +398,7 @@ class StubbyHandlerTest(unittest.TestCase):
         component_probe_infos=comp_probe_infos)
     resp = self._stubby_handler.GetProbeMetadata(req)
     self.assertEqual(
-        [(m.probe_statement_type, m.is_tested) for m in resp.probe_metadatas],
-        [
+        [(m.probe_statement_type, m.is_tested) for m in resp.probe_metadatas], [
             (stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN, True),
             (stubby_pb2.ProbeMetadata.AUTO_GENERATED, True),
             (stubby_pb2.ProbeMetadata.DEVICE_OVERRIDDEN, False),

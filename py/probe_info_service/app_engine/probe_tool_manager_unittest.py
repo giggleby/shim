@@ -38,14 +38,16 @@ class ProbeToolManagerTest(unittest.TestCase):
 
   def test_ValidateProbeInfo_InvalidProbeFunction(self):
     probe_info = probe_tool_manager.ProbeInfo(probe_function_name='no_such_f')
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, True)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
   def test_ValidateProbeInfo_UnknownProbeParameter(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
     probe_info.probe_parameters.add(name='no_such_param')
 
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, True)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
   def test_ValidateProbeInfo_ProbeParameterBadType(self):
@@ -55,7 +57,8 @@ class ProbeToolManagerTest(unittest.TestCase):
         probe_param.string_value = ''
         probe_param.int_value = 123
 
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, True)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
   def test_ValidateProbeInfo_DuplicatedParam(self):
@@ -63,7 +66,8 @@ class ProbeToolManagerTest(unittest.TestCase):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
     probe_info.probe_parameters.add(name='mmc_manfid', string_value='03')
 
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, True)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
   def test_ValidateProbeInfo_MissingProbeParameter(self):
@@ -75,30 +79,36 @@ class ProbeToolManagerTest(unittest.TestCase):
         probe_info.probe_parameters.remove(probe_param)
         break
 
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, False)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, False)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, True)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, True)
     self.assertEqual(resp.result_type, resp.PASSED)
 
   def test_ValidateProbeInfo_ParameterFormatError(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName(
         '1-param_value_error')
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, False)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, False)
     self.assertEqual(resp, unittest_utils.LoadProbeInfoParsedResult(
         '1-param_value_error'))
 
   def test_ValidateProbeInfo_Passed(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, False)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, False)
     self.assertEqual(resp.result_type, resp.PASSED)
 
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('2-valid')
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, False)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, False)
     self.assertEqual(resp.result_type, resp.PASSED)
 
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('3-valid')
-    resp = self._probe_tool_manager.ValidateProbeInfo(probe_info, False)
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, False)
     self.assertEqual(resp.result_type, resp.PASSED)
 
   def test_CreateProbeDataSource(self):

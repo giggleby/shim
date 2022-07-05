@@ -51,9 +51,11 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
   @protorpc_utils.ProtoRPCServiceMethod
   def ValidateProbeInfo(self, request: stubby_pb2.ValidateProbeInfoRequest):
     response = stubby_pb2.ValidateProbeInfoResponse()
-    response.probe_info_parsed_result.CopyFrom(
+
+    unused_converted_probe_info, parsed_result = (
         self._probe_tool_manager.ValidateProbeInfo(request.probe_info,
                                                    not request.is_qual))
+    response.probe_info_parsed_result.CopyFrom(parsed_result)
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod
@@ -287,13 +289,18 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
     response = stubby_pb2.UpdateComponentProbeInfoResponse()
 
     for comp_probe_info in request.component_probe_infos:
-      parsed_result = self._probe_tool_manager.ValidateProbeInfo(
-          comp_probe_info.probe_info,
-          not comp_probe_info.component_identity.qual_id)
+      converted_probe_info, parsed_result = (
+          self._probe_tool_manager.ValidateProbeInfo(
+              comp_probe_info.probe_info,
+              not comp_probe_info.component_identity.qual_id))
       if parsed_result.result_type == _ProbeInfoParsedResult.ResultType.PASSED:
+        converted_comp_probe_info = stubby_pb2.ComponentProbeInfo()
+        converted_comp_probe_info.CopyFrom(comp_probe_info)
+        converted_comp_probe_info.probe_info.CopyFrom(converted_probe_info)
         self._probe_info_storage_connector.SaveComponentProbeInfo(
             comp_probe_info.component_identity.component_id,
-            comp_probe_info.component_identity.qual_id, comp_probe_info)
+            comp_probe_info.component_identity.qual_id,
+            converted_comp_probe_info)
 
       response.probe_info_parsed_results.append(parsed_result)
 

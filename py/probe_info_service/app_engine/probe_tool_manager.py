@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import binascii
 import hashlib
 import os
 import re
@@ -341,6 +342,49 @@ class DeviceProbeResultAnalyzedResult(NamedTuple):
   probe_info_test_results: Optional[List[ProbeInfoTestResult]]
 
 
+def _StandardizeMMCManfid(value: str) -> str:
+  converted_value = value.upper().strip().replace(' ', '')
+  if re.fullmatch(r'0x0*[0-9a-f]{2}', converted_value, flags=re.I):
+    return converted_value[-2:]
+  if re.fullmatch(r'0*[0-9a-f]{2}h', converted_value, flags=re.I):
+    return converted_value[-3:-1]
+  if re.fullmatch(r'[01]{8}b', converted_value, flags=re.I):
+    return f'{int(converted_value[:-1], 2):02X}'
+  return value
+
+
+def _TryUnhexlifyToASCII(value_to_unhexlify, default_value):
+  try:
+    return binascii.unhexlify(value_to_unhexlify).decode('ascii')
+  except ValueError:
+    return default_value
+
+
+def _StandardizeMMCName(value: str) -> str:
+  converted_value = value.lower().strip().replace(' ', '')
+  if re.fullmatch(r'0x[0-9a-f]{12}', converted_value, flags=re.I):
+    return _TryUnhexlifyToASCII(converted_value[2:], value)
+  elif re.fullmatch(r'[0-9a-f]{12}h', converted_value, flags=re.I):
+    return _TryUnhexlifyToASCII(converted_value[:-1], value)
+  return value
+
+
+def _StandardizeProbeInfo(probe_info: ProbeInfo) -> ProbeInfo:
+  if probe_info.probe_function_name == 'storage.emmc_storage':
+    converted_probe_info = ProbeInfo()
+    converted_probe_info.CopyFrom(probe_info)
+    for probe_param in converted_probe_info.probe_parameters:
+      value_type = probe_param.WhichOneof('value')
+      if probe_param == 'mmc_manfid' and value_type == 'string_value':
+        probe_param.string_value = _StandardizeMMCManfid(
+            probe_param.string_value)
+      if probe_param == 'mmc_name' and value_type == 'string_value':
+        probe_param.string_value = _StandardizeMMCName(probe_param.mmc_name)
+
+    return converted_probe_info
+  return probe_info
+
+
 class ProbeToolManager:
   """Provides functionalities related to the probe tool."""
 
@@ -359,8 +403,9 @@ class ProbeToolManager:
           probe_func.GenerateProbeFunctionDefinition())
     return ret
 
-  def ValidateProbeInfo(self, probe_info: ProbeInfo,
-                        allow_missing_params: bool) -> ProbeInfoParsedResult:
+  def ValidateProbeInfo(
+      self, probe_info: ProbeInfo,
+      allow_missing_params: bool) -> Tuple[ProbeInfo, ProbeInfoParsedResult]:
     """Validate the given probe info.
 
     Args:
@@ -369,15 +414,21 @@ class ProbeToolManager:
           or not.
 
     Returns:
-      An instance of `ProbeInfoParsedResult` which records detailed validation
-      result.
+      A pair of the following values:
+        1. The `ProbeInfo` instance with probe parameter value formats being
+           standardized.
+        2. An instance of `ProbeInfoParsedResult` which records detailed
+           validation result.
     """
+    # TODO(b:238061827): Drop this quick fix when the upstream data server
+    #     performs preliminary value check.
+    probe_info = _StandardizeProbeInfo(probe_info)
     probe_info_parsed_result, probe_func = self._LookupProbeFunc(
         probe_info.probe_function_name)
     if probe_func:
       probe_info_parsed_result, unused_ps = probe_func.ParseProbeParams(
           probe_info.probe_parameters, allow_missing_params)
-    return probe_info_parsed_result
+    return probe_info, probe_info_parsed_result
 
   def CreateProbeDataSource(self, component_name,
                             probe_info) -> ProbeDataSource:
