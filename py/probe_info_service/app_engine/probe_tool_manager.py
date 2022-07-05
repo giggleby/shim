@@ -5,7 +5,7 @@
 import hashlib
 import os
 import re
-import typing
+from typing import Any, List, Mapping, NamedTuple, Optional, Tuple
 
 from google.protobuf import text_format
 
@@ -18,9 +18,8 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
-_RESOURCE_PATH = os.path.join(os.path.realpath(os.path.dirname(__file__)),
-                              'resources')
-
+_RESOURCE_PATH = os.path.join(
+    os.path.realpath(os.path.dirname(__file__)), 'resources')
 
 ProbeSchema = stubby_pb2.ProbeSchema
 ProbeFunctionDefinition = stubby_pb2.ProbeFunctionDefinition
@@ -80,7 +79,9 @@ class ProbeFunc:
   Properties:
     name: A string of the name as the identifier of this function.
   """
+
   class _ProbeParam:
+
     def __init__(self, description, value_converter: _ParamValueConverter,
                  ps_gen):
       self.description = description
@@ -99,16 +100,19 @@ class ProbeFunc:
     self._probe_func_def = self._ps_generator.probe_functions[
         runtime_probe_func_name]
 
-    self._probe_param_infos: typing.Mapping[str, self._ProbeParam] = {}
-    probe_params = (probe_params or
-                    {f.name: None for f in self._probe_func_def.output_fields})
+    self._probe_param_infos: Mapping[str, self._ProbeParam] = {}
+    probe_params = (
+        probe_params or
+        {f.name: None
+         for f in self._probe_func_def.output_fields})
     not_found_flag = object()
     for output_field in self._probe_func_def.output_fields:
       probe_param = probe_params.get(output_field.name, not_found_flag)
       if probe_param is not_found_flag:
         continue
-      probe_param = (probe_param or
-                     self._DEFAULT_VALUE_TYPE_MAPPING[output_field.value_type])
+      probe_param = (
+          probe_param or
+          self._DEFAULT_VALUE_TYPE_MAPPING[output_field.value_type])
       self._probe_param_infos[output_field.name] = self._ProbeParam(
           output_field.description, probe_param,
           output_field.probe_statement_generator)
@@ -121,16 +125,15 @@ class ProbeFunc:
                                   description=self._probe_func_def.description)
     for probe_param_name, probe_param in self._probe_param_infos.items():
       ret.parameter_definitions.add(
-          name=probe_param_name,
-          description=probe_param.description,
+          name=probe_param_name, description=probe_param.description,
           value_type=probe_param.value_converter.value_type)
     return ret
 
   def ParseProbeParams(
-      self, probe_params: typing.List[stubby_pb2.ProbeParameter],
+      self, probe_params: List[stubby_pb2.ProbeParameter],
       allow_missing_params: bool, comp_name_for_probe_statement=None
-  ) -> typing.Tuple[ProbeInfoParsedResult, typing
-                    .Optional[probe_config_types.ComponentProbeStatement]]:
+  ) -> Tuple[ProbeInfoParsedResult,
+             Optional[probe_config_types.ComponentProbeStatement]]:
     """Walk through the given probe parameters.
 
     The method first validate each probe parameter.  Then if specified,
@@ -171,18 +174,14 @@ class ProbeFunc:
         raise _IncompatibleError(
             f'Missing probe parameters: {", ".join(missing_param_names)}.')
     except _IncompatibleError as e:
-      return (
-          ProbeInfoParsedResult(
-              result_type=ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
-              general_error_msg=str(e)),
-          None)
+      return (ProbeInfoParsedResult(
+          result_type=ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
+          general_error_msg=str(e)), None)
 
     if probe_param_errors:
-      return (
-          ProbeInfoParsedResult(
-              result_type=ProbeInfoParsedResult.PROBE_PARAMETER_ERROR,
-              probe_parameter_errors=probe_param_errors),
-          None)
+      return (ProbeInfoParsedResult(
+          result_type=ProbeInfoParsedResult.PROBE_PARAMETER_ERROR,
+          probe_parameter_errors=probe_param_errors), None)
 
     ps = None
     if comp_name_for_probe_statement:
@@ -191,11 +190,9 @@ class ProbeFunc:
             comp_name_for_probe_statement, self._probe_func_def.name,
             ps_expected_fields)
       except Exception as e:
-        return (
-            ProbeInfoParsedResult(
-                result_type=ProbeInfoParsedResult.UNKNOWN_ERROR,
-                general_error_msg=str(e)),
-            None)
+        return (ProbeInfoParsedResult(
+            result_type=ProbeInfoParsedResult.UNKNOWN_ERROR,
+            general_error_msg=str(e)), None)
     return ProbeInfoParsedResult(result_type=ProbeInfoParsedResult.PASSED), ps
 
   def _ConvertProbeParamToProbeStatementValue(self, probe_param):
@@ -230,7 +227,7 @@ class ProbeFunc:
 
 
 @type_utils.CachedGetter
-def _GetAllProbeFuncs() -> typing.List[ProbeFunc]:
+def _GetAllProbeFuncs() -> List[ProbeFunc]:
   # TODO(yhong): Separate the data piece out the code logic.
   def _StringToRegexpOrString(value):
     PREFIX = '!re '
@@ -278,16 +275,16 @@ class ProbeDataSource:
     probe_statement: A string of probe statement from the backend system.
         `None` if the instance is generated from probe info.
   """
+
   def __init__(self, fingerprint: str, component_name: str,
-               probe_info: typing.Optional[ProbeInfo],
-               probe_statement: typing.Optional[str]):
+               probe_info: Optional[ProbeInfo], probe_statement: Optional[str]):
     self.component_name = component_name
     self.probe_info = probe_info
     self.fingerprint = fingerprint
     self.probe_statement = probe_statement
 
 
-class ProbeInfoArtifact(typing.NamedTuple):
+class ProbeInfoArtifact(NamedTuple):
   """A placeholder for any artifact generated from probe info(s).
 
   Many tasks performed by this module involve parsing the given `ProbeInfo`
@@ -304,10 +301,10 @@ class ProbeInfoArtifact(typing.NamedTuple):
     output: `None` or any kind of the output.
   """
   probe_info_parsed_result: ProbeInfoParsedResult
-  output: typing.Any
+  output: Any
 
   @property
-  def probe_info_parsed_results(self) -> typing.List[ProbeInfoParsedResult]:
+  def probe_info_parsed_results(self) -> List[ProbeInfoParsedResult]:
     # Since the input is always either one `ProbeInfo` or multiple `ProbeInfo`,
     # `self.probe_info_parsed_result` and `self.probe_info_parsed_results` are
     # mutually exclusively meaningful.  Therefore, we re-use the same
@@ -315,7 +312,7 @@ class ProbeInfoArtifact(typing.NamedTuple):
     return self.probe_info_parsed_result
 
 
-class NamedFile(typing.NamedTuple):
+class NamedFile(NamedTuple):
   """A placeholder represents a named file."""
   name: str
   content: bytes
@@ -332,23 +329,24 @@ def _GetRuntimeProbeWrapperContent():
   return file_utils.ReadFile(full_path, encoding=None)
 
 
-class _ProbedOutcomePreprocessConclusion(typing.NamedTuple):
+class _ProbedOutcomePreprocessConclusion(NamedTuple):
   probed_outcome: client_payload_pb2.ProbedOutcome
-  intrivial_error_msg: typing.Optional[str]
-  probed_components: typing.Optional[typing.List[str]]
+  intrivial_error_msg: Optional[str]
+  probed_components: Optional[List[str]]
 
 
-class DeviceProbeResultAnalyzedResult(typing.NamedTuple):
+class DeviceProbeResultAnalyzedResult(NamedTuple):
   """Placeholder for the analyzed result of a device probe result."""
-  intrivial_error_msg: typing.Optional[str]
-  probe_info_test_results: typing.Optional[typing.List[ProbeInfoTestResult]]
+  intrivial_error_msg: Optional[str]
+  probe_info_test_results: Optional[List[ProbeInfoTestResult]]
 
 
 class ProbeToolManager:
   """Provides functionalities related to the probe tool."""
 
   def __init__(self):
-    self._probe_funcs = {pf.name: pf for pf in _GetAllProbeFuncs()}
+    self._probe_funcs = {pf.name: pf
+                         for pf in _GetAllProbeFuncs()}
 
   def GetProbeSchema(self) -> ProbeSchema:
     """
@@ -381,14 +379,15 @@ class ProbeToolManager:
           probe_info.probe_parameters, allow_missing_params)
     return probe_info_parsed_result
 
-  def CreateProbeDataSource(
-      self, component_name, probe_info) -> ProbeDataSource:
+  def CreateProbeDataSource(self, component_name,
+                            probe_info) -> ProbeDataSource:
     """Creates the probe data source from the given probe_info."""
-    return ProbeDataSource(self._CalcProbeInfoFingerprint(probe_info),
-                           component_name, probe_info, None)
+    return ProbeDataSource(
+        self._CalcProbeInfoFingerprint(probe_info), component_name, probe_info,
+        None)
 
-  def LoadProbeDataSource(
-      self, component_name, probe_statement) -> ProbeDataSource:
+  def LoadProbeDataSource(self, component_name,
+                          probe_statement) -> ProbeDataSource:
     """Load the probe data source from the given probe statement."""
     hash_engine = hashlib.sha1()
     hash_engine.update(
@@ -442,8 +441,7 @@ class ProbeToolManager:
     return self.DumpProbeDataSource(probe_data_source)
 
   def GenerateProbeBundlePayload(
-      self, probe_data_sources: typing.List[ProbeDataSource]
-  ) -> ProbeInfoArtifact:
+      self, probe_data_sources: List[ProbeDataSource]) -> ProbeInfoArtifact:
     """Generates the payload for testing the given probe infos.
 
     Args:
@@ -479,8 +477,9 @@ class ProbeToolManager:
       return ProbeInfoArtifact(probe_info_parsed_results, None)
 
     builder = bundle_builder.BundleBuilder()
-    builder.AddRegularFile(os.path.basename(client_payload_pb2.__file__),
-                           _GetClientPayloadPb2Content())
+    builder.AddRegularFile(
+        os.path.basename(client_payload_pb2.__file__),
+        _GetClientPayloadPb2Content())
     builder.AddExecutableFile('runtime_probe_wrapper',
                               _GetRuntimeProbeWrapperContent())
     builder.SetRunnerFilePath('runtime_probe_wrapper')
@@ -499,8 +498,8 @@ class ProbeToolManager:
     builder.AddRegularFile(metadata.probe_config_file_path,
                            pc_payload.DumpToString().encode('utf-8'))
 
-    builder.AddRegularFile(
-        'metadata.prototxt', text_format.MessageToBytes(metadata))
+    builder.AddRegularFile('metadata.prototxt',
+                           text_format.MessageToBytes(metadata))
 
     # TODO(yhong): Construct a more meaningful file name according to the
     #     expected user scenario.
@@ -548,12 +547,11 @@ class ProbeToolManager:
       return ProbeInfoTestResult(result_type=ProbeInfoTestResult.PASSED)
 
     # TODO(yhong): Provide hints from generic probed result.
-    return ProbeInfoTestResult(
-        result_type=ProbeInfoTestResult.INTRIVIAL_ERROR,
-        intrivial_error_msg='No component is found.')
+    return ProbeInfoTestResult(result_type=ProbeInfoTestResult.INTRIVIAL_ERROR,
+                               intrivial_error_msg='No component is found.')
 
   def AnalyzeDeviceProbeResultPayload(
-      self, probe_data_sources: typing.List[ProbeDataSource],
+      self, probe_data_sources: List[ProbeDataSource],
       probe_result_payload: bytes) -> DeviceProbeResultAnalyzedResult:
     """Analyzes the given probe result payload from a specific device.
 
@@ -569,12 +567,14 @@ class ProbeToolManager:
     """
     preproc_conclusion = self._PreprocessProbeResultPayload(
         probe_result_payload)
-    pds_of_comp_name = {pds.component_name: pds for pds in probe_data_sources}
+    pds_of_comp_name = {pds.component_name: pds
+                        for pds in probe_data_sources}
     ps_metadata_of_comp_name = {
         m.component_name: m
-        for m in preproc_conclusion.probed_outcome.probe_statement_metadatas}
-    unknown_comp_names = set(
-        ps_metadata_of_comp_name.keys()) - set(pds_of_comp_name.keys())
+        for m in preproc_conclusion.probed_outcome.probe_statement_metadatas
+    }
+    unknown_comp_names = set(ps_metadata_of_comp_name.keys()) - set(
+        pds_of_comp_name.keys())
     if unknown_comp_names:
       raise PayloadInvalidError('The probe result payload contains unknown '
                                 f'components: {unknown_comp_names}.')
@@ -595,13 +595,12 @@ class ProbeToolManager:
       else:
         pi_test_result_types.append(ProbeInfoTestResult.NOT_PROBED)
     return DeviceProbeResultAnalyzedResult(
-        intrivial_error_msg=None,
-        probe_info_test_results=[
-            ProbeInfoTestResult(result_type=t) for t in pi_test_result_types])
+        intrivial_error_msg=None, probe_info_test_results=[
+            ProbeInfoTestResult(result_type=t) for t in pi_test_result_types
+        ])
 
   def _LookupProbeFunc(
-      self, probe_function_name
-  ) -> typing.Tuple[ProbeInfoParsedResult, ProbeFunc]:
+      self, probe_function_name) -> Tuple[ProbeInfoParsedResult, ProbeFunc]:
     """A helper method to find the probe function instance by name.
 
     When the target probe function doesn't exist, the method creates and
@@ -642,8 +641,10 @@ class ProbeToolManager:
           getattr(probe_param, value_attr_name) if value_attr_name else None)
     serializable_data = {
         'probe_function_name': probe_info.probe_function_name,
-        'probe_parameters':
-            {k: sorted(v) for k, v in probe_param_values.items()},
+        'probe_parameters': {
+            k: sorted(v)
+            for k, v in probe_param_values.items()
+        },
     }
     hash_engine = hashlib.sha1()
     hash_engine.update(

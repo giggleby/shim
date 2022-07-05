@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import functools
-import typing
+from typing import Callable, NamedTuple, Optional
 
 from cros.factory.probe_info_service.app_engine import probe_info_storage_connector
 from cros.factory.probe_info_service.app_engine import probe_metainfo_connector
@@ -19,12 +19,10 @@ def GetProbeDataSourceComponentName(component_identity):
   return f'AVL_{component_identity.qual_id}'
 
 
-class _ProbeDataSourceFactory(typing.NamedTuple):
+class _ProbeDataSourceFactory(NamedTuple):
   probe_statement_type: int
-  probe_data_source_generator: typing.Callable[
-      [], probe_tool_manager.ProbeDataSource]
-  overridden_probe_data: typing.Optional[
-      ps_storage_connector.OverriddenProbeData]
+  probe_data_source_generator: Callable[[], probe_tool_manager.ProbeDataSource]
+  overridden_probe_data: Optional[ps_storage_connector.OverriddenProbeData]
 
 
 class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
