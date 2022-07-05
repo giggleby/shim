@@ -166,7 +166,9 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       for name in archive.GetNonDirFileNames():
         # Valid report name found, assume this archive is an one-level archive.
         if ReportParser.IsValidReportName(name):
-          return [ReportParser(gcs_path, archive_path, tmp_dir, self.logger)]
+          return [
+              ReportParser(gcs_path, archive_path, tmp_dir, '', self.logger)
+          ]
         archives_in_archive.append(name)
 
       # Assume it is a two-level archive, decompress and check every archive
@@ -181,25 +183,34 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
           # Extracted file is not a supported archive, clean up and skip.
           os.remove(dst)
           continue
-        report_parsers.append(ReportParser(gcs_path, dst, tmp_dir, self.logger))
+        # Adds a string '(archive) ' as prefix for the archive path to help us
+        # distinguish the archive is retrieved from a two-level archive in the
+        # output event.
+        archive_prefix = '(archive) ' + name
+        report_parsers.append(
+            ReportParser(gcs_path, dst, tmp_dir, archive_prefix, self.logger))
       return report_parsers
 
 
 class ReportParser(log_utils.LoggerMixin):
   """A parser to process report archives."""
 
-  def __init__(self, gcs_path, archive_path, tmp_dir, logger=logging):
+  def __init__(self, gcs_path, archive_path, tmp_dir, report_path_parent_dir,
+               logger=logging):
     """Sets up the parser.
 
     Args:
       gcs_path: Path to the archive on Google Cloud Storage.
       archive_path: Path to the archive on disk.
       tmp_dir: Temporary directory.
+      report_path_parent_dir: String value of parent dir to add to every parsed
+        report in report events.
       logger: Logger to use.
     """
     self._archive_path = archive_path
     self._tmp_dir = tmp_dir
     self._gcs_path = gcs_path
+    self._report_path_parent_dir = report_path_parent_dir
     self.logger = logger
 
   def ProcessArchive(self, archive_process_event, process_pool):
@@ -346,6 +357,8 @@ class ReportParser(log_utils.LoggerMixin):
       process_event: A process event with process information.
     """
     uuid = time_utils.TimedUUID()
+    report_file_path = os.path.join(self._report_path_parent_dir,
+                                    report_file_path)
     report_event = datatypes.Event({
         '__report__': True,
         'uuid': uuid,
