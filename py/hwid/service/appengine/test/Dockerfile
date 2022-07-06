@@ -19,6 +19,7 @@ RUN cd "${workdir}" && \
 
 ADD requirements.txt "${workdir}/requirements.txt"
 ADD start_server.sh "${workdir}/start_server.sh"
+ADD check_datastore_status.sh "${workdir}/check_datastore_status.sh"
 
 RUN pip install \
       --target "${workdir}"/lib \

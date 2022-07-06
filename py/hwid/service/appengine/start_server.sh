@@ -7,6 +7,8 @@
 ENTITY_FILE="${ENTITY_FILE}"
 # shellcheck disable=SC2269
 DATASTORE_PROJECT_ID="${DATASTORE_PROJECT_ID}"
+# shellcheck disable=SC2269
+DATASTORE_HOST="${DATASTORE_HOST}"
 
 setup_integration_test() {
   /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
@@ -26,17 +28,14 @@ setup_local_server() {
   /usr/src/google-cloud-sdk/bin/gcloud \
     beta emulators datastore start --consistency=1 &
 
-  # Retry on error to wait datastore start
-  local status
-  status=$(curl localhost:8081 --retry-all-errors --retry 5)
-  if [ "${status}" != "Ok" ]; then
-    echo "Cannot reach datastore server."
+  if ! /usr/src/check_datastore_status.sh; then
+    echo "Datastore is not running. Abort server."
     exit 1
   fi
 
   if [ -f "/datastore/${ENTITY_FILE}" ]; then
     curl -X POST \
-      "localhost:8081/v1/projects/${DATASTORE_PROJECT_ID}:import" \
+      "${DATASTORE_HOST}/v1/projects/${DATASTORE_PROJECT_ID}:import" \
       -H 'Content-Type: application/json' \
       -d "{\"input_url\": \"/datastore/${ENTITY_FILE}\"}"
   fi

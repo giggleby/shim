@@ -80,6 +80,15 @@ def RunTest(image, test_names):
   container_id = process_utils.CheckOutput(
       ['docker', 'run', '-d', '-it', '--rm', image], log=True).strip()
 
+  p = process_utils.Spawn(
+      ['docker', 'exec', container_id, '/usr/src/check_datastore_status.sh'],
+      read_stderr=True, log=True)
+
+  if p.returncode != 0:
+    logging.error('Failed to start server. code=%d. stderr: %s', p.returncode,
+                  p.stderr_data)
+    return False
+
   failed_tests = []
   for tn in test_names:
     p = process_utils.Spawn(

@@ -124,7 +124,7 @@ do_make_build_folder() {
   add_temp "${TEMP_DIR}"
   # Change symlink to hard link due to b/70037640.
   local cp_files=(cron.yaml requirements.txt .gcloudignore gunicorn.conf.py \
-    start_server.sh)
+    start_server.sh check_datastore_status.sh)
   for file in "${cp_files[@]}"; do
     cp -l "${APPENGINE_DIR}/${file}" "${TEMP_DIR}"
   done
