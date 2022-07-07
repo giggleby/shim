@@ -91,6 +91,17 @@ def _NormalizeProjectString(string: str) -> Optional[str]:
   return string.strip().upper() if string else None
 
 
+def _SetupKnownSupportStatusCategories(report: _AnalysisReportMsg):
+  # TODO(yhong): Don't add the status `duplicate` if the project is too old.
+  report.unqualified_support_status.extend([
+      v3_common.COMPONENT_STATUS.deprecated,
+      v3_common.COMPONENT_STATUS.unsupported,
+      v3_common.COMPONENT_STATUS.unqualified,
+      v3_common.COMPONENT_STATUS.duplicate
+  ])
+  report.qualified_support_status.append(v3_common.COMPONENT_STATUS.supported)
+
+
 class HWIDStatusConversionError(Exception):
   """Indicate a failure to convert HWID component status to
   `hwid_api_messages_pb2.SupportStatus`."""
@@ -268,6 +279,9 @@ class SelfServiceHelper:
 
     resp.analysis_report.touched_sections.CopyFrom(
         _ConvertTouchedSectionToMsg(analysis.touched_sections))
+
+    _SetupKnownSupportStatusCategories(resp.analysis_report)
+
     return resp
 
   def CreateHWIDDBFirmwareInfoUpdateCL(self, request):
@@ -481,15 +495,7 @@ Info Update
     if response.validation_result.errors:
       return response
 
-    # TODO(yhong): Don't add the status `duplicate` if the project is too old.
-    response.analysis_report.unqualified_support_status.extend([
-        v3_common.COMPONENT_STATUS.deprecated,
-        v3_common.COMPONENT_STATUS.unsupported,
-        v3_common.COMPONENT_STATUS.unqualified,
-        v3_common.COMPONENT_STATUS.duplicate
-    ])
-    response.analysis_report.qualified_support_status.append(
-        v3_common.COMPONENT_STATUS.supported)
+    _SetupKnownSupportStatusCategories(response.analysis_report)
 
     if require_hwid_db_lines:
       for line in report.lines:

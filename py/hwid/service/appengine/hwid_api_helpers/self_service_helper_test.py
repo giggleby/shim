@@ -224,6 +224,11 @@ class SelfServiceHelperTest(unittest.TestCase):
                     seq_no=2, null_values=True, probe_value_alignment_status=(
                         _PVAlignmentStatusMsg.NO_PROBE_INFO)),
         }, resp.analysis_report.component_infos)
+    self.assertCountEqual(
+        ['deprecated', 'unsupported', 'unqualified', 'duplicate'],
+        resp.analysis_report.unqualified_support_status)
+    self.assertCountEqual(['supported'],
+                          resp.analysis_report.qualified_support_status)
     unused_args, kwargs = live_hwid_repo.CommitHWIDDB.call_args
     self.assertEqual('db data after change 1', kwargs['hwid_db_contents'])
     self.assertEqual('db data after change 1 (internal)',
