@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+_IMAGE_PREFIX = 'image-';
+
+
 /**
  * API for display test.
  */
@@ -45,7 +48,15 @@ window.DisplayTest = class {
    */
   _setDisplayDivClass() {
     cros.factory.utils.removeClassesWithPrefix(this.displayDiv, 'subtest-');
-    this.displayDiv.classList.add(`subtest-${this.itemList[this.focusItem]}`);
+    const item = this.itemList[this.focusItem];
+    if (item.startsWith(_IMAGE_PREFIX)){
+      this.displayDiv.style.backgroundImage = `url(./` +
+        `${item.substring(_IMAGE_PREFIX.length)}.bmp)`;
+      this.displayDiv.classList.add('subtest-custom-image');
+    } else {
+      this.displayDiv.style.backgroundImage = null;
+      this.displayDiv.classList.add(`subtest-${item}`);
+    }
   }
 
   /**

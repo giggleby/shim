@@ -35,8 +35,12 @@ If ``idle_timeout`` is not set:
 
 Dependency
 ----------
-If ``items`` contains item with prefix ``image-``, external program ``bz2`` to
-extract the compressed images.
+Each item of ``items`` is either:
+  1. A predefined CSS item listed in ``_CSS_ITEMS``.
+  2. ``image-<image_name>``: The corresponding image should be in the
+     compressed file ``test_images.tar.bz2``. For example, if the item is
+     "image-horizontal-rgbw", an image named "horizontal-rgbw.bmp" should be in
+     ``test_images.tar.bz2``.
 
 Examples
 --------
@@ -80,6 +84,18 @@ list::
       ]
     }
   }
+
+Default images in compressed file ``test_images.tar.bz2``:
+  'black.bmp',
+  'complex.bmp',
+  'crosstalk-black.bmp',
+  'crosstalk-white.bmp',
+  'gray-127.bmp',
+  'gray-170.bmp',
+  'gray-63.bmp',
+  'horizontal-rgbw.bmp',
+  'vertical-rgbw.bmp',
+  'white.bmp'
 """
 
 import os
@@ -92,7 +108,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
 # The _() is necessary for pygettext to get translatable strings correctly.
-_ALL_ITEMS = [
+_CSS_ITEMS = [
     _('solid-gray-170'),
     _('solid-gray-127'),
     _('solid-gray-63'),
@@ -107,19 +123,9 @@ _ALL_ITEMS = [
     _('gradient-red'),
     _('gradient-green'),
     _('gradient-blue'),
-    _('gradient-white'),
-    _('image-complex'),
-    _('image-black'),
-    _('image-white'),
-    _('image-crosstalk-black'),
-    _('image-crosstalk-white'),
-    _('image-gray-63'),
-    _('image-gray-127'),
-    _('image-gray-170'),
-    _('image-horizontal-rgbw'),
-    _('image-vertical-rgbw')
+    _('gradient-white')
 ]
-_ALL_ITEMS = [x[translation.DEFAULT_LOCALE] for x in _ALL_ITEMS]
+_CSS_ITEMS = [x[translation.DEFAULT_LOCALE] for x in _CSS_ITEMS]
 _IMAGE_PREFIX = 'image-'
 
 
@@ -135,8 +141,9 @@ class DisplayTest(test_case.TestCase):
   ARGS = [
       Arg(
           'items', list,
-          'Set items to be shown on screen. Available items are:\n%s\n' %
-          '\n'.join('  * ``"%s"``' % x for x in _ALL_ITEMS), default=[
+          'Set items to be shown on screen. Available items are: items with '
+          'prefix "image-" and \n%s\n' %
+          '\n'.join('  * ``"%s"``' % x for x in _CSS_ITEMS), default=[
               'solid-gray-170', 'solid-gray-127', 'solid-gray-63', 'solid-red',
               'solid-green', 'solid-blue'
           ]),
@@ -165,10 +172,6 @@ class DisplayTest(test_case.TestCase):
     if self.idle_timeout is not None and len(self.args.items) != 1:
       raise ValueError('items should have exactly one item in idle mode.')
 
-    unknown_items = set(self.args.items) - set(_ALL_ITEMS)
-    if unknown_items:
-      raise ValueError('Unknown item %r in items.' % list(unknown_items))
-
     self.items = self.args.items
     self.images = [
         '%s.bmp' % item[len(_IMAGE_PREFIX):] for item in self.items
@@ -176,6 +179,14 @@ class DisplayTest(test_case.TestCase):
     ]
     if self.images:
       self.ExtractTestImages()
+
+    unknown_items = [
+        item for item in set(self.args.items) - set(_CSS_ITEMS)
+        if not item.startswith(_IMAGE_PREFIX)
+    ]
+    if unknown_items:
+      raise ValueError('Unknown item %r in items.' % unknown_items)
+
     self.frontend_proxy = self.ui.InitJSTestObject('DisplayTest', self.items)
     self.checked = False
     self.fullscreen = False

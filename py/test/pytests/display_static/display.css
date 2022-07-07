@@ -131,52 +131,6 @@
   background-image: linear-gradient(to bottom right, black, white);
 }
 
-#display-div.subtest-image-complex {
-  background-image: url(./complex.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-black {
-  background-image: url(./black.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-white {
-  background-image: url(./white.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-crosstalk-black {
-  background-image: url(./crosstalk-black.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-crosstalk-white {
-  background-image: url(./crosstalk-white.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-gray-63 {
-  background-image: url(./gray-63.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-gray-127 {
-  background-image: url(./gray-127.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-gray-170 {
-  background-image: url(./gray-170.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-horizontal-rgbw {
-  background-image: url(./horizontal-rgbw.bmp);
-  background-size: 100% 100%;
-}
-
-#display-div.subtest-image-vertical-rgbw {
-  background-image: url(./vertical-rgbw.bmp);
+#display-div.subtest-custom-image {
   background-size: 100% 100%;
 }
