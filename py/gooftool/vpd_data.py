@@ -50,6 +50,7 @@ KNOWN_RO_DATA = {
     'display_profiles': r'[0-9a-fA-F]{8}:.+',
     'widevine_keybox': r'[0-9a-f]+',
     'oem_name': ANY,
+    'xo_cal_data': ANY,
 }
 
 # Variable key names in regular expression.
