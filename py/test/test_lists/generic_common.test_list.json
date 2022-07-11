@@ -461,6 +461,9 @@
     },
     "ExternalDisplay": {
       "pytest_name": "external_display",
+      "exclusive_resources": [
+        "DISPLAY"
+      ],
       "args": {
         "main_display": "eDP-1",
         "display_info": [

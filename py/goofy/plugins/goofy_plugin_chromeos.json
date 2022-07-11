@@ -84,6 +84,11 @@
         "size": [200, 300],
         "content": "Hello ChromeOS!"
       }
+    },
+    "display_manager": {
+      "args": {
+        "mirror_mode": true
+      }
     }
   }
 }
