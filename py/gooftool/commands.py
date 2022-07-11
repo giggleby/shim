@@ -27,9 +27,11 @@ from cros.factory.gooftool.common import ExecFactoryPar
 from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
 from cros.factory.gooftool.core import Gooftool
-from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import report_upload
 from cros.factory.gooftool import vpd
+from cros.factory.gooftool.write_protect_target import CreateWriteProtectTarget
+from cros.factory.gooftool.write_protect_target import WriteProtectTargetType
+from cros.factory.gooftool.write_protect_target import UnsupportedOperationError
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.probe.functions import chromeos_firmware
 from cros.factory.test.env import paths
@@ -38,7 +40,6 @@ from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test import state
 from cros.factory.test.utils.cbi_utils import CbiEepromWpStatus
-from cros.factory.test.utils import fpmcu_utils
 from cros.factory.test.utils import hps_utils
 from cros.factory.utils import argparse_utils
 from cros.factory.utils.argparse_utils import CmdArg
@@ -485,129 +486,23 @@ def EnableFwWp(options):
   """Enable then verify firmware software write protection."""
   del options  # Unused.
 
-  def EnableFpmcuWriteProtection():
-    board = Shell('cros_config /fingerprint board').stdout
-    fpmcu = fpmcu_utils.FpmcuDevice(sys_interface.SystemInterface())
-
-    # TODO(b/149590275): Update once they match
-    if board == 'bloonchipper':
-      flashprotect_hw_and_sw_write_protect_enabled_before_reboot = (
-          '^Flash protect flags: 0x0000000b wp_gpio_asserted ro_at_boot '
-          'ro_now$')
-      flashprotect_hw_and_sw_write_protect_enabled = (
-          '^Flash protect flags: 0x0000040f wp_gpio_asserted ro_at_boot '
-          'ro_now rollback_now all_now$')
-    elif board == 'dartmonkey':
-      flashprotect_hw_and_sw_write_protect_enabled_before_reboot = (
-          '^Flash protect flags: 0x00000009 wp_gpio_asserted ro_at_boot$')
-      flashprotect_hw_and_sw_write_protect_enabled = (
-          r'^Flash protect flags:\s*0x0000000b wp_gpio_asserted ro_at_boot '
-          'ro_now$')
-    else:
-      raise Error(f'Unrecognized FPMCU board: {board}')
-
-    def CheckPattern(pattern, text):
-      if not re.search(pattern, text, re.MULTILINE):
-        raise Error(
-            f'Pattern not found in text.\nPattern={pattern}\nText={text}')
-
-    # Reset the FPMCU state.
-    try:
-      fpmcu.FpmcuCommand('reboot_ec')
-    except fpmcu_utils.FpmcuError:
-      pass
-    time.sleep(2)
-
-    # Check if SWWP is disabled but HWWP is enabled.
-    CheckPattern(r'^Flash protect flags:\s*0x00000008 wp_gpio_asserted$',
-                 fpmcu.FpmcuCommand('flashprotect'))
-    if os.path.exists('/tmp/fp.raw'):
-      os.remove('/tmp/fp.raw')
-    fp_frame = fpmcu.FpmcuCommand('fpframe', 'raw')
-    file_utils.WriteFile('/tmp/fp.raw', fp_frame)
-
-    # Enable SWWP.
-    try:
-      fpmcu.FpmcuCommand('flashprotect', 'enable')
-    except fpmcu_utils.FpmcuError:
-      pass
-    time.sleep(2)
-    CheckPattern(flashprotect_hw_and_sw_write_protect_enabled_before_reboot,
-                 fpmcu.FpmcuCommand('flashprotect'))
-    try:
-      fpmcu.FpmcuCommand('reboot_ec')
-    except fpmcu_utils.FpmcuError:
-      pass
-    time.sleep(2)
-
-    # Make sure the flag is correct.
-    CheckPattern(flashprotect_hw_and_sw_write_protect_enabled,
-                 fpmcu.FpmcuCommand('flashprotect'))
-
-    # Make sure the RW image is active.
-    CheckPattern(r'^Firmware copy:\s*RW$', fpmcu.FpmcuCommand('version'))
-
-    # Verify that the system is locked.
-    if os.path.exists('/tmp/fp.raw'):
-      os.remove('/tmp/fp.raw')
-    if os.path.exists('/tmp/error_msg.txt'):
-      os.remove('/tmp/error_msg.txt')
-    stdout, stderr, return_code = fpmcu.FpmcuCommand('fpframe', 'raw',
-                                                     full_info=True)
-    file_utils.WriteFile('/tmp/fp.raw', stdout)
-    file_utils.WriteFile('/tmp/error_msg.txt', stderr)
-
-    if return_code == 0:
-      raise Error('System is not locked.')
-    CheckPattern('ACCESS_DENIED|Permission denied', stderr)
-
-  def WriteProtect(fw):
-    """Calculate protection size, then invoke flashrom.
-
-    The region (offset and size) to write protect may be different per chipset
-    and firmware layout, so we have to read the WP_RO section from FMAP to
-    decide that.
-    """
-    wp_section = 'WP_RO'
-
-    fmap_image = fw.GetFirmwareImage(
-        sections=(['FMAP'] if fw.target == crosfw.TARGET_MAIN else None))
-    if not fmap_image.has_section(wp_section):
-      raise Error('Could not find %s firmware section: %s' %
-                  (fw.target.upper(), wp_section))
-
-    section_data = fw.GetFirmwareImage(
-        sections=[wp_section]).get_section_area(wp_section)
-    ro_offset, ro_size = section_data[0:2]
-
-    logging.debug('write protecting %s [off=%x size=%x]', fw.target.upper(),
-                  ro_offset, ro_size)
-    crosfw.Flashrom(fw.target).EnableWriteProtection(ro_offset, ro_size)
-
+  targets = []
   if HasFpmcu():
-    EnableFpmcuWriteProtection()
+    targets += [WriteProtectTargetType.FPMCU]
+  targets += [
+      WriteProtectTargetType.AP,
+      WriteProtectTargetType.EC,
+      WriteProtectTargetType.PD,
+  ]
 
-  WriteProtect(crosfw.LoadMainFirmware())
-  event_log.Log('wp', fw='main')
-
-  # Some EC (mostly PD) does not support "RO_NOW". Instead they will only set
-  # "RO_AT_BOOT" when you request to enable RO (These platforms consider
-  # --wp-range with right range identical to --wp-enable), and requires a
-  # 'ectool reboot_ec RO at-shutdown; reboot' to let the RO take effect.
-  # After reboot, "flashrom -p host --wp-status" will return protected range.
-  # If you don't reboot, returned range will be (0, 0), and running command
-  # "ectool flashprotect" will not have RO_NOW.
-  # generic_common.test_list.json provides "EnableECWriteProtect" test group
-  # which can be run individually before finalization. Try that out if you're
-  # having trouble enabling RO_NOW flag.
-
-  for fw in [crosfw.LoadEcFirmware(), crosfw.LoadPDFirmware()]:
-    if fw.GetChipId() is None:
-      logging.warning('%s not write protected (seems there is no %s flash).',
-                      fw.target.upper(), fw.target.upper())
-      continue
-    WriteProtect(fw)
-    event_log.Log('wp', fw=fw.target)
+  for target in targets:
+    wp_target = CreateWriteProtectTarget(target)
+    try:
+      wp_target.SetProtectionStatus(True)
+    except UnsupportedOperationError:
+      logging.warning('Cannot enable write protect on %s.', target.value)
+    else:
+      event_log.Log('wp', fw=target.value)
 
 
 @Command('lock_hps')
