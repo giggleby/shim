@@ -8,10 +8,11 @@ import itertools
 import logging
 import math
 import re
-from typing import Dict, List, Union
+import textwrap
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
 from cros.factory.hwid.v3 import common
-from cros.factory.hwid.v3.database import Database
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import probe
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import json_utils
@@ -49,8 +50,8 @@ def GetDeterministicHash(value: ProbedValueType) -> bytes:
   return hashlib.sha256(json_value.encode()).digest()
 
 
-def FilterSpecialCharacter(string):
-  """Filters special cases and converts all seperation characters to underlines.
+def FilterSpecialCharacter(string: str) -> str:
+  """Filters special cases and converts all separation characters to underlines.
   """
   string = re.sub(r'[: .-]+', '_', string)
   string = re.sub(r'[^A-Za-z0-9_]+', '', string)
@@ -156,17 +157,19 @@ def ChecksumUpdater():
 
 
 class DatabaseBuilder:
-  """A helper class for updating a HWID Database object.
+  """A helper class for updating a HWID WritableDatabase object.
 
   properties:
-    database: The Database object this class manipulates on.
+    database_obj: The WritableDatabase object this class manipulates on.
     _from_empty_database: True if this builder is for creating a new database.
   """
 
   _DEFAULT_COMPONENT_SUFFIX = '_default'
 
-  def __init__(self, database_path=None, project=None, image_name=None,
-               database=None, auto_decline_essential_prompt=None):
+  def __init__(self, database_path: Optional[str] = None,
+               project: Optional[str] = None, image_name: Optional[str] = None,
+               database_obj: Optional[database.Database] = None,
+               auto_decline_essential_prompt: Optional[Sequence[str]] = None):
     """Constructor.
 
     If the `database_path` or `database` is given, this class will load the
@@ -178,23 +181,26 @@ class DatabaseBuilder:
       database_path: A path to the database to be loaded.
       project: A string of the project name.
       image_name: A string of the default image name.
-      database: An cros.factory.hwid.v3.database.Database Object.
+      database_obj: A cros.factory.hwid.v3.database.Database Object.
       auto_decline_essential_prompt: A list of essential components that will
         automatically decline the prompt if an essential component is absent.
     """
 
-    if database_path and database:
+    if database_path and database_obj:
       raise ValueError('Both `database_path` and `database_content` are given. '
                        'Please initalize DatabaseBuilder with only one source.')
 
     if database_path:
-      self.database = Database.LoadFile(database_path, verify_checksum=False)
+      self.database = database.WritableDatabase.LoadFile(
+          database_path, verify_checksum=False)
       self._from_empty_database = False
       if not self.database.can_encode:
         raise ValueError('The given HWID database %r is legacy and not '
                          'supported by DatabaseBuilder.' % database_path)
-    elif database:
-      self.database = database
+    elif database_obj:
+      if not isinstance(database_obj, database.WritableDatabase):
+        raise ValueError('The database is not writable.')
+      self.database = database_obj
       self._from_empty_database = False
 
     else:
@@ -339,25 +345,28 @@ class DatabaseBuilder:
 
   @classmethod
   def _BuildEmptyDatabase(cls, project, image_name):
-    return Database.LoadData(
-        'checksum: None\n' +
-        'project: %s\n' % project +
-        'encoding_patterns:\n' +
-        '  0: default\n' +
-        'image_id:\n' +
-        '  0: %s\n' % image_name +
-        'pattern:\n' +
-        '  - image_ids: [0]\n' +
-        '    encoding_scheme: %s\n' % common.ENCODING_SCHEME.base8192 +
-        '    fields: []\n' +
-        'encoded_fields:\n' +
-        '  region_field: !region_field []\n' +
-        'components:\n' +
-        '  region: !region_component\n' +
-        'rules: []\n')
+    return database.WritableDatabase.LoadData(
+        textwrap.dedent(f'''\
+            checksum: None
+            project: {project}
+            encoding_patterns:
+              0: default
+            image_id:
+              0: {image_name}
+            pattern:
+              - image_ids: [0]
+                encoding_scheme: {common.ENCODING_SCHEME.base8192}
+                fields: []
+            encoded_fields:
+              region_field: !region_field []
+            components:
+              region: !region_component
+            rules: []
+        '''))
 
   def AddComponent(self, comp_cls: str, probed_value: ProbedValueType,
-                   set_comp_name=None, supported=False):
+                   set_comp_name: Optional[str] = None,
+                   supported: bool = False):
     """Tries to add a item into the component.
 
     Args:
@@ -397,7 +406,9 @@ class DatabaseBuilder:
       comp_cls: A string of the component class name.
       probed_values: A list of probed value from the device.
     """
-    def _IsSubset(subset, superset):
+
+    def _IsSubset(subset: Mapping[str, Any], superset: Mapping[str,
+                                                               Any]) -> bool:
       return all(subset.get(key) == value for key, value in superset.items())
 
     # Only add the unique component to the database.
@@ -415,7 +426,7 @@ class DatabaseBuilder:
         continue
       self.AddComponent(comp_cls, probed_value_i)
 
-  def _AddNewEncodedField(self, comp_cls, comp_names):
+  def _AddNewEncodedField(self, comp_cls: str, comp_names: Sequence[str]):
     """Adds a new encoded field for the specific component class.
 
     Args:

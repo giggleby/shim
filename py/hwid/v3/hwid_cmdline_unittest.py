@@ -315,7 +315,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
 
       db_file_path = os.path.join(path, 'FOO')
       db = database.Database.LoadFile(db_file_path, verify_checksum=False)
-      expected_db = database.Database(
+      expected_db = database.WritableDatabase(
           'FOO', database.EncodingPatterns({0: 'default'}),
           database.ImageId({0: 'EVT'}),
           database.Pattern([{

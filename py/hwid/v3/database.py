@@ -34,13 +34,14 @@ represents to each part of the HWID database listed above.  The detail of
 each part is described in the class' document.
 """
 
+import abc
 import collections
 import copy
 import hashlib
 import itertools
 import logging
 import re
-from typing import DefaultDict, List, Mapping, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, DefaultDict, List, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Set, Tuple
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.rule import AVLProbeValue
@@ -69,7 +70,29 @@ class MagicPlaceholderOptions(NamedTuple):
   components: Mapping[Tuple[str, str], MagicPlaceholderComponentOptions]
 
 
-class Database:
+class BitEntry(NamedTuple):
+  field: str
+  bit_offset: int
+
+
+class PatternField(NamedTuple):
+  name: str
+  bit_length: int
+
+
+class PatternDatum(NamedTuple):
+  idx: int
+  encoding_scheme: str
+  fields: Sequence[PatternField]
+
+
+class ComponentInfo(type_utils.Obj):
+
+  def __init__(self, values, status, information=None):
+    super().__init__(values=values, status=status, information=information)
+
+
+class Database(abc.ABC):
   """A class for reading in, parsing, and obtaining information of the given
   device-specific component database.
 
@@ -85,14 +108,16 @@ class Database:
     _framework_version: An integer of the framework version.
   """
 
+  @abc.abstractmethod
   def __init__(self, project: str, encoding_patterns: 'EncodingPatterns',
                image_id: 'ImageId', pattern: 'Pattern',
                encoded_fields: 'EncodedFields', components: 'Components',
                rules: 'Rules', checksum: Optional[str], framework_version: int):
     """Constructor.
 
-    This constructor should not be called by other modules.
+    This constructor should be only called by subclasses.
     """
+    super().__init__()
     self._project = project
     self._encoding_patterns = encoding_patterns
     self._image_id = image_id
@@ -116,8 +141,8 @@ class Database:
   def __ne__(self, rhs):
     return not self == rhs
 
-  @staticmethod
-  def LoadFile(file_name, verify_checksum=True):
+  @classmethod
+  def LoadFile(cls, file_name: str, verify_checksum: bool = True) -> 'Database':
     """Loads a device-specific component database from the given file and
     parses it to a Database object.
 
@@ -131,13 +156,13 @@ class Database:
     Raises:
       HWIDException if there is missing field in the database.
     """
-    return Database.LoadData(
+    return cls.LoadData(
         file_utils.ReadFile(file_name),
-        expected_checksum=(Database.Checksum(file_name)
+        expected_checksum=(cls.Checksum(file_name)
                            if verify_checksum else None))
 
-  @staticmethod
-  def Checksum(file_name):
+  @classmethod
+  def Checksum(cls, file_name: str) -> str:
     """Computes a SHA1 digest as the checksum of the given database file.
 
     Args:
@@ -146,10 +171,10 @@ class Database:
     Returns:
       The computed checksum as a string.
     """
-    return Database.ChecksumForText(file_utils.ReadFile(file_name))
+    return cls.ChecksumForText(file_utils.ReadFile(file_name))
 
-  @staticmethod
-  def ChecksumForText(db_text):
+  @classmethod
+  def ChecksumForText(cls, db_text: str) -> str:
     """Computes a SHA1 digest as the checksum of the given database string.
 
     Args:
@@ -162,8 +187,9 @@ class Database:
     db_text = re.sub(r'^checksum:.*$\n?', '', db_text, flags=re.MULTILINE)
     return hashlib.sha1(db_text.encode('utf-8')).hexdigest()
 
-  @staticmethod
-  def LoadData(raw_data, expected_checksum=None):
+  @classmethod
+  def LoadData(cls, raw_data: str,
+               expected_checksum: Optional[str] = None) -> 'Database':
     """Loads a device-specific component database from the given database data.
 
     Args:
@@ -178,42 +204,12 @@ class Database:
       HWIDException if there is missing field in the database, or database
       integrity verification fails.
     """
-    yaml_obj = yaml.safe_load(raw_data)
+    return WritableDatabase.LoadData(raw_data, expected_checksum)
 
-    if not isinstance(yaml_obj, dict):
-      raise common.HWIDException('Invalid HWID database')
-
-    if 'board' in yaml_obj and 'project' not in yaml_obj:
-      yaml_obj['project'] = yaml_obj['board']
-
-    for key in [
-        'project', 'encoding_patterns', 'image_id', 'pattern', 'encoded_fields',
-        'components', 'rules', 'checksum'
-    ]:
-      if key not in yaml_obj:
-        raise common.HWIDException('%r is not specified in HWID database' % key)
-
-    project = yaml_obj['project'].upper()
-    if project != yaml_obj['project']:
-      logging.warning('The project name should be in upper cases, but got %r.',
-                      yaml_obj['project'])
-
-    # Verify database integrity.
-    if (expected_checksum is not None and
-        yaml_obj['checksum'] != expected_checksum):
-      raise common.HWIDException(
-          'HWID database %r checksum verification failed' % project)
-
-    return Database(
-        project, EncodingPatterns(yaml_obj['encoding_patterns']),
-        ImageId(yaml_obj['image_id']), Pattern(yaml_obj['pattern']),
-        EncodedFields(yaml_obj['encoded_fields']),
-        Components(yaml_obj['components']), Rules(yaml_obj['rules']),
-        yaml_obj.get('checksum'),
-        yaml_obj.get('framework_version', common.OLDEST_FRAMEWORK_VERSION))
-
-  def DumpDataWithoutChecksum(self, suppress_support_status=True,
-                              magic_placeholder_options=None, internal=False):
+  def DumpDataWithoutChecksum(
+      self, suppress_support_status: bool = True,
+      magic_placeholder_options: Optional[MagicPlaceholderOptions] = None,
+      internal: bool = False) -> str:
     all_parts = [
         ('checksum', _DUMMY_CHECKSUM),
         ('project', self._project),
@@ -235,87 +231,78 @@ class Database:
                        internal=internal) for key, value in all_parts
     ])
 
-  def DumpFileWithoutChecksum(self, path, internal=False):
+  def DumpFileWithoutChecksum(self, path: str, internal: bool = False):
     file_utils.WriteFile(path, self.DumpDataWithoutChecksum(internal=internal))
 
   @property
-  def can_encode(self):
+  def can_encode(self) -> bool:
     return self._components.can_encode and self._encoded_fields.can_encode
 
   @property
-  def region_field_legacy_info(self):
+  def region_field_legacy_info(self) -> Mapping[str, bool]:
     return self._encoded_fields.region_field_legacy_info
 
   @property
-  def project(self):
+  def project(self) -> str:
     return self._project
 
   @property
-  def checksum(self):
+  def checksum(self) -> Optional[str]:
     return self._checksum
 
   @property
-  def encoding_patterns(self):
+  def encoding_patterns(self) -> Sequence[int]:
     return list(self._encoding_patterns)
 
   @property
-  def image_ids(self):
+  def image_ids(self) -> Sequence[int]:
     return list(self._image_id)
 
   @property
-  def max_image_id(self):
+  def max_image_id(self) -> int:
     return self._image_id.max_image_id
 
   @property
-  def rma_image_id(self):
+  def rma_image_id(self) -> Optional[int]:
     return self._image_id.rma_image_id
 
-  def GetImageName(self, image_id):
+  def GetImageName(self, image_id: int) -> str:
     return self._image_id[image_id]
 
-  def AddImage(self, image_id, image_name, encoding_scheme, new_pattern=False):
-    if new_pattern:
-      self._pattern.AddEmptyPattern(image_id, encoding_scheme)
-    else:
-      self._pattern.AddImageId(image_id, self.max_image_id)
-    self._image_id[image_id] = image_name
-
-  def GetImageIdByName(self, image_name):
+  def GetImageIdByName(self, image_name: str) -> int:
     return self._image_id.GetImageIdByName(image_name)
 
-  def GetEncodingScheme(self, image_id=None):
+  def GetEncodingScheme(self, image_id: Optional[int] = None) -> str:
     return self._pattern.GetEncodingScheme(image_id)
 
-  def GetTotalBitLength(self, image_id=None):
+  def GetTotalBitLength(self, image_id: Optional[int] = None) -> int:
     return self._pattern.GetTotalBitLength(image_id)
 
-  def GetEncodedFieldsBitLength(self, image_id=None):
+  def GetEncodedFieldsBitLength(
+      self, image_id: Optional[int] = None) -> Mapping[str, int]:
     return self._pattern.GetFieldsBitLength(image_id)
 
-  def GetBitMapping(self, image_id=None, max_bit_length=None):
+  def GetBitMapping(self, image_id: Optional[int] = None,
+                    max_bit_length: Optional[int] = None) -> Sequence[BitEntry]:
     return self._pattern.GetBitMapping(image_id, max_bit_length)
 
   def GetPattern(self, image_id: Optional[int] = None,
-                 pattern_idx: Optional[int] = None):
+                 pattern_idx: Optional[int] = None) -> PatternDatum:
     return self._pattern.GetPattern(image_id=image_id, pattern_idx=pattern_idx)
 
-  def GetPatternCount(self):
+  def GetPatternCount(self) -> int:
     return self._pattern.num_patterns
 
-  def AppendEncodedFieldBit(self, field_name, bit_length, image_id=None):
-    if field_name not in self.encoded_fields:
-      raise common.HWIDException('The field %r does not exist.' % field_name)
-
-    self._pattern.AppendField(field_name, bit_length, image_id=image_id)
-
   @property
-  def encoded_fields(self):
+  def encoded_fields(self) -> Sequence[str]:
     return self._encoded_fields.encoded_fields
 
-  def GetEncodedField(self, encoded_field_name):
+  def GetEncodedField(
+      self, encoded_field_name) -> Mapping[int, Mapping[str, Sequence[str]]]:
     return self._encoded_fields.GetField(encoded_field_name)
 
-  def GetComponentClasses(self, encoded_field_name=None):
+  def GetComponentClasses(self,
+                          encoded_field_name: Optional[str] = None) -> Set[str]:
     """Returns a set of component class names with optional conditions.
 
     If `encoded_field_name` is specified, this function only returns the
@@ -341,20 +328,12 @@ class Database:
 
     return ret
 
-  def GetEncodedFieldForComponent(self, comp_cls):
+  def GetEncodedFieldForComponent(self, comp_cls: str) -> Optional[str]:
     return self._encoded_fields.GetFieldForComponent(comp_cls)
 
-  def AddNewEncodedField(self, encoded_field_name, components):
-    self._VerifyEncodedFieldComponents(components)
-
-    self._encoded_fields.AddNewField(encoded_field_name, components)
-
-  def AddEncodedFieldComponents(self, encoded_field_name, components):
-    self._VerifyEncodedFieldComponents(components)
-
-    self._encoded_fields.AddFieldComponents(encoded_field_name, components)
-
-  def GetComponents(self, comp_cls, include_default=True):
+  def GetComponents(
+      self, comp_cls: str,
+      include_default: bool = True) -> Mapping[str, ComponentInfo]:
     """Gets the components of the specific component class.
 
     Args:
@@ -381,34 +360,19 @@ class Database:
       }
     return comps
 
-  def GetDefaultComponent(self, comp_cls):
+  def GetDefaultComponent(self, comp_cls: str) -> Optional[str]:
     return self._components.GetDefaultComponent(comp_cls)
 
-  def AddComponent(self, comp_cls, comp_name, value, status, information=None):
-    return self._components.AddComponent(comp_cls, comp_name, value, status,
-                                         information)
-
-  def SetComponentStatus(self, comp_cls, comp_name, status):
-    return self._components.SetComponentStatus(comp_cls, comp_name, status)
-
-  def SetLinkAVLProbeValue(self, comp_cls: str, comp_name: str,
-                           converter_identifier: Optional[str],
-                           probe_value_matched: bool):
-    return self._components.SetLinkAVLProbeValue(
-        comp_cls, comp_name, converter_identifier, probe_value_matched)
-
   @property
-  def device_info_rules(self):
+  def device_info_rules(self) -> Sequence[Rule]:
     return self._rules.device_info_rules
 
   @property
-  def verify_rules(self):
+  def verify_rules(self) -> Sequence[Rule]:
     return self._rules.verify_rules
 
-  def AddDeviceInfoRule(self, name_suffix, evaluate, **kwargs):
-    self._rules.AddDeviceInfoRule(name_suffix, evaluate, **kwargs)
-
-  def GetActiveComponentClasses(self, image_id=None):
+  def GetActiveComponentClasses(self,
+                                image_id: Optional[int] = None) -> Set[str]:
     ret = set()
     for encoded_field_name in self.GetEncodedFieldsBitLength(image_id).keys():
       ret |= self.GetComponentClasses(encoded_field_name)
@@ -416,12 +380,8 @@ class Database:
     return ret
 
   @property
-  def framework_version(self):
+  def framework_version(self) -> int:
     return self._framework_version
-
-  @framework_version.setter
-  def framework_version(self, new_framework_version):
-    self._framework_version = new_framework_version
 
   def _SanityChecks(self):
     # Each image id should have a corresponding pattern.
@@ -462,6 +422,177 @@ class Database:
                 'The components %r are not defined in `components` part.' %
                 missing_comp_names)
 
+
+class WritableDatabase(Database):
+
+  # Override the abstract method from parent class on purpose.
+  # pylint: disable=useless-super-delegation
+  def __init__(self, project: str, encoding_patterns: 'EncodingPatterns',
+               image_id: 'ImageId', pattern: 'Pattern',
+               encoded_fields: 'EncodedFields', components: 'Components',
+               rules: 'Rules', checksum: Optional[str], framework_version: int):
+    """Initializer.
+
+    This constructor should not be called by other modules.
+    """
+    super().__init__(project, encoding_patterns, image_id, pattern,
+                     encoded_fields, components, rules, checksum,
+                     framework_version)
+
+  @classmethod
+  def LoadFile(cls, file_name: str,
+               verify_checksum: bool = True) -> 'WritableDatabase':
+    """Loads a device-specific component database from the given file and
+    parses it to a WritableDatabase object.
+
+    Args:
+      file_name: A path to a device-specific component database.
+      verify_checksum: Whether to verify the checksum of the database.
+
+    Returns:
+      A WritableDatabase object containing all the settings in the database
+      file.
+
+    Raises:
+      HWIDException if there is missing field in the database.
+    """
+    return cls.LoadData(
+        file_utils.ReadFile(file_name),
+        expected_checksum=(cls.Checksum(file_name)
+                           if verify_checksum else None))
+
+  @classmethod
+  def LoadData(cls, raw_data: str,
+               expected_checksum: Optional[str] = None) -> 'WritableDatabase':
+    """Loads a device-specific component database from the given database data.
+
+    Args:
+      raw_data: The database in string.
+      expected_checksum: The checksum value to verify the loaded data with.
+          A value of None disables checksum verification.
+
+    Returns:
+      A WritableDatabase object containing all the settings in the database
+      file.
+
+    Raises:
+      HWIDException if there is missing field in the database, or database
+      integrity verification fails.
+    """
+    yaml_obj = yaml.safe_load(raw_data)
+
+    if not isinstance(yaml_obj, dict):
+      raise common.HWIDException('Invalid HWID database')
+
+    if 'board' in yaml_obj and 'project' not in yaml_obj:
+      yaml_obj['project'] = yaml_obj['board']
+
+    for key in [
+        'project', 'encoding_patterns', 'image_id', 'pattern', 'encoded_fields',
+        'components', 'rules', 'checksum'
+    ]:
+      if key not in yaml_obj:
+        raise common.HWIDException('%r is not specified in HWID database' % key)
+
+    project = yaml_obj['project'].upper()
+    if project != yaml_obj['project']:
+      logging.warning('The project name should be in upper cases, but got %r.',
+                      yaml_obj['project'])
+
+    # Verify database integrity.
+    if (expected_checksum is not None and
+        yaml_obj['checksum'] != expected_checksum):
+      raise common.HWIDException(
+          'HWID database %r checksum verification failed' % project)
+
+    return cls(
+        project, EncodingPatterns(yaml_obj['encoding_patterns']),
+        ImageId(yaml_obj['image_id']), Pattern(yaml_obj['pattern']),
+        EncodedFields(yaml_obj['encoded_fields']),
+        Components(yaml_obj['components']), Rules(yaml_obj['rules']),
+        yaml_obj.get('checksum'),
+        yaml_obj.get('framework_version', common.OLDEST_FRAMEWORK_VERSION))
+
+  def AddImage(self, image_id: int, image_name: str, encoding_scheme: str,
+               new_pattern: bool = False):
+    if new_pattern:
+      self._pattern.AddEmptyPattern(image_id, encoding_scheme)
+    else:
+      self._pattern.AddImageId(image_id, self.max_image_id)
+    self._image_id[image_id] = image_name
+
+  def AppendEncodedFieldBit(self, field_name: str, bit_length: int,
+                            image_id: Optional[int] = None):
+    if field_name not in self.encoded_fields:
+      raise common.HWIDException('The field %r does not exist.' % field_name)
+
+    self._pattern.AppendField(field_name, bit_length, image_id=image_id)
+
+  def AddNewEncodedField(self, encoded_field_name: str,
+                         components: Mapping[str, Sequence[str]]):
+    self._VerifyEncodedFieldComponents(components)
+
+    self._encoded_fields.AddNewField(encoded_field_name, components)
+
+  def AddEncodedFieldComponents(self, encoded_field_name: str,
+                                components: Mapping[str, Sequence[str]]):
+    self._VerifyEncodedFieldComponents(components)
+
+    self._encoded_fields.AddFieldComponents(encoded_field_name, components)
+
+  def AddComponent(self, comp_cls: str, comp_name: str,
+                   value: Mapping[str, Any], status: str,
+                   information: Optional[Mapping[str, str]] = None):
+    return self._components.AddComponent(comp_cls, comp_name, value, status,
+                                         information)
+
+  def SetComponentStatus(self, comp_cls: str, comp_name: str, status: str):
+    return self._components.SetComponentStatus(comp_cls, comp_name, status)
+
+  def SetLinkAVLProbeValue(self, comp_cls: str, comp_name: str,
+                           converter_identifier: Optional[str],
+                           probe_value_matched: bool):
+    return self._components.SetLinkAVLProbeValue(
+        comp_cls, comp_name, converter_identifier, probe_value_matched)
+
+  def AddDeviceInfoRule(self, name_suffix, evaluate, **kwargs):
+    self._rules.AddDeviceInfoRule(name_suffix, evaluate, **kwargs)
+
+  @property
+  def raw_encoding_patterns(self):
+    return self._encoding_patterns
+
+  @property
+  def raw_image_id(self):
+    return self._image_id
+
+  @property
+  def raw_pattern(self):
+    return self._pattern
+
+  @property
+  def raw_encoded_fields(self):
+    return self._encoded_fields
+
+  @property
+  def raw_components(self):
+    return self._components
+
+  @property
+  def raw_rules(self):
+    return self._rules
+
+  @property
+  def framework_version(self) -> int:
+    return self._framework_version
+
+  @framework_version.setter
+  def framework_version(self, new_framework_version: int):
+    self._framework_version = new_framework_version
+
+  def SanityChecks(self):
+    self._SanityChecks()
+
   def _VerifyEncodedFieldComponents(self, components):
     for comp_cls, comp_names in components.items():
       for comp_name in comp_names:
@@ -480,10 +611,10 @@ class _NamedNumber(dict):
     3. Existed key-value cannot be modified or be removed.
   """
 
-  PART_TAG = None
-  NUMBER_RANGE = None
-  NUMBER_TAG = None
-  NAME_TAG = None
+  PART_TAG: Optional[str] = None
+  NUMBER_RANGE: Optional[Sequence[int]] = None
+  NUMBER_TAG: Optional[str] = None
+  NAME_TAG: Optional[str] = None
 
   def __init__(self, source):
     super().__init__()
@@ -736,7 +867,7 @@ class EncodedFields:
           min_size=1))
 
   def __init__(self, encoded_fields_expr):
-    """Constructor.
+    """Initializer.
 
     This constructor shouldn't be called by other modules.
     """
@@ -818,7 +949,7 @@ class EncodedFields:
     if field_name not in self._fields:
       raise common.HWIDException('The field name %r is invalid.' % field_name)
 
-    ret = {}
+    ret: MutableMapping[int, Mapping[str, Sequence[str]]] = {}
     for index, comps in self._fields[field_name].items():
       ret[index] = {c: self._StandardlizeList(n)
                     for c, n in comps.items()}
@@ -931,12 +1062,6 @@ class EncodedFields:
   @classmethod
   def _StandardlizeList(cls, data):
     return sorted(type_utils.MakeList(data)) if data is not None else []
-
-
-class ComponentInfo(type_utils.Obj):
-
-  def __init__(self, values, status, information=None):
-    super().__init__(values=values, status=status, information=information)
 
 
 class Components:
@@ -1215,6 +1340,9 @@ class Components:
       comp_name: A string of the name of the component.
       values: A dict of the expected probed results.
       status: One of `common.COMPONENT_STATUS`.
+      information: optional dict, these data will be used to further help
+          Runtime Probe and Hardware Verifier have more information to handle
+          miscellaneous probe issues.
     """
     if comp_cls == 'region':
       raise common.HWIDException('Region component class is not modifiable.')
@@ -1309,17 +1437,6 @@ class Components:
 
     self._components[comp_cls][comp_name].values = AVLProbeValue(
         converter_identifier, probe_value_matched, values)
-
-
-class PatternField(NamedTuple):
-  name: str
-  bit_length: int
-
-
-class PatternDatum(NamedTuple):
-  idx: int
-  encoding_scheme: str
-  fields: Sequence[PatternField]
 
 
 class Pattern:
@@ -1423,7 +1540,7 @@ class Pattern:
     """
     self._SCHEMA.Validate(pattern_list_expr)
 
-    self._image_id_to_pattern: Mapping[int, int] = {}
+    self._image_id_to_pattern: MutableMapping[int, int] = {}
     self._patterns = []
 
     for pattern_expr in pattern_list_expr:
@@ -1490,7 +1607,7 @@ class Pattern:
     self._image_id_to_pattern[image_id] = self.num_patterns
     self._patterns.append(new_pattern)
 
-  def AddImageId(self, image_id, reference_image_id: Optional[int] = None,
+  def AddImageId(self, image_id: int, reference_image_id: Optional[int] = None,
                  pattern_idx: Optional[int] = None):
     """Adds an image id to a pattern by the specific image id.
 
@@ -1601,7 +1718,6 @@ class Pattern:
           to the bit offset 1 (which is the second least significant bit)
           of encoded field 'cpu'.
     """
-    BitEntry = collections.namedtuple('BitEntry', ['field', 'bit_offset'])
 
     total_bit_length = self.GetTotalBitLength(image_id=image_id)
     if max_bit_length is None:
@@ -1634,7 +1750,7 @@ class Pattern:
     return ret
 
   def GetPattern(self, image_id: Optional[int] = None,
-                 pattern_idx: Optional[int] = None):
+                 pattern_idx: Optional[int] = None) -> PatternDatum:
     """Get the pattern by a given image id.
 
     Args:

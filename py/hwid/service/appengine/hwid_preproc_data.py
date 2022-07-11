@@ -85,7 +85,7 @@ class HWIDV2PreprocData(HWIDPreprocData):
 class HWIDV3PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv3 data."""
 
-  CACHE_VERSION = '4'
+  CACHE_VERSION = '5'
 
   def __init__(self, project: str, raw_hwid_yaml: str,
                raw_hwid_yaml_internal: str, hwid_db_commit_id: str):

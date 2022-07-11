@@ -14,6 +14,7 @@ from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
+from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 _ErrorMsg = (
@@ -898,6 +899,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock.MagicMock(spec=database.WritableDatabase)
     remove_header.return_value = 'db data'
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
 
@@ -925,6 +927,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   def testCreateHWIDDBFirmwareInfoUpdateCL_InvalidSigner(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock.MagicMock(spec=database.WritableDatabase)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
 
     firmware_record = _FirmwareRecord(model='proj')
@@ -944,6 +947,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.side_effect = [hwid_repo.HWIDRepoError]
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock.MagicMock(spec=database.WritableDatabase)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
 
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
@@ -964,6 +968,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.side_effect = [123, hwid_repo.HWIDRepoError]
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock.MagicMock(spec=database.WritableDatabase)
     remove_header.return_value = 'db data'
     self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
     self._modules.ConfigHWID('PROJ2', '3', 'db data', hwid_action=action)

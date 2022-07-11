@@ -313,7 +313,7 @@ class SelfServiceHelper:
           keys_comp_name += f'_{match.group(2)}'
 
       # Add component to DB
-      db_builder = v3_builder.DatabaseBuilder(database=action.GetDBV3())
+      db_builder = v3_builder.DatabaseBuilder(database_obj=action.GetDBV3())
       changed = False
       for field, value in firmware_record.ListFields():
         if field.message_type is None:
