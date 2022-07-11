@@ -13,6 +13,7 @@ on each device as part of the assembly process.
 """
 
 import functools
+import json
 import logging
 import os
 import pipes
@@ -481,28 +482,55 @@ def VerifyCBIEEPROMWPStatus(options):
       options.cbi_eeprom_wp_status, options.use_generic_tpm2)
 
 
-@Command('write_protect')
-def EnableFwWp(options):
-  """Enable then verify firmware software write protection."""
-  del options  # Unused.
+@Command(
+    'write_protect',
+    CmdArg('--operation', default='enable',
+           choices=['enable', 'disable', 'show'], help='operation to perform'),
+    CmdArg('--targets', nargs='+', default=['all'],
+           choices=['all'] + [member.name for member in WriteProtectTargetType],
+           help='targets to perform on'),
+)
+def WriteProtect(options):
+  """Enable/Disable/Show the firmware software write protection."""
+  options.targets = set(options.targets)
+  if 'all' in options.targets:
+    options.targets = set(WriteProtectTargetType)
+  else:
+    options.targets = set(
+        WriteProtectTargetType[name] for name in options.targets)
 
-  targets = []
+  target_order = []
   if HasFpmcu():
-    targets += [WriteProtectTargetType.FPMCU]
-  targets += [
+    target_order += [WriteProtectTargetType.FPMCU]
+  target_order += [
       WriteProtectTargetType.AP,
       WriteProtectTargetType.EC,
       WriteProtectTargetType.PD,
   ]
 
-  for target in targets:
-    wp_target = CreateWriteProtectTarget(target)
-    try:
-      wp_target.SetProtectionStatus(True)
-    except UnsupportedOperationError:
-      logging.warning('Cannot enable write protect on %s.', target.value)
-    else:
-      event_log.Log('wp', fw=target.value)
+  targets = [target for target in target_order if target in options.targets]
+
+  if options.operation == 'show':
+    status = {}
+    for target in targets:
+      wp_target = CreateWriteProtectTarget(target)
+      try:
+        status[target.name] = wp_target.GetStatus()
+      except UnsupportedOperationError:
+        logging.warning('Cannot get write protection status for %s.',
+                        target.name)
+    print(json.dumps(status, indent=2))
+  else:
+    for target in targets:
+      wp_target = CreateWriteProtectTarget(target)
+      try:
+        wp_target.SetProtectionStatus(options.operation == 'enable')
+      except UnsupportedOperationError:
+        logging.warning('Cannot %s write protection on %s.', options.operation,
+                        target.name)
+      else:
+        if options.operation == 'enable':
+          event_log.Log('wp', fw=target.value)
 
 
 @Command('lock_hps')
@@ -820,7 +848,7 @@ def VerifyAfterCr50Finalize(options):
   if not options.no_write_protect:
     VerifyWPSwitch(options)
   if not options.use_generic_tpm2:
-    # Verify this after EnableFwWp for use_generic_tpm2
+    # Verify this after WriteProtect for use_generic_tpm2
     VerifyCBIEEPROMWPStatus(options)
   VerifySnBits(options)
 
@@ -1042,7 +1070,7 @@ def FpmcuInitializeEntropy(options):
     *ClearFactoryVPDEntries.__args__,
     *ClearGBBFlags.__args__,
     *Cr50Finalize.__args__,
-    *EnableFwWp.__args__,
+    *WriteProtect.__args__,
     *FpmcuInitializeEntropy.__args__,
     *GenerateStableDeviceSecret.__args__,
     *GetGooftool.__args__,
@@ -1106,7 +1134,7 @@ def Finalize(options):
     logging.warning('WARNING: Firmware Software Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
   else:
-    EnableFwWp(options)
+    WriteProtect(options)
     if options.use_generic_tpm2:
       VerifyCBIEEPROMWPStatus(options)
   FpmcuInitializeEntropy(options)
