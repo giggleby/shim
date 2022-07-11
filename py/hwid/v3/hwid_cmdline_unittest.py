@@ -246,10 +246,10 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       hwid_cmdline.BuildDatabaseWrapper(options)
 
       # Constructor.
-      build_database_mock.assert_called_with(
+      build_database_mock.FromEmpty.assert_called_with(
           project=options.project, image_name=options.image_id,
           auto_decline_essential_prompt=options.auto_decline_essential_prompt)
-      instance = build_database_mock.return_value
+      instance = build_database_mock.FromEmpty.return_value
 
       # Uprev the framework version.
       instance.UprevFrameworkVersion.assert_called_with(
@@ -350,9 +350,9 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
       hwid_cmdline.UpdateDatabaseWrapper(options)
 
       # Constructor.
-      build_database_mock.assert_called_with(
-          database_path=os.path.join(path, 'PROJ'))
-      instance = build_database_mock.return_value
+      build_database_mock.FromFilePath.assert_called_with(
+          db_path=os.path.join(path, 'PROJ'))
+      instance = build_database_mock.FromFilePath.return_value
 
       # Update default/null components.
       instance.AddDefaultComponent.assert_has_calls(

@@ -312,43 +312,45 @@ class SelfServiceHelper:
         if match.group(2):
           keys_comp_name += f'_{match.group(2)}'
 
-      # Add component to DB
-      db_builder = v3_builder.DatabaseBuilder(database_obj=action.GetDBV3())
       changed = False
-      for field, value in firmware_record.ListFields():
-        if field.message_type is None:
-          continue
-        value = json_format.MessageToDict(value,
-                                          preserving_proto_field_name=True)
+      # Add component to DB
+      with v3_builder.DatabaseBuilder.FromExistingDB(
+          db=action.GetDBV3()) as db_builder:
+        for field, value in firmware_record.ListFields():
+          if field.message_type is None:
+            continue
+          value = json_format.MessageToDict(value,
+                                            preserving_proto_field_name=True)
 
-        if field.message_type.name == 'FirmwareInfo':
-          comp_name = v3_builder.DetermineComponentName(field.name, value)
-        elif field.message_type.name == 'FirmwareKeys':
-          comp_name = keys_comp_name
-        else:
-          continue
+          if field.message_type.name == 'FirmwareInfo':
+            comp_name = v3_builder.DetermineComponentName(field.name, value)
+          elif field.message_type.name == 'FirmwareKeys':
+            comp_name = keys_comp_name
+          else:
+            continue
 
-        if comp_name in db_builder.database.GetComponents(field.name):
-          logging.info('Skip existed component: %s', comp_name)
-        else:
-          db_builder.AddComponent(field.name, value, comp_name,
-                                  supported=firmware_record.supported)
-          changed = True
+          if comp_name in db_builder.GetComponents(field.name):
+            logging.info('Skip existed component: %s', comp_name)
+          else:
+            db_builder.AddComponent(field.name, value, comp_name,
+                                    supported=firmware_record.supported)
+            changed = True
 
       if not changed:
         logging.info('No component is added to DB: %s', model)
         continue
 
+      db = db_builder.Build()
+
       # Create commit
       hwid_db_contents_internal = action.PatchHeader(
-          db_builder.database.DumpDataWithoutChecksum(
-              internal=True, suppress_support_status=False))
+          db.DumpDataWithoutChecksum(internal=True,
+                                     suppress_support_status=False))
       hwid_db_contents_external = action.PatchHeader(
-          db_builder.database.DumpDataWithoutChecksum(
-              internal=False, suppress_support_status=False))
+          db.DumpDataWithoutChecksum(internal=False,
+                                     suppress_support_status=False))
       commit_msg = textwrap.dedent(f"""\
-          ({int(time.time())}) {db_builder.database.project}: HWID Firmware \
-Info Update
+          ({int(time.time())}) {db.project}: HWID Firmware Info Update
 
           Requested by: {request.original_requester}
           Warning: all posted comments will be sent back to the requester.
@@ -614,8 +616,8 @@ Info Update
       raise common_helper.ConvertExceptionToProtoRPCException(
           ValueError(f'Project: {project} already exists.'))
 
-    init_db = v3_builder.DatabaseBuilder(project=project,
-                                         image_name=request.phase).database
+    init_db = v3_builder.DatabaseBuilder.FromEmpty(
+        project=project, image_name=request.phase).Build()
     db_content = init_db.DumpDataWithoutChecksum(internal=True)
     checksum_updater = v3_builder.ChecksumUpdater()
     db_content = checksum_updater.ReplaceChecksum(db_content)

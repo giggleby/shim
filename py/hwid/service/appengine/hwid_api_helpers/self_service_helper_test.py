@@ -853,8 +853,9 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.CommitHWIDDB.return_value = 123
     live_hwid_repo.GetHWIDDBMetadataByName.side_effect = ValueError
 
-    builder = v3_builder.DatabaseBuilder(project='proj', image_name='EVT')
-    db_content = builder.database.DumpDataWithoutChecksum(internal=True)
+    builder = v3_builder.DatabaseBuilder.FromEmpty(project='proj',
+                                                   image_name='EVT')
+    db_content = builder.Build().DumpDataWithoutChecksum(internal=True)
     action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper
     expected_db_content = action_helper_cls.RemoveHeader(db_content)
 

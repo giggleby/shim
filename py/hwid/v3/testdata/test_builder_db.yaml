@@ -19,8 +19,8 @@ pattern:
       - storage_field: 5
       - dram_field: 5
       - firmware_keys_field: 1
-      - ro_main_firmware_field: 0
-      - comp_cls_1_field: 1
+      - ro_main_firmware_field: 1
+      - comp_cls_1_field: 2
       - comp_cls_23_field: 2
 
 encoded_fields:

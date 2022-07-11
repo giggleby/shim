@@ -138,87 +138,108 @@ class DatabaseBuilderTest(unittest.TestCase):
   # TODO (b/212216855)
   @label_utils.Informational
   def testInit(self):
-    self.assertRaises(ValueError, builder.DatabaseBuilder)
 
     # From file.
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-    self.assertEqual(db.database,
-                     Database.LoadFile(_TEST_DATABASE_PATH,
-                                       verify_checksum=False))
+    db_builder = builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH)
+    self.assertEqual(
+        db_builder.Build(),
+        Database.LoadFile(_TEST_DATABASE_PATH, verify_checksum=False))
 
-    # From stratch.
-    self.assertRaises(ValueError, builder.DatabaseBuilder, project='PROJ')
-
-    db = builder.DatabaseBuilder(project='PROJ', image_name='PROTO')
-    self.assertEqual(db.database.project, 'PROJ')
-    self.assertEqual(db.database.GetImageName(0), 'PROTO')
+    db = builder.DatabaseBuilder.FromEmpty(project='PROJ',
+                                           image_name='PROTO').Build()
+    self.assertEqual(db.project, 'PROJ')
+    self.assertEqual(db.GetImageName(0), 'PROTO')
 
   # TODO (b/212216855)
   @label_utils.Informational
   def testAddDefaultComponent(self):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddDefaultComponent('comp_cls_1')
 
-    db.AddDefaultComponent('comp_cls_1')
-
+    db = db_builder.Build()
     # If the probed results don't contain the component value, the default
     # component should be returned.
-    bom = probe.GenerateBOMFromProbedResults(
-        db.database, {}, {}, {}, 'normal', False)[0]
+    bom = probe.GenerateBOMFromProbedResults(db, {}, {}, {}, 'normal', False)[0]
     self.assertEqual(bom.components['comp_cls_1'], ['comp_cls_1_default'])
 
     # If the probed results contain a real component value, the default
     # component shouldn't be returned.
     bom = probe.GenerateBOMFromProbedResults(
-        db.database,
-        {'comp_cls_1': [{'name': 'comp1', 'values': {'value': "1"}}]},
-        {}, {}, 'normal', False)[0]
+        db, {'comp_cls_1': [{
+            'name': 'comp1',
+            'values': {
+                'value': "1"
+            }
+        }]}, {}, {}, 'normal', False)[0]
     self.assertEqual(bom.components['comp_cls_1'], ['comp_1_1'])
 
-    # One component class can have at most one default component.
-    self.assertRaises(ValueError, db.AddDefaultComponent, 'comp_cls_1')
+    with db_builder:
+      # One component class can have at most one default component.
+      self.assertRaises(ValueError, db_builder.AddDefaultComponent,
+                        'comp_cls_1')
 
   # TODO (b/212216855)
   @label_utils.Informational
   def testAddNullComponent(self):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddNullComponent('comp_cls_1')
 
-    db.AddNullComponent('comp_cls_1')
-    self.assertEqual({0: {'comp_cls_1': ['comp_1_1']},
-                      1: {'comp_cls_1': ['comp_1_2']},
-                      2: {'comp_cls_1': []}},
-                     db.database.GetEncodedField('comp_cls_1_field'))
+    db = db_builder.Build()
+    self.assertEqual(
+        {
+            0: {
+                'comp_cls_1': ['comp_1_1']
+            },
+            1: {
+                'comp_cls_1': ['comp_1_2']
+            },
+            2: {
+                'comp_cls_1': []
+            }
+        }, db.GetEncodedField('comp_cls_1_field'))
 
     # The database already accepts a device without a cpu component.
-    db.AddNullComponent('cpu')
-    self.assertEqual(
-        {0: {'cpu': []}}, db.database.GetEncodedField('cpu_field'))
+    with db_builder:
+      db_builder.AddNullComponent('cpu')
+    db = db_builder.Build()
+    self.assertEqual({0: {
+        'cpu': []
+    }}, db.GetEncodedField('cpu_field'))
 
     # The given component class was not recorded in the database.
-    db.AddNullComponent('new_component')
-    self.assertEqual({0: {'new_component': []}},
-                     db.database.GetEncodedField('new_component_field'))
+    with db_builder:
+      db_builder.AddNullComponent('new_component')
+    self.assertEqual({0: {
+        'new_component': []
+    }}, db.GetEncodedField('new_component_field'))
 
-    # Should fail if the encoded field of the specified component class encodes
-    # more than one class of components.
-    self.assertRaises(ValueError, db.AddNullComponent, 'comp_cls_2')
+    with db_builder:
+      # Should fail if the encoded field of the specified component class
+      # encodes more than one class of components.
+      self.assertRaises(ValueError, db_builder.AddNullComponent, 'comp_cls_2')
 
   # TODO (b/212216855)
   @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk',
               return_value=False)
   def testUpdateByProbedResultsAddFirmware(self, unused_prompt_and_ask_mock):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-    db.UpdateByProbedResults(
-        {'ro_main_firmware': [{
-            'name': 'generic',
-            'values': {
-                'hash': '1'
-            }
-        }]}, {}, {}, [])
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.UpdateByProbedResults(
+          {'ro_main_firmware': [{
+              'name': 'generic',
+              'values': {
+                  'hash': '1'
+              }
+          }]}, {}, {}, [])
 
+    db = db_builder.Build()
     # Should deprecated the legacy firmwares.
     self.assertEqual(
-        db.database.GetComponents('ro_main_firmware')['firmware0'].status,
+        db.GetComponents('ro_main_firmware')['firmware0'].status,
         common.COMPONENT_STATUS.deprecated)
 
   # TODO (b/212216855)
@@ -229,80 +250,93 @@ class DatabaseBuilderTest(unittest.TestCase):
     for add_null_comp in [False, True]:
       prompt_and_ask_mock.return_value = add_null_comp
 
-      db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-      db.UpdateByProbedResults(
-          {
-              'comp_cls_100': [{
-                  'name': 'generic',
-                  'values': {
-                      'key1': 'value1'
-                  }
-              }, {
-                  'name': 'generic',
-                  'values': {
-                      'key1': 'value1',
-                      'key2': 'value2'
-                  }
-              }, {
-                  'name': 'generic',
-                  'values': {
-                      'key1': 'value1',
-                      'key3': 'value3'
-                  }
-              }, {
-                  'name': 'special',
-                  'values': {
-                      'key4': 'value4'
-                  }
-              }, {
-                  'name': 'special',
-                  'values': {
-                      'key4': 'value5'
-                  }
-              }]
-          }, {}, {}, [], image_name='NEW_IMAGE')
+      with builder.DatabaseBuilder.FromFilePath(
+          db_path=_TEST_DATABASE_PATH) as db_builder:
+        db_builder.UpdateByProbedResults(
+            {
+                'comp_cls_100': [{
+                    'name': 'generic',
+                    'values': {
+                        'key1': 'value1'
+                    }
+                }, {
+                    'name': 'generic',
+                    'values': {
+                        'key1': 'value1',
+                        'key2': 'value2'
+                    }
+                }, {
+                    'name': 'generic',
+                    'values': {
+                        'key1': 'value1',
+                        'key3': 'value3'
+                    }
+                }, {
+                    'name': 'special',
+                    'values': {
+                        'key4': 'value4'
+                    }
+                }, {
+                    'name': 'special',
+                    'values': {
+                        'key4': 'value5'
+                    }
+                }]
+            }, {}, {}, [], image_name='NEW_IMAGE')
+      db = db_builder.Build()
       self.assertEqual(
-          sorted([attr.values for attr in db.database.GetComponents(
-              'comp_cls_100').values()], key=lambda d: sorted(d.items())),
-          sorted([{'key1': 'value1'}, {'key4': 'value4'}, {'key4': 'value5'}],
-                 key=lambda d: sorted(d.items())))
+          sorted([
+              attr.values for attr in db.GetComponents('comp_cls_100').values()
+          ], key=lambda d: sorted(d.items())),
+          sorted([{
+              'key1': 'value1'
+          }, {
+              'key4': 'value4'
+          }, {
+              'key4': 'value5'
+          }], key=lambda d: sorted(d.items())))
 
-      self.assertEqual(
-          add_null_comp,
-          {'comp_cls_100': []} in db.database.GetEncodedField(
-              'comp_cls_100_field').values())
+      self.assertEqual(add_null_comp, {'comp_cls_100': []}
+                       in db.GetEncodedField('comp_cls_100_field').values())
 
   # TODO (b/212216855)
   @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
-  def testUpdateByProbedResultsWithExtraComponents(
-      self, unused_prompt_and_ask_mock):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+  def testUpdateByProbedResultsWithExtraComponents(self,
+                                                   unused_prompt_and_ask_mock):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
 
-    # {'value': '3'} is the extra component.
-    db.UpdateByProbedResults(
-        {
-            'comp_cls_1': [{
-                'name': 'generic',
-                'values': {
-                    'value': '1'
-                }
-            }, {
-                'name': 'generic',
-                'values': {
-                    'value': '3'
-                }
-            }]
-        }, {}, {}, [], image_name='NEW_IMAGE')
+      # {'value': '3'} is the extra component.
+      db_builder.UpdateByProbedResults(
+          {
+              'comp_cls_1': [{
+                  'name': 'generic',
+                  'values': {
+                      'value': '1'
+                  }
+              }, {
+                  'name': 'generic',
+                  'values': {
+                      'value': '3'
+                  }
+              }]
+          }, {}, {}, [], image_name='NEW_IMAGE')
+    db = db_builder.Build()
     self.assertEqual(
-        sorted([attr.values for attr in db.database.GetComponents(
-            'comp_cls_1').values()], key=lambda d: sorted(d.items())),
-        sorted([{'value': '1'}, {'value': '2'}, {'value': '3'}],
-               key=lambda d: sorted(d.items())))
+        sorted(
+            [attr.values for attr in db.GetComponents('comp_cls_1').values()],
+            key=lambda d: sorted(d.items())),
+        sorted([{
+            'value': '1'
+        }, {
+            'value': '2'
+        }, {
+            'value': '3'
+        }], key=lambda d: sorted(d.items())))
 
     self.assertIn({'comp_cls_1': sorted(['comp_1_1', '3'])},
-                  list(db.database.GetEncodedField('comp_cls_1_field')
-                       .values()))
+                  list(db.GetEncodedField('comp_cls_1_field').values()))
 
   # TODO (b/212216855)
   @label_utils.Informational
@@ -311,35 +345,39 @@ class DatabaseBuilderTest(unittest.TestCase):
                                                           prompt_and_ask_mock):
     # If the user answer "N", the null component will be added.
     prompt_and_ask_mock.return_value = False
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-    db.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+    db = db_builder.Build()
     for comp_cls in builder.ESSENTIAL_COMPS:
       self.assertIn({comp_cls: []},
-                    list(db.database.GetEncodedField(comp_cls + '_field')
-                         .values()))
+                    list(db.GetEncodedField(comp_cls + '_field').values()))
 
     # If the user answer "Y", the default component will be added if no null
     # component is recorded.
     prompt_and_ask_mock.return_value = True
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-    db.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+
+    db = db_builder.Build()
     for comp_cls in builder.ESSENTIAL_COMPS:
-      if {comp_cls: []} in db.database.GetEncodedField(
-          comp_cls + '_field').values():
+      if {
+          comp_cls: []
+      } in db.GetEncodedField(comp_cls + '_field').values():
         continue
-      self.assertIn(comp_cls + '_default', db.database.GetComponents(comp_cls))
+      self.assertIn(comp_cls + '_default', db.GetComponents(comp_cls))
       self.assertIn({comp_cls: [comp_cls + '_default']},
-                    list(db.database.GetEncodedField(comp_cls + '_field')
-                         .values()))
+                    list(db.GetEncodedField(comp_cls + '_field').values()))
 
   # TODO (b/212216855)
   @label_utils.Informational
   def testUpdateByProbedResultsNoEssentialComponentsWithAutoDecline(self):
-    db = builder.DatabaseBuilder(
-        database_path=_TEST_DATABASE_PATH,
-        auto_decline_essential_prompt=builder.ESSENTIAL_COMPS)
-    db.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
-    # The test will fail due to timeout without adding unittest assertion.
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH,
+        auto_decline_essential_prompt=builder.ESSENTIAL_COMPS) as db_builder:
+      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+      # The test will fail due to timeout without adding unittest assertion.
 
   # TODO (b/212216855)
   @label_utils.Informational
@@ -350,10 +388,10 @@ class DatabaseBuilderTest(unittest.TestCase):
     no_auto_decline_components = set(('mainboard', 'dram'))
     auto_decline_components = set(
         builder.ESSENTIAL_COMPS) - no_auto_decline_components
-    db = builder.DatabaseBuilder(
-        database_path=_TEST_DATABASE_PATH,
-        auto_decline_essential_prompt=list(auto_decline_components))
-    db.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH, auto_decline_essential_prompt=list(
+            auto_decline_components)) as db_builder:
+      db_builder.UpdateByProbedResults({}, {}, {}, [], image_name='NEW_IMAGE')
     self.assertEqual(
         len(no_auto_decline_components), prompt_and_ask_mock.call_count)
 
@@ -362,83 +400,100 @@ class DatabaseBuilderTest(unittest.TestCase):
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsUpdateEncodedFieldsAndPatternCorrectly(
       self, unused_prompt_and_ask_mock):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
 
-    # Add a lot of mainboard so that the field need more bits.
-    for i in range(10):
-      db.UpdateByProbedResults(
-          {'mainboard': [{
-              'name': 'generic',
-              'values': {
-                  'rev': str(i)
-              }
-          }]}, {}, {}, [])
+      # Add a lot of mainboard so that the field need more bits.
+      for i in range(10):
+        db_builder.UpdateByProbedResults(
+            {'mainboard': [{
+                'name': 'generic',
+                'values': {
+                    'rev': str(i)
+                }
+            }]}, {}, {}, [])
 
-    # Add a lot of cpu so that the field need more bits.
-    for i in range(50):
-      db.UpdateByProbedResults(
-          {'cpu': [{
-              'name': 'generic',
-              'values': {
-                  'vendor': str(i)
-              }
-          }]}, {}, {}, [])
+      # Add a lot of cpu so that the field need more bits.
+      for i in range(50):
+        db_builder.UpdateByProbedResults(
+            {'cpu': [{
+                'name': 'generic',
+                'values': {
+                    'vendor': str(i)
+                }
+            }]}, {}, {}, [])
 
-    # Add more component combination of comp_cls_1, comp_cls_2 and comp_cls_3.
-    # Also add an extran component class to trigger adding a new pattern.
-    db.UpdateByProbedResults(
-        {
-            'comp_cls_1': [{
-                'name': 'generic',
-                'values': {
-                    'value': '1'
-                }
-            }, {
-                'name': 'generic',
-                'values': {
-                    'value': '3'
-                }
-            }],
-            'comp_cls_2': [{
-                'name': 'generic',
-                'values': {
-                    'value': '2'
-                }
-            }],
-            'comp_cls_3': [{
-                'name': 'generic',
-                'values': {
-                    'value': '1'
-                }
-            }],
-            'comp_cls_100': [{
-                'name': 'generic',
-                'values': {
-                    'value': '100'
-                }
-            }]
-        }, {}, {}, [], image_name='NEW_IMAGE')
+      # Add more component combination of comp_cls_1, comp_cls_2 and comp_cls_3.
+      # Also add an extran component class to trigger adding a new pattern.
+      db_builder.UpdateByProbedResults(
+          {
+              'comp_cls_1': [{
+                  'name': 'generic',
+                  'values': {
+                      'value': '1'
+                  }
+              }, {
+                  'name': 'generic',
+                  'values': {
+                      'value': '3'
+                  }
+              }],
+              'comp_cls_2': [{
+                  'name': 'generic',
+                  'values': {
+                      'value': '2'
+                  }
+              }],
+              'comp_cls_3': [{
+                  'name': 'generic',
+                  'values': {
+                      'value': '1'
+                  }
+              }],
+              'comp_cls_100': [{
+                  'name': 'generic',
+                  'values': {
+                      'value': '100'
+                  }
+              }]
+          }, {}, {}, [], image_name='NEW_IMAGE')
 
+    db = db_builder.Build()
     self.assertEqual(
-        db.database.GetEncodedField('comp_cls_23_field'),
-        {0: {'comp_cls_2': ['comp_2_1'], 'comp_cls_3': ['comp_3_1']},
-         1: {'comp_cls_2': ['comp_2_2'], 'comp_cls_3': ['comp_3_2']},
-         2: {'comp_cls_2': [], 'comp_cls_3': []},
-         3: {'comp_cls_2': ['comp_2_2'], 'comp_cls_3': ['comp_3_1']}})
+        db.GetEncodedField('comp_cls_23_field'), {
+            0: {
+                'comp_cls_2': ['comp_2_1'],
+                'comp_cls_3': ['comp_3_1']
+            },
+            1: {
+                'comp_cls_2': ['comp_2_2'],
+                'comp_cls_3': ['comp_3_2']
+            },
+            2: {
+                'comp_cls_2': [],
+                'comp_cls_3': []
+            },
+            3: {
+                'comp_cls_2': ['comp_2_2'],
+                'comp_cls_3': ['comp_3_1']
+            }
+        })
 
     # Check the pattern by checking if the fields bit length are all correct.
-    self.assertEqual(db.database.GetEncodedFieldsBitLength(),
-                     {'mainboard_field': 8,
-                      'region_field': 5,
-                      'dram_field': 3,
-                      'cpu_field': 10,
-                      'storage_field': 3,
-                      'chassis_field': 0,
-                      'firmware_keys_field': 1,
-                      'ro_main_firmware_field': 5,
-                      'comp_cls_1_field': 2,
-                      'comp_cls_23_field': 2,
-                      'comp_cls_100_field': 0})
+    self.assertEqual(
+        db.GetEncodedFieldsBitLength(), {
+            'mainboard_field': 8,
+            'region_field': 5,
+            'dram_field': 3,
+            'cpu_field': 10,
+            'storage_field': 3,
+            'chassis_field': 0,
+            'firmware_keys_field': 1,
+            'ro_main_firmware_field': 5,
+            'comp_cls_1_field': 2,
+            'comp_cls_23_field': 2,
+            'comp_cls_100_field': 0
+        })
 
   # TODO (b/212216855)
   @label_utils.Informational
@@ -448,105 +503,153 @@ class DatabaseBuilderTest(unittest.TestCase):
     # No matter if new image name is specified, the pattern will always use
     # the same one if no new encoded fields are added.
     for image_name in [None, 'EVT', 'NEW_IMAGE_NAME']:
-      db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-      db.UpdateByProbedResults(
-          {
-              'comp_cls_2': [{
-                  'name': 'generic',
-                  'values': {
-                      str(x): str(x)
-                  }
-              } for x in range(10)]
-          }, {}, {}, [], image_name=image_name)
-      self.assertEqual(db.database.GetBitMapping(0),
-                       db.database.GetBitMapping(db.database.max_image_id))
+      with builder.DatabaseBuilder.FromFilePath(
+          db_path=_TEST_DATABASE_PATH) as db_builder:
+        db_builder.UpdateByProbedResults(
+            {
+                'comp_cls_2': [{
+                    'name': 'generic',
+                    'values': {
+                        str(x): str(x)
+                    }
+                } for x in range(10)]
+            }, {}, {}, [], image_name=image_name)
+
+      db = db_builder.Build()
+      self.assertEqual(db.GetBitMapping(0), db.GetBitMapping(db.max_image_id))
 
   # TODO (b/212216855)
   @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
   def testUpdateByProbedResultsNeedNewPattern(self, unused_prompt_and_ask_mock):
     # New pattern is required if new encoded fields are added.
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.UpdateByProbedResults(
+          {
+              'comp_cls_200': [{
+                  'name': 'generic',
+                  'values': {
+                      str(x): str(x)
+                  }
+              } for x in range(10)]
+          }, {}, {}, [], image_name='NEW_IMAGE_NAME')
 
-    db.UpdateByProbedResults(
-        {
-            'comp_cls_200': [{
-                'name': 'generic',
-                'values': {
-                    str(x): str(x)
-                }
-            } for x in range(10)]
-        }, {}, {}, [], image_name='NEW_IMAGE_NAME')
-    self.assertNotIn('comp_cls_200_field',
-                     db.database.GetEncodedFieldsBitLength(0))
-    self.assertIn('comp_cls_200_field',
-                  db.database.GetEncodedFieldsBitLength())
-    self.assertIn('NEW_IMAGE_NAME',
-                  db.database.GetImageName(db.database.max_image_id))
+    db = db_builder.Build()
+    self.assertNotIn('comp_cls_200_field', db.GetEncodedFieldsBitLength(0))
+    self.assertIn('comp_cls_200_field', db.GetEncodedFieldsBitLength())
+    self.assertIn('NEW_IMAGE_NAME', db.GetImageName(db.max_image_id))
 
     # Should raise error if new image is needed but no image name.
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-    self.assertRaises(ValueError, db.UpdateByProbedResults,
-                      {'comp_cls_200': [{
-                          'name': 'x',
-                          'values': {
-                              'a': 'b'
-                          }
-                      }]}, {}, {}, [])
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      self.assertRaises(ValueError, db_builder.UpdateByProbedResults,
+                        {'comp_cls_200': [{
+                            'name': 'x',
+                            'values': {
+                                'a': 'b'
+                            }
+                        }]}, {}, {}, [])
 
   # TODO (b/212216855)
   @label_utils.Informational
   def testAddRegions(self):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
-    self.assertEqual(db.database.GetEncodedFieldsBitLength()['region_field'], 5)
+    db_builder = builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH)
+    db = db_builder.Build()
+    self.assertEqual(db.GetEncodedFieldsBitLength()['region_field'], 5)
 
-    self.assertRaises(ValueError, db.AddRegions, [], 'cpu_field')
-    self.assertRaises(common.HWIDException, db.AddRegions, ['invalid_region'])
+    with db_builder:
+      self.assertRaises(ValueError, db_builder.AddRegions, [], 'cpu_field')
+      self.assertRaises(common.HWIDException, db_builder.AddRegions,
+                        ['invalid_region'])
 
+    db = db_builder.Build()
     # Add same region twice, make sure it is not appended again.
-    original_region_field = db.database.GetEncodedField('region_field')
-    db.AddRegions(['us'])
-    db.AddRegions(['us'])
+    original_region_field = db.GetEncodedField('region_field')
+    with db_builder:
+      db_builder.AddRegions(['us'])
+      db_builder.AddRegions(['us'])
+    db = db_builder.Build()
     self.assertDictEqual(original_region_field,
-                         db.database.GetEncodedField('region_field'))
+                         db.GetEncodedField('region_field'))
 
-    # Add 40 regions, check if the bit of region_field extends or not.
-    db.AddRegions(regions.LEGACY_REGIONS_LIST[:40])
-    self.assertEqual(db.database.GetEncodedFieldsBitLength()['region_field'], 6)
+    with db_builder:
+      # Add 40 regions, check if the bit of region_field extends or not.
+      db_builder.AddRegions(regions.LEGACY_REGIONS_LIST[:40])
+    db = db_builder.Build()
+    self.assertEqual(db.GetEncodedFieldsBitLength()['region_field'], 6)
 
   # TODO (b/212216855)
   @label_utils.Informational
   def testAddSkuIds(self):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+    db_builder = builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH)
 
     def _GetSkuIds():
       return [
           e['sku_id'][0]
-          for e in db.database.GetEncodedField('sku_id_field').values()
+          for e in db_builder.Build().GetEncodedField('sku_id_field').values()
           if len(e['sku_id'])
       ]
 
-    self.assertEqual(db.database.GetComponents('sku_id'), {})
+    db = db_builder.Build()
+    self.assertEqual(db.GetComponents('sku_id'), {})
 
-    # New values will be sorted.
-    db._AddSkuIds([0, 1, 50, 2])  # pylint: disable=protected-access
+    with db_builder:
+      # New values will be sorted.
+      db_builder._AddSkuIds([0, 1, 50, 2])  # pylint: disable=protected-access
     self.assertEqual(_GetSkuIds(), ['sku_0', 'sku_1', 'sku_2', 'sku_50'])
-    # Adding the same value again should have no effect.
-    db._AddSkuIds([1, 2])  # pylint: disable=protected-access
+
+    with db_builder:
+      # Adding the same value again should have no effect.
+      db_builder._AddSkuIds([1, 2])  # pylint: disable=protected-access
     self.assertEqual(_GetSkuIds(), ['sku_0', 'sku_1', 'sku_2', 'sku_50'])
-    # New values should be added after the old values, even if the number is
-    # greater.
-    db._AddSkuIds([30, 40, 10])  # pylint: disable=protected-access
+
+    with db_builder:
+      # New values should be added after the old values, even if the number is
+      # greater.
+      db_builder._AddSkuIds([30, 40, 10])  # pylint: disable=protected-access
     self.assertEqual(
         _GetSkuIds(),
         ['sku_0', 'sku_1', 'sku_2', 'sku_50', 'sku_10', 'sku_30', 'sku_40'])
 
+  # TODO (b/212216855)
+  @label_utils.Informational
+  def testBuilderContext_Fail(self):
+    db_builder = builder.DatabaseBuilder.FromEmpty(project='FOO',
+                                                   image_name='BAR')
+    self.assertRaisesRegex(
+        builder.BuilderException,
+        'Modification of DB should be called within builder context',
+        db_builder.AddDefaultComponent, 'comp_cls_1')
+
+    with builder.DatabaseBuilder.FromEmpty(project='FOO',
+                                           image_name='BAR') as db_builder:
+      self.assertRaisesRegex(
+          builder.BuilderException,
+          'Build should be called outside the builder context',
+          db_builder.Build)
+
+  # TODO (b/212216855)
+  @label_utils.Informational
+  def testSanityCheckWhileExitingContext(self):
+    db_builder = builder.DatabaseBuilder.FromEmpty(project='FOO',
+                                                   image_name='BAR')
+    with mock.patch.object(
+        db_builder._database,  # pylint: disable=protected-access
+        'SanityChecks') as mock_sanity_check:
+      with db_builder:
+        pass
+      mock_sanity_check.assert_called_once_with()
+
   # TODO (b/204729913)
   @label_utils.Informational
   def testRender(self):
-    db = builder.DatabaseBuilder(database_path=_TEST_DATABASE_PATH)
+    db_builder = builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH)
     path = file_utils.CreateTemporaryFile()
-    db.Render(path)
+    db_builder.Render(path)
 
     # Should be able to load successfully and pass the checksum check.
     Database.LoadFile(path)

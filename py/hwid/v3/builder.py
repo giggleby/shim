@@ -3,13 +3,14 @@
 # found in the LICENSE file.
 
 from collections import OrderedDict
+import functools
 import hashlib
 import itertools
 import logging
 import math
 import re
 import textwrap
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Union
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
@@ -35,6 +36,10 @@ PRIORITY_COMPS = OrderedDict([
 
 ProbedValueType = Dict[str, Union[List, None, 'ProbedValueType', bool, float,
                                   int, str]]
+
+
+class BuilderException(Exception):
+  """Raised when the operation of the builder is invalid."""
 
 
 def GetDeterministicHash(value: ProbedValueType) -> bytes:
@@ -156,69 +161,114 @@ def ChecksumUpdater():
     return None
 
 
+def _EnsureInBuilderContext(method):
+
+  @functools.wraps(method)
+  def _Wrapper(self, *args, **kwargs):
+    if not self.in_context:
+      raise BuilderException(
+          'Modification of DB should be called within builder context')
+    return method(self, *args, **kwargs)
+
+  return _Wrapper
+
+
 class DatabaseBuilder:
   """A helper class for updating a HWID WritableDatabase object.
 
   properties:
-    database_obj: The WritableDatabase object this class manipulates on.
+    db: The WritableDatabase object this class manipulates on.
     _from_empty_database: True if this builder is for creating a new database.
   """
 
   _DEFAULT_COMPONENT_SUFFIX = '_default'
 
-  def __init__(self, database_path: Optional[str] = None,
-               project: Optional[str] = None, image_name: Optional[str] = None,
-               database_obj: Optional[database.Database] = None,
+  def __init__(self, db: database.WritableDatabase, from_empty_database: bool,
                auto_decline_essential_prompt: Optional[Sequence[str]] = None):
-    """Constructor.
-
-    If the `database_path` or `database` is given, this class will load the
-    existed database; otherwise this class will create an new empty database
-    which project and the image name of image id 0 meets the given arguments
-    `project` and `image_name`.
+    """Initializer.
 
     Args:
-      database_path: A path to the database to be loaded.
-      project: A string of the project name.
-      image_name: A string of the default image name.
-      database_obj: A cros.factory.hwid.v3.database.Database Object.
+      db: A cros.factory.hwid.v3.database.WritableDatabase Object.
+      from_empty_database: True if this builder is for creating a new database.
       auto_decline_essential_prompt: A list of essential components that will
         automatically decline the prompt if an essential component is absent.
     """
+    self._database = db
+    self._from_empty_database = from_empty_database
+    self._auto_decline_essential_prompt = set(auto_decline_essential_prompt or
+                                              [])
+    self._in_context = False
 
-    if database_path and database_obj:
-      raise ValueError('Both `database_path` and `database_content` are given. '
-                       'Please initalize DatabaseBuilder with only one source.')
+  def __enter__(self):
+    self._in_context = True
+    return self
 
-    if database_path:
-      self.database = database.WritableDatabase.LoadFile(
-          database_path, verify_checksum=False)
-      self._from_empty_database = False
-      if not self.database.can_encode:
-        raise ValueError('The given HWID database %r is legacy and not '
-                         'supported by DatabaseBuilder.' % database_path)
-    elif database_obj:
-      if not isinstance(database_obj, database.WritableDatabase):
-        raise ValueError('The database is not writable.')
-      self.database = database_obj
-      self._from_empty_database = False
+  def __exit__(self, exc_type, unused_exc_value, unused_traceback):
+    if exc_type is None:  # Exit the context without errors.
+      self._database.SanityChecks()
+    self._in_context = False
 
-    else:
-      if project is None or image_name is None:
-        raise ValueError('No project name.')
-      self.database = self._BuildEmptyDatabase(project.upper(), image_name)
-      self._from_empty_database = True
+  @property
+  def in_context(self):
+    return self._in_context
 
-    self.auto_decline_essential_prompt = set(auto_decline_essential_prompt or
-                                             [])
+  @classmethod
+  def FromFilePath(
+      cls, db_path: str,
+      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+  ) -> 'DatabaseBuilder':
+    """Create a builder from a path of an existing DB."""
 
+    db = database.WritableDatabase.LoadFile(db_path, verify_checksum=False)
+    if not db.can_encode:
+      raise ValueError(f'The given HWID database {db_path} is legacy and not '
+                       'supported by DatabaseBuilder.')
+    return cls(db=db, from_empty_database=False,
+               auto_decline_essential_prompt=auto_decline_essential_prompt)
+
+  @classmethod
+  def FromExistingDB(
+      cls, db: database.Database,
+      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+  ) -> 'DatabaseBuilder':
+    """Create a builder from an existing DB."""
+
+    if not isinstance(db, database.WritableDatabase):
+      raise ValueError('The database is not writable.')
+    return cls(db=db, from_empty_database=False,
+               auto_decline_essential_prompt=auto_decline_essential_prompt)
+
+  @classmethod
+  def FromEmpty(
+      cls, project: str, image_name: str,
+      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+  ) -> 'DatabaseBuilder':
+    """Create a builder to building an empty DB."""
+
+    db = cls._BuildEmptyDatabase(project.upper(), image_name)
+    return cls(db=db, from_empty_database=True,
+               auto_decline_essential_prompt=auto_decline_essential_prompt)
+
+  @classmethod
+  def FromDBData(
+      cls, db_data: str,
+      auto_decline_essential_prompt: Optional[Sequence[str]] = None
+  ) -> 'DatabaseBuilder':
+    """Create a builder from DB data of an existing DB."""
+
+    db = database.WritableDatabase.LoadData(db_data, expected_checksum=None)
+    return cls(db=db, from_empty_database=False,
+               auto_decline_essential_prompt=auto_decline_essential_prompt)
+
+  @_EnsureInBuilderContext
   def UprevFrameworkVersion(self, new_framework_version):
-    if new_framework_version < self.database.framework_version:
+    if new_framework_version < self._database.framework_version:
       raise ValueError(
           'The HWID framework cannot be downgraded, please consider upgrading '
           'the toolkit on DUT before collecting materials.')
-    self.database.framework_version = new_framework_version
+    self._database.framework_version = new_framework_version
 
+  @_EnsureInBuilderContext
   def AddDefaultComponent(self, comp_cls):
     """Adds a default component item and corresponding rule to the database.
 
@@ -227,14 +277,15 @@ class DatabaseBuilder:
     """
     logging.info('Component [%s]: add a default item.', comp_cls)
 
-    if self.database.GetDefaultComponent(comp_cls) is not None:
+    if self._database.GetDefaultComponent(comp_cls) is not None:
       raise ValueError(
           'The component class %r already has a default component.' % comp_cls)
 
     comp_name = comp_cls + self._DEFAULT_COMPONENT_SUFFIX
-    self.database.AddComponent(
-        comp_cls, comp_name, None, common.COMPONENT_STATUS.unqualified)
+    self._database.AddComponent(comp_cls, comp_name, None,
+                                common.COMPONENT_STATUS.unqualified)
 
+  @_EnsureInBuilderContext
   def AddNullComponent(self, comp_cls):
     """Updates the database to be able to encode a device without specific
     component class.
@@ -242,28 +293,29 @@ class DatabaseBuilder:
     Args:
       comp_cls: A string of the component class name.
     """
-    field_name = self.database.GetEncodedFieldForComponent(comp_cls)
+    field_name = self._database.GetEncodedFieldForComponent(comp_cls)
     if not field_name:
       self._AddNewEncodedField(comp_cls, [])
       return
 
-    if len(self.database.GetComponentClasses(field_name)) > 1:
+    if len(self._database.GetComponentClasses(field_name)) > 1:
       raise ValueError(
           'The encoded field %r for component %r encodes more than one '
           'component class so it\'s not trivial to mark a null %r component.  '
           'Please update the database by a real probed results.' %
           (field_name, comp_cls, comp_cls))
     if all(comps[comp_cls]
-           for comps in self.database.GetEncodedField(field_name).values()):
-      self.database.AddEncodedFieldComponents(field_name, {comp_cls: []})
+           for comps in self._database.GetEncodedField(field_name).values()):
+      self._database.AddEncodedFieldComponents(field_name, {comp_cls: []})
 
+  @_EnsureInBuilderContext
   def AddRegions(self, new_regions, region_field_name='region_field'):
-    if self.database.GetComponentClasses(region_field_name) != set(['region']):
+    if self._database.GetComponentClasses(region_field_name) != set(['region']):
       raise ValueError(
           '"%s" is not a valid region field name.' % region_field_name)
 
     added_regions = set()
-    for region_comp in self.database.GetEncodedField(
+    for region_comp in self._database.GetEncodedField(
         region_field_name).values():
       if region_comp['region']:
         added_regions.add(region_comp['region'][0])
@@ -274,14 +326,14 @@ class DatabaseBuilder:
                         new_region)
         continue
       added_regions.add(new_region)
-      self.database.AddEncodedFieldComponents(
-          region_field_name, {'region': [new_region]})
+      self._database.AddEncodedFieldComponents(region_field_name,
+                                               {'region': [new_region]})
     self._UpdatePattern()
 
   def _AddSkuIds(self, sku_ids):
     field_name = 'sku_id_field'
     comp_cls = 'sku_id'
-    existed_comps = self.database.GetComponents(comp_cls)
+    existed_comps = self._database.GetComponents(comp_cls)
     existed_sku_ids = {int(e.values['sku_id'])
                        for e in existed_comps.values()}
     sku_ids = set(sku_ids)
@@ -296,18 +348,19 @@ class DatabaseBuilder:
     # Check if we need to update the encoded field.
     comp_to_sku_id = {
         comp_name: int(comp_info.values['sku_id'])
-        for comp_name, comp_info in self.database.GetComponents(
+        for comp_name, comp_info in self._database.GetComponents(
             comp_cls).items()
     }
-    for e in self.database.GetEncodedField(field_name).values():
+    for e in self._database.GetEncodedField(field_name).values():
       if e[comp_cls]:
         comp_to_sku_id.pop(e[comp_cls][0])
 
     new_comps = sorted(comp_to_sku_id.keys(), key=lambda x: comp_to_sku_id[x])
     for comp_name in new_comps:
-      self.database.AddEncodedFieldComponents(field_name,
-                                              {comp_cls: [comp_name]})
+      self._database.AddEncodedFieldComponents(field_name,
+                                               {comp_cls: [comp_name]})
 
+  @_EnsureInBuilderContext
   def UpdateByProbedResults(self, probed_results, device_info, vpd, sku_ids,
                             image_name=None):
     """Updates the database by a real probed results.
@@ -334,7 +387,10 @@ class DatabaseBuilder:
     Args:
       database_path: the path of the output HWID database file.
     """
-    self.database.DumpFileWithoutChecksum(database_path, internal=True)
+    if self._in_context:
+      raise BuilderException(
+          'Render should be called outside the builder context')
+    self._database.DumpFileWithoutChecksum(database_path, internal=True)
 
     checksum_updater = ChecksumUpdater()
     if checksum_updater is None:
@@ -343,8 +399,18 @@ class DatabaseBuilder:
       logging.info('Update the checksum.')
       checksum_updater.UpdateFile(database_path)
 
+  def Build(self) -> database.Database:
+    """Build the database."""
+
+    if self._in_context:
+      raise BuilderException(
+          'Build should be called outside the builder context')
+    # TODO(b/232063010): Consider returning a duplicate DB instance.
+    return self._database
+
   @classmethod
-  def _BuildEmptyDatabase(cls, project, image_name):
+  def _BuildEmptyDatabase(cls, project,
+                          image_name) -> database.WritableDatabase:
     return database.WritableDatabase.LoadData(
         textwrap.dedent(f'''\
             checksum: None
@@ -364,6 +430,7 @@ class DatabaseBuilder:
             rules: []
         '''))
 
+  @_EnsureInBuilderContext
   def AddComponent(self, comp_cls: str, probed_value: ProbedValueType,
                    set_comp_name: Optional[str] = None,
                    supported: bool = False):
@@ -378,27 +445,29 @@ class DatabaseBuilder:
     """
     # Set old firmware components to deprecated.
     if comp_cls in ['ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware']:
-      for comp_name, comp_info in self.database.GetComponents(comp_cls).items():
+      for comp_name, comp_info in self._database.GetComponents(
+          comp_cls).items():
         if comp_info.status == common.COMPONENT_STATUS.unsupported:
           continue
-        self.database.SetComponentStatus(
-            comp_cls, comp_name, common.COMPONENT_STATUS.deprecated)
+        self._database.SetComponentStatus(comp_cls, comp_name,
+                                          common.COMPONENT_STATUS.deprecated)
 
     comp_name = set_comp_name or DetermineComponentName(
-        comp_cls, probed_value, list(self.database.GetComponents(comp_cls)))
+        comp_cls, probed_value, list(self._database.GetComponents(comp_cls)))
 
     logging.info('Component %s: add an item "%s".', comp_cls, comp_name)
     status = (
         common.COMPONENT_STATUS.supported
         if supported else common.COMPONENT_STATUS.unqualified)
-    self.database.AddComponent(comp_cls, comp_name, probed_value, status)
+    self._database.AddComponent(comp_cls, comp_name, probed_value, status)
 
     # Deprecate the default component.
-    default_comp_name = self.database.GetDefaultComponent(comp_cls)
+    default_comp_name = self._database.GetDefaultComponent(comp_cls)
     if default_comp_name is not None:
-      self.database.SetComponentStatus(
-          comp_cls, default_comp_name, common.COMPONENT_STATUS.unsupported)
+      self._database.SetComponentStatus(comp_cls, default_comp_name,
+                                        common.COMPONENT_STATUS.unsupported)
 
+  @_EnsureInBuilderContext
   def AddComponents(self, comp_cls: str, probed_values: List[ProbedValueType]):
     """Adds a list of components to the database.
 
@@ -433,9 +502,9 @@ class DatabaseBuilder:
       comp_cls: The component class.
       comp_names: A list of component name.
     """
-    field_name = HandleCollisionName(
-        comp_cls + '_field', self.database.encoded_fields)
-    self.database.AddNewEncodedField(field_name, {comp_cls: comp_names})
+    field_name = HandleCollisionName(comp_cls + '_field',
+                                     self._database.encoded_fields)
+    self._database.AddNewEncodedField(field_name, {comp_cls: comp_names})
 
   def _UpdateComponents(self, probed_results, device_info, vpd, sku_ids):
     """Updates the component part of the database.
@@ -454,7 +523,7 @@ class DatabaseBuilder:
       self._AddSkuIds(sku_ids)
 
     # Add extra components.
-    existed_comp_classes = self.database.GetComponentClasses()
+    existed_comp_classes = self._database.GetComponentClasses()
     for comp_cls, probed_comps in probed_results.items():
       if comp_cls not in existed_comp_classes:
         # We only need the probe values here.
@@ -483,7 +552,7 @@ class DatabaseBuilder:
 
     # Add mismatched components to the database.
     bom, mismatched_probed_results = probe.GenerateBOMFromProbedResults(
-        self.database, probed_results, device_info, vpd,
+        self._database, probed_results, device_info, vpd,
         common.OPERATION_MODE.normal, True)
 
     if mismatched_probed_results:
@@ -492,7 +561,7 @@ class DatabaseBuilder:
             comp_cls, [probed_comp['values'] for probed_comp in probed_comps])
 
       bom = probe.GenerateBOMFromProbedResults(
-          self.database, probed_results, device_info, vpd,
+          self._database, probed_results, device_info, vpd,
           common.OPERATION_MODE.normal, False)[0]
 
     # Ensure all essential components are recorded in the database.
@@ -502,15 +571,15 @@ class DatabaseBuilder:
         # region component.
         continue
       if not bom.components.get(comp_cls):
-        field_name = self.database.GetEncodedFieldForComponent(comp_cls)
-        if (field_name and
-            any(not comps[comp_cls] for comps
-                in self.database.GetEncodedField(field_name).values())):
+        field_name = self._database.GetEncodedFieldForComponent(comp_cls)
+        if (field_name and any(
+            not comps[comp_cls]
+            for comps in self._database.GetEncodedField(field_name).values())):
           # Pass if the database says that device without this component is
           # acceptable.
           continue
 
-        if comp_cls in self.auto_decline_essential_prompt:
+        if comp_cls in self._auto_decline_essential_prompt:
           add_default = False
         else:
           # Ask user to add a default item or a null item.
@@ -531,38 +600,40 @@ class DatabaseBuilder:
             self.AddNullComponent(comp_cls)
 
     return probe.GenerateBOMFromProbedResults(
-        self.database, probed_results, device_info, vpd,
+        self._database, probed_results, device_info, vpd,
         common.OPERATION_MODE.normal, False)[0]
 
   def _UpdateEncodedFields(self, bom):
     covered_comp_classes = set()
-    for field_name in self.database.encoded_fields:
-      comp_classes = self.database.GetComponentClasses(field_name)
+    for field_name in self._database.encoded_fields:
+      comp_classes = self._database.GetComponentClasses(field_name)
 
-      for comps in self.database.GetEncodedField(field_name).values():
+      for comps in self._database.GetEncodedField(field_name).values():
         if all(comp_names == bom.components[comp_cls]
                for comp_cls, comp_names in comps.items()):
           break
 
       else:
-        self.database.AddEncodedFieldComponents(
+        self._database.AddEncodedFieldComponents(
             field_name,
-            {comp_cls: bom.components[comp_cls] for comp_cls in comp_classes})
+            {comp_cls: bom.components[comp_cls]
+             for comp_cls in comp_classes})
 
       covered_comp_classes |= set(comp_classes)
 
     # Although the database allows a component recorded but not encoded by
     # any of the encoded fields, this builder always ensures that all components
     # will be encoded into the HWID string.
-    for comp_cls in sorted(self.database.GetComponentClasses()):
+    for comp_cls in sorted(self._database.GetComponentClasses()):
       if comp_cls not in covered_comp_classes:
         self._AddNewEncodedField(comp_cls, bom.components[comp_cls])
 
   def _MayAddNewPatternAndImage(self, image_name):
-    if image_name in [self.database.GetImageName(image_id)
-                      for image_id in self.database.image_ids]:
-      if image_name != self.database.GetImageName(
-          self.database.max_image_id):
+    if image_name in [
+        self._database.GetImageName(image_id)
+        for image_id in self._database.image_ids
+    ]:
+      if image_name != self._database.GetImageName(self._database.max_image_id):
         raise ValueError('image_name [%s] is already in the database.' %
                          image_name)
       # Mark the image name to none if the given image name is the latest image
@@ -573,15 +644,15 @@ class DatabaseBuilder:
 
     # If the use case is to create a new HWID database, the only pattern
     # contained by the empty database is empty.
-    if not self.database.GetEncodedFieldsBitLength():
+    if not self._database.GetEncodedFieldsBitLength():
       return
 
-    extra_fields = set(self.database.encoded_fields) - set(
-        self.database.GetEncodedFieldsBitLength().keys())
+    extra_fields = set(self._database.encoded_fields) - set(
+        self._database.GetEncodedFieldsBitLength().keys())
     if image_name:
-      self.database.AddImage(self.database.max_image_id + 1, image_name,
-                             common.ENCODING_SCHEME.base8192,
-                             new_pattern=bool(extra_fields))
+      self._database.AddImage(self._database.max_image_id + 1, image_name,
+                              common.ENCODING_SCHEME.base8192,
+                              new_pattern=bool(extra_fields))
 
     elif extra_fields and PromptAndAsk(
         'WARNING: Extra fields [%s] without assigning a new image_id.\n'
@@ -596,14 +667,17 @@ class DatabaseBuilder:
   def _UpdatePattern(self):
     """Updates the pattern so that it includes all encoded fields."""
     def _GetMinBitLength(field_name):
-      return int(math.ceil(math.log(
-          max(self.database.GetEncodedField(field_name).keys()) + 1, 2)))
+      return int(
+          math.ceil(
+              math.log(
+                  max(self._database.GetEncodedField(field_name).keys()) + 1,
+                  2)))
 
     handled_comp_classes = set()
     handled_encoded_fields = set()
 
     # Put the important components at first if the pattern is a new one.
-    if not self.database.GetEncodedFieldsBitLength():
+    if not self._database.GetEncodedFieldsBitLength():
       # Put the essential field first, and align the 5-3-5 bit field.
       bit_iter = itertools.cycle([5, 3, 5])
       next(bit_iter)  # Skip the first field, which is for image_id.
@@ -611,16 +685,16 @@ class DatabaseBuilder:
         if comp_cls in handled_comp_classes:
           continue
 
-        field_name = self.database.GetEncodedFieldForComponent(comp_cls)
+        field_name = self._database.GetEncodedFieldForComponent(comp_cls)
 
         bit_length = 0
         min_bit_length = max(_GetMinBitLength(field_name), 1)
         while bit_length < min_bit_length:
           bit_length += next(bit_iter)
-        self.database.AppendEncodedFieldBit(field_name, bit_length)
+        self._database.AppendEncodedFieldBit(field_name, bit_length)
 
         handled_comp_classes |= set(
-            self.database.GetComponentClasses(field_name))
+            self._database.GetComponentClasses(field_name))
         handled_encoded_fields.add(field_name)
 
       # Put the priority components.
@@ -628,25 +702,41 @@ class DatabaseBuilder:
         if comp_cls in handled_comp_classes:
           continue
 
-        field_name = self.database.GetEncodedFieldForComponent(comp_cls)
+        field_name = self._database.GetEncodedFieldForComponent(comp_cls)
         if not field_name:
           continue
 
         bit_length = max(bit_length, _GetMinBitLength(field_name))
-        self.database.AppendEncodedFieldBit(field_name, bit_length)
+        self._database.AppendEncodedFieldBit(field_name, bit_length)
 
         handled_comp_classes |= set(
-            self.database.GetComponentClasses(field_name))
+            self._database.GetComponentClasses(field_name))
         handled_encoded_fields.add(field_name)
 
     # Append other encoded fields.
-    curr_bit_lengths = self.database.GetEncodedFieldsBitLength()
-    for field_name in self.database.encoded_fields:
+    curr_bit_lengths = self._database.GetEncodedFieldsBitLength()
+    for field_name in self._database.encoded_fields:
       if field_name in handled_encoded_fields:
         continue
       bit_length = _GetMinBitLength(field_name)
       if (field_name in curr_bit_lengths and
           curr_bit_lengths[field_name] >= bit_length):
         continue
-      self.database.AppendEncodedFieldBit(
+      self._database.AppendEncodedFieldBit(
           field_name, bit_length - curr_bit_lengths.get(field_name, 0))
+
+  def GetComponents(
+      self, comp_cls: str,
+      include_default: bool = True) -> Mapping[str, database.ComponentInfo]:
+    return self._database.GetComponents(comp_cls, include_default)
+
+  def GetActiveComponentClasses(self,
+                                image_id: Optional[int] = None) -> Set[str]:
+    return self._database.GetActiveComponentClasses(image_id)
+
+  @_EnsureInBuilderContext
+  def SetLinkAVLProbeValue(self, comp_cls: str, comp_name: str,
+                           converter_identifier: Optional[str],
+                           probe_value_matched: bool):
+    return self._database.SetLinkAVLProbeValue(
+        comp_cls, comp_name, converter_identifier, probe_value_matched)

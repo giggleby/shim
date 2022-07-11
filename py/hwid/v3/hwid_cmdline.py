@@ -298,22 +298,24 @@ def CollectDeviceMaterialCommand(options):
 
 
 def RunDatabaseBuilder(database_builder, options):
-  if options.add_default_comp:
-    for comp_cls in options.add_default_comp:
-      database_builder.AddDefaultComponent(comp_cls)
-  if options.add_null_comp:
-    for comp_cls in options.add_null_comp:
-      database_builder.AddNullComponent(comp_cls)
-  if options.add_regions:
-    database_builder.AddRegions(options.add_regions, options.region_field_name)
+  with database_builder:
+    if options.add_default_comp:
+      for comp_cls in options.add_default_comp:
+        database_builder.AddDefaultComponent(comp_cls)
+    if options.add_null_comp:
+      for comp_cls in options.add_null_comp:
+        database_builder.AddNullComponent(comp_cls)
+    if options.add_regions:
+      database_builder.AddRegions(options.add_regions,
+                                  options.region_field_name)
 
-  hwid_material = ObtainHWIDMaterial(options)
+    hwid_material = ObtainHWIDMaterial(options)
 
-  database_builder.UprevFrameworkVersion(hwid_material.framework_version)
+    database_builder.UprevFrameworkVersion(hwid_material.framework_version)
 
-  database_builder.UpdateByProbedResults(
-      hwid_material.probed_results, hwid_material.device_info,
-      hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id)
+    database_builder.UpdateByProbedResults(
+        hwid_material.probed_results, hwid_material.device_info,
+        hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id)
 
 
 @Command('build-database',
@@ -332,7 +334,7 @@ def BuildDatabaseWrapper(options):
     file_utils.TryMakeDirs(options.hwid_db_path)
   database_path = os.path.join(options.hwid_db_path, options.project.upper())
 
-  database_builder = builder.DatabaseBuilder(
+  database_builder = builder.DatabaseBuilder.FromEmpty(
       project=options.project, image_name=options.image_id,
       auto_decline_essential_prompt=options.auto_decline_essential_prompt)
   if options.minimal:
@@ -376,7 +378,7 @@ def UpdateDatabaseWrapper(options):
 
   database_path = options.output_database or old_db_path
 
-  database_builder = builder.DatabaseBuilder(database_path=old_db_path)
+  database_builder = builder.DatabaseBuilder.FromFilePath(db_path=old_db_path)
   RunDatabaseBuilder(database_builder, options)
   database_builder.Render(database_path)
 

@@ -8,8 +8,8 @@ from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import storage_converter
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
+from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import contents_analyzer
-from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
 
 # A map to collect converter collections.
@@ -44,23 +44,25 @@ class ConverterManager:
       comp_id = comp_probe_info.component_identity.component_id
       probe_info_map[comp_id] = comp_probe_info.probe_info
 
-    db = database.Database.LoadData(hwid_db_content)
-    for comp_cls in db.GetActiveComponentClasses():
-      converter_collection = self.GetConverterCollection(comp_cls)
-      if not converter_collection:
-        continue
-      name_pattern = adapter.GetNamePattern(comp_cls)
-      for comp_name, comp_info in db.GetComponents(comp_cls).items():
-        name_info = name_pattern.Matches(comp_name)
-        if not name_info:
+    with builder.DatabaseBuilder.FromDBData(hwid_db_content) as db_builder:
+      for comp_cls in db_builder.GetActiveComponentClasses():
+        converter_collection = self.GetConverterCollection(comp_cls)
+        if not converter_collection:
           continue
-        probe_info = probe_info_map.get(name_info.cid)
-        if not probe_info:
-          continue
-        match_result = converter_collection.Match(comp_info.values, probe_info)
-        db.SetLinkAVLProbeValue(
-            comp_cls, comp_name, match_result.converter_identifier,
-            match_result.alignment_status == _PVAlignmentStatus.ALIGNED)
+        name_pattern = adapter.GetNamePattern(comp_cls)
+        for comp_name, comp_info in db_builder.GetComponents(comp_cls).items():
+          name_info = name_pattern.Matches(comp_name)
+          if not name_info:
+            continue
+          probe_info = probe_info_map.get(name_info.cid)
+          if not probe_info:
+            continue
+          match_result = converter_collection.Match(comp_info.values,
+                                                    probe_info)
+          db_builder.SetLinkAVLProbeValue(
+              comp_cls, comp_name, match_result.converter_identifier,
+              match_result.alignment_status == _PVAlignmentStatus.ALIGNED)
+    db = db_builder.Build()
     return db.DumpDataWithoutChecksum(suppress_support_status=False,
                                       magic_placeholder_options=None,
                                       internal=True)
