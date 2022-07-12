@@ -489,6 +489,10 @@ def VerifyCBIEEPROMWPStatus(options):
     CmdArg('--targets', nargs='+', default=['all'],
            choices=['all'] + [member.name for member in WriteProtectTargetType],
            help='targets to perform on'),
+    CmdArg(
+        '--skip_enable_check', action='store_true',
+        help='skip the expected failure check of disabling software write '
+        'protect after enabling the write protect'),
 )
 def WriteProtect(options):
   """Enable/Disable/Show the firmware software write protection."""
@@ -524,7 +528,8 @@ def WriteProtect(options):
     for target in targets:
       wp_target = CreateWriteProtectTarget(target)
       try:
-        wp_target.SetProtectionStatus(options.operation == 'enable')
+        wp_target.SetProtectionStatus(options.operation == 'enable',
+                                      options.skip_enable_check)
       except UnsupportedOperationError:
         logging.warning('Cannot %s write protection on %s.', options.operation,
                         target.name)

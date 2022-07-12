@@ -45,7 +45,7 @@ def CreateWriteProtectTarget(target):
 class WriteProtectTarget(abc.ABC):
 
   @abc.abstractmethod
-  def SetProtectionStatus(self, enable):
+  def SetProtectionStatus(self, enable, skip_enable_check=False):
     """Enables or disables the write protection.
 
     Args:
@@ -74,13 +74,14 @@ class _FlashromBasedWriteProtectTarget(WriteProtectTarget):
   def __init__(self):
     self._flashrom = self._GetFlashrom()
 
-  def SetProtectionStatus(self, enable):
+  def SetProtectionStatus(self, enable, skip_enable_check=False):
     if enable:
       fw = self._GetReferenceFirmware()
       section_data = fw.GetFirmwareImage(
           sections=[_WP_SECTION]).get_section_area(_WP_SECTION)
       offset, size = section_data[0:2]
-      self._flashrom.EnableWriteProtection(offset, size)
+      self._flashrom.EnableWriteProtection(offset, size,
+                                           skip_check=skip_enable_check)
     else:
       self._flashrom.DisableWriteProtection()
 
@@ -113,9 +114,9 @@ class _ECBasedWriteProtectTarget(_FlashromBasedWriteProtectTarget):
     super().__init__()
     self._fw = self._GetReferenceFirmware()
 
-  def SetProtectionStatus(self, enable):
+  def SetProtectionStatus(self, enable, skip_enable_check=False):
     self._CheckAvailability()
-    super().SetProtectionStatus(enable)
+    super().SetProtectionStatus(enable, skip_enable_check)
 
   def GetStatus(self):
     self._CheckAvailability()
@@ -161,7 +162,7 @@ class PDWriteProtectTarget(_ECBasedWriteProtectTarget):
 
 class _FPMCUWriteProtectTarget(WriteProtectTarget):
 
-  def SetProtectionStatus(self, enable):
+  def SetProtectionStatus(self, enable, skip_enable_check=False):
     if enable:
       self._EnableWriteProtect()
     else:
