@@ -123,7 +123,8 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-DEFAULT_FIRMWARE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
+DEFAULT_CR50_FIRMWARE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
+DEFAULT_TI50_FIRMWARE_PATH = '/opt/google/ti50/firmware/ti50.bin.prod'
 PREPVT_FLAG_MASK = 0x7F
 KEY_ATTEMPT_CR50_UPDATE_RO_VERSION = device_data.JoinKeys(
     device_data.KEY_FACTORY, 'attempt_cr50_update_ro_version')
@@ -135,7 +136,13 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
   _METHOD_TYPE = type_utils.Enum(['UPDATE', 'CHECK_VERSION'])
 
   ARGS = [
-      Arg('firmware_file', str, 'The full path of the firmware.', default=None),
+      Arg(
+          'firmware_file', str, 'The full path of the firmware. If not set, '
+          'the test will use the default firmware path to update the firmware '
+          'If `is_ti50` is set to true, then the default firmware path is %s. '
+          'Otherwise, the path is %s.' %
+          (DEFAULT_TI50_FIRMWARE_PATH, DEFAULT_CR50_FIRMWARE_PATH),
+          default=None),
       Arg('from_release', bool, 'Find the firmware from release rootfs.',
           default=True),
       Arg(
@@ -201,7 +208,10 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
       self.assertTrue(
           self.args.from_release,
           'Must set "from_release" to True if not specifiying firmware_file')
-      self.args.firmware_file = DEFAULT_FIRMWARE_PATH
+      if self.args.is_ti50:
+        self.args.firmware_file = DEFAULT_TI50_FIRMWARE_PATH
+      else:
+        self.args.firmware_file = DEFAULT_CR50_FIRMWARE_PATH
 
     self.assertEqual(self.args.firmware_file[0], '/',
                      'firmware_file should be a full path')
@@ -227,6 +237,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
           self.CacheImageInfoAndCallMethod(dut_temp_file)
 
   def CacheImageInfoAndCallMethod(self, firmware_file):
+    session.console.info('Firmware path: %s', firmware_file)
     self.image_info = self.gsctool.GetImageInfo(firmware_file)
     if self.args.method == self._METHOD_TYPE.UPDATE:
       self._UpdateCr50Firmware(firmware_file)

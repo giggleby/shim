@@ -1450,9 +1450,11 @@
       "subtests": [
         {
           "pytest_name": "update_cr50_firmware",
+          "label": "Update Ti50 Firmware",
           "args": {
             "firmware_file": "eval! constants.use_prepvt_ti50_firmware and '/opt/google/ti50/firmware/ti50.bin.prepvt' or None",
-            "skip_prepvt_flag_check": "eval! constants.phase != 'PVT'"
+            "skip_prepvt_flag_check": "eval! constants.phase != 'PVT'",
+            "is_ti50": true
           }
         },
         "RebootStep",
@@ -1460,7 +1462,8 @@
           "pytest_name": "update_cr50_firmware",
           "label": "Check Ti50 Firmware Version",
           "args": {
-            "method": "CHECK_VERSION"
+            "method": "CHECK_VERSION",
+            "is_ti50": true
           }
         }
       ]
