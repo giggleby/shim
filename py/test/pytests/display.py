@@ -38,9 +38,10 @@ Dependency
 Each item of ``items`` is either:
   1. A predefined CSS item listed in ``_CSS_ITEMS``.
   2. ``image-<image_name>``: The corresponding image should be in the
-     compressed file ``test_images.tar.bz2``. For example, if the item is
-     "image-horizontal-rgbw", an image named "horizontal-rgbw.bmp" should be in
-     ``test_images.tar.bz2``.
+       compressed file ``test_images.tar.bz2``. For example, if the item is
+       "image-horizontal-rgbw.bmp", an image named "horizontal-rgbw.bmp"
+       should be in ``test_images.tar.bz2``. We support image file formats:
+       apng, avig, bmp, gif, ico, jpeg, png, svg, and webp.
 
 Examples
 --------
@@ -71,16 +72,16 @@ list::
         "grid",
         "rectangle",
         "gradient-red",
-        "image-complex",
-        "image-black",
-        "image-white",
-        "image-crosstalk-black",
-        "image-crosstalk-white",
-        "image-gray-63",
-        "image-gray-127",
-        "image-gray-170",
-        "image-horizontal-rgbw",
-        "image-vertical-rgbw"
+        "image-complex.bmp",
+        "image-black.bmp",
+        "image-white.bmp",
+        "image-crosstalk-black.bmp",
+        "image-crosstalk-white.bmp",
+        "image-gray-63.bmp",
+        "image-gray-127.bmp",
+        "image-gray-170.bmp",
+        "image-horizontal-rgbw.bmp",
+        "image-vertical-rgbw.bmp"
       ]
     }
   }
@@ -189,7 +190,8 @@ class DisplayTest(test_case.TestCase):
 
     self.items = self.args.items
     self.images = [
-        '%s.bmp' % item[len(_IMAGE_PREFIX):] for item in self.items
+        item[len(_IMAGE_PREFIX):]
+        for item in self.items
         if item.startswith(_IMAGE_PREFIX)
     ]
     if self.images:

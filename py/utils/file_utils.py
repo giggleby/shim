@@ -487,9 +487,12 @@ def ExtractFile(compressed_file, output_dir, only_extracts=None, overwrite=True,
     if unsupported:
       raise ExtractFileError('Unsupported compressed file: %s' %
                              compressed_file)
-
-  return process_utils.Spawn(cmd, log=True, call=True,
-                             check_call=not ignore_errors)
+  try:
+    return process_utils.Spawn(cmd, log=True, call=True,
+                               check_call=not ignore_errors,
+                               log_stderr_on_error=True)
+  except process_utils.CalledProcessError as e:
+    raise ExtractFileError(e.stderr) from None
 
 
 def ForceSymlink(target, link_name):

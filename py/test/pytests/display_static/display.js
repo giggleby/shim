@@ -51,7 +51,7 @@ window.DisplayTest = class {
     const item = this.itemList[this.focusItem];
     if (item.startsWith(_IMAGE_PREFIX)){
       this.displayDiv.style.backgroundImage = `url(./` +
-        `${item.substring(_IMAGE_PREFIX.length)}.bmp)`;
+        `${item.substring(_IMAGE_PREFIX.length)})`;
       this.displayDiv.classList.add('subtest-custom-image');
     } else {
       this.displayDiv.style.backgroundImage = null;
