@@ -53,6 +53,21 @@ class WriteProtectTarget(abc.ABC):
     """
     raise NotImplementedError
 
+  @abc.abstractmethod
+  def GetStatus(self):
+    """Gets the information of the write protection.
+
+    Returns:
+      A dictionary containing the status of write protection. The format of the
+      dictionary:
+        {
+          "enabled": Boolean value,
+          "offset": non-negative integer,
+          "size": non-negative integer,
+        }
+    """
+    raise NotImplementedError
+
 
 class _FlashromBasedWriteProtectTarget(WriteProtectTarget):
 
@@ -68,6 +83,9 @@ class _FlashromBasedWriteProtectTarget(WriteProtectTarget):
       self._flashrom.EnableWriteProtection(offset, size)
     else:
       self._flashrom.DisableWriteProtection()
+
+  def GetStatus(self):
+    return self._flashrom.GetWriteProtectionStatus()._asdict()
 
   @abc.abstractmethod
   def _GetReferenceFirmware(self):
@@ -98,6 +116,10 @@ class _ECBasedWriteProtectTarget(_FlashromBasedWriteProtectTarget):
   def SetProtectionStatus(self, enable):
     self._CheckAvailability()
     super().SetProtectionStatus(enable)
+
+  def GetStatus(self):
+    self._CheckAvailability()
+    return super().GetStatus()
 
   def _GetReferenceFirmware(self):
     return self._fw
@@ -144,6 +166,9 @@ class _FPMCUWriteProtectTarget(WriteProtectTarget):
       self._EnableWriteProtect()
     else:
       raise UnsupportedOperationError
+
+  def GetStatus(self):
+    raise UnsupportedOperationError
 
   def _EnableWriteProtect(self):
     fpmcu = fpmcu_utils.FpmcuDevice(sys_interface.SystemInterface())
