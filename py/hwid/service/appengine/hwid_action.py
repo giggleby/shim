@@ -455,3 +455,21 @@ class HWIDAction:
     """
     raise NotSupportedError(
         f'`BundleHWIDDB` is not supported in HWID v{self.HWID_VERSION}')
+
+  def PatchHeader(
+      self,
+      hwid_db_content: hwid_db_data.HWIDDBData) -> hwid_db_data.HWIDDBData:
+    """Patches the header of HWID DB.
+
+    Args:
+      hwid_db_content: DB content to be patched.
+
+    Returns:
+      Pacthed DB content.
+
+    Raises:
+      NotSupportedError: If this function is not supported by the HWID version.
+      HWIDActionError: An error occurs regarding internal data integrity issue.
+    """
+    raise NotSupportedError(
+        f'`PatchHeader` is not supported in HWID v{self.HWID_VERSION}')

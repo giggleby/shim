@@ -490,6 +490,13 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
+  def testCreateHwidDbFirmwareInfoUpdateCl_Empty(self):
+    resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(
+        hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest())
+
+    self.assertEqual(
+        resp, hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClResponse())
+
   def testBatchGetHwidDbEditableSectionChangeClInfo_Empty(self):
     resp = self.service.BatchGetHwidDbEditableSectionChangeClInfo(
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(

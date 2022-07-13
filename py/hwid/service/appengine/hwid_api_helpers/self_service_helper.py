@@ -305,8 +305,9 @@ class SelfServiceHelper:
             f'^{bundle_record.board}(mp|premp)keys(?:-(v[0-9]+))?$',
             bundle_record.firmware_signer.lower())
         if match is None:
-          raise ValueError('Cannot derive firmware key name from signer: '
-                           f'{bundle_record.firmware_signer}.')
+          raise common_helper.ConvertExceptionToProtoRPCException(
+              ValueError('Cannot derive firmware key name from signer: '
+                         f'{bundle_record.firmware_signer}.'))
         keys_comp_name = f'firmware_keys_{match.group(1)}'
         if match.group(2):
           keys_comp_name += f'_{match.group(2)}'
@@ -330,7 +331,8 @@ class SelfServiceHelper:
         if comp_name in db_builder.database.GetComponents(field.name):
           logging.info('Skip existed component: %s', comp_name)
         else:
-          db_builder.AddComponent(field.name, value, comp_name)
+          db_builder.AddComponent(field.name, value, comp_name,
+                                  supported=firmware_record.supported)
           changed = True
 
       if not changed:
@@ -339,9 +341,11 @@ class SelfServiceHelper:
 
       # Create commit
       hwid_db_contents_internal = action.PatchHeader(
-          db_builder.database.DumpDataWithoutChecksum(internal=True))
+          db_builder.database.DumpDataWithoutChecksum(
+              internal=True, suppress_support_status=False))
       hwid_db_contents_external = action.PatchHeader(
-          db_builder.database.DumpDataWithoutChecksum(internal=False))
+          db_builder.database.DumpDataWithoutChecksum(
+              internal=False, suppress_support_status=False))
       commit_msg = textwrap.dedent(f"""\
           ({int(time.time())}) {db_builder.database.project}: HWID Firmware \
 Info Update
@@ -350,7 +354,8 @@ Info Update
           Warning: all posted comments will be sent back to the requester.
 
           %s
-          """) % request.description
+
+          BUG=b:{request.bug_number}""") % request.description
       all_commits.append((model, hwid_db_contents_external,
                           hwid_db_contents_internal, commit_msg))
 

@@ -29,6 +29,8 @@ _PVAlignmentStatusMsg = hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case
 _AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
 _HWIDSectionChangeMsg = _AnalysisReportMsg.HwidSectionChange
 _HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
+_FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
+_FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
 
 
 class SelfServiceHelperTest(unittest.TestCase):
@@ -887,6 +889,107 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+
+  @mock.patch('cros.factory.hwid.service.appengine.hwid_action_helpers'
+              '.v3_self_service_helper.HWIDV3SelfServiceActionHelper'
+              '.RemoveHeader')
+  def testCreateHWIDDBFirmwareInfoUpdateCL_Succeed(self, remove_header):
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    remove_header.return_value = 'db data'
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=self._CreateBundleRecord(['proj']))
+    resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+
+    self.assertIn('PROJ', resp.commits)
+    self.assertEqual(resp.commits['PROJ'].cl_number, 123)
+    self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents, 'db data')
+
+  def testCreateHWIDDBFirmwareInfoUpdateCL_ProjectNotFound(self):
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+
+    firmware_record = _FirmwareRecord(model='notproj')
+    bundle_record = _FactoryBundleRecord(firmware_records=[firmware_record])
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=bundle_record)
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testCreateHWIDDBFirmwareInfoUpdateCL_InvalidSigner(self):
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+
+    firmware_record = _FirmwareRecord(model='proj')
+    bundle_record = _FactoryBundleRecord(board='board',
+                                         firmware_signer='InvalidSigner-V1',
+                                         firmware_records=[firmware_record])
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=bundle_record)
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+
+  def testCreateHWIDDBFirmwareInfoUpdateCL_InternalError(self):
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.side_effect = [hwid_repo.HWIDRepoError]
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=self._CreateBundleRecord(['proj']))
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
+
+  @mock.patch('cros.factory.hwid.service.appengine.hwid_action_helpers'
+              '.v3_self_service_helper.HWIDV3SelfServiceActionHelper'
+              '.RemoveHeader')
+  def testCreateHWIDDBFirmwareInfoUpdateCL_InternalError_AbandonCL(
+      self, remove_header):
+    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
+    self._ConfigLiveHWIDRepo('PROJ2', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.side_effect = [123, hwid_repo.HWIDRepoError]
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    remove_header.return_value = 'db data'
+    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+    self._modules.ConfigHWID('PROJ2', '3', 'db data', hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=self._CreateBundleRecord(['proj1', 'proj2']))
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+
+    self._mock_hwid_repo_manager.AbandonCL.assert_called_with(123)
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
+
+  @classmethod
+  def _CreateBundleRecord(cls, projects):
+    firmware_records = []
+    for proj in projects:
+      firmware_records.append(
+          _FirmwareRecord(
+              model=proj, firmware_keys=_FirmwareRecord.FirmwareKeys(
+                  key_recovery='key_recovery', key_root='key_root'),
+              ro_main_firmware=_FirmwareRecord.FirmwareInfo(
+                  hash='hash_string', version='1111.1.1')))
+
+    return _FactoryBundleRecord(board='board', firmware_signer='BoardMPKeys-V1',
+                                firmware_records=firmware_records)
 
   def _ConfigLiveHWIDRepo(self, project, version, db_contents,
                           commit_id='TEST-COMMIT-ID'):

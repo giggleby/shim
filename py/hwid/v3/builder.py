@@ -357,7 +357,7 @@ class DatabaseBuilder:
         'rules: []\n')
 
   def AddComponent(self, comp_cls: str, probed_value: ProbedValueType,
-                   set_comp_name=None):
+                   set_comp_name=None, supported=False):
     """Tries to add a item into the component.
 
     Args:
@@ -365,6 +365,7 @@ class DatabaseBuilder:
       probed_value: The probed value of the component.
       set_comp_name: Set component name for the item. If None is given, it will
         be determined automatically.
+      supported: whether to mark the added component as supported.
     """
     # Set old firmware components to deprecated.
     if comp_cls in ['ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware']:
@@ -378,8 +379,10 @@ class DatabaseBuilder:
         comp_cls, probed_value, list(self.database.GetComponents(comp_cls)))
 
     logging.info('Component %s: add an item "%s".', comp_cls, comp_name)
-    self.database.AddComponent(
-        comp_cls, comp_name, probed_value, common.COMPONENT_STATUS.unqualified)
+    status = (
+        common.COMPONENT_STATUS.supported
+        if supported else common.COMPONENT_STATUS.unqualified)
+    self.database.AddComponent(comp_cls, comp_name, probed_value, status)
 
     # Deprecate the default component.
     default_comp_name = self.database.GetDefaultComponent(comp_cls)

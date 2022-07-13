@@ -634,6 +634,9 @@ message FactoryBundleRecord {
     FirmwareInfo ro_ec_firmware = 4;
     // RO PD firmware info
     FirmwareInfo ro_pd_firmware = 5;
+
+    // Whether the firmware status is supported.
+    bool supported = 6;
   }
 
   // Firmware record of each model.
@@ -655,6 +658,8 @@ message CreateHwidDbFirmwareInfoUpdateClRequest {
   repeated string cc_emails = 5;
   // A bool indicating if this CL should be auto-approved.
   bool auto_approved = 6;
+  // ID of related bug.
+  int64 bug_number = 7;
 }
 
 // HWID DB Commit info
