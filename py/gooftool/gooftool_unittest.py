@@ -526,13 +526,28 @@ class GooftoolTest(unittest.TestCase):
         partition=vpd.VPD_READWRITE_PARTITION_NAME)
 
   @mock.patch.object(cros_config, 'CrosConfig')
+  def testVerifyVPD_NonSmartAmp(self, mock_cros_config):
+    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
+                        rw=self._SIMPLE_VALID_RW_VPD_DATA)
+    mock_cros_config.return_value.GetAmplifier.return_value = 'MAX98360'
+    mock_cros_config.return_value.GetSoundCardInit.return_value = None
+    self._gooftool.GetSmartAmpInfo = self._smart_amp_info
+
+    # Should not fail, since MAX98360 is not a smart amplifier.
+    self._gooftool.VerifyVPD()
+    self._gooftool._vpd.GetAllData.assert_any_call(
+        partition=vpd.VPD_READONLY_PARTITION_NAME)
+    self._gooftool._vpd.GetAllData.assert_any_call(
+        partition=vpd.VPD_READWRITE_PARTITION_NAME)
+
+  @mock.patch.object(cros_config, 'CrosConfig')
   @mock.patch.object(file_utils, 'CheckPath')
   @mock.patch.object(file_utils, 'ReadFile')
   def testVerifyVPD_SmartAmpNoDSM(self, mock_file_reader, mock_path_checker,
                                   mock_cros_config):
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA,
                         rw=self._SIMPLE_VALID_RW_VPD_DATA)
-    mock_cros_config.return_value.GetSmartAmp.return_value = 'MAX98373'
+    mock_cros_config.return_value.GetAmplifier.return_value = 'MAX98373'
     mock_cros_config.return_value.GetSoundCardInit.return_value = 'factory.yaml'
     mock_path_checker.return_value = True
     mock_file_reader.return_value = \

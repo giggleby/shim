@@ -38,16 +38,16 @@ class SoundCardInitConfParseError(Error):
 
 
 def GetSmartAmpInfo(shell=None, dut=None):
-  """Returns the information about the smart amp on DUT.
+  """Returns the information about the amplifier on DUT.
 
   Amplifiers listed under `src/third_party/adhd/sound_card_init/amp/src` are
-  smart amplifiers.
+  smart amplifiers. Only smart amplifiers have sound-card-init file.
 
   Returns:
       A tuple of two strings and a list. They respectively represent the name
       of the amplifier on DUT, the path to sound-card-init-conf, and a list of
       the channel names of the smart amplifier.
-      Return (None, None, None) if no smart amplifier is found.
+      Return (amp_name, None, None) if no smart amplifiers are found.
   """
 
   def _ParseSoundCardInitConf(sound_card_init_path, sound_card_init_output,
@@ -64,27 +64,24 @@ def GetSmartAmpInfo(shell=None, dut=None):
     return channel_names
 
   cros_config = cros_config_module.CrosConfig(shell=shell, dut=dut)
-  smart_amp = cros_config.GetSmartAmp()
-  if not smart_amp:
-    logging.info('No smart amplifier found on DUT.')
-    return None, None, None
-
+  amp_name = cros_config.GetAmplifier()
   sound_card_init_file = cros_config.GetSoundCardInit()
   if not sound_card_init_file:
-    raise Error('Cannot get the name of sound-card-init-conf via '
-                '`cros_config /audio/main sound-card-init-conf`.')
+    logging.info('No sound-card-init-conf found on DUT. '
+                 'Assume using non-smart amplifier.')
+    return amp_name, None, None
 
   sound_card_init_path = '/etc/sound_card_init/%s' % sound_card_init_file
   file_utils.CheckPath(sound_card_init_path)
 
-  regex = _REGEX_MAPPING.get(smart_amp)
+  regex = _REGEX_MAPPING.get(amp_name)
   if not regex:
     raise Error('Currently we do support parsing the sound card init conf '
                 'of %s. Please contact the factory bundle master to add the '
-                'parsing script.' % smart_amp)
+                'parsing script.' % amp_name)
 
   sound_card_init_output = file_utils.ReadFile(sound_card_init_path)
   channel_names = _ParseSoundCardInitConf(sound_card_init_path,
                                           sound_card_init_output, regex)
 
-  return smart_amp, sound_card_init_path, channel_names
+  return amp_name, sound_card_init_path, channel_names
