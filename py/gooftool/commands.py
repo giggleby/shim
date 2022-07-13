@@ -1253,11 +1253,13 @@ def GetSmartAmpInfo(options):
   speaker_amp, sound_card_init_path, channels = \
     GetGooftool(options).GetSmartAmpInfo()
   if speaker_amp:
-    print('Speaker Amp:', speaker_amp)
+    print('Amplifier name:', speaker_amp)
+  if sound_card_init_path:
     print('Sound card init conf path:', sound_card_init_path)
     print('Channels:', channels)
+    print('The DUT has a smart amplifier.')
   else:
-    print('No smart amplifier found on DUT!')
+    print('The DUT doesn\'t have a smart amplifier.')
 
 
 @Command('get_logical_block_size', *GetGooftool.__args__)

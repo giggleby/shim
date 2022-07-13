@@ -74,14 +74,15 @@ class CrosConfig:
     result = self.GetValue('/', 'brand-code')
     return result.stdout.strip() if result.stdout else ''
 
-  def GetSmartAmp(self):
-    """Returns the name of the smart-amp.
-
-    If the DUT has no smart-amp, returns an empty string.
-    """
+  def GetAmplifier(self):
+    """Returns the name of the amplifier on DUT."""
     result = self.GetValue('/audio/main', 'speaker-amp')
     return result.stdout.strip() if result.stdout else ''
 
   def GetSoundCardInit(self):
+    """Returns the name of the sound-card-init-conf file.
+
+    Only smart amplifiers have sound-card-init-conf file.
+    """
     result = self.GetValue('/audio/main', 'sound-card-init-conf')
     return result.stdout.strip() if result.stdout else ''

@@ -657,16 +657,17 @@ class Gooftool:
     def GetAudioVPDROData():
       """Return the required audio VPD RO data.
 
-      If a DUT comes with a smart amplifier, it must be calibrated in factory
-      and the DSM-related VPD values must be set.
+      If a DUT comes with a smart amplifier, it must be calibrated in the
+      factory and the DSM-related VPD values must be set.
       """
-      speaker_amp, _, channel_names = self.GetSmartAmpInfo()
-      if not speaker_amp:
+      speaker_amp, sound_card_init_file, channel_names = self.GetSmartAmpInfo()
+      if speaker_amp:
+        logging.info('Amplifier %s found on DUT.', speaker_amp)
+      if not sound_card_init_file:
         logging.info('No smart amplifier found! '
                      'Skip checking DSM VPD value.')
         return {}
 
-      logging.info('The DUT is expected to have amplifier %s', speaker_amp)
       num_channels = len(channel_names)
       logging.info(
           'The VPD RO should contain `dsm_calib_r0_N` and '
