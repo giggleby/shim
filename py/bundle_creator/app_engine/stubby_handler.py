@@ -62,15 +62,15 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
       bundle = factorybundle_pb2.Bundle()
       bundle.path = blob.name
       bundle.board, bundle.project, bundle.filename = blob.name.split('/')
+      metadata = blob.metadata or {}
       bundle.created_timestamp_sec = float(
-          blob.metadata.get('Time-Created',
-                            datetime.datetime.timestamp(blob.time_created)))
-      bundle.creator = blob.metadata.get('Bundle-Creator', '-')
-      bundle.toolkit_version = blob.metadata.get('Tookit-Version', '-')
-      bundle.test_image_version = blob.metadata.get('Test-Image-Version', '-')
-      bundle.release_image_version = blob.metadata.get(
-          'Release-Image-Version', '-')
-      bundle.firmware_source = blob.metadata.get('Firmware-Source', '-')
+          metadata.get('Time-Created',
+                       datetime.datetime.timestamp(blob.time_created)))
+      bundle.creator = metadata.get('Bundle-Creator', '-')
+      bundle.toolkit_version = metadata.get('Tookit-Version', '-')
+      bundle.test_image_version = metadata.get('Test-Image-Version', '-')
+      bundle.release_image_version = metadata.get('Release-Image-Version', '-')
+      bundle.firmware_source = metadata.get('Firmware-Source', '-')
       project_set = board_set.setdefault(bundle.board, {})
       project_set.setdefault(bundle.project, []).append(bundle)
 
