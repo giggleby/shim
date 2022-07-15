@@ -6,6 +6,14 @@
 //  chrome.runtime.sendMessage(<ID>, {name: <RPC_NAME>, args: <ARGS>},
 //    function(result) { ... deal with the results ... });
 
+var mirrorInfo = {'mode': 'normal'};
+
+chrome.system.display.onDisplayChanged.addListener(
+    () => {
+      chrome.system.display.setMirrorMode(mirrorInfo, () => {});
+    }
+);
+
 chrome.runtime.onMessageExternal.addListener(
     (request, sender, sendResponse) => {
       if (request.name === 'GetDisplayInfo') {
@@ -17,8 +25,9 @@ chrome.runtime.onMessageExternal.addListener(
             () => { sendResponse(chrome.runtime.lastError); });
         return true;
       } else if (request.name === 'SetDisplayMirrorMode') {
+        mirrorInfo = request.args.info
         chrome.system.display.setMirrorMode(
-            request.args.info,
+            mirrorInfo,
             () => { sendResponse(chrome.runtime.lastError); });
         return true;
       } else {
