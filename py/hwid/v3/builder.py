@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from collections import OrderedDict
+import collections
 import functools
 import hashlib
 import itertools
@@ -28,10 +28,9 @@ ESSENTIAL_COMPS = [
     'storage']
 
 # The components that are added in order if they exist in the probe results.
-PRIORITY_COMPS = OrderedDict([
-    ('ro_main_firmware', 5),
-    ('firmware_keys', 3),
-    ('ro_ec_firmware', 5)])
+PRIORITY_COMPS = collections.OrderedDict([('ro_main_firmware', 5),
+                                          ('firmware_keys', 3),
+                                          ('ro_ec_firmware', 5)])
 
 
 ProbedValueType = Dict[str, Union[List, None, 'ProbedValueType', bool, float,
@@ -740,3 +739,10 @@ class DatabaseBuilder:
                            probe_value_matched: bool):
     return self._database.SetLinkAVLProbeValue(
         comp_cls, comp_name, converter_identifier, probe_value_matched)
+
+  @_EnsureInBuilderContext
+  def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
+                      values: Optional[Mapping[str, Any]], support_status: str,
+                      information: Optional[Mapping[str, Any]] = None):
+    self._database.UpdateComponent(comp_cls, old_name, new_name, values,
+                                   support_status, information)

@@ -555,6 +555,29 @@ class WritableDatabase(Database):
     return self._components.SetLinkAVLProbeValue(
         comp_cls, comp_name, converter_identifier, probe_value_matched)
 
+  def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
+                      values: Optional[Mapping[str, Any]], support_status: str,
+                      information: Optional[Mapping[str, Any]] = None):
+    """Updates a component by name.
+
+    This method will also update the component names in the encoded fields.
+
+    Args:
+      comp_cls: The component class name.
+      old_name: The component name of the component to be updated.
+      new_name: The updated component name.
+      values: A dict of the probed results or None if the component is updated
+        to a null component.
+      support_status: One of `common.COMPONENT_STATUS`.
+      information: Optional dict, these data will be used to further help
+          Runtime Probe and Hardware Verifier have more information to handle
+          miscellaneous probe issues.
+    """
+    self._components.UpdateComponent(comp_cls, old_name, new_name, values,
+                                     support_status, information)
+    if old_name != new_name:  # Update encoded_fields as well.
+      self._encoded_fields.RenameComponent(comp_cls, old_name, new_name)
+
   def AddDeviceInfoRule(self, name_suffix, evaluate, **kwargs):
     self._rules.AddDeviceInfoRule(name_suffix, evaluate, **kwargs)
 
@@ -1042,6 +1065,26 @@ class EncodedFields:
 
     self.AddFieldComponents(field_name, components)
 
+  def RenameComponent(self, comp_cls: str, old_name: str, new_name: str):
+    """Renames a component in encoded fields.
+
+    Args:
+      comp_cls: A string of the name of the component class.
+      old_name: The component name to be updated.
+      new_name: The updated component name.
+    """
+
+    field_name = self.GetFieldForComponent(comp_cls)
+    if field_name is None:
+      raise common.HWIDException(f'Comp class {comp_cls!r} not found in '
+                                 'encoded fields')
+    for combination in self._fields[field_name].values():
+      comp_names = self._StandardlizeList(combination[comp_cls])
+      combination[comp_cls] = self._SimplifyList([
+          new_name if comp_name == old_name else comp_name
+          for comp_name in comp_names
+      ])
+
   def _RegisterNewEmptyField(self, field_name, comp_classes):
     if not comp_classes:
       raise common.HWIDException(
@@ -1437,6 +1480,53 @@ class Components:
 
     self._components[comp_cls][comp_name].values = AVLProbeValue(
         converter_identifier, probe_value_matched, values)
+
+  def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
+                      values: Optional[Mapping[str, Any]], support_status: str,
+                      information: Mapping[str, Any] = None):
+    """Updates a component by name.
+
+    This method will also update the component names in the encoded fields.
+
+    Args:
+      comp_cls: The component class name.
+      old_name: The component name of the component to be updated.
+      new_name: The updated component name.
+      values: A dict of the probed results or None if the component is updated
+        to a null component.
+      support_status: One of `common.COMPONENT_STATUS`.
+      information: Optional dict, these data will be used to further help
+          Runtime Probe and Hardware Verifier have more information to handle
+          miscellaneous probe issues.
+    """
+    self._SCHEMA.value_type.items['items'].value_type.items['values'].Validate(
+        values)
+    self._SCHEMA.value_type.items['items'].value_type.optional_items[
+        'status'].Validate(support_status)
+    self._SCHEMA.value_type.items['items'].value_type.optional_items[
+        'information'].Validate(information)
+
+    if old_name not in self._components[comp_cls]:
+      raise common.HWIDException(
+          f'No such Component ({comp_cls!r}, {old_name!r}).')
+    if old_name == new_name:  # Update in-place.
+      self._components[comp_cls][old_name].values = values
+      self._components[comp_cls][old_name].status = support_status
+      self._components[comp_cls][old_name].information = information
+    else:
+      if new_name in self._components[comp_cls]:
+        raise common.HWIDException(
+            f'Updated Component already exists ({comp_cls!r}, {new_name!r}).')
+      # OrderedDict does not support updating key-value pair in-place without
+      # modifying the order, so it's required to update the list of items and
+      # update the dict.
+      comp_list = list(self._components[comp_cls].items())
+      self._components[comp_cls].clear()
+      for idx, (comp_name, unused_info) in enumerate(comp_list):
+        if comp_name == old_name:
+          comp_list[idx] = (new_name,
+                            ComponentInfo(values, support_status, information))
+      self._components[comp_cls].update(comp_list)
 
 
 class Pattern:

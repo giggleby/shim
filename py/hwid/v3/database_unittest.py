@@ -9,6 +9,7 @@ import unittest
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule
+from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
@@ -104,6 +105,63 @@ class DatabaseTest(unittest.TestCase):
     db2 = database.Database.LoadData(db.DumpDataWithoutChecksum(internal=True))
 
     self.assertEqual(db, db2)
+
+  def testUpdateComponentNameUnchanged(self):
+    db = database.Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+    db.UpdateComponent('cls4', 'comp6', 'comp6', {
+        'field1': 'value1',
+        'field2': 'value2'
+    }, 'deprecated')
+    comps = db.GetComponents('cls4')
+    self.assertDictEqual(
+        yaml.Dict([('comp6',
+                    database.ComponentInfo(
+                        values=yaml.Dict([('field1', 'value1'),
+                                          ('field2', 'value2')]),
+                        status='deprecated')),
+                   ('comp7',
+                    database.ComponentInfo(
+                        values=yaml.Dict([('ggg', 'hhh')]), status='supported',
+                        information=yaml.Dict([('comp_group', 'comp6')])))]),
+        comps)
+
+  def testUpdateComponentNameChanged(self):
+    db = database.Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+    db.UpdateComponent('cls4', 'comp6', 'comp8', {
+        'field1': 'value1',
+        'field2': 'value2'
+    }, 'deprecated')
+    comps = db.GetComponents('cls4')
+    self.assertDictEqual(
+        yaml.Dict([('comp8',
+                    database.ComponentInfo(
+                        values=yaml.Dict([('field1', 'value1'),
+                                          ('field2', 'value2')]),
+                        status='deprecated')),
+                   ('comp7',
+                    database.ComponentInfo(
+                        values=yaml.Dict([('ggg', 'hhh')]), status='supported',
+                        information=yaml.Dict([('comp_group', 'comp6')])))]),
+        comps)
+    self.assertEqual({
+        0: {
+            'cls4': ['comp8']
+        },
+        1: {
+            'cls4': ['comp7']
+        }
+    }, db.GetEncodedField('field4'))
+
+  def testUpdateComponentNameCollision(self):
+    db = database.Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+    self.assertRaises(common.HWIDException, db.UpdateComponent, 'cls4', 'comp6',
+                      'comp7', {
+                          'field1': 'value1',
+                          'field2': 'value2'
+                      }, 'deprecated')
 
 
 class ImageIdTest(unittest.TestCase):
