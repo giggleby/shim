@@ -142,22 +142,25 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       return True
     self.info('Download succeed!')
 
+    report_parsers = []
     try:
       report_parsers = self._CreateReportParsers(gcs_path, self._archive_path,
                                                  self._tmp_dir)
     except NotImplementedError:
-      self.error('Unsupported archive format: %s', gcs_path)
-      event_stream.Commit()
-      return False
-    if len(report_parsers) == 0:
-      self.error('Cannot find valid archive in %s to create report parser',
-                 gcs_path)
-      event_stream.Commit()
-      return False
-
-    for report_parser in report_parsers:
-      report_parser.ProcessArchive(archive_process_event, self._process_pool,
-                                   self.PreEmit)
+      SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
+                            archive_process_event)
+    except Exception as e:
+      self.exception('Exception encountered when creating report parsers')
+      SetProcessEventStatus(ERROR_CODE.ArchiveUnknownError,
+                            archive_process_event, e)
+    else:
+      if not report_parsers:
+        SetProcessEventStatus(ERROR_CODE.ArchiveReportNotFound,
+                              archive_process_event)
+      else:
+        for report_parser in report_parsers:
+          report_parser.ProcessArchive(archive_process_event,
+                                       self._process_pool, self.PreEmit)
     self.EmitAndCommit([archive_process_event], event_stream)
     return True
 
@@ -736,6 +739,7 @@ ERROR_CODE = type_utils.Obj(
     EventNoObjectId=100,
     ArchiveInvalidFormat=200,
     ArchiveReportNumNotMatch=201,
+    ArchiveReportNotFound=202,
     ArchiveUnknownError=299,
     ReportInvalidFormat=300,
     ReportUnknownError=399,
