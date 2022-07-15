@@ -3852,6 +3852,10 @@ msgstr ""
 msgid "Write HWID"
 msgstr "Mã phần cứng"
 
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Write Test HWID"
+msgstr ""
+
 #: ../py/test/test_lists/generic_fat.test_list.json
 msgid "FAT (Final Assembly Test)"
 msgstr "FAT (Final Assembly Test)"

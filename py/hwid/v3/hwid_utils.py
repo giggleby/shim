@@ -7,6 +7,8 @@
 import collections
 import logging
 import os
+from typing import Optional
+import zlib
 
 from cros.factory.hwid.v3.bom import BOM
 from cros.factory.hwid.v3 import common
@@ -74,6 +76,21 @@ def GenerateHWID(database, probed_results, device_info, vpd, rma_mode,
   identity = transformer.BOMToIdentity(database, bom, brand_code,
                                        encoded_configless)
   return identity
+
+
+def GenerateTestHWID(project: str, brand_code: Optional[str] = None):
+  """Generates a test HWID from the given data.
+
+  Args:
+    project: The project of the device.
+    brand_code: Optional brand code of the device.
+  """
+  if brand_code:
+    prefix = f'{project.upper()}-{brand_code} TEST'
+  else:
+    prefix = f'{project.upper()} TEST'
+  checksum = zlib.crc32(prefix.encode('ascii')) % 10000
+  return f'{prefix} {checksum}'
 
 
 def DecodeHWID(database, encoded_string):

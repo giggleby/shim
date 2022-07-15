@@ -3783,6 +3783,10 @@ msgstr "断开无线网络"
 msgid "Write HWID"
 msgstr "硬体代号"
 
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Write Test HWID"
+msgstr "写入测试硬体代号"
+
 #: ../py/test/test_lists/generic_fat.test_list.json
 msgid "FAT (Final Assembly Test)"
 msgstr "FAT (最终组装测试)"

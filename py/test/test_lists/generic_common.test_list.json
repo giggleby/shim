@@ -1573,6 +1573,16 @@
     },
     "WriteProtectSwitch": {
       "pytest_name": "write_protect_switch"
+    },
+    "WriteTestHWID": {
+      "pytest_name": "exec_shell",
+      "label": "Write Test HWID",
+      "args": {
+        "commands": [
+          "hwid read",
+          "hwid write \"$(hwid generate_test)\""
+        ]
+      }
     }
   }
 }

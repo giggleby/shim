@@ -69,6 +69,18 @@ class GenerateHWIDTest(_HWIDTestCaseBase):
                       None)
 
 
+class GenerateTestHWIDTest(_HWIDTestCaseBase):
+  """The unittest of GenerateTestHWID."""
+
+  def testNormal(self):
+    encoded_string = hwid_utils.GenerateTestHWID('brya', 'ZZCR')
+    self.assertEqual(encoded_string, 'BRYA-ZZCR TEST 5069')
+
+  def testNoBrandCode(self):
+    encoded_string = hwid_utils.GenerateTestHWID('brya')
+    self.assertEqual(encoded_string, 'BRYA TEST 7321')
+
+
 # TODO (b/212216855)
 @label_utils.Informational
 class DecodeHWIDTest(_HWIDTestCaseBase):

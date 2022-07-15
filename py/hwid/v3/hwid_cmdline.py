@@ -103,6 +103,13 @@ _RMA_COMMON_ARGS = [
            help='Whether to enable RMA mode.'),
 ]
 
+_BRAND_CODE_COMMON_ARGS = [
+    CmdArg('--brand-code', default=None,
+           help='Device brand code (cros_config / brand-code).'),
+    CmdArg('--no-brand-code', action='store_true',
+           help='Do not add brand code to HWID'),
+]
+
 
 class Arg:
   """A simple class to store arguments passed to the add_argument method of
@@ -395,11 +402,11 @@ def UpdateDatabaseWrapper(options):
            help='Use component name from probed results as matched component.'),
     CmdArg('--with-configless-fields', action='store_true',
            help='Include the configless field.'),
-    CmdArg('--brand-code', default=None,
-           help='Device brand code (cros_config / brand-code).'),
-    CmdArg('--no-brand-code', action='store_true',
-           help='Do not add brand code to HWID'), *_HWID_MATERIAL_COMMON_ARGS,
-    *_OUTPUT_FORMAT_COMMON_ARGS, *_RMA_COMMON_ARGS)
+    *_BRAND_CODE_COMMON_ARGS,
+    *_HWID_MATERIAL_COMMON_ARGS,
+    *_OUTPUT_FORMAT_COMMON_ARGS,
+    *_RMA_COMMON_ARGS,
+)
 def GenerateHWIDWrapper(options):
   """Generates HWID."""
   hwid_material = ObtainHWIDMaterial(options)
@@ -417,6 +424,14 @@ def GenerateHWIDWrapper(options):
           'binary_string': identity.binary_string,
           'database_checksum': options.database.checksum
       })
+
+
+@Command('generate_test', *_BRAND_CODE_COMMON_ARGS)
+def GenerateTestHWIDWrapper(options):
+  """Generates Test HWID for early phase."""
+  encoded_string = hwid_utils.GenerateTestHWID(options.project,
+                                               options.brand_code)
+  Output(encoded_string)
 
 
 @Command('decode',
@@ -586,19 +601,25 @@ def InitializeDefaultOptions(options):
     options.project = hwid_utils.ProbeProject()
 
   # Build database doesn't need to initialize the database.
-  if options.command_name in ('probe', 'collect-material', 'build-database'):
-    return
+  NO_DATABASE_COMMANDS = (
+      'build-database',
+      'collect-material',
+      'generate_test',
+      'probe',
+      'read',
+      'write',
+  )
+  if options.command_name not in NO_DATABASE_COMMANDS:
+    # Create the Database object here since it's common to all functions.
+    logging.debug('Loading database file %s/%s...', options.hwid_db_path,
+                  options.project.upper())
+    options.database = Database.LoadFile(
+        os.path.join(options.hwid_db_path, options.project.upper()),
+        verify_checksum=(not options.no_verify_checksum))
 
-  # Create the Database object here since it's common to all functions.
-  logging.debug('Loading database file %s/%s...', options.hwid_db_path,
-                options.project.upper())
-  options.database = Database.LoadFile(
-      os.path.join(options.hwid_db_path, options.project.upper()),
-      verify_checksum=(not options.no_verify_checksum))
+    phase.OverridePhase(options.phase)
 
-  phase.OverridePhase(options.phase)
-
-  if options.command_name == 'generate':
+  if options.command_name in ('generate', 'generate_test'):
     if options.no_brand_code:
       if options.brand_code:
         sys.exit('--no-brand-code and --brand-code are mutually exclusive')

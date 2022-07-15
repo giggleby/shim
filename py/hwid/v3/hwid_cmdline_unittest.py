@@ -396,6 +396,22 @@ class GenerateHWIDWrapperTest(TestCaseBaseWithMockedOutputObject):
         })
 
 
+class GenerateTestHWIDWrapperTest(unittest.TestCase):
+  """The unittest of GenerateTestHWIDWrapper."""
+
+  @mock.patch('cros.factory.hwid.v3.hwid_utils.GenerateTestHWID')
+  @mock.patch('cros.factory.hwid.v3.hwid_cmdline.Output')
+  def testNormal(self, output_mock: mock.MagicMock,
+                 generate_test_hwid_mock: mock.MagicMock):
+    generate_test_hwid_mock.return_value = 'TEST-ZZCR TEST 9373'
+    options = mock.MagicMock()
+    hwid_cmdline.GenerateTestHWIDWrapper(options)
+
+    generate_test_hwid_mock.assert_called_once_with(options.project,
+                                                    options.brand_code)
+    output_mock.assert_called_once_with('TEST-ZZCR TEST 9373')
+
+
 class DecodeHWIDWrapperTest(TestCaseBaseWithMockedOutputObject):
 
   @mock.patch(
