@@ -261,7 +261,8 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     mock_method = self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL
     mock_method.assert_called_once_with(
         _BUNDLE_RECORD, self._message.request.email,
-        self._message.request.hwid_related_bug_number)
+        self._message.request.hwid_related_bug_number,
+        self._message.request.phase)
 
   def _MockDatetime(self, module_name: str):
     mock_datetime_patcher = mock.patch(f'{module_name}.datetime')

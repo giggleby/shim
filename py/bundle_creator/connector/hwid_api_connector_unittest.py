@@ -27,6 +27,7 @@ class HWIDAPIConnectorTest(unittest.TestCase):
   _ORIGINAL_REQUESTER = 'foo@bar'
   _BUNDLE_RECORD = '{"fake_key": "fake_value"}'
   _BUG_NUMBER = 123456789
+  _PHASE = 'PVT'
 
   def setUp(self):
     mock_urllib_request_patcher = mock.patch('urllib.request')
@@ -46,8 +47,9 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     self._urllib_request.urlopen.return_value.__enter__.return_value = (
         mock_response)
 
-    self._connector.CreateHWIDFirmwareInfoCL(
-        self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER)
+    self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
+                                             self._ORIGINAL_REQUESTER,
+                                             self._BUG_NUMBER, self._PHASE)
 
     self.assertEqual(
         self._urllib_request.Request.call_args.args[0],
@@ -59,6 +61,7 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     self.assertEqual(data['bundle_record'], self._BUNDLE_RECORD)
     self.assertEqual(data['original_requester'], self._ORIGINAL_REQUESTER)
     self.assertEqual(data['bug_number'], self._BUG_NUMBER)
+    self.assertEqual(data['phase'], self._PHASE)
 
   def testCreateHWIDFirmwareInfoCL_succeed_returnsExpectedClUrl(self):
     cl_number = 1234567
@@ -74,7 +77,8 @@ class HWIDAPIConnectorTest(unittest.TestCase):
         mock_response)
 
     cl_url = self._connector.CreateHWIDFirmwareInfoCL(
-        self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER)
+        self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER,
+        self._PHASE)
 
     expected_url = (
         'https://chrome-internal-review.googlesource.com/c/chromeos/'
@@ -93,8 +97,9 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     self._urllib_request.urlopen.side_effect = forbidden_error
 
     with self.assertRaises(hwid_api_connector.HWIDAPIRequestException) as e:
-      self._connector.CreateHWIDFirmwareInfoCL(
-          self._BUNDLE_RECORD, self._ORIGINAL_REQUESTER, self._BUG_NUMBER)
+      self._connector.CreateHWIDFirmwareInfoCL(self._BUNDLE_RECORD,
+                                               self._ORIGINAL_REQUESTER,
+                                               self._BUG_NUMBER, self._PHASE)
 
     self.assertEqual(json.loads(str(e.exception)), error_msg)
 
