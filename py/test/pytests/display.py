@@ -128,6 +128,21 @@ _CSS_ITEMS = [
 _CSS_ITEMS = [x[translation.DEFAULT_LOCALE] for x in _CSS_ITEMS]
 _IMAGE_PREFIX = 'image-'
 
+# This list is unused in this file. Just make sure the default images will be
+# translated correctly.
+_DEFAULT_IMAGES = [
+    _('image-complex'),
+    _('image-black'),
+    _('image-white'),
+    _('image-crosstalk-black'),
+    _('image-crosstalk-white'),
+    _('image-gray-63'),
+    _('image-gray-127'),
+    _('image-gray-170'),
+    _('image-horizontal-rgbw'),
+    _('image-vertical-rgbw')
+]
+
 
 class DisplayTest(test_case.TestCase):
   """Tests the function of display.

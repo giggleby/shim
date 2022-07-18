@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-06-21 17:19+CST\n"
+"PO-Revision-Date: 2022-07-18 10:19+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3744,12 +3744,12 @@ msgid "Update SKU ID"
 msgstr "更新样式 ID"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Check Ti50 Firmware Version"
-msgstr "检查 Ti50 韧体版本"
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Update Ti50 Firmware"
 msgstr "更新 Ti50 韧体"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Check Ti50 Firmware Version"
+msgstr "检查 Ti50 韧体版本"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Reg (ECHO) Codes to activate"
