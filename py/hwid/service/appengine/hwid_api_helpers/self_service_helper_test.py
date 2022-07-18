@@ -111,7 +111,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'validation-token-value-2', 'db data after change 2',
-            'db data after change 2 (internal)', [], [], [], {}))
+            'db data after change 2 (internal)', False, [], [], [], {}))
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', new_hwid_db_editable_section='db data after change 1',
@@ -132,7 +132,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'validation-token-value-1', 'db data after change 1',
-            'db data after change 1 (internal)', [], [], [], {
+            'db data after change 1 (internal)', False, [], [], [], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',
@@ -247,7 +247,7 @@ class SelfServiceHelperTest(unittest.TestCase):
       action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
       action.AnalyzeDraftDBEditableSection.return_value = (
           hwid_action.DBEditableSectionAnalysisReport(hwid_data.raw_db, '', '',
-                                                      [], [], [], {}))
+                                                      False, [], [], [], {}))
       return action
 
     self._modules.ConfigHWID('PROJ', '3', 'db data ver 1',
@@ -470,7 +470,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'fingerprint', 'new_db_content', None, [
+            'fingerprint', 'new_db_content', None, False, [
                 hwid_action.DBValidationError(
                     hwid_action.DBValidationErrorCode.SCHEMA_ERROR,
                     'some_schema_error')
@@ -502,7 +502,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     Part = hwid_action.DBEditableSectionLineAnalysisResult.Part
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'fingerprint', 'new_db_content', None, [], [], [
+            'fingerprint', 'new_db_content', None, False, [], [], [
                 hwid_action.DBEditableSectionLineAnalysisResult(
                     ModificationStatus.NOT_MODIFIED,
                     [Part(Part.Type.TEXT, 'text1')]),
@@ -609,6 +609,26 @@ class SelfServiceHelperTest(unittest.TestCase):
                 framework_version_change_status=(
                     _HWIDSectionChangeStatusMsg.UNTOUCHED),
             )), validation_token='fingerprint')
+    self.assertEqual(resp, expected_resp)
+
+  def testAnalyzeHWIDDBEditableSection_NoopChange(self):
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+    action.AnalyzeDraftDBEditableSection.return_value = (
+        hwid_action.DBEditableSectionAnalysisReport(
+            'fingerprint', 'new_db_content', None, True, [], [], [], {}))
+
+    req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+        project='proj', hwid_db_editable_section='new_db_content')
+    resp = self._ss_helper.AnalyzeHWIDDBEditableSection(req)
+
+    expected_resp = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionResponse(
+        analysis_report=_AnalysisReportMsg(
+            unqualified_support_status=[
+                'deprecated', 'unsupported', 'unqualified', 'duplicate'
+            ], qualified_support_status=['supported'],
+            touched_sections=_HWIDSectionChangeMsg(),
+            noop_for_external_db=True), validation_token='fingerprint')
     self.assertEqual(resp, expected_resp)
 
   def testGetHWIDBundleResourceInfo_RefreshDatastoreFirst(self):
@@ -724,7 +744,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
     action.AnalyzeDraftDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
-            'fingerprint', 'new_db_content', None, [], [], [], {
+            'fingerprint', 'new_db_content', None, False, [], [], [], {
                 'comp1':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls1', comp_name='comp_name1',

@@ -8,7 +8,9 @@ import logging
 import textwrap
 from typing import List, Optional, Tuple
 
-from cros.chromeoshwid import update_checksum
+import yaml
+
+from cros.chromeoshwid import update_checksum  # isort: split
 
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -16,6 +18,7 @@ from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
+from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import bundle_builder
@@ -97,6 +100,7 @@ class HWIDV3SelfServiceActionHelper:
         _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
                                            draft_db_editable_section))
     new_hwid_db_contents_internal = None
+    noop_for_external_db = False
 
     if internal:
       new_hwid_db_contents_with_avl = avl_converter_manager.LinkAVL(
@@ -109,9 +113,17 @@ class HWIDV3SelfServiceActionHelper:
       new_hwid_db_contents = new_hwid_db_contents_external
       curr_hwid_db_contents = curr_hwid_db_contents_external
 
+      # Check if the the change is no-op for external DB.
+      try:
+        new_db = database.Database.LoadData(new_hwid_db_contents)
+        noop_for_external_db = new_db == self._preproc_data.database
+      except (common.HWIDException, yaml.error.YAMLError):
+        pass
+
     report_factory = functools.partial(
         hwid_action.DBEditableSectionAnalysisReport, fingerprint,
-        new_hwid_db_contents_external, new_hwid_db_contents_internal)
+        new_hwid_db_contents_external, new_hwid_db_contents_internal,
+        noop_for_external_db)
 
     if derive_fingerprint_only:
       return report_factory([], [], [], {})

@@ -566,6 +566,8 @@ message HwidDbEditableSectionAnalysisReport {
 
   // A message to indicate top-level HWID DB section changes.
   HwidSectionChange touched_sections = 5;
+  // A bool indicating if the external HWID DB was unchanged.
+  bool noop_for_external_db = 6;
 }
 
 message HwidBundleResourceInfo {

@@ -246,6 +246,7 @@ class DBEditableSectionAnalysisReport(NamedTuple):
   fingerprint: str
   new_hwid_db_contents_external: hwid_db_data.HWIDDBData
   new_hwid_db_contents_internal: Optional[hwid_db_data.HWIDDBData]
+  noop_for_external_db: bool
   validation_errors: List[DBValidationError]
   precondition_errors: List[DBPreconditionError]
   lines: List[DBEditableSectionLineAnalysisResult]

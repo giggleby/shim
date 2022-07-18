@@ -165,6 +165,16 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
 
     self.assertEqual(expected_db, converted_db)
 
+  def testAnalyzeDraftDbEditableSection_NoopChange(self):
+    helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
+    helper_inst_after = self._LoadSSHelper('v3-golden-after-no-op.yaml')
+    editable_section = helper_inst_after.GetDBEditableSection()
+
+    analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(
+        editable_section, False, False)
+
+    self.assertTrue(analysis_report.noop_for_external_db)
+
   def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
     ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')
     ss_helper2 = self._LoadSSHelper('v3-golden-after-good.yaml')

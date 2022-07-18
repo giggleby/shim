@@ -488,6 +488,8 @@ class SelfServiceHelper:
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     response.validation_token = report.fingerprint
+    response.analysis_report.noop_for_external_db = (
+        report.noop_for_external_db)
 
     if report.precondition_errors:
       for error in report.precondition_errors:
