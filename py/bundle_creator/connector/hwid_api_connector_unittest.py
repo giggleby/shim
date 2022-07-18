@@ -33,12 +33,14 @@ class HWIDAPIConnectorTest(unittest.TestCase):
     self._urllib_request = mock_urllib_request_patcher.start()
     self.addCleanup(mock_urllib_request_patcher.stop)
 
+    mock_google_auth_default_patcher = mock.patch('google.auth.default')
+    self._google_auth_default = mock_google_auth_default_patcher.start()
+    self.addCleanup(mock_google_auth_default_patcher.stop)
+    self._google_auth_default.side_effect = _MockGoogleAuthDefault
+
     self._connector = hwid_api_connector.HWIDAPIConnector(self._HWID_ENDPOINT)
 
-  @mock.patch('google.auth.default')
-  def testCreateHWIDFirmwareInfoCL_verifyRequestWithExpectedArguments(
-      self, mock_google_auth_default):
-    mock_google_auth_default.side_effect = _MockGoogleAuthDefault
+  def testCreateHWIDFirmwareInfoCL_verifyRequestWithExpectedArguments(self):
     mock_response = mock.Mock()
     mock_response.read.return_value = '{}'
     self._urllib_request.urlopen.return_value.__enter__.return_value = (
