@@ -359,6 +359,11 @@ def UpdateSerialNumbers(dict_):
     DeleteDeviceData(keys_to_delete, optional=True)
 
 
+def GetOEMName():
+  """Returns OEM name in device data."""
+  return GetDeviceData(KEY_OEM_NAME)
+
+
 def FlattenData(data, parent=''):
   """An helper utility to flatten multiple layers of dict into one dict.
 

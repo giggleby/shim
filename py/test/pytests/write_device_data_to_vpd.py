@@ -93,8 +93,9 @@ class WriteDeviceDataToVPD(test_case.TestCase):
     if self.args.ro_key_map is None and self.args.rw_key_map is None:
       data['ro'] = device_data.GetDeviceData(device_data.KEY_VPD_RO, {})
       data['rw'] = device_data.GetDeviceData(device_data.KEY_VPD_RW, {})
-      # Device serial number is usually not included in vpd.ro.*.
+      # Device serial number and OEM name are usually not included in vpd.ro.*.
       data['ro'].update(device_data.GetAllSerialNumbers())
+      data['ro'].update({device_data.KEY_OEM_NAME: device_data.GetOEMName()})
 
       data['rw'].update(
           device_data.FlattenData({
