@@ -6,7 +6,30 @@ ChromeOS Factory development and ChromeOS factory team.
 
 ## Installation
 
-Find specific folder below and copy corresponding files to specified path.
+* Run `./devtools/vscode/setup.sh ${workspaceFolder}` outside chroot to install
+  `.vscode/settings.json` under `${workspaceFolder}`. Examples:
+  * If you want to use src/platform/factory as workspaceFolder:
+    ```
+    cd path/to/src/platform/factory
+    workspaceFolder=.
+    ./devtools/vscode/setup.sh ${workspaceFolder}
+    code ${workspaceFolder}
+    ```
+  * If you want to use src/private-overlays as workspaceFolder:
+    ```
+    cd path/to/src/platform/factory
+    workspaceFolder=../../private-overlays
+    ./devtools/vscode/setup.sh ${workspaceFolder}
+    code ${workspaceFolder}
+    ```
+  * If you want to use src/private-overlays/overlay-${BOARD}-private as
+    workspaceFolder:
+    ```
+    cd path/to/src/platform/factory
+    workspaceFolder=../../private-overlays/overlay-${BOARD}-private
+    ./devtools/vscode/setup.sh ${workspaceFolder}
+    code ${workspaceFolder}
+    ```
 
 ## Recommended Extensions
 
@@ -14,10 +37,3 @@ Find specific folder below and copy corresponding files to specified path.
 * Instant Markdown (dbankier.vscode-instant-markdown)
 * Trailing Spaces (shardulm94.trailing-spaces)
 * Python (ms-python.python)
-
-## Configuration files
-* `Factory Python development: src/platform/factory`:
-    Copy factory_settings.json to src/platform/factory/.vscode/settings.json.
-* `Factory Python development: src/private-overlays/overlay-${BOARD}-private`:
-    Copy factory_private_overlay_settings.json to
-    src/private-overlays/overlay-${BOARD}-private/.vscode/settings.json.
