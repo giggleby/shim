@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 _IMAGE_PREFIX = 'image-';
-
+_HEX_COLOR_PREFIX = 'hex-color-'
 
 /**
  * API for display test.
@@ -48,13 +48,18 @@ window.DisplayTest = class {
    */
   _setDisplayDivClass() {
     cros.factory.utils.removeClassesWithPrefix(this.displayDiv, 'subtest-');
+    this.displayDiv.style.backgroundImage = null;
+    this.displayDiv.style.backgroundColor = null;
+
     const item = this.itemList[this.focusItem];
     if (item.startsWith(_IMAGE_PREFIX)){
       this.displayDiv.style.backgroundImage = `url(./` +
         `${item.substring(_IMAGE_PREFIX.length)})`;
       this.displayDiv.classList.add('subtest-custom-image');
+    } else if (item.startsWith(_HEX_COLOR_PREFIX)) {
+      this.displayDiv.style.backgroundColor =
+        `${item.substring(_HEX_COLOR_PREFIX.length)}`;
     } else {
-      this.displayDiv.style.backgroundImage = null;
       this.displayDiv.classList.add(`subtest-${item}`);
     }
   }

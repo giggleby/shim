@@ -36,12 +36,13 @@ If ``idle_timeout`` is not set:
 Dependency
 ----------
 Each item of ``items`` is either:
-  1. A predefined CSS item listed in ``_CSS_ITEMS``.
-  2. ``image-<image_name>``: The corresponding image should be in the
+  1. ``image-<image_name>``: The corresponding <image_name> should be in the
        compressed file ``test_images.tar.bz2``. For example, if the item is
        "image-horizontal-rgbw.bmp", an image named "horizontal-rgbw.bmp"
        should be in ``test_images.tar.bz2``. We support image file formats:
        apng, avig, bmp, gif, ico, jpeg, png, svg, and webp.
+  2. ``hex-color-<hex_color_code>``.
+  3. A predefined CSS item listed in ``_CSS_ITEMS``.
 
 Examples
 --------
@@ -81,7 +82,9 @@ list::
         "image-gray-127.bmp",
         "image-gray-170.bmp",
         "image-horizontal-rgbw.bmp",
-        "image-vertical-rgbw.bmp"
+        "image-vertical-rgbw.bmp",
+        "hex-color-#afafaf"
+        "hex-color-#abc"
       ]
     }
   }
@@ -100,6 +103,7 @@ Default images in compressed file ``test_images.tar.bz2``:
 """
 
 import os
+import re
 
 from cros.factory.test.i18n import _
 from cros.factory.test.i18n import translation
@@ -128,6 +132,7 @@ _CSS_ITEMS = [
 ]
 _CSS_ITEMS = [x[translation.DEFAULT_LOCALE] for x in _CSS_ITEMS]
 _IMAGE_PREFIX = 'image-'
+_HEX_COLOR_PREFIX = 'hex-color-'
 
 # This list is unused in this file. Just make sure the default images will be
 # translated correctly.
@@ -197,9 +202,17 @@ class DisplayTest(test_case.TestCase):
     if self.images:
       self.ExtractTestImages()
 
+    invalid_hex_color_items = [
+        item for item in self.items if item.startswith(_HEX_COLOR_PREFIX) and
+        not self._IsHexColor(item[len(_HEX_COLOR_PREFIX):])
+    ]
+    if invalid_hex_color_items:
+      raise ValueError(f'{invalid_hex_color_items} are not valid hex colors.')
+
     unknown_items = [
         item for item in set(self.args.items) - set(_CSS_ITEMS)
-        if not item.startswith(_IMAGE_PREFIX)
+        if not item.startswith(_IMAGE_PREFIX) and
+        not item.startswith(_HEX_COLOR_PREFIX)
     ]
     if unknown_items:
       raise ValueError('Unknown item %r in items.' % unknown_items)
@@ -267,3 +280,8 @@ class DisplayTest(test_case.TestCase):
       self.frontend_proxy.JudgeSubTest(False)
       # If the next subtest will be in fullscreen mode, checked should be True
       self.checked = self.fullscreen
+
+  @staticmethod
+  def _IsHexColor(color_code):
+    pattern = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+    return re.match(pattern, color_code)
