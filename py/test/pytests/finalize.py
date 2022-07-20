@@ -200,6 +200,7 @@ class Finalize(test_case.TestCase):
            'steps in `cr50_finalize` will be adjusted'), default=False),
       Arg('is_reference_board', bool, 'Is reference board or not. If yes, skip '
           'the check for rlz code', default=False),
+      Arg('project', str, 'Project name of the HWID.', default=None),
   ]
 
   FINALIZE_TIMEOUT = 180
@@ -397,6 +398,11 @@ class Finalize(test_case.TestCase):
       command += ' --enable_zero_touch'
     if self.args.is_reference_board:
       command += ' --is_reference_board'
+    if self.args.project:
+      phase.AssertStartingAtPhase(
+          phase.PVT, self.args.project is None,
+          'Should not use `project` option in this phase')
+      command += ' --project %s' % self.args.project
     command += ' --phase "%s"' % phase.GetPhase()
 
     self._FinalizeWipeInPlace(command)

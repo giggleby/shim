@@ -390,6 +390,10 @@
             "is_reference_board": {
               "type": "boolean",
               "default": false
+            },
+            "project": {
+              "type": ["string", "null"],
+              "default": null
             }
           },
           "patternProperties": {

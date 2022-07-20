@@ -68,6 +68,16 @@ feature, set argument like this::
       "enable_configless_fields": true
     }
   }
+
+To override the default project name, use ``project`` arguments::
+
+  {
+    "pytest_name": "hwid",
+    "label": "Write HWID",
+    "args": {
+      "project": "nirwen"
+    }
+  }
 """
 
 import json
@@ -108,6 +118,7 @@ class HWIDV3Test(test_case.TestCase):
       Arg('enable_configless_fields', bool, 'Include the configless fields',
           default=False),
       Arg('include_brand_code', bool, 'Include RLZ brand code', default=True),
+      Arg('project', str, 'Project name of the HWID.', default=None),
   ]
 
   def setUp(self):
@@ -118,10 +129,18 @@ class HWIDV3Test(test_case.TestCase):
   def tearDown(self):
     self._dut.Call(['rm', '-rf', self.tmpdir])
 
+  def AppendProjectArg(self, cmd):
+    """Append the project name to the command list if the name is not None."""
+    if self.args.project:
+      cmd += ['--project', self.args.project]
+
   def runTest(self):
     testlog.LogParam(name='phase', value=str(phase.GetPhase()))
     phase.AssertStartingAtPhase(phase.EVT, self.args.verify_checksum,
                                 'HWID checksum must be verified')
+    phase.AssertStartingAtPhase(
+        phase.PVT, self.args.project is None,
+        'Should not use `project` option in this phase')
 
     if self.args.enable_factory_server:
       update_utils.UpdateHWIDDatabase(self._dut)
@@ -164,6 +183,7 @@ class HWIDV3Test(test_case.TestCase):
         generate_cmd += ['--with-configless-fields']
       if not self.args.include_brand_code:
         generate_cmd += ['--no-brand-code']
+      self.AppendProjectArg(generate_cmd)
 
       output = self.factory_tools.CallOutput(generate_cmd)
       self.assertIsNotNone(output, 'HWID generate failed.')
@@ -173,7 +193,9 @@ class HWIDV3Test(test_case.TestCase):
       session.console.info('Generated HWID: %s', encoded_string)
 
       # try to decode HWID
-      decode_cmd = ['hwid', 'decode'] + [encoded_string]
+      decode_cmd = ['hwid', 'decode']
+      self.AppendProjectArg(decode_cmd)
+      decode_cmd += [encoded_string]
       decoded_hwid = self.factory_tools.CallOutput(decode_cmd)
       self.assertIsNotNone(decoded_hwid, 'HWID decode failed.')
 
@@ -186,7 +208,9 @@ class HWIDV3Test(test_case.TestCase):
 
       device_data.UpdateDeviceData({'hwid': encoded_string})
     else:
-      encoded_string = self.factory_tools.CheckOutput(['hwid', 'read']).strip()
+      read_cmd = ['hwid', 'read']
+      self.AppendProjectArg(read_cmd)
+      encoded_string = self.factory_tools.CheckOutput(read_cmd).strip()
 
     self.ui.SetState(
         _('Verifying HWID (v3): {encoded_string}...',
@@ -200,6 +224,7 @@ class HWIDV3Test(test_case.TestCase):
       verify_cmd += ['--rma-mode']
     if not self.args.verify_checksum:
       verify_cmd += ['--no-verify-checksum']
+    self.AppendProjectArg(verify_cmd)
     verify_cmd += [encoded_string]
 
     output = self.factory_tools.CheckOutput(verify_cmd)
@@ -210,4 +235,7 @@ class HWIDV3Test(test_case.TestCase):
       self.ui.SetState(
           _('Setting HWID (v3): {encoded_string}...',
             encoded_string=encoded_string))
-      self.factory_tools.CheckCall(['hwid', 'write', encoded_string])
+      write_cmd = ['hwid', 'write']
+      self.AppendProjectArg(write_cmd)
+      write_cmd += [encoded_string]
+      self.factory_tools.CheckCall(write_cmd)
