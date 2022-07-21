@@ -116,7 +116,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertEqual(analysis_report.validation_errors, [])
     self.assertEqual(len(analysis_report.lines), 0)
     self.assertEqual(analysis_report.fingerprint,
-                     '22e990e315e68acd94537c5aa85eeaf2f99044bc')
+                     '943ecc91792a30a90ca51a5f02aacf293c596413')
 
   def testAnalyzeDraftDbEditableSection_SyntaxError(self):
     helper_inst = self._LoadSSHelper('v3-golden-before.yaml')
@@ -166,7 +166,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertEqual(expected_db, converted_db)
 
   def testAnalyzeDraftDbEditableSection_NoopChange(self):
-    helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
+    helper_inst_before = self._LoadSSHelper('v3-golden-internal-tags.yaml')
     helper_inst_after = self._LoadSSHelper('v3-golden-after-no-op.yaml')
     editable_section = helper_inst_after.GetDBEditableSection()
 
