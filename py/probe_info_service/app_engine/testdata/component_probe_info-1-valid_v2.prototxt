@@ -1,4 +1,4 @@
-# corresponding fingerprint: b945ea418771be566855158f5c737d5101fc4c40
+# corresponding fingerprint: e2be72fe5bd3296140492fd6255c118b151e4917
 component_identity: {
   qual_id: 1
   readable_label: "PART_NO_1234"
@@ -9,10 +9,10 @@ probe_info: {
     # This param value is different than the one in
     # `comp_probe_info-1-valid.prototxt`.
     name: "mmc_manfid"
-    string_value: "0B"
+    string_value: "0x0b"
   }
   probe_parameters: {
     name: "mmc_name"
-    string_value: "ABCxyz"
+    string_value: "0x41424378797a"
   }
 }

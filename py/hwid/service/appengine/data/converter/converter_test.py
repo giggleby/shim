@@ -415,5 +415,40 @@ class FixedWidthHexValueTypeTest(unittest.TestCase):
                      cm.output[0].splitlines()[0])
 
 
+class HexEncodedStrValueFormatterTest(unittest.TestCase):
+
+  def testWithIncorrectFormat_thenRaiseError(self):
+    value_formatter = converter.HexEncodedStrValueFormatter(
+        source_has_prefix=False, encoding='ascii', fixed_num_bytes=None)
+
+    self.assertRaises(converter_types.StrFormatterError, value_formatter, '673')
+    self.assertRaises(converter_types.StrFormatterError, value_formatter, 'xy')
+
+  def testWithIncorrectLength_thenRaiseError(self):
+    value_formatter = converter.HexEncodedStrValueFormatter(
+        source_has_prefix=False, encoding='ascii', fixed_num_bytes=3)
+
+    self.assertRaises(converter_types.StrFormatterError, value_formatter, '67')
+
+  def testWithPrefix(self):
+    value_factory = converter.MakeHexEncodedStrValueFactory(
+        source_has_prefix=True)
+
+    self.assertEqual(value_factory('0x616263'), 'abc')
+    self.assertEqual(value_factory('0x610063'), 'a\0c')
+
+  def testWithoutPrefix(self):
+    value_factory = converter.MakeHexEncodedStrValueFactory()
+
+    self.assertEqual(value_factory('616263'), 'abc')
+    self.assertEqual(value_factory('610063'), 'a\0c')
+
+  def testWithFixedLength(self):
+    value_factory = converter.MakeHexEncodedStrValueFactory(fixed_num_bytes=3)
+
+    self.assertEqual(value_factory('616263'), 'abc')
+    self.assertEqual(value_factory('610063'), 'a\0c')
+
+
 if __name__ == '__main__':
   unittest.main()

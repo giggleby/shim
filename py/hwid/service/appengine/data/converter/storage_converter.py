@@ -38,19 +38,28 @@ _STORAGE_CONVERTERS: Sequence[converter.FieldNameConverter] = [
     converter.FieldNameConverter.FromFieldMap(
         'mmc_no_prefix', {
             StorageAVLAttrs.MMC_NAME:
-                _ConvertedValueSpec('name'),
+                _ConvertedValueSpec(
+                    'name',
+                    converter.MakeHexEncodedStrValueFactory(
+                        source_has_prefix=True, fixed_num_bytes=6)),
             StorageAVLAttrs.MMC_MANFID:
                 _ConvertedValueSpec(
-                    'manfid', converter.MakeFixedWidthHexValueFactory(width=6))
+                    'manfid',
+                    converter.MakeFixedWidthHexValueFactory(
+                        width=6, source_has_prefix=True))
         }),
     converter.FieldNameConverter.FromFieldMap(
         'mmc_with_prefix', {
             StorageAVLAttrs.MMC_NAME:
-                _ConvertedValueSpec('mmc_name'),
+                _ConvertedValueSpec(
+                    'mmc_name',
+                    converter.MakeHexEncodedStrValueFactory(
+                        source_has_prefix=True, fixed_num_bytes=6)),
             StorageAVLAttrs.MMC_MANFID:
                 _ConvertedValueSpec(
                     'mmc_manfid',
-                    converter.MakeFixedWidthHexValueFactory(width=6))
+                    converter.MakeFixedWidthHexValueFactory(
+                        width=6, source_has_prefix=True))
         }),
 ]
 

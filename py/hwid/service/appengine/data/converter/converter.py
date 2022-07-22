@@ -194,9 +194,41 @@ class HexToHexValueFormatter(converter_types.StrFormatter):
     return f'{target_prefix}{int(value, 16):0{self._num_digits}x}'
 
 
+class HexEncodedStrValueFormatter(converter_types.StrFormatter):
+
+  def __init__(self, source_has_prefix: bool, encoding: str,
+               fixed_num_bytes: Optional[int]):
+    source_prefix = '0x' if source_has_prefix else ''
+    self._skip_prefix_len = len(source_prefix)
+    repeat_pattern = (r'*' if fixed_num_bytes is None else r'{%s}' %
+                      re.escape(str(fixed_num_bytes)))
+    self._value_pattern = r'%s([0-9a-f]{2})%s' % (re.escape(source_prefix),
+                                                  repeat_pattern)
+    self._encoding = encoding
+
+  def __call__(self, value):
+    if not re.fullmatch(self._value_pattern, value, flags=re.I):
+      raise converter_types.StrFormatterError('Not a hex-encoded string.')
+    the_bytes = bytes.fromhex(value[self._skip_prefix_len:])
+    try:
+      return the_bytes.decode(encoding=self._encoding)
+    except ValueError as ex:
+      raise converter_types.StrFormatterError(
+          'Unable to decode the byte string.') from ex
+
+
 def MakeFixedWidthHexValueFactory(
     width: int, source_has_prefix: bool = False, target_has_prefix: bool = True
 ) -> Callable[..., converter_types.FormattedStrType]:
   return converter_types.FormattedStrType.CreateInstanceFactory(
       formatter_self=HexToHexValueFormatter(width, source_has_prefix,
                                             target_has_prefix))
+
+
+def MakeHexEncodedStrValueFactory(
+    source_has_prefix: bool = False, encoding: str = 'ascii',
+    fixed_num_bytes: Optional[int] = None
+) -> Callable[..., converter_types.FormattedStrType]:
+  return converter_types.FormattedStrType.CreateInstanceFactory(
+      formatter_self=HexEncodedStrValueFormatter(source_has_prefix, encoding,
+                                                 fixed_num_bytes))
