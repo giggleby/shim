@@ -4,6 +4,8 @@
 # found in the LICENSE file.
 
 # We need to unload driver to prevent the toolkit screen from flashing black
-# when pressing the recovery button.
+# when pressing the recovery button for Chromebox devices.
 
-echo GOOG0007:00 > /sys/bus/platform/drivers/cros-ec-keyb/unbind || true
+if grep -q "DEVICETYPE=CHROMEBOX" /etc/lsb-release; then
+  echo GOOG0007:00 > /sys/bus/platform/drivers/cros-ec-keyb/unbind || true
+fi
