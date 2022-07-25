@@ -100,7 +100,24 @@ class HWIDV3SelfServiceActionHelper:
         _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
                                            draft_db_editable_section))
     new_hwid_db_contents_internal = None
+    new_hwid_db_contents_external_normalized = ''
     noop_for_external_db = False
+
+    # Try to normalize the input by loading and dumping.
+    try:
+      new_db = database.Database.LoadData(new_hwid_db_contents_external)
+      new_db_dumped = new_db.DumpDataWithoutChecksum()
+      # Check if the the change is no-op for external DB.
+      noop_for_external_db = (
+          new_db_dumped ==
+          self._preproc_data.database.DumpDataWithoutChecksum())
+
+      draft_db_editable_section = self.RemoveHeader(new_db_dumped)
+      new_hwid_db_contents_external_normalized, unused_fingerprint = (
+          _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
+                                             draft_db_editable_section))
+    except (common.HWIDException, yaml.error.YAMLError):
+      pass
 
     if internal:
       new_hwid_db_contents_with_avl = avl_converter_manager.LinkAVL(
@@ -110,27 +127,12 @@ class HWIDV3SelfServiceActionHelper:
       new_hwid_db_contents = new_hwid_db_contents_internal
       curr_hwid_db_contents = curr_hwid_db_contents_internal
     else:
-      # Try to normalize the input by loading and dumping.
-      try:
-        new_db = database.Database.LoadData(new_hwid_db_contents_external)
-        new_db_dumped = new_db.DumpDataWithoutChecksum()
-        # Check if the the change is no-op for external DB.
-        noop_for_external_db = (
-            new_db_dumped ==
-            self._preproc_data.database.DumpDataWithoutChecksum())
-        draft_db_editable_section = self.RemoveHeader(new_db_dumped)
-        new_hwid_db_contents_external, fingerprint = (
-            _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
-                                               draft_db_editable_section))
-      except (common.HWIDException, yaml.error.YAMLError):
-        pass
-
       new_hwid_db_contents = new_hwid_db_contents_external
       curr_hwid_db_contents = curr_hwid_db_contents_external
 
     report_factory = functools.partial(
         hwid_action.DBEditableSectionAnalysisReport, fingerprint,
-        new_hwid_db_contents_external, new_hwid_db_contents_internal,
+        new_hwid_db_contents_external_normalized, new_hwid_db_contents_internal,
         noop_for_external_db)
 
     if derive_fingerprint_only:
