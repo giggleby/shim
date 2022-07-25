@@ -45,6 +45,7 @@ tbody tr:last-child * {
 }
 
 #cd-bluetooth-panel,
+#cd-als-panel,
 #cd-log-panel,
 #cd-legend-panel,
 #cd-wifi-panel {
@@ -58,6 +59,7 @@ tbody tr:last-child * {
 }
 
 #cd-bluetooth-panel,
+#cd-als-panel,
 #cd-log-panel,
 #cd-wifi-panel {
   overflow: scroll;

@@ -56,6 +56,7 @@ import threading
 import time
 from typing import Dict, List, Optional
 
+from cros.factory.device import device_types
 from cros.factory.device import device_utils
 from cros.factory.device import wifi
 from cros.factory.goofy.plugins import plugin_controller
@@ -73,6 +74,7 @@ from cros.factory.utils import type_utils
 
 _WARNING_TEMP_RATIO = 0.95
 _CRITICAL_TEMP_RATIO = 0.98
+_ALS_LOCATION = 'camera'
 
 
 Status = collections.namedtuple('Status',
@@ -94,6 +96,8 @@ class CountDownTest(test_case.TestCase):
           'Interval of time in seconds to scan wifi.', default=10),
       Arg('bluetooth_update_interval', int,
           'Interval of time in seconds to scan bluetooth.', default=10),
+      Arg('als_update_interval', int,
+          'Interval of time in seconds to scan ALS.', default=10),
       Arg('grace_secs', int,
           'Grace period before starting abnormal status detection.',
           default=120),
@@ -302,6 +306,12 @@ class CountDownTest(test_case.TestCase):
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
     self._main_sensor = self._dut.thermal.GetMainSensorName()
+    self._als_controller = None
+    try:
+      self._als_controller = self._dut.ambient_light_sensor.GetController(
+          location=_ALS_LOCATION)
+    except device_types.DeviceException:
+      pass
     # Normalize the sensors so main sensor is always the first one.
     sensors = sorted(self._dut.thermal.GetAllSensorNames())
     sensors.insert(0, sensors.pop(sensors.index(self._main_sensor)))
@@ -324,6 +334,7 @@ class CountDownTest(test_case.TestCase):
     self.btmgmt = bluetooth_utils.BtMgmt()
     self.btmgmt.PowerOn()
     self._last_bluetooth_thread: Optional[threading.Thread] = None
+    self._last_als_thread: Optional[threading.Thread] = None
 
   def Log(self):
     """Add event log and detects abnormal status."""
@@ -400,6 +411,39 @@ class CountDownTest(test_case.TestCase):
     self._last_bluetooth_thread = threading.Thread(target=AsyncScanBluetooth)
     self._last_bluetooth_thread.start()
 
+  def ScanALS(self):
+    """Launch ALS scan in another thread."""
+
+    ALS_PANEL_ID = 'cd-als-panel'
+    if not self._als_controller:
+      # Hide the ALS scanning section if the device does not support ALS.
+      self.ui.HideElement(ALS_PANEL_ID)
+      return
+
+    def AsyncScanALS():
+      self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
+                      id=ALS_PANEL_ID)
+      lux = self._als_controller.GetLuxValue()
+      self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
+                         id=ALS_PANEL_ID)
+      self.ui.AppendHTML(f'<div>lux: {lux!r}</div>', id=ALS_PANEL_ID)
+      if self._event_loop_stop:
+        logging.info('Stop in AsyncScanALS because event loop stopped.')
+      else:
+        self.event_loop.AddTimedHandler(self.ScanALS,
+                                        self.args.als_update_interval)
+
+    if self._last_als_thread:
+      self._last_als_thread.join()
+      self._last_als_thread = None
+
+    if self._event_loop_stop:
+      logging.info('Stop in ScanALS because event loop stopped.')
+      return
+
+    self._last_als_thread = threading.Thread(target=AsyncScanALS)
+    self._last_als_thread.start()
+
   def runTest(self):
     verbose_log_path = session.GetVerboseTestLogPath()
     file_utils.TryMakeDirs(os.path.dirname(verbose_log_path))
@@ -427,6 +471,10 @@ class CountDownTest(test_case.TestCase):
       if self.args.bluetooth_update_interval:
         self.event_loop.AddTimedHandler(self.ScanBluetooth,
                                         self.args.bluetooth_update_interval)
+
+      if self.args.als_update_interval:
+        self.event_loop.AddTimedHandler(self.ScanALS,
+                                        self.args.als_update_interval)
 
       self.Sleep(self.args.duration_secs)
       self._event_loop_stop = True
