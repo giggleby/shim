@@ -9,7 +9,7 @@ from unittest import mock
 
 from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import common
-from cros.factory.hwid.v3.database import Database
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import probe
 from cros.factory.test.l10n import regions
 from cros.factory.unittest_utils import label_utils
@@ -144,7 +144,7 @@ class DatabaseBuilderTest(unittest.TestCase):
         db_path=_TEST_DATABASE_PATH)
     self.assertEqual(
         db_builder.Build(),
-        Database.LoadFile(_TEST_DATABASE_PATH, verify_checksum=False))
+        database.Database.LoadFile(_TEST_DATABASE_PATH, verify_checksum=False))
 
     db = builder.DatabaseBuilder.FromEmpty(project='PROJ',
                                            image_name='PROTO').Build()
@@ -652,7 +652,129 @@ class DatabaseBuilderTest(unittest.TestCase):
     db_builder.Render(path)
 
     # Should be able to load successfully and pass the checksum check.
-    Database.LoadFile(path)
+    database.Database.LoadFile(path)
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddCompoonent(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponent('comp_cls_3', 'comp_3_3', {'value': '3'},
+                              'unqualified', {'extra_info_1': 'extra_val_1'})
+    db = db_builder.Build()
+
+    components = db.GetComponents('comp_cls_3')
+    self.assertEqual(
+        database.ComponentInfo({'value': '3'}, 'unqualified',
+                               {'extra_info_1': 'extra_val_1'}),
+        components.get('comp_3_3'))
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddEncodedFieldComponents(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddEncodedFieldComponents('comp_cls_1_field', 'comp_cls_1',
+                                           ['comp_1_1', 'comp_1_2'])
+    db = db_builder.Build()
+
+    self.assertDictEqual(
+        {
+            0: {
+                'comp_cls_1': ['comp_1_1']
+            },
+            1: {
+                'comp_cls_1': ['comp_1_2']
+            },
+            2: {
+                'comp_cls_1': ['comp_1_1', 'comp_1_2']
+            }
+        }, db.GetEncodedField('comp_cls_1_field'))
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddImage_NewPattern(self):
+    image_id = 2
+    image_name = 'DVT'
+
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddImage(image_id=image_id, image_name=image_name,
+                          new_pattern=True)
+      db_builder.AppendEncodedFieldBit('comp_cls_1_field', 10,
+                                       image_id=image_id)
+      db_builder.AppendEncodedFieldBit('comp_cls_23_field', 20,
+                                       image_id=image_id)
+    db = db_builder.Build()
+
+    self.assertEqual(image_name, db.GetImageName(image_id))
+    self.assertEqual(image_id, db.GetImageIdByName(image_name))
+    self.assertEqual(
+        database.PatternDatum(1, 'base8192', [
+            database.PatternField('comp_cls_1_field', 10),
+            database.PatternField('comp_cls_23_field', 20)
+        ]), db.GetPattern(image_id=image_id))
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddImage_ExistingPattern(self):
+    image_id = 2
+    reference_image_id = 1
+    image_name = 'DVT'
+
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddImage(image_id=image_id, image_name=image_name,
+                          new_pattern=False,
+                          reference_image_id=reference_image_id)
+    db = db_builder.Build()
+
+    self.assertEqual(image_name, db.GetImageName(image_id))
+    self.assertEqual(image_id, db.GetImageIdByName(image_name))
+    self.assertEqual(
+        db.GetPattern(image_id=reference_image_id).idx,
+        db.GetPattern(image_id=image_id).idx)
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAppendEncodedFieldBit(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AppendEncodedFieldBit('comp_cls_1_field', 5, image_id=1)
+    db = db_builder.Build()
+
+    self.assertEqual(
+        7,
+        db.GetEncodedFieldsBitLength(image_id=1)['comp_cls_1_field'])
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testFillEncodedFieldBit(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      # Add one more pattern without comp_cls_1.
+      db_builder.AddImage(image_id=2, image_name='DVT', new_pattern=True)
+      db_builder.AppendEncodedFieldBit('comp_cls_23_field', 0, image_id=2)
+      for i in range(3, 18):
+        db_builder.AddComponent('comp_cls_1', f'comp_1_{i}', {'value': str(i)},
+                                'unqualified', {'extra_info': f'extra_val_{i}'})
+        db_builder.AddEncodedFieldComponents('comp_cls_1_field', 'comp_cls_1',
+                                             [f'comp_1_{i}'])
+      db_builder.FillEncodedFieldBit('comp_cls_1_field')
+      db_builder.FillEncodedFieldBit('comp_cls_23_field')
+    db = db_builder.Build()
+
+    # Total bits for comp_cls_1_field for image 1 is 5 (17 items).
+    self.assertEqual(
+        5,
+        db.GetEncodedFieldsBitLength(image_id=1)['comp_cls_1_field'])
+    # Total bits for comp_cls_23_field for image 2 is 1 (2 items).
+    self.assertEqual(
+        1,
+        db.GetEncodedFieldsBitLength(image_id=2)['comp_cls_23_field'])
+    # comp_cls_1_field does not exist in image 2, so no bits are allocated.
+    self.assertNotIn('comp_cls_1_field',
+                     db.GetEncodedFieldsBitLength(image_id=2))
 
 
 if __name__ == '__main__':

@@ -7,7 +7,6 @@ import functools
 import hashlib
 import itertools
 import logging
-import math
 import re
 import textwrap
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Union
@@ -294,7 +293,7 @@ class DatabaseBuilder:
     """
     field_name = self._database.GetEncodedFieldForComponent(comp_cls)
     if not field_name:
-      self._AddNewEncodedField(comp_cls, [])
+      self.AddNewEncodedField(comp_cls, [])
       return
 
     if len(self._database.GetComponentClasses(field_name)) > 1:
@@ -430,10 +429,19 @@ class DatabaseBuilder:
         '''))
 
   @_EnsureInBuilderContext
-  def AddComponent(self, comp_cls: str, probed_value: ProbedValueType,
-                   set_comp_name: Optional[str] = None,
-                   supported: bool = False):
-    """Tries to add a item into the component.
+  def AddComponentCheck(self, comp_cls: str, probed_value: ProbedValueType,
+                        set_comp_name: Optional[str] = None,
+                        supported: bool = False):
+    """Tries to add an item into the component.
+
+    This method is called with probed value from factory process instead of
+    existing HWID DB content, so it has to perform the following checks:
+
+      1. Mark previously supported (ro_main_firmware, ro_ec_firmware,
+         ro_pd_firmware) components as deprecated.
+      2. Generate component names by the info of probe values if not specified
+         at the set_comp_name argument.
+      3. Deprecate default component of the same component class.
 
     Args:
       comp_cls: The component class.
@@ -467,6 +475,24 @@ class DatabaseBuilder:
                                         common.COMPONENT_STATUS.unsupported)
 
   @_EnsureInBuilderContext
+  def AddComponent(self, comp_cls: str, comp_name: str,
+                   probed_value: ProbedValueType, support_status: str,
+                   information: Optional[Mapping[str, Any]] = None):
+    """Add an item into the component without performing checks.
+
+    Args:
+      comp_cls: The component class.
+      comp_name: Set component name for the item.
+      probed_value: The probed value of the component.
+      support_status: One of `common.COMPONENT_STATUS`.
+      information: Optional dict, these data will be used to further help
+          Runtime Probe and Hardware Verifier have more information to handle
+          miscellaneous probe issues.
+    """
+    self._database.AddComponent(comp_cls, comp_name, probed_value,
+                                support_status, information)
+
+  @_EnsureInBuilderContext
   def AddComponents(self, comp_cls: str, probed_values: List[ProbedValueType]):
     """Adds a list of components to the database.
 
@@ -492,18 +518,64 @@ class DatabaseBuilder:
           any(_IsSubset(probed_value_i, probed_values[j])
               for j in range(i + 1, len(probed_values)))):
         continue
-      self.AddComponent(comp_cls, probed_value_i)
+      self.AddComponentCheck(comp_cls, probed_value_i)
 
-  def _AddNewEncodedField(self, comp_cls: str, comp_names: Sequence[str]):
+  @_EnsureInBuilderContext
+  def AddNewEncodedField(self, comp_cls: str, comp_names: Sequence[str],
+                         encoded_field_name: Optional[str] = None):
     """Adds a new encoded field for the specific component class.
 
     Args:
       comp_cls: The component class.
       comp_names: A list of component name.
+      encoded_field_name: Optional name of the encoded field.
     """
-    field_name = HandleCollisionName(comp_cls + '_field',
-                                     self._database.encoded_fields)
+    field_name = encoded_field_name or HandleCollisionName(
+        comp_cls + '_field', self._database.encoded_fields)
     self._database.AddNewEncodedField(field_name, {comp_cls: comp_names})
+
+  @_EnsureInBuilderContext
+  def AddEncodedFieldComponents(self, field_name: str, comp_cls: str,
+                                comp_names: Sequence[str]):
+    """See database.WritableDatabase.AddEncodedFieldComponents."""
+    self._database.AddEncodedFieldComponents(field_name,
+                                             {comp_cls: list(comp_names)})
+
+  @_EnsureInBuilderContext
+  def AddImage(self, image_id: int, image_name: str, new_pattern: bool = False,
+               pattern_idx: Optional[int] = None,
+               reference_image_id: Optional[int] = None):
+    """See database.WritableDatabase.AddImage."""
+    self._database.AddImage(image_id, image_name,
+                            common.ENCODING_SCHEME.base8192, new_pattern,
+                            reference_image_id, pattern_idx)
+
+  @_EnsureInBuilderContext
+  def AppendEncodedFieldBit(self, field_name: str, bit_length: int,
+                            image_id: Optional[int] = None,
+                            pattern_idx: Optional[int] = None):
+    """See database.WritableDatabase.AppendEncodedFieldBit."""
+    self._database.AppendEncodedFieldBit(field_name, bit_length, image_id,
+                                         pattern_idx)
+
+  @_EnsureInBuilderContext
+  def FillEncodedFieldBit(self, field_name: str):
+    """Fills the bits to each encoded fields in all encoding patterns to cover
+    the number of existing combinations.
+
+    Args:
+      field_name: The name of encoded field.
+    """
+
+    bit_length = self._GetMinBitLength(field_name)
+    for pattern_idx in range(self._database.GetPatternCount()):
+      curr_bit_lengths = self._database.GetEncodedFieldsBitLength(
+          pattern_idx=pattern_idx)
+      if (field_name in curr_bit_lengths and
+          curr_bit_lengths[field_name] < bit_length):
+        self._database.AppendEncodedFieldBit(
+            field_name, bit_length - curr_bit_lengths[field_name],
+            pattern_idx=pattern_idx)
 
   def _UpdateComponents(self, probed_results, device_info, vpd, sku_ids):
     """Updates the component part of the database.
@@ -625,7 +697,7 @@ class DatabaseBuilder:
     # will be encoded into the HWID string.
     for comp_cls in sorted(self._database.GetComponentClasses()):
       if comp_cls not in covered_comp_classes:
-        self._AddNewEncodedField(comp_cls, bom.components[comp_cls])
+        self.AddNewEncodedField(comp_cls, bom.components[comp_cls])
 
   def _MayAddNewPatternAndImage(self, image_name):
     if image_name in [
@@ -663,14 +735,11 @@ class DatabaseBuilder:
       raise ValueError(
           'Please assign a image_id by adding "--image-id" argument.')
 
+  def _GetMinBitLength(self, field_name: str) -> int:
+    return max(self._database.GetEncodedField(field_name)).bit_length()
+
   def _UpdatePattern(self):
     """Updates the pattern so that it includes all encoded fields."""
-    def _GetMinBitLength(field_name):
-      return int(
-          math.ceil(
-              math.log(
-                  max(self._database.GetEncodedField(field_name).keys()) + 1,
-                  2)))
 
     handled_comp_classes = set()
     handled_encoded_fields = set()
@@ -687,7 +756,7 @@ class DatabaseBuilder:
         field_name = self._database.GetEncodedFieldForComponent(comp_cls)
 
         bit_length = 0
-        min_bit_length = max(_GetMinBitLength(field_name), 1)
+        min_bit_length = max(self._GetMinBitLength(field_name), 1)
         while bit_length < min_bit_length:
           bit_length += next(bit_iter)
         self._database.AppendEncodedFieldBit(field_name, bit_length)
@@ -705,7 +774,7 @@ class DatabaseBuilder:
         if not field_name:
           continue
 
-        bit_length = max(bit_length, _GetMinBitLength(field_name))
+        bit_length = max(bit_length, self._GetMinBitLength(field_name))
         self._database.AppendEncodedFieldBit(field_name, bit_length)
 
         handled_comp_classes |= set(
@@ -717,7 +786,7 @@ class DatabaseBuilder:
     for field_name in self._database.encoded_fields:
       if field_name in handled_encoded_fields:
         continue
-      bit_length = _GetMinBitLength(field_name)
+      bit_length = self._GetMinBitLength(field_name)
       if (field_name in curr_bit_lengths and
           curr_bit_lengths[field_name] >= bit_length):
         continue
@@ -746,3 +815,8 @@ class DatabaseBuilder:
                       information: Optional[Mapping[str, Any]] = None):
     self._database.UpdateComponent(comp_cls, old_name, new_name, values,
                                    support_status, information)
+
+  @_EnsureInBuilderContext
+  def ReplaceRules(self, rule_expr_list: Mapping[str, Any]):
+    """See database.WritableDatabase.ReplaceRules."""
+    self._database.ReplaceRules(rule_expr_list)

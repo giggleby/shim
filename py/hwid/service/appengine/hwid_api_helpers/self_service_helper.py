@@ -332,8 +332,8 @@ class SelfServiceHelper:
           if comp_name in db_builder.GetComponents(field.name):
             logging.info('Skip existed component: %s', comp_name)
           else:
-            db_builder.AddComponent(field.name, value, comp_name,
-                                    supported=firmware_record.supported)
+            db_builder.AddComponentCheck(field.name, value, comp_name,
+                                         supported=firmware_record.supported)
             changed = True
 
       if not changed:

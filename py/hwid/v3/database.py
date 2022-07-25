@@ -279,8 +279,10 @@ class Database(abc.ABC):
     return self._pattern.GetTotalBitLength(image_id)
 
   def GetEncodedFieldsBitLength(
-      self, image_id: Optional[int] = None) -> Mapping[str, int]:
-    return self._pattern.GetFieldsBitLength(image_id)
+      self, image_id: Optional[int] = None,
+      pattern_idx: Optional[int] = None) -> Mapping[str, int]:
+    return self._pattern.GetFieldsBitLength(image_id=image_id,
+                                            pattern_idx=pattern_idx)
 
   def GetBitMapping(self, image_id: Optional[int] = None,
                     max_bit_length: Optional[int] = None) -> Sequence[BitEntry]:
@@ -374,7 +376,8 @@ class Database(abc.ABC):
   def GetActiveComponentClasses(self,
                                 image_id: Optional[int] = None) -> Set[str]:
     ret = set()
-    for encoded_field_name in self.GetEncodedFieldsBitLength(image_id).keys():
+    for encoded_field_name in self.GetEncodedFieldsBitLength(
+        image_id=image_id).keys():
       ret |= self.GetComponentClasses(encoded_field_name)
 
     return ret
@@ -391,7 +394,8 @@ class Database(abc.ABC):
 
     # Encoded fields should be well defined.
     for image_id in self.image_ids:
-      for encoded_field_name in self.GetEncodedFieldsBitLength(image_id):
+      for encoded_field_name in self.GetEncodedFieldsBitLength(
+          image_id=image_id):
         if encoded_field_name not in self.encoded_fields:
           raise common.HWIDException(
               'The encoded field %r is not defined in `encoded_fields` part.' %
@@ -399,7 +403,7 @@ class Database(abc.ABC):
     # The last encoded patterns should always contain enough bits for all
     # fields.
     for encoded_field_name, bit_length in self.GetEncodedFieldsBitLength(
-        self.max_image_id).items():
+        image_id=self.max_image_id).items():
       max_index = max(self.GetEncodedField(encoded_field_name))
       if max_index.bit_length() > bit_length:
         raise common.HWIDException(
@@ -514,19 +518,57 @@ class WritableDatabase(Database):
         yaml_obj.get('framework_version', common.OLDEST_FRAMEWORK_VERSION))
 
   def AddImage(self, image_id: int, image_name: str, encoding_scheme: str,
-               new_pattern: bool = False):
+               new_pattern: bool = False,
+               reference_image_id: Optional[int] = None,
+               pattern_idx: Optional[int] = None):
+    """Adds an image associated with an optionally new pattern.
+
+    Args:
+      image_id: The image id.
+      image_name: The image name.
+      encoding_scheme: The encoding scheme.
+      new_pattern: A bool indicating if this image points to a new pattern.
+      reference_image_id: The optional image id of the pattern this new image id
+        will be associated with.
+      pattern_idx: The optional index of pattern this new image id will be
+        associated with.
+    """
     if new_pattern:
+      if pattern_idx is not None or reference_image_id is not None:
+        raise ValueError('None of image_id and reference_image_id can be set '
+                         'when new_pattern is set to True.')
       self._pattern.AddEmptyPattern(image_id, encoding_scheme)
     else:
-      self._pattern.AddImageId(image_id, self.max_image_id)
+      if pattern_idx is not None and reference_image_id is not None:
+        # Both pattern_idx and reference_image_id are set.
+        raise ValueError(
+            'At most one of pattern_idx and reference_image_id can be set.')
+      if pattern_idx is not None:
+        self._pattern.AddImageId(image_id, pattern_idx=pattern_idx)
+      elif reference_image_id is not None:
+        self._pattern.AddImageId(image_id,
+                                 reference_image_id=reference_image_id)
+      else:  # Both are None, use max image id.
+        self._pattern.AddImageId(image_id, reference_image_id=self.max_image_id)
+
     self._image_id[image_id] = image_name
 
   def AppendEncodedFieldBit(self, field_name: str, bit_length: int,
-                            image_id: Optional[int] = None):
+                            image_id: Optional[int] = None,
+                            pattern_idx: Optional[int] = None):
+    """Adds bits to a encoded field in a pattern.
+
+    Args:
+      field_name: The encoded field name.
+      bit_length: The bit length to append to the specific pattern.
+      image_id: The optional image id of the pattern.
+      pattern_idx: The optional index of the pattern.
+    """
     if field_name not in self.encoded_fields:
       raise common.HWIDException('The field %r does not exist.' % field_name)
 
-    self._pattern.AppendField(field_name, bit_length, image_id=image_id)
+    self._pattern.AppendField(field_name, bit_length, image_id=image_id,
+                              pattern_idx=pattern_idx)
 
   def AddNewEncodedField(self, encoded_field_name: str,
                          components: Mapping[str, Sequence[str]]):
@@ -536,6 +578,12 @@ class WritableDatabase(Database):
 
   def AddEncodedFieldComponents(self, encoded_field_name: str,
                                 components: Mapping[str, Sequence[str]]):
+    """Adds a combination of components in encoded fields.
+
+    Args:
+      encoded_field_name: The encoded field name.
+      components: A mapping of comp_cls to a combination of components.
+    """
     self._VerifyEncodedFieldComponents(components)
 
     self._encoded_fields.AddFieldComponents(encoded_field_name, components)
@@ -580,6 +628,14 @@ class WritableDatabase(Database):
 
   def AddDeviceInfoRule(self, name_suffix, evaluate, **kwargs):
     self._rules.AddDeviceInfoRule(name_suffix, evaluate, **kwargs)
+
+  def ReplaceRules(self, rule_expr_list: Mapping[str, Any]):
+    """Replaces the entries in rules section.
+
+    Args:
+      rule_expr_list: A mapping of rules.
+    """
+    self._rules = Rules(rule_expr_list)
 
   @property
   def raw_encoding_patterns(self):
@@ -1727,7 +1783,8 @@ class Pattern:
       raise common.HWIDException(f'No such pattern at position {pattern_idx}.')
     self._image_id_to_pattern[image_id] = pattern_idx
 
-  def AppendField(self, field_name, bit_length, image_id=None):
+  def AppendField(self, field_name, bit_length, image_id=None,
+                  pattern_idx=None):
     """Append a field to the pattern.
 
     Args:
@@ -1735,13 +1792,14 @@ class Pattern:
       bit_length: Bit width to add.
       image_id: An integer of the image id. If not given, the latest image id
           would be used.
+      pattern_idx: The index of the pattern.
     """
     self._SCHEMA.element_type.items['fields'].element_type.key_type.Validate(
         field_name)
     self._SCHEMA.element_type.items['fields'].element_type.value_type.Validate(
         bit_length)
 
-    self.GetPattern(image_id).fields.append(
+    self.GetPattern(image_id=image_id, pattern_idx=pattern_idx).fields.append(
         PatternField(field_name, bit_length))
 
   def GetEncodingScheme(self, image_id=None):
@@ -1768,19 +1826,22 @@ class Pattern:
     """
     return sum([field.bit_length for field in self.GetPattern(image_id).fields])
 
-  def GetFieldsBitLength(self, image_id=None):
+  def GetFieldsBitLength(self, image_id: Optional[int] = None,
+                         pattern_idx: Optional[int] = None):
     """Gets a map for the bit length of each encoded fields defined by the
     pattern. Scattered fields with the same field name are aggregated into one.
 
     Args:
-      image_id: An integer of the image id to query. If not given, the latest
-          image id would be used.
+      image_id: An integer of the image id to query. If both image_id and
+          pattern_idx are not given, the latest image id would be used.
+      pattern_idx: The index of the pattern.
 
     Returns:
       A dict mapping each encoded field to its bit length.
     """
     ret = collections.defaultdict(int)
-    for field in self.GetPattern(image_id).fields:
+    for field in self.GetPattern(image_id=image_id,
+                                 pattern_idx=pattern_idx).fields:
       ret[field.name] += field.bit_length
     return dict(ret)
 

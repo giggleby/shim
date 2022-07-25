@@ -56,7 +56,7 @@ class DatabaseTest(unittest.TestCase):
         internal_db.GetComponents('cls3')['comp5'].values, rule.AVLProbeValue)
 
   def testSetLinkAVLProbeValue(self):
-    db = database.Database.LoadFile(
+    db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
 
     db.SetLinkAVLProbeValue('cls4', 'comp7', 'converter-identifier1', True)
@@ -107,7 +107,7 @@ class DatabaseTest(unittest.TestCase):
     self.assertEqual(db, db2)
 
   def testUpdateComponentNameUnchanged(self):
-    db = database.Database.LoadFile(
+    db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
     db.UpdateComponent('cls4', 'comp6', 'comp6', {
         'field1': 'value1',
@@ -127,7 +127,7 @@ class DatabaseTest(unittest.TestCase):
         comps)
 
   def testUpdateComponentNameChanged(self):
-    db = database.Database.LoadFile(
+    db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
     db.UpdateComponent('cls4', 'comp6', 'comp8', {
         'field1': 'value1',
@@ -155,13 +155,25 @@ class DatabaseTest(unittest.TestCase):
     }, db.GetEncodedField('field4'))
 
   def testUpdateComponentNameCollision(self):
-    db = database.Database.LoadFile(
+    db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
     self.assertRaises(common.HWIDException, db.UpdateComponent, 'cls4', 'comp6',
                       'comp7', {
                           'field1': 'value1',
                           'field2': 'value2'
                       }, 'deprecated')
+
+  def testReplaceRules(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+    db.ReplaceRules([{
+        'name': 'device_info.set_image_id',
+        'evaluate': "SetImageId('TEST')",
+    }])
+
+    self.assertListEqual(
+        [rule.Rule('device_info.set_image_id', "SetImageId('TEST')")],
+        db.device_info_rules)
 
 
 class ImageIdTest(unittest.TestCase):
