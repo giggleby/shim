@@ -84,6 +84,16 @@ into test list::
       "layout": "ISO"
     }
   }
+
+To test keyboard functionality, ask operator to press [2,3] and [4,5] at the
+same time, add this into test list::
+
+  {
+    "pytest_name": "keyboard",
+    "args": {
+      "key_combinations": [[2, 3], [4, 5]]
+    }
+  }
 """
 
 import array
@@ -197,6 +207,10 @@ class KeyboardTest(test_case.TestCase):
           default=False),
       Arg('vivaldi_keyboard', bool, 'Get function keys map from sysfs.',
           default=True),
+      Arg(
+          'key_combinations', list, 'The element in the list is a list of key '
+          'codes, and these keys should be held at the same time to pass the '
+          'test. It is recommended to test 8 keys at once.', default=[]),
   ]
 
   def setUp(self):
@@ -224,6 +238,25 @@ class KeyboardTest(test_case.TestCase):
     if self.args.fn_keycodes and self.args.vivaldi_keyboard:
       session.console.warning('the fn_keycodes will be '
                               'overridden by vivaldi_keyboard.')
+
+    if self.args.key_combinations:
+      self.assertFalse(
+          self.args.repeat_times, 'repeat_times is not supported '
+          'with key_combinations.')
+      self.assertFalse(self.args.key_order, 'key_order is not supported with '
+                       'key_combinations.')
+      self.assertFalse(
+          self.args.strict_sequential_press,
+          'strict_sequential_press is not supported with key_combinations.')
+      self.assertFalse(
+          self.args.sequential_press, 'sequential_press is not '
+          'supported with key_combinations.')
+      self.assertTrue(
+          self.args.allow_multi_keys or self.args.multi_keys_delay == 0,
+          'multi_keys should be allowed when using key_combinations.')
+      self.assertTrue(
+          all(comb for comb in self.args.key_combinations),
+          'Combination should have at least 1 key.')
 
     # Get the keyboard input device.
     try:
@@ -289,6 +322,8 @@ class KeyboardTest(test_case.TestCase):
     if self.args.allow_multi_keys:
       self.ui.HideElement('instruction-single-key')
 
+    if self.args.key_combinations:
+      self.frontend_proxy.Hint(self.args.key_combinations[0], True)
     self.dispatcher = evdev_utils.InputDeviceDispatcher(
         self.keyboard_device, self.event_loop.CatchException(self.HandleEvent))
 
@@ -418,6 +453,22 @@ class KeyboardTest(test_case.TestCase):
       self.FailTask(
           f'Got key up event for keycode {keycode} but did not get key down '
           'event.')
+
+    if self.args.key_combinations:
+      if self.next_index == len(self.args.key_combinations):
+        return
+      keys = self.args.key_combinations[self.next_index]
+      if self.hold_keys == set(keys):
+        self.next_index += 1
+        if self.next_index == len(self.args.key_combinations):
+          self.PassTask()
+      self.hold_keys.remove(keycode)
+      self.frontend_proxy.Click(keycode, 1)  # Restore the color of the key.
+      if not self.hold_keys:
+        self.frontend_proxy.Hint(self.args.key_combinations[self.next_index],
+                                 True)
+      return
+
     self.hold_keys.remove(keycode)
 
     if (self.next_index < len(self.key_order_list) and
@@ -441,9 +492,12 @@ class KeyboardTest(test_case.TestCase):
 
   def FailTestTimeout(self):
     """Fail the test due to timeout, and log untested keys."""
-    failed_keys = [
-        key for key, num_left in self.need_press_keys.items() if num_left
-    ]
+    if self.args.key_combinations:
+      failed_keys = self.args.key_combinations[self.next_index:]
+    else:
+      failed_keys = [
+          key for key, num_left in self.need_press_keys.items() if num_left
+      ]
     for failed_key in failed_keys:
       testlog.LogParam('malfunction_key', failed_key)
     self.FailTask(f'Keyboard test timed out. Malfunction keys: {failed_keys}.')

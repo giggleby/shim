@@ -392,6 +392,20 @@ window.KeyboardTest = class {
 
   skip = keycode => this.setColor(keycode, 'gray');
 
+  hint = function(keycodes, reset=false) {
+    if (reset) {
+      const buttons = document.getElementsByClassName('button');
+      for (let i=0; i<buttons.length; i++) {
+        buttons[i].style['background-color'] = '';
+      }
+    }
+    for (let i=0; i<keycodes.length; i++) {
+      this.setColor(keycodes[i], 'deepskyblue');
+      const status = document.getElementById(keycodes[i] + '_status');
+      status.style.display = '';
+    }
+  }
+
   setColor = function(keycode, color) {
     const button = document.getElementById(keycode);
     button.style['background-color'] = color;

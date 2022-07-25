@@ -30,6 +30,7 @@ class FakeArgs:
     self.fn_keycodes = []
     self.key_order = []
     self.has_power_key = True
+    self.key_combinations = []
 
 
 class KeyboardUnitTest(unittest.TestCase):
@@ -57,8 +58,13 @@ class KeyboardUnitTest(unittest.TestCase):
                       all_keys)
 
   def PressKey(self, keycode):
-    self.test.OnKeydown(keycode)
-    self.test.OnKeyup(keycode)
+    self.PressKeys([keycode])
+
+  def PressKeys(self, keycodes):
+    for keycode in keycodes:
+      self.test.OnKeydown(keycode)
+    for keycode in keycodes:
+      self.test.OnKeyup(keycode)
 
   @mock.patch(f'{keyboard.__name__}.KeyboardTest.PassTask')
   def testPressAllKeys(self, mock_pass):
@@ -134,6 +140,21 @@ class KeyboardUnitTest(unittest.TestCase):
     self.PressKey(2)
     mock_pass.assert_not_called()
     self.PressKey(3)
+    mock_pass.assert_called_once()
+
+  @mock.patch(f'{keyboard.__name__}.KeyboardTest.PassTask')
+  def testKeyCombinations(self, mock_pass):
+    self.test.args.key_combinations = [[3], [1, 2]]
+    self.MockFunction(f'{keyboard.__name__}.KeyboardTest.GetKeyboardLayout')
+    self.MockFunction(f'{keyboard.__name__}.KeyboardTest.GetKeycodesInFirstRow',
+                      [])
+    self.test.setUp()
+
+    self.PressKey(3)
+    self.PressKey(1)
+    self.PressKey(2)
+    mock_pass.assert_not_called()
+    self.PressKeys([2, 1])
     mock_pass.assert_called_once()
 
   @mock.patch(f'{keyboard.__name__}.KeyboardTest.PassTask')
