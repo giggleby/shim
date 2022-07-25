@@ -47,6 +47,7 @@ PATTERN_WP_STATUS = re.compile(r'WP: status: (\w+)')
 PATTERN_WP = re.compile(r'WP: write protect is (\w+)\.')
 PATTERN_SERIAL_NUMBER = re.compile(rb'^\s*serial_number: .*$', re.M)
 PATTERN_MLB_SERIAL_NUMBER = re.compile(rb'^\s*mlb_serial_number: .*$', re.M)
+PATTERN_HWID_LOG = re.compile(r'.+ Generated HWID: (?P<hwid>.+ [A-Z0-9\-].+)')
 yaml_loader = yaml.CBaseLoader if yaml.__with_libyaml__ else yaml.BaseLoader
 
 
@@ -193,6 +194,10 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       # each report parser.
       os.remove(archive_path)
       return report_parsers
+
+
+class HWIDNotFoundInFactoryLogError(Exception):
+  pass
 
 
 class ReportParser(log_utils.LoggerMixin):
@@ -450,6 +455,21 @@ class ReportParser(log_utils.LoggerMixin):
           report_event.payload = testlog_report_event.payload
       else:
         SetProcessEventStatus(ERROR_CODE.TestlogFileNotFound, process_event)
+
+      if 'hwid' not in report_event:
+        factory_log_path = os.path.join(report_dir, 'var', 'factory', 'log',
+                                        'factory.log')
+        try:
+          extracted_hwid = self._ExtractHWIDFromFactoryLog(factory_log_path)
+          report_event['hwid'] = extracted_hwid
+          report_event['modelName'] = extracted_hwid.split(' ')[0]
+        except FileNotFoundError:
+          SetProcessEventStatus(ERROR_CODE.FactorylogFileNotFound,
+                                process_event)
+        except HWIDNotFoundInFactoryLogError:
+          self.warning('HWID not found in factory.log')
+          SetProcessEventStatus(ERROR_CODE.FactorylogNoHWID, process_event)
+
       return
 
   def ParseEventlogEvents(self, path, report_event, process_event):
@@ -667,6 +687,18 @@ class ReportParser(log_utils.LoggerMixin):
       self.exception('Failed to parse testlog events')
       return False
 
+  def _ExtractHWIDFromFactoryLog(self, log_path):
+    """Extracts and returns a HWID string from the given factory.log."""
+    hwid_candidate = ''
+    with open(log_path, 'r', encoding='utf8') as f:
+      for line in f:
+        match_result = PATTERN_HWID_LOG.match(line)
+        if match_result is not None:
+          hwid_candidate = match_result.group('hwid')
+    if hwid_candidate:
+      return hwid_candidate
+    raise HWIDNotFoundInFactoryLogError
+
   def _GetReportNumInZip(self, zip_path):
     """Returns the number of factory report in the zip archive via `unzip -l`.
 
@@ -717,6 +749,9 @@ ERROR_CODE = type_utils.Obj(
     TestlogWrongType=502,
     TestlogBrokenEvent=503,
     TestlogUnknownError=599,
+    FactorylogFileNotFound=600,
+    FactorylogNoHWID=601,
+    FactorylogUnknownError=699,
 )
 
 
