@@ -4,7 +4,6 @@
 
 import datetime
 
-import flask
 from google.cloud import pubsub_v1
 from google.cloud import storage
 
@@ -12,24 +11,10 @@ from google.cloud import storage
 # isort: split
 
 from cros.factory.bundle_creator.app_engine import config
-from cros.factory.bundle_creator.app_engine import protorpc_utils
 from cros.factory.bundle_creator.connector import firestore_connector
 from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
-
-
-class AllowlistException(Exception):
-  pass
-
-
-def allowlist(function):
-  def function_wrapper(*args, **kwargs):
-    loas_peer_username = flask.request.headers.get(
-        'X-Appengine-Loas-Peer-Username')
-    if loas_peer_username not in config.ALLOWED_LOAS_PEER_USERNAMES:
-      raise AllowlistException(
-          f'LOAS_PEER_USERNAME {loas_peer_username} is not allowed')
-    return function(*args, **kwargs)
-  return function_wrapper
+from cros.factory.bundle_creator.utils import allowlist_utils
+from cros.factory.bundle_creator.utils import protorpc_utils
 
 
 class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
@@ -42,7 +27,7 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
     self._firestore_connector = firestore_connector.FirestoreConnector(
         config.GCLOUD_PROJECT)
 
-  @allowlist
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
   def CreateBundleAsync(self, request):
     message = factorybundle_pb2.CreateBundleMessage()
     message.doc_id = self._firestore_connector.CreateUserRequest(
@@ -59,7 +44,7 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
 
     return factorybundle_pb2.CreateBundleRpcResponse()
 
-  @allowlist
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
   def GetBundleHistory(self, request):
     client = storage.Client(project=config.GCLOUD_PROJECT)
     bucket = client.bucket(config.BUNDLE_BUCKET)
@@ -92,7 +77,7 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
     response.bundles.sort(key=lambda b: b.created_timestamp_sec, reverse=True)
     return response
 
-  @allowlist
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
   def DownloadBundle(self, request):
     client = storage.Client(project=config.GCLOUD_PROJECT)
     bucket = client.bucket(config.BUNDLE_BUCKET)
@@ -108,7 +93,7 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
         f'{request.path}')
     return response
 
-  @allowlist
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
   def GetUserRequests(self, request):
     response = factorybundle_pb2.GetUserRequestsRpcResponse()
 

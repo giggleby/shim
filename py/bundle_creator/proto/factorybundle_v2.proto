@@ -1,0 +1,16 @@
+syntax = "proto3";
+package cros.factory.bundle_creator.proto;
+
+message EchoRequest {
+  string message = 1;
+}
+
+message EchoResponse {
+  string message = 1;
+}
+
+service FactoryBundleServiceV2 {
+  rpc Echo(EchoRequest)
+      returns (EchoResponse) {
+  }
+}

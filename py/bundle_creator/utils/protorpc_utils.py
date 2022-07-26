@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(jamesqaq): this is a duplicated and modified file from
-#                 `py/probe_info_service/app_engine/protorpc_utils.py`, both of
-#                 them should be moved to a common package.
+# TODO(b/154190786): This is a duplicated and modified file from
+#                    `py/probe_info_service/app_engine/protorpc_utils.py`, both
+#                    of them should be moved to a common package.
 import uuid
 
 import flask
@@ -53,8 +53,8 @@ class _ProtoRPCServiceFlaskAppViewFunc:
     return response
 
 
-def RegisterProtoRPCServiceToFlaskApp(
-    app_inst, path, service_inst, service_name=None):
+def RegisterProtoRPCServiceToFlaskApp(app_inst, path, service_inst,
+                                      service_name=None):
   """Register the given ProtoRPC service to the given flask app.
 
   Args:

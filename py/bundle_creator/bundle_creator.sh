@@ -72,11 +72,12 @@ create_temp_dir() {
 }
 
 prepare_docker_files() {
-  local destiation_dir="$1"
+  local destination_dir="$1"
   local env_type="$2"
 
   info "Prepare files for building a docker image."
-  rsync -avr --exclude="app_engine*" "${SOURCE_DIR}"/* "${destiation_dir}"
+  rsync -avr --exclude="app_engine*" --exclude="utils" "${SOURCE_DIR}"/* \
+      "${destination_dir}"
 
   # Fill in env vars in docker/config.py
   env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
@@ -85,10 +86,45 @@ prepare_docker_files() {
     HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
     ENV_TYPE="${env_type}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > \
-      "${destiation_dir}/docker/config.py"
+      "${destination_dir}/docker/config.py"
 
-  protoc -I "${SOURCE_DIR}/proto/" --python_out "${destiation_dir}/proto" \
+  protoc -I "${SOURCE_DIR}/proto/" --python_out "${destination_dir}/proto" \
     "${SOURCE_DIR}/proto/factorybundle.proto"
+}
+
+prepare_appengine_files() {
+  local destination_dir="$1"
+  local version_name="$2"
+  local appengine_source_name="app_engine_${version_name}"
+  local proto_filename="factorybundle_${version_name}"
+  if [ -z "${version_name}" ]; then
+    appengine_source_name="app_engine"
+    proto_filename="factorybundle"
+  fi
+
+  local package_dir="${destination_dir}/cros/factory/bundle_creator"
+  mkdir -p "${package_dir}"
+  cp -r "${SOURCE_DIR}/${appengine_source_name}" "${package_dir}"
+  cp -r "${SOURCE_DIR}/connector" "${package_dir}"
+  cp -r "${SOURCE_DIR}/proto" "${package_dir}"
+  cp -r "${SOURCE_DIR}/utils" "${package_dir}"
+
+  local allowed_array
+  allowed_array=$(printf ", \'%s\'" "${ALLOWED_LOAS_PEER_USERNAMES[@]}")
+  allowed_array="${allowed_array:3:$((${#allowed_array}-4))}"
+  # Fill in env vars in config.py
+  env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
+      BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
+      PUBSUB_TOPIC="${PUBSUB_TOPIC}" \
+      ALLOWED_LOAS_PEER_USERNAMES="${allowed_array}" \
+      envsubst < "${SOURCE_DIR}/${appengine_source_name}/config.py" \
+      > "${package_dir}/${appengine_source_name}/config.py"
+  mv "${package_dir}/${appengine_source_name}/app.yaml" "${destination_dir}"
+  mv "${package_dir}/${appengine_source_name}/requirements.txt" \
+      "${destination_dir}"
+
+  protoc --python_out="${package_dir}/proto/" -I "${SOURCE_DIR}/proto" \
+      "${SOURCE_DIR}/proto/${proto_filename}.proto"
 }
 
 download_remote_toolkit() {
@@ -287,38 +323,21 @@ stop_all_emulators() {
 
 do_deploy_appengine() {
   load_config_by_deployment_type "$1"
+  local version_name="$2"
+  local description_name
+  if [ -z "${version_name}" ]; then
+    description_name="App Engine"
+  else
+    description_name="App Engine ${version_name}"
+  fi
+
+  info "Prepare files for deploying ${description_name}."
   local temp_dir
   temp_dir="$(create_temp_dir)"
+  prepare_appengine_files "${temp_dir}" "${version_name}"
 
-  info "Prepare files for deploying."
-  local factory_dir="${temp_dir}/cros/factory"
-  local package_dir="${factory_dir}/bundle_creator"
-  mkdir -p "${package_dir}"
-
-  cp -r "${SOURCE_DIR}/app_engine" "${package_dir}"
-  cp -r "${SOURCE_DIR}/connector" "${package_dir}"
-  cp -r "${SOURCE_DIR}/proto" "${package_dir}"
-  local allowed_array
-  allowed_array=$(printf ", \'%s\'" "${ALLOWED_LOAS_PEER_USERNAMES[@]}")
-  allowed_array="${allowed_array:3:$((${#allowed_array}-4))}"
-  # Fill in env vars in rpc/config.py
-  env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
-    BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
-    PUBSUB_TOPIC="${PUBSUB_TOPIC}" \
-    ALLOWED_LOAS_PEER_USERNAMES="${allowed_array}" \
-    NOREPLY_EMAIL="${NOREPLY_EMAIL}" \
-    FAILURE_EMAIL="${FAILURE_EMAIL}" \
-    envsubst < "${SOURCE_DIR}/app_engine/config.py" \
-    > "${package_dir}/app_engine/config.py"
-  mv "${package_dir}/app_engine/app.yaml" "${temp_dir}"
-  mv "${package_dir}/app_engine/requirements.txt" "${temp_dir}"
-
-  protoc --python_out="${package_dir}/proto/" -I "${SOURCE_DIR}/proto" \
-      "${SOURCE_DIR}/proto/factorybundle.proto"
-
-  info "Start deploying the App Engine."
-  gcloud --project="${GCLOUD_PROJECT}" app deploy \
-    "${temp_dir}/app.yaml" --quiet
+  info "Start deploying the ${description_name}."
+  gcloud --project="${GCLOUD_PROJECT}" app deploy "${temp_dir}/app.yaml" --quiet
 }
 
 do_deploy_appengine_legacy() {
@@ -461,6 +480,10 @@ commands
       Deploys the code and configuration under \`py/bundle_creator/app_engine\`
       to App Engine.
 
+  $0 deploy-appengine-v2 [prod|staging|dev|dev2]
+      Deploys the code and configuration under
+      \`py/bundle_creator/app_engine_v2\` to App Engine.
+
   $0 deploy-appengine-legacy [prod|staging|dev|dev2]
       Deploys the code and configuration under
       \`py/bundle_creator/app_engine_legacy\` to App Engine.
@@ -502,6 +525,9 @@ main() {
       deploy-appengine)
         do_deploy_appengine "$2"
         ;;
+      deploy-appengine-v2)
+        do_deploy_appengine "$2" "v2"
+        ;;
       deploy-appengine-legacy)
         do_deploy_appengine_legacy "$2"
         ;;
@@ -510,6 +536,7 @@ main() {
         ;;
       deploy-all)
         do_deploy_appengine "$2"
+        do_deploy_appengine "$2" "v2"
         do_deploy_appengine_legacy "$2"
         do_deploy_docker "$2"
         ;;
