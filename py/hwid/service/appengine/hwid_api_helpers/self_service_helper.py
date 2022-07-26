@@ -23,6 +23,7 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import name_pattern_adapter
+from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
 _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
@@ -120,7 +121,8 @@ def _ConvertCompInfoToMsg(
 ) -> _AnalysisReportMsg.ComponentInfo:
   comp_info_msg = _AnalysisReportMsg.ComponentInfo()
   comp_info_msg.component_class = comp_info.comp_cls
-  comp_info_msg.original_name = comp_info.comp_name
+  comp_info_msg.original_name = yaml.safe_dump(
+      comp_info.comp_name).partition('\n')[0]
   comp_info_msg.original_status = comp_info.support_status
   comp_info_msg.is_newly_added = comp_info.is_newly_added
   if comp_info.comp_name_info is not None:

@@ -470,10 +470,9 @@ class ContentsAnalyzer:
           ])
         else:
           comp_name_with_correct_seq_no = None
-        raw_comp_name = yaml.safe_dump(comp.name).partition('\n')[0]
         hwid_components[comp_name_replacer] = (
             HWIDComponentAnalysisResult(
-                comp_cls, raw_comp_name, comp.status, comp.is_newly_added,
+                comp_cls, comp.name, comp.status, comp.is_newly_added,
                 comp.extracted_name_info, comp.expected_seq_no,
                 comp_name_with_correct_seq_no, comp.null_values, comp.diff_prev,
                 comp.link_avl, comp.probe_value_alignment_status))
@@ -506,7 +505,7 @@ class ContentsAnalyzer:
   def _ExtractHWIDComponents(self) -> Dict[str, List['_HWIDComponentMetadata']]:
     ret = {}
     adapter = name_pattern_adapter.NamePatternAdapter()
-    for comp_cls in self._curr_db.instance.GetActiveComponentClasses():
+    for comp_cls in self._curr_db.instance.GetComponentClasses():
       ret[comp_cls] = []
       name_pattern = adapter.GetNamePattern(comp_cls)
       prev_items = (() if
