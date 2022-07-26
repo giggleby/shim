@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-08-24 00:28+CST\n"
+"PO-Revision-Date: 2022-08-29 15:17+HKT\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -186,6 +186,10 @@ msgstr "Hiển thị"
 #: ../build/pytests_label_generated.json
 msgid "Display Images"
 msgstr "Hiển thị hình ảnh"
+
+#: ../build/pytests_label_generated.json
+msgid "Display Interactive"
+msgstr "Màn hình thử nghiệm tương tác"
 
 #: ../build/pytests_label_generated.json
 msgid "Display Point"
@@ -1975,6 +1979,11 @@ msgstr "Nhấn nút trống để phát hình ảnh trên màn hình"
 msgid "Press Enter to PASS after showing all images."
 msgstr ""
 "Sau khi tất cả các hình ảnh đã được phát, nhấn Enter để cho biết thành công"
+
+#: ../py/test/pytests/display_interactive/static/display_interactive.html
+msgid ""
+"Display Interactive Test;<br>After checking, test will automatically pass."
+msgstr ""
 
 #: ../py/test/pytests/display_point_static/display_point.html
 msgid ""

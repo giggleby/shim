@@ -1,0 +1,127 @@
+/*
+ * Copyright 2022 The ChromiumOS Authors.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+.caption {
+  text-align: center;
+  font-size: 2.25em;
+}
+
+#timer {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 2;
+  mix-blend-mode: difference;
+  color: white;
+  font-size: 2em;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#display-div {
+  width: 100%;
+  height: 100%;
+}
+
+#display-div.grid {
+  background-image: linear-gradient(0deg, black 1px, transparent 1px),
+    linear-gradient(90deg, black 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+#display-div.gray {
+  background-color: gray;
+}
+
+#display-div.gray-63 {
+  background-color: #3f3f3f;
+}
+
+#display-div.gray-127 {
+  background-color: #7f7f7f;
+}
+
+#display-div.gray-170 {
+  background-color: #aaaaaa;
+}
+
+#display-div.gray-127~#timer {
+  mix-blend-mode: normal;
+}
+
+#display-div.red {
+  background-color: red;
+}
+
+#display-div.green {
+  background-color: green;
+}
+
+#display-div.blue {
+  background-color: blue;
+}
+
+#display-div.black {
+  background-color: black;
+}
+
+#display-div.white {
+  background-color: white;
+}
+
+#display-div.yellow {
+  background-color: yellow;
+}
+
+#display-div.orange {
+  background-color: orange;
+}
+
+#display-div.cyan {
+  background-color: cyan;
+}
+
+
+#display-div.magenta {
+  background-color: magenta;
+}
+
+#display-div.purple {
+  background-color: purple;
+}
+
+#display-div.pink {
+  background-color: pink;
+}
+
+#display-div.rectangle {
+  background-color: black;
+  border: 10px solid white;
+  box-sizing: border-box;
+}
+
+#display-div.gradient-red {
+  background-image: linear-gradient(to bottom right, black, red);
+}
+
+#display-div.gradient-green {
+  background-image: linear-gradient(to bottom right, black, green);
+}
+
+#display-div.gradient-blue {
+  background-image: linear-gradient(to bottom right, black, blue);
+}
+
+#display-div.gradient-white {
+  background-image: linear-gradient(to bottom right, black, white);
+}
+
+#display-div.custom-image {
+  background-size: 100% 100%;
+}

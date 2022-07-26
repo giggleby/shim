@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-08-24 00:28+CST\n"
+"PO-Revision-Date: 2022-08-29 15:17+HKT\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -186,6 +186,10 @@ msgstr "显示"
 #: ../build/pytests_label_generated.json
 msgid "Display Images"
 msgstr "显示图像"
+
+#: ../build/pytests_label_generated.json
+msgid "Display Interactive"
+msgstr "显示交互测试"
 
 #: ../build/pytests_label_generated.json
 msgid "Display Point"
@@ -1943,6 +1947,11 @@ msgstr "按空白键来拨放影像在萤幕上"
 #: ../py/test/pytests/display_images_static/display_images.html
 msgid "Press Enter to PASS after showing all images."
 msgstr "拨放完所有影像后,压下Enter表示成功"
+
+#: ../py/test/pytests/display_interactive/static/display_interactive.html
+msgid ""
+"Display Interactive Test;<br>After checking, test will automatically pass."
+msgstr "显示交互测试, 等待测试站检查, 检查完成后测试将自动通过"
 
 #: ../py/test/pytests/display_point_static/display_point.html
 msgid ""
