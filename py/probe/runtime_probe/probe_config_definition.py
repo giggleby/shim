@@ -88,6 +88,13 @@ def _GetAllProbeStatementDefinitions():
   builder.AddStrOutputField('ata_model', 'Model name.',
                             probe_function_names=probe_function_names,
                             value_format_error_msg=_GetASCIIStringErrorMsg(32))
+
+  builder.AddProbeFunction('ufs_storage', 'Probe function for UFS storage.')
+  probe_function_names = ['generic_storage', 'ufs_storage']
+  builder.AddStrOutputField('ufs_vendor', 'Vendor name.',
+                            probe_function_names=probe_function_names)
+  builder.AddStrOutputField('ufs_model', 'Model name.',
+                            probe_function_names=probe_function_names)
   probe_statement_definitions['storage'] = builder.Build()
 
   # Create network builder

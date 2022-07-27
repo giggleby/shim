@@ -75,7 +75,7 @@ def _GetAllGenericProbeStatementInfoRecords():
       GenericProbeStatementInfoRecord('storage', 'generic_storage', [
           'type', 'sectors', 'mmc_hwrev', 'mmc_manfid', 'mmc_name', 'mmc_oemid',
           'mmc_prv', 'mmc_serial', 'pci_vendor', 'pci_device', 'pci_class',
-          'nvme_model', 'ata_vendor', 'ata_model'
+          'nvme_model', 'ata_vendor', 'ata_model', 'ufs_vendor', 'ufs_model'
       ]),
       GenericProbeStatementInfoRecord('cellular', 'cellular_network', [
           'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
@@ -388,6 +388,13 @@ def GetAllProbeStatementGenerators():
               _FieldRecord(['vendor', 'ata_vendor'], 'ata_vendor',
                            str_converter),
               _FieldRecord(['model', 'ata_model'], 'ata_model', str_converter),
+          ]),
+      # UFS
+      _ProbeStatementGenerator(
+          'storage', 'generic_storage', storage_shared_fields + [
+              _FieldRecord(['vendor', 'ufs_vendor'], 'ufs_vendor',
+                           str_converter),
+              _FieldRecord(['model', 'ufs_model'], 'ufs_model', str_converter),
           ]),
   ]
 

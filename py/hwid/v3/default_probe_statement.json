@@ -161,7 +161,9 @@
         "pci_class",
         "nvme_model",
         "ata_vendor",
-        "ata_model"
+        "ata_model",
+        "ufs_vendor",
+        "ufs_model"
       ]
     }
   },

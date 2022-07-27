@@ -120,7 +120,9 @@
           "pci_class",
           "nvme_model",
           "ata_vendor",
-          "ata_model"
+          "ata_model",
+          "ufs_vendor",
+          "ufs_model"
         ]
       },
       {
@@ -528,6 +530,14 @@
             "int"
           ],
           "type": [
+            false,
+            "str"
+          ],
+          "ufs_model": [
+            false,
+            "str"
+          ],
+          "ufs_vendor": [
             false,
             "str"
           ]
@@ -1162,6 +1172,14 @@
           "type": [
             false,
             "str"
+          ],
+          "ufs_model": [
+            false,
+            "str"
+          ],
+          "ufs_vendor": [
+            false,
+            "str"
           ]
         }
       }
@@ -1572,6 +1590,14 @@
           "type": [
             false,
             "str"
+          ],
+          "ufs_model": [
+            false,
+            "str"
+          ],
+          "ufs_vendor": [
+            false,
+            "str"
           ]
         }
       }
@@ -1980,6 +2006,14 @@
             "int"
           ],
           "type": [
+            false,
+            "str"
+          ],
+          "ufs_model": [
+            false,
+            "str"
+          ],
+          "ufs_vendor": [
             false,
             "str"
           ]
@@ -2412,6 +2446,14 @@
             "int"
           ],
           "type": [
+            false,
+            "str"
+          ],
+          "ufs_model": [
+            false,
+            "str"
+          ],
+          "ufs_vendor": [
             false,
             "str"
           ]
