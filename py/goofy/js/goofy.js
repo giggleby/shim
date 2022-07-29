@@ -3256,17 +3256,18 @@ cros.factory.Goofy = class {
       }
       case 'goofy:update_camera_manager': {
         const message =
-            /** @type {{facingMode: string, enable: boolean}} */ (
-                untypedMessage);
+            /**
+             * @type {{facingMode: string, enable: boolean, hidden: boolean}}*/
+              (untypedMessage);
         const logMessage = (
             `camera_manager: facingMode: ${message.facingMode} ` +
-            `enable:${message.enable}`
+            `enable:${message.enable} hidden:${message.hidden}`
         );
         this.logToConsole(logMessage);
         const iframe = document.getElementById(
             'camera_manager-camera_manager-iframe');
         iframe.contentWindow['updateCamera'](
-            message.facingMode, message.enable);
+            message.facingMode, message.enable, message.hidden);
         break;
       }
       case 'goofy:update_qrcode': {

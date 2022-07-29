@@ -9,7 +9,6 @@ import argparse
 from cros.factory.goofy.plugins.camera_manager import camera_manager
 from cros.factory.goofy.plugins import plugin_controller
 
-
 DESCRIPTION = """Factory Camera Manager
 
 When a camera is enabled, it shows the captured video on goofy UI.
@@ -37,6 +36,7 @@ def ParseArgument():
       description=DESCRIPTION, epilog=EXAMPLES,
       formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument('facing', choices=('front', 'rear'))
+  parser.add_argument('--hidden', action='store_true', help='Hide the video.')
   parser.add_argument('subcommand', choices=('enable', 'disable'))
 
   return parser.parse_args()
@@ -51,7 +51,7 @@ def main():
     raise Exception(f'{plugin_name!r} plugin is not running!')
 
   if args.subcommand == 'enable':
-    manager.EnableCamera(args.facing)
+    manager.EnableCamera(args.facing, args.hidden)
     return
   if args.subcommand == 'disable':
     manager.DisableCamera(args.facing)

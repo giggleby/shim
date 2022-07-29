@@ -36,22 +36,22 @@ const getMediaStream = async (facingMode, getUserMediaRetries) => {
  *
  * @param {str} facingMode This must be one of ('user', 'environment').
  * @param {boolean} enable If true, enable the camera. Otherwise, disable it.
+ * @param {boolean} hidden If true, the video is hidden.
  */
-const updateCamera = async (facingMode, enable) => {
+const updateCamera = async (facingMode, enable, hidden) => {
   const testVideoElem = testVideoElems[facingMode];
+  testVideoElem.hidden = hidden
   const currentMediaStream = testVideoElem.srcObject;
   if(currentMediaStream !== null){
     if(enable === false) {
       currentMediaStream.getVideoTracks().forEach(track => track.stop());
       testVideoElem.srcObject = null;
-      testVideoElem.classList.add('hidden');
     }
   } else {
     if(enable === true) {
       const mediaStream = await getMediaStream(facingMode, 5);
       testVideoElem.autoplay = true;
       testVideoElem.srcObject = mediaStream;
-      testVideoElem.classList.remove('hidden');
     }
   }
 };
