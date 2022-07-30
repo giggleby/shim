@@ -1,7 +1,6 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A stub test waiting for external fixture to finish testing.
 
 Description
@@ -86,20 +85,11 @@ In the fixture side, it should do something like this:
   ssh root@dut -i "${SSH_KEY}" "${SET_RESULT} ${TEST_NAME} PASS"
 """
 
-import os
-
 from cros.factory.test.i18n import _
 from cros.factory.test.i18n import arg_utils as i18n_arg_utils
 from cros.factory.test import test_case
+from cros.factory.test.utils import external_test_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import file_utils
-from cros.factory.utils import sync_utils
-
-_EXTERNAL_DIR = '/run/factory/external'
-
-# Usually external tests will take a long time to run so check duration can be
-# longer.
-_CHECK_PERIOD_SECS = 1
 
 
 class WaitExternalTest(test_case.TestCase):
@@ -107,46 +97,19 @@ class WaitExternalTest(test_case.TestCase):
   ARGS = [
       Arg('run_factory_external_name', str,
           'File name to check in /run/factory/external.'),
-      i18n_arg_utils.I18nArg(
-          'msg', 'Instruction for running external test',
-          default=_('Please run external test: {name}'))
+      i18n_arg_utils.I18nArg('msg', 'Instruction for running external test',
+                             default=_('Please run external test: {name}'))
   ]
 
   def setUp(self):
     self.ui.ToggleTemplateClass('font-large', True)
     self._name = self.args.run_factory_external_name
     self.ui.SetState(_(self.args.msg, name=self._name))
-    self._file_path = os.path.join(
-        _EXTERNAL_DIR, self.args.run_factory_external_name)
-    self.RemoveFile(self._file_path)
-
-  def FileExists(self):
-    return os.path.exists(self._file_path)
+    self.ext_utils = external_test_utils.ExternalTestUtils(self._name)
+    self.ext_utils.InitTest()
 
   def runTest(self):
-    sync_utils.PollForCondition(
-        poll_method=self.FileExists,
-        poll_interval_secs=_CHECK_PERIOD_SECS,
-        timeout_secs=None,
-        condition_name='WaitForExternalFile')
-
-    # Ideally external hosts should do atomic write, but since it's probably
-    # done by 3rd party vendors with arbitrary implementation, so a quick and
-    # simple solution is to wait for one more check period so the file should be
-    # flushed.
-    self.Sleep(_CHECK_PERIOD_SECS)
-
-    result = file_utils.ReadFile(self._file_path).strip()
-
-    self.assertEqual(result.lower(), 'pass',
-                     'Test %s completed with failure: %s' %
-                     (self._name, result or 'unknown'))
-
-  def RemoveFile(self, file_path):
-    try:
-      file_dir = os.path.dirname(file_path)
-      file_utils.TryMakeDirs(file_dir)
-      os.remove(file_path)
-    except OSError:
-      if os.path.exists(file_path) or not os.path.exists(file_dir):
-        raise
+    result = self.ext_utils.GetTestResult()
+    self.assertEqual(
+        result.lower(), 'pass', 'Test %s completed with failure: %s' %
+        (self._name, result or 'unknown'))
