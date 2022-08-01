@@ -355,6 +355,10 @@ def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
         *build_option_args,
         '--help-header',
         help_header.name,
+        # The symbolic link is restricted in /tmp, so we change the extracted
+        # path to /usr/local/tmp, see b/235148382.
+        '--target',
+        '/usr/local/tmp',
         src_root,  # archive_dir
         output_path,  # file_name
         initial_version + modified_msg,  # label
