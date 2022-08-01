@@ -28,6 +28,7 @@ import sys
 import tempfile
 import textwrap
 import time
+from typing import Any, Dict
 import urllib.parse
 
 import yaml
@@ -2650,9 +2651,19 @@ class ChromeOSFactoryBundle:
         if config['name'] in designs
     ]
     for config in configs_for_designs:
+      identity: Dict[str, Any] = config['identity']
       # According to https://crbug.com/1070692, 'platform-name' is not a part of
       # identity info.  We shouldn't check it.
-      config['identity'].pop('platform-name', None)
+      identity.pop('platform-name', None)
+      # The change (https://crrev.com/c/3527015) was landed in 14675.0.0.
+      # TODO(cyueh) Drop this after all factory branches before 14675.0.0 are
+      # removed.
+      non_inclusive_custom_label_tag_key = (
+          bytes.fromhex('77686974656c6162656c2d746167').decode('utf-8'))
+      label = identity.pop(non_inclusive_custom_label_tag_key, None)
+      # The label may be an empty string.
+      if label is not None:
+        identity['custom-label-tag'] = label
 
     return {
         # set sort_keys=True to make the result stable.
