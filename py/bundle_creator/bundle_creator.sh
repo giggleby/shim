@@ -9,14 +9,13 @@ FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 SOURCE_DIR="${FACTORY_DIR}/py/bundle_creator"
 
 LOCAL_DEPLOYMENT_DIR="/tmp/bundle_creator"
-LOCAL_DEPLOYMENT_VENV_DIR="${LOCAL_DEPLOYMENT_DIR}/venv"
-VENV_PYTHON_NAME="python3"
-LOCAL_DEPLOYMENT_VENV_PYTHON_PATH="${LOCAL_DEPLOYMENT_DIR}/venv/bin/\
-${VENV_PYTHON_NAME}"
 LOCAL_DEPLOYMENT_SOURCE_DIR="${LOCAL_DEPLOYMENT_DIR}/src"
 LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR="${LOCAL_DEPLOYMENT_SOURCE_DIR}/cros/\
 factory/bundle_creator"
 LOCAL_DEPLOYMENT_LOG_DIR="${LOCAL_DEPLOYMENT_DIR}/log"
+VENV_PYTHON_NAME="python3"
+TEST_DOCKER_NAME="docker"
+TEST_APPENGINE_V2_NAME="appengine_v2"
 
 LOCAL_BUILD_BUNDLE="${FACTORY_DIR}/build/bundle"
 TOOLKIT_NAME="install_factory_toolkit.run"
@@ -241,17 +240,19 @@ try_delete_pubsub() {
 }
 
 prepare_python_venv() {
-  local requirements_path="$1"
-  if [ ! -d "${LOCAL_DEPLOYMENT_VENV_DIR}" ]; then
-    info "Initialize a new venv \`${LOCAL_DEPLOYMENT_VENV_DIR}\`."
-    virtualenv --python="${VENV_PYTHON_NAME}" "${LOCAL_DEPLOYMENT_VENV_DIR}"
+  local test_name="$1"
+  local requirements_path="$2"
+  local venv_dir="${LOCAL_DEPLOYMENT_DIR}/venv_${test_name}"
+
+  if [ ! -d "${venv_dir}" ]; then
+    info "Initialize a new venv \`${venv_dir}\`."
+    virtualenv --python="${VENV_PYTHON_NAME}" "${venv_dir}"
   else
-    info "Use the existing venv \`${LOCAL_DEPLOYMENT_VENV_DIR}\`."
+    info "Use the existing venv \`${venv_dir}\`."
   fi
 
   info "Install dependent python modules with \`${requirements_path}\`."
-  "${LOCAL_DEPLOYMENT_VENV_PYTHON_PATH}" -m pip install -r \
-      "${requirements_path}"
+  "${venv_dir}/bin/${VENV_PYTHON_NAME}" -m pip install -r "${requirements_path}"
 }
 
 # Print the path of the test log directory created by this command, and link
@@ -319,6 +320,44 @@ stop_all_emulators() {
   for sid in "${EMULATOR_SIDS[@]}"; do
     pkill -s "${sid}"
   done
+}
+
+run_tests() {
+  local test_name="$1"
+  local venv_python_dir="${LOCAL_DEPLOYMENT_DIR}/venv_${test_name}"
+  local venv_python_path="${venv_python_dir}/bin/${VENV_PYTHON_NAME}"
+
+  start_all_emulators
+
+  local test_modules
+  mapfile -t test_modules < \
+      <(find_test_modules "${LOCAL_DEPLOYMENT_SOURCE_DIR}")
+  info "Found ${#test_modules[@]} test modules."
+
+  local log_dir
+  log_dir="$(create_test_log_dir "${test_name}")"
+  local failed_test_modules=()
+  cd "${LOCAL_DEPLOYMENT_SOURCE_DIR}" || exit
+  for test_module in "${test_modules[@]}"; do
+    info "Run test \`${test_module}\`."
+    local logfile_path="${log_dir}/${test_module}.log"
+    if ! "${venv_python_path}" -m "${test_module}" \
+        >"${logfile_path}" 2>&1; then
+      failed_test_modules+=("${test_module}")
+    fi
+  done
+
+  if [ ${#failed_test_modules[@]} -eq 0 ]; then
+    info "All tests are passed!"
+  else
+    error "Following ${#failed_test_modules[@]} test(s) are failed:"
+    for test_module in "${failed_test_modules[@]}"; do
+      local logfile_path="${log_dir}/${test_module}.log"
+      echo " - ${test_module}, logfile path: ${logfile_path}"
+    done
+  fi
+
+  stop_all_emulators
 }
 
 do_deploy_appengine() {
@@ -425,7 +464,7 @@ do_request() {
 }
 
 do_test_docker() {
-  rm -rf "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}"
+  rm -rf "${LOCAL_DEPLOYMENT_SOURCE_DIR}"
   mkdir -p "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}"
 
   # Assign fake values for generating the configuration.
@@ -434,41 +473,29 @@ do_test_docker() {
   PUBSUB_SUBSCRIPTION="fake-sub"
   HWID_API_ENDPOINT="https://fake_hwid_api_endpoint"
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
-  prepare_python_venv "${SOURCE_DIR}/docker/requirements.txt"
+  prepare_python_venv "${TEST_DOCKER_NAME}" \
+    "${SOURCE_DIR}/docker/requirements.txt"
   rsync -avr --exclude="*test\.py" "${FACTORY_DIR}/py/utils"/* \
     "${LOCAL_DEPLOYMENT_SOURCE_DIR}/cros/factory/utils"
 
-  start_all_emulators
+  run_tests "${TEST_DOCKER_NAME}"
+}
 
-  local test_modules
-  mapfile -t test_modules < \
-      <(find_test_modules "${LOCAL_DEPLOYMENT_SOURCE_DIR}")
-  info "Found ${#test_modules[@]} test modules."
+do_test_appengine_v2() {
+  rm -rf "${LOCAL_DEPLOYMENT_SOURCE_DIR}"
+  mkdir -p "${LOCAL_DEPLOYMENT_SOURCE_DIR}"
 
-  local log_dir
-  log_dir="$(create_test_log_dir "docker")"
-  local failed_test_modules=()
-  cd "${LOCAL_DEPLOYMENT_SOURCE_DIR}" || exit
-  for test_module in "${test_modules[@]}"; do
-    info "Run test \`${test_module}\`."
-    local logfile_path="${log_dir}/${test_module}.log"
-    if ! "${LOCAL_DEPLOYMENT_VENV_PYTHON_PATH}" -m "${test_module}" \
-        >"${logfile_path}" 2>&1; then
-      failed_test_modules+=("${test_module}")
-    fi
-  done
+  # Assign fake values for generating the configuration.
+  GCLOUD_PROJECT="fake-gcloud-project"
+  ALLOWED_LOAS_PEER_USERNAMES=("foobar")
+  prepare_appengine_files "${LOCAL_DEPLOYMENT_SOURCE_DIR}" "v2"
+  prepare_python_venv "${TEST_APPENGINE_V2_NAME}" \
+    "${SOURCE_DIR}/app_engine_v2/requirements.txt"
 
-  if [ ${#failed_test_modules[@]} -eq 0 ]; then
-    info "All tests are passed!"
-  else
-    error "Following ${#failed_test_modules[@]} test(s) are failed:"
-    for test_module in "${failed_test_modules[@]}"; do
-      local logfile_path="${log_dir}/${test_module}.log"
-      echo " - ${test_module}, logfile path: ${logfile_path}"
-    done
-  fi
+  # TODO(b/240891955): Add `connector` back if it starts to use connectors.
+  rm -rf "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}/connector"
 
-  stop_all_emulators
+  run_tests "${TEST_APPENGINE_V2_NAME}"
 }
 
 print_usage() {
@@ -513,6 +540,9 @@ commands
   $0 test-docker
       Run all tests under \`py/bundler_creator/connector\` and
       \`py/bundler_creator/docker\`.
+
+  $0 test-appengine-v2
+      Run all tests under \`py/bundle_creator/app_engine_v2\`.
 __EOF__
 }
 
@@ -554,6 +584,9 @@ main() {
         ;;
       test-docker)
         do_test_docker
+        ;;
+      test-appengine-v2)
+        do_test_appengine_v2
         ;;
       *)
         die "Unknown sub-command: \"${subcmd}\".  Run \`${0} help\` to print" \
