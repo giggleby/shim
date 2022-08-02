@@ -67,12 +67,12 @@ class FactoryBundleService(remote.Service):
     else:
       subject = 'Bundle creation failed - {:%Y-%m-%d %H:%M:%S}'.format(
           datetime.datetime.now())
-      buganizer_link = 'https://issuetracker.google.com/new?component=596923'
+      issue_link = ('https://issuetracker.google.com/'
+                    'new?component=596923&template=1242367')
       plain_content = ('If you have issues that need help, please use {}\n\n'
-                       '{}').format(buganizer_link, worker_result.error_message)
+                       '{}').format(issue_link, worker_result.error_message)
       unprocessed_html_content = plain_content.replace(
-          buganizer_link,
-          '<a href="{0}">{0}</a>'.format(buganizer_link))
+          issue_link, '<a href="{0}">{0}</a>'.format(issue_link))
       mail_list.append(config.FAILURE_EMAIL)
 
     html_content = unprocessed_html_content.replace('\n', '<br>').replace(
