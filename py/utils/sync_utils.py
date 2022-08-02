@@ -33,7 +33,7 @@ _DEFAULT_POLLING_SLEEP_FUNCTION = time.sleep
 _POLLING_SLEEP_FUNCTION_KEY = 'sync_utils_polling_sleep_function'
 
 
-def _GetPollingSleepFunction():
+def GetPollingSleepFunction():
   return thread_utils.LocalEnv().get(_POLLING_SLEEP_FUNCTION_KEY,
                                      _DEFAULT_POLLING_SLEEP_FUNCTION)
 
@@ -80,7 +80,7 @@ def PollForCondition(poll_method, condition_method=None,
   if condition_method is None:
     condition_method = lambda ret: ret
   end_time = time_utils.MonotonicTime() + timeout_secs if timeout_secs else None
-  sleep = _GetPollingSleepFunction()
+  sleep = GetPollingSleepFunction()
   while True:
     if condition_name and end_time is not None:
       logging.debug('[%ds left] %s', end_time - time_utils.MonotonicTime(),
@@ -135,7 +135,7 @@ def QueueGet(q, timeout=None,
 
   This is useful when a custom polling sleep function is set.
   """
-  if _GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
+  if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return q.get(timeout=timeout)
 
   def _Poll():
@@ -160,7 +160,7 @@ def EventWait(event, timeout=None,
 
   This is useful when a custom polling sleep function is set.
   """
-  if _GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
+  if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return event.wait(timeout=timeout)
 
   try:
@@ -191,7 +191,7 @@ def Retry(max_retry_times, interval, callback, target, *args, **kwargs):
     any exception for max_retry_times, returns None.
   """
   result = None
-  sleep = _GetPollingSleepFunction()
+  sleep = GetPollingSleepFunction()
   for retry_time in range(max_retry_times):
     try:
       result = target(*args, **kwargs)
