@@ -86,12 +86,13 @@ into test list::
   }
 
 To test keyboard functionality, ask operator to press [2,3] and [4,5] at the
-same time, add this into test list::
+same time, and have a timeout of 300 seconds, add this into test list::
 
   {
     "pytest_name": "keyboard",
     "args": {
-      "key_combinations": [[2, 3], [4, 5]]
+      "key_combinations": [[2, 3], [4, 5]],
+      "timeout_secs": 300
     }
   }
 """
@@ -319,7 +320,7 @@ class KeyboardTest(test_case.TestCase):
       self.ui.HideElement('instruction-sequential')
       self.ui.HideElement('instruction-sequential-numpad')
 
-    if self.args.allow_multi_keys:
+    if self.args.allow_multi_keys or self.args.multi_keys_delay == 0:
       self.ui.HideElement('instruction-single-key')
 
     if self.args.key_combinations:
