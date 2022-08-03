@@ -25,7 +25,11 @@ class TestFailure(Exception):
 
 
 class TestListError(Exception):
-  """TestList exception"""
+  """TestList exception."""
+
+
+class CircularError(TestListError):
+  """Exception of circular dependency in test list."""
 
 
 # pylint: disable=redefined-builtin

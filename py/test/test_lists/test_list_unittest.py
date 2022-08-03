@@ -48,6 +48,47 @@ class FactoryTestListTest(unittest.TestCase):
         'a.e.f',
         test_list_module.FactoryTestList.ResolveRequireRun('a.b.c.d', '...e.f'))
 
+  def testDetectCircularDependency(self):
+    _FAKE_TEST_LIST_CONFIG = {
+        'definitions': {
+            'A': {
+                'subtests': [
+                    'AA',
+                    {
+                        'id':
+                            'AB',
+                        'subtests': [{
+                            'id': 'ABA',
+                            'pytest_name': 't_aba'
+                        }, {
+                            'id': 'ABB',
+                            'pytest_name': 't_abb'
+                        }]
+                    },
+                ]
+            },
+            'AA': {
+                'subtests': [
+                    {
+                        'id': 'AAA',
+                        'pytest_name': 't_aaa'
+                    },
+                    'AAB',
+                ]
+            },
+            'AAB': {
+                'subtests': [{
+                    'id': 'AABA',
+                    'pytest_name': 't_aaba'
+                }, 'A']
+            }
+        },
+        'tests': ['A']
+    }
+    test_list = manager.BuildTestListForUnittest(
+        test_list_config=_FAKE_TEST_LIST_CONFIG)
+    self.assertRaises(type_utils.CircularError, test_list.ToFactoryTestList)
+
 
 class EvaluateRunIfTest(unittest.TestCase):
   def setUp(self):

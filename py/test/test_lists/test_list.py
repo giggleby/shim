@@ -760,12 +760,38 @@ class TestList(ITestList):
 
     return self._cached_test_list
 
-  def MakeTest(self,
-               test_object,
-               cache,
-               default_action_on_failure=None,
-               locals_=None):
-    """Convert a test_object to a FactoryTest object."""
+  def MakeTest(self, test_object, cache, default_action_on_failure=None,
+               locals_=None, test_stack=None, loop_tests=None):
+    """Converts a test_object to a `FactoryTest` object.
+
+    Args:
+      test_object: A string indicating the test ID or a `TestListConfig`.
+      cache: A dictionary to keep the test objects that have once resolved.
+      default_action_on_failure: Default action on failure when the action is
+        not specified.
+      locals_: A dictionary to keep the local constants or the expressions to
+        be evaluated.
+      test_stack: A stack to keep the current reference chain, used to determine
+        if there is any circular dependency.
+      loop_tests: A lists to store all the circular dependencies.
+
+    Returns:
+      A `FactoryTest` object or a string indicating the test name if this
+      function fails to resolve the test (e.g. detect loop)
+
+    Raises:
+      TestListError if fails.
+    """
+    if test_stack is None:
+      test_stack, loop_tests = [], []
+
+    test_id = test_object if isinstance(test_object, str) else None
+    if test_id:
+      if test_id in test_stack:
+        loop_chain = '->'.join(test_stack + [test_id])
+        loop_tests.append(f'{test_id} ({loop_chain})')
+        return test_id
+      test_stack.append(test_id)
 
     test_object = self.ResolveTestObject(
         test_object=test_object,
@@ -794,8 +820,9 @@ class TestList(ITestList):
 
     subtests = []
     for subtest in test_object.get('subtests', []):
-      subtests.append(self.MakeTest(
-          subtest, cache, default_action_on_failure, locals_))
+      subtests.append(
+          self.MakeTest(subtest, cache, default_action_on_failure, locals_,
+                        test_stack, loop_tests))
 
     # replace subtests
     kwargs['subtests'] = subtests
@@ -810,6 +837,14 @@ class TestList(ITestList):
     self._checker.AssertValidArgs(kwargs['dargs'])
     if 'run_if' in kwargs and isinstance(kwargs['run_if'], str):
       self._checker.AssertValidRunIf(kwargs['run_if'])
+
+    if test_id:
+      assert test_stack[-1] == test_id
+      test_stack.pop()
+
+    if len(test_stack) == 0 and len(loop_tests) > 0:
+      raise type_utils.CircularError(
+          f'Detected circular dependency caused by tests {loop_tests}')
 
     return getattr(test_object_module, class_name)(**kwargs)
 
