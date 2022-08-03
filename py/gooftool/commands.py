@@ -1160,6 +1160,9 @@ def Finalize(options):
     wipe_args += ['--wipe_finish_token', options.wipe_finish_token]
   if options.skip_list:
     wipe_args += ['--skip_list'] + options.skip_list
+  if options.waive_list:
+    wipe_args += ['--waive_list'] + options.waive_list
+  wipe_args += ['--phase', str(phase.GetPhase())]
   ExecFactoryPar('gooftool', WIPE_IN_PLACE, *wipe_args)
 
 
