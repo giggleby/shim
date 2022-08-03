@@ -2,15 +2,15 @@
 
 <http://goto/factory-style-guide>
 
-<!--* freshness: { owner: 'stimim' reviewed: '2020-03-23' } *-->
+<!--* freshness: { owner: 'stimim' reviewed: '2022-08-03' } *-->
 
 [TOC]
 
-There are lots of Google, Chromium, and Chromium OS style guides out there. The
+There are lots of Google, Chromium, and ChromiumOS style guides out there. The
 ones most relevant for factory work are:
 
 *   Python
-    *   [Chromium OS Python style
+    *   [ChromiumOS Python style
         guide](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/styleguide/python.md)
     *   [Python PEP-8 style guide](http://www.python.org/dev/peps/pep-0008/)
     *   [Google Python style guide
@@ -19,12 +19,12 @@ ones most relevant for factory work are:
     *   [Chromium Web Development style
         guide](https://chromium.googlesource.com/chromium/src/+/HEAD/styleguide/web/web.md)
     *   [Google JavaScript style guide
-        (public)](https://google.github.io/styleguide/javascriptguide.xml)
+        (public)](https://google.github.io/styleguide/jsguide.html)
 *   HTML/CSS
     *   [Chromium Web Development style
         guide](https://chromium.googlesource.com/chromium/src/+/HEAD/styleguide/web/web.md)
     *   [Google HTML/CSS style guide
-        (public)](https://google.github.io/styleguide/htmlcssguide.xml)
+        (public)](https://google.github.io/styleguide/htmlcssguide.html)
 
 Help! Which one do I use?
 
@@ -35,14 +35,14 @@ common sense!
 
 ## Python
 
-Follow the [Chromium OS Python style
+Follow the [ChromiumOS Python style
 guide](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/styleguide/python.md),
-which says that Chromium OS code should be "PEP-8 with exceptions". The biggest
+which says that ChromiumOS code should be "PEP-8 with exceptions". The biggest
 exceptions are that,
 
 *   We use `MixedCase` instead of `lower_case` for function names.
 *   We use a 2-space indent instead of a 4-space indent.
-    - The Chomium OS python style guide has changed to 4-space indent, but we
+    - The ChromiumOS python style guide has changed to 4-space indent, but we
       are still using 2-space indent in factory projects.
 
 [PEP-8](http://www.python.org/dev/peps/pep-0008/#descriptive-naming-styles) says
@@ -53,7 +53,7 @@ You should also read and abide by the [Google Python style
 guide](https://google.github.io/styleguide/pyguide.html), especially the
 sections about
 [comments](https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments).
-(The "official" Chromium OS policy says that the Google Python style guide isn't
+(The "official" ChromiumOS policy says that the Google Python style guide isn't
 an authority, but in general it has lots of good points and you should follow it
 unless there is a strong reason not to do so.) There are a few places where you
 need to ignore the Google Python style guide:
@@ -131,7 +131,7 @@ For easy cutting-and-pasting, here's the header you should use for Python files
 
 ```
 #!/usr/bin/env python3
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2022 The ChromiumOS Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 ```
@@ -231,7 +231,7 @@ args.no_upload`).
 
 ## Javascript/HTML/CSS
 
-Follow the [Chromium OS Web
+Follow the [ChromiumOS Web
 Development](https://chromium.googlesource.com/chromium/src/+/HEAD/styleguide/web/web.md)
 style guide.
 
