@@ -6,12 +6,10 @@ import os
 
 from cros.factory.probe.runtime_probe import probe_config_definition
 from cros.factory.probe.runtime_probe import probe_config_types
-from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
-RUNTIME_PROBE_BIN = os.path.join(
-    os.path.dirname(__file__), '../../../bin/runtime_probe_invoker')
+RUNTIME_PROBE_BIN = '/usr/local/usr/bin/factory_runtime_probe'
 COMPONENT_NAME = 'adaptor_component'
 
 
@@ -22,9 +20,7 @@ def RunProbeFunction(category, probe_function_name, args):
   payload = probe_config_types.ProbeConfigPayload()
   payload.AddComponentProbeStatement(probe_statement)
 
-  with file_utils.UnopenedTemporaryFile() as config_file:
-    file_utils.WriteFile(config_file, payload.DumpToString())
-    output = process_utils.CheckOutput(
-        [RUNTIME_PROBE_BIN, f'--config_file_path={config_file}', '--to_stdout'])
+  output = process_utils.CheckOutput(
+      [RUNTIME_PROBE_BIN, payload.DumpToString()])
   res = json_utils.LoadStr(output)
   return [x['values'] for x in res[category]]
