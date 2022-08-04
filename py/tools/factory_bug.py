@@ -15,6 +15,9 @@ import os
 import stat
 import sys
 
+from cros.factory.device import device_utils
+from cros.factory.test.test_lists import manager
+from cros.factory.tools import test_list_checker
 from cros.factory.utils import file_utils
 from cros.factory.utils.process_utils import CalledProcessError
 from cros.factory.utils.process_utils import Spawn
@@ -469,6 +472,20 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
     if dram:
       files += GenerateDRAMCalibrationLog()
 
+    _dut = device_utils.CreateDUTInterface()
+    _manager = manager.Manager()
+    active_test_list_id = _manager.GetActiveTestListId(_dut)
+    parent_test_list_id_set = test_list_checker.GetInheritSet(
+        _manager, active_test_list_id)
+    for test_list_id in parent_test_list_id_set:
+      files += [(f'usr/local/factory/py/test/test_lists/{test_list_id}'
+                 '.test_list.json')]
+
+    file_utils.WriteFile(
+        os.path.join(tmp, 'release_image_version'),
+        _dut.info.release_image_version)
+    files += ['release_image_version']
+
     files += GlobAll(
         'etc/lsb-release',
         'sys/fs/pstore',
@@ -562,6 +579,13 @@ def IsBlockDevice(dev_path):
   return os.path.exists(dev_path) and stat.S_ISBLK(os.stat(dev_path).st_mode)
 
 
+def IncludeDetailsInEventLogs():
+  # Include the system details.
+  Spawn(['gooftool', 'log_system_details'], call=True)
+  # Include the sources hashes.
+  Spawn(['gooftool', 'log_source_hashes'], call=True)
+
+
 @contextlib.contextmanager
 def InputDevice(root_is_removable, input_device):
   """Get input paths. See `MountInputDevice`."""
@@ -606,6 +630,7 @@ def main():
   input_device = InputDevice(root_is_removable, args.input_device)
   output_device = OutputDevice(root_is_removable, args.save_to_removable,
                                args.output_dir, parser)
+  IncludeDetailsInEventLogs()
   with input_device as input_paths, output_device as output_path:
     SaveLogs(output_path, args.id, **options, **input_paths)
 
