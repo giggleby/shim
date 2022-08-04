@@ -284,7 +284,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
 
   def testPatchAddFirstEncodingCombination_Success(self):
     first_encoding = _AddEncodingCombination(True, 'new_field', 'comp_cls_2',
-                                             ['comp_2_1', 'comp_2_2'])
+                                             ['comp_2_1', 'comp_2_2'], [])
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
@@ -292,7 +292,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
 
   def testPatchAddFirstEncodingCombination_ExistingEncodedFieldName(self):
     first_encoding = _AddEncodingCombination(
-        True, 'comp_cls_23_field', 'comp_cls_2', ['comp_2_1', 'comp_2_2'])
+        True, 'comp_cls_23_field', 'comp_cls_2', ['comp_2_1', 'comp_2_2'], [])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, first_encoding.Patch,
@@ -302,7 +302,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
     # Add more combinations and check if the bit_length was enough.
     following_encodings = [
         _AddEncodingCombination(False, 'comp_cls_1_field', 'comp_cls_1',
-                                ['comp_1_2'] * i) for i in range(2, 5)
+                                ['comp_1_2'] * i, [0]) for i in range(2, 5)
     ]
 
     self._AssertApplyingPatchesEqualsData(
@@ -310,8 +310,9 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
             self._DIFF_ADD_FOLLOWING_ENCODING_COMBINATION), following_encodings)
 
   def testPatchAddFollowingEncodingCombination_NoSuchEncodedFieldName(self):
-    following_encoding = _AddEncodingCombination(
-        False, 'no_such_encoded_field', 'comp_cls_2', ['comp_2_1', 'comp_2_2'])
+    following_encoding = _AddEncodingCombination(False, 'no_such_encoded_field',
+                                                 'comp_cls_2',
+                                                 ['comp_2_1', 'comp_2_2'], [0])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, following_encoding.Patch,
@@ -478,7 +479,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          encoding_scheme: base8192
          fields:
          - mainboard_field: 3
-      @@ -25,6 +29,15 @@
+      @@ -25,6 +29,16 @@
          - ro_main_firmware_field: 1
          - comp_cls_1_field: 2
          - comp_cls_23_field: 2
@@ -491,10 +492,11 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
       +  - mainboard_field: 10
       +  - cpu_field: 5
       +  - comp_cls_1_field: 2
+      +  - new_field: 0
 
        encoded_fields:
          chassis_field:
-      @@ -54,9 +67,24 @@
+      @@ -54,9 +68,24 @@
              storage: []
          comp_cls_1_field:
            0:
@@ -520,7 +522,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_23_field:
            0:
              comp_cls_2: comp_2_1
-      @@ -64,6 +92,11 @@
+      @@ -64,6 +93,11 @@
            1:
              comp_cls_2: comp_2_2
              comp_cls_3: comp_3_2
@@ -532,7 +534,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
        components:
          mainboard:
-      @@ -92,12 +125,21 @@
+      @@ -92,12 +126,21 @@
                  hash": '0'
          comp_cls_1:
            items:
@@ -556,7 +558,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_2:
            items:
              comp_2_1:
-      @@ -115,4 +157,10 @@
+      @@ -115,4 +158,10 @@
                values:
                  value: '2'
 

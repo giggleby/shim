@@ -104,12 +104,13 @@ class AddEncodingCombination(ChangeUnit):
   """
 
   def __init__(self, is_first: bool, encoded_field_name: str, comp_cls: str,
-               comp_names: Sequence[str]):
+               comp_names: Sequence[str], pattern_idxes: Sequence[int]):
     super().__init__()
     self._is_first = is_first
     self._encoded_field_name = encoded_field_name
     self._comp_cls = comp_cls
     self._comp_names = comp_names
+    self._pattern_idxes = pattern_idxes
 
   @_UnifyException
   def Patch(self, db_builder: builder.DatabaseBuilder):
@@ -121,7 +122,8 @@ class AddEncodingCombination(ChangeUnit):
     else:
       db_builder.AddEncodedFieldComponents(self._encoded_field_name,
                                            self._comp_cls, self._comp_names)
-    db_builder.FillEncodedFieldBit(self._encoded_field_name)
+    db_builder.FillEncodedFieldBit(self._encoded_field_name,
+                                   self._pattern_idxes)
 
 
 class NewImageIdToExistingEncodingPattern(ChangeUnit):
@@ -228,9 +230,26 @@ def _ExtractAddEncodingCombination(
     old_db: database.Database,
     new_db: database.Database) -> Sequence['AddEncodingCombination']:
 
+  common_pattern_idxes = range(old_db.GetPatternCount())
+
+  def _GetPatternIdxesToFill(encoded_field_name: str) -> Sequence[int]:
+    """Gets the indices of common patterns that include the given encoded field
+    from new_db."""
+
+    return [
+        pattern_idx for pattern_idx in common_pattern_idxes
+        if encoded_field_name in new_db.GetEncodedFieldsBitLength(
+            pattern_idx=pattern_idx)
+    ]
+
   change_units: List['AddEncodingCombination'] = []
   old_encoded_fields = set(old_db.encoded_fields)
   new_encoded_fields = set(new_db.encoded_fields)
+
+  if old_db.GetPatternCount() > new_db.GetPatternCount():
+    raise SplitChangeUnitException('Change of pattern removal is unsupported.')
+
+
   if not old_encoded_fields.issubset(new_encoded_fields):
     raise SplitChangeUnitException('Renaming encoded field is unsupported.')
 
@@ -238,10 +257,13 @@ def _ExtractAddEncodingCombination(
     comp_cls = _GetExactlyOneComponentClassFromEncodedField(
         new_db, extra_encoded_field)
 
+    # Only fill bits in existing patterns that include this encoded field.
+    pattern_idxes_to_fill = _GetPatternIdxesToFill(extra_encoded_field)
+
     for idx, combination in new_db.GetEncodedField(extra_encoded_field).items():
       change_units.append(
           AddEncodingCombination(idx == 0, extra_encoded_field, comp_cls,
-                                 combination[comp_cls]))
+                                 combination[comp_cls], pattern_idxes_to_fill))
 
   old_rev_comp_idx = _ReverseCompIdxMapping(old_db)
   new_rev_comp_idx = _ReverseCompIdxMapping(new_db)
@@ -271,13 +293,17 @@ def _ExtractAddEncodingCombination(
           raise SplitChangeUnitException(
               'Modifying existing combinations is unsupported.')
 
+    # Only fill bits in existing patterns that include this encoded field.
+    pattern_idxes_to_fill = _GetPatternIdxesToFill(encoded_field)
+
     if old_comb_idx_set < new_comb_idx_set:
       comp_cls = _GetExactlyOneComponentClassFromEncodedField(
           new_db, encoded_field)
       for i in new_comb_idx_set - old_comb_idx_set:  # new combinations
         comb = new_combinations[i][comp_cls]
         change_units.append(
-            AddEncodingCombination(False, encoded_field, comp_cls, comb))
+            AddEncodingCombination(False, encoded_field, comp_cls, comb,
+                                   pattern_idxes_to_fill))
 
   return change_units
 
@@ -287,10 +313,13 @@ def _ExtractNewImageIds(old_db: database.Database,
 
   change_units: MutableSequence[ChangeUnit] = []
   new_images: MutableMapping[int, _NewImage] = {}
+
+  if not old_db.raw_image_id.items() <= new_db.raw_image_id.items():
+    raise SplitChangeUnitException('Only image id/name addition is supported.')
+
   old_image_ids = set(old_db.image_ids)
   new_image_ids = set(new_db.image_ids)
-  if not old_image_ids.issubset(new_image_ids):
-    raise SplitChangeUnitException('Some image IDs are removed.')
+
   for extra_image_id in new_image_ids - old_image_ids:
     pattern = new_db.GetPattern(image_id=extra_image_id)
     image_name = new_db.GetImageName(extra_image_id)

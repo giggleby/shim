@@ -559,16 +559,22 @@ class DatabaseBuilder:
                                          pattern_idx)
 
   @_EnsureInBuilderContext
-  def FillEncodedFieldBit(self, field_name: str):
+  def FillEncodedFieldBit(self, field_name: str,
+                          pattern_idxes: Optional[Sequence[int]] = None):
     """Fills the bits to each encoded fields in all encoding patterns to cover
     the number of existing combinations.
 
     Args:
       field_name: The name of encoded field.
+      pattern_idxes: The indices of the patterns to fill bit lengthss.  This
+        method will fill bit lengths of patterns having this field if
+        pattern_idxes is set to None.
     """
 
     bit_length = self._GetMinBitLength(field_name)
-    for pattern_idx in range(self._database.GetPatternCount()):
+    if pattern_idxes is None:
+      pattern_idxes = range(self._database.GetPatternCount())
+    for pattern_idx in pattern_idxes:
       curr_bit_lengths = self._database.GetEncodedFieldsBitLength(
           pattern_idx=pattern_idx)
       if (field_name in curr_bit_lengths and

@@ -134,8 +134,10 @@ class Database(abc.ABC):
     return (isinstance(rhs, Database) and self._project == rhs._project and
             self._encoding_patterns == rhs._encoding_patterns and
             self._image_id == rhs._image_id and
+            self._pattern == rhs._pattern and
             self._encoded_fields == rhs._encoded_fields and
             self._components == rhs._components and
+            self._rules == rhs._rules and
             self._framework_version == rhs._framework_version)
 
   def __ne__(self, rhs):
