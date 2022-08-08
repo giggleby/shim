@@ -47,6 +47,7 @@ class KeyboardUnitTest(unittest.TestCase):
     self.test = keyboard.KeyboardTest()
     self.test.args = FakeArgs()
     self.test.event_loop = mock.Mock()
+    self.test.keyboard_device = mock.Mock()
     self.MockFunction('cros.factory.test.utils.evdev_utils.FindDevice')
     self.MockFunction(
         'cros.factory.test.utils.evdev_utils.InputDeviceDispatcher')
@@ -200,6 +201,22 @@ class KeyboardUnitTest(unittest.TestCase):
     self.test.args.fn_keycodes = [63]  # should be ignored
 
     self.assertEqual(self.test.GetKeycodesInFirstRow(), [1, 61, 62, 116])
+
+  @mock.patch('cros.factory.utils.file_utils.ReadFile')
+  @mock.patch(f'{keyboard.__name__}.KeyboardTest._GetKeyboardMapping')
+  def testSkipUnusedScancodes(self, mock_mapping, mock_read_file):
+    _FAKE_SCANCODES = "02 00 00 00 03 04"
+    self.test.args.vivaldi_keyboard = True
+
+    self.MockFunction('re.search')
+    mock_mapping.return_value = {
+        2: 2,
+        3: 3,
+        4: 4
+    }
+    mock_read_file.return_value = _FAKE_SCANCODES
+
+    self.assertEqual(self.test.GetKeycodesInFirstRow(), [1, 2, 3, 4, 116])
 
   def testFnKeycodes(self):
     self.test.args.fn_keycodes = [61, 62]

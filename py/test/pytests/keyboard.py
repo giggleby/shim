@@ -342,55 +342,56 @@ class KeyboardTest(test_case.TestCase):
     last_key = _POWER_KEY_CODE if self.args.has_power_key else _LOCK_KEY_CODE
     return [_ESC_KEY_CODE] + fn_keycodes + [last_key]
 
+  def _GetKeyboardMapping(self):
+    """Gets the scancode to keycode mapping.
+
+    Repeatedly request EVIOCGKEYCODE_V2 ioctl on device node with flag
+    INPUT_KEYMAP_BY_INDEX to fetch scancode keycode translation table for an
+    input device. Sequetially increase index until it returns error.
+    """
+    mapping = {}
+    buf = array.array('b', [0] * struct.calcsize(_INPUT_KEYMAP_ENTRY))
+
+    # NOTE:
+    # 1. index is a __u16.
+    # 2. INPUT_KEYMAP_BY_INDEX = (1 << 0)
+    # See more details in the definition of input_keymap_entry.
+    for i in range(1 << 16):
+      struct.pack_into(_INPUT_KEYMAP_ENTRY, buf, 0, 1, 0, i, 0, *([0] * 32))
+      try:
+        ret_no = fcntl.ioctl(self.keyboard_device, _EVIOCGKEYCODE_V2, buf)
+        if ret_no != 0:
+          session.console.warning(
+              'Failed to fetch keymap at index %d: return_code=%d', i, ret_no)
+          continue
+      except OSError:
+        break
+
+      keymap_entry = struct.unpack(_INPUT_KEYMAP_ENTRY, buf)
+      scancode_len = keymap_entry[1]
+      keycode = keymap_entry[3]
+      scancode = int.from_bytes(keymap_entry[4:4 + scancode_len],
+                                byteorder='little')
+
+      # Mapping to KEY_RESERVED (0) means the scancode is not used.
+      if keycode != 0:
+        mapping[scancode] = keycode
+    return mapping
+
   def GetVivaldiKeycodes(self):
-    """Get the keycodes which are modifiable by partners, ESC is excluded."""
-
-    def GetKeyboardMapping():
-      """Gets the scancode to keycode mapping.
-
-      Repeatedly request EVIOCGKEYCODE_V2 ioctl on device node with flag
-      INPUT_KEYMAP_BY_INDEX to fetch scancode keycode translation table for an
-      input device. Sequetially increase index until it returns error.
-      """
-      mapping = {}
-      buf = array.array('b', [0] * struct.calcsize(_INPUT_KEYMAP_ENTRY))
-
-      # NOTE:
-      # 1. index is a __u16.
-      # 2. INPUT_KEYMAP_BY_INDEX = (1 << 0)
-      # See more details in the definition of input_keymap_entry.
-      for i in range(1 << 16):
-        struct.pack_into(_INPUT_KEYMAP_ENTRY, buf, 0, 1, 0, i, 0, *([0] * 32))
-        try:
-          ret_no = fcntl.ioctl(self.keyboard_device, _EVIOCGKEYCODE_V2, buf)
-          if ret_no != 0:
-            session.console.warning(
-                'Failed to fetch keymap at index %d: return_code=%d', i, ret_no)
-            continue
-        except OSError:
-          break
-
-        keymap_entry = struct.unpack(_INPUT_KEYMAP_ENTRY, buf)
-        scancode_len = keymap_entry[1]
-        keycode = keymap_entry[3]
-        scancode = int.from_bytes(keymap_entry[4:4 + scancode_len],
-                                  byteorder='little')
-
-        # Mapping to KEY_RESERVED (0) means the scancode is not used.
-        if keycode != 0:
-          mapping[scancode] = keycode
-      return mapping
-
+    """Gets the keycodes which are modifiable by partners, ESC is excluded."""
     match = re.search(r'\d+$', self.keyboard_device.path)
     if not match:
       raise RuntimeError('Failed to get keyboard device ID')
     event_id = match.group(0)
     file_content = file_utils.ReadFile(
         f'/sys/class/input/event{event_id}/device/device/function_row_physmap')
+    scancode_to_keycode = self._GetKeyboardMapping()
 
-    scancode_to_keycode = GetKeyboardMapping()
     return [
-        scancode_to_keycode[int(s, 16)] for s in file_content.strip().split()
+        scancode_to_keycode[int(s, 16)]
+        for s in file_content.strip().split()
+        if int(s, 16) != 0
     ]
 
   def GetKeyboardLayout(self):
