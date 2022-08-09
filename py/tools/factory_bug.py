@@ -429,7 +429,11 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
              os.path.join(d, 'dummy-factory-bug')], check_call=True)
     return output_file
 
-  with file_utils.TempDirectory(prefix='factory_bug.') as tmp:
+  # `/tmp` is mounted with nosymfollow to prevent following the symlinks.
+  # Therefore, we use `/usr/local/tmp` instead of `/tmp` to collect logs here.
+  # For more information, please read b/235148382 (Googler only).
+  with file_utils.TempDirectory(prefix='factory_bug.',
+                                dir='/usr/local/tmp') as tmp:
     # Link these paths so their path will remain the same in the zip archive.
     os.symlink(var, os.path.join(tmp, 'var'))
     file_utils.TryMakeDirs(os.path.join(tmp, 'usr'))
