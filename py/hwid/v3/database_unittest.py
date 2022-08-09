@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import textwrap
 import unittest
 
 from cros.factory.hwid.v3 import common
@@ -603,6 +604,249 @@ class ComponentsTest(unittest.TestCase):
             'comp_group': 'comp5',
             'alias': 'cls2_vendor_a-part-number'
         })
+
+  def testExportComponentInfoDictOrder(self):
+    c = database.ComponentInfo(
+        values=yaml.Dict([
+            ('field1', 'val1'),
+            ('field3', 'val3'),
+            ('field2', 'val2'),
+            ('field4', 'val4'),
+        ]), status='unqualified', information=yaml.Dict([
+            ('info3', 'val3'),
+            ('info2', 'val2'),
+            ('info1', 'val1'),
+            ('info4', 'val4'),
+        ]))
+
+    order_preserved = yaml.safe_dump(c.Export(), default_flow_style=False)
+    order_by_key = yaml.safe_dump(
+        c.Export(sort_values_by_key=True), default_flow_style=False)
+
+    self.assertEqual(
+        textwrap.dedent('''\
+            status: unqualified
+            values:
+              field1: val1
+              field3: val3
+              field2: val2
+              field4: val4
+            information:
+              info3: val3
+              info2: val2
+              info1: val1
+              info4: val4
+    '''), order_preserved)
+    self.assertEqual(
+        textwrap.dedent('''\
+            status: unqualified
+            values:
+              field1: val1
+              field2: val2
+              field3: val3
+              field4: val4
+            information:
+              info1: val1
+              info2: val2
+              info3: val3
+              info4: val4
+    '''), order_by_key)
+
+  def testGetComponentNameByHash(self):
+    c = database.Components({
+        'cls1': {
+            'items': {
+                'comp1': {
+                    'values': {
+                        'digits': '1234',
+                        'a': 'b',
+                        'c': 'd',
+                    },
+                    'status': 'unqualified'
+                },
+                'comp2': {
+                    'values': {
+                        'a': 'c'
+                    }
+                }
+            }
+        },
+        'cls2': {
+            'items': {
+                'comp3': {
+                    'values': None,
+                },
+                'comp4': {
+                    'values': {
+                        'regex': rule.Value('abc.*', is_re=True),
+                    },
+                    'information': {
+                        'comp_group': 'comp5',
+                        'alias': 'cls2_vendor_a-part-number'
+                    }
+                }
+            }
+        },
+    })
+    comp1_hash = database.ComponentInfo(
+        values={
+            'a': 'b',
+            'c': 'd',
+            'digits': '1234',
+        }, status='unqualified').comp_hash
+    comp2_hash = database.ComponentInfo(values={
+        'a': 'c'
+    }, status='supported').comp_hash
+    comp3_hash = database.ComponentInfo(values=None,
+                                        status='supported').comp_hash
+    comp4_hash = database.ComponentInfo(
+        values={
+            'regex': rule.Value('abc.*', is_re=True)
+        }, status='supported', information={
+            'alias': 'cls2_vendor_a-part-number',
+            'comp_group': 'comp5',
+        }).comp_hash
+
+    self.assertEqual('comp1', c.GetComponentNameByHash('cls1', comp1_hash))
+    self.assertEqual('comp2', c.GetComponentNameByHash('cls1', comp2_hash))
+    self.assertEqual('comp3', c.GetComponentNameByHash('cls2', comp3_hash))
+    self.assertEqual('comp4', c.GetComponentNameByHash('cls2', comp4_hash))
+
+  def testComponentHashOrderIrrelevant(self):
+    comp = database.ComponentInfo(
+        yaml.Dict([
+            ('a1', 'b1'),
+            ('a2', 'b2'),
+            ('a3', 'b3'),
+        ]), status='unqualified')
+    comp_values_reversed = database.ComponentInfo(
+        yaml.Dict([
+            ('a3', 'b3'),
+            ('a2', 'b2'),
+            ('a1', 'b1'),
+        ]), status='unqualified')
+
+    self.assertEqual(comp.comp_hash, comp_values_reversed.comp_hash)
+
+  def testComponentHashUnique(self):
+    comp = database.ComponentInfo(
+        yaml.Dict([
+            ('a1', 'b1'),
+            ('a2', 'b2'),
+            ('a3', 'b3'),
+        ]), status='supported')
+    comp_diff = database.ComponentInfo(
+        yaml.Dict([
+            ('a3', 'b3'),
+            ('a2', 'b2'),
+            ('a1', 'c1'),
+        ]), status='supported')
+
+    self.assertNotEqual(comp.comp_hash, comp_diff.comp_hash)
+
+  def testUpdateComponent_MappingUpdate(self):
+
+    c = database.Components({
+        'cls1': {
+            'items': {
+                'comp1': {
+                    'values': {
+                        'digits': '1234',
+                        'a': 'b',
+                        'c': 'd',
+                    },
+                    'status': 'unqualified'
+                },
+                'comp2': {
+                    'values': {
+                        'a': 'c'
+                    }
+                }
+            }
+        }
+    })
+    old_comp1_hash = database.ComponentInfo(
+        values={
+            'a': 'b',
+            'c': 'd',
+            'digites': '1234',
+        }, status='unqualified').comp_hash
+    new_comp1_hash = database.ComponentInfo(values=None,
+                                            status='unsupported').comp_hash
+    old_comp2_hash = database.ComponentInfo(values={
+        'a': 'c'
+    }, status='supported').comp_hash
+    new_comp2_hash = database.ComponentInfo(
+        values={
+            'regex': rule.Value('abc.*', is_re=True)
+        }, status='unsupported', information={
+            'alias': 'cls2_vendor_a-part-number',
+            'comp_group': 'comp5',
+        }).comp_hash
+
+    c.UpdateComponent(comp_cls='cls1', old_name='comp1',
+                      new_name='comp1_renamed', values=None,
+                      support_status='unsupported')
+    # Update in-place.
+    c.UpdateComponent(
+        comp_cls='cls1', old_name='comp2', new_name='comp2', values={
+            'regex': rule.Value('abc.*', is_re=True),
+        }, support_status='unsupported', information={
+            'comp_group': 'comp5',
+            'alias': 'cls2_vendor_a-part-number'
+        })
+
+    # Old hash values in mapping should be removed.
+    self.assertRaises(KeyError, c.GetComponentNameByHash, 'cls1',
+                      old_comp1_hash)
+    self.assertRaises(KeyError, c.GetComponentNameByHash, 'cls1',
+                      old_comp2_hash)
+    # New hash values are updated.
+    self.assertEqual('comp1_renamed',
+                     c.GetComponentNameByHash('cls1', new_comp1_hash))
+    self.assertEqual('comp2', c.GetComponentNameByHash('cls1', new_comp2_hash))
+
+  def testSetComponentStatus_MappingUpdate(self):
+
+    c = database.Components({
+        'cls1': {
+            'items': {
+                'comp1': {
+                    'values': {
+                        'digits': '1234',
+                        'a': 'b',
+                        'c': 'd',
+                    },
+                    'status': 'unqualified'
+                },
+                'comp2': {
+                    'values': {
+                        'a': 'c'
+                    }
+                }
+            }
+        }
+    })
+    old_comp1_hash = database.ComponentInfo(
+        values={
+            'a': 'b',
+            'c': 'd',
+            'digits': '1234',
+        }, status='unqualified').comp_hash
+    new_comp1_hash = database.ComponentInfo(
+        values={
+            'a': 'b',
+            'c': 'd',
+            'digits': '1234',
+        }, status='unsupported').comp_hash
+
+    c.SetComponentStatus(comp_cls='cls1', comp_name='comp1',
+                         status='unsupported')
+
+    # Old hash in mapping should be removed.
+    self.assertRaises(KeyError, c.GetComponentNameByHash, 'cls1',
+                      old_comp1_hash)
+    self.assertEqual('comp1', c.GetComponentNameByHash('cls1', new_comp1_hash))
 
 
 class EncodedFieldsTest(unittest.TestCase):

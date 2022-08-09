@@ -44,9 +44,7 @@ import re
 from typing import Any, DefaultDict, List, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Set, Tuple
 
 from cros.factory.hwid.v3 import common
-from cros.factory.hwid.v3.rule import AVLProbeValue
-from cros.factory.hwid.v3.rule import Rule
-from cros.factory.hwid.v3.rule import Value
+from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import schema
@@ -86,10 +84,62 @@ class PatternDatum(NamedTuple):
   fields: Sequence[PatternField]
 
 
-class ComponentInfo(type_utils.Obj):
+class ComponentInfo:
 
-  def __init__(self, values, status, information=None):
-    super().__init__(values=values, status=status, information=information)
+  def __init__(self, values: Optional[Mapping[str, Any]], status: str,
+               information: Optional[Mapping[str, Any]] = None):
+    self._values = values
+    self._status = status
+    self._information = information
+    self._comp_hash = hashlib.sha1(
+        yaml.safe_dump(
+            self.Export(sort_values_by_key=True),
+            default_flow_style=False).encode('utf8')).hexdigest()
+
+  def __eq__(self, rhs: Any) -> bool:
+    return (self._values == rhs._values and self._status == rhs._status and
+            self._information == rhs._information)
+
+  def Export(self, suppress_support_status: bool = False,
+             override_support_status: Optional[str] = None,
+             is_default_comp: bool = False, sort_values_by_key: bool = False):
+
+    def _ExportDict(values):
+      return (yaml.Dict(sorted(values.items()))
+              if values and sort_values_by_key else values)
+
+    component_dict = yaml.Dict()
+    if not suppress_support_status or (self._status !=
+                                       common.COMPONENT_STATUS.supported):
+      component_dict['status'] = override_support_status or self._status
+    component_dict['values'] = _ExportDict(self._values)
+    if is_default_comp:
+      component_dict['default'] = True
+    if self._information:
+      component_dict['information'] = _ExportDict(self._information)
+    return component_dict
+
+  def Replace(self, **kwargs) -> 'ComponentInfo':
+    """Creates a new ComponentInfo instance with optional replaced fields."""
+    return ComponentInfo(
+        kwargs.get('values', self.values), kwargs.get('status', self.status),
+        kwargs.get('information', self.information))
+
+  @property
+  def values(self) -> Optional[Mapping[str, Any]]:
+    return self._values
+
+  @property
+  def status(self) -> str:
+    return self._status
+
+  @property
+  def information(self) -> Optional[Mapping[str, Any]]:
+    return self._information
+
+  @property
+  def comp_hash(self) -> str:
+    return self._comp_hash
 
 
 class Database(abc.ABC):
@@ -368,11 +418,11 @@ class Database(abc.ABC):
     return self._components.GetDefaultComponent(comp_cls)
 
   @property
-  def device_info_rules(self) -> Sequence[Rule]:
+  def device_info_rules(self) -> Sequence[v3_rule.Rule]:
     return self._rules.device_info_rules
 
   @property
-  def verify_rules(self) -> Sequence[Rule]:
+  def verify_rules(self) -> Sequence[v3_rule.Rule]:
     return self._rules.verify_rules
 
   def GetActiveComponentClasses(self,
@@ -383,6 +433,9 @@ class Database(abc.ABC):
       ret |= self.GetComponentClasses(encoded_field_name)
 
     return ret
+
+  def GetComponentNameByHash(self, comp_cls: str, comp_hash: str) -> str:
+    return self._components.GetComponentNameByHash(comp_cls, comp_hash)
 
   @property
   def framework_version(self) -> int:
@@ -1165,6 +1218,50 @@ class EncodedFields:
     return sorted(type_utils.MakeList(data)) if data is not None else []
 
 
+class ComponentsStore(yaml.Dict):
+  """A dictionary which supports looking up component name by the hash value of
+  component info."""
+
+  def __init__(self, comp_cls: str, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self._comp_cls = comp_cls
+    self._hash_mapping: MutableMapping[str, str] = {}
+
+  def __setitem__(self, comp_name: str, val: ComponentInfo):
+    if comp_name in self:
+      self._hash_mapping.pop(self[comp_name].comp_hash, None)
+    self._hash_mapping[val.comp_hash] = comp_name
+    super().__setitem__(comp_name, val)
+
+  def GetComponentNameByHash(self, comp_hash: str):
+    return self._hash_mapping[comp_hash]
+
+  def UpdateComponent(self, old_name: str, new_name: str,
+                      new_comp_info: ComponentInfo):
+    if old_name not in self:
+      raise common.HWIDException(
+          f'No such Component ({self._comp_cls!r}, {old_name!r}).')
+
+    if old_name == new_name:  # Update in-place.
+      self[old_name] = new_comp_info
+    else:
+      if new_name in self:
+        raise common.HWIDException('Updated Component already exists '
+                                   f'({self._comp_cls!r}, {new_name!r}).')
+      # OrderedDict does not support updating key-value pair in-place without
+      # modifying the order, so it's required to update the list of items and
+      # update the dict.
+      comp_list = list(self.items())
+      self.clear()
+      for idx, (comp_name, old_comp_info) in enumerate(comp_list):
+        if comp_name == old_name:
+          self._hash_mapping.pop(old_comp_info.comp_hash, None)
+          comp_list[idx] = (new_name, new_comp_info)
+          self._hash_mapping[new_comp_info.comp_hash] = new_name
+          break
+      self.update(comp_list)
+
+
 class Components:
   """Class for holding `components` part in a HWID database.
 
@@ -1284,7 +1381,8 @@ class Components:
                                               schema.Scalar(
                                                   'probed value', bytes),
                                               schema.Scalar(
-                                                  'probed value regex', Value)
+                                                  'probed value regex',
+                                                  v3_rule.Value)
                                           ]), min_size=1),
                                       schema.Scalar('none', type(None))
                                   ])
@@ -1330,7 +1428,7 @@ class Components:
     self._non_probeable_component_classes = set()
 
     for comp_cls, comps_data in components_expr.items():
-      self._components[comp_cls] = yaml.Dict()
+      self._components[comp_cls] = ComponentsStore(comp_cls)
       for comp_name, comp_attr in comps_data['items'].items():
         self._AddComponent(
             comp_cls, comp_name, comp_attr['values'],
@@ -1379,16 +1477,9 @@ class Components:
         else:
           comp_name_in_expr = replace_info.magic_component_name
           support_status = replace_info.magic_support_status
-        component_dict = yaml.Dict()
-        components_dict[comp_name_in_expr] = component_dict
-        if not suppress_support_status or (comp_info.status !=
-                                           common.COMPONENT_STATUS.supported):
-          component_dict['status'] = support_status
-        component_dict['values'] = comp_info.values
-        if (comp_cls, comp_name) in self._default_components:
-          component_dict['default'] = True
-        if comp_info.information:
-          component_dict['information'] = comp_info.information
+        is_default_comp = (comp_cls, comp_name) in self._default_components
+        components_dict[comp_name_in_expr] = comp_info.Export(
+            suppress_support_status, support_status, is_default_comp)
     return components_expr
 
   @property
@@ -1418,6 +1509,9 @@ class Components:
                      to handle miscellaneous probe issues.
     """
     return self._components.get(comp_cls, {})
+
+  def GetComponentNameByHash(self, comp_cls: str, comp_hash: str) -> str:
+    return self._components[comp_cls].GetComponentNameByHash(comp_hash)
 
   def GetDefaultComponent(self, comp_cls):
     """Gets the default components of the specific component class if exists.
@@ -1468,7 +1562,8 @@ class Components:
       raise common.HWIDException(
           'Component (%r, %r) is not recorded.' % (comp_cls, comp_name))
 
-    self._components[comp_cls][comp_name].status = status
+    comp_info = self._components[comp_cls][comp_name]
+    self._components[comp_cls][comp_name] = comp_info.Replace(status=status)
 
   def _AddComponent(self, comp_cls, comp_name, values, status, information):
     self._SCHEMA.value_type.items['items'].value_type.items['values'].Validate(
@@ -1507,7 +1602,7 @@ class Components:
                           'of the duplicate one "duplicate".')
           self._can_encode = False
 
-    self._components.setdefault(comp_cls, yaml.Dict())
+    self._components.setdefault(comp_cls, ComponentsStore(comp_cls))
     self._components[comp_cls][comp_name] = ComponentInfo(
         values, status, information)
 
@@ -1531,13 +1626,15 @@ class Components:
       raise common.HWIDException(
           f'Component ({comp_cls!r}, {comp_name!r}) is not recorded.')
 
-    values = self._components[comp_cls][comp_name].values
+    comp_info = self._components[comp_cls][comp_name]
+    values = comp_info.values
     if values is None:
       raise common.HWIDException(
           f'No probe values in Component ({comp_cls!r}, {comp_name!r})')
 
-    self._components[comp_cls][comp_name].values = AVLProbeValue(
-        converter_identifier, probe_value_matched, values)
+    self._components[comp_cls][comp_name] = comp_info.Replace(
+        values=v3_rule.AVLProbeValue(converter_identifier, probe_value_matched,
+                                     values))
 
   def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
                       values: Optional[Mapping[str, Any]], support_status: str,
@@ -1563,28 +1660,8 @@ class Components:
         'status'].Validate(support_status)
     self._SCHEMA.value_type.items['items'].value_type.optional_items[
         'information'].Validate(information)
-
-    if old_name not in self._components[comp_cls]:
-      raise common.HWIDException(
-          f'No such Component ({comp_cls!r}, {old_name!r}).')
-    if old_name == new_name:  # Update in-place.
-      self._components[comp_cls][old_name].values = values
-      self._components[comp_cls][old_name].status = support_status
-      self._components[comp_cls][old_name].information = information
-    else:
-      if new_name in self._components[comp_cls]:
-        raise common.HWIDException(
-            f'Updated Component already exists ({comp_cls!r}, {new_name!r}).')
-      # OrderedDict does not support updating key-value pair in-place without
-      # modifying the order, so it's required to update the list of items and
-      # update the dict.
-      comp_list = list(self._components[comp_cls].items())
-      self._components[comp_cls].clear()
-      for idx, (comp_name, unused_info) in enumerate(comp_list):
-        if comp_name == old_name:
-          comp_list[idx] = (new_name,
-                            ComponentInfo(values, support_status, information))
-      self._components[comp_cls].update(comp_list)
+    self._components[comp_cls].UpdateComponent(
+        old_name, new_name, ComponentInfo(values, support_status, information))
 
 
 class Pattern:
@@ -2056,7 +2133,7 @@ class Rules:
     for rule_expr in rule_expr_list:
       self._RULE_SCHEMA.Validate(rule_expr)
 
-      rule = Rule.CreateFromDict(rule_expr)
+      rule = v3_rule.Rule.CreateFromDict(rule_expr)
       if not any(rule.name.startswith(x + '.') for x in self._RULE_TYPES):
         raise common.HWIDException(
             'Invalid rule name %r; rule name must be prefixed with '
@@ -2114,7 +2191,7 @@ class Rules:
     return [rule for rule in self._rules if rule.name.startswith(prefix)]
 
   def _AddRule(self, rule_type, position, name_suffix, evaluate, **kwargs):
-    rule_obj = Rule(rule_type + '.' + name_suffix, evaluate, **kwargs)
+    rule_obj = v3_rule.Rule(rule_type + '.' + name_suffix, evaluate, **kwargs)
 
     if position is not None:
       order = -1

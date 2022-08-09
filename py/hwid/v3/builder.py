@@ -808,6 +808,9 @@ class DatabaseBuilder:
                                 image_id: Optional[int] = None) -> Set[str]:
     return self._database.GetActiveComponentClasses(image_id)
 
+  def GetComponentNameByHash(self, comp_cls: str, comp_hash: str) -> str:
+    return self._database.GetComponentNameByHash(comp_cls, comp_hash)
+
   @_EnsureInBuilderContext
   def SetLinkAVLProbeValue(self, comp_cls: str, comp_name: str,
                            converter_identifier: Optional[str],
