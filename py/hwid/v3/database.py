@@ -1134,6 +1134,21 @@ class EncodedFields:
         return field_name
     return None
 
+  def GetFieldsForComponent(self, comp_cls):
+    """Gets the fields which encode the specific component class.
+
+    Args:
+      comp_cls: A string of the component class.
+
+    Returns:
+      List of field names including this component class.
+    """
+    return [
+        field_name
+        for field_name, comp_cls_set in self._field_to_comp_classes.items()
+        if comp_cls in comp_cls_set
+    ]
+
   def AddFieldComponents(self, field_name, components, _index=None):
     """Adds components combination to an existing encoded field.
 
@@ -1202,16 +1217,17 @@ class EncodedFields:
       new_name: The updated component name.
     """
 
-    field_name = self.GetFieldForComponent(comp_cls)
-    if field_name is None:
+    field_names = self.GetFieldsForComponent(comp_cls)
+    if not field_names:
       raise common.HWIDException(f'Comp class {comp_cls!r} not found in '
                                  'encoded fields')
-    for combination in self._fields[field_name].values():
-      comp_names = self._StandardlizeList(combination[comp_cls])
-      combination[comp_cls] = self._SimplifyList([
-          new_name if comp_name == old_name else comp_name
-          for comp_name in comp_names
-      ])
+    for field_name in field_names:
+      for combination in self._fields[field_name].values():
+        comp_names = self._StandardlizeList(combination[comp_cls])
+        combination[comp_cls] = self._SimplifyList([
+            new_name if comp_name == old_name else comp_name
+            for comp_name in comp_names
+        ])
 
   def _RegisterNewEmptyField(self, field_name, comp_classes):
     if not comp_classes:

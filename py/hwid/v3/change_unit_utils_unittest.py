@@ -121,7 +121,7 @@ class CompChangeTest(ChangeUnitTestBase):
              comp_1_2:
                values:
                  value: '2'
-      +      new_comp#3:
+      +      new_comp:
       +        values:
       +          field1: value1
       +          field2: value2
@@ -282,9 +282,23 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
       _DIFF_ADD_FOLLOWING_ENCODING_COMBINATION,
   ]
 
+  def setUp(self):
+    super().setUp()
+    self._comp_2_1_hash = database.ComponentInfo(values={
+        'value': '1'
+    }, status='supported').comp_hash
+    self._comp_2_2_hash = database.ComponentInfo(values={
+        'value': '2'
+    }, status='supported').comp_hash
+    self._comp_1_2_hash = database.ComponentInfo(values={
+        'value': '2'
+    }, status='supported').comp_hash
+
   def testPatchAddFirstEncodingCombination_Success(self):
-    first_encoding = _AddEncodingCombination(True, 'new_field', 'comp_cls_2',
-                                             ['comp_2_1', 'comp_2_2'], [])
+    first_encoding = _AddEncodingCombination(
+        is_first=True, encoded_field_name='new_field', comp_cls='comp_cls_2',
+        comp_hashes=[self._comp_2_1_hash,
+                     self._comp_2_2_hash], pattern_idxes=[])
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
@@ -292,7 +306,10 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
 
   def testPatchAddFirstEncodingCombination_ExistingEncodedFieldName(self):
     first_encoding = _AddEncodingCombination(
-        True, 'comp_cls_23_field', 'comp_cls_2', ['comp_2_1', 'comp_2_2'], [])
+        is_first=True, encoded_field_name='comp_cls_23_field',
+        comp_cls='comp_cls_2',
+        comp_hashes=[self._comp_2_1_hash,
+                     self._comp_2_2_hash], pattern_idxes=[])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, first_encoding.Patch,
@@ -301,8 +318,10 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   def testPatchAddFollowingEncodingCombination_Success(self):
     # Add more combinations and check if the bit_length was enough.
     following_encodings = [
-        _AddEncodingCombination(False, 'comp_cls_1_field', 'comp_cls_1',
-                                ['comp_1_2'] * i, [0]) for i in range(2, 5)
+        _AddEncodingCombination(
+            is_first=False, encoded_field_name='comp_cls_1_field',
+            comp_cls='comp_cls_1', comp_hashes=[self._comp_1_2_hash] * i,
+            pattern_idxes=[0]) for i in range(2, 5)
     ]
 
     self._AssertApplyingPatchesEqualsData(
@@ -310,9 +329,11 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
             self._DIFF_ADD_FOLLOWING_ENCODING_COMBINATION), following_encodings)
 
   def testPatchAddFollowingEncodingCombination_NoSuchEncodedFieldName(self):
-    following_encoding = _AddEncodingCombination(False, 'no_such_encoded_field',
-                                                 'comp_cls_2',
-                                                 ['comp_2_1', 'comp_2_2'], [0])
+    following_encoding = _AddEncodingCombination(
+        is_first=False, encoded_field_name='no_such_encoded_field',
+        comp_cls='comp_cls_2',
+        comp_hashes=[self._comp_2_1_hash,
+                     self._comp_2_2_hash], pattern_idxes=[0])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, following_encoding.Patch,
@@ -550,7 +571,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
              comp_1_2:
                values:
                  value: '2'
-      +      new_comp#3:
+      +      new_comp:
       +        values:
       +          field: value3
       +        information:
@@ -575,6 +596,109 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
   _DIFFS: Sequence[str] = [
       _DIFF_VARIOUS_CHANGES,
   ]
+
+  def testComponentRenameCollision(self):
+    # Add a new component comp_1_2 and rename existing comp_1_2 to comp_1_3.
+    comp_change_cus = [
+        _CompChange(  # Add component.
+            analysis_result=_HWIDComponentAnalysisResult(
+                comp_cls='comp_cls_1', comp_name='comp_1_2',
+                support_status='supported', is_newly_added=True,
+                comp_name_info=None, seq_no=3,
+                comp_name_with_correct_seq_no=None, null_values=None,
+                diff_prev=None, link_avl=False,
+                probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
+            probe_values={'value': '3'}, information=None),
+        _CompChange(  # Rename component.
+            analysis_result=_HWIDComponentAnalysisResult(
+                comp_cls='comp_cls_1', comp_name='comp_1_3',
+                support_status='deprecated', is_newly_added=False,
+                comp_name_info=None, seq_no=2,
+                comp_name_with_correct_seq_no=None, null_values=None,
+                diff_prev=_DiffStatus(
+                    unchanged=False, name_changed=True,
+                    support_status_changed=True, values_changed=True,
+                    prev_comp_name='comp_1_2', prev_support_status='supported',
+                    probe_value_alignment_status_changed=False,
+                    prev_probe_value_alignment_status=(
+                        _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
+                probe_value_alignment_status=(
+                    _PVAlignmentStatus.NO_PROBE_INFO)),
+            probe_values={'value': '2'}, information=None),
+    ]
+    comp_1_1_hash = database.ComponentInfo(values={
+        'value': '1'
+    }, status='supported').comp_hash
+    comp_1_3_hash = database.ComponentInfo(values={
+        'value': '2'
+    }, status='deprecated').comp_hash
+    comp_1_2_hash = database.ComponentInfo(values={
+        'value': '3'
+    }, status='supported').comp_hash
+    add_comb_cus = [
+        _AddEncodingCombination(
+            is_first=True, encoded_field_name='new_comp_cls_1_field',
+            comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_2_hash],
+            pattern_idxes=[0]),
+        _AddEncodingCombination(
+            is_first=False, encoded_field_name='new_comp_cls_1_field',
+            comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_3_hash],
+            pattern_idxes=[0]),
+    ]
+    expected_diff = textwrap.dedent('''\
+        ---
+        +++
+        @@ -25,6 +25,7 @@
+           - ro_main_firmware_field: 1
+           - comp_cls_1_field: 2
+           - comp_cls_23_field: 2
+        +  - new_comp_cls_1_field: 1
+
+         encoded_fields:
+           chassis_field:
+        @@ -56,7 +57,7 @@
+             0:
+               comp_cls_1: comp_1_1
+             1:
+        -      comp_cls_1: comp_1_2
+        +      comp_cls_1: comp_1_3
+           comp_cls_23_field:
+             0:
+               comp_cls_2: comp_2_1
+        @@ -64,6 +65,15 @@
+             1:
+               comp_cls_2: comp_2_2
+               comp_cls_3: comp_3_2
+        +  new_comp_cls_1_field:
+        +    0:
+        +      comp_cls_1:
+        +      - comp_1_1
+        +      - comp_1_2#3
+        +    1:
+        +      comp_cls_1:
+        +      - comp_1_1
+        +      - comp_1_3
+
+         components:
+           mainboard:
+        @@ -95,9 +105,13 @@
+               comp_1_1:
+                 values:
+                   value: '1'
+        -      comp_1_2:
+        +      comp_1_3:
+        +        status: deprecated
+                 values:
+                   value: '2'
+        +      comp_1_2#3:
+        +        values:
+        +          value: '3'
+           comp_cls_2:
+    ''')
+
+    self._AssertApplyingPatchesEqualsData(
+        self._LoadDBContentWithDiffPatched(expected_diff),
+        comp_change_cus + add_comb_cus)
 
 
 if __name__ == '__main__':

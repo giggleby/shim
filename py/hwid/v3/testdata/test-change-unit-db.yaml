@@ -89,7 +89,7 @@ components:
     items:
       firmware0:
         values:
-          hash": '0'
+          hash: '0'
   comp_cls_1:
     items:
       comp_1_1:

@@ -7,6 +7,16 @@ import re
 from typing import Callable, Match, NamedTuple, Optional, TypeVar, Union
 
 SEQ_SEP = '#'  # Separator between the component name and the sequential suffix.
+_COMP_SEQ_SUFFIX_PATTERN = re.compile(
+    r'{sep}\d+$'.format(sep=re.escape(SEQ_SEP)))
+
+
+def TrimSequenceSuffix(comp_name: str) -> str:
+  return _COMP_SEQ_SUFFIX_PATTERN.sub('', comp_name)
+
+
+def AddSequenceSuffix(comp_name: str, seq: int) -> str:
+  return f'{comp_name}{SEQ_SEP}{seq}'
 
 
 class NameInfo(NamedTuple):

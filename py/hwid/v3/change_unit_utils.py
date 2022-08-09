@@ -6,12 +6,13 @@
 import abc
 import collections
 import functools
-from typing import Any, List, Mapping, MutableMapping, MutableSequence, NamedTuple, Optional, Sequence
+from typing import Any, Iterable, List, Mapping, MutableMapping, MutableSequence, NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import name_pattern_adapter
 
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -66,7 +67,9 @@ class CompChange(ChangeUnit):
   """A change unit to frame component changes.
 
   A CompChange instance includes component changes of creations or
-  modifications.
+  modifications.  Since change units should be independent, name collisions
+  might occur.  In this case, we append the sequence number of the components to
+  the component name to make it unique.
   """
 
   def __init__(self, analysis_result: _HWIDComponentAnalysisResult,
@@ -77,22 +80,33 @@ class CompChange(ChangeUnit):
     self._probe_values = probe_values
     self._information = information
 
-  # TODO: Enforce the updated name suffixed by '#<seq>'
   @_UnifyException
   def Patch(self, db_builder: builder.DatabaseBuilder):
     """See base class."""
 
+    comp_name = name_pattern_adapter.TrimSequenceSuffix(
+        self._analysis_result.comp_name)
+    comp_cls = self._analysis_result.comp_cls
+    comps = db_builder.GetComponents(comp_cls)
     if self._analysis_result.is_newly_added:
-      db_builder.AddComponent(
-          self._analysis_result.comp_cls, self._analysis_result.comp_name,
+      if comp_name in comps:
+        # Name collision, add sequence suffix.
+        comp_name = name_pattern_adapter.AddSequenceSuffix(
+            comp_name,
+            len(db_builder.GetComponents(comp_cls)) + 1)
+      db_builder.AddComponent(comp_cls, comp_name, self._probe_values,
+                              self._analysis_result.support_status,
+                              self._information)
+    else:  # Update component in-place.
+      if (comp_name in comps and
+          comp_name != self._analysis_result.diff_prev.prev_comp_name):
+        # Name collision while renaming component to an existing name.
+        comp_name = name_pattern_adapter.AddSequenceSuffix(
+            comp_name, self._analysis_result.seq_no)
+      db_builder.UpdateComponent(
+          comp_cls, self._analysis_result.diff_prev.prev_comp_name, comp_name,
           self._probe_values, self._analysis_result.support_status,
           self._information)
-    else:  # Update component in-place
-      db_builder.UpdateComponent(
-          self._analysis_result.comp_cls,
-          self._analysis_result.diff_prev.prev_comp_name,
-          self._analysis_result.comp_name, self._probe_values,
-          self._analysis_result.support_status, self._information)
 
 
 class AddEncodingCombination(ChangeUnit):
@@ -104,24 +118,29 @@ class AddEncodingCombination(ChangeUnit):
   """
 
   def __init__(self, is_first: bool, encoded_field_name: str, comp_cls: str,
-               comp_names: Sequence[str], pattern_idxes: Sequence[int]):
+               comp_hashes: Sequence[str], pattern_idxes: Sequence[int]):
     super().__init__()
     self._is_first = is_first
     self._encoded_field_name = encoded_field_name
     self._comp_cls = comp_cls
-    self._comp_names = comp_names
+    self._comp_hashes = comp_hashes
     self._pattern_idxes = pattern_idxes
 
   @_UnifyException
   def Patch(self, db_builder: builder.DatabaseBuilder):
     """See base class."""
 
+    comp_names = [
+        db_builder.GetComponentNameByHash(self._comp_cls, comp_hash)
+        for comp_hash in self._comp_hashes
+    ]
+
     if self._is_first:
-      db_builder.AddNewEncodedField(self._comp_cls, self._comp_names,
+      db_builder.AddNewEncodedField(self._comp_cls, comp_names,
                                     self._encoded_field_name)
     else:
       db_builder.AddEncodedFieldComponents(self._encoded_field_name,
-                                           self._comp_cls, self._comp_names)
+                                           self._comp_cls, comp_names)
     db_builder.FillEncodedFieldBit(self._encoded_field_name,
                                    self._pattern_idxes)
 
@@ -242,6 +261,11 @@ def _ExtractAddEncodingCombination(
             pattern_idx=pattern_idx)
     ]
 
+  def _GetComponentHashes(comp_cls: str,
+                          comp_names: Iterable[str]) -> Sequence[str]:
+    components_store = new_db.GetComponents(comp_cls)
+    return [components_store[comp_name].comp_hash for comp_name in comp_names]
+
   change_units: List['AddEncodingCombination'] = []
   old_encoded_fields = set(old_db.encoded_fields)
   new_encoded_fields = set(new_db.encoded_fields)
@@ -251,7 +275,8 @@ def _ExtractAddEncodingCombination(
 
 
   if not old_encoded_fields.issubset(new_encoded_fields):
-    raise SplitChangeUnitException('Renaming encoded field is unsupported.')
+    raise SplitChangeUnitException(
+        'Renaming/Removing encoded field is unsupported.')
 
   for extra_encoded_field in new_encoded_fields - old_encoded_fields:
     comp_cls = _GetExactlyOneComponentClassFromEncodedField(
@@ -261,9 +286,10 @@ def _ExtractAddEncodingCombination(
     pattern_idxes_to_fill = _GetPatternIdxesToFill(extra_encoded_field)
 
     for idx, combination in new_db.GetEncodedField(extra_encoded_field).items():
+      component_hashes = _GetComponentHashes(comp_cls, combination[comp_cls])
       change_units.append(
           AddEncodingCombination(idx == 0, extra_encoded_field, comp_cls,
-                                 combination[comp_cls], pattern_idxes_to_fill))
+                                 component_hashes, pattern_idxes_to_fill))
 
   old_rev_comp_idx = _ReverseCompIdxMapping(old_db)
   new_rev_comp_idx = _ReverseCompIdxMapping(new_db)
@@ -285,10 +311,10 @@ def _ExtractAddEncodingCombination(
         raise SplitChangeUnitException(
             'Modifying component classes set of combinations is unsupported.')
       for comp_cls in old_comb_mapping:
-        old_comp_idxes = set(old_rev_comp_idx[comp_cls][comp_name]
-                             for comp_name in old_comb_mapping[comp_cls])
-        new_comp_idxes = set(new_rev_comp_idx[comp_cls][comp_name]
-                             for comp_name in new_comb_mapping[comp_cls])
+        old_comp_idxes = sorted(old_rev_comp_idx[comp_cls][comp_name]
+                                for comp_name in old_comb_mapping[comp_cls])
+        new_comp_idxes = sorted(new_rev_comp_idx[comp_cls][comp_name]
+                                for comp_name in new_comb_mapping[comp_cls])
         if old_comp_idxes != new_comp_idxes:
           raise SplitChangeUnitException(
               'Modifying existing combinations is unsupported.')
@@ -301,9 +327,10 @@ def _ExtractAddEncodingCombination(
           new_db, encoded_field)
       for i in new_comb_idx_set - old_comb_idx_set:  # new combinations
         comb = new_combinations[i][comp_cls]
+        component_hashes = _GetComponentHashes(comp_cls, comb)
         change_units.append(
-            AddEncodingCombination(False, encoded_field, comp_cls, comb,
-                                   pattern_idxes_to_fill))
+            AddEncodingCombination(False, encoded_field, comp_cls,
+                                   component_hashes, pattern_idxes_to_fill))
 
   return change_units
 

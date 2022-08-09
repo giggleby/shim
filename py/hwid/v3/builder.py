@@ -572,16 +572,19 @@ class DatabaseBuilder:
     """
 
     bit_length = self._GetMinBitLength(field_name)
+    skip_missing = False
     if pattern_idxes is None:
       pattern_idxes = range(self._database.GetPatternCount())
+      skip_missing = True  # Only adds to patterns including the field.
     for pattern_idx in pattern_idxes:
       curr_bit_lengths = self._database.GetEncodedFieldsBitLength(
           pattern_idx=pattern_idx)
-      if (field_name in curr_bit_lengths and
-          curr_bit_lengths[field_name] < bit_length):
+      if skip_missing and field_name not in curr_bit_lengths:
+        continue
+      curr_bit_length = curr_bit_lengths.get(field_name, 0)
+      if curr_bit_length < bit_length:
         self._database.AppendEncodedFieldBit(
-            field_name, bit_length - curr_bit_lengths[field_name],
-            pattern_idx=pattern_idx)
+            field_name, bit_length - curr_bit_length, pattern_idx=pattern_idx)
 
   def _UpdateComponents(self, probed_results, device_info, vpd, sku_ids):
     """Updates the component part of the database.
