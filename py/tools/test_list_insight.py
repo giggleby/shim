@@ -30,6 +30,7 @@ which will display the resolved test object and the below features:
   - which test list each attribute and argument come from.
   - overridden attributes
   - pytests removed/added from a reference list.
+  - diff factory test objects from two selected test lists
 
 Each test object is a cros.factory.test.factory.FactoryTest object
 with the name of 'test_list_id' + ':' + 'test_path',
@@ -74,6 +75,11 @@ on the extracted toolkit:
 To compare added/removed pytests of main_voxel with generic_main
 (including the pytests they inherit respectively):
 > test_list_insight compare --board volteer generic_main main_voxel
+
+To diff test objects from two test lists, e.g. main_voxel & main_volet:
+> test_list_insight diff --board volteer main_volet
+  {RunInNoDiskStressGroup.FrontCamera} main_voxel {FFT.FrontCameraQRScan}
+(If the second object is empty, the default is the same as the first object.)
 
 * Currently, the input test object names are case-insensitive and input test list ids
   require an exact match.
@@ -127,6 +133,22 @@ def CreateParser():
   parser_compare_pytest.add_argument(
       'testlist_b', type=str, help='the second test list with "tests" defined'
       'Only test list which defines "tests" can be loaded.')
+
+  # Create the parser for the "diff" pytest command.
+  parser_diff_object = subparsers.add_parser(
+      'diff', help='test_list_a object_a test_list_b (object_b)')
+  # Positional arguments.
+  parser_diff_object.add_argument(
+      'testlist_a', type=str, help='a test list with "tests" defined'
+      'Only test list which defines "tests" can be loaded.')
+  parser_diff_object.add_argument('object_a', type=str,
+                                  help='the first test object.')
+  parser_diff_object.add_argument(
+      'testlist_b', type=str, help='the second test list with "tests" defined'
+      'Only test list which defines "tests" can be loaded.')
+  parser_diff_object.add_argument('object_b', type=str,
+                                  help='the second test object.', nargs='?',
+                                  default=None)
 
   # Optional arguments for all subparsers.
   group = parser.add_mutually_exclusive_group(required=False)
@@ -455,6 +477,45 @@ class TestListInsightManager(manager.Manager):
           json.dumps(sorted(
               list(tar_pytest_list))).encode('utf-8').decode('unicode_escape'))
 
+  def OpenFiles(self, factory_test_list, target):
+    path = file_utils.CreateTemporaryFile(prefix='test_list_insight.')
+    with open(path, 'w', encoding='utf-8') as file_:
+      for test_object in sorted(factory_test_list):
+        if target.casefold() in test_object.casefold():
+          file_.write(Colorize(test_object, color='YELLOW') + '\n')
+          file_.write(
+              json.dumps(factory_test_list[test_object].ToStruct(), indent=2) +
+              '\n')
+    return path
+
+  def CompareObjects(self, id_a, id_b, object_a, object_b):
+    """Compare difference between two objects from two test lists.
+
+    Run the shell command 'diff' to produce a side-by-side comparison
+    of test objects from two resolved test lists.
+
+    Args:
+      id_a: the first input test list id
+      id_b: the second input test list id
+      object_a: the first input test object path
+      object_b: the second input test object path (default is the same
+        as object_a)
+    """
+
+    try:
+      testlist_a, testlist_b = self._LoadTestList(id_a, id_b)
+    except KeyError as e:
+      print('Only test list which defines "tests" can be loaded. '
+            '%s is not in the directory or does not have "tests"' % e)
+      return
+
+    # Create two temporary files.
+    path_a = self.OpenFiles(testlist_a.path_map, object_a)
+    path_b = self.OpenFiles(testlist_b.path_map, object_b)
+    path_diff = file_utils.CreateTemporaryFile(prefix='test_list_insight.')
+    process_utils.Spawn(['diff', '-y', '--color', path_a, path_b])
+    process_utils.Spawn(['rm', path_a, path_b, path_diff])
+
 
 def main(args):
   # Set up logging format.
@@ -520,7 +581,11 @@ def main(args):
       print("No matched test object is found.")
   elif options.subcommand == 'compare':
     insight_manager.ComparePytests(options.testlist_a, options.testlist_b)
-
+  elif options.subcommand == 'diff':
+    if not options.object_b:
+      options.object_b = options.object_a
+    insight_manager.CompareObjects(options.testlist_a, options.testlist_b,
+                                   options.object_a, options.object_b)
 
 if __name__ == '__main__':
   main(sys.argv[1:])
