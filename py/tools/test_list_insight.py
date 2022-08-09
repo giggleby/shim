@@ -9,6 +9,7 @@ import copy
 import json
 import logging
 import os.path
+import re
 import sys
 from collections import OrderedDict
 
@@ -28,6 +29,7 @@ A command line tool that loads and analyzes test lists,
 which will display the resolved test object and the below features:
   - which test list each attribute and argument come from.
   - overridden attributes
+  - pytests removed/added from a reference list.
 
 Each test object is a cros.factory.test.factory.FactoryTest object
 with the name of 'test_list_id' + ':' + 'test_path',
@@ -58,7 +60,7 @@ first run `setup_board --board ${BOARD}`, then:
 
 To load test lists from default test list path
 `/usr/local/factory/py/tests/test_list` and show the test object
-"FFT.FrontCamera" with project 'main_volet' on DUT:
+"FFT.FrontCamera" with project "main_volet" on DUT:
 > test_list_insight show main_volet fft.frontcamera
 
 To show the test objects with "LED" in their names and project "main_volta"
@@ -68,6 +70,10 @@ on extracted toolkit:
 To show the "constants" sections and project "main_volta"
 on the extracted toolkit:
 > test_list_insight show --path {path_to_extracted_toolkit} main_volta constants
+
+To compare added/removed pytests of main_voxel with generic_main
+(including the pytests they inherit respectively):
+> test_list_insight compare --board volteer generic_main main_voxel
 
 * Currently, the input test object names are case-insensitive and input test list ids
   require an exact match.
@@ -97,7 +103,8 @@ def CreateParser():
       description=DESCRIPTION, epilog=EXAMPLES)
   subparsers = parser.add_subparsers(
       dest='subcommand',
-      help='show which test list each attribute and argument come from')
+      help='show which test list each attribute and argument come from; '
+      'compare pytests of two test lists')
   subparsers.required = True
 
   # Create the parser for the "show" argument command.
@@ -109,6 +116,17 @@ def CreateParser():
   parser_show_argument.add_argument(
       'target', type=str,
       help='a factory object\'s name/path, or "constants", "options"')
+
+  # Create the parser for the "compare" pytest command.
+  parser_compare_pytest = subparsers.add_parser('compare',
+                                                help='test_list_a test_list_b')
+  # Positional arguments.
+  parser_compare_pytest.add_argument(
+      'testlist_a', type=str, help='a test list with "tests" defined'
+      'Only test list which defines "tests" can be loaded.')
+  parser_compare_pytest.add_argument(
+      'testlist_b', type=str, help='the second test list with "tests" defined'
+      'Only test list which defines "tests" can be loaded.')
 
   # Optional arguments for all subparsers.
   group = parser.add_mutually_exclusive_group(required=False)
@@ -244,7 +262,6 @@ class TestListInsightConfigList(config_utils._ConfigList):
       self._AddSourceToDict(to_be_resolved_object['args'],
                             source_object['args'], source_name)
 
-
 # pylint: disable=protected-access
 config_utils._ConfigList = TestListInsightConfigList
 
@@ -349,6 +366,95 @@ class TestListInsightManager(manager.Manager):
 
     return factory_objects
 
+  def _LoadTestList(self, ref_id, tar_id):
+    valid_test_list, failed_test_lists = self.BuildAllTestLists()
+    # Get two dicts in which key is the test_list name (e.g. generic_main),
+    # and the value is a TestList object.
+    if len(failed_test_lists) > 0:
+      logging.warning('These test lists cannot be loaded:')
+      logging.warning(failed_test_lists)
+    if len(valid_test_list) == 0:
+      logging.warning('No available test lists in the directory: %s',
+                      self.loader.config_dir)
+
+    ref_test_list = valid_test_list[ref_id]
+    tar_test_list = valid_test_list[tar_id]
+    return ref_test_list, tar_test_list
+
+  def CollectPytests(self, factory_test_list):
+    """Find the pytests given a resolved test list.
+
+    Group the pytests according to their each test groups, e.g. SMT, GRT.
+
+    Args:
+      factory_test_list: a dictionary of factory test objects.
+
+    Returns:
+      pytest_dict: a dictionary with keys equal to the group names
+        and values corresponding to their pytests in sets.
+    """
+
+    pytest_dict = {}
+    _FIRST_GROUP_NAME_REGEX = r':(.*?)\.'
+    for k, v in factory_test_list.path_map.items():
+      pytest = v.ToStruct()['pytest_name']
+      if pytest is None:
+        continue
+      # the key of the path_map object looks like
+      # main_xxx:SMT.ModelSKU.BoxsterModelAndSKU
+      # and we extract the first test group name.
+      result = re.search(_FIRST_GROUP_NAME_REGEX, k)
+      if result is None:
+        continue
+      first_group_name = result.group(1)
+      colorized_group_name = Colorize(first_group_name, color='YELLOW')
+      pytest_dict.setdefault(colorized_group_name, set())
+      pytest_dict[colorized_group_name].add(pytest)
+
+    return pytest_dict
+
+  def ComparePytests(self, ref_id, tar_id):
+    """Get pytests from two test lists and compare the difference.
+
+    Args:
+      ref_id: ID of the reference test list.
+      tar_id: ID of the target test list.
+
+    Output:
+      Two lists of added pytests and removed pytests respectively.
+    """
+
+    try:
+      ref_test_list, tar_test_list = self._LoadTestList(ref_id, tar_id)
+    except KeyError as e:
+      print('Only test list which defines "tests" can be loaded. '
+            '%s is not in the directory or does not have "tests"' % e)
+      return
+    ref_py_dict = self.CollectPytests(ref_test_list)
+    tar_py_dict = self.CollectPytests(tar_test_list)
+    print('\nRed: pytests removed from %s\n'
+          'Green: pytests added in %s\n' % (tar_id, tar_id))
+    for test_group, tar_pytest_list in tar_py_dict.items():
+      ref_pytest_list = ref_py_dict[test_group]
+      added = tar_pytest_list - ref_pytest_list
+      removed = ref_pytest_list - tar_pytest_list
+      print(test_group)
+      for x in removed:
+        ref_pytest_list.remove(x)
+        ref_pytest_list.add(Colorize(x, color='RED'))
+      for x in added:
+        tar_pytest_list.remove(x)
+        tar_pytest_list.add(Colorize(x, color='GREEN'))
+
+      print(Colorize(tar_id, color='RED'))
+      print(
+          json.dumps(sorted(
+              list(ref_pytest_list))).encode('utf-8').decode('unicode_escape'))
+      print(Colorize(ref_id, color='GREEN'))
+      print(
+          json.dumps(sorted(
+              list(tar_pytest_list))).encode('utf-8').decode('unicode_escape'))
+
 
 def main(args):
   # Set up logging format.
@@ -412,6 +518,8 @@ def main(args):
       print(object_value)
     if len(factory_objects) == 0:
       print("No matched test object is found.")
+  elif options.subcommand == 'compare':
+    insight_manager.ComparePytests(options.testlist_a, options.testlist_b)
 
 
 if __name__ == '__main__':
