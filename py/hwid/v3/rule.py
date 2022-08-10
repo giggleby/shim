@@ -17,7 +17,7 @@ import logging
 import re
 import threading
 import time
-from typing import Optional
+from typing import Optional, Sequence
 
 from cros.factory.utils import type_utils
 
@@ -410,6 +410,22 @@ class AVLProbeValue(collections.OrderedDict, InternalTags):
     state[1] = (self._converter_identifier,
                 self._probe_value_matched) + state[1]
     return tuple(state)
+
+
+class FromFactoryBundle(collections.OrderedDict, InternalTags):
+  """A class indicates the component is extracted from a factory bundle."""
+
+  def __init__(self, bundle_uuids: Optional[Sequence[str]], *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self._bundle_uuids = bundle_uuids or []
+
+  @property
+  def bundle_uuids(self):
+    return self._bundle_uuids
+
+  def __eq__(self, rhs):
+    return (self.__class__ is rhs.__class__ and super().__eq__(rhs) and
+            set(self.bundle_uuids) == set(rhs.bundle_uuids))
 
 
 def _Eval(expr, local):

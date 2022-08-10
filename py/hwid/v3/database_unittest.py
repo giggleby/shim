@@ -80,6 +80,17 @@ class DatabaseTest(unittest.TestCase):
     self.assertFalse(
         loaded_db.GetComponents('cls3')['comp5'].values.probe_value_matched)
 
+  def testSetBundleUUIDs(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+
+    db.SetBundleUUIDs('cls4', 'comp7', ['uuid1'])
+
+    loaded_db = database.Database.LoadData(
+        db.DumpDataWithoutChecksum(internal=True))
+    self.assertCountEqual(
+        loaded_db.GetComponents('cls4')['comp7'].bundle_uuids, ['uuid1'])
+
   def testLoadDump(self):
     db = database.Database.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))

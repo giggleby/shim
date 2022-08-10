@@ -87,10 +87,12 @@ class PatternDatum(NamedTuple):
 class ComponentInfo:
 
   def __init__(self, values: Optional[Mapping[str, Any]], status: str,
-               information: Optional[Mapping[str, Any]] = None):
+               information: Optional[Mapping[str, Any]] = None,
+               bundle_uuids: Optional[Sequence[str]] = None):
     self._values = values
     self._status = status
     self._information = information
+    self._bundle_uuids = bundle_uuids or []
     self._comp_hash = hashlib.sha1(
         yaml.safe_dump(
             self.Export(sort_values_by_key=True),
@@ -108,7 +110,10 @@ class ComponentInfo:
       return (yaml.Dict(sorted(values.items()))
               if values and sort_values_by_key else values)
 
-    component_dict = yaml.Dict()
+    if self.bundle_uuids:
+      component_dict = v3_rule.FromFactoryBundle(self.bundle_uuids)
+    else:
+      component_dict = yaml.Dict()
     if not suppress_support_status or (self._status !=
                                        common.COMPONENT_STATUS.supported):
       component_dict['status'] = override_support_status or self._status
@@ -123,7 +128,8 @@ class ComponentInfo:
     """Creates a new ComponentInfo instance with optional replaced fields."""
     return ComponentInfo(
         kwargs.get('values', self.values), kwargs.get('status', self.status),
-        kwargs.get('information', self.information))
+        kwargs.get('information', self.information),
+        kwargs.get('bundle_uuids', self.bundle_uuids))
 
   @property
   def values(self) -> Optional[Mapping[str, Any]]:
@@ -140,6 +146,10 @@ class ComponentInfo:
   @property
   def comp_hash(self) -> str:
     return self._comp_hash
+
+  @property
+  def bundle_uuids(self) -> Sequence[str]:
+    return self._bundle_uuids
 
 
 class Database(abc.ABC):
@@ -658,9 +668,14 @@ class WritableDatabase(Database):
     return self._components.SetLinkAVLProbeValue(
         comp_cls, comp_name, converter_identifier, probe_value_matched)
 
+  def SetBundleUUIDs(self, comp_cls: str, comp_name: str,
+                     bundle_uuids: Sequence[str]):
+    return self._components.SetBundleUUIDs(comp_cls, comp_name, bundle_uuids)
+
   def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
                       values: Optional[Mapping[str, Any]], support_status: str,
-                      information: Optional[Mapping[str, Any]] = None):
+                      information: Optional[Mapping[str, Any]] = None,
+                      bundle_uuids: Optional[Sequence[str]] = None):
     """Updates a component by name.
 
     This method will also update the component names in the encoded fields.
@@ -675,9 +690,11 @@ class WritableDatabase(Database):
       information: Optional dict, these data will be used to further help
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
+      bundle_uuids: Optional list, indicate the uuid of which factory bundle
+          extract this component.
     """
     self._components.UpdateComponent(comp_cls, old_name, new_name, values,
-                                     support_status, information)
+                                     support_status, information, bundle_uuids)
     if old_name != new_name:  # Update encoded_fields as well.
       self._encoded_fields.RenameComponent(comp_cls, old_name, new_name)
 
@@ -1404,7 +1421,7 @@ class Components:
                                               str), value_type=schema.Scalar(
                                                   'info value', str)),
                                       schema.Scalar('none', type(None))
-                                  ])
+                                  ]),
                           }))
           }, optional_items={
               'probeable':
@@ -1439,6 +1456,9 @@ class Components:
           # We now use "values: null" to indicate a default component and
           # ignore the "default: True" field.
           self._default_components.add((comp_cls, comp_name))
+
+        if isinstance(comp_attr, v3_rule.FromFactoryBundle):
+          self.SetBundleUUIDs(comp_cls, comp_name, comp_attr.bundle_uuids)
 
       if comps_data.get('probeable') is False:
         logging.info(
@@ -1636,9 +1656,17 @@ class Components:
         values=v3_rule.AVLProbeValue(converter_identifier, probe_value_matched,
                                      values))
 
+  def SetBundleUUIDs(self, comp_cls: str, comp_name: str,
+                     bundle_uuids: Sequence[str]):
+    """Set uuid of factory bundles to the component"""
+    comp_info = self._components[comp_cls][comp_name]
+    self._components[comp_cls][comp_name] = comp_info.Replace(
+        bundle_uuids=bundle_uuids)
+
   def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
                       values: Optional[Mapping[str, Any]], support_status: str,
-                      information: Mapping[str, Any] = None):
+                      information: Optional[Mapping[str, Any]] = None,
+                      bundle_uuids: Optional[Sequence[str]] = None):
     """Updates a component by name.
 
     This method will also update the component names in the encoded fields.
@@ -1653,6 +1681,8 @@ class Components:
       information: Optional dict, these data will be used to further help
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
+      bundle_uuids: Optional list, indicate the uuid of which factory bundle
+          extract this component.
     """
     self._SCHEMA.value_type.items['items'].value_type.items['values'].Validate(
         values)
@@ -1661,7 +1691,8 @@ class Components:
     self._SCHEMA.value_type.items['items'].value_type.optional_items[
         'information'].Validate(information)
     self._components[comp_cls].UpdateComponent(
-        old_name, new_name, ComponentInfo(values, support_status, information))
+        old_name, new_name,
+        ComponentInfo(values, support_status, information, bundle_uuids))
 
 
 class Pattern:

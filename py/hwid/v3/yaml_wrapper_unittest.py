@@ -189,5 +189,34 @@ class ValueYAMLTagTest(unittest.TestCase):
         yaml.safe_dump(rule.Value('abc', is_re=True)), "!re 'abc'\n")
 
 
+class FromFactoryBundleYAMLTagTest(unittest.TestCase):
+
+  def testFromFactoryBundle_Load(self):
+    obj = yaml.safe_load(
+        textwrap.dedent('''\
+            !from_factory_bundle
+            key: value
+            bundle_uuids:
+            - uuid1
+            '''))
+    self.assertDictEqual({'key': 'value'}, obj)
+    self.assertEqual(obj.bundle_uuids, ['uuid1'])
+
+  def testFromFactoryBundle_Dump(self):
+    obj = rule.FromFactoryBundle(bundle_uuids=['uuid1'], key='value')
+    dump_str = yaml.safe_dump(obj)
+    self.assertEqual('{key: value}\n', dump_str)
+
+  def testFromFactoryBundle_DumpInternal(self):
+    obj1 = rule.FromFactoryBundle(bundle_uuids=['uuid1'], key='value')
+    dump_str = yaml.safe_dump(obj1, internal=True)
+    # Current version of PyYaml does not support sort_keys=False feature in
+    # represent_mapping method, so this test only ensures that loaded obj is the
+    # same as the original one.
+    obj2 = yaml.safe_load(dump_str)
+    self.assertDictEqual({'key': 'value'}, obj2)
+    self.assertEqual(obj2.bundle_uuids, ['uuid1'])
+
+
 if __name__ == '__main__':
   unittest.main()

@@ -363,3 +363,24 @@ class _LinkAVLYAMLTagHandler(_HWIDV3YAMLTagHandler):
               'original_values': Dict(data)
           })
     return dumper.represent_dict(data.items())
+
+
+class _FromFactoryBundleTagHandler(_HWIDV3YAMLTagHandler):
+  YAML_TAG = '!from_factory_bundle'
+  TARGET_CLASS = rule.FromFactoryBundle
+
+  @classmethod
+  def YAMLConstructor(cls, loader, node, deep=False):
+    if not isinstance(node, nodes.MappingNode):
+      raise constructor.ConstructorError(
+          f'Expected an mapping node, but got {node.value!r}.')
+    comp = _DefaultMappingHandler.YAMLConstructor(loader, node, deep=True)
+    bundle_uuids = comp.pop('bundle_uuids', None)
+    return cls.TARGET_CLASS(bundle_uuids, **comp)
+
+  @classmethod
+  def YAMLRepresenter(cls, dumper, data):
+    if cls.IsDumperInternal(dumper):
+      data['bundle_uuids'] = data.bundle_uuids
+      return dumper.represent_mapping(cls.YAML_TAG, Dict(data))
+    return dumper.represent_dict(data.items())
