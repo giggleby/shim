@@ -5,6 +5,7 @@
 """Google Cloud Storage utilities."""
 
 import logging
+import multiprocessing
 import os
 
 from . import file_utils
@@ -187,3 +188,69 @@ class CloudStorage:
     except Exception:
       self.logger.exception('Download failed')
       return False
+
+
+# The GCS object is initialized by PoolInit() in each worker process in pool.
+_global_gcs = None
+
+
+class ParallelDownloader:
+  """A Downloader to download files from GCS in parallel."""
+
+  def __init__(self, json_key_path=None, logger=logging, process_number=4):
+    """Initializes the object.
+
+    Args:
+      json_key_path: Path to the private key (in JSON format) on disk. If set to
+                     None, the Google Cloud client will use the default service
+                     account which is set to the environment variable
+                     GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.
+      logger: A logging.logger object to record messages.
+      process_number: The number of worker processes to use.
+    """
+    self.logger = logger
+    # Can't use the context management protocol, since __exit__() calls
+    # Pool.terminate() which stops all worker processes immediately.
+    self._pool = multiprocessing.Pool(  # pylint: disable=consider-using-with
+        process_number, self.PoolInit, (json_key_path, ))
+
+  def Close(self):
+    """Removes the multiprocessing pool."""
+    self._pool.close()
+    self._pool.join()
+
+  def PoolInit(self, json_key_path):
+    """Initializes the global GCS object."""
+    global _global_gcs  # pylint: disable=global-statement
+    _global_gcs = CloudStorage(json_key_path, self.logger)
+
+  @staticmethod
+  def _Download(args):
+    """Calls DownloadFile() in a worker process.
+
+    imap_unordered() can only send one argument, so it splits the
+    arguments first.
+
+    Returns:
+      A tuple (target_path, local_path) which is as same as the argument. If it
+      failed to download a file from target_path, the local_path is None.
+    """
+    target_path, local_path = args
+    global _global_gcs  # pylint: disable=global-variable-not-assigned
+    if _global_gcs.DownloadFile(target_path, local_path, overwrite=True):
+      return target_path, local_path
+    return target_path, None
+
+  def Download(self, target_local_list):
+    """Downloads the files from GCS.
+
+    Args:
+      target_local_list: A list of tuples (target_path, local_path).
+                         (e.g. [('/bucketA/targetA', '/path/to/localA'),
+                                ('/bucketB/targetB', '/path/to/localB')])
+
+    Returns:
+      A iterator of tuples (target_path, local_path). If it failed to download
+      a file from target_path, the local_path is None.
+    """
+    return self._pool.imap_unordered(self._Download, target_local_list)
