@@ -8,6 +8,7 @@ import re
 import textwrap
 import time
 from typing import Optional, Tuple
+import uuid
 
 from google.protobuf import json_format
 
@@ -289,6 +290,7 @@ class SelfServiceHelper:
   def CreateHWIDDBFirmwareInfoUpdateCL(self, request):
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
     bundle_record = request.bundle_record
+    request_uuid = str(uuid.uuid4())
     all_commits = []
     for firmware_record in bundle_record.firmware_records:
       model = _NormalizeProjectString(firmware_record.model)
@@ -331,15 +333,17 @@ class SelfServiceHelper:
           else:
             continue
 
-          if comp_name in db_builder.GetComponents(field.name):
-            logging.info('Skip existed component: %s', comp_name)
-          else:
+          if comp_name not in db_builder.GetComponents(field.name):
             db_builder.AddComponentCheck(field.name, value, comp_name,
                                          supported=firmware_record.supported)
-            changed = True
+
+          comp = db_builder.GetComponents(field.name)[comp_name]
+          db_builder.GetComponents(field.name)[comp_name] = comp.Replace(
+              bundle_uuids=list(comp.bundle_uuids) + [request_uuid])
+          changed = True
 
       if not changed:
-        logging.info('No component is added to DB: %s', model)
+        logging.info('No component is added/modified to DB: %s', model)
         continue
 
       db = db_builder.Build()
