@@ -82,40 +82,9 @@ def CheckPytestDoc(files):
     return False
   return True
 
-
-def CheckPyImport(files):
-
-  def ParseFileName(err_msg):
-    # ERROR: {file name} Imports are incorrectly sorted and/or formatted.
-    return err_msg.split()[1]
-
-  pyFiles = [file for file in files if file.endswith('.py')]
-  if not pyFiles:
-    return True
-
-  ret = subprocess.run(
-      ['isort', '--check', '--diff', '--sp', 'devtools/vscode/.isort.cfg'] +
-      pyFiles, check=False, stderr=subprocess.PIPE, encoding='utf-8')
-  if ret.returncode == 0:
-    return True
-
-  if ret.returncode == 1:
-    bad_files = [
-        ParseFileName(line) for line in ret.stderr.split('\n') if line.strip()
-    ]
-    print('Please sort the imports before submitting for review.')
-    print('Please run (in chroot): `isort --sp devtools/vscode/.isort.cfg ' +
-          ' '.join(bad_files) + '`')
-  else:
-    print(ret.stdout)
-    print(ret.stderr)
-  return False
-
-
 def main():
   files = sys.argv[1:]
   all_passed = True
-  all_passed &= CheckPyImport(files)
   all_passed &= CheckFactoryRepo(files)
   all_passed &= CheckPytestDoc(files)
   all_passed &= CheckUmpire(files)

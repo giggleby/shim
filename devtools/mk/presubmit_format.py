@@ -22,7 +22,6 @@ VENV_REQUIREMNTS_FILE = os.path.join(SCRIPT_DIR, 'yapf.requirements.txt')
 VENV_BIN = os.path.join(VENV_DIR, 'bin')
 YAPF_STYLE_PATH = os.path.join(SCRIPT_DIR, 'style.yapf')
 
-
 def InstallRequirements():
   subprocess.check_call([
       os.path.join(VENV_BIN, 'pip'), 'install', '--force-reinstall', '-r',
@@ -52,10 +51,12 @@ def CheckVirtualEnv():
     InstallRequirements()
 
 
-def _ProcessOneFile(args):
-  base_cmd, file_path, ranges, work_tree = args
+def _PassByYapf(fix, file_path, ranges, work_tree):
   range_args = []
-
+  base_cmd = [
+      os.path.join(VENV_BIN, 'yapf'), '--in-place' if fix else '--quiet',
+      '--style', YAPF_STYLE_PATH
+  ]
   has_formattable_lines = False
   for diff_start, diff_len in ranges:
     diff_end = diff_start + diff_len - 1
@@ -63,26 +64,44 @@ def _ProcessOneFile(args):
       has_formattable_lines = True
       range_args += ['-l', '{}-{}'.format(diff_start, diff_end)]
 
-  if has_formattable_lines:
-    if work_tree:
-      work_tree_file_path = os.path.join(work_tree, file_path)
-    else:
-      work_tree_file_path = file_path
-    if subprocess.call(base_cmd + [work_tree_file_path] + range_args) != 0:
-      return file_path
-  return None
+  if not has_formattable_lines:
+    return True
+
+  if work_tree:
+    work_tree_file_path = os.path.join(work_tree, file_path)
+  else:
+    work_tree_file_path = file_path
+  return subprocess.call(base_cmd + [work_tree_file_path] + range_args) == 0
+
+
+def _PassByIsort(fix, file_path):
+  if not file_path.endswith('.py'):
+    return True
+
+  command = ['isort', '--sp', 'devtools/vscode/.isort.cfg', file_path]
+  if not fix:
+    command += ['--check']
+
+  return subprocess.call(command) == 0
+
+
+def _ProcessOneFile(args):
+  fix, file_path, ranges, work_tree = args
+  if (_PassByYapf(fix, file_path, ranges, work_tree) and
+      _PassByIsort(fix, file_path)):
+    return None
+  return file_path
 
 
 def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument('--fix', action='store_true',
+                      help='Make change to the files in place.')
+  parser.add_argument('--commit',
+                      help='Only check changed lines of a git commit.')
   parser.add_argument(
-      '--fix', action='store_true', help='Make change to the files in place.')
-  parser.add_argument(
-      '--commit', help='Only check changed lines of a git commit.')
-  parser.add_argument(
-      '--rules_file',
-      metavar='RULES_FILE',
-      default=os.path.join(SCRIPT_DIR, 'presubmit_format.json'),
+      '--rules_file', metavar='RULES_FILE', default=os.path.join(
+          SCRIPT_DIR, 'presubmit_format.json'),
       help=('A JSON file contains a shebang allow list and a file exclusion '
             'list.'))
   parser.add_argument(
@@ -108,11 +127,6 @@ def main():
             f'head: {head_commit_hash!r}')
       sys.exit(1)
 
-  base_cmd = [
-      os.path.join(VENV_BIN, 'yapf'), '--in-place' if args.fix else '--quiet',
-      '--style', YAPF_STYLE_PATH
-  ]
-
   line_diffs = presubmit_common.ComputeDiffRange(args.commit, args.files)
 
   def ShouldExclude(file_path):
@@ -134,7 +148,7 @@ def main():
   else:
     work_tree = None
 
-  proc_args = [(base_cmd, f, line_diffs[f], work_tree) for f in files]
+  proc_args = [(args.fix, f, line_diffs[f], work_tree) for f in files]
   with multiprocessing.pool.ThreadPool() as pool:
     failed_files = list(filter(None, pool.imap(_ProcessOneFile, proc_args)))
 
