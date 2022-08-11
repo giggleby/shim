@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import enum
 import fnmatch
 import json
 import multiprocessing.pool
@@ -15,12 +16,20 @@ import tempfile
 
 import presubmit_common
 
+
 # Paths of venv and yapf.
 SCRIPT_DIR = os.path.dirname(__file__)
 VENV_DIR = os.path.join(SCRIPT_DIR, 'yapf.venv')
 VENV_REQUIREMNTS_FILE = os.path.join(SCRIPT_DIR, 'yapf.requirements.txt')
 VENV_BIN = os.path.join(VENV_DIR, 'bin')
 YAPF_STYLE_PATH = os.path.join(SCRIPT_DIR, 'style.yapf')
+
+
+class CheckFormatResult(enum.Enum):
+  PASS = 0
+  UNCERTAIN = 1
+  FAIL = 2
+
 
 def InstallRequirements():
   subprocess.check_call([
@@ -87,10 +96,18 @@ def _PassByIsort(fix, file_path):
 
 def _ProcessOneFile(args):
   fix, file_path, ranges, work_tree = args
-  if (_PassByYapf(fix, file_path, ranges, work_tree) and
-      _PassByIsort(fix, file_path)):
-    return None
-  return file_path
+  if fix:
+    # Currently we use yapf as our main formatter, so we should apply yapf
+    # later to make sure the codes align with the rules of yapf.
+    _PassByIsort(fix, file_path)
+    _PassByYapf(fix, file_path, ranges, work_tree)
+    return (CheckFormatResult.PASS, file_path)
+
+  if not _PassByYapf(fix, file_path, ranges, work_tree):
+    return (CheckFormatResult.FAIL, file_path)
+  if not _PassByIsort(fix, file_path):
+    return (CheckFormatResult.UNCERTAIN, file_path)
+  return (CheckFormatResult.PASS, file_path)
 
 
 def main():
@@ -150,23 +167,43 @@ def main():
 
   proc_args = [(args.fix, f, line_diffs[f], work_tree) for f in files]
   with multiprocessing.pool.ThreadPool() as pool:
-    failed_files = list(filter(None, pool.imap(_ProcessOneFile, proc_args)))
+    failed_files = []
+    uncertain_files = []
+    for result, file in pool.imap(_ProcessOneFile, proc_args):
+      if result == CheckFormatResult.FAIL:
+        failed_files.append(file)
+      elif result == CheckFormatResult.UNCERTAIN:
+        uncertain_files.append(file)
 
   if is_not_head_commit:
     shutil.rmtree(work_tree)
 
-  if failed_files:
-    print('Please format your code before submitting for review.')
-    fix_cmd = ['make', 'format', 'FILES="{}"'.format(' '.join(failed_files))]
+  # b/226500333
+  # We didn't find a good approach to solve the conflict between isort and yapf.
+  # In the case that a file pass by yapf but not isort, we mark the file
+  # uncertain and warn people to check manually instead of blocking presubmit.
+  if failed_files or uncertain_files:
+    fix_cmd = [
+        'make', 'format',
+        'FILES="{}"'.format(' '.join(failed_files + uncertain_files))
+    ]
     if args.commit:
       fix_cmd.append('COMMIT=HEAD')
     fix_cmd = ' '.join(fix_cmd)
     if is_not_head_commit:
-      print('Please run the following command (in chroot) and then rebase: '
-            f'`git checkout {args.commit} && {fix_cmd}`')
+      fix_message = ('Run the following command (in chroot) and then rebase: '
+                     f'`git checkout {args.commit} && {fix_cmd}`')
     else:
-      print(f'Please run (in chroot): `{fix_cmd}`')
-    sys.exit(1)
+      fix_message = f'Run the following command (in chroot): `{fix_cmd}`'
+
+    if failed_files:
+      print('Format your code before submitting for review.')
+      print(fix_message)
+      sys.exit(1)
+    else:
+      print('[WARNING] Format your code for these uncertain files, ignore this '
+            'warning if you have formatted your code.')
+      print(f'[WARNING] {fix_message}')
   else:
     print('Your code looks great, everything is awesome!')
 
