@@ -1,0 +1,37 @@
+syntax = "proto3";
+package cros.factory.probe_info_service.app_engine.admin_pb2;
+
+message RunMigrationScriptsRequest {
+}
+
+message MigrationScriptResult {
+  int64 script_index = 1;
+
+  enum ResultCase {
+    RESULT_CASE_UNSPECIFIED = 0;
+
+    SUCCESS = 1;
+    FAILED_ROLLBACKED = 2;
+    FAILED_NOT_ROLLBACKED = 3;
+  }
+  ResultCase result_case = 2;
+}
+
+message RunMigrationScriptsResponse {
+  repeated MigrationScriptResult reports = 1;
+}
+
+message ForceForwardMigrationProgressRequest {
+  int64 script_index = 1;
+}
+
+message ForceForwardMigrationProgressResponse {
+}
+
+service AdminService {
+  rpc RunMigrationScripts(RunMigrationScriptsRequest)
+      returns (RunMigrationScriptsResponse) {}
+
+  rpc ForceForwardMigrationProgress(ForceForwardMigrationProgressRequest)
+      returns (ForceForwardMigrationProgressResponse) {}
+}

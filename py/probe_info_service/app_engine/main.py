@@ -9,6 +9,7 @@ import os
 import flask
 from google.cloud import logging as gc_logging
 
+from cros.factory.probe_info_service.app_engine import admin_service
 from cros.factory.probe_info_service.app_engine import config
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.probe_info_service.app_engine import stubby_handler
@@ -36,6 +37,8 @@ def _CreateApp():
   flask_app.route('/_ah/warmup', methods=('GET', ))(_WarmupHandler)
   protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
       flask_app, '/_ah/stubby', stubby_handler.ProbeInfoService())
+  protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
+      flask_app, '/_ah/stubby', admin_service.AdminServiceServerStub())
   return flask_app
 
 
