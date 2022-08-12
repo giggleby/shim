@@ -9,14 +9,17 @@ import logging
 import os
 import re
 import sys
+from typing import Mapping
 
 from cros.factory.test import device_data_constants
 from cros.factory.test.env import paths
 from cros.factory.test.test_lists import manager
+from cros.factory.test.test_lists import test_list as test_list_module
 from cros.factory.utils import config_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
+
 
 ERROR_LEVEL = type_utils.Obj(NONE=0, CONVENTION=1, WARNING=2, ERROR=3, FATAL=4)
 ERROR_LEVEL_SHORT = {
@@ -88,15 +91,17 @@ def ValidateRunIf(test_object_value):
   return True
 
 
-def CheckTestList(manager_, waived_level, test_list_id, dump):
+def CheckTestList(manager_: manager.Manager,
+                  all_test_lists: Mapping[str, test_list_module.TestList],
+                  waived_level, test_list_id: str, dump: bool):
   """Check the test list with given `test_list_id`.
 
   Args:
-    manager: a test list manager instance, will be used to load test list and
-      perform checking.
+    manager_: Will be used to load test list and perform checking.
+    all_test_lists: The function uses these to find unused test objects.
     waived_level: The messages which are less or equal to this value do not
       count as failures.
-    test_list_id: ID of the test list (a string).
+    test_list_id: ID of the test list.
     dump: true to simply load and print the test list.
 
   Returns:
@@ -147,7 +152,6 @@ def CheckTestList(manager_, waived_level, test_list_id, dump):
 
   # Check if there are unreferenced test object definitions in the test list.
   cache = {}
-  all_test_lists, unused_failed_test_lists = manager_.BuildAllTestLists()
   for child_test_list_id in all_test_lists:
     # Skip because child_test_list_id is not a child of test_list_id.
     if test_list_id not in GetInheritSet(manager_, child_test_list_id):
@@ -268,10 +272,15 @@ def main(args):
     os.execv(overlay_factory_env, new_args)
 
   manager_ = manager.Manager()
+  if options.dump:
+    all_test_lists = {}
+  else:
+    all_test_lists, unused_failed_test_lists = manager_.BuildAllTestLists()
   success = True
   for test_list_id in options.test_list_id:
-    success &= CheckTestList(manager_, ERROR_LEVEL_SHORT[options.waived],
-                             test_list_id, options.dump)
+    success &= CheckTestList(manager_, all_test_lists,
+                             ERROR_LEVEL_SHORT[options.waived], test_list_id,
+                             options.dump)
 
   sys.exit(not success)
 
