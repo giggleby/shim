@@ -15,18 +15,17 @@ class DataStoreProbeInfoStorageConnector(unittest.TestCase):
 
     # pylint: disable=protected-access
     self._connector = (
-        probe_info_storage_connector._DataStoreProbeInfoStorageConnector(
-            probe_info_storage_connector._ProdEntityConverter()))
+        probe_info_storage_connector._DataStoreProbeInfoStorageConnector())
     # pylint: enable=protected-access
 
   def tearDown(self):
     super().tearDown()
     self._connector.Clean()
 
-  def testLoadAndSave(self):
+  def testSaveAndLoad(self):
     """Save some data and load it back to verify the functionalities."""
-    comp_id = 1
-    qual_id = 2
+    comp_id = 2
+    qual_id = 1
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
 
     self._connector.SaveComponentProbeInfo(comp_id, qual_id, comp_probe_info)

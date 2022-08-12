@@ -6,9 +6,9 @@ import abc
 from typing import Optional
 
 from google.cloud import datastore
-from google.protobuf import text_format
 
 from cros.factory.probe_info_service.app_engine import config
+from cros.factory.probe_info_service.app_engine import models
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import type_utils
 
@@ -65,108 +65,54 @@ class _InMemoryProbeInfoStorageConnector(ProbeInfoStorageConnector):
     self._component_probe_info = {}
 
 
-class _EntityConverter:
-  """Convert component probe info messages to / from datastore entities."""
-
-  def ToEntity(self, key: datastore.Key,
-               message: stubby_pb2.ComponentProbeInfo) -> datastore.Entity:
-    """Converts a protobuf message to the corresponding entity."""
-    raise NotImplementedError
-
-  def FromEntity(self,
-                 entity: datastore.Entity) -> stubby_pb2.ComponentProbeInfo:
-    """Converts the entity back to the protobuf message."""
-    raise NotImplementedError
-
-
-class _ProdEntityConverter(_EntityConverter):
-  """The entity data converter used in production."""
-
-  _DATA_KEY = 'bytes'
-
-  def ToEntity(self, key: datastore.Key,
-               message: stubby_pb2.ComponentProbeInfo) -> datastore.Entity:
-    """See base class."""
-    entity = datastore.Entity(key)
-    entity.update({self._DATA_KEY: message.SerializeToString()})
-    return entity
-
-  def FromEntity(self,
-                 entity: datastore.Entity) -> stubby_pb2.ComponentProbeInfo:
-    """See base class."""
-    message = stubby_pb2.ComponentProbeInfo()
-    message.ParseFromString(entity[self._DATA_KEY])
-    return message
-
-
-class _NonProdEntityConverter(_EntityConverter):
-  """The entity data converter used in non-production environment."""
-
-  _DATA_KEY = 'bytes'
-  _RAW_TEXTPB_KEY = 'raw_textpb'
-
-  def ToEntity(self, key: datastore.Key,
-               message: stubby_pb2.ComponentProbeInfo) -> datastore.Entity:
-    """See base class."""
-    entity = datastore.Entity(key, exclude_from_indexes=[self._RAW_TEXTPB_KEY])
-    entity.update({
-        self._DATA_KEY: message.SerializeToString(deterministic=True),
-        self._RAW_TEXTPB_KEY: text_format.MessageToString(message),
-    })
-    return entity
-
-  def FromEntity(self,
-                 entity: datastore.Entity) -> stubby_pb2.ComponentProbeInfo:
-    """See base class."""
-    message = stubby_pb2.ComponentProbeInfo()
-    message.ParseFromString(entity[self._DATA_KEY])
-    return message
-
-
 class _DataStoreProbeInfoStorageConnector(ProbeInfoStorageConnector):
   """An implementation for the instance running on AppEngine."""
 
-  _COMPONENT_PROBE_INFO_KIND = 'component_probe_info'
-
-  def __init__(self, entity_converter: _EntityConverter):
-    self._entity_converter = entity_converter
-
+  def __init__(self):
     self._client = datastore.Client()
 
   def _GetEntityKey(self, component_id, qual_id) -> datastore.Key:
-    name = f'{component_id}-{qual_id}'
-    return self._client.key(self._COMPONENT_PROBE_INFO_KIND, name)
+    return self._client.key(
+        *models.AVLProbeEntity.GetKeyPath(cid=component_id, qid=qual_id))
 
   def SaveComponentProbeInfo(self, component_id, qual_id, component_probe_info):
     key = self._GetEntityKey(component_id, qual_id)
-    entity = self._entity_converter.ToEntity(key, component_probe_info)
-    self._client.put(entity)
+    entity = self._client.get(key)
+    if entity is None:
+      model = models.AVLProbeEntity.Create(
+          self._client, cid=component_id, qid=qual_id,
+          readable_label=component_probe_info.component_identity.readable_label,
+          probe_info=component_probe_info.probe_info)
+    else:
+      model = models.AVLProbeEntity.FromEntity(entity)
+      model.probe_info = component_probe_info.probe_info
+    self._client.put(model.entity)
 
   def GetComponentProbeInfo(self, component_id, qual_id):
     key = self._GetEntityKey(component_id, qual_id)
     entity = self._client.get(key)
-    if not entity:
+    if entity is None:
       return None
+
     # TODO(yhong): Handle data incompatible issues.
-    return self._entity_converter.FromEntity(entity)
+    model = models.AVLProbeEntity.FromEntity(entity)
+    return stubby_pb2.ComponentProbeInfo(
+        component_identity=stubby_pb2.ComponentIdentity(
+            readable_label=model.readable_label, qual_id=qual_id,
+            component_id=component_id), probe_info=model.probe_info)
 
   def Clean(self):
     if config.Config().is_prod:
       raise RuntimeError(
           f'Cleaning up datastore data for {self._COMPONENT_PROBE_INFO_KIND!r} '
           'in production runtime environment is forbidden.')
-    q = self._client.query(kind=self._COMPONENT_PROBE_INFO_KIND)
-    self._client.delete_multi([e.key for e in q.fetch()])
-
-
-def _ResolveComponentProbeInfoParser() -> _EntityConverter:
-  if config.Config().is_prod:
-    return _ProdEntityConverter()
-  return _NonProdEntityConverter()
+    q = models.AVLProbeEntity.ConstructQuery(self._client)
+    q.keys_only()
+    self._client.delete_multi(list(q.fetch()))
 
 
 @type_utils.CachedGetter
 def GetProbeInfoStorageConnector() -> ProbeInfoStorageConnector:
   if config.Config().env_type == config.EnvType.LOCAL:
     return _InMemoryProbeInfoStorageConnector()
-  return _DataStoreProbeInfoStorageConnector(_ResolveComponentProbeInfoParser())
+  return _DataStoreProbeInfoStorageConnector()

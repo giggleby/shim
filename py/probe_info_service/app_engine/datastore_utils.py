@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import abc
+import typing
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
 
 from google.cloud import datastore
@@ -101,8 +102,11 @@ class TextPBModelFieldConverter(ModelFieldConverter):
           'Unable to load the PB message in text from the entity.') from ex
 
 
-class ModelField:
+class _ModelFieldInternal:
   """Captures the definition of a field in the model class.
+
+  This class is private as the user should access the functionalities via the
+  wrapper `ModelField` defined below.
 
   Attributes:
     converter: The converter of this field.
@@ -113,10 +117,9 @@ class ModelField:
       the entity.
   """
 
-  def __init__(self, converter: Optional[ModelFieldConverter] = None,
-               default: Any = _DEFAULT_NOT_SPECIFIED,
-               default_factory: Optional[Callable[[], Any]] = None,
-               exclude_from_index: bool = False):
+  def __init__(self, converter: Optional[ModelFieldConverter], default: Any,
+               default_factory: Optional[Callable[[], Any]],
+               exclude_from_index: bool):
     """Initializer.
 
     Args:
@@ -142,6 +145,44 @@ class ModelField:
       self.has_default = False
       self.default_factory = None
     self.exclude_from_index = exclude_from_index
+
+
+# Wraps `_ModelFieldInternal` by functions with overloaded type annotations so
+# that
+#
+#    class TheModel(ModelBase):
+#      the_field: int = ModelField(...)
+#
+# can pass the static type check.
+
+_FieldValueType = typing.TypeVar('_FieldValueType')
+
+
+@typing.overload
+def ModelField(default: _FieldValueType,
+               converter: Optional[ModelFieldConverter] = None,
+               exclude_from_index: bool = False) -> _FieldValueType:
+  ...
+
+
+@typing.overload
+def ModelField(default_factory: Callable[[], _FieldValueType],
+               converter: Optional[ModelFieldConverter] = None,
+               exclude_from_index: bool = False) -> _FieldValueType:
+  ...
+
+
+@typing.overload
+def ModelField(converter: Optional[ModelFieldConverter] = None,
+               exclude_from_index: bool = False) -> Any:
+  ...
+
+
+def ModelField(converter=None, default=_DEFAULT_NOT_SPECIFIED,
+               default_factory=None, exclude_from_index=False):
+  return _ModelFieldInternal(converter=converter, default=default,
+                             default_factory=default_factory,
+                             exclude_from_index=exclude_from_index)
 
 
 _DEFAULT_MODEL_FIELD = ModelField()
@@ -293,7 +334,7 @@ class KeyMismatchError(Exception):
 class KeyfulModelBase(_ModelBase):
   """Base class for models which key is determined by the field values."""
 
-  def DeriveKeyPathFromModelFields(self) -> Tuple[Union[str, int]]:
+  def DeriveKeyPathFromModelFields(self) -> Tuple[Union[str, int], ...]:
     """Returns the path list of key of this model.
 
     This method must not access `self.entity` or `self._entity` as it should
