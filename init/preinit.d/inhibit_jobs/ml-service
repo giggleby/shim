@@ -1,0 +1,3 @@
+Plugging in AC triggers ml-service because it has smart charging support used
+by powerd. Since we don't really need this job in the factory, we disable it
+here.
