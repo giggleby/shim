@@ -92,11 +92,10 @@ class _DataStoreProbeMetaInfoConnector(IProbeMetaInfoConnector):
                   qual_probe_meta_info)
 
   def Clean(self):
-    env_type = config.Config().env_type
-    if env_type == config.EnvType.PROD:
-      raise RuntimeError('cleaning up datastore data for %r in %r runtime '
-                         'environment is forbidden' %
-                         (self._QUAL_PROBE_META_INFO_KIND, env_type))
+    if config.Config().is_prod:
+      raise RuntimeError(
+          f'Cleaning up datastore data for {self._QUAL_PROBE_META_INFO_KIND} '
+          'in production is forbidden.')
     q = self._client.query(kind=self._QUAL_PROBE_META_INFO_KIND)
     self._client.delete_multi([e.key for e in q.fetch()])
 

@@ -151,7 +151,7 @@ class _DataStoreProbeInfoStorageConnector(ProbeInfoStorageConnector):
     return self._entity_converter.FromEntity(entity)
 
   def Clean(self):
-    if config.Config().env_type == config.EnvType.PROD:
+    if config.Config().is_prod:
       raise RuntimeError(
           f'Cleaning up datastore data for {self._COMPONENT_PROBE_INFO_KIND!r} '
           'in production runtime environment is forbidden.')
@@ -160,7 +160,7 @@ class _DataStoreProbeInfoStorageConnector(ProbeInfoStorageConnector):
 
 
 def _ResolveComponentProbeInfoParser() -> _EntityConverter:
-  if config.Config().env_type == config.EnvType.PROD:
+  if config.Config().is_prod:
     return _ProdEntityConverter()
   return _NonProdEntityConverter()
 

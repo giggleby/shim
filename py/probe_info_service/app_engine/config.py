@@ -41,3 +41,7 @@ class Config(metaclass=type_utils.Singleton):
 
     self.env_type = EnvType(env_configuration['env_type'])
     self.log_level = env_configuration['log_level']
+
+  @property
+  def is_prod(self) -> bool:
+    return self.env_type == EnvType.PROD
