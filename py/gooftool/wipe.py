@@ -44,6 +44,17 @@ DLC_CACHE_PAYLOAD_NAME = '%s/release_image.dlc_factory_cache' % \
                          _CROS_PAYLOADS_PATH
 DLC_CACHE_TAR_PATH = '/tmp/dlc_cache.tar'
 
+# Some upstart jobs have multiple instances and we need to specify the name of
+# the instance to stop a job.
+# For example, to stop `ml-service` and `timberslide`, we need to run
+# `stop ml-service TASK=<task_name>` and `stop timberslide LOG_PATH=<path>`.
+# Since we cannot get the instance key from `initctl`, we record the
+# mapping here.
+JOB_TO_INSTANCE_KEY = {
+    'ml-service': 'TASK',
+    'timberslide': 'LOG_PATH'
+}
+
 
 def GetLogicalStateful(state_dev, log_message=None):
   """Get the logical stateful partition from the physical one.
@@ -305,6 +316,30 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
     raise
 
 
+def _GetToStopServiceList(exclude_list):
+  # There may be `instance` optional parameter for an upstart job, and the
+  # initctl output may be different. The possible outputs:
+  #   "service_name start/running"
+  #   "service_name ($instance) start/running"
+  initctl_output = process_utils.SpawnOutput(['initctl', 'list']).splitlines()
+
+  running_service_list = []
+  for line in initctl_output:
+    if 'start/running' not in line:
+      continue
+
+    service_name = line.split()[0]
+    instance_val = line.split()[1][1:-1] if '(' in line.split()[1] else ''
+    running_service_list.append((service_name, instance_val))
+
+  logging.info('Running services (service_name, instance): %r',
+               running_service_list)
+
+  return [
+      service for service in running_service_list
+      if not (service[0] in exclude_list or service[0].startswith('console-'))
+  ]
+
 def _StopAllUpstartJobs(exclude_list=None):
   logging.debug('stopping upstart jobs')
 
@@ -315,36 +350,28 @@ def _StopAllUpstartJobs(exclude_list=None):
   # one time after being stopped, e.g. shill_respawn. Two times should be enough
   # to stop shill. Adding one more try for safety.
   for unused_tries in range(3):
-
-    # There may be LOG_PATH optional parameter for upstart job, the initctl
-    # output may different. The possible output:
-    #   "service_name start/running"
-    #   "service_name ($LOG_PATH) start/running"
-    initctl_output = process_utils.SpawnOutput(['initctl', 'list']).splitlines()
-
-    running_service_list = []
-    for line in initctl_output:
-      if 'start/running' not in line:
-        continue
-
-      service_name = line.split()[0]
-      log_path = line.split()[1][1:-1] if '(' in line.split()[1] else ''
-      running_service_list.append((service_name, log_path))
-
-    logging.info('Running services (service_name, LOG_PATH): %r',
-                 running_service_list)
-
-    to_stop_service_list = [
-        service for service in running_service_list
-        if not (service[0] in exclude_list or service[0].startswith('console-'))
-    ]
-    logging.info('Going to stop services (service_name, LOG_PATH): %r',
+    to_stop_service_list = _GetToStopServiceList(exclude_list)
+    logging.info('Going to stop services (service_name, instance): %r',
                  to_stop_service_list)
 
-    for service, log_path in to_stop_service_list:
+    for service, instance_val in to_stop_service_list:
       stop_cmd = ['stop', service]
-      stop_cmd += ["LOG_PATH=" + log_path] if log_path else []
+      if instance_val:
+        instance_key = JOB_TO_INSTANCE_KEY.get(service)
+        if instance_key is None:
+          raise WipeError(
+              'Fail to get the instance key of service %s (%s). Please read '
+              '%s.conf and add the key to `JOB_TO_INSTANCE_KEY`.' %
+              (service, instance_val, service))
+        stop_cmd += ['%s=%s' % (instance_key, instance_val)]
       process_utils.Spawn(stop_cmd, log=True, log_stderr_on_error=True)
+
+  to_stop_service_list = _GetToStopServiceList(exclude_list)
+
+  if to_stop_service_list:
+    raise WipeError('Fail to stop services (service_name, instance): %r.\n'
+                    'Please check the upstart config or check with the '
+                    'service owner.' % to_stop_service_list)
 
 
 def _CollectMountPointsToUmount(state_dev):
