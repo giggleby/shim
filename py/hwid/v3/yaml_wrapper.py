@@ -11,6 +11,7 @@ import collections
 import functools
 
 from yaml import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from yaml import __with_libyaml__
 from yaml import constructor
 from yaml import nodes
 from yaml import resolver
@@ -21,16 +22,20 @@ from cros.factory.test.l10n import regions
 from cros.factory.utils import schema
 from cros.factory.utils import yaml_utils
 
+# Prefer CSafe* to improve performance.
+_SafeLoader, _SafeDumper = ((CSafeLoader, CSafeDumper) if __with_libyaml__ else
+                            (SafeLoader, SafeDumper))
 
-class V3Loader(SafeLoader):
+
+class V3Loader(_SafeLoader):
   """A HWID v3 yaml Loader for patch separation."""
 
 
-class V3Dumper(SafeDumper):
+class V3Dumper(_SafeDumper):
   """A HWID v3 yaml Dumper for patch separation."""
 
 
-class V3DumperInternal(SafeDumper):
+class V3DumperInternal(_SafeDumper):
   """A HWID v3 yaml Dumper for dumping unexposed tags for internal use."""
 
 
@@ -42,13 +47,15 @@ class V3DumperInternal(SafeDumper):
 # We cannot only output the tag without any data, such as !region_component.
 # Therefore we add a dummy string afterward, and remove it in post-processing.
 _YAML_DUMMY_STRING = 'YAML_DUMMY_STRING'
+_DUMMY_STRING_DUMP_STYLE = (f' {_YAML_DUMMY_STRING}'
+                            if __with_libyaml__ else f" '{_YAML_DUMMY_STRING}'")
 
 
 def _RemoveDummyStringWrapper(func):
 
   def wrapper(*args, **kwargs):
     """Remove the dummy string in the yaml result."""
-    return func(*args, **kwargs).replace(" '%s'" % _YAML_DUMMY_STRING, '')
+    return func(*args, **kwargs).replace(_DUMMY_STRING_DUMP_STYLE, '')
 
   return wrapper
 

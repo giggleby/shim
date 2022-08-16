@@ -185,8 +185,12 @@ class ValueYAMLTagTest(unittest.TestCase):
     self.assertEqual(yaml.safe_load('!re abc'), rule.Value('abc', is_re=True))
     self.assertEqual(
         yaml.safe_load(yaml.safe_dump(rule.Value('abc', is_re=False))), 'abc')
-    self.assertEqual(
-        yaml.safe_dump(rule.Value('abc', is_re=True)), "!re 'abc'\n")
+    self.assertIn(
+        yaml.safe_dump(rule.Value('abc', is_re=True)),
+        (
+            "!re 'abc'\n",  # SafeDump style
+            "!re abc\n...\n",  # CSafeDumper style
+        ))
 
 
 class FromFactoryBundleYAMLTagTest(unittest.TestCase):

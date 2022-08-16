@@ -11,7 +11,7 @@
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: a119d3bff98943768b80ac16b21f499e78396722
+checksum: 0c6eb7d0d309b46c770d44082d59e9e1ab022115
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -314,14 +314,14 @@ components:
         values:
           model: model0
           sectors: '0'
-          serial: !re '^#123\d+$'
+          serial: !re '#123\d+$'
           vendor: vendor0
       storage_1:
         values:
           model: model1
           sectors: '100'
           vendor: vendor1
-          serial: !re '^#123\d+$'
+          serial: !re '#123\d+$'
       storage_2:
         values:
           model: model2
