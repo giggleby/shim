@@ -1,4 +1,5 @@
 component_identity: {
+  component_id: 100
   qual_id: 1
   readable_label: "PART_NO_1234"
 }

@@ -5,8 +5,7 @@
 import unittest
 from unittest import mock
 
-from cros.factory.probe_info_service.app_engine import probe_info_storage_connector
-from cros.factory.probe_info_service.app_engine import probe_metainfo_connector
+from cros.factory.probe_info_service.app_engine import models
 from cros.factory.probe_info_service.app_engine import ps_storage_connector
 from cros.factory.probe_info_service.app_engine import stubby_handler
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
@@ -16,13 +15,12 @@ from cros.factory.probe_info_service.app_engine import unittest_utils
 class StubbyHandlerTest(unittest.TestCase):
 
   def setUp(self):
-    probe_info_storage_connector.GetProbeInfoStorageConnector().Clean()
-    probe_metainfo_connector.GetProbeMetaInfoConnectorInstance().Clean()
     ps_storage_connector.GetProbeStatementStorageConnector().Clean()
+    models.AVLProbeEntryManager().CleanupForTest()
 
     self._stubby_handler = stubby_handler.ProbeInfoService()
 
-  def test_GetProbeSchema(self):
+  def testGetProbeSchema(self):
     # This API is stateless, so just simply verify the call stack.
     req = stubby_pb2.GetProbeSchemaRequest()
     resp = self._stubby_handler.GetProbeSchema(req)
@@ -32,7 +30,7 @@ class StubbyHandlerTest(unittest.TestCase):
             'storage.nvme_storage'
         ])
 
-  def test_GetProbeMetadata_IncludeProbeStatementPreviewOfValidInput(self):
+  def testGetProbeMetadata_IncludeProbeStatementPreviewOfValidInput(self):
     req = stubby_pb2.GetProbeMetadataRequest(
         component_probe_infos=[
             unittest_utils.LoadComponentProbeInfo('1-valid')
@@ -41,7 +39,7 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertEqual(resp.probe_metadatas[0].probe_statement_preview,
                      unittest_utils.LoadProbeStatementString('1-default'))
 
-  def test_GetProbeMetadata_IncludeProbeStatementPreviewOfInvalidInput(self):
+  def testGetProbeMetadata_IncludeProbeStatementPreviewOfInvalidInput(self):
     req = stubby_pb2.GetProbeMetadataRequest(
         component_probe_infos=[
             unittest_utils.LoadComponentProbeInfo('1-param_value_error')
@@ -51,7 +49,7 @@ class StubbyHandlerTest(unittest.TestCase):
         resp.probe_metadatas[0].probe_statement_preview,
         self._stubby_handler.MSG_NO_PROBE_STATEMENT_PREVIEW_INVALID_AVL_DATA)
 
-  def test_GetProbeMetadata_IncludeProbeStatementPreviewWithOverridden(self):
+  def testGetProbeMetadata_IncludeProbeStatementPreviewWithOverridden(self):
     # Setup a qualification with overridden probe statement for the test.
     qual_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     qual_id = qual_probe_info.component_identity.qual_id
@@ -75,7 +73,7 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertEqual(resp.probe_metadatas[0].probe_statement_preview,
                      overridden_ps)
 
-  def test_UpdateComponentProbeInfo_ReturnsExpectedResponse(self):
+  def testUpdateComponentProbeInfo_ReturnsExpectedResponse(self):
     req = stubby_pb2.UpdateComponentProbeInfoRequest(component_probe_infos=[
         unittest_utils.LoadComponentProbeInfo('1-valid')
     ])
@@ -86,22 +84,24 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertEqual(resp.probe_info_parsed_results[0].result_type,
                      stubby_pb2.ProbeInfoParsedResult.ResultType.PASSED)
 
-  def test_UpdateComponentProbeInfo_VerifyComponentProbeInfoIsStored(self):
+  def testUpdateComponentProbeInfo_VerifyComponentProbeInfoIsStored(self):
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
-    req = stubby_pb2.UpdateComponentProbeInfoRequest(
+
+    update_req = stubby_pb2.UpdateComponentProbeInfoRequest(
         component_probe_infos=[comp_probe_info])
+    self._stubby_handler.UpdateComponentProbeInfo(update_req)
 
-    self._stubby_handler.UpdateComponentProbeInfo(req)
+    get_req = stubby_pb2.GetDeviceComponentHwidInfoRequest(
+        component_identities=[comp_probe_info.component_identity])
+    get_resp = self._stubby_handler.GetDeviceComponentHwidInfo(get_req)
 
-    connector = probe_info_storage_connector.GetProbeInfoStorageConnector()
-    stored_comp_probe_info = connector.GetComponentProbeInfo(
-        comp_probe_info.component_identity.component_id,
-        comp_probe_info.component_identity.qual_id)
-    self.assertEqual(stored_comp_probe_info, comp_probe_info)
+    self.assertSequenceEqual(
+        [e.component_probe_info for e in get_resp.component_hwid_infos],
+        [comp_probe_info])
 
   @mock.patch('cros.factory.probe_info_service.app_engine'
               '.probe_tool_manager.ProbeToolManager')
-  def test_UpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsNotZero(
+  def testUpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsNotZero(
       self, mock_probe_tool_manager_class):
     mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
@@ -119,7 +119,7 @@ class StubbyHandlerTest(unittest.TestCase):
 
   @mock.patch('cros.factory.probe_info_service.app_engine'
               '.probe_tool_manager.ProbeToolManager')
-  def test_UpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsZero(
+  def testUpdateComponentProbeInfo_IvokesValidateMethodWithQualIdIsZero(
       self, mock_probe_tool_manager_class):
     mock_probe_tool_manager = mock_probe_tool_manager_class.return_value
     comp_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
@@ -136,7 +136,7 @@ class StubbyHandlerTest(unittest.TestCase):
     mock_probe_tool_manager.ValidateProbeInfo.assert_called_once_with(
         comp_probe_info.probe_info, True)
 
-  def test_StatefulAPIs_Scenario1(self):
+  def testStatefulAPIs_Scenario1(self):
     # 1. The user validates the probe info and finds format error.
     req = stubby_pb2.ValidateProbeInfoRequest(
         is_qual=True, probe_info=unittest_utils.LoadComponentProbeInfo(
@@ -197,7 +197,7 @@ class StubbyHandlerTest(unittest.TestCase):
     resp = self._stubby_handler.GetProbeMetadata(req)
     self.assertFalse(resp.probe_metadatas[0].is_tested)
 
-  def test_StatefulAPIs_Scenario2(self):
+  def testStatefulAPIs_Scenario2(self):
     ps_storage_connector_inst = (
         ps_storage_connector.GetProbeStatementStorageConnector())
 
@@ -298,7 +298,7 @@ class StubbyHandlerTest(unittest.TestCase):
                      resp.probe_metadatas[0].QUAL_OVERRIDDEN)
     self.assertFalse(resp.probe_metadatas[0].is_tested)
 
-  def test_StatefulAPIs_Scenario3(self):
+  def testStatefulAPIs_Scenario3(self):
     # 3 qualifications (Q1, Q2 and Q3) and two devices (D1, D2) are involved.
 
     ps_storage_connector_inst = (
