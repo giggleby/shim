@@ -6,6 +6,7 @@
 """Utility to access ChromeOS Netboot firmware settings."""
 
 import argparse
+import json
 import pprint
 import socket
 import struct
@@ -213,6 +214,23 @@ class Settings:
       value += attr.pack()
     return value
 
+  def toJSON(self):
+    """Output a json object of the Settings object.
+
+    Args:
+        self: The instance to be output to the json format.
+
+    Returns:
+        A json object of the settings.
+    """
+    attributes = {
+        key: str(value.value) if (isinstance(value.value, IpAddressValue)) else
+        value.value.pack().decode('ascii')
+        for key, value in self.attributes.items()
+    }
+    return json.dumps(attributes, sort_keys=True, indent=4).replace(
+        '\\u0000', '')
+
 
 class BytesValue:
   """Class for setting values that are stored as bytes strings."""
@@ -285,6 +303,8 @@ def DefineCommandLineArgs(parser):
   parser.add_argument('--output', '-o',
                       help='Path to store output; if not specified we will '
                            'directly modify the input file')
+  parser.add_argument('-m', '--machine', action="store_true",
+                      help='Output json format')
 
   parser.add_argument('--tftpserverip',
                       help='Set the TFTP server IP address (defaults to DHCP-'
@@ -308,13 +328,17 @@ def DefineCommandLineArgs(parser):
 
 def NetbootFirmwareSettings(options):
   """Main function to access netboot firmware settings."""
-  print('Reading from %s...' % options.input)
+  if not options.machine:
+    print('Reading from %s...' % options.input)
   with open(options.input, 'rb') as f:
     image = Image(f.read())
 
   settings = Settings(image[SETTINGS_FMAP_SECTION])
-  print('Current settings:')
-  pprint.pprint(settings.attributes)
+  if options.machine:
+    print(settings.toJSON())
+  else:
+    print('Current settings:')
+    pprint.pprint(settings.attributes)
 
   if options.tftpserverip:
     settings['tftp_server_ip'] = IpAddressValue(options.tftpserverip)
@@ -340,15 +364,18 @@ def NetbootFirmwareSettings(options):
   # If output is specified with different name, always generate output.
   do_output = output_name != options.input
   if new_blob == image[SETTINGS_FMAP_SECTION][:len(new_blob)]:
-    print('Settings not changed.')
+    if not options.machine:
+      print('Settings not changed.')
   else:
-    print('Settings modified. New settings:')
-    pprint.pprint(settings.attributes)
+    if not options.machine:
+      print('Settings modified. New settings:')
+      pprint.pprint(settings.attributes)
     image[SETTINGS_FMAP_SECTION] = new_blob
     do_output = True
 
   if do_output:
-    print('Generating output to %s...' % output_name)
+    if not options.machine:
+      print('Generating output to %s...' % output_name)
     with open(output_name, 'wb') as f:
       f.write(image.data)
 
