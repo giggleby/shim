@@ -907,6 +907,12 @@ add_file_component() {
   commit_payload "${component}" "" "${md5sum%% *}" \
     "${tmp_file}" "${output_dir}"
   update_json_meta "${json_path}" "${component}" version "${version}"
+  if [ "${component}" = "netboot_firmware" ] &&
+     has_tool python3 && has_tool /usr/local/factory/bin/image_tool; then
+    information="$(/usr/local/factory/bin/image_tool netboot -i "${file}" -m)"
+    # The 'information' will be stored as a JSON serialized string
+    update_json_meta "${json_path}" "${component}" information "${information}"
+  fi
 }
 
 # Cache sudo session earlier.
