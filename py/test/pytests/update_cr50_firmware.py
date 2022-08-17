@@ -130,6 +130,8 @@ KEY_ATTEMPT_CR50_UPDATE_RO_VERSION = device_data.JoinKeys(
     device_data.KEY_FACTORY, 'attempt_cr50_update_ro_version')
 KEY_ATTEMPT_CR50_UPDATE_RW_VERSION = device_data.JoinKeys(
     device_data.KEY_FACTORY, 'attempt_cr50_update_rw_version')
+KEY_CR50_UPDATE_NEED_REBOOT = device_data.JoinKeys(device_data.KEY_FACTORY,
+                                                   'cr50_update_need_reboot')
 
 
 class UpdateCr50FirmwareTest(test_case.TestCase):
@@ -365,6 +367,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
     force_update = self.args.force_ro_mode and not has_rebooted
     if self._CompareFirmwareFileVersion(strictly_greater=force_update):
       session.console.info('Cr50 firmware is up-to-date.')
+      device_data.UpdateDeviceData({KEY_CR50_UPDATE_NEED_REBOOT: False})
       return
 
     # If the DUT has rebooted but the chip version and the given FW version
@@ -382,7 +385,8 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
     session.console.info(msg)
     device_data.UpdateDeviceData({
         KEY_ATTEMPT_CR50_UPDATE_RO_VERSION: self.image_info.ro_fw_version,
-        KEY_ATTEMPT_CR50_UPDATE_RW_VERSION: self.image_info.rw_fw_version
+        KEY_ATTEMPT_CR50_UPDATE_RW_VERSION: self.image_info.rw_fw_version,
+        KEY_CR50_UPDATE_NEED_REBOOT: True
     })
     if self.args.set_recovery_request_train_and_reboot:
       self.dut.CheckCall('crossystem recovery_request=0xC4')
@@ -392,10 +396,12 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
     session.console.info('Cr50 firmware update complete: %s.', update_result)
 
     # Wait for the chip to reboot itself. Otherwise, the test will trigger
-    # tearDone and delete the device data.
+    # tearDown and delete the device data.
     if not self.args.upstart_mode:
       self.WaitTaskEnd()
 
   def _CheckCr50FirmwareVersion(self):
     self._CheckVersionRetry(self._CompareFirmwareFileVersion)
     session.console.info('Cr50 firmware is up-to-date.')
+    if device_data.GetDeviceData(KEY_CR50_UPDATE_NEED_REBOOT) is not None:
+      device_data.DeleteDeviceData(KEY_CR50_UPDATE_NEED_REBOOT, True)
