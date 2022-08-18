@@ -75,6 +75,7 @@ class NFCUSBFunctionTest(unittest.TestCase):
     self.assertCountEqual(results, [{
         'idVendor': '1234',
         'idProduct': '5678',
+        'removable': 'fixed',
         'bus_type': 'usb',
         'device_path': '/sys/bus/usb/devices/3-5',
     }])

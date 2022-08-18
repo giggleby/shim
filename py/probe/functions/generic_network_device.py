@@ -284,9 +284,19 @@ class GenericNetworkDeviceFunction(
 
   @classmethod
   def ProbeEthernet(cls):
-    # Built-in ethernet devices should be attached to either SOC or PCI,
-    # not other buses such as USB, SDIO.
-    return NetworkDevices.ReadSysfsDeviceIds('ethernet', ignore_others=True)
+    # Built-in ethernet devices should be attached to either SOC, PCI, or
+    # internal USB/SDIO, not other buses such as external USB/SDIO.
+
+    def _FilterEthernetDevice(device):
+      bus = device.get('bus_type', 'unknown')
+      removable = device.get('removable', 'unknown')
+      return bus == 'pci' or removable == 'fixed'
+
+    devices = list(
+        filter(_FilterEthernetDevice,
+               NetworkDevices.ReadSysfsDeviceIds('ethernet')))
+
+    return devices
 
   @classmethod
   def ProbeCellular(cls):
