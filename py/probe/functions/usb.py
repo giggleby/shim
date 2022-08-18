@@ -10,7 +10,7 @@ from cros.factory.probe.lib import cached_probe_function
 
 
 REQUIRED_FIELDS = ['idVendor', 'idProduct']
-OPTIONAL_FIELDS = ['manufacturer', 'product', 'bcdDevice']
+OPTIONAL_FIELDS = ['manufacturer', 'product', 'bcdDevice', 'removable']
 
 
 def ReadUSBSysfs(dir_path):
