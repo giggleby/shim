@@ -13,7 +13,6 @@ from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
-from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 
 # Shorter identifiers.
@@ -92,8 +91,6 @@ class ChangeUnitTestBase(unittest.TestCase):
 
     self.assertEqual(expected, db_builder.Build().DumpDataWithoutChecksum())
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testApplyPatchesExtractedFromDiff(self):
     """Shared implementation to verify change unit extraction and patch.
 
@@ -170,8 +167,6 @@ class CompChangeTest(ChangeUnitTestBase):
       _DIFF_UPDATE_COMPONENT,
   ]
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchCompChange_New(self):
     new_comp = _CompChange(
         _GenerateNewComponentAnalysis(3), {
@@ -183,8 +178,6 @@ class CompChangeTest(ChangeUnitTestBase):
         self._LoadDBContentWithDiffPatched(self._DIFF_ADD_COMPONENT),
         [new_comp])
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchCompChange_Update(self):
     update_comp = _CompChange(
         _HWIDComponentAnalysisResult(
@@ -207,8 +200,6 @@ class CompChangeTest(ChangeUnitTestBase):
         self._LoadDBContentWithDiffPatched(self._DIFF_UPDATE_COMPONENT),
         [update_comp])
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchCompChange_UpdateFail(self):
     # No matched comp name
     update_comp = _CompChange(
@@ -291,8 +282,6 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
       _DIFF_ADD_FOLLOWING_ENCODING_COMBINATION,
   ]
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchAddFirstEncodingCombination_Success(self):
     first_encoding = _AddEncodingCombination(True, 'new_field', 'comp_cls_2',
                                              ['comp_2_1', 'comp_2_2'], [])
@@ -301,8 +290,6 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
         self._LoadDBContentWithDiffPatched(
             self._DIFF_ADD_FIRST_ENCODING_COMBINATION), [first_encoding])
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchAddFirstEncodingCombination_ExistingEncodedFieldName(self):
     first_encoding = _AddEncodingCombination(
         True, 'comp_cls_23_field', 'comp_cls_2', ['comp_2_1', 'comp_2_2'], [])
@@ -311,8 +298,6 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
       self.assertRaises(_ApplyChangeUnitException, first_encoding.Patch,
                         self._builder)
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchAddFollowingEncodingCombination_Success(self):
     # Add more combinations and check if the bit_length was enough.
     following_encodings = [
@@ -324,8 +309,6 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
         self._LoadDBContentWithDiffPatched(
             self._DIFF_ADD_FOLLOWING_ENCODING_COMBINATION), following_encodings)
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchAddFollowingEncodingCombination_NoSuchEncodedFieldName(self):
     following_encoding = _AddEncodingCombination(False, 'no_such_encoded_field',
                                                  'comp_cls_2',
@@ -361,8 +344,6 @@ class NewImageIdToExistingEncodingPatternTest(ChangeUnitTestBase):
       _DIFF_ADD_NEW_IMAGE_ID_TO_EXISTING_PATTERN,
   ]
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchNewImageToExistingEncodingPattern_Success(self):
     new_image_existing_pattern = (
         _NewImageIdToExistingEncodingPattern(image_name='DVT', image_id=3,
@@ -409,8 +390,6 @@ class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
       _DIFF_ADD_NEW_IMAGE_ID_TO_NEW_PATTERN,
   ]
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchNewImageToNewEncodingPattern_Success(self):
     new_image_new_pattern = _NewImageIdToNewEncodingPattern(
         image_descs=[
@@ -427,8 +406,6 @@ class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
             self._DIFF_ADD_NEW_IMAGE_ID_TO_NEW_PATTERN),
         [new_image_new_pattern])
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchNewImageToNewEncodingPattern_ImageIDAlreadyExists(self):
     new_image_new_pattern = _NewImageIdToNewEncodingPattern(
         image_descs=[
@@ -464,8 +441,6 @@ class ReplaceRulesTest(ChangeUnitTestBase):
       _DIFF_REPLACE_RULES,
   ]
 
-  # TODO(b/242605296)
-  @label_utils.Informational
   def testPatchReplaceRules_Success(self):
     replace_rules = _ReplaceRules([{
         'name': 'device_info.image_id',
