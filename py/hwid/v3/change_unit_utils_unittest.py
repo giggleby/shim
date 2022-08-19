@@ -6,7 +6,7 @@
 import os.path
 import re
 import textwrap
-from typing import Sequence
+from typing import Iterable, Sequence
 import unittest
 
 from cros.factory.hwid.v3 import builder
@@ -29,6 +29,8 @@ _NewImageIdToExistingEncodingPattern = (
 _NewImageIdToNewEncodingPattern = (
     change_unit_utils.NewImageIdToNewEncodingPattern)
 _ReplaceRules = change_unit_utils.ReplaceRules
+_ChangeUnitManager = change_unit_utils.ChangeUnitManager
+_ApprovalStatus = change_unit_utils.ApprovalStatus
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_DATABASE_NAME = 'test-change-unit-db.yaml'
@@ -82,7 +84,7 @@ class ChangeUnitTestBase(unittest.TestCase):
     return _ApplyUnifiedDiff(self._base_db_content, diff)
 
   def _AssertApplyingPatchesEqualsData(self, expected: str,
-                                       change_units: Sequence[_ChangeUnit]):
+                                       change_units: Iterable[_ChangeUnit]):
 
     with builder.DatabaseBuilder.FromFilePath(
         _TEST_DATABASE_PATH) as db_builder:
@@ -106,8 +108,9 @@ class ChangeUnitTestBase(unittest.TestCase):
         target_db_content = self._LoadDBContentWithDiffPatched(diff)
         target_db = database.Database.LoadData(target_db_content)
 
-        extracted = change_unit_utils.ExtractChangeUnitsFromDBChanges(
+        change_unit_manager = change_unit_utils.ChangeUnitManager(
             self._base_db, target_db)
+        extracted = change_unit_manager.GetChangeUnits().values()
 
         self._AssertApplyingPatchesEqualsData(target_db_content, extracted)
 
@@ -168,17 +171,23 @@ class CompChangeTest(ChangeUnitTestBase):
   ]
 
   def testPatchCompChange_New(self):
+    comp_info = database.ComponentInfo({
+        'field1': 'value1',
+        'field2': 'value2'
+    }, 'supported', {'info1': 'val1'})
     new_comp = _CompChange(
-        _GenerateNewComponentAnalysis(3), {
-            'field1': 'value1',
-            'field2': 'value2'
-        }, {'info1': 'val1'})
+        _GenerateNewComponentAnalysis(3), comp_info.values,
+        comp_info.information, comp_info.comp_hash)
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(self._DIFF_ADD_COMPONENT),
         [new_comp])
 
   def testPatchCompChange_Update(self):
+    comp_info = database.ComponentInfo({
+        'field1': 'value1',
+        'field2': 'value2'
+    }, 'deprecated', {'info1': 'val1'})
     update_comp = _CompChange(
         _HWIDComponentAnalysisResult(
             comp_cls='comp_cls_1', comp_name='updated_comp',
@@ -191,10 +200,8 @@ class CompChangeTest(ChangeUnitTestBase):
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
                     _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
-            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO), {
-                'field1': 'value1',
-                'field2': 'value2'
-            }, {'info1': 'val1'})
+            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
+        comp_info.values, comp_info.information, comp_info.comp_hash)
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(self._DIFF_UPDATE_COMPONENT),
@@ -202,10 +209,14 @@ class CompChangeTest(ChangeUnitTestBase):
 
   def testPatchCompChange_UpdateFail(self):
     # No matched comp name
+    comp_info = database.ComponentInfo({
+        'field1': 'value1',
+        'field2': 'value2'
+    }, 'deprecated', {'info1': 'val1'})
     update_comp = _CompChange(
         _HWIDComponentAnalysisResult(
             comp_cls='comp_cls_1', comp_name='updated_comp',
-            support_status='deprecated', is_newly_added=False,
+            support_status=comp_info.status, is_newly_added=False,
             comp_name_info=None, seq_no=2, comp_name_with_correct_seq_no=None,
             null_values=None, diff_prev=_DiffStatus(
                 unchanged=False, name_changed=True, support_status_changed=True,
@@ -214,10 +225,8 @@ class CompChangeTest(ChangeUnitTestBase):
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
                     _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
-            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO), {
-                'field1': 'value1',
-                'field2': 'value2'
-            }, {'info1': 'val1'})
+            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
+        comp_info.values, comp_info.information, comp_info.comp_hash)
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, update_comp.Patch,
@@ -297,8 +306,8 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   def testPatchAddFirstEncodingCombination_Success(self):
     first_encoding = _AddEncodingCombination(
         is_first=True, encoded_field_name='new_field', comp_cls='comp_cls_2',
-        comp_hashes=[self._comp_2_1_hash,
-                     self._comp_2_2_hash], pattern_idxes=[])
+        comp_hashes=[self._comp_2_1_hash, self._comp_2_2_hash],
+        pattern_idxes=[], comp_names=['comp_2_1', 'comp_2_2'])
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
@@ -307,9 +316,9 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   def testPatchAddFirstEncodingCombination_ExistingEncodedFieldName(self):
     first_encoding = _AddEncodingCombination(
         is_first=True, encoded_field_name='comp_cls_23_field',
-        comp_cls='comp_cls_2',
-        comp_hashes=[self._comp_2_1_hash,
-                     self._comp_2_2_hash], pattern_idxes=[])
+        comp_cls='comp_cls_2', comp_hashes=[
+            self._comp_2_1_hash, self._comp_2_2_hash
+        ], pattern_idxes=[], comp_names=['comp_2_1', 'comp_2_2'])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, first_encoding.Patch,
@@ -321,7 +330,8 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
         _AddEncodingCombination(
             is_first=False, encoded_field_name='comp_cls_1_field',
             comp_cls='comp_cls_1', comp_hashes=[self._comp_1_2_hash] * i,
-            pattern_idxes=[0]) for i in range(2, 5)
+            pattern_idxes=[0], comp_names=['comp_1_2'] * i)
+        for i in range(2, 5)
     ]
 
     self._AssertApplyingPatchesEqualsData(
@@ -331,9 +341,9 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   def testPatchAddFollowingEncodingCombination_NoSuchEncodedFieldName(self):
     following_encoding = _AddEncodingCombination(
         is_first=False, encoded_field_name='no_such_encoded_field',
-        comp_cls='comp_cls_2',
-        comp_hashes=[self._comp_2_1_hash,
-                     self._comp_2_2_hash], pattern_idxes=[0])
+        comp_cls='comp_cls_2', comp_hashes=[
+            self._comp_2_1_hash, self._comp_2_2_hash
+        ], pattern_idxes=[0], comp_names=['comp_2_1', 'comp_2_2'])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, following_encoding.Patch,
@@ -368,7 +378,7 @@ class NewImageIdToExistingEncodingPatternTest(ChangeUnitTestBase):
   def testPatchNewImageToExistingEncodingPattern_Success(self):
     new_image_existing_pattern = (
         _NewImageIdToExistingEncodingPattern(image_name='DVT', image_id=3,
-                                             pattern_idx=0))
+                                             pattern_idx=0, last=False))
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
@@ -420,7 +430,7 @@ class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
             database.PatternField('mainboard_field', 10),
             database.PatternField('cpu_field', 5),
             database.PatternField('comp_cls_1_field', 2),
-        ])
+        ], contains_last=True)
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
@@ -432,7 +442,7 @@ class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
         image_descs=[
             _ImageDesc(1, 'DVT'),
             _ImageDesc(4, 'PVT'),
-        ], bit_mapping=[])
+        ], bit_mapping=[], contains_last=True)
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, new_image_new_pattern.Patch,
@@ -599,20 +609,25 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
   def testComponentRenameCollision(self):
     # Add a new component comp_1_2 and rename existing comp_1_2 to comp_1_3.
+    comp_info_1 = database.ComponentInfo({'value': '3'}, 'supported')
+    comp_info_2 = database.ComponentInfo({'value': '2'}, 'deprecated')
+
     comp_change_cus = [
         _CompChange(  # Add component.
             analysis_result=_HWIDComponentAnalysisResult(
                 comp_cls='comp_cls_1', comp_name='comp_1_2',
-                support_status='supported', is_newly_added=True,
+                support_status=comp_info_1.status, is_newly_added=True,
                 comp_name_info=None, seq_no=3,
                 comp_name_with_correct_seq_no=None, null_values=None,
                 diff_prev=None, link_avl=False,
                 probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
-            probe_values={'value': '3'}, information=None),
+            probe_values=comp_info_1.values,
+            information=comp_info_1.information,
+            comp_hash=comp_info_1.comp_hash),
         _CompChange(  # Rename component.
             analysis_result=_HWIDComponentAnalysisResult(
                 comp_cls='comp_cls_1', comp_name='comp_1_3',
-                support_status='deprecated', is_newly_added=False,
+                support_status=comp_info_2.status, is_newly_added=False,
                 comp_name_info=None, seq_no=2,
                 comp_name_with_correct_seq_no=None, null_values=None,
                 diff_prev=_DiffStatus(
@@ -624,7 +639,9 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
                         _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
                 probe_value_alignment_status=(
                     _PVAlignmentStatus.NO_PROBE_INFO)),
-            probe_values={'value': '2'}, information=None),
+            probe_values=comp_info_2.values,
+            information=comp_info_2.information,
+            comp_hash=comp_info_2.comp_hash),
     ]
     comp_1_1_hash = database.ComponentInfo(values={
         'value': '1'
@@ -639,11 +656,11 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
         _AddEncodingCombination(
             is_first=True, encoded_field_name='new_comp_cls_1_field',
             comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_2_hash],
-            pattern_idxes=[0]),
+            pattern_idxes=[0], comp_names=['comp_1_1', 'comp_1_2']),
         _AddEncodingCombination(
             is_first=False, encoded_field_name='new_comp_cls_1_field',
             comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_3_hash],
-            pattern_idxes=[0]),
+            pattern_idxes=[0], comp_names=['comp_1_1', 'comp_1_3']),
     ]
     expected_diff = textwrap.dedent('''\
         ---
@@ -699,6 +716,259 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(expected_diff),
         comp_change_cus + add_comb_cus)
+
+
+class ChangeUnitManagerTest(unittest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._base_db_content = file_utils.ReadFile(_TEST_DATABASE_PATH)
+    self._base_db = database.Database.LoadData(self._base_db_content)
+    self.maxDiff = None
+
+  def testDependencyGraph(self):
+    new_db_content = _ApplyUnifiedDiff(
+        self._base_db_content,
+        textwrap.dedent('''\
+            ---
+            +++
+            @@ -8,11 +8,17 @@
+             image_id:
+               0: PROTO
+               1: EVT
+            +  2: NEW_PHASE
+            +  3: PHASE_NO_NEW_PATTERN_1
+            +  4: PHASE_NO_NEW_PATTERN_2
+            +  5: PHASE_NEW_PATTERN_1
+            +  6: PHASE_NEW_PATTERN_2
+
+             pattern:
+             - image_ids:
+               - 0
+               - 1
+            +  - 2
+               encoding_scheme: base8192
+               fields:
+               - mainboard_field: 3
+            @@ -25,6 +31,23 @@
+               - ro_main_firmware_field: 1
+               - comp_cls_1_field: 2
+               - comp_cls_23_field: 2
+            +  - new_field: 1
+            +  - new_field: 1
+            +- image_ids:
+            +  - 3
+            +  - 4
+            +  encoding_scheme: base8192
+            +  fields:
+            +  - cpu_field: 5
+            +  - comp_cls_1_field: 2
+            +  - ro_main_firmware_field: 1
+            +- image_ids:
+            +  - 5
+            +  - 6
+            +  encoding_scheme: base8192
+            +  fields:
+            +  - comp_cls_1_field: 2
+            +  - new_field: 2
+
+             encoded_fields:
+               chassis_field:
+            @@ -64,6 +87,17 @@
+                 1:
+                   comp_cls_2: comp_2_2
+                   comp_cls_3: comp_3_2
+            +  new_field:
+            +    0:
+            +      comp_cls_1: new_comp
+            +    1:
+            +      comp_cls_1:
+            +      - comp_1_1
+            +      - comp_1_2
+            +    2:
+            +      comp_cls_1:
+            +      - new_comp
+            +      - new_comp
+
+             components:
+               mainboard:
+            @@ -98,6 +132,9 @@
+                   comp_1_2:
+                     values:
+                       value: '2'
+            +      new_comp:
+            +        values:
+            +          value: '3'
+               comp_cls_2:
+                 items:
+                   comp_2_1:
+    '''))
+
+    manager = _ChangeUnitManager(self._base_db,
+                                 database.Database.LoadData(new_db_content))
+
+    graph = manager.ExportDependencyGraph()
+
+    self.assertDictEqual(
+        {
+            'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp': {
+                # Following combinations depends on the first.
+                'AddEncodingCombination:new_field-comp_cls_1:comp_1_1,comp_1_2',
+                # Following combinations depends on the first.
+                'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp',
+                # new_field is included in this image
+                'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+            },
+            # Not depended by other change units.
+            'AddEncodingCombination:new_field-comp_cls_1:comp_1_1,comp_1_2':
+                set(),
+            # Not depended by other change units.
+            'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp':
+                set(),
+            'CompChange:comp_cls_1:new_comp(new)': {
+                # new_comp is mentioned at these combinations.
+                'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp',
+                'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp'
+            },
+            'NewImageIdToExistingEncodingPattern:NEW_PHASE(2)': {
+                # Change units containing the last image id depends on other
+                # image id additions.
+                'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+            },
+            # Not depended by other change units.
+            'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)':
+                set(),
+            'NewImageIdToNewEncodingPattern:PHASE_NO_NEW_PATTERN_1(3)': {
+                # change units containing the last image id depend on other
+                # image id additions.
+                'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+            },
+        },
+        graph)
+
+  def testApprovalStatus(self):
+
+    new_db_content = _ApplyUnifiedDiff(
+        self._base_db_content,
+        textwrap.dedent('''\
+            ---
+            +++
+            @@ -64,6 +64,9 @@
+                 1:
+                   comp_cls_2: comp_2_2
+                   comp_cls_3: comp_3_2
+            +  new_field:
+            +    0:
+            +      comp_cls_1: new_comp
+
+             components:
+               mainboard:
+            @@ -98,6 +101,9 @@
+                   comp_1_2:
+                     values:
+                       value: '2'
+            +      new_comp:
+            +        values:
+            +          value: '3'
+               comp_cls_2:
+                 items:
+                   comp_2_1:
+        '''))
+
+    diff_none = ''
+    diff_comp = textwrap.dedent('''\
+        ---
+        +++
+        @@ -98,6 +98,9 @@
+               comp_1_2:
+                 values:
+                   value: '2'
+        +      new_comp:
+        +        values:
+        +          value: '3'
+           comp_cls_2:
+             items:
+               comp_2_1:
+    ''')
+    diff_encoded_fields = textwrap.dedent('''\
+        ---
+        +++
+        @@ -64,6 +64,9 @@
+             1:
+               comp_cls_2: comp_2_2
+               comp_cls_3: comp_3_2
+        +  new_field:
+        +    0:
+        +      comp_cls_1: new_comp
+
+         components:
+           mainboard:
+    ''')
+    diff_comp_encoded_fields = textwrap.dedent('''\
+        ---
+        +++
+        @@ -64,6 +64,9 @@
+             1:
+               comp_cls_2: comp_2_2
+               comp_cls_3: comp_3_2
+        +  new_field:
+        +    0:
+        +      comp_cls_1: new_comp
+
+         components:
+           mainboard:
+        @@ -98,6 +101,9 @@
+               comp_1_2:
+                 values:
+                   value: '2'
+        +      new_comp:
+        +        values:
+        +          value: '3'
+           comp_cls_2:
+             items:
+               comp_2_1:
+    ''')
+    expected_diff_per_status = {
+        (_ApprovalStatus.AUTO_APPROVED, _ApprovalStatus.AUTO_APPROVED): (
+            diff_comp_encoded_fields, diff_none),
+        (_ApprovalStatus.AUTO_APPROVED, _ApprovalStatus.MANUAL_REVIEW_REQUIRED):
+            (diff_comp, diff_encoded_fields),
+        (_ApprovalStatus.MANUAL_REVIEW_REQUIRED, _ApprovalStatus.AUTO_APPROVED):
+            (diff_none, diff_comp_encoded_fields),
+        (_ApprovalStatus.MANUAL_REVIEW_REQUIRED,
+         _ApprovalStatus.MANUAL_REVIEW_REQUIRED): (
+            diff_none, diff_comp_encoded_fields),
+    }
+
+    for (status_comp,
+         status_encoded_field), (auto_mergeable_diff, review_required_diff) in (
+             expected_diff_per_status.items()):
+      with self.subTest(status_comp=status_comp,
+                        status_encoded_field=status_encoded_field):
+        manager = _ChangeUnitManager(self._base_db,
+                                     database.Database.LoadData(new_db_content))
+        identity_map = {}
+        for identity, change_unit in manager.GetChangeUnits().items():
+          identity_map[repr(change_unit)] = identity
+
+        comp_change_repr = 'CompChange:comp_cls_1:new_comp(new)'
+        add_combination_repr = (
+            'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp')
+
+        manager.SetApprovalStatus({
+            identity_map[comp_change_repr]: status_comp,
+            identity_map[add_combination_repr]: status_encoded_field
+        })
+
+        auto_mergeable_db, review_required_db = manager.SplitChange()
+
+        self.assertEqual(
+            _ApplyUnifiedDiff(self._base_db_content, auto_mergeable_diff),
+            auto_mergeable_db.DumpDataWithoutChecksum())
+        self.assertEqual(
+            _ApplyUnifiedDiff(auto_mergeable_db.DumpDataWithoutChecksum(),
+                              review_required_diff),
+            review_required_db.DumpDataWithoutChecksum())
 
 
 if __name__ == '__main__':
