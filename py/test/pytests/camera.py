@@ -304,13 +304,10 @@ class CameraTest(test_case.TestCase):
           ('String "front" or "rear" for the camera to test. '
            'If in normal mode, default is automatically searching one. '
            'If in e2e mode, default is "front".'), default=None),
-      Arg('camera_usb_vid', str,
-          ('The USB vendor id of the camera to test. '
-           'For testing an external USB camera. '
-           'Only valid in normal mode and if camera_facing is not selected. '),
-          default=None),
-      Arg('camera_usb_pid', str,
-          ('The USB product id of the camera to test. '
+      Arg('camera_usb_vid_pid', list,
+          ('**[vid, pid]** '
+           'The USB vendor id and product id of the camera to test. '
+           'Each is a hex string. '
            'For testing an external USB camera. '
            'Only valid in normal mode and if camera_facing is not selected. '),
           default=None),
@@ -729,15 +726,14 @@ class CameraTest(test_case.TestCase):
           TestModes.face
       ]:
         self.need_transmit_from_ui = True
+    elif (self.args.camera_facing is None and
+          self.args.camera_usb_vid_pid is not None and
+          len(self.args.camera_usb_vid_pid) == 2):
+      self.camera_device = self.dut.camera.GetCameraDeviceByUsbVidPid(
+          self.args.camera_usb_vid_pid[0], self.args.camera_usb_vid_pid[1])
     else:
-      if (self.args.camera_facing is None and
-          self.args.camera_usb_pid is not None and
-          self.args.camera_usb_vid is not None):
-        self.camera_device = self.dut.camera.GetCameraDeviceByUsbVidPid(
-            self.args.camera_usb_vid, self.args.camera_usb_pid)
-      else:
-        self.camera_device = self.dut.camera.GetCameraDevice(
-            self.args.camera_facing)
+      self.camera_device = self.dut.camera.GetCameraDevice(
+          self.args.camera_facing)
 
   def runTest(self):
     self.ui.StartCountdownTimer(self.args.timeout_secs, self._Timeout)

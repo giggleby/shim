@@ -201,11 +201,14 @@ class ChromeOSCamera(camera.Camera):
     camera_paths = GetValidCameraPaths(self._device)
     match_index = -1
     for path, index in camera_paths:
+      dev_removable = self._device.ReadFile(
+          os.path.join(path, 'device', '..', 'removable')).strip()
       dev_vid = self._device.ReadFile(
           os.path.join(path, 'device', '..', 'idVendor')).strip()
       dev_pid = self._device.ReadFile(
           os.path.join(path, 'device', '..', 'idProduct')).strip()
-      if vid.lower() == dev_vid and pid.lower() == dev_pid:
+      if (dev_removable != 'fixed' and vid.lower() == dev_vid and
+          pid.lower() == dev_pid):
         if match_index != -1:
           raise CameraError(
               'Found multiple cameras with VID:PID %s:%s' % (vid, pid))
