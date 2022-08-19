@@ -10,6 +10,9 @@ import time
 
 import serial
 
+# The classes here supporting Cr50 also support Ti50.
+# TODO(b/242588198): Consider updating Cr50 names to GSC.
+
 # Timeout for the unresponding serial console.
 SERIAL_CONSOLE_TIMEOUT = 1
 # Buffer size for each read of cr50 uart console.
@@ -73,14 +76,33 @@ class Cr50Console:
       return ''
 
     end_of_cmd = '__END_OF_COMMAND__'
-    start_token = f'{cmd}\r\n'.encode()
+    start_token = f'{cmd}\r'.encode()
+
+    # Ti50 0.22.4 outputs \r\r\n as its line ending, so split the token to skip
+    # over any excess \r characters.
+    #
+    # TODO(b/242980684): Remove the start_token/start_token_end split once Ti50
+    # uses \r\n.
+    start_token_end = '\n'.encode()
     end_token = f'> {end_of_cmd}'.encode()
     # First '\n' forces the console to print a new line (b'>').
-    ser.write(f'\n{cmd}\n{end_of_cmd}\n'.encode())
+    ser.write(f'\n{cmd}\n'.encode())
 
     output = ser.read_until(start_token, CR50_CONSOLE_BUFFER_SIZE_BYTES)
     if not output.endswith(start_token):
       return ''
+    output = ser.read_until(start_token_end, CR50_CONSOLE_BUFFER_SIZE_BYTES)
+    if not output.endswith(start_token_end):
+      return ''
+
+    # Ti50 0.22.4 outputs "Console busy!" whenever console input is received
+    # while a console command is in progress. Give it some time to complete
+    # before sending end_of_cmd.
+    #
+    # TODO(b/240708372): Remove this sleep and enter end_of_cmd along with cmd
+    # once Ti50 stops outputting "Console busy!" messages.
+    time.sleep(0.2)
+    ser.write(f'{end_of_cmd}\n'.encode())
     output = ser.read_until(end_token, CR50_CONSOLE_BUFFER_SIZE_BYTES)
     if not output.endswith(end_token):
       return ''
