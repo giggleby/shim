@@ -12,10 +12,11 @@ from cros.factory.hwid_extractor import cr50
 from cros.factory.hwid_extractor import rlz
 from cros.factory.hwid_extractor import servod
 
-# SuzyQ usb device id.
+# SuzyQ usb device ids.
 CR50_USB = '18d1:5014'
-CR50_LSUSB_CMD = ['lsusb', '-vd', CR50_USB]
-CR50_LSUSB_SERIAL_RE = r'iSerial +\d+ (\S+)\s'
+TI50_USB = '18d1:504a'
+GSC_LSUSB_CMD = ['lsusb', '-vd']
+GSC_LSUSB_SERIAL_RE = r'iSerial +\d+ (\S+)\s'
 
 RLZ_DATA = rlz.RLZData()
 
@@ -27,11 +28,17 @@ def _ScanCCDDevices():
     Serial name of the first found CCD device, in uppercase.
   """
   logging.info('Scan serial names of CCD devices')
-  try:
-    output = subprocess.check_output(CR50_LSUSB_CMD, encoding='utf-8')
-  except subprocess.CalledProcessError:
+  output = ''
+  for usb_device_id in [CR50_USB, TI50_USB]:
+    try:
+      output += subprocess.check_output(GSC_LSUSB_CMD + [usb_device_id],
+                                        encoding='utf-8')
+    except subprocess.CalledProcessError:
+      pass
+
+  if not output:
     return None
-  serials = re.findall(CR50_LSUSB_SERIAL_RE, output)
+  serials = re.findall(GSC_LSUSB_SERIAL_RE, output)
   if not serials:
     # iSerial should be listed in the output. If not, the user may not have
     # permission to get iSerial.
@@ -40,7 +47,7 @@ def _ScanCCDDevices():
   if len(serials) > 1:
     raise RuntimeError('Working with multiple devices is not supported.')
   logging.info('Serial name of CCD devices: %s', serials)
-  return serials[0].upper()
+  return serials[0]
 
 
 @contextlib.contextmanager
