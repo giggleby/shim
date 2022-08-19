@@ -52,7 +52,8 @@ DLC_CACHE_TAR_PATH = '/tmp/dlc_cache.tar'
 # mapping here.
 JOB_TO_INSTANCE_KEY = {
     'ml-service': 'TASK',
-    'timberslide': 'LOG_PATH'
+    'timberslide': 'LOG_PATH',
+    'timberslide-watcher': 'LOG_PATH',
 }
 
 
