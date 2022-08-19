@@ -20,7 +20,7 @@ VPD_BIN = '/usr/sbin/vpd'
 CMD_TIMEOUT_SECOND = 20
 
 # The servo type names from servod.
-SERVO_TYPE_CCD = 'ccd_cr50'
+SERVO_TYPE_CCD = 'ccd_gsc'
 
 # The config of the ap commands of each board.
 AP_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'ap_config.json')
@@ -117,7 +117,7 @@ def _GetSerialNumber(firmware_binary_file):
 
 def _CheckServoTypeIsCCD(dut_control):
   servo_type = dut_control.GetValue('servo_type')
-  if servo_type != SERVO_TYPE_CCD:
+  if not servo_type.startswith('ccd_'):
     raise RuntimeError(f'Servo type is not ccd, got: {servo_type}')
 
 
