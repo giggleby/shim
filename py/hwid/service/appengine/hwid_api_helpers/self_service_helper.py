@@ -681,3 +681,90 @@ class SelfServiceHelper:
         raise protorpc_utils.ProtoRPCException(
             protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from ex
     return hwid_api_messages_pb2.SetChangeClBotApprovalStatusResponse()
+
+  def SetFirmwareInfoSupportStatus(self, request):
+    project = _NormalizeProjectString(request.project)
+    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    resp = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusResponse()
+    try:
+      self._UpdateHWIDDBDataIfNeed(live_hwid_repo, project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
+    except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+    firmware_comps = action.GetComponents(with_classes=[
+        'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware', 'firmware_keys'
+    ])
+
+    def _GetBundleUUIDsByVersionString(ro_main_firmware_comps):
+      # TODO(wyuang): currently it is possible to create multiple UUIDs for
+      # the same component. Need to investigate how to avoid duplicated
+      # firmware components.
+      bundle_uuids = set()
+      pattern = re.compile(r'(?:google_[a-z0-9]+\.)?(\d+\.\d+\.\d+)',
+                           flags=re.I)
+      match = pattern.fullmatch(request.version_string)
+      if not match:
+        return bundle_uuids
+      ro_version = match.group(1)
+      for comp_info in ro_main_firmware_comps.values():
+        if not comp_info.bundle_uuids:
+          continue
+        match = pattern.fullmatch(comp_info.values.get('version', ''))
+        if match and match.group(1) == ro_version:
+          bundle_uuids.update(comp_info.bundle_uuids)
+      return bundle_uuids
+
+    bundle_uuids = _GetBundleUUIDsByVersionString(
+        firmware_comps.get('ro_main_firmware', {}))
+    db = action.GetDBV3()
+    changed = False
+    for comp_cls, comps in firmware_comps.items():
+      for comp_name, comp_info in comps.items():
+        if comp_info.status in (v3_common.COMPONENT_STATUS.deprecated,
+                                v3_common.COMPONENT_STATUS.supported):
+          continue
+        if bundle_uuids.intersection(comp_info.bundle_uuids):
+          db.SetComponentStatus(comp_cls, comp_name,
+                                v3_common.COMPONENT_STATUS.supported)
+          changed = True
+
+    if not changed:
+      logging.info('No component is added/modified to DB: %s', project)
+      return resp
+
+    # Create commit
+    internal_db = action.PatchHeader(
+        db.DumpDataWithoutChecksum(internal=True,
+                                   suppress_support_status=False))
+    external_db = action.PatchHeader(
+        db.DumpDataWithoutChecksum(internal=False,
+                                   suppress_support_status=False))
+
+    # TODO(wyuang): Include bug number in the commit message. Currently there's
+    # no bug number in the firmware test plan on DLM.
+    commit_msg = textwrap.dedent(f"""\
+        ({int(time.time())}) {project}: HWID Firmware Support Status Update
+
+        Requested by: {request.original_requester}
+        Warning: all posted comments will be sent back to the requester.
+
+        %s""") % request.description
+
+    try:
+      cl_number = live_hwid_repo.CommitHWIDDB(
+          name=project, hwid_db_contents=external_db, commit_msg=commit_msg,
+          reviewers=request.reviewer_emails, cc_list=request.cc_emails,
+          auto_approved=request.auto_approved,
+          hwid_db_contents_internal=internal_db)
+    except hwid_repo.HWIDRepoError:
+      logging.exception(
+          'Caught an unexpected exception while uploading a HWID CL.')
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
+    resp.commit.cl_number = cl_number
+    resp.commit.new_hwid_db_contents = (
+        v3_action_helper.HWIDV3SelfServiceActionHelper.RemoveHeader(external_db)
+    )
+
+    return resp

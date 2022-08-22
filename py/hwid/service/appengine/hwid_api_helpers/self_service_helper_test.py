@@ -1003,6 +1003,97 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
 
+  @mock.patch('cros.factory.hwid.service.appengine.hwid_action_helpers'
+              '.v3_self_service_helper.HWIDV3SelfServiceActionHelper'
+              '.RemoveHeader')
+  def testSetFirmwareInfoSupportStatus_Succeed(self, remove_header):
+    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    mock_db = mock.MagicMock(spec=database.WritableDatabase)
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock_db
+    action.GetComponents.return_value = self._CreateFirmwareComponents()
+    remove_header.return_value = 'db data'
+    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+
+    req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+        project='proj1', version_string='google_proj1.1111.1.1')
+    resp = self._ss_helper.SetFirmwareInfoSupportStatus(req)
+
+    self.assertEqual(mock_db.SetComponentStatus.call_count, 2)
+    mock_db.SetComponentStatus.assert_has_calls([
+        mock.call('ro_main_firmware', 'ro_main_firmware_1', 'supported'),
+        mock.call('firmware_keys', 'firmware_keys_1', 'supported')
+    ], any_order=True)
+    self.assertEqual(resp.commit.cl_number, 123)
+    self.assertEqual(resp.commit.new_hwid_db_contents, 'db data')
+
+  def testSetFirmwareInfoSupportStatus_ProjectNotFound(self):
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+
+    req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+        project='notproj')
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.SetFirmwareInfoSupportStatus(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
+  def testSetFirmwareInfoSupportStatus_NoChange(self):
+    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
+    mock_db = mock.MagicMock(spec=database.WritableDatabase)
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock_db
+    action.GetComponents.return_value = self._CreateFirmwareComponents()
+    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+
+    req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+        project='proj1', version_string='google_proj1.2222.2.2')
+    resp = self._ss_helper.SetFirmwareInfoSupportStatus(req)
+
+    mock_db.SetComponentStatus.assert_not_called()
+    self.assertEqual(
+        resp, hwid_api_messages_pb2.SetFirmwareInfoSupportStatusResponse())
+
+  def testSetFirmwareInfoSupportStatus_InternalError(self):
+    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.side_effect = [hwid_repo.HWIDRepoError]
+    mock_db = mock.MagicMock(spec=database.WritableDatabase)
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    action.GetDBV3.return_value = mock_db
+    action.GetComponents.return_value = self._CreateFirmwareComponents()
+    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+
+    req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+        project='proj1', version_string='google_proj1.1111.1.1')
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.SetFirmwareInfoSupportStatus(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
+
+  @classmethod
+  def _CreateFirmwareComponents(cls):
+    return {
+        'ro_main_firmware': {
+            'ro_main_firmware_1':
+                database.ComponentInfo(
+                    values={'version': 'Google_Proj1.1111.1.1'},
+                    status='unsupported', bundle_uuids=['uuid1']),
+            'ro_main_firmware_local_build':
+                database.ComponentInfo(
+                    values={'version': 'Google_Proj1.2222.2.2_2022_08_22_1144'},
+                    status='unsupported', bundle_uuids=['uuid2'])
+        },
+        'firmware_keys': {
+            'firmware_keys_1':
+                database.ComponentInfo(values={}, status='unsupported',
+                                       bundle_uuids=['uuid1'])
+        }
+    }
+
   @classmethod
   def _CreateBundleRecord(cls, projects):
     firmware_records = []

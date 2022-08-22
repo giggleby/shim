@@ -732,6 +732,32 @@ message SetChangeClBotApprovalStatusRequest {
 // The response of setting CL approval status.
 message SetChangeClBotApprovalStatusResponse {}
 
+// The request of setting firmware info support status.
+message SetFirmwareInfoSupportStatusRequest {
+  // Project name.
+  string project = 1;
+  // ID of related bug.
+  int64 bug_number = 2;
+  // Additional description to be commented on CL.
+  string description = 3;
+  // Original requester from Easy Bundle Creation.
+  string original_requester = 4;
+  // Version string of firmware to be queried.
+  string version_string = 5;
+  // Reviewer list for this CL.
+  repeated string reviewer_emails = 6;
+  // CC list for this CL.
+  repeated string cc_emails = 7;
+  // A bool indicating if this CL should be auto-approved.
+  bool auto_approved = 8;
+}
+
+// The response of setting firmware info support status.
+message SetFirmwareInfoSupportStatusResponse {
+  // Created commit.
+  HwidDbCommit commit = 1;
+}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -818,4 +844,8 @@ service HwidService {
   // Create initial HWID DB.
   rpc CreateHwidDbInitCl(CreateHwidDbInitClRequest)
       returns (CreateHwidDbInitClResponse);
+
+  // Set support status for firmware info components.
+  rpc SetFirmwareInfoSupportStatus(SetFirmwareInfoSupportStatusRequest)
+    returns (SetFirmwareInfoSupportStatusResponse);
 }

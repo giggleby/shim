@@ -295,3 +295,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def SetChangeClBotApprovalStatus(self, request):
     return self._ss_helper.SetChangeCLBotApprovalStatus(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def SetFirmwareInfoSupportStatus(self, request):
+    return self._ss_helper.SetFirmwareInfoSupportStatus(request)

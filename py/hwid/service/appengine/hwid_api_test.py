@@ -542,6 +542,27 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
+  def testSetFirmwareInfoSupportStatus_InvalidRequest(self):
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+          project='foo')
+      self.service.SetFirmwareInfoSupportStatus(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+
+  def testSetFirmwareInfoSupportStatus_ProjectNotFound(self):
+    live_repo = self.patch_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_repo.LoadHWIDDBByName.side_effect = KeyError
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
+          project='foo')
+      self.service.SetFirmwareInfoSupportStatus(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
+
 
 if __name__ == '__main__':
   unittest.main()
