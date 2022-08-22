@@ -311,7 +311,10 @@ class Cr50:
     logging.info('Unlock the device with authcode: %s', authcode)
     output = self._cr50_console.Command(f'rma_auth {authcode}')
     logging.info('Unlock result:\n%s', output)
-    return 'process_response: success!' in output
+    # On success, Cr50 outputs 'process_response: success!'
+    # On success, Ti50 0.22.4 outputs 'Success!'
+    # To support both, check for a case-insensitive 'success!'
+    return 'success!' in output.lower()
 
   def Lock(self):
     """Lock the device.
