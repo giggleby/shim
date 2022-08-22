@@ -4,19 +4,56 @@
 """Test and check cec power control feature on Chrome OS device.
 Description
 -----------
-# TODO(jimmysun) Add this part
+This test checks cec power control feature by turning off and turning on the
+display power. Cec power control consists of following functions:
+(1) Wake up a monitor.
+(2) Put a monitor on standby.
+(3) Get the display status of a monitor.
+
+To check if a ChromeOS device support this feature or not:
+(1) It depends on the HW design. There is an HDMI CEC pin in the HDMI connector.
+(2) CEC function(i.e. ``cec-ctl``) has to be implemented to support it.
+
+In case when a monitor cannot return the power status, we can set
+``manual_mode`` to check the power status manually.
 
 Test Procedure
 --------------
-# TODO(jimmysun) Add this part
+This is an automated test without user interaction. The HDMI port should be
+connected to a CEC-enabled TV.
+
+If ``manual_mode`` is set, the operator has to press the key to indicate the
+display status is on. Else the display status is off.
 
 Dependency
 ----------
-# TODO(jimmysun) Add this part
+- HDMI-CEC support for display control in ChromeOS(cec-ctl)
+- The driver of specified button source: GPIO.
 
 Examples
 --------
-# TODO(jimmysun) Add this part
+Read system information and power status for the monitor in /dev/cec1 and
+verify that it is on::
+
+  {
+    "pytest_name": "cec",
+    "args": {
+      "index": 1,
+      "power_on": true
+    }
+  }
+
+Read system information for the monitor in /dev/cec0 and check power status
+manually. Verify that display can be turned on/off via CEC::
+
+  {
+    "pytest_name": "cec",
+    "args": {
+      "manual_mode": true,
+      "power_on": true,
+      "power_off": true
+    }
+  }
 """
 
 from enum import IntEnum
@@ -27,8 +64,8 @@ import subprocess
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import test_ui as i18n_test_ui
 from cros.factory.test import test_case
+from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
-
 
 _CSS_CEC = """
   #cec-title {
@@ -36,10 +73,20 @@ _CSS_CEC = """
     width: 70%;
   }
 """
+_CSS_CEC_MANUAL = """
+  #cec-manual {
+    font-size: 1.6em;
+    width: 70%;
+  }
+"""
 _HTML_CEC = '<div id="cec-title"></div>'
+_HTML_CEC_MANUAL = '<div id="cec-manual"></div>'
 _MSG_CEC_INFO = i18n_test_ui.MakeI18nLabel(
     'This test will control TV display power via HDMI CEC pin.<br>'
     'Display would be turned off and then turned on back')
+_MSG_CEC_MANUAL_INFO = i18n_test_ui.MakeI18nLabel(
+    '<br>Currently in manual mode.<br>Press Enter if display status is ON.'
+    '<br>Press Space if display status is OFF')
 
 
 class Status(IntEnum):
@@ -66,14 +113,18 @@ class CecController:
     raise NotImplementedError
 
   def GetDisplayStatus(self):
-    """Return display power status by sending a status request
-    and analyze output text.
-    @return: display power status:
-      -1: connection error
-       0: On
-       1: Standby
-       2: In transition Standby to On
-       3: In transition On to Standby
+    """Returns the display status of the monitor.
+
+    Gets the display status by sending a status request and analyze output
+    text via the CEC controller.
+
+    Returns:
+      display power status:
+        -1: connection error
+         0: On
+         1: Standby
+         2: In transition Standby to On
+         3: In transition On to Standby
     """
     raise NotImplementedError
 
@@ -150,16 +201,26 @@ class CecTest(test_case.TestCase):
       Arg('power_off', bool, 'Test power off command.', True),
       Arg('controller_type', str,
           'The CEC controller type (EC or AP) for the device.', 'AP'),
-      Arg('index', int, 'The index of the CEC device', 0)
+      Arg(
+          'index', int, 'The index of the CEC device. The CEC device is at '
+          '/dev/cec``index``', 0),
+      Arg('manual_mode', bool, 'Manually check if power status is on or off.',
+          False),
+      Arg(
+          'status_on_wait_time', float, 'Waiting time for the operator to '
+          'press _KEY_STATUS_ON to indicate display status is on in manual '
+          'mode. If it is not pressed, display status is off.', 5.0)
   ]
 
   def runTest(self):
-    """ This test task check HDMI cec feature. """
-    status = self.cec.GetDisplayStatus()
+    """ This test task checks HDMI CEC feature. """
+    status = self.GetDisplayStatus()
     if status == Status.ERROR:
       raise RuntimeError('The CEC connection is broken.')
     if status != self.args.initial_status:
-      raise RuntimeError('The TV is in wrong power state.')
+      raise RuntimeError(
+          f'The TV is in wrong power state. Current status: {status}; '
+          f'Expected status: {self.args.initial_status}.')
     if self.args.power_off:
       logging.info('Turning off the TV...')
       self.CheckDisplayTurnOff()
@@ -168,10 +229,14 @@ class CecTest(test_case.TestCase):
       self.CheckDisplayTurnOn()
 
   def setUp(self):
-    """ Initialize cec environment. """
+    """ Initializes CEC environment. """
     self.ui.AppendCSS(_CSS_CEC)
     self.ui.SetState(_HTML_CEC)
     self.ui.SetHTML(_MSG_CEC_INFO, id='cec-title')
+    if self.args.manual_mode:
+      self.ui.AppendCSS(_CSS_CEC_MANUAL)
+      self.ui.SetState(_HTML_CEC_MANUAL, append=True)
+      self.ui.SetHTML(_MSG_CEC_MANUAL_INFO, id='cec-manual')
     self.Sleep(self.args.description_wait_time)
 
     self._dut = device_utils.CreateDUTInterface()
@@ -186,27 +251,58 @@ class CecTest(test_case.TestCase):
     self.cec.SetUp()
 
   def CheckDisplayTurnOn(self):
-    """ Send image_view_on cec message from the device, and check it by another
-    status request.
+    """ Sends an image_view_on CEC message and checks the display status.
+
+    Turns on the monitor from the device via the CEC controller and checks
+    that the display status is Status.ON or Status.TO_ON.
+
+    Returns:
+      None.
+
+    Raises:
+      RuntimeError if the display status if not Status.ON or Status.TO_ON.
     """
     self.cec.DisplayTurnOn()
     self.Sleep(self.args.image_view_on_wait_time)
 
-    status = self.cec.GetDisplayStatus()
-    logging.info('Display status: %d.', status)
+    status = self.GetDisplayStatus()
+    logging.info('Display status: %s.', status)
     if status in (Status.ON, Status.TO_ON):
       return
     raise RuntimeError('CEC display turn on test failed.')
 
   def CheckDisplayTurnOff(self):
-    """ Send standby cec message from the device to make connected display turn
-    off.  And check it via another status request.
+    """ Sends a sendby CEC message and checks the display status.
+
+    Turns off the monitor from the device via the CEC controller and checks
+    that the display status is Status.OFF or Status.TO_OFF.
+
+    Returns:
+      None.
+
+    Raises:
+      RuntimeError if the display status if not Status.OFF or Status.TO_OFF.
     """
     self.cec.DisplayTurnOff()
     self.Sleep(self.args.standby_wait_time)
 
-    status = self.cec.GetDisplayStatus()
-    logging.info('Display status: %d.', status)
+    status = self.GetDisplayStatus()
+    logging.info('Display status: %s.', status)
     if status in (Status.OFF, Status.TO_OFF):
       return
     raise RuntimeError('CEC display stand by test failed.')
+
+  def GetDisplayStatus(self):
+    """ Gets the display status.
+
+    Gets the display status in different mode:
+    (1) Manual mode: An operator pressing the keys to send display status.
+    (2) Normal mode: CEC controller API.
+
+    Returns:
+      A status defined in ``class Status``.
+    """
+    if self.args.manual_mode:
+      key_pressed = self.ui.WaitKeysOnce([test_ui.ENTER_KEY, test_ui.SPACE_KEY])
+      return Status.ON if key_pressed == test_ui.ENTER_KEY else Status.OFF
+    return self.cec.GetDisplayStatus()
