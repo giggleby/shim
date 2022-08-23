@@ -34,6 +34,7 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.sys_utils import MountPartition
 from cros.factory.utils.type_utils import CheckDictKeys
 
+
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 REQUIRED_GSUTIL_VERSION = [3, 32]  # 3.32
@@ -847,7 +848,7 @@ class FinalizeBundle:
     }
 
   def DownloadNetbootFromFactoryArchive(self):
-    """Downloads netboot firmware from the factory archive."""
+    """Downloads netboot firmware and kernel from the factory archive."""
     # TODO(hungte) Change factory_shim/netboot/ to be netboot/ in factory.zip.
     orig_netboot_dir = os.path.join(self.bundle_dir, 'factory_shim', 'netboot')
     netboot_dir = os.path.join(self.bundle_dir, 'netboot')
@@ -865,7 +866,18 @@ class FinalizeBundle:
         shutil.move(f, netboot_dir)
 
   def DownloadNetbootFromFirmwareArchive(self):
-    """Downloads netboot firmware from the firmware archive."""
+    """Downloads netboot firmware from the firmware archive.
+
+    The netboot kernel is from the factory archive.
+    """
+    orig_netboot_dir = os.path.join(self.bundle_dir, 'factory_shim', 'netboot')
+    netboot_dir = os.path.join(self.bundle_dir, 'netboot')
+    file_utils.TryMakeDirs(netboot_dir)
+
+    netboot_kernel = os.path.join(orig_netboot_dir, 'vmlinuz')
+    if os.path.exists(netboot_kernel):
+      shutil.move(netboot_kernel, netboot_dir)
+
     version_str = '%s.%s.%s' % self.netboot_firmware_source.version
     resource_name = 'unsigned_firmware_archive'
     urls = [
@@ -873,8 +885,6 @@ class FinalizeBundle:
         gsutil.BuildResourceBaseURL(gsutil.GSUtil.CHANNELS.dev,
                                     self.build_board.gsutil_name, version_str)
     ]
-    netboot_dir = os.path.join(self.bundle_dir, 'netboot')
-    file_utils.TryMakeDirs(netboot_dir)
 
     netboot_firmware_set = self.GetNetbootFirmwareSet()
     missing_netboot_firmware_list = []
