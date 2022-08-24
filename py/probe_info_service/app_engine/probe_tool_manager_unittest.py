@@ -26,15 +26,22 @@ def _LoadProbeInfoAndCompName(testdata_name):
   return comp_probe_info.probe_info, comp_name
 
 
+_FAKE_RUNTIME_PROBE_PATH = os.path.join(unittest_utils.TESTDATA_DIR,
+                                        'fake_runtime_probe')
+_FAKE_LEGACY_RUNTIME_PROBE_PATH = os.path.join(
+    unittest_utils.TESTDATA_DIR, 'fake_runtime_probe_with_legacy_args')
+
+
 class ProbeToolManagerTest(unittest.TestCase):
+
   def setUp(self):
     self._probe_tool_manager = probe_tool_manager.ProbeToolManager()
 
   def test_GetProbeSchema(self):
     resp = self._probe_tool_manager.GetProbeSchema()
-    self.assertCountEqual([f.name for f in resp.probe_function_definitions],
-                          ['battery.generic_battery', 'storage.mmc_storage',
-                           'storage.nvme_storage'])
+    self.assertCountEqual([f.name for f in resp.probe_function_definitions], [
+        'battery.generic_battery', 'storage.mmc_storage', 'storage.nvme_storage'
+    ])
 
   def test_ValidateProbeInfo_InvalidProbeFunction(self):
     probe_info = probe_tool_manager.ProbeInfo(probe_function_name='no_such_f')
@@ -92,8 +99,8 @@ class ProbeToolManagerTest(unittest.TestCase):
         '1-param_value_error')
     unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
         probe_info, False)
-    self.assertEqual(resp, unittest_utils.LoadProbeInfoParsedResult(
-        '1-param_value_error'))
+    self.assertEqual(
+        resp, unittest_utils.LoadProbeInfoParsedResult('1-param_value_error'))
 
   def test_ValidateProbeInfo_Passed(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
@@ -157,27 +164,30 @@ class ProbeToolManagerTest(unittest.TestCase):
       if probe_param.name == 'mmc_manfid':
         probe_info.probe_parameters.remove(probe_param)
         break
-    resp = self._probe_tool_manager.GenerateProbeBundlePayload([
-        self._probe_tool_manager.CreateProbeDataSource(comp_name, probe_info)])
+    resp = self._probe_tool_manager.GenerateProbeBundlePayload(
+        [self._probe_tool_manager.CreateProbeDataSource(comp_name, probe_info)])
     self.assertEqual(resp.probe_info_parsed_results[0].result_type,
                      resp.probe_info_parsed_results[0].INCOMPATIBLE_ERROR)
 
   def test_GenerateQualProbeTestBundlePayload_Passed(self):
-    info = unittest_utils.FakeProbedOutcomeInfo('1-succeed')
+    for fake_runtime_probe_script in (_FAKE_RUNTIME_PROBE_PATH,
+                                      _FAKE_LEGACY_RUNTIME_PROBE_PATH):
+      with self.subTest(fake_runtime_probe_script=fake_runtime_probe_script):
+        info = unittest_utils.FakeProbedOutcomeInfo('1-succeed')
 
-    resp = self._GenerateProbeBundlePayloadForFakeRuntimeProbe(info)
-    self.assertEqual(resp.probe_info_parsed_results[0].result_type,
-                     resp.probe_info_parsed_results[0].PASSED)
+        resp = self._GenerateProbeBundlePayloadForFakeRuntimeProbe(info)
+        self.assertEqual(resp.probe_info_parsed_results[0].result_type,
+                         resp.probe_info_parsed_results[0].PASSED)
 
-    # Invoke the probe bundle file with a fake `runtime_probe` to verify if the
-    # probe bundle works.
-    unpacked_dir, probed_outcome = self._InvokeProbeBundleWithFakeRuntimeProbe(
-        resp.output.content, info.envs)
-    arg_str, pc_payload = self._ExtractFakeRuntimeProbeStderr(probed_outcome)
-    self.assertEqual(probed_outcome, info.probed_outcome)
-    self.assertEqual(arg_str,
-                     self._GetExpectedRuntimeProbeArguments(unpacked_dir))
-    self._AssertJSONStringEqual(pc_payload, info.probe_config_payload)
+        # Invoke the probe bundle file with a fake `runtime_probe` to verify
+        # if the probe bundle works.
+        probed_outcome = self._InvokeProbeBundleWithFakeRuntimeProbe(
+            resp.output.content, info.envs,
+            fake_runtime_probe_path=fake_runtime_probe_script)
+        pc_payload = self._ExtractProbePayloadFromFakeProbedOutcome(
+            probed_outcome)
+        self.assertEqual(probed_outcome, info.probed_outcome)
+        self._AssertJSONStringEqual(pc_payload, info.probe_config_payload)
 
   def test_GenerateQualProbeTestBundlePayload_MultipleSourcePassed(self):
     info = unittest_utils.FakeProbedOutcomeInfo('1_2-succeed')
@@ -190,12 +200,10 @@ class ProbeToolManagerTest(unittest.TestCase):
 
     # Invoke the probe bundle file with a fake `runtime_probe` to verify if the
     # probe bundle works.
-    unpacked_dir, probed_outcome = self._InvokeProbeBundleWithFakeRuntimeProbe(
+    probed_outcome = self._InvokeProbeBundleWithFakeRuntimeProbe(
         resp.output.content, info.envs)
-    arg_str, pc_payload = self._ExtractFakeRuntimeProbeStderr(probed_outcome)
+    pc_payload = self._ExtractProbePayloadFromFakeProbedOutcome(probed_outcome)
     self.assertEqual(probed_outcome, info.probed_outcome)
-    self.assertEqual(arg_str,
-                     self._GetExpectedRuntimeProbeArguments(unpacked_dir))
     self._AssertJSONStringEqual(pc_payload, info.probe_config_payload)
 
   def test_GenerateQualProbeTestBundlePayload_NoRuntimeProbe(self):
@@ -205,7 +213,7 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertEqual(resp.probe_info_parsed_results[0].result_type,
                      resp.probe_info_parsed_results[0].PASSED)
 
-    unused_unpacked_dir, probed_outcome = (
+    probed_outcome = (
         self._InvokeProbeBundleWithFakeRuntimeProbe(resp.output.content,
                                                     info.envs))
     self.assertTrue(bool(probed_outcome.rp_invocation_result.error_msg))
@@ -303,11 +311,12 @@ class ProbeToolManagerTest(unittest.TestCase):
     result = self._probe_tool_manager.AnalyzeDeviceProbeResultPayload(
         [s1, s2, s3, s4], unittest_utils.LoadRawProbedOutcome('1_2_3-valid'))
     self.assertIsNone(result.intrivial_error_msg)
-    self.assertEqual([r.result_type for r in result.probe_info_test_results],
-                     [stubby_pb2.ProbeInfoTestResult.NOT_PROBED,
-                      stubby_pb2.ProbeInfoTestResult.PASSED,
-                      stubby_pb2.ProbeInfoTestResult.LEGACY,
-                      stubby_pb2.ProbeInfoTestResult.NOT_INCLUDED])
+    self.assertEqual([r.result_type for r in result.probe_info_test_results], [
+        stubby_pb2.ProbeInfoTestResult.NOT_PROBED,
+        stubby_pb2.ProbeInfoTestResult.PASSED,
+        stubby_pb2.ProbeInfoTestResult.LEGACY,
+        stubby_pb2.ProbeInfoTestResult.NOT_INCLUDED
+    ])
 
   def _AssertJSONStringEqual(self, lhs, rhs):
     self.assertEqual(json_utils.LoadStr(lhs), json_utils.LoadStr(rhs))
@@ -325,32 +334,36 @@ class ProbeToolManagerTest(unittest.TestCase):
     return self._probe_tool_manager.GenerateProbeBundlePayload(
         probe_info_sources)
 
-  def _InvokeProbeBundleWithFakeRuntimeProbe(self, probe_bundle_payload, envs):
+  def _InvokeProbeBundleWithFakeRuntimeProbe(
+      self, probe_bundle_payload, envs,
+      fake_runtime_probe_path=_FAKE_RUNTIME_PROBE_PATH,
+      runtime_probe_bin_name='runtime_probe'):
     probe_bundle_path = file_utils.CreateTemporaryFile()
     os.chmod(probe_bundle_path, 0o755)
     file_utils.WriteFile(probe_bundle_path, probe_bundle_payload, encoding=None)
 
     unpacked_dir = tempfile.mkdtemp()
     with file_utils.TempDirectory() as fake_bin_path:
-      file_utils.ForceSymlink(unittest_utils.FAKE_RUNTIME_PROBE_PATH,
-                              os.path.join(fake_bin_path, 'runtime_probe'))
+      file_utils.ForceSymlink(
+          fake_runtime_probe_path,
+          os.path.join(fake_bin_path, runtime_probe_bin_name))
       subproc_envs = dict(os.environ)
-      subproc_envs['PATH'] = fake_bin_path + ':' + subproc_envs['PATH']
+      subproc_envs['PATH'] = f'{fake_bin_path}:{subproc_envs["PATH"]}'
+      # Override `subproc_envs` with the given `envs` after configuring `PATH`
+      # so that test cases can simulate no runtime probe by assigning `PATH` by
+      # an empty directory.
       subproc_envs.update(envs)
-      raw_output = process_utils.CheckOutput(
-          [probe_bundle_path, '-d', unpacked_dir], env=subproc_envs,
-          encoding=None)
-    return unpacked_dir, text_format.Parse(
-        raw_output, client_payload_pb2.ProbedOutcome())
+      raw_output = process_utils.CheckOutput([
+          probe_bundle_path, '-d', unpacked_dir, '--', '--verbose', '--output',
+          '-'
+      ], env=subproc_envs, encoding=None)
+    return text_format.Parse(raw_output, client_payload_pb2.ProbedOutcome())
 
-  def _ExtractFakeRuntimeProbeStderr(self, probed_outcome):
-    raw_stderr = probed_outcome.rp_invocation_result.raw_stderr.decode('utf-8')
+  def _ExtractProbePayloadFromFakeProbedOutcome(self, probed_outcome):
+    probe_payload = probed_outcome.rp_invocation_result.raw_stderr.decode(
+        'utf-8')
     probed_outcome.rp_invocation_result.raw_stderr = b''
-    return [s.strip(' \n') for s in raw_stderr.split('=====')]
-
-  def _GetExpectedRuntimeProbeArguments(self, unpacked_dir):
-    return ' '.join(['--config_file_path=%s/probe_config.json' % unpacked_dir,
-                     '--to_stdout', '--verbosity_level=3'])
+    return probe_payload
 
 
 if __name__ == '__main__':

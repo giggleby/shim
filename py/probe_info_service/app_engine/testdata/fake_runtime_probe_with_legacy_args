@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2022 The ChromiumOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,7 +8,7 @@
 It simply performs the following logic:
 *   If `--to_stdout` is specified, the script dumps the value of the environment
     variable `FAKE_RUNTIME_PROBE_STDOUT` to stdout.
-*   If `--log_level` is set to negative values, the script dumps the probe
+*   If `--verbosity_level` is set to positive values, the script dumps the probe
     config payload to stderr.
 """
 
@@ -19,7 +19,7 @@ import os
 
 def main():
   ap = argparse.ArgumentParser()
-  ap.add_argument('--log_level', default=0, type=int)
+  ap.add_argument('--verbosity_level', default=0, type=int)
   ap.add_argument('--to_stdout', action='store_true')
   ap.add_argument('--config_file_path', default='')
   args = ap.parse_args()
@@ -28,7 +28,7 @@ def main():
     # Probed result is controlled by the tester.
     print(os.getenv('FAKE_RUNTIME_PROBE_STDOUT', ''))
 
-  if args.log_level < 0:
+  if args.verbosity_level > 0:
     # Standard error contains the source material passed from the wrapper.
     with open(args.config_file_path, 'r', encoding='utf-8') as f:
       sys.stderr.write(f.read())

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Copyright 2022 The ChromiumOS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Simply print the usage and exit for `--help`.
+for arg in "$@"; do
+  if [[ "${arg}" = "--help" ]]; then
+    echo "ChromeOS runtime probe tool"
+    echo ""
+    echo "  --helper  (Run in the mode to execute probe function)  type: ..."
+    echo "  --log_level  (Logging level - 0: LOG(INFO), 1: LOG(WARNING), ..."
+    exit 0
+  fi
+done
+
+# Standard output is controlled by the tester.
+echo "${FAKE_RUNTIME_PROBE_STDOUT}"
+
+# Standard error contains the source material passed from the
+# runtime_probe_wrapper.
+echo "$@" >&2
+echo "=====" >&2
+for arg in "$@"; do
+  if ! [[ "${arg}" = "--log_level="* ]]; then
+    echo "${arg}" >&2
+  fi
+done
+
+# Return code is controlled by the tester.
+exit "${FAKE_RUNTIME_PROBE_RETURN_CODE}"
