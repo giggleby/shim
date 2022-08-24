@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import datetime
+import os
 from typing import Optional, Sequence
 import unittest
 from unittest import mock
@@ -10,12 +11,15 @@ from unittest import mock
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
+from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+from cros.factory.utils import file_utils
 
 _ErrorMsg = (
     hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult.Error)
@@ -33,6 +37,9 @@ _HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
 _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
 _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
 
+HWIDV3_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/v3-from-factory-bundle.yaml')
 
 class SelfServiceHelperTest(unittest.TestCase):
 
@@ -912,25 +919,24 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
 
-  @mock.patch('cros.factory.hwid.service.appengine.hwid_action_helpers'
-              '.v3_self_service_helper.HWIDV3SelfServiceActionHelper'
-              '.RemoveHeader')
-  def testCreateHWIDDBFirmwareInfoUpdateCL_Succeed(self, remove_header):
-    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+  def testCreateHWIDDBFirmwareInfoUpdateCL_Succeed(self):
+    raw_db = file_utils.ReadFile(HWIDV3_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.GetDBV3.return_value = mock.MagicMock(spec=database.WritableDatabase)
-    remove_header.return_value = 'db data'
-    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
 
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj']))
     resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+    comps = action.GetComponents(['ro_main_firmware', 'ro_ec_firmware'])
 
+    self.assertIn('Google_Proj_1111_1_1', comps['ro_main_firmware'])
     self.assertIn('PROJ', resp.commits)
     self.assertEqual(resp.commits['PROJ'].cl_number, 123)
-    self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents, 'db data')
+    self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
+                     action.GetDBEditableSection())
 
   def testCreateHWIDDBFirmwareInfoUpdateCL_ProjectNotFound(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
@@ -1003,31 +1009,26 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
 
-  @mock.patch('cros.factory.hwid.service.appengine.hwid_action_helpers'
-              '.v3_self_service_helper.HWIDV3SelfServiceActionHelper'
-              '.RemoveHeader')
-  def testSetFirmwareInfoSupportStatus_Succeed(self, remove_header):
-    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
+  def testSetFirmwareInfoSupportStatus_Succeed(self):
+    raw_db = file_utils.ReadFile(HWIDV3_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
-    mock_db = mock.MagicMock(spec=database.WritableDatabase)
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.GetDBV3.return_value = mock_db
-    action.GetComponents.return_value = self._CreateFirmwareComponents()
-    remove_header.return_value = 'db data'
-    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
 
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
-        project='proj1', version_string='google_proj1.1111.1.1')
+        project='proj', version_string='google_proj.1111.1.1')
     resp = self._ss_helper.SetFirmwareInfoSupportStatus(req)
+    comps = action.GetComponents(['ro_main_firmware', 'ro_ec_firmware'])
 
-    self.assertEqual(mock_db.SetComponentStatus.call_count, 2)
-    mock_db.SetComponentStatus.assert_has_calls([
-        mock.call('ro_main_firmware', 'ro_main_firmware_1', 'supported'),
-        mock.call('firmware_keys', 'firmware_keys_1', 'supported')
-    ], any_order=True)
+    self.assertEqual(comps['ro_main_firmware']['ro_main_firmware_1'].status,
+                     'supported')
+    self.assertEqual(comps['ro_ec_firmware']['ro_ec_firmware_1'].status,
+                     'supported')
     self.assertEqual(resp.commit.cl_number, 123)
-    self.assertEqual(resp.commit.new_hwid_db_contents, 'db data')
+    self.assertEqual(resp.commit.new_hwid_db_contents,
+                     action.GetDBEditableSection())
 
   def testSetFirmwareInfoSupportStatus_ProjectNotFound(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
@@ -1041,33 +1042,31 @@ class SelfServiceHelperTest(unittest.TestCase):
                      protorpc_utils.RPCCanonicalErrorCode.NOT_FOUND)
 
   def testSetFirmwareInfoSupportStatus_NoChange(self):
-    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
-    mock_db = mock.MagicMock(spec=database.WritableDatabase)
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.GetDBV3.return_value = mock_db
-    action.GetComponents.return_value = self._CreateFirmwareComponents()
-    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+    raw_db = file_utils.ReadFile(HWIDV3_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
 
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
-        project='proj1', version_string='google_proj1.2222.2.2')
+        project='proj', version_string='google_proj.2222.2.2')
     resp = self._ss_helper.SetFirmwareInfoSupportStatus(req)
+    comps = action.GetComponents(['ro_main_firmware', 'ro_ec_firmware'])
 
-    mock_db.SetComponentStatus.assert_not_called()
+    self.assertEqual(comps['ro_main_firmware']['ro_main_firmware_2'].status,
+                     'unqualified')
     self.assertEqual(
         resp, hwid_api_messages_pb2.SetFirmwareInfoSupportStatusResponse())
 
   def testSetFirmwareInfoSupportStatus_InternalError(self):
-    self._ConfigLiveHWIDRepo('PROJ1', 3, 'db data')
+    raw_db = file_utils.ReadFile(HWIDV3_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.side_effect = [hwid_repo.HWIDRepoError]
-    mock_db = mock.MagicMock(spec=database.WritableDatabase)
-    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-    action.GetDBV3.return_value = mock_db
-    action.GetComponents.return_value = self._CreateFirmwareComponents()
-    self._modules.ConfigHWID('PROJ1', '3', 'db data', hwid_action=action)
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
 
     req = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusRequest(
-        project='proj1', version_string='google_proj1.1111.1.1')
+        project='proj', version_string='google_proj.1111.1.1')
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       self._ss_helper.SetFirmwareInfoSupportStatus(req)
 
@@ -1075,24 +1074,10 @@ class SelfServiceHelperTest(unittest.TestCase):
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
 
   @classmethod
-  def _CreateFirmwareComponents(cls):
-    return {
-        'ro_main_firmware': {
-            'ro_main_firmware_1':
-                database.ComponentInfo(
-                    values={'version': 'Google_Proj1.1111.1.1'},
-                    status='unsupported', bundle_uuids=['uuid1']),
-            'ro_main_firmware_local_build':
-                database.ComponentInfo(
-                    values={'version': 'Google_Proj1.2222.2.2_2022_08_22_1144'},
-                    status='unsupported', bundle_uuids=['uuid2'])
-        },
-        'firmware_keys': {
-            'firmware_keys_1':
-                database.ComponentInfo(values={}, status='unsupported',
-                                       bundle_uuids=['uuid1'])
-        }
-    }
+  def _CreateFakeHWIDBAction(cls, project: str, raw_db: str):
+    return hwid_v3_action.HWIDV3Action(
+        hwid_preproc_data.HWIDV3PreprocData(project, raw_db, raw_db,
+                                            'TEST-COMMIT-ID'))
 
   @classmethod
   def _CreateBundleRecord(cls, projects):
@@ -1103,7 +1088,7 @@ class SelfServiceHelperTest(unittest.TestCase):
               model=proj, firmware_keys=_FirmwareRecord.FirmwareKeys(
                   key_recovery='key_recovery', key_root='key_root'),
               ro_main_firmware=_FirmwareRecord.FirmwareInfo(
-                  hash='hash_string', version='1111.1.1')))
+                  hash='hash_string', version='Google_Proj.1111.1.1')))
 
     return _FactoryBundleRecord(board='board', firmware_signer='BoardMPKeys-V1',
                                 firmware_records=firmware_records)

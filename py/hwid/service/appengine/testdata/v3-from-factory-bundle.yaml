@@ -1,0 +1,61 @@
+
+
+
+##### BEGIN CHECKSUM BLOCK
+#
+# WARNING: This checksum is generated and audited by Google. Do not
+# modify it. If you modify it, devices' configurations will be
+# invalid, and the devices may not be sold.
+#
+# 警告：此校验码由 Google 产生及审核，禁止手动修改。
+# 若修改将使设备配置變為无效，并且不得销售此设备。
+#
+#####
+checksum: 131e76748f5f8a387a56fcd8e05b2b92ebe99564
+
+##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+
+project: PROJ
+
+encoding_patterns:
+  0: default
+
+image_id:
+  0: PROTO
+
+pattern:
+- image_ids:
+  - 0
+  encoding_scheme: base8192
+  fields: []
+
+encoded_fields:
+  region_field: !region_field []
+
+components:
+  region: !region_component
+  ro_ec_firmware:
+    items:
+      ro_ec_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid1
+        status: unqualified
+        values: null
+  ro_main_firmware:
+    items:
+      ro_main_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid1
+        status: unqualified
+        values:
+          version: Google_Proj.1111.1.1
+      ro_main_firmware_2: !from_factory_bundle
+        bundle_uuids:
+        - uuid2
+        status: unqualified
+        values:
+          version: Google_Proj.2222.2.2_2022_08_22_1144
+
+rules: []
+
