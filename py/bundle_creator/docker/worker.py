@@ -171,7 +171,8 @@ class EasyBundleCreationWorker:
           temp_dir, 'factory_bundle_{}_{}.tar.bz2'.format(
               request.project, bundle_name))
       gs_path = self._storage_connector.UploadCreatedBundle(
-          bundle_path, create_bundle_message)
+          bundle_path,
+          self._ConvertToStorageBundleMetadata(create_bundle_message))
 
       cl_url = []
       cl_error_msg = None
@@ -200,6 +201,18 @@ class EasyBundleCreationWorker:
       return factorybundle_pb2.CreateBundleMessage.FromString(message_data)
     return None
 
+  def _ConvertToStorageBundleMetadata(
+      self, create_bundle_message: factorybundle_pb2.CreateBundleMessage
+  ) -> storage_connector.StorageBundleMetadata:
+    request = create_bundle_message.request
+    return storage_connector.StorageBundleMetadata(
+        doc_id=create_bundle_message.doc_id, email=request.email,
+        board=request.board, project=request.project, phase=request.phase,
+        toolkit_version=request.toolkit_version,
+        test_image_version=request.test_image_version,
+        release_image_version=request.release_image_version,
+        firmware_source=request.firmware_source
+        if request.HasField('firmware_source') else None)
 
 if __name__ == '__main__':
   if config.ENV_TYPE == 'local':

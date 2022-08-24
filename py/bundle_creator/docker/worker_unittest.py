@@ -19,11 +19,13 @@ import yaml
 from cros.factory.bundle_creator.connector import firestore_connector
 from cros.factory.bundle_creator.connector import hwid_api_connector
 from cros.factory.bundle_creator.connector import pubsub_connector
+from cros.factory.bundle_creator.connector import storage_connector
 from cros.factory.bundle_creator.docker import config
 from cros.factory.bundle_creator.docker import worker
 from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+
 
 _BUNDLE_RECORD = '{"fake_key": "fake_value"}'
 
@@ -246,7 +248,16 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
 
     args = self._mock_storage_connector.UploadCreatedBundle.call_args.args
     self.assertTrue(os.path.exists(args[0]))
-    self.assertEqual(args[1], self._message)
+    self.assertEqual(
+        args[1],
+        storage_connector.StorageBundleMetadata(
+            doc_id=self._message.doc_id, email=self._message.request.email,
+            board=self._message.request.board,
+            project=self._message.request.project,
+            phase=self._message.request.phase,
+            toolkit_version=self._message.request.toolkit_version,
+            test_image_version=self._message.request.test_image_version,
+            release_image_version=self._message.request.release_image_version))
 
   def testTryProcessRequest_succeed_verifiesCallingHWIDAPIConnector(self):
     self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL.return_value = [
