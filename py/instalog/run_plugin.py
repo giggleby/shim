@@ -161,7 +161,8 @@ class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
       superclass = self._plugin.GetSuperclass()
       if superclass is plugin_base.BufferPlugin:
         self.debug('BufferPlugin: Calling BufferPlugin.Produce')
-        result = self._plugin.CallPlugin('Produce', events)
+        result = self._plugin.CallPlugin('Produce', self._plugin.plugin_id,
+                                         events, True)
         self.info('BufferPlugin: BufferPlugin.Produce returned: %s',
                   result)
       elif superclass is plugin_base.InputPlugin:
