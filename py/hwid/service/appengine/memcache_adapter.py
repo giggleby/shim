@@ -7,6 +7,7 @@
 import logging
 import os
 import pickle
+from typing import Optional
 
 import redis
 
@@ -54,12 +55,11 @@ class MemcacheAdapter:
     # key for the split chunks is <key>.<number> so the first chunk for key SNOW
     # will be SNOW.0 the second chunk will be in SNOW.1
     for i in range(0, len(serialized_data), MEMCACHE_CHUNKSIZE):
-      chunk_key = '%s.py3:%s.%s' % (self.namespace, key,
-                                    i // MEMCACHE_CHUNKSIZE)
+      chunk_key = f'{self.namespace}.py3:{key}.{i // MEMCACHE_CHUNKSIZE}'
       chunks[chunk_key] = serialized_data[i : i+MEMCACHE_CHUNKSIZE]
     return chunks
 
-  def Put(self, key, value):
+  def Put(self, key, value, expiry: Optional[int] = None):
     """Store an object too large to fit directly into memcache."""
     serialized_value = pickle.dumps(value, PICKLE_PROTOCOL_VERSION)
 
@@ -69,11 +69,13 @@ class MemcacheAdapter:
 
     logging.debug('Memcache writing %s', key)
     self.client.mset(chunks)
+    if expiry is not None:
+      for chunk_key in chunks:
+        self.client.expire(chunk_key, expiry)
 
   def Get(self, key):
     """Retrieve and re-assemble a large object from memcache."""
-    keys = ['%s.py3:%s.%s' % (self.namespace, key, i)
-            for i in range(MAX_NUMBER_CHUNKS)]
+    keys = [f'{self.namespace}.py3:{key}.{i}' for i in range(MAX_NUMBER_CHUNKS)]
     chunks = self.client.mget(keys)
     serialized_data = b''.join(filter(None, chunks))
     if not serialized_data:

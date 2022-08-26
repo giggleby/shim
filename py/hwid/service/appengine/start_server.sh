@@ -11,6 +11,7 @@ DATASTORE_PROJECT_ID="${DATASTORE_PROJECT_ID}"
 DATASTORE_HOST="${DATASTORE_HOST}"
 
 setup_integration_test() {
+  redis-server &
   /usr/src/google-cloud-sdk/bin/gcloud beta emulators datastore \
     start --consistency=1 &
   bash

@@ -6,6 +6,7 @@
 """Tests for memcache_adapter."""
 
 import pickle
+import time
 import unittest
 from unittest import mock
 
@@ -91,6 +92,31 @@ class MemcacheAdapterTest(unittest.TestCase):
     retrieved_object = adapter.Get('testkey')
 
     self.assertListEqual(object_to_save, retrieved_object)
+
+  def testExpiry(self):
+    object_to_save = {
+        'a': 1,
+        'b': 2,
+        'c': 3
+    }
+
+    adapter = memcache_adapter.MemcacheAdapter('testnamespace')
+    adapter.Put('testkey-noexpire', object_to_save)
+    adapter.Put('testkey-expire', object_to_save, expiry=1)
+
+    retrived_no_expire_before_sleep = adapter.Get('testkey-noexpire')
+    retrived_expire_before_sleep = adapter.Get('testkey-expire')
+
+    self.assertDictEqual(object_to_save, retrived_no_expire_before_sleep)
+    self.assertDictEqual(object_to_save, retrived_expire_before_sleep)
+
+    time.sleep(2)
+
+    retrived_no_expire_after_sleep = adapter.Get('testkey-noexpire')
+    retrived_expire_after_sleep = adapter.Get('testkey-expire')
+
+    self.assertDictEqual(object_to_save, retrived_no_expire_after_sleep)
+    self.assertIsNone(retrived_expire_after_sleep)
 
 
 if __name__ == '__main__':
