@@ -2,20 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import glob
 import hashlib
 import logging
+import os
 import re
 import tempfile
 
+from cros.factory.gooftool import common as gooftool_common
+from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.gooftool import crosfw
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
+from cros.factory.utils import fmap
 from cros.factory.utils import process_utils
+from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-FIELDS = type_utils.Enum(
-    ['firmware_keys', 'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware'])
+
+FIELDS = type_utils.Enum([
+    'firmware_keys', 'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware',
+    'ro_fp_firmware'
+])
+
+ROOTFS_FP_FIRMWARE_DIR = 'opt/google/biod/fw'
+
+
+class FPReferenceFirmwareError(Exception):
+  pass
 
 
 def _FwKeyHash(fw_file_path, key_name):
@@ -72,6 +87,59 @@ def _EcRoHash(image):
       'version': _AddFirmwareIdTag(image).lstrip('#')}
 
 
+def _GetFPReferenceFirmware(firmware_dir, fingerprint_board_name):
+  """Gets full path of the reference fingreprint firmware.
+
+  Searches the firmware under ROOTFS_FP_FIRMWARE_DIR. The firmware is in the
+  form of <fingerprint_board_name>_<RO version>-RO_<RW version>-RW.bin. The
+  <RO version> and <RW version> need not to be strictly matched.
+
+  Raises:
+    FPReferenceFirmwareError: if there are multiple files or no file matched.
+  """
+  firmware_files = glob.glob(
+      f'{firmware_dir}/{fingerprint_board_name}_*-RO_*-RW.bin')
+  if len(firmware_files) != 1:
+    raise FPReferenceFirmwareError(
+        f'No firmware found under {firmware_dir}' if not firmware_files else
+        f'Multiple firmwares found under {firmware_dir}')
+  return firmware_files[0]
+
+
+def DumpFPFirmware():
+  """Dumps the fingerprint sensor on the device.
+
+  Some sections of FP firmware are locked so that there's no way to dump the
+  whole firmware image. We take FMAP of the firmware in release image as
+  reference, then dump the neceesary sections only.
+
+  Returns:
+    Path of the dumped firmware.
+
+  Raises:
+    FPReferenceFirmwareError if unable to find reference firmware.
+  """
+  release_rootfs = gooftool_common.Util().GetReleaseRootPartitionPath()
+  with sys_utils.MountPartition(release_rootfs) as root:
+    cros_config = cros_config_module.CrosConfig()
+    board_name = cros_config.GetFingerPrintBoard()
+    firmware_dir = os.path.join(root, ROOTFS_FP_FIRMWARE_DIR)
+    reference_firmware = _GetFPReferenceFirmware(firmware_dir, board_name)
+    firmware_blob = file_utils.ReadFile(reference_firmware, encoding=None)
+    firmware_image = fmap.FirmwareImage(firmware_blob)
+
+  # We need EC_RO and RO_FRID, and RO_FRID is included in EC_RO already.
+  ro_offset, ro_size = firmware_image.get_section_area('EC_RO')
+
+  dump_path = f'{tempfile.mkdtemp()}/cache_fp_ro_dump.bin'
+  process_utils.CheckCall([
+      'ectool', '--name=cros_fp', 'flashread',
+      str(ro_offset),
+      str(ro_size), dump_path
+  ])
+  return dump_path
+
+
 def CalculateFirmwareHashes(fw_file_path):
   """Calculate the volatile hashes corresponding to a firmware blob.
 
@@ -124,6 +192,9 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
     the readonly PD firmware and also the version of the firmware.  Since
     not all devices have a PD flash chip, it's possible that the output of this
     function is empty.
+
+  - If ``field="ro_fp_firmware"``, this function outputs the sha256 hash of
+    the readonly fingerprint firmware and also the version of the firmware.
 
   Examples
   --------
@@ -196,8 +267,10 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
     if category == FIELDS.ro_main_firmware:
       fw_file_path = crosfw.LoadMainFirmware().GetFileName(
           sections=['RO_SECTION'])
-    if category == FIELDS.ro_ec_firmware:
+    elif category == FIELDS.ro_ec_firmware:
       fw_file_path = crosfw.LoadEcFirmware().GetFileName()
-    if category == FIELDS.ro_pd_firmware:
+    elif category == FIELDS.ro_pd_firmware:
       fw_file_path = crosfw.LoadPDFirmware().GetFileName()
+    elif category == FIELDS.ro_fp_firmware:
+      fw_file_path = DumpFPFirmware()
     return CalculateFirmwareHashes(fw_file_path)

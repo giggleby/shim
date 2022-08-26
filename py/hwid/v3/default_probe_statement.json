@@ -326,6 +326,11 @@
       "eval": "chromeos_firmware:ro_pd_firmware"
     }
   },
+  "ro_fp_firmware": {
+    "generic": {
+      "eval": "chromeos_firmware:ro_fp_firmware"
+    }
+  },
   "sku_id": {
     "generic": {
       "eval": {
