@@ -1294,6 +1294,11 @@ class ComponentsStore(yaml.Dict):
           break
       self.update(comp_list)
 
+  def __reduce__(self):
+    state = list(super().__reduce__())
+    state[1] = (self._comp_cls, ) + state[1]
+    return tuple(state)
+
 
 class Components:
   """Class for holding `components` part in a HWID database.

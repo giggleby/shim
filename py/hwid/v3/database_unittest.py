@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import pickle
 import textwrap
 import unittest
 
@@ -186,6 +187,15 @@ class DatabaseTest(unittest.TestCase):
     self.assertListEqual(
         [rule.Rule('device_info.set_image_id', "SetImageId('TEST')")],
         db.device_info_rules)
+
+  def testDatabasePicklable(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+
+    serialized_db = pickle.dumps(db)
+    deserialized_db = pickle.loads(serialized_db)
+
+    self.assertEqual(db, deserialized_db)
 
 
 class ImageIdTest(unittest.TestCase):
