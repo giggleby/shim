@@ -22,6 +22,7 @@ from cros.factory.instalog.plugins import buffer_priority_file
 from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
 
+
 _TEST_PRODUCER = 'test_producer'
 
 
@@ -52,6 +53,10 @@ class TestBufferPriorityFile(unittest.TestCase):
     self.e = []
     for pri_level in range(self.pri_level_max):
       self.e.append(datatypes.Event({'priority': pri_level}))
+    self.non_consumable_file = []
+    for pri_level in range(self.pri_level_max):
+      mgr = self.sf.non_consumable_events_mgrs[pri_level]
+      self.non_consumable_file.append(mgr.GetNonConsumableFile(_TEST_PRODUCER))
 
   def tearDown(self):
     shutil.rmtree(self.data_dir)
@@ -255,6 +260,41 @@ class TestBufferPriorityFile(unittest.TestCase):
     self.sf.AddConsumer('a')
     stream = self.sf.Consume('a')
     self.assertEqual(None, stream.Next())
+
+  def testNonConsumableEventsInPreEmitFile(self):
+    for produce_pri in range(self.pri_level_max):
+      self._ProducePriorityEvent(produce_pri, produce_pri, consumable=False)
+      for check_pri in range(self.pri_level_max):
+        # MoveFile() will clean up the preemit file after this with statement.
+        with self.non_consumable_file[check_pri].MoveFile() as pre_file:
+          if produce_pri == check_pri:
+            event = datatypes.Event.Deserialize(file_utils.ReadFile(pre_file))
+            self.assertEqual(self.e[produce_pri], event)
+          else:
+            self.assertFalse(file_utils.ReadFile(pre_file))
+
+  def testProduceNonConsumableEventsWithPriority(self):
+    self.sf.AddConsumer('a')
+
+    self._ProducePriorityEvent(0, 0, False)
+    self._ProducePriorityEvent(1, 1, False)
+    self._ProducePriorityEvent(2, 2, False)
+    self._ProducePriorityEvent(3, 3)
+    stream = self.sf.Consume('a')
+    for pri_level in range(self.pri_level_max):
+      self.assertEqual(self.e[pri_level], stream.Next())
+    self.assertEqual(None, stream.Next())
+    stream.Commit()
+
+    self._ProducePriorityEvent(3, 3, False)
+    self._ProducePriorityEvent(2, 2, False)
+    self._ProducePriorityEvent(1, 1, False)
+    self._ProducePriorityEvent(0, 0)
+    stream = self.sf.Consume('a')
+    for pri_level in range(self.pri_level_max):
+      self.assertEqual(self.e[pri_level], stream.Next())
+    self.assertEqual(None, stream.Next())
+    stream.Commit()
 
   def testProduceConsumableEventsAfterNonConsumable(self):
     self._ProducePriorityEvent(0, 0, consumable=False)
