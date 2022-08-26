@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-08-29 15:17+HKT\n"
+"PO-Revision-Date: 2022-08-30 14:37+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -3459,6 +3459,10 @@ msgid "Check Cr50 Board ID Not Set"
 msgstr "检查 CR50 版号是否未设置"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Check Display Connection"
+msgstr "确认显示链接"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Fingerprint Firmware"
 msgstr "确认指纹韧体"
 
@@ -3536,18 +3540,6 @@ msgstr "前相机组装和扫描QR码"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Front Camera LED"
 msgstr "前相机 LED"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "HDMI External Display"
-msgstr "HDMI 外部显示器"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "HDMI External Display 1"
-msgstr "HDMI 外部显示器1"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "HDMI External Display 2"
-msgstr "HDMI 外部显示器2"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Volume Down"

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-08-29 15:17+HKT\n"
+"PO-Revision-Date: 2022-08-30 14:37+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3528,6 +3528,10 @@ msgid "Check Cr50 Board ID Not Set"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Check Display Connection"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Fingerprint Firmware"
 msgstr ""
 
@@ -3604,18 +3608,6 @@ msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Front Camera LED"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "HDMI External Display"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "HDMI External Display 1"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "HDMI External Display 2"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
