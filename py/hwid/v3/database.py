@@ -2132,7 +2132,7 @@ class Rules:
 
   - name: device_info.component.keyboard
     when: GetOperationMode() != 'rma'
-    evaluate: >
+    evaluate: |
         SetComponent(
             'keyboard', LookupMap(GetDeviceInfo('component.keyboard'), {
                 'US_API': 'us_darfon',

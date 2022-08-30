@@ -13,6 +13,7 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.test.l10n import regions
 from cros.factory.unittest_utils import label_utils
 
+
 _REGIONS_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_yaml_wrapper_regions.json')
 
@@ -220,6 +221,36 @@ class FromFactoryBundleYAMLTagTest(unittest.TestCase):
     obj2 = yaml.safe_load(dump_str)
     self.assertDictEqual({'key': 'value'}, obj2)
     self.assertEqual(obj2.bundle_uuids, ['uuid1'])
+
+
+class FlowStyleForMultiLineDataTest(unittest.TestCase):
+
+  def testFlowStyleIsLiteral(self):
+    # A space followed by a newline in yaml means two spaces in folded flow
+    # style ('>').  However, this does not work (especially for
+    # CSafe{Dumper,Loader} if the line is already indented.  This test fails
+    # when the flow style is set to '>'.
+
+    data = {
+        'key':
+            textwrap.dedent(f'''\
+                firstline
+                 {'x' * 80}  remaining
+            ''')
+    }
+
+    dumped = yaml.safe_dump(data)
+    loaded = yaml.safe_load(dumped)
+
+    # The loaded value loaded['key'] by folded flow style will be
+    # f"firstline\n {'x' * 80} \nremaining\n" which is inconsistent.
+    self.assertDictEqual(data, loaded)
+    self.assertEqual(
+        textwrap.dedent(f'''\
+            key: |
+              firstline
+               {'x' * 80}  remaining
+        '''), dumped)
 
 
 if __name__ == '__main__':

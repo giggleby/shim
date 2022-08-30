@@ -22,6 +22,7 @@ from cros.factory.test.l10n import regions
 from cros.factory.utils import schema
 from cros.factory.utils import yaml_utils
 
+
 # Prefer CSafe* to improve performance.
 _SafeLoader, _SafeDumper = ((CSafeLoader, CSafeDumper) if __with_libyaml__ else
                             (SafeLoader, SafeDumper))
@@ -110,7 +111,7 @@ add_constructor('tag:yaml.org,2002:bool', RestrictedBoolConstructor)
 # style automatically.
 def _HWIDStrPresenter(yaml_dumper, data):
   return yaml_dumper.represent_scalar('tag:yaml.org,2002:str', data,
-                                      style='>' if '\n' in data else None)
+                                      style='|' if '\n' in data else None)
 
 
 add_representer(str, _HWIDStrPresenter)

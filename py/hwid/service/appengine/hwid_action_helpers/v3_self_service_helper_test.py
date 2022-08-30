@@ -47,11 +47,9 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         'image_id:',
         '  0: EVT',
         '  1: DVT',
-        ("    ComponentEq('audio_codec', ['hdmi_1', 'codec_1']) and "
-         "ComponentEq('cpu', 'cpu_4')"),
-        ("    and ComponentEq('battery', 'battery_medium') and ComponentEq("
-         "'keyboard', 'GB')"),
-        "    and ComponentEq('storage', ['HDD', '500G'])",
+        "           ComponentEq('battery', 'battery_medium') and",
+        "           ComponentEq('keyboard', 'GB') and",
+        "           ComponentEq('storage', ['HDD', '500G']))",
     ])
 
   def testAnalyzeDraftDBEditableSection_FPChangesForDifferentSource(self):

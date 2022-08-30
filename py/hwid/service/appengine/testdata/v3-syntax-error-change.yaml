@@ -350,7 +350,7 @@ rules:
   otherwise: SetComponent('cellular', None)
 
 - name: device_info.component.keyboard
-  evaluate: >
+  evaluate: |
       SetComponent(
           'keyboard', LookupMap(GetDeviceInfo('keyboard'), {
               'us': 'keyboard_us',
@@ -358,7 +358,7 @@ rules:
           }))
 
 - name: device_info.component.dram
-  evaluate: >
+  evaluate: |
       SetComponent(
           'dram', LookupMap(GetDeviceInfo('component.dram'), {
               'foo': 'dram_0',
@@ -366,7 +366,7 @@ rules:
           }))
 
 - name: device_info.component.audio_codec
-  evaluate: >
+  evaluate: |
       SetComponent(
           'audio_codec', LookupMap(GetDeviceInfo('component.audio_codec'), {
               'set_0': ['codec_0', 'hdmi_0'],
@@ -430,17 +430,17 @@ rules:
                    ComponentEq('storage', '16G'))
 
 - name: verify.sku.us
-  evaluate: >
-      ComponentEq('audio_codec', ['hdmi_1', 'codec_1']) and
-      ComponentEq('cpu', 'cpu_5') and
-      ComponentEq('battery', 'battery_huge') and
-      ComponentEq('keyboard', 'US') and
-      ComponentEq('storage', ['SSD', '16G'])
+  evaluate: |
+      Assert(ComponentEq('audio_codec', ['hdmi_1', 'codec_1']) and
+             ComponentEq('cpu', 'cpu_5') and
+             ComponentEq('battery', 'battery_huge') and
+             ComponentEq('keyboard', 'US') and
+             ComponentEq('storage', ['SSD', '16G']))
 
 - name: verify.sku.gb
-  evaluate: >
-      ComponentEq('audio_codec', ['hdmi_1', 'codec_1']) and
-      ComponentEq('cpu', 'cpu_4') and
-      ComponentEq('battery', 'battery_medium') and
-      ComponentEq('keyboard', 'GB') and
-      ComponentEq('storage', ['HDD', '500G'])
+  evaluate: |
+      Assert(ComponentEq('audio_codec', ['hdmi_1', 'codec_1']) and
+             ComponentEq('cpu', 'cpu_4') and
+             ComponentEq('battery', 'battery_medium') and
+             ComponentEq('keyboard', 'GB') and
+             ComponentEq('storage', ['HDD', '500G']))
