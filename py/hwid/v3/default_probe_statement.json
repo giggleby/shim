@@ -106,7 +106,10 @@
       "keys": [
         "product",
         "vendor",
-        "revision_id"
+        "revision_id",
+        "idProduct",
+        "idVendor",
+        "bcdDevice"
       ]
     }
   },
