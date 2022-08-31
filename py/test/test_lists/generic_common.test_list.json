@@ -259,6 +259,14 @@
         "timeout_secs": 120
       }
     },
+    "Buzzer": {
+      "pytest_name": "buzzer",
+      "args": {
+        "gpio_index": "eval! constants.buzzer.gpio_index",
+        "beep_duration_secs": 0.3,
+        "mute_duration_secs": 0.5
+      }
+    },
     "CEC": {
       "pytest_name": "cec",
       "args": {
