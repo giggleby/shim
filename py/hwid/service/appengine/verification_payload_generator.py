@@ -553,6 +553,46 @@ _STATUS_MAP = {
 _ProbeRequestSupportCategory = runtime_probe_pb2.ProbeRequest.SupportCategory
 
 
+def GenerateProbeStatement(ps_gens, comp_name, comp_info):
+  err = None
+  error_msg = None
+  all_suitable_generator_and_ps = []
+
+  for ps_gen in ps_gens:
+    try:
+      ps = ps_gen.TryGenerate(comp_name, comp_info.values,
+                              comp_info.information)
+    except MissingComponentValueError:
+      continue
+    except Exception as e:
+      if err is None:
+        err = e
+    else:
+      all_suitable_generator_and_ps.append((ps_gen, ps))
+
+  if not all_suitable_generator_and_ps:
+    if isinstance(err, ProbeStatementConversionError):
+      error_msg = ('Failed to generate the probe statement for component '
+                   f'{comp_name!r}: {err!r}.')
+    else:
+      # Ignore this component if no any generator are suitable for it.
+      return None
+
+  is_duplicate = comp_info.status == hwid_common.COMPONENT_STATUS.duplicate
+  if is_duplicate or error_msg:
+    probe_statement = None
+    component_info = None
+  else:
+    ps_gen, probe_statement = all_suitable_generator_and_ps[0]
+    component_info = hardware_verifier_pb2.ComponentInfo(
+        component_category=_ProbeRequestSupportCategory.Value(
+            ps_gen.probe_category), component_uuid=comp_name,
+        qualification_status=_STATUS_MAP[comp_info.status])
+
+  return ComponentVerificationPayloadPiece(is_duplicate, error_msg,
+                                           probe_statement, component_info)
+
+
 def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
     vpg_config_module.VerificationPayloadGeneratorConfig] = None):
   """Generates materials for verification payload from each components in HWID.
@@ -584,44 +624,12 @@ def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
     comps = db.GetComponents(hwid_comp_category, include_default=False)
     for comp_name, comp_info in comps.items():
       unique_comp_name = model_prefix + '_' + comp_name
-
-      err = None
-      error_msg = None
-      all_suitable_generator_and_ps = []
-      for ps_gen in ps_gens:
-        try:
-          ps = ps_gen.TryGenerate(unique_comp_name, comp_info.values,
-                                  comp_info.information)
-        except MissingComponentValueError:
-          continue
-        except Exception as e:
-          if err is None:
-            err = e
-        else:
-          all_suitable_generator_and_ps.append((ps_gen, ps))
-
-      if not all_suitable_generator_and_ps:
-        if isinstance(err, ProbeStatementConversionError):
-          error_msg = ('Failed to generate the probe statement for component '
-                       f'{unique_comp_name!r}: {err!r}.')
-        else:
-          # Ignore this component if no any generator are suitable for it.
-          continue
-
-      is_duplicate = comp_info.status == hwid_common.COMPONENT_STATUS.duplicate
-      if is_duplicate or error_msg:
-        probe_statement = None
-        component_info = None
-      else:
-        ps_gen, probe_statement = all_suitable_generator_and_ps[0]
-        component_info = hardware_verifier_pb2.ComponentInfo(
-            component_category=_ProbeRequestSupportCategory.Value(
-                ps_gen.probe_category), component_uuid=unique_comp_name,
-            qualification_status=_STATUS_MAP[comp_info.status])
+      vp_piece = GenerateProbeStatement(ps_gens, unique_comp_name, comp_info)
+      if vp_piece is None:
+        continue
       if hwid_comp_category in vpg_config.ignore_error:
-        error_msg = None
-      ret[(hwid_comp_category, comp_name)] = ComponentVerificationPayloadPiece(
-          is_duplicate, error_msg, probe_statement, component_info)
+        vp_piece = vp_piece._replace(error_msg=None)
+      ret[hwid_comp_category, comp_name] = vp_piece
   return ret
 
 
