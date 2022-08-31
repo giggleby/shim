@@ -25,6 +25,7 @@ import urllib.parse
 import yaml
 
 from cros.factory.probe.functions import chromeos_firmware
+from cros.factory.test.rules import phase
 from cros.factory.tools import get_version
 from cros.factory.tools import gsutil
 from cros.factory.utils import cros_board_utils
@@ -212,6 +213,8 @@ class FinalizeBundle:
     firmware_image_source: Path to the release image which contains
         the firmware.
     firmware_record: Firmware information including keys, checksums and signer.
+    timestamp: The date of the creation.
+    bundle_phase: The phase of the bundle.
   """
   bundle_dir = None
   bundle_name = None
@@ -251,6 +254,8 @@ class FinalizeBundle:
     self.jobs = jobs
     self.bundle_record = bundle_record
     self.model_to_firmware_bios_name: Dict[str, str] = {}
+    self.timestamp = ''
+    self.bundle_phase = 'mp'
 
   def Main(self):
     self.ProcessManifest()
@@ -303,12 +308,16 @@ class FinalizeBundle:
           'The designs (currently %r) should be %r, None or a list of str.' %
           (self.designs, BOXSTER_DESIGNS))
 
-    self.bundle_name = self.manifest['bundle_name']
+    self.bundle_name: str = self.manifest['bundle_name']
     if not re.match(r'\d{8}_', self.bundle_name):
       raise FinalizeBundleException(
           "The bundle_name (currently %r) should be today's date, "
           'plus an underscore, plus a description of the build, e.g.: %r' %
           (self.bundle_name, time.strftime('%Y%m%d_proto')))
+
+    name_blocks = self.bundle_name.split('_', 1)
+    self.timestamp = name_blocks[0]
+    self.bundle_phase = name_blocks[1]
 
     # If the basename of the working directory is equal to the expected name, we
     # believe that the user intentionally wants to make the bundle in the
@@ -342,6 +351,17 @@ class FinalizeBundle:
 
     self.readme_path = os.path.join(self.bundle_dir, 'README')
     self.has_firmware = self.manifest.get('has_firmware', DEFAULT_FIRMWARES)
+
+  @property
+  def test_list_phase(self):
+    """The phase of the test list."""
+    return {
+        'proto': phase.PROTO,
+        'evt': phase.EVT,
+        'dvt': phase.DVT,
+        'pvt': phase.PVT,
+        'mp': phase.PVT,
+    }.get(self.bundle_phase, phase.PVT)
 
   def _GetImageVersion(self, image_path):
     """Returns version of the image."""
@@ -787,7 +807,8 @@ class FinalizeBundle:
       self.firmware_record['firmware_records'] = []
 
       missing_models = set(models) - set(manifest.keys())
-      if missing_models and self.is_boxster_project:
+      firmware_manifest_mismatch = self.is_boxster_project and missing_models
+      if firmware_manifest_mismatch and self.test_list_phase > phase.PROTO:
         raise KeyError("No firmware models '%s' in chromeos-firmwareupdate" %
                        missing_models)
 
@@ -815,6 +836,14 @@ class FinalizeBundle:
           record['ro_fp_firmware'] = fp_firmware_hash[model]
 
         self.firmware_record['firmware_records'].append(record)
+
+      if firmware_manifest_mismatch:
+        logging.warning(
+            "No firmware models '%s' in chromeos-firmwareupdate. Remove "
+            "chromeos-firmwareupdate and ignore the error because it's in %r",
+            missing_models, phase.PROTO.name)
+        Spawn(['rm', '-rf', updater_path], log=True, check_call=True)
+        return
 
       # Collect only the desired firmware
       if self.is_boxster_project:
@@ -1299,17 +1328,28 @@ class FinalizeBundle:
           self.work_dir, 'factory_bundle_%s_%s.tar.bz2' % (self.board,
                                                            self.bundle_name))
       output_file = os.path.join(
-          self.work_dir, 'factory_bundle_%s_%s.tar.bz2' % (self.project,
-                                                           self.bundle_name))
-      args = ['bundle', '-o', self.work_dir, '--board', self.board,
-              '--timestamp', self.bundle_name.split('_')[0],
-              '--phase', self.bundle_name.split('_')[1]]
-      args += ['--project', self.project]
+          self.work_dir,
+          'factory_bundle_%s_%s.tar.bz2' % (self.project, self.bundle_name))
+      args = [
+          'bundle',
+          '-o',
+          self.work_dir,
+          '--board',
+          self.board,
+          '--timestamp',
+          self.timestamp,
+          '--phase',
+          self.bundle_phase,
+          '--project',
+          self.project,
+      ]
       if self.designs:
         args += ['--designs']
         args += self.designs
       if self.signed_shim_path:
         args += ['--factory_shim', self.signed_shim_path]
+      if self.test_list_phase < phase.EVT:
+        args += ['--no_verify_cros_config']
       Spawn(_GetImageTool() + args,
             log=True, check_call=True, cwd=self.bundle_dir)
       if image_tool_output_file != output_file:
