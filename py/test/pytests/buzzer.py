@@ -2,16 +2,54 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""This is a buzzer test."""
+"""This is a buzzer test.
 
+Description
+-----------
+This test checks the functionality of the buzzer of a ChromeOS device.
+
+Test Procedure
+--------------
+1. Press space and DUT will start buzzing.
+2. Press the number of buzz heard to pass the test or press 'r' to play again.
+
+Dependency
+----------
+None.
+
+Examples
+--------
+To test buzzer with default parameters on puff, add this in test list::
+
+  {
+    "pytest_name": "buzzer"
+    "args": {
+      "gpio_index": "382"
+    }
+  }
+
+If you want to change the mute duration between two beeps and the duration of a
+beep and test buzzer on brask::
+
+  {
+    "pytest_name": "buzzer",
+    "args": {
+      "gpio_index": "166"
+      "beep_duration_secs": 0.8,
+      "mute_duration_secs": 1.5
+    }
+  }
+"""
+
+import datetime
 import random
 import time
 
+from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import process_utils
 
 
 _MAX_BEEP_TIMES = 5
@@ -21,29 +59,15 @@ class BuzzerTest(test_case.TestCase):
   """Tests buzzer."""
   ARGS = [
       # Common arguments
-      Arg('init_commands', list, 'Setup buzzer commands', None),
-      Arg('start_command', list, 'Start beep command', None),
-      Arg('stop_command', list, 'Stop beep command', None),
       Arg('beep_duration_secs', float, 'How long for one beep', 0.3),
       Arg('mute_duration_secs', float, 'Mute duration between two beeps', 0.5),
+      Arg('gpio_index', str, 'Index for gpio file depending on the board'),
   ]
 
   def setUp(self):
+    self.dut = device_utils.CreateDUTInterface()
     self._pass_digit = random.randint(1, _MAX_BEEP_TIMES)
     self.ui.ToggleTemplateClass('font-large', True)
-    if self.args.init_commands:
-      self.InitialBuzzer(self.args.init_commands)
-
-  def InitialBuzzer(self, commands):
-    for command in commands:
-      process_utils.Spawn(command, check_call=True)
-
-  def BeepOne(self, start_cmd, stop_cmd):
-    if start_cmd:
-      process_utils.Spawn(start_cmd, check_call=True)
-    self.Sleep(self.args.beep_duration_secs)
-    if stop_cmd:
-      process_utils.Spawn(stop_cmd, check_call=True)
 
   def runTest(self):
     max_total_duration = _MAX_BEEP_TIMES * (
@@ -60,7 +84,7 @@ class BuzzerTest(test_case.TestCase):
     while True:
       start_time = time.time()
       for unused_i in range(self._pass_digit):
-        self.BeepOne(self.args.start_command, self.args.stop_command)
+        self.BeepOnce(self.args.beep_duration_secs)
         self.Sleep(self.args.mute_duration_secs)
       # Try to make the test always run for about same duration, to avoid
       # cheating by looking at when the buttons appear.
@@ -71,3 +95,19 @@ class BuzzerTest(test_case.TestCase):
       if key != 'R':
         self.assertEqual(self._pass_digit, int(key), 'Wrong number to press.')
         return
+
+  def BeepOnce(self, beep_duration):
+    t1 = datetime.datetime.now()
+    beep_sec = datetime.timedelta(seconds=beep_duration)
+    index = self.args.gpio_index
+
+    self.dut.WriteSpecialFile('/sys/class/gpio/export', index)
+    self.dut.WriteSpecialFile(f'/sys/class/gpio/gpio{index}/direction', 'out')
+
+    i = 0
+    while t1 + beep_sec > datetime.datetime.now():
+      self.dut.WriteSpecialFile(f'/sys/class/gpio/gpio{index}/value', str(i))
+      i = i ^ 1
+      self.Sleep(0.0001)  # A louder buzzing frequency
+
+    self.dut.WriteSpecialFile('/sys/class/gpio/unexport', index)
