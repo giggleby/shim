@@ -309,3 +309,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def SplitHwidDbChange(self, request):
     return self._ss_helper.SplitHWIDDBChange(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def CreateSplittedHwidDbCls(self, request):
+    return self._ss_helper.CreateSplittedHWIDDBCLs(request)

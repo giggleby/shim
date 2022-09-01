@@ -824,14 +824,14 @@ message CreateSplittedHwidDbClsResponse {
   bool auto_mergeable_change_cl_created = 1;
   // The CL number of the auto-mergeable change.
   int64 auto_mergeable_change_cl_number = 2;
-  // The identifiers of auto-mergeable change units.
-  repeated string auto_mergeable_change_unit_identifiers = 3;
+  // The identities of auto-mergeable change units.
+  repeated string auto_mergeable_change_unit_identities = 3;
   // A bool indicating whether a CL of the review-required change is created.
   bool review_required_change_cl_created = 4;
   // The CL number of the review-required change.
   int64 review_required_change_cl_number = 5;
-  // The identifiers of review-required change units.
-  repeated string review_required_change_unit_identifiers = 6;
+  // The identities of review-required change units.
+  repeated string review_required_change_unit_identities = 6;
   // The final commit of the HWID DB change.  Could be auto-mergeable one if
   // there is no CL of review-required change units.
   HwidDbCommit final_hwid_db_commit = 7;

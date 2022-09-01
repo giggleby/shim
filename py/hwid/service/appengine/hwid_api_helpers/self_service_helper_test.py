@@ -4,6 +4,8 @@
 
 import datetime
 import os
+import re
+import textwrap
 from typing import Optional, Sequence
 import unittest
 from unittest import mock
@@ -17,6 +19,7 @@ from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
+from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import file_utils
@@ -38,9 +41,12 @@ _HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
 _ChangeUnitMsg = hwid_api_messages_pb2.ChangeUnit
 _AddEncodingCombinationMsg = _ChangeUnitMsg.AddEncodingCombination
 _NewImageIdMsg = _ChangeUnitMsg.NewImageId
+_ClActionMsg = hwid_api_messages_pb2.ClAction
+_ReplaceRulesMsg = _ChangeUnitMsg.ReplaceRules
 _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
 _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
 _SessionCache = hwid_action.SessionCache
+_ApprovalStatus = change_unit_utils.ApprovalStatus
 
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -51,6 +57,29 @@ _HWID_V3_CHANGE_UNIT_BEFORE = os.path.join(
 _HWID_V3_CHANGE_UNIT_AFTER = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/change-unit-after.yaml')
+
+
+def _ApplyUnifiedDiff(src: str, diff: str) -> str:
+  src_lines = src.splitlines(keepends=True)
+  src_next_line_no = 0
+  result_lines = []
+  for diff_line in diff.splitlines(keepends=True)[2:]:
+    hunk_header = re.fullmatch(r'@@\s+-(\d+)(?:,\d+)?\s+\+\d+(?:,\d+)?\s+@@',
+                               diff_line.rstrip())
+    if hunk_header:
+      hunk_begin_line_no = int(hunk_header.group(1)) - 1
+      while src_next_line_no < hunk_begin_line_no:
+        result_lines.append(src_lines[src_next_line_no])
+        src_next_line_no += 1
+      continue
+    if diff_line[0] in (' ', '\n'):
+      result_lines.append(src_lines[src_next_line_no])
+      src_next_line_no += 1
+    elif diff_line[0] == '-':
+      src_next_line_no += 1
+    elif diff_line[0] == '+':
+      result_lines.append(diff_line[1:])
+  return ''.join(result_lines + src_lines[src_next_line_no:])
 
 
 class SelfServiceHelperTest(unittest.TestCase):
@@ -1145,6 +1174,231 @@ class SelfServiceHelperTest(unittest.TestCase):
                 with_new_encoding_pattern=True)),
     ], list(split_resp.change_units.values()))
 
+  def testCreateSplittedHWIDDBCLs_Pass(self):
+    # Arrange.
+    project = 'CHROMEBOOK'
+    old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_BEFORE)
+    new_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_AFTER)
+    # Config repo and action.
+    self._ConfigLiveHWIDRepo(project, 3, old_db_data)
+    action = self._CreateFakeHWIDBAction(project, old_db_data)
+    self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
+
+    # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
+    analyze_resp = self._AnalyzeHWIDDBEditableSection(project, new_db_data)
+    session_token = analyze_resp.validation_token
+    split_resp = self._SplitHWIDDBChange(
+        session_token, hwid_api_messages_pb2.HwidDbExternalResource())
+
+    create_cl_req = hwid_api_messages_pb2.CreateSplittedHwidDbClsRequest(
+        session_token=session_token,
+        original_requester='requester@notgoogle.com', description='description',
+        bug_number=100)
+    approval_status = create_cl_req.approval_status
+
+    # Act: only set one AddEncodingCombination change unit as
+    # MANUAL_REVIEW_REQUIRED.
+    change_unit_mapping = split_resp.change_units
+    approved_cl_action = _ClActionMsg(
+        approval_case=_ClActionMsg.ApprovalCase.APPROVED,
+        reviewers=['reviewer1@notgoogle.com', 'reviewer2@notgoogle.com'],
+        ccs=['cc1@notgoogle.com', 'cc2@notgoogle.com'])
+    review_required_cl_action = _ClActionMsg(
+        approval_case=_ClActionMsg.ApprovalCase.NEED_MANUAL_REVIEW,
+        reviewers=['reviewer3@notgoogle.com', 'reviewer4@notgoogle.com'],
+        ccs=['cc3@notgoogle.com', 'cc4@notgoogle.com'])
+
+    for identity, change_unit in change_unit_mapping.items():
+      if change_unit.WhichOneof(
+          'change_unit_type') != 'add_encoding_combination':
+        approval_status[identity].CopyFrom(approved_cl_action)
+      elif len(change_unit.add_encoding_combination.comp_info) != 1:
+        approval_status[identity].CopyFrom(approved_cl_action)
+      else:
+        # The combination of
+        #   comp_cls_1: new_comp
+        approval_status[identity].CopyFrom(review_required_cl_action)
+      approval_status[identity].reasons[:] = [
+          f'reason1 of {identity}.',
+          f'reason2 of {identity}.',
+      ]
+
+    create_cl_resp = self._ss_helper.CreateSplittedHWIDDBCLs(create_cl_req)
+
+    # Assert: both auto-approved and reviewed-required CLs are created.
+    self.assertTrue(create_cl_resp.auto_mergeable_change_cl_created)
+    self.assertTrue(create_cl_resp.review_required_change_cl_created)
+
+    # Validate the two CommitHWIDDB calls.
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    self.assertEqual(2, live_hwid_repo.CommitHWIDDB.call_count)
+    auto_approved_call, review_required_call = (
+        kwargs for (unused_args,
+                    kwargs) in live_hwid_repo.CommitHWIDDB.call_args_list)
+
+    expected_auto_approved_diff = textwrap.dedent('''\
+        ---
+        +++
+        @@ -11,7 +11,7 @@
+         # 若修改将使设备配置變為无效，并且不得销售此设备。
+         #
+         #####
+        -checksum: 3e9825a9a00edbbce83997944d47a6d412f604ca
+        +checksum: 222abbbca451589a2cc44535fbe67f4feccb9ac2
+
+         ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+        @@ -24,11 +24,15 @@
+         image_id:
+           0: PROTO
+           1: EVT
+        +  2: NEW_PHASE
+        +  3: PHASE_NO_NEW_PATTERN_1
+        +  4: PHASE_NO_NEW_PATTERN_2
+
+         pattern:
+         - image_ids:
+           - 0
+           - 1
+        +  - 2
+           encoding_scheme: base8192
+           fields:
+           - mainboard_field: 3
+        @@ -41,6 +45,14 @@
+           - ro_main_firmware_field: 1
+           - comp_cls_1_field: 2
+           - comp_cls_23_field: 2
+        +- image_ids:
+        +  - 3
+        +  - 4
+        +  encoding_scheme: base8192
+        +  fields:
+        +  - cpu_field: 5
+        +  - comp_cls_1_field: 2
+        +  - ro_main_firmware_field: 1
+
+         encoded_fields:
+           chassis_field:
+        @@ -122,6 +134,10 @@
+                 status: supported
+                 values:
+                   value: '2'
+        +      new_comp:
+        +        status: supported
+        +        values:
+        +          value: '3'
+           comp_cls_2:
+             items:
+               comp_2_1:
+    ''')
+
+    expected_review_required_diff = textwrap.dedent('''\
+        ---
+        +++
+        @@ -11,7 +11,7 @@
+         # 若修改将使设备配置變為无效，并且不得销售此设备。
+         #
+         #####
+        -checksum: 222abbbca451589a2cc44535fbe67f4feccb9ac2
+        +checksum: 1f8a06e90af7fb1150e7bdf9d7d0e36461565648
+
+         ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+        @@ -27,6 +27,8 @@
+           2: NEW_PHASE
+           3: PHASE_NO_NEW_PATTERN_1
+           4: PHASE_NO_NEW_PATTERN_2
+        +  5: PHASE_NEW_PATTERN_1
+        +  6: PHASE_NEW_PATTERN_2
+
+         pattern:
+         - image_ids:
+        @@ -45,6 +47,7 @@
+           - ro_main_firmware_field: 1
+           - comp_cls_1_field: 2
+           - comp_cls_23_field: 2
+        +  - new_field: 1
+         - image_ids:
+           - 3
+           - 4
+        @@ -53,6 +56,13 @@
+           - cpu_field: 5
+           - comp_cls_1_field: 2
+           - ro_main_firmware_field: 1
+        +- image_ids:
+        +  - 5
+        +  - 6
+        +  encoding_scheme: base8192
+        +  fields:
+        +  - comp_cls_1_field: 2
+        +  - new_field: 2
+
+         encoded_fields:
+           chassis_field:
+        @@ -91,6 +101,13 @@
+             1:
+               comp_cls_2: comp_2_2
+               comp_cls_3: comp_3_2
+        +  new_field:
+        +    0:
+        +      comp_cls_1: new_comp
+        +    1:
+        +      comp_cls_1:
+        +      - new_comp
+        +      - new_comp
+
+         components:
+           mainboard:
+    ''')
+
+    auto_approved_db_content = _ApplyUnifiedDiff(old_db_data,
+                                                 expected_auto_approved_diff)
+    review_required_db_content = _ApplyUnifiedDiff(
+        auto_approved_db_content, expected_review_required_diff)
+
+    # Validate auto-approved HWID DB CL.
+    self.assertFalse(auto_approved_call['auto_approved'])
+    self.assertCountEqual([
+        'cc1@notgoogle.com',
+        'cc2@notgoogle.com',
+    ], auto_approved_call['cc_list'])
+    self.assertCountEqual([
+        'reviewer1@notgoogle.com',
+        'reviewer2@notgoogle.com',
+    ], auto_approved_call['reviewers'])
+    self.assertEqual(auto_approved_db_content,
+                     auto_approved_call['hwid_db_contents'])
+    self.assertEqual(auto_approved_db_content,
+                     auto_approved_call['hwid_db_contents_internal'])
+    self.assertTrue(
+        all(f'reason1 of {identity}.' in auto_approved_call['commit_msg'] and
+            f'reason2 of {identity}.' in auto_approved_call['commit_msg'] for
+            identity in create_cl_resp.auto_mergeable_change_unit_identities))
+
+    # Validate review-required HWID DB CL.
+    self.assertFalse(review_required_call['auto_approved'])
+    self.assertCountEqual([
+        'cc1@notgoogle.com',
+        'cc2@notgoogle.com',
+        'cc3@notgoogle.com',
+        'cc4@notgoogle.com',
+    ], review_required_call['cc_list'])
+    self.assertCountEqual([
+        'reviewer1@notgoogle.com',
+        'reviewer2@notgoogle.com',
+        'reviewer3@notgoogle.com',
+        'reviewer4@notgoogle.com',
+    ], review_required_call['reviewers'])
+
+    self.assertEqual(review_required_db_content,
+                     review_required_call['hwid_db_contents'])
+    self.assertEqual(review_required_db_content,
+                     review_required_call['hwid_db_contents_internal'])
+    self.assertTrue(
+        all(f'reason1 of {identity}.' in review_required_call['commit_msg'] and
+            f'reason2 of {identity}.' in review_required_call['commit_msg'] for
+            identity in create_cl_resp.review_required_change_unit_identities))
+
   def _AnalyzeHWIDDBEditableSection(self, project: str,
                                     hwid_db_editable_section: str):
     analyze_req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
@@ -1152,6 +1406,14 @@ class SelfServiceHelperTest(unittest.TestCase):
         require_hwid_db_lines=False)
 
     return self._ss_helper.AnalyzeHWIDDBEditableSection(analyze_req)
+
+  def _SplitHWIDDBChange(
+      self, session_token: str,
+      db_external_resource: hwid_api_messages_pb2.HwidDbExternalResource):
+    split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
+        session_token=session_token, db_external_resource=db_external_resource)
+
+    return self._ss_helper.SplitHWIDDBChange(split_req)
 
   @classmethod
   def _CreateFakeHWIDBAction(cls, project: str, raw_db: str):

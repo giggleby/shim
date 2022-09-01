@@ -3,11 +3,12 @@
 # found in the LICENSE file.
 
 import datetime
+import io
 import logging
 import re
 import textwrap
 import time
-from typing import Optional, Tuple
+from typing import Mapping, MutableMapping, NamedTuple, Optional, Sequence, Tuple
 import uuid
 
 from google.protobuf import descriptor
@@ -21,6 +22,7 @@ from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_serv
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import builder as v3_builder
@@ -73,6 +75,19 @@ _HWID_SECTION_CHANGE_STATUS = {
 
 _SessionCache = hwid_action.SessionCache
 _ChangeUnitMsg = hwid_api_messages_pb2.ChangeUnit
+_CLActionMsg = hwid_api_messages_pb2.ClAction
+_CHANGE_UNIT_APPROVAL_STATUS_MAP = {
+    hwid_api_messages_pb2.ClAction.ApprovalCase.APPROVED: (
+        change_unit_utils.ApprovalStatus.AUTO_APPROVED),
+    hwid_api_messages_pb2.ClAction.ApprovalCase.REJECTED: (
+        change_unit_utils.ApprovalStatus.REJECTED),
+    hwid_api_messages_pb2.ClAction.ApprovalCase.NEED_MANUAL_REVIEW: (
+        change_unit_utils.ApprovalStatus.MANUAL_REVIEW_REQUIRED),
+    hwid_api_messages_pb2.ClAction.ApprovalCase.DONT_CARE: (
+        change_unit_utils.ApprovalStatus.DONT_CARE),
+}
+_SplitChangeUnitException = change_unit_utils.SplitChangeUnitException
+_ApplyChangeUnitException = change_unit_utils.ApplyChangeUnitException
 
 
 def _ConvertTouchedSectionToMsg(
@@ -213,6 +228,51 @@ def _ConvertChangeUnitToMsg(
   else:
     raise ValueError('Invalid change unit {change_unit!r}.')
   return msg
+
+
+class _ApprovalInfo(NamedTuple):
+  change_unit_repr: str
+  reviewers: Sequence[str]
+  ccs: Sequence[str]
+  reasons: Sequence[str]
+
+
+def _FormatApprovalStatusReasons(approval_info: _ApprovalInfo) -> str:
+  outbuf = io.StringIO()
+  outbuf.write(f'{approval_info.change_unit_repr}:\n')
+  for reason in approval_info.reasons:
+    outbuf.write(f'  - {reason}\n')
+  return outbuf.getvalue()
+
+
+def _CollectApprovalInfos(
+    change_unit_manager: change_unit_utils.ChangeUnitManager,
+    approval_status: Mapping[str, _CLActionMsg]) -> Mapping[str, _ApprovalInfo]:
+  approval_info_per_identity: MutableMapping[str, _ApprovalInfo] = {}
+  change_units = change_unit_manager.GetChangeUnits()
+  for identity, cu_action in approval_status.items():
+    approval_info_per_identity[identity] = _ApprovalInfo(
+        repr(change_units[identity]), cu_action.reviewers, cu_action.ccs,
+        cu_action.reasons)
+  return approval_info_per_identity
+
+
+def _SplitIntoDBSnapshots(
+    change_unit_manager: change_unit_utils.ChangeUnitManager,
+    approval_status: Mapping[str, _CLActionMsg]
+) -> change_unit_utils.ChangeSplitResult:
+  try:
+    change_unit_manager.SetApprovalStatus({
+        identity: _CHANGE_UNIT_APPROVAL_STATUS_MAP[cu_action.approval_case]
+        for identity, cu_action in approval_status.items()
+    })
+  except KeyError as ex:
+    raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+  try:
+    return change_unit_manager.SplitChange()
+  except (_SplitChangeUnitException, _ApplyChangeUnitException) as ex:
+    raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
 
 class SelfServiceHelper:
@@ -734,13 +794,8 @@ class SelfServiceHelper:
 
   def SetFirmwareInfoSupportStatus(self, request):
     project = _NormalizeProjectString(request.project)
-    live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    live_hwid_repo, action = self._GetRepoAndAction(project)
     resp = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusResponse()
-    try:
-      self._UpdateHWIDDBDataIfNeed(live_hwid_repo, project)
-      action = self._hwid_action_manager.GetHWIDAction(project)
-    except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
-      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
     firmware_comps = action.GetComponents(
         with_classes=v3_builder.FIRMWARE_COMPS)
@@ -819,11 +874,7 @@ class SelfServiceHelper:
     return resp
 
   def SplitHWIDDBChange(self, request):
-    session_cache = self._session_cache_adapter.Get(request.session_token)
-    if session_cache is None:
-      raise protorpc_utils.ProtoRPCException(
-          protorpc_utils.RPCCanonicalErrorCode.ABORTED,
-          detail='The validation token is expired.')
+    session_cache = self._GetSessionCache(request.session_token)
     project = session_cache.project
     avl_resource = request.db_external_resource
     try:
@@ -851,3 +902,119 @@ class SelfServiceHelper:
             for identity, change_unit in
             change_unit_manager.GetChangeUnits().items()
         })
+
+  def CreateSplittedHWIDDBCLs(self, request):
+
+    def _CommitSplittedCL(
+        db: database.Database, msg: str,
+        change_unit_identities: Sequence[str]) -> Tuple[int, str]:
+      commit_msg_list = [msg]
+
+      commit_msg_list.append('Reasons:\n')
+      commit_msg_list.extend(
+          _FormatApprovalStatusReasons(approval_infos[identity])
+          for identity in change_unit_identities
+          if approval_infos[identity].reasons)
+
+      commit_msg_list.append(f'BUG=b:{request.bug_number}')
+      commit_msg = '\n'.join(commit_msg_list)
+      new_hwid_db_editable_section = (
+          db.DumpDataWithoutChecksum(suppress_support_status=False))
+      new_hwid_db_contents_external = action.PatchHeader(
+          new_hwid_db_editable_section)
+      new_hwid_db_contents_internal = action.ConvertToInternalHWIDDBContent(
+          self._avl_converter_manager, new_hwid_db_contents_external,
+          session_cache.avl_resource)
+      reviewers = set()
+      ccs = set()
+      for identity in change_unit_identities:
+        ccs.update(approval_infos[identity].ccs)
+        reviewers.update(approval_infos[identity].reviewers)
+      try:
+        cl_number = live_hwid_repo.CommitHWIDDB(
+            name=project, hwid_db_contents=new_hwid_db_contents_external,
+            commit_msg=commit_msg, reviewers=list(reviewers), cc_list=list(ccs),
+            auto_approved=False,
+            hwid_db_contents_internal=new_hwid_db_contents_internal)
+      except hwid_repo.HWIDRepoError:
+        logging.exception(
+            'Caught an unexpected exception while uploading a HWID CL.')
+        raise protorpc_utils.ProtoRPCException(
+            protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
+      return cl_number, new_hwid_db_contents_external
+
+    # Fetch resources.
+    session_cache = self._GetSessionCache(request.session_token)
+    change_unit_manager = session_cache.change_unit_manager
+    project = session_cache.project
+    live_hwid_repo, action = self._GetRepoAndAction(project)
+    approval_infos = _CollectApprovalInfos(change_unit_manager,
+                                           request.approval_status)
+
+    # Perform change unit related actions.
+    split_result = _SplitIntoDBSnapshots(change_unit_manager,
+                                         request.approval_status)
+
+    auto_mergeable_change_cl_number = review_required_change_cl_number = 0
+    final_hwid_db_content = ''
+    final_cl_number = 0
+
+    if not split_result.auto_mergeable_noop:
+      commit_msg = textwrap.dedent(f"""\
+          ({int(time.time())}) {project}: (Auto-approved) HWID Config Update
+
+          Requested by: {request.original_requester}
+          Warning: this CL will be automatically merged or abandoned with the
+                   following CL if exists.
+
+          %s
+      """) % request.description
+      auto_mergeable_change_cl_number, final_hwid_db_content = (
+          _CommitSplittedCL(split_result.auto_mergeable_db, commit_msg,
+                            split_result.auto_mergeable_change_unit_identities))
+      final_cl_number = auto_mergeable_change_cl_number
+
+    if not split_result.review_required_noop:
+      commit_msg = textwrap.dedent(f"""\
+          ({int(time.time())}) {project}: HWID Config Update
+
+          Requested by: {request.original_requester}
+          Warning: all posted comments will be sent back to the
+                   requester.
+
+          %s
+      """) % request.description
+      review_required_change_cl_number, final_hwid_db_content = (
+          _CommitSplittedCL(
+              split_result.review_required_db, commit_msg,
+              split_result.review_required_change_unit_identities))
+      final_cl_number = review_required_change_cl_number
+
+    return hwid_api_messages_pb2.CreateSplittedHwidDbClsResponse(
+        auto_mergeable_change_cl_created=not split_result.auto_mergeable_noop,
+        auto_mergeable_change_cl_number=auto_mergeable_change_cl_number,
+        auto_mergeable_change_unit_identities=(
+            split_result.auto_mergeable_change_unit_identities),
+        review_required_change_cl_created=not split_result.review_required_noop,
+        review_required_change_cl_number=review_required_change_cl_number,
+        review_required_change_unit_identities=(
+            split_result.review_required_change_unit_identities),
+        final_hwid_db_commit=hwid_api_messages_pb2.HwidDbCommit(
+            cl_number=final_cl_number,
+            new_hwid_db_contents=final_hwid_db_content))
+
+  def _GetRepoAndAction(self, project: str) -> hwid_v3_action.HWIDV3Action:
+    live_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    try:
+      self._UpdateHWIDDBDataIfNeed(live_repo, project)
+      return live_repo, self._hwid_action_manager.GetHWIDAction(project)
+    except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+  def _GetSessionCache(self, session_token: str) -> _SessionCache:
+    session_cache = self._session_cache_adapter.Get(session_token)
+    if session_cache is None:
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.ABORTED,
+          detail='The validation token is expired.')
+    return session_cache
