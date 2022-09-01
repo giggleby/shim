@@ -30,21 +30,21 @@ components:
     items:
       battery_small_supported:
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: S
-          technology: tech
+          technology: Li-ion
       battery_medium_unqualified:
         status: unqualified
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: M
-          technology: tech
+          technology: Li-ion
       battery_large_deprecated:
         status: deprecated
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: L
-          technology: tech
+          technology: Li-ion
   cpu:  # CPU is totally ignored by the generator.
     items:
       cpu_0:

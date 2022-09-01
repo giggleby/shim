@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import functools
 import os
 import unittest
 
@@ -12,6 +13,7 @@ import hardware_verifier_pb2  # pylint: disable=import-error
 
 from cros.factory.hwid.service.appengine import verification_payload_generator
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
+from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule as hwid_rule
 from cros.factory.probe.runtime_probe import probe_config_types
@@ -26,34 +28,123 @@ TESTDATA_DIR = os.path.join(
     os.path.dirname(__file__), 'testdata', 'verification_payload_generator')
 
 
+def GetProbeStatementGenerator(category):
+  return functools.partial(
+      _vp_generator.GenerateProbeStatement,
+      _vp_generator.GetAllProbeStatementGenerators()[category])
+
+
 class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
 
-  def testTryGenerate(self):
-    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['battery'][0]
+  @classmethod
+  def setUpClass(cls):
+    cls._GenerateBatteryProbeStatement = staticmethod(
+        GetProbeStatementGenerator('battery'))
 
-    ps = ps_gen.TryGenerate(
-        'name1',
-        {'manufacturer': 'foo',
-         'model_name': hwid_rule.Value('bar', is_re=True),
-         'technology': 'cutting-edge-tech',
-         'other_value': 'z'})
+  def testTryGenerate_Integrated(self):
+    comp = database.ComponentInfo(
+        {
+            'chemistry': 'LION',
+            'manufacturer': 'foo',
+            'model_name': 'bar',
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('battery', comp)
     self.assertEqual(
-        ps,
+        vp_piece.probe_statement,
         probe_config_types.ComponentProbeStatement(
-            'battery', 'name1', {
+            'battery', 'battery', {
                 'eval': {
                     'generic_battery': {}
                 },
                 'expect': {
+                    'chemistry': [True, 'str', '!eq LION'],
                     'manufacturer': [True, 'str', '!eq foo'],
-                    'model_name': [True, 'str', '!re bar'],
-                    'technology': [True, 'str', '!eq cutting-edge-tech']
+                    'model_name': [True, 'str', '!eq bar'],
                 }
             }))
 
-    # Should report not supported if some fields are missing.
-    self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate,
-                      'name1', {'manufacturer': 'foo'})
+  def testTryGenerate_Sysfs(self):
+    comp = database.ComponentInfo(
+        {
+            'manufacturer': 'foo',
+            'model_name': 'bar',
+            'technology': 'Li-ion'
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
+    self.assertEqual(
+        vp_piece.probe_statement,
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'sysfs_battery', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': [{
+                    'manufacturer': [True, 'str', '!re foo.*'],
+                    'model_name': [True, 'str', '!re bar.*'],
+                    'technology': [True, 'str', '!eq Li-ion']
+                }, {
+                    'chemistry': [True, 'str', '!eq Li-ion'],
+                    'manufacturer': [True, 'str', '!eq foo'],
+                    'model_name': [True, 'str', '!eq bar'],
+                }]
+            }))
+
+  def testTryGenerate_SysfsWithRegex(self):
+    comp = database.ComponentInfo(
+        {
+            'manufacturer': 'foo',
+            'model_name': hwid_rule.Value('bar.*', is_re=True),
+            'technology': 'Li-ion'
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
+    self.assertEqual(
+        vp_piece.probe_statement,
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'sysfs_battery', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': [{
+                    'manufacturer': [True, 'str', '!re foo.*'],
+                    'model_name': [True, 'str', '!re bar.*'],
+                    'technology': [True, 'str', '!eq Li-ion']
+                }, {
+                    'chemistry': [True, 'str', '!eq Li-ion'],
+                    'manufacturer': [True, 'str', '!eq foo'],
+                    'model_name': [True, 'str', '!re bar.*']
+                }]
+            }))
+
+  def testTryGenerate_Ectool(self):
+    comp = database.ComponentInfo(
+        {
+            'manufacturer': 'foo',
+            'model_name': 'bar',
+            'technology': 'LION'
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('ec_battery', comp)
+    self.assertEqual(
+        vp_piece.probe_statement,
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'ec_battery', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': {
+                    'chemistry': [True, 'str', '!eq LION'],
+                    'manufacturer': [True, 'str', '!eq foo'],
+                    'model_name': [True, 'str', '!eq bar']
+                }
+            }))
+
+  def testTryGenerate_MissingFields(self):
+    comp = database.ComponentInfo(
+        {
+            'manufacturer': 'foo',
+            'technology': 'Li-ion'
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('name', comp)
+    self.assertIsNone(vp_piece)
 
 
 class GenericStorageMMCProbeStatementGeneratorTest(unittest.TestCase):

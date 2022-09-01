@@ -99,6 +99,7 @@
       {
         "componentCategory": "battery",
         "fieldNames": [
+          "chemistry",
           "manufacturer",
           "model_name",
           "technology"
@@ -232,6 +233,10 @@
           "generic_battery": {}
         },
         "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
           "manufacturer": [
             false,
             "str"
@@ -250,67 +255,124 @@
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq L"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re L.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq L"
+            ]
+          }
+        ]
       },
       "model_a_battery_medium_unqualified": {
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq M"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re M.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq M"
+            ]
+          }
+        ]
       },
       "model_a_battery_small_supported": {
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq S"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re S.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq S"
+            ]
+          }
+        ]
       }
     },
     "camera": {
@@ -850,6 +912,10 @@
           "generic_battery": {}
         },
         "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
           "manufacturer": [
             false,
             "str"
@@ -868,89 +934,165 @@
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq L"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech1"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re L.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq L"
+            ]
+          }
+        ]
       },
       "model_b_battery_large_supported_tech_2": {
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq L"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech2"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re L.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-poly"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-poly"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq L"
+            ]
+          }
+        ]
       },
       "model_b_battery_medium_supported": {
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq M"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech2"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re M.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq M"
+            ]
+          }
+        ]
       },
       "model_b_battery_small_supported": {
         "eval": {
           "generic_battery": {}
         },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq S"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq tech1"
-          ]
-        }
+        "expect": [
+          {
+            "manufacturer": [
+              true,
+              "str",
+              "!re mfr.*"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!re S.*"
+            ],
+            "technology": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ]
+          },
+          {
+            "chemistry": [
+              true,
+              "str",
+              "!eq Li-ion"
+            ],
+            "manufacturer": [
+              true,
+              "str",
+              "!eq mfr"
+            ],
+            "model_name": [
+              true,
+              "str",
+              "!eq S"
+            ]
+          }
+        ]
       }
     },
     "camera": {
@@ -1334,6 +1476,10 @@
           "generic_battery": {}
         },
         "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
           "manufacturer": [
             false,
             "str"
@@ -1752,6 +1898,10 @@
           "generic_battery": {}
         },
         "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
           "manufacturer": [
             false,
             "str"
@@ -2170,6 +2320,10 @@
           "generic_battery": {}
         },
         "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
           "manufacturer": [
             false,
             "str"

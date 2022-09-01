@@ -25,11 +25,13 @@ def _GetAllProbeStatementDefinitions():
   builder = probe_config_types.ProbeStatementDefinitionBuilder('battery')
   builder.AddProbeFunction('generic_battery',
                            'Read battery information from sysfs.')
+  builder.AddStrOutputField('chemistry', 'Chemistry exposed from the EC.')
   builder.AddStrOutputField('manufacturer',
-                            ('Manufacturing name exposed from the ACPI '
+                            ('Manufacturer name exposed from the ACPI '
                              'interface.'))
   builder.AddStrOutputField('model_name',
-                            'Model name exposed from the ACPI interface.')
+                            ('Model name exposed from the EC or the ACPI '
+                             'interface.'))
   builder.AddStrOutputField('technology',
                             'Technology exposed from the ACPI interface.')
   probe_statement_definitions['battery'] = builder.Build()

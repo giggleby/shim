@@ -71,7 +71,7 @@ def _GetAllGenericProbeStatementInfoRecords():
   return [
       GenericProbeStatementInfoRecord(
           'battery', 'generic_battery',
-          ['manufacturer', 'model_name', 'technology']),
+          ['chemistry', 'manufacturer', 'model_name', 'technology']),
       GenericProbeStatementInfoRecord('storage', 'generic_storage', [
           'type', 'sectors', 'mmc_hwrev', 'mmc_manfid', 'mmc_name', 'mmc_oemid',
           'mmc_prv', 'mmc_serial', 'pci_vendor', 'pci_device', 'pci_class',
@@ -144,6 +144,14 @@ class StrValueConverter(ValueConverter):
     return str(value)
 
 
+class StrPrefixValueConverter(ValueConverter):
+
+  def __call__(self, value):
+    if isinstance(value, hwid_rule.Value):
+      return re.compile(value.raw_value) if value.is_re else value.raw_value
+    return re.compile(f'{re.escape(value)}.*')
+
+
 class IntValueConverter(ValueConverter):
 
   def __call__(self, value):
@@ -189,6 +197,18 @@ class FloatToHexValueConverter(ValueConverter):
   def __call__(self, value):
     value = '%04x' % int(float(value))
     return self._hex_to_hex_converter(value)
+
+
+class BatteryTechnologySysfsValueConverter(ValueConverter):
+  VALUE_ALLOWLIST = ['Li-ion', 'Li-poly']
+
+  def __init__(self):
+    self._str_converter = StrValueConverter()
+
+  def __call__(self, value):
+    if value in self.VALUE_ALLOWLIST:
+      return self._str_converter(value)
+    raise ValueError(f'Unknown battery technology {value}.')
 
 
 class InputDeviceVendorValueConverter(ValueConverter):
@@ -346,11 +366,30 @@ def GetAllProbeStatementGenerators():
   all_probe_statement_generators = {}
 
   all_probe_statement_generators['battery'] = [
-      _ProbeStatementGenerator('battery', 'generic_battery', [
-          _SameNameFieldRecord('manufacturer', str_converter),
-          _SameNameFieldRecord('model_name', str_converter),
-          _SameNameFieldRecord('technology', str_converter),
-      ])
+      _ProbeStatementGenerator(
+          'battery',
+          'generic_battery',
+          [
+              [
+                  _SameNameFieldRecord('chemistry', str_converter),
+                  _SameNameFieldRecord('manufacturer', str_converter),
+                  _SameNameFieldRecord('model_name', str_converter),
+              ],
+              # Components from sysfs.
+              [
+                  _SameNameFieldRecord('manufacturer',
+                                       StrPrefixValueConverter()),
+                  _SameNameFieldRecord('model_name', StrPrefixValueConverter()),
+                  _SameNameFieldRecord('technology',
+                                       BatteryTechnologySysfsValueConverter()),
+              ],
+              # Components from EC.
+              [
+                  _SameNameFieldRecord('manufacturer', str_converter),
+                  _SameNameFieldRecord('model_name', str_converter),
+                  _FieldRecord('technology', 'chemistry', str_converter),
+              ]
+          ])
   ]
 
   storage_shared_fields = [_SameNameFieldRecord('sectors', int_converter)]

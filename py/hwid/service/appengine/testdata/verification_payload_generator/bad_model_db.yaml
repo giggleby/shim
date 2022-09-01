@@ -33,19 +33,19 @@ components:
         values:
           manufacturer: Battery Li-ion
           model_name: Model Small
-          technology: tech1
+          technology: Li-ion
       battery_medium_unqualified:
         status: unqualified
         values:
           manufacturer: Battery Li-ion
           model_name: Model Medium
-          technology: tech2
+          technology: Li-ion
       battery_large_deprecated:
         status: deprecated
         values:
           manufacturer: Battery Li-ion
           model_name: Model Large
-          technology: tech3
+          technology: Li-ion
   cpu:  # CPU is totally ignored by the generator.
     items:
       cpu_0:

@@ -24,25 +24,25 @@ components:
     items:
       battery_small_supported:
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: S
-          technology: tech1
+          technology: Li-ion
       battery_medium_supported:
         status: supported
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: M
-          technology: tech2
+          technology: Li-ion
       battery_large_supported_tech_1:
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: L
-          technology: tech1
+          technology: Li-ion
       battery_large_supported_tech_2:
         status: supported
         values:
-          manufacturer: Li-ion
+          manufacturer: mfr
           model_name: L
-          technology: tech2
+          technology: Li-poly
 
 rules: []
