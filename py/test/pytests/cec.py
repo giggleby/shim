@@ -1,7 +1,9 @@
 # Copyright 2022 The ChromiumOS Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Test and check cec power control feature on Chrome OS device.
+
 Description
 -----------
 This test checks cec power control feature by turning off and turning on the
