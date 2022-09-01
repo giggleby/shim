@@ -21,6 +21,7 @@ from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import file_utils
 
+
 _ErrorMsg = (
     hwid_api_messages_pb2.HwidDbEditableSectionChangeValidationResult.Error)
 _ErrorCodeMsg = (
@@ -930,9 +931,11 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj']))
     resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
-    comps = action.GetComponents(['ro_main_firmware', 'ro_ec_firmware'])
+    comps = action.GetComponents(['ro_main_firmware', 'ro_fp_firmware'])
 
     self.assertIn('Google_Proj_1111_1_1', comps['ro_main_firmware'])
+    self.assertIn('fp_firmware_1', comps['ro_fp_firmware'])
+    self.assertIn('fp_firmware_2', comps['ro_fp_firmware'])
     self.assertIn('PROJ', resp.commits)
     self.assertEqual(resp.commits['PROJ'].cl_number, 123)
     self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
@@ -1087,7 +1090,12 @@ class SelfServiceHelperTest(unittest.TestCase):
           _FirmwareRecord(
               model=proj, firmware_keys=_FirmwareRecord.FirmwareKeys(
                   key_recovery='key_recovery', key_root='key_root'),
-              ro_main_firmware=_FirmwareRecord.FirmwareInfo(
+              ro_fp_firmware=[
+                  _FirmwareRecord.FirmwareInfo(hash='hash_string',
+                                               version='fp_firmware_1'),
+                  _FirmwareRecord.FirmwareInfo(hash='hash_string',
+                                               version='fp_firmware_2'),
+              ], ro_main_firmware=_FirmwareRecord.FirmwareInfo(
                   hash='hash_string', version='Google_Proj.1111.1.1')))
 
     return _FactoryBundleRecord(board='board', firmware_signer='BoardMPKeys-V1',

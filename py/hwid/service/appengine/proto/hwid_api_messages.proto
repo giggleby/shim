@@ -636,9 +636,11 @@ message FactoryBundleRecord {
     FirmwareInfo ro_ec_firmware = 4;
     // RO PD firmware info
     FirmwareInfo ro_pd_firmware = 5;
-
     // Whether the firmware status is supported.
     bool supported = 6;
+    // RO FP firmware info.
+    // Note that it is possible to have multiple FP firmwares in a model.
+    repeated FirmwareInfo ro_fp_firmware = 7;
   }
 
   // Firmware record of each model.

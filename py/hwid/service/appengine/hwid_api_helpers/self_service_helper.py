@@ -10,6 +10,7 @@ import time
 from typing import Optional, Tuple
 import uuid
 
+from google.protobuf import descriptor
 from google.protobuf import json_format
 
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
@@ -26,6 +27,7 @@ from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+
 
 _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
     hwid_repo.HWIDDBCLStatus.NEW:
@@ -320,27 +322,33 @@ class SelfServiceHelper:
       # Add component to DB
       with v3_builder.DatabaseBuilder.FromExistingDB(
           db=action.GetDBV3()) as db_builder:
-        for field, value in firmware_record.ListFields():
+        for field, values in firmware_record.ListFields():
           if field.message_type is None:
             continue
-          value = json_format.MessageToDict(value,
-                                            preserving_proto_field_name=True)
 
-          if field.message_type.name == 'FirmwareInfo':
-            comp_name = v3_builder.DetermineComponentName(field.name, value)
-          elif field.message_type.name == 'FirmwareKeys':
-            comp_name = keys_comp_name
-          else:
-            continue
+          # Currently only ro_fp_firmware is repeated. Specially handle this
+          # case.
+          if field.label != descriptor.FieldDescriptor.LABEL_REPEATED:
+            values = [values]
 
-          if comp_name not in db_builder.GetComponents(field.name):
-            db_builder.AddComponentCheck(field.name, value, comp_name,
-                                         supported=firmware_record.supported)
+          for value in values:
+            value = json_format.MessageToDict(value,
+                                              preserving_proto_field_name=True)
+            if field.message_type.name == 'FirmwareInfo':
+              comp_name = v3_builder.DetermineComponentName(field.name, value)
+            elif field.message_type.name == 'FirmwareKeys':
+              comp_name = keys_comp_name
+            else:
+              continue
 
-          comp = db_builder.GetComponents(field.name)[comp_name]
-          db_builder.GetComponents(field.name)[comp_name] = comp.Replace(
-              bundle_uuids=list(comp.bundle_uuids) + [request_uuid])
-          changed = True
+            if comp_name not in db_builder.GetComponents(field.name):
+              db_builder.AddComponentCheck(field.name, value, comp_name,
+                                           supported=firmware_record.supported)
+
+            comp = db_builder.GetComponents(field.name)[comp_name]
+            db_builder.GetComponents(field.name)[comp_name] = comp.Replace(
+                bundle_uuids=list(comp.bundle_uuids) + [request_uuid])
+            changed = True
 
       if not changed:
         logging.info('No component is added/modified to DB: %s', model)

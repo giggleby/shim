@@ -17,6 +17,7 @@ from cros.factory.hwid.v3 import probe
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import json_utils
 
+
 # The components that are always be created at the front of the pattern,
 # even if they don't exist in the probe results.
 ESSENTIAL_COMPS = [
@@ -451,6 +452,9 @@ class DatabaseBuilder:
       supported: whether to mark the added component as supported.
     """
     # Set old firmware components to deprecated.
+    # TODO(wyuang): auto deprecate ro_fp_firmware. It is possible to have
+    # multiple supported FP firmware at the same time so the logic here doesn't
+    # work.
     if comp_cls in ['ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware']:
       for comp_name, comp_info in self._database.GetComponents(
           comp_cls).items():
