@@ -7,11 +7,10 @@ import unittest
 from unittest import mock
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
-from google.cloud import firestore  # pylint: disable=no-name-in-module,import-error
+from google.cloud import firestore
 import pytz
 
 from cros.factory.bundle_creator.connector import firestore_connector
-from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
 class FirestoreConnectorTest(unittest.TestCase):
@@ -24,14 +23,10 @@ class FirestoreConnectorTest(unittest.TestCase):
                                                         tzinfo=pytz.UTC)
 
   def setUp(self):
-    self._create_bundle_rpc_request = factorybundle_pb2.CreateBundleRpcRequest()
-    self._create_bundle_rpc_request.board = 'board'
-    self._create_bundle_rpc_request.project = 'project'
-    self._create_bundle_rpc_request.phase = 'proto'
-    self._create_bundle_rpc_request.toolkit_version = '11111.0.0'
-    self._create_bundle_rpc_request.test_image_version = '12222.0.0'
-    self._create_bundle_rpc_request.release_image_version = '13333.0.0'
-    self._create_bundle_rpc_request.email = 'foo@bar'
+    self._info = firestore_connector.CreateBundleRequestInfo(
+        email='foo@bar', board='board', project='project', phase='proto',
+        toolkit_version='11111.0.0', test_image_version='12222.0.0',
+        release_image_version='13333.0.0', update_hwid_db_firmware_info=False)
 
     mock_datetime_patcher = mock.patch(
         'cros.factory.bundle_creator.connector.firestore_connector.datetime')
@@ -73,52 +68,41 @@ class FirestoreConnectorTest(unittest.TestCase):
     self.assertIsNone(has_firmware_setting)
 
   def testCreateUserRequest_succeed_verifiesCreatedDocument(self):
-    doc_id = self._connector.CreateUserRequest(self._create_bundle_rpc_request)
+    doc_id = self._connector.CreateUserRequest(self._info)
 
     expected_doc = {
-        'email':
-            self._create_bundle_rpc_request.email,
-        'board':
-            self._create_bundle_rpc_request.board,
-        'project':
-            self._create_bundle_rpc_request.project,
-        'phase':
-            self._create_bundle_rpc_request.phase,
-        'toolkit_version':
-            self._create_bundle_rpc_request.toolkit_version,
-        'test_image_version':
-            self._create_bundle_rpc_request.test_image_version,
-        'release_image_version':
-            self._create_bundle_rpc_request.release_image_version,
-        'status':
-            self._connector.USER_REQUEST_STATUS_NOT_STARTED,
-        'request_time':
-            self._FIRESTORE_CURRENT_DATETIME,
-        'update_hwid_db_firmware_info':
-            False,
+        'email': self._info.email,
+        'board': self._info.board,
+        'project': self._info.project,
+        'phase': self._info.phase,
+        'toolkit_version': self._info.toolkit_version,
+        'test_image_version': self._info.test_image_version,
+        'release_image_version': self._info.release_image_version,
+        'status': self._connector.USER_REQUEST_STATUS_NOT_STARTED,
+        'request_time': self._FIRESTORE_CURRENT_DATETIME,
+        'update_hwid_db_firmware_info': False,
     }
     doc = self._connector.GetUserRequestDocument(doc_id)
     self.assertEqual(doc, expected_doc)
 
   def testCreateUserRequest_hasFirmwareSource_verifiesFirmwareSourceValue(self):
-    self._create_bundle_rpc_request.firmware_source = '14444.0.0'
+    self._info.firmware_source = '14444.0.0'
 
-    doc_id = self._connector.CreateUserRequest(self._create_bundle_rpc_request)
+    doc_id = self._connector.CreateUserRequest(self._info)
 
     doc = self._connector.GetUserRequestDocument(doc_id)
-    self.assertEqual(doc['firmware_source'],
-                     self._create_bundle_rpc_request.firmware_source)
+    self.assertEqual(doc['firmware_source'], self._info.firmware_source)
 
   def testCreateUserRequest_updateHWIDFirmwareInfo_verifiesRelatedValues(self):
-    self._create_bundle_rpc_request.update_hwid_db_firmware_info = True
-    self._create_bundle_rpc_request.hwid_related_bug_number = 123456789
+    self._info.update_hwid_db_firmware_info = True
+    self._info.hwid_related_bug_number = 123456789
 
-    doc_id = self._connector.CreateUserRequest(self._create_bundle_rpc_request)
+    doc_id = self._connector.CreateUserRequest(self._info)
 
     doc = self._connector.GetUserRequestDocument(doc_id)
     self.assertEqual(doc['update_hwid_db_firmware_info'], True)
     self.assertEqual(doc['hwid_related_bug_number'],
-                     self._create_bundle_rpc_request.hwid_related_bug_number)
+                     self._info.hwid_related_bug_number)
 
   def testUpdateUserRequestStatus_succeed_verifiesDocStatus(self):
     status = self._connector.USER_REQUEST_STATUS_SUCCEEDED

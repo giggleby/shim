@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
-from google.cloud import firestore  # pylint: disable=no-name-in-module,import-error
+from google.cloud import firestore
 import pytz
 import yaml
 
@@ -101,8 +101,15 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     self._message.request.email = 'foo@bar'
     self._firestore_connector.ClearCollection('user_requests')
     self._firestore_connector.ClearCollection('has_firmware_settings')
-    self._message.doc_id = (
-        self._firestore_connector.CreateUserRequest(self._message.request))
+    info = firestore_connector.CreateBundleRequestInfo(
+        email=self._message.request.email, board=self._message.request.board,
+        project=self._message.request.project,
+        phase=self._message.request.phase,
+        toolkit_version=self._message.request.toolkit_version,
+        test_image_version=self._message.request.test_image_version,
+        release_image_version=self._message.request.release_image_version,
+        update_hwid_db_firmware_info=False)
+    self._message.doc_id = self._firestore_connector.CreateUserRequest(info)
     self._pubsub_connector.CreateSubscription(self._TOPIC_NAME,
                                               config.PUBSUB_SUBSCRIPTION)
 

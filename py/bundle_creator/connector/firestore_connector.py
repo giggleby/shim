@@ -2,13 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from dataclasses import asdict
+from dataclasses import dataclass
 from datetime import datetime
 import logging
 from typing import Any, Dict, List, Optional
 
 from google.cloud import firestore
 
-from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
+
+@dataclass
+class CreateBundleRequestInfo:
+  """A placeholder represents the information of a create bundle request.
+
+  Properties:
+    email: The email of the bundle creator.
+    board: The board name.
+    project: The project name.
+    phase: The phase name.
+    toolkit_version: The toolkit version.
+    test_image_version: The test image version.
+    release_image_version: The release image version.
+    update_hwid_db_firmware_info: A boolean value which represents including
+        firmware info in HWID DB or not.
+    firmware_source: The firmware source, `None` if it isn't set.
+    hwid_related_bug_number: The bug number to create a HWID CL, `None` if it
+        isn't set.
+  """
+  email: str
+  board: str
+  project: str
+  phase: str
+  toolkit_version: str
+  test_image_version: str
+  release_image_version: str
+  update_hwid_db_firmware_info: bool
+  firmware_source: Optional[str] = None
+  hwid_related_bug_number: Optional[int] = None
 
 
 class FirestoreConnector:
@@ -53,32 +83,24 @@ class FirestoreConnector:
             'No `has_firmware` attribute found in the existing document.')
     return None
 
-  def CreateUserRequest(
-      self, request: factorybundle_pb2.CreateBundleRpcRequest) -> str:
+  def CreateUserRequest(self, info: CreateBundleRequestInfo) -> str:
     """Creates a user request from the create bundle request.
 
     Args:
-      request: A CreateBundleRpcRequest message.
+      info: A `CreateBundleRequestInfo` object which contains the information to
+          create a user request document.
 
     Returns:
       A hashed document id generated from the created document.
     """
-    doc_value = {
-        'email': request.email,
-        'board': request.board,
-        'project': request.project,
-        'phase': request.phase,
-        'toolkit_version': request.toolkit_version,
-        'test_image_version': request.test_image_version,
-        'release_image_version': request.release_image_version,
-        'status': self.USER_REQUEST_STATUS_NOT_STARTED,
-        'request_time': datetime.now(),
-        'update_hwid_db_firmware_info': request.update_hwid_db_firmware_info,
-    }
-    if request.HasField('firmware_source'):
-      doc_value['firmware_source'] = request.firmware_source
-    if request.update_hwid_db_firmware_info:
-      doc_value['hwid_related_bug_number'] = request.hwid_related_bug_number
+    doc_value = asdict(info)
+    doc_value['status'] = self.USER_REQUEST_STATUS_NOT_STARTED
+    doc_value['request_time'] = datetime.now()
+    if not doc_value['firmware_source']:
+      del doc_value['firmware_source']
+    if not info.update_hwid_db_firmware_info:
+      del doc_value['hwid_related_bug_number']
+
     doc_ref = self._GetUserRequestDocRef()
     doc_ref.set(doc_value)
     return doc_ref.id
