@@ -110,12 +110,6 @@ CLOSURE_LIB_URL ?= \
   gs://chromeos-localmirror/distfiles/closure-library-201702.tar.gz
 CLOSURE_LIB_DIR ?= $(BUILD_DIR)/dist/closure-library-$(CLOSURE_LIB_GITREV)
 
-# TODO(hungte) Remove the ifdef when chromeos-base/factory ebuild has changed to
-# always specify CLOSURE_LIB_DIR.
-ifdef CROS_WORKON_SRCROOT
-CLOSURE_LIB_DIR = /opt/closure-library
-endif
-
 LINT_BLOCKLIST=$(shell cat $(MK_DIR)/pylint.blocklist | grep -v '^\#')
 LINT_FILES=$(shell find py go po devtools -name '*.py' -type f | sort)
 LINT_ALLOWLIST=$(filter-out $(LINT_BLOCKLIST),$(wildcard $(LINT_FILES)))
