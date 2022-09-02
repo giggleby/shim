@@ -505,6 +505,7 @@ def GetSkuIdsFromCrosConfig(project, config_yaml_path=None):
   for config in obj['chromeos']['configs']:
     if config['name'] == project:
       identity = config['identity']
-      sku_ids.append(identity['sku-id'])
+      if 'sku-id' in identity:
+        sku_ids.append(identity['sku-id'])
 
   return sku_ids
