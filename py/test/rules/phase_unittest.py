@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -15,6 +15,7 @@ from cros.factory.test.rules.phase import Phase
 from cros.factory.test.rules.phase import PhaseAssertionError
 from cros.factory.utils import file_utils
 
+
 # Allow access to protected members _state_root_for_testing and _current_phase
 # for white-box testing.
 # pylint: disable=protected-access
@@ -25,8 +26,8 @@ class BasicPhaseTest(unittest.TestCase):
   def testBasicOps(self):
     for l, name_l in enumerate(PHASE_NAMES):
       for r, name_r in enumerate(PHASE_NAMES):
-        left = Phase(name_l)
-        right = Phase(name_r)
+        left = Phase[name_l]
+        right = Phase[name_r]
         self.assertEqual(left < right, l < r)
         self.assertEqual(left > right, l > r)
         self.assertEqual(left == right, l == r)
@@ -34,15 +35,42 @@ class BasicPhaseTest(unittest.TestCase):
         self.assertEqual(left <= right, l <= r)
         self.assertEqual(left >= right, l >= r)
 
-    self.assertEqual(Phase('EVT'), phase.EVT)
+    self.assertEqual(phase.CoerceToPhaseOrCurrent('EVT'), phase.EVT)
+    self.assertEqual(Phase(1), phase.EVT)
+    self.assertEqual(Phase(phase.EVT), phase.EVT)
+    self.assertEqual(Phase['EVT'], phase.EVT)
     self.assertEqual(phase.EVT, phase.EVT)
-    self.assertNotEqual(Phase('DVT'), phase.EVT)
+    self.assertNotEqual(phase.CoerceToPhaseOrCurrent('DVT'), phase.EVT)
+    self.assertNotEqual(Phase(2), phase.EVT)
+    self.assertNotEqual(Phase(phase.DVT), phase.EVT)
+    self.assertNotEqual(Phase['DVT'], phase.EVT)
 
   def testInvalidName(self):
     self.assertRaisesRegex(
         ValueError,
-        (r"'evt' is not a valid phase name \(valid names are "
-         r'\[PROTO,EVT,DVT,PVT_DOGFOOD,PVT\]\)'), Phase, 'evt')
+        r'5 is not a valid phase value \(valid values are \[0,1,2,3,4\]\)',
+        Phase, 5)
+
+    self.assertRaisesRegex(
+        ValueError,
+        r"'EVT' is not a valid phase value \(valid values are \[0,1,2,3,4\]\)",
+        Phase, 'EVT')
+
+    self.assertRaisesRegex(
+        KeyError, (r"'evt' is not a valid phase name \(valid names are "
+                   r'\[PROTO,EVT,DVT,PVT_DOGFOOD,PVT\]\)'), Phase.__getitem__,
+        'evt')
+
+    self.assertRaisesRegex(KeyError,
+                           (r'1 is not a valid phase name \(valid names are '
+                            r'\[PROTO,EVT,DVT,PVT_DOGFOOD,PVT\]\)'),
+                           Phase.__getitem__, 1)
+
+  def testInvalidComparison(self):
+    self.assertRaisesRegex(
+        TypeError,
+        r"'<' not supported between instances of 'Phase' and '<class 'int'>'",
+        Phase.__lt__, Phase.EVT, 123)
 
 
 class PersistentPhaseTest(unittest.TestCase):

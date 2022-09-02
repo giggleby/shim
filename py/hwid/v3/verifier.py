@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -49,8 +49,7 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None):
       if status == common.COMPONENT_STATUS.unqualified:
         # Coerce current_phase to a Phase object, and use default phase
         # if unspecified.
-        current_phase = (phase.Phase(current_phase) if current_phase
-                         else phase.GetPhase())
+        current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
         if current_phase in (phase.PVT_DOGFOOD, phase.PVT):
           raise common.HWIDException(
               'Found unqualified component of %r: %r in %r' %
@@ -99,8 +98,7 @@ def VerifyPhase(database, bom, current_phase=None, rma_mode=False):
   """
   # Coerce current_phase to a Phase object, and use default phase
   # if unspecified.
-  current_phase = (phase.Phase(current_phase) if current_phase
-                   else phase.GetPhase())
+  current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
 
   # Check image ID
   expected_image_name_prefix = ('PVT' if current_phase == phase.PVT_DOGFOOD

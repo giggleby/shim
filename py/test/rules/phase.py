@@ -1,31 +1,47 @@
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import functools
 import logging
 import os
+from typing import Optional, Union
 
 from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
 
-PHASE_NAMES = ['PROTO', 'EVT', 'DVT', 'PVT_DOGFOOD', 'PVT']
-PHASE_NAME_TO_INDEX_MAP = dict(
-    (name, index)
-    for (index, name) in enumerate(PHASE_NAMES))
-
 
 # Current phase; unknown at first and read lazily from
 # /var/factory/state/PHASE when required.
-_current_phase = None
+_current_phase: Optional['Phase'] = None
 
 
 class PhaseAssertionError(Exception):
   pass
 
 
+class PhaseEnumMeta(enum.EnumMeta):
+  """Meta class allows constructing Phase from name."""
+
+  def __getitem__(cls, name) -> 'Phase':
+    try:
+      return super().__getitem__(name)
+    except KeyError as err:
+      raise KeyError(f'{name!r} is not a valid phase name (valid names are '
+                     f'[{",".join(cls.__members__)}])') from err
+
+  def __call__(cls, value, *args, **kwargs):
+    try:
+      return super().__call__(value, *args, **kwargs)
+    except ValueError as err:
+      values = ','.join(str(member.value) for member in iter(cls))
+      raise ValueError(f'{value!r} is not a valid phase value (valid values are'
+                       f' [{values}])') from err
+
+
 @functools.total_ordering
-class Phase:
+class Phase(enum.Enum, metaclass=PhaseEnumMeta):
   """Object representing a build phase.
 
   Valid phases are PROTO, EVT, DVT, PVT_DOGFOOD, and PVT.
@@ -39,44 +55,24 @@ class Phase:
     be sold.
   - PVT = production of salable units
   """
-
-  def __init__(self, name):
-    """Constructor.
-
-    Args:
-      name: The name of a valid build phase.  Alternatively this may be another
-          Phase object, in which case this acts as a copy constructor.
-    """
-    # If name is actually an already-constructed Phase option,
-    # just create a copy of it.
-    if isinstance(name, Phase):
-      name = name.name
-
-    self.name = name
-    self.index = PHASE_NAME_TO_INDEX_MAP.get(self.name)
-    if self.index is None:
-      raise ValueError('%r is not a valid phase name (valid names are [%s])' %
-                       (name, ','.join(PHASE_NAMES)))
+  PROTO = 0
+  EVT = 1
+  DVT = 2
+  PVT_DOGFOOD = 3
+  PVT = 4
 
   def __str__(self):
+    """A custom __str__ for hwid_rule_functions.GetPhase."""
     return self.name
 
-  def __repr__(self):
-    return 'Phase(%s)' % self.name
-
-  def __eq__(self, other):
-    return self.index == other.index
-
-  def __ne__(self, other):
-    return self.index != other.index
-
-  def __lt__(self, other):
-    return self.index < other.index
-
-  def __hash__(self):
-    return self.index
+  def __lt__(self, other: 'Phase'):
+    if self.__class__ is not other.__class__:
+      raise TypeError("'<' not supported between instances of 'Phase' and "
+                      f"'{other.__class__}'")
+    return self.value < other.value
 
 
+PHASE_NAMES = list(Phase.__members__)
 _state_root_for_testing = None
 
 
@@ -96,14 +92,14 @@ def GetPhase():
   if _current_phase:
     return _current_phase
 
-  strictest_phase = Phase(PHASE_NAMES[-1])
+  strictest_phase = Phase[PHASE_NAMES[-1]]
 
   # There is a potential for a harmless race condition where we will
   # read the phase twice if GetPhase() is called twice in separate
   # threads.  No big deal.
   path = GetPhaseStatePath()
   try:
-    phase = Phase(file_utils.ReadFile(path))
+    phase = Phase[file_utils.ReadFile(path)]
 
     if (phase != strictest_phase and
         os.system('crossystem phase_enforcement?1 >/dev/null 2>&1') == 0):
@@ -120,12 +116,25 @@ def GetPhase():
   return phase
 
 
-def AssertStartingAtPhase(starting_at_phase, condition, message):
+def _CoerceToPhase(value: Union[Phase, str]):
+  if isinstance(value, Phase):
+    return value
+  if isinstance(value, str):
+    return Phase[value]
+  raise TypeError(f'{value!r} is not Phase or str.')
+
+
+def CoerceToPhaseOrCurrent(value: Union[Phase, str, None]):
+  """Coerce value to a Phase and returns GetPhase if value is False."""
+  return _CoerceToPhase(value) if value else GetPhase()
+
+
+def AssertStartingAtPhase(starting_at_phase: Union[Phase, str], condition,
+                          message):
   """Assert a condition at or after a given phase.
 
   Args:
     starting_at_phase: The phase at which to start checking this condition.
-        This may either be a string or a Phase object.
     condition: A condition to evaluate.  This may be a callable (in which
         case it is called if we're at/after the given phase), or a simple
         Boolean value.
@@ -142,7 +151,7 @@ def AssertStartingAtPhase(starting_at_phase, condition, message):
           protection to be enabled
   """
   # Coerce to an object in case a string was provided.
-  starting_at_phase = Phase(starting_at_phase)
+  starting_at_phase = _CoerceToPhase(starting_at_phase)
 
   current_phase = GetPhase()
   if starting_at_phase > current_phase:
@@ -160,21 +169,20 @@ def AssertStartingAtPhase(starting_at_phase, condition, message):
             starting_at_phase, current_phase, message))
 
 
-def SetPersistentPhase(phase):
+def SetPersistentPhase(phase: Union[Phase, str, None]):
   """Sets the current phase in /var/factory/state.
 
   This should be invoked only by Goofy.
 
   Args:
-    phase: A Phase object, the name of a phase, or None.
-        If None, the file containing the phase is deleted.
+    phase: The target phase. If None, the file containing the phase is deleted.
   """
   global _current_phase  # pylint: disable=global-statement
 
   path = GetPhaseStatePath()
 
   if phase:
-    phase = Phase(phase)  # Coerce to Phase object
+    phase = _CoerceToPhase(phase)
     logging.info('Setting phase to %s in %s', phase, path)
     file_utils.TryMakeDirs(os.path.dirname(path))
     file_utils.WriteFile(path, phase.name)
@@ -185,28 +193,27 @@ def SetPersistentPhase(phase):
   _current_phase = phase
 
 
-def OverridePhase(phase):
+def OverridePhase(phase: Union[Phase, str, None]):
   """Override current phase for this process.
 
   This function overrides current phase of this python process. The phase is not
   saved persistently.
 
   Args:
-    phase: A Phase object, the name of a phase, or None.
-        If None, the phase is reset, next GetPhase() call will read from
-        persistent state again.
+    phase: The target phase. If None, the phase is reset, next GetPhase() call
+        will read from persistent state again.
   """
   global _current_phase  # pylint: disable=global-statement
   if phase:
-    _current_phase = Phase(phase)  # Coerce to Phase object
+    _current_phase = _CoerceToPhase(phase)
   else:
     _current_phase = None
 
 
 # Definitions for globals.  We could automatically do this based on
 # PHASE_NAMES, but instead we define them manually to make lint happy.
-PROTO = Phase('PROTO')
-EVT = Phase('EVT')
-DVT = Phase('DVT')
-PVT_DOGFOOD = Phase('PVT_DOGFOOD')
-PVT = Phase('PVT')
+PROTO = Phase.PROTO
+EVT = Phase.EVT
+DVT = Phase.DVT
+PVT_DOGFOOD = Phase.PVT_DOGFOOD
+PVT = Phase.PVT

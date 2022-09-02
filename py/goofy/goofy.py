@@ -1300,7 +1300,6 @@ class Goofy:
       # TODO(stimim): Perhaps we should check if we are running `shutdown` test?
       self.state_instance.ClearTestState()
 
-    # If the phase is invalid, this will raise a ValueError.
     phase.SetPersistentPhase(self.test_list.options.phase)
 
     if not self.state_instance.DataShelfHasKey('ui_locale'):
