@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-10-20 14:01+CST\n"
+"PO-Revision-Date: 2022-11-08 16:43+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -1992,6 +1992,12 @@ msgid "Press Space to display;<br>After checking, Enter to pass; Esc to fail."
 msgstr ""
 "Nhấn phím trống để hiển thị,;<br>检nhấn Enter sau khi kiểm tra để chuyển, "
 "nhấn Esc thất bại"
+
+#: ../py/test/pytests/display_static/display.html
+msgid ""
+"Press Space to display;<br>After checking, Click the symptom if it is "
+"observed, Enter to pass."
+msgstr ""
 
 #: ../py/test/pytests/display_static/display.js
 msgid "Untested"

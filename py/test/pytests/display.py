@@ -2,36 +2,49 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Test display functionailty.
+"""Test display functionality.
 
 Description
 -----------
-This test check basic display functionality by showing colors or images on
-display, and ask operator to judge if the output looks correct.
+This test checks basic display functionality by showing colors or images on
+display, and asks the operator to judge if the output looks correct.
 
 The test can also be used to show an image for ``idle_timeout`` seconds, and
 automatically pass itself after timeout is reached.
 
 Test Procedure
 --------------
-If ``idle_timeout`` is set:
+
+``Idle mode``
+If ``idle_timeout`` is set and ``symptoms`` is not set:
 
   1. An image is shown on the display.
-  2. If the image looks incorrect, operator can press escape key or touch the
-     display to fail the test.
-  3. The test pass itself after ``idle_timeout`` seconds.
+  2. If the image looks incorrect, press escape key to fail the test.
+  3. The test passes itself after ``idle_timeout`` seconds.
 
-If ``idle_timeout`` is not set:
+``Normal mode``
+If ``idle_timeout`` and ``symptoms`` are both not set:
 
   1. A table of images to be tested is shown.
-  2. Operator press space key to show the image.
-  3. For each image, if it looks correct, operator press enter key to mark the
-     item as passed, otherwise, operator press escape key to mark the item as
-     failed.  Operator can also press space key or touch the display to return
-     to the table view.
+  2. Operator presses space key to show the image.
+  3. For each image, if it looks correct, operator presses enter key to mark the
+     item as passed, otherwise, operator presses escape key to mark the item as
+     failed.  Operator can press space key to return to the table view.
   4. The next image would be shown after the previous one is judged.
-  5. The test is passed if all items are judged as passed, and fail if any item
-     is judged as failed.
+  5. The test is passed if all items are judged as passed, and is failed if any
+     item is judged as failed.
+
+``Symptom mode``
+If ``symptom`` is set and ``idle_timeout`` is not set:
+
+  1. A table of images and symptoms to be checked is shown.
+  2. For each symptom, if it is observed, click the corresponding symptom grid
+     to mark it.
+  3. Press enter to end the subtest. The test is passed if all symptoms are not
+     marked, and is failed if any symptom is marked.
+  4. The next image would be shown after the previous one is judged.
+  5. The test is passed if all items are judged as passed, and is failed if any
+     item is judged as failed.
 
 Dependency
 ----------
@@ -63,6 +76,26 @@ this into test list::
     }
   }
 
+To test images with symptoms, add this into test list::
+
+  {
+    "pytest_name": "display",
+    "args": {
+      "items": [
+        "image-complex.bmp",
+        "solid-red",
+        "hex-color-#afafaf"
+      ],
+      "symptoms": [
+        "Symptom1",
+        "Symptom2",
+        "Dark Dots",
+        "Light Leakage",
+        "Others"
+      ]
+    }
+  }
+
 To test display functionality, and show some more images, add this into test
 list::
 
@@ -89,8 +122,9 @@ list::
     }
   }
 
-Default images in compressed file ``test_images.tar.bz2``:
-  'black.bmp',
+Default images in compressed file ``test_images.tar.bz2``::
+
+ ['black.bmp',
   'complex.bmp',
   'crosstalk-black.bmp',
   'crosstalk-white.bmp',
@@ -99,7 +133,7 @@ Default images in compressed file ``test_images.tar.bz2``:
   'gray-63.bmp',
   'horizontal-rgbw.bmp',
   'vertical-rgbw.bmp',
-  'white.bmp'
+  'white.bmp']
 """
 
 import os
@@ -109,6 +143,7 @@ from cros.factory.test.i18n import _
 from cros.factory.test.i18n import translation
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
+from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
@@ -180,10 +215,10 @@ class DisplayTest(test_case.TestCase):
           'If set to true, the next item will be shown automatically on '
           'enter pressed i.e. no additional space needed to toggle screen.',
           default=True),
-      Arg(
-          'hide_timer', bool,
-          'If set to true, the timer will be hidden even if idle_timeout'
-          'is set', default=True),
+      Arg('show_timer', bool,
+          'If set to true, the timer will be shown in idle mode.',
+          default=False),
+      Arg('symptoms', list, 'Symptoms to check for images', default=[]),
   ]
 
   def setUp(self):
@@ -191,10 +226,15 @@ class DisplayTest(test_case.TestCase):
     self.static_dir = self.ui.GetStaticDirectoryPath()
 
     self.idle_timeout = self.args.idle_timeout
-    if self.idle_timeout is not None and len(self.args.items) != 1:
-      raise ValueError('items should have exactly one item in idle mode.')
-
     self.items = self.args.items
+    self.symptoms = self.args.symptoms
+
+    if self.idle_timeout is not None:
+      if self.symptoms:
+        raise ValueError('Idle mode and symptom mode are incompatible.')
+      if len(self.items) != 1:
+        raise ValueError('items should have exactly one item in idle mode.')
+
     self.images = [
         item[len(_IMAGE_PREFIX):]
         for item in self.items
@@ -211,14 +251,15 @@ class DisplayTest(test_case.TestCase):
       raise ValueError(f'{invalid_hex_color_items} are not valid hex colors.')
 
     unknown_items = [
-        item for item in set(self.args.items) - set(_CSS_ITEMS)
+        item for item in set(self.items) - set(_CSS_ITEMS)
         if not item.startswith(_IMAGE_PREFIX) and
         not item.startswith(_HEX_COLOR_PREFIX)
     ]
     if unknown_items:
       raise ValueError(f'Unknown item {unknown_items!r} in items.')
 
-    self.frontend_proxy = self.ui.InitJSTestObject('DisplayTest', self.items)
+    self.frontend_proxy = self.ui.InitJSTestObject('DisplayTest', self.items,
+                                                   self.symptoms)
     self.checked = False
     self.fullscreen = False
 
@@ -227,21 +268,23 @@ class DisplayTest(test_case.TestCase):
 
   def runTest(self):
     """Sets the callback function of keys."""
+    self.event_loop.AddEventHandler('failed_lists',
+                                    self.LogFailedListsAndFinishTask)
+    self.event_loop.AddEventHandler('pass_subtest', self.OnEnterPressed)
     if self.idle_timeout is None:
       self.ui.BindKey(test_ui.SPACE_KEY, self.OnSpacePressed)
       self.ui.BindKey(test_ui.ENTER_KEY, self.OnEnterPressed)
-      self.event_loop.AddEventHandler('onFullscreenClicked',
-                                      self.OnSpacePressed)
+      if not self.symptoms:
+        # Fail the subtest with Escape key in Normal mode.
+        self.ui.BindKey(test_ui.ESCAPE_KEY, self.OnFailPressed)
     else:
+      # Idle mode
       # Automatically enter fullscreen mode in idle mode.
       self.ToggleFullscreen()
-      self.event_loop.AddEventHandler('onFullscreenClicked', self.OnFailPressed)
+      self.ui.BindKey(test_ui.ESCAPE_KEY, self.OnFailPressed)
       self.ui.StartCountdownTimer(self.idle_timeout, self.PassTask)
-
-    if self.idle_timeout is None or self.args.hide_timer:
-      self.ui.HideElement('display-timer')
-
-    self.ui.BindKey(test_ui.ESCAPE_KEY, self.OnFailPressed)
+      if self.args.show_timer:
+        self.ui.ShowElement('display-timer')
     self.WaitTaskEnd()
 
   def ExtractTestImages(self):
@@ -259,16 +302,14 @@ class DisplayTest(test_case.TestCase):
     del event  # Unused.
     self.ToggleFullscreen()
 
-  def ToggleFullscreen(self):
-    self.checked = True
-    self.frontend_proxy.ToggleFullscreen()
-    self.fullscreen = not self.fullscreen
-
   def OnEnterPressed(self, event):
     """Passes the subtest only if self.checked is True."""
     del event  # Unused.
     if self.checked:
-      self.frontend_proxy.JudgeSubTest(True)
+      if not self.symptoms:
+        self.frontend_proxy.JudgeSubTest(True)
+      else:
+        self.frontend_proxy.JudgeSubTestWithSymptom()
       # If the next subtest will be in fullscreen mode, checked should be True
       self.checked = self.fullscreen
       if self.args.quick_display and not self.fullscreen:
@@ -281,6 +322,29 @@ class DisplayTest(test_case.TestCase):
       self.frontend_proxy.JudgeSubTest(False)
       # If the next subtest will be in fullscreen mode, checked should be True
       self.checked = self.fullscreen
+
+  def LogFailedListsAndFinishTask(self, event):
+    failed_items = event.data[0]
+    failed_symptoms = event.data[1]
+
+    if failed_symptoms:
+      failed_item_symptom = [
+          f'{failed_items[i]}: {", ".join(failed_symptoms[i])}'
+          for i in range(len(failed_items))
+      ]
+      testlog.LogParam('display_test_failed_list', failed_item_symptom)
+      self.FailTask(
+          f'Display test failed. Failed items and the corresponding symptoms:'
+          f'{failed_item_symptom}')
+    if failed_items:
+      testlog.LogParam('display_test_failed_list', failed_items)
+      self.FailTask(f'Display test failed. Failed items: {failed_items}')
+    self.PassTask()
+
+  def ToggleFullscreen(self):
+    self.checked = True
+    self.frontend_proxy.ToggleFullscreen()
+    self.fullscreen = not self.fullscreen
 
   @staticmethod
   def _IsHexColor(color_code):
