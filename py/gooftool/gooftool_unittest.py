@@ -449,7 +449,7 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool.GenerateStableDeviceSecret()
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
-        'tpm-manager get_random 32', log=False)
+        'libhwsec_client get_random 32', log=False)
     self._gooftool._vpd.UpdateData.assert_called_once_with(
         dict(stable_device_secret_DO_NOT_SHARE='00' * 32),
         partition=vpd.VPD_READONLY_PARTITION_NAME)
@@ -462,7 +462,7 @@ class GooftoolTest(unittest.TestCase):
                            self._gooftool.GenerateStableDeviceSecret)
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
-        'tpm-manager get_random 32', log=False)
+        'libhwsec_client get_random 32', log=False)
 
   def testGenerateStableDeviceSecretShortOutput(self):
     self._gooftool._util.GetReleaseImageVersion.return_value = '6887.0.0'
@@ -472,7 +472,7 @@ class GooftoolTest(unittest.TestCase):
                            self._gooftool.GenerateStableDeviceSecret)
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
-        'tpm-manager get_random 32', log=False)
+        'libhwsec_client get_random 32', log=False)
 
   def testGenerateStableDeviceSecretBadOutput(self):
     self._gooftool._util.GetReleaseImageVersion.return_value = '6887.0.0'
@@ -482,7 +482,7 @@ class GooftoolTest(unittest.TestCase):
                            self._gooftool.GenerateStableDeviceSecret)
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
-        'tpm-manager get_random 32', log=False)
+        'libhwsec_client get_random 32', log=False)
 
   def testGenerateStableDeviceSecretBadReleaseImageVersion(self):
     self._gooftool._util.GetReleaseImageVersion.return_value = '6886.0.0'
@@ -500,7 +500,7 @@ class GooftoolTest(unittest.TestCase):
                            self._gooftool.GenerateStableDeviceSecret)
     self._gooftool._util.GetReleaseImageVersion.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
-        'tpm-manager get_random 32', log=False)
+        'libhwsec_client get_random 32', log=False)
     self._gooftool._vpd.UpdateData.assert_called_once_with(
         dict(stable_device_secret_DO_NOT_SHARE='00' * 32),
         partition=vpd.VPD_READONLY_PARTITION_NAME)

@@ -1237,7 +1237,7 @@ class Gooftool:
     with scrub_exceptions('Error generating device secret'):
       # Generate the stable device secret and write it to VPD. Turn off logging,
       # so the generated secret doesn't leak to the logs.
-      secret = self._util.shell('tpm-manager get_random 32',
+      secret = self._util.shell('libhwsec_client get_random 32',
                                 log=False).stdout.strip()
 
     with scrub_exceptions('Error validating device secret'):
