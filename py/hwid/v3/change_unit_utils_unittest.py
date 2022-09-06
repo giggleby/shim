@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import os.path
 import re
 import textwrap
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, NamedTuple, Optional, Sequence
 import unittest
 
 from cros.factory.hwid.v3 import builder
@@ -15,10 +15,12 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
 
+
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _DiffStatus = contents_analyzer.DiffStatus
+_ComponentNameInfo = contents_analyzer.ComponentNameInfo
 _ApplyChangeUnitException = change_unit_utils.ApplyChangeUnitException
 _ChangeUnit = change_unit_utils.ChangeUnit
 _CompChange = change_unit_utils.CompChange
@@ -31,6 +33,7 @@ _NewImageIdToNewEncodingPattern = (
 _ReplaceRules = change_unit_utils.ReplaceRules
 _ChangeUnitManager = change_unit_utils.ChangeUnitManager
 _ApprovalStatus = change_unit_utils.ApprovalStatus
+_ChangeSplitResult = change_unit_utils.ChangeSplitResult
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_DATABASE_NAME = 'test-change-unit-db.yaml'
@@ -70,6 +73,38 @@ def _GenerateNewComponentAnalysis(seq_no: int, comp_cls: str = 'comp_cls_1',
       probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO)
 
 
+def _BuildHWIDComponentAnalysisResultWithDefaults(
+    comp_cls: str, comp_name: str, seq_no: int,
+    comp_info: database.ComponentInfo, is_newly_added: bool = False,
+    comp_name_info: Optional[_ComponentNameInfo] = None,
+    comp_name_with_correct_seq_no: Optional[str] = None,
+    probe_value_alignment_status: _PVAlignmentStatus = (
+        _PVAlignmentStatus.NO_PROBE_INFO),
+    diff_prev: Optional[_DiffStatus] = None):
+
+  null_values = comp_info.values is None
+  support_status = comp_info.status
+  if is_newly_added:
+    if diff_prev:
+      raise ValueError('Newly added component must not have DiffStatus.')
+  else:
+    if diff_prev is None:
+      diff_prev = _DiffStatus(
+          unchanged=True, name_changed=False, support_status_changed=False,
+          values_changed=False, prev_comp_name=comp_name,
+          prev_support_status=support_status,
+          probe_value_alignment_status_changed=False,
+          prev_probe_value_alignment_status=probe_value_alignment_status)
+  return _HWIDComponentAnalysisResult(
+      comp_cls=comp_cls, comp_name=comp_name, seq_no=seq_no,
+      support_status=support_status, is_newly_added=is_newly_added,
+      link_avl=bool(comp_name_info), comp_name_info=comp_name_info,
+      comp_name_with_correct_seq_no=comp_name_with_correct_seq_no,
+      null_values=null_values,
+      probe_value_alignment_status=probe_value_alignment_status,
+      diff_prev=diff_prev)
+
+
 class ChangeUnitTestBase(unittest.TestCase):
 
   _DIFFS: Sequence[str] = []
@@ -91,7 +126,8 @@ class ChangeUnitTestBase(unittest.TestCase):
       for change_unit in change_units:
         change_unit.Patch(db_builder)
 
-    self.assertEqual(expected, db_builder.Build().DumpDataWithoutChecksum())
+    self.assertEqual(expected,
+                     db_builder.Build().DumpDataWithoutChecksum(internal=True))
 
   def testApplyPatchesExtractedFromDiff(self):
     """Shared implementation to verify change unit extraction and patch.
@@ -108,8 +144,7 @@ class ChangeUnitTestBase(unittest.TestCase):
         target_db_content = self._LoadDBContentWithDiffPatched(diff)
         target_db = database.Database.LoadData(target_db_content)
 
-        change_unit_manager = change_unit_utils.ChangeUnitManager(
-            self._base_db, target_db)
+        change_unit_manager = _ChangeUnitManager(self._base_db, target_db)
         extracted = change_unit_manager.GetChangeUnits().values()
 
         self._AssertApplyingPatchesEqualsData(target_db_content, extracted)
@@ -189,19 +224,16 @@ class CompChangeTest(ChangeUnitTestBase):
         'field2': 'value2'
     }, 'deprecated', {'info1': 'val1'})
     update_comp = _CompChange(
-        _HWIDComponentAnalysisResult(
-            comp_cls='comp_cls_1', comp_name='updated_comp',
-            support_status='deprecated', is_newly_added=False,
-            comp_name_info=None, seq_no=2, comp_name_with_correct_seq_no=None,
-            null_values=None, diff_prev=_DiffStatus(
+        _BuildHWIDComponentAnalysisResultWithDefaults(
+            comp_cls='comp_cls_1', comp_name='updated_comp', seq_no=2,
+            comp_info=comp_info, diff_prev=_DiffStatus(
                 unchanged=False, name_changed=True, support_status_changed=True,
                 values_changed=True, prev_comp_name='comp_1_1',
                 prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
-            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
-        comp_info.values, comp_info.information, comp_info.comp_hash)
+                    _PVAlignmentStatus.NO_PROBE_INFO))), comp_info.values,
+        comp_info.information, comp_info.comp_hash)
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(self._DIFF_UPDATE_COMPONENT),
@@ -214,19 +246,16 @@ class CompChangeTest(ChangeUnitTestBase):
         'field2': 'value2'
     }, 'deprecated', {'info1': 'val1'})
     update_comp = _CompChange(
-        _HWIDComponentAnalysisResult(
-            comp_cls='comp_cls_1', comp_name='updated_comp',
-            support_status=comp_info.status, is_newly_added=False,
-            comp_name_info=None, seq_no=2, comp_name_with_correct_seq_no=None,
-            null_values=None, diff_prev=_DiffStatus(
+        _BuildHWIDComponentAnalysisResultWithDefaults(
+            comp_cls='comp_cls_1', comp_name='updated_comp', seq_no=2,
+            comp_info=comp_info, diff_prev=_DiffStatus(
                 unchanged=False, name_changed=True, support_status_changed=True,
                 values_changed=True, prev_comp_name='no-such-comp-name',
                 prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
-            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
-        comp_info.values, comp_info.information, comp_info.comp_hash)
+                    _PVAlignmentStatus.NO_PROBE_INFO))), comp_info.values,
+        comp_info.information, comp_info.comp_hash)
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, update_comp.Patch,
@@ -302,12 +331,21 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
     self._comp_1_2_hash = database.ComponentInfo(values={
         'value': '2'
     }, status='supported').comp_hash
+    # The following comp info are unused in this test, just dummy ones.
+    self._comp_1_2_info = _GenerateNewComponentAnalysis(1)
+    self._comp_2_1_info = _GenerateNewComponentAnalysis(2)
+    self._comp_2_2_info = _GenerateNewComponentAnalysis(3)
 
   def testPatchAddFirstEncodingCombination_Success(self):
     first_encoding = _AddEncodingCombination(
         is_first=True, encoded_field_name='new_field', comp_cls='comp_cls_2',
-        comp_hashes=[self._comp_2_1_hash, self._comp_2_2_hash],
-        pattern_idxes=[], comp_names=['comp_2_1', 'comp_2_2'])
+        comp_hashes=[
+            self._comp_2_1_hash,
+            self._comp_2_2_hash,
+        ], pattern_idxes=[], comp_analyses=[
+            self._comp_2_1_info,
+            self._comp_2_2_info,
+        ])
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(
@@ -317,8 +355,12 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
     first_encoding = _AddEncodingCombination(
         is_first=True, encoded_field_name='comp_cls_23_field',
         comp_cls='comp_cls_2', comp_hashes=[
-            self._comp_2_1_hash, self._comp_2_2_hash
-        ], pattern_idxes=[], comp_names=['comp_2_1', 'comp_2_2'])
+            self._comp_2_1_hash,
+            self._comp_2_2_hash,
+        ], pattern_idxes=[], comp_analyses=[
+            self._comp_2_1_info,
+            self._comp_2_2_info,
+        ])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, first_encoding.Patch,
@@ -330,7 +372,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
         _AddEncodingCombination(
             is_first=False, encoded_field_name='comp_cls_1_field',
             comp_cls='comp_cls_1', comp_hashes=[self._comp_1_2_hash] * i,
-            pattern_idxes=[0], comp_names=['comp_1_2'] * i)
+            pattern_idxes=[0], comp_analyses=[self._comp_1_2_info] * i)
         for i in range(2, 5)
     ]
 
@@ -341,9 +383,12 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   def testPatchAddFollowingEncodingCombination_NoSuchEncodedFieldName(self):
     following_encoding = _AddEncodingCombination(
         is_first=False, encoded_field_name='no_such_encoded_field',
-        comp_cls='comp_cls_2', comp_hashes=[
-            self._comp_2_1_hash, self._comp_2_2_hash
-        ], pattern_idxes=[0], comp_names=['comp_2_1', 'comp_2_2'])
+        comp_cls='comp_cls_2',
+        comp_hashes=[self._comp_2_1_hash,
+                     self._comp_2_2_hash], pattern_idxes=[0], comp_analyses=[
+                         self._comp_2_1_info,
+                         self._comp_2_2_info,
+                     ])
 
     with self._builder:
       self.assertRaises(_ApplyChangeUnitException, following_encoding.Patch,
@@ -611,35 +656,27 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
     # Add a new component comp_1_2 and rename existing comp_1_2 to comp_1_3.
     comp_info_1 = database.ComponentInfo({'value': '3'}, 'supported')
     comp_info_2 = database.ComponentInfo({'value': '2'}, 'deprecated')
-
+    comp_1_1_analysis = _BuildHWIDComponentAnalysisResultWithDefaults(
+        comp_cls='comp_cls_1', comp_name='comp_1_1', seq_no=1,
+        comp_info=comp_info_1)
+    comp_1_2_analysis = _BuildHWIDComponentAnalysisResultWithDefaults(
+        comp_cls='comp_cls_1', comp_name='comp_1_2', seq_no=3,
+        comp_info=comp_info_1, is_newly_added=True)
+    comp_1_3_analysis = _BuildHWIDComponentAnalysisResultWithDefaults(
+        comp_cls='comp_cls_1', comp_name='comp_1_3', seq_no=2,
+        comp_info=comp_info_2, diff_prev=_DiffStatus(
+            unchanged=False, name_changed=True, support_status_changed=True,
+            values_changed=True, prev_comp_name='comp_1_2',
+            prev_support_status='supported',
+            probe_value_alignment_status_changed=False,
+            prev_probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO))
     comp_change_cus = [
         _CompChange(  # Add component.
-            analysis_result=_HWIDComponentAnalysisResult(
-                comp_cls='comp_cls_1', comp_name='comp_1_2',
-                support_status=comp_info_1.status, is_newly_added=True,
-                comp_name_info=None, seq_no=3,
-                comp_name_with_correct_seq_no=None, null_values=None,
-                diff_prev=None, link_avl=False,
-                probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO),
-            probe_values=comp_info_1.values,
+            analysis_result=comp_1_2_analysis, probe_values=comp_info_1.values,
             information=comp_info_1.information,
             comp_hash=comp_info_1.comp_hash),
         _CompChange(  # Rename component.
-            analysis_result=_HWIDComponentAnalysisResult(
-                comp_cls='comp_cls_1', comp_name='comp_1_3',
-                support_status=comp_info_2.status, is_newly_added=False,
-                comp_name_info=None, seq_no=2,
-                comp_name_with_correct_seq_no=None, null_values=None,
-                diff_prev=_DiffStatus(
-                    unchanged=False, name_changed=True,
-                    support_status_changed=True, values_changed=True,
-                    prev_comp_name='comp_1_2', prev_support_status='supported',
-                    probe_value_alignment_status_changed=False,
-                    prev_probe_value_alignment_status=(
-                        _PVAlignmentStatus.NO_PROBE_INFO)), link_avl=False,
-                probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO)),
-            probe_values=comp_info_2.values,
+            analysis_result=comp_1_3_analysis, probe_values=comp_info_2.values,
             information=comp_info_2.information,
             comp_hash=comp_info_2.comp_hash),
     ]
@@ -656,11 +693,17 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
         _AddEncodingCombination(
             is_first=True, encoded_field_name='new_comp_cls_1_field',
             comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_2_hash],
-            pattern_idxes=[0], comp_names=['comp_1_1', 'comp_1_2']),
+            pattern_idxes=[0], comp_analyses=[
+                comp_1_1_analysis,
+                comp_1_2_analysis,
+            ]),
         _AddEncodingCombination(
             is_first=False, encoded_field_name='new_comp_cls_1_field',
             comp_cls='comp_cls_1', comp_hashes=[comp_1_1_hash, comp_1_3_hash],
-            pattern_idxes=[0], comp_names=['comp_1_1', 'comp_1_3']),
+            pattern_idxes=[0], comp_analyses=[
+                comp_1_1_analysis,
+                comp_1_3_analysis,
+            ]),
     ]
     expected_diff = textwrap.dedent('''\
         ---
@@ -875,100 +918,108 @@ class ChangeUnitManagerTest(unittest.TestCase):
                    comp_2_1:
         '''))
 
-    diff_none = ''
-    diff_comp = textwrap.dedent('''\
-        ---
-        +++
-        @@ -98,6 +98,9 @@
-               comp_1_2:
-                 values:
-                   value: '2'
-        +      new_comp:
-        +        values:
-        +          value: '3'
-           comp_cls_2:
-             items:
-               comp_2_1:
-    ''')
-    diff_encoded_fields = textwrap.dedent('''\
-        ---
-        +++
-        @@ -64,6 +64,9 @@
-             1:
-               comp_cls_2: comp_2_2
-               comp_cls_3: comp_3_2
-        +  new_field:
-        +    0:
-        +      comp_cls_1: new_comp
+    db_with_comp_only = database.Database.LoadData(
+        _ApplyUnifiedDiff(
+            self._base_db_content,
+            textwrap.dedent('''\
+                ---
+                +++
+                @@ -98,6 +98,9 @@
+                       comp_1_2:
+                         values:
+                           value: '2'
+                +      new_comp:
+                +        values:
+                +          value: '3'
+                   comp_cls_2:
+                     items:
+                       comp_2_1:
+            ''')))
 
-         components:
-           mainboard:
-    ''')
-    diff_comp_encoded_fields = textwrap.dedent('''\
-        ---
-        +++
-        @@ -64,6 +64,9 @@
-             1:
-               comp_cls_2: comp_2_2
-               comp_cls_3: comp_3_2
-        +  new_field:
-        +    0:
-        +      comp_cls_1: new_comp
+    db_with_comp_and_encoded_fields = database.Database.LoadData(new_db_content)
 
-         components:
-           mainboard:
-        @@ -98,6 +101,9 @@
-               comp_1_2:
-                 values:
-                   value: '2'
-        +      new_comp:
-        +        values:
-        +          value: '3'
-           comp_cls_2:
-             items:
-               comp_2_1:
-    ''')
-    expected_diff_per_status = {
-        (_ApprovalStatus.AUTO_APPROVED, _ApprovalStatus.AUTO_APPROVED): (
-            diff_comp_encoded_fields, diff_none),
-        (_ApprovalStatus.AUTO_APPROVED, _ApprovalStatus.MANUAL_REVIEW_REQUIRED):
-            (diff_comp, diff_encoded_fields),
-        (_ApprovalStatus.MANUAL_REVIEW_REQUIRED, _ApprovalStatus.AUTO_APPROVED):
-            (diff_none, diff_comp_encoded_fields),
-        (_ApprovalStatus.MANUAL_REVIEW_REQUIRED,
-         _ApprovalStatus.MANUAL_REVIEW_REQUIRED): (
-            diff_none, diff_comp_encoded_fields),
-    }
+    comp_change_repr = 'CompChange:comp_cls_1:new_comp(new)'
+    add_combination_repr = (
+        'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp')
 
-    for (status_comp,
-         status_encoded_field), (auto_mergeable_diff, review_required_diff) in (
-             expected_diff_per_status.items()):
-      with self.subTest(status_comp=status_comp,
-                        status_encoded_field=status_encoded_field):
+    class _TestDataset(NamedTuple):
+      change_status: Mapping[str, _ApprovalStatus]
+      expected_result: _ChangeSplitResult
+
+    # As the identities are generated by uuid.uuid4(), the identities of
+    # expected split result are filled with the repr's and updated later.
+    test_datasets = [
+        _TestDataset(
+            change_status={
+                comp_change_repr: _ApprovalStatus.AUTO_APPROVED,
+                add_combination_repr: _ApprovalStatus.AUTO_APPROVED,
+            }, expected_result=_ChangeSplitResult(
+                auto_mergeable_db=db_with_comp_and_encoded_fields,
+                auto_mergeable_change_unit_identities=[
+                    comp_change_repr, add_combination_repr
+                ], review_required_db=db_with_comp_and_encoded_fields,
+                review_required_change_unit_identities=[])),
+        _TestDataset(
+            change_status={
+                comp_change_repr: _ApprovalStatus.AUTO_APPROVED,
+                add_combination_repr: _ApprovalStatus.MANUAL_REVIEW_REQUIRED,
+            }, expected_result=_ChangeSplitResult(
+                auto_mergeable_db=db_with_comp_only,
+                auto_mergeable_change_unit_identities=[comp_change_repr],
+                review_required_db=db_with_comp_and_encoded_fields,
+                review_required_change_unit_identities=[add_combination_repr])),
+        _TestDataset(
+            change_status={
+                comp_change_repr: _ApprovalStatus.MANUAL_REVIEW_REQUIRED,
+                add_combination_repr: _ApprovalStatus.AUTO_APPROVED,
+            }, expected_result=_ChangeSplitResult(
+                auto_mergeable_db=self._base_db,
+                auto_mergeable_change_unit_identities=[],
+                review_required_db=db_with_comp_and_encoded_fields,
+                review_required_change_unit_identities=[
+                    comp_change_repr, add_combination_repr
+                ])),
+        _TestDataset(
+            change_status={
+                comp_change_repr: _ApprovalStatus.MANUAL_REVIEW_REQUIRED,
+                add_combination_repr: _ApprovalStatus.MANUAL_REVIEW_REQUIRED,
+            }, expected_result=_ChangeSplitResult(
+                auto_mergeable_db=self._base_db,
+                auto_mergeable_change_unit_identities=[],
+                review_required_db=db_with_comp_and_encoded_fields,
+                review_required_change_unit_identities=[
+                    comp_change_repr, add_combination_repr
+                ])),
+    ]
+
+    for test_dataset in test_datasets:
+      with self.subTest(f'with approal status: {test_dataset.change_status!r}'):
         manager = _ChangeUnitManager(self._base_db,
                                      database.Database.LoadData(new_db_content))
         identity_map = {}
         for identity, change_unit in manager.GetChangeUnits().items():
           identity_map[repr(change_unit)] = identity
 
-        comp_change_repr = 'CompChange:comp_cls_1:new_comp(new)'
-        add_combination_repr = (
-            'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp')
+        expected_split_result = test_dataset.expected_result
+        # Use identity_map to update the identifiers in expected_split_result.
+        expected_split_result = expected_split_result._replace(
+            auto_mergeable_change_unit_identities=[
+                identity_map[repr_str] for repr_str in
+                expected_split_result.auto_mergeable_change_unit_identities
+            ], review_required_change_unit_identities=[
+                identity_map[repr_str] for repr_str in
+                expected_split_result.review_required_change_unit_identities
+            ])
 
         manager.SetApprovalStatus({
-            identity_map[comp_change_repr]: status_comp,
-            identity_map[add_combination_repr]: status_encoded_field
+            identity_map[comp_change_repr]:
+                test_dataset.change_status[comp_change_repr],
+            identity_map[add_combination_repr]:
+                test_dataset.change_status[add_combination_repr],
         })
+        change_split_result = manager.SplitChange()
 
-        auto_mergeable_db, review_required_db = manager.SplitChange()
-
-        self.assertEqual(
-            _ApplyUnifiedDiff(self._base_db_content, auto_mergeable_diff),
-            auto_mergeable_db.DumpDataWithoutChecksum())
-        self.assertEqual(
-            _ApplyUnifiedDiff(auto_mergeable_db.DumpDataWithoutChecksum(),
-                              review_required_diff),
-            review_required_db.DumpDataWithoutChecksum())
+        self.assertEqual(expected_split_result, change_split_result)
 
 
 if __name__ == '__main__':

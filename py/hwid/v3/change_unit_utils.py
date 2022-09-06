@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Change unit related utilities."""
@@ -16,6 +16,7 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
+
 
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -149,6 +150,10 @@ class CompChange(ChangeUnit):
     comp_name = self._analysis_result.comp_name
     return f'{super().__repr__()}:{comp_cls}:{comp_name}{new}'
 
+  @property
+  def comp_analysis(self):
+    return self._analysis_result
+
   @classmethod
   def CreateDepSpec(cls, comp_cls: str, comp_hash: str) -> ChangeUnitDepSpec:
     return ChangeUnitDepSpec(cls, comp_cls, comp_hash)
@@ -196,20 +201,28 @@ class AddEncodingCombination(ChangeUnit):
 
   def __init__(self, is_first: bool, encoded_field_name: str, comp_cls: str,
                comp_hashes: Sequence[str], pattern_idxes: Sequence[int],
-               comp_names: Sequence[str]):
+               comp_analyses: Sequence[_HWIDComponentAnalysisResult]):
     super().__init__(self.CreateDepSpec(is_first, encoded_field_name))
     self._is_first = is_first
     self._encoded_field_name = encoded_field_name
     self._comp_cls = comp_cls
     self._comp_hashes = comp_hashes
     self._pattern_idxes = pattern_idxes
-    self._comp_names = comp_names
+    self._comp_analyses = comp_analyses
+
+  @property
+  def comp_cls(self):
+    return self._comp_cls
+
+  @property
+  def comp_analyses(self):
+    return self._comp_analyses
 
   def __repr__(self) -> str:
     encoded_field_name = (f'{self._encoded_field_name}'
                           f"{'(first)' if self._is_first else ''}")
     comp_cls = self._comp_cls
-    comp_names = ','.join(self._comp_names)
+    comp_names = ','.join(info.comp_name for info in self._comp_analyses)
     return f'{super().__repr__()}:{encoded_field_name}-{comp_cls}:{comp_names}'
 
   @classmethod
@@ -256,6 +269,10 @@ class NewImageIdToExistingEncodingPattern(ChangeUnit):
     self._image_id = image_id
     self._pattern_idx = pattern_idx
     self._last = last
+
+  @property
+  def image_name(self):
+    return self._image_name
 
   def __repr__(self) -> str:
     image_name = self._image_name
@@ -306,6 +323,10 @@ class NewImageIdToNewEncodingPattern(ChangeUnit):
     self._image_descs = image_descs
     self._bit_mapping = bit_mapping
     self._contains_last = contains_last
+
+  @property
+  def image_descs(self):
+    return self._image_descs
 
   def __repr__(self) -> str:
     image_desc = self._image_descs[0]
@@ -373,20 +394,19 @@ class ReplaceRules(ChangeUnit):
     yield _ALL_OTHER_CHANGE_UNIT_DEP_SPEC
 
 
-def _ExtractCompChanges(old_db: database.Database,
+def _ExtractCompChanges(analysis_mapping: MutableMapping[Tuple[
+    str, str], _HWIDComponentAnalysisResult],
                         new_db: database.Database) -> Iterable[CompChange]:
-  analyzer = contents_analyzer.ContentsAnalyzer(
-      new_db.DumpDataWithoutChecksum(), None, old_db.DumpDataWithoutChecksum())
-  analysis = analyzer.AnalyzeChange(None, False)
-  for comp_analysis in analysis.hwid_components.values():
+  for (comp_cls, comp_name), comp_analysis in analysis_mapping.items():
     if comp_analysis.is_newly_added or not comp_analysis.diff_prev.unchanged:
-      comp_name = comp_analysis.comp_name
-      comp_info = new_db.GetComponents(comp_analysis.comp_cls)[comp_name]
+      comp_info = new_db.GetComponents(comp_cls)[comp_name]
       yield CompChange(comp_analysis, comp_info.values, comp_info.information,
                        comp_info.comp_hash)
 
 
 def _ExtractAddEncodingCombination(
+    analysis_mapping: MutableMapping[Tuple[str, str],
+                                     _HWIDComponentAnalysisResult],
     old_db: database.Database,
     new_db: database.Database) -> Iterable[AddEncodingCombination]:
 
@@ -427,9 +447,13 @@ def _ExtractAddEncodingCombination(
 
     for idx, combination in new_db.GetEncodedField(extra_encoded_field).items():
       component_hashes = _GetComponentHashes(comp_cls, combination[comp_cls])
+      comp_analyses = [
+          analysis_mapping[comp_cls, comp_name]
+          for comp_name in combination[comp_cls]
+      ]
       yield AddEncodingCombination(idx == 0, extra_encoded_field, comp_cls,
                                    component_hashes, pattern_idxes_to_fill,
-                                   combination[comp_cls])
+                                   comp_analyses)
 
   old_rev_comp_idx = _ReverseCompIdxMapping(old_db)
   new_rev_comp_idx = _ReverseCompIdxMapping(new_db)
@@ -468,9 +492,12 @@ def _ExtractAddEncodingCombination(
       for i in new_comb_idx_set - old_comb_idx_set:  # new combinations
         comb = new_combinations[i][comp_cls]
         component_hashes = _GetComponentHashes(comp_cls, comb)
+        comp_analyses = [
+            analysis_mapping[comp_cls, comp_name] for comp_name in comb
+        ]
         yield AddEncodingCombination(False, encoded_field, comp_cls,
                                      component_hashes, pattern_idxes_to_fill,
-                                     comb)
+                                     comp_analyses)
 
 
 def _ExtractNewImageIds(old_db: database.Database,
@@ -539,6 +566,7 @@ class ApprovalStatus(enum.IntEnum):
   AUTO_APPROVED = enum.auto()
   DONT_CARE = enum.auto()
   MANUAL_REVIEW_REQUIRED = enum.auto()
+  REJECTED = enum.auto()
 
 
 class DependencyNode:
@@ -573,6 +601,21 @@ class DependencyNode:
     return not self.n_prerequisites
 
 
+class ChangeSplitResult(NamedTuple):
+  auto_mergeable_db: database.Database
+  auto_mergeable_change_unit_identities: Sequence[str]
+  review_required_db: database.Database
+  review_required_change_unit_identities: Sequence[str]
+
+  @property
+  def auto_mergeable_noop(self) -> bool:
+    return not self.auto_mergeable_change_unit_identities
+
+  @property
+  def review_required_noop(self) -> bool:
+    return not self.review_required_change_unit_identities
+
+
 class ChangeUnitManager:
   """Supports topological sort of change units and splitting the HWID change."""
 
@@ -590,9 +633,20 @@ class ChangeUnitManager:
   def ExtractChangeUnits(self) -> Iterable[ChangeUnit]:
     """Extracts change units from two HWID DBs."""
 
+    analyzer = contents_analyzer.ContentsAnalyzer(
+        self._new_db.DumpDataWithoutChecksum(internal=True), None,
+        self._old_db.DumpDataWithoutChecksum(internal=True))
+    analysis = analyzer.AnalyzeChange(None, False)
+    analysis_mapping: MutableMapping[Tuple[str, str],
+                                     _HWIDComponentAnalysisResult] = {}
+    for comp_analysis in analysis.hwid_components.values():
+      analysis_mapping[comp_analysis.comp_cls, comp_analysis.comp_name] = (
+          comp_analysis)
+
     yield from itertools.chain(
-        _ExtractCompChanges(self._old_db, self._new_db),
-        _ExtractAddEncodingCombination(self._old_db, self._new_db),
+        _ExtractCompChanges(analysis_mapping, self._new_db),
+        _ExtractAddEncodingCombination(analysis_mapping, self._old_db,
+                                       self._new_db),
         _ExtractNewImageIds(self._old_db, self._new_db),
         _ExtractReplaceRules(self._old_db, self._new_db))
 
@@ -629,6 +683,7 @@ class ChangeUnitManager:
     """Sets the approval status for every change unit."""
 
     for identity, status in approval_status.items():
+      assert status != ApprovalStatus.REJECTED
       self._dep_nodes[identity].approval_status = status
 
   def _GetChangeUnitIdentitiesByDepSpec(
@@ -645,10 +700,12 @@ class ChangeUnitManager:
       depended.dependents.add(dependent)
       dependent.n_prerequisites += 1
 
-  def _PatchInTopologicalOrder(self, db_data: str,
-                               condition: Callable[[DependencyNode], bool],
-                               remaining: Set[ChangeUnitIdentity]):
+  def _PatchInTopologicalOrder(
+      self, db_data: str, condition: Callable[[DependencyNode], bool],
+      remaining: Set[ChangeUnitIdentity]
+  ) -> Tuple[database.Database, Sequence[str]]:
 
+    patched_change_unit_identities = []
     q: Deque[DependencyNode] = collections.deque()
     for identity in remaining:
       node = self._dep_nodes[identity]
@@ -659,15 +716,16 @@ class ChangeUnitManager:
       while q:
         node = q.popleft()
         remaining.remove(node.identity)
+        patched_change_unit_identities.append(node.identity)
         self._change_units[node.identity].Patch(db_builder)
         for dependent in node.dependents:
           dependent.n_prerequisites -= 1
           if condition(dependent):
             q.append(dependent)
 
-    return db_builder.Build()
+    return db_builder.Build(), patched_change_unit_identities
 
-  def SplitChange(self) -> Tuple[database.Database, database.Database]:
+  def SplitChange(self) -> ChangeSplitResult:
     """Splits HWID DB change by dependency relation and approval status.
 
     This method picks auto-mergeable change units topologically to create first
@@ -678,7 +736,7 @@ class ChangeUnitManager:
     reviews.
 
     Returns:
-      A tuple of (auto_mergeable_db, review_required_db).
+      An instance of ChangeSplitResult.
     Raises:
       SplitChangeUnitException: If the DB change cannot be splitted.
       ApplyChangeUnitException: If the extracted change units cannot be applied
@@ -688,17 +746,21 @@ class ChangeUnitManager:
     remaining = set(self._change_units)
 
     try:
-      auto_mergeable_db = self._PatchInTopologicalOrder(
-          self._old_db.DumpDataWithoutChecksum(),
-          lambda node: node.auto_mergeable, remaining)
+      auto_mergeable_db, auto_mergeable_change_unit_identities = (
+          self._PatchInTopologicalOrder(
+              self._old_db.DumpDataWithoutChecksum(internal=True),
+              lambda node: node.auto_mergeable, remaining))
     except _ApprovalStatusUnsetException as ex:
       raise SplitChangeUnitException(str(ex)) from None
 
-    review_required_db = self._PatchInTopologicalOrder(
-        auto_mergeable_db.DumpDataWithoutChecksum(),
-        lambda node: node.independent, remaining)
+    review_required_db, review_required_change_unit_identities = (
+        self._PatchInTopologicalOrder(
+            auto_mergeable_db.DumpDataWithoutChecksum(internal=True),
+            lambda node: node.independent, remaining))
 
     if remaining:
       raise SplitChangeUnitException('Unexpected cyclic dependency detected.')
 
-    return auto_mergeable_db, review_required_db
+    return ChangeSplitResult(
+        auto_mergeable_db, auto_mergeable_change_unit_identities,
+        review_required_db, review_required_change_unit_identities)
