@@ -714,6 +714,7 @@ message ClAction {
     APPROVED = 1;
     REJECTED = 2;
     NEED_MANUAL_REVIEW = 3;
+    DONT_CARE = 4;
   }
   // The case of this action.
   ApprovalCase approval_case = 1;
@@ -758,6 +759,82 @@ message SetFirmwareInfoSupportStatusRequest {
 message SetFirmwareInfoSupportStatusResponse {
   // Created commit.
   HwidDbCommit commit = 1;
+}
+
+// The request to split HWID DB changes.
+message SplitHwidDbChangeRequest {
+  // The session token of the CL creation workflow.
+  string session_token = 1;
+  // The external resource required for validating the AVL alignment status.
+  HwidDbExternalResource db_external_resource = 2;
+}
+
+// The change unit with information for making approval decisions.
+message ChangeUnit {
+
+  // The information of AddEncodingCombination change unit.
+  message AddEncodingCombination {
+    // The component class.
+    string comp_cls = 1;
+    // The info of components included in the combination.
+    repeated HwidDbEditableSectionAnalysisReport.ComponentInfo comp_info = 2;
+  }
+
+  // The information of NewImageIdTo{Existing,New}EncodingPattern change unit.
+  message NewImageId {
+    // The images names.
+    repeated string image_names = 1;
+    // True if this change unit is a NewImageIdToNewEncodingPattern change unit.
+    bool with_new_encoding_pattern = 2;
+  }
+
+  // The information of ReplaceRules change unit.  Currently no extra
+  // information is required.
+  message ReplaceRules {}
+
+  // The information of change unit.
+  oneof change_unit_type {
+    HwidDbEditableSectionAnalysisReport.ComponentInfo comp_change = 1;
+    AddEncodingCombination add_encoding_combination = 2;
+    NewImageId new_image_id = 3;
+    ReplaceRules replace_rules = 4;
+  }
+}
+
+// The response of splitted HWID DB change units.
+message SplitHwidDbChangeResponse {
+  // The mapping of identity to change unit.
+  map<string, ChangeUnit> change_units = 1;
+}
+
+// The request of creating splitted HWID DB Cls.
+message CreateSplittedHwidDbClsRequest {
+  // The session token of the CL creation workflow.
+  string session_token = 1;
+  // The mapping of identity to approval status.
+  map<string, ClAction> approval_status = 2;
+  string original_requester = 3;
+  string description = 4;
+  int64 bug_number = 5;
+}
+
+// The response of creating splitted HWID DB Cls.
+message CreateSplittedHwidDbClsResponse {
+  // A bool indicating whether a CL of the auto-mergeable change is created.
+  bool auto_mergeable_change_cl_created = 1;
+  // The CL number of the auto-mergeable change.
+  int64 auto_mergeable_change_cl_number = 2;
+  // The identifiers of auto-mergeable change units.
+  repeated string auto_mergeable_change_unit_identifiers = 3;
+  // A bool indicating whether a CL of the review-required change is created.
+  bool review_required_change_cl_created = 4;
+  // The CL number of the review-required change.
+  int64 review_required_change_cl_number = 5;
+  // The identifiers of review-required change units.
+  repeated string review_required_change_unit_identifiers = 6;
+  // The final commit of the HWID DB change.  Could be auto-mergeable one if
+  // there is no CL of review-required change units.
+  HwidDbCommit final_hwid_db_commit = 7;
 }
 
 service HwidService {
@@ -850,4 +927,12 @@ service HwidService {
   // Set support status for firmware info components.
   rpc SetFirmwareInfoSupportStatus(SetFirmwareInfoSupportStatusRequest)
     returns (SetFirmwareInfoSupportStatusResponse);
+
+  // Split HWID DB change into auto-mergeable and review-required changes.
+  rpc SplitHwidDbChange(SplitHwidDbChangeRequest)
+    returns (SplitHwidDbChangeResponse);
+
+  // Create HWID DB Cls by setting approval status per change unit.
+  rpc CreateSplittedHwidDbCls(CreateSplittedHwidDbClsRequest)
+    returns (CreateSplittedHwidDbClsResponse);
 }
