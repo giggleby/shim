@@ -26,6 +26,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
 
+
 CUTOFF_SCRIPT_DIR = '/usr/local/factory/sh/cutoff'
 """Directory of scripts for device cut-off"""
 
@@ -197,16 +198,12 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
   binary_deps = [
       'activate_date', 'backlight_tool', 'bash', 'busybox', 'cgpt', 'cgpt.bin',
       'clobber-log', 'clobber-state', 'coreutils', 'crossystem', 'dd',
-      'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom', 'halt',
-      'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
-      'od', 'pango-view', 'pkill', 'pv', 'pvdisplay', 'python', 'reboot',
+      'pvdisplay', 'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom',
+      'halt', 'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount',
+      'mount-encrypted', 'od', 'pango-view', 'pkill', 'pv', 'python', 'reboot',
       'setterm', 'sh', 'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof',
-      'jq', '/sbin/frecon', 'stressapptest', 'fuser', 'login'
-      'display_boot_message', 'dumpe2fs', 'ectool', 'flashrom', 'halt',
-      'initctl', 'mkfs.ext4', 'mktemp', 'mosys', 'mount', 'mount-encrypted',
-      'od', 'pango-view', 'pkill', 'pv', 'python', 'reboot', 'setterm', 'sh',
-      'shutdown', 'stop', 'umount', 'vpd', 'curl', 'lsof', 'jq', '/sbin/frecon',
-      'stressapptest', 'fuser', 'login'
+      'jq', '/sbin/frecon', 'stressapptest', 'fuser', 'login', 'factory_ufs',
+      'ufs-utils'
   ]
 
   etc_issue = textwrap.dedent("""
