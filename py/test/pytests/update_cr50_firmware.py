@@ -99,8 +99,7 @@ prepvt firmware::
       "firmware_file": "/path/to/ti50.bin.prepvt",
       "skip_prepvt_flag_check": "eval! constants.phase != 'PVT'",
       "upstart_mode": false,
-      "force_ro_mode": true,
-      "is_ti50": true
+      "force_ro_mode": true
     }
   }
 
@@ -120,11 +119,12 @@ from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import gsc_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-DEFAULT_CR50_FIRMWARE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
-DEFAULT_TI50_FIRMWARE_PATH = '/opt/google/ti50/firmware/ti50.bin.prod'
+
+PROD_FW_SUFFIX = ".prod"
 PREPVT_FLAG_MASK = 0x7F
 KEY_ATTEMPT_CR50_UPDATE_RO_VERSION = device_data.JoinKeys(
     device_data.KEY_FACTORY, 'attempt_cr50_update_ro_version')
@@ -140,11 +140,8 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
   ARGS = [
       Arg(
           'firmware_file', str, 'The full path of the firmware. If not set, '
-          'the test will use the default firmware path to update the firmware '
-          'If `is_ti50` is set to true, then the default firmware path is %s. '
-          'Otherwise, the path is %s.' %
-          (DEFAULT_TI50_FIRMWARE_PATH, DEFAULT_CR50_FIRMWARE_PATH),
-          default=None),
+          'the test will use the default prod firmware path to update the '
+          'firmware.', default=None),
       Arg('from_release', bool, 'Find the firmware from release rootfs.',
           default=True),
       Arg(
@@ -168,14 +165,6 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
           'Force to update the inactive RO even if the RO version on DUT is '
           'the same as given firmware. The DUT will reboot automatically '
           'after the update', default=False),
-      # Since we cannot get the information of which TPM the DUT is using,
-      # we need to turn on this flag manually. (b/225943881)
-      Arg(
-          'is_ti50', bool,
-          'If set to true, the test will check the ti50 firmware version '
-          'before updating. If the user would like to update from RW 0.0.15 '
-          ' (or less) to 0.0.16, then `force_ro_mode` should set to true and '
-          '`upstart_mode` should set to false.', default=False),
       Arg(
           'set_recovery_request_train_and_reboot', bool,
           'Set recovery request to VB2_RECOVERY_TRAIN_AND_REBOOT. '
@@ -194,6 +183,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
     self.dut = device_utils.CreateDUTInterface()
 
     dut_shell = functools.partial(gooftool_common.Shell, sys_interface=self.dut)
+    self.gsc_utils = gsc_utils.GSCUtils()
     self.gsctool = gsctool.GSCTool(shell=dut_shell)
     self.fw_ver = self.gsctool.GetCr50FirmwareVersion()
     self.board_id = self.gsctool.GetBoardID()
@@ -210,10 +200,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
       self.assertTrue(
           self.args.from_release,
           'Must set "from_release" to True if not specifiying firmware_file')
-      if self.args.is_ti50:
-        self.args.firmware_file = DEFAULT_TI50_FIRMWARE_PATH
-      else:
-        self.args.firmware_file = DEFAULT_CR50_FIRMWARE_PATH
+      self.args.firmware_file = self.gsc_utils.image_base_name + PROD_FW_SUFFIX
 
     self.assertEqual(self.args.firmware_file[0], '/',
                      'firmware_file should be a full path')
@@ -247,8 +234,10 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
       self._CheckCr50FirmwareVersion()
 
   def _LogCr50Info(self):
-    session.console.info('Cr50 firmware version: %r', self.fw_ver)
-    session.console.info('Cr50 board ID: %r', self.board_id)
+    session.console.info('The DUT is using security chip: %s',
+                         self.gsc_utils.name)
+    session.console.info('Firmware version: %r', self.fw_ver)
+    session.console.info('Board ID: %r', self.board_id)
 
   def _IsPrePVTFirmware(self):
     logging.info('Cr50 firmware board ID flags: %s',
@@ -376,7 +365,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
       self.FailTask('Cr50 firmware is not updated in the previous attempt '
                     '(actual=%r, expect=%r).' % (self.fw_ver, self.image_info))
 
-    if self.args.is_ti50:
+    if self.gsc_utils.IsTi50():
       self._ValidateTi50FirmwareVersion()
 
     msg = 'Update the Cr50 firmware from version %r to %r.' % (self.fw_ver,
