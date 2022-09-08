@@ -6,6 +6,7 @@
 """Tools to finalize a factory bundle."""
 
 import argparse
+import collections
 import concurrent.futures
 import contextlib
 from distutils import version as version_module
@@ -69,6 +70,10 @@ FACTORY_SHIM_SEARCH_DIR = 'factory_shim'
 FIRMWARE_SEARCH_DIR = 'firmware'
 # temporary directory for the release image which contains firmware
 FIRMWARE_IMAGE_SOURCE_DIR = 'firmware_image_source'
+# directory of fingerprint firmware in release rootfs.
+FP_FIRMWARE_DIR = 'opt/google/biod/fw'
+# yaml file of cros-config in release rootfs.
+CROS_CONFIG_YAML_PATH = 'usr/share/chromeos-config/yaml/config.yaml'
 
 # When version is fixed, we'll try to find the resource in the following order.
 RESOURCE_CHANNELS = ['stable', 'beta', 'dev', 'canary']
@@ -691,6 +696,41 @@ class FinalizeBundle:
   def is_boxster_project(self):
     return self.designs is not None
 
+  def _ExtractFingerprintFirmwareHash(self, models):
+    """Extracts all possible fingerprint firmware hash and version."""
+    model_fp_boards = collections.defaultdict(set)
+
+    with MountPartition(self.release_image_path, 3) as f:
+      fp_firmware_dir = os.path.join(f, FP_FIRMWARE_DIR)
+      cros_config_path = os.path.join(f, CROS_CONFIG_YAML_PATH)
+      cros_config = yaml.safe_load(file_utils.ReadFile(cros_config_path))
+
+      # 1. Get all available fp boards for each model.
+      # 2. Cache the hash for each fingerprint board to prevent from calculate
+      #    hash of the same firmware again.
+      cached_fp_firmware_hash = {}
+      for config in cros_config['chromeos']['configs']:
+        fp_board = config.get('fingerprint', {}).get('board')
+        model = config.get('name')
+        if not fp_board or model not in models:
+          continue
+        model_fp_boards[model].add(fp_board)
+
+        if fp_board not in cached_fp_firmware_hash:
+          fp_firmware_files = glob.glob(
+              f'{fp_firmware_dir}/{fp_board}_*-RO_*-RW.bin')
+          if len(fp_firmware_files) != 1:
+            raise FinalizeBundleException(
+                f'Multiple or no firmware found for fingerprint model {model}: '
+                f'{fp_firmware_files}')
+          cached_fp_firmware_hash[fp_board] = (
+              chromeos_firmware.CalculateFirmwareHashes(fp_firmware_files[0]))
+
+    return {
+        model: [cached_fp_firmware_hash[board] for board in sorted(fp_boards)]
+        for model, fp_boards in model_fp_boards.items()
+    }
+
   def AddFirmwareUpdaterAndImages(self):
     """Add firmware updater into bundle directory, and extract firmware images
     into firmware_images/."""
@@ -698,7 +738,7 @@ class FinalizeBundle:
     firmware_src = self.manifest.get('firmware', 'release_image')
     firmware_dir = os.path.join(self.bundle_dir, FIRMWARE_SEARCH_DIR)
     file_utils.TryMakeDirs(firmware_dir)
-    # TODO(wyuang): retrieve firmwarm channel from image path
+    # TODO(wyuang): retrieve firmware channel from image path
     if firmware_src.startswith('release_image'):
       with MountPartition(self.release_image_path, 3) as f:
         shutil.copy(os.path.join(f, FIRMWARE_UPDATER_PATH), firmware_dir)
@@ -751,6 +791,7 @@ class FinalizeBundle:
         raise KeyError("No firmware models '%s' in chromeos-firmwareupdate" %
                        missing_models)
 
+      fp_firmware_hash = self._ExtractFingerprintFirmwareHash(models)
       for model in models:
         if model in missing_models:
           continue
@@ -769,6 +810,9 @@ class FinalizeBundle:
                                     manifest[model][firmware_key]['image'])
           record[f'ro_{firmware_type}_firmware'] = \
               chromeos_firmware.CalculateFirmwareHashes(image_path)
+
+        if model in fp_firmware_hash:
+          record['ro_fp_firmware'] = fp_firmware_hash[model]
 
         self.firmware_record['firmware_records'].append(record)
 
