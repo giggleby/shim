@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# Copyright 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -677,23 +677,33 @@ class WaivedTestTest(GoofyUITest):
   """A test to verify that a waived test does not block test list execution."""
   test_list = {
       'options': {
-          'auto_run_on_start': True,
-          'stop_on_failure': True,
-          'phase': 'PROTO',
-          'waived_tests': {
-              'PROTO': ['waived', 'G']
-          },
+          'auto_run_on_start':
+              True,
+          'stop_on_failure':
+              True,
+          'phase':
+              'PROTO',
+          'conditional_patches': [{
+              'action': 'waive',
+              'conditions': {
+                  'phases': 'PROTO',
+                  'patterns': ['waived', 'G']
+              }
+          }, ],
       },
-      'tests': [
-          {'id': 'waived', 'pytest_name': 'waived_test'},
-          {'id': 'normal', 'pytest_name': 'normal_test'},
-          {
-              'id': 'G',
-              'subtests': [
-                  {'id': 'waived', 'pytest_name': 'waived_test'},
-              ]
-          }
-      ]
+      'tests': [{
+          'id': 'waived',
+          'pytest_name': 'waived_test'
+      }, {
+          'id': 'normal',
+          'pytest_name': 'normal_test'
+      }, {
+          'id': 'G',
+          'subtests': [{
+              'id': 'waived',
+              'pytest_name': 'waived_test'
+          }, ]
+      }]
   }
 
   def BeforeInitGoofy(self):
@@ -726,29 +736,70 @@ class SkippedTestTest(GoofyUITest):
   """A test to verify that a waived test does not block test list execution."""
 
   test_list = {
-      'constants': {'has_a2': True},
+      'constants': {
+          'has_a2': True
+      },
       'options': {
-          'auto_run_on_start': True,
-          'stop_on_failure': True,
-          'phase': 'PROTO',
-          'skipped_tests': {
-              'PROTO': ['skipped'],
-              'not device.has_a': ['*.A'],
-              'constants.has_a2': ['*.A_2']
-          }
+          'auto_run_on_start':
+              True,
+          'stop_on_failure':
+              True,
+          'phase':
+              'PROTO',
+          'conditional_patches': [
+              {
+                  'action': 'skip',
+                  'conditions': {
+                      'phases': 'PROTO',
+                      'patterns': 'skipped'
+                  }
+              },
+              {
+                  'action': 'skip',
+                  'conditions': {
+                      'run_if': 'not device.has_a',
+                      'patterns': '*.A'
+                  }
+              },
+              {
+                  'action': 'skip',
+                  'conditions': {
+                      'run_if': 'constants.has_a2',
+                      'patterns': '*.A_2'
+                  }
+              },
+          ],
       },
       'tests': [
-          {'id': 'skipped', 'pytest_name': 'normal_test'},
-          {'id': 'G',
-           'subtests': [
-               # This is skipped because device.has_a is not set
-               {'id': 'A', 'pytest_name': 'normal_test'},
-               # This is skipped because constants.has_a2 is True
-               {'id': 'A', 'pytest_name': 'normal_test'},
-               # This will be A_3, and it should not be skipped
-               {'id': 'A', 'pytest_name': 'normal_test'},
-           ]},
-          {'id': 'normal', 'pytest_name': 'normal_test'},
+          {
+              'id': 'skipped',
+              'pytest_name': 'normal_test'
+          },
+          {
+              'id':
+                  'G',
+              'subtests': [
+                  # This is skipped because device.has_a is not set
+                  {
+                      'id': 'A',
+                      'pytest_name': 'normal_test'
+                  },
+                  # This is skipped because constants.has_a2 is True
+                  {
+                      'id': 'A',
+                      'pytest_name': 'normal_test'
+                  },
+                  # This will be A_3, and it should not be skipped
+                  {
+                      'id': 'A',
+                      'pytest_name': 'normal_test'
+                  },
+              ]
+          },
+          {
+              'id': 'normal',
+              'pytest_name': 'normal_test'
+          },
       ],
   }
 

@@ -442,34 +442,88 @@ class TestListIteratorBaseTest(TestListIteratorTest):
     which means that the subtests depend on each other.  Retesting G.b must
     retest G.a too.
     """
-    test_list = self._BuildTestList(
-        {
-            'options': {
-                'phase': 'PROTO',
-                'skipped_tests': {'PROTO': ['J']},
+    test_list = self._BuildTestList({
+        'options': {
+            'phase':
+                'PROTO',
+            'conditional_patches': [{
+                'action': 'skip',
+                'conditions': {
+                    'phases': 'PROTO',
+                    'patterns': 'J'
+                }
+            }],
+        },
+        'tests': [
+            {
+                'inherit':
+                    'TestGroup',
+                'id':
+                    'G',
+                'subtests': [
+                    {
+                        'id': 'a',
+                        'pytest_name': 'a'
+                    },
+                    {
+                        'id': 'b',
+                        'pytest_name': 'b'
+                    },
+                ]
             },
-            'tests': [
-                {'inherit': 'TestGroup', 'id': 'G', 'subtests': [
-                    {'id': 'a', 'pytest_name': 'a'},
-                    {'id': 'b', 'pytest_name': 'b'},
-                ]},
-                {'inherit': 'FactoryTest', 'id': 'H', 'subtests': [
-                    {'id': 'a', 'pytest_name': 'a'},
-                    {'id': 'b', 'pytest_name': 'b'},
-                ]},
-                {'inherit': 'FactoryTest', 'id': 'I', 'subtests': [
-                    {'id': 'a', 'pytest_name': 'a'},
-                    {'id': 'b', 'pytest_name': 'b'},
-                ]},
-                {'inherit': 'FactoryTest', 'id': 'J', 'subtests': [
-                    {'id': 'a', 'pytest_name': 'a'},
-                    {'id': 'b', 'pytest_name': 'b'},
-                ]},
-            ]
-        })
+            {
+                'inherit':
+                    'FactoryTest',
+                'id':
+                    'H',
+                'subtests': [
+                    {
+                        'id': 'a',
+                        'pytest_name': 'a'
+                    },
+                    {
+                        'id': 'b',
+                        'pytest_name': 'b'
+                    },
+                ]
+            },
+            {
+                'inherit':
+                    'FactoryTest',
+                'id':
+                    'I',
+                'subtests': [
+                    {
+                        'id': 'a',
+                        'pytest_name': 'a'
+                    },
+                    {
+                        'id': 'b',
+                        'pytest_name': 'b'
+                    },
+                ]
+            },
+            {
+                'inherit':
+                    'FactoryTest',
+                'id':
+                    'J',
+                'subtests': [
+                    {
+                        'id': 'a',
+                        'pytest_name': 'a'
+                    },
+                    {
+                        'id': 'b',
+                        'pytest_name': 'b'
+                    },
+                ]
+            },
+        ]
+    })
     # G is a test group, H, I, J are AutomatedSequences
     test_list = self._SetStubStateInstance(test_list)
-    test_list.SetSkippedAndWaivedTests()
+    test_list.ApplyConditionalPatchesToTests()
     test_list.LookupPath('G.a').UpdateState(status=state.TestState.PASSED)
     test_list.LookupPath('G.b').UpdateState(status=state.TestState.FAILED)
     test_list.LookupPath('H.a').UpdateState(status=state.TestState.PASSED)
@@ -484,20 +538,29 @@ class TestListIteratorBaseTest(TestListIteratorTest):
         status_filter=[state.TestState.FAILED, state.TestState.UNTESTED])
 
   def testSkippedAndRerun(self):
-    test_list = self._BuildTestList(
-        {
-            'options': {
-                'phase': 'PROTO',
-                'skipped_tests': {'PROTO': ['G.a']},
-            },
-            'tests': [
-                {'inherit': 'TestGroup', 'id': 'G', 'subtests': [
-                    {'id': 'a', 'pytest_name': 'a'},
-                ]},
-            ]
-        })
+    test_list = self._BuildTestList({
+        'options': {
+            'phase':
+                'PROTO',
+            'conditional_patches': [{
+                'action': 'skip',
+                'conditions': {
+                    'phases': 'PROTO',
+                    'patterns': 'G.a'
+                }
+            }],
+        },
+        'tests': [{
+            'inherit': 'TestGroup',
+            'id': 'G',
+            'subtests': [{
+                'id': 'a',
+                'pytest_name': 'a'
+            }, ]
+        }, ]
+    })
     test_list = self._SetStubStateInstance(test_list)
-    test_list.SetSkippedAndWaivedTests()
+    test_list.ApplyConditionalPatchesToTests()
     self._AssertTestSequence(
         test_list,
         [],
@@ -518,23 +581,45 @@ class TestListIteratorBaseTest(TestListIteratorTest):
                      state.TestState.SKIPPED)
 
   def testSkipInParallelGroup(self):
-    test_list = self._BuildTestList(
-        {
-            'options': {
-                'phase': 'PROTO',
-                'skipped_tests': {'PROTO': ['G.a']},
+    test_list = self._BuildTestList({
+        'options': {
+            'phase':
+                'PROTO',
+            'conditional_patches': [{
+                'action': 'skip',
+                'conditions': {
+                    'phases': 'PROTO',
+                    'patterns': 'G.a'
+                }
+            }],
+        },
+        'tests': [
+            {
+                'inherit':
+                    'TestGroup',
+                'id':
+                    'G',
+                'parallel':
+                    True,
+                'subtests': [
+                    {
+                        'id': 'a',
+                        'pytest_name': 'a'
+                    },
+                    {
+                        'id': 'b',
+                        'pytest_name': 'b'
+                    },
+                ]
             },
-            'tests': [
-                {'inherit': 'TestGroup', 'id': 'G', 'parallel': True,
-                 'subtests': [
-                     {'id': 'a', 'pytest_name': 'a'},
-                     {'id': 'b', 'pytest_name': 'b'},
-                 ]},
-                {'id': 'c', 'pytest_name': 'c'},
-            ]
-        })
+            {
+                'id': 'c',
+                'pytest_name': 'c'
+            },
+        ]
+    })
     test_list = self._SetStubStateInstance(test_list)
-    test_list.SetSkippedAndWaivedTests()
+    test_list.ApplyConditionalPatchesToTests()
     test_list.LookupPath('G.b').UpdateState(status=state.TestState.PASSED)
     test_list.LookupPath('c').UpdateState(status=state.TestState.FAILED)
     self._AssertTestSequence(

@@ -191,12 +191,18 @@ Sample ``main.test_list.json``::
       "default_factory_server_url": "http://192.168.111.222:8888/"
     },
     "options": {
-      "skipped_tests": {
-        "PROTO": [
-          "*.AudioJack",
-          "*.SpeakerDMic"
-        ]
-      }
+      "conditional_patches": [
+        {
+          "action": "skip",
+          "conditions": {
+            "patterns": [
+              "*.AudioJack",
+              "*.SpeakerDMic"
+            ],
+            "phases": "PROTO"
+          }
+        }
+      ]
     }
   }
 

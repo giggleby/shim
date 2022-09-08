@@ -491,6 +491,7 @@ class Goofy(object):
 
     # state_instance is initialized, we can mark skipped and waived tests now.
     self.test_list.SetSkippedAndWaivedTests()
+    self.test_list.ApplyConditionalPatchesToTests()
 
   def HandleEvent(self, event):
     """Handles an event from the event server."""

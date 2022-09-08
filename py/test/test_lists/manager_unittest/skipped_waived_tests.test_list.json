@@ -4,18 +4,28 @@
   ],
   "label": "Skip And Waive",
   "options": {
-    "skipped_tests": {
-      "PROTO": [
-        "A",
-        "G.A"
-      ]
-    },
-    "waived_tests": {
-      "PROTO": [
-        "A_2",
-        "G.A_2"
-      ]
-    }
+    "conditional_patches": [
+      {
+        "action": "skip",
+        "conditions": {
+          "phases": "PROTO",
+          "patterns": [
+            "A",
+            "G.A"
+          ]
+        }
+      },
+      {
+        "action": "waive",
+        "conditions": {
+          "phases": "PROTO",
+          "patterns": [
+            "A_2",
+            "G.A_2"
+          ]
+        }
+      }
+    ]
   },
   "definitions": {
     "A": {
