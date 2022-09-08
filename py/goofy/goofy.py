@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -59,6 +59,7 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
 from cros.factory.external import syslog
+
 
 HWID_CFG_PATH = '/usr/local/share/chromeos-hwid/cfg'
 CACHES_DIR = os.path.join(paths.DATA_STATE_DIR, 'caches')
@@ -499,6 +500,7 @@ class Goofy:
 
     # state_instance is initialized, we can mark skipped and waived tests now.
     self.test_list.SetSkippedAndWaivedTests()
+    self.test_list.ApplyConditionalPatchesToTests()
 
   def HandleEvent(self, event):
     """Handles an event from the event server."""

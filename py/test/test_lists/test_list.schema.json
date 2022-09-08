@@ -274,6 +274,61 @@
         },
         "waived_tests": {
           "$ref": "#/definitions/test_phase_allow_list"
+        },
+        "conditional_patches": {
+          "type": "array",
+          "description": "please see cros.factory.test.test_lists.test_list.Options",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "conditions"
+            ],
+            "properties": {
+              "action": {
+                "enum": ["skip", "waive"],
+                "type": "string"
+              },
+              "args": {
+                "type": "object"
+              },
+              "conditions": {
+                "type": "object",
+                "required": ["patterns"],
+                "additionalProperties": false,
+                "properties": {
+                  "run_if": {
+                    "type": ["string", "array"],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "patterns": {
+                    "type": ["string", "array"],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "phases": {
+                    "oneOf":[
+                      {
+                        "type": "string",
+                        "enum": ["PROTO", "EVT", "DVT", "PVT_DOGFOOD", "PVT"]
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": ["PROTO", "EVT", "DVT", "PVT_DOGFOOD", "PVT"]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "patternProperties": {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -88,6 +88,46 @@ class FactoryTestListTest(unittest.TestCase):
     test_list = manager.BuildTestListForUnittest(
         test_list_config=_FAKE_TEST_LIST_CONFIG)
     self.assertRaises(type_utils.CircularError, test_list.ToFactoryTestList)
+
+  # TODO(jeffulin): This test should be removed when skipped_test and
+  # waived_tests are removed.
+  def testSetSkipWaiveTestsAndConditionalPatches(self):
+    _FAKE_TEST_LIST_CONFIG = {
+        'definitions': {
+            'A': {}
+        },
+        'options': {
+            'skipped_tests': {
+                'device.factory.end_FT': [],
+                'device.factory.end_RUNIN': [],
+                'EVT': [],
+                'DVT': []
+            },
+            'conditional_patches': [{
+                'action': 'skip',
+                'conditions': {
+                    'phases': ['EVT', 'DVT', 'PVT'],
+                    'patterns': ['*.AB']
+                }
+            }, {
+                'action': 'skip',
+                'conditions': {
+                    'patterns': ['*.AB'],
+                    'run_if': ['device.factory.end_FT']
+                }
+            }, {
+                'action': 'skip',
+                'conditions': {
+                    'phases': 'EVT',
+                    'patterns': '*.AA'
+                }
+            }]
+        },
+        'tests': ['A']
+    }
+    test_list = manager.BuildTestListForUnittest(
+        test_list_config=_FAKE_TEST_LIST_CONFIG)
+    self.assertRaises(type_utils.TestListError, test_list.ToFactoryTestList)
 
 
 class EvaluateRunIfTest(unittest.TestCase):
