@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -14,7 +14,7 @@ import os
 
 from cros.factory.test import i18n
 from cros.factory.test.i18n import translation
-from cros.factory.test.rules import phase
+from cros.factory.test.rules import phase as phase_module
 from cros.factory.test import state
 from cros.factory.test.state import TestState
 from cros.factory.test.test_lists import test_object as test_object_module
@@ -171,20 +171,20 @@ class Options:
   For example::
 
       {
-          'PROTO': [
-              'SMT.AudioJack',
-              'SMT.SpeakerDMic',
-              '*.Fingerprint'
-          ],
-          'EVT': [
-              'SMT.AudioJack',
-          ],
-          'not device.component.has_touchscreen': [
-              '*.Touchscreen'
-          ],
-          'device.factory.end_SMT': [
-              'SMT'
-          ]
+        "PROTO": [
+          "SMT.AudioJack",
+          "SMT.SpeakerDMic",
+          "*.Fingerprint"
+        ],
+        "EVT": [
+          "SMT.AudioJack",
+        ],
+        "not device.component.has_touchscreen": [
+          "*.Touchscreen"
+        ],
+        "device.factory.end_SMT": [
+          "SMT"
+        ]
       }
 
   If the pattern starts with ``*``, then it will match for all tests with same
@@ -197,6 +197,114 @@ class Options:
   """Tests that should be waived according to current phase.
   See ``skipped_tests`` for the format"""
 
+  conditional_patches = []
+  """A list contains patches to apply to the tests.
+
+  The action of each patch will be applied to all the test meeting the specified
+  conditions.
+
+  The structure of the patch list must be like::
+
+      [
+        {
+          "action": "waive" | "skip",
+          "args": { ... },
+          "conditions": {
+            "run_if": "<run_if expr>" | [ "<run_if expr>", ... ],
+            "patterns": "<pattern>" | [ "<pattern>", ... ],
+            "phases": "<phase>" | [ "<phase>", ... ],
+          }
+        },
+        ...
+      ]
+
+  For example::
+
+      [
+        {
+          "action": "skip",
+          "conditions": {
+            "run_if": "not device.component.has_touchscreen",
+            "patterns": "*.Touchscreen"
+          }
+        },
+        {
+          "action": "skip",
+          "conditions": {
+            "patterns": [
+              "SMT.AudioJack",
+              "SMT.SpeakerDMic",
+              "*.Fingerprint",
+            ],
+            "phases": ["PROTO", "EVT"],
+          }
+        },
+        {
+          "action": "skip",
+          "conditions": {
+            "patterns": "SMT.AudioJack",
+            "phases": "EVT",
+          }
+        }
+      ]
+
+  Usage of each field:
+
+  * **action**: The action to be applied to the tests.
+
+    `action` is a string representing the action applied to the tests which meet
+    the `conditions`. An action will be mapped to a action function.
+
+  * **args**: Keyword arguments to be passed to action functions.
+
+    `args` is an object containing keyword arguments which will be passed to the
+    action functions.
+
+  * **conditions**:
+
+    * **patterns** (*required*): The patterns used to match the test list paths.
+
+      If a `pattern` starts with ``*``, then it will match for all tests with
+      same suffix. For example, ``*.Fingerprint`` matches ``SMT.Fingerprint``,
+      ``FATP.FingerPrint``, ``FOO.BAR.Fingerprint``. But it does not match for
+      ``SMT.Fingerprint_2`` (Generated ID when there are duplicate IDs).
+
+      For single-pattern cases (only having one pattern to be matched), one can
+      set the value of `patterns` as the pattern directly (without wrapping it
+      as an array) for convenience.
+
+      For multiple-pattern cases, the patterns included will be treated as a
+      disjuction, that is, a test will pass `patterns` condition if it matches
+      any one of the patterns.
+
+    * **phases** (*optional*): The phases that will apply the patch.
+
+      If `phases` is not set or it's empty, the patch will be applied to all
+      phases (other condition like `patterns` still need to be checked).
+
+      For single-phase cases (only having one phase to be included), one can set
+      the value of `phases` as the phase directly.
+
+      For multiple-phase cases, the phases included will be treated as a
+      disjuction, that is, a test will pass `phases` condition if the DUT is on
+      any one of the phases.
+
+    * **run_if** (*optional*): A set of `run_if` expressions.
+
+      The expressions in the array are to be evaluated and checked. Please check
+      ``ITestList._EvaluateRunIf`` to see how an expression is evaluated.
+
+      If `run_if` is not set or it's empty, this field will be ignore and check
+      other fields only.
+
+      For single-run_if cases (only having one run_if expre to be evaluated),
+      one can set the value of `run_if` as the run_if directly.
+
+      For multiple-phase cases, the run_if included will be treated as a
+      disjuction, that is, a test will pass `run_if` condition if any one of the
+      expressions is evaluated as `True`.
+  """
+
 
   def CheckValid(self):
     """Throws a TestListError if there are any invalid options."""
@@ -204,6 +312,15 @@ class Options:
     # were set.
     default_options = Options()
     errors = []
+
+    if ((getattr(self, 'skipped_tests') or getattr(self, 'waived_tests')) and
+        getattr(self, 'conditional_patches')):
+      raise type_utils.TestListError(
+          'Only one of `skipped/waived_tests` and `conditional_patches` can be '
+          'set in Option. `skipped_tests` and `waived_tests` are deprecated '
+          'and going to be remove. Skipping or waiving tests can be done by '
+          'setting `conditional_patches`.')
+
     for key in sorted(self.__dict__):
       if not hasattr(default_options, key):
         errors.append('Unknown option %s' % key)
@@ -479,8 +596,108 @@ class ITestList(metaclass=abc.ABCMeta):
 
       return MayTranslate(value)
     return ConvertToBasicType(
-        {k: ResolveArg(k, v) for k, v in test_args.items()})
+        {k: ResolveArg(k, v)
+         for k, v in test_args.items()})
 
+  @debug_utils.CatchException(_LOGGED_NAME)
+  def ApplyConditionalPatchesToTests(self):
+    """Applies the patches in the option to tests.
+
+    For each patch, the action will be applied to all the test that meet the
+    specified conditions. Please check `Option.conditional_patches` for details.
+    """
+
+    def _CheckRunIf(run_if_exprs):
+      if isinstance(run_if_exprs, str):
+        run_if_exprs = [run_if_exprs]
+
+      if len(run_if_exprs) == 0:
+        return True
+
+      for expr in run_if_exprs:
+        if self._EvaluateRunIf(run_if=expr, source='test list options',
+                               test_list=self, default=False):
+          return True
+
+      return False
+
+    def _CheckPhase(phases):
+      if isinstance(phases, str):
+        phases = [phases]
+
+      if len(phases) == 0:
+        return True
+
+      return self.options.phase in phases
+
+    def _CreateMatchFunction(pattern):
+      pattern = pattern.split(':')[-1]  # To remove test_list_id
+      if pattern.startswith('*'):
+        return lambda s: s.endswith(pattern[1:])
+
+      return lambda s: s == pattern
+
+    def _PreprocessPatterns(patterns):
+      """Converts the string patterns into matching functions
+      """
+
+      if isinstance(patterns, str):
+        patterns = [patterns]
+
+      return list(map(_CreateMatchFunction, patterns))
+
+    def _MarkSkipped(test):
+      """Marks the test as skipped.
+
+      The test (and its subtests) statuses will become SKIPPED if they were not
+      PASSED.  And test.run_if will become constant false.  So Goofy will always
+      skip it.
+      """
+      test.Skip(forever=True)
+
+    def _MarkWaived(test):
+      """Marks the test and its subtests as waived.
+
+      subtests should also be waived, so that subtests will become
+      FAILED_AND_WAIVED when failed.  And the status will be propagated to
+      parents (this test).
+      """
+      test.Waive()
+
+    # Since SKIPPED status is saved in state_instance, self.state_instance must
+    # be available at this moment.
+    assert self.state_instance is not None
+
+    # TODO(jeffulin): Use constants as keys instead of literals
+    _FUNCTION_MAP = {
+        'waive': _MarkWaived,
+        'skip': _MarkSkipped
+    }
+
+    for patch in self.options.conditional_patches:
+      conditions = patch.get('conditions', {})
+      args = patch.get('args', {})
+      action = patch.get('action', "")
+
+      if action not in _FUNCTION_MAP:
+        continue
+
+      phases = conditions.get('phases', [])
+      run_if_exprs = conditions.get('run_if', [])
+      patterns = _PreprocessPatterns(conditions.get('patterns', []))
+
+      if not _CheckRunIf(run_if_exprs) or not _CheckPhase(phases):
+        continue
+
+      for test_path, test in self.path_map.items():
+        test_path = test_path.split(':')[-1]  # To remove test_list_id
+        for pattern in patterns:
+          if pattern(test_path):
+            _FUNCTION_MAP[action](test, **args)
+            break
+
+  # TODO(jeffulin): skipped_test and waived_tests are deprecated. Use
+  # conditional_patches instead.
   @debug_utils.CatchException(_LOGGED_NAME)
   def SetSkippedAndWaivedTests(self):
     """Set skipped and waived tests according to phase and options.
@@ -512,7 +729,7 @@ class ITestList(metaclass=abc.ABCMeta):
       """
 
       for key in option:
-        if key in phase.PHASE_NAMES:
+        if key in phase_module.PHASE_NAMES:
           if key != current_phase:
             continue
         else:  # Assume key is a run_if expression
@@ -904,6 +1121,7 @@ class TestList(ITestList):
         if key.startswith('_cached_'):
           self.__dict__[key] = None
       self.SetSkippedAndWaivedTests()
+      self.ApplyConditionalPatchesToTests()
       note['level'] = 'INFO'
       note['text'] = ('Test list %s is reloaded.' % self._config.test_list_id)
     except Exception:

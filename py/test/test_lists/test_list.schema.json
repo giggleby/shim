@@ -3,11 +3,18 @@
   "description": "reference: http://goto/cros-factory-test-list, ./TEST_LIST.md, ./JSON_TEST_LIST.md",
   "definitions": {
     "test_object": {
-      "type": ["object", "string"],
+      "type": [
+        "object",
+        "string"
+      ],
       "properties": {
         "action_on_failure": {
           "type": "string",
-          "enum": ["NEXT", "PARENT", "STOP"]
+          "enum": [
+            "NEXT",
+            "PARENT",
+            "STOP"
+          ]
         },
         "args": {
           "type": "object"
@@ -43,7 +50,10 @@
           "type": "number"
         },
         "label": {
-          "type": ["string", "object"]
+          "type": [
+            "string",
+            "object"
+          ]
         },
         "layout": {
           "$ref": "#/definitions/test_ui_layout"
@@ -83,10 +93,17 @@
         },
         "child_action_on_failure": {
           "type": "string",
-          "enum": ["NEXT", "PARENT", "STOP"]
+          "enum": [
+            "NEXT",
+            "PARENT",
+            "STOP"
+          ]
         },
         "require_run": {
-          "type": ["string", "array"],
+          "type": [
+            "string",
+            "array"
+          ],
           "items": {
             "type": "string"
           }
@@ -100,17 +117,140 @@
         "layout": {
           "properties": {
             "parallel": {
-              "enum": [true]
+              "enum": [
+                true
+              ]
             }
           },
-          "required": ["parallel"]
+          "required": [
+            "parallel"
+          ]
         }
       },
       "additionalProperties": false
     },
     "test_options": {
       "__comment": "please see cros.factory.test.test_lists.test_list.Options",
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "auto_run_on_start": {
+          "default": true
+        },
+        "retry_failed_on_start": {
+          "default": false
+        },
+        "clear_state_on_start": {
+          "default": false
+        },
+        "auto_run_on_keypress": {
+          "default": false
+        },
+        "ui_locale": {
+          "type": "string",
+          "default": "en-US"
+        },
+        "engineering_password_sha1": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sync_event_log_period_secs": {},
+        "update_period_secs": {},
+        "stop_on_failure": {
+          "default": false
+        },
+        "hooks_class": {
+          "type": "string",
+          "default": "cros.factory.goofy.hooks.Hooks"
+        },
+        "testlog_hooks": {
+          "type": "string",
+          "default": "cros.factory.testlog.hooks.Hooks"
+        },
+        "phase": {},
+        "dut_options": {},
+        "plugin_config_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "goofy_plugin_chromeos"
+        },
+        "read_device_data_from_vpd_on_init": {
+          "default": true
+        },
+        "skipped_tests": {},
+        "waived_tests": {},
+        "conditional_patches": {
+          "type": "array",
+          "description": "please see cros.factory.test.test_lists.test_list.Options",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "conditions"
+            ],
+            "properties": {
+              "action": {
+                "enum": [
+                  "skip",
+                  "waive"
+                ],
+                "type": "string"
+              },
+              "args": {
+                "type": "object"
+              },
+              "conditions": {
+                "type": "object",
+                "required": [
+                  "patterns"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "run_if": {
+                    "type": [
+                      "string",
+                      "array"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "patterns": {
+                    "type": [
+                      "string",
+                      "array"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "phases": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patternProperties": {
+        "^__comment[A-Za-z0-9_-]*$": {}
+      },
+      "additionalProperties": false
     },
     "test_constants": {
       "type": "object",
@@ -118,8 +258,7 @@
         "^__comment_[A-Za-z0-9_-]+$": {
           "type": "string"
         },
-        "^[A-Za-z0-9][A-Za-z0-9_-]*$": {
-        }
+        "^[A-Za-z0-9][A-Za-z0-9_-]*$": {}
       },
       "properties": {
         "overlord": {
@@ -141,7 +280,10 @@
     },
     "test_ui_layout_type": {
       "type": "string",
-      "enum": ["tab", "tiled"]
+      "enum": [
+        "tab",
+        "tiled"
+      ]
     },
     "test_ui_layout": {
       "anyOf": [
