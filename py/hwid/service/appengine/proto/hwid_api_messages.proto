@@ -373,7 +373,7 @@ message CreateHwidDbEditableSectionChangeClRequest {
   // The project as a string.
   string project = 1;
   // The HWID DB contents to validate.
-  string new_hwid_db_editable_section = 2;
+  string new_hwid_db_editable_section = 2 [deprecated = true];
   // The ID from ValidateHwidDbEditableSectionChange to
   // justify that the contents have been validated.
   string validation_token = 3;

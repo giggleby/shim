@@ -10,6 +10,7 @@ from typing import Optional
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
+from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
@@ -20,6 +21,7 @@ from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+
 
 KNOWN_BAD_HWIDS = ['DUMMY_HWID', 'dummy_hwid']
 KNOWN_BAD_SUBSTR = [
@@ -34,6 +36,8 @@ _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
     namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
 _hwid_repo_manager = CONFIG.hwid_repo_manager
 _avl_converter_manager = CONFIG.avl_converter_manager
+_session_cache_adapter = memcache_adapter.MemcacheAdapter(
+    namespace=hwid_action.SESSION_CACHE_NAMESPACE)
 
 
 def _NormalizeProjectString(string: str) -> Optional[str]:
@@ -67,7 +71,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         self._sku_helper)
     self._ss_helper = ss_helper.SelfServiceHelper(
         _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager,
-        _avl_converter_manager)
+        _avl_converter_manager, _session_cache_adapter)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -153,8 +157,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     project = _NormalizeProjectString(request.project)
     parse_filter_field = lambda value: set(filter(None, value)) or None
     try:
-      hwid_action = _hwid_action_manager.GetHWIDAction(project)
-      hwids = hwid_action.EnumerateHWIDs(
+      action = _hwid_action_manager.GetHWIDAction(project)
+      hwids = action.EnumerateHWIDs(
           with_classes=parse_filter_field(request.with_classes),
           without_classes=parse_filter_field(request.without_classes),
           with_components=parse_filter_field(request.with_components),
@@ -172,8 +176,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """Return a list of all component classes for the given project."""
     project = _NormalizeProjectString(request.project)
     try:
-      hwid_action = _hwid_action_manager.GetHWIDAction(project)
-      classes = hwid_action.GetComponentClasses()
+      action = _hwid_action_manager.GetHWIDAction(project)
+      classes = action.GetComponentClasses()
     except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.ComponentClassesResponse(
           status=common_helper.ConvertExceptionToStatus(ex), error=str(ex))
@@ -187,8 +191,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """Return a filtered list of components for the given project."""
     project = _NormalizeProjectString(request.project)
     try:
-      hwid_action = _hwid_action_manager.GetHWIDAction(project)
-      components = hwid_action.GetComponents(
+      action = _hwid_action_manager.GetHWIDAction(project)
+      components = action.GetComponents(
           with_classes=set(filter(None, request.with_classes)) or None)
     except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.ComponentsResponse(

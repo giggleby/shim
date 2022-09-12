@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import math
 import tempfile
+import time
 from typing import Optional
 
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
@@ -18,14 +20,23 @@ class FakeMemcacheAdapter:
 
   def __init__(self):
     self._data = {}
+    self._expiry = {}
 
   def ClearAll(self):
     self._data.clear()
+    self._expiry.clear()
 
-  def Put(self, key, value):
+  def Put(self, key, value, expiry: Optional[int] = None):
     self._data[key] = value
+    if expiry is not None:
+      self._expiry[key] = time.time() + expiry
+    else:
+      self._expiry.pop(key, None)
 
   def Get(self, key):
+    if self._expiry.get(key, math.inf) < time.time():
+      self._data.pop(key, None)
+      self._expiry.pop(key, None)
     return self._data.get(key)
 
 
@@ -85,6 +96,7 @@ class FakeModuleCollection:
         self._fake_memcache_for_hwid_preproc_data,
         instance_factory=self._fake_hwid_instance_factory)
     self.fake_avl_converter_manager = converter_utils.ConverterManager({})
+    self.fake_session_cache_adapter = FakeMemcacheAdapter()
 
   @property
   def ndb_connector(self):

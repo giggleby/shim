@@ -21,6 +21,7 @@ from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_serv
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine import hwid_repo
+from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import common as v3_common
@@ -67,6 +68,8 @@ _HWID_SECTION_CHANGE_STATUS = {
     hwid_action.DBHWIDTouchCase.UNTOUCHED: (
         _AnalysisReportMsg.HwidSectionChange.ChangeStatus.UNTOUCHED),
 }
+
+_SessionCache = hwid_action.SessionCache
 
 
 def _ConvertTouchedSectionToMsg(
@@ -190,11 +193,13 @@ class SelfServiceHelper:
                hwid_action_manager_inst: hwid_action_manager.HWIDActionManager,
                hwid_repo_manager: hwid_repo.HWIDRepoManager,
                hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
-               avl_converter_manager: converter_utils.ConverterManager):
+               avl_converter_manager: converter_utils.ConverterManager,
+               session_cache_adapter: memcache_adapter.MemcacheAdapter):
     self._hwid_action_manager = hwid_action_manager_inst
     self._hwid_repo_manager = hwid_repo_manager
     self._hwid_db_data_manager = hwid_db_data_manager
     self._avl_converter_manager = avl_converter_manager
+    self._session_cache_adapter = session_cache_adapter
 
   def GetHWIDDBEditableSection(self, request):
     project = _NormalizeProjectString(request.project)
@@ -230,12 +235,17 @@ class SelfServiceHelper:
   def CreateHWIDDBEditableSectionChangeCL(self, request):
     project = _NormalizeProjectString(request.project)
     live_hwid_repo = self._hwid_repo_manager.GetLiveHWIDRepo()
+    cache = self._session_cache_adapter.Get(request.validation_token)
+    if cache is None:
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.ABORTED,
+          detail='The validation token is expired.')
     try:
       self._UpdateHWIDDBDataIfNeed(live_hwid_repo, project)
 
       action = self._hwid_action_manager.GetHWIDAction(project)
       analysis = action.AnalyzeDraftDBEditableSection(
-          request.new_hwid_db_editable_section, derive_fingerprint_only=False,
+          cache.new_hwid_db_editable_section, derive_fingerprint_only=False,
           require_hwid_db_lines=False, internal=True,
           avl_converter_manager=self._avl_converter_manager,
           avl_resource=request.db_external_resource)
@@ -502,6 +512,9 @@ class SelfServiceHelper:
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     response.validation_token = report.fingerprint
+    self._session_cache_adapter.Put(
+        report.fingerprint, _SessionCache(request.hwid_db_editable_section),
+        expiry=hwid_action.SESSION_TIMEOUT)
     response.analysis_report.noop_for_external_db = (
         report.noop_for_external_db)
 

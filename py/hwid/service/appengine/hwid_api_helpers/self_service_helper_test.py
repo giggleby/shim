@@ -37,6 +37,7 @@ _HWIDSectionChangeMsg = _AnalysisReportMsg.HwidSectionChange
 _HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
 _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
 _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
+_SessionCache = hwid_action.SessionCache
 
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -52,7 +53,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ss_helper = ss_helper.SelfServiceHelper(
         self._modules.fake_hwid_action_manager, self._mock_hwid_repo_manager,
         self._modules.fake_hwid_db_data_manager,
-        self._modules.fake_avl_converter_manager)
+        self._modules.fake_avl_converter_manager,
+        self._modules.fake_session_cache_adapter)
 
   def tearDown(self):
     self._modules.ClearAll()
@@ -122,8 +124,7 @@ class SelfServiceHelperTest(unittest.TestCase):
             'db data after change 2 (internal)', False, [], [], [], {}))
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
-        project='proj', new_hwid_db_editable_section='db data after change 1',
-        validation_token='validation-token-value-1')
+        project='proj', validation_token='validation-token-value-1')
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
@@ -186,9 +187,10 @@ class SelfServiceHelperTest(unittest.TestCase):
                             _PVAlignmentStatus.NO_PROBE_INFO)),
             }))
 
+    self._modules.fake_session_cache_adapter.Put(
+        'validation-token-value-1', _SessionCache('db data after change'))
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
-        project='proj', new_hwid_db_editable_section='db data after change',
-        validation_token='validation-token-value-1')
+        project='proj', validation_token='validation-token-value-1')
     resp = self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
 
     self.assertEqual(resp.cl_number, 123)
@@ -268,8 +270,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data ver 2')
 
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
-        project='proj', new_hwid_db_editable_section='db data after change',
-        validation_token=token_that_will_become_expired)
+        project='proj', validation_token=token_that_will_become_expired)
 
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)

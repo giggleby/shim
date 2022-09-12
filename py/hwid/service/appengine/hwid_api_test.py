@@ -18,6 +18,7 @@ from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import file_utils
 
+
 TEST_MODEL = 'FOO'
 TEST_HWID = 'Foo'
 TEST_HWID_CONTENT = 'prefix\nchecksum: 1234\nsuffix\n'
@@ -487,8 +488,10 @@ class ProtoRPCServiceTest(unittest.TestCase):
           project='foo')
       self.service.CreateHwidDbEditableSectionChangeCl(req)
 
-    self.assertEqual(ex.exception.code,
-                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+    # No token is provided which causes no cache found.
+    self.assertEqual(protorpc_utils.RPCCanonicalErrorCode.ABORTED,
+                     ex.exception.code)
+    self.assertEqual('The validation token is expired.', ex.exception.detail)
 
   def testCreateHwidDbFirmwareInfoUpdateCl_Empty(self):
     resp = self.service.CreateHwidDbFirmwareInfoUpdateCl(

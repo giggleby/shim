@@ -12,6 +12,7 @@ from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
+from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
 from cros.factory.hwid.v3 import database as v3_database
 
@@ -240,6 +241,13 @@ DBHWIDComponentNameInfo = v3_contents_analyzer.ComponentNameInfo
 DBHWIDPVAlignmentStatus = v3_contents_analyzer.ProbeValueAlignmentStatus
 DBHWIDTouchSections = v3_contents_analyzer.TouchHWIDSections
 DBHWIDTouchCase = v3_contents_analyzer.HWIDSectionTouchCase
+SESSION_CACHE_NAMESPACE = 'SessionCache'
+SESSION_TIMEOUT = 3 * 60  # 3 minutes
+
+
+class SessionCache(NamedTuple):
+  new_hwid_db_editable_section: str
+  change_unit_manager: Optional[change_unit_utils.ChangeUnitManager] = None
 
 
 class DBEditableSectionAnalysisReport(NamedTuple):
