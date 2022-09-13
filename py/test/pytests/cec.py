@@ -160,7 +160,7 @@ class ApCecController(CecController):
     self.index = index
 
   def SetUp(self):
-    self._dut.CheckCall('cec-ctl --playback -S -d %d' % self.index)
+    self._dut.CheckCall('cec-ctl --playback -s -d %d' % self.index)
 
   def GetDisplayStatus(self):
     try:
