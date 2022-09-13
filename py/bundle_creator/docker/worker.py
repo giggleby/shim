@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import base64
 from datetime import datetime
 import logging
 import os
@@ -82,7 +83,8 @@ class EasyBundleCreationWorker:
           worker_result.status = (
               factorybundle_pb2.WorkerResult.CREATE_CL_FAILED)
           worker_result.error_message = str(cl_error_msg)
-        self._cloudtasks_connector.ResponseWorkerResult(worker_result)
+        self._cloudtasks_connector.ResponseWorkerResult(
+            self._EncodeWorkerResult(worker_result))
       except CreateBundleException as e:
         self._logger.error(e)
 
@@ -97,7 +99,8 @@ class EasyBundleCreationWorker:
         worker_result.status = factorybundle_pb2.WorkerResult.FAILED
         worker_result.original_request.MergeFrom(task_proto.request)
         worker_result.error_message = str(e)
-        self._cloudtasks_connector.ResponseWorkerResult(worker_result)
+        self._cloudtasks_connector.ResponseWorkerResult(
+            self._EncodeWorkerResult(worker_result))
 
   def _CreateBundle(
       self, create_bundle_message: factorybundle_pb2.CreateBundleMessage
@@ -213,6 +216,11 @@ class EasyBundleCreationWorker:
         release_image_version=request.release_image_version,
         firmware_source=request.firmware_source
         if request.HasField('firmware_source') else None)
+
+  def _EncodeWorkerResult(self,
+                          worker_result: factorybundle_pb2.WorkerResult) -> str:
+    return base64.b64encode(worker_result.SerializeToString()).decode('utf-8')
+
 
 if __name__ == '__main__':
   if config.ENV_TYPE == 'local':

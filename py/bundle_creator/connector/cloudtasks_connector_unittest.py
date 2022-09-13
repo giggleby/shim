@@ -2,14 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import base64
 import unittest
 from unittest import mock
 
 from googleapiclient.errors import HttpError
 
 from cros.factory.bundle_creator.connector import cloudtasks_connector
-from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
 class CloudTasksConnectorTest(unittest.TestCase):
@@ -46,23 +44,20 @@ class CloudTasksConnectorTest(unittest.TestCase):
         'fake-project-id')
 
   def testResponseWorkerResult_succeed_verifyRequest(self):
-    worker_result = factorybundle_pb2.WorkerResult()
-    worker_result.gs_path = 'gs://fake_path'
+    encoded_worker_result = 'Ig5nczovL2Zha2VfcGF0aA=='
 
-    self._connector.ResponseWorkerResult(worker_result)
+    self._connector.ResponseWorkerResult(encoded_worker_result)
 
-    b64enc_data = self._mock_tasks.create.call_args.kwargs['body']['task'][
+    sent_data = self._mock_tasks.create.call_args.kwargs['body']['task'][
         'app_engine_http_request']['body']
-    sent_worker_result = factorybundle_pb2.WorkerResult.FromString(
-        base64.b64decode(b64enc_data))
-    self.assertEqual(sent_worker_result, worker_result)
+    self.assertEqual(sent_data, encoded_worker_result)
     self._mock_request.execute.assert_called_once_with(num_retries=5)
 
   def testResponseWorkerResult_httpError_verifyLogError(self):
     http_error = HttpError(resp=mock.Mock(status=403), content=b'fake_content')
     self._mock_request.execute.side_effect = http_error
 
-    self._connector.ResponseWorkerResult(factorybundle_pb2.WorkerResult())
+    self._connector.ResponseWorkerResult('fake_encoded_worker_result')
 
     self._mock_logger.error.assert_called_once_with(http_error)
 

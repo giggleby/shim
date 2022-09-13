@@ -2,13 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import base64
 import logging
 
 from googleapiclient import discovery
 from googleapiclient.errors import HttpError
-
-from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
 class CloudTasksConnector:
@@ -30,25 +27,21 @@ class CloudTasksConnector:
     service = discovery.build('cloudtasks', 'v2beta3', cache_discovery=False)
     self._tasks = service.projects().locations().queues().tasks()
 
-  def ResponseWorkerResult(self, worker_result: factorybundle_pb2.WorkerResult):
+  def ResponseWorkerResult(self, encoded_worker_result: str):
     """Creates a task to send the worker result.
 
     Args:
-      worker_result: A worker result proto message.
+      encoded_worker_result: An encoded worker result string.
     """
     request_body = {
         'task': {
             'app_engine_http_request': {
-                'http_method':
-                    'POST',
+                'http_method': 'POST',
                 'app_engine_routing': {
                     'service': self._CLOUD_MAIL_ROUTING_NAME,
                 },
-                'relative_uri':
-                    self._RESPONSE_CALLBACK_URI,
-                'body':
-                    base64.b64encode(
-                        worker_result.SerializeToString()).decode('utf-8'),
+                'relative_uri': self._RESPONSE_CALLBACK_URI,
+                'body': encoded_worker_result,
             },
         },
     }
