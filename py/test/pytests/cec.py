@@ -207,11 +207,7 @@ class CecTest(test_case.TestCase):
           'index', int, 'The index of the CEC device. The CEC device is at '
           '/dev/cec``index``', 0),
       Arg('manual_mode', bool, 'Manually check if power status is on or off.',
-          False),
-      Arg(
-          'status_on_wait_time', float, 'Waiting time for the operator to '
-          'press _KEY_STATUS_ON to indicate display status is on in manual '
-          'mode. If it is not pressed, display status is off.', 5.0)
+          False)
   ]
 
   def runTest(self):
