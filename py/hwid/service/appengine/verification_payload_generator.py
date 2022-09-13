@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Methods to generate the verification payload from the HWID database."""
@@ -820,9 +820,6 @@ def main():
       help=('Paths to the input HWID databases. If the board '
             'has multiple models, users should specify all models '
             'at once.'))
-  ap.add_argument('--no_verify_checksum', action='store_false',
-                  help="Don't verify the checksum in the HWID databases.",
-                  dest='verify_checksum')
   ap.add_argument(
       '--ignore_error', nargs='*', default=[], dest='ignore_error',
       help=('Ignore error messages for component category, must specify in '
@@ -848,8 +845,7 @@ def main():
   dbs = []
   for hwid_db_path in args.hwid_db_paths:
     logging.info('Load the HWID database file (%s).', hwid_db_path)
-    db = database.Database.LoadFile(hwid_db_path,
-                                    verify_checksum=args.verify_checksum)
+    db = database.Database.LoadFile(hwid_db_path, verify_checksum=False)
     vpg_config = vpg_config_module.VerificationPayloadGeneratorConfig.Create(
         ignore_error=ignore_error[db.project.lower()],
         waived_comp_categories=waived_categories[db.project.lower()])

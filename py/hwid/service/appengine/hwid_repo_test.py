@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -15,6 +15,7 @@ from dulwich import objects as dulwich_objects
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.utils import file_utils
+
 
 _SERVER_BOARDS_YAML = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/boards_server.yaml')
@@ -166,6 +167,19 @@ class HWIDRepoTest(HWIDRepoBaseTest):
         [('SBOARD', 0o100644, b'hwid_db_contents'),
          ('SBOARD.internal', 0o100644, b'hwid_db_contents_internal')],
         kwargs['new_files'])
+
+  def testCommitHWIDDB_Succeed_RemoveChecksum(self):
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
+    self._mocked_create_cl.return_value = ('unused_change_id', 123)
+
+    self._hwid_repo.CommitHWIDDB(
+        'SBOARD', 'hwid_db_contents\nchecksum: 12345\n', 'unused_test_str', [],
+        [], False, None, 'hwid_db_contents_internal\nchecksum: 12345\n')
+    kwargs = self._mocked_create_cl.call_args[1]
+    self.assertEqual([
+        ('SBOARD', 0o100644, b'hwid_db_contents\nchecksum:\n'),
+        ('SBOARD.internal', 0o100644, b'hwid_db_contents_internal\nchecksum:\n')
+    ], kwargs['new_files'])
 
   def testHWIDRepoHasCommitProperty(self):
     self.assertEqual(self._hwid_repo.hwid_db_commit_id,

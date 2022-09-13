@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Provide functionalities to access the HWID DB repository."""
@@ -55,6 +55,10 @@ def _DumpMetadata(hwid_db_metadata_of_name):
                                             ('path', metadata.path)]))
                   for name, metadata in hwid_db_metadata_of_name.items())),
       indent=4, default_flow_style=False)
+
+
+def _RemoveChecksum(text):
+  return re.sub(r'^checksum:.*$', 'checksum:', text, flags=re.MULTILINE)
 
 
 class HWIDRepoError(Exception):
@@ -156,6 +160,7 @@ class HWIDRepo:
       path = self._hwid_db_metadata_of_name[name].path
     except KeyError:
       raise ValueError(f'invalid HWID DB name: {name}') from None
+    hwid_db_contents = _RemoveChecksum(hwid_db_contents)
     new_files.append(
         (path, git_util.NORMAL_FILE_MODE, hwid_db_contents.encode('utf-8')))
 
@@ -163,6 +168,7 @@ class HWIDRepo:
       hwid_db_contents_internal = hwid_db_contents
 
     internal_path = self.InternalDBPath(path)
+    hwid_db_contents_internal = _RemoveChecksum(hwid_db_contents_internal)
     new_files.append((internal_path, git_util.NORMAL_FILE_MODE,
                       hwid_db_contents_internal.encode('utf-8')))
 
