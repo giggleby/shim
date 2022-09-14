@@ -36,7 +36,7 @@ class BtMgmt:
     self._GetInfo(self._manufacturer_id)
 
   def _GetInfo(self, manufacturer_id):
-    """Get the bluetooth hci device and MAC of the adapter with specified
+    """Gets the bluetooth hci device and MAC of the adapter with specified
     manufacturer id.
 
     If manufacturer_id is None and only one MAC is found, store the one found.
@@ -79,11 +79,11 @@ class BtMgmt:
       self._host_mac = host_mac_list[0][1]
 
   def GetMac(self):
-    """Get the MAC address of the bluetooth adapter."""
+    """Gets the MAC address of the bluetooth adapter."""
     return self._host_mac
 
   def GetHciDevice(self):
-    """Get the HCI device of the bluetooth adapter."""
+    """Gets the HCI device of the bluetooth adapter."""
     return self._hci_device
 
   def FindDevices(self, index=0, timeout_secs=None):
@@ -164,12 +164,12 @@ class GattTool:
       self._gatttool.close()
 
   def _RaiseError(self, msg):
-    """Raise an error."""
+    """Raises an error."""
     self.Exit()
     raise BluetoothUtilsError(str(datetime.datetime.now()) + ': ' + msg)
 
   def ScanAndConnect(self):
-    """Scan and connect to the target peer device."""
+    """Scans and connects to the target peer device."""
     try:
       result = self._gatttool.expect(r'\[LE\]>', timeout=self._timeout)
       if result != 0:
@@ -186,8 +186,8 @@ class GattTool:
     except pexpect.TIMEOUT:
       self._RaiseError('connection timeout')
 
-  def CharReadUUID(self, uuid, spec_name):
-    """Execute char-read-uuid and returns the value.
+  def CharReadUUID(self, uuid, spec_name):  # pylint: disable=inconsistent-return-statements
+    """Executes char-read-uuid and returns the value.
 
     Args:
       uuid: an uuid that defines the attribute type
@@ -214,7 +214,7 @@ class GattTool:
       self._RaiseError('timeout waiting for %s report' % spec_name)
 
   def _Unhexlify(self, string):
-    """Remove spaces and unhexlify the ascii string.
+    """Removes spaces and unhexlify the ascii string.
 
     Args:
       string: the ascii string to unhexlify
@@ -225,7 +225,7 @@ class GattTool:
     return binascii.unhexlify(string.replace(' ', ''))
 
   def GetFirmwareRevisionString(self):
-    """Get the firmware revision string.
+    """Gets the firmware revision string.
 
     The version fetched from UUID_FIRMWARE_REVISION_STRING command outputs like
 
@@ -242,7 +242,7 @@ class GattTool:
     return self._Unhexlify(result)
 
   def GetBatteryLevel(self):
-    """Get the battery level.
+    """Gets the battery level.
 
     An example of the returned battery level, 99, looks like
         handle: 0x0015   value: 63
@@ -283,7 +283,7 @@ class GattTool:
 
 
 def _ParseCommandLine():
-  """Parse the command line options."""
+  """Parses the command line options."""
   usage = ('Example:\n\tpython bluetooth_utils.py -a cd:e3:4a:47:1c:e4')
   parser = argparse.ArgumentParser(description=usage)
   parser.add_argument('-a', '--address', action='store', type=str,
@@ -294,6 +294,32 @@ def _ParseCommandLine():
 
   return args
 
+
+def VerifyAltSetting():
+  """
+  Checks the Alt Setting is 6 for Realtek RTL8852CE.
+
+  The Alt Setting for Realtek RTL8852CE should be 6 to provide a reliable and
+  efficient USB data path for Bluetooth HFP applications. Here we assume the
+  VID:PID is always '0bda:0852' for Realtek RTL8852CE.
+
+  Raises:
+    BluetoothUtilsError if the device is using Realtek RTL8852CE but the Alt
+    Setting is not 6.
+  """
+  vid_pid_RTL8852CE = '0bda:0852'
+  lsusb_output = process_utils.SpawnOutput(f'lsusb -d {vid_pid_RTL8852CE} -v',
+                                           shell=True)
+  if not lsusb_output or re.search(' *bAlternateSetting *6\n', lsusb_output):
+    return
+  current_setting = 'Unknown'
+  expected_setting = '6'
+  if all(
+      re.search(f' *bAlternateSetting *{i}\n', lsusb_output) for i in range(6)):
+    current_setting = 3
+  raise BluetoothUtilsError(
+      ('Wrong USB Alt Setting for Realtek RTL8852CE. Expected setting = '
+       f'{expected_setting}. Current setting = {current_setting}'))
 
 def main():
   """The main program to run the script."""

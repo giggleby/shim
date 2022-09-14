@@ -292,6 +292,7 @@ class BluetoothTest(test_case.TestCase):
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
+    bluetooth_utils.VerifyAltSetting()
     self.ui.ToggleTemplateClass('font-large', True)
 
     self._strongest_rssi_mac = None
