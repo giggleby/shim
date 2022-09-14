@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -21,8 +21,8 @@ LOCAL_DEPLOYMENT_LOG_DIR="${LOCAL_DEPLOYMENT_DIR}/log"
 LOCAL_BUILD_BUNDLE="${FACTORY_DIR}/build/bundle"
 TOOLKIT_NAME="install_factory_toolkit.run"
 LOCAL_BUILD_TOOLKIT="${LOCAL_BUILD_BUNDLE}/toolkit/${TOOLKIT_NAME}"
-REMOTE_TOOLKIT_BOARD="hatch"
-REMOTE_TOOLKIT_VERSION="15110.0.0"
+REMOTE_TOOLKIT_BOARD="grunt"
+REMOTE_TOOLKIT_VERSION="15113.0.0"
 REMOTE_TOOLKIT_PATH="gs://chromeos-releases/dev-channel/\
 ${REMOTE_TOOLKIT_BOARD}/${REMOTE_TOOLKIT_VERSION}/*-factory-*.zip"
 CACHED_REMOTE_TOOLKIT_DIR="${LOCAL_DEPLOYMENT_DIR}/toolkit/\
