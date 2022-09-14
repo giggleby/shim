@@ -96,6 +96,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
 
+
 INPUT_MAX_RETRY_TIMES = 10
 INPUT_RETRY_INTERVAL = 1
 RESET_ADAPTER_SLEEP_TIME = 5
@@ -291,6 +292,7 @@ class BluetoothTest(test_case.TestCase):
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
+    bluetooth_utils.VerifyAltSetting()
     self.ui.ToggleTemplateClass('font-large', True)
 
     self._strongest_rssi_mac = None
