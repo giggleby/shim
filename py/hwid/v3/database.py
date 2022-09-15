@@ -50,6 +50,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
 
+
 _DUMMY_CHECKSUM = 'DUMMY'
 
 
@@ -100,7 +101,8 @@ class ComponentInfo:
 
   def __eq__(self, rhs: Any) -> bool:
     return (self._values == rhs._values and self._status == rhs._status and
-            self._information == rhs._information)
+            self._information == rhs._information and
+            set(self._bundle_uuids) == set(rhs._bundle_uuids))
 
   def Export(self, suppress_support_status: bool = False,
              override_support_status: Optional[str] = None,

@@ -11,7 +11,7 @@
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 808d9939fd4261e0328205d65f47fe05db7c4fe6
+checksum: a3fd338aed36a68f913ee75708fd3dea72c23aac
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -311,14 +311,11 @@ components:
   storage:
     items:
       storage_0:
-        values: !link_avl
-          converter: test-converter1
-          probe_value_matched: true
-          original_values:
-            model: model0
-            sectors: '0'
-            serial: !re '#123\d+$'
-            vendor: vendor0
+        values:
+          model: model0
+          sectors: '0'
+          serial: !re '#123\d+$'
+          vendor: vendor0
       storage_1:
         values:
           model: model1
@@ -326,30 +323,21 @@ components:
           vendor: vendor1
           serial: !re '#123\d+$'
       storage_2:
-        values: !link_avl
-          converter: test-converter1
-          probe_value_matched: false
-          original_values:
-            model: model2
-            sectors: '200'
-            vendor: vendor2
+        values:
+          model: model2
+          sectors: '200'
+          vendor: vendor2
         information:
           comp_group: storage_0
       storage_3:
-        values: !link_avl
-          converter: null
-          probe_value_matched: false
-          original_values:
-            model: model3
-            sectors: '300'
-            vendor: vendor3
+        values:
+          model: model3
+          sectors: '300'
+          vendor: vendor3
       storage_4:
-        values: !link_avl
-          converter: test-converter2
-          probe_value_matched: true
-          original_values:
-            mmc_name: name4
-            mmc_manfid: '0x0000ab'
+        values:
+          mmc_name: name4
+          mmc_manfid: '0x0000ab'
   hash_gbb:
     items:
       hash_gbb_0:

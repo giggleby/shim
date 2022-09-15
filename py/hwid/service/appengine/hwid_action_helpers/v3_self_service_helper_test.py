@@ -21,6 +21,7 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 _TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata')
 
@@ -126,7 +127,7 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
                      hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
 
   def testAnalyzeDraftDbEditableSection_AVLProbeInfo(self):
-    helper_inst = self._LoadSSHelper('v3-golden-no-internal-tags.yaml')
+    helper_inst = self._LoadSSHelper('v3-golden-no-avl-tags.yaml')
     editable_section = helper_inst.GetDBEditableSection()
     collection = converter.ConverterCollection('storage')
     collection.AddConverter(

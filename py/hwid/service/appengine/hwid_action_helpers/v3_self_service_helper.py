@@ -6,9 +6,10 @@ import functools
 import hashlib
 import logging
 import textwrap
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import yaml
+
 
 from cros.chromeoshwid import update_checksum  # isort: split
 
@@ -22,6 +23,7 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import bundle_builder
+
 
 _HWID_BUNDLE_INSTALLER_NAME = 'install.py'
 _HWID_BUNDLE_INSTALLER_SCRIPT = textwrap.dedent(f"""\
@@ -42,6 +44,17 @@ _HWID_BUNDLE_INSTALLER_SCRIPT = textwrap.dedent(f"""\
         continue
       shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
     """)
+
+
+def _GetFirmwareBundleRelatedCompClasses() -> Sequence[str]:
+  desc = hwid_api_messages_pb2.FactoryBundleRecord.FirmwareRecord.DESCRIPTOR
+  return [
+      field.name for field in desc.fields if field.message_type and
+      field.message_type.name in {'FirmwareInfo', 'FirmwareKeys'}
+  ]
+
+
+_FIRMWARE_BUNDLE_RELATED_COMP_CLASSES = _GetFirmwareBundleRelatedCompClasses()
 
 
 def _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents,
@@ -85,6 +98,23 @@ class HWIDV3SelfServiceActionHelper:
         suppress_support_status=suppress_support_status, internal=internal)
     return self.RemoveHeader(dumped_db)
 
+  def PatchFirmwareBundleUUIDs(
+      self,
+      internal_db_content: hwid_db_data.HWIDDBData) -> hwid_db_data.HWIDDBData:
+    """Patches existing bundle UUIDs from internal HWID DB in repo."""
+
+    old_db = database.Database.LoadData(
+        self._preproc_data.raw_database_internal)
+    new_db = database.Database.LoadData(internal_db_content)
+    for comp_cls in _FIRMWARE_BUNDLE_RELATED_COMP_CLASSES:
+      new_db_components = new_db.GetComponents(comp_cls)
+      # TODO: disable renaming fw related components as bundle_uuids will be
+      # lost.
+      for comp_name, comp_info in old_db.GetComponents(comp_cls).items():
+        if comp_info.bundle_uuids and comp_name in new_db_components:
+          new_db.SetBundleUUIDs(comp_cls, comp_name, comp_info.bundle_uuids)
+    return self.PatchHeader(new_db.DumpDataWithoutChecksum(internal=True))
+
   def AnalyzeDraftDBEditableSection(
       self, draft_db_editable_section: hwid_db_data.HWIDDBData,
       derive_fingerprint_only: bool, require_hwid_db_lines: bool,
@@ -120,10 +150,12 @@ class HWIDV3SelfServiceActionHelper:
       pass
 
     if internal:
-      new_hwid_db_contents_with_avl = avl_converter_manager.LinkAVL(
+      new_hwid_db_editable_contents_with_avl = avl_converter_manager.LinkAVL(
           new_hwid_db_contents_external, avl_resource)
-      new_hwid_db_contents_internal = self.PatchHeader(
-          new_hwid_db_contents_with_avl)
+      new_hwid_db_contents_internal_without_bundle = self.PatchHeader(
+          new_hwid_db_editable_contents_with_avl)
+      new_hwid_db_contents_internal = self.PatchFirmwareBundleUUIDs(
+          new_hwid_db_contents_internal_without_bundle)
       new_hwid_db_contents = new_hwid_db_contents_internal
       curr_hwid_db_contents = curr_hwid_db_contents_internal
     else:
