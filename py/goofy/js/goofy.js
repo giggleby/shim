@@ -2935,7 +2935,7 @@ cros.factory.Goofy = class {
    * @return {!goog.ui.SubMenu}
    */
   makeSwitchTestListMenu() {
-    const subMenu = new goog.ui.SubMenu(
+    const subMenu = this.createScrollableSubMenu(
         cros.factory.i18n.i18nLabelNode('Switch test list'));
     for (const {name, id, enabled} of this.testLists) {
       const item = new goog.ui.MenuItem(cros.factory.i18n.i18nLabelNode(name));
