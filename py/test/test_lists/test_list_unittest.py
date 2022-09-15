@@ -131,6 +131,72 @@ class FactoryTestListTest(unittest.TestCase):
     self.assertRaises(type_utils.TestListError, test_list.ToFactoryTestList)
 
 
+class ConditionalPatchTest(unittest.TestCase):
+
+  def testSetRetries(self):
+    _FAKE_TEST_LIST_CONFIG = {
+        'options': {
+            'conditional_patches': [{
+                'action': 'set_retries',
+                'args': {
+                    'times': 3
+                },
+                'conditions': {
+                    'patterns': ['A.*', '*.BA.*']
+                }
+            }]
+        },
+        'definitions': {
+            'A': {
+                'subtests': ['AA', 'AB']
+            },
+            'B': {
+                'subtests': ['BA', 'BB']
+            },
+            'C': {
+                'subtests': ['BA']
+            },
+            'AA': {
+                "inherit": "TestGroup",
+                'subtests': ['AAA']
+            },
+            'AB': {},
+            'BA': {
+                'subtests': ['BAA']
+            },
+            'BB': {},
+            'AAA': {},
+            'BAA': {},
+        },
+        'tests': ['A', 'B', 'C']
+    }
+    test_list = manager.BuildTestListForUnittest(_FAKE_TEST_LIST_CONFIG)
+    test_list.ApplyConditionalPatchesToTests()
+
+    test = test_list.LookupPath('A')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('A.AA')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('A.AB')
+    self.assertEqual((test.retries, test.default_retries), (3, 3))
+    test = test_list.LookupPath('A.AA.AAA')
+    self.assertEqual((test.retries, test.default_retries), (3, 3))
+    test = test_list.LookupPath('B')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('B.BA')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('B.BB')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('B.BA.BAA')
+    self.assertEqual((test.retries, test.default_retries), (3, 3))
+    test = test_list.LookupPath('C')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('C.BA')
+    self.assertEqual((test.retries, test.default_retries), (0, 0))
+    test = test_list.LookupPath('C.BA.BAA')
+    self.assertEqual((test.retries, test.default_retries), (3, 3))
+
+
 class EvaluateRunIfTest(unittest.TestCase):
   def setUp(self):
     state_instance = state.StubFactoryState()
