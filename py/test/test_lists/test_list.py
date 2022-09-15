@@ -279,7 +279,12 @@ class Options:
       If a `pattern` starts with ``*``, then it will match for all tests with
       same suffix. For example, ``*.Fingerprint`` matches ``SMT.Fingerprint``,
       ``FATP.FingerPrint``, ``FOO.BAR.Fingerprint``. But it does not match for
-      ``SMT.Fingerprint_2`` (Generated ID when there are duplicate IDs).
+      ``SMT.Fingerprint_2`` (Generated ID when there are duplicate IDs). On the
+      other hand, ``*`` can also be put at the end of a `pattern`, then it will
+      match for all tests with the same prefix.
+
+      ``*`` can be put at both the beginning and the end of a pattern (e.g.
+      ``*.Fingerprint.*``), but not within a pattern.
 
       For single-pattern cases (only having one pattern to be matched), one can
       set the value of `patterns` as the pattern directly (without wrapping it
@@ -508,8 +513,9 @@ class FactoryTestList(test_object_module.FactoryTest):
 
   def __repr__(self, recursive=False):
     if recursive:
-      return json.dumps(self.ToTestListConfig(recursive=True), indent=2,
-                        sort_keys=True, separators=(',', ': '))
+      return json.dumps(
+          self.ToTestListConfig(recursive=True), indent=2, sort_keys=True,
+          separators=(',', ': '))
     return json.dumps(self.ToTestListConfig(recursive=False), sort_keys=True)
 
 
@@ -561,9 +567,8 @@ class ITestList(metaclass=abc.ABCMeta):
   def constants(self):
     raise NotImplementedError
 
-  def ResolveTestArgs(
-      self, test_args, dut, station, constants=None, options=None,
-      locals_=None, state_proxy=None):
+  def ResolveTestArgs(self, test_args, dut, station, constants=None,
+                      options=None, locals_=None, state_proxy=None):
     self._checker.AssertValidArgs(test_args)
 
     if constants is None:
@@ -576,7 +581,8 @@ class ITestList(metaclass=abc.ABCMeta):
 
     def ConvertToBasicType(value):
       if isinstance(value, collections.abc.Mapping):
-        return {k: ConvertToBasicType(v) for k, v in value.items()}
+        return {k: ConvertToBasicType(v)
+                for k, v in value.items()}
       if isinstance(value, str):
         return value
       if isinstance(value, (list, tuple)):
@@ -603,10 +609,11 @@ class ITestList(metaclass=abc.ABCMeta):
         logging.debug('Resolving argument %s: %s', key, value)
         expression = value[len(EVALUATE_PREFIX):]  # remove prefix
 
-        return self.EvaluateExpression(
-            expression, dut, station, constants, options, locals_, state_proxy)
+        return self.EvaluateExpression(expression, dut, station, constants,
+                                       options, locals_, state_proxy)
 
       return MayTranslate(value)
+
     return ConvertToBasicType(
         {k: ResolveArg(k, v)
          for k, v in test_args.items()})
@@ -644,8 +651,13 @@ class ITestList(metaclass=abc.ABCMeta):
 
     def _CreateMatchFunction(pattern):
       pattern = pattern.split(':')[-1]  # To remove test_list_id
+
+      if pattern.startswith('*') and pattern.endswith('*'):
+        return lambda s: pattern[1:-1] in s
       if pattern.startswith('*'):
         return lambda s: s.endswith(pattern[1:])
+      if pattern.endswith('*'):
+        return lambda s: s.startswith(pattern[:-1])
 
       return lambda s: s == pattern
 
@@ -1292,3 +1304,44 @@ class WaivePatch(BasePatch):
 
   def _CheckArguments(self, args):
     return args == {}
+
+
+class RetriesPatch(BasePatch):
+  """Patch class to set retry times of tests."""
+
+  @type_utils.ClassProperty
+  def action_name(self):
+    return 'set_retries'
+
+  def Apply(self):
+    """Sets the retry times of the given test.
+
+      The argument `times` must be given, for example:
+
+      {
+        "action": "set_retries",
+        "args": {
+          "times": 5
+        },
+        "conditions": {
+          "patterns": [
+            "SMT.*"
+          ]
+        }
+      }
+
+      With the above patch, all the retry times of non-group tests with prefix
+      `SMT.` will be set to 5.
+
+      NOTE: setting retries with `conditional_patches` will only apply to
+      the non-group tests.
+    """
+    times = self.args['times']
+
+    if self.test.IsGroup():
+      return
+
+    self.test.SetRetries(times, set_default=True)
+
+  def _CheckArguments(self, args):
+    return args.get('times', False)

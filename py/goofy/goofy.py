@@ -989,16 +989,16 @@ class Goofy:
     """Set iterations and retries in goofy, ui, and shelf.
 
     If both iterations and retries are None, then set both value to default.
-    If any of the two is invalid, then the function does nothing but logs.
     """
     if iterations is None and retries is None:
       iterations = test.default_iterations
       retries = test.default_retries
     try:
-      test.SetIterationsAndRetries(iterations, retries)
+      test.SetIterations(iterations)
+      test.SetRetries(retries)
       test.UpdateState(iterations=iterations, retries=retries)
     except ValueError:
-      logging.exception('Unable to set iterations and retries.')
+      logging.exception('Unable to set iterations or retries.')
 
   def _AbortActiveTests(self, reason=None):
     self._KillActiveTests(True, reason=reason)

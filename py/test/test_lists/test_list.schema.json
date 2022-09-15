@@ -196,7 +196,8 @@
               "action": {
                 "enum": [
                   "skip",
-                  "waive"
+                  "waive",
+                  "set_retries"
                 ],
                 "type": "string"
               },
