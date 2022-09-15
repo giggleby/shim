@@ -476,8 +476,8 @@ class TestState(object):
   def Update(self, status=None, increment_count=0, error_msg=None,
              shutdown_count=None, increment_shutdown_count=0,
              invocation=None,
-             decrement_iterations_left=0, iterations_left=None,
-             decrement_retries_left=0, retries_left=None):
+             decrement_iterations_left=0, iterations_left=None, iterations=None,
+             decrement_retries_left=0, retries_left=None, retries=None):
     """Updates the state of a test.
 
     Args:
@@ -510,6 +510,10 @@ class TestState(object):
       self.iterations_left = iterations_left
     if retries_left is not None:
       self.retries_left = retries_left
+    if iterations is not None:
+      self.iterations = iterations
+    if retries is not None:
+      self.retries = retries
 
     if invocation is not None:
       self.invocation = invocation

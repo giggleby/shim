@@ -1,4 +1,4 @@
-# Copyright 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -235,20 +235,12 @@ class FactoryTest(object):
     self.path = ''
     self.parent = None
     self.root = None
-    if iterations == -1:
-      self.iterations = float('inf')
-    else:
-      self.iterations = iterations
-      assert isinstance(self.iterations, int) and self.iterations > 0, (
-          'In test %s, Iterations must be a positive integer, not %r' % (
-              self.path, self.iterations))
-    if retries == -1:
-      self.retries = float('inf')
-    else:
-      self.retries = retries
-      assert isinstance(self.retries, int) and self.retries >= 0, (
-          'In test %s, Retries must be a positive integer or 0, not %r' % (
-              self.path, self.retries))
+    self.iterations = None
+    self.retries = None
+    self._SetRetries(retries)
+    self._SetIterations(iterations)
+    self.default_iterations = self.iterations
+    self.default_retries = self.retries
 
     if allow_reboot is not None:
       self.allow_reboot = allow_reboot
@@ -290,6 +282,28 @@ class FactoryTest(object):
           'id %r does not match regexp %s' % (
               self.id, ID_REGEXP.pattern))
       # Note that we check ID uniqueness in _init.
+
+  def _SetIterations(self, iterations, set_default=False):
+    if not isinstance(iterations, int) or iterations == 0 or iterations < -1:
+      raise ValueError(
+          'In test %s, Iterations must be a positive integer or -1, not %r' % (
+              self.path, iterations))
+
+    iterations = float('inf') if iterations == -1 else iterations
+    self.iterations = iterations
+    if set_default:
+      self.default_iterations = iterations
+
+  def _SetRetries(self, retries, set_default=False):
+    if not isinstance(retries, int) or retries < -1:
+      raise ValueError(
+          'In test %s, Retries must be a positive integer, 0, or -1, not %r' % (
+              self.path, retries))
+
+    retries = float('inf') if retries == -1 else retries
+    self.retries = retries
+    if set_default:
+      self.default_retries = retries
 
   @staticmethod
   def PytestNameToLabel(pytest_name):
@@ -647,6 +661,14 @@ class FactoryTest(object):
 
     if self.GetState().status == TestState.FAILED:
       self.UpdateState(status=TestState.FAILED_AND_WAIVED)
+
+  def SetRetries(self, times, set_default=False):
+    """Sets the retry times of this test."""
+    self._SetRetries(times, set_default)
+
+  def SetIterations(self, times, set_default=False):
+    """Sets the iteration times of this test."""
+    self._SetIterations(times, set_default)
 
   def IsSkipped(self):
     """Returns True if this test was skipped."""

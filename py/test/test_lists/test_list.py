@@ -277,7 +277,12 @@ class Options(object):
       If a `pattern` starts with ``*``, then it will match for all tests with
       same suffix. For example, ``*.Fingerprint`` matches ``SMT.Fingerprint``,
       ``FATP.FingerPrint``, ``FOO.BAR.Fingerprint``. But it does not match for
-      ``SMT.Fingerprint_2`` (Generated ID when there are duplicate IDs).
+      ``SMT.Fingerprint_2`` (Generated ID when there are duplicate IDs). On the
+      other hand, ``*`` can also be put at the end of a `pattern`, then it will
+      match for all tests with the same prefix.
+
+      ``*`` can be put at both the beginning and the end of a pattern (e.g.
+      ``*.Fingerprint.*``), but not within a pattern.
 
       For single-pattern cases (only having one pattern to be matched), one can
       set the value of `patterns` as the pattern directly (without wrapping it
@@ -322,14 +327,6 @@ class Options(object):
     # were set.
     default_options = Options()
     errors = []
-
-    if ((getattr(self, 'skipped_tests') or getattr(self, 'waived_tests')) and
-        getattr(self, 'conditional_patches')):
-      raise type_utils.TestListError(
-          'Only one of `skipped/waived_tests` and `conditional_patches` can be '
-          'set in Option. `skipped_tests` and `waived_tests` are deprecated '
-          'and going to be remove. Skipping or waiving tests can be done by '
-          'setting `conditional_patches`.')
 
     for key in sorted(self.__dict__):
       if not hasattr(default_options, key):
@@ -506,10 +503,10 @@ class FactoryTestList(test_object_module.FactoryTest):
 
   def __repr__(self, recursive=False):
     if recursive:
-      return json.dumps(self.ToTestListConfig(recursive=True), indent=2,
-                        sort_keys=True, separators=(',', ': '))
-    else:
-      return json.dumps(self.ToTestListConfig(recursive=False), sort_keys=True)
+      return json.dumps(
+          self.ToTestListConfig(recursive=True), indent=2, sort_keys=True,
+          separators=(',', ': '))
+    return json.dumps(self.ToTestListConfig(recursive=False), sort_keys=True)
 
 
 class ITestList(object):
@@ -562,9 +559,8 @@ class ITestList(object):
   def constants(self):
     raise NotImplementedError
 
-  def ResolveTestArgs(
-      self, test_args, dut, station, constants=None, options=None,
-      locals_=None, state_proxy=None):
+  def ResolveTestArgs(self, test_args, dut, station, constants=None,
+                      options=None, locals_=None, state_proxy=None):
     self._checker.AssertValidArgs(test_args)
 
     if constants is None:
@@ -605,13 +601,14 @@ class ITestList(object):
         logging.debug('Resolving argument %s: %s', key, value)
         expression = value[len(EVALUATE_PREFIX):]  # remove prefix
 
-        return self.EvaluateExpression(
-            expression, dut, station, constants, options, locals_, state_proxy)
+        return self.EvaluateExpression(expression, dut, station, constants,
+                                       options, locals_, state_proxy)
 
       return MayTranslate(value)
+
     return ConvertToBasicType(
         {k: ResolveArg(k, v)
-         for k, v in test_args.items()})
+         for k, v in test_args.iteritems()})
 
   @debug_utils.CatchException(_LOGGED_NAME)
   def ApplyConditionalPatchesToTests(self):
@@ -622,7 +619,7 @@ class ITestList(object):
     """
 
     def _CheckRunIf(run_if_exprs):
-      if isinstance(run_if_exprs, str):
+      if isinstance(run_if_exprs, basestring):
         run_if_exprs = [run_if_exprs]
 
       if len(run_if_exprs) == 0:
@@ -636,7 +633,7 @@ class ITestList(object):
       return False
 
     def _CheckPhase(phases):
-      if isinstance(phases, str):
+      if isinstance(phases, basestring):
         phases = [phases]
 
       if len(phases) == 0:
@@ -646,29 +643,32 @@ class ITestList(object):
 
     def _CreateMatchFunction(pattern):
       pattern = pattern.split(':')[-1]  # To remove test_list_id
+
+      if pattern.startswith('*') and pattern.endswith('*'):
+        return lambda s: pattern[1:-1] in s
       if pattern.startswith('*'):
         return lambda s: s.endswith(pattern[1:])
+      if pattern.endswith('*'):
+        return lambda s: s.startswith(pattern[:-1])
 
       return lambda s: s == pattern
 
     def _PreprocessPatterns(patterns):
       """Converts the string patterns into matching functions."""
 
-      if isinstance(patterns, str):
+      if isinstance(patterns, basestring):
         patterns = [patterns]
 
       return list(map(_CreateMatchFunction, patterns))
 
-    # Since SKIPPED status is saved in state_instance, self.state_instance must
-    # be available at this moment.
-    assert self.state_instance is not None
-
     _PATCH_CLASS_MAP = {
-        WaivePatch.action_name: WaivePatch,
-        SkipPatch.action_name: SkipPatch
+        "waive": WaivePatch,
+        "skip": SkipPatch,
+        "set_retries": RetriesPatch
     }
 
     patch_instances = []
+
     for patch in self.options.conditional_patches:
       conditions = patch.get('conditions', {})
       args = patch.get('args', {})
@@ -1273,3 +1273,44 @@ class WaivePatch(BasePatch):
 
   def _CheckArguments(self, args):
     return args == {}
+
+
+class RetriesPatch(BasePatch):
+  """Patch class to set retry times of tests."""
+
+  @type_utils.ClassProperty
+  def action_name(self):
+    return 'set_retries'
+
+  def Apply(self):
+    """Sets the retry times of the given test.
+
+      The argument `times` must be given, for example:
+
+      {
+        "action": "set_retries",
+        "args": {
+          "times": 5
+        },
+        "conditions": {
+          "patterns": [
+            "SMT.*"
+          ]
+        }
+      }
+
+      With the above patch, all the retry times of non-group tests with prefix
+      `SMT.` will be set to 5.
+
+      NOTE: setting retries with `conditional_patches` will only apply to
+      the non-group tests.
+    """
+    times = self.args['times']
+
+    if self.test.IsGroup():
+      return
+
+    self.test.SetRetries(times, set_default=True)
+
+  def _CheckArguments(self, args):
+    return args.get('times', False)

@@ -959,8 +959,24 @@ class Goofy(object):
       root = self.test_list
     self.Stop(root, reason='Clearing test state')
     for f in root.Walk():
-      if f.IsLeaf():
-        f.UpdateState(status=TestState.UNTESTED)
+      f.UpdateState(status=TestState.UNTESTED if f.IsLeaf() else None,
+                    iterations=f.default_iterations,
+                    retries=f.default_retries)
+
+  def SetIterationsAndRetries(self, test, iterations, retries):
+    """Set iterations and retries in goofy, ui, and shelf.
+
+    If both iterations and retries are None, then set both value to default.
+    """
+    if iterations is None and retries is None:
+      iterations = test.default_iterations
+      retries = test.default_retries
+    try:
+      test.SetIterations(iterations)
+      test.SetRetries(retries)
+      test.UpdateState(iterations=iterations, retries=retries)
+    except ValueError:
+      logging.exception('Unable to set iterations or retries.')
 
   def _AbortActiveTests(self, reason=None):
     self._KillActiveTests(True, reason=reason)
