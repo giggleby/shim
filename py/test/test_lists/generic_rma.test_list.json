@@ -9,7 +9,8 @@
       "rma_mode": true
     },
     "phase": "PVT",
-    "rma_factory_server": "none"
+    "rma_factory_server": "none",
+    "rma_mode": true
   },
   "definitions": {
     "RMAFFT": {
