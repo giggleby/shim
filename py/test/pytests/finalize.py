@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -164,6 +164,9 @@ class Finalize(test_case.TestCase):
           default=False),
       Arg('mlb_mode', bool, 'Enable MLB mode, only do cr50 finalize.',
           default=False),
+      Arg('marketplace_mlb_mode', bool,
+          ('Enable marketplace MLB mode. The MLB will leave factory without '
+           'assembly, and sell to customer directly.'), default=False),
       Arg('is_cros_core', bool,
           'For ChromeOS Core device, skip setting firmware bitmap locale.',
           default=False),
@@ -211,6 +214,11 @@ class Finalize(test_case.TestCase):
     self.go_cond = threading.Condition()
     self.test_states_path = os.path.join(paths.DATA_LOG_DIR, 'test_states')
     self.factory_par = deploy_utils.CreateFactoryTools(self.dut)
+
+    self.assertFalse(
+        self.args.marketplace_mlb_mode and
+        (self.args.rma_mode or self.args.mlb_mode),
+        'marketplace_mlb_mode must be false when rma_mode or mlb_mode is set.')
 
     # variables for remote SSH DUT
     self.dut_response = None
@@ -369,6 +377,11 @@ class Finalize(test_case.TestCase):
     command += ' --add_file "%s"' % self.test_states_path
     if self.args.hwid_need_vpd:
       command += ' --hwid-run-vpd'
+    if self.args.marketplace_mlb_mode:
+      command += ' --marketplace_mlb_mode'
+      logging.info('Using marketplace MLB mode mode. The MLB is expected to '
+                   'leave factory without assembly, and sell to customer '
+                   'directly.')
     if self.args.rma_mode:
       command += ' --rma_mode'
       logging.info('Using RMA mode. Accept deprecated components')
@@ -409,6 +422,9 @@ class Finalize(test_case.TestCase):
         raise type_utils.TestFailure(f'DUT Failed to run {command!r}')
 
       if commands.WIPE_IN_PLACE in self.args.gooftool_skip_list:
+        return
+
+      if self.args.marketplace_mlb_mode:
         return
 
       # Wipe-in-place will terminate all processes that are using stateful

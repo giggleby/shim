@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -220,6 +220,11 @@ _rma_mode_cmd_arg = CmdArg(
 
 _mlb_mode_cmd_arg = CmdArg('--mlb_mode', action='store_true',
                            help='Enable MLB mode, only do cr50 finalize.')
+
+_marketplace_mlb_mode_cmd_arg = CmdArg(
+    '--marketplace_mlb_mode', action='store_true',
+    help='Enable marketplace MLB mode. The MLB will leave factory without '
+    'assembly, and sell to customer directly.')
 
 _cros_core_cmd_arg = CmdArg(
     '--cros_core', action='store_true',
@@ -748,6 +753,7 @@ def WipeInit(options):
     _hwid_run_vpd_cmd_arg,  # this
     _hwid_vpd_data_file_cmd_arg,  # this
     _rma_mode_cmd_arg,  # this
+    _marketplace_mlb_mode_cmd_arg,  # this
     *GetGooftool.__args__)
 def VerifyHWID(options):
   """A simple wrapper that calls out to HWID utils to verify version 3 HWID.
@@ -783,7 +789,8 @@ def VerifyHWID(options):
 
   try:
     hwid_utils.VerifyHWID(database, encoded_string, probed_results, device_info,
-                          vpd_data, options.rma_mode)
+                          vpd_data, options.rma_mode or
+                          options.marketplace_mlb_mode)
   except Exception:
     # TODO(cyueh) Make this only accept HPS HWID validation error.
     if not ignore_errors:
@@ -1070,6 +1077,7 @@ def FpmcuInitializeEntropy(options):
     _fast_cmd_arg,  # this
     _mlb_mode_cmd_arg,  # this
     _rma_mode_cmd_arg,  # this
+    _marketplace_mlb_mode_cmd_arg,  # this
     _rlz_embargo_end_date_offset_cmd_arg,  # this
     _no_generate_mfg_date_cmd_arg,  # this
     _cros_core_cmd_arg,  # this
@@ -1153,6 +1161,9 @@ def Finalize(options):
   FpmcuInitializeEntropy(options)
   LogSystemDetails(options)
   UploadReport(options)
+
+  if options.marketplace_mlb_mode:
+    return
 
   event_log.Log(WIPE_IN_PLACE)
   wipe_args = []
