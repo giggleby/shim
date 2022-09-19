@@ -29,6 +29,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
+
 PYTHONPATH = 'usr/local/factory/py_pkg'
 INSTALLER_MODULE = 'cros.factory.toolkit.installer'
 VERSION_PATH = 'usr/local/factory/TOOLKIT_VERSION'
@@ -362,10 +363,12 @@ def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
     help_header.write(initial_version + '\n' +
                       HELP_HEADER + HELP_HEADER_MAKESELF)
     help_header.flush()
+    build_option_args = ['--tar-format', 'gnu']
     cmd = [
         os.path.join(src_root, 'makeself.sh'),
         '--bzip2',
         '--nox11',
+        *build_option_args,
         '--help-header',
         help_header.name,
         '--target',
@@ -397,7 +400,7 @@ def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
 
     Spawn([
         cmd[0], '--lsm', version_path, '--cleanup', CLEANUP_SCRIPT_PATH,
-        '--append', tmp_dir, output_path
+        *build_option_args, '--append', tmp_dir, output_path
     ], check_call=True, log=True, read_stdout=quiet, read_stderr=quiet)
 
   print('\n'
