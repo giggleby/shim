@@ -477,6 +477,12 @@ def VerifyCBIEEPROMWPStatus(options):
       options.cbi_eeprom_wp_status, options.use_generic_tpm2)
 
 
+@Command('verify_alt_setting', *GetGooftool.__args__)
+def VerifyAltSetting(options):
+  """Verify the usb alt setting for RTL8852CE."""
+  return GetGooftool(options).VerifyAltSetting()
+
+
 @Command('write_protect')
 def EnableFwWp(options):
   """Enable then verify firmware software write protection."""
@@ -795,6 +801,7 @@ def VerifyHWID(options):
     _has_ec_pubkey_cmd_arg,  # this
     _is_reference_board_cmd_arg,  # this
     *GetGooftool.__args__,
+    *VerifyAltSetting.__args__,
     *VerifyCrosConfig.__args__,
     *VerifyDLCImages.__args__,
     *VerifyECKey.__args__,
@@ -816,6 +823,7 @@ def VerifyBeforeCr50Finalize(options):
   device is ready to be finalized before Cr50Finalize, but does not modify
   state.
   """
+  VerifyAltSetting(options)
   if not options.no_write_protect:
     VerifyManagementEngineLocked(options)
   VerifyHWID(options)
