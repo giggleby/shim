@@ -34,6 +34,7 @@ from cros.factory.test.rules import phase
 from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.test.rules import registration_codes
 from cros.factory.test.rules.registration_codes import RegistrationCode
+from cros.factory.test.utils import bluetooth_utils
 from cros.factory.test.utils import cbi_utils
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.test.utils import smart_amp_utils
@@ -43,6 +44,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
+
 
 # The mismatch result tuple.
 Mismatch = namedtuple('Mismatch', ['expected', 'actual'])
@@ -1037,6 +1039,10 @@ class Gooftool:
 
     cbi_utils.VerifyCbiEepromWpStatus(self._util.sys_interface,
                                       cbi_eeprom_wp_status, use_generic_tpm2)
+
+  def VerifyAltSetting(self):
+    """Verify the usb alt setting for RTL8852CE."""
+    bluetooth_utils.VerifyAltSetting()
 
   def GetBitmapLocales(self, image_file):
     """Get bitmap locales

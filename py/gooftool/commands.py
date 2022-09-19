@@ -31,8 +31,8 @@ from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import report_upload
 from cros.factory.gooftool import vpd
 from cros.factory.gooftool.write_protect_target import CreateWriteProtectTarget
-from cros.factory.gooftool.write_protect_target import WriteProtectTargetType
 from cros.factory.gooftool.write_protect_target import UnsupportedOperationError
+from cros.factory.gooftool.write_protect_target import WriteProtectTargetType
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.probe.functions import chromeos_firmware
 from cros.factory.test.env import paths
@@ -53,6 +53,7 @@ from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils.type_utils import Error
+
 
 # TODO(tammo): Replace calls to sys.exit with raise Exit, and maybe
 # treat that specially (as a smoot exit, as opposed to the more
@@ -482,6 +483,12 @@ def VerifyCBIEEPROMWPStatus(options):
       options.cbi_eeprom_wp_status, options.use_generic_tpm2)
 
 
+@Command('verify_alt_setting', *GetGooftool.__args__)
+def VerifyAltSetting(options):
+  """Verify the usb alt setting for RTL8852CE."""
+  return GetGooftool(options).VerifyAltSetting()
+
+
 @Command(
     'write_protect',
     CmdArg('--operation', default='enable',
@@ -795,6 +802,7 @@ def VerifyHWID(options):
     _has_ec_pubkey_cmd_arg,  # this
     _is_reference_board_cmd_arg,  # this
     *GetGooftool.__args__,
+    *VerifyAltSetting.__args__,
     *VerifyCrosConfig.__args__,
     *VerifyDLCImages.__args__,
     *VerifyECKey.__args__,
@@ -816,6 +824,7 @@ def VerifyBeforeCr50Finalize(options):
   device is ready to be finalized before Cr50Finalize, but does not modify
   state.
   """
+  VerifyAltSetting(options)
   if not options.no_write_protect:
     VerifyManagementEngineLocked(options)
   VerifyHWID(options)
