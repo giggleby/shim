@@ -347,24 +347,37 @@ def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
     help_header.write(initial_version + '\n' +
                       HELP_HEADER + HELP_HEADER_MAKESELF)
     help_header.flush()
-    cmd = [os.path.join(src_root, 'makeself.sh'), '--bzip2', '--nox11',
-           '--help-header', help_header.name,
-           src_root, # archive_dir
-           output_path, # file_name
-           initial_version + modified_msg, # label
-           # startup script and args
-           # We have to explicitly execute python instead of directly execute
-           # INSTALLER_PATH because files under INSTALLER_PATH may not be
-           # executable.
-           'env', 'PYTHONPATH=' + PYTHONPATH,
-           'python3', '-m', INSTALLER_MODULE, '--in-exe']
+    build_option_args = ['--tar-format', 'gnu']
+    cmd = [
+        os.path.join(src_root, 'makeself.sh'),
+        '--bzip2',
+        '--nox11',
+        *build_option_args,
+        '--help-header',
+        help_header.name,
+        src_root,  # archive_dir
+        output_path,  # file_name
+        initial_version + modified_msg,  # label
+        # startup script and args
+        # We have to explicitly execute python instead of directly execute
+        # INSTALLER_PATH because files under INSTALLER_PATH may not be
+        # executable.
+        'env',
+        'PYTHONPATH=' + PYTHONPATH,
+        'python3',
+        '-m',
+        INSTALLER_MODULE,
+        '--in-exe'
+    ]
     Spawn(cmd, check_call=True, log=True, read_stdout=quiet, read_stderr=quiet)
   with file_utils.TempDirectory() as tmp_dir:
     version_path = os.path.join(tmp_dir, VERSION_PATH)
     os.makedirs(os.path.dirname(version_path))
     file_utils.WriteFile(version_path, complete_version)
-    Spawn([cmd[0], '--lsm', version_path, '--append', tmp_dir, output_path],
-          check_call=True, log=True, read_stdout=quiet, read_stderr=quiet)
+    Spawn([
+        cmd[0], '--lsm', version_path, *build_option_args, '--append', tmp_dir,
+        output_path
+    ], check_call=True, log=True, read_stdout=quiet, read_stderr=quiet)
   print('\n'
         '  Factory toolkit generated at %s.\n'
         '\n'
