@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -30,6 +30,8 @@ _TEST_ENCODED_STRING_WITH_CONFIGLESS_GOOD = ('CHROMEBOOK-BRAND 0-8-3A-100 '
 _TEST_ENCODED_STRING_BATTERY_UNSUPPORTED = 'CHROMEBOOK B3M-A4Z'
 
 _TEST_ENCODED_STRING_FIRMWARE_KEYS_PREMP = 'CHROMEBOOK B8M-A7Y'
+
+_TEST_ENCODED_STRING_RMA_IMAGE_ID_GOOD = 'CHROMEBOOK P9M-A63'
 
 
 class _HWIDTestCaseBase(unittest.TestCase):
@@ -69,6 +71,12 @@ class GenerateHWIDTest(_HWIDTestCaseBase):
                       self.database, self.probed_results, {}, {}, False, False,
                       None)
 
+  def testMarketplaceMLB_IsRMAImageId(self):
+    identity = hwid_utils.GenerateHWID(self.database, self.probed_results, {},
+                                       {}, False, False, None,
+                                       marketplace_mlb_mode=True)
+    self.assertEqual(identity.encoded_string,
+                     _TEST_ENCODED_STRING_RMA_IMAGE_ID_GOOD)
 
 # TODO (b/212216855)
 @label_utils.Informational
@@ -128,6 +136,12 @@ class VerifyHWIDTest(_HWIDTestCaseBase):
                           self.probed_results, {}, {},
                           False, current_phase='PVT',
                           allow_mismatched_components=False)
+
+  def testMarketplaceMLB(self):
+    hwid_utils.VerifyHWID(
+        self.database, _TEST_ENCODED_STRING_RMA_IMAGE_ID_GOOD,
+        self.probed_results, {}, {}, False, current_phase='PVT',
+        allow_mismatched_components=False, marketplace_mlb_mode=True)
 
   def testBOMMisMatch(self):
     self.probed_results['region'] = [{'name': 'us',

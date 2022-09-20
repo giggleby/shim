@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -382,7 +382,8 @@ class GenerateHWIDWrapperTest(TestCaseBaseWithMockedOutputObject):
         hwid_material.device_info, hwid_material.vpd, options.rma_mode,
         options.with_configless_fields, options.brand_code,
         allow_mismatched_components=options.allow_mismatched_components,
-        use_name_match=options.use_name_match)
+        use_name_match=options.use_name_match,
+        marketplace_mlb_mode=options.marketplace_mlb_mode)
 
     identity = generate_hwid_mock.return_value
     hwid_cmdline.OutputObject.assert_called_once_with(
@@ -430,7 +431,8 @@ class VerifyHWIDWrapperTest(TestCaseBaseWithFakeOutput):
         options.database, options.hwid, hwid_material.probed_results,
         hwid_material.device_info, hwid_material.vpd, options.rma_mode,
         current_phase=options.phase,
-        allow_mismatched_components=options.allow_mismatched_components)
+        allow_mismatched_components=options.allow_mismatched_components,
+        marketplace_mlb_mode=options.marketplace_mlb_mode)
 
   @mock.patch('cros.factory.hwid.v3.hwid_utils.VerifyHWID',
               side_effect=HWIDException('verify fail'))

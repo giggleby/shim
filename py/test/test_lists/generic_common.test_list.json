@@ -18,6 +18,8 @@
     "has_keybox": false,
     "hwid_need_vpd": false,
     "__comment_hwid_need_vpd": "Set to true if some rules in the HWID database rely on VPD data",
+    "marketplace_mlb_mode": false,
+    "__comment_marketplace_mlb_mode": "Set this to true if the MLB will leave factory without assembly, and sell to customer directly.",
     "mlb_mode": false,
     "__comment_mlb_mode": "Set this to true if the MLB parts will be sent to a different location for assembly, such as RMA or local OEM",
     "overlord": {
@@ -1494,7 +1496,8 @@
       "args": {
         "enable_factory_server": "eval! constants.enable_factory_server",
         "run_vpd": "eval! constants.hwid_need_vpd",
-        "rma_mode": "eval! constants.rma_mode"
+        "rma_mode": "eval! constants.rma_mode",
+        "marketplace_mlb_mode": "eval! constants.marketplace_mlb_mode"
       }
     },
     "WriteProtectSwitch": {

@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -39,7 +39,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
         usually the output of the probe command.
     device_info: None or a dict of device info.
     vpd: None or a dict of vpd data.
-    mode: None or "rma" or "normal".
+    mode: One of common.OPERATION_MODE.
     allow_mismatched_components: Whether to allow some probed components to be
         ignored if no any component in the database matches with them.
     use_name_match: Use component name from probed results as matched component.
@@ -77,7 +77,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
         comp_classes.add(cls)
     return comp_classes
 
-  if mode == common.OPERATION_MODE.rma:
+  if mode in (common.OPERATION_MODE.rma, common.OPERATION_MODE.marketplace_mlb):
     # If RMA image ID is not available, fallback to max image ID.
     image_id = database.rma_image_id or database.max_image_id
   else:
@@ -96,7 +96,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
       mismatched_components = {}
     else:
       component_classes = database.GetComponentClasses()
-      # In normal mode, treat unrecognized components as mismatched components.
+      # In non-RMA mode, treat unrecognized components as mismatched components.
       mismatched_components = {comp_cls: comps
                                for comp_cls, comps in probed_results.items()
                                if comp_cls not in component_classes}

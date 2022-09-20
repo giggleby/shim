@@ -1,4 +1,4 @@
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -23,7 +23,9 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
 
-def _HWIDMode(rma_mode):
+def _HWIDMode(rma_mode, marketplace_mlb_mode: bool):
+  if marketplace_mlb_mode:
+    return common.OPERATION_MODE.marketplace_mlb
   if rma_mode:
     return common.OPERATION_MODE.rma
   return common.OPERATION_MODE.normal
@@ -31,7 +33,8 @@ def _HWIDMode(rma_mode):
 
 def GenerateHWID(database, probed_results, device_info, vpd, rma_mode,
                  with_configless_fields, brand_code,
-                 allow_mismatched_components=False, use_name_match=False):
+                 allow_mismatched_components=False, use_name_match=False,
+                 marketplace_mlb_mode: bool = False):
   """Generates a HWID v3 from the given data.
 
   The HWID is generated based on the given device info and a BOM object. If
@@ -53,13 +56,14 @@ def GenerateHWID(database, probed_results, device_info, vpd, rma_mode,
     allow_mismatched_components: Whether to allows some probed components to be
         ignored if no any component in the database matches with them.
     use_name_match: Use component name from probed results as matched component.
+    marketplace_mlb_mode: Use RMA image_id. Except that, normal.
 
   Returns:
     The generated HWID Identity object.
   """
   from cros.factory.hwid.v3 import probe
 
-  hwid_mode = _HWIDMode(rma_mode)
+  hwid_mode = _HWIDMode(rma_mode, marketplace_mlb_mode)
 
   bom = probe.GenerateBOMFromProbedResults(
       database, probed_results, device_info, vpd, hwid_mode,
@@ -99,9 +103,9 @@ def DecodeHWID(database, encoded_string):
   return identity, bom, configless_fields
 
 
-def VerifyHWID(database, encoded_string,
-               probed_results, device_info, vpd, rma_mode,
-               current_phase=None, allow_mismatched_components=False):
+def VerifyHWID(database, encoded_string, probed_results, device_info, vpd,
+               rma_mode, current_phase=None, allow_mismatched_components=False,
+               marketplace_mlb_mode: bool = False):
   """Verifies the given encoded HWID v3 string against the probed BOM object.
 
   A HWID context is built with the encoded HWID string and the project-specific
@@ -132,13 +136,14 @@ def VerifyHWID(database, encoded_string,
         if none is available).
     allow_mismatched_components: Whether to allows some probed components to be
         ignored if no any component in the database matches with them.
+    marketplace_mlb_mode: Use RMA image_id. Except that, normal.
 
   Raises:
     HWIDException if verification fails.
   """
   from cros.factory.hwid.v3 import probe
 
-  hwid_mode = _HWIDMode(rma_mode)
+  hwid_mode = _HWIDMode(rma_mode, marketplace_mlb_mode)
 
   probed_bom = probe.GenerateBOMFromProbedResults(
       database, probed_results, device_info, vpd, hwid_mode,
@@ -150,7 +155,8 @@ def VerifyHWID(database, encoded_string,
   verifier.VerifyBOM(database, decoded_bom, probed_bom)
   verifier.VerifyComponentStatus(
       database, decoded_bom, hwid_mode, current_phase=current_phase)
-  verifier.VerifyPhase(database, decoded_bom, current_phase, rma_mode)
+  verifier.VerifyPhase(database, decoded_bom, current_phase, rma_mode or
+                       marketplace_mlb_mode)
   if decoded_configless:
     verifier.VerifyConfigless(
         database, decoded_configless, probed_bom, device_info, rma_mode)

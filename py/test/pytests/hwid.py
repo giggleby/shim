@@ -1,4 +1,4 @@
-# Copyright 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Uses HWID v3 to generate, encode, and verify the device's HWID.
@@ -103,6 +103,8 @@ class HWIDV3Test(test_case.TestCase):
       Arg('rma_mode', bool,
           'Enable rma_mode, do not check for deprecated components.',
           default=False),
+      Arg('marketplace_mlb_mode', bool,
+          'Enable marketplace_mlb_mode, use RMA image id.', default=False),
       Arg('verify_checksum', bool, 'Enable database checksum verification.',
           default=True),
       Arg('enable_configless_fields', bool, 'Include the configless fields',
@@ -157,6 +159,8 @@ class HWIDV3Test(test_case.TestCase):
       ]
       if self.args.rma_mode:
         generate_cmd += ['--rma-mode']
+      if self.args.marketplace_mlb_mode:
+        generate_cmd += ['--marketplace-mlb-mode']
       if not self.args.verify_checksum:
         generate_cmd += ['--no-verify-checksum']
       if self.args.enable_configless_fields:
@@ -197,6 +201,8 @@ class HWIDV3Test(test_case.TestCase):
     ]
     if self.args.rma_mode:
       verify_cmd += ['--rma-mode']
+    if self.args.marketplace_mlb_mode:
+      verify_cmd += ['--marketplace-mlb-mode']
     if not self.args.verify_checksum:
       verify_cmd += ['--no-verify-checksum']
     verify_cmd += [encoded_string]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Command-line interface for HWID v3 utilities."""
@@ -99,9 +99,11 @@ _HWID_MATERIAL_COMMON_ARGS = [
            help='(Deprecated!)  Used to specify a file with probed results.'),
 ] + _HWID_MATERIAL_FIELD_COMMON_ARGS
 
-_RMA_COMMON_ARGS = [
+_OPERATION_MODE_COMMON_ARGS = [
     CmdArg('--rma-mode', default=False, action='store_true',
            help='Whether to enable RMA mode.'),
+    CmdArg('--marketplace-mlb-mode', default=False, action='store_true',
+           help='Whether to enable marketplace MLB mode.'),
 ]
 
 
@@ -393,8 +395,11 @@ def UpdateDatabaseWrapper(options):
     CmdArg('--brand-code', default=None,
            help='Device brand code (cros_config / brand-code).'),
     CmdArg('--no-brand-code', action='store_true',
-           help='Do not add brand code to HWID'), *_HWID_MATERIAL_COMMON_ARGS,
-    *_OUTPUT_FORMAT_COMMON_ARGS, *_RMA_COMMON_ARGS)
+           help='Do not add brand code to HWID'),
+    *_HWID_MATERIAL_COMMON_ARGS,
+    *_OUTPUT_FORMAT_COMMON_ARGS,
+    *_OPERATION_MODE_COMMON_ARGS,
+)
 def GenerateHWIDWrapper(options):
   """Generates HWID."""
   hwid_material = ObtainHWIDMaterial(options)
@@ -404,7 +409,8 @@ def GenerateHWIDWrapper(options):
       hwid_material.vpd, options.rma_mode, options.with_configless_fields,
       options.brand_code,
       allow_mismatched_components=options.allow_mismatched_components,
-      use_name_match=options.use_name_match)
+      use_name_match=options.use_name_match,
+      marketplace_mlb_mode=options.marketplace_mlb_mode)
 
   OutputObject(
       options, {
@@ -442,7 +448,7 @@ def DecodeHWIDWrapper(options):
              '--allow-mismatched-components', action='store_true',
              help='Allows some probed components to be ignored if no any '
              'component in the database matches with them.'),
-         *_HWID_MATERIAL_COMMON_ARGS, *_RMA_COMMON_ARGS)
+         *_HWID_MATERIAL_COMMON_ARGS, *_OPERATION_MODE_COMMON_ARGS)
 def VerifyHWIDWrapper(options):
   """Verifies HWID."""
   encoded_string = options.hwid if options.hwid else GetHWIDString()
@@ -453,7 +459,8 @@ def VerifyHWIDWrapper(options):
       options.database, encoded_string, hwid_material.probed_results,
       hwid_material.device_info, hwid_material.vpd, options.rma_mode,
       current_phase=options.phase,
-      allow_mismatched_components=options.allow_mismatched_components)
+      allow_mismatched_components=options.allow_mismatched_components,
+      marketplace_mlb_mode=options.marketplace_mlb_mode)
 
   # No exception raised. Verification was successful.
   Output('Verification passed.')

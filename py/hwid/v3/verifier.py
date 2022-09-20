@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -33,7 +33,7 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None):
   Args:
     database: The Database object which records the status of each components.
     bom: The BOM object to be verified.
-    mode: Either "normal" or "rma".
+    mode: One of common.OPERATION_MODE.
     current_phase: The current phase, for phase checks.  If None is
         specified, then phase.GetPhase() is used (this defaults to PVT
         if none is available).
