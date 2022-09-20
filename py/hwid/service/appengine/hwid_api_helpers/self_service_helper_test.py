@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -35,6 +35,9 @@ _PVAlignmentStatusMsg = hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case
 _AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
 _HWIDSectionChangeMsg = _AnalysisReportMsg.HwidSectionChange
 _HWIDSectionChangeStatusMsg = _HWIDSectionChangeMsg.ChangeStatus
+_ChangeUnitMsg = hwid_api_messages_pb2.ChangeUnit
+_AddEncodingCombinationMsg = _ChangeUnitMsg.AddEncodingCombination
+_NewImageIdMsg = _ChangeUnitMsg.NewImageId
 _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
 _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
 _SessionCache = hwid_action.SessionCache
@@ -42,6 +45,13 @@ _SessionCache = hwid_action.SessionCache
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/v3-from-factory-bundle.yaml')
+_HWID_V3_CHANGE_UNIT_BEFORE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/change-unit-before.yaml')
+_HWID_V3_CHANGE_UNIT_AFTER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/change-unit-after.yaml')
+
 
 class SelfServiceHelperTest(unittest.TestCase):
 
@@ -188,7 +198,8 @@ class SelfServiceHelperTest(unittest.TestCase):
             }))
 
     self._modules.fake_session_cache_adapter.Put(
-        'validation-token-value-1', _SessionCache('db data after change'))
+        'validation-token-value-1', _SessionCache('PROJ',
+                                                  'db data after change'))
     req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
         project='proj', validation_token='validation-token-value-1')
     resp = self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
@@ -198,13 +209,13 @@ class SelfServiceHelperTest(unittest.TestCase):
         {
             'comp1':
                 _ComponentInfoMsg(
-                    component_class="comp_cls1", original_name="comp_name1",
-                    original_status="unqualified", is_newly_added=False,
+                    component_class='comp_cls1', original_name='comp_name1',
+                    original_status='unqualified', is_newly_added=False,
                     seq_no=2, null_values=False, diff_prev=_DiffStatusMsg(
                         unchanged=True, name_changed=False,
                         support_status_changed=False, values_changed=False,
-                        prev_comp_name="comp_name1",
-                        prev_support_status="unqualified",
+                        prev_comp_name='comp_name1',
+                        prev_support_status='unqualified',
                         probe_value_alignment_status_changed=False,
                         prev_probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
@@ -212,19 +223,19 @@ class SelfServiceHelperTest(unittest.TestCase):
                         _PVAlignmentStatusMsg.NO_PROBE_INFO)),
             'comp2':
                 _ComponentInfoMsg(
-                    component_class="comp_cls2",
-                    original_name="comp_cls2_111_222#9",
-                    original_status="unqualified", is_newly_added=True,
+                    component_class='comp_cls2',
+                    original_name='comp_cls2_111_222#9',
+                    original_status='unqualified', is_newly_added=True,
                     avl_info=_AvlInfoMsg(
                         cid=111,
                         qid=222,
                     ), has_avl=True, seq_no=1,
-                    component_name_with_correct_seq_no="comp_cls2_111_222#1",
+                    component_name_with_correct_seq_no='comp_cls2_111_222#1',
                     null_values=False, diff_prev=_DiffStatusMsg(
                         unchanged=False, name_changed=True,
                         support_status_changed=False, values_changed=False,
-                        prev_comp_name="old_comp_name",
-                        prev_support_status="unqualified",
+                        prev_comp_name='old_comp_name',
+                        prev_support_status='unqualified',
                         probe_value_alignment_status_changed=True,
                         prev_probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
@@ -232,8 +243,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         _PVAlignmentStatusMsg.ALIGNED)),
             'comp3':
                 _ComponentInfoMsg(
-                    component_class="comp_cls2", original_name="comp_name3",
-                    original_status="unqualified", is_newly_added=True,
+                    component_class='comp_cls2', original_name='comp_name3',
+                    original_status='unqualified', is_newly_added=True,
                     seq_no=2, null_values=True, probe_value_alignment_status=(
                         _PVAlignmentStatusMsg.NO_PROBE_INFO)),
         }, resp.analysis_report.component_infos)
@@ -1076,6 +1087,71 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.INTERNAL)
+
+  def testSplitHWIDDBChange_InvalidToken(self):
+    req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
+        session_token='invalid_token')
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.SplitHWIDDBChange(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.ABORTED)
+    self.assertEqual(ex.exception.detail, 'The validation token is expired.')
+
+  def testSplitHWIDDBChange_Pass(self):
+    project = 'CHROMEBOOK'
+    old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_BEFORE)
+    new_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_AFTER)
+    # Config repo and action.
+    self._ConfigLiveHWIDRepo(project, 3, old_db_data)
+    action = self._CreateFakeHWIDBAction(project, old_db_data)
+    self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
+
+    # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
+    analyze_resp = self._AnalyzeHWIDDBEditableSection(project, new_db_data)
+    session_token = analyze_resp.validation_token
+
+    db_external_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
+        session_token=session_token, db_external_resource=db_external_resource)
+
+    split_resp = self._ss_helper.SplitHWIDDBChange(split_req)
+
+    new_comp_msg = _ComponentInfoMsg(
+        component_class='comp_cls_1', original_name='new_comp',
+        original_status='supported', is_newly_added=True, seq_no=3,
+        probe_value_alignment_status=_PVAlignmentStatusMsg.NO_PROBE_INFO)
+    self.assertCountEqual([
+        _ChangeUnitMsg(
+            add_encoding_combination=_AddEncodingCombinationMsg(
+                comp_cls='comp_cls_1', comp_info=[new_comp_msg])),
+        _ChangeUnitMsg(comp_change=new_comp_msg),
+        _ChangeUnitMsg(
+            new_image_id=_NewImageIdMsg(
+                image_names=['NEW_PHASE'],
+            )),
+        _ChangeUnitMsg(
+            add_encoding_combination=_AddEncodingCombinationMsg(
+                comp_cls='comp_cls_1', comp_info=[new_comp_msg, new_comp_msg])),
+        _ChangeUnitMsg(
+            new_image_id=_NewImageIdMsg(
+                image_names=[
+                    'PHASE_NO_NEW_PATTERN_1', 'PHASE_NO_NEW_PATTERN_2'
+                ], with_new_encoding_pattern=True)),
+        _ChangeUnitMsg(
+            new_image_id=_NewImageIdMsg(
+                image_names=['PHASE_NEW_PATTERN_1', 'PHASE_NEW_PATTERN_2'],
+                with_new_encoding_pattern=True)),
+    ], list(split_resp.change_units.values()))
+
+  def _AnalyzeHWIDDBEditableSection(self, project: str,
+                                    hwid_db_editable_section: str):
+    analyze_req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+        project=project, hwid_db_editable_section=hwid_db_editable_section,
+        require_hwid_db_lines=False)
+
+    return self._ss_helper.AnalyzeHWIDDBEditableSection(analyze_req)
 
   @classmethod
   def _CreateFakeHWIDBAction(cls, project: str, raw_db: str):

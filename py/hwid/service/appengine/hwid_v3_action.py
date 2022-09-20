@@ -50,8 +50,10 @@ class HWIDV3Action(hwid_action.HWIDAction):
   def GetDBV3(self):
     return self._preproc_data.database
 
-  def GetDBEditableSection(self):
-    return self._ss_helper.GetDBEditableSection()
+  def GetDBEditableSection(self, suppress_support_status: bool = False,
+                           internal: bool = False) -> hwid_db_data.HWIDDBData:
+    return self._ss_helper.GetDBEditableSection(
+        suppress_support_status=suppress_support_status, internal=internal)
 
   def AnalyzeDraftDBEditableSection(
       self, draft_db_editable_section: hwid_db_data.HWIDDBData,

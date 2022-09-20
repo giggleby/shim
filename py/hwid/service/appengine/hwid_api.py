@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """HWID Api definition.  Defines all the exposed API methods.
@@ -304,3 +304,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def SetFirmwareInfoSupportStatus(self, request):
     return self._ss_helper.SetFirmwareInfoSupportStatus(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def SplitHwidDbChange(self, request):
+    return self._ss_helper.SplitHWIDDBChange(request)

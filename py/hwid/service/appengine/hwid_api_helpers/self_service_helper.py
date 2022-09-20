@@ -24,7 +24,9 @@ from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import builder as v3_builder
+from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import common as v3_common
+from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.probe_info_service.app_engine import protorpc_utils
@@ -70,6 +72,7 @@ _HWID_SECTION_CHANGE_STATUS = {
 }
 
 _SessionCache = hwid_action.SessionCache
+_ChangeUnitMsg = hwid_api_messages_pb2.ChangeUnit
 
 
 def _ConvertTouchedSectionToMsg(
@@ -185,6 +188,31 @@ def _CheckIfHWIDDBCLShouldBeAbandoned(
     elif cl_age > _MAX_MERGE_CONFLICT_HWID_DB_CL_AGE:
       return True, 'The CL is expired because the contents are out-of-date.'
   return False, None
+
+
+def _ConvertChangeUnitToMsg(
+    change_unit: change_unit_utils.ChangeUnit) -> _ChangeUnitMsg:
+  msg = _ChangeUnitMsg()
+  if isinstance(change_unit, change_unit_utils.CompChange):
+    msg.comp_change.CopyFrom(_ConvertCompInfoToMsg(change_unit.comp_analysis))
+  elif isinstance(change_unit, change_unit_utils.AddEncodingCombination):
+    msg.add_encoding_combination.comp_cls = change_unit.comp_cls
+    msg.add_encoding_combination.comp_info.extend(
+        _ConvertCompInfoToMsg(comp_analysis)
+        for comp_analysis in change_unit.comp_analyses)
+  elif isinstance(change_unit,
+                  change_unit_utils.NewImageIdToExistingEncodingPattern):
+    msg.new_image_id.image_names.append(change_unit.image_name)
+  elif isinstance(change_unit,
+                  change_unit_utils.NewImageIdToNewEncodingPattern):
+    msg.new_image_id.image_names.extend(
+        desc.name for desc in change_unit.image_descs)
+    msg.new_image_id.with_new_encoding_pattern = True
+  elif isinstance(change_unit, change_unit_utils.ReplaceRules):
+    msg.replace_rules.CopyFrom(_ChangeUnitMsg.ReplaceRules())
+  else:
+    raise ValueError('Invalid change unit {change_unit!r}.')
+  return msg
 
 
 class SelfServiceHelper:
@@ -513,7 +541,8 @@ class SelfServiceHelper:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     response.validation_token = report.fingerprint
     self._session_cache_adapter.Put(
-        report.fingerprint, _SessionCache(request.hwid_db_editable_section),
+        report.fingerprint,
+        _SessionCache(project, request.hwid_db_editable_section),
         expiry=hwid_action.SESSION_TIMEOUT)
     response.analysis_report.noop_for_external_db = (
         report.noop_for_external_db)
@@ -788,3 +817,37 @@ class SelfServiceHelper:
     )
 
     return resp
+
+  def SplitHWIDDBChange(self, request):
+    session_cache = self._session_cache_adapter.Get(request.session_token)
+    if session_cache is None:
+      raise protorpc_utils.ProtoRPCException(
+          protorpc_utils.RPCCanonicalErrorCode.ABORTED,
+          detail='The validation token is expired.')
+    project = session_cache.project
+    avl_resource = request.db_external_resource
+    try:
+      action = self._hwid_action_manager.GetHWIDAction(project)
+    except (KeyError, ValueError, RuntimeError) as ex:
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+    old_db = database.Database.LoadData(
+        action.PatchHeader(action.GetDBEditableSection(internal=True)))
+    new_hwid_db_contents_internal = action.ConvertToInternalHWIDDBContent(
+        self._avl_converter_manager,
+        action.PatchHeader(session_cache.new_hwid_db_editable_section),
+        avl_resource)
+    new_db = database.Database.LoadData(new_hwid_db_contents_internal)
+
+    change_unit_manager = change_unit_utils.ChangeUnitManager(old_db, new_db)
+    self._session_cache_adapter.Put(
+        request.session_token,
+        session_cache._replace(change_unit_manager=change_unit_manager,
+                               avl_resource=avl_resource),
+        expiry=hwid_action.SESSION_TIMEOUT)
+    return hwid_api_messages_pb2.SplitHwidDbChangeResponse(
+        change_units={
+            identity: _ConvertChangeUnitToMsg(change_unit)
+            for identity, change_unit in
+            change_unit_manager.GetChangeUnits().items()
+        })

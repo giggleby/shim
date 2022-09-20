@@ -246,8 +246,10 @@ SESSION_TIMEOUT = 3 * 60  # 3 minutes
 
 
 class SessionCache(NamedTuple):
+  project: str
   new_hwid_db_editable_section: str
   change_unit_manager: Optional[change_unit_utils.ChangeUnitManager] = None
+  avl_resource: Optional[hwid_api_messages_pb2.HwidDbExternalResource] = None
 
 
 class DBEditableSectionAnalysisReport(NamedTuple):
@@ -386,9 +388,14 @@ class HWIDAction:
     raise NotSupportedError(
         f'`GetDBV3` is not supported in HWID v{self.HWID_VERSION}')
 
-  def GetDBEditableSection(self) -> str:
+  def GetDBEditableSection(self, suppress_support_status: bool = False,
+                           internal: bool = False) -> hwid_db_data.HWIDDBData:
     """Get the editable section of the HWID DB.
 
+    Args:
+      suppress_support_status: Whether to suppress the "status: " line if it is
+        supported.
+      internal: True to return an internal HWID DB.
     Returns:
       The text value of the HWID DB editable section.
 
