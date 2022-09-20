@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Defines available actions upon a specific HWID DB."""
@@ -482,3 +482,23 @@ class HWIDAction:
     """
     raise NotSupportedError(
         f'`PatchHeader` is not supported in HWID v{self.HWID_VERSION}')
+
+  def ConvertToInternalHWIDDBContent(
+      self, avl_converter_manager: converter_utils.ConverterManager,
+      hwid_db_contents: hwid_db_data.HWIDDBData,
+      avl_resource: hwid_api_messages_pb2.HwidDbExternalResource
+  ) -> hwid_db_data.HWIDDBData:
+    """Converts an external HWID DB to internal HWID DB.
+
+    Args:
+      avl_converter_manager: A manager responsible for converting AVL probe
+          values to HWID probe values for comparison.
+      hwid_db_contents: The external HWID DB content.
+      avl_resource: AVL resource for checking if HWID probe values align with
+          AVL probe values.
+    Returns:
+      An internal HWID DB with internal tags.
+    """
+    raise NotSupportedError(
+        '`ConvertToInternalHWIDDBContent` is not supported in HWID '
+        f'v{self.HWID_VERSION}')

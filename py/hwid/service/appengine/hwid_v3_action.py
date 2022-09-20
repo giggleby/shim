@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Defines available actions for HWIDv3 DB."""
@@ -84,3 +84,11 @@ class HWIDV3Action(hwid_action.HWIDAction):
     for comp_cls in with_classes:
       comps[comp_cls] = database.GetComponents(comp_cls)
     return comps
+
+  def ConvertToInternalHWIDDBContent(
+      self, avl_converter_manager: converter_utils.ConverterManager,
+      hwid_db_contents: hwid_db_data.HWIDDBData,
+      avl_resource: hwid_api_messages_pb2.HwidDbExternalResource
+  ) -> hwid_db_data.HWIDDBData:
+    return self._ss_helper.ConvertToInternalHWIDDBContent(
+        avl_converter_manager, hwid_db_contents, avl_resource)

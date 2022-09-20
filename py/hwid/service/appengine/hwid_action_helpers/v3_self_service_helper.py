@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -113,7 +113,9 @@ class HWIDV3SelfServiceActionHelper:
       for comp_name, comp_info in old_db.GetComponents(comp_cls).items():
         if comp_info.bundle_uuids and comp_name in new_db_components:
           new_db.SetBundleUUIDs(comp_cls, comp_name, comp_info.bundle_uuids)
-    return self.PatchHeader(new_db.DumpDataWithoutChecksum(internal=True))
+    return self.PatchHeader(
+        new_db.DumpDataWithoutChecksum(internal=True,
+                                       suppress_support_status=False))
 
   def AnalyzeDraftDBEditableSection(
       self, draft_db_editable_section: hwid_db_data.HWIDDBData,
@@ -150,13 +152,10 @@ class HWIDV3SelfServiceActionHelper:
       pass
 
     if internal:
-      new_hwid_db_editable_contents_with_avl = avl_converter_manager.LinkAVL(
-          new_hwid_db_contents_external, avl_resource)
-      new_hwid_db_contents_internal_without_bundle = self.PatchHeader(
-          new_hwid_db_editable_contents_with_avl)
-      new_hwid_db_contents_internal = self.PatchFirmwareBundleUUIDs(
-          new_hwid_db_contents_internal_without_bundle)
-      new_hwid_db_contents = new_hwid_db_contents_internal
+      new_hwid_db_contents = new_hwid_db_contents_internal = (
+          self.ConvertToInternalHWIDDBContent(avl_converter_manager,
+                                              new_hwid_db_contents_external,
+                                              avl_resource))
       curr_hwid_db_contents = curr_hwid_db_contents_internal
     else:
       new_hwid_db_contents = new_hwid_db_contents_external
@@ -225,3 +224,16 @@ class HWIDV3SelfServiceActionHelper:
   def RemoveHeader(hwid_db_contents):
     unused_header, lines = _SplitHWIDDBV3Sections(hwid_db_contents)
     return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)
+
+  def ConvertToInternalHWIDDBContent(
+      self, avl_converter_manager: converter_utils.ConverterManager,
+      hwid_db_contents: hwid_db_data.HWIDDBData,
+      avl_resource: hwid_api_messages_pb2.HwidDbExternalResource
+  ) -> hwid_db_data.HWIDDBData:
+
+    hwid_db_editable_contents_with_avl = avl_converter_manager.LinkAVL(
+        hwid_db_contents, avl_resource)
+    new_hwid_db_contents_internal_without_bundle = self.PatchHeader(
+        hwid_db_editable_contents_with_avl)
+    return self.PatchFirmwareBundleUUIDs(
+        new_hwid_db_contents_internal_without_bundle)
