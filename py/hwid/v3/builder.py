@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -26,6 +26,12 @@ ESSENTIAL_COMPS = [
     'dram',
     'cpu',
     'storage']
+
+# The list of firmware component.
+FIRMWARE_COMPS = [
+    'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware', 'ro_fp_firmware',
+    'firmware_keys'
+]
 
 # The components that are added in order if they exist in the probe results.
 PRIORITY_COMPS = collections.OrderedDict([('ro_main_firmware', 5),
@@ -438,8 +444,7 @@ class DatabaseBuilder:
     This method is called with probed value from factory process instead of
     existing HWID DB content, so it has to perform the following checks:
 
-      1. Mark previously supported (ro_main_firmware, ro_ec_firmware,
-         ro_pd_firmware) components as deprecated.
+      1. Mark previously supported firmware components as deprecated.
       2. Generate component names by the info of probe values if not specified
          at the set_comp_name argument.
       3. Deprecate default component of the same component class.
@@ -451,15 +456,26 @@ class DatabaseBuilder:
         be determined automatically.
       supported: whether to mark the added component as supported.
     """
+
+    def _GetFPBoardFromVersion(version_string):
+      # The format of firmware version is ${BOARD}_${VERSION}
+      return version_string.split('_', 1)[0]
+
     # Set old firmware components to deprecated.
-    # TODO(wyuang): auto deprecate ro_fp_firmware. It is possible to have
-    # multiple supported FP firmware at the same time so the logic here doesn't
-    # work.
-    if comp_cls in ['ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware']:
+    if comp_cls in FIRMWARE_COMPS:
       for comp_name, comp_info in self._database.GetComponents(
           comp_cls).items():
-        if comp_info.status == common.COMPONENT_STATUS.unsupported:
+        if comp_info.status != common.COMPONENT_STATUS.supported:
           continue
+
+        # Only deprecate ro_fp_firmware with the same FP board.
+        if comp_cls == 'ro_fp_firmware':
+          fp_board = _GetFPBoardFromVersion(probed_value.get('version', ''))
+          added_fp_board = _GetFPBoardFromVersion(
+              comp_info.values.get('version', ''))
+          if fp_board != added_fp_board:
+            continue
+
         self._database.SetComponentStatus(comp_cls, comp_name,
                                           common.COMPONENT_STATUS.deprecated)
 

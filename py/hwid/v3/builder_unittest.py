@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -14,6 +14,7 @@ from cros.factory.hwid.v3 import probe
 from cros.factory.test.l10n import regions
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
+
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_DATABASE_PATH = os.path.join(_TEST_DATA_PATH, 'test_builder_db.yaml')
@@ -668,6 +669,41 @@ class DatabaseBuilderTest(unittest.TestCase):
         database.ComponentInfo({'value': '3'}, 'unqualified',
                                {'extra_info_1': 'extra_val_1'}),
         components.get('comp_3_3'))
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddCompoonentCheck_AutoDeprecate(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponentCheck('ro_fp_firmware',
+                                   {'version': 'fpboard_1111.1.1'},
+                                   'fp_firmware1', 'supported')
+      db_builder.AddComponentCheck('ro_fp_firmware',
+                                   {'version': 'fpboard_2222.2.2'},
+                                   'fp_firmware2', 'supported')
+
+    db = db_builder.Build()
+
+    components = db.GetComponents('ro_fp_firmware')
+    self.assertEqual('deprecated', components['fp_firmware1'].status)
+    self.assertEqual('supported', components['fp_firmware2'].status)
+
+  @label_utils.Informational
+  def testAddCompoonentCheck_OnlyDeprecateSameFPBoard(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponentCheck('ro_fp_firmware',
+                                   {'version': 'fpboard1_1111.1.1'},
+                                   'fp_firmware1', 'supported')
+      db_builder.AddComponentCheck('ro_fp_firmware',
+                                   {'version': 'fpboard2_2222.2.2'},
+                                   'fp_firmware2', 'supported')
+
+    db = db_builder.Build()
+
+    components = db.GetComponents('ro_fp_firmware')
+    self.assertEqual('supported', components['fp_firmware1'].status)
+    self.assertEqual('supported', components['fp_firmware2'].status)
 
   # TODO (b/204729913)
   @label_utils.Informational

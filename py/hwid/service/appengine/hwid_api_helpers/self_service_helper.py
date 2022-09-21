@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -713,9 +713,8 @@ class SelfServiceHelper:
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
-    firmware_comps = action.GetComponents(with_classes=[
-        'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware', 'firmware_keys'
-    ])
+    firmware_comps = action.GetComponents(
+        with_classes=v3_builder.FIRMWARE_COMPS)
 
     def _GetBundleUUIDsByVersionString(ro_main_firmware_comps):
       # TODO(wyuang): currently it is possible to create multiple UUIDs for
