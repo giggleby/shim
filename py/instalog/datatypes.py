@@ -142,6 +142,8 @@ class Event(json_utils.Serializable):
 
   def __eq__(self, other):
     """Implements == operator."""
+    if not isinstance(other, Event):
+      return False
     if not self.payload == other.payload:
       return False
     if not len(self.attachments) == len(other.attachments):

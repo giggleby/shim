@@ -23,7 +23,8 @@ from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
 from cros.factory.instalog.utils import time_utils
 
-_DEFAULT_INTERVAL = 60
+
+_DEFAULT_INTERVAL = 600
 
 
 class InputGCSScan(plugin_base.InputPlugin):
@@ -52,6 +53,7 @@ class InputGCSScan(plugin_base.InputPlugin):
     self.start_time = None
     self.end_time = None
     self.record_path = None
+    self.waiting_blob = None
     super().__init__(*args, **kwargs)
 
   def SetUp(self):
@@ -63,6 +65,7 @@ class InputGCSScan(plugin_base.InputPlugin):
     self.end_time = time_utils.DatetimeToUnixtime(
         datetime.datetime.strptime(self.args.end_time, json_utils.FORMAT_DATE))
     self.record_path = os.path.join(self.GetDataDir(), 'processed_blob')
+    self.waiting_blob = {}
     if not os.path.isfile(self.record_path):
       file_utils.TouchFile(self.record_path)
 
@@ -93,9 +96,12 @@ class InputGCSScan(plugin_base.InputPlugin):
           blob_dict[blob_event['objectId']] = blob_event
 
       self.RemoveProcessedBlob(blob_dict)
+      self.RemoveUnstableBlob(blob_dict)
 
+      if blob_dict or self.waiting_blob:
+        self.info('Found %d (+ %d unstable) new ReportArchives', len(blob_dict),
+                  len(self.waiting_blob))
       if blob_dict:
-        self.info('Found %d new ReportArchives', len(blob_dict))
         events = list(blob_dict.values())
         if self.Emit(events):
           with file_utils.AtomicWrite(self.record_path) as f:
@@ -137,8 +143,22 @@ class InputGCSScan(plugin_base.InputPlugin):
       for line in f:
         blob_event = datatypes.Event.Deserialize(line)
         processed_object_id = blob_event['objectId']
-        if processed_object_id in blob_dict:
+        if blob_event == blob_dict.get(processed_object_id, None):
           blob_dict.pop(processed_object_id)
+
+  def RemoveUnstableBlob(self, blob_dict):
+    """Removes unstable blobs from blob_dict.
+
+    When a file is uploading to GCS, it may appears on GCS even it is
+    incomplete. To avoid receiving corrupted files, we record new files to
+    waiting_blob. We download them after an interval if the blob doesn't change.
+    """
+    for object_id, blob_event in list(blob_dict.items()):
+      if blob_event == self.waiting_blob.get(object_id, None):
+        self.waiting_blob.pop(object_id)
+      else:
+        self.waiting_blob[object_id] = blob_event
+        blob_dict.pop(object_id)
 
 
 if __name__ == '__main__':
