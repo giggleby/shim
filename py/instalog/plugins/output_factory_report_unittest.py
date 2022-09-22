@@ -359,7 +359,7 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
         'message': []
     })
     # pylint: enable=protected-access
-    self.assertEqual(6, report_num)
+    self.assertEqual(None, report_num)
 
   @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
   def testNoReport(self, tar_cmd_mock):

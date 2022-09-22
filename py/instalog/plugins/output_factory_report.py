@@ -290,6 +290,15 @@ class ReportParser(log_utils.LoggerMixin):
             target=self.DecompressZipArchive, args=(args_queue, ))
         report_num_by_external_tool = self._GetReportNumInZip(
             self._archive_path)
+      # If a ZIP file is corrupted, 7zip may decompress part reports from it.
+      elif self._archive_path.endswith('zip'):
+        self.warning('Using 7zip to decompress the archive %s', self._gcs_path)
+        SetProcessEventStatus(ERROR_CODE.ArchiveCorrupted,
+                              archive_process_event)
+        decompress_process = multiprocessing.Process(
+            target=self.Decompress7zArchive, args=(args_queue, ))
+        # The number of reports may be incorrect if the archive is corrupted.
+        # Furthermore, we don't need to count the report number again by 7zip.
       elif tarfile.is_tarfile(self._archive_path):
         decompress_process = multiprocessing.Process(
             target=self.DecompressTarArchive, args=(args_queue, ))
@@ -371,6 +380,46 @@ class ReportParser(log_utils.LoggerMixin):
           with open(report_path, 'wb') as dst_f:
             with archive_obj.open(member_name, 'r') as report_obj:
               shutil.copyfileobj(report_obj, dst_f)
+          args_queue.put((member_name, report_path))
+    except Exception as e:
+      self.exception('Exception encountered when decompressing archive file')
+      args_queue.put(e)
+    else:
+      args_queue.put(None)
+
+  def Decompress7zArchive(self, args_queue):
+    """Decompresses the 7z format archive.
+
+    Args:
+      args_queue: Process shared queue to send messages.  A message can be
+                  arguments for ProcessReport(), exception or None.
+    """
+    try:
+      member_list_process = process_utils.Spawn(
+          ['7z', 'l', self._archive_path, '-slt'], read_stdout=True)
+      member_list_output = member_list_process.stdout_data
+      member_list = re.findall('Path = (.*)', member_list_output, re.M)
+      basename_to_filepath = {}
+      for member_name in member_list:
+        member_basename = os.path.basename(member_name)
+        basename_to_filepath[member_basename] = member_name
+
+      with file_utils.TempDirectory(dir=self._tmp_dir) as decompress_tmp_path:
+        process = process_utils.Spawn([
+            '7z', 'e', self._archive_path, '-o' + decompress_tmp_path, '*.xz',
+            '-r', '-y'
+        ], read_stdout=True, read_stderr=True)
+        if process.returncode != 0:
+          self.warning('7z return %d. Error message: %s', process.returncode,
+                       process.stderr_data)
+        for member_basename in os.listdir(decompress_tmp_path):
+          member_name = basename_to_filepath[member_basename]
+          src_path = os.path.join(decompress_tmp_path, member_basename)
+          if not self.IsValidReportName(src_path):
+            continue
+
+          report_path = file_utils.CreateTemporaryFile(dir=self._tmp_dir)
+          shutil.move(src_path, report_path)
           args_queue.put((member_name, report_path))
     except Exception as e:
       self.exception('Exception encountered when decompressing archive file')
@@ -835,7 +884,9 @@ class ReportParser(log_utils.LoggerMixin):
       # process the factory reports in it.
       SetProcessEventStatus(ERROR_CODE.ArchiveCorrupted, archive_process_event,
                             stderr)
-    elif result.returncode != 0:
+      # The number may always be incorrect, so we should just return None.
+      return None
+    if result.returncode != 0:
       self.error(
           'Failed to get number of reports in %s due to tar exit status %d',
           tar_path, result.returncode)
@@ -850,7 +901,6 @@ ERROR_CODE = type_utils.Obj(
     ArchiveInvalidFormat=200,
     ArchiveReportNumNotMatch=201,
     ArchiveReportNotFound=202,
-    # TODO(chuntsen): Add ArchiveCorrupted error to corrupted zip file.
     ArchiveCorrupted=203,
     ArchiveUnknownError=299,
     ReportInvalidFormat=300,
