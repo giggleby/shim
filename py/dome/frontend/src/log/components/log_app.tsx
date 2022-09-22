@@ -41,7 +41,7 @@ class LogApp extends React.Component<LogAppProps> {
 
     return (
       <>
-        <LogForm onSubmit={startExportLog} />
+        <LogForm projectName={projectName} onSubmit={startExportLog} />
         {pileKeys.map((key) => {
             return (
               <LogPile

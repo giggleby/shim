@@ -18,12 +18,28 @@ import {
 export const localState = (state: RootState): LogState =>
   displayedState(state)[NAME];
 
-export const getDefaultDownloadDate =
-  (state: RootState): string => {
-  const defaultDate = localState(state).defaultDownloadDate;
-  return defaultDate === '' ?
-    new Date().toISOString().slice(0, 10) : defaultDate;
+const getYesterday = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return date;
 };
+
+export const getDefaultDownloadStartDate =
+  (state: RootState, projectName: string): string => {
+    const defaultDate = localState(state).defaultDownloadDate[projectName];
+    const date = new Date(defaultDate);
+    date.setDate(date.getDate() + 1);
+
+    if (defaultDate !== '' && date.getTime() <= getYesterday().getTime()) {
+      return date.toISOString().slice(0, 10);
+    } else {
+      return getYesterday().toISOString().slice(0, 10);
+    }
+  };
+
+export const getDefaultDownloadEndDate = () => {
+    return getYesterday().toISOString().slice(0, 10);
+  };
 
 export const getExpansionMap =
   (state: RootState): ExpansionMap => localState(state).expanded;

@@ -8,17 +8,32 @@ import {ActionType, getType} from 'typesafe-actions';
 
 import {basicActions as actions} from './actions';
 import {
+  DefaultDownloadDateObject,
   ExpansionMap,
   PileMap,
 } from './types';
 
 export interface LogState {
-  defaultDownloadDate: string;
+  defaultDownloadDate: DefaultDownloadDateObject;
   expanded: ExpansionMap;
   piles: PileMap;
 }
 
 type LogAction = ActionType<typeof actions>;
+
+const defaultDownloadDateReducer = produce(
+  (draft: DefaultDownloadDateObject, action: LogAction) => {
+    switch (action.type) {
+      case getType(actions.setDefaultDownloadDate): {
+        const {projectName, date} = action.payload;
+        draft[projectName] = date;
+        return;
+      }
+
+      default:
+        return;
+    }
+  }, {});
 
 const expandReducer = produce(
   (draft: ExpansionMap, action: LogAction) => {
@@ -137,17 +152,7 @@ const pileReducer = produce(
   }, {});
 
 export default combineReducers<LogState, LogAction>({
-  defaultDownloadDate: (state = '', action) => {
-    switch (action.type) {
-      case getType(actions.setDefaultDownloadDate): {
-        const {defaultDownloadDate} = action.payload;
-        return defaultDownloadDate;
-      }
-
-      default:
-        return state;
-    }
-  },
+  defaultDownloadDate: defaultDownloadDateReducer,
   expanded: expandReducer,
   piles: pileReducer,
 });

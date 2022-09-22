@@ -36,7 +36,8 @@ export const removeDownloadFiles =
 
 const setDefaultDownloadDate =
   createAction('SET_DEFAULT_DOWNLOAD_DATE', (resolve) =>
-    (defaultDownloadDate: string) => resolve({defaultDownloadDate}));
+    (projectName: string, date: string) =>
+      resolve({projectName, date}));
 
 const addLogPile =
   createAction('ADD_DOWNLOAD_PILE', (resolve) =>
@@ -130,7 +131,7 @@ export const exportLog = (projectName: string,
         dispatch(setReportMessages(pileKey, messages));
         dispatch(setTempDir(pileKey, tmpDir));
         dispatch(downloadLogs(projectName, tmpDir, logPaths, pileKey));
-        dispatch(setDefaultDownloadDate(endDate));
+        dispatch(setDefaultDownloadDate(projectName, endDate));
         break;
       case 'cleanup':
         dispatch(addLogPile(pileKey, title, projectName, actionType));

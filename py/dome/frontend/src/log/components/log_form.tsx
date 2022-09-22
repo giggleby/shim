@@ -33,7 +33,10 @@ import {
 import {RootState} from '@app/types';
 import ReduxFormTextField from '@common/components/redux_form_text_field';
 
-import {getDefaultDownloadDate} from '../selectors';
+import {
+  getDefaultDownloadEndDate,
+  getDefaultDownloadStartDate,
+} from '../selectors';
 import {LogFormData} from '../types';
 
 import ReduxFormDateField from './redux_form_date_field';
@@ -48,7 +51,7 @@ const logTypes = [
 ];
 
 interface LogFormOwnProps {
-  logType: string;
+  projectName: string;
 }
 
 const styles = (theme: Theme) => createStyles({
@@ -262,14 +265,14 @@ class LogForm extends React.Component<
 
 const selector = formValueSelector('logForm');
 
-const mapStateToProps = (state: RootState) => ({
+const mapStateToProps = (state: RootState, props: LogFormOwnProps) => ({
   logType: selector(state, 'logType'),
   initialValues: {
     logType: 'log',
     archiveSize: 200,
     archiveUnit: 'MB',
-    startDate: getDefaultDownloadDate(state),
-    endDate: getDefaultDownloadDate(state),
+    startDate: getDefaultDownloadStartDate(state, props.projectName),
+    endDate: getDefaultDownloadEndDate(),
     actionType: '',
   },
 });

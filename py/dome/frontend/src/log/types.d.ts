@@ -35,6 +35,10 @@ export interface Pile {
   actionType: string;
 }
 
+export interface DefaultDownloadDateObject {
+  [projectName: string]: string;
+}
+
 export interface ExpansionMap {
   [key: string]: boolean;
 }
