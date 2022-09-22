@@ -294,7 +294,7 @@ class ReportParser(log_utils.LoggerMixin):
         decompress_process = multiprocessing.Process(
             target=self.DecompressTarArchive, args=(args_queue, ))
         report_num_by_external_tool = self._GetReportNumInTar(
-            self._archive_path)
+            self._archive_path, archive_process_event)
       else:
         # We only support tar file and zip file.
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
@@ -811,34 +811,37 @@ class ReportParser(log_utils.LoggerMixin):
       # stderr logs the string `zipfile is empty`.
       if result.returncode == 1 and 'zipfile is empty' in stderr:
         return 0
-      self.exception(
-          'Failed get number of reports in %s due to unzip exit status %d',
+      self.error(
+          'Failed to get number of reports in %s due to unzip exit status %d',
           zip_path, result.returncode)
       return None
-    try:
-      lines = stdout.split('\n')
-      return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
-    except Exception:
-      self.exception(
-          'Failed to count number of reports from output of unzip in %s',
-          zip_path)
-      return None
+    lines = stdout.split('\n')
+    return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
 
-  def _GetReportNumInTar(self, tar_path):
+  def _GetReportNumInTar(self, tar_path, archive_process_event):
     """Returns the number of factory report in the archive via `tar tvf`.
 
     Args:
       tar_path: the string path of the tar archive.
+      archive_process_event: An archive process event with process information.
     Returns:
       A non-negative number, or None if encounter exception.
     """
-    try:
-      output = process_utils.CheckOutput(['tar', 'tvf', tar_path])
-      lines = output.split('\n')
-      return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
-    except Exception:
-      self.exception('Cannot get number of reports in %s', tar_path)
+    result = process_utils.Spawn(['tar', 'tvf', tar_path], read_stdout=True,
+                                 read_stderr=True)
+    stdout, stderr = result.communicate()
+    if result.returncode == 2 and 'Unexpected EOF in archive' in stderr:
+      # If the tar file is corrupted or incomplete, the plugin should also
+      # process the factory reports in it.
+      SetProcessEventStatus(ERROR_CODE.ArchiveCorrupted, archive_process_event,
+                            stderr)
+    elif result.returncode != 0:
+      self.error(
+          'Failed to get number of reports in %s due to tar exit status %d',
+          tar_path, result.returncode)
       return None
+    lines = stdout.split('\n')
+    return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
 
 
 ERROR_CODE = type_utils.Obj(
@@ -847,6 +850,8 @@ ERROR_CODE = type_utils.Obj(
     ArchiveInvalidFormat=200,
     ArchiveReportNumNotMatch=201,
     ArchiveReportNotFound=202,
+    # TODO(chuntsen): Add ArchiveCorrupted error to corrupted zip file.
+    ArchiveCorrupted=203,
     ArchiveUnknownError=299,
     ReportInvalidFormat=300,
     ReportUnknownError=399,
@@ -1001,9 +1006,17 @@ class ZipWith7ZArchive(Archive):
 class TarArchive(Archive):
 
   def GetNonDirFileNames(self):
-    return [
-        member.name for member in self._file.getmembers() if not member.isdir()
-    ]
+    member_list = []
+    try:
+      for member in self._file:
+        if not member.isdir():
+          member_list.append(member.name)
+    except EOFError:
+      # If the tar file is corrupted or incomplete, the plugin should ignore
+      # the EOFError and process the factory reports in it. See
+      # http://b/255895782 for details.
+      pass
+    return member_list
 
   def Extract(self, member_name, dst_path):
     with self._file.extractfile(member_name) as member, \

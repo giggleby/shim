@@ -306,9 +306,9 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
 class TarCmdCheckReportNumUnittest(unittest.TestCase):
   """Test parsing output from `tar tvf {project}_factorylog_{date}.tar`."""
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
   def testSimpleTarReport(self, tar_cmd_mock):
-    tar_cmd_mock.return_value = textwrap.dedent('''\
+    stdout = textwrap.dedent('''\
       drwxr-xr-x lschyi/primarygroup 0 2022-05-19 14:54 test/
       drwxr-xr-x lschyi/primarygroup 0 2022-05-19 14:54 test/20211201/
       -rw-r--r-- lschyi/primarygroup 274248 2022-05-19 14:54 test/20211201/GRT-AAAAAAAAAA-20211201T141228Z.rpt.xz
@@ -318,22 +318,73 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
       -rw-r--r-- lschyi/primarygroup 252796 2022-05-19 14:54 test/20211201/GRT-EEEEEEEEEE-20211201T065154Z.rpt.xz
       -rw-r--r-- lschyi/primarygroup 210252 2022-05-19 14:54 test/20211201/GRT-FFFFFFFFFF-20211201T064612Z.rpt.xz
     ''')
+    tar_cmd_mock.return_value.returncode = 0
+    tar_cmd_mock.return_value.communicate.return_value = (stdout, '')
+
     parser = output_factory_report.ReportParser('', '', '', 0, '')
-    report_num = parser._GetReportNumInTar('')  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    report_num = parser._GetReportNumInTar('', {
+        'status': [],
+        'message': []
+    })
+    # pylint: enable=protected-access
     self.assertEqual(6, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
-  def testNoReport(self, tar_cmd_mock):
-    tar_cmd_mock.return_value = ''
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  def testCorruptedTarReport(self, tar_cmd_mock):
+    stdout = textwrap.dedent('''\
+      drwxr-xr-x lschyi/primarygroup 0 2022-05-19 14:54 test/
+      drwxr-xr-x lschyi/primarygroup 0 2022-05-19 14:54 test/20211201/
+      -rw-r--r-- lschyi/primarygroup 274248 2022-05-19 14:54 test/20211201/GRT-AAAAAAAAAA-20211201T141228Z.rpt.xz
+      -rw-r--r-- lschyi/primarygroup 242416 2022-05-19 14:54 test/20211201/GRT-BBBBBBBBBB-20211201T152936Z.rpt.xz
+      -rw-r--r-- lschyi/primarygroup 278824 2022-05-19 14:54 test/20211201/GRT-CCCCCCCCCC-20211201T082433Z.rpt.xz
+      -rw-r--r-- lschyi/primarygroup 246512 2022-05-19 14:54 test/20211201/GRT-DDDDDDDDDD-20211201T082412Z.rpt.xz
+      -rw-r--r-- lschyi/primarygroup 252796 2022-05-19 14:54 test/20211201/GRT-EEEEEEEEEE-20211201T065154Z.rpt.xz
+      -rw-r--r-- lschyi/primarygroup 210252 2022-05-19 14:54 test/20211201/GRT-FFFFFFFFFF-20211201T064612Z.rpt.xz
+    ''')
+
+    stderr = textwrap.dedent('''\
+
+      gzip: stdin: unexpected end of file
+      tar: Unexpected EOF in archive
+      tar: Error is not recoverable: exiting now
+    ''')
+    tar_cmd_mock.return_value.returncode = 2
+    tar_cmd_mock.return_value.communicate.return_value = (stdout, stderr)
+
     parser = output_factory_report.ReportParser('', '', '', 0, '')
-    report_num = parser._GetReportNumInTar('')  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    report_num = parser._GetReportNumInTar('', {
+        'status': [],
+        'message': []
+    })
+    # pylint: enable=protected-access
+    self.assertEqual(6, report_num)
+
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  def testNoReport(self, tar_cmd_mock):
+    tar_cmd_mock.return_value.returncode = 0
+    tar_cmd_mock.return_value.communicate.return_value = ('', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
+    # pylint: disable=protected-access
+    report_num = parser._GetReportNumInTar('', {
+        'status': [],
+        'message': []
+    })
+    # pylint: enable=protected-access
     self.assertEqual(0, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
   def testEncounterException(self, tar_cmd_mock):
-    tar_cmd_mock.side_effect = Exception
+    tar_cmd_mock.return_value.returncode = 2
+    tar_cmd_mock.return_value.communicate.return_value = ('', '')
     parser = output_factory_report.ReportParser('', '', '', 0, '')
-    report_num = parser._GetReportNumInTar('random_path')  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    report_num = parser._GetReportNumInTar('random_path', {
+        'status': [],
+        'message': []
+    })
+    # pylint: enable=protected-access
     self.assertEqual(None, report_num)
 
 
