@@ -280,7 +280,7 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
     unzip_cmd_mock.return_value.returncode = 0
     unzip_cmd_mock.return_value.communicate.return_value = (stdout, '')
 
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     report_num = parser._GetReportNumInZip('')  # pylint: disable=protected-access
     self.assertEqual(6, report_num)
 
@@ -290,7 +290,7 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
     stderr = 'warning [empty.zip]:  zipfile is empty\n'
     unzip_cmd_mock.return_value.returncode = 1
     unzip_cmd_mock.return_value.communicate.return_value = (stdout, stderr)
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     report_num = parser._GetReportNumInZip('')  # pylint: disable=protected-access
     self.assertEqual(0, report_num)
 
@@ -298,7 +298,7 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
   def testEncounterException(self, unzip_cmd_mock):
     unzip_cmd_mock.return_value.returncode = 9
     unzip_cmd_mock.return_value.communicate.return_value = ('', '')
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     report_num = parser._GetReportNumInZip('random_path')  # pylint: disable=protected-access
     self.assertEqual(None, report_num)
 
@@ -318,21 +318,21 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
       -rw-r--r-- lschyi/primarygroup 252796 2022-05-19 14:54 test/20211201/GRT-EEEEEEEEEE-20211201T065154Z.rpt.xz
       -rw-r--r-- lschyi/primarygroup 210252 2022-05-19 14:54 test/20211201/GRT-FFFFFFFFFF-20211201T064612Z.rpt.xz
     ''')
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     report_num = parser._GetReportNumInTar('')  # pylint: disable=protected-access
     self.assertEqual(6, report_num)
 
   @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
   def testNoReport(self, tar_cmd_mock):
     tar_cmd_mock.return_value = ''
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     report_num = parser._GetReportNumInTar('')  # pylint: disable=protected-access
     self.assertEqual(0, report_num)
 
   @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
   def testEncounterException(self, tar_cmd_mock):
     tar_cmd_mock.side_effect = Exception
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     report_num = parser._GetReportNumInTar('random_path')  # pylint: disable=protected-access
     self.assertEqual(None, report_num)
 
@@ -390,7 +390,7 @@ class ExtractHWIDFromFactoryLogUnittest(unittest.TestCase):
 
   def testOneMatchHWID(self):
     expected_hwid = 'GENERIC-XXXX XXX-XXX-XXX-XXX-XXX'
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     hwid_log = self._CreateHWIDLogLine(expected_hwid)
     with self._CreateFactoryLogFile(None, hwid_log) as path:
       extracted_hwid = parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
@@ -402,27 +402,27 @@ class ExtractHWIDFromFactoryLogUnittest(unittest.TestCase):
     hwid_log = self._CreateHWIDLogLine(mid_hwid) + self._CreateHWIDLogLine(
         expected_hwid)
 
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     with self._CreateFactoryLogFile(None, hwid_log) as path:
       extracted_hwid = parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
     self.assertEqual(expected_hwid, extracted_hwid)
 
   def testNoHWIDMatch(self):
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     with self.assertRaises(output_factory_report.HWIDNotFoundInFactoryLogError
                           ), self._CreateFactoryLogFile(None, None) as path:
       parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
 
   def testNonUTF8EncodingCharacterInLog(self):
     expected_hwid = 'GENERIC-XXXX XXX-XXX-XXX-XXX-XXX'
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     hwid_log = self._CreateHWIDLogLine(expected_hwid) + b'\xae'
     with self._CreateFactoryLogFile(b'\xae', hwid_log) as path:
       extracted_hwid = parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
     self.assertEqual(expected_hwid, extracted_hwid)
 
   def testCorruptedHWIDField(self):
-    parser = output_factory_report.ReportParser('', '', '', '')
+    parser = output_factory_report.ReportParser('', '', '', 0, '')
     hwid_log = self.HWID_LOG_TEMPLATE + 'GENERIC-XXXX'.encode('utf-8') + b'\xae'
     with self.assertRaises(output_factory_report.HWIDNotFoundInFactoryLogError
                           ), self._CreateFactoryLogFile(None, hwid_log) as path:

@@ -178,7 +178,7 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       report_parsers = []
       try:
         report_parsers = self._CreateReportParsers(gcs_path, archive_path,
-                                                   self._tmp_dir)
+                                                   self._tmp_dir, event['time'])
       except NotImplementedError:
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
                               archive_process_event)
@@ -205,14 +205,15 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       event_stream.Abort()
     return True
 
-  def _CreateReportParsers(self, gcs_path, archive_path, tmp_dir):
+  def _CreateReportParsers(self, gcs_path, archive_path, tmp_dir, upload_time):
     with GetArchive(archive_path) as archive:
       archives_in_archive = []
       for name in archive.GetNonDirFileNames():
         # Valid report name found, assume this archive is an one-level archive.
         if ReportParser.IsValidReportName(name):
           return [
-              ReportParser(gcs_path, archive_path, tmp_dir, '', self.logger)
+              ReportParser(gcs_path, archive_path, tmp_dir, upload_time, '',
+                           self.logger)
           ]
         archives_in_archive.append(name)
 
@@ -237,7 +238,8 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
         # output event.
         archive_prefix = '(archive) ' + name
         report_parsers.append(
-            ReportParser(gcs_path, dst, tmp_dir, archive_prefix, self.logger))
+            ReportParser(gcs_path, dst, tmp_dir, upload_time, archive_prefix,
+                         self.logger))
       # Remove the two-level archive as every one-level archive is handled by
       # each report parser.
       os.remove(archive_path)
@@ -251,21 +253,23 @@ class HWIDNotFoundInFactoryLogError(Exception):
 class ReportParser(log_utils.LoggerMixin):
   """A parser to process report archives."""
 
-  def __init__(self, gcs_path, archive_path, tmp_dir, report_path_parent_dir,
-               logger=logging):
+  def __init__(self, gcs_path, archive_path, tmp_dir, upload_time,
+               report_path_parent_dir, logger=logging):
     """Sets up the parser.
 
     Args:
       gcs_path: Path to the archive on Google Cloud Storage.
       archive_path: Path to the archive on disk.
       tmp_dir: Temporary directory.
+      upload_time: Time to upload report/archive to GCS.
       report_path_parent_dir: String value of parent dir to add to every parsed
         report in report events.
       logger: Logger to use.
     """
+    self._gcs_path = gcs_path
     self._archive_path = archive_path
     self._tmp_dir = tmp_dir
-    self._gcs_path = gcs_path
+    self._upload_time = upload_time
     self._report_path_parent_dir = report_path_parent_dir
     self.logger = logger
 
@@ -442,6 +446,7 @@ class ReportParser(log_utils.LoggerMixin):
         'time': 0,  # The partitioned table on BigQuery need this field.
         'objectId': self._gcs_path,
         'reportFilePath': report_file_path,
+        'uploadTime': self._upload_time,
         'serialNumbers': {}
     })
     process_event = datatypes.Event({

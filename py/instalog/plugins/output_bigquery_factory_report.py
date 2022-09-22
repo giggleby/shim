@@ -50,6 +50,7 @@ class OutputBigQueryFactoryReport(output_bigquery.OutputBigQuery):
         SchemaField('modelName', 'string', 'NULLABLE', None, ()),
         SchemaField('time', 'timestamp', 'NULLABLE', None, ()),
         SchemaField('dutTime', 'timestamp', 'NULLABLE', None, ()),
+        SchemaField('uploadTime', 'timestamp', 'NULLABLE', None, ()),
         SchemaField('serialNumbers', 'record', 'REPEATED', None, (SchemaField(
             'key', 'string', 'NULLABLE', None,
             ()), SchemaField('value', 'string', 'NULLABLE', None, ()))),
@@ -92,8 +93,9 @@ class OutputBigQueryFactoryReport(output_bigquery.OutputBigQuery):
     row['modemStatus'] = json.dumps(event.get('modemStatus'))
     row['modelName'] = event.get('modelName')
     row['platformName'] = event.get('platformName')
-    row['dutTime'] = event.get('dutTime')
     row['time'] = event.get('time')
+    row['dutTime'] = event.get('dutTime')
+    row['uploadTime'] = event.get('uploadTime')
     row['serialNumbers'] = []
     for key, value in event.get('serialNumbers', {}).items():
       row['serialNumbers'].append({})
