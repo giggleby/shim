@@ -39,6 +39,14 @@ _DUMMY_CACHE = object()
 _LOGGED_NAME = 'TestListManager'
 
 
+class ConditionalPatchError(type_utils.TestListError):
+  """Exception of setting patches."""
+
+
+class PatchArgumentError(ConditionalPatchError):
+  """Exception of invalid arguments in patches."""
+
+
 def MayTranslate(obj, force=False):
   """Translate a string if it starts with 'i18n! ' or force=True.
 
@@ -644,48 +652,29 @@ class ITestList(object):
       return lambda s: s == pattern
 
     def _PreprocessPatterns(patterns):
-      """Converts the string patterns into matching functions
-      """
+      """Converts the string patterns into matching functions."""
 
       if isinstance(patterns, str):
         patterns = [patterns]
 
       return list(map(_CreateMatchFunction, patterns))
 
-    def _MarkSkipped(test):
-      """Marks the test as skipped.
-
-      The test (and its subtests) statuses will become SKIPPED if they were not
-      PASSED.  And test.run_if will become constant false.  So Goofy will always
-      skip it.
-      """
-      test.Skip(forever=True)
-
-    def _MarkWaived(test):
-      """Marks the test and its subtests as waived.
-
-      subtests should also be waived, so that subtests will become
-      FAILED_AND_WAIVED when failed.  And the status will be propagated to
-      parents (this test).
-      """
-      test.Waive()
-
     # Since SKIPPED status is saved in state_instance, self.state_instance must
     # be available at this moment.
     assert self.state_instance is not None
 
-    # TODO(jeffulin): Use constants as keys instead of literals
-    _FUNCTION_MAP = {
-        'waive': _MarkWaived,
-        'skip': _MarkSkipped
+    _PATCH_CLASS_MAP = {
+        WaivePatch.action_name: WaivePatch,
+        SkipPatch.action_name: SkipPatch
     }
 
+    patch_instances = []
     for patch in self.options.conditional_patches:
       conditions = patch.get('conditions', {})
       args = patch.get('args', {})
       action = patch.get('action', "")
 
-      if action not in _FUNCTION_MAP:
+      if action not in _PATCH_CLASS_MAP:
         continue
 
       phases = conditions.get('phases', [])
@@ -699,8 +688,12 @@ class ITestList(object):
         test_path = test_path.split(':')[-1]  # To remove test_list_id
         for pattern in patterns:
           if pattern(test_path):
-            _FUNCTION_MAP[action](test, **args)
+            patch_instances.append(_PATCH_CLASS_MAP[action](test, args))
             break
+
+    # After all the patches are ready, apply them sequentially
+    for inst in patch_instances:
+      inst.Apply()
 
   # TODO(jeffulin): skipped_test and waived_tests are deprecated. Use
   # conditional_patches instead.
@@ -1215,3 +1208,68 @@ class TestList(ITestList):
   def state_change_callback(self, state_change_callback):
     self._state_change_callback = state_change_callback
     self.ToFactoryTestList().state_change_callback = state_change_callback
+
+
+class BasePatch():
+  """Base class of patches with different actions."""
+
+  @type_utils.ClassProperty
+  @abc.abstractmethod
+  def action_name(self):
+    raise NotImplementedError
+
+  def __init__(self, test, args):
+    if not self._CheckArguments(args):
+      raise PatchArgumentError(
+          'Invalid arguments for %s: %r', self.action_name, args)
+
+    self.test = test
+    self.args = args
+
+  @abc.abstractmethod
+  def _CheckArguments(self, args):
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def Apply(self):
+    raise NotImplementedError
+
+
+class SkipPatch(BasePatch):
+  """Patch class to handle skipping tests."""
+
+  @type_utils.ClassProperty
+  def action_name(self):
+    return 'skip'
+
+  def Apply(self):
+    """Marks the test as skipped.
+
+    The test (and its subtests) statuses will become SKIPPED if they were not
+    PASSED.  And test.run_if will become constant false.  So Goofy will always
+    skip it.
+    """
+    self.test.Skip(forever=True)
+
+  def _CheckArguments(self, args):
+    return args == {}
+
+
+class WaivePatch(BasePatch):
+  """Patch class to handle waiving tests."""
+
+  @type_utils.ClassProperty
+  def action_name(self):
+    return 'waive'
+
+  def Apply(self):
+    """Marks the test and its subtests as waived.
+
+    subtests should also be waived, so that subtests will become
+    FAILED_AND_WAIVED when failed.  And the status will be propagated to
+    parents (this test).
+    """
+    self.test.Waive()
+
+  def _CheckArguments(self, args):
+    return args == {}

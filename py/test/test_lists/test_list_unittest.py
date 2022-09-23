@@ -49,6 +49,46 @@ class FactoryTestListTest(unittest.TestCase):
         'a.e.f',
         test_list_module.FactoryTestList.ResolveRequireRun('a.b.c.d', '...e.f'))
 
+  # TODO(jeffulin): This test should be removed when skipped_test and
+  # waived_tests are removed.
+  def testSetSkipWaiveTestsAndConditionalPatches(self):
+    _FAKE_TEST_LIST_CONFIG = {
+        'definitions': {
+            'A': {}
+        },
+        'options': {
+            'skipped_tests': {
+                'device.factory.end_FT': [],
+                'device.factory.end_RUNIN': [],
+                'EVT': [],
+                'DVT': []
+            },
+            'conditional_patches': [{
+                'action': 'skip',
+                'conditions': {
+                    'phases': ['EVT', 'DVT', 'PVT'],
+                    'patterns': ['*.AB']
+                }
+            }, {
+                'action': 'skip',
+                'conditions': {
+                    'patterns': ['*.AB'],
+                    'run_if': ['device.factory.end_FT']
+                }
+            }, {
+                'action': 'skip',
+                'conditions': {
+                    'phases': 'EVT',
+                    'patterns': '*.AA'
+                }
+            }]
+        },
+        'tests': ['A']
+    }
+    test_list = manager.BuildTestListForUnittest(
+        test_list_config=_FAKE_TEST_LIST_CONFIG)
+    self.assertRaises(type_utils.TestListError, test_list.ToFactoryTestList)
+
 
 class EvaluateRunIfTest(unittest.TestCase):
   def setUp(self):
