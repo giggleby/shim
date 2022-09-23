@@ -367,7 +367,8 @@ class SelfServiceHelper:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=analysis.new_hwid_db_contents_external,
           commit_msg=commit_msg, reviewers=request.reviewer_emails,
-          cc_list=request.cc_emails, auto_approved=request.auto_approved,
+          cc_list=request.cc_emails, bot_commit=request.auto_approved,
+          commit_queue=request.auto_approved,
           hwid_db_contents_internal=analysis.new_hwid_db_contents_internal)
     except hwid_repo.HWIDRepoError:
       logging.exception(
@@ -481,7 +482,8 @@ class SelfServiceHelper:
           cl_number = live_hwid_repo.CommitHWIDDB(
               name=model_name, hwid_db_contents=external_db,
               commit_msg=commit_msg, reviewers=request.reviewer_emails,
-              cc_list=request.cc_emails, auto_approved=request.auto_approved,
+              cc_list=request.cc_emails, bot_commit=request.auto_approved,
+              commit_queue=request.auto_approved,
               hwid_db_contents_internal=internal_db)
         except hwid_repo.HWIDRepoError:
           logging.exception(
@@ -763,7 +765,8 @@ class SelfServiceHelper:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=db_content, commit_msg=commit_msg,
           reviewers=request.reviewer_emails, cc_list=request.cc_emails,
-          auto_approved=request.auto_approved, update_metadata=new_metadata)
+          bot_commit=request.auto_approved, commit_queue=request.auto_approved,
+          update_metadata=new_metadata)
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')
@@ -859,7 +862,7 @@ class SelfServiceHelper:
       cl_number = live_hwid_repo.CommitHWIDDB(
           name=project, hwid_db_contents=external_db, commit_msg=commit_msg,
           reviewers=request.reviewer_emails, cc_list=request.cc_emails,
-          auto_approved=request.auto_approved,
+          bot_commit=request.auto_approved, commit_queue=request.auto_approved,
           hwid_db_contents_internal=internal_db)
     except hwid_repo.HWIDRepoError:
       logging.exception(
@@ -905,9 +908,10 @@ class SelfServiceHelper:
 
   def CreateSplittedHWIDDBCLs(self, request):
 
-    def _CommitSplittedCL(
-        db: database.Database, msg: str,
-        change_unit_identities: Sequence[str]) -> Tuple[int, str]:
+    def _CommitSplittedCL(db: database.Database, msg: str,
+                          change_unit_identities: Sequence[str],
+                          bot_commit: bool = False,
+                          commit_queue: bool = False) -> Tuple[int, str]:
       commit_msg_list = [msg]
 
       commit_msg_list.append('Reasons:\n')
@@ -934,7 +938,7 @@ class SelfServiceHelper:
         cl_number = live_hwid_repo.CommitHWIDDB(
             name=project, hwid_db_contents=new_hwid_db_contents_external,
             commit_msg=commit_msg, reviewers=list(reviewers), cc_list=list(ccs),
-            auto_approved=False,
+            bot_commit=bot_commit, commit_queue=commit_queue,
             hwid_db_contents_internal=new_hwid_db_contents_internal)
       except hwid_repo.HWIDRepoError:
         logging.exception(
@@ -971,7 +975,9 @@ class SelfServiceHelper:
       """) % request.description
       auto_mergeable_change_cl_number, final_hwid_db_content = (
           _CommitSplittedCL(split_result.auto_mergeable_db, commit_msg,
-                            split_result.auto_mergeable_change_unit_identities))
+                            split_result.auto_mergeable_change_unit_identities,
+                            bot_commit=True,
+                            commit_queue=split_result.review_required_noop))
       final_cl_number = auto_mergeable_change_cl_number
 
     if not split_result.review_required_noop:

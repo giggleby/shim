@@ -1357,7 +1357,8 @@ class SelfServiceHelperTest(unittest.TestCase):
         auto_approved_db_content, expected_review_required_diff)
 
     # Validate auto-approved HWID DB CL.
-    self.assertFalse(auto_approved_call['auto_approved'])
+    self.assertTrue(auto_approved_call['bot_commit'])
+    self.assertFalse(auto_approved_call['commit_queue'])
     self.assertCountEqual([
         'cc1@notgoogle.com',
         'cc2@notgoogle.com',
@@ -1376,7 +1377,8 @@ class SelfServiceHelperTest(unittest.TestCase):
             identity in create_cl_resp.auto_mergeable_change_unit_identities))
 
     # Validate review-required HWID DB CL.
-    self.assertFalse(review_required_call['auto_approved'])
+    self.assertFalse(review_required_call['bot_commit'])
+    self.assertFalse(review_required_call['commit_queue'])
     self.assertCountEqual([
         'cc1@notgoogle.com',
         'cc2@notgoogle.com',

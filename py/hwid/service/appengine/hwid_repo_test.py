@@ -159,8 +159,8 @@ class HWIDRepoTest(HWIDRepoBaseTest):
                                            expected_cl_number)
 
     actual_cl_number = self._hwid_repo.CommitHWIDDB(
-        'SBOARD', 'hwid_db_contents', 'unused_test_str', [], [], False, None,
-        'hwid_db_contents_internal')
+        'SBOARD', 'hwid_db_contents', 'unused_test_str', [], [], False, False,
+        None, 'hwid_db_contents_internal')
     self.assertEqual(actual_cl_number, expected_cl_number)
     kwargs = self._mocked_create_cl.call_args[1]
     self.assertEqual(
@@ -174,7 +174,7 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
     self._hwid_repo.CommitHWIDDB(
         'SBOARD', 'hwid_db_contents\nchecksum: 12345\n', 'unused_test_str', [],
-        [], False, None, 'hwid_db_contents_internal\nchecksum: 12345\n')
+        [], False, False, None, 'hwid_db_contents_internal\nchecksum: 12345\n')
     kwargs = self._mocked_create_cl.call_args[1]
     self.assertEqual([
         ('SBOARD', 0o100644, b'hwid_db_contents\nchecksum:\n'),

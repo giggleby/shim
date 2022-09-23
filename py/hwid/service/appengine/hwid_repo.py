@@ -127,7 +127,7 @@ class HWIDRepo:
 
   def CommitHWIDDB(self, name: str, hwid_db_contents: str, commit_msg: str,
                    reviewers: Sequence[str], cc_list: Sequence[str],
-                   auto_approved: bool,
+                   bot_commit: bool = False, commit_queue: bool = False,
                    update_metadata: Optional[HWIDDBMetadata] = None,
                    hwid_db_contents_internal: Optional[str] = None):
     """Commit an HWID DB to the repo.
@@ -139,7 +139,8 @@ class HWIDRepo:
       author: Author in form of "Name <email@domain>".
       reviewers: List of emails of reviewers.
       cc_list: List of emails of CC's.
-      auto_approved: A bool indicating if this CL should be auto-approved.
+      bot_commit: True if this is an auto-approved CL.
+      commit_queue: True if this CL is ready to be put into the commit queue.
       update_metadata: A HWIDDBMetadata object to update for the project.
       hwid_db_contents_internal: The contents of the HWID DB in internal format.
 
@@ -179,7 +180,8 @@ class HWIDRepo:
           git_url=self._repo_url, auth_cookie=git_util.GetGerritAuthCookie(),
           branch=self._repo_branch, new_files=new_files, author=author,
           committer=author, commit_msg=commit_msg, reviewers=reviewers,
-          cc=cc_list, auto_approved=auto_approved, repo=self._repo)
+          cc=cc_list, bot_commit=bot_commit, commit_queue=commit_queue,
+          repo=self._repo)
       if cl_number is None:
         logging.warning(
             'Failed to parse CL number from change_id=%s. Get CL number from '

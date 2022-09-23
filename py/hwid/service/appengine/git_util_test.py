@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Tests for cros.factory.hwid.service.appengine.git_util"""
@@ -545,7 +545,8 @@ class CreateCLTest(unittest.TestCase):
     repo.shallow_clone(url, branch=branch)
     new_files = [(file_name, 0o100644, b'')]
     git_util.CreateCL(url, auth_cookie, branch, new_files, author, committer,
-                      commit_msg, reviewers, ccs, True)
+                      commit_msg, reviewers, ccs, bot_commit=True,
+                      commit_queue=True)
     mock_porcelain.push.assert_called_once_with(
         mock.ANY, url,
         (f'HEAD:refs/for/refs/heads/{branch}%'

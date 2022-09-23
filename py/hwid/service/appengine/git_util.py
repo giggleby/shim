@@ -1,4 +1,4 @@
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -35,6 +35,7 @@ from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import json_utils
 from cros.factory.utils import schema
 
+
 # Constants.
 HEAD = b'HEAD'
 DEFAULT_REMOTE_NAME = b'origin'
@@ -60,6 +61,7 @@ class ApprovalCase(enum.Enum):
   APPROVED = enum.auto()
   REJECTED = enum.auto()
   NEED_MANUAL_REVIEW = enum.auto()
+  COMMIT_QUEUE = enum.auto()
 
   def ConvertToVotes(self) -> Sequence[ReviewVote]:
     return _REVIEW_VOTES_OF_CASE[self]
@@ -81,6 +83,7 @@ _REVIEW_VOTES_OF_CASE = {
         ReviewVote(_CODE_REVIEW, 0),
         ReviewVote(_COMMIT_QUEUE, 0),
     ],
+    ApprovalCase.COMMIT_QUEUE: [ReviewVote(_COMMIT_QUEUE, 2)],
 }
 
 
@@ -440,8 +443,8 @@ def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
 
 
 def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
-             commit_msg, reviewers=None, cc=None, auto_approved=False,
-             repo=None):
+             commit_msg, reviewers=None, cc=None, bot_commit=False,
+             commit_queue=False, repo=None):
   """Creates a CL from adding files in specified location.
 
   Args:
@@ -454,7 +457,8 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     commit_msg: Commit message
     reviewers: List of emails of reviewers
     cc: List of emails of cc's
-    auto_approved: A bool indicating if this CL should be auto-approved.
+    bot_commit: True if this is an auto-approved CL.
+    commit_queue: True if this CL is ready to be put into the commit queue.
     repo: The `MemoryRepo` instance to create the commit.  If not specified,
         this function clones the repository from `git_url:branch`.
   Returns:
@@ -482,8 +486,10 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     options += ['r=' + email for email in reviewers]
   if cc:
     options += ['cc=' + email for email in cc]
-  if auto_approved:
-    options += [f'l={_BOT_COMMIT}+1', f'l={_COMMIT_QUEUE}+2']
+  if bot_commit:
+    options.append(f'l={_BOT_COMMIT}+1')
+  if commit_queue:
+    options.append(f'l={_COMMIT_QUEUE}+2')
   target_branch = 'refs/for/refs/heads/' + branch
   if options:
     target_branch += '%' + ','.join(options)
