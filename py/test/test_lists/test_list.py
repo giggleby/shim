@@ -38,6 +38,18 @@ _DUMMY_CACHE = object()
 _LOGGED_NAME = 'TestListManager'
 
 
+class CircularError(type_utils.TestListError):
+  """Exception of circular dependency in test list."""
+
+
+class ConditionalPatchError(type_utils.TestListError):
+  """Exception of setting patches."""
+
+
+class PatchArgumentError(ConditionalPatchError):
+  """Exception of invalid arguments in patches."""
+
+
 def MayTranslate(obj, force=False):
   """Translate a string if it starts with 'i18n! ' or force=True.
 
@@ -1216,3 +1228,67 @@ class TestList(ITestList):
   def state_change_callback(self, state_change_callback):
     self._state_change_callback = state_change_callback
     self.ToFactoryTestList().state_change_callback = state_change_callback
+
+
+class BasePatch(metaclass=abc.ABCMeta):
+  """Base class of patches with different actions."""
+
+  @type_utils.ClassProperty
+  @abc.abstractmethod
+  def action_name(self):
+    raise NotImplementedError
+
+  def __init__(self, test, args):
+    if not self._CheckArguments(args):
+      raise PatchArgumentError(
+          f'Invalid arguments for {self.action_name}: {args:!r}')
+    self.test = test
+    self.args = args
+
+  @abc.abstractmethod
+  def _CheckArguments(self, args):
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def Apply(self):
+    raise NotImplementedError
+
+
+class SkipPatch(BasePatch):
+  """Patch class to handle skipping tests."""
+
+  @type_utils.ClassProperty
+  def action_name(self):
+    return 'skip'
+
+  def Apply(self):
+    """Marks the test as skipped.
+
+    The test (and its subtests) statuses will become SKIPPED if they were not
+    PASSED.  And test.run_if will become constant false.  So Goofy will always
+    skip it.
+    """
+    self.test.Skip(forever=True)
+
+  def _CheckArguments(self, args):
+    return args == {}
+
+
+class WaivePatch(BasePatch):
+  """Patch class to handle waiving tests."""
+
+  @type_utils.ClassProperty
+  def action_name(self):
+    return 'waive'
+
+  def Apply(self):
+    """Marks the test and its subtests as waived.
+
+    subtests should also be waived, so that subtests will become
+    FAILED_AND_WAIVED when failed.  And the status will be propagated to
+    parents (this test).
+    """
+    self.test.Waive()
+
+  def _CheckArguments(self, args):
+    return args == {}
