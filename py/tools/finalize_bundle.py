@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -541,8 +541,7 @@ class FinalizeBundle:
                        self.test_image_path is None)
     need_release_image = (self.release_image_source != LOCAL and
                           self.release_image_path is None)
-    # TODO: skip download if this is equal to self.release_image_source.
-    need_firmware = self.firmware_source.startswith('release_image/')
+    need_firmware = self.firmware_source.startswith('release_image')
 
     # TODO(crbug.com/707155): see #c1. We have to always download the factory
     #                         toolkit unless the "toolkit" source in config
@@ -614,7 +613,9 @@ class FinalizeBundle:
           not_done_jobs.add(get_install_shim)
 
         if need_firmware:
-          firmware_source_version = self.firmware_source.split('/')[1]
+          parts = self.firmware_source.split('/', 1)
+          firmware_source_version = (
+              parts[1] if len(parts) == 2 else self.release_image_source)
           if firmware_source_version != self.release_image_source:
             download_firmware_image = executor.submit(
                 self._DownloadReleaseImage, firmware_source_version,
@@ -752,20 +753,24 @@ class FinalizeBundle:
     }
 
   def AddFirmwareUpdaterAndImages(self):
-    """Add firmware updater into bundle directory, and extract firmware images
-    into firmware_images/."""
+    """Add firmware updater and extract firmware images.
 
-    firmware_src = self.manifest.get('firmware', 'release_image')
+    The destination of firmware updater is firmware/. The destination of
+    firmware images is firmware_images/.
+
+    Raises:
+      FinalizeBundleException: Multiple firmware files exist or the format of
+      firmware_source is wrong.
+      KeyError: Some model(s) is not in the chromeos-firmwareupdate.
+    """
+
     firmware_dir = os.path.join(self.bundle_dir, FIRMWARE_SEARCH_DIR)
     file_utils.TryMakeDirs(firmware_dir)
     # TODO(wyuang): retrieve firmware channel from image path
-    if firmware_src.startswith('release_image'):
-      with MountPartition(self.release_image_path, 3) as f:
-        shutil.copy(os.path.join(f, FIRMWARE_UPDATER_PATH), firmware_dir)
-    elif firmware_src.startswith('release_image/'):
+    if self.firmware_image_source is not None:
       with MountPartition(self.firmware_image_source, 3) as f:
         shutil.copy(os.path.join(f, FIRMWARE_UPDATER_PATH), firmware_dir)
-    elif firmware_src != LOCAL:
+    elif self.firmware_source != LOCAL:
       # TODO: check input in ProcessManifest(), not here.
       raise FinalizeBundleException(
           'firmware must be either "release_image", '

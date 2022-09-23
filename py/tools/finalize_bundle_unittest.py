@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Unit tests for finalize_bundle."""
@@ -176,6 +176,11 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     self.pack_mock = patcher.start()
     self.addCleanup(patcher.stop)
 
+  def _SetupBuilder(self, bundle_builder: finalize_bundle.FinalizeBundle):
+    bundle_builder.ProcessManifest()
+    bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
+    bundle_builder.firmware_image_source = 'mock_fw'  # Set by DownloadResources
+
   def testAddFirmware_protoCrosConfigMismatch_doNotDownloadUpdater(self):
     self.pack_mock.side_effect = self.MockMismatchPack
     bundle_builder = finalize_bundle.FinalizeBundle(
@@ -190,8 +195,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
             'designs': finalize_bundle.BOXSTER_DESIGNS,
         }, work_dir=self.temp_dir)
 
-    bundle_builder.ProcessManifest()
-    bundle_builder.designs = ['test']
+    self._SetupBuilder(bundle_builder)
     bundle_builder.AddFirmwareUpdaterAndImages()
 
     self.assertDictEqual(
@@ -212,8 +216,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
             'designs': finalize_bundle.BOXSTER_DESIGNS,
         }, work_dir=self.temp_dir)
 
-    bundle_builder.ProcessManifest()
-    bundle_builder.designs = ['test']
+    self._SetupBuilder(bundle_builder)
     self.assertRaisesRegex(KeyError, r'No firmware models.*',
                            bundle_builder.AddFirmwareUpdaterAndImages)
 
@@ -235,8 +238,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
             'designs': finalize_bundle.BOXSTER_DESIGNS,
         }, work_dir=self.temp_dir)
 
-    bundle_builder.ProcessManifest()
-    bundle_builder.designs = ['test']
+    self._SetupBuilder(bundle_builder)
     bundle_builder.AddFirmwareUpdaterAndImages()
 
     self.assertDictEqual(
@@ -244,6 +246,111 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
             os.path.join(bundle_builder.bundle_dir, 'firmware')),
         {'chromeos-firmwareupdate': 'da39a3ee5e6b4b0d3255bfef95601890afd80709'})
 
+
+class DownloadResourcesTest(unittest.TestCase):
+  """Unit tests of DownloadResources."""
+
+  def setUp(self):
+    self.temp_dir = tempfile.mkdtemp(prefix='download_resources_unittest_')
+    self.addCleanup(shutil.rmtree, self.temp_dir)
+
+    for member in (
+        '_CheckGSUtilVersion',
+        '_DownloadProjectToolkit',
+        '_DownloadFactoryToolkit',
+        '_TryDownloadSignedFactoryShim',
+    ):
+      patcher = mock.patch(finalize_bundle.__name__ +
+                           f'.FinalizeBundle.{member}')
+      patcher.start()
+      self.addCleanup(patcher.stop)
+
+    def MockDownloadTest(requested_version, target_dir):
+      target_path = os.path.join(target_dir,
+                                 f'mock_test_image_{requested_version}')
+      file_utils.TryMakeDirs(target_dir)
+      file_utils.TouchFile(target_path)
+      return target_path
+
+    patcher = mock.patch(finalize_bundle.__name__ +
+                         '.FinalizeBundle._DownloadTestImage')
+    patcher.start().side_effect = MockDownloadTest
+    self.addCleanup(patcher.stop)
+
+    patcher = mock.patch(finalize_bundle.__name__ +
+                         '.FinalizeBundle._DownloadReleaseImage')
+
+    def MockDownloadRelease(requested_version, target_dir):
+      target_path = os.path.join(target_dir,
+                                 f'mock_release_image_{requested_version}')
+      file_utils.TryMakeDirs(target_dir)
+      file_utils.TouchFile(target_path)
+      return target_path
+
+    patcher.start().side_effect = MockDownloadRelease
+    self.addCleanup(patcher.stop)
+
+  def _SetupBuilder(self, bundle_builder: finalize_bundle.FinalizeBundle):
+    bundle_builder.ProcessManifest()
+    bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
+
+  def testDownloadFirmwareSource_fromReleaseImage(self):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest={
+            'board': 'brya',
+            'project': 'brya',
+            'bundle_name': '20210107_evt',
+            'toolkit': '15003.0.0',
+            'test_image': '14909.124.0',
+            'release_image': '15003.0.0',
+            'firmware': 'release_image',
+            'designs': finalize_bundle.BOXSTER_DESIGNS,
+        }, work_dir=self.temp_dir)
+
+    self._SetupBuilder(bundle_builder)
+    bundle_builder.DownloadResources()
+
+    self.assertEqual(
+        os.path.basename(bundle_builder.firmware_image_source),
+        'mock_release_image_15003.0.0')
+
+  def testDownloadFirmwareSource_fromOtherReleaseImage(self):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest={
+            'board': 'brya',
+            'project': 'brya',
+            'bundle_name': '20210107_evt',
+            'toolkit': '15003.0.0',
+            'test_image': '14909.124.0',
+            'release_image': '15003.0.0',
+            'firmware': 'release_image/15004.0.0',
+            'designs': finalize_bundle.BOXSTER_DESIGNS,
+        }, work_dir=self.temp_dir)
+
+    self._SetupBuilder(bundle_builder)
+    bundle_builder.DownloadResources()
+
+    self.assertEqual(
+        os.path.basename(bundle_builder.firmware_image_source),
+        'mock_release_image_15004.0.0')
+
+  def testDownloadFirmwareSource_fromLocal(self):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest={
+            'board': 'brya',
+            'project': 'brya',
+            'bundle_name': '20210107_evt',
+            'toolkit': '15003.0.0',
+            'test_image': '14909.124.0',
+            'release_image': '15003.0.0',
+            'firmware': 'local',
+            'designs': finalize_bundle.BOXSTER_DESIGNS,
+        }, work_dir=self.temp_dir)
+
+    self._SetupBuilder(bundle_builder)
+    bundle_builder.DownloadResources()
+
+    self.assertIsNone(bundle_builder.firmware_image_source)
 
 if __name__ == '__main__':
   unittest.main()
