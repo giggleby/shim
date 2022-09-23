@@ -87,7 +87,8 @@ class FactoryTestListTest(unittest.TestCase):
     }
     test_list = manager.BuildTestListForUnittest(
         test_list_config=_FAKE_TEST_LIST_CONFIG)
-    self.assertRaises(type_utils.CircularError, test_list.ToFactoryTestList)
+    self.assertRaises(test_list_module.CircularError,
+                      test_list.ToFactoryTestList)
 
   # TODO(jeffulin): This test should be removed when skipped_test and
   # waived_tests are removed.

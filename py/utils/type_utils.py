@@ -1,4 +1,4 @@
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -10,6 +10,7 @@ import inspect
 import queue
 import re
 from typing import Callable, Generic, TypeVar, Union
+
 
 # The regular expression used by Overrides.
 _OVERRIDES_CLASS_RE = re.compile(r'^\s*class([^#]+)\(\s*([^\s#]+)\s*\)\s*\:')
@@ -26,10 +27,6 @@ class TestFailure(Exception):
 
 class TestListError(Exception):
   """TestList exception."""
-
-
-class CircularError(TestListError):
-  """Exception of circular dependency in test list."""
 
 
 # pylint: disable=redefined-builtin
@@ -63,7 +60,7 @@ class Obj:
 class Enum(frozenset):
   """An enumeration type.
 
-  Usage:
+  Examples:
     To create a enum object:
       dummy_enum = type_utils.Enum(['A', 'B', 'C'])
 
@@ -204,7 +201,7 @@ class AttrDict(dict):
   initial iterable will be converted to AttrDict if its type is a builtin
   dict or builtin list.
 
-  Example:
+  Examples:
     foo = AttrDict()
     foo['xyz'] = 'abc'
     assertEqual(foo.xyz, 'abc')
@@ -237,7 +234,7 @@ class Singleton(type):
   are stored in:
     Singleton._instances[CLASSNAME]
 
-  Example:
+  Examples:
     class C:
       __metaclass__ = Singleton
 
@@ -258,7 +255,7 @@ def Overrides(method):
   Inspired from http://stackoverflow.com/questions/1167617.
   Current implementation does not support multiple inheritance.
 
-  Example:
+  Examples:
     class A:
       def m(self):
         return 1
@@ -370,7 +367,7 @@ def OverrideCacheableGetter(getter, value):
 class LazyProperty(Generic[T]):
   """A decorator for lazy loading properties.
 
-  Example::
+  Examples:
 
     class C:
       @LazyProperty
@@ -381,7 +378,6 @@ class LazyProperty(Generic[T]):
     c = C()
     print c.m  # see 'init!' then 3
     print c.m  # only see 3
-
   """
   PROP_NAME_PREFIX = '_lazyprop_'
 
@@ -413,6 +409,16 @@ class LazyProperty(Generic[T]):
     setattr(obj, cls.PROP_NAME_PREFIX + prop_name, value)
 
 
+class ClassProperty:
+  """A decorator for setting class property."""
+
+  def __init__(self, fget=None):
+    self.fget = fget
+
+  def __get__(self, unused_obj, obj_type=None):
+    return self.fget(obj_type)
+
+
 class LazyObject:
   """A proxy object for creating an object on demand.."""
 
@@ -431,7 +437,7 @@ class LazyObject:
 
 
 class UniqueStack:
-  """ A data structure very similar to a stack, but objects inside are unique.
+  """A data structure very similar to a stack, but objects inside are unique.
 
   - If an object is in the stack already, adding it again to the stack won't
     change anything.
@@ -447,7 +453,8 @@ class UniqueStack:
     self._list = list([])
 
   def Add(self, x):
-    """Add an object on the top of the stack.
+    """Adds an object on the top of the stack.
+
     If the object is already in the stack, nothing will happen.
 
     This function should run in O(1)
@@ -459,7 +466,8 @@ class UniqueStack:
           self._list.append(x)
 
   def Del(self, x):
-    """Remove @x from the stack, no matter where it is.
+    """Removes @x from the stack, no matter where it is.
+
     If @x is not in the stack, nothing will happen.
 
     This function should run in O(1)
