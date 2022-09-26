@@ -633,6 +633,7 @@ class ReportParser(log_utils.LoggerMixin):
                 GetField('factoryImageVersion', event, 'factory_image_version')
                 GetField('releaseImageVersion', event, 'release_image_version')
               elif event_name == 'preamble':
+                GetField('dutDeviceId', event, 'device_id')
                 GetField('toolkitVersion', event, 'toolkit_version')
               elif event_name == 'test_states':
                 test_states_list = []
