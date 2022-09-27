@@ -6,21 +6,24 @@ import abc
 import enum
 import logging
 import os
-import re
-import time
+import tempfile
 
-from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import crosfw
 from cros.factory.test.utils import fpmcu_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import sys_interface
 from cros.factory.utils.type_utils import Error
 
+
 _WP_SECTION = 'WP_RO'
 
 
-class UnsupportedOperationError(Exception):
-  pass
+class UnsupportedOperationError(Error):
+  """Exception for methods that are not supported."""
+
+
+class WriteProtectError(Error):
+  """Failed to enable write protection."""
 
 
 class WriteProtectTargetType(enum.Enum):
@@ -38,7 +41,7 @@ def CreateWriteProtectTarget(target):
   if target == WriteProtectTargetType.PD:
     return PDWriteProtectTarget()
   if target == WriteProtectTargetType.FPMCU:
-    return _CreateFPMCUWriteProtectTarget()
+    return FPMCUWriteProtectTarget()
   raise TypeError(f'Cannot create WriteProtectTarget for {target}.')
 
 
@@ -160,7 +163,13 @@ class PDWriteProtectTarget(_ECBasedWriteProtectTarget):
     return crosfw.LoadPDFirmware()
 
 
-class _FPMCUWriteProtectTarget(WriteProtectTarget):
+class FPMCUWriteProtectTarget(WriteProtectTarget):
+
+  FILE_FPFRAME = 'fp.raw'
+  FILE_FPFRAME_ERR_MSG = 'error_msg.txt'
+
+  def __init__(self):
+    self._fpmcu = fpmcu_utils.FpmcuDevice(sys_interface.SystemInterface())
 
   def SetProtectionStatus(self, enable, skip_enable_check=False):
     if enable:
@@ -172,116 +181,86 @@ class _FPMCUWriteProtectTarget(WriteProtectTarget):
     raise UnsupportedOperationError
 
   def _EnableWriteProtect(self):
-    fpmcu = fpmcu_utils.FpmcuDevice(sys_interface.SystemInterface())
+    """Enables the write protection of the FPMCU.
 
-    # Reset the FPMCU state.
-    self._RebootEC(fpmcu)
+    The write protection, or more specifically, SWWP, is enabled by the
+    following steps:
 
-    # Check if SWWP is disabled but HWWP is enabled.
-    self._CheckPattern(r'^Flash protect flags:\s*0x00000008 wp_gpio_asserted$',
-                       fpmcu.FpmcuCommand('flashprotect'))
-    if os.path.exists('/tmp/fp.raw'):
-      os.remove('/tmp/fp.raw')
-    fp_frame = fpmcu.FpmcuCommand('fpframe', 'raw', encoding=None)
-    file_utils.WriteFile('/tmp/fp.raw', fp_frame)
+    1. Reboot the FPMCU. We need to make sure the FPMCU state matches the
+       initial state.
+    2. Do prerequisite checking:
+       - HWWP is enabled.
+       - SWWP is disabled.
+    3. Request to enable SWWP and reboot FPMCU so that SWWP makes effect.
+    4. Validate the final FPMCU state:
+       - HWWP and SWWP are both enabled.
+       - Image in use is 'RW'.
+       - System is locked.
 
-    # Enable SWWP.
-    try:
-      fpmcu.FpmcuCommand('flashprotect', 'enable')
-    except fpmcu_utils.FpmcuError:
-      pass
-    time.sleep(2)
-    self._EnsureWriteProtectEnabledBeforeRebootFromPattern(fpmcu)
-    self._RebootEC(fpmcu)
-
-    # Make sure the flag is correct.
-    self._EnsureWriteProtectEnabledFlagFromPattern(fpmcu)
-
-    # Make sure the RW image is active.
-    self._CheckPattern(r'^Firmware copy:\s*RW$', fpmcu.FpmcuCommand('version'))
-
-    # Verify that the system is locked.
-    if os.path.exists('/tmp/fp.raw'):
-      os.remove('/tmp/fp.raw')
-    if os.path.exists('/tmp/error_msg.txt'):
-      os.remove('/tmp/error_msg.txt')
-    stdout, stderr, return_code = fpmcu.FpmcuCommand('fpframe', 'raw',
-                                                     full_info=True)
-    file_utils.WriteFile('/tmp/fp.raw', stdout)
-    file_utils.WriteFile('/tmp/error_msg.txt', stderr)
-
-    if return_code == 0:
-      raise Error('System is not locked.')
-    self._CheckPattern('ACCESS_DENIED|Permission denied', stderr)
-
-  @staticmethod
-  def _CheckPattern(pattern, text):
-    if not re.search(pattern, text, re.MULTILINE):
-      raise Error(f'Pattern not found in text.\nPattern={pattern}\nText={text}')
-
-  def _RebootEC(self, fpmcu):
-    try:
-      fpmcu.FpmcuCommand('reboot_ec')
-    except fpmcu_utils.FpmcuError:
-      pass
-    time.sleep(2)
-
-  @abc.abstractmethod
-  def _EnsureWriteProtectEnabledBeforeRebootFromPattern(self, fpmcu):
-    """Checks status before reboot the EC.
-
-    The implementation classes calls |fpmcu.FpmcuCommand|, and checks whether
-    the command output matches to some pattern.
+    Raises:
+      WriteProtectError:
+        when fail to enable write protection.
     """
-    raise NotImplementedError
 
-  @abc.abstractmethod
-  def _EnsureWriteProtectEnabledFlagFromPattern(self, fpmcu):
-    """Checks write protect flag status.
+    def _Assert(expected: bool, assert_message: str):
+      if expected:
+        logging.info('Check %r: OK', assert_message)
+      else:
+        raise WriteProtectError(f'Check {assert_message!r}: FAILED')
 
-    The implementation classes calls |fpmcu.FpmcuCommand|, and chesk whether
-    the command output matches to some pattern.
+    # Before the enablement, we create a temp dir for saving fpframe and, if
+    # failed, error messages.
+    temp_dir = tempfile.mkdtemp(prefix='write_protect_fpmcu-', )
+
+    # Reboot the FPMCU. We need to make sure the FPMCU state matches the initial
+    # state.
+    try:
+      self._fpmcu.Reboot()
+    except fpmcu_utils.FpmcuError as e:
+      raise WriteProtectError(f'Failed to reboot FPMCU: {e.message}') from e
+
+    # Do prerequisite checking.
+    _Assert(self._fpmcu.IsHWWPEnabled(), 'FPMCU HWWP is enabled')
+    _Assert(not self._fpmcu.IsSWWPEnabled(), 'FPMCU SWWP is disabled')
+
+    # Log fpframe. This provides useful information for debugging if fail to
+    # enable the write protection in the further steps.
+    self._SaveFpframe(temp_dir)
+
+    # Request to enable SWWP and reboot FPMCU so that SWWP makes effect. But
+    # before rebooting, check if flags are updated to the expected state.
+    try:
+      self._fpmcu.RequestToEnableSWWPOnBoot()
+      _Assert(self._fpmcu.IsSWWPEnabledOnBoot(),
+              'FPMCU SWWP is enabled on boot')
+      self._fpmcu.Reboot()
+    except fpmcu_utils.FpmcuError as e:
+      raise WriteProtectError(f'Failed to reboot FPMCU: {e.message}') from e
+
+    # Validate the final FPMCU state.
+    _Assert(self._fpmcu.IsSWWPEnabled(), 'FPMCU SWWP is enabled')
+    _Assert(self._fpmcu.IsHWWPEnabled(), 'FPMCU HWWP is enabled')
+    _Assert(self._fpmcu.GetImageName() == fpmcu_utils.ImageName.RW,
+            'FPMCU RW image is active')
+    _Assert(self._fpmcu.IsSystemLocked(), 'FPMCU system is locked')
+
+  def _SaveFpframe(self, dest: str) -> None:
+    """Saves fpframe under given destination directory, or logs error messages
+    if failing to get fpframe.
+
+    Args:
+      dest: path to the directory where fpframe or error messages should be
+          saved.
     """
-    raise NotImplementedError
 
-
-class _FPMCUType(enum.Enum):
-  bloonchipper = 'bloonchipper'
-  dartmonkey = 'dartmonkey'
-
-
-def _CreateFPMCUWriteProtectTarget():
-  board = Shell('cros_config /fingerprint board').stdout
-  enum_member = _FPMCUType(board)
-  # TODO(b/149590275): Update once they match
-  if enum_member == _FPMCUType.bloonchipper:
-    return BloonchipperWriteProtectTarget()
-  # _FPMCUType only has two enum member, so if not bloonchipper, it must be
-  # dartmonkey.
-  return DartmonkeyWriteProtectTarget()
-
-
-class BloonchipperWriteProtectTarget(_FPMCUWriteProtectTarget):
-
-  def _EnsureWriteProtectEnabledBeforeRebootFromPattern(self, fpmcu):
-    pattern = ('^Flash protect flags: 0x0000000b wp_gpio_asserted ro_at_boot '
-               'ro_now$')
-    self._CheckPattern(pattern, fpmcu.FpmcuCommand('flashprotect'))
-
-  def _EnsureWriteProtectEnabledFlagFromPattern(self, fpmcu):
-    pattern = ('^Flash protect flags: 0x0000040f wp_gpio_asserted ro_at_boot '
-               'ro_now rollback_now all_now$')
-    self._CheckPattern(pattern, fpmcu.FpmcuCommand('flashprotect'))
-
-
-class DartmonkeyWriteProtectTarget(_FPMCUWriteProtectTarget):
-
-  def _EnsureWriteProtectEnabledBeforeRebootFromPattern(self, fpmcu):
-    pattern = ('^Flash protect flags: 0x00000009 wp_gpio_asserted ro_at_boot$')
-    self._CheckPattern(pattern, fpmcu.FpmcuCommand('flashprotect'))
-
-  def _EnsureWriteProtectEnabledFlagFromPattern(self, fpmcu):
-    pattern = (
-        r'^Flash protect flags:\s*0x0000000b wp_gpio_asserted ro_at_boot '
-        'ro_now$')
-    self._CheckPattern(pattern, fpmcu.FpmcuCommand('flashprotect'))
+    try:
+      fpframe = self._fpmcu.GetFpframe()
+      path_fpframe = os.path.join(dest, self.FILE_FPFRAME)
+      file_utils.WriteFile(path_fpframe, fpframe, encoding=None)
+      logging.info('Saved fpframe log: %s', path_fpframe)
+    except fpmcu_utils.FpmcuCommandError as e:
+      err_msg = e.stderr
+      path_fpframe_err_msg = os.path.join(dest, self.FILE_FPFRAME_ERR_MSG)
+      file_utils.WriteFile(path_fpframe_err_msg, err_msg)
+      logging.info('Saved fpframe err: %s', path_fpframe_err_msg)
+      raise WriteProtectError(f'Failed to save fpframe: {err_msg}') from e
