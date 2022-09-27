@@ -9,13 +9,14 @@ import datetime
 import enum
 import functools
 import hashlib
+import http
 import http.client
 import io
 import logging
 import os
 import re
 import time
-from typing import Any, NamedTuple, Optional, Sequence, Tuple, Type, Union
+from typing import Any, DefaultDict, Deque, MutableMapping, MutableSequence, NamedTuple, Optional, Sequence, Tuple, Type, Union
 import urllib.parse
 
 import certifi
@@ -193,7 +194,7 @@ def _InvokeGerritAPI(
   if return_resp:
     return resp
 
-  if resp.status != http.client.OK:
+  if resp.status != http.HTTPStatus.OK:
     raise GitUtilException(
         f'Request {url!r} unsuccessfully with code {resp.status!r}.')
 
@@ -569,7 +570,7 @@ def GetFileContent(git_url_prefix: str, project: str, path: str,
                    commit_id: Optional[str] = None,
                    change_id: Optional[str] = None,
                    branch: Optional[str] = None,
-                   auth_cookie: Optional[str] = None) -> bytes:
+                   auth_cookie: str = '') -> bytes:
   """Gets file content on Gerrit.
 
   Uses the gerrit API to get the file content.  If commit_id is specified
@@ -671,6 +672,8 @@ class CLInfo(NamedTuple):
   created_time: datetime.datetime
   comment_threads: Optional[Sequence[CLCommentThread]]
   bot_commit: Optional[bool]
+  commit_queue: Optional[bool]
+  parent_cl_numbers: Optional[Sequence[int]]
 
 
 def _ConvertGerritTimestamp(timestamp):
@@ -696,6 +699,7 @@ _CHANGE_INFO_SCHEMA = schema.FixedDict(
         'change_id': schema.Scalar('change_id', str),
         '_number': schema.Scalar('_number', int),
         'subject': schema.Scalar('subject', str),
+        'current_revision': schema.Scalar('current_revision', str),
     }, optional_items={
         'labels':
             schema.Dict('labels', schema.Scalar('label_name', str),
@@ -719,6 +723,25 @@ _COMMENT_INFO = schema.FixedDict(
         'in_reply_to': schema.Scalar('in_reply_to', str),
         'context_lines': schema.List('context_lines', _CONTEXT_LINE_SCHEMA),
     }, allow_undefined_keys=True)
+_COMMIT_INFO = schema.FixedDict(
+    'commit', items={
+        'commit':
+            schema.Scalar('commit', str),
+        'parents':
+            schema.List(
+                'parents',
+                schema.FixedDict(
+                    'commit', items={'commit': schema.Scalar('commit', str)}))
+    }, allow_undefined_keys=True)
+_RELATED_CHANGE_INFO = schema.FixedDict(
+    'RelatedChangeInfo', items={
+        'commit': _COMMIT_INFO,
+        '_change_number': schema.Scalar('_change_number', int),
+    }, allow_undefined_keys=True)
+_RELATED_CHANGES_INFO = schema.FixedDict(
+    'RelatedChangesInfo',
+    items={'changes': schema.List('changes', _RELATED_CHANGE_INFO)},
+    allow_undefined_keys=True)
 
 
 def _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels):
@@ -786,19 +809,19 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
   gerrit_resps = []
 
   @RetryOnException(retry_value=(GitUtilException, ))
-  def GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]],
-                    response_schema: schema.BaseType):
+  def _GetChangeInfo(scope: str, params: Sequence[Tuple[str, str]],
+                     response_schema: schema.BaseType):
     resp = _InvokeGerritAPIJSON('GET', f'{base_url}{scope}', params,
                                 auth_cookie=auth_cookie,
                                 response_schema=response_schema)
     gerrit_resps.append(resp)
     return resp
 
-  def GetCLMergeableInfo(cl_status):
+  def _GetCLMergeableInfo(cl_status):
     if cl_status != CLStatus.NEW:
       return False
-    cl_mergeable_info_json = GetChangeInfo('/revisions/current/mergeable', [],
-                                           _MERGEABLE_INFO)
+    cl_mergeable_info_json = _GetChangeInfo('/revisions/current/mergeable', [],
+                                            _MERGEABLE_INFO)
     return cl_mergeable_info_json['mergeable']
 
   def _GetCLReviewStatus(change_info_json):
@@ -812,13 +835,45 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
   def _GetBotApprovalStatus(change_info_json):
     if not include_review_status:
       return None
-    bot_commit_labels = change_info_json.get('labels', {}).get(_BOT_COMMIT)
-    if bot_commit_labels is None:
-      return False
+    bot_commit_labels = change_info_json.get('labels', {}).get(_BOT_COMMIT, {})
     return bool(bot_commit_labels.get('approved'))
 
-  def GetCLCommentThread():
-    comment_json_of_path = GetChangeInfo(
+  def _GetCommitQueueStatus(change_info_json):
+    if not include_review_status:
+      return None
+    cq_labels = change_info_json.get('labels', {}).get(_COMMIT_QUEUE, {})
+    return bool(cq_labels.get('approved'))
+
+  def _GetParentCLNumbers(commit_id: str) -> Optional[Sequence[int]]:
+    if not include_review_status:
+      return None
+    related_cls_info = _GetChangeInfo('/revisions/current/related', [],
+                                      _RELATED_CHANGES_INFO)
+
+    parent_cids: DefaultDict[str, MutableSequence[str]] = (
+        collections.defaultdict(list))
+    related_cl_numbers: MutableMapping = {}
+    for related_cl in related_cls_info['changes']:
+      commit = related_cl['commit']
+      related_cl_numbers[commit['commit']] = related_cl['_change_number']
+      parent_cids[commit['commit']].extend(
+          c['commit'] for c in commit['parents'])
+
+    # Use BFS to collect all parent CL numbers from all related CLs.
+    q: Deque[str] = collections.deque()
+    q.append(commit_id)
+    parent_cl_numbers: MutableSequence[int] = []
+    while q:
+      cid = q.popleft()
+      for parent_commit_id in parent_cids[cid]:
+        if parent_commit_id in related_cl_numbers:
+          parent_cl_numbers.append(related_cl_numbers[parent_commit_id])
+          q.append(parent_commit_id)
+
+    return parent_cl_numbers
+
+  def _GetCLCommentThread():
+    comment_json_of_path = _GetChangeInfo(
         '/comments', [('enable-context', 'true')],
         schema.Dict('comment_map', schema.Scalar('path', str),
                     schema.List('comments', _COMMENT_INFO)))
@@ -870,16 +925,18 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
 
     return root_comment_threads
 
-  change_info_json = GetChangeInfo(
-      '', [('o', 'LABELS')] if include_review_status else [],
-      _CHANGE_INFO_SCHEMA)
+  options = [('o', 'CURRENT_REVISION')]
+  if include_review_status:
+    options.append(('o', 'LABELS'))
+  change_info_json = _GetChangeInfo('', options, _CHANGE_INFO_SCHEMA)
+  commit_id = change_info_json['current_revision']
 
   try:
     cl_status = _GERRIT_CL_STATUS_TO_CL_STATUS[change_info_json['status']]
     mergeable_or_none = (
-        GetCLMergeableInfo(cl_status) if include_mergeable else None)
+        _GetCLMergeableInfo(cl_status) if include_mergeable else None)
     comment_threads_or_none = (
-        GetCLCommentThread() if include_comment_thread else None)
+        _GetCLCommentThread() if include_comment_thread else None)
     return CLInfo(
         change_id=change_info_json['change_id'],
         cl_number=change_info_json['_number'],
@@ -888,7 +945,9 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
         mergeable=mergeable_or_none, created_time=_ConvertGerritTimestamp(
             change_info_json['created']),
         comment_threads=comment_threads_or_none,
-        bot_commit=_GetBotApprovalStatus(change_info_json))
+        bot_commit=_GetBotApprovalStatus(change_info_json),
+        commit_queue=_GetCommitQueueStatus(change_info_json),
+        parent_cl_numbers=_GetParentCLNumbers(commit_id))
   except GitUtilException:
     raise
   except Exception as ex:
@@ -977,7 +1036,7 @@ def RebaseCL(review_host: str, change_id: str, auth_cookie: str = '',
     if not force:
       if resp.status == 409:
         return resp.data.decode().split('merge conflict(s):\n')[-1].split()
-      if resp.status == http.client.Ok:
+      if resp.status == http.HTTPStatus.OK:
         return []
       raise GitUtilException
 

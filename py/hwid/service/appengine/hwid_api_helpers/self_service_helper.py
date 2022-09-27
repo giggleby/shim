@@ -508,6 +508,39 @@ class SelfServiceHelper:
 
     return resp
 
+  def _PutCLChainIntoCQ(self, cl_info: hwid_repo.HWIDDBCLInfo):
+    if cl_info.review_status != hwid_repo.HWIDDBCLReviewStatus.APPROVED:
+      return
+    put_cq = []
+    if not cl_info.commit_queue:
+      put_cq.append(cl_info.cl_number)
+
+    # Collect parent CLs which have Bot-Commit+1 votes.
+    for cl_number in cl_info.parent_cl_numbers:
+      try:
+        parent_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
+        if not parent_cl_info.bot_commit:
+          logging.error('Some parent CL does not have Bot-Commit+1: %s',
+                        cl_number)
+          return
+        if not parent_cl_info.commit_queue:
+          put_cq.append(cl_number)
+      except hwid_repo.HWIDRepoError as ex:
+        logging.error('Failed to load the HWID DB CL info: %r.', ex)
+        return
+
+    parent_cl_cq_reasons = [f'CL:*{cl_info.cl_number} has been approved.']
+    for cl_number in put_cq:
+      try:
+        git_util.ReviewCL(
+            hwid_repo.INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
+            cl_number=cl_number, reasons=[]
+            if cl_number == cl_info.cl_number else parent_cl_cq_reasons,
+            approval_case=git_util.ApprovalCase.COMMIT_QUEUE)
+      except git_util.GitUtilException as ex:
+        raise protorpc_utils.ProtoRPCException(
+            protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from ex
+
   def _GetHWIDDBCLInfo(self, cl_number):
     try:
       cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
@@ -549,6 +582,7 @@ class SelfServiceHelper:
         return cl_info
 
     if not is_cl_expired and not merge_conflict:
+      self._PutCLChainIntoCQ(cl_info)
       return cl_info
 
     try:

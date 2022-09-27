@@ -6,8 +6,10 @@
 
 import datetime
 import hashlib
-import http.client
+import http
 import os.path
+import random
+from typing import Optional, Sequence, Tuple
 import unittest
 from unittest import mock
 
@@ -173,23 +175,23 @@ class GetCommitIdTest(unittest.TestCase):
     instance = mocked_poolmanager.return_value  # pool_manager instance
     error_responses = [
         # 400 error
-        mock.MagicMock(status=http.client.BAD_REQUEST, data=''),
+        mock.MagicMock(status=http.HTTPStatus.BAD_REQUEST, data=''),
         # invalid json
         mock.MagicMock(
-            status=http.client.OK,
+            status=http.HTTPStatus.OK,
             data=(")]}'\n"
                   '\n'
                   '  "revision": "0123456789abcdef0123456789abcdef01234567"\n'
                   '}\n')),
         # no magic line
         mock.MagicMock(
-            status=http.client.OK,
+            status=http.HTTPStatus.OK,
             data=('{\n'
                   '  "revision": "0123456789abcdef0123456789abcdef01234567"\n'
                   '}\n')),
         # no "revision" field
         mock.MagicMock(
-            status=http.client.OK, data=(
+            status=http.HTTPStatus.OK, data=(
                 ")]}'\n"
                 '{\n'
                 '  "no_revision": "0123456789abcdef0123456789abcdef01234567"\n'
@@ -208,6 +210,7 @@ class GetCLInfoTest(unittest.TestCase):
   _THE_CL_NUMBER = 123
   _THE_CL_STATUS = 'NEW'
   _THE_CL_SUBJECT = 'SUBJECT'
+  _THE_COMMIT_ID = 'the_commit_id'
 
   def setUp(self):
     super().setUp()
@@ -217,11 +220,11 @@ class GetCLInfoTest(unittest.TestCase):
 
   def _BuildGerritSuccResponse(self, json_obj):
     data = b")]}'\n" + json_utils.DumpStr(json_obj, pretty=True).encode('utf-8')
-    return type_utils.Obj(status=http.client.OK, data=data)
+    return type_utils.Obj(status=http.HTTPStatus.OK, data=data)
 
   def _BuildGetChangeSuccResponseWithDefaults(
       self, change_id=None, cl_number=None, created_timestamp=None, status=None,
-      subject=None, **other_fields):
+      subject=None, current_revision=None, **other_fields):
     created_timestamp = created_timestamp or self._THE_CREATED_TIMESTAMP
     json_obj = {
         'change_id': change_id or self._THE_CHANGE_ID,
@@ -229,8 +232,38 @@ class GetCLInfoTest(unittest.TestCase):
         'created': created_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f000'),
         'status': status or self._THE_CL_STATUS,
         'subject': subject or self._THE_CL_SUBJECT,
+        'current_revision': current_revision or self._THE_COMMIT_ID,
     }
     json_obj.update(other_fields)
+    return self._BuildGerritSuccResponse(json_obj)
+
+  def _BuildGerritRelatedChangeInfos(
+      self, tot_commit_id: Optional[str] = None,
+      tot_cl_number: Optional[int] = None,
+      parent_cls_info: Optional[Sequence[Tuple[str, int]]] = None):
+    json_obj = {
+        'changes': [{
+            'commit': {
+                'commit': tot_commit_id or self._THE_COMMIT_ID,
+                'parents': [],
+            },
+            '_change_number': tot_cl_number or self._THE_CL_NUMBER,
+        }]
+    }
+    if parent_cls_info:
+      for commit_id, cl_number in parent_cls_info:
+        json_obj['changes'][-1]['commit']['parents'].append(
+            {'commit': commit_id})
+        json_obj['changes'].append({
+            'commit': {
+                'commit': commit_id,
+                'parents': [],
+            },
+            '_change_number': cl_number,
+        })
+      # To assert that the order is unimportant.
+      random.shuffle(json_obj['changes'])
+
     return self._BuildGerritSuccResponse(json_obj)
 
   def testGetCLInfo_BasicInfo(self):
@@ -287,14 +320,16 @@ class GetCLInfoTest(unittest.TestCase):
 
   def testGetCLInfo_WithApprovedReviewStatus(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.return_value = self._BuildGetChangeSuccResponseWithDefaults(
-        labels={
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(labels={
             'Code-Review': {
                 'approved': {
                     '_account_id': 12345
                 },
             },
-        })
+        }),
+        self._BuildGerritRelatedChangeInfos(),
+    ]
 
     actual_cl_info = git_util.GetCLInfo(
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
@@ -304,51 +339,52 @@ class GetCLInfoTest(unittest.TestCase):
 
   def testGetCLInfo_WithAmbiguousReviewStatus(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.side_effect = [
-        self._BuildGetChangeSuccResponseWithDefaults(
-            labels={
-                'Code-Review': {
-                    'approved': {
-                        '_account_id': 12345
-                    },
-                    'disliked': {
-                        '_account_id': 12345
-                    },
-                },
-            }),
-        self._BuildGetChangeSuccResponseWithDefaults(
-            labels={
-                'Code-Review': {
-                    'recommended': {
-                        '_account_id': 12345
-                    },
-                    'disliked': {
-                        '_account_id': 12345
-                    },
-                },
-            }),
-    ]
+    ambiguous_labels = [{
+        'Code-Review': {
+            'approved': {
+                '_account_id': 12345
+            },
+            'disliked': {
+                '_account_id': 12345
+            },
+        },
+    }, {
+        'Code-Review': {
+            'recommended': {
+                '_account_id': 12345
+            },
+            'disliked': {
+                '_account_id': 12345
+            },
+        },
+    }]
 
-    actual_cl_info1 = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
-    actual_cl_info2 = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
+    for test_data in ambiguous_labels:
+      with self.subTest(labels=test_data):
+        mock_urlopen.side_effect = [
+            self._BuildGetChangeSuccResponseWithDefaults(labels=test_data),
+            self._BuildGerritRelatedChangeInfos(),
+        ]
 
-    self.assertEqual(actual_cl_info1.review_status,
-                     git_util.CLReviewStatus.AMBIGUOUS)
-    self.assertEqual(actual_cl_info2.review_status,
-                     git_util.CLReviewStatus.AMBIGUOUS)
+        actual_cl_info = git_util.GetCLInfo('unused_review_host',
+                                            self._THE_CHANGE_ID,
+                                            include_review_status=True)
+
+        self.assertEqual(actual_cl_info.review_status,
+                         git_util.CLReviewStatus.AMBIGUOUS)
 
   def testGetCLInfo_WithDislikedReviewStatus(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.return_value = self._BuildGetChangeSuccResponseWithDefaults(
-        labels={
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(labels={
             'Code-Review': {
                 'disliked': {
                     '_account_id': 12345
                 },
             },
-        })
+        }),
+        self._BuildGerritRelatedChangeInfos(),
+    ]
 
     actual_cl_info = git_util.GetCLInfo(
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
@@ -358,58 +394,58 @@ class GetCLInfoTest(unittest.TestCase):
 
   def testGetCLInfo_WithRejectedReviewStatus(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.side_effect = [
-        self._BuildGetChangeSuccResponseWithDefaults(
-            labels={
-                'Code-Review': {
-                    'disliked': {
-                        '_account_id': 12345
-                    },
-                    'rejected': {
-                        '_account_id': 12345
-                    },
+    rejected_labels = [
+        {
+            'Code-Review': {
+                'disliked': {
+                    '_account_id': 12345
                 },
-            }),
-        self._BuildGetChangeSuccResponseWithDefaults(labels={
+                'rejected': {
+                    '_account_id': 12345
+                },
+            },
+        },
+        {
             'Code-Review': {
                 'rejected': {
                     '_account_id': 12345
                 },
             },
-        }),
-        self._BuildGetChangeSuccResponseWithDefaults(
-            labels={
-                'Code-Review': {
-                    'approved': {
-                        '_account_id': 12345
-                    },
-                    'rejected': {
-                        '_account_id': 12345
-                    },
+        },
+        {
+            'Code-Review': {
+                'approved': {
+                    '_account_id': 12345
                 },
-            }),
+                'rejected': {
+                    '_account_id': 12345
+                },
+            },
+        },
     ]
 
-    actual_cl_info1 = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
-    actual_cl_info2 = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
-    actual_cl_info3 = git_util.GetCLInfo(
-        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
+    for test_data in rejected_labels:
+      with self.subTest(labels=test_data):
+        mock_urlopen.side_effect = [
+            self._BuildGetChangeSuccResponseWithDefaults(labels=test_data),
+            self._BuildGerritRelatedChangeInfos(),
+        ]
 
-    self.assertEqual(actual_cl_info1.review_status,
-                     git_util.CLReviewStatus.REJECTED)
-    self.assertEqual(actual_cl_info2.review_status,
-                     git_util.CLReviewStatus.REJECTED)
-    self.assertEqual(actual_cl_info3.review_status,
-                     git_util.CLReviewStatus.REJECTED)
+        actual_cl_info = git_util.GetCLInfo('unused_review_host',
+                                            self._THE_CHANGE_ID,
+                                            include_review_status=True)
+
+        self.assertEqual(actual_cl_info.review_status,
+                         git_util.CLReviewStatus.REJECTED)
 
   def testGetCLInfo_WithNoReviewStatus(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
-    mock_urlopen.return_value = self._BuildGetChangeSuccResponseWithDefaults(
-        labels={
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(labels={
             'Code-Review': {},
-        })
+        }),
+        self._BuildGerritRelatedChangeInfos(),
+    ]
 
     actual_cl_info = git_util.GetCLInfo(
         'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
@@ -526,6 +562,29 @@ class GetCLInfoTest(unittest.TestCase):
                 git_util.CLComment('author5@not_google.com', 'Message 5.'),
             ]),
     ])
+
+  def testGetCLInfo_WithParentCLs(self):
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    commit_id = 'commit_id'
+    cl_number = 100
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(
+            cl_number=cl_number, labels={'Code-Review': {}},
+            current_revision=commit_id),
+        self._BuildGerritRelatedChangeInfos(
+            tot_commit_id=commit_id, tot_cl_number=cl_number, parent_cls_info=[
+                (f'parent_commit_id_{cl_number + i}', cl_number + i)
+                for i in range(1, 10)
+            ])
+    ]
+
+    actual_cl_info = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
+
+    self.assertEqual(cl_number, actual_cl_info.cl_number)
+    self.assertCountEqual(
+        list(range(cl_number + 1, cl_number + 10)),
+        actual_cl_info.parent_cl_numbers)
 
 
 class CreateCLTest(unittest.TestCase):
