@@ -11,13 +11,21 @@ import os
 import re
 
 from cros.factory.device import device_types
+from cros.factory.device import storage
+from cros.factory.gooftool import gsctool
+from cros.factory.gooftool import vpd
+from cros.factory.gooftool import write_protect_target
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.test import device_data
 from cros.factory.test.env import paths
 from cros.factory.test.rules import phase
 from cros.factory.test import session
+from cros.factory.test.utils import cbi_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import gsc_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils.sys_utils import MountDeviceAndReadFile
+
 
 # Static list of known properties in SystemInfo.
 _INFO_PROP_LIST = []
@@ -63,10 +71,26 @@ class SystemInfo(device_types.DeviceComponent):
   _FIRMWARE_NV_INDEX = 0x1007
   _FLAG_VIRTUAL_DEV_MODE_ON = 0x02
 
+  # KEY=VALUE
+  _REGEX_KEY_EQUAL_VALUE = r'^(?P<key>.+)=(?P<value>.+)$'
+  # KEY: VALUE
+  _REGEX_LSCPU = r'(?P<key>.+):\s+(?P<value>.+)$'
+  # KEY = VALUE # COMMENT
+  _REGEX_CROSSYSTEM = r'^(?P<key>.+?)\s+=\s+(?P<value>.+?)\s*#'
+
   def __init__(self, device=None):
     super().__init__(device)
     self._cached = {}
     self._overrides = {}
+
+  def _IntToHexStr(self, num):
+    return hex(num) if isinstance(num, int) else None
+
+  def _ParseStrToDict(self, regex, string):
+    return {
+        m.group('key'): m.group('value')
+        for m in re.finditer(regex, string, re.MULTILINE)
+    }
 
   def GetAll(self):
     """Returns all properties in a dictionary object."""
@@ -100,13 +124,25 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def cpu_count(self):
     """Gets number of CPUs on the machine"""
-    output = self._device.CallOutput('lscpu')
-    match = re.search(r'^CPU\(s\):\s*(\d+)', output, re.MULTILINE)
-    return int(match.group(1)) if match else None
+    return int(self._cpu_info['CPU(s)'])
+
+  @InfoProperty
+  def cpu_model(self):
+    """Gets the name of the CPU model on the machine"""
+    return self._cpu_info['Model name']
+
+  @InfoProperty
+  def _cpu_info(self):
+    output = self._device.CheckOutput('lscpu')
+    return self._ParseStrToDict(self._REGEX_LSCPU, output)
 
   @InfoProperty
   def memory_total_kb(self):
     return self._device.memory.GetTotalMemoryKB()
+
+  @InfoProperty
+  def storage_type(self):
+    return storage.Storage(self._device).GetMainStorageType().value
 
   @InfoProperty
   def release_image_version(self):
@@ -159,17 +195,17 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def test_image_version(self):
     """Version of the image on factory test partition."""
-    lsb_release = self._device.ReadFile('/etc/lsb-release')
-    match = re.search('^GOOGLE_RELEASE=(.+)$', lsb_release, re.MULTILINE)
-    return match.group(1) if match else None
+    return self._test_lsb_data['GOOGLE_RELEASE']
+
+  @InfoProperty
+  def test_image_channel(self):
+    """Channel of the image on factory test partition."""
+    return self._test_lsb_data['CHROMEOS_RELEASE_TRACK']
 
   @InfoProperty
   def test_image_builder_path(self):
     """Builder path of the image on factory test partition."""
-    lsb_release = self._device.ReadFile('/etc/lsb-release')
-    match = re.search('^CHROMEOS_RELEASE_BUILDER_PATH=(.+)$', lsb_release,
-                      re.MULTILINE)
-    return match.group(1) if match else None
+    return self._test_lsb_data['CHROMEOS_RELEASE_BUILDER_PATH']
 
   @InfoProperty
   def factory_image_version(self):
@@ -211,32 +247,53 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def kernel_version(self):
     """Version of running kernel."""
-    return self._device.CallOutput(['uname', '-r']).strip()
+    return self._device.CheckOutput(['uname', '-r']).strip()
 
   @InfoProperty
   def architecture(self):
     """System architecture."""
-    return self._device.CallOutput(['uname', '-m']).strip()
+    return self._device.CheckOutput(['uname', '-m']).strip()
 
   @InfoProperty
   def root_device(self):
     """The root partition that boots current system."""
-    return self._device.CallOutput(['rootdev', '-s']).strip()
+    return self._device.CheckOutput(['rootdev', '-s']).strip()
 
   @InfoProperty
   def firmware_version(self):
     """Version of main firmware."""
-    return self._device.CallOutput(['crossystem', 'fwid']).strip()
+    return self._crossystem['fwid']
 
   @InfoProperty
   def ro_firmware_version(self):
     """Version of RO main firmware."""
-    return self._device.CallOutput(['crossystem', 'ro_fwid']).strip()
+    return self._crossystem['ro_fwid']
 
   @InfoProperty
   def mainfw_type(self):
     """Type of main firmware."""
-    return self._device.CallOutput(['crossystem', 'mainfw_type']).strip()
+    return self._crossystem['mainfw_type']
+
+  @InfoProperty
+  def mainfw_act(self):
+    return self._crossystem['mainfw_act']
+
+  @InfoProperty
+  def ecfw_act(self):
+    return self._crossystem['ecfw_act']
+
+  @InfoProperty
+  def hwwp(self):
+    return self._crossystem['wpsw_cur']
+
+  @InfoProperty
+  def hwid(self):
+    return self._crossystem['hwid']
+
+  @InfoProperty
+  def _crossystem(self):
+    output = self._device.CheckOutput(['crossystem']).strip()
+    return self._ParseStrToDict(self._REGEX_CROSSYSTEM, output)
 
   @InfoProperty
   def ec_version(self):
@@ -263,7 +320,13 @@ class SystemInfo(device_types.DeviceComponent):
     release_rootfs = self._device.partitions.RELEASE_ROOTFS.path
     lsb_content = MountDeviceAndReadFile(
         release_rootfs, '/etc/lsb-release', dut=self._device)
-    return dict(re.findall('^(.+)=(.+)$', lsb_content, re.MULTILINE))
+    return self._ParseStrToDict(self._REGEX_KEY_EQUAL_VALUE, lsb_content)
+
+  @InfoProperty
+  def _test_lsb_data(self):
+    """Returns the lsb-release data in dict from test image partition."""
+    lsb_content = file_utils.ReadFile('/etc/lsb-release')
+    return self._ParseStrToDict(self._REGEX_KEY_EQUAL_VALUE, lsb_content)
 
   @InfoProperty
   def hwid_database_version(self):
@@ -287,8 +350,162 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def device_name(self):
     """Returns the device name of the device."""
-    return self._device.CallOutput(['cros_config', '/', 'name']).strip()
+    return self._device.CheckOutput(['cros_config', '/', 'name']).strip()
 
+  @InfoProperty
+  def system_timezone(self):
+    """Returns the system timezone of the device."""
+    timezone = self._device.CheckOutput(['date', '+%Z']).strip()
+    offset = self._device.CheckOutput(['date', '+%:z']).strip()
+    return {
+        'timezone': timezone,
+        'offset': offset,
+    }
+
+  @InfoProperty
+  def image_info(self):
+    return {
+        'test_image': {
+            'version': self.test_image_version,
+            'channel': self.test_image_channel,
+        },
+        'release_image': {
+            'version': self.release_image_version,
+            'channel': self.release_image_channel,
+        },
+    }
+
+  @InfoProperty
+  def factory_info(self):
+    return {
+        'stage': self.stage,
+        'toolkit_version': self.toolkit_version,
+        'hwid_database_version': self.hwid_database_version,
+    }
+
+  @InfoProperty
+  def system_info(self):
+    return {
+        'architecture': self.architecture,
+        'kernel_version': self.kernel_version,
+        'root_device': self.root_device,
+    }
+
+  # TODO (phoebewang): collect more fw version from /var/log/message
+  @InfoProperty
+  def fw_info(self):
+    return {
+        'fwid': self.firmware_version,
+        'ro_fwid': self.ro_firmware_version,
+        'mainfw_act': self.mainfw_act,
+        'mainfw_type': self.mainfw_type,
+        'ecfw_act': self.ecfw_act,
+        'ec_version': self.ec_version,
+        'pd_version': self.pd_version,
+        'hwid': self.hwid,
+    }
+
+  @InfoProperty
+  def hw_info(self):
+    return {
+        'cpu_info': {
+            'model_name': self.cpu_model,
+            'count': self.cpu_count,
+        },
+        'storage': self.storage_type,
+        'total_memory_kb': self.memory_total_kb,
+        'wlan0_mac': self.wlan0_mac,
+        'eth_mac': self.eth_macs,
+    }
+
+  @InfoProperty
+  def device_info(self):
+    return {
+        'name': self.device_name,
+        'id': self.device_id,
+        'serial_number': self.serial_number,
+        'mlb_serial_number': self.mlb_serial_number,
+        'pci_device_number': self.pci_device_number,
+        'system_timezone': self.system_timezone,
+    }
+
+  @InfoProperty
+  def gsc_info(self):
+    """Returns the Google Security Chip (GSC) info of the device."""
+    gsc_info = {}
+    gsc_info['name'] = gsc_utils.GSCUtils().name
+    board_id = gsctool.GSCTool().GetBoardID()
+    gsc_info['board_id'] = {
+        'type': self._IntToHexStr(board_id.type),
+        'flags': self._IntToHexStr(board_id.flags)
+    }
+    fw_version = gsctool.GSCTool().GetCr50FirmwareVersion()
+    gsc_info['version'] = {
+        'ro_version': fw_version.ro_version,
+        'rw_version': fw_version.rw_version,
+    }
+
+    return gsc_info
+
+  @InfoProperty
+  def cbi_info(self):
+    """Returns the cbi info of the device."""
+    cbi_info = {}
+    cbi_info['board_version'] = cbi_utils.GetCbiData(
+        self._device, cbi_utils.CbiDataName.BOARD_VERSION)
+    cbi_info['sku_id'] = self._IntToHexStr(
+        cbi_utils.GetCbiData(self._device, cbi_utils.CbiDataName.SKU_ID))
+    cbi_info['fw_config'] = self._IntToHexStr(
+        cbi_utils.GetCbiData(self._device, cbi_utils.CbiDataName.FW_CONFIG))
+    return cbi_info
+
+  @InfoProperty
+  def vpd_info(self):
+    """Returns the VPD info of the device."""
+    return {
+        'ro':
+            vpd.VPDTool().GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME),
+        'rw':
+            vpd.VPDTool().GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME
+                                    ),
+    }
+
+  @InfoProperty
+  def crosid(self):
+    """Returns the crosid of the device.
+
+    The output of `crosid` command looks like:
+      SKU=xxx
+      CONFIG_INDEX=xxx
+      FIRMWARE_MANIFEST_KEY='xxx'
+    """
+    output = self._device.CheckOutput(['crosid']).strip()
+    crosid = self._ParseStrToDict(self._REGEX_KEY_EQUAL_VALUE, output)
+    return {
+        'sku': self._IntToHexStr(int(crosid['SKU'])),
+        'config_index': int(crosid['CONFIG_INDEX']),
+        'firmware_manifest_key': crosid['FIRMWARE_MANIFEST_KEY'],
+    }
+
+  @InfoProperty
+  def wp_info(self):
+    software_wp = {}
+    for target in set(write_protect_target.WriteProtectTargetType):
+      wp_target = write_protect_target.CreateWriteProtectTarget(target)
+      try:
+        software_wp[target.name] = wp_target.GetStatus()
+      except write_protect_target.UnsupportedOperationError:
+        pass
+
+    return {
+        'hardware_wp': {
+            "enabled": {
+                '0': False,
+                '1': True
+            }[self.hwwp]
+        },
+        'software_wp': software_wp,
+    }
 
 def main():
   import pprint
