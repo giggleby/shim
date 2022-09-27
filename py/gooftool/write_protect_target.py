@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -33,15 +33,16 @@ class WriteProtectTargetType(enum.Enum):
   FPMCU = 'fpmcu'
 
 
-def CreateWriteProtectTarget(target):
+def CreateWriteProtectTarget(
+    target: WriteProtectTargetType) -> 'WriteProtectTarget':
   if target == WriteProtectTargetType.AP:
-    return APWriteProtectTarget()
+    return _APWriteProtectTarget()
   if target == WriteProtectTargetType.EC:
-    return ECWriteProtectTarget()
+    return _ECWriteProtectTarget()
   if target == WriteProtectTargetType.PD:
-    return PDWriteProtectTarget()
+    return _PDWriteProtectTarget()
   if target == WriteProtectTargetType.FPMCU:
-    return FPMCUWriteProtectTarget()
+    return _FPMCUWriteProtectTarget()
   raise TypeError(f'Cannot create WriteProtectTarget for {target}.')
 
 
@@ -102,7 +103,7 @@ class _FlashromBasedWriteProtectTarget(WriteProtectTarget):
     raise NotImplementedError
 
 
-class APWriteProtectTarget(_FlashromBasedWriteProtectTarget):
+class _APWriteProtectTarget(_FlashromBasedWriteProtectTarget):
 
   def _GetFlashrom(self):
     return crosfw.Flashrom(crosfw.TARGET_MAIN)
@@ -145,7 +146,7 @@ class _ECBasedWriteProtectTarget(_FlashromBasedWriteProtectTarget):
       raise UnsupportedOperationError
 
 
-class ECWriteProtectTarget(_ECBasedWriteProtectTarget):
+class _ECWriteProtectTarget(_ECBasedWriteProtectTarget):
 
   def _GetFlashrom(self):
     return crosfw.Flashrom(crosfw.TARGET_EC)
@@ -154,7 +155,7 @@ class ECWriteProtectTarget(_ECBasedWriteProtectTarget):
     return crosfw.LoadEcFirmware()
 
 
-class PDWriteProtectTarget(_ECBasedWriteProtectTarget):
+class _PDWriteProtectTarget(_ECBasedWriteProtectTarget):
 
   def _GetFlashrom(self):
     return crosfw.Flashrom(crosfw.TARGET_PD)
@@ -163,7 +164,7 @@ class PDWriteProtectTarget(_ECBasedWriteProtectTarget):
     return crosfw.LoadPDFirmware()
 
 
-class FPMCUWriteProtectTarget(WriteProtectTarget):
+class _FPMCUWriteProtectTarget(WriteProtectTarget):
 
   FILE_FPFRAME = 'fp.raw'
   FILE_FPFRAME_ERR_MSG = 'error_msg.txt'
