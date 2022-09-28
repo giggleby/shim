@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -136,7 +136,7 @@ def DumpFPFirmware():
       'ectool', '--name=cros_fp', 'flashread',
       str(ro_offset),
       str(ro_size), dump_path
-  ])
+  ], stdout=process_utils.DEVNULL)
   return dump_path
 
 
