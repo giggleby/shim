@@ -182,10 +182,15 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
 
       self.info('Download succeed and start processing: %s', gcs_path)
       report_parsers = []
+      total_reports = 0
       try:
         report_parsers = self._CreateReportParsers(gcs_path, archive_path,
                                                    self._tmp_dir, event['time'])
+        if len(report_parsers) > 1:
+          self.info("Found %d inner archive from the archive: %s",
+                    len(report_parsers), gcs_path)
       except NotImplementedError:
+        self.error('The archive is invalid: %s', gcs_path)
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
                               archive_process_event)
       except Exception as e:
@@ -198,10 +203,17 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
                                 archive_process_event)
         else:
           for report_parser in report_parsers:
-            total_reports = report_parser.ProcessArchive(
+            archive_size = os.path.getsize(report_parser.archive_path)
+            report_num = report_parser.ProcessArchive(
                 archive_process_event, self._process_pool, self.PreEmit)
-            self.info('Parsed %d reports from %s (size=%d)', total_reports,
-                      gcs_path, event['size'])
+            if len(report_parsers) > 1:
+              self.info(
+                  'Parsed %d (+ %d) report from inner archive %s (size=%d)',
+                  report_num, total_reports, report_parser.inner_archive_path,
+                  archive_size)
+            total_reports += report_num
+      self.info('Parsed %d reports from %s (size=%d)', total_reports, gcs_path,
+                event['size'])
       self.PreEmit([archive_process_event])
 
     self.info('Emit events to buffer.')
@@ -231,6 +243,7 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
         try:
           archive.Extract(name, dst)
         except ExtractError:
+          self.exception('Failed to extract inner file: %s', name)
           continue
 
         try:
@@ -239,12 +252,8 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
           # Extracted file is not a supported archive, clean up and skip.
           os.remove(dst)
           continue
-        # Adds a string '(archive) ' as prefix for the archive path to help us
-        # distinguish the archive is retrieved from a two-level archive in the
-        # output event.
-        archive_prefix = '(archive) ' + name
         report_parsers.append(
-            ReportParser(gcs_path, dst, tmp_dir, upload_time, archive_prefix,
+            ReportParser(gcs_path, dst, tmp_dir, upload_time, name,
                          self.logger))
       # Remove the two-level archive as every one-level archive is handled by
       # each report parser.
@@ -260,7 +269,7 @@ class ReportParser(log_utils.LoggerMixin):
   """A parser to process report archives."""
 
   def __init__(self, gcs_path, archive_path, tmp_dir, upload_time,
-               report_path_parent_dir, logger=logging):
+               inner_archive_path, logger=logging):
     """Sets up the parser.
 
     Args:
@@ -268,15 +277,15 @@ class ReportParser(log_utils.LoggerMixin):
       archive_path: Path to the archive on disk.
       tmp_dir: Temporary directory.
       upload_time: Time to upload report/archive to GCS.
-      report_path_parent_dir: String value of parent dir to add to every parsed
-        report in report events.
+      inner_archive_path: Path to the inner archive in the archive or '' if
+                          there is no inner_archive_path.
       logger: Logger to use.
     """
-    self._gcs_path = gcs_path
-    self._archive_path = archive_path
+    self.archive_path = archive_path
     self._tmp_dir = tmp_dir
+    self._gcs_path = gcs_path
     self._upload_time = upload_time
-    self._report_path_parent_dir = report_path_parent_dir
+    self.inner_archive_path = inner_archive_path
     self.logger = logger
 
   def ProcessArchive(self, archive_process_event, process_pool,
@@ -291,13 +300,12 @@ class ReportParser(log_utils.LoggerMixin):
 
     try:
       # TODO(chuntsen): Find a way to stop process pool.
-      if zipfile.is_zipfile(self._archive_path):
+      if zipfile.is_zipfile(self.archive_path):
         decompress_process = multiprocessing.Process(
             target=self.DecompressZipArchive, args=(args_queue, ))
-        report_num_by_external_tool = self._GetReportNumInZip(
-            self._archive_path)
+        report_num_by_external_tool = self._GetReportNumInZip(self.archive_path)
       # If a ZIP file is corrupted, 7zip may decompress part reports from it.
-      elif self._archive_path.endswith('zip'):
+      elif self.archive_path.endswith('zip'):
         self.warning('Using 7zip to decompress the archive %s', self._gcs_path)
         SetProcessEventStatus(ERROR_CODE.ArchiveCorrupted,
                               archive_process_event)
@@ -305,11 +313,11 @@ class ReportParser(log_utils.LoggerMixin):
             target=self.Decompress7zArchive, args=(args_queue, ))
         # The number of reports may be incorrect if the archive is corrupted.
         # Furthermore, we don't need to count the report number again by 7zip.
-      elif tarfile.is_tarfile(self._archive_path):
+      elif tarfile.is_tarfile(self.archive_path):
         decompress_process = multiprocessing.Process(
             target=self.DecompressTarArchive, args=(args_queue, ))
         report_num_by_external_tool = self._GetReportNumInTar(
-            self._archive_path, archive_process_event)
+            self.archive_path, archive_process_event)
       else:
         # We only support tar file and zip file.
         SetProcessEventStatus(ERROR_CODE.ArchiveInvalidFormat,
@@ -366,7 +374,7 @@ class ReportParser(log_utils.LoggerMixin):
     archive_process_event['duration'] = (
         archive_process_event['endTime'] - archive_process_event['startTime'])
 
-    os.remove(self._archive_path)
+    os.remove(self.archive_path)
     return total_reports
 
   def DecompressZipArchive(self, args_queue):
@@ -377,7 +385,7 @@ class ReportParser(log_utils.LoggerMixin):
                   arguments for ProcessReport(), exception or None.
     """
     try:
-      with zipfile.ZipFile(self._archive_path, 'r') as archive_obj:
+      with zipfile.ZipFile(self.archive_path, 'r') as archive_obj:
         for member_name in archive_obj.namelist():
           if not self.IsValidReportName(member_name):
             continue
@@ -402,7 +410,7 @@ class ReportParser(log_utils.LoggerMixin):
     """
     try:
       member_list_process = process_utils.Spawn(
-          ['7z', 'l', self._archive_path, '-slt'], read_stdout=True)
+          ['7z', 'l', self.archive_path, '-slt'], read_stdout=True)
       member_list_output = member_list_process.stdout_data
       member_list = re.findall('Path = (.*)', member_list_output, re.M)
       basename_to_filepath = {}
@@ -412,7 +420,7 @@ class ReportParser(log_utils.LoggerMixin):
 
       with file_utils.TempDirectory(dir=self._tmp_dir) as decompress_tmp_path:
         process = process_utils.Spawn([
-            '7z', 'e', self._archive_path, '-o' + decompress_tmp_path, '*.xz',
+            '7z', 'e', self.archive_path, '-o' + decompress_tmp_path, '*.xz',
             '-r', '-y'
         ], read_stdout=True, read_stderr=True)
         if process.returncode != 0:
@@ -443,7 +451,7 @@ class ReportParser(log_utils.LoggerMixin):
     try:
       # The 'r|*' mode will process data as a stream of blocks, and it may
       # faster than normal 'r:*' mode.
-      with tarfile.open(self._archive_path, 'r|*') as archive_obj:
+      with tarfile.open(self.archive_path, 'r|*') as archive_obj:
         for archive_member in archive_obj:
           # Some ReportArchives contain symlink, and it is not allow by using
           # 'r|*' mode.
@@ -493,8 +501,12 @@ class ReportParser(log_utils.LoggerMixin):
       result_queue: A shared queue to store processed result.
     """
     uuid = time_utils.TimedUUID()
-    report_file_path = os.path.join(self._report_path_parent_dir,
-                                    report_file_path)
+    if self.inner_archive_path:
+      # Adds a string '(archive) ' as prefix for the archive path to help us
+      # distinguish the archive is retrieved from a two-level archive in the
+      # output event.
+      report_file_path = os.path.join('(archive) ' + self.inner_archive_path,
+                                      report_file_path)
     report_event = datatypes.Event({
         '__report__': True,
         'uuid': uuid,
@@ -576,7 +588,6 @@ class ReportParser(log_utils.LoggerMixin):
           SetProcessEventStatus(ERROR_CODE.FactorylogFileNotFound,
                                 process_event)
         except HWIDNotFoundInFactoryLogError:
-          self.warning('HWID not found in factory.log')
           SetProcessEventStatus(ERROR_CODE.FactorylogNoHWID, process_event)
 
       return
