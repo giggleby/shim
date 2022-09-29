@@ -1,4 +1,4 @@
-# Copyright 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Uses HWID v3 to generate, encode, and verify the device's HWID.
@@ -134,6 +134,33 @@ class HWIDV3Test(test_case.TestCase):
     if self.args.project:
       cmd += ['--project', self.args.project]
 
+  def BuildCollectMaterialCommand(self, hwid_material_file: str):
+    """Build the command for `hwid collect-material`.
+
+    Args:
+      hwid_material_file: The path of hwid_material_file on DUT.
+
+    Returns:
+      A list of arguments in the command.
+    """
+    # pass device info to DUT
+    device_info_file = self._dut.path.join(self.tmpdir, 'device_info')
+    device_info = device_data.GetAllDeviceData()
+    with file_utils.UnopenedTemporaryFile() as f:
+      with open(f, 'w', encoding='utf8') as fp:
+        yaml.safe_dump(device_info, fp)
+      self._dut.SendFile(f, device_info_file)
+
+    collect_material_cmd = ['hwid', 'collect-material']
+    collect_material_cmd.extend(['--device-info-file', device_info_file])
+    if self.args.vpd_data_file:
+      collect_material_cmd.extend(['--vpd-data-file', self.args.vpd_data_file])
+    if self.args.run_vpd:
+      collect_material_cmd.append('--run-vpd')
+
+    collect_material_cmd.extend(['--output-file', hwid_material_file])
+    return collect_material_cmd
+
   def runTest(self):
     testlog.LogParam(name='phase', value=str(phase.GetPhase()))
     phase.AssertStartingAtPhase(phase.EVT, self.args.verify_checksum,
@@ -146,25 +173,11 @@ class HWIDV3Test(test_case.TestCase):
       update_utils.UpdateHWIDDatabase(self._dut)
 
     self.ui.SetState(_('Collecting DUT materials...'))
-    collect_material_cmd = ['hwid', 'collect-material']
-
-    # pass device info to DUT
-    device_info_file = self._dut.path.join(self.tmpdir, 'device_info')
-    device_info = device_data.GetAllDeviceData()
-    with file_utils.UnopenedTemporaryFile() as f:
-      with open(f, 'w', encoding='utf8') as fp:
-        yaml.safe_dump(device_info, fp)
-      self._dut.SendFile(f, device_info_file)
-
-    collect_material_cmd.extend(['--device-info-file', device_info_file])
-    if self.args.vpd_data_file:
-      collect_material_cmd.extend(['--vpd-data-file', self.args.vpd_data_file])
-    if self.args.run_vpd:
-      collect_material_cmd.append('--run-vpd')
-
     hwid_material_file = self._dut.path.join(self.tmpdir, 'hwid_material_file')
-    hwid_material = self.factory_tools.CallOutput(collect_material_cmd)
-    self._dut.WriteFile(hwid_material_file, hwid_material)
+    collect_material_cmd = self.BuildCollectMaterialCommand(hwid_material_file)
+    self.factory_tools.Call(collect_material_cmd, log=True)
+
+    hwid_material = self._dut.ReadFile(hwid_material_file)
     testlog.LogParam(name='hwid_material', value=hwid_material)
     testlog.UpdateParam(name='hwid_material',
                         description='materials to generate HWID string')
