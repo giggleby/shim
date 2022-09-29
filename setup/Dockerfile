@@ -83,7 +83,7 @@ ADD build/docker/uftp.tgz /usr/bin
 # Prepare requirements file and install pip packages.
 COPY py/umpire/server/requirements.txt "${umpire_dir}/"
 COPY py/dome/requirements.txt "${dome_dir}/"
-COPY py/instalog/requirements.txt "${instalog_dir}/"
+COPY py/instalog/requirements_for_docker.txt "${instalog_dir}/"
 COPY py/dkps/requirements.txt "${dkps_dir}/"
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --upgrade setuptools && \
@@ -91,7 +91,7 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 RUN pip3 install --no-cache-dir \
       -r "${umpire_dir}/requirements.txt" \
       -r "${dome_dir}/requirements.txt" \
-      -r "${instalog_dir}/requirements.txt" \
+      -r "${instalog_dir}/requirements_for_docker.txt" \
       -r "${dkps_dir}/requirements.txt"
 
 # Create Umpire mount point. Normally we should mount this (and Docker will
