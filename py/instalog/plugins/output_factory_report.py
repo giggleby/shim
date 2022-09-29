@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Output factory report plugin.
@@ -22,6 +22,7 @@ import multiprocessing
 import os
 import re
 import shutil
+import subprocess
 import tarfile
 import time
 import traceback
@@ -131,8 +132,10 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
           continue
 
       gcs_path = event['objectId']
+      archive_extension = os.path.splitext(gcs_path)[1]
       archive_path = os.path.join(
-          self._tmp_dir, 'archive_%d_%s' % (event['time'], event['md5']))
+          self._tmp_dir,
+          'archive_%d_%s%s' % (event['time'], event['md5'], archive_extension))
       download_list.append((gcs_path, archive_path))
 
       event['archive_path'] = archive_path
@@ -208,7 +211,11 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       report_parsers = []
       for name in archives_in_archive:
         dst = file_utils.CreateTemporaryFile(dir=self._tmp_dir)
-        archive.Extract(name, dst)
+        try:
+          archive.Extract(name, dst)
+        except ExtractError:
+          continue
+
         try:
           GetArchive(dst)
         except NotImplementedError:
@@ -858,6 +865,10 @@ def SetProcessEventStatus(code, process_event, message=None):
       process_event['message'].append(traceback.format_exc())
 
 
+class ExtractError(Exception):
+  """Generic error if extracting archive content failed."""
+
+
 class Archive(abc.ABC):
 
   def __init__(self, archive_path):
@@ -914,6 +925,49 @@ class ZipArchive(Archive):
     self._file = zipfile.ZipFile(self._archive_path, 'r')  # pylint: disable=consider-using-with
 
 
+class ZipWith7ZArchive(Archive):
+
+  def __init__(self, archive_path):
+    super().__init__(archive_path)
+    self._non_dir_files_in_archive = []
+
+  def GetNonDirFileNames(self):
+    return self._non_dir_files_in_archive
+
+  def Extract(self, member_name, dst_path):
+    with file_utils.TempDirectory() as tmp_dir:
+      process_utils.Spawn(
+          ['7z', 'x', self._archive_path, member_name, f'-o{tmp_dir}'],
+          stdout=subprocess.DEVNULL, call=True)
+      try:
+        shutil.move(os.path.join(tmp_dir, member_name), dst_path)
+      except FileNotFoundError as e:
+        raise ExtractError from e
+
+  def _OpenArchive(self):
+    output = process_utils.SpawnOutput(
+        ['7z', 'l', '-slt', '-ba', self._archive_path])
+    # The -slt (technical information list format) output is composed by
+    # sections, each section is either a file or a directory
+    # The output format of a section is:
+    #   Path = <file path>\n
+    #   ...
+    #   Attributes = <file attributes>\n
+    #   ...
+    #   \n
+    section_regex = re.compile(
+        r'Path = (?P<file_path>.+?\n)(?:.*?\n)*?' +
+        r'Attributes = (?P<attributes>.*?\n)(?:.*?\n)*?\n', re.DOTALL)
+    for match in section_regex.finditer(output):
+      file_path = match.group('file_path').strip()
+      attributes = match.group('attributes').strip()
+      if 'D' not in attributes:
+        self._non_dir_files_in_archive.append(file_path)
+
+  def _CloseArchive(self):
+    """7z archive does not open any file, thus no need to clean up."""
+
+
 class TarArchive(Archive):
 
   def GetNonDirFileNames(self):
@@ -931,8 +985,12 @@ class TarArchive(Archive):
 
 
 def GetArchive(archive_path):
+  # It is better to handle as much archive as possible, so we first try with the
+  # `zipfile` package, then use `7z` as fallback.
   if zipfile.is_zipfile(archive_path):
     return ZipArchive(archive_path)
+  if archive_path.endswith('.zip'):
+    return ZipWith7ZArchive(archive_path)
   if tarfile.is_tarfile(archive_path):
     return TarArchive(archive_path)
   raise NotImplementedError

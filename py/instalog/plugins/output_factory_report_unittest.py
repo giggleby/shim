@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 #
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import contextlib
 import os
 import shutil
 import sys
@@ -11,6 +12,7 @@ import tempfile
 import textwrap
 import unittest
 from unittest import mock
+
 
 # mock gcs_utils so that this test can run in chroot.
 sys.modules['cros.factory.instalog.utils.gcs_utils'] = mock.Mock()
@@ -37,6 +39,36 @@ class ArchiveUnittest(unittest.TestCase):
   def tearDownClass(cls):
     shutil.rmtree(cls.test_dir)
 
+  @staticmethod
+  @contextlib.contextmanager
+  def _PrepareTestingFileSystemStructure(files):
+    """Prepare a file system structure for testing.
+
+    Args:
+      files: a dict wit the key is a relative file path to create and values is
+        the file content string.
+    """
+    try:
+      with tempfile.TemporaryDirectory() as d:
+        for name, content in files.items():
+          full_path = os.path.join(d, name)
+          dir_name = os.path.dirname(full_path)
+          if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+          with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        yield d
+    finally:
+      pass
+
+  def _CheckExtractedContent(self, archive, archive_member_path, expected):
+    with tempfile.TemporaryDirectory() as d:
+      extracted_file_name = os.path.join(d, 'extracted.txt')
+      archive.Extract(archive_member_path, extracted_file_name)
+      with open(extracted_file_name, encoding='utf-8') as f:
+        extracted_content = f.read()
+    self.assertEqual(extracted_content, expected)
+
   def testCreateTarArchive(self):
     with tempfile.TemporaryDirectory() as d:
       archive_path = CreateTarArchive(os.path.join(self.test_dir, 'test'), d)
@@ -49,63 +81,180 @@ class ArchiveUnittest(unittest.TestCase):
     archive = output_factory_report.GetArchive(archive_path)
     self.assertIsInstance(archive, output_factory_report.ZipArchive)
 
-  def testZipGetNonDirFileNames(self):
-    expected_file_names = {'1.txt', '2.txt'}
+  @mock.patch('zipfile.is_zipfile')
+  def testCreateZipWith7ZArchive(self, mock_is_zip_file):
+    mock_is_zip_file.return_value = False
     with tempfile.TemporaryDirectory() as d:
-      for name in expected_file_names:
-        with open(os.path.join(d, name), 'w', encoding="utf-8") as f:
-          f.write('test')
-      os.mkdir(os.path.join(d, 'test'))
       archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), d)
+    archive = output_factory_report.GetArchive(archive_path)
+    self.assertIsInstance(archive, output_factory_report.ZipWith7ZArchive)
+
+  def testZipGetNonDirFileNames(self):
+    expected_files = {
+        '1.txt': '',
+        '2.txt': ''
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), path)
 
     with output_factory_report.GetArchive(archive_path) as archive:
       file_names = set(archive.GetNonDirFileNames())
-    self.assertEqual(file_names, expected_file_names)
+    self.assertEqual(file_names, expected_files.keys())
 
   def testTarGetNonDirFileNames(self):
-    expected_file_names = {'./1.txt', './2.txt'}
-    with tempfile.TemporaryDirectory() as d:
-      for name in expected_file_names:
-        with open(os.path.join(d, name), 'w', encoding="utf-8") as f:
-          f.write('test')
-      os.mkdir(os.path.join(d, 'test'))
-      archive_path = CreateTarArchive(os.path.join(self.test_dir, 'test'), d)
+    expected_files = {
+        './1.txt': '',
+        './2.txt': ''
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateTarArchive(os.path.join(self.test_dir, 'test'), path)
 
     with output_factory_report.GetArchive(archive_path) as archive:
       file_names = set(archive.GetNonDirFileNames())
-    self.assertEqual(file_names, expected_file_names)
+    self.assertEqual(file_names, expected_files.keys())
+
+  def testZipWith7ZGetNonDirFileNames(self):
+    expected_files = {
+        '1.txt': '',
+        '2.txt': ''
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), path)
+
+    with output_factory_report.ZipWith7ZArchive(archive_path) as archive:
+      file_names = set(archive.GetNonDirFileNames())
+    self.assertEqual(file_names, expected_files.keys())
 
   def testZipExtract(self):
-    file_name = 'test.txt'
-    content = 'test'
-    with tempfile.TemporaryDirectory() as d:
-      with open(os.path.join(d, file_name), 'w', encoding="utf-8") as f:
-        f.write(content)
-      archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), d)
+    expected_files = {
+        'test.txt': 'test'
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), path)
 
     with output_factory_report.GetArchive(archive_path) as archive:
-      with tempfile.TemporaryDirectory() as d:
-        extracted_file_name = os.path.join(d, 'extracted.txt')
-        archive.Extract(archive.GetNonDirFileNames()[0], extracted_file_name)
-        with open(extracted_file_name, encoding="utf-8") as f:
-          extracted_content = f.read()
-    self.assertEqual(extracted_content, content)
+      self._CheckExtractedContent(archive,
+                                  archive.GetNonDirFileNames()[0],
+                                  next(iter(expected_files.values())))
 
   def testTarExtract(self):
-    file_name = 'test.txt'
-    content = 'test'
-    with tempfile.TemporaryDirectory() as d:
-      with open(os.path.join(d, file_name), 'w', encoding="utf-8") as f:
-        f.write(content)
-      archive_path = CreateTarArchive(os.path.join(self.test_dir, 'test'), d)
+    expected_files = {
+        'test.txt': 'test'
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateTarArchive(os.path.join(self.test_dir, 'test'), path)
 
     with output_factory_report.GetArchive(archive_path) as archive:
-      with tempfile.TemporaryDirectory() as d:
-        extracted_file_name = os.path.join(d, 'extracted.txt')
-        archive.Extract(archive.GetNonDirFileNames()[0], extracted_file_name)
-        with open(extracted_file_name, encoding="utf-8") as f:
-          extracted_content = f.read()
-    self.assertEqual(extracted_content, content)
+      self._CheckExtractedContent(archive,
+                                  archive.GetNonDirFileNames()[0],
+                                  next(iter(expected_files.values())))
+
+  def testZipWith7ZExtract(self):
+    expected_files = {
+        'test.txt': 'test'
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), path)
+
+    with output_factory_report.ZipWith7ZArchive(archive_path) as archive:
+      self._CheckExtractedContent(archive,
+                                  archive.GetNonDirFileNames()[0],
+                                  next(iter(expected_files.values())))
+
+  def testZipWith7ZExtractDeepFile(self):
+    expected_files = {
+        'random_path/test.txt': 'test'
+    }
+    with ArchiveUnittest._PrepareTestingFileSystemStructure(
+        expected_files) as path:
+      os.mkdir(os.path.join(path, 'test'))
+      archive_path = CreateZipArchive(os.path.join(self.test_dir, 'test'), path)
+
+    with output_factory_report.ZipWith7ZArchive(archive_path) as archive:
+      self._CheckExtractedContent(archive,
+                                  archive.GetNonDirFileNames()[0],
+                                  next(iter(expected_files.values())))
+
+
+class ZipWith7ZUnittest(unittest.TestCase):
+
+  @mock.patch('cros.factory.instalog.utils.process_utils.SpawnOutput')
+  def testNormal7ZListOutput(self, mock_7z_cmd):
+    mock_7z_cmd.return_value = textwrap.dedent('''\
+      Path = sh/stub_startup.sh
+      Size = 813
+      Packed Size =
+      Modified = 2022-07-05 16:04:03
+      Attributes = A_ -rwxr-xr-x
+      CRC = 24617276
+      Encrypted = -
+      Method = LZMA2:17
+      Block = 0
+
+      Path = sh/cutoff.sh
+      Size = 813
+      Packed Size =
+      Modified = 2022-07-05 16:04:03
+      Attributes = A_ -rwxr-xr-x
+      CRC = 24617276
+      Encrypted = -
+      Method = LZMA2:17
+      Block = 0
+
+    ''')
+    expected = set(['sh/stub_startup.sh', 'sh/cutoff.sh'])
+    with output_factory_report.ZipWith7ZArchive('mock_path') as archive:
+      self.assertEqual(set(archive.GetNonDirFileNames()), expected)
+
+  # Due to version difference (version number and platform 7z version), the list
+  # format may change.
+  @mock.patch('cros.factory.instalog.utils.process_utils.SpawnOutput')
+  def testAttributesRightAfterPath7ZListOutput(self, mock_7z_cmd):
+    mock_7z_cmd.return_value = textwrap.dedent('''\
+      Path = sh/stub_startup.sh
+      Attributes = A_ -rwxr-xr-x
+      Size = 813
+      Packed Size =
+      Modified = 2022-07-05 16:04:03
+      CRC = 24617276
+      Encrypted = -
+      Method = LZMA2:17
+      Block = 0
+
+    ''')
+    expected = ['sh/stub_startup.sh']
+    with output_factory_report.ZipWith7ZArchive('mock_path') as archive:
+      self.assertEqual(archive.GetNonDirFileNames(), expected)
+
+  @mock.patch('cros.factory.instalog.utils.process_utils.SpawnOutput')
+  def testAttributesAtLast7ZListOutput(self, mock_7z_cmd):
+    mock_7z_cmd.return_value = textwrap.dedent('''\
+      Path = sh/stub_startup.sh
+      Size = 813
+      Packed Size =
+      Modified = 2022-07-05 16:04:03
+      CRC = 24617276
+      Encrypted = -
+      Method = LZMA2:17
+      Block = 0
+      Attributes = A_ -rwxr-xr-x
+
+    ''')
+    expected = ['sh/stub_startup.sh']
+    with output_factory_report.ZipWith7ZArchive('mock_path') as archive:
+      self.assertEqual(archive.GetNonDirFileNames(), expected)
 
 
 class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
