@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2019 The ChromiumOS Authors
+# Copyright 2019 The ChromiumOS Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Methods to generate the verification payload from the HWID database."""
@@ -22,6 +22,9 @@ from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
+
+BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH = 7
+BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH = 7
 
 class GenericProbeStatementInfoRecord:
   """Placeholder for info. related to the generic probe statement.
@@ -146,10 +149,15 @@ class StrValueConverter(ValueConverter):
 
 class StrPrefixValueConverter(ValueConverter):
 
+  def __init__(self, prefix_min_length: int = 0):
+    self._prefix_min_length = prefix_min_length
+
   def __call__(self, value):
     if isinstance(value, hwid_rule.Value):
       return re.compile(value.raw_value) if value.is_re else value.raw_value
-    return re.compile(f'{re.escape(value)}.*')
+    if len(value) >= self._prefix_min_length:
+      return re.compile(f'{re.escape(value)}.*')
+    return value
 
 
 class IntValueConverter(ValueConverter):
@@ -375,11 +383,19 @@ def GetAllProbeStatementGenerators():
                   _SameNameFieldRecord('manufacturer', str_converter),
                   _SameNameFieldRecord('model_name', str_converter),
               ],
-              # Components from sysfs.
+              # Components from sysfs. Since the maximum length of the
+              # manufacturer field and the model_name field are both 7, we
+              # should check the length of values before adding prefix matching
+              # regex.
               [
-                  _SameNameFieldRecord('manufacturer',
-                                       StrPrefixValueConverter()),
-                  _SameNameFieldRecord('model_name', StrPrefixValueConverter()),
+                  _SameNameFieldRecord(
+                      'manufacturer',
+                      StrPrefixValueConverter(
+                          BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH)),
+                  _SameNameFieldRecord(
+                      'model_name',
+                      StrPrefixValueConverter(
+                          BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH)),
                   _SameNameFieldRecord('technology',
                                        BatteryTechnologySysfsValueConverter()),
               ],

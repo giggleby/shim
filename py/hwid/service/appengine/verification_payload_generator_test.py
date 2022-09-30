@@ -19,6 +19,7 @@ from cros.factory.hwid.v3 import rule as hwid_rule
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
 
+
 _vp_generator = verification_payload_generator
 
 MissingComponentValueError = _vp_generator.MissingComponentValueError
@@ -66,6 +67,32 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
   def testTryGenerate_Sysfs(self):
     comp = database.ComponentInfo(
         {
+            'manufacturer': 'foo-567',
+            'model_name': 'bar-567',
+            'technology': 'Li-ion'
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
+    self.assertEqual(
+        vp_piece.probe_statement,
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'sysfs_battery', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': [{
+                    'manufacturer': [True, 'str', '!re foo\\-567.*'],
+                    'model_name': [True, 'str', '!re bar\\-567.*'],
+                    'technology': [True, 'str', '!eq Li-ion']
+                }, {
+                    'chemistry': [True, 'str', '!eq Li-ion'],
+                    'manufacturer': [True, 'str', '!eq foo-567'],
+                    'model_name': [True, 'str', '!eq bar-567'],
+                }]
+            }))
+
+  def testTryGenerate_Sysfs_ShortFields(self):
+    comp = database.ComponentInfo(
+        {
             'manufacturer': 'foo',
             'model_name': 'bar',
             'technology': 'Li-ion'
@@ -79,8 +106,8 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'generic_battery': {}
                 },
                 'expect': [{
-                    'manufacturer': [True, 'str', '!re foo.*'],
-                    'model_name': [True, 'str', '!re bar.*'],
+                    'manufacturer': [True, 'str', '!eq foo'],
+                    'model_name': [True, 'str', '!eq bar'],
                     'technology': [True, 'str', '!eq Li-ion']
                 }, {
                     'chemistry': [True, 'str', '!eq Li-ion'],
@@ -92,7 +119,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
   def testTryGenerate_SysfsWithRegex(self):
     comp = database.ComponentInfo(
         {
-            'manufacturer': 'foo',
+            'manufacturer': 'foo-567',
             'model_name': hwid_rule.Value('bar.*', is_re=True),
             'technology': 'Li-ion'
         }, hwid_common.COMPONENT_STATUS.supported)
@@ -105,12 +132,12 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'generic_battery': {}
                 },
                 'expect': [{
-                    'manufacturer': [True, 'str', '!re foo.*'],
+                    'manufacturer': [True, 'str', '!re foo\\-567.*'],
                     'model_name': [True, 'str', '!re bar.*'],
                     'technology': [True, 'str', '!eq Li-ion']
                 }, {
                     'chemistry': [True, 'str', '!eq Li-ion'],
-                    'manufacturer': [True, 'str', '!eq foo'],
+                    'manufacturer': [True, 'str', '!eq foo-567'],
                     'model_name': [True, 'str', '!re bar.*']
                 }]
             }))

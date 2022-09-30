@@ -30,7 +30,7 @@ components:
     items:
       battery_small_supported:
         values:
-          manufacturer: mfr
+          manufacturer: mfr-567
           model_name: S
           technology: Li-ion
       battery_medium_unqualified:
