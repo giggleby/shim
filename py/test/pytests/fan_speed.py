@@ -1,4 +1,4 @@
-# Copyright 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -17,7 +17,7 @@ In mode A, the steps are:
 1. Sets the fan speed to a target RPM.
 2. Monitors the fan speed for a given period (duration_secs) with sampling
    interval (probe_interval_secs). Then it takes average of the latest
-   #num_samples_to_use samples as the stabilized fan speed reading.
+   num_samples_to_use samples as the stabilized fan speed reading.
 3. Checks that the averaged reading is within range
    [target_rpm - error_margin, target_rpm + error_margin].
 """
@@ -41,20 +41,22 @@ class FanSpeedTest(test_case.TestCase):
   """A factory test for testing system fan."""
 
   ARGS = [
-      Arg('target_rpm', (int, list),
-          'A list of target RPM to set during test.'
-          'Unused if spin_max_then_half is set.',
-          default=0),
-      Arg('error_margin', int,
-          'Fail the test if actual fan speed is off the target by the margin.',
-          default=200),
+      Arg(
+          'target_rpm', (int, list), 'A list of target RPM to set during test.'
+          'Unused if spin_max_then_half is set.', default=0),
+      Arg(
+          'error_margin', int,
+          'Fail the test if actual fan speed is off the target by the margin '
+          'default in units of RPM', default=200),
       Arg('duration_secs', (int, float),
           'Duration of monitoring fan speed in seconds.', default=10),
-      Arg('spin_max_then_half', bool,
+      Arg(
+          'spin_max_then_half', bool,
           'If True, spin the fan to max_rpm, measure the actual reading, and '
           'set fan speed to half of actual max speed. Note that if True, '
           'target_rpm is invalid.', default=False),
-      Arg('max_rpm', int,
+      Arg(
+          'max_rpm', int,
           'A relatively high RPM for probing maximum fan speed. It is used '
           'when spin_max_then_half=True.', default=10000),
       Arg('probe_interval_secs', float,
@@ -62,8 +64,10 @@ class FanSpeedTest(test_case.TestCase):
       Arg('num_samples_to_use', int,
           'Number of lastest samples to count average as stablized speed.',
           default=5),
-      Arg('use_percentage', bool, 'Use percentage to set fan speed',
+      Arg('speed_use_percentage', bool, 'Use percentage to set fan speed',
           default=False),
+      Arg('error_margin_use_percentage', bool,
+          'Use percentage to set error margin', default=False),
       Arg('fan_id', int, 'The ID of fan to test, use None to test all fans.',
           default=None)
   ]
@@ -110,7 +114,7 @@ class FanSpeedTest(test_case.TestCase):
     self.ui.SetHTML(status, id='fs-status')
     self.ui.SetHTML(str(observed_rpm), id='fs-rpm')
 
-    if self.args.use_percentage:
+    if self.args.speed_use_percentage:
       self._fan.SetFanRPM(int(target_rpm * 100 / self.args.max_rpm),
                           self.args.fan_id)
     else:
@@ -150,14 +154,22 @@ class FanSpeedTest(test_case.TestCase):
 
   def VerifyResult(self, observed_rpm, target_rpm):
     """Verify observed rpms are in the range
-      (target_rpm - error_margin, target_rpm + error_margin)
+
+    In units of RPM: (target_rpm - error_margin, target_rpm + error_margin)
+    In units of percent: (target_rpm * (1 - error_margin_percent * 0.01),
+                            target_rpm * (1 + error_margin_percent * 0.01))
 
     Args:
       observed_rpm: a list of fan rpm readings.
       target_rpm: target fan speed.
     """
-    lower_bound = target_rpm - self.args.error_margin
-    upper_bound = target_rpm + self.args.error_margin
+    if self.args.error_margin_use_percentage:
+      lower_bound = target_rpm * (1 - self.args.error_margin * 0.01)
+      upper_bound = target_rpm * (1 + self.args.error_margin * 0.01)
+    else:
+      lower_bound = target_rpm - self.args.error_margin
+      upper_bound = target_rpm + self.args.error_margin
+
     error_messages = []
     for i, rpm in enumerate(observed_rpm):
       if lower_bound <= rpm <= upper_bound:
