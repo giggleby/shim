@@ -834,10 +834,18 @@ class Gooftool:
       with open(config_path, encoding='utf8') as f:
         obj = yaml.safe_load(f)
 
-      # According to https://crbug.com/1070692, 'platform-name' is not a part of
-      # identity info.  We shouldn't check it.
       for config in obj['chromeos']['configs']:
+        # According to https://crbug.com/1070692, 'platform-name' is not a 
+        # part of identity info.  We shouldn't check it.
         config['identity'].pop('platform-name', None)
+
+        # Per b/245588383, 'device-tree-compatible-match' is renamed to 'frid'.
+        # Normalize the dictionary keys to 'device-tree-compatible-match'.
+        if 'frid' in config['identity']:
+          frid_tag = config['identity'].pop('frid', None)
+          # Translate from FRID format string "Google_Model" to "google,model"
+          previous_tag = ",".join(frid_tag.lower().split("_"))
+          config['identity']['device-tree-compatible-match'] = previous_tag
 
       fields = ['name', 'identity', 'brand-code']
       configs = [
