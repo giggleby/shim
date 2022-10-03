@@ -817,6 +817,15 @@ class ChangeUnitManagerTest(unittest.TestCase):
 
              encoded_fields:
                chassis_field:
+            @@ -54,7 +77,7 @@
+                   storage: []
+               comp_cls_1_field:
+                 0:
+            -      comp_cls_1: comp_1_1
+            +      comp_cls_1: comp_1_1_renamed
+                 1:
+                   comp_cls_1: comp_1_2
+               comp_cls_23_field:
             @@ -64,6 +87,17 @@
                  1:
                    comp_cls_2: comp_2_2
@@ -826,7 +835,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
             +      comp_cls_1: new_comp
             +    1:
             +      comp_cls_1:
-            +      - comp_1_1
+            +      - comp_1_1_renamed
             +      - comp_1_2
             +    2:
             +      comp_cls_1:
@@ -835,8 +844,16 @@ class ChangeUnitManagerTest(unittest.TestCase):
 
              components:
                mainboard:
-            @@ -98,6 +132,9 @@
+            @@ -92,12 +126,16 @@
+                       hash: '0'
+               comp_cls_1:
+                 items:
+            -      comp_1_1:
+            +      comp_1_1_renamed:
+                     values:
+                       value: '1'
                    comp_1_2:
+            +        status: unsupported
                      values:
                        value: '2'
             +      new_comp:
@@ -856,17 +873,27 @@ class ChangeUnitManagerTest(unittest.TestCase):
         {
             'AddEncodingCombination:new_field(first)-comp_cls_1:new_comp': {
                 # Following combinations depends on the first.
-                'AddEncodingCombination:new_field-comp_cls_1:comp_1_1,comp_1_2',
+                ('AddEncodingCombination:new_field-comp_cls_1:'
+                 'comp_1_1_renamed,comp_1_2'),
                 # Following combinations depends on the first.
                 'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp',
                 # new_field is included in this image
                 'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
             },
             # Not depended by other change units.
-            'AddEncodingCombination:new_field-comp_cls_1:comp_1_1,comp_1_2':
+            ('AddEncodingCombination:new_field-comp_cls_1:'
+             'comp_1_1_renamed,comp_1_2'):
                 set(),
             # Not depended by other change units.
             'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp':
+                set(),
+            # Component renamed is depended by combination addition.
+            'CompChange:comp_cls_1:comp_1_1_renamed': {
+                ('AddEncodingCombination:new_field-comp_cls_1:'
+                 'comp_1_1_renamed,comp_1_2')
+            },
+            # Not depended by other change units (status change only).
+            'CompChange:comp_cls_1:comp_1_2':
                 set(),
             'CompChange:comp_cls_1:new_comp(new)': {
                 # new_comp is mentioned at these combinations.

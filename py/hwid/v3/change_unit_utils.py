@@ -59,6 +59,12 @@ def _GetExactlyOneComponentClassFromEncodedField(db: database.Database,
   return comp_classes.pop()
 
 
+def _IsNewlyCreatedOrRenamedComp(
+    analysis_result: _HWIDComponentAnalysisResult) -> bool:
+  return (analysis_result.is_newly_added or
+          analysis_result.diff_prev.name_changed)
+
+
 class ChangeUnitDepSpec:
   """Using fields to represent or filter change units.
 
@@ -138,7 +144,9 @@ class CompChange(ChangeUnit):
   def __init__(self, analysis_result: _HWIDComponentAnalysisResult,
                probe_values: Optional[builder.ProbedValueType],
                information: Optional[Mapping[str, Any]], comp_hash: str):
-    super().__init__(self.CreateDepSpec(analysis_result.comp_cls, comp_hash))
+    super().__init__(
+        self.CreateDepSpec(analysis_result.comp_cls, comp_hash,
+                           _IsNewlyCreatedOrRenamedComp(analysis_result)))
     self._analysis_result = analysis_result
     self._probe_values = probe_values
     self._information = information
@@ -155,8 +163,9 @@ class CompChange(ChangeUnit):
     return self._analysis_result
 
   @classmethod
-  def CreateDepSpec(cls, comp_cls: str, comp_hash: str) -> ChangeUnitDepSpec:
-    return ChangeUnitDepSpec(cls, comp_cls, comp_hash)
+  def CreateDepSpec(cls, comp_cls: str, comp_hash: str,
+                    new_or_renamed: bool) -> ChangeUnitDepSpec:
+    return ChangeUnitDepSpec(cls, comp_cls, comp_hash, new_or_renamed)
 
   @_UnifyException
   def Patch(self, db_builder: builder.DatabaseBuilder):
@@ -250,7 +259,7 @@ class AddEncodingCombination(ChangeUnit):
 
   def GetDependedSpecs(self) -> Iterable[ChangeUnitDepSpec]:
     # Combinations depend on the mentioned components.
-    yield from (CompChange.CreateDepSpec(self._comp_cls, comp_hash)
+    yield from (CompChange.CreateDepSpec(self._comp_cls, comp_hash, True)
                 for comp_hash in self._comp_hashes)
     if not self._is_first:
       # The first combination of a certain encoded field might be used as the
