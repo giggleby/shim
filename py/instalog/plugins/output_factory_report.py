@@ -114,7 +114,6 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
 
     total_archive_size = 0
     event_dict = {}
-    download_list = []
     for event in event_stream.iter(count=_PROCESSES_NUMBER):
       archive_process_event = datatypes.Event({
           '__process__': True,
@@ -136,16 +135,27 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       archive_path = os.path.join(
           self._tmp_dir,
           'archive_%d_%s%s' % (event['time'], event['md5'], archive_extension))
-      download_list.append((gcs_path, archive_path))
 
       event['archive_path'] = archive_path
       event['archive_process_event'] = archive_process_event
-      event_dict[event['objectId']] = event
+      if gcs_path in event_dict:
+        other_event = event_dict[gcs_path]
+        self.info('Found duplicated objectId: %s', gcs_path)
+        # Compare the upload time of the archive and remain the latest one.
+        if other_event['time'] > event['time']:
+          self.info('Ignore the event: %r', event)
+          continue
+        self.info('Ignore the event: %r', other_event)
+        total_archive_size -= other_event['size']
+      event_dict[gcs_path] = event
 
       total_archive_size += event['size']
       if total_archive_size >= self.args.archive_batch_size:
         break
 
+    download_list = []
+    for gcs_path, event in event_dict.items():
+      download_list.append((gcs_path, event['archive_path']))
     downloader_results = self._downloader.Download(download_list)
 
     for gcs_path, archive_path in downloader_results:
