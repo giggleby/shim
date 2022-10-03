@@ -525,6 +525,14 @@ class Gooftool:
           tag = config['identity'].pop('custom-label-tag', None)
           config['identity']['whitelabel-tag'] = tag
 
+        # Per b/245588383, 'smbios-name-match' is renamed to 'frid'.
+        # Normalize the dictionary keys to 'smbios-name-match'.
+        if 'frid' in config['identity']:
+          frid_tag = config['identity'].pop('frid', None)
+          # Translate from FRID format string "Google_Model" to "google,model"
+          previous_tag = ",".join(frid_tag.lower().split("_"))
+          config['identity']['smbios-name-match'] = previous_tag
+
       fields = ['name', 'identity', 'brand-code']
       configs = [
           {
