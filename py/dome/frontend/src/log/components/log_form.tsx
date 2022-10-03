@@ -15,12 +15,12 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListSubheader from '@mui/material/ListSubheader';
 import MenuItem from '@mui/material/MenuItem';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   WithStyles,
   withStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 import {
@@ -114,101 +114,116 @@ class LogForm extends React.Component<
     let actionTypeComponent = null;
     if (actionType === 'download') {
       actionTypeComponent =
-        <>
-          <Divider />
-          {(logType === 'csv') ||
-            <List>
-              <ListSubheader>Maximum Archive Size</ListSubheader>
-              <ListItem>
-                <ReduxFormTextField
-                  name="archiveSize"
-                  label="size"
-                  type="number"
-                />
-                <ReduxFormTextField
-                  name="archiveUnit"
-                  label="unit"
-                  select
-                >
-                  {units.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </ReduxFormTextField>
-              </ListItem>
-              <ListSubheader>Dates</ListSubheader>
-              <ListItem>
-                <ReduxFormDateField
-                  name="startDate"
-                  label="start date"
-                  ignoreTouch
-                />
-                <ReduxFormDateField
-                  name="endDate"
-                  label="end date"
-                  ignoreTouch
-                />
-              </ListItem>
-              {/* <ListSubheader>Action on file</ListSubheader>
-              <ListItem>
-                <ReduxFormTextField
-                  name="actionType"
-                  label="action"
-                  select
-                >
-                  {actions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.name}
-                    </MenuItem>
-                  ))}
-                </ReduxFormTextField>
-              </ListItem> */}
-            </List>
-          }
-          <CardActions>
-            <Button type="submit" color="primary">
-              Download
-            </Button>
-          </CardActions>
-        </>
+        (
+          <>
+            <Divider />
+            {(logType === 'csv') ||
+              <List>
+                <ListSubheader>Maximum Archive Size</ListSubheader>
+                <ListItem>
+                  <ReduxFormTextField
+                    name="archiveSize"
+                    label="size"
+                    type="number"
+                  />
+                  <ReduxFormTextField
+                    name="archiveUnit"
+                    label="unit"
+                    select
+                  >
+                    {units.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </ReduxFormTextField>
+                </ListItem>
+                <ListSubheader>Dates</ListSubheader>
+                <ListItem>
+                  <ReduxFormDateField
+                    name="startDate"
+                    label="start date"
+                    ignoreTouch
+                  />
+                  <ReduxFormDateField
+                    name="endDate"
+                    label="end date"
+                    ignoreTouch
+                  />
+                </ListItem>
+                {/* <ListSubheader>Action on file</ListSubheader>
+                <ListItem>
+                  <ReduxFormTextField
+                    name="actionType"
+                    label="action"
+                    select
+                  >
+                    {actions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.name}
+                      </MenuItem>
+                    ))}
+                  </ReduxFormTextField>
+                </ListItem> */}
+              </List>
+            }
+            <CardActions>
+              <Button type="submit" color="primary">
+                Download
+              </Button>
+            </CardActions>
+          </>
+        );
     } else if (actionType === 'cleanup') {
       actionTypeComponent =
-        <>
-          <Divider />
-          {(logType === 'csv') ||
-            <List>
-              <ListSubheader>Dates</ListSubheader>
-              <ListItem>
-                <ReduxFormDateField
-                  name="startDate"
-                  label="start date"
-                  ignoreTouch
-                />
-                <ReduxFormDateField
-                  name="endDate"
-                  label="end date"
-                  ignoreTouch
-                />
-              </ListItem>
-            </List>
-          }
-          <CardActions>
-            <Button type="button" color="primary" onClick={() => {this.setState({open: true});}}>
-              {`Delete ${logType} file`}
-            </Button>
-          </CardActions>
-          <Dialog open={this.state.open} onClose={this.handleClose}>
-            <DialogTitle>Alert</DialogTitle>
-            <DialogContent>
-              All files will be deleted permanently. Do you want to continue?
-            </DialogContent>
-            <DialogActions>
-              <Button form="logForm" type="submit" color="primary" onClick={() => {this.setState({open: false});}}>OK</Button>
-              <Button onClick={this.handleClose}>Cancel</Button>
-            </DialogActions>
-          </Dialog>
-        </>
+        (
+          <>
+            <Divider />
+            {(logType === 'csv') ||
+              <List>
+                <ListSubheader>Dates</ListSubheader>
+                <ListItem>
+                  <ReduxFormDateField
+                    name="startDate"
+                    label="start date"
+                    ignoreTouch
+                  />
+                  <ReduxFormDateField
+                    name="endDate"
+                    label="end date"
+                    ignoreTouch
+                  />
+                </ListItem>
+              </List>
+            }
+            <CardActions>
+              <Button
+                type="button"
+                color="primary"
+                onClick={() => this.setState({open: true})}
+              >
+                {`Delete ${logType} file`}
+              </Button>
+            </CardActions>
+            <Dialog open={this.state.open} onClose={this.handleClose}>
+              <DialogTitle>Alert</DialogTitle>
+              <DialogContent>
+                All files will be deleted permanently. Do you want to continue?
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  form="logForm"
+                  type="submit"
+                  color="primary"
+                  onClick={() => this.setState({open: false})}
+                >
+                  OK
+                </Button>
+                <Button onClick={this.handleClose}>Cancel</Button>
+              </DialogActions>
+            </Dialog>
+          </>
+        );
     }
 
     return (

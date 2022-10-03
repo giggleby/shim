@@ -20,7 +20,8 @@ const INITIAL_STATE = {
   dirs: [],
 };
 
-export default produce((draft: FactoryDriveState, action: FactoryDriveAction) => {
+export default produce(
+  (draft: FactoryDriveState, action: FactoryDriveAction) => {
   switch (action.type) {
     case getType(actions.receiveFactoryDrives): {
       const {factoryDrives} = action.payload;

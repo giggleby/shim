@@ -4,12 +4,12 @@
 
 import Drawer from '@mui/material/Drawer';
 import MenuList from '@mui/material/MenuList';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 

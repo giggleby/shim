@@ -18,7 +18,8 @@ export const closeForm = createAction('CLOSE_FORM', (resolve) =>
 export const basicActions = {openFormImpl, closeForm};
 
 export const openForm = <T extends FormNames>(
-  formName: T, formPayload: FormPayloadTypeMap[T] = {} as FormPayloadTypeMap[T]) =>
+  formName: T,
+  formPayload: FormPayloadTypeMap[T] = {} as FormPayloadTypeMap[T]) =>
   (dispatch: Dispatch, getState: () => RootState) => {
     // The file input does not fire any event when canceled, if the user
     // opened the file dialog and canceled, its onChange handler won't be

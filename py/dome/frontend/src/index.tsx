@@ -4,11 +4,11 @@
 
 import {indigo} from '@mui/material/colors';
 import CssBaseline from '@mui/material/CssBaseline';
+import StyledEngineProvider from '@mui/material/StyledEngineProvider';
 import {
   createTheme,
   ThemeProvider,
 } from '@mui/material/styles';
-import StyledEngineProvider from '@mui/material/StyledEngineProvider';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {Provider} from 'react-redux';

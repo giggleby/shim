@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import MenuItem, {MenuItemProps} from '@mui/material/MenuItem';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 

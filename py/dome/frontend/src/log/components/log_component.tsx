@@ -2,18 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import CardContent from '@mui/material/CardContent';
-import CircularProgress from '@mui/material/CircularProgress';
-import green from '@mui/material/colors/green';
-import IconButton from '@mui/material/IconButton';
-import {
-  createStyles,
-  withStyles,
-  WithStyles,
-} from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
 import RunningIcon from '@mui/icons-material/Autorenew';
 import SuccessIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -21,6 +9,18 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CollapseIcon from '@mui/icons-material/ExpandLess';
 import ExpandIcon from '@mui/icons-material/ExpandMore';
 import ReportIcon from '@mui/icons-material/ReportProblem';
+import CardContent from '@mui/material/CardContent';
+import CircularProgress from '@mui/material/CircularProgress';
+import green from '@mui/material/colors/green';
+import IconButton from '@mui/material/IconButton';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import {
+  createStyles,
+  withStyles,
+  WithStyles,
+} from '@mui/styles';
 import classNames from 'classnames';
 import React from 'react';
 

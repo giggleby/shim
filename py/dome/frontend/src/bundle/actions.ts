@@ -79,7 +79,7 @@ export const fetchBundles = () =>
         `${baseURL(getState)}/bundles.json`);
       dispatch(receiveBundles(response.data));
     } catch (err: unknown) {
-      if(isAxiosError(err)) {
+      if (isAxiosError(err)) {
         dispatch(error.actions.setAndShowErrorDialog(
           `error fetching bundle list\n\n${err.message}`));
       } else {

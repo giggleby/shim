@@ -17,11 +17,10 @@ import {DispatchProps} from '@common/types';
 import {startUpdateResource} from '../actions';
 import {UPDATE_RESOURCE_FORM} from '../constants';
 import {getBundleNames} from '../selectors';
+import {UpdateResourceFormPayload} from '../types';
 
-import UpdateResourceForm, {
-  UpdateResourceFormData,
-} from './update_resource_form';
-import { UpdateResourceFormPayload } from '../types';
+import {UpdateResourceFormData} from './update_resource_form';
+import UpdateResourceForm from './update_resource_form';
 
 type UpdateResourceDialogProps =
   ReturnType<typeof mapStateToProps> & DispatchProps<typeof mapDispatchToProps>;

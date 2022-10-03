@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import Grid from '@mui/material/Grid';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import classNames from 'classnames';
 import React from 'react';
 import {hot} from 'react-hot-loader';

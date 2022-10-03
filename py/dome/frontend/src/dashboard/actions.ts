@@ -42,6 +42,7 @@ export const fetchPorts = () => async (dispatch: Dispatch) => {
   dispatch(receivePorts(response.data));
 };
 
-export const removeProjectPort = (ports: PortResponse, projectName: string) => async (dispatch: Dispatch) => {
+export const removeProjectPort = (ports: PortResponse, projectName: string) =>
+  async (dispatch: Dispatch) => {
   dispatch(removePorts(ports, projectName));
 };

@@ -21,7 +21,12 @@ import {RootState} from '@app/types';
 
 import {DispatchProps} from '@common/types';
 
-import {disableUmpire, enableUmpireWithSettings, fetchPorts, removeProjectPort} from '../actions';
+import {
+  disableUmpire,
+  enableUmpireWithSettings,
+  fetchPorts,
+  removeProjectPort,
+} from '../actions';
 import {ENABLE_UMPIRE_FORM} from '../constants';
 import {getPorts} from '../selectors';
 

@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import IconButton from '@mui/material/IconButton';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
-import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import React from 'react';
 import {connect} from 'react-redux';
 
@@ -47,7 +47,8 @@ type FactoryDriveAppProps =
   WithStyles<typeof styles> &
   DispatchProps<typeof mapDispatchToProps>;
 
-class FactoryDriveApp extends React.Component<FactoryDriveAppProps, FactoryDriveState> {
+class FactoryDriveApp
+  extends React.Component<FactoryDriveAppProps, FactoryDriveState> {
 
   state = {currentDirId: null};
 

@@ -36,7 +36,7 @@ export const updateConfig = (config: Partial<Config>) =>
       'Update config', 'PUT', '/config/0/', newConfig, () => {
         // optimistic update
         dispatch(receiveConfig(newConfig));
-      }))
+      }));
   };
 
 export const enableTftp = () => updateConfig({tftpEnabled: true});

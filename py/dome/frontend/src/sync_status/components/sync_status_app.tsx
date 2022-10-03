@@ -19,38 +19,42 @@ import {RootState} from '@app/types';
 
 import {authorizedAxios} from '@common/utils';
 
-type SyncStatusAppProps = ReturnType<typeof mapStateToProps>
+type SyncStatusAppProps = ReturnType<typeof mapStateToProps>;
 
-function statusToColor(status: any){
-  if(status === 'Success') return 'green';
-  if(status === 'Failure') return 'red';
+function statusToColor(status: any) {
+  if (status === 'Success') return 'green';
+  if (status === 'Failure') return 'red';
   return 'gray';
 }
 
-function syncStatusContent(status: any){
+function syncStatusContent(status: any) {
   const _items = [];
   for (const [index, value] of Object.entries(status)) {
     _items.push(
-      (index === 'status')?
-      <TableCell align="left" style={{color: statusToColor(value)}}> {value} </TableCell> :
-      <TableCell> {value} </TableCell>
-    );
+      (index === 'status') ?
+      (
+        <TableCell align="left" style={{color: statusToColor(value)}}>
+          {`${value}`}
+        </TableCell>
+      )
+      :
+      <TableCell> {value} </TableCell>);
   }
   return _items;
 }
 
 class SyncStatusApp extends React.Component<SyncStatusAppProps> {
   timerID: number;
-  constructor(props: SyncStatusAppProps, ){
+  constructor(props: SyncStatusAppProps) {
     super(props);
     this.state = {};
     this.timerID = 0;
   }
 
-  getStatus = async() => {
+  getStatus = async () => {
     try {
       const response = await authorizedAxios().get(
-        `projects/${this.props.projectName}/sync/status/`
+        `projects/${this.props.projectName}/sync/status/`,
       );
       this.setState(response.data);
     } catch (unknownError: unknown) {
@@ -58,9 +62,8 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
     }
   }
 
-
   renderUpdate = () => {
-    const _items = []
+    const _items = [];
     for (const [secondary, status] of Object.entries(this.state)) {
       _items.push(
         <TableRow key={secondary}>
@@ -68,8 +71,7 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
             {secondary}
           </TableCell>
           {syncStatusContent(status)}
-        </TableRow>
-       );
+        </TableRow>);
     }
     return _items;
   }
@@ -93,7 +95,8 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
           (
             <Alert severity="info">
               You haven't set up the secondary umpire.
-              You can go to the "Dashboard &#62; Services &#62; umpireSync" section to set up it.
+              You can go to the "Dashboard &#62; Services &#62; umpireSync"
+              section to set up it.
             </Alert>
           )
           :
@@ -114,7 +117,7 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
         }
         </CardContent>
       </Card>
-    )
+    );
   }
 }
 
@@ -122,4 +125,4 @@ const mapStateToProps = (state: RootState) => ({
   projectName: project.selectors.getCurrentProject(state),
 });
 
-export default connect(mapStateToProps, {})(SyncStatusApp);;
+export default connect(mapStateToProps, {})(SyncStatusApp);

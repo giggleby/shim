@@ -47,4 +47,4 @@ export const validateDirectoryName = (string: string) => {
     return true;
   }
   return false;
-}
+};

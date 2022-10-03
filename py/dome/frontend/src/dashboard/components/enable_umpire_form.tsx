@@ -41,12 +41,13 @@ interface FormData {
 }
 
 /**
- * Check whether the current umpire port overlaps with the ports of other projects,
- * if overlap, then return the project name which is overlap.
+ * Check whether the current umpire port overlaps with the ports of other
+ * projects, if overlap, then return the project name which is overlap.
  * @param currentUmpirePort The current umpire port of the project.
  * @param ports Includes data for maxPortOffset and allPorts.
  */
-const checkUmpirePortOverlap = (currentUmpirePort: number, ports: PortResponse) => {
+const checkUmpirePortOverlap = (currentUmpirePort: number,
+                                ports: PortResponse) => {
   const maxPortOffset = ports.maxPortOffset;
   let project_name = null;
   ports.allPorts.forEach((port: Port) => {
@@ -62,9 +63,11 @@ const checkUmpirePortOverlap = (currentUmpirePort: number, ports: PortResponse) 
 const validate = (values: FormData) => {
   const errors: any = {};
   if (values.ports) {
-    const project_name = checkUmpirePortOverlap(values.umpirePort, values.ports);
+    const project_name = checkUmpirePortOverlap(values.umpirePort,
+                                                values.ports);
     if (project_name !== null) {
-      errors['umpirePort'] = `Port range will overlap with ${project_name} project`;
+      errors.umpirePort =
+        `Port range will overlap with ${project_name} project`;
     }
   }
   return errors;
@@ -130,8 +133,13 @@ const EnableUmpireForm: React.SFC<EnableUmpireFormProps> = ({
         {
           ports.allPorts?.map((port: Port) => (
             <Tooltip title={port.name}>
-              <Chip label={`${(port.umpirePort)}~${port.umpirePort + ports.maxPortOffset}`}
-                size="small" sx={{ marginRight: 1, marginBottom: 1 }} />
+              <Chip
+                label={
+                  `${port.umpirePort}~${port.umpirePort + ports.maxPortOffset}`
+                }
+                size="small"
+                sx={{marginRight: 1, marginBottom: 1}}
+              />
             </Tooltip>
           ))
         }

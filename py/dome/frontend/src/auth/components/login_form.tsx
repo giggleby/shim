@@ -7,13 +7,13 @@ import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import FormHelperText from '@mui/material/FormHelperText';
+import {Theme} from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Typography from '@mui/material/Typography';
 import React from 'react';
 import {InjectedFormProps, reduxForm} from 'redux-form';
 

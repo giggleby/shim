@@ -35,13 +35,15 @@ const baseURL = (getState: () => RootState): string => {
 const receiveFactoryDrives = createAction('RECEIVE_FACTORY_DRIVES', (resolve) =>
   (factoryDrives: FactoryDrive[]) => resolve({factoryDrives}));
 
-const receiveFactoryDriveDirs = createAction('RECEIVE_FACTORY_DRIVE_DIRS', (resolve) =>
+const receiveFactoryDriveDirs =
+  createAction('RECEIVE_FACTORY_DRIVE_DIRS', (resolve) =>
   (factoryDriveDirs: FactoryDriveDirectory[]) => resolve({factoryDriveDirs}));
 
 const updateFactoryDrive = createAction('UPDATE_FACTORY_DRIVE', (resolve) =>
   (factoryDrive: FactoryDrive) => resolve({factoryDrive}));
 
-const updateFactoryDriveDir = createAction('UPDATE_FACTORY_DRIVE_DIR', (resolve) =>
+const updateFactoryDriveDir =
+  createAction('UPDATE_FACTORY_DRIVE_DIR', (resolve) =>
   (factoryDriveDir: FactoryDriveDirectory) => resolve({factoryDriveDir}));
 
 export const basicActions = {
@@ -105,7 +107,8 @@ export const startUpdateFactoryDrive = (data: UpdateFactoryDriveRequest) =>
 
     // send the request
     const description = `Update factory drive "${data.name}"`;
-    const factoryDriveComponent = await dispatch(task.actions.runTask<FactoryDrive>(
+    const factoryDriveComponent = await dispatch(
+      task.actions.runTask<FactoryDrive>(
       description, 'POST', `${baseURL(getState)}/factory_drives/files/`, data,
       optimisticUpdate));
     dispatch(updateFactoryDrive(factoryDriveComponent));
@@ -116,11 +119,15 @@ export const startUpdateComponentVersion =
     async (dispatch: Dispatch, getState: () => RootState) => {
       // send the request
       const description = `Update factory drive "${data.name}"  version`;
-      const factoryDriveComponent = await dispatch(task.actions.runTask<FactoryDrive>(
+      const factoryDriveComponent = await dispatch(
+        task.actions.runTask<FactoryDrive>(
         description, 'POST', `${baseURL(getState)}/factory_drives/files/`, data,
         () => {
           dispatch(updateFactoryDrive({
-            ...getFactoryDrives(getState())[data.id], usingVer: data.usingVer}));
+            ...getFactoryDrives(
+              getState())[data.id],
+              usingVer: data.usingVer,
+          }));
         }));
       dispatch(updateFactoryDrive(factoryDriveComponent));
     };
@@ -130,11 +137,15 @@ export const startRenameFactoryDrive = (data: RenameRequest) =>
     dispatch(formDialog.actions.closeForm(RENAME_FACTORY_DRIVE_FORM));
     // send the request
     const description = `Rename factory drive "${data.name}"`;
-    const factoryDriveComponent = await dispatch(task.actions.runTask<FactoryDrive>(
+    const factoryDriveComponent = await dispatch(
+      task.actions.runTask<FactoryDrive>(
       description, 'POST', `${baseURL(getState)}/factory_drives/files/`, data,
       () => {
         dispatch(updateFactoryDrive({
-          ...getFactoryDrives(getState())[data.id], name: data.name}));
+          ...getFactoryDrives(
+            getState())[data.id],
+            name: data.name,
+          }));
       }));
     dispatch(updateFactoryDrive(factoryDriveComponent));
   };

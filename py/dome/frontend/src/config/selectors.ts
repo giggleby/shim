@@ -14,7 +14,7 @@ export const localState = (state: RootState): ConfigState =>
   displayedState(state)[NAME];
 
 export const getConfig =
-  (state: RootState): Config => localState(state).config
+  (state: RootState): Config => localState(state).config;
 export const isTftpEnabled =
   (state: RootState): boolean => localState(state).config.tftpEnabled;
 export const isMcastEnabled =

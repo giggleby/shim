@@ -4,12 +4,12 @@
 
 import Card from '@mui/material/Card';
 import Collapse from '@mui/material/Collapse';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 import {createSelector} from 'reselect';

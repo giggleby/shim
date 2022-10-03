@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import AddIcon from '@mui/icons-material/Add';
 import Fab from '@mui/material/Fab';
 import Portal from '@mui/material/Portal';
-import AddIcon from '@mui/icons-material/Add';
 import React from 'react';
 import {connect} from 'react-redux';
 
@@ -40,7 +40,8 @@ const BundlesApp: React.SFC<BundlesAppProps> =
           <Portal container={overlay}>
             <Fab
               color="primary"
-              title="Upload Factory Bundle (zip or {gzip|bzip2|xz} compressed tarball)"
+              title="Upload Factory Bundle (zip or {gzip|bzip2|xz} compressed
+                tarball)"
               onClick={openUploadNewBundleForm}
             >
               <AddIcon />

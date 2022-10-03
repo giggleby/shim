@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import BorderColorIcon from '@mui/icons-material/BorderColor';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import UpdateIcon from '@mui/icons-material/Update';
 import Button from '@mui/material/Button';
 import grey from '@mui/material/colors/grey';
 import Dialog from '@mui/material/Dialog';
@@ -13,18 +17,14 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListSubheader from '@mui/material/ListSubheader';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import BorderColorIcon from '@mui/icons-material/BorderColor';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import UpdateIcon from '@mui/icons-material/Update';
 import classNames from 'classnames';
 import React from 'react';
 import {connect} from 'react-redux';
@@ -136,7 +136,10 @@ class FactoryDriveList extends
   }
 
   handleRenameFactoryDrive = (compId: number) => {
-    this.props.renameFactoryDrive(compId, this.props.factoryDrives[compId].name);
+    this.props.renameFactoryDrive(
+      compId,
+      this.props.factoryDrives[compId].name,
+    );
   }
 
   handleRenameDirectory = (dirId: number) => {
@@ -187,7 +190,9 @@ class FactoryDriveList extends
               <div className={classes.cell}>
                 <Tooltip title="Rename">
                   <IconButton
-                    onClick={() => this.handleRenameDirectory(factoryDriveDir.id)}
+                    onClick={
+                      () => this.handleRenameDirectory(factoryDriveDir.id)
+                    }
                   >
                     <BorderColorIcon />
                   </IconButton>
@@ -216,7 +221,9 @@ class FactoryDriveList extends
               <div className={classes.cell}>
                 <Tooltip title="Rename">
                   <IconButton
-                    onClick={() => this.handleRenameFactoryDrive(factoryDrive.id)}
+                    onClick={
+                      () => this.handleRenameFactoryDrive(factoryDrive.id)
+                    }
                   >
                     <BorderColorIcon />
                   </IconButton>
@@ -235,7 +242,11 @@ class FactoryDriveList extends
                 <Tooltip title="Update" className={classes.cell}>
                   <IconButton
                     onClick={() => this.props.updateComponent(
-                      factoryDrive.id, factoryDrive.dirId, factoryDrive.name, false)}
+                      factoryDrive.id,
+                      factoryDrive.dirId,
+                      factoryDrive.name,
+                      false,
+                    )}
                   >
                     <CloudUploadIcon />
                   </IconButton>

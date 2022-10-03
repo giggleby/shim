@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import {grey, red} from '@mui/material/colors';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 
 import {DomeInfo} from '../types';

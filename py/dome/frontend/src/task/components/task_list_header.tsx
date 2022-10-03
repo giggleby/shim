@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import DismissIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CollapseIcon from '@mui/icons-material/ExpandLess';
+import ExpandIcon from '@mui/icons-material/ExpandMore';
 import IconButton from '@mui/material/IconButton';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import DismissIcon from '@mui/icons-material/CheckCircle';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CollapseIcon from '@mui/icons-material/ExpandLess';
-import ExpandIcon from '@mui/icons-material/ExpandMore';
 import React from 'react';
 
 import {isCancellable, isRunning} from '../constants';

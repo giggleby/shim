@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosError} from 'axios';
+import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 
 // add authentication token to header, if exists.
 export const authorizedAxios = (): AxiosInstance => {

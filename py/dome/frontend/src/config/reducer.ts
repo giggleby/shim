@@ -29,7 +29,7 @@ export default combineReducers<ConfigState, ConfigAction>({
     }
   },
   config: (state = {tftpEnabled: false, mcastEnabled: false},
-    action: ConfigAction) => {
+           action: ConfigAction) => {
     switch (action.type) {
       case getType(actions.receiveConfig):
         return action.payload.config;

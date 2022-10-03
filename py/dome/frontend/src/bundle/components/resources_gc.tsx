@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import Fab from '@mui/material/Fab';
 import Snackbar from '@mui/material/Snackbar';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import React from 'react';
 import {connect} from 'react-redux';
 

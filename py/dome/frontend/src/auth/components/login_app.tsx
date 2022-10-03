@@ -4,12 +4,12 @@
 
 import CircularProgress from '@mui/material/CircularProgress';
 import Modal from '@mui/material/Modal';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 import {connect} from 'react-redux';
 
@@ -47,7 +47,7 @@ class LoginApp extends React.Component<LoginAppProps> {
     try {
       await this.props.tryLogin(data);
     } catch (err: unknown) {
-      if(isAxiosError(err)) {
+      if (isAxiosError(err)) {
         throw toReduxFormError(err);
       } else {
         throw err;

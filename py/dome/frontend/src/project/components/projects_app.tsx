@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import DeleteIcon from '@mui/icons-material/Delete';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -16,15 +17,14 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemText from '@mui/material/ListItemText';
+import {Theme} from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import DeleteIcon from '@mui/icons-material/Delete';
 import React from 'react';
 import {connect} from 'react-redux';
 import {reset} from 'redux-form';
@@ -68,7 +68,7 @@ interface DialogStates {
 class ProjectsApp extends React.Component<ProjectAppProps, DialogStates> {
   state: DialogStates = {
     open: false,
-    name:''
+    name: '',
   };
 
   handleSubmit = ({name}: CreateProjectFormData) => {
@@ -118,7 +118,9 @@ class ProjectsApp extends React.Component<ProjectAppProps, DialogStates> {
                     <Tooltip title="delete this project">
                       <IconButton
                         color="inherit"
-                        onClick={() => {this.setState({open: true, name: name});}}
+                        onClick={() => {
+                          this.setState({open: true, name});
+                        }}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -148,9 +150,15 @@ class ProjectsApp extends React.Component<ProjectAppProps, DialogStates> {
         Do you want to continue?
         </DialogContent>
         <DialogActions>
-          <Button color="primary" onClick={() => {
-            deleteProject(this.state.name);
-            this.setState({open: false});}}>OK</Button>
+          <Button
+            color="primary"
+            onClick={() => {
+              deleteProject(this.state.name);
+              this.setState({open: false});
+            }}
+          >
+            OK
+          </Button>
           <Button onClick={this.handleClose}>Cancel</Button>
         </DialogActions>
       </Dialog>

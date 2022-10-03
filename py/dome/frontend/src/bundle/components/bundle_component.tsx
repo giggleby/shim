@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import DeleteIcon from '@mui/icons-material/Delete';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Collapse from '@mui/material/Collapse';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
+import {Theme} from '@mui/material/styles';
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DragHandleIcon from '@mui/icons-material/DragHandle';
 import classNames from 'classnames';
 import React from 'react';
 import {connect} from 'react-redux';
@@ -147,7 +147,8 @@ class BundleComponent extends React.Component<BundleComponentProps> {
           <Tooltip title="use this bundle's netboot resource">
             <Button
               color="primary"
-              variant={(projectNetbootBundle === bundle.name) ? 'contained': 'outlined'}
+              variant={(projectNetbootBundle === bundle.name) ?
+                'contained' : 'outlined'}
               onClick={(e) => {
                 e.stopPropagation();
                 setBundleAsNetboot(bundle.name, projectName);

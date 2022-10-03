@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import Download from '@mui/icons-material/GetApp';
+import Update from '@mui/icons-material/Publish';
 import grey from '@mui/material/colors/grey';
 import IconButton from '@mui/material/IconButton';
+import {Theme} from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
-import Typography from '@mui/material/Typography';
-import Download from '@mui/icons-material/GetApp';
-import Update from '@mui/icons-material/Publish';
 import classNames from 'classnames';
 import React from 'react';
 import {connect} from 'react-redux';
@@ -125,17 +125,17 @@ class ResourceTable extends React.Component<ResourceTableProps> {
   }
 }
 
-const resourceNameToFileType : Record<string, string> = {
-    'complete': '*.sh',
-    'firmware': 'chromeos-firmwareupdate',
-    'hwid': 'hwid_v3_bundle_*.sh',
-    'netboot_cmdline': 'cmdline',
-    'netboot_firmware': '*.net.bin',
-    'netboot_kernel': 'vmlinu*',
-    'project_config': '*.tar.gz',
-    'release_image': '*.bin',
-    'test_image': '*.bin',
-    'toolkit': '*.run',
+const resourceNameToFileType: Record<string, string> = {
+    complete: '*.sh',
+    firmware: 'chromeos-firmwareupdate',
+    hwid: 'hwid_v3_bundle_*.sh',
+    netboot_cmdline: 'cmdline',
+    netboot_firmware: '*.net.bin',
+    netboot_kernel: 'vmlinu*',
+    project_config: '*.tar.gz',
+    release_image: '*.bin',
+    test_image: '*.bin',
+    toolkit: '*.run',
 };
 
 const mapDispatchToProps = {

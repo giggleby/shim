@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import MenuItem, {MenuItemProps} from '@mui/material/MenuItem';
+import {Theme} from '@mui/material/styles';
 import {
   createStyles,
   withStyles,
   WithStyles,
 } from '@mui/styles';
-import {Theme} from '@mui/material/styles';
 import React from 'react';
 
 import {Omit} from '@common/types';
@@ -22,7 +22,8 @@ const styles = (theme: Theme) => createStyles({
 });
 
 type MenuSubheaderProps =
-  Omit<MenuItemProps<'li', { button?: true }>, 'classes'> & WithStyles<typeof styles>;
+  Omit<MenuItemProps<'li', { button?: true }>, 'classes'> &
+  WithStyles<typeof styles>;
 
 class MenuSubheader extends React.Component<MenuSubheaderProps> {
   menuItemRef: React.RefObject<HTMLLIElement>;
@@ -48,7 +49,11 @@ class MenuSubheader extends React.Component<MenuSubheaderProps> {
   render() {
     const {classes, ...other} = this.props;
     return (
-      <MenuItem ref={this.menuItemRef} className={classes.subtitle} {...other} />
+      <MenuItem
+        ref={this.menuItemRef}
+        className={classes.subtitle}
+        {...other}
+      />
     );
   }
 }

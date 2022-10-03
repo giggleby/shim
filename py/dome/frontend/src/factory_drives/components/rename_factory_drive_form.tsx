@@ -47,7 +47,8 @@ type RenameFactoryDriveFormProps =
   ReturnType<typeof mapStateToProps> &
   DispatchProps<typeof mapDispatchToProps>;
 
-class RenameFactoryDriveForm extends React.Component<RenameFactoryDriveFormProps> {
+class RenameFactoryDriveForm
+  extends React.Component<RenameFactoryDriveFormProps> {
   render() {
     const {open, cancelRename, renameFactoryDrive, submitForm} = this.props;
     const payload = this.props.payload as RenameRequest;

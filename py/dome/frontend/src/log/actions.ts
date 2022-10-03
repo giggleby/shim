@@ -102,7 +102,7 @@ export const exportLog = (projectName: string,
     const dates = (startDate === endDate) ?
         startDate : `${startDate} ~ ${endDate}`;
     const title = (logType === 'csv') ? logType : `${logType} ${dates}`;
-    switch(actionType) {
+    switch (actionType) {
       case 'download':
         dispatch(addLogPile(pileKey, title, projectName, actionType));
         try {
