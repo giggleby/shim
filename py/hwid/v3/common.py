@@ -1,10 +1,13 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Common classes and values for HWID v3 framework."""
 
+import enum
+
 from cros.factory.utils import type_utils
+
 
 DEFAULT_PROBE_STATEMENT = 'default_probe_statement.json'
 HEADER_BIT_LENGTH = 5
@@ -20,6 +23,23 @@ OLDEST_FRAMEWORK_VERSION = 0
 # This version number is used to distinguish non-compatible syntax changes
 # in HWID DB.
 FRAMEWORK_VERSION = 0
+
+
+class FirmwareComps(str, enum.Enum):
+  """The list of firmware component."""
+
+  RO_MAIN_FIRMWARE = 'ro_main_firmware'
+  RO_EC_FIRMWARE = 'ro_ec_firmware'
+  RO_PD_FIRMWARE = 'ro_pd_firmware'
+  RO_FP_FIRMWARE = 'ro_fp_firmware'
+  FIRMWARE_KEYS = 'firmware_keys'
+
+  @classmethod
+  def has_value(cls, value: str):
+    return value in cls.__members__.values()
+
+  def __str__(self):
+    return self.value
 
 
 class HWIDException(Exception):

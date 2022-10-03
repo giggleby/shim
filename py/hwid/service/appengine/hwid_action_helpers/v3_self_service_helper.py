@@ -6,7 +6,7 @@ import functools
 import hashlib
 import logging
 import textwrap
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Tuple
 
 import yaml
 
@@ -44,17 +44,6 @@ _HWID_BUNDLE_INSTALLER_SCRIPT = textwrap.dedent(f"""\
         continue
       shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
     """)
-
-
-def _GetFirmwareBundleRelatedCompClasses() -> Sequence[str]:
-  desc = hwid_api_messages_pb2.FactoryBundleRecord.FirmwareRecord.DESCRIPTOR
-  return [
-      field.name for field in desc.fields if field.message_type and
-      field.message_type.name in {'FirmwareInfo', 'FirmwareKeys'}
-  ]
-
-
-_FIRMWARE_BUNDLE_RELATED_COMP_CLASSES = _GetFirmwareBundleRelatedCompClasses()
 
 
 def _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents,
@@ -106,7 +95,7 @@ class HWIDV3SelfServiceActionHelper:
     old_db = database.Database.LoadData(
         self._preproc_data.raw_database_internal)
     new_db = database.Database.LoadData(internal_db_content)
-    for comp_cls in _FIRMWARE_BUNDLE_RELATED_COMP_CLASSES:
+    for comp_cls in common.FirmwareComps:
       new_db_components = new_db.GetComponents(comp_cls)
       # TODO: disable renaming fw related components as bundle_uuids will be
       # lost.

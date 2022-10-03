@@ -433,10 +433,10 @@ class SelfServiceHelper:
           for value in values:
             value = json_format.MessageToDict(value,
                                               preserving_proto_field_name=True)
-            if field.message_type.name == 'FirmwareInfo':
-              comp_name = v3_builder.DetermineComponentName(field.name, value)
-            elif field.message_type.name == 'FirmwareKeys':
+            if field.name == v3_common.FirmwareComps.FIRMWARE_KEYS:
               comp_name = keys_comp_name
+            elif v3_common.FirmwareComps.has_value(field.name):
+              comp_name = v3_builder.DetermineComponentName(field.name, value)
             else:
               continue
 
@@ -835,7 +835,7 @@ class SelfServiceHelper:
     resp = hwid_api_messages_pb2.SetFirmwareInfoSupportStatusResponse()
 
     firmware_comps = action.GetComponents(
-        with_classes=v3_builder.FIRMWARE_COMPS)
+        with_classes=list(v3_common.FirmwareComps))
 
     def _GetBundleUUIDsByVersionString(ro_main_firmware_comps):
       # TODO(wyuang): currently it is possible to create multiple UUIDs for
@@ -857,7 +857,7 @@ class SelfServiceHelper:
       return bundle_uuids
 
     bundle_uuids = _GetBundleUUIDsByVersionString(
-        firmware_comps.get('ro_main_firmware', {}))
+        firmware_comps.get(v3_common.FirmwareComps.RO_MAIN_FIRMWARE, {}))
     db = action.GetDBV3()
     changed = False
     for comp_cls, comps in firmware_comps.items():
