@@ -153,6 +153,8 @@ export const exportLog = (projectName: string,
         }
         dispatch(setCleanupReportMessages(pileKey, response.data.messages));
         break;
+      default:
+        return;
     }
   };
 

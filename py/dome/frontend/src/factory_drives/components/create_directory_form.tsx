@@ -31,7 +31,8 @@ import {CreateDirectoryRequest} from '../types';
 const validate = (values: CreateDirectoryRequest) => {
   const errors: FormErrors<CreateDirectoryRequest> = {};
   if (!validateDirectoryName(values.name)) {
-    errors['name'] =
+    const key = 'name';
+    errors[key] =
       'Invalid directory name. It should only contain: A-Z, a-z, 0-9, -, _';
   }
   return errors;

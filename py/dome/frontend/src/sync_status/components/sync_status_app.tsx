@@ -21,16 +21,16 @@ import {authorizedAxios} from '@common/utils';
 
 type SyncStatusAppProps = ReturnType<typeof mapStateToProps>;
 
-function statusToColor(status: any) {
+const statusToColor = (status: any) => {
   if (status === 'Success') return 'green';
   if (status === 'Failure') return 'red';
   return 'gray';
-}
+};
 
-function syncStatusContent(status: any) {
-  const _items = [];
+const syncStatusContent = (status: any) => {
+  const items = [];
   for (const [index, value] of Object.entries(status)) {
-    _items.push(
+    items.push(
       (index === 'status') ?
       (
         <TableCell align="left" style={{color: statusToColor(value)}}>
@@ -40,8 +40,8 @@ function syncStatusContent(status: any) {
       :
       <TableCell> {value} </TableCell>);
   }
-  return _items;
-}
+  return items;
+};
 
 class SyncStatusApp extends React.Component<SyncStatusAppProps> {
   timerID: number;
@@ -63,9 +63,9 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
   }
 
   renderUpdate = () => {
-    const _items = [];
+    const items = [];
     for (const [secondary, status] of Object.entries(this.state)) {
-      _items.push(
+      items.push(
         <TableRow key={secondary}>
           <TableCell component="th" scope="row">
             {secondary}
@@ -73,7 +73,7 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
           {syncStatusContent(status)}
         </TableRow>);
     }
-    return _items;
+    return items;
   }
 
   componentDidMount() {
@@ -91,7 +91,7 @@ class SyncStatusApp extends React.Component<SyncStatusAppProps> {
         <CardHeader title="Sync Status" />
         <CardContent>
         {
-          Object.keys(this.state).length == 0 ?
+          Object.keys(this.state).length === 0 ?
           (
             <Alert severity="info">
               You haven't set up the secondary umpire.

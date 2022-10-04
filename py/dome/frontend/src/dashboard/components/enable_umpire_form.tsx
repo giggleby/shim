@@ -49,25 +49,25 @@ interface FormData {
 const checkUmpirePortOverlap = (currentUmpirePort: number,
                                 ports: PortResponse) => {
   const maxPortOffset = ports.maxPortOffset;
-  let project_name = null;
+  let projectName = null;
   ports.allPorts.forEach((port: Port) => {
     const minPort = port.umpirePort - maxPortOffset;
     const maxPort = port.umpirePort + maxPortOffset;
     if (currentUmpirePort >= minPort && currentUmpirePort <= maxPort) {
-      project_name = port.name;
+      projectName = port.name;
     }
   });
-  return project_name;
+  return projectName;
 };
 
 const validate = (values: FormData) => {
   const errors: any = {};
   if (values.ports) {
-    const project_name = checkUmpirePortOverlap(values.umpirePort,
+    const projectName = checkUmpirePortOverlap(values.umpirePort,
                                                 values.ports);
-    if (project_name !== null) {
+    if (projectName !== null) {
       errors.umpirePort =
-        `Port range will overlap with ${project_name} project`;
+        `Port range will overlap with ${projectName} project`;
     }
   }
   return errors;
@@ -122,7 +122,7 @@ const EnableUmpireForm: React.SFC<EnableUmpireFormProps> = ({
 }) => {
   const initialValues = {
     umpirePort: project.umpirePort || 8080,
-    ports: ports,
+    ports,
   };
   const hasExisting = project.hasExistingUmpire;
   return (
@@ -131,17 +131,16 @@ const EnableUmpireForm: React.SFC<EnableUmpireFormProps> = ({
       <DialogContent>
         <Typography>Ports are already use in</Typography>
         {
-          ports.allPorts?.map((port: Port) => (
-            <Tooltip title={port.name}>
+          ports.allPorts?.map((port: Port) => {
+            const endUmpirePort = port.umpirePort + ports.maxPortOffset;
+            return <Tooltip key={port.name} title={port.name}>
               <Chip
-                label={
-                  `${port.umpirePort}~${port.umpirePort + ports.maxPortOffset}`
-                }
+                label={`${port.umpirePort}~${endUmpirePort}`}
                 size="small"
                 sx={{marginRight: 1, marginBottom: 1}}
               />
-            </Tooltip>
-          ))
+            </Tooltip>;
+          })
         }
         <InnerForm
           onSubmit={onSubmit}

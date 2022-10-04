@@ -31,7 +31,8 @@ import {RenameRequest} from '../types';
 const validate = (values: RenameRequest) => {
   const errors: FormErrors<RenameRequest> = {};
   if (!validateDirectoryName(values.name)) {
-    errors['name'] =
+    const key = 'name';
+    errors[key] =
       'Invalid directory name. It should only contain: A-Z, a-z, 0-9, -, _';
   }
   return errors;
