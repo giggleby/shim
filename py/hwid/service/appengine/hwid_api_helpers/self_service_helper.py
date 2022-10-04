@@ -882,15 +882,15 @@ class SelfServiceHelper:
         db.DumpDataWithoutChecksum(internal=False,
                                    suppress_support_status=False))
 
-    # TODO(wyuang): Include bug number in the commit message. Currently there's
-    # no bug number in the firmware test plan on DLM.
     commit_msg = textwrap.dedent(f"""\
         ({int(time.time())}) {project}: HWID Firmware Support Status Update
 
         Requested by: {request.original_requester}
         Warning: all posted comments will be sent back to the requester.
 
-        %s""") % request.description
+        %s
+
+        BUG=b:{request.bug_number}""") % request.description
 
     try:
       cl_number = live_hwid_repo.CommitHWIDDB(
