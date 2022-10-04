@@ -29,6 +29,16 @@ class TestListError(Exception):
   """TestList exception."""
 
 
+class MaxRetryError(Exception):
+  """Retry times exceeds threshold error."""
+
+  def __init__(self, message="") -> None:
+    self.message = message
+    if not message:
+      self.message = "Retry times exceeds threshold"
+    super().__init__(message)
+
+
 # pylint: disable=redefined-builtin
 class TimeoutError(Error):
   """Timeout error."""

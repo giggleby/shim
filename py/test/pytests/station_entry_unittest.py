@@ -91,6 +91,7 @@ class FactoryEntryUnitTest(unittest.TestCase):
         lambda: self._timeline.GetTime() < 10)
 
     self.test.setUp()
+    self._timeline.AdvanceTime(10)
     self.test.runTest()
 
     self.mock_dut.info.Invalidate.assert_called_once()
@@ -116,6 +117,7 @@ class FactoryEntryUnitTest(unittest.TestCase):
         lambda: self._timeline.GetTime() >= 10)
 
     self.test.setUp()
+    self._timeline.AdvanceTime(10)
     self.test.runTest()
 
     self.mock_dut.info.Invalidate.assert_called_once()
@@ -129,7 +131,7 @@ class FactoryEntryUnitTest(unittest.TestCase):
     self._timeline.AssertTimeAt(10)
 
   def testStartStationBasedTestTimeout(self):
-    timeout_secs = 123
+    timeout_secs = 0
     self.test.args = FakeArgs({'start_station_tests': True,
                                'prompt_start': False,
                                'load_dut_storage': True,

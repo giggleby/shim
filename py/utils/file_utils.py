@@ -19,12 +19,12 @@ import stat
 import subprocess
 import tempfile
 import threading
-import time
 import zipfile
 import zipimport
 
 from . import platform_utils
 from . import process_utils
+from . import sync_utils
 from . import type_utils
 
 
@@ -637,26 +637,33 @@ class FileLock:
   def Acquire(self):
     self._fd = os.open(self._lockfile, os.O_RDWR | os.O_CREAT)
 
-    remaining_secs = self._timeout_secs
-    while True:
-      try:
-        self._sys_lock(self._fd, is_exclusive=True, is_blocking=False)
-        self._locked = True
-        logging.debug('%s (%d) locked by %s',
-                      self._lockfile, self._fd, os.getpid())
-        break
-      except IOError:
-        if self._timeout_secs is not None:
-          # We don't want to use real system time because the sleep may
-          # be longer due to system busy or suspend/resume.
-          time.sleep(self._retry_secs)
-          remaining_secs -= self._retry_secs
-          if remaining_secs < 0:
-            raise FileLockTimeoutError(
-                f'Could not acquire file lock of {self._lockfile} in '
-                f'{self._timeout_secs} second(s)') from None
-        else:
-          raise
+    def lock():
+      self._sys_lock(self._fd, is_exclusive=True, is_blocking=False)
+      self._locked = True
+      logging.debug('%s (%d) locked by %s', self._lockfile, self._fd,
+                    os.getpid())
+
+    if self._timeout_secs:
+      # Retry Until timeout second has reached
+      _timeout_secs = self._timeout_secs
+
+      file_lock_timeout_error = FileLockTimeoutError(
+          f'Could not acquire file lock'
+          f' of {self._lockfile} in {self._timeout_secs} second(s)')
+
+      retry_wrapper = sync_utils.RetryDecorator(
+          timeout_sec=_timeout_secs, interval_sec=self._retry_secs,
+          exceptions_to_catch=[IOError],
+          timeout_exception_to_raise=file_lock_timeout_error)
+    else:
+      # Try once and raise if there is any error
+      retry_wrapper = sync_utils.RetryDecorator(
+          max_attempt_count=1,
+          timeout_sec=0,
+          reraise=True,
+          exceptions_to_catch=[IOError],
+      )
+    retry_wrapper(lock)()
 
   def Release(self):
     if self._locked:

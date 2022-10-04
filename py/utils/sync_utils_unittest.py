@@ -62,18 +62,38 @@ class PollForConditionTest(PollingTestBase):
 
 class WaitForTest(PollingTestBase):
 
+  def setUp(self):
+    super().setUp()
+    self.start_time = self._timeline.GetTime()
+
   def runTest(self):
-    def _ReturnTrueAfter(t):
-      return self._timeline.GetTime() > t
 
-    now = self._timeline.GetTime()
-    self.assertEqual(True, sync_utils.WaitFor(
-        lambda: _ReturnTrueAfter(now + 0.5),
-        timeout_secs=1))
+    def _ReturnTrueAfter(delta_time: float):
+      return self._timeline.GetTime() > self.start_time + delta_time
 
-    now = self._timeline.GetTime()
     self.assertRaises(type_utils.TimeoutError, sync_utils.WaitFor,
-                      lambda: _ReturnTrueAfter(now + 1), timeout_secs=0.5)
+                      condition=lambda: _ReturnTrueAfter(1), timeout_secs=0.5)
+
+    self.start_time = self._timeline.GetTime()
+    self.assertTrue(
+        sync_utils.WaitFor(lambda: _ReturnTrueAfter(0.5), timeout_secs=1))
+
+
+class EventWaitTest(unittest.TestCase):
+
+  def testMultithreadClose(self):
+    start_event = threading.Event()
+
+    def Target():
+      start_event.clear()
+      time.sleep(1)
+      start_event.set()
+
+    t = threading.Thread(target=Target)
+    t.start()
+
+    self.assertEqual(False, sync_utils.EventWait(start_event, 0.5, 1))
+    self.assertEqual(True, sync_utils.EventWait(start_event, 1, 0.5))
 
 
 class QueueGetTest(PollingTestBase):
@@ -83,36 +103,179 @@ class QueueGetTest(PollingTestBase):
     self._queue = queue.Queue()
 
   def testQueueGetEmpty(self):
-    self.assertRaises(queue.Empty, sync_utils.QueueGet, self._queue, timeout=1)
+    self.assertRaises(queue.Empty, sync_utils.QueueGet, self._queue, timeout=.5,
+                      poll_interval_secs=0.2)
 
   def testQueueGetSomething(self):
-    self._timeline.AddEvent(30, lambda: self._queue.put(123))
-
-    self.assertEqual(123, sync_utils.QueueGet(self._queue))
+    self._queue.put(123)
+    self.assertEqual(123, sync_utils.QueueGet(self._queue, timeout=0))
 
   def testQueueGetNone(self):
-    self._timeline.AddEvent(1, lambda: self._queue.put(None))
+    self._queue.put('foo')
 
-    self.assertIsNone(sync_utils.QueueGet(self._queue))
+    self.assertEqual(
+        'foo',
+        sync_utils.QueueGet(self._queue, timeout=.5, poll_interval_secs=0.2))
 
   def testQueueGetTimeout(self):
-    self._timeline.AddEvent(30, lambda: self._queue.put('foo'))
-    self._timeline.AddEvent(40, lambda: self._queue.put('bar'))
+    self.assertRaises(queue.Empty, sync_utils.QueueGet, self._queue, timeout=.5,
+                      poll_interval_secs=0.2)
 
-    self.assertRaises(
-        queue.Empty,
-        sync_utils.QueueGet, self._queue, timeout=20, poll_interval_secs=1)
-    self._timeline.AssertTimeAt(20)
+    self._queue.put('foo')
 
-    self.assertEqual('foo',
-                     sync_utils.QueueGet(
-                         self._queue, timeout=20, poll_interval_secs=1))
-    self._timeline.AssertTimeAt(30)
+    self.assertEqual(
+        'foo',
+        sync_utils.QueueGet(self._queue, timeout=.5, poll_interval_secs=0.2))
 
-    self.assertEqual('bar',
-                     sync_utils.QueueGet(
-                         self._queue, timeout=20, poll_interval_secs=1))
-    self._timeline.AssertTimeAt(40)
+    self.assertRaises(queue.Empty, sync_utils.QueueGet, self._queue,
+                      timeout=0.5, poll_interval_secs=0.2)
+
+    self._queue.put('bar')
+
+    self.assertEqual(
+        'bar',
+        sync_utils.QueueGet(self._queue, timeout=.5, poll_interval_secs=0.2))
+
+
+class RetryTest(unittest.TestCase):
+
+  def testNormal(self):
+    counter = []
+
+    @sync_utils.RetryDecorator(
+        max_attempt_count=3,
+        interval_sec=0.1,
+    )
+    def CountFunc():
+      counter.append(0)
+
+    CountFunc()
+
+    self.assertEqual(1, len(counter))
+
+  def testRetryCount(self):
+    counter = []
+
+    @sync_utils.RetryDecorator(
+        max_attempt_count=3,
+        interval_sec=0.1,
+    )
+    def CountFunc():
+      counter.append(0)
+      if len(counter) != 3:
+        raise type_utils.TestFailure
+
+    CountFunc()
+    self.assertEqual(3, len(counter))
+
+  def testMaxRetryError(self):
+    counter = []
+
+    retry_wrapper = sync_utils.RetryDecorator(
+        max_attempt_count=3,
+        interval_sec=0,
+    )
+
+    def CountFunc():
+      counter.append(0)
+      if len(counter) != 5:
+        raise type_utils.TestFailure
+
+    TestFunc = retry_wrapper(CountFunc)
+
+    self.assertRaises(type_utils.MaxRetryError, TestFunc)
+
+    retry_wrapper = sync_utils.RetryDecorator(max_attempt_count=3,
+                                              interval_sec=0, reraise=True)
+
+    self.assertRaises(type_utils.TestFailure, CountFunc)
+
+  def testRetryTimeout(self):
+    counter = []
+
+    @sync_utils.RetryDecorator(
+        timeout_sec=1,
+        interval_sec=0.1,
+    )
+    def CountFunc():
+      counter.append(0)
+      if len(counter) != 10:
+        raise type_utils.TestFailure
+
+    CountFunc()
+    self.assertEqual(10, len(counter))
+
+  def testCatchCustomException(self):
+    counter = []
+
+    @sync_utils.RetryDecorator(max_attempt_count=3, interval_sec=0,
+                               exceptions_to_catch=[type_utils.TestFailure],
+                               reraise=True)
+    def CountFunc():
+      counter.append(0)
+      raise type_utils.TestFailure
+
+    self.assertRaises(type_utils.TestFailure, CountFunc)
+    self.assertEqual(3, len(counter))
+
+  def testCatchException(self):
+    counter = []
+
+    @sync_utils.RetryDecorator(max_attempt_count=3, interval_sec=0,
+                               exceptions_to_catch=[type_utils.TestFailure])
+    def CountFunc():
+      counter.append(0)
+      raise type_utils.Error
+
+    self.assertRaises(type_utils.Error, CountFunc)
+    self.assertEqual(1, len(counter))
+
+  def testRetryOnTarget(self):
+    counter = []
+
+    @sync_utils.RetryDecorator(timeout_sec=2, interval_sec=0,
+                               target_condition=lambda x: len(x) == 2)
+    def CountFunc():
+      counter.append(0)
+      return counter
+
+    CountFunc()
+    self.assertEqual(2, len(counter))
+
+  def testRaiseOnTarget(self):
+
+    @sync_utils.RetryDecorator(timeout_sec=0.5, interval_sec=0,
+                               exceptions_to_catch=[],
+                               target_condition=lambda x: len(x) == 2)
+    def CountFunc():
+      raise type_utils.TestFailure
+
+    self.assertRaises(type_utils.TestFailure, CountFunc)
+
+  def testRetryUntilTimeout(self):
+
+    @sync_utils.RetryDecorator(timeout_sec=0.5, interval_sec=0.1)
+    def CountFunc():
+      raise type_utils.TestFailure
+
+    self.assertRaises(type_utils.TimeoutError, CountFunc)
+
+  def testRetryTimeoutErrorReraise(self):
+
+    @sync_utils.RetryDecorator(timeout_sec=0.5, interval_sec=0.1, reraise=True)
+    def CountFunc():
+      raise type_utils.TestFailure
+
+    self.assertRaises(type_utils.TestFailure, CountFunc)
+
+  def testRetryUntilTimeoutCustomException(self):
+
+    @sync_utils.RetryDecorator(timeout_sec=0.5, interval_sec=0.1,
+                               timeout_exception_to_raise=type_utils.Error)
+    def CountFunc():
+      raise type_utils.TestFailure
+
+    self.assertRaises(type_utils.Error, CountFunc)
 
 
 class TimeoutTest(unittest.TestCase):
