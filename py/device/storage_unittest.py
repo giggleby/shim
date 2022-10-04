@@ -140,5 +140,58 @@ class StorageDevicePathTest(unittest.TestCase):
     self.assertEqual(part1_dev, '/dev/sda1')
 
 
+class MainStorageTypeTest(unittest.TestCase):
+
+  def setUp(self):
+    self.dut = mock.MagicMock()
+    self.storage = storage.Storage(self.dut)
+    self.storage.GetMainStorageDevice = mock.MagicMock()
+
+  def testNVMe(self):
+    self.dut.path.basename.return_value = 'nvme0n1'
+    self.assertEqual(storage.MainStorageType.NVME,
+                     self.storage.GetMainStorageType())
+
+  def testEMMC(self):
+    self.dut.path.basename.return_value = 'mmcblk0'
+    self.dut.path.realpath.return_value = (
+        '/sys/devices/pci0000:00/0000:00:1a.0/mmc_host/mmc1/mmc1:0001')
+    self.dut.ReadFile.return_value = 'MMC'
+    self.assertEqual(storage.MainStorageType.MMC,
+                     self.storage.GetMainStorageType())
+
+  def testUSB(self):
+    self.dut.path.basename.return_value = 'sda'
+    self.dut.path.realpath.return_value = (
+        '/sys/devices/pci0000:00/0000:00:14.0/usb4/4-1/4-1:1.0/host1'
+        '/target1:0:0/1:0:0:0')
+    self.assertEqual(storage.MainStorageType.USB,
+                     self.storage.GetMainStorageType())
+
+  def testUFS(self):
+    self.dut.path.basename.return_value = 'sda'
+    self.dut.path.realpath.return_value = (
+        '/sys/devices/pci0000:00/0000:00:12.7/host0/ufs0:0:0/0:0:0:0')
+    self.assertEqual(storage.MainStorageType.UFS,
+                     self.storage.GetMainStorageType())
+
+  def testUFSDriver(self):
+    self.dut.path.basename.return_value = 'sda'
+    self.dut.path.realpath.side_effect = [
+        '/sys/devices/pci0000:00/0000:00:12.7/host0/target0:0:0/0:0:0:0',
+        '/sys/devices/pci0000:00/0000:00:12.7/host0/target0:0:0/0:0:0:0/driver',
+        '/sys/bus/pci/drivers/ufshcd'
+    ]
+    self.assertEqual(storage.MainStorageType.UFS,
+                     self.storage.GetMainStorageType())
+
+  def testOther(self):
+    self.dut.path.basename.return_value = 'sda'
+    self.dut.path.realpath.return_value = (
+        '/sys/devices/pci0000:00/0000:00:12.7/host0/other0:0:0/0:0:0:0')
+    self.assertEqual(storage.MainStorageType.OTHER,
+                     self.storage.GetMainStorageType())
+
+
 if __name__ == '__main__':
   unittest.main()

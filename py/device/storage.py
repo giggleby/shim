@@ -4,6 +4,7 @@
 
 """A system module providing access to permanent storage on device."""
 
+import enum
 import json
 import logging
 import re
@@ -11,6 +12,14 @@ import subprocess
 
 from cros.factory.device import device_types
 from cros.factory.utils import process_utils
+
+
+class MainStorageType(str, enum.Enum):
+  MMC = 'MMC'
+  NVME = 'NVME'
+  USB = 'USB'
+  UFS = 'UFS'
+  OTHER = 'OTHER'
 
 
 class Storage(device_types.DeviceComponent):
@@ -219,6 +228,50 @@ class Storage(device_types.DeviceComponent):
       return '/dev/%s/unencrypted' % result.strip()
     except device_types.CalledProcessError:
       return state_dev
+
+  def GetMainStorageType(self) -> MainStorageType:
+    """Get the main storage type by reading the system files.
+
+    This function re-implements part of the logic of `get_device_type` from
+    `src/platform2/chromeos-common-script/share/chromeos-common.sh`.
+    We do not implement detecting storage type ATA since no project is using
+    it now.
+
+    Returns:
+      A MainStorageType enum.
+    """
+    dut = self._device
+    dev_basename = dut.path.basename(self.GetMainStorageDevice())
+
+    if dev_basename.startswith('nvme'):
+      return MainStorageType.NVME
+
+    dev_node = f'/sys/block/{dev_basename}/device'
+    type_file = dut.path.realpath(dut.path.join(dev_node, 'type'))
+
+    if 'mmc' in type_file:
+      return MainStorageType(dut.ReadFile(type_file))
+    if 'usb' in type_file:
+      return MainStorageType.USB
+    if 'ufs' in type_file:
+      return MainStorageType.UFS
+    if 'target' in type_file:
+      # Example symbolic links of the driver path:
+      # dev_node: /sys/block/sda/device
+      #        -> /sys/devices/pcixxx/host0/target0:0:0/0:0:0:0
+      # type_file: /sys/block/sda/device/type
+      #         -> /sys/devices/pcixxx/host0/target0:0:0/0:0:0:0/type
+      # driver_path: /sys/devices/pcixxx/driver
+      #           -> /sys/bus/pci/drivers/ufshcd
+      dirname = dut.path.dirname
+      dev_node_realpath = dut.path.realpath(dev_node)
+      driver_path = dut.path.join(
+          dirname(dirname(dirname(dev_node_realpath))), 'driver')
+      driver_realpath = dut.path.realpath(driver_path)
+      if driver_realpath.endswith('/ufshcd'):
+        return MainStorageType.UFS
+
+    return MainStorageType.OTHER
 
 
 class AndroidStorage(Storage):
