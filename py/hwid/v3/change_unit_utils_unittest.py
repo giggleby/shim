@@ -916,6 +916,33 @@ class ChangeUnitManagerTest(unittest.TestCase):
         },
         graph)
 
+  def testInternalStateNotChanged(self):
+    new_encoded_field_db_content = _ApplyUnifiedDiff(
+        self._base_db_content,
+        textwrap.dedent('''\
+            ---
+            +++
+            @@ -64,6 +64,11 @@
+                 1:
+                   comp_cls_2: comp_2_2
+                   comp_cls_3: comp_3_2
+            +  new_field:
+            +    0:
+            +      comp_cls_2:
+            +      - comp_2_1
+            +      - comp_2_2
+
+             components:
+               mainboard:
+        '''))
+    db_with_new_comp_field = database.Database.LoadData(
+        new_encoded_field_db_content)
+
+    _ChangeUnitManager(self._base_db, db_with_new_comp_field)
+
+    self.assertCountEqual(
+        {'comp_cls_2'}, db_with_new_comp_field.GetComponentClasses('new_field'))
+
   def testApprovalStatus(self):
 
     new_db_content = _ApplyUnifiedDiff(

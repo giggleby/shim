@@ -56,7 +56,7 @@ def _GetExactlyOneComponentClassFromEncodedField(db: database.Database,
     raise SplitChangeUnitException(
         'Extracting changes of encoded fields with multiple component classes '
         'is unsupported.')
-  return comp_classes.pop()
+  return next(iter(comp_classes))
 
 
 def _IsNewlyCreatedOrRenamedComp(
