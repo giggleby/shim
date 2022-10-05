@@ -10,23 +10,28 @@ import os
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 DEFAULT_ETC_ISSUE = """
-You are now in tmp file system created by gooftool.chroot.Chroot.
+You are now in ram file system created by gooftool.chroot.Chroot.
 Log files can be found under /tmp, /mnt/stateful_partition/unencrypted.
 """
 
-class TmpChroot:
-  """Create a tmpfs with necessary files and chroot to it.
 
+class TmpChroot:
+  """Create a memory based file system with necessary files and chroot to it.
+
+  We mount ramfs since executions are not allowed in tmpfs. (b/244403061)
+  We can't limit the size to ramfs, and ramfs might crash or become
+  unresponsive when out of RAM.
   Please refer to Chroot.__init__ to see what it will do.
   """
 
   def __init__(self, new_root, binary_list=None, file_dir_list=None,
-               etc_issue=None, logfile=None, size='2048M'):
+               etc_issue=None, logfile=None):
     """The constructor.
 
     Args:
-      new_root: Path to the new root, this should be a directory, a tmpfs will
+      new_root: Path to the new root, this should be a directory, a ramfs will
           be mounted at this point.
       binary_list: Executable or libraries that are required in the new root,
           libraries they depend on will also be copied. For common utilities,
@@ -36,7 +41,6 @@ class TmpChroot:
           in this list.
       etc_issue: A string that will be saved in `<new_root>/etc/issue`.
       logfile: Path to the log file, default will be '/tmp/gooftool.chroot.log'
-      size: A string for size of the tmpfs, default '2048M'
     """
     self.new_root = os.path.realpath(new_root)
     assert self.new_root != '/', 'new root cannot be /'
@@ -49,10 +53,9 @@ class TmpChroot:
       file_handler = logging.FileHandler(logfile)
       file_handler.setLevel(logging.NOTSET)  # log everything
       self.logger.addHandler(file_handler)
-    self.size = size
 
   def _GetLoadedLibrary(self):
-    # we assume that all memory mapped files are shared libraries
+    # We assume that all memory mapped files are shared libraries
     command = ['lsof', '-p', str(os.getpid()), '-a', '-d', 'mem']
     return [line.split()[-1]
             for line in process_utils.SpawnOutput(command).splitlines()[1:]]
@@ -65,20 +68,19 @@ class TmpChroot:
     """
     self.logger.debug('InitializeNewRoot')
 
-    # create tmpfs
-    process_utils.Spawn(['mount', '-n', '-t', 'tmpfs',
-                         '-o', 'size=' + self.size,
-                         '-o', 'mode=755',
-                         'tmpfs', self.new_root],
+    # Create ramfs
+    process_utils.Spawn(['mount', '-n', '-t', 'ramfs', 'ramfs', self.new_root],
                         check_call=True)
 
-    self.logger.debug('create tmpfs layout')
-    tmpfs_layout_dirs = [os.path.join(self.new_root, subdir)
-                         for subdir in ['bin', 'dev', 'etc', 'lib', 'log',
-                                        'mnt/stateful_partition', 'proc',
-                                        'root', 'sys', 'tmp', 'var']]
-    process_utils.Spawn(['mkdir', '-p'] + tmpfs_layout_dirs, check_call=True)
-    # use symbolic links to make /usr/local/bin, /bin/, /usr/bin same as /sbin
+    self.logger.debug('create ramfs layout')
+    ramfs_layout_dirs = [
+        os.path.join(self.new_root, subdir) for subdir in [
+            'bin', 'dev', 'etc', 'lib', 'log', 'mnt/stateful_partition', 'proc',
+            'root', 'sys', 'tmp', 'var'
+        ]
+    ]
+    process_utils.Spawn(['mkdir', '-p'] + ramfs_layout_dirs, check_call=True)
+    # Use symbolic links to make /usr/local/bin, /bin/, /usr/bin same as /sbin
     process_utils.Spawn(['ln', '-s', '.', os.path.join(self.new_root, 'usr')],
                         check_call=True)
     process_utils.Spawn(['ln', '-s', '.', os.path.join(self.new_root, 'local')],
@@ -111,22 +113,22 @@ class TmpChroot:
                  for k in bin_deps]
     self.logger.warning('following binaries are not found: %s',
                         [k for (k, v) in bin_paths if not v])
-    # remove binaries that are not found
+    # Remove binaries that are not found
     bin_paths = {k: v for (k, v) in bin_paths if v}
-    # copy binaries and their dependencies
+    # Copy binaries and their dependencies
     process_utils.Spawn(('tar -ch $(lddtree -l %s 2>/dev/null | sort -u) | '
                          'tar -C %s -x --skip-old-files' %
                          (' '.join(bin_paths.values()), self.new_root)),
                         check_call=True, shell=True, log=True,
                         log_stderr_on_error=True)
 
-    # install busybox for common utilities
+    # Install busybox for common utilities
     process_utils.Spawn([
         os.path.join(self.new_root, 'bin', 'busybox'), '--install',
         os.path.join(self.new_root, 'bin')
     ], check_call=True, log=True, log_stderr_on_error=True)
 
-    # create /etc/issue
+    # Create /etc/issue
     file_utils.WriteFile(
         os.path.join(self.new_root, 'etc', 'issue'), self.etc_issue)
 
@@ -151,7 +153,7 @@ class TmpChroot:
       with tmpchroot.Chroot():
         # do something inside chroot
 
-    The tmpfs will be mount and initialized before entering the context, and
+    The ramfs will be mount and initialized before entering the context, and
     will be cleared and unmounted after leaving the context.
     """
     return self._InvokeChroot(pivot_root=False, old_root=None)
@@ -168,7 +170,7 @@ class TmpChroot:
         # system is at /`old_root`
 
     The file system will be reset when leaving the context. That is, current
-    root file system will be moved back to root and tmpfs will be cleared and
+    root file system will be moved back to root and ramfs will be cleared and
     unmounted.
     """
     return self._InvokeChroot(pivot_root=True, old_root=old_root)
@@ -180,7 +182,7 @@ class TmpChroot:
     assert (not pivot_root) or old_root, (
         'old_root must be given when pivot root')
 
-    real_root = os.open('/', os.O_RDONLY)  # cache the old root
+    real_root = os.open('/', os.O_RDONLY)  # Cache the old root
 
     self.InitializeNewRoot()
 
@@ -208,5 +210,5 @@ class TmpChroot:
       self.ResetNewRoot()
 
   def ResetNewRoot(self):
-    """unmount mounted tmpfs at new root."""
+    """Unmount mounted ramfs at new root."""
     process_utils.Spawn(['umount', '-R', self.new_root], check_call=True)

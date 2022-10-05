@@ -122,6 +122,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 MSG_BUILD_PHASE = _('Build Phase')
 MSG_WRITE_PROTECTION = _('Write Protection')
 MSG_FACTORY_SERVER = _('Factory Server')
@@ -480,8 +481,8 @@ class Finalize(test_case.TestCase):
     output_dir = os.path.join(
         paths.DATA_TESTS_DIR, session.GetCurrentTestPath())
     file_utils.WriteFile(
-        os.path.join(output_dir, 'wipe_in_tmpfs.log'),
-        self.dut_response.get('wipe_in_tmpfs_log', ''))
+        os.path.join(output_dir, 'wipe_in_ramfs.log'),
+        self.dut_response.get('wipe_in_ramfs_log', ''))
     file_utils.WriteFile(
         os.path.join(output_dir, 'wipe_init.log'),
         self.dut_response.get('wipe_init_log', ''))

@@ -933,9 +933,8 @@ class Gooftool:
     GBB_FLAG_FORCE_DEV_SWITCH_ON = 0x00000008
     keep_developer_mode_flag = bool(gbb_flags & GBB_FLAG_FORCE_DEV_SWITCH_ON)
 
-    wipe.WipeInTmpFs(is_fast, shopfloor_url,
-                     station_ip, station_port, wipe_finish_token,
-                     keep_developer_mode_flag, test_umount)
+    wipe.WipeInRamFs(is_fast, shopfloor_url, station_ip, station_port,
+                     wipe_finish_token, keep_developer_mode_flag, test_umount)
 
   def WipeInit(self, wipe_args, shopfloor_url, state_dev,
                release_rootfs, root_disk, old_root, station_ip, station_port,

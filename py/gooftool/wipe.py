@@ -30,7 +30,7 @@ from cros.factory.utils import sys_utils
 CUTOFF_SCRIPT_DIR = '/usr/local/factory/sh/cutoff'
 """Directory of scripts for device cut-off"""
 
-WIPE_IN_TMPFS_LOG = 'wipe_in_tmpfs.log'
+WIPE_IN_RAMFS_LOG = 'wipe_in_ramfs.log'
 
 STATEFUL_PARTITION_PATH = '/mnt/stateful_partition/'
 
@@ -88,17 +88,15 @@ def _CopyLogFileToStateDev(state_dev, logfile):
                     os.path.join(mount_point, os.path.basename(logfile)))
 
 
-def _OnError(ip, port, token, state_dev, wipe_in_tmpfs_log=None,
+def _OnError(ip, port, token, state_dev, wipe_in_ramfs_log=None,
              wipe_init_log=None):
   state_dev = GetLogicalStateful(state_dev)
-  if wipe_in_tmpfs_log:
-    _CopyLogFileToStateDev(state_dev, wipe_in_tmpfs_log)
+  if wipe_in_ramfs_log:
+    _CopyLogFileToStateDev(state_dev, wipe_in_ramfs_log)
   if wipe_init_log:
     _CopyLogFileToStateDev(state_dev, wipe_init_log)
-  _InformStation(ip, port, token,
-                 wipe_in_tmpfs_log=wipe_in_tmpfs_log,
-                 wipe_init_log=wipe_init_log,
-                 success=False)
+  _InformStation(ip, port, token, wipe_in_ramfs_log=wipe_in_ramfs_log,
+                 wipe_init_log=wipe_init_log, success=False)
 
 
 def Daemonize(logfile=None):
@@ -166,10 +164,10 @@ def ResetLog(logfile=None):
   logging.basicConfig(filename=logfile, level=logging.NOTSET, format=log_format)
 
 
-def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
+def WipeInRamFs(is_fast=None, shopfloor_url=None, station_ip=None,
                 station_port=None, wipe_finish_token=None,
                 keep_developer_mode_flag=False, test_umount=False):
-  """prepare to wipe by pivot root to tmpfs and unmount stateful partition.
+  """Prepare to wipe by pivot root to ram and unmount stateful partition.
 
   Args:
     is_fast: whether or not to apply fast wipe.
@@ -189,12 +187,12 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
 
   Daemonize()
 
-  logfile = os.path.join('/tmp', WIPE_IN_TMPFS_LOG)
+  logfile = os.path.join('/tmp', WIPE_IN_RAMFS_LOG)
   ResetLog(logfile)
 
   factory_par = paths.GetFactoryPythonArchivePath()
 
-  new_root = tempfile.mkdtemp(prefix='tmpfs.')
+  new_root = tempfile.mkdtemp(prefix='ramfs.')
   binary_deps = [
       'activate_date', 'backlight_tool', 'bash', 'busybox', 'cgpt', 'cgpt.bin',
       'clobber-log', 'clobber-state', 'coreutils', 'crossystem', 'dd',
@@ -214,7 +212,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
     /mnt/stateful_partition/unencrypted
 
     The log file name should be
-    - wipe_in_tmpfs.log
+    - wipe_in_ramfs.log
     - wipe_init.log
 
     You can also run scripts under /usr/local/factory/sh for wiping process.
@@ -283,7 +281,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
 
       # Restart gooftool under new root. Since current gooftool might be using
       # some resource under stateful partition, restarting gooftool ensures that
-      # everything new gooftool is using comes from tmpfs and we can safely
+      # everything new gooftool is using comes from ramfs and we can safely
       # unmount stateful partition.
       args = []
       if wipe_args:
@@ -310,7 +308,7 @@ def WipeInTmpFs(is_fast=None, shopfloor_url=None, station_ip=None,
   except Exception:
     logging.exception('wipe_in_place failed')
     _OnError(station_ip, station_port, wipe_finish_token, state_dev,
-             wipe_in_tmpfs_log=logfile, wipe_init_log=None)
+             wipe_in_ramfs_log=logfile, wipe_init_log=None)
     raise
 
 
@@ -530,8 +528,8 @@ def _IsStateDevMounted(state_dev):
     return False
 
 
-def _InformStation(ip, port, token, wipe_init_log=None,
-                   wipe_in_tmpfs_log=None, success=True):
+def _InformStation(ip, port, token, wipe_init_log=None, wipe_in_ramfs_log=None,
+                   success=True):
   if not ip:
     return
   port = int(port)
@@ -554,8 +552,8 @@ def _InformStation(ip, port, token, wipe_init_log=None,
     if wipe_init_log:
       response['wipe_init_log'] = file_utils.ReadFile(wipe_init_log)
 
-    if wipe_in_tmpfs_log:
-      response['wipe_in_tmpfs_log'] = file_utils.ReadFile(wipe_in_tmpfs_log)
+    if wipe_in_ramfs_log:
+      response['wipe_in_ramfs_log'] = file_utils.ReadFile(wipe_in_ramfs_log)
 
     sock.sendall(json.dumps(response) + '\n')
     sock.close()
@@ -654,7 +652,7 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
   Daemonize()
   logfile = '/tmp/wipe_init.log'
   ResetLog(logfile)
-  wipe_in_tmpfs_log = os.path.join(old_root, 'tmp', WIPE_IN_TMPFS_LOG)
+  wipe_in_ramfs_log = os.path.join(old_root, 'tmp', WIPE_IN_RAMFS_LOG)
 
   logging.debug('wipe_args: %s', wipe_args)
   logging.debug('shopfloor_url: %s', shopfloor_url)
@@ -715,8 +713,7 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
     _InformShopfloor(shopfloor_url)
 
     _InformStation(station_ip, station_port, finish_token,
-                   wipe_init_log=logfile,
-                   wipe_in_tmpfs_log=wipe_in_tmpfs_log,
+                   wipe_init_log=logfile, wipe_in_ramfs_log=wipe_in_ramfs_log,
                    success=True)
 
     _Cutoff()
@@ -729,5 +726,5 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
     # Keep sync if changed this.
     logging.exception('wipe_init failed')
     _OnError(station_ip, station_port, finish_token, state_dev,
-             wipe_in_tmpfs_log=wipe_in_tmpfs_log, wipe_init_log=logfile)
+             wipe_in_ramfs_log=wipe_in_ramfs_log, wipe_init_log=logfile)
     raise
