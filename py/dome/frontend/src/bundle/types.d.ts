@@ -32,6 +32,8 @@ export interface Resource {
   type: string;
   version: string;
   hash: string;
+  information: string;
+  warningMessage: string;
 }
 
 export interface ResourceMap {
@@ -43,6 +45,7 @@ export interface Bundle {
   note: string;
   active: boolean;
   resources: ResourceMap;
+  warningMessage: string;
 }
 
 export interface DeletedResources {

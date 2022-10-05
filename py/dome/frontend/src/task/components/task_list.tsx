@@ -109,12 +109,14 @@ class TaskList extends React.Component<TaskListProps, TaskListState> {
           <div className={classes.tasklist}>
             {/* task list */}
             {!this.state.collapsed &&
-              tasks.map(({taskId, state, description, progress}) => {
+              tasks.map(
+                ({taskId, state, description, warningMessage, progress}) => {
                 return (
                   <TaskComponent
                     key={taskId}
                     state={state}
                     description={description}
+                    warningMessage={warningMessage}
                     progress={progress}
                     cancel={() => cancelWaitingTaskAfter(taskId)}
                     dismiss={() => dismissTask(taskId)}

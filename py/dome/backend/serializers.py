@@ -86,6 +86,8 @@ class ResourceSerializer(serializers.Serializer):
 
   type = serializers.CharField()
   version = serializers.CharField(read_only=True)
+  information = serializers.CharField(read_only=True)
+  warning_message = serializers.CharField(read_only=True)
   file_id = serializers.IntegerField(write_only=True)
 
   def create(self, validated_data):
@@ -111,6 +113,7 @@ class BundleSerializer(serializers.Serializer):
   active = serializers.NullBooleanField(required=False)
   rules = serializers.DictField(required=False)
   resources = serializers.DictField(required=False, child=ResourceSerializer())
+  warning_message = serializers.CharField(required=False)
 
   new_name = serializers.CharField(write_only=True, required=False)
   bundle_file_id = serializers.IntegerField(write_only=True, required=False)
@@ -125,10 +128,13 @@ class BundleSerializer(serializers.Serializer):
     """Override parent's method."""
     project_name = validated_data.pop('project_name')
     bundle_name = instance.name
-    data = {'dst_bundle_name': validated_data.pop('new_name', None),
-            'note': validated_data.pop('note', None),
-            'active': validated_data.pop('active', None),
-            'resources': validated_data.pop('resources', None)}
+    data = {
+        'dst_bundle_name': validated_data.pop('new_name', None),
+        'note': validated_data.pop('note', None),
+        'active': validated_data.pop('active', None),
+        'resources': validated_data.pop('resources', None),
+        'warning_message': validated_data.pop('warning_message', None)
+    }
     return Bundle.ModifyOne(project_name, bundle_name, **data)
 
 

@@ -13,6 +13,7 @@ from backend import models
 import rest_framework.status
 import rest_framework.test
 
+
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -367,8 +368,12 @@ class DomeAPITest(rest_framework.test.APITestCase):
   def testUploadResource(self):
     RESOURCE_TYPE = 'toolkit'
     RESOURCE_VERSION = '1234.5678'
-    EXPECTED_RETURN_VALUE = {'type': RESOURCE_TYPE,
-                             'version': RESOURCE_VERSION}
+    EXPECTED_RETURN_VALUE = {
+        'information': '',
+        'type': RESOURCE_TYPE,
+        'version': RESOURCE_VERSION,
+        'warningMessage': '[]'
+    }
 
     # mock Umpire AddResource() call
     self.mocks['xmlrpc.client.ServerProxy']().AddPayload = mock.MagicMock(

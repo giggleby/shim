@@ -110,8 +110,8 @@ class CLICommand(umpire_rpc.UmpireRPC):
           replaces the specified resource(s). Otherwise, it replaces
           resource(s) in place.
     """
-    update.ResourceUpdater(self.daemon).Update(
-        resources_to_update, source_id, dest_id)
+    return update.ResourceUpdater(self.daemon).Update(resources_to_update,
+                                                      source_id, dest_id)
 
   @umpire_rpc.RPCCall
   def ImportBundle(self, bundle_path, bundle_id=None, note=None):

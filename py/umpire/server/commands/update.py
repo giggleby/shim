@@ -16,6 +16,7 @@ from cros.factory.umpire import common
 from cros.factory.umpire.server.commands import deploy
 from cros.factory.umpire.server import config as umpire_config
 from cros.factory.umpire.server import resource
+from cros.factory.utils import process_utils
 
 
 class ResourceUpdater:
@@ -82,6 +83,20 @@ class ResourceUpdater:
     """
     self._CheckPayloadsList(payloads_to_update)
 
+    # Check if argsfile and bootfile file are exist.
+    messages = []
+    for type_name, file_path in payloads_to_update:
+      if type_name == 'netboot_firmware':
+        temp_output = process_utils.CheckOutput([
+            '/usr/local/factory/bin/image_tool', 'netboot', '-i', file_path,
+            '-m'
+        ])
+        netboot_firmware_information = json.loads(temp_output)
+        for key in ('argsfile', 'bootfile'):
+          netboot_firmware_file = netboot_firmware_information[key]
+          if not os.path.isfile('/mnt/tftp/%s' % netboot_firmware_file):
+            messages.append('%s is missing' % netboot_firmware_file)
+
     config = umpire_config.UmpireConfig(self._daemon.env.config)
     if not source_id:
       source_id = config.GetActiveBundle()['id']
@@ -99,6 +114,7 @@ class ResourceUpdater:
     payloads_to_update = self._MakePayloads(payloads_to_update)
     self._UpdatePayloads(bundle, payloads_to_update)
     self._Deploy(config)
+    return messages
 
   def UpdateFromConfig(self, payloads_config_to_update, update_note=''):
     """Updates payload(s) in a new bundle with payloads config.

@@ -4,7 +4,9 @@
 
 import Download from '@mui/icons-material/GetApp';
 import Update from '@mui/icons-material/Publish';
+import WarningIcon from '@mui/icons-material/Warning';
 import grey from '@mui/material/colors/grey';
+import orange from '@mui/material/colors/orange';
 import IconButton from '@mui/material/IconButton';
 import {Theme} from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
@@ -42,6 +44,14 @@ const styles = (theme: Theme) => createStyles({
   },
   actionColumn: {
     justifyContent: 'center',
+  },
+  small: {
+    color: orange[700],
+  },
+  warningIcon: {
+    fontSize: '0.9rem',
+    color: orange[700],
+    marginRight: '3px',
   },
 });
 
@@ -88,14 +98,31 @@ class ResourceTable extends React.Component<ResourceTableProps> {
         </div>
         {Object.keys(resources).sort().map((key) => {
           const resource = resources[key];
-
           return (
             <React.Fragment key={resource.type}>
               <div className={classes.cell}>
                 {resource.type} ({resourceNameToFileType[resource.type]})
               </div>
               <div className={classes.cell}>
-                {resource.version}
+                <div>
+                  {resource.version}
+                  {(resource.information) ?
+                    <div>
+                      {resource.information}
+                    </div>
+                  : <></>}
+                  {(resource.warningMessage) ?
+                    JSON.parse(resource.warningMessage).map(
+                      (warningMessage: string, index: number) => {
+                      return (
+                        <div key={index} className={classes.small}>
+                          <WarningIcon className={classes.warningIcon} />
+                          {warningMessage}
+                        </div>
+                      );
+                    })
+                  : <></>}
+                </div>
               </div>
               <div className={classes.cell}>
                 <IconButton

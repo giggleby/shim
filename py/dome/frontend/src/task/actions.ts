@@ -27,13 +27,19 @@ const createTaskImpl = createAction('CREATE_TASK', (resolve) =>
     method: Method,
     url: string,
     debugBody: any,
-  ) => resolve({taskId, description, method, url, debugBody}));
+    warningMessage: string | null = null,
+  ) => resolve({taskId, description, method, url, debugBody, warningMessage}));
 
 const dismissTaskImpl = createAction('DISMISS_TASK', (resolve) =>
   (taskId: string) => resolve({taskId}));
 
 export const changeTaskState = createAction('CHANGE_TASK_STATE', (resolve) =>
   (taskId: string, state: TaskState) => resolve({taskId, state}));
+
+export const changeTaskWarningMessage = createAction(
+  'CHANGE_TASK_WARNING_MESSAGE', (resolve) =>
+    (taskId: string, warningMessage: string) =>
+      resolve({taskId, warningMessage}));
 
 export const updateTaskProgress = createAction('UPDATE_TASK_PROGRESS',
   (resolve) => (taskId: string, progress: Partial<TaskProgress>) =>
@@ -43,6 +49,7 @@ export const basicActions = {
   createTaskImpl,
   dismissTaskImpl,
   changeTaskState,
+  changeTaskWarningMessage,
   updateTaskProgress,
 };
 
@@ -103,6 +110,8 @@ export const runTask =
     body: any,
     // The optimisticUpdate function may be replay many times.
     optimisticUpdate: (() => void) | null = null,
+    // Define the warning message.
+    warningMessage: string | null = null,
   ) =>
   (dispatch: Dispatch, getState: () => RootState): Promise<T> =>
     new Promise((resolve, reject) => {
@@ -123,7 +132,9 @@ export const runTask =
         setOptimisticUpdating(null);
       }
 
-      dispatch(createTaskImpl(taskId, description, method, url, debugBody));
+      dispatch(createTaskImpl(
+        taskId, description, method, url, debugBody, warningMessage,
+      ));
 
       if (startNow) {
         dispatch(runTaskImpl(taskId));
@@ -237,6 +248,13 @@ const runTaskImpl = (taskId: string) =>
         method: task.method,
         data,
       });
+
+      // if warningMessage is exist, then change the warning message.
+      if (endResponse.data.hasOwnProperty('warningMessage') &&
+          endResponse.data.warningMessage !== '') {
+        dispatch(changeTaskWarningMessage(
+          taskId, endResponse.data.warningMessage));
+      }
 
       const optimisticUpdate = taskOptimisticUpdate[taskId];
       if (optimisticUpdate) {

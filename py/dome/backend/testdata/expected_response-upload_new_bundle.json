@@ -4,44 +4,65 @@
   "note": "climbing like a monkey",
   "resources": {
     "complete": {
+      "information": "",
       "type": "complete",
-      "version": "1234.5678"
+      "version": "1234.5678",
+      "warningMessage": ""
     },
     "firmware": {
+      "information": "",
       "type": "firmware",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "hwid": {
+      "information": "",
       "type": "hwid",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "netbootCmdline": {
+      "information": "",
       "type": "netboot_cmdline",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "netbootFirmware": {
+      "information": "",
       "type": "netboot_firmware",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "netbootKernel": {
+      "information": "",
       "type": "netboot_kernel",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "projectConfig": {
+      "information": "",
       "type": "project_config",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "releaseImage": {
+      "information": "",
       "type": "release_image",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "testImage": {
+      "information": "",
       "type": "test_image",
-      "version": "N/A"
+      "version": "N/A",
+      "warningMessage": ""
     },
     "toolkit": {
+      "information": "",
       "type": "toolkit",
-      "version": "5678.1234"
+      "version": "5678.1234",
+      "warningMessage": ""
     }
-  }
+  },
+  "warningMessage": null
 }

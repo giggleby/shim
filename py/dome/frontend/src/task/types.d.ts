@@ -22,6 +22,7 @@ export interface Task {
   taskId: string;
   state: TaskState;
   description: string;
+  warningMessage: string | null;
   method: Method;
   url: string;
   progress: TaskProgress;

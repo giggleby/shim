@@ -158,6 +158,7 @@ export const startUploadBundle = (data: UploadBundleRequestPayload) =>
         note: data.note,
         active: true,
         resources: {},
+        warningMessage: '',
       }));
     };
 

@@ -16,6 +16,7 @@ TODO(littlecvr): make umpire config complete such that it contains all the
 import contextlib
 import copy
 import errno
+import json
 import logging
 import os
 import shutil
@@ -36,6 +37,7 @@ from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
+
 
 # TODO(littlecvr): pull out the common parts between umpire and dome, and put
 #                  them into a config file (using the new config API).
@@ -188,6 +190,38 @@ def DoesContainerExist(container_name):
       ['docker', 'ps', '--all', '--format', '{{.Names}}'],
       encoding='utf-8').splitlines()
   return container_name in container_list
+
+
+def LoadJsonOrNone(json_data):
+  try:
+    result = json.loads(json_data)
+  except ValueError:
+    return None
+  return result
+
+
+def GetNetbootFirmwarewarningMessage(project_name, payloads):
+  warning_message = []
+  if ('netboot_firmware' in payloads and
+      'information' in payloads['netboot_firmware']):
+    netboot_firmware_information = LoadJsonOrNone(
+        payloads['netboot_firmware']['information'])
+    if netboot_firmware_information:
+      for key in ('argsfile', 'bootfile'):
+        netboot_firmware_file = netboot_firmware_information[key]
+        if project_name not in netboot_firmware_file:
+          warning_message.append('"%s" does not match with project "%s". ' \
+                                  'Please make sure the %s are under ' \
+                                  'project "%s".' %
+                                  (netboot_firmware_file, project_name, key,
+                                  project_name))
+        if not os.path.isfile(
+            '%s/%s' % (TFTP_BASE_DIR_IN_TFTP_CONTAINER, netboot_firmware_file)):
+          warning_message.append('"%s" is missing. To fix this, upload ' \
+                                  'netboot_kernel and netboot_cmdline and ' \
+                                  'then click the NETBOOT button to link ' \
+                                  'the tftp server.' % netboot_firmware_file)
+  return json.dumps(warning_message)
 
 
 class DomeConfig(django.db.models.Model):
@@ -625,22 +659,29 @@ class Project(django.db.models.Model):
                       'already has been used.\nYou should retry enable ' \
                       'umpire or try another port.\n%r' % e
       logger.error(error_message)
-      raise DomeServerException(detail=error_message)
+      raise DomeServerException(detail=error_message) from None
     return project
 
 
 class Resource:
 
-  def __init__(self, type_name, version):
+  def __init__(self, type_name, version, information, warning_message):
     self.type = type_name
     self.version = version
+    self.information = information
+    self.warning_message = warning_message
 
   @staticmethod
   def CreateOne(project_name, type_name, file_id):
     umpire_server = GetUmpireServer(project_name)
     with UploadedFile(file_id) as p:
       payloads = umpire_server.AddPayload(p, type_name)
-    return Resource(type_name, payloads[type_name]['version'])
+      warning_message = GetNetbootFirmwarewarningMessage(project_name, payloads)
+    return Resource(
+        type_name, payloads[type_name]['version'],
+        payloads[type_name]['information']
+        if 'information' in payloads[type_name] else '',
+        warning_message if warning_message else '')
 
   @staticmethod
   def GarbageCollection(project_name):
@@ -668,16 +709,29 @@ class Resource:
 class Bundle:
   """Represent a bundle in umpire."""
 
-  def __init__(self, name, note, active, payloads):
+  def __init__(self, name, note, active, payloads, project_name,
+               warning_message):
     self.name = name
     self.note = note
     self.active = active
+    self.project_name = project_name
+    self.warning_message = warning_message
 
-    self.resources = {type_name: Resource(type_name, 'N/A')
-                      for type_name in umpire_resource.PayloadTypeNames}
+    self.resources = {
+        type_name: Resource(type_name, 'N/A', '', '')
+        for type_name in umpire_resource.PayloadTypeNames
+    }
     for type_name in payloads:
-      self.resources[type_name] = Resource(type_name,
-                                           payloads[type_name]['version'])
+      if type_name == 'netboot_firmware':
+        warning_message = GetNetbootFirmwarewarningMessage(
+            project_name, payloads)
+      else:
+        warning_message = []
+      self.resources[type_name] = Resource(
+          type_name, payloads[type_name]['version'],
+          payloads[type_name]['information']
+          if 'information' in payloads[type_name] else '',
+          warning_message if warning_message else '')
 
   @staticmethod
   def HasResource(project_name, bundle_name, resource_name):
@@ -688,7 +742,7 @@ class Bundle:
     return resource_name in payloads
 
   @staticmethod
-  def _FromUmpireBundle(project_name, bundle, config):
+  def _FromUmpireBundle(project_name, bundle, config, warning_message=None):
     """Take the target entry in the "bundles" sections in Umpire config, and
     turns them into the Bundle entity in Dome.
 
@@ -697,10 +751,13 @@ class Bundle:
       config: Umpire config.
     """
     payloads = GetUmpireServer(project_name).GetPayloadsDict(bundle['payloads'])
-    return Bundle(bundle['id'],  # name
-                  bundle['note'],  # note
-                  bundle['id'] == config['active_bundle_id'],  # active
-                  payloads)  # payloads
+    return Bundle(
+        bundle['id'],  # name
+        bundle['note'],  # note
+        bundle['id'] == config['active_bundle_id'],  # active
+        payloads,
+        project_name,
+        warning_message)  # payloads
 
   @staticmethod
   def DeleteOne(project_name, bundle_name):
@@ -728,7 +785,7 @@ class Bundle:
     project.UploadAndDeployConfig(config)
 
   @staticmethod
-  def ListOne(project_name, bundle_name):
+  def ListOne(project_name, bundle_name, warning_message=None):
     """Return the bundle that matches the search criterion.
 
     Args:
@@ -748,7 +805,8 @@ class Bundle:
       logger.error(error_message)
       raise DomeClientException(error_message) from None
 
-    return Bundle._FromUmpireBundle(project_name, bundle, config)
+    return Bundle._FromUmpireBundle(project_name, bundle, config,
+                                    warning_message)
 
   @staticmethod
   def ListAll(project_name):
@@ -767,8 +825,8 @@ class Bundle:
             for b in config['bundles']]
 
   @staticmethod
-  def ModifyOne(project_name, src_bundle_name, dst_bundle_name=None,
-                note=None, active=None, resources=None):
+  def ModifyOne(project_name, src_bundle_name, dst_bundle_name=None, note=None,
+                active=None, resources=None, warning_message=None):
     """Modify a bundle.
 
     Args:
@@ -825,10 +883,9 @@ class Bundle:
     # update resources
     if resources is not None:
       for resource_key, resource in resources.items():
-        Bundle._UpdateResource(project_name, bundle['id'], resource_key,
-                               resource['file_id'])
-
-    return Bundle.ListOne(project_name, bundle['id'])
+        warning_message = Bundle._UpdateResource(
+            project_name, bundle['id'], resource_key, resource['file_id'])
+    return Bundle.ListOne(project_name, bundle['id'], warning_message)
 
   @staticmethod
   def ReorderBundles(project_name, new_order):
@@ -873,7 +930,7 @@ class Bundle:
     umpire_server = GetUmpireServer(project_name)
     with UploadedFile(resource_file_id) as p:
       try:
-        umpire_server.Update([(type_name, p)], bundle_name)
+        return umpire_server.Update([(type_name, p)], bundle_name)
       except xmlrpc.client.Fault as e:
         raise DomeServerException(detail=e.faultString) from None
 

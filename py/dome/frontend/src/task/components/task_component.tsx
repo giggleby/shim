@@ -6,8 +6,10 @@ import RunningIcon from '@mui/icons-material/Autorenew';
 import DismissIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ErrorIcon from '@mui/icons-material/Error';
+import WarningIcon from '@mui/icons-material/Warning';
 import CircularProgress from '@mui/material/CircularProgress';
 import green from '@mui/material/colors/green';
+import orange from '@mui/material/colors/orange';
 import IconButton from '@mui/material/IconButton';
 import {Theme} from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
@@ -32,12 +34,24 @@ export const styles = (theme: Theme) => createStyles({
     padding: theme.spacing(1),
     gridColumnStart: 1,
   },
+  small: {
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    color: orange[700],
+  },
+  warningIcon: {
+    fontSize: '0.9rem',
+    color: orange[700],
+    marginRight: '3px',
+  },
 });
 
 interface TaskProps extends WithStyles<typeof styles> {
   state: TaskState;
   progress: TaskProgress;
   description: string;
+  warningMessage: string | null;
   dismiss: () => void;
   retry: () => void;
   cancel: () => void;
@@ -51,6 +65,7 @@ const Task: React.SFC<TaskProps> = ({
   state,
   progress,
   description,
+  warningMessage,
   cancel,
   dismiss,
   retry,
@@ -120,17 +135,29 @@ const Task: React.SFC<TaskProps> = ({
     <>
       <Typography variant="body2" className={classes.description} >
         {description}
+        {
+          (warningMessage === '' ||
+            warningMessage === null ||
+            warningMessage === '[]') ?
+          <></>
+          :
+          <>
+            <br />
+            <small className={classes.small}>
+              <WarningIcon className={classes.warningIcon} />
+              {warningMessage}
+            </small>
+          </>
+        }
       </Typography>
       <Tooltip title="cancel">
-        <div>
-          {/* We need an extra div so tooltip works when button is disabled. */}
-          <IconButton
-            onClick={cancel}
-            disabled={!isCancellable(state)}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </div>
+        {/* We need an extra div so tooltip works when button is disabled. */}
+        <IconButton
+          onClick={cancel}
+          disabled={!isCancellable(state)}
+        >
+          <DeleteIcon />
+        </IconButton>
       </Tooltip>
       {actionButton}
     </>

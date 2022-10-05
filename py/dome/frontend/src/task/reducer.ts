@@ -23,11 +23,18 @@ const tasksReducer = produce(
   (draft: Task[], action: TaskAction) => {
     switch (action.type) {
       case getType(actions.createTaskImpl): {
-        const {taskId, description, method, url} = action.payload;
+        const {
+          taskId,
+          description,
+          method,
+          url,
+          warningMessage,
+        } = action.payload;
         draft.push({
           taskId,
           state: 'WAITING',
           description,
+          warningMessage,
           method,
           url,
           progress: {
@@ -45,6 +52,15 @@ const tasksReducer = produce(
         const taskIndex = findTaskIndex(draft, taskId);
         if (taskIndex > -1) {
           draft[taskIndex].state = state;
+        }
+        return;
+      }
+
+      case getType(actions.changeTaskWarningMessage): {
+        const {taskId, warningMessage} = action.payload;
+        const taskIndex = findTaskIndex(draft, taskId);
+        if (taskIndex > -1) {
+          draft[taskIndex].warningMessage = warningMessage;
         }
         return;
       }
