@@ -19,7 +19,7 @@ import shutil
 import sys
 import textwrap
 import time
-from typing import Dict, Optional, Set
+from typing import Dict, List, Optional, Set
 import urllib.parse
 
 import yaml
@@ -215,6 +215,7 @@ class FinalizeBundle:
     firmware_record: Firmware information including keys, checksums and signer.
     timestamp: The date of the creation.
     bundle_phase: The phase of the bundle.
+    firmware_manifest_keys: Map from firmware manifest key to a list of models.
   """
   bundle_dir = None
   bundle_name = None
@@ -253,7 +254,8 @@ class FinalizeBundle:
     self.archive = archive
     self.jobs = jobs
     self.bundle_record = bundle_record
-    self.model_to_firmware_bios_name: Dict[str, str] = {}
+    self.firmware_bios_names: List[str] = []
+    self.firmware_manifest_keys: Dict[str, List[str]] = {}
     self.timestamp = ''
     self.bundle_phase = 'mp'
 
@@ -262,6 +264,7 @@ class FinalizeBundle:
     self.LocateResources()
     self.DownloadResources()
     self.PrepareProjectConfig()
+    self.ObtainFirmwareManifestKeys()
     self.AddProjectToolkit()
     self.AddDefaultCompleteScript()
     self.AddFirmwareUpdaterAndImages()
@@ -811,55 +814,61 @@ class FinalizeBundle:
       models = self.designs if self.is_boxster_project else [self.project]
       self.firmware_record['firmware_records'] = []
 
-      missing_models = set(models) - set(manifest.keys())
-      firmware_manifest_mismatch = self.is_boxster_project and missing_models
+      missing_manifest_keys = (
+          set(self.firmware_manifest_keys.keys()) - set(manifest.keys()))
+      firmware_manifest_mismatch = (
+          self.is_boxster_project and missing_manifest_keys)
       if firmware_manifest_mismatch and self.test_list_phase > phase.PROTO:
-        raise KeyError("No firmware models '%s' in chromeos-firmwareupdate" %
-                       missing_models)
+        raise KeyError(f'No manifest keys {missing_manifest_keys!r} in'
+                       ' chromeos-firmwareupdate')
 
       fp_firmware_hash = self._ExtractFingerprintFirmwareHash(models)
-      for model in models:
-        if model in missing_models:
+      for manifest_key, sub_manifest in manifest.items():
+        if manifest_key not in self.firmware_manifest_keys:
           continue
-        record = {
-            'model': model
-        }
+        shared_record = {}
         # 2) root/recovery keys:
-        bios_path = os.path.join(temp_dir, manifest[model]['host']['image'])
-        record['firmware_keys'] = chromeos_firmware.GetFirmwareKeys(bios_path)
-
+        bios_path = os.path.join(temp_dir, sub_manifest['host']['image'])
+        shared_record['firmware_keys'] = (
+            chromeos_firmware.GetFirmwareKeys(bios_path))
         # 3) RO version/checksum:
         for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
-          if firmware_key not in manifest[model]:
+          if firmware_key not in sub_manifest:
             continue
           image_path = os.path.join(temp_dir,
-                                    manifest[model][firmware_key]['image'])
-          record[f'ro_{firmware_type}_firmware'] = \
-              chromeos_firmware.CalculateFirmwareHashes(image_path)
+                                    sub_manifest[firmware_key]['image'])
+          shared_record[f'ro_{firmware_type}_firmware'] = (
+              chromeos_firmware.CalculateFirmwareHashes(image_path))
 
-        if model in fp_firmware_hash:
-          record['ro_fp_firmware'] = fp_firmware_hash[model]
+        for model in self.firmware_manifest_keys[manifest_key]:
+          record = shared_record.copy()
+          # TODO(b/251742457) There are models which use multiple firmware
+          # manifest keys and create multiple records. We cannot change the
+          # logic here now since the server side should be updated first.
+          record['model'] = model
+          if model in fp_firmware_hash:
+            record['ro_fp_firmware'] = fp_firmware_hash[model]
 
-        self.firmware_record['firmware_records'].append(record)
+          self.firmware_record['firmware_records'].append(record)
 
       if firmware_manifest_mismatch:
         logging.warning(
-            "No firmware models '%s' in chromeos-firmwareupdate. Remove "
+            'No manifest keys %r in chromeos-firmwareupdate. Remove '
             "chromeos-firmwareupdate and ignore the error because it's in %r",
-            missing_models, phase.PROTO.name)
+            missing_manifest_keys, phase.PROTO.name)
         Spawn(['rm', '-rf', updater_path], log=True, check_call=True)
         return
 
       # Collect only the desired firmware
       if self.is_boxster_project:
         keep_list = set()
-        for design in manifest:
-          if design in self.designs:
-            keep_list.add(manifest[design].get('host', {}).get('image'))
-            keep_list.add(manifest[design].get('ec', {}).get('image'))
+        for manifest_key, sub_manifest in manifest.items():
+          if manifest_key in self.firmware_manifest_keys:
+            keep_list.add(sub_manifest.get('host', {}).get('image'))
+            keep_list.add(sub_manifest.get('ec', {}).get('image'))
           else:
             Spawn(['rm', '-rf',
-                   os.path.join(temp_dir, 'models', design)], log=True,
+                   os.path.join(temp_dir, 'models', manifest_key)], log=True,
                   check_call=True)
         for f in os.listdir(os.path.join(temp_dir, 'images')):
           if os.path.join('images', f) not in keep_list:
@@ -870,29 +879,34 @@ class FinalizeBundle:
     # firmware. This option is available for updaters extracted from image
     # version >= 9962.0.0. This also checks that the firmwares that we care
     # exist.
-    for model in models:
+    for manifest_key in self.firmware_manifest_keys:
       Spawn([
-          'sudo', 'sh', updater_path, '--mode', 'output', '--model', model,
-          '--output_dir', firmware_images_dir
+          'sudo', 'sh', updater_path, '--mode', 'output', '--model',
+          manifest_key, '--output_dir', firmware_images_dir
       ], log=True, call=True)
 
     if self.is_boxster_project:
-      model_to_ro_version: Dict[str, version_module.StrictVersion] = {}
-      model_to_firmware_bios_name: Dict[str, str] = {}
-      for model, info in manifest.items():
+      max_ro_version: Optional[version_module.StrictVersion] = None
+      firmware_bios_names: Set[str] = set()
+      for manifest_key, sub_manifest in manifest.items():
+        if manifest_key not in self.firmware_manifest_keys:
+          continue
         ro_version, firmware_bios_name = self.GetRoInfoFromHostImageName(
-            info['host']['image'])
+            sub_manifest['host']['image'])
         if ro_version:
-          model_to_ro_version[model] = ro_version
-          model_to_firmware_bios_name[model] = firmware_bios_name
+          logging.info(
+              'manifest_key: %r, ro_version: %r, firmware_bios_name: %r',
+              manifest_key, ro_version, firmware_bios_name)
+          if max_ro_version is None:
+            max_ro_version = ro_version
+          else:
+            max_ro_version = max(max_ro_version, ro_version)
+          firmware_bios_names.add(firmware_bios_name)
 
-      if model_to_ro_version:
+      if max_ro_version is not None:
         if not self.netboot_firmware_source:
-          self.netboot_firmware_source = max(model_to_ro_version.values())
-        self.model_to_firmware_bios_name = model_to_firmware_bios_name
-        logging.info('model_to_ro_version:\n%r', model_to_ro_version)
-        logging.info('model_to_firmware_bios_name:\n%r',
-                     model_to_firmware_bios_name)
+          self.netboot_firmware_source = max_ro_version
+        self.firmware_bios_names = sorted(firmware_bios_names)
         logging.info('netboot_firmware_source: %r',
                      self.netboot_firmware_source)
 
@@ -921,8 +935,8 @@ class FinalizeBundle:
     if not self.is_boxster_project:
       raise ValueError('Call GetNetbootFirmwareSet for a non-boxster project.')
     return {
-        f'image-{self.model_to_firmware_bios_name.get(design, design)}.net.bin'
-        for design in self.designs
+        f'image-{firmware_bios_name}.net.bin'
+        for firmware_bios_name in self.firmware_bios_names
     }
 
   def DownloadNetbootFromFactoryArchive(self):
@@ -1188,6 +1202,27 @@ class FinalizeBundle:
     Spawn(['tar', '-zcf', os.path.join(config_dir, 'project_config.tar.gz'),
            '-C', extracted_dir, config], check_call=True, log=True)
     os.remove(config_path)
+
+  def ObtainFirmwareManifestKeys(self):
+    """Obtains the firmware_manifest_keys from cros_config."""
+    models = self.designs if self.is_boxster_project else [self.project]
+    logging.info('models: %r.', models)
+    firmware_manifest_keys: Dict[str, Set[str]] = {}
+    with MountPartition(self.release_image_path, 3) as f:
+      cros_config_path = os.path.join(f, CROS_CONFIG_YAML_PATH)
+      cros_config = yaml.safe_load(file_utils.ReadFile(cros_config_path))
+    for config in cros_config['chromeos']['configs']:
+      model = config.get('name')
+      if model not in models:
+        continue
+      manifest_key = config.get('firmware', {}).get('image-name') or model
+      firmware_manifest_keys.setdefault(manifest_key, set()).add(model)
+    self.firmware_manifest_keys = {
+        key: sorted(value)
+        for key, value in firmware_manifest_keys.items()
+    }
+    logging.info('firmware_manifest_keys: %r',
+                 sorted(self.firmware_manifest_keys))
 
   def RemoveUnnecessaryFiles(self):
     """Removes vim backup files, pyc files, and empty directories."""

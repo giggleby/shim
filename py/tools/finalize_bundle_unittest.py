@@ -27,8 +27,7 @@ class PrepareNetbootTest(unittest.TestCase):
     if os.path.exists(self.temp_dir):
       shutil.rmtree(self.temp_dir)
 
-  def _PrepareDownloadedFiles(self,
-                              bundle_builder: finalize_bundle.FinalizeBundle):
+  def _SetupBuilder(self, bundle_builder: finalize_bundle.FinalizeBundle):
     orig_netboot_dir = os.path.join(bundle_builder.bundle_dir, 'factory_shim',
                                     'netboot')
     file_utils.TryMakeDirs(orig_netboot_dir)
@@ -36,8 +35,15 @@ class PrepareNetbootTest(unittest.TestCase):
         os.path.join(bundle_builder.bundle_dir, 'factory_shim',
                      'factory_shim.bin'))
     file_utils.TouchFile(os.path.join(orig_netboot_dir, 'vmlinuz'))
-    file_utils.TouchFile(os.path.join(orig_netboot_dir, 'image-test.net.bin'))
-    bundle_builder.designs = ['test']
+    file_utils.TouchFile(
+        os.path.join(orig_netboot_dir, 'image-randomName.net.bin'))
+    bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
+    # Set by ObtainFirmwareManifestKeys
+    bundle_builder.firmware_manifest_keys = {
+        'randomFWKey': ['test']
+    }
+    # Set by AddFirmwareUpdaterAndImages
+    bundle_builder.firmware_bios_names = ['randomName']
 
   @mock.patch(finalize_bundle.__name__ + '.Spawn', mock.Mock())
   def testPrepareNetboot_fromFactoryArchive_verifyFinalLayout(self):
@@ -55,7 +61,7 @@ class PrepareNetbootTest(unittest.TestCase):
         }, work_dir=self.temp_dir)
 
     bundle_builder.ProcessManifest()
-    self._PrepareDownloadedFiles(bundle_builder)
+    self._SetupBuilder(bundle_builder)
     bundle_builder.PrepareNetboot()
 
     self.assertDictEqual(
@@ -63,7 +69,7 @@ class PrepareNetbootTest(unittest.TestCase):
             os.path.join(bundle_builder.bundle_dir, 'netboot')), {
                 'dnsmasq.conf':
                     '084e4b7f1040bd77555563f49f271213306b8ea5',
-                'image-test.net.bin':
+                'image-randomName.net.bin':
                     'da39a3ee5e6b4b0d3255bfef95601890afd80709',
                 'tftp/chrome-bot/brya/cmdline.sample':
                     'cc137825fb0bf8ed405353b2deffb0c2a4d00b0c',
@@ -98,7 +104,7 @@ class PrepareNetbootTest(unittest.TestCase):
         }, work_dir=self.temp_dir)
 
     bundle_builder.ProcessManifest()
-    self._PrepareDownloadedFiles(bundle_builder)
+    self._SetupBuilder(bundle_builder)
     bundle_builder.PrepareNetboot()
 
     self.assertDictEqual(
@@ -123,7 +129,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     file_utils.TryMakeDirs(os.path.join(dirpath, 'images'))
     file_utils.WriteFile(
         os.path.join(dirpath, 'manifest.json'),
-        json_utils.DumpStr({'test': {
+        json_utils.DumpStr({'randomFWKey': {
             'host': {
                 'image': '123'
             }
@@ -180,6 +186,10 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     bundle_builder.ProcessManifest()
     bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
     bundle_builder.firmware_image_source = 'mock_fw'  # Set by DownloadResources
+    # Set by ObtainFirmwareManifestKeys
+    bundle_builder.firmware_manifest_keys = {
+        'randomFWKey': ['test']
+    }
 
   def testAddFirmware_protoCrosConfigMismatch_doNotDownloadUpdater(self):
     self.pack_mock.side_effect = self.MockMismatchPack
@@ -217,7 +227,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
         }, work_dir=self.temp_dir)
 
     self._SetupBuilder(bundle_builder)
-    self.assertRaisesRegex(KeyError, r'No firmware models.*',
+    self.assertRaisesRegex(KeyError, r'No manifest keys.*',
                            bundle_builder.AddFirmwareUpdaterAndImages)
 
   @mock.patch(chromeos_firmware.__name__ + '.CalculateFirmwareHashes',
@@ -351,6 +361,111 @@ class DownloadResourcesTest(unittest.TestCase):
     bundle_builder.DownloadResources()
 
     self.assertIsNone(bundle_builder.firmware_image_source)
+
+
+class ObtainFirmwareManifestKeysTest(unittest.TestCase):
+  """Unit tests of ObtainFirmwareManifestKeys."""
+
+  def setUp(self):
+    self.temp_dir = tempfile.mkdtemp(prefix='obtain_manifest_keys_unittest_')
+    self.addCleanup(shutil.rmtree, self.temp_dir)
+
+    self.config_yaml = None
+
+    @contextlib.contextmanager
+    def MockMount(unused_source, unused_index):
+      mount_point = os.path.join(self.temp_dir, 'release_mount')
+      config_dir = os.path.join(mount_point, 'usr/share/chromeos-config/yaml')
+      file_utils.TryMakeDirs(config_dir)
+      file_utils.WriteFile(
+          os.path.join(config_dir, 'config.yaml'), self.config_yaml)
+      yield mount_point
+      shutil.rmtree(mount_point)
+
+    patcher = mock.patch(finalize_bundle.__name__ + '.MountPartition')
+    patcher.start().side_effect = MockMount
+    self.addCleanup(patcher.stop)
+
+  def _CreateBuilder(self):
+    bundle_builder = finalize_bundle.FinalizeBundle(
+        manifest={
+            'board': 'brya',
+            'project': 'brya',
+            'bundle_name': '20210107_evt',
+            'toolkit': '15003.0.0',
+            'test_image': '14909.124.0',
+            'release_image': '15003.0.0',
+            'designs': finalize_bundle.BOXSTER_DESIGNS,
+        }, work_dir=self.temp_dir)
+    bundle_builder.ProcessManifest()
+    bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
+    return bundle_builder
+
+  def testObtainFirmwareManifestKeys_MultipleKeys(self):
+    self.config_yaml = json_utils.DumpStr({
+        'chromeos': {
+            'configs': [{
+                'name': 'test',
+                'firmware': {
+                    'image-name': 'randomFWKey'
+                }
+            }, {
+                'name': 'test',
+                'firmware': {
+                    'image-name': 'randomFWKey_ufs'
+                }
+            }]
+        }
+    })
+
+    bundle_builder = self._CreateBuilder()
+    bundle_builder.ObtainFirmwareManifestKeys()
+
+    self.assertDictEqual(bundle_builder.firmware_manifest_keys, {
+        'randomFWKey': ['test'],
+        'randomFWKey_ufs': ['test']
+    })
+
+  def testObtainFirmwareManifestKeys_SharedFirmwareKey(self):
+    self.config_yaml = json_utils.DumpStr({
+        'chromeos': {
+            'configs': [{
+                'name': 'test',
+                'firmware': {
+                    'image-name': 'randomFWKey'
+                }
+            }, {
+                'name': 'test15W360',
+                'firmware': {
+                    'image-name': 'randomFWKey'
+                }
+            }]
+        }
+    })
+
+    bundle_builder = self._CreateBuilder()
+    bundle_builder.designs = ['test', 'test15W360']
+    bundle_builder.ObtainFirmwareManifestKeys()
+
+    self.assertDictEqual(bundle_builder.firmware_manifest_keys,
+                         {'randomFWKey': ['test', 'test15W360']})
+
+  def testObtainFirmwareManifestKeys_Legacy(self):
+    self.config_yaml = json_utils.DumpStr(
+        {'chromeos': {
+            'configs': [{
+                'name': 'test'
+            }, {
+                'name': 'test'
+            }]
+        }})
+
+    bundle_builder = self._CreateBuilder()
+    bundle_builder.ObtainFirmwareManifestKeys()
+
+    self.assertDictEqual(bundle_builder.firmware_manifest_keys,
+                         {'test': ['test']})
+
 
 if __name__ == '__main__':
   unittest.main()
