@@ -260,12 +260,12 @@
             "manufacturer": [
               true,
               "str",
-              "!eq mfr"
+              "!re mfr(\\s{4}.*)?"
             ],
             "model_name": [
               true,
               "str",
-              "!eq L"
+              "!re L(\\s{6}.*)?"
             ],
             "technology": [
               true,
@@ -301,12 +301,12 @@
             "manufacturer": [
               true,
               "str",
-              "!eq mfr"
+              "!re mfr(\\s{4}.*)?"
             ],
             "model_name": [
               true,
               "str",
-              "!eq M"
+              "!re M(\\s{6}.*)?"
             ],
             "technology": [
               true,
@@ -347,7 +347,7 @@
             "model_name": [
               true,
               "str",
-              "!eq S"
+              "!re S(\\s{6}.*)?"
             ],
             "technology": [
               true,
@@ -939,12 +939,12 @@
             "manufacturer": [
               true,
               "str",
-              "!eq mfr"
+              "!re mfr(\\s{4}.*)?"
             ],
             "model_name": [
               true,
               "str",
-              "!eq L"
+              "!re L(\\s{6}.*)?"
             ],
             "technology": [
               true,
@@ -980,12 +980,12 @@
             "manufacturer": [
               true,
               "str",
-              "!eq mfr"
+              "!re mfr(\\s{4}.*)?"
             ],
             "model_name": [
               true,
               "str",
-              "!eq L"
+              "!re L(\\s{6}.*)?"
             ],
             "technology": [
               true,
@@ -1021,12 +1021,12 @@
             "manufacturer": [
               true,
               "str",
-              "!eq mfr"
+              "!re mfr(\\s{4}.*)?"
             ],
             "model_name": [
               true,
               "str",
-              "!eq M"
+              "!re M(\\s{6}.*)?"
             ],
             "technology": [
               true,
@@ -1062,12 +1062,12 @@
             "manufacturer": [
               true,
               "str",
-              "!eq mfr"
+              "!re mfr(\\s{4}.*)?"
             ],
             "model_name": [
               true,
               "str",
-              "!eq S"
+              "!re S(\\s{6}.*)?"
             ],
             "technology": [
               true,

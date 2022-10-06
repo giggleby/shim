@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2019 The ChromiumOS Authors.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Methods to generate the verification payload from the HWID database."""
@@ -147,17 +147,19 @@ class StrValueConverter(ValueConverter):
     return str(value)
 
 
-class StrPrefixValueConverter(ValueConverter):
+class TruncatedStrValueConverter(ValueConverter):
 
-  def __init__(self, prefix_min_length: int = 0):
-    self._prefix_min_length = prefix_min_length
+  def __init__(self, truncated_length: int = 0):
+    self._truncated_length = truncated_length
 
   def __call__(self, value):
     if isinstance(value, hwid_rule.Value):
       return re.compile(value.raw_value) if value.is_re else value.raw_value
-    if len(value) >= self._prefix_min_length:
-      return re.compile(f'{re.escape(value)}.*')
-    return value
+    space_count = self._truncated_length - len(value)
+    if space_count > 0:
+      # TODO: Use raw f-string once yapf supports it.
+      return re.compile(f'{re.escape(value)}(\\s{{{space_count}}}.*)?')
+    return re.compile(f'{re.escape(value)}.*')
 
 
 class IntValueConverter(ValueConverter):
@@ -384,17 +386,17 @@ def GetAllProbeStatementGenerators():
                   _SameNameFieldRecord('model_name', str_converter),
               ],
               # Components from sysfs. Since the maximum length of the
-              # manufacturer field and the model_name field are both 7, we
-              # should check the length of values before adding prefix matching
-              # regex.
+              # manufacturer field and the model_name field are both 7 and the
+              # trailing spaces will be truncated, we should fill the space if
+              # it is too short and do a prefix matching.
               [
                   _SameNameFieldRecord(
                       'manufacturer',
-                      StrPrefixValueConverter(
+                      TruncatedStrValueConverter(
                           BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH)),
                   _SameNameFieldRecord(
                       'model_name',
-                      StrPrefixValueConverter(
+                      TruncatedStrValueConverter(
                           BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH)),
                   _SameNameFieldRecord('technology',
                                        BatteryTechnologySysfsValueConverter()),
