@@ -573,9 +573,7 @@ class Goofy:
 
       if untested:
         untested_paths = ', '.join(sorted([x.path for x in untested]))
-        if self.state_instance.DataShelfGetValue('engineering_mode',
-                                                 optional=True):
-
+        if self.state_instance.IsEngineeringMode():
           # In engineering mode, we'll let it go.
           session.console.warn('In engineering mode; running '
                                '%s even though required tests '

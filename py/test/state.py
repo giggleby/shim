@@ -40,6 +40,8 @@ KEY_POST_SHUTDOWN = '%s.post_shutdown'
 # shopfloor calls with information about the configuration of the device.
 KEY_DEVICE_DATA = 'device'
 
+KEY_ENGINEERING_MODE = 'engineering_mode'
+
 
 class FactoryStateLayerException(Exception):
   """Exception about FactoryStateLayer."""
@@ -237,6 +239,16 @@ class FactoryState:
     """Clears all test state."""
     for layer in self.layers:
       layer.tests_shelf.Clear()
+
+  @sync_utils.Synchronized
+  def IsEngineeringMode(self):
+    """Returns whether the engineering mode is enabled or not."""
+    return self.DataShelfGetValue(KEY_ENGINEERING_MODE, optional=True)
+
+  @sync_utils.Synchronized
+  def SetEngineeringMode(self, enabled: bool):
+    """Enables or disables engineering mode."""
+    self.DataShelfSetValue(KEY_ENGINEERING_MODE, enabled)
 
   #############################################################################
   # The following functions are exposed for data_shelf APIs.

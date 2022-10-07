@@ -1696,7 +1696,7 @@ cros.factory.Goofy = class {
   setEngineeringMode(enabled) {
     this.engineeringMode = enabled;
     this.updateCSSClasses();
-    this.sendRpc('DataShelfSetValue', 'engineering_mode', enabled);
+    this.sendRpc('SetEngineeringMode', enabled);
   }
 
   /**
