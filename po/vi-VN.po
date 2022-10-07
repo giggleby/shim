@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-06-10 15:29+CST\n"
+"PO-Revision-Date: 2022-10-07 16:29+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3588,8 +3588,13 @@ msgstr "Tạo bộ nhớ cache"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 #: ../py/test/test_lists/generic_run_in.test_list.json
-msgid "Verify Cache"
-msgstr "Xác minh bộ nhớ cache"
+msgid "Verify Cache Update"
+msgstr "Xác minh Cập nhật bộ nhớ cache"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+#: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Verify Cache No Update"
+msgstr "Xác minh Bộ nhớ cache Không có Cập nhật"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Model and SKU"

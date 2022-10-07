@@ -1,13 +1,16 @@
-# Copyright 2016 The Chromium OS Authors. All rights reserved.
+# Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""A factory test to initiate and verify recovery mode memory re-train process.
+"""A factory test to initiate and verify memory re-training process.
 
 Description
 -----------
-The test either request memory re-training on next boot (if ``mode`` is
-``'create'``), or verify the mrc cache trained (if ``mode`` is ``'verify'``).
+The test either requests memory re-training on next boot (if ``mode`` is
+``'create'``), or verifies the MRC cache. (if ``mode`` is ``'verify_update'``
+or ``'verify_no_update'``).
+
+Please refer to py/tools/mrc_cache.py for more details.
 
 Test Procedure
 --------------
@@ -15,12 +18,12 @@ This is an automated test without user interaction.
 
 Dependency
 ----------
-``flashrom``, ``crossystem`` and ``futility validate_rec_mrc``.
+``flashrom``
 
 Examples
 --------
-To generate mrc cache on next boot, reboot, and verify the generated mrc cache,
-add this in test list::
+To run the complete memory training and verification flow described in
+py/tools/mrc_cache.py, add this to test list::
 
   {
     "label": "i18n! MRC Cache",
@@ -35,39 +38,65 @@ add this in test list::
       "RebootStep",
       {
         "pytest_name": "mrc_cache",
-        "label": "i18n! Verify Cache",
+        "label": "i18n! Verify Cache Update",
         "args": {
-          "mode": "verify"
+          "mode": "verify_update"
+        }
+      },
+      "RebootStep",
+      {
+        "pytest_name": "mrc_cache",
+        "label": "i18n! Verify Cache No Update",
+        "args": {
+          "mode": "verify_no_update"
         }
       }
     ]
   }
 """
 
+import enum
 import unittest
 
 from cros.factory.device import device_utils
 from cros.factory.tools import mrc_cache
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils.type_utils import Enum
 
 
-TestMode = Enum(['create', 'verify'])
-
+class TestMode(str, enum.Enum):
+  create = 'create'
+  verify_update = 'verify_update'
+  verify_no_update = 'verify_no_update'
 
 class MrcCacheTest(unittest.TestCase):
   ARGS = [
       Arg(
-          'mode', TestMode, 'Specify the phase of the test, valid values are:\n'
-          '- "create": request memory retraining on next boot.\n'
-          '- "verify": verify the mrc cache created by previous step.\n')
+          'mode', str, 'Specify the phase of the test, valid values are:\n'
+          '- "create": erase MRC cache and request memory retraining on the'
+          ' next boot.\n'
+          '- "verify_update": verify the MRC cache update result and request'
+          ' memory retraining on next boot.\n'
+          '- "verify_no_update": verify the MRC cache is not updated.\n')
   ]
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
 
   def runTest(self):
-    if self.args.mode == TestMode.create:
+    mode = self.args.mode
+    valid_mode = [m.value for m in TestMode]
+    if mode not in valid_mode:
+      raise KeyError(f'Mode {mode} is not valid. '
+                     f'Valid modes: {valid_mode}')
+
+    mode = TestMode(mode)
+    if mode == TestMode.create:
       mrc_cache.EraseTrainingData(self.dut)
-    elif self.args.mode == TestMode.verify:
-      mrc_cache.VerifyTrainingData(self.dut)
+      mrc_cache.SetRecoveryRequest(self.dut)
+    elif mode == TestMode.verify_update:
+      mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
+      # Though `verify_update` requests memory retraining, coreboot won't
+      # retrain the memory if the cache is valid.
+      mrc_cache.SetRecoveryRequest(self.dut)
+    elif mode == TestMode.verify_no_update:
+      mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.NoUpdate)
