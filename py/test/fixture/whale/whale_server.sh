@@ -52,6 +52,6 @@ iptables -P FORWARD ACCEPT
 iptables -t nat -A POSTROUTING -o ${DONGLE_IFACE} -j MASQUERADE
 
 echo "Starting DHCP service against ${DHCPD_IFACE}"
-exec /usr/local/sbin/dnsmasq -k -d \
+exec /usr/sbin/dnsmasq -k -d \
   -C "${DHCPD_CONF}" -l "${LEASE_FILE}" -i "${DHCPD_IFACE}"
 

@@ -49,5 +49,5 @@ iptables -C INPUT ${IPTABLES_RULE} 2>/dev/null ||
   iptables -I INPUT 1 ${IPTABLES_RULE}
 
 echo "Starting DHCP service against ${DHCPD_IFACE}"
-exec /usr/local/sbin/dnsmasq -k -d \
+exec /usr/sbin/dnsmasq -k -d \
   -C "${DHCPD_CONF}" -l "${LEASE_FILE}" -i "${DHCPD_IFACE}"
