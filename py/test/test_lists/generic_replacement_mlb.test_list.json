@@ -6,7 +6,7 @@
   "label": "Generic Replacement MLB SMT",
   "constants": {
     "grt": {
-      "mlb_mode": true
+      "two_stages": true
     },
     "phase": "PVT",
     "replacement_mlb_factory_server": "none"

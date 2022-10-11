@@ -40,6 +40,7 @@ from cros.factory.test.utils import model_sku_utils
 from cros.factory.test.utils import smart_amp_utils
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
+from cros.factory.utils import gsc_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
@@ -1304,6 +1305,21 @@ class Gooftool:
     result = self._util.shell(cmd)
     return result.stdout.startswith('digest:')
 
+  def _Cr50SetROHashForShipping(self):
+    """Calculate and set the hash as in release/shipping state.
+
+    Since the hash range includes GBB flags, we need to calculate hash with
+    the same GBB flags as in release/shipping state.
+    """
+
+    gbb_flags_in_factory = self.GetGBBFlags()
+    self.ClearGBBFlags()
+    try:
+      self.Cr50SetROHash()
+    finally:
+      self.SetGBBFlags(gbb_flags_in_factory)
+
+
   def Cr50SetROHash(self):
     """Set the AP-RO hash on the Cr50 chip.
 
@@ -1401,7 +1417,7 @@ class Gooftool:
       raise Error('Failed to set serial number bits on Cr50. '
                   '(args=%s)' % arg_phase)
 
-  def Cr50SetBoardId(self, is_custom_label):
+  def _Cr50SetBoardId(self, two_stages, is_flags_only=False):
     """Set the board id and flags on the Cr50 chip.
 
     The Cr50 image need to be lock down for a certain subset of devices for
@@ -1413,6 +1429,14 @@ class Gooftool:
 
     To the detail design of the lock-down mechanism, please refer to
     go/cr50-boardid-lock for more details.
+
+    Args:
+      two_stages: The MLB parts is sent to a different location for assembly,
+          such as RMA or local OEM. And we need to set a different board ID flags
+          in this case.
+      is_flags_only: Set board ID flags only, this should only be true in the
+          first stage in a two stages project. The board ID type still should be
+          set in the second stage.
     """
 
     script_path = '/usr/share/cros/cr50-set-board-id.sh'
@@ -1426,11 +1450,13 @@ class Gooftool:
     else:
       arg_phase = 'dev'
 
-    if is_custom_label:
-      cmd = [script_path, f'whitelabel_{arg_phase}']
-    else:
-      cmd = [script_path, arg_phase]
+    mode = arg_phase
+    if two_stages:
+      mode = 'whitelabel_' + mode
+      if is_flags_only:
+        mode += '_flags'
 
+    cmd = [script_path, mode]
     try:
       result = self._util.shell(cmd)
       if result.status == 0:
@@ -1451,16 +1477,8 @@ class Gooftool:
       logging.exception('Failed to set Cr50 Board ID.')
       raise
 
-  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
-                         mlb_mode=False):
-    """Write device info into cr50 flash.
 
-    Args:
-      enable_zero_touch: Will set SN-bits in cr50 if rma_mode is not set.
-      rma_mode: This device / MLB is for RMA purpose, this will disable
-          zero_touch.
-      mlb_mode: This is just a MLB, not a full device.
-    """
+  def VerifyCustomLabel(self):
     model_sku_config = model_sku_utils.GetDesignConfig(self._util.sys_interface)
     custom_type = model_sku_config.get('custom_type', '')
     is_custom_label, custom_label_tag = self._cros_config.GetCustomLabelTag()
@@ -1485,53 +1503,42 @@ class Gooftool:
                     'match.  Have you reboot the device after updating VPD '
                     'fields?')
 
-    set_sn_bits = enable_zero_touch and not rma_mode
-    write_custom_label_flags = mlb_mode and is_custom_label
 
+  def Cr50SMTWriteFlashInfo(self):
+    """Write device info into cr50 flash in SMT, usually used in two stages
+    projects.
+    """
+
+    self.VerifyCustomLabel()
+
+    # The MLB is still not finalized, and some dependencies of
+    # SN bits or AP RO Hash might be uncertain at this time.
+    # So we only set Board ID flags for security issue.
+    self._Cr50SetBoardId(two_stages=True, is_flags_only=True)
+
+  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
+                         two_stages=False):
+    """Write full device info into cr50 flash.
+
+    Args:
+      enable_zero_touch: Will set SN-bits in cr50 if rma_mode is not set.
+      rma_mode: This device / MLB is for RMA purpose, the cr50 settings should
+          already be set in this mode.
+      two_stages: The MLB parts is sent to a different location
+          for assembly, such as RMA or local OEM.
+    """
+
+    self.VerifyCustomLabel()
+
+    set_sn_bits = enable_zero_touch and not rma_mode
     if set_sn_bits:
       self.Cr50SetSnBits()
-    if write_custom_label_flags:
-      self.Cr50WriteCustomlabelFlags()
-    else:
-      self.Cr50SetBoardId(is_custom_label)
 
-  def Cr50WriteCustomlabelFlags(self):
-    """Write the flags for custom label devices.
-
-    The brand-code (cr50 board id) won't be set.  This should be called for
-    spare MLBs of custom label devices.
-    """
-    is_custom_label, unused_custom_label_tag = (
-        self._cros_config.GetCustomLabelTag())
-    if not is_custom_label:
-      raise Error('This is not a custom label device.')
-
-    script_path = '/usr/share/cros/cr50-set-board-id.sh'
-    if not os.path.exists(script_path):
-      logging.warning('The Cr50 script is not found, there should be no '
-                      'Cr50 on this device.')
-      return
-
-    if phase.GetPhase() >= phase.PVT_DOGFOOD:
-      arg_phase = 'pvt'
-    else:
-      arg_phase = 'dev'
-
-    cmd = [script_path, f'whitelabel_{arg_phase}_flags']
-    try:
-      result = self._util.shell(cmd)
-      if result.status == 0:
-        logging.info('Successfully set custom label flags.')
-      elif result.status == 2:
-        logging.error('Custom label flags has already been set.')
-      elif result.status == 3:
-        error_msg = 'Board ID and/or flag has been set DIFFERENTLY on Cr50!'
-        raise Error(error_msg)
-      else:  # General errors.
-        raise Error('Failed to set custom label flags.')
-    except Exception:
-      logging.exception('Failed to set Cr50 custom label flags.')
-      raise
+    gsc = gsc_utils.GSCUtils()
+    if not gsc.IsTi50():
+      # Ti50 uses different way to set/verify AP RO Hash.
+      self._Cr50SetROHashForShipping()
+    self._Cr50SetBoardId(two_stages)
 
   def Cr50DisableFactoryMode(self):
     """Disable Cr50 Factory mode.

@@ -35,8 +35,6 @@
     },
     "hwid_need_vpd": false,
     "__comment_hwid_need_vpd": "Set to true if some rules in the HWID database rely on VPD data",
-    "mlb_mode": false,
-    "__comment_mlb_mode": "Set this to true if the MLB parts will be sent to a different location for assembly, such as RMA or local OEM",
     "overlord": {
       "overlord_urls": [],
       "tls_no_verify": true
@@ -59,6 +57,8 @@
       "sysfs_path": ""
     },
     "__comment_sd_sysfs_path": "Use 'udevadm monitor' to find out udev sysfs path.",
+    "two_stages": false,
+    "__comment_two_stages": "Set this to true if the MLB parts will be sent to a different location for assembly, such as RMA or local OEM",
     "typea_usb": {
       "left": {
         "usb2_sysfs_path": "",
@@ -486,12 +486,8 @@
       ]
     },
     "Cr50SMTWriteFlashInfo": {
-      "pytest_name": "cr50_smt_write_flash_info",
-      "args": {
-        "enable_zero_touch": "eval! constants.grt.enable_zero_touch",
-        "mlb_mode": "eval! constants.mlb_mode",
-        "rma_mode": "eval! constants.rma_mode"
-      }
+      "inherit": "SMTFinalize",
+      "__comment": "Make old definition as an alias of the new definition for backward compatibility"
     },
     "Cr50WriteCustomlabelFlags": {
       "inherit": "Cr50SMTWriteFlashInfo",
@@ -965,6 +961,15 @@
         "media": "SD",
         "sysfs_path": "eval! constants.sd.sysfs_path",
         "timeout_secs": 60
+      }
+    },
+    "SMTFinalize": {
+      "inherit": "ExecShell",
+      "label": "SMT Finalize",
+      "args": {
+        "commands": [
+          "gooftool smt_finalize"
+        ]
       }
     },
     "Scan": {
