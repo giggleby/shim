@@ -1350,7 +1350,7 @@ class SelfServiceHelperTest(unittest.TestCase):
          #
          #####
         -checksum: 222abbbca451589a2cc44535fbe67f4feccb9ac2
-        +checksum: 1f8a06e90af7fb1150e7bdf9d7d0e36461565648
+        +checksum: 72f58aceddca8779c32728e7f35989c7ea839dc9
 
          ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -1363,15 +1363,16 @@ class SelfServiceHelperTest(unittest.TestCase):
 
          pattern:
          - image_ids:
-        @@ -45,6 +47,7 @@
+        @@ -45,6 +47,8 @@
            - ro_main_firmware_field: 1
            - comp_cls_1_field: 2
            - comp_cls_23_field: 2
+        +  - new_field: 0
         +  - new_field: 1
          - image_ids:
            - 3
            - 4
-        @@ -53,6 +56,13 @@
+        @@ -53,6 +57,13 @@
            - cpu_field: 5
            - comp_cls_1_field: 2
            - ro_main_firmware_field: 1
@@ -1385,7 +1386,7 @@ class SelfServiceHelperTest(unittest.TestCase):
 
          encoded_fields:
            chassis_field:
-        @@ -91,6 +101,13 @@
+        @@ -91,6 +102,13 @@
              1:
                comp_cls_2: comp_2_2
                comp_cls_3: comp_3_2

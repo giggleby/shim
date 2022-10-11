@@ -784,7 +784,8 @@ message ChangeUnit {
   message NewImageId {
     // The images names.
     repeated string image_names = 1;
-    // True if this change unit is a NewImageIdToNewEncodingPattern change unit.
+    // True if this change unit is a AssignBitMappingToEncodingPattern change
+    // unit with a new pattern.
     bool with_new_encoding_pattern = 2;
   }
 

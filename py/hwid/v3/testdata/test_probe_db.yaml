@@ -13,7 +13,8 @@ pattern:
     - comp_cls_3_field: 1
   - image_ids: [0, 1]
     encoding_scheme: base8192
-    fields: []
+    fields:
+    - comp_cls_3_field: 1
 
 encoded_fields:
   comp_cls_3_field:

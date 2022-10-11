@@ -576,11 +576,11 @@ class DatabaseBuilder:
   @_EnsureInBuilderContext
   def AddImage(self, image_id: int, image_name: str, new_pattern: bool = False,
                pattern_idx: Optional[int] = None,
-               reference_image_id: Optional[int] = None):
+               reference_image_id: Optional[int] = None) -> int:
     """See database.WritableDatabase.AddImage."""
-    self._database.AddImage(image_id, image_name,
-                            common.ENCODING_SCHEME.base8192, new_pattern,
-                            reference_image_id, pattern_idx)
+    return self._database.AddImage(image_id, image_name,
+                                   common.ENCODING_SCHEME.base8192, new_pattern,
+                                   reference_image_id, pattern_idx)
 
   @_EnsureInBuilderContext
   def AppendEncodedFieldBit(self, field_name: str, bit_length: int,
@@ -614,7 +614,7 @@ class DatabaseBuilder:
       if skip_missing and field_name not in curr_bit_lengths:
         continue
       curr_bit_length = curr_bit_lengths.get(field_name, 0)
-      if curr_bit_length < bit_length:
+      if field_name not in curr_bit_lengths or curr_bit_length < bit_length:
         self._database.AppendEncodedFieldBit(
             field_name, bit_length - curr_bit_length, pattern_idx=pattern_idx)
 

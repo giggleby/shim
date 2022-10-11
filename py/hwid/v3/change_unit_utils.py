@@ -305,7 +305,7 @@ class NewImageIdToExistingEncodingPattern(ChangeUnit):
       # The max image ID (except RMA) will be used as the default image to
       # perform encoding process.
       yield self.CreateDepSpec(False)
-      yield NewImageIdToNewEncodingPattern.CreateDepSpec(False)
+      yield AssignBitMappingToEncodingPattern.CreateDepSpec(False)
 
 
 class ImageDesc(NamedTuple):
@@ -322,26 +322,42 @@ class _NewImage:
     self.contains_last = False
 
 
-class NewImageIdToNewEncodingPattern(ChangeUnit):
-  """A change unit to frame new image id added with a new pattern."""
+class AssignBitMappingToEncodingPattern(ChangeUnit):
+  """A change unit to frame bit patterns assignment.
+
+  This change unit applies to two cases:
+    1. Add a new pattern with multiple (image_id, image_name) pairs.
+    2. Append bit patterns to an existing pattern of the DB.  In this
+       case the image_descs must only contain the associated image desc and the
+       reused_pattern_idx must not be None.
+  Note that the case 2. the (image_id, image_name) is an existed image desc and
+  will not be added into the DB.
+  """
 
   def __init__(self, image_descs: Sequence[ImageDesc],
                bit_mapping: Sequence[database.PatternField],
-               contains_last: bool):
+               contains_last: bool, reused_pattern_idx: Optional[int] = None):
     super().__init__(self.CreateDepSpec(contains_last))
+    if reused_pattern_idx is not None and len(image_descs) != 1:
+      raise ValueError('An AssignBitMappingToEncodingPattern change unit with '
+                       'reused_pattern_idx must only have the associated image '
+                       'desc.')
     self._image_descs = image_descs
     self._bit_mapping = bit_mapping
     self._contains_last = contains_last
+    self._reused_pattern_idx = reused_pattern_idx
 
   @property
   def image_descs(self):
     return self._image_descs
 
   def __repr__(self) -> str:
-    image_desc = self._image_descs[0]
-    contains_last = '(last)' if self._contains_last else ''
-    return (f'{super().__repr__()}:{image_desc.name}({image_desc.id})'
-            f'{contains_last}')
+    if self._reused_pattern_idx is None:
+      image_desc = self._image_descs[0]
+      contains_last = '(last)' if self._contains_last else ''
+      return (f'{super().__repr__()}:{image_desc.name}({image_desc.id})'
+              f'{contains_last}')
+    return f'{super().__repr__()}:reused_pattern_id:{self._reused_pattern_idx}'
 
   @classmethod
   def CreateDepSpec(cls, contains_last: bool) -> ChangeUnitDepSpec:
@@ -351,21 +367,27 @@ class NewImageIdToNewEncodingPattern(ChangeUnit):
   def Patch(self, db_builder: builder.DatabaseBuilder):
     """See base class."""
 
-    if len(self._image_descs) != len(
-        set(desc.id for desc in self._image_descs)):
-      raise ApplyChangeUnitException('Image IDs should be distinct.')
-    if len(self._image_descs) != len(
-        set(desc.name for desc in self._image_descs)):
-      raise ApplyChangeUnitException('Image names should be distinct.')
-    first_image_id, first_image_name = self._image_descs[0]
-    db_builder.AddImage(image_id=first_image_id, image_name=first_image_name,
-                        new_pattern=True)
-    for image_id, image_name in self._image_descs[1:]:
-      db_builder.AddImage(image_id=image_id, image_name=image_name,
-                          new_pattern=False, reference_image_id=first_image_id)
+    if self._reused_pattern_idx is None:
+      if len(self._image_descs) != len(
+          set(desc.id for desc in self._image_descs)):
+        raise ApplyChangeUnitException('Image IDs should be distinct.')
+      if len(self._image_descs) != len(
+          set(desc.name for desc in self._image_descs)):
+        raise ApplyChangeUnitException('Image names should be distinct.')
+      image_desc_iter = iter(self._image_descs)
+      first_image_id, first_image_name = next(image_desc_iter)
+      pattern_idx = db_builder.AddImage(image_id=first_image_id,
+                                        image_name=first_image_name,
+                                        new_pattern=True)
+      for image_id, image_name in image_desc_iter:
+        db_builder.AddImage(image_id=image_id, image_name=image_name,
+                            new_pattern=False,
+                            reference_image_id=first_image_id)
+    else:
+      pattern_idx = self._reused_pattern_idx
     for pattern_field in self._bit_mapping:
       db_builder.AppendEncodedFieldBit(
-          pattern_field.name, pattern_field.bit_length, image_id=first_image_id)
+          pattern_field.name, pattern_field.bit_length, pattern_idx=pattern_idx)
 
   def GetDependedSpecs(self) -> Iterable[ChangeUnitDepSpec]:
     if self._contains_last:
@@ -419,7 +441,10 @@ def _ExtractAddEncodingCombination(
     old_db: database.Database,
     new_db: database.Database) -> Iterable[AddEncodingCombination]:
 
-  common_pattern_idxes = range(old_db.GetPatternCount())
+  if old_db.is_initial:
+    common_pattern_idxes = range(1, old_db.GetPatternCount())
+  else:
+    common_pattern_idxes = range(old_db.GetPatternCount())
 
   def _GetPatternIdxesToFill(encoded_field_name: str) -> Sequence[int]:
     """Gets the indices of common patterns that include the given encoded field
@@ -537,8 +562,17 @@ def _ExtractNewImageIds(old_db: database.Database,
       new_images[pattern.idx].image_descs.append(
           ImageDesc(extra_image_id, image_name))
   for new_image in new_images.values():
-    yield NewImageIdToNewEncodingPattern(
+    yield AssignBitMappingToEncodingPattern(
         new_image.image_descs, new_image.bit_mapping, new_image.contains_last)
+
+  if old_db.is_initial:  # old_db is an initial DB.
+    first_bit_pattern_in_new_db = new_db.GetPattern(pattern_idx=0)
+    if not first_bit_pattern_in_new_db.fields:
+      raise SplitChangeUnitException('Empty bit pattern in the upload change.')
+    yield AssignBitMappingToEncodingPattern(
+        image_descs=[ImageDesc(0, new_db.GetImageName(0))],
+        bit_mapping=list(first_bit_pattern_in_new_db.fields),
+        contains_last=(max_image_id == 0), reused_pattern_idx=0)
 
 
 def _ExtractReplaceRules(old_db: database.Database,

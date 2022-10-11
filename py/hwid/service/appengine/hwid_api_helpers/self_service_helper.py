@@ -219,7 +219,7 @@ def _ConvertChangeUnitToMsg(
                   change_unit_utils.NewImageIdToExistingEncodingPattern):
     msg.new_image_id.image_names.append(change_unit.image_name)
   elif isinstance(change_unit,
-                  change_unit_utils.NewImageIdToNewEncodingPattern):
+                  change_unit_utils.AssignBitMappingToEncodingPattern):
     msg.new_image_id.image_names.extend(
         desc.name for desc in change_unit.image_descs)
     msg.new_image_id.with_new_encoding_pattern = True

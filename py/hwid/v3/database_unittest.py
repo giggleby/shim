@@ -14,6 +14,7 @@ from cros.factory.hwid.v3 import rule
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 
+
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
 
@@ -1224,7 +1225,9 @@ class PatternTest(unittest.TestCase):
         'fields': []
     }])
 
-    pattern.AddEmptyPattern(2, 'base8192')
+    associated_pattern_idx = pattern.AddEmptyPattern(2, 'base8192')
+
+    self.assertEqual(1, associated_pattern_idx)
     self.assertEqual(
         Unordered(pattern.Export()), [{
             'image_ids': [0],
@@ -1252,7 +1255,9 @@ class PatternTest(unittest.TestCase):
         'fields': []
     }])
 
-    pattern.AddImageId(3, reference_image_id=0)
+    associated_pattern_idx = pattern.AddImageId(3, reference_image_id=0)
+
+    self.assertEqual(0, associated_pattern_idx)
     self.assertEqual(
         Unordered(pattern.Export()), [{
             'image_ids': [0, 3],
@@ -1263,7 +1268,10 @@ class PatternTest(unittest.TestCase):
             'encoding_scheme': 'base32',
             'fields': []
         }])
-    pattern.AddImageId(4, pattern_idx=1)
+
+    associated_pattern_idx = pattern.AddImageId(4, pattern_idx=1)
+
+    self.assertEqual(1, associated_pattern_idx)
     self.assertEqual(
         Unordered(pattern.Export()), [{
             'image_ids': [0, 3],
@@ -1366,12 +1374,17 @@ class PatternTest(unittest.TestCase):
     }
     patterns = database.Pattern([pattern_0, pattern_1])
     self.assertEqual(2, patterns.num_patterns)
+
     # Add new image id with a new pattern.
-    patterns.AddEmptyPattern(4, common.ENCODING_SCHEME.base8192)
-    self.assertEqual(3, patterns.num_patterns)
+    associated_pattern_idx = patterns.AddEmptyPattern(
+        4, common.ENCODING_SCHEME.base8192)
+
+    self.assertEqual(2, associated_pattern_idx)
+
     # Add new image id and reuse an existing pattern.
-    patterns.AddImageId(5, reference_image_id=1)
-    self.assertEqual(3, patterns.num_patterns)
+    associated_pattern_idx = patterns.AddImageId(5, reference_image_id=1)
+
+    self.assertEqual(0, associated_pattern_idx)
 
   def testGetPattern(self):
     pattern_0 = {

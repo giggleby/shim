@@ -6,7 +6,7 @@
 import os.path
 import re
 import textwrap
-from typing import Iterable, Mapping, NamedTuple, Optional, Sequence
+from typing import Iterable, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Tuple
 import unittest
 
 from cros.factory.hwid.v3 import builder
@@ -28,16 +28,18 @@ _AddEncodingCombination = change_unit_utils.AddEncodingCombination
 _ImageDesc = change_unit_utils.ImageDesc
 _NewImageIdToExistingEncodingPattern = (
     change_unit_utils.NewImageIdToExistingEncodingPattern)
-_NewImageIdToNewEncodingPattern = (
-    change_unit_utils.NewImageIdToNewEncodingPattern)
+_AssignBitMappingToEncodingPattern = (
+    change_unit_utils.AssignBitMappingToEncodingPattern)
 _ReplaceRules = change_unit_utils.ReplaceRules
 _ChangeUnitManager = change_unit_utils.ChangeUnitManager
 _ApprovalStatus = change_unit_utils.ApprovalStatus
 _ChangeSplitResult = change_unit_utils.ChangeSplitResult
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
-_TEST_DATABASE_NAME = 'test-change-unit-db.yaml'
+_TEST_DATABASE_NAME = 'test_change_unit_db.yaml'
+_TEST_INITIAL_DB_NAME = 'test_database_initial.yaml'
 _TEST_DATABASE_PATH = os.path.join(_TEST_DATA_PATH, _TEST_DATABASE_NAME)
+_TEST_INITIAL_DB_PATH = os.path.join(_TEST_DATA_PATH, _TEST_INITIAL_DB_NAME)
 
 
 def _ApplyUnifiedDiff(src: str, diff: str) -> str:
@@ -103,6 +105,63 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
       null_values=null_values,
       probe_value_alignment_status=probe_value_alignment_status,
       diff_prev=diff_prev)
+
+
+def _CollectHashMappingOfCombinations(
+    db: database.Database, fields: Mapping[int, Mapping[str, Sequence[str]]]
+) -> Mapping[int, Tuple[str, ...]]:
+  ret: MutableMapping[int, Tuple[str, ...]] = {}
+  for idx, item in fields.items():
+    ret[idx] = tuple(
+        db.GetComponents(comp_cls)[comp_name].comp_hash
+        for comp_cls, comp_names in item.items()
+        for comp_name in comp_names)
+  return ret
+
+
+def _RelaxedDBEqual(db1: database.Database, db2: database.Database) -> bool:
+  """Performs relaxed database.Database.__eq__.
+
+  This method performs an order-irrelavant comparison of encoded fields and
+  components.  Note that the first combination (default comp) of each encoded
+  field should still be the same.
+  """
+
+  if db1.project != db2.project:
+    return False
+  if db1.raw_encoding_patterns != db2.raw_encoding_patterns:
+    return False
+  if db1.raw_image_id != db2.raw_image_id:
+    return False
+  if db1.raw_pattern != db2.raw_pattern:
+    return False
+  if sorted(db1.encoded_fields) != sorted(db2.encoded_fields):
+    return False
+  for field_name in db1.encoded_fields:
+    comb_list1 = db1.raw_encoded_fields.GetField(field_name)
+    comb_list2 = db2.raw_encoded_fields.GetField(field_name)
+    comb_hash1 = _CollectHashMappingOfCombinations(db1, comb_list1)
+    comb_hash2 = _CollectHashMappingOfCombinations(db2, comb_list2)
+    if comb_hash1[0] != comb_hash2[0]:
+      return False
+    if set(comb_hash1.values()) != set(comb_hash2.values()):
+      return False
+  comp_classes1 = db1.GetComponentClasses()
+  comp_classes2 = db2.GetComponentClasses()
+  if comp_classes1 != comp_classes2:
+    return False
+  for comp_cls in comp_classes1:
+    comp_hashes1 = set(
+        comp.comp_hash for comp in db1.GetComponents(comp_cls).values())
+    comp_hashes2 = set(
+        comp.comp_hash for comp in db2.GetComponents(comp_cls).values())
+    if comp_hashes1 != comp_hashes2:
+      return False
+  if db1.raw_rules != db2.raw_rules:
+    return False
+  if db1.framework_version != db2.framework_version:
+    return False
+  return True
 
 
 class ChangeUnitTestBase(unittest.TestCase):
@@ -431,7 +490,7 @@ class NewImageIdToExistingEncodingPatternTest(ChangeUnitTestBase):
         [new_image_existing_pattern])
 
 
-class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
+class AssignBitMappingToEncodingPatternTest(ChangeUnitTestBase):
 
   _DIFF_ADD_NEW_IMAGE_ID_TO_NEW_PATTERN = textwrap.dedent('''\
       ---
@@ -467,7 +526,7 @@ class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
   ]
 
   def testPatchNewImageToNewEncodingPattern_Success(self):
-    new_image_new_pattern = _NewImageIdToNewEncodingPattern(
+    new_image_new_pattern = _AssignBitMappingToEncodingPattern(
         image_descs=[
             _ImageDesc(3, 'DVT'),
             _ImageDesc(4, 'PVT'),
@@ -483,7 +542,7 @@ class NewImageIdToNewEncodingPatternTest(ChangeUnitTestBase):
         [new_image_new_pattern])
 
   def testPatchNewImageToNewEncodingPattern_ImageIDAlreadyExists(self):
-    new_image_new_pattern = _NewImageIdToNewEncodingPattern(
+    new_image_new_pattern = _AssignBitMappingToEncodingPattern(
         image_descs=[
             _ImageDesc(1, 'DVT'),
             _ImageDesc(4, 'PVT'),
@@ -708,15 +767,16 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
     expected_diff = textwrap.dedent('''\
         ---
         +++
-        @@ -25,6 +25,7 @@
+        @@ -25,6 +25,8 @@
            - ro_main_firmware_field: 1
            - comp_cls_1_field: 2
            - comp_cls_23_field: 2
+        +  - new_comp_cls_1_field: 0
         +  - new_comp_cls_1_field: 1
 
          encoded_fields:
            chassis_field:
-        @@ -56,7 +57,7 @@
+        @@ -56,7 +58,7 @@
              0:
                comp_cls_1: comp_1_1
              1:
@@ -725,7 +785,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
            comp_cls_23_field:
              0:
                comp_cls_2: comp_2_1
-        @@ -64,6 +65,15 @@
+        @@ -64,6 +66,15 @@
              1:
                comp_cls_2: comp_2_2
                comp_cls_3: comp_3_2
@@ -741,7 +801,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
          components:
            mainboard:
-        @@ -95,9 +105,13 @@
+        @@ -95,9 +106,13 @@
                comp_1_1:
                  values:
                    value: '1'
@@ -754,6 +814,8 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
         +        values:
         +          value: '3'
            comp_cls_2:
+             items:
+               comp_2_1:
     ''')
 
     self._AssertApplyingPatchesEqualsData(
@@ -878,7 +940,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
                 # Following combinations depends on the first.
                 'AddEncodingCombination:new_field-comp_cls_1:new_comp,new_comp',
                 # new_field is included in this image
-                'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+                'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
             },
             # Not depended by other change units.
             ('AddEncodingCombination:new_field-comp_cls_1:'
@@ -903,15 +965,15 @@ class ChangeUnitManagerTest(unittest.TestCase):
             'NewImageIdToExistingEncodingPattern:NEW_PHASE(2)': {
                 # Change units containing the last image id depends on other
                 # image id additions.
-                'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+                'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
             },
             # Not depended by other change units.
-            'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)':
+            'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)':
                 set(),
-            'NewImageIdToNewEncodingPattern:PHASE_NO_NEW_PATTERN_1(3)': {
+            'AssignBitMappingToEncodingPattern:PHASE_NO_NEW_PATTERN_1(3)': {
                 # change units containing the last image id depend on other
                 # image id additions.
-                'NewImageIdToNewEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
+                'AssignBitMappingToEncodingPattern:PHASE_NEW_PATTERN_1(5)(last)'
             },
         },
         graph)
@@ -1074,6 +1136,184 @@ class ChangeUnitManagerTest(unittest.TestCase):
         change_split_result = manager.SplitChange()
 
         self.assertEqual(expected_split_result, change_split_result)
+
+  def testPatchInitialDB(self):
+    # Arrange.
+    initial_db_content = file_utils.ReadFile(_TEST_INITIAL_DB_PATH)
+    initial_db = database.Database.LoadData(initial_db_content)
+    patched_db_content = _ApplyUnifiedDiff(
+        initial_db_content,
+        textwrap.dedent('''\
+            ---
+            +++
+            @@ -7,17 +7,151 @@
+
+             image_id:
+               0: PROTO
+            +  1: EVT
+
+             pattern:
+             - image_ids:
+               - 0
+            +  - 1
+               encoding_scheme: base8192
+            -  fields: []
+            +  fields:
+            +  - mainboard_field: 3
+            +  - region_field: 5
+            +  - dram_field: 5
+            +  - cpu_field: 3
+            +  - storage_field: 5
+            +  - ro_main_firmware_field: 5
+            +  - battery_field: 0
+            +  - display_panel_field: 0
+            +  - display_panel_field: 1
+            +  - wireless_field: 1
+
+             encoded_fields:
+               region_field: !region_field []
+            +  battery_field:
+            +    0:
+            +      battery: battery_1
+            +  cpu_field:
+            +    0:
+            +      cpu: cpu_1
+            +  display_panel_field:
+            +    0:
+            +      display_panel: display_panel_1
+            +    1:
+            +      display_panel: display_panel_2
+            +  dram_field:
+            +    0:
+            +      dram:
+            +      - dram_1
+            +      - dram_2
+            +      - dram_3
+            +      - dram_4
+            +  mainboard_field:
+            +    0:
+            +      mainboard: rev0
+            +  ro_main_firmware_field:
+            +    0:
+            +      ro_main_firmware: ro_main_firmware_1
+            +  storage_field:
+            +    0:
+            +      storage: storage_1
+            +  wireless_field:
+            +    0:
+            +      wireless: wireless_1
+
+             components:
+               region: !region_component
+            +  battery:
+            +    items:
+            +      battery_1:
+            +        status: unqualified
+            +        values:
+            +          manufacturer: MANF_ID
+            +          model_name: MD_NAME
+            +          technology: OOI0
+            +  mainboard:
+            +    items:
+            +      rev0:
+            +        status: unqualified
+            +        values:
+            +          version: rev0
+            +  cpu:
+            +    items:
+            +      cpu_1:
+            +        status: unqualified
+            +        values:
+            +          cores: '4'
+            +          model: Genuine Intel(R) 0000
+            +  display_panel:
+            +    items:
+            +      display_panel_1:
+            +        status: unqualified
+            +        values:
+            +          height: '901'
+            +          product_id: '1234'
+            +          vendor: ABC
+            +          width: '5678'
+            +      display_panel_2:
+            +        status: unqualified
+            +        values:
+            +          height: '123'
+            +          product_id: '4567'
+            +          vendor: DEF
+            +          width: '890'
+            +  dram:
+            +    items:
+            +      dram_1:
+            +        status: unqualified
+            +        values:
+            +          part: PART1
+            +          size: '2048'
+            +          slot: '0'
+            +      dram_2:
+            +        status: unqualified
+            +        values:
+            +          part: PART2
+            +          size: '2048'
+            +          slot: '1'
+            +      dram_3:
+            +        status: unqualified
+            +        values:
+            +          part: PART3
+            +          size: '2048'
+            +          slot: '2'
+            +      dram_4:
+            +        status: unqualified
+            +        values:
+            +          part: PART4
+            +          size: '2048'
+            +          slot: '3'
+            +  storage:
+            +    items:
+            +      storage_1:
+            +        status: unqualified
+            +        values:
+            +          mmc_hwrev: '0x0'
+            +          mmc_manfid: '0x000001'
+            +          mmc_name: MMC_NAME
+            +          mmc_oemid: '0x0002'
+            +          mmc_prv: '0x3'
+            +          sectors: '12345678'
+            +          size: '12345678'
+            +          type: MMC
+            +  ro_main_firmware:
+            +    items:
+            +      ro_main_firmware_1:
+            +        status: unqualified
+            +        values:
+            +          hash: hash_value
+            +          version: CHROMEBOOK.12345.0.0
+            +  wireless:
+            +    items:
+            +      wireless_1:
+            +        status: unqualified
+            +        values:
+            +          device: '0x1234'
+            +          revision_id: '0x00'
+            +          subsystem_device: '0x5678'
+            +          vendor: '0x90ab'
+
+             rules: []
+        '''))
+    patched_db = database.Database.LoadData(patched_db_content)
+
+    # Act.
+    manager = _ChangeUnitManager(initial_db, patched_db)
+    change_units = manager.GetChangeUnits()
+    manager.SetApprovalStatus({
+        identity: _ApprovalStatus.MANUAL_REVIEW_REQUIRED
+        for identity in change_units
+    })
+    split_result = manager.SplitChange()
+
+    # Assert.
+    self.assertTrue(
+        _RelaxedDBEqual(patched_db, split_result.review_required_db))
 
 
 if __name__ == '__main__':

@@ -330,6 +330,10 @@ class Database(abc.ABC):
   def rma_image_id(self) -> Optional[int]:
     return self._image_id.rma_image_id
 
+  @property
+  def is_initial(self) -> bool:
+    return not self.GetPattern(pattern_idx=0).fields
+
   def GetImageName(self, image_id: int) -> str:
     return self._image_id[image_id]
 
@@ -493,6 +497,17 @@ class Database(abc.ABC):
                 'The components %r are not defined in `components` part.' %
                 missing_comp_names)
 
+    # Only initial DB could have empty bit patterns.
+    has_empty_field = any(not self.GetPattern(pattern_idx=i).fields
+                          for i in range(self.GetPatternCount()))
+    if has_empty_field:
+      if self.GetPatternCount() > 1:
+        raise common.HWIDException(
+            'Only initial DB could have empty bit patterns.')
+      if self.image_ids != [0]:
+        raise common.HWIDException(
+            'Only image id 0 is allowed in an initial DB.')
+
 
 class WritableDatabase(Database):
 
@@ -587,7 +602,7 @@ class WritableDatabase(Database):
   def AddImage(self, image_id: int, image_name: str, encoding_scheme: str,
                new_pattern: bool = False,
                reference_image_id: Optional[int] = None,
-               pattern_idx: Optional[int] = None):
+               pattern_idx: Optional[int] = None) -> int:
     """Adds an image associated with an optionally new pattern.
 
     Args:
@@ -599,26 +614,32 @@ class WritableDatabase(Database):
         will be associated with.
       pattern_idx: The optional index of pattern this new image id will be
         associated with.
+    Returns:
+      The associated pattern index.
     """
     if new_pattern:
       if pattern_idx is not None or reference_image_id is not None:
         raise ValueError('None of image_id and reference_image_id can be set '
                          'when new_pattern is set to True.')
-      self._pattern.AddEmptyPattern(image_id, encoding_scheme)
+      associated_pattern_idx = self._pattern.AddEmptyPattern(
+          image_id, encoding_scheme)
     else:
       if pattern_idx is not None and reference_image_id is not None:
         # Both pattern_idx and reference_image_id are set.
         raise ValueError(
             'At most one of pattern_idx and reference_image_id can be set.')
       if pattern_idx is not None:
-        self._pattern.AddImageId(image_id, pattern_idx=pattern_idx)
+        associated_pattern_idx = self._pattern.AddImageId(
+            image_id, pattern_idx=pattern_idx)
       elif reference_image_id is not None:
-        self._pattern.AddImageId(image_id,
-                                 reference_image_id=reference_image_id)
+        associated_pattern_idx = self._pattern.AddImageId(
+            image_id, reference_image_id=reference_image_id)
       else:  # Both are None, use max image id.
-        self._pattern.AddImageId(image_id, reference_image_id=self.max_image_id)
+        associated_pattern_idx = self._pattern.AddImageId(
+            image_id, reference_image_id=self.max_image_id)
 
     self._image_id[image_id] = image_name
+    return associated_pattern_idx
 
   def AppendEncodedFieldBit(self, field_name: str, bit_length: int,
                             image_id: Optional[int] = None,
@@ -1868,12 +1889,14 @@ class Pattern:
     """Returns all image ids."""
     return list(self._image_id_to_pattern)
 
-  def AddEmptyPattern(self, image_id, encoding_scheme):
+  def AddEmptyPattern(self, image_id, encoding_scheme) -> int:
     """Adds a new empty pattern.
 
     Args:
       image_id: The image id of the new pattern.
       encoding_sheme: The encoding scheme of the new pattern.
+    Returns:
+      The associated pattern index.
     """
     self._SCHEMA.element_type.items['image_ids'].element_type.Validate(image_id)
     self._SCHEMA.element_type.items['encoding_scheme'].Validate(encoding_scheme)
@@ -1882,12 +1905,14 @@ class Pattern:
       raise common.HWIDException(
           'The image id %r is already in used.' % image_id)
 
-    new_pattern = PatternDatum(self.num_patterns, encoding_scheme, [])
-    self._image_id_to_pattern[image_id] = self.num_patterns
+    associated_pattern_idx = self.num_patterns
+    new_pattern = PatternDatum(associated_pattern_idx, encoding_scheme, [])
+    self._image_id_to_pattern[image_id] = associated_pattern_idx
     self._patterns.append(new_pattern)
+    return associated_pattern_idx
 
   def AddImageId(self, image_id: int, reference_image_id: Optional[int] = None,
-                 pattern_idx: Optional[int] = None):
+                 pattern_idx: Optional[int] = None) -> int:
     """Adds an image id to a pattern by the specific image id.
 
     Args:
@@ -1895,6 +1920,8 @@ class Pattern:
           image id would be used.
       image_id: The image id to be added.
       pattern_idx: The index of the pattern to be associated to image_id.
+    Returns:
+      The associated pattern index.
     """
     self._SCHEMA.element_type.items['image_ids'].element_type.Validate(image_id)
 
@@ -1915,6 +1942,7 @@ class Pattern:
     if pattern_idx >= self.num_patterns:
       raise common.HWIDException(f'No such pattern at position {pattern_idx}.')
     self._image_id_to_pattern[image_id] = pattern_idx
+    return pattern_idx
 
   def AppendField(self, field_name, bit_length, image_id=None,
                   pattern_idx=None):
