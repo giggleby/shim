@@ -346,8 +346,6 @@
           "clear_gbb_flags",
           "cr50_disable_factory_mode",
           "cr50_finalize",
-          "cr50_set_ro_hash",
-          "cr50_smt_write_flash_info",
           "cr50_write_flash_info",
           "enable_release_partition",
           "fpmcu_initialize_entropy",
@@ -418,9 +416,9 @@
               "type": "boolean",
               "default": false
             },
-            "mlb_mode": {
+            "two_stages": {
               "type": "boolean",
-              "description": "The MLB will leave factory without assembly, for example, this is a RMA spare board or local OEM projects.",
+              "description": "reference: https://docs.google.com/document/d/15v7O8LWFL_tbTp2X4PKedGZ4IQAP11ZQeKsTJ_eQp1s/preview",
               "default": false
             },
             "enable_zero_touch": {
