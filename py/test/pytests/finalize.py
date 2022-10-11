@@ -162,8 +162,9 @@ class Finalize(test_case.TestCase):
       Arg('rma_mode', bool,
           'Enable rma_mode, do not check for deprecated components.',
           default=False),
-      Arg('mlb_mode', bool, 'Enable MLB mode, only do cr50 finalize.',
-          default=False),
+      Arg(
+          'two_stages', bool, 'The MLB parts is sent to a different location'
+          'for assembly, such as RMA or local OEM', default=False),
       Arg('is_cros_core', bool,
           'For ChromeOS Core device, skip setting firmware bitmap locale.',
           default=False),
@@ -365,9 +366,8 @@ class Finalize(test_case.TestCase):
     if self.args.rma_mode:
       command += ' --rma_mode'
       logging.info('Using RMA mode. Accept deprecated components')
-    if self.args.mlb_mode:
-      command += ' --mlb_mode'
-      logging.info('Using MLB mode. Only do cr50 finalize')
+    if self.args.two_stages:
+      command += ' --two_stages'
     if self.args.is_cros_core:
       command += ' --cros_core'
       logging.info('ChromeOS Core device. Skip some check.')
