@@ -787,12 +787,26 @@ class ReportParser(log_utils.LoggerMixin):
     Returns:
       A non-negative number, or None if encounter exception.
     """
+    result = process_utils.Spawn(['unzip', '-l', zip_path], read_stdout=True,
+                                 read_stderr=True)
+    stdout, stderr = result.communicate()
+    if result.returncode != 0:
+      # https://linux.die.net/man/1/unzip: return code 1 means the processing
+      # completed successfully, and empty zip makes the return code 1 with
+      # stderr logs the string `zipfile is empty`.
+      if result.returncode == 1 and 'zipfile is empty' in stderr:
+        return 0
+      self.exception(
+          'Failed get number of reports in %s due to unzip exit status %d',
+          zip_path, result.returncode)
+      return None
     try:
-      output = process_utils.CheckOutput(['unzip', '-l', zip_path])
-      lines = output.split('\n')
+      lines = stdout.split('\n')
       return sum(map(lambda line: self.IsValidReportName(line.strip()), lines))
     except Exception:
-      self.exception('Cannot get number of reports in %s', zip_path)
+      self.exception(
+          'Failed to count number of reports from output of unzip in %s',
+          zip_path)
       return None
 
   def _GetReportNumInTar(self, tar_path):

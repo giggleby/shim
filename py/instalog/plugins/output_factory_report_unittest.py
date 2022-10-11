@@ -260,9 +260,9 @@ class ZipWith7ZUnittest(unittest.TestCase):
 class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
   """Test parsing output from `unzip -l {project}_factorylog_{date}.zip`."""
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
   def testSimpleUnZipReport(self, unzip_cmd_mock):
-    unzip_cmd_mock.return_value = textwrap.dedent('''\
+    stdout = textwrap.dedent('''\
       Archive:  coachz_factorylog_20211201-1231.zip
         Length      Date    Time    Name
       ---------  ---------- -----   ----
@@ -277,20 +277,27 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
       ---------                     -------
       682265096                     8 files
     ''')
+    unzip_cmd_mock.return_value.returncode = 0
+    unzip_cmd_mock.return_value.communicate.return_value = (stdout, '')
+
     parser = output_factory_report.ReportParser('', '', '', '')
     report_num = parser._GetReportNumInZip('')  # pylint: disable=protected-access
     self.assertEqual(6, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
-  def testNoReport(self, unzip_cmd_mock):
-    unzip_cmd_mock.return_value = ''
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  def testEmptyZip(self, unzip_cmd_mock):
+    stdout = 'Archive:  empty.zip\n'
+    stderr = 'warning [empty.zip]:  zipfile is empty\n'
+    unzip_cmd_mock.return_value.returncode = 1
+    unzip_cmd_mock.return_value.communicate.return_value = (stdout, stderr)
     parser = output_factory_report.ReportParser('', '', '', '')
     report_num = parser._GetReportNumInZip('')  # pylint: disable=protected-access
     self.assertEqual(0, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.CheckOutput')
+  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
   def testEncounterException(self, unzip_cmd_mock):
-    unzip_cmd_mock.side_effect = Exception
+    unzip_cmd_mock.return_value.returncode = 9
+    unzip_cmd_mock.return_value.communicate.return_value = ('', '')
     parser = output_factory_report.ReportParser('', '', '', '')
     report_num = parser._GetReportNumInZip('random_path')  # pylint: disable=protected-access
     self.assertEqual(None, report_num)
