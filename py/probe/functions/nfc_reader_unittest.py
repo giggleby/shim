@@ -44,37 +44,29 @@ class NFCUSBFunctionTest(unittest.TestCase):
     file_utils.TryMakeDirs(self._PatchPath(os.path.dirname(pathname)))
     file_utils.WriteFile(self._PatchPath(pathname), data)
 
-  def testProbeANfcReader(self):
-    # The following files represent a NFC reader device.
-    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-5/idVendor', '1234')
-    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-5/idProduct', '5678')
+  def testProbeNFCReader(self):
+    # The following files represent an internal NFC reader.
+    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-5/idVendor', '0c27')
+    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-5/idProduct', '3bfa')
     self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-5/removable', 'fixed')
-    self._CreateFileAndParentDirs(
-        '/sys/bus/usb/devices/3-5/3-5:1.0/bInterfaceClass', '03')
-    # The following files don't represent a NFC reader device because it's
+    # The following files represent an external NFC reader device because it's
     # removable.
-    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-9/idVendor', '1357')
-    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-9/idProduct', '2468')
+    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-9/idVendor', '0c27')
+    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-9/idProduct', '3bfa')
     self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-9/removable',
                                   'removable')
-    self._CreateFileAndParentDirs(
-        '/sys/bus/usb/devices/3-9/3-9:1.0/bInterfaceClass', '03')
-    self._CreateFileAndParentDirs(
-        '/sys/bus/usb/devices/3-9/3-9:2.0/bInterfaceClass', 'xyz123')
     # The following files don't represent a NFC reader device because its
-    # bInterfaceClass is not 03.
-    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-6/idVendor', '4321')
-    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-6/idProduct', '8765')
+    # (vid, pid) is not in the _ALLOWED_VID_PID_LIST.
+    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-6/idVendor', '0c27')
+    self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-6/idProduct', 'ffff')
     self._CreateFileAndParentDirs('/sys/bus/usb/devices/3-6/removable', 'fixed')
-    self._CreateFileAndParentDirs(
-        '/sys/bus/usb/devices/3-6/3-6:1.0/bInterfaceClass', '0b')
 
     probe_function = nfc_reader.NFCUSBFunction()
     results = probe_function.Probe()
 
     self.assertCountEqual(results, [{
-        'idVendor': '1234',
-        'idProduct': '5678',
+        'idVendor': '0c27',
+        'idProduct': '3bfa',
         'removable': 'fixed',
         'bus_type': 'usb',
         'device_path': '/sys/bus/usb/devices/3-5',
