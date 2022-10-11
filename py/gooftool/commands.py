@@ -310,14 +310,6 @@ _cbi_eeprom_wp_status_cmd_arg = CmdArg(
     choices=CbiEepromWpStatus,
     help='The expected status of CBI EEPROM after factory mode disabled.')
 
-_use_generic_tpm2_arg = CmdArg(
-    '--use_generic_tpm2', action='store_true',
-    help=('Most Chromebooks are using Google security chips.  If this project '
-          'is using a generic TPM (e.g. infineon), set this to true.  The '
-          'steps in `cr50_finalize` will be adjusted.  The EC will bypass the '
-          'CBI EEPROM write protect check and will return general error code '
-          'if failed to write.'))
-
 _is_reference_board_cmd_arg = CmdArg(
     '--is_reference_board', action='store_true', default=False,
     help='Indicating this project is reference board.')
@@ -466,7 +458,6 @@ def VerifySnBits(options):
 @Command(
     'verify_cbi_eeprom_wp_status',
     _cbi_eeprom_wp_status_cmd_arg,  # this
-    _use_generic_tpm2_arg,  # this
     *GetGooftool.__args__)
 def VerifyCBIEEPROMWPStatus(options):
   """Verify CBI EEPROM status.
@@ -474,13 +465,10 @@ def VerifyCBIEEPROMWPStatus(options):
   If cbi_eeprom_wp_status is Absent, CBI EEPROM must be absent. If
   cbi_eeprom_wp_status is Locked, write protection must be on. Otherwise, write
   protection must be off.
-  If use_generic_tmp2, the EEPROM write protect checks in EC will be bypassed
-  and will return general error (code: 4) even if it is write protected. So we
-  must handle this situation in cbi_util.
   """
 
   return GetGooftool(options).VerifyCBIEEPROMWPStatus(
-      options.cbi_eeprom_wp_status, options.use_generic_tpm2)
+      options.cbi_eeprom_wp_status)
 
 
 @Command('verify_alt_setting', *GetGooftool.__args__)
@@ -642,7 +630,6 @@ def Cr50DisableFactoryMode(options):
     _no_write_protect_cmd_arg,  # this
     _rma_mode_cmd_arg,  # this
     _mlb_mode_cmd_arg,  # this
-    _use_generic_tpm2_arg,  # this
     *Cr50DisableFactoryMode.__args__,
     *Cr50SetROHash.__args__,
     *Cr50WriteFlashInfo.__args__,
@@ -663,8 +650,6 @@ def Cr50Finalize(options):
     logging.warning('RMA mode. Skip setting RO hash.')
   elif options.mlb_mode:
     logging.warning('MLB mode. Skip setting RO hash.')
-  elif options.use_generic_tpm2:
-    logging.warning('Generic TPM2 device. Skip setting RO hash.')
   else:
     # Since the hash range includes GBB flags, we need to calculate hash with
     # the same GBB flags as in release/shipping state.
@@ -677,8 +662,6 @@ def Cr50Finalize(options):
   Cr50WriteFlashInfo(options)
   if options.mlb_mode:
     logging.warning('MLB mode. Skip disabling factory mode.')
-  elif options.use_generic_tpm2:
-    logging.warning('Generic TPM2 device. No need to disable factory mode.')
   else:
     Cr50DisableFactoryMode(options)
 
@@ -847,7 +830,6 @@ def VerifyBeforeCr50Finalize(options):
 @Command(
     'verify_after_cr50_finalize',
     _no_write_protect_cmd_arg,  # this
-    _use_generic_tpm2_arg,  # this
     *GetGooftool.__args__,
     *VerifyCBIEEPROMWPStatus.__args__,
     *VerifySnBits.__args__,
@@ -861,9 +843,7 @@ def VerifyAfterCr50Finalize(options):
   """
   if not options.no_write_protect:
     VerifyWPSwitch(options)
-  if not options.use_generic_tpm2:
-    # Verify this after WriteProtect for use_generic_tpm2
-    VerifyCBIEEPROMWPStatus(options)
+  VerifyCBIEEPROMWPStatus(options)
   VerifySnBits(options)
 
 
@@ -1075,7 +1055,6 @@ def FpmcuInitializeEntropy(options):
     _no_generate_mfg_date_cmd_arg,  # this
     _cros_core_cmd_arg,  # this
     _no_write_protect_cmd_arg,  # this
-    _use_generic_tpm2_arg,  # this
     _shopfloor_url_args_cmd_arg,  # this
     _station_ip_cmd_arg,  # this
     _station_port_cmd_arg,  # this
@@ -1096,7 +1075,6 @@ def FpmcuInitializeEntropy(options):
     *UploadReport.__args__,
     *VerifyAfterCr50Finalize.__args__,
     *VerifyBeforeCr50Finalize.__args__,
-    *VerifyCBIEEPROMWPStatus.__args__,
 )
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
@@ -1149,8 +1127,6 @@ def Finalize(options):
     event_log.Log('wp', fw='both', status='skipped')
   else:
     WriteProtect(options)
-    if options.use_generic_tpm2:
-      VerifyCBIEEPROMWPStatus(options)
   FpmcuInitializeEntropy(options)
   LogSystemDetails(options)
   UploadReport(options)
