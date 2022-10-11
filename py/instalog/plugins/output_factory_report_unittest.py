@@ -337,5 +337,97 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
     self.assertEqual(None, report_num)
 
 
+class ExtractHWIDFromFactoryLogUnittest(unittest.TestCase):
+  """Tests extracting HWID from factory.log."""
+
+  HWID_LOG_TEMPLATE = b'main_generic:RunIn.Prepare.WriteHWID> [INFO] main_generic:RunIn.Prepare.WriteHWID hwid.py:217 2022-01-01 00:00:00.000 Generated HWID: '  # pylint: disable=line-too-long
+
+  @contextlib.contextmanager
+  def _CreateFactoryLogFile(self, pre_placeholder, after_placeholder):
+    """Contextlib method which sets up the testing log.
+
+    Arg:
+      pre_placeholder: bytes data before testing placeholder log write in the
+        testing factory log file. Can be `None` to write nothing before the
+        testing placeholder.
+      after_placeholder: bytes data after testing placeholder log write in the
+        testing factory log file. Can be `None` to write nothing after the
+        testing placeholder.
+
+    Yields:
+      A string of the factory log file path.
+    """
+    log_place_holder = textwrap.dedent('''\
+        --- 202200101 00:00:00 Starting new Goofy session () ---
+      Device ID: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      [INFO] goofy.py session.py:106 2022-01-01 00:00:00.000 Session (Goofy) init count = 0
+      ''').encode('utf-8')
+
+    f = tempfile.NamedTemporaryFile()
+    try:
+      if pre_placeholder is not None:
+        f.write(pre_placeholder)
+      f.write(log_place_holder)
+      if after_placeholder is not None:
+        f.write(after_placeholder)
+      f.flush()
+      yield f.name
+    finally:
+      f.close()
+
+  @staticmethod
+  def _CreateHWIDLogLine(hwid):
+    """Creates a WriteHWID log line.
+
+    Arg:
+      hwid: string of the hwid appears in the log line.
+
+    Returns:
+      Bytes of the log line.
+    """
+    return ExtractHWIDFromFactoryLogUnittest.HWID_LOG_TEMPLATE + hwid.encode(
+        'utf-8') + b'\n'
+
+  def testOneMatchHWID(self):
+    expected_hwid = 'GENERIC-XXXX XXX-XXX-XXX-XXX-XXX'
+    parser = output_factory_report.ReportParser('', '', '', '')
+    hwid_log = self._CreateHWIDLogLine(expected_hwid)
+    with self._CreateFactoryLogFile(None, hwid_log) as path:
+      extracted_hwid = parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
+    self.assertEqual(expected_hwid, extracted_hwid)
+
+  def testMatchLastHWID(self):
+    expected_hwid = 'GENERIC-XXXX XXX-XXX-XXX-XXX-XXX'
+    mid_hwid = expected_hwid.replace('XXX', 'AAA')
+    hwid_log = self._CreateHWIDLogLine(mid_hwid) + self._CreateHWIDLogLine(
+        expected_hwid)
+
+    parser = output_factory_report.ReportParser('', '', '', '')
+    with self._CreateFactoryLogFile(None, hwid_log) as path:
+      extracted_hwid = parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
+    self.assertEqual(expected_hwid, extracted_hwid)
+
+  def testNoHWIDMatch(self):
+    parser = output_factory_report.ReportParser('', '', '', '')
+    with self.assertRaises(output_factory_report.HWIDNotFoundInFactoryLogError
+                          ), self._CreateFactoryLogFile(None, None) as path:
+      parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
+
+  def testNonUTF8EncodingCharacterInLog(self):
+    expected_hwid = 'GENERIC-XXXX XXX-XXX-XXX-XXX-XXX'
+    parser = output_factory_report.ReportParser('', '', '', '')
+    hwid_log = self._CreateHWIDLogLine(expected_hwid) + b'\xae'
+    with self._CreateFactoryLogFile(b'\xae', hwid_log) as path:
+      extracted_hwid = parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
+    self.assertEqual(expected_hwid, extracted_hwid)
+
+  def testCorruptedHWIDField(self):
+    parser = output_factory_report.ReportParser('', '', '', '')
+    hwid_log = self.HWID_LOG_TEMPLATE + 'GENERIC-XXXX'.encode('utf-8') + b'\xae'
+    with self.assertRaises(output_factory_report.HWIDNotFoundInFactoryLogError
+                          ), self._CreateFactoryLogFile(None, hwid_log) as path:
+      parser._ExtractHWIDFromFactoryLog(path)  # pylint: disable=protected-access
+
+
 if __name__ == '__main__':
   unittest.main()

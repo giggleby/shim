@@ -49,7 +49,7 @@ PATTERN_WP_STATUS = re.compile(r'WP: status: (\w+)')
 PATTERN_WP = re.compile(r'WP: write protect is (\w+)\.')
 PATTERN_SERIAL_NUMBER = re.compile(rb'^\s*serial_number: .*$', re.M)
 PATTERN_MLB_SERIAL_NUMBER = re.compile(rb'^\s*mlb_serial_number: .*$', re.M)
-PATTERN_HWID_LOG = re.compile(r'.+ Generated HWID: (?P<hwid>.+ [A-Z0-9\-].+)')
+PATTERN_HWID_LOG = re.compile(rb'.+ Generated HWID: (?P<hwid>.+ [A-Z0-9\-]+)')
 yaml_loader = yaml.CBaseLoader if yaml.__with_libyaml__ else yaml.BaseLoader
 
 
@@ -770,13 +770,13 @@ class ReportParser(log_utils.LoggerMixin):
   def _ExtractHWIDFromFactoryLog(self, log_path):
     """Extracts and returns a HWID string from the given factory.log."""
     hwid_candidate = ''
-    with open(log_path, 'r', encoding='utf8') as f:
+    with open(log_path, 'rb') as f:
       for line in f:
         match_result = PATTERN_HWID_LOG.match(line)
         if match_result is not None:
           hwid_candidate = match_result.group('hwid')
     if hwid_candidate:
-      return hwid_candidate
+      return hwid_candidate.decode('utf-8')
     raise HWIDNotFoundInFactoryLogError
 
   def _GetReportNumInZip(self, zip_path):
