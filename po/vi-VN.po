@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-06-01 16:24+CST\n"
+"PO-Revision-Date: 2022-10-20 14:01+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -170,10 +170,6 @@ msgstr "La bàn"
 #: ../build/pytests_label_generated.json
 msgid "Countdown"
 msgstr "Đếm ngược"
-
-#: ../build/pytests_label_generated.json
-msgid "CR50 SMT Write Flash Info"
-msgstr "SMT Viết CR50 Flash Info"
 
 #: ../build/pytests_label_generated.json
 msgid "Display"
@@ -3638,6 +3634,10 @@ msgstr ""
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "SD Performance"
 msgstr "Hiệu suất SD"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "SMT Finalize"
+msgstr "SMT Trình tự cuối cùng"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Screen Rotation"

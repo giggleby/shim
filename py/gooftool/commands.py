@@ -221,8 +221,10 @@ _rma_mode_cmd_arg = CmdArg(
     '--rma_mode', action='store_true',
     help='Enable RMA mode, do not check for deprecated components.')
 
-_mlb_mode_cmd_arg = CmdArg('--mlb_mode', action='store_true',
-                           help='Enable MLB mode, only do cr50 finalize.')
+_two_stages_cmd_arg = CmdArg(
+    '--two_stages', action='store_true',
+    help='The MLB parts is sent to a different location '
+    'for assembly, such as RMA or local OEM.')
 
 _cros_core_cmd_arg = CmdArg(
     '--cros_core', action='store_true',
@@ -659,48 +661,18 @@ def GenerateStableDeviceSecret(options):
   event_log.Log('generate_stable_device_secret')
 
 
-@Command('cr50_set_ro_hash', *GetGooftool.__args__)
-def Cr50SetROHash(options):
-  GetGooftool(options).Cr50SetROHash()
-  event_log.Log('cr50_set_ro_hash')
-
-
 @Command(
     'cr50_write_flash_info',
     _rma_mode_cmd_arg,  # this
-    _mlb_mode_cmd_arg,  # this
     _enable_zero_touch_cmd_arg,  # this
+    _two_stages_cmd_arg,  # this
     *GetGooftool.__args__)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
       enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
-      mlb_mode=options.mlb_mode)
+      two_stages=options.two_stages)
   event_log.Log('cr50_write_flash_info')
-
-
-@Command('cr50_set_sn_bits_and_board_id', *Cr50WriteFlashInfo.__args__)
-def Cr50SetSnBitsAndBoardId(options):
-  """Deprecated: use Cr50WriteFlashInfo instead."""
-  logging.warning('This function is renamed to Cr50WriteFlashInfo')
-  Cr50WriteFlashInfo(options)
-
-
-@Command(
-    'cr50_smt_write_flash_info',
-    _enable_zero_touch_cmd_arg,  # this
-    _rma_mode_cmd_arg,  # this
-    *GetGooftool.__args__)
-def Cr50SMTWriteFlashInfo(options):
-  """Call this function to set the cr50 fields in SMT stage.
-
-  This is required if the MLB will leave factory after SMT stage, such as RMA
-  spare boards, local OEM projects.
-  """
-  GetGooftool(options).Cr50WriteFlashInfo(
-      enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
-      mlb_mode=True)
-  event_log.Log('cr50_smt_write_flash_info')
 
 
 @Command('cr50_disable_factory_mode', *GetGooftool.__args__)
@@ -711,41 +683,15 @@ def Cr50DisableFactoryMode(options):
 
 @Command(
     'cr50_finalize',
-    _no_write_protect_cmd_arg,  # this
-    _rma_mode_cmd_arg,  # this
-    _mlb_mode_cmd_arg,  # this
-    _use_generic_tpm2_arg,  # this
     *Cr50DisableFactoryMode.__args__,
-    *Cr50SetROHash.__args__,
     *Cr50WriteFlashInfo.__args__,
     *GetGooftool.__args__,
 )
 def Cr50Finalize(options):
   """Finalize steps for cr50."""
 
-  if (not GetGooftool(options).IsCr50BoardIDSet() and
-      GetGooftool(options).IsCr50ROHashSet()):
-    # Avoid setting RO hash accidentally in pytest.
-    logging.warning('AP RO hash is set before finalize, '
-                    'clear the unexpected hash.')
-    GetGooftool(options).Cr50ClearRoHash()
-  if options.no_write_protect:
-    logging.warning('SWWP is not enabled. Skip setting RO hash.')
-  elif options.rma_mode:
-    logging.warning('RMA mode. Skip setting RO hash.')
-  elif options.mlb_mode:
-    logging.warning('MLB mode. Skip setting RO hash.')
-  elif options.use_generic_tpm2:
-    logging.warning('Generic TPM2 device. Skip setting RO hash.')
-  else:
-    Cr50SetROHash(options)
   Cr50WriteFlashInfo(options)
-  if options.mlb_mode:
-    logging.warning('MLB mode. Skip disabling factory mode.')
-  elif options.use_generic_tpm2:
-    logging.warning('Generic TPM2 device. No need to disable factory mode.')
-  else:
-    Cr50DisableFactoryMode(options)
+  Cr50DisableFactoryMode(options)
 
 
 @Command(
@@ -1130,15 +1076,34 @@ def FpmcuInitializeEntropy(options):
 
 
 @Command(
+    'smt_finalize',
+    *GetGooftool.__args__,
+    *LogSourceHashes.__args__,
+    *LogSystemDetails.__args__,
+    *UploadReport.__args__,
+)
+def SMTFinalize(options):
+  """Call this function to finalize MLB in SMT stage.
+
+  This is required if the MLB will leave factory after SMT stage, such as RMA
+  spare boards, local OEM projects.
+  """
+
+  GetGooftool(options).Cr50SMTWriteFlashInfo()
+  event_log.Log('cr50_smt_write_flash_info')
+  LogSourceHashes(options)
+  LogSystemDetails(options)
+  UploadReport(options)
+
+
+@Command(
     'finalize',
     _fast_cmd_arg,  # this
-    _mlb_mode_cmd_arg,  # this
     _rma_mode_cmd_arg,  # this
     _rlz_embargo_end_date_offset_cmd_arg,  # this
     _no_generate_mfg_date_cmd_arg,  # this
     _cros_core_cmd_arg,  # this
     _no_write_protect_cmd_arg,  # this
-    _use_generic_tpm2_arg,  # this
     _shopfloor_url_args_cmd_arg,  # this
     _station_ip_cmd_arg,  # this
     _station_port_cmd_arg,  # this
@@ -1147,7 +1112,6 @@ def FpmcuInitializeEntropy(options):
     *ClearFactoryVPDEntries.__args__,
     *ClearGBBFlags.__args__,
     *Cr50Finalize.__args__,
-    *EnableFwWp.__args__,
     *FpmcuInitializeEntropy.__args__,
     *GenerateStableDeviceSecret.__args__,
     *GetGooftool.__args__,
@@ -1159,7 +1123,6 @@ def FpmcuInitializeEntropy(options):
     *UploadReport.__args__,
     *VerifyAfterCr50Finalize.__args__,
     *VerifyBeforeCr50Finalize.__args__,
-    *VerifyCBIEEPROMWPStatus.__args__,
 )
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
@@ -1176,13 +1139,6 @@ def Finalize(options):
   - Uploads system logs & reports
   - Wipes the testing kernel, rootfs, and stateful partition
   """
-  if options.mlb_mode:
-    # MLB mode only do cr50 finalize.
-    Cr50Finalize(options)
-    LogSourceHashes(options)
-    LogSystemDetails(options)
-    UploadReport(options)
-    return
 
   if not options.rma_mode:
     # Write VPD values related to RLZ ping into VPD.
