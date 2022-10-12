@@ -22,6 +22,22 @@
     }
   },
   "definitions": {
+    "ChromeboxSMTItems": {
+      "inherit": "FlattenGroup",
+      "subtests": [
+        "CheckSecdataVersion",
+        "SMTComponents",
+        "SMTStress",
+        "SMTThermalLoad",
+        "AudioJack",
+        "LED",
+        "USBTypeATest",
+        "USBTypeCTest",
+        "HWButton",
+        "Ethernet",
+        "Buzzer"
+      ]
+    },
     "SMT": {
       "inherit": "TestGroup",
       "label": "SMT (SA Test)",
