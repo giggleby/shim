@@ -77,6 +77,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
+
 _FIRMWARE_UPDATER_NAME = 'chromeos-firmwareupdate'
 _FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
 
@@ -177,7 +178,8 @@ class UpdateFirmwareTest(test_case.TestCase):
         # The temporary folder will not be removed after this test finished
         # for the convenient of debugging.
         temp_path = os.path.join(
-            tempfile.mkdtemp(prefix='test_fw_update_'), _FIRMWARE_UPDATER_NAME)
+            tempfile.mkdtemp(prefix='test_fw_update_', dir='/usr/local/tmp'),
+            _FIRMWARE_UPDATER_NAME)
         if self.DownloadFirmware(
             self.args.force_update, temp_path):
           yield temp_path
