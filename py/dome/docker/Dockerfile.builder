@@ -40,12 +40,12 @@ RUN npm run build
 WORKDIR "${workdir}/build"
 
 # make sure others can read
-RUN chmod 644 app.js app.js.map main.css
+RUN chmod 644 app.js app.js.map main.css favicon.svg
 
 ARG output_file="frontend.tar"
 ENV output_file="${output_file}"
 
-RUN tar cvf "${output_file}" app.js app.js.map main.css
+RUN tar cvf "${output_file}" app.js app.js.map main.css favicon.svg
 
 # nothing to do here
 CMD ["echo"]
