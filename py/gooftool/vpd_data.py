@@ -31,6 +31,11 @@ REQUIRED_RW_DATA = {
     'gbind_attribute': ANY,
 }
 
+# PVS related field is required for pre-PVT phase only.
+PVS_REQUIRED_RO_DATA = {
+    'dlm_sku_id': r'[0-9]+',
+}
+
 # KNOWN = Recommended + Optional, and "required but is auto generated".
 KNOWN_RO_DATA = {
     # Generated in finalization.
@@ -51,6 +56,7 @@ KNOWN_RO_DATA = {
     'widevine_keybox': r'[0-9a-f]+',
     'oem_name': ANY,
     'xo_cal_data': ANY,
+    'dlm_sku_id': r'[0-9]+',
 }
 
 # Variable key names in regular expression.

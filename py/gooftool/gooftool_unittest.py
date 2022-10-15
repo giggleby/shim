@@ -211,6 +211,12 @@ class GooftoolTest(unittest.TestCase):
   _SIMPLE_VALID_RO_VPD_DATA = {
       'serial_number': 'A1234',
       'region': 'us',
+      'dlm_sku_id': '1234',
+  }
+
+  _SIMPLE_VALID_RO_VPD_DATA_WITHOUT_PVS = {
+      'serial_number': 'A1234',
+      'region': 'us',
   }
 
   _SIMPLE_VALID_RW_VPD_DATA = {
@@ -796,6 +802,36 @@ class GooftoolTest(unittest.TestCase):
         '=CjAKIP______TESTING_______-rhGkyZUn_'
         'zbTOX_9OQI_3EAAaCmNocm9tZWJvb2sQouDUgwQ=')
     self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA, rw=rw_vpd_value)
+    self._gooftool.VerifyVPD()
+
+  @mock.patch('cros.factory.test.rules.phase.GetPhase')
+  def testVerifyVPD_MissingPVSPrePVT(self, get_phase_mock):
+    get_phase_mock.return_value = phase.DVT
+    rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
+    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA_WITHOUT_PVS,
+                        rw=rw_vpd_value)
+    self.assertRaisesRegex(core.VPDError,
+                           'Missing required RO VPD values: dlm_sku_id',
+                           self._gooftool.VerifyVPD)
+
+  @mock.patch('cros.factory.test.rules.phase.GetPhase')
+  def testVerifyVPD_MissingPVSPrePVTArm(self, get_phase_mock):
+    """Without PVS related VPD field should work fine on ARM platforms."""
+    get_phase_mock.return_value = phase.DVT
+    self._gooftool._util.shell.return_value = StubStdout('arm')
+    rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
+    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA_WITHOUT_PVS,
+                        rw=rw_vpd_value)
+    self._gooftool.VerifyVPD()
+
+  @mock.patch('cros.factory.test.rules.phase.GetPhase')
+  def testVerifyVPD_MissingPVSPVTx86(self, get_phase_mock):
+    """Without PVS related VPD field should work fine on x86 platforms."""
+    get_phase_mock.return_value = phase.PVT
+    self._gooftool._util.shell.return_value = StubStdout('x86')
+    rw_vpd_value = self._SIMPLE_VALID_RW_VPD_DATA.copy()
+    self._SetupVPDMocks(ro=self._SIMPLE_VALID_RO_VPD_DATA_WITHOUT_PVS,
+                        rw=rw_vpd_value)
     self._gooftool.VerifyVPD()
 
   def testVerifyVPD_UnexpectedValues(self):

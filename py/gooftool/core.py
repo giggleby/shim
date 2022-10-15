@@ -734,6 +734,12 @@ class Gooftool:
     audio_vpd_ro_data = GetAudioVPDROData()
     required_vpd_ro_data.update(audio_vpd_ro_data)
 
+    # Update PVS required field
+    # ARM-based platforms are not suppprted by PVS yet, therefore ruled out.
+    if phase.GetPhase() <= phase.DVT and self._util.shell(
+        'crossystem arch').stdout.strip() != 'arm':
+      required_vpd_ro_data.update(vpd_data.PVS_REQUIRED_RO_DATA.copy())
+
     # Check required data
     ro_vpd = self._vpd.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME)
     rw_vpd = self._vpd.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME)
