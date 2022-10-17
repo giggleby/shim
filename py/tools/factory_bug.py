@@ -445,82 +445,92 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
     # These are hardcoded paths because they are virtual filesystems. The data
     # we want is always in /dev and /sys, never on the real devices.
     os.symlink('/sys', os.path.join(tmp, 'sys'))
+    # TODO(wdzeng): consider set cwd for each shell command execution (if
+    # needed), rather than chdir before and after a series of command execution.
+    old_dir = os.getcwd()
     os.chdir(tmp)
 
-    Run = RunCommandAndSaveOutputToFile
-    files = [
-        Run('crossystem', filename='crossystem', include_stderr=True),
-        Run('dmesg', filename='dmesg'),
-        Run(['elogtool', 'list'], filename='firmware_eventlog',
-            check_call=False, include_stderr=True),
-        Run('audio_diagnostics', filename='audio_diagnostics', check_call=False,
-            include_stderr=True),
-        # Cannot zip an unseekable file, need to manually copy it instead.
-        Run(['cat', 'sys/firmware/log'], filename='bios_log', check_call=False),
-    ]
-    if HasEC():
-      files += [
-          Run(['ectool', 'version'], filename='ec_version'),
-          Run(['ectool', 'console'], filename='ec_console', check_call=False,
-              include_stderr=True),
-      ]
-    if probe:
-      files += [
-          Run(['hwid', 'probe'], filename='probe_result.json',
+    try:
+      Run = RunCommandAndSaveOutputToFile
+      files = [
+          Run('crossystem', filename='crossystem', include_stderr=True),
+          Run('dmesg', filename='dmesg'),
+          Run(['elogtool', 'list'], filename='firmware_eventlog',
+              check_call=False, include_stderr=True),
+          Run('audio_diagnostics', filename='audio_diagnostics',
+              check_call=False, include_stderr=True),
+          # Cannot zip an unseekable file, need to manually copy it instead.
+          Run(['cat', 'sys/firmware/log'], filename='bios_log',
               check_call=False),
       ]
-    if dram:
-      files += GenerateDRAMCalibrationLog()
+      if HasEC():
+        files += [
+            Run(['ectool', 'version'], filename='ec_version'),
+            Run(['ectool', 'console'], filename='ec_console', check_call=False,
+                include_stderr=True),
+        ]
+      if probe:
+        files += [
+            Run(['hwid', 'probe'], filename='probe_result.json',
+                check_call=False),
+        ]
+      if dram:
+        files += GenerateDRAMCalibrationLog()
 
-    _dut = device_utils.CreateDUTInterface()
-    _manager = manager.Manager()
-    active_test_list_id = _manager.GetActiveTestListId(_dut)
-    parent_test_list_id_set = test_list_checker.GetInheritSet(
-        _manager, active_test_list_id)
-    for test_list_id in parent_test_list_id_set:
-      files += [(f'usr/local/factory/py/test/test_lists/{test_list_id}'
-                 '.test_list.json')]
+      _dut = device_utils.CreateDUTInterface()
+      _manager = manager.Manager()
+      active_test_list_id = _manager.GetActiveTestListId(_dut)
+      parent_test_list_id_set = test_list_checker.GetInheritSet(
+          _manager, active_test_list_id)
+      for test_list_id in parent_test_list_id_set:
+        files += [(f'usr/local/factory/py/test/test_lists/{test_list_id}'
+                   '.test_list.json')]
 
-    file_utils.WriteFile(
-        os.path.join(tmp, 'release_image_version'),
-        _dut.info.release_image_version)
-    files += ['release_image_version']
+      file_utils.WriteFile(
+          os.path.join(tmp, 'release_image_version'),
+          _dut.info.release_image_version)
+      files += ['release_image_version']
 
-    files += GlobAll(
-        'etc/lsb-release',
-        'sys/fs/pstore',
-        'usr/local/etc/lsb-*',
-        'usr/local/factory/TOOLKIT_VERSION',
-        'usr/local/factory/hwid',
-        'var/factory',
-        'var/log',
-        'var/spool/crash',
-    )
+      files += GlobAll(
+          'etc/lsb-release',
+          'sys/fs/pstore',
+          'usr/local/etc/lsb-*',
+          'usr/local/factory/TOOLKIT_VERSION',
+          'usr/local/factory/hwid',
+          'var/factory',
+          'var/log',
+          'var/spool/crash',
+      )
 
-    # Patterns for those files which are excluded from factory_bug.
-    exclude_patterns = [
-        'var/log/journal/*',
-    ]
-    if not net:
-      exclude_patterns += ['var/log/net.log']
+      # Patterns for those files which are excluded from factory_bug.
+      exclude_patterns = [
+          'var/log/journal/*',
+      ]
+      if not net:
+        exclude_patterns += ['var/log/net.log']
 
-    if abt:
-      files += [CreateABTFile(files, exclude_patterns)]
+      if abt:
+        files += [CreateABTFile(files, exclude_patterns)]
 
-    file_utils.TryMakeDirs(os.path.dirname(output_file))
-    logging.info('Saving %s to %s...', files, output_file)
-    try:
-      zip_command = (['zip', '-r', output_file] + files + ['--exclude'] +
-                     exclude_patterns)
-      Spawn(zip_command, cwd=tmp, check_call=True, read_stdout=True,
-            read_stderr=True)
-    except CalledProcessError as e:
-      # 1 = non-fatal errors like "some files differ"
-      if e.returncode != 1:
-        logging.error(
-            'Command "zip" exited with return code: %d\n'
-            'Stdout: %s\n Stderr: %s\n', e.returncode, e.stdout, e.stderr)
-        raise
+      file_utils.TryMakeDirs(os.path.dirname(output_file))
+      logging.info('Saving %s to %s...', files, output_file)
+      try:
+        zip_command = (['zip', '-r', output_file] + files + ['--exclude'] +
+                       exclude_patterns)
+        Spawn(zip_command, cwd=tmp, check_call=True, read_stdout=True,
+              read_stderr=True)
+      except CalledProcessError as e:
+        # 1 = non-fatal errors like "some files differ"
+        if e.returncode != 1:
+          logging.error(
+              'Command "zip" exited with return code: %d\n'
+              'Stdout: %s\n Stderr: %s\n', e.returncode, e.stdout, e.stderr)
+          raise
+    finally:
+      # Change the current working directory to the old one. The current
+      # temporary working directory may be deleted in the future and thus causes
+      # goofy unable to run any shell commands. See b/253537848.
+      os.chdir(old_dir)
 
     logging.warning('Wrote %s (%d bytes)', output_file,
                     os.path.getsize(output_file))
