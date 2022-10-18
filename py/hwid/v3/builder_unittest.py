@@ -224,6 +224,51 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
+  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=True)
+  def testExtendEncodedFieldToFullCombination(self, unused_patch):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.ExtendEncodedFieldToFullCombination('comp_cls_1_field', 2)
+
+    db = db_builder.Build()
+    self.assertCountEqual([
+        {
+            'comp_cls_1': ['comp_1_1']
+        },
+        {
+            'comp_cls_1': ['comp_1_2']
+        },
+        {
+            'comp_cls_1': ['comp_1_1', 'comp_1_1']
+        },
+        {
+            'comp_cls_1': ['comp_1_1', 'comp_1_2']
+        },
+        {
+            'comp_cls_1': ['comp_1_2', 'comp_1_2']
+        },
+    ], list(db.GetEncodedField('comp_cls_1_field').values()))
+
+  # TODO (b/212216855)
+  @label_utils.Informational
+  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
+  def testExtendEncodedFieldToFullCombination_UserRegret(self, unused_patch):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.ExtendEncodedFieldToFullCombination('comp_cls_1_field', 2)
+
+    db = db_builder.Build()
+    self.assertCountEqual([
+        {
+            'comp_cls_1': ['comp_1_1']
+        },
+        {
+            'comp_cls_1': ['comp_1_2']
+        },
+    ], list(db.GetEncodedField('comp_cls_1_field').values()))
+
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk',
               return_value=False)
   def testUpdateByProbedResultsAddFirmware(self, unused_prompt_and_ask_mock):

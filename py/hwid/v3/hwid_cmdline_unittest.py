@@ -15,6 +15,7 @@ from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 HWIDException = common.HWIDException
 
 
@@ -242,6 +243,8 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       options.region_field_name = 'test_region_field'
       options.minimal = False
       options.auto_decline_essential_prompt = []
+      options.fill_combinations = []
+      options.skip_update_by_material_file = False
 
       hwid_cmdline.BuildDatabaseWrapper(options)
 
@@ -288,6 +291,8 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           run_vpd=False,
           config_yaml=None,
           auto_decline_essential_prompt=[],
+          fill_combinations=[],
+          skip_update_by_material_file=False,
       )
       with self.assertRaises(ValueError):
         hwid_cmdline.BuildDatabaseWrapper(options)
@@ -310,6 +315,8 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           run_vpd=False,
           config_yaml=None,
           auto_decline_essential_prompt=[],
+          fill_combinations=[],
+          skip_update_by_material_file=False,
       )
       hwid_cmdline.BuildDatabaseWrapper(options)
 
@@ -346,6 +353,10 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
       options.region_field_name = 'test_region_field'
       options.project = 'proj'
       options.minimal = False
+      options.skip_update_by_material_file = False
+      options.fill_combinations = [
+          hwid_cmdline.ComponentCombinationFillingRequest('camera_field', 2)
+      ]
 
       hwid_cmdline.UpdateDatabaseWrapper(options)
 
@@ -369,6 +380,10 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.vpd,
           obtain_hwid_material_mock.return_value.sku_ids,
           image_name=options.image_id)
+
+      # Extend full component combination in specified encoded fields.
+      instance.ExtendEncodedFieldToFullCombination.assert_called_with(
+          'camera_field', 2)
 
 
 class GenerateHWIDWrapperTest(TestCaseBaseWithMockedOutputObject):

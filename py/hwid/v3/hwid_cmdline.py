@@ -27,6 +27,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
+
 _COMMON_ARGS = [
     CmdArg('-p', '--hwid-db-path', default=None,
            help='path to the HWID database directory'),
@@ -49,18 +50,31 @@ _OUTPUT_FORMAT_COMMON_ARGS = [
            help='Whether to dump result in JSON format.'),
 ]
 
-_DATABASE_BUILDER_COMMON_ARGS = [
-    CmdArg('--add-default-component', default=None, nargs='+', metavar='COMP',
-           dest='add_default_comp',
-           help='Component classes that add a default item.\n'),
-    CmdArg('--add-null-component', default=None, nargs='+', metavar='COMP',
-           dest='add_null_comp',
-           help='Component classes that add a null item.\n'),
-    CmdArg('--add-region', default=None, nargs='+', metavar='REGION',
-           dest='add_regions', help='The new regions to be added.'),
-    CmdArg('--region-field-name', default='region_field',
-           help="Name of region field. (defaults to \"%(default)s\")"),
-]
+
+class ComponentCombinationFillingRequest(NamedTuple):
+  encoded_field_name: str
+  num_components: int
+
+
+class _FillCombinationArgType:
+  __name__ = 'ENCODED_FIELD:NUM_COMPONENTS'
+
+  def _RenderValueFormatError(self, raw_arg_value: str) -> str:
+    return (f'Incorrect value ({raw_arg_value!r}) for --fill-combination: '
+            f'expect format {self.__name__!r}.')
+
+  def __call__(self, raw_arg_value: str) -> ComponentCombinationFillingRequest:
+    encoded_field_name, sep, raw_num_comp_value = raw_arg_value.partition(':')
+    if not sep:
+      raise ValueError(self._RenderValueFormatError(raw_arg_value))
+    try:
+      num_comp = int(raw_num_comp_value)
+    except ValueError as ex:
+      raise ValueError(self._RenderValueFormatError(raw_arg_value)) from ex
+    if num_comp <= 1:
+      raise ValueError(f'Incorrect value ({raw_arg_value!r}) for '
+                       '--fill-combination: expect NUM_COMPONENTS > 1.')
+    return ComponentCombinationFillingRequest(encoded_field_name, int(num_comp))
 
 _HWID_MATERIAL_FIELD_COMMON_ARGS = [
     CmdArg(
@@ -97,6 +111,30 @@ _HWID_MATERIAL_COMMON_ARGS = [
     CmdArg('--probed-results-file', default=None,
            help='(Deprecated!)  Used to specify a file with probed results.'),
 ] + _HWID_MATERIAL_FIELD_COMMON_ARGS
+
+_DATABASE_BUILDER_COMMON_ARGS = _HWID_MATERIAL_COMMON_ARGS + [
+    CmdArg('--skip-update-by-collected-material', action='store_true',
+           dest='skip_update_by_material_file',
+           help='Explicitly skip updating HWID database from HWID material.'),
+    CmdArg('--add-default-component', default=None, nargs='+', metavar='COMP',
+           dest='add_default_comp',
+           help='Component classes that add a default item.\n'),
+    CmdArg('--add-null-component', default=None, nargs='+', metavar='COMP',
+           dest='add_null_comp',
+           help='Component classes that add a null item.\n'),
+    CmdArg('--add-region', default=None, nargs='+', metavar='REGION',
+           dest='add_regions', help='The new regions to be added.'),
+    CmdArg('--region-field-name', default='region_field',
+           help="Name of region field. (defaults to \"%(default)s\")"),
+    CmdArg(
+        '--fill-combination', action='append', type=_FillCombinationArgType(),
+        default=[], metavar=_FillCombinationArgType.__name__,
+        dest='fill_combinations',
+        help='Encoded fields to expand to cover full combinations '
+        'of the specific number of components. '
+        ' E.g. `--fill-combination camera_field:2` will append all '
+        'combination of 2 cameras into `camera_field`.'),
+]
 
 _RMA_COMMON_ARGS = [
     CmdArg('--rma-mode', default=False, action='store_true',
@@ -316,13 +354,18 @@ def RunDatabaseBuilder(database_builder, options):
       database_builder.AddRegions(options.add_regions,
                                   options.region_field_name)
 
-    hwid_material = ObtainHWIDMaterial(options)
+    if not options.skip_update_by_material_file:
+      hwid_material = ObtainHWIDMaterial(options)
 
-    database_builder.UprevFrameworkVersion(hwid_material.framework_version)
+      database_builder.UprevFrameworkVersion(hwid_material.framework_version)
 
-    database_builder.UpdateByProbedResults(
-        hwid_material.probed_results, hwid_material.device_info,
-        hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id)
+      database_builder.UpdateByProbedResults(
+          hwid_material.probed_results, hwid_material.device_info,
+          hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id)
+
+    for request in options.fill_combinations:
+      database_builder.ExtendEncodedFieldToFullCombination(
+          request.encoded_field_name, request.num_components)
 
 
 @Command('build-database',
@@ -333,7 +376,7 @@ def RunDatabaseBuilder(database_builder, options):
          CmdArg(
              '--auto-decline-essential-prompt', nargs='*', default=[],
              help="Auto decline the prompt for specified essential components"),
-         *_HWID_MATERIAL_COMMON_ARGS, *_DATABASE_BUILDER_COMMON_ARGS)
+         *_DATABASE_BUILDER_COMMON_ARGS)
 def BuildDatabaseWrapper(options):
   '''Build the HWID database from probed result.'''
   if not os.path.isdir(options.hwid_db_path):
@@ -356,6 +399,7 @@ def BuildDatabaseWrapper(options):
         options.run_vpd,
         options.vpd_data_file,
         options.config_yaml,
+        options.fill_combinations,
     ]):
       raise ValueError(('The argument --minimal should not be set with '
                         'material related options and database builder '
@@ -372,7 +416,7 @@ def BuildDatabaseWrapper(options):
          CmdArg('--image-id', default=None, help="Name of image_id.\n"),
          CmdArg('--output-database', default=None,
                 help='Write into different file.\n'),
-         *_HWID_MATERIAL_COMMON_ARGS, *_DATABASE_BUILDER_COMMON_ARGS)
+         *_DATABASE_BUILDER_COMMON_ARGS)
 def UpdateDatabaseWrapper(options):
   '''Update the HWID database from probed result.'''
   old_db_path = os.path.join(options.hwid_db_path, options.project.upper())
