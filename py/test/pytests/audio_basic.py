@@ -53,6 +53,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 
+
 _RECORD_SEC = 3
 _RECORD_RATE = 48000
 _SOUND_DIRECTORY = os.path.join(
@@ -149,8 +150,9 @@ class AudioBasicTest(test_case.TestCase):
     logging.info('start play sample')
     locale = self.ui.GetUILocale()
     for channel_idx in range(1, self.args.output_channels + 1):
-      ogg_path = os.path.join(_SOUND_DIRECTORY, locale, '%d.ogg' % channel_idx)
-      number_wav_path = '%s.wav' % ogg_path
+      ogg_path = os.path.join(_SOUND_DIRECTORY, locale,
+                              f'{int(channel_idx)}.ogg')
+      number_wav_path = f'{ogg_path}.wav'
       process_utils.Spawn(
           ['sox', ogg_path, '-c1', number_wav_path], check_call=True)
       with file_utils.UnopenedTemporaryFile(suffix='.wav') as wav_path:

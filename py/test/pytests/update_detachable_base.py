@@ -84,6 +84,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
 
+
 BASE_FW_DIR = '/lib/firmware'
 
 ELAN_VENDOR_ID = 0x04f3
@@ -99,10 +100,10 @@ class UpdateDetachableBaseTest(test_case.TestCase):
       Arg('product_id', int, 'Product ID of the USB device.', default=None),
       Arg('vendor_id', int, 'Vendor ID of the USB device.', default=None),
       Arg('ec_image_path', str,
-          'Path to the EC firmware image file under %s.' % BASE_FW_DIR,
+          f'Path to the EC firmware image file under {BASE_FW_DIR}.',
           default=None),
       Arg('touchpad_image_path', str,
-          'Path to the touchpad image file under %s.' % BASE_FW_DIR,
+          f'Path to the touchpad image file under {BASE_FW_DIR}.',
           default=None),
       Arg('update', bool, 'Update detachable base FW (hammerd is needed)',
           default=True),
@@ -129,8 +130,7 @@ class UpdateDetachableBaseTest(test_case.TestCase):
       self.args.touchpad_image_path = self.dut.path.join(
           BASE_FW_DIR, self.CrosConfig('touch-image-name'))
 
-    self.device_id = '{:04x}:{:04x}'.format(self.args.vendor_id,
-                                            self.args.product_id)
+    self.device_id = f'{self.args.vendor_id:04x}:{self.args.product_id:04x}'
     self.usb_info = UsbInfo(self.device_id)
 
   def runDetachableTest(self):
@@ -213,15 +213,14 @@ class UpdateDetachableBaseTest(test_case.TestCase):
     """
     minijail0_cmd = ['/sbin/minijail0', '-e', '-N', '-p', '-l',
                      '-u', 'hammerd', '-g', 'hammerd', '-c', '0002']
-    hammerd_cmd = ['/usr/bin/hammerd',
-                   '--at_boot=true',
-                   '--force_inject_entropy=true',
-                   '--update_if=always',
-                   '--product_id=%d' % self.args.product_id,
-                   '--vendor_id=%d' % self.args.vendor_id,
-                   '--usb_path=%s' % self.args.usb_path,
-                   '--ec_image_path=%s' % self.args.ec_image_path,
-                   '--touchpad_image_path=%s' % self.args.touchpad_image_path]
+    hammerd_cmd = [
+        '/usr/bin/hammerd', '--at_boot=true', '--force_inject_entropy=true',
+        '--update_if=always', f'--product_id={int(self.args.product_id)}',
+        f'--vendor_id={int(self.args.vendor_id)}',
+        f'--usb_path={self.args.usb_path}',
+        f'--ec_image_path={self.args.ec_image_path}',
+        f'--touchpad_image_path={self.args.touchpad_image_path}'
+    ]
 
     try:
       process_utils.Spawn(minijail0_cmd + hammerd_cmd,
@@ -248,8 +247,9 @@ class UpdateDetachableBaseTest(test_case.TestCase):
       else:
         logging.error('Hammerd exited due to unknown error.')
 
-      self.FailTask('Hammerd update failed (exit status %d). Please check '
-                    '/var/log/hammerd.log for detail.' % e.returncode)
+      self.FailTask(
+          f'Hammerd update failed (exit status {int(e.returncode)}). Please '
+          f'check /var/log/hammerd.log for detail.')
 
   def VerifyBaseInfo(self, ec, tp, fw, key_version):
     """Verify base is updated properly by comparing its attributes with the
@@ -263,24 +263,24 @@ class UpdateDetachableBaseTest(test_case.TestCase):
     """
     self.assertEqual(
         ec['ro_version'], fw['ro']['version'],
-        'Base EC may not be properly updated: Base RO version %s (%s expected).'
-        % (ec['ro_version'], fw['ro']['version']))
+        f"Base EC may not be properly updated: Base RO version "
+        f"{ec['ro_version']} ({fw['ro']['version']} expected).")
     self.assertEqual(
         ec['rw_version'], fw['rw']['version'],
-        'Base EC may not be properly updated: Base RW version %s (%s expected).'
-        % (ec['rw_version'], fw['rw']['version']))
+        f"Base EC may not be properly updated: Base RW version "
+        f"{ec['rw_version']} ({fw['rw']['version']} expected).")
     self.assertIn(
         int(tp['tp_vendor'], 16), VENDOR_IDS,
-        'Touchpad may not be properly updated: Vendor %s (any of %s expected).'
-        % (tp['tp_vendor'], [hex(x) for x in VENDOR_IDS]))
+        f"Touchpad may not be properly updated: Vendor {tp['tp_vendor']} (any "
+        f"of {[hex(x) for x in VENDOR_IDS]} expected).")
     self.assertNotEqual(
         tp['tp_fw_checksum'], '0x0000',
-        'Touchpad may not be properly updated: checksum %s (unexpected).' %
-        (tp['tp_fw_checksum']))
+        f"Touchpad may not be properly updated: checksum {tp['tp_fw_checksum']}"
+        f" (unexpected).")
     self.assertGreaterEqual(
         key_version, 3,
-        'key version not greater or higher than MP (>= 3), used key version: %d'
-        % key_version)
+        f'key version not greater or higher than MP (>= 3), used key version: '
+        f'{int(key_version)}')
 
   def BaseIsReady(self):
     try:

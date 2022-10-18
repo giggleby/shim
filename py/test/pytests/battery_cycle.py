@@ -88,11 +88,10 @@ class BatteryCycleTest(test_case.TestCase):
     """Updates history in the UI."""
     history_lines = []
     for h in self.history[-5:]:
-      line = ('%d: Charged in %s' % (h.cycle + 1,
-                                     time_utils.FormatElapsedTime(h.charge)))
+      line = (f'{int(h.cycle + 1)}: Charged in '
+              f'{time_utils.FormatElapsedTime(h.charge)}')
       if h.discharge:
-        line += (
-            ', discharged in %s' % time_utils.FormatElapsedTime(h.discharge))
+        line += (f', discharged in {time_utils.FormatElapsedTime(h.discharge)}')
 
       history_lines.append(test_ui.Escape(line))
 
@@ -116,10 +115,10 @@ class BatteryCycleTest(test_case.TestCase):
     for elt_id, content in (
         ('bc-phase', 'Charging' if self.mode == Mode.CHARGE else 'Discharging'),
         ('bc-current-cycle', self.completed_cycles + 1),
-        ('bc-cycles-remaining', (self.args.num_cycles - self.completed_cycles
-                                 if self.args.num_cycles
-                                 else u'\u221e')),
-        ('bc-target-charge', '%.2f%%' % target_charge_pct)):
+        ('bc-cycles-remaining',
+         (self.args.num_cycles -
+          self.completed_cycles if self.args.num_cycles else u'\u221e')),
+        ('bc-target-charge', f'{target_charge_pct:.2f}%')):
       self.ui.SetHTML(content, id=elt_id)
 
     first_done_time = [None]
@@ -173,7 +172,7 @@ class BatteryCycleTest(test_case.TestCase):
           self._Log('status')
 
         if now > self.cycle_start_time + self.args.cycle_timeout_secs:
-          self.fail('%s timed out' % self.mode)
+          self.fail(f'{self.mode} timed out')
 
         if IsDone():
           self._Log(
@@ -201,15 +200,13 @@ class BatteryCycleTest(test_case.TestCase):
                 if self.args.max_duration_hours else None))):
           self.ui.SetHTML(
               time_utils.FormatElapsedTime(elapsed_time)
-              if elapsed_time else u'\u221e',
-              id=elt_id)
+              if elapsed_time else u'\u221e', id=elt_id)
+        self.ui.SetHTML(f'{self.dut.power.GetChargePct(get_float=True):.2f}%',
+                        id='bc-charge')
+        time_cost = self.args.charge_threshold_secs - int(
+            round(now - first_done_time[0]))
         self.ui.SetHTML(
-            '%.2f%%' % self.dut.power.GetChargePct(get_float=True),
-            id='bc-charge')
-        self.ui.SetHTML(
-            '(complete in %s s)' % (self.args.charge_threshold_secs -
-                                    int(round(now - first_done_time[0])))
-            if first_done_time[0] else '',
+            f'(complete in {time_cost} s)' if first_done_time[0] else '',
             id='bc-phase-complete')
 
         self.Sleep(self.args.idle_time_secs)

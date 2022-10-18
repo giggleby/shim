@@ -89,6 +89,7 @@ from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 
+
 _CC_UNCONNECT = 'UNCONNECTED'
 
 
@@ -232,9 +233,10 @@ class PlanktonCCFlipCheck(test_case.TestCase):
     if (self.args.original_enabled_cc is not None and
         self._polarity != self.args.original_enabled_cc and
         not self._bft_fixture.IsDoubleCCCable()):
-      self.fail('Original polarity is wrong (expect: %s, got: %s). '
-                'Does Raiden cable connect in correct direction?' %
-                (self.args.original_enabled_cc, self._polarity))
+      self.fail(
+          f'Original polarity is wrong (expect: '
+          f'{self.args.original_enabled_cc}, got: {self._polarity}). Does '
+          f'Raiden cable connect in correct direction?')
 
     if self.args.ask_flip_operation:
       self.ui.SetState(_('Flip USB type-C cable and plug in again...'))

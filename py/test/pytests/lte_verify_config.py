@@ -29,6 +29,7 @@ from cros.factory.test.rf import modem
 from cros.factory.test import session
 from cros.factory.utils.arg_utils import Arg
 
+
 try:
   # TODO(littlecvr) Make dummy implementation.
   from cros.factory.board import modem_utils
@@ -80,7 +81,6 @@ class LTEVerifyConfig(unittest.TestCase):
           expected_response += ['OK']
         response = self.modem.SendCommandWithCheck(cmd)
         if response != expected_response:
-          raise ValueError(
-              'Should get %s but got %s' % (expected_response, response))
+          raise ValueError(f'Should get {expected_response} but got {response}')
     finally:
       self.ExitFactoryMode()

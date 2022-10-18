@@ -83,9 +83,9 @@ class CompassTest(test_case.TestCase):
         self._CalculateAngle(x, y, *expected_direction) < self.args.tolerance)
 
   def _UpdateUI(self, degree, in_magn_x, in_magn_y, in_magn_z):
-    self.ui.SetHTML('%.2f' % degree, id='degree')
+    self.ui.SetHTML(f'{degree:.2f}', id='degree')
     self.ui.SetHTML(in_magn_x, id='in-magn-x')
     self.ui.SetHTML(in_magn_y, id='in-magn-y')
     self.ui.SetHTML(in_magn_z, id='in-magn-z')
-    self.ui.RunJS('document.getElementById("compass").style.transform = '
-                  '"rotate(%ddeg)";' % degree)
+    self.ui.RunJS(f'document.getElementById("compass").style.transform = '
+                  f'"rotate({int(degree)}deg)";')

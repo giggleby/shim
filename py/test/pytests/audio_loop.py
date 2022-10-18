@@ -187,6 +187,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils.schema import JSONSchemaDict
 
+
 # Default setting
 _DEFAULT_FREQ_HZ = 1000
 
@@ -399,19 +400,19 @@ class AudioLoopTest(test_case.TestCase):
       Arg(
           'input_dev', list, 'Input ALSA device. [card_name, sub_device]. '
           'For example: ["audio_card", "0"]. The sub_device could be a string '
-          'of an integer or one of %r. If this argument is a string of an '
-          'integer then it represents the PCM Id. Otherwise the test will find '
-          'the PCM Id from UCM config using this argument as the keyword.' %
-          list(base.InputDevices), default=['0', '0'],
+          f'of an integer or one of {list(base.InputDevices)!r}. If this '
+          'argument is a string of an integer then it represents the PCM Id. '
+          'Otherwise the test will find the PCM Id from UCM config using this '
+          'argument as the keyword.', default=['0', '0'],
           schema=_ARG_INPUT_DEVICE_SCHEMA),
       Arg('num_input_channels', int, 'Number of input channels.', default=2),
       Arg(
           'output_dev', list, 'Output ALSA device. [card_name, sub_device]. '
           'For example: ["audio_card", "0"]. The sub_device could be a string '
-          'of an integer or one of %r. If this argument is a string of an '
-          'integer then it represents the PCM Id. Otherwise the test will find '
-          'the PCM Id from UCM config using this argument as the keyword.' %
-          list(base.OutputDevices), default=['0', '0'],
+          f'of an integer or one of {list(base.OutputDevices)!r}. If this '
+          'argument is a string of an integer then it represents the PCM Id. '
+          'Otherwise the test will find the PCM Id from UCM config using this '
+          'argument as the keyword.', default=['0', '0'],
           schema=_ARG_OUTPUT_DEVICE_SCHEMA),
       Arg('num_output_channels', int, 'Number of output channels.', default=2),
       Arg('output_volume', (int, list),
@@ -573,8 +574,8 @@ class AudioLoopTest(test_case.TestCase):
     # Backward compatible for non-porting case, which use ALSA device name.
     # only works on chromebook device
     # TODO(mojahsu) Remove them later.
-    self._alsa_input_device = 'hw:%s,%s' % (self._in_card, self._in_device)
-    self._alsa_output_device = 'hw:%s,%s' % (self._out_card, self._out_device)
+    self._alsa_input_device = f'hw:{self._in_card},{self._in_device}'
+    self._alsa_output_device = f'hw:{self._out_card},{self._out_device}'
 
     self._current_test_args = None
 
@@ -585,11 +586,10 @@ class AudioLoopTest(test_case.TestCase):
       else:
         cras_status = 'stop/waiting'
       self.assertIn(
-          cras_status,
-          self._dut.CallOutput(['status', 'cras']),
-          'cras status is wrong (expected status: %s). '
-          'Please make sure that you have appropriate setting for '
-          '\'"disable_services": ["cras"]\' in the test item.' % cras_status)
+          cras_status, self._dut.CallOutput(['status', 'cras']),
+          f'cras status is wrong (expected status: {cras_status}). Please make '
+          f'sure that you have appropriate setting for \'"disable_services": '
+          f'["cras"]\' in the test item.')
     self._dut_temp_dir = self._dut.temp.mktemp(True, '', 'audio_loop')
 
     # If the test fails, attach the audio file; otherwise, remove it.
@@ -646,7 +646,7 @@ class AudioLoopTest(test_case.TestCase):
         elif test['type'] == 'noise':
           self.NoiseTest()
         else:
-          raise ValueError('Test type "%s" not supported.' % test['type'])
+          raise ValueError(f"Test type \"{test['type']}\" not supported.")
 
       if self.MayPassTest():
         self.ui.CallJSFunction('testPassResult')
@@ -674,8 +674,8 @@ class AudioLoopTest(test_case.TestCase):
     """Sets the test result to fail and append a new error message."""
     self._test_results[self._output_volume_index] = False
     self._test_message.append(
-        'Under output volume %r' % self._output_volumes[
-            self._output_volume_index])
+        f'Under output volume '
+        f'{self._output_volumes[self._output_volume_index]!r}')
     self._test_message.append(error_message)
     session.console.error(error_message)
 
@@ -717,12 +717,12 @@ class AudioLoopTest(test_case.TestCase):
 
     all_channel_rate = {}
     for expected_channel in input_channels:
-      m = self._MatchPatternLines(
-          audiofun_output, _AUDIOFUNTEST_SUCCESS_RATE_RE, 1)
+      m = self._MatchPatternLines(audiofun_output,
+                                  _AUDIOFUNTEST_SUCCESS_RATE_RE, 1)
       if m is None or int(m.group(1)) != expected_channel:
         self.AppendErrorMessage(
-            'Failed to get expected %d channel output from audiofuntest'
-            % expected_channel)
+            f'Failed to get expected {int(expected_channel)} channel output '
+            f'from audiofuntest')
         return None
       all_channel_rate[expected_channel] = float(m.group(2))
     return all_channel_rate
@@ -795,31 +795,22 @@ class AudioLoopTest(test_case.TestCase):
     min_frequency = self._current_test_args.get(
         'min_frequency', _DEFAULT_MIN_FREQUENCY)
     self.assertGreaterEqual(min_frequency, 0)
-    max_frequency = self._current_test_args.get(
-        'max_frequency', _DEFAULT_MAX_FREQUENCY)
+    max_frequency = self._current_test_args.get('max_frequency',
+                                                _DEFAULT_MAX_FREQUENCY)
     self.assertLessEqual(min_frequency, max_frequency)
 
-    player_cmd = 'sox -b%d -c%d -e%s -r%d -traw - '\
-                 '-b%d -e%s -talsa %s' % (
-                     audiofuntest_bits,
-                     self.args.num_output_channels,
-                     audiofuntest_encoding,
-                     output_rate,
-                     player_bits,
-                     player_encoding,
-                     self._alsa_output_device)
+    player_cmd = (
+        f'sox -b{audiofuntest_bits:d} -c{self.args.num_output_channels:d} -e'
+        f'{audiofuntest_encoding} -r{output_rate:d} -traw - -b{player_bits:d} '
+        f'-e{player_encoding} -talsa {self._alsa_output_device}')
 
     input_gain = self._current_test_args.get('input_gain',
                                              self._default_input_gain)
-    recorder_cmd = 'sox -talsa %s '\
-                   '-b%d -c%d -e%s -r%d -traw - remix %s gain %d' % (
-                       self._alsa_input_device,
-                       audiofuntest_bits,
-                       len(input_channels),
-                       audiofuntest_encoding,
-                       input_rate,
-                       ' '.join(str(x+1) for x in input_channels),
-                       input_gain)
+    recorder_cmd = (
+        f'sox -talsa {self._alsa_input_device} -b{audiofuntest_bits:d} -c'
+        f'{len(input_channels):d} -e{audiofuntest_encoding} -r{input_rate:d}'
+        f' -traw - remix {" ".join(str(x+1) for x in input_channels)} gain'
+        f' {input_gain:d}')
 
     default_rms_threshold = max(
         volume_gain *
@@ -833,17 +824,12 @@ class AudioLoopTest(test_case.TestCase):
     unused_help_stdout, help_stderr = help_process.communicate()
     audiofun_cmd = [
         audio_utils.AUDIOFUNTEST_PATH, '-P', player_cmd, '-R', recorder_cmd,
-        '-t', audiofuntest_sample_format, '-I',
-        '%d' % input_rate, '-O',
-        '%d' % output_rate, '-T',
-        '%d' % iteration, '-a',
-        '%d' % output_channel, '-c',
-        '%d' % len(input_channels), '-C',
-        '%d' % self.args.num_output_channels, '-g',
-        '%d' % volume_gain, '-i',
-        '%d' % min_frequency, '-x',
-        '%d' % max_frequency, '-p',
-        '%f' % rms_threshold
+        '-t', audiofuntest_sample_format, '-I', f'{int(input_rate)}', '-O',
+        f'{int(output_rate)}', '-T', f'{int(iteration)}', '-a',
+        f'{int(output_channel)}', '-c', f'{len(input_channels)}', '-C',
+        f'{int(self.args.num_output_channels)}', '-g', f'{int(volume_gain)}',
+        '-i', f'{int(min_frequency)}', '-x', f'{int(max_frequency)}', '-p',
+        f'{rms_threshold:f}'
     ]
     match = re.search(r'--played-file-path\b', help_stderr)
     if match:
@@ -888,7 +874,7 @@ class AudioLoopTest(test_case.TestCase):
           stdout_stream, list(range(len(input_channels))))
       if last_success_rate is None:
         break
-      rate_msg = ', '.join('Mic %d: %.1f%%' % (input_channels[channel], rate)
+      rate_msg = ', '.join(f'Mic {int(input_channels[channel])}: {rate:.1f}%'
                            for channel, rate in last_success_rate.items())
       self.ui.CallJSFunction('testInProgress', rate_msg)
 
@@ -901,8 +887,8 @@ class AudioLoopTest(test_case.TestCase):
       success = False
     elif any(rate < threshold for rate in last_success_rate.values()):
       self.AppendErrorMessage(
-          'For output device channel %s, the success rate is "'
-          '%s", too low!' % (output_channel, rate_msg))
+          f'For output device channel {output_channel}, the success rate is '
+          f'"{rate_msg}", too low!')
       self.ui.CallJSFunction('testFailResult', rate_msg)
       success = False
       self.Sleep(1)
@@ -987,7 +973,7 @@ class AudioLoopTest(test_case.TestCase):
                                            _DEFAULT_NOISE_TEST_DURATION)
     input_channels = self._current_test_args.get('input_channels',
                                                  self._in_channel_map)
-    noise_file_path = '/tmp/noise-%s.wav' % time.time()
+    noise_file_path = f'/tmp/noise-{time.time()}.wav'
     self.RecordAndCheck(duration, input_channels, noise_file_path)
 
   def RecordAndCheck(self, duration, input_channels, file_path):
@@ -1033,14 +1019,16 @@ class AudioLoopTest(test_case.TestCase):
   def CheckRecordedAudio(self, sox_output):
     rms_value = audio_utils.GetAudioRms(sox_output)
     session.console.info('Got audio RMS value: %f.', rms_value)
-    rms_threshold = self._current_test_args.get(
-        'rms_threshold', _DEFAULT_SOX_RMS_THRESHOLD)
+    rms_threshold = self._current_test_args.get('rms_threshold',
+                                                _DEFAULT_SOX_RMS_THRESHOLD)
     if rms_threshold[0] is not None and rms_threshold[0] > rms_value:
-      self.AppendErrorMessage('Audio RMS value %f too low. Minimum pass is %f.'
-                              % (rms_value, rms_threshold[0]))
+      self.AppendErrorMessage(
+          f'Audio RMS value {rms_value:f} too low. Minimum pass is '
+          f'{rms_threshold[0]:f}.')
     if rms_threshold[1] is not None and rms_threshold[1] < rms_value:
-      self.AppendErrorMessage('Audio RMS value %f too high. Maximum pass is %f.'
-                              % (rms_value, rms_threshold[1]))
+      self.AppendErrorMessage(
+          f'Audio RMS value {rms_value:f} too high. Maximum pass is '
+          f'{rms_threshold[1]:f}.')
 
     amplitude_threshold = self._current_test_args.get(
         'amplitude_threshold', _DEFAULT_SOX_AMPLITUDE_THRESHOLD)
@@ -1049,16 +1037,16 @@ class AudioLoopTest(test_case.TestCase):
     if (amplitude_threshold[0] is not None and
         amplitude_threshold[0] > min_value):
       self.AppendErrorMessage(
-          'Audio minimum amplitude %f too low. Minimum pass is %f.' % (
-              min_value, amplitude_threshold[0]))
+          f'Audio minimum amplitude {min_value:f} too low. Minimum pass is '
+          f'{amplitude_threshold[0]:f}.')
 
     max_value = audio_utils.GetAudioMaximumAmplitude(sox_output)
     session.console.info('Got audio max amplitude: %f.', max_value)
     if (amplitude_threshold[1] is not None and
         amplitude_threshold[1] < max_value):
       self.AppendErrorMessage(
-          'Audio maximum amplitude %f too high. Maximum pass is %f.' % (
-              max_value, amplitude_threshold[1]))
+          f'Audio maximum amplitude {max_value:f} too high. Maximum pass is '
+          f'{amplitude_threshold[1]:f}.')
 
     max_delta_value = audio_utils.GetAudioMaximumDelta(sox_output)
     session.console.info('Got audio max delta value: %f.', max_delta_value)
@@ -1067,13 +1055,13 @@ class AudioLoopTest(test_case.TestCase):
     if (max_delta_threshold[0] is not None and
         max_delta_threshold[0] > max_delta_value):
       self.AppendErrorMessage(
-          'Audio max delta value %f too low. Minimum pass is %f.' %
-          (max_delta_value, max_delta_threshold[0]))
+          f'Audio max delta value {max_delta_value:f} too low. Minimum pass is '
+          f'{max_delta_threshold[0]:f}.')
     if (max_delta_threshold[1] is not None and
         max_delta_threshold[1] < max_delta_value):
       self.AppendErrorMessage(
-          'Audio max delta value %f too high. Minimum pass is %f.' %
-          (max_delta_value, max_delta_threshold[1]))
+          f'Audio max delta value {max_delta_value:f} too high. Minimum pass is'
+          f' {max_delta_threshold[1]:f}.')
 
     if self._current_test_args['type'] == 'sinewav':
       freq = audio_utils.GetRoughFreq(sox_output)
@@ -1082,7 +1070,7 @@ class AudioLoopTest(test_case.TestCase):
       session.console.info('Expected frequency %r +- %d', _DEFAULT_FREQ_HZ,
                            freq_threshold)
       if freq is None or (abs(freq - _DEFAULT_FREQ_HZ) > freq_threshold):
-        self.AppendErrorMessage('Test Fail at frequency %r' % freq)
+        self.AppendErrorMessage(f'Test Fail at frequency {freq!r}')
       else:
         session.console.info('Got frequency %d', freq)
 

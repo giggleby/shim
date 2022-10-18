@@ -62,6 +62,7 @@ from cros.factory.test import test_case
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
+
 _PROBE_TIMES_ID = 'probed_times'
 _AC_STATUS_ID = 'ac_status'
 _AC_POWER_ID = 'ac_power'
@@ -117,8 +118,8 @@ class ACPowerTest(test_case.TestCase):
     self.ui.SetInstruction(instruction)
 
     self.ui.SetState(
-        '<div id="%s"></div><div id="%s"></div><div id="%s"></div>' %
-        (_PROBE_TIMES_ID, _AC_STATUS_ID, _AC_POWER_ID))
+        f'<div id="{_PROBE_TIMES_ID}"></div><div '
+        f'id="{_AC_STATUS_ID}"></div><div id="{_AC_POWER_ID}"></div>')
 
     self._power_state = {}
     self._last_type = None
@@ -194,8 +195,8 @@ class ACPowerTest(test_case.TestCase):
             'usbpdpower', power_watt, min=power_min, max=power_max)
         if not result:
           session.console.warning(
-              'Expecting (%s, %s) watt usbpd power but see %s' %
-              (power_min, power_max, power_watt))
+              f'Expecting ({power_min}, {power_max}) watt usbpd power but see '
+              f'{power_watt}')
         return result
       return False
     return True
@@ -213,6 +214,6 @@ class ACPowerTest(test_case.TestCase):
         break
       num_probes += 1
       if self.args.retries is not None and num_probes > self.args.retries:
-        self.FailTask('Failed after probing %d times' % num_probes)
+        self.FailTask(f'Failed after probing {int(num_probes)} times')
       # Prevent busy polling.
       self.Sleep(self.args.polling_period_secs)

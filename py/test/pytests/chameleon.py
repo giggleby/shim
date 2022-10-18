@@ -24,6 +24,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 # Constants.
 PORTS = type_utils.Enum(['DP', 'HDMI'])
 EDIDS = {
@@ -52,8 +53,7 @@ class Chameleon:
   }
 
   def __init__(self, hostname, port):
-    self.chameleond = xmlrpc.client.ServerProxy('http://%s:%s' %
-                                                (hostname, port))
+    self.chameleond = xmlrpc.client.ServerProxy(f'http://{hostname}:{port}')
 
   def Reset(self):
     """Resets the Chameleon board."""
@@ -188,8 +188,8 @@ class ChameleonDisplayTest(test_case.TestCase):
 
   IMAGE_TEMPLATE_WIDTH = 1680
   IMAGE_TEMPLATE_HEIGHT = 988
-  IMAGE_TEMPLATE_FILENAME = 'template-%sx%s.svg' % (
-      IMAGE_TEMPLATE_WIDTH, IMAGE_TEMPLATE_HEIGHT)
+  IMAGE_TEMPLATE_FILENAME = (
+      f'template-{IMAGE_TEMPLATE_WIDTH}x{IMAGE_TEMPLATE_HEIGHT}.svg')
   CHAMELEON_IMAGE_PATH = '/usr/local/chameleon.png'
   INTERNAL_IMAGE_PATH = '/usr/local/internal.png'
   DIFF_IMAGE_PATH = '/usr/local/diff_image.png'
@@ -312,10 +312,8 @@ class ChameleonDisplayTest(test_case.TestCase):
             scale_height=height / self.IMAGE_TEMPLATE_HEIGHT))
 
     tab_id = self.goofy_rpc.DeviceQueryTabs(window_id)[0]['id']
-    url = 'http://%s:%s%s' % (
-        net_utils.LOCALHOST,
-        goofy_proxy.DEFAULT_GOOFY_PORT,
-        self.ui.URLForFile(self.image_template_file))
+    url = (f'http://{net_utils.LOCALHOST}:{goofy_proxy.DEFAULT_GOOFY_PORT}'
+           f'{self.ui.URLForFile(self.image_template_file)}')
     self.goofy_rpc.DeviceUpdateTab(tab_id, {'url': url})
 
   def CaptureImages(self, dut_port, chameleon_port):
@@ -349,19 +347,17 @@ class ChameleonDisplayTest(test_case.TestCase):
       height: The height of the resolution in pixels.
       refresh_rate: The screen refresh rate.
     """
-    mode = ('%sx%s' % (width, height), '%sHz' % refresh_rate)
-    logging.info(
-        ('Testing DUT %s port on Chameleon %s port using mode %s...'),
-        dut_port, chameleon_port, mode)
+    mode = (f'{width}x{height}', f'{refresh_rate}Hz')
+    logging.info(('Testing DUT %s port on Chameleon %s port using mode %s...'),
+                 dut_port, chameleon_port, mode)
     self.ui.SetState(
-        _('Testing DUT {dut_port} port on Chameleon {chameleon_port} port'
-          ' using mode {mode}...',
-          dut_port=dut_port,
-          chameleon_port=chameleon_port,
-          mode=mode))
+        _(
+            'Testing DUT {dut_port} port on Chameleon {chameleon_port} port'
+            ' using mode {mode}...', dut_port=dut_port,
+            chameleon_port=chameleon_port, mode=mode))
 
     if not mode in EDIDS[chameleon_port]:
-      self.fail('Invalid mode for %s: %s' % (chameleon_port, mode))
+      self.fail(f'Invalid mode for {chameleon_port}: {mode}')
 
     edid = file_utils.ReadFile(
         os.path.join(self.ui.GetStaticDirectoryPath(),
@@ -401,25 +397,25 @@ class ChameleonDisplayTest(test_case.TestCase):
     histogram = diff_image.convert('L').histogram()
     pixel_diff_margin = 1 if self.args.downscale_to_tv_level else 0
     if sum(histogram[pixel_diff_margin + 1:]) > 0:
+      ratio = self.UI_IMAGE_RESIZE_RATIO
       self.ui.SetState([
           _('Captured images mismatch'), '<br><br>',
-          '<image src="%s" width=%d height=%d></image>' %
-          (self.ui.URLForFile(self.DIFF_IMAGE_PATH),
-           original_display['workArea']['width'] * self.UI_IMAGE_RESIZE_RATIO,
-           original_display['workArea']['height'] * self.UI_IMAGE_RESIZE_RATIO)
+          f'<image src="{self.ui.URLForFile(self.DIFF_IMAGE_PATH)}" width='
+          f'{original_display["workArea"]["width"] * ratio:d} height='
+          f'{original_display["workArea"]["height"] * ratio:d}></image>'
       ])
       # Wait 10 seconds for the operator to inspect the difference.
       self.Sleep(10)
-      self.fail(('Captured image of port %s from Chameleon does not match '
-                 'the internal framebuffer; check %s for the difference') %
-                (chameleon_port, self.DIFF_IMAGE_PATH))
+      self.fail((f'Captured image of port {chameleon_port} from Chameleon does '
+                 f'not match the internal framebuffer; check '
+                 f'{self.DIFF_IMAGE_PATH} for the difference'))
 
   def runTest(self):
     dut_port, chameleon_port, width, height, refresh_rate = self.args.test_info
     self.assertTrue(
         chameleon_port in PORTS,
-        'Invalid port: %s; chameleon port must be one of %s' %
-        (chameleon_port, PORTS))
+        f'Invalid port: {chameleon_port}; chameleon port must be one of {PORTS}'
+    )
     # Wait for 5 seconds for the fade-in visual effect.
     self.Sleep(5)
     self.TestPort(dut_port, chameleon_port, width, height, refresh_rate)

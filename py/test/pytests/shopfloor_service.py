@@ -215,7 +215,7 @@ class ShopfloorService(test_case.TestCase):
                 self.DOMAIN_FACTORY, self.KEY_HWID]
     illegal_keys = [k for k in data if k.partition('.')[0] not in prefixes]
     if illegal_keys:
-      raise ValueError('Invalid response keys: %r' % illegal_keys)
+      raise ValueError(f'Invalid response keys: {illegal_keys!r}')
     keys_to_delete = [k for k, v in data.items() if v is None]
     device_data.DeleteDeviceData(keys_to_delete)
     data = {k: v for k, v in data.items() if k not in keys_to_delete}
@@ -255,7 +255,7 @@ class ShopfloorService(test_case.TestCase):
         raise ValueError('`kargs` only allowed for `raw_invocation`.')
       spec = self.METHODS.get(method)
       if not spec:
-        raise ValueError('Unknown method for shopfloor service: %s' % method)
+        raise ValueError(f'Unknown method for shopfloor service: {method}')
 
     if spec.data_args:
       args = [device_data.GetDeviceData(k) for k in spec.data_args] + args
@@ -280,7 +280,7 @@ class ShopfloorService(test_case.TestCase):
             _('Retry'), '</button>'
         ] if retry else ''
         self.ui.SetState([
-            '<span class="%s">' % css, caption,
+            f'<span class="{css}">', caption,
             '</span><p><textarea rows=25 cols=90 readonly>',
             test_ui.Escape(message, False), '</textarea><p>', retry_button
         ])

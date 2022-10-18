@@ -49,6 +49,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 _MIN_SUSPEND_MARGIN_SECS = 5
 
 
@@ -142,10 +143,10 @@ class SuspendStressTest(test_case.TestCase):
         str(self.args.suspend_time_margin_min_secs),
         '--suspend_time_margin_max',
         str(self.args.suspend_time_margin_max_secs),
-        '--%sfw_errors_fatal' % ('' if self.args.fw_errors_fatal else 'no'),
-        '--%spremature_wake_fatal' %
-        ('' if self.args.premature_wake_fatal else 'no'),
-        '--%slate_wake_fatal' % ('' if self.args.late_wake_fatal else 'no'),
+        f"--{'' if self.args.fw_errors_fatal else 'no'}fw_errors_fatal",
+        f"--{'' if self.args.premature_wake_fatal else 'no'}"
+        f"premature_wake_fatal",
+        f"--{'' if self.args.late_wake_fatal else 'no'}late_wake_fatal",
         '--record_dmesg_dir',
         os.path.dirname(GetLogPath('')),
         '--pre_suspend_command',
@@ -195,23 +196,23 @@ class SuspendStressTest(test_case.TestCase):
 
     errors = []
     if returncode != 0:
-      errors.append('Suspend stress test failed: returncode:%d' % returncode)
+      errors.append(f'Suspend stress test failed: returncode:{int(returncode)}')
     match = re.findall(r'Premature wake detected', stdout)
     if match:
       if self.args.premature_wake_fatal:
-        errors.append('Premature wake detected:%d' % len(match))
+        errors.append(f'Premature wake detected:{len(match)}')
       else:
         logging.warning('Premature wake detected:%d', len(match))
     match = re.findall(r'Late wake detected', stdout)
     if match:
       if self.args.late_wake_fatal:
-        errors.append('Late wake detected:%d' % len(match))
+        errors.append(f'Late wake detected:{len(match)}')
       else:
         logging.warning('Late wake detected:%d', len(match))
     match = re.search(r'Finished (\d+) iterations', stdout)
     if match and match.group(1) != str(self.args.cycles):
-      errors.append('Only finished %r cycles instead of %d cycles' %
-                    (match.group(1), self.args.cycles))
+      errors.append(f'Only finished {match.group(1)!r} cycles instead of '
+                    f'{int(self.args.cycles)} cycles')
     match = re.search(r'Suspend failures: (\d+)', stdout)
     if match and match.group(1) != '0':
       errors.append(match.group(0))
@@ -228,4 +229,4 @@ class SuspendStressTest(test_case.TestCase):
     if match and match.group(1) != '0':
       errors.append(match.group(0))
     if errors:
-      self.FailTask('%r' % errors)
+      self.FailTask(f'{errors!r}')

@@ -75,6 +75,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 _DEVKEY = 'b11d74edd286c144e1135b49e7f0bc20cf041f10'
 
 
@@ -95,11 +96,13 @@ class UpdateKernel(unittest.TestCase):
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
     if self.args.kernel_image is not None:
-      self.assertTrue(os.path.isfile(self.args.kernel_image),
-                      msg='%s is missing.' % self.args.kernel_image)
+      self.assertTrue(
+          os.path.isfile(self.args.kernel_image),
+          msg=f'{self.args.kernel_image} is missing.')
     if self.args.kernel_config is not None:
-      self.assertTrue(os.path.isfile(self.args.kernel_config),
-                      msg='%s is missing.' % self.args.kernel_config)
+      self.assertTrue(
+          os.path.isfile(self.args.kernel_config),
+          msg=f'{self.args.kernel_config} is missing.')
 
   def UpdateKernel(self):
     """Apply new kernel.
@@ -134,7 +137,7 @@ class UpdateKernel(unittest.TestCase):
       self._dut.WriteSpecialFile(kerndev.path,
                                  file_utils.ReadFile(self.args.kernel_image))
 
-    config_suffix = ".%s" % kernel_id
+    config_suffix = f".{kernel_id}"
     with self._dut.temp.TempFile(suffix=config_suffix) as config_file:
       self._dut.WriteFile(config_file, kernel_config)
       process_utils.LogAndCheckCall([

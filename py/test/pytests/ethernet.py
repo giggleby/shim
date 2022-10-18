@@ -114,18 +114,18 @@ class EthernetTest(test_case.TestCase):
     return False
 
   def CheckLinkSimple(self, dev):
-    status = self.dut.ReadSpecialFile('/sys/class/net/%s/carrier' % dev).strip()
-    speed = self.dut.ReadSpecialFile('/sys/class/net/%s/speed' % dev).strip()
+    status = self.dut.ReadSpecialFile(f'/sys/class/net/{dev}/carrier').strip()
+    speed = self.dut.ReadSpecialFile(f'/sys/class/net/{dev}/speed').strip()
     if not int(status):
-      self.FailTask('Link is down on dev %s' % dev)
+      self.FailTask(f'Link is down on dev {dev}')
 
     if int(speed) != 1000:
-      self.FailTask('Speed is %sMb/s not 1000Mb/s on dev %s' % (speed, dev))
+      self.FailTask(f'Speed is {speed}Mb/s not 1000Mb/s on dev {dev}')
 
     self.PassTask()
 
   def CheckNotUsbLanDongle(self, device):
-    if 'usb' not in self.dut.path.realpath('/sys/class/net/%s' % device):
+    if 'usb' not in self.dut.path.realpath(f'/sys/class/net/{device}'):
       session.console.info('Built-in ethernet device %s found.', device)
       return True
     return False
@@ -151,16 +151,18 @@ class EthernetTest(test_case.TestCase):
            'port', str(port), 'get', 'link'])
 
       if 'up' not in status:
-        self.FailTask('Link is down on switch %s port %d' %
-                      (self.args.swconfig_switch, port))
+        self.FailTask(
+            f'Link is down on switch {self.args.swconfig_switch} port '
+            f'{int(port)}')
 
       session.console.info('Link is up on switch %s port %d',
                            self.args.swconfig_switch, port)
       if speed:
-        speed_str = '{0}baseT'.format(speed)
+        speed_str = f'{speed}baseT'
         if speed_str not in status:
-          self.FailTask('The negotiated speed is not expected (%r not in %r)' %
-                        (speed_str, status))
+          self.FailTask(
+              f'The negotiated speed is not expected ({speed_str!r} not in '
+              f'{status!r})')
 
     self.PassTask()
 
@@ -188,8 +190,8 @@ class EthernetTest(test_case.TestCase):
       self.Sleep(self.args.retry_interval_msecs / 1000.0)
 
     if self.args.link_only:
-      self.FailTask('Cannot find interface %s' % self.args.iface)
+      self.FailTask(f'Cannot find interface {self.args.iface}')
     elif self.args.test_url:
-      self.FailTask('Failed to download url %s' % self.args.test_url)
+      self.FailTask(f'Failed to download url {self.args.test_url}')
     else:
       self.FailTask('Cannot get ethernet IP')

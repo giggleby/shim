@@ -123,8 +123,8 @@ class SimpleBatteryTest(test_case.TestCase):
     if self.args.min_charge_current_mA:
       self.assertGreaterEqual(
           max(sampled_current), self.args.min_charge_current_mA,
-          'Battery charge current did not reach defined threshold %f mA' %
-          self.args.min_charge_current_mA)
+          f'Battery charge current did not reach defined threshold '
+          f'{self.args.min_charge_current_mA:f} mA')
     else:
       self.assertGreater(
           max(sampled_current), 0,
@@ -155,8 +155,8 @@ class SimpleBatteryTest(test_case.TestCase):
     if self.args.min_discharge_current_mA:
       self.assertLessEqual(
           min(sampled_current), self.args.min_discharge_current_mA,
-          'Battery discharge current did not reach defined threshold %f mA' %
-          self.args.min_discharge_current_mA)
+          f'Battery discharge current did not reach defined threshold '
+          f'{self.args.min_discharge_current_mA:f} mA')
     else:
       self.assertLess(
           min(sampled_current), 0,
@@ -169,8 +169,8 @@ class SimpleBatteryTest(test_case.TestCase):
     cycle_count = self._dut.power.GetBatteryCycleCount()
     self.assertLessEqual(
         cycle_count, self.args.max_cycle_count,
-        'Battery cycle count %d exceeds max %d' % (cycle_count,
-                                                   self.args.max_cycle_count))
+        f'Battery cycle count {int(cycle_count)} exceeds max '
+        f'{int(self.args.max_cycle_count)}')
 
     self.TestCharge(self.args.charge_duration_secs)
     self.TestDischarge(self.args.discharge_duration_secs)

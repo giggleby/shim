@@ -49,6 +49,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import time_utils
 
+
 START_GLGPS_TIMEOUT = 5
 DEFAULT_INIT_TIMEOUT = 10
 DEFAULT_TIMEOUT = 15
@@ -76,46 +77,54 @@ CMP_FNS = {
 
 class GPS(unittest.TestCase):
   ARGS = [
-      Arg('station_name', str,
+      Arg(
+          'station_name', str,
           'Name of the station.  We might want to run the GPS test at '
           'different points in the factory.  This can be used to identify '
           'them, and will be saved in event_logs.  e.g. "gps_smt"'),
       Arg('fixture_id', str,
           'Name of the fixture.  This will be saved in event_logs.'),
-      Arg('init_timeout', (int, float),
-          'How long to poll for good data before giving up.  '
-          'Default %d seconds.' % DEFAULT_INIT_TIMEOUT,
+      Arg(
+          'init_timeout', (int, float),
+          f'How long to poll for good data before giving up.  Default '
+          f'{int(DEFAULT_INIT_TIMEOUT)} seconds.',
           default=DEFAULT_INIT_TIMEOUT),
-      Arg('timeout', (int, float),
-          'How long to run the test.  Default %d seconds.' % DEFAULT_TIMEOUT,
+      Arg(
+          'timeout', (int, float),
+          f'How long to run the test.  Default {int(DEFAULT_TIMEOUT)} seconds.',
           default=DEFAULT_TIMEOUT),
-      Arg('warmup_count', int,
+      Arg(
+          'warmup_count', int,
           'How many initial matching NMEA sentences to ignore before starting '
-          'to record data.',
-          default=0),
-      Arg('gps_config_file', str,
+          'to record data.', default=0),
+      Arg(
+          'gps_config_file', str,
           'Relative or absolute path to GPS configuration file to upload '
           'to device.  If relative, searches both in directory of this test '
           'file, and in directory of currently executing Python script.'),
-      Arg('gps_config_job', str,
+      Arg(
+          'gps_config_job', str,
           'Name of the job within gps_config_file to run.  This will be passed '
           'as an argument to glgps to start the job during test execution.'),
-      Arg('nmea_out_path', str,
+      Arg(
+          'nmea_out_path', str,
           'Path to the nmea_out file on the device.  This should be a named '
           'pipe which is specified in gps_config_file in the <hal> element, '
           'like so: <hal NmeaOutName="/data/gps/nmea_out">'),
-      Arg('nmea_prefix', str,
+      Arg(
+          'nmea_prefix', str,
           'Prefix of NMEA sentences for which to filter.  Only these sentences '
           'will be parsed based on nmea_fields.'),
-      Arg('nmea_fields', dict,
+      Arg(
+          'nmea_fields', dict,
           'Dictionary of fields to pull from the NMEA sentence.  '
           'Key is a string representing the name of the field, and '
           'value is its comma-separated index.'),
-      Arg('limits', list,
-          'List of limits, in the format ("nmea_field", "fn", "cmp", value), '
-          'where fn can be any of %s, and cmp can be any of %s.'
-          % (list(STAT_FNS), list(CMP_FNS)),
-          default=[])
+      Arg(
+          'limits', list,
+          f'List of limits, in the format ("nmea_field", "fn", "cmp", value), '
+          f'where fn can be any of {list(STAT_FNS)}, and cmp can be any of '
+          f'{list(CMP_FNS)}.', default=[])
   ]
 
   def setUp(self):
@@ -150,7 +159,7 @@ class GPS(unittest.TestCase):
           config_path = try_config_path
           break
     if not config_path:
-      self.fail('Config file %s could not be found' % self.args.gps_config_file)
+      self.fail(f'Config file {self.args.gps_config_file} could not be found')
     self.dut.WriteFile('/data/gps', file_utils.ReadFile(config_path))
 
   def _ParseNMEAStream(self, file_stream):
@@ -214,21 +223,20 @@ class GPS(unittest.TestCase):
         key = index_to_key[index]
         if nmea_values[index] == '':
           self._failures.append(
-              'Empty value for %s encountered after initialization' % key)
+              f'Empty value for {key} encountered after initialization')
           return all_values
         try:
           parsed_value = float(nmea_values[index])
         except ValueError:
-          self._failures.append('Non-numeric value encountered for %s: %s'
-                                % (key, nmea_values[index]))
+          self._failures.append(
+              f'Non-numeric value encountered for {key}: {nmea_values[index]}')
           return all_values
         all_values[key].append(parsed_value)
         current_values[key] = parsed_value
 
       # Print parsed values.
       current_values_str = ' '.join(
-          '%s=%.1f' % (key, value)
-          for key, value in current_values.items())
+          f'{key}={value:.1f}' for key, value in current_values.items())
       session.console.info('[%d] %s', time_left, current_values_str)
 
     logging.debug('Timeout has been reached (%d secs)', self.args.timeout)
@@ -258,8 +266,7 @@ class GPS(unittest.TestCase):
         for fn_name, fn in STAT_FNS.items():
           field_stats[key][fn_name] = fn(values)
         field_stats_str = ' '.join(
-            '%s=%.1f' % (k, v)
-            for k, v in field_stats[key].items())
+            f'{k}={v:.1f}' for k, v in field_stats[key].items())
         session.console.info('%s: %s', key, field_stats_str)
 
     # Do limit testing.
@@ -274,9 +281,8 @@ class GPS(unittest.TestCase):
         test_value = field_stats[nmea_field][stat_fn]
         passed = cmp_fn(test_value, limit_value)
       passed_str = 'PASS' if passed else 'FAIL'
-      limit_str = ('%s.%s %s %.1f'
-                   % (nmea_field, stat_fn, cmp_fn_key, limit_value))
-      result_str = '%s %s' % (passed_str, limit_str)
+      limit_str = f'{nmea_field}.{stat_fn} {cmp_fn_key} {limit_value:.1f}'
+      result_str = f'{passed_str} {limit_str}'
       limit_results[limit_str] = {'test_value': test_value, 'passed': passed}
       session.console.info(result_str)
       if not passed:
@@ -304,24 +310,24 @@ class GPS(unittest.TestCase):
     # Check that glgps is running and is writing to <self.args.nmea_out_path>.
     def CheckGLGPSRunning():
       try:
-        self.dut.CheckCall('ps | grep %s' % GLGPS_BINARY)
-        self.dut.CheckCall('[[ -n `timeout 1 cat %s` ]]'
-                           % self.args.nmea_out_path)
+        self.dut.CheckCall(f'ps | grep {GLGPS_BINARY}')
+        self.dut.CheckCall(
+            f'[[ -n `timeout 1 cat {self.args.nmea_out_path}` ]]')
         return True
       except device.CalledProcessError:
         return False
+
     if not sync_utils.PollForCondition(poll_method=CheckGLGPSRunning,
                                        timeout_secs=START_GLGPS_TIMEOUT,
                                        poll_interval_secs=0):
-      self.fail('%s was not running' % GLGPS_BINARY)
+      self.fail(f'{GLGPS_BINARY} was not running')
 
     # Get the latest readings from the NMEA output file.
     session.console.info('Reading from NMEA output file...')
     # TODO(kitching): Move this into AdbTarget so we can use something like
     # self.dut.Popen() instead of calling adb directly.
-    with subprocess.Popen(
-        ['adb', 'shell', 'cat %s' % self.args.nmea_out_path],
-        stdout=subprocess.PIPE) as cat_process:
+    with subprocess.Popen(['adb', 'shell', f'cat {self.args.nmea_out_path}'],
+                          stdout=subprocess.PIPE) as cat_process:
       all_values = self._ParseNMEAStream(cat_process.stdout)
     field_stats, limit_results, limit_failures_str = (
         self._CheckLimits(all_values))
@@ -355,7 +361,7 @@ class GPS(unittest.TestCase):
   def _KillGLGPS(self):
     # Stop the glgps with Factory_Test_Track.
     try:
-      ps_line = self.dut.CheckOutput('ps | grep %s' % GLGPS_BINARY)
+      ps_line = self.dut.CheckOutput(f'ps | grep {GLGPS_BINARY}')
     except device.CalledProcessError:
       # Process is not running.  Don't kill it!
       session.console.info('%s already stopped', GLGPS_BINARY)

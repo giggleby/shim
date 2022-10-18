@@ -171,6 +171,7 @@ from cros.factory.test import ui_templates
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 
+
 # Known regions to be listed first.
 _COMMONLY_USED_REGIONS = (
     'us',
@@ -246,14 +247,16 @@ class UpdateDeviceData(test_case.TestCase):
 
     if isinstance(entry, SelectionDataEntry):
       self._RenderSelectBox(entry)
-      self.ui.BindKeyJS(test_ui.ENTER_KEY, 'window.sendSelectValue(%r, %r)' %
-                        (entry.key, event_subtype))
+      self.ui.BindKeyJS(
+          test_ui.ENTER_KEY,
+          f'window.sendSelectValue({entry.key!r}, {event_subtype!r})')
     else:
       self._RenderInputBox(entry)
-      self.ui.BindKey(
-          test_ui.ESCAPE_KEY, lambda unused_event: event_queue.put(None))
-      self.ui.BindKeyJS(test_ui.ENTER_KEY, 'window.sendInputValue(%r, %r)' % (
-          entry.key, event_subtype))
+      self.ui.BindKey(test_ui.ESCAPE_KEY,
+                      lambda unused_event: event_queue.put(None))
+      self.ui.BindKeyJS(
+          test_ui.ENTER_KEY,
+          f'window.sendInputValue({entry.key!r}, {event_subtype!r})')
 
     self.event_loop.AddEventHandler(event_subtype, event_queue.put)
 
@@ -303,9 +306,9 @@ class UpdateDeviceData(test_case.TestCase):
   def _RenderInputBox(self, entry):
     html = [
         _('Enter {label}: ', label=entry.label),
-        '<input type="text" id="%s" value="%s" style="width: 20em;">'
-        '<div id="errormsg" class="test-error"></div>' % (entry.key,
-                                                          entry.value or '')
+        f"<input type=\"text\" id=\"{entry.key}\" value=\"{entry.value or ''}\""
+        f" style=\"width: 20em;\"><div id=\"errormsg\" "
+        f"class=\"test-error\"></div>"
     ]
 
     if entry.value:

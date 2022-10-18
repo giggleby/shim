@@ -52,6 +52,7 @@ from cros.factory.test.utils import audio_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
+
 _VPD_KEY = 'dsm_calib'
 
 
@@ -71,7 +72,7 @@ class DSMCalibrationTest(unittest.TestCase):
     self._sox_process = None
 
   def runTest(self):
-    device = 'hw:%s,%s' % tuple(self.args.output_dev)
+    device = f'hw:{self._out_card},{self._out_device}'
     sox_args = audio_utils.GetPlaySineArgs(2, 48000, device, freq=100,
                                            duration_secs=1000)
     self._sox_process = process_utils.Spawn(sox_args)
@@ -98,10 +99,10 @@ class DSMCalibrationTest(unittest.TestCase):
     match = re.search('[a-f0-9]+:' + ' ([a-f0-9]+)' * 6, calib_data)
     if not match:
       raise RuntimeError(
-          'Calibration offset not found in output: %s' % calib_data)
+          f'Calibration offset not found in output: {calib_data}')
 
-    vpd_value = "0000000 00000010 01000006 {} 02000006 {}".format(
-        match.group(3), match.group(4))
+    vpd_value = (
+        f'0000000 00000010 01000006 {match.group(3)} 02000006 {match.group(4)}')
     self._dut.vpd.ro.Update({_VPD_KEY: vpd_value})
 
     # Quit calibration mode.

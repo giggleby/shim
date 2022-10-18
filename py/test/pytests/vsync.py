@@ -38,6 +38,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 DEFAULT_CAPTURE_NUMBER = 10
 
 
@@ -74,7 +75,7 @@ class SpatialSensorCalibration(test_case.TestCase):
           _('Verifying VSync pin... ({count}/{total})',
             count=idx, total=self.args.repeat_times))
       self._dut.CheckCall(
-          ['yavta', '--capture=%d' % self.args.capture_number, camera_path])
+          ['yavta', f'--capture={int(self.args.capture_number)}', camera_path])
       end_count = self._vsync.GetCount()
       session.console.info('VSync device in_count_raw (%d/%d): %d',
                            idx, self.args.repeat_times, end_count)
@@ -86,9 +87,9 @@ class SpatialSensorCalibration(test_case.TestCase):
 
   def GetDevicePath(self):
     device_index = self._dut.camera.GetDeviceIndex(self.args.camera_facing)
-    camera_path = '/dev/video%d' % device_index
+    camera_path = f'/dev/video{int(device_index)}'
     if not stat.S_ISCHR(os.stat(camera_path)[stat.ST_MODE]):
-      self.fail('%s is not a character special file' % camera_path)
+      self.fail(f'{camera_path} is not a character special file')
     return camera_path
 
   def WaitForDevice(self):

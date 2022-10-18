@@ -24,6 +24,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
+
 _SIM_PRESENT_RE = re.compile(r'IMSI: (\d{14,15})', re.IGNORECASE | re.MULTILINE)
 _SIM_NOT_PRESENT_RE = re.compile(r'SIM: /$|No modems were found$',
                                  re.IGNORECASE | re.MULTILINE)
@@ -94,7 +95,7 @@ class ProbeSIMCardTest(test_case.TestCase):
         total_delay += _INSERT_CHECK_PERIOD_SECS
         if total_delay >= _INSERT_CHECK_MAX_WAIT:
           self.FailTask(
-              'Failed to detect sim in %d seconds' % _INSERT_CHECK_MAX_WAIT)
+              f'Failed to detect sim in {int(_INSERT_CHECK_MAX_WAIT)} seconds')
         output = self.GetModemStatus()
 
     logging.info(output)

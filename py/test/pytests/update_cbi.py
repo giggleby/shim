@@ -70,6 +70,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import type_utils
 
+
 _DEFAULT_SKU_ID = 0x7fffffff
 _KEY_COMPONENT_SKU = device_data.JoinKeys(
     device_data.KEY_COMPONENT, 'sku')
@@ -112,10 +113,10 @@ class UpdateCBITest(test_case.TestCase):
       Arg('project', str, 'The project of the device.', default=None),
       Arg(
           'product_name', str,
-          'The product_name of the device. If not specified, read from '
-          '%s on x86 devices and %s on ARM devices.' %
-          (model_sku_utils.PRODUCT_NAME_PATH,
-           model_sku_utils.DEVICE_TREE_COMPATIBLE_PATH), default=None),
+          f'The product_name of the device. If not specified, read from '
+          f'{model_sku_utils.PRODUCT_NAME_PATH} on x86 devices and '
+          f'{model_sku_utils.DEVICE_TREE_COMPATIBLE_PATH} on ARM devices.',
+          default=None),
       Arg('enable_factory_server', bool,
           'Update project_config data from factory server.', default=False)
   ]
@@ -125,14 +126,12 @@ class UpdateCBITest(test_case.TestCase):
     # Check settings of sku_id_source.
     if (self.args.sku_id_source != SKU_ID_SOURCE.hardcode and
         self.args.hardcode_sku_id is not None):
-      raise ValueError(
-          'hardcode_sku_id must be None for sku_id_source: %s'
-          % self.args.sku_id_source)
+      raise ValueError(f'hardcode_sku_id must be None for sku_id_source: '
+                       f'{self.args.sku_id_source}')
     if (self.args.sku_id_source == SKU_ID_SOURCE.hardcode and
         self.args.hardcode_sku_id is None):
-      raise ValueError(
-          'hardcode_sku_id must not be None for sku_id_source: %s'
-          % self.args.sku_id_source)
+      raise ValueError(f'hardcode_sku_id must not be None for sku_id_source: '
+                       f'{self.args.sku_id_source}')
 
     if self.args.enable_factory_server:
       if self.args.config_source in [CONFIG_SOURCE.config_jsonproto,
@@ -142,17 +141,16 @@ class UpdateCBITest(test_case.TestCase):
           session.console.info('project_config is not updated')
       else:
         raise ValueError(
-            'Nothing could be downloaded from server for config_source: %s'
-            % self.args.config_source)
+            f'Nothing could be downloaded from server for config_source: '
+            f'{self.args.config_source}')
 
     self._config_jsonproto = None
     # Check settings of config_source.
     if self.args.config_source == CONFIG_SOURCE.config_jsonproto:
       if not cros_config_api_utils.MODULE_READY:
         raise ImportError(
-            'cros_config_api_utils is not ready. '
-            'chromeos-base/cros-config-api is required for %s.'
-            % self.args.config_source)
+            f'cros_config_api_utils is not ready. chromeos-base/cros-config-api'
+            f' is required for {self.args.config_source}.')
       self._config_jsonproto = cros_config_api_utils.SKUConfigs(
           self.args.program, self.args.project)
 
@@ -161,7 +159,7 @@ class UpdateCBITest(test_case.TestCase):
     if self.args.program and self.args.project:
       model_sku_path = self._dut.path.join(
           model_sku_utils.PROJECT_CONFIG_PATH,
-          '%s_%s_model_sku' % (self.args.program, self.args.project))
+          f'{self.args.program}_{self.args.project}_model_sku')
     else:
       model_sku_path = model_sku_utils.BOXSTER
     return model_sku_utils.GetDesignConfig(
@@ -207,14 +205,15 @@ class UpdateCBITest(test_case.TestCase):
       return device_data.GetDeviceData(key, data_type=data_type,
                                        throw_if_none=True)
     except Exception as e:
-      self.FailTask('%s' % e)
+      self.FailTask(f'{e}')
 
   def CheckCbiData(self, data_name, expected_data):
     read_data = GetCbiData(self._dut, data_name)
     if read_data != expected_data:
-      self.FailTask('The data_name=%d in EEPROM (%d) is not equal to the '
-                    'data in device data (%d) after we set.' %
-                    (data_name, read_data, expected_data))
+      self.FailTask(
+          f'The data_name={int(data_name)} in EEPROM ({int(read_data)}) is not '
+          f'equal to the data in device data ({int(expected_data)}) after we '
+          f'set.')
 
   def SetSKUID(self):
     old_sku_id = GetCbiData(self._dut, CbiDataName.SKU_ID)
@@ -228,9 +227,10 @@ class UpdateCBITest(test_case.TestCase):
     if not self.args.force and old_sku_id == new_sku_id:
       return
 
-    if new_sku_id > 2 ** 32 - 1:
-      self.FailTask('SKU ID (%d) should not be greater than UINT32_MAX (%d).' %
-                    (new_sku_id, 2 ** 32 - 1))
+    if new_sku_id > 2**32 - 1:
+      self.FailTask(
+          f'SKU ID ({int(new_sku_id)}) should not be greater than UINT32_MAX '
+          f'({int(2 ** 32 - 1)}).')
 
     old_fw_config = GetCbiData(self._dut, CbiDataName.FW_CONFIG)
     if self.args.config_source == CONFIG_SOURCE.config_jsonproto:
@@ -243,16 +243,17 @@ class UpdateCBITest(test_case.TestCase):
     if old_fw_config is None and new_fw_config is None:
       logging.info('FW CONFIG is not supported on this board.')
     elif new_fw_config is None:
-      self.FailTask('FW_CONFIG does not exist in %s but is '
-                    'set in EEPROM.' % self.args.config_source)
+      self.FailTask(
+          f'FW_CONFIG does not exist in {self.args.config_source} but is set in'
+          f' EEPROM.')
     elif old_fw_config and old_fw_config != new_fw_config \
         and old_sku_id != _DEFAULT_SKU_ID:
       # The fw_config is allowed to be any value while the board is
       # unprovisioned, otherwise the fw_config value must match what
       # configuration says it should be based on the SKU value
-      self.FailTask('FW CONFIG in EEPROM (%d) is not equal to the '
-                    'FW CONFIG in %s (%d).' %
-                    (old_fw_config, self.args.config_source, new_fw_config))
+      self.FailTask(
+          f'FW CONFIG in EEPROM ({int(old_fw_config)}) is not equal to the FW '
+          f'CONFIG in {self.args.config_source} ({int(new_fw_config)}).')
 
     session.console.info('Set the new SKU_ID to EEPROM (%r -> %r).',
                          old_sku_id, new_sku_id)

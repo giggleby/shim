@@ -59,6 +59,7 @@ from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 
+
 FWUPDTOOL = 'fwupdtool'
 
 
@@ -108,7 +109,7 @@ class UpdateUsingFwUpdTest(test_case.TestCase):
     # In older version of fwupdtool, the option `--plugins` is called
     # `--plugin-whitelist`. nocheck
     support_plugins = self._dut.CallOutput(
-        '%s --help | grep -- --plugins' % FWUPDTOOL)
+        f'{FWUPDTOOL} --help | grep -- --plugins')
 
     if support_plugins:
       update_command += ['--plugins', self._plugin]
@@ -123,4 +124,5 @@ class UpdateUsingFwUpdTest(test_case.TestCase):
     logging.info('Update plugins: %s', update_command)
     returncode = self.ui.PipeProcessOutputToUI(update_command)
 
-    self.assertEqual(returncode, 0, 'Firmware update failed: %d.' % returncode)
+    self.assertEqual(returncode, 0,
+                     f'Firmware update failed: {int(returncode)}.')

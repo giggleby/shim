@@ -220,6 +220,7 @@ from cros.factory.utils import type_utils
 from cros.factory.external import cv2 as cv
 from cros.factory.external import numpy as np
 
+
 # Set JPEG image compression quality to 70 so that the image can be transferred
 # through websocket.
 _JPEG_QUALITY = 70
@@ -358,7 +359,7 @@ class CameraTest(test_case.TestCase):
 
   def _RunJSBlockingImpl(self, js, func):
     return_queue = queue.Queue()
-    event_name = 'wait_js_%s_%s' % (func, uuid.uuid4())
+    event_name = f'wait_js_{func}_{uuid.uuid4()}'
     self.event_loop.AddEventHandler(
         event_name, lambda event: return_queue.put(event.data))
     self.ui.CallJSFunction(func, js, event_name)
@@ -461,14 +462,10 @@ class CameraTest(test_case.TestCase):
     if self.e2e_mode:
       # Normalize the coordinates / size to [0, 1], since the canvas in the
       # frontend may not be the same size as the image.
-      draw_rect_js += 'cameraTest.drawRect({}, {}, {}, {}, ' \
-                      '"{}", {});'.format(
-                          float(x_pos) / image_width,
-                          float(y_pos) / image_height,
-                          float(rect_width) / image_width,
-                          float(rect_height) / image_height,
-                          color_string,
-                          fill_string)
+      draw_rect_js += (
+          f'cameraTest.drawRect({float(x_pos) / image_width}, '
+          f'{float(y_pos) / image_height}, {float(rect_width) / image_width}, '
+          f'{float(rect_height) / image_height}, {color_string}, {fill_string}')
     else:
       cv.rectangle(cv_image, (x_pos, y_pos),
                    (x_pos + rect_width, y_pos + rect_height), bgr_color,
@@ -612,11 +609,10 @@ class CameraTest(test_case.TestCase):
 
     if self.e2e_mode:
       self.RunJSBlocking('cameraTest.clearOverlay()')
-      self.RunJSBlocking('cameraTest.drawRect({}, {}, {}, {})'.format(
-          float(x_pos) / img_width,
-          float(y_pos) / img_height,
-          float(qr_width) / img_width,
-          float(qr_height) / img_height))
+      self.RunJSBlocking(
+          f'cameraTest.drawRect({float(x_pos) / img_width}, '
+          f'{float(y_pos) / img_height}, {float(qr_width) / img_width},'
+          f' {float(qr_height) / img_height})')
     else:
       cv.rectangle(cv_image, (x_pos, y_pos),
                    (x_pos + qr_width, y_pos + qr_height), 255)

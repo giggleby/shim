@@ -239,7 +239,7 @@ class Finalize(test_case.TestCase):
     self.ui.SetInstruction([
         MSG_WRITE_PROTECTION, ': ',
         GetState(self.args.write_protection), '<br>', MSG_BUILD_PHASE,
-        ': %s, ' % phase.GetPhase(), MSG_FACTORY_SERVER, ': ',
+        f': {phase.GetPhase()}, ', MSG_FACTORY_SERVER, ': ',
         GetState(self.args.enable_factory_server)
     ])
     self.ui.SetState(MSG_PREFLIGHT)
@@ -323,8 +323,8 @@ class Finalize(test_case.TestCase):
       return 'none'
 
     if method == 'shopfloor':
-      method = 'shopfloor:%s#%s' % (server_proxy.GetServerURL(),
-                                    device_data.GetSerialNumber())
+      method = (f'shopfloor:{server_proxy.GetServerURL()}#'
+                f'{device_data.GetSerialNumber()}')
     logging.info('Using upload method %s', method)
 
     return method
@@ -340,7 +340,7 @@ class Finalize(test_case.TestCase):
     if not self.args.write_protection:
       self.Warn('WRITE PROTECTION IS DISABLED.')
       command += ' --no_write_protect'
-    command += ' --cbi_eeprom_wp_status %s' % self.args.cbi_eeprom_wp_status
+    command += f' --cbi_eeprom_wp_status {self.args.cbi_eeprom_wp_status}'
 
     if not self.args.has_ectool:
       command += ' --no_ectool'
@@ -350,17 +350,16 @@ class Finalize(test_case.TestCase):
     if self.args.enable_factory_server:
       server_url = server_proxy.GetServerURL()
       if server_url:
-        command += ' --shopfloor_url "%s"' % server_url
+        command += f' --shopfloor_url "{server_url}"'
 
-    command += ' --upload_method "%s"' % upload_method
+    command += f' --upload_method "{upload_method}"'
     if self.args.upload_max_retry_times:
-      command += ' --upload_max_retry_times %s' % (
-          self.args.upload_max_retry_times)
+      command += f' --upload_max_retry_times {self.args.upload_max_retry_times}'
     if self.args.upload_retry_interval is not None:
-      command += ' --upload_retry_interval %s' % self.args.upload_retry_interval
+      command += f' --upload_retry_interval {self.args.upload_retry_interval}'
     if self.args.upload_allow_fail:
       command += ' --upload_allow_fail'
-    command += ' --add_file "%s"' % self.test_states_path
+    command += f' --add_file "{self.test_states_path}"'
     if self.args.hwid_need_vpd:
       command += ' --hwid-run-vpd'
     if self.args.rma_mode:
@@ -376,14 +375,14 @@ class Finalize(test_case.TestCase):
       command += ' --has_ec_pubkey'
       logging.info('Device has EC public key for EFS and need to verify it.')
     if self.args.enforced_release_channels:
-      command += ' --enforced_release_channels %s' % (
-          ' '.join(self.args.enforced_release_channels))
-      logging.info(
-          'Enforced release channels: %s.', self.args.enforced_release_channels)
+      command += (f" --enforced_release_channels "
+                  f"{' '.join(self.args.enforced_release_channels)}")
+      logging.info('Enforced release channels: %s.',
+                   self.args.enforced_release_channels)
     if self.args.ec_pubkey_path:
-      command += ' --ec_pubkey_path %s' % self.args.ec_pubkey_path
+      command += f' --ec_pubkey_path {self.args.ec_pubkey_path}'
     elif self.args.ec_pubkey_hash:
-      command += ' --ec_pubkey_hash %s' % self.args.ec_pubkey_hash
+      command += f' --ec_pubkey_hash {self.args.ec_pubkey_hash}'
     if self.args.gooftool_waive_list:
       command += ' --waive_list ' + ' '.join(self.args.gooftool_waive_list)
     if self.args.gooftool_skip_list:
@@ -396,8 +395,8 @@ class Finalize(test_case.TestCase):
       phase.AssertStartingAtPhase(
           phase.PVT, self.args.project is None,
           'Should not use `project` option in this phase')
-      command += ' --project %s' % self.args.project
-    command += ' --phase "%s"' % phase.GetPhase()
+      command += f' --project {self.args.project}'
+    command += f' --phase "{phase.GetPhase()}"'
 
     self._FinalizeWipeInPlace(command)
 
@@ -413,8 +412,8 @@ class Finalize(test_case.TestCase):
       # Wipe-in-place will terminate all processes that are using stateful
       # partition, this test should be killed at here.
       self.Sleep(self.FINALIZE_TIMEOUT)
-      raise type_utils.TestFailure('DUT Failed to finalize in %d seconds' %
-                                   self.FINALIZE_TIMEOUT)
+      raise type_utils.TestFailure(
+          f'DUT Failed to finalize in {int(self.FINALIZE_TIMEOUT)} seconds')
     if isinstance(self.dut.link, ssh.SSHLink):
       # For remote SSH DUT, we ask DUT to send wipe log back.
       self._FinalizeRemoteSSHDUT(command)
@@ -424,16 +423,15 @@ class Finalize(test_case.TestCase):
       self._CallGoofTool(command)
       try:
         sync_utils.WaitFor(lambda: not self.dut.IsReady(),
-                           self.FINALIZE_TIMEOUT,
-                           poll_interval=1)
+                           self.FINALIZE_TIMEOUT, poll_interval=1)
       except type_utils.TimeoutError:
         raise type_utils.TestFailure(
-            'Remote DUT failed to finalize in %d seconds' %
-            self.FINALIZE_TIMEOUT) from None
+            f'Remote DUT failed to finalize in {int(self.FINALIZE_TIMEOUT)} '
+            f'seconds') from None
 
   def _FinalizeRemoteSSHDUT(self, command):
     # generate a random token, so the response is different for every DUT.
-    token = "{:016x}".format(random.getrandbits(64))
+    token = f"{random.getrandbits(64):016x}"
 
     dut_finished = threading.Event()
     self.dut_response = None
@@ -462,11 +460,13 @@ class Finalize(test_case.TestCase):
 
     # If station IP is not given, we assume that this station is the first host
     # in the subnet, and number of prefix bits in this subnet is 24.
-    station_ip = (self.args.station_ip or
-                  net_utils.CIDR(str(self.dut.link.host), 24).SelectIP(1))
-    command += ' --station_ip "%s"' % station_ip
-    command += ' --station_port %d' % self.response_listener.server_address[1]
-    command += ' --wipe_finish_token "%s"' % token
+    station_ip = (
+        self.args.station_ip or
+        net_utils.CIDR(str(self.dut.link.host), 24).SelectIP(1))
+    command += f' --station_ip "{station_ip}"'
+    command += (
+        f' --station_port {int(self.response_listener.server_address[1])}')
+    command += f' --wipe_finish_token "{token}"'
 
     if not self._CallGoofTool(command):
       raise type_utils.TestFailure('finalize command failed')
@@ -475,7 +475,7 @@ class Finalize(test_case.TestCase):
 
     if not dut_finished.wait(self.FINALIZE_TIMEOUT):
       raise type_utils.TestFailure(
-          'Remote DUT not response in %d seconds' % self.FINALIZE_TIMEOUT)
+          f'Remote DUT not response in {int(self.FINALIZE_TIMEOUT)} seconds')
 
     # save log files in test data directory
     output_dir = os.path.join(

@@ -84,6 +84,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
+
 IIO_GET_EVENT_FD_IOCTL = 0x80046990
 
 PROXIMITY_EVENT_TYPE = type_utils.Enum(['close', 'far'])
@@ -222,11 +223,12 @@ class ProximitySensor(test_case.TestCase):
         buf = self._ReadEventBuffer()
 
         if buf[6] not in event_type_map:
-          self.FailTask('Invalid event buffer: %r' % buf)
+          self.FailTask(f'Invalid event buffer: {buf!r}')
         got_event_type = event_type_map[buf[6]]
         if got_event_type != expect_event_type:
-          self.FailTask('Expect to get a %r event, but got a %r event.' %
-                        (expect_event_type, got_event_type))
+          self.FailTask(
+              f'Expect to get a {expect_event_type!r} event, but got a '
+              f'{got_event_type!r} event.')
         logging.info('Pass %s.', expect_event_type)
     finally:
       if disable_after_test:
@@ -243,7 +245,7 @@ class ProximitySensor(test_case.TestCase):
     path = self._dut.path.join('/dev',
                                self._dut.path.basename(self._iio_device_path))
     fd = os.open(path, 0)
-    self.assertTrue(fd >= 0, "Can't open the device, error = %d" % fd)
+    self.assertTrue(fd >= 0, f"Can't open the device, error = {int(fd)}")
 
     # Python fcntl only allows a 32-bit input to fcntl - using 0x40 here
     # allows us to try and obtain a pointer in the low 2GB of the address space.
@@ -252,10 +254,10 @@ class ProximitySensor(test_case.TestCase):
 
     ret = fcntl.ioctl(fd, IIO_GET_EVENT_FD_IOCTL, event_fdp)
     os.close(fd)
-    self.assertTrue(ret >= 0, "Can't get the IIO event fd, error = %d" % ret)
+    self.assertTrue(ret >= 0, f"Can't get the IIO event fd, error = {int(ret)}")
 
     event_fd = event_fdp.value
-    self.assertTrue(event_fd >= 0, "Invalid IIO event fd = %d" % event_fd)
+    self.assertTrue(event_fd >= 0, f"Invalid IIO event fd = {int(event_fd)}")
 
     return event_fd
 
@@ -270,7 +272,7 @@ class ProximitySensor(test_case.TestCase):
         fds = select.select([self._event_fd], [], [],
                             self._POLLING_TIME_INTERVAL)[0]
       except select.error as e:
-        self.FailTask('Unable to read from the event fd: %r.' % e)
+        self.FailTask(f'Unable to read from the event fd: {e!r}.')
 
       if not fds:
         if self._sensor_value_path:
@@ -282,5 +284,5 @@ class ProximitySensor(test_case.TestCase):
       buf = os.read(self._event_fd, PROXIMITY_EVENT_BUF_SIZE)
 
       if len(buf) != PROXIMITY_EVENT_BUF_SIZE:
-        self.FailTask('The event buffer has the wrong size: %r.' % len(buf))
+        self.FailTask(f'The event buffer has the wrong size: {len(buf)!r}.')
       return buf

@@ -87,8 +87,9 @@ class SpatialSensorCalibration(test_case.TestCase):
           location == self.args.device_location):
         self._device_path = path
 
-    self.assertIsNotNone(self._device_path, '%s at %s not found' %
-                         (self.args.device_name, self.args.device_location))
+    self.assertIsNotNone(
+        self._device_path,
+        f'{self.args.device_name} at {self.args.device_location} not found')
 
   def runTest(self):
     previous_fail = False
@@ -167,6 +168,6 @@ class SpatialSensorCalibration(test_case.TestCase):
       vpd_key = self.args.vpd_entry_template % axis
       value = self._dut.ReadFile(
           self._dut.path.join(self._device_path, calibbias_key))
-      cmd.extend(['-s', '%s=%s' % (vpd_key, value.strip())])
+      cmd.extend(['-s', f'{vpd_key}={value.strip()}'])
 
     self._dut.CheckCall(cmd)

@@ -78,6 +78,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 _SOUND_DIRECTORY = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..', '..', 'goofy',
     'static', 'sounds')
@@ -92,7 +93,7 @@ def _PlayAudioFile(dut, audio_file, card, device, channel, sample_rate):
       # if needed.
       cmd = ['sox', audio_file, '-c2']
       if sample_rate is not None:
-        cmd += ['-r', '%d' % sample_rate]
+        cmd += ['-r', f'{int(sample_rate)}']
       cmd += [temp_wav_path]
       process_utils.Spawn(cmd, log=True, check_call=True)
       if channel == 'left':
@@ -154,7 +155,8 @@ def TestAudioDigitPlayback(ui, dut, port_name, card, device, channel='all',
           device=device))
 
     locale = ui.GetUILocale()
-    audio_file = os.path.join(_SOUND_DIRECTORY, locale, '%d.ogg' % pass_digit)
+    audio_file = os.path.join(_SOUND_DIRECTORY, locale,
+                              f'{int(pass_digit)}.ogg')
     _PlayAudioFile(dut, audio_file, card, device, channel, sample_rate)
 
     ui.SetState([

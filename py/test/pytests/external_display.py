@@ -133,6 +133,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
 
+
 # Interval (seconds) of probing connection state.
 _CONNECTION_CHECK_PERIOD_SECS = 1
 _DEFAULT_DRM_GLOB_PATH = '/sys/class/drm/card?'
@@ -405,7 +406,7 @@ class ExtDisplayTest(test_case.TestCase):
       key = key_pressed.get()
       if key != pass_input:
         self.FailTask(
-            'Wrong key pressed. pressed: %s, correct: %s' % (key, pass_input))
+            f'Wrong key pressed. pressed: {key}, correct: {pass_input}')
 
   def CheckVideoFixture(self, args):
     """Use fixture to check display.
@@ -435,9 +436,8 @@ class ExtDisplayTest(test_case.TestCase):
               check_interval_secs)
           self.Sleep(check_interval_secs)
         else:
-          self.FailTask(
-              'Failed to see screen on external display after %d retries.' %
-              retry_times)
+          self.FailTask(f'Failed to see screen on external display after '
+                        f'{int(retry_times)} retries.')
 
   def VerifyDisplayConfig(self):
     """Check display configuration.
@@ -482,7 +482,9 @@ class ExtDisplayTest(test_case.TestCase):
       # Select non-primary display
       target = other[0]['id']
     else:
-      self.FailTask('Invalid display count: %d internal %d external' % config)
+      self.FailTask(
+          f'Invalid display count: {config[0]:d} internal {config[1]:d} '
+          f'external')
 
     return (current, target)
 
@@ -493,9 +495,9 @@ class ExtDisplayTest(test_case.TestCase):
       target_id: id of target display.
     """
 
-    err = state.GetInstance().DeviceSetDisplayProperties(display_id,
-                                                         {'isPrimary': True})
-    self.assertIsNone(err, 'Failed to set the main display: %s' % err)
+    err = state.GetInstance().DeviceSetDisplayProperties(
+        display_id, {'isPrimary': True})
+    self.assertIsNone(err, f'Failed to set the main display: {err}')
 
   def SetupAudio(self, args):
     for card, action in args.init_actions:
@@ -529,8 +531,7 @@ class ExtDisplayTest(test_case.TestCase):
               media=args.display_label))
       else:
         mismatch_mux = set(usb_c.MUX_INFO_VALUES) & set(mismatch)
-        messages = ','.join(
-            '%s=%s' % (key, mismatch[key]) for key in mismatch_mux)
+        messages = ','.join(f'{key}={mismatch[key]}' for key in mismatch_mux)
         self.ui.SetInstruction(
             _('Wrong MUX information: {messages}.', messages=messages))
     return usbpd_verified
@@ -544,7 +545,7 @@ class ExtDisplayTest(test_case.TestCase):
       for candidate in candidates:
         card_name = os.path.basename(candidate.rstrip('/'))
         status_file_path = self._dut.path.join(
-            candidate, '%s-%s' % (card_name, args.display_id), 'status')
+            candidate, f'{card_name}-{args.display_id}', 'status')
         try:
           new_status = (status_file_path,
                         self._dut.ReadFile(status_file_path).strip())
@@ -564,14 +565,14 @@ class ExtDisplayTest(test_case.TestCase):
       if str(e) == 'NULL pointer access':
         url = ('https://storage.googleapis.com/chromeos-factory-docs/'
                'sdk/pytests/external_display.html?highlight=drm_sysfs')
-        self.FailTask('drm_sysfs_path argument is NULL. To resolve this, '
-                      'please configure drm_sysfs_path. '
-                      'See "%s" for more information.' % url)
+        self.FailTask(
+            f'drm_sysfs_path argument is NULL. To resolve this, please '
+            f'configure drm_sysfs_path. See "{url}" for more information.')
       raise
     if args.display_id not in port_info:
       self.FailTask(
-          'Display "%s" not found. If this is an MST port, '
-          'drm_sysfs_path argument must have been set.' % args.display_id)
+          f'Display "{args.display_id}" not found. If this is an MST port, '
+          f'drm_sysfs_path argument must have been set.')
     return port_info[args.display_id].connected
 
   def _WaitDisplayConnection(self, args, connect):
@@ -580,7 +581,7 @@ class ExtDisplayTest(test_case.TestCase):
         self._fixture.SetDeviceEngaged(
             bft_fixture.BFTFixture.Device.EXT_DISPLAY, connect)
       except bft_fixture.BFTFixtureException as e:
-        self.FailTask('Detect display failed: %s' % e)
+        self.FailTask(f'Detect display failed: {e}')
 
     if args.usbpd_spec is None:
       usbpd_spec = None

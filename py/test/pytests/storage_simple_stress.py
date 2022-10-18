@@ -64,6 +64,7 @@ from cros.factory.device import device_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 
+
 BLOCK_SIZE = 4096
 
 
@@ -90,17 +91,18 @@ class SimpleStorageStressTest(unittest.TestCase):
     with self._dut.temp.TempFile() as data_file:
       # Prepare a random content.
       logging.info('Preparing data.')
-      self._dut.CheckCall(
-          ['toybox', 'dd', 'if=/dev/urandom',
-           'of=%s' % data_file, 'bs=%d' % file_size,
-           'count=1', 'conv=sync'])
+      self._dut.CheckCall([
+          'toybox', 'dd', 'if=/dev/urandom', f'of={data_file}',
+          f'bs={int(file_size)}', 'count=1', 'conv=sync'
+      ])
 
       # perform write operation.
       logging.info('Performing write test.')
       start_time = time.time()
-      self._dut.CheckCall(
-          ['toybox', 'dd', 'if=%s' % data_file, 'of=%s' % test_file,
-           'bs=%d' % BLOCK_SIZE, 'conv=fsync'])
+      self._dut.CheckCall([
+          'toybox', 'dd', f'if={data_file}', f'of={test_file}',
+          f'bs={int(BLOCK_SIZE)}', 'conv=fsync'
+      ])
       write_time = time.time() - start_time
 
       # Drop cache to ensure the system do a real read.
@@ -115,7 +117,7 @@ class SimpleStorageStressTest(unittest.TestCase):
       logging.info('Performing read test.')
       start_time = time.time()
       self._dut.CheckCall(
-          'toybox dd if=%s | toybox cmp %s -' % (test_file, data_file))
+          f'toybox dd if={test_file} | toybox cmp {data_file} -')
       read_time = time.time() - start_time
 
       logging.info('Write time=%.3f secs', write_time)

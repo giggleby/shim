@@ -64,13 +64,13 @@ class OfflineTestFetchLog(unittest.TestCase):
     except Exception:
       logging.exception('cannot fetch %s from DUT', remote_path)
       if required:
-        self.fail('cannot fetch %s from DUT' % remote_path)
+        self.fail(f'cannot fetch {remote_path} from DUT')
       else:
         return []
     return [local_path]
 
   def _CompressLog(self, files):
-    zipfile_name = '%s.zip' % time.strftime('%Y%m%d%H%M%S')
+    zipfile_name = f"{time.strftime('%Y%m%d%H%M%S')}.zip"
     zipfile_path = os.path.join(self.temp_dir, zipfile_name)
     with zipfile.ZipFile(zipfile_path, 'w') as myzip:
       for f in files:
@@ -128,8 +128,8 @@ class OfflineTestFetchLog(unittest.TestCase):
       else:
         raise ValueError('Cannot find shtest_name or pytest_name.')
 
-      fail_msg = 'offline test failed on test %s (%d/%d)' % (
-          failed_test_name, last_task_id, total_tasks)
+      fail_msg = (f'offline test failed on test {failed_test_name} '
+                  f'({int(last_task_id)}/{int(total_tasks)})')
       session.console.error(fail_msg)
       # show content of logfile in factory.log
       if self.args.upload_to_shopfloor:

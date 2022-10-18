@@ -160,7 +160,7 @@ class StationEntry(test_case.TestCase):
       sync_utils.WaitFor(_IsReady, self.args.timeout_secs, poll_interval=1)
     except type_utils.TimeoutError:
       self.FailTask(
-          'DUT is not connected in %d seconds' % self.args.timeout_secs)
+          f'DUT is not connected in {int(self.args.timeout_secs)} seconds')
 
     if self.args.wait_goofy:
       def _TryCreateStateProxy():
@@ -178,7 +178,8 @@ class StationEntry(test_case.TestCase):
                            poll_interval=1)
       except type_utils.TimeoutError:
         self.FailTask(
-            'DUT Goofy is not connected in %d seconds' % self.args.timeout_secs)
+            f'DUT Goofy is not connected in {int(self.args.timeout_secs)} '
+            f'seconds')
 
     if self.args.prompt_start:
       self.ui.SetState(_('Press SPACE to start the test.'))

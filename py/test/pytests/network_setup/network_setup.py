@@ -75,22 +75,23 @@ from cros.factory.test.utils import connection_manager
 from cros.factory.utils import arg_utils
 from cros.factory.utils import sync_utils
 
+
 _ID_SUBTITLE_DIV = 'subtitle'
 _ID_MESSAGE_DIV = 'message'
 _ID_INSTRUCTION_DIV = 'instruction'
 
-_STATE_HTML = """
-<div id='%s'></div>
-<div id='%s'></div>
-<div id='%s'></div>
-""" % (_ID_SUBTITLE_DIV, _ID_MESSAGE_DIV, _ID_INSTRUCTION_DIV)
+_STATE_HTML = f"""
+<div id='{_ID_SUBTITLE_DIV}'></div>
+<div id='{_ID_MESSAGE_DIV}'></div>
+<div id='{_ID_INSTRUCTION_DIV}'></div>
+"""
 
 
 ErrorCode = connection_manager.ConnectionManagerException.ErrorCode
 
 
 def _ErrorCodeToMessage(error_code, interface):
-  interface = '<b>%s</b>' % interface
+  interface = f'<b>{interface}</b>'
   if error_code == ErrorCode.NO_PHYSICAL_LINK:
     return _('No physical link on {interface}', interface=interface)
   if error_code == ErrorCode.INTERFACE_NOT_FOUND:
@@ -122,8 +123,7 @@ class NetworkConnectionSetup(test_case.TestCase):
       interface_name = settings[interface].pop('interface_name', interface)
       self.ui.SetHTML(
           _('Setting up interface {interface}',
-            interface='<b>%s</b>' % interface),
-          id=_ID_SUBTITLE_DIV)
+            interface=f'<b>{interface}</b>'), id=_ID_SUBTITLE_DIV)
 
       def _TryOnce(interface=interface, interface_name=interface_name):
         try:

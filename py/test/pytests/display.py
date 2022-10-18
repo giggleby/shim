@@ -112,6 +112,7 @@ from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
+
 # The _() is necessary for pygettext to get translatable strings correctly.
 _CSS_ITEMS = [
     _('solid-gray-170'),
@@ -163,8 +164,8 @@ class DisplayTest(test_case.TestCase):
       Arg(
           'items', list,
           'Set items to be shown on screen. Available items are: items with '
-          'prefix "image-" and \n%s\n' %
-          '\n'.join('  * ``"%s"``' % x for x in _CSS_ITEMS), default=[
+          'prefix "image-" and \n' +
+          '\n'.join(f'  * ``"{x}"``' for x in _CSS_ITEMS) + '\n', default=[
               'solid-gray-170', 'solid-gray-127', 'solid-gray-63', 'solid-red',
               'solid-green', 'solid-blue'
           ]),
@@ -215,7 +216,7 @@ class DisplayTest(test_case.TestCase):
         not item.startswith(_HEX_COLOR_PREFIX)
     ]
     if unknown_items:
-      raise ValueError('Unknown item %r in items.' % unknown_items)
+      raise ValueError(f'Unknown item {unknown_items!r} in items.')
 
     self.frontend_proxy = self.ui.InitJSTestObject('DisplayTest', self.items)
     self.checked = False

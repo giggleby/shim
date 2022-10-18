@@ -89,7 +89,7 @@ class NoUpdatesException(Exception):
 
 class UpdateFirmwareTest(test_case.TestCase):
   ARGS = [
-      Arg('firmware_updater', str, 'Full path of %s.' % _FIRMWARE_UPDATER_NAME,
+      Arg('firmware_updater', str, f'Full path of {_FIRMWARE_UPDATER_NAME}.',
           default=paths.FACTORY_FIRMWARE_UPDATER_PATH),
       Arg('rw_only', bool, 'Update only RW firmware', default=False),
       # Updating only EC/PD is not supported.
@@ -119,7 +119,7 @@ class UpdateFirmwareTest(test_case.TestCase):
     rw_version = self._dut.info.firmware_version
     ro_version = self._dut.info.ro_firmware_version
 
-    current_version = 'ro:%s;rw:%s' % (ro_version, rw_version)
+    current_version = f'ro:{ro_version};rw:{rw_version}'
 
     if not updater.IsUpdateAvailable(
         current_version, match_method=update_utils.MATCH_METHOD.substring):
@@ -139,15 +139,15 @@ class UpdateFirmwareTest(test_case.TestCase):
     """
     # Remove /tmp/chromeos-firmwareupdate-running if the process
     # doesn't seem to be alive anymore.  (http://crosbug.com/p/15642)
-    LOCK_FILE = '/tmp/%s-running' % _FIRMWARE_UPDATER_NAME
+    LOCK_FILE = f'/tmp/{_FIRMWARE_UPDATER_NAME}-running'
     if os.path.exists(LOCK_FILE):
       process = process_utils.Spawn(['pgrep', '-f', _FIRMWARE_UPDATER_NAME],
                                     call=True, log=True, read_stdout=True)
       if process.returncode == 0:
         # Found a chromeos-firmwareupdate alive.
-        self.FailTask('Lock file %s is present and firmware update already '
-                      'running (PID %s)' %
-                      (LOCK_FILE, ', '.join(process.stdout_data.split())))
+        self.FailTask(
+            f"Lock file {LOCK_FILE} is present and firmware update already "
+            f"running (PID {', '.join(process.stdout_data.split())})")
         return
       logging.warning('Removing %s', LOCK_FILE)
       os.unlink(LOCK_FILE)
@@ -166,7 +166,8 @@ class UpdateFirmwareTest(test_case.TestCase):
     # are correct.
     self.event_loop.PostEvent(event.Event(event.Event.Type.UPDATE_SYSTEM_INFO))
 
-    self.assertEqual(returncode, 0, 'Firmware update failed: %d.' % returncode)
+    self.assertEqual(returncode, 0,
+                     f'Firmware update failed: {int(returncode)}.')
 
   def runTest(self):
     # Either download_from_server or from_release can be True.
@@ -195,7 +196,7 @@ class UpdateFirmwareTest(test_case.TestCase):
     try:
       with GetUpdater() as updater_path:
         self.assertTrue(
-            os.path.isfile(updater_path), msg='%s is missing.' % updater_path)
+            os.path.isfile(updater_path), msg=f'{updater_path} is missing.')
         self.args.firmware_updater = updater_path
         self.UpdateFirmware()
     except NoUpdatesException:

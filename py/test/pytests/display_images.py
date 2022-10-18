@@ -31,6 +31,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 _IMAGE_ROOT = '/usr/local/factory/misc/'
 _DEFAULT_IMAGE_FILE = 'display_images.tar.gz'
 _IMAGE_DIR = 'images'
@@ -97,7 +98,7 @@ class DisplayImageTest(test_case.TestCase):
     process_utils.StartDaemonThread(
         target=self.UploadImages, args=(station_paths, ))
 
-    images = ''.join('<img src="%s" class="image-thumb">' % path
+    images = ''.join(f'<img src="{path}" class="image-thumb">'
                      for path in self._station_image_urls)
     self.ui.SetHTML(images, id='display-table')
 
@@ -142,7 +143,7 @@ class DisplayImageTest(test_case.TestCase):
     # show the image on the chromebook to let operator know what will be shown
     # on the DUT.
     path = self._station_image_urls[display_index]
-    tag = '%d: <img src="%s" class="image-info">' % (display_index, path)
+    tag = f'{int(display_index)}: <img src="{path}" class="image-info">'
     self.ui.SetHTML(tag, id='display-image-info')
     # Display image on DUT.
     dut_path = self._dut_image_paths[display_index]

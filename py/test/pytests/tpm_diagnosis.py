@@ -25,8 +25,9 @@ class TpmDiagnosisTest(test_case.TestCase):
   ui_class = test_ui.ScrollableLogUI
 
   def setUp(self):
-    self.assertTrue(os.path.isfile(self.args.tpm_selftest),
-                    msg='%s is missing.' % self.args.tpm_selftest)
+    self.assertTrue(
+        os.path.isfile(self.args.tpm_selftest),
+        msg=f'{self.args.tpm_selftest} is missing.')
 
   def runTest(self):
     """Runs tpm_selftest.
@@ -43,6 +44,6 @@ class TpmDiagnosisTest(test_case.TestCase):
 
     self.assertTrue(
         success.is_set(),
-        'TPM self-diagnose failed: Cannot find a success pattern: "%s". '
-        'tpm_selftest returncode: %d.' % (self.args.success_pattern,
-                                          returncode))
+        f'TPM self-diagnose failed: Cannot find a success pattern: '
+        f'"{self.args.success_pattern}". tpm_selftest returncode: '
+        f'{int(returncode)}.')

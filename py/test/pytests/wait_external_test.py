@@ -111,5 +111,5 @@ class WaitExternalTest(test_case.TestCase):
   def runTest(self):
     result = self.ext_utils.GetTestResult()
     self.assertEqual(
-        result.lower(), 'pass', 'Test %s completed with failure: %s' %
-        (self._name, result or 'unknown'))
+        result.lower(), 'pass',
+        f"Test {self._name} completed with failure: {result or 'unknown'}")

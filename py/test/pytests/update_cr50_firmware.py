@@ -301,8 +301,9 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
     except type_utils.TestFailure:
       if self.args.check_version_retry_timeout <= 0:
         raise
-      self.ui.SetState('Version is old, sleep for %d seconds and re-check.' %
-                       self.args.check_version_retry_timeout)
+      self.ui.SetState(
+          f'Version is old, sleep for '
+          f'{int(self.args.check_version_retry_timeout)} seconds and re-check.')
       self.Sleep(self.args.check_version_retry_timeout)
       _Check()
 
@@ -325,8 +326,9 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
         version.StrictVersion(expect) >= version.StrictVersion('0.0.16')):
       # RW FW version on DUT is < 0.0.15 and the user try to upgrade to
       # 0.0.16+. This is not allowed and we should upgrade to 0.0.15 first.
-      self.FailTask('Please upgrade to RW 0.0.15 first before upgrading '
-                    'to 0.0.16+. Current: %r' % self.fw_ver)
+      self.FailTask(
+          f'Please upgrade to RW 0.0.15 first before upgrading to 0.0.16+. '
+          f'Current: {self.fw_ver!r}')
 
     if version.StrictVersion(actual) <= version.StrictVersion('0.0.15'):
       if not self.args.force_ro_mode or self.args.upstart_mode:
@@ -362,14 +364,14 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
     # If the DUT has rebooted but the chip version and the given FW version
     # does not match, this means the update failed.
     if has_rebooted:
-      self.FailTask('Cr50 firmware is not updated in the previous attempt '
-                    '(actual=%r, expect=%r).' % (self.fw_ver, self.image_info))
+      self.FailTask(f'Cr50 firmware is not updated in the previous attempt '
+                    f'(actual={self.fw_ver!r}, expect={self.image_info!r}).')
 
     if self.gsc_utils.IsTi50():
       self._ValidateTi50FirmwareVersion()
 
-    msg = 'Update the Cr50 firmware from version %r to %r.' % (self.fw_ver,
-                                                               self.image_info)
+    msg = (f'Update the Cr50 firmware from version {self.fw_ver!r} to '
+           f'{self.image_info!r}.')
     self.ui.SetState(msg)
     session.console.info(msg)
     device_data.UpdateDeviceData({

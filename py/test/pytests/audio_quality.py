@@ -77,6 +77,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
+
 # Host test machine crossover connected to DUT, fix local ip and port for
 # communication in between.
 _HOST = ''
@@ -174,8 +175,8 @@ class AudioQualityTest(test_case.TestCase):
     # Backward compatible for non-porting case, which use ALSA device name.
     # only works on chromebook device.
     # TODO(mojahsu): Remove them later.
-    self._alsa_input_device = 'hw:%s,%s' % (self._in_card, self._in_device)
-    self._alsa_output_device = 'hw:%s,%s' % (self._out_card, self._out_device)
+    self._alsa_input_device = f'hw:{self._in_card},{self._in_device}'
+    self._alsa_output_device = f'hw:{self._out_card},{self._out_device}'
 
   def setUpLoopHandler(self):
     # Register commands to corresponding handlers.
@@ -405,7 +406,7 @@ class AudioQualityTest(test_case.TestCase):
         self.SendResponse(rawdata, args)
     except IOError:
       session.console.error('No such file or directory: %s', file_path)
-      self.SendResponse('NO_CONFIG;0;%s' % binascii.b2a_hex(b''), args)
+      self.SendResponse(f"NO_CONFIG;0;{binascii.b2a_hex(b'')}", args)
 
   def DecompressZip(self, file_path, target_path):
     """Decompresses ZIP format file
@@ -540,10 +541,8 @@ class AudioQualityTest(test_case.TestCase):
       with file_utils.UnopenedTemporaryFile() as path:
         with open(path, 'w', encoding='utf8') as f:
           yaml.safe_dump(test_result, f)
-        testlog.AttachFile(
-            path=path,
-            name='audio_quality_test_%s' % test_index,
-            mime_type='text/plain')
+        testlog.AttachFile(path=path, name=f'audio_quality_test_{test_index}',
+                           mime_type='text/plain')
     elif match2:
       serial_number, timestamp = match2.groups()
 

@@ -59,7 +59,7 @@ class LightbarTest(test_case.TestCase):
       args = [str(x) for x in args]
       process_utils.CheckOutput(['ectool', 'lightbar'] + args, log=True)
     except Exception as e:
-      raise type_utils.TestFailure('Unable to set lightbar: %s' % e)
+      raise type_utils.TestFailure(f'Unable to set lightbar: {e}')
 
   def runTest(self):
     for color_label, lrgb in self.colors_to_test:
@@ -71,4 +71,4 @@ class LightbarTest(test_case.TestCase):
             color=color_label))
       key = self.ui.WaitKeysOnce([test_ui.SPACE_KEY, 'F'])
       if key == 'F':
-        self.FailTask('Lightbar failed to light up in %s' % color_name)
+        self.FailTask(f'Lightbar failed to light up in {color_name}')

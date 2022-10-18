@@ -123,6 +123,7 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import pyudev
 
+
 # The GPT ( http://en.wikipedia.org/wiki/GUID_Partition_Table )
 # occupies the first 34 and the last 33 512-byte blocks.
 #
@@ -232,12 +233,12 @@ class RemovableStorageTest(test_case.TestCase):
     random.seed(0)
     logging.info('media = %s', self.args.media)
 
-    self._insertion_image = '%s_insert.png' % self.args.media
-    self._removal_image = '%s_remove.png' % self.args.media
-    self._testing_image = '%s_testing.png' % self.args.media
+    self._insertion_image = f'{self.args.media}_insert.png'
+    self._removal_image = f'{self.args.media}_remove.png'
+    self._testing_image = f'{self.args.media}_testing.png'
 
-    self._locktest_insertion_image = '%s_locktest_insert.png' % self.args.media
-    self._locktest_removal_image = '%s_locktest_remove.png' % self.args.media
+    self._locktest_insertion_image = f'{self.args.media}_locktest_insert.png'
+    self._locktest_removal_image = f'{self.args.media}_locktest_remove.png'
 
     # Initialize progress bar
     total_tests = [
@@ -271,8 +272,7 @@ class RemovableStorageTest(test_case.TestCase):
           **self.args.bft_fixture)
       self._bft_media_device = self.args.bft_media_device
       if self._bft_media_device not in self._bft_fixture.Device:
-        self.fail(
-            'Invalid args.bft_media_device: %s' % self._bft_media_device)
+        self.fail(f'Invalid args.bft_media_device: {self._bft_media_device}')
 
   def tearDown(self):
     if not self.args.skip_insert_remove:
@@ -298,8 +298,9 @@ class RemovableStorageTest(test_case.TestCase):
           self._errors.append('The device speed is unavailable.')
         elif self._device_speed != self.args.expected_max_speed:
           self._errors.append(
-              'The device speed(%d Mbps) does not match the expected_max_speed'
-              '(%d Mpbs)' % (self._device_speed, self.args.expected_max_speed))
+              f'The device speed({int(self._device_speed)} Mbps) does not match'
+              f' the expected_max_speed({int(self.args.expected_max_speed)} '
+              f'Mpbs)')
       if self.args.perform_random_test:
         self.TestReadWrite(_RWTestMode.RANDOM)
       if self.args.perform_sequential_test:
@@ -337,7 +338,7 @@ class RemovableStorageTest(test_case.TestCase):
         logging.info('Device removed : %s', device.device_node)
         event = _Event.WAIT_REMOVE
         if self._accessing:
-          self.FailTask('Device %s removed too early' % device.device_node)
+          self.FailTask(f'Device {device.device_node} removed too early')
       else:
         return
 
@@ -390,7 +391,7 @@ class RemovableStorageTest(test_case.TestCase):
     try:
       dev_size = self._dut.CheckOutput(['blockdev', '--getsize64', dev_path])
     except Exception:
-      self.FailTask('Unable to determine dev size of %s.' % dev_path)
+      self.FailTask(f'Unable to determine dev size of {dev_path}.')
 
     dev_size = int(dev_size)
     gb = dev_size / 1.0e9
@@ -410,7 +411,7 @@ class RemovableStorageTest(test_case.TestCase):
     try:
       ro = self._dut.CheckOutput(['blockdev', '--getro', dev_path])
     except Exception:
-      self.FailTask('Unable to get RO status of %s.' % dev_path)
+      self.FailTask(f'Unable to get RO status of {dev_path}.')
 
     ro = int(ro)
     logging.info('%s RO : %d', dev_path, ro)
@@ -467,7 +468,7 @@ class RemovableStorageTest(test_case.TestCase):
     }
     for key, value in args.items():
       if value:
-        cmd.append('%s=%s' % (key, value))
+        cmd.append(f'{key}={value}')
     return cmd
 
   def TestReadWrite(self, mode):
@@ -481,7 +482,7 @@ class RemovableStorageTest(test_case.TestCase):
 
       match = _RE_DD_EXECUTION_TIME.search(dd_output)
       if not match:
-        raise ValueError('Invalid dd output %s' % dd_output)
+        raise ValueError(f'Invalid dd output {dd_output}')
       return float(match.group(1))
 
     self._accessing = True
@@ -586,14 +587,12 @@ class RemovableStorageTest(test_case.TestCase):
 
           # Check if the block was actually written, and restore the
           # original content of the block.
-          dd_cmd = self._PrepareDDCommand(
-              ifile=dev_path,
-              bs=self.args.block_size,
-              count=block_count,
-              skip=random_block)
+          dd_cmd = self._PrepareDDCommand(ifile=dev_path,
+                                          bs=self.args.block_size,
+                                          count=block_count, skip=random_block)
           try:
-            self._dut.CheckCall(
-                ' '.join(dd_cmd) + ' | toybox cmp %s -' % write_buf)
+            self._dut.CheckCall(' '.join(dd_cmd) +
+                                f' | toybox cmp {write_buf} -')
           except Exception as e:
             session.console.error('Failed to write block %s', e)
             ok = False
@@ -623,26 +622,28 @@ class RemovableStorageTest(test_case.TestCase):
     if not ok:
       if self.GetDeviceRo(dev_path):
         session.console.warn('Is write protection on?')
-        self._errors.append('%s is read-only.' % dev_path)
+        self._errors.append(f'{dev_path} is read-only.')
       else:
         test_name = ''
         if mode == _RWTestMode.RANDOM:
           test_name = 'random r/w'
         elif mode == _RWTestMode.SEQUENTIAL:
           test_name = 'sequential r/w'
-        self._errors.append('IO error while running %s test on %s.' %
-                            (test_name, self._target_device))
+        self._errors.append(
+            f'IO error while running {test_name} test on {self._target_device}.'
+        )
     else:
       update_bin = {}
 
       def _CheckThreshold(test_type, value, threshold):
-        update_bin['%s_speed' % test_type] = value
+        update_bin[f'{test_type}_speed'] = value
         logging.info('%s_speed: %.3f MB/s', test_type, value)
         if threshold:
-          update_bin['%s_threshold' % test_type] = threshold
+          update_bin[f'{test_type}_threshold'] = threshold
           if value < threshold:
-            self._errors.append('%s_speed of %s does not meet lower bound.' %
-                                (test_type, self._target_device))
+            self._errors.append(
+                f'{test_type}_speed of {self._target_device} does not meet '
+                f'lower bound.')
 
       if mode == _RWTestMode.RANDOM:
         random_read_speed = (
@@ -665,7 +666,7 @@ class RemovableStorageTest(test_case.TestCase):
 
       self._metrics.update(update_bin)
 
-    Log(('%s_rw_speed' % self.args.media), **self._metrics)
+    Log(f'{self.args.media}_rw_speed', **self._metrics)
 
   def TestLock(self):
     """SD card write protection test."""
@@ -674,7 +675,7 @@ class RemovableStorageTest(test_case.TestCase):
     self.SetImage(self._testing_image)
 
     if not self.GetDeviceRo(self._target_device):
-      self._errors.append('Locktest failed on %s.' % self._target_device)
+      self._errors.append(f'Locktest failed on {self._target_device}.')
 
     self._accessing = False
     self.ui.AdvanceProgress()
@@ -690,9 +691,9 @@ class RemovableStorageTest(test_case.TestCase):
     # Set partition size to 128 MB or (dev_size / 2) MB
     partition_size = min(128, (self._device_size // 2) // (1024 * 1024))
     if partition_size < _MIN_PARTITION_SIZE_MB:
-      self.FailTask('The size on %s device %s is too small (only %d bytes) for '
-                    'partition test.' % (self.args.media, dev_path,
-                                         self._device_size))
+      self.FailTask(
+          f'The size on {self.args.media} device {dev_path} is too small (only '
+          f'{int(self._device_size)} bytes) for partition test.')
     else:
       # clear partition table first and create one partition
       self._dut.CheckCall(['parted', '-s', dev_path, 'mklabel', 'gpt'])
@@ -715,8 +716,8 @@ class RemovableStorageTest(test_case.TestCase):
       self._dut.path.exists(dev_path + '1')
     except Exception:
       self.FailTask(
-          'Partition verification failed on %s device %s. Problem with card '
-          'reader module maybe?' % (self.args.media, dev_path))
+          f'Partition verification failed on {self.args.media} device '
+          f'{dev_path}. Problem with card reader module maybe?')
 
   def CheckUSBPDPolarity(self):
     """Verifies the USB PD CC line polarity on the port."""
@@ -736,8 +737,8 @@ class RemovableStorageTest(test_case.TestCase):
       self._bft_fixture.SetDeviceEngaged(self._bft_media_device,
                                          mode == 'insert')
     except bft_fixture.BFTFixtureException as e:
-      self.fail('BFT fixture failed to %s %s device %s. Reason: %s' %
-                (mode, self.args.media, self._target_device, e))
+      self.fail(f'BFT fixture failed to {mode} {self.args.media} device '
+                f'{self._target_device}. Reason: {e}')
 
   def WaitInsert(self):
     """Wait for the removable storage to be inserted.

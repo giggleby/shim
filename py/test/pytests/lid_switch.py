@@ -48,6 +48,7 @@ from cros.factory.utils import file_utils
 
 from cros.factory.external import evdev
 
+
 _DEFAULT_TIMEOUT = 30
 
 _BACKLIGHT_OFF_TIMEOUT = 12
@@ -97,10 +98,10 @@ class LidSwitchTest(test_case.TestCase):
       value: The targeted brightness value.
     """
     try:
-      file_utils.WriteFile(self.args.brightness_path, '%d' % value)
+      file_utils.WriteFile(self.args.brightness_path, f'{int(value)}')
     except IOError:
-      self.FailTask('Can not write %r into brightness. '
-                    'Maybe the limit is wrong' % value)
+      self.FailTask(
+          f'Can not write {value!r} into brightness. Maybe the limit is wrong')
 
   def GetBrightness(self):  # pylint: disable=inconsistent-return-statements
     """Gets the brightness value from sysfs."""
@@ -240,9 +241,9 @@ class LidSwitchTest(test_case.TestCase):
       except bft_fixture.BFTFixtureException as e:
         if retry == self.args.bft_retries:
           if not in_tear_down:
-            self.FailTask('Failed to %s the lid with %d retries. Reason: %s' %
-                          ('close'
-                           if close else 'open', self.args.bft_retries, e))
+            self.FailTask(
+                f"Failed to {'close' if close else 'open'} the lid with "
+                f"{int(self.args.bft_retries)} retries. Reason: {e}")
 
   def AskForOpenLid(self):
     if self.fixture:

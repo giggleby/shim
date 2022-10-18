@@ -64,5 +64,5 @@ class BatteryCommunicationTest(unittest.TestCase):
     logging.info('Get battery design capacity: %d', capacity)
     self.assertTrue(
         lower <= capacity <= upper,
-        'Battery design capacity %d out of range: %s' % (
-            capacity, str(self.args.design_capacity_range)))
+        f'Battery design capacity {int(capacity)} out of range: '
+        f'{str(self.args.design_capacity_range)}')

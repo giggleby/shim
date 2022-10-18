@@ -73,14 +73,14 @@ class CheckCr50FirmwareBoardIDTest(test_case.TestCase):
   }
 
   ARGS = [
-      Arg('board_id_type', (int, str), 'The expected board ID type, can be '
-          'either an integer or a string of hex code.',
-          default=None),
-      Arg('board_id_flags', (int, str), 'The expected board ID flags, can be '
+      Arg(
+          'board_id_type', (int, str), 'The expected board ID type, can be '
+          'either an integer or a string of hex code.', default=None),
+      Arg(
+          'board_id_flags', (int, str), 'The expected board ID flags, can be '
           'either an integer or a string.  If the value is a string, '
-          'the value can be either the hex code of the board ID flags or %s.' %
-          ', '.join('%s for %08x' % (k, v)
-                    for k, v in _PREDEFINED_PHASES.items()),
+          'the value can be either the hex code of the board ID flags or' +
+          ', '.join(f'{k} for {v:08x}' for k, v in _PREDEFINED_PHASES.items()),
           default=None),
   ]
 
@@ -108,8 +108,8 @@ class CheckCr50FirmwareBoardIDTest(test_case.TestCase):
 
   def runTest(self):
     board_id = self.gsctool.GetBoardID()
-    board_id_type_str = '%08x' % board_id.type
-    board_id_flags_str = '%08x' % board_id.flags
+    board_id_type_str = f'{board_id.type:08x}'
+    board_id_flags_str = f'{board_id.flags:08x}'
     session.console.info('Board ID type: %s; Board ID flags: %s.',
                          board_id_type_str, board_id_flags_str)
     testlog.LogParam('board_id_type', board_id_type_str)

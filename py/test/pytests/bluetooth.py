@@ -460,18 +460,19 @@ class BluetoothTest(test_case.TestCase):
           'firmware revision string', hci_device=self.hci_device,
           timeout=self.args.read_bluetooth_uuid_timeout_secs)
     except bluetooth_utils.BluetoothUtilsError as e:
-      self.FailTask('Failed to get firmware revision string: %s' % e)
+      self.FailTask(f'Failed to get firmware revision string: {e}')
 
     session.console.info('Expected firmware: %s',
                          self.args.firmware_revision_string)
     session.console.info('Actual firmware: %s', fw)
     state.DataShelfSetValue(self.args.firmware_revision_string_key, fw)
 
-    _AppendLog(self.log_tmp_file, 'FW: %s\n' % fw)
+    _AppendLog(self.log_tmp_file, f'FW: {fw}\n')
 
-    self.assertEqual(self.args.firmware_revision_string, fw,
-                     'Expected firmware: %s, actual firmware: %s' %
-                     (self.args.firmware_revision_string, fw))
+    self.assertEqual(
+        self.args.firmware_revision_string, fw,
+        f'Expected firmware: {self.args.firmware_revision_string}, actual '
+        f'firmware: {fw}')
 
   def CheckBatteryLevel(self):
     """Checks whether the following conditions are satisfied:
@@ -520,7 +521,7 @@ class BluetoothTest(test_case.TestCase):
           timeout=self.args.read_bluetooth_uuid_timeout_secs))
       session.console.info('%s: %d', step, battery_level)
     except bluetooth_utils.BluetoothUtilsError as e:
-      self.FailTask('%s failed to get battery level: %s' % (step, e))
+      self.FailTask(f'{step} failed to get battery level: {e}')
 
     old_battery_level = state.DataShelfGetValue(step)
     if (step == READ_BATTERY_STEP_1 and
@@ -535,18 +536,17 @@ class BluetoothTest(test_case.TestCase):
       state.DataShelfSetValue(step, battery_level)
 
     if step == READ_BATTERY_STEP_1:
-      data = '\nSN: %s\nMAC: %s\n' % (self.args.base_enclosure_serial_number,
-                                      mac)
+      data = f'\nSN: {self.args.base_enclosure_serial_number}\nMAC: {mac}\n'
     else:
       data = ''
-    data += '%s: %s\n' % (step, battery_level)
+    data += f'{step}: {battery_level}\n'
     _AppendLog(self.log_tmp_file, data)
 
     if self.args.battery_log:
       with open(self.args.battery_log, 'a', encoding='utf8') as f:
-        f.write('%s %s %s [%s]: %s\n' %
-                (GetCurrentTime(), self.args.base_enclosure_serial_number, mac,
-                 step, battery_level))
+        f.write(
+            f'{GetCurrentTime()} {self.args.base_enclosure_serial_number} {mac}'
+            f' [{step}]: {battery_level}\n')
 
   def FixtureControl(self, operation, post_sleep=0):
     """Control the charge test fixture.
@@ -567,7 +567,7 @@ class BluetoothTest(test_case.TestCase):
       fixture_method()
       self.Sleep(post_sleep)
     except Exception as e:
-      self.FailTask('error in executing %s (%s)' % (operation, e))
+      self.FailTask(f'error in executing {operation} ({e})')
 
   def DetectAdapter(self, expected_adapter_count):
     """Check number of adapters.
@@ -584,8 +584,8 @@ class BluetoothTest(test_case.TestCase):
         self.args.detect_adapters_interval_secs)
     self.assertEqual(
         len(adapters), expected_adapter_count,
-        'DetectAdapter: expect %d and find %d adapter(s).' %
-        (expected_adapter_count, len(adapters)))
+        f'DetectAdapter: expect {int(expected_adapter_count)} and find '
+        f'{len(adapters)} adapter(s).')
 
   def Unpair(self, device_mac, name_fragment):
     """Unpair from bluetooth devices.
@@ -747,22 +747,23 @@ class BluetoothTest(test_case.TestCase):
 
     if mac_to_scan and not HasScannedTargetMac():
       found_addresses = list(candidate_rssis)
-      self.FailTask('Failed to find MAC address %s.'
-                    'Scanned addresses: %s' % (mac_to_scan, found_addresses))
+      self.FailTask(
+          f'Failed to find MAC address {mac_to_scan}.Scanned addresses: '
+          f'{found_addresses}')
 
     if average_rssi_threshold is None:
       # Test is uninterested in RSSI thresholds
       pass
     elif average_rssi_threshold > max_average_rssi:
-      session.console.error('The largest average RSSI %f does not meet'
-                            ' threshold %f. Please ensure that the test BT '
-                            "device is 'visible' and close to the DUT "
-                            'antenna.',
-                            max_average_rssi, average_rssi_threshold)
+      session.console.error(
+          'The largest average RSSI %f does not meet'
+          ' threshold %f. Please ensure that the test BT '
+          "device is 'visible' and close to the DUT "
+          'antenna.', max_average_rssi, average_rssi_threshold)
       self.FailTask(
-          'ScanDeviceTask: The largest average RSSI %f of device %s does'
-          ' not meet threshold %f.' %
-          (max_average_rssi, max_average_rssi_mac, average_rssi_threshold))
+          f'ScanDeviceTask: The largest average RSSI {max_average_rssi:f} of '
+          f'device {max_average_rssi_mac} does not meet threshold '
+          f'{average_rssi_threshold:f}.')
     else:
       session.console.info('The largest average RSSI %f meets threshold %f.',
                            max_average_rssi, average_rssi_threshold)
@@ -819,15 +820,16 @@ class BluetoothTest(test_case.TestCase):
     input_device_rssi_key = self.args.input_device_rssi_key
 
     fail_msg = []
+
     def _DeriveRSSIThreshold(threshold, fid):
       if isinstance(threshold, (int, float)):
         return threshold
       if isinstance(threshold, dict):
         if fid in threshold:
           return threshold.get(fid)
-        fail_msg.append('Fixture ID "%s" is not legitimate!\n' % fid)
+        fail_msg.append(f'Fixture ID "{fid}" is not legitimate!\n')
       else:
-        fail_msg.append('Wrong type of RSSI threshold: %s\n' % threshold)
+        fail_msg.append(f'Wrong type of RSSI threshold: {threshold}\n')
       return None
 
     fid = session.GetDeviceID()
@@ -857,8 +859,7 @@ class BluetoothTest(test_case.TestCase):
 
     if not rssis:
       self.FailTask(
-          'DetectRSSIofTargetMAC: Fail to get RSSI from device %s.' %
-          mac_to_scan)
+          f'DetectRSSIofTargetMAC: Fail to get RSSI from device {mac_to_scan}.')
 
     average_rssi = sum(rssis) / len(rssis)
     state.DataShelfSetValue(input_device_rssi_key, average_rssi)
@@ -868,19 +869,21 @@ class BluetoothTest(test_case.TestCase):
     fail_msg = ''
     if (average_rssi_lower_threshold is not None and
         average_rssi < average_rssi_lower_threshold):
-      fail_msg += ('Average RSSI %.2f less than the lower threshold %.2f\n' %
-                   (average_rssi, average_rssi_lower_threshold))
+      fail_msg += (
+          f'Average RSSI {average_rssi:.2f} less than the lower threshold '
+          f'{average_rssi_lower_threshold:.2f}\n')
     if (average_rssi_upper_threshold is not None and
         average_rssi > average_rssi_upper_threshold):
-      fail_msg += ('Average RSSI %.2f greater than the upper threshold %.2f' %
-                   (average_rssi, average_rssi_upper_threshold))
+      fail_msg += (
+          f'Average RSSI {average_rssi:.2f} greater than the upper threshold '
+          f'{average_rssi_upper_threshold:.2f}')
 
     # Convert dbus.Int16 in rssis below to regular integers.
     status = (('pass' if fail_msg == '' else 'fail') +
-              ' exp: [%.2f, %.2f]' % (average_rssi_lower_threshold,
-                                      average_rssi_upper_threshold))
-    data = ('Average RSSI: %.2f %s  (%s)\n' %
-            (average_rssi, list(map(int, rssis)), status))
+              f' exp: [{average_rssi_lower_threshold:.2f}, '
+              f'{average_rssi_upper_threshold:.2f}]')
+    data = (f'Average RSSI: {average_rssi:.2f} {list(map(int, rssis))}  '
+            f'({status})\n')
     _AppendLog(self.log_tmp_file, data)
 
     if fail_msg:
@@ -929,7 +932,7 @@ class BluetoothTest(test_case.TestCase):
 
     def SaveLogAndFail(fail_reason):
       """Save the fail log and invoke Fail()."""
-      data = 'Pairing fail: %s\n' % fail_reason
+      data = f'Pairing fail: {fail_reason}\n'
       _AppendLog(self.log_tmp_file, data)
       self.FailTask(fail_reason)
 

@@ -22,6 +22,7 @@ from subprocess import STDOUT
 
 from cros.factory.utils import file_utils
 
+
 # Constants.
 _SYSFS_I2C_PATH = '/sys/bus/i2c/devices'
 _DEBUG_PATH = '/sys/kernel/debug'
@@ -66,7 +67,8 @@ def IsDestinationPortEnabled(port):
   If port 8000 is enabled, it looks like
     ACCEPT  tcp  --  0.0.0.0/0  0.0.0.0/0  ctstate NEW tcp dpt:8000
   """
-  pattern = re.compile(r'ACCEPT\s+tcp.+\s+ctstate\s+NEW\s+tcp\s+dpt:%d' % port)
+  pattern = re.compile(r'ACCEPT\s+tcp.+\s+ctstate\s+NEW\s+tcp\s+dpt:' +
+                       f'{port:d}')
   rules = SimpleSystemOutput('iptables -L INPUT -n --line-number')
   for rule in rules.splitlines():
     if pattern.search(rule):
@@ -77,10 +79,11 @@ def IsDestinationPortEnabled(port):
 def EnableDestinationPort(port):
   """Enable the destination port in iptables."""
   if not IsDestinationPortEnabled(port):
-    cmd = ('iptables -A INPUT -p tcp -m conntrack --ctstate NEW --dport %d '
-           '-j ACCEPT' % port)
+    cmd = (f'iptables -A INPUT -p tcp -m conntrack --ctstate NEW --dport '
+           f'{int(port)} -j ACCEPT')
     if SimpleSystem(cmd) != 0:
-      raise Error('Failed to enable destination port in iptables: %d.' % port)
+      raise Error(
+          f'Failed to enable destination port in iptables: {int(port)}.')
 
 
 def GetSysfsEntry(vendor=ATMEL):
@@ -183,11 +186,11 @@ class NetworkStatus:
 
   def PingBB(self):
     """Ping the Beagle Bone."""
-    return IsSuccessful(SimpleSystem('ping -c 1 %s' % self._BB_ip))
+    return IsSuccessful(SimpleSystem(f'ping -c 1 {self._BB_ip}'))
 
   def PingShopfloor(self):
     """Ping the Shopfloor machine."""
-    return IsSuccessful(SimpleSystem('ping -c 1 %s' % self._shopfloor_ip))
+    return IsSuccessful(SimpleSystem(f'ping -c 1 {self._shopfloor_ip}'))
 
 
 class KernelModule:
@@ -199,19 +202,19 @@ class KernelModule:
 
   def IsLoaded(self):
     """Is the module loaded?"""
-    lsmod_result = SimpleSystemOutput('lsmod | grep %s' % self.name)
+    lsmod_result = SimpleSystemOutput(f'lsmod | grep {self.name}')
     return bool(lsmod_result) and self.name in lsmod_result
 
   def Remove(self):
     """Remove the module."""
     if self.IsLoaded():
-      return IsSuccessful(SimpleSystem('rmmod %s' % self.name))
+      return IsSuccessful(SimpleSystem(f'rmmod {self.name}'))
     return True
 
   def Insert(self):
     """Insert the module."""
     if not self.IsLoaded():
-      return IsSuccessful(SimpleSystem('modprobe %s' % self.name))
+      return IsSuccessful(SimpleSystem(f'modprobe {self.name}'))
     return True
 
   def IsDeviceDetected(self):

@@ -75,6 +75,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import type_utils
 
+
 _ARG_SERVICES_SCHEMA = JSONSchemaDict('services schema object', {
     'type': 'array',
     'items': {
@@ -229,12 +230,13 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
         logging.info('Retry...')
         self._device.wifi.BringsDownInterface(self._interface)
       else:
-        raise wifi.WiFiError('Failed to set antenna. ret code: %d. stderr: %s' %
-                             (retcode, stderr))
+        raise wifi.WiFiError(
+            f'Failed to set antenna. ret code: {int(retcode)}. stderr: {stderr}'
+        )
     self._device.wifi.BringsUpInterface(self._interface,
                                         self._switch_antenna_sleep_secs)
     if not success:
-      raise wifi.WiFiError('Failed to set antenna for %s tries' % max_retries)
+      raise wifi.WiFiError(f'Failed to set antenna for {max_retries} tries')
     self._antenna = antenna
 
 
@@ -433,12 +435,13 @@ class Capture:
 
     This function is currently only needed for Intel WiFi.
     """
-    path = '/sys/kernel/debug/ieee80211/%s/netdev:%s/iwlmvm/bf_params' % (
-        self.phy, self.parent_device)
+    path = (
+        f'/sys/kernel/debug/ieee80211/{self.phy}/netdev:{self.parent_device}'
+        f'/iwlmvm/bf_params')
     if self.dut.path.exists(path):
       session.console.info('Setting beacon filter (enable=%d) for Intel WiFi',
                            value)
-      self.dut.WriteFile(path, 'bf_enable_beacon_filter=%d\n' % value)
+      self.dut.WriteFile(path, f'bf_enable_beacon_filter={int(value)}\n')
 
   def Create(self):
     if not self.created_device:
@@ -484,7 +487,7 @@ class RadiotapWiFiChip(wifi.WiFiChip):
     if capture_times >= scan_count:
       return
 
-    session.console.info('Switching to AP %s %d...' % target_service)
+    session.console.info(f'Switching to AP {service.ssid} {service.freq:d}...')
     if not self._ConnectService(service.ssid, service.password,
                                 freqs=service.freq):
       return
@@ -528,8 +531,7 @@ class RadiotapWiFiChip(wifi.WiFiChip):
           ssid=service_name, interface=self._interface, frequency=freqs,
           scan_timeout=self._scan_timeout)
     except wifi.WiFiError as e:
-      session.console.info(
-          'Unable to find the service %s: %r' % (service_name, e))
+      session.console.info(f'Unable to find the service {service_name}: {e!r}')
       return False
 
     try:
@@ -537,7 +539,7 @@ class RadiotapWiFiChip(wifi.WiFiChip):
           self._ap, interface=self._interface, passkey=password,
           connect_timeout=self._connect_timeout)
     except type_utils.TimeoutError:
-      session.console.info('Unable to connect to the service %s' % service_name)
+      session.console.info(f'Unable to connect to the service {service_name}')
       return False
 
     session.console.info(
@@ -622,8 +624,8 @@ class WirelessTest(test_case.TestCase):
 
     if (self.args.wifi_chip_type == 'disable_switch' and
         list(self.args.strength) != ['all']):
-      self.FailTask('Switching antenna is disabled but antenna configs are %s' %
-                    list(self.args.strength))
+      self.FailTask(f'Switching antenna is disabled but antenna configs are '
+                    f'{list(self.args.strength)}')
 
     # Group checker for Testlog.
     self._service_group_checker = testlog.GroupParam(
@@ -702,10 +704,10 @@ class WirelessTest(test_case.TestCase):
     spec_strength = spec_antenna_strength[antenna]
     if not scanned_strength:
       self.FailTask(
-          'Antenna %s, service: %s: Can not scan signal strength.' %
-          (antenna, service))
+          f'Antenna {antenna}, service: {service}: Can not scan signal '
+          f'strength.')
 
-    event_log.Log('antenna_%s' % antenna, freq=service.freq,
+    event_log.Log(f'antenna_{antenna}', freq=service.freq,
                   rssi=scanned_strength,
                   meet=(scanned_strength and scanned_strength >= spec_strength))
     with self._antenna_group_checker:
@@ -715,8 +717,8 @@ class WirelessTest(test_case.TestCase):
                                          min=spec_strength)
     if not result:
       self.FailTask(
-          'Antenna %s, service: %s: The scanned strength %f < spec strength'
-          ' %f' % (antenna, service, scanned_strength, spec_strength))
+          f'Antenna {antenna}, service: {service}: The scanned strength '
+          f'{scanned_strength:f} < spec strength {spec_strength:f}')
     else:
       session.console.info(
           'Antenna %s, service: %s: The scanned strength %f >= spec strength'
@@ -772,8 +774,7 @@ class WirelessTest(test_case.TestCase):
           self.args.scan_timeout)
       return
 
-    raise ValueError('Wifi chip type %s is not supported.' %
-                     self._wifi_chip_type)
+    raise ValueError(f'Wifi chip type {self._wifi_chip_type} is not supported.')
 
   def _ScanAllServices(self):
     self.ui.SetState(_('Checking frequencies...'))
@@ -795,17 +796,19 @@ class WirelessTest(test_case.TestCase):
               'Ignore this service and continue the test.', service.ssid)
           self._services.remove(service)
           continue
-        self.FailTask('The service %s is not found.' % service.ssid)
+        self.FailTask(f'The service {service.ssid} is not found.')
       elif service.freq is None:
         if len(ssid_freqs[service.ssid]) > 1:
-          self.FailTask('There are more than one frequencies (%r) for ssid %s. '
-                        'Please specify the frequency explicitly.' %
-                        (ssid_freqs[service.ssid], service.ssid))
+          self.FailTask(
+              f'There are more than one frequencies '
+              f'({ssid_freqs[service.ssid]!r}) for ssid {service.ssid}. Please '
+              f'specify the frequency explicitly.')
         service.freq = ssid_freqs[service.ssid].pop()
       elif service.freq not in ssid_freqs[service.ssid]:
-        self.FailTask('Frequency %s is not supported by the service %s.  '
-                      'Available frequencies are %r.' %
-                      (service.freq, service.ssid, ssid_freqs[service.ssid]))
+        self.FailTask(
+            f'Frequency {service.freq} is not supported by the service '
+            f'{service.ssid}.  Available frequencies are '
+            f'{ssid_freqs[service.ssid]!r}.')
 
   def _TrySetRegionUSFor6G(self):
     """Set region for testing 6G in the factory."""
@@ -853,7 +856,7 @@ class WirelessTest(test_case.TestCase):
     # Gets the service with the largest strength to test for each spec.
     test_service = self._ChooseMaxStrengthService()
     if test_service is None:
-      self.FailTask('Services %s are not valid.' % self.args.services)
+      self.FailTask(f'Services {self.args.services} are not valid.')
 
     # Checks 'all' since we have scanned using antenna 'all' already.
     self._CheckSpec(test_service, self.args.strength, 'all')

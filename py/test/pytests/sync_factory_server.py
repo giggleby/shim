@@ -157,6 +157,7 @@ from cros.factory.utils import debug_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import sync_utils
 
+
 ID_TEXT_INPUT_URL = 'text_input_url'
 ID_BUTTON_EDIT_URL = 'button_edit_url'
 
@@ -227,16 +228,14 @@ class SyncFactoryServer(test_case.TestCase):
   @staticmethod
   def CreateButton(node_id, message, on_click):
     return [
-        '<button type="button" id="%s" onclick=%r>' % (node_id, on_click),
-        message, '</button>'
+        f'<button type="button" id="{node_id}" onclick={on_click!r}>', message,
+        '</button>'
     ]
 
   def CreateChangeURLButton(self):
     return self.CreateButton(
-        ID_BUTTON_EDIT_URL,
-        _('Change URL'),
-        'this.disabled = true; window.test.sendTestEvent("%s");' %
-        EVENT_DO_SET_URL)
+        ID_BUTTON_EDIT_URL, _('Change URL'), f'this.disabled = true; '
+        f'window.test.sendTestEvent("{EVENT_DO_SET_URL}");')
 
   def OnButtonSetClicked(self, event):
     self.ChangeServerURL(event.data)
@@ -273,16 +272,14 @@ class SyncFactoryServer(test_case.TestCase):
     self.ui.SetState([
         prompt,
         _('Change server URL: '),
-        '<input type="text" id="%s" value="%s"/>' % (ID_TEXT_INPUT_URL,
-                                                     current_url), '<span>',
-        self.CreateButton('btnSet',
-                          _('Set'), 'window.test.sendTestEvent("%s", '
-                          'document.getElementById("%s").value)' %
-                          (EVENT_SET_URL, ID_TEXT_INPUT_URL)),
+        f'<input type="text" id="{ID_TEXT_INPUT_URL}" value="{current_url}"/>',
+        '<span>',
         self.CreateButton(
-            'btnCancel',
-            _('Cancel'),
-            'window.test.sendTestEvent("%s")' % EVENT_CANCEL_SET_URL), '</span>'
+            'btnSet', _('Set'), f'window.test.sendTestEvent("{EVENT_SET_URL}", '
+            f'document.getElementById("{ID_TEXT_INPUT_URL}").value)'),
+        self.CreateButton(
+            'btnCancel', _('Cancel'),
+            f'window.test.sendTestEvent("{EVENT_CANCEL_SET_URL}")'), '</span>'
     ])
 
   def DetectServerURL(self):
@@ -379,8 +376,8 @@ class SyncFactoryServer(test_case.TestCase):
     gbind = device_data.GetDeviceData(device_data.KEY_VPD_GROUP_REGCODE)
     for label, value in ('user', ubind), ('group', gbind):
       if not value:
-        raise Exception('Missing %s registration codes in device data (%r).' %
-                        (label, value))
+        raise Exception(
+            f'Missing {label} registration codes in device data ({value!r}).')
 
     registration_codes.CheckRegistrationCode(ubind)
     registration_codes.CheckRegistrationCode(gbind)

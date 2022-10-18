@@ -11,6 +11,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
+
 class OfflineTestError(Exception):
   pass
 
@@ -21,16 +22,14 @@ class OfflineTest(unittest.TestCase):
 
   DEPLOY_ARGS = [
       Arg('shutdown', SHUTDOWN,
-          'What to do after tests are deployed (One of %s)' % SHUTDOWN),
+          f'What to do after tests are deployed (One of {SHUTDOWN})'),
       Arg('test_spec_file', str,
           'A JSON file to specify which tests are running'),
-      Arg('start_up_service', bool,
-          'Do you want to run the tests on start up?', default=True)
+      Arg('start_up_service', bool, 'Do you want to run the tests on start up?',
+          default=True)
   ]
 
-  ARGS = [
-      Arg('action', ACTION, 'one of %s' % ACTION)
-  ] + DEPLOY_ARGS
+  ARGS = [Arg('action', ACTION, f'one of {ACTION}')] + DEPLOY_ARGS
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
@@ -59,7 +58,7 @@ class OfflineTest(unittest.TestCase):
     dut_root = self.dut.storage.GetFactoryRoot()
     # make sure dut_root is writable
     if not self.dut.storage.Remount(dut_root):
-      raise OfflineTestError('failed to make dut:%s writable' % dut_root)
+      raise OfflineTestError(f'failed to make dut:{dut_root} writable')
 
     self.dut.Call(['rm', '-rf', dut_root])
     self.dut.CheckCall(['mkdir', '-p', dut_root])

@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Display interactive test utils.
@@ -9,6 +9,7 @@ import os
 import subprocess
 import time
 import xmlrpc.client
+
 
 # Setup logging level and format.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
@@ -89,17 +90,17 @@ class SSHClient:
 
   def SSHCommand(self, cmd):
     """Build the ssh command using the fixed options."""
-    return 'ssh %s %s %s' % (' '.join(self._fixed_options), self._host, cmd)
+    return f"ssh {' '.join(self._fixed_options)} {self._host} {cmd}"
 
   def SCPPushCommand(self, src, dst):
     """Build the scp push command using the fixed options."""
-    return 'scp -r %s %s root@%s:%s' % (' '.join(
-        self._fixed_options), src, self._host, dst)
+    return (
+        f"scp -r {' '.join(self._fixed_options)} {src} root@{self._host}:{dst}")
 
   def SCPPullCommand(self, src, dst):
     """Build the scp pull command using the fixed options."""
-    return 'scp -r %s root@%s:%s %s' % (' '.join(
-        self._fixed_options), self._host, src, dst)
+    return (
+        f"scp -r {' '.join(self._fixed_options)} root@{self._host}:{src} {dst}")
 
 
 class Communication:
@@ -190,7 +191,7 @@ class Communication:
     Returns:
         The DUT device data serial number.
     """
-    print('Serial Number: %s' % self.proxy.GetSerialNumber())
+    print(f'Serial Number: {self.proxy.GetSerialNumber()}')
     self.proxy.GetSerialNumber()
 
   def FailTest(self, reason):
@@ -219,4 +220,4 @@ class Communication:
     Args:
         brightness: The brightness to set.
     """
-    self.RunCommand('ectool pwmsetkblight %s' % brightness)
+    self.RunCommand(f'ectool pwmsetkblight {brightness}')

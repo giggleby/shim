@@ -143,7 +143,7 @@ class TouchpadHoverTest(test_case.TestCase):
         self.Sleep(self.args.calibration_sleep_secs)
 
     for round_index in range(self.args.repeat_times):
-      progress = '(%d/%d) ' % (round_index, self.args.repeat_times)
+      progress = f'({int(round_index)}/{int(self.args.repeat_times)}) '
       self._TestForValue(
           [progress, _('Please put the hover-tool into the holder.')], 1)
       self._TestForValue(

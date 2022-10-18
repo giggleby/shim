@@ -73,6 +73,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
+
 # The root of the pytests vswr folder. The config path is relative to this when
 # we load the config file locally.
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -166,7 +167,7 @@ class VSWR(test_case.TestCase):
         self.log['network_analyzer']['ip'] = ena_ip
     if valid_ping_count != 1:
       raise Exception(
-          'Found %d ENAs which should be only 1.' % valid_ping_count)
+          f'Found {int(valid_ping_count)} ENAs which should be only 1.')
     logging.info('IP of ENA automatic detected as %s',
                  self.log['network_analyzer']['ip'])
 
@@ -230,8 +231,9 @@ class VSWR(test_case.TestCase):
         logging.info('SN matched config %s.', sn_config['name'])
         return sn_config
     valid_patterns = [config['serial_number_regex'] for config in device_models]
-    raise ValueError('serial number %s is not matched. Valid patterns are: %s' %
-                     (self._serial_number, valid_patterns))
+    raise ValueError(
+        f'serial number {self._serial_number} is not matched. Valid patterns '
+        f'are: {valid_patterns}')
 
   def _CheckMeasurement(self, threshold, extracted_value,
                         print_on_failure=False, freq=None, title=None):
@@ -264,19 +266,21 @@ class VSWR(test_case.TestCase):
           title, freq.MHzi(), float(extracted_value),
           float(difference), min_value, max_value)
     # Record the detail for event_log.
-    self._vswr_detail_results['%dM' % freq.MHzi()] = {
+    self._vswr_detail_results[f'{freq.MHzi():d}M'] = {
         'type': title,
         'freq': freq.Hzf(),
         'observed': extracted_value,
         'result': check_pass,
         'threshold': [min_value, max_value],
-        'diff': difference}
+        'diff': difference
+    }
     return check_pass
 
   def _TestAntennas(self, measurement_sequence, default_thresholds):
     """Tests either main or aux antenna for both cellular and wifi."""
+
     def _PortName(port_number):
-      return 'S%s%s' % (port_number, port_number)
+      return f'S{port_number}{port_number}'
 
     # Make sure the segment is correct.
     self._ena.SetSweepSegments([(
@@ -298,7 +302,7 @@ class VSWR(test_case.TestCase):
         thresholds_list = {}
 
       self.log['test']['traces'][antenna_name] = trace[rf_port]
-      self._LogTrace(trace[rf_port], 'result_trace_%s' % antenna_name)
+      self._LogTrace(trace[rf_port], f'result_trace_{antenna_name}')
 
       # Check all sample points.
       results = {}
@@ -396,12 +400,12 @@ class VSWR(test_case.TestCase):
         antenna_name = measurement_sequence[port]['name']
         if self._results[antenna_name] == state.TestState.PASSED:
           result_html_string += (
-              '<tr><td>%s</td><td>%s</td><td>%s</td></tr>' % (
-                  row_count, antenna_name, self._results[antenna_name]))
+              f'<tr><td>{row_count}</td><td>{antenna_name}</td><td>'
+              f'{self._results[antenna_name]}</td></tr>')
         else:
           result_html_string += (
-              '<tr><td>%s</td><td>%s</td><td style="color:red">%s</td></tr>' % (
-                  row_count, antenna_name, self._results[antenna_name]))
+              f'<tr><td>{row_count}</td><td>{antenna_name}</td><td '
+              f'style="color:red">{self._results[antenna_name]}</td></tr>')
         row_count += 1
     self.ui.SetHTML(result_html_string, id='result-table')
 
@@ -450,7 +454,7 @@ class VSWR(test_case.TestCase):
     self.log['network_analyzer']['calibration_traces'] = calibration_traces
 
     for rf_port, trace in self._SerializeTraces(calibration_traces).items():
-      self._LogTrace(trace, 'calibration_trace_%s' % rf_port,
+      self._LogTrace(trace, f'calibration_trace_{rf_port}',
                      ena_config['calibration_check_thresholds']['min'],
                      ena_config['calibration_check_thresholds']['max'])
 

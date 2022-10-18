@@ -23,6 +23,7 @@ import xmlrpc.server
 from cros.factory.test.pytests.touchscreen_calibration import touchscreen_calibration_utils as utils
 from cros.factory.utils import file_utils
 
+
 # List the supported boards below
 SAMUS = 'samus'
 RYU = 'ryu'
@@ -42,7 +43,7 @@ REMOTE_COMMAND_FLAGS = [
 
 def SshCommand(ip, cmd, output=True):
   """Execute a remote command through ssh."""
-  remote_args = ['ssh', 'root@%s' % ip] + REMOTE_COMMAND_FLAGS + [cmd]
+  remote_args = ['ssh', f'root@{ip}'] + REMOTE_COMMAND_FLAGS + [cmd]
   cmd_str = ' '.join(remote_args)
   if output:
     return utils.SimpleSystemOutput(cmd_str)
@@ -53,7 +54,7 @@ def SshCommand(ip, cmd, output=True):
 def ScpCommand(ip, filename, remote_path):
   """Execute a remote command through ssh."""
   remote_args = (['scp'] + REMOTE_COMMAND_FLAGS +
-                 ['-p', filename, 'root@%s:%s' % (ip, remote_path)])
+                 ['-p', filename, f'root@{ip}:{remote_path}'])
   return utils.IsSuccessful(utils.SimpleSystem(' '.join(remote_args)))
 
 
@@ -61,8 +62,8 @@ class TSConfig:
   """Manage the touchscreen config data."""
 
   def __init__(self, board):
-    config_filepath = os.path.join(os.path.dirname(__file__),
-                                   'boards', board, '%s.conf' % board)
+    config_filepath = os.path.join(
+        os.path.dirname(__file__), 'boards', board, f'{board}.conf')
     if not os.path.isfile(config_filepath):
       raise Error('The config file does not exist: ' + config_filepath)
 
@@ -71,7 +72,7 @@ class TSConfig:
       with open(config_filepath, encoding='utf8') as f:
         self.parser.read_file(f)
     except Exception:
-      raise Error('Failed to read config file: %s.' % config_filepath) from None
+      raise Error(f'Failed to read config file: {config_filepath}.') from None
 
   def Read(self, section, option):
     """Read config data."""
@@ -262,10 +263,10 @@ class SensorServiceSamus(BaseSensorService):
   def _Make_Symlink(self, target, link_name):
     """Make the symlink to the target."""
     if not os.path.isfile(target):
-      self.log.error('The target does not exist: %s' % target)
+      self.log.error(f'The target does not exist: {target}')
       return False
 
-    cmd_make_symlink = 'ln -s -f %s %s' % (target, link_name)
+    cmd_make_symlink = f'ln -s -f {target} {link_name}'
     return utils.IsSuccessful(utils.SimpleSystem(cmd_make_symlink))
 
   def _TouchFileUpdate(self, config_filename, link_name, update_fw=True):
@@ -274,10 +275,10 @@ class SensorServiceSamus(BaseSensorService):
                                'boards', self.board, config_filename)
     link_path = os.path.join('/lib/firmware', link_name)
     filename = 'update_fw' if update_fw else 'update_config'
-    sysfs_update_interface = os.path.join(os.path.dirname(self.sysfs_entry),
-                                          filename)
-    cmd_update = 'echo 1 > %s' % sysfs_update_interface
-    self.log.info('Begin touch auto update:  %s' % cmd_update)
+    sysfs_update_interface = os.path.join(
+        os.path.dirname(self.sysfs_entry), filename)
+    cmd_update = f'echo 1 > {sysfs_update_interface}'
+    self.log.info(f'Begin touch auto update:  {cmd_update}')
     if self._Make_Symlink(target_path, link_path):
       result = utils.IsSuccessful(utils.SimpleSystem(cmd_update))
       time.sleep(1)
@@ -328,7 +329,7 @@ class SensorServiceSamus(BaseSensorService):
     try:
       file_utils.WriteFile(self.sysfs_entry, content)
     except Exception as e:
-      self.log.info('WriteSysfs failed to write %s: %s' % (content, e))
+      self.log.info(f'WriteSysfs failed to write {content}: {e}')
       return False
 
     time.sleep(0.1)
@@ -343,7 +344,7 @@ class SensorServiceSamus(BaseSensorService):
     Returns:
       the list of raw sensor values
     """
-    debugfs = '%s/%s' % (self.debugfs, category)
+    debugfs = f'{self.debugfs}/{category}'
     with open(debugfs, 'rb') as f:
       # The debug fs content is composed of num_rows, where each row
       # contains (num_cols * 2) bytes of num_cols consecutive sensor values.
@@ -407,7 +408,7 @@ class SensorServiceRyu(BaseSensorService):
 
     self.remote_tool_bin_dir = os.path.join(self.remote_bin_root, 'bin')
     self.src_dir = os.path.join(os.path.dirname(__file__), 'boards', self.board)
-    self.read_cmd_prefix = '%s -r ' % self._GetToolPath(tool)
+    self.read_cmd_prefix = f'{self._GetToolPath(tool)} -r '
     self.check_cmd = 'test -e %s'
     self.num_rows = None
     self.num_cols = None
@@ -581,7 +582,7 @@ class SensorServiceRyu(BaseSensorService):
     """
     expected_values = self.EXPECTED_VALUES.get(category)
     if expected_values is None:
-      raise Error('The "%s" is not supported in EXPECTED_VALUES.' % category)
+      raise Error(f'The "{category}" is not supported in EXPECTED_VALUES.')
     return data == expected_values
 
   def FlashFirmware(self, fw_version, fw_config):
@@ -596,17 +597,17 @@ class SensorServiceRyu(BaseSensorService):
       self.log.info(msg % (existing_fw_version, existing_fw_config))
       return True
 
-    cmd_update = '%s -f -d /dev/hidraw0 %s' % (
-        self._GetToolPath(self.fw_update_tool),
-        self._GetDataPath(self.fw_file))
-    self.log.info('flashing a new firmware %s:%s...' % (fw_version, fw_config))
+    cmd_update = (
+        f'{self._GetToolPath(self.fw_update_tool)} -f -d /dev/hidraw0 '
+        f'{self._GetDataPath(self.fw_file)}')
+    self.log.info(f'flashing a new firmware {fw_version}:{fw_config}...')
     return utils.IsSuccessful(self.dut.Call(cmd_update))
 
   def ReadFirmwareVersion(self):
     """Read whether the firmware version and config are correct."""
     fw_version = None
     fw_config = None
-    read_cmd = '%s -o /dev/hidraw0' % self._GetToolPath(self.hid_tool)
+    read_cmd = f'{self._GetToolPath(self.hid_tool)} -o /dev/hidraw0'
     for line in self.dut.CheckOutput(read_cmd).splitlines():
       if ':' in line:
         name, value = [elm.strip() for elm in line.split(':')]
@@ -622,7 +623,7 @@ class SensorServiceRyu(BaseSensorService):
     Re-calibrate the baseline after the metal mesh is lifted up.
     """
     flag = self.CalibrateBaseline()
-    self.log.info('Calibrate the baseline: %s' % str(flag))
+    self.log.info(f'Calibrate the baseline: {str(flag)}')
     return flag
 
 
@@ -636,7 +637,7 @@ def GetSensorServiceClass(board):
   board_sensors = SENSORS_CLASS_DICT.get(board)
   if board_sensors:
     return board_sensors
-  raise Error('Failed to get sensor service subclass for %s.' % board)
+  raise Error(f'Failed to get sensor service subclass for {board}.')
 
 
 def RunXMLRPCSysfsServer(addr, board, log=logging):
@@ -658,11 +659,11 @@ def RunXMLRPCSysfsServer(addr, board, log=logging):
 
   _, port = addr
   if _IsServerRunning():
-    print('XMLRPCServer(%s) has been already running....' % str(addr))
+    print(f'XMLRPCServer({str(addr)}) has been already running....')
   else:
     if not utils.IsDestinationPortEnabled(port):
       utils.EnableDestinationPort(port)
-      log.info('The destination port %d is enabled.' % port)
+      log.info(f'The destination port {int(port)} is enabled.')
 
     server = xmlrpc.server.SimpleXMLRPCServer(addr)
     # Set allow_dotted_names=True since SensorService has an object,
@@ -670,7 +671,7 @@ def RunXMLRPCSysfsServer(addr, board, log=logging):
     # i.e. kernel_module, as its member. This flag helps register
     # the functions in kernel_module as well.
     server.register_instance(board_sensors(log), allow_dotted_names=True)
-    print('XMLRPCServer(%s) serves sys fs data forever....' % str(addr))
+    print(f'XMLRPCServer({str(addr)}) serves sys fs data forever....')
     server.serve_forever()
 
 
@@ -687,9 +688,9 @@ def _ParseAddr(addr_str):
 def _Usage():
   """Print the usage."""
   prog = sys.argv[0]
-  print('Usage: ./%s ip:port board' % prog)
-  print('E.g.:  ./%s 192.168.10.20:8000 ryu' % prog)
-  print('       ./%s localhost:8000 samus' % prog)
+  print(f'Usage: ./{prog} ip:port board')
+  print(f'E.g.:  ./{prog} 192.168.10.20:8000 ryu')
+  print(f'       ./{prog} localhost:8000 samus')
   sys.exit(1)
 
 

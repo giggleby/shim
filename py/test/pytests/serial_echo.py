@@ -24,6 +24,7 @@ import serial
 from cros.factory.test.utils import serial_utils
 from cros.factory.utils.arg_utils import Arg
 
+
 _SERIAL_TIMEOUT = 3
 
 
@@ -47,7 +48,7 @@ class SerialEchoTest(unittest.TestCase):
 
     if (len(self.args.send_recv) != 2 or
         not all(isinstance(a, str) for a in self.args.send_recv)):
-      self.fail('Invalid dargs send_recv: %s' % str(self.args.send_recv))
+      self.fail(f'Invalid dargs send_recv: {str(self.args.send_recv)}')
     self._send = self.args.send_recv[0].encode('latin1')
     self._recv = self.args.send_recv[1].encode('latin1')
 

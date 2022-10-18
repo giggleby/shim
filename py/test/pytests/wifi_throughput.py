@@ -105,6 +105,7 @@ from cros.factory.utils.schema import JSONSchemaDict
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 _WIFI_TIMEOUT_SECS = 20
 _DEFAULT_POLL_INTERVAL_SECS = 1
 _IPERF_TIMEOUT_SECS = 5
@@ -429,8 +430,7 @@ class _ServiceTest:
                                ap_config.ssid, fn.__name__, status)
       except self._TestException as e:
         logging.exception('Failed to run %s(**kwargs=%s)', fn.__name__, kwargs)
-        message = '[%s] FAIL [%s] %s' % (
-            ap_config.ssid, fn.__name__, str(e))
+        message = f'[{ap_config.ssid}] FAIL [{fn.__name__}] {str(e)}'
         self._log['failures'].append(message)
         session.console.error(message)
         if abort:
@@ -458,20 +458,15 @@ class _ServiceTest:
         (False, 'TX', ap_config.min_tx_throughput),
         (True, 'RX', ap_config.min_rx_throughput)]:
       try:
-        DoTest(self._RunIperf, abort=True,
-               iperf_host=ap_config.iperf_host,
-               bind_wifi=self._bind_wifi,
-               reverse=reverse,
-               tx_rx=tx_rx,
-               log_key=('iperf_%s' % tx_rx.lower()),
+        DoTest(self._RunIperf, abort=True, iperf_host=ap_config.iperf_host,
+               bind_wifi=self._bind_wifi, reverse=reverse, tx_rx=tx_rx,
+               log_key=f'iperf_{tx_rx.lower()}',
                transmit_time=ap_config.transmit_time,
                transmit_interval=ap_config.transmit_interval)
 
-        DoTest(self._CheckIperfThroughput, abort=True,
-               ssid=ap_config.ssid,
-               tx_rx=tx_rx,
-               log_key=('iperf_%s' % tx_rx.lower()),
-               log_pass_key=('pass_iperf_%s' % tx_rx.lower()),
+        DoTest(self._CheckIperfThroughput, abort=True, ssid=ap_config.ssid,
+               tx_rx=tx_rx, log_key=f'iperf_{tx_rx.lower()}',
+               log_pass_key=f'pass_iperf_{tx_rx.lower()}',
                min_throughput=min_throughput)
       except self._TestException:
         pass  # continue to next test (TX/RX)
@@ -493,8 +488,8 @@ class _ServiceTest:
     for ap in self._aps:
       if ap.ssid == ssid:
         self._ap = ap
-        return u'Found service %s' % ssid
-    raise self._TestException(u'Unable to find service %s' % ssid)
+        return f'Found service {ssid}'
+    raise self._TestException(f'Unable to find service {ssid}')
 
   def _CheckStrength(self, min_strength):
     # Check signal strength.
@@ -504,9 +499,9 @@ class _ServiceTest:
     self._log['pass_strength'] = (
         strength is not None and strength >= min_strength)
     if not self._log['pass_strength']:
-      raise self._TestException('strength %s < %d [fail]'
-                                % (strength, min_strength))
-    return 'strength %s >= %d [pass]' % (strength, min_strength)
+      raise self._TestException(
+          f'strength {strength} < {int(min_strength)} [fail]')
+    return f'strength {strength} >= {int(min_strength)} [pass]'
 
   def _CheckQuality(self, min_quality):
     # Check signal quality.
@@ -516,9 +511,9 @@ class _ServiceTest:
     self._log['pass_quality'] = (
         quality is not None and quality >= min_quality)
     if not self._log['pass_quality']:
-      raise self._TestException('quality %s < %d [fail]'
-                                % (quality, min_quality))
-    return 'quality %s >= %d [pass]' % (quality, min_quality)
+      raise self._TestException(
+          f'quality {quality} < {int(min_quality)} [fail]')
+    return f'quality {quality} >= {int(min_quality)} [pass]'
 
   def _Connect(self, ssid, password):
     # Try connecting.
@@ -532,12 +527,12 @@ class _ServiceTest:
           dhcp_timeout=_WIFI_TIMEOUT_SECS)
     except self._wifi.WiFiError:
       unused_exc_class, exc, tb = sys.exc_info()
-      exc_message = '%s: %s' % (exc.__class__.__name__, str(exc))
-      new_exc = self._TestException('Unable to connect to %s: %s'
-                                    % (ssid, exc_message))
+      exc_message = f'{exc.__class__.__name__}: {str(exc)}'
+      new_exc = self._TestException(
+          f'Unable to connect to {ssid}: {exc_message}')
       raise new_exc.__class__(new_exc).with_traceback(tb) from None
     else:
-      return 'Successfully connected to %s' % ssid
+      return f'Successfully connected to {ssid}'
 
   def _LogConnection(self):
     # Save network ssid details.
@@ -569,8 +564,8 @@ class _ServiceTest:
     # indefinitely, asking the user to press space bar to try again.  If any
     # other error message is received, try again over the period of
     # _IPERF_TIMEOUT_SECS.
-    log_msg = '%s running iperf3 on %s (%s seconds)...' % (
-        tx_rx, iperf_host, transmit_time)
+    log_msg = (
+        f'{tx_rx} running iperf3 on {iperf_host} ({transmit_time} seconds)...')
     self._Log(log_msg)
     while True:
       try:
@@ -611,18 +606,18 @@ class _ServiceTest:
 
     # Show any errors from iperf, but only fail if NO intervals.
     if 'error' in iperf_output:
-      error_msg = '%s iperf3 error: %s' % (tx_rx, iperf_output['error'])
+      error_msg = f"{tx_rx} iperf3 error: {iperf_output['error']}"
       if 'intervals' not in iperf_output:
         raise self._TestException(error_msg)
       self._Log(error_msg)
 
     # Count, print, and log number of zero-transfer intervals.
     throughputs = [
-        x['sum']['bits_per_second'] for x in iperf_output['intervals']]
+        x['sum']['bits_per_second'] for x in iperf_output['intervals']
+    ]
     throughputs_string = ' '.join(
-        ['%d' % _BitsToMbits(x) for x in throughputs])
-    self._Log('%s iperf throughputs (Mbits/sec): %s' % (
-        tx_rx, throughputs_string))
+        [f'{int(_BitsToMbits(x))}' for x in throughputs])
+    self._Log(f'{tx_rx} iperf throughputs (Mbits/sec): {throughputs_string}')
     num_zero_throughputs = len([x for x in throughputs if x == 0])
     self._log[log_key]['num_zero_throughputs'] = num_zero_throughputs
 
@@ -630,34 +625,29 @@ class _ServiceTest:
     min_intervals = transmit_time / transmit_interval
     if len(iperf_output['intervals']) < min_intervals:
       raise self._TestException(
-          '%s iperf3 intervals too few: %d (expected %d)' % (
-              tx_rx, len(iperf_output['intervals']), min_intervals))
+          f"{tx_rx} iperf3 intervals too few: {len(iperf_output['intervals'])} "
+          f"(expected {int(min_intervals)})")
 
     # Show information about the data transferred.
     iperf_avg = iperf_output['end']['sum_sent']
     return (
-        '%s transferred: %.2f Mbits, time spent: %d sec, '
-        'throughput: %.2f Mbits/sec' % (
-            tx_rx,
-            _BytesToMbits(iperf_avg['bytes']),
-            transmit_time,
-            _BitsToMbits(iperf_avg['bits_per_second'])))
+        f"{tx_rx} transferred: {_BytesToMbits(iperf_avg['bytes']):.2f} Mbits, "
+        f"time spent: {int(transmit_time)} sec, throughput: "
+        f"{_BitsToMbits(iperf_avg['bits_per_second']):.2f} Mbits/sec")
 
   def _CheckIperfThroughput(self, ssid, tx_rx, log_key, log_pass_key,
                             min_throughput):
     iperf_avg = self._log[log_key]['end']['sum_sent']
 
     # Ensure the average throughput is over its minimum.
-    param_name = '%s_%s_avg_bits_per_second' % (ssid, tx_rx.lower())
+    param_name = f'{ssid}_{tx_rx.lower()}_avg_bits_per_second'
     testlog.CheckNumericParam(
-        name=param_name,
-        value=iperf_avg['bits_per_second'],
+        name=param_name, value=iperf_avg['bits_per_second'],
         min=_MbitsToBits(min_throughput) if min_throughput else None)
     testlog.UpdateParam(
         name=param_name,
-        description='Average speed of %s throughput test on AP %s' % (
-            tx_rx.upper(), ssid),
-        value_unit='Bits/second')
+        description=(f'Average speed of {tx_rx.upper()} throughput test on AP '
+                     f'{ssid}'), value_unit='Bits/second')
 
     if min_throughput is None:
       return None
@@ -666,12 +656,12 @@ class _ServiceTest:
         _BitsToMbits(iperf_avg['bits_per_second']) > min_throughput)
     if not self._log[log_pass_key]:
       raise self._TestException(
-          '%s throughput %.2f < %.2f Mbits/s didn\'t meet the minimum' %
-          (tx_rx, _BitsToMbits(iperf_avg['bits_per_second']), min_throughput))
+          f"{tx_rx} throughput {_BitsToMbits(iperf_avg['bits_per_second']):.2f}"
+          f" < {min_throughput:.2f} Mbits/s didn't meet the minimum")
 
-    return ('%s throughput %.2f >= %.2f Mbits/s meets the minimum' %
-            (tx_rx, _BitsToMbits(iperf_avg['bits_per_second']),
-             min_throughput))
+    return (
+        f"{tx_rx} throughput {_BitsToMbits(iperf_avg['bits_per_second']):.2f} "
+        f">= {min_throughput:.2f} Mbits/s meets the minimum")
 
   def _Disconnect(self, ssid):
     # Try disconnecting.
@@ -679,10 +669,10 @@ class _ServiceTest:
     try:
       self._conn.Disconnect()
     except self._wifi.WiFiError as e:
-      raise self._TestException('Unable to disconnect from %s: %s'
-                                % (ssid, e.message))
+      raise self._TestException(
+          f'Unable to disconnect from {ssid}: {e.message}')
     else:
-      return 'Successfully disconnected from %s' % ssid
+      return f'Successfully disconnected from {ssid}'
 
 
 class WiFiThroughput(test_case.TestCase):
@@ -870,7 +860,7 @@ class WiFiThroughput(test_case.TestCase):
           self.args.iperf_host = str(ip)
           break
       else:
-        self.fail('There is no host IP in CIDR: %s' % cidr)
+        self.fail(f'There is no host IP in CIDR: {cidr}')
 
     # If only one service is provided as a dict, wrap a list around it.
     # Ensure that each service SSID is only specified once.
@@ -998,9 +988,9 @@ class WiFiThroughput(test_case.TestCase):
     if self.args.services:
       with (Iperf3Server(Iperf3Client.DEFAULT_PORT)
             if self.args.enable_iperf_server else DummyContextManager()):
-        service_test = _ServiceTest(
-            self._wifi, self._interface, found_aps, self._iperf3, self.ui,
-            self.args.bind_wifi, self.args.use_ui_retry)
+        service_test = _ServiceTest(self._wifi, self._interface, found_aps,
+                                    self._iperf3, self.ui, self.args.bind_wifi,
+                                    self.args.use_ui_retry)
 
         for ap_config in self.args.services:
           test_result = service_test.Run(ap_config)
@@ -1008,13 +998,11 @@ class WiFiThroughput(test_case.TestCase):
 
           # log throughput data
           for tx_rx in ('tx', 'rx'):
-            iperf_key = 'iperf_%s' % tx_rx
-            # pylint:disable=unsupported-membership-test
+            iperf_key = f'iperf_{tx_rx}'
             for interval in test_result[iperf_key].get('intervals', []):
               self._LogIperfParams(ap_config.ssid, tx_rx, interval['sum'])
             if 'end' in test_result[iperf_key]:
-              # pylint:disable=unsubscriptable-object
-              self._LogIperfParams(ap_config.ssid, '%s_summary' % tx_rx,
+              self._LogIperfParams(ap_config.ssid, f'{tx_rx}_summary',
                                    test_result[iperf_key]['end']['sum_sent'])
 
           # log RSSI data

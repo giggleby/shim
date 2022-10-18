@@ -128,6 +128,7 @@ class ThermalSlopeTest(unittest.TestCase):
     fan_rpm = self.dut.fan.GetFanRPM()
     elapsed_time = time.time() - self.stage_start_time
     temperatures = self.dut.thermal.GetAllTemperatures()
+    # pylint: disable=consider-using-f-string
     self.log.info(
         u'%s (%.1f s): fan_rpm=%s, temp=%d°C, power=%.3f W' % (
             self.stage, elapsed_time,
@@ -184,8 +185,7 @@ class ThermalSlopeTest(unittest.TestCase):
       max_temperature_c = (self.args.cool_down_max_temperature_c or
                            self.args.cool_down_temperature_c)
       if self._MainTemperature() > max_temperature_c:
-        self.fail(u'Temperature never got down to %s°C' %
-                  max_temperature_c)
+        self.fail(f'Temperature never got down to {max_temperature_c}°C')
 
     self.dut.fan.SetFanRPM(self.args.target_fan_rpm)
 
@@ -249,13 +249,11 @@ class ThermalSlopeTest(unittest.TestCase):
 
     errors = []
     if self.args.min_slope is not None and slope < self.args.min_slope:
-      errors.append(
-          'Slope %.5f is less than minimum slope %.5f' % (
-              slope, self.args.min_slope))
+      errors.append(f'Slope {slope:.5f} is less than minimum slope '
+                    f'{self.args.min_slope:.5f}')
     if self.args.max_slope is not None and slope > self.args.max_slope:
-      errors.append(
-          'Slope %.5f is greater than maximum slope %.5f' % (
-              slope, self.args.max_slope))
+      errors.append(f'Slope {slope:.5f} is greater than maximum slope '
+                    f'{self.args.max_slope:.5f}')
     if errors:
       self.fail(', '.join(errors))
 

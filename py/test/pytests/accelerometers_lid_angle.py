@@ -163,4 +163,4 @@ class AccelerometersLidAngleTest(test_case.TestCase):
     logging.info('angle = %f', angle)
     if not (self.args.angle - self.args.tolerance <= angle <=
             self.args.angle + self.args.tolerance):
-      self.FailTask('The lid angle is out of range: %f' % angle)
+      self.FailTask(f'The lid angle is out of range: {angle:f}')

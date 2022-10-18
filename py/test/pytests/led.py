@@ -67,6 +67,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
 
+
 LEDColor = led_module.LED.Color
 LEDIndex = led_module.LED.CrOSIndexes
 _COLOR_LABEL = {
@@ -239,9 +240,9 @@ class LEDTest(test_case.TestCase):
 
   def _CreateChallengeTaskUI(self, test_id, led_name, color_options):
     """Create the UI of challenge task."""
+
     def _MakeButton(idx, color):
-      return '<span class="led-btn color-{color}">{idx}</span>'.format(
-          color=color.lower(), idx=idx)
+      return f'<span class="led-btn color-{color.lower()}">{idx}</span>'
 
     led_name_label = self._GetNameI18nLabel(led_name)
     description = [
@@ -284,8 +285,8 @@ class LEDTest(test_case.TestCase):
       else:
         self.ui.SetHTML('<span class="result-fail">FAIL</span>', id='result')
         self.Sleep(0.5)
-        self.FailTask('correct color for %s is %s but got %s.' %
-                      (led_name, color, color_options[pressed_key]))
+        self.FailTask(f'correct color for {led_name} is {color} but got '
+                      f'{color_options[pressed_key]}.')
     finally:
       self._TurnOffLED(led_name)
 
@@ -298,7 +299,7 @@ class LEDTest(test_case.TestCase):
           self.PassTask()
         else:
           # Fail later to detect all colors.
-          self.FailTask('Unable to detect %s LED.' % color)
+          self.FailTask(f'Unable to detect {color} LED.')
       except bft_fixture.BFTFixtureException:
         logging.exception('Failed to send command to BFT fixture')
         self.FailTask('Failed to send command to BFT fixture.')
@@ -344,7 +345,7 @@ class LEDTest(test_case.TestCase):
     while True:
       current_pd_status: Dict[int, Dict] = self._usb_c.GetPDPowerStatus()
       if expected_port != -1 and expected_port not in current_pd_status.keys():
-        self.FailTask('Unable to detect port %d.' % expected_port)
+        self.FailTask(f'Unable to detect port {int(expected_port)}.')
       plug_ports = []
       unplug_ports = []
       for port, status in current_pd_status.items():

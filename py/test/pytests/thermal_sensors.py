@@ -85,4 +85,4 @@ class BoardTempSensorsTest(unittest.TestCase):
     for name, temperature in values.items():
       self.assertTrue(
           min_temp <= temperature <= max_temp,
-          'Abnormal temperature reading on sensor %s: %s' % (name, temperature))
+          f'Abnormal temperature reading on sensor {name}: {temperature}')

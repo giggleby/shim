@@ -293,10 +293,9 @@ class PlanktonChargeBFTTest(test_case.TestCase):
       retry -= 1
 
     if retry <= 0:
-      self.fail('Plankton INA current %d mA out of range [%d, %d] '
-                'after %d retry.' %
-                (ina_current, current_min, current_max,
-                 self.args.protect_ina_retry_times))
+      self.fail(f'Plankton INA current {int(ina_current)} mA out of range '
+                f'[{int(current_min)}, {int(current_max)}] after '
+                f'{int(self.args.protect_ina_retry_times)} retry.')
 
   def TestCharging(self, current_min_threshold, testing_volt):
     """Tests charge scenario. It will monitor within args.charge_duration_secs.
@@ -315,10 +314,10 @@ class PlanktonChargeBFTTest(test_case.TestCase):
 
     if testing_volt not in self._SUPPORT_CHARGE_VOLT:
       raise type_utils.TestFailure(
-          'Specified test voltage %d is not in supported list: %r' %
-          (testing_volt, self._SUPPORT_CHARGE_VOLT))
+          f'Specified test voltage {int(testing_volt)} is not in supported '
+          f'list: {self._SUPPORT_CHARGE_VOLT!r}')
 
-    command_device = 'CHARGE_%dV' % testing_volt
+    command_device = f'CHARGE_{int(testing_volt)}V'
     logging.info('Testing %s...', command_device)
 
     self.ui.SetState(
@@ -341,8 +340,8 @@ class PlanktonChargeBFTTest(test_case.TestCase):
     # Fail if all battery current samples are below threshold.
     if not any(c > current_min_threshold for c in sampled_battery_current):
       raise type_utils.TestFailure(
-          'Battery charge current did not reach defined threshold %f mA' %
-          current_min_threshold)
+          f'Battery charge current did not reach defined threshold '
+          f'{current_min_threshold:f} mA')
     # Fail if all Plankton INA voltage samples are not within specified range.
     self.CheckINASampleVoltage(sampled_ina_voltage, testing_volt, charging=True)
     # If args.check_ina_current, fail if average of Plankton INA current
@@ -386,13 +385,13 @@ class PlanktonChargeBFTTest(test_case.TestCase):
       with stress_manager.StressManager(self._dut).Run(
           self.args.discharge_duration_secs):
         (sampled_battery_current, sampled_ina_current, sampled_ina_voltage) = (
-            self.SampleCurrentAndVoltage(
-                self.args.discharge_duration_secs, charging=False))
+            self.SampleCurrentAndVoltage(self.args.discharge_duration_secs,
+                                         charging=False))
       # Fail if all samples are over threshold.
       if not any(c < current_min_threshold for c in sampled_battery_current):
         raise type_utils.TestFailure(
-            'Battery discharge current did not reach defined threshold %f mA' %
-            current_min_threshold)
+            f'Battery discharge current did not reach defined threshold '
+            f'{current_min_threshold:f} mA')
 
     # Fail if all Plankton INA voltage samples are not within specified range.
     self.CheckINASampleVoltage(
@@ -416,9 +415,9 @@ class PlanktonChargeBFTTest(test_case.TestCase):
     # Fail if error ratios of all voltage samples are higher than tolerance
     if not any(abs(v - testing_volt * 1000.0) <= tolerance for v in ina_sample):
       raise type_utils.TestFailure(
-          'Plankton INA voltage did not meet expected %s %dV, sampled voltage '
-          '= %s' % ('charge' if charging else 'discharge',
-                    testing_volt, str(ina_sample)))
+          f"Plankton INA voltage did not meet expected "
+          f"{'charge' if charging else 'discharge'} {int(testing_volt)}V, "
+          f"sampled voltage = {str(ina_sample)}")
 
   def CheckINASampleCurrent(self, ina_sample, charging):
     """Checks if average INA current is within range on Plankton.
@@ -443,8 +442,9 @@ class PlanktonChargeBFTTest(test_case.TestCase):
     logging.info('Average Plankton INA current = %d mA', average)
     if not ina_min < average < ina_max:
       raise type_utils.TestFailure(
-          'Plankton INA %s current average %d mA did not within %d - %d' %
-          ('charge' if charging else 'discharge', average, ina_min, ina_max))
+          f"Plankton INA {'charge' if charging else 'discharge'} current "
+          f"average {int(average)} mA did not within {int(ina_min)} - "
+          f"{int(ina_max)}")
 
   def runTest(self):
     """Runs charge test.
@@ -453,12 +453,11 @@ class PlanktonChargeBFTTest(test_case.TestCase):
       TestFailure: Battery attribute error.
     """
     if not self._power.CheckBatteryPresent():
-      raise type_utils.TestFailure(
-          'Cannot detect battery. Missing battery?')
+      raise type_utils.TestFailure('Cannot detect battery. Missing battery?')
     if (self.args.check_battery_cycle and
         self._power.GetBatteryCycleCount() > self.args.battery_cycle_threshold):
-      raise type_utils.TestFailure('Battery cycle count is higher than %d' %
-                                   self.args.battery_cycle_threshold)
+      raise type_utils.TestFailure(f'Battery cycle count is higher than '
+                                   f'{int(self.args.battery_cycle_threshold)}')
 
     if self._remote_test:
       # Get remote target battery capacity and warn if almost full

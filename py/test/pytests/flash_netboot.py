@@ -57,10 +57,9 @@ from cros.factory.utils.arg_utils import Arg
 
 class FlashNetbootTest(test_case.TestCase):
   ARGS = [
-      Arg('image', str,
-          ('Path of netboot firmware image. Default to use %s' %
-           flash_netboot.DEFAULT_NETBOOT_FIRMWARE_PATH),
-          default=None),
+      Arg(
+          'image', str, f'Path of netboot firmware image. Default to use '
+          f'{flash_netboot.DEFAULT_NETBOOT_FIRMWARE_PATH}', default=None),
   ]
 
   ui_class = test_ui.ScrollableLogUI

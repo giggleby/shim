@@ -70,17 +70,17 @@ class DisplayPointTest(test_case.TestCase):
           self.ToggleDisplay()
         elif key == test_ui.ESCAPE_KEY:
           self.FailTask(
-              'DisplayPoint test failed at item %d: Mark failed by operator.' %
-              idx)
+              f'DisplayPoint test failed at item {int(idx)}: Mark failed by '
+              f'operator.')
         else:
           if not self.checked:
             continue
           input_num = int(key)
           if input_num == item.num_point:
             break
-          self.FailTask('DisplayPoint test failed at item %d:'
-                        ' Correct number: %d, Input number: %d' %
-                        (idx, item.num_point, input_num))
+          self.FailTask(
+              f'DisplayPoint test failed at item {int(idx)}: Correct number: '
+              f'{int(item.num_point)}, Input number: {int(input_num)}')
 
   def ToggleDisplay(self):
     if self.display:

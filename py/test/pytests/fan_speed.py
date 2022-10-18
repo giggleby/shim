@@ -177,8 +177,8 @@ class FanSpeedTest(test_case.TestCase):
                      i, rpm, lower_bound, upper_bound)
       else:
         error_messages.append(
-            'Observed fan %d RPM: %d out of target range: [%d, %d].' %
-            (i, rpm, lower_bound, upper_bound))
+            f'Observed fan {int(i)} RPM: {int(rpm)} out of target range: '
+            f'[{int(lower_bound)}, {int(upper_bound)}].')
     if error_messages:
       self.FailTask('\n'.join(error_messages))
 

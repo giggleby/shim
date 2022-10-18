@@ -30,7 +30,7 @@ class WebGLAquariumTest(test_case.TestCase):
     hours = int(secs / 3600)
     minutes = int((secs / 60) % 60)
     seconds = int(secs % 60)
-    return '%02d:%02d:%02d' % (hours, minutes, seconds)
+    return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
   def PeriodicCheck(self):
     time_left = self.end_time - time.time()

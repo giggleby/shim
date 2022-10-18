@@ -60,6 +60,7 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
+
 DEFAULT_LIMITS = {
     'x': [-0.5, 0.5],
     'y': [-0.5, 0.5],
@@ -129,4 +130,4 @@ class AccelerometersTest(test_case.TestCase):
       passed &= testlog.CheckNumericParam(
           name=key, value=raw_data[key], min=limit_min, max=limit_max)
     if not passed:
-      self.FailTask('Sensor value out of limit %r' % raw_data)
+      self.FailTask(f'Sensor value out of limit {raw_data!r}')

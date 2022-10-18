@@ -96,11 +96,13 @@ from cros.factory.utils.process_utils import CheckOutput
 from cros.factory.utils.process_utils import LogAndCheckCall
 from cros.factory.utils import type_utils
 
+
 _DEFAULT_TARGET_CHARGE = 78
 
 
 def FormatTime(seconds):
-  return '%d:%02d:%02d' % (seconds // 3600, (seconds // 60) % 60, seconds % 60)
+  return (f'{int(seconds // 3600)}:{int(seconds // 60 % 60):02}:'
+          f'{int(seconds % 60):02}')
 
 
 def MakeChargeTextLabel(start, current, target, elapsed, remaining):
@@ -115,9 +117,8 @@ def MakeChargeTextLabel(start, current, target, elapsed, remaining):
 
 
 def MakeSpriteHTMLTag(src, height, width):
-  return ('<div id="batteryIcon" style="background-image: url(%s);'
-          'width: %dpx; height: %dpx; margin: auto;"></div>') % (src, width,
-                                                                 height)
+  return (f'<div id="batteryIcon" style="background-image: url({src});'
+          f'width: {width:d}px; height: {height:d}px; margin: auto;"></div>')
 
 
 def _GetCutoffBatteryMinPercentage():
@@ -157,17 +158,19 @@ class ChargerTest(test_case.TestCase):
 
     if self.args.dim_backlight:
       # Get initial backlight brightness
-      self._init_backlight_pct = float(CheckOutput(
-          ['backlight_tool', '--get_brightness_percent']).strip())
-      LogAndCheckCall(['backlight_tool',
-                       '--set_brightness_percent=%f'
-                       % self.args.dim_backlight_pct])
+      self._init_backlight_pct = float(
+          CheckOutput(['backlight_tool', '--get_brightness_percent']).strip())
+      LogAndCheckCall([
+          'backlight_tool',
+          f'--set_brightness_percent={self.args.dim_backlight_pct:f}'
+      ])
 
   def tearDown(self):
     if self.args.dim_backlight:
-      LogAndCheckCall(['backlight_tool',
-                       '--set_brightness_percent=%f'
-                       % self._init_backlight_pct])
+      LogAndCheckCall([
+          'backlight_tool',
+          f'--set_brightness_percent={self._init_backlight_pct:f}'
+      ])
 
   def runTest(self):
     self.assertTrue(self._power.CheckBatteryPresent(), 'Cannot find battery.')
@@ -208,8 +211,8 @@ class ChargerTest(test_case.TestCase):
           testlog.LogParam('elapsed', elapsed)
         return
       self.ui.RunJS(
-          'document.getElementById("batteryIcon").style.backgroundPosition'
-          ' = "-%dpx 0px"' % ((elapsed % 4) * 256))
+          f'document.getElementById("batteryIcon").style.backgroundPosition = '
+          f'"-{int(elapsed % 4 * 256)}px 0px"')
       self.ui.SetInstruction(MakeChargeTextLabel(
           start_charge,
           charge,
@@ -225,5 +228,5 @@ class ChargerTest(test_case.TestCase):
 
     event_log.Log('failed_to_charge', charge=charge, target=target_charge,
                   timeout_sec=self.args.timeout_secs)
-    self.FailTask('Cannot charge battery to %d%% in %d seconds.' %
-                  (target_charge, self.args.timeout_secs))
+    self.FailTask(f'Cannot charge battery to {int(target_charge)}% in '
+                  f'{int(self.args.timeout_secs)} seconds.')

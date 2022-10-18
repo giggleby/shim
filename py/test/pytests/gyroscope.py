@@ -114,11 +114,10 @@ class Gyroscope(test_case.TestCase):
     self._WaitForDeviceRotate()
 
   def _UpdateState(self, data, is_passed, rule_text):
-    html = ['<div>%s</div>' % rule_text]
+    html = [f'<div>{rule_text}</div>']
     for k, v in data.items():
       state = ('test-status-passed' if is_passed[k] else 'test-status-failed')
-      html.append(
-          '<div class="%s">%s=%.10f</div>' % (state, test_ui.Escape(k), v))
+      html.append(f'<div class="{state}">{test_ui.Escape(k)}={v:.10f}</div>')
     self.ui.SetState(''.join(html))
 
   def _WaitForDeviceStop(self):
@@ -131,7 +130,7 @@ class Gyroscope(test_case.TestCase):
           k: abs(v) < self.args.stop_threshold
           for k, v in data.items()
       }
-      self._UpdateState(data, is_passed, '< %.10f' % self.args.stop_threshold)
+      self._UpdateState(data, is_passed, f'< {self.args.stop_threshold:.10f}')
       return all(is_passed.values())
 
     sync_utils.WaitFor(CheckSensorState, self.args.timeout_secs)
@@ -150,7 +149,7 @@ class Gyroscope(test_case.TestCase):
           for k, v in max_values.items()
       }
       self._UpdateState(max_values, is_passed,
-                        '> %.10f' % self.args.rotation_threshold)
+                        f'> {self.args.rotation_threshold:.10f}')
       return all(is_passed.values())
 
     sync_utils.WaitFor(CheckSensorMaxValues, self.args.timeout_secs)

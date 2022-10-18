@@ -115,8 +115,9 @@ class KeyboardSMTTest(test_case.TestCase):
     else:
       self.received_sequence.append(key)
       if key != self.expected_sequence[len(self.received_sequence) - 1]:
-        self.FailTask('Keycode sequence mismatches. expected: %r, actual: %r.' %
-                      (self.expected_sequence, self.received_sequence))
+        self.FailTask(
+            f'Keycode sequence mismatches. expected: '
+            f'{self.expected_sequence!r}, actual: {self.received_sequence!r}.')
       if self.received_sequence == self.expected_sequence:
         self.PassTask()
     self.UpdateUI()

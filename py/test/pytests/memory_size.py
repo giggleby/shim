@@ -109,8 +109,8 @@ class MemorySize(test_case.TestCase):
                   file_utils.ReadFile('/proc/meminfo')).group(1)) // 1024
 
     if abs(1.0 - kernel_mem_mb / mosys_mem_mb) > self.args.max_diff_ratio:
-      self.fail('Kernel and mosys report different memory sizes: mosys=%dmb, '
-                'kernel=%dmb.' % (mosys_mem_mb, kernel_mem_mb))
+      self.fail(f'Kernel and mosys report different memory sizes: '
+                f'mosys={int(mosys_mem_mb)}mb, kernel={int(kernel_mem_mb)}mb.')
       return
 
     if not self.args.device_data_key:
@@ -122,6 +122,7 @@ class MemorySize(test_case.TestCase):
 
     # The memory size info in mosys should be the same as that in device data.
     if abs(mosys_mem_gb - sf_mem_gb) > 10e-6:
-      msg = ('Memory size detected in mosys (%.1f GB) is different from the '
-             'record in device data (%.1f GB)' % (mosys_mem_gb, sf_mem_gb))
+      msg = (
+          f'Memory size detected in mosys ({mosys_mem_gb:.1f} GB) is different '
+          f'from the record in device data ({sf_mem_gb:.1f} GB)')
       self.fail(msg)

@@ -78,6 +78,7 @@ from cros.factory.test.utils import oemcrypto_utils
 from cros.factory.test.utils.url_spec import URLSpec
 from cros.factory.utils.arg_utils import Arg
 
+
 KEYBOX_VPD_KEY = 'widevine_keybox'
 
 
@@ -133,7 +134,7 @@ class ProvisionDRMKey(test_case.TestCase):
       keybox += FromWidevineDeviceData(key)
 
     if not widevine_utils.IsValidKeybox(keybox):
-      self.FailTask('CRC verification failed. keybox: %s.' % keybox)
+      self.FailTask(f'CRC verification failed. keybox: {keybox}.')
 
     return keybox
 

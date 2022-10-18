@@ -117,8 +117,8 @@ class MouseTest(test_case.TestCase):
       duration = time.time() - self.down_keycode_time[keycode]
       if duration > self.args.button_updown_secs:
         self.FailTask(
-            'The time between button up and down is %f second(s), longer '
-            'than %f second(s).' % (duration, self.args.button_updown_secs))
+            f'The time between button up and down is {duration:f} second(s), '
+            f'longer than {self.args.button_updown_secs:f} second(s).')
       del self.down_keycode_time[keycode]
       self.frontend_proxy.MarkClickButtonTested(button)
       self.click_tested[button] = True
@@ -150,9 +150,11 @@ class MouseTest(test_case.TestCase):
         direction for direction, tested in self.move_tested.items()
         if not tested]
     failed_click = [
-        button for button, tested in self.click_tested.items() if not tested]
-    self.FailTask('Test timed out. Malfunction move directions: %r. '
-                  'Malfunction buttons: %r' % (failed_move, failed_click))
+        button for button, tested in self.click_tested.items() if not tested
+    ]
+    self.FailTask(
+        f'Test timed out. Malfunction move directions: {failed_move!r}. '
+        f'Malfunction buttons: {failed_click!r}')
 
   def runTest(self):
     self.mouse_device.grab()

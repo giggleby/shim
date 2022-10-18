@@ -126,6 +126,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
+
 _RE_CROS_PAYLOAD_ERROR = re.compile(r'ERROR: .*')
 _RE_BRANCHED_IMAGE_VERSION = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*$')
 
@@ -247,20 +248,20 @@ class CheckImageVersionTest(test_case.TestCase):
     except Exception:
       self.FailTask('Error flashing netboot firmware!')
     else:
-      self.FailTask('%s. DUT is rebooting to reimage.' % self.reinstall_reason)
+      self.FailTask(f'{self.reinstall_reason}. DUT is rebooting to reimage.')
 
   def ReImage(self, component, destination, callback):
 
     def ReInstallCallBack(line):
       # Check the output of the `cros_payload`.
       if _RE_CROS_PAYLOAD_ERROR.match(line):
-        raise Exception('Installation failed! Reason: %s' % line)
+        raise Exception(f'Installation failed! Reason: {line}')
 
     updater = update_utils.Updater(
         component, spawn=lambda cmd: self.ui.PipeProcessOutputToUI(
             cmd, callback=ReInstallCallBack))
     if not updater.IsUpdateAvailable():
-      self.FailTask('%s not available on factory server.' % component)
+      self.FailTask(f'{component} not available on factory server.')
 
     self.ui.SetInstruction(_('Updating {component}....', component=component))
     updater.PerformUpdate(destination=destination, callback=callback)

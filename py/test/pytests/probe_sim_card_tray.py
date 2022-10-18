@@ -21,6 +21,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 # Constants.
 _INSERT_CHECK_PERIOD_SECS = 1
 _GPIO_PATH = '/sys/class/gpio'
@@ -74,7 +75,7 @@ class ProbeSimCardTrayTest(test_case.TestCase):
 
   def setUp(self):
     self._detection_gpio_path = os.path.join(
-        _GPIO_PATH, 'gpio%d' % self.args.tray_detection_gpio)
+        _GPIO_PATH, f'gpio{int(self.args.tray_detection_gpio)}')
 
   def runTest(self):
     self.ExportGPIO()
@@ -115,8 +116,9 @@ class ProbeSimCardTrayTest(test_case.TestCase):
     except IOError:
       logging.exception('Can not write %s into %s',
                         self.args.tray_detection_gpio, export_path)
-      raise ProbeTrayException('Can not export detection gpio %s' %
-                               self.args.tray_detection_gpio) from None
+      raise ProbeTrayException(
+          f'Can not export detection gpio {self.args.tray_detection_gpio}'
+      ) from None
 
     direction_path = os.path.join(self._detection_gpio_path, 'direction')
     try:
@@ -131,13 +133,12 @@ class ProbeSimCardTrayTest(test_case.TestCase):
     value_path = os.path.join(self._detection_gpio_path, 'value')
     lines = file_utils.ReadLines(value_path)
     if not lines:
-      raise ProbeTrayException('Can not get detection result from %s' %
-                               value_path)
+      raise ProbeTrayException(
+          f'Can not get detection result from {value_path}')
 
     ret = lines[0].strip()
     if ret not in ['0', '1']:
-      raise ProbeTrayException('Get invalid detection %s from %s' %
-                               (ret, value_path))
+      raise ProbeTrayException(f'Get invalid detection {ret} from {value_path}')
 
     if self.args.gpio_active_high:
       return _TrayState.INSERTED if ret == '1' else _TrayState.REMOVED
@@ -147,9 +148,10 @@ class ProbeSimCardTrayTest(test_case.TestCase):
     self.assertEqual(
         self.args.tray_already_present,
         self.GetDetection() == _TrayState.INSERTED,
-        ('Unexpected tray %s. Please %s SIM card tray and retest.' %
-         (('absence', 'insert')
-          if self.args.tray_already_present else ('presence', 'remove'))))
+        (f'Unexpected tray '
+         f'{"absence" if self.args.tray_already_present else "presence"}. '
+         f'Please {"insert" if self.args.tray_already_present else "remove"} '
+         f'SIM card tray and retest.'))
 
   def WaitTrayInserted(self):
     self.ui.SetState(_('Please insert the SIM card tray'))

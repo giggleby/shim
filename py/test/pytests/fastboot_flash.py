@@ -98,7 +98,7 @@ class FastbootFlash(test_case.TestCase):
       """
       data = _RE_SENDING_TIME.findall(fastboot_output)
       if not data:
-        self.fail('Incorrect fastboot output. %s' % fastboot_output)
+        self.fail(f'Incorrect fastboot output. {fastboot_output}')
 
       for size_time in data:
         # Get the size in byte.
@@ -117,7 +117,7 @@ class FastbootFlash(test_case.TestCase):
     def _FlashImage(partition, file_path):
       """Flash image to the given partition."""
       if not os.path.exists(file_path):
-        self.fail('Not able to find required image file %s' % file_path)
+        self.fail(f'Not able to find required image file {file_path}')
       self.ui.SetState(
           _('Flashing {file} to {partition}.',
             file=file_path,

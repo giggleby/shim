@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -68,6 +68,7 @@ from cros.factory.test.i18n import test_ui as i18n_test_ui
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
+
 
 _CSS_CEC = """
   #cec-title {
@@ -160,12 +161,12 @@ class ApCecController(CecController):
     self.index = index
 
   def SetUp(self):
-    self._dut.CheckCall('cec-ctl --playback -s -d %d' % self.index)
+    self._dut.CheckCall(f'cec-ctl --playback -s -d {int(self.index)}')
 
   def GetDisplayStatus(self):
     try:
       output = self._dut.CheckOutput(
-          'cec-ctl --to 0 --give-device-power-status -s -d %d' % self.index)
+          f'cec-ctl --to 0 --give-device-power-status -s -d {int(self.index)}')
     except subprocess.CalledProcessError:
       return Status.ERROR
     logging.info(output)
@@ -178,10 +179,11 @@ class ApCecController(CecController):
     return status
 
   def DisplayTurnOn(self):
-    self._dut.CheckCall('cec-ctl --to 0 --image-view-on -s -d %d' % self.index)
+    self._dut.CheckCall(
+        f'cec-ctl --to 0 --image-view-on -s -d {int(self.index)}')
 
   def DisplayTurnOff(self):
-    self._dut.CheckCall('cec-ctl --to 0 --standby -s -d %d' % self.index)
+    self._dut.CheckCall(f'cec-ctl --to 0 --standby -s -d {int(self.index)}')
 
 
 class CecTest(test_case.TestCase):
@@ -244,7 +246,7 @@ class CecTest(test_case.TestCase):
       self.cec = ApCecController(self._dut, self.args.index)
     else:
       raise ValueError(
-          'Controller type %s not supported.' % self.args.controller_type)
+          f'Controller type {self.args.controller_type} not supported.')
 
     self.cec.SetUp()
 

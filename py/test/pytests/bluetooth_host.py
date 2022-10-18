@@ -134,8 +134,8 @@ class BluetoothScanTest(unittest.TestCase):
     """Connects with the Bluetooth devices of the host station."""
 
     host_mac = self.host_device_to_pair.address
-    CONNECT_CMD = 'hcitool cc --role=m %s' % host_mac
-    DISCONNECT_CMD = 'hcitool dc %s' % host_mac
+    CONNECT_CMD = f'hcitool cc --role=m {host_mac}'
+    DISCONNECT_CMD = f'hcitool dc {host_mac}'
     CHECK_CONNECTION_CMD = 'hcitool con'
 
     self.dut.CheckCall(CONNECT_CMD)
@@ -169,7 +169,7 @@ class BluetoothScanTest(unittest.TestCase):
     #      01:02:03:04:05:07       Chromebook_4567
     SCAN_COMMAND = 'hcitool scan'
     if self.args.dut_hci_num_response is not None:
-      SCAN_COMMAND += ' --numrsp=%d' % self.args.dut_hci_num_response
+      SCAN_COMMAND += f' --numrsp={int(self.args.dut_hci_num_response)}'
     output = self.dut.CheckOutput(SCAN_COMMAND)
     lines = output.splitlines()[1:]  # Skip the first line "Scanning ...".
     return [line.split()[0].lower() for line in lines]

@@ -69,7 +69,7 @@ class SysfsBatteryTest(unittest.TestCase):
       if wearPct is None:
         msg = 'Cannot get wear percentage'
       elif wearPct > wearAllowedPct:
-        msg = 'Battery is over-worn: %d%%' % wearPct
+        msg = f'Battery is over-worn: {int(wearPct)}%'
       else:
         success = True
     else:
@@ -79,7 +79,7 @@ class SysfsBatteryTest(unittest.TestCase):
       cycleCount = power.GetBatteryCycleCount()
       if success and self.args.maximum_cycle_count >= 0:
         if cycleCount > self.args.maximum_cycle_count:
-          msg = 'Battery cycle count is too high: %d' % cycleCount
+          msg = f'Battery cycle count is too high: {int(cycleCount)}'
           success = False
 
       testlog.LogParam('battery_sysfs_info', power.GetInfoDict())

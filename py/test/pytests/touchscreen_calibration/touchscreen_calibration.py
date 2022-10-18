@@ -27,6 +27,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 # __name__ looks like "cros.factory.test.pytests.touchscreen_calibration".
 # test_name is "touchscreen_calibration"
 test_name = __name__.rsplit('.', maxsplit=1)[-1]
@@ -43,7 +44,7 @@ class Error(Exception):
 
 def _CreateXMLRPCSensorsClient(addr=('localhost', 8000)):
   """A helper function to create the xmlrpc client for sensors data."""
-  url = 'http://%s:%s' % addr
+  url = f'http://{":".join(addr)}'
   proxy = xmlrpc.client.ServerProxy(url)
   return proxy
 
@@ -96,7 +97,7 @@ class TouchscreenCalibration(test_case.TestCase):
     self._monitor_thread = None
     self.query_fixture_state_flag = False
     self._mounted_media_flag = True
-    self._local_log_dir = '/var/tmp/%s' % test_name
+    self._local_log_dir = f'/var/tmp/{test_name}'
     self._board = self._GetBoard()
     session.console.info('Get Board: %s', self._board)
     self.sensors = None
@@ -322,7 +323,7 @@ class TouchscreenCalibration(test_case.TestCase):
     if len(self.host_ip_dict) == 2:
       for interface, ip in self.host_ip_dict.items():
         if ip is None:
-          cmd = 'ifconfig %s %s' % (interface, self.direct_host_ip)
+          cmd = f'ifconfig {interface} {self.direct_host_ip}'
           if touchscreen_calibration_utils.IsSuccessful(
               touchscreen_calibration_utils.SimpleSystem(cmd)):
             session.console.info('Successfully assign direct host ip: %s',
@@ -412,10 +413,8 @@ class TouchscreenCalibration(test_case.TestCase):
   def _AttachLog(self, log_name, log_data):
     """Attachs the data by Testlog."""
     if self.args.keep_raw_logs:
-      testlog.AttachContent(
-          content=log_data,
-          name=log_name,
-          description='plain text log of %s' % log_name)
+      testlog.AttachContent(content=log_data, name=log_name,
+                            description=f'plain text log of {log_name}')
 
   def _WriteLog(self, filename, content):
     """Writes the content to the file and display the message in the log.
@@ -438,13 +437,13 @@ class TouchscreenCalibration(test_case.TestCase):
 
   def _WriteSensorDataToFile(self, logger, sn, phase, test_pass, data):
     """Writes the sensor data and the test result to a file."""
-    logger.write('%s: %s %s\n' % (phase, sn, 'Pass' if test_pass else 'Fail'))
+    logger.write(f"{phase}: {sn} {'Pass' if test_pass else 'Fail'}\n")
     for row in data:
       if isinstance(row, collections.abc.Iterable):
         logger.write(' '.join([str(val) for val in row]))
         logger.write('\n')
       else:
-        logger.write('%s\n' % str(row))
+        logger.write(f'{str(row)}\n')
     self._WriteLog(sn, logger.getvalue())
 
   def _GetTime(self):
@@ -469,9 +468,9 @@ class TouchscreenCalibration(test_case.TestCase):
     The summary file on the local host is updated and it will be attached by
     Testlog in FinishTest.
     """
-    self.summary_file = 'summary_%s.txt' % sn
+    self.summary_file = f'summary_{sn}.txt'
     if summary_line.strip():
-      summary_line += '  (time: %s)\n' % self._GetTime()
+      summary_line += f'  (time: {self._GetTime()})\n'
     self._WriteLog(self.summary_file, summary_line)
 
   def _ReadAndVerifyTRxData(self, sn, phase, category, verify_method):
@@ -496,11 +495,11 @@ class TouchscreenCalibration(test_case.TestCase):
     testlog.LogParam('sensor_data', data)
     result = 'pass' if self.test_pass else 'fail'
     self._AttachLog('touchscreen_calibration.log', str(data))
-    summary_line = '%s: %s (%s)' % (sn, result, phase)
+    summary_line = f'{sn}: {result} ({phase})'
     self._UpdateSummaryFile(sn, summary_line)
 
     if not self.test_pass:
-      self.FailTask('%s failed' % phase)
+      self.FailTask(f'{phase} failed')
 
   def _ReadAndVerifySensorData(self, sn, phase, category, verify_method):
     # Get data based on the category, i.e., REFS or DELTAS.
@@ -528,14 +527,14 @@ class TouchscreenCalibration(test_case.TestCase):
     testlog.LogParam('sensor_data', data)
     result = 'pass' if self.test_pass else 'fail'
     self._AttachLog('touchscreen_calibration.log', str(data))
-    summary_line = ('%s: %s (%s) [min: %d, max: %d]' %
-                    (sn, result, phase, min_value, max_value))
+    summary_line = (f'{sn}: {result} ({phase}) [min: {int(min_value)}, max: '
+                    f'{int(max_value)}]')
     self._UpdateSummaryFile(sn, summary_line)
     if phase == 'PHASE_DELTAS_TOUCHED':
       self._UpdateSummaryFile(sn, '\n')
 
     if not self.test_pass:
-      msg = '[min, max] of phase %s: [%d, %d]' % (phase, min_value, max_value)
+      msg = f'[min, max] of phase {phase}: [{int(min_value)}, {int(max_value)}]'
       self.FailTask(msg)
 
   def _FlashFirmware(self, sn, phase):
@@ -544,29 +543,28 @@ class TouchscreenCalibration(test_case.TestCase):
     test_pass = self.sensors.FlashFirmware(self.args.fw_version,
                                            self.args.fw_config)
     result = 'pass' if test_pass else 'fail'
-    summary_line = ('%s: %s (%s) flashed fw %s:%s' %
-                    (sn, result, phase, self.args.fw_version,
-                     self.args.fw_config))
+    summary_line = (f'{sn}: {result} ({phase}) flashed fw '
+                    f'{self.args.fw_version}:{self.args.fw_config}')
     self._UpdateSummaryFile(sn, summary_line)
     if test_pass:
       session.console.info('Have flashed %s to %s', fw_file, sn)
     else:
-      self.FailTask('Fail to flash firmware: %s' % fw_file)
+      self.FailTask(f'Fail to flash firmware: {fw_file}')
 
   def _CheckFirmwareVersion(self, sn, phase):
     """Check whether the firmware version and the config are correct."""
     fw_version, fw_config = self.sensors.ReadFirmwareVersion()
     session.console.info('firmware version  %s:%s', fw_version, fw_config)
-    test_pass = (fw_version == self.args.fw_version and
-                 fw_config == self.args.fw_config)
+    test_pass = (
+        fw_version == self.args.fw_version and fw_config == self.args.fw_config)
     result = 'pass' if test_pass else 'fail'
-    summary_line = ('%s: %s (%s) detected base fw %s:%s' %
-                    (sn, result, phase, fw_version, fw_config))
+    summary_line = (
+        f'{sn}: {result} ({phase}) detected base fw {fw_version}:{fw_config}')
     self._UpdateSummaryFile(sn, summary_line)
     if not test_pass:
-      self.FailTask(
-          'Firmware version failed. Expected %s:%s, but got %s:%s' %
-          (self.args.fw_version, self.args.fw_config, fw_version, fw_config))
+      self.FailTask(f'Firmware version failed. Expected '
+                    f'{self.args.fw_version}:{self.args.fw_config}, but got '
+                    f'{fw_version}:{fw_config}')
 
   def _DoTest(self, sn, phase):
     """The actual calibration method.
@@ -734,15 +732,13 @@ class TouchscreenCalibration(test_case.TestCase):
     """Checks the existence of the mounted media."""
     try:
       # Write the test launch time.
-      self._WriteLog('touchscreen_calibration_launch.txt',
-                     '%s\n' % time.ctime())
+      self._WriteLog('touchscreen_calibration_launch.txt', f'{time.ctime()}\n')
     except Exception:
       self._mounted_media_flag = False
       msg = 'Mounted media does not exist. Use %s instead.'
       session.console.warn(msg, self._local_log_dir)
       self._MakeLocalLogDir()
-      self._WriteLog('touchscreen_calibration_launch.txt',
-                     '%s\n' % time.ctime())
+      self._WriteLog('touchscreen_calibration_launch.txt', f'{time.ctime()}\n')
 
   def QueryFixtureState(self):
     """Query the fixture internal state including all sensor values."""

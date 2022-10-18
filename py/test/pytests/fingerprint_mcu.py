@@ -76,6 +76,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
 
+
 # use the fingerprint image processing library if available
 sys.path.extend(['/usr/local/opt/fpc', '/opt/fpc'])
 try:
@@ -270,26 +271,22 @@ class FingerprintTest(test_case.TestCase):
     logging.info('%s dead pixels in detect zones:\t%d',
                  full_name, dead_detect_count)
 
-    testlog.UpdateParam(
-        name='dead_pixels_%s' % short_name,
-        description='Number of dead pixels',
-        value_unit='pixels')
-    if not testlog.CheckNumericParam(
-        name='dead_pixels_%s' % short_name,
-        value=dead_count,
-        max=self.args.max_dead_pixels):
+    testlog.UpdateParam(name=f'dead_pixels_{short_name}',
+                        description='Number of dead pixels',
+                        value_unit='pixels')
+    if not testlog.CheckNumericParam(name=f'dead_pixels_{short_name}',
+                                     value=dead_count,
+                                     max=self.args.max_dead_pixels):
       raise type_utils.TestFailure('Too many dead pixels')
-    testlog.UpdateParam(
-        name='dead_detect_pixels_%s' % short_name,
-        description='Dead pixels in detect zone',
-        value_unit='pixels')
-    if not testlog.CheckNumericParam(
-        name='dead_detect_pixels_%s' % short_name,
-        value=dead_detect_count,
-        max=self.args.max_dead_detect_pixels):
+    testlog.UpdateParam(name=f'dead_detect_pixels_{short_name}',
+                        description='Dead pixels in detect zone',
+                        value_unit='pixels')
+    if not testlog.CheckNumericParam(name=f'dead_detect_pixels_{short_name}',
+                                     value=dead_detect_count,
+                                     max=self.args.max_dead_detect_pixels):
       raise type_utils.TestFailure('Too many dead pixels in detect zone')
     # Check specified pixel range constraints
-    t1 = "%s_type1" % short_name
+    t1 = f"{short_name}_type1"
     testlog.UpdateParam(
         name=t1,
         description='Median Type-1 pixel value',
@@ -300,7 +297,7 @@ class FingerprintTest(test_case.TestCase):
         min=self.args.pixel_median[t1][0],
         max=self.args.pixel_median[t1][1]):
       raise type_utils.TestFailure('Out of range Type-1 pixels')
-    t2 = "%s_type2" % short_name
+    t2 = f"{short_name}_type2"
     testlog.UpdateParam(
         name=t2,
         description='Median Type-2 pixel value',
@@ -399,7 +396,7 @@ class FingerprintTest(test_case.TestCase):
     self._ui_table.SetContent(0, self._ui_table.cols, filename_prefix)
     self._ui_table.SetContent(
         1, self._ui_table.cols,
-        ''.join('<img src="%s">' % os.path.join(_IMAGE_DIR, filename)
+        ''.join(f'<img src="{os.path.join(_IMAGE_DIR, filename)}">'
                 for filename in captures))
     self._ui_table.cols += 1
     self.ui.SetState(
@@ -415,7 +412,7 @@ class FingerprintTest(test_case.TestCase):
       self.FpmcuTryWaitEvent(self.EC_MKBP_EVENT_FINGERPRINT,
                              str(self.args.timeout_secs * 1000))
       img = self.FpmcuGetFpframe('raw', encoding=None)
-      self._ShowFingerprint(img, 'capture%d' % (iteration + 1))
+      self._ShowFingerprint(img, f'capture{int(iteration + 1)}')
 
     def _FailTask(unused_event):
       self._dut.CheckCall([
@@ -468,7 +465,7 @@ class FingerprintTest(test_case.TestCase):
         rc, snr = libfputils.mqt(img)
         logging.info('MQT SNR %f (err:%d)', snr, rc)
         if rc:
-          raise type_utils.TestFailure('MQT failed with error %d' % (rc))
+          raise type_utils.TestFailure(f'MQT failed with error {int(rc)}')
         testlog.UpdateParam(
             name='mqt_snr', description='Image signal-to-noise ratio')
         if not testlog.CheckNumericParam(

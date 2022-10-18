@@ -73,6 +73,7 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
+
 # File that suppresses reboot if present (e.g., for development).
 NO_REBOOT_FILE = '/var/log/factory.noreboot'
 
@@ -99,7 +100,7 @@ class Checkpoint:
     return self.func()
 
   def __str__(self):
-    return '<Checkpoint: %s>' % self.name
+    return f'<Checkpoint: {self.name}>'
 
   def __repr__(self):
     return self.__str__()
@@ -189,14 +190,13 @@ class ShutdownTest(test_case.TestCase):
   def Shutdown(self):
     """Commences shutdown process by invoking Goofy's shutdown method."""
     if os.path.exists(NO_REBOOT_FILE):
-      raise ShutdownError(
-          'Skipped shutdown since %s is present' % NO_REBOOT_FILE)
+      raise ShutdownError(f'Skipped shutdown since {NO_REBOOT_FILE} is present')
 
     expected_device_number = self.args.check_audio_devices
     if expected_device_number:
       total_device_number = audio_utils.GetTotalNumberOfAudioDevices()
-      message = 'Expect %d audio devices, found %d' % (expected_device_number,
-                                                       total_device_number)
+      message = (f'Expect {int(expected_device_number)} audio devices, found '
+                 f'{int(total_device_number)}')
       logging.info(message)
       if expected_device_number != total_device_number:
         raise ShutdownError(message)
@@ -213,7 +213,7 @@ class ShutdownTest(test_case.TestCase):
     except type_utils.TestFailure:
       return
     self.FailTask(
-        'System did not shutdown in %s seconds.' % self.args.wait_shutdown_secs)
+        f'System did not shutdown in {self.args.wait_shutdown_secs} seconds.')
 
   def CheckShutdownFailureTagFile(self):
     """Checks if there is any shutdown failure tag file.
@@ -245,7 +245,7 @@ class ShutdownTest(test_case.TestCase):
       for k, v in kw.items():
         testlog.LogParam(k, v)
       logging.info('Rebooted: status=%s, %s', status,
-                   (('error_msg=%s' % error_msg) if error_msg else None))
+                   (f'error_msg={error_msg}' if error_msg else None))
       if status == state.TestState.FAILED:
         raise ShutdownError(error_msg)
 
@@ -265,10 +265,10 @@ class ShutdownTest(test_case.TestCase):
       # no battery resets time and thus triggers the 'time moving backward'
       # error. Since this is an expected result, we do this check for fullreboot
       # and direct_ec_reboot only when battery is present.
-      LogAndEndTest(status=state.TestState.FAILED,
-                    error_msg=('Time moved backward during reboot '
-                               '(before=%s, after=%s)' %
-                               (last_shutdown_time, now)))
+      LogAndEndTest(
+          status=state.TestState.FAILED, error_msg=(
+              f'Time moved backward during reboot (before={last_shutdown_time},'
+              f' after={now})'))
     elif (self.args.operation == SHUTDOWN_TYPES.reboot and
           self.args.max_reboot_time_secs and
           (now - last_shutdown_time > self.args.max_reboot_time_secs)):
@@ -277,20 +277,18 @@ class ShutdownTest(test_case.TestCase):
       # very long time, and even unplugged with battery backup,
       # thus hosing the clock.)
       LogAndEndTest(
-          status=state.TestState.FAILED,
-          error_msg=('More than %d s elapsed during reboot '
-                     '(%.03f s, from %s to %s)' % (
-                         self.args.max_reboot_time_secs,
-                         now - last_shutdown_time,
-                         time_utils.TimeString(last_shutdown_time),
-                         time_utils.TimeString(now))),
+          status=state.TestState.FAILED, error_msg=(
+              f'More than {self.args.max_reboot_time_secs:d} s elapsed during '
+              f'reboot ({now - last_shutdown_time:03f} s, from '
+              f'{time_utils.TimeString(last_shutdown_time)} to '
+              f'{time_utils.TimeString(now)})'),
           duration=(now - last_shutdown_time))
       logging.info(self.dut.GetStartupMessages())
     elif self.test_state.shutdown_count > self.test_state.iterations:
       # Shut down too many times
-      LogAndEndTest(status=state.TestState.FAILED,
-                    error_msg=('Too many shutdowns (count=%s)' %
-                               self.test_state.shutdown_count))
+      LogAndEndTest(
+          status=state.TestState.FAILED, error_msg=(
+              f'Too many shutdowns (count={self.test_state.shutdown_count})'))
       logging.info(self.dut.GetStartupMessages())
 
     elif self.args.check_tag_file and self.CheckShutdownFailureTagFile():
@@ -343,13 +341,14 @@ class ShutdownTest(test_case.TestCase):
     while checkpoints:
       self.remaining_time = end_time - time.time()
       if self.remaining_time < 0:
-        raise ShutdownError('%s are not completed in %s secs.' %
-                            (checkpoints, self.args.wait_shutdown_secs))
+        raise ShutdownError(
+            f'{checkpoints} are not completed in {self.args.wait_shutdown_secs}'
+            f' secs.')
       self.ui.SetState(
-          _('Remote DUT is performing {operation}, '
-            'timeout in {delay} seconds.',
-            operation=self.operation_label,
-            delay=self.remaining_time))
+          _(
+              'Remote DUT is performing {operation}, '
+              'timeout in {delay} seconds.', operation=self.operation_label,
+              delay=self.remaining_time))
       logging.debug('Checking %s...', checkpoints[0])
       if checkpoints[0]():
         logging.info('%s is passed.', checkpoints[0])
@@ -396,20 +395,20 @@ class ShutdownTest(test_case.TestCase):
     for idx in kernel_partitions:
       if not pm.IsChromeOsKernelPartition(idx):
         raise ShutdownError(
-            'Partition %d should be a Chrome OS kernel partition' % idx)
+            f'Partition {int(idx)} should be a Chrome OS kernel partition')
       if not pm.IsChromeOsRootFsPartition(idx + 1):
         raise ShutdownError(
-            'Partition %d should be a Chrome OS rootfs partition' % (idx + 1))
+            f'Partition {int(idx + 1)} should be a Chrome OS rootfs partition')
 
     active_partition = self._GetActiveKernelPartition()
     if active_partition not in kernel_partitions:
       raise ShutdownError(
-          'Active partition %d should be one of %r' % (
-              active_partition, kernel_partitions))
+          f'Active partition {int(active_partition)} should be one of '
+          f'{kernel_partitions!r}')
 
     if not pm.GetAttributeSuccess(active_partition):
       raise ShutdownError(
-          'Active partition %d should be marked success.' % active_partition)
+          f'Active partition {int(active_partition)} should be marked success.')
 
     active_partition_priority = pm.GetAttributePriority(active_partition)
     for idx in kernel_partitions:
@@ -418,9 +417,10 @@ class ShutdownTest(test_case.TestCase):
       idx_priority = pm.GetAttributePriority(idx)
       if idx_priority >= active_partition_priority:
         raise ShutdownError(
-            'Active kernel partition %d is with priority %d, which should not '
-            'be lower (or equal) to other kernel partition %d (priority=%d)' %
-            (active_partition, active_partition_priority, idx, idx_priority))
+            f'Active kernel partition {active_partition:d} is with priority '
+            f'{active_partition_priority:d}, which should not be lower '
+            f'(or equal) to other kernel partition {idx:d} (priority='
+            f'{idx_priority:d}')
 
   def runTest(self):
     if self.dut.link.IsLocal():

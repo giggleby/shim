@@ -76,6 +76,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 _LOOPBACK_TEST_PATH = '/sys/kernel/debug/thunderbolt'
 _DEFAULT_CONTROLLER_PATTERNS = ('0-1.*', '0-3.*', '1-1.*', '1-3.*')
 _RE_ADP_DOMAIN = re.compile(r'^.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+$')
@@ -238,7 +239,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       if self._muxinfo != outputs:
         logging.info('%s %r', fail_tag, outputs)
         self.ui.SetState(
-            'Port %d<br>%s %r' % (self._usbpd_port, fail_tag, outputs))
+            f'Port {int(self._usbpd_port)}<br>{fail_tag} {outputs!r}')
         self._muxinfo = outputs
       if self._usbpd_polarity:
         if outputs['POLARITY'] != self._usbpd_polarity:
@@ -398,11 +399,11 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       server.Ping()
       server.UploadCSVEntry(self.LOG_GROUP_NAME, csv_entries)
     except server_proxy.Fault:
-      messages = 'Server fault %s' % server_proxy.GetServerURL()
+      messages = f'Server fault {server_proxy.GetServerURL()}'
       logging.exception(messages)
       self._errors.append(messages)
     except Exception:
-      messages = 'Unable to sync with server %s' % server_proxy.GetServerURL()
+      messages = f'Unable to sync with server {server_proxy.GetServerURL()}'
       logging.exception(messages)
       self._errors.append(messages)
 
@@ -494,9 +495,9 @@ class ThunderboltLoopbackTest(test_case.TestCase):
     if result == 'success':
       return
     if result in ('fail', 'failed', 'not run'):
-      self._errors.append('result: %s' % result)
+      self._errors.append(f'result: {result}')
     else:
-      self._errors.append('Unknown result: %r' % result)
+      self._errors.append(f'Unknown result: {result!r}')
 
   def runTest(self):
     self._WaitMuxInfoBecomingTBT()

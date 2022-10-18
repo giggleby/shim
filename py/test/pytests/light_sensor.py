@@ -97,6 +97,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
+
 _DEFAULT_SUBTEST_LIST = ['Light sensor dark',
                          'Light sensor exact',
                          'Light sensor light']
@@ -157,14 +158,12 @@ class iio_generic:
         filtered_matches = matches
       if not filtered_matches:
         raise ValueError(
-            'Cannot find any light sensor from %r. '
-            'matches: %r, filtered_matches: %r'
-            % (device_path, matches, filtered_matches))
+            f'Cannot find any light sensor from {device_path!r}. matches: '
+            f'{matches!r}, filtered_matches: {filtered_matches!r}')
       if len(filtered_matches) > 1:
         raise ValueError(
-            'More than one light sensor found from %r. '
-            'matches: %r, filtered_matches: %r'
-            % (device_path, matches, filtered_matches))
+            f'More than one light sensor found from {device_path!r}. matches: '
+            f'{matches!r}, filtered_matches: {filtered_matches!r}')
       device_path, device_name = list(filtered_matches.items())[0]
     else:
       try:
@@ -174,8 +173,8 @@ class iio_generic:
       if device_name is not None:
         if device_name != name:
           raise ValueError(
-              'The name of %s is %s but configure as %s'
-              % (device_path, name, device_name))
+              f'The name of {device_path} is {name} but configure as '
+              f'{device_name}')
       else:
         device_name = name
 
@@ -195,9 +194,9 @@ class iio_generic:
 
     if range_value is not None:
       if range_value not in (1000, 4000, 16000, 64000):
-        raise ValueError('Range value is invalid: %d' % range_value)
+        raise ValueError(f'Range value is invalid: {int(range_value)}')
 
-      self._dut.WriteFile(self._range_setting, '%d\n' % range_value)
+      self._dut.WriteFile(self._range_setting, f'{int(range_value)}\n')
 
     ambient = self.Read('mean', delay=0, samples=10)
     logging.info('ambient light sensor = %d', ambient)
@@ -207,7 +206,7 @@ class iio_generic:
     if self._init_cmd:
       process_utils.Spawn(self._init_cmd, check_call=True)
     if not os.path.isfile(self._rd):
-      raise ValueError('Cannot create %s' % self._rd)
+      raise ValueError(f'Cannot create {self._rd}')
     val = self.Read('first', samples=1)
     if val <= self._min or val >= self._max:
       raise ValueError('Failed initial read')
@@ -266,7 +265,7 @@ class iio_generic:
       return buffers
     if param == 'first':
       return buffers[0]
-    raise ValueError('Illegal value %s for type' % type)
+    raise ValueError(f'Illegal value {type} for type')
 
 
 class LightSensorTest(test_case.TestCase):
@@ -315,16 +314,13 @@ class LightSensorTest(test_case.TestCase):
 
     for test_idx, name in enumerate(self._subtest_list):
       instruction = self._subtest_instruction[name]
-      desc = '%s (%s)' % (
-          name, self.GetConfigDescription(self._subtest_cfg[name]))
+      desc = f'{name} ({self.GetConfigDescription(self._subtest_cfg[name])})'
       html = [
-          '<div class="task">',
-          '<div id="title{idx}">'.format(idx=test_idx), instruction, '</div>'
-          '<div class="desc-row">',
-          '<div id="desc{idx}" class="desc">'.format(idx=test_idx),
-          test_ui.Escape(desc), '</div>'
-          '<div id="result{idx}" class="result">UNTESTED</div>'.format(
-              idx=test_idx),
+          '<div class="task">', f'<div id="title{test_idx}">', instruction,
+          '</div>'
+          '<div class="desc-row">', f'<div id="desc{test_idx}" class="desc">',
+          test_ui.Escape(desc),
+          f'</div><div id="result{test_idx}" class="result">UNTESTED</div>',
           '</div>', '</div>'
       ]
       self.ui.SetHTML(html, id='tasks', append=True)
@@ -338,11 +334,11 @@ class LightSensorTest(test_case.TestCase):
 
   def GetConfigDescription(self, cfg):
     if 'above' in cfg:
-      return 'Input > %d' % cfg['above']
+      return f"Input > {int(cfg['above'])}"
     if 'below' in cfg:
-      return 'Input < %d' % cfg['below']
+      return f"Input < {int(cfg['below'])}"
     if 'between' in cfg:
-      return '%d < Input < %d' % tuple(cfg['between'])
+      return f"{cfg['between'][0]} < Input < {cfg['between'][1]}"
     raise ValueError('Unknown type in subtest configuration')
 
   def tearDown(self):
@@ -358,13 +354,13 @@ class LightSensorTest(test_case.TestCase):
         self._timeout_per_subtest * len(self._subtest_list))
 
     for idx, name in enumerate(self._subtest_list):
-      self.ui.SetHTML('ACTIVE', id='result%d' % idx)
+      self.ui.SetHTML('ACTIVE', id=f'result{int(idx)}')
       current_iter_remained = self._iter_req_per_subtest
       cumulative_val = 0
       start_time = time.time()
       while True:
         val = self._als.Read('mean', samples=5, delay=0)
-        self.ui.SetHTML('Input: %d' % val, id='input')
+        self.ui.SetHTML(f'Input: {int(val)}', id='input')
 
         cfg = self._subtest_cfg[name]
         passed = False
@@ -394,7 +390,7 @@ class LightSensorTest(test_case.TestCase):
           cumulative_val += val
           current_iter_remained -= 1
           if not current_iter_remained:
-            self.ui.SetHTML('PASSED', id='result%d' % idx)
+            self.ui.SetHTML('PASSED', id=f'result{int(idx)}')
             mean_val = cumulative_val // self._iter_req_per_subtest
             logging.info('Passed subtest "%s" with mean value %d.', name,
                          mean_val)

@@ -19,6 +19,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
+
 ANCHOR_FOR_LOW_BAND_CALIBRATION_DATA = 'calPierData2G'
 ANCHOR_FOR_HIGH_BAND_CALIBRATION_DATA = 'calPierData5G'
 EEP_POWER_PATH = '/sys/kernel/debug/ieee80211/phy*/ath9k/dump_eep_power'
@@ -140,6 +141,5 @@ class CheckWifiCalibrationTest(unittest.TestCase):
       failed_flag = True
 
     if failed_flag:
-      self.fail(
-          "Calibration data doesn't meet requirement. 2.4G = %r, 5G = %r." %
-          (low_band_table, high_band_table))
+      self.fail(f"Calibration data doesn't meet requirement. 2.4G = "
+                f"{low_band_table!r}, 5G = {high_band_table!r}.")

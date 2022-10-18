@@ -88,7 +88,7 @@ class TouchpadMonitor(touch_monitor.MultiTouchMonitor):
       self.OnMove(slot_id)
     elif not self.test.already_alerted:
       self.test.already_alerted = True
-      msg = 'number_fingers = %d' % state.num_fingers
+      msg = f'number_fingers = {int(state.num_fingers)}'
       logging.error(msg)
       session.console.error(msg)
       self.test.ui.Alert(_(
@@ -296,25 +296,26 @@ class TouchpadTest(test_case.TestCase):
     fail_items = []
 
     for x, row in enumerate(self.touch_tested):
-      fail_items.extend('touch-x-%d-y-%d' % (x, y)
-                        for y, tested in enumerate(row) if not tested)
+      fail_items.extend(
+          f'touch-x-{int(x)}-y-{int(y)}' for y, tested in enumerate(row)
+          if not tested)
 
-    fail_items.extend('scroll-y-%d' % y
-                      for y, tested in enumerate(self.scroll_tested)
-                      if not tested)
+    fail_items.extend(
+        f'scroll-y-{int(y)}' for y, tested in enumerate(self.scroll_tested)
+        if not tested)
 
-    fail_items.extend('quadrant-%d' % i
-                      for i, c in enumerate(self.quadrant_count[1:], 1)
-                      if c < self.args.number_to_quadrant)
+    fail_items.extend(
+        f'quadrant-{int(i)}' for i, c in enumerate(self.quadrant_count[1:], 1)
+        if c < self.args.number_to_quadrant)
 
     if self.single_click_count < self.args.number_to_click:
-      fail_items.append('left click count: %d' % self.single_click_count)
+      fail_items.append(f'left click count: {int(self.single_click_count)}')
 
     if self.double_click_count < self.args.number_to_click:
-      fail_items.append('right click count: %d' % self.double_click_count)
+      fail_items.append(f'right click count: {int(self.double_click_count)}')
 
     self.FailTask(
-        'Touchpad test failed. Malfunction sectors: %s' % ', '.join(fail_items))
+        f"Touchpad test failed. Malfunction sectors: {', '.join(fail_items)}")
 
   def runTest(self):
     """Start the test if the touchpad is clear.

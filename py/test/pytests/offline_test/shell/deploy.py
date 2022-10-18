@@ -201,8 +201,8 @@ class ScriptBuilder:
       if not disk_thread_dir:
         disk_thread_dir = self.dut.storage.GetDataRoot()
       self.dut.CheckCall(['mkdir', '-p', disk_thread_dir])
-      disk_thread = ('-f "{0}/sat.disk_thread.a" '
-                     '-f "{0}/sat.disk_thread.b"').format(disk_thread_dir)
+      disk_thread = (f'-f "{disk_thread_dir[0]}/sat.disk_thread.a" '
+                     f'-f "{disk_thread_dir[0]}/sat.disk_thread.b"')
     else:
       disk_thread = ''
 
@@ -254,17 +254,17 @@ class DeployShellOfflineTest(unittest.TestCase):
       Arg('test_spec', list,
           'Please refer to _`py/test/pytests/offline_test/shell/README`.'),
       Arg('next_action', NEXT_ACTION,
-          ('What to do after tests are deployed (One of %s)' % NEXT_ACTION)),
+          f'What to do after tests are deployed (One of {NEXT_ACTION})'),
       Arg('start_up_service', bool, 'Do you want to run the tests on start up?',
           default=True),
-      Arg('callback_script_path', str,
+      Arg(
+          'callback_script_path', str,
           'Path to a shell script which contains the callback functions. See '
           'callback_example.sh for example. That file is also the default '
           'implementation. The path should be absolute path or relative to '
           'FACTORY_PATH.',
           default='py/test/pytests/offline_test/shell/callback_example.sh'),
-      Arg('check_reboot', bool,
-          'detect unexpected reboot or not',
+      Arg('check_reboot', bool, 'detect unexpected reboot or not',
           default=True),
       # TODO(shunhsingou): Remove this argument and write individual rules for
       # each test.
@@ -274,7 +274,8 @@ class DeployShellOfflineTest(unittest.TestCase):
       # delay.
       Arg('delay_after_reboot_secs', int,
           'Delay given seconds after each reboot before starting tests.',
-          default=0)]
+          default=0)
+  ]
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
@@ -293,13 +294,13 @@ class DeployShellOfflineTest(unittest.TestCase):
 
     # save current time to a file, see check_time() in main.sh
     file_path = self.dut.path.join(self.data_root, 'last_check_time')
-    self.dut.CheckCall('date "+%s\n%m%d%H%M%Y.%S" >"{0}"'.format(file_path))
+    self.dut.CheckCall(f'date "+%s\n%m%d%H%M%Y.%S" >"{file_path}"')
 
   def runTest(self):
     # make sure script_root is writable
     if not self.dut.storage.Remount(self.script_root):
       raise common.OfflineTestError(
-          'failed to make dut:%s writable' % self.script_root)
+          f'failed to make dut:{self.script_root} writable')
     # create script_root
     self.dut.Call(['rm', '-rf', self.script_root])
     self.dut.CheckCall(['mkdir', '-p', self.script_root])
@@ -307,7 +308,7 @@ class DeployShellOfflineTest(unittest.TestCase):
     # make sure data_root is writable
     if not self.dut.storage.Remount(self.data_root):
       raise common.OfflineTestError(
-          'failed to make dut:%s writable' % self.data_root)
+          f'failed to make dut:{self.data_root} writable')
     # create data_root
     self.dut.Call(['rm', '-rf', self.data_root])
     self.dut.CheckCall(['mkdir', '-p', self.data_root])
@@ -367,10 +368,13 @@ class DeployShellOfflineTest(unittest.TestCase):
       self.dut.Call(['reboot'])
     elif self.args.next_action == self.NEXT_ACTION.START_TEST:
       # Starts the scripts in background and deteches it from the terminal.
-      self.dut.Popen(['sh', '-c', 'nohup %s >%s &' % (
-          starter_path, self.dut.path.join(self.data_root, 'nohup.out'))])
+      self.dut.Popen([
+          'sh', '-c', f"nohup {starter_path} >"
+          f"{self.dut.path.join(self.data_root, 'nohup.out')} &"
+      ])
     elif self.args.next_action == self.NEXT_ACTION.NOP:
       pass
     else:
-      raise ValueError('`next_action` must be one of %s (it is %s)' %
-                       (self.NEXT_ACTION, self.args.next_action))
+      raise ValueError(
+          f'`next_action` must be one of {self.NEXT_ACTION} (it is '
+          f'{self.args.next_action})')

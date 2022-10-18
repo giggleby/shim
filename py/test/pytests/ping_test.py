@@ -104,8 +104,8 @@ class PingTest(test_case.TestCase):
     success_percentage = (success_count / total_count) * 100
     if success_percentage < self.args.ping_success_percent:
       self.FailTask(
-          'Failed to meet ping success percentage: %.2f%% (expected: %d%%).' % (
-              success_percentage, self.args.ping_success_percent))
+          f'Failed to meet ping success percentage: {success_percentage:.2f}% '
+          f'(expected: {int(self.args.ping_success_percent)}%).')
     logging.info('%s%.2f%% packets received.', title, success_percentage)
 
   def runTest(self):
@@ -121,11 +121,11 @@ class PingTest(test_case.TestCase):
     total_success_count = 0
     total_count = 0
 
-    ping_command = 'ping %s -c 1' % self.args.host
+    ping_command = f'ping {self.args.host} -c 1'
     if self.args.interface:
-      ping_command += ' -I %s' % self.args.interface
+      ping_command += f' -I {self.args.interface}'
     if self.args.packet_size:
-      ping_command += ' -s %d' % self.args.packet_size
+      ping_command += f' -s {int(self.args.packet_size)}'
 
     end_time = time_utils.MonotonicTime() + self.args.duration_secs
     while time_utils.MonotonicTime() < end_time:

@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Test display functionality with interactive mode.
@@ -137,7 +137,7 @@ class DisplayInteractiveTest(test_case.TestCase):
   def ShowImage(self, image):
     """Shows the local image."""
     if not os.path.exists(os.path.join(self.static_dir, image + '.png')):
-      self.FailTest('Image file %s.png does not exist.' % image)
+      self.FailTest(f'Image file {image}.png does not exist.')
 
     logging.info('Showing the local image: %s', image)
     self.frontend_proxy.ShowImage(image)

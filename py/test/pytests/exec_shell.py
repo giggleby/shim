@@ -175,21 +175,19 @@ class ExecShell(test_case.TestCase):
       time.sleep(interval_sec)
 
   def SaveAttachments(self, name, path):
-    assert self._dut.path.exists(path), 'Log path does not exist: %s' % path
+    assert self._dut.path.exists(path), f'Log path does not exist: {path}'
     with self._dut.temp.TempFile() as temp_path:
       dirname = path
       filename = '.'
       if self._dut.path.isfile(path):
         dirname = self._dut.path.dirname(path)
         filename = self._dut.path.basename(path)
-      command = 'tar -zcf %s -C %s %s' % (temp_path, dirname, filename)
+      command = f'tar -zcf {temp_path} -C {dirname} {filename}'
       self._dut.CheckCall(command)
       # TODO(hungte) Use link.pull if link is not local.
       assert self._dut.link.IsLocal(), 'Remote DUT not supported.'
-      testlog.AttachFile(
-          path=temp_path,
-          name=('%s.tar.gz' % name),
-          mime_type='application/gzip')
+      testlog.AttachFile(path=temp_path, name=f'{name}.tar.gz',
+                         mime_type='application/gzip')
 
   def RunCommand(self, cwd, command):
     self.ui.SetInstruction(self._DisplayedCommand(command))
@@ -252,7 +250,7 @@ class ExecShell(test_case.TestCase):
     log_dir = os.path.join(paths.DATA_TESTS_DIR, session.GetCurrentTestPath())
     for source_path in source_codes:
       file_name, extension = os.path.splitext(os.path.basename(source_path))
-      hash_file_name = '%s_%s' % (file_name, file_utils.SHA1InHex(source_path))
+      hash_file_name = f'{file_name}_{file_utils.SHA1InHex(source_path)}'
       log_path = os.path.join(log_dir, hash_file_name + extension)
       file_utils.CopyFileSkipBytes(source_path, log_path, 0)
 
@@ -283,7 +281,7 @@ class ExecShell(test_case.TestCase):
 
       result = self.RunCommand(cwd, command)
       if result != 0:
-        testlog.AddFailure(code=result, details='failed command: %r' % command)
+        testlog.AddFailure(code=result, details=f'failed command: {command!r}')
         break
       self.ui.AdvanceProgress()
 
@@ -297,4 +295,4 @@ class ExecShell(test_case.TestCase):
     if result != 0:
       # More chance so user can see the error.
       self.Sleep(3)
-      self.FailTask('Shell command failed (%d): %s' % (result, command))
+      self.FailTask(f'Shell command failed ({int(result)}): {command}')

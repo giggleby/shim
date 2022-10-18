@@ -96,7 +96,7 @@ class PartitionTableTest(test_case.TestCase):
     # Linux always considers sectors to be 512 bytes long independently of the
     # devices real block size.
     device_size = 512 * int(
-        self.dut.ReadFile('/sys/class/block/%s/size' % os.path.basename(dev)))
+        self.dut.ReadFile(f'/sys/class/block/{os.path.basename(dev)}/size'))
 
     pct_used = end_sector * sector_size * 100 / device_size
 
@@ -162,8 +162,7 @@ class PartitionTableTest(test_case.TestCase):
       src = self.dut.storage.GetMainStorageDevice(minios_a_no)
       dst = self.dut.storage.GetMainStorageDevice(minios_b_no)
       self.dut.CheckCall([
-          'dd', 'bs=1048576',
-          'if=%s' % src,
-          'of=%s' % dst, 'iflag=fullblock', 'oflag=dsync'
+          'dd', 'bs=1048576', f'if={src}', f'of={dst}', 'iflag=fullblock',
+          'oflag=dsync'
       ], log=True)
       self._ShowGPTTable(dev)

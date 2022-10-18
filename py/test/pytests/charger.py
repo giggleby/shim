@@ -21,6 +21,7 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 
+
 # Constants.
 CHARGE_TOLERANCE = 0.001
 
@@ -71,7 +72,7 @@ class ChargerTest(test_case.TestCase):
 
     for spec in self.args.spec_list:
       self.assertTrue(2 <= len(spec) <= 3,
-                      'spec_list item %r should have length 2 or 3' % spec)
+                      f'spec_list item {spec!r} should have length 2 or 3')
 
     verbose_log_path = session.GetVerboseTestLogPath()
     file_utils.TryMakeDirs(os.path.dirname(verbose_log_path))
@@ -84,7 +85,7 @@ class ChargerTest(test_case.TestCase):
     testlog.UpdateParam('target', param_type=testlog.PARAM_TYPE.argument)
 
   def _GetLabelWithUnit(self, value):
-    return '%.2f%s' % (value, '%' if self.args.use_percentage else 'mAh')
+    return f"{value:.2f}{'%' if self.args.use_percentage else 'mAh'}"
 
   def _GetRegulateChargeText(self, charge, target, timeout, load,
                              battery_current):
@@ -124,7 +125,7 @@ class ChargerTest(test_case.TestCase):
     self.assertTrue(self._power.CheckACPresent(), 'Cannot find AC power.')
     if self.args.charger_type:
       self.assertEqual(self._power.GetACType(), self.args.charger_type,
-                       'Incorrect charger type: %s' % self._power.GetACType())
+                       f'Incorrect charger type: {self._power.GetACType()}')
 
   def _GetCharge(self, use_percentage=True):
     """Gets charge level through power interface"""
@@ -140,7 +141,7 @@ class ChargerTest(test_case.TestCase):
     try:
       return self._power.GetBatteryCurrent()
     except Exception as e:
-      self.fail('Cannot get battery current on this board. %s' % e)
+      self.fail(f'Cannot get battery current on this board. {e}')
 
   def _GetChargerCurrent(self):
     """Gets current that charger wants to drive through board"""
@@ -301,17 +302,18 @@ class ChargerTest(test_case.TestCase):
         testlog.LogParam('load', load)
         testlog.LogParam('elapsed', elapsed)
         testlog.LogParam('status', 'not_meet')
-      self.fail('Cannot regulate battery to %s in %d seconds.' %
-                (self._GetLabelWithUnit(target), timeout_secs))
+      self.fail(
+          f'Cannot regulate battery to {self._GetLabelWithUnit(target)} in '
+          f'{int(timeout_secs)} seconds.')
 
   def _VerboseLog(self, charge, charger_current, battery_current):
     """Log data to verbose log"""
     self._verbose_log.write(time.strftime('%Y-%m-%d %H:%M:%S\n', time.gmtime()))
-    self._verbose_log.write('Charge = %s\n' % self._GetLabelWithUnit(charge))
+    self._verbose_log.write(f'Charge = {self._GetLabelWithUnit(charge)}\n')
     if charger_current is not None:
-      self._verbose_log.write('Charger current = %d\n' % charger_current)
-    self._verbose_log.write('Battery current = %d\n' % battery_current)
-    self._verbose_log.write('Power info =\n%s\n' % self._GetPowerInfo())
+      self._verbose_log.write(f'Charger current = {int(charger_current)}\n')
+    self._verbose_log.write(f'Battery current = {int(battery_current)}\n')
+    self._verbose_log.write(f'Power info =\n{self._GetPowerInfo()}\n')
     self._verbose_log.flush()
 
   def _Log(self, charge, charger_current, battery_current):
@@ -338,7 +340,7 @@ class ChargerTest(test_case.TestCase):
     try:
       self._power.SetChargeState(self._power.ChargeState.CHARGE)
     except Exception as e:
-      self.fail('Cannot set charger state to CHARGE on this board. %s' % e)
+      self.fail(f'Cannot set charger state to CHARGE on this board. {e}')
     else:
       self.Sleep(1)
 
@@ -347,7 +349,7 @@ class ChargerTest(test_case.TestCase):
     try:
       self._power.SetChargeState(self._power.ChargeState.DISCHARGE)
     except Exception as e:
-      self.fail('Cannot set charger state to DISCHARGE on this board. %s' % e)
+      self.fail(f'Cannot set charger state to DISCHARGE on this board. {e}')
     else:
       self.Sleep(1)
 

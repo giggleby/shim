@@ -94,6 +94,7 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.type_utils import Obj
 
+
 _EXTERNAL_DIR = '/run/factory/external'
 
 # The following test states are considered passed
@@ -188,7 +189,7 @@ class Report(test_case.TestCase):
       if all_pass:
         self.dut.WriteFile(file_path, 'PASS')
       else:
-        report = ''.join('%s: %s\n' % (r.path, r.status) for r in test_results)
+        report = ''.join(f'{r.path}: {r.status}\n' for r in test_results)
         self.dut.WriteFile(file_path, report)
 
     if all_pass and self.args.pass_without_prompt:

@@ -82,6 +82,7 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Enum
 from cros.factory.utils.type_utils import Error
 
+
 FLASHTOOL = '/usr/local/bin/flash_fp_mcu'
 FPMCU_FW_DIR_UNDER_ROOTFS = 'opt/google/biod/fw'
 
@@ -122,7 +123,7 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
       with sys_utils.MountPartition(
           self._dut.partitions.RELEASE_ROOTFS.path, dut=self._dut) as root:
         pattern = self._dut.path.join(root, FPMCU_FW_DIR_UNDER_ROOTFS,
-                                      '%s_v*.bin' % fpmcu_board)
+                                      f'{fpmcu_board}_v*.bin')
         fpmcu_fw_files = self._dut.Glob(pattern)
         self.assertEqual(len(fpmcu_fw_files), 1,
                          'No uniquely matched FPMCU firmware blob found')
@@ -158,12 +159,12 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
 
     self.assertEqual(
         cur_ro_ver, bin_ro_ver,
-        'Current FPMCU RO: %s does not match the expected RO: %s.' %
-        (cur_rw_ver, bin_ro_ver))
+        f'Current FPMCU RO: {cur_rw_ver} does not match the expected RO: '
+        f'{bin_ro_ver}.')
     self.assertEqual(
         cur_rw_ver, bin_rw_ver,
-        'Current FPMCU RW: %s does not match the expected RW: %s.' %
-        (cur_rw_ver, bin_rw_ver))
+        f'Current FPMCU RW: {cur_rw_ver} does not match the expected RW: '
+        f'{bin_rw_ver}.')
 
   def GetCurrentAndExpectedFirmwareVersion(self, firmware_file):
     cur_ro_ver = cur_rw_ver = ''
@@ -191,6 +192,7 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
     if not get_fmap_output:
       raise Error('Fmap area name might be wrong?')
     unused_name, offset, size = get_fmap_output.split()
-    get_ro_ver_cmd = ["dd", "bs=1", "skip=%s" % offset,
-                      "count=%s" % size, "if=%s" % firmware_file]
+    get_ro_ver_cmd = [
+        "dd", "bs=1", f"skip={offset}", f"count={size}", f"if={firmware_file}"
+    ]
     return self._dut.CheckOutput(get_ro_ver_cmd).strip('\x00')

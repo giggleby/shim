@@ -158,6 +158,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
 from cros.factory.utils import type_utils
 
+
 # LED pattern.
 LED_PATTERN = ((kbd_leds.LED_NUM | kbd_leds.LED_CAP, 0.05), (0, 0.05))
 
@@ -240,7 +241,7 @@ class ALSFixture(test_case.TestCase):
       self.als_controller = self.dut.ambient_light_sensor.GetController()
     except Exception as e:
       self._LogFailure(FAIL_ALS_NOT_FOUND,
-                       'Error getting ALS controller: %s' % str(e))
+                       f'Error getting ALS controller: {str(e)}')
       raise
 
     # Loads config.
@@ -276,7 +277,7 @@ class ALSFixture(test_case.TestCase):
           fixture_conn=self.fixture_conn, fixture_cmd=self.args.chamber_cmd)
     except Exception as e:
       self._LogFailure(FAIL_CHAMBER_ERROR,
-                       'Error setting up ALS chamber: %s' % str(e))
+                       f'Error setting up ALS chamber: {str(e)}')
 
     self.all_sampled_lux = []  # mean of sampled lux for each light
     self.scale_factor = None  # value of calibrated scale factor
@@ -298,7 +299,7 @@ class ALSFixture(test_case.TestCase):
 
   def _LogArgument(self, key, value, description):
     testlog.AddArgument(key, value, description)
-    self._Log("%s=%s" % (key, value))
+    self._Log(f"{key}={value}")
 
   def _LogConfig(self):
     if self.args.keep_raw_logs:
@@ -309,7 +310,7 @@ class ALSFixture(test_case.TestCase):
 
   def _LogFailure(self, code, details):
     testlog.AddFailure(code, details)
-    message = 'FAIL %r: %r' % (code, details)
+    message = f'FAIL {code!r}: {details!r}'
     logging.exception(message)
     session.console.info(message)
 
@@ -319,8 +320,8 @@ class ALSFixture(test_case.TestCase):
       if not self.args.mock_mode:
         self.als_controller.CleanUpCalibrationValues()
     except Exception as e:
-      self._LogFailure(FAIL_ALS_CLEAN, 'Error cleaning up calibration values:'
-                       ' %s' % str(e))
+      self._LogFailure(FAIL_ALS_CLEAN,
+                       f'Error cleaning up calibration values: {str(e)}')
       raise
 
     while True:
@@ -333,16 +334,17 @@ class ALSFixture(test_case.TestCase):
             i18n.StringFormat(_('Sampling {name}'), name=light_name))
         self._SampleALS(light_name)
       except Exception as e:
-        self._LogFailure(FAIL_ALS_SAMPLE, 'Error sampling lighting %d %s: %s' %
-                         (self.light_index, light_name, str(e)))
+        self._LogFailure(
+            FAIL_ALS_SAMPLE,
+            f'Error sampling lighting {int(self.light_index)} {light_name}: {str(e)}'
+        )
         raise
 
     try:
       self._ShowTestStatus(_('Checking ALS ordering'))
       self._CheckALSOrdering()
     except Exception as e:
-      self._LogFailure(FAIL_ALS_ORDER,
-                       'Error checking als ordering: %s' % str(e))
+      self._LogFailure(FAIL_ALS_ORDER, f'Error checking als ordering: {str(e)}')
       raise
 
 
@@ -350,16 +352,17 @@ class ALSFixture(test_case.TestCase):
       self._ShowTestStatus(_('Calculating calibration coefficients'))
       self._CalculateCalibCoef()
     except Exception as e:
-      self._LogFailure(FAIL_ALS_CALC, 'Error calculating calibration'
-                       ' coefficient: %s' % str(e))
+      self._LogFailure(FAIL_ALS_CALC,
+                       f'Error calculating calibration coefficient: {str(e)}')
       raise
 
     try:
       self._ShowTestStatus(_('Saving calibration coefficients to VPD'))
       self._SaveCalibCoefToVPD()
     except Exception as e:
-      self._LogFailure(FAIL_ALS_VPD, 'Error setting calibration'
-                       ' coefficient to VPD: %s' % str(e))
+      self._LogFailure(
+          FAIL_ALS_VPD,
+          f'Error setting calibration coefficient to VPD: {str(e)}')
       raise
 
     try:
@@ -369,7 +372,7 @@ class ALSFixture(test_case.TestCase):
       self._ValidateALS(light_name)
     except Exception as e:
       self._LogFailure(FAIL_ALS_VALID,
-                       'Error validating calibrated ALS: %s' % str(e))
+                       f'Error validating calibrated ALS: {str(e)}')
       raise
 
   def _OnU2SInsertion(self, device):
@@ -398,29 +401,29 @@ class ALSFixture(test_case.TestCase):
       style = 'color-bad'
       label = _('Fixture Disconnected')
     else:
-      raise ValueError('Unknown fixture status %s' % status)
-    self.ui.SetHTML(
-        ['<span class="%s">' % style, label, '</span>'], id='fixture-status')
+      raise ValueError(f'Unknown fixture status {status}')
+    self.ui.SetHTML([f'<span class="{style}">', label, '</span>'],
+                    id='fixture-status')
 
   def _SetupFixture(self):
     """Initialize the communication with the fixture."""
     try:
       self.chamber.Connect()
     except Exception as e:
-      self._LogFailure(FAIL_CHAMBER_ERROR, 'Error initializing the ALS fixture:'
-                       ' %s' % str(e))
+      self._LogFailure(FAIL_CHAMBER_ERROR,
+                       f'Error initializing the ALS fixture: {str(e)}')
       raise
     self._Log('Test fixture successfully initialized.')
 
   def _SwitchLight(self, light):
-    self._Log("Switching to lighting %s." % light)
+    self._Log(f"Switching to lighting {light}.")
     self._ShowTestStatus(
         i18n.StringFormat(_('Switching to lighting {name}'), name=light))
     try:
       self.chamber.SetLight(light)
     except Exception as e:
       self._LogFailure(FAIL_CHAMBER_ERROR,
-                       'Error commanding ALS chamber: %s' % str(e))
+                       f'Error commanding ALS chamber: {str(e)}')
       raise
     self.Sleep(self.config['light_delay'])
 
@@ -445,7 +448,7 @@ class ALSFixture(test_case.TestCase):
           testlog.LogParam('name', param_name)
           testlog.LogParam('value', buf[-1])
           testlog.LogParam('elapsed', elapsed_time)
-          self._Log('%r: %r' % (elapsed_time, buf[-1]))
+          self._Log(f'{elapsed_time!r}: {buf[-1]!r}')
     except ambient_light_sensor.AmbientLightSensorException as e:
       logging.exception('Error reading ALS value: %s', str(e))
       raise
@@ -455,14 +458,14 @@ class ALSFixture(test_case.TestCase):
     param_name = 'Calibrating' + light_name
     testlog.UpdateParam(
         param_name,
-        description=('Sampled calibrating lux for %s over time' % light_name),
+        description=f'Sampled calibrating lux for {light_name} over time',
         value_unit='lx')
     sampled_lux = self._SampleLuxValue(
         param_name, self.read_delay, self.n_samples)
     preset_lux = self.config['luxs'][self.light_index]
-    self._LogArgument('Preset%s' % light_name, preset_lux,
+    self._LogArgument(f'Preset{light_name}', preset_lux,
                       'Preset calibrating lux value.')
-    self._LogArgument('Mean%s' % light_name, sampled_lux,
+    self._LogArgument(f'Mean{light_name}', sampled_lux,
                       'Mean of sampled calibrating lux value.')
     self.all_sampled_lux.append(sampled_lux)
 
@@ -472,34 +475,32 @@ class ALSFixture(test_case.TestCase):
     # where y is light intensity v_lux, and x is read lux value v_val.
     testlog.UpdateParam(
         'ValidatingLux',
-        description=('Sampled validating lux for %s over time' % light_name),
+        description=f'Sampled validating lux for {light_name} over time',
         value_unit='lx')
     sampled_vlux = self._SampleLuxValue(
         'ValidatingLux', self.read_delay, self.n_samples)
     preset_vlux = float(self.config['validating_lux'])
-    self._LogArgument('Preset%s' % light_name, preset_vlux,
+    self._LogArgument(f'Preset{light_name}', preset_vlux,
                       'Preset validating lux value.')
     self._LogArgument('MeanValidatingLux', sampled_vlux,
                       'Mean of sampled validating lux value.')
     testlog.UpdateParam(
         name='ValidatingLuxMean',
-        description=('Mean of sampled validating lux for %s' % light_name),
+        description=f'Mean of sampled validating lux for {light_name}',
         value_unit='lx')
     err_limit = float(self.config['validating_err_limit'])
     lower_bound = preset_vlux * (1 - err_limit)
     upper_bound = preset_vlux * (1 + err_limit)
-    result = testlog.CheckNumericParam(
-        'ValidatingLuxMean',
-        sampled_vlux,
-        min=lower_bound,
-        max=upper_bound)
-    self._Log('%s ValidatingLuxMean: %r (min=%s, max=%s)' %
-              (result, sampled_vlux, lower_bound, upper_bound))
+    result = testlog.CheckNumericParam('ValidatingLuxMean', sampled_vlux,
+                                       min=lower_bound, max=upper_bound)
+    self._Log(
+        f'{result} ValidatingLuxMean: {sampled_vlux!r} (min={lower_bound}, max={upper_bound})'
+    )
 
     if not result and not self.args.mock_mode:
-      raise ValueError('Error validating calibrated als, got %s out of'
-                       ' range (%s, %s)' % (sampled_vlux, lower_bound,
-                                            upper_bound))
+      raise ValueError(
+          f'Error validating calibrated als, got {sampled_vlux} out of range ({lower_bound}, {upper_bound})'
+      )
 
   def _CheckALSOrdering(self):
     if self.args.mock_mode:
@@ -581,8 +582,8 @@ class ALSFixture(test_case.TestCase):
     except Exception as e:
       fail_msg = str(e)
       self._ShowTestStatus(
-          i18n.NoTranslation('ALS: FAIL %r' % fail_msg), style='color-bad')
-      self.fail('Test ALS failed - %r.' % fail_msg)
+          i18n.NoTranslation(f'ALS: FAIL {fail_msg!r}'), style='color-bad')
+      self.fail(f'Test ALS failed - {fail_msg!r}.')
     else:
       self._ShowTestStatus(i18n.NoTranslation('ALS: PASS'),
                            style='color-good')
@@ -594,5 +595,5 @@ class ALSFixture(test_case.TestCase):
       msg: i18n text.
       style: CSS style.
     """
-    self.ui.SetHTML(
-        ['<span class="%s">' % style, msg, '</span>'], id='test-status')
+    self.ui.SetHTML([f'<span class="{style}">', msg, '</span>'],
+                    id='test-status')

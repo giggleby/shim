@@ -76,6 +76,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
+
 _TestModes = type_utils.Enum(['file', 'raw', 'stateful_partition_free_space'])
 
 
@@ -215,9 +216,10 @@ class BadBlocksTest(test_case.TestCase):
 
       # Could get this to work, but for now we assume that fs_block_size is a
       # multiple of sector_size.
-      self.assertEqual(0, fs_block_size % sector_size,
-                       'fs_block_size %d is not a multiple of sector_size %d' %
-                       (fs_block_size, sector_size))
+      self.assertEqual(
+          0, fs_block_size % sector_size,
+          f'fs_block_size {int(fs_block_size)} is not a multiple of sector_size'
+          f' {int(sector_size)}')
 
       first_unused_sector = (fs_first_block + fs_block_count) * (
           fs_block_size // sector_size)
@@ -229,15 +231,14 @@ class BadBlocksTest(test_case.TestCase):
       last_block = first_block + sectors_to_test - 1
 
       local_variables = locals()
-      logging.info(', '.join(
-          ['%s=%s' % (x, local_variables[x])
-           for x in ['fs_first_block', 'fs_block_count', 'fs_block_size',
-                     'start_sector', 'sector_count',
-                     'sector_size',
-                     'first_unused_sector',
-                     'sectors_to_test',
-                     'first_block',
-                     'last_block']]))
+      logging.info(', '.join([
+          f'{x}={local_variables[x]}' for x in [
+              'fs_first_block', 'fs_block_count', 'fs_block_size',
+              'start_sector', 'sector_count', 'sector_size',
+              'first_unused_sector', 'sectors_to_test', 'first_block',
+              'last_block'
+          ]
+      ]))
 
       fail_desc = 'There is no unused space after stateful partition.'
       if sectors_to_test <= 0:
@@ -259,10 +260,9 @@ class BadBlocksTest(test_case.TestCase):
                      'badblocks test may not be run within the chroot')
 
     params = self.DetermineParameters()
-
-    test_size_mb = '%.1f MiB' % (
-        (params.last_block - params.first_block + 1) *
-        params.sector_size / 1024 ** 2)
+    test_size_tmp = (params.last_block - params.first_block +
+                     1) * params.sector_size / 1024**2
+    test_size_mb = (f'{test_size_tmp:.1f} MiB')
 
     self.ui.SetInstruction(
         _('Testing {test_size_mb} region of storage',
@@ -328,7 +328,7 @@ class BadBlocksTest(test_case.TestCase):
 
       self.assertTrue(
           rlist,
-          'Timeout: No badblocks output for %.2f s' % self.args.timeout_secs)
+          f'Timeout: No badblocks output for {self.args.timeout_secs:.2f} s')
 
       ch = process.stdout.read(1)
       if ch in ['', '\x08', '\r', '\n']:
@@ -384,7 +384,7 @@ class BadBlocksTest(test_case.TestCase):
 
     self.assertEqual(
         0, process.wait(),
-        'badblocks returned with error code %d' % process.returncode)
+        f'badblocks returned with error code {int(process.returncode)}')
 
     last_line = lines[-1]
     self.assertEqual('Pass completed, 0 bad blocks found. (0/0/0 errors)',
@@ -468,8 +468,8 @@ class BadBlocksTest(test_case.TestCase):
         'SMART says drive is not healthy')
     # Ignore error other than first two bits, this should be aligned to
     # hardware_Smartctl autotest.
-    self.assertTrue(
-        exit_code & 0x3 == 0, 'smartclt exit code = 0x%x' % exit_code)
+    self.assertTrue(exit_code & 0x3 == 0,
+                    f'smartclt exit code = 0x{exit_code:x}')
 
   def _UpdateSATALinkSpeed(self):
     """Updates the current SATA link speed based on /var/log/messages."""

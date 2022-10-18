@@ -78,6 +78,7 @@ from cros.factory.test import ui_templates
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.utils.arg_utils import Arg
 
+
 _KEY_COMPONENT_SKU = device_data.JoinKeys(device_data.KEY_COMPONENT, 'sku')
 
 _PLATFORM_DATA = ['model', 'sku', 'brand']
@@ -89,17 +90,17 @@ class PlatformSKUModelTest(test_case.TestCase):
   ARGS = [
       Arg(
           'config_name', str,
-          'Name of JSON config to load for setting device data. Set this '
-          'argument to %s if you want to load boxster data.' %
-          model_sku_utils.BOXSTER, default=None),
+          f'Name of JSON config to load for setting device data. Set this '
+          f'argument to {model_sku_utils.BOXSTER} if you want to load boxster '
+          f'data.', default=None),
       Arg('schema_name', str,
           'Name of JSON schema to load for setting device data.', default=None),
       Arg(
           'product_name', str,
-          'The product_name of the device. If not specified, read from '
-          '%s on x86 devices and %s on ARM devices.' %
-          (model_sku_utils.PRODUCT_NAME_PATH,
-           model_sku_utils.DEVICE_TREE_COMPATIBLE_PATH), default=None),
+          f'The product_name of the device. If not specified, read from '
+          f'{model_sku_utils.PRODUCT_NAME_PATH} on x86 devices and '
+          f'{model_sku_utils.DEVICE_TREE_COMPATIBLE_PATH} on ARM devices.',
+          default=None),
   ]
 
   def setUp(self):
@@ -154,8 +155,8 @@ class PlatformSKUModelTest(test_case.TestCase):
 
     self.assertEqual(
         str(value), self._platform['sku'],
-        'Value [%s] from "cros_config /identity sku-id" does not match '
-        'device data [%s]' % (self._platform['sku'], value))
+        f"Value [{self._platform['sku']}] from \"cros_config /identity sku-id\""
+        f" does not match device data [{value}]")
 
     self.ApplyConfig()
     return True

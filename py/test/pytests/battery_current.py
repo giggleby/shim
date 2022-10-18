@@ -161,7 +161,7 @@ class BatteryCurrentTest(test_case.TestCase):
       if not isinstance(info_i, check_type):
         logging.error('(%s)usbpd_info[%d] type is not %s', type(info_i), i,
                       check_type)
-        raise ValueError('ERROR: invalid usbpd_info[%d]: ' % i + str(info))
+        raise ValueError(f'ERROR: invalid usbpd_info[{int(i)}]: ' + str(info))
 
   def _LogCurrent(self, current):
     if current >= 0:

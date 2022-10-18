@@ -91,8 +91,8 @@ class ThermalLoadTest(unittest.TestCase):
                       temperature_limit=self.args.temperature_limit[index],
                       sensor=self.sensors[index],
                       elapsed_sec=elapsed)
-        self.fail('Sensor %s temperature got over %d.' % (
-            self.sensors[index], self.args.temperature_limit[index]))
+        self.fail(f'Sensor {self.sensors[index]} temperature got over '
+                  f'{int(self.args.temperature_limit[index])}.')
 
       if elapsed >= self.args.heat_up_timeout_secs and (
           not self.heated_up[index]):
@@ -101,17 +101,17 @@ class ThermalLoadTest(unittest.TestCase):
                       sensor=self.sensors[index],
                       timeout=self.args.heat_up_timeout_secs)
         logging.info('temperature track: %r', self.temperatures_track)
-        self.fail("Temperature %s didn't go over %d in %s seconds." % (
-            self.sensors[index],
-            self.args.lower_threshold[index],
-            self.args.heat_up_timeout_secs))
+        self.fail(f"Temperature {self.sensors[index]} didn't go over "
+                  f"{int(self.args.lower_threshold[index])} in "
+                  f"{self.args.heat_up_timeout_secs} seconds.")
 
     if self.args.temperatures_difference:
       difference = max(temperatures) - min(temperatures)
       if difference > self.args.temperatures_difference:
         logging.info('temperature track: %r', self.temperatures_track)
-        self.fail('The difference of temperatures %d exceeds the limit %d.' % (
-            difference, self.args.temperatures_difference))
+        self.fail(
+            f'The difference of temperatures {int(difference)} exceeds the '
+            f'limit {int(self.args.temperatures_difference)}.')
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()

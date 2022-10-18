@@ -76,6 +76,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 _RETIMER_VERSION_PATH = '/sys/bus/thunderbolt/devices/%s/nvm_version'
 _CONTROLLER_PORTS = ('0-0:1.1', '0-0:3.1', '1-0:1.1', '1-0:3.1')
 _REBOOT_DEVICE_DATA_PATH = 'factory.retimer_firmware_reboot'
@@ -149,14 +150,16 @@ class RetimerFirmwareTest(test_case.TestCase):
     if self.args.min_retimer_version:
       min_retimer_version = version.LooseVersion(self.args.min_retimer_version)
       if retimer_version < min_retimer_version:
-        raise ValueError('retimer_version %s < min_retimer_version %s' %
-                         (retimer_version, min_retimer_version))
+        raise ValueError(
+            f'retimer_version {retimer_version} < min_retimer_version '
+            f'{min_retimer_version}')
 
     if self.args.max_retimer_version:
       max_retimer_version = version.LooseVersion(self.args.max_retimer_version)
       if retimer_version > max_retimer_version:
-        raise ValueError('retimer_version %s > max_retimer_version %s' %
-                         (retimer_version, max_retimer_version))
+        raise ValueError(
+            f'retimer_version {retimer_version} > max_retimer_version '
+            f'{max_retimer_version}')
 
   def _WaitOneUSBUnplugged(self, usb_port):
     """Waits until usb_port is disconnected."""

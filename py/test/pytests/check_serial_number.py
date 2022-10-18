@@ -74,6 +74,7 @@ from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 
+
 HTML = """
 <div style="font-size:2em">
   <div>
@@ -121,20 +122,20 @@ class CheckDeviceState(test_case.TestCase):
       self.ui.SetHTML('No device_id<br />', id='fail_message', append=True)
       success = False
 
-    device_data_sn = proxy.DataShelfGetValue(
-        key='device.serials.%s' % sn_name, optional=True)
+    device_data_sn = proxy.DataShelfGetValue(key=f'device.serials.{sn_name}',
+                                             optional=True)
     self.ui.SetHTML(str(device_data_sn), id='device-data-value')
-    vpd_sn = self.dut.CallOutput('vpd -g %s' % sn_name) or None
+    vpd_sn = self.dut.CallOutput(f'vpd -g {sn_name}') or None
     self.ui.SetHTML(str(vpd_sn), id='vpd-value')
 
     if not device_data_sn:
-      self.ui.SetHTML('%s not in device data<br />' % sn_name,
-                      id='fail_message', append=True)
+      self.ui.SetHTML(f'{sn_name} not in device data<br />', id='fail_message',
+                      append=True)
       success = False
 
     if not vpd_sn:
-      self.ui.SetHTML('%s not in VPD<br />' % sn_name,
-                      id='fail_message', append=True)
+      self.ui.SetHTML(f'{sn_name} not in VPD<br />', id='fail_message',
+                      append=True)
       success = False
 
     if vpd_sn != device_data_sn:
@@ -157,4 +158,4 @@ class CheckDeviceState(test_case.TestCase):
           'Failed, Press ENTER to continue<br />',
           id='message', append=True)
       self.ui.WaitKeysOnce(keys=[test_ui.ENTER_KEY])
-      self.FailTask('Invalid device state (%s error)' % sn_name)
+      self.FailTask(f'Invalid device state ({sn_name} error)')

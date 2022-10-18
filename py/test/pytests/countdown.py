@@ -72,6 +72,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
+
 _WARNING_TEMP_RATIO = 0.95
 _CRITICAL_TEMP_RATIO = 0.98
 _ALS_LOCATION = 'camera'
@@ -133,7 +134,7 @@ class CountDownTest(test_case.TestCase):
     hours = int(secs / 3600)
     minutes = int((secs / 60) % 60)
     seconds = int(secs % 60)
-    return '%02d:%02d:%02d' % (hours, minutes, seconds)
+    return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
   def UpdateTimeAndLoad(self):
     self._elapsed_secs = time.time() - self._start_secs
@@ -151,19 +152,17 @@ class CountDownTest(test_case.TestCase):
     # Simplify thermal output by the order of self._sensors
     log_items = [
         time_utils.TimeString(),
-        'Temperatures: %s' %
-        [sys_status.temperatures[sensor] for sensor in self._sensors],
-        'Fan RPM: %s' % sys_status.fan_rpm,
-        'CPU frequency (MHz): %s' % sys_status.cpu_freq
+        (f'Temperatures: '
+         f'{[sys_status.temperatures[sensor] for sensor in self._sensors]}'),
+        f'Fan RPM: {sys_status.fan_rpm}',
+        f'CPU frequency (MHz): {sys_status.cpu_freq}'
     ]
     log_str = '.  '.join(log_items)
     if self._verbose_log:
       self._verbose_log.write(log_str + os.linesep)
       self._verbose_log.flush()
-    self.ui.AppendHTML(
-        '<div>%s</div>' % test_ui.Escape(log_str),
-        id='cd-log-panel',
-        autoscroll=True)
+    self.ui.AppendHTML(f'<div>{test_ui.Escape(log_str)}</div>',
+                       id='cd-log-panel', autoscroll=True)
     self.ui.RunJS('const panel = document.getElementById("cd-log-panel");'
                   'if (panel.childNodes.length > 512)'
                   '  panel.removeChild(panel.firstChild);')
@@ -171,7 +170,7 @@ class CountDownTest(test_case.TestCase):
   def UpdateLegend(self, sensor_names):
     for i, sensor in enumerate(sensor_names):
       self.ui.AppendHTML(
-          '<div class="cd-legend-item">[%d] %s</div>' % (i, sensor),
+          f'<div class="cd-legend-item">[{int(i)}] {sensor}</div>',
           id='cd-legend-item-panel')
     if sensor_names:
       self.ui.ToggleClass('cd-legend-panel', 'hidden', False)
@@ -189,9 +188,9 @@ class CountDownTest(test_case.TestCase):
 
     if self.args.temp_max_delta:
       if len(status.temperatures) != len(last_status.temperatures):
-        warnings.append(
-            'Number of temperature sensors differ (current: %d, last: %d) ' %
-            (len(status.temperatures), len(last_status.temperatures)))
+        warnings.append(f'Number of temperature sensors differ (current: '
+                        f'{len(status.temperatures)}, last: '
+                        f'{len(last_status.temperatures)}) ')
 
       for sensor in status.temperatures:
         current = status.temperatures[sensor]
@@ -203,17 +202,18 @@ class CountDownTest(test_case.TestCase):
           continue
         if last is None or current is None:
           warnings.append(
-              'Cannot read temperature sensor %s (current: %r, last: %r)' %
-              (sensor, current, last))
+              f'Cannot read temperature sensor {sensor} (current: {current!r}, '
+              f'last: {last!r})')
         elif abs(current - last) > self.args.temp_max_delta:
           warnings.append(
-              'Temperature sensor %s delta over %d (current: %d, last: %d)' %
-              (sensor, self.args.temp_max_delta, current, last))
+              f'Temperature sensor {sensor} delta over '
+              f'{int(self.args.temp_max_delta)} (current: {int(current)}, last:'
+              f' {int(last)})')
 
     for name, sensor, warning_temp, critical_temp in self.args.temp_criteria:
       temp = GetTemperature(sensor)
       if temp is None:
-        warnings.append('%s temperature unavailable' % name)
+        warnings.append(f'{name} temperature unavailable')
         continue
 
       if warning_temp is None or critical_temp is None:
@@ -221,8 +221,8 @@ class CountDownTest(test_case.TestCase):
           sys_temp = self._dut.thermal.GetCriticalTemperature(sensor)
         except NotImplementedError:
           raise type_utils.TestFailure(
-              'Failed to get the critical temperature of %r, please explicitly '
-              'specify the value in the test arguments.' % name) from None
+              f'Failed to get the critical temperature of {name!r}, please '
+              f'explicitly specify the value in the test arguments.') from None
         if warning_temp is None:
           warning_temp = sys_temp * _WARNING_TEMP_RATIO
         if critical_temp is None:
@@ -230,12 +230,12 @@ class CountDownTest(test_case.TestCase):
 
       if temp >= critical_temp:
         warnings.append(
-            '%s over critical temperature (now: %.1f, critical: %.1f)' % (
-                name, temp, critical_temp))
+            f'{name} over critical temperature (now: {temp:.1f}, critical: '
+            f'{critical_temp:.1f})')
       elif temp >= warning_temp:
         warnings.append(
-            '%s over warning temperature (now: %.1f, warning: %.1f)' %
-            (name, temp, warning_temp))
+            f'{name} over warning temperature (now: {temp:.1f}, warning: '
+            f'{warning_temp:.1f})')
 
     for (relation, first_sensor, second_sensor,
          max_diff) in self.args.relative_temp_criteria:
@@ -248,39 +248,40 @@ class CountDownTest(test_case.TestCase):
         if second_temp is None:
           unavailable_sensor.append(second_sensor)
         warnings.append(
-            'Cannot measure temperature difference between %s: '
-            'temperature %s unavailable' %
-            (relation, ', '.join(unavailable_sensor)))
+            f"Cannot measure temperature difference between {relation}: "
+            f"temperature {', '.join(unavailable_sensor)} unavailable")
       elif abs(first_temp - second_temp) > max_diff:
-        warnings.append('Temperature difference between %s over %d '
-                        '(first: %d, second: %d)' %
-                        (relation, max_diff, first_temp, second_temp))
+        warnings.append(
+            f'Temperature difference between {relation} over {int(max_diff)} '
+            f'(first: {int(first_temp)}, second: {int(second_temp)})')
 
     if self.args.fan_min_expected_rpm:
       for i, fan_rpm in enumerate(status.fan_rpm):
         if fan_rpm < self.args.fan_min_expected_rpm:
-          warnings.append('Fan %d rpm %d less than min expected %d' %
-                          (i, fan_rpm, self.args.fan_min_expected_rpm))
+          warnings.append(
+              f'Fan {int(i)} rpm {int(fan_rpm)} less than min expected '
+              f'{int(self.args.fan_min_expected_rpm)}')
 
     if self.args.cpu_min_expected_freq:
       for cpu_freq in status.cpu_freq:
         if cpu_freq < self.args.cpu_min_expected_freq:
-          warnings.append('CPU frequency %f MHz less than expected %d MHz' %
-                          (cpu_freq, self.args.cpu_min_expected_freq))
+          warnings.append(f'CPU frequency {cpu_freq:f} MHz less than expected '
+                          f'{int(self.args.cpu_min_expected_freq)} MHz')
 
     if self.args.cpu_max_expected_freq:
       for cpu_freq in status.cpu_freq:
         if cpu_freq > self.args.cpu_max_expected_freq:
-          warnings.append('CPU frequency %f MHz larger than expected %d MHz' %
-                          (cpu_freq, self.args.cpu_max_expected_freq))
+          warnings.append(
+              f'CPU frequency {cpu_freq:f} MHz larger than expected '
+              f'{int(self.args.cpu_max_expected_freq)} MHz')
 
     if not self.args.allow_invalid_temp:
       for sensor, temp in status.temperatures.items():
         if temp is None:
-          warnings.append('Cannot read temperature sensor %s.' % sensor)
+          warnings.append(f'Cannot read temperature sensor {sensor}.')
         elif temp <= 0:
-          warnings.append('Thermal zone %s reports abnormal temperature %d'
-                          % (sensor, temp))
+          warnings.append(
+              f'Thermal zone {sensor} reports abnormal temperature {int(temp)}')
 
     in_grace_period = self._elapsed_secs < self.args.grace_secs
     if warnings:

@@ -81,6 +81,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
+
 # The Graphyte config files (pathloss, test plan, port config) should be placed
 # in the config_files folder in Graphyte framework.
 RELATIVE_CONFIG_DIR = 'config_files/'
@@ -138,8 +139,7 @@ class RFGraphyteTest(test_case.TestCase):
   def runTest(self):
     # Check the config file exists.
     if not os.path.exists(self.config_file_path):
-      self.fail('Graphyte config file %s does not exist.' %
-                self.config_file_path)
+      self.fail(f'Graphyte config file {self.config_file_path} does not exist.')
 
     # Patch the DUT config with DHCP IP.
     if self.args.patch_dhcp_ssh_dut_ip:
@@ -211,8 +211,8 @@ class RFGraphyteTest(test_case.TestCase):
       final_result = result_lines[-1].split(',')[-1]
     except Exception as e:
       logging.exception(e)
-      self.fail('Corrupt or incomplete result file %s: %s: %s'
-                % (self.result_file_path, e.__class__.__name__, e))
+      self.fail(f'Corrupt or incomplete result file {self.result_file_path}: '
+                f'{e.__class__.__name__}: {e}')
 
     # Pass or fail the pytest.
     self.assertEqual(final_result, 'PASS')
@@ -225,8 +225,7 @@ class RFGraphyteTest(test_case.TestCase):
     """
     mlb_serial_number = device_data.GetAllSerialNumbers().get(
         'mlb_serial_number', 'unknown')
-    file_name = '%s_%s_%s' % (
-        mlb_serial_number, timestamp, suffix)
+    file_name = f'{mlb_serial_number}_{timestamp}_{suffix}'
     # save the log under /var/factory/tests/<TestID>-<UUID>/
     current_test_dir = os.path.join(
         paths.DATA_TESTS_DIR, session.GetCurrentTestPath())
@@ -270,7 +269,7 @@ class RFGraphyteTest(test_case.TestCase):
         result_value = _ConvertToNumber(data['result'])
         if result_value is None:
           code = 'GraphyteResultMissing'
-          details = '%s result is missing.' % json.dumps(parameters)
+          details = f'{json.dumps(parameters)} result is missing.'
           testlog.AddFailure(code=code, details=details)
         else:
           with self.group_checker:
@@ -309,8 +308,7 @@ def ParseGraphyteArguments(test_item):
     logging.error('Should not be here. items: %s', items)
   if (len(items[:4]) != len(common_fields) or
       len(items[4:]) != len(extra_fields)):
-    raise ValueError('items %s, fields %s' %
-                     (items, common_fields + extra_fields))
+    raise ValueError(f'items {items}, fields {common_fields + extra_fields}')
 
   arguments = dict(zip(common_fields, items[:4]))
   arguments['extra_fields'] = dict(zip(extra_fields, items[4:]))

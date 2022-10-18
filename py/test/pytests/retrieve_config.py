@@ -76,6 +76,7 @@ from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 DATA_METHOD = type_utils.Enum(['USB', 'FACTORY_SERVER'])
 
 
@@ -197,7 +198,7 @@ class RetrieveConfig(unittest.TestCase):
       session.console.info('Retrieving %s from USB.', pathname)
       if not os.path.exists(pathname):
         raise ValueError(
-            'File %r does not exist or it is not a file.' % pathname)
+            f'File {pathname!r} does not exist or it is not a file.')
       try:
         file_utils.CopyFileSkipBytes(pathname, self.config_save_path, 0)
       except IOError as e:

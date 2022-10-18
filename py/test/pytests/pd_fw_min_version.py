@@ -65,8 +65,7 @@ class PdFwMinVersion(unittest.TestCase):
       self.args.ports = [self.args.ports]
 
     for port in self.args.ports:
-      info = self.dut.CheckOutput(['ectool', 'pdchipinfo', '%s' % port],
-                                  log=True)
+      info = self.dut.CheckOutput(['ectool', 'pdchipinfo', f'{port}'], log=True)
       logging.info('pdchipinfo of port %d:\n%s.', port, info)
       res = re.search(r'^min_req_fw_version: (0x\w+)$', info, re.MULTILINE)
       if not res:
@@ -80,6 +79,7 @@ class PdFwMinVersion(unittest.TestCase):
                          'firmware version.')
       fw_version = res.group(1)
 
-      self.assertTrue(int(fw_version, 16) >= int(min_fw_version, 16),
-                      'TCPC firmware version (%s) is less then minimum '
-                      'required one (%s).' % (fw_version, min_fw_version))
+      self.assertTrue(
+          int(fw_version, 16) >= int(min_fw_version, 16),
+          f'TCPC firmware version ({fw_version}) is less then minimum required '
+          f'one ({min_fw_version}).')

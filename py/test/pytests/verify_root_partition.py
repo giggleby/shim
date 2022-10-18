@@ -50,7 +50,7 @@ class VerifyRootPartitionTest(test_case.TestCase):
     # Copy out the KERN-A partition to a file, since vbutil_kernel
     # won't operate on a device, only a file
     # (http://crosbug.com/34176)
-    self.ui.SetState('Verifying KERN-A (%s)...' % self.args.kern_a_device)
+    self.ui.SetState(f'Verifying KERN-A ({self.args.kern_a_device})...')
     with self.dut.temp.TempFile() as kern_a_bin:
       self.dut.toybox.dd(if_=self.args.kern_a_device, of=kern_a_bin,
                          conv='fsync')
@@ -68,19 +68,19 @@ class VerifyRootPartitionTest(test_case.TestCase):
 
     DM_REGEXP = re.compile(r'dm="(?:1 )?vroot none ro(?: 1)?,(0 (\d+) .+)"')
     match = DM_REGEXP.search(vbutil_kernel_output)
-    assert match, 'Cannot find regexp %r in vbutil_kernel output' % (
-        DM_REGEXP.pattern)
+    assert match, (f'Cannot find regexp {DM_REGEXP.pattern!r} in vbutil_kernel '
+                   f'output')
 
     table = match.group(1)
     partition_size = int(match.group(2)) * 512
 
     DEV_REGEXP = re.compile(r'payload=\S* hashtree=\S*')
     (table_new, nsubs) = DEV_REGEXP.subn(
-        'payload=%s hashtree=%s' % (
-            self.args.root_device, self.args.root_device), table)
-    assert nsubs == 1, ('Expected to find %r in %r once, '
-                        'but found %d matches.' %
-                        (DEV_REGEXP.pattern, table, nsubs))
+        f'payload={self.args.root_device} hashtree={self.args.root_device}',
+        table)
+    assert nsubs == 1, (
+        f'Expected to find {DEV_REGEXP.pattern!r} in {table!r} once, but found'
+        f' {int(nsubs)} matches.')
     table = table_new
     del table_new
     # Cause I/O error on invalid bytes
@@ -113,8 +113,8 @@ class VerifyRootPartitionTest(test_case.TestCase):
             break
           bytes_read += count
           pct_done = bytes_read / bytes_to_read
-          message = 'Read {:.1f} MiB ({:.1%}) of {}'.format(
-              bytes_read / 1024 / 1024, pct_done, self.args.root_device)
+          message = (f'Read {bytes_read / 1024 / 1024:.1f} MiB ({pct_done:.1%})'
+                     f'of {self.args.root_device}')
           logging.info(message)
           self.ui.SetState(message)
           self.ui.SetProgress(bytes_read)
@@ -124,11 +124,11 @@ class VerifyRootPartitionTest(test_case.TestCase):
         try:
           # since we need the output of stderr, use CheckCall rather than
           # toybox.dd
-          self.dut.CheckCall(
-              ['dd', 'if=' + DM_DEVICE_PATH, 'of=/dev/null',
-               'bs=%d' % BLOCK_SIZE, 'count=%d' % bytes_to_read,
-               'iflag=count_bytes'],
-              log=True, stderr=stderr)
+          self.dut.CheckCall([
+              'dd', 'if=' + DM_DEVICE_PATH, 'of=/dev/null',
+              f'bs={int(BLOCK_SIZE)}', f'count={int(bytes_to_read)}',
+              'iflag=count_bytes'
+          ], log=True, stderr=stderr)
           stderr.flush()
           stderr.seek(0)
           dd_output = stderr.read()
@@ -140,7 +140,7 @@ class VerifyRootPartitionTest(test_case.TestCase):
 
       DD_REGEXP = re.compile(r'^(\d+) bytes \(.*\) copied', re.MULTILINE)
       match = DD_REGEXP.search(dd_output)
-      assert match, 'unexpected dd output: %s' % dd_output
+      assert match, f'unexpected dd output: {dd_output}'
       bytes_read = int(match.group(1))
 
     self.assertEqual(bytes_to_read, bytes_read)

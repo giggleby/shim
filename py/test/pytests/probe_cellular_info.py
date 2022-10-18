@@ -135,7 +135,7 @@ class ProbeCellularInfoTest(unittest.TestCase):
     missing = set(k for k, v in data.items() if v is None)
     self.assertFalse(
         missing,
-        "Missing elements in 'modem status' output: %s" % sorted(missing))
+        f"Missing elements in 'modem status' output: {sorted(missing)}")
 
     logging.info('Probed data: %s', data)
     device_data.UpdateDeviceData({

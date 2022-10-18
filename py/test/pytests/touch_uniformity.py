@@ -39,6 +39,7 @@ from cros.factory.utils import file_utils
 
 from cros.factory.external import numpy
 
+
 # Private Constants.
 _LABEL_PASS = ['<span class="test-status-passed">', _('PASS'), '</span>']
 _LABEL_FAIL = ['<span class="test-status-failed">', _('FAIL'), '</span>']
@@ -117,13 +118,11 @@ class TouchUniformity(test_case.TestCase):
     logging.info('Lowest value: %s', actual_min_val)
     logging.info('Highest value: %s', actual_max_val)
     logging.info('Standard deviation %f', standard_deviation)
-    event_log.Log('touch_%d_stats' % check_item.frame_idx,
-                  allowed_min_val=check_item.min_val,
-                  allowed_max_val=check_item.max_val,
-                  actual_min_val=actual_min_val,
-                  actual_max_val=actual_max_val,
-                  standard_deviation=standard_deviation,
-                  test_passed=check_passed)
+    event_log.Log(
+        f'touch_{int(check_item.frame_idx)}_stats',
+        allowed_min_val=check_item.min_val, allowed_max_val=check_item.max_val,
+        actual_min_val=actual_min_val, actual_max_val=actual_max_val,
+        standard_deviation=standard_deviation, test_passed=check_passed)
 
     with self.group_checker:
       testlog.LogParam('frame_idx', check_item.frame_idx)
@@ -160,7 +159,7 @@ class TouchUniformity(test_case.TestCase):
       with file_utils.UnopenedTemporaryFile() as temp_path:
         with open(temp_path, 'w', encoding='utf8') as f:
           for obj in to_log:
-            f.write('%r\n' % obj)
+            f.write(f'{obj!r}\n')
         testlog.AttachFile(
             path=temp_path,
             name='touch_uniformity.log',
@@ -168,4 +167,4 @@ class TouchUniformity(test_case.TestCase):
             description='plain text log of touch_uniformity')
 
     if fails:
-      self.FailTask('Uniformity check failed on frame %s.' % fails)
+      self.FailTask(f'Uniformity check failed on frame {fails}.')

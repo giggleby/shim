@@ -53,6 +53,7 @@ from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 
+
 _DEFAULT_ADJUST_LEVEL = 0.05
 _DEFAULT_RESET_LEVEL = 0.5
 _DEFAULT_MIN_LEVEL = 0.0
@@ -130,7 +131,7 @@ class BacklightTest(test_case.TestCase):
           if key == correct_key:
             session.console.info('Passed for %r', key)
             break
-          self.FailTask('Wrong answer: %r' % key)
+          self.FailTask(f'Wrong answer: {key!r}')
 
   def AdjustBrightness(self, level):
     """Adjust the intensity."""

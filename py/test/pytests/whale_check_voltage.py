@@ -24,11 +24,11 @@ _CSS = """.warn {
 
 
 def _StateId(key):
-  return '%s_state' % key
+  return f'{key}_state'
 
 
 def _ValueId(key):
-  return '%s_value' % key
+  return f'{key}_value'
 
 
 class WhaleCheckVoltageTest(test_case.TestCase):
@@ -49,7 +49,7 @@ class WhaleCheckVoltageTest(test_case.TestCase):
     all_pass = True
     power_rail = self._bft.CheckPowerRail()
     self._power_rail_str = ', '.join(
-        '%s: %d' % kv for kv in sorted(power_rail.items()))
+        f'{k}: {v:d}' for k, v in sorted(power_rail.items()))
     logging.debug('Measured power rail (mV): %s', self._power_rail_str)
 
     self._errors = []
@@ -72,18 +72,16 @@ class WhaleCheckVoltageTest(test_case.TestCase):
             state = 'failed'
             all_pass = False
             self._errors.append(
-                '%s: %d (expect %d +- %d%%)' % (
-                    display_name, measured, expected, tolerance))
+                f'{display_name}: {int(measured)} (expect {int(expected)} +- '
+                f'{int(tolerance)}%)')
             logging.info(
                 'Unexpected voltage on %s: expected %d mV, actual %d mV',
                 display_name, expected, measured)
 
-      self.ui.SetHTML(
-          '<div class=test-status-{0}>{1}</div>'.format(state, measured),
-          id=_ValueId(key))
-      self.ui.SetHTML(
-          '<div class=test-status-{0}>{0}</div>'.format(state),
-          id=_StateId(key))
+      self.ui.SetHTML(f'<div class=test-status-{state}>{measured}</div>',
+                      id=_ValueId(key))
+      self.ui.SetHTML(f'<div class=test-status-{state}>{state}</div>',
+                      id=_StateId(key))
 
     return all_pass
 
@@ -113,12 +111,12 @@ class WhaleCheckVoltageTest(test_case.TestCase):
     for r, (key, (display_name, expected, tolerance)) in enumerate(
         self._sorted_criteria, 1):
       table.SetContent(r, 0, display_name)
-      table.SetContent(r, 1, '<div id="%s"></div>' % _ValueId(key))
+      table.SetContent(r, 1, f'<div id="{_ValueId(key)}"></div>')
       if expected is None:
         table.SetContent(r, 2, 'N/A')
       else:
-        table.SetContent(r, 2, '%d &plusmn; %d%%' % (expected, tolerance))
-      table.SetContent(r, 3, '<div id="%s"></div>' % _StateId(key))
+        table.SetContent(r, 2, f'{int(expected)} &plusmn; {int(tolerance)}%')
+      table.SetContent(r, 3, f'<div id="{_StateId(key)}"></div>')
     self.ui.SetState([table.GenerateHTML()])
 
   def runTest(self):

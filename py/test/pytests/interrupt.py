@@ -34,7 +34,7 @@ class InterruptTest(unittest.TestCase):
 
     interrupts = sys_utils.GetInterrupts()
     self.assertTrue(interrupt in interrupts,
-                    'Cannot get interrupt %s.' % interrupt)
+                    f'Cannot get interrupt {interrupt}.')
     return interrupts[interrupt]
 
   def runTest(self):
@@ -51,5 +51,5 @@ class InterruptTest(unittest.TestCase):
 
     self.assertTrue(
         count >= min_count,
-        'Interrupt test failed: int[%s] = %d < min_count %d' % (
-            interrupt, count, min_count))
+        f'Interrupt test failed: int[{interrupt}] = {int(count)} < min_count '
+        f'{int(min_count)}')

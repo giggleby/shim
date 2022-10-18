@@ -334,7 +334,7 @@ class FactoryStateEnd2EndTest(FactoryStateUnittest):
       self.goofy_server.append(server)
 
       thread = threading.Thread(target=server.serve_forever,
-                                name=('GoofyServer_%d' % i))
+                                name=f'GoofyServer_{int(i)}')
       thread.start()
       self.goofy_server_thread.append(thread)
 

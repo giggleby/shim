@@ -35,7 +35,7 @@ class PlanktonCC2PullTest(test_case.TestCase):
     self.ui.ToggleTemplateClass('font-large', True)
     self._dut = device_utils.CreateDUTInterface()
     self._usb_c_index = self.args.usb_c_index
-    self._pull_gpio = 'C%d_CC2_DUT' % self._usb_c_index
+    self._pull_gpio = f'C{int(self._usb_c_index)}_CC2_DUT'
 
     self._whale_fixture = bft_fixture.CreateBFTFixture(
         **self.args.whale_bft_fixture)
@@ -61,9 +61,9 @@ class PlanktonCC2PullTest(test_case.TestCase):
   def runTest(self):
     # Check initial CC status is 'CC1'
     cc_status = self.GetCCPolarity()
-    self.assertEqual('CC1', cc_status,
-                     msg='[initial stage] unexpected CC status: '
-                         '%s (expect CC1)' % cc_status)
+    self.assertEqual(
+        'CC1', cc_status,
+        msg=f'[initial stage] unexpected CC status: {cc_status} (expect CC1)')
 
     self._whale_fixture.SetDeviceEngaged(self._pull_gpio, engage=True)
 
@@ -94,13 +94,13 @@ class PlanktonCC2PullTest(test_case.TestCase):
             secs=disconnect_half_secs))
     self.Sleep(disconnect_half_secs)
 
-    self.assertEqual('CC2', cc_status,
-                     msg='[pull-high stage] unexpected CC status: '
-                         '%s (expect CC2)' % cc_status)
+    self.assertEqual(
+        'CC2', cc_status,
+        msg=f'[pull-high stage] unexpected CC status: {cc_status} (expect CC2)')
 
     # After Whale released CC2, check CC status is 'CC1'
     self.Sleep(1)  # Wait for CC line
     cc_status = self.GetCCPolarity()
-    self.assertEqual('CC1', cc_status,
-                     msg='[recover stage] unexpected CC status: '
-                         '%s (expect CC1)' % cc_status)
+    self.assertEqual(
+        'CC1', cc_status,
+        msg=f'[recover stage] unexpected CC status: {cc_status} (expect CC1)')

@@ -160,6 +160,7 @@ from cros.factory.test import ui_templates
 from cros.factory.test.utils import deploy_utils
 from cros.factory.utils.arg_utils import Arg
 
+
 # The config files should be placed in the py/test/pytests/probe/ folder.
 LOCAL_CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
 OPERATOR_MAP = {
@@ -204,7 +205,7 @@ class ProbeTest(test_case.TestCase):
   def runTest(self):
     # Check the config file exists.
     if not os.path.exists(self.config_file_path):
-      self.fail('Config file %s does not exist.' % self.config_file_path)
+      self.fail(f'Config file {self.config_file_path} does not exist.')
 
     # Execute Probe.
     cmd = ['probe', '-v', 'probe', '--config-file', self.config_file_path]
@@ -226,7 +227,7 @@ class ProbeTest(test_case.TestCase):
     table_html = ui_templates.Table(rows=len(probed_results) + 1, cols=4)
     title = ['Category', 'Probed Components', 'Rule', 'Status']
     for idx, content in enumerate(title):
-      table_html.SetContent(0, idx, '<b>%s</b>' % content)
+      table_html.SetContent(0, idx, f'<b>{content}</b>')
 
     # Check every category meets the rule.
     all_passed = True
@@ -240,10 +241,10 @@ class ProbeTest(test_case.TestCase):
       counter = collections.defaultdict(int)
       for result in probed_results[category]:
         counter[result['name']] += 1
-      comp_summary = '<br>'.join('%d %s found.' % (num_comp, comp_name)
+      comp_summary = '<br>'.join(f'{int(num_comp)} {comp_name} found.'
                                  for comp_name, num_comp in counter.items())
       summary_str = comp_summary or 'No component found.'
-      rule_str = 'count (%s) %s %s' % (count, op_str, value)
+      rule_str = f'count ({count}) {op_str} {value}'
       status_str = 'passed' if status else 'failed'
       session.console.info('Category "%s" %s %s, %s.',
                            category, summary_str, rule_str, status_str)
@@ -252,7 +253,7 @@ class ProbeTest(test_case.TestCase):
       table_html.SetContent(row_idx, 1, summary_str)
       table_html.SetContent(row_idx, 2, rule_str)
       table_html.SetContent(
-          row_idx, 3, '<div class=test-status-{0}>{0}</div>'.format(status_str))
+          row_idx, 3, f'<div class=test-status-{status_str}>{status_str}</div>')
 
     if self.args.show_ui is True or (self.args.show_ui is None and
                                      not all_passed):

@@ -72,6 +72,7 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 
+
 CheckItem = collections.namedtuple('CheckItem',
                                    'instruction command judge_to_pass')
 
@@ -105,7 +106,7 @@ class LineCheckItemTest(test_case.TestCase):
         check_item = CheckItem(i18n.Translated(item[0], translate=False),
                                item[1], item[2])
       else:
-        raise ValueError('Unknown item %r in args.items.' % item)
+        raise ValueError(f'Unknown item {item!r} in args.items.')
       self._items.append(check_item)
 
     if not any(item.judge_to_pass for item in self._items):
@@ -139,8 +140,9 @@ class LineCheckItemTest(test_case.TestCase):
       if retcode:
         session.console.info('%s: Exit code %d\nstdout: %s\nstderr: %s',
                              command, retcode, stdout, stderr)
-        self.FailTask('%s: Exit code %d\nstdout: %s\nstderr: %s' %
-                      (command, retcode, stdout, stderr))
+        self.FailTask(
+            f'{command}: Exit code {int(retcode)}\nstdout: {stdout}\nstderr: '
+            f'{stderr}')
 
       session.console.info('%s: stdout: %s\n', command, stdout)
       if stderr:
