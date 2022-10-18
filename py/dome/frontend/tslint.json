@@ -7,7 +7,7 @@
     "curly": [true, "ignore-same-line"],
     "file-header": [
       true,
-      "Copyright \\d{4} The Chromium OS Authors\\. All rights reserved."
+      "Copyright \\d{4} The ChromiumOS Authors"
     ],
     "indent": [true, "space", 2],
     "interface-name": [true, "never-prefix"],
