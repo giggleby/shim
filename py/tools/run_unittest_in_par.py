@@ -12,6 +12,7 @@ within PAR.
 import argparse
 import importlib
 import logging
+import sys
 import unittest
 
 
@@ -29,7 +30,8 @@ def main():
 
   module = importlib.import_module(args.unittest_path)
   suite = unittest.TestLoader().loadTestsFromModule(module)
-  unittest.TextTestRunner(verbosity=2).run(suite)
+  result = unittest.TextTestRunner(verbosity=2).run(suite)
+  sys.exit(not result.wasSuccessful())
 
 
 if __name__ == '__main__':
