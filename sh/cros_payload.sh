@@ -1143,12 +1143,22 @@ install_payload() {
     # payloads (for a test_image component, execution time reduced from 72s to
     # 59s for bs=2M), but that does not help bz2 payloads and also makes it
     # harder to install small partitions.
-    MCAST="${mcast_enabled}" fetch "${remote_url}" | \
+    {
+      MCAST="${mcast_enabled}" fetch "${remote_url}" || \
+        die "Failed to fetch ${remote_url}";
+      # The script won't actually die here since the error code is piped to
+      # `do_compress`.  But we added `die` here to make the caller able to catch
+      # the error by parsing the output.
+      # (see py/test/pytests/check_image_version.py)
+    } | \
       do_compress ".${file_ext}" -d | \
       dd of="${dest}" bs=1048576 iflag=fullblock oflag=dsync
   elif [ -n "${DO_INSTALL}" ]; then
     echo "Installing from ${payload} to ${output_display} ..."
-    MCAST="${mcast_enabled}" fetch "${remote_url}" | \
+    {
+      MCAST="${mcast_enabled}" fetch "${remote_url}" || \
+        die "Failed to fetch ${remote_url}";
+    } | \
       do_compress ".${file_ext}" -d >"${output}"
     if [ -n "${mount_point}" ]; then
       install_add_stub "${payload}" "${output}"
