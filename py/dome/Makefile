@@ -43,6 +43,7 @@ lint-backend:
 lint-frontend:
 	../../setup/cros_docker.sh build
 	docker run --rm cros/dome-builder npm run lint
+	touch .lint-frontend-passed
 
 test: test-frontend test-backend
 	touch .tests-passed

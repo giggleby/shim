@@ -16,40 +16,60 @@ def FilterFiles(folder, files):
       '' if folder == '.' else folder)]
 
 
-def CheckTestsPassedInDirectory(folder, files, instruction):
+def CheckTestsPassedInDirectory(folder, files, instruction, checked_file):
   """Checks if all given files are older than previous execution of tests."""
+  messages_mapping = {
+      '.tests-passed': [
+          'Tests have not passed.',
+          'Files have changed since last time tests have passed:',
+      ],
+      '.lint-frontend-passed': [
+          'Lints have not passed.',
+          'Files have changed since last time lints have passed:',
+      ]
+  }
+  messages = messages_mapping[checked_file]
   files_in_folder = FilterFiles(folder, files)
   if not files_in_folder:
     return True
-  tests_file_path = os.path.join(folder, '.tests-passed')
+  tests_file_path = os.path.join(folder, checked_file)
   if not os.path.exists(tests_file_path):
-    print('Tests have not passed.\n%s' % instruction)
+    print('%s\n%s' % (messages[0], instruction))
     return False
   mtime = os.path.getmtime(tests_file_path)
   newer_files = [file_path for file_path in files_in_folder
                  if os.path.getmtime(file_path) > mtime]
   if newer_files:
-    print('Files have changed since last time tests have passed:\n%s\n%s' %
-          ('\n'.join('  ' + file for file in newer_files), instruction))
+    print('%s\n%s\n%s' % (messages[1], '\n'.join(
+        '  ' + file for file in newer_files), instruction))
     return False
   return True
 
 
 def CheckFactoryRepo(files):
   return CheckTestsPassedInDirectory(
-      '.', files, 'Please run "make test" in factory repo inside chroot.')
+      '.', files, 'Please run "make test" in factory repo inside chroot.',
+      '.tests-passed')
 
 
 def CheckUmpire(files):
   return CheckTestsPassedInDirectory(
       'py/umpire', files,
-      'Please run "setup/cros_docker.sh umpire test" outside chroot.')
+      'Please run "setup/cros_docker.sh umpire test" outside chroot.',
+      '.tests-passed')
 
 
 def CheckDome(files):
   return CheckTestsPassedInDirectory(
+      'py/dome', files, 'Please run "make test" in py/dome outside chroot.',
+      '.tests-passed')
+
+
+def CheckDomeLint(files):
+  return CheckTestsPassedInDirectory(
       'py/dome', files,
-      'Please run "make test" in py/dome outside chroot.')
+      'Please run "make lint-frontend" in py/dome outside chroot.',
+      '.lint-frontend-passed')
 
 
 def CheckPytestDoc(files):
@@ -89,6 +109,7 @@ def main():
   all_passed &= CheckPytestDoc(files)
   all_passed &= CheckUmpire(files)
   all_passed &= CheckDome(files)
+  all_passed &= CheckDomeLint(files)
   if all_passed:
     print('All presubmit test passed.')
   else:
