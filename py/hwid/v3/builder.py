@@ -20,20 +20,13 @@ from cros.factory.utils import json_utils
 
 # The components that are always be created at the front of the pattern,
 # even if they don't exist in the probe results.
-ESSENTIAL_COMPS = [
-    'mainboard',
-    'region',
-    'dram',
-    'cpu',
-    'storage']
-
+ESSENTIAL_COMPS = ['mainboard', 'region', 'dram', 'cpu', 'storage']
 
 # The components that are added in order if they exist in the probe results.
 PRIORITY_COMPS = collections.OrderedDict(
     [(common.FirmwareComps.RO_MAIN_FIRMWARE, 5),
      (common.FirmwareComps.FIRMWARE_KEYS, 3),
      (common.FirmwareComps.RO_EC_FIRMWARE, 5)])
-
 
 ProbedValueType = Dict[str, Union[List, None, 'ProbedValueType', bool, float,
                                   int, str]]
@@ -89,7 +82,7 @@ def HandleCollisionName(comp_name, name_list):
 
 
 def _DetermineComponentName(comp_cls: str, value: ProbedValueType):
-  """Determines the componenet name by the value.
+  """Determines the component name by the value.
 
   For some specific components, we can determine a meaningful name by the
   component value. For example the value contains the vendor name, or the part
@@ -119,8 +112,9 @@ def _DetermineComponentName(comp_cls: str, value: ProbedValueType):
     return '%s_%smb_%s' % (value['part'], value['size'], value['slot'])
   except KeyError:
     pass
-  for key in ['id', 'version', 'model', 'manufacturer', 'part', 'name',
-              'compact_str']:
+  for key in [
+      'id', 'version', 'model', 'manufacturer', 'part', 'name', 'compact_str'
+  ]:
     if key in value:
       return FilterSpecialCharacter(str(value[key]))
 
@@ -368,7 +362,7 @@ class DatabaseBuilder:
 
     Args:
       probed_results: The probed result obtained by probing the device.
-      device_info: An emty dict or a dict contains the device information.
+      device_info: An empty dict or a dict contains the device information.
       vpd: An empty dict or a dict contains the vpd values.
     """
     if self._from_empty_database and image_name:
@@ -551,9 +545,10 @@ class DatabaseBuilder:
     # then we only add the first and the third components because the second
     # one is considered as the same as the first one.
     for i, probed_value_i in enumerate(probed_values):
-      if (any(_IsSubset(probed_value_i, probed_values[j]) and
-              probed_value_i != probed_values[j] for j in range(i)) or
-          any(_IsSubset(probed_value_i, probed_values[j])
+      if (any(
+          _IsSubset(probed_value_i, probed_values[j]) and
+          probed_value_i != probed_values[j] for j in range(i)) or any(
+              _IsSubset(probed_value_i, probed_values[j])
               for j in range(i + 1, len(probed_values)))):
         continue
       self.AddComponentCheck(comp_cls, probed_value_i)
@@ -746,14 +741,65 @@ class DatabaseBuilder:
       if comp_cls not in covered_comp_classes:
         self.AddNewEncodedField(comp_cls, bom.components[comp_cls])
 
+  def ExtendEncodedFieldToFullCombination(self, field_name, num_components):
+    """Extends the encoded field to cover full combination of the components.
+
+    For example, if the `field_name` is `camera_field` and the HWID DB contains
+    `N` "supported" or "unqualified" cameras, then this method ensures that
+    `camera_field` covers all `C(N+num_components-1, num_components)`
+    combinations of `num_components` cameras.
+
+    Args:
+      field_name: Name of the encoded field to extend.
+      num_components: The number of component in the combination.
+
+    Raises:
+      ValueError: if the specified encoded field maps to multiple component
+        classes.
+    """
+    comp_classes = self._database.GetComponentClasses(field_name)
+    if len(comp_classes) != 1:
+      raise ValueError(f'Cannot extend {field_name!r} to full combinations '
+                       'because it contains multiple component classes.')
+    comp_class = next(iter(comp_classes))
+    acceptable_status = (common.COMPONENT_STATUS.supported,
+                         common.COMPONENT_STATUS.unqualified)
+    candidate_comp_names = sorted(
+        comp_name for comp_name, comp_info in self._database.GetComponents(
+            comp_class).items() if comp_info.status in acceptable_status)
+
+    all_existing_comp_names = set(
+        tuple(sorted(encoded_field[comp_class])) for encoded_field in
+        self._database.GetEncodedField(field_name).values())
+    comp_names_to_append = []
+    for comp_names in itertools.combinations_with_replacement(
+        candidate_comp_names, num_components):
+      if comp_names not in all_existing_comp_names:
+        comp_names_to_append.append(comp_names)
+    if not comp_names_to_append:
+      return
+    confirmation = PromptAndAsk(
+        f'WARNING: The following {len(comp_names_to_append)} component '
+        'combinations will be appended, do you want to continue (Y/n)?'
+        '\n' + str(comp_names_to_append), default_answer=True)
+    if not confirmation:
+      logging.info('Skipped appending full component combination in %s.',
+                   field_name)
+      return
+    logging.info('Appending full component combination in %s: %s.', field_name,
+                 comp_names_to_append)
+    for comp_names in comp_names_to_append:
+      self.AddEncodedFieldComponents(field_name, comp_class, comp_names)
+    self._UpdatePattern()
+
   def _MayAddNewPatternAndImage(self, image_name):
     if image_name in [
         self._database.GetImageName(image_id)
         for image_id in self._database.image_ids
     ]:
       if image_name != self._database.GetImageName(self._database.max_image_id):
-        raise ValueError('image_name [%s] is already in the database.' %
-                         image_name)
+        raise ValueError(
+            f'image_name [{image_name}] is already in the database.')
       # Mark the image name to none if the given image name is the latest image
       # name so that the caller can specify that they don't want to create
       # an extra image by specifying the image_name to either none or the latest
@@ -777,8 +823,8 @@ class DatabaseBuilder:
         'If the fields are added into the current pattern, the index of '
         'these fields will be encoded to index 0 for all old HWID string. '
         'Enter "y" if you are sure all old devices with old HWID string '
-        'have the component with index 0.' %
-        ','.join(extra_fields), default_answer=False) is False:
+        'have the component with index 0.' % ','.join(extra_fields),
+        default_answer=False) is False:
       raise ValueError(
           'Please assign a image_id by adding "--image-id" argument.')
 

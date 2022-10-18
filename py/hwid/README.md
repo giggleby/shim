@@ -103,33 +103,11 @@ needs to be manually updated in the following scenarios:
 ### Command of Database Builder
 
 ```shell
-# Build the HWID database
-$ hwid build-database \
-    --project <project name> \
-    [--material-file <HWID material file> ] \
-    [--hwid-db-path <hwid db folder>] \
-    [--image-id <IMAGE_ID>] \  # Name of the image_id, default is 'EVT'
-    [--add-default-component COMP [COMP ...]] \  # Add the default item
-    [--add-null-component COMP [COMP ...]] \  # Add the null item
-    [--region REGION [REGION ...]] \  # Add supported regions
-    [--chassis ID1 [ID2 ...]] \  # Add supported chassis
-    [--config-yaml <path to config.yaml>] \  # Get SKU IDs config.yaml
+# Views the usage of building a new HWID database.
+$ hwid build-database --help
 
-# Update the HWID database
-$ hwid update-database \
-    --project <project name> \
-    [--hwid-db-path <hwid db folder>] \
-    [--material-file <HWID material file> ] \
-    [--output-database <output file>] \  # Write into different file
-    [--image-id <IMAGE_ID>] \  # Name of the image_id
-    [--add-default-component COMP [COMP ...]] \  # Add the default item
-    [--add-null-component COMP [COMP ...]] \  # Add the null item
-    [--region REGION [REGION ...]] \  # Add supported regions
-    [--chassis ID1 [ID2 ...]] \  # Add supported chassis
-    [--config-yaml <path to config.yaml>] \  # Get SKU IDs config.yaml
-
-# the --hwid-db-path argument is only required if the HWID database is not
-# placed in /usr/local/factory/hwid/
+# Views the usage of updating an existing HWID database.
+$ hwid update-database --help
 ```
 
 ### Post-Processing
@@ -670,6 +648,49 @@ uses the legacy style.
 **Note:** a new `image_id` is required when converting.
 ***
 
+### 8. Append Full Component Combinations to the Encoded Field
+
+The argument `--fill-combination <ENCODED_FIELD>:<NUMBER_OF_COMPONENTS>`
+helps ensure the encoded field contains all possible component combinations.
+When a device is equipped with multiple components of the same type (2 cameras,
+one for user-facing and one for world-facing, for example), the corresponding
+encoded field allocates each unuqie combination a dedicate index number.
+Which means that the user will need to register all possible combinations into
+the HWID DB.  Approaches include running
+`hwid updat-database --material-file ...` on all SKUs, or manually appending
+all possible combinations based on the build plan.  Both of the approaches
+involve many manual works, and hence `--fill-combination` is here to simplify
+the process.
+
+For example, assuming the HWID DB already includes some existing cameras.
+And now we want to add a new camera into HWID DB.  The following command
+
+```shell
+hwid update-database \
+    --material-file <COLLECTED_MATERIAL_FILE_FROM_A_DEVICE_WITH_NEW_CAMERA> \
+    --fill-combination camera_field:2  # Specify to append full combinations of
+                                       # 2 components to camera_field.
+```
+
+will not only add the new camera into the HWID DB but also make sure
+`camera_field` includes all *pairs* of cameras.  So if the HWID DB contains
+4 cameras in total after update, `camera_fields` will contain at least 10
+combinations.
+
+Another usage is that if all the candidate cameras already exist and the user
+only want to fulfill the encoded field, they can run the following command,
+which will not update the HWID DB based on collected materials and only touch
+the specified encoded field.
+
+```shell
+hwid update-database \
+    --skip-update-by-collected-material \
+    --fill-combination camera_field:2  # Specify to append full combinations of
+                                       # 2 components to camera_field.
+```
+
+**Note**: Only `unqualified` or `supported` components are used to generate
+the combinations.
 
 ## Appendix
 
