@@ -25,7 +25,7 @@ def ProbeDUT(probe_statement_path):
     return probe_utils.Probe(probe_statement)
 
   except Exception as e:
-    raise common.HWIDException('Failed to execute the probe tool: %r.' % e)
+    raise common.HWIDException('Failed to execute the probe tool') from e
 
 
 def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,

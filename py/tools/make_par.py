@@ -183,6 +183,9 @@ def main(argv=None):
         '--exclude', '*.pyo',  # pyo will discard assert.
         '--include' if args.compiled else '--exclude', '*.pyc',
         '--include', '*.py']
+    # Config files are stored in JSON format. Config files are required by some
+    # mini-par functions, such as `hwid`.
+    rsync_args += [ '--include', '*.json' ]
 
     if args.mini:
       # Exclude some piggy directories we'll never need for the mini
@@ -196,7 +199,6 @@ def main(argv=None):
                          '--include', '*.html',
                          '--include', '*.js',
                          '--include', '*.png',
-                         '--include', '*.json',
                          # We must include instalog/utils explicitly, as it is
                          # a symlink that would otherwise be excluded
                          # by the * wildcard.

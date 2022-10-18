@@ -103,7 +103,6 @@ class PARSelfTest(unittest.TestCase):
   def setUp(self):
     self.tmp = tempfile.mkdtemp(prefix='make_par_unittest.')
     self.par = os.path.join(self.tmp, 'factory.par')
-    self.assertTrue(make_par.main(['-o', self.par, '--include-unittest']))
 
   def tearDown(self):
     shutil.rmtree(self.tmp)
@@ -114,7 +113,18 @@ class PARSelfTest(unittest.TestCase):
     process = Spawn([link, unittest_module_path], call=True, env={}, cwd='/')
     self.assertEqual(0, process.returncode)
 
-  def testCrosConfig(self):
+  def _BuildPar(self, is_mini):
+    args = ['-o', self.par, '--include-unittest']
+    if is_mini:
+      args += ['--mini']
+    self.assertTrue(make_par.main(args))
+
+  def testCrosConfigInFactoryPAR(self):
+    self._BuildPar(False)
+    self._RunUnittestInPar('cros.factory.utils.config_utils_unittest')
+
+  def testCrosConfigInFactoryMiniPAR(self):
+    self._BuildPar(True)
     self._RunUnittestInPar('cros.factory.utils.config_utils_unittest')
 
 
