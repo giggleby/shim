@@ -11,6 +11,7 @@ from cros.factory.gooftool import cros_config
 from cros.factory.test.env import paths
 from cros.factory.utils import config_utils
 
+
 BOXSTER = 'boxster'
 PROJECT_CONFIG_PATH = os.path.join(paths.FACTORY_DIR, 'project_config')
 DEVICE_TREE_COMPATIBLE_PATH = cros_config.DEVICE_TREE_COMPATIBLE_PATH
@@ -72,6 +73,7 @@ def GetDesignConfig(dut, product_name=None, sku_id=None,
   # with `oem_name` configurations in `model_sku`.
   custom_label_tag = custom_label_tag or ''
   design = cros_config_object.GetModelName()
+  product_names.append(design)
 
   matched_configs = []
   matched_design_config = {}

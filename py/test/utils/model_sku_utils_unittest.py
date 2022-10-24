@@ -16,8 +16,11 @@ class TestModelSKUUtils(unittest.TestCase):
   def _SetProjectConfigMock(listdir_mock, load_config_mock):
     """Mock a project config database."""
     listdir_mock.return_value = [
-        'program1_project1_model_sku.json', 'program1_project2_model_sku.json',
-        'program2_project3_model_sku.json', 'program2_project4_model_sku.json'
+        'program1_project1_model_sku.json',
+        'program1_project2_model_sku.json',
+        'program2_project3_model_sku.json',
+        'program2_project4_model_sku.json',
+        'program3_project5_model_sku.json',
     ]
     load_config_mock.side_effect = [{
         'model': {
@@ -101,6 +104,30 @@ class TestModelSKUUtils(unittest.TestCase):
                 'loemc': 'FAKE_LOEMC',
             },
         },
+    }, {
+        'model': {
+            'design10': {
+                'has_laser': True
+            },
+            'design11': {
+                'has_laser': False
+            }
+        },
+        'product_sku': {
+            'design10': {
+                '10': {
+                    'fw_config': 125
+                }
+            }
+        },
+        'oem_name': {
+            'design10': {
+                '': 'FAKE_OEM',
+            },
+            'design11': {
+                'loema': 'FAKE_OEMA',
+            },
+        },
     }]
 
   @staticmethod
@@ -166,6 +193,16 @@ class TestModelSKUUtils(unittest.TestCase):
     design_config = model_sku_utils.GetDesignConfig(sys_mock)
     self.assertEqual(design_config, {})
 
+    sys_mock.ReadFile.return_value = 'Fakeproduct'
+    self._SetCrosConfigMock(cros_config_mock, '10', 'design10', None)
+    self._SetProjectConfigMock(listdir_mock, load_config_mock)
+    design_config = model_sku_utils.GetDesignConfig(sys_mock)
+    self.assertEqual(design_config['fw_config'], 125)
+    self.assertEqual(design_config['program'], 'program3')
+    self.assertEqual(design_config['project'], 'project5')
+    self.assertEqual(design_config['has_laser'], True)
+    self.assertEqual(design_config['oem_name'], 'FAKE_OEM')
+
   @mock.patch('os.listdir')
   @mock.patch('cros.factory.gooftool.cros_config.CrosConfig')
   @mock.patch('cros.factory.utils.config_utils.LoadConfig')
@@ -228,6 +265,21 @@ class TestModelSKUUtils(unittest.TestCase):
     self._SetProjectConfigMock(listdir_mock, load_config_mock)
     design_config = model_sku_utils.GetDesignConfig(sys_mock)
     self.assertEqual(design_config, {})
+
+    sys_mock.ReadFile.side_effect = [
+        # Read from PRODUCT_NAME_PATH and fail.
+        Exception(),
+        # Read from DEVICE_TREE_COMPATIBLE_PATH.
+        'fake,bad,rev123\0fake,boo,rev0'
+    ]
+    self._SetCrosConfigMock(cros_config_mock, '10', 'design10', None)
+    self._SetProjectConfigMock(listdir_mock, load_config_mock)
+    design_config = model_sku_utils.GetDesignConfig(sys_mock)
+    self.assertEqual(design_config['fw_config'], 125)
+    self.assertEqual(design_config['program'], 'program3')
+    self.assertEqual(design_config['project'], 'project5')
+    self.assertEqual(design_config['has_laser'], True)
+    self.assertEqual(design_config['oem_name'], 'FAKE_OEM')
 
 
 if __name__ == '__main__':
