@@ -7,9 +7,13 @@ import {createAction} from 'typesafe-actions';
 import {Dispatch} from '@app/types';
 
 const setError = createAction('SET_ERROR_MESSAGE', (resolve) =>
-  (message: string) => resolve({message}));
+  (message: string, moreMessage: string) => resolve({message, moreMessage}));
 
 const showErrorDialog = createAction('SHOW_ERROR_DIALOG');
+
+const hideMoreErrorMessage = createAction('HIDE_MORE_ERROR_MESSAGE');
+
+export const showMoreErrorMessage = createAction('SHOW_MORE_ERROR_MESSAGE');
 
 export const hideErrorDialog = createAction('HIDE_ERROR_DIALOG');
 
@@ -17,11 +21,14 @@ export const basicActions = {
   setError,
   showErrorDialog,
   hideErrorDialog,
+  showMoreErrorMessage,
+  hideMoreErrorMessage,
 };
 
 // convenient wrapper of setError() + showErrorDialog()
-export const setAndShowErrorDialog = (message: string) =>
+export const setAndShowErrorDialog = (message: string, moreMessage: string) =>
   (dispatch: Dispatch) => {
-    dispatch(setError(message));
+    dispatch(setError(message, moreMessage));
     dispatch(showErrorDialog());
+    dispatch(hideMoreErrorMessage());
   };

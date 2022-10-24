@@ -78,12 +78,17 @@ export const fetchBundles = () =>
       const response = await authorizedAxios().get<Bundle[]>(
         `${baseURL(getState)}/bundles.json`);
       dispatch(receiveBundles(response.data));
-    } catch (err: unknown) {
-      if (isAxiosError(err)) {
+    } catch (unknownError: unknown) {
+      if (isAxiosError(unknownError)) {
+        let moreMessage = unknownError.response?.data.detail;
+        if (moreMessage === undefined) {
+          moreMessage = unknownError.response?.data;
+        }
         dispatch(error.actions.setAndShowErrorDialog(
-          `error fetching bundle list\n\n${err.message}`));
+          `error fetching bundle list\n\n${unknownError.message}`,
+          moreMessage));
       } else {
-        throw err;
+        throw unknownError;
       }
     }
   };
@@ -251,7 +256,7 @@ export const downloadResource = (projectName: string,
       reader.onload = () => {
         const message = JSON.parse(reader.result as string);
         dispatch(error.actions.setAndShowErrorDialog(
-            `error downloading resource\n\n${message.detail}`));
+            `error downloading resource`, message.detail));
       };
       reader.readAsText(unknownError.response.data);
     });

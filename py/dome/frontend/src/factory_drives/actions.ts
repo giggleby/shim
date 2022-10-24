@@ -174,12 +174,17 @@ export const fetchFactoryDrives = () =>
       const directories = await authorizedAxios().get<FactoryDriveDirectory[]>(
         `${baseURL(getState)}/factory_drives/dirs.json`);
       dispatch(receiveFactoryDriveDirs(directories.data));
-    } catch (err: unknown) {
-      if (isAxiosError(err)) {
+    } catch (unknownError: unknown) {
+      if (isAxiosError(unknownError)) {
+        let moreMessage = unknownError.response?.data.detail;
+        if (moreMessage === undefined) {
+          moreMessage = unknownError.response?.data;
+        }
         dispatch(error.actions.setAndShowErrorDialog(
-          `error fetching factory drives or dirs\n\n${err.message}`));
+            `error fetching factory drives or dirs\n\n${unknownError.message}`,
+            moreMessage));
       } else {
-        throw err;
+        throw unknownError;
       }
     }
   };

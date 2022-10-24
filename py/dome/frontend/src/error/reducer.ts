@@ -7,9 +7,15 @@ import {ActionType, getType} from 'typesafe-actions';
 
 import {basicActions as actions} from './actions';
 
+export interface MessageObject {
+  errorMessage: string;
+  moreErrorMessage: string;
+}
+
 export interface ErrorState {
   show: boolean;
-  message: string;
+  showMore: boolean;
+  message: MessageObject;
 }
 
 type ErrorAction = ActionType<typeof actions>;
@@ -27,10 +33,25 @@ export default combineReducers<ErrorState, ErrorAction>({
         return state;
     }
   },
-  message: (state = '', action) => {
+  showMore: (state = false, action) => {
+    switch (action.type) {
+      case getType(actions.showMoreErrorMessage):
+        return true;
+
+      case getType(actions.hideMoreErrorMessage):
+        return false;
+
+      default:
+        return state;
+    }
+  },
+  message: (state = {errorMessage: '', moreErrorMessage: ''}, action) => {
     switch (action.type) {
       case getType(actions.setError):
-        return action.payload.message;
+        return {
+          errorMessage: action.payload.message,
+          moreErrorMessage: action.payload.moreMessage,
+        };
 
       default:
         return state;

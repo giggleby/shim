@@ -1101,6 +1101,6 @@ class Log:
                                          delete_params['start_date'],
                                          delete_params['end_date'])
       return response
-    except Exception as e:
-      logger.error('Downloading failed. Error message: %r', e)
-      raise DomeServerException(detail=e) from None
+    except xmlrpc.client.Fault as e:
+      logger.error('Delete files failed')
+      raise DomeServerException(detail=e.faultString) from e

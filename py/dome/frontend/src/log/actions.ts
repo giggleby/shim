@@ -114,10 +114,14 @@ export const exportLog = (projectName: string,
           dispatch(setCompressState(pileKey, 'SUCCEEDED'));
         } catch (unknownError: unknown) {
           if (isAxiosError(unknownError)) {
+            let moreMessage = unknownError.response?.data.detail;
+            if (moreMessage === undefined) {
+              moreMessage = unknownError.response?.data;
+            }
             dispatch(setCompressState(pileKey, 'FAILED'));
-            const message = unknownError.response?.data.detail;
             dispatch(error.actions.setAndShowErrorDialog(
-                `error compressing log\n\n${message}`));
+                `error compressing log\n\n${unknownError.message}`,
+                moreMessage));
             return;
           } else {
             throw unknownError;
@@ -143,10 +147,14 @@ export const exportLog = (projectName: string,
           dispatch(setCleanupState(pileKey, 'SUCCEEDED'));
         } catch (unknownError: unknown) {
           if (isAxiosError(unknownError)) {
+            let moreMessage = unknownError.response?.data.detail;
+            if (moreMessage === undefined) {
+              moreMessage = unknownError.response?.data;
+            }
             dispatch(setCleanupState(pileKey, 'FAILED'));
-            const message = unknownError.response?.data.detail;
             dispatch(error.actions.setAndShowErrorDialog(
-                `error compressing log\n\n${message}`));
+                `error deleting log\n\n${unknownError.message}`,
+                moreMessage));
             return;
           } else {
             throw unknownError;

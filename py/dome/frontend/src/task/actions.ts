@@ -283,13 +283,13 @@ const runTaskImpl = (taskId: string) =>
           const {data} = response;
           const responseText = typeof data === 'string' ? data : safeDump(data);
           dispatch(error.actions.setAndShowErrorDialog(
-            `${err.message}\n\n${responseText}`));
+            err.message, responseText));
         } else {
           // Some unexpected error that is not server-side happened, probably a
           // bug in the task code.
           console.error(err);
           dispatch(error.actions.setAndShowErrorDialog(
-            `Unexpected Dome error: ${err}`));
+            'Unexpected Dome error', `${err}`));
         }
         // mark the task as failed
         dispatch(changeTaskState(taskId, 'FAILED'));

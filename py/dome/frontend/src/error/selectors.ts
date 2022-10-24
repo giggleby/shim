@@ -7,12 +7,14 @@ import {RootState} from '@app/types';
 import {displayedState} from '@common/optimistic_update';
 
 import {NAME} from './constants';
-import {ErrorState} from './reducer';
+import {ErrorState, MessageObject} from './reducer';
 
 export const localState = (state: RootState): ErrorState =>
   displayedState(state)[NAME];
 
 export const isErrorDialogShown =
   (state: RootState): boolean => localState(state).show;
+export const isMoreErrorMessageShown =
+  (state: RootState): boolean => localState(state).showMore;
 export const getErrorMessage =
-  (state: RootState): string => localState(state).message;
+  (state: RootState): MessageObject => localState(state).message;
