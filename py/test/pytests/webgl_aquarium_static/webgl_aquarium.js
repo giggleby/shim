@@ -9,7 +9,7 @@ const iframeLoaded = new Promise((resolve) => {
 });
 
 const getFpsContainer = () =>
-    webglIFrame.contentDocument.getElementsByClassName('fpsContainer')[0];
+  webglIFrame.contentDocument.getElementsByClassName('fpsContainer')[0];
 
 const hideOptions = () => {
   const topUI = webglIFrame.contentDocument.getElementById('topUI');
@@ -19,6 +19,15 @@ const hideOptions = () => {
 };
 
 const isFullScreen = () => webglIFrame.classList.contains('fullscreen');
+
+var getFpsValue = () => {
+  return webglIFrame.contentDocument.getElementById('fps').innerText;
+}
+
+const sendFpsToPytest = () => {
+  // Triggers 'AddFPSToWindow' event in pytest with latest FPS value.
+  window.test.sendTestEvent('AddFPSToWindow', {'webgl_fps': getFpsValue()});
+}
 
 const toggleFullScreen = () => {
   const fullscreen = !isFullScreen();
@@ -93,7 +102,8 @@ iframeLoaded.then(() => {
 
 const exports = {
   toggleFullScreen,
-  updateUI
+  updateUI,
+  sendFpsToPytest
 };
 for (const key of Object.keys(exports)) {
   window[key] = exports[key];
