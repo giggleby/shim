@@ -188,8 +188,10 @@ class BluetoothTest(test_case.TestCase):
           default=None),
       Arg('average_rssi_threshold', float,
           'Checks the largest average RSSI among scanned device is equal to or '
-          'greater than average_rssi_threshold.',
-          default=None),
+          'greater than average_rssi_threshold. The thresholds recommended by '
+          'Google are -60.0 at 3ft (0.9144m) distance over the air or -70.0 at '
+          '6ft (1.8288m) distance over the air.',
+          default=-70.0),
       Arg('scan_counts', int,
           'Number of scans to calculate average RSSI.',
           default=3),

@@ -247,8 +247,7 @@
       "pytest_name": "bluetooth",
       "args": {
         "expected_adapter_count": 1,
-        "scan_devices": true,
-        "average_rssi_threshold": -55.0
+        "scan_devices": true
       }
     },
     "Button": {
