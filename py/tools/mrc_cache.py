@@ -36,7 +36,6 @@ import logging
 import re
 
 from cros.factory.device import device_utils
-from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
 # x86 and ARM (Qualcomm) have both RECOVERY and RW MRC cache.
@@ -64,7 +63,6 @@ class Result(str, enum.Enum):
   NoUpdate = 'NoUpdate'
 
 
-EVENT_LOG_PATH = '/var/log/eventlog.txt'
 _MRC_CACHE_UPDATE_REGEX = (
     r'\| Memory Cache Update \| (?P<mode>\w+) \| (?P<result>\w+)')
 _SYSTEM_BOOT_REGEX = r'\| System boot \| \d+'
@@ -122,7 +120,7 @@ class MRCCacheUpdateError(type_utils.Error):
             f'Expected: {self.expected}, Actual: {self.actual}')
 
 
-def _ReadEventLog(has_recovery_mrc):
+def _ReadEventLog(has_recovery_mrc, dut):
   """Reads the eventlog reversely and returns the MRC update result.
 
   The update result can be 'Success', 'Fail' or 'NoUpdate'. Coreboot only
@@ -158,7 +156,11 @@ def _ReadEventLog(has_recovery_mrc):
   }
 
   system_boot_msg_cnt = 0
-  for line in reversed(file_utils.ReadFile(EVENT_LOG_PATH).split('\n')):
+
+  # Use elogtool command instead of reading from eventlog.txt in case eventlog
+  # is not flushed to file yet. See b/249407529.
+  elogtool_output = dut.CheckOutput('elogtool list', log=True)
+  for line in reversed(elogtool_output.splitlines()):
     match = re.search(_MRC_CACHE_UPDATE_REGEX, line)
     if match:
       update_result[Mode(match.group('mode'))] = Result(match.group('result'))
@@ -172,7 +174,7 @@ def _ReadEventLog(has_recovery_mrc):
 
 def VerifyTrainingData(dut, expected):
   has_recovery_mrc = HasRecoveryMRCCache(dut)
-  update_result = _ReadEventLog(has_recovery_mrc)
+  update_result = _ReadEventLog(has_recovery_mrc, dut)
   actual_normal = update_result[Mode.Normal]
 
   if actual_normal != expected:

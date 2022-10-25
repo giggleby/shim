@@ -121,31 +121,30 @@ class MRCCacheTestHasRecovery(unittest.TestCase):
     ]
     self.assertEqual(self.dut.CheckCall.call_args_list, check_call_calls)
 
-  @mock.patch('cros.factory.utils.file_utils.ReadFile')
   @mock.patch('cros.factory.tools.mrc_cache.GetMRCSections')
-  def testVerifyTrainingResult(self, get_mrc_section_mock, read_file_mock):
+  def testVerifyTrainingResult(self, get_mrc_section_mock):
     get_mrc_section_mock.return_value = self.mrc_sections
 
     # Both sections updates successfully.
-    read_file_mock.return_value = _GenerateEventLog(
+    self.dut.CheckOutput.return_value = _GenerateEventLog(
         mrc_cache.Result.Success, mrc_cache.Result.Success, True)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # Recovery MRC cache does not update.
-    read_file_mock.return_value = _GenerateEventLog(
+    self.dut.CheckOutput.return_value = _GenerateEventLog(
         mrc_cache.Result.Success, mrc_cache.Result.NoUpdate, True)
     with self.assertRaises(mrc_cache.MRCCacheUpdateError):
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # Both sections fails to update.
-    read_file_mock.return_value = _GenerateEventLog(mrc_cache.Result.Fail,
-                                                    mrc_cache.Result.Fail)
+    self.dut.CheckOutput.return_value = _GenerateEventLog(
+        mrc_cache.Result.Fail, mrc_cache.Result.Fail)
     with self.assertRaises(mrc_cache.MRCCacheUpdateError):
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # Both sections do not update.
-    read_file_mock.return_value = _GenerateEventLog(mrc_cache.Result.NoUpdate,
-                                                    mrc_cache.Result.NoUpdate)
+    self.dut.CheckOutput.return_value = _GenerateEventLog(
+        mrc_cache.Result.NoUpdate, mrc_cache.Result.NoUpdate)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.NoUpdate)
 
 
@@ -204,22 +203,23 @@ class MRCCacheTestNoRecovery(unittest.TestCase):
     mrc_cache.SetRecoveryRequest(self.dut)
     self.assertEqual(self.dut.CheckCall.call_args_list, [])
 
-  @mock.patch('cros.factory.utils.file_utils.ReadFile')
   @mock.patch('cros.factory.tools.mrc_cache.GetMRCSections')
-  def testVerifyTrainingData(self, get_mrc_section_mock, read_file_mock):
+  def testVerifyTrainingData(self, get_mrc_section_mock):
     get_mrc_section_mock.return_value = self.mrc_sections
 
     # RW cache updates successfully.
-    read_file_mock.return_value = _GenerateEventLog(mrc_cache.Result.Success)
+    self.dut.CheckOutput.return_value = _GenerateEventLog(
+        mrc_cache.Result.Success)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # RW cache fails to update.
-    read_file_mock.return_value = _GenerateEventLog(mrc_cache.Result.Fail)
+    self.dut.CheckOutput.return_value = _GenerateEventLog(mrc_cache.Result.Fail)
     with self.assertRaises(mrc_cache.MRCCacheUpdateError):
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # RW cache does not update.
-    read_file_mock.return_value = _GenerateEventLog(mrc_cache.Result.NoUpdate)
+    self.dut.CheckOutput.return_value = _GenerateEventLog(
+        mrc_cache.Result.NoUpdate)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.NoUpdate)
 
 
