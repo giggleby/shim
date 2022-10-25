@@ -19,6 +19,7 @@ import unittest
 from cros.factory.test.rf.n1914a import N1914A
 from cros.factory.utils import net_utils
 
+
 NORMAL_ERR_RESPONSE = b'+0,"No error"\n'
 NORMAL_ESR_REGISTER = b'+0\n'
 NORMAL_OPC_RESPONSE = b'+1\n'
@@ -81,8 +82,7 @@ class MockServerHandler(socketserver.StreamRequestHandler):
         if output:
           self.wfile.write(output)
       else:
-        raise ValueError('Expecting [%s] but got [%s]' % (
-            expected_input, line))
+        raise ValueError(f'Expecting [{expected_input}] but got [{line}]')
 
 
 class N1914ATest(unittest.TestCase):

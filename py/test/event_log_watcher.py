@@ -13,6 +13,7 @@ from cros.factory.test import event_log
 from cros.factory.utils import debug_utils
 from cros.factory.utils import shelve_utils
 
+
 EVENT_SEPARATOR = '\n---\n'
 KEY_OFFSET = 'offset'
 EVENT_LOG_DB_FILE = os.path.join(paths.DATA_STATE_DIR, 'event_log_db')
@@ -32,8 +33,8 @@ class Chunk(collections.namedtuple('Chunk', 'log_name chunk pos')):
   """
 
   def __str__(self):
-    return 'Chunk(log_name=%r, len=%s, pos=%d)' % (
-        self.log_name, len(self.chunk), self.pos)
+    return (f'Chunk(log_name={self.log_name!r}, len={len(self.chunk)}, pos='
+            f'{int(self.pos)})')
 
 
 class EventLogWatcher:

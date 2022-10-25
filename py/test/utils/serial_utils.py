@@ -42,7 +42,7 @@ def OpenSerial(**params):
     raise ValueError('Missing parameter "port".')
   ser = serial.Serial(**params)
   if not ser.isOpen():
-    raise serial.SerialException('Failed to open serial: %r' % port)
+    raise serial.SerialException(f'Failed to open serial: {port!r}')
   return ser
 
 
@@ -73,7 +73,7 @@ def FindTtyByDriver(driver_name, interface_protocol=None, multiple_ports=False):
   """
   matched_candidates = []
   for candidate in glob.glob('/dev/tty*'):
-    device_path = '/sys/class/tty/%s/device' % os.path.basename(candidate)
+    device_path = f'/sys/class/tty/{os.path.basename(candidate)}/device'
     driver_path = os.path.realpath(os.path.join(device_path, 'driver'))
 
     # Check if driver_name exist at the tail of driver_path.
@@ -105,7 +105,7 @@ def FindTtyByPortIndex(port_index, driver_name=None):
     matched /dev/tty path. Return None if no port has been detected.
   """
   for candidate in glob.glob('/dev/tty*'):
-    device_path = '/sys/class/tty/%s/device' % os.path.basename(candidate)
+    device_path = f'/sys/class/tty/{os.path.basename(candidate)}/device'
     driver_path = os.path.realpath(os.path.join(device_path, 'driver'))
 
     # If driver_name is given, check if driver_name exists at the tail of
@@ -115,7 +115,7 @@ def FindTtyByPortIndex(port_index, driver_name=None):
 
     device_path = os.path.realpath(device_path)
     # Check if port_index exists in device_path.
-    if '/%s/' % port_index in device_path:
+    if f'/{port_index}/' in device_path:
       logging.info('Find serial path : %s', candidate)
       return candidate
   return None
@@ -201,7 +201,7 @@ class SerialDevice:
 
     if not port:
       raise serial.SerialException(
-          'Serial device with driver %r not found' % driver)
+          f'Serial device with driver {driver!r} not found')
 
     self._port = port
 
@@ -254,8 +254,9 @@ class SerialDevice:
         logging.info('Successfully sent %r. Took %.3f seconds', command,
                      duration)
     except serial.SerialTimeoutException:
-      error_message = 'Send %r timeout after %.2f seconds' % (
-          command, self._serial.write_timeout)
+      error_message = (
+          f'Send {command!r} timeout after {self._serial.write_timeout:.2f} '
+          f'seconds')
       if self.log:
         logging.warning(error_message)
       raise serial.SerialTimeoutException(error_message) from None
@@ -287,8 +288,9 @@ class SerialDevice:
         logging.info('Successfully received %r. Took %.3f seconds', response,
                      duration)
       return response
-    error_message = 'Receive %d bytes timeout after %.2f seconds' % (
-        size, self._serial.timeout)
+    error_message = (
+        f'Receive {int(size)} bytes timeout after {self._serial.timeout:.2f} '
+        f'seconds')
     if self.log:
       logging.warning(error_message)
     raise serial.SerialTimeoutException(error_message)
@@ -334,8 +336,8 @@ class SerialDevice:
         if nth_run < retry:
           time.sleep(self.retry_interval_secs)
 
-    error_message = 'Timeout receiving %d bytes for command %r' % (size,
-                                                                   command)
+    error_message = (
+        f'Timeout receiving {int(size)} bytes for command {command!r}')
     if not suppress_log and self.log:
       logging.warning(error_message)
     raise serial.SerialTimeoutException(error_message)

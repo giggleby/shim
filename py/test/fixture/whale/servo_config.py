@@ -12,6 +12,7 @@ for ryu board.
 import glob
 import os
 
+
 try:
   from cros.factory.utils import type_utils
 except ImportError:
@@ -24,18 +25,17 @@ IMPORT_PATH = 'cros.factory.test.fixture.whale.%s'
 
 # Whale's krill INA dict
 WHALE_INA = {
-    'krill_vc_connector_ina%d' % i: 'krill_vc_connector_ina%d' % i
+    f'krill_vc_connector_ina{int(i)}': f'krill_vc_connector_ina{int(i)}'
     for i in range(1, 17)
 }
 
 # Whale's krill ADC list
-WHALE_ADC = [
-    ('whale_adc%d' % i, 1) for i in range(7)
-]
+WHALE_ADC = [(f'whale_adc{int(i)}', 1) for i in range(7)]
 
 # Whale's feedback dict
 FIXTURE_FEEDBACK = type_utils.AttrDict(
-    {'FB%d' % i: 'fixture_fb%d' % i for i in range(1, 15)})
+    {f'FB{int(i)}': f'fixture_fb{int(i)}'
+     for i in range(1, 15)})
 
 def _GetBoardServoConfig():
   """Gets board-dependent servo config file name.

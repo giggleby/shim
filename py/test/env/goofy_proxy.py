@@ -6,6 +6,7 @@ from jsonrpclib import jsonrpc
 
 from cros.factory.utils import net_utils
 
+
 # Default address and port that goofy server will bind on.
 DEFAULT_GOOFY_PORT = 0x0FAC
 DEFAULT_GOOFY_ADDRESS = net_utils.LOCALHOST
@@ -29,5 +30,4 @@ def GetRPCProxy(address=None, port=None, url=GOOFY_RPC_URL):
   """
   address = address or DEFAULT_GOOFY_ADDRESS
   port = port or DEFAULT_GOOFY_PORT
-  return jsonrpc.ServerProxy(
-      'http://%s:%d%s' % (address, port, url))
+  return jsonrpc.ServerProxy(f'http://{address}:{int(port)}{url}')

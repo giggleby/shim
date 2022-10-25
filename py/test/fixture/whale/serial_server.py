@@ -52,13 +52,15 @@ class SerialServer:
     try:
       conn = self._serials[serial_index]
     except IndexError:
-      raise SerialServerError('index %d out of range' % serial_index) from None
+      raise SerialServerError(
+          f'index {int(serial_index)} out of range') from None
 
     try:
       conn.Send(command + '\n', flush=False)
     except serial.SerialTimeoutException as e:
-      raise SerialServerError('Serial index %d send command: %s fail: %s' %
-                              (serial_index, command, e)) from None
+      raise SerialServerError(
+          f'Serial index {int(serial_index)} send command: {command} fail: {e}'
+      ) from None
 
   def Receive(self, serial_index, num_bytes):
     """Receives N byte data from serial connection.
@@ -79,7 +81,8 @@ class SerialServer:
     try:
       conn = self._serials[serial_index]
     except IndexError:
-      raise SerialServerError('index %d out of range' % serial_index) from None
+      raise SerialServerError(
+          f'index {int(serial_index)} out of range') from None
 
     try:
       read_data = conn.Receive(num_bytes)
@@ -87,7 +90,7 @@ class SerialServer:
       return xmlrpc.client.Binary(read_data)
     except serial.SerialTimeoutException as e:
       raise SerialServerError(
-          'Serial index %d receive fail: %s' % (serial_index, e)) from None
+          f'Serial index {int(serial_index)} receive fail: {e}') from None
 
   def GetSerialAmount(self):
     """Gets total serial amount on server.
@@ -104,7 +107,8 @@ class SerialServer:
     try:
       params = self._params_list[serial_index]
     except IndexError:
-      raise SerialServerError('index %d out of range' % serial_index) from None
+      raise SerialServerError(
+          f'index {int(serial_index)} out of range') from None
 
     # Disconnect old serial first
     if self._serials[serial_index]:
@@ -140,15 +144,15 @@ class SerialServer:
                                                     serial_driver)
       if not serial_path:
         raise SerialServerError(
-            'No serial device with driver %r detected at port index %s' %
-            (serial_driver, serial_port_index))
+            f'No serial device with driver {serial_driver!r} detected at port '
+            f'index {serial_port_index}')
       serial_params['port'] = serial_path
 
     elif not serial_params.get('port'):
       serial_path = serial_utils.FindTtyByDriver(serial_driver)
       if not serial_path:
         raise SerialServerError(
-            'No serial device with driver %r detected' % serial_driver)
+            f'No serial device with driver {serial_driver!r} detected')
       serial_params['port'] = serial_path
 
     logging.info('Connect to %s', serial_params['port'])
@@ -158,4 +162,4 @@ class SerialServer:
       return conn
     except serial.SerialException as e:
       raise SerialServerError(
-          'Connect to %s fail: %s' % (serial_params['port'], e)) from None
+          f"Connect to {serial_params['port']} fail: {e}") from None

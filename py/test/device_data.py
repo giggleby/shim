@@ -125,6 +125,7 @@ from cros.factory.test import state
 from cros.factory.utils import config_utils
 from cros.factory.utils import shelve_utils
 
+
 # Helper utility for manipulating keys.
 JoinKeys = shelve_utils.DictKey.Join
 
@@ -146,24 +147,23 @@ def CheckValidDeviceDataKey(key, key_prefix=None):
   """
   prefix, dot, postfix = key.partition('.')
   if key_prefix and prefix != key_prefix:
-    raise KeyError('Key %s must start with %s.' % (key, key_prefix))
+    raise KeyError(f'Key {key} must start with {key_prefix}.')
   top_level_keys = [KEY_SERIALS, KEY_HWID, KEY_VPD, KEY_COMPONENT, KEY_FACTORY]
   if prefix not in top_level_keys:
-    raise KeyError('Key %s must start with one of %r' % (key, top_level_keys))
+    raise KeyError(f'Key {key} must start with one of {top_level_keys!r}')
   if prefix == KEY_SERIALS:
     if '.' in postfix:
-      raise KeyError('Serial number name must not contain dots: %s' % postfix)
+      raise KeyError(f'Serial number name must not contain dots: {postfix}')
   elif prefix == KEY_HWID:
     if dot != '':
-      raise KeyError('HWID must not have sub keys: %s' % postfix)
+      raise KeyError(f'HWID must not have sub keys: {postfix}')
   elif prefix == KEY_VPD:
     vpd_sections = [NAME_RO, NAME_RW]
     section, unused_dot, name = postfix.partition('.')
     if section not in vpd_sections:
-      raise KeyError('VPD key [%s] must be in the sections: %s' %
-                     (key, vpd_sections))
+      raise KeyError(f'VPD key [{key}] must be in the sections: {vpd_sections}')
     if '.' in name:
-      raise KeyError('VPD entry name must not contain dots: %s' % name)
+      raise KeyError(f'VPD entry name must not contain dots: {name}')
   return True
 
 
@@ -191,7 +191,7 @@ def GetDeviceData(key: str, default=None, data_type: Union[int, str,
 
   value = _GetInstance()[key].Get(default)
   if throw_if_none and value is None:
-    raise KeyError('No device data (%s)' % key)
+    raise KeyError(f'No device data ({key})')
   if data_type is None:
     return value
   if data_type == str:

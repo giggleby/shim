@@ -23,8 +23,9 @@ class FpmcuCommandError(FpmcuError):
 
   def __init__(self, cmdline: List[str], stdout: Union[str, bytes],
                stderr: Union[str, bytes], returncode: int):
-    super().__init__('cmd: %r, returncode: %d, stdout: %r, stderr: %r' %
-                     (cmdline, returncode, stdout, stderr))
+    super().__init__(
+        f'cmd: {cmdline!r}, returncode: {int(returncode)}, stdout: {stdout!r}, '
+        f'stderr: {stderr!r}')
     self.stdout = stdout
     self.stderr = stderr
     self.returncode = returncode
@@ -193,8 +194,7 @@ class FpmcuDevice:
     match_name = self.CHIPINFO_NAME_RE.search(fpmcu_chipinfo)
 
     if match_name is None:
-      raise FpmcuError(
-          'Unable to retrieve FPMCU chipinfo (%s)' % fpmcu_chipinfo)
+      raise FpmcuError(f'Unable to retrieve FPMCU chipinfo ({fpmcu_chipinfo})')
 
     return match_name.group(1)
 
@@ -225,7 +225,7 @@ class FpmcuDevice:
     match_model = self.FPINFO_MODEL_RE.search(info)
 
     if match_vendor is None or match_model is None:
-      raise FpmcuError('Unable to retrieve Sensor info (%s)' % info)
+      raise FpmcuError(f'Unable to retrieve Sensor info ({info})')
     logging.info('ectool fpinfo:\n%s\n', info)
 
     # Check error flags
@@ -235,7 +235,7 @@ class FpmcuDevice:
 
     flags = match_errors.group(1)
     if flags != '':
-      raise FpmcuError('Sensor failure: %s' % flags)
+      raise FpmcuError(f'Sensor failure: {flags}')
 
     return (match_vendor.group(1), match_model.group(1))
 

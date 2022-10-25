@@ -64,7 +64,7 @@ AllowedWpErrorMessages = [
 
 def GetCbiData(dut, data_name):
   if data_name not in CbiDataName:
-    raise CbiException('%s is not a valid CBI data name.' % data_name)
+    raise CbiException(f'{data_name} is not a valid CBI data name.')
   data_attr = CbiDataDict[data_name]
 
   get_flag = 1  # Invalidate cache
@@ -89,11 +89,10 @@ def GetCbiData(dut, data_name):
 
 def SetCbiData(dut, data_name, value):
   if data_name not in CbiDataName:
-    raise CbiException('%s is not a valid CBI data name.' % data_name)
+    raise CbiException(f'{data_name} is not a valid CBI data name.')
   data_attr = CbiDataDict[data_name]
   if not isinstance(value, data_attr.type):
-    raise CbiException('value %r should have type %r.' %
-                       (value, data_attr.type))
+    raise CbiException(f'value {value!r} should have type {data_attr.type!r}.')
 
   command = ['ectool', 'cbi', 'set', str(data_attr.tag), str(value),
              str(data_attr.size)]
@@ -102,9 +101,9 @@ def SetCbiData(dut, data_name, value):
   stdout, stderr = process.communicate()
   logging.info('%s: stdout: %s\n', command, stdout)
   if process.returncode != 0:
-    raise CbiException('Failed to set data_name=%s to EEPROM. '
-                       'returncode=%d, stdout=%s, stderr=%s' %
-                       (data_name, process.returncode, stdout, stderr))
+    raise CbiException(
+        f'Failed to set data_name={data_name} to EEPROM. returncode='
+        f'{int(process.returncode)}, stdout={stdout}, stderr={stderr}')
 
 
 def CheckCbiEepromPresent(dut):
@@ -152,8 +151,9 @@ def VerifyCbiEepromWpStatus(dut, cbi_eeprom_wp_status):
   detect_presence = CheckCbiEepromPresent(dut)
   expected_presence = cbi_eeprom_wp_status != CbiEepromWpStatus.Absent
   if detect_presence != expected_presence:
-    raise CbiException(('CheckCbiEepromPresent returns %r but is expected to be'
-                        ' %r.' % (detect_presence, expected_presence)))
+    raise CbiException(
+        f'CheckCbiEepromPresent returns {detect_presence!r} but is expected to '
+        f'be {expected_presence!r}.')
   if not detect_presence:
     return
 
@@ -185,8 +185,8 @@ def VerifyCbiEepromWpStatus(dut, cbi_eeprom_wp_status):
       errors.append('_SetSKUId should return False but get True.')
     elif all(error_message not in messages
              for error_message in AllowedWpErrorMessages):
-      errors.append('Output of _SetSKUId should contain one of %r but get %r' %
-                    (AllowedWpErrorMessages, messages))
+      errors.append(f'Output of _SetSKUId should contain one of '
+                    f'{AllowedWpErrorMessages!r} but get {messages!r}')
   else:
     if not write_success:
       errors.append('_SetSKUId should return True but get False.')
@@ -201,6 +201,6 @@ def VerifyCbiEepromWpStatus(dut, cbi_eeprom_wp_status):
     if not write_success:
       errors.append('_SetSKUId fails.')
   if errors:
-    errors.append('write protection switch of CBI EEPROM is%s enabled.' %
-                  (' not' if expected_write_protect else ''))
+    errors.append(f"write protection switch of CBI EEPROM is"
+                  f"{' not' if expected_write_protect else ''} enabled.")
     raise CbiException(' '.join(errors))

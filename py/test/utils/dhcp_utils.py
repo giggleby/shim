@@ -117,8 +117,8 @@ class DHCPManager:
       used_range.append((str(cidr.SelectIP(1)), cidr.prefix))
       ip_start = cidr.SelectIP(2)
       ip_end = cidr.SelectIP(-3)
-      dhcp_ranges.extend(['--dhcp-range',
-                          '%s,%s,%d' % (ip_start, ip_end, self._lease_time)])
+      dhcp_ranges.extend(
+          ['--dhcp-range', f'{ip_start},{ip_end},{int(self._lease_time)}'])
     interfaces = [interface.name for interface in interfaces]
     return interfaces, dhcp_ranges
 
@@ -135,9 +135,8 @@ class DHCPManager:
     self._rpc_server.Start()
     # __file__ may be a generated .pyc file that's not executable. Use .py.
     callback_file_target = __file__.replace('.pyc', '.py')
-    callback_file_symlink = os.path.join(self.RUN_DIR,
-                                         '%s%d' % (self.CALLBACK_PREFIX,
-                                                   self._callback_port))
+    callback_file_symlink = os.path.join(
+        self.RUN_DIR, f'{self.CALLBACK_PREFIX}{int(self._callback_port)}')
     os.symlink(callback_file_target, callback_file_symlink)
 
     interfaces, dhcp_ranges = self._CollectInterfaceAndIPRange()
@@ -145,24 +144,22 @@ class DHCPManager:
 
     dns_port = net_utils.FindUnusedTCPPort()
     uid = random.getrandbits(64)
-    lease_file = os.path.join(self.RUN_DIR,
-                              '%s%016x' % (self.LEASE_PREFIX, uid))
-    pid_file = os.path.join(self.RUN_DIR,
-                            '%s%016x' % (self.PID_PREFIX, uid))
+    lease_file = os.path.join(self.RUN_DIR, f'{self.LEASE_PREFIX}{uid:016x}')
+    pid_file = os.path.join(self.RUN_DIR, f'{self.PID_PREFIX}{uid:016x}')
     # Start dnsmasq and have it call back to us on any DHCP event.
 
-    cmd = ['dnsmasq',
-           '--no-daemon',
-           '--port', str(dns_port),
-           '--no-dhcp-interface=%s' % net_utils.GetDefaultGatewayInterface(),
-           '--dhcp-leasefile=%s' % lease_file,
-           '--pid-file=%s' % pid_file,
-           '--dhcp-script', callback_file_symlink]
-    cmd += ['--interface=%s' % ','.join(interfaces)]
+    cmd = [
+        'dnsmasq', '--no-daemon', '--port',
+        str(dns_port),
+        f'--no-dhcp-interface={net_utils.GetDefaultGatewayInterface()}',
+        f'--dhcp-leasefile={lease_file}', f'--pid-file={pid_file}',
+        '--dhcp-script', callback_file_symlink
+    ]
+    cmd += [f"--interface={','.join(interfaces)}"]
     cmd += dhcp_ranges
     if self._bootp:
-      cmd.append('--dhcp-boot=%s,%s,%s' %
-                 (self._bootp[1], self._bootp[2], self._bootp[0]))
+      cmd.append(
+          f'--dhcp-boot={self._bootp[1]},{self._bootp[2]},{self._bootp[0]}')
     self._process = process_utils.Spawn(cmd, sudo=True, log=True)
     # Make sure DHCP packets are not blocked
     process_utils.Spawn(['iptables',
@@ -181,9 +178,8 @@ class DHCPManager:
     self._rpc_server = None
     for interface in self._handled_interfaces:
       net_utils.Ifconfig(interface, enable=False)
-    callback_file_symlink = os.path.join(self.RUN_DIR,
-                                         '%s%d' % (self.CALLBACK_PREFIX,
-                                                   self._callback_port))
+    callback_file_symlink = os.path.join(
+        self.RUN_DIR, f'{self.CALLBACK_PREFIX}{int(self._callback_port)}')
     os.unlink(callback_file_symlink)
 
   def DHCPCallback(self, argv):
@@ -286,6 +282,6 @@ if __name__ == '__main__':
   callback_port = int(filename[len(DHCPManager.CALLBACK_PREFIX):])
 
   # Forward whatever dnsmasq tells us to DHCPManager
-  proxy = jsonrpclib.Server('http://127.0.0.1:%d' % callback_port,
+  proxy = jsonrpclib.Server(f'http://127.0.0.1:{int(callback_port)}',
                             transport=jsonrpc_utils.TimeoutJSONRPCTransport(1))
   proxy.Callback(sys.argv)

@@ -6,6 +6,7 @@ import datetime
 
 from cros.factory.device import device_utils
 
+
 try:
   from cros.factory.goofy.plugins import plugin_controller
   _HAS_PLUGIN_CONTROLLER = True
@@ -26,7 +27,7 @@ def SyncDate(dut=None):
   if not dut.link.IsLocal():
     now = datetime.datetime.utcnow()
     # set DUT time
-    dut.CheckCall(['date', '-u', '{:%m%d%H%M%Y.%S}'.format(now)], log=True)
+    dut.CheckCall(['date', '-u', f'{now:%m%d%H%M%Y.%S}'], log=True)
 
 
 def SyncTimeWithFactoryServer():

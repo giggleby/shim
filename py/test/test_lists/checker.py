@@ -12,6 +12,7 @@ from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import arg_utils
 from cros.factory.utils import type_utils
 
+
 _EVALUATE_PREFIX = test_list_module.EVALUATE_PREFIX
 
 
@@ -215,7 +216,7 @@ class Checker:
     undefined_identifiers = (collector.free_vars - valid_identifiers)
 
     if undefined_identifiers:
-      raise CheckerError('undefined identifiers: %s' % undefined_identifiers)
+      raise CheckerError(f'undefined identifiers: {undefined_identifiers}')
 
   def CheckArgsType(self, test, test_list):
     """Check if the type of arguments are valid."""
@@ -228,7 +229,7 @@ class Checker:
       # no argument for this pytest
       if test.dargs:
         raise type_utils.TestListError(
-            '%s does not accept any arguments' % test.pytest_name)
+            f'{test.pytest_name} does not accept any arguments')
       return
 
     for arg in args_spec:

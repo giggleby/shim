@@ -42,12 +42,13 @@ class WhaleBFTFixture(bft.BFTFixture):
 
   # Add 8 GPIOs on krill board PCA9534
   _WHALE_DEVICE.update({
-      'krill_pca9534_p%d' % i: 'krill_pca9534_p%d' % i for i in range(8)
+      f'krill_pca9534_p{int(i)}': f'krill_pca9534_p{int(i)}'
+      for i in range(8)
   })
 
   # Add whale_fixture_ctrl
   _WHALE_DEVICE.update({
-      'whale_fixture_ctrl%d' % i: 'whale_fixture_ctrl%d' % i
+      f'whale_fixture_ctrl{int(i)}': f'whale_fixture_ctrl{int(i)}'
       for i in range(1, 7)
   })
 
@@ -88,7 +89,7 @@ class WhaleBFTFixture(bft.BFTFixture):
         # Make identity file less open to make ssh happy
         os.chmod(self._testing_rsa_path, 0o600)
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException('Failed to Init(). Reason: %s' % e)
+      raise bft.BFTFixtureException(f'Failed to Init(). Reason: {e}')
 
   def Disconnect(self):
     # No need to disconnect it.
@@ -104,7 +105,7 @@ class WhaleBFTFixture(bft.BFTFixture):
       return (self.Status.ON if self._servo.IsOn(whale_device)
               else self.Status.OFF)
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException('%s failed. Reason: %s' % (action, e))
+      raise bft.BFTFixtureException(f'{action} failed. Reason: {e}')
 
   def SetDeviceEngaged(self, device, engage):
     """Engages/disengages a device.
@@ -117,7 +118,7 @@ class WhaleBFTFixture(bft.BFTFixture):
       device: device defined in BFTFixture.Device
       engage: True to engage; False to disengage.
     """
-    action = '%s device %s' % ('engage' if engage else 'disengage', device)
+    action = f"{'engage' if engage else 'disengage'} device {device}"
     logging.debug(action)
 
     whale_device = self._WHALE_DEVICE.get(device)
@@ -126,7 +127,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     try:
       self._servo.Set(whale_device, 'on' if engage else 'off')
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException('Failed to %s. Reason: %s' % (action, e))
+      raise bft.BFTFixtureException(f'Failed to {action}. Reason: {e}')
 
   def Ping(self):
     # Try sending an XMLRPC command.
@@ -134,8 +135,7 @@ class WhaleBFTFixture(bft.BFTFixture):
       self._servo.Get(self._WHALE_CONTROL.PASS_LED)
       logging.debug('ping success')
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException(
-          'Failed to connect to servo. Reason: %s' % e)
+      raise bft.BFTFixtureException(f'Failed to connect to servo. Reason: {e}')
 
   def CheckPowerRail(self):
     """Checks if DUT's power rail's voltage is okay.
@@ -163,13 +163,15 @@ class WhaleBFTFixture(bft.BFTFixture):
     raise NotImplementedError
 
   def ScanBarcode(self, saved_barcode_path=None):
-    _UNSPECIFIED_ERROR = 'unspecified %s in BFT params'
+    _UNSPECIFIED_ERROR = 'unspecified {} in BFT params'
     if not self._nuc_host:
-      raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'nuc_host')
+      raise bft.BFTFixtureException(_UNSPECIFIED_ERROR.format('nuc_host'))
     if not self._nuc_dut_serial_path and not saved_barcode_path:
-      raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'nuc_dut_serial_path')
+      raise bft.BFTFixtureException(
+          _UNSPECIFIED_ERROR.format('nuc_dut_serial_path'))
     if not self._testing_rsa_path:
-      raise bft.BFTFixtureException(_UNSPECIFIED_ERROR % 'testing_rsa_path')
+      raise bft.BFTFixtureException(
+          _UNSPECIFIED_ERROR.format('testing_rsa_path'))
 
     if not saved_barcode_path:
       saved_barcode_path = self._nuc_dut_serial_path
@@ -179,8 +181,8 @@ class WhaleBFTFixture(bft.BFTFixture):
     mlbsn = process_utils.SpawnOutput(
         ssh_command_base + [self._nuc_host, 'cat', saved_barcode_path])
     if not mlbsn:
-      raise bft.BFTFixtureException('Unable to read barcode from %s:%s' %
-                                    (self._nuc_host, saved_barcode_path))
+      raise bft.BFTFixtureException(
+          f'Unable to read barcode from {self._nuc_host}:{saved_barcode_path}')
     return mlbsn.strip()
 
   def IsLEDColor(self, color):
@@ -190,7 +192,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     try:
       return self._color_sensor1.ReadColor() == color
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException('Failed to check LED color. Reason %s' % e)
+      raise bft.BFTFixtureException(f'Failed to check LED color. Reason {e}')
 
   def GetStatusColor(self):
     try:
@@ -203,19 +205,19 @@ class WhaleBFTFixture(bft.BFTFixture):
       # If no match, treat as OFF status
       return bft.BFTFixture.StatusColor.OFF
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException('Failed to get LED status. Reason: %s' % e)
+      raise bft.BFTFixtureException(f'Failed to get LED status. Reason: {e}')
 
   def SetStatusColor(self, color):
     (is_pass, is_fail) = self._STATUS_COLOR.get(color, (None, None))
     if is_pass is None:
-      raise bft.BFTFixtureException('Unsupported status color %s' % color)
+      raise bft.BFTFixtureException(f'Unsupported status color {color}')
 
     try:
       self._servo.MultipleSet([(self._WHALE_CONTROL.PASS_LED, is_pass),
                                (self._WHALE_CONTROL.FAIL_LED, is_fail)])
     except servo_client.ServoClientError as e:
       raise bft.BFTFixtureException(
-          'Failed to set status color %s. Reason %s' % (color, e))
+          f'Failed to set status color {color}. Reason {e}')
 
   def ResetKeyboard(self):
     self._keyboard_emulator.Reset()
@@ -228,7 +230,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     try:
       self._keyboard_emulator.KeyPress(int(bitmask, 0), float(duration_secs))
     except ValueError as e:
-      raise bft.BFTFixtureException('Failed to convert bitmask. Reason %s' % e)
+      raise bft.BFTFixtureException(f'Failed to convert bitmask. Reason {e}')
 
   def SimulateButtonPress(self, button, duration_secs):
     logging.debug('press %s for %d seconds', button, duration_secs)
@@ -242,8 +244,7 @@ class WhaleBFTFixture(bft.BFTFixture):
       else:
         self._servo.Click(whale_device, duration_secs)
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException(
-          'Failed to press %s. Reason: %s' % (button, e))
+      raise bft.BFTFixtureException(f'Failed to press {button}. Reason: {e}')
 
   def SimulateButtonRelease(self, button):
     logging.debug('release %s', button)
@@ -253,22 +254,21 @@ class WhaleBFTFixture(bft.BFTFixture):
     try:
       self._servo.Set(whale_device, 'off')
     except servo_client.ServoClientError as e:
-      raise bft.BFTFixtureException(
-          'Failed to press %s. Reason: %s' % (button, e))
+      raise bft.BFTFixtureException(f'Failed to press {button}. Reason: {e}')
 
   def SetLcmText(self, row, message):
     try:
       self._lcm.SetLcmText(row, message)
     except servo_client.ServoClientError as e:
       raise bft.BFTFixtureException(
-          'Failed to show a message to LCM. Reason %s' % e)
+          f'Failed to show a message to LCM. Reason {e}')
 
   def IssueLcmCommand(self, action):
     try:
       self._lcm.IssueLcmCommand(action)
     except servo_client.ServoClientError as e:
       raise bft.BFTFixtureException(
-          'Failed to execute an action to LCM. Reason %s' % e)
+          f'Failed to execute an action to LCM. Reason {e}')
 
   def IsDUTInFixture(self):
     try:
@@ -310,8 +310,7 @@ class WhaleBFTFixture(bft.BFTFixture):
                         duration_secs=0.3)
     except servo_client.ServoClientError as e:
       logging.exception('Failed to trigger scanner %s', e)
-      raise bft.BFTFixtureException(
-          'Failed to trigger scanner %s' % e)
+      raise bft.BFTFixtureException(f'Failed to trigger scanner {e}')
 
   def StopFixture(self):
     """Stops fixture by opening cover."""

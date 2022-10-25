@@ -9,6 +9,7 @@ import logging
 
 from cros.factory.test.fixture import bft_fixture as bft
 
+
 # shortcut
 BFT = bft.BFTFixture
 
@@ -41,13 +42,13 @@ class ColorSensor:
     # Verify parameters first because it's easy to make mistakes.
     for config in self._REQUIRED_PARAMS:
       if config not in params:
-        raise ValueError('Missing parameter %s' % config)
+        raise ValueError(f'Missing parameter {config}')
       if sensor_index not in params[config]:
-        raise ValueError('Parameter %s does not contain sensor index %d' %
-                         (config, sensor_index))
+        raise ValueError(f'Parameter {config} does not contain sensor index '
+                         f'{int(sensor_index)}')
     for color_name in params[self._CONFIG_COLOR][sensor_index]:
       if color_name not in self._COLOR_NAMES:
-        raise ValueError('Unsupport color name %s in parameters' % color_name)
+        raise ValueError(f'Unsupport color name {color_name} in parameters')
 
     # Initialize the color sensor hardware.
     if sensor_index == 1:
@@ -55,7 +56,7 @@ class ColorSensor:
           params[self._CONFIG_TIMING][sensor_index])
       servo.whale_color1_gain = params[self._CONFIG_GAIN][sensor_index]
     else:
-      raise ValueError('Sensor index %s is unsupported' % sensor_index)
+      raise ValueError(f'Sensor index {sensor_index} is unsupported')
 
     self._servo = servo
     self._sensor_index = sensor_index
@@ -126,9 +127,9 @@ class ColorSensor:
       # Servo returns a string containing list expression.
       read_hsv = ast.literal_eval(self._servo.whale_color1_HSV)
     else:
-      raise ValueError('Sensor index %s is unsupported' % self._sensor_index)
-    logging.info('Read Hue=%.3f, Saturation=%.3f, Lightness=%.3f',
-                 read_hsv[0], read_hsv[1], read_hsv[2])
+      raise ValueError(f'Sensor index {self._sensor_index} is unsupported')
+    logging.info('Read Hue=%.3f, Saturation=%.3f, Lightness=%.3f', read_hsv[0],
+                 read_hsv[1], read_hsv[2])
     return read_hsv
 
   def IsColor(self, color_name):
@@ -141,7 +142,7 @@ class ColorSensor:
       True if cuurent color is color_name; otherwise False.
     """
     if color_name not in self._color_params:
-      raise ValueError('Unsupported color name: %s' % color_name)
+      raise ValueError(f'Unsupported color name: {color_name}')
     return self._CompareColor(self.ReadHSV(), color_name)
 
   def ReadColor(self):

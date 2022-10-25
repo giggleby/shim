@@ -44,7 +44,7 @@ def WebSocketHandshake(request):
 
   version = request.headers.get('Sec-WebSocket-Version')
   if not version or version not in [str(x) for x in ws4py.WS_VERSION]:
-    send_error('Unsupported WebSocket version %s' % version)
+    send_error(f'Unsupported WebSocket version {version}')
     return False
 
   request.send_response(http.client.SWITCHING_PROTOCOLS)

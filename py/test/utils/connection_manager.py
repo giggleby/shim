@@ -16,6 +16,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils.net_utils import WLAN  # pylint: disable=unused-import
 from cros.factory.utils import type_utils
 
+
 try:
   # This import is not a hard dependency.
   from cros.factory.goofy.plugins import plugin_controller
@@ -169,7 +170,7 @@ class ConnectionManager:
     """Tries to auto-detect the network manager process name."""
     # Try to detects the network manager process with pgrep.
     for process_name in _PROC_NAME_LIST[1:]:
-      if not subprocess.call('pgrep %s' % process_name, shell=True,
+      if not subprocess.call(f'pgrep {process_name}', shell=True,
                              stdout=subprocess.DEVNULL):
         self.process_name = process_name
         return
@@ -241,7 +242,7 @@ class ConnectionManager:
 
     if device is None:  # Cannot find it.
       raise ConnectionManagerException(
-          'Cannot find interface %s' % interface,
+          f'Cannot find interface {interface}',
           error_code=ConnectionManagerException.ErrorCode.INTERFACE_NOT_FOUND)
 
     device.Enable()  # Try to enable the device.
@@ -249,13 +250,13 @@ class ConnectionManager:
     if not device_props.get('Ethernet.LinkUp', False):
       # There is no physical link.
       raise ConnectionManagerException(
-          'No physical link presents on interface %s' % interface,
+          f'No physical link presents on interface {interface}',
           error_code=ConnectionManagerException.ErrorCode.NO_PHYSICAL_LINK)
 
     service_path = device_props['SelectedService']
     if service_path == '/':
       raise ConnectionManagerException(
-          'No service running on interface %s' % interface,
+          f'No service running on interface {interface}',
           error_code=ConnectionManagerException.ErrorCode.NO_SELECTED_SERVICE)
 
     service = base_manager.FindElementByNameSubstring('Service', service_path)
@@ -296,16 +297,17 @@ class ConnectionManager:
     # Turn on drivers for interfaces.
     for dev in self._GetInterfaces():
       logging.info('ifconfig %s up', dev)
-      subprocess.call('ifconfig %s up' % dev, shell=True,
+      subprocess.call(f'ifconfig {dev} up', shell=True,
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Start network manager.
     for service in self.depservices + [self.network_manager] + self.subservices:
-      cmd = 'start %s' % service
+      cmd = f'start {service}'
       if (service in _MANAGER_LIST and
           self.override_blocklisted_devices is not None):
-        cmd += ' BLOCKED_DEVICES="%s"' % (
-            ','.join(self.override_blocklisted_devices))
+        cmd += (
+            f" BLOCKED_DEVICES=\"{','.join(self.override_blocklisted_devices)}"
+            f"\"")
       logging.info('Call cmd: %s', cmd)
       subprocess.call(cmd, shell=True, stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL)
@@ -348,12 +350,12 @@ class ConnectionManager:
 
     # Stop network manager.
     for service in self.subservices + [self.network_manager] + self.depservices:
-      subprocess.call('stop %s' % service, shell=True,
-                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+      subprocess.call(f'stop {service}', shell=True, stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL)
 
     # Turn down drivers for interfaces to really stop the network.
     for dev in self._GetInterfaces():
-      subprocess.call('ifconfig %s down' % dev, shell=True,
+      subprocess.call(f'ifconfig {dev} down', shell=True,
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Delete the configured profiles
@@ -404,9 +406,8 @@ def PingHost(host, timeout=_PING_TIMEOUT_SECS):
   Returns:
     True if host is successfully pinged.
   """
-  return subprocess.call('ping %s -c 1 -w %d' % (host, int(timeout)),
-                         shell=True, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL)
+  return subprocess.call(f'ping {host} -c 1 -w {int(int(timeout))}', shell=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def LoadNetworkConfig(config_name):

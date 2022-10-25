@@ -69,7 +69,7 @@ class PlanktonHDMI:
     self._camera_device = cv.VideoCapture(self._uvc_video_index)
     if not self._camera_device.isOpened():
       raise PlanktonHDMIException(
-          'Unable to open video capture interface: %r' % self._uvc_video_index)
+          f'Unable to open video capture interface: {self._uvc_video_index!r}')
 
     # Set camera capture to HD resolution.
     logging.debug('Set capture resolution')
@@ -223,7 +223,7 @@ class PlanktonHDMI:
     if not device_port:
       raise PlanktonHDMIException('Unspecified uvc_video_port')
     uvc_vid_dirs = glob.glob(
-        '/sys/bus/usb/drivers/uvcvideo/%s*/video4linux/video*' % device_port)
+        f'/sys/bus/usb/drivers/uvcvideo/{device_port}*/video4linux/video*')
     if not uvc_vid_dirs:
       raise PlanktonHDMIException('No DP loopback interface found')
     if len(uvc_vid_dirs) > 1:

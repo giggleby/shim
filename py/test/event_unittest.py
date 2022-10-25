@@ -13,6 +13,7 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
+
 EventType = event.Event.Type
 
 PING = 'PING'
@@ -83,7 +84,7 @@ class Tests:
       for thread in extra_threads:
         thread.join(timeout=end_time - time.time())
         self.assertFalse(thread.is_alive(),
-                         "Thread %r still alive after 1 second." % thread)
+                         f"Thread {thread!r} still alive after 1 second.")
 
   class EventServerClientTest(EventServerClientTestBase):
     def testBasic(self):

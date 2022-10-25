@@ -10,6 +10,7 @@ from cros.factory.utils import process_utils
 
 from cros.factory.external import dbus
 
+
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
 # Configuration file is using YAML nested collections format.
@@ -58,17 +59,15 @@ def GetPlaySineArgs(channel, sample_rate, odev='default', freq=1000,
     A command string to generate a sine wav
   """
   cmdargs = [
-      SOX_PATH, '-r',
-      '%d' % sample_rate, '-b',
-      '%d' % sample_size, '-n', '-t', 'alsa', odev, 'synth',
-      '%d' % duration_secs
+      SOX_PATH, '-r', f'{int(sample_rate)}', '-b', f'{int(sample_size)}', '-n',
+      '-t', 'alsa', odev, 'synth', f'{int(duration_secs)}'
   ]
   if channel == 0:
-    cmdargs += ['sine', '%d' % freq, 'sine', '0']
+    cmdargs += ['sine', f'{int(freq)}', 'sine', '0']
   elif channel == 1:
-    cmdargs += ['sine', '0', 'sine', '%d' % freq]
+    cmdargs += ['sine', '0', 'sine', f'{int(freq)}']
   else:
-    cmdargs += ['sine', '%d' % freq]
+    cmdargs += ['sine', f'{int(freq)}']
   return cmdargs
 
 
@@ -84,14 +83,15 @@ def GetGenerateSineWavArgs(path, channel, sample_rate, freq=1000,
     duration_secs: Duration of the generated sine tone.
     sample_size: Output audio sample size. Default to 16.
   """
-  cmdargs = '%s -r %d -b %d -n %s synth %d' % (SOX_PATH, sample_rate,
-                                               sample_size, path, duration_secs)
+  cmdargs = (
+      f'{SOX_PATH} -r {int(sample_rate)} -b {int(sample_size)} -n {path} synth '
+      f'{int(duration_secs)}')
   if channel == 0:
-    cmdargs += ' sine %d sine 0' % freq
+    cmdargs += f' sine {int(freq)} sine 0'
   elif channel == 1:
-    cmdargs += ' sine 0 sine %d' % freq
+    cmdargs += f' sine 0 sine {int(freq)}'
   else:
-    cmdargs += ' sine %d' % freq
+    cmdargs += f' sine {int(freq)}'
   return cmdargs
 
 
@@ -237,7 +237,7 @@ def GetCardIndexByName(card_name):
     m = _RE_CARD_INDEX.match(line)
     if m is not None and m.group(2) == card_name:
       return m.group(1)
-  raise ValueError('device name %s is incorrect' % card_name)
+  raise ValueError(f'device name {card_name} is incorrect')
 
 
 def GetTotalNumberOfAudioDevices():
@@ -269,8 +269,8 @@ class CRAS:
       self.is_active = is_active
 
     def __str__(self):
-      return ('Cras node %s, id=%s, is_active=%s' % (
-          self.name, self.node_id, self.is_active))
+      return (f'Cras node {self.name}, id={self.node_id}, is_active='
+              f'{self.is_active}')
 
   def __init__(self):
     self.input_nodes = []

@@ -20,6 +20,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import platform_utils
 from cros.factory.utils import time_utils
 
+
 FileLock = platform_utils.GetProvider('FileLock')
 
 # A global event logger to log all events for a test. Since each
@@ -137,7 +138,7 @@ class FloatDigit:
     self._digit = digit
 
   def __repr__(self):
-    return ("%%.0%df" % self._digit) % self._value
+    return (f"%.0{int(self._digit)}f") % self._value
 
 
 def YamlFloatDigitRepresenter(dumper, data):
@@ -227,11 +228,10 @@ def SetGlobalLoggerDefaultPrefix(prefix):
   global _default_event_logger_prefix  # pylint: disable=global-statement
 
   if not PREFIX_RE.match(prefix):
-    raise ValueError("prefix %r must match re %s" % (
-        prefix, PREFIX_RE.pattern))
+    raise ValueError(f"prefix {prefix!r} must match re {PREFIX_RE.pattern}")
   if _global_event_logger:
-    raise EventLogException(("Unable to set default prefix %r after "
-                             "initializing the global event logger") % prefix)
+    raise EventLogException((f"Unable to set default prefix {prefix} after "
+                             f"initializing the global event logger"))
 
   _default_event_logger_prefix = prefix
 
@@ -436,8 +436,7 @@ class EventLog:
     self.file = None
     self.suppress = suppress
     if not PREFIX_RE.match(prefix):
-      raise ValueError("prefix %r must match re %s" % (
-          prefix, PREFIX_RE.pattern))
+      raise ValueError(f"prefix {prefix!r} must match re {PREFIX_RE.pattern}")
     self.prefix = prefix
     self.lock = threading.Lock()
     self.seq = seq or GlobalSeq()
@@ -526,14 +525,13 @@ class EventLog:
     self._OpenUnlocked()
 
     if self.file is None:
-      raise IOError("cannot append to closed file for prefix %r" % self.prefix)
+      raise IOError(f"cannot append to closed file for prefix {self.prefix!r}")
     if not EVENT_NAME_RE.match(event_name):
-      raise ValueError("event_name %r must match %s" % (
-          event_name, EVENT_NAME_RE.pattern))
+      raise ValueError(
+          f"event_name {event_name!r} must match {EVENT_NAME_RE.pattern}")
     for k in kwargs:
       if not EVENT_KEY_RE.match(k):
-        raise ValueError("key %r must match re %s" % (
-            k, EVENT_KEY_RE.pattern))
+        raise ValueError(f"key {k!r} must match re {EVENT_KEY_RE.pattern}")
     data = {
         "EVENT": event_name,
         "SEQ": self.seq.Next(),

@@ -15,6 +15,7 @@ import time
 
 from cros.factory.test.rf.n1914a import N1914A
 
+
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description=('This tool will use REAL format to measure the reading/sec '
@@ -45,7 +46,7 @@ if __name__ == '__main__':
   last_measurment = {}
   for mode_name, mode_func in modes:
     mode_func(port=args.port)
-    print('Profiling mode %s ...' % mode_name)
+    print(f'Profiling mode {mode_name} ...')
     start_time = time.time()
     for unused_iteration in range(args.iteration):
       power = n1914a.MeasureOnceInBinary(port=args.port)
@@ -54,6 +55,7 @@ if __name__ == '__main__':
 
   # Printing the result.
   for mode_name, _ in modes:
-    print('Mode[%8s]:  %8.2f reading/sec, last measurment=%10.7f dBm.' % (
-        mode_name, args.iteration / time_elapsed[mode_name],
-        last_measurment[mode_name]))
+    print(
+        f'Mode[{mode_name:8}]:  {args.iteration / time_elapsed[mode_name]:8.2f}'
+        f' reading/sec, last measurment={last_measurment[mode_name]:10.7f} '
+        f'dBm.')

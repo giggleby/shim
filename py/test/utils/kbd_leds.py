@@ -13,6 +13,7 @@ import os
 import sys
 import threading
 
+
 # Constants from /usr/include/linux/kd.h.
 KDSETLED = 0x4B32
 LED_SCR = 1
@@ -49,7 +50,7 @@ def SetLeds(state):
     if _tty_fds is None:
       _tty_fds = []
       for tty in range(MAX_VTS):
-        dev = '/dev/tty%d' % tty
+        dev = f'/dev/tty{int(tty)}'
         try:
           _tty_fds.append(os.open(dev, os.O_RDWR))
         except Exception:

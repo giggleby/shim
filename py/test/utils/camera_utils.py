@@ -17,6 +17,7 @@ from cros.factory.utils import process_utils
 
 from cros.factory.external import cv2 as cv
 
+
 # sysfs camera paths.
 GLOB_CAMERA_PATH = '/sys/bus/usb/drivers/uvcvideo/*/video4linux/video*'
 RE_CAMERA_INDEX = r'/sys/bus/usb/drivers/uvcvideo/.*/video4linux/video(\d+)'
@@ -47,7 +48,7 @@ def ReadImageFile(filename):
   """
   img = cv.imread(filename)
   if img is None:
-    raise CameraError('Can not open image file %s' % filename)
+    raise CameraError(f'Can not open image file {filename}')
   return img
 
 
@@ -293,7 +294,7 @@ class YavtaCameraReader(CameraReaderBase):
     if controls is None:
       controls = []
     for ctl in controls:
-      command = ['yavta', '/dev/video%d' % self._device_index, '-w', ctl]
+      command = ['yavta', f'/dev/video{int(self._device_index)}', '-w', ctl]
       logging.info(' '.join(command))
       process_utils.Spawn(command, check_call=True)
     self._resolution = resolution
@@ -307,9 +308,13 @@ class YavtaCameraReader(CameraReaderBase):
     # Remove previous captured file since yavta will accumulate the frames
     file_utils.TryUnlink(filename)
 
-    command = ['yavta', '/dev/video%d' % self._device_index,
-               '-c%d' % (self._skip + 1), '--skip', str(self._skip), '-n1',
-               '-s%dx%d' % self._resolution, '-fSRGGB10', '-F%s' % filename]
+    command = [
+        'yavta', f'/dev/video{int(self._device_index)}',
+        f'-c{int(self._skip + 1)}', '--skip',
+        str(self._skip), '-n1',
+        f'-s{self._resolution[0]}x{self._resolution[1]}', '-fSRGGB10',
+        f'-F{filename}'
+    ]
     logging.info(' '.join(command))
     process_utils.Spawn(command, check_call=True)
 
@@ -424,10 +429,10 @@ class USBCameraDevice(CameraDevice):
           self._dut.ReadSpecialFile(self._sn_sysfs_path)).rstrip()
     except IOError as e:
       raise CameraError(
-          'Fail to read %r: %r' % (self._sn_sysfs_path, e)) from None
+          f'Fail to read {self._sn_sysfs_path!r}: {e!r}') from None
     if serial.find('\n') >= 0:
-      raise CameraError('%r contains multi-line data: %r' %
-                        (self._sn_sysfs_path, serial))
+      raise CameraError(
+          f'{self._sn_sysfs_path!r} contains multi-line data: {serial!r}')
     return serial
 
 
@@ -459,7 +464,7 @@ class MIPICameraDevice(CameraDevice):
       return target.Read(self._sn_i2c_param['data_addr'],
                          self._sn_i2c_param['length'])[::-2]
     except Exception as e:
-      raise CameraError('Fail to read serial number: %r' % e) from None
+      raise CameraError(f'Fail to read serial number: {e!r}') from None
     finally:
       if fd is not None:
         os.close(fd)

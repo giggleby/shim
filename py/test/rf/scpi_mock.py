@@ -43,7 +43,7 @@ class MockServerHandler(socketserver.StreamRequestHandler):
     elif inspect.isfunction(response) or inspect.ismethod(response):
       is_known_types = True
     assert is_known_types, (
-        'type %r of response is not supported' % type(response))
+        f'type {type(response)!r} of response is not supported')
     cls.responses_lookup.append((input_line, response))
 
   def __init__(self, *args, **kwargs):
@@ -71,4 +71,4 @@ class MockServerHandler(socketserver.StreamRequestHandler):
         # Only the first match will be used.
         break
       if not matched:
-        raise ValueError('Input %r is not matching any.' % line)
+        raise ValueError(f'Input {line!r} is not matching any.')

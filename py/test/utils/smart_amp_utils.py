@@ -9,6 +9,7 @@ from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.utils import file_utils
 from cros.factory.utils.type_utils import Error
 
+
 _RE_MAX98390_CHANNEL_NAME = re.compile(r'"(.+?) DSM Rdc"', re.MULTILINE)
 
 _RE_MAX98373_CHANNEL_NAME = re.compile(r'"(.+?) ADC TEMP"', re.MULTILINE)
@@ -74,14 +75,15 @@ def GetSmartAmpInfo(shell=None, dut=None):
                  'Assume using non-smart amplifier.')
     return amp_name, None, None
 
-  sound_card_init_path = '/etc/sound_card_init/%s' % sound_card_init_file
+  sound_card_init_path = f'/etc/sound_card_init/{sound_card_init_file}'
   file_utils.CheckPath(sound_card_init_path)
 
   regex = _REGEX_MAPPING.get(amp_name)
   if not regex:
-    raise Error('Currently we do support parsing the sound card init conf '
-                'of %s. Please contact the factory bundle master to add the '
-                'parsing script.' % amp_name)
+    raise Error(
+        f'Currently we do support parsing the sound card init conf of '
+        f'{amp_name}. Please contact the factory bundle master to add the '
+        f'parsing script.')
 
   sound_card_init_output = file_utils.ReadFile(sound_card_init_path)
   channel_names = _ParseSoundCardInitConf(sound_card_init_path,

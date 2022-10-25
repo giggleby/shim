@@ -22,6 +22,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
+
 KEYBOARD_PATTERN = re.compile(r'^xkb:\w+:[\w-]*:\w+$|'
                               r'^(ime|m17n|t13n):[\w:-]+$')
 LANGUAGE_CODE_PATTERN = re.compile(r'^(\w+)(-[A-Z0-9]+)?$')
@@ -146,24 +147,25 @@ class Region:
 
     for f in (self.keyboards, self.language_codes):
       assert all(isinstance(x, str) for x in f), (
-          'Expected a list of strings, not %r' % f)
+          f'Expected a list of strings, not {f!r}')
     for f in self.keyboards:
       assert KEYBOARD_PATTERN.match(f), (
-          'Keyboard pattern %r does not match %r' % (
-              f, KEYBOARD_PATTERN.pattern))
+          f'Keyboard pattern {f!r} does not match {KEYBOARD_PATTERN.pattern!r}')
     for f in self.language_codes:
       assert LANGUAGE_CODE_PATTERN.match(f), (
-          'Language code %r does not match %r' % (
-              f, LANGUAGE_CODE_PATTERN.pattern))
+          f'Language code {f!r} does not match '
+          f'{LANGUAGE_CODE_PATTERN.pattern!r}')
 
   def __repr__(self):
-    return 'Region(%s)' % ', '.join(
-        [repr(getattr(self, x)) for x in self.FIELDS])
+    return f"Region({', '.join([repr(getattr(self, x)) for x in self.FIELDS])})"
 
   def __str__(self):
-    return 'Region(%s)' % ', '.join([
+    region_desc = ', '.join([
         ';'.join(v) if isinstance(v, list) else str(v)
-        for x in self.FIELDS for v in [getattr(self, x)]])
+        for x in self.FIELDS
+        for v in [getattr(self, x)]
+    ])
+    return f'Region({region_desc})'
 
   def GetFieldsDict(self):
     """Returns a dict of all substantive fields.
@@ -193,7 +195,7 @@ def LoadRegionDatabaseFromSource():
 
   command = [generator, '--format=json', '--all', '--notes']
   if os.path.exists(overlay_file):
-    command += ['--overlay=%s' % overlay_file]
+    command += [f'--overlay={overlay_file}']
 
   return json.loads(subprocess.check_output(command))
 
@@ -324,9 +326,8 @@ def _ConsolidateRegions(regions):
     if existing_region:
       if existing_region.GetFieldsDict() != r.GetFieldsDict():
         raise RegionException(
-            'Conflicting definitions for region %r: %r, %r' %
-            (r.region_code, existing_region.GetFieldsDict(),
-             r.GetFieldsDict()))
+            f'Conflicting definitions for region {r.region_code!r}: '
+            f'{existing_region.GetFieldsDict()!r}, {r.GetFieldsDict()!r}')
     else:
       region_dict[r.region_code] = r
 

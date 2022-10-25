@@ -13,6 +13,7 @@ from cros.factory.test.utils import serial_utils
 
 from cros.factory.external import serial
 
+
 _DEFAULT_DRIVER = 'pl2303'
 _DEFAULT_INDEX = '1-1'
 _DEFAULT_PORT = '/dev/ttyUSB0'
@@ -127,7 +128,7 @@ class FindTtyByPortIndexTest(unittest.TestCase):
   @mock.patch('os.path.realpath')
   def testFindTtyByPortIndex(self, realpath_mock, glob_mock):
     glob_mock.return_value = ['/dev/ttyUSB0', '/dev/ttyUSB1']
-    realpath_mock.side_effect = [_DEFAULT_DRIVER, '/%s/' % _DEFAULT_INDEX]
+    realpath_mock.side_effect = [_DEFAULT_DRIVER, f'/{_DEFAULT_INDEX}/']
     realpath_calls = [
         mock.call('/sys/class/tty/ttyUSB0/device/driver'),
         mock.call('/sys/class/tty/ttyUSB0/device')]
@@ -142,8 +143,7 @@ class FindTtyByPortIndexTest(unittest.TestCase):
   @mock.patch('os.path.realpath')
   def testFindTtyByPortIndexSecondPort(self, realpath_mock, glob_mock):
     glob_mock.return_value = ['/dev/ttyUSB0', '/dev/ttyUSB1']
-    realpath_mock.side_effect = ['foo', _DEFAULT_DRIVER,
-                                 '/%s/' % _DEFAULT_INDEX]
+    realpath_mock.side_effect = ['foo', _DEFAULT_DRIVER, f'/{_DEFAULT_INDEX}/']
     realpath_calls = [
         mock.call('/sys/class/tty/ttyUSB0/device/driver'),
         mock.call('/sys/class/tty/ttyUSB1/device/driver'),

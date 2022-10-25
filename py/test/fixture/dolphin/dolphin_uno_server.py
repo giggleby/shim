@@ -22,6 +22,7 @@ from cros.factory.test.fixture.dolphin import plankton_hdmi
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 DOLPHIN_RAIDEN_CONF = {
     # A dict of USB Type-A serial parameters.
     'usb_serial_params': {
@@ -52,7 +53,7 @@ class DolphinXMLRPCRequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
     This method is overridden to do without requesting domain name.
     """
     host, _ = self.client_address[:2]
-    return '%s (no getfqdn)' % host  # original: return socket.getfqdn(host)
+    return f'{host} (no getfqdn)'  # original: return socket.getfqdn(host)
 
 
 def _PrepareGoldenImage():

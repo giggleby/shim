@@ -12,6 +12,7 @@ from cros.factory.proto import reg_code_pb2
 from cros.factory.proto.reg_code_pb2 import RegCode
 from cros.factory.utils import type_utils
 
+
 # Registration code length in characters.
 LEGACY_REGISTRATION_CODE_LENGTH = 72
 
@@ -75,23 +76,23 @@ class RegistrationCode:
           data).strip().decode('utf-8')
       if encoded_string != expected_encoded_string:
         raise RegistrationCodeException(
-            'Reg code %r has bad base64 encoding (should be %r)' % (
-                encoded_string, expected_encoded_string))
+            f'Reg code {encoded_string!r} has bad base64 encoding (should be '
+            f'{expected_encoded_string!r})')
 
       self.proto = RegCode()
       self.proto.ParseFromString(data)
       if len(self.proto.content.code) != REGISTRATION_CODE_PAYLOAD_BYTES:
         raise RegistrationCodeException(
-            'In reg code %r, expected %d-byte code but got %d bytes' % (
-                encoded_string, REGISTRATION_CODE_PAYLOAD_BYTES,
-                len(self.proto.content.code)))
+            f'In reg code {encoded_string!r}, expected '
+            f'{int(REGISTRATION_CODE_PAYLOAD_BYTES)}-byte code but got '
+            f'{len(self.proto.content.code)} bytes')
 
       expected_checksum = (
           binascii.crc32(self.proto.content.SerializeToString()) & 0xFFFFFFFF)
       if expected_checksum != self.proto.checksum:
         raise RegistrationCodeException(
-            'In reg code %r, expected checksum 0x%x but got 0x%x' % (
-                encoded_string, self.proto.checksum, expected_checksum))
+            f'In reg code {encoded_string!r}, expected checksum 0x'
+            f'{self.proto.checksum:x} but got 0x{expected_checksum:x}')
 
       self.type = {
           reg_code_pb2.UNIQUE_CODE: RegistrationCode.Type.UNIQUE_CODE,
@@ -100,20 +101,20 @@ class RegistrationCode:
       }.get(self.proto.content.code_type)
       if self.type is None:
         raise RegistrationCodeException(
-            'In reg code %r, unexpected code type' % encoded_string)
+            f'In reg code {encoded_string!r}, unexpected code type')
 
-      self.device = (str(self.proto.content.device)
-                     if self.proto.content.HasField('device') else None)
+      self.device = (
+          str(self.proto.content.device)
+          if self.proto.content.HasField('device') else None)
       if self.type != RegistrationCode.Type.ONE_TIME_CODE:
         if self.device is None:
           raise RegistrationCodeException(
-              'In reg code %r, expected non-empty device' % encoded_string)
+              f'In reg code {encoded_string!r}, expected non-empty device')
 
       if self.device is not None and not DEVICE_PATTERN.match(self.device):
         raise RegistrationCodeException(
-            'In reg code %r, invalid device %r '
-            '(expected pattern %r)' % (
-                encoded_string, self.device, DEVICE_PATTERN.pattern))
+            f'In reg code {encoded_string!r}, invalid device {self.device!r} '
+            f'(expected pattern {DEVICE_PATTERN.pattern!r})')
     elif len(encoded_string) == LEGACY_REGISTRATION_CODE_LENGTH:
       # Old representation
       CheckLegacyRegistrationCode(encoded_string)
@@ -121,12 +122,12 @@ class RegistrationCode:
       self.device = None
       self.proto = None
     else:
-      raise RegistrationCodeException('Invalid registration code %r' % (
-          encoded_string))
+      raise RegistrationCodeException(
+          f'Invalid registration code {encoded_string!r}')
 
   def __str__(self):
-    return 'RegistrationCode(type=%r, device=%r, encoded_string=%r)' % (
-        self.type, self.device, self.encoded_string)
+    return (f'RegistrationCode(type={self.type!r}, device={self.device!r}, '
+            f'encoded_string={self.encoded_string!r})')
 
 
 def CheckLegacyRegistrationCode(code):
@@ -140,19 +141,19 @@ def CheckLegacyRegistrationCode(code):
   """
   if len(code) != LEGACY_REGISTRATION_CODE_LENGTH:
     raise RegistrationCodeException(
-        'Registration code %r is not %d characters long' % (
-            code, LEGACY_REGISTRATION_CODE_LENGTH))
+        f'Registration code {code!r} is not '
+        f'{int(LEGACY_REGISTRATION_CODE_LENGTH)} characters long')
   if re.search('[^0-9a-f]', code):
     raise RegistrationCodeException(
-        'Registration code %r has invalid characters' % code)
+        f'Registration code {code!r} has invalid characters')
 
   # Parse payload and CRC as byte strings.
   payload = binascii.unhexlify(code[0:64])
   crc = binascii.unhexlify(code[64:72])
   expected_crc = struct.pack('!I', binascii.crc32(payload) & 0xFFFFFFFF)
   if expected_crc != crc:
-    raise RegistrationCodeException('CRC of %r is invalid (should be %s)' %
-                                    (code, binascii.hexlify(expected_crc)))
+    raise RegistrationCodeException(f'CRC of {code!r} is invalid (should be '
+                                    f'{binascii.hexlify(expected_crc)})')
 
 
 # pylint: disable=redefined-builtin
@@ -178,17 +179,17 @@ def CheckRegistrationCode(encoded_string, type=None, device=None,
     if allow_dummy:
       logging.warning('Registration code %r is dummy.', encoded_string)
     else:
-      raise RegistrationCodeException('Registration code %r is dummy' % (
-          encoded_string))
+      raise RegistrationCodeException(
+          f'Registration code {encoded_string!r} is dummy')
 
   reg_code = RegistrationCode(encoded_string)
   if (type and reg_code.type != RegistrationCode.Type.LEGACY and
       reg_code.type != type):
     raise RegistrationCodeException(
-        'In code %r, expected type %r but got %r' % (
-            encoded_string, type, reg_code.type))
+        f'In code {encoded_string!r}, expected type {type!r} but got '
+        f'{reg_code.type!r}')
   if (device and reg_code.type != RegistrationCode.Type.LEGACY and
       reg_code.device != device):
     raise RegistrationCodeException(
-        'In code %r, expected device %r but got %r' % (
-            encoded_string, device, reg_code.device))
+        f'In code {encoded_string!r}, expected device {device!r} but got '
+        f'{reg_code.device!r}')

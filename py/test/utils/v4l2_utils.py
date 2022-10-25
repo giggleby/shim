@@ -8,6 +8,7 @@ import logging
 
 from cros.factory.utils import type_utils
 
+
 # Bitmask for video capture capability.  Please check
 # Documentation/media/uapi/v4l/vidioc-querycap.rst under kernel source tree and
 # https://chromium.googlesource.com/chromiumos/platform2/+/05b743f8c37bd63e49844eff806f0e5daf8c3352/camera/hal/usb/v4l2_test/media_v4l2_test.cc#78
@@ -67,7 +68,7 @@ def QueryV4L2Capability(video_idx):
     instance will be zeroized.
   """
   IOCTL_VIDIOC_QUERYCAP = 0x80685600
-  dev_path = '/dev/video%d' % video_idx
+  dev_path = f'/dev/video{int(video_idx)}'
   try:
     with open(dev_path, 'r', encoding='utf8') as f:
       v4l2_capability = V4L2Capability()

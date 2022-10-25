@@ -8,6 +8,7 @@ import tempfile
 
 from cros.factory.utils import sys_utils
 
+
 SCRIPT_PATH = os.path.realpath(__file__)
 # Path to factory environment (code and resources)
 FACTORY_DIR = os.path.realpath(
@@ -24,7 +25,7 @@ FACTORY_LOG_PATH_ON_DEVICE = '/var/factory/log/factory.log'
 # The root directory for logging and state.
 DATA_DIR = os.environ.get(
     'CROS_FACTORY_DATA_DIR',
-    (os.path.join(tempfile.gettempdir(), 'factory.%s' % getpass.getuser()))
+    (os.path.join(tempfile.gettempdir(), f'factory.{getpass.getuser()}'))
     if sys_utils.InChroot() else '/var/factory')
 # The directory for logs.
 DATA_LOG_DIR = os.path.join(DATA_DIR, 'log')

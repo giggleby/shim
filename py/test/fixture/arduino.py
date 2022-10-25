@@ -96,7 +96,7 @@ class ArduinoController(serial_utils.SerialDevice):
 
     if not self.Ping():
       self.Disconnect()
-      raise serial.SerialException('Ping Arduino (port %s) failed' % self._port)
+      raise serial.SerialException(f'Ping Arduino (port {self._port}) failed')
 
   def Ping(self, retry=0):
     """Pings Arduino. Used for handshaking.
@@ -147,8 +147,8 @@ class ArduinoDigitalPinController(ArduinoController):
     """
     command = chr(pin) + ('H' if level_high else 'L')
     if not self.SendExpectReceive(command, command):
-      raise serial.SerialException('Send command "chr(%d) %s" failed' % (
-          ord(command[0]), command[1]))
+      raise serial.SerialException(
+          f'Send command "chr({int(ord(command[0]))}) {command[1]}" failed')
 
 
 def _Blink(arduino, times=1, interval_secs=0.1):

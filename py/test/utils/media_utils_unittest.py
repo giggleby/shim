@@ -24,6 +24,7 @@ from cros.factory.external import glib
 from cros.factory.external import gtk
 from cros.factory.external import pyudev
 
+
 # udev constants
 _UDEV_ACTION_INSERT = 'add'
 _UDEV_ACTION_REMOVE = 'remove'
@@ -40,18 +41,18 @@ class TestMountedMedia(unittest.TestCase):
     self._virtual_device = tempfile.NamedTemporaryFile(
         prefix='media_utils_unitttest')
     exit_code, ret = subprocess.getstatusoutput(
-        'truncate -s 1048576 %s && mkfs -F -t ext3 %s' %
-        (self._virtual_device.name, self._virtual_device.name))
+        f'truncate -s 1048576 {self._virtual_device.name} && mkfs -F -t ext3 '
+        f'{self._virtual_device.name}')
     self.assertEqual(0, exit_code)
 
-    exit_code, ret = subprocess.getstatusoutput('losetup --show -f %s' %
-                                              self._virtual_device.name)
+    exit_code, ret = subprocess.getstatusoutput(
+        f'losetup --show -f {self._virtual_device.name}')
     self._free_loop_device = ret
     self.assertEqual(0, exit_code)
 
   def tearDown(self):
     exit_code, ret = subprocess.getstatusoutput(
-        'losetup -d %s' % self._free_loop_device)
+        f'losetup -d {self._free_loop_device}')
     self.assertEqual(0, exit_code)
     self._virtual_device.close()
 
@@ -78,10 +79,9 @@ class TestMountedMedia(unittest.TestCase):
     """
     virtual_partition = tempfile.NamedTemporaryFile(
         prefix='virtual_partition',
-        suffix='sdc%d' % _VIRTUAL_PATITION_NUMBER)
+        suffix=f'sdc{int(_VIRTUAL_PATITION_NUMBER)}')
     exit_code, ret = subprocess.getstatusoutput(
-        'ln -s -f %s %s' %
-        (self._free_loop_device, virtual_partition.name))
+        f'ln -s -f {self._free_loop_device} {virtual_partition.name}')
     self.assertEqual(0, exit_code)
 
     with MountedMedia(virtual_partition.name[:-1],
@@ -100,10 +100,9 @@ class TestMountedMedia(unittest.TestCase):
     """
     virtual_partition = tempfile.NamedTemporaryFile(
         prefix='virtual_partition',
-        suffix='mmcblk0p%d' % _VIRTUAL_PATITION_NUMBER)
+        suffix=f'mmcblk0p{int(_VIRTUAL_PATITION_NUMBER)}')
     exit_code, ret = subprocess.getstatusoutput(
-        'ln -s -f %s %s' %
-        (self._free_loop_device, virtual_partition.name))
+        f'ln -s -f {self._free_loop_device} {virtual_partition.name}')
     self.assertEqual(0, exit_code)
 
     with MountedMedia(virtual_partition.name[:-2],
@@ -130,17 +129,17 @@ class TestMediaMonitor(unittest.TestCase):
     self._virtual_device = tempfile.NamedTemporaryFile(
         prefix='media_utils_unitttest')
     exit_code, ret = subprocess.getstatusoutput(
-        'truncate -s 1048576 %s' % self._virtual_device.name)
+        f'truncate -s 1048576 {self._virtual_device.name}')
     self.assertEqual(0, exit_code)
 
-    exit_code, ret = subprocess.getstatusoutput('losetup --show -f %s' %
-                                              self._virtual_device.name)
+    exit_code, ret = subprocess.getstatusoutput(
+        f'losetup --show -f {self._virtual_device.name}')
     self._free_loop_device = ret
     self.assertEqual(0, exit_code)
 
   def tearDown(self):
     exit_code, ret = subprocess.getstatusoutput(
-        'losetup -d %s' % self._free_loop_device)
+        f'losetup -d {self._free_loop_device}')
     self.assertEqual(0, exit_code)
     self._virtual_device.close()
 

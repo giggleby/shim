@@ -55,8 +55,7 @@ class MockServerHandler(socketserver.StreamRequestHandler):
         if output:
           self.wfile.write(output)
       else:
-        raise ValueError('Expecting [%s] but got [%s]' % (
-            expected_input, line))
+        raise ValueError(f'Expecting [{expected_input}] but got [{line}]')
 
 
 class LanScpiTest(unittest.TestCase):

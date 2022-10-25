@@ -26,6 +26,7 @@ from cros.factory.external import dpkt
 from cros.factory.external import netifaces
 from cros.factory.external import pexpect
 
+
 INSERT_ETHERNET_DONGLE_TIMEOUT = 30
 
 
@@ -124,7 +125,7 @@ def RenewDhcpLease(interface, timeout=3):
     True if a new lease is obtained; otherwise, False.
   """
   with file_utils.UnopenedTemporaryFile() as conf_file:
-    file_utils.WriteFile(conf_file, "timeout %d;" % timeout)
+    file_utils.WriteFile(conf_file, f"timeout {int(timeout)};")
     try:
       p = process_utils.Spawn(['dhclient', '-1', '-d', '-cf', conf_file,
                                interface])
@@ -213,7 +214,7 @@ def GetUnmanagedEthernetInterfaces():
   def IsShillUsingDHCP(intf):
     if dbus.MODULE_READY:
       bus = dbus.SystemBus()
-      dev = bus.get_object("org.chromium.flimflam", "/device/%s" % intf)
+      dev = bus.get_object("org.chromium.flimflam", f"/device/{intf}")
       dev_intf = dbus.Interface(dev, "org.chromium.flimflam.Device")
       properties = dev_intf.GetProperties()
       for config in properties['IPConfigs']:
@@ -257,8 +258,9 @@ def GetDHCPBootParameters(interface):
   dhcp_filter = '((port 67 or port 68) and (udp[8:1] = 0x2))'
   with file_utils.UnopenedTemporaryFile() as dump_file:
     try:
-      p = process_utils.Spawn("tcpdump -i %s -c 1 -w %s '%s'" %
-                              (interface, dump_file, dhcp_filter), shell=True)
+      p = process_utils.Spawn(
+          f"tcpdump -i {interface} -c 1 -w {dump_file} '{dhcp_filter}'",
+          shell=True)
     except OSError as e:
       logging.exception(str(e))
       return None

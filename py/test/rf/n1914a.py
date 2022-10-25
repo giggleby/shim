@@ -99,7 +99,7 @@ class N1914A(agilent_scpi.AgilentSCPI):
         # Use built-in auto average feature.
         self.Send(b'SENSe%d:AVERage:COUNt:AUTO 1' % port)
       else:
-        raise ValueError('Invalid avg_length setting [%s]' % avg_length)
+        raise ValueError(f'Invalid avg_length setting [{avg_length}]')
 
   # Frequency related methods.
   def SetMeasureFrequency(self, port, freq):
@@ -130,15 +130,15 @@ class N1914A(agilent_scpi.AgilentSCPI):
 
   def MeasureOnce(self, port):
     """Performs a single measurement."""
-    ret = self.Query('FETCh%d?' % port, formatter=float)
+    ret = self.Query(f'FETCh{int(port)}?', formatter=float)
     return ret
 
   def MeasureOnceInBinary(self, port):
     """Performs a single measurement in binary format."""
     def UnpackBinaryInDouble(binary_array):
       if len(binary_array) != 8:
-        raise lan_scpi.Error('Binary double must be 8 bytes'
-                             ' not %d bytes.' % len(binary_array))
+        raise lan_scpi.Error(
+            f'Binary double must be 8 bytes not {len(binary_array)} bytes.')
       return struct.unpack('>d', binary_array)[0]
 
     ret = self.QueryWithoutErrorChecking(

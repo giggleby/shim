@@ -19,9 +19,9 @@ def _CommandStr(command):
   """
   if isinstance(command, str):
     if len(command) == 1:
-      return '0x%02X' % ord(command)
-    return 'invalid command %r, len:%d != 1' % (command, len(command))
-  return 'invalid command %r: not a string.' % command
+      return f'0x{ord(command):02X}'
+    return f'invalid command {command!r}, len:{len(command)} != 1'
+  return f'invalid command {command!r}: not a string.'
 
 
 class SpringBFTFixture(bft_fixture.BFTFixture):
@@ -89,8 +89,7 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
                            returned result was not in status map.
     """
     if probe not in self.SYSTEM_STATUS_COMMAND:
-      raise bft_fixture.BFTFixtureException(
-          'Fixture does not support %s' % probe)
+      raise bft_fixture.BFTFixtureException(f'Fixture does not support {probe}')
 
     cmd = self.SYSTEM_STATUS_COMMAND[probe]
     self._Send(cmd['code'], cmd['fail_message'])
@@ -112,8 +111,8 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
       serial_params['port'] = serial_utils.FindTtyByDriver(
           serial_params['driver'])
       if not serial_params['port']:
-        raise bft_fixture.BFTFixtureException('Cannot find TTY with driver %s' %
-                                              serial_params['driver'])
+        raise bft_fixture.BFTFixtureException(
+            f"Cannot find TTY with driver {serial_params['driver']}")
       # After lookup, remove 'driver' from serial_params as OpenSerial
       # doesn't accept 'driver' param.
       del serial_params['driver']
@@ -121,7 +120,7 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
       self._serial = serial_utils.OpenSerial(**serial_params)
     except serial.SerialException as e:
       raise bft_fixture.BFTFixtureException(
-          'Cannot connect to BFT fixture: %s' % e)
+          f'Cannot connect to BFT fixture: {e}')
 
     # Get fixture each time we establish a BFT connection as operator may
     # use different fixture to retest a board and we want to know which
@@ -147,13 +146,13 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
       write_len = self._serial.write(command)
     except serial.SerialTimeoutException as e:
       raise bft_fixture.BFTFixtureException(
-          '%sSend command %s to fixture %d timeout: %s' %
-          (fail_message, self.fixture_id, _CommandStr(command), e))
+          f'{fail_message}Send command {self.fixture_id} to fixture '
+          f'{int(_CommandStr(command))} timeout: {e}')
 
     if write_len != 1:
       raise bft_fixture.BFTFixtureException(
-          '%sSend command %s to fixture %d failed.' %
-          (fail_message, self.fixture_id, _CommandStr(command)))
+          f'{fail_message}Send command {self.fixture_id} to fixture '
+          f'{int(_CommandStr(command))} failed.')
 
   def _Recv(self, fail_message):
     """Receives a response from BFT fixture.
@@ -167,7 +166,7 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
       return self._serial.read()
     except serial.SerialTimeoutException as e:
       raise bft_fixture.BFTFixtureException(
-          '%sReceive timeout: %s' % (fail_message, e))
+          f'{fail_message}Receive timeout: {e}')
 
   def _SendRecv(self, command, expect, fail_message):
     """Sends a command and expects a response.
@@ -182,9 +181,8 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
     actual = self._Recv(fail_message)
     if actual != expect:
       raise bft_fixture.BFTFixtureException(
-          '%s Sent:%s. Expect response:%s, actual:%s.' %
-          (fail_message, _CommandStr(command), _CommandStr(expect),
-           _CommandStr(actual)))
+          f'{fail_message} Sent:{_CommandStr(command)}. Expect response:'
+          f'{_CommandStr(expect)}, actual:{_CommandStr(actual)}.')
 
     logging.info(
         'Successfully sent %s to fixture %d. Got expected response %s.',
@@ -205,8 +203,7 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
       device: device defined in BFTFixture.Device
       engage: True to engage; False to disengage.
     """
-    action_str = '%s device %s' % ('engage' if engage else 'disengage',
-                                   device)
+    action_str = f"{'engage' if engage else 'disengage'} device {device}"
     logging.info(action_str)
 
     command = None
@@ -215,7 +212,7 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
     if not command:
       raise bft_fixture.BFTFixtureException('Unsupported action: ' + action_str)
 
-    self._SendRecvDefault(command, 'Failed to %s. ' % action_str)
+    self._SendRecvDefault(command, f'Failed to {action_str}. ')
 
   def Ping(self):
     self._SendRecv(chr(0xE0), chr(0xE1), 'Failed to ping the fixture. ')
@@ -254,11 +251,11 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
 
   def IsLEDColor(self, color):
     if color not in self.LED_CHECK_COMMAND:
-      raise bft_fixture.BFTFixtureException('Invalid LED color %r' % color)
+      raise bft_fixture.BFTFixtureException(f'Invalid LED color {color!r}')
 
     (command, expect) = self.LED_CHECK_COMMAND[color]
-    self._Send(command, 'Fail to check %s LED. ' % color)
-    response = self._Recv('Fail to check %s LED. ' % color)
+    self._Send(command, f'Fail to check {color} LED. ')
+    response = self._Recv(f'Fail to check {color} LED. ')
     if response == expect:
       logging.info(
           'Successfully sent %s to fixture %d. Got matched response %s',
@@ -273,6 +270,6 @@ class SpringBFTFixture(bft_fixture.BFTFixture):
 
   def SetStatusColor(self, color):
     if color not in self.STATUS_COLOR_COMMAND:
-      raise bft_fixture.BFTFixtureException('Invalid status color %r' % color)
+      raise bft_fixture.BFTFixtureException(f'Invalid status color {color!r}')
     self._SendRecvDefault(self.STATUS_COLOR_COMMAND[color],
-                          'Unable to set status color to %s' % color)
+                          f'Unable to set status color to {color}')

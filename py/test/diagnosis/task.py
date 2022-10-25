@@ -24,6 +24,7 @@ import time
 from cros.factory.test.diagnosis import common
 from cros.factory.utils import process_utils
 
+
 _WAIT_TIMEOUT = 0.1
 
 
@@ -131,7 +132,7 @@ class Task:
     try:
       checked_input_values = self._CheckInputsValid(input_values)
     except common.FormatError as e:
-      self._ui_proxy.AppendOutput('%s\n' % e)
+      self._ui_proxy.AppendOutput(f'{e}\n')
       return
 
     with self._stopping_lock:
@@ -172,9 +173,8 @@ class Task:
           (regexp, flags) = tuple(input_element[common.TOKEN.REGEXP])
           if not common.CreateRegExp(regexp, flags).search(value):
             raise common.FormatError(
-                'Invalid input field "%s%s", %r not matched (%r, %r)' %
-                (input_element[common.TOKEN.PROMPT], value, value, regexp,
-                 flags))
+                f'Invalid input field "{input_element[common.TOKEN.PROMPT]}'
+                f'{value}", {value!r} not matched ({regexp!r}, {flags!r})')
         ret[var_id] = value
     return ret
 
@@ -360,7 +360,7 @@ class _CommandStep(_Step):
   def Run(self, *args):
     input_values = args[0]
     command = _ParseCommandLine(self._command, input_values)
-    self._ui_append_output('$%s\n' % command)
+    self._ui_append_output(f'${command}\n')
     # start_new_session=True so setsid() will be invoked in the child processes,
     # for enabling sending a signal to all the process in the group.
     proc = subprocess.Popen(  # pylint: disable=consider-using-with
@@ -444,8 +444,7 @@ class _CommandStep(_Step):
     if isinstance(expected_output, list):
       (regexp, flags) = tuple(expected_output)
       return common.CreateRegExp(regexp, flags).search(stdout_text) is not None
-    raise TypeError(
-        "expected_output can't be of type %s" % type(expected_output))
+    raise TypeError(f"expected_output can't be of type {type(expected_output)}")
 
 
 class _FinallyStep(_CommandStep):
@@ -505,7 +504,7 @@ def _ParseCommandLine(command, input_values):
     dollar_star += splitter + value
     dollar_at += splitter + '"' + value + '"'
     splitter = ' '
-    ret = ret.replace('$%d' % int(key), value)
+    ret = ret.replace(f'${int(int(key))}', value)
   ret = ret.replace('$*', dollar_star)
   ret = ret.replace('$@', dollar_at)
   ret = ret.replace('<splash!!>', '\\')

@@ -22,6 +22,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import ssh_utils
 from cros.factory.utils import type_utils
 
+
 ActionType = type_utils.Enum(['PUSH_NEEDLE', 'FIXTURE_STARTED'])
 
 def TimeClassMethodDebug(func):
@@ -432,7 +433,7 @@ class InterruptHandler:
     if not interface:
       ip_address = 'dongle not found...'
     else:
-      ifconfig_command = 'ifconfig %s' % interface
+      ifconfig_command = f'ifconfig {interface}'
       ifconfig_result = process_utils.SpawnOutput(
           ssh_command_base + [nuc_host, ifconfig_command]).strip()
       ip_matcher = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', ifconfig_result,

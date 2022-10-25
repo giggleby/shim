@@ -103,8 +103,8 @@ class E5601CMock:
     num_of_segments = int(parameters[cls.SWEEP_SEGMENT_PREFIX_LEN])
     assert len(parameters) == (
         cls.SEGMENT_TUPLE_LEN * num_of_segments +
-        len(cls.SWEEP_SEGMENT_PREFIX) + 1), (
-            'Length of parameters is %d, not supported') % len(parameters)
+        len(cls.SWEEP_SEGMENT_PREFIX) +
+        1), (f'Length of parameters is {len(parameters)}, not supported')
 
     cls._sweep_segment = []
     x_axis_points = []
@@ -130,13 +130,14 @@ class E5601CMock:
     return_strings.append(str(len(cls._sweep_segment)))
     for start_freq, end_freq, sample_points in cls._sweep_segment:
       return_strings.extend(
-          ['%.1f' % start_freq, '%.1f' % end_freq, str(sample_points)])
+          [f'{start_freq:.1f}', f'{end_freq:.1f}',
+           str(sample_points)])
     return ','.join(return_strings) + '\n'
 
   @classmethod
   def GetXAxis(cls, input_str):
     del input_str  # Unused.
-    return ','.join(['%+.11E' % x for x in cls._x_axis]) + '\n'
+    return ','.join([f'{x:+.11E}' for x in cls._x_axis]) + '\n'
 
   @classmethod
   def SetTraceCount(cls, input_str):
@@ -155,17 +156,17 @@ class E5601CMock:
     match_obj = re.match(cls.RE_SET_TRACE_CONFIG, input_str)
     parameter_idx = int(match_obj.group(1)) - 1  # index starts from 0
     assert parameter_idx < len(cls._trace_config), (
-        'Index out of predefined trace size %d') % len(cls._trace_config)
+        f'Index out of predefined trace size {len(cls._trace_config)}')
     port_x = int(match_obj.group(2))
     port_y = int(match_obj.group(3))
-    cls._trace_config[parameter_idx] = 'S%d%d' % (port_x, port_y)
+    cls._trace_config[parameter_idx] = f'S{int(port_x)}{int(port_y)}'
 
   @classmethod
   def GetTraceConfig(cls, input_str):
     match_obj = re.match(cls.RE_GET_TRACE_CONFIG, input_str)
     parameter_idx = int(match_obj.group(1)) - 1  # index starts from 0
     assert parameter_idx < len(cls._trace_config), (
-        'Index out of predefined trace size %d') % len(cls._trace_config)
+        f'Index out of predefined trace size {len(cls._trace_config)}')
     return cls._trace_config[parameter_idx] + '\n'
 
   @classmethod
@@ -173,7 +174,7 @@ class E5601CMock:
     match_obj = re.match(cls.RE_GET_TRACE, input_str)
     parameter_idx = int(match_obj.group(1)) - 1  # index starts from 0
     assert parameter_idx < len(cls._trace_config), (
-        'Index out of predefined trace size %d') % len(cls._trace_config)
+        f'Index out of predefined trace size {len(cls._trace_config)}')
 
     trace_info = cls._trace_map.get(cls._trace_config[parameter_idx], None)
     if not trace_info:
@@ -189,9 +190,9 @@ class E5601CMock:
         logging.info('Freq %15.2f is not defined in trace, '
                      'use default value %15.2f', x_pos, cls.DEFAULT_SIGNAL)
         signal = cls.DEFAULT_SIGNAL
-      values.append('%+.11E' % signal)
+      values.append(f'{signal:+.11E}')
       # Second is always 0 when the data format is not the Smith chart
-      values.append('%+.11E' % 0)
+      values.append(f'{0:+.11E}')
     return ','.join(values) + '\n'
 
   @classmethod

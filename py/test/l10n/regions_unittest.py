@@ -16,6 +16,7 @@ import unittest
 
 from cros.factory.test.l10n import regions
 
+
 # pylint: disable=protected-access
 
 
@@ -29,9 +30,9 @@ class RegionTest(unittest.TestCase):
     all_zoneinfos = [os.path.join('/usr/share/zoneinfo', r.time_zone)
                      for r in all_regions.values()]
     missing = [z for z in all_zoneinfos if not os.path.exists(z)]
-    self.assertFalse(missing,
-                     ('Missing zoneinfo files; are timezones misspelled?: %r' %
-                      missing))
+    self.assertFalse(
+        missing,
+        f'Missing zoneinfo files; are timezones misspelled?: {missing!r}')
 
   def testBadLanguage(self):
     self.assertRaisesRegex(
@@ -70,7 +71,7 @@ class RegionTest(unittest.TestCase):
         if any(os.path.exists(x) for x in paths):
           break
       else:
-        self.fail('For region %r, none of %r exists' % (r.region_code, paths))
+        self.fail(f'For region {r.region_code!r}, none of {paths!r} exists')
 
   def testFieldsDict(self):
     # 'description' and 'notes' should be missing.

@@ -17,11 +17,12 @@ from cros.factory.test.event_log_watcher import Chunk
 from cros.factory.test.event_log_watcher import EventLogWatcher
 from cros.factory.utils import file_utils
 
-MOCK_LOG_NAME = lambda x: 'mylog12345%d' % x
+
+MOCK_LOG_NAME = lambda x: f'mylog12345{int(x)}'
 
 
 def MOCK_PREAMBLE(x, sync_marker=False):
-  ret = 'device: 123%d\nimage: 456\nmd5: abc\n' % x
+  ret = f'device: 123{int(x)}\nimage: 456\nmd5: abc\n'
   if sync_marker:
     ret += event_log.SYNC_MARKER
   ret += '---\n'
@@ -29,7 +30,7 @@ def MOCK_PREAMBLE(x, sync_marker=False):
 
 
 def MOCK_EVENT(x=0, sync_marker=False):
-  ret = 'seq: %d\nevent: start\n' % x
+  ret = f'seq: {int(x)}\nevent: start\n'
   if sync_marker:
     ret += event_log.SYNC_MARKER
   ret += '---\n'

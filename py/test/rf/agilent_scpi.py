@@ -13,8 +13,7 @@ class AgilentSCPI(lan_scpi.LANSCPI):
     self.id_fields = [x.strip() for x in self.id.split(b',')]
     model = self.id_fields[1].decode('utf-8')
     if model != expected_model:
-      raise lan_scpi.Error('Expected model %s but got %s' % (
-          expected_model, model))
+      raise lan_scpi.Error(f'Expected model {expected_model} but got {model}')
 
   def GetSerialNumber(self):
     """Returns the serial number of the device."""

@@ -21,7 +21,7 @@ class SafeFormatterTest(unittest.TestCase):
 
   def AssertHasWarningRegexp(self, pattern):
     found = any(re.search(pattern, msg) for msg in self.warnings)
-    self.assertTrue(found, '"%s" not found in warning messages.' % pattern)
+    self.assertTrue(found, f'"{pattern}" not found in warning messages.')
 
   def testFormat(self):
     self.assertEqual("a 'b' 1",

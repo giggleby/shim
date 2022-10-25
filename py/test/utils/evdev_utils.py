@@ -188,7 +188,7 @@ class FindDeviceError(RuntimeError):
     })
 
   def __repr__(self) -> str:
-    return '{}({})'.format(self.__class__.__name__, self.__str__())
+    return f'{self.__class__.__name__}({self.__str__()})'
 
 
 class DeviceNotFoundError(FindDeviceError):
@@ -229,7 +229,7 @@ def FindDevice(*args):
     if item is None:
       continue
     if isinstance(item, int):
-      dev_filter = lambda dev: dev.fn == '/dev/input/event%d' % item
+      dev_filter = lambda dev: dev.fn == f'/dev/input/event{int(item)}'
     elif isinstance(item, str):
       if item in evdev.ecodes.__dict__:
         dev_filter = lambda dev: FilterEvdevEcodes(
@@ -239,7 +239,7 @@ def FindDevice(*args):
     elif callable(item):
       dev_filter = item
     else:
-      raise ValueError('Invalid argument %r' % item)
+      raise ValueError(f'Invalid argument {item!r}')
     filtered_candidates.append(
         (item,
          [candidate for candidate in candidates if not dev_filter(candidate)]))

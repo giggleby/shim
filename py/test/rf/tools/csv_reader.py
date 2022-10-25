@@ -17,6 +17,7 @@ import csv
 import logging
 import os
 
+
 KEY = '__key__'
 VALUE = '__value__'
 
@@ -46,8 +47,9 @@ def ReadSingleCell(value):
     try:
       value_in_python = ReadCsv(value_in_python.link)
     except Exception as e:
-      raise ValueError('Failed to load external csv - %s, %s' %
-                       (value_in_python.link, e)) from None
+      raise ValueError(
+          f'Failed to load external csv - {value_in_python.link}, {e}'
+      ) from None
   return value_in_python
 
 
@@ -96,20 +98,20 @@ def ReadCsvAsDict(source):
     fieldnames = reader.fieldnames
     # Check fieldnames.
     if fieldnames != [KEY, VALUE]:
-      raise ValueError('Columns format is not a dict in %s' % source)
+      raise ValueError(f'Columns format is not a dict in {source}')
     for idx, row in enumerate(reader):
       if IsAnnotation(row, fieldnames):
         continue
 
       key = row.get(KEY)
       if key in data:
-        raise ValueError('Duplicated key %s in %s' % (key, source))
+        raise ValueError(f'Duplicated key {key} in {source}')
 
       value = ReadSingleCell(row.get(VALUE, ''))
       data[key] = value
       # Check if any fields left
       if len(row) > 2:
-        raise ValueError('Unexpectecd data at row %d' % idx)
+        raise ValueError(f'Unexpectecd data at row {int(idx)}')
   return data
 
 
@@ -125,7 +127,7 @@ def ReadCsvAsListOfDict(source):
 
     # Check if fieldnames are unique.
     if len(set(fieldnames)) != len(fieldnames):
-      raise ValueError('Duplicated column name in %s' % source)
+      raise ValueError(f'Duplicated column name in {source}')
 
     for idx, row in enumerate(reader):
       if IsAnnotation(row, fieldnames):

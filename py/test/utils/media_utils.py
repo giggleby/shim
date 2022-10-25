@@ -10,6 +10,7 @@ import tempfile
 
 from cros.factory.external import pyudev
 
+
 # udev constants
 _UDEV_ACTION_INSERT = 'add'
 _UDEV_ACTION_REMOVE = 'remove'
@@ -115,10 +116,10 @@ class MountedMedia:
 
     if dev_path[-1].isdigit():
       # Devices enumerated in numbers (ex, mmcblk0).
-      self._dev_path = '%sp%d' % (dev_path, partition)
+      self._dev_path = f'{dev_path}p{int(partition)}'
     else:
       # Devices enumerated in alphabets (ex, sda)
-      self._dev_path = '%s%d' % (dev_path, partition)
+      self._dev_path = f'{dev_path}{int(partition)}'
 
     # For devices not using partition table (floppy mode),
     # allow using whole device as first partition.
@@ -143,18 +144,17 @@ class MountedMedia:
     self._mount_dir = tempfile.mkdtemp(prefix='MountedMedia')
     logging.info('Media mount directory created: %s', self._mount_dir)
     exit_code, output = subprocess.getstatusoutput(
-        'mount %s %s' % (self._dev_path, self._mount_dir))
+        f'mount {self._dev_path} {self._mount_dir}')
     if exit_code != 0:
       shutil.rmtree(self._mount_dir)
-      raise Exception('Failed to mount. Message-%s' % output)
+      raise Exception(f'Failed to mount. Message-{output}')
     self._mounted = True
 
   def _UmountMedia(self):
     """Umounts the partition of the media."""
     # Umount media and delete the temporary directory.
-    exit_code, output = subprocess.getstatusoutput(
-        'umount %s' % self._mount_dir)
+    exit_code, output = subprocess.getstatusoutput(f'umount {self._mount_dir}')
     if exit_code != 0:
-      raise Exception('Failed to umount. Message-%s' % output)
+      raise Exception(f'Failed to umount. Message-{output}')
     shutil.rmtree(self._mount_dir)
     self._mounted = False

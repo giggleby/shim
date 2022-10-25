@@ -93,8 +93,7 @@ class SixDoFCalibrationRobot(robot.Robot):
 
     res = self._serial.readline()
     if res.find('OK') == -1:
-      raise robot.RobotException(
-          'Unexpected data %s received from robot.' % res)
+      raise robot.RobotException(f'Unexpected data {res} received from robot.')
 
     if self._log:
       logging.info('Received from robot: %s', res)
@@ -103,9 +102,9 @@ class SixDoFCalibrationRobot(robot.Robot):
     if power_on:
       # This robot requires setting speed and acceleration after powering on.
       self._SendCommand(self.CMD_POWER_ON)
-      self._SendCommand(self.CMD_SET_SPEED, *(['%d' % self._speed] * 2))
+      self._SendCommand(self.CMD_SET_SPEED, *([f'{int(self._speed)}'] * 2))
       self._SendCommand(self.CMD_SET_ACCELERATION,
-                        *(['%d' % self._acceleration] * 4))
+                        *([f'{int(self._acceleration)}'] * 4))
     else:
       # Make sure the robot is in unload position before power off.
       self.LoadDevice(False)

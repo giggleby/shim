@@ -13,6 +13,7 @@ import unittest
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 PYTESTS_RELPATH = os.path.join('py', 'test', 'pytests')
 
 _PATTERNS = (
@@ -57,8 +58,7 @@ def LoadPytestModule(pytest_name):
   Returns:
     The loaded pytest module object.
   """
-  return __import__(
-      'cros.factory.test.pytests.%s' % pytest_name, fromlist=[None])
+  return __import__(f'cros.factory.test.pytests.{pytest_name}', fromlist=[None])
 
 
 def FindTestCase(pytest_module):
@@ -76,9 +76,9 @@ def FindTestCase(pytest_module):
 
   if len(test_case_types) != 1:
     raise type_utils.TestFailure(
-        'Only exactly one TestCase per pytest is supported, but found %r. '
-        'Use test.AddTask if multiple tasks need to be done in a single pytest.'
-        % test_case_types)
+        f'Only exactly one TestCase per pytest is supported, but found '
+        f'{test_case_types!r}. Use test.AddTask if multiple tasks need to be '
+        f'done in a single pytest.')
 
   return test_case_types[0]
 

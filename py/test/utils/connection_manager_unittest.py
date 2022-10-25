@@ -12,6 +12,7 @@ import dbus
 from cros.factory.test.utils import connection_manager
 from cros.factory.utils.net_utils import WLAN
 
+
 _FAKE_MANAGER = 'flimflam'
 _FAKE_PROC_NAME = 'shill'
 _FAKE_SCAN_INTERVAL_SECS = 10
@@ -56,14 +57,14 @@ class ConnectionManagerTest(unittest.TestCase):
     for service in (_FAKE_SUBSERVICE_LIST + [_FAKE_MANAGER] +
                     _FAKE_DEPSERVICE_LIST):
       subprocess_call_calls.append(
-          mock.call('stop %s' % service, shell=True, stdout=mock.ANY,
+          mock.call(f'stop {service}', shell=True, stdout=mock.ANY,
                     stderr=mock.ANY))
 
     interfaces = list(_FAKE_INTERFACES)
     interfaces.remove('lo')
     for dev in interfaces:
       subprocess_call_calls.append(
-          mock.call('ifconfig %s down' % dev, shell=True, stdout=mock.ANY,
+          mock.call(f'ifconfig {dev} down', shell=True, stdout=mock.ANY,
                     stderr=mock.ANY))
 
     return subprocess_call_calls
@@ -88,16 +89,16 @@ class ConnectionManagerTest(unittest.TestCase):
 
     for dev in interfaces:
       subprocess_call_calls.append(
-          mock.call('ifconfig %s up' % dev, shell=True, stdout=mock.ANY,
+          mock.call(f'ifconfig {dev} up', shell=True, stdout=mock.ANY,
                     stderr=mock.ANY))
 
     for service in (_FAKE_DEPSERVICE_LIST + [_FAKE_MANAGER] +
                     _FAKE_SUBSERVICE_LIST):
-      cmd = 'start %s' % service
+      cmd = f'start {service}'
       if (service in [_FAKE_MANAGER] and
           self.fakeData['override_blocklisted_devices'] is not None):
-        cmd += ' BLOCKED_DEVICES="%s"' % (
-            ','.join(self.fakeData['override_blocklisted_devices']))
+        cmd += (f" BLOCKED_DEVICES=\""
+                f"{','.join(self.fakeData['override_blocklisted_devices'])}\"")
       subprocess_call_calls.append(
           mock.call(cmd, shell=True, stdout=mock.ANY, stderr=mock.ANY))
 

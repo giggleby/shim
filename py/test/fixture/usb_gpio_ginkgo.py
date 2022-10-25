@@ -21,6 +21,7 @@ from ctypes import c_ushort
 from ctypes import cdll
 import os
 
+
 GPIO_DIRECTION_IN = 'in'
 GPIO_DIRECTION_OUT = 'out'
 
@@ -86,21 +87,21 @@ class UsbGpioGinkgo:
       if os.path.isfile(ginkgo_lib_path):
         break
     else:
-      raise UsbGpioError('Cannot find %s in %s.' %
-                         (self.GINGKO_DRIVER, all_lib_paths))
+      raise UsbGpioError(
+          f'Cannot find {self.GINGKO_DRIVER} in {all_lib_paths}.')
 
     # Try to load the driver.
     # ginkgo_lib_path = '/usr/lib64/libGinkgo_Driver.so'
     try:
       self.ginkgo_lib = cdll.LoadLibrary(ginkgo_lib_path)
     except Exception as e:
-      raise UsbGpioError('load %s (%s)' % (ginkgo_lib_path, e)) from None
+      raise UsbGpioError(f'load {ginkgo_lib_path} ({e})') from None
 
   def _GetGPIOPin(self, gpio_port):
     """Convert the GPIO port number to the physical GPIO pin number."""
     # Check the validity of the gpio_port.
     if gpio_port < self.MIN_GPIO_PORT or gpio_port > self.MAX_GPIO_PORT:
-      raise UsbGpioError('invalid gpio port %d' % gpio_port)
+      raise UsbGpioError(f'invalid gpio port {int(gpio_port)}')
     gpio_pin = 1 << gpio_port
     return gpio_pin
 
@@ -116,9 +117,9 @@ class UsbGpioGinkgo:
                                           c_int(self.device_index),
                                           c_ushort(gpio_pin))
     else:
-      raise UsbGpioError('invalid direction %s' % direction)
+      raise UsbGpioError(f'invalid direction {direction}')
     if ret != self.ERR_SUCCESS:
-      raise UsbGpioError('set gpio_%d to %s' % (gpio_port, direction))
+      raise UsbGpioError(f'set gpio_{int(gpio_port)} to {direction}')
 
   def WriteValue(self, gpio_port, value):
     """Write the value to the GPIO port."""
@@ -132,9 +133,9 @@ class UsbGpioGinkgo:
                                           c_int(self.device_index),
                                           c_ushort(gpio_pin))
     else:
-      raise UsbGpioError('WriteValue: invalid value: %d' % value)
+      raise UsbGpioError(f'WriteValue: invalid value: {int(value)}')
     if ret != self.ERR_SUCCESS:
-      raise UsbGpioError('set gpio_%d to %d' % (gpio_port, value))
+      raise UsbGpioError(f'set gpio_{int(gpio_port)} to {int(value)}')
 
   def ReadValue(self, gpio_port):
     """Read the value of the GPIO port."""
@@ -145,7 +146,7 @@ class UsbGpioGinkgo:
                                         c_ushort(gpio_pin),
                                         byref(pin_value))
     if ret != self.ERR_SUCCESS:
-      raise UsbGpioError('read gpio_%d' % gpio_port)
+      raise UsbGpioError(f'read gpio_{int(gpio_port)}')
     return GPIO_HIGH if (pin_value.value & gpio_pin) != 0 else GPIO_LOW
 
   def Close(self):

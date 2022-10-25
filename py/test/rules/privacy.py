@@ -7,6 +7,7 @@
 
 import copy
 
+
 BLOCKLIST_KEYS = [
     'ubind_attribute',
     'gbind_attribute',
@@ -39,9 +40,9 @@ def FilterDict(data):
         continue
       if str(k) in BLOCKLIST_KEYS:
         if isinstance(v, str):
-          ret[k] = '<redacted %d chars>' % len(v)
+          ret[k] = f'<redacted {len(v)} chars>'
         else:
-          ret[k] = '<redacted type %s>' % v.__class__.__name__
+          ret[k] = f'<redacted type {v.__class__.__name__}>'
       elif isinstance(v, (dict, list, set)):
         ret[k] = FilterDict(v)
   return ret

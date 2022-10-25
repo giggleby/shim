@@ -165,8 +165,8 @@ def AssertStartingAtPhase(starting_at_phase: Union[Phase, str], condition,
 
   if not condition:
     raise PhaseAssertionError(
-        'Assertion starting at %s failed (currently in %s): %s' % (
-            starting_at_phase, current_phase, message))
+        f'Assertion starting at {starting_at_phase} failed (currently in '
+        f'{current_phase}): {message}')
 
 
 def SetPersistentPhase(phase: Union[Phase, str, None]):

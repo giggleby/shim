@@ -19,6 +19,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
+
 # Default test list.
 DEFAULT_TEST_LIST_ID = 'main'
 
@@ -264,12 +265,12 @@ class Manager:
     candidates = []
 
     cros_config = cros_config_module.CrosConfig(dut=device)
-    candidates.append('main_%s' % cros_config.GetModelName())
+    candidates.append(f'main_{cros_config.GetModelName()}')
 
     try:
       model_sku = model_sku_utils.GetDesignConfig(device)
       if 'project' in model_sku:
-        candidates.append('main_%s' % model_sku['project'])
+        candidates.append(f"main_{model_sku['project']}")
     except FileNotFoundError:
       # Get here if the project is not using Boxster config
       pass

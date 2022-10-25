@@ -7,6 +7,7 @@ import os
 
 from google.protobuf import json_format
 
+
 try:
   from chromiumos.config.payload import config_bundle_pb2
   MODULE_READY = True
@@ -38,10 +39,10 @@ class SKUConfigs:
   def __init__(self, program, project):
     self._project = project
     config_jsonproto_dir = os.path.join(paths.FACTORY_DIR, 'project_config')
-    program_config_file = os.path.join(
-        config_jsonproto_dir, '%s_config.jsonproto' % program)
-    project_config_file = os.path.join(
-        config_jsonproto_dir, '%s_%s_config.jsonproto' % (program, project))
+    program_config_file = os.path.join(config_jsonproto_dir,
+                                       f'{program}_config.jsonproto')
+    project_config_file = os.path.join(config_jsonproto_dir,
+                                       f'{program}_{project}_config.jsonproto')
     boxster_config = MergeConfigs(
         [ReadConfig(program_config_file), ReadConfig(project_config_file)])
     program_candidates = []
@@ -52,16 +53,16 @@ class SKUConfigs:
         self._program_config = config
         break
     else:
-      raise ValueError('program is %s and must be one of %r.'
-                       % (program, program_candidates))
+      raise ValueError(
+          f'program is {program} and must be one of {program_candidates!r}.')
 
   def GetSKUConfig(self, sku_id):
-    project_key = ('%s:%d' % (self._project, sku_id)).lower()
+    project_key = f'{self._project}:{int(sku_id)}'.lower()
     project_candidates = []
     for config in self._program_config.configs:
       project_id = config.id.value.lower()
       project_candidates.append(project_id)
       if project_id == project_key:
         return config
-    raise ValueError('sku_id is %s and must be one of %r.'
-                     % (project_key, project_candidates))
+    raise ValueError(
+        f'sku_id is {project_key} and must be one of {project_candidates!r}.')

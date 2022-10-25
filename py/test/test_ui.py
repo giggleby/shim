@@ -28,6 +28,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 # Key values
 ENTER_KEY = 'ENTER'
 ESCAPE_KEY = 'ESCAPE'
@@ -162,7 +163,7 @@ class EventLoop:
     self.event_client.close()
 
     if end_event.status not in (state.TestState.PASSED, state.TestState.FAILED):
-      raise ValueError('Unexpected status in event %r' % end_event)
+      raise ValueError(f'Unexpected status in event {end_event!r}')
     return end_event
 
   def AddTimedHandler(self, handler, time_sec, repeat=False):
@@ -257,8 +258,9 @@ class JavaScriptProxy:
     # Change naming convension between Python and JavaScript.
     # SetState (Python) -> setState (JavaScript).
     js_name = name[0].lower() + name[1:]
+
     def _Proxy(*args):
-      self._ui.CallJSFunction('window.%s.%s' % (self._var_name, js_name), *args)
+      self._ui.CallJSFunction(f'window.{self._var_name}.{js_name}', *args)
     setattr(self, name, _Proxy)
     return _Proxy
 
@@ -301,11 +303,11 @@ class UI:
                                             'static')]))
     if len(static_dirs) > 1:
       raise type_utils.TestFailure(
-          'Cannot have both of %s - delete one!' % static_dirs)
+          f'Cannot have both of {static_dirs} - delete one!')
     if static_dirs:
       self._static_dir_path = static_dirs[0]
       goofy_proxy.GetRPCProxy(url=goofy_proxy.GOOFY_SERVER_URL).RegisterPath(
-          '/tests/%s' % test, self._static_dir_path)
+          f'/tests/{test}', self._static_dir_path)
 
     def GetAutoload(extension, default=''):
       if self._static_dir_path is None:
@@ -317,8 +319,7 @@ class UI:
         return default
       return file_utils.ReadFile(static_file)
 
-    self.SetHTML(
-        html='<base href="/tests/%s/">' % test, id='head', append=True)
+    self.SetHTML(html=f'<base href="/tests/{test}/">', id='head', append=True)
 
     # default CSS files are set in default_test_ui.html by goofy.py, and we
     # only set the HTML of body here.
@@ -362,14 +363,12 @@ class UI:
 
   def AppendCSS(self, css):
     """Append CSS in the test pane."""
-    self.AppendHTML('<style type="text/css">%s</style>' % css,
-                    id='head')
+    self.AppendHTML(f'<style type="text/css">{css}</style>', id='head')
 
   def AppendCSSLink(self, css_link):
     """Append CSS link in the test pane."""
     self.AppendHTML(
-        '<link rel="stylesheet" type="text/css" href="%s">' % css_link,
-        id='head')
+        f'<link rel="stylesheet" type="text/css" href="{css_link}">', id='head')
 
   def RunJS(self, js, **kwargs):
     """Runs JavaScript code in the UI.
@@ -400,10 +399,9 @@ class UI:
       name: The name of the function to execute.
       args: Arguments to the function.
     """
-    keys = ['arg_%d' % i for i in range(len(args))]
+    keys = [f'arg_{int(i)}' for i in range(len(args))]
     kwargs = dict(zip(keys, args))
-    self.RunJS('%s(%s)' % (name, ','.join('args.%s' % key for key in keys)),
-               **kwargs)
+    self.RunJS(f'{name}({",".join(f"args.{key}" for key in keys)})', **kwargs)
 
   def InitJSTestObject(self, class_name, *args):
     """Initialize a JavaScript test object in frontend.
@@ -417,9 +415,8 @@ class UI:
     Returns:
       A JavaScriptProxy to the frontend test object.
     """
-    self.RunJS(
-        'window.testObject = new %s(...args.constructorArg)' % class_name,
-        constructorArg=args)
+    self.RunJS(f'window.testObject = new {class_name}(...args.constructorArg)',
+               constructorArg=args)
     return JavaScriptProxy(self, 'testObject')
 
   def URLForFile(self, path):
@@ -464,9 +461,8 @@ class UI:
       virtual_key: If true, also show a button on screen.
     """
     self.RunJS(
-        'test.bindKey(args.key, (event) => { %s }, args.once, args.virtual_key)'
-        % js,
-        key=key, once=once, virtual_key=virtual_key)
+        f'test.bindKey(args.key, (event) => {{ {js} }}, args.once, '
+        'args.virtual_key)', key=key, once=once, virtual_key=virtual_key)
 
   def BindKey(self, key, handler, args=None, once=False, virtual_key=True):
     """Sets a key binding to invoke the handler if the key is pressed.
@@ -483,8 +479,8 @@ class UI:
     uuid_str = str(uuid.uuid4())
     args = json.dumps(args) if args is not None else '{}'
     self._event_loop.AddEventHandler(uuid_str, handler)
-    self.BindKeyJS(key, 'test.sendTestEvent("%s", %s);' % (uuid_str, args),
-                   once=once, virtual_key=virtual_key)
+    self.BindKeyJS(key, f'test.sendTestEvent("{uuid_str}", {args});', once=once,
+                   virtual_key=virtual_key)
 
   def UnbindKey(self, key):
     """Removes a key binding in frontend JavaScript.
@@ -766,7 +762,7 @@ class StandardUI(UI):
       A threading.Event that would stop the countdown timer when set.
     """
     if error_msg is None:
-      error_msg = 'Timed out after %d seconds.' % timeout_secs
+      error_msg = f'Timed out after {int(timeout_secs)} seconds.'
 
     def _TimeoutHandler():
       raise type_utils.TestFailure(error_msg)
@@ -807,12 +803,11 @@ class ScrollableLogUI(StandardUI):
 
     line: The log to be append.
     """
-    self.AppendHTML(
-        '<div>%s</div>' % Escape(line), id='ui-log', autoscroll=True)
+    self.AppendHTML(f'<div>{Escape(line)}</div>', id='ui-log', autoscroll=True)
     if self.max_log_lines is not None:
-      self.RunJS('const log = document.getElementById("ui-log");'
-                 'if (log.childNodes.length > %d)'
-                 '  log.removeChild(log.firstChild);' % self.max_log_lines)
+      self.RunJS(f'const log = document.getElementById("ui-log");if '
+                 f'(log.childNodes.length > {int(self.max_log_lines)})  '
+                 f'log.removeChild(log.firstChild);')
 
   def ClearLog(self):
     """Clear the log in UI."""

@@ -30,7 +30,7 @@ def MakeI18nLabel(label):
   for locale in translation.LOCALES:
     translated_label = label[locale]
     html_class = 'goofy-label-' + locale
-    html.append(u'<span class="%s">%s</span>' % (html_class, translated_label))
+    html.append(f'<span class="{html_class}">{translated_label}</span>')
   return ''.join(html)
 
 
@@ -38,11 +38,11 @@ def GetStyleSheet():
   """Return a stylesheet that can be used to style i18n labels properly."""
   styles = []
   for locale in translation.LOCALES:
-    styles.append("""
+    styles.append(f"""
     .goofy-label-{locale} {{
       display: none;
     }}
     .goofy-locale-{locale} .goofy-label-{locale} {{
       display: inline;
-    }}""".format(locale=locale))
+    }}""")
   return '\n'.join(styles)

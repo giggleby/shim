@@ -55,7 +55,7 @@ class ClientProtocol(Protocol):
 
   def __init__(self):
     self.factory = None
-    self.uuid = "ClientProtocol(%s)" % uuid.uuid4()
+    self.uuid = f"ClientProtocol({uuid.uuid4()})"
 
   def dataReceived(self, data):
     logging.info("%s: got %3d bytes from remote host", self.uuid, len(data))
@@ -120,7 +120,7 @@ class ServerProtocol(Protocol):
 
   def __init__(self, client_factory):
     self.client_factory = client_factory
-    self.uuid = "ServerProtocol(%s)" % uuid.uuid4()
+    self.uuid = f"ServerProtocol({uuid.uuid4()})"
     logging.info("%s initialized and got ClientFactory %r",
                  self.uuid, self.client_factory)
 
@@ -155,7 +155,7 @@ class ServerFactory(Factory):
 
   def __init__(self, client_factory):
     self.client_factory = client_factory
-    self.uuid = "ServerFactory(%s)" % uuid.uuid4()
+    self.uuid = f"ServerFactory({uuid.uuid4()})"
     logging.info(
         "%s initialized and got ClientFactory %r", self.uuid, client_factory)
 

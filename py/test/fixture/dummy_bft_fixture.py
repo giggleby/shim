@@ -35,7 +35,7 @@ class DummyBFTFixture(bft_fixture.BFTFixture):
 
   def SetDeviceEngaged(self, device, engage):
     self._Prompt(
-        'Please %s device: %s' % ('engage' if engage else 'disengage', device))
+        f"Please {'engage' if engage else 'disengage'} device: {device}")
 
   def Ping(self):
     self._Log('ping back.')
@@ -57,11 +57,11 @@ class DummyBFTFixture(bft_fixture.BFTFixture):
     self._Prompt('Please input keystoke sequence.')
 
   def IsLEDColor(self, color):
-    self._Log('Sees color: %s' % color)
+    self._Log(f'Sees color: {color}')
     return True
 
   def SetStatusColor(self, color):
-    self._Log('Status color is set: %s' % color)
+    self._Log(f'Status color is set: {color}')
 
   @property
   def delay_secs(self):
@@ -106,10 +106,10 @@ class SpringDummyBFTFixture(DummyBFTFixture):
         self._backlight_off_time = now + self._backlight_waiting_off_secs
       elif self._backlight_off_time < now:
         status = bft_fixture.BFTFixture.Status.OFF
-        self._Log('Backlight status: %s' % status)
+        self._Log(f'Backlight status: {status}')
         return status
 
-      self._Log('Backlight status: %s. Will turn off after %.1f seconds.' %
-                (status, self._backlight_off_time - now))
+      self._Log(f'Backlight status: {status}. Will turn off after '
+                f'{self._backlight_off_time - now:.1f} seconds.')
       return status
-    raise bft_fixture.BFTFixtureException('Fixture does not support %s' % probe)
+    raise bft_fixture.BFTFixtureException(f'Fixture does not support {probe}')

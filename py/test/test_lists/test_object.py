@@ -220,10 +220,10 @@ class FactoryTest:
     # Turn strings into single RequireRun objects
     require_run = [RequireRun(x) if isinstance(x, str) else x
                    for x in require_run]
-    assert (isinstance(require_run, list) and
-            all(isinstance(x, RequireRun) for x in require_run)), (
-                'require_run must be a list of RequireRun objects (%r)' %
-                require_run)
+    assert (
+        isinstance(require_run, list) and
+        all(isinstance(x, RequireRun) for x in require_run)
+    ), (f'require_run must be a list of RequireRun objects ({require_run!r})')
     self.require_run = require_run
 
     self.run_if = run_if
@@ -266,20 +266,17 @@ class FactoryTest:
     else:
       self.id = id or self.LabelToId(self.label.get(translation.DEFAULT_LOCALE))
 
-      assert self.id, (
-          'id not specified for test: %r' % self)
-      assert '.' not in self.id, (
-          'id cannot contain a period: %r' % self)
+      assert self.id, (f'id not specified for test: {self!r}')
+      assert '.' not in self.id, (f'id cannot contain a period: {self!r}')
       assert ID_REGEXP.match(self.id), (
-          'id %r does not match regexp %s' % (
-              self.id, ID_REGEXP.pattern))
+          f'id {self.id!r} does not match regexp {ID_REGEXP.pattern}')
       # Note that we check ID uniqueness in _init.
 
   def _SetIterations(self, iterations, set_default=False):
     if not isinstance(iterations, int) or iterations == 0 or iterations < -1:
       raise ValueError(
-          'In test %s, Iterations must be a positive integer or -1, not %r' % (
-              self.path, iterations))
+          f'In test {self.path}, Iterations must be a positive integer or -1, '
+          f'not {iterations!r}')
 
     iterations = float('inf') if iterations == -1 else iterations
     self.iterations = iterations
@@ -289,8 +286,8 @@ class FactoryTest:
   def _SetRetries(self, retries, set_default=False):
     if not isinstance(retries, int) or retries < -1:
       raise ValueError(
-          'In test %s, Retries must be a positive integer, 0, or -1, not %r' % (
-              self.path, retries))
+          f'In test {self.path}, Retries must be a positive integer, 0, or -1, '
+          f'not {retries!r}')
 
     retries = float('inf') if retries == -1 else retries
     self.retries = retries
@@ -399,7 +396,7 @@ class FactoryTest:
       self.id += '_' + str(count)
       self.path = prefix + (self.id or '')
 
-    assert self.path not in path_map, 'Duplicate test path %s' % (self.path)
+    assert self.path not in path_map, f'Duplicate test path {self.path}'
     path_map[self.path] = self
 
     # subtests of a teardown test should be part of teardown as well
@@ -446,12 +443,12 @@ class FactoryTest:
       for subtest in self.subtests:
         if not subtest.IsLeaf():
           raise type_utils.TestListError(
-              'Test %s: all subtests in a parallel test should be leaf nodes' %
-              self.id)
+              f'Test {self.id}: all subtests in a parallel test should be leaf '
+              f'nodes')
         if subtest.enable_services or subtest.disable_services:
           raise type_utils.TestListError(
-              'Test %s cannot be parallel with enable_services or '
-              'disable_services specified.' % subtest.id)
+              f'Test {subtest.id} cannot be parallel with enable_services or '
+              f'disable_services specified.')
 
     # all subtests should come before teardown tests
     it = iter(self.subtests)
@@ -461,7 +458,7 @@ class FactoryTest:
     for subtest in it:
       if not subtest.teardown:
         raise type_utils.TestListError(
-            '%s: all subtests should come before teardown tests' % self.id)
+            f'{self.id}: all subtests should come before teardown tests')
 
     for subtest in self.subtests:
       subtest._check()  # pylint: disable=protected-access

@@ -18,6 +18,7 @@ from cros.factory.test import session
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 GOOFTOOL_HOME = '/usr/local/factory'
 
 
@@ -46,9 +47,9 @@ def run(command, ignore_status=False):
   console_log_path = paths.CONSOLE_LOG_PATH
   file_utils.TryMakeDirs(os.path.dirname(console_log_path))
   with tempfile.NamedTemporaryFile() as return_code_file:
-    system_cmd = ('(PATH=%s:$PATH %s %s || echo $? >"%s") | tee -a "%s"' %
-                  (GOOFTOOL_HOME, command, swap_stdout_stderr,
-                   return_code_file.name, console_log_path))
+    system_cmd = (
+        f'(PATH={GOOFTOOL_HOME}:$PATH {command} {swap_stdout_stderr} || echo $?'
+        f' >"{return_code_file.name}") | tee -a "{console_log_path}"')
     with subprocess.Popen(system_cmd, stderr=subprocess.PIPE,
                           stdout=subprocess.PIPE, shell=True,
                           encoding='utf-8') as proc:

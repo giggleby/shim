@@ -36,6 +36,7 @@ import yaml
 
 from cros.factory.utils import type_utils
 
+
 TEST_ARG_HELP = """A dictionary with the following items:
 
   ``class_name``
@@ -442,22 +443,21 @@ def main():
 
   command = args.command
   if command in ('Engage', 'Disengage'):
-    print('%s %s' % (command, args.device))
+    print(f'{command} {args.device}')
     fixture.SetDeviceEngaged(args.device, command == 'Engage')
   elif command == 'DeviceStatus':
     device = args.device
-    print('GetDeviceStatus(%s): %s' % (device, fixture.GetDeviceStatus(device)))
+    print(f'GetDeviceStatus({device}): {fixture.GetDeviceStatus(device)}')
   elif command == 'SystemStatus':
     component = args.component
-    print('GetSystemStatus(%s): %s' % (device,
-                                       fixture.GetSystemStatus(component)))
+    print(f'GetSystemStatus({device}): {fixture.GetSystemStatus(component)}')
   elif command == 'IsLEDColor':
     color = args.color
-    print('IsLEDColor(%s): %s' % (color, fixture.IsLEDColor(color)))
+    print(f'IsLEDColor({color}): {fixture.IsLEDColor(color)}')
   elif command == 'SetStatusColor':
     color = args.color
     fixture.SetStatusColor(color)
-    print('SetStatusColor(%s)' % color)
+    print(f'SetStatusColor({color})')
   elif command == 'ResetKeyboard':
     fixture.ResetKeyboard()
   elif command == 'SimulateKeystrokes':
@@ -465,20 +465,20 @@ def main():
   elif command == 'SimulateKeyPress':
     bitmask = args.bitmask
     period_secs = args.period_secs
-    print('SimulateKeyPress(%s, %s)' % (bitmask, period_secs))
+    print(f'SimulateKeyPress({bitmask}, {period_secs})')
     fixture.SimulateKeyPress(bitmask, period_secs)
   elif command == 'SetLcmText':
     row_number = args.row_number
     message = args.message
-    print('SetLcmText(%s, %s)' % (row_number, message))
+    print(f'SetLcmText({row_number}, {message})')
     fixture.SetLcmText(row_number, message)
   elif command == 'IssueLcmCommand':
     action = args.action
-    print('IssueLcmCommand(%s)' % (action))
+    print(f'IssueLcmCommand({action})')
     fixture.IssueLcmCommand(action)
   elif command == 'SetUSBHubChargeStatus':
     enable = args.enable
-    print('SetUSBHubChargeStatus(%r)' % (enable))
+    print(f'SetUSBHubChargeStatus({enable!r})')
     fixture.SetUSBHubChargeStatus(enable)
   else:
     print(getattr(fixture, command)())

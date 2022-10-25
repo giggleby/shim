@@ -23,6 +23,6 @@ def CreateFixture(class_name, params):
     An instance of the specified fixture implementation.
   """
   module, cls = class_name.rsplit('.', 1)
-  module = 'cros.factory.test.fixture.%s' % module
+  module = f'cros.factory.test.fixture.{module}'
   fixture = getattr(__import__(module, fromlist=[cls]), cls)(**params)
   return fixture

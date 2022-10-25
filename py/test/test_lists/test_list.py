@@ -340,15 +340,16 @@ class Options:
 
     for key in sorted(self.__dict__):
       if not hasattr(default_options, key):
-        errors.append('Unknown option %s' % key)
+        errors.append(f'Unknown option {key}')
         continue
 
       value = getattr(self, key)
       allowable_types = Options._types.get(
           key, [type(getattr(default_options, key))])
       if not any(isinstance(value, x) for x in allowable_types):
-        errors.append('Option %s has unexpected type %s (should be %s)' %
-                      (key, type(value), allowable_types))
+        errors.append(
+            f'Option {key} has unexpected type {type(value)} (should be '
+            f'{allowable_types})')
     if errors:
       raise type_utils.TestListError('\n'.join(errors))
 
@@ -438,9 +439,8 @@ class FactoryTestList(test_object_module.FactoryTest):
             self.ResolveRequireRun(test.path, requirement.path))
         if not requirement.test:
           raise type_utils.TestListError(
-              "Unknown test %s in %s's require_run argument (note "
-              'that full paths are required)'
-              % (requirement.path, test.path))
+              f"Unknown test {requirement.path} in {test.path}'s require_run "
+              f"argument (note that full paths are required)")
 
     self.options.CheckValid()
     self._check()
@@ -550,7 +550,7 @@ class ITestList(metaclass=abc.ABCMeta):
     if hasattr(self, name):
       object.__setattr__(self, name, value)
     else:
-      raise AttributeError('cannot set attribute %r' % name)
+      raise AttributeError(f'cannot set attribute {name!r}')
 
   @property
   @abc.abstractmethod
@@ -593,13 +593,13 @@ class ITestList(metaclass=abc.ABCMeta):
 
     def ResolveArg(key, value):
       if isinstance(value, collections.abc.Mapping):
-        return {k: ResolveArg('%s[%r]' % (key, k), v)
+        return {k: ResolveArg(f'{key}[{k!r}]', v)
                 for k, v in value.items()}
 
       if isinstance(value, collections.abc.Sequence):
         if not isinstance(value, str):
           return [
-              ResolveArg('%s[%d]' % (key, i), v) for i, v in enumerate(value)
+              ResolveArg(f'{key}[{int(i)}]', v) for i, v in enumerate(value)
           ]
 
       if not isinstance(value, str):
@@ -1076,7 +1076,7 @@ class TestList(ITestList):
     if test_object_name in cache:
       if cache[test_object_name] == _DUMMY_CACHE:
         raise type_utils.TestListError(
-            'Detected loop inheritance dependency of %s' % test_object_name)
+            f'Detected loop inheritance dependency of {test_object_name}')
       return cache[test_object_name]
 
     # syntactic sugar: if a test_object is just a string, it's equivalent to
@@ -1090,8 +1090,7 @@ class TestList(ITestList):
     parent_name = test_object.get('inherit', 'FactoryTest')
     if parent_name not in self._config['definitions']:
       raise type_utils.TestListError(
-          '%s inherits %s, which is not defined' % (test_object_name,
-                                                    parent_name))
+          f'{test_object_name} inherits {parent_name}, which is not defined')
     if parent_name == test_object_name:
       # this test object inherits itself, it means that this object is a class
       # defined in cros.factory.test.test_lists.test_object
@@ -1166,15 +1165,15 @@ class TestList(ITestList):
       self.SetSkippedAndWaivedTests()
       self.ApplyConditionalPatchesToTests()
       note['level'] = 'INFO'
-      note['text'] = ('Test list %s is reloaded.' % self._config.test_list_id)
+      note['text'] = f'Test list {self._config.test_list_id} is reloaded.'
     except Exception:
       logging.exception('Failed to reload latest test list %s.',
                         self._config.test_list_id)
       self._PreventReload()
 
       note['level'] = 'WARNING'
-      note['text'] = ('Failed to reload latest test list %s.' %
-                      self._config.test_list_id)
+      note['text'] = (
+          f'Failed to reload latest test list {self._config.test_list_id}.')
     try:
       self._state_instance.AddNote(note)
     except Exception:

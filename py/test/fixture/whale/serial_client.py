@@ -13,6 +13,7 @@ import xmlrpc.client
 from cros.factory.test.fixture.whale.host import dolphin_server
 from cros.factory.utils import type_utils
 
+
 __all__ = ['SerialClientError', 'SerialClient']
 FUNCTIONS = type_utils.Enum(['send', 'receive', 'get_serial_num'])
 
@@ -37,7 +38,7 @@ class SerialClient:
       tcp_port: TCP port on which serial server is listening on.
       verbose: Enables verbose messaging across xmlrpc.client.ServerProxy.
     """
-    remote = 'http://%s:%s' % (host, tcp_port)
+    remote = f'http://{host}:{tcp_port}'
     self._server = xmlrpc.client.ServerProxy(remote, verbose=verbose)
 
   def Send(self, serial_index, command):
@@ -53,8 +54,9 @@ class SerialClient:
     try:
       self._server.Send(serial_index, command)
     except Exception as e:
-      raise SerialClientError('Fail to send command %s to serial_index %d: %s' %
-                              (command, serial_index, e)) from None
+      raise SerialClientError(
+          f'Fail to send command {command} to serial_index {int(serial_index)}:'
+          f' {e}') from None
 
   def Receive(self, serial_index, num_bytes):
     """Receives N byte data through serial server.
@@ -76,8 +78,8 @@ class SerialClient:
       return recv
     except Exception as e:
       raise SerialClientError(
-          'Fail to receive %d bytes from serial_index %d: %s' %
-          (num_bytes, serial_index, e)) from None
+          f'Fail to receive {int(num_bytes)} bytes from serial_index '
+          f'{int(serial_index)}: {e}') from None
 
   def GetSerialAmount(self):
     """Gets total serial amount on server.
@@ -90,7 +92,7 @@ class SerialClient:
       logging.debug('Get total serial amount = %d', serial_amount)
       return serial_amount
     except Exception as e:
-      raise SerialClientError('Fail to get serial amount: %s' % e) from None
+      raise SerialClientError(f'Fail to get serial amount: {e}') from None
 
 
 def ParseArgs():

@@ -28,6 +28,7 @@ from cros.factory.test.diagnosis import sanitizer
 from cros.factory.test.diagnosis import task
 from cros.factory.test import event
 
+
 _BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -341,14 +342,12 @@ class DiagnosisToolRPC:
       return
     if self._current_task.state != common.TASK_STATE.RUNNING:
       return
-    self._ui_proxy.Confirm(title='Confirm',
-                           content=('Do you really want to stop the task %r?' %
-                                    self._current_task.name),
-                           options=[common.OPTIONS.YES, common.OPTIONS.CANCEL],
-                           timeout=10,
-                           default_option=common.OPTIONS.CANCEL,
-                           callback=self._StopTaskConfirmCallback,
-                           callback_args=(task_id,))
+    self._ui_proxy.Confirm(
+        title='Confirm', content=f'Do you really want to stop the task'
+        f'{self._current_task.name!r}?', options=[
+            common.OPTIONS.YES, common.OPTIONS.CANCEL
+        ], timeout=10, default_option=common.OPTIONS.CANCEL,
+        callback=self._StopTaskConfirmCallback, callback_args=(task_id, ))
 
   def _StopTaskConfirmCallback(self, option, task_id):
     """A callback function for the user choosing to stop the task or not.

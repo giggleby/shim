@@ -221,12 +221,12 @@ class TestCase(unittest.TestCase):
       elif status == state.TestState.FAILED:
         self.FailTask(event.data.get('error_msg', ''))
       else:
-        raise ValueError('Unexpected status in event %r' % event)
+        raise ValueError(f'Unexpected status in event {event!r}')
 
     # pylint: disable=unused-argument
     def ScreenshotHandler(event):
-      output_filename = ('/var/factory/log/screenshots/screenshot_%s.png' %
-                         time.strftime('%Y%m%d-%H%M%S'))
+      output_filename = (f"/var/factory/log/screenshots/screenshot_"
+                         f"{time.strftime('%Y%m%d-%H%M%S')}.png")
       state.GetInstance().DeviceTakeScreenshot(output_filename)
       session.console.info('Take a screenshot of Goofy page and store as %s',
                            output_filename)

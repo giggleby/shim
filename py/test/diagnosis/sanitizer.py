@@ -11,6 +11,7 @@ import re
 from cros.factory.test.diagnosis import common
 from cros.factory.utils import process_utils
 
+
 _DEFAULT_INPUT_BOOL_VALUE = True
 _DEFAULT_INPUT_FILE_PATTERN = '.*'
 _DEFAULT_INPUT_FILE_TYPE = 'regular-file'
@@ -66,23 +67,23 @@ def _SanitizeTask(config):
   try:
     if common.TOKEN.STEPS in config:
       if not isinstance(config[common.TOKEN.STEPS], list):
-        raise common.FormatError('Value of %r is not a %r' %
-                                 (common.TOKEN.STEPS, 'list'))
+        raise common.FormatError(
+            f"Value of {common.TOKEN.STEPS!r} is not a {'list'!r}")
       config[common.TOKEN.STEPS] = [_SanitizeStep(x)
                                     for x in config[common.TOKEN.STEPS]]
       _SanitizeDefaultValueAndType(config, [(common.TOKEN.INPUTS, [], list)])
       config[common.TOKEN.INPUTS] = _SanitizeInputs(config[common.TOKEN.INPUTS])
     if common.TOKEN.MEMBER in config:
       if not isinstance(config[common.TOKEN.MEMBER], list):
-        raise common.FormatError('Value of %r is not a %r' %
-                                 (common.TOKEN.MEMBER, 'list'))
+        raise common.FormatError(
+            f"Value of {common.TOKEN.MEMBER!r} is not a {'list'!r}")
       config[common.TOKEN.MEMBER] = [_SanitizeTask(x)
                                      for x in config[common.TOKEN.MEMBER]]
       count = collections.Counter(x[common.TOKEN.NAME]
                                   for x in config[common.TOKEN.MEMBER])
       repeat_names = [x for x in count if count[x] > 1]
       for repeat_name in repeat_names:
-        raise common.FormatError('Same sub-task name: %r' % repeat_name)
+        raise common.FormatError(f'Same sub-task name: {repeat_name!r}')
     return config
   except common.FormatError as e:
     raise common.FormatError(config[common.TOKEN.NAME] + ':' + str(e))
@@ -181,10 +182,10 @@ def _SanitizeInput(config):
       _SanitizeInputString(config)
 
     else:
-      raise common.FormatError('Unknown input type: %r.' % config_type)
+      raise common.FormatError(f'Unknown input type: {config_type!r}.')
 
   except KeyError as e:
-    raise common.FormatError('Key "%s" not found in the input element.' % e)
+    raise common.FormatError(f'Key "{e}" not found in the input element.')
   except Exception as e:
     raise common.FormatError('Exception: "' + str(e) + '"')
   return config
@@ -198,7 +199,7 @@ def _SanitizeInputNumberAndSlider(ref):
       ref[key] = _GetCommandOutput(ref[key][1:], float, 'float')
     else:
       raise common.FormatError(
-          'Value of %r is neither a number nor a command: %r' % (key, ref[key]))
+          f'Value of {key!r} is neither a number nor a command: {ref[key]!r}')
   _SanitizeDefaultValueAndType(ref, [
       (common.TOKEN.VALUE, ref[common.TOKEN.MIN], (int, float)),
       (common.TOKEN.ROUND, 0, (int, float)),
@@ -213,14 +214,14 @@ def _SanitizeInputChoices(ref):
     ref[key] = _GetCommandOutput(ref[key][1:], lambda x: re.split(' |\t|\n', x))
   else:
     raise common.FormatError(
-        'Value of %r is neither a number nor a command: %r' % (key, ref[key]))
+        f'Value of {key!r} is neither a number nor a command: {ref[key]!r}')
   ref[key] = [str(x) for x in ref[key] if str(x)]
   if not ref[key]:
-    raise common.FormatError('No valid flag in %r.' % key)
+    raise common.FormatError(f'No valid flag in {key!r}.')
   ref.setdefault(common.TOKEN.VALUE, ref[key][0])
   if ref[common.TOKEN.VALUE] not in ref[key]:
-    raise common.FormatError('Default value is not a valid flag: %r.' %
-                             ref[common.TOKEN.VALUE])
+    raise common.FormatError(
+        f'Default value is not a valid flag: {ref[common.TOKEN.VALUE]!r}.')
 
 
 def _SanitizeInputBool(ref):
@@ -295,8 +296,8 @@ def _SanitizeStep(config):
     config.setdefault(common.TOKEN.EXPECTED_OUTPUT,
                       config[common.TOKEN.OPTIONS][0])
     if config[common.TOKEN.EXPECTED_OUTPUT] not in config[common.TOKEN.OPTIONS]:
-      raise common.FormatError('expected_output not in the options: %r' %
-                               config[common.TOKEN.EXPECTED_OUTPUT])
+      raise common.FormatError(f'expected_output not in the options: '
+                               f'{config[common.TOKEN.EXPECTED_OUTPUT]!r}')
     found += 1
   for key in (
       x for x in [common.TOKEN.COMMAND, common.TOKEN.FINALLY] if x in config):
@@ -312,7 +313,7 @@ def _SanitizeStep(config):
                       common.TOKEN.EXPECTED_OUTPUT)
     found += 1
   if found != 1:
-    raise common.FormatError('Unknown step type %r.' % config)
+    raise common.FormatError(f'Unknown step type {config!r}.')
   return config
 
 
@@ -332,12 +333,13 @@ def _GetCommandOutput(command, converter, converted_type_name=None):
   try:
     output = process_utils.SpawnOutput(command, shell=True)
   except Exception as e:
-    raise common.FormatError('Runs command %r failed, reason %r' % (command, e))
+    raise common.FormatError(f'Runs command {command!r} failed, reason {e!r}')
   try:
     return converter(output)
   except Exception:
-    raise common.FormatError('Cannot convert the output of %r to %s: %s' %
-                             (command, converted_type_name, output)) from None
+    raise common.FormatError(
+        f'Cannot convert the output of {command!r} to {converted_type_name}: '
+        f'{output}') from None
 
 
 def _SanitizeDefaultValueAndType(ref, value_type_list):
@@ -352,7 +354,7 @@ def _SanitizeDefaultValueAndType(ref, value_type_list):
   for (key, default_value, value_type) in value_type_list:
     ref.setdefault(key, default_value)
     if not isinstance(ref[key], value_type):
-      raise common.FormatError('Value of %r is not a %r' % (key, value_type))
+      raise common.FormatError(f'Value of {key!r} is not a {value_type!r}')
 
 
 def _SanitizeRegExp(lst, key_name):
@@ -370,6 +372,6 @@ def _SanitizeRegExp(lst, key_name):
   """
   if not (len(lst) in (1, 2) and all(isinstance(x, str) for x in lst)):
     raise common.FormatError(
-        'Value of %r is not a valid regular expression: %s' % (key_name, lst))
+        f'Value of {key_name!r} is not a valid regular expression: {lst}')
   if len(lst) == 1:
     lst.append('')

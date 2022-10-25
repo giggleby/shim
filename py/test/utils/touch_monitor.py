@@ -64,7 +64,7 @@ class TouchMonitorBase:
       # Defined in <uapi/linux/input.h>.
       EVIOCGKEY = (2 << 30) | (ord('E') << 8) | 0x18 | (nbytes << 16)
       in_buf = '\0' * nbytes
-      out_buf = struct.unpack('=%dB' % nbytes,
+      out_buf = struct.unpack(f'={int(nbytes)}B',
                               fcntl.ioctl(device.fileno(), EVIOCGKEY, in_buf))
       return {key: bool((out_buf[key >> 3] >> (key & 7)) & 1)
               for key in caps[ecodes.EV_KEY]}
@@ -227,7 +227,7 @@ class MultiTouchMonitor(TouchMonitorBase):
       # This function calls ioctl with EVIOCGMTSLOTS request, which can return
       # the X position, Y position, or tracking id of all slots as an array of
       # 32-bit signed integers. See <uapi/linux/input.h> for details.
-      fmt = '=%di' % (1 + num_slots)
+      fmt = f'={int(1 + num_slots)}i'
       nbytes = struct.calcsize(fmt)
       # Defined in <uapi/linux/input.h>.
       EVIOCGMTSLOTS = (2 << 30) | (ord('E') << 8) | 0x0a | (nbytes << 16)

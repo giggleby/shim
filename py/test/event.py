@@ -23,6 +23,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
+
 # Environment variable storing the path to the endpoint.
 CROS_FACTORY_EVENT = 'CROS_FACTORY_EVENT'
 
@@ -132,9 +133,7 @@ class Event:
   def __repr__(self):
     return type_utils.StdRepr(
         self,
-        extra=[
-            'type=%s' % self.type,
-            'timestamp=%s' % time.ctime(self.timestamp)],
+        extra=[f'type={self.type}', f'timestamp={time.ctime(self.timestamp)}'],
         excluded_keys=['type', 'timestamp'])
 
   def to_json(self):
@@ -174,7 +173,7 @@ class EventServerRequestHandler(socketserver.BaseRequestHandler):
   def setup(self):
     socketserver.BaseRequestHandler.setup(self)
     threading.current_thread().name = (
-        'EventServerRequestHandler-%d' % get_unique_id())
+        f'EventServerRequestHandler-{int(get_unique_id())}')
     # A thread to be used to send messages that are posted to the queue.
     self.send_thread = None
     # A queue containing messages.
@@ -193,7 +192,7 @@ class EventServerRequestHandler(socketserver.BaseRequestHandler):
 
       self.send_thread = process_utils.StartDaemonThread(
           target=self._run_send_thread,
-          name='EventServerSendThread-%d' % get_unique_id())
+          name=f'EventServerSendThread-{int(get_unique_id())}')
 
       # Process events: continuously read message and broadcast to all
       # clients' queues.
@@ -349,8 +348,8 @@ class EventClientBase(metaclass=abc.ABCMeta):
 
     hello = s.recv(len(_HELLO_MESSAGE))
     if hello != _HELLO_MESSAGE:
-      raise socket.error('Event client expected hello (%r) but got %r' %
-                         _HELLO_MESSAGE, hello)
+      raise socket.error(f'Event client expected hello ({_HELLO_MESSAGE:r}) '
+                         f'but got {hello:r}')
     return s
 
   def __del__(self):
@@ -389,12 +388,12 @@ class EventClientBase(metaclass=abc.ABCMeta):
                     self._truncate_event_for_debug_log(event))
     message = pickle.dumps(event)
     if len(message) > _MAX_MESSAGE_SIZE:
-      logging.error(b'Message too large (%d bytes): event type = %s, '
-                    b'truncated message: %s', len(message), event.type,
-                    message[:_MAX_MESSAGE_SIZE // 20] +
-                    b'\n\n...SKIPED...\n\n' +
-                    message[-_MAX_MESSAGE_SIZE // 20:])
-      raise IOError('Message too large (%d bytes)' % len(message))
+      logging.error(
+          b'Message too large (%d bytes): event type = %s, '
+          b'truncated message: %s', len(message), event.type,
+          message[:_MAX_MESSAGE_SIZE // 20] + b'\n\n...SKIPED...\n\n' +
+          message[-_MAX_MESSAGE_SIZE // 20:])
+      raise IOError(f'Message too large ({len(message)} bytes)')
     self.socket.sendall(message)
 
   def _process_event(self, timeout=None):
@@ -535,7 +534,7 @@ class ThreadingEventClient(EventClientBase):
 
     self.recv_thread = process_utils.StartDaemonThread(
         target=self._run_recv_thread,
-        name='EventServerRecvThread-%s' % (name or get_unique_id()))
+        name=f'EventServerRecvThread-{name or get_unique_id()}')
 
   def close(self):
     super().close()

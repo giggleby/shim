@@ -18,6 +18,7 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
+
 # Environment variable names.
 ENV_TEST_PATH = 'CROS_FACTORY_TEST_PATH'
 ENV_TEST_INVOCATION = 'CROS_FACTORY_TEST_INVOCATION'
@@ -106,7 +107,7 @@ def IncrementInitCount(path=INIT_COUNT_PATH):
 
   file_utils.TryMakeDirs(os.path.dirname(path))
   with file_utils.AtomicWrite(path) as f:
-    f.write('%d' % init_count)
+    f.write(f'{int(init_count)}')
 
 
 @type_utils.CachedGetter
@@ -162,5 +163,5 @@ def GetVerboseTestLogPath():
   The file name will contain test invocation ID and thus this method
   can only be called from a test.
   """
-  log_name = '%s-log-%s' % (GetCurrentTestPath(), GetCurrentTestInvocation())
+  log_name = f'{GetCurrentTestPath()}-log-{GetCurrentTestInvocation()}'
   return os.path.join(paths.DATA_LOG_DIR, log_name)

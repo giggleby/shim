@@ -12,6 +12,7 @@ import os
 from cros.factory.test.env import paths
 from cros.factory.utils import string_utils
 
+
 DOMAIN = 'factory'
 
 DEFAULT_LOCALE = 'en-US'
@@ -31,7 +32,7 @@ _TRANSLATIONS_DICT = {}
 
 def _GetTranslations(locale):
   if locale not in LOCALES:
-    raise ValueError('Unsupported locale: %s' % locale)
+    raise ValueError(f'Unsupported locale: {locale}')
   if locale not in _TRANSLATIONS_DICT:
     _TRANSLATIONS_DICT[locale] = gettext.translation(
         DOMAIN, LOCALE_DIR, [locale], fallback=True)
@@ -100,7 +101,7 @@ def Translated(obj, translate=True):
   if isinstance(obj, dict):
     if DEFAULT_LOCALE not in obj:
       raise ValueError(
-          "%r doesn't contain the default locale %s." % (obj, DEFAULT_LOCALE))
+          f"{obj!r} doesn't contain the default locale {DEFAULT_LOCALE}.")
     default = obj[DEFAULT_LOCALE]
     obj = {
         locale: string_utils.DecodeUTF8(obj.get(locale, default))

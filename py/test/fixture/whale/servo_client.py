@@ -37,6 +37,7 @@ from cros.factory.test.fixture.whale import servo_config
 from cros.factory.utils.net_utils import TimeoutXMLRPCServerProxy
 from cros.factory.utils.type_utils import AttrDict
 
+
 # Whale's buttons. Can get its value ('on'/'off').
 WHALE_BUTTON = AttrDict(dict(
     BUG_FILING='whale_bug_filing_btn',
@@ -61,7 +62,8 @@ FIXTURE_FEEDBACK = servo_config.FIXTURE_FEEDBACK
 
 # Plankton feedback 1 ~ 8. Can get its value ('on'/'off').
 PLANKTON_FEEDBACK = AttrDict(
-    {'FB%d' % i: 'plankton_fb%d' % i for i in range(1, 9)})
+    {f'FB{int(i)}': f'plankton_fb{int(i)}'
+     for i in range(1, 9)})
 
 # Tuple of Whale's latchless feedback
 WHALE_FEEDBACKS = tuple(set(FIXTURE_FEEDBACK.values()).
@@ -131,9 +133,9 @@ class ServoClientError(Exception):
       message = text
     elif isinstance(e, xmlrpc.client.Fault):
       xmlrpc_error = re.sub('^.*>:', '', e.faultString)
-      message = '%s :: %s' % (text, xmlrpc_error)
+      message = f'{text} :: {xmlrpc_error}'
     else:
-      message = '%s :: %s' % (text, e)
+      message = f'{text} :: {e}'
     # Pass the message to Exception class.
     super().__init__(message)
 
@@ -156,7 +158,7 @@ class ServoClient:
       timeout: Timeout for HTTP connection.
       verbose: Enables verbose messaging across xmlrpc.client.ServerProxy.
     """
-    remote = 'http://%s:%s' % (host, port)
+    remote = f'http://{host}:{port}'
     # __setattr__ of this class is overridden.
     super().__setattr__(
         '_server',
@@ -178,7 +180,7 @@ class ServoClient:
     try:
       return self._server.get(name)
     except Exception as e:
-      raise ServoClientError('Problem getting %r' % name, e) from None
+      raise ServoClientError(f'Problem getting {name!r}', e) from None
 
   def MultipleGet(self, names):
     """Checks multiple controls' value.
@@ -197,7 +199,7 @@ class ServoClient:
     try:
       return dict(zip(names, self._server.set_get_all(names)))
     except Exception as e:
-      raise ServoClientError('Problem getting controls %s' % repr(names),
+      raise ServoClientError(f'Problem getting controls {repr(names)}',
                              e) from None
 
   @staticmethod
@@ -221,7 +223,7 @@ class ServoClient:
     if value == 'off':
       return False
     raise ServoClientError(
-        'Control %r value %r is neither "on" nor "off".' % (name, value))
+        f'Control {name!r} value {value!r} is neither "on" nor "off".')
 
   def IsOn(self, name):
     """Checks if the control's value is 'on'.
@@ -269,7 +271,7 @@ class ServoClient:
     try:
       self._server.set(name, value)
     except Exception as e:
-      raise ServoClientError('Problem setting %r to %r' % (name, value),
+      raise ServoClientError(f'Problem setting {name!r} to {value!r}',
                              e) from None
 
   def MultipleSet(self, name_value_pairs):
@@ -289,9 +291,9 @@ class ServoClient:
       ServoClientError: If error occurs when setting value.
     """
     try:
-      self._server.set_get_all(['%s:%s' % (n, v) for n, v in name_value_pairs])
+      self._server.set_get_all([f'{n}:{v}' for n, v in name_value_pairs])
     except Exception as e:
-      raise ServoClientError('Problem setting %r' % name_value_pairs,
+      raise ServoClientError(f'Problem setting {name_value_pairs!r}',
                              e) from None
 
   def Enable(self, name):

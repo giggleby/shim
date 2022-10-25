@@ -101,7 +101,7 @@ class FactoryPythonArchive(FactoryTools):
   @type_utils.LazyProperty
   def checksum(self):
     if not os.path.exists(self.local_factory_par):
-      raise IOError('No such file: %s' % self.local_factory_par)
+      raise IOError(f'No such file: {self.local_factory_par}')
     return process_utils.CheckOutput(
         self.CHECKSUM_COMMAND.format(self.local_factory_par), shell=True)
 
@@ -169,8 +169,7 @@ class FactoryBin(FactoryTools):
     if not isinstance(command, str):
       command = ' '.join(map(pipes.quote, command))
 
-    command = 'PATH=%s:$PATH %s' % (os.path.join(paths.FACTORY_DIR, 'bin'),
-                                    command)
+    command = f"PATH={os.path.join(paths.FACTORY_DIR, 'bin')}:$PATH {command}"
     return command
 
   def _Preprocess(self, command):

@@ -29,10 +29,8 @@ class JSONFormatTest(unittest.TestCase):
 
     self.assertFalse(
         failed_files,
-        ('files %r are not properly formatted, please run '
-         '"py/tools/format_json_test_list.py -i" on these files.') %
-        failed_files)
-
+        (f'files {failed_files} are not properly formatted, please run '
+         f'"py/tools/format_json_test_list.py -i" on these files.'))
 
 if __name__ == '__main__':
   unittest.main()

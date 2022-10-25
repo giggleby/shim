@@ -76,8 +76,8 @@ class LANSCPI:
         time.sleep(1)
         self.logger.info('Unable to connect to %s:%d: %s', host, port, e)
 
-    raise Error('Failed to connect %s:%d after %d tries' % (
-        host, port, retries))
+    raise Error(
+        f'Failed to connect {host}:{int(port)} after {int(retries)} tries')
 
   def _Connect(self):
     self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -127,7 +127,7 @@ class LANSCPI:
     self._WriteLine(b'*CLS')
     for command in commands:
       if command[-1] == '?':
-        raise Error('Called Send with query %r' % command)
+        raise Error(f'Called Send with query {command!r}')
       self._WriteLine(command)
       self._WriteLine(b'SYST:ERR?')
 
@@ -137,7 +137,7 @@ class LANSCPI:
     for command in commands:
       ret = self._ReadLine()
       if ret != b'+0,"No error"':
-        errors.append('Issuing command %r: %r' % (command, ret))
+        errors.append(f'Issuing command {command!r}: {ret!r}')
       if not error_id:
         # We don't have an error ID for the exception yet;
         # try to parse the SCPI error.
@@ -153,7 +153,7 @@ class LANSCPI:
       self._WriteLine(b'*OPC?')
       ret = self._ReadLine()
       if int(ret) != 1:
-        raise Error('Expected 1 after *OPC? but got %r' % ret)
+        raise Error(f'Expected 1 after *OPC? but got {ret!r}')
 
   def Query(self, command, formatter=None):
     """Issues a query, returning the result.
@@ -167,7 +167,7 @@ class LANSCPI:
           argument.
     """
     if b'?' not in command:
-      raise Error('Called Query with non-query %r' % command)
+      raise Error(f'Called Query with non-query {command!r}')
     self._WriteLine(b'*CLS')
     self._WriteLine(command)
 
@@ -181,12 +181,12 @@ class LANSCPI:
     # is the error string.  We do this to make sure that we can
     # detect an unknown header rather than just waiting forever.
     if b',' in line2:
-      raise Error('Error issuing command %r: %r' % (command, line2))
+      raise Error(f'Error issuing command {command!r}: {line2!r}')
 
     # Success!  Get SYST:ERR, which should be +0
     line3 = self._ReadLine()
     if line3 != b'+0,"No error"':
-      raise Error('Error issuing command %r: %r' % (command, line3))
+      raise Error(f'Error issuing command {command!r}: {line3!r}')
 
     if formatter:
       line1 = formatter(line1)
@@ -209,7 +209,7 @@ class LANSCPI:
           argument.
     """
     if b'?' not in command:
-      raise Error('Called Query with non-query %r' % command)
+      raise Error(f'Called Query with non-query {command!r}')
     self._WriteLine(command)
     line1 = self._ReadBinary(expected_length)
     if formatter:
@@ -219,7 +219,7 @@ class LANSCPI:
   def Quote(self, string):
     """Quotes a string."""
     # TODO(jsalz): Use the real IEEE 488.2 string format.
-    return '"%s"' % string
+    return f'"{string}"'
 
   def _ReadLine(self):
     """Reads a single line, timing out in self.timeout seconds."""
@@ -278,7 +278,7 @@ class LANSCPI:
   def _WriteLine(self, command):
     """Writes a single line."""
     if b'\n' in command:
-      raise Error('Newline in command: %r' % command)
+      raise Error(f'Newline in command: {command!r}')
     self.logger.debug('] %s', command)
     self.wfile.write(command + b'\n')
 
@@ -292,8 +292,9 @@ FLOATS = lambda s: [float(f) for f in s.split(',')]
 
 def BINARY_FLOATS(binary_string):
   if len(binary_string) % 4:
-    raise Error('Binary float data contains %d bytes '
-                '(not a multiple of 4)' % len(binary_string))
+    raise Error(
+        f'Binary float data contains {len(binary_string)} bytes (not a multiple'
+        f' of 4)')
   return struct.unpack('>' + 'f' * (len(binary_string) // 4), binary_string)
 
 
@@ -303,8 +304,8 @@ def BINARY_FLOATS_WITH_LENGTH(expected_length):
     if len(ret) == 1 and math.isnan(ret[0]):
       raise Error('Unable to retrieve array')
     if len(ret) != expected_length:
-      raise Error('Expected %d elements but got %d' % (
-          expected_length, len(ret)))
+      raise Error(
+          f'Expected {int(expected_length)} elements but got {len(ret)}')
     return ret
 
   return formatter

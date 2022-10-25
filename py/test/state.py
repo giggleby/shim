@@ -32,6 +32,7 @@ from cros.factory.utils import shelve_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 DEFAULT_FACTORY_STATE_FILE_DIR = paths.DATA_STATE_DIR
 
 KEY_POST_SHUTDOWN = '%s.post_shutdown'
@@ -169,7 +170,7 @@ class FactoryState:
   def ConvertKeyToTestPath(cls, key):
     test_path, postfix = shelve_utils.DictKey.Split(key)
     if postfix != cls.TEST_STATE_POSTFIX:
-      raise KeyError('Invalid test path key: %r' % key)
+      raise KeyError(f'Invalid test path key: {key!r}')
     return test_path
 
   @sync_utils.Synchronized

@@ -15,7 +15,7 @@ class Frequency:
 
   def __repr__(self):
     """Returns a string representation."""
-    return 'Frequency(%f Hz)' % self._f
+    return f'Frequency({self._f:f} Hz)'
 
   @staticmethod
   def FromHz(f):

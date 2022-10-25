@@ -146,12 +146,13 @@ class GattTool:
     hci_option = ''
     if hci_device:
       if hci_device.startswith('hci'):
-        hci_option = '-i %s' % hci_device
+        hci_option = f'-i {hci_device}'
       else:
         msg = 'hci device "%s" should start with "hci", e.g., hci0 or hci1.'
         logging.warning(msg, hci_device)
-    self._gatttool = pexpect.spawn('gatttool %s -b %s -t random --interactive' %
-                                   (hci_option, target_mac.upper()))
+    self._gatttool = pexpect.spawn(
+        f'gatttool {hci_option} -b {target_mac.upper()} -t random --interactive'
+    )
     self._gatttool.logfile = open(logfile, 'w', encoding='utf8')  # pylint: disable=consider-using-with
     if timeout is None:
       self._timeout = self.DEFAULT_TIMEOUT
@@ -201,7 +202,7 @@ class GattTool:
     See details of the complete specification names at
     https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicsHome.aspx
     """
-    command = 'char-read-uuid %s' % uuid
+    command = f'char-read-uuid {uuid}'
     self._gatttool.sendline(command)
     # Expect to receive a string like
     #   handle: xxxx   value: ........
@@ -209,10 +210,10 @@ class GattTool:
     try:
       result = self._gatttool.expect(expect_pattern, timeout=self._timeout)
       if result != 0:
-        self._RaiseError('%s error' % command)
+        self._RaiseError(f'{command} error')
       return self._gatttool.match.groups()[0]
     except pexpect.TIMEOUT:
-      self._RaiseError('timeout waiting for %s report' % spec_name)
+      self._RaiseError(f'timeout waiting for {spec_name} report')
 
   def _Unhexlify(self, string):
     """Removes spaces and unhexlify the ascii string.

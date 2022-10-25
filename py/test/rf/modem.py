@@ -11,6 +11,7 @@ import serial
 
 from cros.factory.utils import type_utils
 
+
 _COMMAND_RETRY_TIMES = 5
 _RECEIVE_RETRY_TIMES = 10
 
@@ -28,7 +29,7 @@ class Modem:
       disable_operation: Put modem into a non-operation mode so it will
           not throw unexpected messages.
     """
-    self.ser = serial.Serial('/dev/%s' % port, timeout=timeout)
+    self.ser = serial.Serial(f'/dev/{port}', timeout=timeout)
 
     if cancel_echo:
       self.SendCommandWithCheck('ATE0')
@@ -97,7 +98,7 @@ class Modem:
           return response
       else:
         retries += 1
-    raise type_utils.Error('Cannot get entire response: %r' % (response))
+    raise type_utils.Error(f'Cannot get entire response: {response!r}')
 
   def ExpectResponse(self, expected_msg, modem_response):
     """Checks expected messages from modem.
@@ -114,13 +115,13 @@ class Modem:
     for msg in expected_msg:
       if msg not in modem_response:
         raise type_utils.Error(
-            'Expected %r but got %r' % (expected_msg, modem_response))
+            f'Expected {expected_msg!r} but got {modem_response!r}')
 
   def ExpectLine(self, expected_line):
     """Expects a line from the modem."""
     line = self.ReadLine()
     if line != expected_line:
-      raise type_utils.Error('Expected %r but got %r' % (expected_line, line))
+      raise type_utils.Error(f'Expected {expected_line!r} but got {line!r}')
 
   def ExpectMultipleLines(self, expected_regex):
     """Expects a multiple line regular expression."""
@@ -128,4 +129,4 @@ class Modem:
     for line in lines:
       logging.info('modem[ %r', line)
     if not re.search(expected_regex, ''.join(lines), re.MULTILINE | re.DOTALL):
-      raise type_utils.Error('Expected %r but got %r' % (expected_regex, lines))
+      raise type_utils.Error(f'Expected {expected_regex!r} but got {lines!r}')

@@ -19,6 +19,7 @@ from cros.factory.test import test_ui
 from cros.factory.unittest_utils import mock_time_utils
 from cros.factory.utils import type_utils
 
+
 _MOCK_TEST = 'mock.test'
 _MOCK_INVOCATION = 'mock-invocation'
 
@@ -371,10 +372,10 @@ class EventLoopRunTest(EventLoopTestBase):
     def _AddRandomEvent():
       event_type = random.randint(1, 3)
       event_time = random.randrange(TOTAL_TIME)
-      self._timeline.AddEvent(
-          event_time, lambda: _MockEvent('type%d' % event_type))
+      self._timeline.AddEvent(event_time,
+                              lambda: _MockEvent(f'type{int(event_type)}'))
       if event_type != 3:
-        expected_calls.setdefault('handler%d' % event_type,
+        expected_calls.setdefault(f'handler{int(event_type)}',
                                   []).append(event_time)
 
     for unused_i in range(300):
@@ -384,7 +385,7 @@ class EventLoopRunTest(EventLoopTestBase):
     def _AddRandomHandler():
       event_time = random.randrange(TOTAL_TIME)
       event_delay = random.randrange(TOTAL_TIME)
-      name = 'timed-%d-%d' % (event_time, event_delay)
+      name = f'timed-{int(event_time)}-{int(event_delay)}'
       self._timeline.AddEvent(event_time,
                               (lambda: self.event_loop.AddTimedHandler(
                                   lambda: _Log(name), event_delay)))
@@ -398,7 +399,7 @@ class EventLoopRunTest(EventLoopTestBase):
     def _AddRandomRepeatingHandler():
       event_time = random.randrange(TOTAL_TIME)
       event_delay = random.randrange(TOTAL_TIME)
-      name = 'timed-repeat-%d-%d' % (event_time, event_delay)
+      name = f'timed-repeat-{int(event_time)}-{int(event_delay)}'
       self._timeline.AddEvent(
           event_time, (lambda: self.event_loop.AddTimedHandler(
               lambda: _Log(name), event_delay, repeat=True)))
@@ -415,7 +416,8 @@ class EventLoopRunTest(EventLoopTestBase):
       event_time = random.randrange(TOTAL_TIME)
       event_delay = random.randrange(TOTAL_TIME)
       iter_count = random.randrange(1, 30)
-      name = 'iter-repeat-%d-%d-%d' % (event_time, event_delay, iter_count)
+      name = (
+          f'iter-repeat-{int(event_time)}-{int(event_delay)}-{int(iter_count)}')
 
       def _Iterator():
         for unused_i in range(iter_count):
@@ -461,8 +463,8 @@ class EnsureI18nTest(unittest.TestCase):
     fake_make_i18n_label = self.patcher.start()
 
     def FakeMakeI18nLabel(text):
-      items = ('%s=%s' % (key, value) for key, value in sorted(text.items()))
-      return '[%s]' % ','.join(items)
+      items = (f'{key}={value}' for key, value in sorted(text.items()))
+      return f"[{','.join(items)}]"
     fake_make_i18n_label.side_effect = FakeMakeI18nLabel
 
   def tearDown(self):
@@ -518,14 +520,14 @@ class UITestBase(unittest.TestCase):
     strip_js = re.sub(r'\s', '', js)
     strip_event_js = event_js
     for name, arg in event_args.items():
-      strip_event_js = re.sub(r'\b%s\b' % re.escape('args.%s' % name),
+      strip_event_js = re.sub(r'\b' + re.escape(f'args.{name}') + r'\b',
                               json.dumps(arg), strip_event_js)
     strip_event_js = re.sub(r'\s', '', strip_event_js)
 
     self.assertEqual(
         strip_js, strip_event_js,
-        'RunJS event not equal, js = %r, event_js = %r, event_args = %r' %
-        (js, event_js, event_args))
+        f'RunJS event not equal, js = {js!r}, event_js = {event_js!r}, '
+        f'event_args = {event_args!r}')
 
   def AssertEventsPosted(self, *events):
     called_events = self._event_loop.PostNewEvent.call_args_list
@@ -587,10 +589,8 @@ class UITest(UITestBase):
     self._ui.AppendCSS(_MOCK_CSS)
 
     self.AssertEventsPosted(
-        self._SetHTMLEvent(
-            html='<style type="text/css">%s</style>' % _MOCK_CSS,
-            id='head',
-            append=True))
+        self._SetHTMLEvent(html=f'<style type="text/css">{_MOCK_CSS}</style>',
+                           id='head', append=True))
 
   def testAppendCSSLink(self):
     _MOCK_CSS_LINK = 'mock-css-link'
@@ -598,10 +598,8 @@ class UITest(UITestBase):
 
     self.AssertEventsPosted(
         self._SetHTMLEvent(
-            html='<link rel="stylesheet" type="text/css" href="%s">' %
-            _MOCK_CSS_LINK,
-            id='head',
-            append=True))
+            html=f'<link rel="stylesheet" type="text/css" href="'
+            f'{_MOCK_CSS_LINK}">', id='head', append=True))
 
   def testRunJS(self):
     self._ui.RunJS('alert(1);')
@@ -657,9 +655,9 @@ class UITest(UITestBase):
     uuid, handler = self._event_loop.AddEventHandler.call_args[0]
     self.assertEqual(_Handler, handler)
     self.AssertEventsPosted(
-        self._RunJSEvent(
-            'test.bindKey("U", (event) => { test.sendTestEvent("%s", '
-            '{}); }, false, true)' % uuid))
+        self._RunJSEvent('test.bindKey("U", (event) => { test.sendTestEvent('
+                         f'"{uuid}", '
+                         '{}); }, false, true)'))
 
   def testUnbindKey(self):
     self._ui.UnbindKey('A')
@@ -944,8 +942,8 @@ class StandardUITest(UITestBase):
         break
 
       self.AssertEventsPosted(
-          self._RunJSEvent('window.template.setTimerValue(%d)' % (
-              _TIMEOUT - self._timeline.GetTime())))
+          self._RunJSEvent(f'window.template.setTimerValue('
+                           f'{int(_TIMEOUT - self._timeline.GetTime())})'))
       self._timeline.AdvanceTime(1)
 
     self.AssertEventsPosted(self._RunJSEvent(
@@ -970,8 +968,8 @@ class StandardUITest(UITestBase):
         break
 
       self.AssertEventsPosted(
-          self._RunJSEvent('window.template.setTimerValue(%d)' % (
-              _TIMEOUT - self._timeline.GetTime())))
+          self._RunJSEvent(f'window.template.setTimerValue('
+                           f'{int(_TIMEOUT - self._timeline.GetTime())})'))
       self._timeline.AdvanceTime(1)
       if self._timeline.GetTime() >= _STOP_TIME:
         stop_event.set()
@@ -997,8 +995,8 @@ class StandardUITest(UITestBase):
         break
 
       self.AssertEventsPosted(
-          self._RunJSEvent('window.template.setTimerValue(%d)' % (
-              _TIMEOUT - self._timeline.GetTime())))
+          self._RunJSEvent(f'window.template.setTimerValue('
+                           f'{int(_TIMEOUT - self._timeline.GetTime())})'))
       self._timeline.AdvanceTime(1)
 
     self.AssertEventsPosted()

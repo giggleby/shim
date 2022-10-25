@@ -75,8 +75,8 @@ def Interpolate(x_values, y_values, x_position):
   # Check if the x_position is inside some interval in the trace
   if x_position < x_values[0] or x_position > x_values[-1]:
     raise ValueError(
-        'x_position is not in the current range of x_values[%s,%s]' %
-        (x_values[0], x_values[-1]))
+        f'x_position is not in the current range of x_values[{x_values[0]},'
+        f'{x_values[-1]}]')
 
   # Binary search where to interpolate the x_position
   right_index = bisect.bisect_left(x_values, x_position)
@@ -100,10 +100,9 @@ class Traces:
   def __repr__(self):
     """Returns a representation of the object, including its properties."""
     return (self.__class__.__name__ + '(' +
-            ', '.join('%s=%s' % (k, repr(getattr(self, k)))
+            ', '.join(f'{k}={repr(getattr(self, k))}'
                       for k in sorted(self.__dict__.keys())
-                      if k[0] != '_')
-            + ')')
+                      if k[0] != '_') + ')')
 
   def GetFreqResponse(self, freq, parameter):
     """Returns corresponding frequency response.
@@ -121,7 +120,7 @@ class Traces:
       A floating point value in dB at freq.
     """
     if parameter not in self.traces:
-      raise lan_scpi.Error('No trace available for parameter %s' % parameter)
+      raise lan_scpi.Error(f'No trace available for parameter {parameter}')
     return Interpolate(self.x_axis, self.traces[parameter], freq)
 
 
@@ -143,7 +142,7 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     Saves the current screen to a portable network graphics (PNG) file.
     The default store path in E5071C is under disk D.
     """
-    self.Send(':MMEMory:STORe:IMAGe "%s.png"' % filename)
+    self.Send(f':MMEMory:STORe:IMAGe "{filename}.png"')
 
   def SetMarker(self, channel, marker_num, marker_freq):
     """Sets the marker at channel.
@@ -162,8 +161,9 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     # _ch_selected_marker_mk_x.htm#Syntax
 
     #:CALCulate{[1]-4}[:SELected]:MARKer{[1]-10}:X <numeric>
-    buffer_str = ':CALCulate%d:SELected:MARKer%d:X %f' % (
-        channel, marker_num, float(marker_freq))
+    buffer_str = (
+        f':CALCulate{int(channel)}:SELected:MARKer{int(marker_num)}:X '
+        f'{float(marker_freq):f}')
     self.Send(buffer_str)
 
   def SetLinearSweep(self, min_freq, max_freq):
@@ -175,9 +175,10 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
       min_freq: The minimum frequency in Hz.
       max_freq: The maximum frequency in Hz.
     """
-    self.Send([':SENS:SWEep:TYPE LINear',
-               ':SENS:FREQ:STAR %d' % min_freq,
-               ':SENS:FREQ:STOP %d' % max_freq])
+    self.Send([
+        ':SENS:SWEep:TYPE LINear', f':SENS:FREQ:STAR {int(min_freq)}',
+        f':SENS:FREQ:STOP {int(max_freq)}'
+    ])
 
   def SetSweepSegments(self, segments):
     """Sets a collection of sweep segments.
@@ -202,17 +203,18 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
         assert segments[i + 1][0] >= min_freq
 
     data = [
-        5,              # Magic number from the device documentation
-        0,              # Stop/stop values
-        0,              # No per-segment IF bandwidth setting
-        0,              # No per-segment sweep delay setting
-        0,              # No per-segment sweep mode setting
-        0,              # No per-segment sweep time setting
+        5,  # Magic number from the device documentation
+        0,  # Stop/stop values
+        0,  # No per-segment IF bandwidth setting
+        0,  # No per-segment sweep delay setting
+        0,  # No per-segment sweep mode setting
+        0,  # No per-segment sweep time setting
         len(segments),  # Number of segments
     ] + list(sum(segments, ()))
-    self.Send([':SENS:SWEep:TYPE SEGMent',
-               (':SENS:SEGMent:DATA %s' %
-                ','.join(str(x) for x in data))])
+    self.Send([
+        ':SENS:SWEep:TYPE SEGMent',
+        f":SENS:SEGMent:DATA {','.join(str(x) for x in data)}"
+    ])
 
   def GetTraces(self, parameters):
     """Collects a set of traces based on the current sweep.
@@ -231,9 +233,9 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     assert parameters
     assert len(parameters) <= 4
 
-    commands = [':CALC:PAR:COUN %d' % len(parameters)]
+    commands = [f':CALC:PAR:COUN {len(parameters)}']
     for i, p in zip(itertools.count(1), parameters):
-      commands.append(':CALC:PAR%d:DEF %s' % (i, p))
+      commands.append(f':CALC:PAR{int(i)}:DEF {p}')
     self.Send(commands)
 
     ret = Traces()
@@ -245,10 +247,11 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     self.Send(':INITiate1:IMMediate')
     for i, p in zip(itertools.count(1), parameters):
       ret.traces[p] = (
-          self.Query(':CALC:TRACE%d:DATA:FDAT?' % i, lan_scpi.FLOATS)[0::2])
+          self.Query(f':CALC:TRACE{int(i)}:DATA:FDAT?', lan_scpi.FLOATS)[0::2])
       if len(ret.x_axis) != len(ret.traces[p]):
-        raise lan_scpi.Error('x_axis has %d elements but trace has %d' %
-                             (len(ret.x_axis), len(ret.traces[p])))
+        raise lan_scpi.Error(
+            f'x_axis has {len(ret.x_axis)} elements but trace has '
+            f'{len(ret.traces[p])}')
       CheckTraceValid(ret.x_axis, ret.traces[p])
     # Unfreeze the trace.
     self.Send(':INITiate1:CONTinuous ON')
@@ -308,7 +311,7 @@ class ENASCPI(agilent_scpi.AgilentSCPI):
     # a copy locally, we need to make another screenshot using ENA's HTTP
     # service (image.asp) which always puts the file publicly available as
     # "disp.png".
-    with urllib.request.urlopen('http://%s/image.asp' % self.host) as resp:
+    with urllib.request.urlopen(f'http://{self.host}/image.asp') as resp:
       resp.read()
-    with urllib.request.urlopen('http://%s/disp.png' % self.host) as resp:
+    with urllib.request.urlopen(f'http://{self.host}/disp.png') as resp:
       return resp.read()

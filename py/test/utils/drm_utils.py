@@ -17,6 +17,7 @@ import os
 
 from cros.factory.external import PIL
 
+
 if PIL.MODULE_READY:
   from cros.factory.external.PIL import Image  # pylint: disable=no-name-in-module
 
@@ -133,8 +134,8 @@ class DRMModeModeInfo(DRMModeBaseStruct):
   ]
 
   def __repr__(self):
-    return '<Mode %dx%d, vrefresh=%d>' % (
-        self.hdisplay, self.vdisplay, self.vrefresh)
+    return (f'<Mode {int(self.hdisplay)}x{int(self.vdisplay)}, vrefresh='
+            f'{int(self.vrefresh)}>')
 
   def __del__(self):
     if self.need_free:
@@ -260,7 +261,7 @@ class DRMModeConnector(DRMModeBaseStruct):
   ]
 
   def __repr__(self):
-    return '<Connector %s, status=%s>' % (self.id, self.status)
+    return f'<Connector {self.id}, status={self.status}>'
 
   def __del__(self):
     if self.need_free:
@@ -268,8 +269,8 @@ class DRMModeConnector(DRMModeBaseStruct):
 
   @property
   def id(self):
-    return '%s-%d' % (self.CONNECTOR_TYPE_NAMES[self.connector_type],
-                      self.connector_type_id)
+    return (f'{self.CONNECTOR_TYPE_NAMES[self.connector_type]}-'
+            f'{int(self.connector_type_id)}')
 
   @property
   def status(self):
@@ -436,8 +437,8 @@ class DRMModeFB(DRMModeBaseStruct):
     ]
 
   def __repr__(self):
-    return '<Framebuffer %dx%d, pitch=%d, bpp=%d, depth=%d>' % (
-        self.width, self.height, self.pitch, self.bpp, self.depth)
+    return (f'<Framebuffer {int(self.width)}x{int(self.height)}, pitch='
+            f'{int(self.pitch)}, bpp={int(self.bpp)}, depth={int(self.depth)}>')
 
   def __del__(self):
     if self.need_free:
@@ -459,7 +460,7 @@ class DRMModeFB(DRMModeBaseStruct):
       A Image() instance with mode='RGB' of the converted framebuffer.
     """
     if self.depth != 24:
-      raise DRMError('Unable to convert depth %s' % self.depth)
+      raise DRMError(f'Unable to convert depth {self.depth}')
 
     return Image.fromstring(
         'RGB', (self.width, self.height), self.contents, 'raw', 'BGRX')

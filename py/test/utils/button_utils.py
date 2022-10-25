@@ -8,6 +8,7 @@ from cros.factory.test.utils import evdev_utils
 
 from cros.factory.external import evdev
 
+
 _KEY_GPIO = 'gpio:'
 _KEY_CROSSYSTEM = 'crossystem:'
 _KEY_ECTOOL = 'ectool:'
@@ -68,18 +69,18 @@ class GpioButton(GenericButton):
     """
     super().__init__(dut)
     gpio_base = '/sys/class/gpio'
-    self._value_path = self._dut.path.join(gpio_base, 'gpio%d' % number,
+    self._value_path = self._dut.path.join(gpio_base, f'gpio{int(number)}',
                                            'value')
     if not self._dut.path.exists(self._value_path):
       self._dut.WriteFile(
-          self._dut.path.join(gpio_base, 'export'), '%d' % number)
+          self._dut.path.join(gpio_base, 'export'), f'{int(number)}')
 
     # Exporting new GPIO may cause device busy for a while.
     for unused_counter in range(5):
       try:
         self._dut.WriteFile(
-            self._dut.path.join(gpio_base, 'gpio%d' % number, 'active_low'),
-            '%d' % (0 if is_active_high else 1))
+            self._dut.path.join(gpio_base, f'gpio{int(number)}', 'active_low'),
+            f'{int(0 if is_active_high else 1)}')
         break
       except Exception:
         time.sleep(0.1)
@@ -103,7 +104,7 @@ class CrossystemButton(GenericButton):
     self._name = name
 
   def IsPressed(self):
-    return self._dut.Call(['crossystem', '%s?1' % self._name]) == 0
+    return self._dut.Call(['crossystem', f'{self._name}?1']) == 0
 
 
 class ECToolButton(GenericButton):

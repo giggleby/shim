@@ -27,6 +27,7 @@ from cros.factory.test import event
 from cros.factory.utils import config_utils
 from cros.factory.utils import net_utils
 
+
 Fault = xmlrpc.client.Fault
 
 FACTORY_SERVER_CONFIG_NAME = 'factory_server'
@@ -119,7 +120,6 @@ def GetServerProxy(url=None, expected_project=None, timeout=None):
     project = proxy.Ping().get('project')
     if project is not None and project != expected_project:
       raise ServerProxyError(
-          "The expected_project (%s) doesn't match the "
-          'project returned from Umpire (%s). The URL (%s) might be wrong.' %
-          (expected_project, project, url))
+          f"The expected_project ({expected_project}) doesn't match the project"
+          f" returned from Umpire ({project}). The URL ({url}) might be wrong.")
   return proxy

@@ -11,6 +11,7 @@ import serial
 
 from cros.factory.test.fixture.robot import six_dof_calibration_robot
 
+
 Robot = six_dof_calibration_robot.SixDoFCalibrationRobot
 
 
@@ -63,7 +64,7 @@ class SixDoFCalibrationRobotTest(unittest.TestCase):
     self._MockConnect()
     cmd = '5566'
     args = ['5', '5', '6', '6']
-    data = '%s%s,%s' % (Robot._CMD_PREFIX, cmd, ','.join(args))
+    data = f"{Robot._CMD_PREFIX}{cmd},{','.join(args)}"
     res = 'Cmd5566 OK'
     self._serial.write.return_value = len(data)
     self._serial.readline.return_value = res
@@ -80,9 +81,10 @@ class SixDoFCalibrationRobotTest(unittest.TestCase):
 
     calls = [
         mock.call(Robot.CMD_POWER_ON),
-        mock.call(Robot.CMD_SET_SPEED, *(['%d' % self._speed] * 2)),
+        mock.call(Robot.CMD_SET_SPEED, *([f'{int(self._speed)}'] * 2)),
         mock.call(Robot.CMD_SET_ACCELERATION,
-                  *(['%d' % self._acceleration] * 4))]
+                  *([f'{int(self._acceleration)}'] * 4))
+    ]
     self._robot._SendCommand.assert_has_calls(calls)
 
   def testSetMotorOff(self):
