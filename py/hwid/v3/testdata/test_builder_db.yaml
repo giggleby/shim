@@ -20,6 +20,7 @@ pattern:
       - dram_field: 5
       - firmware_keys_field: 1
       - ro_main_firmware_field: 1
+      - ro_fp_firmware_field: 1
       - comp_cls_1_field: 2
       - comp_cls_23_field: 2
 
@@ -27,10 +28,11 @@ encoded_fields:
   chassis_field: {0: {chassis: []}}
   cpu_field: {0: {cpu: []}}
   dram_field: {0: {dram: [dram_0, dram_0]}}
-  firmware_keys_field: {0: {firmware_key: key0}}
+  firmware_keys_field: {0: {firmware_keys: key0}}
   mainboard_field: {0: {mainboard: rev0}}
   region_field: !region_field [us]
   ro_main_firmware_field: {0: {ro_main_firmware: firmware0}}
+  ro_fp_firmware_field: {0: {ro_fp_firmware: firmware0}}
   storage_field: {0: {storage: []}}
 
   comp_cls_1_field:
@@ -52,13 +54,17 @@ components:
       dram_0: {values: {version: "0"}}
       dram_1: {values: {version: "1"}}
 
-  firmware_key:
+  firmware_keys:
     items:
       key0: {values: {hash: "0"}}
 
   ro_main_firmware:
     items:
-      firmware0: {values: {hash": "0"}}
+      firmware0: {values: {hash: "0", version: "Google_Proj.1111.1.1"}}
+
+  ro_fp_firmware:
+    items:
+      firmware0: {values: {hash: "0", version: "fpboard_v1.0.1111"}}
 
   comp_cls_1:
     items:

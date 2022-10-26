@@ -230,12 +230,15 @@ class DatabaseBuilderTest(unittest.TestCase):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.UpdateByProbedResults(
-          {'ro_main_firmware': [{
-              'name': 'generic',
-              'values': {
-                  'hash': '1'
-              }
-          }]}, {}, {}, [])
+          {
+              'ro_main_firmware': [{
+                  'name': 'generic',
+                  'values': {
+                      'hash': '1',
+                      'version': 'Google_Proj.2222.2.2'
+                  }
+              }]
+          }, {}, {}, [])
 
     db = db_builder.Build()
     # Should deprecated the legacy firmwares.
@@ -489,8 +492,9 @@ class DatabaseBuilderTest(unittest.TestCase):
             'cpu_field': 10,
             'storage_field': 3,
             'chassis_field': 0,
-            'firmware_keys_field': 1,
+            'firmware_keys_field': 3,
             'ro_main_firmware_field': 5,
+            'ro_fp_firmware_field': 1,
             'comp_cls_1_field': 2,
             'comp_cls_23_field': 2,
             'comp_cls_100_field': 0
@@ -675,35 +679,47 @@ class DatabaseBuilderTest(unittest.TestCase):
   def testAddCompoonentCheck_AutoDeprecate(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponentCheck('ro_main_firmware',
+                                   {'version': 'Google_Proj.2222.2.2'},
+                                   'firmware1', 'supported')
       db_builder.AddComponentCheck('ro_fp_firmware',
-                                   {'version': 'fpboard_1111.1.1'},
-                                   'fp_firmware1', 'supported')
-      db_builder.AddComponentCheck('ro_fp_firmware',
-                                   {'version': 'fpboard_2222.2.2'},
-                                   'fp_firmware2', 'supported')
+                                   {'version': 'fpboard_v2.0.22222'},
+                                   'firmware1', 'supported')
+      db_builder.AddComponentCheck(
+          'firmware_keys', {'key_recovery': 'some_hash'}, 'key1', 'supported')
 
     db = db_builder.Build()
 
+    components = db.GetComponents('ro_main_firmware')
+    self.assertEqual('deprecated', components['firmware0'].status)
+    self.assertEqual('supported', components['firmware1'].status)
+
     components = db.GetComponents('ro_fp_firmware')
-    self.assertEqual('deprecated', components['fp_firmware1'].status)
-    self.assertEqual('supported', components['fp_firmware2'].status)
+    self.assertEqual('deprecated', components['firmware0'].status)
+    self.assertEqual('supported', components['firmware1'].status)
+
+    components = db.GetComponents('firmware_keys')
+    self.assertEqual('deprecated', components['key0'].status)
+    self.assertEqual('supported', components['key1'].status)
 
   @label_utils.Informational
-  def testAddCompoonentCheck_OnlyDeprecateSameFPBoard(self):
+  def testAddCompoonentCheck_OnlyDeprecateSameIdentity(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponentCheck('ro_main_firmware',
+                                   {'version': 'Google_NotProj.2222.2.2'},
+                                   'firmware1', 'supported')
       db_builder.AddComponentCheck('ro_fp_firmware',
-                                   {'version': 'fpboard1_1111.1.1'},
-                                   'fp_firmware1', 'supported')
-      db_builder.AddComponentCheck('ro_fp_firmware',
-                                   {'version': 'fpboard2_2222.2.2'},
-                                   'fp_firmware2', 'supported')
+                                   {'version': 'notfpboard_v2.0.22222'},
+                                   'firmware1', 'supported')
 
     db = db_builder.Build()
 
+    components = db.GetComponents('ro_main_firmware')
+    self.assertEqual('supported', components['firmware0'].status)
+
     components = db.GetComponents('ro_fp_firmware')
-    self.assertEqual('supported', components['fp_firmware1'].status)
-    self.assertEqual('supported', components['fp_firmware2'].status)
+    self.assertEqual('supported', components['firmware0'].status)
 
   # TODO (b/204729913)
   @label_utils.Informational
