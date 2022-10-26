@@ -436,35 +436,41 @@ class DatabaseBuilder:
                                      probed_value: ProbedValueType):
     """Deprecates old firmware component by the given probed value.
 
-    For RO_FP_FIRMWARE, the components with same FP board will be deprecated.
-    For other firmware components, all other old component will be deprecated.
+    This method will get the firmware identity from version string, and
+    deprecates all old firmware components with the same identity.
 
     Args:
       comp_cls: The component class.
       probed_value: The probed value of the component.
     """
 
-    def _GetFPBoardFromVersion(version_string):
-      # The format of firmware version is ${BOARD}_${VERSION}
+    def _GetVersionStringIdentity(version_string):
+      """Gets the identity from firmware version string.
+
+      The format of firmware version:
+        ro_main_firwamre: ${ID}.${VERSION}
+        others: ${ID}_${VERSION}
+      """
+      if not version_string:
+        return None
+      if comp_cls == common.FirmwareComps.RO_MAIN_FIRMWARE:
+        return version_string.split('.', 1)[0]
       return version_string.split('_', 1)[0]
 
-    if comp_cls == common.FirmwareComps.RO_FP_FIRMWARE:
-      fp_board = _GetFPBoardFromVersion(probed_value.get('version', ''))
+    fw_identity = _GetVersionStringIdentity(probed_value.get('version'))
 
     # Set old firmware components to deprecated.
     for comp_name, comp_info in self._database.GetComponents(comp_cls).items():
       if comp_info.status != common.COMPONENT_STATUS.supported:
         continue
 
-      # Only deprecate ro_fp_firmware with the same FP board.
-      if comp_cls == common.FirmwareComps.RO_FP_FIRMWARE:
-        existing_fp_board = _GetFPBoardFromVersion(
-            comp_info.values.get('version', ''))
-        if fp_board != existing_fp_board:
-          continue
-
-      self._database.SetComponentStatus(comp_cls, comp_name,
-                                        common.COMPONENT_STATUS.deprecated)
+      existing_fw_identity = _GetVersionStringIdentity(
+          comp_info.values.get('version'))
+      # Firmware keys don't have identity.  Just deprecate anyway.
+      if (comp_cls == common.FirmwareComps.FIRMWARE_KEYS or
+          fw_identity == existing_fw_identity):
+        self._database.SetComponentStatus(comp_cls, comp_name,
+                                          common.COMPONENT_STATUS.deprecated)
 
   @_EnsureInBuilderContext
   def AddComponentCheck(self, comp_cls: str, probed_value: ProbedValueType,
