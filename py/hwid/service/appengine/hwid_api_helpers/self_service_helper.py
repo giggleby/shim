@@ -140,6 +140,29 @@ def _ConvertValidationErrorCode(code):
   return ValidationResultMessage.ErrorCode.CONTENTS_ERROR
 
 
+_SUPPORT_STATUS_CASE_OF_HWID_STRING = {
+    v3_common.COMPONENT_STATUS.supported:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.SUPPORTED,
+    v3_common.COMPONENT_STATUS.deprecated:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.DEPRECATED,
+    v3_common.COMPONENT_STATUS.unsupported:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.UNSUPPORTED,
+    v3_common.COMPONENT_STATUS.unqualified:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.UNQUALIFIED,
+    v3_common.COMPONENT_STATUS.duplicate:
+        hwid_api_messages_pb2.ComponentSupportStatus.Case.DUPLICATE,
+}
+
+
+def _ConvertSupportStatsCase(
+    hwid_value: str) -> hwid_api_messages_pb2.ComponentSupportStatus.Case:
+  try:
+    return _SUPPORT_STATUS_CASE_OF_HWID_STRING[hwid_value]
+  except KeyError as ex:
+    raise HWIDStatusConversionError(
+        f'Unrecognizable HWID support status value: {hwid_value!r}.') from ex
+
+
 def _ConvertCompInfoToMsg(
     comp_info: hwid_action.DBHWIDComponentAnalysisResult
 ) -> _AnalysisReportMsg.ComponentInfo:
@@ -148,6 +171,8 @@ def _ConvertCompInfoToMsg(
   comp_info_msg.original_name = yaml.safe_dump(
       comp_info.comp_name).partition('\n')[0]
   comp_info_msg.original_status = comp_info.support_status
+  comp_info_msg.support_status_case = _ConvertSupportStatsCase(
+      comp_info.support_status)
   comp_info_msg.is_newly_added = comp_info.is_newly_added
   if comp_info.comp_name_info is not None:
     comp_info_msg.avl_info.cid = comp_info.comp_name_info.cid
@@ -170,6 +195,8 @@ def _ConvertCompInfoToMsg(
             values_changed=diff.values_changed,
             prev_comp_name=diff.prev_comp_name,
             prev_support_status=diff.prev_support_status,
+            prev_support_status_case=_ConvertSupportStatsCase(
+                diff.prev_support_status),
             probe_value_alignment_status_changed=(
                 diff.probe_value_alignment_status_changed),
             prev_probe_value_alignment_status=_PROBE_VALUE_ALIGNMENT_STATUS[

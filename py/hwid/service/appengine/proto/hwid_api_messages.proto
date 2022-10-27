@@ -201,6 +201,17 @@ message ProbeValueAlignmentStatus {
   }
 }
 
+message ComponentSupportStatus {
+  enum Case {
+    CASE_UNSPECIFIED = 0;
+    SUPPORTED = 1;
+    DEPRECATED = 2;
+    UNSUPPORTED = 3;
+    UNQUALIFIED = 4;
+    DUPLICATE = 5;
+  }
+}
+
 // A message that summarizes the component change.
 message DiffStatus {
   // True if the component is unchanged.  This value should be equals to
@@ -221,21 +232,13 @@ message DiffStatus {
   // has changed.
   bool probe_value_alignment_status_changed = 7;
   ProbeValueAlignmentStatus.Case prev_probe_value_alignment_status = 8;
+  ComponentSupportStatus.Case prev_support_status_case = 9;
 }
 
 message NameChangedComponent {
-  enum SupportStatus {
-    SUPPORT_STATUS_UNSPECIFIED = 0;
-    SUPPORTED = 1;
-    DEPRECATED = 2;
-    UNSUPPORTED = 3;
-    UNQUALIFIED = 4;
-    DUPLICATE = 5;
-  }
-
   int64 cid = 1 [deprecated = true];
   int64 qid = 2 [deprecated = true];
-  SupportStatus support_status = 3;
+  ComponentSupportStatus.Case support_status = 3;
   string component_name = 4;
   // True if this component name has AVL information.
   bool has_cid_qid = 5;
@@ -535,6 +538,7 @@ message HwidDbEditableSectionAnalysisReport {
     // from the previous status for existing components, and will be unspecified
     // for new components.
     ProbeValueAlignmentStatus.Case probe_value_alignment_status = 11;
+    ComponentSupportStatus.Case support_status_case = 12;
   }
 
   // A list of support status values that is available no matter the AVL entry
@@ -597,8 +601,8 @@ message GetHwidBundleResourceInfoResponse {
 
 message CreateHwidBundleRequest {
   string project = 1;
-  string bundle_creation_token = 2  [deprecated = true];
-  HwidBundleResource resource = 3  [deprecated = true];
+  string bundle_creation_token = 2 [deprecated = true];
+  HwidBundleResource resource = 3 [deprecated = true];
 }
 
 message CreateHwidBundleResponse {
@@ -771,7 +775,6 @@ message SplitHwidDbChangeRequest {
 
 // The change unit with information for making approval decisions.
 message ChangeUnit {
-
   // The information of AddEncodingCombination change unit.
   message AddEncodingCombination {
     // The component class.
@@ -927,13 +930,13 @@ service HwidService {
 
   // Set support status for firmware info components.
   rpc SetFirmwareInfoSupportStatus(SetFirmwareInfoSupportStatusRequest)
-    returns (SetFirmwareInfoSupportStatusResponse);
+      returns (SetFirmwareInfoSupportStatusResponse);
 
   // Split HWID DB change into auto-mergeable and review-required changes.
   rpc SplitHwidDbChange(SplitHwidDbChangeRequest)
-    returns (SplitHwidDbChangeResponse);
+      returns (SplitHwidDbChangeResponse);
 
   // Create HWID DB Cls by setting approval status per change unit.
   rpc CreateSplittedHwidDbCls(CreateSplittedHwidDbClsRequest)
-    returns (CreateSplittedHwidDbClsResponse);
+      returns (CreateSplittedHwidDbClsResponse);
 }

@@ -33,6 +33,7 @@ _ErrorCodeMsg = (
 _AnalysisReportMsg = hwid_api_messages_pb2.HwidDbEditableSectionAnalysisReport
 _DiffStatus = hwid_action.DBHWIDComponentDiffStatus
 _DiffStatusMsg = hwid_api_messages_pb2.DiffStatus
+_SupportStatusCase = hwid_api_messages_pb2.ComponentSupportStatus.Case
 _ComponentInfoMsg = _AnalysisReportMsg.ComponentInfo
 _PVAlignmentStatus = hwid_action.DBHWIDPVAlignmentStatus
 _PVAlignmentStatusMsg = hwid_api_messages_pb2.ProbeValueAlignmentStatus.Case
@@ -239,24 +240,32 @@ class SelfServiceHelperTest(unittest.TestCase):
         {
             'comp1':
                 _ComponentInfoMsg(
-                    component_class='comp_cls1', original_name='comp_name1',
-                    original_status='unqualified', is_newly_added=False,
-                    seq_no=2, null_values=False, diff_prev=_DiffStatusMsg(
+                    component_class='comp_cls1',
+                    original_name='comp_name1',
+                    original_status='unqualified',
+                    support_status_case=_SupportStatusCase.UNQUALIFIED,
+                    is_newly_added=False,
+                    seq_no=2,
+                    null_values=False,
+                    diff_prev=_DiffStatusMsg(
                         unchanged=True, name_changed=False,
                         support_status_changed=False, values_changed=False,
                         prev_comp_name='comp_name1',
                         prev_support_status='unqualified',
+                        prev_support_status_case=_SupportStatusCase.UNQUALIFIED,
                         probe_value_alignment_status_changed=False,
                         prev_probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
                     probe_value_alignment_status=(
-                        _PVAlignmentStatusMsg.NO_PROBE_INFO)),
+                        _PVAlignmentStatusMsg.NO_PROBE_INFO),
+                ),
             'comp2':
                 _ComponentInfoMsg(
                     component_class='comp_cls2',
                     original_name='comp_cls2_111_222#9',
-                    original_status='unqualified', is_newly_added=True,
-                    avl_info=_AvlInfoMsg(
+                    original_status='unqualified',
+                    support_status_case=_SupportStatusCase.UNQUALIFIED,
+                    is_newly_added=True, avl_info=_AvlInfoMsg(
                         cid=111,
                         qid=222,
                     ), has_avl=True, seq_no=1,
@@ -266,6 +275,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                         support_status_changed=False, values_changed=False,
                         prev_comp_name='old_comp_name',
                         prev_support_status='unqualified',
+                        prev_support_status_case=_SupportStatusCase.UNQUALIFIED,
                         probe_value_alignment_status_changed=True,
                         prev_probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
@@ -274,8 +284,10 @@ class SelfServiceHelperTest(unittest.TestCase):
             'comp3':
                 _ComponentInfoMsg(
                     component_class='comp_cls2', original_name='comp_name3',
-                    original_status='unqualified', is_newly_added=True,
-                    seq_no=2, null_values=True, probe_value_alignment_status=(
+                    original_status='unqualified',
+                    support_status_case=_SupportStatusCase.UNQUALIFIED,
+                    is_newly_added=True, seq_no=2, null_values=True,
+                    probe_value_alignment_status=(
                         _PVAlignmentStatusMsg.NO_PROBE_INFO)),
         }, resp.analysis_report.component_infos)
     self.assertCountEqual(
@@ -702,15 +714,17 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp1':
                     _ComponentInfoMsg(
                         component_class='comp_cls1', original_name='comp_name1',
-                        original_status='unqualified', is_newly_added=False,
-                        has_avl=False, seq_no=2, null_values=True,
-                        probe_value_alignment_status=(
+                        original_status='unqualified',
+                        support_status_case=_SupportStatusCase.UNQUALIFIED,
+                        is_newly_added=False, has_avl=False, seq_no=2,
+                        null_values=True, probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
                 'comp2':
                     _ComponentInfoMsg(
                         component_class='comp_cls2',
                         original_name='comp_cls2_111_222#9',
                         original_status='unqualified',
+                        support_status_case=_SupportStatusCase.UNQUALIFIED,
                         is_newly_added=True,
                         has_avl=True,
                         avl_info=_AvlInfoMsg(cid=111, qid=222),
@@ -828,9 +842,10 @@ class SelfServiceHelperTest(unittest.TestCase):
                         _ComponentInfoMsg(
                             component_class='comp_cls1',
                             original_name='comp_name1',
-                            original_status='unqualified', is_newly_added=False,
-                            avl_info=None, has_avl=False, seq_no=2,
-                            component_name_with_correct_seq_no=None,
+                            original_status='unqualified',
+                            support_status_case=_SupportStatusCase.UNQUALIFIED,
+                            is_newly_added=False, avl_info=None, has_avl=False,
+                            seq_no=2, component_name_with_correct_seq_no=None,
                             diff_prev=None, null_values=True,
                             probe_value_alignment_status=(
                                 _PVAlignmentStatusMsg.NO_PROBE_INFO)),
@@ -839,6 +854,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                             component_class='comp_cls2',
                             original_name='comp_cls2_111_222#9',
                             original_status='unqualified',
+                            support_status_case=_SupportStatusCase.UNQUALIFIED,
                             is_newly_added=False, avl_info=_AvlInfoMsg(
                                 cid=111, qid=222), has_avl=True, seq_no=1,
                             component_name_with_correct_seq_no=(
@@ -939,12 +955,16 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp1':
                     _ComponentInfoMsg(
                         component_class='comp_cls1', original_name='comp_name1',
-                        original_status='unqualified', is_newly_added=False,
-                        has_avl=False, seq_no=2, diff_prev=_DiffStatusMsg(
+                        original_status='unqualified',
+                        support_status_case=_SupportStatusCase.UNQUALIFIED,
+                        is_newly_added=False, has_avl=False, seq_no=2,
+                        diff_prev=_DiffStatusMsg(
                             unchanged=True, name_changed=False,
                             support_status_changed=False, values_changed=False,
                             prev_comp_name='comp_name1',
                             prev_support_status='unqualified',
+                            prev_support_status_case=(
+                                _SupportStatusCase.UNQUALIFIED),
                             probe_value_alignment_status_changed=False,
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatusMsg.NO_PROBE_INFO)),
@@ -954,15 +974,19 @@ class SelfServiceHelperTest(unittest.TestCase):
                     _ComponentInfoMsg(
                         component_class='comp_cls2',
                         original_name='comp_cls2_111_222#9',
-                        original_status='unqualified', is_newly_added=True,
-                        has_avl=True, avl_info=_AvlInfoMsg(cid=111, qid=222),
-                        seq_no=1, component_name_with_correct_seq_no=(
+                        original_status='unqualified',
+                        support_status_case=_SupportStatusCase.UNQUALIFIED,
+                        is_newly_added=True, has_avl=True, avl_info=_AvlInfoMsg(
+                            cid=111, qid=222), seq_no=1,
+                        component_name_with_correct_seq_no=(
                             'comp_cls2_111_222#1'),
                         diff_prev=_DiffStatusMsg(
                             unchanged=False, name_changed=True,
                             support_status_changed=False, values_changed=False,
                             prev_comp_name='old_comp_name',
                             prev_support_status='unqualified',
+                            prev_support_status_case=(
+                                _SupportStatusCase.UNQUALIFIED),
                             probe_value_alignment_status_changed=True,
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatusMsg.NO_PROBE_INFO)),
@@ -971,9 +995,10 @@ class SelfServiceHelperTest(unittest.TestCase):
                 'comp3':
                     _ComponentInfoMsg(
                         component_class='comp_cls2', original_name='comp_name3',
-                        original_status='unqualified', is_newly_added=True,
-                        has_avl=False, seq_no=2, null_values=True,
-                        probe_value_alignment_status=(
+                        original_status='unqualified',
+                        support_status_case=_SupportStatusCase.UNQUALIFIED,
+                        is_newly_added=True, has_avl=False, seq_no=2,
+                        null_values=True, probe_value_alignment_status=(
                             _PVAlignmentStatusMsg.NO_PROBE_INFO)),
             }, touched_sections=_HWIDSectionChangeMsg(
                 image_id_change_status=_HWIDSectionChangeStatusMsg.UNTOUCHED,
@@ -1223,7 +1248,9 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     new_comp_msg = _ComponentInfoMsg(
         component_class='comp_cls_1', original_name='new_comp',
-        original_status='supported', is_newly_added=True, seq_no=3,
+        original_status='supported',
+        support_status_case=_SupportStatusCase.SUPPORTED, is_newly_added=True,
+        seq_no=3,
         probe_value_alignment_status=_PVAlignmentStatusMsg.NO_PROBE_INFO)
     self.assertCountEqual([
         _ChangeUnitMsg(
