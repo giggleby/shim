@@ -51,6 +51,7 @@ IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
 _BOT_COMMIT = 'Bot-Commit'
 _CODE_REVIEW = 'Code-Review'
 _COMMIT_QUEUE = 'Commit-Queue'
+_VERIFIED = 'Verified'
 
 
 class ReviewVote(NamedTuple):
@@ -674,6 +675,7 @@ class CLInfo(NamedTuple):
   bot_commit: Optional[bool]
   commit_queue: Optional[bool]
   parent_cl_numbers: Optional[Sequence[int]]
+  verified: Optional[bool]
 
 
 def _ConvertGerritTimestamp(timestamp):
@@ -832,6 +834,12 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
       raise GitUtilException('The Code-Review labels are missing.')
     return _ConvertCodeReviewLabelsToCLReviewStatus(code_review_labels)
 
+  def _GetCLVerified(change_info_json):
+    if not include_review_status:
+      return None
+    verified_labels = change_info_json.get('labels', {}).get(_VERIFIED, {})
+    return bool(verified_labels.get('approved'))
+
   def _GetBotApprovalStatus(change_info_json):
     if not include_review_status:
       return None
@@ -947,7 +955,8 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
         comment_threads=comment_threads_or_none,
         bot_commit=_GetBotApprovalStatus(change_info_json),
         commit_queue=_GetCommitQueueStatus(change_info_json),
-        parent_cl_numbers=_GetParentCLNumbers(commit_id))
+        parent_cl_numbers=_GetParentCLNumbers(commit_id),
+        verified=_GetCLVerified(change_info_json))
   except GitUtilException:
     raise
   except Exception as ex:

@@ -328,8 +328,8 @@ class SelfServiceHelperTest(unittest.TestCase):
       mergeable: Optional[bool] = None,
       created_time: Optional[datetime.datetime] = None,
       bot_commit: Optional[bool] = None, commit_queue: Optional[bool] = None,
-      parent_cl_numbers: Optional[Sequence[int]] = None
-  ) -> hwid_repo.HWIDDBCLInfo:
+      parent_cl_numbers: Optional[Sequence[int]] = None,
+      verified: Optional[bool] = None) -> hwid_repo.HWIDDBCLInfo:
     change_id = str(cl_number)
     if mergeable is None:
       mergeable = status == hwid_repo.HWIDDBCLStatus.NEW
@@ -338,7 +338,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     return hwid_repo.HWIDDBCLInfo(change_id, cl_number, subject, status,
                                   review_status, mergeable, created_time,
                                   comment_threads, bot_commit, commit_queue,
-                                  parent_cl_numbers)
+                                  parent_cl_numbers, verified)
 
   def testBatchGetHWIDDBEditableSectionChangeCLInfo(self):
     all_hwid_commit_infos = {
@@ -516,7 +516,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_info_with_parents = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, created_time=now,
         review_status=hwid_repo.HWIDDBCLReviewStatus.APPROVED,
-        parent_cl_numbers=[3, 4, 5])
+        parent_cl_numbers=[3, 4, 5], verified=True)
     parent_cls_info = [
         self._CreateHWIDDBCLWithDefaults(
             3, hwid_repo.HWIDDBCLStatus.NEW,
@@ -551,6 +551,30 @@ class SelfServiceHelperTest(unittest.TestCase):
                     cl_number=cl_number, reasons=['CL:*2 has been approved.'])
           for cl_number in [3, 4, 5])
     ], mock_review_cl.call_args_list)
+
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.ReviewCL')
+  @mock.patch(
+      'cros.factory.hwid.service.appengine.git_util.GetGerritAuthCookie')
+  def testBatchGetHWIDDBEditableSectionChangeCLInfo_NotCQReady(
+      self, mock_auth_cookie, mock_review_cl):
+    del mock_auth_cookie
+    now = datetime.datetime.utcnow()
+    cl_info_with_parents = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.NEW, created_time=now,
+        review_status=hwid_repo.HWIDDBCLReviewStatus.APPROVED,
+        parent_cl_numbers=[], verified=False)
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [
+        cl_info_with_parents
+    ]
+    req = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+            cl_numbers=[2]))
+
+    self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+
+    # Verify that the CL and its parent CLs are not put into CQ since the
+    # Verified vote has not been set.
+    self.assertFalse(mock_review_cl.call_args_list)
 
   def testBatchGenerateAVLComponentName(self):
     req = hwid_api_messages_pb2.BatchGenerateAvlComponentNameRequest()

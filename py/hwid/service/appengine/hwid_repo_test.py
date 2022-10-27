@@ -247,7 +247,8 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     returned_cl_info = git_util.CLInfo(
         'unused_change_id', 123, 'subject', git_util.CLStatus.MERGED,
         git_util.CLReviewStatus.APPROVED, cl_mergeable, cl_created_time,
-        [cl_patchset_comment_thread, cl_file_comment_thread], None, None, None)
+        [cl_patchset_comment_thread, cl_file_comment_thread], None, None, None,
+        None)
     self._mocked_get_cl_info.return_value = returned_cl_info
 
     actual_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(123)
@@ -255,7 +256,7 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     expected_cl_info = hwid_repo.HWIDDBCLInfo(
         'unused_change_id', 123, 'subject', git_util.CLStatus.MERGED,
         git_util.CLReviewStatus.APPROVED, cl_mergeable, cl_created_time,
-        [cl_file_comment_thread], None, None, None)
+        [cl_file_comment_thread], None, None, None, None)
     self.assertEqual(actual_cl_info, expected_cl_info)
 
 
@@ -279,7 +280,7 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     cl_info = git_util.CLInfo('unused_change_id', 123, 'PROJ2: subject',
                               git_util.CLStatus.NEW, None, None,
                               datetime.datetime.utcnow(), None, None, None,
-                              None)
+                              None, None)
     self._hwid_repo_manager.RebaseCLMetadata(cl_info)
 
     patch_cl.assert_called_with(mock.ANY, mock.ANY, mock.ANY, expected_metadata,
@@ -291,7 +292,7 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     cl_info = git_util.CLInfo('unused_change_id', 123, 'PROJ: subject',
                               git_util.CLStatus.NEW, None, None,
                               datetime.datetime.utcnow(), None, None, None,
-                              None)
+                              None, None)
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo_manager.RebaseCLMetadata(cl_info)
@@ -301,7 +302,7 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     cl_info = git_util.CLInfo('unused_change_id', 123, 'NO_PROJECT_NAME',
                               git_util.CLStatus.NEW, None, None,
                               datetime.datetime.utcnow(), None, None, None,
-                              None)
+                              None, None)
 
     with self.assertRaises(ValueError):
       self._hwid_repo_manager.RebaseCLMetadata(cl_info)

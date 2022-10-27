@@ -275,6 +275,11 @@ def _SplitIntoDBSnapshots(
     raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
 
+def _IsCLReadyForCQ(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
+  return cl_info.bot_commit or (cl_info.verified and cl_info.review_status
+                                == hwid_repo.HWIDDBCLReviewStatus.APPROVED)
+
+
 class SelfServiceHelper:
 
   def __init__(self,
@@ -508,8 +513,8 @@ class SelfServiceHelper:
 
     return resp
 
-  def _PutCLChainIntoCQ(self, cl_info: hwid_repo.HWIDDBCLInfo):
-    if cl_info.review_status != hwid_repo.HWIDDBCLReviewStatus.APPROVED:
+  def _TryPutCLChainIntoCQ(self, cl_info: hwid_repo.HWIDDBCLInfo):
+    if not _IsCLReadyForCQ(cl_info):
       return
     put_cq = []
     if not cl_info.commit_queue:
@@ -519,7 +524,7 @@ class SelfServiceHelper:
     for cl_number in cl_info.parent_cl_numbers:
       try:
         parent_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(cl_number)
-        if not parent_cl_info.bot_commit:
+        if not _IsCLReadyForCQ(parent_cl_info):
           logging.error('Some parent CL does not have Bot-Commit+1: %s',
                         cl_number)
           return
@@ -582,7 +587,7 @@ class SelfServiceHelper:
         return cl_info
 
     if not is_cl_expired and not merge_conflict:
-      self._PutCLChainIntoCQ(cl_info)
+      self._TryPutCLChainIntoCQ(cl_info)
       return cl_info
 
     try:
