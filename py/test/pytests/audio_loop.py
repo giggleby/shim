@@ -808,9 +808,9 @@ class AudioLoopTest(test_case.TestCase):
                                              self._default_input_gain)
     recorder_cmd = (
         f'sox -talsa {self._alsa_input_device} -b{audiofuntest_bits:d} -c'
-        f'{len(input_channels):d} -e{audiofuntest_encoding} -r{input_rate:d}'
+        f'{len(input_channels)} -e{audiofuntest_encoding} -r{input_rate:d}'
         f' -traw - remix {" ".join(str(x+1) for x in input_channels)} gain'
-        f' {input_gain:d}')
+        f' {input_gain}')
 
     default_rms_threshold = max(
         volume_gain *
