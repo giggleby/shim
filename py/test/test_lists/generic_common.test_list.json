@@ -993,7 +993,7 @@
       "label": "Set Widevine Keybox",
       "run_if": "constants.has_keybox",
       "args": {
-        "proxy_server_url": ""
+        "from_device_data": true
       }
     },
     "SetWidevineKeyboxGroup": {
