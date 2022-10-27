@@ -629,21 +629,19 @@ message FactoryBundleRecord {
       string key_recovery = 1;
       string key_root = 2;
     }
-
     // Model name of firmware info.
     string model = 1;
     // Firmware keys
     FirmwareKeys firmware_keys = 2;
     // RO AP firmware info
-    FirmwareInfo ro_main_firmware = 3;
+    repeated FirmwareInfo ro_main_firmware = 3;
     // RO EC firmware info
-    FirmwareInfo ro_ec_firmware = 4;
+    repeated FirmwareInfo ro_ec_firmware = 4;
     // RO PD firmware info
-    FirmwareInfo ro_pd_firmware = 5;
+    repeated FirmwareInfo ro_pd_firmware = 5;
     // Whether the firmware status is supported.
     bool supported = 6;
     // RO FP firmware info.
-    // Note that it is possible to have multiple FP firmwares in a model.
     repeated FirmwareInfo ro_fp_firmware = 7;
   }
 

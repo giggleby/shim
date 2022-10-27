@@ -457,8 +457,6 @@ class SelfServiceHelper:
           if field.message_type is None:
             continue
 
-          # Currently only ro_fp_firmware is repeated. Specially handle this
-          # case.
           if field.label != descriptor.FieldDescriptor.LABEL_REPEATED:
             values = [values]
 
