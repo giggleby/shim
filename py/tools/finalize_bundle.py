@@ -818,46 +818,50 @@ class FinalizeBundle:
           set(self.firmware_manifest_keys.keys()) - set(manifest.keys()))
       firmware_manifest_mismatch = (
           self.is_boxster_project and missing_manifest_keys)
-      if firmware_manifest_mismatch and self.test_list_phase > phase.PROTO:
-        raise KeyError(f'No manifest keys {missing_manifest_keys!r} in'
-                       ' chromeos-firmwareupdate')
-
-      fp_firmware_hash = self._ExtractFingerprintFirmwareHash(models)
-      for manifest_key, sub_manifest in manifest.items():
-        if manifest_key not in self.firmware_manifest_keys:
-          continue
-        shared_record = {}
-        # 2) root/recovery keys:
-        bios_path = os.path.join(temp_dir, sub_manifest['host']['image'])
-        shared_record['firmware_keys'] = (
-            chromeos_firmware.GetFirmwareKeys(bios_path))
-        # 3) RO version/checksum:
-        for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
-          if firmware_key not in sub_manifest:
-            continue
-          image_path = os.path.join(temp_dir,
-                                    sub_manifest[firmware_key]['image'])
-          shared_record[f'ro_{firmware_type}_firmware'] = (
-              chromeos_firmware.CalculateFirmwareHashes(image_path))
-
-        for model in self.firmware_manifest_keys[manifest_key]:
-          record = shared_record.copy()
-          # TODO(b/251742457) There are models which use multiple firmware
-          # manifest keys and create multiple records. We cannot change the
-          # logic here now since the server side should be updated first.
-          record['model'] = model
-          if model in fp_firmware_hash:
-            record['ro_fp_firmware'] = fp_firmware_hash[model]
-
-          self.firmware_record['firmware_records'].append(record)
-
       if firmware_manifest_mismatch:
+        if self.test_list_phase > phase.PROTO:
+          raise KeyError(f'No manifest keys {missing_manifest_keys!r} in'
+                         ' chromeos-firmwareupdate')
         logging.warning(
             'No manifest keys %r in chromeos-firmwareupdate. Remove '
             "chromeos-firmwareupdate and ignore the error because it's in %r",
             missing_manifest_keys, phase.PROTO.name)
         Spawn(['rm', '-rf', updater_path], log=True, check_call=True)
         return
+
+      # 2) root/recovery keys:
+      # There should be only one firmware key per board, so we can collect the
+      # key from any bios image.
+      bios_path = os.path.join(temp_dir,
+                               next(iter(manifest.values()))['host']['image'])
+      firmware_keys = chromeos_firmware.GetFirmwareKeys(bios_path)
+
+      # 3) RO version/checksum:
+      # Collect RO firmware for each model. One model may have multiple manifest
+      # key.
+      fp_firmware_hash = self._ExtractFingerprintFirmwareHash(models)
+      for model in models:
+        record = collections.defaultdict(list, {
+            'model': model,
+            'firmware_keys': firmware_keys
+        })
+        for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
+          # Use a set to prevent from collecting duplicated firmwares
+          image_list = set()
+          for manifest_key, sub_manifest in manifest.items():
+            if (firmware_key not in sub_manifest or
+                model not in self.firmware_manifest_keys.get(manifest_key, {})):
+              continue
+            image_list.add(
+                os.path.join(temp_dir, sub_manifest[firmware_key]['image']))
+          for image_path in image_list:
+            record[f'ro_{firmware_type}_firmware'].append(
+                chromeos_firmware.CalculateFirmwareHashes(image_path))
+
+        if model in fp_firmware_hash:
+          record['ro_fp_firmware'] = fp_firmware_hash[model]
+
+        self.firmware_record['firmware_records'].append(record)
 
       # Collect only the desired firmware
       if self.is_boxster_project:
