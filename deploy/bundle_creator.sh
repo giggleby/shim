@@ -360,9 +360,12 @@ do_run_docker() {
 do_ssh_vm() {
   load_config_by_deployment_type "$1"
 
-  vm_name=$(gcloud compute instances list --project "${GCLOUD_PROJECT}" \
+  local vm_name
+  vm_name=$(gcloud compute instances list \
+    --project "${GCLOUD_PROJECT}" \
+    --zones="${ZONE}"\
     | sed -n "s/\(${INSTANCE_GROUP_NAME}-\S*\).*$/\1/p")
-  gcloud --project "${GCLOUD_PROJECT}" compute ssh "${vm_name}"
+  gcloud --project "${GCLOUD_PROJECT}" compute ssh "${vm_name}" --zone="${ZONE}"
 }
 
 do_request() {
