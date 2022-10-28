@@ -35,6 +35,8 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
   SERVICE_DESCRIPTOR = factorybundle_pb2.DESCRIPTOR.services_by_name[
       'FactoryBundleService']
 
+  _PUBSUB_ORDERING_KEY = 'DEFAULT'
+
   def __init__(self):
     self._firestore_connector = firestore_connector.FirestoreConnector(
         config.GCLOUD_PROJECT)
@@ -45,10 +47,14 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
     message.doc_id = self._firestore_connector.CreateUserRequest(
         self._ConvertToCreateBundleRequestInfo(request))
     message.request.MergeFrom(request)
-    publisher = pubsub_v1.PublisherClient()
-    topic_path = publisher.topic_path(
-        config.GCLOUD_PROJECT, config.PUBSUB_TOPIC)
-    publisher.publish(topic_path, message.SerializeToString())
+
+    publisher_options = pubsub_v1.types.PublisherOptions(
+        enable_message_ordering=True)
+    publisher = pubsub_v1.PublisherClient(publisher_options=publisher_options)
+    topic_path = publisher.topic_path(config.GCLOUD_PROJECT,
+                                      config.PUBSUB_TOPIC)
+    publisher.publish(topic_path, message.SerializeToString(),
+                      ordering_key=self._PUBSUB_ORDERING_KEY)
 
     return factorybundle_pb2.CreateBundleRpcResponse()
 

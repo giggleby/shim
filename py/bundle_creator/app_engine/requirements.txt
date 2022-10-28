@@ -1,6 +1,6 @@
 Flask==1.1.4
 google-cloud-firestore==1.8.1
-google-cloud-pubsub==1.1.0
+google-cloud-pubsub==1.6.0
 google-cloud-storage==1.24.1
 gunicorn==20.0.4
 # Uses `MarkupSafe` with version 2.0.1 here to prevent `ImportError`, see

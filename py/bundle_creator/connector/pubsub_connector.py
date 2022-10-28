@@ -10,6 +10,8 @@ from google.cloud import pubsub_v1
 class PubSubConnector:
   """Connector for accessing the Pub/Sub service."""
 
+  _ORDERING_KEY = 'DEFAULT'
+
   def __init__(self, cloud_project_id: str):
     """Initializes a Pub/Sub client by the cloud project id.
 
@@ -17,7 +19,10 @@ class PubSubConnector:
       cloud_project_id: A cloud project id.
     """
     self._cloud_project_id = cloud_project_id
-    self._publisher_client = pubsub_v1.PublisherClient()
+    publisher_options = pubsub_v1.types.PublisherOptions(
+        enable_message_ordering=True)
+    self._publisher_client = pubsub_v1.PublisherClient(
+        publisher_options=publisher_options)
     self._subscriber_client = pubsub_v1.SubscriberClient()
 
   def PullFirstMessage(self, subscription_name: str) -> Optional[bytes]:
@@ -50,7 +55,8 @@ class PubSubConnector:
     """
     topic_path = self._publisher_client.topic_path(self._cloud_project_id,
                                                    topic_name)
-    self._publisher_client.publish(topic_path, message_data)
+    self._publisher_client.publish(topic_path, message_data,
+                                   ordering_key=self._ORDERING_KEY)
 
   def CreateTopic(self, topic_name: str):
     """Testing purpose.  Creates a new topic.
@@ -86,7 +92,7 @@ class PubSubConnector:
         self._cloud_project_id, subscription_name)
     self._subscriber_client.create_subscription(
         subscription_path, topic_path,
-        ack_deadline_seconds=ack_deadline_seconds)
+        ack_deadline_seconds=ack_deadline_seconds, enable_message_ordering=True)
 
   def DeleteSubscription(self, subscription_name: str):
     """Testing purpose.  Deletes the specific subscription.

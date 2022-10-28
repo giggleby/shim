@@ -57,6 +57,23 @@ class PubSubConnectorTest(unittest.TestCase):
 
     self.assertIsNone(return_value)
 
+  def testPullFirstMessage_multipleMessages_verifiesPullingMessagesOrder(self):
+    message_data_1 = b'message_1'
+    message_data_2 = b'message_2'
+    message_data_3 = b'message_3'
+    self._connector.PublishMessage(self._TOPIC_NAME, message_data_1)
+    self._connector.PublishMessage(self._TOPIC_NAME, message_data_2)
+    self._connector.PublishMessage(self._TOPIC_NAME, message_data_3)
+    sleep(1)  # Ensure the messages are published.
+
+    pulled_message_1 = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
+    pulled_message_2 = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
+    pulled_message_3 = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
+
+    self.assertEqual(pulled_message_1, message_data_1)
+    self.assertEqual(pulled_message_2, message_data_2)
+    self.assertEqual(pulled_message_3, message_data_3)
+
 
 if __name__ == '__main__':
   unittest.main()
