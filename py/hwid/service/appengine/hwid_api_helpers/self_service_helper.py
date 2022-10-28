@@ -540,6 +540,15 @@ class SelfServiceHelper:
 
     return resp
 
+  def _AbandonParentCLs(self, cl_info: hwid_repo.HWIDDBCLInfo):
+    parent_cl_reject_reason = (f'CL:*{cl_info.cl_number} is rejected by the '
+                               'reviewer.')
+    for parent_cl_number in cl_info.parent_cl_numbers:
+      parent_cl_info = self._hwid_repo_manager.GetHWIDDBCLInfo(parent_cl_number)
+      if parent_cl_info.status != hwid_repo.HWIDDBCLStatus.ABANDONED:
+        self._hwid_repo_manager.AbandonCL(parent_cl_number,
+                                          reason=parent_cl_reject_reason)
+
   def _TryPutCLChainIntoCQ(self, cl_info: hwid_repo.HWIDDBCLInfo):
     if not _IsCLReadyForCQ(cl_info):
       return
@@ -607,6 +616,7 @@ class SelfServiceHelper:
       try:
         self._hwid_repo_manager.AbandonCL(cl_number,
                                           reason=cl_expiration_reason)
+        self._AbandonParentCLs(cl_info)
       except git_util.GitUtilException as ex:
         logging.warning(
             'Caught an exception while abandoning the expired HWID DB CL: %r.',

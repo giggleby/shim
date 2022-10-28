@@ -408,7 +408,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                                                                     9)
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=True,
-        created_time=long_time_ago)
+        created_time=long_time_ago, parent_cl_numbers=[])
     abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=long_time_ago)
 
@@ -433,7 +433,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     long_time_ago = datetime.datetime.utcnow() - datetime.timedelta(days=35)
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=False,
-        created_time=long_time_ago)
+        created_time=long_time_ago, parent_cl_numbers=[])
     abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=long_time_ago)
 
@@ -459,7 +459,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW,
         review_status=hwid_repo.HWIDDBCLReviewStatus.REJECTED, mergeable=True,
-        created_time=now)
+        created_time=now, parent_cl_numbers=[])
     abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=now)
 
@@ -479,6 +479,50 @@ class SelfServiceHelperTest(unittest.TestCase):
     cl_status.status = cl_status.ABANDONED
     self.assertEqual(resp, expected_resp)
 
+  def testBatchGetHWIDDBEditableSectionChangeCLInfo_AbandonCLChain(self):
+    # Arrange.
+    now = datetime.datetime.utcnow()
+    cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.NEW,
+        review_status=hwid_repo.HWIDDBCLReviewStatus.REJECTED, mergeable=True,
+        created_time=now, parent_cl_numbers=[3, 4])
+    parent_cls_info = [
+        self._CreateHWIDDBCLWithDefaults(
+            3, hwid_repo.HWIDDBCLStatus.NEW,
+            review_status=hwid_repo.HWIDDBCLReviewStatus.APPROVED,
+            bot_commit=True, created_time=now, parent_cl_numbers=[4]),
+        self._CreateHWIDDBCLWithDefaults(
+            4, hwid_repo.HWIDDBCLStatus.ABANDONED,
+            review_status=hwid_repo.HWIDDBCLReviewStatus.APPROVED,
+            bot_commit=True, created_time=now, parent_cl_numbers=[]),
+    ]
+    abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
+        2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=now)
+
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [
+        cl_info, *parent_cls_info, abandoned_cl_info
+    ]
+
+    # Act.
+    req = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
+            cl_numbers=[2]))
+    resp = self._ss_helper.BatchGetHWIDDBEditableSectionChangeCLInfo(req)
+
+    # Assert.
+    abandon_reason = 'The CL is rejected by the reviewer.'
+    parent_cl_abandon_reason = 'CL:*2 is rejected by the reviewer.'
+    self.assertCountEqual([
+        mock.call(2, reason=abandon_reason),
+        mock.call(3, reason=parent_cl_abandon_reason),
+    ], self._mock_hwid_repo_manager.AbandonCL.call_args_list)
+    expected_resp = (
+        hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoResponse(
+        ))
+    cl_status = expected_resp.cl_status.get_or_create(2)
+    cl_status.status = cl_status.ABANDONED
+    self.assertEqual(expected_resp, resp)
+
   def testBatchGetHWIDDBEditableSectionChangeCLInfo_RebaseMergeConflict(self):
     now = datetime.datetime.utcnow()
     cl_info = self._CreateHWIDDBCLWithDefaults(
@@ -497,7 +541,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     now = datetime.datetime.utcnow()
     orig_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, mergeable=False, created_time=now,
-        bot_commit=True)
+        bot_commit=True, parent_cl_numbers=[])
     abandoned_cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.ABANDONED, created_time=now)
 
@@ -571,13 +615,11 @@ class SelfServiceHelperTest(unittest.TestCase):
       self, mock_auth_cookie, mock_review_cl):
     del mock_auth_cookie
     now = datetime.datetime.utcnow()
-    cl_info_with_parents = self._CreateHWIDDBCLWithDefaults(
+    cl_info = self._CreateHWIDDBCLWithDefaults(
         2, hwid_repo.HWIDDBCLStatus.NEW, created_time=now,
         review_status=hwid_repo.HWIDDBCLReviewStatus.APPROVED,
         parent_cl_numbers=[], verified=False)
-    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [
-        cl_info_with_parents
-    ]
+    self._mock_hwid_repo_manager.GetHWIDDBCLInfo.side_effect = [cl_info]
     req = (
         hwid_api_messages_pb2.BatchGetHwidDbEditableSectionChangeClInfoRequest(
             cl_numbers=[2]))
