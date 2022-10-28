@@ -446,60 +446,6 @@ class LazyObject:
     return attr
 
 
-class UniqueStack:
-  """A data structure very similar to a stack, but objects inside are unique.
-
-  - If an object is in the stack already, adding it again to the stack won't
-    change anything.
-
-  - One can remove any object from the stack, no matter where it is.
-
-  - One can always get the latest added object that haven't been removed.
-  """
-  def __init__(self):
-    import threading
-    self._lock = threading.Lock()
-    self._set = set([])
-    self._list = list([])
-
-  def Add(self, x):
-    """Adds an object on the top of the stack.
-
-    If the object is already in the stack, nothing will happen.
-
-    This function should run in O(1)
-    """
-    if x not in self._set:
-      with self._lock:
-        if x not in self._set:
-          self._set.add(x)
-          self._list.append(x)
-
-  def Del(self, x):
-    """Removes @x from the stack, no matter where it is.
-
-    If @x is not in the stack, nothing will happen.
-
-    This function should run in O(1)
-    """
-    if x in self._set:
-      with self._lock:
-        if x in self._set:
-          self._set.remove(x)
-
-  def Get(self):
-    """Returns element at top of the stack.
-
-    This function should run in amortized O(1)
-    """
-    with self._lock:
-      while self._list:
-        if self._list[-1] in self._set:
-          return self._list[-1]
-        self._list.pop()
-      return None
-
-
 def StdRepr(obj, extra=None, excluded_keys=None, true_only=False):
   """Returns the representation of an object including its properties.
 

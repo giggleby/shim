@@ -9,6 +9,7 @@ import unittest
 
 from cros.factory.utils import type_utils
 
+
 # Jon's favorite character for Unicode testing: 囧
 JIONG_UTF8 = '\xe5\x9b\xa7'
 
@@ -239,54 +240,6 @@ class CachedGetterTest(unittest.TestCase):
     self.assertEqual(self.args_getter(2), 3)
     self.assertEqual(self.args_getter(1), 3)
     self.assertEqual(self.args_getter(0), 3)
-
-
-class UniqueSetTest(unittest.TestCase):
-
-  def setUp(self):
-    self.container = type_utils.UniqueStack()
-
-  def testInsertThenGet(self):
-    for x in [5, 1, 2, 4, 3]:
-      self.container.Add(x)
-      self.assertEqual(self.container.Get(), x)
-
-  def testDeleteOlderObject(self):
-    data = [5, 1, 2, 4, 3]
-    for x in data:
-      self.container.Add(x)
-
-    last = data.pop()
-
-    self.assertEqual(self.container.Get(), last)
-    for x in data:
-      self.container.Del(x)
-      self.assertEqual(self.container.Get(), last)
-
-  def testInsertExistingObject(self):
-    data = [5, 4, 3, 2, 1, 0]
-    for x in data:
-      self.container.Add(x)
-
-    for x in data:
-      self.container.Add(x)
-      self.assertEqual(self.container.Get(), 0)
-
-  def testGetAfterDelete(self):
-    for x in range(5):
-      self.container.Add(x)
-
-    for x in range(4, 0, -1):
-      self.container.Del(x)
-      self.assertEqual(self.container.Get(), x - 1)
-
-  def testInsertAfterDelete(self):
-    self.container.Add(1)
-    self.container.Add(2)
-    self.container.Del(1)
-    self.assertEqual(self.container.Get(), 2)
-    self.container.Add(1)
-    self.assertEqual(self.container.Get(), 1)
 
 
 class GetDictTest(unittest.TestCase):

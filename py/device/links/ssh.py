@@ -4,6 +4,7 @@
 
 """Implementation of cros.factory.device.device_types.DeviceLink using SSH."""
 
+import collections
 import logging
 import os
 import pipes
@@ -467,18 +468,23 @@ class SSHLink(device_types.DeviceLink):
       self._dhcp_server = None
       self._exclude_ip_prefix = exclude_ip_prefix
 
-      self._devices = type_utils.UniqueStack()
+      self._lock = threading.Lock()
+      self._devices = collections.OrderedDict()
 
     def _SetLastDUT(self):
-      last_dut = self._devices.Get()
-      if last_dut:
-        SSHLink.SetLinkIP(last_dut[0])
-      else:
-        SSHLink.ResetLinkIP()
+      with self._lock:
+        if self._devices:
+          last_dut = next(reversed(self._devices))
+          SSHLink.SetLinkIP(last_dut[0])
+        else:
+          SSHLink.ResetLinkIP()
 
     def _OnDHCPAdd(self, ip, mac_address):
       # update last device
-      self._devices.Add((ip, mac_address))
+      if (ip, mac_address) not in self._devices:
+        with self._lock:
+          if (ip, mac_address) not in self._devices:
+            self._devices[(ip, mac_address)] = None
       self._SetLastDUT()
 
       # invoke callback function
@@ -487,7 +493,10 @@ class SSHLink(device_types.DeviceLink):
 
     def _OnDHCPOld(self, ip, mac_address):
       # update last device
-      self._devices.Add((ip, mac_address))
+      if (ip, mac_address) not in self._devices:
+        with self._lock:
+          if (ip, mac_address) not in self._devices:
+            self._devices[(ip, mac_address)] = None
       self._SetLastDUT()
 
       # invoke callback function
@@ -496,14 +505,17 @@ class SSHLink(device_types.DeviceLink):
 
     def _OnDHCPDel(self, ip, mac_address):
       # remove the device
-      self._devices.Del((ip, mac_address))
+      if (ip, mac_address) in self._devices:
+        with self._lock:
+          if (ip, mac_address) in self._devices:
+            del self._devices[(ip, mac_address)]
       self._SetLastDUT()
 
       # invoke callback function
       if callable(self._on_del):
         self._on_del(ip, mac_address)
 
-    def _StartHDCPServer(self):
+    def _StartDHCPServer(self):
       self._dhcp_server = dhcp_utils.StartDHCPManager(
           blocklist_file=self._blocklist_file,
           exclude_ip_prefix=self._exclude_ip_prefix,
@@ -514,7 +526,7 @@ class SSHLink(device_types.DeviceLink):
 
     def Start(self):
       self._SetLastDUT()
-      self._StartHDCPServer()
+      self._StartDHCPServer()
 
     def Stop(self):
       if self._dhcp_server:
