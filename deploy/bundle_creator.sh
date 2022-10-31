@@ -189,6 +189,21 @@ create_vm() {
     --size 1
 }
 
+try_delete_pubsub() {
+  local type="$1"
+  local name="$2"
+  {
+    gcloud pubsub "${type}"s list --project="${GCLOUD_PROJECT}" \
+      --filter="${name}" | \
+      grep "${name}" && \
+    info "The specific ${type} ${name} was created."
+  } && {
+    info "Try deleting the existing ${type}."
+    gcloud pubsub "${type}"s delete "${name}" --project="${GCLOUD_PROJECT}"
+  }
+  return 0
+}
+
 prepare_python_venv() {
   local requirements_path="$1"
   if [ ! -d "${LOCAL_DEPLOYMENT_VENV_DIR}" ]; then
@@ -337,6 +352,21 @@ do_deploy_docker() {
   create_vm "$1"
 }
 
+do_create_pubsub() {
+  load_config_by_deployment_type "$1"
+
+  try_delete_pubsub "subscription" "${PUBSUB_SUBSCRIPTION}"
+  try_delete_pubsub "topic" "${PUBSUB_TOPIC}"
+
+  info "Start creating Pub/Sub topic and subscription."
+  gcloud pubsub topics create "${PUBSUB_TOPIC}" --project="${GCLOUD_PROJECT}"
+  gcloud pubsub subscriptions create "${PUBSUB_SUBSCRIPTION}" \
+    --topic "${PUBSUB_TOPIC}" \
+    --project="${GCLOUD_PROJECT}" \
+    --expiration-period=never \
+    --enable-message-ordering
+}
+
 do_run_docker() {
   if [[ "$1" == "prod" || "$1" == "staging" ]]; then
     die "Unsupported deployment type for \`run-docker\` command: \"$1\"."
@@ -443,6 +473,10 @@ commands
       Does \`deploy-appengine\`, \`deploy-appengine-legacy\` and
       \`deploy-docker\` commands.
 
+  $0 create-pubsub [prod|staging|dev|dev2]
+      Creates Pub/Sub topic and subscription used by the appengine and docker.
+      This command deletes the existing topic and subscription.
+
   $0 run-docker [dev|dev2]
       Runs \`py/bundle_creator/docker/worker.py\` in local with the specific
       deployment type.  The worker connects to the real Cloud Project services.
@@ -478,6 +512,9 @@ main() {
         do_deploy_appengine "$2"
         do_deploy_appengine_legacy "$2"
         do_deploy_docker "$2"
+        ;;
+      create-pubsub)
+        do_create_pubsub "$2"
         ;;
       run-docker)
         do_run_docker "$2"

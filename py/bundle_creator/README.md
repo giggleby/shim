@@ -47,6 +47,12 @@ To deploy the compute engine, run:
 (factory-repo)$ ./deploy/bundle_creator.sh deploy-docker ${deployment_type}
 ```
 
+To create Pub/Sub's topic and subscription used by the app engine and the
+compute engine, run:
+```
+(factory-repo)$ ./deploy/bundle_creator.sh create-pubsub ${deployment_type}
+```
+
 To access the VM, run:
 ```
 # SSH ino the VM
