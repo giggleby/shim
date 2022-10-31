@@ -28,9 +28,9 @@ class SpringPower(power.Power):
         self._device.CheckCall(['ectool', 'extpwrcurrentlimit', '0'])
         self._device.CheckCall(['ectool', 'gpioset', 'charger_en', '0'])
       else:
-        raise self.Error('Unknown EC charge state: %s' % state)
+        raise self.Error(f'Unknown EC charge state: {state}')
     except Exception as e:
-      raise self.Error('Unable to set charge state: %s' % e)
+      raise self.Error(f'Unable to set charge state: {e}')
 
   def GetChargerCurrent(self):
     """Charger current is not available on spring board."""
@@ -41,7 +41,7 @@ class SpringPower(power.Power):
     try:
       output = self._device.CheckCall(['ectool', 'powerinfo'])
     except Exception as e:
-      raise self.Error('Unable to get powerinfo: %s' % e)
+      raise self.Error(f'Unable to get powerinfo: {e}')
     return output
 
   def GetBatteryRegisters(self):
@@ -59,7 +59,7 @@ class SpringPower(power.Power):
     try:
       ret = {reg: self._device.ec.I2CRead(0, 0x16, reg) for reg in regs}
     except Exception as e:
-      raise self.Error('Unable to get battery registers: %s' % e)
+      raise self.Error(f'Unable to get battery registers: {e}')
     return ret
 
 

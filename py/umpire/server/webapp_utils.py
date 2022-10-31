@@ -39,7 +39,7 @@ def ParseDUTHeader(header):
   dut_info.load(header)
   invalid_keys = [key for key in dut_info if not ValidKey(key)]
   if invalid_keys:
-    raise ValueError('Invalid key(s): %r' % invalid_keys)
+    raise ValueError(f'Invalid key(s): {invalid_keys!r}')
 
   return {k: v.value for k, v in dut_info.items()
           if k not in common.LEGACY_DUT_INFO_KEYS}

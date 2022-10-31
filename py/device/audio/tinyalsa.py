@@ -17,6 +17,7 @@ import time
 from cros.factory.device.audio import base
 from cros.factory.utils import file_utils
 
+
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
 # Configuration file is using YAML nested collections format.
@@ -93,7 +94,9 @@ class TinyalsaMixerController(base.BaseMixerController):
   def _GetMixerControlsByLines(self, name, lines):
     """Get Mixer control value by the tinymix results"""
     # Try Enum value
-    m = re.search(r'.*%s:.*\t>.*' % name, lines, re.MULTILINE)
+    m = re.search(r'.*'
+                  f'{name}'
+                  r':.*\t>.*', lines, re.MULTILINE)
     if m:
       values = m.group(0).split('\t')
       # Find the value start with '>', and return value
@@ -101,12 +104,16 @@ class TinyalsaMixerController(base.BaseMixerController):
         if s.startswith('>'):
           return s[1:]
     # Try Int value
-    m = re.search(r'.*%s: (.*) \(range.*' % name, lines, re.MULTILINE)
+    m = re.search(r'.*'
+                  f'{name}'
+                  r': (.*) \(range.*', lines, re.MULTILINE)
     if m:
       value = m.group(1)
       return value
     # Try Bool value
-    m = re.search(r'.*%s: (On|Off).*' % name, lines, re.MULTILINE)
+    m = re.search(r'.*'
+                  f'{name}'
+                  r': (On|Off).*', re.MULTILINE)
     if m:
       value = m.group(1)
       # translate value to the control usage.
@@ -145,8 +152,7 @@ class TinyalsaMixerController(base.BaseMixerController):
     result_file = os.path.basename(output_file.name)
     result_path = os.path.join(self._remote_directory, result_file)
     for name in mixer_settings:
-      open_file.write('tinymix -D %s \'%s\' >> %s\n' % (card, name,
-                                                        result_path))
+      open_file.write(f'tinymix -D {card} \'{name}\' >> {result_path}\n')
 
   def _PushAndExecute(self, push_path, pull_path=None):
     """Push file to dut and execute it and then get result file back
@@ -173,7 +179,7 @@ class TinyalsaMixerController(base.BaseMixerController):
     """Generate a bash file to get tinymix old value"""
     for name, value in mixer_settings.items():
       logging.info('Set \'%s\' to \'%s\' on card %s', name, value, card)
-      open_file.write('tinymix -D %s \'%s\' \'%s\'\n' % (card, name, value))
+      open_file.write(f'tinymix -D {card} \'{name}\' \'{value}\'\n')
 
   def GetCardIndexByName(self, card_name):
     """See BaseMixerController.GetCardIndexByName"""
@@ -184,7 +190,7 @@ class TinyalsaMixerController(base.BaseMixerController):
       m = self._RE_CARD_INDEX.match(line)
       if m and m.group(2) == card_name:
         return m.group(1)
-    raise ValueError('device name %s is incorrect' % card_name)
+    raise ValueError(f'device name {card_name} is incorrect')
 
 
 class TinyalsaAudioControl(base.BaseAudioControl):

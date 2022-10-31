@@ -8,6 +8,7 @@ import typing
 
 from cros.factory.device import device_types
 
+
 IIO_DEVICES_PATTERN = '/sys/bus/iio/devices/iio:device*'
 
 
@@ -53,10 +54,10 @@ def FindDevice(dut, path_pattern, **attr_filter):
 
   if not devices:
     raise device_types.DeviceException(
-        'Device with constraint %r not found' % attr_filter)
+        f'Device with constraint {attr_filter!r} not found')
   if len(devices) > 1:
     raise device_types.DeviceException(
-        'Multiple devices found with constraint %r' % attr_filter)
+        f'Multiple devices found with constraint {attr_filter!r}')
 
   return devices[0]
 

@@ -13,6 +13,7 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import evdev
 
+
 INPUT_DEVICE_PATH = '/proc/bus/input/devices'
 KNOWN_DEVICE_TYPES = type_utils.Enum(['touchscreen', 'touchpad', 'stylus'])
 
@@ -139,7 +140,7 @@ class InputDeviceFunction(cached_probe_function.CachedProbeFunction):
     if (self.args.device_type is not None and
         self.args.device_type not in KNOWN_DEVICE_TYPES):
       raise cached_probe_function.InvalidCategoryError(
-          'The type of input device must be one of %r' % KNOWN_DEVICE_TYPES)
+          f'The type of input device must be one of {KNOWN_DEVICE_TYPES!r}')
 
     return self.args.device_type
 

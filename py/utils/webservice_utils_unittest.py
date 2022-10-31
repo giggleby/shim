@@ -38,7 +38,7 @@ class WebServiceUtilsTest(unittest.TestCase):
         port=self.port,
         methods={'GetDeviceInfo': self._GetDeviceInfo,
                  'JSONGetDeviceInfo': self._JSONGetDeviceInfo})
-    self.url = 'http://%s:%d' % (net_utils.LOCALHOST, self.port)
+    self.url = f'http://{net_utils.LOCALHOST}:{int(self.port)}'
 
   def _GetDeviceInfo(self, dict_arg):
     self.assertTrue(isinstance(dict_arg, dict))

@@ -11,6 +11,7 @@ from cros.factory.device.audio import config_manager
 from cros.factory.device import device_types
 from cros.factory.utils import process_utils
 
+
 # The bytes of the WAV header
 WAV_HEADER_SIZE = 44
 
@@ -375,9 +376,10 @@ class BaseAudioControl(device_types.DeviceComponent):
     """
     with self._device.temp.TempFile() as wav_path:
       self.RecordWavFile(wav_path, card, device, duration, channels, rate)
-      self._device.CheckCall(
-          ['dd', 'skip=%d' % WAV_HEADER_SIZE, 'if=%s' % wav_path, 'of=%s' %
-           path, 'bs=1'])
+      self._device.CheckCall([
+          'dd', f'skip={int(WAV_HEADER_SIZE)}', f'if={wav_path}', f'of={path}',
+          'bs=1'
+      ])
 
   def _GetPIDByName(self, name):
     """Used to get process ID"""
@@ -385,7 +387,7 @@ class BaseAudioControl(device_types.DeviceComponent):
     pids = output.strip().split() if output else []
     # we sholud only have one PID.
     if len(pids) > 1:
-      raise RuntimeError('Find more than one PID(%r) of %s!' % (pids, name))
+      raise RuntimeError(f'Find more than one PID({pids!r}) of {name}!')
     if not pids:
       logging.info('Find no PID of %s', name)
     return pids[0] if pids else None

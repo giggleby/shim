@@ -58,13 +58,12 @@ class ECToolFanControl(FanControl):
       A list of int indicating the RPM of each fan.
     """
     try:
-      ectool_output = self._device.CallOutput(
-          ['ectool', 'pwmgetfanrpm'] + (['%d' % fan_id] if fan_id is not None
-                                        else []))
+      ectool_output = self._device.CallOutput(['ectool', 'pwmgetfanrpm'] + (
+          [f'{int(fan_id)}'] if fan_id is not None else []))
       return [int(rpm[1])
               for rpm in self.GET_FAN_SPEED_RE.findall(ectool_output)]
     except Exception as e:
-      raise self.Error('Unable to get fan speed: %s' % e)
+      raise self.Error(f'Unable to get fan speed: {e}')
 
   def SetFanRPM(self, rpm, fan_id=None):
     """Sets the target fan RPM.
@@ -79,15 +78,16 @@ class ECToolFanControl(FanControl):
       if rpm == self.AUTO:
         self._device.CheckCall(
             (['ectool', 'autofanctrl'] +
-             (['%d' % fan_id] if fan_id is not None else [])))
+             ([f'{int(fan_id)}'] if fan_id is not None else [])))
       else:
         self._device.CheckCall(
             (['ectool', 'pwmsetfanrpm'] +
-             (['%d' % fan_id] if fan_id is not None else []) + ['%d' % rpm]))
+             ([f'{int(fan_id)}'] if fan_id is not None else []) +
+             [f'{int(rpm)}']))
     except Exception as e:
       if rpm == self.AUTO:
-        raise self.Error('Unable to set auto fan control: %s' % e)
-      raise self.Error('Unable to set fan speed to %d RPM: %s' % (rpm, e))
+        raise self.Error(f'Unable to set auto fan control: {e}')
+      raise self.Error(f'Unable to set fan speed to {int(rpm)} RPM: {e}')
 
 
 class SysFSFanControl(FanControl):
@@ -139,7 +139,7 @@ class SysFSFanControl(FanControl):
           ret.append(info['get_speed_map'](buf))
       return ret
     except Exception as e:
-      raise self.Error('Unable to get fan speed: %s' % e)
+      raise self.Error(f'Unable to get fan speed: {e}')
 
   def SetFanRPM(self, rpm, fan_id=None):
     """See FanControl.SetFanRPM."""
@@ -157,5 +157,5 @@ class SysFSFanControl(FanControl):
                 info['path'], info['set_speed_filename']), buf)
     except Exception as e:
       if rpm == self.AUTO:
-        raise self.Error('Unable to set auto fan control: %s' % e)
-      raise self.Error('Unable to set fan speed to %d RPM: %s' % (rpm, e))
+        raise self.Error(f'Unable to set auto fan control: {e}')
+      raise self.Error(f'Unable to set fan speed to {int(rpm)} RPM: {e}')

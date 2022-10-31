@@ -69,10 +69,12 @@ class GSUtil:
       The generated Google storage URI prefix.
     """
     if channel not in self.CHANNELS:
-      raise GSUtilError('Invalid channel %r. Valid choices are: %r' % (
-          channel, self.CHANNELS))
-    return 'gs://chromeos-releases/%(channel)s-channel/%(board)s/' % dict(
-        channel=channel, board=self.board.gsutil_name)
+      raise GSUtilError(
+          f'Invalid channel {channel!r}. Valid choices are: {self.CHANNELS!r}')
+    return ('gs://chromeos-releases/'
+            f'{dict(channel=channel, board=self.board.gsutil_name)["channel"]}'
+            '-channel/'
+            f'{dict(channel=channel, board=self.board.gsutil_name)["board"]}/')
 
   def GetLatestBuildPath(self, channel, branch=None):
     """Gets the latest build version from Google storage.
@@ -87,7 +89,7 @@ class GSUtil:
     if branch:
       branch_re = r'\d+(.\d+){0,2}'
       if not re.match(branch_re, branch):
-        raise GSUtilError('branch must be a string of format: %s' % branch_re)
+        raise GSUtilError(f'branch must be a string of format: {branch_re}')
     gs_url_pattern = self.GetGSPrefix(channel)
     if gs_url_pattern not in self.gs_output_cache:
       self.gs_output_cache[gs_url_pattern] = self.LS(gs_url_pattern)
@@ -122,8 +124,8 @@ class GSUtil:
       The Google storage URI of the specified binary object.
     """
     if filetype not in self.IMAGE_TYPES:
-      raise GSUtilError('Invalid file type %r. Valid choices are: %r' % (
-          filetype, self.IMAGE_TYPES))
+      raise GSUtilError(f'Invalid file type {filetype!r}. Valid choices are: '
+                        f'{self.IMAGE_TYPES!r}')
 
     fileext = {
         self.IMAGE_TYPES.factory: 'zip',
@@ -160,12 +162,12 @@ class GSUtil:
     result = [path for path in gs_builds_output if filespec_re.search(path)]
 
     if not result:
-      raise NoSuchKey('Unable to get binary URI for %r from %r' % (
-          filetype, gs_dir))
+      raise NoSuchKey(
+          f'Unable to get binary URI for {filetype!r} from {gs_dir!r}')
 
     if len(result) > 1:
-      raise GSUtilError('Got more than one URI for %r from %r: %r' % (
-          filetype, gs_dir, result))
+      raise GSUtilError(
+          f'Got more than one URI for {filetype!r} from {gs_dir!r}: {result!r}')
 
     return result[0]
 
@@ -222,7 +224,7 @@ class GSUtil:
       if match_obj:
         return ParsedObj(*match_obj.groups())
 
-    raise GSUtilError('Unable to parse URI: %r' % uri)
+    raise GSUtilError(f'Unable to parse URI: {uri!r}')
 
   def GSDownload(self, uri, cache_dir=None):
     """Downloads a file from Google storage, returning the path to the file.

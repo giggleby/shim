@@ -25,6 +25,7 @@ use the args attribute to access the attribute values.
 
 from .type_utils import Enum
 
+
 # Save the 'type' function (since we'll be overloading it in Arg.__init__).
 TYPE = type
 
@@ -103,17 +104,16 @@ class Arg:
     if not name:
       raise ArgError('Argument is missing a name')
     if not type:
-      raise ArgError('Argument %s is missing a type' % name)
+      raise ArgError(f'Argument {name} is missing a type')
 
     # Always make type a tuple.
     if not isinstance(type, tuple):
       type = (type,)
-    if any(not isinstance(x, TYPE) and not isinstance(x, Enum)
-           for x in type):
-      raise ArgError('Argument %s has invalid types %r' % (name, type))
+    if any(not isinstance(x, TYPE) and not isinstance(x, Enum) for x in type):
+      raise ArgError(f'Argument {name} has invalid types {type!r}')
 
     if not help:
-      raise ArgError('Argument %s is missing a help string' % name)
+      raise ArgError(f'Argument {name} is missing a help string')
 
     # Allow None for all optional arguments with default None
     if default is None and (TYPE(None) not in type):
@@ -130,8 +130,9 @@ class Arg:
     # Check validity of default.
     if self.IsOptional():
       if not self.ValueMatchesType(default):
-        raise ArgError('Default value %s should have type %r, not %r' % (
-            default, type, TYPE(default)))
+        raise ArgError(
+            f'Default value {default} should have type {type!r}, not '
+            f'{TYPE(default)!r}')
       if self.schema:
         self.schema.Validate(default)
 
@@ -155,8 +156,7 @@ class Arg:
     """
     if (len(self.type) >= 1 and self.type[0] not in [str, list, bool, int] and
         not isinstance(self.type[0], Enum)):
-      raise ValueError('Arg %s cannot be transfered. %s' %
-                       (self.name, self.type))
+      raise ValueError(f'Arg {self.name} cannot be transfered. {self.type}')
 
     if self.IsOptional():
       args = ['--' + self.name.replace('_', '-')]
@@ -168,7 +168,7 @@ class Arg:
         'default': self.default}
     if self.type[0] == bool:
       if self.default is True:
-        args = ['--no-%s' % self.name.replace('_', '-')]
+        args = [f"--no-{self.name.replace('_', '-')}"]
         kwargs['default'] = True
         kwargs['action'] = 'store_false'
       else:
@@ -235,9 +235,9 @@ class Args:
 
       value = dargs.get(arg.name, arg.default)
       if not arg.ValueMatchesType(value):
-        errors.append('Argument %s=%r' % (arg.name, value))
-        errors.append('The argument should have type %r, not %r' %
-                      (arg.type, type(value)))
+        errors.append(f'Argument {arg.name}={value!r}')
+        errors.append(
+            f'The argument should have type {arg.type!r}, not {type(value)!r}')
         continue
 
       if not unresolvable_type or not isinstance(value, unresolvable_type):
@@ -245,7 +245,7 @@ class Args:
           try:
             arg.schema.Validate(value)
           except Exception as e:
-            errors.append('Argument %s=%r' % (arg.name, value))
+            errors.append(f'Argument {arg.name}={value!r}')
             errors.append(repr(e))
             continue
 

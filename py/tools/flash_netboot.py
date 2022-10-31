@@ -25,6 +25,7 @@ import time
 from cros.factory.utils.file_utils import UnopenedTemporaryFile
 from cros.factory.utils.process_utils import Spawn
 
+
 DEFAULT_NETBOOT_FIRMWARE_PATH = '/usr/local/factory/board/image.net.bin'
 
 
@@ -46,9 +47,9 @@ class FlashNetboot:
 
     images = glob.glob(image_file_pattern)
     if not images:
-      raise ValueError('Firmware image %s does not exist' % image_file_pattern)
+      raise ValueError(f'Firmware image {image_file_pattern} does not exist')
     if len(images) > 1:
-      raise ValueError('Multiple firmware images %s exist' % image_file_pattern)
+      raise ValueError(f'Multiple firmware images {image_file_pattern} exist')
     self._image = images[0]
 
   def Run(self):
@@ -69,14 +70,14 @@ class FlashNetboot:
         '\n'
         '\n'
         '*** You are about to flash netboot firmware on this machine with:\n'
-        '***   %s\n'
+        f'***   {self._image}\n'
         '***\n'
         '*** This process is unrecoverable and this machine WILL need to\n'
         '*** go through network installation again.\n'
         '***\n'
         '*** Once this process starts, aborting it or powering off the\n'
         '*** machine may leave the machine in an unknown state.\n'
-        '***\n' % self._image)
+        '***\n')
 
   def _Flashrom(self, params):
     cmd = ['flashrom', '-p', 'host'] + params
@@ -96,8 +97,7 @@ class FlashNetboot:
       section_name: The name of the section to read out.
     """
     logging.info('Saving %s to %s', section_name, section_file)
-    self._Flashrom(['-r', fw_main_file,
-                    '-i', '%s:%s' % (section_name, section_file)])
+    self._Flashrom(['-r', fw_main_file, '-i', f'{section_name}:{section_file}'])
 
   def _PreserveVPD(self):
     self._PreserveSection(self._fw_main, self._rw_vpd, 'RW_VPD')
@@ -105,8 +105,10 @@ class FlashNetboot:
 
   def _PackVPD(self):
     logging.info('Packing RO/RW VPD into %s', self._fw_main)
-    Spawn(['futility', 'load_fmap', self._fw_main, 'RO_VPD:%s' % self._ro_vpd,
-           'RW_VPD:%s' % self._rw_vpd], check_call=True)
+    Spawn([
+        'futility', 'load_fmap', self._fw_main, f'RO_VPD:{self._ro_vpd}',
+        f'RW_VPD:{self._rw_vpd}'
+    ], check_call=True)
 
   def _FlashFirmware(self):
     logging.info('Flashing firmware %s...', self._fw_main)

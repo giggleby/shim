@@ -13,6 +13,7 @@ import sys
 from . import file_utils
 from . import process_utils
 
+
 BACKUP_DIRECTORY = 'backup'
 
 
@@ -100,7 +101,7 @@ def RecoverShelf(shelf):
 
   # Validate the backup
   if not IsShelfValid(backup_shelf):
-    raise IOError('Backup shelf %s is invalid or missing' % backup_shelf)
+    raise IOError(f'Backup shelf {backup_shelf} is invalid or missing')
 
   shelf_files = FindShelfFiles(backup_shelf)
   assert shelf_files

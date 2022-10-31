@@ -13,6 +13,7 @@ from cros.factory.device.audio import config_manager
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 # Configuration file is put under overlay directory and it can be customized
 # for each board.
 # Configuration file is using YAML nested collections format.
@@ -41,7 +42,7 @@ class AlsaMixerController(base.BaseMixerController):
   def GetMixerControls(self, name, card='0'):
     """See BaseMixerController.GetMixerControls"""
     list_controls = self._device.CallOutput(
-        ['amixer', '-c%d' % int(card), 'controls'])
+        ['amixer', f'-c{int(card)}', 'controls'])
     re_control = re.compile(self._CONTROL_RE_STR % name)
     numid = 0
     for ctl in list_controls.splitlines():
@@ -54,7 +55,7 @@ class AlsaMixerController(base.BaseMixerController):
       return None
 
     lines = self._device.CallOutput(
-        ['amixer', '-c%d' % int(card), 'cget', 'numid=%d' % numid])
+        ['amixer', f'-c{int(card)}', 'cget', f'numid={int(numid)}'])
     logging.debug('lines: %s', lines)
     m = re.search(r'^.*: values=(.*)$', lines, re.MULTILINE)
     if m:
@@ -74,7 +75,7 @@ class AlsaMixerController(base.BaseMixerController):
         logging.debug('Saving \'%s\' with value %s on card %s',
                       name, old_value, card)
       logging.debug('Setting \'%s\' to %s on card %s', name, value, card)
-      command = ['amixer', '-c', card, 'cset', 'name=%r' % name, value]
+      command = ['amixer', '-c', card, 'cset', f'name={name!r}', value]
       self._device.CheckCall(command)
     if store:
       self._restore_mixer_control_stack.append((restore_mixer_settings, card))
@@ -82,7 +83,7 @@ class AlsaMixerController(base.BaseMixerController):
   def GetCardIndexByName(self, card_name):
     """See BaseMixerController.GetCardIndexByName"""
     if not isinstance(card_name, str):
-      raise ValueError('card_name %r is not a str' % card_name)
+      raise ValueError(f'card_name {card_name!r} is not a str')
     if card_name.isdigit():
       return card_name
     output = self._device.CallOutput(['aplay', '-l'])
@@ -90,7 +91,7 @@ class AlsaMixerController(base.BaseMixerController):
       m = self._RE_CARD_INDEX.match(line)
       if m is not None and m.group(2) == card_name:
         return m.group(1)
-    raise ValueError('device name %s is incorrect' % card_name)
+    raise ValueError(f'device name {card_name} is incorrect')
 
 
 class AlsaAudioControl(base.BaseAudioControl):
@@ -146,7 +147,7 @@ class AlsaAudioControl(base.BaseAudioControl):
   def _PlaybackWavFile(self, path, card, device):
     """See BaseAudioControl._PlaybackWavFile"""
     self._device.Call(
-        ['aplay', '-t', 'wav', '-D', 'plughw:%s,%s' % (card, device), path])
+        ['aplay', '-t', 'wav', '-D', f'plughw:{card},{device}', path])
 
   def _StopPlaybackWavFile(self):
     """See BaseAudioControl._StopPlaybackWavFile"""
@@ -200,8 +201,7 @@ class AlsaAudioControl(base.BaseAudioControl):
       tokens = [x.strip() for x in line.split(':')]
       if tokens[0] == 'available channels':
         if not isinstance(orig_channel, int):
-          raise TypeError(
-              'Channel should be an integer: %s' % type(orig_channel))
+          raise TypeError(f'Channel should be an integer: {type(orig_channel)}')
         #  The values of channels are increased.
         channel = GetElementFromList(
             list(map(int, tokens[1].split(' '))), orig_channel)
@@ -214,7 +214,7 @@ class AlsaAudioControl(base.BaseAudioControl):
       if tokens[0] == 'available rates':
         if not isinstance(orig_rate, int):
           raise TypeError(
-              'Sample rate should be an integer: %s' % type(orig_rate))
+              f'Sample rate should be an integer: {type(orig_rate)}')
         #  The values of rates are increased.
         rate = GetElementFromList(
             list(map(int, tokens[1].split(' '))), orig_rate)

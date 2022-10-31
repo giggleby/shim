@@ -26,6 +26,7 @@ from cros.factory.umpire.server.web import wsgi
 from cros.factory.utils import net_utils
 from cros.factory.utils import type_utils
 
+
 # Forward to the correct executer with additional arguments.
 if __name__ == '__main__':
   unittest_helper.ExecScriptWithTrial()
@@ -64,8 +65,8 @@ class TestWebApplication(wsgi.WebApp):
   def Handle(self, session):
     logging.debug('test webapp is called: %s', session)
     return session.Respond(
-        '\n  - REQUEST_METHOD=%s\n  - remote_address=%s\n  - PATH_INFO=%s' %
-        (session.REQUEST_METHOD, session.remote_address, session.PATH_INFO))
+        f'\n  - REQUEST_METHOD={session.REQUEST_METHOD}\n  - remote_address='
+        f'{session.remote_address}\n  - PATH_INFO={session.PATH_INFO}')
 
 
 class TestCommand:

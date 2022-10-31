@@ -27,6 +27,7 @@ from . import platform_utils
 from . import process_utils
 from . import type_utils
 
+
 # Block size in bytes for iteratively generating hashes of files.
 _HASH_FILE_READ_BLOCK_SIZE = 1024 * 64  # 64kb
 
@@ -87,7 +88,7 @@ class Glob:
     elif isinstance(exclude, str):
       self.exclude = [exclude]
     else:
-      raise TypeError('Unexpected exclude type %s' % type(exclude))
+      raise TypeError(f'Unexpected exclude type {type(exclude)}')
 
   def Match(self, root):
     """Returns files that match include but not exclude.
@@ -252,7 +253,7 @@ def TailFile(path, max_length=5 * 1024 * 1024, dut=None):
     # Skip the first (probably incomplete) line
     skipped_line, unused_sep, data = data.partition('\n')
     offset += len(skipped_line) + 1
-    data = ('<truncated %d bytes>\n' % offset) + data
+    data = f'<truncated {int(offset)} bytes>\n' + data
   return data
 
 
@@ -319,8 +320,9 @@ def CopyFileSkipBytes(in_file_name, out_file_name, skip_size):
   """
   in_file_size = os.path.getsize(in_file_name)
   if in_file_size <= skip_size:
-    raise ValueError('skip_size: %d should be smaller than input file: %s '
-                     '(size: %d)' % (skip_size, in_file_name, in_file_size))
+    raise ValueError(
+        f'skip_size: {int(skip_size)} should be smaller than input file: '
+        f'{in_file_name} (size: {int(in_file_size)})')
 
   _CHUNK_SIZE = 4096
   with open(in_file_name, 'rb') as in_file:
@@ -419,7 +421,7 @@ def GetCompressor(file_format, allow_parallel=True):
   if not allow_parallel:
     program_list = program_list[-1:]
   for program in program_list:
-    if os.system('type %s >/dev/null 2>&1' % program) == 0:
+    if os.system(f'type {program} >/dev/null 2>&1') == 0:
       return program
   return None
 
@@ -446,10 +448,10 @@ def ExtractFile(compressed_file, output_dir, only_extracts=None, overwrite=True,
   """
 
   if not os.path.exists(compressed_file):
-    raise ExtractFileError('Missing compressed file %r' % compressed_file)
+    raise ExtractFileError(f'Missing compressed file {compressed_file!r}')
   if not os.access(compressed_file, os.R_OK):
-    raise ExtractFileError('Permission denied reading compressed file %r' %
-                           compressed_file)
+    raise ExtractFileError(
+        f'Permission denied reading compressed file {compressed_file!r}')
   TryMakeDirs(output_dir)
   logging.info('Extracting %s to %s', compressed_file, output_dir)
   only_extracts = type_utils.MakeList(only_extracts) if only_extracts else []
@@ -481,12 +483,11 @@ def ExtractFile(compressed_file, output_dir, only_extracts=None, overwrite=True,
         if use_parallel:
           cmd += ['-I', GetCompressor(file_format, use_parallel)]
         if exclude:
-          cmd += ['--exclude=%s' % e for e in exclude]
+          cmd += [f'--exclude={e}' for e in exclude]
         cmd += only_extracts
         break
     if unsupported:
-      raise ExtractFileError('Unsupported compressed file: %s' %
-                             compressed_file)
+      raise ExtractFileError(f'Unsupported compressed file: {compressed_file}')
   try:
     return process_utils.Spawn(cmd, log=True, call=True,
                                check_call=not ignore_errors,
@@ -652,8 +653,8 @@ class FileLock:
           remaining_secs -= self._retry_secs
           if remaining_secs < 0:
             raise FileLockTimeoutError(
-                'Could not acquire file lock of %s in %s second(s)' %
-                (self._lockfile, self._timeout_secs)) from None
+                f'Could not acquire file lock of {self._lockfile} in '
+                f'{self._timeout_secs} second(s)') from None
         else:
           raise
 
@@ -682,13 +683,12 @@ def WriteWithSudo(file_path, content):
     content: The content to write.
   """
   # Write with sudo, since only root can write this.
-  process = process_utils.Spawn(
-      'cat > %s' % pipes.quote(file_path), sudo=True,
-      stdin=subprocess.PIPE, shell=True)
+  process = process_utils.Spawn(f'cat > {pipes.quote(file_path)}', sudo=True,
+                                stdin=subprocess.PIPE, shell=True)
   process.stdin.write(content)
   process.stdin.close()
   if process.wait():
-    raise RuntimeError('Unable to write %s' % file_path)
+    raise RuntimeError(f'Unable to write {file_path}')
 
 
 def GlobSingleFile(pattern):
@@ -702,8 +702,7 @@ def GlobSingleFile(pattern):
   """
   matches = glob.glob(pattern)
   if len(matches) != 1:
-    raise ValueError('Expected one match for %s but got %s' %
-                     (pattern, matches))
+    raise ValueError(f'Expected one match for {pattern} but got {matches}')
 
   return matches[0]
 
@@ -826,7 +825,7 @@ def HashSourceTree(py_path):
       # Use first 4 bytes of SHA1
       hash_function=lambda data: hashlib.sha1(data).hexdigest()[0:8])
   if not hashes:
-    raise RuntimeError('No sources found in %s' % py_path)
+    raise RuntimeError(f'No sources found in {py_path}')
 
   return dict(
       # Log hash function used, just in case we ever want to change it
@@ -841,7 +840,7 @@ def HashPythonArchive(par_path):
       # Use first 4 bytes of SHA1
       hash_function=lambda data: hashlib.sha1(data).hexdigest()[0:8])
   if not hashes:
-    raise RuntimeError('No sources found at %s' % par_path)
+    raise RuntimeError(f'No sources found at {par_path}')
 
   return dict(
       # Log hash function used, just in case we ever want to change it
@@ -952,7 +951,7 @@ def AtomicWrite(path, binary=False, fsync=True):
   path_dir = os.path.abspath(os.path.dirname(path))
   path_file = os.path.basename(path)
   assert path_file != ''  # Make sure path contains a file.
-  with UnopenedTemporaryFile(prefix='%s_atomicwrite_' % path_file,
+  with UnopenedTemporaryFile(prefix=f'{path_file}_atomicwrite_',
                              dir=path_dir) as tmp_path:
     with open(tmp_path, mode, encoding=encoding) as f:
       yield f

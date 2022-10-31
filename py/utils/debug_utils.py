@@ -38,17 +38,17 @@ def DumpStackTracebacks():
       '*****\n')
   # pylint: disable=protected-access
   for thread_id, stack in sys._current_frames().items():
-    results.append('Thread %s (id=%d):\n' %
-                   (id_name_map.get(thread_id, 'unnamed-%d' % thread_id),
-                    thread_id))
+    results.append(
+        f"Thread {id_name_map.get(thread_id, f'unnamed-{thread_id:d}')}"
+        f" (id={int(thread_id)}):\n")
     for filename, line_no, function_name, text in (
         traceback.extract_stack(stack)):
       # Same format as the usual Python stack trace, but indented
       # twice
-      results.append('  File: "%s", line %d, in %s\n' % (
-          filename, line_no, function_name))
+      results.append(
+          f'  File: "{filename}", line {int(line_no)}, in {function_name}\n')
       if text:
-        results.append('    %s\n' % text.strip())
+        results.append(f'    {text.strip()}\n')
 
   results.append('***** End of debug information.\n')
 
@@ -203,7 +203,7 @@ def NoRecursion(func):
     if thread_id in func._running_threads and sys_utils.InChroot():
       logging.error('Detect unexpected recursion: \n%s', DumpStackTracebacks())
     assert thread_id not in func._running_threads, \
-        'Recursion for %s is not allowed' % func.__name__
+        f'Recursion for {func.__name__} is not allowed'
     try:
       func._running_threads.append(thread_id)
       return func(*args, **kwargs)

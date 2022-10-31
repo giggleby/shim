@@ -9,6 +9,7 @@ import pkgutil
 
 from cros.factory.utils import arg_utils
 
+
 # The index for indicating the situation that there is only one argument.
 _FAKE_INDEX = 'FAKE_INDEX'
 NOTHING = []
@@ -37,9 +38,9 @@ def RegisterFunction(name, cls, force=False):
     force: True to allow overwriting a registered function name.
   """
   if not isinstance(cls, type) or not issubclass(cls, Function):
-    raise FunctionException('"%s" is not subclass of Function.' % cls.__name__)
+    raise FunctionException(f'"{cls.__name__}" is not subclass of Function.')
   if name in _function_map and not force:
-    raise FunctionException('Function "%s" is already registered.' % name)
+    raise FunctionException(f'Function "{name}" is already registered.')
   _function_map[name] = cls
 
 
@@ -103,14 +104,14 @@ def InterpretFunction(func_expression):
 
   if len(func_expression) != 1:
     raise FunctionException(
-        'Function expression %s should only contain 1 item.' % func_expression)
+        f'Function expression {func_expression} should only contain 1 item.')
   func_name, kwargs = next(iter(func_expression.items()))
   if func_name not in _function_map:
-    raise FunctionException('Function "%s" is not registered.' % func_name)
+    raise FunctionException(f'Function "{func_name}" is not registered.')
 
   if not isinstance(kwargs, str) and not isinstance(kwargs, dict):
     raise FunctionException(
-        'Invalid argument: "%s" should be string or dict.' % kwargs)
+        f'Invalid argument: "{kwargs}" should be string or dict.')
   if isinstance(kwargs, str):
     # If the argument is a string, then treat it the only required argument.
     instance = _function_map[func_name](**{_FAKE_INDEX: kwargs})
@@ -141,16 +142,16 @@ class Function:
     if len(kwargs) == 1 and _FAKE_INDEX in kwargs:
       if not self.ARGS:
         raise FunctionException(
-            'Function "%s" does not require any argument.' %
-            self.__class__.__name__)
+            f'Function "{self.__class__.__name__}" does not require any '
+            'argument.')
       if len(self.ARGS) == 1:
         kwargs = {self.ARGS[0].name: kwargs[_FAKE_INDEX]}
       else:
         required_args = [arg.name for arg in self.ARGS if not arg.IsOptional()]
         if len(required_args) != 1:
           raise FunctionException(
-              'Function "%s" requires more than one argument: %s' %
-              (self.__class__.__name__, required_args))
+              f'Function "{self.__class__.__name__}" requires more than one '
+              f'argument: {required_args}')
         kwargs = {required_args[0]: kwargs[_FAKE_INDEX]}
     self.args = arg_utils.Args(*self.ARGS).Parse(kwargs)
 

@@ -12,6 +12,7 @@ import os
 
 from cros.factory.umpire.server.service import umpire_service
 
+
 LOG_FILENAME = 'umpire_sync_log'
 SERVICE_NAME = 'umpire_sync'
 STATUS_FILENAME = 'umpire_sync_status.json'
@@ -41,15 +42,14 @@ class UmpireSync(umpire_service.UmpireService):
     umpire_sync_config = umpire_config['services']['umpire_sync']
     log_path = os.path.join(env.log_dir, LOG_FILENAME)
     status_path = os.path.join(env.umpire_data_dir, STATUS_FILENAME)
-    primary_url = 'http://%s:%s' % (
-        umpire_sync_config['primary_information']['ip'],
-        umpire_sync_config['primary_information']['port'])
+    primary_url = (f"http://{umpire_sync_config['primary_information']['ip']}:"
+                   f"{umpire_sync_config['primary_information']['port']}")
     secondary_urls = []
     sync_time = umpire_sync_config.get('synchronize_time', '60')
 
     if 'secondary_information' in umpire_sync_config:
       for info in umpire_sync_config['secondary_information']:
-        secondary_url = 'http://%s:%s' % (info['ip'], info['port'])
+        secondary_url = f"http://{info['ip']}:{info['port']}"
         secondary_urls.append(secondary_url)
 
     script_path = os.path.join(env.server_toolkit_dir, 'py', 'umpire_sync',

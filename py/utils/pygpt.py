@@ -75,14 +75,15 @@ class UTF16StructField(StructField):
 
   def __init__(self, max_length, name):
     self.max_length = max_length
-    fmt = '%ds' % max_length
+    fmt = f'{int(max_length)}s'
     super().__init__(fmt, name)
 
   def Pack(self, value):
     new_value = value.encode(self.encoding)
     if len(new_value) >= self.max_length:
-      raise StructError('Value "%s" cannot be packed into field %s (len=%s)' %
-                        (value, self.name, self.max_length))
+      raise StructError(
+          f'Value "{value}" cannot be packed into field {self.name} (len='
+          f'{self.max_length})')
     return new_value
 
   def Unpack(self, value):
@@ -111,8 +112,8 @@ class GUIDStructField(StructField):
     if value is None:
       return b'\x00' * 16
     if not isinstance(value, uuid.UUID):
-      raise StructError('Field %s needs a GUID value instead of [%r].' %
-                        (self.name, value))
+      raise StructError(
+          f'Field {self.name} needs a GUID value instead of [{value!r}].')
     return value.bytes_le
 
   def Unpack(self, value):
@@ -135,8 +136,7 @@ def BitProperty(getter, setter, shift, mask):
   def _getter(self):
     return (getter(self) >> shift) & mask
   def _setter(self, value):
-    assert value & mask == value, (
-        'Value %s out of range (mask=%s)' % (value, mask))
+    assert value & mask == value, (f'Value {value} out of range (mask={mask})')
     setter(self, getter(self) & ~(mask << shift) | value << shift)
   return property(_getter, _setter)
 
@@ -148,7 +148,7 @@ def RemovePartition(image, part):
     image: a path to an image file.
     part: the partition number.
   """
-  print('Removing partition %d...' % part)
+  print(f'Removing partition {int(part)}...')
   add_cmd = GPTCommands.Add()
   add_cmd.ExecuteCommandLine('-i', str(part), '-t', 'Unused', image)
 
@@ -187,8 +187,8 @@ class PartitionAttributeStructField(StructField):
 
   def Pack(self, value):
     if not isinstance(value, PartitionAttributes):
-      raise StructError('Given value %r is not %s.' %
-                        (value, PartitionAttributes.__name__))
+      raise StructError(
+          f'Given value {value!r} is not {PartitionAttributes.__name__}.')
     return value.raw
 
   def Unpack(self, value):
@@ -282,8 +282,9 @@ class GPTObject:
   def __init__(self, *args, **kargs):
     if args:
       if len(args) != len(self.FIELDS):
-        raise GPTError('%s need %s arguments (found %s).' %
-                       (type(self).__name__, len(self.FIELDS), len(args)))
+        raise GPTError(
+            f'{type(self).__name__} need {len(self.FIELDS)} arguments (found '
+            f'{len(args)}).')
       for f, value in zip(self.FIELDS, args):
         setattr(self, f.name, value)
     else:
@@ -292,8 +293,8 @@ class GPTObject:
     all_names = list(self.__slots__)
     for name, value in kargs.items():
       if name not in all_names:
-        raise GPTError('%s does not support keyword arg <%s>.' %
-                       (type(self).__name__, name))
+        raise GPTError(
+            f'{type(self).__name__} does not support keyword arg <{name}>.')
       setattr(self, name, value)
 
   def __iter__(self):
@@ -301,8 +302,8 @@ class GPTObject:
     return (getattr(self, f.name) for f in self.FIELDS)
 
   def __repr__(self):
-    return '(%s: %s)' % (type(self).__name__, ', '.join(
-        '%s=%r' % (f, getattr(self, f)) for f in self.__slots__))
+    repr_desc = ', '.join(f'{f}={getattr(self, f)!r}' for f in self.__slots__)
+    return f'({type(self).__name__}: {repr_desc})'
 
   @classmethod
   def GetStructFormat(cls):
@@ -490,7 +491,7 @@ class GPT:
     NAMES_LENGTH = 72
 
     def __str__(self):
-      return '%s#%s' % (self.image, self.number)
+      return f'{self.image}#{self.number}'
 
     def IsUnused(self):
       """Returns if the partition is unused and can be allocated."""
@@ -574,7 +575,7 @@ class GPT:
     The underlying call is BLKSSZGET. An alternative command is blockdev,
     but that needs root permission even if we just want to get sector size.
     """
-    assert cls.IsBlockDevice(block_dev), '%s must be block device.' % block_dev
+    assert cls.IsBlockDevice(block_dev), f'{block_dev} must be block device.'
     return int(subprocess.check_output(
         ['lsblk', '-d', '-n', '-r', '-o', 'log-sec', block_dev]).strip())
 
@@ -670,7 +671,7 @@ class GPT:
       number: an integer as 1-based partition number.
     """
     if not 0 < number <= len(self.partitions):
-      raise GPTError('Invalid partition number %s.' % number)
+      raise GPTError(f'Invalid partition number {number}.')
     return self.partitions[number - 1]
 
   def UpdatePartition(self, part, number):
@@ -704,7 +705,7 @@ class GPT:
     old_size = self.GetSize()
     if new_size % self.block_size:
       raise GPTError(
-          'New file size %d is not valid for image files.' % new_size)
+          f'New file size {int(new_size)} is not valid for image files.')
     new_blocks = new_size // self.block_size
     if old_size != new_size:
       logging.warning('Image size (%d, LBA=%d) changed from %d (LBA=%d).',
@@ -748,12 +749,11 @@ class GPT:
     # largest LBA.
     p = self.GetPartition(number)
     if p.IsUnused():
-      raise GPTError('Partition %s is unused.' % p)
+      raise GPTError(f'Partition {p} is unused.')
     max_used_lba = self.GetMaxUsedLBA()
     # TODO(hungte) We can do more by finding free space after i.
     if max_used_lba > p.LastLBA:
-      raise GPTError(
-          'Cannot expand %s because it is not allocated at last.' % p)
+      raise GPTError(f'Cannot expand {p} because it is not allocated at last.')
 
     old_blocks = p.blocks
     p.Update(LastLBA=self.header.LastUsableLBA - reserved_blocks)
@@ -773,18 +773,19 @@ class GPT:
 
     def CheckOutsideUsable(name, lba, outside_entries=False):
       if lba < 1:
-        raise GPTError('%s should not live in LBA %s.' % (name, lba))
+        raise GPTError(f'{name} should not live in LBA {lba}.')
       if lba > max(header.BackupLBA, header.CurrentLBA):
         # Note this is "in theory" possible, but we want to report this as
         # error as well, since it usually leads to error.
-        raise GPTError('%s (%s) should not be larger than BackupLBA (%s).' %
-                       (name, lba, header.BackupLBA))
+        raise GPTError(f'{name} ({lba}) should not be larger than BackupLBA ('
+                       f'{header.BackupLBA}).')
       if header.FirstUsableLBA <= lba <= header.LastUsableLBA:
-        raise GPTError('%s (%s) should not be included in usable LBAs [%s,%s]' %
-                       (name, lba, header.FirstUsableLBA, header.LastUsableLBA))
+        raise GPTError(f'{name} ({lba}) should not be included in usable LBAs ['
+                       f'{header.FirstUsableLBA},{header.LastUsableLBA}]')
       if outside_entries and entries_first_lba <= lba <= entries_last_lba:
-        raise GPTError('%s (%s) should be outside partition entries [%s,%s]' %
-                       (name, lba, entries_first_lba, entries_last_lba))
+        raise GPTError(f'{name} ({lba}) should be outside partition entries ['
+                       f'{entries_first_lba},{entries_last_lba}]')
+
     CheckOutsideUsable('Header', header.CurrentLBA, True)
     CheckOutsideUsable('Backup header', header.BackupLBA, True)
     CheckOutsideUsable('Partition entries', entries_first_lba)
@@ -796,20 +797,20 @@ class GPT:
     lba_list.sort(key=lambda t: t[0])
     for i in range(len(lba_list) - 1):
       if lba_list[i][1] >= lba_list[i + 1][0]:
-        raise GPTError('Overlap in partition entries: [%s,%s]%s, [%s,%s]%s.' %
-                       (lba_list[i] + lba_list[i + 1]))
+        raise GPTError(
+            'Overlap in partition entries: '
+            f'[{lba_list[i][0]},{lba_list[i][1]}]{lba_list[i][2]}, '
+            f'[{lba_list[i+1][0]},{lba_list[i+1][1]}]{lba_list[i+1][2]}.')
     # Now, check the first and last partition.
     if lba_list:
       p = lba_list[0][2]
       if p.FirstLBA < header.FirstUsableLBA:
-        raise GPTError(
-            'Partition %s must not go earlier (%s) than FirstUsableLBA=%s' %
-            (p, p.FirstLBA, header.FirstLBA))
+        raise GPTError(f'Partition {p} must not go earlier ({p.FirstLBA}) than '
+                       f'FirstUsableLBA={header.FirstLBA}')
       p = lba_list[-1][2]
       if p.LastLBA > header.LastUsableLBA:
-        raise GPTError(
-            'Partition %s must not go further (%s) than LastUsableLBA=%s' %
-            (p, p.LastLBA, header.LastLBA))
+        raise GPTError(f'Partition {p} must not go further ({p.LastLBA}) than '
+                       f'LastUsableLBA={header.LastLBA}')
     # Check if UniqueGUIDs are not unique.
     if len(set(p.UniqueGUID for p in parts)) != len(parts):
       raise GPTError('Partition UniqueGUIDs are duplicated.')
@@ -1083,7 +1084,7 @@ class GPTCommands:
         args.image_file.write(b'\0' * block_size * gpt.header.FirstUsableLBA)
       gpt.WriteToFile(args.image_file)
       args.image_file.close()
-      return 'Created GPT for %s' % args.image_file.name
+      return f'Created GPT for {args.image_file.name}'
 
   class Boot(SubCommand):
     """Edit the PMBR sector for legacy BIOSes.
@@ -1152,33 +1153,32 @@ class GPTCommands:
       gpt.WriteToFile(args.image_file)
       args.image_file.close()
       if args.primary_ignore:
-        return ('Set %s primary GPT header to %s.' %
-                (args.image_file.name, gpt.header.SIGNATURE_IGNORE))
-      return ('Changed GPT signature for %s to %s.' %
-              (args.image_file.name, new_signature))
+        return (f'Set {args.image_file.name} primary GPT header to '
+                f'{gpt.header.SIGNATURE_IGNORE}.')
+      return (
+          f'Changed GPT signature for {args.image_file.name} to {new_signature}'
+          '.')
 
   class Repair(SubCommand):
     """Repair damaged GPT headers and tables."""
 
     def DefineArgs(self, parser):
-      parser.add_argument(
-          'image_file', type=argparse.FileType('rb+'),
-          help='Disk image file to repair.')
+      parser.add_argument('image_file', type=argparse.FileType('rb+'),
+                          help='Disk image file to repair.')
 
     def Execute(self, args):
       gpt = GPT.LoadFromFile(args.image_file)
       gpt.Resize(GPT.GetImageSize(args.image_file.name))
       gpt.WriteToFile(args.image_file)
       args.image_file.close()
-      return 'Disk image file %s repaired.' % args.image_file.name
+      return f'Disk image file {args.image_file.name} repaired.'
 
   class Expand(SubCommand):
     """Expands a GPT partition to all available free space."""
 
     def DefineArgs(self, parser):
-      parser.add_argument(
-          '-i', '--number', type=int, required=True,
-          help='The partition to expand.')
+      parser.add_argument('-i', '--number', type=int, required=True,
+                          help='The partition to expand.')
       parser.add_argument(
           'image_file', type=argparse.FileType('rb+'),
           help='Disk image file to modify.')
@@ -1190,12 +1190,12 @@ class GPTCommands:
       args.image_file.close()
       if old_blocks < new_blocks:
         return (
-            'Partition %s on disk image file %s has been extended '
-            'from %s to %s .' %
-            (args.number, args.image_file.name, old_blocks * gpt.block_size,
-             new_blocks * gpt.block_size))
-      return ('Nothing to expand for disk image %s partition %s.' %
-              (args.image_file.name, args.number))
+            f'Partition {args.number} on disk image file {args.image_file.name}'
+            f' has been extended from {old_blocks * gpt.block_size} to '
+            f'{new_blocks * gpt.block_size} .')
+      return (
+          f'Nothing to expand for disk image {args.image_file.name} partition '
+          f'{args.number}.')
 
   class Add(SubCommand):
     """Add, edit, or remove a partition entry.
@@ -1286,17 +1286,16 @@ class GPTCommands:
         return default_value if arg_value is None else arg_value
 
       attrs = part.Attributes
-      for name in ['legacy_boot', 'required', 'priority', 'tries',
-                   'successful', 'raw_16']:
+      for name in [
+          'legacy_boot', 'required', 'priority', 'tries', 'successful', 'raw_16'
+      ]:
         UpdateAttr(name)
       first_lba = GetArg(args.begin, part.FirstLBA)
       part.Update(
-          Names=GetArg(args.label, part.Names),
-          FirstLBA=first_lba,
+          Names=GetArg(args.label, part.Names), FirstLBA=first_lba,
           LastLBA=first_lba - 1 + GetArg(args.sectors, part.blocks),
-          TypeGUID=GetArg(args.type_guid, part.TypeGUID),
-          UniqueGUID=GetArg(args.unique_guid, part.UniqueGUID),
-          Attributes=attrs)
+          TypeGUID=GetArg(args.type_guid, part.TypeGUID), UniqueGUID=GetArg(
+              args.unique_guid, part.UniqueGUID), Attributes=attrs)
 
       # Wipe partition again if it should be empty.
       if part.IsUnused():
@@ -1306,10 +1305,10 @@ class GPTCommands:
       args.image_file.close()
       if part.IsUnused():
         # If we do ('%s' % part) there will be TypeError.
-        return 'Deleted (zeroed) %s.' % (part,)
-      return ('%s %s (%s+%s).' %
-              ('Added' if is_new_part else 'Modified',
-               part, part.FirstLBA, part.blocks))
+        return f'Deleted (zeroed) {part}.'
+      return (
+          f"{'Added' if is_new_part else 'Modified'} {part} ({part.FirstLBA}+"
+          f"{part.blocks}).")
 
   class Show(SubCommand):
     """Show partition table and entries.
@@ -1318,9 +1317,8 @@ class GPTCommands:
     """
 
     def DefineArgs(self, parser):
-      parser.add_argument(
-          '--numeric', '-n', action='store_true',
-          help='Numeric output only.')
+      parser.add_argument('--numeric', '-n', action='store_true',
+                          help='Numeric output only.')
       parser.add_argument(
           '--quick', '-q', action='store_true',
           help='Quick output.')
@@ -1329,12 +1327,10 @@ class GPTCommands:
           help='Show specified partition only, with format args.')
       for name, help_str in GPTCommands.FORMAT_ARGS:
         # TODO(hungte) Alert if multiple args were specified.
-        parser.add_argument(
-            '--%s' % name, '-%c' % name[0], action='store_true',
-            help='[format] %s.' % help_str)
-      parser.add_argument(
-          'image_file', type=argparse.FileType('rb'),
-          help='Disk image file to show.')
+        parser.add_argument(f'--{name}', f'-{name[0]}', action='store_true',
+                            help=f'[format] {help_str}.')
+      parser.add_argument('image_file', type=argparse.FileType('rb'),
+                          help='Disk image file to show.')
 
     def Execute(self, args):
       """Show partition table and entries."""
@@ -1354,13 +1350,13 @@ class GPTCommands:
 
       def FormatAttribute(attrs, chromeos_kernel=False):
         if args.numeric:
-          return '[%x]' % (attrs.raw >> 48)
+          return f'[{attrs.raw >> 48:x}]'
         results = []
         if chromeos_kernel:
           results += [
-              'priority=%d' % attrs.priority,
-              'tries=%d' % attrs.tries,
-              'successful=%d' % attrs.successful]
+              f'priority={int(attrs.priority)}', f'tries={int(attrs.tries)}',
+              f'successful={int(attrs.successful)}'
+          ]
         if attrs.required:
           results += ['required=1']
         if attrs.legacy_boot:
@@ -1387,7 +1383,7 @@ class GPTCommands:
         if args.Legacy:
           return p.Attributes.legacy_boot
         if args.Attribute:
-          return '[%x]' % (p.Attributes.raw >> 48)
+          return f'[{p.Attributes.raw >> 48:x}]'
         return None
 
       def IsFormatArgsSpecified():
@@ -1404,7 +1400,7 @@ class GPTCommands:
 
       if not (args.number is None or
               0 < args.number <= gpt.header.PartitionEntriesNumber):
-        raise GPTError('Invalid partition number: %d' % args.number)
+        raise GPTError(f'Invalid partition number: {int(args.number)}')
 
       partitions = gpt.partitions
       do_print_gpt_blocks = False
@@ -1435,16 +1431,16 @@ class GPTCommands:
           print(ApplyFormatArgs(p))
           continue
 
-        print(fmt % (p.FirstLBA, p.blocks, p.number,
-                     FormatTypeGUID(p) if args.quick else
-                     'Label: "%s"' % p.Names))
+        print(
+            fmt % (p.FirstLBA, p.blocks, p.number,
+                   FormatTypeGUID(p) if args.quick else f'Label: "{p.Names}"'))
 
         if not args.quick:
           print(fmt2 % ('', 'Type', FormatTypeGUID(p)))
           print(fmt2 % ('', 'UUID', p.UniqueGUID))
           if args.numeric or IsBootableType(p.TypeGUID):
-            print(fmt2 % ('', 'Attr', FormatAttribute(
-                p.Attributes, p.IsChromeOSKernel())))
+            print(fmt2 % ('', 'Attr',
+                          FormatAttribute(p.Attributes, p.IsChromeOSKernel())))
 
       if do_print_gpt_blocks:
         if gpt.is_secondary:
@@ -1499,7 +1495,7 @@ class GPTCommands:
       if args.number:
         p = gpt.GetPartition(args.number)
         if p not in parts:
-          raise GPTError('%s is not a ChromeOS kernel.' % p)
+          raise GPTError(f'{p} is not a ChromeOS kernel.')
         pri = p.Attributes.priority
         friends = groups.pop(pri)
         new_pri = max(groups) + 1
@@ -1567,9 +1563,8 @@ class GPTCommands:
       parser.add_argument(
           '-l', '--label',
           help='Search for Label')
-      parser.add_argument(
-          '-n', '--numeric', action='store_true',
-          help='Numeric output only.')
+      parser.add_argument('-n', '--numeric', action='store_true',
+                          help='Numeric output only.')
       parser.add_argument(
           '-1', '--single-match', action='store_true',
           help='Fail if more than one match is found.')
@@ -1592,7 +1587,7 @@ class GPTCommands:
         args.drive.close()
       else:
         drives = [
-            '/dev/%s' % name for name in subprocess.check_output(
+            f'/dev/{name}' for name in subprocess.check_output(
                 'lsblk -d -n -r -o name', shell=True, encoding='utf-8').split()
         ]
 
@@ -1630,8 +1625,7 @@ class GPTCommands:
             print(p.number)
           else:
             # This is actually more for block devices.
-            print('%s%s%s' % (p.image, 'p' if p.image[-1].isdigit() else '',
-                              p.number))
+            print(f"{p.image}{'p' if p.image[-1].isdigit() else ''}{p.number}")
 
       if found < 1 or (args.single_match and found > 1):
         return 1
@@ -1658,11 +1652,11 @@ def main():
     if isinstance(code, int):
       sys.exit(code)
     elif isinstance(code, str):
-      print('OK: %s' % code)
+      print(f'OK: {code}')
   except Exception as e:
     if args.verbose or args.debug:
       logging.exception('Failure in command [%s]', args.command)
-    sys.exit('ERROR: %s: %s' % (args.command, str(e) or 'Unknown error.'))
+    sys.exit(f"ERROR: {args.command}: {str(e) or 'Unknown error.'}")
 
 
 if __name__ == '__main__':

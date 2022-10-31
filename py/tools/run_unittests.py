@@ -33,6 +33,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
+
 FACTORY_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..'))
 # Directories to search unit test files starting from factory repository root.
@@ -237,34 +238,35 @@ class RunTests:
     if self._max_jobs > 1:
       tests = set(self._tests) - set(self._isolated_tests)
       num_total_tests = len(tests) + len(self._isolated_tests)
-      self._InfoMessage('Run %d tests in parallel with %d jobs:' %
-                        (len(tests), self._max_jobs))
+      self._InfoMessage(
+          f'Run {len(tests)} tests in parallel with {int(self._max_jobs)} jobs:'
+      )
     else:
       tests = set(self._tests) | set(self._isolated_tests)
       num_total_tests = len(tests)
-      self._InfoMessage('Run %d tests sequentially:' % len(tests))
+      self._InfoMessage(f'Run {len(tests)} tests sequentially:')
 
     self._RunInParallel(tests, self._max_jobs)
     if self._max_jobs > 1 and self._isolated_tests:
-      self._InfoMessage('Run %d isolated tests sequentially:' %
-                        len(self._isolated_tests))
+      self._InfoMessage(
+          f'Run {len(self._isolated_tests)} isolated tests sequentially:')
       self._RunInParallel(self._isolated_tests, 1)
 
-    self._PassMessage('%d/%d tests passed.' % (len(self._passed_tests),
-                                               num_total_tests))
+    self._PassMessage(
+        f'{len(self._passed_tests)}/{int(num_total_tests)} tests passed.')
 
     if self._failed_tests and self._fallback:
       self._InfoMessage('Re-run failed tests sequentially:')
       rerun_tests = sorted(self._failed_tests.keys())
       self._failed_tests.clear()
       self._RunInParallel(rerun_tests, 1)
-      self._PassMessage('%d/%d tests passed.' % (len(self._passed_tests),
-                                                 len(self._tests)))
+      self._PassMessage(
+          f'{len(self._passed_tests)}/{len(self._tests)} tests passed.')
 
-    self._InfoMessage('Elapsed time: %.2f s' % (time.time() - self._start_time))
+    self._InfoMessage(f'Elapsed time: {time.time() - self._start_time:.2f} s')
 
     if self._failed_tests:
-      self._FailMessage('Logs of %d failed tests:' % len(self._failed_tests))
+      self._FailMessage(f'Logs of {len(self._failed_tests)} failed tests:')
       # Log all the values in the dict (i.e., the log file paths)
       for test_name, log_path in sorted(self._failed_tests.items()):
         self._FailMessage(f'{log_path} ({test_name}):\n'
@@ -290,9 +292,8 @@ class RunTests:
     run_count = self._run_counts[test_path] = self._run_counts.get(
         test_path, 0) + 1
 
-    return os.path.join(
-        self._log_dir,
-        '%s.%d.log' % (test_path.replace('/', '_'), run_count))
+    return os.path.join(self._log_dir,
+                        f"{test_path.replace('/', '_')}.{int(run_count)}.log")
 
   def _RunInParallel(self, tests, max_jobs):
     """Runs tests in parallel.
@@ -315,7 +316,7 @@ class RunTests:
               _TestProc(test_name, self._GetLogFilename(test_name),
                         port_server_socket_file, python_path))
         except Exception:
-          self._FailMessage('Error running test %r' % test_name)
+          self._FailMessage(f'Error running test {test_name!r}')
           raise
         self._running_proc[p.proc.pid] = (p, os.path.basename(test_name))
         self._WaitRunningProcessesFewerThan(max_jobs)
@@ -359,10 +360,10 @@ class RunTests:
     failedReason = self._CheckTestFailedReason(p)
     if failedReason:
       self._FailMessage(
-          '*** FAIL [%.2f s] %s (%s)' % (duration, p.test_name, failedReason))
+          f'*** FAIL [{duration:.2f} s] {p.test_name} ({failedReason})')
       self._failed_tests[p.test_name] = p.log_file_name
     else:
-      self._PassMessage('*** PASS [%.2f s] %s' % (duration, p.test_name))
+      self._PassMessage(f'*** PASS [{duration:.2f} s] {p.test_name}')
       self._passed_tests.add(p.test_name)
 
   def _TerminateAndCleanupAll(self):
@@ -421,12 +422,12 @@ class RunTests:
   def _ShowRunningTest(self):
     if not self._running_proc or self._plain_log:
       return
-    status = '-> %d tests running' % len(self._running_proc)
+    status = f'-> {len(self._running_proc)} tests running'
     running_tests = ', '.join([p[1] for p in self._running_proc.values()])
     if len(status) + 3 + len(running_tests) > 80:
       running_tests = running_tests[:80 - len(status) - 6] + '...'
     self._ClearLine()
-    sys.stderr.write('%s [%s]' % (status, running_tests))
+    sys.stderr.write(f'{status} [{running_tests}]')
     sys.stderr.flush()
 
 

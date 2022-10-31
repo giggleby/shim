@@ -11,6 +11,7 @@ from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
+
 FACTORY_ENV = '/usr/local/factory/bin/factory_env'
 
 MCAST_CONFIG_NAME = 'multicast_config.json'
@@ -77,7 +78,7 @@ class MulticastService(umpire_service.UmpireService):
           continue
 
         def _IsRequiredPart(component, part):
-          image_part = component + '.%s' % (part)
+          image_part = component + f'.{part}'
           return image_part in _REQUIRED_IMAGE_PARTS
 
         if 'image' in component and not _IsRequiredPart(component, part):
@@ -85,7 +86,7 @@ class MulticastService(umpire_service.UmpireService):
 
         if required_components.get(component, False):
           mcast_addrs.setdefault(component, {})
-          mcast_addrs[component][part] = '%s:%s' % (mgroup, port)
+          mcast_addrs[component][part] = f'{mgroup}:{port}'
 
         # Increment the port number here even if the port is not used, so the
         # active clients won't get the wrong payload when we update

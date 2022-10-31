@@ -6,6 +6,7 @@ import pipes
 
 from cros.factory.device import device_types
 
+
 _HWMON_PATH = '/sys/class/hwmon'
 
 
@@ -65,6 +66,7 @@ class HardwareMonitor(device_types.DeviceComponent):
     search_path = self._device.path.join(
         self._hwmon_path, '*', pipes.quote(attr_name))
     output = self._device.CheckOutput(
-        'grep %s -l -e %s' % (search_path, pipes.quote('^%s$' % attr_value)))
+        f'grep {search_path} -l -e {pipes.quote(f"^{attr_value}$")}')
+
     return [HardwareMonitorDevice(self._device, self._device.path.dirname(path))
             for path in output.splitlines()]

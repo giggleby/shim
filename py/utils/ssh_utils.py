@@ -11,6 +11,7 @@ testing_rsa identity.
 import logging
 import os
 
+
 try:
   from chromite.lib import remote_access
   _HAS_REMOTE_ACCESS = True
@@ -20,6 +21,7 @@ except ImportError:
 from . import file_utils
 from . import net_utils
 from . import process_utils
+
 
 # The path to the testing_rsa identity file.
 testing_rsa = None
@@ -42,7 +44,7 @@ def _Init():
   if not _HAS_REMOTE_ACCESS:
     raise RuntimeError('chromite.lib.remote_access does not exist.')
   if not testing_rsa:
-    target_name = '/tmp/testing_rsa.%s' % os.environ.get('USER', 'default')
+    target_name = f"/tmp/testing_rsa.{os.environ.get('USER', 'default')}"
     if not os.path.exists(target_name):
       file_utils.AtomicCopy(remote_access.TEST_PRIVATE_KEY, target_name, 0o400)
     testing_rsa = target_name
@@ -59,18 +61,14 @@ def BuildSSHCommand(identity_file=None):
   if not identity_file:
     _Init()
     identity_file = testing_rsa
-  return ['ssh',
-          '-o', 'IdentityFile=%s' % identity_file,
-          '-o', 'UserKnownHostsFile=/dev/null',
-          '-o', 'LogLevel=ERROR',
-          '-o', 'User=root',
-          '-o', 'StrictHostKeyChecking=no',
-          '-o', 'Protocol=2',
-          '-o', 'BatchMode=yes',
-          '-o', 'ConnectTimeout=30',
-          '-o', 'ServerAliveInterval=180',
-          '-o', 'ServerAliveCountMax=3',
-          '-o', 'ConnectionAttempts=4']
+  return [
+      'ssh', '-o', f'IdentityFile={identity_file}', '-o',
+      'UserKnownHostsFile=/dev/null', '-o', 'LogLevel=ERROR', '-o', 'User=root',
+      '-o', 'StrictHostKeyChecking=no', '-o', 'Protocol=2', '-o',
+      'BatchMode=yes', '-o', 'ConnectTimeout=30', '-o',
+      'ServerAliveInterval=180', '-o', 'ServerAliveCountMax=3', '-o',
+      'ConnectionAttempts=4'
+  ]
 
 
 def BuildRsyncCommand(identity_file=None):
@@ -145,8 +143,7 @@ class SSHTunnelToDUT:
       self.Close()
     self._ssh_process = SpawnSSHToDUT([
         self._remote, '-N', '-f', '-L',
-        '%s:%s:%s:%s' %
-        (self._bind_address, self._bind_port, self._host, self._host_port)
+        f'{self._bind_address}:{self._bind_port}:{self._host}:{self._host_port}'
     ], stderr=process_utils.DEVNULL, check_call=True)
 
   def Close(self):

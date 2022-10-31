@@ -21,6 +21,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 _DEVICE_DATA_KEY = 'DYNAMIC_SSH_TARGET_IP'
 
 
@@ -137,17 +138,19 @@ class SSHLink(device_types.DeviceLink):
       parameters.
     """
     if self.user:
-      sig = '%s@%s' % (self.user, self.host)
+      sig = f'{self.user}@{self.host}'
     else:
       sig = self.host
 
-    options = ['-o', 'UserKnownHostsFile=/dev/null',
-               '-o', 'StrictHostKeyChecking=no',
-               '-o', 'ConnectTimeout=%d' % self.connect_timeout]
+    options = [
+        '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no',
+        '-o', f'ConnectTimeout={int(self.connect_timeout)}'
+    ]
     if self.control_persist is not None:
-      options += ['-o', 'ControlMaster=auto',
-                  '-o', 'ControlPath=/tmp/.ssh-%r@%h:%p',
-                  '-o', 'ControlPersist=%s' % self.control_persist]
+      options += [
+          '-o', 'ControlMaster=auto', '-o', 'ControlPath=/tmp/.ssh-%r@%h:%p',
+          '-o', f'ControlPersist={self.control_persist}'
+      ]
     if self.port:
       options += ['-P' if is_scp else '-p', str(self.port)]
     if self.identity:
@@ -158,9 +161,9 @@ class SSHLink(device_types.DeviceLink):
     remote_sig, scp_options = self._signature(True)
 
     if is_push:
-      dest = '%s:%s' % (remote_sig, dest)
+      dest = f'{remote_sig}:{dest}'
     else:
-      src = '%s:%s' % (remote_sig, src)
+      src = f'{remote_sig}:{src}'
 
     if options:
       if isinstance(options, list):
@@ -168,7 +171,7 @@ class SSHLink(device_types.DeviceLink):
       elif isinstance(options, str):
         scp_options.append(options)
       else:
-        raise ValueError('options must be a list or string (got %r)' % options)
+        raise ValueError(f'options must be a list or string (got {options!r})')
 
     def _TryOnce():
       with tempfile.TemporaryFile('w+') as stderr:
@@ -205,8 +208,8 @@ class SSHLink(device_types.DeviceLink):
 
     returncode = result[1] if result else 255
     if returncode:
-      raise subprocess.CalledProcessError(
-          returncode, 'SCP failed: src=%s, dst=%s' % (src, dest))
+      raise subprocess.CalledProcessError(returncode,
+                                          f'SCP failed: src={src}, dst={dest}')
     return 0
 
   def Push(self, local, remote):
@@ -239,7 +242,7 @@ class SSHLink(device_types.DeviceLink):
     if not isinstance(command, str):
       command = ' '.join(map(pipes.quote, command))
     if cwd:
-      command = 'cd %s ; %s' % (pipes.quote(cwd), command)
+      command = f'cd {pipes.quote(cwd)} ; {command}'
 
     command = ['ssh'] + options + [remote_sig, command]
 

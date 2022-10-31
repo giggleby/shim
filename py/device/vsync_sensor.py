@@ -7,6 +7,7 @@ import os
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 
+
 IN_COUNT = 'in_count_raw'
 FREQUENCY = 'frequency'
 DEFAULT_LOCATION = 'camera'
@@ -59,19 +60,19 @@ class VSyncSensorController(sensor_utils.BasicSensorController):
     try:
       return int(self._GetSysfsValue(IN_COUNT))
     except Exception as e:
-      raise VSyncSensorException("Failed to read count: %s" % str(e)) from None
+      raise VSyncSensorException(f"Failed to read count: {str(e)}") from None
 
   def GetFrequency(self):
     try:
       return int(self._GetSysfsValue(FREQUENCY))
     except Exception as e:
-      raise VSyncSensorException("Failed to read freq: %s" % str(e)) from None
+      raise VSyncSensorException(f"Failed to read freq: {str(e)}") from None
 
   def SetFrequency(self, freq):
     try:
       self._SetSysfsValue(FREQUENCY, str(freq))
     except Exception as e:
-      raise VSyncSensorException("Failed to set freq: %s" % str(e)) from None
+      raise VSyncSensorException(f"Failed to set freq: {str(e)}") from None
 
 
 class VSyncSensor(device_types.DeviceComponent):

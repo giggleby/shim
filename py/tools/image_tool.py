@@ -33,6 +33,7 @@ import urllib.parse
 
 import yaml
 
+
 # The edit_lsb command works better if readline enabled, but will still work if
 # that is not available.
 try:
@@ -51,6 +52,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
 from cros.factory.tools import netboot_firmware_settings  # pylint: disable=wrong-import-position
 from cros.factory.utils import fmap  # pylint: disable=wrong-import-position
 from cros.factory.utils import pygpt  # pylint: disable=wrong-import-position
+
 
 # Partition index for Chrome OS stateful partition.
 PART_CROS_STATEFUL = 1
@@ -73,8 +75,8 @@ PATH_LSB_FACTORY = os.path.join('dev_image', 'etc', 'lsb-factory')
 # Preflash disk image default board name.
 PREFLASH_DEFAULT_BOARD = 'preflash'
 # Relative path of payload metadata in a preflash disk image.
-PATH_PREFLASH_PAYLOADS_JSON = os.path.join(
-    'dev_image', 'etc', '%s.json' % PREFLASH_DEFAULT_BOARD)
+PATH_PREFLASH_PAYLOADS_JSON = os.path.join('dev_image', 'etc',
+                                           f'{PREFLASH_DEFAULT_BOARD}.json')
 # Relative path of RMA image metadata.
 CROS_RMA_METADATA = 'rma_metadata.json'
 # Mode for new created folder, 0755 = u+rwx, go+rx
@@ -125,7 +127,7 @@ CMD_NAMESPACE_RMA = 'rma'
 
 def MakePartition(block_dev, part):
   """Helper function to build Linux device path for storage partition."""
-  return '%s%s%s' % (block_dev, 'p' if block_dev[-1].isdigit() else '', part)
+  return f"{block_dev}{'p' if block_dev[-1].isdigit() else ''}{part}"
 
 
 class ArgTypes:
@@ -135,7 +137,7 @@ class ArgTypes:
   def ExistsPath(path):
     """An argument with existing path."""
     if not os.path.exists(path):
-      raise argparse.ArgumentTypeError('Does not exist: %s' % path)
+      raise argparse.ArgumentTypeError(f'Does not exist: {path}')
     return path
 
   @staticmethod
@@ -161,10 +163,10 @@ class ArgTypes:
           continue
         if allow_none:
           return None
-        raise argparse.ArgumentTypeError('Does not exist: %s' % pattern)
+        raise argparse.ArgumentTypeError(f'Does not exist: {pattern}')
       if len(found) > 1:
         raise argparse.ArgumentTypeError(
-            'Too many files found for <%s>: %s' % (pattern, found))
+            f'Too many files found for <{pattern}>: {found}')
       return found[0]
 
 
@@ -207,8 +209,8 @@ class SysUtils:
 
     process = subprocess.run(commands, check=False, **kargs)
     if process.returncode != 0 and log_stderr_on_error:
-      print('command: %r stdout:\n %s\nstderr:\n%s' %
-            (commands, process.stdout, process.stderr))
+      print(f'command: {commands!r} stdout:\n {process.stdout}\nstderr:\n'
+            f'{process.stderr}')
     if check:
       process.check_returncode()
     return process.stdout if output else process.returncode
@@ -233,7 +235,7 @@ class SysUtils:
     if not os.path.exists(provided):
       provided = Shell(['which', command], output=True, check=False).strip()
     if not provided:
-      raise RuntimeError('Cannot find program: %s' % command)
+      raise RuntimeError(f'Cannot find program: {command}')
     return provided
 
   @classmethod
@@ -245,7 +247,7 @@ class SysUtils:
       except Exception:
         pass
     raise RuntimeError(
-        'Cannot find any of the following commands: %s' % ', '.join(commands))
+        f"Cannot find any of the following commands: {', '.join(commands)}")
 
   @classmethod
   def FindCGPT(cls):
@@ -256,14 +258,14 @@ class SysUtils:
     via `image_tool gpt`.
     """
     if os.path.exists(__file__) and os.access(__file__, os.X_OK):
-      return '%s gpt' % __file__
+      return f'{__file__} gpt'
 
     # Are we inside PAR?
     par_path = os.environ.get('PAR_PATH')
     if par_path:
       if os.path.basename(par_path) == 'image_tool':
-        return '%s gpt' % par_path
-      return 'sh %s image_tool gpt' % par_path
+        return f'{par_path} gpt'
+      return f'sh {par_path} image_tool gpt'
 
     # Nothing more - let's try to find the real programs.
     return cls.FindCommands('pygpt', 'cgpt')
@@ -393,7 +395,7 @@ class CrosPayloadUtils:
       cmd = [cls.GetProgramPath(), 'get_cros_payloads_dir']
       result = SudoOutput(cmd)
       if not result:
-        raise RuntimeError('%s returns empty path %r.' % (cmd, result))
+        raise RuntimeError(f'{cmd} returns empty path {result!r}.')
       cls._cros_payloads_dir = result
     return cls._cros_payloads_dir
 
@@ -406,7 +408,7 @@ class CrosPayloadUtils:
 
   @staticmethod
   def GetJSONPath(payloads_dir, board):
-    return os.path.join(payloads_dir, '%s.json' % board)
+    return os.path.join(payloads_dir, f'{board}.json')
 
   @classmethod
   def InitMetaData(cls, payloads_dir, board, mounted=False):
@@ -460,7 +462,7 @@ class CrosPayloadUtils:
       # Make sure that there are no unknown components
       for component in component_versions:
         assert component in PAYLOAD_COMPONENTS, (
-            'Unknown component "%s"' % component)
+            f'Unknown component "{component}"')
       return component_versions
 
   @classmethod
@@ -568,7 +570,7 @@ class CrosPayloadUtils:
       elif create_metadata:
         cls.InitMetaData(dest_payloads_dir, board)
       else:
-        raise RuntimeError('Cannot find %s.' % image_json_path)
+        raise RuntimeError(f'Cannot find {image_json_path}.')
 
       for component in components:
         files = cls.GetComponentFiles(image_json_path, component)
@@ -615,7 +617,7 @@ class CrosPayloadUtils:
       # Remove old files that are not used by any boards.
       for f in old_files - new_files - other_files:
         file_path = os.path.join(old_payloads_dir, f)
-        print('Remove old payload file %s.' % os.path.basename(f))
+        print(f'Remove old payload file {os.path.basename(f)}.')
         Sudo(['rm', '-f', file_path])
       # Don't copy files that already exists.
       for f in new_files & (old_files | other_files):
@@ -637,12 +639,12 @@ class CrosPayloadUtils:
           image, PART_CROS_STATEFUL, new_payloads_size - remain_size + margin)
 
     # Move the added payloads to stateful partition.
-    print('Moving payloads (%dM)...' % (new_payloads_size // MEGABYTE))
+    print(f'Moving payloads ({int(new_payloads_size // MEGABYTE)}M)...')
     with Partition(image, PART_CROS_STATEFUL).Mount(rw=True) as stateful:
       dest = os.path.join(stateful, cls.GetCrosPayloadsDir())
       dest_dir = os.path.dirname(dest)
       Sudo(['chown', '-R', 'root:root', new_payloads_dir])
-      Sudo(['mkdir', '-p', dest_dir, '-m', '%o' % MODE_NEW_DIR])
+      Sudo(['mkdir', '-p', dest_dir, '-m', f'{MODE_NEW_DIR:o}'])
       Sudo(['rsync', '-a', new_payloads_dir, dest_dir])
 
     # Shrink stateful partition.
@@ -775,7 +777,7 @@ class GPT(pygpt.GPT):
         options = [options]
       options = ['rw' if rw else 'ro'] + options
 
-      options += ['loop', 'offset=%s' % self.offset, 'sizelimit=%s' % self.size]
+      options += ['loop', f'offset={self.offset}', f'sizelimit={self.size}']
       args = ['mount', '-o', ','.join(options)]
       if fs_type:
         args += ['-t', fs_type]
@@ -806,11 +808,10 @@ class GPT(pygpt.GPT):
       the RO bit in ext2 attributes and can't be mounted without specifying
       mount arguments "-t ext2 -o ro".
       """
-      assert kargs.get('rw', False) is False, (
-          'Cannot change Chrome OS rootfs %s.' % self)
+      assert kargs.get(
+          'rw', False) is False, (f'Cannot change Chrome OS rootfs {self}.')
       assert kargs.get('fs_type', FS_TYPE_CROS_ROOTFS) == FS_TYPE_CROS_ROOTFS, (
-          'Chrome OS rootfs %s must be mounted as %s.' % (
-              self, FS_TYPE_CROS_ROOTFS))
+          f'Chrome OS rootfs {self} must be mounted as {FS_TYPE_CROS_ROOTFS}.')
       kargs['rw'] = False
       kargs['fs_type'] = FS_TYPE_CROS_ROOTFS
       return self.Mount(*args, **kargs)
@@ -882,7 +883,7 @@ class GPT(pygpt.GPT):
           raise RuntimeError('Failed ensuring file system integrity (e2fsck).')
         args = ['resize2fs', '-f', raw_part]
         if new_size:
-          args.append('%sM' % (new_size // MEGABYTE))
+          args.append(f'{new_size // MEGABYTE}M')
         Sudo(args)
         real_size = self._ParseExtFileSystemSize(raw_part)
         logging.debug(
@@ -903,11 +904,12 @@ class GPT(pygpt.GPT):
       if self.size != dest.size:
         if check_equal:
           raise RuntimeError(
-              'Partition size is different (%d, %d).' % (self.size, dest.size))
+              f'Partition size is different ({int(self.size)}, {int(dest.size)}'
+              ').')
         if self.size > dest.size:
           raise RuntimeError(
-              'Source partition (%s) is larger than destination (%s).' %
-              (self.size, dest.size))
+              f'Source partition ({self.size}) is larger than destination ('
+              f'{dest.size}).')
       if verbose:
         logging.info('Copying partition %s => %s...', self, dest)
       SysUtils.PartialCopy(self.image, dest.image, self.size, self.offset,
@@ -918,7 +920,7 @@ def Partition(image, number):
   """Returns a GPT object by given parameters."""
   part = GPT.LoadFromFile(image).GetPartition(number)
   if part.IsUnused():
-    raise RuntimeError('Partition %s is unused.' % part)
+    raise RuntimeError(f'Partition {part} is unused.')
   return part
 
 def ExpandPartition(image, number, size):
@@ -945,13 +947,14 @@ def ExpandPartition(image, number, size):
   part = gpt.GetPartition(number)
   # Check that the partition is the last partition.
   if not gpt.IsLastPartition(number):
-    raise RuntimeError('Cannot expand partition %d; '
-                       'must be the last one in LBA layout.' % number)
+    raise RuntimeError(
+        f'Cannot expand partition {int(number)}; must be the last one in LBA '
+        'layout.')
 
   old_size = gpt.GetSize()
   new_size = Aligned(int((old_size + size) * 1.15), part.block_size)
-  print('Changing size: %d M => %d M' %
-        (old_size // MEGABYTE, new_size // MEGABYTE))
+  print(f'Changing size: {int(old_size // MEGABYTE)} M => '
+        f'{int(new_size // MEGABYTE)} M')
 
   Shell(['truncate', '-s', str(new_size), image])
   gpt.Resize(new_size)
@@ -980,16 +983,18 @@ def ShrinkPartition(image, number, size):
   reduced_size = (size // part.block_size) * part.block_size
   # Check that the partition is the last partition.
   if not gpt.IsLastPartition(number):
-    raise RuntimeError('Cannot expand partition %d; '
-                       'must be the last one in LBA layout.' % number)
+    raise RuntimeError(
+        f'Cannot expand partition {int(number)}; must be the last one in LBA '
+        'layout.')
   # Check that the partition size is greater than shrink size.
   if part.size <= reduced_size:
-    raise RuntimeError('Cannot shrink partition %d. Size too small.' % number)
+    raise RuntimeError(
+        f'Cannot shrink partition {int(number)}. Size too small.')
 
   old_size = gpt.GetSize()
   new_size = old_size - reduced_size
-  print('Changing size: %d M => %d M' %
-        (old_size // MEGABYTE, new_size // MEGABYTE))
+  print(f'Changing size: {int(old_size // MEGABYTE)} M => '
+        f'{int(new_size // MEGABYTE)} M')
 
   part.ResizeFileSystem(part.size - reduced_size)
   Shell(['truncate', '-s', str(new_size), image])
@@ -1066,7 +1071,7 @@ class LSBFile:
       f.flush()
       os.chmod(f.name, 0o644)
       if backup and os.path.exists(destination):
-        bak_file = '%s.bak.%s' % (destination, time.strftime('%Y%m%d%H%M%S'))
+        bak_file = f"{destination}.bak.{time.strftime('%Y%m%d%H%M%S')}"
         Sudo(['cp', '-pf', destination, bak_file])
       Sudo(['cp', '-pf', f.name, destination])
       Sudo(['chown', 'root:root', destination])
@@ -1211,13 +1216,13 @@ class RMABoardResourceVersions:
 
   def __init__(self, **kargs):
     for component, version in kargs.items():
-      assert component in self.__slots__, 'Unknown component "%s"' % component
+      assert component in self.__slots__, f'Unknown component "{component}"'
       setattr(self, component, version)
 
   def __str__(self):
     max_len = max([len(s) for s in self.__slots__])
-    return '\n'.join(['%-*s: %s' % (max_len, k, getattr(self, k, 'None'))
-                      for k in self.__slots__])
+    return '\n'.join(
+        [f'{k:<{max_len}}: {getattr(self, k, "None")}' for k in self.__slots__])
 
 
 def _ReadBoardResourceVersions(rootfs, stateful, board_info):
@@ -1297,23 +1302,24 @@ class UserInput:
           '(%s)%s%s' % (key, ' ' if single_line_option else '\n', option))
 
     while True:
-      keys = [] if list_n == 0 else ['1'] if list_n == 1 else ['1-%d' % list_n]
+      keys = [] if list_n == 0 else ['1'
+                                    ] if list_n == 1 else [f'1-{int(list_n)}']
       keys += list(options_dict)
-      prompt = 'Please select an option [%s]%s: ' % (
-          ', '.join(keys), ' or empty to skip' if optional else '')
+      prompt = (f"Please select an option [{', '.join(keys)}]"
+                f"{' or empty to skip' if optional else ''}: ")
       answer = input(prompt).strip()
       if optional and not answer:
         return None
       try:
         selected = int(answer)
         if not 0 < selected <= list_n:
-          print('Out of range: %d' % selected)
+          print(f'Out of range: {int(selected)}')
           continue
         # Convert to 0-based
         selected -= 1
       except ValueError:
         if answer not in options_dict:
-          print('Invalid option: %s' % answer)
+          print(f'Invalid option: {answer}')
           continue
         selected = answer
       break
@@ -1353,14 +1359,15 @@ class UserInput:
     """
     if min_value is not None and max_value is not None:
       assert min_value <= max_value, (
-          'min_value %d is greater than max_value %d' % (min_value, max_value))
+          f'min_value {int(min_value)} is greater than max_value '
+          f'{int(max_value)}')
 
     print('\n' + title)
     while True:
-      prompt = 'Enter a number in [%s, %s]%s: ' % (
-          str(min_value) if min_value is not None else '-INF',
-          str(max_value) if max_value is not None else 'INF',
-          ' or empty to skip' if optional else '')
+      prompt = ('Enter a number in ['
+                f"{str(min_value) if min_value is not None else '-INF'}, "
+                f"{str(max_value) if max_value is not None else 'INF'}]"
+                f"{' or empty to skip' if optional else ''}: ")
       answer = input(prompt).strip()
       if optional and not answer:
         return None
@@ -1371,7 +1378,7 @@ class UserInput:
         if max_value is not None and value > max_value:
           raise ValueError('out of range')
       except ValueError:
-        print('Invalid option: %s' % answer)
+        print(f'Invalid option: {answer}')
         continue
       break
     return value
@@ -1392,12 +1399,12 @@ class UserInput:
         'max_length should be greater than 0')
     print('\n' + title)
     while True:
-      prompt = 'Enter a string%s: ' % (' or empty to skip' if optional else '')
+      prompt = f"Enter a string{' or empty to skip' if optional else ''}: "
       answer = input(prompt).strip()
       if answer:
         if max_length is None or len(answer) <= max_length:
           break
-        print('Input string too long, max length is %d' % max_length)
+        print(f'Input string too long, max length is {int(max_length)}')
       elif optional:
         return None
       else:
@@ -1649,7 +1656,7 @@ class ChromeOSFactoryBundle:
         logging.debug('Add %s payloads from %s...', component, resource)
         CrosPayloadUtils.AddComponent(json_path, component, resource)
       else:
-        print('Leaving %s component payload as empty.' % component)
+        print(f'Leaving {component} component payload as empty.')
 
   @staticmethod
   def CopyPayloads(src_dir, target_dir, json_path):
@@ -1680,15 +1687,15 @@ class ChromeOSFactoryBundle:
       target_dir: path of target directory.
       json_path: board metadata path <board>.json.
     """
-    assert os.path.exists(src_dir), 'Path does not exist: %s' % src_dir
-    assert os.path.exists(target_dir), 'Path does not exist: %s' % target_dir
-    assert os.path.isfile(json_path), 'File does not exist: %s' % json_path
+    assert os.path.exists(src_dir), f'Path does not exist: {src_dir}'
+    assert os.path.exists(target_dir), f'Path does not exist: {target_dir}'
+    assert os.path.isfile(json_path), f'File does not exist: {json_path}'
 
-    Sudo('cp -p %s %s/' % (json_path, target_dir))
+    Sudo(f'cp -p {json_path} {target_dir}/')
     files = CrosPayloadUtils.GetAllComponentFiles(json_path)
     for f in files:
       path = os.path.join(src_dir, f)
-      Sudo('cp -p %s %s/' % (path, target_dir))
+      Sudo(f'cp -p {path} {target_dir}/')
 
   def GetPMBR(self, image_path):
     """Creates a file containing PMBR contents from given image.
@@ -1727,8 +1734,8 @@ class ChromeOSFactoryBundle:
       verbose: True to enable debug out of script execution (-x).
     """
     write_gpt_path = os.path.join(rootfs, 'usr', 'sbin', 'write_gpt.sh')
-    chromeos_common_path = os.path.join(
-        rootfs, 'usr', 'share', 'misc', 'chromeos-common.sh')
+    chromeos_common_path = os.path.join(rootfs, 'usr', 'share', 'misc',
+                                        'chromeos-common.sh')
 
     if not os.path.exists(write_gpt_path):
       raise RuntimeError('Missing write_gpt.sh.')
@@ -1739,8 +1746,8 @@ class ChromeOSFactoryBundle:
     # commands, have to find an externally executable GPT.
     cgpt_command = SysUtils.FindCGPT()
 
-    with GPT.Partition.MapAll(
-        image_path, partscan=False, block_size=block_size) as loop_dev:
+    with GPT.Partition.MapAll(image_path, partscan=False,
+                              block_size=block_size) as loop_dev:
       # stateful partitions are enlarged only if the target is a block device
       # (not file), in order to reduce USB image size. As a result, we have to
       # run partition script with disk mapped.
@@ -1748,20 +1755,21 @@ class ChromeOSFactoryBundle:
           # Currently write_gpt.sh will load chromeos_common from a fixed path.
           # In future when it supports overriding ROOT, we can invoke prevent
           # sourcing chromeos_common.sh explicitly below.
-          '. "%s"' % chromeos_common_path,
-          '. "%s"' % write_gpt_path,
-          'GPT="%s"' % cgpt_command,
+          f'. "{chromeos_common_path}"',
+          f'. "{write_gpt_path}"',
+          f'GPT="{cgpt_command}"',
           'set -e',
-          'write_base_table "%s" "%s"' % (loop_dev, pmbr_path),
+          f'write_base_table "{loop_dev}" "{pmbr_path}"',
           # write_base_table will set partition #2 to S=0, T=15, P=15.
           # However, if update_engine is disabled (very common in factory) or if
           # the system has to do several quick reboots before reaching
           # chromeos-setgoodkernel, then the device may run out of tries without
           # setting S=1 and will stop booting. So we want to explicitly set S=1.
-          '%s add -i 2 -S 1 "%s"' % (cgpt_command, loop_dev)]
+          f'{cgpt_command} add -i 2 -S 1 "{loop_dev}"'
+      ]
       # The commands must be executed in a single invocation for '.' to work.
       command = ' ; '.join(commands)
-      Sudo("bash %s -c '%s'" % ('-x' if verbose else '', command))
+      Sudo(f"bash {'-x' if verbose else ''} -c '{command}'")
 
   def InitDiskImage(self, output, sectors, sector_size, verbose=False):
     """Initializes (resize and partition) a new disk image.
@@ -1776,8 +1784,8 @@ class ChromeOSFactoryBundle:
       An integer as the size (in bytes) of output file.
     """
     new_size = sectors * sector_size
-    print('Initialize disk image in %s*%s bytes [%s G]' %
-          (sectors, sector_size, new_size // GIGABYTE_STORAGE))
+    print(f'Initialize disk image in {sectors}*{sector_size} bytes ['
+          f'{new_size // GIGABYTE_STORAGE} G]')
     pmbr_path = self.GetPMBR(self.release_image)
 
     # TODO(hungte) Support block device as output, and support 'preserve'.
@@ -1864,8 +1872,8 @@ class ChromeOSFactoryBundle:
     logging.debug('Total reserved space: %d M', (total_fs_size // MEGABYTE))
     if total_fs_size >= part.size:
       raise RuntimeError(
-          'Stateful partition is too small! Please increase the'
-          ' size of preflash image! Current: %d M' % (part.size // MEGABYTE))
+          'Stateful partition is too small! Please increase the size of '
+          f'preflash image! Current: {int(part.size // MEGABYTE)} M')
     part.ResizeFileSystem(total_fs_size)
     with GPT.Partition.MapAll(output, block_size=sector_size) as output_dev:
       targets = [
@@ -1890,13 +1898,13 @@ class ChromeOSFactoryBundle:
     with stateful_part.Mount() as stateful:
       json_path = os.path.join(stateful, PATH_PREFLASH_PAYLOADS_JSON)
       if not os.path.exists(json_path):
-        raise RuntimeError('Cannot find json file %s.' % json_path)
+        raise RuntimeError(f'Cannot find json file {json_path}.')
       versions = CrosPayloadUtils.GetComponentVersions(json_path)
 
       print(SPLIT_LINE)
       max_len = max([len(c) for c in PREFLASH_COMPONENTS])
       for component in PREFLASH_COMPONENTS:
-        print('%-*s: %s' % (max_len, component, versions.get(component, None)))
+        print(f'{component:<{max_len}}: {versions.get(component,None)}')
       print(SPLIT_LINE)
 
   def CreateRMAImage(self, output, src_payloads_dir=None,
@@ -1970,15 +1978,15 @@ class ChromeOSFactoryBundle:
                                         new_lsb_file_name)
 
     payloads_size = SysUtils.GetDiskUsage(payloads_dir)
-    print('cros_payloads size: %s M' % (payloads_size // MEGABYTE))
+    print(f'cros_payloads size: {payloads_size // MEGABYTE} M')
 
     shutil.copyfile(self.factory_shim, output)
     ExpandPartition(output, PART_CROS_STATEFUL, payloads_size)
 
     # Clear lsb-factory file in output image.
     with Partition(output, PART_CROS_STATEFUL).Mount(rw=True) as stateful:
-      SysUtils.WriteFileToMountedDir(
-          stateful, PATH_LSB_FACTORY, LSB_FACTORY_WARNING_MESSAGE)
+      SysUtils.WriteFileToMountedDir(stateful, PATH_LSB_FACTORY,
+                                     LSB_FACTORY_WARNING_MESSAGE)
 
     with Partition(output, PART_CROS_STATEFUL).Mount(rw=True) as stateful:
       print('Moving payload files to disk image...')
@@ -1986,10 +1994,10 @@ class ChromeOSFactoryBundle:
       new_name = os.path.join(stateful, DIR_CROS_PAYLOADS)
       new_dir = os.path.dirname(new_name)
       if os.path.exists(new_name):
-        raise RuntimeError('Factory shim already contains %s - already RMA?' %
-                           DIR_CROS_PAYLOADS)
+        raise RuntimeError(
+            f'Factory shim already contains {DIR_CROS_PAYLOADS} - already RMA?')
       Sudo(['chown', '-R', 'root:root', payloads_dir])
-      Sudo(['mkdir', '-p', new_name, '-m', '%o' % MODE_NEW_DIR])
+      Sudo(['mkdir', '-p', new_name, '-m', f'{MODE_NEW_DIR:o}'])
       Sudo(['mv', '-f', payloads_dir, new_dir])
       _WriteRMAMetadata(stateful,
                         board_list=[RMAImageBoardInfo(board=self.board)])
@@ -2006,13 +2014,13 @@ class ChromeOSFactoryBundle:
       DIR_CROS_PAYLOADS = CrosPayloadUtils.GetCrosPayloadsDir()
       payloads_dir = os.path.join(stateful, DIR_CROS_PAYLOADS)
       if not os.path.exists(payloads_dir):
-        raise RuntimeError('Cannot find dir /%s, is this a RMA shim?' %
-                           DIR_CROS_PAYLOADS)
+        raise RuntimeError(
+            f'Cannot find dir /{DIR_CROS_PAYLOADS}, is this a RMA shim?')
 
       metadata = _ReadRMAMetadata(stateful)
 
-      print('This RMA shim contains boards: %s' % (
-          ' '.join(board_info.board for board_info in metadata)))
+      print('This RMA shim contains boards: '
+            f"{' '.join(board_info.board for board_info in metadata)}")
 
       print(SPLIT_LINE)
       for board_info in metadata:
@@ -2100,8 +2108,8 @@ class ChromeOSFactoryBundle:
       if block_size == 0:
         block_size = gpt.block_size
       assert gpt.block_size == block_size, (
-          'Cannot merge image %s due to different block size (%s, %s)' %
-          (image, block_size, gpt.block_size))
+          f'Cannot merge image {image} due to different block size ('
+          f'{block_size}, {gpt.block_size})')
       # A list of entries in `image`.
       image_entries = []
       with gpt.GetPartition(PART_CROS_STATEFUL).Mount() as stateful:
@@ -2183,11 +2191,11 @@ class ChromeOSFactoryBundle:
       with Partition(output, PART_CROS_STATEFUL).Mount(rw=True) as stateful:
         DIR_CROS_PAYLOADS = CrosPayloadUtils.GetCrosPayloadsDir()
         payloads_dir = os.path.join(stateful, DIR_CROS_PAYLOADS)
-        Sudo('rm -rf "%s"/*' % payloads_dir)
+        Sudo(f'rm -rf "{payloads_dir}"/*')
         board_info_list = []
         for index, entry in enumerate(entries):
           # Copy payloads in stateful partition
-          print('Copying %s board payload ...' % entry.board)
+          print(f'Copying {entry.board} board payload ...')
           with Partition(entry.image, PART_CROS_STATEFUL).Mount() as src_dir:
             src_payloads_dir = os.path.join(src_dir, DIR_CROS_PAYLOADS)
             src_metadata_path = CrosPayloadUtils.GetJSONPath(
@@ -2201,10 +2209,10 @@ class ChromeOSFactoryBundle:
               temp_metadata = json.load(f)
             if PAYLOAD_TYPE_LSB_FACTORY not in temp_metadata:
               lsb_path = os.path.join(src_dir, PATH_LSB_FACTORY)
-              CrosPayloadUtils.AddComponent(
-                  temp_metadata_path, PAYLOAD_TYPE_LSB_FACTORY, lsb_path)
+              CrosPayloadUtils.AddComponent(temp_metadata_path,
+                                            PAYLOAD_TYPE_LSB_FACTORY, lsb_path)
           # Copy kernel/rootfs partitions
-          print('Copying %s board kernel/rootfs ...' % entry.board)
+          print(f'Copying {entry.board} board kernel/rootfs ...')
           new_kernel = index * 2 + PART_CROS_KERNEL_A
           new_rootfs = index * 2 + PART_CROS_ROOTFS_A
           entry.kernel.Copy(Partition(output, new_kernel))
@@ -2217,8 +2225,8 @@ class ChromeOSFactoryBundle:
         for info in board_info_list:
           CrosPayloadUtils.InitMetaData(payloads_dir, info.board, mounted=True)
         # Clear lsb-factory in output image.
-        SysUtils.WriteFileToMountedDir(
-            stateful, PATH_LSB_FACTORY, LSB_FACTORY_WARNING_MESSAGE)
+        SysUtils.WriteFileToMountedDir(stateful, PATH_LSB_FACTORY,
+                                       LSB_FACTORY_WARNING_MESSAGE)
 
       CrosPayloadUtils.ReplaceComponentsInImage(
           output, [entry.board for entry in entries], temp_payloads_dir)
@@ -2247,12 +2255,11 @@ class ChromeOSFactoryBundle:
         if len(board_entries) == 1 or auto_select:
           selected = len(board_entries) - 1
         else:
-          title = 'Board %s has more than one entry.' % board_name
-          options = ['From %s\n%s' % (entry.image, entry.versions)
-                     for entry in board_entries]
-          selected = UserInput.Select(title,
-                                      options,
-                                      single_line_option=False,
+          title = f'Board {board_name} has more than one entry.'
+          options = [
+              f'From {entry.image}\n{entry.versions}' for entry in board_entries
+          ]
+          selected = UserInput.Select(title, options, single_line_option=False,
                                       split_line=True)
         selected_entries.add(board_entries[selected])
 
@@ -2271,7 +2278,7 @@ class ChromeOSFactoryBundle:
       if select is not None:
         selected = int(select) - 1
         if not 0 <= selected < len(entries):
-          raise ValueError('Index %d out of range.' % selected)
+          raise ValueError(f'Index {int(selected)} out of range.')
       else:
         title = 'Please select a board to extract.'
         options = [str(entry.versions) for entry in entries]
@@ -2334,7 +2341,7 @@ class ChromeOSFactoryBundle:
           rw = fw_image.get_section(rw_name).strip(b'\xff').strip(b'\0')
           break
       else:
-        raise RuntimeError('Unknown RW firmware version in %s' % image_path)
+        raise RuntimeError(f'Unknown RW firmware version in {image_path}')
     return {'ro': ro.decode('utf-8'), 'rw': rw.decode('utf-8')}
 
   @staticmethod
@@ -2364,8 +2371,8 @@ class ChromeOSFactoryBundle:
     with open(
         os.path.join(tftp_root, '..', 'dnsmasq.conf'), 'w',
         encoding='utf8') as f:
-      f.write(textwrap.dedent(
-          '''\
+      f.write(
+          textwrap.dedent('''\
           # This is a sample config, can be invoked by "dnsmasq -d -C FILE".
           interface=eth2
           tftp-root=/var/tftp
@@ -2377,32 +2384,32 @@ class ChromeOSFactoryBundle:
     tftp_server_ip = ''
     if self.server_url:
       tftp_server_ip = urllib.parse.urlparse(self.server_url).hostname
-      server_url_config = os.path.join(
-          tftp_root, 'omahaserver_%s.conf' % self.board)
+      server_url_config = os.path.join(tftp_root,
+                                       f'omahaserver_{self.board}.conf')
       with open(server_url_config, 'w', encoding='utf8') as f:
         f.write(self.server_url)
 
-    cmdline_sample = os.path.join(
-        tftp_root, 'chrome-bot', self.board, 'cmdline.sample')
+    cmdline_sample = os.path.join(tftp_root, 'chrome-bot', self.board,
+                                  'cmdline.sample')
     with open(cmdline_sample, 'w', encoding='utf8') as f:
-      config = (
-          'lsm.module_locking=0 cros_netboot_ramfs cros_factory_install '
-          'cros_secure cros_netboot earlyprintk cros_debug loglevel=7 '
-          'console=ttyS2,115200n8')
+      config = ('lsm.module_locking=0 cros_netboot_ramfs cros_factory_install '
+                'cros_secure cros_netboot earlyprintk cros_debug loglevel=7 '
+                'console=ttyS2,115200n8')
       if tftp_server_ip:
-        config += ' tftpserverip=%s' % tftp_server_ip
+        config += f' tftpserverip={tftp_server_ip}'
       f.write(config)
 
   def CreateNetbootFirmware(self, src_path, dest_path):
     parser = argparse.ArgumentParser()
     netboot_firmware_settings.DefineCommandLineArgs(parser)
     # This comes from sys-boot/chromeos-bootimage: ${PORTAGE_USER}/${BOARD_USE}
-    tftp_board_dir = 'chrome-bot/%s' % self.board
+    tftp_board_dir = f'chrome-bot/{self.board}'
     args = [
-        '--argsfile', os.path.join(tftp_board_dir, 'cmdline'),
-        '--bootfile', os.path.join(tftp_board_dir, 'vmlinuz'),
-        '--input', src_path,
-        '--output', dest_path]
+        '--argsfile',
+        os.path.join(tftp_board_dir, 'cmdline'), '--bootfile',
+        os.path.join(tftp_board_dir, 'vmlinuz'), '--input', src_path,
+        '--output', dest_path
+    ]
     if self.server_url:
       args += [
           '--factory-server-url', self.server_url,
@@ -2432,7 +2439,7 @@ class ChromeOSFactoryBundle:
         return 'N/A'
       if info['ro'] == info['rw']:
         return info['ro']
-      return 'RO: %s, RW: %s' % (info['ro'], info['rw'])
+      return f"RO: {info['ro']}, RW: {info['rw']}"
 
     def AddResource(dir_name, resources_glob, do_copy=False):
       """Adds resources to specified sub directory under bundle_dir.
@@ -2443,7 +2450,7 @@ class ChromeOSFactoryBundle:
         return None
       resources = glob.glob(resources_glob)
       if not resources:
-        raise RuntimeError('Cannot find resource: %s' % resources_glob)
+        raise RuntimeError(f'Cannot find resource: {resources_glob}')
       resource_dir = os.path.join(bundle_dir, dir_name)
       if not os.path.exists(resource_dir):
         os.makedirs(resource_dir)
@@ -2465,8 +2472,8 @@ class ChromeOSFactoryBundle:
 
     if timestamp is None:
       timestamp = time.strftime('%Y%m%d')
-    bundle_name = '%s_%s_%s' % (self.board, timestamp, phase)
-    output_name = 'factory_bundle_%s.tar.bz2' % bundle_name
+    bundle_name = f'{self.board}_{timestamp}_{phase}'
+    output_name = f'factory_bundle_{bundle_name}.tar.bz2'
     bundle_dir = os.path.join(self._temp_dir, 'bundle')
     SysUtils.CreateDirectories(bundle_dir)
 
@@ -2492,8 +2499,8 @@ class ChromeOSFactoryBundle:
     if self.netboot:
       netboot_vmlinuz = os.path.join(self.netboot, 'vmlinuz')
       if not os.path.exists(netboot_vmlinuz):
-        netboot_vmlinuz = os.path.join(
-            self.netboot, 'tftp', 'chrome-bot', self.board, 'vmlinuz')
+        netboot_vmlinuz = os.path.join(self.netboot, 'tftp', 'chrome-bot',
+                                       self.board, 'vmlinuz')
         has_tftp = True
 
     readme_path = os.path.join(bundle_dir, 'README.md')
@@ -2502,8 +2509,8 @@ class ChromeOSFactoryBundle:
       fsi_fw_ver = self.GetFirmwareUpdaterVersion(release_firmware_updater)
       info = [
           ('Board', self.board),
-          ('Bundle', '%s (created by %s)' % (
-              bundle_name, os.environ.get('USER', 'unknown'))),
+          ('Bundle',
+           f"{bundle_name} (created by {os.environ.get('USER', 'unknown')})"),
           ('Factory toolkit', self.GetToolkitVersion()),
           ('Test image', self.GetImageVersion(self.test_image)),
           ('Factory shim', self.GetImageVersion(self.factory_shim)),
@@ -2512,32 +2519,30 @@ class ChromeOSFactoryBundle:
           ('Release (FSI)', self.GetImageVersion(self.release_image)),
       ]
       if fsi_fw_ver != fw_ver:
-        info += [
-            ('FSI AP firmware', FormatFirmwareVersion(fsi_fw_ver.get('main'))),
-            ('FSI EC firmware', FormatFirmwareVersion(fsi_fw_ver.get('ec')))]
+        info += [('FSI AP firmware',
+                  FormatFirmwareVersion(fsi_fw_ver.get('main'))),
+                 ('FSI EC firmware', FormatFirmwareVersion(
+                     fsi_fw_ver.get('ec')))]
       if self.netboot:
-        for netboot_firmware_image in glob.glob(os.path.join(
-            self.netboot, 'image*.net.bin')):
+        for netboot_firmware_image in glob.glob(
+            os.path.join(self.netboot, 'image*.net.bin')):
           key_name = 'Netboot firmware'
           match = re.match(r'^image-(.*)\.net\.bin$',
                            os.path.basename(netboot_firmware_image))
           if match:
-            key_name += ' (%s)' % match.group(1)
+            key_name += f' ({match.group(1)})'
           info += [(key_name,
                     FormatFirmwareVersion(
                         self.GetFirmwareVersion(netboot_firmware_image)))]
         info += [('Netboot kernel', self.GetKernelVersion(netboot_vmlinuz))]
       info += [('Factory server URL', self.server_url or 'N/A')]
-      key_len = max(len(k) for (k, v) in info)
+      key_len = max(len(k) for (k, v) in info) + 2
 
-      f.write(textwrap.dedent(
-          '''\
-          # Chrome OS Factory Bundle
-          %s
-          ## Additional Notes
-          %s
-          ''') % ('\n'.join('- %-*s%s' % (key_len + 2, k + ':', v)
-                            for (k, v) in info), notes))
+      info_desc = '\n'.join(f'- {k+":":<{key_len}}{v}' for (k, v) in info)
+      f.write('# Chrome OS Factory Bundle\n'
+              f'{info_desc}\n'
+              '## Additional Notes\n'
+              f'{notes}\n')
     Shell(['cat', readme_path])
 
     output_path = os.path.join(output_dir, output_name)
@@ -2573,11 +2578,13 @@ class ChromeOSFactoryBundle:
       if has_tftp:
         AddResource('netboot', os.path.join(self.netboot, 'tftp'))
       else:
-        AddResource('netboot/tftp/chrome-bot/%s' % self.board, netboot_vmlinuz)
+        AddResource(f'netboot/tftp/chrome-bot/{self.board}', netboot_vmlinuz)
         self.GenerateTFTP(os.path.join(bundle_dir, 'netboot', 'tftp'))
 
-    Shell(['tar', '-I', SysUtils.FindBZip2(), '-chvf', output_path,
-           '-C', bundle_dir, '.'])
+    Shell([
+        'tar', '-I',
+        SysUtils.FindBZip2(), '-chvf', output_path, '-C', bundle_dir, '.'
+    ])
     # Print final results again since tar may have flood screen output.
     Shell(['cat', readme_path])
     return output_path
@@ -2597,11 +2604,11 @@ class ChromeOSFactoryBundle:
                                'yaml', 'config.yaml')
 
     if os.path.exists(config_path):
-      print('%s found.' % config_path)
+      print(f'{config_path} found.')
       with open(config_path, encoding='utf8') as f:
         obj = yaml.safe_load(f)['chromeos']['configs']
     else:
-      print('%s not found.' % config_path)
+      print(f'{config_path} not found.')
       return {}
 
     def _SelectConfig(config: dict, fields: dict) -> dict:
@@ -2683,7 +2690,7 @@ class ChromeOSFactoryBundle:
     if not (self.designs or self.project):
       return
     designs = self.designs or [self.project]
-    print('Verify cros_config of designs: %r' % designs)
+    print(f'Verify cros_config of designs: {designs!r}')
 
     test_part = Partition(self.test_image, PART_CROS_ROOTFS_A)
     with test_part.MountAsCrOSRootfs() as rootfs:
@@ -2693,8 +2700,9 @@ class ChromeOSFactoryBundle:
         version = version_utils.LooseVersion(
             lsb_data.GetChromeOSVersion(remove_milestone=True))
         if version < version_utils.LooseVersion('10212.0.0'):
-          print('Skip cros_config verification for early test image: %r' %
-                version)
+          print(
+              f'Skip cros_config verification for early test image: {version!r}'
+          )
           return
 
     release_part = Partition(self.release_image, PART_CROS_ROOTFS_A)
@@ -2780,9 +2788,10 @@ class SubCommand:
 
 class SubCommandNamespace(SubCommand):
   """A command namespace."""
+
   def __init__(self, parser, subparsers):
     super().__init__(parser, subparsers)
-    title = '%s subcommands' % self.name
+    title = f'{self.name} subcommands'
     namespace_subparser = self.subparser.add_subparsers(
         title=title, dest='namespace_subcommand')
     namespace_subparser.required = True
@@ -2818,7 +2827,7 @@ class HelpCommand(SubCommand):
       try:
         parser = GetSubparsers(parser).choices[v]
       except Exception:
-        sys.exit('Unknown subcommand %r' % ' '.join(self.args.command))
+        sys.exit(f"Unknown subcommand {' '.join(self.args.command)!r}")
     parser.print_help()
 
 
@@ -2837,9 +2846,8 @@ class MountPartitionCommand(SubCommand):
     self.subparser.add_argument(
         '-ro', '--ro', dest='rw', action='store_false',
         help='mount partition read-only')
-    self.subparser.add_argument(
-        'image', type=ArgTypes.ExistsPath,
-        help='path to the Chromium OS image')
+    self.subparser.add_argument('image', type=ArgTypes.ExistsPath,
+                                help='path to the Chromium OS image')
     self.subparser.add_argument(
         'partition_number', type=int,
         help='which partition (1-based) to mount')
@@ -2869,7 +2877,7 @@ class MountPartitionCommand(SubCommand):
       with part.MountAsCrOSRootfs(self.args.mount_point, auto_umount=False):
         mode = 'RO'
 
-    print('OK: Mounted %s as %s on %s.' % (part, mode, self.args.mount_point))
+    print(f'OK: Mounted {part} as {mode} on {self.args.mount_point}.')
 
 
 class GetFirmwareCommand(SubCommand):
@@ -2879,19 +2887,17 @@ class GetFirmwareCommand(SubCommand):
   aliases = ['extract_firmware_updater']
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', type=ArgTypes.ExistsPath, required=True,
-        help='path to the Chrome OS (release) image')
-    self.subparser.add_argument(
-        '-o', '--output_dir', default='.',
-        help='directory to save output file(s)')
+    self.subparser.add_argument('-i', '--image', type=ArgTypes.ExistsPath,
+                                required=True,
+                                help='path to the Chrome OS (release) image')
+    self.subparser.add_argument('-o', '--output_dir', default='.',
+                                help='directory to save output file(s)')
 
   def Run(self):
     part = Partition(self.args.image, PART_CROS_ROOTFS_A)
     output = part.CopyFile(PATH_CROS_FIRMWARE_UPDATER, self.args.output_dir,
                            fs_type=FS_TYPE_CROS_ROOTFS)
-    print('OK: Extracted %s:%s to: %s' % (
-        part, PATH_CROS_FIRMWARE_UPDATER, output))
+    print(f'OK: Extracted {part}:{PATH_CROS_FIRMWARE_UPDATER} to: {output}')
 
 
 class NetbootFirmwareSettingsCommand(SubCommand):
@@ -2926,9 +2932,9 @@ class ResizeFileSystemCommand(SubCommand):
   aliases = ['resize_image_fs']
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', type=ArgTypes.ExistsPath, required=True,
-        help='path to the Chromium OS disk image')
+    self.subparser.add_argument('-i', '--image', type=ArgTypes.ExistsPath,
+                                required=True,
+                                help='path to the Chromium OS disk image')
     self.subparser.add_argument(
         '-p', '--partition_number', type=int, default=1,
         help='file system on which partition to resize')
@@ -2938,9 +2944,9 @@ class ResizeFileSystemCommand(SubCommand):
     self.subparser.add_argument(
         '-a', '--append', dest='append', action='store_true', default=True,
         help='append (increase) file system by +size_mb')
-    self.subparser.add_argument(
-        '--no-append', dest='append', action='store_false',
-        help='set file system to a new size of size_mb')
+    self.subparser.add_argument('--no-append', dest='append',
+                                action='store_false',
+                                help='set file system to a new size of size_mb')
 
   def Run(self):
     part = Partition(self.args.image, self.args.partition_number)
@@ -2953,12 +2959,13 @@ class ResizeFileSystemCommand(SubCommand):
 
     if new_size > part.size:
       raise RuntimeError(
-          'Requested size (%s MB) larger than %s partition (%s MB).' % (
-              new_size // MEGABYTE, part, part.size // MEGABYTE))
+          f'Requested size ({new_size // MEGABYTE} MB) larger than {part} '
+          f'partition ({part.size // MEGABYTE} MB).')
 
     new_size = part.ResizeFileSystem(new_size)
-    print('OK: %s file system has been resized from %s to %s MB.' %
-          (part, curr_size // MEGABYTE, new_size // MEGABYTE))
+    print(
+        f'OK: {part} file system has been resized from {curr_size // MEGABYTE} '
+        f'to {new_size // MEGABYTE} MB.')
 
 
 class CreatePreflashImageCommand(SubCommand):
@@ -2988,9 +2995,8 @@ class CreatePreflashImageCommand(SubCommand):
         default=2048,
         help=('extra space to claim in stateful partition in MB. '
               'default: %(default)s'))
-    self.subparser.add_argument(
-        '-o', '--output', required=True,
-        help='path to the output disk image file.')
+    self.subparser.add_argument('-o', '--output', required=True,
+                                help='path to the output disk image file.')
 
   def Run(self):
     with SysUtils.TempDirectory(prefix='diskimg_') as temp_dir:
@@ -3013,8 +3019,8 @@ class CreatePreflashImageCommand(SubCommand):
       new_size = bundle.CreateDiskImage(
           self.args.output, self.args.sectors, self.args.sector_size,
           self.args.stateful_free_space, self.args.verbose)
-    print('OK: Generated pre-flash disk image at %s [%s G]' % (
-        self.args.output, new_size // GIGABYTE_STORAGE))
+    print(f'OK: Generated pre-flash disk image at {self.args.output} ['
+          f'{new_size // GIGABYTE_STORAGE} G]')
 
 
 class ShowPreflashImageCommand(SubCommand):
@@ -3022,10 +3028,9 @@ class ShowPreflashImageCommand(SubCommand):
   name = 'preflash-show'
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', required=True,
-        type=ArgTypes.ExistsPath,
-        help='Path to input preflash image.')
+    self.subparser.add_argument('-i', '--image', required=True,
+                                type=ArgTypes.ExistsPath,
+                                help='Path to input preflash image.')
 
   def Run(self):
     ChromeOSFactoryBundle.ShowDiskImage(self.args.image)
@@ -3044,23 +3049,20 @@ class CreateRMAImageCommmand(SubCommand):
   aliases = ['create_rma', 'rma-create']
 
   def Init(self):
-    ChromeOSFactoryBundle.DefineBundleArguments(
-        self.subparser, ChromeOSFactoryBundle.RMA)
-    self.subparser.add_argument(
-        '--active_test_list', default=None,
-        help='active test list')
-    self.subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='Overwrite existing output image file.')
-    self.subparser.add_argument(
-        '-o', '--output', required=True,
-        help='path to the output RMA image file')
+    ChromeOSFactoryBundle.DefineBundleArguments(self.subparser,
+                                                ChromeOSFactoryBundle.RMA)
+    self.subparser.add_argument('--active_test_list', default=None,
+                                help='active test list')
+    self.subparser.add_argument('-f', '--force', action='store_true',
+                                help='Overwrite existing output image file.')
+    self.subparser.add_argument('-o', '--output', required=True,
+                                help='path to the output RMA image file')
 
   def Run(self):
     output = self.args.output
     if os.path.exists(output) and not self.args.force:
       raise RuntimeError(
-          'Output already exists (add -f to overwrite): %s' % output)
+          f'Output already exists (add -f to overwrite): {output}')
 
     with SysUtils.TempDirectory(prefix='rma_') as temp_dir:
       bundle = ChromeOSFactoryBundle(
@@ -3085,8 +3087,7 @@ class CreateRMAImageCommmand(SubCommand):
       bundle.CreateRMAImage(self.args.output,
                             active_test_list=self.args.active_test_list)
       ChromeOSFactoryBundle.ShowRMAImage(output)
-      print('OK: Generated %s RMA image at %s' %
-            (bundle.board, self.args.output))
+      print(f'OK: Generated {bundle.board} RMA image at {self.args.output}')
 
 
 class MergeRMAImageCommand(SubCommand):
@@ -3096,16 +3097,13 @@ class MergeRMAImageCommand(SubCommand):
   aliases = ['merge_rma', 'rma-merge']
 
   def Init(self):
-    self.subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='Overwrite existing output image file.')
-    self.subparser.add_argument(
-        '-o', '--output', required=True,
-        help='Path to the merged output image.')
-    self.subparser.add_argument(
-        '-i', '--images', required=True, nargs='+',
-        type=ArgTypes.ExistsPath,
-        help='Path to input RMA images')
+    self.subparser.add_argument('-f', '--force', action='store_true',
+                                help='Overwrite existing output image file.')
+    self.subparser.add_argument('-o', '--output', required=True,
+                                help='Path to the merged output image.')
+    self.subparser.add_argument('-i', '--images', required=True, nargs='+',
+                                type=ArgTypes.ExistsPath,
+                                help='Path to input RMA images')
     self.subparser.add_argument(
         '-a', '--auto_select', action='store_true',
         help='Automatically resolve duplicate boards (use the last one).')
@@ -3120,15 +3118,16 @@ class MergeRMAImageCommand(SubCommand):
     output = self.args.output
     if os.path.exists(output) and not self.args.force:
       raise RuntimeError(
-          'Output already exists (add -f to overwrite): %s' % output)
+          f'Output already exists (add -f to overwrite): {output}')
     if len(self.args.images) < 2:
       raise RuntimeError('Need > 1 input image files to merge.')
 
-    print('Scanning %s input image files...' % len(self.args.images))
-    ChromeOSFactoryBundle.MergeRMAImage(
-        self.args.output, self.args.images, self.args.auto_select)
+    print(f'Scanning {len(self.args.images)} input image files...')
+    ChromeOSFactoryBundle.MergeRMAImage(self.args.output, self.args.images,
+                                        self.args.auto_select)
     ChromeOSFactoryBundle.ShowRMAImage(output)
-    print('OK: Merged successfully in new image: %s' % output)
+    print(f'OK: Merged successfully in new image: {output}')
+
 
 class ExtractRMAImageCommand(SubCommand):
   """Extract an RMA image from a universal RMA image."""
@@ -3137,16 +3136,13 @@ class ExtractRMAImageCommand(SubCommand):
   aliases = ['extract_rma', 'rma-extract']
 
   def Init(self):
-    self.subparser.add_argument(
-        '-f', '--force', action='store_true',
-        help='Overwrite existing output image file.')
-    self.subparser.add_argument(
-        '-o', '--output', required=True,
-        help='Path to the merged output image.')
-    self.subparser.add_argument(
-        '-i', '--image', required=True,
-        type=ArgTypes.ExistsPath,
-        help='Path to input RMA image.')
+    self.subparser.add_argument('-f', '--force', action='store_true',
+                                help='Overwrite existing output image file.')
+    self.subparser.add_argument('-o', '--output', required=True,
+                                help='Path to the merged output image.')
+    self.subparser.add_argument('-i', '--image', required=True,
+                                type=ArgTypes.ExistsPath,
+                                help='Path to input RMA image.')
     self.subparser.add_argument(
         '-s', '--select', default=None,
         help='Select the SELECT-th board in the shim to extract.')
@@ -3160,13 +3156,14 @@ class ExtractRMAImageCommand(SubCommand):
     output = self.args.output
     if os.path.exists(output) and not self.args.force:
       raise RuntimeError(
-          'Output already exists (add -f to overwrite): %s' % output)
+          f'Output already exists (add -f to overwrite): {output}')
 
     print('Scanning input image file...')
-    ChromeOSFactoryBundle.ExtractRMAImage(
-        self.args.output, self.args.image, self.args.select)
+    ChromeOSFactoryBundle.ExtractRMAImage(self.args.output, self.args.image,
+                                          self.args.select)
     ChromeOSFactoryBundle.ShowRMAImage(output)
-    print('OK: Extracted successfully in new image: %s' % output)
+    print(f'OK: Extracted successfully in new image: {output}')
+
 
 class ShowRMAImageCommand(SubCommand):
   """Show the content of a RMA image."""
@@ -3175,10 +3172,9 @@ class ShowRMAImageCommand(SubCommand):
   aliases = ['show_rma', 'rma-show']
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', required=True,
-        type=ArgTypes.ExistsPath,
-        help='Path to input RMA image.')
+    self.subparser.add_argument('-i', '--image', required=True,
+                                type=ArgTypes.ExistsPath,
+                                help='Path to input RMA image.')
 
   def Run(self):
     ChromeOSFactoryBundle.ShowRMAImage(self.args.image)
@@ -3224,12 +3220,8 @@ class ReplaceRMAComponentCommand(SubCommand):
                         'lsb-factory configs will be cleared.', self.args.board)
         single_board_image = os.path.join(temp_dir, 'single_board.bin')
         bundle = ChromeOSFactoryBundle(
-            temp_dir=temp_dir,
-            board=self.args.board,
-            release_image=None,
-            test_image=None,
-            toolkit=None,
-            factory_shim=self.args.factory_shim)
+            temp_dir=temp_dir, board=self.args.board, release_image=None,
+            test_image=None, toolkit=None, factory_shim=self.args.factory_shim)
         with Partition(self.args.image, PART_CROS_STATEFUL).Mount() as stateful:
           DIR_CROS_PAYLOADS = CrosPayloadUtils.GetCrosPayloadsDir()
           src_payloads_dir = os.path.join(stateful, DIR_CROS_PAYLOADS)
@@ -3241,15 +3233,11 @@ class ReplaceRMAComponentCommand(SubCommand):
       target_image = (
           single_board_image if single_board_image else self.args.image)
       ChromeOSFactoryBundle.ReplaceRMAPayload(
-          target_image,
-          board=self.args.board,
+          target_image, board=self.args.board,
           release_image=self.args.release_image,
-          test_image=self.args.test_image,
-          toolkit=self.args.toolkit,
-          firmware=self.args.firmware,
-          hwid=self.args.hwid,
-          complete=self.args.complete,
-          toolkit_config=self.args.toolkit_config,
+          test_image=self.args.test_image, toolkit=self.args.toolkit,
+          firmware=self.args.firmware, hwid=self.args.hwid,
+          complete=self.args.complete, toolkit_config=self.args.toolkit_config,
           project_config=self.args.project_config)
 
       if self.args.factory_shim:
@@ -3265,7 +3253,7 @@ class ReplaceRMAComponentCommand(SubCommand):
           Shell(['mv', single_board_image, self.args.image])
 
     ChromeOSFactoryBundle.ShowRMAImage(self.args.image)
-    print('OK: Replaced components successfully in image: %s' % self.args.image)
+    print(f'OK: Replaced components successfully in image: {self.args.image}')
 
 
 class ToolkitCommand(SubCommand):
@@ -3278,15 +3266,12 @@ class ToolkitCommand(SubCommand):
         '-i', '--image', required=True,
         type=ArgTypes.ExistsPath,
         help='Path to input RMA image.')
-    self.subparser.add_argument(
-        '--board', type=str, default=None,
-        help='Board to get toolkit.')
-    self.subparser.add_argument(
-        '--unpack', type=str, default=None,
-        help='Path to unpack the toolkit.')
-    self.subparser.add_argument(
-        '--repack', type=str, default=None,
-        help='Path to repack the toolkit.')
+    self.subparser.add_argument('--board', type=str, default=None,
+                                help='Board to get toolkit.')
+    self.subparser.add_argument('--unpack', type=str, default=None,
+                                help='Path to unpack the toolkit.')
+    self.subparser.add_argument('--repack', type=str, default=None,
+                                help='Path to repack the toolkit.')
 
   def Run(self):
     # Check that exactly one of --unpack and --repack is specified.
@@ -3297,7 +3282,7 @@ class ToolkitCommand(SubCommand):
     target_path = self.args.unpack or self.args.repack
     if self.args.unpack:
       if os.path.exists(target_path):
-        raise RuntimeError('Extract path "%s" already exists.' % target_path)
+        raise RuntimeError(f'Extract path "{target_path}" already exists.')
     if self.args.repack:
       if not os.path.isdir(target_path):
         raise RuntimeError('PATH should be a directory.')
@@ -3315,30 +3300,32 @@ class ToolkitCommand(SubCommand):
             raise RuntimeError('Board not set.')
         DIR_CROS_PAYLOADS = CrosPayloadUtils.GetCrosPayloadsDir()
         old_payloads_dir = os.path.join(stateful, DIR_CROS_PAYLOADS)
-        old_json_path = CrosPayloadUtils.GetJSONPath(
-            old_payloads_dir, self.args.board)
+        old_json_path = CrosPayloadUtils.GetJSONPath(old_payloads_dir,
+                                                     self.args.board)
         CrosPayloadUtils.GetToolkit(old_json_path, old_toolkit_path)
       # Unpack toolkit
       if self.args.unpack:
         Shell([old_toolkit_path, '--target', target_path, '--noexec'])
-        print('OK: Unpacked %s toolkit to directory "%s".' %
-              (self.args.board, target_path))
+        print(f'OK: Unpacked {self.args.board} toolkit to directory "'
+              f'{target_path}".')
       # Repack toolkit.
       if self.args.repack:
-        Shell([old_toolkit_path, '--', '--repack', target_path,
-               '--pack-into', new_toolkit_path])
+        Shell([
+            old_toolkit_path, '--', '--repack', target_path, '--pack-into',
+            new_toolkit_path
+        ])
         # Replace old_toolkit in image with new_toolkit.
         with CrosPayloadUtils.TempPayloadsDir() as new_payloads_dir:
           CrosPayloadUtils.CopyComponentsInImage(
               self.args.image, self.args.board, [], new_payloads_dir)
-          new_json_path = CrosPayloadUtils.GetJSONPath(
-              new_payloads_dir, self.args.board)
+          new_json_path = CrosPayloadUtils.GetJSONPath(new_payloads_dir,
+                                                       self.args.board)
           CrosPayloadUtils.ReplaceComponent(
               new_json_path, PAYLOAD_TYPE_TOOLKIT, new_toolkit_path)
           CrosPayloadUtils.ReplaceComponentsInImage(
               self.args.image, self.args.board, new_payloads_dir)
-        print('OK: Repacked %s toolkit from directory "%s".' %
-              (self.args.board, target_path))
+        print(f'OK: Repacked {self.args.board} toolkit from directory "'
+              f'{target_path}".')
 
 
 class CreateBundleCommand(SubCommand):
@@ -3346,17 +3333,15 @@ class CreateBundleCommand(SubCommand):
   name = 'bundle'
 
   def Init(self):
-    ChromeOSFactoryBundle.DefineBundleArguments(
-        self.subparser, ChromeOSFactoryBundle.BUNDLE)
+    ChromeOSFactoryBundle.DefineBundleArguments(self.subparser,
+                                                ChromeOSFactoryBundle.BUNDLE)
     self.subparser.add_argument(
         '-o', '--output_dir', default='.',
         help='directory for the output factory bundle file')
     self.subparser.add_argument(
-        '--timestamp',
-        help='override the timestamp field in output file name')
+        '--timestamp', help='override the timestamp field in output file name')
     self.subparser.add_argument(
-        '-n', '--notes',
-        help='additional notes or comments for bundle release')
+        '-n', '--notes', help='additional notes or comments for bundle release')
 
   def Run(self):
     with SysUtils.TempDirectory(prefix='bundle_') as temp_dir:
@@ -3380,10 +3365,10 @@ class CreateBundleCommand(SubCommand):
       )
       if self.args.verify_cros_config:
         bundle.VerifyCrosConfig()
-      output_file = bundle.CreateBundle(
-          self.args.output_dir, self.args.phase, self.args.notes,
-          timestamp=self.args.timestamp)
-      print('OK: Created %s factory bundle: %s' % (bundle.board, output_file))
+      output_file = bundle.CreateBundle(self.args.output_dir, self.args.phase,
+                                        self.args.notes,
+                                        timestamp=self.args.timestamp)
+      print(f'OK: Created {bundle.board} factory bundle: {output_file}')
 
 
 class CreateDockerImageCommand(SubCommand):
@@ -3395,9 +3380,9 @@ class CreateDockerImageCommand(SubCommand):
   name = 'docker'
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', type=ArgTypes.ExistsPath, required=True,
-        help='path to the Chromium OS image')
+    self.subparser.add_argument('-i', '--image', type=ArgTypes.ExistsPath,
+                                required=True,
+                                help='path to the Chromium OS image')
 
   def _CreateDocker(self, image, root):
     """Creates a docker image from prepared rootfs and stateful partition.
@@ -3411,23 +3396,22 @@ class CreateDockerImageCommand(SubCommand):
     board = lsb_data.GetChromeOSBoard()
     version = lsb_data.GetChromeOSVersion()
     if not board or not version:
-      raise RuntimeError('Input image does not have proper Chromium OS '
-                         'board [%s] or version [%s] info.' % (board, version))
-    docker_name = 'cros/%s_test:%s' % (board, version)
-    docker_tag = 'cros/%s_test:%s' % (board, 'latest')
-    print('Creating Docker image as %s ...' % docker_name)
+      raise RuntimeError(
+          f'Input image does not have proper Chromium OS board [{board}] or '
+          f'version [{version}] info.')
+    docker_name = f'cros/{board}_test:{version}'
+    docker_tag = f'cros/{board}_test:latest'
+    print(f'Creating Docker image as {docker_name} ...')
 
     # Use pv if possible. It may be hard to estimate the real size of files in
     # mounted folder so we will use 2/3 of raw disk image - which works on most
     # test images.
     try:
-      pv = '%s -s %s' % (SysUtils.FindCommand('pv'),
-                         os.path.getsize(image) // 3 * 2)
+      pv = f"{SysUtils.FindCommand('pv')} -s {os.path.getsize(image) // 3 * 2}"
     except Exception:
       pv = 'cat'
 
-    Sudo('tar -C "%s" -c . | %s | docker import - "%s"' %
-         (root, pv, docker_name))
+    Sudo(f'tar -C "{root}" -c . | {pv} | docker import - "{docker_name}"')
     Sudo(['docker', 'tag', docker_name, docker_tag])
     return docker_name
 
@@ -3437,14 +3421,17 @@ class CreateDockerImageCommand(SubCommand):
 
     with state_part.Mount() as state:
       with rootfs_part.MountAsCrOSRootfs() as rootfs:
-        Sudo(['mount', '--bind', os.path.join(state, 'var_overlay'),
-              os.path.join(rootfs, 'var')])
+        Sudo([
+            'mount', '--bind',
+            os.path.join(state, 'var_overlay'),
+            os.path.join(rootfs, 'var')
+        ])
         Sudo(['mount', '--bind', os.path.join(state, 'dev_image'),
               os.path.join(rootfs, 'usr', 'local')])
         docker_name = self._CreateDocker(self.args.image, rootfs)
 
-    print('OK: Successfully built docker image [%s] from %s.' %
-          (docker_name, self.args.image))
+    print(f'OK: Successfully built docker image [{docker_name}] from '
+          f'{self.args.image}.')
 
 
 class InstallChromiumOSImageCommand(SubCommand):
@@ -3472,11 +3459,10 @@ class InstallChromiumOSImageCommand(SubCommand):
         default=True,
         help='skip copying stateful partition')
     self.subparser.add_argument(
-        '-p', '--partition_number', type=int, required=False,
-        help=('kernel partition number to install (rootfs will be +1); '
-              'default to %s or %s if active kernel is %s.' % (
-                  PART_CROS_KERNEL_A, PART_CROS_KERNEL_B,
-                  PART_CROS_KERNEL_A)))
+        '-p', '--partition_number', type=int, required=False, help=(
+            'kernel partition number to install (rootfs will be +1); default '
+            f'to {PART_CROS_KERNEL_A} or {PART_CROS_KERNEL_B} if active kernel '
+            f'is {PART_CROS_KERNEL_A}.'))
 
   def Run(self):
     # TODO(hungte) Auto-detect by finding removable and fixed storage for from
@@ -3496,12 +3482,10 @@ class InstallChromiumOSImageCommand(SubCommand):
       to_rootfs = MakePartition(to_image, to_part + 1)
       if to_rootfs == SudoOutput('rootdev -s').strip():
         if arg_part is not None:
-          raise RuntimeError(
-              'Cannot install to active partition %s' % to_rootfs)
+          raise RuntimeError(f'Cannot install to active partition {to_rootfs}')
         known_kernels = [PART_CROS_KERNEL_A, PART_CROS_KERNEL_B]
         if to_part not in known_kernels:
-          raise RuntimeError(
-              'Unsupported kernel destination for %s' % to_rootfs)
+          raise RuntimeError(f'Unsupported kernel destination for {to_rootfs}')
         to_part = known_kernels[1 - known_kernels.index(to_part)]
 
     # Ready to install!
@@ -3510,12 +3494,12 @@ class InstallChromiumOSImageCommand(SubCommand):
 
     # On USB stick images, kernel A is signed by recovery key and B is signed by
     # normal key, so we have to choose B when installed to disk.
-    print('Installing [%s] to [%s#%s]...' % (from_image, to_image, to_part))
+    print(f'Installing [{from_image}] to [{to_image}#{to_part}]...')
     gpt_from.GetPartition(PART_CROS_KERNEL_B).Copy(
         gpt_to.GetPartition(to_part), sync=is_block, verbose=True)
     gpt_from.GetPartition(PART_CROS_ROOTFS_A).Copy(
-        gpt_to.GetPartition(to_part + 1),
-        check_equal=False, sync=is_block, verbose=True)
+        gpt_to.GetPartition(to_part + 1), check_equal=False, sync=is_block,
+        verbose=True)
 
     # Now, prioritize and make kernel A bootable.
     # TODO(hungte) Check if kernel key is valid.
@@ -3548,12 +3532,15 @@ class InstallChromiumOSImageCommand(SubCommand):
           # Use sudo instead of shutil.copytree sine people may invoke this
           # command with user permission (which works for copying partitions).
           # SysUtils.Sudo does not support pipe yet so we have to add 'sh -c'.
-          Sudo(['sh', '-c', 'tar -C %s -cf - dev_image | %s | '
-                'tar -C %s --warning=none --exclude="%s" -xf -' %
-                (from_dir, pv, to_dir, exclude)])
+          Sudo([
+              'sh', '-c',
+              (f'tar -C {from_dir} -cf - dev_image | {pv} | tar -C {to_dir} '
+               f'--warning=none --exclude="{exclude}" -xf -')
+          ])
 
-    print('OK: Successfully installed image from [%s] to [%s].' %
-          (from_image, to_image))
+    print(
+        f'OK: Successfully installed image from [{from_image}] to [{to_image}].'
+    )
 
 
 class EditLSBCommand(SubCommand):
@@ -3564,36 +3551,33 @@ class EditLSBCommand(SubCommand):
   lsb = None
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', type=ArgTypes.ExistsPath, required=True,
-        help='Path to the factory_install image.')
-    self.subparser.add_argument(
-        '--board', type=str, default=None,
-        help='Board to edit lsb file.')
+    self.subparser.add_argument('-i', '--image', type=ArgTypes.ExistsPath,
+                                required=True,
+                                help='Path to the factory_install image.')
+    self.subparser.add_argument('--board', type=str, default=None,
+                                help='Board to edit lsb file.')
 
   def _DoURL(self, title, keys, default_port=8080, suffix=''):
-    host = UserInput.GetString('%s host' % title, optional=True)
+    host = UserInput.GetString(f'{title} host', optional=True)
     if not host:
       return
-    port = UserInput.GetString('Enter port (default=%s)' % default_port,
+    port = UserInput.GetString(f'Enter port (default={default_port})',
                                optional=True)
     if not port:
       port = str(default_port)
-    url = 'http://%s:%s%s' % (host, port, suffix)
+    url = f'http://{host}:{port}{suffix}'
     for key in keys:
       self.lsb.SetValue(key, url)
 
   def _DoOptions(self, title, key, options):
-    selected = UserInput.Select('%s (%s)' % (title, key), options)
+    selected = UserInput.Select(f'{title} ({key})', options)
     value = options[selected]
     self.lsb.SetValue(key, value)
     return value
 
   def _DoOptionalNumber(self, title, key, min_value, max_value):
-    selected = UserInput.GetNumber('%s (%s)' % (title, key),
-                                   min_value=min_value,
-                                   max_value=max_value,
-                                   optional=True)
+    selected = UserInput.GetNumber(f'{title} ({key})', min_value=min_value,
+                                   max_value=max_value, optional=True)
     if selected is not None:
       self.lsb.SetValue(key, str(selected))
     else:
@@ -3608,9 +3592,8 @@ class EditLSBCommand(SubCommand):
 
   def EditServerAddress(self):
     """Modify Chrome OS Factory Server address."""
-    self._DoURL(
-        'Chrome OS Factory Server', ['CHROMEOS_AUSERVER', 'CHROMEOS_DEVSERVER'],
-        suffix='/update')
+    self._DoURL('Chrome OS Factory Server',
+                ['CHROMEOS_AUSERVER', 'CHROMEOS_DEVSERVER'], suffix='/update')
 
   def EditDefaultAction(self):
     """Modify default action (will be overridden by RMA autorun)."""
@@ -3669,9 +3652,8 @@ class EditLSBCommand(SubCommand):
     answer = self._DoOptionalNumber(
         'Minimum allowed battery voltage (mA)', 'CUTOFF_BATTERY_MIN_VOLTAGE',
         None, None)
-    self._DoOptionalNumber(
-        'Maximum allowed battery voltage (mA)', 'CUTOFF_BATTERY_MAX_VOLTAGE',
-        answer, None)
+    self._DoOptionalNumber('Maximum allowed battery voltage (mA)',
+                           'CUTOFF_BATTERY_MAX_VOLTAGE', answer, None)
     self._DoURL(
         'Chrome OS Factory Server or Shopfloor Service for OQC ReFinalize',
         ['SHOPFLOOR_URL'])
@@ -3722,10 +3704,8 @@ class EditLSBCommand(SubCommand):
           warning_message = [
               SPLIT_LINE,
               'This is a reset shim, or an old RMA shim without lsb_factory '
-              'payload.',
-              'This command will modify %s file.' % PATH_LSB_FACTORY,
-              SPLIT_LINE,
-              'Continue?'
+              'payload.', f'This command will modify {PATH_LSB_FACTORY} file.',
+              SPLIT_LINE, 'Continue?'
           ]
           if not UserInput.YesNo('\n'.join(warning_message)):
             return
@@ -3761,15 +3741,10 @@ class EditLSBCommand(SubCommand):
           print('QUIT. No changes were applied.')
           return True
 
-        self.DoMenu(self.EditBoard,
-                    self.EditServerAddress,
-                    self.EditDefaultAction,
-                    self.EditActionCountdown,
-                    self.EditCompletePrompt,
-                    self.EditRMAAutorun,
-                    self.EditCutoff,
-                    w=Write,
-                    q=Quit)
+        self.DoMenu(self.EditBoard, self.EditServerAddress,
+                    self.EditDefaultAction, self.EditActionCountdown,
+                    self.EditCompletePrompt, self.EditRMAAutorun,
+                    self.EditCutoff, w=Write, q=Quit)
 
 
 class EditToolkitConfigCommand(SubCommand):
@@ -3781,9 +3756,9 @@ class EditToolkitConfigCommand(SubCommand):
   config_wip = None
 
   def Init(self):
-    self.subparser.add_argument(
-        '-i', '--image', type=ArgTypes.ExistsPath, required=True,
-        help='Path to the factory_install image.')
+    self.subparser.add_argument('-i', '--image', type=ArgTypes.ExistsPath,
+                                required=True,
+                                help='Path to the factory_install image.')
     self.subparser.add_argument(
         '--board', type=str, default=None,
         help='Board to edit lsb file.')
@@ -3797,13 +3772,13 @@ class EditToolkitConfigCommand(SubCommand):
   def _DoUpdate(self):
     types = ['string', 'integer', 'boolean']
     key = UserInput.GetString('Enter a key to add/update')
-    value_type = UserInput.Select('Type of value for key "%s"' % key, types)
+    value_type = UserInput.Select(f'Type of value for key "{key}"', types)
     if value_type == 0:
-      value = UserInput.GetString('Enter a string value for key "%s"' % key)
+      value = UserInput.GetString(f'Enter a string value for key "{key}"')
     elif value_type == 1:
-      value = UserInput.GetNumber('Enter an integer value for key "%s"' % key)
+      value = UserInput.GetNumber(f'Enter an integer value for key "{key}"')
     else:
-      value = UserInput.YesNo('Select True(y) or False(n) for key "%s"' % key)
+      value = UserInput.YesNo(f'Select True(y) or False(n) for key "{key}"')
     self.Update(key, value)
 
   def _DoDeleteKey(self):
@@ -3815,28 +3790,26 @@ class EditToolkitConfigCommand(SubCommand):
     self.Update(key, value)
 
   def _DoURL(self, title, keys, default_port=8080, suffix=''):
-    host = UserInput.GetString('%s host' % title, optional=True)
+    host = UserInput.GetString(f'{title} host', optional=True)
     if not host:
       return
-    port = UserInput.GetString('Enter port (default=%s)' % default_port,
+    port = UserInput.GetString(f'Enter port (default={default_port})',
                                optional=True)
     if not port:
       port = str(default_port)
-    url = 'http://%s:%s%s' % (host, port, suffix)
+    url = f'http://{host}:{port}{suffix}'
     for key in keys:
       self.Update(key, url)
 
   def _DoOptions(self, title, key, options):
-    selected = UserInput.Select('%s (%s)' % (title, key), options)
+    selected = UserInput.Select(f'{title} ({key})', options)
     value = options[selected]
     self.Update(key, value)
     return value
 
   def _DoOptionalNumber(self, title, key, min_value, max_value):
-    selected = UserInput.GetNumber('%s (%s)' % (title, key),
-                                   min_value=min_value,
-                                   max_value=max_value,
-                                   optional=True)
+    selected = UserInput.GetNumber(f'{title} ({key})', min_value=min_value,
+                                   max_value=max_value, optional=True)
     if selected is not None:
       self.Update(key, selected)
     else:
@@ -3855,15 +3828,16 @@ class EditToolkitConfigCommand(SubCommand):
     subconfig_key = TOOLKIT_SUBCONFIG_TEST_LIST_CONSTANTS
     self.config_wip = self.toolkit_config.get(subconfig_key, {}).copy()
     options_list = ['Add/edit key', 'Delete key']
-    options_dict = {'q': 'Return to menu without saving changes',
-                    'w': 'Save changes and return to menu'}
+    options_dict = {
+        'q': 'Return to menu without saving changes',
+        'w': 'Save changes and return to menu'
+    }
     while True:
       Shell(['clear'])
       title = '\n'.join([
-          'Test list constants:',
-          SPLIT_LINE,
-          json.dumps(self.config_wip, indent=2),
-          SPLIT_LINE])
+          'Test list constants:', SPLIT_LINE,
+          json.dumps(self.config_wip, indent=2), SPLIT_LINE
+      ])
       option = UserInput.Select(title, options_list, options_dict)
       if option == 0:
         self._DoUpdate()

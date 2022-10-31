@@ -23,6 +23,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 
+
 # Constants lifted from EDID documentation.
 VERSION = 0x01
 MAGIC = b'\x00\xff\xff\xff\xff\xff\xff\x00'
@@ -135,10 +136,12 @@ def _ParseBinaryBlob(blob):
   product_id = ReadShortLE(PRODUCT_ID_OFFSET)
   width = (blob[HORIZONTAL_OFFSET] | ((blob[HORIZONTAL_HIGH_OFFSET] >> 4) << 8))
   height = (blob[VERTICAL_OFFSET] | ((blob[VERTICAL_HIGH_OFFSET] >> 4) << 8))
-  return {'vendor': vendor_name,
-          'product_id': '%04x' % product_id,
-          'width': str(width),
-          'height': str(height)}
+  return {
+      'vendor': vendor_name,
+      'product_id': f'{product_id:04x}',
+      'width': str(width),
+      'height': str(height)
+  }
 
 
 def _I2CDump(bus, address, size):
@@ -172,9 +175,9 @@ def LoadFromI2C(path):
     Parsed I2c output, None if it fails to dump something for the specific I2C.
   """
   if isinstance(path, int):
-    path = '/dev/i2c-%d' % path
-  command = 'i2cdetect -y -r %s %d %d' % (
-      path.split('-')[1], I2C_LVDS_ADDRESS, I2C_LVDS_ADDRESS)
+    path = f'/dev/i2c-{int(path)}'
+  command = (f"i2cdetect -y -r {path.split('-')[1]} {int(I2C_LVDS_ADDRESS)} "
+             f"{int(I2C_LVDS_ADDRESS)}")
   # Make sure there is a device in I2C_LVDS_ADDRESS
   blob = None
   if not '--' in Shell(command).stdout:

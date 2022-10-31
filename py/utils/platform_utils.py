@@ -8,6 +8,7 @@ import os
 import platform
 import time
 
+
 # Cache to speed up.
 _CURRENT_PLATFORM_SYSTEM = platform.system()
 
@@ -67,8 +68,7 @@ def GetProvider(api_name, system=None):
     system = _CURRENT_PLATFORM_SYSTEM
   func = systems.get(system, systems.get(_SYSTEM_DEFAULT, None))
   if func is None:
-    raise NotImplementedError('No implementation on %s for <%s>' %
-                              (system, api_name))
+    raise NotImplementedError(f'No implementation on {system} for <{api_name}>')
   return func
 
 

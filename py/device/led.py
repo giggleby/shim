@@ -11,6 +11,7 @@ import re
 from cros.factory.device import device_types
 from cros.factory.utils.type_utils import Enum
 
+
 _PATTERN = re.compile(r'\t([a-z]+)\t: (0x[0-9A-Fa-f]+)\n')
 """The pattern of entries of output of 'ectool led <name> query'"""
 
@@ -65,15 +66,16 @@ class LED(device_types.DeviceComponent):
   def _CheckSetColorParameters(self, color, led_name, brightness):
     """Check parameters."""
     if led_name is not None and led_name.upper() not in self.Index:
-      raise ValueError('Invalid led name: %r' % led_name)
+      raise ValueError(f'Invalid led name: {led_name!r}')
     if color not in self.Color:
-      raise ValueError('Invalid color: %r' % color)
+      raise ValueError(f'Invalid color: {color!r}')
     if brightness is not None:
       if not isinstance(brightness, int):
-        raise TypeError('Invalid brightness: %r' %  brightness)
+        raise TypeError(f'Invalid brightness: {brightness!r}')
       # pylint: disable=superfluous-parens
       if not (0 <= brightness <= 100):
-        raise ValueError('brightness (%d) out-of-range [0, 100]' % brightness)
+        raise ValueError(
+            f'brightness ({int(brightness)}) out-of-range [0, 100]')
 
   def SetColor(self, color, led_name=None, brightness=None):
     """Sets LED color.
@@ -108,7 +110,7 @@ class LED(device_types.DeviceComponent):
       else:
         max_brightness = self.led_infoes[led_name][color.lower()]
         scaled_brightness = int(round(brightness / 100.0 * max_brightness))
-        color_brightness = '%s=%d' % (color.lower(), scaled_brightness)
+        color_brightness = f'{color.lower()}={int(scaled_brightness)}'
     except Exception:
       logging.exception('Failed deciding LED command for %r (%r,%r)',
                         led_name, color, brightness)
@@ -186,7 +188,7 @@ class PWMLeftRightLED(LED):
     self._pwm_idx = pwm_idx
     self._duty_map = duty_map or self.DefaultDutyMap
     if not set(self._duty_map).issuperset(list(self.Index) + [None]):
-      raise ValueError('Invalid duty map: %r' % self._duty_map)
+      raise ValueError(f'Invalid duty map: {self._duty_map!r}')
 
   def SetColor(self, color, led_name=None, brightness=None):
     """See LED.SetColor."""

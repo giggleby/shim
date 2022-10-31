@@ -27,7 +27,7 @@ class TemporaryFiles(device_types.DeviceComponent):
   # pylint: disable=redefined-builtin
   def mktemp(self, is_dir, suffix='', prefix='cftmp', dir=None):
     """Creates a temporary file or directory on DUT."""
-    template = '%s.XXXXXX%s' % (prefix, suffix)
+    template = f'{prefix}.XXXXXX{suffix}'
     # http://unix.stackexchange.com/questions/30091/
     # GNU mktemp takes TEMPLATE with 6X as full path unless DIR is not assigned.
     # BSD mktemp takes arbitary X with -t (deprecated by GNU) for DIR. DIR can
@@ -39,7 +39,7 @@ class TemporaryFiles(device_types.DeviceComponent):
     args = ['mktemp']
     if is_dir:
       args += ['-d']
-    args += ['--tmpdir' if dir is None else '--tmpdir=%s' % dir]
+    args += ['--tmpdir' if dir is None else f'--tmpdir={dir}']
     args += [template]
     return self._device.CheckOutput(args).strip()
 
@@ -86,7 +86,7 @@ class AndroidTemporaryFiles(TemporaryFiles):
   def mktemp(self, is_dir, suffix='', prefix='cftmp', dir=None):
     """Creates a temporary file or directory on DUT."""
 
-    template = '%s.XXXXXX%s' % (prefix, suffix)
+    template = f'{prefix}.XXXXXX{suffix}'
     args = ['mktemp']
     if dir is not None:
       args += ['-p', dir]

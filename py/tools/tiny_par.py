@@ -41,6 +41,7 @@ import tempfile
 
 from cros.factory.utils.process_utils import Spawn
 
+
 # A pattern in TEMPLATE to be replaced with real module list.
 MODULES_PATTERN = '__MODULES_HERE__'
 
@@ -172,7 +173,7 @@ def main(argv=None):
       with open(zip_path, 'rb') as z:
         f.write(z.read())
     os.chmod(args.output, 0o755)
-    print('Successfully created PAR executable: %s' % args.output)
+    print(f'Successfully created PAR executable: {args.output}')
   finally:
     shutil.rmtree(tmp_dir)
 

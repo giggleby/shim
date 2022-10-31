@@ -45,6 +45,7 @@ don't want to add arguments for all utility functions, so instead we can use
 import contextlib
 import threading
 
+
 _local_env = threading.local()
 
 
@@ -77,6 +78,6 @@ def SetLocalEnv(**kwargs):
   finally:
     if len(_local_env.stack) != stack_size + 1:
       raise LocalEnvException(
-          'mismatched number of append and pop, expected: %d, actual: %d' % (
-              stack_size + 1, len(_local_env.stack)))
+          'mismatched number of append and pop, expected: '
+          f'{int(stack_size + 1)}, actual: {len(_local_env.stack)}')
     _local_env.stack.pop()

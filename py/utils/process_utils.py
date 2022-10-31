@@ -71,7 +71,7 @@ def IsProcessAlive(pid, ppid=None):
       another process, the function returns False in this case.
   """
   try:
-    with open('/proc/%d/stat' % pid, encoding='utf8') as f:
+    with open(f'/proc/{int(pid)}/stat', encoding='utf8') as f:
       stat = f.readline().split()
       if ppid is not None and int(stat[3]) != ppid:
         return False
@@ -248,9 +248,9 @@ def Spawn(args, **kwargs):
     if (callable(getattr(log, "info", None)) and
         callable(getattr(log, "error", None))):
       logger = log
-    message = 'Running command: "%s"' % args_to_log
+    message = f'Running command: "{args_to_log}"'
     if 'cwd' in kwargs:
-      message += ' in %s' % kwargs['cwd']
+      message += f" in {kwargs['cwd']}"
     logger.info(message)
 
   call = kwargs.pop('call', False)
@@ -332,10 +332,11 @@ def Spawn(args, **kwargs):
       failed = process.returncode != 0
     if failed:
       if log or log_stderr_on_error:
-        message = 'Exit code %d from command: "%s"' % (
-            process.returncode, args_to_log)
+        message = (
+            f'Exit code {int(process.returncode)} from command: "{args_to_log}'
+            '"')
         if log_stderr_on_error:
-          message += '; stderr: """\n%s\n"""' % process.stderr_data
+          message += f'; stderr: ""\"\n{process.stderr_data}\n"""'
         logger.error(message)
 
       if check_call:
@@ -618,10 +619,13 @@ def RedirectStandardStreams(stdin=None, stdout=None, stderr=None):
 
   yield
 
-  changed = {k: sys.__dict__[k] for k, v in redirect_streams.items()
-             if v is not sys.__dict__[k]}
+  changed = {
+      k: sys.__dict__[k]
+      for k, v in redirect_streams.items()
+      if v is not sys.__dict__[k]
+  }
   if changed:
-    raise IOError('Unexpected standard stream redirections: %r' % changed)
+    raise IOError(f'Unexpected standard stream redirections: {changed!r}')
   for k, v in old_streams.items():
     sys.__dict__[k] = v
 

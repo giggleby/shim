@@ -14,6 +14,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
+
 DeviceProperty = device_types.DeviceProperty
 Overrides = type_utils.Overrides
 
@@ -230,11 +231,11 @@ class LinuxBoard(device_types.DeviceBoard):
     if self.link.IsLocal():
       return super().ReadSpecialFile(path, count, skip, encoding)
 
-    args = ['dd', 'bs=1', 'if=%s' % path]
+    args = ['dd', 'bs=1', f'if={path}']
     if count is not None:
-      args += ['count=%d' % count]
+      args += [f'count={int(count)}']
     if skip is not None:
-      args += ['skip=%d' % skip]
+      args += [f'skip={int(skip)}']
 
     return self.CheckOutput(args)
 
@@ -272,7 +273,7 @@ class LinuxBoard(device_types.DeviceBoard):
       file_utils.WriteFile(local_temp, content)
       with self.temp.TempFile() as remote_temp:
         self.link.Push(local_temp, remote_temp)
-        self.CheckOutput(['dd', 'if=%s' % remote_temp, 'of=%s' % path])
+        self.CheckOutput(['dd', f'if={remote_temp}', f'of={path}'])
 
   @type_utils.Overrides
   def SendDirectory(self, local, remote):
@@ -347,7 +348,7 @@ class LinuxBoard(device_types.DeviceBoard):
     if self.link.IsLocal():
       return super().Glob(pattern)
 
-    results = self.CallOutput('ls -d %s' % pattern)
+    results = self.CallOutput(f'ls -d {pattern}')
     return results.splitlines() if results else []
 
   @type_utils.Overrides

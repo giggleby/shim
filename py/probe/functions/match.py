@@ -155,7 +155,7 @@ class MatchFunction(function.Function):
     op, unused_sep, num = value.partition(' ')
     num = float(num)
     if op not in cls.NUM_CMP_OPERATOR:
-      raise ValueError('invalid operator %s' % op)
+      raise ValueError(f'invalid operator {op}')
     def matcher(v):
       try:
         v = float(v)

@@ -19,6 +19,7 @@ from cros.factory.test.env import paths
 from cros.factory.utils import cros_board_utils
 from cros.factory.utils import process_utils
 
+
 try:
   DEPOT_TOOLS_PATH = os.path.join(
       os.path.dirname(os.environ.get('CROS_WORKON_SRCROOT',
@@ -111,8 +112,8 @@ def QueryChanges(info, options):
         'change_id': change['change_id'],
         'parent': current_revision['commit']['parents'][0]['commit'],
         'fetch': current_revision['fetch']['http'],
-        'url': 'https://%s/%d' % (info['url'],
-                                  change['_number']), }
+        'url': f"https://{info['url']}/{int(change['_number'])}",
+    }
   return changes
 
 
@@ -207,7 +208,7 @@ def CherryPickChanges(info, changes):
 
     successes = set()
     for idx, change in enumerate(changes):
-      print('cherry-picking %s ...' % change['url'])
+      print(f"cherry-picking {change['url']} ...")
       try:
         process_utils.LogAndCheckCall(
             ['git', 'fetch', change['fetch']['url'], change['fetch']['ref']],
@@ -238,8 +239,7 @@ def CherryPickChanges(info, changes):
   print('Summary:')
   print('BASE:', head)
   for idx, change in enumerate(changes):
-    print('%s: %s' % (change['url'],
-                      'success' if idx in successes else 'failed'))
+    print(f"{change['url']}: {'success' if idx in successes else 'failed'}")
   print()
   print()
 

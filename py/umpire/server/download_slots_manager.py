@@ -21,6 +21,7 @@ import uuid
 
 from twisted.internet import reactor
 
+
 _SLOTS_NUMBER = 10
 # Expects that client side will send heart beat in every 60 seconds
 _SLOT_ALIVE_TIME = 80.0
@@ -134,7 +135,7 @@ class DownloadSlotsManager:
     else:
       result = self._HeartBeat(identity)
 
-    return 'UUID: %s\nN_PLACE: %d\n' % result
+    return f'UUID: {result[0]}\nN_PLACE: {result[1]:d}\n'
 
   def _RemoveExpiredSession(self):
     now = time.time()

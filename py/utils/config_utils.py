@@ -54,6 +54,7 @@ import zipimport
 from . import file_utils
 from . import json_utils
 
+
 # To simplify portability issues, validating JSON schema is optional.
 try:
   import jsonschema
@@ -104,15 +105,15 @@ class _JsonFileInvalidError(Exception):
 
 
 class ConfigFileInvalidError(_JsonFileInvalidError):
+
   def __str__(self):
-    return 'Failed to load the config file %r: %r' % (self.filename,
-                                                      self.detail)
+    return f'Failed to load the config file {self.filename!r}: {self.detail!r}'
 
 
 class SchemaFileInvalidError(_JsonFileInvalidError):
+
   def __str__(self):
-    return 'Failed to load the schema file %r: %r' % (self.filename,
-                                                      self.detail)
+    return f'Failed to load the schema file {self.filename!r}: {self.detail!r}'
 
 
 class ConfigInvalidError(Exception):
@@ -146,7 +147,7 @@ def OverrideConfig(base, overrides, copy_on_write=False):
   def pop_bool(dct, key):
     val = dct.pop(key, False)
     if not isinstance(val, bool):
-      raise ValueError('Field %r should be a bool but %r found.' % (key, val))
+      raise ValueError(f'Field {key!r} should be a bool but {val!r} found.')
     return val
 
   changed = False
@@ -499,7 +500,7 @@ def LoadConfig(config_name=None, schema_name=None, validate_schema=True,
         # Config data can be extended, but schema must be self-contained.
         schema = new_schema
         break
-    assert schema, 'Need JSON schema file defined for %s.' % config_name
+    assert schema, f'Need JSON schema file defined for {config_name}.'
     if _CAN_VALIDATE_SCHEMA:
       try:
         jsonschema.validate(config, schema)
@@ -624,9 +625,9 @@ def _C3Linearization(parent_configs, config_name):
     if head is None:
       logging.info('original items:\n%s',
                    "\n".join(repr(list(l)) for l in parent_configs))
-      logging.info('current items:\n%s',
-                   "\n".join(repr(list(l)) for l in parent_lists))
-      raise RuntimeError('C3 linearization failed for %s' % config_name)
+      logging.info('current items:\n%s', "\n".join(
+          repr(list(l)) for l in parent_lists))
+      raise RuntimeError(f'C3 linearization failed for {config_name}')
     ret[head] = all_configs[head]
     for l in parent_lists:
       if l and FirstKey(l) == head:
@@ -639,7 +640,7 @@ def _LoadRawConfigList(config_name, config_dirs, allow_inherit,
   """Internal function to load the config list."""
   if config_name in cached_configs:
     assert cached_configs[config_name] != _DUMMY_CACHE, (
-        'Detected loop inheritance dependency of %s' % config_name)
+        f'Detected loop inheritance dependency of {config_name}')
     return cached_configs[config_name]
 
   # Mark the current config in loading.
@@ -655,7 +656,7 @@ def _LoadRawConfigList(config_name, config_dirs, allow_inherit,
       found_configs.append((config_dir, new_config))
   if not found_configs:
     raise ConfigNotFoundError(
-        'No configuration files found for %s.' % config_name)
+        f'No configuration files found for {config_name}.')
   config_list[config_name] = found_configs
 
   # Get the current config dict.

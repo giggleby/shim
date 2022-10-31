@@ -96,7 +96,7 @@ def CheckAndMoveFile(src_path, dst_path, use_move):
       logging.warning('Skip copying as file already exists: %s', dst_path)
       return
     raise common.UmpireError(
-        'Hash collision: file %r != resource file %r' % (src_path, dst_path))
+        f'Hash collision: file {src_path!r} != resource file {dst_path!r}')
   if use_move:
     os.rename(src_path, dst_path)
   else:

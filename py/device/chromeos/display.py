@@ -7,6 +7,7 @@ from cros.factory.test.utils import drm_utils
 
 from cros.factory.external import PIL
 
+
 if PIL.MODULE_READY:
   from cros.factory.external.PIL import Image  # pylint: disable=no-name-in-module
 
@@ -91,8 +92,8 @@ class ChromeOSDisplay(display.LinuxDisplay):
     """
     port_info_dict = self.GetPortInfo()
     if port not in port_info_dict:
-      raise DisplayError('Unknown port %s; valid ports are: %r' %
-                         (port, list(port_info_dict)))
+      raise DisplayError(
+          f'Unknown port {port}; valid ports are: {list(port_info_dict)!r}')
     port_info = port_info_dict[port]
     if not port_info.connected:
       raise DisplayError('Port %s is not connected')
@@ -100,7 +101,7 @@ class ChromeOSDisplay(display.LinuxDisplay):
     image = None
     if not port_info.drm_fb:
       raise DisplayError(
-          'Connector %s does not have an associated framebuffer' % port)
+          f'Connector {port} does not have an associated framebuffer')
     image = port_info.drm_fb.AsRGBImage()
 
     if box is not None:

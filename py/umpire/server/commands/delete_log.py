@@ -78,13 +78,12 @@ class LogDeleter:
           shutil.rmtree(src_dir)
 
         if no_logs:
-          messages.append('no {}s for {} ~ {}'.format(log_type, start_date,
-                                                      end_date))
+          messages.append(f'no {log_type}s for {start_date} ~ {end_date}')
         else:
           messages.append('File removed successfully')
         return {
             'messages': messages,
         }
-      raise common.UmpireError('Failed to export %s: No such type' % log_type)
+      raise common.UmpireError(f'Failed to export {log_type}: No such type')
     except Exception as e:
-      raise common.UmpireError('Failed to export %s\n%r' % (log_type, e))
+      raise common.UmpireError(f'Failed to export {log_type}\n{e!r}')

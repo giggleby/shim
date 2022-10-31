@@ -10,6 +10,7 @@ import os
 
 from . import file_utils
 
+
 try:
   from google.cloud import storage
   from google.oauth2 import service_account
@@ -51,7 +52,7 @@ class CloudStorage:
                   of _CHUNK_SIZE_MULTIPLE.
     """
     assert chunk_size % _CHUNK_SIZE_MULTIPLE == 0, (
-        'chunk_size must be a multiple of %d B' % _CHUNK_SIZE_MULTIPLE)
+        f'chunk_size must be a multiple of {int(_CHUNK_SIZE_MULTIPLE)} B')
     self.chunk_size = chunk_size
 
     self.logger = logger

@@ -34,7 +34,7 @@ class CherryPickChangesTest(unittest.TestCase):
           found = True
           break
       if not found:
-        raise AssertionError('%r is not a subsequence of %r' % (subseq, seq))
+        raise AssertionError(f'{subseq!r} is not a subsequence of {seq!r}')
 
   def testTopologicalSort(self):
     # a -> b -> c

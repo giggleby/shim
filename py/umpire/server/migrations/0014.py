@@ -17,7 +17,7 @@ def SaveNewActiveConfig(config):
       config, indent=2, separators=(',', ': '), sort_keys=True) + '\n'
 
   encoded_json_config = json_config.encode('utf-8')
-  json_name = 'umpire.%s.json' % hashlib.md5(encoded_json_config).hexdigest()
+  json_name = f'umpire.{hashlib.md5(encoded_json_config).hexdigest()}.json'
   json_path = os.path.join('resources', json_name)
   with open(os.path.join(_ENV_DIR, json_path), 'w', encoding='utf8') as f:
     f.write(json_config)

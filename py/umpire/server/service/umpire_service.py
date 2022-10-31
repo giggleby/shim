@@ -29,6 +29,7 @@ from cros.factory.umpire.server import utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 # A list of all available umpire services
 _SERVICE_LIST = [
     'umpire_http', 'rsync', 'shop_floor', 'instalog', 'dkps', 'multicast',
@@ -160,17 +161,17 @@ class ServiceProcess(protocol.ProcessProtocol):
     config_keys = set(config_dict)
 
     if not required_keys.issubset(config_keys):
-      raise ValueError('Required config keys not found: %s' %
-                       ','.join(required_keys - config_keys))
+      raise ValueError('Required config keys not found: '
+                       f'{",".join(required_keys - config_keys)}')
 
     if not config_keys.issubset(all_keys):
-      raise ValueError('Found unknown config keys: %s' %
-                       ','.join(config_keys - all_keys))
+      raise ValueError(
+          f"Found unknown config keys: {','.join(config_keys - all_keys)}")
 
     for key, value in config_dict.items():
       if isinstance(self.config[key], list):
         if not isinstance(value, list):
-          raise ValueError('Config %s should be a list' % key)
+          raise ValueError(f'Config {key} should be a list')
       self.config[key] = value
 
     self.process_name = self.service.name + ':' + self.config.name
@@ -197,14 +198,15 @@ class ServiceProcess(protocol.ProcessProtocol):
       Exception instance. The start deferred returns process pid as result.
     """
     if self.state not in [State.INIT, State.STOPPED, State.ERROR]:
-      return defer.fail(self._Error(
-          'Can not start process %s in state %s' %
-          (self.process_name, self.state)))
+      return defer.fail(
+          self._Error(
+              f'Can not start process {self.process_name} in state {self.state}'
+          ))
     self.messages = []
     if not (os.path.isfile(self.config.executable) and
             os.access(self.config.executable, os.X_OK)):
-      return defer.fail(self._Error(
-          'Executable does not exist: %s' % self.config.executable))
+      return defer.fail(
+          self._Error(f'Executable does not exist: {self.config.executable}'))
     self.deferred_start = defer.Deferred()
     self._ChangeState(State.STARTING)
     self._SpawnProcess()
@@ -226,8 +228,8 @@ class ServiceProcess(protocol.ProcessProtocol):
       return failure
 
     if self.state not in [State.STARTING, State.STARTED]:
-      self._Info('Ignored stop process %s in state %s' %
-                 (self.process_name, self.state))
+      self._Info(
+          f'Ignored stop process {self.process_name} in state {self.state}')
       return defer.succeed(-1)
 
     self.CancelAllMonitors()
@@ -236,12 +238,13 @@ class ServiceProcess(protocol.ProcessProtocol):
     self._ChangeState(State.STOPPING)
 
     def KillChild():
-      self._Info('Process %d not stopped after %f seconds, sending SIGKILL' %
-                 (self.subprocess.pid, _STOPTIME_LIMIT))
+      self._Info(f'Process {int(self.subprocess.pid)} not stopped after '
+                 f'{_STOPTIME_LIMIT:f} seconds, sending SIGKILL')
       self.subprocess.signalProcess('KILL')
+
     self.stop_monitor = reactor.callLater(_STOPTIME_LIMIT, KillChild)
 
-    self._Info('Sending SIGTERM to %d' % self.subprocess.pid)
+    self._Info(f'Sending SIGTERM to {int(self.subprocess.pid)}')
     self.subprocess.signalProcess('TERM')
     self.deferred_stop = defer.Deferred()
     self.deferred_stop.addCallbacks(HandleStopResult, HandleStopFailure)
@@ -249,8 +252,9 @@ class ServiceProcess(protocol.ProcessProtocol):
 
   def _SpawnProcess(self):
     args = [self.config.executable] + self.config.args + self.config.ext_args
-    self._Info('%s starting, executable %s args %r' %
-               (self.process_name, self.config.executable, args))
+    self._Info(
+        f'{self.process_name} starting, executable {self.config.executable} '
+        f'args {args!r}')
     s = reactor.spawnProcess(
         self,  # processProtocol.
         self.config.executable,  # Full program pathname.
@@ -258,11 +262,11 @@ class ServiceProcess(protocol.ProcessProtocol):
         self.config.env,  # Env vars.
         self.config.path,  # Process CWD.
         usePTY=True)
-    self._Info('%r' % s)
+    self._Info(f'{s!r}')
 
   # Twisted process protocol callbacks.
   def makeConnection(self, transport):
-    self._Debug('makeConnection %s' % transport)
+    self._Debug(f'makeConnection {transport}')
     self.subprocess = transport
     def Started():
       self._ChangeState(State.STARTED)
@@ -323,7 +327,7 @@ class ServiceProcess(protocol.ProcessProtocol):
       if self.restart_count >= _MAX_RESTART_COUNT:
         self.deferred_start.errback(self._Error('respawn too fast'))
       else:
-        self._Info('restart count %d' % self.restart_count)
+        self._Info(f'restart count {int(self.restart_count)}')
         self._ChangeState(State.STARTING)
         self._SpawnProcess()
       return
@@ -341,8 +345,7 @@ class ServiceProcess(protocol.ProcessProtocol):
   def _ChangeState(self, state):
     if state == self.state:
       return
-    message = ('%s state change: %s --> %s' % (self.process_name,
-                                               self.state, state))
+    message = f'{self.process_name} state change: {self.state} --> {state}'
     if self.state == State.ERROR:
       logging.error(message)
     else:
@@ -369,8 +372,8 @@ class ServiceProcess(protocol.ProcessProtocol):
 
     lineno = frame.f_lineno
     func = frame.f_code.co_name
-    message = '%s(%s) %s' % (self.process_name, self.subprocess.pid
-                             if self.subprocess else None, message)
+    message = (f'{self.process_name}('
+               f'{self.subprocess.pid if self.subprocess else None}) {message}')
 
     logger = logging.getLogger()
     record = logger.makeRecord(
@@ -529,7 +532,7 @@ def GetServiceSchemata():
   properties = {}
   for name, module in _SERVICE_MAP.items():
     module_path = os.path.dirname(os.path.realpath(module.__file__))
-    config_path = os.path.join(module_path, "%s_config.schema.json" % name)
+    config_path = os.path.join(module_path, f"{name}_config.schema.json")
     properties[name] = copy.deepcopy(_COMMON_SERVICE_SCHEMA)
     try:
       properties[name]["properties"].update(copy.deepcopy(

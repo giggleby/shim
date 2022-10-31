@@ -22,7 +22,7 @@ def GetChromeOSFactoryBoardPath(board):
   for package in package_names:
     try:
       ebuild_path = process_utils.SpawnOutput(
-          ['equery-%s' % board, 'which', package])
+          [f'equery-{board}', 'which', package])
     except OSError:
       logging.error('Fail to execute equery-%s. Try to run inside chroot'
                     ' and do "setup_board --board %s" first.', board, board)
@@ -88,8 +88,8 @@ class BuildBoard:
       if board_name in [None, 'default']:
         default_path = os.path.join(src, 'scripts', '.default_board')
         if not os.path.exists(default_path):
-          raise BuildBoardException('Unable to read default board from %s' %
-                                    default_path)
+          raise BuildBoardException(
+              f'Unable to read default board from {default_path}')
         board_name = file_utils.ReadFile(default_path).strip()
 
       board_name = board_name.lower()
@@ -103,14 +103,14 @@ class BuildBoard:
         LSB_BOARD_RE = re.compile(r'^CHROMEOS_RELEASE_BOARD=([\w-]+)$', re.M)
         if not os.path.exists(LSB_RELEASE_FILE):
           raise BuildBoardException(
-              'Not in chroot and %r does not exist, unable to determine board' %
-              LSB_RELEASE_FILE)
+              f'Not in chroot and {LSB_RELEASE_FILE!r} does not exist, unable '
+              'to determine board')
         try:
           self.full_name = LSB_BOARD_RE.findall(
               file_utils.ReadFile(LSB_RELEASE_FILE))[0].lower()
         except IndexError:
           raise BuildBoardException(
-              'Cannot determine board from %r' % LSB_RELEASE_FILE) from None
+              f'Cannot determine board from {LSB_RELEASE_FILE!r}') from None
       else:
         self.full_name = re.sub('-', '_', board_name).lower()
 
@@ -133,7 +133,7 @@ class BuildBoard:
         # 'emerge-<board> --info' instead.
         try:
           emerge_info = process_utils.CheckOutput(
-              ['emerge-%s' % self.full_name, '--info'])
+              [f'emerge-{self.full_name}', '--info'])
           return re.search(r'^ACCEPT_KEYWORDS="(.*)"$', emerge_info,
                            re.MULTILINE).group(1)
         except subprocess.CalledProcessError:
@@ -141,9 +141,10 @@ class BuildBoard:
       else:
         # Try to determine arch through toolchain.
         chromite = os.path.join(os.environ['CROS_WORKON_SRCROOT'], 'chromite')
-        toolchain = process_utils.CheckOutput(
-            [os.path.join(chromite, 'bin', 'cros_setup_toolchains'),
-             '--show-board-cfg=%s' % self.full_name]).split(',')[0].strip()
+        toolchain = process_utils.CheckOutput([
+            os.path.join(chromite, 'bin', 'cros_setup_toolchains'),
+            f'--show-board-cfg={self.full_name}'
+        ]).split(',')[0].strip()
         target_cfg = process_utils.CheckOutput(
             ['/usr/bin/crossdev', '--show-target-cfg', toolchain])
         arch = re.search(r'^arch=(.*)$', target_cfg, re.MULTILINE).group(1)

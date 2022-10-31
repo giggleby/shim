@@ -22,6 +22,7 @@ from . import file_utils
 from . import process_utils
 from .type_utils import Error
 
+
 DEFAULT_TIMEOUT = 10
 # Some systems map 'localhost' to its IPv6 equivalent ::1.  Sometimes this
 # causes unexpected behaviour.  We want to force the numerical IPv4 address, so
@@ -105,10 +106,10 @@ class CIDR:
     if isinstance(prefix, int):
       self.prefix = prefix
     else:
-      raise RuntimeError('invalid prefix: %s' % prefix)
+      raise RuntimeError(f'invalid prefix: {prefix}')
 
   def __repr__(self):
-    return '%s/%d' % (self.IP, self.prefix)
+    return f'{self.IP}/{int(self.prefix)}'
 
   def __eq__(self, obj):
     return self.IP == obj.IP and self.prefix == obj.prefix
@@ -202,7 +203,7 @@ def FindUsableEthDevice(raise_exception=False,
   last_level = 0
   devices = GetEthernetInterfaces(name_patterns)
   for dev in devices:
-    p = process_utils.Spawn('ethtool %s' % dev, shell=True, read_stdout=True,
+    p = process_utils.Spawn(f'ethtool {dev}', shell=True, read_stdout=True,
                             ignore_stderr=True)
     stat = p.stdout_data
 
@@ -248,8 +249,8 @@ def SetEthernetIp(ip, interface=None, netmask=None, force=False, logger=None):
       cmd += ['netmask', netmask]
     process_utils.Spawn(cmd, call=True)
   elif logger:
-    logger('Not setting IP address for interface %s: already set to %s' %
-           (interface, current_ip))
+    logger(f'Not setting IP address for interface {interface}: already set to '
+           f'{current_ip}')
 
 
 def GetEthernetIp(interface=None):
@@ -287,7 +288,7 @@ def SetAliasEthernetIp(ip, alias_index=0, interface=None, mask='255.255.255.0'):
     mask: Network mask.
   """
   interface = interface or FindUsableEthDevice(raise_exception=False)
-  alias_interface = '%s:%d' % (interface, alias_index)
+  alias_interface = f'{interface}:{int(alias_index)}'
   process_utils.Spawn(['ifconfig', alias_interface, ip, 'netmask', mask, 'up'],
                       call=True, log=True)
 
@@ -299,9 +300,9 @@ def UnsetAliasEthernetIp(alias_index=0, interface=None):
     interface: The target interface.
   """
   interface = interface or FindUsableEthDevice(raise_exception=False)
-  alias_interface = '%s:%d' % (interface, alias_index)
-  process_utils.Spawn(['ifconfig', alias_interface, 'down'],
-                      call=True, log=True)
+  alias_interface = f'{interface}:{int(alias_index)}'
+  process_utils.Spawn(['ifconfig', alias_interface, 'down'], call=True,
+                      log=True)
 
 
 def GetNetworkInterfaceByPath(interface_path, allow_multiple=False):
@@ -349,7 +350,7 @@ def GetNetworkInterfaceByPath(interface_path, allow_multiple=False):
   if allow_multiple:
     logging.warning('Multiple interfaces are found: %s', valid_interfaces)
     return valid_interfaces[0]
-  raise ValueError('Multiple interfaces are found: %s' % valid_interfaces)
+  raise ValueError(f'Multiple interfaces are found: {valid_interfaces}')
 
 
 def GetWLANMACAddress():
@@ -362,7 +363,7 @@ def GetWLANMACAddress():
     IOError: If unable to determine the MAC address.
   """
   for dev in ['wlan0', 'mlan0']:
-    path = '/sys/class/net/%s/address' % dev
+    path = f'/sys/class/net/{dev}/address'
     if os.path.exists(path):
       return file_utils.ReadFile(path).strip()
 
@@ -388,7 +389,7 @@ def GetWLANInterface():
     None if there is no wireless interface.
   """
   for dev in ['wlan0', 'mlan0']:
-    path = '/sys/class/net/%s/address' % dev
+    path = f'/sys/class/net/{dev}/address'
     if os.path.exists(path):
       return dev
   return None
@@ -433,7 +434,7 @@ def ExistPluggedEthernet(name_patterns=None):
   """
   devs = GetEthernetInterfaces(name_patterns or DEFAULT_ETHERNET_NAME_PATTERNS)
   for dev in devs:
-    if int(file_utils.ReadFile('/sys/class/net/%s/carrier' % dev)) > 0:
+    if int(file_utils.ReadFile(f'/sys/class/net/{dev}/carrier')) > 0:
       return True
   return False
 
@@ -550,12 +551,12 @@ def EnablePort(port, protocol='tcp', priority=None, interface=None):
   rule = []
   if (not protocol) and port:
     # Ports are not allowed if protocol is omitted.
-    raise ValueError('Cannot assign port %r without protocol.' % port)
+    raise ValueError(f'Cannot assign port {port!r} without protocol.')
   if protocol:
     rule += ['-p', protocol]
   if port:
     if (port < 1) or (port > MAX_PORT):
-      raise ValueError('Invalid port number: %r' % port)
+      raise ValueError(f'Invalid port number: {port!r}')
     rule += ['--dport', str(port)]
   if interface:
     rule += ['-i', interface]
@@ -655,7 +656,7 @@ def GetDefaultGatewayInterface():
     except ValueError:
       pass
   else:
-    raise ValueError('Output of `route -n` is unexpected.\n%s' % output)
+    raise ValueError(f'Output of `route -n` is unexpected.\n{output}')
 
   for line in lines[line_idx + 1:]:
     data = line.split()
@@ -778,8 +779,7 @@ class WLAN:
       raise ValueError('Invalid wireless network security type:'
                        " wpa. Use 'psk' instead")
     if security not in ['none', 'wep', 'rsn', 'psk', '802_1x']:
-      raise ValueError('Invalid wireless network security type: %s'
-                       % security)
+      raise ValueError(f'Invalid wireless network security type: {security}')
     self.ssid = ssid
     self.security = security
     self.passphrase = passphrase

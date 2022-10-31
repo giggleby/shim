@@ -9,6 +9,7 @@ import os
 from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 
+
 RSYNC_BIN = '/usr/bin/rsync'
 # rsync daemon mode configuration file doesn't need hash in name.
 RSYNCD_CONFIG_FILENAME = 'rsyncd.conf'
@@ -62,8 +63,9 @@ class RsyncService(umpire_service.UmpireService):
     proc_config = {
         'executable': RSYNC_BIN,
         'name': 'rsync',
-        'args': ['--daemon', '--no-detach', '--config=%s' % config_path],
-        'path': '/tmp'}
+        'args': ['--daemon', '--no-detach', f'--config={config_path}'],
+        'path': '/tmp'
+    }
     proc = umpire_service.ServiceProcess(self)
     proc.SetConfig(proc_config)
     return [proc]

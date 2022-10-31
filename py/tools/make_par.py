@@ -26,6 +26,7 @@ from cros.factory.test.env import paths
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils.process_utils import SpawnOutput
 
+
 DESCRIPTION = """Creates a self-extracting Python executable.
 
 The generated executable contains a copy of the entire factory code
@@ -264,7 +265,7 @@ def main(argv=None):
 
       link_name = os.path.basename(f)
 
-      module = 'cros.factory.%s' % match.group(1).replace('/', '.')
+      module = f"cros.factory.{match.group(1).replace('/', '.')}"
       if module == 'cros.factory.cli.factory_env':
         module = 'cros.factory.cli.' + link_name
 
@@ -285,7 +286,7 @@ def main(argv=None):
       os.fchmod(out.fileno(), 0o755)
 
     # Done!
-    print('Created %s (%d bytes)' % (args.output, os.path.getsize(args.output)))
+    print(f'Created {args.output} ({os.path.getsize(args.output):d} bytes)')
 
     # Sanity check: make sure we can run 'make_par --help' within the
     # archive, in a totally clean environment, and see the help

@@ -33,9 +33,8 @@ class Path(device_types.DeviceComponent):
       return getattr(posixpath, attr)
     type_name = type(self).__name__
     if attr in posixpath.__all__:
-      raise NotImplementedError('%r is not implemented in %r' % (attr,
-                                                                 type_name))
-    raise AttributeError('%r has no attribute %r' % (type_name, attr))
+      raise NotImplementedError(f'{attr!r} is not implemented in {type_name!r}')
+    raise AttributeError(f'{type_name!r} has no attribute {attr!r}')
 
   def exists(self, path):
     """Tests whether a path exists. Returns False for broken symbolic links."""
@@ -43,7 +42,7 @@ class Path(device_types.DeviceComponent):
 
   def getsize(self, path):
     if not self.exists(path):
-      raise OSError('No such file or directory: %r' % path)
+      raise OSError(f'No such file or directory: {path!r}')
 
     cmd = ['stat', '--printf', '%F\n%s', path]
     output = self._device.CheckOutput(cmd)

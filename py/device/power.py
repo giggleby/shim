@@ -97,9 +97,9 @@ class ECToolPowerControlMixin(PowerControlMixinBase):
       elif state == self.ChargeState.DISCHARGE:
         self._device.CheckCall(['ectool', 'chargecontrol', 'discharge'])
       else:
-        raise self.Error('Unknown EC charge state: %s' % state)
+        raise self.Error(f'Unknown EC charge state: {state}')
     except Exception as e:
-      raise self.Error('Unable to set charge state: %s' % e)
+      raise self.Error(f'Unable to set charge state: {e}')
 
 
 class PowerInfoMixinBase:
@@ -229,7 +229,7 @@ class PowerInfoMixinBase:
       try:
         result[k] = getter()
       except Exception as e:
-        exc_str = '%s: %s' % (e.__class__.__name__, e)
+        exc_str = f'{e.__class__.__name__}: {e}'
         logging.error('battery attribute %s is unavailable: %s', k, exc_str)
     return result
 
@@ -300,7 +300,7 @@ class SysfsPowerInfoMixin(PowerInfoMixinBase):
           return p
       return power_supplies[0]
 
-    raise PowerException('Cannot find %s' % power_source)
+    raise PowerException(f'Cannot find {power_source}')
 
   def CheckACPresent(self):
     """See PowerInfoMixinBase.CheckACPresent"""
@@ -423,7 +423,7 @@ class SysfsPowerInfoMixin(PowerInfoMixinBase):
     charging = (self.GetBatteryAttribute('status') == 'Charging')
     current = self.GetBatteryAttribute('current_now')
     if current is None:
-      raise self.Error('Cannot find %s/current_now' % self._battery_path)
+      raise self.Error(f'Cannot find {self._battery_path}/current_now')
     current_ma = abs(int(current)) // 1000
     return current_ma if charging else -current_ma
 
@@ -435,7 +435,7 @@ class SysfsPowerInfoMixin(PowerInfoMixinBase):
     try:
       return int(design_capacity) // 1000
     except Exception as e:
-      raise self.Error('Unable to get battery design capacity: %s' % e)
+      raise self.Error(f'Unable to get battery design capacity: {e}')
 
   def GetBatteryVoltage(self):
     """See PowerInfoMixinBase.GetBatteryVoltage"""
@@ -469,11 +469,12 @@ class ECToolPowerInfoMixin(PowerInfoMixinBase):
     return []
 
   def _GetECToolBatteryAttribute(self, key_name, item_type=str):
-    re_object = re.findall(r'%s\s+(\S+)' % key_name,
+    re_object = re.findall(f'{key_name}'
+                           r'\s+(\S+)',
                            self._device.CallOutput(['ectool', 'battery']))
     if re_object:
       return item_type(re_object[0])
-    raise self.Error('Cannot find key "%s" in ectool battery' % key_name)
+    raise self.Error(f'Cannot find key "{key_name}" in ectool battery')
 
   def CheckACPresent(self):
     """See PowerInfoMixinBase.CheckACPresent"""
@@ -594,17 +595,17 @@ class ECToolPowerInfoMixin(PowerInfoMixinBase):
     for line in output.strip().splitlines():
       match = re.match(r'Port\s+(\d+):\s+(\w+)', line)
       if not match:
-        raise self.Error('unexpected output: %s' % output)
+        raise self.Error(f'unexpected output: {output}')
       port_id, port_state = int(match.group(1)), match.group(2)
       if port_state not in ['Disconnected', 'SNK', 'SRC']:
-        raise self.Error('unexpected PD state: %s\noutput="""%s"""' %
-                         (port_state, output))
+        raise self.Error(
+            f'unexpected PD state: {port_state}\noutput="""{output}"""')
       voltage = None
       current = None
       if port_state == 'SNK':
         match = re.search(r'SNK Charger PD (\d+)mV\s+/\s+(\d+)mA', line)
         if not match:
-          raise self.Error('unexpected output for SNK state: %s' % output)
+          raise self.Error(f'unexpected output for SNK state: {output}')
         voltage, current = int(match.group(1)), int(match.group(2))
 
       ports.append(USBPortInfo(port_id, port_state, voltage, current))
@@ -618,11 +619,12 @@ class PowerDaemonPowerInfoMixin(PowerInfoMixinBase):
     return self._device.CallOutput(['dump_power_status'])
 
   def _GetPowerAttribute(self, key_name, item_type=str):
-    re_object = re.findall(
-        r'^%s ?(.*)$' % key_name, self._GetDumpPowerStatus(), re.MULTILINE)
+    re_object = re.findall(r'^'
+                           f'{key_name}'
+                           r' ?(.*)$', self._GetDumpPowerStatus(), re.MULTILINE)
     if re_object:
       return item_type(re_object[0])
-    raise self.Error('Cannot find key "%s" in dump_power_status' % key_name)
+    raise self.Error(f'Cannot find key "{key_name}" in dump_power_status')
 
   def CheckACPresent(self):
     """See PowerInfoMixinBase.CheckACPresent"""

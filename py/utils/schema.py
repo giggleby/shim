@@ -51,6 +51,7 @@ import copy
 
 from .type_utils import MakeList
 
+
 # To simplify portability issues, validating JSON schema is optional.
 try:
   import jsonschema
@@ -88,7 +89,7 @@ class BaseType:
     self.label = label
 
   def __repr__(self):
-    return 'BaseType(%r)' % self.label
+    return f'BaseType({self.label!r})'
 
   def Validate(self, data):
     raise NotImplementedError
@@ -112,15 +113,14 @@ class Scalar(BaseType):
     if getattr(element_type, '__iter__', None) and element_type not in (
         str, bytes):
       raise SchemaException(
-          'element_type %r of Scalar %r is not a scalar type' % (element_type,
-                                                                 label))
+          f'element_type {element_type!r} of Scalar {label!r} is not a scalar '
+          'type')
     self.element_type = element_type
     self.choices = set(choices) if choices else set()
 
   def __repr__(self):
-    return 'Scalar(%r, %r%s)' % (
-        self.label, self.element_type,
-        ', choices=%r' % sorted(self.choices) if self.choices else '')
+    choices = f', choices={sorted(self.choices)!r}' if self.choices else ''
+    return f'Scalar({self.label!r}, {self.element_type!r}{choices})'
 
   def Validate(self, data):
     """Validates the given data against the Scalar schema.
@@ -136,11 +136,12 @@ class Scalar(BaseType):
       SchemaException if validation fails.
     """
     if not isinstance(data, self.element_type):
-      raise SchemaException('Type mismatch on %r: expected %r, got %r' %
-                            (data, self.element_type, type(data)))
+      raise SchemaException(
+          f'Type mismatch on {data!r}: expected {self.element_type!r}, got '
+          f'{type(data)!r}')
     if self.choices and data not in self.choices:
-      raise SchemaException('Value mismatch on %r: expected one of %r' %
-                            (data, sorted(self.choices)))
+      raise SchemaException(f'Value mismatch on {data!r}: expected one of '
+                            f'{sorted(self.choices)!r}')
 
 
 class RegexpStr(Scalar):
@@ -159,7 +160,7 @@ class RegexpStr(Scalar):
     self.regexp = regexp
 
   def __repr__(self):
-    return 'RegexpStr(%r, %s)' % (self.label, self.regexp.pattern)
+    return f'RegexpStr({self.label!r}, {self.regexp.pattern})'
 
   def __deepcopy__(self, memo):
     return RegexpStr(self.label, self.regexp)
@@ -178,8 +179,8 @@ class RegexpStr(Scalar):
     """
     super().Validate(data)
     if not self.regexp.match(data):
-      raise SchemaException("Value %r doesn't match regeular expression %s" %
-                            (data, self.regexp.pattern))
+      raise SchemaException(f"Value {data!r} doesn't match regeular expression "
+                            f"{self.regexp.pattern}")
 
 
 class Dict(BaseType):
@@ -206,21 +207,22 @@ class Dict(BaseType):
     if not (isinstance(key_type, Scalar) or
             (isinstance(key_type, AnyOf) and
              key_type.CheckTypeOfPossibleValues(Scalar))):
-      raise SchemaException('key_type %r of Dict %r is not Scalar' %
-                            (key_type, self.label))
+      raise SchemaException(
+          f'key_type {key_type!r} of Dict {self.label!r} is not Scalar')
     self.key_type = key_type
     if not isinstance(value_type, BaseType):
-      raise SchemaException('value_type %r of Dict %r is not Schema object' %
-                            (value_type, self.label))
+      raise SchemaException(
+          f'value_type {value_type!r} of Dict {self.label!r} is not Schema '
+          'object')
     self.value_type = value_type
     self.min_size = min_size
     self.max_size = max_size
 
   def __repr__(self):
-    size_expr = '[%d, %s]' % (self.min_size, ('inf' if self.max_size is None
-                                              else '%d' % self.max_size))
-    return 'Dict(%r, key_type=%r, value_type=%r, size=%s)' % (
-        self.label, self.key_type, self.value_type, size_expr)
+    size_expr = (f"[{int(self.min_size)}, "
+                 f"{'inf' if self.max_size is None else f'{self.max_size:d}'}]")
+    return (f'Dict({self.label!r}, key_type={self.key_type!r}, value_type='
+            f'{self.value_type!r}, size={size_expr})')
 
   def Validate(self, data):
     """Validates the given data against the Dict schema.
@@ -235,16 +237,18 @@ class Dict(BaseType):
       SchemaException if validation fails.
     """
     if not isinstance(data, dict):
-      raise SchemaException('Type mismatch on %r: expected dict, got %r' %
-                            (self.label, type(data)))
+      raise SchemaException(
+          f'Type mismatch on {self.label!r}: expected dict, got {type(data)!r}')
 
     if len(data) < self.min_size:
-      raise SchemaException('Size mismatch on %r: expected size >= %r' %
-                            (self.label, self.min_size))
+      raise SchemaException(
+          f'Size mismatch on {self.label!r}: expected size >= {self.min_size!r}'
+      )
 
     if self.max_size is not None and self.max_size < len(data):
-      raise SchemaException('Size mismatch on %r: expected size <= %r' %
-                            (self.label, self.max_size))
+      raise SchemaException(
+          f'Size mismatch on {self.label!r}: expected size <= {self.max_size!r}'
+      )
 
     for k, v in data.items():
       self.key_type.Validate(k)
@@ -283,20 +287,19 @@ class FixedDict(BaseType):
                allow_undefined_keys=False):
     super().__init__(label)
     if items and not isinstance(items, dict):
-      raise SchemaException('items of FixedDict %r should be a dict' %
-                            self.label)
+      raise SchemaException(
+          f'items of FixedDict {self.label!r} should be a dict')
     self.items = copy.deepcopy(items) if items is not None else {}
     if optional_items and not isinstance(optional_items, dict):
-      raise SchemaException('optional_items of FixedDict %r should be a dict' %
-                            self.label)
+      raise SchemaException(
+          f'optional_items of FixedDict {self.label!r} should be a dict')
     self.optional_items = (
         copy.deepcopy(optional_items) if optional_items is not None else {})
     self.allow_undefined_keys = allow_undefined_keys
 
   def __repr__(self):
-    return 'FixedDict(%r, items=%r, optional_items=%r)' % (self.label,
-                                                           self.items,
-                                                           self.optional_items)
+    return (f'FixedDict({self.label!r}, items={self.items!r}, optional_items='
+            f'{self.optional_items!r})')
 
   def Validate(self, data):
     """Validates the given data and all its key-value pairs against the Dict
@@ -314,15 +317,14 @@ class FixedDict(BaseType):
       SchemaException if validation fails.
     """
     if not isinstance(data, dict):
-      raise SchemaException('Type mismatch on %r: expected dict, got %r' %
-                            (self.label, type(data)))
+      raise SchemaException(
+          f'Type mismatch on {self.label!r}: expected dict, got {type(data)!r}')
     data_key_list = list(data)
     # Check that every key-value pair in items exists in data
     for key, value_schema in self.items.items():
       if key not in data:
         raise SchemaException(
-            'Required item %r does not exist in FixedDict %r' %
-            (key, data))
+            f'Required item {key!r} does not exist in FixedDict {data!r}')
       value_schema.Validate(data[key])
       data_key_list.remove(key)
     # Check that all the remaining unmatched key-value pairs matches any
@@ -333,8 +335,8 @@ class FixedDict(BaseType):
       value_schema.Validate(data[key])
       data_key_list.remove(key)
     if not self.allow_undefined_keys and data_key_list:
-      raise SchemaException('Keys %r are undefined in FixedDict %r' %
-                            (data_key_list, self.label))
+      raise SchemaException(
+          f'Keys {data_key_list!r} are undefined in FixedDict {self.label!r}')
 
 
 class JSONSchemaDict(BaseType):
@@ -357,12 +359,11 @@ class JSONSchemaDict(BaseType):
       try:
         jsonschema.Draft4Validator.check_schema(schema)
       except Exception as e:
-        raise SchemaException(
-            'Schema %r is invalid: %r' % (schema, e)) from None
+        raise SchemaException(f'Schema {schema!r} is invalid: {e!r}') from None
     self.schema = schema
 
   def __repr__(self):
-    return 'JSONSchemaDict(%r, %r)' % (self.label, self.schema)
+    return f'JSONSchemaDict({self.label!r}, {self.schema!r})'
 
   def Validate(self, data):
     if _HAVE_JSONSCHEMA:
@@ -371,8 +372,9 @@ class JSONSchemaDict(BaseType):
       except jsonschema.ValidationError as e:
         raise SchemaInvalidException(e.instance, e.schema, e) from None
       except Exception as e:
-        raise SchemaException('Fail to validate %r with JSON schema %r: %r' %
-                              (data, self.schema, e)) from None
+        raise SchemaException(
+            f'Fail to validate {data!r} with JSON schema {self.schema!r}: {e!r}'
+        ) from None
 
   def CreateOptional(self):
     """Creates a new schema that accepts null and itself."""
@@ -403,17 +405,18 @@ class List(BaseType):
     super().__init__(label)
     if element_type and not isinstance(element_type, BaseType):
       raise SchemaException(
-          'element_type %r of List %r is not a Schema object' %
-          (element_type, self.label))
+          f'element_type {element_type!r} of List {self.label!r} is not a '
+          'Schema object')
     self.element_type = copy.deepcopy(element_type)
     self.min_length = min_length
     self.max_length = max_length
 
   def __repr__(self):
-    max_bound_repr = ('inf' if self.max_length is None
-                      else '%d' % self.max_length)
-    return 'List(%r, %r, [%r, %s])' % (
-        self.label, self.element_type, self.min_length, max_bound_repr)
+    max_bound_repr = ('inf'
+                      if self.max_length is None else f'{int(self.max_length)}')
+    return (
+        f'List({self.label!r}, {self.element_type!r}, [{self.min_length!r}, '
+        f'{max_bound_repr}])')
 
   def Validate(self, data):
     """Validates the given data and all its elements against the List schema.
@@ -425,16 +428,18 @@ class List(BaseType):
       SchemaException if validation fails.
     """
     if not isinstance(data, list):
-      raise SchemaException('Type mismatch on %r: expected list, got %r' %
-                            (self.label, type(data)))
+      raise SchemaException(
+          f'Type mismatch on {self.label!r}: expected list, got {type(data)!r}')
 
     if len(data) < self.min_length:
-      raise SchemaException('Length mismatch on %r: expected length >= %d' %
-                            (self.label, self.min_length))
+      raise SchemaException(
+          f'Length mismatch on {self.label!r}: expected length >= '
+          f'{int(self.min_length)}')
 
     if self.max_length is not None and self.max_length < len(data):
-      raise SchemaException('Length mismatch on %r: expected length <= %d' %
-                            (self.label, self.max_length))
+      raise SchemaException(
+          f'Length mismatch on {self.label!r}: expected length <= '
+          f'{int(self.max_length)}')
 
     if self.element_type:
       for data_value in data:
@@ -458,16 +463,15 @@ class Tuple(BaseType):
 
   def __init__(self, label, element_types=None):
     super().__init__(label)
-    if (element_types and
-        (not isinstance(element_types, (tuple, list))) or
+    if (element_types and (not isinstance(element_types, (tuple, list))) or
         (not all([isinstance(x, BaseType)] for x in element_types))):
       raise SchemaException(
-          'element_types %r of Tuple %r is not a tuple or list' %
-          (element_types, self.label))
+          f'element_types {element_types!r} of Tuple {self.label!r} is not a '
+          'tuple or list')
     self.element_types = copy.deepcopy(element_types)
 
   def __repr__(self):
-    return 'Tuple(%r, %r)' % (self.label, self.element_types)
+    return f'Tuple({self.label!r}, {self.element_types!r})'
 
   def Validate(self, data):
     """Validates the given data and all its elements against the Tuple schema.
@@ -479,12 +483,13 @@ class Tuple(BaseType):
       SchemaException if validation fails.
     """
     if not isinstance(data, tuple):
-      raise SchemaException('Type mismatch on %r: expected tuple, got %r' %
-                            (self.label, type(data)))
+      raise SchemaException(
+          f'Type mismatch on {self.label!r}: expected tuple, got {type(data)!r}'
+      )
     if self.element_types and len(self.element_types) != len(data):
       raise SchemaException(
-          'Number of elements in tuple %r does not match that defined '
-          'in Tuple schema %r' % (str(data), self.label))
+          f'Number of elements in tuple {str(data)!r} does not match that '
+          f'defined in Tuple schema {self.label!r}')
     for content, element_type in zip(data, self.element_types):
       element_type.Validate(content)
 
@@ -502,13 +507,14 @@ class AnyOf(BaseType):
     if (not isinstance(types, list) or
         not all(isinstance(x, BaseType) for x in types)):
       raise SchemaException(
-          'types in AnyOf(types=%r%s) should be a list of Schemas' %
-          (types, '' if label is None else ', label=%r' % label))
+          f'types in AnyOf(types={types!r}'
+          f"{'' if label is None else ', label='f'{label}'}) should be a list "
+          'of Schemas')
     self.types = list(types)
 
   def __repr__(self):
-    label = '' if self.label is None else ', label=%r' % self.label
-    return 'AnyOf(%r%s)' % (self.types, label)
+    label = '' if self.label is None else f', label={self.label!r}'
+    return f'AnyOf({self.types!r}{label})'
 
   def CheckTypeOfPossibleValues(self, schema_type):
     """Checks if the acceptable types are of the same type as schema_type.
@@ -536,8 +542,8 @@ class AnyOf(BaseType):
       match = True
       break
     if not match:
-      raise SchemaException('%r does not match any type in %r' % (data,
-                                                                  self.types))
+      raise SchemaException(
+          f'{data!r} does not match any type in {self.types!r}')
 
 
 class Optional(AnyOf):
@@ -556,13 +562,13 @@ class Optional(AnyOf):
       super().__init__(MakeList(types), label=label)
     except SchemaException:
       raise SchemaException(
-          'types in Optional(types=%r%s) should be a Schema or a list of '
-          'Schemas' %
-          (types, '' if label is None else ', label=%r' % label)) from None
+          f'types in Optional(types={types!r}'
+          f"{'' if label is None else ', label='f'{label}'}') should be a "
+          'Schema or a list of Schemas') from None
 
   def __repr__(self):
-    label = '' if self.label is None else ', label=%r' % self.label
-    return 'Optional(%r%s)' % (self.types, label)
+    label = '' if self.label is None else f', label={self.label!r}'
+    return f'Optional({self.types!r}{label})'
 
   def Validate(self, data):
     """Validates if the given data is None or matches any schema in types.
@@ -579,5 +585,6 @@ class Optional(AnyOf):
     try:
       super().Validate(data)
     except SchemaException:
-      raise SchemaException('%r is not None and does not match any type in %r' %
-                            (data, self.types)) from None
+      raise SchemaException(
+          f'{data!r} is not None and does not match any type in {self.types!r}'
+      ) from None

@@ -38,8 +38,8 @@ class TimeoutXMLRPCTest(unittest.TestCase):
 
   def MakeProxy(self, timeout):
     return net_utils.TimeoutXMLRPCServerProxy(
-        'http://%s:%d' % (net_utils.LOCALHOST, self.port),
-        timeout=timeout, allow_none=True)
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}', timeout=timeout,
+        allow_none=True)
 
   def runTest(self):
     self.client = self.MakeProxy(timeout=1)

@@ -43,7 +43,7 @@ class PayloadExporter:
     config = umpire_config.UmpireConfig(self._env.config)
     bundle = config.GetBundle(bundle_id)
     if not bundle:
-      raise common.UmpireError('bundle %r does not exist' % bundle_id)
+      raise common.UmpireError(f'bundle {bundle_id!r} does not exist')
     file_utils.TryMakeDirs(os.path.dirname(file_path))
     if os.path.isdir(file_path):
       raise common.UmpireError('<file_path> should not be a directory')
@@ -63,6 +63,6 @@ class PayloadExporter:
         ]
         process_utils.Spawn(cmd, check_call=True, log=True)
       except Exception:
-        raise common.UmpireError('Failed to export %s' % payload_type) from None
+        raise common.UmpireError(f'Failed to export {payload_type}') from None
     else:
-      raise common.UmpireError('Payload not found: %s' % payload_type)
+      raise common.UmpireError(f'Payload not found: {payload_type}')

@@ -16,6 +16,7 @@ from cros.factory.utils import cros_board_utils
 from cros.factory.utils.process_utils import CheckOutput
 from cros.factory.utils.process_utils import Spawn
 
+
 RE_PACKAGE_FILES = re.compile(r'.*?files/')
 
 
@@ -37,7 +38,7 @@ def GetFileToLint(path=None):
   all_files = set(uncommitted)
 
   for i in itertools.count():
-    commit = 'HEAD~%d' % i
+    commit = f'HEAD~{int(i)}'
     proc = Spawn(['git', 'log', '-1', commit], cwd=path, read_stdout=True)
     if proc.returncode:
       # No more log entries
@@ -73,12 +74,12 @@ def main():
     overlay_path = cros_board_utils.GetChromeOSFactoryBoardPath(args.overlay)
     if overlay_path:
       all_files |= GetFileToLint(os.path.join(overlay_path, '../..'))
-    CheckOutput(['make', 'overlay-%s' % args.overlay])
+    CheckOutput(['make', f'overlay-{args.overlay}'])
 
   all_files_str = ' '.join(sorted(all_files))
-  overlay_args = ['-C', 'overlay-%s' % args.overlay] if args.overlay else []
+  overlay_args = ['-C', f'overlay-{args.overlay}'] if args.overlay else []
   proc = Spawn(
-      ['make'] + overlay_args + ['lint', 'LINT_FILES=%s' % all_files_str],
+      ['make'] + overlay_args + ['lint', f'LINT_FILES={all_files_str}'],
       call=True, log=True)
   sys.exit(proc.returncode)
 

@@ -31,9 +31,9 @@ class JSONRPCTest(unittest.TestCase):
         methods={'Echo': self.echo,
                  'Sleep': self.sleep})
     self.simple_proxy = jsonrpclib.Server(
-        'http://%s:%d' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}')
     self.timeout_proxy = jsonrpclib.Server(
-        'http://%s:%d' % (net_utils.LOCALHOST, self.port),
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}',
         transport=jsonrpc_utils.TimeoutJSONRPCTransport(timeout=1))
 
   def tearDown(self):
@@ -99,8 +99,7 @@ class MultiPathJSONRPCServerTest(unittest.TestCase):
 
   def setUp(self):
     def ServerReady():
-      p = jsonrpc.ServerProxy(
-          'http://%s:%d/' % (net_utils.LOCALHOST, self.port))
+      p = jsonrpc.ServerProxy(f'http://{net_utils.LOCALHOST}:{int(self.port)}/')
       try:
         p.Try()
       except jsonrpclib.ProtocolError as err:
@@ -151,35 +150,35 @@ class MultiPathJSONRPCServerTest(unittest.TestCase):
 
     # Check instance A
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/')
     _CheckListMethods([u'A', u'B', u'Error'], proxy)
     proxy.A()
     self.assertTrue(A.a_called)
 
     # Check instance B
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/B' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/B')
     _CheckListMethods([u'A', u'B', u'Error'], proxy)
     proxy.B()
     self.assertTrue(B.b_called)
 
     # Check instance C
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/C' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/C')
     _CheckListMethods([u'Func'], proxy)
     proxy.Func()
     self.assertTrue(self.func_called)
 
   def testURLNotFound(self):
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/not_exists' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/not_exists')
     self.assertRaisesRegex(
         jsonrpclib.ProtocolError, 'Not Found', proxy.Func)
 
   def testRPCException(self):
     self._SetInstance('/', self.RPCInstance())
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/')
     self.assertRaisesRegex(
         jsonrpc.ProtocolError, 'RuntimeError: Something Wrong',
         proxy.Error)

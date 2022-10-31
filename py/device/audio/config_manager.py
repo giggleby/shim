@@ -13,6 +13,7 @@ from cros.factory.device import device_types
 from cros.factory.utils import config_utils
 from cros.factory.utils import type_utils
 
+
 # Strings for key in audio.conf
 HP_JACK_NAME = 'headphone_jack'
 MIC_JACK_NAME = 'mic_jack'
@@ -462,12 +463,12 @@ class UCMConfigManager(BaseConfigManager):
       invalid_devices = set(device_map) - set(AudioDeviceType)
       if invalid_devices:
         raise KeyError(
-            "Invalid device: '%r' in card '%s'" % (invalid_devices, card))
+            f"Invalid device: '{invalid_devices!r}' in card '{card}'")
 
     for card in set(self._card_map) - set(self._card_device_map):
       # Get the device map from HiFi.conf.
-      output = self._InvokeCardCommands(
-          card, 'set _verb %s' % self._verb, 'list _devices')
+      output = self._InvokeCardCommands(card, f'set _verb {self._verb}',
+                                        'list _devices')
       device_map = {}
       for match in re.finditer(r'^.*: (.*)$', output, re.MULTILINE):
         value = match.group(1).strip()
@@ -487,7 +488,7 @@ class UCMConfigManager(BaseConfigManager):
       ucm_suffix = self._device.CallOutput(
           ['cros_config', '/audio/main', 'ucm-suffix'])
       if ucm_suffix:
-        ucm_dir = '%s.%s' % (card_name, ucm_suffix)
+        ucm_dir = f'{card_name}.{ucm_suffix}'
         ucm_path = self._device.path.join(self._AlsaUCMPath, ucm_dir)
         if self._device.path.isdir(ucm_path):
           return ucm_dir
@@ -524,7 +525,7 @@ class UCMConfigManager(BaseConfigManager):
     try:
       return self._card_map[card]
     except KeyError:
-      raise KeyError('%s is not in %r' % (card, self._card_map)) from None
+      raise KeyError(f'{card} is not in {self._card_map!r}') from None
 
   def _GetDeviceName(self, card, device):
     """Get device name of the card index."""
@@ -629,10 +630,10 @@ class UCMConfigManager(BaseConfigManager):
     return out_msg
 
   def _InvokeCardCommands(self, card, *commands):
-    return self._InvokeAlsaUCM('open "%s"' % self._GetCardName(card), *commands)
+    return self._InvokeAlsaUCM(f'open "{self._GetCardName(card)}"', *commands)
 
   def _InvokeDeviceCommands(self, card, *suffix_commands):
-    commands = ['reset', 'set _verb %s' % self._verb]
+    commands = ['reset', f'set _verb {self._verb}']
     # 'set _verb' resets devices state to initial state for some sound card but
     # we can not 'set _enadev' without 'set _verb' first. So we just reset all
     # devices here.
@@ -646,10 +647,10 @@ class UCMConfigManager(BaseConfigManager):
       # after reset. The quotes are used to pass device name with space, such as
       # "Internal Mic".
       if state == DEVICE_STATE.Disabled:
-        disable_commands.append('set _enadev "%s"' % device_name)
-        disable_commands.append('set _disdev "%s"' % device_name)
+        disable_commands.append(f'set _enadev "{device_name}"')
+        disable_commands.append(f'set _disdev "{device_name}"')
       elif state == DEVICE_STATE.Enabled:
-        enable_commands.append('set _enadev "%s"' % device_name)
+        enable_commands.append(f'set _enadev "{device_name}"')
     # Always run disable commands before enable. In some case there will have a
     # mutex between different devices, and it will disable devices unexpectedly
     # if we do not specify the order. (b/211533075)
@@ -685,16 +686,16 @@ class UCMConfigManager(BaseConfigManager):
   def GetPCMId(self, category, device, card):
     """Return the card index and device index of a device."""
     if category not in PCMType:
-      raise ValueError('category must in one of %r' % PCMType)
+      raise ValueError(f'category must in one of {PCMType!r}')
     card_name = self._GetCardName(card)
     device_name = self._GetDeviceName(card, device)
-    identity = '%s/%s' % (category, device_name)
-    output = self._InvokeDeviceCommands(card, 'get "%s"' % identity)
+    identity = f'{category}/{device_name}'
+    output = self._InvokeDeviceCommands(card, f'get "{identity}"')
     match = re.search(r'^(.+)=hw:.+,(\d+)$', output, re.MULTILINE)
     if match and match.group(1).strip() == identity:
       return match.group(2)
     raise ValueError(
-        'Wrong output format. output:%r card_name:%r' % (output, card_name))
+        f'Wrong output format. output:{output!r} card_name:{card_name!r}')
 
   def GetChannelMap(self, device, card):
     """Return the channels of a input device.
@@ -710,9 +711,9 @@ class UCMConfigManager(BaseConfigManager):
     """
     card_name = self._GetCardName(card)
     device_name = self._GetDeviceName(card, device)
-    identity = 'CaptureChannelMap/%s' % device_name
+    identity = f'CaptureChannelMap/{device_name}'
     try:
-      output = self._InvokeDeviceCommands(card, 'get "%s"' % identity)
+      output = self._InvokeDeviceCommands(card, f'get "{identity}"')
     except device_types.CalledProcessError:
       return None
     match = re.search(r'^(.+)=(.+)$', output, re.MULTILINE)
@@ -723,17 +724,17 @@ class UCMConfigManager(BaseConfigManager):
       if result:
         return result
       raise ValueError(
-          'There must be at least one channel. output:%r card_name:%r' %
-          (output, card_name))
+          f'There must be at least one channel. output:{output!r} card_name:'
+          f'{card_name!r}')
     raise ValueError(
-        'Wrong output format. output:%r card_name:%r' % (output, card_name))
+        f'Wrong output format. output:{output!r} card_name:{card_name!r}')
 
   def GetDefaultInputGain(self, card):
     """Return the default input gain of a device."""
     device_name = self._GetDeviceName(card, AudioDeviceType.Dmic)
-    identity = '%s/%s' % (INPUT_SENSITIVITY_NAME, device_name)
+    identity = f'{INPUT_SENSITIVITY_NAME}/{device_name}'
     try:
-      output = self._InvokeDeviceCommands(card, 'get "%s"' % identity)
+      output = self._InvokeDeviceCommands(card, f'get "{identity}"')
       sensitivity = re.search(r'^(.+)=(.+)$', output, re.MULTILINE).group(2)
       input_gain = (DEFAULT_CAPTURE_VOLUME_DBFS - int(sensitivity)) / 100
       return input_gain

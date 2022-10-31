@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -41,7 +41,7 @@ class GSCUtils:
   def _GetConstant(self, constant_name):
     try:
       return process_utils.CheckOutput(
-          '. "%s"; "%s"' % (self.gsc_constants_path, constant_name), sudo=True,
+          f'. "{self.gsc_constants_path}"; "{constant_name}"', sudo=True,
           shell=True).strip()
     except process_utils.CalledProcessError as err:
       raise GSCUtilsError(constant_name) from err

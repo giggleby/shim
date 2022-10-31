@@ -42,8 +42,7 @@ class EmbeddedController(device_types.DeviceComponent):
     match = self.RO_VERSION_RE.search(ec_version)
     if match:
       return match.group(1)
-    raise self.Error(
-        'Unexpected output from "ectool version": %s' % ec_version)
+    raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
 
   def GetRWVersion(self):
     """Gets the EC RW firmware version.
@@ -55,8 +54,7 @@ class EmbeddedController(device_types.DeviceComponent):
     match = self.RW_VERSION_RE.search(ec_version)
     if match:
       return match.group(1)
-    raise self.Error(
-        'Unexpected output from "ectool version": %s' % ec_version)
+    raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
 
   def GetECConsoleLog(self):
     """Gets the EC console log.
@@ -82,7 +80,7 @@ class EmbeddedController(device_types.DeviceComponent):
           ['ectool', 'hello']).find('EC says hello') == -1:
         raise self.Error('Did not find "EC says hello".')
     except Exception as e:
-      raise self.Error('Unable to say hello: %s' % e)
+      raise self.Error(f'Unable to say hello: {e}')
     return True
 
   def I2CRead(self, port, addr, reg):
@@ -103,7 +101,7 @@ class EmbeddedController(device_types.DeviceComponent):
           ['ectool', 'i2cread', '16', str(port), str(addr), str(reg)])
       return int(self.I2C_READ_RE.findall(ectool_output)[0], 16)
     except Exception as e:
-      raise self.Error('Unable to read from I2C: %s' % e)
+      raise self.Error(f'Unable to read from I2C: {e}')
 
   def I2CWrite(self, port, addr, reg, value):
     """Writes 16-bit value to I2C bus connected via EC.
@@ -121,4 +119,4 @@ class EmbeddedController(device_types.DeviceComponent):
           ['ectool', 'i2cwrite', '16', str(port), str(addr), str(reg),
            str(value)])
     except Exception as e:
-      raise self.Error('Unable to write to I2C: %s' % e)
+      raise self.Error(f'Unable to write to I2C: {e}')

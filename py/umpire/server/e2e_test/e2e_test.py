@@ -36,6 +36,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import time_utils
 
+
 DOCKER_IMAGE_NAME = 'cros/factory_server'
 
 BASE_DIR = os.path.dirname(__file__)
@@ -81,8 +82,8 @@ class _UmpireInformation():
 
   def __init__(self, project_name):
     self.port = net_utils.FindUnusedPort(tcp_only=True, length=5)
-    self.addr_base = 'http://localhost:%s' % self.port
-    self.rpc_addr_base = 'http://localhost:%s' % (self.port + 2)
+    self.addr_base = f'http://localhost:{self.port}'
+    self.rpc_addr_base = f'http://localhost:{self.port + 2}'
     self.project_name = project_name
     self.container_name = 'umpire_' + project_name
     self.umpire_dir = os.path.join(HOST_SHARED_DIR, 'umpire', self.project_name)
@@ -189,14 +190,14 @@ class ResourceMapTest(UmpireDockerTestCase):
   """Tests for Umpire /webapps/resourcemap and legacy /resourcemap."""
 
   def testResourceMap(self):
-    r = requests.get('%s/webapps/resourcemap' % self.umpire.addr_base,
+    r = requests.get(f'{self.umpire.addr_base}/webapps/resourcemap',
                      headers={'X-Umpire-DUT': 'mac=00:11:22:33:44:55'})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
         re.search(r'^payloads: .*\.json$', r.text, re.MULTILINE))
 
   def testLegacyResourceMap(self):
-    r = requests.get('%s/resourcemap' % self.umpire.addr_base,
+    r = requests.get(f'{self.umpire.addr_base}/resourcemap',
                      headers={'X-Umpire-DUT': 'mac=00:11:22:33:44:55'})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
@@ -207,7 +208,7 @@ class DownloadSlotsManagerTest(UmpireDockerTestCase):
   """Tests for Umpire /webapps/download_slots."""
 
   def testCanRequestSlot(self):
-    r = requests.get('%s/webapps/download_slots' % self.umpire.addr_base,
+    r = requests.get(f'{self.umpire.addr_base}/webapps/download_slots',
                      headers={'X-Umpire-DUT': 'uuid='})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
@@ -216,17 +217,18 @@ class DownloadSlotsManagerTest(UmpireDockerTestCase):
     self.assertIsNotNone(re.search(r'^N_PLACE: 0$', r.text, re.MULTILINE))
 
   def testExtendAliveTimeSlot(self):
-    r = requests.get('%s/webapps/download_slots' % self.umpire.addr_base,
+    r = requests.get(f'{self.umpire.addr_base}/webapps/download_slots',
                      headers={'X-Umpire-DUT': 'uuid='})
     self.assertEqual(200, r.status_code)
     res = re.search(r'^UUID: ([\w-]+)$', r.text, re.MULTILINE)
     self.assertIsNotNone(res)
 
-    r = requests.get('%s/webapps/download_slots' % self.umpire.addr_base,
-                     headers={'X-Umpire-DUT': 'uuid=%s' % res.group(1)})
+    r = requests.get(f'{self.umpire.addr_base}/webapps/download_slots',
+                     headers={'X-Umpire-DUT': f'uuid={res.group(1)}'})
     self.assertEqual(200, r.status_code)
     self.assertIsNotNone(
-        re.search(r'^UUID: (%s)$' % res.group(1), r.text, re.MULTILINE))
+        re.search(r'^UUID: ('
+                  f'{res.group(1)})$', r.text, re.MULTILINE))
 
 
 class UmpireRPCTest(UmpireDockerTestCase):
@@ -332,8 +334,9 @@ class UmpireRPCTest(UmpireDockerTestCase):
     self.assertEqual(self.default_config, active_config)
 
   def testStopStartService(self):
-    test_rsync_cmd = ('rsync rsync://localhost:%d/system_logs >/dev/null 2>&1' %
-                      (self.umpire.port + 4))
+    test_rsync_cmd = (
+        f'rsync rsync://localhost:{int(self.umpire.port + 4)}/system_logs '
+        '>/dev/null 2>&1')
 
     self.proxy.StopServices(['rsync'])
     self.assertNotEqual(0, subprocess.call(test_rsync_cmd, shell=True))
@@ -404,8 +407,9 @@ class UmpireHTTPTest(UmpireDockerTestCase):
     conf = self.proxy.AddConfigFromBlob(to_deploy_config, 'umpire_config')
     self.proxy.Deploy(conf)
 
-    response = requests.get('http://localhost:%d/res/test' % self.umpire.port,
-                            allow_redirects=False)
+    response = requests.get(
+        f'http://localhost:{int(self.umpire.port)}/res/test',
+        allow_redirects=False)
     self.assertEqual(307, response.status_code)
     self.assertEqual('http://11.22.33.44/res/test',
                      response.headers['Location'])
@@ -436,7 +440,7 @@ class RPCDUTTest(UmpireDockerTestCase):
     self.assertAlmostEqual(t, time.time(), delta=1)
 
   def testAlternateURL(self):
-    proxy = xmlrpc.client.ServerProxy('%s/umpire' % self.umpire.addr_base)
+    proxy = xmlrpc.client.ServerProxy(f'{self.umpire.addr_base}/umpire')
     version = proxy.Ping()
     self.assertEqual({
         'version': 3,
@@ -501,8 +505,8 @@ class ServiceTest(TwoUmpireDockerTestCase):
     self.StartService(to_deploy_config, wait_time=2)
     self.assertEqual(self.proxy.GetActivePayload(),
                      self.second_proxy.GetActivePayload())
-    second_url = 'http://%s:%d' % (docker_bridge_gateway_ip,
-                                   self.second_umpire.port)
+    second_url = (
+        f'http://{docker_bridge_gateway_ip}:{int(self.second_umpire.port)}')
     self.assertEqual(self.proxy.GetUmpireSyncStatus()[second_url]['status'],
                      'Success')
 

@@ -25,6 +25,7 @@ from typing import NamedTuple, Optional, Sequence
 
 import yaml
 
+
 # Constants for config file.
 CONFIG_GROUPS = r'groups'
 CONFIG_RULES = r'rules'
@@ -93,10 +94,10 @@ def ReconstructSourceImport(item):
   This is used to output human-friendly error message.
   """
   if item['import'] is None:
-    return "import %s" % item['module']
+    return f"import {item['module']}"
   module = ''.join(['.'] * item['level'])
   module += item['module'] or ''
-  return "from %s import %s" % (module, item['import'])
+  return f"from {module} import {item['import']}"
 
 
 def GuessModule(filename):
@@ -193,17 +194,14 @@ def GetSysPathInDir(file_dir, additional_script=''):
   If additional_script is given, it'll be run inside the subprocess.
   """
   return json.loads(
-      subprocess.check_output(
-          [
-              'python3', '-c', (
-                  'import sys\n'
-                  'import os\n'
-                  'import json\n'
-                  '%s\n'
-                  'print(json.dumps([os.path.abspath(p) for p in sys.path]))') %
-              additional_script
-          ],
-          cwd=file_dir))
+      subprocess.check_output([
+          'python3', '-c',
+          ('import sys\n'
+           'import os\n'
+           'import json\n'
+           f'{additional_script}\n'
+           'print(json.dumps([os.path.abspath(p) for p in sys.path]))')
+      ], cwd=file_dir))
 
 
 def GetImportList(filename, module_name):
@@ -277,7 +275,7 @@ def LoadRules(path):
   with open(path, encoding='utf8') as fp:
     config = yaml.safe_load(fp)
   if (CONFIG_GROUPS not in config) or (CONFIG_RULES not in config):
-    raise ValueError('Syntax error in %s' % path)
+    raise ValueError(f'Syntax error in {path}')
 
   groups = config[CONFIG_GROUPS]
   rules = {}
@@ -370,7 +368,7 @@ def FindRule(rules, module):
   for key, value in rules:
     if RuleMatch(key, module):
       return value
-  raise ValueError('Module %s not found in rule.' % module)
+  raise ValueError(f'Module {module} not found in rule.')
 
 
 def CheckDependencyList(rules, module, import_list):
@@ -404,18 +402,17 @@ def Check(filename, rules):
     filename = os.path.abspath(filename)
     module_name = GuessModule(filename)
     if module_name is None:
-      raise ValueError("%s is not in factory Python directory." % filename)
+      raise ValueError(f"{filename} is not in factory Python directory.")
 
     import_list = GetImportList(filename, module_name)
     import_list = [x for x in import_list if not GuessIsBuiltinOrStdlib(x)]
 
     bad_imports = CheckDependencyList(rules, module_name, import_list)
     if bad_imports:
-      raise ValueError('\n'.join('  x %s' % x for x in bad_imports))
+      raise ValueError('\n'.join(f'  x {x}' for x in bad_imports))
     return None
   except Exception as e:
-    error_msg = '--- %s (%s) ---\n%s' % (os.path.relpath(filename), module_name,
-                                         e)
+    error_msg = f'--- {os.path.relpath(filename)} ({module_name}) ---\n{e}'
     return error_msg
 
 

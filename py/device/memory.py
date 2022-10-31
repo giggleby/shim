@@ -32,7 +32,7 @@ class LinuxMemory(BaseMemory):
   def ResizeSharedMemory(self, size='100%'):
     """See BaseMemory.ResizeSharedMemory."""
     self._device.CheckCall(
-        'mount -o remount,size=%s /dev/shm' % pipes.quote(size))
+        f'mount -o remount,size={pipes.quote(size)} /dev/shm')
 
   def GetTotalMemoryKB(self):
     """Gets total memory of system in kB"""

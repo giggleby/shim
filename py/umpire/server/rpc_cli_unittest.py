@@ -26,6 +26,7 @@ from cros.factory.umpire.server.web import xmlrpc as umpire_xmlrpc
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
+
 # Forward to the correct executer with additional arguments.
 if __name__ == '__main__':
   unittest_helper.ExecScriptWithTrial()
@@ -140,7 +141,7 @@ class CommandTest(unittest.TestCase):
     checksum_for_empty = 'da39a3ee5e6b4b0d3255bfef95601890afd80709'
 
     file_to_add = os.path.join(self.env.base_dir, 'hwid')
-    file_utils.WriteFile(file_to_add, 'checksum: %s' % checksum_for_empty)
+    file_utils.WriteFile(file_to_add, f'checksum: {checksum_for_empty}')
 
     d = self.Call('AddPayload', file_to_add, resource.PayloadTypeNames.hwid)
     d.addCallback(lambda result: self.assertEqual(checksum_for_empty,

@@ -48,7 +48,7 @@ def MountPartition(source_path, index=None, mount_point=None, rw=False,
   path = os.path if local_mode else dut.path
 
   if not path.exists(source_path):
-    raise OSError('Image file %s does not exist' % source_path)
+    raise OSError(f'Image file {source_path} does not exist')
 
   all_options = ['rw' if rw else 'ro']
   # source_path is a block device.
@@ -69,9 +69,9 @@ def MountPartition(source_path, index=None, mount_point=None, rw=False,
     partitions = PartitionManager(source_path, dut)
     sector_size = partitions.GetSectorSize()
     offset = sector_size * partitions.GetPartitionOffsetInSector(index)
-    all_options.append('offset=%d' % offset)
+    all_options.append(f'offset={int(offset)}')
     sizelimit = sector_size * partitions.GetPartitionSizeInSector(index)
-    all_options.append('sizelimit=%d' % sizelimit)
+    all_options.append(f'sizelimit={int(sizelimit)}')
 
   if options:
     all_options.extend(options)
@@ -89,11 +89,11 @@ def MountPartition(source_path, index=None, mount_point=None, rw=False,
     remove_mount_point = False
 
   if not path.isdir(mount_point):
-    raise OSError('Mount point %s does not exist' % mount_point)
+    raise OSError(f'Mount point {mount_point} does not exist')
 
   for line in file_utils.ReadLines('/proc/mounts', dut):
     if line.split()[1] == mount_point:
-      raise OSError('Mount point %s is already mounted' % mount_point)
+      raise OSError(f'Mount point {mount_point} is already mounted')
 
   command = ['toybox'] if (not local_mode and
                            dut.Call(['type', 'toybox']) == 0) else []
@@ -176,13 +176,13 @@ def MountDeviceAndReadFile(device, path, dut=None):
 
 def LoadKernelModule(name, error_on_fail=True):
   """Ensures kernel module is loaded.  If not already loaded, do the load."""
-  loaded = process_utils.Spawn('lsmod | grep -q %s' % name,
-                               call=True, shell=True).returncode == 0
+  loaded = process_utils.Spawn(f'lsmod | grep -q {name}', call=True,
+                               shell=True).returncode == 0
   if not loaded:
-    loaded = process_utils.Spawn('modprobe %s' % name,
-                                 call=True, shell=True).returncode == 0
+    loaded = process_utils.Spawn(f'modprobe {name}', call=True,
+                                 shell=True).returncode == 0
     if not loaded and error_on_fail:
-      raise OSError('Cannot load kernel module: %s' % name)
+      raise OSError(f'Cannot load kernel module: {name}')
   return loaded
 
 
@@ -253,8 +253,7 @@ class PartitionInfo:
     self.name = name
 
   def __str__(self):
-    return ('%5s %5s %10s %-20s' %
-            (self.major, self.minor, self.blocks, self.name))
+    return f'{self.major:>5} {self.minor:>5} {self.blocks:>10} {self.name:<20}'
 
 
 def GetPartitions():
@@ -656,5 +655,6 @@ def GetVarLogMessagesBeforeReboot(lines=100,
 
   # Done! Return the last few lines.
   output = tail_lines[-lines:] + [
-      '<after reboot, kernel came up at %s>' % match.group(1)]
+      f'<after reboot, kernel came up at {match.group(1)}>'
+  ]
   return '\n'.join(output) + '\n'

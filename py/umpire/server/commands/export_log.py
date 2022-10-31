@@ -45,7 +45,7 @@ class LogExporter:
     process_utils.Spawn(cmd, check_call=True, log=True)
 
   def CompressFilesFromList(self, index, date, src_dir_with_files, dst_dir):
-    tar_file = '{}-{}.tar.bz2'.format(date, index)
+    tar_file = f'{date}-{index}.tar.bz2'
     dst_path = os.path.join(dst_dir, tar_file)
     self.CompressFilesFromListToPath(src_dir_with_files, dst_path)
     return tar_file
@@ -133,7 +133,7 @@ class LogExporter:
               'log_paths': [compressed_file_name],
           }
 
-        messages.append('%s does not exist' % compressed_file_name)
+        messages.append(f'{compressed_file_name} does not exist')
         return {
             'messages': messages,
             'log_paths': [],
@@ -150,13 +150,11 @@ class LogExporter:
           tar_files_list = self.CompressFilesLimitedMaxSize(
               start_date, end_date, root_dir, dst_dir, split_bytes)
         if no_logs:
-          messages.append('no {}s for {} ~ {}'.format(log_type,
-                                                      start_date,
-                                                      end_date))
+          messages.append(f'no {log_type}s for {start_date} ~ {end_date}')
         return {
             'messages': messages,
             'log_paths': tar_files_list,
         }
-      raise common.UmpireError('Failed to export %s: No such type' % log_type)
+      raise common.UmpireError(f'Failed to export {log_type}: No such type')
     except Exception as e:
-      raise common.UmpireError('Failed to export %s\n%r' % (log_type, e))
+      raise common.UmpireError(f'Failed to export {log_type}\n{e!r}')

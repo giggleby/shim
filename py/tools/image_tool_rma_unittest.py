@@ -19,6 +19,7 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
+
 DEBUG = False
 """Set DEBUG to True to debug this unit test itself.
 
@@ -61,32 +62,31 @@ class EnvBuilder:
   def CreateDiskImage(self, lsb_content):
     cgpt = image_tool.SysUtils.FindCGPT()
     image_path = os.path.join(self.temp_dir, self.name)
-    self.CheckCall('truncate -s %s %s' % (16 * 1048576, self.name))
+    self.CheckCall(f'truncate -s {16 * 1048576} {self.name}')
 
     for command in self.PARTITION_COMMANDS:
       self.CheckCall(command % dict(command=cgpt, file=self.name))
     with image_tool.GPT.Partition.MapAll(image_path) as f:
-      self.CheckCall('sudo mkfs -F %sp3' % f)
-      self.CheckCall('sudo mkfs -F %sp5' % f)
-      self.CheckCall('sudo mkfs -F %sp1 2048' % f)
+      self.CheckCall(f'sudo mkfs -F {f}p3')
+      self.CheckCall(f'sudo mkfs -F {f}p5')
+      self.CheckCall(f'sudo mkfs -F {f}p1 2048')
     with image_tool.Partition(image_path, 3).Mount(rw=True) as d:
       fw_path = os.path.join(d, 'usr', 'sbin', 'chromeos-firmwareupdate')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(fw_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(fw_path)}')
       tmp_fw_path = os.path.join(self.temp_dir, 'chromeos-firmwareupdate')
       file_utils.WriteFile(tmp_fw_path, self.UPDATER_CONTENT)
-      self.CheckCall('sudo mv %s %s' % (tmp_fw_path, fw_path))
-      self.CheckCall('sudo chmod a+rx %s' % fw_path)
-      common_sh_path = os.path.join(
-          d, 'usr', 'share', 'misc', 'chromeos-common.sh')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(common_sh_path))
-      self.CheckCall('echo "%s" | sudo dd of=%s' %
-                     ('#!/bin/sh', common_sh_path))
+      self.CheckCall(f'sudo mv {tmp_fw_path} {fw_path}')
+      self.CheckCall(f'sudo chmod a+rx {fw_path}')
+      common_sh_path = os.path.join(d, 'usr', 'share', 'misc',
+                                    'chromeos-common.sh')
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(common_sh_path)}')
+      self.CheckCall(f"echo \"#!/bin/sh\" | sudo dd of={common_sh_path}")
       lsb_path = os.path.join(d, 'etc', 'lsb-release')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(lsb_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(lsb_path)}')
       self.CheckCall('echo "%s" | sudo dd of=%s' %
                      (lsb_content.strip('\n'), lsb_path))
       write_gpt_path = os.path.join(d, 'usr', 'sbin', 'write_gpt.sh')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(write_gpt_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(write_gpt_path)}')
       tmp_write_gpt_path = os.path.join(self.temp_dir, 'write_gpt.sh')
       write_command = '\n'.join(
           cmd % dict(command=cgpt, file='$1')
@@ -96,20 +96,21 @@ class EnvBuilder:
           '\n'.join([
               '#!/bin/sh',
               'GPT=""',
-              'GPT="%s"' % cgpt,  # Override for unit test.
+              f'GPT="{cgpt}"',  # Override for unit test.
               'write_base_table() {',
               write_command,
               '}',
           ]))
-      self.CheckCall('sudo mv %s %s' % (tmp_write_gpt_path, write_gpt_path))
+      self.CheckCall(f'sudo mv {tmp_write_gpt_path} {write_gpt_path}')
 
     with image_tool.Partition(image_path, 1).Mount(rw=True) as d:
       lsb_path = os.path.join(d, 'dev_image', 'etc', 'lsb-factory')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(lsb_path))
-      self.CheckCall('echo "%s" | sudo dd of=%s' %
-                     (lsb_content.strip('\n'), lsb_path))
-      self.CheckCall('sudo mkdir -p %s' % os.path.join(
-          d, 'unencrypted', 'import_extensions'))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(lsb_path)}')
+      self.CheckCall(
+          'echo "%s" | sudo dd of=%s' % (lsb_content.strip('\n'), lsb_path))
+      self.CheckCall(
+          f"sudo mkdir -p {os.path.join(d, 'unencrypted', 'import_extensions')}"
+      )
 
   def SetupBundleEnvironment(self, image_path):
     for dir_name in ['factory_shim', 'test_image', 'release_image',
@@ -120,11 +121,11 @@ class EnvBuilder:
       dest_path = os.path.join(self.temp_dir, name, 'image.bin')
       shutil.copy(image_path, dest_path)
       with image_tool.Partition(dest_path, 3).Mount(rw=True) as d:
-        self.CheckCall('echo "%s" | sudo dd of="%s"' %
-                       (name, os.path.join(d, 'tag')))
+        self.CheckCall(
+            f"echo \"{name}\" | sudo dd of=\"{os.path.join(d, 'tag')}\"")
       with image_tool.Partition(dest_path, 1).Mount(rw=True) as d:
-        self.CheckCall('echo "%s" | sudo dd of="%s"' %
-                       (name, os.path.join(d, 'tag')))
+        self.CheckCall(
+            f"echo \"{name}\" | sudo dd of=\"{os.path.join(d, 'tag')}\"")
     toolkit_path = os.path.join(self.temp_dir, 'toolkit', 'toolkit.run')
     file_utils.WriteFile(toolkit_path, '#!/bin/sh\necho Toolkit Version 1.0\n')
     os.chmod(toolkit_path, 0o755)
@@ -174,7 +175,7 @@ class RMACreateThread(threading.Thread):
 class ImageToolRMATest(unittest.TestCase):
   """Unit tests for image_tool RMA related commands."""
 
-  LSB_CONTENT = 'CHROMEOS_RELEASE_VERSION=1.0\nCHROMEOS_RELEASE_BOARD=%s\n'
+  LSB_CONTENT = 'CHROMEOS_RELEASE_VERSION=1.0\nCHROMEOS_RELEASE_BOARD={}\n'
 
   def CheckCall(self, command):
     return subprocess.check_call(command, shell=True, cwd=self.temp_dir)
@@ -183,10 +184,10 @@ class ImageToolRMATest(unittest.TestCase):
     command = args[0]
     if command == image_tool.CMD_NAMESPACE_RMA:
       command = args[1]
-      self.assertIn(command, self.rma_map, 'Unknown command: %s' % command)
+      self.assertIn(command, self.rma_map, f'Unknown command: {command}')
       cmd = self.rma_map[command](*self.rma_parsers)
     else:
-      self.assertIn(command, self.cmd_map, 'Unknown command: %s' % command)
+      self.assertIn(command, self.cmd_map, f'Unknown command: {command}')
       cmd = self.cmd_map[command](*self.cmd_parsers)
     cmd.Init()
     cmd_args = self.cmd_parsers[0].parse_args(args)
@@ -247,8 +248,8 @@ class ImageToolRMATest(unittest.TestCase):
       self.ImageTool(*create_args)
 
     os.chdir(self.temp_dir)
-    b1 = EnvBuilder('test1.bin', self.LSB_CONTENT % 'test1')
-    b2 = EnvBuilder('test2.bin', self.LSB_CONTENT % 'test2')
+    b1 = EnvBuilder('test1.bin', self.LSB_CONTENT.format('test1'))
+    b2 = EnvBuilder('test2.bin', self.LSB_CONTENT.format('test2'))
 
     t1 = RMACreateThread(BuildRMAImage, (b1, 'rma1.bin'))
     t2 = RMACreateThread(BuildRMAImage, (b2, 'rma2.bin', 'test'))
@@ -286,8 +287,8 @@ class ImageToolRMATest(unittest.TestCase):
 
     # `rma merge` to merge a single-board shim with a universal shim.
     with image_tool.Partition('rma2.bin', 3).Mount(rw=True) as d:
-      self.CheckCall('echo "factory_shim_2" | sudo dd of="%s"' %
-                     os.path.join(d, 'tag'))
+      self.CheckCall(
+          f"echo \"factory_shim_2\" | sudo dd of=\"{os.path.join(d, 'tag')}\"")
     self.ImageTool(
         'rma', 'merge', '-f', '-o', 'rma12_new.bin',
         '-i', 'rma12.bin', 'rma2.bin', '--auto_select')
@@ -306,8 +307,8 @@ class ImageToolRMATest(unittest.TestCase):
     factory_shim2_path = os.path.join(self.temp_dir, 'factory_shim2.bin')
     shutil.copy(image2_path, factory_shim2_path)
     with image_tool.Partition(factory_shim2_path, 3).Mount(rw=True) as d:
-      self.CheckCall('echo "factory_shim_3" | sudo dd of="%s"' %
-                     os.path.join(d, 'tag'))
+      self.CheckCall(
+          f"echo \"factory_shim_3\" | sudo dd of=\"{os.path.join(d, 'tag')}\"")
     toolkit2_path = os.path.join(self.temp_dir, 'toolkit2.run')
     file_utils.WriteFile(toolkit2_path, '#!/bin/sh\necho Toolkit Version 2.0\n')
     os.chmod(toolkit2_path, 0o755)

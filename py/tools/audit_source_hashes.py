@@ -17,6 +17,7 @@ from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
 from cros.factory.utils.process_utils import Spawn
 
+
 DESCRIPTION = '''
 Audits source hashes logged during system finalization
 to verify that no unauthorized changes have been made to
@@ -54,7 +55,7 @@ def GetHashes(path):
   if os.path.isdir(path):
     if os.path.basename(path) != 'py':
       raise AuditException(
-          '%s is a directory, but not a path to a "py" source directory' % path)
+          f'{path} is a directory, but not a path to a "py" source directory')
     return file_utils.HashSourceTree(path)['hashes']
 
   if path.endswith('.run'):
@@ -75,8 +76,8 @@ def GetHashes(path):
     proc = Spawn(['tar', '-Oaxf', path, 'events'], read_stdout=True)
     if proc.returncode:
       raise AuditException(
-          'Unable to read events from report %s (tar returned %d)' % (
-              path, proc.returncode))
+          f'Unable to read events from report {path} (tar returned '
+          f'{int(proc.returncode)})')
     data = proc.stdout_data
   else:
     # Assume it's an event log.  Look for the event specifically
@@ -92,12 +93,10 @@ def GetHashes(path):
     hash_function = data.get('hash_function')
     if hash_function != file_utils.SOURCE_HASH_FUNCTION_NAME:
       raise ValueError(
-          'Expected hash function %r but got %r' % (
-              file_utils.SOURCE_HASH_FUNCTION_NAME,
-              hash_function))
+          f'Expected hash function {file_utils.SOURCE_HASH_FUNCTION_NAME!r} but'
+          f' got {hash_function!r}')
     return data['hashes']
-  raise AuditException(
-      'No source_hashes event in event log %s' % path)
+  raise AuditException(f'No source_hashes event in event log {path}')
 
 
 def FindMismatches(golden_hashes, sample_hashes, sample, out):
@@ -105,8 +104,8 @@ def FindMismatches(golden_hashes, sample_hashes, sample, out):
 
   def ReportLine(path, msg):
     if error_count[0] == 0:
-      out.write('In sample %s:\n' % sample)
-    out.write('- %s: %s\n' % (path, msg))
+      out.write(f'In sample {sample}:\n')
+    out.write(f'- {path}: {msg}\n')
     error_count[0] += 1
 
   all_keys = sorted(set(sample_hashes.keys()) |
@@ -120,8 +119,8 @@ def FindMismatches(golden_hashes, sample_hashes, sample, out):
     elif sample_value is None and golden_value is not None:
       ReportLine(k, 'missing from sample')
     elif sample_value != golden_value:
-      ReportLine(k, 'hash mismatch (expected %s, found %s)' % (
-          golden_value, sample_value))
+      ReportLine(
+          k, f'hash mismatch (expected {golden_value}, found {sample_value})')
 
   return error_count[0]
 
@@ -147,7 +146,7 @@ def AuditHashes(golden, samples, out):
       mismatched_hashes = FindMismatches(golden_hashes,
                                          sample_hashes, s, out)
     except Exception:
-      out.write('Error processing sample %s\n' % s)
+      out.write(f'Error processing sample {s}\n')
       traceback.print_exc(file=out)
       total_exceptions += 1
       total_bad_samples += 1
@@ -157,16 +156,12 @@ def AuditHashes(golden, samples, out):
         total_bad_samples += 1
 
   if total_bad_samples:
-    out.write('\n'
-              'Found %d mismatched hashes and %d exceptions.\n'
-              'FAILED (%d/%d samples passed).\n' % (
-                  total_mismatched_hashes,
-                  total_exceptions,
-                  len(samples) - total_bad_samples,
-                  len(samples)))
+    out.write(f'\nFound {int(total_mismatched_hashes)} mismatched hashes and '
+              f'{int(total_exceptions)} exceptions.\nFAILED ('
+              f'{int(len(samples) - total_bad_samples)}/{len(samples)} samples '
+              'passed).\n')
     return False
-  out.write('PASSED (%d/%d samples passed).\n' % (
-      len(samples), len(samples)))
+  out.write(f'PASSED ({len(samples)}/{len(samples)} samples passed).\n')
   return True
 
 

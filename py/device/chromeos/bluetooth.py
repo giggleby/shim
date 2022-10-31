@@ -26,6 +26,7 @@ from cros.factory.external.dbus.mainloop.glib import DBusGMainLoop
 from cros.factory.external.dbus import service
 from cros.factory.external import gobject
 
+
 BUS_NAME = 'org.bluez'
 SERVICE_NAME = 'org.bluez'
 ADAPTER_INTERFACE = SERVICE_NAME + '.Adapter1'
@@ -106,8 +107,8 @@ class ChromeOSBluetoothManager(BluetoothManager):
       self._manager = dbus.Interface(bus.get_object(BUS_NAME, '/'),
                                      'org.freedesktop.DBus.ObjectManager')
     except DBusException as e:
-      raise BluetoothManagerException('DBus Exception in getting Manager'
-                                      'dbus Interface: %s.' % e) from None
+      raise BluetoothManagerException(
+          f'DBus Exception in getting Managerdbus Interface: {e}.') from None
 
   def _FindDeviceInterface(self, mac_addr, adapter):
     """Given a MAC address, returns the corresponding device dbus object
@@ -147,8 +148,9 @@ class ChromeOSBluetoothManager(BluetoothManager):
     try:
       device = self._FindDeviceInterface(device_address, adapter)
     except DBusException as e:
-      raise BluetoothManagerException('SetDeviceConnected: fail to find device'
-                                      ' %s: %s' % (device_address, e)) from None
+      raise BluetoothManagerException(
+          f'SetDeviceConnected: fail to find device {device_address}: {e}'
+      ) from None
     try:
       if connect:
         device.Connect()
@@ -157,8 +159,8 @@ class ChromeOSBluetoothManager(BluetoothManager):
         if device:
           device.Disconnect()
     except DBusException as e:
-      raise BluetoothManagerException('SetDeviceConnected: fail to switch'
-                                      'connection: %s' % e) from None
+      raise BluetoothManagerException(
+          f'SetDeviceConnected: fail to switchconnection: {e}') from None
     else:
       return True
 
@@ -183,8 +185,8 @@ class ChromeOSBluetoothManager(BluetoothManager):
       if device:
         adapter.RemoveDevice(device)
     except DBusException as e:
-      raise BluetoothManagerException('RemovePairedDevice: fail to remove'
-                                      ' device: %s.' % e) from None
+      raise BluetoothManagerException(
+          f'RemovePairedDevice: fail to remove device: {e}.') from None
     else:
       logging.info('succesfully removed device.')
       return True
@@ -241,9 +243,9 @@ class ChromeOSBluetoothManager(BluetoothManager):
     self._main_loop = gobject.MainLoop()
     matching_device = self._FindDeviceInterface(device_address, adapter)
     if not matching_device:
-      raise BluetoothManagerException('CreatePairedDevice: '
-                                      'Address was not found in scan: %s'
-                                      % device_address)
+      raise BluetoothManagerException(
+          f'CreatePairedDevice: Address was not found in scan: {device_address}'
+      )
     success = threading.Event()
 
     def _ReplyHandler():
@@ -522,7 +524,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
       logging.info('Bluetooth Device Found: %s.', address)
 
       if match_address and address == match_address:
-        _QuitScan('Device %s found.' % match_address)
+        _QuitScan(f'Device {match_address} found.')
 
       if 'RSSI' in properties:
         logging.info('Address: %s, RSSI: %s', address, properties['RSSI'])

@@ -157,13 +157,13 @@ class UmpireClientInfo:
         # 'mac.eth0='xxxx', 'mac.wlan0=xxxx'.
         values = getattr(self, UmpireClientInfo.KEY_TRANSLATION[key_prefix])
         for subkey, value in values.items():
-          info_dict['%s.%s' % (key_prefix, subkey)] = value
+          info_dict[f'{key_prefix}.{subkey}'] = value
     except KeyError as e:
       raise UmpireClientInfoException(
-          'DUT info key not found in KEY_TRANSLATION: %s.' % e) from None
+          f'DUT info key not found in KEY_TRANSLATION: {e}.') from None
     except AttributeError as e:
       raise UmpireClientInfoException(
-          'Property not found in UmpireClientInfo: %s.' % e) from None
+          f'Property not found in UmpireClientInfo: {e}.') from None
 
     logging.debug('Client info_dict: %r', info_dict)
     return info_dict
@@ -186,8 +186,7 @@ class UmpireClientInfo:
       Umpire client info in X-Umpire-DUT format: 'key=value; key=value ...'.
     """
     info_dict = self._GetXUmpireDUTDict()
-    output = '; '.join(
-        '%s=%s' % (key, info_dict[key]) for key in sorted(info_dict))
+    output = '; '.join(f'{key}={info_dict[key]}' for key in sorted(info_dict))
     logging.debug('Client X-Umpire-DUT : %r', output)
     # This will be directly sent to HTTP header and we don't want to allow new
     # line characters.

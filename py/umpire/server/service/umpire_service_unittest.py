@@ -19,6 +19,7 @@ from cros.factory.umpire.server import umpire_env
 from cros.factory.umpire.server import unittest_helper
 from cros.factory.umpire.server import utils
 
+
 # Forward to the correct executer with additional arguments.
 if __name__ == '__main__':
   unittest_helper.ExecScriptWithTrial()
@@ -54,9 +55,10 @@ class MultiProcService(umpire_service.UmpireService):
     for p in range(0, 7):
       config_dict = {
           'executable': '/bin/sh',
-          'name': 'P_%d' % p,
+          'name': f'P_{int(p)}',
           'args': [],
-          'path': '/tmp'}
+          'path': '/tmp'
+      }
       proc = umpire_service.ServiceProcess(self)
       proc.SetConfig(config_dict)
       yield proc

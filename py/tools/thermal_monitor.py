@@ -65,8 +65,8 @@ class TemperaturesMonitor:
       worth_to_output = False
       if self._sensor_array_changed:
         worth_to_output = True
-        syslog.syslog('Sensors changed (added or removed): %s' %
-                      self._sensor_array)
+        syslog.syslog(
+            f'Sensors changed (added or removed): {self._sensor_array}')
       else:
         # In order not to overflow the logs, only output if the
         # delta is larger than we expected. The _sensor_array_changed
@@ -79,7 +79,7 @@ class TemperaturesMonitor:
       if worth_to_output:
         self._last_temperatures = current_temperatures
         values = [current_temperatures[i] for i in self._sensor_array]
-        syslog.syslog('Temperatures: %s' % values)
+        syslog.syslog(f'Temperatures: {values}')
         logging.info('Temperatures: %s', values)
 
   def CheckForever(self):
@@ -100,8 +100,8 @@ def main():
                       help='Use testlog to log information.',
                       action='store_true', required=False)
   args = parser.parse_args()
-  syslog.syslog('Monitoring thermal with period %.2f, delta %.2f' % (
-      args.period_secs, args.delta))
+  syslog.syslog(f'Monitoring thermal with period {args.period_secs:.2f}, delta '
+                f'{args.delta:.2f}')
   if args.period_secs <= 0:
     syslog.syslog('Disable monitoring.')
     return

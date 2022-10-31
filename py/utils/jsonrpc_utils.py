@@ -64,7 +64,7 @@ class JSONRPCServer:
       return
     self._aborted.set()
     # Make a fake request to self
-    s = jsonrpclib.Server('http://%s:%d/' % (net_utils.LOCALHOST, self._port),
+    s = jsonrpclib.Server(f'http://{net_utils.LOCALHOST}:{int(self._port)}/',
                           transport=TimeoutJSONRPCTransport(0.01))
     try:
       s.IsAlive()

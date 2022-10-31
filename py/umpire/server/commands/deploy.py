@@ -83,9 +83,9 @@ class ConfigDeployer:
     Returns:
       Failure object that indicates deploy failed but rollback success.
     """
-    error = ('Deploy failed. Successfully rollbacked to config %r.\n'
-             'The original error was: %s' % (self._env.config_path,
-                                             original_failure))
+    error = ('Deploy failed. Successfully rollbacked to config '
+             f'{self._env.config_path!r}.\nThe original error was: '
+             f'{original_failure}')
     logging.error(error)
     return twisted_failure.Failure(common.UmpireError(error))
 
@@ -95,8 +95,9 @@ class ConfigDeployer:
     Raises:
       UmpireError to its caller (CLI) as Umpire is in an unrecoverable state.
     """
-    error = 'Rollback to config %r failed: %s. Stopping Umpire daemon' % (
-        self._original_config_path, failure)
+    error = (
+        f'Rollback to config {self._original_config_path!r} failed: {failure}. '
+        'Stopping Umpire daemon')
     logging.error(error)
     self._daemon.Stop()
     raise common.UmpireError(error)

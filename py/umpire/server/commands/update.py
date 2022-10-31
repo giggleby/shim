@@ -43,15 +43,15 @@ class ResourceUpdater:
     """Check the correctness of payloads list."""
     for type_name, file_path in payloads_to_update:
       if type_name not in resource.PayloadTypeNames:
-        raise common.UmpireError('Unsupported payload type: %s' % type_name)
+        raise common.UmpireError(f'Unsupported payload type: {type_name}')
       if not os.path.isfile(file_path):
-        raise common.UmpireError('File not found: %s' % file_path)
+        raise common.UmpireError(f'File not found: {file_path}')
 
   def _CheckPayloadsConfig(self, payloads_config_to_update):
     """Check the correctness of payloads config."""
     for type_name in payloads_config_to_update:
       if type_name not in resource.PayloadTypeNames:
-        raise common.UmpireError('Unsupported payload type: %s' % type_name)
+        raise common.UmpireError(f'Unsupported payload type: {type_name}')
 
   def _MakePayloads(self, payloads_to_update):
     new_payloads = {}
@@ -87,12 +87,11 @@ class ResourceUpdater:
       source_id = config.GetActiveBundle()['id']
     bundle = config.GetBundle(source_id)
     if not bundle:
-      raise common.UmpireError(
-          'Source bundle ID does not exist: %s' % source_id)
+      raise common.UmpireError(f'Source bundle ID does not exist: {source_id}')
     if dest_id:
       if config.GetBundle(dest_id):
         raise common.UmpireError(
-            'Destination bundle ID already exists: %s' % dest_id)
+            f'Destination bundle ID already exists: {dest_id}')
       bundle = copy.deepcopy(bundle)
       bundle['id'] = dest_id
       config['bundles'].append(bundle)

@@ -14,6 +14,7 @@ from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
+
 DEVICE_MODULE_BASE = 'cros.factory.device'
 DEVICE_CONFIG_NAME = 'devices'
 # Config types must match the config.json file.
@@ -68,8 +69,8 @@ def _GetDeviceClass(module_prefix, class_postfix, class_name):
   """
   if callable(class_name):
     return class_name
-  assert class_name.endswith(class_postfix), ('Unknown class name: %s' %
-                                              class_name)
+  assert class_name.endswith(class_postfix), (
+      f'Unknown class name: {class_name}')
   module_name = class_name[:-len(class_postfix)].lower()
   module_path = '.'.join([DEVICE_MODULE_BASE, module_prefix, module_name])
   try:
@@ -79,7 +80,7 @@ def _GetDeviceClass(module_prefix, class_postfix, class_name):
   except Exception:
     logging.exception('GetDeviceClass')
     raise DeviceOptionsError(
-        'Failed to load %s#%s' % (module_path, class_name)) from None
+        f'Failed to load {module_path}#{class_name}') from None
 
 
 def _ParseOptions(config_type, new_options):

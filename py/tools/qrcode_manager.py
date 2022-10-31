@@ -9,6 +9,7 @@ import json
 
 from cros.factory.goofy.plugins import plugin_controller
 
+
 DESCRIPTION = 'Factory QR Code Manager'
 EXAMPLES = """
   This is a command line interface which interacts with the `qrcode_manager`
@@ -51,10 +52,10 @@ class QRCodeManager:
     info = self._qrcode_manager.GetQRCodeInfo()
     if info:
       print('QR codes are displayed at the front end.')
-      print('Positions: %s' % info['pos'])
-      print('Sizes: %s' % info['size'])
-      print('QR code content: %s' % info['qrcode_content'])
-      print('QR code base64 string: %s' % info['qrcode'])
+      print(f"Positions: {info['pos']}")
+      print(f"Sizes: {info['size']}")
+      print(f"QR code content: {info['qrcode_content']}")
+      print(f"QR code base64 string: {info['qrcode']}")
     else:
       print('QR codes are not displayed.')
 

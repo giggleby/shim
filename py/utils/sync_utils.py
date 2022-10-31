@@ -18,6 +18,7 @@ from . import thread_utils
 from . import time_utils
 from . import type_utils
 
+
 _HAVE_CTYPES = True
 try:
   import ctypes
@@ -91,7 +92,7 @@ def PollForCondition(poll_method, condition_method=None,
     if ((end_time is not None) and
         (time_utils.MonotonicTime() + poll_interval_secs > end_time)):
       if condition_name:
-        msg = 'Timed out waiting for condition: %s' % condition_name
+        msg = f'Timed out waiting for condition: {condition_name}'
       else:
         msg = 'Timed out waiting for unnamed condition'
       logging.info(msg)

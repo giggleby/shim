@@ -28,11 +28,11 @@ def ConvertYAMLPathToJSONPath(yaml_path):
 
 def main():
   if not 1 < len(sys.argv) < 4:
-    sys.exit('Usage: %s input [output]' % sys.argv[0])
+    sys.exit(f'Usage: {sys.argv[0]} input [output]')
   in_file = sys.argv[1]
   out_file = sys.argv[2] if len(sys.argv) > 2 else (
       ConvertYAMLPathToJSONPath(in_file))
-  print('%s => %s' % (in_file, out_file))
+  print(f'{in_file} => {out_file}')
   with open(in_file, encoding='utf8') as f_in:
     with open(out_file, 'w', encoding='utf8') as f_out:
       f_out.write(ConvertYAMLToJSON(f_in.read()))

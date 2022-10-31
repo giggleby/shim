@@ -16,8 +16,9 @@ def SaveNewActiveConfig(config):
   """Serialize and saves the configuration as new active config file."""
   json_config = json.dumps(
       config, indent=2, separators=(',', ': '), sort_keys=True) + '\n'
-  json_name = 'umpire.%s.json' % (
-      hashlib.md5(json_config.encode('utf-8')).hexdigest())
+  json_name =  (
+      f"umpire.{hashlib.md5(json_config.encode('utf-8')).hexdigest()}.json"
+      )
   json_path = os.path.join('resources', json_name)
   with open(os.path.join(_ENV_DIR, json_path), 'w', encoding='utf8') as f:
     f.write(json_config)
@@ -44,7 +45,7 @@ def NormalizeConfig(config):
       # end if there are many conflicts
       new_name = r['bundle_id']
       while True:
-        new_name = '%s_copy' % new_name
+        new_name = f'{new_name}_copy'
         if new_name not in ruleset_id_set and new_name not in bundle_id_set:
           ruleset_id_set.add(new_name)
           bundle_id_set.add(new_name)

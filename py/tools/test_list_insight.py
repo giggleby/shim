@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import argparse
+from collections import OrderedDict
 import copy
 import json
 import logging
 import os.path
 import re
 import sys
-from collections import OrderedDict
 
 from cros.factory.test.env import paths
 from cros.factory.test.test_lists import manager
@@ -81,8 +81,8 @@ To diff test objects from two test lists, e.g. main_voxel & main_volet:
   {RunInNoDiskStressGroup.FrontCamera} main_voxel {FFT.FrontCameraQRScan}
 (If the second object is empty, the default is the same as the first object.)
 
-* Currently, the input test object names are case-insensitive and input test list ids
-  require an exact match.
+* Currently, the input test object names are case-insensitive and input test
+  list ids require an exact match.
 """
 
 STYLE = {
@@ -210,11 +210,11 @@ class TestListInsightConfigList(config_utils._ConfigList):
           self._AddSourceToTestObject(
               resolved_test_list['definitions'][test_object_name],
               test_list_def.get(test_object_name, {}),
-              '%s; %s' % (test_list_id, test_object_name))
+              f'{test_list_id}; {test_object_name}')
         for _key in ['constants', 'options']:
           if _key in config:
             self._AddSourceToDict(resolved_test_list[_key], config[_key],
-                                  '%s; %s' % (test_list_id, _key))
+                                  f'{test_list_id}; {_key}')
 
   def _AddSourceToDict(self, to_be_resolved_object, source_object, source_name):
     """An internal function to add sources for arguments inside a dictionary.
@@ -243,7 +243,7 @@ class TestListInsightConfigList(config_utils._ConfigList):
         # Record the source test list id of the argument.
         od = OrderedDict()  # store the order of loaded sources.
         # Add prefix '__comment' to avoid error from validating test list.
-        tagged_arg_key = '%s_%s' % ('__comment', Colorize(arg_key, '__source'))
+        tagged_arg_key = f"__comment_{Colorize(arg_key, '__source')}"
         to_be_resolved_object.setdefault(tagged_arg_key, od)
         to_be_resolved_object[tagged_arg_key][source_name] = source_object[
             arg_key]
@@ -359,7 +359,7 @@ class TestListInsightManager(manager.Manager):
       update_test_list.ToFactoryTestList()
     except KeyError:
       print('Only test list which defines "tests" can be loaded. '
-            '%s does not have "tests"' % target_list_id)
+            f'{target_list_id} does not have "tests"')
       raise
 
     json_constants = dict(update_test_list.constants)
@@ -449,13 +449,14 @@ class TestListInsightManager(manager.Manager):
     try:
       ref_test_list, tar_test_list = self._LoadTestList(ref_id, tar_id)
     except KeyError as e:
-      print('Only test list which defines "tests" can be loaded. '
-            '%s is not in the directory or does not have "tests"' % e)
+      print(
+          f'Only test list which defines "tests" can be loaded. {e} is not in '
+          'the directory or does not have "tests"')
       return
     ref_py_dict = self.CollectPytests(ref_test_list)
     tar_py_dict = self.CollectPytests(tar_test_list)
-    print('\nRed: pytests removed from %s\n'
-          'Green: pytests added in %s\n' % (tar_id, tar_id))
+    print(f'\nRed: pytests removed from {tar_id}\nGreen: pytests added in '
+          f'{tar_id}\n')
     for test_group, tar_pytest_list in tar_py_dict.items():
       ref_pytest_list = ref_py_dict[test_group]
       added = tar_pytest_list - ref_pytest_list
@@ -505,8 +506,9 @@ class TestListInsightManager(manager.Manager):
     try:
       testlist_a, testlist_b = self._LoadTestList(id_a, id_b)
     except KeyError as e:
-      print('Only test list which defines "tests" can be loaded. '
-            '%s is not in the directory or does not have "tests"' % e)
+      print(
+          f'Only test list which defines "tests" can be loaded. {e} is not in '
+          'the directory or does not have "tests"')
       return
 
     # Create two temporary files.

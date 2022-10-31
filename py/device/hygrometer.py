@@ -45,4 +45,4 @@ class SysFSHygrometer(Hygrometer):
     try:
       return self._rh_map(self._device.ReadFile(self._rh_filename))
     except Exception as e:
-      raise self.Error('Unable to get relative humidity: %s' % e)
+      raise self.Error(f'Unable to get relative humidity: {e}')

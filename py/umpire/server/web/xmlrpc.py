@@ -70,7 +70,7 @@ class XMLRPCContainer(twisted_xmlrpc.XMLRPC):
         """
         error_message = ''
         if isinstance(result, failure.Failure):
-          error_message = ': %s' % result.getTraceback()
+          error_message = f': {result.getTraceback()}'
         class_name = method.__self__.__class__.__name__
         method_name = method.__name__
         duration = time.time() - start_time

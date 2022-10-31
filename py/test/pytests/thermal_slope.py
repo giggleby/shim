@@ -107,6 +107,7 @@ class ThermalSlopeTest(unittest.TestCase):
     self.sample_group_checker = testlog.GroupParam(
         'sample',
         ['stage', 'fan_rpm', 'temperatures', 'energy', 'power', 'elapsed'])
+
     testlog.UpdateParam('stage', param_type=testlog.PARAM_TYPE.argument)
     testlog.UpdateParam('energy', value_unit='Joule')
     testlog.UpdateParam('power', value_unit='Watt')
@@ -128,13 +129,10 @@ class ThermalSlopeTest(unittest.TestCase):
     fan_rpm = self.dut.fan.GetFanRPM()
     elapsed_time = time.time() - self.stage_start_time
     temperatures = self.dut.thermal.GetAllTemperatures()
-    # pylint: disable=consider-using-f-string
-    self.log.info(
-        u'%s (%.1f s): fan_rpm=%s, temp=%d°C, power=%.3f W' % (
-            self.stage, elapsed_time,
-            fan_rpm, self._MainTemperature(),
-            (float('nan') if self.snapshot['power'] is None
-             else self.snapshot['power'])))
+    self.log.info('%s (%.1f s): fan_rpm=%s, temp=%d°C, power=%.3f W',
+                  self.stage, elapsed_time, fan_rpm, self._MainTemperature(),
+                  (float('nan') if self.snapshot['power'] is None else
+                   self.snapshot['power']))
     event_log.Log('sample',
                   stage=self.stage,
                   fan_rpm=fan_rpm,

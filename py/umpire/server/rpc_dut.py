@@ -173,10 +173,8 @@ class UmpireDUTCommands(umpire_rpc.UmpireRPC):
     """
     del x_umpire_dut  # Unused.
     bundle = self.env.config.GetActiveBundle()
-    if bundle:
-      return 'http://%s:%d/res/%s' % (
-          GetServerIpPortFromRequest(request, self.env) + (bundle['payloads'],))
-    return ''
+    ip, port = GetServerIpPortFromRequest(request, self.env)
+    return f'http://{ip}:{port:d}/res/{bundle["payloads"]}' if bundle else ''
 
 
 class ShopfloorServiceDUTCommands(umpire_rpc.UmpireRPC):
@@ -360,9 +358,8 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
       used as a XML-RPC server module.
     """
     opt_name = ('-' + report_name) if report_name else ''
-    file_name = '{stage}{opt_name}-{serial}-{gmtime}.rpt.xz'.format(
-        stage=stage or 'Unknown', opt_name=opt_name, serial=serial,
-        gmtime=time.strftime('%Y%m%dT%H%M%SZ', self._Now()))
+    file_name = (f"{stage or 'Unknown'}{opt_name}-{serial}-"
+                 f"{time.strftime('%Y%m%dT%H%M%SZ', self._Now())}.rpt.xz")
     d = threads.deferToThread(lambda: self._SaveUpload(
         'report', file_name, self._UnwrapBlob(report_blob)))
     d.addCallback(self._ReturnTrue)

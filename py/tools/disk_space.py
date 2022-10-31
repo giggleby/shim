@@ -9,6 +9,7 @@ import collections
 import logging
 import os
 
+
 # Classes holding structured data.
 VFSInfo = collections.namedtuple('VFSInfo', ['mount_points', 'statvfs'])
 DiskUsedPercentage = (
@@ -64,8 +65,8 @@ def FormatSpaceUsed(vfs_info):
     meaning that on the device that /a and /b are mounted from, 87% of bytes
     and 17% of inodes are used (unavailable to unprivileged users).
   """
-  return ' '.join(vfs_info.mount_points) + (': %d%%/%d%%' %
-                                            GetPartitionUsage(vfs_info))
+  info = [int(k) for k in GetPartitionUsage(vfs_info)]
+  return ' '.join(vfs_info.mount_points) + (f': {info[0]}%/{info[1]}%')
 
 
 def FormatSpaceUsedAll(vfs_infos):
@@ -190,9 +191,8 @@ class DiskSpace:
     max_partition, max_usage_type, max_usage = GetMaxStatefulPartitionUsage()
     if max_usage > self.args.stateful_partition_threshold:
       raise DiskException(
-          ('%s partition %s usage %d%% is above threshold %d%%' %
-           (max_partition, max_usage_type, max_usage,
-            self.args.stateful_partition_threshold)))
+          f'{max_partition} partition {max_usage_type} usage {int(max_usage)}% '
+          f'is above threshold {int(self.args.stateful_partition_threshold)}%')
 
 
 if __name__ == '__main__':

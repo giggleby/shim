@@ -18,8 +18,7 @@ def ReorderDictKey(obj, key_order=None):
   if callable(key_order):
     key_order = list(sorted(obj.keys(), key=key_order))
   elif not all(k in key_order for k in obj):
-    raise ValueError('Some keys of %r is not inside order %r.' % (obj,
-                                                                  key_order))
+    raise ValueError(f'Some keys of {obj!r} is not inside order {key_order!r}.')
 
   return collections.OrderedDict((k, obj[k]) for k in key_order if k in obj)
 

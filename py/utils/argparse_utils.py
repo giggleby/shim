@@ -51,8 +51,9 @@ class HackedArgParser(argparse.ArgumentParser):
     s = argparse.ArgumentParser.format_help(self)
     if self.subcommands:
       s = re.sub(r'(?ms)\].*{.*}.*\.\.\.', r'] <sub-command>', s)
-      s = re.sub(r'(?ms)(positional.*)(optional arguments:)',
-                 r'sub-commands:\n%s\n\n\2' % self.format_sub_cmd_menu(), s)
+      s = re.sub(r'(?ms)(positional.*)(optional arguments:)', r'sub-commands:\n'
+                 f'{self.format_sub_cmd_menu()}'
+                 r'\n\n\2', s)
     return s
 
   def format_usage(self):

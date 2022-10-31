@@ -14,6 +14,7 @@ import sys
 from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import json_utils
 
+
 _ENV_DIR = os.path.join('/', umpire_env.DEFAULT_BASE_DIR)
 _SESSION_JSON_PATH = os.path.join(_ENV_DIR, umpire_env.SESSION_JSON_FILE)
 
@@ -57,12 +58,12 @@ def _RunMigration(migration_id):
   version, env = _GetEnvironmentVersionAndData()
   if migration_id != version + 1:
     raise RuntimeError(
-        "Shouldn't run migration #%d when environment version is %d." % (
-            migration_id, version))
+        f"Shouldn't run migration #{int(migration_id)} when environment version"
+        f" is {int(version)}.")
 
   migration_name = _MIGRATION_NAME_TEMPLATE % migration_id
   module = importlib.import_module(
-      'cros.factory.umpire.server.migrations.%s' % migration_name)
+      f'cros.factory.umpire.server.migrations.{migration_name}')
   try:
     os.chdir(os.path.join(_MIGRATIONS_DIR, migration_name))
   except OSError:
@@ -71,8 +72,8 @@ def _RunMigration(migration_id):
   if env:
     if env.get(_WIP_KEY):
       raise RuntimeError(
-          "Please remove field %r from %r before running migrations." % (
-              _WIP_KEY, _SESSION_JSON_PATH))
+          f'Please remove field {_WIP_KEY!r} from {_SESSION_JSON_PATH!r} before'
+          'running migrations.')
     env[_WIP_KEY] = True
     env.Save()
 

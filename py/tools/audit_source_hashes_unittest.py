@@ -173,11 +173,11 @@ class FakeSourceTreeTest(unittest.TestCase):
         toolkit_path,
         '#!/bin/bash\n'
         '[ "$1" == "--tar" ] || exit 1\n'  # First arg must be '--tar'
-        'shift\n'                          # Remove '--tar'
-        'tar_flags="$1"\n'                 # Save tar flags
-        'shift\n'                          # Remove tar flags
-        'tar "$tar_flags" "%s" "$@"\n'     # Call tar on tar_file
-        % tar_file)
+        'shift\n'  # Remove '--tar'
+        'tar_flags="$1"\n'  # Save tar flags
+        'shift\n'  # Remove tar flags
+        f'tar "$tar_flags" "{tar_file}" "$@"\n'  # Call tar on tar_file
+    )
     os.chmod(toolkit_path, 0o555)
 
     # Now we can use the fake toolkit as a golden source.

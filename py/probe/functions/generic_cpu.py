@@ -13,6 +13,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
+
 KNOWN_CPU_TYPES = type_utils.Enum(['x86', 'arm'])
 
 
@@ -33,7 +34,7 @@ class GenericCPUFunction(probe_function.ProbeFunction):
       self.args.cpu_type = process_utils.CheckOutput(
           'crossystem arch', shell=True)
     if self.args.cpu_type not in KNOWN_CPU_TYPES:
-      raise ValueError('cpu_type should be one of %r.' % list(KNOWN_CPU_TYPES))
+      raise ValueError(f'cpu_type should be one of {list(KNOWN_CPU_TYPES)!r}.')
 
   def Probe(self):
     if self.args.cpu_type == KNOWN_CPU_TYPES.x86:

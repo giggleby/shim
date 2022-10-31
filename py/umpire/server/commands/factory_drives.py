@@ -74,8 +74,8 @@ class _FactoryDriveObject:
       # rollback component to existed version
       if not 0 <= using_ver < len(component['revisions']):
         raise common.UmpireError(
-            'Intend to use invalid version of factory drive %d.' %
-            component['id'])
+            'Intend to use invalid version of factory drive '
+            f'{int(component["id"])}.')
       component['using_ver'] = using_ver
     elif rename is not None:
       # rename component

@@ -41,8 +41,8 @@ class LegacyADBProcess:
 
     # To get real exit code, we want to find out using logcat (see
     # implementation in ADBLink).
-    result = process_utils.CheckOutput('adb logcat -d -b main -s %s' %
-                                       self._session_id, shell=True).strip()
+    result = process_utils.CheckOutput(
+        f'adb logcat -d -b main -s {self._session_id}', shell=True).strip()
     logging.debug('%s: Exit Results = %s', type(self), result)
 
     # Format: I/session_id(PID): EXITCODE
@@ -112,7 +112,7 @@ class ADBLink(device_types.DeviceLink):
     if not isinstance(command, str):
       command = ' '.join(pipes.quote(param) for param in command)
     if cwd:
-      command = 'cd %s ; %s' % (pipes.quote(cwd), command)
+      command = f'cd {pipes.quote(cwd)} ; {command}'
 
     # ADB protocol currently mixes stderr and stdout in same channel (i.e., the
     # stdout by adb command has both stderr and stdout from device) so we do
@@ -145,12 +145,12 @@ class ADBLink(device_types.DeviceLink):
           # We don't know the correct way to create true tmp file on the device
           # since it differs from board to board. Use session_id in the
           # filename to avoid collision as much as possible.
-          target_tmp_file = os.path.join(
-              self._temp_dir, '%s.%s' % (session_id, filename))
+          target_tmp_file = os.path.join(self._temp_dir,
+                                         f'{session_id}.{filename}')
 
           self.Push(tmp_file.name, target_tmp_file)
-          redirections += ' <%s' % target_tmp_file
-          delete_tmps = 'rm -f %s' % target_tmp_file
+          redirections += f' <{target_tmp_file}'
+          delete_tmps = f'rm -f {target_tmp_file}'
 
     if self._exit_code_hack:
       # ADB shell has a bug that exit code is not correctly returned (
@@ -158,12 +158,13 @@ class ADBLink(device_types.DeviceLink):
       # implementations work around that by adding an echo and then parsing the
       # execution results. To avoid problems in redirection, we do this slightly
       # different by using the log service and "logcat" ADB feature.
-      command = ['adb', 'shell', '( %s ) %s; log -t %s $?; %s' %
-                 (command, redirections, session_id, delete_tmps)]
+      command = [
+          'adb', 'shell',
+          f'( {command} ) {redirections}; log -t {session_id} $?; {delete_tmps}'
+      ]
       wrapper = LegacyADBProcess
     else:
-      command = ['adb', 'shell', '( %s ) %s; %s' %
-                 (command, redirections, delete_tmps)]
+      command = ['adb', 'shell', f'( {command} ) {redirections}; {delete_tmps}']
       wrapper = RawADBProcess
 
     logging.debug('ADBLink: Run %r', command)

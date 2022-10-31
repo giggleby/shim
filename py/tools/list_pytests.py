@@ -20,8 +20,9 @@ from cros.factory.test.utils import pytest_utils
 
 def _ToI18nLabel(name):
   name = os.path.splitext(name)[0]
-  return 'i18n! %s' % test_object.FactoryTest.PytestNameToLabel(
-      name.replace('/', '.'))
+  return (
+      'i18n! '
+      f'{test_object.FactoryTest.PytestNameToLabel(name.replace("/", "."))}')
 
 
 def main():

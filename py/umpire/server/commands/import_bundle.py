@@ -56,7 +56,7 @@ class BundleImporter:
 
     config = umpire_config.UmpireConfig(self._daemon.env.config)
     if config.GetBundle(bundle_id):
-      raise common.UmpireError('bundle_id %r already in use' % bundle_id)
+      raise common.UmpireError(f'bundle_id {bundle_id!r} already in use')
 
     file_utils.CheckPath(bundle_path, 'bundle')
     if not os.path.isdir(bundle_path):
@@ -89,8 +89,7 @@ class BundleImporter:
       target = resource.GetPayloadType(type_name).import_pattern
       candidates = glob.glob(os.path.join(bundle_path, target))
       if len(candidates) > 1:
-        raise common.UmpireError(
-            'Multiple %s found: %r' % (type_name, candidates))
+        raise common.UmpireError(f'Multiple {type_name} found: {candidates!r}')
       if len(candidates) == 1:
         ret.append((candidates[0], type_name))
     return ret

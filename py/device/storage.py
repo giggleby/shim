@@ -67,7 +67,7 @@ class Storage(device_types.DeviceComponent):
     Args:
       data: a dict, new key-value pairs.
     """
-    assert isinstance(data, dict), '%r is not a dict object' % data
+    assert isinstance(data, dict), f'{data!r} is not a dict object'
 
     invalid_keys = [k for k in data if not isinstance(k, str)]
     if invalid_keys:
@@ -162,7 +162,7 @@ class Storage(device_types.DeviceComponent):
       logging.error('remount: Cannot get mount point of %s', path)
       return False
 
-    cmd = ['mount', '-o', 'remount,%s' % options, mount_point]
+    cmd = ['mount', '-o', f'remount,{options}', mount_point]
     if self._device.Call(cmd) != 0:
       logging.error('remount: Cannot remount mount point: %s', mount_point)
       return False
@@ -194,8 +194,8 @@ class Storage(device_types.DeviceComponent):
     main_storage_device_mount_point = self._GetMainStorageDeviceMountPoint()
     mnt_point_path = self.GetMountPoint(main_storage_device_mount_point)[1]
     if not mnt_point_path:
-      raise IOError('Unable to find main storage device (%s)' %
-                    main_storage_device_mount_point)
+      raise IOError('Unable to find main storage device ('
+                    f'{main_storage_device_mount_point})')
     # For NVMe and eMMC, the device paths look like /dev/nvmen0pX and
     # /dev/mmcblk0pX. For UFS, the device path looks like /dev/sdaX.
     if partition:
@@ -225,7 +225,7 @@ class Storage(device_types.DeviceComponent):
           'pvdisplay', '-C', '--quiet', '--noheadings', '--separator', '"|"',
           '-o', 'vg_name', state_dev
       ], log=True)
-      return '/dev/%s/unencrypted' % result.strip()
+      return f'/dev/{result.strip()}/unencrypted'
     except device_types.CalledProcessError:
       return state_dev
 

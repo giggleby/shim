@@ -12,6 +12,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 SYSFS_I2C_DIR_PATH = '/sys/bus/i2c/devices'
 I2C_BUS_PREFIX = 'i2c-'
 EC_BUS_PREFIX = 'EC-'
@@ -88,7 +89,7 @@ def Hexify(value):
     number = int(value, 16)
   else:
     number = int(value, 10)
-  return '0x%02x' % number
+  return f'0x{number:02x}'
 
 
 class I2CFunction(probe_function.ProbeFunction):
@@ -134,24 +135,23 @@ class I2CFunction(probe_function.ProbeFunction):
   """
 
   ARGS = [
-      Arg('bus_number', str,
-          'The I2C bus number. Every bus will be scanned if it is not '
-          'assigned. If the bus is behind EC, then it should have "%s" prefix. '
-          'For example: "%s0"' % (EC_BUS_PREFIX, EC_BUS_PREFIX),
-          default=None),
-      Arg('bus_path', str,
+      Arg(
+          'bus_number', str,
+          'The I2C bus number. Every bus will be scanned if it is not assigned.'
+          f' If the bus is behind EC, then it should have "{EC_BUS_PREFIX}" '
+          f'prefix. For example: "{EC_BUS_PREFIX}0"', default=None),
+      Arg(
+          'bus_path', str,
           'The realpath of the I2C bus sysfs node. Ignored if `bus_number` '
-          'argument is given.',
-          default=None),
-      Arg('bus_name', str,
+          'argument is given.', default=None),
+      Arg(
+          'bus_name', str,
           'The name of the I2C bus sysfs node. Ignored if `bus_number` '
-          'argument is given.',
-          default=None),
-      Arg('addr', str,
-          'The address of the device. Every address between %s and %s will be '
-          'scanned if it is not assigned.' %
-          (Hexify(ADDR_START), Hexify(ADDR_END)),
-          default=None),
+          'argument is given.', default=None),
+      Arg(
+          'addr', str, 'The address of the device. Every address between '
+          f'{Hexify(ADDR_START)} and {Hexify(ADDR_END)} will be scanned if it '
+          'is not assigned.', default=None),
       Arg('use_r_flag', bool, 'Use SMBus "read byte" commands for probing.',
           default=False),
   ]

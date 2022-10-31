@@ -13,6 +13,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
+
 MTD_PATH = '/sys/kernel/debug/mtd/mtd0/'
 
 class FlashChipFunction(cached_probe_function.LazyCachedProbeFunction):
@@ -69,9 +70,10 @@ class FlashChipFunction(cached_probe_function.LazyCachedProbeFunction):
   }
 
   ARGS = [
-      Arg('chip', type_utils.Enum(TARGET_MAP),
-          'The flash chip. It should be one of {%s}' %
-          ', '.join(TARGET_MAP.keys())),
+      Arg(
+          'chip', type_utils.Enum(TARGET_MAP),
+          'The flash chip. It should be one of '
+          f'{{{", ".join(TARGET_MAP.keys())}}}'),
   ]
 
   def GetCategoryFromArgs(self):

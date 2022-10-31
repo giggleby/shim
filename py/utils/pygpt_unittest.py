@@ -41,7 +41,7 @@ class GPTTest(unittest.TestCase):
   def setUp(self):
     self.gpt_command = GPTCommand()
     self.temp_bin = file_utils.CreateTemporaryFile()
-    CheckCall('truncate -s %s %s' % (50 * 1048576, self.temp_bin))
+    CheckCall(f'truncate -s {50 * 1048576} {self.temp_bin}')
     self.init_commands = [
         ['create', self.temp_bin],
         ['add', '-i', '2', '-b', '34', '-s', '16384', '-t', 'kernel',
@@ -127,7 +127,7 @@ class GPTTest(unittest.TestCase):
       gpt.ExpandPartition(1)
       gpt.WriteToFile(f)
 
-    with os.popen("cgpt show -i 1 -s %s" % self.temp_bin) as f:
+    with os.popen(f"cgpt show -i 1 -s {self.temp_bin}") as f:
       stateful_size = f.read().strip()
       self.assertEqual(int(stateful_size), 53177)
 

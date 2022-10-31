@@ -640,7 +640,7 @@ class HashFilesTest(unittest.TestCase):
     for relpath in ['a', 'b', 'c', 'd/e', 'd/f']:
       path = os.path.join(self.tmpdir, relpath)
       file_utils.TryMakeDirs(os.path.dirname(path))
-      file_utils.WriteFile(path, 'Contents of %s' % relpath)
+      file_utils.WriteFile(path, f'Contents of {relpath}')
 
     # ...and create a symlink cc -> c (it should be skipped)
     os.symlink('c', os.path.join(self.tmpdir, 'cc'))

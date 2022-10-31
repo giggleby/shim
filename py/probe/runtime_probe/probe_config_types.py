@@ -9,6 +9,7 @@ import re
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
+
 ValueType = type_utils.Enum(['INT', 'STRING'])
 
 class OutputFieldDefinition:
@@ -202,14 +203,12 @@ class ProbeConfigPayload:
 
     dest = self._data.setdefault(probe_statement.category_name, {})
     if probe_statement.component_name in dest:
-      raise ValueError(
-          'duplicated component: %s.%s' %
-          (probe_statement.category_name, probe_statement.component_name))
+      raise ValueError(f'duplicated component: {probe_statement.category_name}.'
+                       f'{probe_statement.component_name}')
     if probe_statement.statement_hash in self._probe_statement_hash_values:
       raise ValueError(
-          'duplicated probe statement: %s.%s: %s' %
-          (probe_statement.category_name, probe_statement.component_name,
-           probe_statement.statement))
+          f'duplicated probe statement: {probe_statement.category_name}.'
+          f'{probe_statement.component_name}: {probe_statement.statement}')
     self._probe_statement_hash_values.add(probe_statement.statement_hash)
     dest[probe_statement.component_name] = copy.deepcopy(
         probe_statement.statement)
@@ -262,8 +261,8 @@ class _AbstractOutputFieldValue:
 
   def _GenerateTypeError(self, value):
     """A helper class for the sub class to generate the exception."""
-    return TypeError('unknown value type %r for %r' % (type(value),
-                                                       self.TYPE_TAG))
+    return TypeError(
+        f'unknown value type {type(value)!r} for {self.TYPE_TAG!r}')
 
 
 class _IntOutputFieldValue(_AbstractOutputFieldValue):
@@ -272,7 +271,7 @@ class _IntOutputFieldValue(_AbstractOutputFieldValue):
   @type_utils.Overrides
   def _GenerateValueNotation(self, value):
     if isinstance(value, int):
-      return '!eq %d' % value
+      return f'!eq {int(value)}'
     raise self._GenerateTypeError(value)
 
 
@@ -284,9 +283,8 @@ class _StrOutputFieldValue(_AbstractOutputFieldValue):
     self._pattern = pattern
     if self._pattern:
       self._format_error_msg = (
-          format_error_msg or
-          ('format error, the value is expected to match %r' %
-           self._pattern.pattern))
+          format_error_msg or ('format error, the value is expected to match '
+                               f'{self._pattern.pattern!r}'))
     else:
       self._format_error_msg = None
 
@@ -295,9 +293,9 @@ class _StrOutputFieldValue(_AbstractOutputFieldValue):
     if isinstance(value, str):
       if self._pattern and not self._pattern.match(value):
         raise ValueError(self._format_error_msg)
-      return '!eq %s' % value
+      return f'!eq {value}'
     if isinstance(value, self._REGEXP_TYPE):
-      return '!re %s' % value.pattern
+      return f'!re {value.pattern}'
     raise self._GenerateTypeError(value)
 
 
@@ -310,17 +308,17 @@ class _HexOutputFieldValue(_AbstractOutputFieldValue):
       self._format_error_msg = (
           'format error, should be a hex number constructs with 0-9, A-F')
     else:
-      self._pattern = re.compile('^[0-9A-F]{%d}$' % num_digits)
+      self._pattern = re.compile(f'^[0-9A-F]{{{num_digits:d}}}$')
       self._format_error_msg = (
-          'format error, should be hex number between %s and %s with leading '
-          'zero perserved.' % ('0' * num_digits, 'F' * num_digits))
+          f"format error, should be hex number between {'0' * num_digits} and "
+          f"{'F' * num_digits} with leading zero perserved.")
 
   @type_utils.Overrides
   def _GenerateValueNotation(self, value):
     if isinstance(value, str):
       if self._pattern and not self._pattern.match(value):
         raise ValueError(self._format_error_msg)
-      return '!eq 0x%s' % value
+      return f'!eq 0x{value}'
     raise self._GenerateTypeError(value)
 
 

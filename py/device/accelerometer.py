@@ -10,6 +10,7 @@ from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 from cros.factory.utils import process_utils
 
+
 _GRAVITY = 9.80665
 
 class AccelerometerException(Exception):
@@ -57,7 +58,7 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     the calibration to allow reading raw data from a trigger.
     """
     for signal_name in self.signal_names:
-      self._SetSysfsValue('%s_calibbias' % signal_name, '0')
+      self._SetSysfsValue(f'{signal_name}_calibbias', '0')
 
   def GetData(self, capture_count: int = 1, sample_rate: float = None,
               average: bool = True):
@@ -110,10 +111,10 @@ class AccelerometerController(sensor_utils.BasicSensorController):
 
     iioservice_cmd = [
         'iioservice_simpleclient',
-        '--channels=%s' % ' '.join(iioservice_channels),
-        '--frequency=%f' % sample_rate,
-        '--device_id=%d' % int(self._GetSysfsValue('dev').split(':')[1]),
-        '--samples=%d' % capture_count
+        f"--channels={' '.join(iioservice_channels)}",
+        f'--frequency={sample_rate:f}',
+        f"--device_id={int(self._GetSysfsValue('dev').split(':')[1])}",
+        f'--samples={int(capture_count)}'
     ]
     logging.info('iioservice_simpleclient command: %r', iioservice_cmd)
 
@@ -121,8 +122,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     proc = process_utils.CheckCall(iioservice_cmd, read_stderr=True)
     for signal_name in self.signal_names:
       channel_name = ToChannelName(signal_name)
-      matches = re.findall(r'(?<={}: )-?\d+'.format(channel_name),
-                           proc.stderr_data)
+      matches = re.findall(f'(?<={channel_name}'
+                           r': )-?\d+', proc.stderr_data)
       if len(matches) != capture_count:
         logging.error(
             'Failed to read channel "%s" from iioservice_simpleclient. Expect '
@@ -215,8 +216,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     for signal_name in data:
       ideal_value = _GRAVITY * orientations[signal_name]
       current_calib_bias = (
-          int(self._GetSysfsValue('%s_calibbias' % signal_name))
-          * _GRAVITY / 1024)
+          int(self._GetSysfsValue(f'{signal_name}_calibbias')) * _GRAVITY /
+          1024)
       # Calculate the difference between the ideal value and actual value
       # then store it into _calibbias.  In release image, the raw data will
       # be adjusted by _calibbias to generate the 'post-calibrated' values.
@@ -240,8 +241,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     self._device.vpd.ro.Update(scaled)
     mapping = []
     for signal_name in self.signal_names:
-      mapping.append(('%s_%s_calibbias' % (signal_name, self.location),
-                      '%s_calibbias' % signal_name))
+      mapping.append((f'{signal_name}_{self.location}_calibbias',
+                      f'{signal_name}_calibbias'))
     for vpd_entry, sysfs_entry in mapping:
       self._SetSysfsValue(sysfs_entry, scaled[vpd_entry])
 

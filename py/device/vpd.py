@@ -188,7 +188,7 @@ class VPDSource(device_types.DeviceComponent):
       return self.rw
     if partition == 'ro':
       return self.ro
-    raise device_types.DeviceException('No %s partition found.' % partition)
+    raise device_types.DeviceException(f'No {partition} partition found.')
 
 
 class CommandVPDSource(VPDSource):

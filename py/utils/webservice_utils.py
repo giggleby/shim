@@ -8,6 +8,7 @@ import json
 import logging
 import xmlrpc.client
 
+
 # This is a top level helper so it can't use cros.factory.external.
 try:
   import zeep
@@ -54,9 +55,8 @@ PROTOCOL_PREFIXES = [PREFIX_XMLRPC,
 def CheckPackage(url, has_package, package_name):
   if not has_package:
     raise ImportError(
-        'The URL %s needs Python package "%s" installed. '
-        'Please install that by command: "sudo pip install %s"' %
-        (url, package_name, package_name))
+        f'The URL {url} needs Python package "{package_name}" installed. Please'
+        f' install that by command: "sudo pip install {package_name}"')
 
 
 def ParseURL(url):
@@ -180,8 +180,8 @@ class JSONProxyFilter(WebServiceProxy):
   def callRemote(self, method, *args, **kargs):
     if kargs:
       raise TypeError(
-          'Keyword arguments (%r) not allowed for web service method: %s.' %
-          (kargs, method))
+          f'Keyword arguments ({kargs!r}) not allowed for web service method: '
+          f'{method}.')
     result = self._proxy.callRemote(method, *list(map(json.dumps, args)))
     if HAVE_TWISTED and isinstance(result, defer.Deferred):
       return result.addCallback(json.loads)
@@ -229,7 +229,7 @@ def CreateWebServiceProxy(url, use_twisted=False):
 
   forced = [force_wsdl, force_jsonrpc, force_xmlrpc]
   if forced.count(True) > 1:
-    raise ValueError('URL %s has too many protocol identifiers.' % url)
+    raise ValueError(f'URL {url} has too many protocol identifiers.')
 
   if not any(forced) and url.lower().endswith('wsdl'):
     force_wsdl = True

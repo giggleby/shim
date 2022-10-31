@@ -23,6 +23,7 @@ from cros.factory.utils.process_utils import CalledProcessError
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
+
 # The candidate of device names which the ChromeOS may mount on rootfs.
 # Assume that ChromeOS has only one device, and always has a smaller index.
 # That is, it should always be `sda`, `nvme0n1`... not `sdb`, `nvme0n2`...
@@ -421,8 +422,9 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
 
   output_file = os.path.join(output_dir, filename)
   if os.path.exists(output_file):
-    raise RuntimeError('Same filename [%s] exists. Use `factory_bug --id` or '
-                       'add description in goofy UI dialog.' % filename)
+    raise RuntimeError(
+        f'Same filename [{filename}] exists. Use `factory_bug --id` or add '
+        'description in goofy UI dialog.')
 
   if sys_utils.InChroot():
     # Just save a dummy zip.

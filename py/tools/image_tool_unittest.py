@@ -21,6 +21,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
+
 DEBUG = False
 """Set DEBUG to True to debug this unit test itself.
 
@@ -58,7 +59,7 @@ class ImageToolTest(unittest.TestCase):
 
   def ImageTool(self, *args):
     command = args[0]
-    self.assertIn(command, self.cmd_map, 'Unknown command: %s' % command)
+    self.assertIn(command, self.cmd_map, f'Unknown command: {command}')
     cmd = self.cmd_map[command](*self.cmd_parsers)
     cmd.Init()
     cmd_args = self.cmd_parsers[0].parse_args(args)
@@ -72,30 +73,29 @@ class ImageToolTest(unittest.TestCase):
     dir_path = os.path.dirname(image_path)
     if not os.path.exists(dir_path):
       os.makedirs(dir_path)
-    self.CheckCall('truncate -s %s %s' % (16 * 1048576, name))
+    self.CheckCall(f'truncate -s {16 * 1048576} {name}')
     for command in self.PARTITION_COMMANDS:
       self.CheckCall(command % dict(command=cgpt, file=name))
     with image_tool.GPT.Partition.MapAll(image_path) as f:
-      self.CheckCall('sudo mkfs -F %sp3' % f)
-      self.CheckCall('sudo mkfs -F %sp5' % f)
-      self.CheckCall('sudo mkfs -F %sp1 2048' % f)
+      self.CheckCall(f'sudo mkfs -F {f}p3')
+      self.CheckCall(f'sudo mkfs -F {f}p5')
+      self.CheckCall(f'sudo mkfs -F {f}p1 2048')
     with image_tool.Partition(image_path, 3).Mount(rw=True) as d:
       fw_path = os.path.join(d, 'usr', 'sbin', 'chromeos-firmwareupdate')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(fw_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(fw_path)}')
       self.CheckCall('echo "%s" | sudo dd of=%s' %
                      (self.UPDATER_CONTENT.strip('\n'), fw_path))
-      self.CheckCall('sudo chmod a+rx %s' % fw_path)
-      common_sh_path = os.path.join(
-          d, 'usr', 'share', 'misc', 'chromeos-common.sh')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(common_sh_path))
-      self.CheckCall('echo "%s" | sudo dd of=%s' %
-                     ('#!/bin/sh', common_sh_path))
+      self.CheckCall(f'sudo chmod a+rx {fw_path}')
+      common_sh_path = os.path.join(d, 'usr', 'share', 'misc',
+                                    'chromeos-common.sh')
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(common_sh_path)}')
+      self.CheckCall(f"echo \"#!/bin/sh\" | sudo dd of={common_sh_path}")
       lsb_path = os.path.join(d, 'etc', 'lsb-release')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(lsb_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(lsb_path)}')
       self.CheckCall('echo "%s" | sudo dd of=%s' %
                      (self.LSB_CONTENT.strip('\n'), lsb_path))
       write_gpt_path = os.path.join(d, 'usr', 'sbin', 'write_gpt.sh')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(write_gpt_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(write_gpt_path)}')
       tmp_write_gpt_path = os.path.join(self.temp_dir, 'write_gpt.sh')
       write_command = '\n'.join(
           cmd % dict(command=cgpt, file='$1')
@@ -105,20 +105,21 @@ class ImageToolTest(unittest.TestCase):
           '\n'.join([
               '#!/bin/sh',
               'GPT=""',
-              'GPT="%s"' % cgpt,  # Override for unit test.
+              f'GPT="{cgpt}"',  # Override for unit test.
               'write_base_table() {',
               write_command,
               '}',
           ]))
-      self.CheckCall('sudo mv %s %s' % (tmp_write_gpt_path, write_gpt_path))
+      self.CheckCall(f'sudo mv {tmp_write_gpt_path} {write_gpt_path}')
 
     with image_tool.Partition(image_path, 1).Mount(rw=True) as d:
       lsb_path = os.path.join(d, 'dev_image', 'etc', 'lsb-factory')
-      self.CheckCall('sudo mkdir -p %s' % os.path.dirname(lsb_path))
+      self.CheckCall(f'sudo mkdir -p {os.path.dirname(lsb_path)}')
       self.CheckCall('echo "%s" | sudo dd of=%s' %
                      (self.LSB_CONTENT.strip('\n'), lsb_path))
-      self.CheckCall('sudo mkdir -p %s' % os.path.join(
-          d, 'unencrypted', 'import_extensions'))
+      self.CheckCall(
+          f"sudo mkdir -p {os.path.join(d, 'unencrypted', 'import_extensions')}"
+      )
 
   def SetupBundleEnvironment(self, image_path):
     for dir_name in ['factory_shim', 'test_image', 'release_image', 'toolkit',
@@ -130,11 +131,11 @@ class ImageToolTest(unittest.TestCase):
       dest_path = os.path.join(self.temp_dir, name, 'image.bin')
       shutil.copy(image_path, dest_path)
       with image_tool.Partition(dest_path, 3).Mount(rw=True) as d:
-        self.CheckCall('echo "%s" | sudo dd of="%s"' %
-                       (name, os.path.join(d, 'tag')))
+        self.CheckCall(
+            f"echo \"{name}\" | sudo dd of=\"{os.path.join(d, 'tag')}\"")
       with image_tool.Partition(dest_path, 1).Mount(rw=True) as d:
-        self.CheckCall('echo "%s" | sudo dd of="%s"' %
-                       (name, os.path.join(d, 'tag')))
+        self.CheckCall(
+            f"echo \"{name}\" | sudo dd of=\"{os.path.join(d, 'tag')}\"")
     toolkit_path = os.path.join(self.temp_dir, 'toolkit', 'toolkit.run')
     file_utils.WriteFile(toolkit_path, '#!/bin/sh\necho Toolkit Version 1.0\n')
     os.chmod(toolkit_path, 0o755)
@@ -172,14 +173,14 @@ class ImageToolTest(unittest.TestCase):
       self.ImageTool('mount', '-ro', image_path, '3', mnt_dir)
       self.assertTrue(os.path.exists(os.path.join(mnt_dir, 'usr', 'sbin')))
     finally:
-      self.CheckCall('sudo umount %s' % mnt_dir)
+      self.CheckCall(f'sudo umount {mnt_dir}')
 
     try:
       self.ImageTool('mount', '-rw', image_path, '3', mnt_dir)
       self.assertTrue(os.path.exists(os.path.join(mnt_dir, 'usr', 'sbin')))
-      self.CheckCall('sudo touch %s' % os.path.join(mnt_dir, 'rw'))
+      self.CheckCall(f"sudo touch {os.path.join(mnt_dir, 'rw')}")
     finally:
-      self.CheckCall('sudo umount %s' % mnt_dir)
+      self.CheckCall(f'sudo umount {mnt_dir}')
 
     self.ImageTool('get_firmware', '-i', image_path, '-o', self.temp_dir)
     updater = os.path.join(self.temp_dir, 'chromeos-firmwareupdate')
@@ -220,8 +221,7 @@ class ImageToolTest(unittest.TestCase):
     self.ImageTool('bundle', '--no-firmware', '--timestamp', '20180101')
     bundle_name = 'factory_bundle_test_20180101_proto.tar.bz2'
     self.assertTrue(os.path.exists(bundle_name))
-    contents = process_utils.CheckOutput('tar -xvf %s' % bundle_name,
-                                         shell=True)
+    contents = process_utils.CheckOutput(f'tar -xvf {bundle_name}', shell=True)
     contents = [line.split()[-1] for line in contents.splitlines()]
     self.assertCountEqual(
         contents,

@@ -127,8 +127,7 @@ def Check(options):
         rw_vpd = dut.vpd.rw.GetAll()
       code = rw_vpd.get(vpd_attribute)
       if not code:
-        sys.stderr.write('error: %s is not present in RW VPD\n' %
-                         vpd_attribute)
+        sys.stderr.write(f'error: {vpd_attribute} is not present in RW VPD\n')
         sys.exit(1)
 
     try:

@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from . import platform_utils
 
+
 MonotonicTime = platform_utils.GetProvider('MonotonicTime')
 
 
@@ -46,8 +47,8 @@ def FormatElapsedTime(elapsed_secs):
   elapsed_secs /= 60
   hours = elapsed_secs
 
-  return '%s%02d:%02d:%02d' % ('-' if negative else '',
-                               hours, mins, secs)
+  return (
+      f"{'-' if negative else ''}{int(hours):02}:{int(mins):02}:{int(secs):02}")
 
 
 def TimeString(time_value=None, time_separator=':', milliseconds=True):
@@ -72,7 +73,7 @@ def TimeString(time_value=None, time_separator=':', milliseconds=True):
       '%Y-%m-%dT%H' + time_separator + '%M' + time_separator + '%S',
       time.gmtime(t))
   if milliseconds:
-    ret += '.%03d' % int((t - int(t)) * 1000)
+    ret += f'.{int((t - int(t)) * 1000):03}'
   ret += 'Z'
   return ret
 
@@ -86,8 +87,7 @@ def TimedUUID():
   (handy for ls'ing directories); and it still contains far more than
   enough randomness to remain unique.
   """
-  return ('%08x' % (int(time.time() * 100) & 0xFFFFFFFF) +
-          str(uuid4())[8:])
+  return f'{int(time.time() * 100) & 0xFFFFFFFF:08x}{str(uuid4())[8:]}'
 
 
 EPOCH_ZERO = datetime.datetime(1970, 1, 1)
@@ -101,7 +101,7 @@ def DatetimeToUnixtime(obj):
   obj as in Coordinated Universal Time (UTC).
   """
   if not isinstance(obj, datetime.datetime):
-    raise ValueError('Expected datetime.datetime but found %s' % type(obj))
+    raise ValueError(f'Expected datetime.datetime but found {type(obj)}')
   if obj.tzinfo is not None:
     return (obj - EPOCH_ZERO_WITH_TZINFO).total_seconds()
   return (obj - EPOCH_ZERO).total_seconds()

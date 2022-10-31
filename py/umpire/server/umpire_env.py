@@ -28,6 +28,7 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 from cros.factory.utils import webservice_utils
 
+
 CROS_PAYLOAD = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', '..', 'bin', 'cros_payload')
@@ -185,7 +186,7 @@ class UmpireEnv:
     key = 'services.shop_floor.service_url'
     url = type_utils.GetDict(
         self.config, key,
-        'http://localhost:%s/' % common.DEFAULT_SHOPFLOOR_SERVICE_PORT)
+        f'http://localhost:{common.DEFAULT_SHOPFLOOR_SERVICE_PORT}/')
 
     # The webservice_utils.py module allows having a 'protocol prefix' in URL
     # string so we have to preserve that first.
@@ -279,8 +280,7 @@ class UmpireEnv:
       # All Umpire payloads must have version.
       if 'version' not in payloads[type_name]:
         raise common.UmpireError(
-            'Cannot identify version information from <%s> payload.' %
-            type_name)
+            f'Cannot identify version information from <{type_name}> payload.')
 
       for filename in os.listdir(temp_dir):
         self._AddResource(os.path.join(temp_dir, filename), filename, True)

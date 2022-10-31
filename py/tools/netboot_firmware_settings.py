@@ -14,6 +14,7 @@ import sys
 
 from cros.factory.utils import fmap
 
+
 # Values to encode netboot settings.
 CODE_TFTP_SERVER_IP = 1
 CODE_KERNEL_ARGS = 2
@@ -71,7 +72,7 @@ class Image:
     """
     area = self.areas[key]
     if len(value) > area['size']:
-      raise ValueError('Too much data for FMAP area %s' % key)
+      raise ValueError(f'Too much data for FMAP area {key}')
     value = value.ljust(area['size'], b'\0')
     self.data = (self.data[:area['offset']] + value +
                  self.data[area['offset'] + area['size']:])
@@ -142,7 +143,7 @@ class Settings:
         value = b''
       value_len = len(value)
       padded_value = self.padded_value(value)
-      format_str = '<II%ds' % len(padded_value)
+      format_str = f'<II{len(padded_value)}s'
       return struct.pack(format_str, self.code, value_len, padded_value)
 
     def __repr__(self):
@@ -329,7 +330,7 @@ def DefineCommandLineArgs(parser):
 def NetbootFirmwareSettings(options):
   """Main function to access netboot firmware settings."""
   if not options.machine:
-    print('Reading from %s...' % options.input)
+    print(f'Reading from {options.input}...')
   with open(options.input, 'rb') as f:
     image = Image(f.read())
 
@@ -375,7 +376,7 @@ def NetbootFirmwareSettings(options):
 
   if do_output:
     if not options.machine:
-      print('Generating output to %s...' % output_name)
+      print(f'Generating output to {output_name}...')
     with open(output_name, 'wb') as f:
       f.write(image.data)
 

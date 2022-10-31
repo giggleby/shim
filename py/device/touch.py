@@ -83,7 +83,7 @@ class Atmel1664sTouchController(TouchController):
         for path in self._device.Glob(
             self._device.path.join(self._KERNEL_DEBUG_PATH, '*'))]
     assert len(candidates) == 1, (
-        'Not having exactly one possible device: %s' % candidates)
+        f'Not having exactly one possible device: {candidates}')
     return candidates[0]
 
   def CheckInterface(self):
@@ -105,7 +105,7 @@ class Atmel1664sTouchController(TouchController):
     Args:
       frame_idx_list: Index 0 = References, Index 1 = Deltas.
     """
-    fmt = '<%dh' % (self._rows * self._cols)
+    fmt = f'<{int(self._rows * self._cols)}h'
     nbytes = struct.calcsize(fmt)
 
     result = []

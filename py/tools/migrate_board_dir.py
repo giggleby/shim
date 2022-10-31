@@ -14,6 +14,7 @@ import sys
 
 from cros.factory.utils.file_utils import UnopenedTemporaryFile
 
+
 ReplacePattern = namedtuple('ReplacePattern',
                             ['old_substring', 'new_substring'])
 
@@ -70,14 +71,14 @@ def PrepareDirectoryCopy(src_dir, dst_dir,
     out_stream: a stream to write output messages to.
   """
   if not os.path.isdir(src_dir):
-    out_stream.write('Source directory: %r not found.\n' % src_dir)
+    out_stream.write(f'Source directory: {src_dir!r} not found.\n')
     sys.exit(1)
 
   if os.path.isdir(dst_dir):
-    out_stream.write('dst_dir: %r already exists.\n'
-                     'The folder will be deleted before copy.\n'
-                     'Are you sure you want to proceed?\n'
-                     'Press "y" to continue and press "n" to exit.\n' % dst_dir)
+    out_stream.write(
+        f'dst_dir: {dst_dir!r} already exists.\nThe folder will be deleted '
+        'before copy.\nAre you sure you want to proceed?\nPress "y" to '
+        'continue and press "n" to exit.\n')
     while True:
       input_char = in_stream.readline().strip()
       if input_char == 'n':
@@ -85,7 +86,7 @@ def PrepareDirectoryCopy(src_dir, dst_dir,
       if input_char == 'y':
         shutil.rmtree(dst_dir)
         out_stream.write(
-            'Directory: %r was removed before migration.\n' % dst_dir)
+            f'Directory: {dst_dir!r} was removed before migration.\n')
         break
       out_stream.write('Only accept input y/n.\n')
 
@@ -205,8 +206,8 @@ def GenerateReplacePatterns(src_board_name, dst_board_name):
   # Old style: Copyright (c) 2013 The Chromium OS Authors.
   # New style: Copyright 2014 The Chromium OS Authors.
   COPYRIGHT = 'Copyright .* The Chromium OS Authors'
-  COPYRIGHT_THIS_YEAR = 'Copyright %d The Chromium OS Authors' % (
-      date.today().year)
+  COPYRIGHT_THIS_YEAR = (
+      f'Copyright {int(date.today().year)} The Chromium OS Authors')
   replace_patterns.append(ReplacePattern(COPYRIGHT, COPYRIGHT_THIS_YEAR))
 
   return replace_patterns
@@ -242,11 +243,11 @@ def main():
   CopyFilesAndRename(args.src_dir, args.dst_dir,
                      ReplacePattern(args.src_board_name, args.dst_board_name),
                      args.reset_ebuild_file)
-  ReplaceStringInFiles(args.dst_dir,
-                       GenerateReplacePatterns(args.src_board_name,
-                                               args.dst_board_name))
+  ReplaceStringInFiles(
+      args.dst_dir,
+      GenerateReplacePatterns(args.src_board_name, args.dst_board_name))
   print(('Migration complete!\n'
-         'Please check the result under: %r.') % args.dst_dir)
+         f'Please check the result under: {args.dst_dir!r}.'))
 
 
 if __name__ == '__main__':

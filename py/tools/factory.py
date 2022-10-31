@@ -58,7 +58,7 @@ def Dump(data, dump_format, stream=sys.stdout, use_filter=True):
   elif dump_format == 'pprint':
     pprint.pprint(data, stream)
   else:
-    raise RuntimeError('Unknown format: %s' % dump_format)
+    raise RuntimeError(f'Unknown format: {dump_format}')
 
 
 class Subcommand:
@@ -106,7 +106,7 @@ class HelpCommand(Subcommand):
     if self.args.command:
       choice = self.subparsers.choices.get(self.args.command)
       if not choice:
-        sys.exit('Unknown subcommand %r' % self.args.command)
+        sys.exit(f'Unknown subcommand {self.args.command!r}')
       choice.print_help()
     else:
       self.parser.print_help()
@@ -123,8 +123,8 @@ class RunCommand(Subcommand):
 
   def Run(self):
     run_id = state.GetInstance().RunTest(self.args.id)
-    print('Running test %s' % self.args.id)
-    print('Active test run ID: %s' % run_id)
+    print(f'Running test {self.args.id}')
+    print(f'Active test run ID: {run_id}')
 
 
 class WaitCommand(Subcommand):
@@ -152,13 +152,13 @@ class WaitCommand(Subcommand):
         if last_test_dict is None:
           # First time; just print active tests
           if t['status'] == TestState.ACTIVE:
-            print('%s: %s' % (t['path'], t['status']))
+            print(f"{t['path']}: {t['status']}")
         else:
           # Show any tests with changed statuses.
           if t['status'] != last_test_dict[t['path']]['status']:
-            sys.stdout.write('%s: %s' % (t['path'], t['status']))
+            sys.stdout.write(f"{t['path']}: {t['status']}")
             if t['status'] == TestState.FAILED:
-              sys.stdout.write(' (%r)' % str(t['error_msg']))
+              sys.stdout.write(f" ({str(t['error_msg'])!r})")
             sys.stdout.write('\n')
 
         test_dict[t['path']] = t
@@ -185,9 +185,9 @@ class RunStatusCommand(Subcommand):
   def Run(self):
     goofy = state.GetInstance()
     run_status = goofy.GetTestRunStatus(self.args.id)
-    print('status: %s' % run_status['status'])
+    print(f"status: {run_status['status']}")
     if 'run_id' in run_status:
-      print('run_id: %s' % run_status['run_id'])
+      print(f"run_id: {run_status['run_id']}")
       print('scheduled_tests:')
       # Simply call 'tests' subcommand to print out information about the
       # scheduled tests.
@@ -290,9 +290,9 @@ class TestsCommand(Subcommand):
       for t in tests:
         sys.stdout.write(t['label'])
         if t['status'] != TestState.UNTESTED:
-          sys.stdout.write(': %s' % t['status'])
+          sys.stdout.write(f": {t['status']}")
         if t['error_msg']:
-          sys.stdout.write(': %r' % str(t['error_msg']))
+          sys.stdout.write(f": {str(t['error_msg'])!r}")
         sys.stdout.write('\n')
     else:
       for t in tests:
@@ -379,12 +379,13 @@ class TestListCommand(Subcommand):
 
     if self.args.id:
       if self.args.id not in all_test_lists:
-        sys.exit('Unknown test list ID %r (use "factory test-list --list" to '
-                 'see available test lists' % self.args.id)
+        sys.exit(
+            f'Unknown test list ID {self.args.id!r} (use "factory test-list '
+            '--list" to see available test lists')
       mgr.SetActiveTestList(self.args.id)
-      print('Set active test list to %s (wrote %r to %s)' % (
-          self.args.id, self.args.id,
-          test_list_common.ACTIVE_TEST_LIST_CONFIG_PATH))
+      print(
+          f'Set active test list to {self.args.id} (wrote {self.args.id!r} to '
+          f'{test_list_common.ACTIVE_TEST_LIST_CONFIG_PATH})')
       sys.stdout.flush()
     else:
       print(mgr.GetActiveTestListId(device))
@@ -447,15 +448,14 @@ class TestListCommand(Subcommand):
             logging.info('goofy is up')
             if status['test_list_id'] != self.args.id:
               # Shouldn't ever happen
-              sys.exit('goofy came up with wrong test list %r' %
-                       status['test_list_id'])
+              sys.exit('goofy came up with wrong test list '
+                       f'{status["test_list_id"]!r}')
             return
           if status['status'] not in ['UNINITIALIZED', 'INITIALIZING']:
             # This means it's never going to come up.
-            sys.exit('goofy failed to come up; status is %r',
-                     status['status'])
+            sys.exit('goofy failed to come up; status is %r', status['status'])
         except Exception:
-          status_summary = 'Exception: %s' % debug_utils.FormatExceptionOnly()
+          status_summary = f'Exception: {debug_utils.FormatExceptionOnly()}'
           if 'Connection refused' in status_summary:
             # Still waiting for goofy to open its RPC; print a friendly
             # error message
@@ -466,7 +466,7 @@ class TestListCommand(Subcommand):
           logging.info(status_summary)
           last_status_summary = status_summary
         if time.time() - start >= self.TIMEOUT_SECS:
-          sys.exit('goofy did not come up after %s seconds' % self.TIMEOUT_SECS)
+          sys.exit(f'goofy did not come up after {self.TIMEOUT_SECS} seconds')
         time.sleep(self.POLL_INTERVAL_SECS)
 
 
@@ -543,7 +543,7 @@ class DeviceDataCommand(Subcommand):
         with open(self.args.set_yaml, encoding='utf8') as f:
           update = yaml.safe_load(f)
       if not isinstance(update, dict):
-        sys.exit('Expected a dict but got a %r' % type(update))
+        sys.exit(f'Expected a dict but got a {type(update)!r}')
       device_data.UpdateDeviceData(update)
 
     Dump(device_data.GetAllDeviceData(), self.args.format,

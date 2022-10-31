@@ -13,6 +13,7 @@ from cros.factory.device import device_types
 
 from cros.factory.external import netifaces
 
+
 # Static list of known properties in SystemStatus.
 _PROP_LIST = []
 
@@ -76,7 +77,7 @@ def GetIPv4Addresses():
   interfaces = GetIPv4Interfaces()
   for interface in interfaces:
     ips = GetIPv4InterfaceAddresses(interface)
-    ret.append('%s=%s' % (interface, '+'.join(ips)))
+    ret.append(f"{interface}={'+'.join(ips)}")
 
   return ', '.join(ret)
 

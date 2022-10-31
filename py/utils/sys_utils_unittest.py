@@ -17,6 +17,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_utils
 
+
 SAMPLE_INTERRUPTS = """           CPU0       CPU1       CPU2       CPU3
   0:        124          0          0          0   IO-APIC-edge      timer
   1:         19        683          7         14   IO-APIC-edge      i8042
@@ -218,9 +219,10 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
     # normal user can't run without adding /sbin and /usr/sbin.
     env = os.environ.copy()
     env['PATH'] = '/sbin:/usr/sbin:' + env['PATH']
-    Spawn(['/sbin/mkfs', '-E', 'root_owner=%d:%d' % (os.getuid(), os.getgid()),
-           '-F', '-t', 'ext3', self.device.name], log=True, check_call=True,
-          env=env)
+    Spawn([
+        '/sbin/mkfs', '-E', f'root_owner={os.getuid()}:{os.getgid()}', '-F',
+        '-t', 'ext3', self.device.name
+    ], log=True, check_call=True, env=env)
 
     # Creates a file with some content on the device.
     mount_point = tempfile.mkdtemp(prefix='MountDeviceAndReadFileSetup')

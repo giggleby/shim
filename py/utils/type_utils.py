@@ -167,11 +167,11 @@ def CheckDictKeys(dict_to_check, allowed_keys):
     allowed_keys: The set of allowed keys in the dictionary.
   """
   if not isinstance(dict_to_check, dict):
-    raise TypeError('Expected dict but found %s' % type(dict_to_check))
+    raise TypeError(f'Expected dict but found {type(dict_to_check)}')
 
   extra_keys = set(dict_to_check) - set(allowed_keys)
   if extra_keys:
-    raise ValueError('Found extra keys: %s' % list(extra_keys))
+    raise ValueError(f'Found extra keys: {list(extra_keys)}')
 
 
 def GetDict(data, key_path, default_value=None):
@@ -302,8 +302,8 @@ def Overrides(method):
       context = getattr(context, name)
 
   assert hasattr(context, method.__name__), (
-      'Method <%s> in class <%s> is not defined in base class <%s>.' %
-      (method.__name__, current_class, base_class))
+      f'Method <{method.__name__}> in class <{current_class}> is not defined in'
+      f' base class <{base_class}>.')
   return method
 
 
@@ -396,16 +396,16 @@ class LazyProperty(Generic[T]):
     return getattr(obj, self._prop_name)
 
   def __set__(self, obj, value):
-    raise AttributeError('cannot set attribute, use %s.Override instead' %
-                         type(self).__name__)
+    raise AttributeError(
+        f'cannot set attribute, use {type(self).__name__}.Override instead')
 
   @classmethod
   def Override(cls, obj, prop_name, value):
     obj_class = type(obj)
     if not hasattr(obj_class, prop_name):
-      raise AttributeError('%s has no attribute named %s' % (obj, prop_name))
+      raise AttributeError(f'{obj} has no attribute named {prop_name}')
     if not isinstance(getattr(obj_class, prop_name), cls):
-      raise AttributeError('%s is not a %s' % (prop_name, cls.__name__))
+      raise AttributeError(f'{prop_name} is not a {cls.__name__}')
     setattr(obj, cls.PROP_NAME_PREFIX + prop_name, value)
 
 
@@ -502,14 +502,11 @@ def StdRepr(obj, extra=None, excluded_keys=None, true_only=False):
   """
   extra = extra or []
   excluded_keys = excluded_keys or []
-  return (obj.__class__.__name__ + '('
-          + ', '.join(
-              extra +
-              ['%s=%s' % (k, repr(getattr(obj, k)))
-               for k in sorted(obj.__dict__.keys())
-               if k[0] != '_' and k not in excluded_keys and (
-                   not true_only or getattr(obj, k))])
-          + ')')
+  return (obj.__class__.__name__ + '(' + ', '.join(extra + [
+      f'{k}={getattr(obj, k)!r}' for k in sorted(obj.__dict__.keys())
+      if k[0] != '_' and k not in excluded_keys and
+      (not true_only or getattr(obj, k))
+  ]) + ')')
 
 
 def BindFunction(func, *args, **kwargs):

@@ -48,6 +48,7 @@ from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Enum
 
+
 _GHOST_RPC_PORT = int(os.getenv('GHOST_RPC_PORT', '4499'))
 
 _OVERLORD_PORT = int(os.getenv('OVERLORD_PORT', '4455'))
@@ -317,9 +318,8 @@ class Ghost:
       return
 
     scriptpath = os.path.abspath(sys.argv[0])
-    url = 'http%s://%s:%d/upgrade/ghost.py' % (
-        's' if https_enabled else '', self._connected_addr[0],
-        _OVERLORD_HTTP_PORT)
+    url = (f"http{'s' if https_enabled else ''}://{self._connected_addr[0]}:"
+           f"{int(_OVERLORD_HTTP_PORT)}/upgrade/ghost.py")
 
     # Download sha1sum for ghost.py for verification
     try:
@@ -327,7 +327,7 @@ class Ghost:
           urllib.request.urlopen(url + '.sha1', timeout=_CONNECT_TIMEOUT,
                                  context=self._tls_settings.Context())) as f:
         if f.getcode() != 200:
-          raise RuntimeError('HTTP status %d' % f.getcode())
+          raise RuntimeError(f'HTTP status {f.getcode()}')
         sha1sum = f.read().strip()
     except (ssl.SSLError, ssl.CertificateError) as e:
       logging.error('Upgrade: %s: %s', e.__class__.__name__, e)
@@ -346,7 +346,7 @@ class Ghost:
           urllib.request.urlopen(url, timeout=_CONNECT_TIMEOUT,
                                  context=self._tls_settings.Context())) as f:
         if f.getcode() != 200:
-          raise RuntimeError('HTTP status %d' % f.getcode())
+          raise RuntimeError(f'HTTP status {f.getcode()}')
         data = f.read()
     except (ssl.SSLError, ssl.CertificateError) as e:
       logging.error('Upgrade: %s: %s', e.__class__.__name__, e)
@@ -388,7 +388,7 @@ class Ghost:
     if self._platform == 'Linux':
       for fd in os.listdir('/proc/self/fd/'):
         try:
-          real_fd = os.readlink('/proc/self/fd/%s' % fd)
+          real_fd = os.readlink(f'/proc/self/fd/{fd}')
           if real_fd.startswith('socket'):
             os.close(int(fd))
         except Exception:
@@ -507,7 +507,7 @@ class Ghost:
           continue
 
         macs.append(
-            file_utils.ReadFile('/sys/class/net/%s/address' % iface).strip())
+            file_utils.ReadFile(f'/sys/class/net/{iface}/address').strip())
 
       return ';'.join(macs)
     except Exception:
@@ -517,7 +517,7 @@ class Ghost:
 
   def GetProcessWorkingDirectory(self, pid):
     if self._platform == 'Linux':
-      return os.readlink('/proc/%d/cwd' % pid)
+      return os.readlink(f'/proc/{int(pid)}/cwd')
     if self._platform == 'Darwin':
       PROC_PIDVNODEPATHINFO = 9
       proc_vnodepathinfo_size = 2352
@@ -550,7 +550,7 @@ class Ghost:
   def SendRequest(self, name, args, handler=None,
                   timeout=_REQUEST_TIMEOUT_SECS):
     if handler and not callable(handler):
-      raise RequestError('Invalid request handler for msg "%s"' % name)
+      raise RequestError(f'Invalid request handler for msg "{name}"')
 
     rid = str(uuid.uuid4())
     msg = {'rid': rid, 'timeout': timeout, 'name': name, 'params': args}
@@ -600,7 +600,7 @@ class Ghost:
           env = os.environ.copy()
           env['USER'] = os.getenv('USER', 'root')
           env['HOME'] = os.getenv('HOME', '/root')
-          env['PATH'] = os.getenv('PATH') + ':%s' % script_dir
+          env['PATH'] = os.getenv('PATH') + f':{script_dir}'
           os.chdir(env['HOME'])
           os.execve(_SHELL, [_SHELL], env)
       else:
@@ -681,7 +681,7 @@ class Ghost:
     # Add ghost executable to PATH
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     env = os.environ.copy()
-    env['PATH'] = '%s:%s' % (script_dir, os.getenv('PATH'))
+    env['PATH'] = f"{script_dir}:{os.getenv('PATH')}"
 
     # Execute shell command from HOME directory
     os.chdir(os.getenv('HOME', '/tmp'))
@@ -1228,7 +1228,7 @@ class Ghost:
     status = self._register_status
     if self._register_status == SUCCESS:
       ip, port = self._sock.sock.getpeername()
-      status += ' %s:%d' % (ip, port)
+      status += f' {ip}:{int(port)}'
     return status
 
   def AddToDownloadQueue(self, ttyname, filename):
@@ -1379,7 +1379,7 @@ class Ghost:
 
 def GhostRPCServer():
   """Returns handler to Ghost's JSON RPC server."""
-  return jsonrpclib.Server('http://localhost:%d' % _GHOST_RPC_PORT)
+  return jsonrpclib.Server(f'http://localhost:{int(_GHOST_RPC_PORT)}')
 
 
 def ForkToBackground():

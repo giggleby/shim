@@ -7,6 +7,7 @@ from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
+
 PARTITION = type_utils.Enum(['ro', 'rw'])
 
 _PARTITION_NAME_MAP = {PARTITION.ro: vpd.VPD_READONLY_PARTITION_NAME,
@@ -151,7 +152,7 @@ class VPDFunction(cached_probe_function.LazyCachedProbeFunction):
   def GetCategoryFromArgs(self):
     if self.args.partition not in PARTITION:
       raise cached_probe_function.InvalidCategoryError(
-          'partition should be one of %r.' % list(PARTITION))
+          f'partition should be one of {list(PARTITION)!r}.')
 
     return self.args.partition
 

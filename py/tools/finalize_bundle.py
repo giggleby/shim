@@ -98,7 +98,7 @@ def _GetReleaseVersion(mount_point):
   result = get_version.GetReleaseVersion(mount_point)
   if not result:
     raise FinalizeBundleException(
-        'Unable to read lsb-release from %s' % mount_point)
+        f'Unable to read lsb-release from {mount_point}')
   return result
 
 
@@ -119,7 +119,7 @@ def _GetFirmwareVersions(updater, expected_firmwares):
   for label in expected_firmwares:
     if versions.get(label) is None:
       raise FinalizeBundleException(
-          'Unable to read %r version from %s' % (label, updater))
+          f'Unable to read {label!r} version from {updater}')
   return versions
 
 
@@ -144,7 +144,7 @@ def _PackFirmwareUpdater(updater_path, dirpath, operation='repack'):
     operation: which operation to do. Must be "repack" or "unpack".
   """
   if operation not in ['repack', 'unpack']:
-    raise ValueError('operation must be "repack" or "unpack": %s' % operation)
+    raise ValueError(f'operation must be "repack" or "unpack": {operation}')
 
   process = Spawn(['sh', updater_path, f'--{operation}', dirpath], log=True,
                   call=True)
@@ -308,15 +308,15 @@ class FinalizeBundle:
     if not (self.designs == BOXSTER_DESIGNS or self.designs is None or
             isinstance(self.designs, list)):
       raise FinalizeBundleException(
-          'The designs (currently %r) should be %r, None or a list of str.' %
-          (self.designs, BOXSTER_DESIGNS))
+          f'The designs (currently {self.designs!r}) should be '
+          f'{BOXSTER_DESIGNS!r}, None or a list of str.')
 
     self.bundle_name: str = self.manifest['bundle_name']
     if not re.match(r'\d{8}_', self.bundle_name):
       raise FinalizeBundleException(
-          "The bundle_name (currently %r) should be today's date, "
-          'plus an underscore, plus a description of the build, e.g.: %r' %
-          (self.bundle_name, time.strftime('%Y%m%d_proto')))
+          f"The bundle_name (currently {self.bundle_name!r}) should be today's "
+          'date, plus an underscore, plus a description of the build, e.g.: '
+          f'{time.strftime("%Y%m%d_proto")!r}')
 
     name_blocks = self.bundle_name.split('_', 1)
     self.timestamp = name_blocks[0]
@@ -327,8 +327,7 @@ class FinalizeBundle:
     # working directory (this is also needed if any of the resource is assigned
     # as local). Otherwise, we'll create a directory with expected name under
     # the working directory.
-    expected_dir_name = 'factory_bundle_%s_%s' % (self.project,
-                                                  self.bundle_name)
+    expected_dir_name = f'factory_bundle_{self.project}_{self.bundle_name}'
     logging.info('Expected bundle directory name is %r', expected_dir_name)
     if expected_dir_name == os.path.basename(self.work_dir):
       self.bundle_dir = self.work_dir
@@ -426,26 +425,26 @@ class FinalizeBundle:
 
     if len_found_entries == 1:
       resource_path = found_entries[0]
-      logging.info(
-          'A local copy of %s is found at %r', resource_name, resource_path)
+      logging.info('A local copy of %s is found at %r', resource_name,
+                   resource_path)
       if not is_local and not version_checker(resource_path, resource_source):
         raise FinalizeBundleException(
-            'Requested %s version is %r but found a local one with different '
-            'version at %r' % (resource_name, resource_source, resource_path))
+            f'Requested {resource_name} version is {resource_source!r} but '
+            f'found a local one with different version at {resource_path!r}')
     elif len_found_entries > 1:
       raise FinalizeBundleException(
-          'There should be only one %s in %r but found multiple: %r' % (
-              resource_name, search_dirs, found_entries))
+          f'There should be only one {resource_name} in {search_dirs!r} but '
+          f'found multiple: {found_entries!r}')
     else:
       assert len_found_entries == 0
       if is_local:
         raise FinalizeBundleException(
-            '%s source is specified as %r but no one found under %r' % (
-                resource_name.capitalize(), LOCAL, abs_search_dirs))
+            f'{resource_name.capitalize()} source is specified as {LOCAL!r} but'
+            f' no one found under {abs_search_dirs!r}')
       if not self.download:
         raise FinalizeBundleException(
-            'Need %s but no files found under %r' % (
-                resource_name.capitalize(), abs_search_dirs))
+            f'Need {resource_name.capitalize()} but no files found under '
+            f'{abs_search_dirs!r}')
       # Will be downloaded later.
 
     return resource_path
@@ -471,19 +470,19 @@ class FinalizeBundle:
 
     if len_found_entries == 1:
       resource_path = found_entries[0]
-      pattern = 'chromeos_(.*)_{board}_factory'.format(board=self.board)
+      pattern = f'chromeos_(.*)_{self.board}_factory'
       version_match = re.search(pattern, resource_path)
       if version_match and version_match.group(1) == resource_source:
         logging.info('A local copy of %s is found at %r', resource_name,
                      resource_path)
         return resource_path
       raise FinalizeBundleException(
-          'Requested %s version is %r but found a local one with different '
-          'version at %r' % (resource_name, resource_source, resource_path))
+          f'Requested {resource_name} version is {resource_source!r} but found '
+          f'a local one with different version at {resource_path!r}')
     if len_found_entries > 1:
       raise FinalizeBundleException(
-          'There should be only one %s in %r but found multiple: %r' %
-          (resource_name, abs_search_dir, found_entries))
+          f'There should be only one {resource_name} in {abs_search_dir!r} but '
+          f'found multiple: {found_entries!r}')
 
     return None
 
@@ -522,7 +521,6 @@ class FinalizeBundle:
       self.signed_shim_path = self._LocateSignedFactoryShim(
           self.toolkit_source, FACTORY_SHIM_SEARCH_DIR)
 
-
   def _CheckGSUtilVersion(self):
     # Check for gsutil >= 3.32.
     version = self.gsutil.GetVersion()
@@ -531,11 +529,11 @@ class FinalizeBundle:
     version_split = [int(x) for x in version.split('.')]
     if version_split < REQUIRED_GSUTIL_VERSION:
       raise FinalizeBundleException(
-          'gsutil version >=%s is required; you seem to have %s.\n'
-          'Please download and install gsutil ('
+          'gsutil version >='
+          f'{".".join(str(x) for x in REQUIRED_GSUTIL_VERSION)} is required; '
+          f'you seem to have {version}.\nPlease download and install gsutil ('
           'https://developers.google.com/storage/docs/gsutil_install), and '
-          'make sure this is in your PATH before the system gsutil.' % (
-              '.'.join(str(x) for x in REQUIRED_GSUTIL_VERSION), version))
+          'make sure this is in your PATH before the system gsutil.')
 
   def DownloadResources(self):
     """Downloads test image, release image, factory toolkit if needed."""
@@ -660,15 +658,15 @@ class FinalizeBundle:
         executor.shutdown(wait=True)
       if (not self.test_image_path or not os.path.exists(self.test_image_path)):
         raise FinalizeBundleException(
-            'No test image at %s' % self.test_image_path)
+            f'No test image at {self.test_image_path}')
       if (not self.release_image_path or
           not os.path.exists(self.release_image_path)):
         raise FinalizeBundleException(
-            'No release image at %s' % self.release_image_path)
+            f'No release image at {self.release_image_path}')
       if (need_firmware and (not self.firmware_image_source or
                              not os.path.exists(self.firmware_image_source))):
         raise FinalizeBundleException(
-            'No release image for firmware at %s' % self.firmware_image_source)
+            f'No release image for firmware at {self.firmware_image_source}')
 
   def GetAndSetResourceVersions(self):
     """Gets and sets versions of test, release image, and factory toolkit."""
@@ -680,7 +678,7 @@ class FinalizeBundle:
 
     output = Spawn([self.toolkit_path, '--info'], check_output=True).stdout_data
     match = re.match(r'^Identification: .+ Factory Toolkit (.+)$', output, re.M)
-    assert match, 'Unable to parse toolkit info: %r' % output
+    assert match, f'Unable to parse toolkit info: {output!r}'
     self.toolkit_version = match.group(1)  # May be None if locally built
     logging.info('Toolkit version: %s', self.toolkit_version)
 
@@ -710,7 +708,7 @@ class FinalizeBundle:
       return
     if num_complete_scripts > 1:
       raise FinalizeBundleException(
-          'Not having exactly one file under %s.' % complete_dir)
+          f'Not having exactly one file under {complete_dir}.')
 
     default_complete_script = os.path.join(
         self.bundle_dir, 'setup', 'complete_script_sample.sh')
@@ -775,14 +773,13 @@ class FinalizeBundle:
         shutil.copy(os.path.join(f, FIRMWARE_UPDATER_PATH), firmware_dir)
     elif self.firmware_source != LOCAL:
       # TODO: check input in ProcessManifest(), not here.
-      raise FinalizeBundleException(
-          'firmware must be either "release_image", '
-          'release_image/{version}" or "%s".' % LOCAL)
+      raise FinalizeBundleException('firmware must be either "release_image", '
+                                    f'release_image/{{version}}" or "{LOCAL}".')
 
     updaters = os.listdir(firmware_dir)
     if len(updaters) != 1:
       raise FinalizeBundleException(
-          'Not having exactly one file under %s.' % firmware_dir)
+          f'Not having exactly one file under {firmware_dir}.')
     updater_path = os.path.join(firmware_dir, updaters[0])
 
     firmware_images_dir = os.path.join(self.bundle_dir, 'firmware_images')
@@ -926,7 +923,7 @@ class FinalizeBundle:
     if not match:
       logging.info('%r does not match %r.', name, pattern.pattern)
       return (None, None)
-    version_str = '%s.%s.%s' % (match.group(2), match.group(3), match.group(4))
+    version_str = f'{match.group(2)}.{match.group(3)}.{match.group(4)}'
     try:
       firmware_bios_name: str = match.group(1)
       return (version_module.StrictVersion(version_str), firmware_bios_name)
@@ -973,14 +970,14 @@ class FinalizeBundle:
     netboot_kernel = os.path.join(orig_netboot_dir, 'vmlinuz')
     if os.path.exists(netboot_kernel):
       shutil.move(netboot_kernel, netboot_dir)
-
-    version_str = '%s.%s.%s' % self.netboot_firmware_source.version
-    resource_name = 'unsigned_firmware_archive'
-    urls = [
-        '%s/ChromeOS-firmware-*.tar.bz2' %
-        gsutil.BuildResourceBaseURL(gsutil.GSUtil.CHANNELS.dev,
-                                    self.build_board.gsutil_name, version_str)
+    netboot_firmware_source_version = [
+        str(k) for k in self.netboot_firmware_source.version
     ]
+    version_str = '.'.join(netboot_firmware_source_version)
+    resource_name = 'unsigned_firmware_archive'
+    url_prefix = gsutil.BuildResourceBaseURL(
+        gsutil.GSUtil.CHANNELS.dev, self.build_board.gsutil_name, version_str)
+    urls = [f'{url_prefix}/ChromeOS-firmware-*.tar.bz2']
 
     netboot_firmware_set = self.GetNetbootFirmwareSet()
     missing_netboot_firmware_list = []
@@ -1052,13 +1049,16 @@ class FinalizeBundle:
 
     def SetOneNetbootImage(netboot_firmware_image):
       new_netboot_firmware_image = netboot_firmware_image + '.INPROGRESS'
-      args = ['--argsfile', target_argsfile,
-              '--bootfile', target_bootfile,
-              '--input', netboot_firmware_image,
-              '--output', new_netboot_firmware_image]
+      args = [
+          '--argsfile', target_argsfile, '--bootfile', target_bootfile,
+          '--input', netboot_firmware_image, '--output',
+          new_netboot_firmware_image
+      ]
       if server_url:
-        args += ['--factory-server-url=%s' % server_url,
-                 '--tftpserverip=%s' % tftp_server_ip]
+        args += [
+            f'--factory-server-url={server_url}',
+            f'--tftpserverip={tftp_server_ip}'
+        ]
       Spawn(_GetImageTool() + ['netboot'] + args, check_call=True, log=True)
       shutil.move(new_netboot_firmware_image, netboot_firmware_image)
 
@@ -1073,11 +1073,12 @@ class FinalizeBundle:
     # omaha_conf is fetched by factory_installer explicitly.
     if server_url:
       # TODO(hungte) Rename omahaserver_* to factory_server_*.conf.
-      omaha_conf = os.path.join(tftp_root, 'omahaserver_%s.conf' % self.board)
+      omaha_conf = os.path.join(tftp_root, f'omahaserver_{self.board}.conf')
       file_utils.WriteFile(omaha_conf, server_url)
 
-    file_utils.WriteFile(os.path.join(tftp_root, '..', 'dnsmasq.conf'),
-                         textwrap.dedent('''\
+    file_utils.WriteFile(
+        os.path.join(tftp_root, '..', 'dnsmasq.conf'),
+        textwrap.dedent('''\
           # This is a sample config file to be invoked by `dnsmasq -d -C FILE`.
           interface=eth2
           tftp-root=/var/tftp
@@ -1090,13 +1091,13 @@ class FinalizeBundle:
     bootfile_path = os.path.join(netboot_dir, 'vmlinuz')
     if os.path.exists(bootfile_path):
       shutil.move(bootfile_path, os.path.join(tftp_board_dir, 'vmlinuz'))
-    tftpserverip_config = (
-        ('tftpserverip=%s' % tftp_server_ip) if tftp_server_ip else '')
+    tftpserverip_config = (f'tftpserverip={tftp_server_ip}'
+                           if tftp_server_ip else '')
     file_utils.WriteFile(
         os.path.join(tftp_board_dir, 'cmdline.sample'),
-        'lsm.module_locking=0 cros_netboot_ramfs cros_factory_install '
-        'cros_secure cros_netboot earlyprintk cros_debug loglevel=7 '
-        '%s console=ttyS2,115200n8' % tftpserverip_config)
+        ('lsm.module_locking=0 cros_netboot_ramfs cros_factory_install '
+         'cros_secure cros_netboot earlyprintk cros_debug loglevel=7 '
+         f'{tftpserverip_config} console=ttyS2,115200n8'))
 
   def UpdateInstallShim(self):
     server_url = self.manifest.get('server_url')
@@ -1110,8 +1111,7 @@ class FinalizeBundle:
       Returns:
         True if there were any changes.
       """
-      lsb_factory_path = os.path.join(
-          mount, 'dev_image', 'etc', 'lsb-factory')
+      lsb_factory_path = os.path.join(mount, 'dev_image', 'etc', 'lsb-factory')
       logging.info('Patching lsb-factory in %s', lsb_factory_path)
       orig_lsb_factory = file_utils.ReadFile(lsb_factory_path)
       lsb_factory = orig_lsb_factory
@@ -1122,7 +1122,7 @@ class FinalizeBundle:
             lsb_factory)
         if number_of_subs != 2:
           raise FinalizeBundleException(
-              'Unable to set factory server URL in %s' % lsb_factory_path)
+              f'Unable to set factory server URL in {lsb_factory_path}')
 
       if lsb_factory == orig_lsb_factory:
         return False  # No changes
@@ -1131,6 +1131,7 @@ class FinalizeBundle:
 
     def PatchInstallShim(shim):
       """Patches lsb-factory and updates self.install_shim_version."""
+
       def GetSigningKey(shim):
         """Derives signing key from factory install shim's file name."""
         if shim.endswith('factory_install_shim.bin'):
@@ -1145,8 +1146,8 @@ class FinalizeBundle:
         PatchLSBFactory(mount)
 
       with MountPartition(shim, 3) as mount:
-        self.install_shim_version = '%s (%s)' % (_GetReleaseVersion(mount),
-                                                 GetSigningKey(shim))
+        self.install_shim_version = (
+            f'{_GetReleaseVersion(mount)} ({GetSigningKey(shim)})')
 
     # Patch in the install shim, if present.
     has_install_shim = False
@@ -1156,16 +1157,17 @@ class FinalizeBundle:
       PatchInstallShim(unsigned_shim)
       has_install_shim = True
 
-    signed_shims = glob.glob(os.path.join(self.bundle_dir, 'factory_shim',
-                                          'chromeos_*_factory*.bin'))
+    signed_shims = glob.glob(
+        os.path.join(self.bundle_dir, 'factory_shim',
+                     'chromeos_*_factory*.bin'))
     if has_install_shim and signed_shims:
       raise FinalizeBundleException(
           'Both unsigned and signed install shim exists. '
           'Please remove unsigned one')
     if len(signed_shims) > 1:
       raise FinalizeBundleException(
-          'Expected to find 1 signed factory shim but found %d: %r' % (
-              len(signed_shims), signed_shims))
+          'Expected to find 1 signed factory shim but found '
+          f'{len(signed_shims)}: {signed_shims!r}')
     if len(signed_shims) == 1:
       PatchInstallShim(signed_shims[0])
       has_install_shim = True
@@ -1190,7 +1192,7 @@ class FinalizeBundle:
             check_call=True, log=True)
       os.remove(config_ball)
 
-    config = '%s_%s_model_sku.json' % (self.board, self.project)
+    config = f'{self.board}_{self.project}_model_sku.json'
     config_path = os.path.join(extracted_dir, config)
 
     if not os.path.exists(config_path):
@@ -1256,7 +1258,8 @@ class FinalizeBundle:
           r'\*\*\*\n\*\n\* (.+?)\n\*\n\*\*\*\n'
           # Anything up to (but not including) the next section header
           r'((?:(?!\*\*\*).)+)',
-          file_utils.ReadFile(self.readme_path), re.DOTALL)
+          file_utils.ReadFile(self.readme_path),
+          re.DOTALL)
       # This results in a list of tuples (x, y), where x is the name of the
       # section, and y is the contents of the section. Turn each tuple into a
       # list; we'll be modifying some of them.
@@ -1269,18 +1272,19 @@ class FinalizeBundle:
       readme_section_index[s[0]] = i
     for x in REQUIRED_SECTIONS:
       if x not in readme_section_index:
-        raise FinalizeBundleException('README is missing %s section' % x)
+        raise FinalizeBundleException(f'README is missing {x} section')
 
     # Make sure that the CHANGES section contains this version.
-    expected_str = '%s changes:' % self.bundle_name
+    expected_str = f'{self.bundle_name} changes:'
     if expected_str not in readme_sections[readme_section_index['CHANGES']][1]:
-      logging.warning('The string %r was not found in the CHANGES section. '
-                      'Please add a section for it (if this is the first '
-                      'version, just say "initial release").', expected_str)
+      logging.warning(
+          'The string %r was not found in the CHANGES section. '
+          'Please add a section for it (if this is the first '
+          'version, just say "initial release").', expected_str)
 
     def _ExtractFirmwareVersions(updater_file, updater_name):
       firmware_versions = _GetFirmwareVersions(updater_file, self.has_firmware)
-      return [('%s %s' % (updater_name, firmware_type), version)
+      return [(f'{updater_name} {firmware_type}', version)
               for firmware_type, version in firmware_versions.items()
               if version is not None]
 
@@ -1289,15 +1293,14 @@ class FinalizeBundle:
     if self.is_boxster_project:
       vitals.append(('Designs', repr(self.designs)))
     vitals.append(
-        ('Bundle',
-         '%s (created by %s, %s)' % (self.bundle_name, os.environ['USER'],
-                                     time.strftime('%a %Y-%m-%d %H:%M:%S %z'))))
+        ('Bundle', (f"{self.bundle_name} (created by {os.environ['USER']}, "
+                    f"{time.strftime('%a %Y-%m-%d %H:%M:%S %z')})")))
     if self.toolkit_version:
       vitals.append(('Factory toolkit', self.toolkit_version))
 
     if self.test_image_source == LOCAL:
       with MountPartition(self.test_image_path, 3) as f:
-        vitals.append(('Test image', '%s (local)' % _GetReleaseVersion(f)))
+        vitals.append(('Test image', f'{_GetReleaseVersion(f)} (local)'))
     elif self.test_image_source:
       vitals.append(('Test image', self.test_image_source))
 
@@ -1305,21 +1308,19 @@ class FinalizeBundle:
       stat = os.statvfs(f)
       stateful_free_bytes = stat.f_bfree * stat.f_bsize
       stateful_total_bytes = stat.f_blocks * stat.f_bsize
-      vitals.append((
-          'Stateful partition size',
-          '%d MiB (%d MiB free = %d%% free)' % (
-              stateful_total_bytes // 1024 // 1024,
-              stateful_free_bytes // 1024 // 1024,
-              stateful_free_bytes * 100 // stateful_total_bytes)))
-      vitals.append((
-          'Stateful partition inodes',
-          '%d nodes (%d free)' % (stat.f_files, stat.f_ffree)))
+      vitals.append(('Stateful partition size', (
+          f'{int(stateful_total_bytes // 1024 // 1024)} MiB ('
+          f'{int(stateful_free_bytes // 1024 // 1024)} MiB free = '
+          f'{int(stateful_free_bytes * 100 // stateful_total_bytes)}% free)')))
+      vitals.append(('Stateful partition inodes',
+                     f'{int(stat.f_files)} nodes ({int(stat.f_ffree)} free)'))
     if self.install_shim_version:
       vitals.append(('Factory install shim', self.install_shim_version))
     with MountPartition(self.release_image_path, 3) as f:
       vitals.append(('Release (FSI)', _GetReleaseVersion(f)))
-      vitals.extend(_ExtractFirmwareVersions(
-          os.path.join(f, FIRMWARE_UPDATER_PATH), 'Release (FSI)'))
+      vitals.extend(
+          _ExtractFirmwareVersions(
+              os.path.join(f, FIRMWARE_UPDATER_PATH), 'Release (FSI)'))
 
     # If we have any firmware in the tree, add them to the vitals.
     for root, unused_dirs, files in os.walk(self.bundle_dir):
@@ -1333,47 +1334,47 @@ class FinalizeBundle:
           version = get_version.GetFirmwareBinaryVersion(path)
           if not version:
             raise FinalizeBundleException(
-                'Unable to find firmware version in %s' % path)
+                f'Unable to find firmware version in {path}')
           vitals.append((relpath, version))
 
     vital_lines = []
     max_key_length = max(len(k) for k, v in vitals)
     for k, v in vitals:
-      vital_lines.append('%s:%s %s' % (k, ' ' * (max_key_length - len(k)), v))
+      vital_lines.append(f"{k}:{' ' * (max_key_length - len(k))} {v}")
     vital_contents = '\n'.join(vital_lines)
     readme_sections[readme_section_index['VITAL INFORMATION']][1] = (
         vital_contents + '\n\n')
 
     with open(self.readme_path, 'w', encoding='utf8') as f:
       for section in readme_sections:
+        sec_desc = tuple(section)
         f.write('***\n'
                 '*\n'
-                '* %s\n'
+                f'* {sec_desc[0]}\n'
                 '*\n'
                 '***\n'
-                '%s' % tuple(section))
-    logging.info('\n\nUpdated %s; vital information:\n%s\n',
-                 self.readme_path, vital_contents)
+                f'{sec_desc[1]}')
+    logging.info('\n\nUpdated %s; vital information:\n%s\n', self.readme_path,
+                 vital_contents)
 
   def Archive(self):
     if self.archive:
       # Done! tar it up, and encourage the poor shmuck who has to build
       # the bundle to take a little break.
-      logging.info('Just works! Creating the tarball. '
-                   'This will take a while... meanwhile, go get %s. '
-                   'You deserve it.',
-                   (['some rest'] * 5 +
-                    ['a cup of coffee'] * 7 +
-                    ['some lunch', 'some fruit'] +
-                    ['an afternoon snack'] * 2 +
-                    ['a beer'] * 8)[time.localtime().tm_hour])
+      logging.info(
+          'Just works! Creating the tarball. '
+          'This will take a while... meanwhile, go get %s. '
+          'You deserve it.',
+          (['some rest'] * 5 + ['a cup of coffee'] * 7 +
+           ['some lunch', 'some fruit'] + ['an afternoon snack'] * 2 +
+           ['a beer'] * 8)[time.localtime().tm_hour])
 
       image_tool_output_file = os.path.join(
-          self.work_dir, 'factory_bundle_%s_%s.tar.bz2' % (self.board,
-                                                           self.bundle_name))
+          self.work_dir,
+          f'factory_bundle_{self.board}_{self.bundle_name}.tar.bz2')
       output_file = os.path.join(
           self.work_dir,
-          'factory_bundle_%s_%s.tar.bz2' % (self.project, self.bundle_name))
+          f'factory_bundle_{self.project}_{self.bundle_name}.tar.bz2')
       args = [
           'bundle',
           '-o',
@@ -1465,7 +1466,7 @@ class FinalizeBundle:
 
     if found_url is None:
       raise FinalizeBundleException(
-          'No %s found for version %s' % (resource_name, version))
+          f'No {resource_name} found for version {version}')
     logging.info('Starting to download %s...', found_url)
     downloaded_path = self.gsutil.GSDownload(found_url)
 
@@ -1476,8 +1477,8 @@ class FinalizeBundle:
 
   def _DownloadAndExtractImage(self, image_name, version, possible_urls,
                                target_dir):
-    with self._DownloadResource(
-        possible_urls, image_name, version) as (downloaded_path, found_url):
+    with self._DownloadResource(possible_urls, image_name,
+                                version) as (downloaded_path, found_url):
       try:
         file_utils.TryMakeDirs(target_dir)
         image_basename = os.path.basename(found_url)
@@ -1491,7 +1492,7 @@ class FinalizeBundle:
 
           extracted_path = os.listdir(target_dir)
           assert len(extracted_path) == 1, (
-              'Expect only one file in %r but found multiple' % target_dir)
+              f'Expect only one file in {target_dir!r} but found multiple')
           extracted_path = os.path.join(target_dir, extracted_path[0])
 
           # Replace '.tar.xz' with the extracted ext name ('.bin' normally).
@@ -1500,7 +1501,7 @@ class FinalizeBundle:
           shutil.move(extracted_path, dst_path)
         else:
           raise ValueError(
-              "Don't know how to handle file extension of %r" % downloaded_path)
+              f"Don't know how to handle file extension of {downloaded_path!r}")
         return dst_path
       finally:
         file_utils.TryUnlink(downloaded_path)
@@ -1508,10 +1509,9 @@ class FinalizeBundle:
   def _DownloadTestImage(self, requested_version, target_dir):
     possible_urls = []
     for channel in RESOURCE_CHANNELS:
-      url = '%s/%s' % (
-          gsutil.BuildResourceBaseURL(
-              channel, self.build_board.gsutil_name, requested_version),
-          '*test*.tar.xz')
+      url_prefix = gsutil.BuildResourceBaseURL(
+          channel, self.build_board.gsutil_name, requested_version)
+      url = f'{url_prefix}/*test*.tar.xz'
       possible_urls.append(url)
     return self._DownloadAndExtractImage('test image', requested_version,
                                          possible_urls, target_dir)
@@ -1522,10 +1522,9 @@ class FinalizeBundle:
     # must be searched first. Unsigned recovery image ends with .tar.xz.
     for ext in ['.bin', '.tar.xz']:
       for channel in RESOURCE_CHANNELS:
-        url = '%s/%s%s' % (
-            gsutil.BuildResourceBaseURL(
-                channel, self.build_board.gsutil_name, requested_version),
-            '*recovery*', ext)
+        url_prefix = gsutil.BuildResourceBaseURL(
+            channel, self.build_board.gsutil_name, requested_version)
+        url = f'{url_prefix}/*recovery*{ext}'
         possible_urls.append(url)
     return self._DownloadAndExtractImage('release image', requested_version,
                                          possible_urls, target_dir)
@@ -1541,14 +1540,13 @@ class FinalizeBundle:
     """
     possible_urls = []
     for channel in RESOURCE_CHANNELS:
-      url = '%s/%s' % (
-          gsutil.BuildResourceBaseURL(
-              channel, self.build_board.gsutil_name, requested_version),
-          '*factory*.zip')
+      url_prefix = gsutil.BuildResourceBaseURL(
+          channel, self.build_board.gsutil_name, requested_version)
+      url = f'{url_prefix}/*factory*.zip'
       possible_urls.append(url)
     with self._DownloadResource(
-        possible_urls, 'factory toolkit', requested_version
-    ) as (downloaded_path, unused_url):
+        possible_urls, 'factory toolkit',
+        requested_version) as (downloaded_path, unused_url):
       file_utils.ExtractFile(downloaded_path, target_dir, exclude=['*/README'])
 
     return self._LocateOneResource(
@@ -1565,9 +1563,9 @@ class FinalizeBundle:
       return None
     branches = ['factory', 'release']
     possible_urls = [
-        'gs://chromeos-image-archive/%s-%s/R*-%s/%s' %
-        (self.build_board.gsutil_name, branch, requested_version,
-         PROJECT_TOOLKIT_PACKAGES) for branch in branches
+        (f'gs://chromeos-image-archive/{self.build_board.gsutil_name}-{branch}'
+         f'/R*-{requested_version}/{PROJECT_TOOLKIT_PACKAGES}')
+        for branch in branches
     ]
     try:
       with self._DownloadResource(
@@ -1587,10 +1585,9 @@ class FinalizeBundle:
   def _TryDownloadSignedFactoryShim(self, requested_version, target_dir):
     possible_urls = []
     for channel in RESOURCE_CHANNELS:
-      url = '%s/%s' % (
-          gsutil.BuildResourceBaseURL(
-              channel, self.build_board.gsutil_name, requested_version),
-          'chromeos_*_factory*.bin')
+      url_prefix = gsutil.BuildResourceBaseURL(
+          channel, self.build_board.gsutil_name, requested_version)
+      url = f'{url_prefix}/chromeos_*_factory*.bin'
       possible_urls.append(url)
     try:
       with self._DownloadResource(

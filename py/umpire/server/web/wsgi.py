@@ -93,7 +93,7 @@ class WSGISession(type_utils.AttrDict):
     Returns:
       (response code, message) tuple.
     """
-    return '%d %s' % (code, http.RESPONSES.get(code, 'Unknown Status'))
+    return f"{int(code)} {http.RESPONSES.get(code, 'Unknown Status')}"
 
   def Respond(self, data=b'', content_type=TEXT_PLAIN, code=http.OK):
     """Sends response header then returns body.

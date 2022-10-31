@@ -229,17 +229,15 @@ class Toybox(device_types.DeviceComponent):
         'dd using toybox does not support "conf=%s"')
     if conv:
       conv = ','.join(conv)
-    return self._device.CheckOutput(self._BuildCommand(
-        'dd',
-        ['if=%s' % if_] if if_ else None,
-        ['ibs=%s' % ibs] if ibs else None,
-        ['of=%s' % of] if of else None,
-        ['obs=%s' % obs] if obs else None,
-        ['bs=%s' % bs] if bs else None,
-        ['count=%s' % count] if count else None,
-        ['skip=%s' % skip] if skip else None,
-        ['seek=%s' % seek] if seek else None,
-        ['conv=%s' % conv] if conv else None))
+    return self._device.CheckOutput(
+        self._BuildCommand(
+            'dd', [f'if={if_}'] if if_ else None,
+            [f'ibs={ibs}'] if ibs else None, [f'of={of}'] if of else None,
+            [f'obs={obs}'] if obs else None, [f'bs={bs}'] if bs else None,
+            [f'count={count}'] if count else None,
+            [f'skip={skip}'] if skip else None,
+            [f'seek={seek}'] if seek else None,
+            [f'conv={conv}'] if conv else None))
 
   def df(self, filesystems=None, fs_type=None):
     """The "disk free" command.
@@ -264,7 +262,7 @@ class Toybox(device_types.DeviceComponent):
     # Filesystem      1K-blocks       Used  Available Use% Mounted on
     # udev             32924692         12   32924680   1% /dev
     if '1K-blocks' not in output[0]:
-      raise IOError('df: Unknown output in header: %s' % output[0])
+      raise IOError(f'df: Unknown output in header: {output[0]}')
 
     def _output_filter(args):
       return [int(arg.strip('%')) if 0 < i < 5 else arg
@@ -319,11 +317,10 @@ class Toybox(device_types.DeviceComponent):
     """
     known_units = 'bkmgt'
     if units not in known_units:
-      raise ValueError('free: invalid output unit <%s>' % units)
+      raise ValueError(f'free: invalid output unit <{units}>')
 
-    raw_output = self._device.CheckOutput(self._BuildCommand(
-        'free',
-        '-%s' % units)).splitlines()
+    raw_output = self._device.CheckOutput(
+        self._BuildCommand('free', f'-{units}')).splitlines()
 
     # Output example:
     #           total        used        free      shared     buffers

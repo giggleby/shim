@@ -240,7 +240,7 @@ class ECToolTemperatureSensors(ThermalSensorSource):
     # 'ectool temps' prints a message like Reading 'temperature...(\d+)'
     return self._ConvertRawValue(
         self.ECTOOL_TEMPS_SENSORID_RE.findall(
-            self._device.CallOutput('ectool temps %s' % sensor_id))[0])
+            self._device.CallOutput(f'ectool temps {sensor_id}'))[0])
 
   def GetAllValues(self):
     """Returns all ectool temps values.

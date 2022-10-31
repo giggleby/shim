@@ -10,6 +10,7 @@ import re
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
 
+
 _RADIAN_TO_DEGREE = 180 / math.pi
 
 
@@ -61,7 +62,7 @@ class GyroscopeController(sensor_utils.BasicSensorController):
     the calibration to allow reading raw data from a trigger.
     """
     for signal_name in self.signal_names:
-      self._SetSysfsValue('%s_calibbias' % signal_name, '0')
+      self._SetSysfsValue(f'{signal_name}_calibbias', '0')
 
   def CalculateCalibrationBias(self, data):
     """Calculating calibration data."""
@@ -69,8 +70,8 @@ class GyroscopeController(sensor_utils.BasicSensorController):
     for signal_name in data:
       ideal_value = 0
       current_calib_bias = (
-          int(self._GetSysfsValue('%s_calibbias' % signal_name))
-          / _RADIAN_TO_DEGREE / 1024)
+          int(self._GetSysfsValue(f'{signal_name}_calibbias')) /
+          _RADIAN_TO_DEGREE / 1024)
       # Calculate the difference between the ideal value and actual value
       # then store it into _calibbias.  In release image, the raw data will
       # be adjusted by _calibbias to generate the 'post-calibrated' values.
@@ -94,8 +95,8 @@ class GyroscopeController(sensor_utils.BasicSensorController):
     self._device.vpd.ro.Update(scaled)
     mapping = []
     for signal_name in self.signal_names:
-      mapping.append(('%s_%s_calibbias' % (signal_name, self.location),
-                      '%s_calibbias' % signal_name))
+      mapping.append((f'{signal_name}_{self.location}_calibbias',
+                      f'{signal_name}_calibbias'))
     for vpd_entry, sysfs_entry in mapping:
       self._SetSysfsValue(sysfs_entry, scaled[vpd_entry])
 
@@ -136,7 +137,7 @@ class GyroscopeController(sensor_utils.BasicSensorController):
       self._CheckGyroAttr(gyro)
     except Exception as e:
       raise MotionSensorException(
-          'Failed to preprocess gyro info.  %s' % e) from None
+          f'Failed to preprocess gyro info.  {e}') from None
 
     # Do the real motion sensor setup
     setup_cmd = base_cmd + ['odr', gyro['id'], gyro['freq']]
@@ -144,7 +145,7 @@ class GyroscopeController(sensor_utils.BasicSensorController):
       self._device.CheckOutput(setup_cmd)
     except Exception as e:
       raise MotionSensorException(
-          'Failed to set up motion sensor.  %s' % e) from None
+          f'Failed to set up motion sensor.  {e}') from None
 
     logging.info('Motion sensor setup done.')
 
@@ -170,8 +171,7 @@ class GyroscopeController(sensor_utils.BasicSensorController):
       for key, re_exp in re_dict.items():
         result[key] = re_exp.search(raw_info).group(1)
     except AttributeError as e:
-      raise MotionSensorException(
-          'Failed to parse key "%s": %s' % (key, e)) from None
+      raise MotionSensorException(f'Failed to parse key "{key}": {e}') from None
 
     return result
 
@@ -189,8 +189,9 @@ class GyroscopeController(sensor_utils.BasicSensorController):
                       'correct sensor id.')
 
     if gyro['location'] != self.location:
-      raise Exception('Gyro location mismatched: "%s" specified but found'
-                      '"%s".' % (self.location, gyro['location']))
+      raise Exception(
+          f"Gyro location mismatched: \"{self.location}\" specified but found\""
+          f"{gyro['location']}\".")
 
     #  Adapt gyro['freq'] to the minimal usable freq if it's None.
     if self.freq is None:

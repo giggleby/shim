@@ -8,6 +8,7 @@ import re
 from cros.factory.device import device_types
 from cros.factory.utils import schema
 
+
 USB_PD_SPEC_SCHEMA_V1 = schema.JSONSchemaDict('USB PD specification schema v1',
                                               {'type': 'integer'})
 
@@ -164,12 +165,14 @@ class USBTypeC(device_types.DeviceComponent):
       Return 1 if GPIO is high; otherwise 0.
 
     """
-    gpio_info_re = re.compile(r'^GPIO %s = (\d)' % gpio_name)
+    gpio_info_re = re.compile(r'^GPIO '
+                              f'{gpio_name}'
+                              r' = (\d)')
     response = self._CallPD(['gpioget', gpio_name])
     gpio_value = gpio_info_re.findall(response)
     if gpio_value:
       return int(gpio_value[0])
-    raise self.Error('Fail to get GPIO %s value' % gpio_name)
+    raise self.Error(f'Fail to get GPIO {gpio_name} value')
 
   def GetPDStatus(self, port):
     """Gets the USB PD status.
@@ -185,7 +188,7 @@ class USBTypeC(device_types.DeviceComponent):
         'polarity': 'CC1' or 'CC2'
         'state': <state>
     """
-    response = self._CallPD(['usbpd', '%d' % port])
+    response = self._CallPD(['usbpd', f'{int(port)}'])
     for pd_version, re_pattern in self.USB_PD_INFO_RE_ALL.items():
       match = re_pattern.match(response)
       if match:
@@ -204,7 +207,7 @@ class USBTypeC(device_types.DeviceComponent):
             if pd_version in ('USB_PD_INFO_RE_V1_2', 'USB_PD_INFO_RE_V2'):
               status['vconn'] = match.group('vconn')
         return status
-    raise self.Error('Unable to parse USB PD status from: %s' % response)
+    raise self.Error(f'Unable to parse USB PD status from: {response}')
 
   def GetPDMuxInfo(self, port, log=None):
     """Gets the USB PD Mux information.
@@ -226,10 +229,10 @@ class USBTypeC(device_types.DeviceComponent):
     for line in response.splitlines():
       match = re_port.match(line)
       if not match:
-        raise self.Error('Unable to parse USB PD Mux from: %s' % response)
+        raise self.Error(f'Unable to parse USB PD Mux from: {response}')
       if int(match.group(1)) == port:
         return dict(map(MatchToPair, re_key_value.finditer(line)))
-    raise self.Error('Unable to find port %d from: %s' % (port, response))
+    raise self.Error(f'Unable to find port {int(port)} from: {response}')
 
   def VerifyPDStatus(self, spec):
     """Verify PD status with spec.
@@ -274,7 +277,7 @@ class USBTypeC(device_types.DeviceComponent):
         continue
       match = self.USB_PD_POWER_INFO_RE.match(line)
       if not match:
-        raise self.Error('Unable to parse USB Power status from: %s' % line)
+        raise self.Error(f'Unable to parse USB Power status from: {line}')
       status[int(match.group('port'))] = port_status
       port_status['role'] = match.group('role')
       port_status['type'] = match.group('type')
@@ -296,7 +299,7 @@ class USBTypeC(device_types.DeviceComponent):
       port: The USB port number.
     """
     # Pull-up HPD GPIO
-    self._CallPD(['gpioset', 'USB_C%d_DP_HPD' % port, '1'])
+    self._CallPD(['gpioset', f'USB_C{int(port)}_DP_HPD', '1'])
 
   def ResetHPD(self, port):
     """Manually pulls down DP HPD (Hot Plug Detection) GPIO.
@@ -307,7 +310,7 @@ class USBTypeC(device_types.DeviceComponent):
       port: The USB port number.
     """
     # Pull-down HPD GPIO
-    self._CallPD(['gpioset', 'USB_C%d_DP_HPD' % port, '0'])
+    self._CallPD(['gpioset', f'USB_C{int(port)}_DP_HPD', '0'])
 
   def SetPortFunction(self, port, function):
     """Sets USB type-C port's function.
@@ -320,7 +323,7 @@ class USBTypeC(device_types.DeviceComponent):
     logging.info('Set USB type-C port %d to %s', port, function)
     if function not in self.PORT_FUNCTION:
       raise device_types.DeviceException(
-          'unsupported USB Type-C function: %s' % function)
+          f'unsupported USB Type-C function: {function}')
     self._CallPD([function], port)
 
   def ResetPortFunction(self, port):
@@ -349,6 +352,5 @@ class USBTypeC(device_types.DeviceComponent):
     Raises:
       CalledProcessError if the exit code is non-zero.
     """
-    return self._device.CheckOutput(
-        ['ectool'] + self.ECTOOL_PD_ARGS +
-        ([] if port is None else ['usbpd', '%d' % port]) + command)
+    return self._device.CheckOutput(['ectool'] + self.ECTOOL_PD_ARGS + (
+        [] if port is None else ['usbpd', f'{int(port)}']) + command)

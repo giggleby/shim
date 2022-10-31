@@ -103,15 +103,13 @@ class WiFi(device_types.DeviceComponent):
     # If a specific interface is specified, check that it exists.
     if interface:
       if interface not in interfaces:
-        raise WiFiError('Specified interface %s not available' %
-                        interface)
+        raise WiFiError(f'Specified interface {interface} not available')
       return interface
 
     # If no interface is specified, check the uniqueness.
     if len(interfaces) != 1:
-      raise WiFiError(
-          'There are multiple interfaces. '
-          'Please specify one from: %r' % interfaces)
+      raise WiFiError('There are multiple interfaces. Please specify one from: '
+                      f'{interfaces!r}')
     return interfaces[0]
 
   def BringsUpInterface(self, interface, sleep_time_secs=1, log=True):
@@ -355,7 +353,7 @@ class WiFi(device_types.DeviceComponent):
       A connected Connection object.
     """
     if not isinstance(ap, AccessPoint):
-      raise WiFiError('Expected AccessPoint for ap argument: %s' % ap)
+      raise WiFiError(f'Expected AccessPoint for ap argument: {ap}')
     interface = self._ValidateInterface(interface)
     conn = self._NewConnection(
         dut=self._device, interface=interface,
@@ -379,7 +377,7 @@ class WiFi(device_types.DeviceComponent):
     ap = self.FindAccessPoint(ssid=ssid, interface=interface,
                               scan_timeout=scan_timeout, **kwargs)
     if not ap:
-      raise WiFiError('Could not find AP with ssid=%s' % ssid)
+      raise WiFiError(f'Could not find AP with ssid={ssid}')
     return self.Connect(ap, interface=interface, passkey=passkey,
                         connect_timeout=connect_timeout,
                         dhcp_timeout=dhcp_timeout)
@@ -422,23 +420,13 @@ class AccessPoint:
   def __repr__(self):
     if not self.bssid:
       return 'AccessPoint()'
-    strength = '{:.2f} dBm, '.format(
-        self.strength) if self.strength is not None else ''
-    quality = '{:.2f}/100, '.format(
-        self.quality) if self.quality is not None else ''
-    return (
-        u'AccessPoint({ssid}, {bssid}, channel={channel}, '
-        'frequency={frequency} MHz, {active}, '
-        '{strength}{quality}encryption={encryption}, {last_seen}ms)'.format(
-            ssid=self.ssid,
-            bssid=self.bssid,
-            channel=self.channel,
-            frequency=self.frequency,
-            active='active' if self.active else 'inactive',
-            strength=strength,
-            quality=quality,
-            encryption=self.encryption_type or 'none',
-            last_seen=self.last_seen)).encode('utf-8')
+    strength = f'{self.strength:.2f} dBm, ' if self.strength is not None else ''
+    quality = f'{self.quality:.2f}/100, ' if self.quality is not None else ''
+    return (f'AccessPoint({self.ssid}, {self.bssid}, channel={self.channel}, '
+            f'frequency={self.frequency} MHz, '
+            f'{"active" if self.active else "inactive"}, {strength}{quality}'
+            f'encryption={self.encryption_type or "none"}, '
+            f'{self.last_seen}ms)').encode('utf-8')
 
 
 class WiFiAndroid(WiFi):
@@ -562,8 +550,7 @@ class Connection:
 
   def _DisconnectAP(self):
     """Disconnects from the current AP."""
-    disconnect_command = 'iw dev {interface} disconnect'.format(
-        interface=self.interface)
+    disconnect_command = f'iw dev {self.interface} disconnect'
     # This call may fail if we are not connected to any network.
     self._device.Call(disconnect_command)
 
@@ -585,7 +572,7 @@ class Connection:
   def _WaitConnect(self):
     """Blocks until authenticated and connected to the AP."""
     CHECK_SUCCESS_PREFIX = 'Connected to'
-    check_command = 'iw dev {interface} link'.format(interface=self.interface)
+    check_command = f'iw dev {self.interface} link'
     logging.info('Waiting to connect to AP...')
     def CheckConnected():
       return self._device.CheckOutput(
@@ -659,7 +646,7 @@ class Connection:
         return ConnectionStatus.Signal(
             int(computed), [int(a) for a in antenna.split(',')])
       except Exception as e:
-        raise WiFiError('unexpected signal format: %r, %r' % (s, e)) from None
+        raise WiFiError(f'unexpected signal format: {s!r}, {e!r}') from None
 
     def _ParseBitRate(s):
       try:
@@ -668,13 +655,12 @@ class Connection:
         assert words[1] == 'MBit/s'
         return float(words[0])
       except Exception as e:
-        raise WiFiError(
-            'unexpected tx_bitrate format: %r, %r' % (s, e)) from None
+        raise WiFiError(f'unexpected tx_bitrate format: {s!r}, {e!r}') from None
 
     try:
       out = self._device.CheckOutput(['iw', self.interface, 'station', 'dump'])
     except device_types.CalledProcessError as e:
-      raise WiFiError('unable to fetch the connection status: %r' % e) from None
+      raise WiFiError(f'unable to fetch the connection status: {e!r}') from None
 
     ret = ConnectionStatus()
     cases = [('signal', _ParseSignal, self._CONN_STATUS_SIGNALS_RE),
@@ -695,8 +681,7 @@ class Connection:
     Returns:
       Leased IP as a string or False if not yet leased.
     """
-    check_command = 'ip addr show {interface} | grep "inet "'.format(
-        interface=self.interface)
+    check_command = f'ip addr show {self.interface} | grep "inet "'
     try:
       # grep exit with return code 0 when we have retrieved an IP.
       out = self._device.CheckOutput(check_command)
@@ -708,19 +693,15 @@ class Connection:
   def _RunDHCPCD(self, **kwargs):
     """Grabs an IP for the device using the dhcpcd command."""
     del kwargs
-    clear_ifconfig_command = 'ifconfig {interface} 0.0.0.0'.format(
-        interface=self.interface)
+    clear_ifconfig_command = f'ifconfig {self.interface} 0.0.0.0'
     # -K: Don't receive link messages for carrier status.  You should
     #     only have to use this with buggy device drivers or running
     #     dhcpcd through a network manager.
     # -c: Location to the hooks file.  If the default location happens to be
     #     empty, dhcpcd will fail.  So we set the hooks file to /dev/null.
-    dhcp_command = ('dhcpcd -K -t {timeout} -c /dev/null {interface}').format(
-        timeout=self._dhcp_timeout,
-        interface=self.interface)
-    dhcp_timeout_command = 'timeout {timeout} {cmd}'.format(
-        timeout=self._dhcp_timeout,
-        cmd=dhcp_command)
+    dhcp_command = (
+        f'dhcpcd -K -t {self._dhcp_timeout} -c /dev/null {self.interface}')
+    dhcp_timeout_command = f'timeout {self._dhcp_timeout} {dhcp_command}'
     force_kill_command = 'pgrep dhcpcd | xargs -r kill -9'
 
     logging.info('Killing any existing dhcpcd processes...')
@@ -750,20 +731,16 @@ class Connection:
     """Grabs an IP for the device using the dhclient command."""
     del kwargs
     PID_FILE = os.path.join(self._tmp_dir, 'dhclient.pid')
-    clear_ifconfig_command = 'ifconfig {interface} 0.0.0.0'.format(
-        interface=self.interface)
-    dhcp_command = ('echo "" | '  # dhclient expects STDIN for some reason
-                    'dhclient -4 '  # only run on IPv4
-                    '-nw '  # immediately daemonize
-                    '-pf {pid_file} '
-                    '-sf {dhclient_script} '
-                    '-lf /dev/null '  # don't keep a leases file
-                    '-v {interface}'.format(
-                        pid_file=PID_FILE,
-                        dhclient_script=dhclient_script_path,
-                        interface=self.interface))
-    kill_command = 'cat {pid_file} | xargs -r kill; rm {pid_file}'.format(
-        pid_file=PID_FILE)
+    clear_ifconfig_command = f'ifconfig {self.interface} 0.0.0.0'
+    dhcp_command = (
+        'echo "" | '  # dhclient expects STDIN for some reason
+        'dhclient -4 '  # only run on IPv4
+        '-nw '  # immediately daemonize
+        f'-pf {PID_FILE} '
+        f'-sf {dhclient_script_path} '
+        '-lf /dev/null '  # don't keep a leases file
+        f'-v {self.interface}')
+    kill_command = f'cat {PID_FILE} | xargs -r kill; rm {PID_FILE}'
     force_kill_command = 'pgrep dhclient | xargs -r kill -9'
 
     logging.info('Killing any existing dhclient processes...')
@@ -795,14 +772,10 @@ class Connection:
     """Connects to an open network."""
     # TODO(kitching): Escape quotes in ssid properly.
     if self.ap.frequency is None:
-      connect_command = u'iw dev {interface} connect {ssid}'.format(
-          interface=self.interface,
-          ssid=self.ap.ssid)
+      connect_command = f'iw dev {self.interface} connect {self.ap.ssid}'
     else:
-      connect_command = u'iw dev {interface} connect {ssid} {freq}'.format(
-          interface=self.interface,
-          ssid=self.ap.ssid,
-          freq=self.ap.frequency)
+      connect_command = (
+          f'iw dev {self.interface} connect {self.ap.ssid} {self.ap.frequency}')
 
     # Pause until connected.  Throws exception if failed.
     def ConnectOpen():
@@ -823,17 +796,12 @@ class Connection:
     # TODO(kitching): Escape quotes in ssid and passkey properly.
     if self.ap.frequency is None:
       connect_command = (
-          u'iw dev {interface} connect {ssid} key 0:{passkey}'.format(
-              interface=self.interface,
-              ssid=self.ap.ssid,
-              passkey=self.passkey))
+          f'iw dev {self.interface} connect {self.ap.ssid} key 0:{self.passkey}'
+      )
     else:
       connect_command = (
-          u'iw dev {interface} connect {ssid} {freq} key 0:{passkey}'.format(
-              interface=self.interface,
-              ssid=self.ap.ssid,
-              freq=self.ap.frequency,
-              passkey=self.passkey))
+          f'iw dev {self.interface} connect {self.ap.ssid} {self.ap.frequency} '
+          f'key 0:{self.passkey}')
 
     # Pause until connected.  Throws exception if failed.
     def ConnectWEP():
@@ -870,10 +838,10 @@ class Connection:
     config_content = '\n'.join([
         'sae_pwe=2' if use_h2e else '',
         'network={',
-        '        ssid="{}"'.format(self.ap.ssid),
+        f'        ssid="{self.ap.ssid}"',
         '        key_mgmt=WPA-PSK SAE',
         '        ieee80211w=1',
-        '        psk="{}"'.format(self.passkey),
+        f'        psk="{self.passkey}"',
         '}',
     ])
     logging.info('wpa.conf:\n%s', config_content)
@@ -907,18 +875,12 @@ class Connection:
     wpa_supplicant_command = (
         'wpa_supplicant '
         '-B '  # daemonize
-        '-P {pid_file} '
+        f'-P {PID_FILE} '
         '-D nl80211 '
-        '-i {interface} '
-        '-c {wpa_file}'.format(
-            pid_file=PID_FILE,
-            interface=self.interface,
-            wpa_file=WPA_FILE))
+        f'-i {self.interface} '
+        f'-c {WPA_FILE}')
     kill_command = (
-        'cat {pid_file} | xargs -r kill; '
-        'rm {pid_file}; rm {wpa_file}'.format(
-            pid_file=PID_FILE,
-            wpa_file=WPA_FILE))
+        f'cat {PID_FILE} | xargs -r kill; rm {PID_FILE}; rm {WPA_FILE}')
     force_kill_command = 'killall wpa_supplicant'
 
     logging.info('Killing any existing wpa_command processes...')

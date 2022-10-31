@@ -20,7 +20,7 @@ def Migrate():
       for j in range(4):
         if i == 0 and j == 0:
           continue
-        new_buffer_dir = os.path.join(_OLD_BUFFER_DIR, '%d_%d' % (i, j))
+        new_buffer_dir = os.path.join(_OLD_BUFFER_DIR, f'{int(i)}_{int(j)}')
         if not os.path.exists(new_buffer_dir):
           os.mkdir(new_buffer_dir)
         sample_consumers_file = os.path.join(

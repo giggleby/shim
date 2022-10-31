@@ -17,6 +17,7 @@ from cros.factory.test.utils.camera_utils import CameraError
 from cros.factory.test.utils.camera_utils import GetValidCameraPaths
 from cros.factory.utils import type_utils
 
+
 CAMERA_CONFIG_PATH = '/etc/camera/camera_characteristics.conf'
 ALLOWED_FACING = type_utils.Enum(['front', 'rear', None])
 
@@ -44,8 +45,8 @@ class ChromeOSCamera(camera.Camera):
               'front', 'rear' or None. None is automatically searching one.
     """
     if facing not in ALLOWED_FACING:
-      raise CameraError('The facing (%s) is not in ALLOWED_FACING (%s)' %
-                        (facing, ALLOWED_FACING))
+      raise CameraError(
+          f'The facing ({facing}) is not in ALLOWED_FACING ({ALLOWED_FACING})')
 
     if facing in self._index_mapping:
       return self._index_mapping[facing]
@@ -57,7 +58,7 @@ class ChromeOSCamera(camera.Camera):
           os.path.join(path, 'device', '..', 'idVendor')).strip()
       pid = self._device.ReadFile(
           os.path.join(path, 'device', '..', 'idProduct')).strip()
-      index_to_vid_pid[index] = '%s:%s' % (vid, pid)
+      index_to_vid_pid[index] = f'{vid}:{pid}'
 
     num_camera = int(
         self._device.CallOutput(['cros_config', '/camera', 'count']))
@@ -83,7 +84,7 @@ class ChromeOSCamera(camera.Camera):
       return next(iter(self._index_mapping.values()))
 
     if facing not in self._index_mapping:
-      raise CameraError('No %s camera is found' % facing)
+      raise CameraError(f'No {facing} camera is found')
     return self._index_mapping[facing]
 
   def GetCameraIndexFromCrosConfig(self, index_to_vid_pid, num_camera):
@@ -98,9 +99,8 @@ class ChromeOSCamera(camera.Camera):
 
       while True:
         vid_pid = self._device.CallOutput([
-            'cros_config',
-            '/camera/devices/%d/ids' % cros_index,
-            '%d' % id_index
+            'cros_config', f'/camera/devices/{int(cros_index)}/ids',
+            f'{int(id_index)}'
         ])
 
         if not vid_pid:
@@ -108,9 +108,9 @@ class ChromeOSCamera(camera.Camera):
 
         if vid_pid in vid_pid_to_cros_index:
           raise CameraError(
-              'Multiple cameras have the same usb_vid_pid (%s)'
-              ' There are duplicated usb_vid_pid in the'
-              ' cros_config file. Please submit a CL to fix this.' % vid_pid)
+              f'Multiple cameras have the same usb_vid_pid ({vid_pid}) There '
+              'are duplicated usb_vid_pid in the cros_config file. Please '
+              'submit a CL to fix this.')
 
         vid_pid_to_cros_index[vid_pid] = cros_index
         id_index += 1
@@ -119,7 +119,7 @@ class ChromeOSCamera(camera.Camera):
       if vid_pid in vid_pid_to_cros_index:
         camera_facing = self._device.CallOutput([
             'cros_config',
-            '/camera/devices/%d' % vid_pid_to_cros_index[vid_pid], 'facing'
+            f'/camera/devices/{int(vid_pid_to_cros_index[vid_pid])}', 'facing'
         ])
         camera_facing = {
             'front': 'front',
@@ -128,8 +128,8 @@ class ChromeOSCamera(camera.Camera):
         self._index_mapping[camera_facing] = index
       else:
         raise CameraError(
-            'No camera has the usb_vid_pid (%s)'
-            ' Please submit a CL to update the cros_config file.' % vid_pid)
+            f'No camera has the usb_vid_pid ({vid_pid}) Please submit a CL to '
+            'update the cros_config file.')
 
   def GetCameraIndexFromCameraConfig(self, index_to_vid_pid):
     """Fallback function when unable to query from cros_config.
@@ -143,27 +143,29 @@ class ChromeOSCamera(camera.Camera):
       # In CAMERA_CONFIG_PATH, usb_vid_pid hex string could be in uppercase or
       # lowercase, so we make the matching case insensitive.
       camera_id = re.findall(
-          r'^camera(\d+)\.module\d+\.usb_vid_pid=%s$' % vid_pid,
-          camera_config, re.IGNORECASE | re.MULTILINE)
+          r'^camera(\d+)\.module\d+\.usb_vid_pid='
+          f'{vid_pid}'
+          r'$', camera_config, re.IGNORECASE | re.MULTILINE)
       if len(camera_id) > 1:
         raise CameraError(
-            'Multiple cameras have the same usb_vid_pid (%s)'
+            f'Multiple cameras have the same usb_vid_pid ({vid_pid})'
             ' There are duplicated usb_vid_pid in the'
             ' camera_characteristics.conf file. Please submit'
-            ' a CL to fix this. See sample CL at https://crrev.com/c/419375' %
-            vid_pid)
+            ' a CL to fix this. See sample CL at https://crrev.com/c/419375')
       if not camera_id:
         raise CameraError(
-            'No camera has the usb_vid_pid (%s)'
-            ' Please submit a CL to update the camera_characteristics.conf'
-            ' file. See sample CL at https://crrev.com/c/419375' % vid_pid)
+            f'No camera has the usb_vid_pid ({vid_pid}) Please submit a CL to '
+            'update the camera_characteristics.conf file. See sample CL at '
+            'https://crrev.com/c/419375')
       camera_id = int(camera_id[0])
       index_to_camera_id[index] = camera_id
 
     for index, camera_id in index_to_camera_id.items():
-      camera_facing = int(re.search(
-          r'^camera%d\.lens_facing=(\d+)$' % camera_id,
-          camera_config, re.MULTILINE).group(1))
+      camera_facing = int(
+          re.search(r'^camera'
+                    f'{camera_id:d}'
+                    r'\.lens_facing=(\d+)$', camera_config,
+                    re.MULTILINE).group(1))
       camera_facing = {
           0: 'front',
           1: 'rear'
@@ -210,11 +212,10 @@ class ChromeOSCamera(camera.Camera):
       if (dev_removable != 'fixed' and vid.lower() == dev_vid and
           pid.lower() == dev_pid):
         if match_index != -1:
-          raise CameraError(
-              'Found multiple cameras with VID:PID %s:%s' % (vid, pid))
+          raise CameraError(f'Found multiple cameras with VID:PID {vid}:{pid}')
         match_index = index
     if match_index == -1:
-      raise CameraError('Did not find camera with VID:PID %s:%s' % (vid, pid))
+      raise CameraError(f'Did not find camera with VID:PID {vid}:{pid}')
 
     return self._devices.setdefault(
         None,

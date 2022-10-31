@@ -23,8 +23,8 @@ from cros.factory.utils.type_utils import Error
 
 def _FormatTime(t):
   us, s = math.modf(t)
-  return '%s.%06dZ' % (time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(s)),
-                       int(us * 1000000))
+  return (f"{time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(s))}."
+          f"{int(us * 1000000):06}Z")
 
 
 librt_name = find_library('rt')
@@ -209,7 +209,8 @@ class TimeSanitizer:
         if os.path.exists(f):
           try:
             if os.stat(f).st_mtime > now:
-              process_utils.CheckCall(['touch', '-d', '@%d' % now, f], log=True)
+              process_utils.CheckCall(['touch', '-d', f'@{int(now)}', f],
+                                      log=True)
           except Exception:
             logging.exception('Unable to touch %s.', f)
       self.base_time = now

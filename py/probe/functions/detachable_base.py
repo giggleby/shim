@@ -32,7 +32,7 @@ class DetachableBaseFunction(cached_probe_function.CachedProbeFunction):
     try:
       ret = {}
       for field in cls.FIELDS:
-        ret[field] = process_utils.CheckOutput('%s %s' % (cls.PROGRAM, field),
+        ret[field] = process_utils.CheckOutput(f'{cls.PROGRAM} {field}',
                                                shell=True, log=True).strip()
       return [ret]
 

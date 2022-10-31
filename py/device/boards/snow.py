@@ -26,9 +26,9 @@ class SnowPower(power.Power):
                              'Disabled the charger instead.'
                              'IF SYSTEM POWER IS OFF, PLEASE UNPLUG AC.')
       else:
-        raise self.Error('Unknown SnowBoard charge state: %s' % state)
+        raise self.Error(f'Unknown SnowBoard charge state: {state}')
     except Exception as e:
-      raise self.Error('Unable to set charge state in SnowBoard: %s' % e)
+      raise self.Error(f'Unable to set charge state in SnowBoard: {e}')
 
   def GetChargerCurrent(self):
     """Charger current is not available on snow board."""

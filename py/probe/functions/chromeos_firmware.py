@@ -39,12 +39,12 @@ def _FwKeyHash(fw_file_path, key_name):
       'b11d74edd286c144e1135b49e7f0bc20cf041f10': 'devkeys/rootkey',
       'c14bd720b70d97394257e3e826bd8f43de48d4ed': 'devkeys/recovery',
   }
-  with tempfile.NamedTemporaryFile(prefix='gbb_%s_' % key_name) as f:
+  with tempfile.NamedTemporaryFile(prefix=f'gbb_{key_name}_') as f:
     process_utils.CheckOutput(
-        'futility gbb -g --%s=%s %s' % (key_name, f.name, fw_file_path),
-        shell=True, log=True)
+        f'futility gbb -g --{key_name}={f.name} {fw_file_path}', shell=True,
+        log=True)
     key_info = process_utils.CheckOutput(
-        'futility vbutil_key --unpack %s' % f.name, shell=True)
+        f'futility vbutil_key --unpack {f.name}', shell=True)
     sha1sum = re.findall(r'Key sha1sum:[\s]+([\w]+)', key_info)
     if len(sha1sum) != 1:
       logging.error('Failed calling vbutil_key for firmware key hash.')
@@ -61,7 +61,7 @@ def _AddFirmwareIdTag(image, id_name='RO_FRID'):
     return ''
   id_stripped = image.get_section(id_name).decode('utf-8').strip(chr(0))
   if id_stripped:
-    return '#%s' % id_stripped
+    return f'#{id_stripped}'
   return ''
 
 
@@ -253,7 +253,7 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
   def GetCategoryFromArgs(self):
     if self.args.field not in FIELDS:
       raise cached_probe_function.InvalidCategoryError(
-          '`field` should be one of %r' % FIELDS)
+          f'`field` should be one of {FIELDS!r}')
 
     return self.args.field
 

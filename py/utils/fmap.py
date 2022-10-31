@@ -32,6 +32,7 @@ import pprint
 import struct
 import sys
 
+
 # constants imported from lib/fmap.h
 FMAP_SIGNATURE = b'__FMAP__'
 FMAP_VER_MAJOR = 1
@@ -66,8 +67,8 @@ FMAP_AREA_NAMES = (
 
 
 # format string
-FMAP_HEADER_FORMAT = '<8sBBQI%dsH' % (FMAP_STRLEN)
-FMAP_AREA_FORMAT = '<II%dsH' % (FMAP_STRLEN)
+FMAP_HEADER_FORMAT = f'<8sBBQI{int(FMAP_STRLEN)}sH'
+FMAP_AREA_FORMAT = f'<II{int(FMAP_STRLEN)}sH'
 
 
 def _fmap_decode_header(blob, offset):
@@ -137,8 +138,8 @@ def _fmap_check_name(fmap, name):
     struct.error if the name does not match.
   """
   if fmap['name'] != name:
-    raise struct.error('Incorrect FMAP (found: "%s", expected: "%s")' %
-                       (fmap['name'], name))
+    raise struct.error(
+        f"Incorrect FMAP (found: \"{fmap['name']}\", expected: \"{name}\")")
 
 
 def _fmap_search_header(blob, fmap_name=None):
@@ -266,7 +267,7 @@ class FirmwareImage:
   def get_section_area(self, name):
     """Returns the area (offset, size) information of given section."""
     if not self.has_section(name):
-      raise ValueError('get_section_area: invalid section: %s' % name)
+      raise ValueError(f'get_section_area: invalid section: {name}')
     return self._areas[name]
 
   def get_section(self, name):
@@ -282,8 +283,9 @@ class FirmwareImage:
     """Updates content of specified section in image."""
     area = self.get_section_area(name)
     if len(value) != area[1]:
-      raise ValueError('Value size (%d) does not fit into section (%s, %d)' %
-                       (len(value), name, area[1]))
+      raise ValueError(
+          f'Value size ({len(value)}) does not fit into section ({name}, '
+          f'{int(area[1])})')
     self._image = (self._image[0:area[0]] +
                    value +
                    self._image[(area[0] + area[1]):])
@@ -311,7 +313,7 @@ def main(argv):
   opts = parser.parse_args(argv)
 
   if not opts.raw:
-    print('Decoding FMAP from: %s' % opts.file)
+    print(f'Decoding FMAP from: {opts.file}')
   with open(opts.file, 'rb', encoding=None) as f:
     blob = f.read()
   obj = fmap_decode(blob)

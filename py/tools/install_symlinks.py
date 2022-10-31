@@ -23,6 +23,7 @@ from cros.factory.utils.schema import Dict
 from cros.factory.utils.schema import FixedDict
 from cros.factory.utils.schema import Scalar
 
+
 # Valid modes.
 MODE_FULL = 'full'  # Install all binaries
 MODE_MINI = 'mini'  # Install only factory-mini binaries
@@ -152,7 +153,7 @@ def main(argv=None, out=sys.stdout):
   logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING)
 
   linked = InstallSymlinks(args.target, args.dest[0], args.mode)
-  out.write('Created symlinks: %s\n' % ' '.join(linked))
+  out.write(f"Created symlinks: {' '.join(linked)}\n")
 
 
 if __name__ == '__main__':

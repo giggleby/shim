@@ -28,6 +28,7 @@ import urllib.request
 
 from ws4py.client.threadedclient import WebSocketClient
 
+
 DEFAULT_CHROME_DEBUG_URL = 'http://127.0.0.1:9222'
 
 
@@ -124,7 +125,7 @@ class ChromeRemoteDebugger:
 
 if __name__ == '__main__':
   if len(sys.argv) != 3:
-    sys.exit('Usage: %s method_name json_params' % sys.argv[0])
+    sys.exit(f'Usage: {sys.argv[0]} method_name json_params')
 
   chrome = ChromeRemoteDebugger()
   pages = chrome.GetPages('page')
@@ -134,6 +135,6 @@ if __name__ == '__main__':
 
   page_command = {'method': sys.argv[1], 'params': json.loads(sys.argv[2])}
   for target in targets:
-    print("Send %s to page %s" % (page_command, target))
+    print(f"Send {page_command} to page {target}")
     chrome.SetActivePage(target)
     chrome.SendCommand(page_command)

@@ -44,6 +44,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 
+
 _CERT_DIR = os.path.expanduser('~/.config/ovl')
 
 _ESCAPE = '~'
@@ -99,7 +100,7 @@ def GetVersionDigest():
 
 
 def GetTLSCertPath(host):
-  return os.path.join(_CERT_DIR, '%s.cert' % host)
+  return os.path.join(_CERT_DIR, f'{host}.cert')
 
 
 def UrlOpen(state, url):
@@ -136,11 +137,11 @@ def AutoRetry(action_name, retries):
         try:
           func(*args, **kwargs)
         except Exception as e:
-          print('error: %s: %s: retrying ...' % (args[0], e))
+          print(f'error: {args[0]}: {e}: retrying ...')
         else:
           break
       else:
-        print('error: failed to %s %s' % (action_name, args[0]))
+        print(f'error: failed to {action_name} {args[0]}')
     return Loop
   return Wrap
 
@@ -149,7 +150,7 @@ def BasicAuthHeader(user, password):
   """Return HTTP basic auth header."""
   credential = base64.b64encode(
       b'%s:%s' % (user.encode('utf-8'), password.encode('utf-8')))
-  return ('Authorization', 'Basic %s' % credential.decode('utf-8'))
+  return ('Authorization', f"Basic {credential.decode('utf-8')}")
 
 
 def GetTerminalSize():
@@ -161,7 +162,7 @@ def GetTerminalSize():
 
 
 def MakeRequestUrl(state, url):
-  return 'http%s://%s' % ('s' if state.ssl else '', url)
+  return f"http{'s' if state.ssl else ''}://{url}"
 
 
 class ProgressBar:
@@ -202,8 +203,8 @@ class ProgressBar:
       value = size_in_bytes / (1024 ** 2)
     elif size_in_bytes < 1024 ** 4:
       unit = 'GiB'
-      value = size_in_bytes / (1024 ** 3)
-    return ' %6.1f %3s' % (value, unit)
+      value = size_in_bytes / (1024**3)
+    return f' {value:6.1f} {unit:3}'
 
   def _SpeedToHuman(self, speed_in_bs):
     if speed_in_bs < 1024:
@@ -217,11 +218,11 @@ class ProgressBar:
       value = speed_in_bs / (1024 ** 2)
     elif speed_in_bs < 1024 ** 4:
       unit = 'G'
-      value = speed_in_bs / (1024 ** 3)
-    return ' %6.1f%s/s' % (value, unit)
+      value = speed_in_bs / (1024**3)
+    return f' {value:6.1f}{unit}/s'
 
   def _DurationToClock(self, duration):
-    return ' %02d:%02d' % (duration // 60, duration % 60)
+    return f' {int(duration // 60):02}:{int(duration % 60):02}'
 
   def SetProgress(self, percentage, size=None):
     current_width = GetTerminalSize()[1]
@@ -240,12 +241,11 @@ class ProgressBar:
 
     width = int(self._max * percentage / 100.0)
     sys.stdout.write(
-        '%*s' % (- self._name_max,
-                 self._name if len(self._name) <= self._name_max else
-                 self._name[:self._name_max - 4] + ' ...') +
-        size_str + speed_str + elapse_str +
-        ((' [' + '#' * width + ' ' * (self._max - width) + ']' +
-          '%4d%%' % int(percentage)) if self._max > 2 else '') + '\r')
+        (f'{self._name:<{self._name_max}}' if len(self._name) < self._name_max
+         else self._name[:self._name_max - 4] + ' ...') + size_str + speed_str +
+        elapse_str + ((' [' + '#' * width + ' ' * (self._max - width) + ']' +
+                       f'{int(percentage):4}%') if self._max > 2 else '') +
+        '\r')
     sys.stdout.flush()
 
   def End(self):
@@ -311,8 +311,8 @@ class OverlordClientDaemon:
   @staticmethod
   def GetRPCServer():
     """Returns the Overlord client daemon RPC server."""
-    server = jsonrpclib.Server('http://%s:%d' %
-                               _OVERLORD_CLIENT_DAEMON_RPC_ADDR)
+    server_desc = _OVERLORD_CLIENT_DAEMON_RPC_ADDR
+    server = jsonrpclib.Server(f'http://{server_desc[0]}:{server_desc[1]:d}')
     try:
       server.Ping()
     except Exception:
@@ -329,7 +329,7 @@ class OverlordClientDaemon:
     return os.getpid()
 
   def _GetJSON(self, path):
-    url = '%s:%d%s' % (self._state.host, self._state.port, path)
+    url = f'{self._state.host}:{int(self._state.port)}{path}'
     return json.loads(UrlOpen(self._state, url).read())
 
   def _TLSEnabled(self):
@@ -404,7 +404,7 @@ class OverlordClientDaemon:
 
     tls_enabled = self._TLSEnabled()
     if tls_enabled:
-      if not os.path.exists(os.path.join(_CERT_DIR, '%s.cert' % host)):
+      if not os.path.exists(os.path.join(_CERT_DIR, f'{host}.cert')):
         return 'SSLCertificateNotExisted'
 
       if not self._CheckTLSCertificate(check_hostname):
@@ -412,7 +412,7 @@ class OverlordClientDaemon:
 
     try:
       self._state.ssl = tls_enabled
-      UrlOpen(self._state, '%s:%d' % (host, port))
+      UrlOpen(self._state, f'{host}:{int(port)}')
     except urllib.error.HTTPError as e:
       return ('HTTPError', e.getcode(), str(e),
               e.read().strip().decode('utf-8'))
@@ -535,7 +535,7 @@ class TerminalWebSocketClient(SSLEnabledWebSocketBaseClient):
   def closed(self, code, reason=None):
     del code, reason  # Unused.
     termios.tcsetattr(self._stdin_fd, termios.TCSANOW, self._old_termios)
-    print('Connection to %s closed.' % self._mid)
+    print(f'Connection to {self._mid} closed.')
 
   def received_message(self, message):
     if message.is_binary:
@@ -752,16 +752,14 @@ class OverlordCLIClient:
     """
     url = MakeRequestUrl(self._state, url)
     size = os.stat(filename).st_size
-    boundary = '-----------%s' % _HTTP_BOUNDARY_MAGIC
+    boundary = f'-----------{_HTTP_BOUNDARY_MAGIC}'
     CRLF = '\r\n'
     parse = urllib.parse.urlparse(url)
 
     part_headers = [
-        '--' + boundary,
-        'Content-Disposition: form-data; name="file"; '
-        'filename="%s"' % os.path.basename(filename),
-        'Content-Type: application/octet-stream',
-        '', ''
+        '--' + boundary, 'Content-Disposition: form-data; name="file"; '
+        f'filename="{os.path.basename(filename)}"',
+        'Content-Type: application/octet-stream', '', ''
     ]
     part_header = CRLF.join(part_headers)
     end_part = CRLF + '--' + boundary + '--' + CRLF
@@ -776,7 +774,7 @@ class OverlordCLIClient:
     post_path = url[url.index(parse.netloc) + len(parse.netloc):]
     h.putrequest('POST', post_path)
     h.putheader('Content-Length', content_length)
-    h.putheader('Content-Type', 'multipart/form-data; boundary=%s' % boundary)
+    h.putheader('Content-Type', f'multipart/form-data; boundary={boundary}')
 
     if user and passwd:
       h.putheader(*BasicAuthHeader(user, passwd))
@@ -806,8 +804,8 @@ class OverlordCLIClient:
   def CheckDaemon(self):
     self._server = OverlordClientDaemon.GetRPCServer()
     if self._server is None:
-      print('* daemon not running, starting it now on port %d ... *' %
-            _OVERLORD_CLIENT_DAEMON_PORT)
+      print('* daemon not running, starting it now on port '
+            f'{int(_OVERLORD_CLIENT_DAEMON_PORT)} ... *')
       self.StartServer()
 
     self._state = self._server.State()
@@ -837,8 +835,7 @@ class OverlordCLIClient:
     with subprocess.Popen([
         'ssh', '-Nf', '-M', '-S', control_file, '-L', '9000:localhost:9000',
         '-p',
-        str(port),
-        '%s%s' % (user + '@' if user else '', host)
+        str(port), f"{user + '@' if user else ''}{host}"
     ]):
       pass
 
@@ -879,22 +876,21 @@ class OverlordCLIClient:
 
     if not any(client['mid'] == self._selected_mid
                for client in self._server.Clients()):
-      raise RuntimeError('client %s disappeared' % self._selected_mid)
+      raise RuntimeError(f'client {self._selected_mid} disappeared')
 
   def CheckOutput(self, command):
     headers = []
     if self._state.username is not None and self._state.password is not None:
-      headers.append(BasicAuthHeader(self._state.username,
-                                     self._state.password))
+      headers.append(
+          BasicAuthHeader(self._state.username, self._state.password))
 
-    scheme = 'ws%s://' % ('s' if self._state.ssl else '')
+    scheme = f"ws{'s' if self._state.ssl else ''}://"
     sio = StringIO()
     ws = ShellWebSocketClient(
-        self._state, sio, scheme + '%s:%d/api/agent/shell/%s?command=%s' % (
-            self._state.host, self._state.port,
-            urllib.parse.quote(self._selected_mid),
-            urllib.parse.quote(command)),
-        headers=headers)
+        self._state, sio,
+        scheme + f'{self._state.host}:{int(self._state.port)}/api/agent/shell/'
+        f'{urllib.parse.quote(self._selected_mid)}?command='
+        f'{urllib.parse.quote(command)}', headers=headers)
     ws.connect()
     ws.run()
     return sio.getvalue()
@@ -905,9 +901,9 @@ class OverlordCLIClient:
       print('Not connected to any host.')
     else:
       if self._state.ssh_pid is not None:
-        print('Connected to %s with SSH tunneling.' % self._state.orig_host)
+        print(f'Connected to {self._state.orig_host} with SSH tunneling.')
       else:
-        print('Connected to %s:%d.' % (self._state.host, self._state.port))
+        print(f'Connected to {self._state.host}:{int(self._state.port)}.')
 
     if self._selected_mid is None:
       self._selected_mid = self._state.selected_mid
@@ -915,7 +911,7 @@ class OverlordCLIClient:
     if self._selected_mid is None:
       print('No client is selected.')
     else:
-      print('Client %s selected.' % self._selected_mid)
+      print(f'Client {self._selected_mid} selected.')
 
   @Command('connect', 'connect to Overlord server', [
       Arg('host', metavar='HOST', type=str, default='localhost',
@@ -953,7 +949,7 @@ class OverlordCLIClient:
 
     if args.cert and os.path.exists(args.cert):
       os.makedirs(_CERT_DIR, exist_ok=True)
-      shutil.copy(args.cert, os.path.join(_CERT_DIR, '%s.cert' % host))
+      shutil.copy(args.cert, os.path.join(_CERT_DIR, f'{host}.cert'))
 
     if args.ssh_forward:
       # Kill previous SSH tunnel
@@ -981,7 +977,7 @@ class OverlordCLIClient:
           if ret[0] == 'HTTPError':
             code, except_str, body = ret[1:]
             if code == 401:
-              print('connect: %s' % body)
+              print(f'connect: {body}')
               prompt = True
               if not username_provided or not password_provided:
                 continue
@@ -992,9 +988,9 @@ class OverlordCLIClient:
           print(_TLS_CERT_FAILED_WARNING % ret)
           return
         if ret is not True:
-          print('can not connect to %s: %s' % (host, ret))
+          print(f'can not connect to {host}: {ret}')
         else:
-          print('connection to %s:%d established.' % (host, args.port))
+          print(f'connection to {host}:{int(args.port)} established.')
       except Exception as e:
         logging.exception(e)
       else:
@@ -1039,7 +1035,7 @@ class OverlordCLIClient:
       key, sep, regex = prop_filter.partition('=')
       if not sep:
         # The filter doesn't contains =.
-        raise ValueError('Invalid filter condition %r' % filter)
+        raise ValueError(f'Invalid filter condition {filter!r}')
       clients = [c for c in clients if _ClientPropertiesMatch(c, key, regex)]
 
     if mid is not None:
@@ -1076,7 +1072,7 @@ class OverlordCLIClient:
       return
 
     def FormatPrint(length, string):
-      print('%*s' % (length + 2, string), end='|')
+      print(f'{string:>{length+2}}', end='|')
 
     columns = [
         'mid', 'serial', 'status', 'pytest', 'model', 'ip', 'track_connection'
@@ -1118,7 +1114,7 @@ class OverlordCLIClient:
       # This case would not happen when args.mid is specified.
       print('Select from the following clients:')
       for i, client in enumerate(clients):
-        print('    %d. %s' % (i + 1, client['mid']))
+        print(f"    {int(i + 1)}. {client['mid']}")
 
       print('\nSelection: ', end='')
       try:
@@ -1132,7 +1128,7 @@ class OverlordCLIClient:
     self._selected_mid = mid
     if store:
       self._server.SelectClient(mid)
-      print('Client %s selected' % mid)
+      print(f'Client {mid} selected')
 
   @Command('shell', 'open a shell or execute a shell command', [
       Arg('command', metavar='CMD', nargs='?', help='command to execute')])
@@ -1146,22 +1142,19 @@ class OverlordCLIClient:
       headers.append(BasicAuthHeader(self._state.username,
                                      self._state.password))
 
-    scheme = 'ws%s://' % ('s' if self._state.ssl else '')
+    scheme = f"ws{'s' if self._state.ssl else ''}://"
     if command:
       cmd = ' '.join(command)
       ws = ShellWebSocketClient(
-          self._state, sys.stdout,
-          scheme + '%s:%d/api/agent/shell/%s?command=%s' % (
-              self._state.host, self._state.port,
-              urllib.parse.quote(self._selected_mid), urllib.parse.quote(cmd)),
-          headers=headers)
+          self._state, sys.stdout, scheme +
+          f'{self._state.host}:{int(self._state.port)}/api/agent/shell/'
+          f'{urllib.parse.quote(self._selected_mid)}?command='
+          f'{urllib.parse.quote(cmd)}', headers=headers)
     else:
       ws = TerminalWebSocketClient(
           self._state, self._selected_mid, self._escape,
-          scheme + '%s:%d/api/agent/tty/%s' % (
-              self._state.host, self._state.port,
-              urllib.parse.quote(self._selected_mid)),
-          headers=headers)
+          scheme + f'{self._state.host}:{int(self._state.port)}/api/agent/tty/'
+          f'{urllib.parse.quote(self._selected_mid)}', headers=headers)
     try:
       ws.connect()
       ws.run()
@@ -1188,22 +1181,20 @@ class OverlordCLIClient:
         self.CheckOutput('mkdir -p %(dirname)s; '
                          'if [ -d "%(dst)s" ]; then '
                          'ln -sf "%(link_path)s" "%(dst)s/%(link_name)s"; '
-                         'else ln -sf "%(link_path)s" "%(dst)s"; fi' %
-                         dict(dirname=os.path.dirname(dst),
-                              link_path=link_path, dst=dst,
-                              link_name=src_base))
+                         'else ln -sf "%(link_path)s" "%(dst)s"; fi' % dict(
+                             dirname=os.path.dirname(dst), link_path=link_path,
+                             dst=dst, link_name=src_base))
         pbar.End()
         return
 
-      mode = '0%o' % (0x1FF & os.stat(src).st_mode)
-      url = ('%s:%d/api/agent/upload/%s?dest=%s&perm=%s' %
-             (self._state.host, self._state.port,
-              urllib.parse.quote(self._selected_mid), dst, mode))
+      mode = f'0{0x1FF & os.stat(src).st_mode:o}'
+      url = (f'{self._state.host}:{int(self._state.port)}/api/agent/upload/'
+             f'{urllib.parse.quote(self._selected_mid)}?dest={dst}&perm={mode}')
       try:
-        UrlOpen(self._state, url + '&filename=%s' % src_base)
+        UrlOpen(self._state, url + f'&filename={src_base}')
       except urllib.error.HTTPError as e:
         msg = json.loads(e.read()).get('error', None)
-        raise RuntimeError('push: %s' % msg) from None
+        raise RuntimeError(f'push: {msg}') from None
 
       pbar = ProgressBar(src_base)
       self._HTTPPostFile(url, src, pbar.SetProgress,
@@ -1212,8 +1203,9 @@ class OverlordCLIClient:
 
     def _push_single_target(src, dst):
       if os.path.isdir(src):
-        dst_exists = ast.literal_eval(self.CheckOutput(
-            'stat %s >/dev/null 2>&1 && echo True || echo False' % dst))
+        dst_exists = ast.literal_eval(
+            self.CheckOutput(
+                f'stat {dst} >/dev/null 2>&1 && echo True || echo False'))
         for root, unused_x, files in os.walk(src):
           # If destination directory does not exist, we should strip the first
           # layer of directory. For example: src_dir contains a single file 'A'
@@ -1227,25 +1219,24 @@ class OverlordCLIClient:
           #   dest_dir/A
           dst_root = root if dst_exists else root[len(src):].lstrip('/')
           for name in files:
-            _push(os.path.join(root, name),
-                  os.path.join(dst, dst_root, name))
+            _push(os.path.join(root, name), os.path.join(dst, dst_root, name))
       else:
         _push(src, dst)
 
     if len(args.srcs) > 1:
-      dst_type = self.CheckOutput('stat \'%s\' --printf \'%%F\' '
-                                  '2>/dev/null' % args.dst).strip()
+      dst_type = self.CheckOutput(f'stat \'{args.dst}\' --printf \'%F\' '
+                                  '2>/dev/null').strip()
       if not dst_type:
-        raise RuntimeError('push: %s: No such file or directory' % args.dst)
+        raise RuntimeError(f'push: {args.dst}: No such file or directory')
       if dst_type != 'directory':
-        raise RuntimeError('push: %s: Not a directory' % args.dst)
+        raise RuntimeError(f'push: {args.dst}: Not a directory')
 
     for src in args.srcs:
       if not os.path.exists(src):
-        raise RuntimeError('push: can not stat "%s": no such file or directory'
-                           % src)
+        raise RuntimeError(
+            f'push: can not stat "{src}": no such file or directory')
       if not os.access(src, os.R_OK):
-        raise RuntimeError('push: can not open "%s" for reading' % src)
+        raise RuntimeError(f'push: can not open "{src}" for reading')
 
       _push_single_target(src, args.dst)
 
@@ -1273,14 +1264,14 @@ class OverlordCLIClient:
         pbar.End()
         return
 
-      url = ('%s:%d/api/agent/download/%s?filename=%s' %
-             (self._state.host, self._state.port,
-              urllib.parse.quote(self._selected_mid), urllib.parse.quote(src)))
+      url = (f'{self._state.host}:{int(self._state.port)}/api/agent/download/'
+             f'{urllib.parse.quote(self._selected_mid)}?filename='
+             f'{urllib.parse.quote(src)}')
       try:
         h = UrlOpen(self._state, url)
       except urllib.error.HTTPError as e:
         msg = json.loads(e.read()).get('error', 'unkown error')
-        raise RuntimeError('pull: %s' % msg) from None
+        raise RuntimeError(f'pull: {msg}') from None
       except KeyboardInterrupt:
         return
 
@@ -1303,11 +1294,8 @@ class OverlordCLIClient:
     # Use find to get a listing of all files under a root directory. The 'stat'
     # command is used to retrieve the filename and it's filemode.
     output = self.CheckOutput(
-        'cd $HOME; '
-        'stat "%(src)s" >/dev/null && '
-        'find "%(src)s" \'(\' -type f -o -type l \')\' '
-        '-printf \'%%m\t%%p\t%%y\t%%l\n\''
-        % {'src': args.src})
+        f'cd $HOME; stat "{args.src}" >/dev/null && find "{args.src}" \'(\' '
+        '-type f -o -type l \')\' -printf \'%m\t%p\t%y\t%l\n\'')
 
     # We got error from the stat command
     if output.startswith('stat: '):
@@ -1341,20 +1329,21 @@ class OverlordCLIClient:
       Arg('--remove', metavar='LOCAL_PORT', dest='remove', type=int,
           default=None,
           help='remove port forwarding for local port LOCAL_PORT'),
-      Arg('--remove-all', dest='remove_all', action='store_true',
-          default=False, help='remove all port forwarding'),
+      Arg('--remove-all', dest='remove_all', action='store_true', default=False,
+          help='remove all port forwarding'),
       Arg('remote', metavar='REMOTE_PORT', type=int, nargs='?'),
-      Arg('local', metavar='LOCAL_PORT', type=int, nargs='?')])
+      Arg('local', metavar='LOCAL_PORT', type=int, nargs='?')
+  ])
   def Forward(self, args):
     if args.list_all:
       max_len = 10
       if self._state.forwards:
         max_len = max([len(v[0]) for v in self._state.forwards.values()])
 
-      print('%-*s   %-8s  %-8s' % (max_len, 'Client', 'Remote', 'Local'))
+      print(f'{"Client":<{max_len}}   {"Remote":<8}  {"Local":<8}')
       for local in sorted(self._state.forwards.keys()):
         value = self._state.forwards[local]
-        print('%-*s   %-8s  %-8s' % (max_len, value[0], value[1], local))
+        print(f'{value[0]:<{max_len}}   {value[1]:<8}  {local:<8}')
       return
 
     if args.remove_all:
@@ -1378,21 +1367,20 @@ class OverlordCLIClient:
     def HandleConnection(conn):
       headers = []
       if self._state.username is not None and self._state.password is not None:
-        headers.append(BasicAuthHeader(self._state.username,
-                                       self._state.password))
+        headers.append(
+            BasicAuthHeader(self._state.username, self._state.password))
 
-      scheme = 'ws%s://' % ('s' if self._state.ssl else '')
+      scheme = f"ws{'s' if self._state.ssl else ''}://"
       ws = ForwarderWebSocketClient(
-          self._state, conn,
-          scheme + '%s:%d/api/agent/forward/%s?port=%d' % (
-              self._state.host, self._state.port,
-              urllib.parse.quote(self._selected_mid), remote),
+          self._state, conn, scheme +
+          f'{self._state.host}:{int(self._state.port)}/api/agent/forward/'
+          f'{urllib.parse.quote(self._selected_mid)}?port={int(remote)}',
           headers=headers)
       try:
         ws.connect()
         ws.run()
       except Exception as e:
-        print('error: %s' % e)
+        print(f'error: {e}')
       finally:
         ws.close()
 
@@ -1405,11 +1393,11 @@ class OverlordCLIClient:
     if pid == 0:
       while True:
         conn, unused_addr = server.accept()
-        t = threading.Thread(target=HandleConnection, args=(conn,))
+        t = threading.Thread(target=HandleConnection, args=(conn, ))
         t.daemon = True
         t.start()
     else:
-      print('ovl_forward_port: http://localhost:%d' % local)
+      print(f'ovl_forward_port: http://localhost:{int(local)}')
       self._server.AddForward(self._selected_mid, remote, local, pid)
 
 

@@ -363,11 +363,9 @@ class TestPipeStdoutLines(unittest.TestCase):
 
   def testReadStreamed(self):
     with file_utils.UnopenedTemporaryFile() as f:
-      process = Spawn('echo foo\n'
-                      'while [ ! -e "%s" ]; do\n'
-                      '  sleep 0.01\n'
-                      'done\n'
-                      'echo bar' % f, stdout=PIPE, shell=True)
+      process = Spawn(
+          f'echo foo\nwhile [ ! -e "{f}" ]; do\n  sleep 0.01\ndone\necho bar',
+          stdout=PIPE, shell=True)
       buf = []
       def _Callback(line):
         buf.append(line)

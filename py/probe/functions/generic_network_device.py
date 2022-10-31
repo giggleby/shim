@@ -14,6 +14,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 from cros.factory.utils.type_utils import Obj
 
+
 try:
   sys.path.append('/usr/local/lib/flimflam/test')
   import flimflam
@@ -43,10 +44,11 @@ class NetworkDevices:
 
     Returns a list of network objects having WiFi extension.
     """
-    return [Obj(devtype='wifi',
-                path='/sys/class/net/%s/device' % node.split()[0])
-            for node in process_utils.CheckOutput('iwconfig').splitlines()
-            if extension in node]
+    return [
+        Obj(devtype='wifi', path=f'/sys/class/net/{node.split()[0]}/device')
+        for node in process_utils.CheckOutput('iwconfig').splitlines()
+        if extension in node
+    ]
 
   @classmethod
   def _GetIwDevices(cls, iw_type='managed'):
@@ -82,8 +84,11 @@ class NetworkDevices:
                 'iw dev', shell=True, log=True).splitlines()
             if ' ' in line and line.split()[0] in ['Interface', 'type']]
     i = iter(data)
-    return [Obj(devtype='wifi', path='/sys/class/net/%s/device' % name)
-            for name in i if next(i) == iw_type]
+    return [
+        Obj(devtype='wifi', path=f'/sys/class/net/{name}/device')
+        for name in i
+        if next(i) == iw_type
+    ]
 
   @classmethod
   def _GetFlimflamDevices(cls):
@@ -103,13 +108,12 @@ class NetworkDevices:
       get_prop = lambda p: flimflam.convert_dbus_value(properties[p])
       result = Obj(
           devtype=get_prop('Type'),
-          path='/sys/class/net/%s/device' % get_prop('Interface'))
+          path=f"/sys/class/net/{get_prop('Interface')}/device")
       if result.devtype == 'cellular':
-        result.attributes = dict(
-            (key, get_prop('Cellular.%s' % key))
-            for key in ['Carrier', 'FirmwareRevision', 'HardwareRevision',
-                        'ModelID', 'Manufacturer']
-            if 'Cellular.%s' % key in properties)
+        result.attributes = dict((key, get_prop(f'Cellular.{key}')) for key in [
+            'Carrier', 'FirmwareRevision', 'HardwareRevision', 'ModelID',
+            'Manufacturer'
+        ] if f'Cellular.{key}' in properties)
       return result
 
     def _ParseDbusArray(dbus_array):
@@ -266,7 +270,7 @@ class GenericNetworkDeviceFunction(
   def GetCategoryFromArgs(self):
     if self.args.device_type not in KNOWN_DEVICE_TYPES:
       raise cached_probe_function.InvalidIdentityError(
-          'device_type should be one of %r.' % KNOWN_DEVICE_TYPES)
+          f'device_type should be one of {KNOWN_DEVICE_TYPES!r}.')
 
     return self.args.device_type
 

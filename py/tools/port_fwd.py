@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 
+
 _CTRL_C_EXIT_CODE = 130
 
 
@@ -161,40 +162,52 @@ class SSHPortForwarder:
       state_str = 'failed'
 
     # Port forward representation.
-    src = str(self._src_port) + (
-        ':%s' % self._src_host if self._src_host else '')
-    dst = str(self._dst_port) + (
-        ':%s' % self._dst_host if self._dst_host else '')
+    src = str(self._src_port) + (f':{self._src_host}' if self._src_host else '')
+    dst = str(self._dst_port) + (f':{self._dst_host}' if self._dst_host else '')
     if self._forward_to == self.REMOTE:
-      fwd_str = '%s->%s' % (src, dst)
+      fwd_str = f'{src}->{dst}'
     else:
-      fwd_str = '%s<-%s' % (dst, src)
+      fwd_str = f'{dst}<-{src}'
 
-    return 'SSHPortForwarder(%s,%s)' % (state_str, fwd_str)
+    return f'SSHPortForwarder({state_str},{fwd_str})'
 
   def _ForwardArgs(self):
     flag = '-L' if self._forward_to == self.REMOTE else '-R'
-    return [flag, '%s:%d:%s:%d' % (
-        self._src_host, self._src_port, self._dst_host, self._dst_port)]
+    return [
+        flag,
+        (f'{self._src_host}:{int(self._src_port)}:{self._dst_host}:'
+         f'{int(self._dst_port)}')
+    ]
 
   def _RunSSHCmd(self):
     """Runs the SSH command, storing the exception on failure."""
     try:
       cmd = [
           'ssh',
-          '-o', 'StrictHostKeyChecking=no',
-          '-o', 'GlobalKnownHostsFile=/dev/null',
-          '-o', 'UserKnownHostsFile=/dev/null',
-          '-o', 'ExitOnForwardFailure=yes',
-          '-o', 'ConnectTimeout=%d' % self._connect_timeout,
-          '-o', 'ServerAliveInterval=%d' % self._alive_interval,
-          '-o', 'ServerAliveCountMax=1',
-          '-o', 'TCPKeepAlive=yes',
-          '-o', 'BatchMode=yes',
-          '-i', self._identity_file,
+          '-o',
+          'StrictHostKeyChecking=no',
+          '-o',
+          'GlobalKnownHostsFile=/dev/null',
+          '-o',
+          'UserKnownHostsFile=/dev/null',
+          '-o',
+          'ExitOnForwardFailure=yes',
+          '-o',
+          f'ConnectTimeout={int(self._connect_timeout)}',
+          '-o',
+          f'ServerAliveInterval={int(self._alive_interval)}',
+          '-o',
+          'ServerAliveCountMax=1',
+          '-o',
+          'TCPKeepAlive=yes',
+          '-o',
+          'BatchMode=yes',
+          '-i',
+          self._identity_file,
           '-N',
-          '-p', str(self._port),
-          '%s@%s' % (self._user, self._host),
+          '-p',
+          str(self._port),
+          f'{self._user}@{self._host}',
       ] + self._ForwardArgs() + self._extra_args
       logging.info(' '.join(cmd))
       self._ssh_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)

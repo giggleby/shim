@@ -26,7 +26,7 @@ class CPUUsageMonitor:
     self.dut = dut
 
   def _GetLoadString(self):
-    return ', '.join('%.1f' % load for load in self.dut.status.load_avg)
+    return ', '.join(f'{load:.1f}' for load in self.dut.status.load_avg)
 
   def GetStatus(self):
     """Get the current CPU usage status.
@@ -35,7 +35,7 @@ class CPUUsageMonitor:
       A string of current CPU usage.
     """
     msg = []
-    msg.append('Load average: %s' % self._GetLoadString())
+    msg.append(f'Load average: {self._GetLoadString()}')
 
     # Get column legend from 'top' and throw away summary header and legend
     top_output = self.dut.CheckOutput(
@@ -52,8 +52,9 @@ class CPUUsageMonitor:
       if float(attr[cpu_column]) < self.CPU_THRESHOLD:
         break
       command = attr[command_column][0:self.COMMAND_LENGTH]
-      msg.append('Process %s using %s%% CPU: %s' %
-                 (attr[pid_column], attr[cpu_column], command))
+      msg.append(
+          f'Process {attr[pid_column]} using {attr[cpu_column]}% CPU: {command}'
+      )
 
     return '; '.join(msg)
 

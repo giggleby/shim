@@ -14,6 +14,7 @@ from cros.factory.umpire.server.service import umpire_service
 
 from cros.factory.external import yaml
 
+
 CLI_HOSTNAME = '0.0.0.0'  # Allows remote connections.
 CLI_PORT = 7000
 NODE_ID = 'factory_server'
@@ -129,7 +130,7 @@ class InstalogService(umpire_service.UmpireService):
     # pprint guarantees the dictionary is sorted.
     config_value = pprint.pformat(instalog_config).encode('utf-8')
     config_hash = hashlib.md5(config_value).hexdigest()
-    config_path = os.path.join(root_dir, 'instalog-%s.yaml' % config_hash)
+    config_path = os.path.join(root_dir, f'instalog-{config_hash}.yaml')
     if os.path.exists(config_path):
       os.remove(config_path)
     with open(config_path, 'w', encoding='utf8') as f:

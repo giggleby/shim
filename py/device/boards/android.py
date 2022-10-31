@@ -30,7 +30,7 @@ class AndroidBoard(linux.LinuxBoard):
     if not isinstance(command, str):
       command = ' '.join(pipes.quote(param) for param in command)
 
-    command = ['TMPDIR=%s' % self.TMPDIR, 'sh', '-c', command]
+    command = [f'TMPDIR={self.TMPDIR}', 'sh', '-c', command]
     return super().Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
                          cwd=cwd, log=log, encoding=encoding)
 

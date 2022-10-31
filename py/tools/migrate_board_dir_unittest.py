@@ -33,13 +33,15 @@ def CheckFileContent(path_contents_dict):
       expected_linkto = expected_content.split(':')[1].strip()
       actual_linkto = os.readlink(path)
       if expected_linkto != actual_linkto:
-        raise ValueError('Symlink path error (expected %r but got %r).' % (
-            expected_linkto, actual_linkto))
+        raise ValueError(
+            f'Symlink path error (expected {expected_linkto!r} but got '
+            f'{actual_linkto!r}).')
     else:
       actual_content = file_utils.ReadFile(path)
       if expected_content != actual_content:
-        raise ValueError('File content error (expected %r but got %r' % (
-            expected_content, actual_content))
+        raise ValueError(
+            f'File content error (expected {expected_content!r} but got '
+            f'{actual_content!r}')
 
 
 def CreateFileWithContent(path_contents_dict):
@@ -75,14 +77,13 @@ class PrepareDirectoryCopyTest(unittest.TestCase):
   def testNoSourceDirectory(self):
     nonexistent_src_dir = os.path.join(self.temp_dir, 'nonexistent_src')
     with self.assertRaises(SystemExit) as sys_exit:
-      migrate_board_dir.PrepareDirectoryCopy(
-          nonexistent_src_dir, mock.ANY, sys.stdin, self.mock_outstream)
+      migrate_board_dir.PrepareDirectoryCopy(nonexistent_src_dir, mock.ANY,
+                                             sys.stdin, self.mock_outstream)
 
     # Checks sys.exit(1) and the output messages.
     self.assertEqual(sys_exit.exception.code, 1)
-    self.assertEqual(
-        'Source directory: %r not found.\n' % nonexistent_src_dir,
-        self.mock_outstream.getvalue())
+    self.assertEqual(f'Source directory: {nonexistent_src_dir!r} not found.\n',
+                     self.mock_outstream.getvalue())
 
   def testPressNToCancel(self):
     src_dir = os.path.join(self.temp_dir, 'src')
@@ -112,7 +113,7 @@ class PrepareDirectoryCopyTest(unittest.TestCase):
     # Checks that dst_dir was removed.
     self.assertFalse(os.path.exists(dst_dir))
     self.assertTrue(self.mock_outstream.getvalue().endswith(
-        'Directory: %r was removed before migration.\n' % dst_dir))
+        f'Directory: {dst_dir!r} was removed before migration.\n'))
 
 
 class CopyFilesAndRenameTest(unittest.TestCase):
@@ -174,7 +175,7 @@ class CopyFilesAndRenameTest(unittest.TestCase):
     no_src_file = os.path.join(src_dir, 'no_such_file1')
     no_dst_file = os.path.join(dst_dir, 'no_such_file1')
     no_such_file_raised_exception = IOError(
-        'IOError: [Errno 2] No such file or directory: %r' % no_src_file)
+        f'IOError: [Errno 2] No such file or directory: {no_src_file!r}')
     errors.append((no_src_file, no_dst_file,
                    str(no_such_file_raised_exception)))
 
@@ -184,13 +185,13 @@ class CopyFilesAndRenameTest(unittest.TestCase):
     no_src_file2 = os.path.join(src_sub_dir, 'no_such_file2')
     no_dst_file2 = os.path.join(dst_sub_dir, 'no_such_file2')
     no_such_file2_raised_exception = IOError(
-        'IOError: [Errno 2] No such file or directory: %r' % no_src_file2)
-    errors.append((no_src_file2, no_dst_file2,
-                   str(no_such_file2_raised_exception)))
+        f'IOError: [Errno 2] No such file or directory: {no_src_file2!r}')
+    errors.append(
+        (no_src_file2, no_dst_file2, str(no_such_file2_raised_exception)))
 
     # Test copystat error.
     raised_exception = OSError(
-        'OSError: [Errno 2] No such file or directory: %r' % src_dir)
+        f'OSError: [Errno 2] No such file or directory: {src_dir!r}')
     errors.append((src_dir, dst_dir, str(raised_exception)))
 
     # Normal files should still be copied and renamed as expected.
@@ -265,10 +266,10 @@ WATCH OUT FOR THE CATS!!!"""
 # Copyright 2013 (c) The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file."""
-    content2_after = """\
-# Copyright %d The Chromium OS Authors. All rights reserved.
+    content2_after = f"""\
+# Copyright {date.today().year:d} The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.""" % date.today().year
+# found in the LICENSE file."""
 
     files_before_replacement = {
         os.path.join(self.temp_dir, 'file1'): content1_before,

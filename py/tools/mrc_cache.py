@@ -38,6 +38,7 @@ import re
 from cros.factory.device import device_utils
 from cros.factory.utils import type_utils
 
+
 # x86 and ARM (Qualcomm) have both RECOVERY and RW MRC cache.
 # ARM (Mediatek) only has RW MRC cache.
 # For AMD, though it has RW MRC cache, it uses different caching mechanism
@@ -70,8 +71,8 @@ _SYSTEM_BOOT_REGEX = r'\| System boot \| \d+'
 
 def GetMRCSections(dut):
   with dut.temp.TempFile() as temp_file:
-    dut.CheckCall('flashrom -p host -r %s -i FMAP' % temp_file, log=True)
-    fmap_sections = dut.CheckOutput('dump_fmap -p %s' % temp_file, log=True)
+    dut.CheckCall(f'flashrom -p host -r {temp_file} -i FMAP', log=True)
+    fmap_sections = dut.CheckOutput(f'dump_fmap -p {temp_file}', log=True)
 
   mrc_sections = []
   for section_info in fmap_sections.splitlines():

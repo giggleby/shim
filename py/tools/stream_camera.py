@@ -13,6 +13,7 @@ import struct
 import subprocess
 import sys
 
+
 _SERVER_PORT = 8080
 _BUFSIZ = 8192
 _DEFAULT_DEVICE = '/dev/video0'
@@ -53,20 +54,17 @@ def StartCaptureProcess(args):
 
   if system == 'Linux':
     return subprocess.Popen(
-        'sleep 1; '
-        'ffmpeg -an -s %s -f video4linux2 -i %s -f mpeg1video -b:v %s -r %d '
-        'http://localhost:%s/' % (args.size, args.device, args.bitrate,
-                                  args.framerate, _SERVER_PORT),
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        f'sleep 1; ffmpeg -an -s {args.size} -f video4linux2 -i {args.device} '
+        f'-f mpeg1video -b:v {args.bitrate} -r {int(args.framerate)} '
+        f'http://localhost:{_SERVER_PORT}/', stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, shell=True)
   if system == 'Darwin':
     return subprocess.Popen(
-        'sleep 1; '
-        'ffmpeg -an -f avfoundation -video_size %s -framerate %d -i %s -b:v %s '
-        '-f mpeg1video -r %d http://localhost:%s/' %
-        (args.size, args.framerate, args.device, args.bitrate, args.framerate,
-         _SERVER_PORT),
+        f'sleep 1; ffmpeg -an -f avfoundation -video_size {args.size} -'
+        f'framerate {args.framerate:d} -i {args.device} -b:v {args.bitrate} '
+        f'-f mpeg1video -r {args.framerate} http://localhost:{_SERVER_PORT}/',
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-  raise ValueError('Only support Linux or Darwin, found %s' % system)
+  raise ValueError(f'Only support Linux or Darwin, found {system}')
 
 
 def StopCaptureProcess(handler):

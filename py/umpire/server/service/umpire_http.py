@@ -10,6 +10,7 @@ import shutil
 from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 
+
 HTTP_BIN = '/usr/sbin/nginx'
 HTTP_SERVICE_NAME = 'httpsvc'
 
@@ -199,7 +200,7 @@ class HTTPService(umpire_service.UmpireService):
 
     if 'reverse_proxies' in http_config:
       for idx, proxy in enumerate(http_config['reverse_proxies'], start=1):
-        reverse_proxy_ips.append('%s %d;' % (proxy['remoteip'], idx))
+        reverse_proxy_ips.append(f"{proxy['remoteip']} {int(idx)};")
         reverse_proxies_str.append(
             NGINX_REVERSE_PROXY_TEMPLATE %
             {'reverse_proxy_ip_index': idx, 'proxy_addr': proxy['proxy_addr']})

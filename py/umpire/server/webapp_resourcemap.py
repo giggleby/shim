@@ -12,6 +12,7 @@ import logging
 
 from cros.factory.umpire.server.web import wsgi
 
+
 PATH_INFO = '/webapps/resourcemap'
 
 
@@ -33,17 +34,16 @@ def GetResourceMap(env):
 
   # TODO(hungte) Remove __token__ and shop_floor_handler when most DUTs have
   # finished migration.
-  result = ['id: %s' % bundle['id'],
-            'note: %s' % bundle['note'],
-            '__token__: 00000001',
-            'shop_floor_handler: /umpire',
-            'payloads: %s' % bundle['payloads']]
+  result = [
+      f"id: {bundle['id']}", f"note: {bundle['note']}", '__token__: 00000001',
+      'shop_floor_handler: /umpire', f"payloads: {bundle['payloads']}"
+  ]
 
   # Only add multicast resource when the multicast service is active.
   if env.config['services'].get('multicast', {}).get('active', False):
-    result.append('multicast: %s' % env.config['multicast'])
+    result.append(f"multicast: {env.config['multicast']}")
 
-  return ''.join('%s\n' % s for s in result)
+  return ''.join(f'{s}\n' for s in result)
 
 
 class ResourceMapApp(wsgi.WebApp):
