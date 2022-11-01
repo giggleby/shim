@@ -882,8 +882,7 @@ class SelfServiceHelper:
       # the same component. Need to investigate how to avoid duplicated
       # firmware components.
       bundle_uuids = set()
-      pattern = re.compile(r'(?:google_[a-z0-9]+\.)?(\d+\.\d+\.\d+)',
-                           flags=re.I)
+      pattern = re.compile(r'(?:google_\w+\.)?(\d+\.\d+\.\d+)', flags=re.I)
       match = pattern.fullmatch(request.version_string)
       if not match:
         return bundle_uuids
