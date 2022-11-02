@@ -168,6 +168,31 @@ class LinkAVLTest(unittest.TestCase):
     self.assertEqual('converter', obj2.converter_identifier)
     self.assertTrue(obj2.probe_value_matched)
 
+  def testAVLProbeValue_LoadNoneValue(self):
+    obj = yaml.safe_load(
+        textwrap.dedent('''\
+            !link_avl
+            converter: converter1
+            probe_value_matched: false
+            original_values: null
+            '''))
+
+    self.assertIsInstance(obj, rule.AVLProbeValue)
+    self.assertEqual('converter1', obj.converter_identifier)
+    self.assertFalse(obj.probe_value_matched)
+    self.assertTrue(obj.value_is_none)
+
+  def testAVLProbeValue_DumpNoneValue(self):
+    obj = rule.AVLProbeValue('converter', False, None)
+    dumped_external = yaml.safe_dump(obj, internal=False)
+    dumped_internal = yaml.safe_dump(obj, internal=True)
+
+    loaded_external = yaml.safe_load(dumped_external)
+    loaded_internal = yaml.safe_load(dumped_internal)
+
+    self.assertIsNone(loaded_external)
+    self.assertEqual(obj, loaded_internal)
+
 
 @rule.RuleFunction(['string'])
 def StrLen():

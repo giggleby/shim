@@ -1,4 +1,4 @@
-checksum: de6dc2363f7d7b07be9df374b651802695fa9575
+checksum: 37ccdf8c14b53381f8f8fae24c04ae70088a68a8
 
 project: CHROMEBOOK
 
@@ -57,5 +57,6 @@ components:
     items:
       comp6: {values: {eee: fff}}
       comp7: {values: {ggg: hhh}, information: {comp_group: comp6}}
+      comp8: {values: null}
 
 rules: []

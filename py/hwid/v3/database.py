@@ -109,8 +109,10 @@ class ComponentInfo:
              is_default_comp: bool = False, sort_values_by_key: bool = False):
 
     def _ExportDict(values):
-      return (yaml.Dict(sorted(values.items()))
-              if values and sort_values_by_key else values)
+      if not sort_values_by_key:
+        return values
+      return None if v3_rule.IsComponentValueNone(values) else yaml.Dict(
+          sorted(values.items()))
 
     if self.bundle_uuids:
       component_dict = v3_rule.FromFactoryBundle(self.bundle_uuids)
@@ -152,6 +154,10 @@ class ComponentInfo:
   @property
   def bundle_uuids(self) -> Sequence[str]:
     return self._bundle_uuids
+
+  @property
+  def value_is_none(self) -> bool:
+    return v3_rule.IsComponentValueNone(self._values)
 
 
 class Database(abc.ABC):
@@ -426,7 +432,7 @@ class Database(abc.ABC):
       comps = {
           name: info
           for name, info in comps.items()
-          if info.values is not None
+          if not info.value_is_none
       }
     return comps
 
@@ -1479,7 +1485,11 @@ class Components:
 
     This constructor shouldn't be called by other modules.
     """
-    self._SCHEMA.Validate(components_expr)
+    # To avoid failing validation when values is None wrapped by AVLProbeValue,
+    # we only validate the external format.
+    external_components_expr = yaml.safe_load(
+        yaml.safe_dump(components_expr, default_flow_style=False))
+    self._SCHEMA.Validate(external_components_expr)
 
     self._region_component_expr = copy.deepcopy(components_expr.get('region'))
     self._components = yaml.Dict()
@@ -1587,7 +1597,7 @@ class Components:
       None or a string of the component name.
     """
     for comp_name, comp_info in self._components.get(comp_cls, {}).items():
-      if comp_info.values is None:
+      if comp_info.value_is_none:
         return comp_name
     return None
 
@@ -1630,8 +1640,12 @@ class Components:
     self._components[comp_cls][comp_name] = comp_info.Replace(status=status)
 
   def _AddComponent(self, comp_cls, comp_name, values, status, information):
+    # To avoid failing validation when values is None wrapped by AVLProbeValue,
+    # we only validate the external format.
+    external_values = yaml.safe_load(
+        yaml.safe_dump(values, default_flow_style=False))
     self._SCHEMA.value_type.items['items'].value_type.items['values'].Validate(
-        values)
+        external_values)
     self._SCHEMA.value_type.items['items'].value_type.optional_items[
         'status'].Validate(status)
     self._SCHEMA.value_type.items['items'].value_type.optional_items[
@@ -1641,7 +1655,8 @@ class Components:
       raise common.HWIDException(
           'Component (%r, %r) already exists.' % (comp_cls, comp_name))
 
-    if values is None and any(
+    value_is_none = v3_rule.IsComponentValueNone(values)
+    if value_is_none and any(
         c.values is None for c in self.GetComponents(comp_cls).values()):
       logging.warning(
           'Found more than one default component of %r, '
@@ -1691,11 +1706,8 @@ class Components:
           f'Component ({comp_cls!r}, {comp_name!r}) is not recorded.')
 
     comp_info = self._components[comp_cls][comp_name]
-    values = comp_info.values
-    if values is None:
-      raise common.HWIDException(
-          f'No probe values in Component ({comp_cls!r}, {comp_name!r})')
 
+    values = None if comp_info.value_is_none else comp_info.values
     self._components[comp_cls][comp_name] = comp_info.Replace(
         values=v3_rule.AVLProbeValue(converter_identifier, probe_value_matched,
                                      values))

@@ -82,6 +82,20 @@ class DatabaseTest(unittest.TestCase):
     self.assertFalse(
         loaded_db.GetComponents('cls3')['comp5'].values.probe_value_matched)
 
+  def testSetLinkAVLProbeValue_NoneValue(self):
+    db = database.WritableDatabase.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
+
+    db.SetLinkAVLProbeValue('cls4', 'comp8', 'converter-identifier1', False)
+    loaded_db = database.Database.LoadData(
+        db.DumpDataWithoutChecksum(internal=True))
+
+    values = loaded_db.GetComponents('cls4')['comp8'].values
+    self.assertIsInstance(values, rule.AVLProbeValue)
+    self.assertEqual('converter-identifier1', values.converter_identifier)
+    self.assertFalse(values.probe_value_matched)
+    self.assertTrue(values.value_is_none)
+
   def testSetBundleUUIDs(self):
     db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
@@ -137,31 +151,34 @@ class DatabaseTest(unittest.TestCase):
                    ('comp7',
                     database.ComponentInfo(
                         values=yaml.Dict([('ggg', 'hhh')]), status='supported',
-                        information=yaml.Dict([('comp_group', 'comp6')])))]),
+                        information=yaml.Dict([('comp_group', 'comp6')]))),
+                   ('comp8',
+                    database.ComponentInfo(values=None, status='supported'))]),
         comps)
 
   def testUpdateComponentNameChanged(self):
     db = database.WritableDatabase.LoadFile(
         os.path.join(_TEST_DATA_PATH, 'test_database_db.yaml'))
-    db.UpdateComponent('cls4', 'comp6', 'comp8', {
+    db.UpdateComponent('cls4', 'comp6', 'comp9', {
         'field1': 'value1',
         'field2': 'value2'
     }, 'deprecated')
     comps = db.GetComponents('cls4')
     self.assertDictEqual(
-        yaml.Dict([('comp8',
-                    database.ComponentInfo(
-                        values=yaml.Dict([('field1', 'value1'),
-                                          ('field2', 'value2')]),
-                        status='deprecated')),
-                   ('comp7',
-                    database.ComponentInfo(
-                        values=yaml.Dict([('ggg', 'hhh')]), status='supported',
-                        information=yaml.Dict([('comp_group', 'comp6')])))]),
-        comps)
+        yaml.Dict([
+            ('comp9',
+             database.ComponentInfo(
+                 values=yaml.Dict([('field1', 'value1'), ('field2', 'value2')]),
+                 status='deprecated')),
+            ('comp7',
+             database.ComponentInfo(
+                 values=yaml.Dict([('ggg', 'hhh')]), status='supported',
+                 information=yaml.Dict([('comp_group', 'comp6')]))),
+            ('comp8', database.ComponentInfo(values=None, status='supported')),
+        ]), comps)
     self.assertEqual({
         0: {
-            'cls4': ['comp8']
+            'cls4': ['comp9']
         },
         1: {
             'cls4': ['comp7']

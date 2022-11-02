@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,6 +9,7 @@ from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
+
 
 # shorter identifiers.
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
@@ -151,6 +152,24 @@ class ConverterTest(unittest.TestCase):
         }, probe_info)
 
     self.assertEqual(converter.ProbeValueMatchStatus.INCONVERTIBLE, match_case)
+
+  def testFieldNameConverterMatchValueIsNone(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
+        })
+    probe_info = _ProbeInfoFromMapping({
+        'avl_attr_name1': 'value1',
+        'avl_attr_name3': 'skipped_value',
+        'avl_attr_name4': 100,
+    })
+
+    match_case = test_converter.Match(None, probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.VALUE_IS_NONE, match_case)
 
 
 class ConverterCollectionTest(unittest.TestCase):
@@ -372,6 +391,35 @@ class ConverterCollectionTest(unittest.TestCase):
     self.assertEqual(
         converter.CollectionMatchResult(_PVAlignmentStatus.NOT_ALIGNED, None),
         match_result)
+
+  def testMatchProbeValues_ValueIsNone(self):
+    converter1 = converter.FieldNameConverter.FromFieldMap(
+        'inconvertible_converter', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('inconvertible_converted_key1'),
+            TestAVLAttrs.AVL_ATTR3:
+                converter.ConvertedValueSpec('inconvertible_converted_key2'),
+        })
+    converter2 = converter.FieldNameConverter.FromFieldMap(
+        'unmatched_converter', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('unmatched_converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('unmatched_converted_key2'),
+        })
+    self.collection.AddConverter(converter1)
+    self.collection.AddConverter(converter2)
+
+    match_result = self.collection.Match(
+        None,
+        _ProbeInfoFromMapping({
+            'avl_attr_name1': 'value1',
+            'avl_attr_name2': 2,
+        }))
+
+    self.assertEqual(
+        converter.CollectionMatchResult(_PVAlignmentStatus.NOT_ALIGNED,
+                                        converter2.identifier), match_result)
 
 
 class FixedWidthHexValueTypeTest(unittest.TestCase):

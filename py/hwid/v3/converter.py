@@ -8,6 +8,7 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.rule import Value
 from cros.factory.probe import probe_utils
 
+
 DEFAULT_PROBE_STATEMENT_PATH = os.path.join(
     os.path.dirname(__file__), common.DEFAULT_PROBE_STATEMENT)
 
@@ -35,7 +36,7 @@ def ConvertToProbeStatement(database, probe_statement_path):
     converted_components = {}
     generic_statement = statements['generic']
     for comp_name, comp_info in database.GetComponents(comp_cls).items():
-      if comp_info.values is None:
+      if comp_info.value_is_none:
         continue
       converted_components[comp_name] = generic_statement.copy()
       expect = {k: _ConvertValue(v) for k, v in comp_info.values.items()}

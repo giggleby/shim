@@ -20,6 +20,7 @@ from cros.factory.hwid.v3 import rule
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import schema
 
+
 _BLOCKLIST_DRAM_TAG = set([
     'dram_default',
     'dram_placeholder',
@@ -175,7 +176,7 @@ class ContentsAnalyzer:
     for dram_tag, dram_info in db_instance.GetComponents('dram').items():
       if dram_tag in _BLOCKLIST_DRAM_TAG:
         continue
-      if not dram_info.values or 'size' not in dram_info.values:
+      if dram_info.value_is_none or 'size' not in dram_info.values:
         validation_report.errors.append(
             Error(ErrorCode.CONTENTS_ERROR,
                   f'{dram_tag!r} does not contain size property'))
@@ -522,7 +523,7 @@ class ContentsAnalyzer:
         name_info = name_pattern.Matches(comp_name)
         noseq_comp_name, sep, actual_seq = comp_name.partition(
             name_pattern_adapter.SEQ_SEP)
-        null_values = comp_info.values is None
+        null_values = comp_info.value_is_none
         link_avl = isinstance(comp_info.values, rule.AVLProbeValue)
         curr_alignment_status = (
             ProbeValueAlignmentStatus.FromProbeValues(comp_info.values))

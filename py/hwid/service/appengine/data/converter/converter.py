@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Defines the converter which converts Probe Info to HWID probe values."""
@@ -12,6 +12,7 @@ from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
+
 # Shorter identifiers.
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _ConvertedValueTypeMapping = Mapping[str, converter_types.ConvertedValueType]
@@ -19,6 +20,7 @@ _ConvertedValueTypeMapping = Mapping[str, converter_types.ConvertedValueType]
 
 class ProbeValueMatchStatus(enum.IntEnum):
   INCONVERTIBLE = enum.auto()
+  VALUE_IS_NONE = enum.auto()
   KEY_UNMATCHED = enum.auto()
   VALUE_UNMATCHED = enum.auto()
   ALL_MATCHED = enum.auto()
@@ -109,11 +111,13 @@ class FieldNameConverter(Converter):
         return None
     return translated
 
-  def Match(self, comp_values: Mapping[str, Any],
+  def Match(self, comp_values: Optional[Mapping[str, Any]],
             probe_info: stubby_pb2.ProbeInfo) -> ProbeValueMatchStatus:
     converted = self.Convert(probe_info)
     if not converted:
       return ProbeValueMatchStatus.INCONVERTIBLE
+    if not comp_values:
+      return ProbeValueMatchStatus.VALUE_IS_NONE
     if not converted.keys() <= comp_values.keys():
       return ProbeValueMatchStatus.KEY_UNMATCHED
     if not converted.items() <= comp_values.items():
@@ -154,7 +158,7 @@ class ConverterCollection:
   def GetConverter(self, identifier: str) -> Optional[Converter]:
     return self._converters.get(identifier)
 
-  def Match(self, comp_values: Mapping[str, Any],
+  def Match(self, comp_values: Optional[Mapping[str, Any]],
             probe_info: stubby_pb2.ProbeInfo) -> CollectionMatchResult:
     best_match_status, best_match_identifier = (
         ProbeValueMatchStatus.INCONVERTIBLE, None)

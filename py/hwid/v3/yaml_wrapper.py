@@ -368,9 +368,10 @@ class _LinkAVLYAMLTagHandler(_HWIDV3YAMLTagHandler):
           cls.YAML_TAG, {
               'converter': data.converter_identifier,
               'probe_value_matched': data.probe_value_matched,
-              'original_values': Dict(data)
+              'original_values': None if data.value_is_none else Dict(data)
           })
-    return dumper.represent_dict(data.items())
+    return (dumper.represent_none(data)
+            if data.value_is_none else dumper.represent_dict(data.items()))
 
 
 class _FromFactoryBundleTagHandler(_HWIDV3YAMLTagHandler):

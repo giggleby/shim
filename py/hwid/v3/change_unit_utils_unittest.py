@@ -84,7 +84,7 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
         _PVAlignmentStatus.NO_PROBE_INFO),
     diff_prev: Optional[_DiffStatus] = None):
 
-  null_values = comp_info.values is None
+  null_values = comp_info.value_is_none
   support_status = comp_info.status
   if is_newly_added:
     if diff_prev:
