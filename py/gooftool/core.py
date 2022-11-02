@@ -1310,6 +1310,8 @@ class Gooftool:
 
     Since the hash range includes GBB flags, we need to calculate hash with
     the same GBB flags as in release/shipping state.
+    We might not want to clear GBB flags in early phase, so we need to clear it
+    explicitly in this function.
     """
 
     gbb_flags_in_factory = self.GetGBBFlags()
