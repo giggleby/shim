@@ -1067,6 +1067,7 @@ def Finalize(options):
       # We cannot lock HPS after HWWP is enabled.
       LockHPS(options)
 
+  ClearGBBFlags(options)
   VerifyBeforeCr50Finalize(options)
   Cr50Finalize(options)
   VerifyAfterCr50Finalize(options)
@@ -1078,7 +1079,6 @@ def Finalize(options):
     SetFirmwareBitmapLocale(options)
   ClearFactoryVPDEntries(options)
   GenerateStableDeviceSecret(options)
-  ClearGBBFlags(options)
   if options.no_write_protect:
     logging.warning('WARNING: Firmware Software Write Protection is SKIPPED.')
     event_log.Log('wp', fw='both', status='skipped')
