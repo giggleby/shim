@@ -127,11 +127,12 @@ class HWIDV3SelfServiceActionHelper:
     # Try to normalize the input by loading and dumping.
     try:
       new_db = database.Database.LoadData(new_hwid_db_contents_external)
-      new_db_dumped = new_db.DumpDataWithoutChecksum()
+      new_db_dumped = new_db.DumpDataWithoutChecksum(
+          suppress_support_status=False)
       # Check if the the change is no-op for external DB.
       noop_for_external_db = (
-          new_db_dumped ==
-          self._preproc_data.database.DumpDataWithoutChecksum())
+          new_db_dumped == self._preproc_data.database.DumpDataWithoutChecksum(
+              suppress_support_status=False))
 
       draft_db_editable_section = self.RemoveHeader(new_db_dumped)
       new_hwid_db_contents_external_normalized, unused_fingerprint = (

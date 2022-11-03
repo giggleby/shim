@@ -174,6 +174,23 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
 
     self.assertTrue(analysis_report.noop_for_external_db)
 
+  def testAnalyzeDraftDbEditableSection_NoSupressSupportStatus(self):
+    helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
+    editable_section = helper_inst_before.GetDBEditableSection()
+    converter_manager = converter_utils.ConverterManager({})
+    resource_msg = hwid_api_messages_pb2.HwidDbExternalResource()
+
+    analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(
+        draft_db_editable_section=editable_section,
+        derive_fingerprint_only=False, require_hwid_db_lines=False,
+        internal=True, avl_converter_manager=converter_manager,
+        avl_resource=resource_msg)
+
+    self.assertIn('status: supported',
+                  analysis_report.new_hwid_db_contents_external)
+    self.assertIn('status: supported',
+                  analysis_report.new_hwid_db_contents_internal)
+
   def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
     ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')
     ss_helper2 = self._LoadSSHelper('v3-golden-after-good.yaml')
