@@ -1190,19 +1190,21 @@ cros.factory.Goofy = class {
   async preInit() {
     this.initWebSocket();
     while (true) {
-      let /** boolean */ isReady = false;
-      try {
-        isReady = await this.sendRpc('IsReadyForUIConnection');
-      } catch (e) {
-        // There's a chance that goofy RPC isn't ready before this, since we
-        // initialize goofy RPC server after static files.
-        // We can't change the initialization order, since the static page need
-        // to be initialized early to prevent Chrome from getting a 404 page for
-        // index.html.
-      }
-      if (isReady) {
-        await this.init();
-        return;
+      if (this.ws.isOpen()) {
+        let /** boolean */ isReady = false;
+        try {
+          isReady = await this.sendRpc('IsReadyForUIConnection');
+        } catch (e) {
+          // There's a chance that goofy RPC isn't ready before this, since we
+          // initialize goofy RPC server after static files.
+          // We can't change the initialization order, since the static page
+          // need to be initialized early to prevent Chrome from getting a 404
+          // page for index.html.
+        }
+        if (isReady) {
+          await this.init();
+          return;
+        }
       }
       window.console.log('Waiting for the Goofy backend to be ready...');
       await cros.factory.utils.delay(500);
@@ -1214,7 +1216,6 @@ cros.factory.Goofy = class {
    */
   async init() {
     try {
-      await this.sendRpc('StartAllPlugins');
       this.initUIComponents();
       await this.initLocaleSelector();
       const testList = await this.sendRpc('GetTestList');

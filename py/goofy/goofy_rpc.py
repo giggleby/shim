@@ -835,10 +835,6 @@ class GoofyRPC:
     file_utils.WriteFile(path, content)
     return path
 
-  def StartAllPlugins(self):
-    """Starts all Goofy plugins."""
-    self.goofy.StartAllPlugins()
-
 
 def main():
   parser = argparse.ArgumentParser(
