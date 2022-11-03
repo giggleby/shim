@@ -125,6 +125,7 @@ class GoofyTest(unittest.TestCase):
   def InitGoofy(self, restart=True):
     """Initializes and returns a Goofy."""
     new_goofy = Goofy()
+    new_goofy.InitUI = mock.MagicMock()
     args = []
     if restart:
       args.append('--restart')
