@@ -8,6 +8,7 @@ import time
 from typing import Callable, Dict, List, Optional, Type
 
 from cros.factory.instalog import datatypes
+from cros.factory.instalog.plugin_base import BufferPlugin
 from cros.factory.instalog.plugin_base import OutputPlugin
 from cros.factory.instalog.plugin_base import Plugin
 from cros.factory.instalog.plugin_sandbox import PluginSandbox
@@ -66,6 +67,41 @@ class PluginBenchmarkRunner(abc.ABC):
 
   def _GetLastMeasurement(self) -> float:
     return self._finish_time - self._start_time
+
+
+class _BufferPluginBenchmarkRunner(PluginBenchmarkRunner):
+
+  PRODUCER_ID = 'benchmark_producer'
+  CONSUMER_ID = 'benchmark_consumer'
+
+  def __init__(self, plugin_class_to_test: Type[BufferPlugin],
+               plugin_config: Dict, pre_emit: bool) -> None:
+    super().__init__(plugin_class_to_test, plugin_config)
+    self._pre_emit = pre_emit
+
+  def _RunOnce(self, testing_events: List[datatypes.Event]) -> None:
+    with file_utils.TempDirectory() as tmp_dir_path:
+      plugin_api = _BufferBenchmarkPluginAPIImpl(tmp_dir_path)
+      plugin = self._plugin_class_to_test(self._plugin_config, '', {},
+                                          plugin_api)
+      assert isinstance(plugin, BufferPlugin)
+      plugin.SetUp()
+      plugin.AddConsumer(self.CONSUMER_ID)
+
+      self._StartCounting()
+
+      if self._pre_emit:
+        plugin.Produce(self.PRODUCER_ID, testing_events, False)
+        plugin.Produce(self.PRODUCER_ID, [], True)
+      else:
+        plugin.Produce(self.PRODUCER_ID, testing_events, True)
+
+      stream = plugin.Consume(self.CONSUMER_ID)
+      event = stream.Next()
+      while event is not None:
+        event = stream.Next()
+
+      self._StopCounting()
 
 
 class _OutputPluginBenchmarkRunner(PluginBenchmarkRunner):
@@ -129,6 +165,10 @@ class _BaseBenchmarkPluginAPIImpl:
     pass
 
 
+class _BufferBenchmarkPluginAPIImpl(_BaseBenchmarkPluginAPIImpl):
+  """The PluginAPI implementation used in Buffer plugin benchmark testing."""
+
+
 class _OutputBenchmarkPluginAPIImpl(_BaseBenchmarkPluginAPIImpl):
   """The PluginAPI implementation used in Output plugin benchmark testing.
 
@@ -189,6 +229,10 @@ class _OutputBenchmarkPluginAPIImpl(_BaseBenchmarkPluginAPIImpl):
 
 def CreatePluginBenchmarkRunner(
     test_config: BenchmarkTestConfig) -> PluginBenchmarkRunner:
+  if issubclass(test_config.plugin_class_to_test, BufferPlugin):
+    return _BufferPluginBenchmarkRunner(test_config.plugin_class_to_test,
+                                        test_config.plugin_config,
+                                        test_config.pre_emit)
   if issubclass(test_config.plugin_class_to_test, OutputPlugin):
     return _OutputPluginBenchmarkRunner(test_config.plugin_class_to_test,
                                         test_config.plugin_config)
