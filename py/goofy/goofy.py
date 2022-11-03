@@ -1223,10 +1223,6 @@ class Goofy:
 
     process_utils.StartDaemonThread(target=PrepareLink)
 
-  def StartAllPlugins(self):
-    """Starts all Goofy plugins."""
-    self.plugin_controller.StartAllPlugins()
-
   def Init(self, args=None, env=None):
     """Initializes Goofy.
 
@@ -1314,9 +1310,8 @@ class Goofy:
     self._InitStates()
     self._StartEventServer()
 
-    # Some plugins connect to UI web socket so cannot be started here. Config
-    # the plugin_controller and waiting for UI to call `StartAllPlugins` Goofy
-    # RPC to launch the plugins.
+    # Some plugins connect to UI web socket so we have to start all plugins
+    # after `InitUI`.
     self.plugin_controller = plugin_controller.PluginController(
         self.test_list.options.plugin_config_name, self)
 
@@ -1344,6 +1339,9 @@ class Goofy:
 
     # Only after this point the Goofy backend is ready for UI connection.
     self.ready_for_ui_connection = True
+    if self.args.goofy_ui:
+      self.InitUI()
+    self.plugin_controller.StartAllPlugins()
 
     def state_change_callback(test, test_state):
       self.event_client.post_event(
