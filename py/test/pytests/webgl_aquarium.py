@@ -2,7 +2,51 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""WebGL performance test that executes a set of WebGL operations."""
+"""WebGL performance test that executes a set of WebGL operations.
+
+Description
+-----------
+The test runs the WebGL aquarium test for testing the 3D hardware-accelerated
+JavaScript API 'WebGL', and get FPS value from frontend for checking.
+
+Test Procedure
+--------------
+This is an automatic test that doesn't need any user interaction.
+Just set the argument before start, and wait for the completion.
+
+"min_fps" argument is the minimum average FPS to pass the test, if the average
+FPS is lower than it, the test will fail, the default value of it is set to 10
+for warning that FPS is low.
+You can set it to 0 if FPS doesn't matter at all, or set it to a higher value
+for strictly performance requirement.
+
+Dependency
+----------
+None.
+
+Examples
+--------
+To disable the performance restriction, add this in test list::
+
+  {
+    "pytest_name": "webgl_aquarium",
+    "args": {
+      "min_fps": 0
+    }
+  }
+
+To sample and check FPS more frequently with higher standard for FPS,
+add this in test list::
+
+  {
+    "pytest_name": "webgl_aquarium",
+    "args": {
+      "min_fps": 30,
+      "fps_sample_interval": 0.5,
+      "fps_check_interval": 3
+    }
+  }
+"""
 
 import collections
 import time
@@ -20,7 +64,7 @@ class WebGLAquariumTest(test_case.TestCase):
           default=True),
       Arg('full_screen', bool, 'Whether to go full screen mode by default',
           default=True),
-      Arg('min_fps', int, 'Minimum FPS to pass the test', default=30),
+      Arg('min_fps', int, 'Minimum average FPS to pass the test', default=10),
       Arg('fps_sample_interval', float, 'Period of FPS sampling in seconds',
           default=1.0),
       Arg('fps_log_interval', int, 'Period of FPS logging in seconds',
