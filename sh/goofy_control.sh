@@ -24,7 +24,7 @@ BOARD_SETUP="${FACTORY}/board/board_setup_factory.sh"
 export PATH="/usr/local/factory/bin:${PATH}"
 
 # Default args for Goofy.
-GOOFY_ARGS=""
+: "${GOOFY_ARGS:=}"
 
 # Default implementation for factory_setup (no-op).  May be overriden
 # by board_setup_factory.sh.
