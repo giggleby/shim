@@ -153,6 +153,7 @@
     },
     "BaseAccelerometersCalibration": {
       "inherit": "AccelerometersCalibration",
+      "label": "Base Accelerometers Calibration",
       "run_if": "not constants.has_device_data or device.component.has_base_accelerometer",
       "args": {
         "location": "base"
@@ -463,6 +464,7 @@
     },
     "LidAccelerometersCalibration": {
       "inherit": "AccelerometersCalibration",
+      "label": "Lid Accelerometers Calibration",
       "run_if": "not constants.has_device_data or device.component.has_lid_accelerometer",
       "args": {
         "location": "lid"

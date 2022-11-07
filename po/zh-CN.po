@@ -3259,6 +3259,9 @@ msgstr "音源孔"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Barrier"
 msgstr "检查关卡"
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Base Accelerometers Calibration"
+msgstr "基底加速度计校正"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Camera Tests"
@@ -3339,6 +3342,9 @@ msgstr "按键测试"
 msgid "Idle"
 msgstr "闲置等待"
 
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Lid Accelerometers Calibration"
+msgstr "上盖加速度计校正"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Create Cache"
 msgstr "产生 Cache"
