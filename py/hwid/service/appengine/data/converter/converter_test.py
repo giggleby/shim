@@ -7,11 +7,15 @@ import unittest
 
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_types
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
+from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
+from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import contents_analyzer
+from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
 
-# shorter identifiers.
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 
 
@@ -27,6 +31,19 @@ def _ProbeInfoFromMapping(mapping: Mapping[str, Union[str, int]]):
       stubby_pb2.ProbeParameter(name=name, string_value=value) if isinstance(
           value, str) else stubby_pb2.ProbeParameter(name=name, int_value=value)
       for name, value in mapping.items()
+  ])
+
+
+def _HWIDDBExternalResourceFromProbeInfos(
+    probe_info_mapping: Mapping[int, stubby_pb2.ProbeInfo]
+) -> hwid_api_messages_pb2.HwidDbExternalResource:
+  return hwid_api_messages_pb2.HwidDbExternalResource(component_probe_infos=[
+      stubby_pb2.ComponentProbeInfo(
+          component_identity=stubby_pb2.ComponentIdentity(
+              readable_label=f'label_{cid}_{i}',
+              component_id=cid,
+          ), probe_info=probe_info)
+      for i, (cid, probe_info) in enumerate(probe_info_mapping.items())
   ])
 
 
@@ -496,6 +513,66 @@ class HexEncodedStrValueFormatterTest(unittest.TestCase):
 
     self.assertEqual(value_factory('616263'), 'abc')
     self.assertEqual(value_factory('610063'), 'a\0c')
+
+
+class ConverterManagerTest(unittest.TestCase):
+
+  def testLinkAVL_TryAllComponents(self):
+    # Arrange.
+    comp_cls = 'comp_cls1'
+    cid = 123
+    comp_name1 = f'comp_cls1_{cid}#1'
+    comp_name2 = f'comp_cls1_{cid}#2'
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR2:
+                converter.ConvertedValueSpec('converted_key2'),
+        })
+    converter_collection = converter.ConverterCollection(comp_cls)
+    converter_collection.AddConverter(test_converter)
+    converter_manager = converter_utils.ConverterManager(
+        {comp_cls: converter_collection})
+
+    with v3_builder.DatabaseBuilder.FromEmpty('CHROMEBOOK', 'PROTO') as builder:
+      builder.AddComponent(comp_cls, comp_name1, {
+          'converted_key1': 'value1',
+          'converted_key2': 'value2',
+      }, 'supported')
+      builder.AddComponent(comp_cls, comp_name2, {
+          'converted_key1': 'value1',
+          'converted_key2': 'value-not-2',
+      }, 'unsupported')
+    db_with_components_only = builder.Build().DumpDataWithoutChecksum()
+    avl_resource = _HWIDDBExternalResourceFromProbeInfos({
+        cid:
+            _ProbeInfoFromMapping({
+                'avl_attr_name1': 'value1',
+                'avl_attr_name2': 'value2',
+            })
+    })
+
+    # Act.
+    avl_linked_db_content = converter_manager.LinkAVL(db_with_components_only,
+                                                      avl_resource)
+
+    # Assert.
+    avl_linked_db = database.Database.LoadData(avl_linked_db_content)
+    self.assertEqual(
+        v3_rule.AVLProbeValue(
+            identifier='converter1', probe_value_matched=True, values={
+                'converted_key1': 'value1',
+                'converted_key2': 'value2'
+            }),
+        avl_linked_db.GetComponents(comp_cls)[comp_name1].values)
+    self.assertEqual(
+        v3_rule.AVLProbeValue(
+            identifier='converter1', probe_value_matched=False, values={
+                'converted_key1': 'value1',
+                'converted_key2': 'value-not-2'
+            }),
+        avl_linked_db.GetComponents(comp_cls)[comp_name2].values)
 
 
 if __name__ == '__main__':

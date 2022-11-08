@@ -1,4 +1,4 @@
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -45,7 +45,7 @@ class ConverterManager:
       probe_info_map[comp_id] = comp_probe_info.probe_info
 
     with builder.DatabaseBuilder.FromDBData(hwid_db_content) as db_builder:
-      for comp_cls in db_builder.GetActiveComponentClasses():
+      for comp_cls in db_builder.GetComponentClasses():
         converter_collection = self.GetConverterCollection(comp_cls)
         if not converter_collection:
           continue

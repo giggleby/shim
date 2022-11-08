@@ -895,6 +895,11 @@ class DatabaseBuilder:
                                 image_id: Optional[int] = None) -> Set[str]:
     return self._database.GetActiveComponentClasses(image_id)
 
+  def GetComponentClasses(self,
+                          encoded_field_name: Optional[str] = None) -> Set[str]:
+    """See database.WritableDatabase.GetComponentClasses."""
+    return self._database.GetComponentClasses(encoded_field_name)
+
   def GetComponentNameByHash(self, comp_cls: str, comp_hash: str) -> str:
     return self._database.GetComponentNameByHash(comp_cls, comp_hash)
 
