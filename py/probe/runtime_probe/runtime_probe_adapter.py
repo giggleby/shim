@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import os
-
 from cros.factory.probe.runtime_probe import probe_config_definition
 from cros.factory.probe.runtime_probe import probe_config_types
 from cros.factory.utils import json_utils
