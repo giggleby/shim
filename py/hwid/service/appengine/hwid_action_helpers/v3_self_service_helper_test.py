@@ -126,6 +126,17 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertEqual(analysis_report.validation_errors[0].code,
                      hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
 
+  def testAnalyzeDraftDbEditableSection_SchemaError(self):
+    helper_inst = self._LoadSSHelper('v3-golden-before.yaml')
+    schema_error_content = file_utils.ReadFile(
+        os.path.join(_TESTDATA_PATH, 'v3-schema-error-editable-content.yaml'))
+
+    analysis_report = helper_inst.AnalyzeDraftDBEditableSection(
+        schema_error_content, False, True)
+
+    self.assertEqual(analysis_report.validation_errors[0].code,
+                     hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
+
   def testAnalyzeDraftDbEditableSection_AVLProbeInfo(self):
     helper_inst = self._LoadSSHelper('v3-golden-no-avl-tags.yaml')
     editable_section = helper_inst.GetDBEditableSection()

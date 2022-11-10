@@ -23,6 +23,7 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import bundle_builder
+from cros.factory.utils import schema
 
 
 _HWID_BUNDLE_INSTALLER_NAME = 'install.py'
@@ -138,7 +139,9 @@ class HWIDV3SelfServiceActionHelper:
       new_hwid_db_contents_external_normalized, unused_fingerprint = (
           _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
                                              draft_db_editable_section))
-    except (common.HWIDException, yaml.error.YAMLError):
+    except (common.HWIDException, yaml.error.YAMLError, schema.SchemaException):
+      # Skip here and defer the syntax/schema error to
+      # hwid_validator.ValidateChange below.
       pass
 
     if internal:

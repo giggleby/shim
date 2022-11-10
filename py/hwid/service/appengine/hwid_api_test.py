@@ -4,11 +4,8 @@
 # found in the LICENSE file.
 """Tests for cros.hwid.service.appengine.hwid_api"""
 
-import os.path
 import unittest
 from unittest import mock
-
-from cros.chromeoshwid import update_checksum
 
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_api
@@ -16,23 +13,9 @@ from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configl
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.probe_info_service.app_engine import protorpc_utils
-from cros.factory.utils import file_utils
 
 
-TEST_MODEL = 'FOO'
 TEST_HWID = 'Foo'
-TEST_HWID_CONTENT = 'prefix\nchecksum: 1234\nsuffix\n'
-EXPECTED_REPLACE_RESULT = update_checksum.ReplaceChecksum(TEST_HWID_CONTENT)
-GOLDEN_HWIDV3_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'testdata', 'v3-golden.yaml')
-GOLDEN_HWIDV3_CONTENT = file_utils.ReadFile(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'testdata',
-        'v3-golden.yaml'))
-HWIDV3_CONTENT_SCHEMA_ERROR_CHANGE = file_utils.ReadFile(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'testdata',
-        'v3-schema-error-change.yaml'))
 
 ComponentMsg = hwid_api_messages_pb2.Component
 StatusMsg = hwid_api_messages_pb2.Status
