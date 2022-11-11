@@ -682,5 +682,67 @@ class USBCameraProbeStatementGeneratorTest(unittest.TestCase):
                        'bcdDevice': '4836'})
 
 
+class MIPICameraEepromProbeStatementGeneratorTest(unittest.TestCase):
+
+  def testTryGenerate(self):
+    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['video'][1]
+    ps = ps_gen.TryGenerate(
+        'name1', {
+            'name': 'i2c-00/i2c-ABC0000:00',
+            'module_id': 'TC1234',
+            'sensor_id': 'OV5678',
+            'bus_type': 'mipi'
+        })
+    self.assertEqual(
+        ps,
+        probe_config_types.ComponentProbeStatement(
+            'camera', 'name1', {
+                'eval': {
+                    'mipi_camera': {}
+                },
+                'expect': {
+                    'mipi_name': [True, 'str', '!eq i2c-00/i2c-ABC0000:00'],
+                    'mipi_module_id': [True, 'str', '!eq TC1234'],
+                    'mipi_sensor_id': [True, 'str', '!eq OV5678']
+                }
+            }))
+
+    # Should report not supported if some fields are missing.
+    self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'name1', {
+        'name': 'i2c-00/i2c-ABC0000:00',
+        'sensor_id': 'OV5678',
+        'bus_type': 'mipi'
+    })
+
+
+class MIPICameraV4L2ProbeStatementGeneratorTest(unittest.TestCase):
+
+  def testTryGenerate(self):
+    ps_gen = _vp_generator.GetAllProbeStatementGenerators()['video'][2]
+    ps = ps_gen.TryGenerate('name1', {
+        'name': 'AA1234 00-0000',
+        'vendor': '0x1234',
+        'bus_type': 'mipi'
+    })
+    self.assertEqual(
+        ps,
+        probe_config_types.ComponentProbeStatement(
+            'camera', 'name1', {
+                'eval': {
+                    'mipi_camera': {}
+                },
+                'expect': {
+                    'mipi_name': [True, 'str', '!eq AA1234 00-0000'],
+                    'mipi_vendor': [True, 'hex', '!eq 0x1234']
+                }
+            }))
+
+    # Should report not supported if some fields are missing.
+    self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'name1', {
+        'vendor': '0x1234',
+        'bus_type': 'mipi'
+    })
+
+
 if __name__ == '__main__':
   unittest.main()

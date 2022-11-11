@@ -95,15 +95,11 @@ def _GetAllGenericProbeStatementInfoRecords():
       ]),
       GenericProbeStatementInfoRecord('dram', 'memory',
                                       ['part', 'size', 'slot']),
-      # TODO(yhong): Include other type of cameras if needed.
-      GenericProbeStatementInfoRecord(
-          'camera', 'usb_camera', {
-              'bus_type': None,
-              'usb_vendor_id': None,
-              'usb_product_id': None,
-              'usb_bcd_device': None,
-              'usb_removable': re.compile('^(FIXED|UNKNOWN)$'),
-          }),
+      GenericProbeStatementInfoRecord('camera', 'generic_camera', [
+          'bus_type', 'usb_vendor_id', 'usb_product_id', 'usb_bcd_device',
+          'usb_removable', 'mipi_module_id', 'mipi_name', 'mipi_sensor_id',
+          'mipi_vendor'
+      ]),
       GenericProbeStatementInfoRecord(
           'display_panel', 'edid', ['height', 'product_id', 'vendor', 'width']),
       GenericProbeStatementInfoRecord(
@@ -557,12 +553,28 @@ def GetAllProbeStatementGenerators():
           probe_function_argument={'device_type': 'touchscreen'}),
   ]
 
+  mipi_fields_eeprom = [
+      _FieldRecord('name', 'mipi_name', str_converter),
+      _FieldRecord('module_id', 'mipi_module_id', str_converter),
+      _FieldRecord('sensor_id', 'mipi_sensor_id', str_converter),
+  ]
+  mipi_fields_v4l2 = [
+      _FieldRecord('name', 'mipi_name', str_converter),
+      _FieldRecord('vendor', 'mipi_vendor',
+                   HexToHexValueConverter(4, has_prefix=True),
+                   is_optional=True),
+  ]
+
   # This is the old name for video_codec + camera.
   all_probe_statement_generators['video'] = [
       _ProbeStatementGenerator('camera', 'usb_camera', usb_fields),
+      _ProbeStatementGenerator('camera', 'mipi_camera', mipi_fields_eeprom),
+      _ProbeStatementGenerator('camera', 'mipi_camera', mipi_fields_v4l2),
   ]
   all_probe_statement_generators['camera'] = [
       _ProbeStatementGenerator('camera', 'usb_camera', usb_fields),
+      _ProbeStatementGenerator('camera', 'mipi_camera', mipi_fields_eeprom),
+      _ProbeStatementGenerator('camera', 'mipi_camera', mipi_fields_v4l2),
   ]
 
   display_panel_fields = [

@@ -152,9 +152,10 @@ def _GetAllProbeStatementDefinitions():
   builder = probe_config_types.ProbeStatementDefinitionBuilder('camera')
   builder.AddProbeFunction('usb_camera',
                            ('A method that probes camera devices on USB bus.'))
-  builder.AddStrOutputField('bus_type', 'HW interface type of the component.',
-                            value_pattern=re.compile('usb$'),
-                            value_format_error_msg=('Currently must be "usb".'))
+  builder.AddStrOutputField(
+      'bus_type', 'HW interface type of the component.',
+      value_pattern=re.compile('(usb|mipi)$'),
+      value_format_error_msg=('Must be either "usb" or "mipi".'))
   builder.AddHexOutputField('usb_vendor_id', 'USB Vendor ID.',
                             num_value_digits=4)
   builder.AddHexOutputField('usb_product_id', 'USB Product ID.',
@@ -162,6 +163,19 @@ def _GetAllProbeStatementDefinitions():
   builder.AddHexOutputField('usb_bcd_device', 'USB BCD Device Info.',
                             num_value_digits=4)
   builder.AddStrOutputField('usb_removable', 'Whether the device is removable.')
+
+  builder.AddProbeFunction('mipi_camera',
+                           ('A method that probes camera devices on MIPI bus.'))
+  builder.AddStrOutputField('mipi_name', 'Entity name from sysfs path or V4L2.')
+  builder.AddStrOutputField(
+      'mipi_module_id',
+      'Camera module vendor ID and product ID read from camera EEPROM.')
+  builder.AddStrOutputField(
+      'mipi_sensor_id',
+      'Image sensor vendor ID and product ID read from camera EEPROM.')
+  builder.AddHexOutputField('mipi_vendor',
+                            'Image sensor vendor ID queried via V4L2.',
+                            num_value_digits=4)
   probe_statement_definitions['camera'] = builder.Build()
 
   builder = probe_config_types.ProbeStatementDefinitionBuilder('display_panel')

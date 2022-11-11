@@ -56,7 +56,27 @@
       },
       {
         "componentCategory": "camera",
+        "componentUuid": "model_c_video_comp_1",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "camera",
+        "componentUuid": "model_c_video_comp_2",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "camera",
         "componentUuid": "model_d_camera_comp_0",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "camera",
+        "componentUuid": "model_d_camera_comp_1",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "camera",
+        "componentUuid": "model_d_camera_comp_2",
         "qualificationStatus": "QUALIFIED"
       },
       {
@@ -182,7 +202,11 @@
           "usb_vendor_id",
           "usb_product_id",
           "usb_bcd_device",
-          "usb_removable"
+          "usb_removable",
+          "mipi_module_id",
+          "mipi_name",
+          "mipi_sensor_id",
+          "mipi_vendor"
         ]
       },
       {
@@ -378,7 +402,7 @@
     "camera": {
       "generic": {
         "eval": {
-          "usb_camera": {}
+          "generic_camera": {}
         },
         "expect": {
           "bus_type": [
@@ -394,11 +418,26 @@
             "hex"
           ],
           "usb_removable": [
-            true,
-            "str",
-            "!re ^(FIXED|UNKNOWN)$"
+            false,
+            "str"
           ],
           "usb_vendor_id": [
+            false,
+            "hex"
+          ],
+          "mipi_module_id": [
+            false,
+            "str"
+          ],
+          "mipi_name": [
+            false,
+            "str"
+          ],
+          "mipi_sensor_id": [
+            false,
+            "str"
+          ],
+          "mipi_vendor": [
             false,
             "hex"
           ]
@@ -1098,7 +1137,7 @@
     "camera": {
       "generic": {
         "eval": {
-          "usb_camera": {}
+          "generic_camera": {}
         },
         "expect": {
           "bus_type": [
@@ -1114,11 +1153,26 @@
             "hex"
           ],
           "usb_removable": [
-            true,
-            "str",
-            "!re ^(FIXED|UNKNOWN)$"
+            false,
+            "str"
           ],
           "usb_vendor_id": [
+            false,
+            "hex"
+          ],
+          "mipi_module_id": [
+            false,
+            "str"
+          ],
+          "mipi_name": [
+            false,
+            "str"
+          ],
+          "mipi_sensor_id": [
+            false,
+            "str"
+          ],
+          "mipi_vendor": [
             false,
             "hex"
           ]
@@ -1498,7 +1552,7 @@
     "camera": {
       "generic": {
         "eval": {
-          "usb_camera": {}
+          "generic_camera": {}
         },
         "expect": {
           "bus_type": [
@@ -1514,11 +1568,26 @@
             "hex"
           ],
           "usb_removable": [
-            true,
-            "str",
-            "!re ^(FIXED|UNKNOWN)$"
+            false,
+            "str"
           ],
           "usb_vendor_id": [
+            false,
+            "hex"
+          ],
+          "mipi_module_id": [
+            false,
+            "str"
+          ],
+          "mipi_name": [
+            false,
+            "str"
+          ],
+          "mipi_sensor_id": [
+            false,
+            "str"
+          ],
+          "mipi_vendor": [
             false,
             "hex"
           ]
@@ -1543,6 +1612,45 @@
             true,
             "hex",
             "!eq 0xCCDD"
+          ]
+        }
+      },
+      "model_c_video_comp_1": {
+        "eval": {
+          "mipi_camera": {}
+        },
+        "expect": {
+          "mipi_name": [
+            true,
+            "str",
+            "!eq BB5678 00-0000"
+          ],
+          "mipi_vendor": [
+            true,
+            "hex",
+            "!eq 0x1234"
+          ]
+        }
+      },
+      "model_c_video_comp_2": {
+        "eval": {
+          "mipi_camera": {}
+        },
+        "expect": {
+          "mipi_module_id": [
+            true,
+            "str",
+            "!eq AA1234"
+          ],
+          "mipi_name": [
+            true,
+            "str",
+            "!eq i2c-00/i2c-ABC1234:56"
+          ],
+          "mipi_sensor_id": [
+            true,
+            "str",
+            "!eq BB5678"
           ]
         }
       }
@@ -1920,7 +2028,7 @@
     "camera": {
       "generic": {
         "eval": {
-          "usb_camera": {}
+          "generic_camera": {}
         },
         "expect": {
           "bus_type": [
@@ -1936,11 +2044,26 @@
             "hex"
           ],
           "usb_removable": [
-            true,
-            "str",
-            "!re ^(FIXED|UNKNOWN)$"
+            false,
+            "str"
           ],
           "usb_vendor_id": [
+            false,
+            "hex"
+          ],
+          "mipi_module_id": [
+            false,
+            "str"
+          ],
+          "mipi_name": [
+            false,
+            "str"
+          ],
+          "mipi_sensor_id": [
+            false,
+            "str"
+          ],
+          "mipi_vendor": [
             false,
             "hex"
           ]
@@ -1965,6 +2088,45 @@
             true,
             "hex",
             "!eq 0xCCDD"
+          ]
+        }
+      },
+      "model_d_camera_comp_1": {
+        "eval": {
+          "mipi_camera": {}
+        },
+        "expect": {
+          "mipi_name": [
+            true,
+            "str",
+            "!eq BB5678 00-0000"
+          ],
+          "mipi_vendor": [
+            true,
+            "hex",
+            "!eq 0x1234"
+          ]
+        }
+      },
+      "model_d_camera_comp_2": {
+        "eval": {
+          "mipi_camera": {}
+        },
+        "expect": {
+          "mipi_module_id": [
+            true,
+            "str",
+            "!eq AA1234"
+          ],
+          "mipi_name": [
+            true,
+            "str",
+            "!eq i2c-00/i2c-ABC1234:56"
+          ],
+          "mipi_sensor_id": [
+            true,
+            "str",
+            "!eq BB5678"
           ]
         }
       }
@@ -2342,7 +2504,7 @@
     "camera": {
       "generic": {
         "eval": {
-          "usb_camera": {}
+          "generic_camera": {}
         },
         "expect": {
           "bus_type": [
@@ -2358,11 +2520,26 @@
             "hex"
           ],
           "usb_removable": [
-            true,
-            "str",
-            "!re ^(FIXED|UNKNOWN)$"
+            false,
+            "str"
           ],
           "usb_vendor_id": [
+            false,
+            "hex"
+          ],
+          "mipi_module_id": [
+            false,
+            "str"
+          ],
+          "mipi_name": [
+            false,
+            "str"
+          ],
+          "mipi_sensor_id": [
+            false,
+            "str"
+          ],
+          "mipi_vendor": [
             false,
             "hex"
           ]

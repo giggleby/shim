@@ -31,11 +31,17 @@ components:
           product: USB2.0 HD UVC WebCam
           type: webcam
       camera_comp_1:
-        # Sample output of a MIPI camera. For now, it won't be converted to
-        # runtime_probe probe statement.
+        # Sample output of a MIPI camera.
         values:
-          name: mipi_camera_1
-          vendor: vendor_1
+          name: BB5678 00-0000
+          vendor: '0x1234'
+          type: webcam
+      camera_comp_2:
+        # Sample output of a MIPI camera.
+        values:
+          module_id: AA1234
+          name: i2c-00/i2c-ABC1234:56
+          sensor_id: BB5678
           type: webcam
 
 rules: []
