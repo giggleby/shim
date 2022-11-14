@@ -304,6 +304,19 @@ class DatabaseBuilder:
       self._database.AddEncodedFieldComponents(field_name, {comp_cls: []})
 
   @_EnsureInBuilderContext
+  def AddFirmwareComponent(self, comp_cls, value, comp_name, supported=False):
+    self.AddComponentCheck(comp_cls, value, comp_name, supported=supported)
+    field_name = f'{comp_cls}_field'
+    if field_name not in self._database.encoded_fields:
+      self.AddNewEncodedField(comp_cls, [comp_name])
+    else:
+      self.AddEncodedFieldComponents(field_name, comp_cls, [comp_name])
+    # Skip updating pattern to initial DB since it swill cause error due to
+    # missing essential comps.
+    if not self._database.is_initial:
+      self.FillEncodedFieldBit(field_name)
+
+  @_EnsureInBuilderContext
   def AddRegions(self, new_regions, region_field_name='region_field'):
     if self._database.GetComponentClasses(region_field_name) != set(['region']):
       raise ValueError(

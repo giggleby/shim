@@ -18,6 +18,8 @@ from cros.factory.utils import file_utils
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_DATABASE_PATH = os.path.join(_TEST_DATA_PATH, 'test_builder_db.yaml')
+_TEST_INITIAL_DATABASE_PATH = os.path.join(_TEST_DATA_PATH,
+                                           'test_database_initial.yaml')
 
 
 class DetermineComponentNameTest(unittest.TestCase):
@@ -706,7 +708,7 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/204729913)
   @label_utils.Informational
-  def testAddCompoonent(self):
+  def testAddComponent(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.AddComponent('comp_cls_3', 'comp_3_3', {'value': '3'},
@@ -721,15 +723,45 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/204729913)
   @label_utils.Informational
-  def testAddCompoonentCheck_AutoDeprecate(self):
+  def testAddFirmwareComponent(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddFirmwareComponent(
+          'ro_main_firmware', {'version': 'Google_Proj.2222.2.2'}, 'firmware1')
+
+    db = db_builder.Build()
+
+    components = db.GetComponents('ro_main_firmware')
+    self.assertDictEqual({'ro_main_firmware': ['firmware1']},
+                         db.GetEncodedField('ro_main_firmware_field')[1])
+    self.assertIn('firmware1', components)
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddFirmwareComponent_InitialDB_DontUpdatePattern(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_INITIAL_DATABASE_PATH) as db_builder:
+      db_builder.AddFirmwareComponent('ro_main_firmware',
+                                      {'version': 'Google_Proj.2222.2.2'},
+                                      'firmware1', True)
+
+    db = db_builder.Build()
+
+    self.assertFalse(db.GetEncodedFieldsBitLength())
+    self.assertDictEqual({'ro_main_firmware': ['firmware1']},
+                         db.GetEncodedField('ro_main_firmware_field')[0])
+
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddComponentCheck_AutoDeprecate(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.AddComponentCheck('ro_main_firmware',
                                    {'version': 'Google_Proj.2222.2.2'},
-                                   'firmware1', 'supported')
+                                   'firmware1', True)
       db_builder.AddComponentCheck('ro_fp_firmware',
                                    {'version': 'fpboard_v2.0.22222'},
-                                   'firmware1', 'supported')
+                                   'firmware1', True)
       db_builder.AddComponentCheck(
           'firmware_keys', {'key_recovery': 'some_hash'}, 'key1', 'supported')
 
@@ -748,15 +780,15 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertEqual('supported', components['key1'].status)
 
   @label_utils.Informational
-  def testAddCompoonentCheck_OnlyDeprecateSameIdentity(self):
+  def testAddComponentCheck_OnlyDeprecateSameIdentity(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
       db_builder.AddComponentCheck('ro_main_firmware',
                                    {'version': 'Google_NotProj.2222.2.2'},
-                                   'firmware1', 'supported')
+                                   'firmware1', True)
       db_builder.AddComponentCheck('ro_fp_firmware',
                                    {'version': 'notfpboard_v2.0.22222'},
-                                   'firmware1', 'supported')
+                                   'firmware1', True)
 
     db = db_builder.Build()
 

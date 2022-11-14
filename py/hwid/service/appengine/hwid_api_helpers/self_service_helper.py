@@ -471,8 +471,9 @@ class SelfServiceHelper:
               continue
 
             if comp_name not in db_builder.GetComponents(field.name):
-              db_builder.AddComponentCheck(field.name, value, comp_name,
-                                           supported=firmware_record.supported)
+              db_builder.AddFirmwareComponent(
+                  field.name, value, comp_name,
+                  supported=firmware_record.supported)
 
             comp = db_builder.GetComponents(field.name)[comp_name]
             db_builder.GetComponents(field.name)[comp_name] = comp.Replace(
