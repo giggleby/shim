@@ -22,3 +22,7 @@
 .bg-white {
   background-color: white;
 }
+
+#fullscreen {
+  cursor: none;
+}

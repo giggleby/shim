@@ -61,6 +61,7 @@
 #display-div {
   width: 100%;
   height: 100%;
+  cursor: none;
 }
 
 #display-div.subtest-grid {
