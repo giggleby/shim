@@ -1519,7 +1519,7 @@ class Gooftool:
     self._Cr50SetBoardId(two_stages=True, is_flags_only=True)
 
   def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
-                         two_stages=False):
+                         two_stages=False, no_write_protect=True):
     """Write full device info into cr50 flash.
 
     Args:
@@ -1537,8 +1537,10 @@ class Gooftool:
       self.Cr50SetSnBits()
 
     gsc = gsc_utils.GSCUtils()
-    if not gsc.IsTi50():
-      # Ti50 uses different way to set/verify AP RO Hash.
+    if gsc.IsTi50():
+      self.Ti50SetAddressingMode()
+      self.Ti50SetSWWPRegister(no_write_protect)
+    else:
       self._Cr50SetROHashForShipping()
     self._Cr50SetBoardId(two_stages)
 
@@ -1719,3 +1721,31 @@ class Gooftool:
     """Returns the smart amp info by parsing sound-card-init-conf."""
 
     return smart_amp_utils.GetSmartAmpInfo(shell=self._util.shell)
+
+  def Ti50SetAddressingMode(self):
+    cmd = ['flashrom', '--flash-size']
+    proc = self._CheckCall(cmd)
+
+    try:
+      size = int(proc.stdout.splitlines()[-1])
+    except (IndexError, ValueError) as parsing_error:
+      raise Error('Unknown format on flashrom --flash-size') from parsing_error
+    if size <= 0x1000000:  # 2^24
+      cmd = ['gsctool', '-a', '-C', '3byte']
+    else:
+      cmd = ['gsctool', '-a', '-C', '4byte']
+    self._CheckCall(cmd)
+
+  def Ti50SetSWWPRegister(self, no_write_protect):
+    if no_write_protect:
+      cmd = ['gsctool', '-a', '-E', '0 0']
+    else:
+      # TODO(jasonchuang) Call flashrom command to get the values b/259013033.
+      raise NotImplementedError
+    self._CheckCall(cmd)
+
+  def _CheckCall(self, cmd):
+    proc = self._util.shell(cmd)
+    if proc.status != 0:
+      raise Error(f'Fail to call {cmd}. Log:\n{proc.stderr}')
+    return proc
