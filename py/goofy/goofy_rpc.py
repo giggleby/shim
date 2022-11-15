@@ -38,6 +38,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
+
 DEFAULT_GOOFY_RPC_TIMEOUT_SECS = 15
 REBOOT_AFTER_UPDATE_DELAY_SECS = 5
 PING_SERVER_TIMEOUT_SECS = 2
@@ -835,6 +836,10 @@ class GoofyRPC:
     path = file_utils.CreateTemporaryFile(prefix='goofy_rpc_temp_')
     file_utils.WriteFile(path, content)
     return path
+
+  def SetUiInitialized(self):
+    """Sets ui_initialized flag for informing backend that UI is ready."""
+    self.goofy.ui_initialized = True
 
 
 def main():

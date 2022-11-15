@@ -1227,6 +1227,9 @@ cros.factory.Goofy = class {
       document.getElementById('goofy-div-wait').style.display = 'none';
     }
 
+    // Sets ui_initialized flag for informing backend that UI is ready.
+    await this.sendRpc('SetUiInitialized');
+
     await Promise.all([
       (async () => {
         this.testLists = await this.sendRpc('GetTestLists');

@@ -131,7 +131,7 @@ class Goofy:
     self.testlog = None
     self.plugin_controller = None
     self.pytest_prespawner = None
-    self._ui_initialized = False
+    self.ui_initialized = False
     self.invocations = {}
     self.chrome = None
     self.hooks = None
@@ -611,8 +611,7 @@ class Goofy:
     The argument `test` should be either a leaf test (no subtests) or a parallel
     test (all subtests should be run in parallel).
     """
-    if (self.args.goofy_ui and not self._ui_initialized and
-        not test.IsNoHost()):
+    if (self.args.goofy_ui and not self.ui_initialized and not test.IsNoHost()):
       self.InitUI()
 
     if set_layout:
@@ -1190,7 +1189,13 @@ class Goofy:
     """Initialize UI."""
     logging.info('Waiting for a web socket connection')
     self.web_socket_manager.wait()
-    self._ui_initialized = True
+
+    # Before start the test, make sure that UI is ready by
+    # checking whether the ui_initialized flag was set by frontend.
+    logging.info('Waiting until UI initialized')
+    while not self.ui_initialized:
+      pass
+    logging.info('UI is ready')
 
   @staticmethod
   def GetCommandLineArgsParser():
