@@ -197,11 +197,6 @@ _probe_results_cmd_arg = CmdArg(
     '--probe_results', metavar='RESULTS.json',
     help=('Output from "hwid probe" (used instead of probing this system).'))
 
-_device_info_cmd_arg = CmdArg(
-    '--device_info', metavar='DEVICE_INFO.yaml', default=None,
-    help='A dict of device info to use instead of fetching from shopfloor '
-    'server.')
-
 _hwid_cmd_arg = CmdArg(
     '--hwid', metavar='HWID',
     help='HWID to verify (instead of the currently set HWID of this system).')
@@ -582,12 +577,13 @@ def GenerateStableDeviceSecret(options):
     _rma_mode_cmd_arg,  # this
     _enable_zero_touch_cmd_arg,  # this
     _two_stages_cmd_arg,  # this
+    _no_write_protect_cmd_arg,  # this
     *GetGooftool.__args__)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
       enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
-      two_stages=options.two_stages)
+      two_stages=options.two_stages, no_write_protect=options.no_write_protect)
   event_log.Log('cr50_write_flash_info')
 
 
@@ -1139,6 +1135,16 @@ def GetSmartAmpInfo(options):
 def GetLogicalBlockSize(options):
   """Get the logical block size of the primary device on DUT."""
   print('Logical block size:', GetGooftool(options).GetLogicalBlockSize())
+
+
+@Command(
+    'ti50_set_spi_data',
+    _no_write_protect_cmd_arg,  # this
+    *GetGooftool.__args__)
+def Ti50SetSPIData(options):
+  """Gets the logical block size of the primary device on DUT."""
+  GetGooftool(options).Ti50SetAddressingMode()
+  GetGooftool(options).Ti50SetSWWPRegister(options.no_write_protect)
 
 
 def main():
