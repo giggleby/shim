@@ -58,7 +58,7 @@ def _GetAllProbeStatementDefinitions():
   builder.AddStrOutputField(
       'mmc_name', 'Product name (PNM) in CID register.',
       probe_function_names=probe_function_names,
-      value_pattern=re.compile('^[ -~]{4,6}$'),
+      value_pattern=re.compile(r'^[\x01-\x7f]{4,6}$'),
       value_format_error_msg=_GetASCIIStringErrorMsg(4, 6))
   builder.AddHexOutputField(
       'mmc_prv', 'Product revision (PRV) in CID register.',
