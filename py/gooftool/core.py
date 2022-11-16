@@ -7,6 +7,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 import datetime
 from distutils.version import LooseVersion
+import enum
 import glob
 import logging
 import os
@@ -68,6 +69,22 @@ _DLC_ERROR_TEMPLATE = 'If you install the images via network, please make ' \
                       'information about DLCs, please read the partner site ' \
                       'document: (Google partners only) ' \
                       'https://chromeos.google.com/partner/dlm/docs/factory/factory-dlc-support.html.'
+
+
+class FactoryProcessEnum(str, enum.Enum):
+  """ The process that a device/MLB is produced or assembled.
+
+  FULL: The device runs full factory process in current factory.
+  TWOSTAGES: The MLB part is sent to a different location for assembly, such
+    as local OEM project or MLB for RMA.
+  RMA: The device runs factory process in RMA center.
+
+  Check https://docs.google.com/document/d/15v7O8LWFL_tbTp2X4PKedGZ4IQAP11ZQeKsTJ_eQp1s/preview
+  for details.
+  """
+  FULL = 'FULL'
+  TWOSTAGES = 'TWOSTAGES'
+  RMA = 'RMA'
 
 
 class CrosConfigError(Error):
@@ -529,7 +546,7 @@ class Gooftool:
     logging.info('SUCCESS: Verification completed.')
 
   def VerifySystemTime(self, release_rootfs=None, system_time=None,
-                       rma_mode=False):
+                       factory_process=FactoryProcessEnum.FULL):
     """Verify system time is later than release filesystem creation time."""
     if release_rootfs is None:
       release_rootfs = self._util.GetReleaseRootPartitionPath()
@@ -549,7 +566,7 @@ class Gooftool:
     logging.debug('Comparing system time <%s> and filesystem time <%s>',
                   system_time, created_time)
     if system_time < created_time:
-      if not rma_mode:
+      if factory_process != FactoryProcessEnum.RMA:
         raise Error('System time (%s) earlier than file system (%s) creation '
                     'time (%s)' % (system_time, release_rootfs, created_time))
       logging.warning('Set system time to file system creation time (%s)',
@@ -1396,7 +1413,7 @@ class Gooftool:
     go/cr50-boardid-lock for more details.
 
     Args:
-      two_stages: The MLB parts is sent to a different location for assembly,
+      two_stages: The MLB part is sent to a different location for assembly,
           such as RMA or local OEM. And we need to set a different board ID flags
           in this case.
       is_flags_only: Set board ID flags only, this should only be true in the
@@ -1481,22 +1498,19 @@ class Gooftool:
     # So we only set Board ID flags for security issue.
     self._Cr50SetBoardId(two_stages=True, is_flags_only=True)
 
-  def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
-                         two_stages=False, no_write_protect=True, wpsr=''):
+  def Cr50WriteFlashInfo(self, enable_zero_touch=False,
+                         factory_process=FactoryProcessEnum.FULL,
+                         no_write_protect=True, wpsr=''):
     """Write full device info into cr50 flash.
 
     Args:
-      enable_zero_touch: Will set SN-bits in cr50 if rma_mode is not set.
-      rma_mode: This device / MLB is for RMA purpose, the cr50 settings should
-          already be set in this mode.
-      two_stages: The MLB parts is sent to a different location
-          for assembly, such as RMA or local OEM.
-      no_write_protect: Will be used to deduce sr_value and sr_mask for
-          enabling AP RO verification on Ti50.
+      enable_zero_touch: Will set SN-bits in cr50 if not in RMA center.
+      factory_process: The process that a device/MLB is produced or assembled.
       wpsr: We might need to set sr_values and sr_masks manually for enabling
           AP RO verification on Ti50 before b/259013033 is solved.
     """
 
+    rma_mode = factory_process == FactoryProcessEnum.RMA
     self.VerifyCustomLabel()
 
     set_sn_bits = enable_zero_touch and not rma_mode
@@ -1510,7 +1524,17 @@ class Gooftool:
         self.Ti50SetSWWPRegister(no_write_protect, wpsr)
     else:
       self._Cr50SetROHashForShipping()
-    self._Cr50SetBoardId(two_stages)
+
+    if not rma_mode:
+      self._Cr50SetBoardId(
+          two_stages=factory_process == FactoryProcessEnum.TWOSTAGES)
+      return
+
+    # In RMA center, we don't know the process that the device was produced.
+    try:
+      self._Cr50SetBoardId(two_stages=True)
+    except Exception:
+      self._Cr50SetBoardId(two_stages=False)
 
   def Cr50DisableFactoryMode(self):
     """Disable Cr50 Factory mode.
