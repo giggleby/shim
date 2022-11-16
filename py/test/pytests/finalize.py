@@ -102,6 +102,7 @@ import yaml
 from cros.factory.device import device_utils
 from cros.factory.device.links import ssh
 from cros.factory.gooftool import commands
+from cros.factory.gooftool.core import FactoryProcessEnum
 from cros.factory.test import device_data
 from cros.factory.test.env import paths
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
@@ -159,12 +160,13 @@ class Finalize(test_case.TestCase):
       Arg('hwid_need_vpd', bool,
           'Whether the HWID validation process needs the vpd data.',
           default=False),
-      Arg('rma_mode', bool,
-          'Enable rma_mode, do not check for deprecated components.',
-          default=False),
       Arg(
-          'two_stages', bool, 'The MLB parts is sent to a different location'
-          'for assembly, such as RMA or local OEM', default=False),
+          'factory_process', str, 'Set "FULL" if running a full factory '
+          'process. Set "TWOSTAGES" for local OEM project or MLB for RMA.'
+          'Set "RMA" if in a RMA center', default=FactoryProcessEnum.FULL),
+      Arg('rma_mode', bool,
+          'Deprecated, please set factory_process to "RMA" instead.',
+          default=False),
       Arg('is_cros_core', bool,
           'For ChromeOS Core device, skip setting firmware bitmap locale.',
           default=False),
@@ -354,6 +356,7 @@ class Finalize(test_case.TestCase):
         command += f' --shopfloor_url "{server_url}"'
 
     command += f' --upload_method "{upload_method}"'
+    command += f' --factory_process {self.args.factory_process}'
     if self.args.upload_max_retry_times:
       command += f' --upload_max_retry_times {self.args.upload_max_retry_times}'
     if self.args.upload_retry_interval is not None:
@@ -363,11 +366,6 @@ class Finalize(test_case.TestCase):
     command += f' --add_file "{self.test_states_path}"'
     if self.args.hwid_need_vpd:
       command += ' --hwid-run-vpd'
-    if self.args.rma_mode:
-      command += ' --rma_mode'
-      logging.info('Using RMA mode. Accept deprecated components')
-    if self.args.two_stages:
-      command += ' --two_stages'
     if self.args.is_cros_core:
       command += ' --cros_core'
       logging.info('ChromeOS Core device. Skip some check.')
