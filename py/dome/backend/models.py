@@ -207,20 +207,32 @@ def GetNetbootFirmwarewarningMessage(project_name, payloads):
     netboot_firmware_information = LoadJsonOrNone(
         payloads['netboot_firmware']['information'])
     if netboot_firmware_information:
+      # Check if argsfile and bootfile file are exist.
       for key in ('argsfile', 'bootfile'):
         netboot_firmware_file = netboot_firmware_information[key]
         if project_name not in netboot_firmware_file:
-          warning_message.append('"%s" does not match with project "%s". ' \
-                                  'Please make sure the %s are under ' \
-                                  'project "%s".' %
-                                  (netboot_firmware_file, project_name, key,
-                                  project_name))
+          warning_message.append(
+              '"%s" does not match with project "%s". '
+              'Please make sure the %s are under project "%s".' %
+              (netboot_firmware_file, project_name, key, project_name))
         if not os.path.isfile(
             '%s/%s' % (TFTP_BASE_DIR_IN_TFTP_CONTAINER, netboot_firmware_file)):
-          warning_message.append('"%s" is missing. To fix this, upload ' \
-                                  'netboot_kernel and netboot_cmdline and ' \
-                                  'then click the NETBOOT button to link ' \
-                                  'the tftp server.' % netboot_firmware_file)
+          warning_message.append('"%s" is missing. To fix this, upload '
+                                 'netboot_kernel and netboot_cmdline and '
+                                 'then click the NETBOOT button to link the '
+                                 'tftp server.' % netboot_firmware_file)
+      # Check if tftp_server_ip is same as the ip set.
+      host_ip = str(net_utils.GetDockerHostIP())
+      tftp_server_ip = netboot_firmware_information['tftp_server_ip']
+      if tftp_server_ip and tftp_server_ip != host_ip:
+        warning_message.append('The tftp_server_ip "%s" does not equal to '
+                               '"%s". Please re-upload a new bundle with the '
+                               'same ip.' % (tftp_server_ip, host_ip))
+      # Check if TFTP server is enabled.
+      tftp_enabled = DoesContainerExist(TFTP_CONTAINER_NAME)
+      if tftp_server_ip and tftp_enabled is False:
+        warning_message.append('The TFTP server is not enabled. Please go to '
+                               '"Config" page to enable your TFTP server.')
   return json.dumps(warning_message)
 
 
@@ -755,9 +767,9 @@ class Bundle:
         bundle['id'],  # name
         bundle['note'],  # note
         bundle['id'] == config['active_bundle_id'],  # active
-        payloads,
-        project_name,
-        warning_message)  # payloads
+        payloads,  # payloads
+        project_name,  # project name
+        warning_message)  # warning message
 
   @staticmethod
   def DeleteOne(project_name, bundle_name):

@@ -141,13 +141,17 @@ const Task: React.SFC<TaskProps> = ({
             warningMessage === '[]') ?
           <></>
           :
-          <>
-            <br />
-            <small className={classes.small}>
-              <WarningIcon className={classes.warningIcon} />
-              {warningMessage}
-            </small>
-          </>
+          JSON.parse(warningMessage).map(
+            (message: string, index: number) => {
+            return (
+              <div key={index} className={classes.small}>
+                <small>
+                  <WarningIcon className={classes.warningIcon} />
+                  {message}
+                </small>
+              </div>
+            );
+          })
         }
       </Typography>
       <Tooltip title="cancel">

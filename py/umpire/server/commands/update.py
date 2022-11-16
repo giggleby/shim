@@ -83,7 +83,6 @@ class ResourceUpdater:
     """
     self._CheckPayloadsList(payloads_to_update)
 
-    # Check if argsfile and bootfile file are exist.
     messages = []
     for type_name, file_path in payloads_to_update:
       if type_name == 'netboot_firmware':
@@ -92,10 +91,17 @@ class ResourceUpdater:
             '-m'
         ])
         netboot_firmware_information = json.loads(temp_output)
+        # Check if argsfile and bootfile file are exist.
         for key in ('argsfile', 'bootfile'):
           netboot_firmware_file = netboot_firmware_information[key]
           if not os.path.isfile('/mnt/tftp/%s' % netboot_firmware_file):
             messages.append('%s is missing' % netboot_firmware_file)
+        # Check if tftp_server_ip is same as the ip set.
+        host_ip = process_utils.CheckOutput(['ip', 'route']).split()[2]
+        tftp_server_ip = netboot_firmware_information['tftp_server_ip']
+        if tftp_server_ip and tftp_server_ip != host_ip:
+          messages.append('The tftp_server_ip "%s" does not equal to "%s". ' %
+                          (tftp_server_ip, host_ip))
 
     config = umpire_config.UmpireConfig(self._daemon.env.config)
     if not source_id:
@@ -114,7 +120,7 @@ class ResourceUpdater:
     payloads_to_update = self._MakePayloads(payloads_to_update)
     self._UpdatePayloads(bundle, payloads_to_update)
     self._Deploy(config)
-    return messages
+    return json.dumps(messages)
 
   def UpdateFromConfig(self, payloads_config_to_update, update_note=''):
     """Updates payload(s) in a new bundle with payloads config.
