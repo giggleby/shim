@@ -5,9 +5,7 @@
   ],
   "label": "Generic RMA",
   "constants": {
-    "grt": {
-      "rma_mode": true
-    },
+    "factory_process": "RMA",
     "phase": "PVT",
     "rma_factory_server": "none"
   },

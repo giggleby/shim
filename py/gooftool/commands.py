@@ -26,6 +26,7 @@ import xmlrpc.client
 from cros.factory.gooftool.common import ExecFactoryPar
 from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
+from cros.factory.gooftool.core import FactoryProcessEnum
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import report_upload
@@ -217,14 +218,11 @@ _no_write_protect_cmd_arg = CmdArg(
     '--no_write_protect', action='store_true',
     help='Do not enable firmware write protection.')
 
-_rma_mode_cmd_arg = CmdArg(
-    '--rma_mode', action='store_true',
-    help='Enable RMA mode, do not check for deprecated components.')
-
-_two_stages_cmd_arg = CmdArg(
-    '--two_stages', action='store_true',
-    help='The MLB parts is sent to a different location '
-    'for assembly, such as RMA or local OEM.')
+_factory_process_cmd_arg = CmdArg(
+    '--factory_process', type=str, default=FactoryProcessEnum.FULL,
+    help='Set "FULL" if running a full factory process. '
+    'Set "TWOSTAGES" for local OEM project or MLB for RMA. '
+    'Set "RMA" if in a RMA center.')
 
 _cros_core_cmd_arg = CmdArg(
     '--cros_core', action='store_true',
@@ -371,13 +369,13 @@ def SetFirmwareBitmapLocale(options):
 @Command(
     'verify_system_time',
     _release_rootfs_cmd_arg,  # this
-    _rma_mode_cmd_arg,  # this
+    _factory_process_cmd_arg,  # this
     *GetGooftool.__args__)
 def VerifySystemTime(options):
   """Verify system time is later than release filesystem creation time."""
 
-  return GetGooftool(options).VerifySystemTime(options.release_rootfs,
-                                               rma_mode=options.rma_mode)
+  return GetGooftool(options).VerifySystemTime(
+      options.release_rootfs, factory_process=options.factory_process)
 
 
 @Command(
@@ -663,15 +661,14 @@ def GenerateStableDeviceSecret(options):
 
 @Command(
     'cr50_write_flash_info',
-    _rma_mode_cmd_arg,  # this
     _enable_zero_touch_cmd_arg,  # this
-    _two_stages_cmd_arg,  # this
+    _factory_process_cmd_arg,  # this
     *GetGooftool.__args__)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
-      enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
-      two_stages=options.two_stages)
+      enable_zero_touch=options.enable_zero_touch,
+      factory_process=options.factory_process)
   event_log.Log('cr50_write_flash_info')
 
 
@@ -759,7 +756,7 @@ def WipeInit(options):
     _hwid_cmd_arg,  # this
     _hwid_run_vpd_cmd_arg,  # this
     _hwid_vpd_data_file_cmd_arg,  # this
-    _rma_mode_cmd_arg,  # this
+    _factory_process_cmd_arg,  # this
     *GetGooftool.__args__)
 def VerifyHWID(options):
   """A simple wrapper that calls out to HWID utils to verify version 3 HWID.
@@ -795,7 +792,8 @@ def VerifyHWID(options):
 
   try:
     hwid_utils.VerifyHWID(database, encoded_string, probed_results, device_info,
-                          vpd_data, options.rma_mode)
+                          vpd_data,
+                          options.factory_process == FactoryProcessEnum.RMA)
   except Exception:
     # TODO(cyueh) Make this only accept HPS HWID validation error.
     if not ignore_errors:
@@ -1099,7 +1097,7 @@ def SMTFinalize(options):
 @Command(
     'finalize',
     _fast_cmd_arg,  # this
-    _rma_mode_cmd_arg,  # this
+    _factory_process_cmd_arg,  # this
     _rlz_embargo_end_date_offset_cmd_arg,  # this
     _no_generate_mfg_date_cmd_arg,  # this
     _cros_core_cmd_arg,  # this
@@ -1140,7 +1138,7 @@ def Finalize(options):
   - Wipes the testing kernel, rootfs, and stateful partition
   """
 
-  if not options.rma_mode:
+  if options.factory_process != FactoryProcessEnum.RMA:
     # Write VPD values related to RLZ ping into VPD.
     GetGooftool(options).WriteVPDForRLZPing(options.embargo_offset)
     if options.generate_mfg_date:
