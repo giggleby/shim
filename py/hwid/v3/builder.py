@@ -305,6 +305,18 @@ class DatabaseBuilder:
 
   @_EnsureInBuilderContext
   def AddFirmwareComponent(self, comp_cls, value, comp_name, supported=False):
+    # Rename instead of add if any old component has same probed value
+    for old_comp_name, comp_info in self.GetComponents(comp_cls).items():
+      if (value and not comp_info.value_is_none and
+          dict.__eq__(comp_info.values, value)):
+        status = (
+            common.COMPONENT_STATUS.supported
+            if supported else comp_info.status)
+        self.UpdateComponent(comp_cls, old_comp_name, comp_name,
+                             comp_info.values, status, comp_info.information,
+                             comp_info.bundle_uuids)
+        return
+
     self.AddComponentCheck(comp_cls, value, comp_name, supported=supported)
     field_name = f'{comp_cls}_field'
     if field_name not in self._database.encoded_fields:
@@ -926,9 +938,10 @@ class DatabaseBuilder:
   @_EnsureInBuilderContext
   def UpdateComponent(self, comp_cls: str, old_name: str, new_name: str,
                       values: Optional[Mapping[str, Any]], support_status: str,
-                      information: Optional[Mapping[str, Any]] = None):
+                      information: Optional[Mapping[str, Any]] = None,
+                      bundle_uuids: Optional[Sequence[str]] = None):
     self._database.UpdateComponent(comp_cls, old_name, new_name, values,
-                                   support_status, information)
+                                   support_status, information, bundle_uuids)
 
   @_EnsureInBuilderContext
   def ReplaceRules(self, rule_expr_list: Mapping[str, Any]):

@@ -753,6 +753,23 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/204729913)
   @label_utils.Informational
+  def testAddFirmwareComponent_RenameSameComponent(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddFirmwareComponent('firmware_keys',
+                                      {'key_recovery': 'some_hash'}, 'key1')
+      db_builder.AddFirmwareComponent('firmware_keys',
+                                      {'key_recovery': 'some_hash'}, 'key2')
+
+    db = db_builder.Build()
+
+    components = db.GetComponents('firmware_keys')
+    self.assertNotIn('key1', components)
+    self.assertDictEqual({'key_recovery': 'some_hash'},
+                         components['key2'].values)
+
+  # TODO (b/204729913)
+  @label_utils.Informational
   def testAddComponentCheck_AutoDeprecate(self):
     with builder.DatabaseBuilder.FromFilePath(
         db_path=_TEST_DATABASE_PATH) as db_builder:
@@ -762,8 +779,8 @@ class DatabaseBuilderTest(unittest.TestCase):
       db_builder.AddComponentCheck('ro_fp_firmware',
                                    {'version': 'fpboard_v2.0.22222'},
                                    'firmware1', True)
-      db_builder.AddComponentCheck(
-          'firmware_keys', {'key_recovery': 'some_hash'}, 'key1', 'supported')
+      db_builder.AddComponentCheck('firmware_keys',
+                                   {'key_recovery': 'some_hash'}, 'key1', True)
 
     db = db_builder.Build()
 
