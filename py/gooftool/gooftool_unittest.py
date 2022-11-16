@@ -20,6 +20,7 @@ from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
 from cros.factory.gooftool import cros_config
 from cros.factory.gooftool import crosfw
+from cros.factory.gooftool.management_engine import ManagementEngineError
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
@@ -29,6 +30,7 @@ from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
+
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -413,11 +415,13 @@ class GooftoolTest(unittest.TestCase):
 
     # Raise if it is Consumer SKU.
     MockCBMEM(consumer_sku_flag, 'NO', 'OK')
-    self.assertRaises(Error, self._gooftool.VerifyManagementEngineLocked)
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
 
     # Raise if it is unknown SKU.
     MockCBMEM(unknown_sku_flag, 'NO', 'OK')
-    self.assertRaises(Error, self._gooftool.VerifyManagementEngineLocked)
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
 
     # Pass if it is Lite SKU.
     MockCBMEM(lite_sku_flag, 'NO', 'OK')
@@ -425,11 +429,13 @@ class GooftoolTest(unittest.TestCase):
 
     # Raise if Manufacturing Mode is not NO.
     MockCBMEM(lite_sku_flag, 'YES', 'OK')
-    self.assertRaises(Error, self._gooftool.VerifyManagementEngineLocked)
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
 
     # Raise if FW Partition Table is not OK.
     MockCBMEM(lite_sku_flag, 'NO', 'BAD')
-    self.assertRaises(Error, self._gooftool.VerifyManagementEngineLocked)
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
 
   def testClearGBBFlags(self):
     command = '/usr/share/vboot/bin/set_gbb_flags.sh 0 2>&1'
