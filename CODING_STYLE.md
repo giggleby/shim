@@ -131,7 +131,7 @@ For easy cutting-and-pasting, here's the header you should use for Python files
 
 ```
 #!/usr/bin/env python3
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 ```
