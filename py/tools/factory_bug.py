@@ -464,6 +464,8 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
           # Cannot zip an unseekable file, need to manually copy it instead.
           Run(['cat', 'sys/firmware/log'], filename='bios_log',
               check_call=False),
+          Run(['factory_summary', 'system'], filename='factory_system_summary',
+              check_call=False),
       ]
       if HasEC():
         files += [
