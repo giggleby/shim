@@ -838,7 +838,7 @@ class GoofyRPC:
 
   def SetUiInitialized(self):
     """Sets ui_initialized flag for informing backend that UI is ready."""
-    self.goofy.ui_initialized = True
+    self.goofy.ui_initialized.set()
 
 
 def main():

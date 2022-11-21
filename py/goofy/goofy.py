@@ -133,7 +133,7 @@ class Goofy:
     self.testlog = None
     self.plugin_controller = None
     self.pytest_prespawner = None
-    self.ui_initialized = False
+    self.ui_initialized = threading.Event()
     self.invocations = {}
     self.chrome = None
     self.hooks = None
@@ -609,7 +609,7 @@ class Goofy:
     The argument `test` should be either a leaf test (no subtests) or a parallel
     test (all subtests should be run in parallel).
     """
-    if (self.args.goofy_ui and not self.ui_initialized and not test.IsNoHost()):
+    if self.args.goofy_ui and not test.IsNoHost():
       self.InitUI()
 
     if set_layout:
@@ -1191,8 +1191,7 @@ class Goofy:
     # Before start the test, make sure that UI is ready by
     # checking whether the ui_initialized flag was set by frontend.
     logging.info('Waiting until UI initialized')
-    while not self.ui_initialized:
-      pass
+    self.ui_initialized.wait()
     logging.info('UI is ready')
 
   @staticmethod
