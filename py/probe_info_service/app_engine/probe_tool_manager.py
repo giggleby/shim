@@ -235,6 +235,12 @@ class ProbeFunc:
     return value
 
 
+def _RemoveHexPrefixAndNormalize(value: str) -> str:
+  if not value.lower().startswith('0x'):
+    raise ValueError('Expect hex value to start with "0x".')
+  return value[2:].upper()
+
+
 @type_utils.CachedGetter
 def _GetAllProbeFuncs() -> List[ProbeFunc]:
   # TODO(yhong): Separate the data piece out the code logic.
@@ -255,18 +261,23 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
       ProbeFunc(
           'storage', 'mmc_storage', {
               'mmc_manfid':
-                  _ParamValueConverter(
-                      'string',
-                      lambda hex_with_prefix: hex_with_prefix[2:].upper()),
+                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
               'mmc_name':
                   _ParamValueConverter(
                       'string', lambda hex_with_prefix: bytes.fromhex(
                           hex_with_prefix[2:]).decode('ascii')),
           }),
-      ProbeFunc('storage', 'nvme_storage', {
-          n: None
-          for n in ['pci_vendor', 'pci_device', 'pci_class', 'nvme_model']
-      }),
+      ProbeFunc(
+          'storage', 'nvme_storage', {
+              'pci_vendor':
+                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
+              'pci_device':
+                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
+              'pci_class':
+                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
+              'nvme_model':
+                  None,
+          }),
   ]
 
 

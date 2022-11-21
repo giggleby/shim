@@ -1,4 +1,4 @@
-# corresponding fingerprint: 2cd2506509d14a865e6296cc6869b27d1c22196c
+# corresponding fingerprint: 3ebaae7fa900e7b983f16630491c6594d55c8a55
 component_identity: {
   component_id: 200
   qual_id: 2
@@ -8,15 +8,15 @@ probe_info: {
   probe_function_name: "storage.nvme_storage"
   probe_parameters: {
     name: "pci_vendor"
-    string_value: "01AB"
+    string_value: "0x01ab"
   }
   probe_parameters: {
     name: "pci_device"
-    string_value: "23CD"
+    string_value: "0x23cd"
   }
   probe_parameters: {
     name: "pci_class"
-    string_value: "012ABC"
+    string_value: "0x012abc"
   }
   probe_parameters: {
     name: "nvme_model"

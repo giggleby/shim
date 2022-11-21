@@ -13,7 +13,7 @@ probed_outcome_prototxt: '
   }
   probe_statement_metadatas: {
     component_name: "AVL_2"
-    fingerprint: "2cd2506509d14a865e6296cc6869b27d1c22196c"
+    fingerprint: "3ebaae7fa900e7b983f16630491c6594d55c8a55"
   }
   rp_invocation_result: {
     result_type: FINISHED
