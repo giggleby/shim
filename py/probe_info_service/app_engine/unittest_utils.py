@@ -14,23 +14,25 @@ from cros.factory.probe_info_service.app_engine import stubby_pb2
 # pylint: enable=no-name-in-module
 from cros.factory.utils import file_utils
 
+
 TESTDATA_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata')
-
 
 FAKE_RUNTIME_PROBE_PATH = os.path.join(TESTDATA_DIR, 'fake_runtime_probe')
 
 
 def _ReadTestdataFile(testdata_filename, encoding='utf-8'):
-  return file_utils.ReadFile(os.path.join(TESTDATA_DIR, testdata_filename),
-                             encoding=encoding)
+  return file_utils.ReadFile(
+      os.path.join(TESTDATA_DIR, testdata_filename), encoding=encoding)
 
 
 def LoadComponentProbeInfo(testdata_name):
   testdata_filename = 'component_probe_info-%s.prototxt' % testdata_name
-  instance = stubby_pb2.ComponentProbeInfo()
-  text_format.Parse(_ReadTestdataFile(testdata_filename), instance)
-  return instance
+  return LoadComponentProbeInfoPayload(_ReadTestdataFile(testdata_filename))
+
+
+def LoadComponentProbeInfoPayload(proto_payload):
+  return text_format.Parse(proto_payload, stubby_pb2.ComponentProbeInfo())
 
 
 def LoadProbeInfoParsedResult(testdata_name):
@@ -57,6 +59,7 @@ def LoadProbedOutcome(testdata_name):
 
 
 class FakeProbedOutcomeInfo:
+
   def __init__(self, testdata_name):
     testdata_filename = 'fake_probed_outcome_info-%s.yaml' % testdata_name
     raw_data = yaml.safe_load(_ReadTestdataFile(testdata_filename))

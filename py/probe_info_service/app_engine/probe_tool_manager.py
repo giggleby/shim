@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import collections
 import hashlib
+import itertools
 import os
 import re
 from typing import Any, List, Mapping, NamedTuple, Optional, Tuple
@@ -17,6 +19,7 @@ from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: dis
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
+
 
 _RESOURCE_PATH = os.path.join(
     os.path.realpath(os.path.dirname(__file__)), 'resources')
@@ -84,6 +87,8 @@ class ProbeFunc:
 
     def __init__(self, description, value_converter: _ParamValueConverter,
                  ps_gen):
+      # TODO(yhong): Consider define whether to accept non-singular parameter
+      #     values.
       self.description = description
       self.value_converter = value_converter
       self.ps_gen = ps_gen
@@ -153,23 +158,20 @@ class ProbeFunc:
         - A probe statement object or `None`.
     """
     probe_param_errors = []
-    ps_expected_fields = {}
+    expected_values_of_field = collections.defaultdict(list)
     try:
       for index, probe_param in enumerate(probe_params):
-        if probe_param.name in ps_expected_fields:
-          raise _IncompatibleError(
-              f'Found duplicate probe parameter: {probe_param.name}.')
         try:
           value = self._ConvertProbeParamToProbeStatementValue(probe_param)
         except ValueError as e:
-          ps_expected_fields[probe_param.name] = None
+          expected_values_of_field[probe_param.name].append(None)
           probe_param_errors.append(
               ProbeParameterSuggestion(index=index, hint=str(e)))
         else:
-          ps_expected_fields[probe_param.name] = value
+          expected_values_of_field[probe_param.name].append(value)
 
       missing_param_names = (
-          set(self._probe_param_infos.keys()) - set(ps_expected_fields.keys()))
+          set(self._probe_param_infos) - set(expected_values_of_field))
       if missing_param_names and not allow_missing_params:
         raise _IncompatibleError(
             f'Missing probe parameters: {", ".join(missing_param_names)}.')
@@ -185,6 +187,13 @@ class ProbeFunc:
 
     ps = None
     if comp_name_for_probe_statement:
+      field_names = tuple(expected_values_of_field)
+      field_values_combinations = itertools.product(
+          *expected_values_of_field.values())
+      ps_expected_fields = [
+          dict(zip(field_names, field_values))
+          for field_values in field_values_combinations
+      ]
       try:
         ps = self._ps_generator.GenerateProbeStatement(
             comp_name_for_probe_statement, self._probe_func_def.name,

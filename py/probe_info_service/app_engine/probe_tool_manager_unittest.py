@@ -26,6 +26,13 @@ def _LoadProbeInfoAndCompName(testdata_name):
   return comp_probe_info.probe_info, comp_name
 
 
+def _LoadProbeInfoAndCompNameFromPayload(proto_payload):
+  comp_probe_info = unittest_utils.LoadComponentProbeInfoPayload(proto_payload)
+  comp_name = stubby_handler.GetProbeDataSourceComponentName(
+      comp_probe_info.component_identity)
+  return comp_probe_info.probe_info, comp_name
+
+
 _FAKE_RUNTIME_PROBE_PATH = os.path.join(unittest_utils.TESTDATA_DIR,
                                         'fake_runtime_probe')
 _FAKE_LEGACY_RUNTIME_PROBE_PATH = os.path.join(
@@ -37,19 +44,19 @@ class ProbeToolManagerTest(unittest.TestCase):
   def setUp(self):
     self._probe_tool_manager = probe_tool_manager.ProbeToolManager()
 
-  def test_GetProbeSchema(self):
+  def testGetProbeSchema(self):
     resp = self._probe_tool_manager.GetProbeSchema()
     self.assertCountEqual([f.name for f in resp.probe_function_definitions], [
         'battery.generic_battery', 'storage.mmc_storage', 'storage.nvme_storage'
     ])
 
-  def test_ValidateProbeInfo_InvalidProbeFunction(self):
+  def testValidateProbeInfo_InvalidProbeFunction(self):
     probe_info = probe_tool_manager.ProbeInfo(probe_function_name='no_such_f')
     unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
         probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
-  def test_ValidateProbeInfo_UnknownProbeParameter(self):
+  def testValidateProbeInfo_UnknownProbeParameter(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
     probe_info.probe_parameters.add(name='no_such_param')
 
@@ -57,7 +64,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
-  def test_ValidateProbeInfo_ProbeParameterBadType(self):
+  def testValidateProbeInfo_ProbeParameterBadType(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
     for probe_param in probe_info.probe_parameters:
       if probe_param.name == 'mmc_manfid':
@@ -68,16 +75,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         probe_info, True)
     self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
 
-  def test_ValidateProbeInfo_DuplicatedParam(self):
-    # Duplicated probe parameters is a kind of compatible error for now.
-    probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
-    probe_info.probe_parameters.add(name='mmc_manfid', string_value='03')
-
-    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
-        probe_info, True)
-    self.assertEqual(resp.result_type, resp.INCOMPATIBLE_ERROR)
-
-  def test_ValidateProbeInfo_MissingProbeParameter(self):
+  def testValidateProbeInfo_MissingProbeParameter(self):
     # Missing probe parameters is a kind of compatible error unless
     # `allow_missing_parameters` is `True`.
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
@@ -94,7 +92,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         probe_info, True)
     self.assertEqual(resp.result_type, resp.PASSED)
 
-  def test_ValidateProbeInfo_ParameterFormatError(self):
+  def testValidateProbeInfo_ParameterFormatError(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName(
         '1-param_value_error')
     unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
@@ -102,7 +100,7 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertEqual(
         resp, unittest_utils.LoadProbeInfoParsedResult('1-param_value_error'))
 
-  def test_ValidateProbeInfo_Passed(self):
+  def testValidateProbeInfo_Passed(self):
     probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
     unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
         probe_info, False)
@@ -118,26 +116,69 @@ class ProbeToolManagerTest(unittest.TestCase):
         probe_info, False)
     self.assertEqual(resp.result_type, resp.PASSED)
 
-  def test_CreateProbeDataSource(self):
+  def testValidateProbeInfo_PassedWithDuplicatedParam(self):
+    probe_info, unused_comp_name = _LoadProbeInfoAndCompName('1-valid')
+    probe_info.probe_parameters.add(name='mmc_manfid', string_value='0x03')
+
+    unused_probe_info, resp = self._probe_tool_manager.ValidateProbeInfo(
+        probe_info, True)
+    self.assertEqual(resp.result_type, resp.PASSED)
+
+  def testCreateProbeDataSource(self):
     s1 = self._LoadProbeDataSource('1-valid', comp_name='aaa')
     s2 = self._LoadProbeDataSource('2-valid', comp_name='aaa')
     s3 = self._LoadProbeDataSource('1-valid', comp_name='bbb')
     self.assertNotEqual(s1.fingerprint, s2.fingerprint)
     self.assertEqual(s1.fingerprint, s3.fingerprint)
 
-  def test_DumpProbeDataSource(self):
+  def testDumpProbeDataSource(self):
     s = self._LoadProbeDataSource('1-valid')
     ps = self._probe_tool_manager.DumpProbeDataSource(s).output
     self._AssertJSONStringEqual(
         ps, unittest_utils.LoadProbeStatementString('1-default'))
 
-  def test_GenerateRawProbeStatement_FromValidProbeInfo(self):
+  def testGenerateRawProbeStatement_FromValidProbeInfo(self):
     s = self._LoadProbeDataSource('1-valid')
     ps = self._probe_tool_manager.GenerateRawProbeStatement(s).output
     self._AssertJSONStringEqual(
         ps, unittest_utils.LoadProbeStatementString('1-default'))
 
-  def test_GenerateRawProbeStatement_FromInvalidProbeInfo(self):
+  def testGenerateRawProbeStatement_WithMultipleProbeValues(self):
+    probe_info, comp_name = _LoadProbeInfoAndCompNameFromPayload('''
+        component_identity: {
+          qual_id: 1
+          readable_label: "PART_NO_1234"
+          component_id: 100
+        }
+        probe_info: {
+          probe_function_name: "storage.mmc_storage"
+          probe_parameters: { name: "mmc_manfid" string_value: "0x0a" }
+          probe_parameters: { name: "mmc_manfid" string_value: "0x0b" }
+          probe_parameters: { name: "mmc_name" string_value: "0x414141414141" }
+        }
+    ''')
+    probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+        comp_name, probe_info)
+
+    probe_statement = self._probe_tool_manager.GenerateRawProbeStatement(
+        probe_data_source).output
+
+    self._AssertJSONStringEqual(
+        probe_statement, '''{
+          "storage": {
+            "AVL_1": {
+              "eval": { "mmc_storage": {} },
+              "expect": [
+                { "mmc_manfid": [ true, "hex", "!eq 0x0A" ],
+                  "mmc_name": [ true, "str", "!eq AAAAAA" ] },
+                { "mmc_manfid": [ true, "hex", "!eq 0x0B" ],
+                  "mmc_name": [ true, "str", "!eq AAAAAA" ] }
+              ]
+            }
+          }
+        }''')
+
+  def testGenerateRawProbeStatement_FromInvalidProbeInfo(self):
     s = self._LoadProbeDataSource('1-param_value_error')
     gen_result = self._probe_tool_manager.GenerateRawProbeStatement(s)
     self.assertEqual(
@@ -145,20 +186,20 @@ class ProbeToolManagerTest(unittest.TestCase):
         unittest_utils.LoadProbeInfoParsedResult('1-param_value_error'))
     self.assertIsNone(gen_result.output)
 
-  def test_GenerateRawProbeStatement_FromOverriddenProbeStatement(self):
+  def testGenerateRawProbeStatement_FromOverriddenProbeStatement(self):
     overridden_ps = unittest_utils.LoadProbeStatementString('1-valid_modified')
     s = self._probe_tool_manager.LoadProbeDataSource('comp_name', overridden_ps)
     generated_ps = self._probe_tool_manager.GenerateRawProbeStatement(s).output
     self._AssertJSONStringEqual(generated_ps, overridden_ps)
 
-  def test_GenerateProbeBundlePayload_ProbeParameterError(self):
+  def testGenerateProbeBundlePayload_ProbeParameterError(self):
     s = self._LoadProbeDataSource('1-param_value_error')
     resp = self._probe_tool_manager.GenerateProbeBundlePayload([s])
     self.assertEqual(
         resp.probe_info_parsed_results[0],
         unittest_utils.LoadProbeInfoParsedResult('1-param_value_error'))
 
-  def test_GenerateProbeBundlePayload_IncompatibleError(self):
+  def testGenerateProbeBundlePayload_IncompatibleError(self):
     probe_info, comp_name = _LoadProbeInfoAndCompName('1-valid')
     for probe_param in probe_info.probe_parameters:
       if probe_param.name == 'mmc_manfid':
@@ -169,7 +210,7 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertEqual(resp.probe_info_parsed_results[0].result_type,
                      resp.probe_info_parsed_results[0].INCOMPATIBLE_ERROR)
 
-  def test_GenerateQualProbeTestBundlePayload_Passed(self):
+  def testGenerateQualProbeTestBundlePayload_Passed(self):
     for fake_runtime_probe_script in (_FAKE_RUNTIME_PROBE_PATH,
                                       _FAKE_LEGACY_RUNTIME_PROBE_PATH):
       with self.subTest(fake_runtime_probe_script=fake_runtime_probe_script):
@@ -189,7 +230,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         self.assertEqual(probed_outcome, info.probed_outcome)
         self._AssertJSONStringEqual(pc_payload, info.probe_config_payload)
 
-  def test_GenerateQualProbeTestBundlePayload_MultipleSourcePassed(self):
+  def testGenerateQualProbeTestBundlePayload_MultipleSourcePassed(self):
     info = unittest_utils.FakeProbedOutcomeInfo('1_2-succeed')
 
     resp = self._GenerateProbeBundlePayloadForFakeRuntimeProbe(info)
@@ -206,7 +247,7 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertEqual(probed_outcome, info.probed_outcome)
     self._AssertJSONStringEqual(pc_payload, info.probe_config_payload)
 
-  def test_GenerateQualProbeTestBundlePayload_NoRuntimeProbe(self):
+  def testGenerateQualProbeTestBundlePayload_NoRuntimeProbe(self):
     info = unittest_utils.FakeProbedOutcomeInfo('1-bin_not_found')
 
     resp = self._GenerateProbeBundlePayloadForFakeRuntimeProbe(info)
@@ -219,13 +260,13 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertTrue(bool(probed_outcome.rp_invocation_result.error_msg))
     self.assertEqual(probed_outcome, info.probed_outcome)
 
-  def test_AnalyzeQualProbeTestResult_PayloadFormatError(self):
+  def testAnalyzeQualProbeTestResult_PayloadFormatError(self):
     s = self._LoadProbeDataSource('1-valid')
     with self.assertRaises(probe_tool_manager.PayloadInvalidError):
       self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
           s, 'this_is_an_invalid_data')
 
-  def test_AnalyzeQualProbeTestResult_WrongComponentError(self):
+  def testAnalyzeQualProbeTestResult_WrongComponentError(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome(
         '1-wrong_component')
@@ -233,21 +274,21 @@ class ProbeToolManagerTest(unittest.TestCase):
       self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
           s, raw_probed_outcome)
 
-  def test_AnalyzeQualProbeTestResult_Pass(self):
+  def testAnalyzeQualProbeTestResult_Pass(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome('1-passed')
     resp = self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
         s, raw_probed_outcome)
     self.assertEqual(resp.result_type, resp.PASSED)
 
-  def test_AnalyzeQualProbeTestResult_Legacy(self):
+  def testAnalyzeQualProbeTestResult_Legacy(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome('1-legacy')
     resp = self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
         s, raw_probed_outcome)
     self.assertEqual(resp.result_type, resp.LEGACY)
 
-  def test_AnalyzeQualProbeTestResult_IntrivialError_BadReturnCode(self):
+  def testAnalyzeQualProbeTestResult_IntrivialError_BadReturnCode(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome(
         '1-bad_return_code')
@@ -255,7 +296,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         s, raw_probed_outcome)
     self.assertEqual(resp.result_type, resp.INTRIVIAL_ERROR)
 
-  def test_AnalyzeQualProbeTestResult_IntrivialError_InvalidProbeResult(self):
+  def testAnalyzeQualProbeTestResult_IntrivialError_InvalidProbeResult(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome(
         '1-invalid_probe_result')
@@ -263,7 +304,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         s, raw_probed_outcome)
     self.assertEqual(resp.result_type, resp.INTRIVIAL_ERROR)
 
-  def test_AnalyzeQualProbeTestResult_IntrivialError_ProbeResultMismatch(self):
+  def testAnalyzeQualProbeTestResult_IntrivialError_ProbeResultMismatch(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome(
         '1-probe_result_not_match_metadata')
@@ -271,14 +312,14 @@ class ProbeToolManagerTest(unittest.TestCase):
         s, raw_probed_outcome)
     self.assertEqual(resp.result_type, resp.INTRIVIAL_ERROR)
 
-  def test_AnalyzeQualProbeTestResult_IntrivialError_RuntimeProbeTimeout(self):
+  def testAnalyzeQualProbeTestResult_IntrivialError_RuntimeProbeTimeout(self):
     s = self._LoadProbeDataSource('1-valid')
     raw_probed_outcome = unittest_utils.LoadRawProbedOutcome('1-timeout')
     resp = self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
         s, raw_probed_outcome)
     self.assertEqual(resp.result_type, resp.INTRIVIAL_ERROR)
 
-  def test_AnalyzeDeviceProbeResultPayload_FormatError(self):
+  def testAnalyzeDeviceProbeResultPayload_FormatError(self):
     s1 = self._LoadProbeDataSource('1-valid')
     s2 = self._LoadProbeDataSource('2-valid')
     raw_probed_outcome = 'this is not a valid probed outcome'
@@ -286,7 +327,7 @@ class ProbeToolManagerTest(unittest.TestCase):
       self._probe_tool_manager.AnalyzeDeviceProbeResultPayload(
           [s1, s2], raw_probed_outcome)
 
-  def test_AnalyzeDeviceProbeResultPayload_HasUnknownComponentError(self):
+  def testAnalyzeDeviceProbeResultPayload_HasUnknownComponentError(self):
     s1 = self._LoadProbeDataSource('1-valid')
     s2 = self._LoadProbeDataSource('2-valid')
     with self.assertRaises(probe_tool_manager.PayloadInvalidError):
@@ -294,7 +335,7 @@ class ProbeToolManagerTest(unittest.TestCase):
           [s1, s2],
           unittest_utils.LoadRawProbedOutcome('1_2-has_unknown_component'))
 
-  def test_AnalyzeDeviceProbeResultPayload_IntrivialError(self):
+  def testAnalyzeDeviceProbeResultPayload_IntrivialError(self):
     s1 = self._LoadProbeDataSource('1-valid')
     s2 = self._LoadProbeDataSource('2-valid')
     result = self._probe_tool_manager.AnalyzeDeviceProbeResultPayload(
@@ -303,7 +344,7 @@ class ProbeToolManagerTest(unittest.TestCase):
     self.assertIsNotNone(result.intrivial_error_msg)
     self.assertIsNone(result.probe_info_test_results)
 
-  def test_AnalyzeDeviceProbeResultPayload_Passed(self):
+  def testAnalyzeDeviceProbeResultPayload_Passed(self):
     s1 = self._LoadProbeDataSource('1-valid')
     s2 = self._LoadProbeDataSource('2-valid')
     s3 = self._LoadProbeDataSource('3-valid')
