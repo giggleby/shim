@@ -822,6 +822,7 @@
     "SMTFinalize": {
       "inherit": "ExecShell",
       "label": "SMT Finalize",
+      "run_if": "constants.two_stages",
       "args": {
         "commands": [
           "gooftool smt_finalize"
