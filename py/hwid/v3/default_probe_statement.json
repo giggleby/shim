@@ -260,29 +260,19 @@
   },
   "camera": {
     "generic": {
-      "eval": {
-        "concat": {
-          "functions": [
-            "generic_video",
-            "camera_cros"
-          ]
-        }
-      },
+      "eval": "generic_camera",
       "keys": [
-        "bcdDevice",
         "bus_type",
-        "idProduct",
-        "idVendor",
-        "module_id",
-        "name",
-        "product",
-        "sensor_id",
-        "type",
-        "vendor"
-      ],
-      "expect": {
-        "type": "webcam"
-      }
+        "mipi_module_id",
+        "mipi_name",
+        "mipi_sensor_id",
+        "mipi_vendor",
+        "usb_bcd_device",
+        "usb_manufacturer",
+        "usb_product",
+        "usb_product_id",
+        "usb_vendor_id"
+      ]
     }
   },
   "wireless": {

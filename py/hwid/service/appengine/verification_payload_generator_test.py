@@ -658,19 +658,26 @@ class USBCameraProbeStatementGeneratorTest(unittest.TestCase):
         'name1',
         {'idVendor': '1234', 'idProduct': '5678', 'bcdDevice': '90AB',
          'bus_type': 'usb'})
-    self.assertEqual(
-        ps,
-        probe_config_types.ComponentProbeStatement(
-            'camera', 'name1', {
-                'eval': {
-                    'usb_camera': {}
-                },
-                'expect': {
-                    'usb_vendor_id': [True, 'hex', '!eq 0x1234'],
-                    'usb_product_id': [True, 'hex', '!eq 0x5678'],
-                    'usb_bcd_device': [True, 'hex', '!eq 0x90AB']
-                }
-            }))
+    ps_new = ps_gen.TryGenerate(
+        'name1', {
+            'usb_vendor_id': '1234',
+            'usb_product_id': '5678',
+            'usb_bcd_device': '90AB',
+            'bus_type': 'usb'
+        })
+    expected = probe_config_types.ComponentProbeStatement(
+        'camera', 'name1', {
+            'eval': {
+                'usb_camera': {}
+            },
+            'expect': {
+                'usb_vendor_id': [True, 'hex', '!eq 0x1234'],
+                'usb_product_id': [True, 'hex', '!eq 0x5678'],
+                'usb_bcd_device': [True, 'hex', '!eq 0x90AB']
+            }
+        })
+    self.assertEqual(ps, expected)
+    self.assertEqual(ps_new, expected)
 
     # Should report not supported if some fields are missing.
     self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'name1',
@@ -693,19 +700,26 @@ class MIPICameraEepromProbeStatementGeneratorTest(unittest.TestCase):
             'sensor_id': 'OV5678',
             'bus_type': 'mipi'
         })
-    self.assertEqual(
-        ps,
-        probe_config_types.ComponentProbeStatement(
-            'camera', 'name1', {
-                'eval': {
-                    'mipi_camera': {}
-                },
-                'expect': {
-                    'mipi_name': [True, 'str', '!eq i2c-00/i2c-ABC0000:00'],
-                    'mipi_module_id': [True, 'str', '!eq TC1234'],
-                    'mipi_sensor_id': [True, 'str', '!eq OV5678']
-                }
-            }))
+    ps_new = ps_gen.TryGenerate(
+        'name1', {
+            'mipi_name': 'i2c-00/i2c-ABC0000:00',
+            'mipi_module_id': 'TC1234',
+            'mipi_sensor_id': 'OV5678',
+            'bus_type': 'mipi'
+        })
+    expected = probe_config_types.ComponentProbeStatement(
+        'camera', 'name1', {
+            'eval': {
+                'mipi_camera': {}
+            },
+            'expect': {
+                'mipi_name': [True, 'str', '!eq i2c-00/i2c-ABC0000:00'],
+                'mipi_module_id': [True, 'str', '!eq TC1234'],
+                'mipi_sensor_id': [True, 'str', '!eq OV5678']
+            }
+        })
+    self.assertEqual(ps, expected)
+    self.assertEqual(ps_new, expected)
 
     # Should report not supported if some fields are missing.
     self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'name1', {
@@ -724,18 +738,23 @@ class MIPICameraV4L2ProbeStatementGeneratorTest(unittest.TestCase):
         'vendor': '0x1234',
         'bus_type': 'mipi'
     })
-    self.assertEqual(
-        ps,
-        probe_config_types.ComponentProbeStatement(
-            'camera', 'name1', {
-                'eval': {
-                    'mipi_camera': {}
-                },
-                'expect': {
-                    'mipi_name': [True, 'str', '!eq AA1234 00-0000'],
-                    'mipi_vendor': [True, 'hex', '!eq 0x1234']
-                }
-            }))
+    ps_new = ps_gen.TryGenerate('name1', {
+        'mipi_name': 'AA1234 00-0000',
+        'mipi_vendor': '0x1234',
+        'bus_type': 'mipi'
+    })
+    expected = probe_config_types.ComponentProbeStatement(
+        'camera', 'name1', {
+            'eval': {
+                'mipi_camera': {}
+            },
+            'expect': {
+                'mipi_name': [True, 'str', '!eq AA1234 00-0000'],
+                'mipi_vendor': [True, 'hex', '!eq 0x1234']
+            }
+        })
+    self.assertEqual(ps, expected)
+    self.assertEqual(ps_new, expected)
 
     # Should report not supported if some fields are missing.
     self.assertRaises(MissingComponentValueError, ps_gen.TryGenerate, 'name1', {

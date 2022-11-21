@@ -153,9 +153,9 @@
       "eval": "generic_usb_hosts"
     }
   },
-  "video": {
+  "camera": {
     "generic": {
-      "eval": "generic_video"
+      "eval": "generic_camera"
     }
   },
   "wireless": {

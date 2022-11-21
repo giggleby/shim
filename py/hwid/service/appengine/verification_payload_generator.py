@@ -467,11 +467,11 @@ def GetAllProbeStatementGenerators():
       _FieldRecord('device', 'sdio_device_id', HexToHexValueConverter(4)),
   ]
   usb_fields = [
-      _FieldRecord('idVendor', 'usb_vendor_id',
+      _FieldRecord(['idVendor', 'usb_vendor_id'], 'usb_vendor_id',
                    HexToHexValueConverter(4, has_prefix=False)),
-      _FieldRecord('idProduct', 'usb_product_id',
+      _FieldRecord(['idProduct', 'usb_product_id'], 'usb_product_id',
                    HexToHexValueConverter(4, has_prefix=False)),
-      _FieldRecord('bcdDevice', 'usb_bcd_device',
+      _FieldRecord(['bcdDevice', 'usb_bcd_device'], 'usb_bcd_device',
                    HexToHexValueConverter(4, has_prefix=False),
                    is_optional=True),
   ]
@@ -553,13 +553,15 @@ def GetAllProbeStatementGenerators():
   ]
 
   mipi_fields_eeprom = [
-      _FieldRecord('name', 'mipi_name', str_converter),
-      _FieldRecord('module_id', 'mipi_module_id', str_converter),
-      _FieldRecord('sensor_id', 'mipi_sensor_id', str_converter),
+      _FieldRecord(['name', 'mipi_name'], 'mipi_name', str_converter),
+      _FieldRecord(['module_id', 'mipi_module_id'], 'mipi_module_id',
+                   str_converter),
+      _FieldRecord(['sensor_id', 'mipi_sensor_id'], 'mipi_sensor_id',
+                   str_converter),
   ]
   mipi_fields_v4l2 = [
-      _FieldRecord('name', 'mipi_name', str_converter),
-      _FieldRecord('vendor', 'mipi_vendor',
+      _FieldRecord(['name', 'mipi_name'], 'mipi_name', str_converter),
+      _FieldRecord(['vendor', 'mipi_vendor'], 'mipi_vendor',
                    HexToHexValueConverter(4, has_prefix=True),
                    is_optional=True),
   ]
