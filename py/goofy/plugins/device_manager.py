@@ -146,17 +146,17 @@ class DeviceManager(plugin.Plugin):
         lines = lines.rstrip()
 
         return ''.join(
-            '<line>%s</line>' % saxutils.escape(l) for l in lines.splitlines())
+            f'<line>{saxutils.escape(l)}</line>' for l in lines.splitlines())
 
       result = []
-      result.append('<node id=%s' % saxutils.quoteattr(node_id))
+      result.append(f'<node id={saxutils.quoteattr(node_id)}')
       if not slow_command:
         result.append('>')
       else:
-        result.append(' slow_command=%s>' % saxutils.quoteattr(slow_command))
+        result.append(f' slow_command={saxutils.quoteattr(slow_command)}>')
 
       result.append(
-          '<description>%s</description>' % saxutils.escape(node_description))
+          f'<description>{saxutils.escape(node_description)}</description>')
 
       for tag_name, tag_text, split_multiline in tag_list:
         xml_tag_name = saxutils.escape(tag_name)
@@ -164,8 +164,7 @@ class DeviceManager(plugin.Plugin):
           xml_tag_text = SplitMultilineToNodes(tag_text)
         else:
           xml_tag_text = saxutils.escape(tag_text)
-        result.append(
-            '<%s>%s</%s>' % (xml_tag_name, xml_tag_text, xml_tag_name))
+        result.append(f'<{xml_tag_name}>{xml_tag_text}</{xml_tag_name}>')
 
       result.append('</node>')
 
@@ -219,7 +218,7 @@ class DeviceManager(plugin.Plugin):
       tpm_status = (file_utils.ReadFile(os.path.join(tpm_root, 'enabled')),
                     file_utils.ReadFile(os.path.join(tpm_root, 'owned')))
       tpm_stat = (
-          ('Enabled: %s\nOwned: %s\n' % tpm_status) +
+          (f'Enabled: {tpm_status[0]}\nOwned: {tpm_status[1]}\n') +
           process_utils.CheckOutput('crossystem | grep tpm_owner', shell=True))
 
       return DeviceNodeString(
@@ -283,7 +282,7 @@ class DeviceManager(plugin.Plugin):
         A string including the firmware version.
       """
       re_device_name = (
-          re.compile(r'N: Name=".*(%s).*"' % ('|'.join(device_name_list))))
+          re.compile(f'N: Name=".*({"|".join(device_name_list)}).*"'))
       re_device_sysfs = re.compile(r'S: Sysfs=(.*)')
 
       device_list = file_utils.ReadFile('/proc/bus/input/devices').split('\n\n')
@@ -511,7 +510,7 @@ class DeviceManager(plugin.Plugin):
 
       for line in lines:
         if not found_tag_id:
-          if 'id="%s"' % tag_id in line:
+          if f'id="{tag_id}"' in line:
             found_tag_id = True
         else:
           if not '</div>' in line:
@@ -530,8 +529,9 @@ class DeviceManager(plugin.Plugin):
           The default time is 20 seconds.
       """
       with file_utils.UnopenedTemporaryFile(suffix='.html') as html_file_path:
-        process_utils.CheckOutput(['powertop', '--html=%s' % html_file_path,
-                                   '--time=%d' % fetch_time])
+        process_utils.CheckOutput([
+            'powertop', f'--html={html_file_path}', f'--time={int(fetch_time)}'
+        ])
 
         power_usage_main_xml = []
         power_usage_main_xml.append('<node id="power_usage">')

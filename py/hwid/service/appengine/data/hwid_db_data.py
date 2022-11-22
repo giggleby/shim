@@ -126,7 +126,7 @@ class HWIDDBDataManager:
     except Exception as e:
       logging.exception('Missing HWID file: %r', path)
       raise HWIDDBNotFoundError(
-          'HWID file missing for the requested project: %r' % e) from None
+          f'HWID file missing for the requested project: {e!r}') from None
     return raw_hwid_yaml
 
   def UpdateProjectContent(self, repo_metadata: hwid_repo.HWIDDBMetadata,

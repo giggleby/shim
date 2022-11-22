@@ -198,7 +198,7 @@ def ListComponents(database, comp_class=None):
   output_components = collections.defaultdict(list)
   for comp_cls in comp_class_to_lookup:
     if comp_cls not in database.GetComponentClasses():
-      raise ValueError('Invalid component class %r' % comp_cls)
+      raise ValueError(f'Invalid component class {comp_cls!r}')
     output_components[comp_cls].extend(database.GetComponents(comp_cls).keys())
 
   # Convert defaultdict to dict.
@@ -235,8 +235,9 @@ def EnumerateHWID(database, image_id=None, status='supported', comps=None,
   elif status == 'all':
     acceptable_status = set(common.COMPONENT_STATUS)
   else:
-    raise ValueError('The argument `status` must be one of "supported", '
-                     '"released", "all", but got %r.' % status)
+    raise ValueError(
+        'The argument `status` must be one of "supported", "released", "all", '
+        f'but got {status!r}.')
 
   def _IsComponentsSetValid(comps):
     for comp_cls, comp_names in comps.items():
@@ -467,7 +468,7 @@ def GetHWIDBundleName(project=None):
     Filename of the hwid bundle name as a string.
   """
   project = project or ProbeProject()
-  return 'hwid_v3_bundle_%s.sh' % project.upper()
+  return f'hwid_v3_bundle_{project.upper()}.sh'
 
 
 def GetBrandCode(brand_code=None):
@@ -482,8 +483,7 @@ def GetProbeStatementPath(project=None):
     project = project or ProbeProject()
     # We assume that project name is not 'default'.
     model_probe_statement_path = os.path.join(
-        os.path.dirname(__file__),
-        '%s_probe_statement.json' % (project.lower()))
+        os.path.dirname(__file__), f'{project.lower()}_probe_statement.json')
     if os.path.exists(model_probe_statement_path):
       path = model_probe_statement_path
   except Exception:

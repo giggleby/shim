@@ -33,6 +33,7 @@ from cros.factory.utils import type_utils
 
 from cros.factory.external import qrcode
 
+
 _POS_SCHEMA = schema.JSONSchemaDict(
     'position schema object',
     {
@@ -70,14 +71,14 @@ class QRCodeManager(plugin.Plugin):
 
   def _CheckSizeEqual(self, pos, size):
     if len(pos) != len(size):
-      raise Exception('The length of pos and size must match!'
-                      'pos: %r, size: %r' % (pos, size))
+      raise Exception(
+          f'The length of pos and size must match!pos: {pos!r}, size: {size!r}')
 
   def _GenerateQRCode(self, content):
     """Generates a base64 qrcode string."""
     if not isinstance(content, str):
       raise Exception(
-          'QR code content must be a string! (current: %r)' % content)
+          f'QR code content must be a string! (current: {content!r})')
 
     img = qrcode.make(content)
 

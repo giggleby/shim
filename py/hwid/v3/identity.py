@@ -49,13 +49,14 @@ from cros.factory.hwid.v3 import base32
 from cros.factory.hwid.v3 import base8192
 from cros.factory.hwid.v3 import common
 
+
 _ENCODING_SCHEME_MAP = {
     common.ENCODING_SCHEME.base32: base32.Base32,
     common.ENCODING_SCHEME.base8192: base8192.Base8192
 }
 
 
-_HEADER_FORMAT_STR = '{0:01b}{1:0%db}' % common.IMAGE_ID_BIT_LENGTH
+_HEADER_FORMAT_STR = f'{{0:01b}}{{1:0{common.IMAGE_ID_BIT_LENGTH}b}}'
 
 
 class _IdentityConverter:
@@ -144,7 +145,7 @@ class _IdentityConverter:
       (project_and_brand_code, encoded_configless,
        encoded_components_and_checksum) = parts
     else:
-      raise common.HWIDException('Invalid HWID string: %r' % encoded_string)
+      raise common.HWIDException(f'Invalid HWID string: {encoded_string!r}')
 
     if '0' in encoded_components_and_checksum or \
        '1' in encoded_components_and_checksum:
@@ -153,8 +154,8 @@ class _IdentityConverter:
       suggested_string = encoded_string.replace(encoded_components_and_checksum,
                                                 suggested_string)
       raise common.HWIDException(
-          'HWID encoded string only allows [A-Z2-9]. Do you mean "%s"?' %
-          suggested_string)
+          'HWID encoded string only allows [A-Z2-9]. Do you mean "'
+          f'{suggested_string}"?')
 
     project, _, brand_code = project_and_brand_code.partition('-')
     # An old HWID string might not have brand code.
@@ -182,7 +183,7 @@ class _IdentityConverter:
 
 def _VerifyPart(condition, part, value):
   if not condition(value):
-    raise common.HWIDException('The given %s %r is invalid.' % (part, value))
+    raise common.HWIDException(f'The given {part} {value!r} is invalid.')
 
 
 def _VerifyProjectPart(project):
@@ -289,7 +290,8 @@ class Identity:
     return not self.__eq__(rhs)
 
   def __repr__(self):
-    return 'Identity(%r)' % {k: getattr(self, k) for k in self.__slots__}
+    id_desc = ', '.join(f'{k}: {getattr(self, k)}' for k in self.__slots__)
+    return f'Identity({id_desc})'
 
   @staticmethod
   def Verify(encoding_scheme, project, encoding_pattern_index, image_id,

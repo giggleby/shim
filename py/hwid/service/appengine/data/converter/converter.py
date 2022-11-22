@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
+
 # Shorter identifiers.
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _ConvertedValueTypeMapping = Mapping[
@@ -197,8 +198,8 @@ class HexToHexValueFormatter(converter_types.StrFormatter):
   def __call__(self, value):
     source_prefix = '0x' if self._source_has_prefix else ''
     if not re.match(
-        '%s0*[0-9a-f]{1,%d}$' %
-        (source_prefix.lower(), self._num_digits), value, flags=re.I):
+        f'{source_prefix.lower()}0*[0-9a-f]{{1,{self._num_digits}}}$', value,
+        flags=re.I):
       raise converter_types.StrFormatterError(
           f'Not a regular string of {self._num_digits} digits hex number.')
     target_prefix = '0x' if self._target_has_prefix else ''
@@ -211,10 +212,12 @@ class HexEncodedStrValueFormatter(converter_types.StrFormatter):
                fixed_num_bytes: Optional[int]):
     source_prefix = '0x' if source_has_prefix else ''
     self._skip_prefix_len = len(source_prefix)
-    repeat_pattern = (r'*' if fixed_num_bytes is None else r'{%s}' %
-                      re.escape(str(fixed_num_bytes)))
-    self._value_pattern = r'%s([0-9a-f]{2})%s' % (re.escape(source_prefix),
-                                                  repeat_pattern)
+    bytes_pattern = re.escape(str(fixed_num_bytes))
+    repeat_pattern = (r'*'
+                      if fixed_num_bytes is None else f'{{{bytes_pattern}}}')
+    prefix_pattern = re.escape(source_prefix)
+    byte_in_hex = r'([0-9a-f]{2})'
+    self._value_pattern = f'{prefix_pattern}{byte_in_hex}{repeat_pattern}'
     self._encoding = encoding
 
   def __call__(self, value):

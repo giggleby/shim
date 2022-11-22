@@ -231,10 +231,8 @@ class GoofyServer(socketserver.ThreadingMixIn,
       url: A (possibly relative) URL that refers to the file
     """
     uuid = str(uuid4())
-    uri_path = '%s/%s/%s' % (self._PREFIX_GENERATED_FILE,
-                             uuid,
-                             os.path.basename(path))
-    self._resolver.AddPath('%s/%s' % (self._PREFIX_GENERATED_FILE, uuid),
+    uri_path = f'{self._PREFIX_GENERATED_FILE}/{uuid}/{os.path.basename(path)}'
+    self._resolver.AddPath(f'{self._PREFIX_GENERATED_FILE}/{uuid}',
                            os.path.dirname(path))
     return uri_path
 
@@ -249,7 +247,7 @@ class GoofyServer(socketserver.ThreadingMixIn,
           the data will expire.
     """
     uuid = str(uuid4())
-    uri_path = '%s/%s' % (self._PREFIX_GENERATED_DATA, uuid)
+    uri_path = f'{self._PREFIX_GENERATED_DATA}/{uuid}'
     self.RegisterData(uri_path, mime_type, data, expiration_secs)
     return uri_path
 

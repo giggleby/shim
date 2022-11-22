@@ -101,7 +101,7 @@ class GoofyRPC:
       ret, exc = result.get(block=True, timeout=timeout_secs)
     except queue.Empty:
       raise GoofyRPCException(
-          'Time out waiting for %s to complete' % _GetFuncString()) from None
+          f'Time out waiting for {_GetFuncString()} to complete') from None
     if exc:
       raise exc
     return ret
@@ -263,8 +263,7 @@ class GoofyRPC:
         for f in self.goofy.test_list.Walk():
           f.UpdateState(iterations=f.iterations, retries=f.retries)
       else:
-        raise NotImplementedError(
-            'Unknown type: %s' % type(self.goofy.test_list))
+        raise NotImplementedError(f'Unknown type: {type(self.goofy.test_list)}')
 
     return self._InRunQueue(Target)
 
@@ -278,7 +277,7 @@ class GoofyRPC:
         archive_key: A "key" that may later be used to refer to the archive.
             This is just a randomly-chosen 8-digit number.
     """
-    archive_key = '%08d' % random.SystemRandom().randint(0, 1e8)
+    archive_key = f'{random.SystemRandom().randint(0, 1e8):08}'
     archive_id = '.'.join([re.sub('[^A-Za-z0-9.]', '_', x)
                            for x in (archive_key, name, serial, description)])
     output_file = factory_bug.SaveLogs(tempfile.gettempdir(),
@@ -318,7 +317,7 @@ class GoofyRPC:
     """Runs a test."""
     test = self.goofy.test_list.LookupPath(path)
     if not test:
-      raise GoofyRPCException('Unknown test path %r' % path)
+      raise GoofyRPCException(f'Unknown test path {path!r}')
     test = test.GetTopLevelParentOrGroup()
 
     self._InRunQueue(lambda: self.goofy.RestartTests(root=test),
@@ -359,7 +358,7 @@ class GoofyRPC:
     if operation not in [
         'force_halt', 'halt', 'reboot', 'full_reboot', 'direct_ec_reboot'
     ]:
-      raise GoofyRPCException('Invalid shutdown operation %r' % operation)
+      raise GoofyRPCException(f'Invalid shutdown operation {operation!r}')
     # No timeout for shutdown as the operation can be delayed for arbitrary
     # duration by the factory test.
     self._InRunQueue(lambda: self.goofy.Shutdown(operation))
@@ -572,7 +571,7 @@ class GoofyRPC:
                    e.is_response),
         timeout)
     if result is None:
-      raise type_utils.TimeoutError('Failed calling Extension RPC <%r>' % name)
+      raise type_utils.TimeoutError(f'Failed calling Extension RPC <{name!r}>')
     return result.args
 
   def DeviceTakeScreenshot(self, output_file=None,
@@ -594,10 +593,10 @@ class GoofyRPC:
     """
 
     if not output_file:
-      output_filename = ('/var/log/screenshot_%s.png' %
-                         time.strftime('%Y%m%d-%H%M%S'))
+      output_filename = (
+          f"/var/log/screenshot_{time.strftime('%Y%m%d-%H%M%S')}.png")
     else:
-      output_filename = '%s' % output_file
+      output_filename = output_file
 
     tmp_file = self.CallExtension('TakeScreenshot', timeout=timeout)
     image = base64.b64decode(file_utils.ReadFile(tmp_file).split(',')[1])
@@ -774,8 +773,7 @@ class GoofyRPC:
 
   def GetTestHistoryEntry(self, path, invocation):
     """Returns metadata and log for one test invocation."""
-    test_dir = os.path.join(paths.DATA_TESTS_DIR,
-                            '%s-%s' % (path, invocation))
+    test_dir = os.path.join(paths.DATA_TESTS_DIR, f'{path}-{invocation}')
 
     testlog = json_utils.LoadFile(os.path.join(test_dir, 'testlog.json'))
 

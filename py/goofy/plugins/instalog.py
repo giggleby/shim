@@ -18,6 +18,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
+
 # Private constants
 _DEFAULT_FLUSH_TIMEOUT = 5  # 5sec
 _SHOPFLOOR_TIMEOUT = 10  # 10sec
@@ -167,7 +168,7 @@ class Instalog(plugin.Plugin):
     try:
       return True, int(out), None
     except Exception:
-      return False, None, 'Could not parse output: %s' % out
+      return False, None, f'Could not parse output: {out}'
 
   def FlushInput(self, last_seq_output, timeout=None):
     """Flushes Instalog's Testlog input plugin.
@@ -204,9 +205,13 @@ class Instalog(plugin.Plugin):
     success, last_seq_processed, msg = self._GetLastSeqProcessed()
     if not success:
       logging.error('FlushInput: Error encountered: %s', msg)
-      return False, {self.INPUT_TESTLOG_ID: {
-          'result': 'error (%s)' % msg,
-          'completed_count': -1, 'total_count': -1}}
+      return False, {
+          self.INPUT_TESTLOG_ID: {
+              'result': f'error ({msg})',
+              'completed_count': -1,
+              'total_count': -1
+          }
+      }
     if last_seq_processed < last_seq_output:
       return False, {self.INPUT_TESTLOG_ID: {
           'result': 'timeout', 'completed_count': last_seq_processed,

@@ -10,6 +10,7 @@ import uuid
 from cros.factory.utils import debug_utils
 from cros.factory.utils import type_utils
 
+
 # Type of resources that can be used by plugins.
 RESOURCE = type_utils.Enum(['CPU', 'LED', 'NETWORK', 'POWER', 'DISPLAY'])
 
@@ -53,7 +54,7 @@ def GetPluginClass(plugin_name):
         obj.__module__ == full_name and
         issubclass(obj, Plugin)):
       assert target_class is None, (
-          'Multiple plugins class found in %s' % plugin_name)
+          f'Multiple plugins class found in {plugin_name}')
       target_class = obj
   return target_class
 
@@ -73,7 +74,7 @@ def GetPluginNameFromClass(plugin_class):
   """
   if (not issubclass(plugin_class, Plugin) or
       not plugin_class.__module__.startswith(_PLUGIN_MODULE_BASE)):
-    raise RuntimeError('%r is not a valid Goofy plugin' % plugin_class)
+    raise RuntimeError(f'{plugin_class!r} is not a valid Goofy plugin')
   return plugin_class.__module__[len(_PLUGIN_MODULE_BASE) + 1:]
 
 

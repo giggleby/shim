@@ -236,9 +236,9 @@ class GoofyUITest(GoofyTest):
                                  uuid=event.uuid).to_json())
           self.ws_start.set()
 
-    ws = MyClient('ws://%s:%d/event' %
-                  (net_utils.LOCALHOST, goofy_proxy.DEFAULT_GOOFY_PORT),
-                  protocols=None, extensions=None)
+    ws = MyClient(
+        f'ws://{net_utils.LOCALHOST}:{int(goofy_proxy.DEFAULT_GOOFY_PORT)}'
+        '/event', protocols=None, extensions=None)
 
     def OpenWebSocket():
       ws.connect()

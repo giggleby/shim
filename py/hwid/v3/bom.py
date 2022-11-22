@@ -64,8 +64,9 @@ class BOM:
     return not self.__eq__(op2)
 
   def __repr__(self):
-    return 'BOM(encoding_pattern_index=%r, image_id=%r, components=%r)' % (
-        self.encoding_pattern_index, self.image_id, self.components)
+    return (
+        f'BOM(encoding_pattern_index={self.encoding_pattern_index!r}, image_id='
+        f'{self.image_id!r}, components={self.components!r})')
 
 
 class RamSize:
@@ -85,7 +86,7 @@ class RamSize:
     matches = RamSize._RE.findall(ram_size_str.upper())
     if not matches:
       logging.error('Unable to process dram format %s', ram_size_str)
-      raise ValueError('Invalid DRAM: %s' % ram_size_str)
+      raise ValueError(f'Invalid DRAM: {ram_size_str}')
     # Use the latest match as the ram size, since most ram strings
     # put the ram size at the end.
     # For example: Samsung_4G_M471A5644EB0-CRC_2048mb_1
@@ -116,4 +117,4 @@ class RamSize:
     for key, value in reversed(list(RamSize._UNITS.items())):
       if self.byte_count % value == 0:
         return str(int(self.byte_count // value)) + key + 'B'
-    raise ValueError('Cannot represent byte_count %s.' % self.byte_count)
+    raise ValueError(f'Cannot represent byte_count {self.byte_count}.')

@@ -18,7 +18,7 @@ import logging
 import re
 import threading
 import time
-from typing import Optional, Mapping, Sequence, Tuple, Union
+from typing import Mapping, Optional, Sequence, Tuple, Union
 
 from cros.factory.utils import type_utils
 
@@ -55,9 +55,9 @@ class RuleLogger:
       message: A string indicating the message to log.
     """
     if tag not in RuleLogger.VALID_TAGS:
-      raise RuleException('Invalid logging tag: %r' % tag)
+      raise RuleException(f'Invalid logging tag: {tag!r}')
     getattr(self, tag).append(
-        RuleLogger.LogEntry(time.time(), '%s: %s' % (tag.upper(), message)))
+        RuleLogger.LogEntry(time.time(), f'{tag.upper()}: {message}'))
 
   def Info(self, message):
     self.Log('info', message)
@@ -71,7 +71,7 @@ class RuleLogger:
   def Dump(self):
     """Dumps the log in chronological order to a string."""
     logs = sorted(self.info + self.warning + self.error)
-    return '\n' + '\n'.join([log.message for log in logs])
+    return '\n' + '\n'.join(log.message for log in logs)
 
   def Reset(self):
     """Resets the logger by cleaning all the log messages."""
@@ -152,9 +152,8 @@ def RuleFunction(ctx_list):
       """A method to dump a string to represent the rule function being called.
       """
       result = ''.join([
-          '%s(' % fn.__name__, ', '.join(['%r' % arg for arg in args]),
-          ', '.join(['%r=%r' % (key, value) for key, value in kwargs.items()]),
-          ')'
+          f'{fn.__name__}(', ', '.join(f'{arg!r}' for arg in args),
+          ', '.join(f'{key!r}={value!r}' for key, value in kwargs.items()), ')'
       ])
       return result
 
@@ -163,14 +162,14 @@ def RuleFunction(ctx_list):
       context = GetContext()
       for ctx in ctx_list:
         if not getattr(context, ctx, None):
-          raise ValueError('%r not found in context' % ctx)
+          raise ValueError(f'{ctx!r} not found in context')
       result = fn(*args, **kwargs)
       # Log the rule function being evaluated and its result.
-      GetLogger().Info('  %s: %r' % (RuleFunctionRepr(*args, **kwargs), result))
+      GetLogger().Info(f'  {RuleFunctionRepr(*args, **kwargs)}: {result!r}')
       return result
 
     if fn.__name__ in _rule_functions:
-      raise KeyError('Re-defining rule function %r' % fn.__name__)
+      raise KeyError(f'Re-defining rule function {fn.__name__!r}')
     _rule_functions[fn.__name__] = ContextAwareFunction
     return ContextAwareFunction
 
@@ -197,7 +196,7 @@ class Rule:
   def __init__(self, name, evaluate, when=None, otherwise=None):
     if otherwise and not when:
       raise RuleException(
-          "'when' must be specified along with 'otherwise' in %r" % name)
+          f"'when' must be specified along with 'otherwise' in {name!r}")
 
     self.name = name
     self.when = when
@@ -233,7 +232,7 @@ class Rule:
     """
     for field in ('name', 'evaluate'):
       if not rule_dict.get(field):
-        raise RuleException('Required field %r not specified' % field)
+        raise RuleException(f'Required field {field!r} not specified')
     return Rule(rule_dict['name'], rule_dict['evaluate'],
                 when=rule_dict.get('when'),
                 otherwise=rule_dict.get('otherwise'))
@@ -279,18 +278,19 @@ class Rule:
     def EvaluateAllFunctions(function_list):
       for function in function_list:
         try:
-          logger.Info('%s' % function)
+          logger.Info(function)
           _Eval(function, {})
         except Exception as e:
-          raise RuleException('Evaluation of %r in rule %r failed: %r' %
-                              (function, self.name, e)) from None
+          raise RuleException(
+              f'Evaluation of {function!r} in rule {self.name!r} failed: {e!r}'
+          ) from None
 
     try:
       SetContext(context)
-      logger.Info('Checking rule %r' % self.name)
+      logger.Info(f'Checking rule {self.name!r}')
       if self.when is not None:
         logger.Info("Evaluating 'when':")
-        logger.Info('%s' % self.when)
+        logger.Info(f'{self.when}')
         if _Eval(self.when, {}):
           logger.Info("Evaluating 'evaluate':")
           EvaluateAllFunctions(type_utils.MakeList(self.evaluate))
@@ -303,7 +303,7 @@ class Rule:
     finally:
       if logger.error:
         raise RuleException(logger.Dump() +
-                            '\nEvaluation of rule %r failed' % self.name)
+                            f'\nEvaluation of rule {self.name!r} failed')
       logging.debug(logger.Dump())
       SetContext(None)
 
@@ -377,8 +377,8 @@ class Value:
     return not self == operand
 
   def __repr__(self):
-    return '%s(%r, is_re=%r)' % (self.__class__.__name__, self.raw_value,
-                                 self.is_re)
+    return (
+        f'{self.__class__.__name__}({self.raw_value!r}, is_re={self.is_re!r})')
 
 
 class InternalTags:

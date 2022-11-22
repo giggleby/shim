@@ -94,14 +94,14 @@ class ResourceUpdater:
         # Check if argsfile and bootfile file are exist.
         for key in ('argsfile', 'bootfile'):
           netboot_firmware_file = netboot_firmware_information[key]
-          if not os.path.isfile('/mnt/tftp/%s' % netboot_firmware_file):
-            messages.append('%s is missing' % netboot_firmware_file)
+          if not os.path.isfile(f'/mnt/tftp/{netboot_firmware_file}'):
+            messages.append(f'{netboot_firmware_file} is missing')
         # Check if tftp_server_ip is same as the ip set.
         host_ip = process_utils.CheckOutput(['ip', 'route']).split()[2]
         tftp_server_ip = netboot_firmware_information['tftp_server_ip']
         if tftp_server_ip and tftp_server_ip != host_ip:
-          messages.append('The tftp_server_ip "%s" does not equal to "%s". ' %
-                          (tftp_server_ip, host_ip))
+          messages.append(f'The tftp_server_ip "{tftp_server_ip}" does not '
+                          f'equal to "{host_ip}". ')
 
     config = umpire_config.UmpireConfig(self._daemon.env.config)
     if not source_id:

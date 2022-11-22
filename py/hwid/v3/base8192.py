@@ -95,18 +95,18 @@ class Base8192:
     result = []
     for index in range(0, len(base8192_string), 3):
       try:
-        result.append('{0:05b}'.format(cls.BASE32_REVERSED[
-            base8192_string[index].upper()]))
+        result.append(
+            f'{cls.BASE32_REVERSED[base8192_string[index].upper()]:05b}')
         if index == len(base8192_string) - 1:
           break
-        result.append('{0:03b}'.format(cls.BASE8_REVERSED[
-            base8192_string[index + 1].upper()]))
-        result.append('{0:05b}'.format(cls.BASE32_REVERSED[
-            base8192_string[index + 2].upper()]))
+        result.append(
+            f'{cls.BASE8_REVERSED[base8192_string[index + 1].upper()]:03b}')
+        result.append(
+            f'{cls.BASE32_REVERSED[base8192_string[index + 2].upper()]:05b}')
       except KeyError:
         raise KeyError(
-            'Encoded string should be of format: ([A-Z2-7][2-9][A-Z2-7])+: %r' %
-            base8192_string) from None
+            'Encoded string should be of format: ([A-Z2-7][2-9][A-Z2-7])+: '
+            f'{base8192_string!r}') from None
     return ''.join(result)
 
   @classmethod
@@ -147,6 +147,6 @@ if __name__ == '__main__':
     if expected_checksum == given_checksum:
       print('Success.')
     else:
-      print('Checksum should be: %r' % expected_checksum)
+      print(f'Checksum should be: {expected_checksum!r}')
   else:
     option_parser.print_help()

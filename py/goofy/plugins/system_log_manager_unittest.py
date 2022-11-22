@@ -21,6 +21,7 @@ from cros.factory.test import state
 from cros.factory.utils import debug_utils
 from cros.factory.utils import file_utils
 
+
 # Mocks CatchException decorator since it will suppress exception in
 # SystemLogManager.
 CatchExceptionImpl = debug_utils.CatchException
@@ -33,8 +34,9 @@ debug_utils.CatchException = CatchExceptionDisabled
 
 from cros.factory.goofy.plugins import system_log_manager  # pylint: disable=wrong-import-position
 
-TEST_DIRECTORY = '/tmp/system_log_manager_unittest_%s_/' % os.getpid()
-mock_file_prefix = 'system_log_manager_unittest_%s_' % os.getpid()
+
+TEST_DIRECTORY = f'/tmp/system_log_manager_unittest_{os.getpid()}_/'
+mock_file_prefix = f'system_log_manager_unittest_{os.getpid()}_'
 mock_sync_log_paths = [os.path.join(TEST_DIRECTORY, mock_file_prefix + '*')]
 
 MOCK_SYNC_PERIOD_SEC = 0.6
@@ -56,11 +58,13 @@ MOCK_SERVER_URL = 'http://0.0.0.0:1234'
 MOCK_PORT = '8084'
 MOCK_DEVICE_ID = 'abcdef0123456789abcdef0123456789'
 MOCK_RSYNC_DESTINATION = [
-    'rsync://%s:%s/system_logs/%s' %
-    (urllib.parse.urlparse(MOCK_SERVER_URL).hostname, MOCK_PORT,
-     MOCK_DEVICE_ID)]
-MOCK_RSYNC_COMMAND_ARG = ['rsync', '-azR', '--stats', '--chmod=o-t',
-                          '--timeout=%s' % MOCK_RSYNC_IO_TIMEOUT]
+    (f'rsync://{urllib.parse.urlparse(MOCK_SERVER_URL).hostname}:{MOCK_PORT}'
+     f'/system_logs/{MOCK_DEVICE_ID}')
+]
+MOCK_RSYNC_COMMAND_ARG = [
+    'rsync', '-azR', '--stats', '--chmod=o-t',
+    f'--timeout={MOCK_RSYNC_IO_TIMEOUT}'
+]
 
 
 def CreateTestFile(prefix):
@@ -75,7 +79,7 @@ class StubTimer:
     self.fake_time = 0
 
   def __str__(self):
-    return '(t=%s)' % self.fake_time
+    return f'(t={self.fake_time})'
 
   def time(self):
     return self.fake_time
@@ -504,7 +508,7 @@ class TestSystemLogManager(unittest.TestCase):
     self.SetMock()
 
     times = 5
-    mock_extra_files = [['mock_extra_files_%d' % x] for x in range(times)]
+    mock_extra_files = [[f'mock_extra_files_{int(x)}'] for x in range(times)]
     mock_callback = mock.MagicMock()
 
     for kick_number in range(times):

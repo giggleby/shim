@@ -68,7 +68,7 @@ class Base32:
     """
     result = []
     for c in base32_string:
-      result.append('{0:05b}'.format(cls.BASE32_REVERSED[c.upper()]))
+      result.append(f'{cls.BASE32_REVERSED[c.upper()]:05b}')
     return ''.join(result)
 
   @classmethod
@@ -109,6 +109,6 @@ if __name__ == '__main__':
     if expected_checksum == given_checksum:
       print('Success.')
     else:
-      print('Checksum should be: %r' % expected_checksum)
+      print(f'Checksum should be: {expected_checksum!r}')
   else:
     option_parser.print_help()

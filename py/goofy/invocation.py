@@ -34,6 +34,7 @@ from cros.factory.utils import time_utils
 
 from cros.factory.external import syslog
 
+
 # Number of bytes to include from the log of a failed test.
 ERROR_LOG_TAIL_LENGTH = 8 * 1024
 
@@ -126,8 +127,8 @@ class TestInvocation:
     """
     self.goofy = goofy
     self.test = test
-    self.thread = threading.Thread(
-        target=self._Run, name='TestInvocation-%s' % self.test.path)
+    self.thread = threading.Thread(target=self._Run,
+                                   name=f'TestInvocation-{self.test.path}')
     self.thread.daemon = True
     self.count = None
     self.update_state_on_completion = {}
@@ -163,8 +164,9 @@ class TestInvocation:
     return self._dargs
 
   def __repr__(self):
-    return 'TestInvocation(_aborted=%s, _completed=%s)' % (
-        self._aborted, self._completed)
+    return (
+        f'TestInvocation(_aborted={self._aborted}, _completed={self._completed}'
+        ')')
 
   def Start(self):
     """Starts the test threads."""
@@ -204,7 +206,7 @@ class TestInvocation:
 
   def _SetupOutputDir(self):
     output_dir = os.path.join(paths.DATA_TESTS_DIR,
-                              '%s-%s' % (self.test.path, self.uuid))
+                              f'{self.test.path}-{self.uuid}')
     file_utils.TryMakeDirs(output_dir)
 
     # Create a symlink for the latest test run, so if we're looking at the
@@ -243,8 +245,7 @@ class TestInvocation:
     files_to_delete = []
     try:
       def make_tmp(prefix):
-        ret = tempfile.mktemp(
-            prefix='%s-%s-' % (self.test.path, prefix))
+        ret = tempfile.mktemp(prefix=f'{self.test.path}-{prefix}-')
         files_to_delete.append(ret)
         return ret
 
@@ -259,14 +260,14 @@ class TestInvocation:
       with open(self._log_path, 'ab', 0) as log:
         log.write(b'Running test: %s\n' % self.test.path.encode('utf-8'))
         self._env_additions['CROS_PROC_TITLE'] = (
-            '%s.py (factory pytest %s)' % (pytest_name, self.output_dir))
+            f'{pytest_name}.py (factory pytest {self.output_dir})')
 
         env = dict(os.environ)
         env.update(self._env_additions)
         with self._lock:
           if self._aborted:
             return (TestState.FAILED,
-                    'Before starting: %s' % self._AbortedMessage())
+                    f'Before starting: {self._AbortedMessage()}')
 
           self._process = self.goofy.pytest_prespawner.spawn(
               PytestInfo(test_list=self.goofy.test_list.test_list_id,
@@ -279,7 +280,7 @@ class TestInvocation:
 
         def _LineCallback(line):
           log.write(line.encode('utf-8') + b'\n')
-          sys.stderr.write('%s> %s\n' % (self.test.path, line))
+          sys.stderr.write(f'{self.test.path}> {line}\n')
 
         # Tee process's stderr to both the log and our stderr.
         process_utils.PipeStdoutLines(self._process, _LineCallback)
@@ -294,7 +295,7 @@ class TestInvocation:
             return TestState.FAILED, self._AbortedMessage()
         if self._process.returncode:
           return (TestState.FAILED,
-                  'Test returned code %d' % self._process.returncode)
+                  f'Test returned code {int(self._process.returncode)}')
 
       if not os.path.exists(results_path):
         return TestState.FAILED, 'pytest did not complete'
@@ -306,7 +307,7 @@ class TestInvocation:
         #     analysis.
         return result.status, '; '.join(f.exc_repr for f in result.failures)
     except Exception as e:
-      return TestState.FAILED, 'Unable to retrieve pytest results: %r' % e
+      return TestState.FAILED, f'Unable to retrieve pytest results: {e!r}'
     finally:
       for f in files_to_delete:
         try:
@@ -319,15 +320,13 @@ class TestInvocation:
     iteration_string = ''
     retries_string = ''
     if self.test.iterations > 1:
-      iteration_string = ' [%s/%s]' % (
-          self.test.iterations -
-          self.test.GetState().iterations_left + 1,
-          self.test.iterations)
+      iteration_string = (
+          f' [{self.test.iterations - self.test.GetState().iterations_left + 1}'
+          f'/{self.test.iterations}]')
     if self.test.retries > 0:
-      retries_string = ' [retried %s/%s]' % (
-          self.test.retries -
-          self.test.GetState().retries_left,
-          self.test.retries)
+      retries_string = (
+          f' [retried {self.test.retries - self.test.GetState().retries_left}/'
+          f'{self.test.retries}]')
     logging.info('Running test %s%s%s', self.test.path,
                  iteration_string, retries_string)
 
@@ -366,9 +365,9 @@ class TestInvocation:
 
     service_manager.RestoreServices()
 
-    log_func = (session.console.error if status == TestState.FAILED
-                else logging.info)
-    tag_decorator = (' (%s)' % self._tag if self._tag else '')
+    log_func = (
+        session.console.error if status == TestState.FAILED else logging.info)
+    tag_decorator = (f' ({self._tag})' if self._tag else '')
     log_func(u'Test %s%s%s %s: %s', self.test.path, iteration_string,
              tag_decorator, status, error_msg)
 
@@ -394,16 +393,14 @@ class TestInvocation:
       logging.debug('Resolving self.test.dargs from test list [%s]...',
                     self.goofy.test_list.test_list_id)
       self._dargs = ResolveTestArgs(
-          self.goofy,
-          self.test,
-          test_list_id=self.goofy.test_list.test_list_id,
+          self.goofy, self.test, test_list_id=self.goofy.test_list.test_list_id,
           dut_options=self._dut_options)
     except Exception as e:
       logging.exception('Unable to resolve test arguments')
       # Although the test is considered failed already,
       # let's still follow the normal path, so everything is logged properly.
       status = TestState.FAILED
-      error_msg = 'Unable to resolve test arguments: %s' % e
+      error_msg = f'Unable to resolve test arguments: {e}'
 
     init_data = {
         'testRunId': self.uuid,
@@ -435,8 +432,7 @@ class TestInvocation:
     except Exception:
       logging.exception('Unable to log %s event by event_log', event_name)
 
-    syslog.syslog('Test %s (%s) %s' %
-                  (self.test.path, self.uuid, progressing_verb))
+    syslog.syslog(f'Test {self.test.path} ({self.uuid}) {progressing_verb}')
 
     return status, error_msg
 
@@ -468,15 +464,13 @@ class TestInvocation:
       error_msg = DecodeUTF8(error_msg)
     try:
       self.goofy.event_client.post_event(
-          Event(Event.Type.DESTROY_TEST,
-                test=self.test.path,
+          Event(Event.Type.DESTROY_TEST, test=self.test.path,
                 invocation=self.uuid))
     except Exception:
       logging.exception('Unable to post DESTROY_TEST event')
 
-    syslog.syslog('Test %s (%s) completed: %s%s' % (
-        self.test.path, self.uuid, status,
-        (' (%s)' % error_msg if error_msg else '')))
+    syslog.syslog(f'Test {self.test.path} ({self.uuid}) completed: {status}'
+                  f'{f" ({error_msg})" if error_msg else ""}')
 
     end_time = time.time()
     finish_data = {

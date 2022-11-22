@@ -172,8 +172,7 @@ class HexToHexValueConverter(ValueConverter):
 
   def __call__(self, value):
     prefix = '0x' if self._has_prefix else ''
-    if not re.match('%s0*[0-9a-fA-F]{1,%d}$' %
-                    (prefix, self._num_digits), value):
+    if not re.match(f'{prefix}0*[0-9a-fA-F]{{1,{self._num_digits}}}$', value):
       raise ValueError(
           f'Not a regular string of {self._num_digits} digits hex number.')
     # Regulate the output to the fixed-digit hex string with upper cases.
@@ -189,7 +188,7 @@ class IntToHexValueConverter(ValueConverter):
                                                         has_prefix=False)
 
   def __call__(self, value):
-    value = '%04x' % int(value)
+    value = f'{int(value):04x}'
     return self._hex_to_hex_converter(value)
 
 
@@ -201,7 +200,7 @@ class FloatToHexValueConverter(ValueConverter):
                                                         has_prefix=False)
 
   def __call__(self, value):
-    value = '%04x' % int(float(value))
+    value = f'{int(float(value)):04x}'
     return self._hex_to_hex_converter(value)
 
 
@@ -296,16 +295,16 @@ class _FieldRecord:
         return None
       if not valid_hwid_field_names:
         raise MissingComponentValueError(
-            'Missing component value field(s) for field %r : %r.' %
-            (self.probe_statement_field_name, self.hwid_field_names))
+            'Missing component value field(s) for field '
+            f'{self.probe_statement_field_name!r} : {self.hwid_field_names!r}.')
       raise ProbeStatementConversionError(
-          'Unable to convert the value of field %r : %r.' %
-          (self.probe_statement_field_name, err))
+          'Unable to convert the value of field '
+          f'{self.probe_statement_field_name!r} : {err!r}.')
     for value in expected_field:
       if value != expected_field[0]:
         raise ProbeStatementConversionError(
-            'Found multiple valid component value fields for field %r.' %
-            self.probe_statement_field_name)
+            'Found multiple valid component value fields for field '
+            f'{self.probe_statement_field_name!r}.')
     return expected_field[0]
 
 
@@ -800,7 +799,7 @@ def GenerateVerificationPayload(dbs):
       if ps_gen.probe_category not in vpg_config.waived_comp_categories:
         probe_config.AddComponentProbeStatement(ps_gen.GenerateProbeStatement())
 
-    probe_config_pathname = 'runtime_probe/%s/probe_config.json' % model_prefix
+    probe_config_pathname = f'runtime_probe/{model_prefix}/probe_config.json'
     generated_file_contents[probe_config_pathname] = probe_config.DumpToString()
     grouped_comp_vp_piece_per_model[db.project] = grouped_comp_vp_piece
     grouped_primary_comp_name_per_model[db.project] = grouped_primary_comp_name

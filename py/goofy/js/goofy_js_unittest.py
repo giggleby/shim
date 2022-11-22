@@ -14,6 +14,7 @@ import unittest
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import process_utils
 
+
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
@@ -26,8 +27,8 @@ class GoofyJSTest(unittest.TestCase):
         ['make', '-C', static_dir, 'check_js'], stderr=subprocess.STDOUT)
     self.assertNotIn(
         ' WARNING ', output,
-        "There's warning in closure compiler output, please fix them.\n"
-        'output:\n%s' % output)
+        "There's warning in closure compiler output, please fix them.\noutput:"
+        f"\n{output}")
 
 
 if __name__ == '__main__':

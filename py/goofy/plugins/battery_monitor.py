@@ -51,8 +51,8 @@ class BatteryMonitor(periodic_plugin.PeriodicPlugin):
       else:
         ac_present = power.CheckACPresent()
         charge_pct = power.GetChargePct(get_float=True)
-        message = ('Current battery level %.1f%%, AC charger is %s' %
-                   (charge_pct, 'connected' if ac_present else 'disconnected'))
+        message = (f"Current battery level {charge_pct:.1f}%, AC charger is "
+                   f"{'connected' if ac_present else 'disconnected'}")
 
         if charge_pct > self._critical_low_battery_pct:
           critical_low_battery = False

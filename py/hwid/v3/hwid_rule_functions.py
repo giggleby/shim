@@ -53,7 +53,7 @@ def ComponentEq(comp_cls, comp_names):
   bom = GetContext().bom
 
   if comp_cls not in bom.components:
-    raise HWIDException('The given component class %r is invalid.' % comp_cls)
+    raise HWIDException(f'The given component class {comp_cls!r} is invalid.')
 
   return bom.components[comp_cls] == sorted(type_utils.MakeList(comp_names))
 
@@ -74,7 +74,7 @@ def ComponentIn(comp_cls, values):
   bom = GetContext().bom
 
   if comp_cls not in bom.components:
-    raise HWIDException('The given component class %r is invalid.' % comp_cls)
+    raise HWIDException(f'The given component class {comp_cls!r} is invalid.')
 
   values = [Value(value) if not isinstance(value, Value) else value
             for value in type_utils.MakeList(values)]
@@ -98,7 +98,7 @@ def SetImageId(image_id_name):
     image_id = image_id_name
 
   if image_id not in context.database.image_ids:
-    raise HWIDException('Invalid image id: %r' % image_id)
+    raise HWIDException(f'Invalid image id: {image_id!r}')
   context.bom.image_id = image_id
 
 

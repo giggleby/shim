@@ -46,11 +46,11 @@ def _TestDatabase(targs):
                  db_path, db_path_in_proj_info)
     return None
   try:
-    title = '%s %s:%s' % (project_name, commit, db_path)
+    title = f'{project_name} {commit}:{db_path}'
     logging.info('Checking %s', title)
     if projects_info[project_name]['branch'] != 'main':
-      raise Exception('Project %r is not on main' %
-                      (projects_info[project_name]['branch'], ))
+      raise Exception(
+          f"Project {projects_info[project_name]['branch']!r} is not on main")
     HWIDDBsPatternTest.VerifyDatabasePattern(hwid_dir, commit, db_path)
     return None
   except Exception:
@@ -79,13 +79,13 @@ class HWIDDBsPatternTest(unittest.TestCase):
         'cros-internal/main')
     projects_info = yaml.safe_load(
         process_utils.CheckOutput(
-            ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
+            ['git', 'show', f'{target_commit}:projects.yaml'], cwd=hwid_dir))
 
 
     if self.project:
       if self.project not in projects_info:
-        self.fail('Invalid project %r' % self.project)
-      test_args = [('v3/%s' % self.project, projects_info, target_commit,
+        self.fail(f'Invalid project {self.project!r}')
+      test_args = [(f'v3/{self.project}', projects_info, target_commit,
                     hwid_dir)]
     else:
       files = os.environ.get('PRESUBMIT_FILES')
@@ -106,7 +106,7 @@ class HWIDDBsPatternTest(unittest.TestCase):
     if exception_list:
       error_msg = []
       for title, err_msg_lines in exception_list:
-        error_msg.append('Error occurs in %s\n' % title +
+        error_msg.append(f'Error occurs in {title}\n' +
                          ''.join('  ' + l for l in err_msg_lines))
       raise Exception('\n'.join(error_msg))
 

@@ -62,7 +62,7 @@ class SKUHelper:
           components['dram'])
 
     project = bom.project.lower()
-    sku_str = '%s_%s_%s' % (project, cpu, memory_str)
+    sku_str = f'{project}_{cpu}_{memory_str}'
 
     return SKU(sku_str=sku_str, project=project, cpu=cpu, memory_str=memory_str,
                total_bytes=total_bytes, warnings=warnings)

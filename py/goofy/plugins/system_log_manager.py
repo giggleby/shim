@@ -27,6 +27,7 @@ from cros.factory.utils.process_utils import TerminateOrKillProcess
 from cros.factory.utils import time_utils
 from cros.factory.utils import type_utils
 
+
 KickRequest = namedtuple('KickRequest',
                          ['extra_files', 'callback', 'clear_only'])
 
@@ -102,8 +103,8 @@ class SystemLogManager(plugin.Plugin):
     if self._sync_log_period_secs:
       if self._sync_log_period_secs < MIN_SYNC_LOG_PERIOD_SECS:
         raise SystemLogManagerException(
-            'sync_log_period_secs should not'
-            ' be less than %d.' % MIN_SYNC_LOG_PERIOD_SECS)
+            'sync_log_period_secs should not be less than '
+            f'{int(MIN_SYNC_LOG_PERIOD_SECS)}.')
       if self._scan_log_period_secs > self._sync_log_period_secs:
         raise SystemLogManagerException(
             'scan_log_period_secs should not'
@@ -111,7 +112,7 @@ class SystemLogManager(plugin.Plugin):
     for list_name in ['_clear_log_paths', '_clear_log_excluded_paths']:
       list_attribute = getattr(self, list_name)
       if list_attribute and not isinstance(list_attribute, list):
-        raise SystemLogManagerException('%r should be a list.' % list_name)
+        raise SystemLogManagerException(f'{list_name!r} should be a list.')
     if self._clear_log_paths and self._sync_log_paths:
       if set(self._clear_log_paths) & set(self._sync_log_paths):
         raise SystemLogManagerException('clear_log_paths should not be '
@@ -193,9 +194,8 @@ class SystemLogManager(plugin.Plugin):
     proxy = server_proxy.GetServerProxy()
     factory_log_port = proxy.GetFactoryLogPort()
     folder_name = session.GetDeviceID()
-    return ['rsync://%s:%s/system_logs/%s' %
-            (urllib.parse.urlparse(url).hostname, factory_log_port,
-             folder_name)]
+    return [(f'rsync://{urllib.parse.urlparse(url).hostname}:{factory_log_port}'
+             f'/system_logs/{folder_name}')]
 
   @CatchException('SystemLogManager')
   def _ClearLogs(self):
@@ -256,8 +256,10 @@ class SystemLogManager(plugin.Plugin):
     # If in periodic sync, show error messages if
     # _suppress_periodic_server_message is not set.
     # If not in periodic sync, always show error messages.
-    rsync_command = ['rsync', '-azR', '--stats', '--chmod=o-t',
-                     '--timeout=%s' % self._rsync_io_timeout]
+    rsync_command = [
+        'rsync', '-azR', '--stats', '--chmod=o-t',
+        f'--timeout={self._rsync_io_timeout}'
+    ]
     rsync_command += sum([glob.glob(x) for x in self._sync_log_paths], [])
     rsync_command += extra_files
     rsync_command += self._RsyncDestination()
@@ -353,12 +355,10 @@ class SystemLogManager(plugin.Plugin):
             with open(path, encoding='utf8') as f:
               data = f.read(MAX_CRASH_FILE_SIZE)
               tell = f.tell()
-            logging.info(
-                'Contents of %s%s:%s',
-                path,
-                ('' if tell == stat.st_size
-                 else '(truncated to %d bytes)' % MAX_CRASH_FILE_SIZE),
-                ('\n' + data).replace('\n', '\n  ' + ext + '> '))
+            logging.info('Contents of %s%s:%s', path,
+                         ('' if tell == stat.st_size else
+                          f'(truncated to {int(MAX_CRASH_FILE_SIZE)} bytes)'),
+                         ('\n' + data).replace('\n', '\n  ' + ext + '> '))
             extra_log_args['data'] = data
 
             # Copy to /var/factory/kcrash for posterity

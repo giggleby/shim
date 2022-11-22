@@ -13,6 +13,7 @@ from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import verifier
 from cros.factory.test.rules import phase
 
+
 _TEST_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_verifier_db.yaml')
 
@@ -23,10 +24,10 @@ class VerifyComponentStatusTest(unittest.TestCase):
                                       verify_checksum=False)
     self.boms = {}
     for status in common.COMPONENT_STATUS:
-      bom = BOM(encoding_pattern_index=0,
-                image_id=0,
-                components={'cpu': ['cpu_%s' % status],
-                            'ram': ['ram_supported']})
+      bom = BOM(encoding_pattern_index=0, image_id=0, components={
+          'cpu': [f'cpu_{status}'],
+          'ram': ['ram_supported']
+      })
       self.boms[status] = bom
 
   def testSupported(self):

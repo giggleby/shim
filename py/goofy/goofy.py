@@ -316,7 +316,7 @@ class Goofy:
     self.goofy_rpc.RegisterMethods(self.state_instance)
 
   def _InitI18n(self):
-    js_data = 'var goofy_i18n_data = %s;' % translation.GetAllI18nDataJS()
+    js_data = f'var goofy_i18n_data = {translation.GetAllI18nDataJS()};'
     self.goofy_server.RegisterData('/js/goofy-translations.js',
                                    'application/javascript', js_data)
     self.goofy_server.RegisterData('/css/i18n.css',
@@ -581,8 +581,7 @@ class Goofy:
                                test.path, untested_paths)
         else:
           # Not in engineering mode; mark it failed.
-          error_msg = ('Required tests [%s] have not been run yet'
-                       % untested_paths)
+          error_msg = f'Required tests [{untested_paths}] have not been run yet'
           session.console.error('Not running %s: %s',
                                 test.path, error_msg)
           test.UpdateState(status=TestState.FAILED,
@@ -744,8 +743,7 @@ class Goofy:
     invocation threads.
     """
     if self.exceptions:
-      raise RuntimeError('Exception in invocation thread: %r' %
-                         self.exceptions)
+      raise RuntimeError(f'Exception in invocation thread: {self.exceptions!r}')
 
   def _RecordExceptions(self, msg):
     """Records an exception in an invocation thread.
@@ -1029,8 +1027,8 @@ class Goofy:
 
     self.status = Status.RUNNING
     syslog.syslog('Goofy (factory test harness) starting')
-    syslog.syslog('Boot sequence = %d' % GetBootSequence())
-    syslog.syslog('Goofy init count = %d' % session.GetInitCount())
+    syslog.syslog(f'Boot sequence = {GetBootSequence()}')
+    syslog.syslog(f'Goofy init count = {session.GetInitCount()}')
     self.Run()
 
   def _UpdateSystemInfo(self):
@@ -1092,14 +1090,14 @@ class Goofy:
       return self.test_lists[test_list_id]
     except KeyError:
       raise type_utils.TestListError(
-          '%r is not a valid test list ID (available IDs are %r)' %
-          (test_list_id, sorted(self.test_lists.keys()))) from None
+          f'{test_list_id!r} is not a valid test list ID (available IDs are '
+          f'{sorted(self.test_lists)!r})') from None
 
   def _RecordStartError(self, error_message):
     """Appends the startup error message into the shared data."""
     KEY = 'startup_error'
     data = self.state_instance.DataShelfGetValue(KEY, optional=True)
-    new_data = '%s\n\n%s' % (data, error_message) if data else error_message
+    new_data = f'{data}\n\n{error_message}' if data else error_message
     self.state_instance.DataShelfSetValue(KEY, new_data)
 
   def _InitTestLists(self):
@@ -1114,16 +1112,14 @@ class Goofy:
       self.test_lists, failed_test_lists = (
           self.test_list_manager.BuildAllTestLists())
 
-      logging.info('Loaded test lists: %r', sorted(self.test_lists.keys()))
+      logging.info('Loaded test lists: %r', sorted(self.test_lists))
 
       # Check for any syntax errors in test list files.
       if failed_test_lists:
-        logging.info('Failed test list IDs: [%s]',
-                     ' '.join(failed_test_lists.keys()))
+        logging.info('Failed test list IDs: [%s]', ' '.join(failed_test_lists))
         for test_list_id, reason in failed_test_lists.items():
           logging.error('Error in test list %s: %s', test_list_id, reason)
-          startup_errors.append('Error in test list %s:\n%s'
-                                % (test_list_id, reason))
+          startup_errors.append(f'Error in test list {test_list_id}:\n{reason}')
 
       active_test_list = self.test_list_manager.GetActiveTestListId(self.dut)
 
@@ -1142,7 +1138,7 @@ class Goofy:
     except Exception:
       logging.exception('Unable to initialize test lists')
       self._RecordStartError(
-          'Unable to initialize test lists\n%s' % traceback.format_exc())
+          f'Unable to initialize test lists\n{traceback.format_exc()}')
 
     success = bool(self.test_list)
     if not success:
@@ -1179,7 +1175,7 @@ class Goofy:
     module, cls = self.test_list.options.hooks_class.rsplit('.', 1)
     self.hooks = getattr(__import__(module, fromlist=[cls]), cls)()
     assert isinstance(self.hooks, hooks.Hooks), (
-        'hooks should be of type Hooks but is %r' % type(self.hooks))
+        f'hooks should be of type Hooks but is {type(self.hooks)!r}')
     self.hooks.test_list = self.test_list
     self.hooks.OnCreatedTestList()
 
@@ -1397,7 +1393,7 @@ class Goofy:
 
     for chunk in chunks:
       try:
-        description = 'event logs (%s)' % str(chunk)
+        description = f'event logs ({str(chunk)})'
         start_time = time.time()
         proxy = server_proxy.GetServerProxy()
         proxy.UploadEvent(
@@ -1414,10 +1410,10 @@ class Goofy:
 
     if exception_count:
       if exception_count == 1:
-        msg = 'Log upload failed: %s' % first_exception
+        msg = f'Log upload failed: {first_exception}'
       else:
-        msg = '%d log upload failed; first is: %s' % (
-            exception_count, first_exception)
+        msg = (f'{int(exception_count)} log upload failed; first is: '
+               f'{first_exception}')
       # For periodic event log syncing, only show the first error messages.
       if periodic:
         if not self._suppress_event_log_error_messages:

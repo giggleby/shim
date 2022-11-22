@@ -35,8 +35,8 @@ class HWIDV2Action(hwid_action.HWIDAction):
           self._preproc_data.bom_map[name]['primary']['components'],
           verbose=verbose)
     else:
-      raise hwid_action.HWIDDecodeError('BOM %r not found for project %r.' %
-                                        (bom, self._preproc_data.project))
+      raise hwid_action.HWIDDecodeError(
+          f'BOM {bom!r} not found for project {self._preproc_data.project!r}.')
 
     if variant:
       if variant in self._preproc_data.variant_map:
@@ -45,8 +45,8 @@ class HWIDV2Action(hwid_action.HWIDAction):
             verbose=verbose)
       else:
         raise hwid_action.HWIDDecodeError(
-            'variant %r not found for project %r.' %
-            (variant, self._preproc_data.project))
+            f'variant {variant!r} not found for project '
+            f'{self._preproc_data.project!r}.')
 
     if volatile:
       if volatile in self._preproc_data.volatile_map:
@@ -54,8 +54,8 @@ class HWIDV2Action(hwid_action.HWIDAction):
                              verbose=verbose)
       else:
         raise hwid_action.HWIDDecodeError(
-            'volatile %r not found for project %r.' %
-            (volatile, self._preproc_data.project))
+            f'volatile {volatile!r} not found for project '
+            f'{self._preproc_data.project!r}.')
 
     return bom, None
 
@@ -188,7 +188,7 @@ class HWIDV2Action(hwid_action.HWIDAction):
       return (project, name, variant, volatile)
 
     raise hwid_action.InvalidHWIDError(
-        'Invalid HWIDv2 format: %r' % hwid_string)
+        f'Invalid HWIDv2 format: {hwid_string!r}')
 
 
 def _NormalizeString(string):

@@ -50,7 +50,7 @@ def LookupMap(key, mapping):
     KeyError: If 'key' is not found in 'mapping'.
   """
   if not isinstance(mapping, dict):
-    raise RuleException('%r is not a dict' % mapping)
+    raise RuleException(f'{mapping!r} is not a dict')
   return mapping[key]
 
 

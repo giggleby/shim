@@ -67,7 +67,7 @@ class GoofyServerTest(unittest.TestCase):
     def ServerReady():
       try:
         with urllib.request.urlopen(
-            'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, '/not_exists')):
+            f"http://{net_utils.LOCALHOST}:{int(self.port)}{'/not_exists'}"):
           pass
       except urllib.error.HTTPError as err:
         if err.code == 404:
@@ -97,7 +97,7 @@ class GoofyServerTest(unittest.TestCase):
     self.server.AddRPCInstance('/test', instance)
 
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/test' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/test')
     proxy.Func()
     self.assertTrue(instance.called)
 
@@ -115,7 +115,7 @@ class GoofyServerTest(unittest.TestCase):
     self.server.AddHTTPGetHandler('/test', MyHandler)
 
     with urllib.request.urlopen(
-        'http://%s:%d/test' % (net_utils.LOCALHOST, self.port)) as response:
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/test') as response:
       self.assertEqual(200, response.getcode())
       self.assertEqual(data, response.read())
 
@@ -127,15 +127,16 @@ class GoofyServerTest(unittest.TestCase):
 
       self.server.RegisterPath('/', path)
       with urllib.request.urlopen(
-          'http://%s:%d/' % (net_utils.LOCALHOST, self.port)) as response:
+          f'http://{net_utils.LOCALHOST}:{int(self.port)}/') as response:
         self.assertEqual(200, response.getcode())
         self.assertEqual(data, response.read())
 
       # Check svg mime type
       with open(os.path.join(path, 'test.svg'), 'wb') as f:
         f.write(data)
-      with urllib.request.urlopen('http://%s:%d/test.svg' %
-                                  (net_utils.LOCALHOST, self.port)) as response:
+      with urllib.request.urlopen(
+          f'http://{net_utils.LOCALHOST}:{int(self.port)}/test.svg'
+      ) as response:
         self.assertEqual(200, response.getcode())
         self.assertEqual(data, response.read())
 
@@ -145,7 +146,7 @@ class GoofyServerTest(unittest.TestCase):
     url = self.server.URLForData('text/html', data)
 
     with urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}') as response:
       self.assertEqual(200, response.getcode())
       self.assertEqual(data, response.read())
 
@@ -156,7 +157,7 @@ class GoofyServerTest(unittest.TestCase):
     self.server.RegisterData(url, 'text/html', data)
 
     with urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}') as response:
       self.assertEqual(200, response.getcode())
       self.assertEqual(data, response.read())
 
@@ -167,13 +168,13 @@ class GoofyServerTest(unittest.TestCase):
     self.server.RegisterData(url, 'text/html', data)
 
     with urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}') as response:
       self.assertEqual(200, response.getcode())
       self.assertEqual(data, response.read().decode('UTF-8'))
 
   def testGoofyServerRPC(self):
     proxy = jsonrpc.ServerProxy(
-        'http://%s:%d/' % (net_utils.LOCALHOST, self.port))
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}/')
     self.assertCountEqual(
         ['URLForData',
          'URLForFile',
@@ -186,7 +187,7 @@ class GoofyServerTest(unittest.TestCase):
     data = '<html><body><h1>Hello</h1></body></html>'
     url = proxy.URLForData('text/html', data)
     with urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}') as response:
       self.assertEqual(200, response.getcode())
       self.assertEqual(data, response.read().decode('utf-8'))
 
@@ -197,7 +198,7 @@ class GoofyServerTest(unittest.TestCase):
 
       url = self.server.URLForFile(path)
       with urllib.request.urlopen(
-          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+          f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}') as response:
         self.assertEqual(200, response.getcode())
         self.assertEqual(data, response.read().decode('utf-8'))
 
@@ -207,7 +208,7 @@ class GoofyServerTest(unittest.TestCase):
     url = self.server.URLForData('text/html', data, 0.8)
 
     with urllib.request.urlopen(
-        'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)) as response:
+        f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}') as response:
       self.assertEqual(200, response.getcode())
       self.assertEqual(data, response.read().decode('utf-8'))
 
@@ -216,13 +217,13 @@ class GoofyServerTest(unittest.TestCase):
     # The data should expired now.
     with self.assertRaises(urllib.error.HTTPError):
       with urllib.request.urlopen(
-          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, url)):
+          f'http://{net_utils.LOCALHOST}:{int(self.port)}{url}'):
         pass
 
   def testURLNotFound(self):
     with self.assertRaisesRegex(urllib.error.HTTPError, '404: Not Found'):
       with urllib.request.urlopen(
-          'http://%s:%d%s' % (net_utils.LOCALHOST, self.port, '/not_exists')):
+          f"http://{net_utils.LOCALHOST}:{int(self.port)}{'/not_exists'}"):
         pass
 
   def tearDown(self):

@@ -25,7 +25,7 @@ def ConvertToProbeStatement(database, probe_statement_path):
   def _ConvertValue(v):
     if isinstance(v, Value):
       if v.is_re:
-        return "!re {}".format(v.raw_value)
+        return f"!re {v.raw_value}"
       return v.raw_value
     return v
 

@@ -20,6 +20,7 @@ from cros.factory.tools.goofy_ghost import ghost_prop
 from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
+
 _DEFAULT_STATION_KEYS = [('station_name', _('Station Name')),
                          ('line_number', _('Manufacture Line Number')),
                          ('station_number', _('Station Number'))]
@@ -109,7 +110,7 @@ class StationSetup(plugin.Plugin):
 
     ls_cmd = [_OVL_BIN, 'ls', '--mid-only']
     for key, value in check_dict.items():
-      ls_cmd.extend(['-f', '%s=^%s$' % (key, re.escape(value))])
+      ls_cmd.extend(['-f', f'{key}=^{re.escape(value)}$'])
     match_clients = process_utils.CheckOutput(ls_cmd, log=True).splitlines()
 
     # Filter self out.

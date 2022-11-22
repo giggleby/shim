@@ -35,7 +35,7 @@ class HWIDV3Action(hwid_action.HWIDAction):
           self._preproc_data.database, hwid_string)
     except common.HWIDException as e:
       logging.info('Unable to decode a valid HWID. %s', hwid_string)
-      raise hwid_action.InvalidHWIDError('HWID not found %s' % hwid_string, e)
+      raise hwid_action.InvalidHWIDError(f'HWID not found {hwid_string}', e)
 
     bom = hwid_action.BOM()
 

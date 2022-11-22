@@ -23,6 +23,7 @@ from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 APPENGINE_DIR = os.path.dirname(TEST_DIR)
 PROTO_DIR = os.path.join(APPENGINE_DIR, 'proto')
@@ -80,7 +81,7 @@ class E2ETest(unittest.TestCase):
 
           temp_path = file_utils.CreateTemporaryFile()
           file_utils.WriteFile(temp_path, err_msg)
-          self.fail('%s failed, see report at %s' % (test['name'], temp_path))
+          self.fail(f"{test['name']} failed, see report at {temp_path}")
 
 
 if __name__ == '__main__':

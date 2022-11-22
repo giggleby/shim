@@ -141,7 +141,7 @@ class _DefaultMappingHandler(_HWIDV3YAMLTagHandler):
   def YAMLConstructor(cls, loader, node, deep=False):
     if not isinstance(node, nodes.MappingNode):
       raise constructor.ConstructorError(
-          None, None, 'Expected a mapping node, but found %s.' % node.id,
+          None, None, f'Expected a mapping node, but found {node.id}.',
           node.start_mark)
     mapping = cls.TARGET_CLASS()
     for key_node, value_node in node.value:
@@ -151,12 +151,12 @@ class _DefaultMappingHandler(_HWIDV3YAMLTagHandler):
       except TypeError:
         raise constructor.ConstructorError(
             'While constructing a mapping', node.start_mark,
-            'found unacceptable key (%s).' % key, key_node.start_mark) from None
+            f'found unacceptable key ({key}).', key_node.start_mark) from None
       value = loader.construct_object(value_node, deep=deep)
       if key in mapping:
         raise constructor.ConstructorError(
             'While constructing a mapping', node.start_mark,
-            'found duplicated key (%s).' % key, key_node.start_mark)
+            f'found duplicated key ({key}).', key_node.start_mark)
       mapping[key] = value
     return mapping
 
@@ -291,7 +291,7 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
     if isinstance(node, nodes.ScalarNode):
       if node.value:
         raise constructor.ConstructorError(
-            'Expected empty scalar node, but got %r.' % node.value)
+            f'Expected empty scalar node, but got {node.value!r}.')
       return cls.TARGET_CLASS()
 
     status_lists = _DefaultMappingHandler.YAMLConstructor(
@@ -310,14 +310,14 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
     try:
       cls._STATUS_LISTS_SCHEMA.Validate(status_lists)
     except schema.SchemaException as e:
-      raise constructor.ConstructorError(str(e) + '%r' % status_lists)
+      raise constructor.ConstructorError(f'{e}{status_lists!r}')
 
     for i, s1 in enumerate(status_lists.keys()):
       for s2 in list(status_lists)[i + 1:]:
         duplicated_regions = set(status_lists[s1]) & set(status_lists[s2])
         if duplicated_regions:
           raise constructor.ConstructorError(
-              'found ambiguous status for regions %r' % duplicated_regions)
+              f'found ambiguous status for regions {duplicated_regions!r}')
 
 
 class _RegexpYAMLTagHandler(_HWIDV3YAMLTagHandler):

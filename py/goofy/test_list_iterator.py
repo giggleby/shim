@@ -147,8 +147,8 @@ class TestListIterator:
       self.stack = []
     else:
       raise ValueError(
-          'root must be one of ITestList, FactoryTest, string or None '
-          '(got %r)' % root)
+          'root must be one of ITestList, FactoryTest, string or None (got '
+          f'{root!r})')
 
   # define __getstate__ and __setstate__ to make this object pickable
   def __getstate__(self):
@@ -270,7 +270,7 @@ class TestListIterator:
     next_step = self.Top().next_step
     self.Top().next_step = self.Body.__name__
     if next_step != self.CheckContinue.__name__:
-      return 'test_list_iterator: unexpected next_step %r' % next_step
+      return f'test_list_iterator: unexpected next_step {next_step!r}'
     return None
 
   ###########################

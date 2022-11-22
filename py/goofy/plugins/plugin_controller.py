@@ -13,6 +13,7 @@ from cros.factory.test.env import paths
 from cros.factory.utils import config_utils
 from cros.factory.utils import type_utils
 
+
 # PRC URL prefix used by plugin.
 PLUGIN_PREFIX = '/plugin'
 
@@ -24,7 +25,7 @@ def _GetPluginRPCPath(plugin_path):
   `cros.factory.goofy.plugins`.
   """
   subpath = plugin_path.replace('.', '_')
-  return '%s/%s' % (PLUGIN_PREFIX, subpath)
+  return f'{PLUGIN_PREFIX}/{subpath}'
 
 
 def GetPluginRPCProxy(plugin_name, address=None, port=None):
@@ -125,8 +126,8 @@ class PluginController:
         if location is True:
           location = 'testlist'
         self._frontend_configs.append({
-            'iframe_id': '%s-iframe' % name.replace('.', '-'),
-            'url': '%s/%s.html' % (url_base_path, plugin_paths[-1]),
+            'iframe_id': f"{name.replace('.', '-')}-iframe",
+            'url': f'{url_base_path}/{plugin_paths[-1]}.html',
             'location': location
         })
       except Exception:

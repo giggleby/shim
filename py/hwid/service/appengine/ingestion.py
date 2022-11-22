@@ -24,6 +24,7 @@ from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
+
 CONFIG = config.CONFIG
 
 GOLDENEYE_MEMCACHE_NAMESPACE = 'SourceGoldenEye'
@@ -255,8 +256,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     # force push, set dryrun_upload to False
     if force_push:
       dryrun_upload = False
-    author = 'chromeoshwid <{account_name}>'.format(
-        account_name=service_account_name)
+    author = f'chromeoshwid <{service_account_name}>'
 
     setting = CONFIG.GetVerificationPayloadSettings(board)
     git_url = setting.repo_host + setting.repo_path
@@ -269,9 +269,11 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       new_git_files.append((os.path.join(
           setting.prefix, filepath), git_util.NORMAL_FILE_MODE, filecontent))
 
-    commit_msg = ('verification payload: update payload from hwid\n'
-                  '\n'
-                  'From chromeos/chromeos-hwid: %s\n' % (hwid_main_commit, ))
+    commit_msg = textwrap.dedent(f"""\
+        verification payload: update payload from hwid
+
+        From chromeos/chromeos-hwid: {hwid_main_commit}
+    """)
 
     if dryrun_upload:
       # file_info = (file_path, mode, content)

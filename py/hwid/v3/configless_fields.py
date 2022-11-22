@@ -170,9 +170,9 @@ class FeatureList:
     feature_count = len(self.features)
     if encoded_value >= 2 ** (feature_count + 1):
       raise common.HWIDException(
-          'The given configless fields is invalid. The last field should be a '
-          'hex value in [0, %s].' %
-          hex(2 ** (feature_count + 1) - 1).upper().replace('0X', ''))
+          "The given configless fields is invalid. The last field should be a "
+          "hex value in [0, "
+          f"{hex(2 ** (feature_count + 1) - 1).upper().replace('0X', '')}].")
 
     bin_string = bin(encoded_value).replace('0b', '')[1:]
     result = {
@@ -252,8 +252,8 @@ class _ConfiglessFieldDecoder:
     encoded_fields = [int(field, 16) for field in encoded_string.split('-')]
     if len(encoded_fields) != len(ConfiglessFields.FIELDS):
       raise common.HWIDException(
-          'The given configless fields %r is invalid. It must have %r fields.' %
-          (encoded_string, len(ConfiglessFields.FIELDS)))
+          f'The given configless fields {encoded_string!r} is invalid. It must '
+          f'have {len(ConfiglessFields.FIELDS)!r} fields.')
 
     self._encoded_fields = dict(zip(ConfiglessFields.FIELDS, encoded_fields))
     self._feature_list = FeatureList(self._encoded_fields['version'])

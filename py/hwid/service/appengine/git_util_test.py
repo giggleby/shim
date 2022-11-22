@@ -59,7 +59,7 @@ class MemoryRepoTest(unittest.TestCase):
       tree = repo.add_files(new_files, tree)
       tree.check()
     except Exception as ex:
-      self.fail("testAddFiles raise Exception unexpectedly: %r" % ex)
+      self.fail(f"testAddFiles raise Exception unexpectedly: {ex!r}")
 
     mode1, sha1 = tree.lookup_path(repo.get_object, b'a/b/c')
     self.assertEqual(mode1, 0o100644)
@@ -122,7 +122,7 @@ class MemoryRepoTest(unittest.TestCase):
       tree = repo.add_files(new_files, tree)
       tree.check()
     except Exception as ex:
-      self.fail("testListFiles raise Exception unexpectedly: %r" % ex)
+      self.fail(f"testListFiles raise Exception unexpectedly: {ex!r}")
     repo.do_commit(b'Test_commit', tree=tree.id)
 
     self.assertEqual(

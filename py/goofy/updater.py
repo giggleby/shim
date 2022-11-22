@@ -77,8 +77,8 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   new_version_from_fs = file_utils.ReadFile(new_version_path).rstrip()
   if update_version != new_version_from_fs:
     raise UpdaterException(
-        'Unexpected TOOLKIT_VERSION in %s: expected %s but found %s' %
-        (new_version_path, update_version, new_version_from_fs))
+        f'Unexpected TOOLKIT_VERSION in {new_version_path}: expected '
+        f'{update_version} but found {new_version_from_fs}')
 
   # Raises an exception if certain critical files are missing.
   # TODO(pihsun): The pytest/finalize/finalize.py is finalize path in old
@@ -93,7 +93,7 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   for critical_files in critical_files_list:
     if not any(os.path.exists(f) for f in critical_files):
       raise UpdaterException(
-          'Aborting update: Missing critical files %r' % critical_files)
+          f'Aborting update: Missing critical files {critical_files!r}')
 
   # Some files should be kept.
   # TODO(crbug.com/756275): We should move ALL runtime generated files outside
@@ -115,7 +115,7 @@ def TryUpdate(pre_update_hook=None, timeout=15):
   if pre_update_hook:
     pre_update_hook()
 
-  old_path = os.path.join(parent_dir, 'updater.old.%s' % uuid.uuid4())
+  old_path = os.path.join(parent_dir, f'updater.old.{uuid.uuid4()}')
   # If one of these fails, we're screwed.
   shutil.move(paths.FACTORY_DIR, old_path)
   shutil.move(src_path, parent_dir)

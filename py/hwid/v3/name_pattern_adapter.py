@@ -6,9 +6,10 @@ import io
 import re
 from typing import Callable, Match, NamedTuple, Optional, TypeVar, Union
 
+
 SEQ_SEP = '#'  # Separator between the component name and the sequential suffix.
-_COMP_SEQ_SUFFIX_PATTERN = re.compile(
-    r'{sep}\d+$'.format(sep=re.escape(SEQ_SEP)))
+_COMP_SEQ_SUFFIX_PATTERN = re.compile(f'{re.escape(SEQ_SEP)}'
+                                      r'\d+$')
 
 
 def TrimSequenceSuffix(comp_name: str) -> str:
@@ -73,11 +74,13 @@ class NamePattern:
 
   assert len(SEQ_SEP) == 1
   _SUBCOMP_ANNOTATION = 'subcomp'
-  _COMP_VALUE_PATTERN = (
-      r'_(?P<cid>\d+)(_(?P<qid>\d+))?({sep}[^{sep}]+)?'.format(
-          sep=re.escape(SEQ_SEP)))
-  _SUBCOMP_VALUE_PATTERN = r'_{annot}_(?P<cid>\d+)({sep}[^{sep}]+)?'.format(
-      annot=re.escape(_SUBCOMP_ANNOTATION), sep=re.escape(SEQ_SEP))
+  sep = re.escape(SEQ_SEP)
+  _COMP_VALUE_PATTERN = r'_(?P<cid>\d+)(_(?P<qid>\d+))?' f'({sep}[^{sep}]+)?'
+  annot = re.escape(_SUBCOMP_ANNOTATION)
+  _SUBCOMP_VALUE_PATTERN = (r'_'
+                            f'{annot}'
+                            r'_(?P<cid>\d+)'
+                            f'({sep}[^{sep}]+)?')
 
   def __init__(self, comp_cls: str):
     self._comp_cls = comp_cls

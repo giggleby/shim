@@ -62,4 +62,4 @@ class DUTEnvironment(Environment):
     # TODO(hungte) Current implementation will raise SIGTERM so goofy can't
     # really gracefully shutdown. We should do "on exit" instead.
     time.sleep(30)
-    assert False, 'Never reached (should %s)' % operation
+    assert False, f'Never reached (should {operation})'

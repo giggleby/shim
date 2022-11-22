@@ -28,10 +28,10 @@ def BOMToIdentity(database, bom, brand_code=None, encoded_configless=None):
 
   if bom.encoding_pattern_index not in database.encoding_patterns:
     raise common.HWIDException(
-        'Invalid encoding pattern: %r' % bom.encoding_pattern_index)
+        f'Invalid encoding pattern: {bom.encoding_pattern_index!r}')
 
   if bom.image_id not in database.image_ids:
-    raise common.HWIDException('Invalid image id: %r' % bom.image_id)
+    raise common.HWIDException(f'Invalid image id: {bom.image_id!r}')
 
   # Try to encode every field and fail if some fields are missing or
   # the bit length of a field recorded in the pattern is not enough.
@@ -46,10 +46,10 @@ def BOMToIdentity(database, bom, brand_code=None, encoded_configless=None):
 
     else:
       raise common.HWIDException(
-          'Encoded field %s has unknown indices' % field_name)
+          f'Encoded field {field_name} has unknown indices')
 
     if encoded_fields[field_name] >= (2 ** bit_length):
-      raise common.HWIDException('Index overflow in field %r' % field_name)
+      raise common.HWIDException(f'Index overflow in field {field_name!r}')
 
   # Fill in each bit.
   components_bitset = ''
@@ -77,11 +77,11 @@ def IdentityToBOM(database, identity):
     A BOM object.
   """
   if identity.project != database.project:
-    raise common.HWIDException('Invalid project: %r' % identity.project)
+    raise common.HWIDException(f'Invalid project: {identity.project!r}')
 
   if identity.encoding_pattern_index not in database.encoding_patterns:
     raise common.HWIDException(
-        'Invalid encoding pattern index: %r' % identity.encoding_pattern_index)
+        f'Invalid encoding pattern index: {identity.encoding_pattern_index!r}')
 
   image_id = identity.image_id
 
@@ -92,14 +92,14 @@ def IdentityToBOM(database, identity):
       database.GetEncodingScheme(image_id), identity.encoded_string)
   if identity != identity2:
     raise common.HWIDException(
-        'The hwid %r was generated with wrong encoding scheme.' % identity)
+        f'The hwid {identity!r} was generated with wrong encoding scheme.')
 
   bit_length = len(identity.components_bitset) - 1
   total_bit_length = database.GetTotalBitLength(image_id)
   if bit_length > total_bit_length:
     raise common.HWIDException(
-        'Invalid bit string length of %r. Expected length <= %d'
-        % (identity.components_bitset[:-1], total_bit_length))
+        f'Invalid bit string length of {identity.components_bitset[:-1]!r}. '
+        f'Expected length <= {int(total_bit_length)}')
 
   # Construct the encoded fields dict.
   encoded_fields = {field_name: 0 for field_name
@@ -114,8 +114,8 @@ def IdentityToBOM(database, identity):
   for field, index in encoded_fields.items():
     database_encoded_field = database.GetEncodedField(field)
     if index not in database_encoded_field:
-      raise common.HWIDException('Invalid encoded field index: {%r: %r}' %
-                                 (field, index))
+      raise common.HWIDException(
+          f'Invalid encoded field index: {{{field!r}: {index!r}}}')
     components.update(database_encoded_field[index])
 
   return BOM(identity.encoding_pattern_index, image_id, components)

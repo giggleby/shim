@@ -52,17 +52,17 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None):
         current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
         if current_phase in (phase.PVT_DOGFOOD, phase.PVT):
           raise common.HWIDException(
-              'Found unqualified component of %r: %r in %r' %
-              (comp_cls, comp_name, current_phase))
+              f'Found unqualified component of {comp_cls!r}: {comp_name!r} in '
+              f'{current_phase!r}')
         continue
       if status == common.COMPONENT_STATUS.unsupported:
-        raise common.HWIDException('Found unsupported component of %r: %r' %
-                                   (comp_cls, comp_name))
+        raise common.HWIDException(
+            f'Found unsupported component of {comp_cls!r}: {comp_name!r}')
       if status == common.COMPONENT_STATUS.deprecated:
         if mode != common.OPERATION_MODE.rma:
           raise common.HWIDException(
-              'Not in RMA mode. Found deprecated component of %r: %r' %
-              (comp_cls, comp_name))
+              f'Not in RMA mode. Found deprecated component of {comp_cls!r}: '
+              f'{comp_name!r}')
 
 
 _PRE_MP_KEY_NAME_PATTERN = re.compile('_pre_?mp')
@@ -101,17 +101,17 @@ def VerifyPhase(database, bom, current_phase=None, rma_mode=False):
   current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
 
   # Check image ID
-  expected_image_name_prefix = ('PVT' if current_phase == phase.PVT_DOGFOOD
-                                else current_phase.name)
+  expected_image_name_prefix = ('PVT' if current_phase == phase.PVT_DOGFOOD else
+                                current_phase.name)
   image_name = database.GetImageName(bom.image_id)
   if image_name.startswith('RMA') and rma_mode:
-    logging.info('In RMA mode, image name beginning with RMA is allowed. '
-                 '(rma_mod=%r, image_name=%r)', rma_mode, image_name)
+    logging.info(
+        'In RMA mode, image name beginning with RMA is allowed. '
+        '(rma_mod=%r, image_name=%r)', rma_mode, image_name)
   elif not image_name.startswith(expected_image_name_prefix):
     raise common.HWIDException(
-        'In %s phase, expected an image name beginning with '
-        '%r (but got image ID %r)' %
-        (current_phase, expected_image_name_prefix, image_name))
+        f'In {current_phase} phase, expected an image name beginning with '
+        f'{expected_image_name_prefix!r} (but got image ID {image_name!r})')
 
   # MP-key checking applies only in PVT and above
   if current_phase >= phase.PVT:
@@ -121,7 +121,7 @@ def VerifyPhase(database, bom, current_phase=None, rma_mode=False):
     name = next(iter(bom.components['firmware_keys']))
     if not _IsMPKeyName(name):
       raise common.HWIDException(
-          'MP keys are required in %r, but got %r' % (current_phase, name))
+          f'MP keys are required in {current_phase!r}, but got {name!r}')
 
 
 def VerifyBOM(database, decoded_bom, probed_bom):
@@ -156,24 +156,24 @@ def VerifyBOM(database, decoded_bom, probed_bom):
   for comp_cls in database.GetActiveComponentClasses(decoded_bom.image_id):
     if comp_cls not in probed_bom.components:
       raise common.HWIDException(
-          'Component class %r is not found in probed BOM.' % comp_cls)
+          f'Component class {comp_cls!r} is not found in probed BOM.')
 
     err_msgs = []
 
     extra_components = _GetExtraComponents(decoded_bom.components[comp_cls],
                                            probed_bom.components[comp_cls])
     if extra_components:
-      err_msgs.append('has extra components: %r' % extra_components)
+      err_msgs.append(f'has extra components: {extra_components!r}')
 
     missing_components = _GetExtraComponents(probed_bom.components[comp_cls],
                                              decoded_bom.components[comp_cls])
     if missing_components:
-      err_msgs.append('is missing components: %r' % missing_components)
+      err_msgs.append(f'is missing components: {missing_components!r}')
 
     if err_msgs:
       raise common.HWIDException(
-          'Component class %r ' % comp_cls + ' and '.join(err_msgs) +
-          '.  Expected components are: %r' % probed_bom.components[comp_cls])
+          f'Component class {comp_cls!r} ' + ' and '.join(err_msgs) +
+          f'.  Expected components are: {probed_bom.components[comp_cls]!r}')
 
 
 def VerifyConfigless(database, decoded_configless, bom, device_info, rma_mode):
@@ -195,29 +195,27 @@ def VerifyConfigless(database, decoded_configless, bom, device_info, rma_mode):
   if 'version' not in decoded_configless:
     raise common.HWIDException('Configless dict lacks version field.')
 
-  encoded_configless = ConfiglessFields.Encode(database, bom, device_info,
-                                               decoded_configless['version'],
-                                               rma_mode)
+  encoded_configless = ConfiglessFields.Encode(
+      database, bom, device_info, decoded_configless['version'], rma_mode)
   configless_fields = ConfiglessFields.Decode(encoded_configless)
 
   err_msgs = []
   extra_components = _GetExtraComponents(decoded_configless, configless_fields)
   if extra_components:
-    err_msgs.append('has extra components: %r' % extra_components)
+    err_msgs.append(f'has extra components: {extra_components!r}')
 
   missing_components = _GetExtraComponents(configless_fields,
                                            decoded_configless)
   if missing_components:
-    err_msgs.append('is missing components: %r' % missing_components)
+    err_msgs.append(f'is missing components: {missing_components!r}')
 
   if err_msgs:
     raise common.HWIDException('Configless dict ' + ' and '.join(err_msgs))
 
   for field in configless_fields:
     if configless_fields[field] != decoded_configless[field]:
-      err_msgs.append('%r should be %r (got %r)' % (field,
-                                                    configless_fields[field],
-                                                    decoded_configless[field]))
+      err_msgs.append(f'{field!r} should be {configless_fields[field]!r} (got '
+                      f'{decoded_configless[field]!r})')
 
   if err_msgs:
     raise common.HWIDException('Configless field ' + ', '.join(err_msgs))

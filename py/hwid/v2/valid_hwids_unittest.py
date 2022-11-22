@@ -22,6 +22,7 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import process_utils
 
+
 _FREEZED_DB_CHECKSUM_FILE = os.path.join(
     paths.FACTORY_DIR, '..', 'factory-private', 'hwid_v2_testdata',
     'freezed_db_checksums.json')
@@ -42,7 +43,7 @@ class ValidHWIDsTest(unittest.TestCase):
 
     projects_info = yaml.safe_load(
         process_utils.CheckOutput(
-            ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
+            ['git', 'show', f'{target_commit}:projects.yaml'], cwd=hwid_dir))
 
     # Check the checksum of *all* HWID v2 databases.
     for proj_info in projects_info.values():
@@ -53,8 +54,8 @@ class ValidHWIDsTest(unittest.TestCase):
 
       expected_checksum = freezed_hwid_db_checksums.pop(proj_info['path'])
       raw_hwid_db = process_utils.CheckOutput(
-          ['git', 'show', '%s:%s' % (target_commit, proj_info['path'])],
-          cwd=hwid_dir, ignore_stderr=True)
+          ['git', 'show', f"{target_commit}:{proj_info['path']}"], cwd=hwid_dir,
+          ignore_stderr=True)
       checksum = hashlib.sha1(raw_hwid_db.encode('utf-8')).hexdigest()
       self.assertEqual(checksum, expected_checksum)
 

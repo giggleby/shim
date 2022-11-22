@@ -103,5 +103,5 @@ class LocalFileSystemAdapter(FileSystemAdapter):
     if prefix:
       dirpath = os.path.join(dirpath, prefix)
     if not os.path.isdir(dirpath):
-      raise OSError("%s is not a folder" % dirpath)
+      raise OSError(f"{dirpath} is not a folder")
     return os.listdir(dirpath)

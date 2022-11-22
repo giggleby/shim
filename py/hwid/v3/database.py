@@ -475,8 +475,8 @@ class Database(abc.ABC):
           image_id=image_id):
         if encoded_field_name not in self.encoded_fields:
           raise common.HWIDException(
-              'The encoded field %r is not defined in `encoded_fields` part.' %
-              encoded_field_name)
+              f'The encoded field {encoded_field_name!r} is not defined in '
+              '`encoded_fields` part.')
     # The last encoded patterns should always contain enough bits for all
     # fields.
     for encoded_field_name, bit_length in self.GetEncodedFieldsBitLength(
@@ -484,9 +484,9 @@ class Database(abc.ABC):
       max_index = max(self.GetEncodedField(encoded_field_name))
       if max_index.bit_length() > bit_length:
         raise common.HWIDException(
-            'Number of allocated bits (%d) for field %r is not enough in the '
-            'encoded patterns for image id %r' %
-            (bit_length, encoded_field_name, self.max_image_id))
+            f'Number of allocated bits ({int(bit_length)}) for field '
+            f'{encoded_field_name!r} is not enough in the encoded patterns for '
+            f'image id {self.max_image_id!r}')
     # TODO(yhong): Perform stricter check against the encoded fields that are
     #     excluded in the latest encoded pattern.  Currently it's allowed as
     #     this feature is often applied to solve exceptional HWID submission
@@ -500,8 +500,8 @@ class Database(abc.ABC):
               set(comp_names) - set(self.GetComponents(comp_cls).keys()))
           if missing_comp_names:
             raise common.HWIDException(
-                'The components %r are not defined in `components` part.' %
-                missing_comp_names)
+                f'The components {missing_comp_names!r} are not defined in '
+                '`components` part.')
 
     # Only initial DB could have empty bit patterns.
     has_empty_field = any(not self.GetPattern(pattern_idx=i).fields
@@ -584,7 +584,7 @@ class WritableDatabase(Database):
         'components', 'rules', 'checksum'
     ]:
       if key not in yaml_obj:
-        raise common.HWIDException('%r is not specified in HWID database' % key)
+        raise common.HWIDException(f'{key!r} is not specified in HWID database')
 
     project = yaml_obj['project'].upper()
     if project != yaml_obj['project']:
@@ -595,7 +595,7 @@ class WritableDatabase(Database):
     if (expected_checksum is not None and
         yaml_obj['checksum'] != expected_checksum):
       raise common.HWIDException(
-          'HWID database %r checksum verification failed' % project)
+          f'HWID database {project!r} checksum verification failed')
 
     return cls(
         project, EncodingPatterns(yaml_obj['encoding_patterns']),
@@ -659,7 +659,7 @@ class WritableDatabase(Database):
       pattern_idx: The optional index of the pattern.
     """
     if field_name not in self.encoded_fields:
-      raise common.HWIDException('The field %r does not exist.' % field_name)
+      raise common.HWIDException(f'The field {field_name!r} does not exist.')
 
     self._pattern.AppendField(field_name, bit_length, image_id=image_id,
                               pattern_idx=pattern_idx)
@@ -777,8 +777,9 @@ class WritableDatabase(Database):
     for comp_cls, comp_names in components.items():
       for comp_name in comp_names:
         if comp_name not in self.GetComponents(comp_cls):
-          raise common.HWIDException('The component %r is not recorded '
-                                     'in `components` part.' % comp_name)
+          raise common.HWIDException(
+              f'The component {comp_name!r} is not recorded in `components` '
+              'part.')
 
 
 class _NamedNumber(dict):
@@ -801,8 +802,8 @@ class _NamedNumber(dict):
 
     if not isinstance(source, dict):
       raise common.HWIDException(
-          'Invalid source %r for `%s` part of a HWID database.' %
-          (source, self.PART_TAG))
+          f'Invalid source {source!r} for `{self.PART_TAG}` part of a HWID '
+          'database.')
 
     for number, name in source.items():
       self[number] = name
@@ -821,7 +822,7 @@ class _NamedNumber(dict):
       return super().__getitem__(number)
     except KeyError:
       raise common.HWIDException(
-          'The %s %r is not recorded.' % (self.NUMBER_TAG, number)) from None
+          f'The {self.NUMBER_TAG} {number!r} is not recorded.') from None
 
   def __setitem__(self, number, name):
     """Adds a new number or updates an existed number's name.
@@ -831,26 +832,27 @@ class _NamedNumber(dict):
     """
     # pylint:disable=unsupported-membership-test
     if number not in self.NUMBER_RANGE:
-      raise common.HWIDException('The %s should be one of %r, but got %r.' %
-                                 (self.NUMBER_TAG, self.NUMBER_RANGE, number))
+      raise common.HWIDException(
+          f'The {self.NUMBER_TAG} should be one of {self.NUMBER_RANGE!r}, but '
+          f'got {number!r}.')
 
     if not isinstance(name, str):
       raise common.HWIDException(
-          'The %s should be a string, but got %r.' % (self.NAME_TAG, name))
+          f'The {self.NAME_TAG} should be a string, but got {name!r}.')
 
     if number in self:
       raise common.HWIDException(
-          'The %s %r already exists.' % (self.NUMBER_TAG, number))
+          f'The {self.NUMBER_TAG} {number!r} already exists.')
 
     if name in self.values():
       raise common.HWIDException(
-          'The %s %r is already in used.' % (self.NAME_TAG, name))
+          f'The {self.NAME_TAG} {name!r} is already in used.')
 
     super().__setitem__(number, name)
 
   def __delitem__(self, key):
     raise common.HWIDException(
-        'Invalid operation: remove %s %r.' % (self.NUMBER_TAG, key))
+        f'Invalid operation: remove {self.NUMBER_TAG} {key!r}.')
 
 
 class EncodingPatterns(_NamedNumber):
@@ -917,7 +919,7 @@ class ImageId(_NamedNumber):
       if name == image_name:
         return i
 
-    raise common.HWIDException('The image name %r is not valid.' % image_name)
+    raise common.HWIDException(f'The image name {image_name!r} is not valid.')
 
   @property
   def max_image_id(self):
@@ -1127,7 +1129,7 @@ class EncodedFields:
           component names).
     """
     if field_name not in self._fields:
-      raise common.HWIDException('The field name %r is invalid.' % field_name)
+      raise common.HWIDException(f'The field name {field_name!r} is invalid.')
 
     ret: MutableMapping[int, Mapping[str, Sequence[str]]] = {}
     for index, comps in self._fields[field_name].items():
@@ -1145,7 +1147,7 @@ class EncodedFields:
       A set of string of component classes.
     """
     if field_name not in self._fields:
-      raise common.HWIDException('The field name %r is invalid.' % field_name)
+      raise common.HWIDException(f'The field name {field_name!r} is invalid.')
 
     return self._field_to_comp_classes[field_name]
 
@@ -1188,8 +1190,7 @@ class EncodedFields:
       _index: Specify the index for the new component combination.
     """
     if field_name not in self._fields:
-      raise common.HWIDException(
-          'Encoded field %r does not exist' % (field_name, ))
+      raise common.HWIDException(f'Encoded field {field_name!r} does not exist')
 
     if field_name == 'region_field':
       if len(components) != 1 or list(components) != ['region']:
@@ -1225,8 +1226,7 @@ class EncodedFields:
           component name.
     """
     if field_name in self._fields:
-      raise common.HWIDException(
-          'Encoded field %r already exists' % (field_name, ))
+      raise common.HWIDException(f'Encoded field {field_name!r} already exists')
 
     if field_name == 'region_field' or 'region' in components:
       raise common.HWIDException(
@@ -1634,7 +1634,7 @@ class Components:
 
     if comp_name not in self._components.get(comp_cls, {}):
       raise common.HWIDException(
-          'Component (%r, %r) is not recorded.' % (comp_cls, comp_name))
+          f'Component ({comp_cls!r}, {comp_name!r}) is not recorded.')
 
     comp_info = self._components[comp_cls][comp_name]
     self._components[comp_cls][comp_name] = comp_info.Replace(status=status)
@@ -1653,7 +1653,7 @@ class Components:
 
     if comp_name in self.GetComponents(comp_cls):
       raise common.HWIDException(
-          'Component (%r, %r) already exists.' % (comp_cls, comp_name))
+          f'Component ({comp_cls!r}, {comp_name!r}) already exists.')
 
     value_is_none = v3_rule.IsComponentValueNone(values)
     if value_is_none and any(
@@ -1865,8 +1865,8 @@ class Pattern:
       for image_id in pattern_expr['image_ids']:
         if image_id in self._image_id_to_pattern:
           raise common.HWIDException(
-              'One image id should map to one pattern, but image id %r maps to '
-              'multiple patterns.' % image_id)
+              'One image id should map to one pattern, but image id '
+              f'{image_id!r} maps to multiple patterns.')
 
         self._image_id_to_pattern[image_id] = self.num_patterns
       self._patterns.append(pattern_obj)
@@ -1915,7 +1915,7 @@ class Pattern:
 
     if image_id in self._image_id_to_pattern:
       raise common.HWIDException(
-          'The image id %r is already in used.' % image_id)
+          f'The image id {image_id!r} is already in used.')
 
     associated_pattern_idx = self.num_patterns
     new_pattern = PatternDatum(associated_pattern_idx, encoding_scheme, [])
@@ -1943,7 +1943,7 @@ class Pattern:
 
     if image_id in self._image_id_to_pattern:
       raise common.HWIDException(
-          'The image id %r has already been in used.' % image_id)
+          f'The image id {image_id!r} has already been in used.')
 
     if reference_image_id is not None:
       if reference_image_id not in self._image_id_to_pattern:
@@ -2095,7 +2095,7 @@ class Pattern:
       return self._patterns[self._image_id_to_pattern[self._max_image_id]]
 
     if image_id not in self._image_id_to_pattern:
-      raise common.HWIDException('No pattern for image id %r.' % image_id)
+      raise common.HWIDException(f'No pattern for image id {image_id!r}.')
 
     return self._patterns[self._image_id_to_pattern[image_id]]
 
@@ -2219,8 +2219,8 @@ class Rules:
     """
     if not isinstance(rule_expr_list, list):
       raise common.HWIDException(
-          '`rules` part of a HWID database should be a list, but got %r' %
-          (rule_expr_list, ))
+          '`rules` part of a HWID database should be a list, but got '
+          f'{rule_expr_list!r}')
 
     self._rules = []
 
@@ -2230,9 +2230,9 @@ class Rules:
       rule = v3_rule.Rule.CreateFromDict(rule_expr)
       if not any(rule.name.startswith(x + '.') for x in self._RULE_TYPES):
         raise common.HWIDException(
-            'Invalid rule name %r; rule name must be prefixed with '
-            '"device_info." (evaluated when generating HWID) '
-            'or "verify." (evaluated when verifying HWID)' % rule.name)
+            f'Invalid rule name {rule.name!r}; rule name must be prefixed with '
+            '"device_info." (evaluated when generating HWID) or "verify." '
+            '(evaluated when verifying HWID)')
 
       self._rules.append(rule)
 

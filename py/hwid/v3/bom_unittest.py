@@ -66,7 +66,7 @@ class RamSizeTest(unittest.TestCase):
     for bad_ram_str in _MEMORY_BAD_EXAMPLES:
       with self.assertRaises(ValueError) as error:
         RamSize(ram_size_str=bad_ram_str)
-      self.assertEqual('Invalid DRAM: %s' % bad_ram_str, str(error.exception))
+      self.assertEqual(f'Invalid DRAM: {bad_ram_str}', str(error.exception))
 
   def testAdd(self):
     r1 = random.randint(0, 1 << 30)

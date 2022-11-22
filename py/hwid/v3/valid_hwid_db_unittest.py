@@ -37,6 +37,7 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 BLOCKLIST_PROJECT = []
 
 
@@ -53,7 +54,7 @@ def _CheckProject(args):
   presubmit_commit = os.environ.get('PRESUBMIT_COMMIT')
   commit = presubmit_commit or 'cros-internal/main'
 
-  title = '%s %s:%s' % (project_name, commit, db_path)
+  title = f'{project_name} {commit}:{db_path}'
   logging.info('Checking %s', title)
 
   try:
@@ -66,8 +67,8 @@ def _CheckProject(args):
       # running a presubmit check for a commit that removes the HWID database.
       if presubmit_commit:
         returncode = process_utils.Spawn(
-            ['git', 'show', '%s:%s' % (presubmit_commit, db_path)],
-            cwd=hwid_dir, call=True, ignore_stdin=True, ignore_stdout=True,
+            ['git', 'show', f'{presubmit_commit}:{db_path}'], cwd=hwid_dir,
+            call=True, ignore_stdin=True, ignore_stdout=True,
             ignore_stderr=True).returncode
         if returncode == 128:
           logging.info('Database %s is removed.  Skip test for %s.', db_path,
@@ -75,13 +76,12 @@ def _CheckProject(args):
           return None
 
       raise ValueError(
-          'missing metadata in projects.yaml for the project %r' % project_name)
+          f'missing metadata in projects.yaml for the project {project_name!r}')
 
     assert project_info['branch'] == 'main'
 
-    db_raw = process_utils.CheckOutput(
-        ['git', 'show', '%s:%s' % (commit, db_path)], cwd=hwid_dir,
-        ignore_stderr=True)
+    db_raw = process_utils.CheckOutput(['git', 'show', f'{commit}:{db_path}'],
+                                       cwd=hwid_dir, ignore_stderr=True)
 
     # Load databases and verify checksum. For old factory branches that do not
     # have database checksum, the checksum verification will be skipped.
@@ -121,7 +121,7 @@ class ValidHWIDDBsTest(unittest.TestCase):
     target_commit = (os.environ.get('PRESUBMIT_COMMIT') or 'cros-internal/main')
     projects_info = yaml.safe_load(
         process_utils.CheckOutput(
-            ['git', 'show', '%s:projects.yaml' % target_commit], cwd=hwid_dir))
+            ['git', 'show', f'{target_commit}:projects.yaml'], cwd=hwid_dir))
 
     presubmit_files = os.environ.get('PRESUBMIT_FILES')
     if presubmit_files:
@@ -136,10 +136,9 @@ class ValidHWIDDBsTest(unittest.TestCase):
             if not ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.match(
                 project_info['path']):
               raise ValueError(
-                  ('Unexpected db path %r.  Expected db path should follow '
-                   'regex pattern %r') %
-                  (db_path,
-                   ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.pattern))
+                  f'Unexpected db path {db_path!r}. Expected db path should '
+                  'follow regex pattern '
+                  f'{ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.pattern!r}')
 
             target_dbs.append((project_name, db_path, project_info))
     else:
@@ -157,7 +156,7 @@ class ValidHWIDDBsTest(unittest.TestCase):
     if exception_list:
       error_msg = []
       for title, err_msg_lines in exception_list:
-        error_msg.append('Error occurs in %s\n' % title +
+        error_msg.append(f'Error occurs in {title}\n' +
                          ''.join('  ' + l for l in err_msg_lines))
       raise Exception('\n'.join(error_msg))
 

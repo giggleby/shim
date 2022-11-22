@@ -530,7 +530,7 @@ def WriteHWIDWrapper(options):
     raise ValueError('Cannot write HWID to GBB in chroot.')
 
   process_utils.CheckOutput(['gooftool', 'write_hwid', options.hwid])
-  Output('HWID %r written to firmware GBB.' % options.hwid)
+  Output(f'HWID {options.hwid!r} written to firmware GBB.')
 
 
 @Command('read')
@@ -593,7 +593,7 @@ def EnumerateHWIDWrapper(options):
       Output(k)
   else:
     for k, v in sorted(hwids.items()):
-      Output('%s: %s' % (k, v))
+      Output(f'{k}: {v}')
 
 
 @Command('verify-database')
@@ -602,9 +602,9 @@ def VerifyHWIDDatabase(options):
   # Do nothing here since all the verifications are done when loading the
   # database with HWID library.
   if options.database.can_encode:
-    Output('Database %s verified' % options.project)
+    Output(f'Database {options.project} verified')
   else:
-    Output('Database %s (not works for encoding) verified' % options.project)
+    Output(f'Database {options.project} (not works for encoding) verified')
 
 
 @Command(

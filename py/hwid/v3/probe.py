@@ -134,8 +134,9 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
             mismatched_components.setdefault(comp_cls, [])
             mismatched_components[comp_cls].append(probed_comp)
         else:  # len(...) > 1
-          raise common.HWIDException('%r matches multiple components: %r' % (
-              probed_comp, matched_comp_name))
+          raise common.HWIDException(
+              f'{probed_comp!r} matches multiple components: '
+              f'{matched_comp_name!r}')
 
       # If no any probed result of this component class, try add the default
       # one.
@@ -145,8 +146,8 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
     if (not allow_mismatched_components and
         any(mismatched_components.values())):
       raise common.HWIDException(
-          'Probed components %r are not matched with any component records in '
-          'the database.' % mismatched_components)
+          f'Probed components {mismatched_components!r} are not matched with '
+          'any component records in the database.')
 
   bom = BOM(encoding_pattern_index=0,
             image_id=image_id,

@@ -45,7 +45,7 @@ class DatabaseTest(unittest.TestCase):
     ]:
       self.assertRaises(
           common.HWIDException, database.Database.LoadFile,
-          os.path.join(_TEST_DATA_PATH, 'test_database_db_%s.yaml' % case),
+          os.path.join(_TEST_DATA_PATH, f'test_database_db_{case}.yaml'),
           verify_checksum=False)
 
   def testLoadInternal(self):

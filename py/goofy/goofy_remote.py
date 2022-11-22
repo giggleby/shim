@@ -25,6 +25,7 @@ from cros.factory.utils.ssh_utils import SpawnSSHToDUT
 from cros.factory.utils.sync_utils import Retry
 from cros.factory.utils.sys_utils import InChroot
 
+
 SRCROOT = os.environ.get('CROS_WORKON_SRCROOT')
 
 
@@ -152,29 +153,25 @@ def main():
   # We need --force to remove the original goofy directory if it's not a
   # symlink, -l for re-creating the symlink on DUT, -K for following the symlink
   # on DUT.
-  SpawnRsyncToDUT(
-      ['-azlKC', '--force', '--exclude', '*.pyc'] +
-      list(filter(os.path.exists,
-                  [os.path.join(paths.FACTORY_DIR, x)
-                   for x in
-                   ('bin', 'py', 'py_pkg', 'sh', 'third_party', 'init')])) +
-      ['%s:/usr/local/factory' % args.host],
-      check_call=True, log=True)
+  SpawnRsyncToDUT(['-azlKC', '--force', '--exclude', '*.pyc'] + list(
+      filter(os.path.exists, [
+          os.path.join(paths.FACTORY_DIR, x)
+          for x in ('bin', 'py', 'py_pkg', 'sh', 'third_party', 'init')
+      ])) + [f'{args.host}:/usr/local/factory'], check_call=True, log=True)
 
-  Spawn(['make', 'par-overlay-%s' % board], cwd=paths.FACTORY_DIR,
+  Spawn(['make', f'par-overlay-{board}'], cwd=paths.FACTORY_DIR,
         check_call=True, log=True)
 
-  SpawnRsyncToDUT(
-      ['-az', 'overlay-%s/build/par/factory.par' % board,
-       '%s:/usr/local/factory/' % args.host],
-      cwd=paths.FACTORY_DIR, check_call=True, log=True)
+  SpawnRsyncToDUT([
+      '-az', f'overlay-{board}/build/par/factory.par',
+      f'{args.host}:/usr/local/factory/'
+  ], cwd=paths.FACTORY_DIR, check_call=True, log=True)
 
   private_path = cros_board_utils.GetChromeOSFactoryBoardPath(board)
   if private_path:
-    SpawnRsyncToDUT(
-        ['-azlKC', '--exclude', 'bundle'] +
-        [private_path + '/', '%s:/usr/local/factory/' % args.host],
-        check_call=True, log=True)
+    SpawnRsyncToDUT(['-azlKC', '--exclude', 'bundle'] +
+                    [private_path + '/', f'{args.host}:/usr/local/factory/'],
+                    check_call=True, log=True)
 
   # Call goofy_remote on the remote host, allowing it to tweak test lists.
   SpawnSSHToDUT([args.host, 'goofy_remote', '--local'] +
@@ -217,7 +214,7 @@ def main():
   if args.run_test:
     def GoofyRpcRunTest():
       return SpawnSSHToDUT(
-          [args.host, 'goofy_rpc', r'RunTest\(\"%s\"\)' % args.run_test],
+          [args.host, 'goofy_rpc', r'RunTest\(\"' + args.run_test + r'\"\)'],
           check_call=True, log=True)
     Retry(max_retry_times=10, interval=5, callback=None, target=GoofyRpcRunTest)
 

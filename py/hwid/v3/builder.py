@@ -75,9 +75,9 @@ def HandleCollisionName(comp_name, name_list):
     name_list = []
   if comp_name in name_list:
     suffix_num = 1
-    while '%s_%d' % (comp_name, suffix_num) in name_list:
+    while f'{comp_name}_{int(suffix_num)}' in name_list:
       suffix_num += 1
-    comp_name = '%s_%d' % (comp_name, suffix_num)
+    comp_name = f'{comp_name}_{int(suffix_num)}'
   return comp_name
 
 
@@ -109,7 +109,7 @@ def _DetermineComponentName(comp_cls: str, value: ProbedValueType):
   if len(value) == 1:
     return FilterSpecialCharacter(str(next(iter(value.values()))))
   try:
-    return '%s_%smb_%s' % (value['part'], value['size'], value['slot'])
+    return f"{value['part']}_{value['size']}mb_{value['slot']}"
   except KeyError:
     pass
   for key in [
@@ -274,7 +274,7 @@ class DatabaseBuilder:
 
     if self._database.GetDefaultComponent(comp_cls) is not None:
       raise ValueError(
-          'The component class %r already has a default component.' % comp_cls)
+          f'The component class {comp_cls!r} already has a default component.')
 
     comp_name = comp_cls + self._DEFAULT_COMPONENT_SUFFIX
     self._database.AddComponent(comp_cls, comp_name, None,
@@ -295,10 +295,10 @@ class DatabaseBuilder:
 
     if len(self._database.GetComponentClasses(field_name)) > 1:
       raise ValueError(
-          'The encoded field %r for component %r encodes more than one '
-          'component class so it\'s not trivial to mark a null %r component.  '
-          'Please update the database by a real probed results.' %
-          (field_name, comp_cls, comp_cls))
+          f'The encoded field {field_name!r} for component {comp_cls!r} encodes'
+          ' more than one component class so it\'s not trivial to mark a null '
+          f'{comp_cls!r} component. Please update the database by a real probed'
+          ' results.')
     if all(comps[comp_cls]
            for comps in self._database.GetEncodedField(field_name).values()):
       self._database.AddEncodedFieldComponents(field_name, {comp_cls: []})
@@ -332,7 +332,7 @@ class DatabaseBuilder:
   def AddRegions(self, new_regions, region_field_name='region_field'):
     if self._database.GetComponentClasses(region_field_name) != set(['region']):
       raise ValueError(
-          '"%s" is not a valid region field name.' % region_field_name)
+          f'"{region_field_name}" is not a valid region field name.')
 
     added_regions = set()
     for region_comp in self._database.GetEncodedField(
@@ -675,14 +675,14 @@ class DatabaseBuilder:
           continue
 
         add_null = PromptAndAsk(
-            'Found probed values of [%s] component\n' % comp_cls + ''.join([
+            f'Found probed values of [{comp_cls}] component\n' + ''.join([
                 '\n' + yaml.safe_dump(probed_value, default_flow_style=False)
                 for probed_value in probed_values
             ]).replace('\n', '\n  ') + '\n' +
             'to be added to the database, please confirm that:\n' +
-            'If the device has a SKU without %s component, ' % comp_cls +
+            f'If the device has a SKU without {comp_cls} component, ' +
             'please enter "Y".\n' +
-            'If the device always has %s component, ' % comp_cls +
+            f'If the device always has {comp_cls} component, ' +
             'please enter "N".\n', default_answer=True)
 
         if add_null:
@@ -722,11 +722,11 @@ class DatabaseBuilder:
         else:
           # Ask user to add a default item or a null item.
           add_default = PromptAndAsk(
-              'Component [%s] is essential but the probe result is missing. '
-              'Do you want to add a default item?\n'
+              f'Component [{comp_cls}] is essential but the probe result is '
+              'missing. Do you want to add a default item?\n'
               'If the probed code is not ready yet, please enter "Y".\n'
-              'If the device does not have the component, please enter "N".' %
-              comp_cls, default_answer=True)
+              'If the device does not have the component, please enter "N".',
+              default_answer=True)
 
         if add_default:
           self.AddDefaultComponent(comp_cls)
@@ -844,12 +844,11 @@ class DatabaseBuilder:
                               new_pattern=bool(extra_fields))
 
     elif extra_fields and PromptAndAsk(
-        'WARNING: Extra fields [%s] without assigning a new image_id.\n'
-        'If the fields are added into the current pattern, the index of '
-        'these fields will be encoded to index 0 for all old HWID string. '
-        'Enter "y" if you are sure all old devices with old HWID string '
-        'have the component with index 0.' % ','.join(extra_fields),
-        default_answer=False) is False:
+        f'WARNING: Extra fields [{",".join(extra_fields)}] without assigning a '
+        'new image_id.\nIf the fields are added into the current pattern, the '
+        'index of these fields will be encoded to index 0 for all old HWID '
+        'string. Enter "y" if you are sure all old devices with old HWID string'
+        ' have the component with index 0.', default_answer=False) is False:
       raise ValueError(
           'Please assign a image_id by adding "--image-id" argument.')
 
