@@ -48,6 +48,8 @@ class TestCase(unittest.TestCase):
     self.__exceptions = []
     self.__exceptions_lock = threading.Lock()
 
+    self.__goofy_rpc = state.GetInstance()
+
   def PassTask(self):
     """Pass current task.
 
@@ -63,6 +65,16 @@ class TestCase(unittest.TestCase):
     thread.
     """
     raise type_utils.TestFailure(msg)
+
+  def WaiveTask(self, msg):
+    """Waive current task.
+
+    Should only be called in the event callbacks or primary background test
+    thread.
+    """
+    current_invocation_uuid = session.GetCurrentTestInvocation()
+    self.__goofy_rpc.WaiveCurrentFactoryTest(current_invocation_uuid)
+    self.FailTask(msg)
 
   def __WaitTaskEnd(self, timeout):
     if self.__task_end_event.wait(timeout=timeout):

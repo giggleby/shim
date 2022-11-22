@@ -265,6 +265,18 @@ cros.factory.Test = class {
   }
 
   /**
+   * Waives the test with the given waive message.
+   * @param {string} waiveMsg
+   * @export
+   */
+   waive(waiveMsg) {
+    this.sendTestEvent('goofy_ui_task_end', {
+      'status': 'FAILED_AND_WAIVED',
+      'waive_msg': waiveMsg
+    });
+  }
+
+  /**
    * Takes a screenshot of Goofy page.
    * @export
    */
