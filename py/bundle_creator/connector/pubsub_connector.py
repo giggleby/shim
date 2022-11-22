@@ -2,9 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Optional
+from dataclasses import dataclass
+from typing import Dict, Optional
 
 from google.cloud import pubsub_v1
+
+
+@dataclass
+class PubSubMessage:
+  """A placeholder represents a Pub/Sub message.
+
+  Properties:
+    data: A byte string of the message's data.
+    attributes: A dictionary of the message's attributes.
+  """
+  data: bytes
+  attributes: Dict[str, str]
 
 
 class PubSubConnector:
@@ -25,15 +38,15 @@ class PubSubConnector:
         publisher_options=publisher_options)
     self._subscriber_client = pubsub_v1.SubscriberClient()
 
-  def PullFirstMessage(self, subscription_name: str) -> Optional[bytes]:
+  def PullFirstMessage(self, subscription_name: str) -> Optional[PubSubMessage]:
     """Pulls the first message from the specific Pub/Sub subscription.
 
     Args:
       subscription_name: The subscription name to pull a message.
 
     Returns:
-      A string of the first message's data if it exists.  Otherwise `None` is
-      returned.
+      A `PubSubMessage` object if a message is pulled.  Otherwise `None` is
+          returned.
     """
     subscription_path = self._subscriber_client.subscription_path(
         self._cloud_project_id, subscription_name)
@@ -43,20 +56,24 @@ class PubSubConnector:
       received_message = response.received_messages[0]
       response = self._subscriber_client.acknowledge(subscription_path,
                                                      [received_message.ack_id])
-      return received_message.message.data
+      return PubSubMessage(received_message.message.data,
+                           received_message.message.attributes)
     return None
 
-  def PublishMessage(self, topic_name: str, message_data: bytes):
-    """Testing purpose.  Publishes a message.
+  def PublishMessage(self, topic_name: str, message_data: bytes,
+                     attributes: Optional[Dict[str, str]] = None):
+    """Publishes a message to the specific topic.
 
     Args:
       topic_name: The name of the topic to be published a message.
       message_data: The byte string of the data to be published.
+      attributes: A dictionary of attributes to be sent as metadata.
     """
+    attributes = attributes or {}
     topic_path = self._publisher_client.topic_path(self._cloud_project_id,
                                                    topic_name)
-    self._publisher_client.publish(topic_path, message_data,
-                                   ordering_key=self._ORDERING_KEY)
+    self._publisher_client.publish(
+        topic_path, message_data, ordering_key=self._ORDERING_KEY, **attributes)
 
   def CreateTopic(self, topic_name: str):
     """Testing purpose.  Creates a new topic.

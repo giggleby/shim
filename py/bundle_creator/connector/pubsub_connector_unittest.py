@@ -5,7 +5,15 @@
 from time import sleep
 import unittest
 
+from google.cloud import pubsub_v1
+
+
+# isort: split
+
 from cros.factory.bundle_creator.connector import pubsub_connector
+
+
+PubSubMessage = pubsub_connector.PubSubMessage
 
 
 class PubSubConnectorTest(unittest.TestCase):
@@ -31,19 +39,42 @@ class PubSubConnectorTest(unittest.TestCase):
   def tearDown(self):
     self._connector.DeleteSubscription(self._SUBSCRIPTION_NAME)
 
+  def testPublishMessage_withoutAttributes_verifiesPublishedMessage(self):
+    message_data = b'fake_data'
+
+    self._connector.PublishMessage(self._TOPIC_NAME, message_data)
+    sleep(1)  # Ensure the message is published.
+
+    received_message = self._PullOriginalMessage()
+    self.assertEqual(received_message.message.data, message_data)
+    self.assertEqual(received_message.message.ordering_key, 'DEFAULT')
+    self.assertEqual(received_message.message.attributes, {})
+
+  def testPublishMessage_withAttributes_verifiesAttributes(self):
+    attributes = {
+        'request_from': 'v2',
+    }
+
+    self._connector.PublishMessage(self._TOPIC_NAME, b'fake_data', attributes)
+    sleep(1)  # Ensure the message is published.
+
+    received_message = self._PullOriginalMessage()
+    self.assertEqual(received_message.message.attributes, attributes)
+
   def testPullFirstMessage_noMessageIsPublished_returnsNone(self):
     return_value = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
 
     self.assertIsNone(return_value)
 
-  def testPullFirstMessage_succeed_returnsExpectedData(self):
-    expected_message_data = b'fake_data'
-    self._connector.PublishMessage(self._TOPIC_NAME, expected_message_data)
+  def testPullFirstMessage_succeed_returnsExpectedMessage(self):
+    message_data = b'fake_data'
+    self._connector.PublishMessage(self._TOPIC_NAME, message_data)
     sleep(1)  # Ensure the message is published.
 
-    message_data = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
+    message = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
 
-    self.assertEqual(message_data, expected_message_data)
+    expected_message = PubSubMessage(data=message_data, attributes={})
+    self.assertEqual(message, expected_message)
 
   def testPullFirstMessage_succeed_verifiesMessageIsAcknowledged(self):
     self._connector.PublishMessage(self._TOPIC_NAME, b'fake_data')
@@ -57,22 +88,32 @@ class PubSubConnectorTest(unittest.TestCase):
 
     self.assertIsNone(return_value)
 
-  def testPullFirstMessage_multipleMessages_verifiesPullingMessagesOrder(self):
+  def testPublishPullIntegration_multipleMessages_verifiesPullingMessagesOrder(
+      self):
     message_data_1 = b'message_1'
     message_data_2 = b'message_2'
     message_data_3 = b'message_3'
+
     self._connector.PublishMessage(self._TOPIC_NAME, message_data_1)
     self._connector.PublishMessage(self._TOPIC_NAME, message_data_2)
     self._connector.PublishMessage(self._TOPIC_NAME, message_data_3)
     sleep(1)  # Ensure the messages are published.
-
     pulled_message_1 = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
     pulled_message_2 = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
     pulled_message_3 = self._connector.PullFirstMessage(self._SUBSCRIPTION_NAME)
 
-    self.assertEqual(pulled_message_1, message_data_1)
-    self.assertEqual(pulled_message_2, message_data_2)
-    self.assertEqual(pulled_message_3, message_data_3)
+    self.assertEqual(pulled_message_1.data, message_data_1)
+    self.assertEqual(pulled_message_2.data, message_data_2)
+    self.assertEqual(pulled_message_3.data, message_data_3)
+
+  def _PullOriginalMessage(self) -> pubsub_v1.types.ReceivedMessage:
+    client = pubsub_v1.SubscriberClient()
+    subscription_path = client.subscription_path(self._CLOUD_PROJECT_ID,
+                                                 self._SUBSCRIPTION_NAME)
+    received_message = client.pull(subscription_path, max_messages=1,
+                                   return_immediately=True).received_messages[0]
+    client.acknowledge(subscription_path, [received_message.ack_id])
+    return received_message
 
 
 if __name__ == '__main__':

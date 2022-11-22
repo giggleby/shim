@@ -11,6 +11,12 @@ from typing import Any, Dict, List, Optional
 from google.cloud import firestore
 
 
+# isort: split
+
+from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
+from cros.factory.bundle_creator.proto import factorybundle_v2_pb2  # pylint: disable=no-name-in-module
+
+
 @dataclass
 class CreateBundleRequestInfo:
   """A placeholder represents the information of a create bundle request.
@@ -39,6 +45,39 @@ class CreateBundleRequestInfo:
   update_hwid_db_firmware_info: bool
   firmware_source: Optional[str] = None
   hwid_related_bug_number: Optional[int] = None
+
+  @classmethod
+  def FromCreateBundleRpcRequest(
+      cls, request: factorybundle_pb2.CreateBundleRpcRequest
+  ) -> 'CreateBundleRequestInfo':
+    info = cls(
+        email=request.email, board=request.board, project=request.project,
+        phase=request.phase, toolkit_version=request.toolkit_version,
+        test_image_version=request.test_image_version,
+        release_image_version=request.release_image_version,
+        update_hwid_db_firmware_info=request.update_hwid_db_firmware_info)
+    info.firmware_source = request.firmware_source if request.HasField(
+        'firmware_source') else None
+    info.hwid_related_bug_number = (
+        request.hwid_related_bug_number
+        if request.HasField('hwid_related_bug_number') else None)
+    return info
+
+  @classmethod
+  def FromV2CreateBundleRequest(
+      cls, request: factorybundle_v2_pb2.CreateBundleRequest
+  ) -> 'CreateBundleRequestInfo':
+    metadata = request.bundle_metadata
+    hwid_option = request.hwid_option
+    info = cls(email=request.email, board=metadata.board,
+               project=metadata.project, phase=metadata.phase,
+               toolkit_version=metadata.toolkit_version,
+               test_image_version=metadata.test_image_version,
+               release_image_version=metadata.release_image_version,
+               update_hwid_db_firmware_info=hwid_option.update_db_firmware_info,
+               firmware_source=metadata.firmware_source or None,
+               hwid_related_bug_number=hwid_option.related_bug_number or None)
+    return info
 
 
 class FirestoreConnector:
@@ -83,12 +122,14 @@ class FirestoreConnector:
             'No `has_firmware` attribute found in the existing document.')
     return None
 
-  def CreateUserRequest(self, info: CreateBundleRequestInfo) -> str:
+  def CreateUserRequest(self, info: CreateBundleRequestInfo,
+                        request_from: Optional[str] = None) -> str:
     """Creates a user request from the create bundle request.
 
     Args:
       info: A `CreateBundleRequestInfo` object which contains the information to
           create a user request document.
+      request_from: An optional field to record where the request is from.
 
     Returns:
       A hashed document id generated from the created document.
@@ -100,6 +141,8 @@ class FirestoreConnector:
       del doc_value['firmware_source']
     if not info.update_hwid_db_firmware_info:
       del doc_value['hwid_related_bug_number']
+    if request_from:
+      doc_value['request_from'] = request_from
 
     doc_ref = self._GetUserRequestDocRef()
     doc_ref.set(doc_value)

@@ -1,16 +1,42 @@
 syntax = "proto3";
 package cros.factory.bundle_creator.proto;
 
-message EchoRequest {
-  string message = 1;
+message BundleMetadata {
+  string board = 1;
+  string project = 2;
+  string phase = 3;
+  string toolkit_version = 4;
+  string test_image_version = 5;
+  string release_image_version = 6;
+  string firmware_source = 7;
 }
 
-message EchoResponse {
-  string message = 1;
+message HwidOption {
+  bool update_db_firmware_info = 1;
+  int64 related_bug_number = 2;
+}
+
+message CreateBundleRequest {
+  string email = 1;
+  BundleMetadata bundle_metadata = 2;
+  HwidOption hwid_option = 3;
+}
+
+message CreateBundleResponse {
+  enum Status {
+    UNKNOWN = 0;
+    NO_ERROR = 1;
+  }
+  Status status = 1;
+}
+
+message CreateBundleMessage {
+  string doc_id = 1;
+  CreateBundleRequest request = 2;
 }
 
 service FactoryBundleServiceV2 {
-  rpc Echo(EchoRequest)
-      returns (EchoResponse) {
+  rpc CreateBundle(CreateBundleRequest)
+      returns (CreateBundleResponse) {
   }
 }

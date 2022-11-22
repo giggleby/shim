@@ -10,7 +10,77 @@ from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from google.cloud import firestore
 import pytz
 
+
+# isort: split
+
 from cros.factory.bundle_creator.connector import firestore_connector
+from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
+from cros.factory.bundle_creator.proto import factorybundle_v2_pb2  # pylint: disable=no-name-in-module
+
+
+CreateBundleRequestInfo = firestore_connector.CreateBundleRequestInfo
+
+
+class CreateBundleRequestInfoTest(unittest.TestCase):
+
+  def setUp(self):
+    self._request = factorybundle_pb2.CreateBundleRpcRequest()
+    self._request.board = 'board'
+    self._request.project = 'project'
+    self._request.phase = 'proto'
+    self._request.toolkit_version = '11111.0.0'
+    self._request.test_image_version = '22222.0.0'
+    self._request.release_image_version = '33333.0.0'
+    self._request.email = 'foo@bar'
+    self._request.update_hwid_db_firmware_info = False
+
+    self._request_v2 = factorybundle_v2_pb2.CreateBundleRequest()
+    self._request_v2.email = 'foo2@bar'
+    self._request_v2.bundle_metadata.board = 'board2'
+    self._request_v2.bundle_metadata.project = 'project2'
+    self._request_v2.bundle_metadata.phase = 'proto2'
+    self._request_v2.bundle_metadata.toolkit_version = '55555.0.0'
+    self._request_v2.bundle_metadata.test_image_version = '66666.0.0'
+    self._request_v2.bundle_metadata.release_image_version = '77777.0.0'
+    self._request_v2.hwid_option.update_db_firmware_info = False
+
+  def testFromCreateBundleRpcRequest_succeed_returnsExpectedValue(self):
+    info = CreateBundleRequestInfo.FromCreateBundleRpcRequest(self._request)
+
+    expected_info = CreateBundleRequestInfo(
+        email='foo@bar', board='board', project='project', phase='proto',
+        toolkit_version='11111.0.0', test_image_version='22222.0.0',
+        release_image_version='33333.0.0', update_hwid_db_firmware_info=False)
+    self.assertEqual(info, expected_info)
+
+  def testFromCreateBundleRpcRequest_optionalFields_verifiesOptionalFields(
+      self):
+    self._request.firmware_source = '44444.0.0'
+    self._request.hwid_related_bug_number = 1234
+
+    info = CreateBundleRequestInfo.FromCreateBundleRpcRequest(self._request)
+
+    self.assertEqual(info.firmware_source, '44444.0.0')
+    self.assertEqual(info.hwid_related_bug_number, 1234)
+
+  def testFromV2CreateBundleRequest_succeed_returnsExpectedValue(self):
+    info = CreateBundleRequestInfo.FromV2CreateBundleRequest(self._request_v2)
+
+    expected_info = CreateBundleRequestInfo(
+        email='foo2@bar', board='board2', project='project2', phase='proto2',
+        toolkit_version='55555.0.0', test_image_version='66666.0.0',
+        release_image_version='77777.0.0', update_hwid_db_firmware_info=False)
+    self.assertEqual(info, expected_info)
+
+  def testFromV2CreateBundleRequest_optionalFields_verifiesOptionalFields(
+      self):
+    self._request_v2.bundle_metadata.firmware_source = '88888.0.0'
+    self._request_v2.hwid_option.related_bug_number = 5678
+
+    info = CreateBundleRequestInfo.FromV2CreateBundleRequest(self._request_v2)
+
+    self.assertEqual(info.firmware_source, '88888.0.0')
+    self.assertEqual(info.hwid_related_bug_number, 5678)
 
 
 class FirestoreConnectorTest(unittest.TestCase):
@@ -103,6 +173,14 @@ class FirestoreConnectorTest(unittest.TestCase):
     self.assertEqual(doc['update_hwid_db_firmware_info'], True)
     self.assertEqual(doc['hwid_related_bug_number'],
                      self._info.hwid_related_bug_number)
+
+  def testCreateUserRequest_callWithRequestFrom_verifiesRequestFromValue(self):
+    request_from = 'v2'
+
+    doc_id = self._connector.CreateUserRequest(self._info, request_from)
+
+    doc = self._connector.GetUserRequestDocument(doc_id)
+    self.assertEqual(doc['request_from'], request_from)
 
   def testUpdateUserRequestStatus_succeed_verifiesDocStatus(self):
     status = self._connector.USER_REQUEST_STATUS_SUCCEEDED

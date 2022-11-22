@@ -34,6 +34,9 @@ class FactoryBundleService(remote.Service):
       subject = 'Bundle creation success'
       match = re.match(r'^gs://{}/(.*)$'.format(config.BUNDLE_BUCKET),
                        worker_result.gs_path)
+      # TODO(b/264779024): Pass through `request_from` value and decide the link
+      #                    format by the value and the deployment type after we
+      #                    could have the v2 download link.
       download_link = (
           'https://chromeos.google.com/partner/console/DownloadBundle?path={}'
           .format(urllib.quote_plus(match.group(1))) if match else '-')

@@ -31,7 +31,8 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
   def CreateBundleAsync(self, request):
     message = factorybundle_pb2.CreateBundleMessage()
     message.doc_id = self._firestore_connector.CreateUserRequest(
-        self._ConvertToCreateBundleRequestInfo(request))
+        firestore_connector.CreateBundleRequestInfo.FromCreateBundleRpcRequest(
+            request))
     message.request.MergeFrom(request)
 
     publisher_options = pubsub_v1.types.PublisherOptions(
@@ -141,19 +142,3 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
         break
 
     return response
-
-  def _ConvertToCreateBundleRequestInfo(
-      self, request: factorybundle_pb2.CreateBundleRpcRequest
-  ) -> firestore_connector.CreateBundleRequestInfo:
-    info = firestore_connector.CreateBundleRequestInfo(
-        email=request.email, board=request.board, project=request.project,
-        phase=request.phase, toolkit_version=request.toolkit_version,
-        test_image_version=request.test_image_version,
-        release_image_version=request.release_image_version,
-        update_hwid_db_firmware_info=request.update_hwid_db_firmware_info)
-    info.firmware_source = request.firmware_source if request.HasField(
-        'firmware_source') else None
-    info.hwid_related_bug_number = (
-        request.hwid_related_bug_number
-        if request.HasField('hwid_related_bug_number') else None)
-    return info

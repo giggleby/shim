@@ -70,6 +70,13 @@ create_temp_dir() {
   echo "${temp_dir}"
 }
 
+prepare_proto_files() {
+  local destination_dir="$1"
+  protoc --python_out="${destination_dir}" -I "${SOURCE_DIR}/proto" \
+      "${SOURCE_DIR}/proto/factorybundle.proto" \
+      "${SOURCE_DIR}/proto/factorybundle_v2.proto"
+}
+
 prepare_docker_files() {
   local destination_dir="$1"
   local env_type="$2"
@@ -87,18 +94,15 @@ prepare_docker_files() {
     envsubst < "${SOURCE_DIR}/docker/config.py" > \
       "${destination_dir}/docker/config.py"
 
-  protoc -I "${SOURCE_DIR}/proto/" --python_out "${destination_dir}/proto" \
-    "${SOURCE_DIR}/proto/factorybundle.proto"
+  prepare_proto_files "${destination_dir}/proto"
 }
 
 prepare_appengine_files() {
   local destination_dir="$1"
   local version_name="$2"
   local appengine_source_name="app_engine_${version_name}"
-  local proto_filename="factorybundle_${version_name}"
   if [ -z "${version_name}" ]; then
     appengine_source_name="app_engine"
-    proto_filename="factorybundle"
   fi
 
   local package_dir="${destination_dir}/cros/factory/bundle_creator"
@@ -122,8 +126,7 @@ prepare_appengine_files() {
   mv "${package_dir}/${appengine_source_name}/requirements.txt" \
       "${destination_dir}"
 
-  protoc --python_out="${package_dir}/proto/" -I "${SOURCE_DIR}/proto" \
-      "${SOURCE_DIR}/proto/${proto_filename}.proto"
+  prepare_proto_files "${package_dir}/proto"
 }
 
 download_remote_toolkit() {
@@ -488,12 +491,17 @@ do_test_appengine_v2() {
   # Assign fake values for generating the configuration.
   GCLOUD_PROJECT="fake-gcloud-project"
   ALLOWED_LOAS_PEER_USERNAMES=("foobar")
+  PUBSUB_TOPIC="fake-topic"
   prepare_appengine_files "${LOCAL_DEPLOYMENT_SOURCE_DIR}" "v2"
   prepare_python_venv "${TEST_APPENGINE_V2_NAME}" \
     "${SOURCE_DIR}/app_engine_v2/requirements.txt"
 
-  # TODO(b/240891955): Add `connector` back if it starts to use connectors.
-  rm -rf "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}/connector"
+  # Remove the unit tests of unused connectors.
+  local unused_connector_names=("cloudtasks" "hwid_api" "storage")
+  for name in "${unused_connector_names[@]}"; do
+    local filename="${name}_connector_unittest.py"
+    rm -f "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}/connector/${filename}"
+  done
 
   run_tests "${TEST_APPENGINE_V2_NAME}"
 }
