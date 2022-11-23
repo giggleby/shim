@@ -158,8 +158,11 @@ class Settings:
       offset += header_len
       value = blob[offset:offset + value_len]
       offset += len(cls.padded_value(value))
-      if value:
-        setting = IpAddressValue if code == CODE_TFTP_SERVER_IP else BytesValue
+      if code == CODE_TFTP_SERVER_IP and value and value != b'\0':
+        setting = IpAddressValue
+        value = setting.unpack(value)
+      else:
+        setting = BytesValue
         value = setting.unpack(value)
       return cls(code, value), offset
 
@@ -224,11 +227,15 @@ class Settings:
     Returns:
         A json object of the settings.
     """
-    attributes = {
-        key: str(value.value) if (isinstance(value.value, IpAddressValue)) else
-        value.value.pack().decode('ascii')
-        for key, value in self.attributes.items()
-    }
+    attributes = {}
+    for key, value in self.attributes.items():
+      if isinstance(value.value, IpAddressValue):
+        attributes[key] = str(value.value)
+      elif isinstance(value.value, BytesValue):
+        attributes[key] = value.value.pack().decode('ascii')
+      else:
+        raise ValueError('Invalid type of the netboot firmware attributes, '
+                         'only accept BytesValue or IpAddressValue')
     return json.dumps(attributes, sort_keys=True, indent=4).replace(
         '\\u0000', '')
 
@@ -335,17 +342,17 @@ def NetbootFirmwareSettings(options):
     image = Image(f.read())
 
   settings = Settings(image[SETTINGS_FMAP_SECTION])
-  if options.machine:
-    print(settings.toJSON())
-  else:
+  if not options.machine:
     print('Current settings:')
     pprint.pprint(settings.attributes)
 
   if options.tftpserverip:
     settings['tftp_server_ip'] = IpAddressValue(options.tftpserverip)
-  if options.bootfile:
+  elif options.tftpserverip == '':
+    settings['tftp_server_ip'] = BytesValue('\0')
+  if options.bootfile or options.bootfile == '':
     settings['bootfile'] = BytesValue(options.bootfile + '\0')
-  if options.argsfile:
+  if options.argsfile or options.argsfile == '':
     settings['argsfile'] = BytesValue(options.argsfile + '\0')
   # pylint: enable=unsubscriptable-object
 
@@ -365,10 +372,14 @@ def NetbootFirmwareSettings(options):
   # If output is specified with different name, always generate output.
   do_output = output_name != options.input
   if new_blob == image[SETTINGS_FMAP_SECTION][:len(new_blob)]:
-    if not options.machine:
+    if options.machine:
+      print(settings.toJSON())
+    else:
       print('Settings not changed.')
   else:
-    if not options.machine:
+    if options.machine:
+      print(settings.toJSON())
+    else:
       print('Settings modified. New settings:')
       pprint.pprint(settings.attributes)
     image[SETTINGS_FMAP_SECTION] = new_blob
