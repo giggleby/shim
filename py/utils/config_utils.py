@@ -394,6 +394,9 @@ def _ResolveConfigInfo(config_name, frame, extra_config_dirs):
   for config_dir in reversed(extra_config_dirs):
     config_dirs += caller_dirs if config_dir == CALLER_DIR else [config_dir]
 
+  config_dirs = list(collections.OrderedDict().fromkeys(
+      os.path.realpath(config_dir) for config_dir in config_dirs))
+
   return (config_name or default_config_name, config_dirs)
 
 
