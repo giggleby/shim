@@ -47,31 +47,33 @@ DRAM_CALIBRATION_LOG_FILES = [
 # Root directory to use when root partition is USB
 USB_ROOT_OUTPUT_DIR = '/mnt/stateful_partition/factory_bug'
 
-DESCRIPTION = """Generate and save zip archive of log files.
+DESCRIPTION = """Generate and save zip archives of log and toolkit files.
 
   This tool always tries to collect log from the on board storage device.
   That is, if the current rootfs is a removable devices like usb drive,
   this tool will try to find the on board device and collect log from it.
+  Besides, it also collect all of the files under /usr/local/factory as
+  factory_toolkit.zip, which is an extra helpful information for debugging.
 """
 
 EXAMPLES = """Examples:
 
   When booting from the internal hard disk:
 
-    # Save logs to /tmp
+    # Save logs and factory toolkit to /tmp
     factory_bug
 
-    # Save logs to a USB drive (using the first one already mounted, or the
-    # first mountable on any USB device if none is mounted yet)
+    # Save logs and factory toolkit to a USB drive (using the first one already
+    # mounted, or the first mountable on any USB device if none is mounted yet)
     factory_bug --save-to-removable
 
   When booting from an USB drive:
 
-    # Mount on board rootfs, collect logs from there, and save logs to the USB
-    # drive's stateful partition
+    # Mount on board rootfs, collect logs and factory toolkit from there,
+    # and save logs to the USB drive's stateful partition
     factory_bug
 
-    # Specify the input device for logs collecting.
+    # Specify the input device for logs and factory toolkit collecting.
     factory_bug --input-device /dev/sda
 """
 
@@ -393,6 +395,22 @@ def GenerateDRAMCalibrationLog():
   return [log for log in DRAM_CALIBRATION_LOG_FILES if os.path.isfile(log)]
 
 
+def GenerateOutputFilePath(output_dir, filename, archive_id):
+  output_dir = os.path.realpath(output_dir)
+
+  if archive_id:
+    filename += archive_id.replace('/', '') + '.'
+  filename += 'zip'
+
+  output_file = os.path.join(output_dir, filename)
+  if os.path.exists(output_file):
+    raise RuntimeError(
+        f'Same filename [{filename}] exists. Use `factory_bug --id` or add '
+        'description in goofy UI dialog.')
+
+  return output_file
+
+
 def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
              abt=False, var='/var', usr_local='/usr/local', etc='/etc'):
   """Saves dmesg and relevant log files to a new archive in output_dir.
@@ -413,18 +431,8 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
   Returns:
     The name of the zip archive joined with `output_dir`.
   """
-  output_dir = os.path.realpath(output_dir)
-
   filename = 'factory_bug.'
-  if archive_id:
-    filename += archive_id.replace('/', '') + '.'
-  filename += 'zip'
-
-  output_file = os.path.join(output_dir, filename)
-  if os.path.exists(output_file):
-    raise RuntimeError(
-        f'Same filename [{filename}] exists. Use `factory_bug --id` or add '
-        'description in goofy UI dialog.')
+  output_file = GenerateOutputFilePath(output_dir, filename, archive_id)
 
   if sys_utils.InChroot():
     # Just save a dummy zip.
@@ -542,6 +550,55 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
   return output_file
 
 
+def SaveFactoryToolkit(output_dir, archive_id=None, usr_local='/usr/local'):
+  """Saves all files of factory toolkit to a new archive in output_dir.
+
+  The archive will be named factory_toolkit.<description>.zip,
+  where description is the 'archive_id' argument (if provided).
+
+  Args:
+    output_dir: The directory in which to create the file.
+    archive_id: An optional short ID to put in the filename (so
+      archives may be more easily differentiated).
+    usr_local: Paths to the relevant directories.
+
+  Returns:
+    The name of the zip archive joined with `output_dir`.
+  """
+  filename = 'factory_toolkit.'
+  output_file = GenerateOutputFilePath(output_dir, filename, archive_id)
+
+  factory_toolkit_dir = os.path.join(usr_local, 'factory')
+  if not os.path.exists(factory_toolkit_dir):
+    raise RuntimeError(f'The path of factory toolkit ({factory_toolkit_dir}) '
+                       'seems to be wrong...')
+
+  file_utils.TryMakeDirs(os.path.dirname(output_file))
+  logging.info('Saving factory toolkit to %s...', output_file)
+
+  # chdir to factory_toolkit_dir to ignore directory structure
+  curr_dir = os.getcwd()
+  os.chdir(factory_toolkit_dir)
+  try:
+    # use -y to store symbolic links as the link,
+    # instead of the referenced file
+    zip_command = (['zip', '-ry', output_file, './'])
+    Spawn(zip_command, check_call=True, read_stdout=True, read_stderr=True)
+  except CalledProcessError as e:
+    # 1 = non-fatal errors like "some files differ"
+    if e.returncode != 1:
+      logging.error(
+          'Command "zip" exited with return code: %d\n'
+          'Stdout: %s\n Stderr: %s\n', e.returncode, e.stdout, e.stderr)
+      raise
+  finally:
+    os.chdir(curr_dir)
+  logging.warning('Wrote %s (%d bytes)', output_file,
+                  os.path.getsize(output_file))
+
+  return output_file
+
+
 def ParseArgument():
   """argparse config
 
@@ -647,6 +704,8 @@ def main():
   IncludeDetailsInEventLogs()
   with input_device as input_paths, output_device as output_path:
     SaveLogs(output_path, args.id, **options, **input_paths)
+    usr_local = input_paths.get('usr_local', '/usr/local')
+    SaveFactoryToolkit(output_path, args.id, usr_local)
 
 
 if __name__ == '__main__':
