@@ -9,6 +9,7 @@ import argparse
 from cros.factory.goofy.plugins.camera_manager import camera_manager
 from cros.factory.goofy.plugins import plugin_controller
 
+
 DESCRIPTION = """Factory Camera Manager
 
 When a camera is enabled, it shows the captured video on goofy UI.
@@ -28,6 +29,9 @@ EXAMPLES = """Examples:
 
 > camera_manager rear disable
   Disable the rear camera.
+
+> camera_manager --dut-ip 192.168.30.100 front enable
+  Enable the front camera of device with ip 192.168.30.100.
 """
 
 
@@ -35,6 +39,8 @@ def ParseArgument():
   parser = argparse.ArgumentParser(
       description=DESCRIPTION, epilog=EXAMPLES,
       formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument('--dut-ip', type=str, default='localhost')
+  parser.add_argument('--dut-port', type=str, default='4012')
   parser.add_argument('facing', choices=('front', 'rear'))
   parser.add_argument('--hidden', action='store_true', help='Hide the video.')
   parser.add_argument('subcommand', choices=('enable', 'disable'))
@@ -46,7 +52,8 @@ def main():
   args = ParseArgument()
   plugin_name = 'camera_manager.camera_manager'
   manager: camera_manager.CameraManager = (
-      plugin_controller.GetPluginRPCProxy(plugin_name))
+      plugin_controller.GetPluginRPCProxy(plugin_name, args.dut_ip,
+                                          args.dut_port))
   if not manager:
     raise Exception(f'{plugin_name!r} plugin is not running!')
 
