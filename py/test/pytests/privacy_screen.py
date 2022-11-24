@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""A test to ensure the privacy screen functionalities of device under test.
+"""Test that sets privacy screen to specific state.
 
 Description
 -----------
@@ -21,14 +21,16 @@ Dependency
 
 Examples
 --------
-Turn privacy screen on and then validate state. Argument ``target_state`` is
-required and must be on of ``on`` or ``off``.
+Turn privacy screen on and then validate state::
 
-{
-  "pytest_name": "privacy_screen", "args": {
-    "target_state": "on"
+  {
+    "pytest_name": "privacy_screen",
+    "args": {
+      "target_state": "on"
+    }
   }
-}
+
+Argument ``target_state`` is required and must be either ``on`` or ``off``.
 """
 
 import json

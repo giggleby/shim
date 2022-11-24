@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-11-08 16:43+CST\n"
+"PO-Revision-Date: 2022-11-24 17:51+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -388,6 +388,10 @@ msgstr "hiển thị Plankton"
 #: ../build/pytests_label_generated.json
 msgid "Power Under Stress"
 msgstr "Kiểm tra công suất áp suất"
+
+#: ../build/pytests_label_generated.json
+msgid "Privacy Screen"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Probe"
@@ -2486,6 +2490,20 @@ msgstr "mVĐiện áp: {voltage} mV"
 #: ../py/test/pytests/power_under_stress.py
 msgid "Current: {current} mA"
 msgstr "Hiện tại: {current} mA"
+
+#: ../py/test/pytests/privacy_screen.py
+msgid "Running diagnostics privacy screen routine..."
+msgstr ""
+
+#: ../py/test/pytests/privacy_screen.py
+msgid ""
+"Diagnostics privacy screen routine failed. Expected state: {expected_state}, "
+"current state: {current_state}"
+msgstr ""
+
+#: ../py/test/pytests/privacy_screen.py
+msgid "Privacy screen state \"{state}\" verified."
+msgstr ""
 
 #: ../py/test/pytests/probe_sim.py
 msgid "Please insert the SIM card"
