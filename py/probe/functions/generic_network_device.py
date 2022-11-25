@@ -29,6 +29,7 @@ class NetworkDevices:
   """A general probing module for network devices."""
 
   cached_dev_list = None
+  find_cellular = False
 
   @classmethod
   def _GetIwconfigDevices(cls, extension='IEEE 802.11'):
@@ -91,11 +92,14 @@ class NetworkDevices:
     ]
 
   @classmethod
-  def _GetFlimflamDevices(cls):
+  def _GetFlimflamDevices(cls, probe_cellular=False):
     """Wrapper around flimflam (shill), the ChromeOS connection manager.
 
     This object is a wrapper around the data from the flimflam module, providing
     dbus format post processing.
+
+    Args:
+      probe_cellular: Whether to wait for cellular initialization or not.
 
     Returns:
       A list of network objects in Obj, having:
@@ -152,12 +156,13 @@ class NetworkDevices:
       logging.info('DUT does not have cellular.')
       return False
 
-    if _HasCellular():
+    if probe_cellular and _HasCellular():
       # Cellular related dbus takes 10~20 seconds to initialize after booting.
       # We have to wait until it is available.
       if not flimflam.FlimFlam().FindCellularDevice():
         raise RuntimeError('Call of flimflam.FlimFlam().FindCellularDevice() '
                            'timeout!')
+      cls.find_cellular = True
 
     return [_ProcessDevice(device) for device in
             flimflam.FlimFlam().GetObjectList('Device')]
@@ -171,9 +176,11 @@ class NetworkDevices:
     (location of related data in sysfs) fields.  For cellular devices, there is
     also an attributes field which contains a dict of attribute:value items.
     """
-    if cls.cached_dev_list is None:
+    probe_cellular = (devtype == 'cellular')
+    if (cls.cached_dev_list is None or
+        (probe_cellular and not cls.find_cellular)):
       try:
-        dev_list = cls._GetFlimflamDevices()
+        dev_list = cls._GetFlimflamDevices(probe_cellular)
       except Exception:
         # for Brillo devices, shill might not be running in factory
         logging.debug('Cannot get wireless devices from shill', exc_info=1)
