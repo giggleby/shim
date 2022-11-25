@@ -1,0 +1,10 @@
+{
+  "typeAcquisition": {
+    "include": [
+      "chrome"
+    ]
+  },
+  "include": [
+    "${factoryFolder}/py/**/*.js"
+  ]
+}

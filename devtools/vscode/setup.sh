@@ -20,7 +20,8 @@ main(){
   if which "code"; then
     echo "Verified that the vscode is installed."
   else
-    echo "No vscode is installed as code. Run this script outside chroot."
+    die "No vscode is installed as code. Run this script outside chroot if" \
+        "you install vscode outside chroot."
   fi
 
   isort "${SCRIPT_DIR}/.isort.cfg"
@@ -28,6 +29,10 @@ main(){
   mkdir -p "${settings_dir}"
   cp -f "${SCRIPT_DIR}/factory_settings.json" "${settings_path}"
   sed -i "s#\${factoryFolder}#${FACTORY_DIR}#g" "${settings_path}"
+
+  local jsconfig_path="${workspace_folder}/jsconfig.json"
+  cp -f "${SCRIPT_DIR}/example_jsconfig.json" "${jsconfig_path}"
+  sed -i "s#\${factoryFolder}#${FACTORY_DIR}#g" "${jsconfig_path}"
 
   echo "Add .vscode to your global .gitignore."
   echo "See https://gist.github.com/subfuzion/db7f57fff2fb6998a16c for more" \
