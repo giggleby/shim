@@ -12,4 +12,3 @@ This folder contains various tools to help developer's life easier.
 - mk/: Scripts for top level Makefile to use.
 - [vim/](vim/README.md): Scripts to help programming within VIM editor.
 - [vscode/](vscode/README.md): VSCode configuration files.
-- test_list_editor/: Configurations for developing test list editor with VSCODE.

@@ -161,7 +161,6 @@ def main(argv=None):
     os.mkdir(src)
     Spawn(['rsync', '-a',
            '--exclude', '/py/dome',
-           '--exclude', '/py/test_list_editor',
            '--exclude', '/py/umpire/server',
            os.path.join(paths.FACTORY_DIR, 'py'),
            os.path.join(paths.FACTORY_DIR, 'bin'),
