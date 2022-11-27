@@ -18,8 +18,8 @@ import time
 import unittest
 
 from cros.factory.testlog import testlog_seq
-from cros.factory.testlog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import file_utils
 
 
 class BootSequenceTest(unittest.TestCase):

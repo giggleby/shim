@@ -203,11 +203,7 @@ def main(argv=None):
                          # We must include instalog/utils explicitly, as it is
                          # a symlink that would otherwise be excluded
                          # by the * wildcard.
-                         '--include', 'instalog/utils',
-                         # We must include testlog/utils explicitly, as it is
-                         # a symlink that would otherwise be excluded
-                         # by the * wildcard.
-                         '--include', 'testlog/utils'])
+                         '--include', 'instalog/utils'])
 
     rsync_args.extend([
         '--include', '*/',

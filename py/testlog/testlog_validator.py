@@ -10,7 +10,7 @@ import pprint
 import re
 import shutil
 
-from .utils import time_utils
+from cros.factory.utils import time_utils
 
 
 class Validator:

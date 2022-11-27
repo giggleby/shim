@@ -8,7 +8,7 @@ import datetime
 import inspect
 import traceback
 
-from .utils import time_utils
+from cros.factory.utils import time_utils
 
 
 class TestlogError(Exception):

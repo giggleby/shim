@@ -43,15 +43,17 @@ import tempfile
 import threading
 import time
 
+from cros.factory.utils import file_utils
+from cros.factory.utils import schema
+from cros.factory.utils import sys_utils
+from cros.factory.utils import time_utils
+from cros.factory.utils import type_utils
+
 from . import hooks
 from . import testlog_seq
 from . import testlog_utils
 from . import testlog_validator
-from .utils import file_utils
-from .utils import schema
-from .utils import sys_utils
-from .utils import time_utils
-from .utils import type_utils
+
 
 TESTLOG_API_VERSION = '0.21'
 TESTLOG_ENV_VARIABLE_NAME = 'TESTLOG'

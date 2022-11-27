@@ -53,7 +53,6 @@ TESTS_TO_EXCLUDE = [
     'py/test/utils/media_utils_unittest.py',
     'py/test_list_editor',
     # symbolic link folders
-    'py/testlog/utils',
     'py/instalog/testlog',
     'py/instalog/utils/',
 ]
