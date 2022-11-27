@@ -8,7 +8,7 @@ import datetime
 import json
 
 from cros.factory.instalog import json_utils
-from cros.factory.instalog.utils import time_utils
+from cros.factory.utils import time_utils
 
 
 def From0_1to0_21(event):

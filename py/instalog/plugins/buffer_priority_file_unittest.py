@@ -19,8 +19,8 @@ import psutil
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog.plugins import buffer_priority_file
-from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import file_utils
 
 
 _TEST_PRODUCER = 'test_producer'

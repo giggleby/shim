@@ -17,7 +17,7 @@ from google.cloud.bigquery.schema import SchemaField
 
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import output_bigquery
-from cros.factory.instalog.utils import time_utils
+from cros.factory.utils import time_utils
 
 
 class OutputBigQueryTestlog(output_bigquery.OutputBigQuery):

@@ -16,12 +16,13 @@ from cros.factory.instalog import core
 from cros.factory.instalog import daemon_utils
 from cros.factory.instalog import instalog_common
 from cros.factory.instalog import log_utils
-from cros.factory.instalog.utils import file_utils
-from cros.factory.instalog.utils import sync_utils
-from cros.factory.instalog.utils import type_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
-from cros.factory.instalog.external import jsonrpclib
-from cros.factory.instalog.external import yaml
+from cros.factory.external import jsonrpclib
+from cros.factory.external import yaml
+
 
 # The default number of seconds to wait before giving up on a flush.
 _DEFAULT_FLUSH_TIMEOUT = 30
@@ -268,9 +269,6 @@ class InstalogCLI:
           return tarinfo
         print('Archiving Instalog source code')
         tar.add(instalog_dir, 'instalog', filter=VirtualEnvFilter)
-        tar.add(os.path.join(instalog_parent_dir, 'utils'), 'utils')
-        tar.add(os.path.join(instalog_parent_dir, 'testlog'), 'testlog')
-        tar.add(os.path.join(instalog_parent_dir, 'external'), 'external')
       if details >= 2:
         if os.path.exists(instalog_virtual_env_dir):
           print('Archiving virtual_env')

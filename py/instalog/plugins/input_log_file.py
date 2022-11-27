@@ -26,9 +26,10 @@ import zlib
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
-from cros.factory.instalog.utils.arg_utils import Arg
-from cros.factory.instalog.utils import file_utils
-from cros.factory.instalog.utils import time_utils
+from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
+from cros.factory.utils import time_utils
+
 
 _DEFAULT_NEW_FILE_POLL_INTERVAL = 60
 _DEFAULT_POLL_INTERVAL = 2

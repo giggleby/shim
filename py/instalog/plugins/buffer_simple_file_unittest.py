@@ -46,8 +46,9 @@ from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import buffer_file_common
 from cros.factory.instalog.plugins import buffer_simple_file
-from cros.factory.instalog.utils import file_utils
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import file_utils
+
 
 _TEST_PRODUCER = 'test_producer'
 

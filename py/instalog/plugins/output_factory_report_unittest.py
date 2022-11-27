@@ -15,7 +15,7 @@ from unittest import mock
 
 
 # mock gcs_utils so that this test can run in chroot.
-sys.modules['cros.factory.instalog.utils.gcs_utils'] = mock.Mock()
+sys.modules['cros.factory.utils.gcs_utils'] = mock.Mock()
 
 from cros.factory.instalog.plugins import output_factory_report  # pylint: disable=wrong-import-position
 
@@ -190,7 +190,7 @@ class ArchiveUnittest(unittest.TestCase):
 
 class ZipWith7ZUnittest(unittest.TestCase):
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.SpawnOutput')
+  @mock.patch('cros.factory.utils.process_utils.SpawnOutput')
   def testNormal7ZListOutput(self, mock_7z_cmd):
     mock_7z_cmd.return_value = textwrap.dedent('''\
       Path = sh/stub_startup.sh
@@ -220,7 +220,7 @@ class ZipWith7ZUnittest(unittest.TestCase):
 
   # Due to version difference (version number and platform 7z version), the list
   # format may change.
-  @mock.patch('cros.factory.instalog.utils.process_utils.SpawnOutput')
+  @mock.patch('cros.factory.utils.process_utils.SpawnOutput')
   def testAttributesRightAfterPath7ZListOutput(self, mock_7z_cmd):
     mock_7z_cmd.return_value = textwrap.dedent('''\
       Path = sh/stub_startup.sh
@@ -238,7 +238,7 @@ class ZipWith7ZUnittest(unittest.TestCase):
     with output_factory_report.ZipWith7ZArchive('mock_path') as archive:
       self.assertEqual(archive.GetNonDirFileNames(), expected)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.SpawnOutput')
+  @mock.patch('cros.factory.utils.process_utils.SpawnOutput')
   def testAttributesAtLast7ZListOutput(self, mock_7z_cmd):
     mock_7z_cmd.return_value = textwrap.dedent('''\
       Path = sh/stub_startup.sh
@@ -260,7 +260,7 @@ class ZipWith7ZUnittest(unittest.TestCase):
 class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
   """Test parsing output from `unzip -l {project}_factorylog_{date}.zip`."""
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testSimpleUnZipReport(self, unzip_cmd_mock):
     stdout = textwrap.dedent('''\
       Archive:  coachz_factorylog_20211201-1231.zip
@@ -284,7 +284,7 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
     report_num = parser._GetReportNumInZip('')  # pylint: disable=protected-access
     self.assertEqual(6, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testEmptyZip(self, unzip_cmd_mock):
     stdout = 'Archive:  empty.zip\n'
     stderr = 'warning [empty.zip]:  zipfile is empty\n'
@@ -294,7 +294,7 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
     report_num = parser._GetReportNumInZip('')  # pylint: disable=protected-access
     self.assertEqual(0, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testEncounterException(self, unzip_cmd_mock):
     unzip_cmd_mock.return_value.returncode = 9
     unzip_cmd_mock.return_value.communicate.return_value = ('', '')
@@ -306,7 +306,7 @@ class UnZipCmdCheckReportNumUnittest(unittest.TestCase):
 class TarCmdCheckReportNumUnittest(unittest.TestCase):
   """Test parsing output from `tar tvf {project}_factorylog_{date}.tar`."""
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testSimpleTarReport(self, tar_cmd_mock):
     stdout = textwrap.dedent('''\
       drwxr-xr-x lschyi/primarygroup 0 2022-05-19 14:54 test/
@@ -330,7 +330,7 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
     # pylint: enable=protected-access
     self.assertEqual(6, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testCorruptedTarReport(self, tar_cmd_mock):
     stdout = textwrap.dedent('''\
       drwxr-xr-x lschyi/primarygroup 0 2022-05-19 14:54 test/
@@ -361,7 +361,7 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
     # pylint: enable=protected-access
     self.assertEqual(None, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testNoReport(self, tar_cmd_mock):
     tar_cmd_mock.return_value.returncode = 0
     tar_cmd_mock.return_value.communicate.return_value = ('', '')
@@ -374,7 +374,7 @@ class TarCmdCheckReportNumUnittest(unittest.TestCase):
     # pylint: enable=protected-access
     self.assertEqual(0, report_num)
 
-  @mock.patch('cros.factory.instalog.utils.process_utils.Spawn')
+  @mock.patch('cros.factory.utils.process_utils.Spawn')
   def testEncounterException(self, tar_cmd_mock):
     tar_cmd_mock.return_value.returncode = 2
     tar_cmd_mock.return_value.communicate.return_value = ('', '')

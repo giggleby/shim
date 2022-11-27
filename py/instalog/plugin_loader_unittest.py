@@ -177,10 +177,9 @@ class TestPluginLoader(unittest.TestCase):
 
   def testArgsInvalidError(self):
     """Tests providing invalid arguments to a plugin."""
-    pname = self._createPluginFile(
-        '''\
+    pname = self._createPluginFile('''\
         from cros.factory.instalog import plugin_base
-        from cros.factory.instalog.utils.arg_utils import Arg
+        from cros.factory.utils.arg_utils import Arg
         class InputTest(plugin_base.InputPlugin):
           ARGS = [
             Arg('explode', bool, 'True if device is expected to explode'),
@@ -196,10 +195,9 @@ class TestPluginLoader(unittest.TestCase):
 
   def testArgs(self):
     """Tests providing valid arguments to a plugin."""
-    pname = self._createPluginFile(
-        '''\
+    pname = self._createPluginFile('''\
         from cros.factory.instalog import plugin_base
-        from cros.factory.instalog.utils.arg_utils import Arg
+        from cros.factory.utils.arg_utils import Arg
         class InputTest(plugin_base.InputPlugin):
           ARGS = [
             Arg('explode', bool, 'True if device is expected to explode'),

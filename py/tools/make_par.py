@@ -199,11 +199,7 @@ def main(argv=None):
                          '--include', '*.csv',
                          '--include', '*.html',
                          '--include', '*.js',
-                         '--include', '*.png',
-                         # We must include instalog/utils explicitly, as it is
-                         # a symlink that would otherwise be excluded
-                         # by the * wildcard.
-                         '--include', 'instalog/utils'])
+                         '--include', '*.png'])
 
     rsync_args.extend([
         '--include', '*/',

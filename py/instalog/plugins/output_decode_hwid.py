@@ -15,10 +15,12 @@ from google.auth import default
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 
+
 # isort: split
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import plugin_base
-from cros.factory.instalog.utils.arg_utils import Arg
+from cros.factory.utils.arg_utils import Arg
+
 
 _CHROMEOS_HWID_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'
 _HWID_API_URL = 'https://chromeoshwid-pa.googleapis.com/v2/boms:batchGet'

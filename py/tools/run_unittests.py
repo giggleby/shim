@@ -52,9 +52,6 @@ TESTS_TO_EXCLUDE = [
     # TODO (b/204134192)
     'py/test/utils/media_utils_unittest.py',
     'py/test_list_editor',
-    # symbolic link folders
-    'py/instalog/testlog',
-    'py/instalog/utils/',
 ]
 # TEST_PASSED_MARK is the .tests-passed file at factory root path
 TEST_PASSED_MARK = os.path.join(FACTORY_ROOT, '.tests-passed')

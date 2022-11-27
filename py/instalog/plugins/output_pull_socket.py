@@ -17,7 +17,8 @@ import socket
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import output_socket
 from cros.factory.instalog.plugins import socket_common
-from cros.factory.instalog.utils.arg_utils import Arg
+from cros.factory.utils.arg_utils import Arg
+
 
 _DEFAULT_BATCH_SIZE = 500
 _DEFAULT_TIMEOUT = 5

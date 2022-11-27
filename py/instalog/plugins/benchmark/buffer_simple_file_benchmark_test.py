@@ -13,7 +13,7 @@ from cros.factory.instalog.plugins.benchmark.benchmark_runner import BenchmarkRe
 from cros.factory.instalog.plugins.benchmark.benchmark_runner import BenchmarkTestConfig
 from cros.factory.instalog.plugins.benchmark import events
 from cros.factory.instalog.plugins import buffer_simple_file
-from cros.factory.instalog.utils import file_utils
+from cros.factory.utils import file_utils
 
 
 class BenchmarkBufferSimpleFile(benchmark.BenchmarkCase):

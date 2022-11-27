@@ -18,7 +18,8 @@ from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog.plugins import output_file
 from cros.factory.instalog import testing
-from cros.factory.instalog.utils import file_utils
+from cros.factory.utils import file_utils
+
 
 EVENT_FILE_NAME = output_file.EVENT_FILE_NAME
 ATT_DIR_NAME = output_file.ATT_DIR_NAME

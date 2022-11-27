@@ -13,7 +13,7 @@ from cros.factory.instalog.plugin_base import OutputPlugin
 from cros.factory.instalog.plugin_base import Plugin
 from cros.factory.instalog.plugin_sandbox import PluginSandbox
 from cros.factory.instalog.plugins.benchmark.benchmark import BenchmarkResult
-from cros.factory.instalog.utils import file_utils
+from cros.factory.utils import file_utils
 
 
 class BenchmarkTestConfig:

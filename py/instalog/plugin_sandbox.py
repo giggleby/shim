@@ -20,11 +20,12 @@ from cros.factory.instalog import json_utils
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog import plugin_loader
-from cros.factory.instalog.utils import debug_utils
-from cros.factory.instalog.utils import file_utils
-from cros.factory.instalog.utils import sync_utils
-from cros.factory.instalog.utils import time_utils
-from cros.factory.instalog.utils import type_utils
+from cros.factory.utils import debug_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import sync_utils
+from cros.factory.utils import time_utils
+from cros.factory.utils import type_utils
+
 
 # Some unittests fail if they run on a really slow machine.  To not block the
 # Chromium Commit Queue, we set longer timeout by default.

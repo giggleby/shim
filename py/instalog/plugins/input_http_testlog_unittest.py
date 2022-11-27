@@ -19,7 +19,7 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_sandbox
 from cros.factory.instalog import testing
-from cros.factory.instalog.utils import net_utils
+from cros.factory.utils import net_utils
 
 
 class TestInputHTTPTestlog(unittest.TestCase):

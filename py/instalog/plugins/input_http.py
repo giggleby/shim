@@ -39,11 +39,12 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import http_common
-from cros.factory.instalog.utils.arg_utils import Arg
-from cros.factory.instalog.utils import file_utils
-from cros.factory.instalog.utils import net_utils
+from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
+from cros.factory.utils import net_utils
 
-from cros.factory.instalog.external import gnupg
+from cros.factory.external import gnupg
+
 
 _DEFAULT_HOSTNAME = '0.0.0.0'
 

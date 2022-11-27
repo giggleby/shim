@@ -16,7 +16,7 @@ import time
 
 from cros.factory.instalog import json_utils
 from cros.factory.instalog import plugin_base
-from cros.factory.instalog.utils import time_utils
+from cros.factory.utils import time_utils
 
 
 class ProcessStage(json_utils.Serializable):

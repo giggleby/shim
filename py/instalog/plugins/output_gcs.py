@@ -7,9 +7,9 @@
 """Cloud Storage attachment upload output plugin."""
 
 from cros.factory.instalog import plugin_base
-from cros.factory.instalog.utils.arg_utils import Arg
-from cros.factory.instalog.utils import file_utils
-from cros.factory.instalog.utils import gcs_utils
+from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
+from cros.factory.utils import gcs_utils
 
 
 _DEFAULT_INTERVAL = 5

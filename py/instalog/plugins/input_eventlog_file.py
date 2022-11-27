@@ -15,7 +15,8 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import input_log_file
 
-from cros.factory.instalog.external import yaml
+from cros.factory.external import yaml
+
 
 _EVENT_HEAD = 'EVENT: '
 _EVENT_SEPARATOR = '---\n'

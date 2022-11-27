@@ -28,10 +28,11 @@ import shutil
 
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import output_file
-from cros.factory.instalog.utils import arg_utils
-from cros.factory.instalog.utils.arg_utils import Arg
-from cros.factory.instalog.utils import file_utils
-from cros.factory.instalog.utils import type_utils
+from cros.factory.utils import arg_utils
+from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
+from cros.factory.utils import type_utils
+
 
 DEFAULT_CLASSIFIERS = ['__DAY__', 'deviceId']
 

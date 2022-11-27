@@ -17,7 +17,8 @@ import signal
 import sys
 import time
 
-from cros.factory.instalog.utils import file_utils
+from cros.factory.utils import file_utils
+
 
 # Constants
 CHILD = 0

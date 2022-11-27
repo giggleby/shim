@@ -14,7 +14,7 @@ import tempfile
 
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog import plugin_sandbox
-from cros.factory.instalog.utils import file_utils
+from cros.factory.utils import file_utils
 
 
 class MockCore(plugin_sandbox.CoreAPI):

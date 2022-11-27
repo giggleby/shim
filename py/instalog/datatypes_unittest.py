@@ -18,8 +18,8 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import json_utils
 from cros.factory.instalog import log_utils
 from cros.factory.instalog import plugin_base
-from cros.factory.instalog.utils import time_utils
 from cros.factory.unittest_utils import label_utils
+from cros.factory.utils import time_utils
 
 
 class RuntimeBound:
