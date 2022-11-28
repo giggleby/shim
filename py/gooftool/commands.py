@@ -314,6 +314,12 @@ _is_reference_board_cmd_arg = CmdArg(
 _fast_cmd_arg = CmdArg('--fast', action='store_true',
                        help='use non-secure but faster wipe method.')
 
+_wpsr_cmd_arg = CmdArg(
+    '--wpsr', type=str, default="", help='The format should be '
+    '"<sr_value1> <sr_mask1> <sr_value2> <sr_mask2> ...", '
+    'e.g. "0x0f 0x0f 0x00 0xf0". The value will be deduced automatically'
+    ' if not provided.')
+
 
 @Command('verify_dlc_images', *GetGooftool.__args__)
 def VerifyDLCImages(options):
@@ -578,12 +584,14 @@ def GenerateStableDeviceSecret(options):
     _enable_zero_touch_cmd_arg,  # this
     _two_stages_cmd_arg,  # this
     _no_write_protect_cmd_arg,  # this
+    _wpsr_cmd_arg,  # this
     *GetGooftool.__args__)
 def Cr50WriteFlashInfo(options):
   """Set the serial number bits, board id and flags on the Cr50 chip."""
   GetGooftool(options).Cr50WriteFlashInfo(
       enable_zero_touch=options.enable_zero_touch, rma_mode=options.rma_mode,
-      two_stages=options.two_stages, no_write_protect=options.no_write_protect)
+      two_stages=options.two_stages, no_write_protect=options.no_write_protect,
+      wpsr=options.wpsr)
   event_log.Log('cr50_write_flash_info')
 
 
@@ -1140,11 +1148,13 @@ def GetLogicalBlockSize(options):
 @Command(
     'ti50_set_spi_data',
     _no_write_protect_cmd_arg,  # this
+    _wpsr_cmd_arg,  # this
     *GetGooftool.__args__)
 def Ti50SetSPIData(options):
   """Gets the logical block size of the primary device on DUT."""
   GetGooftool(options).Ti50SetAddressingMode()
-  GetGooftool(options).Ti50SetSWWPRegister(options.no_write_protect)
+  GetGooftool(options).Ti50SetSWWPRegister(options.no_write_protect,
+                                           options.wpsr)
 
 
 def main():
