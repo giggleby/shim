@@ -1527,7 +1527,7 @@ class Gooftool:
     self._Cr50SetBoardId(two_stages=True, is_flags_only=True)
 
   def Cr50WriteFlashInfo(self, enable_zero_touch=False, rma_mode=False,
-                         two_stages=False, no_write_protect=True):
+                         two_stages=False, no_write_protect=True, wpsr=''):
     """Write full device info into cr50 flash.
 
     Args:
@@ -1536,6 +1536,10 @@ class Gooftool:
           already be set in this mode.
       two_stages: The MLB parts is sent to a different location
           for assembly, such as RMA or local OEM.
+      no_write_protect: Will be used to deduce sr_value and sr_mask for
+          enabling AP RO verification on Ti50.
+      wpsr: We might need to set sr_values and sr_masks manually for enabling
+          AP RO verification on Ti50 before b/259013033 is solved.
     """
 
     self.VerifyCustomLabel()
@@ -1547,7 +1551,7 @@ class Gooftool:
     gsc = gsc_utils.GSCUtils()
     if gsc.IsTi50():
       self.Ti50SetAddressingMode()
-      self.Ti50SetSWWPRegister(no_write_protect)
+      self.Ti50SetSWWPRegister(no_write_protect, wpsr)
     else:
       self._Cr50SetROHashForShipping()
     self._Cr50SetBoardId(two_stages)
@@ -1744,8 +1748,10 @@ class Gooftool:
       cmd = ['gsctool', '-a', '-C', '4byte']
     self._CheckCall(cmd)
 
-  def Ti50SetSWWPRegister(self, no_write_protect):
-    if no_write_protect:
+  def Ti50SetSWWPRegister(self, no_write_protect, wpsr):
+    if wpsr:
+      cmd = ['gsctool', '-a', '-E', wpsr]
+    elif no_write_protect:
       cmd = ['gsctool', '-a', '-E', '0 0']
     else:
       # TODO(jasonchuang) Call flashrom command to get the values b/259013033.

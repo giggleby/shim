@@ -447,6 +447,11 @@
             "project": {
               "type": ["string", "null"],
               "default": null
+            },
+            "wpsr": {
+              "type": "string",
+              "description": "The format should be '<sr_value1> <sr_mask1> <sr_value2> <sr_mask2> ...', e.g. '0x0f 0x0f 0x00 0xf0'. The value will be deduced automatically if not provided.",
+              "default": ""
             }
           },
           "patternProperties": {
