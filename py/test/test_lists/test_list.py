@@ -330,14 +330,6 @@ class Options:
     default_options = Options()
     errors = []
 
-    if ((getattr(self, 'skipped_tests') or getattr(self, 'waived_tests')) and
-        getattr(self, 'conditional_patches')):
-      raise type_utils.TestListError(
-          'Only one of `skipped/waived_tests` and `conditional_patches` can be '
-          'set in Option. `skipped_tests` and `waived_tests` are deprecated '
-          'and going to be remove. Skipping or waiving tests can be done by '
-          'setting `conditional_patches`.')
-
     for key in sorted(self.__dict__):
       if not hasattr(default_options, key):
         errors.append('Unknown option %s' % key)
