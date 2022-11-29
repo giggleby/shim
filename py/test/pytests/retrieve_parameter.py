@@ -102,6 +102,8 @@ class RetrieveParameter(test_case.TestCase):
           str,
           'The path on DUT to save parameter files to.',
           default='/tmp'),
+      Arg('timeout_secs', int, 'How many seconds to wait for the download.',
+          default=600),
   ]
 
   def setUp(self):
@@ -113,7 +115,7 @@ class RetrieveParameter(test_case.TestCase):
   def runTest(self):
     self._frontend_proxy.DisplayStatus('Try connecting to server...')
     try:
-      self._server = server_proxy.GetServerProxy(timeout=5)
+      self._server = server_proxy.GetServerProxy(timeout=self.args.timeout_secs)
       self._server.Ping()
     except Exception:
       logging.exception('Retrieve Parameter')
@@ -128,7 +130,7 @@ class RetrieveParameter(test_case.TestCase):
       self._handleError('Namespace or file not found')
 
     with file_utils.UnopenedTemporaryFile() as tar_path:
-      file_utils.WriteFile(tar_path, content)
+      file_utils.WriteFile(tar_path, content, encoding=None)
       tar_file = tarfile.open(tar_path)
       file_utils.TryMakeDirs(self.args.destination_namespace)
       self._frontend_proxy.DisplayStatus('Files downloaded:')
