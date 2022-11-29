@@ -797,6 +797,7 @@ class FinalizeBundle:
       # The format follows HWID API message in
       # `py/hwid/service/appengine/proto/hwid_api_messages.proto`
       # 1) signer:
+      # TODO(b/260660098): identify firmware_keys by key-id instead of keyset.
       signer_path = os.path.join(temp_dir, 'VERSION.signer')
       if os.path.exists(signer_path):
         signer_output = file_utils.ReadFile(signer_path)
@@ -826,22 +827,13 @@ class FinalizeBundle:
         Spawn(['rm', '-rf', updater_path], log=True, check_call=True)
         return
 
-      # 2) root/recovery keys:
-      # There should be only one firmware key per board, so we can collect the
-      # key from any bios image.
-      bios_path = os.path.join(temp_dir,
-                               next(iter(manifest.values()))['host']['image'])
-      firmware_keys = chromeos_firmware.GetFirmwareKeys(bios_path)
 
-      # 3) RO version/checksum:
-      # Collect RO firmware for each model. One model may have multiple manifest
-      # key.
       fp_firmware_hash = self._ExtractFingerprintFirmwareHash(models)
       for model in models:
-        record = collections.defaultdict(list, {
-            'model': model,
-            'firmware_keys': firmware_keys
-        })
+        record = collections.defaultdict(list, {'model': model})
+
+        # Collect RO firmware for each model. One model may have multiple
+        # manifest key.
         for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
           # Use a set to prevent from collecting duplicated firmwares
           image_list = set()
@@ -852,6 +844,11 @@ class FinalizeBundle:
             image_list.add(
                 os.path.join(temp_dir, sub_manifest[firmware_key]['image']))
           for image_path in image_list:
+            # 2) root/recovery keys:
+            if firmware_type == 'main' and 'firmware_keys' not in record:
+              record['firmware_keys'] = (
+                  chromeos_firmware.GetFirmwareKeys(image_path))
+            # 3) RO version/checksum:
             record[f'ro_{firmware_type}_firmware'].append(
                 chromeos_firmware.CalculateFirmwareHashes(image_path))
 
