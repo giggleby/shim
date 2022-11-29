@@ -438,23 +438,21 @@ class SelfServiceHelper:
       # Derive firmware key component name
       keys_comp_name = None
       if bundle_record.firmware_signer:
-        match = re.match(
-            f'^{bundle_record.board}(mp|premp)keys(?:-(v[0-9]+))?$',
-            bundle_record.firmware_signer.lower())
+        match = re.match(f'^{bundle_record.board}(mp|premp)keys(?:-v[0-9]+)?$',
+                         bundle_record.firmware_signer.lower())
         if match is None:
           raise common_helper.ConvertExceptionToProtoRPCException(
               ValueError('Cannot derive firmware key name from signer: '
                          f'{bundle_record.firmware_signer}.'))
         keys_comp_name = f'firmware_keys_{match.group(1)}'
-        if match.group(2):
-          keys_comp_name += f'_{match.group(2)}'
 
       changed = False
       # Add component to DB
       with v3_builder.DatabaseBuilder.FromExistingDB(
           db=action.GetDBV3()) as db_builder:
         for field, values in firmware_record.ListFields():
-          if field.message_type is None:
+          if (field.message_type is None or
+              not v3_common.FirmwareComps.has_value(field.name)):
             continue
 
           if field.label != descriptor.FieldDescriptor.LABEL_REPEATED:
@@ -463,12 +461,14 @@ class SelfServiceHelper:
           for value in values:
             value = json_format.MessageToDict(value,
                                               preserving_proto_field_name=True)
-            if field.name == v3_common.FirmwareComps.FIRMWARE_KEYS:
+            if (field.name == v3_common.FirmwareComps.FIRMWARE_KEYS and
+                keys_comp_name):
               comp_name = keys_comp_name
-            elif v3_common.FirmwareComps.has_value(field.name):
-              comp_name = v3_builder.DetermineComponentName(field.name, value)
+              key_id = value.pop('key_id', None)
+              if key_id:
+                comp_name = f'{keys_comp_name}_{key_id.lower()}'
             else:
-              continue
+              comp_name = v3_builder.DetermineComponentName(field.name, value)
 
             if comp_name not in db_builder.GetComponents(field.name):
               db_builder.AddFirmwareComponent(

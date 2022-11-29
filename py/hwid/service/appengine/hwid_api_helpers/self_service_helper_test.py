@@ -1113,11 +1113,37 @@ class SelfServiceHelperTest(unittest.TestCase):
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
         bundle_record=self._CreateBundleRecord(['proj']))
     resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
-    comps = action.GetComponents(['ro_main_firmware', 'ro_fp_firmware'])
+    comps = action.GetComponents(
+        ['ro_main_firmware', 'ro_fp_firmware', 'firmware_keys'])
 
     self.assertIn('Google_Proj_1111_1_1', comps['ro_main_firmware'])
     self.assertIn('fp_firmware_1', comps['ro_fp_firmware'])
     self.assertIn('fp_firmware_2', comps['ro_fp_firmware'])
+    self.assertIn('firmware_keys_mp_default', comps['firmware_keys'])
+    self.assertIn('PROJ', resp.commits)
+    self.assertEqual(resp.commits['PROJ'].cl_number, 123)
+    self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
+                     action.GetDBEditableSection())
+
+  def testCreateHWIDDBFirmwareInfoUpdateCL_Succeed_DevSignedFirmware(self):
+    raw_db = file_utils.ReadFile(HWIDV3_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    firmware_record = _FirmwareRecord(
+        model='proj', firmware_keys=_FirmwareRecord.FirmwareKeys(
+            key_recovery='#devkeys/recoverykey', key_root='#devkeys/rootkey'))
+    bundle_record = _FactoryBundleRecord(board='board', firmware_signer='',
+                                         firmware_records=[firmware_record])
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=bundle_record)
+    resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+    comps = action.GetComponents(['firmware_keys'])
+
+    self.assertIn('firmware_keys_dev', comps['firmware_keys'])
     self.assertIn('PROJ', resp.commits)
     self.assertEqual(resp.commits['PROJ'].cl_number, 123)
     self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
@@ -1574,8 +1600,8 @@ class SelfServiceHelperTest(unittest.TestCase):
       firmware_records.append(
           _FirmwareRecord(
               model=proj, firmware_keys=_FirmwareRecord.FirmwareKeys(
-                  key_recovery='key_recovery',
-                  key_root='key_root'), ro_fp_firmware=[
+                  key_recovery='key_recovery', key_root='key_root',
+                  key_id='default'), ro_fp_firmware=[
                       _FirmwareRecord.FirmwareInfo(hash='hash_string',
                                                    version='fp_firmware_1'),
                       _FirmwareRecord.FirmwareInfo(hash='hash_string',

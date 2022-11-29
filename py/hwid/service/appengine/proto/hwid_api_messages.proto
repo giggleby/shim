@@ -628,6 +628,7 @@ message FactoryBundleRecord {
     message FirmwareKeys {
       string key_recovery = 1;
       string key_root = 2;
+      string key_id = 3;
     }
     // Model name of firmware info.
     string model = 1;
