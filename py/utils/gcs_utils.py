@@ -12,6 +12,8 @@ from . import file_utils
 
 
 try:
+  import google.auth
+  from google.auth import impersonated_credentials
   from google.cloud import storage
   from google.oauth2 import service_account
 except ImportError as e:
@@ -38,8 +40,8 @@ class CloudStorage:
   """Wrapper to access Google Cloud Storage."""
 
   # TODO(chuntsen): Remove json_key_path argument since we don't use it anymore.
-  def __init__(self, json_key_path=None, logger=logging,
-               chunk_size=_CHUNK_SIZE):
+  def __init__(self, json_key_path=None, impersonated_account=None,
+               logger=logging, chunk_size=_CHUNK_SIZE):
     """Authenticates the connection to Cloud Storage.
 
     Args:
@@ -47,6 +49,10 @@ class CloudStorage:
                      None, the Google Cloud client will use the default service
                      account which is set to the environment variable
                      GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.
+      impersonated_account: A service account to impersonate. The default
+                            credential should have the permission to impersonate
+                            the service account.
+                            (roles/iam.serviceAccountTokenCreator)
       logger: A logging.logger object to record messages.
       chunk_size: Files uploaded to GCS are sent in chunks. Must be a multiple
                   of _CHUNK_SIZE_MULTIPLE.
@@ -60,6 +66,11 @@ class CloudStorage:
     if json_key_path:
       credentials = service_account.Credentials.from_service_account_file(
           json_key_path, scopes=[_GCS_SCOPE])
+    elif impersonated_account:
+      default_credentials, unused_projectid = google.auth.default()
+      credentials = impersonated_credentials.Credentials(
+          source_credentials=default_credentials,
+          target_principal=impersonated_account, target_scopes=[_GCS_SCOPE])
     else:
       credentials = None
     # Google Cloud Storage is depend on bucket instead of project, so we don't
@@ -198,7 +209,8 @@ _global_gcs = None
 class ParallelDownloader:
   """A Downloader to download files from GCS in parallel."""
 
-  def __init__(self, json_key_path=None, logger=logging, process_number=4):
+  def __init__(self, json_key_path=None, impersonated_account=None,
+               logger=logging, process_number=4):
     """Initializes the object.
 
     Args:
@@ -206,6 +218,10 @@ class ParallelDownloader:
                      None, the Google Cloud client will use the default service
                      account which is set to the environment variable
                      GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.
+      impersonated_account: A service account to impersonate. The default
+                            credential should have the permission to impersonate
+                            the service account.
+                            (roles/iam.serviceAccountTokenCreator)
       logger: A logging.logger object to record messages.
       process_number: The number of worker processes to use.
     """
@@ -213,17 +229,19 @@ class ParallelDownloader:
     # Can't use the context management protocol, since __exit__() calls
     # Pool.terminate() which stops all worker processes immediately.
     self._pool = multiprocessing.Pool(  # pylint: disable=consider-using-with
-        process_number, self.PoolInit, (json_key_path, ))
+        process_number, self.PoolInit, (json_key_path, impersonated_account))
 
   def Close(self):
     """Removes the multiprocessing pool."""
     self._pool.close()
     self._pool.join()
 
-  def PoolInit(self, json_key_path):
+  def PoolInit(self, json_key_path, impersonated_account):
     """Initializes the global GCS object."""
     global _global_gcs  # pylint: disable=global-statement
-    _global_gcs = CloudStorage(json_key_path, self.logger)
+    _global_gcs = CloudStorage(json_key_path=json_key_path,
+                               impersonated_account=impersonated_account,
+                               logger=self.logger)
 
   @staticmethod
   def _Download(args):

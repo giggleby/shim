@@ -65,6 +65,11 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
           'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
           default=None),
       Arg(
+          'impersonated_account', str,
+          'A service account to impersonate.  The default credential should '
+          'have the permission to impersonate the service account.  '
+          '(roles/iam.serviceAccountTokenCreator)', default=None),
+      Arg(
           'archive_batch_size', int,
           'Size in bytes of archives to process in parallel.  Default is '
           '50GB.', default=50 * 1024**3),
@@ -83,7 +88,8 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
   def SetUp(self):
     """Sets up the plugin."""
     self._tmp_dir = os.path.join(self.GetDataDir(), 'tmp')
-    self._downloader = gcs_utils.ParallelDownloader(logger=self.logger)
+    self._downloader = gcs_utils.ParallelDownloader(
+        logger=self.logger, impersonated_account=self.args.impersonated_account)
 
   def TearDown(self):
     if os.path.exists(self._tmp_dir):

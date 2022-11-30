@@ -8,12 +8,15 @@
 A plugin to query data in BigQuery.
 """
 
+import google.auth
+from google.auth import impersonated_credentials
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
+
 
 _BIGQUERY_SCOPE = 'https://www.googleapis.com/auth/bigquery'
 _DEFAULT_INTERVAL = 86400
@@ -30,6 +33,11 @@ class InputBigQuery(plugin_base.InputPlugin):
           'which is set to the environment variable '
           'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
           default=None),
+      Arg(
+          'impersonated_account', str,
+          'A service account to impersonate.  The default credential should '
+          'have the permission to impersonate the service account.  '
+          '(roles/iam.serviceAccountTokenCreator)', default=None),
       Arg('interval', (int, float), 'Interval in between querys, in seconds.',
           default=_DEFAULT_INTERVAL),
   ]
@@ -56,6 +64,12 @@ class InputBigQuery(plugin_base.InputPlugin):
     if self.args.key_path:
       credentials = service_account.Credentials.from_service_account_file(
           self.args.key_path, scopes=[_BIGQUERY_SCOPE])
+    elif self.args.impersonated_account:
+      default_credentials, unused_projectid = google.auth.default()
+      credentials = impersonated_credentials.Credentials(
+          source_credentials=default_credentials,
+          target_principal=self.args.impersonated_account,
+          target_scopes=[_BIGQUERY_SCOPE])
     else:
       credentials = None
     # Query doesn't need a project ID.

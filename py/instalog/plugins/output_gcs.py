@@ -11,6 +11,7 @@ from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
 
+
 _DEFAULT_INTERVAL = 5
 
 
@@ -30,6 +31,11 @@ class OutputCloudStorage(plugin_base.OutputPlugin):
           'which is set to the environment variable '
           'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
           default=None),
+      Arg(
+          'impersonated_account', str,
+          'A service account to impersonate.  The default credential should '
+          'have the permission to impersonate the service account.  '
+          '(roles/iam.serviceAccountTokenCreator)', default=None),
       Arg('target_dir', str,
           'Path to the target bucket and directory on Google Cloud.'),
       Arg(
@@ -50,7 +56,9 @@ class OutputCloudStorage(plugin_base.OutputPlugin):
   def SetUp(self):
     """Authenticates the connection to Cloud Storage."""
     self.target_dir = self.args.target_dir.strip('/')
-    self.gcs = gcs_utils.CloudStorage(self.args.key_path, self.logger)
+    self.gcs = gcs_utils.CloudStorage(
+        json_key_path=self.args.key_path, logger=self.logger,
+        impersonated_account=self.args.impersonated_account)
 
   def Main(self):
     """Main thread of the plugin."""

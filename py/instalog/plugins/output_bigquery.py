@@ -24,6 +24,8 @@ import datetime
 import os
 
 from google.api_core import exceptions
+import google.auth
+from google.auth import impersonated_credentials
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
@@ -31,6 +33,7 @@ from cros.factory.instalog import plugin_base
 from cros.factory.instalog.utils.arg_utils import Arg
 from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import gcs_utils
+
 
 # Constants.
 _BIGQUERY_SCOPE = 'https://www.googleapis.com/auth/bigquery'
@@ -63,6 +66,11 @@ class OutputBigQuery(plugin_base.OutputPlugin):
           'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
           default=None),
       Arg(
+          'impersonated_account', str,
+          'A service account to impersonate.  The default credential should '
+          'have the permission to impersonate the service account.  '
+          '(roles/iam.serviceAccountTokenCreator)', default=None),
+      Arg(
           'gcs_target_dir', str,
           'Path to the target bucket and directory on Google Cloud Storage.  '
           'If set to None, not upload attachments to GCS (default).',
@@ -84,7 +92,9 @@ class OutputBigQuery(plugin_base.OutputPlugin):
     self.JOB_ID_PREFIX = 'instalog_' + self.__class__.__name__ + '_'
     self.client = self.BuildClient()
     self.CreateDatasetAndTable()
-    self._gcs = gcs_utils.CloudStorage(self.args.key_path, self.logger)
+    self._gcs = gcs_utils.CloudStorage(
+        json_key_path=self.args.key_path, logger=self.logger,
+        impersonated_account=self.args.impersonated_account)
 
   def Main(self):
     """Main thread of the plugin."""
@@ -99,6 +109,12 @@ class OutputBigQuery(plugin_base.OutputPlugin):
     if self.args.key_path:
       credentials = service_account.Credentials.from_service_account_file(
           self.args.key_path, scopes=[_BIGQUERY_SCOPE])
+    elif self.args.impersonated_account:
+      default_credentials, unused_projectid = google.auth.default()
+      credentials = impersonated_credentials.Credentials(
+          source_credentials=default_credentials,
+          target_principal=self.args.impersonated_account,
+          target_scopes=[_BIGQUERY_SCOPE])
     else:
       credentials = None
     return bigquery.Client(project=self.args.project_id,

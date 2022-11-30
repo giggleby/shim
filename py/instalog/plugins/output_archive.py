@@ -55,6 +55,11 @@ class OutputArchive(output_file.OutputFile):
               'GOOGLE_APPLICATION_CREDENTIALS or Google Cloud services.',
               default=None),
           Arg(
+              'impersonated_account', str,
+              'A service account to impersonate.  The default credential '
+              'should have the permission to impersonate the service account.  '
+              '(roles/iam.serviceAccountTokenCreator)', default=None),
+          Arg(
               'gcs_target_dir', str,
               'Path to the target bucket and directory on Google Cloud '
               'Storage.', default=None),
@@ -85,7 +90,9 @@ class OutputArchive(output_file.OutputFile):
                          'provided')
 
       from cros.factory.instalog.utils import gcs_utils
-      self._gcs = gcs_utils.CloudStorage(self.args.key_path)
+      self._gcs = gcs_utils.CloudStorage(
+          json_key_path=self.args.key_path, logger=self.logger,
+          impersonated_account=self.args.impersonated_account)
 
   def ProcessEvents(self, base_dir):
     """Archives events which are saved on base_dir."""
