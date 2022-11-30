@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Mapping, Union
+from typing import List, Mapping, Union
 import unittest
 
 from cros.factory.hwid.service.appengine.data.converter import converter
@@ -26,12 +26,19 @@ class TestAVLAttrs(converter.AVLAttrs):
   AVL_ATTR4 = 'avl_attr_name4'
 
 
-def _ProbeInfoFromMapping(mapping: Mapping[str, Union[str, int]]):
-  return stubby_pb2.ProbeInfo(probe_parameters=[
-      stubby_pb2.ProbeParameter(name=name, string_value=value) if isinstance(
-          value, str) else stubby_pb2.ProbeParameter(name=name, int_value=value)
-      for name, value in mapping.items()
-  ])
+def _ProbeInfoFromMapping(mapping: Mapping[str, Union[str, int,
+                                                      List[Union[str, int]]]]):
+  probe_parameters = []
+  for name, value_or_values in mapping.items():
+    values = value_or_values if isinstance(value_or_values,
+                                           list) else [value_or_values]
+    for value in values:
+      kwargs = {
+          'name': name
+      }
+      kwargs['string_value' if isinstance(value, str) else 'int_value'] = value
+      probe_parameters.append(stubby_pb2.ProbeParameter(**kwargs))
+  return stubby_pb2.ProbeInfo(probe_parameters=probe_parameters)
 
 
 def _HWIDDBExternalResourceFromProbeInfos(
@@ -62,12 +69,10 @@ class ConverterTest(unittest.TestCase):
         'avl_attr_name3': 'skipped_value',
         'avl_attr_name4': 100,
     })
-    converted_values = test_converter.Convert(probe_info)
-    self.assertDictEqual(
-        {
-            'converted_key1': 'value1',
-            'converted_key4': converter_types.IntValueType(100),
-        }, converted_values)
+    match_status = test_converter.Match({'dummy_key': 'dummy_value'},
+                                        probe_info)
+    self.assertEqual(match_status,
+                     converter.ProbeValueMatchStatus.KEY_UNMATCHED)
 
   def testFieldNameConverterConvert_Missing(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
@@ -82,8 +87,10 @@ class ConverterTest(unittest.TestCase):
         'avl_attr_name2': 100,
         'avl_attr_name3': 'skipped_value',
     })
-    converted_values = test_converter.Convert(probe_info)
-    self.assertIsNone(converted_values)
+    match_status = test_converter.Match({'dummy_key': 'dummy_value'},
+                                        probe_info)
+    self.assertEqual(match_status,
+                     converter.ProbeValueMatchStatus.INCONVERTIBLE)
 
   def testFieldNameConverterMatchAligned(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(
@@ -106,6 +113,51 @@ class ConverterTest(unittest.TestCase):
         }, probe_info)
 
     self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
+
+  def testFieldNameConverterMatchAlignedToOneOfTheValues(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
+        })
+    probe_info = _ProbeInfoFromMapping({
+        'avl_attr_name1': 'value1',
+        'avl_attr_name3': 'skipped_value',
+        'avl_attr_name4': [200, 100],
+    })
+    match_case = test_converter.Match(
+        {
+            'converted_key1': 'value1',
+            'converted_key3': 'unused_value3',
+            'converted_key4': '0x64',
+        }, probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.ALL_MATCHED, match_case)
+
+  def testFieldNameConverterMatchNotAlignedToAllOfTheValues(self):
+    test_converter = converter.FieldNameConverter.FromFieldMap(
+        'converter1', {
+            TestAVLAttrs.AVL_ATTR1:
+                converter.ConvertedValueSpec('converted_key1'),
+            TestAVLAttrs.AVL_ATTR4:
+                converter.ConvertedValueSpec('converted_key4'),
+        })
+    probe_info = _ProbeInfoFromMapping({
+        'avl_attr_name1': 'value1',
+        'avl_attr_name3': 'skipped_value',
+        'avl_attr_name4': [200, 100],
+    })
+    match_case = test_converter.Match(
+        {
+            'converted_key1': 'value1',
+            'converted_key3': 'unused_value3',
+            'converted_key4': '0x65',
+        }, probe_info)
+
+    self.assertEqual(converter.ProbeValueMatchStatus.VALUE_UNMATCHED,
+                     match_case)
 
   def testFieldNameConverterMatchNotAligned(self):
     test_converter = converter.FieldNameConverter.FromFieldMap(

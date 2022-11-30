@@ -3,19 +3,20 @@
 # found in the LICENSE file.
 """Defines the converter which converts Probe Info to HWID probe values."""
 
+import collections
 import enum
 import logging
 import re
-from typing import Any, Callable, Dict, Mapping, NamedTuple, Optional
+from typing import Any, Callable, Dict, Mapping, NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
-
 # Shorter identifiers.
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
-_ConvertedValueTypeMapping = Mapping[str, converter_types.ConvertedValueType]
+_ConvertedValueTypeMapping = Mapping[
+    str, Sequence[converter_types.ConvertedValueType]]
 
 
 class ProbeValueMatchStatus(enum.IntEnum):
@@ -43,12 +44,6 @@ class Converter:
   def identifier(self):
     return self._identifier
 
-  def Convert(
-      self,
-      probe_info: stubby_pb2.ProbeInfo) -> Optional[_ConvertedValueTypeMapping]:
-    """Converts a probe info to an optional mapping for matching."""
-    raise NotImplementedError
-
   def Match(self, comp_values: Optional[Mapping[str, Any]],
             probe_info: stubby_pb2.ProbeInfo) -> ProbeValueMatchStatus:
     """Tries to match a probe info to HWID comp values with this converter."""
@@ -62,6 +57,15 @@ class Converter:
 class ConvertedValueSpec(NamedTuple):
   name: str
   value_factory: Optional[converter_types.ConvertedValueTypeFactory] = None
+
+
+def _ConvertValueWithDefaultTypeFactory(
+    value: Any) -> Optional[converter_types.ConvertedValueType]:
+  if isinstance(value, int):  # basic int type
+    return converter_types.IntValueType(value)
+  if isinstance(value, str):  # basic str type
+    return converter_types.StrValueType(value)
+  return None
 
 
 class FieldNameConverter(Converter):
@@ -82,46 +86,49 @@ class FieldNameConverter(Converter):
   def field_name_map(self):
     return self._field_name_map
 
-  def Convert(
+  def _Convert(
       self,
       probe_info: stubby_pb2.ProbeInfo) -> Optional[_ConvertedValueTypeMapping]:
+    """Converts a probe info to an optional mapping for matching."""
     translated: _ConvertedValueTypeMapping = {}
-    probe_info_values = {}
+    probe_info_values = collections.defaultdict(list)
 
     for param in probe_info.probe_parameters:
       if param.HasField('string_value'):
-        probe_info_values[param.name] = param.string_value
+        probe_info_values[param.name].append(param.string_value)
       elif param.HasField('int_value'):
-        probe_info_values[param.name] = param.int_value
+        probe_info_values[param.name].append(param.int_value)
 
     for name, translated_value_spec in self._field_name_map.items():
-      value = probe_info_values.get(name)
-      if value is not None:
-        if translated_value_spec.value_factory is not None:
-          value = translated_value_spec.value_factory(value)
-        elif isinstance(value, int):  # basic int type
-          value = converter_types.IntValueType(value)
-        elif isinstance(value, str):  # basic str type
-          value = converter_types.StrValueType(value)
-        else:
-          logging.error('Invalid value (%r).', value)
-          return None
-        translated[translated_value_spec.name] = value
-      else:
+      values = probe_info_values.get(name)
+      if values is None:
         return None
+      if translated_value_spec.value_factory is not None:
+        translated_values = list(
+            map(translated_value_spec.value_factory, values))
+      else:
+        translated_values = []
+        for value in values:
+          translated_value = _ConvertValueWithDefaultTypeFactory(value)
+          if translated_value is None:
+            logging.error('Invalid value (%r).', value)
+            return None
+          translated_values.append(translated_value)
+      translated[translated_value_spec.name] = translated_values
     return translated
 
   def Match(self, comp_values: Optional[Mapping[str, Any]],
             probe_info: stubby_pb2.ProbeInfo) -> ProbeValueMatchStatus:
-    converted = self.Convert(probe_info)
+    converted = self._Convert(probe_info)
     if not converted:
       return ProbeValueMatchStatus.INCONVERTIBLE
     if not comp_values:
       return ProbeValueMatchStatus.VALUE_IS_NONE
     if not converted.keys() <= comp_values.keys():
       return ProbeValueMatchStatus.KEY_UNMATCHED
-    if not converted.items() <= comp_values.items():
-      return ProbeValueMatchStatus.VALUE_UNMATCHED
+    for converted_name, converted_values in converted.items():
+      if comp_values[converted_name] not in converted_values:
+        return ProbeValueMatchStatus.VALUE_UNMATCHED
     return ProbeValueMatchStatus.ALL_MATCHED
 
   def ConflictWithExisting(self, other: 'FieldNameConverter') -> bool:
