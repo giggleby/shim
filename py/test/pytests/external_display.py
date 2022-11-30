@@ -120,13 +120,15 @@ import logging
 import os
 import queue
 import random
+from typing import Optional
 
 from cros.factory.device import device_utils
 from cros.factory.device import usb_c
+from cros.factory.goofy.plugins import display_manager
+from cros.factory.goofy.plugins import plugin_controller
 from cros.factory.test.fixture import bft_fixture
 from cros.factory.test.i18n import _
 from cros.factory.test.pytests import audio
-from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test.utils import button_utils
 from cros.factory.utils.arg_utils import Arg
@@ -266,6 +268,11 @@ class ExtDisplayTest(test_case.TestCase):
 
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
+    self._display_manager: Optional[display_manager.DisplayManager] = (
+        plugin_controller.GetPluginRPCProxy('display_manager'))
+    if not self._display_manager:
+      raise RuntimeError('display_manager plugin is not defined.')
+
     self._fixture = None
     if self.args.bft_fixture:
       self._fixture = bft_fixture.CreateBFTFixture(**self.args.bft_fixture)
@@ -451,7 +458,7 @@ class ExtDisplayTest(test_case.TestCase):
     Returns:
       (current, target): current and target display ids.
     """
-    display_info = state.GetInstance().DeviceGetDisplayInfo()
+    display_info = self._display_manager.ListDisplayInfo()
 
     # Sort the current displays
     primary = []
@@ -492,12 +499,9 @@ class ExtDisplayTest(test_case.TestCase):
     """Sets the main display.
 
     Args:
-      target_id: id of target display.
+      display_id: id of target display.
     """
-
-    err = state.GetInstance().DeviceSetDisplayProperties(
-        display_id, {'isPrimary': True})
-    self.assertIsNone(err, f'Failed to set the main display: {err}')
+    self._display_manager.SetMainDisplay(display_id=display_id, timeout=10)
 
   def SetupAudio(self, args):
     for card, action in args.init_actions:
@@ -593,16 +597,15 @@ class ExtDisplayTest(test_case.TestCase):
     while True:
       if (self._IsUSBPDVerified(args, usbpd_spec) and
           connect == self._IsDisplayConnected(args)):
-        display_info = state.GetInstance().DeviceGetDisplayInfo()
+        display_info = self._display_manager.ListDisplayInfo()
         # display_info item, we assume the device's default mode is mirror
         # mode and try to turn off mirror mode.
         # On the other hand, in the case of disconnecting an external display,
         # we can not check display info has no display with 'isInternal' False
         # because any display for chromebox has 'isInternal' False.
         if connect and all(x['isInternal'] for x in display_info):
-          err = state.GetInstance().DeviceSetDisplayMirrorMode({'mode': 'off'})
-          if err is not None:
-            logging.warning('Failed to turn off the mirror mode: %s', err)
+          self._display_manager.SetMirrorMode(
+              mode=display_manager.MirrorMode.off, timeout=10)
         else:
           logging.info('Get display info %r', display_info)
           break

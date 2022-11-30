@@ -116,7 +116,7 @@ class DisplayManager(plugin.Plugin):
     sync_utils.WaitFor(BecomePrimaryEvent, timeout)
 
   @plugin.RPCFunction
-  def ListDisplayInfo(self, verbose: bool):
+  def ListDisplayInfo(self, verbose: bool = False):
     """Lists display info.
 
     Args:
