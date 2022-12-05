@@ -113,7 +113,8 @@ class HWIDV3SelfServiceActionHelper:
       internal: bool = False,
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
       avl_resource: Optional[
-          hwid_api_messages_pb2.HwidDbExternalResource] = None
+          hwid_api_messages_pb2.HwidDbExternalResource] = None,
+      hwid_bundle_checksum: Optional[str] = None
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     curr_hwid_db_contents_external = self._preproc_data.raw_database
     curr_hwid_db_contents_internal = self._preproc_data.raw_database_internal
@@ -161,6 +162,26 @@ class HWIDV3SelfServiceActionHelper:
 
     if derive_fingerprint_only:
       return report_factory([], [], [], {})
+
+    if not internal and hwid_bundle_checksum:
+      tag_trimmed_raw_db = self._preproc_data.database.DumpDataWithoutChecksum(
+          suppress_support_status=True, internal=False)
+      external_raw_db = self.PatchHeader(tag_trimmed_raw_db)
+      # To cover two cases of HWID bundle which might have different valid
+      # checksums:
+      # 1. Directly copied from the external HWID DB
+      # 2. Normalized by `BundleHWIDDB`
+      expected_checksums = [
+          database.Database.ChecksumForText(external_raw_db),
+          database.Database.ChecksumForText(curr_hwid_db_contents)
+      ]
+      if hwid_bundle_checksum not in expected_checksums:
+        return report_factory([], [
+            hwid_validator.Error(
+                hwid_validator.ErrorCode.CHECKSUM_ERROR,
+                'The HWID bundle checksum is out-dated and may damage the '
+                'database! Please update HWID DB with the latest bundle.')
+        ], [], {})
 
     try:
       self._hwid_validator.ValidateChange(new_hwid_db_contents,

@@ -137,6 +137,17 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     self.assertEqual(analysis_report.validation_errors[0].code,
                      hwid_action.DBValidationErrorCode.SCHEMA_ERROR)
 
+  def testAnalyzeDraftDbEditableSection_ChecksumError(self):
+    helper_inst_before = self._LoadSSHelper('v3-golden-before.yaml')
+    helper_inst_after = self._LoadSSHelper('v3-golden-after-good.yaml')
+    editable_section = helper_inst_after.GetDBEditableSection()
+
+    analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(
+        editable_section, False, True, hwid_bundle_checksum='invalid_checksum')
+
+    self.assertEqual(analysis_report.precondition_errors[0].code,
+                     hwid_action.DBValidationErrorCode.CHECKSUM_ERROR)
+
   def testAnalyzeDraftDbEditableSection_AVLProbeInfo(self):
     helper_inst = self._LoadSSHelper('v3-golden-no-avl-tags.yaml')
     editable_section = helper_inst.GetDBEditableSection()

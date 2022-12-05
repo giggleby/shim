@@ -412,7 +412,8 @@ class HWIDAction:
       internal: bool = False,
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
       avl_resource: Optional[
-          hwid_api_messages_pb2.HwidDbExternalResource] = None
+          hwid_api_messages_pb2.HwidDbExternalResource] = None,
+      hwid_bundle_checksum: Optional[str] = None
   ) -> DBEditableSectionAnalysisReport:
     """Deep analyzes the given HWID DB editable section.
 

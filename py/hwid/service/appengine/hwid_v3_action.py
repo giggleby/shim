@@ -61,11 +61,13 @@ class HWIDV3Action(hwid_action.HWIDAction):
       internal: bool = False,
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
       avl_resource: Optional[
-          hwid_api_messages_pb2.HwidDbExternalResource] = None
+          hwid_api_messages_pb2.HwidDbExternalResource] = None,
+      hwid_bundle_checksum: Optional[str] = None
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     return self._ss_helper.AnalyzeDraftDBEditableSection(
         draft_db_editable_section, derive_fingerprint_only,
-        require_hwid_db_lines, internal, avl_converter_manager, avl_resource)
+        require_hwid_db_lines, internal, avl_converter_manager, avl_resource,
+        hwid_bundle_checksum)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only=False):
     return self._ss_helper.GetHWIDBundleResourceInfo(fingerprint_only)

@@ -468,6 +468,8 @@ message AnalyzeHwidDbEditableSectionRequest {
   string hwid_db_editable_section = 2;
   // A bool indicating if HWID DB lines are required.
   bool require_hwid_db_lines = 3;
+  // Checksum of latest HWID bundle.
+  string hwid_bundle_checksum = 4;
 }
 
 // The response for analyzing the HWID config.

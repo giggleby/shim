@@ -34,6 +34,7 @@ class ErrorCode(enum.Enum):
   CONTENTS_ERROR = enum.auto()
   UNKNOWN_ERROR = enum.auto()
   COMPATIBLE_ERROR = enum.auto()
+  CHECKSUM_ERROR = enum.auto()
 
 
 class Error(NamedTuple):

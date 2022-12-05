@@ -673,7 +673,8 @@ class SelfServiceHelper:
     try:
       action = self._hwid_action_manager.GetHWIDAction(project)
       report = action.AnalyzeDraftDBEditableSection(
-          request.hwid_db_editable_section, False, require_hwid_db_lines)
+          request.hwid_db_editable_section, False, require_hwid_db_lines,
+          hwid_bundle_checksum=request.hwid_bundle_checksum)
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     response.validation_token = report.fingerprint
