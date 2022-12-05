@@ -529,8 +529,20 @@ class Gooftool:
         # Normalize the dictionary keys to 'smbios-name-match'.
         if 'frid' in config['identity']:
           frid_tag = config['identity'].pop('frid', None)
-          # Translate from FRID format string "Google_Model" to "google,model"
-          previous_tag = ",".join(frid_tag.lower().split("_"))
+          # Translate from FRID format string "Google_Model" to "Model"
+          # We need to consider coreboot_customizations will introduce extra
+          # suffix to ap fw name. e.g.
+          # In test image:
+          #   "smbios-name-match": "Nivviks"
+          # In FSI:
+          #   "frid": "Google_Nivviks_Ufs"
+          frid_tag_list = frid_tag.split("_")
+          if len(frid_tag_list) < 2:
+            # format changes in FSI, need new workaround
+            raise Error(
+                'frid cannot be split by underline, maybe the format has changed.'
+            )
+          previous_tag = frid_tag_list[1]
           config['identity']['smbios-name-match'] = previous_tag
 
       fields = ['name', 'identity', 'brand-code']
