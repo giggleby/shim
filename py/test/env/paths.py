@@ -27,6 +27,8 @@ DATA_DIR = os.environ.get(
     'CROS_FACTORY_DATA_DIR',
     (os.path.join(tempfile.gettempdir(), f'factory.{getpass.getuser()}'))
     if sys_utils.InChroot() else '/var/factory')
+# The directory for csv files.
+DATA_CSV_DIR = os.path.join(DATA_DIR, 'csv')
 # The directory for logs.
 DATA_LOG_DIR = os.path.join(DATA_DIR, 'log')
 # The directory for testlog data (pytest-related data only).

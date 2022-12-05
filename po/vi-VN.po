@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-10-18 18:35+CST\n"
+"PO-Revision-Date: 2023-10-20 12:10+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -426,6 +426,10 @@ msgstr "Đọc dữ liệu máy từ Cros Config"
 #: ../build/pytests_label_generated.json
 msgid "Read Device Data From VPD"
 msgstr "Đọc dữ liệu máy từ VPD"
+
+#: ../build/pytests_label_generated.json
+msgid "Record CSV Entry Example"
+msgstr "Ghi ví dụ về mục nhập CSV"
 
 #: ../build/pytests_label_generated.json
 msgid "Removable Storage"
@@ -2971,6 +2975,10 @@ msgstr "Số sêri bo mạch chủ(MLB)"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Zero Touch Ids"
 msgstr "Tải lên Zero Touch Ids"
+
+#: ../py/test/pytests/sync_factory_server.py
+msgid "Upload CSV Entries"
+msgstr "Tải lên các mục nhập CSV"
 
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Update Toolkit"

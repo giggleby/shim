@@ -151,6 +151,7 @@ from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
+from cros.factory.test.utils import csv_utils
 from cros.factory.test.utils import time_utils
 from cros.factory.test.utils.url_spec import URLSpec
 from cros.factory.utils.arg_utils import Arg
@@ -216,6 +217,9 @@ class SyncFactoryServer(test_case.TestCase):
       Arg('upload_zero_touch_ids', bool,
           'Upload attested_device_id and serial_number pair to server.',
           default=False),
+      Arg('upload_csv_entries', bool,
+          'Upload CSV entries recorded by `csv_utils.CSVManager`',
+          default=True),
   ]
 
   def setUp(self):
@@ -227,6 +231,7 @@ class SyncFactoryServer(test_case.TestCase):
     self.report = Report(None, None, self.args.report_stage)
     self.dut = device_utils.CreateDUTInterface()
     self.station = device_utils.CreateStationInterface()
+    self.csv_entry_manager = csv_utils.CSVManager()
 
   def _GetHWID(self):
     hwid = device_data.GetDeviceData(device_data.KEY_HWID,
@@ -390,7 +395,7 @@ class SyncFactoryServer(test_case.TestCase):
     registration_codes.CheckRegistrationCode(gbind)
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
     entry = [board, ubind, gbind, timestamp, hwid]
-    self.server.UploadCSVEntry('registration_code_log', entry)
+    self.csv_entry_manager.Append('registration_code_log', entry)
 
   def UploadSerialNumberForAuditing(self):
     hwid = self._GetHWID()
@@ -421,7 +426,10 @@ class SyncFactoryServer(test_case.TestCase):
     if not serial_number:
       raise Exception('serial_number is not set.')
     entry = [serial_number, attested_device_id]
-    self.server.UploadCSVEntry('zero_touch_ids', entry)
+    self.csv_entry_manager.Append('zero_touch_ids', entry)
+
+  def UploadCSVEntries(self):
+    self.csv_entry_manager.UploadAll(self.server)
 
   def UpdateToolkit(self):
     unused_toolkit_version, has_update = updater.CheckForUpdate(
@@ -485,6 +493,14 @@ class SyncFactoryServer(test_case.TestCase):
 
     if self.args.upload_zero_touch_ids:
       tasks += [(_('Upload Zero Touch Ids'), self.UploadZeroTouchIds)]
+
+    upload_csv_entries = any({
+        self.args.upload_csv_entries,
+        self.args.upload_reg_codes,
+        self.args.upload_zero_touch_ids,
+    })
+    if upload_csv_entries:
+      tasks += [(_('Upload CSV Entries'), self.UploadCSVEntries)]
 
     if self.args.update_toolkit:
       tasks += [(_('Update Toolkit'), self.UpdateToolkit)]

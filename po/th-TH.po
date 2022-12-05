@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-10-18 18:35+CST\n"
+"PO-Revision-Date: 2023-10-20 12:10+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: th-TH\n"
@@ -426,6 +426,10 @@ msgstr "อ่านข้อมูลอุปกรณ์จาก Cros Config
 #: ../build/pytests_label_generated.json
 msgid "Read Device Data From VPD"
 msgstr "อ่านข้อมูลอุปกรณ์จาก VPD"
+
+#: ../build/pytests_label_generated.json
+msgid "Record CSV Entry Example"
+msgstr "บันทึกตัวอย่างรายการ CSV"
 
 #: ../build/pytests_label_generated.json
 msgid "Removable Storage"
@@ -2936,6 +2940,10 @@ msgstr "อัพโหลดหมายเลขซีเรียลเพื
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Upload Zero Touch Ids"
 msgstr "อัพโหลด Zero Touch Ids"
+
+#: ../py/test/pytests/sync_factory_server.py
+msgid "Upload CSV Entries"
+msgstr "อัปโหลดรายการ CSV"
 
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Update Toolkit"
