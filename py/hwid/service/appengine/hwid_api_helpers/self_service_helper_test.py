@@ -1134,8 +1134,10 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
 
     firmware_record = _FirmwareRecord(
-        model='proj', firmware_keys=_FirmwareRecord.FirmwareKeys(
-            key_recovery='#devkeys/recoverykey', key_root='#devkeys/rootkey'))
+        model='proj', firmware_keys=[
+            _FirmwareRecord.FirmwareKeys(key_recovery='#devkeys/recoverykey',
+                                         key_root='#devkeys/rootkey')
+        ])
     bundle_record = _FactoryBundleRecord(board='board', firmware_signer='',
                                          firmware_records=[firmware_record])
     req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
@@ -1599,17 +1601,19 @@ class SelfServiceHelperTest(unittest.TestCase):
     for proj in projects:
       firmware_records.append(
           _FirmwareRecord(
-              model=proj, firmware_keys=_FirmwareRecord.FirmwareKeys(
-                  key_recovery='key_recovery', key_root='key_root',
-                  key_id='default'), ro_fp_firmware=[
-                      _FirmwareRecord.FirmwareInfo(hash='hash_string',
-                                                   version='fp_firmware_1'),
-                      _FirmwareRecord.FirmwareInfo(hash='hash_string',
-                                                   version='fp_firmware_2'),
-                  ], ro_main_firmware=[
-                      _FirmwareRecord.FirmwareInfo(
-                          hash='hash_string', version='Google_Proj.1111.1.1')
-                  ]))
+              model=proj, firmware_keys=[
+                  _FirmwareRecord.FirmwareKeys(key_recovery='key_recovery',
+                                               key_root='key_root',
+                                               key_id='default')
+              ], ro_fp_firmware=[
+                  _FirmwareRecord.FirmwareInfo(hash='hash_string',
+                                               version='fp_firmware_1'),
+                  _FirmwareRecord.FirmwareInfo(hash='hash_string',
+                                               version='fp_firmware_2'),
+              ], ro_main_firmware=[
+                  _FirmwareRecord.FirmwareInfo(hash='hash_string',
+                                               version='Google_Proj.1111.1.1')
+              ]))
 
     return _FactoryBundleRecord(board='board', firmware_signer='BoardMPKeys-V1',
                                 firmware_records=firmware_records)

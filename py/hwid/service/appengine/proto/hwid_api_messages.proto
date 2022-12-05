@@ -635,7 +635,7 @@ message FactoryBundleRecord {
     // Model name of firmware info.
     string model = 1;
     // Firmware keys
-    FirmwareKeys firmware_keys = 2;
+    repeated FirmwareKeys firmware_keys = 2;
     // RO AP firmware info
     repeated FirmwareInfo ro_main_firmware = 3;
     // RO EC firmware info
