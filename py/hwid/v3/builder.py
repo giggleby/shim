@@ -478,6 +478,10 @@ class DatabaseBuilder:
 
     fw_identity = _GetVersionStringIdentity(probed_value.get('version'))
 
+    def _IsPrePVTFirmwareKeys(comp_name):
+      return (comp_cls == common.FirmwareComps.FIRMWARE_KEYS and
+              re.match('firmware_keys_(dev|premp|mp_default)', comp_name))
+
     # Set old firmware components to deprecated.
     for comp_name, comp_info in self._database.GetComponents(comp_cls).items():
       if comp_info.status != common.COMPONENT_STATUS.supported:
@@ -485,9 +489,9 @@ class DatabaseBuilder:
 
       existing_fw_identity = _GetVersionStringIdentity(
           comp_info.values.get('version'))
-      # Firmware keys don't have identity.  Just deprecate anyway.
-      if (comp_cls == common.FirmwareComps.FIRMWARE_KEYS or
-          fw_identity == existing_fw_identity):
+      # Only deprecate pre-PVT firmware keys.
+      if (_IsPrePVTFirmwareKeys(comp_name) or
+          fw_identity and fw_identity == existing_fw_identity):
         self._database.SetComponentStatus(comp_cls, comp_name,
                                           common.COMPONENT_STATUS.deprecated)
 

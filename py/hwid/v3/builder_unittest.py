@@ -779,8 +779,6 @@ class DatabaseBuilderTest(unittest.TestCase):
       db_builder.AddComponentCheck('ro_fp_firmware',
                                    {'version': 'fpboard_v2.0.22222'},
                                    'firmware1', True)
-      db_builder.AddComponentCheck('firmware_keys',
-                                   {'key_recovery': 'some_hash'}, 'key1', True)
 
     db = db_builder.Build()
 
@@ -792,9 +790,27 @@ class DatabaseBuilderTest(unittest.TestCase):
     self.assertEqual('deprecated', components['firmware0'].status)
     self.assertEqual('supported', components['firmware1'].status)
 
+  # TODO (b/204729913)
+  @label_utils.Informational
+  def testAddComponentCheck_OnlyDeprecatePrePVTKeys(self):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddComponentCheck('firmware_keys', {'key_recovery': 'hash1'},
+                                   'firmware_keys_dev', True)
+      db_builder.AddComponentCheck('firmware_keys', {'key_recovery': 'hash1'},
+                                   'firmware_keys_mp_default', True)
+      db_builder.AddComponentCheck('firmware_keys', {'key_recovery': 'hash1'},
+                                   'firmware_keys_mp_keyid1', True)
+      db_builder.AddComponentCheck('firmware_keys', {'key_recovery': 'hash1'},
+                                   'firmware_keys_mp_keyid2', True)
+
+    db = db_builder.Build()
+
     components = db.GetComponents('firmware_keys')
-    self.assertEqual('deprecated', components['key0'].status)
-    self.assertEqual('supported', components['key1'].status)
+    self.assertEqual('deprecated', components['firmware_keys_dev'].status)
+    self.assertEqual('deprecated',
+                     components['firmware_keys_mp_default'].status)
+    self.assertEqual('supported', components['firmware_keys_mp_keyid1'].status)
 
   @label_utils.Informational
   def testAddComponentCheck_OnlyDeprecateSameIdentity(self):
