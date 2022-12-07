@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 import re
 
@@ -20,8 +21,12 @@ class ManagementEngineError(Error):
   pass
 
 
-def _VerifyHFSTS3(me_flags, main_fw):
-  """Check the content of HFSTS3 register to see if ME is locked."""
+class SKU(str, enum.Enum):
+  Consumer = 'Consumer'
+  Lite = 'Lite'
+
+
+def _GetSKUFromHFSTS3(me_flags):
   hfsts3_str = me_flags.get('HFSTS3')
   if hfsts3_str is None:
     raise ManagementEngineError('HFSTS3 is not found')
@@ -32,17 +37,22 @@ def _VerifyHFSTS3(me_flags, main_fw):
     raise ManagementEngineError(
         f'HFSTS3 is {hfsts3_str!r} and can not convert to an integer') from None
   if (hfsts3 & 0xF0) == 0x20:
+    return SKU.Consumer
+  if (hfsts3 & 0xF0) == 0x50:
+    return SKU.Lite
+  raise ManagementEngineError('HFSTS3 indicates that this is an unknown SKU')
+
+
+def _VerifySIMESection(sku, main_fw):
+  if sku == SKU.Consumer:
     # For Consumer SKU, if ME is locked, it should contain only 0xFFs.
     data = main_fw.get_section('SI_ME').strip(b'\xff')
     if data:
       raise ManagementEngineError(
           'ME (ManagementEngine) firmware may be not locked.')
-  elif (hfsts3 & 0xF0) == 0x50:
-    # For Lite SKU, if ME is locked, it is still readable.
+  elif sku == SKU.Lite:
+    # For Lite SKU, if ME is locked, it is still readable. Do nothing.
     pass
-  else:
-    raise ManagementEngineError('HFSTS3 indicates that this is an unknown SKU')
-
 
 def _VerifyManufacturingMode(me_flags):
   errors = []
@@ -81,7 +91,9 @@ def VerifyMELocked(main_fw, shell):
   for match in re.finditer(_RE_ME_PATTERN, cbmem_stdout, re.MULTILINE):
     me_flags[match.group('key').strip()] = match.group('value')
 
-  _VerifyHFSTS3(me_flags, main_fw)
+  sku = _GetSKUFromHFSTS3(me_flags)
+  logging.info('CSE SKU: %s', sku.value)
+  _VerifySIMESection(sku, main_fw)
   _VerifyManufacturingMode(me_flags)
   # TODO(hungte) In future we may add more checks using ifdtool. See
   # crosbug.com/p/30283 for more information.
