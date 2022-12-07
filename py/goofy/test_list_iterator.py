@@ -438,10 +438,6 @@ class TestListIterator:
             status in self.status_filter)
 
   def CheckRunIf(self, test):
-    # Skip the checking in engineering mode.
-    if self.test_list.state_instance.IsEngineeringMode():
-      return True
-
     return test_list_module.ITestList.EvaluateRunIf(test, self.test_list)
 
   def _ResetIterations(self, test):
