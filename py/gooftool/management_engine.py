@@ -24,6 +24,15 @@ class ManagementEngineError(Error):
 class SKU(str, enum.Enum):
   Consumer = 'Consumer'
   Lite = 'Lite'
+  Unknown = 'Unknown'
+
+  @property
+  def flag(self):
+    return {
+        SKU.Consumer: 0x20,
+        SKU.Lite: 0x50,
+        SKU.Unknown: 0xff,
+    }[self]
 
 
 def _GetSKUFromHFSTS3(me_flags):
@@ -36,9 +45,9 @@ def _GetSKUFromHFSTS3(me_flags):
   except:
     raise ManagementEngineError(
         f'HFSTS3 is {hfsts3_str!r} and can not convert to an integer') from None
-  if (hfsts3 & 0xF0) == 0x20:
+  if (hfsts3 & 0xF0) == SKU.Consumer.flag:
     return SKU.Consumer
-  if (hfsts3 & 0xF0) == 0x50:
+  if (hfsts3 & 0xF0) == SKU.Lite.flag:
     return SKU.Lite
   raise ManagementEngineError('HFSTS3 indicates that this is an unknown SKU')
 
