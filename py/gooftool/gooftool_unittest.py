@@ -21,6 +21,7 @@ from cros.factory.gooftool import core
 from cros.factory.gooftool import cros_config
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool.management_engine import ManagementEngineError
+from cros.factory.gooftool.management_engine import SKU
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
@@ -80,6 +81,23 @@ class MockPath(os.PathLike):
   def __exit__(self, filetype, value, traceback):
     pass
 
+
+class MockME:
+  FW_NO_ME = {
+      'RO_SECTION': b''
+  }
+  FW_ME_READ_LOCKED = {
+      'SI_ME': b'\xff' * 1024
+  }
+  FW_ME_READ_UNLOCKED = {
+      'SI_ME': b'\x55' * 1024
+  }
+
+  def GetMockedCBMEM(self, sku_flag, mode, table):
+    output = (f'ME: HFSTS3                  : 0x{sku_flag:08x}\n'
+              f'ME: Manufacturing Mode      : {mode}\n'
+              f'ME: FW Partition Table      : {table}\n')
+    return Obj(success=True, stdout=output)
 
 class UtilTest(unittest.TestCase):
   """Unit test for core.Util."""
@@ -379,63 +397,73 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaises(Error, self._gooftool.VerifyTPM)
     path_exists_mock.assert_called_with('/sys/class/tpm/tpm0/device')
 
-  def testVerifyManagementEngineLocked(self):
-    data_no_me = {'RO_SECTION': b''}
-    data_me_read_locked = {
-        'SI_ME': b'\xff' * 1024
-    }
-    data_me_read_unlocked = {
-        'SI_ME': b'\x55' * 1024
-    }
-
-    consumer_sku_flag = 0x20
-    lite_sku_flag = 0x50
-    unknown_sku_flag = 0xff
-
-    def MockCBMEM(sku_flag, mode, table):
-      output = ('ME: HFSTS3                  : 0x%08x\n'
-                'ME: Manufacturing Mode      : %s\n'
-                'ME: FW Partition Table      : %s\n') % (sku_flag, mode, table)
-      self._gooftool._util.shell.return_value = Obj(success=True, stdout=output)
-
+  def testVerifyManagementEngineLockedNoME(self):
     # No ME firmware
     self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
-        MockFirmwareImage(data_no_me))
+        MockFirmwareImage(MockME.FW_NO_ME))
     self._gooftool.VerifyManagementEngineLocked()
 
+  def testVerifyManagementEngineLockedUnknownSKU(self):
+    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+        MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
+
+    # Raise since it is an unknown SKU
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(SKU.Unknown.flag, 'NO', 'OK')
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
+
+  def testVerifyManagementEngineLockedConsumerSKU(self):
     # ME read locked firmware
     self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
-        MockFirmwareImage(data_me_read_locked))
-    MockCBMEM(consumer_sku_flag, 'NO', 'OK')
+        MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
+
+    consumer_flag = SKU.Consumer.flag
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(consumer_flag, 'NO', 'OK')
     self._gooftool.VerifyManagementEngineLocked()
 
     # ME read unlocked firmware
     self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
-        MockFirmwareImage(data_me_read_unlocked))
+        MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
 
-    # Raise if it is Consumer SKU.
-    MockCBMEM(consumer_sku_flag, 'NO', 'OK')
+    # Raise since the SI_ME is not 0xff
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(consumer_flag, 'NO', 'OK')
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
 
-    # Raise if it is unknown SKU.
-    MockCBMEM(unknown_sku_flag, 'NO', 'OK')
-    self.assertRaises(ManagementEngineError,
-                      self._gooftool.VerifyManagementEngineLocked)
+  def testVerifyManagementEngineLockedLiteSKU(self):
+    # ME read locked firmware
+    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+        MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
 
-    # Pass if it is Lite SKU.
-    MockCBMEM(lite_sku_flag, 'NO', 'OK')
+    lite_flag = SKU.Lite.flag
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(lite_flag, 'NO', 'OK')
     self._gooftool.VerifyManagementEngineLocked()
 
-    # Raise if Manufacturing Mode is not NO.
-    MockCBMEM(lite_sku_flag, 'YES', 'OK')
+    # ME read unlocked firmware
+    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+        MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
+
+    # Won't raise since we don't check the SI_ME content
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(lite_flag, 'NO', 'OK')
+    self._gooftool.VerifyManagementEngineLocked()
+
+    # Raise since Manufacturing Mode is not NO
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(lite_flag, 'YES', 'OK')
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
 
-    # Raise if FW Partition Table is not OK.
-    MockCBMEM(lite_sku_flag, 'NO', 'BAD')
+    # Raise since FW Partition Table is not OK
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(lite_flag, 'NO', 'BAD')
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
+
 
   def testClearGBBFlags(self):
     command = '/usr/share/vboot/bin/set_gbb_flags.sh 0 2>&1'
