@@ -18,6 +18,8 @@ from unittest import mock
 from cros.factory.gooftool.bmpblk import unpack_bmpblock
 from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
+from cros.factory.gooftool.core import CrosConfigIdentity
+from cros.factory.gooftool.core import IdentitySourceEnum
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool.management_engine import ManagementEngineError
 from cros.factory.gooftool.management_engine import SKU
@@ -1040,7 +1042,7 @@ class GooftoolTest(unittest.TestCase):
   @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
   @mock.patch('cros.factory.test.device_data.GetDeviceData')
   def testGSCSetFeatureManagementFlags_Flags_Inconsistent_Use_HwSecUtils(
-      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+      self, mock_get_device_data, unused_mock_gsctool, mock_hwsec_wrapper):
 
     mock_get_device_data.side_effect = [True, 1]
 
@@ -1099,6 +1101,209 @@ class GooftoolTest(unittest.TestCase):
     expect_str = 'ERROR:root:Feature management flags already set.'
     self.assertEqual([expect_str], cm.output)
 
+  def testMatchConfigWithIdentity_X86_Frid(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['smbios-name-match'] = 'skolas'
+    identity['frid'] = 'Google_Skolas'
+    identity['sku-id'] = 'sku1'
+    identity['customization-id'] = '1'
+    identity['custom-label-tag'] = 'custom-label-tag'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Skolas',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Skolas',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 2
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Skolas_Something',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertDictEqual(matched_config, configs[0])
+
+  def testMatchConfigWithIdentity_Arm_Frid(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['device-tree-compatible-match'] = \
+        'google,tentacruelgoogle,corsolamediatek,mt8186'
+    identity['frid'] = 'Google_Tentacruel'
+    identity['sku-id'] = '1'
+    identity['customization-id'] = '1'
+    identity['custom-label-tag'] = 'custom-label-tag'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Tentacruel',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Tentacruel',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 2
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'frid': 'Google_Tentacruel',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertDictEqual(matched_config, configs[0])
+
+  def testMatchConfigWithIdentity_Smbios(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['smbios-name-match'] = 'Skolas'
+    identity['frid'] = 'Google_Skolas'
+    identity['sku-id'] = 'sku1'
+    identity['customization-id'] = '1'
+    identity['custom-label-tag'] = 'custom-label-tag'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'smbios-name-match': 'Skolas',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'smbios-name-match': 'Skolas',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 2
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'smbios-name-match': 'Skolas',
+                'custom-label-tag': 'some-other-tag',
+                'customization-id': '2',
+                'sku-id': 1
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertDictEqual(matched_config, configs[0])
+
+  def testMatchConfigWithIdentity_DeviceTree(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['device-tree-compatible-match'] = \
+        'google,tentacruelgoogle,corsolamediatek,mt8186'
+    identity['frid'] = 'Google_Tentacruel'
+    identity['sku-id'] = '1'
+    identity['customization-id'] = '1'
+    identity['custom-label-tag'] = 'custom-label-tag'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'device-tree-compatible-match': 'google,tentacruel',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'device-tree-compatible-match': 'google,tentacruel',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 2
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'device-tree-compatible-match': 'google,tentacruel',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1',
+                'sku-id': 1
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertDictEqual(matched_config, configs[0])
+
+  def testMatchConfigWithIdentity_NoSkuId(self):
+    identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
+    identity['smbios-name-match'] = 'Hayato'
+    identity['frid'] = 'Google_Hayato'
+    identity['sku-id'] = ''
+    identity['customization-id'] = '1'
+    identity['custom-label-tag'] = 'custom-label-tag'
+
+    configs = [
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'smbios-name-match': 'Hayato',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1'
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'smbios-name-match': 'Hayato',
+                'custom-label-tag': 'some-other-tag',
+                'customization-id': '2'
+            }
+        },
+        {
+            'brand-code': 'zzcr',
+            'identity': {
+                'smbios-name-match': 'Hayato_something',
+                'custom-label-tag': 'custom-label-tag',
+                'customization-id': '1'
+            }
+        },
+    ]
+
+    matched_config = self._gooftool._MatchConfigWithIdentity(configs, identity)
+    self.assertDictEqual(matched_config, configs[0])
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)
