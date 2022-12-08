@@ -2636,21 +2636,7 @@ class ChromeOSFactoryBundle:
     fields = {
         'name': None,
         'identity': None,
-        'brand-code': None,
-        'firmware': {
-            # We write this value in EEPROM.
-            'firmware-config': None
-        },
-        'fingerprint': {
-            # Used by update_fpmcu_firmware and gooftool/commands.py
-            'board': None
-        },
-        'audio': {
-            'main': {
-                # Used by audio config manager
-                'ucm-suffix': None
-            }
-        }
+        'brand-code': None
     }
     configs_for_designs = [
         _SelectConfig(config, fields)
@@ -2671,6 +2657,23 @@ class ChromeOSFactoryBundle:
       # The label may be an empty string.
       if label is not None:
         identity['custom-label-tag'] = label
+
+      # According to b/245588383, 'frid' was introduced in recent cros_config
+      # change and smbios-name-match/device-tree-compatible-match are removed.
+      # In order to create factory bundle with non-frid factory branch
+      # test image + frid-ready FSI, removed identity keys smbios-name-match and
+      # device-tree-compatible-match have to be transformed into frid.
+      smbios_match = identity.pop('smbios-name-match', None)
+      if smbios_match:
+        # Skolas to Google_Skolas
+        config['identity']['frid'] = 'Google_' + smbios_match
+
+      dt_match = identity.pop('device-tree-compatible-match', None)
+      if dt_match:
+        # google,skolas to Google_Skolas
+        frid = '_'.join(dt_match.split(','))
+        frid = '_'.join([frid_part.title() for frid_part in frid.split('_')])
+        config['identity']['frid'] = frid
 
     return {
         # set sort_keys=True to make the result stable.
@@ -2710,8 +2713,12 @@ class ChromeOSFactoryBundle:
       release_configs = self._ParseCrosConfig(designs, rootfs)
 
     error = []
-    if test_configs != release_configs:
-      error += ['Detect different chromeos-config between test image and FSI.']
+    configs_not_in_release_configs = [
+        test_config for test_config in test_configs
+        if test_config not in release_configs
+    ]
+    if configs_not_in_release_configs:
+      error += ['Identities found in test image could not be found in FSI.']
     if not test_configs:
       error += ['Detect empty chromeos-config for test image.']
     if not release_configs:
