@@ -4,6 +4,7 @@
 
 from cros.factory.external.chromeos_cli import shell
 
+
 # Path to the product name and sku id of the device.
 # ARM devices: DEVICE_TREE_COMPATIBLE_PATH and DEVICE_TREE_SKU_ID_PATH
 # x86 devices: PRODUCT_NAME_PATH and PRODUCT_SKU_ID_PATH
@@ -11,6 +12,9 @@ DEVICE_TREE_COMPATIBLE_PATH = '/proc/device-tree/compatible'
 PRODUCT_NAME_PATH = '/sys/class/dmi/id/product_name'
 DEVICE_TREE_SKU_ID_PATH = '/proc/device-tree/firmware/coreboot/sku-id'
 PRODUCT_SKU_ID_PATH = '/sys/class/dmi/id/product_sku'
+SYSFS_CHROMEOS_ACPI_FRID_PATH = '/sys/devices/platform/chromeos_acpi/FRID'
+PROC_FDT_CHROMEOS_FRID_PATH = \
+    '/proc/device-tree/firmware/chromeos/readonly-firmware-version'
 
 
 class CrosConfig:
@@ -47,6 +51,13 @@ class CrosConfig:
     result = self.GetValue('/identity', 'platform-name')
     return result.stdout.strip() if result.stdout else ''
 
+  # Introducing frid as ToT cros_config only supports this field
+  # while removing smbios-name-match / device-tree-compatible-match.
+  # The change was landed in 15227.0.0, refer to b/245588383 for details.
+  def GetFrid(self):
+    result = self.GetValue('/identity', 'frid')
+    return result.stdout.strip() if result.stdout else ''
+
   def GetModelName(self):
     result = self.GetValue('/', 'name')
     return result.stdout.strip() if result.stdout else ''
@@ -61,9 +72,14 @@ class CrosConfig:
 
   def GetProductName(self):
     result_x86 = self.GetValue('/identity', 'smbios-name-match')
+    if result_x86:
+      return result_x86.stdout.strip(), 'smbios-name-match'
+
     result_arm = self.GetValue('/identity', 'device-tree-compatible-match')
-    result = result_x86 or result_arm
-    return result.stdout.strip() if result.stdout else ''
+    if result_arm:
+      return result_arm.stdout.strip(), 'device-tree-compatible-match'
+
+    return '', ''
 
   def GetCustomizationId(self):
     result = self.GetValue('/identity', 'customization-id')

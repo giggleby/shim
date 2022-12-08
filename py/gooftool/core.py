@@ -88,6 +88,33 @@ class FactoryProcessEnum(str, enum.Enum):
   RMA = 'RMA'
 
 
+class IdentitySourceEnum(str, enum.Enum):
+  cros_config = 'Cros Config Database'
+  current_identity = 'Current Identity'
+
+
+class CrosConfigIdentity(dict):
+  message_template = '%s:\nproduct name: %s\nsku id: %s\n' + \
+      'frid: %s\ncustomization id: %s\ncustom label tag: %s\n'
+
+  def __init__(self, config_source):
+    dict.__init__(self)
+    self.config_source = config_source.value
+    identity_key_list = [
+        'smbios-name-match', 'sku-id', 'customization-id'
+        'frid', 'custom-label-tag', 'device-tree-compatible-match'
+    ]
+    for key in identity_key_list:
+      self[key] = ''
+
+  def __str__(self):
+    product_name = self['smbios-name-match'] or \
+        self['device-tree-compatible-match'] or 'empty'
+    return CrosConfigIdentity.message_template % (
+        self.config_source, product_name, self['sku-id'], self['frid'],
+        self['customization-id'], self['custom-label-tag'])
+
+
 class CrosConfigError(Error):
   message_template = '%s. Identity may be misconfigured.\n%s\n%s'
 
@@ -841,6 +868,44 @@ class Gooftool:
         # this is incorrect...
         raise Error('RLZ code "%s" is not allowed in/after EVT' % rlz)
 
+  def _MatchConfigWithIdentity(self, configs, identity):
+    for config in configs:
+      config_identity = config['identity']
+      mismatch_count = 0
+      for key in config_identity.keys():
+        if key == 'device-tree-compatible-match':
+          # For device-tree-compatible-match, the original way of crosid matching
+          # is using a sliding window with width = len(config_identity[key]).
+          # For example, the original device-tree-compatible-match for tentacruel
+          # is 'google,tentacruelgoogle,corsolamediatek,mt8186'. For each
+          # iteration it will try to match the window with 'google,tentacruel'
+          # and if it could not match it will slide to the next complete window
+          # starting from the next char of the last char in previous window.
+          # [google,tentacruel][google,corsolamed][...].
+          # We just match it with a simpler way here.
+          if config_identity[key] not in identity[key]:
+            mismatch_count += 1
+            break
+        elif key == 'sku-id':
+          # For x86 devices the format would be sku + at least 1 digit.
+          # For arm devices it does not have sku prefix but in both types of devices
+          # the sku-id in config.yaml is interpret as integer,
+          # we'll perform a one-time transform here and let no digit cases error out.
+          # Note that in some devices like hayato it has no sku-id in config.yaml
+          # as it only has one sku. In this case identity['sku-id'] would be empty
+          # string but we're safe as it would not be compared.
+          sku_string = identity[key]
+          sku_value = int(sku_string.lstrip('sku'))
+          if config_identity[key] != sku_value:
+            mismatch_count += 1
+            break
+        elif config_identity[key] != identity[key]:
+          mismatch_count += 1
+          break
+      if not mismatch_count:
+        return config
+    return None
+
   def VerifyCrosConfig(self):
     """Verify that entries in cros config make sense."""
     model = self._cros_config.GetModelName()
@@ -858,17 +923,10 @@ class Gooftool:
         config['identity'].pop('platform-name', None)
 
       fields = ['name', 'identity', 'brand-code']
-      configs = [
-          {
-              field: config[field] for field in fields
-          }
-          for config in obj['chromeos']['configs']
-          if config['name'] == model
-      ]
-      configs = {
-          # set sort_keys=True to make the result stable.
-          json_utils.DumpStr(config, sort_keys=True) for config in configs
-      }
+      configs = [{field: config[field]
+                  for field in fields}
+                 for config in obj['chromeos']['configs']
+                 if config['name'] == model]
       return configs
 
     # Load config.yaml from release image (FSI) and test image, and compare the
@@ -879,12 +937,35 @@ class Gooftool:
         self._util.GetReleaseRootPartitionPath()) as root:
       release_configs = _ParseCrosConfig(os.path.join(root, config_path))
 
-    if test_configs != release_configs:
-      error = ['Detect different chromeos-config between test image and FSI.']
+    unused_db_identity, cur_identity = self.GetIdentity()
+    matched_test_config = self._MatchConfigWithIdentity(test_configs,
+                                                        cur_identity)
+    matched_release_config = self._MatchConfigWithIdentity(
+        release_configs, cur_identity)
+
+    error = []
+    if matched_test_config and matched_release_config:
+      if matched_test_config['brand-code'] != matched_release_config[
+          'brand-code']:
+        error += ['Detect mismatch brand code between test image and FSI.']
+    else:
+      if not matched_test_config:
+        error += [
+            'Cannot match any test image cros config with current identity'
+        ]
+      if not matched_release_config:
+        error += [
+            'Cannot match any release image cros config with current identity'
+        ]
+
+    if error:
+      error += [str(cur_identity)]
       error += ['Configs in test image:']
-      error += ['\t' + config for config in test_configs]
+      error += ['\t' + \
+          json_utils.DumpStr(config, sort_keys=True) for config in test_configs]
       error += ['Configs in FSI:']
-      error += ['\t' + config for config in release_configs]
+      error += ['\t' + \
+          json_utils.DumpStr(config, sort_keys=True) for config in release_configs]
       raise Error('\n'.join(error))
 
   def GetGBBFlags(self):
@@ -1820,7 +1901,8 @@ class Gooftool:
     settings.
 
     Returns:
-      Strings which contain identities in cros_config and current identities.
+      CrosConfigIdentity objects which contain identity information read from
+      cros_config database and from firmware, which is the current setting.
     """
 
     def get_cros_config_val(val):
@@ -1839,34 +1921,34 @@ class Gooftool:
     def get_vpd_val(tag_name):
       return self._vpd.GetValue(tag_name, 'empty')
 
-    db_product_name = get_cros_config_val(self._cros_config.GetProductName())
-    db_sku_id = get_cros_config_val(self._cros_config.GetSkuID())
-    db_customization_id = get_cros_config_val(
+    db_identity = CrosConfigIdentity(IdentitySourceEnum.cros_config)
+    product_name, product_name_match = self._cros_config.GetProductName()
+    if product_name_match:
+      db_identity[product_name_match] = get_cros_config_val(product_name)
+    db_identity['frid'] = get_cros_config_val(self._cros_config.GetFrid())
+    db_identity['sku-id'] = get_cros_config_val(self._cros_config.GetSkuID())
+    db_identity['customization-id'] = get_cros_config_val(
         self._cros_config.GetCustomizationId())
-    db_custom_label_tag = get_cros_config_val(
+    db_identity['custom-label-tag'] = get_cros_config_val(
         self._cros_config.GetCustomLabelTag()[1])
 
-    db_identity = (
-        'In cros_config:\nproduct name: %s\nsku id: %s\n'
-        'customization id: %s\ncustom label tag: %s\n' %
-        (db_product_name, db_sku_id, db_customization_id, db_custom_label_tag))
-
+    cur_identity = CrosConfigIdentity(IdentitySourceEnum.current_identity)
     # one for x86 device another for ARM device
-    cur_product_name = get_file_if_exist(
-        cros_config_module.PRODUCT_NAME_PATH) or get_file_if_exist(
-            cros_config_module.DEVICE_TREE_COMPATIBLE_PATH) or 'empty'
+    cur_identity['smbios-name-match'] = get_file_if_exist(
+        cros_config_module.PRODUCT_NAME_PATH)
+    cur_identity['device-tree-compatible-match'] = get_file_if_exist(
+        cros_config_module.DEVICE_TREE_COMPATIBLE_PATH)
+    firmware_ro_info = get_file_if_exist(
+        cros_config_module.SYSFS_CHROMEOS_ACPI_FRID_PATH) or get_file_if_exist(
+            cros_config_module.PROC_FDT_CHROMEOS_FRID_PATH) or 'empty'
+    cur_identity['frid'] = firmware_ro_info.split('.')[0]
     # For some devices (e.g. hayato), there's only one SKU.
     # In this case, sku-id might not be set.
-    cur_sku_id = get_file_if_exist(
+    cur_identity['sku-id'] = get_file_if_exist(
         cros_config_module.PRODUCT_SKU_ID_PATH) or get_file_if_exist(
             cros_config_module.DEVICE_TREE_SKU_ID_PATH, True) or 'empty'
-    cur_customization_id = get_vpd_val('customization_id')
-    cur_custom_label_tag = get_vpd_val('custom_label_tag')
-
-    cur_identity = ('Current:\nproduct name: %s\nsku id: %s\n'
-                    'customization id: %s\ncustom label tag: %s\n' %
-                    (cur_product_name, cur_sku_id, cur_customization_id,
-                     cur_custom_label_tag))
+    cur_identity['customization-id'] = get_vpd_val('customization_id')
+    cur_identity['custom-label-tag'] = get_vpd_val('custom_label_tag')
 
     return db_identity, cur_identity
 
