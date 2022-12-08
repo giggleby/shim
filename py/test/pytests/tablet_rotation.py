@@ -246,6 +246,9 @@ class TabletRotationTest(test_case.TestCase):
         # But this should be fine, because we will run the "tablet_mode" test
         # before running this test, and the test will check the "tablet mode
         # switch" in evtest.
+        # To set the `kSupportsClamshellAutoRotation`, one can edit the
+        # `init/goofy.d/chrome_dev.conf` and add one line to enable the option
+        # `--supports-clamshell-auto-rotation`.
         self.fail('Auto rotation is not allowed.')
 
       for loc, dic in self.args.degrees_to_orientations.items():
