@@ -290,7 +290,7 @@ class ContentsAnalyzer:
     return True
 
   def _ValidateChangeOfComponents(self, report: ValidationReport):
-    """Check if modified (created) component names are valid."""
+    """Check if modified (created) components are valid."""
     for comps in self._ExtractHWIDComponents().values():
       for comp in comps:
         if comp.extracted_seq_no is not None:
@@ -305,6 +305,16 @@ class ContentsAnalyzer:
                     'Invalid component name with sequence number, please '
                     f'modify it from {comp.name!r} to {expected_comp_name!r}'
                     '.'))
+            continue
+        if (not comp.is_newly_added and comp.diff_prev.name_changed and
+            comp.diff_prev.values_changed):
+          report.errors.append(
+              Error(
+                  ErrorCode.COMPATIBLE_ERROR,
+                  'Modifying both the component name '
+                  f'({comp.diff_prev.prev_comp_name!r} -> {comp.name!r}) '
+                  'and values often causes compatibility issues. Is this '
+                  'change proposal mistakenly based on a legacy HWID bundle?'))
 
   def _AnalyzeDBLines(self, db_contents_patcher, all_placeholders,
                       db_placeholder_options):

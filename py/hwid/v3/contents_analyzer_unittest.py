@@ -21,6 +21,8 @@ DB_COMP_BEFORE_PATH = os.path.join(_TEST_DATA_PATH,
                                    'test_database_db_comp_before.yaml')
 DB_COMP_AFTER_GOOD_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_good_change.yaml')
+DB_COMP_AFTER_INCOMPATIBLE_CHANGE_PATH = os.path.join(
+    _TEST_DATA_PATH, 'test_database_db_comp_incompatible_change.yaml')
 
 _ComponentNameInfo = contents_analyzer.ComponentNameInfo
 
@@ -45,9 +47,29 @@ class ContentsAnalyzerTest(unittest.TestCase):
   def test_ValidateChange_GoodCompNameChange(self):
     prev_db_contents = file_utils.ReadFile(DB_COMP_BEFORE_PATH)
     curr_db_contents = file_utils.ReadFile(DB_COMP_AFTER_GOOD_PATH)
+
     inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
                                               prev_db_contents)
-    inst.ValidateChange()
+    report = inst.ValidateChange()
+
+    self.assertEqual(report.errors, [])
+
+  def test_ValidateChange_InvalidForModifyBothComponentNameAndValues(self):
+    prev_db_contents = file_utils.ReadFile(DB_COMP_BEFORE_PATH)
+    curr_db_contents = file_utils.ReadFile(
+        DB_COMP_AFTER_INCOMPATIBLE_CHANGE_PATH)
+
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    report = inst.ValidateChange()
+
+    expect_error = contents_analyzer.Error(
+        contents_analyzer.ErrorCode.COMPATIBLE_ERROR,
+        "Modifying both the component name ('display_panel_100_200' -> "
+        "'display_panel_123_456') and values often causes compatibility "
+        'issues. Is this change proposal mistakenly based on a legacy HWID '
+        'bundle?')
+    self.assertIn(expect_error, report.errors)
 
   def test_AnalyzeChange_PreconditionErrors(self):
     prev_db_contents = 'some invalid text for HWID DB.'

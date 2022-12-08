@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: a640df7bc8f604f03c3576bf363bf46e6dd6e07d
+checksum: 8561e1237ae6c5512299cee5c494ea55bf969268
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -38,25 +38,20 @@ components:
     items:
       display_panel_0:
         values:
-          cores: '1'
-          model: 'x'
+          the_attribute: AAA
       display_panel_1:
         values:
-          cores: '4'
-          model: 'abc'
+          the_attribute: BBB
       display_panel_invalid1:
         values:
-          cores: '4'
-          model: 'def'
+          the_attribute: CCC
       display_panel_invalid2:
         values:
-          cores: '4'
-          model: 'def'
+          the_attribute: DDD
       display_panel_100_200:
         status: unqualified
         values:
-          cores: '8'
-          model: 'ghi'
+          the_attribute: EEE
 
 rules:
 - name: device_info.set_image_id

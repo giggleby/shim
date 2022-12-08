@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: 10a13ff446966dff8f5484c268842efcb6e92071
+checksum: 8ce762381abb832a9ec8b7a835d05750ac1bca45
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -36,27 +36,26 @@ encoded_fields:
 components:
   display_panel:
     items:
-      display_panel_0:  # Modify component name.
+      display_panel_0:
         values:
-          the_attribute: ZZZ
+          the_attribute: AAA
       display_panel_1:
         values:
           the_attribute: BBB
-      display_panel_9_10:  # Rename to a valid one.
+      display_panel_invalid1:
         values:
           the_attribute: CCC
-      display_panel_still_invalid2:
+      display_panel_invalid2:
         values:
           the_attribute: DDD
-      display_panel_100_200:  # Change status.
-        values:
-          the_attribute: EEE
-      display_panel_123_456:  # New component.
+      display_panel_123_456:  # Inserting (not appending) a new component is
+                              # often problemetic.
+        status: unqualified
         values:
           the_attribute: FFF
-      display_panel_subcomp_234:  # New component.
+      display_panel_100_200:
         values:
-          the_attribute: GGG
+          the_attribute: EEE
 
 rules:
 - name: device_info.set_image_id
