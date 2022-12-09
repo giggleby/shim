@@ -23,6 +23,7 @@ LONG_OPTIONS = [
     'logging=',
     'profile=',
     'seccomp-bpf-binary',
+    'no-default-runtime-environment',
 ]
 
 # Only override these programs (find from /etc/init/*.conf)
