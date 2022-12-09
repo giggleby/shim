@@ -4,6 +4,10 @@ This folder contains VSCode configuration files that are useful for
 ChromeOS Factory development and ChromeOS factory team.
 (e.g, non-factory repositories)
 
+## Note
+* The CrOS IDE extension might have conflict with the following setting. Make
+  sure to disable it in the workspace used to develop factory toolkit.
+
 ## Installation
 
 * Run `./devtools/vscode/setup.sh ${workspaceFolder}` outside chroot to install
