@@ -50,6 +50,23 @@ Dependency
 
 Examples
 --------
+The standard way to update cr50 firmware on the factory line is adding a
+"UpdateCr50Firmware" test group.
+The UpdateCr50Firmware test group contains three steps:
+
+1. Update the firmware (pytest: update_cr50_firmware)
+2. Reboot (pytest: shutdown)
+3. Check firmware version (pytest: update_cr50_firmware)
+
+Step 1 (update firmware) checks the current firmware version, and decides
+       whether to update the firmware or not. If the test updates the firmware,
+       device data `device.factory.cr50_update_need_reboot` will be set to
+       `True`. Otherwise, it will be set to `False`.
+Step 2 (reboot) will be skipped if the device data is set to `False` while
+       checking `run-if`.
+Step 3 (check firmware) deletes the device data to clean up the state after
+       the version is validated as up-to-date.
+
 To update Cr50 firmware with the Cr50 firmware image in DUT release partition,
 add this in test list::
 
