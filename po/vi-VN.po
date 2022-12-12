@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-11-24 17:51+CST\n"
+"PO-Revision-Date: 2022-12-12 06:20+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -834,6 +834,10 @@ msgstr "Xóa trạng thái của {count} kiểm tra trong「{test}」"
 #: ../py/goofy/js/goofy.js
 msgid "Clear status of test \"{test}\""
 msgstr "Xóa trạng thái của thử nghiệm {test}"
+
+#: ../py/goofy/js/goofy.js
+msgid "All the running tests will be stopped for clearing status."
+msgstr "Tất cả các bài kiểm tra đang chạy sẽ bị dừng để xóa trạng thái."
 
 #: ../py/goofy/js/goofy.js
 msgid "Run {count} untested tests in \"{test}\""

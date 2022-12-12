@@ -960,16 +960,20 @@ class Goofy:
         test.UpdateState(status=TestState.UNTESTED)
     self.ReapCompletedTests()
 
-  def Stop(self, root=None, fail=False, reason=None):
+  def Stop(self, root=None, fail=False, reason=None, clear_queue=False):
     self._KillActiveTests(fail, root, reason)
-
     self.test_list_iterator.Stop(root)
-    self._RunNextTest()
+
+    if clear_queue:
+      # Clear the running queue
+      self.CancelPendingTests()
+    else:
+      self._RunNextTest()
 
   def ClearState(self, root=None):
     if root is None:
       root = self.test_list
-    self.Stop(root, reason='Clearing test state')
+    self.Stop(root, reason='Clearing test state', clear_queue=True)
     for f in root.Walk():
       f.UpdateState(status=TestState.UNTESTED if f.IsLeaf() else None,
                     iterations=f.default_iterations,

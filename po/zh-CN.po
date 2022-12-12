@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-11-24 17:51+CST\n"
+"PO-Revision-Date: 2022-12-12 06:20+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -834,6 +834,10 @@ msgstr "清除{count}个在「{test}」里面的测试的状态"
 #: ../py/goofy/js/goofy.js
 msgid "Clear status of test \"{test}\""
 msgstr "清除测试「{test}」的状态"
+
+#: ../py/goofy/js/goofy.js
+msgid "All the running tests will be stopped for clearing status."
+msgstr "所有正在运行的测试都将停止以清除状态"
 
 #: ../py/goofy/js/goofy.js
 msgid "Run {count} untested tests in \"{test}\""

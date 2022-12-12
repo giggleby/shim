@@ -2028,6 +2028,11 @@ cros.factory.Goofy = class {
                 _('Clear status of {count} tests in "{test}"'),
                 _('Clear status of test "{test}"'), numLeaves, test,
                 () => {
+                  if (test.state.status === "ACTIVE") {
+                    this.alert(
+                      _('All the running tests will be stopped for clearing ' +
+                        'status.'));
+                  }
                   this.sendEvent('goofy:clear_state', {path});
                 }),
             true);
