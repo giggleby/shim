@@ -790,6 +790,17 @@ class Gooftool:
       for config in obj['chromeos']['configs']:
         config['identity'].pop('platform-name', None)
 
+        # Switch smbios-name-match to frid, the rename starts from M109, M108
+        # recovery image may need this to pass cros-config verification.
+        # See b/262224726.
+        if 'smbios-name-match' in config['identity']:
+          variant_name = config['identity'].pop('smbios-name-match', None)
+          # In recovery image:
+          #   "smbios-name-match": "Craask"
+          # In test image:
+          #   "frid": "Google_Craask"
+          config['identity']['frid'] = 'Google_' + variant_name
+
       fields = ['name', 'identity', 'brand-code']
       configs = [
           {
