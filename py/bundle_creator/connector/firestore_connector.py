@@ -5,6 +5,7 @@
 from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import datetime
+import enum
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -15,6 +16,14 @@ from google.cloud import firestore
 
 from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 from cros.factory.bundle_creator.proto import factorybundle_v2_pb2  # pylint: disable=no-name-in-module
+
+
+class UserRequestStatus(enum.Enum):
+  """Enumerate the status of user request stored in Cloud Firestore."""
+  NOT_STARTED = enum.auto()
+  IN_PROGRESS = enum.auto()
+  SUCCEEDED = enum.auto()
+  FAILED = enum.auto()
 
 
 @dataclass
@@ -86,11 +95,6 @@ class FirestoreConnector:
   _COLLECTION_HAS_FIRMWARE_SETTINGS = 'has_firmware_settings'
   _COLLECTION_USER_REQUESTS = 'user_requests'
 
-  USER_REQUEST_STATUS_NOT_STARTED = 'NOT_STARTED'
-  USER_REQUEST_STATUS_IN_PROGRESS = 'IN_PROGRESS'
-  USER_REQUEST_STATUS_SUCCEEDED = 'SUCCEEDED'
-  USER_REQUEST_STATUS_FAILED = 'FAILED'
-
   def __init__(self, cloud_project_id: str):
     """Initializes the firestore client by a cloud project id.
 
@@ -135,7 +139,7 @@ class FirestoreConnector:
       A hashed document id generated from the created document.
     """
     doc_value = asdict(info)
-    doc_value['status'] = self.USER_REQUEST_STATUS_NOT_STARTED
+    doc_value['status'] = UserRequestStatus.NOT_STARTED.name
     doc_value['request_time'] = datetime.now()
     if not doc_value['firmware_source']:
       del doc_value['firmware_source']
@@ -148,14 +152,14 @@ class FirestoreConnector:
     doc_ref.set(doc_value)
     return doc_ref.id
 
-  def UpdateUserRequestStatus(self, doc_id: str, status: str):
+  def UpdateUserRequestStatus(self, doc_id: str, status: UserRequestStatus):
     """Updates `status` of the specific user request document.
 
     Args:
       doc_id: The document id of the document to be updated.
-      status: The value used to update.
+      status: The enum value used to update.
     """
-    self._TryUpdateUserRequestDocRef(doc_id, {'status': status})
+    self._TryUpdateUserRequestDocRef(doc_id, {'status': status.name})
 
   def UpdateUserRequestStartTime(self, doc_id: str):
     """Updates `start_time` of the specific user request document.
@@ -191,21 +195,22 @@ class FirestoreConnector:
     """
     self._TryUpdateUserRequestDocRef(doc_id, {'gs_path': gs_path})
 
-  def GetUserRequestsByEmail(self, email: str) -> List[Dict]:
+  def GetUserRequestsByEmail(self, email: str,
+                             project: Optional[str] = None) -> List[Dict]:
     """Returns user requests with the specific email.
 
     Args:
       email: The requestor's email.
+      project: An optional field used to filter with email together.
 
     Returns:
       A list of dictionaries which represent the specific user requests in
       descending order of `request_time`.
     """
-    return [
-        doc.to_dict()
-        for doc in self._user_request_col_ref.where('email', '==', email).
-        order_by('request_time', direction=firestore.Query.DESCENDING).stream()
-    ]
+    query = self._user_request_col_ref.where('email', '==', email)
+    query = query.where('project', '==', project) if project else query
+    query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
+    return [doc.to_dict() for doc in query.stream()]
 
   def UpdateHWIDCLURLAndErrorMessage(self, doc_id: str, cl_url: List[str],
                                      cl_error_msg: Optional[str]):

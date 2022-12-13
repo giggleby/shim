@@ -1,6 +1,7 @@
 Flask==1.1.4
 google-cloud-firestore==1.8.1
 google-cloud-pubsub==1.6.0
+google-cloud-storage==1.29.0
 gunicorn==20.0.4
 # Uses `MarkupSafe` with version 2.0.1 here to prevent `ImportError`, see
 # https://github.com/pallets/markupsafe/issues/284 for details.

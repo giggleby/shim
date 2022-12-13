@@ -148,7 +148,7 @@ class FirestoreConnectorTest(unittest.TestCase):
         'toolkit_version': self._info.toolkit_version,
         'test_image_version': self._info.test_image_version,
         'release_image_version': self._info.release_image_version,
-        'status': self._connector.USER_REQUEST_STATUS_NOT_STARTED,
+        'status': firestore_connector.UserRequestStatus.NOT_STARTED.name,
         'request_time': self._FIRESTORE_CURRENT_DATETIME,
         'update_hwid_db_firmware_info': False,
     }
@@ -183,14 +183,14 @@ class FirestoreConnectorTest(unittest.TestCase):
     self.assertEqual(doc['request_from'], request_from)
 
   def testUpdateUserRequestStatus_succeed_verifiesDocStatus(self):
-    status = self._connector.USER_REQUEST_STATUS_SUCCEEDED
+    status = firestore_connector.UserRequestStatus.SUCCEEDED
 
     self._connector.UpdateUserRequestStatus(self._EMPTY_USER_REQUEST_DOC_ID,
                                             status)
 
     doc = self._connector.GetUserRequestDocument(
         self._EMPTY_USER_REQUEST_DOC_ID)
-    self.assertEqual(doc['status'], status)
+    self.assertEqual(doc['status'], status.name)
 
   def testUpdateUserRequestStartTime_succeed_verifiesDocStartTime(self):
     self._connector.UpdateUserRequestStartTime(self._EMPTY_USER_REQUEST_DOC_ID)
@@ -230,15 +230,15 @@ class FirestoreConnectorTest(unittest.TestCase):
     email = 'foo@bar'
     self._user_requests_col.document('doc_1').set({
         'email': email,
-        'request_time': datetime.datetime(2022, 5, 20, 0, 0)
+        'request_time': datetime.datetime(2022, 5, 20, 0, 0),
     })
     self._user_requests_col.document('doc_2').set({
         'email': email,
-        'request_time': datetime.datetime(2022, 5, 21, 0, 0)
+        'request_time': datetime.datetime(2022, 5, 21, 0, 0),
     })
     self._user_requests_col.document('doc_3').set({
         'email': 'foo2@bar',
-        'request_time': datetime.datetime(2022, 5, 22, 0, 0)
+        'request_time': datetime.datetime(2022, 5, 22, 0, 0),
     })
 
     user_requests = self._connector.GetUserRequestsByEmail(email)
@@ -247,12 +247,49 @@ class FirestoreConnectorTest(unittest.TestCase):
         'email':
             email,
         'request_time':
-            DatetimeWithNanoseconds(2022, 5, 21, 0, 0, tzinfo=pytz.UTC)
+            DatetimeWithNanoseconds(2022, 5, 21, 0, 0, tzinfo=pytz.UTC),
     }, {
         'email':
             email,
         'request_time':
-            DatetimeWithNanoseconds(2022, 5, 20, 0, 0, tzinfo=pytz.UTC)
+            DatetimeWithNanoseconds(2022, 5, 20, 0, 0, tzinfo=pytz.UTC),
+    }])
+
+  def testGetUserRequestsByEmail_withProject_returnsExpectedDocuments(self):
+    email = 'foo@bar'
+    project = 'project'
+    self._user_requests_col.document('doc_1').set({
+        'email': email,
+        'project': project,
+        'request_time': datetime.datetime(2022, 12, 24, 0, 0),
+    })
+    self._user_requests_col.document('doc_2').set({
+        'email': email,
+        'project': 'other_project',
+        'request_time': datetime.datetime(2022, 12, 25, 0, 0),
+    })
+    self._user_requests_col.document('doc_3').set({
+        'email': email,
+        'project': project,
+        'request_time': datetime.datetime(2022, 12, 26, 0, 0),
+    })
+
+    user_requests = self._connector.GetUserRequestsByEmail(email, project)
+
+    self.assertEqual(user_requests, [{
+        'email':
+            email,
+        'project':
+            project,
+        'request_time':
+            DatetimeWithNanoseconds(2022, 12, 26, 0, 0, tzinfo=pytz.UTC),
+    }, {
+        'email':
+            email,
+        'project':
+            project,
+        'request_time':
+            DatetimeWithNanoseconds(2022, 12, 24, 0, 0, tzinfo=pytz.UTC),
     }])
 
   def testUpdateHWIDCLURLAndErrorMessage_onlyCLURL_verifiesDocument(self):

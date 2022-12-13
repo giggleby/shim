@@ -11,6 +11,19 @@ message BundleMetadata {
   string firmware_source = 7;
 }
 
+message BundleInfo {
+  BundleMetadata metadata = 1;
+  string creator = 2;
+  string status = 3;
+  string blob_path = 4;
+  string filename = 5;
+  double request_time_sec = 6;
+  double request_start_time_sec = 7;
+  double request_end_time_sec = 8;
+  double bundle_created_timestamp_sec = 9;
+  string error_message = 10;
+}
+
 message HwidOption {
   bool update_db_firmware_info = 1;
   int64 related_bug_number = 2;
@@ -35,8 +48,20 @@ message CreateBundleMessage {
   CreateBundleRequest request = 2;
 }
 
+message GetBundleInfoRequest {
+  string email = 1;
+  string project = 2;
+}
+
+message GetBundleInfoResponse {
+  repeated BundleInfo bundle_infos = 1;
+}
+
 service FactoryBundleServiceV2 {
   rpc CreateBundle(CreateBundleRequest)
       returns (CreateBundleResponse) {
+  }
+  rpc GetBundleInfo(GetBundleInfoRequest)
+      returns (GetBundleInfoResponse) {
   }
 }

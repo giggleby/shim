@@ -492,12 +492,13 @@ do_test_appengine_v2() {
   GCLOUD_PROJECT="fake-gcloud-project"
   ALLOWED_LOAS_PEER_USERNAMES=("foobar")
   PUBSUB_TOPIC="fake-topic"
+  BUNDLE_BUCKET="fake-bundle-bucket"
   prepare_appengine_files "${LOCAL_DEPLOYMENT_SOURCE_DIR}" "v2"
   prepare_python_venv "${TEST_APPENGINE_V2_NAME}" \
     "${SOURCE_DIR}/app_engine_v2/requirements.txt"
 
   # Remove the unit tests of unused connectors.
-  local unused_connector_names=("cloudtasks" "hwid_api" "storage")
+  local unused_connector_names=("cloudtasks" "hwid_api")
   for name in "${unused_connector_names[@]}"; do
     local filename="${name}_connector_unittest.py"
     rm -f "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}/connector/${filename}"

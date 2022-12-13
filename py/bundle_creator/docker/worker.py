@@ -157,15 +157,13 @@ class EasyBundleCreationWorker:
     if task:
       try:
         self._firestore_connector.UpdateUserRequestStatus(
-            task.doc_id,
-            self._firestore_connector.USER_REQUEST_STATUS_IN_PROGRESS)
+            task.doc_id, firestore_connector.UserRequestStatus.IN_PROGRESS)
         self._firestore_connector.UpdateUserRequestStartTime(task.doc_id)
 
         gs_path, cl_url, cl_error_msg = self._CreateBundle(task)
 
         self._firestore_connector.UpdateUserRequestStatus(
-            task.doc_id,
-            self._firestore_connector.USER_REQUEST_STATUS_SUCCEEDED)
+            task.doc_id, firestore_connector.UserRequestStatus.SUCCEEDED)
         self._firestore_connector.UpdateUserRequestEndTime(task.doc_id)
         self._firestore_connector.UpdateUserRequestGsPath(task.doc_id, gs_path)
         self._firestore_connector.UpdateHWIDCLURLAndErrorMessage(
@@ -186,7 +184,7 @@ class EasyBundleCreationWorker:
         self._logger.error(e)
 
         self._firestore_connector.UpdateUserRequestStatus(
-            task.doc_id, self._firestore_connector.USER_REQUEST_STATUS_FAILED)
+            task.doc_id, firestore_connector.UserRequestStatus.FAILED)
         self._firestore_connector.UpdateUserRequestEndTime(task.doc_id)
         self._firestore_connector.UpdateUserRequestErrorMessage(
             task.doc_id, str(e))

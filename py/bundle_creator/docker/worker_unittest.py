@@ -282,7 +282,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.gs_path = self._GS_PATH
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['status'],
-                     self._firestore_connector.USER_REQUEST_STATUS_SUCCEEDED)
+                     firestore_connector.UserRequestStatus.SUCCEEDED.name)
     self.assertEqual(doc['start_time'], self._FIRESTORE_CURRENT_DATETIME)
     self.assertEqual(doc['end_time'], self._FIRESTORE_CURRENT_DATETIME)
     self.assertEqual(doc['gs_path'], self._GS_PATH)
@@ -304,7 +304,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.error_message = error_message
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['status'],
-                     self._firestore_connector.USER_REQUEST_STATUS_FAILED)
+                     firestore_connector.UserRequestStatus.FAILED.name)
     self.assertEqual(doc['end_time'], self._FIRESTORE_CURRENT_DATETIME)
     self.assertEqual(doc['error_message'], error_message)
     mock_method.assert_called_once_with(

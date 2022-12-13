@@ -3,11 +3,16 @@
 # found in the LICENSE file.
 
 from dataclasses import dataclass
-import datetime
+from datetime import datetime
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from google.cloud import storage
+
+
+# isort: split
+
+from cros.factory.bundle_creator.proto import factorybundle_v2_pb2  # pylint: disable=no-name-in-module
 
 
 @dataclass
@@ -35,6 +40,38 @@ class StorageBundleMetadata:
   test_image_version: str
   release_image_version: str
   firmware_source: Optional[str] = None
+
+  def ToV2BundleMetadata(self) -> factorybundle_v2_pb2.BundleMetadata:
+    metadata = factorybundle_v2_pb2.BundleMetadata()
+    metadata.board = self.board
+    metadata.project = self.project
+    metadata.phase = self.phase
+    metadata.toolkit_version = self.toolkit_version
+    metadata.test_image_version = self.test_image_version
+    metadata.release_image_version = self.release_image_version
+    if self.firmware_source:
+      metadata.firmware_source = self.firmware_source
+    return metadata
+
+
+@dataclass
+class StorageBundleInfo:
+  """A placeholder represents the information of a factory bundle.
+
+  Properties:
+    blob_path: The gs path to the factory bundle without `gs://` prefix.
+    metadata: A `StorageBundleMetadata` object.
+    created_timestamp_sec: A number represents the bundle created time in
+        seconds.
+  """
+  blob_path: str
+  metadata: StorageBundleMetadata
+  created_timestamp_sec: float
+
+  @property
+  def filename(self):
+    unused_board, unused_project, filename = self.blob_path.split('/')
+    return filename
 
 
 class StorageConnector:
@@ -64,7 +101,7 @@ class StorageConnector:
     Returns:
       A string of the google storage path.
     """
-    current_datetime = datetime.datetime.now()
+    current_datetime = datetime.now()
     blob_filename = (f'factory_bundle_{bundle_metadata.project}_'
                      f'{current_datetime:%Y%m%d_%H%M}_{bundle_metadata.phase}_'
                      f'{current_datetime:%S%f}'[:-3] + '.tar.bz2')
@@ -101,3 +138,39 @@ class StorageConnector:
     gs_path = f'gs://{self._bucket_name}/{blob_path}'
     self._logger.info('The created bundle was uploaded to `%s`.', gs_path)
     return gs_path
+
+  def GetBundleInfosByProject(self, project: str) -> List[StorageBundleInfo]:
+    """Returns created bundles by the specific project name.
+
+    Args:
+      project: The project name used to filter.
+
+    Returns:
+      A list of `StorageBundleInfo` object.
+    """
+    infos = []
+    for blob in self._bucket.list_blobs():
+      blob_board, blob_project, unused_blob_filename = blob.name.split('/')
+      if blob_project != project:
+        continue
+      metadata = StorageBundleMetadata(
+          doc_id=blob.metadata.get('User-Request-Doc-Id', ''),
+          email=blob.metadata.get('Bundle-Creator', ''),
+          board=blob_board, project=blob_project, phase=blob.metadata.get(
+              'Phase', ''), toolkit_version=blob.metadata.get(
+                  'Tookit-Version', ''), test_image_version=blob.metadata.get(
+                      'Test-Image-Version',
+                      ''), release_image_version=blob.metadata.get(
+                          'Release-Image-Version',
+                          ''), firmware_source=blob.metadata.get(
+                              'Firmware-Source', None))
+      # Due to b/153287792, the blob created time `blob.time_created` isn't
+      # reliable because some blobs were migrated from an old bucket.  Use
+      # `Time-Created` metadata which is set in `UploadCreatedBundle` method
+      # instead if it exists.
+      info = StorageBundleInfo(
+          blob_path=blob.name, metadata=metadata,
+          created_timestamp_sec=blob.metadata.get(
+              'Time-Created', datetime.timestamp(blob.time_created)))
+      infos.append(info)
+    return infos
