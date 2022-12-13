@@ -141,6 +141,10 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
                 }
             }
         }))
+    file_utils.WriteFile(
+        os.path.join(dirpath, 'signer_config.csv'),
+        'model_name,firmware_image,key_id,ec_image,brand_code\n'
+        'randomSignId1,image_path,DEFAULT,ec_image_path,ZZCR')
 
   @staticmethod
   def MockMismatchPack(unused_updater_path, dirpath, operation='pack'):
@@ -149,6 +153,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     file_utils.TryMakeDirs(os.path.join(dirpath, 'images'))
     file_utils.WriteFile(
         os.path.join(dirpath, 'manifest.json'), json_utils.DumpStr({}))
+    file_utils.WriteFile(os.path.join(dirpath, 'signer_config.csv'), '')
 
   def setUp(self):
     self.temp_dir = tempfile.mkdtemp(prefix='add_firmware_unittest_')
@@ -206,6 +211,9 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     bundle_builder.firmware_manifest_keys = {
         'randomFWKey': ['test'],
         'randomFWKey1': ['test']
+    }
+    bundle_builder.firmware_sign_ids = {
+        'test': {'randomSignId1'}
     }
 
   def testAddFirmware_protoCrosConfigMismatch_doNotDownloadUpdater(self):
@@ -272,7 +280,7 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
   def testAddFirmware_verifyFirmwareRecord(self):
     fw_keys = {
         'key_recovery': 'hash123',
-        'key_root': 'hash456',
+        'key_root': 'hash456'
     }
     ro_main_firmware = [{
         'hash': 'hash123',
@@ -303,7 +311,10 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
         bundle_builder.firmware_record, {
             'firmware_records': [{
                 'model': 'test',
-                'firmware_keys': fw_keys,
+                'firmware_keys': [{
+                    'key_id': 'DEFAULT',
+                    **fw_keys
+                }],
                 'ro_main_firmware': ro_main_firmware
             }]
         })
@@ -460,11 +471,17 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
                 'name': 'test',
                 'firmware': {
                     'image-name': 'randomFWKey'
+                },
+                'firmware-signing': {
+                    'signature-id': 'randomSignId'
                 }
             }, {
                 'name': 'test',
                 'firmware': {
                     'image-name': 'randomFWKey_ufs'
+                },
+                'firmware-signing': {
+                    'signature-id': 'randomSignId'
                 }
             }]
         }
@@ -485,11 +502,17 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
                 'name': 'test',
                 'firmware': {
                     'image-name': 'randomFWKey'
+                },
+                'firmware-signing': {
+                    'signature-id': 'randomSignId'
                 }
             }, {
                 'name': 'test15W360',
                 'firmware': {
                     'image-name': 'randomFWKey'
+                },
+                'firmware-signing': {
+                    'signature-id': 'randomSignId'
                 }
             }]
         }
@@ -503,14 +526,21 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
                          {'randomFWKey': ['test', 'test15W360']})
 
   def testObtainFirmwareManifestKeys_Legacy(self):
-    self.config_yaml = json_utils.DumpStr(
-        {'chromeos': {
+    self.config_yaml = json_utils.DumpStr({
+        'chromeos': {
             'configs': [{
-                'name': 'test'
+                'name': 'test',
+                'firmware-signing': {
+                    'signature-id': 'randomSignId'
+                }
             }, {
-                'name': 'test'
+                'name': 'test',
+                'firmware-signing': {
+                    'signature-id': 'randomSignId'
+                }
             }]
-        }})
+        }
+    })
 
     bundle_builder = self._CreateBuilder()
     bundle_builder.ObtainFirmwareManifestKeys()

@@ -9,6 +9,7 @@ import argparse
 import collections
 import concurrent.futures
 import contextlib
+import csv
 from distutils import version as version_module
 import errno
 import glob
@@ -216,6 +217,7 @@ class FinalizeBundle:
     timestamp: The date of the creation.
     bundle_phase: The phase of the bundle.
     firmware_manifest_keys: Map from firmware manifest key to a list of models.
+    firmware_sign_ids: Map from model to a list of firmware signature ids.
   """
   bundle_dir = None
   bundle_name = None
@@ -256,6 +258,7 @@ class FinalizeBundle:
     self.bundle_record = bundle_record
     self.firmware_bios_names: List[str] = []
     self.firmware_manifest_keys: Dict[str, List[str]] = {}
+    self.firmware_sign_ids = collections.defaultdict(set)
     self.timestamp = ''
     self.bundle_phase = 'mp'
 
@@ -797,7 +800,6 @@ class FinalizeBundle:
       # The format follows HWID API message in
       # `py/hwid/service/appengine/proto/hwid_api_messages.proto`
       # 1) signer:
-      # TODO(b/260660098): identify firmware_keys by key-id instead of keyset.
       signer_path = os.path.join(temp_dir, 'VERSION.signer')
       if os.path.exists(signer_path):
         signer_output = file_utils.ReadFile(signer_path)
@@ -832,6 +834,25 @@ class FinalizeBundle:
       for model in models:
         record = collections.defaultdict(list, {'model': model})
 
+        # 2) root/recovery keys:
+        signer_config_path = os.path.join(temp_dir, 'signer_config.csv')
+        with open(signer_config_path, 'r', encoding='utf8') as csvfile:
+          reader = csv.DictReader(csvfile)
+          firmware_keys = {}
+          for row in reader:
+            # model_name in signer_config.csv is actually signature-id in
+            # cros_config
+            if (row['model_name'] not in self.firmware_sign_ids[model] or
+                row['key_id'] in firmware_keys):
+              continue
+            firmware_keys[row['key_id']] = chromeos_firmware.GetFirmwareKeys(
+                os.path.join(temp_dir, row['firmware_image']))
+        record['firmware_keys'] = [{
+            'key_id': key_id,
+            **fw_key
+        } for key_id, fw_key in firmware_keys.items()]
+
+        # 3) RO version/checksum:
         # Collect RO firmware for each model. One model may have multiple
         # manifest key.
         for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
@@ -844,11 +865,6 @@ class FinalizeBundle:
             image_list.add(
                 os.path.join(temp_dir, sub_manifest[firmware_key]['image']))
           for image_path in image_list:
-            # 2) root/recovery keys:
-            if firmware_type == 'main' and 'firmware_keys' not in record:
-              record['firmware_keys'] = (
-                  chromeos_firmware.GetFirmwareKeys(image_path))
-            # 3) RO version/checksum:
             record[f'ro_{firmware_type}_firmware'].append(
                 chromeos_firmware.CalculateFirmwareHashes(image_path))
 
@@ -1210,7 +1226,7 @@ class FinalizeBundle:
     """Obtains the firmware_manifest_keys from cros_config."""
     models = self.designs if self.is_boxster_project else [self.project]
     logging.info('models: %r.', models)
-    firmware_manifest_keys: Dict[str, Set[str]] = {}
+    firmware_manifest_keys = collections.defaultdict(set)
     with MountPartition(self.release_image_path, 3) as f:
       cros_config_path = os.path.join(f, CROS_CONFIG_YAML_PATH)
       cros_config = yaml.safe_load(file_utils.ReadFile(cros_config_path))
@@ -1219,7 +1235,9 @@ class FinalizeBundle:
       if model not in models:
         continue
       manifest_key = config.get('firmware', {}).get('image-name') or model
-      firmware_manifest_keys.setdefault(manifest_key, set()).add(model)
+      firmware_manifest_keys[manifest_key].add(model)
+      self.firmware_sign_ids[model].add(
+          config['firmware-signing']['signature-id'])
     self.firmware_manifest_keys = {
         key: sorted(value)
         for key, value in firmware_manifest_keys.items()
