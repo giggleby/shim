@@ -18,6 +18,7 @@ from cros.factory.test.env import paths
 from cros.factory.test import server_proxy
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.utils.sync_utils import RetryDecorator
 from cros.factory.utils.type_utils import Error
 
 
@@ -60,14 +61,21 @@ class Time:
 
   def _CheckHwclock(self):
     """Check hwclock is working by a write(retry once if fail) and a read."""
-    with self.lock:
-      for unused_i in range(2):
-        if process_utils.Spawn(['hwclock', '-w', '--utc', '--noadjfile'],
-                               log=True,
-                               log_stderr_on_error=True).returncode == 0:
-          break
-        logging.error('Unable to set hwclock time')
 
+    @RetryDecorator(max_attempt_count=2, timeout_sec=float('inf'),
+                    target_condition=lambda x: x)
+    def _Spawn():
+      result = process_utils.Spawn(['hwclock', '-w', '--utc', '--noadjfile'],
+                                   log=True,
+                                   log_stderr_on_error=True).returncode
+
+      if result != 0:
+        logging.error('Unable to set hwclock time')
+        return False
+      return True
+
+    with self.lock:
+      _Spawn()
       logging.info('Current hwclock time: %s',
                    process_utils.Spawn(['hwclock', '-r'], log=True,
                                        read_stdout=True).stdout_data)

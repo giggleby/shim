@@ -43,6 +43,7 @@ import yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
+from cros.factory.utils import sync_utils
 
 
 _CERT_DIR = os.path.expanduser('~/.config/ovl')
@@ -126,24 +127,6 @@ def KillGraceful(pid, wait_secs=1):
     os.kill(pid, signal.SIGKILL)
   except OSError:
     pass
-
-
-def AutoRetry(action_name, retries):
-  """Decorator for retry function call."""
-  def Wrap(func):
-    @functools.wraps(func)
-    def Loop(*args, **kwargs):
-      for unused_i in range(retries):
-        try:
-          func(*args, **kwargs)
-        except Exception as e:
-          print(f'error: {args[0]}: {e}: retrying ...')
-        else:
-          break
-      else:
-        print(f'error: failed to {action_name} {args[0]}')
-    return Loop
-  return Wrap
 
 
 def BasicAuthHeader(user, password):
@@ -1170,7 +1153,8 @@ class OverlordCLIClient:
   def Push(self, args):
     self.CheckClient()
 
-    @AutoRetry('push', _RETRY_TIMES)
+    @sync_utils.RetryDecorator(max_attempt_count=_RETRY_TIMES,
+                               timeout_sec=float('inf'))
     def _push(src, dst):
       src_base = os.path.basename(src)
 
@@ -1246,7 +1230,8 @@ class OverlordCLIClient:
   def Pull(self, args):
     self.CheckClient()
 
-    @AutoRetry('pull', _RETRY_TIMES)
+    @sync_utils.RetryDecorator(max_attempt_count=_RETRY_TIMES,
+                               timeout_sec=float('inf'))
     def _pull(src, dst, ftype, perm=0o644, link=None):
       try:
         os.makedirs(os.path.dirname(dst))
