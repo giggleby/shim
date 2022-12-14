@@ -29,5 +29,4 @@ def GetRPCProxy(address=None, port=None, url=GOOFY_RPC_URL):
   """
   address = address or DEFAULT_GOOFY_ADDRESS
   port = port or DEFAULT_GOOFY_PORT
-  return jsonrpc.ServerProxy(
-      'http://%s:%d%s' % (address, port, url))
+  return jsonrpc.ServerProxy(f'http://{address}:{int(port)}{url}')
