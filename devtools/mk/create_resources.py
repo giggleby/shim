@@ -20,6 +20,7 @@ import os
 import sys
 import tarfile
 
+
 # RSRC file pattern.
 RSRC_FILES = '*.rsrc'
 
@@ -60,7 +61,7 @@ def AddResource(output, rule, args):
     if is_optional:
       logging.info('skip non-exist optional resource: %s', src)
       return
-    raise ResourceError('Failed to find input resource: %s' % src)
+    raise ResourceError(f'Failed to find input resource: {src}')
 
 
 def CreateResource(resource, input_list, args):
@@ -127,7 +128,7 @@ def main():
   try:
     CreateAllResources(args)
   except Exception as e:
-    print('ERROR: %s' % e)
+    print(f'ERROR: {e}')
     sys.exit(1)
 
 

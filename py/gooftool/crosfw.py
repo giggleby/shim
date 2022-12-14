@@ -73,7 +73,7 @@ class Flashrom:
 
     result = common.Shell(command)
     if not (ignore_status or result.success):
-      raise CrosFWError('Failed in command: %s\n%s' % (command, result.stderr))
+      raise CrosFWError(f'Failed in command: {command}\n{result.stderr}')
     return result
 
   def GetTarget(self):
@@ -82,7 +82,7 @@ class Flashrom:
 
   def SetTarget(self, target):
     """Sets current target (bus) to access."""
-    assert target in self._VALID_TARGETS, 'Unknown target: %s' % target
+    assert target in self._VALID_TARGETS, f'Unknown target: {target}'
     self._target = target
 
   def GetSize(self):
@@ -105,11 +105,11 @@ class Flashrom:
       Image data read from flash chipset.
     """
     if filename is None:
-      with tempfile.NamedTemporaryFile(prefix='fw_%s_' % self._target) as f:
+      with tempfile.NamedTemporaryFile(prefix=f'fw_{self._target}_') as f:
         return self.Read(f.name)
-    sections_param = ['-i %s' % name for name in sections or []]
-    self._InvokeCommand("-r '%s' %s %s" % (filename, ' '.join(sections_param),
-                                           self._READ_FLAGS))
+    sections_param = [f'-i {name}' for name in sections or []]
+    self._InvokeCommand(
+        f"-r '{filename}' {' '.join(sections_param)} {self._READ_FLAGS}")
     with open(filename, 'rb') as file_handle:
       return file_handle.read()
 
@@ -124,14 +124,14 @@ class Flashrom:
     assert ((data is None) ^ (filename is None)), (
         'Either data or filename should be None.')
     if data is not None:
-      with tempfile.NamedTemporaryFile(prefix='fw_%s_' % self._target) as f:
+      with tempfile.NamedTemporaryFile(prefix=f'fw_{self._target}_') as f:
         f.write(data)
         f.flush()
         self.Write(None, f.name)
         return
-    sections_param = [('-i %s' % name) for name in sections or []]
-    self._InvokeCommand("-w '%s' %s %s" % (filename, ' '.join(sections_param),
-                                           self._WRITE_FLAGS))
+    sections_param = [f'-i {name}' for name in sections or []]
+    self._InvokeCommand(
+        f"-w '{filename}' {' '.join(sections_param)} {self._WRITE_FLAGS}")
 
   def GetWriteProtectionStatus(self):
     """Gets write protection status from selected flash chipset.
@@ -163,7 +163,7 @@ class Flashrom:
       raise CrosFWError('Failed getting write protection status')
     status = status[0]
     if status not in ('hardware', 'enabled', 'disabled'):
-      raise ValueError('Unknown write protection status: %s' % status)
+      raise ValueError(f'Unknown write protection status: {status}')
 
     wp_range = re.findall(r'WP: write protect range: start=(\w+), len=(\w+)',
                           results)
@@ -178,7 +178,7 @@ class Flashrom:
 
   def EnableWriteProtection(self, offset, size, skip_check=False):
     """Enables write protection by specified range."""
-    self._InvokeCommand('--wp-range 0x%06X,0x%06X --wp-enable' % (offset, size))
+    self._InvokeCommand(f'--wp-range 0x{offset:06X},0x{size:06X} --wp-enable')
     result = self.GetWriteProtectionStatus()
     if ((not result.enabled) or (result.offset != offset) or
         (result.size != size)):
@@ -255,7 +255,7 @@ class FirmwareContent:
                                       sections.issubset(sections_in_file)):
         return fileref.name
 
-    fileref = tempfile.NamedTemporaryFile(prefix='fw_%s_' % self.target)  # pylint: disable=consider-using-with
+    fileref = tempfile.NamedTemporaryFile(prefix=f'fw_{self.target}_')  # pylint: disable=consider-using-with
     self.flashrom.Read(filename=fileref.name, sections=sections)
     self.cached_files.append((fileref, sections))
     return fileref.name
@@ -266,7 +266,7 @@ class FirmwareContent:
       if fileref.name == filename:
         self.flashrom.Write(filename=filename, sections=sections_in_file)
         return
-    raise ValueError('%r is not found in the cached files' % (filename,))
+    raise ValueError(f'{filename!r} is not found in the cached files')
 
   def GetFirmwareImage(self, sections=None):
     """Returns a fmap.FirmwareImage instance.
@@ -309,7 +309,7 @@ class Ifdtool:
 
     result = common.Shell(command)
     if not (ignore_status or result.success):
-      raise CrosFWError('Failed in command: %s\n%s' % (command, result.stderr))
+      raise CrosFWError('Failed in command: {command}\n{result.stderr}}')
     return result
 
   def Dump(self, desc_path):

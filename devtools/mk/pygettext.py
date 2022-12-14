@@ -33,6 +33,7 @@ import subprocess
 import sys
 import tempfile
 
+
 # Example header.
 POT_HEADER = r"""# SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR ORGANIZATION
@@ -60,7 +61,7 @@ def Escape(s):
   def EscapeChar(c):
     if 32 <= ord(c) <= 126:
       return ESCAPE_CHAR_MAP.get(c, c)
-    return '\\%03o' % ord(c)
+    return f'\\{ord(c):03o}'
   return ''.join(EscapeChar(c) for c in s)
 
 
@@ -78,7 +79,7 @@ def Normalize(s):
   lines = s.splitlines(True)
   if len(lines) != 1:
     lines.insert(0, '')
-  return '\n'.join('"%s"' % Escape(l) for l in lines)
+  return '\n'.join(f'"{Escape(l)}"' for l in lines)
 
 
 def WritePot(fp, messages, width):
@@ -143,7 +144,7 @@ class PyAstVisitor(ast.NodeVisitor):
       node = ast.parse(source, filename)
     except SyntaxError as e:
       raise RuntimeError(
-          'line %d, column %d: %s' % (e.lineno, e.offset, e.text)) from None
+          f'line {int(e.lineno)}, column {int(e.offset)}: {e.text}') from None
     visitor.visit(node)
     return visitor.messages
 
@@ -164,9 +165,9 @@ class HTMLMessageParser(html.parser.HTMLParser):
     self.in_keyword_tag = False
 
   def _MakeStartTag(self, tag, attrs, self_closing=False):
-    attrs_str = ''.join(' %s="%s"' % (key, html.escape(value))
-                        for key, value in attrs)
-    return '<%s%s%s>' % (tag, attrs_str, '/' if self_closing else '')
+    attrs_str = ''.join(
+        f' {key}="{html.escape(value)}"' for key, value in attrs)
+    return f"<{tag}{attrs_str}{'/' if self_closing else ''}>"
 
   def handle_starttag(self, tag, attrs):
     if self.in_keyword_tag:
@@ -186,8 +187,9 @@ class HTMLMessageParser(html.parser.HTMLParser):
       open_tag, is_keyword = self.tags.pop()
       if open_tag != tag:
         row, col = self.getpos()
-        raise ValueError('%s,%s: Unexpected close tag, expected %s, got %s.' % (
-            row, col, open_tag, tag))
+        raise ValueError(
+            f'{row},{col}: Unexpected close tag, expected {open_tag}, got '
+            f'{tag}.')
 
       if is_keyword:
         msg = ''.join(self.data).strip()
@@ -197,7 +199,7 @@ class HTMLMessageParser(html.parser.HTMLParser):
         self.in_keyword_tag = False
 
     if self.in_keyword_tag:
-      self.data.append('</%s>' % tag)
+      self.data.append(f'</{tag}>')
 
   def handle_startendtag(self, tag, attrs):
     if self.in_keyword_tag:
@@ -209,16 +211,16 @@ class HTMLMessageParser(html.parser.HTMLParser):
 
   def handle_entityref(self, name):
     if self.in_keyword_tag:
-      self.data.append('&%s;' % name)
+      self.data.append(f'&{name};')
 
   def handle_charref(self, name):
     if self.in_keyword_tag:
-      self.data.append('&#%s;' % name)
+      self.data.append(f'&#{name};')
 
   def close(self):
     super().close()
     if self.tags:
-      raise ValueError('Found unclosed tags: %r' % ([t[0] for t in self.tags]))
+      raise ValueError(f'Found unclosed tags: {[t[0] for t in self.tags]!r}')
 
   @classmethod
   def ParseFile(cls, filename, options):
@@ -267,7 +269,7 @@ def ParseJSFiles(files, options):
 
   try:
     if options.verbose:
-      print('Running xgettext on JS files %r' % files)
+      print(f'Running xgettext on JS files {files!r}')
     subprocess.check_call(cmd)
     return GetPotMessages(temp_filename)
   finally:
@@ -313,13 +315,13 @@ def ParseMultipleFilesWrapper(func):
     messages = []
     for filename in files:
       if options.verbose:
-        print('Working on %s' % filename)
+        print(f'Working on {filename}')
       try:
         new_messages = func(filename, options)
         messages.extend(((filename, i), msg)
                         for i, msg in enumerate(new_messages))
       except Exception as e:
-        sys.exit('ERROR %s: %s' % (filename, e))
+        sys.exit(f'ERROR {filename}: {e}')
     return messages
   return Inner
 
@@ -372,7 +374,7 @@ def main():
     if ext in PARSERS:
       input_files_by_type[ext].append(filename)
     else:
-      sys.exit('Unknown file type %s for file %s' % (ext, filename))
+      sys.exit(f'Unknown file type {ext} for file {filename}')
 
   messages = []
   for filetype, files in input_files_by_type.items():

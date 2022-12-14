@@ -82,7 +82,8 @@ class TestOutputArchive(unittest.TestCase):
         sandbox._state = plugin_sandbox.STOPPING
         sandbox.AdvanceState(True)
         # Once the plugin has really stopped, report our error.
-        self.fail('Memory usage exceeded: %d/%d' % (mem_usage, mem_usage_max))
+        self.fail(
+            f'Memory usage exceeded: {int(mem_usage)}/{int(mem_usage_max)}')
       time.sleep(0.1)
     # pylint: disable=protected-access
     sandbox._state = plugin_sandbox.STOPPING

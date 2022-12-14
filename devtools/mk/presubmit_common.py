@@ -28,7 +28,7 @@ def ComputeDiffRange(commit, files):
       '--src-prefix=a/', '--dst-prefix=b/'
   ]
   if commit:
-    diff_cmd.append('{commit}^..{commit}'.format(commit=commit))
+    diff_cmd.append(f'{commit}^..{commit}')
   # If @files is an empty list, the diff command will show "all" changed files.
   diff_cmd += ['--', *files]
   diff_output = subprocess.check_output(diff_cmd, encoding='utf-8')

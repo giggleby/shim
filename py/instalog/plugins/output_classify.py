@@ -74,7 +74,7 @@ class OutputClassify(output_file.OutputFile):
     for classifier_name in self.args.classifiers:
       if (classifier_name.startswith('__') and
           classifier_name not in CLASSIFIERS_MAPPING):
-        raise ValueError('The classifier "%r" is not found' % classifier_name)
+        raise ValueError(f'The classifier "{classifier_name!r}" is not found')
 
   def ProcessEvents(self, base_dir):
     """Classifies events which are saved on base_dir."""

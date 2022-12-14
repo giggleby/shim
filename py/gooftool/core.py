@@ -163,7 +163,7 @@ class Gooftool:
       self._db_creator = lambda: Database.LoadFile(
           os.path.join(self._hwdb_path, self._project.upper()))
     else:
-      raise ValueError('Invalid HWID version: %r' % hwid_version)
+      raise ValueError(f'Invalid HWID version: {hwid_version!r}')
 
     self._util = Util()
     self._crosfw = crosfw
@@ -259,18 +259,19 @@ class Gooftool:
             'Skip checking.', dlc_cache_path)
         return
       raise Error(
-          'No factory installed DLC images found! Expected number of'
-          ' DLCs: %d! %s' % (expected_num_dlcs, _DLC_ERROR_TEMPLATE)) from None
+          f'No factory installed DLC images found! Expected number of DLCs: {int(expected_num_dlcs)}! {_DLC_ERROR_TEMPLATE}'
+      ) from None
 
     with file_utils.TempDirectory() as tmpdir:
       # The DLC images are stored as compressed format.
-      decompress_command = 'tar -xpvf %s -C %s' % (dlc_cache_path, tmpdir)
+      decompress_command = f'tar -xpvf {dlc_cache_path} -C {tmpdir}'
       logging.info(decompress_command)
       decompress_out = self._util.shell(decompress_command)
 
       if not decompress_out.success:
-        raise Error('DLC images decompressing failed: %s. %s' %
-                    (decompress_out.stderr, _DLC_ERROR_TEMPLATE))
+        raise Error(
+            f'DLC images decompressing failed: {decompress_out.stderr}. {_DLC_ERROR_TEMPLATE}'
+        )
 
       dlc_image_path = os.path.join(tmpdir, 'unencrypted', 'dlc-factory-images')
 
@@ -280,8 +281,8 @@ class Gooftool:
 
       if cur_num_dlcs != expected_num_dlcs:
         raise Error(
-            'Current number of factory installed DLCs: %d, expected: '
-            '%d. %s' % (cur_num_dlcs, expected_num_dlcs, _DLC_ERROR_TEMPLATE))
+            f'Current number of factory installed DLCs: {int(cur_num_dlcs)}, expected: {int(expected_num_dlcs)}. {_DLC_ERROR_TEMPLATE}'
+        )
 
       if cur_num_dlcs == 0:
         logging.info('No DLC images under %s. Skip checking.', dlc_image_path)
@@ -294,8 +295,7 @@ class Gooftool:
         for sub_dir_name in sub_dir_names:
           image_path = os.path.join(dlc_image_path, sub_dir_name, 'package',
                                     'dlc.img')
-          verify_command = '%s --id=%s --image=%s --rootfs_mount=%s' % \
-                           (_DLCVERIFY, sub_dir_name, image_path, root)
+          verify_command = f'{_DLCVERIFY} --id={sub_dir_name} --image={image_path} --rootfs_mount={root}'
           logging.info(verify_command)
           check_hash_out = self._util.shell(verify_command)
 
@@ -303,7 +303,7 @@ class Gooftool:
             error_messages[image_path] = check_hash_out.stderr
 
       if error_messages:
-        raise Error('%r. %s' % (error_messages, _DLC_ERROR_TEMPLATE))
+        raise Error(f'{error_messages!r}. {_DLC_ERROR_TEMPLATE}')
 
   def VerifyECKey(self, pubkey_path=None, pubkey_hash=None):
     """Verify EC public key.
@@ -316,20 +316,23 @@ class Gooftool:
           the EC with the given pubkey_hash.
     """
     with self._named_temporary_file() as tmp_ec_bin:
-      flash_out = self._util.shell('flashrom -p ec -r %s' % tmp_ec_bin.name)
+      flash_out = self._util.shell(f'flashrom -p ec -r {tmp_ec_bin.name}')
       if not flash_out.success:
-        raise Error('Failed to read EC image: %s' % flash_out.stderr)
+        raise Error(f'Failed to read EC image: {flash_out.stderr}')
       if pubkey_path:
-        result = self._util.shell('futility show --type rwsig --pubkey %s %s' %
-                                  (pubkey_path, tmp_ec_bin.name))
+        result = self._util.shell(
+            f'futility show --type rwsig --pubkey {pubkey_path} {tmp_ec_bin.name}'
+        )
         if not result.success:
-          raise Error('Failed to verify EC key with pubkey %s: %s' %
-                      (pubkey_path, result.stderr))
+          raise Error(
+              f'Failed to verify EC key with pubkey {pubkey_path}: {result.stderr}'
+          )
       elif pubkey_hash:
         live_ec_hash = self._util.GetKeyHashFromFutil(tmp_ec_bin.name)
         if live_ec_hash != pubkey_hash:
-          raise Error('Failed to verify EC key: expects (%s) got (%s)' %
-                      (pubkey_hash, live_ec_hash))
+          raise Error(
+              f'Failed to verify EC key: expects ({pubkey_hash}) got ({live_ec_hash})'
+          )
       else:
         raise ValueError('All arguments are None.')
 
@@ -350,7 +353,7 @@ class Gooftool:
     with sys_utils.MountPartition(
         self._util.GetReleaseRootPartitionPath()) as root:
       fp_fw_pattern = os.path.join(root,
-                                   'opt/google/biod/fw/%s_v*.bin' % fp_board)
+                                   f'opt/google/biod/fw/{fp_board}_v*.bin')
       fp_fw_files = glob.glob(fp_fw_pattern)
       if len(fp_fw_files) != 1:
         raise Error('No uniquely matched fingerprint firmware blob')
@@ -363,8 +366,9 @@ class Gooftool:
     live_key_id = key_id_result.stdout.strip()
 
     if live_key_id != release_key_id:
-      raise Error('Failed to verify fingerprint key: expects (%s) got (%s)' %
-                  (release_key_id, live_key_id))
+      raise Error(
+          f'Failed to verify fingerprint key: expects ({release_key_id}) got ({live_key_id})'
+      )
 
   def VerifyKeys(self, release_rootfs=None, firmware_path=None, _tmpexec=None):
     """Verify keys in firmware and SSD match.
@@ -403,19 +407,19 @@ class Gooftool:
         if gpt.GetPartition(minios_a_no).blocks != gpt.GetPartition(
             minios_b_no).blocks:
           raise Error(
-              'The size of partition MINIOS_A and MINIOS_B are different. %s' %
-              _PART_TABLE_ERROR_TEMPLATE)
+              f'The size of partition MINIOS_A and MINIOS_B are different. {_PART_TABLE_ERROR_TEMPLATE}'
+          )
 
         _TmpExec(
             'check if the content of partition MINIOS_A and MINIOS_B are the '
-            'same', 'cmp %s %s' % (minios_a_part, minios_b_part),
-            'The content of partition MINIOS_A and MINIOS_B are different. %s' %
-            _PART_TABLE_ERROR_TEMPLATE)
+            'same', f'cmp {minios_a_part} {minios_b_part}',
+            f'The content of partition MINIOS_A and MINIOS_B are different. {_PART_TABLE_ERROR_TEMPLATE}'
+        )
 
         try:
           _TmpExec(
               'check if minios is ready',
-              'futility dump_kernel_config %s' % minios_a_part,
+              f'futility dump_kernel_config {minios_a_part}',
               'MINIOS partitions are not ready. Skip checking their keys.')
         except Error as err:
           logging.info(err)
@@ -438,17 +442,16 @@ class Gooftool:
           # Check if minios is officially signed.
           for minios_part in minios_a_part, minios_b_part:
             _TmpExec(
-                'check recovery key signed minios image (%s)' % minios_part,
-                'futility vbutil_kernel --verify %s --signpubkey %s' %
-                (minios_part, key_recovery))
+                f'check recovery key signed minios image ({minios_part})',
+                f'futility vbutil_kernel --verify {minios_part} --signpubkey {key_recovery}'
+            )
         except Error:
           # Check if minios is dev-signed.
           for minios_part in minios_a_part, minios_b_part:
             _TmpExec(
-                'check dev-signed minios image (%s)' % minios_part,
-                '! futility vbutil_kernel --verify %s --signpubkey %s/%s' %
-                (minios_part, dir_devkeys, key_recovery),
-                'YOU ARE USING A DEV-SIGNED MINIOS IMAGE. (%s)' % minios_part)
+                f'check dev-signed minios image ({minios_part})',
+                f'! futility vbutil_kernel --verify {minios_part} --signpubkey {dir_devkeys}/{key_recovery}',
+                f'YOU ARE USING A DEV-SIGNED MINIOS IMAGE. ({minios_part})')
           raise
 
     if release_rootfs is None:
@@ -472,10 +475,9 @@ class Gooftool:
         If regex is specified, return matched string from stdout.
         """
         logging.debug(message)
-        result = self._util.shell('( cd %s; %s )' % (tmpdir, command))
+        result = self._util.shell(f'( cd {tmpdir}; {command} )')
         if not result.success:
-          raise Error(fail_message or
-                      ('Failed to %s: %s' % (message, result.stderr)))
+          raise Error(fail_message or f'Failed to {message}: {result.stderr}')
         if regex:
           matched = re.findall(regex, result.stdout)
           if matched:
@@ -503,14 +505,15 @@ class Gooftool:
         file_utils.WriteFile(os.path.join(tmpdir, section),
                              firmware_image.get_section(section), encoding=None)
 
-      _TmpExec('get keys from firmware GBB',
-               'futility gbb -g --rootkey %s  --recoverykey %s GBB' %
-               (key_root, key_recovery))
-      rootkey_hash = _TmpExec(
-          'unpack rootkey', 'futility vbutil_key --unpack %s' % key_root,
-          regex=r'(?<=Key sha1sum:).*').strip()
+      _TmpExec(
+          'get keys from firmware GBB',
+          f'futility gbb -g --rootkey {key_root}  --recoverykey {key_recovery} GBB'
+      )
+      rootkey_hash = _TmpExec('unpack rootkey',
+                              f'futility vbutil_key --unpack {key_root}',
+                              regex=r'(?<=Key sha1sum:).*').strip()
       _TmpExec('unpack recoverykey',
-               'futility vbutil_key --unpack %s' % key_recovery)
+               f'futility vbutil_key --unpack {key_recovery}')
 
       # Pre-scan for well-known problems.
       is_dev_rootkey = (
@@ -520,35 +523,36 @@ class Gooftool:
         if phase.GetPhase() >= phase.PVT:
           raise Error('Dev-signed firmware should not be used in PVT phase.')
 
-      _TmpExec('verify firmware A with root key',
-               'futility vbutil_firmware --verify VBLOCK_A --signpubkey %s '
-               ' --fv FW_MAIN_A --kernelkey %s' % (key_root, key_normal_a))
-      _TmpExec('verify firmware B with root key',
-               'futility vbutil_firmware --verify VBLOCK_B --signpubkey %s '
-               ' --fv FW_MAIN_B --kernelkey %s' % (key_root, key_normal_b))
+      _TmpExec(
+          'verify firmware A with root key',
+          f'futility vbutil_firmware --verify VBLOCK_A --signpubkey {key_root}  --fv FW_MAIN_A --kernelkey {key_normal_a}'
+      )
+      _TmpExec(
+          'verify firmware B with root key',
+          f'futility vbutil_firmware --verify VBLOCK_B --signpubkey {key_root}  --fv FW_MAIN_B --kernelkey {key_normal_b}'
+      )
 
       # Unpack keys and keyblocks
       _TmpExec('unpack kernel keyblock',
-               'futility vbutil_keyblock --unpack %s' % blob_kern)
+               f'futility vbutil_keyblock --unpack {blob_kern}')
       try:
         for key in key_normal_a, key_normal_b:
-          _TmpExec('unpack %s' % key, 'vbutil_key --unpack %s' % key)
-          _TmpExec('verify kernel by %s' % key,
-                   'futility vbutil_kernel --verify %s --signpubkey %s' %
-                   (blob_kern, key))
+          _TmpExec(f'unpack {key}', f'vbutil_key --unpack {key}')
+          _TmpExec(
+              f'verify kernel by {key}',
+              f'futility vbutil_kernel --verify {blob_kern} --signpubkey {key}')
 
       except Error:
-        _TmpExec('check recovery key signed image',
-                 '! futility vbutil_kernel --verify %s --signpubkey %s' %
-                 (blob_kern, key_recovery),
-                 'YOU ARE USING A RECOVERY KEY SIGNED IMAGE.')
+        _TmpExec(
+            'check recovery key signed image',
+            f'! futility vbutil_kernel --verify {blob_kern} --signpubkey {key_recovery}',
+            'YOU ARE USING A RECOVERY KEY SIGNED IMAGE.')
 
         for key in key_normal, key_recovery:
-          _TmpExec('check dev-signed image <%s>' % key,
-                   '! futility vbutil_kernel --verify %s --signpubkey %s/%s' %
-                   (blob_kern, dir_devkeys, key),
-                   'YOU ARE FINALIZING WITH DEV-SIGNED IMAGE <%s>' %
-                   key)
+          _TmpExec(
+              f'check dev-signed image <{key}>',
+              f'! futility vbutil_kernel --verify {blob_kern} --signpubkey {dir_devkeys}/{key}',
+              f'YOU ARE FINALIZING WITH DEV-SIGNED IMAGE <{key}>')
         raise
 
       _VerifyMiniOS(is_dev_rootkey, key_recovery, dir_devkeys)
@@ -562,13 +566,14 @@ class Gooftool:
         with sys_utils.MountPartition(release_rootfs) as root:
           release_updater_path = os.path.join(root, _FIRMWARE_RELATIVE_PATH)
           _TmpExec('unpack firmware updater from release rootfs partition',
-                   '%s --unpack %s' % (release_updater_path, tmpdir))
-        release_rootkey_hash = _TmpExec(
-            'get rootkey from signer', 'cat VERSION.signer',
-            regex=r'(?<={}:).*'.format(model_name)).strip()
+                   f'{release_updater_path} --unpack {tmpdir}')
+        release_rootkey_hash = _TmpExec('get rootkey from signer',
+                                        'cat VERSION.signer', regex=r'(?<='
+                                        f'{model_name}:).*').strip()
         if release_rootkey_hash != rootkey_hash:
-          raise Error('Firmware rootkey is not matched (%s != %s).' %
-                      (release_rootkey_hash, rootkey_hash))
+          raise Error(
+              f'Firmware rootkey is not matched ({release_rootkey_hash} != {rootkey_hash}).'
+          )
 
     logging.info('SUCCESS: Verification completed.')
 
@@ -580,25 +585,25 @@ class Gooftool:
     if system_time is None:
       system_time = time.time()
 
-    e2header = self._util.shell('dumpe2fs -h %s' % release_rootfs)
+    e2header = self._util.shell(f'dumpe2fs -h {release_rootfs}')
     if not e2header.success:
-      raise Error('Failed to read file system: %s, %s' %
-                  (release_rootfs, e2header.stderr))
+      raise Error(
+          f'Failed to read file system: {release_rootfs}, {e2header.stderr}')
     matched = re.findall(r'^Filesystem created: *(.*)', e2header.stdout,
                          re.MULTILINE)
     if not matched:
-      raise Error('Failed to find file system creation time: %s' %
-                  release_rootfs)
+      raise Error(f'Failed to find file system creation time: {release_rootfs}')
     created_time = time.mktime(time.strptime(matched[0]))
     logging.debug('Comparing system time <%s> and filesystem time <%s>',
                   system_time, created_time)
     if system_time < created_time:
       if factory_process != FactoryProcessEnum.RMA:
-        raise Error('System time (%s) earlier than file system (%s) creation '
-                    'time (%s)' % (system_time, release_rootfs, created_time))
+        raise Error(
+            f'System time ({system_time}) earlier than file system ({release_rootfs}) creation time ({created_time})'
+        )
       logging.warning('Set system time to file system creation time (%s)',
                       created_time)
-      self._util.shell('toybox date @%d' % int(created_time))
+      self._util.shell(f'toybox date @{int(created_time)}')
 
   def VerifyRootFs(self, release_rootfs=None):
     """Verify rootfs on SSD is valid by checking hash."""
@@ -672,8 +677,8 @@ class Gooftool:
           '`dsm_calib_temp_N` where N ranges from 0 ~ %d.', num_channels - 1)
       dsm_vpd_ro_data = {}
       for channel in range(num_channels):
-        dsm_vpd_ro_data['dsm_calib_r0_%d' % channel] = r'[0-9]*'
-        dsm_vpd_ro_data['dsm_calib_temp_%d' % channel] = r'[0-9]*'
+        dsm_vpd_ro_data[f'dsm_calib_r0_{int(channel)}'] = r'[0-9]*'
+        dsm_vpd_ro_data[f'dsm_calib_temp_{int(channel)}'] = r'[0-9]*'
 
       return dsm_vpd_ro_data
 
@@ -681,8 +686,8 @@ class Gooftool:
       if re.match(r'^' + pattern + r'$', value):
         return key
       if raise_exception:
-        raise ValueError('Incorrect VPD: %s=%s (expected format: %s)' %
-                         (key, value, pattern))
+        raise ValueError(
+            f'Incorrect VPD: {key}={value} (expected format: {pattern})')
       return None
 
     def CheckVPDFields(section, data, required, optional, optional_re):
@@ -715,12 +720,12 @@ class Gooftool:
               checked.append(MatchWhole(k, rv, v))
               break
           else:
-            raise KeyError('Unexpected %s VPD: %s=%s.' % (section, k, v))
+            raise KeyError(f'Unexpected {section} VPD: {k}={v}.')
 
       missing_keys = set(required).difference(checked)
       if missing_keys:
-        raise Error('Missing required %s VPD values: %s' %
-                    (section, ','.join(missing_keys)))
+        raise Error(
+            f"Missing required {section} VPD values: {','.join(missing_keys)}")
 
     def GetDeviceNameForRegistrationCode(project):
 
@@ -773,7 +778,7 @@ class Gooftool:
     # Check known value contents.
     region = ro_vpd['region']
     if region not in regions.REGIONS:
-      raise ValueError('Unknown region: "%s".' % region)
+      raise ValueError(f'Unknown region: "{region}".')
 
     device_name = GetDeviceNameForRegistrationCode(self._project)
 
@@ -786,7 +791,7 @@ class Gooftool:
             rw_vpd[vpd_field_name], type=type_name, device=device_name,
             allow_dummy=(phase.GetPhase() < phase.PVT_DOGFOOD))
       except registration_codes.RegistrationCodeException as e:
-        raise ValueError('%s is invalid: %r' % (vpd_field_name, e)) from None
+        raise ValueError(f'{vpd_field_name} is invalid: {e!r}') from None
 
   def VerifyReleaseChannel(self, enforced_channels=None):
     """Verify that release image channel is correct.
@@ -802,21 +807,21 @@ class Gooftool:
     if enforced_channels is None:
       enforced_channels = allowed_channels
     elif not all(channel in allowed_channels for channel in enforced_channels):
-      raise Error('Enforced channels are incorrect: %s. '
-                  'Allowed channels are %s.' % (
-                      enforced_channels, allowed_channels))
+      raise Error(
+          f'Enforced channels are incorrect: {enforced_channels}. Allowed channels are {allowed_channels}.'
+      )
 
     if not any(channel in release_channel for channel in enforced_channels):
-      raise Error('Release image channel is incorrect: %s. '
-                  'Enforced channels are %s.' % (
-                      release_channel, enforced_channels))
+      raise Error(
+          f'Release image channel is incorrect: {release_channel}. Enforced channels are {enforced_channels}.'
+      )
 
   def VerifyRLZCode(self):
     if phase.GetPhase() >= phase.EVT:
       rlz = self._cros_config.GetBrandCode()
       if not rlz or rlz == 'ZZCR':
         # this is incorrect...
-        raise Error('RLZ code "%s" is not allowed in/after EVT' % rlz)
+        raise Error(f'RLZ code "{rlz}" is not allowed in/after EVT')
 
   def _MatchConfigWithIdentity(self, configs, identity):
     for config in configs:
@@ -877,6 +882,11 @@ class Gooftool:
                   for field in fields}
                  for config in obj['chromeos']['configs']
                  if config['name'] == model]
+      configs = {
+          # set sort_keys=True to make the result stable.
+          json_utils.DumpStr(config, sort_keys=True)
+          for config in configs
+      }
       return configs
 
     # Load config.yaml from release image (FSI) and test image, and compare the
@@ -926,13 +936,13 @@ class Gooftool:
         if match:
           return int(match.group(1), 16)
 
-    raise Error('Failed getting GBB flags %s' % result.stdout)
+    raise Error(f'Failed getting GBB flags {result.stdout}')
 
   def SetGBBFlags(self, flags):
     result = self._util.shell(
         f'/usr/share/vboot/bin/set_gbb_flags.sh {flags} 2>&1')
     if not result.success:
-      raise Error('Failed setting GBB flags %s' % result.stdout)
+      raise Error(f'Failed setting GBB flags {result.stdout}')
 
   def ClearGBBFlags(self):
     """Zero out the GBB flags, in preparation for transition to release state.
@@ -968,7 +978,7 @@ class Gooftool:
     try:
       main_fw = self._crosfw.LoadMainFirmware()
       fw_filename = main_fw.GetFileName(sections=['GBB'])
-      result = self._util.shell('futility gbb --get --flags "%s"' % fw_filename)
+      result = self._util.shell(f'futility gbb --get --flags "{fw_filename}"')
       # The output should look like 'flags: 0x00000000'.
       unused_prefix, gbb_flags = result.stdout.strip().split(' ')
       gbb_flags = int(gbb_flags, 16)
@@ -978,7 +988,7 @@ class Gooftool:
 
     if (not test_umount and
         phase.GetPhase() >= phase.PVT and gbb_flags != 0):
-      raise Error('GBB flags should be cleared in PVT (it is 0x%x)' % gbb_flags)
+      raise Error(f'GBB flags should be cleared in PVT (it is {gbb_flags:#x})')
 
     GBB_FLAG_FORCE_DEV_SWITCH_ON = 0x00000008
     keep_developer_mode_flag = bool(gbb_flags & GBB_FLAG_FORCE_DEV_SWITCH_ON)
@@ -990,8 +1000,8 @@ class Gooftool:
                release_rootfs, root_disk, old_root, station_ip, station_port,
                wipe_finish_token, keep_developer_mode_flag, test_umount):
     """Start wiping test image."""
-    wipe.WipeInit(wipe_args, shopfloor_url, state_dev,
-                  release_rootfs, root_disk, old_root, station_ip, station_port,
+    wipe.WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
+                  root_disk, old_root, station_ip, station_port,
                   wipe_finish_token, keep_developer_mode_flag, test_umount)
 
   def WriteVPDForRLZPing(self, embargo_offset=7):
@@ -1003,10 +1013,11 @@ class Gooftool:
     embargo_date = datetime.date.today()
     embargo_date += datetime.timedelta(days=embargo_offset)
 
-    self._vpd.UpdateData({
-        'should_send_rlz_ping': '1',
-        'rlz_embargo_end_date': embargo_date.isoformat(),
-    }, partition=vpd.VPD_READWRITE_PARTITION_NAME)
+    self._vpd.UpdateData(
+        {
+            'should_send_rlz_ping': '1',
+            'rlz_embargo_end_date': embargo_date.isoformat(),
+        }, partition=vpd.VPD_READWRITE_PARTITION_NAME)
 
   def WriteVPDForMFGDate(self):
     """Write manufacturing date into VPD."""
@@ -1025,17 +1036,16 @@ class Gooftool:
     assert hwid
     main_fw = self._crosfw.LoadMainFirmware()
     fw_filename = main_fw.GetFileName(sections=['GBB'])
-    self._util.shell(
-        'futility gbb --set --hwid="%s" "%s"' % (hwid, fw_filename))
+    self._util.shell(f'futility gbb --set --hwid="{hwid}" "{fw_filename}"')
     main_fw.Write(fw_filename)
 
   def ReadHWID(self):
     """Reads the HWID string from firmware GBB."""
 
     fw_filename = self._crosfw.LoadMainFirmware().GetFileName(sections=['GBB'])
-    result = self._util.shell('futility gbb -g --hwid "%s"' % fw_filename)
+    result = self._util.shell(f'futility gbb -g --hwid "{fw_filename}"')
     if not result.success:
-      raise Error('Failed to read the HWID string: %s' % result.stderr)
+      raise Error(f'Failed to read the HWID string: {result.stderr}')
 
     return re.findall(r'hardware_id:(.*)', result.stdout)[0].strip()
 
@@ -1104,16 +1114,15 @@ class Gooftool:
     """
     bitmap_locales = []
     with self._named_temporary_file('w+') as f:
-      self._util.shell('cbfstool %s extract -n locales -f %s -r COREBOOT' %
-                       (image_file, f.name))
+      self._util.shell(
+          f'cbfstool {image_file} extract -n locales -f {f.name} -r COREBOOT')
       bitmap_locales = f.read()
       # We reach here even if cbfstool command fails
       if bitmap_locales:
         # The line format is "code,rtl". We remove ",rtl" here.
         return re.findall(r'^(\S+?)(?:,\S*)?$', bitmap_locales, re.MULTILINE)
       # Looks like image does not have locales file. Do the old-fashioned way
-      self._util.shell('futility gbb -g --bmpfv=%s %s' %
-                       (f.name, image_file))
+      self._util.shell(f'futility gbb -g --bmpfv={f.name} {image_file}')
       bmpblk_data = self._unpack_bmpblock(f.read())
       bitmap_locales = bmpblk_data.get('locales', bitmap_locales)
     return bitmap_locales
@@ -1143,7 +1152,7 @@ class Gooftool:
     if region is None:
       raise Error('Missing VPD "region".')
     if region not in regions.REGIONS:
-      raise ValueError('Unknown region: "%s".' % region)
+      raise ValueError(f'Unknown region: "{region}".')
     # Use the primary locale for the firmware bitmap.
     locales = regions.REGIONS[region].language_codes
     bitmap_locales = self.GetBitmapLocales(image_file)
@@ -1157,13 +1166,12 @@ class Gooftool:
                             locale.partition('-')[0]]:
         if language_code in bitmap_locales:
           locale_index = bitmap_locales.index(language_code)
-          self._util.shell('crossystem loc_idx=%d' % locale_index)
+          self._util.shell(f'crossystem loc_idx={int(locale_index)}')
           return (locale_index, language_code)
 
-    raise Error('Firmware bitmaps do not contain support for the specified '
-                'initial locales: %r.\n'
-                'Current supported locales are %r.' % (
-                    locales, bitmap_locales))
+    raise Error(
+        f'Firmware bitmaps do not contain support for the specified initial locales: {locales!r}.\nCurrent supported locales are {bitmap_locales!r}.'
+    )
 
   def GetSystemDetails(self):
     """Gets the system details including: platform name, crossystem,
@@ -1218,7 +1226,7 @@ class Gooftool:
     entries = {k: v for k, v in dot_entries.items() if _IsFactoryVPD(k)}
     unknown_keys = set(dot_entries) - set(entries)
     if unknown_keys:
-      raise Error('Found unexpected RW VPD(s): %r' % unknown_keys)
+      raise Error(f'Found unexpected RW VPD(s): {unknown_keys!r}')
 
     logging.info('Removing VPD entries %s', FilterDict(entries))
     if entries:
@@ -1226,7 +1234,7 @@ class Gooftool:
         self._vpd.UpdateData({k: None for k in entries.keys()},
                              partition=vpd.VPD_READWRITE_PARTITION_NAME)
       except Exception as e:
-        raise Error('Failed to remove VPD entries: %r' % e) from None
+        raise Error(f'Failed to remove VPD entries: {e!r}') from None
 
     return entries
 
@@ -1286,7 +1294,7 @@ class Gooftool:
         # exception to facilitate error analysis. Don't include the exception
         # value as it may contain the device secret.
         (exc_type, _, exc_traceback) = sys.exc_info()
-        cause = '%s: %s' % (operation, exc_type)
+        cause = f'{operation}: {exc_type}'
         raise Error(cause).with_traceback(exc_traceback) from None
 
     with scrub_exceptions('Error generating device secret'):
@@ -1323,7 +1331,7 @@ class Gooftool:
       board_id = gsctool.GetBoardID()
     except gsctool_module.GSCToolError as e:
       raise Error(
-          'Failed to get boardID with gsctool command: %r' % e) from None
+          f'Failed to get boardID with gsctool command: {e!r}') from None
     if board_id.type == 0xffffffff:
       return False
 
@@ -1416,8 +1424,8 @@ class Gooftool:
         [interval.SplitInterval(i, 0x400000) for i in hash_intervals], [])
 
     # ap_ro_hash.py takes offset:size in hex as range parameters.
-    cmd = 'ap_ro_hash.py %s' % ' '.join(
-        ['%x:%x' % (i.start, i.size) for i in hash_intervals])
+    cmd = ('ap_ro_hash.py ' +
+           ' '.join([(f'{i.start:x}:{i.size:x}') for i in hash_intervals]))
     result = self._util.shell(cmd)
     if result.status == 0:
       if 'SUCCEEDED' in result.stdout:
@@ -1447,7 +1455,7 @@ class Gooftool:
     if not has_vpd_key:
       # TODO(stimim): What if Zero-Touch is enabled on a program (e.g. hatch),
       # but not expected for a project (e.g. kohaku).
-      raise Error('Zero-Touch is enabled, but %r is not set' % vpd_key)
+      raise Error(f'Zero-Touch is enabled, but {vpd_key!r} is not set')
 
     if phase.GetPhase() >= phase.PVT_DOGFOOD:
       arg_phase = 'pvt'
@@ -1465,8 +1473,8 @@ class Gooftool:
         raise Error(error_msg)
       logging.error(error_msg)
     else:  # General errors.
-      raise Error('Failed to set serial number bits on Cr50. '
-                  '(args=%s)' % arg_phase)
+      raise Error(
+          f'Failed to set serial number bits on Cr50. (args={arg_phase})')
 
   def _Cr50SetBoardId(self, two_stages, is_flags_only=False):
     """Set the board id and flags on the Cr50 chip.
@@ -1522,8 +1530,8 @@ class Gooftool:
         else:
           raise Error(error_msg)
       else:  # General errors.
-        raise Error('Failed to set board ID and flag on Cr50. '
-                    '(cmd=`%s`)' % ' '.join(cmd))
+        raise Error(
+            f"Failed to set board ID and flag on Cr50. (cmd=`{' '.join(cmd)}`)")
     except Exception:
       logging.exception('Failed to set Cr50 Board ID.')
       raise
@@ -1647,10 +1655,10 @@ class Gooftool:
       is_factory_mode = gsctool.IsFactoryMode()
 
     except gsctool_module.GSCToolError as e:
-      raise Error('gsctool command fail: %r' % e) from None
+      raise Error(f'gsctool command fail: {e!r}') from None
 
     except Exception as e:
-      raise Error('Unknown exception from gsctool: %r' % e) from None
+      raise Error(f'Unknown exception from gsctool: {e!r}') from None
 
     if is_factory_mode:
       raise Error('Failed to disable Cr50 factory mode.')
@@ -1692,12 +1700,12 @@ class Gooftool:
     def get_rbinfo():
       proc = self._util.shell(RBINFO_CMD)
       if not proc.success:
-        raise Error('Fail to call %r. Log:\n%s' %
-                    (RBINFO_CMD, proc.stderr))
+        raise Error(f'Fail to call {RBINFO_CMD!r}. Log:\n{proc.stderr}')
       result = RBINFO_REGEX.search(proc.stdout)
       if result is None:
-        raise Error('FPS rollback info not found.\n'\
-                    '%r not found in:\n%s' % (RBINFO_PATTERN, proc.stdout))
+        raise Error(
+            f'FPS rollback info not found.\n{RBINFO_PATTERN!r} not found in:\n{proc.stdout}'
+        )
       return int(result.group(1))
 
     if get_rbinfo() != 0:
@@ -1710,11 +1718,11 @@ class Gooftool:
     biowash = self._util.shell(BIOWASH_CMD)
 
     if not biowash.success:
-      raise Error('Fail to call %r. Log:\n%s' %
-                  (BIOWASH_CMD, biowash.stderr))
+      raise Error(f'Fail to call {BIOWASH_CMD!r}. Log:\n{biowash.stderr}')
     if get_rbinfo() != 1:
-      raise Error('FPMCU entropy cannot be initialized properly.\n'\
-                  'Log of %r:\n%s' % (BIOWASH_CMD, biowash.stderr))
+      raise Error(
+          f'FPMCU entropy cannot be initialized properly.\nLog of {BIOWASH_CMD!r}:\n{biowash.stderr}'
+      )
     logging.info('FPMCU entropy initialized successfully.')
 
   def GetIdentity(self):

@@ -130,7 +130,7 @@ class EasyBundleCreationWorker:
     with file_utils.TempDirectory() as temp_dir:
       os.chdir(temp_dir)
 
-      bundle_name = '{:%Y%m%d}_{}'.format(datetime.now(), request.phase)
+      bundle_name = f'{datetime.now():%Y%m%d}_{request.phase}'
       firmware_source = ('release_image/' + request.firmware_source
                          if request.HasField('firmware_source') else
                          'release_image')
@@ -171,8 +171,7 @@ class EasyBundleCreationWorker:
       self._logger.info(output)
 
       bundle_path = os.path.join(
-          temp_dir, 'factory_bundle_{}_{}.tar.bz2'.format(
-              request.project, bundle_name))
+          temp_dir, f'factory_bundle_{request.project}_{bundle_name}.tar.bz2')
       gs_path = self._storage_connector.UploadCreatedBundle(
           bundle_path,
           self._ConvertToStorageBundleMetadata(create_bundle_message))

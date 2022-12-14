@@ -34,7 +34,7 @@ def CheckTestsPassedInDirectory(folder, files, instruction, checked_file):
     return True
   tests_file_path = os.path.join(folder, checked_file)
   if not os.path.exists(tests_file_path):
-    print('%s\n%s' % (messages[0], instruction))
+    print(f'{messages[0]}\n{instruction}')
     return False
   mtime = os.path.getmtime(tests_file_path)
   newer_files = [file_path for file_path in files_in_folder

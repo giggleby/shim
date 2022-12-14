@@ -90,9 +90,10 @@ class InputEventlogFile(input_log_file.InputLogFile):
     def LogError(logger_name, error_str, relative_end_line_num):
       logger = logging.getLogger(logger_name)
       if source_name:
-        error_str += ' from %s' % source_name
+        error_str += f' from {source_name}'
       source_end_line_num = source_line_num + relative_end_line_num
-      error_str += ' on lines %d to %d' % (source_line_num, source_end_line_num)
+      error_str += (
+          f' on lines {int(source_line_num)} to {int(source_end_line_num)}')
       logger.warning(error_str)
 
     # Remove trailing '---\n'.

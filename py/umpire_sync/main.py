@@ -14,6 +14,7 @@ import xmlrpc.client
 from cros.factory.umpire_sync import utils
 from cros.factory.utils import net_utils
 
+
 RPC_PORT_OFFSET = 2
 RPC_TIMEOUT = 1
 UPDATE_TIMEOUT = 600
@@ -22,8 +23,8 @@ UPDATE_TIMEOUT = 600
 class PrimaryUmpire:
 
   def __init__(self, host, port):
-    self.rpc_url = 'http://%s:%d' % (host, port + RPC_PORT_OFFSET)
-    self.url = 'http://%s:%d' % (host, port)
+    self.rpc_url = f'http://{host}:{int(port + RPC_PORT_OFFSET)}'
+    self.url = f'http://{host}:{int(port)}'
     self.proxy = xmlrpc.client.ServerProxy(self.rpc_url)
     self.active_payload = self.GetActivePayload()
 
@@ -56,7 +57,7 @@ class SecondaryUmpire:
     for url in urls:
       self.status.SetStatus(url, utils.STATUS.Waiting)
       host, port = url.split('//')[1].split(':')[0], int(url.split(':')[2])
-      rpc_url = 'http://%s:%d' % (host, port + RPC_PORT_OFFSET)
+      rpc_url = f'http://{host}:{int(port + RPC_PORT_OFFSET)}'
       self.proxies.append(self._MakeTimeoutProxy(rpc_url, UPDATE_TIMEOUT))
       self.check_alive_proxies.append(
           self._MakeTimeoutProxy(rpc_url, RPC_TIMEOUT))

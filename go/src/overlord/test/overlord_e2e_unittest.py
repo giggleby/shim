@@ -19,6 +19,7 @@ from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 
+
 # Constants.
 _HOST = '127.0.0.1'
 _INCREMENT = 42
@@ -61,8 +62,9 @@ class TestOverlord(unittest.TestCase):
     # Build overlord, only do this once over all tests.
     basedir = os.path.dirname(__file__)
     cls.bindir = tempfile.mkdtemp()
-    subprocess.call('make -C %s BINDIR=%s' % (
-        os.path.join(basedir, '..'), cls.bindir), shell=True)
+    subprocess.call(
+        f"make -C {os.path.join(basedir, '..')} BINDIR={cls.bindir}",
+        shell=True)
 
   @classmethod
   def tearDownClass(cls):
@@ -79,7 +81,7 @@ class TestOverlord(unittest.TestCase):
 
     # set ports for overlord to bind
     overlord_http_port = net_utils.FindUnusedPort()
-    self.host = '%s:%d' % (_HOST, overlord_http_port)
+    self.host = f'{_HOST}:{int(overlord_http_port)}'
     env['OVERLORD_PORT'] = str(net_utils.FindUnusedPort())
     env['OVERLORD_LD_PORT'] = str(net_utils.FindUnusedPort())
     env['OVERLORD_HTTP_PORT'] = str(overlord_http_port)
@@ -87,19 +89,19 @@ class TestOverlord(unittest.TestCase):
 
     # Launch overlord
     self.ovl = subprocess.Popen(  # pylint: disable=consider-using-with
-        ['%s/overlordd' % bindir, '-no-auth', '-no-lan-disc'], env=env)
+        [f'{bindir}/overlordd', '-no-auth', '-no-lan-disc'], env=env)
 
     # Launch go implementation of ghost
     self.goghost = subprocess.Popen(  # pylint: disable=consider-using-with
         [
-            '%s/ghost' % bindir, '-rand-mid', '-no-lan-disc', '-no-rpc-server',
+            f'{bindir}/ghost', '-rand-mid', '-no-lan-disc', '-no-rpc-server',
             '-tls=n'
         ], env=env)
 
     # Launch python implementation of ghost
     self.pyghost = subprocess.Popen(  # pylint: disable=consider-using-with
         [
-            '%s/py/tools/ghost.py' % factorydir, '--rand-mid', '--no-lan-disc',
+            f'{factorydir}/py/tools/ghost.py', '--rand-mid', '--no-lan-disc',
             '--no-rpc-server', '--tls=n'
         ], env=env)
 
@@ -148,8 +150,7 @@ class TestOverlord(unittest.TestCase):
 
     # Test /api/agent/properties/mid
     for client in self._GetJSON('/api/agents/list'):
-      assert self._GetJSON(
-          '/api/agent/properties/%s' % client['mid']) is not None
+      assert self._GetJSON(f"/api/agent/properties/{client['mid']}") is not None
 
   def testShellCommand(self):
 
@@ -167,8 +168,8 @@ class TestOverlord(unittest.TestCase):
     answer = subprocess.check_output(['uname', '-r'])
 
     for client in clients:
-      ws = TestClient('ws://' + self.host + '/api/agent/shell/%s' %
-                      urllib.parse.quote(client['mid']) + '?command=' +
+      ws = TestClient(f"ws://{self.host}/api/agent/shell/"
+                      f"{urllib.parse.quote(client['mid'])}?command=" +
                       urllib.parse.quote('uname -r'))
       ws.connect()
       ws.run()
@@ -188,7 +189,7 @@ class TestOverlord(unittest.TestCase):
 
       def closed(self, code, reason=None):
         if not self.test_run:
-          raise RuntimeError('test exit before being run: %s' % reason)
+          raise RuntimeError(f'test exit before being run: {reason}')
 
       def received_message(self, message):
         if message.is_text:
@@ -206,7 +207,7 @@ class TestOverlord(unittest.TestCase):
             self.state = self.PROMPT
             challenge_number = int(msg_text.split()[1])
             self.answer = challenge_number + _INCREMENT
-            self.send('%d\n' % self.answer)
+            self.send(f'{int(self.answer)}\n')
         elif self.state == self.PROMPT:
           msg_text = msg_text.strip()
           if msg_text == b'SUCCESS':
@@ -216,14 +217,14 @@ class TestOverlord(unittest.TestCase):
           if msg_text and int(msg_text) == self.answer:
             pass
           else:
-            raise TestError('Unexpected response: %r' % msg_text)
+            raise TestError(f'Unexpected response: {msg_text!r}')
 
     clients = self._GetJSON('/api/agents/list')
     assert clients
 
     for client in clients:
-      ws = TestClient('ws://' + self.host + '/api/agent/tty/%s' %
-                      urllib.parse.quote(client['mid']))
+      ws = TestClient('ws://' + self.host +
+                      f"/api/agent/tty/{urllib.parse.quote(client['mid'])}")
       ws.connect()
       try:
         ws.run()

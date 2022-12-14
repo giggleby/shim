@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 
+
 # Constants
 DATE_FORMAT = '%Y%m%d%H%M%S'
 HASH_FILE_READ_BLOCK_SIZE = 1024 * 64  # 64kb
@@ -34,8 +35,8 @@ def CheckVersion(args):
   print('Checking your gsutil version...')
   subprocess.check_call([args.gsutil_path, '--version'])
   print('Checking your Storage permission...')
-  subprocess.check_call([args.gsutil_path, 'ls',
-                         'gs://%s/%s' % (PROJECT_ID, args.dataset_id)])
+  subprocess.check_call(
+      [args.gsutil_path, 'ls', f'gs://{PROJECT_ID}/{args.dataset_id}'])
 
   print('Checking your bq version...')
   subprocess.check_call([args.bq_path, 'version'])
@@ -105,8 +106,8 @@ def Download(args, results):
   remote_list = list(set(remote_list))
 
   for i in range(0, len(remote_list), 100):
-    print('Downloading the %d-%d of %s attachments...' %
-          (i, min(i + 100, len(remote_list)) - 1, len(remote_list)))
+    print(f'Downloading the {int(i)}-{int(min(i + 100, len(remote_list)) - 1)} '
+          f'of {len(remote_list)} attachments...')
     commands = [args.gsutil_path, '-m', 'cp', '-n']
     commands.extend(remote_list[i:i+100])
     commands.append(tmp_dir)
@@ -124,9 +125,9 @@ def FileHash(path):
 def CopyAndDelete(args, results):
   tmp_dir = os.path.join(args.target_dir, 'tmp')
   for row in results:
-    file_name = '%s_%s_%s_%s' % (row['server_time'], row['attachment_key'],
-                                 row['serial_number'] or 'NoSerialNumber',
-                                 FileHash(row['tmp']))
+    file_name = (
+        f"{row['server_time']}_{row['attachment_key']}_"
+        f"{row['serial_number'] or 'NoSerialNumber'}_{FileHash(row['tmp'])}")
     local = os.path.join(args.target_dir, file_name)
     print(row['remote'] + ' --> ' + local)
     shutil.copyfile(row['tmp'], local)
@@ -147,25 +148,21 @@ def main():
   parser.add_argument(
       'attachment_key',
       help='The attachment key.  Example: TESTID')
-  parser.add_argument(
-      '--start_date', '-s', default=DEFAULT_START_TIME,
-      help='The start of date.  Default: %s' % DEFAULT_START_TIME)
-  parser.add_argument(
-      '--end_date', '-e', default=DEFAULT_END_TIME,
-      help='The end of date.  Default: %s' % DEFAULT_END_TIME)
+  parser.add_argument('--start_date', '-s', default=DEFAULT_START_TIME,
+                      help=f'The start of date.  Default: {DEFAULT_START_TIME}')
+  parser.add_argument('--end_date', '-e', default=DEFAULT_END_TIME,
+                      help=f'The end of date.  Default: {DEFAULT_END_TIME}')
   parser.add_argument(
       '--target_dir', '-t', default=DEFAULT_TARGET_DIR,
-      help='The target directory.  Default: %s' % DEFAULT_TARGET_DIR)
-  parser.add_argument(
-      '--bq_path', '-b', default=DEFAULT_BQ_PATH,
-      help='The bq path.  Default: %s' % DEFAULT_BQ_PATH)
-  parser.add_argument(
-      '--gsutil_path', '-g', default=DEFAULT_GSUTIL_PATH,
-      help='The gsutil path.  Default: %s' % DEFAULT_GSUTIL_PATH)
+      help=f'The target directory.  Default: {DEFAULT_TARGET_DIR}')
+  parser.add_argument('--bq_path', '-b', default=DEFAULT_BQ_PATH,
+                      help=f'The bq path.  Default: {DEFAULT_BQ_PATH}')
+  parser.add_argument('--gsutil_path', '-g', default=DEFAULT_GSUTIL_PATH,
+                      help=f'The gsutil path.  Default: {DEFAULT_GSUTIL_PATH}')
   parser.add_argument(
       '--serial_number_key', '-sn_key', default=DEFAULT_SERIAL_NUMBER_KEY,
-      help='The key of the serial number to put in the file name.  '
-           'Default: %s' % DEFAULT_SERIAL_NUMBER_KEY)
+      help='The key of the serial number to put in the file name.  Default: '
+      f'{DEFAULT_SERIAL_NUMBER_KEY}')
   parser.add_argument(
       '--serial_number', '-sn', type=str, action='append',
       help='The value of the serial number to download.  This can be added '
@@ -185,7 +182,7 @@ def main():
     print('Query returned zero records.\n'
           'Done!')
     return
-  print('Found %d files!\n' % len(results))
+  print(f'Found {len(results)} files!\n')
 
   if not os.path.isdir(os.path.join(args.target_dir, 'tmp')):
     os.makedirs(os.path.join(args.target_dir, 'tmp'))

@@ -110,7 +110,7 @@ def GetChecksumLegacy(data):
   checksum = zlib.crc32(data.encode('utf-8'))
   if checksum >= 2**31:
     checksum -= 2**32
-  return '{:08x}'.format(abs(checksum))
+  return f'{abs(checksum):08x}'
 
 
 def GetChecksum(data):
@@ -118,14 +118,14 @@ def GetChecksum(data):
   # The function crc32() returns a signed 32-bit integer in Python2, but it
   # returns an unsigned 32-bit integer in Python3. To generate the same value
   # across all Python versions, we use "crc32() & 0xffffffff".
-  return '{:08x}'.format(zlib.crc32(data.encode('utf-8')) & 0xffffffff)
+  return f"{zlib.crc32(data.encode('utf-8')) & 0xffffffff:08x}"
 
 
 def FormatRecord(seq, record):
   """Returns a record formatted as a line to be written to disk."""
-  data = '%d, %s' % (seq, record)
+  data = f'{int(seq)}, {record}'
   checksum = GetChecksum(data)
-  return '[%s, "%s"]\n' % (data, checksum)
+  return f'[{data}, "{checksum}"]\n'
 
 
 def ParseRecord(line, logger_name=None):
@@ -177,8 +177,8 @@ def CopyAttachmentsToTempDir(att_paths, tmp_dir, logger_name=None):
     for att_path in att_paths:
       # Check that the source file exists.
       if not os.path.isfile(att_path):
-        raise ValueError('Attachment path `%s` specified in event does not '
-                         'exist' % att_path)
+        raise ValueError(
+            f'Attachment path `{att_path}` specified in event does not exist')
       target_path = os.path.join(tmp_dir, att_path.replace('/', '_'))
       logger.debug('Copying attachment: %s --> %s',
                    att_path, target_path)
@@ -228,7 +228,7 @@ def MoveAndWrite(config_dct, event_iter_factory):
     try:
       for event in event_iter:
         for att_id, att_path in event.attachments.items():
-          target_name = '%s_%s' % (cur_seq, att_id)
+          target_name = f'{cur_seq}_{att_id}'
           target_path = os.path.join(config_dct['attachments_dir'], target_name)
           event.attachments[att_id] = target_name
           logger.debug('Relocating attachment %s: %s --> %s', att_id, att_path,
@@ -600,7 +600,7 @@ class BufferFile(log_utils.LoggerMixin):
     self.debug('Add consumer %s', name)
     with self.data_write_lock, self._consumer_lock:
       if name in self.consumers:
-        raise SimpleFileException('Consumer %s already exists' % name)
+        raise SimpleFileException(f'Consumer {name} already exists')
       self.consumers[name] = self._CreateConsumer(name)
       self._SaveConsumers()
 
@@ -609,7 +609,7 @@ class BufferFile(log_utils.LoggerMixin):
     self.debug('Remove consumer %s', name)
     with self.data_write_lock, self._consumer_lock:
       if name not in self.consumers:
-        raise SimpleFileException('Consumer %s does not exist' % name)
+        raise SimpleFileException(f'Consumer {name} does not exist')
       del self.consumers[name]
       self._SaveConsumers()
 

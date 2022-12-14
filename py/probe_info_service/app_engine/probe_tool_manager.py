@@ -653,7 +653,7 @@ class ProbeToolManager:
     else:
       parsed_result = ProbeInfoParsedResult(
           result_type=ProbeInfoParsedResult.ResultType.INCOMPATIBLE_ERROR,
-          general_error_msg='unknown probe function: %r' % probe_function_name)
+          general_error_msg=f'unknown probe function: {probe_function_name!r}')
     return parsed_result, probe_func
 
   def _CalcProbeInfoFingerprint(self, probe_info: ProbeInfo) -> str:

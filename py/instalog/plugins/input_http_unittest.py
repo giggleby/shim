@@ -74,7 +74,8 @@ class TestInputHTTP(unittest.TestCase):
       curl_args.append('--form' if value[0] == '@' else '--form-string')
       curl_args.append(field)
     status_code_str = process_utils.CheckOutput(
-        ['curl'] + curl_args + ['localhost:%d' % self.port], ignore_stderr=True)
+        ['curl'] + curl_args + [f'localhost:{int(self.port)}'],
+        ignore_stderr=True)
     return int(status_code_str)
 
   def _RequestsPost(self, files=None, multi_event=True, timeout=None):
@@ -102,7 +103,7 @@ class TestInputHTTP(unittest.TestCase):
     q = queue.Queue()
     def PostBig():
       event_str = datatypes.Event.Serialize(event)
-      r = self._CurlPost('event=%s' % event_str, 'att=@%s' % big_att_path)
+      r = self._CurlPost(f'event={event_str}', f'att=@{big_att_path}')
       q.put(r)
     t = threading.Thread(target=PostBig)
     t.daemon = False
@@ -283,7 +284,7 @@ class TestInputHTTP(unittest.TestCase):
     q = queue.Queue()
     def PostBig():
       event_str = datatypes.Event.Serialize(event1)
-      r = self._CurlPost('event=%s' % event_str, 'att=@%s' % big_att_path)
+      r = self._CurlPost(f'event={event_str}', f'att=@{big_att_path}')
       q.put(r)
     t = threading.Thread(target=PostBig)
     t.daemon = False
@@ -304,7 +305,7 @@ class TestInputHTTP(unittest.TestCase):
   def testCurlCommand(self):
     att_path = self._GeneratePayload(1)  # 1mb
     self._CurlPost('event=[{"GG": "HH"}, {"att_id": "att"}]',
-                   'att=@%s' % att_path)
+                   f'att=@{att_path}')
     self.assertEqual(1, len(self.core.emit_calls))
     self.assertEqual(1, len(self.core.emit_calls[0]))
     self.assertEqual({'GG': 'HH'}, self.core.emit_calls[0][0].payload)
@@ -319,7 +320,7 @@ class TestInputHTTP(unittest.TestCase):
     event = datatypes.Event({}, {'att_id': 'att'})
     att_path = self._GeneratePayload(1024)  # 1gb
     event_str = datatypes.Event.Serialize(event)
-    r = self._CurlPost('event=%s' % event_str, 'att=@%s' % att_path)
+    r = self._CurlPost(f'event={event_str}', f'att=@{att_path}')
     self.assertEqual(200, r)
     self.assertEqual(1, len(self.core.emit_calls))
     self.assertEqual(1, len(self.core.emit_calls[0]))

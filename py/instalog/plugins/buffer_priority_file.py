@@ -108,9 +108,9 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
     for pri_level in range(_PRIORITY_LEVEL):
       for file_num in range(_PARTITION):
         self.buffer_file[pri_level][file_num] = buffer_file_common.BufferFile(
-            self.args,
-            self.logger.name,
-            os.path.join(self.GetDataDir(), '%d_%d' % (pri_level, file_num)))
+            self.args, self.logger.name,
+            os.path.join(self.GetDataDir(),
+                         f'{int(pri_level)}_{int(file_num)}'))
 
     for file_num in range(_PARTITION):
       self._file_num_lock[file_num] = lock_utils.Lock(self.logger.name)
@@ -318,12 +318,12 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
           progress_dict[name][pri_level][file_num] = (
               self.buffer_file[pri_level][file_num].ListConsumers()[name])
           if details >= 2:
-            consumers_dict['%s(%d-%d)' % (name, pri_level, file_num)] = (
+            consumers_dict[f'{name}({int(pri_level)}-{int(file_num)})'] = (
                 progress_dict[name][pri_level][file_num])
         progress_dict[name][pri_level] = tuple(
             map(sum, list(zip(*progress_dict[name][pri_level].values()))))
         if details == 1:
-          consumers_dict['%s(%d)' % (name, pri_level)] = (
+          consumers_dict[f'{name}({int(pri_level)})'] = (
               progress_dict[name][pri_level])
       progress_dict[name] = tuple(
           map(sum, list(zip(*progress_dict[name].values()))))

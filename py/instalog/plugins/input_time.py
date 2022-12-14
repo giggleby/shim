@@ -61,7 +61,8 @@ class InputTime(plugin_base.InputPlugin):
           # Create fake attachment files for the event.
           attachments = {}
           for j in range(self.args.num_attachments):
-            att_path = os.path.join(tmp_dir, '%d_%d_%d' % (batch_id, i, j))
+            att_path = os.path.join(tmp_dir,
+                                    f'{int(batch_id)}_{int(i)}_{int(j)}')
             with open(att_path, 'wb') as f:
               f.write(os.urandom(self.args.attachment_bytes))
             attachments[j] = att_path

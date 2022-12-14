@@ -114,13 +114,13 @@ class OutputCloudStorage(plugin_base.OutputPlugin):
     for att_id, att_path in event.attachments.items():
       target_filename = (file_utils.SHA1InHex(att_path) if self.args.use_sha1
                          else att_id)
-      target_path = '/%s/%s' % (self.target_dir, target_filename)
+      target_path = f'/{self.target_dir}/{target_filename}'
 
       # Upload the file.
       self.gcs(att_path, target_path)
 
       # Relocate the attachments entry into the event payload.
-      event.setdefault('__attachments__', {})[att_id] = 'gs:/%s' % target_path
+      event.setdefault('__attachments__', {})[att_id] = f'gs:/{target_path}'
 
     # Remove attachments from the event for re-emitting.
     event.attachments = {}

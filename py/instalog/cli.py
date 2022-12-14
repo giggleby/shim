@@ -105,8 +105,8 @@ class InstalogCLI:
 
     self._service = InstalogService(config, logging_level)
     self._core = jsonrpclib.Server(
-        'http://%s:%s' % (config['instalog']['cli_hostname'],
-                          config['instalog']['cli_port']))
+        f"http://{config['instalog']['cli_hostname']}:"
+        f"{config['instalog']['cli_port']}")
 
     if args.cmd == 'start':
       self.Start(args.foreground)
@@ -246,21 +246,20 @@ class InstalogCLI:
     if os.path.isdir(archive_path):
       archive_path = os.path.join(archive_path, 'archived_instalog.tar.gz')
     if not os.path.isdir(os.path.dirname(archive_path)):
-      print('The directory of `%s` does not exist' %
-            os.path.realpath(archive_path))
+      print(
+          f'The directory of `{os.path.realpath(archive_path)}` does not exist')
       sys.exit(1)
 
-    print('Archiving to %s ...' % os.path.realpath(archive_path))
+    print(f'Archiving to {os.path.realpath(archive_path)} ...')
     with tarfile.open(archive_path, 'w') as tar:
       data_dir = os.path.realpath(data_dir)
       instalog_dir = instalog_common.INSTALOG_DIR
-      instalog_parent_dir = instalog_common.INSTALOG_PARENT_DIR
       instalog_virtual_env_dir = instalog_common.INSTALOG_VIRTUAL_ENV_DIR
 
       if os.path.exists(data_dir):
-        print('Archiving data_dir from %s' % os.path.realpath(data_dir))
+        print(f'Archiving data_dir from {os.path.realpath(data_dir)}')
         tar.add(data_dir, 'data')
-        print('Archiving config file from %s' % os.path.realpath(config_path))
+        print(f'Archiving config file from {os.path.realpath(config_path)}')
         tar.add(config_path, 'instalog.yaml')
       if details >= 1:
         def VirtualEnvFilter(tarinfo):
@@ -281,8 +280,8 @@ class InstalogCLI:
     for name in sorted(progress_dict):
       if plugin_id is None or name.startswith(plugin_id):
         completed, total = progress_dict[name]
-        print('%s completed %d of %d events, and remaining %d events' %
-              (name, completed, total, total - completed))
+        print(f'{name} completed {int(completed)} of {int(total)} events, and '
+              f'remaining {int(total - completed)} events')
 
 
 def main():

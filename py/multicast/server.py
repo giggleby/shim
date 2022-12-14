@@ -14,6 +14,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 
+
 LOG_FILE = 'uftp.log'
 MCAST_CONFIG_NAME = 'multicast_config.json'
 UMPIRE_CONFIG_NAME = 'active_umpire.json'
@@ -113,7 +114,7 @@ class MulticastServer:
     logger = logging.getLogger(project)
     if not logger.hasHandlers():
       formatter = logging.Formatter(
-          '%%(asctime)s:%%(levelname)s:%s:%%(message)s' % project)
+          f'%(asctime)s:%(levelname)s:{project}:%(message)s')
       handler = logging.FileHandler(log_path)
       handler.setFormatter(formatter)
       logger.addHandler(handler)
@@ -146,8 +147,7 @@ class MulticastServer:
 
         file_path = os.path.join(resource_dir, file_name)
         uftp_mcast_addr = mcast_addrs[component][part]
-        status_file_path = os.path.join(self._log_dir,
-                                        'uftp_%s.log' % file_name)
+        status_file_path = os.path.join(self._log_dir, f'uftp_{file_name}.log')
 
         active_args.append(
             UftpArgs(file_path, uftp_mcast_addr, status_file_path, interface))
@@ -172,7 +172,7 @@ class MulticastServer:
 
 def IsUmpireEnabled(project):
   """Return True if corresponding Umpire container is running."""
-  container_name = 'umpire_%s' % project
+  container_name = f'umpire_{project}'
 
   container_list = process_utils.CheckOutput(
       ['docker', 'ps', '--all', '--format', '{{.Names}}'],

@@ -84,7 +84,7 @@ class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
 
     # Data directory and JSON store carry across PluginRunner runs.
     self._data_dir = os.path.join(tempfile.gettempdir(),
-                                  'plugin_runner.%s' % plugin_type)
+                                  f'plugin_runner.{plugin_type}')
     if not os.path.isdir(self._data_dir):
       os.mkdir(self._data_dir)
     self._store_path = os.path.join(self._data_dir, 'store.json')
@@ -318,7 +318,7 @@ def main(plugin_type=None, config=None):
   if config is None:
     config = json.loads(sys.argv.pop(1)) if len(sys.argv) > 1 else {}
 
-  logger = logging.getLogger('%s.plugin_runner' % plugin_type)
+  logger = logging.getLogger(f'{plugin_type}.plugin_runner')
 
   plugin_runner = PluginRunner(logger.name, plugin_type, config)
   plugin_runner.Run()

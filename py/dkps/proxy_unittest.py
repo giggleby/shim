@@ -17,6 +17,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 
+
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 # Copied from Widevine website.
 FAKE_KEYBOX = '5769646576696e65546573744f6e6c794b6579626f7830303000000000000000e4ff574c322ef53426212cb3ed37f35e0000000200001ee8ca1e717cfbe8a394520a6b7137d269fa5ac6b54c6b46639bbe803dbb4ff74c5f6f550e3d3d9acf81125d52e0478cda0bf4314113d0d52da05b209aed515d13d66b626f7839f294a7'  # pylint: disable=line-too-long
@@ -50,7 +51,7 @@ class DKPSProxyTest(unittest.TestCase):
                                     args=(ip, port))
     sync_utils.WaitFor(lambda: net_utils.ProbeTCPPort(ip, port), 2)
 
-    rpc_proxy = xmlrpc.client.ServerProxy('http://%s:%d' % (ip, port))
+    rpc_proxy = xmlrpc.client.ServerProxy(f'http://{ip}:{int(port)}')
 
     # Call `Request()` without any argument because we only want to make sure
     # the port is listening.

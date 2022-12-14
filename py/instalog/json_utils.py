@@ -12,6 +12,7 @@ import json
 import logging
 import traceback
 
+
 # This is ISO 8601 format of date/time/datetime. If you want to change this,
 # you have to also change the FastStringParseDate/Time/Datetime function
 # and isoformat() below.
@@ -23,7 +24,7 @@ FORMAT_TIME = '%H:%M:%S.%f'
 def FastStringParseDate(date_string):
   """Parses the date_string with FORMAT_DATE to datetime.date"""
   if len(date_string) != 10 or date_string[4] != '-' or date_string[7] != '-':
-    raise ValueError('Wrong format string: %s' % date_string)
+    raise ValueError(f'Wrong format string: {date_string}')
   return datetime.date(
       int(date_string[0:4]),
       int(date_string[5:7]),
@@ -34,7 +35,7 @@ def FastStringParseTime(date_string):
   """Parses the date_string with FORMAT_TIME to datetime.time"""
   if (len(date_string) != 15 or date_string[2] != ':' or
       date_string[5] != ':' or date_string[8] != '.'):
-    raise ValueError('Wrong format string: %s' % date_string)
+    raise ValueError(f'Wrong format string: {date_string}')
   return datetime.time(
       int(date_string[0:2]),
       int(date_string[3:5]),
@@ -45,7 +46,7 @@ def FastStringParseTime(date_string):
 def FastStringParseDatetime(date_string):
   """Parses the date_string with FORMAT_DATETIME to datetime.datetime"""
   if len(date_string) != 27 or date_string[10] != 'T' or date_string[26] != 'Z':
-    raise ValueError('Wrong format string: %s' % date_string)
+    raise ValueError(f'Wrong format string: {date_string}')
   return datetime.datetime.combine(
       FastStringParseDate(date_string[0:10]),
       FastStringParseTime(date_string[11:26]))
@@ -85,7 +86,7 @@ class JSONEncoder(json.JSONEncoder):
       tb = ''.join(traceback.format_tb(obj))
       return tb.strip()
     if isinstance(obj, Exception):
-      return 'Exception: %s' % str(obj)
+      return f'Exception: {obj}'
 
     # Base class default method may raise TypeError.
     try:
@@ -143,8 +144,8 @@ class SerializableMeta(type):
   def __new__(cls, name, bases, class_dict):
     mcs = type.__new__(cls, name, bases, class_dict)
     if mcs.__name__ in _class_registry:
-      raise RuntimeError('Multiple serializable classes with name "%s"'
-                         % mcs.__name__)
+      raise RuntimeError(
+          f'Multiple serializable classes with name "{mcs.__name__}"')
     _class_registry[mcs.__name__] = mcs
     return mcs
 
@@ -176,8 +177,8 @@ class Serializable(metaclass=SerializableMeta):
     """Deserializes the JSON string into its corresponding Python object."""
     ret = decoder.decode(json_string)
     if not isinstance(ret, cls):
-      raise ValueError('Given JSON string does not contain "%s" instance'
-                       % cls.__name__)
+      raise ValueError(
+          f'Given JSON string does not contain "{cls.__name__}" instance')
     return ret
 
   def ToDict(self):
@@ -232,6 +233,6 @@ def WalkJSONPath(json_path, data):
     if current.startswith('['):
       return WalkJSONPath(left, data[int(current[1:-1])])
   except (KeyError, TypeError):
-    raise ValueError('Could not access %s' % json_path) from None
+    raise ValueError(f'Could not access {json_path}') from None
   else:
-    raise ValueError('Invalid syntax found at %s' % json_path)
+    raise ValueError(f'Invalid syntax found at {json_path}')

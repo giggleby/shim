@@ -39,9 +39,9 @@ def Shell(cmd, stdin=None, log=True, sys_interface=None):
     process = sys_interface.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
   stdout, stderr = process.communicate(input=stdin)
   if log:
-    logging.debug('running %s' % repr(cmd) +
-                  (', stdout: %s' % repr(stdout.strip()) if stdout else '') +
-                  (', stderr: %s' % repr(stderr.strip()) if stderr else ''))
+    logging.debug(f'running {repr(cmd)}' +
+                  (f', stdout: {repr(stdout.strip())}' if stdout else '') +
+                  (f', stderr: {repr(stderr.strip())}' if stderr else ''))
   status = process.poll()
   return Obj(stdout=stdout, stderr=stderr, status=status, success=(status == 0))
 
@@ -94,7 +94,7 @@ class Util:
       True if the given device is fixed, and false if it is not.
     """
 
-    sysfs_path = '/sys/block/%s/removable' % dev
+    sysfs_path = f'/sys/block/{dev}/removable'
     return (os.path.exists(sysfs_path) and
             file_utils.ReadFile(sysfs_path).strip() == '0')
 
@@ -110,7 +110,7 @@ class Util:
 
     futil_out = self.shell(['futility', 'show', '--type', 'rwsig', fw_file])
     if not futil_out.success:
-      raise Error('Failed to get EC pubkey hash: %s' % futil_out.stderr)
+      raise Error(f'Failed to get EC pubkey hash: {futil_out.stderr}')
     # A typical example of the output from `futility show` is:
     # Public Key file:       /tmp/ec_binasdf1234
     #    Vboot API:           2.1
@@ -145,7 +145,7 @@ class Util:
 
     dev_path = self.shell('rootdev -s -d').stdout.strip()
     if not self._IsDeviceFixed(os.path.basename(dev_path)):
-      raise Error('%s is not a fixed device' % dev_path)
+      raise Error(f'{dev_path} is not a fixed device')
     if partition is None:
       return dev_path
     fmt_str = '%sp%d' if dev_path[-1].isdigit() else '%s%d'
@@ -184,11 +184,12 @@ class Util:
                    'string to LVM stateful partition.')
       return None
 
-    result = self.shell('pvdisplay -C --quiet --noheadings --separator "|" '
-                        '-o vg_name %s | tr -d "[:space:]"' % state_dev)
+    result = self.shell(
+        'pvdisplay -C --quiet --noheadings --separator "|" -o vg_name '
+        f'{state_dev} | tr -d "[:space:]"')
 
     if result.stdout:
-      return '/dev/%s/unencrypted' % result.stdout
+      return f'/dev/{result.stdout}/unencrypted'
 
     return None
 
@@ -203,8 +204,8 @@ class Util:
     """
     chromeos_startup_path = os.path.join(rootfs_path, 'sbin',
                                          'chromeos_startup.sh')
-    return self.shell('grep -q USE_LVM_STATEFUL_PARTITION=1 %s' %
-                      chromeos_startup_path).success
+    return self.shell(
+        f'grep -q USE_LVM_STATEFUL_PARTITION=1 {chromeos_startup_path}').success
 
   def FindScript(self, script_name):
     """Finds the script under /usr/local/factory/sh
@@ -220,11 +221,11 @@ class Util:
     """
 
     # __file__ is in /usr/local/factory/py/gooftool/__init__.py
-    factory_base = os.path.realpath(os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), '..', '..'))
+    factory_base = os.path.realpath(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..'))
     script_path = os.path.join(factory_base, 'sh', script_name)
     if not os.path.isfile(script_path):
-      raise Error('Needed script %s does not exist.' % script_path)
+      raise Error(f'Needed script {script_path} does not exist.')
     return script_path
 
   def FindAndRunScript(self, script_name, post_opts=None, pre_opts=None):
@@ -248,12 +249,11 @@ class Util:
     assert not pre_opts or isinstance(pre_opts, list)
 
     script = self.FindScript(script_name)
-    cmd = '%s %s %s' % (' '.join(pre_opts) if pre_opts else '',
-                        script,
-                        ' '.join(post_opts) if post_opts else '')
+    cmd = (f"{' '.join(pre_opts) if pre_opts else ''} {script} "
+           f"{' '.join(post_opts) if post_opts else ''}")
     result = self.shell(cmd.strip())
     if not result.success:
-      raise Error('%r failed, stderr: %r' % (cmd, result.stderr))
+      raise Error(f'{cmd!r} failed, stderr: {result.stderr!r}')
 
     return result
 
@@ -367,11 +367,11 @@ class Util:
       device = self.GetPrimaryDevicePath()
 
     attrs = {}
-    for line in self.shell('cgpt show %s -q' % device).stdout.splitlines():
+    for line in self.shell(f'cgpt show {device} -q').stdout.splitlines():
       # format: offset size no name
       part_no = line.split()[2]
-      attrs[part_no] = self.shell('cgpt show %s -i %s -A' %
-                                  (device, part_no)).stdout.strip()
+      attrs[part_no] = self.shell(
+          f'cgpt show {device} -i {part_no} -A').stdout.strip()
     return attrs
 
   def SetCgptAttributes(self, attrs, device=None):
@@ -382,8 +382,8 @@ class Util:
     for k, v in attrs.items():
       if curr_attrs.get(k) == v:
         continue
-      if not self.shell('cgpt add %s -i %s -A %s' % (device, k, v)).success:
-        raise Error('Failed to set device config: %s#%s=%s' % (device, k, v))
+      if not self.shell(f'cgpt add {device} -i {k} -A {v}').success:
+        raise Error(f'Failed to set device config: {device}#{k}={v}')
 
   def InvokeChromeOSPostInstall(self, root_dev=None):
     """Invokes the ChromeOS post-install script (/postinst)."""
@@ -398,27 +398,27 @@ class Util:
     # safer to always mount the partition with legacy ext2. (ref:
     # chrome-os-partner:3940)
     with sys_utils.MountPartition(root_dev, fstype='ext2') as mount_path:
-      # IS_FACTORY_INSTALL is used to prevent postinst trying to update firmare.
-      command = ('IS_FACTORY_INSTALL=1 IS_INSTALL=1 "%s"/postinst %s' %
-                 (mount_path, root_dev))
+      # IS_FACTORY_INSTALL is used to prevent postinst from updating firmware.
+      command = (f'IS_FACTORY_INSTALL=1 IS_INSTALL=1 "{mount_path}"/postinst '
+                 f'{root_dev}')
       result = self.shell(command)
       if not result.success:
-        raise Error('chromeos-postinst on %s failed with error: code=%s. %s' %
-                    (root_dev, result.status, result.stderr))
+        raise Error(f'chromeos-postinst on {root_dev} failed with error: code='
+                    f'{result.status}. {result.stderr}')
 
   def EnableKernel(self, device, part_no):
     """Enables the kernel partition from GPT."""
     logging.info('Enabling kernel on %s#%s...', device, part_no)
-    r = self.shell('cgpt add -i %s -P 3 -S 1 -T 0 %s' % (part_no, device))
+    r = self.shell(f'cgpt add -i {part_no} -P 3 -S 1 -T 0 {device}')
     if not r.success:
-      raise Error('Failed to enable kernel on %s#%s' % (device, part_no))
+      raise Error(f'Failed to enable kernel on {device}#{part_no}')
 
   def DisableKernel(self, device, part_no):
     """Disables the kernel partition from GPT."""
     logging.info('Disabling kernel on %s#%s...', device, part_no)
-    r = self.shell('cgpt add -i %s -P 0 -S 0 -T 0 %s' % (part_no, device))
+    r = self.shell(f'cgpt add -i {part_no} -P 0 -S 0 -T 0 {device}')
     if not r.success:
-      raise Error('Failed to disable kernel on %s#%s' % (device, part_no))
+      raise Error(f'Failed to disable kernel on {device}#{part_no}')
 
   def IsLegacyChromeOSFirmware(self):
     """Returns if the system is running legacy ChromeOS firmware."""
@@ -430,8 +430,8 @@ class Util:
     release_no = int(root_dev[-1]) - 1
     factory_map = {2: 4, 4: 2}
     if release_no not in factory_map:
-      raise ValueError('EnableReleasePartition: Cannot identify kernel %s' %
-                       root_dev)
+      raise ValueError(
+          f'EnableReleasePartition: Cannot identify kernel {root_dev}')
 
     factory_no = factory_map[release_no]
     device = self.GetPartitionDevice(root_dev)

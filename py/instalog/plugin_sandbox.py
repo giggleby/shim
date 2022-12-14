@@ -161,7 +161,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
       raise TypeError('Invalid CoreAPI object provided')
 
     # Create a logger this class to use.
-    self.logger = logging.getLogger('%s.plugin_sandbox' % self.plugin_id)
+    self.logger = logging.getLogger(f'{self.plugin_id}.plugin_sandbox')
 
     self._loader = plugin_loader.PluginLoader(
         self.plugin_type, plugin_id=self.plugin_id,
@@ -188,8 +188,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return ('PluginSandbox(%s, state=%s)'
-            % (self.plugin_id, self._state))
+    return f'PluginSandbox({self.plugin_id}, state={self._state})'
 
   def _LoadStore(self, store_path):
     """Loads the data store dictionary from disk.
@@ -235,7 +234,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
       raise
     except Exception as e:
       raise plugin_base.PluginCallError(
-          'Plugin call for %s unexpectedly failed.' % self.plugin_id) from e
+          f'Plugin call for {self.plugin_id} unexpectedly failed.') from e
     return ret
 
 
@@ -324,8 +323,8 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
         self.plugin_id, self._state, caller_name)
     if self._state not in allowed_states:
       raise plugin_base.StateCommandError(
-          'Plugin %s (%s) called %s, but only allowed for %s'
-          % (self.plugin_id, self._state, caller_name, allowed_states))
+          f'Plugin {self.plugin_id} ({self._state}) called {caller_name}, but '
+          f'only allowed for {allowed_states}')
 
   def GetState(self):
     """Returns the current state of the plugin."""

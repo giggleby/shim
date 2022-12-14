@@ -160,7 +160,7 @@ class FactoryToolkitInstaller:
       self._usr_local_dest = os.path.join(dest, 'dev_image')
       if not os.path.exists(self._usr_local_dest):
         raise Exception(
-            'The destination path %s is not a stateful partition!' % dest)
+            f'The destination path {dest} is not a stateful partition!')
 
     self._dest = dest
     self._usr_local_src = os.path.join(src, 'usr', 'local')
@@ -177,39 +177,32 @@ class FactoryToolkitInstaller:
   def WarningMessage(self, target_test_image=None):
     ret = file_utils.ReadFile(os.path.join(self._src, VERSION_PATH))
     if target_test_image:
-      ret += (
-          '\n'
-          '\n'
-          '*** You are about to patch the factory toolkit into:\n'
-          '***   %s\n'
-          '***' % target_test_image)
+      ret += ('\n\n*** You are about to patch the factory toolkit into:\n***   '
+              f'{target_test_image}\n***')
     else:
-      ret += (
-          '\n'
-          '\n'
-          '*** You are about to install the factory toolkit to:\n'
-          '***   %s\n'
-          '***' % self._dest)
+      ret += ('\n\n*** You are about to install the factory toolkit to:\n***   '
+              f'{self._dest}\n***')
     if self._dest == self._system_root:
       if self._no_enable:
-        ret += ('\n*** Factory tests will be disabled after this process is '
-                'done, but\n*** you can enable them by creating the factory '
-                'enabled tag:\n***   %s\n***' % self._tag_file)
+        ret += (
+            '\n*** Factory tests will be disabled after this process is done, '
+            'but\n*** you can enable them by creating the factory enabled '
+            f'tag:\n***   {self._tag_file}\n***')
       else:
         ret += ('\n*** After this process is done, your device will start '
                 'factory\n*** tests on the next reboot.\n***\n*** Factory '
                 'tests can be disabled by deleting the factory enabled\n*** '
-                'tag:\n***   %s\n***' % self._tag_file)
+                f'tag:\n***   {self._tag_file}\n***')
     return ret
 
   def _SetTagFile(self, name, path, enabled):
     """Install or remove a tag file."""
     if enabled:
-      print('*** Installing %s enabled tag...' % name)
+      print(f'*** Installing {name} enabled tag...')
       Spawn(['touch', path], sudo=True, log=True, check_call=True)
       Spawn(['chmod', 'go+r', path], sudo=True, log=True, check_call=True)
     else:
-      print('*** Removing %s enabled tag...' % name)
+      print(f'*** Removing {name} enabled tag...')
       Spawn(['rm', '-f', path], sudo=True, log=True, check_call=True)
 
   def _SetActiveTestList(self):
@@ -234,15 +227,15 @@ class FactoryToolkitInstaller:
     """
     app_enable = os.path.join(self._usr_local_dest,
                               'factory', 'init', 'main.d', 'enable-' + app)
-    app_disable = os.path.join(self._usr_local_dest,
-                               'factory', 'init', 'main.d', 'disable-' + app)
+    app_disable = os.path.join(self._usr_local_dest, 'factory', 'init',
+                               'main.d', 'disable-' + app)
     if enabled:
-      print('*** Enabling {app} ***'.format(app=app))
+      print(f'*** Enabling {app} ***')
       Spawn(['rm', '-f', app_disable], sudo=self._sudo, log=True,
             check_call=True)
       Spawn(['touch', app_enable], sudo=self._sudo, log=True, check_call=True)
     else:
-      print('*** Disabling {app} ***'.format(app=app))
+      print(f'*** Disabling {app} ***')
       Spawn(['touch', app_disable], sudo=self._sudo, log=True, check_call=True)
       Spawn(['rm', '-f', app_enable], sudo=self._sudo, log=True,
             check_call=True)
@@ -258,8 +251,7 @@ class FactoryToolkitInstaller:
       elif app[0] == '-':
         app_list.append((app[1:], False))
       else:
-        raise ValueError(
-            'Use +{app} to enable and -{app} to disable'.format(app=app))
+        raise ValueError(f'Use +{app} to enable and -{app} to disable')
 
     for app, enabled in app_list:
       self._EnableApp(app, enabled)
@@ -301,10 +293,10 @@ class FactoryToolkitInstaller:
     # before sudo (doesn't matter if sudo is not present). --force is also
     # necessary to allow goofy directory from prior toolkit installations to
     # be overwritten by the goofy symlink.
-    print('***   %s -> %s' % (self._usr_local_src, self._usr_local_dest))
-    Spawn(['rsync', '-a', '--no-owner', '--no-group', '--chmod=ugo+rX',
-           '--force'] + SERVER_FILE_MASK + [self._usr_local_src + '/',
-                                            self._usr_local_dest],
+    print(f'***   {self._usr_local_src} -> {self._usr_local_dest}')
+    Spawn([
+        'rsync', '-a', '--no-owner', '--no-group', '--chmod=ugo+rX', '--force'
+    ] + SERVER_FILE_MASK + [self._usr_local_src + '/', self._usr_local_dest],
           sudo=self._sudo, log=True, check_output=True, cwd=self._usr_local_src)
 
     print('*** Ensure SSH keys file permission...')
@@ -348,9 +340,10 @@ def PrintBuildInfo(src_root):
 def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
   """Packs the files containing this script into a factory toolkit."""
   if initial_version is None:
-    complete_version = '%s  repacked by %s@%s at %s\n' % (
-        file_utils.ReadFile(os.path.join(src_root, VERSION_PATH)),
-        getpass.getuser(), os.uname()[1], time.strftime('%Y-%m-%d %H:%M:%S'))
+    complete_version = (
+        f"{file_utils.ReadFile(os.path.join(src_root, VERSION_PATH))}  repacked"
+        f" by {getpass.getuser()}@{os.uname()[1]} at "
+        f"{time.strftime('%Y-%m-%d %H:%M:%S')}\n")
     initial_version = complete_version.splitlines()[0]
   else:
     complete_version = initial_version + '\n'
@@ -358,10 +351,10 @@ def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
   if modified_times == 0:
     modified_msg = ''
   else:
-    modified_msg = ' (modified %d times)' % modified_times
+    modified_msg = f' (modified {int(modified_times)} times)'
   with tempfile.NamedTemporaryFile('w') as help_header:
-    help_header.write(initial_version + '\n' +
-                      HELP_HEADER + HELP_HEADER_MAKESELF)
+    help_header.write(initial_version + '\n' + HELP_HEADER +
+                      HELP_HEADER_MAKESELF)
     help_header.flush()
     build_option_args = ['--tar-format', 'gnu']
     cmd = [
@@ -404,15 +397,15 @@ def PackFactoryToolkit(src_root, output_path, initial_version, quiet=False):
     ], check_call=True, log=True, read_stdout=quiet, read_stderr=quiet)
 
   print('\n'
-        '  Factory toolkit generated at %s.\n'
+        f'  Factory toolkit generated at {output_path}.\n'
         '\n'
         '  To install factory toolkit on a live device running a test image,\n'
         '  copy this to the device and execute it as root.\n'
         '\n'
         '  Alternatively, the factory toolkit can be used to patch a test\n'
         '  image. For more information, run:\n'
-        '    %s --help\n'
-        '\n' % (output_path, output_path))
+        f'    {output_path} --help\n'
+        '\n')
 
 
 def ExtractOverlord(src_root, output_dir):
@@ -431,7 +424,7 @@ def ExtractOverlord(src_root, output_dir):
 
   # Give overlordd execution permission
   os.chmod(os.path.join(output_dir, 'overlordd'), 0o755)
-  print("Extracted overlord under '%s'" % output_dir)
+  print(f"Extracted overlord under '{output_dir}'")
 
 
 def main():
@@ -539,7 +532,7 @@ def main():
     return
 
   if not os.path.exists(args.dest):
-    parser.error('Destination %s does not exist!' % args.dest)
+    parser.error(f'Destination {args.dest} does not exist!')
 
   patch_test_image = os.path.isfile(args.dest)
 

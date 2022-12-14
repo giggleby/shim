@@ -22,6 +22,7 @@ import sys
 
 from cros.factory.utils import file_utils
 
+
 # Constant Definition
 KEY_BLOCK_MAGIC = 'CHROMEOS'
 KEY_BLOCK_MAGIC_SIZE = 8
@@ -50,11 +51,11 @@ def unpack_VbKeyBlockHeader(blob, offset=0):
   header = dict(zip(names, fields))
   # check values
   if header['magic'] != KEY_BLOCK_MAGIC:
-    raise ValueError('unknown key block magic: %s' % header['magic'])
+    raise ValueError(f"unknown key block magic: {header['magic']}")
   major = header['header_version_major']
   minor = header['header_version_minor']
   if major != KEY_BLOCK_HEADER_VERSION_MAJOR:
-    raise ValueError('unknown key block version (%d.%d)' % (major, minor))
+    raise ValueError(f'unknown key block version ({int(major)}.{int(minor)})')
   return header
 
 
@@ -87,7 +88,7 @@ def unpack_VbFirmwarePreambleHeader(blob, offset=0):
   major = header['header_version_major']
   minor = header['header_version_minor']
   if major != FIRMWARE_PREAMBLE_HEADER_VERSION_MAJOR:
-    raise ValueError('unknown preamble version: (%d.%d)' % (major, minor))
+    raise ValueError(f'unknown preamble version: ({int(major)}.{int(minor)})')
   return header
 
 

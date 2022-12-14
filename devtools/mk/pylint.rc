@@ -118,10 +118,6 @@ disable=
     too-many-return-statements,
     too-many-statements,
     wrong-import-order,
-    # TODO(b/233844450): Review the following messages which fail the current
-    # sources.  Either remove them to enable or leave them here to disable the
-    # unexpected checks.
-    consider-using-f-string,
 
 [REPORTS]
 

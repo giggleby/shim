@@ -93,7 +93,7 @@ UMPIRE_BASE_DIR = '/var/db/factory/umpire'
 UMPIRED_FILEPATH = '/usr/local/factory/bin/umpired'
 
 
-logger = logging.getLogger('django.%s' % __name__)
+logger = logging.getLogger(f'django.{__name__}')
 
 
 class DomeException(rest_framework.exceptions.APIException):
@@ -144,7 +144,7 @@ def UploadedFile(temporary_uploaded_file_id):
 
 def GetUmpireServerFromPort(port):
   host = net_utils.GetDockerHostIP()
-  url = 'http://%s:%d' % (host, port + UMPIRE_RPC_PORT_OFFSET)
+  url = f'http://{host}:{int(port + UMPIRE_RPC_PORT_OFFSET)}'
   return xmlrpc.client.ServerProxy(url, allow_none=True)
 
 
@@ -178,7 +178,7 @@ def GenerateUploadToPath(unused_instance, filename):
       raise
 
   # add a time string as prefix for better debugging experience
-  temp_dir = tempfile.mkdtemp(prefix='%s-' % time.strftime('%Y%m%d%H%M%S'),
+  temp_dir = tempfile.mkdtemp(prefix=f"{time.strftime('%Y%m%d%H%M%S')}-",
                               dir=SHARED_TMP_DIR)
   path = os.path.relpath(os.path.join(temp_dir, filename), SHARED_TMP_DIR)
   logger.info('Uploading file to %r', path)
@@ -212,22 +212,22 @@ def GetNetbootFirmwarewarningMessage(project_name, payloads):
         netboot_firmware_file = netboot_firmware_information[key]
         if project_name not in netboot_firmware_file:
           warning_message.append(
-              '"%s" does not match with project "%s". '
-              'Please make sure the %s are under project "%s".' %
-              (netboot_firmware_file, project_name, key, project_name))
+              f'"{netboot_firmware_file}" does not match with project "'
+              f'{project_name}". Please make sure the {key} are under project "'
+              f'{project_name}".')
         if not os.path.isfile(
-            '%s/%s' % (TFTP_BASE_DIR_IN_TFTP_CONTAINER, netboot_firmware_file)):
-          warning_message.append('"%s" is missing. To fix this, upload '
-                                 'netboot_kernel and netboot_cmdline and '
-                                 'then click the NETBOOT button to link the '
-                                 'tftp server.' % netboot_firmware_file)
+            f'{TFTP_BASE_DIR_IN_TFTP_CONTAINER}/{netboot_firmware_file}'):
+          warning_message.append(
+              f'"{netboot_firmware_file}" is missing. To fix this, upload '
+              'netboot_kernel and netboot_cmdline and then click the NETBOOT '
+              'button to link the tftp server.')
       # Check if tftp_server_ip is same as the ip set.
       host_ip = str(net_utils.GetDockerHostIP())
       tftp_server_ip = netboot_firmware_information['tftp_server_ip']
       if tftp_server_ip and tftp_server_ip != host_ip:
-        warning_message.append('The tftp_server_ip "%s" does not equal to '
-                               '"%s". Please re-upload a new bundle with the '
-                               'same ip.' % (tftp_server_ip, host_ip))
+        warning_message.append(
+            f'The tftp_server_ip "{tftp_server_ip}" does not equal to "'
+            f'{host_ip}". Please re-upload a new bundle with the same ip.')
       # Check if TFTP server is enabled.
       tftp_enabled = DoesContainerExist(TFTP_CONTAINER_NAME)
       if tftp_server_ip and tftp_enabled is False:
@@ -250,16 +250,13 @@ class DomeConfig(django.db.models.Model):
 
     try:
       cmd = [
-          'docker', 'run', '--detach',
-          '--restart', 'unless-stopped',
-          '--name', TFTP_CONTAINER_NAME,
-          '--volume', '%s:%s' % (TFTP_DOCKER_DIR,
-                                 TFTP_BASE_DIR_IN_TFTP_CONTAINER),
-          '--net', 'host',
-          FACTORY_SERVER_IMAGE_NAME,
-          'dnsmasq', '--user=root', '--port=0',
-          '--enable-tftp', '--tftp-root=%s' % TFTP_BASE_DIR_IN_TFTP_CONTAINER,
-          '--no-daemon', '--no-resolv'
+          'docker', 'run', '--detach', '--restart', 'unless-stopped', '--name',
+          TFTP_CONTAINER_NAME, '--volume',
+          f'{TFTP_DOCKER_DIR}:{TFTP_BASE_DIR_IN_TFTP_CONTAINER}', '--net',
+          'host', FACTORY_SERVER_IMAGE_NAME, 'dnsmasq', '--user=root',
+          '--port=0', '--enable-tftp',
+          f'--tftp-root={TFTP_BASE_DIR_IN_TFTP_CONTAINER}', '--no-daemon',
+          '--no-resolv'
       ]
       logger.info('Running command %r', cmd)
       subprocess.check_call(cmd)
@@ -290,10 +287,9 @@ class DomeConfig(django.db.models.Model):
       cmd = [
           'docker', 'run', '--detach', '--restart', 'unless-stopped', '--name',
           MCAST_CONTAINER_NAME, '--net', 'host', '--volume',
-          '%s:%s' % (UMPIRE_DOCKER_DIR, UMPIRE_BASE_DIR_IN_UMPIRE_CONTAINER),
-          '--volume',
-          '%s:%s' % (MCAST_SHARED_DIR, MCAST_LOG_DIR_IN_CONTAINER), '--volume',
-          '/var/run/docker.sock:/var/run/docker.sock',
+          f'{UMPIRE_DOCKER_DIR}:{UMPIRE_BASE_DIR_IN_UMPIRE_CONTAINER}',
+          '--volume', f'{MCAST_SHARED_DIR}:{MCAST_LOG_DIR_IN_CONTAINER}',
+          '--volume', '/var/run/docker.sock:/var/run/docker.sock',
           FACTORY_SERVER_IMAGE_NAME, MCAST_SERVER_FILEPATH, '-l',
           MCAST_LOG_DIR_IN_CONTAINER
       ]
@@ -431,11 +427,13 @@ class Project(django.db.models.Model):
     container_name = Project.GetUmpireContainerName(self.name)
     if not DoesContainerExist(container_name):
       return None
-    return int(subprocess.check_output([
-        'docker', 'inspect', '--format',
-        '{{(index (index .NetworkSettings.Ports "%s/tcp") 0).HostPort}}' %
-        UMPIRE_BASE_PORT, container_name
-    ]))
+    return int(
+        subprocess.check_output([
+            'docker', 'inspect', '--format',
+            '{{(index (index .NetworkSettings.Ports '
+            f'"{UMPIRE_BASE_PORT}/tcp") 0).HostPort'
+            '}}', container_name
+        ]))
 
   @staticmethod
   def GetProjectByName(project_name):
@@ -507,7 +505,8 @@ class Project(django.db.models.Model):
       time.sleep(0.2)
     else:
       raise DomeClientException(
-          "Can't connect to umpire after %d seconds." % UMPIRE_START_WAIT_SECS)
+          f"Can't connect to umpire after {int(UMPIRE_START_WAIT_SECS)} "
+          "seconds.")
     logger.info('Connected to umpire server (version=%d)', version)
     return version
 
@@ -536,33 +535,30 @@ class Project(django.db.models.Model):
       #                  done by Dome only
       cmd = [
           'docker', 'run', '--detach', '--privileged', '--tmpfs',
-          '/run:rw,size=16384k', '--volume',
-          '%s:/mnt' % DOCKER_SHARED_DIR, '--volume',
-          '%s/%s:%s' %
-          (UMPIRE_DOCKER_DIR, self.name, UMPIRE_BASE_DIR_IN_UMPIRE_CONTAINER),
+          '/run:rw,size=16384k', '--volume', f'{DOCKER_SHARED_DIR}:/mnt',
           '--volume',
-          '%s:%s' % (DOCKER_SHARED_TMP_VOLUME, SHARED_TMP_DIR), '--publish',
-          '%d:%d' % (port, UMPIRE_BASE_PORT), '--publish',
-          '%d:%d' % (port + UMPIRE_RPC_PORT_OFFSET,
-                     UMPIRE_BASE_PORT + UMPIRE_RPC_PORT_OFFSET), '--publish',
-          '%d:%d' % (port + UMPIRE_RSYNC_PORT_OFFSET,
-                     UMPIRE_BASE_PORT + UMPIRE_RSYNC_PORT_OFFSET), '--publish',
-          '%d:%d' %
-          (port + UMPIRE_INSTALOG_PULL_SOCKET_PORT_OFFSET,
-           UMPIRE_BASE_PORT + UMPIRE_INSTALOG_PULL_SOCKET_PORT_OFFSET),
-          '--publish',
-          '%d:%d' %
-          (port + UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET,
-           UMPIRE_BASE_PORT + UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET),
-          '--publish',
-          '%d:%d' % (port + UMPIRE_DKPS_PORT_OFFSET,
-                     UMPIRE_BASE_PORT + UMPIRE_DKPS_PORT_OFFSET), '--env',
-          'UMPIRE_PROJECT_NAME=%s' % self.name, '--env',
-          'UMPIRE_PROJECT_PORT=%s' % port, '--restart', 'unless-stopped',
+          (f'{UMPIRE_DOCKER_DIR}/{self.name}:'
+           f'{UMPIRE_BASE_DIR_IN_UMPIRE_CONTAINER}'), '--volume',
+          f'{DOCKER_SHARED_TMP_VOLUME}:{SHARED_TMP_DIR}', '--publish',
+          f'{int(port)}:{int(UMPIRE_BASE_PORT)}', '--publish',
+          (f'{int(port + UMPIRE_RPC_PORT_OFFSET)}:'
+           f'{int(UMPIRE_BASE_PORT + UMPIRE_RPC_PORT_OFFSET)}'), '--publish',
+          (f'{int(port + UMPIRE_RSYNC_PORT_OFFSET)}:'
+           f'{int(UMPIRE_BASE_PORT + UMPIRE_RSYNC_PORT_OFFSET)}'), '--publish',
+          (f'{int(port + UMPIRE_INSTALOG_PULL_SOCKET_PORT_OFFSET)}:'
+           f'{int(UMPIRE_BASE_PORT + UMPIRE_INSTALOG_PULL_SOCKET_PORT_OFFSET)}'
+          ), '--publish',
+          (f'{int(port + UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET)}:'
+           f'{UMPIRE_BASE_PORT + UMPIRE_INSTALOG_CUSTOMIZED_OUTPUT_PORT_OFFSET}'
+          ), '--publish',
+          (f'{int(port + UMPIRE_DKPS_PORT_OFFSET)}:'
+           f'{int(UMPIRE_BASE_PORT + UMPIRE_DKPS_PORT_OFFSET)}'), '--env',
+          f'UMPIRE_PROJECT_NAME={self.name}', '--env',
+          f'UMPIRE_PROJECT_PORT={port}', '--restart', 'unless-stopped',
           '--name', container_name
       ]
       if LOCALTIME_DOCKER_PATH:
-        cmd += ['--volume', '%s:/etc/localtime:ro' % LOCALTIME_DOCKER_PATH]
+        cmd += ['--volume', f'{LOCALTIME_DOCKER_PATH}:/etc/localtime:ro']
       cmd += [FACTORY_SERVER_IMAGE_NAME, UMPIRED_FILEPATH]
       logger.info('Running command %r', cmd)
       subprocess.check_call(cmd)
@@ -614,15 +610,15 @@ class Project(django.db.models.Model):
     version = self.GetUmpireVersion()
     if version != umpire_common.UMPIRE_VERSION:
       raise DomeServerException(
-          "Umpire version of new instance (%d) doesn't "
-          'match the version of what Dome expected (%d).' %
-          (version, umpire_common.UMPIRE_VERSION))
+          f"Umpire version of new instance ({int(version)}) doesn't match the "
+          f"version of what Dome expected ({int(umpire_common.UMPIRE_VERSION)}"
+          ").")
 
     logger.info('Umpire container for %s had been restarted.', self.name)
 
   @staticmethod
   def GetUmpireContainerName(name):
-    return 'umpire_%s' % name
+    return f'umpire_{name}'
 
   @staticmethod
   def CreateOne(name, **kwargs):
@@ -667,9 +663,9 @@ class Project(django.db.models.Model):
           setattr(project, attr, value)
       project.save()
     except Exception as e:
-      error_message = 'Failed to create umpire server: The umpire port ' \
-                      'already has been used.\nYou should retry enable ' \
-                      'umpire or try another port.\n%r' % e
+      error_message = (
+          'Failed to create umpire server: The umpire port already has been '
+          f'used.\nYou should retry enable umpire or try another port.\n{e!r}')
       logger.error(error_message)
       raise DomeServerException(detail=error_message) from None
     return project
@@ -783,7 +779,7 @@ class Bundle:
     config = project.GetActiveConfig()
     if not any(b['id'] == bundle_name for b in config['bundles']):
       raise DomeClientException(
-          detail='Bundle %s not found' % bundle_name,
+          detail=f'Bundle {bundle_name} not found',
           status_code=rest_framework.status.HTTP_404_NOT_FOUND)
 
     if config['active_bundle_id'] == bundle_name:
@@ -813,7 +809,7 @@ class Bundle:
       bundle = next(b for b in config['bundles'] if b['id'] == bundle_name)
     except StopIteration:
       logger.exception(traceback.format_exc())
-      error_message = 'Bundle %r does not exist' % bundle_name
+      error_message = f'Bundle {bundle_name!r} does not exist'
       logger.error(error_message)
       raise DomeClientException(error_message) from None
 
@@ -861,7 +857,7 @@ class Bundle:
           b for b in config['bundles'] if b['id'] == src_bundle_name)
     except StopIteration:
       logger.exception(traceback.format_exc())
-      error_message = 'Bundle %r does not exist' % src_bundle_name
+      error_message = f'Bundle {src_bundle_name!r} does not exist'
       logger.error(error_message)
       raise DomeClientException(error_message) from None
 
@@ -871,7 +867,7 @@ class Bundle:
     else:
       if any(b for b in config['bundles'] if b['id'] == dst_bundle_name):
         raise DomeClientException(
-            detail='Bundle "%s" already exists' % dst_bundle_name,
+            detail=f'Bundle "{dst_bundle_name}" already exists',
             status_code=rest_framework.status.HTTP_409_CONFLICT)
       # not in-place update, duplicate the source bundle
       bundle = copy.deepcopy(src_bundle)
@@ -969,7 +965,7 @@ class Bundle:
       except xmlrpc.client.Fault as e:
         if 'already in use' in e.faultString:
           raise DomeClientException(
-              detail='Bundle "%s" already exists' % bundle_name,
+              detail=f'Bundle "{bundle_name}" already exists',
               status_code=rest_framework.status.HTTP_409_CONFLICT) from None
         raise DomeServerException(detail=e.faultString) from None
 
@@ -1098,10 +1094,10 @@ class Log:
     assert temp_dir.startswith(SHARED_TMP_DIR + '/'), \
         'temp_dir should be under /tmp/shared'
     if not os.path.isdir(temp_dir):
-      return 'No directory: {}'.format(temp_dir)
+      return f'No directory: {temp_dir}'
     try:
       shutil.rmtree(temp_dir)
-      return 'Deleted directory: {}'.format(temp_dir)
+      return f'Deleted directory: {temp_dir}'
     except OSError as e:
       raise DomeServerException(detail=e) from None
 

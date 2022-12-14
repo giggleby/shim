@@ -14,7 +14,7 @@ class Interval:
     self.end = end
 
   def __repr__(self):
-    return 'Interval(%s, %s)' % (self.start, self.end)
+    return f'Interval({self.start}, {self.end})'
 
   def __eq__(self, other):
     return self.start == other.start and self.end == other.end

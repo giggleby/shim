@@ -51,11 +51,12 @@ class RuntimeBound:
     self._end = time_utils.MonotonicTime()
     self._elapsed = self._end - self._start
     if self._elapsed < self._min_seconds:
-      raise ValueError('Only %.5fs elapsed (min %.2fs)'
-                       % (self._elapsed, self._min_seconds))
+      raise ValueError(
+          f'Only {self._elapsed:.5f}s elapsed (min {self._min_seconds:.2f}s)')
     if self._elapsed > self._max_seconds:
-      raise ValueError('Already %.5fs elapsed (max %.2fs)'
-                       % (self._elapsed, self._max_seconds))
+      raise ValueError(
+          f'Already {self._elapsed:.5f}s elapsed (max {self._max_seconds:.2f}s)'
+      )
 
 
 # pylint: disable=abstract-method
@@ -194,16 +195,24 @@ class TestEvent(unittest.TestCase):
   def testDeserialize(self):
     now_time = datetime.datetime.utcnow()
     event = datatypes.Event({'a': 1, 'time': now_time})
-    self.assertEqual(event, datatypes.Event.Deserialize(
-        '{"a": 1, "time": {"__type__": "datetime", "value": "%s"}}' %
-        now_time.strftime(json_utils.FORMAT_DATETIME)))
-    self.assertEqual(event, datatypes.Event.Deserialize(
-        '[{"a": 1, "time": {"__type__": "datetime", "value": "%s"}}, {}]' %
-        now_time.strftime(json_utils.FORMAT_DATETIME)))
-    self.assertEqual(event, datatypes.Event.Deserialize(
-        '{"payload": {"a": 1, "time": {"__type__": "datetime", "value": "%s"}},'
-        '"attachments": {}, "history": [], "__type__": "Event"}' %
-        now_time.strftime(json_utils.FORMAT_DATETIME)))
+    self.assertEqual(
+        event,
+        datatypes.Event.Deserialize(
+            '{"a": 1, "time": {"__type__": "datetime", "value": "'
+            f'{now_time.strftime(json_utils.FORMAT_DATETIME)}"'
+            '}}'))
+    self.assertEqual(
+        event,
+        datatypes.Event.Deserialize(
+            '[{"a": 1, "time": {"__type__": "datetime", "value": "'
+            f'{now_time.strftime(json_utils.FORMAT_DATETIME)}"'
+            '}}, {}]'))
+    self.assertEqual(
+        event,
+        datatypes.Event.Deserialize(
+            '{"payload": {"a": 1, "time": {"__type__": "datetime", "value": "'
+            f'{now_time.strftime(json_utils.FORMAT_DATETIME)}"'
+            '}},"attachments": {}, "history": [], "__type__": "Event"}'))
 
   def testRoundTrip(self):
     """Checks that an event can de serialized and deserialized."""

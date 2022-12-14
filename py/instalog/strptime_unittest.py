@@ -26,6 +26,7 @@ import threading
 import time
 import unittest
 
+
 error = False
 
 
@@ -89,7 +90,7 @@ def main():
     elif sys.argv[1] == 'datetime':
       fn = datetime.datetime.strptime
     if not fn:
-      print('%s: [<time/datetime> [patched]]' % sys.argv[0])
+      print(f'{sys.argv[0]}: [<time/datetime> [patched]]')
     if fn:
       sys.exit(0 if StrptimeRun(fn, patched) else 1)
 

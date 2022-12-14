@@ -54,10 +54,10 @@ class ProcessStage(json_utils.Serializable):
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return ('ProcessStage(node_id=%r, time=%r, plugin_id=%r, '
-            'plugin_type=%r, target=%r)'
-            % (self.node_id, self.time, self.plugin_id,
-               self.plugin_type, self.target))
+    return (
+        f'ProcessStage(node_id={self.node_id!r}, time={self.time!r}, plugin_id='
+        f'{self.plugin_id!r}, plugin_type={self.plugin_type!r}, target='
+        f'{self.target!r})')
 
 
 class Event(json_utils.Serializable):
@@ -116,8 +116,7 @@ class Event(json_utils.Serializable):
     if isinstance(obj, dict):
       return cls(payload=obj)
 
-    raise ValueError('Unable to deserialize the JSON string: %s' %
-                     json_string)
+    raise ValueError(f'Unable to deserialize the JSON string: {json_string}')
 
   def ToDict(self):
     """Returns the dictionary equivalent of the Event object."""
@@ -137,8 +136,8 @@ class Event(json_utils.Serializable):
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return ('Event(payload=%s, attachments=%s, history=%s)'
-            % (self.payload, self.attachments, self.history))
+    return (f'Event(payload={self.payload}, attachments={self.attachments}, '
+            f'history={self.history})')
 
   def __eq__(self, other):
     """Implements == operator."""

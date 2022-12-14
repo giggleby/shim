@@ -25,11 +25,12 @@ from django.views.generic import TemplateView
 from rest_framework.authtoken import views as drf_views
 from rest_framework.urlpatterns import format_suffix_patterns
 
+
 # TODO(littlecvr): move to common config with umpire.
-PROJECT_URL_ARG = r'(?P<project_name>%s)' % common.PROJECT_NAME_RE
+PROJECT_URL_ARG = r'(?P<project_name>' f'{common.PROJECT_NAME_RE})'
 BUNDLE_URL_ARG = r'(?P<bundle_name>[^/]+)'  # anything but slash
 RESOURCE_URL_ARG = r'(?P<resource_type>[^/]+)'
-
+URL_PREFIX = r'^projects/' f'{PROJECT_URL_ARG}/'
 
 urlpatterns = [
     url(r'^$', TemplateView.as_view(template_name='index.html')),
@@ -39,38 +40,37 @@ urlpatterns = [
     url(r'^info$', views.InfoView.as_view()),
     url(r'^project_ports/$', views.ProjectPortCollectionView.as_view()),
     url(r'^projects/$', views.ProjectCollectionView.as_view()),
-    url(r'^projects/%s/$' % PROJECT_URL_ARG,
-        views.ProjectElementView.as_view()),
-    url(r'^projects/%s/bundles/$' % PROJECT_URL_ARG,
-        views.BundleCollectionView.as_view()),
-    url(r'^projects/%s/bundles/%s/$' % (PROJECT_URL_ARG, BUNDLE_URL_ARG),
-        views.BundleElementView.as_view()),
-    url(
-        r'^projects/%s/bundles/%s/%s$' %
-        (PROJECT_URL_ARG, BUNDLE_URL_ARG, RESOURCE_URL_ARG),
-        views.ResourceDownloadView.as_view()),
-    url(r'^projects/%s/log/compress/$' % PROJECT_URL_ARG,
-        views.LogExportView.as_view()),
-    url(r'^projects/%s/log/delete/$' % PROJECT_URL_ARG,
-        views.LogDeleteView.as_view()),
-    url(r'^projects/%s/log/delete_files/$' % PROJECT_URL_ARG,
-        views.LogFileDeleteView.as_view()),
-    url(r'^projects/%s/log/download/$' % PROJECT_URL_ARG,
-        views.LogDownloadView.as_view()),
-    url(r'^projects/%s/factory_drives/dirs/$' % PROJECT_URL_ARG,
-        views.FactoryDriveDirectoriesView.as_view()),
-    url(r'^projects/%s/factory_drives/files/$' % PROJECT_URL_ARG,
-        views.FactoryDriveComponentsView.as_view()),
-    url(r'^projects/%s/resources/$' % PROJECT_URL_ARG,
-        views.ResourceCollectionView.as_view()),
-    url(r'^projects/%s/resources/gc$' % PROJECT_URL_ARG,
-        views.ResourceGarbageCollectionView.as_view()),
-    url(r'^projects/%s/services/$' % PROJECT_URL_ARG,
-        views.ServiceCollectionView.as_view()),
-    url(r'^projects/%s/services/schema$' % PROJECT_URL_ARG,
-        views.ServiceSchemaView.as_view()),
-    url(r'^projects/%s/sync/status/$' % PROJECT_URL_ARG,
-        views.SyncStatusView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'$', views.ProjectElementView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'bundles/$', views.BundleCollectionView.as_view()),
+    url(f'{URL_PREFIX}bundles/{BUNDLE_URL_ARG}'
+        r'/$', views.BundleElementView.as_view()),
+    url(f'{URL_PREFIX}bundles/{BUNDLE_URL_ARG}/'
+        f'{RESOURCE_URL_ARG}'
+        r'$', views.ResourceDownloadView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'log/compress/$', views.LogExportView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'log/delete/$', views.LogDeleteView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'log/delete_files/$', views.LogFileDeleteView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'log/download/$', views.LogDownloadView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'factory_drives/dirs/$', views.FactoryDriveDirectoriesView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'factory_drives/files/$', views.FactoryDriveComponentsView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'resources/$', views.ResourceCollectionView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'resources/gc$', views.ResourceGarbageCollectionView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'services/$', views.ServiceCollectionView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'services/schema$', views.ServiceSchemaView.as_view()),
+    url(f'{URL_PREFIX}'
+        r'sync/status/$', views.SyncStatusView.as_view()),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

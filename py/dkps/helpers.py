@@ -75,7 +75,7 @@ class BaseHelper:
     self.server_ip = server_ip
     self.server_port = server_port
     self.dkps = xmlrpc.client.ServerProxy(
-        'http://%s:%s' % (self.server_ip, self.server_port))
+        f'http://{self.server_ip}:{self.server_port}')
 
   def __del__(self):
     # Remove temp dir.
@@ -90,7 +90,7 @@ class BaseHelper:
         uuid.uuid4().hex, keyid=self.client_key_fingerprint,
         passphrase=self.passphrase)
     if signed_obj.status != 'signature created':
-      raise ValueError('Failed to sign the UUID: %s.' % signed_obj.status)
+      raise ValueError(f'Failed to sign the UUID: {signed_obj.status}.')
 
     return self.dkps.AvailableKeyCount(signed_obj.data)
 
@@ -132,8 +132,8 @@ class RequesterHelper(BaseHelper):
         sign=self.client_key_fingerprint, passphrase=self.passphrase)
 
     if not encrypted_obj.ok:
-      raise ValueError('Failed to encrypt and sign the serial number: %s.' %
-                       encrypted_obj.status)
+      raise ValueError('Failed to encrypt and sign the serial number: '
+                       f'{encrypted_obj.status}.')
 
     encrypted_drm_key = self.dkps.Request(encrypted_obj.data)
 
@@ -208,8 +208,8 @@ class UploaderHelper(BaseHelper):
           serialized_drm_keys, self.server_key_fingerprint, always_trust=True,
           sign=self.client_key_fingerprint, passphrase=self.passphrase)
       if not encrypted_obj.ok:
-        raise ValueError('Failed to encrypt and sign the DRM keys: %s.' %
-                         encrypted_obj.status)
+        raise ValueError(
+            f'Failed to encrypt and sign the DRM keys: {encrypted_obj.status}.')
 
       encrypted_data = encrypted_obj.data
 
@@ -299,7 +299,7 @@ def main():
       print(helper.Request(args.serial_number))
 
   else:
-    raise ValueError('Unknown command %s' % args.command)
+    raise ValueError(f'Unknown command {args.command}')
 
 
 if __name__ == '__main__':

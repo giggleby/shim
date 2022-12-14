@@ -19,6 +19,7 @@ import sys
 
 from cros.factory.utils import file_utils
 
+
 # Constant Definition
 BMPBLOCK_SIGNATURE = '$BMP'
 BMPBLOCK_SIGNATURE_SIZE = 4
@@ -84,7 +85,7 @@ def unpack_BmpBlockHeader(blob, offset=0):
   header = dict(zip(NAMES_BMPBLOCK_HEADER, fields))
   # check signature
   if header['signature'] != BMPBLOCK_SIGNATURE:
-    raise ValueError('unknown bmpblock signature: %s' % header['signature'])
+    raise ValueError(f"unknown bmpblock signature: {header['signature']}")
   return header
 
 

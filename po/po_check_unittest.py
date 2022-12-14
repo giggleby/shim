@@ -82,8 +82,8 @@ class PoBuildTest(unittest.TestCase):
         used_vars = self._ExtractVariablesFromFormatString(text[locale], locale)
         unknown_vars = used_vars - default_vars
         if unknown_vars:
-          self.AddError(u'[%s] "%s": Unknown vars %r' %
-                        (locale, text[locale], list(unknown_vars)))
+          self.AddError(f'[{locale}] "{text[locale]}": Unknown vars '
+                        f'{list(unknown_vars)!r}')
 
         unused_vars = default_vars - used_vars
         if unused_vars:
@@ -99,7 +99,7 @@ class PoBuildTest(unittest.TestCase):
         try:
           self.formatter.vformat(text[locale], [], kwargs)
         except Exception as e:
-          self.AddError('[%s] "%s": %s' % (locale, text[locale], e))
+          self.AddError(f'[{locale}] "{text[locale]}": {e}')
 
   def _ExtractVariablesFromFormatString(self, format_str, locale):
     ret = set()
@@ -109,8 +109,9 @@ class PoBuildTest(unittest.TestCase):
         continue
       var_name = re.match('[a-zA-Z0-9_]*', field_name).group(0)
       if not var_name or re.match('[0-9]+$', var_name):
-        self.AddError(u'[%s] "%s": Positional argument {%s} found' %
-                      (locale, format_str, var_name))
+        self.AddError(
+            f'[{locale}] "{format_str}": Positional argument {{{var_name}}} '
+            'found')
       else:
         ret.add(var_name)
     return ret
@@ -130,8 +131,8 @@ class PoCheckTest(unittest.TestCase):
 
     self.assertFalse(
         err_files,
-        "'#, fuzzy' lines found in files %r, please check the translation is "
-        'correct and remove those lines.' % err_files)
+        f"'#, fuzzy' lines found in files {err_files!r}, please check the "
+        "translation is correct and remove those lines.")
 
   def testNoUnused(self):
     err_files = []
@@ -142,8 +143,8 @@ class PoCheckTest(unittest.TestCase):
 
     self.assertFalse(
         err_files,
-        "Lines started with '#~' found in files %r, please check if those lines"
-        ' are unused and remove those lines.' % err_files)
+        f"Lines started with '#~' found in files {err_files!r}, please check "
+        "if those lines are unused and remove those lines.")
 
   def testNoUnusedAgain(self):
     bad_lines = []
@@ -163,11 +164,12 @@ class PoCheckTest(unittest.TestCase):
           is_first_msgid = False
         last_line = line
 
+    bad_lines_desc = (
+        f'{po_file} at line {line_num}' for po_file, line_num in bad_lines)
     self.assertFalse(
         bad_lines,
-        'Translations without file reference found in %s, please check if those'
-        ' lines are unused and remove those lines.'
-        % ', '.join('%s at line %d' % file_line for file_line in bad_lines))
+        f'Translations without file reference found in {bad_lines_desc}, '
+        'please check if those lines are unused and remove those lines.')
 
 
 if __name__ == '__main__':

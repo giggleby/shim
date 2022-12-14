@@ -18,6 +18,7 @@ from cros.factory.test.env import paths
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils.process_utils import Spawn
 
+
 # Files allowed to have errors now.
 BLOCKLIST = []
 RSTS_BLOCKLIST = []
@@ -44,8 +45,8 @@ class DocTest(unittest.TestCase):
       if match:
         basename = os.path.basename(match.group(1))
         blocklisted = basename in BLOCKLIST
-        sys.stderr.write('%s%s\n' % (
-            l.strip(), ' (blocklisted)' if blocklisted else ''))
+        sys.stderr.write(
+            f"{l.strip()}{' (blocklisted)' if blocklisted else ''}\n")
         files_with_errors.add(basename)
         continue
 
@@ -56,7 +57,7 @@ class DocTest(unittest.TestCase):
       if match:
         blocklisted = match.group(1) in RSTS_BLOCKLIST
         sys.stderr.write(
-            '%s%s\n' % (l.strip(), ' (blocklisted)' if blocklisted else ''))
+            f"{l.strip()}{' (blocklisted)' if blocklisted else ''}\n")
         rsts_with_errors.add(match.group(1))
 
     if files_with_errors:
@@ -72,15 +73,15 @@ class DocTest(unittest.TestCase):
     error_messages = []
     failed_files = files_with_errors - set(BLOCKLIST)
     if failed_files:
-      error_messages.append('Found errors in non-blocklisted files %s; '
-                            'see stderr for details' % sorted(failed_files))
+      error_messages.append(
+          f'Found errors in non-blocklisted files {sorted(failed_files)}; see '
+          'stderr for details')
 
     failed_rsts = rsts_with_errors - set(RSTS_BLOCKLIST)
     if failed_rsts:
       error_messages.append(
-          'Found errors in non-blocklisted pytests %s; '
-          'Run "bin/generate_rsts -o build/tmp/docsrc" for details' %
-          sorted(failed_rsts))
+          f'Found errors in non-blocklisted pytests {sorted(failed_rsts)}; Run '
+          '"bin/generate_rsts -o build/tmp/docsrc" for details')
 
     if error_messages:
       self.fail('\n'.join(error_messages))

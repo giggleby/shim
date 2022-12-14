@@ -428,8 +428,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
 
   def testDeleteBundle(self):
     response = self.client.delete(
-        '/projects/%s/bundles/%s/' % (self.PROJECT_WITH_UMPIRE_NAME,
-                                      'testing_bundle_02'),
+        f'/projects/{self.PROJECT_WITH_UMPIRE_NAME}/bundles/testing_bundle_02/',
         format='json')
     self.assertEqual(response.status_code,
                      rest_framework.status.HTTP_204_NO_CONTENT)
@@ -438,25 +437,22 @@ class DomeAPITest(rest_framework.test.APITestCase):
 
   def testDeleteActiveBundle(self):
     response = self.client.delete(
-        '/projects/%s/bundles/%s/' % (self.PROJECT_WITH_UMPIRE_NAME,
-                                      'testing_bundle_01'),
+        f"/projects/{self.PROJECT_WITH_UMPIRE_NAME}/bundles/testing_bundle_01/",
         format='json')
     self.assertEqual(response.status_code,
                      rest_framework.status.HTTP_422_UNPROCESSABLE_ENTITY)
 
   def testDeleteNonExistingBundle(self):
     response = self.client.delete(
-        '/projects/%s/bundles/%s/' % (self.PROJECT_WITH_UMPIRE_NAME,
-                                      'non_existing_bundle'),
-        format='json')
+        f'/projects/{self.PROJECT_WITH_UMPIRE_NAME}/bundles/'
+        'non_existing_bundle/', format='json')
     self.assertEqual(response.status_code,
                      rest_framework.status.HTTP_404_NOT_FOUND)
     self.assertIn('not found', response.json()['detail'])
 
   def testListBundles(self):
     response = self.client.get(
-        '/projects/%s/bundles/' % self.PROJECT_WITH_UMPIRE_NAME,
-        format='json')
+        f'/projects/{self.PROJECT_WITH_UMPIRE_NAME}/bundles/', format='json')
     self.assertEqual(response.status_code, rest_framework.status.HTTP_200_OK)
 
     bundle_list = response.json()
@@ -510,7 +506,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
     self.mocks['xmlrpc.client.ServerProxy']().ImportBundle = mock.MagicMock(
         side_effect=xmlrpc.client.Fault(
             -32500,  # application error, doesn't matter actually
-            "UmpireError: bundle_id: '%s' already in use" % BUNDLE_NAME))
+            f"UmpireError: bundle_id: '{BUNDLE_NAME}' already in use"))
 
     response = self._UploadNewBundle(self.PROJECT_WITH_UMPIRE_NAME,
                                      BUNDLE_NAME, BUNDLE_NOTE)
@@ -537,8 +533,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
 
   def testUpdateBundleResource(self):
     response = self.client.put(
-        '/projects/%s/bundles/%s/' % (self.PROJECT_WITH_UMPIRE_NAME,
-                                      'testing_bundle_01'),
+        f'/projects/{self.PROJECT_WITH_UMPIRE_NAME}/bundles/testing_bundle_01/',
         data={
             'newName': 'testing_bundle_01_new',
             'note': 'climbing like a monkey',
@@ -548,9 +543,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
                     'file_id': self._UploadFile()['id']
                 }
             }
-        },
-        format='json'
-    )
+        }, format='json')
 
     self.assertEqual(response.status_code, rest_framework.status.HTTP_200_OK)
 
@@ -563,51 +556,44 @@ class DomeAPITest(rest_framework.test.APITestCase):
     self.mocks['xmlrpc.client.ServerProxy']().Update.assert_called_once()
 
   def _ActivateBundle(self, project_name, bundle_name):
-    return self.client.put('/projects/%s/bundles/%s/' % (project_name,
-                                                         bundle_name),
-                           data={'active': True},
-                           format='json')
+    return self.client.put(f'/projects/{project_name}/bundles/{bundle_name}/',
+                           data={'active': True}, format='json')
 
   def _AddExistingUmpire(self, project_name):
-    return self.client.put('/projects/%s/' % project_name,
-                           data={'umpireEnabled': True},
-                           format='json')
+    return self.client.put(f'/projects/{project_name}/',
+                           data={'umpireEnabled': True}, format='json')
 
   def _CreateProject(self, project_name):
-    return self.client.post('/projects/',
-                            data={'name': project_name},
+    return self.client.post('/projects/', data={'name': project_name},
                             format='json')
 
   def _CreateResource(self, project_name, resource_type):
-    return self.client.post('/projects/%s/resources/' % project_name,
-                            {'file_id': self._UploadFile()['id'],
-                             'type': resource_type},
-                            format='json')
+    return self.client.post(f'/projects/{project_name}/resources/', {
+        'file_id': self._UploadFile()['id'],
+        'type': resource_type
+    }, format='json')
 
   def _DeactivateBundle(self, project_name, bundle_name):
-    return self.client.put('/projects/%s/bundles/%s/' % (project_name,
-                                                         bundle_name),
-                           data={'active': False},
-                           format='json')
+    return self.client.put(f'/projects/{project_name}/bundles/{bundle_name}/',
+                           data={'active': False}, format='json')
 
   def _DeleteProject(self, project_name):
-    return self.client.delete('/projects/%s/' % project_name, format='json')
+    return self.client.delete(f'/projects/{project_name}/', format='json')
 
   def _DisableUmpire(self, project_name):
-    return self.client.put('/projects/%s/' % project_name,
-                           data={'umpireEnabled': False},
-                           format='json')
+    return self.client.put(f'/projects/{project_name}/',
+                           data={'umpireEnabled': False}, format='json')
 
   def _EnableUmpire(self, project_name, umpire_port):
     return self.client.put(
-        '/projects/%s/' % project_name,
-        data={'umpireEnabled': True,
-              'umpirePort': umpire_port,
-              'umpireFactoryToolkitFileId': self._UploadFile()['id']},
-        format='json')
+        f'/projects/{project_name}/', data={
+            'umpireEnabled': True,
+            'umpirePort': umpire_port,
+            'umpireFactoryToolkitFileId': self._UploadFile()['id']
+        }, format='json')
 
   def _ReorderBundles(self, project_name, bundle_name_list):
-    return self.client.put('/projects/%s/bundles/' % project_name,
+    return self.client.put(f'/projects/{project_name}/bundles/',
                            data=bundle_name_list, format='json')
 
   def _UploadFile(self):
@@ -616,11 +602,12 @@ class DomeAPITest(rest_framework.test.APITestCase):
     return response.json()
 
   def _UploadNewBundle(self, project_name, bundle_name, bundle_note):
-    return self.client.post('/projects/%s/bundles/' % project_name,
-                            data={'name': bundle_name,
-                                  'note': bundle_note,
-                                  'bundle_file_id': self._UploadFile()['id']},
-                            format='json')
+    return self.client.post(
+        f'/projects/{project_name}/bundles/', data={
+            'name': bundle_name,
+            'note': bundle_note,
+            'bundle_file_id': self._UploadFile()['id']
+        }, format='json')
 
   def _GetUploadedConfig(self, index):
     call_args_list = (

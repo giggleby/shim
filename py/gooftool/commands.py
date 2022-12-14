@@ -12,6 +12,7 @@ provides all of the Google required test functionality and must be run
 on each device as part of the assembly process.
 """
 
+import datetime
 import functools
 import json
 import logging
@@ -21,7 +22,6 @@ import re
 import sys
 from tempfile import gettempdir
 import threading
-import time
 import xmlrpc.client
 
 from cros.factory.gooftool.common import ExecFactoryPar
@@ -104,7 +104,7 @@ def HasFpmcu():
       has_cros_config_fpmcu = True
 
     if not os.path.exists(FPMCU_PATH) and has_cros_config_fpmcu:
-      raise Error('FPMCU found in cros_config but missing in %s.' % FPMCU_PATH)
+      raise Error(f'FPMCU found in cros_config but missing in {FPMCU_PATH}.')
 
     _has_fpmcu = has_cros_config_fpmcu
 
@@ -141,9 +141,8 @@ def Command(cmd_name, *args, **kwargs):
       skip_list = vars(options).get('skip_list', [])
       if phase.GetPhase() >= phase.PVT_DOGFOOD and (
           waive_list != [] or skip_list != []):
-        raise Error(
-            'waive_list and skip_list should be empty for phase %s' %
-            phase.GetPhase())
+        raise Error('waive_list and skip_list should be empty for phase '
+                    f'{phase.GetPhase()}')
 
       if cmd_name not in skip_list:
         try:
@@ -181,7 +180,7 @@ def WriteHWID(options):
   logging.info('writing hwid string %r', options.hwid)
   GetGooftool(options).WriteHWID(options.hwid)
   event_log.Log('write_hwid', hwid=options.hwid)
-  print('Wrote HWID: %r' % options.hwid)
+  print(f'Wrote HWID: {options.hwid!r}')
 
 
 @Command('read_hwid', *GetGooftool.__args__)
@@ -873,15 +872,14 @@ def CreateReportArchive(device_sn=None, add_file=None):
   def NormalizeAsFileName(token):
     return re.sub(r'\W+', '', token).strip()
 
-  target_name = '%s%s.tar.xz' % (
-      time.strftime('%Y%m%dT%H%M%SZ',
-                    time.gmtime()),
-      ('' if device_sn is None else
-       '_' + NormalizeAsFileName(device_sn)))
+  target_name = (
+      f"{datetime.datetime.utcnow():%Y%m%dT%H%M%SZ}"
+      f"{'' if device_sn is None else '_' + NormalizeAsFileName(device_sn)}"
+      ".tar.xz")
   target_path = os.path.join(gettempdir(), target_name)
 
   # Intentionally ignoring dotfiles in EVENT_LOG_DIR.
-  tar_cmd = 'cd %s ; tar cJf %s * -C /' % (event_log.EVENT_LOG_DIR, target_path)
+  tar_cmd = f'cd {event_log.EVENT_LOG_DIR} ; tar cJf {target_path} * -C /'
   tar_files = [paths.FACTORY_LOG_PATH, paths.DATA_TESTLOG_DIR]
   if add_file:
     tar_files = tar_files + add_file
@@ -889,10 +887,10 @@ def CreateReportArchive(device_sn=None, add_file=None):
     # Require absolute paths since we use -C / to change current directory to
     # root.
     if not f.startswith('/'):
-      raise Error('Not an absolute path: %s' % f)
+      raise Error(f'Not an absolute path: {f}')
     if not os.path.exists(f):
-      raise Error('File does not exist: %s' % f)
-    tar_cmd += ' %s' % pipes.quote(f[1:])
+      raise Error(f'File does not exist: {f}')
+    tar_cmd += f' {pipes.quote(f[1:])}'
   cmd_result = Shell(tar_cmd)
 
   if cmd_result.status == 1:
@@ -902,8 +900,8 @@ def CreateReportArchive(device_sn=None, add_file=None):
     Spawn(['tar', 'tJf', target_path], check_call=True, log=True,
           ignore_stdout=True)
   elif not cmd_result.success:
-    raise Error('unable to tar event logs, cmd %r failed, stderr: %r' %
-                (tar_cmd, cmd_result.stderr))
+    raise Error(f'unable to tar event logs, cmd {tar_cmd!r} failed, stderr: '
+                f'{cmd_result.stderr!r}')
 
   return target_path
 
@@ -963,7 +961,7 @@ def UploadReport(options):
                             retry_interval=retry_interval,
                             allow_fail=options.upload_allow_fail)
   elif method == 'ftps':
-    report_upload.CurlUrlUpload(target_path, '--ftp-ssl-reqd ftp:%s' % param,
+    report_upload.CurlUrlUpload(target_path, f'--ftp-ssl-reqd ftp:{param}',
                                 max_retry_times=options.upload_max_retry_times,
                                 retry_interval=retry_interval,
                                 allow_fail=options.upload_allow_fail)
@@ -979,7 +977,7 @@ def UploadReport(options):
                             retry_interval=retry_interval,
                             allow_fail=options.upload_allow_fail)
   else:
-    raise Error('unknown report upload method %r' % method)
+    raise Error(f'unknown report upload method {method!r}')
 
 
 @Command('fpmcu_initialize_entropy', *GetGooftool.__args__)
@@ -1117,9 +1115,9 @@ def GetFirmwareHash(options):
   if os.path.exists(options.file):
     value_dict = chromeos_firmware.CalculateFirmwareHashes(options.file)
     for key, value in value_dict.items():
-      print('  %s: %s' % (key, value))
+      print(f'  {key}: {value}')
   else:
-    raise Error('File does not exist: %s' % options.file)
+    raise Error(f'File does not exist: {options.file}')
 
 
 @Command('get_smart_amp_info', *GetGooftool.__args__)
@@ -1180,10 +1178,10 @@ def main():
     logging.info('GOOFTOOL command %r SUCCESS', options.command_name)
   except Error as e:
     logging.exception(e)
-    sys.exit('GOOFTOOL command %r ERROR: %s' % (options.command_name, e))
+    sys.exit(f'GOOFTOOL command {options.command_name!r} ERROR: {e}')
   except Exception as e:
     logging.exception(e)
-    sys.exit('UNCAUGHT RUNTIME EXCEPTION %s' % e)
+    sys.exit(f'UNCAUGHT RUNTIME EXCEPTION {e}')
 
 
 if __name__ == '__main__':

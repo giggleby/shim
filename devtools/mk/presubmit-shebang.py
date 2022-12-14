@@ -63,20 +63,20 @@ def main():
           check(os.path.join(dirpath, filename))
 
   if redundant_files:
-    print('%4d files with redundant shebang:' % len(redundant_files))
+    print(f'{len(redundant_files):4} files with redundant shebang:')
     for filepath in redundant_files:
-      print('     %s' % filepath)
+      print(f'     {filepath}')
     print()
   for shebang, filepaths in unknown_shebangs.items():
-    print('%4d #!%s' % (len(filepaths), shebang))
+    print(f'{len(filepaths):4} #!{shebang}')
     for filepath in filepaths:
-      print('     %s' % filepath)
+      print(f'     {filepath}')
     print()
   if unicode_decode_error_executable_files:
-    print('%4d files with UnicodeDecodeError:' %
-          len(unicode_decode_error_executable_files))
+    print(f'{len(unicode_decode_error_executable_files):4} files with '
+          'UnicodeDecodeError:')
     for filepath in unicode_decode_error_executable_files:
-      print('     %s' % filepath)
+      print(f'     {filepath}')
     print()
   if (redundant_files or unknown_shebangs or
       unicode_decode_error_executable_files):

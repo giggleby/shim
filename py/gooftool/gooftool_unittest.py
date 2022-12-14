@@ -255,8 +255,9 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._util.GetKeyHashFromFutil.return_value = _hash
     self._gooftool._util.shell.side_effect = [stub_result, stub_result]
     shell_calls = [
-        mock.call('flashrom -p ec -r %s' % f.name),
-        mock.call('flashrom -p ec -r %s' % f.name)]
+        mock.call(f'flashrom -p ec -r {f.name}'),
+        mock.call(f'flashrom -p ec -r {f.name}')
+    ]
 
     self._gooftool.VerifyECKey(pubkey_hash=_hash)
     self.assertRaises(Error, self._gooftool.VerifyECKey, pubkey_hash='abc123')
@@ -274,9 +275,9 @@ class GooftoolTest(unittest.TestCase):
         stub_result,
         Obj(success=True)]
     shell_calls = [
-        mock.call('flashrom -p ec -r %s' % f.name),
-        mock.call('futility show --type rwsig --pubkey %s %s' %
-                  (pubkey, f.name))]
+        mock.call(f'flashrom -p ec -r {f.name}'),
+        mock.call(f'futility show --type rwsig --pubkey {pubkey} {f.name}')
+    ]
 
     self._gooftool.VerifyECKey(pubkey_path=pubkey)
     self.assertEqual(self._gooftool._util.shell.call_args_list, shell_calls)
@@ -706,8 +707,8 @@ class GooftoolTest(unittest.TestCase):
     # the error messages.
     dsm_string_regex = 'dsm_calib_(?:temp|r0)_[0-1]'
     self.assertRaisesRegex(
-        Error, 'Missing required RO VPD values: (?:%s,){3}%s' %
-        (dsm_string_regex, dsm_string_regex), self._gooftool.VerifyVPD)
+        Error, f'Missing required RO VPD values: (?:{dsm_string_regex},){{3}}'
+        f'{dsm_string_regex}', self._gooftool.VerifyVPD)
 
   def testVerifyVPD_NoRegion(self):
     ro_vpd_value = self._SIMPLE_VALID_RO_VPD_DATA.copy()
@@ -858,10 +859,12 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._named_temporary_file.return_value = f
 
     shell_calls = [
-        mock.call('cbfstool %s extract -n locales -f %s -r COREBOOT' %
-                  (image_file, f.name)),
+        mock.call(
+            f'cbfstool {image_file} extract -n locales -f {f.name} -r COREBOOT'
+        ),
         # Expect index = 1 for zh is matched.
-        mock.call('crossystem loc_idx=1')]
+        mock.call('crossystem loc_idx=1')
+    ]
 
     self._gooftool.SetFirmwareBitmapLocale()
     self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
@@ -883,11 +886,13 @@ class GooftoolTest(unittest.TestCase):
     self._gooftool._unpack_bmpblock.return_value = {'locales': ['ja', 'zh',
                                                                 'en']}
     shell_calls = [
-        mock.call('cbfstool %s extract -n locales -f %s -r COREBOOT' %
-                  (image_file, f.name)),
-        mock.call('futility gbb -g --bmpfv=%s %s' % (f.name, image_file)),
+        mock.call(
+            f'cbfstool {image_file} extract -n locales -f {f.name} -r COREBOOT'
+        ),
+        mock.call(f'futility gbb -g --bmpfv={f.name} {image_file}'),
         # Expect index = 1 for zh is matched.
-        mock.call('crossystem loc_idx=1')]
+        mock.call('crossystem loc_idx=1')
+    ]
 
     self._gooftool.SetFirmwareBitmapLocale()
     self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
@@ -914,8 +919,7 @@ class GooftoolTest(unittest.TestCase):
     self.assertRaises(Error, self._gooftool.SetFirmwareBitmapLocale)
     self._gooftool._crosfw.LoadMainFirmware.assert_any_call()
     self._gooftool._util.shell.assert_called_once_with(
-        'cbfstool %s extract -n locales -f %s -r COREBOOT' %
-        (image_file, f.name))
+        f'cbfstool {image_file} extract -n locales -f {f.name} -r COREBOOT')
 
   def testSetFirmwareBitmapLocaleNoVPD(self):
     """Test for setting firmware bitmap locale without default locale in VPD."""

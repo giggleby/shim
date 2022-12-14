@@ -99,7 +99,7 @@ class OutputArchive(output_file.OutputFile):
     # Create the archive.
     cur_time = datetime.datetime.now()
     archive_name = cur_time.strftime('InstalogEvents_%Y%m%d%H%M%S')
-    archive_filename = '%s.tar.gz' % archive_name
+    archive_filename = f'{archive_name}.tar.gz'
     with file_utils.UnopenedTemporaryFile(
         prefix='instalog_archive_', suffix='.tar.gz') as tmp_archive:
       self.info('Creating temporary archive file: %s', tmp_archive)
@@ -109,7 +109,7 @@ class OutputArchive(output_file.OutputFile):
       # What should we do with the archive?
       if self.args.enable_gcs:
         gcs_target_dir = self.args.gcs_target_dir.strip('/')
-        gcs_target_path = '/%s/%s' % (gcs_target_dir, archive_filename)
+        gcs_target_path = f'/{gcs_target_dir}/{archive_filename}'
         if not self._gcs.UploadFile(
             tmp_archive, gcs_target_path, overwrite=True):
           self.error('Unable to upload to GCS, aborting')

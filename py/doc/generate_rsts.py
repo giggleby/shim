@@ -32,6 +32,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils.type_utils import Enum
 
+
 DOC_GENERATORS = {}
 SRC_URL_BASE = ("https://chromium.googlesource.com/chromiumos/platform/factory/"
                 "+/refs/heads/main/py/test/pytests/")
@@ -76,7 +77,7 @@ def LinkToDoc(name, path):
     name: The tag name.
     path: Path of the target document, either absolute or relative.
   """
-  return ':doc:`%s <%s>`' % (Escape(name), Escape(path))
+  return f':doc:`{Escape(name)} <{Escape(path)}>`'
 
 
 def LinkToCode(pytest_name):
@@ -96,7 +97,7 @@ class RSTWriter:
 
   def WriteTitle(self, title, mark, ref_label=None):
     if ref_label:
-      self.io.write('.. _%s:\n\n' % Escape(ref_label))
+      self.io.write(f'.. _{Escape(ref_label)}:\n\n')
     self.io.write(title + '\n')
     self.io.write(mark * len(title) + '\n')
 
@@ -109,9 +110,9 @@ class RSTWriter:
   def WriteListTableHeader(self, widths=None, header_rows=None):
     self.io.write('.. list-table::\n')
     if widths is not None:
-      self.io.write('   :widths: %s\n' % ' '.join(map(str, widths)))
+      self.io.write(f"   :widths: {' '.join(map(str, widths))}\n")
     if header_rows is not None:
-      self.io.write('   :header-rows: %d\n' % header_rows)
+      self.io.write(f'   :header-rows: {int(header_rows)}\n')
     self.io.write('\n')
 
   def WriteListTableRow(self, row):
@@ -146,9 +147,9 @@ def WriteArgsTable(rst, title, args):
     annotations = []
     if arg.IsOptional():
       annotations.append('optional')
-      annotations.append('default: ``%s``' % Escape(repr(arg.default)))
+      annotations.append(f'default: ``{Escape(repr(arg.default))}``')
     if annotations:
-      description = '(%s) %s' % ('; '.join(annotations), description)
+      description = f"({'; '.join(annotations)}) {description}"
 
     def FormatArgType(arg_type):
       if isinstance(arg_type, Enum):
@@ -178,7 +179,7 @@ def GenerateTestDocs(rst, pytest_name):
 
   doc = getattr(module, '__doc__', None)
   if doc is None:
-    doc = 'No test-level description available for pytest %s.' % pytest_name
+    doc = f'No test-level description available for pytest {pytest_name}.'
 
   rst.WriteTitle(pytest_name, '=')
   rst.WriteParagraph(LinkToCode(pytest_name))
@@ -238,8 +239,7 @@ def WriteTestObjectDetail(
       formatted_value = json_utils.DumpStr(value, pretty=True)
       formatted_value = '::\n\n' + Indent(formatted_value, '  ')
       formatted_value = Indent(formatted_value, '  ')
-      rst.WriteParagraph('``{key}``\n{value}'.format(
-          key=key, value=formatted_value))
+      rst.WriteParagraph(f'``{key}``\n{formatted_value}')
 
 
 @DocGenerator('test_lists')
@@ -285,8 +285,9 @@ def GenerateTestListDoc(output_dir):
           has_definitions = True
           pytest_name = test_object['pytest_name']
           doc_path = os.path.join('..', 'pytests', pytest_name)
-          rst_define.WriteListTableRow(('`%s`_' % Escape(test_object_name),
-                                        LinkToDoc(pytest_name, doc_path)))
+          rst_define.WriteListTableRow(
+              (f'`{Escape(test_object_name)}`_', LinkToDoc(
+                  pytest_name, doc_path)))
 
           WriteTestObjectDetail(rst_detail, test_object_name, test_object)
 

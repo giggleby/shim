@@ -23,6 +23,7 @@ import xmlrpc.server
 
 import gnupg
 
+
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 FILTERS_DIR = os.path.join(SCRIPT_DIR, 'filters')
 PARSERS_DIR = os.path.join(SCRIPT_DIR, 'parsers')
@@ -303,10 +304,10 @@ class DRMKeysProvisioningServer:
       sql_parameters.append(name)
       with self.db_connection:
         self.db_cursor.execute(
-            'UPDATE projects SET %s WHERE name = ?' % sql_set_clause,
+            f'UPDATE projects SET {sql_set_clause} WHERE name = ?',
             tuple(sql_parameters))
       if self.db_cursor.rowcount != 1:
-        raise RuntimeError('Failed to update project %s' % name)
+        raise RuntimeError(f'Failed to update project {name}')
     except BaseException:
       if not same_uploader_key and uploader_key_fingerprint:
         self.gpg.delete_keys(uploader_key_fingerprint)
@@ -356,7 +357,7 @@ class DRMKeysProvisioningServer:
     decrypted_obj = self.gpg.decrypt(encrypted_serialized_drm_keys.data)
     if not decrypted_obj.ok:
       raise RuntimeError(
-          'Failed to decrypt the DRM keys: %s' % decrypted_obj.status)
+          f'Failed to decrypt the DRM keys: {decrypted_obj.status}')
     if decrypted_obj.fingerprint is None:
       raise InvalidUploaderException('The DRM keys was not signed properly. '
                                      'Please check your uploader key.')
@@ -446,7 +447,7 @@ class DRMKeysProvisioningServer:
     decrypted_obj = self.gpg.decrypt(encrypted_device_serial_number.data)
     if not decrypted_obj.ok:
       raise RuntimeError(
-          'Failed to decrypt the serial number: %s' % decrypted_obj.status)
+          f'Failed to decrypt the serial number: {decrypted_obj.status}')
     if decrypted_obj.fingerprint is None:
       raise InvalidRequesterException(
           'The serial number was not signed properly. '
@@ -613,14 +614,14 @@ class DRMKeysProvisioningServer:
     for param_name in ['name', 'uploader_key_fingerprint',
                        'requester_key_fingerprint']:
       if local_vars[param_name] is not None:
-        where_clause_list.append('%s = ?' % param_name)
+        where_clause_list.append(f'{param_name} = ?')
         params.append(locals()[param_name])
     if not where_clause_list:
       raise ValueError('No conditions given to fetch the project')
     where_clause = 'WHERE ' + ' AND '.join(where_clause_list)
 
-    self.db_cursor.execute(
-        'SELECT * FROM projects %s' % where_clause, tuple(params))
+    self.db_cursor.execute(f'SELECT * FROM projects {where_clause}',
+                           tuple(params))
     project = self.db_cursor.fetchone()
 
     if not project and exception_type:
@@ -629,9 +630,9 @@ class DRMKeysProvisioningServer:
     return project
 
   def _FetchProjectByName(self, name):
-    return self._FetchOneProject(
-        name=name, exception_type=ProjectNotFoundException,
-        error_msg=('Project %s not found' % name))
+    return self._FetchOneProject(name=name,
+                                 exception_type=ProjectNotFoundException,
+                                 error_msg=f'Project {name} not found')
 
   def _FetchProjectByUploaderKeyFingerprint(self, uploader_key_fingerprint):
     return self._FetchOneProject(
@@ -702,12 +703,11 @@ def _ParseArguments():
 
   parser_listen = subparsers.add_parser(
       'listen', help='starts the server, waiting for upload or request keys')
-  parser_listen.add_argument(
-      '--ip', default=DEFAULT_BIND_ADDR,
-      help='IP to bind, default to %s' % DEFAULT_BIND_ADDR)
+  parser_listen.add_argument('--ip', default=DEFAULT_BIND_ADDR,
+                             help=f'IP to bind, default to {DEFAULT_BIND_ADDR}')
   parser_listen.add_argument(
       '--port', type=int, default=DEFAULT_BIND_PORT,
-      help='port to listen, default to %s' % DEFAULT_BIND_PORT)
+      help=f'port to listen, default to {DEFAULT_BIND_PORT}')
 
   parser_rm = subparsers.add_parser('rm', help='removes an existing project')
   parser_rm.add_argument('-n', '--name', required=True,
@@ -756,7 +756,7 @@ def main():
   elif args.command == 'rm':
     dkps.RemoveProject(args.name)
   else:
-    raise ValueError('Unknown command %s' % args.command)
+    raise ValueError(f'Unknown command {args.command}')
 
 
 if __name__ == '__main__':

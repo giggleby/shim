@@ -97,12 +97,10 @@ class InputLogFile(plugin_base.InputPlugin):
         #
         #   /some/file/a => _some_file_a_0744b918
         #   /some/file_a => _some_file_a_287bc0ee
-        crc = '{:08x}'.format(abs(zlib.crc32(path.encode('utf-8'))))
-        offset_file = '%s_%s' % (path.replace(os.sep, '_'), crc)
+        crc = f"{abs(zlib.crc32(path.encode('utf-8'))):08x}"
+        offset_file = f"{path.replace(os.sep, '_')}_{crc}"
         log_file = LogFile(
-            logger_name=self.logger.name,
-            args=self.args,
-            path=path,
+            logger_name=self.logger.name, args=self.args, path=path,
             offset_path=os.path.join(self.GetDataDir(), offset_file),
             parse_and_emit_fn=self.ParseAndEmit)
         self.log_files[path] = log_file
@@ -311,7 +309,7 @@ class LogFile(log_utils.LoggerMixin):
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return 'LogFile(%s)' % self.path
+    return f'LogFile({self.path})'
 
   def GetSize(self):
     """Returns the current size of the log file.

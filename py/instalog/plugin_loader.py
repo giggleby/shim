@@ -74,7 +74,7 @@ class PluginLoader:
       self._ReportException('Provided plugin_api object is invalid')
 
     # Create a logger for the plugin to use.
-    self._logger = logging.getLogger('%s.plugin' % self.plugin_id)
+    self._logger = logging.getLogger(f'{self.plugin_id}.plugin')
 
   def _ReportException(self, message=None):
     """Reports a LoadPluginError exception with specified message.
@@ -86,17 +86,17 @@ class PluginLoader:
                stack's last exception.
     """
     _, exc, tb = sys.exc_info()
-    exc_message = message or '%s: %s' % (exc.__class__.__name__, str(exc))
+    exc_message = message or f'{exc.__class__.__name__}: {exc}'
     new_exc = plugin_base.LoadPluginError(
-        'Plugin %s encountered an error loading: %s'
-        % (self.plugin_id, exc_message))
+        f'Plugin {self.plugin_id} encountered an error loading: {exc_message}')
     raise new_exc.__class__(new_exc).with_traceback(tb)
 
   def _GetPossibleModuleNames(self):
     if not self._possible_module_names:
       self._possible_module_names = [
-          '%s%s.%s' % (self._plugin_prefix, self.plugin_type, self.plugin_type),
-          '%s%s' % (self._plugin_prefix, self.plugin_type)]
+          f'{self._plugin_prefix}{self.plugin_type}.{self.plugin_type}',
+          f'{self._plugin_prefix}{self.plugin_type}'
+      ]
     return self._possible_module_names
 
   def _LoadModule(self):  # pylint: disable=inconsistent-return-statements
@@ -136,8 +136,8 @@ class PluginLoader:
         # Any other exception -- probably SyntaxError.
         self._ReportException()
     # Uses traceback from the last ImportError.
-    self._ReportException('No module named %s'
-                          % ' or '.join(self._GetPossibleModuleNames()))
+    self._ReportException(
+        f"No module named {' or '.join(self._GetPossibleModuleNames())}")
 
   def GetClass(self):
     """Returns the Python class object of the plugin.
@@ -166,8 +166,8 @@ class PluginLoader:
     plugin_classes = inspect.getmembers(module_ref, IsSubclass)
     if len(plugin_classes) != 1:
       self._ReportException(
-          '%s contains %d plugin classes; only 1 is allowed per file'
-          % (self.plugin_type, len(plugin_classes)))
+          f'{self.plugin_type} contains {len(plugin_classes)} plugin classes; '
+          'only 1 is allowed per file')
     # getmembers returns a list of tuples: (binding_name, value).
     cls = plugin_classes[0][1]
 
@@ -215,6 +215,6 @@ class PluginLoader:
       return plugin_class(self.config, self._logger.name, self._store,
                           self._plugin_api)
     except arg_utils.ArgError as e:
-      self._ReportException('Error parsing arguments: %s' % str(e))
+      self._ReportException(f'Error parsing arguments: {str(e)}')
     except Exception:
       self._ReportException()

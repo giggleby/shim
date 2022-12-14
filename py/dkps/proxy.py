@@ -19,6 +19,7 @@ import xmlrpc.server
 from cros.factory.dkps import helpers
 from cros.factory.dkps import widevine_utils
 
+
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_BIND_ADDR = '0.0.0.0'  # all addresses
 DEFAULT_BIND_PORT = 5439
@@ -77,8 +78,8 @@ class DKPSProxy:
       keybox = self.helper.Request(device_serial_number)
     except Exception as e:
       raise RuntimeError(
-          'The proxy server failed to request keyboxes from DKPS: %r' %
-          e) from None
+          f'The proxy server failed to request keyboxes from DKPS: {e!r}'
+      ) from None
     keybox = json.loads(keybox)
 
     # Re-encrypt the keybox with the transport key
@@ -128,9 +129,9 @@ def main():
       'private key')
   # Arguments for proxy server itself.
   parser.add_argument('--ip', default=DEFAULT_BIND_ADDR,
-                      help='IP to bind, default to %s' % DEFAULT_BIND_ADDR)
+                      help=f'IP to bind, default to {DEFAULT_BIND_ADDR}')
   parser.add_argument('--port', type=int, default=DEFAULT_BIND_PORT,
-                      help='port to listen, default to %s' % DEFAULT_BIND_PORT)
+                      help=f'port to listen, default to {DEFAULT_BIND_PORT}')
   parser.add_argument(
       '-l', '--log_file_path', default=os.path.join(SCRIPT_DIR,
                                                     DEFAULT_LOG_FILE_NAME),

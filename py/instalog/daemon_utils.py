@@ -55,7 +55,7 @@ class Daemon:
         # Exit first parent.
         return PARENT
     except OSError as e:
-      sys.stderr.write('fork #1 failed: %d (%s)\n' % (e.errno, e.strerror))
+      sys.stderr.write(f'fork #1 failed: {int(e.errno)} ({e.strerror})\n')
       sys.exit(1)
 
     # Decouple from parent environment.
@@ -70,7 +70,7 @@ class Daemon:
         # Exit from second parent.
         sys.exit(0)
     except OSError as e:
-      sys.stderr.write('fork #2 failed: %d (%s)\n' % (e.errno, e.strerror))
+      sys.stderr.write(f'fork #2 failed: {int(e.errno)} ({e.strerror})\n')
       sys.exit(1)
 
     # Redirect standard file descriptors.
@@ -194,7 +194,7 @@ class Daemon:
       sys.stderr.write(message % self.pidfile)
       return
 
-    print('Running at PID %d' % pid)
+    print(f'Running at PID {int(pid)}')
 
   def Restart(self):
     """Restarts the daemon."""

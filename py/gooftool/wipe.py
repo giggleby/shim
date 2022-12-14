@@ -38,11 +38,11 @@ WIPE_MARK_FILE = 'wipe_mark_file'
 
 _CROS_PAYLOADS_PATH = 'dev_image/opt/cros_payloads'
 
-CRX_CACHE_PAYLOAD_NAME = '%s/release_image.crx_cache' % _CROS_PAYLOADS_PATH
+CRX_CACHE_PAYLOAD_NAME = f'{_CROS_PAYLOADS_PATH}/release_image.crx_cache'
 CRX_CACHE_TAR_PATH = '/tmp/crx_cache.tar'
 
-DLC_CACHE_PAYLOAD_NAME = '%s/release_image.dlc_factory_cache' % \
-                         _CROS_PAYLOADS_PATH
+DLC_CACHE_PAYLOAD_NAME = (
+    f'{_CROS_PAYLOADS_PATH}/release_image.dlc_factory_cache')
 DLC_CACHE_TAR_PATH = '/tmp/dlc_cache.tar'
 
 # Some upstart jobs have multiple instances and we need to specify the name of
@@ -178,11 +178,12 @@ def WipeInRamFs(is_fast=None, shopfloor_url=None, station_ip=None,
     # b/78323428: Check if dhcpcd is locking /var/run. If dhcpcd is locking
     # /var/run, unmount will fail. Need CL:1021611 to use /run instead.
     for pid in Shell('pgrep dhcpcd').stdout.splitlines():
-      lock_result = Shell('ls -al /proc/%s/fd | grep /var/run' % pid)
+      lock_result = Shell(f'ls -al /proc/{pid}/fd | grep /var/run')
       if lock_result.stdout:
-        raise WipeError('dhcpcd is still locking on /var/run. Please use a '
-                        'newer ChromeOS image with CL:1021611 included. '
-                        'Lock info: "%s"' % lock_result.stdout)
+        raise WipeError(
+            'dhcpcd is still locking on /var/run. Please use a newer ChromeOS '
+            f'image with CL:1021611 included. Lock info: "{lock_result.stdout}'
+            '"')
   _CheckBug78323428()
 
   Daemonize()
@@ -267,7 +268,7 @@ def WipeInRamFs(is_fast=None, shopfloor_url=None, station_ip=None,
       logging.debug('ps -aux: %s', process_utils.SpawnOutput(['ps', '-aux']))
       logging.debug(
           'lsof: %s',
-          process_utils.SpawnOutput('lsof -p %d' % os.getpid(), shell=True))
+          process_utils.SpawnOutput(f'lsof -p {os.getpid()}', shell=True))
 
       # Modify display_wipe_message so we have shells in VT2.
       # --dev-mode provides shell with etc-issue.
@@ -356,18 +357,19 @@ def _StopAllUpstartJobs(exclude_list=None):
         instance_key = JOB_TO_INSTANCE_KEY.get(service)
         if instance_key is None:
           raise WipeError(
-              'Fail to get the instance key of service %s (%s). Please read '
-              '%s.conf and add the key to `JOB_TO_INSTANCE_KEY`.' %
-              (service, instance_val, service))
-        stop_cmd += ['%s=%s' % (instance_key, instance_val)]
+              f'Fail to get the instance key of service {service} ('
+              f'{instance_val}). Please read {service}.conf and add the key to '
+              '`JOB_TO_INSTANCE_KEY`.')
+        stop_cmd += [f'{instance_key}={instance_val}']
       process_utils.Spawn(stop_cmd, log=True, log_stderr_on_error=True)
 
   to_stop_service_list = _GetToStopServiceList(exclude_list)
 
   if to_stop_service_list:
-    raise WipeError('Fail to stop services (service_name, instance): %r.\n'
-                    'Please check the upstart config or check with the '
-                    'service owner.' % to_stop_service_list)
+    raise WipeError(
+        'Fail to stop services (service_name, instance): '
+        f'{to_stop_service_list!r}.\nPlease check the upstart config or check '
+        'with the service owner.')
 
 
 def _CollectMountPointsToUmount(state_dev):
@@ -442,12 +444,12 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
     logging.error('wipe_init itself is using stateful partition')
     logging.error(
         'lsof: %s',
-        process_utils.SpawnOutput('lsof -p %d' % os.getpid(), shell=True))
+        process_utils.SpawnOutput(f'lsof -p {os.getpid()}', shell=True))
     raise WipeError('wipe_init itself is using stateful partition')
 
   def _KillOpeningBySignal(sig):
     for mount_point in mount_point_list:
-      cmd = ['fuser', '-k', '-%d' % sig, '-m', mount_point]
+      cmd = ['fuser', '-k', f'-{int(sig)}', '-m', mount_point]
       process_utils.Spawn(cmd, call=True, log=True)
     proc_list = _ListProcOpening(mount_point_list)
     if not proc_list:
@@ -464,7 +466,7 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
   sync_utils.Retry(10, 0.1, None, _KillOpeningBySignal, signal.SIGKILL)
 
   proc_list = _ListProcOpening(mount_point_list)
-  assert not proc_list, "processes using stateful partition: %s" % proc_list
+  assert not proc_list, f"processes using stateful partition: {proc_list}"
 
   def _Unmount(mount_point, critical):
     logging.info('try to unmount %s', mount_point)
@@ -479,7 +481,7 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
       time.sleep(0.5)
     logging.error('failed to unmount %s', mount_point)
     if critical:
-      raise WipeError('Unmounting %s is critical. Stop.' % mount_point)
+      raise WipeError(f'Unmounting {mount_point} is critical. Stop.')
 
   def _UnmountAll(critical):
     # Remove all mounted namespace to release stateful partition.
@@ -497,8 +499,8 @@ def _UnmountStatefulPartition(root, state_dev, test_umount):
     # Need to list the processes and solve each-by-each.
     proc_list = _ListMinijail()
     assert not proc_list, (
-        "processes still using minijail: %s" %
-        process_utils.SpawnOutput(['pgrep', '-al', 'minijail']))
+        "processes still using minijail: "
+        f"{process_utils.SpawnOutput(['pgrep', '-al', 'minijail'])}")
 
     process_utils.Spawn(['dmsetup', 'remove', 'encstateful',
                          '--noudevrules', '--noudevsync'], check_call=True)

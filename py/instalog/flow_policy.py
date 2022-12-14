@@ -9,6 +9,7 @@ Decides whether or not a plugin should process an Event.
 
 import logging
 
+
 # Name of the key used to specify the rule type in the config dictionary.
 _RULE_TYPE_KEY = 'rule'
 
@@ -48,8 +49,7 @@ class FlowPolicy:
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return ('FlowPolicy(allow=%r, deny=%r)'
-            % (self.allow, self.deny))
+    return f'FlowPolicy(allow={self.allow!r}, deny={self.deny!r})'
 
 
 class RuleMeta(type):
@@ -60,8 +60,8 @@ class RuleMeta(type):
     mcs = type.__new__(cls, name, bases, class_dict)
     if hasattr(mcs, 'NAME'):
       if mcs.NAME in _rule_registry:
-        raise RuntimeError('Multiple serializable classes with name "%s"'
-                           % mcs.__name__)
+        raise RuntimeError(
+            f'Multiple serializable classes with name "{mcs.__name__}"')
       _rule_registry[mcs.NAME] = mcs
     return mcs
 
@@ -87,11 +87,11 @@ class Rule(metaclass=RuleMeta):
         # Currently only the '==' operator is supported.
         self.args[key] = RHSOperation(kwargs.pop(key))
     if kwargs:
-      raise ValueError('Extra arguments: %s' % kwargs)
+      raise ValueError(f'Extra arguments: {kwargs}')
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return '%s(%r)' % (self.__class__.__name__, self.args)
+    return f'{self.__class__.__name__}({self.args!r})'
 
   def __eq__(self, other):
     """Implements == operator."""
@@ -104,7 +104,7 @@ class Rule(metaclass=RuleMeta):
       raise ValueError('FlowPolicy: No `rule\' key found to specify rule type')
     rule_name = dct.pop(_RULE_TYPE_KEY)
     if rule_name not in _rule_registry:
-      raise ValueError('FlowPolicy: No rule called `%s\'' % rule_name)
+      raise ValueError(f'FlowPolicy: No rule called `{rule_name}\'')
     return _rule_registry[rule_name](**dct)
 
   def MatchEvent(self, event):
@@ -202,7 +202,7 @@ class RHSOperation:
 
   def __repr__(self):
     """Implements repr function for debugging."""
-    return 'RHSOperation(== %r)' % self.rhs
+    return f'RHSOperation(== {self.rhs!r})'
 
   def __eq__(self, other):
     """Implements == operator."""

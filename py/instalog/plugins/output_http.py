@@ -83,9 +83,8 @@ class OutputHTTP(plugin_base.OutputPlugin):
       self._EncryptData('Checks the target public key is valid.')
       self.info('Finished checking the target public key')
 
-    self._target_url = 'http://%s:%d/%s' % (self.args.hostname,
-                                            self.args.port,
-                                            self.args.url_path)
+    self._target_url = (f'http://{self.args.hostname}:{int(self.args.port)}/'
+                        f'{self.args.url_path}')
 
   def Main(self):
     """Main thread of the plugin."""
@@ -181,7 +180,7 @@ class OutputHTTP(plugin_base.OutputPlugin):
     att_seq = 0
     for event in events:
       for att_id, att_path in event.attachments.items():
-        att_newname = '%s_%03d' % (os.path.basename(att_path), att_seq)
+        att_newname = f'{os.path.basename(att_path)}_{int(att_seq):03}'
         att_seq += 1
         if self._gpg:
           att_path = self._EncryptFile(att_path, tmp_dir)
@@ -225,8 +224,8 @@ class OutputHTTP(plugin_base.OutputPlugin):
     clen = int(req.headers.get('Content-Length'))
     # Checks the size of request, and doesn't send if bigger than maximum size.
     if clen > self._max_bytes:
-      return (413, 'Request Entity Too Large: The request is bigger '
-                   'than %d bytes' % self._max_bytes, clen)
+      return (413, 'Request Entity Too Large: The request is bigger than '
+              f'{int(self._max_bytes)} bytes', clen)
     resp = requests.Session().send(req, timeout=http_common.HTTP_TIMEOUT)
     if resp.headers['Maximum-Bytes']:
       self._max_bytes = int(resp.headers['Maximum-Bytes'])
@@ -237,12 +236,10 @@ class OutputHTTP(plugin_base.OutputPlugin):
     if isinstance(data, str):
       data = data.encode('utf-8')
     encrypted_data = self._gpg.encrypt(
-        data,
-        self.args.target_key,
-        sign=self._gpg.list_keys(True)[0]['fingerprint'],
-        always_trust=False)
+        data, self.args.target_key,
+        sign=self._gpg.list_keys(True)[0]['fingerprint'], always_trust=False)
     if not encrypted_data.ok:
-      raise Exception('Failed to encrypt data! Log: %s' % encrypted_data.stderr)
+      raise Exception(f'Failed to encrypt data! Log: {encrypted_data.stderr}')
     return encrypted_data.data
 
   def _EncryptFile(self, file_path, target_dir):
@@ -251,14 +248,11 @@ class OutputHTTP(plugin_base.OutputPlugin):
                                                   dir=target_dir)
     with open(file_path, 'rb') as plaintext_file:
       encrypted_data = self._gpg.encrypt_file(
-          plaintext_file,
-          self.args.target_key,
-          sign=self._gpg.list_keys(True)[0]['fingerprint'],
-          output=encrypt_path,
+          plaintext_file, self.args.target_key,
+          sign=self._gpg.list_keys(True)[0]['fingerprint'], output=encrypt_path,
           always_trust=False)
       if not encrypted_data.ok:
-        raise Exception(
-            'Failed to encrypt file! Log: %s' % encrypted_data.stderr)
+        raise Exception(f'Failed to encrypt file! Log: {encrypted_data.stderr}')
     return encrypt_path
 
 

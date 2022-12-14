@@ -20,6 +20,7 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
 
+
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Mock key list for testing.
@@ -245,7 +246,7 @@ class DRMKeysProvisioningServerTest(unittest.TestCase):
       self.assertEqual(expected_available_key_count, available_key_count)
 
       # Request.
-      device_serial_number = 'SN%.6d' % i
+      device_serial_number = f'SN{int(i):06}'
       serialized_key = self._Request(device_serial_number)
       self.assertEqual(mock_key, json.loads(serialized_key))
 

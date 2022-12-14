@@ -140,8 +140,9 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler, log_utils.LoggerMixin):
       return
     # Content-Length may be wrong, and may cause some security issue.
     if int(self.content_length) > self._max_bytes:
-      self._SendResponse(413, 'Request Entity Too Large: The request is bigger '
-                              'than %d bytes' % self._max_bytes)
+      self._SendResponse(
+          413, ('Request Entity Too Large: The request is bigger than '
+                f'{int(self._max_bytes)} bytes'))
       return
     if self.headers.get('Multi-Event', 'False') == 'True':
       self._enable_multi_event = True
@@ -194,11 +195,11 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler, log_utils.LoggerMixin):
 
         for att_id, att_key in event.attachments.items():
           if att_key not in form or isinstance(form[att_key], list):
-            raise ValueError('Attachment(%s) should have exactly one in the '
-                             'request' % att_key)
+            raise ValueError(
+                f'Attachment({att_key}) should have exactly one in the request')
           if att_key not in remaining_att:
-            raise ValueError('Attachment(%s) should be used by one event' %
-                             att_key)
+            raise ValueError(
+                f'Attachment({att_key}) should be used by one event')
           remaining_att.remove(att_key)
           event.attachments[att_id] = form[att_key].file.name
           if self._gpg:
@@ -210,7 +211,7 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler, log_utils.LoggerMixin):
           ignore_count += 1
       del form  # Free memory earlier.
       if remaining_att:
-        raise ValueError('Additional fields: %s' % list(remaining_att))
+        raise ValueError(f'Additional fields: {list(remaining_att)}')
     except Exception as e:
       self.exception('Bad request with exception: %s', repr(e))
       return 400, 'Bad request: ' + repr(e)
@@ -235,7 +236,7 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler, log_utils.LoggerMixin):
   def _CheckDecryptedData(self, decrypted_data):
     """Checks if the data is decrypted and verified."""
     if not decrypted_data.ok:
-      raise Exception('Failed to decrypt! Log: %s' % decrypted_data.stderr)
+      raise Exception(f'Failed to decrypt! Log: {decrypted_data.stderr}')
     if (decrypted_data.trust_level is None or
         decrypted_data.trust_level < decrypted_data.TRUST_FULLY):
       raise Exception('Failed to verify!')

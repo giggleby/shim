@@ -140,7 +140,7 @@ class OutputFactoryReport(plugin_base.OutputPlugin):
       archive_extension = os.path.splitext(gcs_path)[1]
       archive_path = os.path.join(
           self._tmp_dir,
-          'archive_%d_%s%s' % (event['time'], event['md5'], archive_extension))
+          f"archive_{int(event['time'])}_{event['md5']}{archive_extension}")
 
       event['archive_path'] = archive_path
       event['archive_process_event'] = archive_process_event
@@ -647,8 +647,8 @@ class ReportParser(log_utils.LoggerMixin):
                   if report_event[field] != data:
                     SetProcessEventStatus(
                         ERROR_CODE.EventlogDataChange, process_event,
-                        'Field=%s, Old data=%s, New data=%s, Replace=%s' %
-                        (field, report_event[field], data, replace))
+                        (f'Field={field}, Old data={report_event[field]}, New '
+                         f'data={data}, Replace={replace}'))
 
                 report_event[field] = data
 
@@ -816,8 +816,8 @@ class ReportParser(log_utils.LoggerMixin):
                 if report_event[field] != data:
                   SetProcessEventStatus(
                       ERROR_CODE.TestlogDataChange, process_event,
-                      'Field=%s, Old data=%s, New data=%s, Replace=%s' %
-                      (field, report_event[field], data, replace))
+                      (f'Field={field}, Old data={report_event[field]}, New '
+                       f'data={data}, Replace={replace}'))
               report_event[field] = data
 
             if event.get('testType', None) == 'hwid':

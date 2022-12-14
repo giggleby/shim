@@ -123,7 +123,7 @@ class _InMemoryProbeStatementStorageConnector(IProbeStatementStorageConnector):
     assert key not in self._overridden_probe_data
     self._overridden_probe_data[key] = OverriddenProbeData(
         False, False, init_probe_statement)
-    return 'OK: qual=%r, device=%r.' % (qual_id, device_id)
+    return f'OK: qual={qual_id!r}, device={device_id!r}.'
 
   def MarkOverriddenProbeStatementTested(self, qual_id, device_id):
     key = (qual_id, device_id)
@@ -177,7 +177,7 @@ class _DataStoreProbeStatementStorageConnector(IProbeStatementStorageConnector):
     logging.debug('Update the overridden probe statement for qual %r %s by %r.',
                   qual_id, '' if not device_id else 'on ' + device_id,
                   data_instance)
-    return 'OK: entity path: %r' % (entity_path,)
+    return f'OK: entity path: {entity_path!r}'
 
   def MarkOverriddenProbeStatementTested(self, qual_id, device_id):
     entity_path = self._GetOverriddenProbeDataPath(qual_id, device_id)
@@ -197,14 +197,14 @@ class _DataStoreProbeStatementStorageConnector(IProbeStatementStorageConnector):
     raise NotImplementedError
 
   def _GetOverriddenProbeDataPath(self, qual_id, device_id):
-    name = str(qual_id) if not device_id else '%s-%s' % (qual_id, device_id)
+    name = str(qual_id) if not device_id else f'{qual_id}-{device_id}'
     return [self._OVERRIDDEN_PROBE_DATA_KIND, name]
 
   def _LoadEntity(self, path_args):
     key = self._client.key(*path_args)
     data = self._client.get(key)
     if data is None:
-      raise KeyError('path %r is not found in the datastore' % (path_args,))
+      raise KeyError(f'path {path_args!r} is not found in the datastore')
     return data
 
   def _SaveEntity(self, path_args, data):

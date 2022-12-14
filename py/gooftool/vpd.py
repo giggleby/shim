@@ -7,6 +7,7 @@ import subprocess
 
 from cros.factory.gooftool import common as gooftool_common
 
+
 # ChromeOS firmware VPD partition names.
 VPD_READONLY_PARTITION_NAME = 'RO_VPD'
 VPD_READWRITE_PARTITION_NAME = 'RW_VPD'
@@ -74,7 +75,7 @@ class VPDTool:
     cmd = self._BuildBasicCmd(partition, filename)
     for k, v in items.items():
       self._EnsureIfKeyValid(k)
-      cmd += ['-d', k] if v is None else ['-s', '%s=%s' % (k, v)]
+      cmd += ['-d', k] if v is None else ['-s', f'{k}={v}']
     self._InvokeCmd(cmd)
     self._UpdateCache()
 
@@ -106,5 +107,5 @@ class VPDTool:
   @classmethod
   def _EnsureIfKeyValid(cls, key):
     if not cls._KEY_PATTERN.match(key):
-      raise ValueError('Invalid VPD key %r (does not match pattern %s)' %
-                       (key, cls._KEY_PATTERN.pattern))
+      raise ValueError(f'Invalid VPD key {key!r} (does not match pattern '
+                       f'{cls._KEY_PATTERN.pattern})')

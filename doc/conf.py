@@ -176,8 +176,8 @@ html_theme = 'default'
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = ('%s %s documentation %s' % (
-    project, version, os.environ.get('DOC_TITLE_SUFFIX', ''))).strip()
+html_title = f"{project} {version} documentation {os.environ.get('DOC_TITLE_SUFFIX', '')}".strip(
+)
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None

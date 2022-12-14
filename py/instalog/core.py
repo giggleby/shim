@@ -107,8 +107,8 @@ class Instalog(plugin_sandbox.CoreAPI):
           for target in targets:
             if target not in output_plugins:
               raise plugin_base.ConfigError(
-                  'Non-existent target output plugin ID `%s\' referenced in '
-                  'plugin `%s\' config' % (target, plugin_id))
+                  f'Non-existent target output plugin ID `{target}\' referenced'
+                  f' in plugin `{plugin_id}\' config')
             target_allow = output_plugins[target].setdefault('allow', [])
             target_allow.append({'rule': 'history',
                                  'plugin_id': plugin_id,
@@ -118,9 +118,9 @@ class Instalog(plugin_sandbox.CoreAPI):
     for plugin_id, plugin_config in output_plugins.items():
       if not plugin_config.get('allow'):
         raise plugin_base.ConfigError(
-            'No plugin is targetting output plugin `%s\'.  Please (1) disable '
-            'this plugin, (2) add allow/deny rules, or (3) configure '
-            '`targets\' of another plugin to point to it.' % plugin_id)
+            f'No plugin is targetting output plugin `{plugin_id}\'.  Please (1)'
+            ' disable this plugin, (2) add allow/deny rules, or (3) configure '
+            '`targets\' of another plugin to point to it.')
 
 
   def _ConfigEntryToSandbox(self, superclass, plugin_id, config):
@@ -135,8 +135,8 @@ class Instalog(plugin_sandbox.CoreAPI):
     # The plugin type is included along with its configuration.  Extract it.
     if not isinstance(config, dict) or 'plugin' not in config:
       raise plugin_base.ConfigError(
-          'Plugin %s must have a config dictionary which includes the key '
-          '`plugin` to specify which plugin module to load' % plugin_id)
+          f'Plugin {plugin_id} must have a config dictionary which includes the'
+          ' key `plugin` to specify which plugin module to load')
     plugin_type = config.pop('plugin')
     allow = config.pop('allow', [])
     deny = config.pop('deny', [])
@@ -146,17 +146,16 @@ class Instalog(plugin_sandbox.CoreAPI):
     enable_recursion = config.pop('enable_recursion', False)
     if config:
       raise plugin_base.ConfigError(
-          'Plugin %s has extra arguments: %s' % (plugin_id, ', '.join(config)))
+          f"Plugin {plugin_id} has extra arguments: {', '.join(config)}")
 
     # Create FlowPolicy object.
     policy = flow_policy.FlowPolicy(allow, deny)
     if not enable_recursion:
       policy.deny.append(
-          flow_policy.HistoryRule(plugin_id=plugin_id,
-                                  node_id=self._node_id))
+          flow_policy.HistoryRule(plugin_id=plugin_id, node_id=self._node_id))
 
     # Make sure we have a store_path and data_dir for the plugin.
-    store_path = os.path.join(self._data_dir, '%s.json' % plugin_id)
+    store_path = os.path.join(self._data_dir, f'{plugin_id}.json')
     data_dir = os.path.join(self._data_dir, plugin_id)
     if not os.path.exists(data_dir):
       os.makedirs(data_dir)
@@ -290,14 +289,14 @@ class Instalog(plugin_sandbox.CoreAPI):
   def Inspect(self, plugin_id, json_path):
     with self._rpc_lock:
       if plugin_id not in self._plugins:
-        return False, 'Plugin `%s\' not found' % plugin_id
+        return False, f'Plugin `{plugin_id}\' not found'
       try:
         store_data = self._plugins[plugin_id].store
         return True, json_utils.JSONEncoder().encode(
             json_utils.WalkJSONPath(json_path, store_data))
       except Exception as e:
-        return False, ('Error on inspect with JSON path `%s\': %s'
-                       % (json_path, str(e)))
+        return False, (
+            f'Error on inspect with JSON path `{json_path}\': {str(e)}')
 
   def Flush(self, plugin_id, timeout):
     """Flushes the given plugin with given timeout.

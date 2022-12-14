@@ -71,7 +71,7 @@ def _PassByYapf(fix, file_path, ranges, work_tree):
     diff_end = diff_start + diff_len - 1
     if diff_end >= diff_start:
       has_formattable_lines = True
-      range_args += ['-l', '{}-{}'.format(diff_start, diff_end)]
+      range_args += ['-l', f'{diff_start}-{diff_end}']
 
   if not has_formattable_lines:
     return True
@@ -185,7 +185,7 @@ def main():
   if failed_files or uncertain_files:
     fix_cmd = [
         'make', 'format',
-        'FILES="{}"'.format(' '.join(failed_files + uncertain_files))
+        f"FILES=\"{' '.join(failed_files + uncertain_files)}\""
     ]
     if args.commit:
       fix_cmd.append('COMMIT=HEAD')

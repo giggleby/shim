@@ -8,6 +8,7 @@ import flask
 from google.cloud import pubsub_v1
 from google.cloud import storage
 
+
 # isort: split
 
 from cros.factory.bundle_creator.app_engine import config
@@ -26,7 +27,7 @@ def allowlist(function):
         'X-Appengine-Loas-Peer-Username')
     if loas_peer_username not in config.ALLOWED_LOAS_PEER_USERNAMES:
       raise AllowlistException(
-          'LOAS_PEER_USERNAME {} is not allowed'.format(loas_peer_username))
+          f'LOAS_PEER_USERNAME {loas_peer_username} is not allowed')
     return function(*args, **kwargs)
   return function_wrapper
 
@@ -102,8 +103,9 @@ class FactoryBundleService(protorpc_utils.ProtoRPCServiceBase):
     blob.acl.save()
 
     response = factorybundle_pb2.DownloadBundleRpcResponse()
-    response.download_link = 'https://storage.cloud.google.com/{}/{}'.format(
-        config.BUNDLE_BUCKET, request.path)
+    response.download_link = (
+        f'https://storage.cloud.google.com/{config.BUNDLE_BUCKET}/'
+        f'{request.path}')
     return response
 
   @allowlist

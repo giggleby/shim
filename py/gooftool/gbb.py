@@ -17,6 +17,7 @@ import sys
 
 from cros.factory.utils import file_utils
 
+
 GBBContent = collections.namedtuple(
     'GBBContent', ['hwid', 'hwid_digest', 'rootkey', 'recovery_key'])
 GBBField = collections.namedtuple('GBBField', ['value', 'offset', 'size'])
@@ -72,7 +73,7 @@ def UnpackGBBHeader(blob, offset=0):
   header = GBBHeader(*struct.unpack_from(FORMAT_GBB_HEADER, blob, offset))
   # Check signature.
   if header.signature != GBB_SIGNATURE:
-    raise ValueError('unknown GBB signature: %s' % header.signature)
+    raise ValueError(f'unknown GBB signature: {header.signature}')
   return header
 
 

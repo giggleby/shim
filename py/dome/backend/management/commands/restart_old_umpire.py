@@ -7,7 +7,8 @@ import logging
 from backend.models import Project
 from django.core.management.base import BaseCommand
 
-logger = logging.getLogger('django.%s' % __name__)
+
+logger = logging.getLogger(f'django.{__name__}')
 
 
 class Command(BaseCommand):

@@ -11,6 +11,7 @@ from cros.factory.test.l10n.regions import REGIONS
 from cros.factory.utils.debug_utils import SetupLogging
 from cros.factory.utils.process_utils import Spawn
 
+
 DESCRIPTION = """Re-runs OOBE on a remote device with the given region.
 
 This tool is useful for manually testing how OOBE behaves with VPD
@@ -32,20 +33,25 @@ def main():
   args = parser.parse_args()
   SetupLogging(level=logging.INFO)
 
-  vpd_command_args = '-s region=%s' % (REGIONS[args.region].region_code)
+  vpd_command_args = f'-s region={REGIONS[args.region].region_code}'
 
-  Spawn(['ssh', args.host,
-         'set -x; '
-         # Stop the UI
-         'stop ui; '
-         # Update the VPD
-         'vpd %s; '
-         'dump_vpd_log --force; '
-         # Delete local state to re-run OOBE
-         'rm -rf /home/chronos /home/user; '
-         # Restart the UI
-         'start ui' % vpd_command_args],
-        log=True, check_call=True)
+  Spawn(
+      [
+          'ssh',
+          args.host,
+          'set -x; '
+          # Stop the UI
+          'stop ui; '
+          # Update the VPD
+          f'vpd {vpd_command_args}; '
+          'dump_vpd_log --force; '
+          # Delete local state to re-run OOBE
+          'rm -rf /home/chronos /home/user; '
+          # Restart the UI
+          'start ui'
+      ],
+      log=True,
+      check_call=True)
 
 
 if __name__ == '__main__':

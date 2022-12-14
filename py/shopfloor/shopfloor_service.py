@@ -12,6 +12,7 @@ import socket
 import socketserver
 import xmlrpc.server
 
+
 DEFAULT_SERVER_PORT = 8090
 DEFAULT_SERVER_ADDRESS = '0.0.0.0'
 
@@ -155,10 +156,10 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument(
       '-a', '--address', metavar='ADDR', default=DEFAULT_SERVER_ADDRESS,
-      help='address to bind (default: %s)' % DEFAULT_SERVER_ADDRESS)
-  parser.add_argument(
-      '-p', '--port', metavar='PORT', type=int, default=DEFAULT_SERVER_PORT,
-      help='port to bind (default: %s)' % DEFAULT_SERVER_PORT)
+      help=f'address to bind (default: {DEFAULT_SERVER_ADDRESS})')
+  parser.add_argument('-p', '--port', metavar='PORT', type=int,
+                      default=DEFAULT_SERVER_PORT,
+                      help=f'port to bind (default: {DEFAULT_SERVER_PORT})')
   parser.add_argument('-v', '--verbose', default=False, action='store_true',
                       help='provide verbose logs for debugging.')
   args = parser.parse_args()

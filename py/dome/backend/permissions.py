@@ -12,7 +12,8 @@ from rest_framework import permissions as drf_permissions
 
 from cros.factory.utils import net_utils
 
-logger = logging.getLogger('django.%s' % __name__)
+
+logger = logging.getLogger(f'django.{__name__}')
 
 
 class AllowLocalHostOrIsAuthenticated(drf_permissions.IsAuthenticated):

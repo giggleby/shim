@@ -19,7 +19,7 @@ def JSONHandler(obj):
   """Handler for serializing objects during conversion to JSON."""
   if isinstance(obj, datetime.datetime):
     # Change datetime.datetime obj to Unix time.
-    return '%.6f' % time_utils.DatetimeToUnixtime(obj)
+    return f'{time_utils.DatetimeToUnixtime(obj):.6f}'
   if isinstance(obj, datetime.date):
     # Currently we didn't expect obj in this type
     return obj.isoformat()
@@ -30,7 +30,7 @@ def JSONHandler(obj):
     tb = ''.join(traceback.format_tb(obj))
     return tb.strip()
   if isinstance(obj, Exception):
-    return 'Exception: %s' % str(obj)
+    return f'Exception: {obj}'
   return str(obj)
 
 

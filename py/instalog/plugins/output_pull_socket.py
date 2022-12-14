@@ -58,7 +58,7 @@ class OutputPullSocket(plugin_base.OutputPlugin):
     try:
       self._accept_sock.bind((self.args.hostname, self.args.port))
     except socket.error as e:
-      self.exception('Bind failed. Error : %s' % e)
+      self.exception(f'Bind failed. Error : {e}')
       self._accept_sock.close()
       raise
     self.debug('Socket bind complete')
@@ -72,7 +72,7 @@ class OutputPullSocket(plugin_base.OutputPlugin):
       self._sock.settimeout(socket_common.SOCKET_TIMEOUT)
       self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,
                             socket_common.SOCKET_BUFFER_SIZE)
-      self.info('Connected with %s:%d' % (addr[0], addr[1]))
+      self.info(f'Connected with {addr[0]}:{int(addr[1])}')
       self._accept_sock.shutdown(socket.SHUT_RDWR)
       self._accept_sock.close()
       # Receive qing.

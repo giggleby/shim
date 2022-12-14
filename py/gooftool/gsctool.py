@@ -8,6 +8,7 @@ import re
 from cros.factory.gooftool import common as gooftool_common
 from cros.factory.utils import type_utils
 
+
 # Path to the relied `gsctool` command line utility.
 GSCTOOL_PATH = '/usr/sbin/gsctool'
 
@@ -119,7 +120,7 @@ class GSCTool:
     return info
 
   def _GetAttrs(self, cmd, AttrClass, fields, target_name):
-    cmd_result = self._InvokeCommand(cmd, 'failed to get %s' % target_name)
+    cmd_result = self._InvokeCommand(cmd, f'failed to get {target_name}')
 
     translated_kwargs = {}
     for line in cmd_result.stdout.splitlines():
@@ -130,8 +131,9 @@ class GSCTool:
     missing_fields = [field_name for field_name, attr_name in fields.items()
                       if attr_name not in translated_kwargs]
     if missing_fields:
-      raise GSCToolError('%r Field(s) are missing, gsctool stdout=%r' %
-                         (missing_fields, cmd_result.stdout))
+      raise GSCToolError(
+          f'{missing_fields!r} Field(s) are missing, gsctool stdout='
+          f'{cmd_result.stdout!r}')
 
     return AttrClass(**translated_kwargs)
 
@@ -147,8 +149,7 @@ class GSCTool:
     """
     enable_str = 'enable' if enable else 'disable'
     cmd = [GSCTOOL_PATH, '-a', '-F', enable_str]
-    self._InvokeCommand(
-        cmd, 'failed to %s cr50 factory mode' % enable_str)
+    self._InvokeCommand(cmd, f'failed to {enable_str} cr50 factory mode')
 
   def IsFactoryMode(self):
     """Queries if the cr50 is in factory mode or not.
@@ -196,7 +197,7 @@ class GSCTool:
     elif re.match(r'[A-Z]{4}$', result.BID_RLZ):
       rlz_num = int.from_bytes(result.BID_RLZ.encode('utf-8'), 'big')
     else:
-      raise GSCToolError('Unexpected RLZ format: %r.' % result.BID_RLZ)
+      raise GSCToolError(f'Unexpected RLZ format: {result.BID_RLZ!r}.')
     try:
       bid_type = int(result.BID_TYPE, 16)
       bid_type_inv = int(result.BID_TYPE_INV, 16)
@@ -211,11 +212,12 @@ class GSCTool:
     is_bid_type_complement = ((bid_type & bid_type_inv) == 0 and
                               (bid_type | bid_type_inv) == _BID_TYPE_MASK)
     if is_bid_type_programmed and not is_bid_type_complement:
-      raise GSCToolError('BID_TYPE(%x) and BID_TYPE_INV(%x) are not complement '
-                         'to each other' % (bid_type, bid_type_inv))
+      raise GSCToolError(
+          f'BID_TYPE({bid_type:x}) and BID_TYPE_INV({bid_type_inv:x}) are not '
+          'complement to each other')
     if rlz_num != bid_type:
-      raise GSCToolError('BID_TYPE(%x) and RLZ_CODE(%s) mismatch.' %
-                         (bid_type, result.BID_RLZ))
+      raise GSCToolError(
+          f'BID_TYPE({bid_type:x}) and RLZ_CODE({result.BID_RLZ}) mismatch.')
     return BoardID(bid_type, bid_flags)
 
   def ClearROHash(self):
@@ -227,5 +229,5 @@ class GSCTool:
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)
     result = self._shell(cmd)
     if not cmd_result_checker(result):
-      raise GSCToolError(failure_msg + ' (command result: %r)' % result)
+      raise GSCToolError(failure_msg + f' (command result: {result!r})')
     return result

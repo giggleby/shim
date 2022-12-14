@@ -51,7 +51,7 @@ class ProjectSerializer(serializers.ModelSerializer):
       validators=[
           validators.UniqueValidator(queryset=Project.objects.all()),
           django.core.validators.RegexValidator(
-              regex=r'^%s$' % common.PROJECT_NAME_RE,
+              regex=r'^' + common.PROJECT_NAME_RE + r'$',
               message='Invalid project name')
       ])
 
@@ -93,10 +93,8 @@ class ResourceSerializer(serializers.Serializer):
   def create(self, validated_data):
     project_name = validated_data['project_name']
     if not Project.objects.filter(pk=project_name).exists():
-      raise exceptions.ValidationError(
-          'Project %s does not exist' % project_name)
-    return Resource.CreateOne(project_name,
-                              validated_data['type'],
+      raise exceptions.ValidationError(f'Project {project_name} does not exist')
+    return Resource.CreateOne(project_name, validated_data['type'],
                               validated_data['file_id'])
 
   def update(self, instance, validated_data):

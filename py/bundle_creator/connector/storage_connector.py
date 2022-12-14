@@ -65,15 +65,15 @@ class StorageConnector:
       A string of the google storage path.
     """
     current_datetime = datetime.datetime.now()
-    blob_filename = 'factory_bundle_{}_{:%Y%m%d_%H%M}_{}_{}.tar.bz2'.format(
-        bundle_metadata.project, current_datetime, bundle_metadata.phase,
-        '{:%S%f}'.format(current_datetime)[:-3])
-    blob_path = '{}/{}/{}'.format(bundle_metadata.board,
-                                  bundle_metadata.project, blob_filename)
+    blob_filename = (f'factory_bundle_{bundle_metadata.project}_'
+                     f'{current_datetime:%Y%m%d_%H%M}_{bundle_metadata.phase}_'
+                     f'{current_datetime:%S%f}'[:-3] + '.tar.bz2')
+    blob_path = (
+        f'{bundle_metadata.board}/{bundle_metadata.project}/{blob_filename}')
     blob = self._bucket.blob(blob_path, chunk_size=100 * 1024 * 1024)
 
     # Set Content-Disposition for the correct default download filename.
-    blob.content_disposition = 'filename="{}"'.format(blob_filename)
+    blob.content_disposition = f'filename="{blob_filename}"'
     self._logger.info('Start uploading `%s` to `%s` bucket.', bundle_path,
                       self._bucket_name)
     blob.upload_from_filename(bundle_path)
@@ -98,6 +98,6 @@ class StorageConnector:
     blob.metadata = metadata
     blob.update()
 
-    gs_path = 'gs://{}/{}'.format(self._bucket_name, blob_path)
+    gs_path = f'gs://{self._bucket_name}/{blob_path}'
     self._logger.info('The created bundle was uploaded to `%s`.', gs_path)
     return gs_path

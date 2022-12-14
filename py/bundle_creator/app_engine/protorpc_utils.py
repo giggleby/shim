@@ -68,6 +68,6 @@ def RegisterProtoRPCServiceToFlaskApp(
   service_name = service_name or service_inst.SERVICE_DESCRIPTOR.name
   endpoint_name = '__protorpc_service_view_func_' + str(uuid.uuid1())
   view_func = _ProtoRPCServiceFlaskAppViewFunc(app_inst, service_inst)
-  app_inst.add_url_rule(
-      '%s/%s.<method_name>' % (path, service_name), endpoint=endpoint_name,
-      view_func=view_func, methods=['POST'])
+  app_inst.add_url_rule(f'{path}/{service_name}.<method_name>',
+                        endpoint=endpoint_name, view_func=view_func,
+                        methods=['POST'])

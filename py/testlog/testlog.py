@@ -156,8 +156,8 @@ class Testlog:
       session_data = Testlog._ReadSessionInfo()
     else:
       assert False, (
-          'Wrong initialization of _global_testlog with log_root:'
-          ' %r, uuid: %r' % (log_root, uuid))
+          f'Wrong initialization of _global_testlog with log_root: {log_root!r}'
+          f', uuid: {uuid!r}')
 
     self.last_test_run = session_data.pop(self.FIELDS.LAST_TEST_RUN, None)
     self.log_root = session_data.pop(self.FIELDS.LOG_ROOT)
@@ -211,7 +211,7 @@ class Testlog:
     self.hooks = getattr(__import__(module, fromlist=[class_name]),
                          class_name)()
     assert isinstance(self.hooks, hooks.Hooks), (
-        'Testlog hooks should be of type Hooks but is %r' % type(self.hooks))
+        f'Testlog hooks should be of type Hooks but is {type(self.hooks)!r}')
 
   def CaptureLogging(self, stationDeviceId=None, stationInstallationId=None):
     """Captures calls to logging.* into primary_json."""
@@ -252,7 +252,7 @@ class Testlog:
   def _ReadSessionInfo():
     session_json_path = os.environ.get(TESTLOG_ENV_VARIABLE_NAME, None)
     assert session_json_path, (
-        'Not able to find environment variable %r' % TESTLOG_ENV_VARIABLE_NAME)
+        f'Not able to find environment variable {TESTLOG_ENV_VARIABLE_NAME!r}')
     # Read to load metadata.
     metadata = None
     manager = file_utils.FileLockContextManager(session_json_path, 'r')
@@ -694,7 +694,7 @@ class LogFormatter(logging.Formatter):
   def format(self, record):
     message = record.getMessage()
     if record.exc_info:
-      message += '\n%s' % self.formatException(record.exc_info)
+      message += f'\n{self.formatException(record.exc_info)}'
 
     data = {
         'filePath': getattr(record, 'pathname', None),
@@ -793,8 +793,8 @@ class EventBase:
       if key in cls.FIELDS:
         cls.FIELDS[key][1](self, key, value)
         return
-    raise testlog_utils.TestlogError('Cannot find key %r for event %s' % (
-        key, self.__class__.__name__))
+    raise testlog_utils.TestlogError(
+        f'Cannot find key {key!r} for event {self.__class__.__name__}')
 
   def __contains__(self, item):
     """Supports `in` operator."""
@@ -818,11 +818,11 @@ class EventBase:
       missing_fields.append('serialNumbers')
 
     if missing_fields:
-      raise testlog_utils.TestlogError('Missing fields: %s' % missing_fields)
+      raise testlog_utils.TestlogError(f'Missing fields: {missing_fields}')
 
     if self._data['apiVersion'] != TESTLOG_API_VERSION:
-      raise testlog_utils.TestlogError('Invalid Testlog API version: %s' %
-                                       self._data['apiVersion'])
+      raise testlog_utils.TestlogError(
+          f"Invalid Testlog API version: {self._data['apiVersion']}")
 
     # Check the length of the grouped parameters.
     if 'parameters' in self._data:
@@ -834,8 +834,7 @@ class EventBase:
             group_length[group] = len(param['data'])
           elif group_length[group] != len(param['data']):
             raise testlog_utils.TestlogError(
-                'The parameters length in the group(%s) are not the same' %
-                group)
+                f'The parameters length in the group({group}) are not the same')
 
     for key, data in self._data.items():
       # Ignore keys that start with an underscore.
@@ -844,10 +843,10 @@ class EventBase:
       data_type = type(data)
       if data_type == list:
         if not data:
-          raise testlog_utils.TestlogError('Empty list is invalid: %r' % key)
+          raise testlog_utils.TestlogError(f'Empty list is invalid: {key!r}')
       elif data_type == dict:
         if not data:
-          raise testlog_utils.TestlogError('Empty dict is invalid: %r' % key)
+          raise testlog_utils.TestlogError(f'Empty dict is invalid: {key!r}')
 
   @classmethod
   def GetEventType(cls):
@@ -870,12 +869,12 @@ class EventBase:
       data_type = type(data[key])
       if data_type == list:
         if not data[key]:
-          raise testlog_utils.TestlogError('Empty list is invalid: %r' % key)
+          raise testlog_utils.TestlogError(f'Empty list is invalid: {key!r}')
         for value in data[key]:
           self[key] = value
       elif data_type == dict:
         if not data[key]:
-          raise testlog_utils.TestlogError('Empty dict is invalid: %r' % key)
+          raise testlog_utils.TestlogError(f'Empty dict is invalid: {key!r}')
         for sub_key, value in data[key].items():
           self[key] = {'key': sub_key, 'value': value}
       else:
@@ -936,7 +935,7 @@ class EventBase:
 
   def __repr__(self):
     """Repr operator for string printing."""
-    return '<{} data={}>'.format(self.__class__.__name__, repr(self._data))
+    return f'<{self.__class__.__name__} data={repr(self._data)}>'
 
 
 class Event(EventBase):
@@ -1018,8 +1017,8 @@ class _GroupChecker:
     length = len(self.event['parameters'][self.param_list[0]]['data'])
     for param_name in self.param_list:
       if length != len(self.event['parameters'][param_name]['data']):
-        raise ValueError('The parameters length in the group(%s) are not '
-                         'the same' % self.name)
+        raise ValueError(
+            f'The parameters length in the group({self.name}) are not the same')
 
 
 class StationStatus(_StationBase):
@@ -1143,7 +1142,7 @@ class StationStatus(_StationBase):
     We use testlog_utils.IsInRange to perform the check.
     """
     if not isinstance(value, (int, float)):
-      raise ValueError('%r is not a numeric' % value)
+      raise ValueError(f'{value!r} is not a numeric')
 
     value_dict = StationStatus._CreateParamValueDict(value, min, max)
 
@@ -1160,7 +1159,7 @@ class StationStatus(_StationBase):
     We use re.search to perform the check.
     """
     if not isinstance(value, str):
-      raise ValueError('%r is not a text' % value)
+      raise ValueError(f'{value!r} is not a text')
     value_dict = StationStatus._CreateParamValueDict(value, regex=regex)
 
     # Check the result
@@ -1189,19 +1188,18 @@ class StationStatus(_StationBase):
   def GroupParam(self, name, param_list):
     """Groups a list of parameters."""
     if not isinstance(name, str) or not name:
-      raise ValueError('name(%r) should be a string and not empty' % name)
+      raise ValueError(f'name({name!r}) should be a string and not empty')
     if not isinstance(param_list, list) or not param_list:
-      raise ValueError('param_list(%r) should be a list and not empty' %
-                       param_list)
+      raise ValueError(
+          f'param_list({param_list!r}) should be a list and not empty')
     for param in param_list:
       self._CheckAndCreateParam(param)
 
       if self['parameters'][param]['data']:
         raise ValueError(
-            'parameter(%s) should not have data before grouping' % param)
+            f'parameter({param}) should not have data before grouping')
       if self['parameters'][param].get('group', None):
-        raise ValueError(
-            'parameter(%s) should not be grouped twice' % param)
+        raise ValueError(f'parameter({param}) should not be grouped twice')
 
       self['parameters'][param]['group'] = name
 
@@ -1390,10 +1388,13 @@ class StationTestRun(StationStatus):
     # TODO(itspeter): Unittest.
     # Get the numeric code unified into hex format.
     if isinstance(code, int):
-      code = '0x%x' % code
+      code = f'{code:#x}'
     if not isinstance(code, str):
-      raise ValueError('code(%r) should be a string or an integer' % code)
+      raise ValueError(f'code({code!r}) should be a string or an integer')
     if not isinstance(details, str):
-      raise ValueError('details(%r) should be a string' % details)
-    self['failures'] = {'code': code, 'details': details}
+      raise ValueError(f'details({details!r}) should be a string')
+    self['failures'] = {
+        'code': code,
+        'details': details
+    }
     return self

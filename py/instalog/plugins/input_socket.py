@@ -59,7 +59,7 @@ class InputSocket(plugin_base.InputPlugin):
     try:
       self._sock.bind((self.args.hostname, self.args.port))
     except socket.error as e:
-      self.exception('Bind failed. Error : %s' % e)
+      self.exception(f'Bind failed. Error : {e}')
       raise
     self.debug('Socket bind complete')
 
@@ -82,7 +82,7 @@ class InputSocket(plugin_base.InputPlugin):
           del self._threads[thread]
 
       conn, addr = self._sock.accept()
-      self.info('Connected with %s:%d' % (addr[0], addr[1]))
+      self.info(f'Connected with {addr[0]}:{int(addr[1])}')
       conn.settimeout(socket_common.SOCKET_TIMEOUT)
       conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
                       socket_common.SOCKET_BUFFER_SIZE)
@@ -237,7 +237,7 @@ class InputSocketReceiver(log_utils.LoggerMixin):
   def RecvFieldParts(self):
     """Returns a generator to retrieve the next field in socket stream."""
     total = self.RecvInt()
-    self.debug('RecvFieldParts total = %d bytes' % total)
+    self.debug(f'RecvFieldParts total = {int(total)} bytes')
     progress = 0
     local_hash = hashlib.sha1()
     while progress < total:

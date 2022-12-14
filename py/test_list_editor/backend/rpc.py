@@ -14,6 +14,7 @@ from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
 
+
 _BASIC_ARG_TYPE = type_utils.Enum((
     'NONE', 'BOOL', 'INT', 'FLOAT', 'STR', 'LIST', 'DICT'
 ))
@@ -36,7 +37,7 @@ def _NormalizedArgType(t):
     return _BASIC_ARG_TYPE.LIST
   if issubclass(t, collections.abc.Mapping):
     return _BASIC_ARG_TYPE.DICT
-  raise ValueError('Unknown argument type %r.' % t)
+  raise ValueError(f'Unknown argument type {t!r}.')
 
 
 class RPC:
@@ -77,7 +78,7 @@ class RPC:
           # Actually, files in private overlays will override the file with same
           # name in factory repository (if exists). We disallow this to make
           # things easier.
-          raise RuntimeError('Multiple files with the same name %r' % basename)
+          raise RuntimeError(f'Multiple files with the same name {basename!r}')
         files[basename] = file_utils.ReadFile(filepath)
         filelist.append(basename)
       dirs.append(dict(name=dirname, path=test_list_dir, filelist=filelist))
@@ -105,7 +106,7 @@ class RPC:
 
     for filepath, content in requests.items():
       if IsForbidden(filepath):
-        raise RuntimeError('Writing to %r is disallowed.' % filepath)
+        raise RuntimeError(f'Writing to {filepath!r} is disallowed.')
       file_utils.WriteFile(filepath, content)
 
   @type_utils.LazyProperty

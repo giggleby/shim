@@ -125,7 +125,7 @@ class InputGCSScan(plugin_base.InputPlugin):
     Returns a Event if the creation time is valid, or None otherwise"""
     object_id = None
     try:
-      object_id = '/%s/%s' % (self.args.bucket_id, blob.name)
+      object_id = f'/{self.args.bucket_id}/{blob.name}'
       if blob.time_created is None or blob.md5_hash is None:
         blob.reload()
       blob_hash = base64.standard_b64decode(blob.md5_hash).hex()

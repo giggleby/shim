@@ -20,6 +20,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils.string_utils import ParseUrl
 from cros.factory.utils.type_utils import Error
 
+
 # Constants
 DEFAULT_MAX_RETRY_TIMES = 0
 DEFAULT_RETRY_INTERVAL = 60
@@ -69,7 +70,7 @@ def RetryCommand(callback, message_prefix, max_retry_times, interval):
 
     for i in range(interval, 0, -1):
       if i % 10 == 0:
-        sys.stderr.write(' Retry in %d seconds...\n' % i)
+        sys.stderr.write(f' Retry in {int(i)} seconds...\n')
       time.sleep(1)
 
 
@@ -94,8 +95,8 @@ def ShopFloorUpload(source_path, remote_spec, stage,
       instance.UploadReport(serial_number, blob, option_name, stage)
       return True
     except xmlrpc.client.Fault as err:
-      result['message'] = 'Remote server fault #%d: %s' % (err.faultCode,
-                                                           err.faultString)
+      result['message'] = (
+          f'Remote server fault #{int(err.faultCode)}: {err.faultString}')
       result['abort'] = True
     except Exception:
       result['message'] = sys.exc_info()[1]
@@ -110,7 +111,7 @@ def ShopFloorUpload(source_path, remote_spec, stage,
       logging.info('ShopFloorUpload: skip uploading to: %s', remote_spec)
     else:
       raise Error(
-          'ShopFloorUpload: fail to upload to: %s' % remote_spec) from None
+          f'ShopFloorUpload: fail to upload to: {remote_spec}') from None
   else:
     logging.info('ShopFloorUpload: successfully uploaded to: %s', remote_spec)
 
@@ -145,8 +146,7 @@ def CurlCommand(curl_command, success_string=None, abort_string=None,
 
   arg_verbose_silent = '-v' if success_string else '-s'
   arg_redirect_stderr = '--stderr -' if success_string or abort_string else ''
-  cmd = 'curl -S %s %s %s' % (arg_verbose_silent, arg_redirect_stderr,
-                              curl_command)
+  cmd = f'curl -S {arg_verbose_silent} {arg_redirect_stderr} {curl_command}'
   logging.debug('CurlCommand: %s', cmd)
 
   # man curl(1) for EXIT CODES not related to temporary network failure.
@@ -158,17 +158,18 @@ def CurlCommand(curl_command, success_string=None, abort_string=None,
     message = None
     return_value = False
     if abort_string and cmd_result.stdout.find(abort_string) >= 0:
-      message = 'Abort: Found abort pattern: %s' % abort_string
+      message = f'Abort: Found abort pattern: {abort_string}'
       abort = True
       return_value = False
     elif cmd_result.success:
       if success_string and cmd_result.stdout.find(success_string) < 0:
-        message = 'Retry: No valid pattern (%s) in response.' % success_string
+        message = f'Retry: No valid pattern ({success_string}) in response.'
       else:
         return_value = True
     else:
-      message = '#%d %s' % (cmd_result.status, cmd_result.stderr
-                            if cmd_result.stderr else cmd_result.stdout)
+      message = (
+          f'#{int(cmd_result.status)} '
+          f'{cmd_result.stderr if cmd_result.stderr else cmd_result.stdout}')
       if cmd_result.status in curl_abort_exit_codes:
         abort = True
 
@@ -185,7 +186,7 @@ def CurlCommand(curl_command, success_string=None, abort_string=None,
     if allow_fail:
       logging.info('CurlCommand: skipped, max retry times reached: %s', cmd)
     else:
-      raise Error('CurlCommand: failed to execute: %s' % cmd) from None
+      raise Error(f'CurlCommand: failed to execute: {cmd}') from None
   else:
     logging.info('CurlCommand: successfully executed: %s', cmd)
 
@@ -200,7 +201,7 @@ def CurlUrlUpload(source_path, params, **kargs):
     retry_interval: Duration (in seconds) between each retry.
     allow_fail: Do not raise exception when upload fails.
   """
-  return CurlCommand('--ftp-ssl -T "%s" %s' % (source_path, params), **kargs)
+  return CurlCommand(f'--ftp-ssl -T "{source_path}" {params}', **kargs)
 
 
 def CpfeUpload(source_path, cpfe_url, **kargs):
@@ -213,7 +214,7 @@ def CpfeUpload(source_path, cpfe_url, **kargs):
     retry_interval: Duration (in seconds) between each retry.
     allow_fail: Do not raise exception when upload fails.
   """
-  curl_command = '--form "report_file=@%s" %s' % (source_path, cpfe_url)
+  curl_command = f'--form "report_file=@{source_path}" {cpfe_url}'
   CPFE_SUCCESS = 'CPFE upload: OK'
   CPFE_ABORT = 'CPFE upload: Failed'
   return CurlCommand(curl_command, success_string=CPFE_SUCCESS,
@@ -248,7 +249,7 @@ def FtpUpload(source_path, ftp_url,
 
   # Check and specify default parameters
   if not host:
-    raise Error('FtpUpload: invalid ftp url: %s' % ftp_url)
+    raise Error(f'FtpUpload: invalid ftp url: {ftp_url}')
   if not port:
     port = ftplib.FTP_PORT
   if not userid:
@@ -270,14 +271,14 @@ def FtpUpload(source_path, ftp_url,
     path = os.path.join(path, source_name)
 
   ftp = ftplib.FTP()
-  url = 'ftp://%s:%s@%s:%s/ %s' % (userid, passwd, host, port, path)
+  url = f'ftp://{userid}:{passwd}@{host}:{port}/ {path}'
   logging.info('FtpUpload: target is %s', url)
 
   def FtpCallback(result):
     try:
       ftp.connect(host=host, port=port, timeout=retry_timeout)
     except Exception as e:
-      result['message'] = '%s' % e
+      result['message'] = f'{e}'
       return False
     return True
 
@@ -288,13 +289,13 @@ def FtpUpload(source_path, ftp_url,
     if allow_fail:
       logging.info('FtpUpload: skip uploading to %s', ftp_url)
     else:
-      raise Error('FtpUpload: fail to upload to %s' % ftp_url) from None
+      raise Error(f'FtpUpload: fail to upload to {ftp_url}') from None
   else:
     # Ready for copying files
     logging.debug('FtpUpload: connected, uploading to %s...', path)
     ftp.login(user=userid, passwd=passwd)
     with open(source_path, 'rb') as fileobj:
-      ftp.storbinary('STOR %s' % path, fileobj)
+      ftp.storbinary(f'STOR {path}', fileobj)
     logging.debug('FtpUpload: upload complete.')
     ftp.quit()
     logging.info('FtpUpload: successfully uploaded to %s', ftp_url)
@@ -320,18 +321,18 @@ def SmbUpload(source_path, smb_url,
 
   # Check and specify default parameters
   if not url.get('host'):
-    raise Error('SmbUpload: invalid smb url: %s. Missing host.' % smb_url)
+    raise Error(f'SmbUpload: invalid smb url: {smb_url}. Missing host.')
 
   # Parse destination path: According to RFC1738, 3.2.2,
   # Starting with %2F means absolute path, otherwise relative.
   url['path'] = urllib.parse.unquote(url.get('path', ''))
   if url['path'] == '' or url['path'][0] != '/':
-    raise Error('SmbUpload: invalid smb url: %s. Missing share name.' % smb_url)
+    raise Error(f'SmbUpload: invalid smb url: {smb_url}. Missing share name.')
   try:
     share_name, path = url['path'][1:].split('/', 1)
   except ValueError:
-    raise Error('SmbUpload: invalid smb url: %s. Missing dest path.' %
-                smb_url) from None
+    raise Error(
+        f'SmbUpload: invalid smb url: {smb_url}. Missing dest path.') from None
 
   source_name = os.path.split(source_path)[1]
   dest_name = os.path.split(path)[1]
@@ -340,11 +341,11 @@ def SmbUpload(source_path, smb_url,
   if source_name and (not dest_name):
     path = os.path.join(path, source_name)
 
-  cmd = ['smbclient', '//%s/%s' % (url['host'], share_name),
-         '-s', '/dev/null',
-         '-U', '%s%%%s' % (url.get('user', ''), url.get('password', '')),
-         '-c', 'put %s %s' % (source_path, path),
-         '-E']
+  cmd = [
+      'smbclient', f"//{url['host']}/{share_name}", '-s', '/dev/null', '-U',
+      f"{url.get('user', '')}%{url.get('password', '')}", '-c',
+      f'put {source_path} {path}', '-E'
+  ]
   if url.get('port'):
     cmd += ['-p', url['port']]
   logging.debug('SmbUpload: %s', cmd)
@@ -357,8 +358,9 @@ def SmbUpload(source_path, smb_url,
     if cmd_result.success:
       return_value = True
     else:
-      message = '#%d %s' % (cmd_result.status, cmd_result.stderr
-                            if cmd_result.stderr else cmd_result.stdout)
+      message = (
+          f'#{int(cmd_result.status)} '
+          f'{cmd_result.stderr if cmd_result.stderr else cmd_result.stdout}')
       if cmd_result.status != 0:
         abort = True
 
@@ -375,6 +377,6 @@ def SmbUpload(source_path, smb_url,
     if allow_fail:
       logging.info('SmbUpload: skip uploading to: %s', smb_url)
     else:
-      raise Error('SmbUpload: fail to upload to: %s' % smb_url) from None
+      raise Error(f'SmbUpload: fail to upload to: {smb_url}') from None
   else:
     logging.info('SmbUpload: successfully uploaded to %s', smb_url)

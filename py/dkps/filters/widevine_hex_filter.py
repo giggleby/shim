@@ -25,9 +25,9 @@ def Filter(drm_key_list):
     ValueError if one of the keyboxes is invalid."""
   for widevine_key in drm_key_list:
     if len(widevine_key) != 256:
-      raise ValueError('Keybox length incorrect: %s' % widevine_key)
+      raise ValueError(f'Keybox length incorrect: {widevine_key}')
 
     if not IsValidKeybox(widevine_key):
-      raise ValueError('CRC verification failed on key: %s' % widevine_key)
+      raise ValueError(f'CRC verification failed on key: {widevine_key}')
 
   return drm_key_list

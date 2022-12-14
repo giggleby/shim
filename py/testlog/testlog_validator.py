@@ -24,8 +24,8 @@ class Validator:
   def Long(inst, key, value):
     if not isinstance(value, int):
       raise ValueError(
-          'key[%s] accepts type of int or long. Not %r '
-          'Please convert before assign' % (key, type(value)))
+          f'key[{key}] accepts type of int or long. Not {type(value)!r} Please '
+          'convert before assign')
     Validator.Object(inst, key, value)
 
   @staticmethod
@@ -34,24 +34,24 @@ class Validator:
       value = float(value)
     if not isinstance(value, float):
       raise ValueError(
-          'key[%s] accepts type of float. Not %r '
-          'Please convert before assign' % (key, type(value)))
+          f'key[{key}] accepts type of float. Not {type(value)!r} Please '
+          'convert before assign')
     Validator.Object(inst, key, value)
 
   @staticmethod
   def String(inst, key, value):
     if not isinstance(value, str):
       raise ValueError(
-          'key[%s] accepts type of str. Not %r '
-          'Please convert before assign' % (key, type(value)))
+          f'key[{key}] accepts type of str. Not {type(value)!r} Please convert '
+          'before assign')
     Validator.Object(inst, key, value)
 
   @staticmethod
   def Boolean(inst, key, value):
     if not isinstance(value, bool):
       raise ValueError(
-          'key[%s] accepts type of bool. Not %r '
-          'Please convert before assign' % (key, type(value)))
+          f'key[{key}] accepts type of bool. Not {type(value)!r} Please convert'
+          ' before assign')
     Validator.Object(inst, key, value)
 
   @staticmethod
@@ -64,13 +64,13 @@ class Validator:
     logging.debug('Validator.Dict called with (%s, %s)', key, value)
     if not 'key' in value or not 'value' in value or len(value.items()) != 2:
       raise ValueError(
-          'Validator.Dict accepts value in form of {%r:..., %r:...}, not %s' % (
-              'key', 'value', pprint.pformat(value)))
+          'Validator.Dict accepts value in form of {key:..., value:...}, not '
+          f'{pprint.pformat(value)}')
 
     if not isinstance(value['key'], str):
       raise ValueError(
-          'The key of %s accepts type of str. Not %r '
-          'Please convert before assign' % (key, type(value['key'])))
+          f"The key of {key} accepts type of str. Not {type(value['key'])!r} "
+          "Please convert before assign")
 
     if schema:
       schema.Validate(value['value'])
@@ -79,8 +79,7 @@ class Validator:
     updated_dict = inst._data[key] if key in inst._data else {}
     sub_key = value['key']
     if sub_key in updated_dict:
-      raise ValueError(
-          '%r is duplicated for field %s' % (sub_key, key))
+      raise ValueError(f'{sub_key!r} is duplicated for field {key}')
     updated_dict[sub_key] = value['value']
     # TODO(itspeter): Check if anything left in value.
     # pylint: disable=protected-access
@@ -119,12 +118,12 @@ class Validator:
     # Check if source_path exists
     # TODO(itspeter): Consider doing a lsof sanity check.
     if not os.path.exists(source_path):
-      raise ValueError('not able to find file %s' % source_path)
+      raise ValueError(f'not able to find file {source_path}')
     mime_type = value[MIME_TYPE]
     if not isinstance(mime_type, str) or (
         not re.match(r'^[-\+\w]+/[-\+\w]+$', mime_type)):
-      raise ValueError('mimeType(%r) is incorrect for file %s' % (
-          mime_type, source_path))
+      raise ValueError(
+          f'mimeType({mime_type!r}) is incorrect for file {source_path}')
 
     # Move the attachment file.
     folder = testlog_getter_fn().attachments_folder
@@ -135,16 +134,15 @@ class Validator:
     if os.path.exists(target_path):
       target_path = None
       for unused_i in range(5):  # Try at most 5 times of adding a random UUID.
-        uuid_target_path = os.path.join(folder, '%s_%s' % (
-            time_utils.TimedUUID()[-12:], ideal_target_name))
+        uuid_target_path = os.path.join(
+            folder, f'{time_utils.TimedUUID()[-12:]}_{ideal_target_name}')
         if not os.path.exists(uuid_target_path):
           target_path = uuid_target_path
           break
       if target_path is None:
         raise ValueError(
-            'Try to get a lottery for yourself, with about a probability '
-            'of %s, %s failed to find its way home' % (
-                (1.0 / 16) ** 12, source_path))
+            'Try to get a lottery for yourself, with about a probability of '
+            f'{(1.0 / 16) ** 12}, {source_path} failed to find its way home')
     if delete:
       shutil.move(source_path, target_path)
     else:
@@ -155,5 +153,5 @@ class Validator:
   @staticmethod
   def Status(inst, key, value):
     if value not in inst.STATUS:
-      raise ValueError('Invalid status : %r' % value)
+      raise ValueError(f'Invalid status : {value!r}')
     Validator.Object(inst, key, value)

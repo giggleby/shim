@@ -20,6 +20,7 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
+
 HELP_HEADER = """
 Uninstall the factory toolkit on a CrOS device.
 """
@@ -50,7 +51,7 @@ def MakeWarningMessage():
       '*** You are about to uninstall the factory toolkit at:\n')
 
   for p in FACTORY_PATHS:
-    ret += '***   %s\n' % p
+    ret += f'***   {p}\n'
 
   ret += '***'
 

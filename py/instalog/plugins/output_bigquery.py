@@ -185,12 +185,12 @@ class OutputBigQuery(plugin_base.OutputPlugin):
     for att_id, att_path in event.attachments.items():
       target_filename = file_utils.SHA1InHex(att_path)
       target_dir = self.args.gcs_target_dir.strip('/')
-      target_path = '/%s/%s' % (target_dir, target_filename)
+      target_path = f'/{target_dir}/{target_filename}'
       if not self._gcs.UploadFile(att_path, target_path, overwrite=True):
         return False
 
       # Relocate the attachments entry into the event payload.
-      event.setdefault('__attachments__', {})[att_id] = 'gs:/%s' % target_path
+      event.setdefault('__attachments__', {})[att_id] = f'gs:/{target_path}'
 
     return True
 

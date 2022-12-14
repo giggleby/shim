@@ -59,8 +59,8 @@ def _GetPrivateOverlayDir(board):
     repo_dir = Locate(common.SCRIPT_DIR, '.repo')
     if not repo_dir:
       raise RuntimeError('Not in a Chromium OS source tree.')
-    private_overlay_dir = os.path.join(
-        repo_dir, 'src', 'private-overlays', 'overlay-%s-private' % board)
+    private_overlay_dir = os.path.join(repo_dir, 'src', 'private-overlays',
+                                       f'overlay-{board}-private')
   else:
     private_overlay_dir = Locate(os.getcwd(), '.git')
     if (not private_overlay_dir or
@@ -78,7 +78,7 @@ def _AddPrivateOverlay(dirs, board):
   base_dir = os.path.join(private_overlay_dir, common.PRIVATE_FACTORY_RELPATH)
   test_list_dir = os.path.join(base_dir, test_list_common.TEST_LISTS_RELPATH)
   if not os.path.isdir(test_list_dir):
-    raise RuntimeError('Directory %r not found.' % test_list_dir)
+    raise RuntimeError(f'Directory {test_list_dir!r} not found.')
   dirs.append((os.path.basename(private_overlay_dir).split('-')[1], base_dir))
 
 
@@ -96,7 +96,7 @@ def main():
 
   if not os.path.isdir(common.STATIC_DIR):
     # TODO(youcheng): Pull static files automatically.
-    raise RuntimeError('%r is required.' % common.STATIC_DIR)
+    raise RuntimeError(f'{common.STATIC_DIR!r} is required.')
   os.chdir(common.STATIC_DIR)
 
   if not os.path.isdir(translation.LOCALE_DIR):

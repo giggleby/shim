@@ -99,7 +99,7 @@ def _InvokeRuntimeProbe(probe_config_file_relpath):
         stderr=subprocess.PIPE)
   except OSError as e:
     result.result_type = result.INVOCATION_ERROR
-    result.error_msg = 'Unable to invoke %r: %r.' % (cmd_args[0], e)
+    result.error_msg = f'Unable to invoke {cmd_args[0]!r}: {e!r}.'
     logging.error(result.error_msg)
     return result
 

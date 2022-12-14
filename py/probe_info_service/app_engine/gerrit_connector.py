@@ -123,9 +123,7 @@ class GerritConnectorHelper:
     credential, unused_project_id = google.auth.default(
         scopes=['https://www.googleapis.com/auth/gerritcodereview'])
     credential.refresh(google.auth.transport.requests.Request())
-    return 'o=git-{service_account_name}={token}'.format(
-        service_account_name=credential.service_account_email,
-        token=credential.token)
+    return f'o=git-{credential.service_account_email}={credential.token}'
 
   def ConvertDataToJson(self, data) -> dict:
     """Convert the data responded from the Gerrit Rest API to the json type.
@@ -145,8 +143,7 @@ class GerritConnectorHelper:
       stripped_json = data.split(b'\n', 1)[1]
       return json_utils.LoadStr(stripped_json)
     except Exception:
-      raise GerritConnectorError(
-          'Response format error: %r' % (data, )) from None
+      raise GerritConnectorError(f'Response format error: {data!r}') from None
 
   def URLOpen(self, method, url):
     """Convert the data responded from the Gerrit Rest API to the json type.

@@ -40,8 +40,9 @@ class TimeLine:
       event_func: The function to be executed.
     """
     if time_at < self._fake_time:
-      raise ValueError('AddEvent add a past event, time_at = %s, time = %s' %
-                       (time_at, self._fake_time))
+      raise ValueError(
+          f'AddEvent add a past event, time_at = {time_at}, time = '
+          f'{self._fake_time}')
     self._events.put((time_at, next(self._unique_id), event_func))
 
   def GetTime(self):
@@ -50,8 +51,8 @@ class TimeLine:
 
   def AssertTimeAt(self, time_at):
     """Assert the current time is same at time_at."""
-    assert self._fake_time == time_at, 'fake time %s != %s' % (self._fake_time,
-                                                               time_at)
+    assert self._fake_time == time_at, (
+        f'fake time {self._fake_time} != {time_at}')
 
   def AdvanceTime(self, delta, condition=None):
     """Advance the time.

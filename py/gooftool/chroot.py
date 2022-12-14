@@ -100,10 +100,10 @@ class TmpChroot:
         sysconfig.get_python_lib(standard_lib=True),
         sysconfig.get_python_inc()]
     files_dirs = list(filter(os.path.exists, files_dirs))
-    process_utils.Spawn(('tar -h -c %s | '
-                         'tar -C %s -x --skip-old-files' %
-                         (' '.join(files_dirs), self.new_root)), shell=True,
-                        call=True, log=True, log_stderr_on_error=True)
+    process_utils.Spawn(
+        f"tar -h -c {' '.join(files_dirs)} | tar -C {self.new_root} -x "
+        "--skip-old-files", shell=True, call=True, log=True,
+        log_stderr_on_error=True)
 
     self.logger.debug('copy necessary binaries')
     bin_deps = self.binary_list + ['python3', 'busybox']
@@ -116,11 +116,10 @@ class TmpChroot:
     # Remove binaries that are not found
     bin_paths = {k: v for (k, v) in bin_paths if v}
     # Copy binaries and their dependencies
-    process_utils.Spawn(('tar -ch $(lddtree -l %s 2>/dev/null | sort -u) | '
-                         'tar -C %s -x --skip-old-files' %
-                         (' '.join(bin_paths.values()), self.new_root)),
-                        check_call=True, shell=True, log=True,
-                        log_stderr_on_error=True)
+    process_utils.Spawn(
+        f"tar -ch $(lddtree -l {' '.join(bin_paths.values())} 2>/dev/null | "
+        f"sort -u) | tar -C {self.new_root} -x --skip-old-files",
+        check_call=True, shell=True, log=True, log_stderr_on_error=True)
 
     # Install busybox for common utilities
     process_utils.Spawn([
@@ -189,7 +188,7 @@ class TmpChroot:
     os.chdir(self.new_root)
     if pivot_root:
       old_root_path = os.path.join(self.new_root, old_root)
-      assert not os.path.lexists(old_root_path), '%s already exists' % old_root
+      assert not os.path.lexists(old_root_path), f'{old_root} already exists'
       os.makedirs(old_root_path)
       process_utils.Spawn(['pivot_root', '.', old_root])
 

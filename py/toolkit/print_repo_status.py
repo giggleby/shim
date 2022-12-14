@@ -16,6 +16,7 @@ import os
 from cros.factory.utils.cros_board_utils import BuildBoard
 from cros.factory.utils.process_utils import CheckOutput
 
+
 NUM_COMMITS_PER_REPO = 50
 
 SRC = os.path.join(os.environ['CROS_WORKON_SRCROOT'], 'src')
@@ -23,7 +24,9 @@ MERGED_MSG = ['Reviewed-on', 'Marking set of ebuilds as stable']
 
 
 def GitLog(repo, skip=0, max_count=NUM_COMMITS_PER_REPO, extra_args=None):
-  cmd = ['git', 'log', '--max-count', '%d' % max_count, '--skip', '%d' % skip]
+  cmd = [
+      'git', 'log', '--max-count', f'{int(max_count)}', '--skip', f'{int(skip)}'
+  ]
   if extra_args:
     cmd.extend(extra_args)
   return CheckOutput(cmd, cwd=repo).strip()
@@ -63,10 +66,9 @@ def main():
   for repo_path in repos:
     if not repo_path:
       raise ValueError(
-          'No overlay available for %s! Please check if the board is correct '
-          'and you have done `setup_board --board %s`.'
-          % (args.board, args.board))
-    print('Repository %s' % repo_path)
+          f'No overlay available for {args.board}! Please check if the board is'
+          f' correct and you have done `setup_board --board {args.board}`.')
+    print(f'Repository {repo_path}')
     repo_full_path = os.path.join(SRC, repo_path)
 
     if not os.path.exists(repo_full_path):
@@ -77,18 +79,18 @@ def main():
     if uncommitted:
       print('  >>> Repository contains uncommitted changes:')
       for changed_file in uncommitted:
-        print('\t%s' % changed_file)
+        print(f'\t{changed_file}')
 
     unmerged = GetUnmergedCommits(repo_full_path)
     if unmerged:
-      print('  >>> Repository contains %d unmerged commits:' % len(unmerged))
+      print(f'  >>> Repository contains {len(unmerged)} unmerged commits:')
       for commit in unmerged:
-        print('\t%s' % commit)
+        print(f'\t{commit}')
 
     commit_list = GetCommitList(repo_full_path)
-    print('  >>> Last %d commits in the repository:' % len(commit_list))
+    print(f'  >>> Last {len(commit_list)} commits in the repository:')
     for commit in commit_list:
-      print('\t%s' % commit)
+      print(f'\t{commit}')
 
     print('\n')
 

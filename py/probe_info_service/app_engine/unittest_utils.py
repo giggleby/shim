@@ -27,7 +27,7 @@ def _ReadTestdataFile(testdata_filename, encoding='utf-8'):
 
 
 def LoadComponentProbeInfo(testdata_name):
-  testdata_filename = 'component_probe_info-%s.prototxt' % testdata_name
+  testdata_filename = f'component_probe_info-{testdata_name}.prototxt'
   return LoadComponentProbeInfoPayload(_ReadTestdataFile(testdata_filename))
 
 
@@ -36,19 +36,19 @@ def LoadComponentProbeInfoPayload(proto_payload):
 
 
 def LoadProbeInfoParsedResult(testdata_name):
-  testdata_filename = 'probe_info_parsed_result-%s.prototxt' % testdata_name
+  testdata_filename = f'probe_info_parsed_result-{testdata_name}.prototxt'
   instance = stubby_pb2.ProbeInfoParsedResult()
   text_format.Parse(_ReadTestdataFile(testdata_filename), instance)
   return instance
 
 
 def LoadProbeStatementString(testdata_name) -> str:
-  testdata_filename = 'probe_statement-%s.json' % testdata_name
+  testdata_filename = f'probe_statement-{testdata_name}.json'
   return _ReadTestdataFile(testdata_filename)
 
 
 def LoadRawProbedOutcome(testdata_name) -> bytes:
-  testdata_filename = 'probed_outcome-%s.prototxt' % testdata_name
+  testdata_filename = f'probed_outcome-{testdata_name}.prototxt'
   return _ReadTestdataFile(testdata_filename, encoding=None)
 
 
@@ -61,7 +61,7 @@ def LoadProbedOutcome(testdata_name):
 class FakeProbedOutcomeInfo:
 
   def __init__(self, testdata_name):
-    testdata_filename = 'fake_probed_outcome_info-%s.yaml' % testdata_name
+    testdata_filename = f'fake_probed_outcome_info-{testdata_name}.yaml'
     raw_data = yaml.safe_load(_ReadTestdataFile(testdata_filename))
     self.component_testdata_names: typing.List[str] = raw_data[
         'component_testdata_names']
