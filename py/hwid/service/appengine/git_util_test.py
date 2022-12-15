@@ -619,7 +619,7 @@ class GitFilesystemAdapterTest(unittest.TestCase):
     self.repo = git_util.MemoryRepo(auth_cookie='')
     self.repo.shallow_clone(
         'https://chromium.googlesource.com/chromiumos/platform/factory',
-        branch='stabilize-13360.B')  # use a stabilize branch as a repo snapshot
+        branch='stabilize-15251.B')  # use a stabilize branch as a repo snapshot
     self.git_fs = git_util.GitFilesystemAdapter(self.repo)
     self.target_dir = 'deploy'
     self.file_name = 'README.md'
