@@ -19,8 +19,10 @@ main() {
   if [ -x "${CROS_VERSION_SCRIPT}" ]; then
     version="$("${CROS_VERSION_SCRIPT}" | \
                sed -n 's/ *CHROMEOS_VERSION_STRING=//p')"
-    # If ${version} does not contain '_', consider as official build.
-    if [ "${version}" = "${version##*_}" ]; then
+    if [ "${CHROMEOS_OFFICIAL:-0}" -ne 1 ]; then
+      timestamp="$(date +%Y_%m_%d_%H%M%S)"
+      version="$(echo "${version}" | cut -f 1,2 -d '.').${timestamp}"
+    else
       version_postfix=""
     fi
   fi
