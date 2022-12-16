@@ -852,7 +852,7 @@ class Gooftool:
         obj = yaml.safe_load(f)
 
       for config in obj['chromeos']['configs']:
-        # According to https://crbug.com/1070692, 'platform-name' is not a 
+        # According to https://crbug.com/1070692, 'platform-name' is not a
         # part of identity info.  We shouldn't check it.
         config['identity'].pop('platform-name', None)
 
@@ -1564,8 +1564,12 @@ class Gooftool:
 
     gsc = gsc_utils.GSCUtils()
     if gsc.IsTi50():
-      self.Ti50SetAddressingMode()
-      self.Ti50SetSWWPRegister(no_write_protect, wpsr)
+      # TODO(b/262525027): AP RO provision will brick the device after deep
+      # sleep resume.  Temporary disable provision process for PVT devices until
+      # the issue is fixed.
+      if no_write_protect:
+        self.Ti50SetAddressingMode()
+        self.Ti50SetSWWPRegister(no_write_protect, wpsr)
     else:
       self._Cr50SetROHashForShipping()
 
