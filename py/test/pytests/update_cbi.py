@@ -215,7 +215,7 @@ class UpdateCBITest(test_case.TestCase):
           f'equal to the data in device data ({int(expected_data)}) after we '
           f'set.')
 
-  def SetSKUID(self):
+  def SetSKUIDAndFWConfig(self):
     old_sku_id = GetCbiData(self._dut, CbiDataName.SKU_ID)
     if self.args.sku_id_source == SKU_ID_SOURCE.device_data:
       new_sku_id = self.GetDeviceData(_KEY_COMPONENT_SKU, int)
@@ -292,7 +292,7 @@ class UpdateCBITest(test_case.TestCase):
 
   def runTest(self):
     if CbiDataName.SKU_ID in self.args.cbi_data_names:
-      self.SetSKUID()
+      self.SetSKUIDAndFWConfig()
     if CbiDataName.DRAM_PART_NUM in self.args.cbi_data_names:
       self.SetDramPartNum()
     if CbiDataName.PCB_SUPPLIER in self.args.cbi_data_names:
