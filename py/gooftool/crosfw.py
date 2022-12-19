@@ -14,6 +14,7 @@ To get the content of (cacheable) firmware, use LoadMainFirmware() or
 """
 
 import collections
+import enum
 import logging
 import os
 import re
@@ -21,6 +22,8 @@ import tempfile
 
 from cros.factory.gooftool import common
 from cros.factory.utils import fmap
+from cros.factory.utils.type_utils import Error
+
 
 # Names to select target bus.
 TARGET_MAIN = 'main'
@@ -35,6 +38,9 @@ WpStatus = collections.namedtuple('WpStatus', 'enabled offset size')
 # All Chrome OS images are FMAP based.
 FirmwareImage = fmap.FirmwareImage
 
+
+class CrosFWError(Error):
+  pass
 
 class Flashrom:
   """Wrapper for calling system command flashrom(8)."""
@@ -67,7 +73,7 @@ class Flashrom:
 
     result = common.Shell(command)
     if not (ignore_status or result.success):
-      raise IOError('Failed in command: %s\n%s' % (command, result.stderr))
+      raise CrosFWError('Failed in command: %s\n%s' % (command, result.stderr))
     return result
 
   def GetTarget(self):
@@ -154,7 +160,7 @@ class Flashrom:
     if len(status) != 1:
       status = re.findall(r'Protection mode: (\w+)', results)
     if len(status) != 1:
-      raise IOError('Failed getting write protection status')
+      raise CrosFWError('Failed getting write protection status')
     status = status[0]
     if status not in ('hardware', 'enabled', 'disabled'):
       raise ValueError('Unknown write protection status: %s' % status)
@@ -165,7 +171,7 @@ class Flashrom:
       wp_range = re.findall(r'Protection range: start=(\w+) length=(\w+)',
                             results)
     if len(wp_range) != 1:
-      raise IOError('Failed getting write protection range')
+      raise CrosFWError('Failed getting write protection range')
     wp_range = wp_range[0]
     return WpStatus(status != 'disabled', int(wp_range[0], 0),
                     int(wp_range[1], 0))
@@ -176,7 +182,7 @@ class Flashrom:
     result = self.GetWriteProtectionStatus()
     if ((not result.enabled) or (result.offset != offset) or
         (result.size != size)):
-      raise IOError('Failed to enabled write protection.')
+      raise CrosFWError('Failed to enabled write protection.')
 
     if skip_check:
       return
@@ -187,15 +193,16 @@ class Flashrom:
     result = self.GetWriteProtectionStatus()
     if ((not result.enabled) or (result.offset != offset) or
         (result.size != size)):
-      raise IOError('Software write protection can be disabled. Please make '
-                    'sure hardware write protection is enabled.')
+      raise CrosFWError(
+          'Software write protection can be disabled. Please make '
+          'sure hardware write protection is enabled.')
 
   def DisableWriteProtection(self):
     """Tries to Disable whole write protection range and status."""
     self._InvokeCommand('--wp-disable --wp-range 0,0')
     result = self.GetWriteProtectionStatus()
     if result.enabled or (result.offset != 0) or (result.size != 0):
-      raise IOError('Failed to disable write protection.')
+      raise CrosFWError('Failed to disable write protection.')
 
 
 class FirmwareContent:
@@ -244,8 +251,8 @@ class FirmwareContent:
     sections = set(sections) if sections else None
 
     for (fileref, sections_in_file) in self.cached_files:
-      if sections_in_file is None or (
-          sections is not None and sections.issubset(sections_in_file)):
+      if sections_in_file is None or (sections is not None and
+                                      sections.issubset(sections_in_file)):
         return fileref.name
 
     fileref = tempfile.NamedTemporaryFile(prefix='fw_%s_' % self.target)  # pylint: disable=consider-using-with
@@ -274,6 +281,78 @@ class FirmwareContent:
       return fmap.FirmwareImage(image.read())
 
 
+class IntelPlatform(str, enum.Enum):
+  AlderLake = 'adl'
+  ApolloLake = 'aplk'
+  CannonLake = 'cnl'
+  LewisburgPCH = 'lbg'
+  Denverton = 'dnv'
+  ElkhartLake = 'ehl'
+  GeminiLake = 'glk'
+  IceLake = 'icl'
+  IFDv2Platform = 'ifd2'
+  JasperLake = 'jsl'
+  SkyLake = 'sklkbl'
+  KabyLake = 'sklkbl'
+  TigerLake = 'tgl'
+
+
+class Ifdtool:
+  """Wrapper for Intel's ifdtool."""
+
+  def __init__(self, platform: IntelPlatform):
+    self._platform = \
+      IntelPlatform.IFDv2Platform.value if platform is None else platform.value
+
+  def _InvokeCommand(self, param, ignore_status=False):
+    command = ' '.join(['ifdtool', '-p', self._platform, param])
+
+    result = common.Shell(command)
+    if not (ignore_status or result.success):
+      raise CrosFWError('Failed in command: %s\n%s' % (command, result.stderr))
+    return result
+
+  def Dump(self, desc_path):
+    """Dump the descriptor binary into human-readable format."""
+    return self._InvokeCommand(f'-d {desc_path}').stdout
+
+  def GenerateLockedDescriptor(self, unlocked_desc_path, prefix='locked_desc_'):
+    """Generate a locked descriptor binary."""
+    locked_desc_path = tempfile.NamedTemporaryFile(prefix=prefix).name  # pylint: disable=consider-using-with
+    self._InvokeCommand(f'-lr -O {locked_desc_path} {unlocked_desc_path}')
+    return locked_desc_path
+
+
+class IntelLayout(str, enum.Enum):
+  """Intel's firmware image layout.
+
+  The firmware image layout is defined under
+  `src/third_party/coreboot/src/mainboard/google/<intel_board>/chromeos.fmd`.
+  """
+  DESC = 'SI_DESC'
+  ME = 'SI_ME'
+
+
+class IntelMainFirmwareContent(FirmwareContent):
+  """Wrapper around FirmwareContent and ifdtool for manipulating descriptor."""
+
+  @classmethod
+  def Load(cls, platform=None):  # pylint: disable=arguments-renamed
+    obj = super(IntelMainFirmwareContent, cls).Load(TARGET_MAIN)
+    obj.ifdtool = Ifdtool(platform)
+    return obj
+
+  def DumpDescriptor(self):
+    desc_bin = self.GetFileName([IntelLayout.DESC.value])
+    return self.ifdtool.Dump(desc_bin)
+
+  def LockDescriptor(self):
+    desc_bin = self.GetFileName([IntelLayout.DESC.value])
+    locked_desc_bin = self.ifdtool.GenerateLockedDescriptor(desc_bin)
+    self.flashrom.Write(filename=locked_desc_bin,
+                        sections=[IntelLayout.DESC.value])
+
+
 def LoadEcFirmware():
   """Returns flashrom data from Embedded Controller chipset."""
   return FirmwareContent.Load(TARGET_EC)
@@ -287,3 +366,8 @@ def LoadPDFirmware():
 def LoadMainFirmware():
   """Returns flashrom data from main firmware (also known as BIOS)."""
   return FirmwareContent.Load(TARGET_MAIN)
+
+
+def LoadIntelMainFirmware(platform=None):
+  """Returns Intel's Main firmware."""
+  return IntelMainFirmwareContent.Load(platform)
