@@ -219,6 +219,23 @@ class ConnectionManagerTest(unittest.TestCase):
     self.assertEqual(x.IsConnected(), False)
     self.VerifyDisableNetworking(glob_mock, call_mock)
 
+  @mock.patch(connection_manager.__name__ + '.GetBaseNetworkManager')
+  def testIsEnabled(self, get_base_network_manager_mock):
+    get_base_network_manager_mock.return_value = self.fakeBaseNetworkManager
+
+    x = connection_manager.ConnectionManager(start_enabled=False,
+                                             **self.fakeData)
+    self.assertEqual(x.IsEnabled(), True)
+
+  @mock.patch(connection_manager.__name__ + '.GetBaseNetworkManager')
+  def testIsEnabled_NotRunning(self, get_base_network_manager_mock):
+    get_base_network_manager_mock.return_value = self.fakeBaseNetworkManager
+    get_base_network_manager_mock.side_effect = dbus.exceptions.DBusException()
+
+    x = connection_manager.ConnectionManager(start_enabled=False,
+                                             **self.fakeData)
+    self.assertEqual(x.IsEnabled(), False)
+
 
 if __name__ == '__main__':
   unittest.main()
