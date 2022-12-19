@@ -395,6 +395,15 @@ class ConnectionManager:
     stat = base_manager.GetSystemState()
     return stat != 'offline'
 
+  def IsEnabled(self):
+    """Checks if the network manager is running"""
+    try:
+      GetBaseNetworkManager()
+    except dbus.exceptions.DBusException:
+      # The network manager is not running.
+      return False
+    return True
+
 
 def PingHost(host, timeout=_PING_TIMEOUT_SECS):
   """Checks if we can reach a host.
