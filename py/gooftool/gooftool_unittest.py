@@ -48,13 +48,31 @@ class MockMainFirmware:
     self.GetFirmwareImage = lambda: image
 
 
+class MockIfdtool:
+
+  def __init__(self, flmstr):
+    self._flmstr = flmstr
+
+  def Dump(self):
+    output = ''
+    for idx, value in self._flmstr.items():
+      output += f'FLMSTR{idx}:   0x{value:08x} (Host CPU/BIOS)\n'
+    return output
+
+
+class MockIntelMainFirmware(MockMainFirmware):
+  """Mock Intel's firmware image object."""
+
+  def __init__(self, flmstr, image=None):
+    super().__init__(image)
+    self.DumpDescriptor = MockIfdtool(flmstr).Dump
+
 class MockFirmwareImage:
   """Mock firmware image object."""
 
   def __init__(self, section_map):
     self.has_section = lambda name: name in section_map
     self.get_section = lambda name: section_map[name]
-
 
 class MockFile:
   """Mock file object."""
@@ -87,10 +105,16 @@ class MockME:
       'RO_SECTION': b''
   }
   FW_ME_READ_LOCKED = {
-      'SI_ME': b'\xff' * 1024
+      crosfw.IntelLayout.ME.value: b'\xff' * 1024
   }
   FW_ME_READ_UNLOCKED = {
-      'SI_ME': b'\x55' * 1024
+      crosfw.IntelLayout.ME.value: b'\x55' * 1024
+  }
+  DESCRIPTOR_UNLOCKED = {
+      1: 0xffffffff,
+      2: 0xffffffff,
+      3: 0xffffffff,
+      5: 0xffffffff,
   }
 
   def GetMockedCBMEM(self, sku_flag, mode, table):
@@ -98,6 +122,7 @@ class MockME:
               f'ME: Manufacturing Mode      : {mode}\n'
               f'ME: FW Partition Table      : {table}\n')
     return Obj(success=True, stdout=output)
+
 
 class UtilTest(unittest.TestCase):
   """Unit test for core.Util."""
@@ -399,12 +424,14 @@ class GooftoolTest(unittest.TestCase):
 
   def testVerifyManagementEngineLockedNoME(self):
     # No ME firmware
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
-        MockFirmwareImage(MockME.FW_NO_ME))
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(None, MockFirmwareImage(MockME.FW_NO_ME))
     self._gooftool.VerifyManagementEngineLocked()
 
   def testVerifyManagementEngineLockedUnknownSKU(self):
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        MockME.DESCRIPTOR_UNLOCKED,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
 
     # Raise since it is an unknown SKU
@@ -414,53 +441,85 @@ class GooftoolTest(unittest.TestCase):
                       self._gooftool.VerifyManagementEngineLocked)
 
   def testVerifyManagementEngineLockedConsumerSKU(self):
-    # ME read locked firmware
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+    consumer = SKU.Consumer
+    # Read locked ME section + locked cbmem + locked descriptor
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        consumer.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
-
-    consumer_flag = SKU.Consumer.flag
     self._gooftool._util.shell.return_value = \
-      MockME().GetMockedCBMEM(consumer_flag, 'NO', 'OK')
+      MockME().GetMockedCBMEM(consumer.flag, 'NO', 'OK')
+    # Pass since everything is fine
     self._gooftool.VerifyManagementEngineLocked()
 
-    # ME read unlocked firmware
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+    # Read unlocked ME section + locked cbmem + locked descriptor
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        consumer.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
-
-    # Raise since the SI_ME is not 0xff
     self._gooftool._util.shell.return_value = \
-      MockME().GetMockedCBMEM(consumer_flag, 'NO', 'OK')
+      MockME().GetMockedCBMEM(consumer.flag, 'NO', 'OK')
+    # Raise since the ME section is not 0xff
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
+
+    # Read locked ME section + locked cbmem + unlocked descriptor
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        MockME().DESCRIPTOR_UNLOCKED,
+        MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(consumer.flag, 'NO', 'OK')
+    # Raise since the descriptor is not locked
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
 
   def testVerifyManagementEngineLockedLiteSKU(self):
-    # ME read locked firmware
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
+    lite = SKU.Lite
+    # Read locked ME section + locked cbmem + locked descriptor
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        lite.flmstr,
         MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
-
-    lite_flag = SKU.Lite.flag
     self._gooftool._util.shell.return_value = \
-      MockME().GetMockedCBMEM(lite_flag, 'NO', 'OK')
+      MockME().GetMockedCBMEM(lite.flag, 'NO', 'OK')
+    # Pass since everything is fine
     self._gooftool.VerifyManagementEngineLocked()
 
-    # ME read unlocked firmware
-    self._gooftool._crosfw.LoadMainFirmware.return_value = MockMainFirmware(
-        MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
-
-    # Won't raise since we don't check the SI_ME content
+    # Read locked ME section + locked cbmem with invalid manufacturing mode
+    # + locked descriptor
     self._gooftool._util.shell.return_value = \
-      MockME().GetMockedCBMEM(lite_flag, 'NO', 'OK')
-    self._gooftool.VerifyManagementEngineLocked()
-
+      MockME().GetMockedCBMEM(lite.flag, 'YES', 'OK')
     # Raise since Manufacturing Mode is not NO
-    self._gooftool._util.shell.return_value = \
-      MockME().GetMockedCBMEM(lite_flag, 'YES', 'OK')
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
 
-    # Raise since FW Partition Table is not OK
+    # Read locked ME section + locked cbmem with invalid FW partition table
+    # + locked descriptor
     self._gooftool._util.shell.return_value = \
-      MockME().GetMockedCBMEM(lite_flag, 'NO', 'BAD')
+      MockME().GetMockedCBMEM(lite.flag, 'NO', 'BAD')
+    # Raise since FW Partition Table is not OK
+    self.assertRaises(ManagementEngineError,
+                      self._gooftool.VerifyManagementEngineLocked)
+
+    # Read unlocked ME section + locked cbmem + locked descriptor
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        lite.flmstr,
+        MockFirmwareImage(MockME.FW_ME_READ_UNLOCKED))
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(lite.flag, 'NO', 'OK')
+    # Pass since we don't check the SI_ME content
+    self._gooftool.VerifyManagementEngineLocked()
+
+    # Read locked ME section + locked cbmem + unlocked descriptor
+    self._gooftool._crosfw.LoadIntelMainFirmware.return_value = \
+      MockIntelMainFirmware(
+        MockME().DESCRIPTOR_UNLOCKED,
+        MockFirmwareImage(MockME.FW_ME_READ_LOCKED))
+    self._gooftool._util.shell.return_value = \
+      MockME().GetMockedCBMEM(lite.flag, 'NO', 'OK')
+    # Raise since the descriptor is not locked
     self.assertRaises(ManagementEngineError,
                       self._gooftool.VerifyManagementEngineLocked)
 
