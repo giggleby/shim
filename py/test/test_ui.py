@@ -352,13 +352,12 @@ class UI:
       autoscroll: If True and the element scroll were at bottom before SetHTML,
           scroll the element to bottom after SetHTML.
     """
+    if id:
+      id = str(id)
     # pylint: disable=redefined-builtin
-    self._event_loop.PostNewEvent(
-        test_event.Event.Type.SET_HTML,
-        html=EnsureI18n(html),
-        append=append,
-        id=id,
-        autoscroll=autoscroll)
+    self._event_loop.PostNewEvent(test_event.Event.Type.SET_HTML,
+                                  html=EnsureI18n(html), append=append, id=id,
+                                  autoscroll=autoscroll)
 
   def AppendHTML(self, html, **kwargs):
     """Append to the UI in the test pane."""
@@ -385,6 +384,8 @@ class UI:
     Example:
       ui.RunJS('alert(args.msg)', msg='The British are coming')
     """
+    if kwargs.get('id'):
+      kwargs['id'] = str(kwargs['id'])
     self._event_loop.PostNewEvent(
         test_event.Event.Type.RUN_JS, js=js, args=kwargs)
 
