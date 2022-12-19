@@ -142,7 +142,6 @@ class PlatformSKUModelTest(test_case.TestCase):
     key = self.ui.WaitKeysOnce([test_ui.ENTER_KEY, test_ui.ESCAPE_KEY])
     if key == test_ui.ESCAPE_KEY:
       self.FailTask('Failed by operator')
-    self.ApplyConfig()
 
   def CheckByDeviceData(self):
     try:
@@ -158,7 +157,6 @@ class PlatformSKUModelTest(test_case.TestCase):
         f"Value [{self._platform['sku']}] from \"cros_config /identity sku-id\""
         f" does not match device data [{value}]")
 
-    self.ApplyConfig()
     return True
 
   def GetPlatformData(self):
@@ -170,7 +168,7 @@ class PlatformSKUModelTest(test_case.TestCase):
   def runTest(self):
     self.GetPlatformData()
 
-    if self.CheckByDeviceData():
-      return
+    if not self.CheckByDeviceData():
+      self.CheckByOperator()
 
-    self.CheckByOperator()
+    self.ApplyConfig()
