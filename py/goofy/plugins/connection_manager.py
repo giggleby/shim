@@ -59,15 +59,15 @@ class ConnectionManager(plugin.Plugin):
   @type_utils.Overrides
   def OnStop(self):
     # connection_manager plugin is usually stopped for running pytests that
-    # needs exclusive access to network. But we should restore network state
-    # when Goofy is terminating for factory_restart and wipe_in_place.
+    # needs exclusive access to network. But we should enable network manager if
+    # necessary when Goofy is terminating for factory_restart and wipe_in_place.
     name = self.__class__.__name__
-    if self.goofy.status == goofy_module.Status.TERMINATING:
-      logging.info('%s: Leave network enabled for shutdown.', name)
-      self._connection_manager.EnableNetworking(reset=False)
-    else:
+    if self.goofy.status == goofy_module.Status.RUNNING:
       logging.info('%s: Disable network.', name)
       self._connection_manager.DisableNetworking()
+    elif not self._connection_manager.IsEnabled():
+      logging.info('%s: Leave network enabled for shutdown.', name)
+      self._connection_manager.EnableNetworking(reset=False)
 
   @plugin.RPCFunction
   def SetStaticIP(self, *args, **kwargs):
