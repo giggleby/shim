@@ -646,7 +646,7 @@ class Gooftool:
 
   def VerifyManagementEngineLocked(self):
     """Verify Management Engine is locked."""
-    main_fw = self._crosfw.LoadMainFirmware().GetFirmwareImage()
+    main_fw = self._crosfw.LoadIntelMainFirmware()
     management_engine.VerifyMELocked(main_fw, self._util.shell)
 
   def VerifyVPD(self):
