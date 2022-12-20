@@ -50,11 +50,12 @@ exceeding 65 Celcius::
 """
 
 import collections
+import enum
 import logging
 import os
 import threading
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from cros.factory.device import device_types
 from cros.factory.device import device_utils
@@ -80,6 +81,19 @@ _ALS_LOCATION = 'camera'
 
 Status = collections.namedtuple('Status',
                                 ['temperatures', 'fan_rpm', 'cpu_freq'])
+
+
+class PanelID(str, enum.Enum):
+
+  def __str__(self) -> str:
+    return self.value
+
+  LOG = 'cd-log-panel'
+  LEGEND = 'cd-legend-panel'
+  LEGEND_ITEM = 'cd-legend-item-panel'
+  WIFI = 'cd-wifi-panel'
+  BLUETOOTH = 'cd-bluetooth-panel'
+  ALS = 'cd-als-panel'
 
 
 class CountDownTest(test_case.TestCase):
@@ -161,9 +175,9 @@ class CountDownTest(test_case.TestCase):
     if self._verbose_log:
       self._verbose_log.write(log_str + os.linesep)
       self._verbose_log.flush()
-    self.ui.AppendHTML(f'<div>{test_ui.Escape(log_str)}</div>',
-                       id='cd-log-panel', autoscroll=True)
-    self.ui.RunJS('const panel = document.getElementById("cd-log-panel");'
+    self.ui.AppendHTML(f'<div>{test_ui.Escape(log_str)}</div>', id=PanelID.LOG,
+                       autoscroll=True)
+    self.ui.RunJS(f'const panel = document.getElementById("{PanelID.LOG}");'
                   'if (panel.childNodes.length > 512)'
                   '  panel.removeChild(panel.firstChild);')
 
@@ -171,9 +185,9 @@ class CountDownTest(test_case.TestCase):
     for i, sensor in enumerate(sensor_names):
       self.ui.AppendHTML(
           f'<div class="cd-legend-item">[{int(i)}] {sensor}</div>',
-          id='cd-legend-item-panel')
+          id=PanelID.LEGEND_ITEM)
     if sensor_names:
-      self.ui.ToggleClass('cd-legend-panel', 'hidden', False)
+      self.ui.ToggleClass(PanelID.LEGEND, 'hidden', False)
 
   def DetectAbnormalStatus(self, status, last_status):
     def GetTemperature(sensor):
@@ -306,19 +320,24 @@ class CountDownTest(test_case.TestCase):
 
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
+
     self._main_sensor = self._dut.thermal.GetMainSensorName()
-    self._als_controller = None
-    try:
-      self._als_controller = self._dut.ambient_light_sensor.GetController(
-          location=_ALS_LOCATION)
-    except device_types.DeviceException:
-      pass
     # Normalize the sensors so main sensor is always the first one.
     sensors = sorted(self._dut.thermal.GetAllSensorNames())
     sensors.insert(0, sensors.pop(sensors.index(self._main_sensor)))
     self._sensors = sensors
     self._cpu_freq_manager = plugin_controller.GetPluginRPCProxy(
         'cpu_freq_manager')
+
+    self._als_controller = None
+    try:
+      self._als_controller = self._dut.ambient_light_sensor.GetController(
+          location=_ALS_LOCATION)
+    except device_types.DeviceException:
+      # Disable the ALS scanning if the device does not support ALS.
+      self.ui.HideElement(PanelID.ALS)
+      self.args.als_update_interval = 0
+
     # Group checker for Testlog.
     self._group_checker = testlog.GroupParam(
         'system_status',
@@ -327,15 +346,13 @@ class CountDownTest(test_case.TestCase):
 
     self._start_secs = time.time()
     self._elapsed_secs = 0
-    self._last_wifi_thread: Optional[threading.Thread] = None
     self._verbose_log = None
     self._event_loop_stop = False
     self.last_status = Status(None, None, None)
     self.goofy = state.GetInstance()
     self.btmgmt = bluetooth_utils.BtMgmt()
     self.btmgmt.PowerOn()
-    self._last_bluetooth_thread: Optional[threading.Thread] = None
-    self._last_als_thread: Optional[threading.Thread] = None
+    self._last_thread: Dict[str, threading.Thread] = {}
 
   def Log(self):
     """Add event log and detects abnormal status."""
@@ -345,105 +362,80 @@ class CountDownTest(test_case.TestCase):
     self.DetectAbnormalStatus(sys_status, self.last_status)
     self.last_status = sys_status
 
+  def StartNewScanThread(self, scan_func):
+    if scan_func in self._last_thread:
+      self._last_thread[scan_func].join()
+      del self._last_thread[scan_func]
+
+    if self._event_loop_stop:
+      logging.info('Stop in StartNewScanThread(%s) because event loop stopped.',
+                   scan_func.__name__)
+      return
+    self._last_thread[scan_func] = threading.Thread(target=scan_func)
+    self._last_thread[scan_func].start()
+
+  def StartNewScanWiFiThread(self):
+    self.StartNewScanThread(self.ScanWiFi)
+
+  def StartNewScanBluetoothThread(self):
+    self.StartNewScanThread(self.ScanBluetooth)
+
+  def StartNewScanALSThread(self):
+    self.StartNewScanThread(self.ScanALS)
+
   def ScanWiFi(self):
     """Launch WiFi scan in another thread."""
-
-    WIFI_PANEL_ID = 'cd-wifi-panel'
-
-    def AsyncScanWiFi():
-      self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
-                      id=WIFI_PANEL_ID)
-      wifi_aps: List[wifi.AccessPoint] = (
-          self._dut.wifi.FilterAccessPoints(log=False))
-      self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
-                         id=WIFI_PANEL_ID)
-      for ap in wifi_aps:
-        self.ui.AppendHTML(
-            f'<div>ssid: {ap.ssid!r}, strength: {ap.strength!r}</div>',
-            id=WIFI_PANEL_ID)
-      if self._event_loop_stop:
-        logging.info('Stop in AsyncScanWiFi because event loop stopped.')
-      else:
-        self.event_loop.AddTimedHandler(self.ScanWiFi,
-                                        self.args.wifi_update_interval)
-
-    if self._last_wifi_thread:
-      self._last_wifi_thread.join()
-      self._last_wifi_thread = None
+    self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
+                    id=PanelID.WIFI)
+    wifi_aps: List[wifi.AccessPoint] = (
+        self._dut.wifi.FilterAccessPoints(log=False))
+    self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
+                       id=PanelID.WIFI)
+    for ap in wifi_aps:
+      self.ui.AppendHTML(
+          f'<div>ssid: {ap.ssid!r}, strength: {ap.strength!r}</div>',
+          id=PanelID.WIFI)
 
     if self._event_loop_stop:
       logging.info('Stop in ScanWiFi because event loop stopped.')
-      return
-
-    self._last_wifi_thread = threading.Thread(target=AsyncScanWiFi)
-    self._last_wifi_thread.start()
+    else:
+      self.event_loop.AddTimedHandler(self.StartNewScanWiFiThread,
+                                      self.args.wifi_update_interval)
 
   def ScanBluetooth(self):
     """Launch bluetooth scan in another thread."""
-
-    BLUETOOTH_PANEL_ID = 'cd-bluetooth-panel'
-
-    def AsyncScanBluetooth():
-      self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
-                      id=BLUETOOTH_PANEL_ID)
-      # There may be hundreds of bluetooth device inside the factory and the
-      # scanning may be too long to be finished so we have to set a timeout.
-      devices: Dict[str, Dict] = self.btmgmt.FindDevices(
-          timeout_secs=self.args.bluetooth_update_interval, log=False)
-      self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
-                         id=BLUETOOTH_PANEL_ID)
-      for mac, data in devices.items():
-        self.ui.AppendHTML(f'<div>mac: {mac!r}, {data!r}</div>',
-                           id=BLUETOOTH_PANEL_ID)
-      if self._event_loop_stop:
-        logging.info('Stop in AsyncScanBluetooth because event loop stopped.')
-      else:
-        self.event_loop.AddTimedHandler(self.ScanBluetooth,
-                                        self.args.bluetooth_update_interval)
-
-    if self._last_bluetooth_thread:
-      self._last_bluetooth_thread.join()
-      self._last_bluetooth_thread = None
+    self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
+                    id=PanelID.BLUETOOTH)
+    # There may be hundreds of bluetooth device inside the factory and the
+    # scanning may be too long to be finished so we have to set a timeout.
+    devices: Dict[str, Dict] = self.btmgmt.FindDevices(
+        timeout_secs=self.args.bluetooth_update_interval, log=False)
+    self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
+                       id=PanelID.BLUETOOTH)
+    for mac, data in devices.items():
+      self.ui.AppendHTML(f'<div>mac: {mac!r}, {data!r}</div>',
+                         id=PanelID.BLUETOOTH)
 
     if self._event_loop_stop:
       logging.info('Stop in ScanBluetooth because event loop stopped.')
-      return
-
-    self._last_bluetooth_thread = threading.Thread(target=AsyncScanBluetooth)
-    self._last_bluetooth_thread.start()
+    else:
+      self.event_loop.AddTimedHandler(self.StartNewScanBluetoothThread,
+                                      self.args.bluetooth_update_interval)
 
   def ScanALS(self):
     """Launch ALS scan in another thread."""
-
-    ALS_PANEL_ID = 'cd-als-panel'
-    if not self._als_controller:
-      # Hide the ALS scanning section if the device does not support ALS.
-      self.ui.HideElement(ALS_PANEL_ID)
-      return
-
-    def AsyncScanALS():
-      self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
-                      id=ALS_PANEL_ID)
-      lux = self._als_controller.GetLuxValue()
-      self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
-                         id=ALS_PANEL_ID)
-      self.ui.AppendHTML(f'<div>lux: {lux!r}</div>', id=ALS_PANEL_ID)
-      if self._event_loop_stop:
-        logging.info('Stop in AsyncScanALS because event loop stopped.')
-      else:
-        self.event_loop.AddTimedHandler(self.ScanALS,
-                                        self.args.als_update_interval)
-
-    if self._last_als_thread:
-      self._last_als_thread.join()
-      self._last_als_thread = None
+    self.ui.SetHTML(f'<div>scan start time: {self._elapsed_secs}</div>',
+                    id=PanelID.ALS)
+    lux = self._als_controller.GetLuxValue()
+    self.ui.AppendHTML(f'<div>scan end time: {self._elapsed_secs}</div>',
+                       id=PanelID.ALS)
+    self.ui.AppendHTML(f'<div>lux: {lux!r}</div>', id=PanelID.ALS)
 
     if self._event_loop_stop:
       logging.info('Stop in ScanALS because event loop stopped.')
-      return
-
-    self._last_als_thread = threading.Thread(target=AsyncScanALS)
-    self._last_als_thread.start()
+    else:
+      self.event_loop.AddTimedHandler(self.StartNewScanALSThread,
+                                      self.args.als_update_interval)
 
   def runTest(self):
     verbose_log_path = session.GetVerboseTestLogPath()
@@ -458,24 +450,21 @@ class CountDownTest(test_case.TestCase):
 
       # Loop until count-down ends.
       self.event_loop.AddTimedHandler(self.UpdateTimeAndLoad, 0.5, repeat=True)
-
       self.event_loop.AddTimedHandler(self.Log, self.args.log_interval,
                                       repeat=True)
-
       self.event_loop.AddTimedHandler(self.UpdateUILog,
                                       self.args.ui_update_interval, repeat=True)
 
-      if self.args.wifi_update_interval:
-        self.event_loop.AddTimedHandler(self.ScanWiFi,
-                                        self.args.wifi_update_interval)
-
-      if self.args.bluetooth_update_interval:
-        self.event_loop.AddTimedHandler(self.ScanBluetooth,
-                                        self.args.bluetooth_update_interval)
-
-      if self.args.als_update_interval:
-        self.event_loop.AddTimedHandler(self.ScanALS,
-                                        self.args.als_update_interval)
+      # For the events of components scanning,
+      # we use a dict to store the {event}:{interval} pair
+      event_interval_dict = {
+          self.StartNewScanWiFiThread: self.args.wifi_update_interval,
+          self.StartNewScanBluetoothThread: self.args.bluetooth_update_interval,
+          self.StartNewScanALSThread: self.args.als_update_interval
+      }
+      for event, interval in event_interval_dict.items():
+        if interval:
+          self.event_loop.AddTimedHandler(event, interval)
 
       self.Sleep(self.args.duration_secs)
       self._event_loop_stop = True
