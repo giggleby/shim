@@ -11,6 +11,9 @@ from cros.factory.test.test_lists import test_list as test_list_module
 from cros.factory.utils import type_utils
 
 
+KEY_ENGINEERING_MODE = 'engineering_mode'
+
+
 class FactoryTestListTest(unittest.TestCase):
   def testGetNextSibling(self):
     test_list = manager.BuildTestListForUnittest(
@@ -210,6 +213,72 @@ class EvaluateRunIfTest(unittest.TestCase):
   def _EvaluateRunIf(self):
     return test_list_module.ITestList.EvaluateRunIf(self.test, self.test_list)
 
+  def _ReplaceIsEngineeringModeInRunIf(self, is_engineering_mode):
+    return test_list_module.ITestList.ReplaceIsEngineeringModeInRunIf(
+        self.test.run_if, is_engineering_mode)
+
+  def testReplaceIsEngineeringModeInRunIf_Match(self):
+    is_engineering_mode = True
+
+    self.test.run_if = 'is_engineering_mode'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode), 'True')
+
+    self.test.run_if = ' is_engineering_mode'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode), ' True')
+
+    self.test.run_if = 'is_engineering_mode '
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode), 'True ')
+
+    self.test.run_if = ' is_engineering_mode '
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode), ' True ')
+
+    self.test.run_if = 'is_engineering_mode or device.foo.bar'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'True or device.foo.bar')
+
+    self.test.run_if = ' is_engineering_mode or device.foo.bar'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        ' True or device.foo.bar')
+
+    self.test.run_if = 'device.foo.bar or is_engineering_mode'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'device.foo.bar or True')
+
+    self.test.run_if = 'device.foo.bar or is_engineering_mode '
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'device.foo.bar or True ')
+
+    self.test.run_if = 'device.foo.bar or is_engineering_mode or constants.foo'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'device.foo.bar or True or constants.foo')
+
+  def testReplaceIsEngineeringModeInRunIf_NotMatch(self):
+    is_engineering_mode = True
+
+    self.test.run_if = 'not_is_engineering_mode'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'not_is_engineering_mode')
+
+    self.test.run_if = 'is_engineering_mode_and_something'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'is_engineering_mode_and_something')
+
+    self.test.run_if = 'device.foo.is_engineering_mode'
+    self.assertEqual(
+        self._ReplaceIsEngineeringModeInRunIf(is_engineering_mode),
+        'device.foo.is_engineering_mode')
+
   def testInvalidRunIfString(self):
     self.test.run_if = '!device.foo.bar'
     self.assertTrue(self._EvaluateRunIf())
@@ -236,6 +305,17 @@ class EvaluateRunIfTest(unittest.TestCase):
     self.test_list.constants['foo'] = {'bar': False}
     self.assertFalse(self._EvaluateRunIf())
 
+  def testIsEngineeringMode(self):
+    self.test.run_if = 'is_engineering_mode'
+
+    self.assertIsNone(self._EvaluateRunIf())
+
+    self.test_list.state_instance.data_shelf[KEY_ENGINEERING_MODE].Set(False)
+    self.assertFalse(self._EvaluateRunIf())
+
+    self.test_list.state_instance.data_shelf[KEY_ENGINEERING_MODE].Set(True)
+    self.assertTrue(self._EvaluateRunIf())
+
   def testExpression(self):
     self.test.run_if = 'constants.phase == "PVT"'
 
@@ -248,7 +328,10 @@ class EvaluateRunIfTest(unittest.TestCase):
     self.assertTrue(self._EvaluateRunIf())
 
   def testComplexExpression(self):
-    self.test.run_if = 'not device.foo.bar or constants.x.y'
+    self.test.run_if = ('not device.foo.bar or constants.x.y '
+                        'and is_engineering_mode')
+
+    self.test_list.state_instance.data_shelf[KEY_ENGINEERING_MODE].Set(True)
 
     self.assertTrue(self._EvaluateRunIf())
 
@@ -268,6 +351,21 @@ class EvaluateRunIfTest(unittest.TestCase):
 
     self.test_list.state_instance.data_shelf['device.foo.bar'].Set(True)
     self.test_list.constants['x'] = {'y': True}
+    self.assertTrue(self._EvaluateRunIf())
+
+    self.test_list.state_instance.data_shelf['device.foo.bar'].Set(True)
+    self.test_list.constants['x'] = {'y': False}
+    self.test_list.state_instance.data_shelf[KEY_ENGINEERING_MODE].Set(False)
+    self.assertFalse(self._EvaluateRunIf())
+
+    self.test_list.state_instance.data_shelf['device.foo.bar'].Set(True)
+    self.test_list.constants['x'] = {'y': True}
+    self.test_list.state_instance.data_shelf[KEY_ENGINEERING_MODE].Set(False)
+    self.assertFalse(self._EvaluateRunIf())
+
+    self.test_list.state_instance.data_shelf['device.foo.bar'].Set(False)
+    self.test_list.constants['x'] = {'y': True}
+    self.test_list.state_instance.data_shelf[KEY_ENGINEERING_MODE].Set(False)
     self.assertTrue(self._EvaluateRunIf())
 
 

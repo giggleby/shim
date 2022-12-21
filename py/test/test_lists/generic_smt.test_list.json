@@ -41,7 +41,7 @@
     "SMT": {
       "inherit": "TestGroup",
       "label": "SMT (SA Test)",
-      "run_if": "not device.factory.end_SMT",
+      "run_if": "is_engineering_mode or not device.factory.end_SMT",
       "__comment": "The stage of tests performed after SMT and before FA.  This is also known as SA (System Assembly) testing.  After SMT, most factories will do System Assembly (SA) and then System Imaging then perform SA Testing.",
       "locals": {
         "station_end_upload_report": true,

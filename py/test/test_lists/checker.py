@@ -139,13 +139,13 @@ class Checker:
   *before* actually running tests in the test list.
   """
 
-  _EVAL_VALID_IDENTIFIERS = set(
-      ['constants', 'options', 'dut', 'station', 'state_proxy', 'locals',
-       'device'] +
-      [key for key, unused_value in inspect.getmembers(builtins)])
+  _EVAL_VALID_IDENTIFIERS = set([
+      'constants', 'options', 'dut', 'station', 'state_proxy', 'locals',
+      'device', 'is_engineering_mode'
+  ] + [key for key, unused_value in inspect.getmembers(builtins)])
 
   _RUN_IF_VALID_IDENTIFIERS = set(
-      ['constants', 'device'] +
+      ['constants', 'device', 'is_engineering_mode'] +
       [key for key, unused_value in inspect.getmembers(builtins)])
 
   def AssertValidArgs(self, args):

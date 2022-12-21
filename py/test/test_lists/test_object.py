@@ -159,7 +159,7 @@ class FactoryTest:
                                       # be passed.
 
       run_if: Condition under which the test should be run.  This
-        must be either a function taking a single argument (an
+        must be 'is_engineering_mode', a function taking a single argument (an
         ``invocation.TestArgsEnv`` object), or a string of the format::
 
           table_name.col
@@ -167,6 +167,8 @@ class FactoryTest:
 
         If the auxiliary table 'table_name' is available, then its column 'col'
         is used to determine whether the test should be run.
+        If use 'is_engineering_mode' in run_if, it will be considered as the
+        boolean result of whether in engineering mode or not.
       iterations: Number of times to run the test.
       retries: Maximum number of retries allowed to pass the test.
         If it's 0, then no retries are allowed (the usual case). If, for

@@ -9,16 +9,16 @@
   "label": "Generic Chromebook",
   "options": {
     "skipped_tests": {
-      "device.factory.end_SMT": [
+      "not is_engineering_mode and device.factory.end_SMT": [
         "SMT"
       ],
-      "device.factory.end_FAT": [
+      "not is_engineering_mode and device.factory.end_FAT": [
         "FAT"
       ],
-      "device.factory.end_RUNIN": [
+      "not is_engineering_mode and device.factory.end_RUNIN": [
         "RunIn"
       ],
-      "device.factory.end_FFT": [
+      "not is_engineering_mode and device.factory.end_FFT": [
         "FFT"
       ]
     },

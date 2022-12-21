@@ -11,6 +11,7 @@ import copy
 import json
 import logging
 import os
+import re
 
 from cros.factory.test import i18n
 from cros.factory.test.i18n import translation
@@ -776,6 +777,18 @@ class ITestList(metaclass=abc.ABCMeta):
         if match(test_path):
           action(test)
 
+  @classmethod
+  def ReplaceIsEngineeringModeInRunIf(cls, run_if, is_engineering_mode):
+    """Replaces 'is_engineering_mode' in run_if by input boolean value.
+
+    Replaces 'is_engineering_mode' in run_if statement by the boolean result of
+    checking whether in engineering mode or not.
+    """
+    if 'is_engineering_mode' in run_if:
+      run_if = re.sub(r'(?<!\S)is_engineering_mode(?!\S)',
+                      str(is_engineering_mode), run_if)
+    return run_if
+
   @staticmethod
   def EvaluateExpression(expression, dut, station, constants, options, locals_,
                          state_proxy):
@@ -827,6 +840,11 @@ class ITestList(metaclass=abc.ABCMeta):
             state_instance, key='device'),
         'constants': selector_utils.DictSelector(value=test_list.constants),
     }
+
+    is_engineering_mode = state_instance.IsEngineeringMode()
+    run_if = ITestList.ReplaceIsEngineeringModeInRunIf(run_if,
+                                                       is_engineering_mode)
+
     try:
       syntax_tree = ast.parse(run_if, mode='eval')
       syntax_tree = NodeTransformer_AddGet(
