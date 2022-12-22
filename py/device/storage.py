@@ -250,7 +250,7 @@ class Storage(device_types.DeviceComponent):
     type_file = dut.path.realpath(dut.path.join(dev_node, 'type'))
 
     if 'mmc' in type_file:
-      return MainStorageType(dut.ReadFile(type_file))
+      return MainStorageType(dut.ReadFile(type_file).strip())
     if 'usb' in type_file:
       return MainStorageType.USB
     if 'ufs' in type_file:
