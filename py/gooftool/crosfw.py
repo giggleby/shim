@@ -15,6 +15,7 @@ To get the content of (cacheable) firmware, use LoadMainFirmware() or
 
 import collections
 import enum
+import filecmp
 import logging
 import os
 import re
@@ -346,12 +347,34 @@ class IntelMainFirmwareContent(FirmwareContent):
     desc_bin = self.GetFileName([IntelLayout.DESC.value])
     return self.ifdtool.Dump(desc_bin)
 
-  def LockDescriptor(self):
+  def GenerateAndCheckLockedDescriptor(self):
+    """Generate the locked descriptor and check if it is already locked.
+
+    This function generates a locked descriptor using the current descriptor.
+    It then compares the two descriptors to see if the descriptor is already
+    locked.
+
+    Returns:
+      A tuple of (string, bool).
+      string - Path to the locked descriptor binary.
+      bool - The descriptor is already locked or not.
+    """
     desc_bin = self.GetFileName([IntelLayout.DESC.value])
     locked_desc_bin = self.ifdtool.GenerateLockedDescriptor(desc_bin)
-    self.flashrom.Write(filename=locked_desc_bin,
-                        sections=[IntelLayout.DESC.value])
+    is_locked = filecmp.cmp(desc_bin, locked_desc_bin, shallow=False)
+    return locked_desc_bin, is_locked
 
+  def WriteDescriptor(self, desc):
+    """Write the given descriptor to the main firmware.
+
+    For the new descriptor to take effect, caller needs to trigger a cold
+    reboot.
+
+    Args:
+      desc: Path to the descriptor binary.
+    """
+    logging.info('Write the descriptor...')
+    self.flashrom.Write(filename=desc, sections=[IntelLayout.DESC.value])
 
 def LoadEcFirmware():
   """Returns flashrom data from Embedded Controller chipset."""
