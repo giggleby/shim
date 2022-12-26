@@ -1,10 +1,10 @@
 #!/bin/bash
-# Copyright 2019 The ChromiumOS Authors
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-FACTORY_DIR="$(readlink -f "${SCRIPT_DIR}/..")"
+FACTORY_DIR="$(readlink -f "${SCRIPT_DIR}/../..")"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 
 . "${FACTORY_DIR}/devtools/mk/common.sh" || exit 1

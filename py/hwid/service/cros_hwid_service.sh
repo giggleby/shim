@@ -1,10 +1,10 @@
 #!/bin/bash
-# Copyright 2018 The ChromiumOS Authors
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-DEPLOY_DIR="$(dirname "$(readlink -f "$0")")"
-FACTORY_DIR="$(readlink -f "${DEPLOY_DIR}/..")"
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+FACTORY_DIR="$(readlink -f "${SCRIPT_DIR}/../../..")"
 PY_PKG_DIR="${FACTORY_DIR}/py_pkg"
 APPENGINE_DIR="${PY_PKG_DIR}/cros/factory/hwid/service/appengine"
 HW_VERIFIER_DIR="${FACTORY_DIR}/../../platform2/hardware_verifier/proto"
