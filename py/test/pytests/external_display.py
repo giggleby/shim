@@ -120,12 +120,14 @@ import logging
 import os
 import queue
 import random
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
+from cros.factory.device import device_types
 from cros.factory.device import device_utils
 from cros.factory.device import usb_c
 from cros.factory.goofy.plugins import display_manager
 from cros.factory.goofy.plugins import plugin_controller
+from cros.factory.probe.functions import edid
 from cros.factory.test.fixture import bft_fixture
 from cros.factory.test.i18n import _
 from cros.factory.test.pytests import audio
@@ -225,6 +227,57 @@ def _MigrateDisplayInfo(display_info):
   return display_info
 
 
+class SysfsDisplayInfo:
+  """The display info under /sys/class/drm/cardX-YYY."""
+
+  def __init__(self, dut: device_types.DeviceBoard, sysfs_path: str):
+    self.sysfs_path = sysfs_path
+    self.status_path = dut.path.join(sysfs_path, 'status')
+    self.edid_path = dut.path.join(sysfs_path, 'edid')
+    self.status = dut.ReadFile(self.status_path).strip()
+    self.edid = None
+    if self.status != 'connected':
+      return
+    try:
+      edid_data = edid.LoadFromFile(self.edid_path)
+      edid_data['manufacturerId'] = edid_data['vendor']
+      edid_data['productId'] = edid_data['product_id'].upper()
+      edid_data.pop('vendor')
+      edid_data.pop('product_id')
+      self.edid = edid_data
+    except Exception as err:
+      raise RuntimeError('No edid or bad edid found from drm_sysfs_path: '
+                         f'{sysfs_path}') from err
+
+  def JoinTargetInfo(self, display_info: List[Dict[str, Any]]):
+    """Joins target display info between sysfs and Chrome API.
+
+    The Chrome API doesn't tell us which port is using which display so we have
+    to use sysfs to find if the target port is connected.
+
+    However, the Chrome API reacts slower than the sysfs and there is a time
+    that sysfs thinks the port is connected and the Chrome API thinks it's not.
+
+    If we enter VerifyDisplayConfig before the sysfs and Chrome API sync, the
+    VerifyDisplayConfig may fail or return unexpected current and target.
+
+    Args:
+      display_info: A List of display info obtained from Chrome API.
+
+    Returns:
+      One display info obtained from Chrome API which matched the target edid or
+      None if there is no match.
+    """
+    if self.status != 'connected':
+      return None
+    for info in display_info:
+      for key in ('manufacturerId', 'productId'):
+        if info['edid'][key] != self.edid[key]:
+          break
+      else:
+        return info
+    return None
+
 class ExtDisplayTest(test_case.TestCase):
   """Main class for external display test."""
   ARGS = [
@@ -305,12 +358,17 @@ class ExtDisplayTest(test_case.TestCase):
       self.do_output = True
       self.do_disconnect = True
 
-    self._toggle_timestamp = 0
-    self._last_status = (None, None)
+    if self.do_output:
+      self.assertTrue(self.do_connect,
+                      'If do_output is True then do_connect must be True')
+
+    self._target_display_info = None
 
     # Setup tasks
     for info in self.args.display_info:
       args = self.ParseDisplayInfo(info)
+
+      self.AddTask(self.Reset)
 
       if self.do_connect:
         self.AddTask(self.WaitConnect, args)
@@ -327,6 +385,10 @@ class ExtDisplayTest(test_case.TestCase):
 
       if self.do_disconnect:
         self.AddTask(self.WaitDisconnect, args)
+
+  def Reset(self):
+    """Resets status between different displays."""
+    self._target_display_info = None
 
   def ParseDisplayInfo(self, info):
     """Parses lists from args.display_info.
@@ -360,6 +422,7 @@ class ExtDisplayTest(test_case.TestCase):
   def CheckVideo(self, args):
     self.ui.BindStandardFailKeys()
     original, target = self.VerifyDisplayConfig()
+    logging.info('original=%r, target=%r', original, target)
     # We need to check ``target != original`` because when we test MST ports on
     # a Chromebox device (i.e., no built-in display), `target` and `original`
     # will be the same.  In this situation, we might get the display info from
@@ -479,6 +542,13 @@ class ExtDisplayTest(test_case.TestCase):
     self.assertEqual(len(primary), 1, "invalid number of primary displays")
     current = primary[0]['id']
 
+    if self.args.drm_sysfs_path:
+      target_info = self._target_display_info.JoinTargetInfo(display_info)
+      if target_info:
+        return (current, target_info['id'])
+      self.FailTask(
+          f'Target {self._target_display_info!r} is not in Chrome API.')
+
     # Test for a valid configuration
     config = (len(internal), len(external))
     if config == (1, 1):
@@ -540,27 +610,37 @@ class ExtDisplayTest(test_case.TestCase):
             _('Wrong MUX information: {messages}.', messages=messages))
     return usbpd_verified
 
-  def _IsDisplayConnected(self, args):
-    """Get connection status."""
-    if self.args.drm_sysfs_path is not None:
-      candidates = self._dut.Glob(self.args.drm_sysfs_path)
-      # Get display status from sysfs path.
-      new_status = (None, None)
-      for candidate in candidates:
-        card_name = os.path.basename(candidate.rstrip('/'))
-        status_file_path = self._dut.path.join(
-            candidate, f'{card_name}-{args.display_id}', 'status')
-        try:
-          new_status = (status_file_path,
-                        self._dut.ReadFile(status_file_path).strip())
-          break
-        except FileNotFoundError:
-          pass
+  def _GetInfoFromSysfs(self, display_id):
+    candidates = self._dut.Glob(self.args.drm_sysfs_path)
+    # Get display status from sysfs path.
+    for candidate in candidates:
+      card_name = os.path.basename(candidate.rstrip('/'))
+      sysfs_path = self._dut.path.join(candidate, f'{card_name}-{display_id}')
+      try:
+        return SysfsDisplayInfo(self._dut, sysfs_path)
+      except FileNotFoundError:
+        # Ignore exception if status is not there.
+        continue
 
-      if self._last_status != new_status:
-        self._last_status = new_status
-        logging.info('`cat "%s"` outputs %r', new_status[0], new_status[1])
-      return new_status[1] == 'connected'
+    raise RuntimeError(
+        f'No display found from drm_sysfs_path: {self.args.drm_sysfs_path}')
+
+  def _FetchTargetInfo(self, display_id):
+    target_display_info = self._GetInfoFromSysfs(display_id)
+    if self._target_display_info != target_display_info:
+      self._target_display_info = target_display_info
+      logging.info('`cat "%s"` outputs %r', target_display_info.status_path,
+                   target_display_info.status)
+      logging.info('Parsing %r outputs %r', target_display_info.edid_path,
+                   target_display_info.edid)
+
+  def _IsDisplayConnected(self, args: ExtDisplayTaskArg,
+                          display_info: Optional[List[Dict[str, Any]]] = None):
+    """Gets connection status."""
+    if self.args.drm_sysfs_path:
+      display_info = display_info or self._display_manager.ListDisplayInfo()
+      # Check that the target exists in Chrome API.
+      return bool(self._target_display_info.JoinTargetInfo(display_info))
 
     # Get display status from drm_utils.
     try:
@@ -579,6 +659,14 @@ class ExtDisplayTest(test_case.TestCase):
           f'drm_sysfs_path argument must have been set.')
     return port_info[args.display_id].connected
 
+  def _IsDisplayDisconnected(self, args: ExtDisplayTaskArg):
+    """Gets disconnection status."""
+    if self.args.drm_sysfs_path:
+      self._FetchTargetInfo(args.display_id)
+      return self._target_display_info.status == 'disconnected'
+
+    return not self._IsDisplayConnected(args)
+
   def _WaitDisplayConnection(self, args, connect):
     if self._fixture and not (connect and self.args.already_connect):
       try:
@@ -594,19 +682,34 @@ class ExtDisplayTest(test_case.TestCase):
       usbpd_spec['connected'] = connect
       if 'DP' not in usbpd_spec or usbpd_spec['DP']:
         usbpd_spec['DP'] = connect
+
+    # Waits for sysfs being ready.
+    if self.args.drm_sysfs_path and connect:
+      while True:
+        self._FetchTargetInfo(args.display_id)
+        if self._target_display_info.status == 'connected':
+          break
+        self.Sleep(_CONNECTION_CHECK_PERIOD_SECS)
+
     while True:
-      if (self._IsUSBPDVerified(args, usbpd_spec) and
-          connect == self._IsDisplayConnected(args)):
-        display_info = self._display_manager.ListDisplayInfo()
+      display_info = self._display_manager.ListDisplayInfo()
+
+      if self._IsUSBPDVerified(args, usbpd_spec):
         # display_info item, we assume the device's default mode is mirror
         # mode and try to turn off mirror mode.
         # On the other hand, in the case of disconnecting an external display,
         # we can not check display info has no display with 'isInternal' False
         # because any display for chromebox has 'isInternal' False.
-        if connect and all(x['isInternal'] for x in display_info):
-          self._display_manager.SetMirrorMode(
-              mode=display_manager.MirrorMode.off, timeout=10)
-        else:
-          logging.info('Get display info %r', display_info)
+        if connect:
+          if not self._IsDisplayConnected(args, display_info):
+            pass
+          elif all(x['isInternal'] for x in display_info):
+            self._display_manager.SetMirrorMode(
+                mode=display_manager.MirrorMode.off, timeout=10)
+          else:
+            break
+        elif self._IsDisplayDisconnected(args):
           break
       self.Sleep(_CONNECTION_CHECK_PERIOD_SECS)
+
+    logging.info('Get display info %r', display_info)
