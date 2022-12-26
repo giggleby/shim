@@ -758,6 +758,26 @@
     "LidSwitch": {
       "pytest_name": "lid_switch"
     },
+    "LockIntelDescriptor": {
+      "pytest_name": "lock_intel_descriptor"
+    },
+    "LockIntelDescriptorGroup": {
+      "run_if": "constants.grt.force_write_protect or constants.phase == 'PVT'",
+      "subtests": [
+        "LockIntelDescriptor",
+        {
+          "inherit": "FullRebootStep",
+          "run_if": "device.factory.desc_update_need_reboot"
+        },
+        {
+          "inherit": "LockIntelDescriptor",
+          "run_if": "device.factory.desc_update_need_reboot",
+          "args": {
+            "mode": "verify"
+          }
+        }
+      ]
+    },
     "MRCCache": {
       "label": "i18n! MRC Cache",
       "subtests": [

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-12-12 06:20+UTC\n"
+"PO-Revision-Date: 2022-12-27 11:46+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -305,6 +305,10 @@ msgstr "Thanh ánh sáng"
 #: ../build/pytests_label_generated.json
 msgid "Line Check Item"
 msgstr "Xác minh dự án"
+
+#: ../build/pytests_label_generated.json
+msgid "Lock Intel Descriptor"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "LTE Verify Config"
