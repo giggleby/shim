@@ -60,15 +60,13 @@ _DLCVERIFY = 'dlcverify'
 
 _DLCMETADATADIR = 'opt/google/dlc'
 
-# pylint: disable=line-too-long
-_DLC_ERROR_TEMPLATE = 'If you install the images via network, please make ' \
-                      'sure you use docker image version >= `20211102181209`' \
-                      '. To re-install the DLC images, please run pytest ' \
-                      '`check_image_version.py` with argument ' \
-                      '`reinstall_only_dlc` set to true. For more ' \
-                      'information about DLCs, please read the partner site ' \
-                      'document: (Google partners only) ' \
-                      'https://chromeos.google.com/partner/dlm/docs/factory/factory-dlc-support.html.'
+_DLC_ERROR_TEMPLATE = (
+    'If you install the images via network, please make sure you use docker '
+    'image version >= `20211102181209`. To re-install the DLC images, please '
+    'run pytest `check_image_version.py` with argument `reinstall_only_dlc` '
+    'set to true. For more information about DLCs, please read the partner '
+    'site document: (Google partners only) https://chromeos.google.com/partner/'
+    'dlm/docs/factory/factory-dlc-support.html.')
 
 
 class FactoryProcessEnum(str, enum.Enum):
@@ -78,8 +76,8 @@ class FactoryProcessEnum(str, enum.Enum):
   TWOSTAGES: The MLB part is sent to a different location for assembly, such
     as local OEM project or MLB for RMA.
   RMA: The device runs factory process in RMA center.
-
-  Check https://docs.google.com/document/d/15v7O8LWFL_tbTp2X4PKedGZ4IQAP11ZQeKsTJ_eQp1s/preview
+  Check
+  https://docs.google.com/document/d/15v7O8LWFL_tbTp2X4PKedGZ4IQAP11ZQeKsTJ_eQp1s/preview
   for details.
   """
   FULL = 'FULL'
@@ -259,8 +257,8 @@ class Gooftool:
             'Skip checking.', dlc_cache_path)
         return
       raise Error(
-          f'No factory installed DLC images found! Expected number of DLCs: {int(expected_num_dlcs)}! {_DLC_ERROR_TEMPLATE}'
-      ) from None
+          'No factory installed DLC images found! Expected number of DLCs: '
+          f'{int(expected_num_dlcs)}! {_DLC_ERROR_TEMPLATE}') from None
 
     with file_utils.TempDirectory() as tmpdir:
       # The DLC images are stored as compressed format.
@@ -270,8 +268,8 @@ class Gooftool:
 
       if not decompress_out.success:
         raise Error(
-            f'DLC images decompressing failed: {decompress_out.stderr}. {_DLC_ERROR_TEMPLATE}'
-        )
+            f'DLC images decompressing failed: {decompress_out.stderr}. '
+            f'{_DLC_ERROR_TEMPLATE}')
 
       dlc_image_path = os.path.join(tmpdir, 'unencrypted', 'dlc-factory-images')
 
@@ -281,8 +279,8 @@ class Gooftool:
 
       if cur_num_dlcs != expected_num_dlcs:
         raise Error(
-            f'Current number of factory installed DLCs: {int(cur_num_dlcs)}, expected: {int(expected_num_dlcs)}. {_DLC_ERROR_TEMPLATE}'
-        )
+            f'Current number of factory installed DLCs: {int(cur_num_dlcs)}, '
+            f'expected: {int(expected_num_dlcs)}. {_DLC_ERROR_TEMPLATE}')
 
       if cur_num_dlcs == 0:
         logging.info('No DLC images under %s. Skip checking.', dlc_image_path)
@@ -295,7 +293,9 @@ class Gooftool:
         for sub_dir_name in sub_dir_names:
           image_path = os.path.join(dlc_image_path, sub_dir_name, 'package',
                                     'dlc.img')
-          verify_command = f'{_DLCVERIFY} --id={sub_dir_name} --image={image_path} --rootfs_mount={root}'
+          verify_command = (
+              f'{_DLCVERIFY} --id={sub_dir_name} --image={image_path} '
+              f'--rootfs_mount={root}')
           logging.info(verify_command)
           check_hash_out = self._util.shell(verify_command)
 
@@ -321,18 +321,16 @@ class Gooftool:
         raise Error(f'Failed to read EC image: {flash_out.stderr}')
       if pubkey_path:
         result = self._util.shell(
-            f'futility show --type rwsig --pubkey {pubkey_path} {tmp_ec_bin.name}'
-        )
+            f'futility show --type rwsig --pubkey {pubkey_path} '
+            f'{tmp_ec_bin.name}')
         if not result.success:
-          raise Error(
-              f'Failed to verify EC key with pubkey {pubkey_path}: {result.stderr}'
-          )
+          raise Error(f'Failed to verify EC key with pubkey {pubkey_path}: '
+                      f'{result.stderr}')
       elif pubkey_hash:
         live_ec_hash = self._util.GetKeyHashFromFutil(tmp_ec_bin.name)
         if live_ec_hash != pubkey_hash:
-          raise Error(
-              f'Failed to verify EC key: expects ({pubkey_hash}) got ({live_ec_hash})'
-          )
+          raise Error(f'Failed to verify EC key: expects ({pubkey_hash}) got '
+                      f'({live_ec_hash})')
       else:
         raise ValueError('All arguments are None.')
 
@@ -367,8 +365,8 @@ class Gooftool:
 
     if live_key_id != release_key_id:
       raise Error(
-          f'Failed to verify fingerprint key: expects ({release_key_id}) got ({live_key_id})'
-      )
+          f'Failed to verify fingerprint key: expects ({release_key_id}) got '
+          f'({live_key_id})')
 
   def VerifyKeys(self, release_rootfs=None, firmware_path=None, _tmpexec=None):
     """Verify keys in firmware and SSD match.
@@ -407,14 +405,14 @@ class Gooftool:
         if gpt.GetPartition(minios_a_no).blocks != gpt.GetPartition(
             minios_b_no).blocks:
           raise Error(
-              f'The size of partition MINIOS_A and MINIOS_B are different. {_PART_TABLE_ERROR_TEMPLATE}'
-          )
+              'The size of partition MINIOS_A and MINIOS_B are different. '
+              f'{_PART_TABLE_ERROR_TEMPLATE}')
 
         _TmpExec(
             'check if the content of partition MINIOS_A and MINIOS_B are the '
             'same', f'cmp {minios_a_part} {minios_b_part}',
-            f'The content of partition MINIOS_A and MINIOS_B are different. {_PART_TABLE_ERROR_TEMPLATE}'
-        )
+            f'The content of partition MINIOS_A and MINIOS_B are different. '
+            f'{_PART_TABLE_ERROR_TEMPLATE}')
 
         try:
           _TmpExec(
@@ -443,14 +441,15 @@ class Gooftool:
           for minios_part in minios_a_part, minios_b_part:
             _TmpExec(
                 f'check recovery key signed minios image ({minios_part})',
-                f'futility vbutil_kernel --verify {minios_part} --signpubkey {key_recovery}'
-            )
+                f'futility vbutil_kernel --verify {minios_part} '
+                f'--signpubkey {key_recovery}')
         except Error:
           # Check if minios is dev-signed.
           for minios_part in minios_a_part, minios_b_part:
             _TmpExec(
                 f'check dev-signed minios image ({minios_part})',
-                f'! futility vbutil_kernel --verify {minios_part} --signpubkey {dir_devkeys}/{key_recovery}',
+                f'! futility vbutil_kernel --verify {minios_part} '
+                f'--signpubkey {dir_devkeys}/{key_recovery}',
                 f'YOU ARE USING A DEV-SIGNED MINIOS IMAGE. ({minios_part})')
           raise
 
@@ -507,8 +506,8 @@ class Gooftool:
 
       _TmpExec(
           'get keys from firmware GBB',
-          f'futility gbb -g --rootkey {key_root}  --recoverykey {key_recovery} GBB'
-      )
+          f'futility gbb -g --rootkey {key_root}  '
+          f'--recoverykey {key_recovery} GBB')
       rootkey_hash = _TmpExec('unpack rootkey',
                               f'futility vbutil_key --unpack {key_root}',
                               regex=r'(?<=Key sha1sum:).*').strip()
@@ -525,12 +524,12 @@ class Gooftool:
 
       _TmpExec(
           'verify firmware A with root key',
-          f'futility vbutil_firmware --verify VBLOCK_A --signpubkey {key_root}  --fv FW_MAIN_A --kernelkey {key_normal_a}'
-      )
+          f'futility vbutil_firmware --verify VBLOCK_A --signpubkey {key_root}'
+          f'  --fv FW_MAIN_A --kernelkey {key_normal_a}')
       _TmpExec(
           'verify firmware B with root key',
-          f'futility vbutil_firmware --verify VBLOCK_B --signpubkey {key_root}  --fv FW_MAIN_B --kernelkey {key_normal_b}'
-      )
+          f'futility vbutil_firmware --verify VBLOCK_B --signpubkey {key_root}'
+          f'  --fv FW_MAIN_B --kernelkey {key_normal_b}')
 
       # Unpack keys and keyblocks
       _TmpExec('unpack kernel keyblock',
@@ -540,18 +539,20 @@ class Gooftool:
           _TmpExec(f'unpack {key}', f'vbutil_key --unpack {key}')
           _TmpExec(
               f'verify kernel by {key}',
-              f'futility vbutil_kernel --verify {blob_kern} --signpubkey {key}')
+              f'futility vbutil_kernel --verify {blob_kern} --signpubkey '
+              f'{key}')
 
       except Error:
         _TmpExec(
             'check recovery key signed image',
-            f'! futility vbutil_kernel --verify {blob_kern} --signpubkey {key_recovery}',
-            'YOU ARE USING A RECOVERY KEY SIGNED IMAGE.')
+            f'! futility vbutil_kernel --verify {blob_kern} --signpubkey '
+            f'{key_recovery}', 'YOU ARE USING A RECOVERY KEY SIGNED IMAGE.')
 
         for key in key_normal, key_recovery:
           _TmpExec(
               f'check dev-signed image <{key}>',
-              f'! futility vbutil_kernel --verify {blob_kern} --signpubkey {dir_devkeys}/{key}',
+              f'! futility vbutil_kernel --verify {blob_kern} --signpubkey '
+              f'{dir_devkeys}/{key}',
               f'YOU ARE FINALIZING WITH DEV-SIGNED IMAGE <{key}>')
         raise
 
@@ -572,8 +573,8 @@ class Gooftool:
                                         f'{model_name}:).*').strip()
         if release_rootkey_hash != rootkey_hash:
           raise Error(
-              f'Firmware rootkey is not matched ({release_rootkey_hash} != {rootkey_hash}).'
-          )
+              f'Firmware rootkey is not matched ({release_rootkey_hash} != '
+              f'{rootkey_hash}).')
 
     logging.info('SUCCESS: Verification completed.')
 
@@ -598,9 +599,8 @@ class Gooftool:
                   system_time, created_time)
     if system_time < created_time:
       if factory_process != FactoryProcessEnum.RMA:
-        raise Error(
-            f'System time ({system_time}) earlier than file system ({release_rootfs}) creation time ({created_time})'
-        )
+        raise Error(f'System time ({system_time}) earlier than file system '
+                    f'({release_rootfs}) creation time ({created_time})')
       logging.warning('Set system time to file system creation time (%s)',
                       created_time)
       self._util.shell(f'toybox date @{int(created_time)}')
@@ -807,14 +807,12 @@ class Gooftool:
     if enforced_channels is None:
       enforced_channels = allowed_channels
     elif not all(channel in allowed_channels for channel in enforced_channels):
-      raise Error(
-          f'Enforced channels are incorrect: {enforced_channels}. Allowed channels are {allowed_channels}.'
-      )
+      raise Error(f'Enforced channels are incorrect: {enforced_channels}. '
+                  f'Allowed channels are {allowed_channels}.')
 
     if not any(channel in release_channel for channel in enforced_channels):
-      raise Error(
-          f'Release image channel is incorrect: {release_channel}. Enforced channels are {enforced_channels}.'
-      )
+      raise Error(f'Release image channel is incorrect: {release_channel}. '
+                  f'Enforced channels are {enforced_channels}.')
 
   def VerifyRLZCode(self):
     if phase.GetPhase() >= phase.EVT:
@@ -829,10 +827,11 @@ class Gooftool:
       mismatch_count = 0
       for key in config_identity.keys():
         if key == 'device-tree-compatible-match':
-          # For device-tree-compatible-match, the original way of crosid matching
-          # is using a sliding window with width = len(config_identity[key]).
-          # For example, the original device-tree-compatible-match for tentacruel
-          # is 'google,tentacruelgoogle,corsolamediatek,mt8186'. For each
+          # For device-tree-compatible-match, the original way of crosid
+          # matching is using a sliding window with width =
+          # len(config_identity[key]). For example, the original
+          # device-tree-compatible-match for tentacruel is
+          # 'google,tentacruelgoogle,corsolamediatek,mt8186'. For each
           # iteration it will try to match the window with 'google,tentacruel'
           # and if it could not match it will slide to the next complete window
           # starting from the next char of the last char in previous window.
@@ -843,12 +842,12 @@ class Gooftool:
             break
         elif key == 'sku-id':
           # For x86 devices the format would be sku + at least 1 digit.
-          # For arm devices it does not have sku prefix but in both types of devices
-          # the sku-id in config.yaml is interpret as integer,
-          # we'll perform a one-time transform here and let no digit cases error out.
-          # Note that in some devices like hayato it has no sku-id in config.yaml
-          # as it only has one sku. In this case identity['sku-id'] would be empty
-          # string but we're safe as it would not be compared.
+          # For arm devices it does not have sku prefix but in both types of
+          # devices the sku-id in config.yaml is interpret as integer, we'll
+          # perform a one-time transform here and let no digit cases error out.
+          # Note that in some devices like hayato it has no sku-id in
+          # config.yaml as it only has one sku. In this case identity['sku-id']
+          # would be empty string but we're safe as it would not be compared.
           sku_string = identity[key]
           sku_value = int(sku_string.lstrip('sku'))
           if config_identity[key] != sku_value:
@@ -925,7 +924,8 @@ class Gooftool:
           json_utils.DumpStr(config, sort_keys=True) for config in test_configs]
       error += ['Configs in FSI:']
       error += ['\t' + \
-          json_utils.DumpStr(config, sort_keys=True) for config in release_configs]
+          json_utils.DumpStr(config, sort_keys=True) for config
+          in release_configs]
       raise Error('\n'.join(error))
 
   def GetGBBFlags(self):
@@ -1170,8 +1170,9 @@ class Gooftool:
           return (locale_index, language_code)
 
     raise Error(
-        f'Firmware bitmaps do not contain support for the specified initial locales: {locales!r}.\nCurrent supported locales are {bitmap_locales!r}.'
-    )
+        'Firmware bitmaps do not contain support for the specified initial '
+        f'locales: {locales!r}.\nCurrent supported locales are '
+        f'{bitmap_locales!r}.')
 
   def GetSystemDetails(self):
     """Gets the system details including: platform name, crossystem,
@@ -1491,8 +1492,8 @@ class Gooftool:
 
     Args:
       two_stages: The MLB part is sent to a different location for assembly,
-          such as RMA or local OEM. And we need to set a different board ID flags
-          in this case.
+          such as RMA or local OEM. And we need to set a different board ID
+          flags in this case.
       is_flags_only: Set board ID flags only, this should only be true in the
           first stage in a two stages project. The board ID type still should be
           set in the second stage.
@@ -1704,8 +1705,8 @@ class Gooftool:
       result = RBINFO_REGEX.search(proc.stdout)
       if result is None:
         raise Error(
-            f'FPS rollback info not found.\n{RBINFO_PATTERN!r} not found in:\n{proc.stdout}'
-        )
+            f'FPS rollback info not found.\n{RBINFO_PATTERN!r} not found in:'
+            f'\n{proc.stdout}')
       return int(result.group(1))
 
     if get_rbinfo() != 0:
@@ -1720,9 +1721,8 @@ class Gooftool:
     if not biowash.success:
       raise Error(f'Fail to call {BIOWASH_CMD!r}. Log:\n{biowash.stderr}')
     if get_rbinfo() != 1:
-      raise Error(
-          f'FPMCU entropy cannot be initialized properly.\nLog of {BIOWASH_CMD!r}:\n{biowash.stderr}'
-      )
+      raise Error(f'FPMCU entropy cannot be initialized properly.\nLog of '
+                  f'{BIOWASH_CMD!r}:\n{biowash.stderr}')
     logging.info('FPMCU entropy initialized successfully.')
 
   def GetIdentity(self):
