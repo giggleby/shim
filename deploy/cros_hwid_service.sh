@@ -1,0 +1,1 @@
+../py/hwid/service/cros_hwid_service.sh
