@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-10-20 14:01+CST\n"
+"PO-Revision-Date: 2022-12-27 11:46+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -305,6 +305,10 @@ msgstr "光棒"
 #: ../build/pytests_label_generated.json
 msgid "Line Check Item"
 msgstr "项目验证"
+
+#: ../build/pytests_label_generated.json
+msgid "Lock Intel Descriptor"
+msgstr "锁定 Intel 描述符"
 
 #: ../build/pytests_label_generated.json
 msgid "LTE Verify Config"
