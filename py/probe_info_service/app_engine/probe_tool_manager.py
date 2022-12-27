@@ -253,10 +253,8 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
   return [
       ProbeFunc(
           'battery', 'generic_battery', {
-              'manufacturer':
-                  _ParamValueConverter('string', _StringToRegexpOrString),
-              'model_name':
-                  _ParamValueConverter('string', _StringToRegexpOrString),
+              'manufacturer': _ParamValueConverter('string'),
+              'model_name': _ParamValueConverter('string'),
           }),
       ProbeFunc(
           'storage', 'mmc_storage', {

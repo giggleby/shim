@@ -4,6 +4,7 @@
 
 from typing import Mapping, Optional
 
+from cros.factory.hwid.service.appengine.data.converter import battery_converter
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import storage_converter
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -12,8 +13,10 @@ from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import name_pattern_adapter
 
+
 # A map to collect converter collections.
 _DEFAULT_CONVERTER_COLLECTION_MAP = {
+    'battery': battery_converter.GetConverterCollection(),
     'storage': storage_converter.GetConverterCollection(),
 }
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
