@@ -541,6 +541,9 @@ message HwidDbEditableSectionAnalysisReport {
     // for new components.
     ProbeValueAlignmentStatus.Case probe_value_alignment_status = 11;
     ComponentSupportStatus.Case support_status_case = 12;
+    // True if this component is a known exception which does not require AVL
+    // validation even for the name pattern.
+    bool skip_avl_check = 13;
   }
 
   // A list of support status values that is available no matter the AVL entry
@@ -842,6 +845,14 @@ message CreateSplittedHwidDbClsResponse {
   HwidDbCommit final_hwid_db_commit = 7;
 }
 
+message UpdateAudioCodecKernelNamesRequest {
+  repeated string allowlisted_kernel_names = 1;
+  repeated string blocklisted_kernel_names = 2;
+}
+
+message UpdateAudioCodecKernelNamesResponse {
+}
+
 service HwidService {
   rpc GetProjects(ProjectsRequest) returns (ProjectsResponse);
 
@@ -940,4 +951,8 @@ service HwidService {
   // Create HWID DB Cls by setting approval status per change unit.
   rpc CreateSplittedHwidDbCls(CreateSplittedHwidDbClsRequest)
       returns (CreateSplittedHwidDbClsResponse);
+
+  // Update allowlist / blocklist of kernel names of audio codec components.
+  rpc UpdateAudioCodecKernelNames(UpdateAudioCodecKernelNamesRequest)
+    returns (UpdateAudioCodecKernelNamesResponse);
 }
