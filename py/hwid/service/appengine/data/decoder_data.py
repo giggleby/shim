@@ -36,7 +36,7 @@ class PrimaryIdentifier(ndb.Model):
 
 class DecoderDataManager:
 
-  def __init__(self, ndb_connector: ndbc_module):
+  def __init__(self, ndb_connector: ndbc_module.NDBConnector):
     self._ndb_connector = ndb_connector
 
   def SyncAVLNameMapping(self, mapping):
