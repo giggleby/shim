@@ -70,6 +70,7 @@ class EventLoop:
     self._handler_exception_hook = handler_exception_hook
     self._timed_handler_event_queue = queue.PriorityQueue()
     self._unique_id = count()
+    self._event_queue_lock = threading.Lock()
 
   def AddEventHandler(self, subtype, handler):
     """Adds an event handler.
@@ -122,33 +123,34 @@ class EventLoop:
 
       # Run all expired timed handler.
       while True:
-        try:
-          timed_handler_event = self._timed_handler_event_queue.get_nowait()
-        except queue.Empty:
-          break
-
-        current_time = time.time()
-        if timed_handler_event.next_time <= current_time:
-          stop_iteration = False
-
+        with self._event_queue_lock:
           try:
-            self._RunHandler(timed_handler_event.handler)
-          except StopIteration:
-            stop_iteration = True
-          except Exception:
-            self._handler_exception_hook()
+            timed_handler_event = self._timed_handler_event_queue.get_nowait()
+          except queue.Empty:
+            break
 
-          if not stop_iteration and timed_handler_event.interval is not None:
-            self._timed_handler_event_queue.put(
-                _TimedHandlerEvent(
-                    next_time=time.time() + timed_handler_event.interval,
-                    unique_id=timed_handler_event.unique_id,
-                    handler=timed_handler_event.handler,
-                    interval=timed_handler_event.interval))
-        else:
-          timeout = min(timeout, timed_handler_event.next_time - current_time)
-          self._timed_handler_event_queue.put(timed_handler_event)
-          break
+          current_time = time.time()
+          if timed_handler_event.next_time <= current_time:
+            stop_iteration = False
+
+            try:
+              self._RunHandler(timed_handler_event.handler)
+            except StopIteration:
+              stop_iteration = True
+            except Exception:
+              self._handler_exception_hook()
+
+            if not stop_iteration and timed_handler_event.interval is not None:
+              self._timed_handler_event_queue.put(
+                  _TimedHandlerEvent(
+                      next_time=time.time() + timed_handler_event.interval,
+                      unique_id=timed_handler_event.unique_id,
+                      handler=timed_handler_event.handler,
+                      interval=timed_handler_event.interval))
+          else:
+            timeout = min(timeout, timed_handler_event.next_time - current_time)
+            self._timed_handler_event_queue.put(timed_handler_event)
+            break
 
       # Process all events and wait for end event.
       end_event = self.event_client.wait(
@@ -177,12 +179,12 @@ class EventLoop:
       repeat: If True, would call handler once now, and repeatly in interval
           time_sec.
     """
-    self._timed_handler_event_queue.put(
-        _TimedHandlerEvent(
-            next_time=time.time() + (0 if repeat else time_sec),
-            unique_id=next(self._unique_id),
-            handler=handler,
-            interval=time_sec if repeat else None))
+    with self._event_queue_lock:
+      self._timed_handler_event_queue.put(
+          _TimedHandlerEvent(
+              next_time=time.time() + (0 if repeat else time_sec),
+              unique_id=next(self._unique_id), handler=handler,
+              interval=time_sec if repeat else None))
 
   def AddTimedIterable(self, iterable, time_sec):
     """Add a iterable that would be consumed at interval time_sec.
@@ -195,7 +197,8 @@ class EventLoop:
 
   def RemoveTimedHandler(self):
     """Remove all time event handlers."""
-    type_utils.DrainQueue(self._timed_handler_event_queue)
+    with self._event_queue_lock:
+      type_utils.DrainQueue(self._timed_handler_event_queue)
 
   def ClearHandlers(self):
     """Clear all event handlers."""
