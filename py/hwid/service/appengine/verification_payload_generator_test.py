@@ -695,14 +695,12 @@ class MIPICameraEepromProbeStatementGeneratorTest(unittest.TestCase):
     ps_gen = _vp_generator.GetAllProbeStatementGenerators()['video'][1]
     ps = ps_gen.TryGenerate(
         'name1', {
-            'name': 'i2c-00/i2c-ABC0000:00',
             'module_id': 'TC1234',
             'sensor_id': 'OV5678',
             'bus_type': 'mipi'
         })
     ps_new = ps_gen.TryGenerate(
         'name1', {
-            'mipi_name': 'i2c-00/i2c-ABC0000:00',
             'mipi_module_id': 'TC1234',
             'mipi_sensor_id': 'OV5678',
             'bus_type': 'mipi'
@@ -713,7 +711,6 @@ class MIPICameraEepromProbeStatementGeneratorTest(unittest.TestCase):
                 'mipi_camera': {}
             },
             'expect': {
-                'mipi_name': [True, 'str', '!eq i2c-00/i2c-ABC0000:00'],
                 'mipi_module_id': [True, 'str', '!eq TC1234'],
                 'mipi_sensor_id': [True, 'str', '!eq OV5678']
             }

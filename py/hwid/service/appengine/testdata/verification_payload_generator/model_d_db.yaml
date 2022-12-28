@@ -40,7 +40,6 @@ components:
         # Sample output of a MIPI camera.
         values:
           module_id: AA1234
-          name: i2c-00/i2c-ABC1234:56
           sensor_id: BB5678
           type: webcam
 

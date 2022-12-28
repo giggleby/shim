@@ -1642,11 +1642,6 @@
             "str",
             "!eq AA1234"
           ],
-          "mipi_name": [
-            true,
-            "str",
-            "!eq i2c-00/i2c-ABC1234:56"
-          ],
           "mipi_sensor_id": [
             true,
             "str",
@@ -2117,11 +2112,6 @@
             true,
             "str",
             "!eq AA1234"
-          ],
-          "mipi_name": [
-            true,
-            "str",
-            "!eq i2c-00/i2c-ABC1234:56"
           ],
           "mipi_sensor_id": [
             true,

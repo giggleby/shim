@@ -166,7 +166,7 @@ def _GetAllProbeStatementDefinitions():
 
   builder.AddProbeFunction('mipi_camera',
                            ('A method that probes camera devices on MIPI bus.'))
-  builder.AddStrOutputField('mipi_name', 'Entity name from sysfs path or V4L2.')
+  builder.AddStrOutputField('mipi_name', 'Entity name from V4L2.')
   builder.AddStrOutputField(
       'mipi_module_id',
       'Camera module vendor ID and product ID read from camera EEPROM.')

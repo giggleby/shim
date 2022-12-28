@@ -553,7 +553,6 @@ def GetAllProbeStatementGenerators():
   ]
 
   mipi_fields_eeprom = [
-      _FieldRecord(['name', 'mipi_name'], 'mipi_name', str_converter),
       _FieldRecord(['module_id', 'mipi_module_id'], 'mipi_module_id',
                    str_converter),
       _FieldRecord(['sensor_id', 'mipi_sensor_id'], 'mipi_sensor_id',
