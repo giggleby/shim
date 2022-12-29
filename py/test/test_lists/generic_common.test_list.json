@@ -1642,6 +1642,9 @@
         "max_bytes": 1048576
       }
     },
+    "VerifyUFSAndISHConfig": {
+      "pytest_name": "verify_ufs_and_ish_config"
+    },
     "VerifyWidevineKeybox": {
       "pytest_name": "verify_keybox",
       "label": "Verify Widevine Keybox",

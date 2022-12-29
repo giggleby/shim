@@ -76,7 +76,9 @@
         "ReSignReleaseKernel",
         "UploadRegCodes",
         "UploadZeroTouchIds",
-        "VerifyWidevineKeybox"
+        "VerifyWidevineKeybox",
+        "VerifyUFSAndISHConfig",
+        "LockIntelDescriptorGroup"
       ]
     },
     "GRTStart": {
