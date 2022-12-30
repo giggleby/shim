@@ -668,6 +668,7 @@
     },
     "GetDeviceInfo": {
       "inherit": "ShopfloorService",
+      "label": "Shopfloor Service (GetDeviceInfo)",
       "args": {
         "method": "GetDeviceInfo"
       }

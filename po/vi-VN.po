@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-12-27 11:46+CST\n"
+"PO-Revision-Date: 2022-12-30 13:28+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3637,6 +3637,10 @@ msgstr ""
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Front Camera LED"
 msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Shopfloor Service (GetDeviceInfo)"
+msgstr "Dịch vụ Shopfloor (GetDeviceInfo)"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Volume Down"
