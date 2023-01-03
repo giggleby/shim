@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 """Functionalities to access / update the HWID DBs in the datastore."""
 
+from concurrent import futures
 import logging
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from google.cloud import ndb
 
@@ -175,6 +176,7 @@ class HWIDDBDataManager:
     hwid_db_metadata_of_name = {m.name: m
                                 for m in hwid_db_metadata_list}
     hwid_db_commit_id = live_hwid_repo.hwid_db_commit_id
+    metadata_to_update = []
 
     # Discard the names for the entries, indexing only by path.
     with self._ndb_connector.CreateClientContextWithGlobalCache():
@@ -199,8 +201,7 @@ class HWIDDBDataManager:
           hwid_metadata.version = str(new_data.version)
           hwid_metadata.board = new_data.board_name
           hwid_metadata.commit = hwid_db_commit_id
-          self._ActivateProjectFile(live_hwid_repo, hwid_metadata)
-          hwid_metadata.put()
+          metadata_to_update.append(hwid_metadata)
 
     for project in files_to_create:
       path = project  # Use the project name as the file path.
@@ -210,8 +211,9 @@ class HWIDDBDataManager:
       with self._ndb_connector.CreateClientContextWithGlobalCache():
         metadata = HWIDDBMetadata(board=board, version=version, path=path,
                                   project=project, commit=hwid_db_commit_id)
-        self._ActivateProjectFile(live_hwid_repo, metadata)
-        metadata.put()
+        metadata_to_update.append(metadata)
+
+    self._ActivateProjectFiles(live_hwid_repo, metadata_to_update)
 
   def RegisterProjectForTest(self, board: str, project: str, version: str,
                              hwid_db: Optional[HWIDDBData],
@@ -260,14 +262,21 @@ class HWIDDBDataManager:
       return hwid_repo.HWIDRepo.InternalDBPath(path)
     return path
 
-  def _ActivateProjectFile(self, live_hwid_repo: hwid_repo.HWIDRepo,
-                           hwid_metadata: HWIDDBMetadata):
-    hwid_db_name = hwid_metadata.project
-    live_file_id = hwid_metadata.path
-    project_data = live_hwid_repo.LoadHWIDDBByName(hwid_db_name)
-    self._fs_adapter.WriteFile(self._LivePath(live_file_id), project_data)
-    if hwid_metadata.has_internal_format():
-      project_data_internal = live_hwid_repo.LoadHWIDDBByName(
-          hwid_db_name, internal=True)
-      self._fs_adapter.WriteFile(
-          self._LivePath(live_file_id, internal=True), project_data_internal)
+  def _ActivateProjectFiles(self, live_hwid_repo: hwid_repo.HWIDRepo,
+                            hwid_metadata_list: Sequence[HWIDDBMetadata]):
+
+    with self._ndb_connector.CreateClientContextWithGlobalCache(), \
+        futures.ThreadPoolExecutor() as executor:
+      for hwid_metadata in hwid_metadata_list:
+        hwid_db_name = hwid_metadata.project
+        live_file_id = hwid_metadata.path
+        project_data = live_hwid_repo.LoadHWIDDBByName(hwid_db_name)
+        executor.submit(self._fs_adapter.WriteFile,
+                        self._LivePath(live_file_id), project_data)
+        if hwid_metadata.has_internal_format():
+          project_data_internal = live_hwid_repo.LoadHWIDDBByName(
+              hwid_db_name, internal=True)
+          executor.submit(self._fs_adapter.WriteFile,
+                          self._LivePath(live_file_id, internal=True),
+                          project_data_internal)
+      ndb.model.put_multi(hwid_metadata_list)
