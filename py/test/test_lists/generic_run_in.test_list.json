@@ -169,6 +169,9 @@
     "RunInStressCountdown": {
       "inherit": "RunInCountdown",
       "args": {
+        "wifi_update_interval": 10,
+        "bluetooth_update_interval": 10,
+        "als_update_interval": 10,
         "duration_secs": "eval! constants.run_in.sat_duration_secs"
       }
     },
