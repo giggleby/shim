@@ -10,6 +10,7 @@ import queue
 import random
 import re
 import sys
+import threading
 import unittest
 from unittest import mock
 
@@ -174,6 +175,19 @@ class EventLoopTest(EventLoopTestBase):
     self.assertTrue(self._handler_exceptions)
     self.assertIsInstance(self._handler_exceptions[0], RuntimeError)
 
+  def testRemoveTimedHandler(self):
+
+    def _Handler():
+      # pylint: disable=protected-access
+      self.assertTrue(self.event_loop._event_queue_lock.locked())
+
+    self.event_loop.AddTimedHandler(_Handler, 0)
+    # pylint: disable=protected-access
+    self.assertFalse(self.event_loop._timed_handler_event_queue.empty())
+
+    self.event_loop.RemoveTimedHandler()
+    # pylint: disable=protected-access
+    self.assertTrue(self.event_loop._timed_handler_event_queue.empty())
 
 _PROBE_INTERVAL = 100
 
@@ -454,6 +468,35 @@ class EventLoopRunTest(EventLoopTestBase):
           else:
             # The call happens after TOTAL_TIME.
             self.assertGreater(expected_time + _PROBE_INTERVAL, TOTAL_TIME)
+
+  def testRemoveTimedHandler_RepeatedEventThreadSafe(self):
+    timed_handler_interval = 10
+    handler_called = threading.Event()
+
+    def _Handler():
+      handler_called.set()
+      # pylint: disable=protected-access
+      self.assertTrue(self.event_loop._event_queue_lock.locked())
+
+    self.event_loop.AddTimedHandler(_Handler, timed_handler_interval,
+                                    repeat=True)
+
+    def _RemoveTimedHandlerAfterCalled():
+      handler_called.wait()
+      self.event_loop.RemoveTimedHandler()
+
+    thread_remove_timed_handler = threading.Thread(
+        target=_RemoveTimedHandlerAfterCalled)
+    thread_remove_timed_handler.start()
+
+    # Make sure we end the event loop after some events are processed.
+    self._MockEndEventLoopEvent(_PROBE_INTERVAL + timed_handler_interval * 5)
+
+    self.event_loop.Run()
+    thread_remove_timed_handler.join()
+    # pylint: disable=protected-access
+    self.assertTrue(self.event_loop._timed_handler_event_queue.empty())
+    self.assertFalse(self._handler_exceptions)
 
 
 class EnsureI18nTest(unittest.TestCase):
