@@ -9,6 +9,7 @@ import logging
 import os
 import os.path
 import textwrap
+from typing import Set
 
 import urllib3
 
@@ -130,7 +131,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     if CONFIG.env == 'dev':
       return ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env')
 
-    response = self._UpdatePayloadsAndSync(force_push, do_limit)
+    response = self._UpdatePayloadsAndSync(force_push, do_limit, limit_models)
     logging.info('Ingestion complete.')
     return response
 
@@ -308,7 +309,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         logging.error('CL is not created: %r', str(ex))
         raise PayloadGenerationException('CL is not created') from ex
 
-  def _UpdatePayloads(self, force_push, force_update):
+  def _UpdatePayloads(self, force_push: bool, force_update: bool,
+                      limit_models: Set[str]):
     """Update generated payloads to repo.
 
     Also return the hash of main commit and payloads to skip unnecessary
@@ -317,10 +319,15 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     Args:
       force_push: True to always push to git repo.
       force_update: True for always returning payload_hash_mapping for testing
-                    purpose.
+        purpose.
+      limit_models: A set of models requiring payload generation, empty if
+        unlimited.
     Returns:
       tuple (commit_id, {board: payload_hash,...}), possibly None for commit_id
     """
+
+    def IsModelRequired(model: str) -> bool:
+      return not limit_models or model in limit_models
 
     payload_hash_mapping = {}
     service_account_name, unused_token = git_util.GetGerritCredentials()
@@ -331,6 +338,11 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     db_lists = self._GetPayloadDBLists()
 
     for board, db_list in db_lists.items():
+      db_list = [(db, vpg_config)
+                 for (db, vpg_config) in db_list
+                 if IsModelRequired(db.project)]
+      if not db_list:
+        continue
       result = vpg_module.GenerateVerificationPayload(db_list)
       if result.error_msgs:
         logging.error('Generate Payload fail: %s', ' '.join(result.error_msgs))
@@ -345,7 +357,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     return hwid_main_commit, payload_hash_mapping
 
-  def _UpdatePayloadsAndSync(self, force_push, force_update):
+  def _UpdatePayloadsAndSync(self, force_push: bool, force_update: bool,
+                             limit_models: Set[str]):
     """Update generated payloads to private overlays.
 
     This method will handle the payload creation request as follows:
@@ -365,12 +378,14 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     Args:
       force_push: True to always push to git repo.
       force_update: True for always getting payload_hash_mapping for testing
-                    purpose.
+        purpose.
+      limit_models: A set of models requiring payload generation, empty if
+        unlimited.
     """
 
     response = ingestion_pb2.IngestHwidDbResponse()
     commit_id, payload_hash_mapping = self._UpdatePayloads(
-        force_push, force_update)
+        force_push, force_update, limit_models)
     if commit_id:
       self.vp_data_manager.SetLatestHWIDMainCommit(commit_id)
     if force_update:
