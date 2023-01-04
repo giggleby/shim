@@ -111,14 +111,9 @@ def SetRecoveryRequest(dut):
 class MRCCacheUpdateError(type_utils.Error):
 
   def __init__(self, mode: Mode, expected: Result, actual: Result):
-    super().__init__(self)
-    self.mode = mode.value
-    self.expected = expected.value
-    self.actual = actual.value
-
-  def __str__(self):
-    return (f'{self.mode} mode MRC cache update filed. '
-            f'Expected: {self.expected}, Actual: {self.actual}')
+    message = (f'{mode.value} mode MRC cache update filed. '
+               f'Expected: {expected.value}, Actual: {actual.value}')
+    super().__init__(message)
 
 
 def _ReadEventLog(has_recovery_mrc, dut):
