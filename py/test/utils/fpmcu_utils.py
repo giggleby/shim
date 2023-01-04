@@ -50,8 +50,8 @@ class ImageName(enum.Enum):
   RW = 'RW'
   UNKNOWN = 'unknown'
 
-  @staticmethod
-  def FromEctoolOutput(image_name: str) -> 'ImageName':
+  @classmethod
+  def FromEctoolOutput(cls, image_name: str) -> 'ImageName':
     image_name_mapping: Dict[str, ImageName] = dict(
         {e.value: e
          for e in ImageName}, **{'?': ImageName.UNKNOWN})

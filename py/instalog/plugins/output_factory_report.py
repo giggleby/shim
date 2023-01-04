@@ -464,8 +464,8 @@ class ReportParser(log_utils.LoggerMixin):
     else:
       args_queue.put(None)
 
-  @staticmethod
-  def IsValidReportName(name):
+  @classmethod
+  def IsValidReportName(cls, name):
     name = os.path.basename(name)
     # Report name format: {stage}{opt_name}-{serial}-{gmtime}.rpt.xz
     if name.endswith('.rpt.xz'):

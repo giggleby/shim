@@ -48,8 +48,8 @@ class DeviceManager(plugin.Plugin):
     return plugin.MenuItem.ReturnData(
         action=plugin.MenuItem.Action.SHOW_IN_DIALOG, data=log)
 
-  @staticmethod
-  def _ReadUptime():
+  @classmethod
+  def _ReadUptime(cls):
     return file_utils.ReadFile('/proc/uptime')
 
   def GetDmesg(self):

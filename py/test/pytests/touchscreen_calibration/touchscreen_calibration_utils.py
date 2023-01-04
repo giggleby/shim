@@ -162,8 +162,8 @@ class NetworkStatus:
     self._BB_ip = BB_ip
     self._shopfloor_ip = shopfloor_ip
 
-  @staticmethod
-  def GetHostIPs():
+  @classmethod
+  def GetHostIPs(cls):
     """Get this host's IPs.
 
     Its output is a dictionary looking like

@@ -221,8 +221,8 @@ class ShopfloorService(test_case.TestCase):
     data = {k: v for k, v in data.items() if k not in keys_to_delete}
     device_data.UpdateDeviceData(data)
 
-  @staticmethod
-  def FilterDict(data):
+  @classmethod
+  def FilterDict(cls, data):
     """Returns a dict with privacy data filtered."""
     result = shelve_utils.DictShelfView(shelve_utils.InMemoryShelf())
     for k, v in data.items():

@@ -225,8 +225,8 @@ class SyncFactoryServer(test_case.TestCase):
     self.dut = device_utils.CreateDUTInterface()
     self.station = device_utils.CreateStationInterface()
 
-  @staticmethod
-  def CreateButton(node_id, message, on_click):
+  @classmethod
+  def CreateButton(cls, node_id, message, on_click):
     return [
         f'<button type="button" id="{node_id}" onclick={on_click!r}>', message,
         '</button>'
@@ -274,10 +274,10 @@ class SyncFactoryServer(test_case.TestCase):
         _('Change server URL: '),
         f'<input type="text" id="{ID_TEXT_INPUT_URL}" value="{current_url}"/>',
         '<span>',
-        self.CreateButton(
+        SyncFactoryServer.CreateButton(
             'btnSet', _('Set'), f'window.test.sendTestEvent("{EVENT_SET_URL}", '
             f'document.getElementById("{ID_TEXT_INPUT_URL}").value)'),
-        self.CreateButton(
+        SyncFactoryServer.CreateButton(
             'btnCancel', _('Cancel'),
             f'window.test.sendTestEvent("{EVENT_CANCEL_SET_URL}")'), '</span>'
     ])

@@ -30,8 +30,8 @@ class CameraManager(plugin.Plugin):
     event.PostNewEvent(event.Event.Type.UPDATE_CAMERA_MANAGER,
                        facingMode=facing_mode, enable=enable, hidden=hidden)
 
-  @staticmethod
-  def MapFacing(camera_facing: str):
+  @classmethod
+  def MapFacing(cls, camera_facing: str):
     """Maps camera_facing to facing mode.
 
     Args:

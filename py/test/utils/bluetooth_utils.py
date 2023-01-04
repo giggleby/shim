@@ -264,8 +264,8 @@ class GattTool:
     """Exit and clean up."""
     self.__del__()
 
-  @staticmethod
-  def GetDeviceInfo(target_mac, spec_name, hci_device=None, timeout=None):
+  @classmethod
+  def GetDeviceInfo(cls, target_mac, spec_name, hci_device=None, timeout=None):
     """A helper method to get information conveniently from a specified
     bluetooth device.
 

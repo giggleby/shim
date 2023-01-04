@@ -924,8 +924,8 @@ class FinalizeBundle:
         logging.info('netboot_firmware_source: %r',
                      self.netboot_firmware_source)
 
-  @staticmethod
-  def GetRoInfoFromHostImageName(name: str):
+  @classmethod
+  def GetRoInfoFromHostImageName(cls, name: str):
     """Extracts the info from the image name.
 
     Returns:
@@ -1621,8 +1621,8 @@ class FinalizeBundle:
       logging.info(e)
       return None
 
-  @staticmethod
-  def _ListAllFilesIn(search_dirs):
+  @classmethod
+  def _ListAllFilesIn(cls, search_dirs):
     """Returns all files under search_dirs.
 
     Args:
@@ -1637,9 +1637,9 @@ class FinalizeBundle:
             found_entries.append(p)
     return found_entries
 
-  @staticmethod
-  def FromArgs():
-    args = FinalizeBundle._ParseArgs()
+  @classmethod
+  def FromArgs(cls):
+    args = cls._ParseArgs()
     if os.path.isdir(args.manifest):
       manifest_path = os.path.join(args.manifest, 'MANIFEST.yaml')
     else:
@@ -1654,8 +1654,8 @@ class FinalizeBundle:
     return FinalizeBundle(manifest, work_dir, args.download, args.archive,
                           args.bundle_record, args.jobs)
 
-  @staticmethod
-  def _ParseArgs():
+  @classmethod
+  def _ParseArgs(cls):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=USAGE)

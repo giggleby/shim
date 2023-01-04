@@ -300,8 +300,8 @@ class RadiotapPacket:
   # This is a variable-length header, but this is what we want to see.
   EXPECTED_HEADER_FORMAT = struct.Struct(MAIN_HEADER_FORMAT.format + b'II')
 
-  @staticmethod
-  def Decode(packet_bytes):
+  @classmethod
+  def Decode(cls, packet_bytes):
     """Returns signal strength data for each antenna.
 
     Format is {all_signal, {antenna_index, antenna_signal}}.
@@ -331,8 +331,8 @@ class RadiotapPacket:
         antenna_data.append(signal)
     return antenna_data
 
-  @staticmethod
-  def ParseHeader(field_list):
+  @classmethod
+  def ParseHeader(cls, field_list):
     """Returns packet information of the radiotap header should have."""
     header_size = RadiotapPacket.MAIN_HEADER_FORMAT.size
     data_bytes = 0

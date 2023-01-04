@@ -103,15 +103,15 @@ class Glob:
         ret.append(f)
     return ret
 
-  @staticmethod
-  def Construct(loader, node):
+  @classmethod
+  def Construct(cls, loader, node):
     """YAML constructor."""
     value = loader.construct_mapping(node)
     type_utils.CheckDictKeys(value, ['include', 'exclude'])
     return Glob(value['include'], value.get('exclude', None))
 
-  @staticmethod
-  def Represent(representer, node):
+  @classmethod
+  def Represent(cls, representer, node):
     """YAML representer."""
     return representer.represent_mapping('!glob', dict(
         include=node.include, exclude=node.exclude))

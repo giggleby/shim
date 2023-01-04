@@ -71,8 +71,8 @@ class _ParamValueConverter:
     return self._value_converter(
         getattr(probe_parameter, self._probe_param_field_name))
 
-  @staticmethod
-  def _DummyValueConverter(value):
+  @classmethod
+  def _DummyValueConverter(cls, value):
     return value
 
 

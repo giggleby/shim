@@ -10,6 +10,7 @@ import time
 
 import serial
 
+
 # The classes here supporting Cr50 also support Ti50.
 # TODO(b/242588198): Consider updating Cr50 names to GSC.
 
@@ -48,8 +49,8 @@ class Cr50Console:
   def __init__(self, cr50_uart_pty):
     self._cr50_uart_pty = cr50_uart_pty
 
-  @staticmethod
-  def _DropUnusedCr50ConsoleOutput(ser):
+  @classmethod
+  def _DropUnusedCr50ConsoleOutput(cls, ser):
     """Drop the unused output from cr50 console.
 
     Sometime console prints debug messages before sending commands. Drop

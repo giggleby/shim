@@ -122,8 +122,8 @@ class Settings:
       self.code = code
       self.value = value
 
-    @staticmethod
-    def padded_value(value):
+    @classmethod
+    def padded_value(cls, value):
       value_len = len(value)
       pad_len = ((value_len + 3) // 4) * 4 - value_len
       return value + b'\0' * pad_len

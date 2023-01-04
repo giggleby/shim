@@ -39,9 +39,9 @@ class ArchiveUnittest(unittest.TestCase):
   def tearDownClass(cls):
     shutil.rmtree(cls.test_dir)
 
-  @staticmethod
+  @classmethod
   @contextlib.contextmanager
-  def _PrepareTestingFileSystemStructure(files):
+  def _PrepareTestingFileSystemStructure(cls, files):
     """Prepare a file system structure for testing.
 
     Args:
@@ -426,8 +426,8 @@ class ExtractHWIDFromFactoryLogUnittest(unittest.TestCase):
     finally:
       f.close()
 
-  @staticmethod
-  def _CreateHWIDLogLine(hwid):
+  @classmethod
+  def _CreateHWIDLogLine(cls, hwid):
     """Creates a WriteHWID log line.
 
     Arg:

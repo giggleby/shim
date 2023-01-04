@@ -41,8 +41,8 @@ class GenericCPUFunction(probe_function.ProbeFunction):
       return self._ProbeX86()
     return self._ProbeArm()
 
-  @staticmethod
-  def _ProbeX86():
+  @classmethod
+  def _ProbeX86(cls):
     cmd = r'/usr/bin/lscpu'
     try:
       stdout = process_utils.CheckOutput(cmd, shell=True, log=True)
@@ -72,8 +72,8 @@ class GenericCPUFunction(probe_function.ProbeFunction):
         'cores': str(physical),
         'online_cores': str(online)}
 
-  @staticmethod
-  def _ProbeArm():
+  @classmethod
+  def _ProbeArm(cls):
     # For ARM platform, ChromeOS kernel has/had special code to expose fields
     # like 'model name' or 'Processor' and 'Hardware' field.  However, this
     # doesn't seem to be available in ARMv8 (and probably all future versions).

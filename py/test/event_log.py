@@ -395,8 +395,8 @@ class EventLog:
     log_id: The ID of the log file.
   """
 
-  @staticmethod
-  def ForAutoTest():
+  @classmethod
+  def ForAutoTest(cls):
     """Deprecated, please use event_log.GetGlobalLogger() instead.
 
     Creates an EventLog object for the running autotest."""

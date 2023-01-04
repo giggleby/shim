@@ -127,8 +127,8 @@ class HTTPService(umpire_service.UmpireService):
     proc.SetConfig(proc_config)
     return [proc]
 
-  @staticmethod
-  def GenerateNginxConfig(umpire_config, env):
+  @classmethod
+  def GenerateNginxConfig(cls, umpire_config, env):
     """Generates a nginx config.
 
     Args:
@@ -155,8 +155,8 @@ class HTTPService(umpire_service.UmpireService):
       os.chmod(config_path, 0o644)
     return config_path
 
-  @staticmethod
-  def _GenerateNginxConfigImpl(umpire_config, env, config_path):
+  @classmethod
+  def _GenerateNginxConfigImpl(cls, umpire_config, env, config_path):
     """Real implementation of GenerateNginxConfig.
 
     It writes config to config_path.

@@ -345,8 +345,9 @@ class DictKey:
   'device.factory'.  All keys shall not contain dots (just like you cannot have
   slashes '/' in linux filename).
   """
-  @staticmethod
-  def Join(parent, *keys):
+
+  @classmethod
+  def Join(cls, parent, *keys):
     """Joins two or more pathname components, '.' will be inserted."""
     path = parent.strip('.')
     for key in keys:
@@ -359,28 +360,28 @@ class DictKey:
         path += '.' + key
     return path
 
-  @staticmethod
-  def GetBasename(path):
+  @classmethod
+  def GetBasename(cls, path):
     """Returns the final component."""
     i = path.rfind('.') + 1
     return path[i:]
 
-  @staticmethod
-  def GetParent(path):
+  @classmethod
+  def GetParent(cls, path):
     """Returns the path whose final component is removed."""
     i = path.rfind('.') + 1
     head = path[:i]
     return head.rstrip('.')
 
-  @staticmethod
-  def Split(path):
+  @classmethod
+  def Split(cls, path):
     """Returns (GetParent(path), GetBasename(path))."""
     i = path.rfind('.') + 1
     head, tail = path[:i], path[i:]
     return head.rstrip('.'), tail
 
-  @staticmethod
-  def IsAncestor(a, b):
+  @classmethod
+  def IsAncestor(cls, a, b):
     """Returns True if `a` is an ancestor of `b` or `a` == `b`"""
     if not isinstance(a, str) or not isinstance(b, str):
       raise ValueError('`a` and `b` must be strings')

@@ -293,8 +293,8 @@ class Identity:
     id_desc = ', '.join(f'{k}: {getattr(self, k)}' for k in self.__slots__)
     return f'Identity({id_desc})'
 
-  @staticmethod
-  def Verify(encoding_scheme, project, encoding_pattern_index, image_id,
+  @classmethod
+  def Verify(cls, encoding_scheme, project, encoding_pattern_index, image_id,
              components_bitset):
     _VerifyEncodingSchemePart(encoding_scheme)
     _VerifyProjectPart(project)
@@ -305,11 +305,10 @@ class Identity:
     _VerifyPart(lambda val: val and not set(val) - set('01') and val[-1] == '1',
                 'components_bitset', components_bitset)
 
-  @staticmethod
-  def GenerateFromBinaryString(encoding_scheme, project,
-                               encoding_pattern_index, image_id,
-                               components_bitset, brand_code=None,
-                               encoded_configless=None):
+  @classmethod
+  def GenerateFromBinaryString(
+      cls, encoding_scheme, project, encoding_pattern_index, image_id,
+      components_bitset, brand_code=None, encoded_configless=None):
     """Generates an instance of Identity from the given 3 parts of the binary
     string.
 
@@ -347,8 +346,8 @@ class Identity:
     return Identity(project, encoded_string, encoding_pattern_index, image_id,
                     components_bitset, brand_code, encoded_configless)
 
-  @staticmethod
-  def GenerateFromEncodedString(encoding_scheme, encoded_string):
+  @classmethod
+  def GenerateFromEncodedString(cls, encoding_scheme, encoded_string):
     """Generates an instance of Identity from the given HWID encoded string.
 
     This function also verifies whether the given HWID encoded string matches

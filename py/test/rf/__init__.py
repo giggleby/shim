@@ -17,23 +17,23 @@ class Frequency:
     """Returns a string representation."""
     return f'Frequency({self._f:f} Hz)'
 
-  @staticmethod
-  def FromHz(f):
+  @classmethod
+  def FromHz(cls, f):
     """Return an f Hz frequency instance."""
     return Frequency(f)
 
-  @staticmethod
-  def FromKHz(f):
+  @classmethod
+  def FromKHz(cls, f):
     """Return an f KHz frequency instance."""
     return Frequency(1e3 * float(f))
 
-  @staticmethod
-  def FromMHz(f):
+  @classmethod
+  def FromMHz(cls, f):
     """Return an f MHz frequency instance."""
     return Frequency(1e6 * float(f))
 
-  @staticmethod
-  def FromGHz(f):
+  @classmethod
+  def FromGHz(cls, f):
     """Return an f GHz frequency instance."""
     return Frequency(1e9 * float(f))
 

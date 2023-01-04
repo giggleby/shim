@@ -133,15 +133,15 @@ def MakePartition(block_dev, part):
 class ArgTypes:
   """Helper class to collect all argument type checkers."""
 
-  @staticmethod
-  def ExistsPath(path):
+  @classmethod
+  def ExistsPath(cls, path):
     """An argument with existing path."""
     if not os.path.exists(path):
       raise argparse.ArgumentTypeError(f'Does not exist: {path}')
     return path
 
-  @staticmethod
-  def GlobPath(pattern):
+  @classmethod
+  def GlobPath(cls, pattern):
     """An argument as glob pattern, and solved as single path.
 
     This is a useful type to specify default values with wildcard.
@@ -173,8 +173,8 @@ class ArgTypes:
 class SysUtils:
   """Collection of system utilities."""
 
-  @staticmethod
-  def Shell(commands, sudo=False, output=False, check=True, silent=False,
+  @classmethod
+  def Shell(cls, commands, sudo=False, output=False, check=True, silent=False,
             log_stderr_on_error=None, **kargs):
     """Helper to execute 'sudo' command in a shell.
 
@@ -215,25 +215,25 @@ class SysUtils:
       process.check_returncode()
     return process.stdout if output else process.returncode
 
-  @staticmethod
-  def Sudo(commands, **kargs):
+  @classmethod
+  def Sudo(cls, commands, **kargs):
     """Shortcut to Shell(commands, sudo=True)."""
     kargs['sudo'] = True
-    return Shell(commands, **kargs)
+    return cls.Shell(commands, **kargs)
 
-  @staticmethod
-  def SudoOutput(commands, **kargs):
+  @classmethod
+  def SudoOutput(cls, commands, **kargs):
     """Shortcut to Sudo(commands, output=True)."""
     kargs['output'] = True
-    return Sudo(commands, **kargs)
+    return cls.Sudo(commands, **kargs)
 
-  @staticmethod
-  def FindCommand(command):
+  @classmethod
+  def FindCommand(cls, command):
     """Returns the right path to invoke given command."""
     provided = os.path.join(
         os.path.dirname(os.path.abspath(sys.argv[0])), command)
     if not os.path.exists(provided):
-      provided = Shell(['which', command], output=True, check=False).strip()
+      provided = cls.Shell(['which', command], output=True, check=False).strip()
     if not provided:
       raise RuntimeError(f'Cannot find program: {command}')
     return provided
@@ -275,9 +275,9 @@ class SysUtils:
     """Returns a path to best working 'bzip2'."""
     return cls.FindCommands('lbzip2', 'pbzip2', 'bzip2')
 
-  @staticmethod
+  @classmethod
   @contextlib.contextmanager
-  def TempDirectory(prefix='imgtool_', delete=True):
+  def TempDirectory(cls, prefix='imgtool_', delete=True):
     """Context manager to allocate and remove temporary folder.
 
     Args:
@@ -291,8 +291,8 @@ class SysUtils:
       if tmp_folder and delete:
         Sudo(['rm', '-rf', tmp_folder], check=False)
 
-  @staticmethod
-  def PartialCopy(src_path, dest_path, count, src_offset=0, dest_offset=0,
+  @classmethod
+  def PartialCopy(cls, src_path, dest_path, count, src_offset=0, dest_offset=0,
                   buffer_size=32 * MEGABYTE, sync=False, verbose=None):
     """Copy partial contents from one file to another file, like 'dd'."""
     with open(src_path, 'rb') as src:
@@ -321,25 +321,25 @@ class SysUtils:
     if verbose:
       sys.stderr.write('\n')
 
-  @staticmethod
-  def GetDiskUsage(path):
+  @classmethod
+  def GetDiskUsage(cls, path):
     return int(SudoOutput(['du', '-sk', path]).split()[0]) * 1024
 
-  @staticmethod
-  def GetRemainingSize(path):
+  @classmethod
+  def GetRemainingSize(cls, path):
     return int(
         SudoOutput(['df', '-k', '--output=avail', path]).splitlines()[1]) * 1024
 
-  @staticmethod
-  def WriteFile(f, content):
+  @classmethod
+  def WriteFile(cls, f, content):
     """Clears the original content and write new content to a file object."""
     f.seek(0)
     f.truncate()
     f.write(content)
     f.flush()
 
-  @staticmethod
-  def WriteFileToMountedDir(mounted_dir, file_name, content):
+  @classmethod
+  def WriteFileToMountedDir(cls, mounted_dir, file_name, content):
     with tempfile.NamedTemporaryFile('w') as f:
       f.write(content)
       f.flush()
@@ -348,17 +348,17 @@ class SysUtils:
       Sudo(['cp', '-pf', f.name, dest])
       Sudo(['chown', 'root:root', dest])
 
-  @staticmethod
+  @classmethod
   @contextlib.contextmanager
-  def SetUmask(mask):
+  def SetUmask(cls, mask):
     old_umask = os.umask(mask)
     try:
       yield
     finally:
       os.umask(old_umask)
 
-  @staticmethod
-  def CreateDirectories(dir_name, mode=MODE_NEW_DIR):
+  @classmethod
+  def CreateDirectories(cls, dir_name, mode=MODE_NEW_DIR):
     with SysUtils.SetUmask(0o022):
       try:
         os.makedirs(dir_name, mode)
@@ -406,8 +406,8 @@ class CrosPayloadUtils:
           cls.GetCrosPayloadsDir(), CROS_RMA_METADATA)
     return cls._cros_rma_metadata_path
 
-  @staticmethod
-  def GetJSONPath(payloads_dir, board):
+  @classmethod
+  def GetJSONPath(cls, payloads_dir, board):
     return os.path.join(payloads_dir, f'{board}.json')
 
   @classmethod
@@ -678,9 +678,9 @@ class GPT(pygpt.GPT):
   class Partition(pygpt.GPT.Partition):
     """A special GPT Partition object with mount ability."""
 
-    @staticmethod
+    @classmethod
     @contextlib.contextmanager
-    def _Map(image, offset, size, partscan=False, block_size=None):
+    def _Map(cls, image, offset, size, partscan=False, block_size=None):
       """Context manager to map (using losetup) partition(s) from disk image.
 
       Args:
@@ -835,8 +835,8 @@ class GPT(pygpt.GPT):
         shutil.copy(src_path, dest_path)
         return dest_path
 
-    @staticmethod
-    def _ParseExtFileSystemSize(block_dev):
+    @classmethod
+    def _ParseExtFileSystemSize(cls, block_dev):
       """Helper to parse ext* file system size using dumpe2fs.
 
       Args:
@@ -1259,8 +1259,8 @@ def _ReadBoardResourceVersions(rootfs, stateful, board_info):
 class UserInput:
   """A helper class to manage user inputs."""
 
-  @staticmethod
-  def Select(title, options_list=None, options_dict=None,
+  @classmethod
+  def Select(cls, title, options_list=None, options_dict=None,
              single_line_option=True, split_line=False, optional=False):
     """Ask user to select an option from the given options.
 
@@ -1325,8 +1325,8 @@ class UserInput:
       break
     return selected
 
-  @staticmethod
-  def YesNo(title):
+  @classmethod
+  def YesNo(cls, title):
     """Ask user to input "y" or "n" for a question.
 
     Args:
@@ -1344,8 +1344,8 @@ class UserInput:
       if answer == 'n':
         return False
 
-  @staticmethod
-  def GetNumber(title, min_value=None, max_value=None, optional=False):
+  @classmethod
+  def GetNumber(cls, title, min_value=None, max_value=None, optional=False):
     """Ask user to input a number in the given range.
 
     Args:
@@ -1383,8 +1383,8 @@ class UserInput:
       break
     return value
 
-  @staticmethod
-  def GetString(title, max_length=None, optional=False):
+  @classmethod
+  def GetString(cls, title, max_length=None, optional=False):
     """Ask user to input a string.
 
     Args:
@@ -1658,8 +1658,8 @@ class ChromeOSFactoryBundle:
       else:
         print(f'Leaving {component} component payload as empty.')
 
-  @staticmethod
-  def CopyPayloads(src_dir, target_dir, json_path):
+  @classmethod
+  def CopyPayloads(cls, src_dir, target_dir, json_path):
     """Copy cros_payload contents of a board to target_dir.
 
     Board metadata <board>.json stores the resources in a dictionary.
@@ -1890,8 +1890,8 @@ class ChromeOSFactoryBundle:
             os.path.join(stateful, PATH_PREFLASH_PAYLOADS_JSON)], check=False)
     return new_size
 
-  @staticmethod
-  def ShowDiskImage(image):
+  @classmethod
+  def ShowDiskImage(cls, image):
     """Show the content of a disk image."""
     gpt = GPT.LoadFromFile(image)
     stateful_part = gpt.GetPartition(PART_CROS_STATEFUL)
@@ -2004,8 +2004,8 @@ class ChromeOSFactoryBundle:
 
       Sudo(['df', '-h', stateful])
 
-  @staticmethod
-  def ShowRMAImage(image):
+  @classmethod
+  def ShowRMAImage(cls, image):
     """Show the content of a RMA image."""
     gpt = GPT.LoadFromFile(image)
 
@@ -2068,8 +2068,8 @@ class ChromeOSFactoryBundle:
               resources.append((payload, SysUtils.GetDiskUsage(path)))
       return resources
 
-  @staticmethod
-  def _RecreateRMAImage(output, images, select_func):
+  @classmethod
+  def _RecreateRMAImage(cls, output, images, select_func):
     """Recreate RMA (USB installation) disk images using existing ones.
 
     A (universal) RMA image should have factory_install kernel and rootfs in
@@ -2234,8 +2234,8 @@ class ChromeOSFactoryBundle:
     with Partition(output, PART_CROS_STATEFUL).Mount() as stateful:
       Sudo(['df', '-h', stateful])
 
-  @staticmethod
-  def MergeRMAImage(output, images, auto_select):
+  @classmethod
+  def MergeRMAImage(cls, output, images, auto_select):
     """Merges multiple RMA disk images into a single universal RMA image.
 
     When there are duplicate boards across different images, it asks user to
@@ -2270,8 +2270,8 @@ class ChromeOSFactoryBundle:
 
     ChromeOSFactoryBundle._RecreateRMAImage(output, images, _ResolveDuplicate)
 
-  @staticmethod
-  def ExtractRMAImage(output, image, select=None):
+  @classmethod
+  def ExtractRMAImage(cls, output, image, select=None):
     """Extract a board image from a universal RMA image."""
 
     def _SelectBoard(entries):
@@ -2291,8 +2291,8 @@ class ChromeOSFactoryBundle:
 
     ChromeOSFactoryBundle._RecreateRMAImage(output, [image], _SelectBoard)
 
-  @staticmethod
-  def ReplaceRMAPayload(image, board=None, **kargs):
+  @classmethod
+  def ReplaceRMAPayload(cls, image, board=None, **kargs):
     """Replace payloads in an RMA shim."""
 
     replaced_payloads = {
@@ -2324,15 +2324,15 @@ class ChromeOSFactoryBundle:
     with Partition(image, PART_CROS_STATEFUL).Mount() as stateful:
       Sudo(['df', '-h', stateful])
 
-  @staticmethod
-  def GetKernelVersion(image_path):
+  @classmethod
+  def GetKernelVersion(cls, image_path):
     raw_output = Shell(['file', image_path], output=True)
     versions = (line.strip().partition(' ')[2] for line in raw_output.split(',')
                 if line.startswith(' version'))
     return next(versions, 'Unknown')
 
-  @staticmethod
-  def GetFirmwareVersion(image_path):
+  @classmethod
+  def GetFirmwareVersion(cls, image_path):
     with open(image_path, 'rb') as f:
       fw_image = fmap.FirmwareImage(f.read())
       ro = fw_image.get_section('RO_FRID').strip(b'\xff').strip(b'\0')
@@ -2344,8 +2344,8 @@ class ChromeOSFactoryBundle:
         raise RuntimeError(f'Unknown RW firmware version in {image_path}')
     return {'ro': ro.decode('utf-8'), 'rw': rw.decode('utf-8')}
 
-  @staticmethod
-  def GetFirmwareUpdaterVersion(updater):
+  @classmethod
+  def GetFirmwareUpdaterVersion(cls, updater):
     if not updater:
       return {}
 
@@ -2416,8 +2416,8 @@ class ChromeOSFactoryBundle:
           '--tftpserverip', urllib.parse.urlparse(self.server_url).hostname]
     netboot_firmware_settings.NetbootFirmwareSettings(parser.parse_args(args))
 
-  @staticmethod
-  def GetImageVersion(image):
+  @classmethod
+  def GetImageVersion(cls, image):
     if not image:
       return 'N/A'
     part = Partition(image, PART_CROS_ROOTFS_A)
@@ -2589,8 +2589,8 @@ class ChromeOSFactoryBundle:
     Shell(['cat', readme_path])
     return output_path
 
-  @staticmethod
-  def _ParseCrosConfig(designs, root_path):
+  @classmethod
+  def _ParseCrosConfig(cls, designs, root_path):
     """Parses a config file and selects fields used by factory environment.
 
     Args:

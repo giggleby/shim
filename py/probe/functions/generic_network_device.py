@@ -211,8 +211,8 @@ class NetworkDevices:
     return [dev for dev in cls.cached_dev_list
             if devtype is None or dev.devtype == devtype]
 
-  @staticmethod
-  def GetPCIPath(devtype, path):
+  @classmethod
+  def GetPCIPath(cls, devtype, path):
     """Returns the PCI path of a device.
 
     `realpath /sys/class/net/wwan0/device` may be

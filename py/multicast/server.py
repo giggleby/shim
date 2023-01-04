@@ -107,8 +107,8 @@ class MulticastServer:
     self._log_dir = log_dir
     self._logger = self._GetLogger(project, os.path.join(log_dir, LOG_FILE))
 
-  @staticmethod
-  def _GetLogger(project, log_path):
+  @classmethod
+  def _GetLogger(cls, project, log_path):
     # Default log level is logging.WARNING, but we only use logger.error for
     # now so no need to change it.
     logger = logging.getLogger(project)
@@ -198,8 +198,8 @@ class MulticastServerManager:
     self._servers = {}
     self._log_dir = log_dir
 
-  @staticmethod
-  def _ScanActiveProjects():
+  @classmethod
+  def _ScanActiveProjects(cls):
     return [
         project for project in os.listdir(UMPIRE_DIR)
         if IsUmpireEnabled(project) and IsServiceEnabled(project)

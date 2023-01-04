@@ -177,8 +177,8 @@ class SuspendResumeTest(test_case.TestCase):
     # Clear any active wake alarms
     self._SetWakealarm('0')
 
-  @staticmethod
-  def _ReadAndCastFileSafely(path, return_type=str):
+  @classmethod
+  def _ReadAndCastFileSafely(cls, path, return_type=str):
     try:
       text = file_utils.ReadFile(path)
     except IOError as err:
@@ -198,9 +198,11 @@ class SuspendResumeTest(test_case.TestCase):
     """
     wakeup_sources = [os.path.join(_WAKEUP_PATH, name)
                       for name in os.listdir(_WAKEUP_PATH)]
-    return {wakeup_source: self._ReadAndCastFileSafely(
-        os.path.join(wakeup_source, 'event_count'), int)
-            for wakeup_source in wakeup_sources}
+    return {
+        wakeup_source: SuspendResumeTest._ReadAndCastFileSafely(
+            os.path.join(wakeup_source, 'event_count'), int)
+        for wakeup_source in wakeup_sources
+    }
 
   def _GetPossibleWakeupSources(self):
     """Return all possible wakeup sources that may cause the wake.
@@ -220,7 +222,7 @@ class SuspendResumeTest(test_case.TestCase):
       current_event_count = current_wakeup_source_event_count.get(wakeup_source)
       if snapshot_event_count == current_event_count:
         continue
-      name = (self._ReadAndCastFileSafely(
+      name = (SuspendResumeTest._ReadAndCastFileSafely(
           os.path.join(wakeup_source, 'name')) or 'unknown').strip()
       if snapshot_event_count is None or current_event_count is None:
         logging.info('wakeup_source %s(%r) %sappeared after suspend.',

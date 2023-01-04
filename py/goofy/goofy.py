@@ -753,8 +753,8 @@ class Goofy:
     """
     self.exceptions.append(msg)
 
-  @staticmethod
-  def DrainNondaemonThreads():
+  @classmethod
+  def DrainNondaemonThreads(cls):
     """Wait for all non-current non-daemon threads to exit.
 
     This is performed by the Python runtime in an atexit handler,
@@ -776,8 +776,8 @@ class Goofy:
         all_threads_joined = True
     return all_threads_joined
 
-  @staticmethod
-  def RunMainAndExit():
+  @classmethod
+  def RunMainAndExit(cls):
     """Instantiate the receiver, run its main function, and exit when done.
 
     This static method is the "entry point" for Goofy.
@@ -786,7 +786,6 @@ class Goofy:
     it exits the process.
     """
     try:
-      cls = Goofy
       goofy = cls()
     except Exception:
       logging.info('Failed to instantiate %s, shutting down.', cls.__name__)
@@ -1194,8 +1193,8 @@ class Goofy:
     self.ui_initialized.wait()
     logging.info('UI is ready')
 
-  @staticmethod
-  def GetCommandLineArgsParser():
+  @classmethod
+  def GetCommandLineArgsParser(cls):
     """Returns a parser for Goofy command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true',

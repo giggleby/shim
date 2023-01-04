@@ -322,8 +322,8 @@ class _GPTTool:
     """Returns the Attribute value."""
     raise NotImplementedError
 
-  @staticmethod
-  def ExtractBits(value, shift, mask):
+  @classmethod
+  def ExtractBits(cls, value, shift, mask):
     return (value >> shift) & mask
 
   def GetAttributeSuccess(self, index):

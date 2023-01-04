@@ -39,8 +39,8 @@ class MulticastService(umpire_service.UmpireService):
   This service generates a config resource file from Umpire config, and creates
   a symbolic link at Umpire base directory for the multicast server."""
 
-  @staticmethod
-  def _GetMcastGroup(service_config):
+  @classmethod
+  def _GetMcastGroup(cls, service_config):
     if 'mgroup' in service_config:
       mgroup = service_config['mgroup']
     elif 'server_ip' in service_config:
@@ -52,8 +52,8 @@ class MulticastService(umpire_service.UmpireService):
     assert re.match(r'\d+\.\d+\.\d+\.\d+', mgroup)
     return mgroup
 
-  @staticmethod
-  def GenerateConfig(service_config, payloads, port):
+  @classmethod
+  def GenerateConfig(cls, service_config, payloads, port):
     """Generates multicast config.
 
     Read all available components from the payload config, and assign a port

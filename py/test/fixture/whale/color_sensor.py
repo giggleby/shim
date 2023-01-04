@@ -74,8 +74,8 @@ class ColorSensor:
     """
     return all(p in params for p in cls._REQUIRED_PARAMS)
 
-  @staticmethod
-  def _CompareHue(hue1, hue2, tolerance):
+  @classmethod
+  def _CompareHue(cls, hue1, hue2, tolerance):
     """Compares hue values.
 
     Because hue value is cyclic from 0.0 to 1.0. It treats values close to 0.0

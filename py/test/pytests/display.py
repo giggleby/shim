@@ -346,7 +346,7 @@ class DisplayTest(test_case.TestCase):
     self.frontend_proxy.ToggleFullscreen()
     self.fullscreen = not self.fullscreen
 
-  @staticmethod
-  def _IsHexColor(color_code):
+  @classmethod
+  def _IsHexColor(cls, color_code):
     pattern = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
     return re.match(pattern, color_code)

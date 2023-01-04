@@ -786,8 +786,9 @@ class WLAN:
 
 
 class CallbackSocketServer:
-  @staticmethod
-  def RequestHandlerFactory(callback):
+
+  @classmethod
+  def RequestHandlerFactory(cls, callback):
     class _Handler(socketserver.StreamRequestHandler):
       def handle(self):
         callback(self)

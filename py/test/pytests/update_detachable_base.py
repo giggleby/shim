@@ -192,8 +192,8 @@ class UpdateDetachableBaseTest(test_case.TestCase):
     else:
       self.runDetachableTest()
 
-  @staticmethod
-  def CrosConfig(key):
+  @classmethod
+  def CrosConfig(cls, key):
     """Helper method for cros_config key retrieval.
 
     Args:

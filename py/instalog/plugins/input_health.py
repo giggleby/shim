@@ -27,8 +27,8 @@ class InputHealth(plugin_base.InputPlugin):
           default=_DEFAULT_INTERVAL),
   ]
 
-  @staticmethod
-  def GetDiskUsage(path):
+  @classmethod
+  def GetDiskUsage(cls, path):
     st = os.statvfs(path)
     free = st.f_bavail * st.f_frsize
     total = st.f_blocks * st.f_frsize

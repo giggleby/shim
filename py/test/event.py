@@ -139,8 +139,8 @@ class Event:
   def to_json(self):
     return json.dumps(self, default=json_default_repr)
 
-  @staticmethod
-  def from_json(encoded_event):
+  @classmethod
+  def from_json(cls, encoded_event):
     kw = json.loads(encoded_event)
     type = kw.pop('type')  # pylint: disable=redefined-builtin
     return Event(type=type, **kw)

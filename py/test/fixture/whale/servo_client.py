@@ -202,8 +202,8 @@ class ServoClient:
       raise ServoClientError(f'Problem getting controls {repr(names)}',
                              e) from None
 
-  @staticmethod
-  def _OnOffToBool(name, value):
+  @classmethod
+  def _OnOffToBool(cls, name, value):
     """A helper to convert 'on' to True, 'off' to False and raise otherwise.
 
     Args:

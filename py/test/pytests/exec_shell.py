@@ -156,8 +156,8 @@ class ExecShell(test_case.TestCase):
           'A list (or single path) of source codes to log.', default=None)
   ]
 
-  @staticmethod
-  def _DisplayedCommand(command, length=50):
+  @classmethod
+  def _DisplayedCommand(cls, command, length=50):
     """Returns a possibly truncated command with max length to display."""
     return (command[:length] + ' ...') if len(command) > length else command
 

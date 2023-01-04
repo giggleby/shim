@@ -8,6 +8,7 @@ import time
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
+
 SERVOD_BIN = 'servod'
 DUT_CONTROL_TIMEOUT = 10
 SERVOD_INIT_TIMEOUT_SEC = 10
@@ -69,8 +70,8 @@ class Servod:
 
     self._exit_stack = contextlib.ExitStack()
 
-  @staticmethod
-  def _CheckServodHasInitialized(dut_control):
+  @classmethod
+  def _CheckServodHasInitialized(cls, dut_control):
     """Wait until servod has initialized.
 
     If servod has stopped, RuntimeError should be raised.  If servod is

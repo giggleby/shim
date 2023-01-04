@@ -171,8 +171,8 @@ class GSUtil:
 
     return result[0]
 
-  @staticmethod
-  def ParseURI(uri):
+  @classmethod
+  def ParseURI(cls, uri):
     """Parses a Google storage URI to extract various fields.
 
     This method parses out channel name, board name, image type and image

@@ -234,8 +234,8 @@ class HWIDV3SelfServiceActionHelper:
                                            hwid_db_editable_section))
     return patched_hwid_db_content
 
-  @staticmethod
-  def RemoveHeader(hwid_db_contents):
+  @classmethod
+  def RemoveHeader(cls, hwid_db_contents):
     unused_header, lines = _SplitHWIDDBV3Sections(hwid_db_contents)
     return _NormalizeAndJoinHWIDDBEditableSectionLines(lines)
 

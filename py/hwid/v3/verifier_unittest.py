@@ -80,8 +80,8 @@ class VerifyPhaseTest(unittest.TestCase):
                                       verify_checksum=False)
     self.possible_names = list(self.database.GetComponents('firmware_keys'))
 
-  @staticmethod
-  def _CreateBOM(image_id, firmware_key_name=None):
+  @classmethod
+  def _CreateBOM(cls, image_id, firmware_key_name=None):
     components = {}
     if firmware_key_name:
       components['firmware_keys'] = [firmware_key_name]

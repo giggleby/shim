@@ -418,8 +418,8 @@ class _CommandStep(_Step):
   def Stop(self):
     self._need_to_stop = True
 
-  @staticmethod
-  def _CheckCommandSuccess(return_code, stdout_text, expected_output):
+  @classmethod
+  def _CheckCommandSuccess(cls, return_code, stdout_text, expected_output):
     """Check whether the command was finished successfully or not.
 
     Args:

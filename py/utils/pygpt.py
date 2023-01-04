@@ -368,8 +368,8 @@ class GPTObject:
     class ZeroReader:
       """A /dev/zero like stream."""
 
-      @staticmethod
-      def read(num):
+      @classmethod
+      def read(cls, num):
         return '\x00' * num
 
     self.Unpack(ZeroReader())

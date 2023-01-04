@@ -110,8 +110,8 @@ class HWIDDBsPatternTest(unittest.TestCase):
                          ''.join('  ' + l for l in err_msg_lines))
       raise Exception('\n'.join(error_msg))
 
-  @staticmethod
-  def GetOldNewDB(hwid_dir, commit, db_path):
+  @classmethod
+  def GetOldNewDB(cls, hwid_dir, commit, db_path):
     """Get old and new DB.
 
     Get the DB in commit and the previous version (None not applicable).
@@ -141,8 +141,8 @@ class HWIDDBsPatternTest(unittest.TestCase):
 
     return old_db, new_db
 
-  @staticmethod
-  def VerifyDatabasePattern(hwid_dir, commit, db_path):
+  @classmethod
+  def VerifyDatabasePattern(cls, hwid_dir, commit, db_path):
     """Verify the specific HWID database.
 
     This method obtains the old_db and new_db, creates a context about

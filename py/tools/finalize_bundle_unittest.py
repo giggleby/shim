@@ -122,8 +122,8 @@ class PrepareNetbootTest(unittest.TestCase):
 class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
   """Unit tests for AddFirmwareUpdaterAndImages."""
 
-  @staticmethod
-  def MockMatchPack(unused_updater_path, dirpath, operation='pack'):
+  @classmethod
+  def MockMatchPack(cls, unused_updater_path, dirpath, operation='pack'):
     if operation != 'unpack':
       return
     file_utils.TryMakeDirs(os.path.join(dirpath, 'images'))
@@ -146,8 +146,8 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
         'model_name,firmware_image,key_id,ec_image,brand_code\n'
         'randomSignId1,image_path,DEFAULT,ec_image_path,ZZCR')
 
-  @staticmethod
-  def MockMismatchPack(unused_updater_path, dirpath, operation='pack'):
+  @classmethod
+  def MockMismatchPack(cls, unused_updater_path, dirpath, operation='pack'):
     if operation != 'unpack':
       return
     file_utils.TryMakeDirs(os.path.join(dirpath, 'images'))

@@ -446,8 +446,8 @@ class FactoryTestList(test_object_module.FactoryTest):
     self.options.CheckValid()
     self._check()
 
-  @staticmethod
-  def ResolveRequireRun(test_path, requirement_path):
+  @classmethod
+  def ResolveRequireRun(cls, test_path, requirement_path):
     """Resolve the test path for a requirement in require_run.
 
     If the path for the requirement starts with ".", then it will be
@@ -789,9 +789,9 @@ class ITestList(metaclass=abc.ABCMeta):
                       str(is_engineering_mode), run_if)
     return run_if
 
-  @staticmethod
-  def EvaluateExpression(expression, dut, station, constants, options, locals_,
-                         state_proxy):
+  @classmethod
+  def EvaluateExpression(cls, expression, dut, station, constants, options,
+                         locals_, state_proxy):
     namespace = {
         'dut': dut,
         'station': station,
@@ -806,8 +806,8 @@ class ITestList(metaclass=abc.ABCMeta):
     code_object = compile(syntax_tree, '<string>', 'eval')
     return eval(code_object, namespace)  # pylint: disable=eval-used
 
-  @staticmethod
-  def EvaluateRunIf(test, test_list):
+  @classmethod
+  def EvaluateRunIf(cls, test, test_list):
     """Evaluate the run_if value of this test.
 
     Evaluates run_if argument to decide skipping the test or not.  If run_if
@@ -824,8 +824,8 @@ class ITestList(metaclass=abc.ABCMeta):
     return ITestList._EvaluateRunIf(
         test.run_if, test.path, test_list, default=True)
 
-  @staticmethod
-  def _EvaluateRunIf(run_if, source, test_list, default):
+  @classmethod
+  def _EvaluateRunIf(cls, run_if, source, test_list, default):
     """Real implementation of EvaluateRunIf.
 
     If anything went wrong, `default` will be returned.

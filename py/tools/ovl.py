@@ -308,8 +308,8 @@ class OverlordClientDaemon:
         os.close(fd)
       self._server.serve_forever()
 
-  @staticmethod
-  def GetRPCServer():
+  @classmethod
+  def GetRPCServer(cls):
     """Returns the Overlord client daemon RPC server."""
     server_desc = _OVERLORD_CLIENT_DAEMON_RPC_ADDR
     server = jsonrpclib.Server(f'http://{server_desc[0]}:{server_desc[1]:d}')

@@ -172,12 +172,12 @@ class FindDeviceError(RuntimeError):
     self.candidates = candidates
     self.filtered_candidates = filtered_candidates
 
-  @staticmethod
-  def FormatDevice(dev):
+  @classmethod
+  def FormatDevice(cls, dev):
     return f'(path={dev.fn}, name={dev.name!r})'
 
-  @staticmethod
-  def FormatDevices(devices):
+  @classmethod
+  def FormatDevices(cls, devices):
     return str(sorted(map(FindDeviceError.FormatDevice, devices)))
 
   def FormatFilteredCandidates(self):

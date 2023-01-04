@@ -13,13 +13,14 @@ import unittest
 from cros.factory.test.utils.pytest_utils import LoadPytestModule
 from cros.factory.utils import file_utils
 
+
 _PYTEST_MODULES = ['cros', 'factory', 'test', 'pytests']
 
 
 class LoadPytestModuleTest(unittest.TestCase):
 
-  @staticmethod
-  def CreateScript(tmpdir, script_path):
+  @classmethod
+  def CreateScript(cls, tmpdir, script_path):
     """Create an python script under `tmpdir` with path=`script_path`.
 
     The created script file will be empty, the `__init__.py`s will also be

@@ -248,8 +248,8 @@ class Testlog:
       _pylogger = None
       _pylogger_handler = None
 
-  @staticmethod
-  def _ReadSessionInfo():
+  @classmethod
+  def _ReadSessionInfo(cls):
     session_json_path = os.environ.get(TESTLOG_ENV_VARIABLE_NAME, None)
     assert session_json_path, (
         f'Not able to find environment variable {TESTLOG_ENV_VARIABLE_NAME!r}')
@@ -1085,8 +1085,8 @@ class StationStatus(_StationBase):
   def GetEventType(cls):
     return 'station.status'
 
-  @staticmethod
-  def _CreateParamValueDict(value, min_val=None, max_val=None, regex=None):
+  @classmethod
+  def _CreateParamValueDict(cls, value, min_val=None, max_val=None, regex=None):
     """Checks types and returns a dict that aligns with Testlog Playbook."""
     value_dict = {}
     if isinstance(value, str):

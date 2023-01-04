@@ -15,21 +15,22 @@ from cros.factory.utils import time_utils
 
 class Validator:
   """Wrapper for functions that assign and validate values to Event object."""
-  @staticmethod
-  def Object(inst, key, value):
+
+  @classmethod
+  def Object(cls, inst, key, value):
     # pylint: disable=protected-access
     inst._data[key] = value
 
-  @staticmethod
-  def Long(inst, key, value):
+  @classmethod
+  def Long(cls, inst, key, value):
     if not isinstance(value, int):
       raise ValueError(
           f'key[{key}] accepts type of int or long. Not {type(value)!r} Please '
           'convert before assign')
     Validator.Object(inst, key, value)
 
-  @staticmethod
-  def Number(inst, key, value):
+  @classmethod
+  def Number(cls, inst, key, value):
     if isinstance(value, int):
       value = float(value)
     if not isinstance(value, float):
@@ -38,24 +39,24 @@ class Validator:
           'convert before assign')
     Validator.Object(inst, key, value)
 
-  @staticmethod
-  def String(inst, key, value):
+  @classmethod
+  def String(cls, inst, key, value):
     if not isinstance(value, str):
       raise ValueError(
           f'key[{key}] accepts type of str. Not {type(value)!r} Please convert '
           'before assign')
     Validator.Object(inst, key, value)
 
-  @staticmethod
-  def Boolean(inst, key, value):
+  @classmethod
+  def Boolean(cls, inst, key, value):
     if not isinstance(value, bool):
       raise ValueError(
           f'key[{key}] accepts type of bool. Not {type(value)!r} Please convert'
           ' before assign')
     Validator.Object(inst, key, value)
 
-  @staticmethod
-  def Dict(inst, key, value, schema=None):
+  @classmethod
+  def Dict(cls, inst, key, value, schema=None):
     """Inserts an item into the inst._data[key].
 
     Assuming inst._data[key] is a dictionary, the inserted element will be
@@ -85,8 +86,8 @@ class Validator:
     # pylint: disable=protected-access
     inst._data[key] = updated_dict
 
-  @staticmethod
-  def List(inst, key, value, schema=None):
+  @classmethod
+  def List(cls, inst, key, value, schema=None):
     logging.debug('Validator.List called with (%s, %s)', key, value)
 
     if schema:
@@ -98,8 +99,8 @@ class Validator:
     # pylint: disable=protected-access
     inst._data[key] = updated_list
 
-  @staticmethod
-  def Attachment(inst, key, value, delete, testlog_getter_fn):
+  @classmethod
+  def Attachment(cls, inst, key, value, delete, testlog_getter_fn):
     del inst  # Unused.
     logging.debug('Validator.Attachment is called: (key=%s, value=%s, '
                   'delete=%s)', key, value, delete)
@@ -150,8 +151,8 @@ class Validator:
     value[PATH] = target_path
     # TODO(itspeter): Check if anything left in value.
 
-  @staticmethod
-  def Status(inst, key, value):
+  @classmethod
+  def Status(cls, inst, key, value):
     if value not in inst.STATUS:
       raise ValueError(f'Invalid status : {value!r}')
     Validator.Object(inst, key, value)

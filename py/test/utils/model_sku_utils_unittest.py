@@ -12,8 +12,8 @@ from cros.factory.test.utils import model_sku_utils
 class TestModelSKUUtils(unittest.TestCase):
   """Unit tests for model_sku_utils."""
 
-  @staticmethod
-  def _SetProjectConfigMock(listdir_mock, load_config_mock):
+  @classmethod
+  def _SetProjectConfigMock(cls, listdir_mock, load_config_mock):
     """Mock a project config database."""
     listdir_mock.return_value = [
         'program1_project1_model_sku.json',
@@ -130,8 +130,9 @@ class TestModelSKUUtils(unittest.TestCase):
         },
     }]
 
-  @staticmethod
-  def _SetCrosConfigMock(cros_config_mock, sku_id, model, custom_label_tag):
+  @classmethod
+  def _SetCrosConfigMock(cls, cros_config_mock, sku_id, model,
+                         custom_label_tag):
     """Mock cros_config."""
     # Constructor returns itself
     cros_config_mock.return_value = cros_config_mock

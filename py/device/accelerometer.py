@@ -144,8 +144,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
 
     return ret
 
-  @staticmethod
-  def IsVarianceOutOfRange(data: dict, threshold: float = 5.0):
+  @classmethod
+  def IsVarianceOutOfRange(cls, data: dict, threshold: float = 5.0):
     """Checks whether the variance of sensor data is higher than the threshold.
 
     Args:
@@ -171,8 +171,8 @@ class AccelerometerController(sensor_utils.BasicSensorController):
         ret = True
     return ret
 
-  @staticmethod
-  def IsWithinOffsetRange(data, orientations, spec_offset):
+  @classmethod
+  def IsWithinOffsetRange(cls, data, orientations, spec_offset):
     """Checks whether the value of sensor data is within the spec or not.
 
     It is used before calibration to filter out abnormal accelerometers.

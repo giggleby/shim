@@ -557,8 +557,8 @@ class TestState:
     return result
 
 
-  @staticmethod
-  def OverallStatus(statuses):
+  @classmethod
+  def OverallStatus(cls, statuses):
     """Returns the "overall status" given a list of statuses.
 
     This is the first element of

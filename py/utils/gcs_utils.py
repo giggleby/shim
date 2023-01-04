@@ -243,8 +243,8 @@ class ParallelDownloader:
                                impersonated_account=impersonated_account,
                                logger=self.logger)
 
-  @staticmethod
-  def _Download(args):
+  @classmethod
+  def _Download(cls, args):
     """Calls DownloadFile() in a worker process.
 
     imap_unordered() can only send one argument, so it splits the

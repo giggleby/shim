@@ -296,8 +296,8 @@ class FactoryTest:
     if set_default:
       self.default_retries = retries
 
-  @staticmethod
-  def PytestNameToLabel(pytest_name):
+  @classmethod
+  def PytestNameToLabel(cls, pytest_name):
     """Returns a titled string without duplicated elements."""
     def _GuessIsAcronym(word):
       return not word.isalpha() or all(c not in 'aeiouy' for c in word)
@@ -314,8 +314,8 @@ class FactoryTest:
               part, part.upper() if _GuessIsAcronym(part) else part.title()))
     return ' '.join(parts)
 
-  @staticmethod
-  def LabelToId(label):
+  @classmethod
+  def LabelToId(cls, label):
     """Converts a label to an ID.
 
     Removes all symbols and join as CamelCase.

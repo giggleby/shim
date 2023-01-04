@@ -66,8 +66,8 @@ class TestListConfig:
   def ToDict(self):
     return self._resolved_config.copy()
 
-  @staticmethod
-  def GetTimestamp(path):
+  @classmethod
+  def GetTimestamp(cls, path):
     if os.path.exists(path):
       return os.stat(path).st_mtime
     if '.par' in path.lower():
@@ -232,8 +232,8 @@ class Manager:
     logging.debug('loaded test lists: %r', list(self.test_lists))
     return valid_test_lists, failed_test_lists
 
-  @staticmethod
-  def GetActiveTestListId(device):
+  @classmethod
+  def GetActiveTestListId(cls, device):
     """Returns the ID of the active test list.
 
     This method first try to load the active test list id by loading the
@@ -260,8 +260,8 @@ class Manager:
 
     return Manager.SelectDefaultTestList(device)
 
-  @staticmethod
-  def SelectDefaultTestList(device):
+  @classmethod
+  def SelectDefaultTestList(cls, device):
     candidates = []
 
     cros_config = cros_config_module.CrosConfig(dut=device)
@@ -283,8 +283,8 @@ class Manager:
         return test_list_id
     return DEFAULT_TEST_LIST_ID
 
-  @staticmethod
-  def SetActiveTestList(new_id):
+  @classmethod
+  def SetActiveTestList(cls, new_id):
     """Sets the active test list.
 
     This writes the name of the new active test list to the build time config

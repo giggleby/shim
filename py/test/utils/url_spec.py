@@ -6,8 +6,8 @@ from cros.factory.device import device_types
 
 class URLSpec:
 
-  @staticmethod
-  def FindServerURL(url_spec, dut: device_types.DeviceBoard):
+  @classmethod
+  def FindServerURL(cls, url_spec, dut: device_types.DeviceBoard):
     """Tries to parse url_spec and find a "best match URL" for a DUT.
 
       It is very often that partner may want to deploy multiple servers with

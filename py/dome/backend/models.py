@@ -443,8 +443,8 @@ class Project(django.db.models.Model):
   def ListAllEnabledProject():
     return Project.objects.filter(umpire_enabled=True)
 
-  @staticmethod
-  def GetMaxPortOffset():
+  @classmethod
+  def GetMaxPortOffset(cls):
     return UMPIRE_MAX_PORT_OFFSET
 
   def UploadAndDeployConfig(self, config):
@@ -616,12 +616,12 @@ class Project(django.db.models.Model):
 
     logger.info('Umpire container for %s had been restarted.', self.name)
 
-  @staticmethod
-  def GetUmpireContainerName(name):
+  @classmethod
+  def GetUmpireContainerName(cls, name):
     return f'umpire_{name}'
 
-  @staticmethod
-  def CreateOne(name, **kwargs):
+  @classmethod
+  def CreateOne(cls, name, **kwargs):
     logger.info('Creating new project %r', name)
     project = Project.objects.create(name=name)
     try:
@@ -636,8 +636,8 @@ class Project(django.db.models.Model):
         pass
       return None
 
-  @staticmethod
-  def UpdateOne(project, **kwargs):
+  @classmethod
+  def UpdateOne(cls, project, **kwargs):
     try:
       logger.info('Updating project %r', project.name)
       # enable or disable Umpire if necessary
@@ -679,8 +679,8 @@ class Resource:
     self.information = information
     self.warning_message = warning_message
 
-  @staticmethod
-  def CreateOne(project_name, type_name, file_id):
+  @classmethod
+  def CreateOne(cls, project_name, type_name, file_id):
     umpire_server = GetUmpireServer(project_name)
     with UploadedFile(file_id) as p:
       payloads = umpire_server.AddPayload(p, type_name)
@@ -691,15 +691,15 @@ class Resource:
         if 'information' in payloads[type_name] else '',
         warning_message if warning_message else '')
 
-  @staticmethod
-  def GarbageCollection(project_name):
+  @classmethod
+  def GarbageCollection(cls, project_name):
     umpire_server = GetUmpireServer(project_name)
     payloads = umpire_server.ResourceGarbageCollection()
     payloads['size'] = int(payloads['size'])
     return payloads
 
-  @staticmethod
-  def Download(project_name, bundle_name, resource_type):
+  @classmethod
+  def Download(cls, project_name, bundle_name, resource_type):
     umpire_server = GetUmpireServer(project_name)
     with file_utils.TempDirectory(dir=SHARED_TMP_DIR) as temporary_directory:
       resource_filepath = os.path.join(temporary_directory, resource_type)
@@ -741,16 +741,17 @@ class Bundle:
           if 'information' in payloads[type_name] else '',
           warning_message if warning_message else '')
 
-  @staticmethod
-  def HasResource(project_name, bundle_name, resource_name):
+  @classmethod
+  def HasResource(cls, project_name, bundle_name, resource_name):
     project = Project.GetProjectByName(project_name)
     config = project.GetActiveConfig()
     bundle = next(b for b in config['bundles'] if b['id'] == bundle_name)
     payloads = GetUmpireServer(project_name).GetPayloadsDict(bundle['payloads'])
     return resource_name in payloads
 
-  @staticmethod
-  def _FromUmpireBundle(project_name, bundle, config, warning_message=None):
+  @classmethod
+  def _FromUmpireBundle(cls, project_name, bundle, config,
+                        warning_message=None):
     """Take the target entry in the "bundles" sections in Umpire config, and
     turns them into the Bundle entity in Dome.
 
@@ -767,8 +768,8 @@ class Bundle:
         project_name,  # project name
         warning_message)  # warning message
 
-  @staticmethod
-  def DeleteOne(project_name, bundle_name):
+  @classmethod
+  def DeleteOne(cls, project_name, bundle_name):
     """Delete a bundle in Umpire config.
 
     Args:
@@ -792,8 +793,8 @@ class Bundle:
 
     project.UploadAndDeployConfig(config)
 
-  @staticmethod
-  def ListOne(project_name, bundle_name, warning_message=None):
+  @classmethod
+  def ListOne(cls, project_name, bundle_name, warning_message=None):
     """Return the bundle that matches the search criterion.
 
     Args:
@@ -816,8 +817,8 @@ class Bundle:
     return Bundle._FromUmpireBundle(project_name, bundle, config,
                                     warning_message)
 
-  @staticmethod
-  def ListAll(project_name):
+  @classmethod
+  def ListAll(cls, project_name):
     """Return all bundles as a list.
 
     Args:
@@ -832,9 +833,9 @@ class Bundle:
     return [Bundle._FromUmpireBundle(project_name, b, config)
             for b in config['bundles']]
 
-  @staticmethod
-  def ModifyOne(project_name, src_bundle_name, dst_bundle_name=None, note=None,
-                active=None, resources=None, warning_message=None):
+  @classmethod
+  def ModifyOne(cls, project_name, src_bundle_name, dst_bundle_name=None,
+                note=None, active=None, resources=None, warning_message=None):
     """Modify a bundle.
 
     Args:
@@ -895,8 +896,8 @@ class Bundle:
             project_name, bundle['id'], resource_key, resource['file_id'])
     return Bundle.ListOne(project_name, bundle['id'], warning_message)
 
-  @staticmethod
-  def ReorderBundles(project_name, new_order):
+  @classmethod
+  def ReorderBundles(cls, project_name, new_order):
     """Reorder the bundles in Umpire config.
 
     TODO(littlecvr): make sure this also works if multiple users are using at
@@ -925,8 +926,9 @@ class Bundle:
 
     return Bundle.ListAll(project_name)
 
-  @staticmethod
-  def _UpdateResource(project_name, bundle_name, type_name, resource_file_id):
+  @classmethod
+  def _UpdateResource(cls, project_name, bundle_name, type_name,
+                      resource_file_id):
     """Update resource in a bundle.
 
     Args:
@@ -942,8 +944,8 @@ class Bundle:
       except xmlrpc.client.Fault as e:
         raise DomeServerException(detail=e.faultString) from None
 
-  @staticmethod
-  def UploadNew(project_name, bundle_name, bundle_note, bundle_file_id):
+  @classmethod
+  def UploadNew(cls, project_name, bundle_name, bundle_note, bundle_file_id):
     """Upload a new bundle.
 
     Args:
@@ -984,13 +986,13 @@ class Service:
   def GetServiceSchemata():
     return umpire_service.GetAllServiceSchemata()['properties']
 
-  @staticmethod
-  def ListAll(project_name):
+  @classmethod
+  def ListAll(cls, project_name):
     project = Project.objects.get(pk=project_name)
     return project.GetActiveConfig()['services']
 
-  @staticmethod
-  def Update(project_name, data):
+  @classmethod
+  def Update(cls, project_name, data):
     project = Project.GetProjectByName(project_name)
     config = project.GetActiveConfig()
     config['services'].update(data)
@@ -1005,15 +1007,15 @@ class FactoryDriveDirectory:
     self.parent_id = parent_id
     self.name = name
 
-  @staticmethod
-  def CreateOne(project_name, id, parent_id, name):
+  @classmethod
+  def CreateOne(cls, project_name, id, parent_id, name):
     # pylint: disable=redefined-builtin
     umpire_server = GetUmpireServer(project_name)
     directory = umpire_server.UpdateFactoryDriveDirectory(id, parent_id, name)
     return FactoryDriveDirectory(**directory)
 
-  @staticmethod
-  def ListAll(project_name):
+  @classmethod
+  def ListAll(cls, project_name):
     umpire_server = GetUmpireServer(project_name)
     factory_drives = umpire_server.GetFactoryDriveInfo()
     return [FactoryDriveDirectory(**p) for p in factory_drives['dirs']]
@@ -1029,8 +1031,8 @@ class FactoryDriveComponent:
     self.using_ver = using_ver
     self.revisions = revisions
 
-  @staticmethod
-  def CreateOne(project_name, id, dir_id, name, using_ver, file_id):
+  @classmethod
+  def CreateOne(cls, project_name, id, dir_id, name, using_ver, file_id):
     # pylint: disable=redefined-builtin
     umpire_server = GetUmpireServer(project_name)
     try:
@@ -1047,8 +1049,8 @@ class FactoryDriveComponent:
       raise DomeServerException(detail=e.faultString) from None
     return None
 
-  @staticmethod
-  def ListAll(project_name):
+  @classmethod
+  def ListAll(cls, project_name):
     umpire_server = GetUmpireServer(project_name)
     factory_drives = umpire_server.GetFactoryDriveInfo()
     return [FactoryDriveComponent(**p) for p in factory_drives['files']]
@@ -1056,8 +1058,8 @@ class FactoryDriveComponent:
 
 class Log:
 
-  @staticmethod
-  def Export(project_name, compress_params):
+  @classmethod
+  def Export(cls, project_name, compress_params):
     umpire_server = GetUmpireServer(project_name)
     split_size = {
         'size': compress_params['archive_size'],
@@ -1077,8 +1079,8 @@ class Log:
           'Downloading failed. Error message from Umpire: %r', e.faultString)
       raise DomeServerException(detail=e.faultString) from None
 
-  @staticmethod
-  def Download(download_params):
+  @classmethod
+  def Download(cls, download_params):
     try:
       log_path = os.path.join(SHARED_TMP_DIR, download_params['temp_dir'],
                               download_params['log_file'])
@@ -1089,8 +1091,8 @@ class Log:
           'Downloading failed. Error message: %r', e)
       raise DomeServerException(detail=e) from None
 
-  @staticmethod
-  def Delete(temp_dir):
+  @classmethod
+  def Delete(cls, temp_dir):
     assert temp_dir.startswith(SHARED_TMP_DIR + '/'), \
         'temp_dir should be under /tmp/shared'
     if not os.path.isdir(temp_dir):
@@ -1101,8 +1103,8 @@ class Log:
     except OSError as e:
       raise DomeServerException(detail=e) from None
 
-  @staticmethod
-  def DeleteFiles(project_name, delete_params):
+  @classmethod
+  def DeleteFiles(cls, project_name, delete_params):
     umpire_server = GetUmpireServer(project_name)
     try:
       response = umpire_server.DeleteLog(delete_params['log_type'],

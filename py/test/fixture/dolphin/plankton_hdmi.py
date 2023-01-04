@@ -207,8 +207,8 @@ class PlanktonHDMI:
         raise PlanktonHDMIException('Error capturing. DP Loopback distached?')
       time.sleep(tick)
 
-  @staticmethod
-  def FindUVCVideoDeviceIndex(device_port):
+  @classmethod
+  def FindUVCVideoDeviceIndex(cls, device_port):
     """Searches uvcvideo device index in sysfs with given video port index.
 
     Args:
@@ -231,8 +231,8 @@ class PlanktonHDMI:
           'Multiple DP loopback interface found')
     return int(re.search(r'video([0-9]+)$', uvc_vid_dirs[0]).group(1))
 
-  @staticmethod
-  def CompareImage(image1, image2, threshold=(0.8, 0.8, 0.8),
+  @classmethod
+  def CompareImage(cls, image1, image2, threshold=(0.8, 0.8, 0.8),
                    return_corr=False):
     """Compares bgr-channel histograms for two images by correlation.
 
