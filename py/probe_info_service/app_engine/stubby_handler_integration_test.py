@@ -95,9 +95,13 @@ class StubbyHandlerTest(unittest.TestCase):
         component_identities=[comp_probe_info.component_identity])
     get_resp = self._stubby_handler.GetDeviceComponentHwidInfo(get_req)
 
-    self.assertSequenceEqual(
-        [e.component_probe_info for e in get_resp.component_hwid_infos],
-        [comp_probe_info])
+    self.assertCountEqual(get_resp.component_hwid_infos, [
+        stubby_pb2.ComponentHwidInfo(
+            component_probe_info=comp_probe_info,
+            metadata=stubby_pb2.ProbeMetadata(
+                probe_statement_type=stubby_pb2.ProbeMetadata.AUTO_GENERATED,
+                is_tested=False, is_proved_ready_for_overridden=False))
+    ])
 
   @mock.patch('cros.factory.probe_info_service.app_engine'
               '.probe_tool_manager.ProbeToolManager')

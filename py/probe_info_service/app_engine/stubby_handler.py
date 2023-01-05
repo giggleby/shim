@@ -284,8 +284,12 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
         continue
       comp_probe_info = stubby_pb2.ComponentProbeInfo(
           component_identity=comp_identity, probe_info=entry.probe_info)
-      # TODO(yhong): Load the metadata if needs.
-      response.component_hwid_infos.add(component_probe_info=comp_probe_info)
+      metadata = stubby_pb2.ProbeMetadata(
+          probe_statement_type=stubby_pb2.ProbeMetadata.AUTO_GENERATED,
+          is_tested=entry.is_tested,
+          is_proved_ready_for_overridden=entry.is_justified_for_overridden)
+      response.component_hwid_infos.add(component_probe_info=comp_probe_info,
+                                        metadata=metadata)
     return response
 
   @protorpc_utils.ProtoRPCServiceMethod
