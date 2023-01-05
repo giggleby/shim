@@ -59,6 +59,9 @@ _HWID_V3_CHANGE_UNIT_BEFORE = os.path.join(
 _HWID_V3_CHANGE_UNIT_AFTER = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/change-unit-after.yaml')
+_HWID_V3_GOLDEN_WITH_AUDIO_CODEC = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/v3-golden-audio-codec.yaml')
 
 
 def _ApplyUnifiedDiff(src: str, diff: str) -> str:
@@ -92,10 +95,13 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._mock_hwid_repo_manager = mock.create_autospec(
         hwid_repo.HWIDRepoManager, instance=True)
     self._ss_helper = ss_helper.SelfServiceHelper(
-        self._modules.fake_hwid_action_manager, self._mock_hwid_repo_manager,
+        self._modules.fake_hwid_action_manager,
+        self._mock_hwid_repo_manager,
         self._modules.fake_hwid_db_data_manager,
         self._modules.fake_avl_converter_manager,
-        self._modules.fake_session_cache_adapter)
+        self._modules.fake_session_cache_adapter,
+        self._modules.fake_avl_metadata_manager,
+    )
 
   def tearDown(self):
     self._modules.ClearAll()
@@ -198,7 +204,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO)),
                         link_avl=False, probe_value_alignment_status=(
-                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -216,7 +223,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO)),
                         link_avl=False, probe_value_alignment_status=(
-                            _PVAlignmentStatus.ALIGNED)),
+                            _PVAlignmentStatus.ALIGNED), skip_avl_check=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
@@ -225,7 +232,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
-                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False),
             }))
 
     self._modules.fake_session_cache_adapter.Put(
@@ -700,7 +708,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
-                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -711,7 +720,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                         null_values=False, diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
-                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False),
             },
             hwid_action.DBHWIDTouchSections(
                 hwid_action.DBHWIDTouchCase.UNTOUCHED,
@@ -854,7 +864,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                           comp_name_with_correct_seq_no=None, null_values=True,
                           diff_prev=None, link_avl=False,
                           probe_value_alignment_status=(
-                              _PVAlignmentStatus.NO_PROBE_INFO)),
+                              _PVAlignmentStatus.NO_PROBE_INFO),
+                          skip_avl_check=False),
                   'comp2':
                       hwid_action.DBHWIDComponentAnalysisResult(
                           comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -865,7 +876,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                           comp_name_with_correct_seq_no='comp_cls2_111_222#1',
                           null_values=True, diff_prev=None, link_avl=True,
                           probe_value_alignment_status=(
-                              _PVAlignmentStatus.NO_PROBE_INFO)),
+                              _PVAlignmentStatus.NO_PROBE_INFO),
+                          skip_avl_check=False),
               }))
       return action
 
@@ -941,7 +953,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO)),
                         link_avl=False, probe_value_alignment_status=(
-                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False),
                 'comp2':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_cls2_111_222#9',
@@ -959,7 +972,7 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_probe_value_alignment_status=(
                                 _PVAlignmentStatus.NO_PROBE_INFO)),
                         link_avl=False, probe_value_alignment_status=(
-                            _PVAlignmentStatus.ALIGNED)),
+                            _PVAlignmentStatus.ALIGNED), skip_avl_check=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
                         comp_cls='comp_cls2', comp_name='comp_name3',
@@ -968,7 +981,8 @@ class SelfServiceHelperTest(unittest.TestCase):
                         comp_name_with_correct_seq_no=None, null_values=True,
                         diff_prev=None, link_avl=False,
                         probe_value_alignment_status=(
-                            _PVAlignmentStatus.NO_PROBE_INFO)),
+                            _PVAlignmentStatus.NO_PROBE_INFO),
+                        skip_avl_check=False),
             },
             hwid_action.DBHWIDTouchSections(
                 hwid_action.DBHWIDTouchCase.UNTOUCHED,
@@ -1572,6 +1586,65 @@ class SelfServiceHelperTest(unittest.TestCase):
         all(f'reason1 of {identity}.' in review_required_call['commit_msg'] and
             f'reason2 of {identity}.' in review_required_call['commit_msg'] for
             identity in create_cl_resp.review_required_change_unit_identities))
+
+  def testUpdateAudioCodecKernelNames_HasIntersection(self):
+    req = hwid_api_messages_pb2.UpdateAudioCodecKernelNamesRequest(
+        allowlisted_kernel_names=['common', 'allowlist1', 'allowlist2'],
+        blocklisted_kernel_names=['blocklist1', 'blocklist2', 'common'])
+
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self._ss_helper.UpdateAudioCodecKernelNames(req)
+
+    self.assertEqual(ex.exception.code,
+                     protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT)
+    self.assertEqual(
+        'Allowlist and blocklist should be disjoint, and the '
+        "overlapped part: {'common'}.", ex.exception.detail)
+
+  def testAnalyzeHWIDDBEditableSection_ReportAVLSkippableComps(self):
+    # Arrange.
+    project = 'CHROMEBOOK'
+    old_db_data = file_utils.ReadFile(_HWID_V3_GOLDEN_WITH_AUDIO_CODEC)
+    action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper
+    new_db_data = action_helper_cls.RemoveHeader(old_db_data)
+    # Config repo and action.
+    self._ConfigLiveHWIDRepo(project, 3, old_db_data)
+    action = self._CreateFakeHWIDBAction(project, old_db_data)
+    self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
+    # Update blocklist of audio codec kernel names.
+    blocklist_req = hwid_api_messages_pb2.UpdateAudioCodecKernelNamesRequest(
+        blocklisted_kernel_names=['skippable_kernel_names'])
+    self._ss_helper.UpdateAudioCodecKernelNames(blocklist_req)
+
+    # Act.
+    analysis_resp = self._AnalyzeHWIDDBEditableSection(project, new_db_data)
+
+    # Assert.
+    skippable_comps = [
+        comp_analysis_msg for comp_analysis_msg in
+        analysis_resp.analysis_report.component_infos.values()
+        if comp_analysis_msg.skip_avl_check
+    ]
+    self.assertCountEqual([
+        _ComponentInfoMsg(
+            component_class='audio_codec',
+            original_name='avl_skipped_comp',
+            original_status='supported',
+            is_newly_added=False,
+            avl_info=None,
+            has_avl=False,
+            seq_no=5,
+            diff_prev=_DiffStatusMsg(
+                unchanged=True, prev_comp_name='avl_skipped_comp',
+                prev_support_status='supported',
+                prev_probe_value_alignment_status=(
+                    _PVAlignmentStatusMsg.NO_PROBE_INFO),
+                prev_support_status_case=_SupportStatusCase.SUPPORTED),
+            probe_value_alignment_status=_PVAlignmentStatusMsg.NO_PROBE_INFO,
+            support_status_case=_SupportStatusCase.SUPPORTED,
+            skip_avl_check=True,
+        )
+    ], skippable_comps)
 
   def _AnalyzeHWIDDBEditableSection(self, project: str,
                                     hwid_db_editable_section: str):

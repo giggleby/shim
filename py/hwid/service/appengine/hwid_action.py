@@ -7,6 +7,7 @@ import collections
 import copy
 from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -413,7 +414,9 @@ class HWIDAction:
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
       avl_resource: Optional[
           hwid_api_messages_pb2.HwidDbExternalResource] = None,
-      hwid_bundle_checksum: Optional[str] = None
+      hwid_bundle_checksum: Optional[str] = None,
+      avl_metadata_manager: Optional[
+          avl_metadata_util.AVLMetadataManager] = None
   ) -> DBEditableSectionAnalysisReport:
     """Deep analyzes the given HWID DB editable section.
 

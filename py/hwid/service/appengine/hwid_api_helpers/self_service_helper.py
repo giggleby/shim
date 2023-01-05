@@ -14,6 +14,7 @@ import uuid
 from google.protobuf import descriptor
 from google.protobuf import json_format
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import git_util
@@ -203,6 +204,7 @@ def _ConvertCompInfoToMsg(
                 diff.prev_probe_value_alignment_status]))
   comp_info_msg.probe_value_alignment_status = _PROBE_VALUE_ALIGNMENT_STATUS[
       comp_info.probe_value_alignment_status]
+  comp_info_msg.skip_avl_check = comp_info.skip_avl_check
   return comp_info_msg
 
 
@@ -314,12 +316,14 @@ class SelfServiceHelper:
                hwid_repo_manager: hwid_repo.HWIDRepoManager,
                hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
                avl_converter_manager: converter_utils.ConverterManager,
-               session_cache_adapter: memcache_adapter.MemcacheAdapter):
+               session_cache_adapter: memcache_adapter.MemcacheAdapter,
+               avl_metadata_manager: avl_metadata_util.AVLMetadataManager):
     self._hwid_action_manager = hwid_action_manager_inst
     self._hwid_repo_manager = hwid_repo_manager
     self._hwid_db_data_manager = hwid_db_data_manager
     self._avl_converter_manager = avl_converter_manager
     self._session_cache_adapter = session_cache_adapter
+    self._avl_metadata_manager = avl_metadata_manager
 
   def GetHWIDDBEditableSection(self, request):
     project = _NormalizeProjectString(request.project)
@@ -368,7 +372,8 @@ class SelfServiceHelper:
           cache.new_hwid_db_editable_section, derive_fingerprint_only=False,
           require_hwid_db_lines=False, internal=True,
           avl_converter_manager=self._avl_converter_manager,
-          avl_resource=request.db_external_resource)
+          avl_resource=request.db_external_resource,
+          avl_metadata_manager=self._avl_metadata_manager)
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
@@ -674,7 +679,8 @@ class SelfServiceHelper:
       action = self._hwid_action_manager.GetHWIDAction(project)
       report = action.AnalyzeDraftDBEditableSection(
           request.hwid_db_editable_section, False, require_hwid_db_lines,
-          hwid_bundle_checksum=request.hwid_bundle_checksum)
+          hwid_bundle_checksum=request.hwid_bundle_checksum,
+          avl_metadata_manager=self._avl_metadata_manager)
     except (KeyError, ValueError, RuntimeError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
     response.validation_token = report.fingerprint
@@ -1083,6 +1089,26 @@ class SelfServiceHelper:
         final_hwid_db_commit=hwid_api_messages_pb2.HwidDbCommit(
             cl_number=final_cl_number,
             new_hwid_db_contents=final_hwid_db_content))
+
+  def UpdateAudioCodecKernelNames(self, request):
+    allowlist = set(request.allowlisted_kernel_names)
+    blocklist = set(request.blocklisted_kernel_names)
+    intersection = allowlist & blocklist
+    if intersection:
+      raise common_helper.ConvertExceptionToProtoRPCException(
+          ValueError(
+              'Allowlist and blocklist should be disjoint, and the overlapped '
+              f'part: {intersection!r}.'))
+    try:
+      self._avl_metadata_manager.UpdateAudioCodecBlocklist(list(blocklist))
+    except avl_metadata_util.AVLMetadataError as ex:
+      logging.exception(
+          'Unexpected error while updating blocklist to datastore')
+      raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
+
+    # TODO(b/260662755): Create a CL of blocklist/allowlist as secret variables
+    # under tast-tests-private/vars.
+    return hwid_api_messages_pb2.UpdateAudioCodecKernelNamesResponse()
 
   def _GetRepoAndAction(self, project: str) -> hwid_v3_action.HWIDV3Action:
     live_repo = self._hwid_repo_manager.GetLiveHWIDRepo()

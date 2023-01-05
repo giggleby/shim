@@ -9,6 +9,7 @@ from typing import NamedTuple, Optional
 import yaml
 
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -20,6 +21,7 @@ from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.utils import file_utils
 from cros.factory.utils import type_utils
+
 
 _DEFAULT_CONFIGURATION = {
     'env': 'dev',
@@ -110,6 +112,8 @@ class _Config:
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch)
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
     self.avl_converter_manager = converter_utils.ConverterManager.FromDefault()
+    self.avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
+        self._ndb_connector)
 
   def GetVerificationPayloadSettings(self, board):
     """Get repo settings for specific board.

@@ -10,11 +10,13 @@ import unittest
 
 from google.protobuf import text_format
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_preproc_data
+from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
@@ -24,6 +26,9 @@ from cros.factory.utils import process_utils
 
 _TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata')
+_PVAlignmentStatus = hwid_action.DBHWIDPVAlignmentStatus
+_HWIDCompAnalysisResult = hwid_action.DBHWIDComponentAnalysisResult
+_DiffStatus = hwid_action.DBHWIDComponentDiffStatus
 
 
 class _TestAVLAttrs(converter.AVLAttrs):
@@ -212,6 +217,47 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
                   analysis_report.new_hwid_db_contents_external)
     self.assertIn('status: supported',
                   analysis_report.new_hwid_db_contents_internal)
+
+  def testAnalyzeDraftDbEditableSection_WithAVLMetadataManager(self):
+    helper_inst_before = self._LoadSSHelper('v3-golden-audio-codec.yaml')
+    editable_section = helper_inst_before.GetDBEditableSection()
+    avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
+        ndbc_module.NDBConnector())
+
+    avl_metadata_manager.UpdateAudioCodecBlocklist(['skippable_kernel_names'])
+    analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(
+        draft_db_editable_section=editable_section,
+        derive_fingerprint_only=False, require_hwid_db_lines=False,
+        internal=False, avl_metadata_manager=avl_metadata_manager)
+
+    skippable_comps = [
+        comp_analysis
+        for comp_analysis in analysis_report.hwid_components.values()
+        if comp_analysis.skip_avl_check
+    ]
+    self.assertCountEqual([
+        _HWIDCompAnalysisResult(
+            comp_cls='audio_codec',
+            comp_name='avl_skipped_comp',
+            support_status='supported',
+            is_newly_added=False,
+            comp_name_info=None,
+            seq_no=5,
+            comp_name_with_correct_seq_no=None,
+            null_values=False,
+            diff_prev=_DiffStatus(
+                unchanged=True, name_changed=False,
+                support_status_changed=False, values_changed=False,
+                prev_comp_name='avl_skipped_comp',
+                prev_support_status='supported',
+                probe_value_alignment_status_changed=False,
+                prev_probe_value_alignment_status=(
+                    _PVAlignmentStatus.NO_PROBE_INFO)),
+            link_avl=False,
+            probe_value_alignment_status=(_PVAlignmentStatus.NO_PROBE_INFO),
+            skip_avl_check=True,
+        )
+    ], skippable_comps)
 
   def testGetHWIDBundleResourceInfo_DifferentDBContentsHasDifferentFP(self):
     ss_helper1 = self._LoadSSHelper('v3-golden-before.yaml')

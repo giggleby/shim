@@ -7,8 +7,10 @@ import os.path
 import unittest
 
 from cros.factory.hwid.v3 import contents_analyzer
+from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
+
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')
 _TEST_DATA_PREFIX = 'contents_analyzer_test'
@@ -24,7 +26,8 @@ DB_COMP_AFTER_GOOD_PATH = os.path.join(
 DB_COMP_AFTER_INCOMPATIBLE_CHANGE_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_incompatible_change.yaml')
 
-_ComponentNameInfo = contents_analyzer.ComponentNameInfo
+_PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
+_HWIDCompAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
 
 
 class ContentsAnalyzerTest(unittest.TestCase):
@@ -147,6 +150,31 @@ class ContentsAnalyzerTest(unittest.TestCase):
             framework_version_change_status=(
                 contents_analyzer.HWIDSectionTouchCase.TOUCHED),
         ), analysis.touched_sections)
+
+  def test_AnalyzeChange_WithSkipAVLCheckChecker(self):
+    skippable_comp = database.ComponentInfo({'xxx': 'yyy'}, 'supported')
+
+    def Checker(category: str, comp: database.ComponentInfo) -> bool:
+      return category == 'cls3' and comp == skippable_comp
+
+    curr_db_contents = self._ReadTestData('test_database_db.yaml')
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None, None)
+
+    analysis = inst.AnalyzeChange(None, False, Checker)
+
+    skippable_comps = [
+        comp_analysis for comp_analysis in analysis.hwid_components.values()
+        if comp_analysis.skip_avl_check
+    ]
+    self.assertCountEqual([
+        _HWIDCompAnalysisResult(
+            comp_cls='cls3', comp_name='comp4', support_status='supported',
+            is_newly_added=True, comp_name_info=None, seq_no=1,
+            comp_name_with_correct_seq_no=None, null_values=False,
+            diff_prev=None, link_avl=False,
+            probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
+            skip_avl_check=True)
+    ], skippable_comps)
 
   def _ReadTestData(self, test_data_name: str) -> str:
     return file_utils.ReadFile(os.path.join(_TEST_DATA_PATH, test_data_name))

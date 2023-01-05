@@ -38,6 +38,7 @@ _hwid_repo_manager = CONFIG.hwid_repo_manager
 _avl_converter_manager = CONFIG.avl_converter_manager
 _session_cache_adapter = memcache_adapter.MemcacheAdapter(
     namespace=hwid_action.SESSION_CACHE_NAMESPACE)
+_avl_metadata_manager = CONFIG.avl_metadata_manager
 
 
 def _NormalizeProjectString(string: str) -> Optional[str]:
@@ -71,7 +72,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         self._sku_helper)
     self._ss_helper = ss_helper.SelfServiceHelper(
         _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager,
-        _avl_converter_manager, _session_cache_adapter)
+        _avl_converter_manager, _session_cache_adapter, _avl_metadata_manager)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -314,3 +315,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def CreateSplittedHwidDbCls(self, request):
     return self._ss_helper.CreateSplittedHWIDDBCLs(request)
+
+  @protorpc_utils.ProtoRPCServiceMethod
+  @auth.RpcCheck
+  def UpdateAudioCodecKernelNames(self, request):
+    return self._ss_helper.UpdateAudioCodecKernelNames(request)

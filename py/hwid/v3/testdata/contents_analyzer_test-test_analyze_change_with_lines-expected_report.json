@@ -585,7 +585,8 @@
         "prev_probe_value_alignment_status": "NO_PROBE_INFO"
       },
       "link_avl": false,
-      "probe_value_alignment_status": "NO_PROBE_INFO"
+      "probe_value_alignment_status": "NO_PROBE_INFO",
+      "skip_avl_check": false
     },
     "x@@@@component-display_panel-display_panel_B_both_null@@y@": {
       "comp_cls": "display_panel",
@@ -607,7 +608,8 @@
         "prev_probe_value_alignment_status": "NO_PROBE_INFO"
       },
       "link_avl": false,
-      "probe_value_alignment_status": "NO_PROBE_INFO"
+      "probe_value_alignment_status": "NO_PROBE_INFO",
+      "skip_avl_check": false
     },
     "x@@@@component-display_panel-display_panel_B_prev_null@@y@": {
       "comp_cls": "display_panel",
@@ -629,7 +631,8 @@
         "prev_probe_value_alignment_status": "NO_PROBE_INFO"
       },
       "link_avl": false,
-      "probe_value_alignment_status": "NO_PROBE_INFO"
+      "probe_value_alignment_status": "NO_PROBE_INFO",
+      "skip_avl_check": false
     },
     "x@@@@component-display_panel-display_panel_B_next_null@@y@": {
       "comp_cls": "display_panel",
@@ -651,7 +654,8 @@
         "prev_probe_value_alignment_status": "NO_PROBE_INFO"
       },
       "link_avl": false,
-      "probe_value_alignment_status": "NO_PROBE_INFO"
+      "probe_value_alignment_status": "NO_PROBE_INFO",
+      "skip_avl_check": false
     },
     "x@@@@component-display_panel-display_panel_123_456#8@@y@": {
       "comp_cls": "display_panel",
@@ -668,7 +672,8 @@
       "null_values": false,
       "diff_prev": null,
       "link_avl": false,
-      "probe_value_alignment_status": "NO_PROBE_INFO"
+      "probe_value_alignment_status": "NO_PROBE_INFO",
+      "skip_avl_check": false
     },
     "x@@@@component-display_panel-display_panel_subcomp_234@@y@": {
       "comp_cls": "display_panel",
@@ -685,7 +690,8 @@
       "null_values": false,
       "diff_prev": null,
       "link_avl": false,
-      "probe_value_alignment_status": "NO_PROBE_INFO"
+      "probe_value_alignment_status": "NO_PROBE_INFO",
+      "skip_avl_check": false
     }
   },
   "touched_sections": {

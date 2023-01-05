@@ -7,6 +7,7 @@ import tempfile
 import time
 from typing import Optional
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -97,6 +98,8 @@ class FakeModuleCollection:
         instance_factory=self._fake_hwid_instance_factory)
     self.fake_avl_converter_manager = converter_utils.ConverterManager({})
     self.fake_session_cache_adapter = FakeMemcacheAdapter()
+    self.fake_avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
+        self._ndb_connector)
 
   @property
   def ndb_connector(self):
@@ -105,6 +108,7 @@ class FakeModuleCollection:
   def ClearAll(self):
     self.fake_decoder_data_manager.CleanAllForTest()
     self.fake_hwid_db_data_manager.CleanAllForTest()
+    self.fake_avl_metadata_manager.CleanAllForTest()
     self._tmpdir_for_hwid_db_data.cleanup()
 
   def ConfigHWID(self, project, version, raw_db, hwid_action=None,

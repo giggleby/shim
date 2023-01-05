@@ -13,6 +13,7 @@ import yaml
 
 from cros.chromeoshwid import update_checksum  # isort: split
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
@@ -108,13 +109,17 @@ class HWIDV3SelfServiceActionHelper:
                                        suppress_support_status=False))
 
   def AnalyzeDraftDBEditableSection(
-      self, draft_db_editable_section: hwid_db_data.HWIDDBData,
-      derive_fingerprint_only: bool, require_hwid_db_lines: bool,
+      self,
+      draft_db_editable_section: hwid_db_data.HWIDDBData,
+      derive_fingerprint_only: bool,
+      require_hwid_db_lines: bool,
       internal: bool = False,
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
       avl_resource: Optional[
           hwid_api_messages_pb2.HwidDbExternalResource] = None,
-      hwid_bundle_checksum: Optional[str] = None
+      hwid_bundle_checksum: Optional[str] = None,
+      avl_metadata_manager: Optional[
+          avl_metadata_util.AVLMetadataManager] = None,
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     curr_hwid_db_contents_external = self._preproc_data.raw_database
     curr_hwid_db_contents_internal = self._preproc_data.raw_database_internal
@@ -191,7 +196,11 @@ class HWIDV3SelfServiceActionHelper:
 
     analyzer = contents_analyzer.ContentsAnalyzer(new_hwid_db_contents, None,
                                                   curr_hwid_db_contents)
-    analysis = analyzer.AnalyzeChange(self.RemoveHeader, require_hwid_db_lines)
+    skip_avl_check_checker = (
+        avl_metadata_manager.SkipAVLCheck
+        if avl_metadata_manager is not None else None)
+    analysis = analyzer.AnalyzeChange(self.RemoveHeader, require_hwid_db_lines,
+                                      skip_avl_check_checker)
     return report_factory([], analysis.precondition_errors, analysis.lines,
                           analysis.hwid_components, analysis.touched_sections)
 

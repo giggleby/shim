@@ -116,6 +116,7 @@ class HWIDComponentAnalysisResult(NamedTuple):
   diff_prev: Optional[DiffStatus]
   link_avl: bool
   probe_value_alignment_status: ProbeValueAlignmentStatus
+  skip_avl_check: bool
 
 
 class HWIDSectionTouchCase(enum.Enum):
@@ -431,14 +432,20 @@ class ContentsAnalyzer:
                              components_change_status, rules_change_status,
                              framework_version_change_status)
 
-  def AnalyzeChange(self, db_contents_patcher: Optional[Callable[[str], str]],
-                    require_hwid_db_lines: bool) -> ChangeAnalysis:
+  def AnalyzeChange(
+      self, db_contents_patcher: Optional[Callable[[str], str]],
+      require_hwid_db_lines: bool,
+      skip_avl_check_checker: Optional[Callable[[str, database.ComponentInfo],
+                                                bool]] = None
+  ) -> ChangeAnalysis:
     """Analyzes the HWID DB change.
 
     Args:
       db_contents_patcher: An optional function that patches / removes the
           header of the given HWID DB contents.  This argument is ignored when
           require_hwid_db_lines is False.
+      skip_avl_check_checker: An optional function that checks if the component
+          does not require AVL check (e.g. known software nodes).
       require_hwid_db_lines: A flag indicating if DB line analysis is required.
 
     Returns:
@@ -455,7 +462,7 @@ class ContentsAnalyzer:
     # replaced by some magic placeholders.  Then we parse the raw string to
     # find out the location of those fields.
 
-    all_comps = self._ExtractHWIDComponents()
+    all_comps = self._ExtractHWIDComponents(skip_avl_check_checker)
     all_placeholders = {}
     db_placeholder_options = database.MagicPlaceholderOptions({})
     hwid_components = {}
@@ -487,7 +494,8 @@ class ContentsAnalyzer:
                 comp_cls, comp.name, comp.status, comp.is_newly_added,
                 comp.extracted_name_info, comp.expected_seq_no,
                 comp_name_with_correct_seq_no, comp.null_values, comp.diff_prev,
-                comp.link_avl, comp.probe_value_alignment_status))
+                comp.link_avl, comp.probe_value_alignment_status,
+                comp.skip_avl_check))
 
     if require_hwid_db_lines:
       if db_contents_patcher is None:
@@ -513,8 +521,13 @@ class ContentsAnalyzer:
     diff_prev: Optional[DiffStatus]
     link_avl: bool
     probe_value_alignment_status: ProbeValueAlignmentStatus
+    skip_avl_check: bool
 
-  def _ExtractHWIDComponents(self) -> Dict[str, List['_HWIDComponentMetadata']]:
+  def _ExtractHWIDComponents(
+      self,
+      skip_avl_check_checker: Optional[Callable[[str, database.ComponentInfo],
+                                                bool]] = None
+  ) -> Dict[str, List['_HWIDComponentMetadata']]:
     ret = {}
     adapter = name_pattern_adapter.NamePatternAdapter()
     for comp_cls in self._curr_db.instance.GetComponentClasses():
@@ -540,6 +553,9 @@ class ContentsAnalyzer:
             ProbeValueAlignmentStatus.FromProbeValues(comp_info.values))
 
         diffstatus = None
+        skip_avl_check = (
+            skip_avl_check_checker(comp_cls, comp_info)
+            if skip_avl_check_checker else False)
         if prev_item:
           prev_comp_name, prev_comp_info = prev_item
           prev_support_status = prev_comp_info.status
@@ -571,7 +587,7 @@ class ContentsAnalyzer:
                 comp_name, comp_info.status, noseq_comp_name,
                 actual_seq if sep else None, name_info, expected_seq,
                 is_newly_added, null_values, diffstatus, link_avl,
-                curr_alignment_status))
+                curr_alignment_status, skip_avl_check))
     return ret
 
   @classmethod

@@ -72,7 +72,8 @@ def _GenerateNewComponentAnalysis(seq_no: int, comp_cls: str = 'comp_cls_1',
       support_status='supported', is_newly_added=True, comp_name_info=None,
       seq_no=seq_no, comp_name_with_correct_seq_no=None, null_values=None,
       diff_prev=None, link_avl=False,
-      probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO)
+      probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
+      skip_avl_check=False)
 
 
 def _BuildHWIDComponentAnalysisResultWithDefaults(
@@ -82,7 +83,7 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
     comp_name_with_correct_seq_no: Optional[str] = None,
     probe_value_alignment_status: _PVAlignmentStatus = (
         _PVAlignmentStatus.NO_PROBE_INFO),
-    diff_prev: Optional[_DiffStatus] = None):
+    diff_prev: Optional[_DiffStatus] = None, skip_avl_check: bool = False):
 
   null_values = comp_info.value_is_none
   support_status = comp_info.status
@@ -104,7 +105,7 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
       comp_name_with_correct_seq_no=comp_name_with_correct_seq_no,
       null_values=null_values,
       probe_value_alignment_status=probe_value_alignment_status,
-      diff_prev=diff_prev)
+      diff_prev=diff_prev, skip_avl_check=skip_avl_check)
 
 
 def _CollectHashMappingOfCombinations(

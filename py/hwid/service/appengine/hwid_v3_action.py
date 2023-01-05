@@ -6,6 +6,7 @@
 import logging
 from typing import List, Optional
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
@@ -62,12 +63,14 @@ class HWIDV3Action(hwid_action.HWIDAction):
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
       avl_resource: Optional[
           hwid_api_messages_pb2.HwidDbExternalResource] = None,
-      hwid_bundle_checksum: Optional[str] = None
+      hwid_bundle_checksum: Optional[str] = None,
+      avl_metadata_manager: Optional[
+          avl_metadata_util.AVLMetadataManager] = None
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     return self._ss_helper.AnalyzeDraftDBEditableSection(
         draft_db_editable_section, derive_fingerprint_only,
         require_hwid_db_lines, internal, avl_converter_manager, avl_resource,
-        hwid_bundle_checksum)
+        hwid_bundle_checksum, avl_metadata_manager)
 
   def GetHWIDBundleResourceInfo(self, fingerprint_only=False):
     return self._ss_helper.GetHWIDBundleResourceInfo(fingerprint_only)
