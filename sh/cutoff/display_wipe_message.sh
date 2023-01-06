@@ -6,9 +6,22 @@
 
 # Script used to show boot message.
 
+# The color tells operators to connect the AC power if it's not connected.
+: "${COLOR_ACTION:=Blue}"
+
+# The color tells operators to collect the device for investigation.
+: "${COLOR_FAILURE:=Red}"
+
+# The color tells operators to remove the AC power if it's not removed and
+# informs them that the device reaches the cutoff stage.
+: "${COLOR_PASS:=Green}"
+
+# The color tells operators not to touch the device.
+: "${COLOR_WAIT:=Yellow}"
 
 FONT_SIZE="60"
-FONT_COLOR="Green"
+FONT_COLOR="${COLOR_PASS}"
+SHOW_SPINNER="false"
 
 # Temp message file for display_boot_message.
 MESSAGE_FILE="$(mktemp --tmpdir)"
@@ -95,68 +108,83 @@ display_message() {
 }
 
 mode_connect_ac() {
-  (FONT_COLOR="Red" display_message "Connect AC" \
-                                    "Please Connect AC Power" \
-                                    "请连接AC电源")
+  (FONT_COLOR="${COLOR_ACTION}" \
+    display_message "Connect AC" \
+                    "Please Connect AC Power" \
+                    "请连接AC电源")
 }
 
 mode_remove_ac() {
-  (FONT_COLOR="Red" display_message "Remove AC" \
-                                    "Please Remove AC Power" \
-                                    "请移除AC电源")
+  (FONT_COLOR="${COLOR_PASS}" \
+    display_message "Remove AC" \
+                    "Please Remove AC Power" \
+                    "请移除AC电源")
 }
 
 mode_charging() {
-  (SHOW_SPINNER="true" display_message "Charging" \
-                                       "Charging Battery..." \
-                                       "正在充电...")
+  (FONT_COLOR="${COLOR_WAIT}" \
+    SHOW_SPINNER="true" \
+    display_message "Charging" \
+                    "Charging Battery..." \
+                    "正在充电...")
 }
 
 mode_discharging() {
-  (SHOW_SPINNER="true" display_message "Discharging" \
-                                       "Discharging Battery..." \
-                                       "正在放电...")
+  (FONT_COLOR="${COLOR_WAIT}" \
+    SHOW_SPINNER="true" \
+    display_message "Discharging" \
+                    "Discharging Battery..." \
+                    "正在放电...")
 }
 
 mode_cutting_off() {
-  (SHOW_SPINNER="true" display_message "Cutting Off" \
-                                       "Cutting Off Battery" \
-                                       "Please wait..." \
-                                       "切断电池电源中" \
-                                       "请稍候...")
+  (FONT_COLOR="${COLOR_PASS}" \
+    SHOW_SPINNER="true" \
+    display_message "Cutting Off" \
+                    "Cutting Off Battery" \
+                    "Please wait..." \
+                    "切断电池电源中" \
+                    "请稍候...")
 }
 
 mode_cutoff_failed() {
-  (FONT_COLOR="Red" && display_message "Cutoff Failed" \
-                                       "Battery Cut-off Failed" \
-                                       "Please contact factory team" \
-                                       "无法切断电池电源" \
-                                       "请联络RD")
+  (FONT_COLOR="${COLOR_FAILURE}" \
+    display_message "Cutoff Failed" \
+                    "Battery Cut-off Failed" \
+                    "Please contact factory team" \
+                    "无法切断电池电源" \
+                    "请联络RD")
 }
 
 mode_wipe() {
-  (SHOW_SPINNER="true" display_message "Wiping" \
-                                       "Factory Wiping In Progress" \
-                                       "正在进行工厂清除程序")
+  (FONT_COLOR="${COLOR_WAIT}" \
+    SHOW_SPINNER="true" \
+    display_message "Wiping" \
+                    "Factory Wiping In Progress" \
+                    "正在进行工厂清除程序")
 }
 
 mode_wipe_failed() {
-  (FONT_COLOR="Red" display_message "Wiping Failed" \
-                                    "Factory Wiping Failed" \
-                                    "无法进行工厂清除程序" \
-                                    "请联络RD")
+  (FONT_COLOR="${COLOR_FAILURE}" \
+    display_message "Wiping Failed" \
+                    "Factory Wiping Failed" \
+                    "无法进行工厂清除程序" \
+                    "请联络RD")
 }
 
 mode_inform_shopfloor() {
-  (SHOW_SPINNER="true" display_message "Inform Shopfloor" \
-                                       "Inform Shopfloor In Progress" \
-                                       "传送资料至Shopfloor")
+  (FONT_COLOR="${COLOR_WAIT}" \
+    SHOW_SPINNER="true" \
+    display_message "Inform Shopfloor" \
+                    "Inform Shopfloor In Progress" \
+                    "传送资料至Shopfloor")
 }
 
 mode_inform_shopfloor_failed() {
-  (FONT_COLOR="Red" display_message "Inform Shopfloor Failed" \
-                                    "无法传送资料至Shopfloor" \
-                                    "请联络RD")
+  (FONT_COLOR="${COLOR_FAILURE}" \
+    display_message "Inform Shopfloor Failed" \
+                    "无法传送资料至Shopfloor" \
+                    "请联络RD")
 }
 
 main() {
