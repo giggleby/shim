@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# pylint: disable=consider-using-f-string
 import datetime
 import re
 import urllib
@@ -31,48 +32,49 @@ class FactoryBundleService(remote.Service):
 
     if worker_result.status != proto.WorkerResult.Status.FAILED:
       subject = 'Bundle creation success'
-      match = re.match(r'^gs://' + config.BUNDLE_BUCKET + r'/(.*)$',
+      match = re.match(r'^gs://{}/(.*)$'.format(config.BUNDLE_BUCKET),
                        worker_result.gs_path)
       download_link = (
-          'https://chromeos.google.com/partner/console/DownloadBundle?path='
-          f'{urllib.quote_plus(match.group(1))}' if match else '-')
+          'https://chromeos.google.com/partner/console/DownloadBundle?path={}'
+          .format(urllib.quote_plus(match.group(1))) if match else '-')
       request = worker_result.original_request
-      items = [f'Board: {request.board}\n']
-      items.append(f'Device: {request.project}\n')
-      items.append(f'Phase: {request.phase}\n')
-      items.append(f'Toolkit Version: {request.toolkit_version}\n')
-      items.append(f'Test Image Version: {request.test_image_version}\n')
-      items.append(f'Release Image Version: {request.release_image_version}\n')
+      items = ['Board: {}\n'.format(request.board)]
+      items.append('Device: {}\n'.format(request.project))
+      items.append('Phase: {}\n'.format(request.phase))
+      items.append('Toolkit Version: {}\n'.format(request.toolkit_version))
+      items.append('Test Image Version: {}\n'.format(
+          request.test_image_version))
+      items.append('Release Image Version: {}\n'.format(
+          request.release_image_version))
 
       if request.firmware_source:
-        items.append(f'Firmware Source: {request.firmware_source}\n')
+        items.append('Firmware Source: {}\n'.format(request.firmware_source))
 
-      items.append(f'\nDownload link: {download_link}\n')
+      items.append('\nDownload link: {}\n'.format(download_link))
 
       if worker_result.status == proto.WorkerResult.Status.CREATE_CL_FAILED:
         items.append('\nCannot create HWID DB CL:\n')
-        items.append(f'{worker_result.error_message}\n')
+        items.append('{}\n'.format(worker_result.error_message))
       if request.update_hwid_db_firmware_info:
         if worker_result.cl_url:
           items.append('\nHWID CL created:\n')
           for url in worker_result.cl_url:
-            items.append(f'<a href="{url}">{url}</a>\n')
+            items.append('<a href="{0}">{0}</a>\n'.format(url))
         else:
           items.append('\nNo HWID CL is created.\n')
 
       plain_content = ''.join(items)
       unprocessed_html_content = plain_content.replace(
-          download_link, f'<a href="{download_link}">{download_link}</a>')
+          download_link, '<a href="{0}">{0}</a>'.format(download_link))
     else:
-      subject = ('Bundle creation failed - '
-                 f'{datetime.datetime.now():%Y-%m-%d %H:%M:%S}')
+      subject = 'Bundle creation failed - {:%Y-%m-%d %H:%M:%S}'.format(
+          datetime.datetime.now())
       issue_link = ('https://issuetracker.google.com/'
                     'new?component=596923&template=1242367')
-      plain_content = (
-          f'If you have issues that need help, please use {issue_link}\n\n'
-          f'{worker_result.error_message}')
+      plain_content = ('If you have issues that need help, please use {}\n\n'
+                       '{}').format(issue_link, worker_result.error_message)
       unprocessed_html_content = plain_content.replace(
-          issue_link, f'<a href="{issue_link}">{issue_link}</a>')
+          issue_link, '<a href="{0}">{0}</a>'.format(issue_link))
       mail_list.append(config.FAILURE_EMAIL)
 
     html_content = unprocessed_html_content.replace('\n', '<br>').replace(
