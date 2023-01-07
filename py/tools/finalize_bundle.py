@@ -20,7 +20,7 @@ import shutil
 import sys
 import textwrap
 import time
-from typing import Dict, List, Optional, Set
+from typing import List, Optional, Set
 import urllib.parse
 
 import yaml
@@ -216,8 +216,6 @@ class FinalizeBundle:
     firmware_record: Firmware information including keys, checksums and signer.
     timestamp: The date of the creation.
     bundle_phase: The phase of the bundle.
-    firmware_manifest_keys: Map from firmware manifest key to a list of models.
-    firmware_sign_ids: Map from model to a list of firmware signature ids.
   """
   bundle_dir = None
   bundle_name = None
@@ -257,8 +255,6 @@ class FinalizeBundle:
     self.jobs = jobs
     self.bundle_record = bundle_record
     self.firmware_bios_names: List[str] = []
-    self.firmware_manifest_keys: Dict[str, List[str]] = {}
-    self.firmware_sign_ids = collections.defaultdict(set)
     self.timestamp = ''
     self.bundle_phase = 'mp'
 
@@ -267,7 +263,6 @@ class FinalizeBundle:
     self.LocateResources()
     self.DownloadResources()
     self.PrepareProjectConfig()
-    self.ObtainFirmwareManifestKeys()
     self.AddProjectToolkit()
     self.AddDefaultCompleteScript()
     self.AddFirmwareUpdaterAndImages()
@@ -721,35 +716,35 @@ class FinalizeBundle:
   def is_boxster_project(self):
     return self.designs is not None
 
-  def _ExtractFingerprintFirmwareHash(self, models):
+  @classmethod
+  def _ExtractFingerprintFirmwareHash(cls, image_path, models):
     """Extracts all possible fingerprint firmware hash and version."""
     model_fp_boards = collections.defaultdict(set)
 
-    with MountPartition(self.release_image_path, 3) as f:
-      fp_firmware_dir = os.path.join(f, FP_FIRMWARE_DIR)
-      cros_config_path = os.path.join(f, CROS_CONFIG_YAML_PATH)
-      cros_config = yaml.safe_load(file_utils.ReadFile(cros_config_path))
+    fp_firmware_dir = os.path.join(image_path, FP_FIRMWARE_DIR)
+    cros_config_path = os.path.join(image_path, CROS_CONFIG_YAML_PATH)
+    cros_config = yaml.safe_load(file_utils.ReadFile(cros_config_path))
 
-      # 1. Get all available fp boards for each model.
-      # 2. Cache the hash for each fingerprint board to prevent from calculate
-      #    hash of the same firmware again.
-      cached_fp_firmware_hash = {}
-      for config in cros_config['chromeos']['configs']:
-        fp_board = config.get('fingerprint', {}).get('board')
-        model = config.get('name')
-        if not fp_board or model not in models:
-          continue
-        model_fp_boards[model].add(fp_board)
+    # 1. Get all available fp boards for each model.
+    # 2. Cache the hash for each fingerprint board to prevent from calculate
+    #    hash of the same firmware again.
+    cached_fp_firmware_hash = {}
+    for config in cros_config['chromeos']['configs']:
+      fp_board = config.get('fingerprint', {}).get('board')
+      model = config.get('name')
+      if not fp_board or model not in models:
+        continue
+      model_fp_boards[model].add(fp_board)
 
-        if fp_board not in cached_fp_firmware_hash:
-          fp_firmware_files = glob.glob(
-              f'{fp_firmware_dir}/{fp_board}_*-RO_*-RW.bin')
-          if len(fp_firmware_files) != 1:
-            raise FinalizeBundleException(
-                f'Multiple or no firmware found for fingerprint model {model}: '
-                f'{fp_firmware_files}')
-          cached_fp_firmware_hash[fp_board] = (
-              chromeos_firmware.CalculateFirmwareHashes(fp_firmware_files[0]))
+      if fp_board not in cached_fp_firmware_hash:
+        fp_firmware_files = glob.glob(
+            f'{fp_firmware_dir}/{fp_board}_*-RO_*-RW.bin')
+        if len(fp_firmware_files) != 1:
+          raise FinalizeBundleException(
+              f'Multiple or no firmware found for fingerprint model {model}: '
+              f'{fp_firmware_files}')
+        cached_fp_firmware_hash[fp_board] = (
+            chromeos_firmware.CalculateFirmwareHashes(fp_firmware_files[0]))
 
     return {
         model: [cached_fp_firmware_hash[board] for board in sorted(fp_boards)]
@@ -767,10 +762,8 @@ class FinalizeBundle:
       firmware_source is wrong.
       KeyError: Some model(s) is not in the chromeos-firmwareupdate.
     """
-
     firmware_dir = os.path.join(self.bundle_dir, FIRMWARE_SEARCH_DIR)
     file_utils.TryMakeDirs(firmware_dir)
-    # TODO(wyuang): retrieve firmware channel from image path
     if self.firmware_image_source is not None:
       with MountPartition(self.firmware_image_source, 3) as f:
         shutil.copy(os.path.join(f, FIRMWARE_UPDATER_PATH), firmware_dir)
@@ -788,6 +781,11 @@ class FinalizeBundle:
     firmware_images_dir = os.path.join(self.bundle_dir, 'firmware_images')
     file_utils.TryMakeDirs(firmware_images_dir)
 
+    models = self.designs if self.is_boxster_project else [self.project]
+    self.firmware_record, firmware_manifest_keys = (
+        self.ExtractFirmwareInfo(self.firmware_image_source, updater_path,
+                                 models))
+
     with file_utils.TempDirectory() as temp_dir:
       _PackFirmwareUpdater(updater_path, temp_dir, 'unpack')
       for root, unused_dirs, files in os.walk(temp_dir):
@@ -796,26 +794,10 @@ class FinalizeBundle:
             shutil.copy(os.path.join(root, filename),
                         firmware_images_dir)
 
-      # Collect firmware information
-      # The format follows HWID API message in
-      # `py/hwid/service/appengine/proto/hwid_api_messages.proto`
-      # 1) signer:
-      signer_path = os.path.join(temp_dir, 'VERSION.signer')
-      if os.path.exists(signer_path):
-        signer_output = file_utils.ReadFile(signer_path)
-        match = re.search(r'.*/cros/keys/([^\s]+)', signer_output)
-        signer = match.group(1)
-        self.firmware_record['firmware_signer'] = signer
-      else:
-        logging.warning(
-            'Finalize bundle with an unsigned(dev signed) firmware.')
-
       manifest = json_utils.LoadFile(os.path.join(temp_dir, 'manifest.json'))
-      models = self.designs if self.is_boxster_project else [self.project]
-      self.firmware_record['firmware_records'] = []
 
       missing_manifest_keys = (
-          set(self.firmware_manifest_keys.keys()) - set(manifest.keys()))
+          set(firmware_manifest_keys.keys()) - set(manifest.keys()))
       firmware_manifest_mismatch = (
           self.is_boxster_project and missing_manifest_keys)
       if firmware_manifest_mismatch:
@@ -829,55 +811,11 @@ class FinalizeBundle:
         Spawn(['rm', '-rf', updater_path], log=True, check_call=True)
         return
 
-
-      fp_firmware_hash = self._ExtractFingerprintFirmwareHash(models)
-      for model in models:
-        record = collections.defaultdict(list, {'model': model})
-
-        # 2) root/recovery keys:
-        signer_config_path = os.path.join(temp_dir, 'signer_config.csv')
-        with open(signer_config_path, 'r', encoding='utf8') as csvfile:
-          reader = csv.DictReader(csvfile)
-          firmware_keys = {}
-          for row in reader:
-            # model_name in signer_config.csv is actually signature-id in
-            # cros_config
-            if (row['model_name'] not in self.firmware_sign_ids[model] or
-                row['key_id'] in firmware_keys):
-              continue
-            firmware_keys[row['key_id']] = chromeos_firmware.GetFirmwareKeys(
-                os.path.join(temp_dir, row['firmware_image']))
-        record['firmware_keys'] = [{
-            'key_id': key_id,
-            **fw_key
-        } for key_id, fw_key in firmware_keys.items()]
-
-        # 3) RO version/checksum:
-        # Collect RO firmware for each model. One model may have multiple
-        # manifest key.
-        for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
-          # Use a set to prevent from collecting duplicated firmwares
-          image_list = set()
-          for manifest_key, sub_manifest in manifest.items():
-            if (firmware_key not in sub_manifest or
-                model not in self.firmware_manifest_keys.get(manifest_key, {})):
-              continue
-            image_list.add(
-                os.path.join(temp_dir, sub_manifest[firmware_key]['image']))
-          for image_path in image_list:
-            record[f'ro_{firmware_type}_firmware'].append(
-                chromeos_firmware.CalculateFirmwareHashes(image_path))
-
-        if model in fp_firmware_hash:
-          record['ro_fp_firmware'] = fp_firmware_hash[model]
-
-        self.firmware_record['firmware_records'].append(record)
-
       # Collect only the desired firmware
       if self.is_boxster_project:
         keep_list = set()
         for manifest_key, sub_manifest in manifest.items():
-          if manifest_key in self.firmware_manifest_keys:
+          if manifest_key in firmware_manifest_keys:
             keep_list.add(sub_manifest.get('host', {}).get('image'))
             keep_list.add(sub_manifest.get('ec', {}).get('image'))
           else:
@@ -893,7 +831,7 @@ class FinalizeBundle:
     # firmware. This option is available for updaters extracted from image
     # version >= 9962.0.0. This also checks that the firmwares that we care
     # exist.
-    for manifest_key in self.firmware_manifest_keys:
+    for manifest_key in firmware_manifest_keys:
       Spawn([
           'sudo', 'sh', updater_path, '--mode', 'output', '--model',
           manifest_key, '--output_dir', firmware_images_dir
@@ -903,7 +841,7 @@ class FinalizeBundle:
       max_ro_version: Optional[version_module.StrictVersion] = None
       firmware_bios_names: Set[str] = set()
       for manifest_key, sub_manifest in manifest.items():
-        if manifest_key not in self.firmware_manifest_keys:
+        if manifest_key not in firmware_manifest_keys:
           continue
         ro_version, firmware_bios_name = self.GetRoInfoFromHostImageName(
             sub_manifest['host']['image'])
@@ -923,6 +861,110 @@ class FinalizeBundle:
         self.firmware_bios_names = sorted(firmware_bios_names)
         logging.info('netboot_firmware_source: %r',
                      self.netboot_firmware_source)
+
+  @classmethod
+  def ExtractFirmwareInfo(cls, image_path, firmware_updater=None, models=None):
+    """Extract firmware related information from release image.
+
+    Returns:
+      A tuple of:
+        firmware_record: Firmware information including keys, checksums and
+          signer.
+        firmware_manifest_keys: Map from firmware manifest key to a list of
+          models.
+    """
+    if os.path.isfile(image_path):
+      with MountPartition(image_path, 3) as release_image:
+        return cls.ExtractFirmwareInfo(release_image, firmware_updater, models)
+
+    firmware_record = {}
+    firmware_manifest_keys = collections.defaultdict(set)
+    firmware_sign_ids = collections.defaultdict(set)
+
+    cros_config = os.path.join(image_path, CROS_CONFIG_YAML_PATH)
+    cros_config = yaml.safe_load(file_utils.ReadFile(cros_config))
+    models = models or {
+        conf.get('name')
+        for conf in cros_config['chromeos']['configs']
+    }
+    for config in cros_config['chromeos']['configs']:
+      model = config.get('name')
+      if model not in models:
+        continue
+      manifest_key = config.get('firmware', {}).get('image-name') or model
+      firmware_manifest_keys[manifest_key].add(model)
+      firmware_sign_ids[model].add(config['firmware-signing']['signature-id'])
+    firmware_manifest_keys = {
+        key: sorted(value)
+        for key, value in firmware_manifest_keys.items()
+    }
+
+    firmware_updater = firmware_updater or os.path.join(image_path,
+                                                        FIRMWARE_UPDATER_PATH)
+    with file_utils.TempDirectory() as temp_dir:
+      _PackFirmwareUpdater(firmware_updater, temp_dir, 'unpack')
+
+      # Collect firmware information
+      # The format follows HWID API message in
+      # `py/hwid/service/appengine/proto/hwid_api_messages.proto`
+      # 1) signer:
+      signer_path = os.path.join(temp_dir, 'VERSION.signer')
+      if os.path.exists(signer_path):
+        signer_output = file_utils.ReadFile(signer_path)
+        match = re.search(r'.*/cros/keys/([^\s]+)', signer_output)
+        signer = match.group(1)
+        firmware_record['firmware_signer'] = signer
+      else:
+        logging.warning(
+            'Finalize bundle with an unsigned(dev signed) firmware.')
+
+      manifest = json_utils.LoadFile(os.path.join(temp_dir, 'manifest.json'))
+      firmware_record['firmware_records'] = []
+
+      fp_firmware_hash = cls._ExtractFingerprintFirmwareHash(image_path, models)
+      for model in models:
+        record = collections.defaultdict(list, {'model': model})
+
+        # 2) root/recovery keys:
+        signer_config_path = os.path.join(temp_dir, 'signer_config.csv')
+        with open(signer_config_path, 'r', encoding='utf8') as csvfile:
+          reader = csv.DictReader(csvfile)
+          firmware_keys = {}
+          for row in reader:
+            # model_name in signer_config.csv is actually signature-id in
+            # cros_config
+            if (row['model_name'] not in firmware_sign_ids[model] or
+                row['key_id'] in firmware_keys):
+              continue
+            firmware_keys[row['key_id']] = chromeos_firmware.GetFirmwareKeys(
+                os.path.join(temp_dir, row['firmware_image']))
+        record['firmware_keys'] = [{
+            'key_id': key_id,
+            **fw_key
+        } for key_id, fw_key in firmware_keys.items()]
+
+        # 3) RO version/checksum:
+        # Collect RO firmware for each model. One model may have multiple
+        # manifest key.
+        for firmware_key, firmware_type in FIRMWARE_MANIFEST_MAP.items():
+          # Use a set to prevent from collecting duplicated firmwares
+          image_list = set()
+          for manifest_key, sub_manifest in manifest.items():
+            if (firmware_key not in sub_manifest or
+                model not in firmware_manifest_keys.get(manifest_key, {})):
+              continue
+            image_list.add(
+                os.path.join(temp_dir, sub_manifest[firmware_key]['image']))
+          for fw_image_path in image_list:
+            record[f'ro_{firmware_type}_firmware'].append(
+                chromeos_firmware.CalculateFirmwareHashes(fw_image_path))
+
+        if model in fp_firmware_hash:
+          record['ro_fp_firmware'] = fp_firmware_hash[model]
+
+        firmware_record['firmware_records'].append(record)
+
+    return firmware_record, firmware_manifest_keys
 
   @classmethod
   def GetRoInfoFromHostImageName(cls, name: str):
@@ -1221,29 +1263,6 @@ class FinalizeBundle:
     Spawn(['tar', '-zcf', os.path.join(config_dir, 'project_config.tar.gz'),
            '-C', extracted_dir, config], check_call=True, log=True)
     os.remove(config_path)
-
-  def ObtainFirmwareManifestKeys(self):
-    """Obtains the firmware_manifest_keys from cros_config."""
-    models = self.designs if self.is_boxster_project else [self.project]
-    logging.info('models: %r.', models)
-    firmware_manifest_keys = collections.defaultdict(set)
-    with MountPartition(self.release_image_path, 3) as f:
-      cros_config_path = os.path.join(f, CROS_CONFIG_YAML_PATH)
-      cros_config = yaml.safe_load(file_utils.ReadFile(cros_config_path))
-    for config in cros_config['chromeos']['configs']:
-      model = config.get('name')
-      if model not in models:
-        continue
-      manifest_key = config.get('firmware', {}).get('image-name') or model
-      firmware_manifest_keys[manifest_key].add(model)
-      self.firmware_sign_ids[model].add(
-          config['firmware-signing']['signature-id'])
-    self.firmware_manifest_keys = {
-        key: sorted(value)
-        for key, value in firmware_manifest_keys.items()
-    }
-    logging.info('firmware_manifest_keys: %r',
-                 sorted(self.firmware_manifest_keys))
 
   def RemoveUnnecessaryFiles(self):
     """Removes vim backup files, pyc files, and empty directories."""
@@ -1638,8 +1657,7 @@ class FinalizeBundle:
     return found_entries
 
   @classmethod
-  def FromArgs(cls):
-    args = cls._ParseArgs()
+  def FromArgs(cls, args):
     if os.path.isdir(args.manifest):
       manifest_path = os.path.join(args.manifest, 'MANIFEST.yaml')
     else:
@@ -1651,15 +1669,19 @@ class FinalizeBundle:
       logging.error('Please refer to setup/BUNDLE.md (https://goo.gl/pM1pxo)')
       raise
     work_dir = args.dir or os.path.dirname(os.path.realpath(manifest_path))
-    return FinalizeBundle(manifest, work_dir, args.download, args.archive,
-                          args.bundle_record, args.jobs)
+    return cls(manifest, work_dir, args.download, args.archive,
+               args.bundle_record, args.jobs)
 
   @classmethod
-  def _ParseArgs(cls):
+  def ParseArgs(cls):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=USAGE)
 
+    parser.add_argument(
+        '--extract-firmware-info', type=str, default=None,
+        help='Extract firmware info from the release image file'
+        ' or rootfs partition. (for testing only)')
     parser.add_argument(
         '--no-download', dest='download', action='store_false',
         help="Don't download files from Google Storage (for testing only)")
@@ -1670,10 +1692,10 @@ class FinalizeBundle:
     parser.add_argument('--jobs', dest='jobs', type=int, default=1,
                         help='How many workers to work at maximum.')
 
-    parser.add_argument('manifest', metavar='MANIFEST',
-                        help=(
-                            'Path to the manifest file or the directory '
-                            'containing MANIFEST.yaml'))
+    parser.add_argument(
+        'manifest', metavar='MANIFEST',
+        help=('Path to the manifest file or the directory '
+              'containing MANIFEST.yaml'))
     parser.add_argument('dir', metavar='DIR', nargs='?',
                         default=None, help='Working directory')
 
@@ -1687,7 +1709,12 @@ if __name__ == '__main__':
       '[%(levelname)s] %(asctime)s %(filename)s:%(lineno)d %(message)s')
   logging.basicConfig(level=logging.INFO, format=log_format)
   try:
-    FinalizeBundle.FromArgs().Main()
+    cmd_args = FinalizeBundle.ParseArgs()
+    if cmd_args.extract_firmware_info:
+      info = FinalizeBundle.ExtractFirmwareInfo(cmd_args.extract_firmware_info)
+      logging.info(json_utils.DumpStr(info[0], pretty=True))
+    else:
+      FinalizeBundle.FromArgs(cmd_args).Main()
   except Exception:
     logging.exception('')
     sys.exit(1)

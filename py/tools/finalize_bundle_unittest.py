@@ -17,15 +17,29 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
 
-class PrepareNetbootTest(unittest.TestCase):
-  """Unit tests for preparing netboot."""
+class FinalizeBundleTestBase(unittest.TestCase):
 
   def setUp(self):
-    self.temp_dir = tempfile.mkdtemp(prefix='prepare_netboot_unittest_')
+    self.temp_dir = tempfile.mkdtemp(prefix=__class__.__name__)
+
+    @contextlib.contextmanager
+    def MockTempdir():
+      dir_path = os.path.join(self.temp_dir, 'tmp')
+      file_utils.TryMakeDirs(dir_path)
+      yield dir_path
+      shutil.rmtree(dir_path)
+
+    patcher = mock.patch(file_utils.__name__ + '.TempDirectory')
+    patcher.start().side_effect = MockTempdir
+    self.addCleanup(patcher.stop)
 
   def tearDown(self):
     if os.path.exists(self.temp_dir):
       shutil.rmtree(self.temp_dir)
+
+
+class PrepareNetbootTest(FinalizeBundleTestBase):
+  """Unit tests for preparing netboot."""
 
   def _SetupBuilder(self, bundle_builder: finalize_bundle.FinalizeBundle):
     orig_netboot_dir = os.path.join(bundle_builder.bundle_dir, 'factory_shim',
@@ -119,7 +133,7 @@ class PrepareNetbootTest(unittest.TestCase):
             })
 
 
-class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
+class AddFirmwareUpdaterAndImagesTest(FinalizeBundleTestBase):
   """Unit tests for AddFirmwareUpdaterAndImages."""
 
   @classmethod
@@ -141,10 +155,6 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
                 }
             }
         }))
-    file_utils.WriteFile(
-        os.path.join(dirpath, 'signer_config.csv'),
-        'model_name,firmware_image,key_id,ec_image,brand_code\n'
-        'randomSignId1,image_path,DEFAULT,ec_image_path,ZZCR')
 
   @classmethod
   def MockMismatchPack(cls, unused_updater_path, dirpath, operation='pack'):
@@ -153,11 +163,9 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     file_utils.TryMakeDirs(os.path.join(dirpath, 'images'))
     file_utils.WriteFile(
         os.path.join(dirpath, 'manifest.json'), json_utils.DumpStr({}))
-    file_utils.WriteFile(os.path.join(dirpath, 'signer_config.csv'), '')
 
   def setUp(self):
-    self.temp_dir = tempfile.mkdtemp(prefix='add_firmware_unittest_')
-    self.addCleanup(shutil.rmtree, self.temp_dir)
+    super().setUp()
 
     @contextlib.contextmanager
     def MockMount(unused_source, unused_index):
@@ -165,13 +173,6 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
       sbin = os.path.join(mount_point, 'usr/sbin')
       file_utils.TryMakeDirs(sbin)
       file_utils.TouchFile(os.path.join(sbin, 'chromeos-firmwareupdate'))
-      config_dir = os.path.join(mount_point, 'usr/share/chromeos-config/yaml')
-      file_utils.TryMakeDirs(config_dir)
-      file_utils.WriteFile(
-          os.path.join(config_dir, 'config.yaml'),
-          json_utils.DumpStr({'chromeos': {
-              'configs': []
-          }}))
       yield mount_point
       shutil.rmtree(mount_point)
 
@@ -179,42 +180,24 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
     patcher.start().side_effect = MockMount
     self.addCleanup(patcher.stop)
 
-    @contextlib.contextmanager
-    def MockTempdir():
-      dir_path = os.path.join(self.temp_dir, 'tmp')
-      file_utils.TryMakeDirs(dir_path)
-      yield dir_path
-      shutil.rmtree(dir_path)
-
-    patcher = mock.patch(file_utils.__name__ + '.TempDirectory')
-    patcher.start().side_effect = MockTempdir
-    self.addCleanup(patcher.stop)
-
     patcher = mock.patch(finalize_bundle.__name__ + '._PackFirmwareUpdater')
     self.pack_mock = patcher.start()
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch(chromeos_firmware.__name__ +
-                         '.CalculateFirmwareHashes')
-    self.mock_calculate_fw_hashes = patcher.start()
+    patcher = mock.patch(finalize_bundle.__name__ +
+                         '.FinalizeBundle.ExtractFirmwareInfo')
+    self.mock_extract_firmware_info = patcher.start()
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch(chromeos_firmware.__name__ + '.GetFirmwareKeys')
-    self.mock_get_fw_keys = patcher.start()
-    self.addCleanup(patcher.stop)
 
   def _SetupBuilder(self, bundle_builder: finalize_bundle.FinalizeBundle):
     bundle_builder.ProcessManifest()
     bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
     bundle_builder.firmware_image_source = 'mock_fw'  # Set by DownloadResources
-    # Set by ObtainFirmwareManifestKeys
-    bundle_builder.firmware_manifest_keys = {
+    self.mock_extract_firmware_info.return_value = ({}, {
         'randomFWKey': ['test'],
         'randomFWKey1': ['test']
-    }
-    bundle_builder.firmware_sign_ids = {
-        'test': {'randomSignId1'}
-    }
+    })
 
   def testAddFirmware_protoCrosConfigMismatch_doNotDownloadUpdater(self):
     self.pack_mock.side_effect = self.MockMismatchPack
@@ -277,55 +260,13 @@ class AddFirmwareUpdaterAndImagesTest(unittest.TestCase):
             os.path.join(bundle_builder.bundle_dir, 'firmware')),
         {'chromeos-firmwareupdate': 'da39a3ee5e6b4b0d3255bfef95601890afd80709'})
 
-  def testAddFirmware_verifyFirmwareRecord(self):
-    fw_keys = {
-        'key_recovery': 'hash123',
-        'key_root': 'hash456'
-    }
-    ro_main_firmware = [{
-        'hash': 'hash123',
-        'version': 'version123'
-    }, {
-        'hash': 'hash456',
-        'version': 'version456'
-    }]
-    self.mock_get_fw_keys.return_value = fw_keys
-    self.mock_calculate_fw_hashes.side_effect = ro_main_firmware
-    self.pack_mock.side_effect = self.MockMatchPack
-    bundle_builder = finalize_bundle.FinalizeBundle(
-        manifest={
-            'board': 'brya',
-            'project': 'brya',
-            'bundle_name': '20210107_evt',
-            'toolkit': '15003.0.0',
-            'test_image': '14909.124.0',
-            'release_image': '15003.0.0',
-            'firmware': 'release_image',
-            'designs': finalize_bundle.BOXSTER_DESIGNS,
-        }, work_dir=self.temp_dir)
-
-    self._SetupBuilder(bundle_builder)
-    bundle_builder.AddFirmwareUpdaterAndImages()
-
-    self.assertEqual(
-        bundle_builder.firmware_record, {
-            'firmware_records': [{
-                'model': 'test',
-                'firmware_keys': [{
-                    'key_id': 'DEFAULT',
-                    **fw_keys
-                }],
-                'ro_main_firmware': ro_main_firmware
-            }]
-        })
 
 
-class DownloadResourcesTest(unittest.TestCase):
+class DownloadResourcesTest(FinalizeBundleTestBase):
   """Unit tests of DownloadResources."""
 
   def setUp(self):
-    self.temp_dir = tempfile.mkdtemp(prefix='download_resources_unittest_')
-    self.addCleanup(shutil.rmtree, self.temp_dir)
+    super().setUp()
 
     for member in (
         '_CheckGSUtilVersion',
@@ -426,18 +367,20 @@ class DownloadResourcesTest(unittest.TestCase):
     self.assertIsNone(bundle_builder.firmware_image_source)
 
 
-class ObtainFirmwareManifestKeysTest(unittest.TestCase):
-  """Unit tests of ObtainFirmwareManifestKeys."""
+class ExtractFirmwareInfoTest(FinalizeBundleTestBase):
+  """Unit tests of ExtractFirmwareInfo."""
 
   def setUp(self):
-    self.temp_dir = tempfile.mkdtemp(prefix='obtain_manifest_keys_unittest_')
-    self.addCleanup(shutil.rmtree, self.temp_dir)
+    super().setUp()
 
     self.config_yaml = None
 
     @contextlib.contextmanager
     def MockMount(unused_source, unused_index):
       mount_point = os.path.join(self.temp_dir, 'release_mount')
+      sbin = os.path.join(mount_point, 'usr/sbin')
+      file_utils.TryMakeDirs(sbin)
+      file_utils.TouchFile(os.path.join(sbin, 'chromeos-firmwareupdate'))
       config_dir = os.path.join(mount_point, 'usr/share/chromeos-config/yaml')
       file_utils.TryMakeDirs(config_dir)
       file_utils.WriteFile(
@@ -449,22 +392,61 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
     patcher.start().side_effect = MockMount
     self.addCleanup(patcher.stop)
 
-  def _CreateBuilder(self):
-    bundle_builder = finalize_bundle.FinalizeBundle(
-        manifest={
-            'board': 'brya',
-            'project': 'brya',
-            'bundle_name': '20210107_evt',
-            'toolkit': '15003.0.0',
-            'test_image': '14909.124.0',
-            'release_image': '15003.0.0',
-            'designs': finalize_bundle.BOXSTER_DESIGNS,
-        }, work_dir=self.temp_dir)
-    bundle_builder.ProcessManifest()
-    bundle_builder.designs = ['test']  # Set by PrepareProjectConfig
-    return bundle_builder
+    def MockPack(unused_updater_path, dirpath, operation='pack'):
+      if operation != 'unpack':
+        return
+      file_utils.TryMakeDirs(os.path.join(dirpath, 'images'))
+      file_utils.WriteFile(
+          os.path.join(dirpath, 'manifest.json'),
+          json_utils.DumpStr({
+              'randomFWKey': {
+                  'host': {
+                      'image': '123'
+                  }
+              },
+              'randomFWKey_ufs': {
+                  'host': {
+                      'image': '456'
+                  }
+              }
+          }))
+      file_utils.WriteFile(
+          os.path.join(dirpath, 'signer_config.csv'),
+          'model_name,firmware_image,key_id,ec_image,brand_code\n'
+          'randomSignId,image_path,DEFAULT,ec_image_path,ZZCR')
 
-  def testObtainFirmwareManifestKeys_MultipleKeys(self):
+    patcher = mock.patch(finalize_bundle.__name__ + '._PackFirmwareUpdater')
+    self.pack_mock = patcher.start()
+    self.pack_mock.side_effect = MockPack
+    self.addCleanup(patcher.stop)
+
+    patcher = mock.patch('os.path.isfile')
+    patcher.start().side_effect = [True, False]
+    self.addCleanup(patcher.stop)
+
+    ro_main_firmware = [{
+        'hash': 'hash123',
+        'version': 'version123'
+    }, {
+        'hash': 'hash456',
+        'version': 'version456'
+    }]
+    patcher = mock.patch(chromeos_firmware.__name__ +
+                         '.CalculateFirmwareHashes')
+    self.mock_calculate_fw_hashes = patcher.start()
+    self.mock_calculate_fw_hashes.side_effect = ro_main_firmware
+    self.addCleanup(patcher.stop)
+
+    fw_keys = {
+        'key_recovery': 'hash123',
+        'key_root': 'hash456'
+    }
+    patcher = mock.patch(chromeos_firmware.__name__ + '.GetFirmwareKeys')
+    self.mock_get_fw_keys = patcher.start()
+    self.mock_get_fw_keys.return_value = fw_keys
+    self.addCleanup(patcher.stop)
+
+  def testExtractFirmwareInfo(self):
     self.config_yaml = json_utils.DumpStr({
         'chromeos': {
             'configs': [{
@@ -487,15 +469,34 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
         }
     })
 
-    bundle_builder = self._CreateBuilder()
-    bundle_builder.ObtainFirmwareManifestKeys()
+    firmware_record, firmware_manifest_keys = (
+        finalize_bundle.FinalizeBundle.ExtractFirmwareInfo('fake_image'))
 
-    self.assertDictEqual(bundle_builder.firmware_manifest_keys, {
+    self.assertDictEqual(firmware_manifest_keys, {
         'randomFWKey': ['test'],
         'randomFWKey_ufs': ['test']
     })
+    self.assertEqual(
+        firmware_record, {
+            'firmware_records': [{
+                'model':
+                    'test',
+                'firmware_keys': [{
+                    'key_id': 'DEFAULT',
+                    'key_recovery': 'hash123',
+                    'key_root': 'hash456'
+                }],
+                'ro_main_firmware': [{
+                    'hash': 'hash123',
+                    'version': 'version123'
+                }, {
+                    'hash': 'hash456',
+                    'version': 'version456'
+                }]
+            }]
+        })
 
-  def testObtainFirmwareManifestKeys_SharedFirmwareKey(self):
+  def testExtractFirmwareInfo_SharedFirmwareKey(self):
     self.config_yaml = json_utils.DumpStr({
         'chromeos': {
             'configs': [{
@@ -518,23 +519,20 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
         }
     })
 
-    bundle_builder = self._CreateBuilder()
-    bundle_builder.designs = ['test', 'test15W360']
-    bundle_builder.ObtainFirmwareManifestKeys()
+    firmware_record, firmware_manifest_keys = (
+        finalize_bundle.FinalizeBundle.ExtractFirmwareInfo(
+            'fake_image', models=['test', 'test15W360']))
 
-    self.assertDictEqual(bundle_builder.firmware_manifest_keys,
+    self.assertDictEqual(firmware_manifest_keys,
                          {'randomFWKey': ['test', 'test15W360']})
+    self.assertEqual(firmware_record['firmware_records'][0]['firmware_keys'],
+                     firmware_record['firmware_records'][1]['firmware_keys'])
 
-  def testObtainFirmwareManifestKeys_Legacy(self):
+  def testExtractFirmwareInfo_Legacy(self):
     self.config_yaml = json_utils.DumpStr({
         'chromeos': {
             'configs': [{
-                'name': 'test',
-                'firmware-signing': {
-                    'signature-id': 'randomSignId'
-                }
-            }, {
-                'name': 'test',
+                'name': 'randomFWKey',
                 'firmware-signing': {
                     'signature-id': 'randomSignId'
                 }
@@ -542,11 +540,27 @@ class ObtainFirmwareManifestKeysTest(unittest.TestCase):
         }
     })
 
-    bundle_builder = self._CreateBuilder()
-    bundle_builder.ObtainFirmwareManifestKeys()
+    firmware_record, firmware_manifest_keys = (
+        finalize_bundle.FinalizeBundle.ExtractFirmwareInfo('fake_image'))
 
-    self.assertDictEqual(bundle_builder.firmware_manifest_keys,
-                         {'test': ['test']})
+    self.assertDictEqual(firmware_manifest_keys,
+                         {'randomFWKey': ['randomFWKey']})
+    self.assertEqual(
+        firmware_record, {
+            'firmware_records': [{
+                'model':
+                    'randomFWKey',
+                'firmware_keys': [{
+                    'key_id': 'DEFAULT',
+                    'key_recovery': 'hash123',
+                    'key_root': 'hash456'
+                }],
+                'ro_main_firmware': [{
+                    'hash': 'hash123',
+                    'version': 'version123'
+                }]
+            }]
+        })
 
 
 if __name__ == '__main__':
