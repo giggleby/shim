@@ -36,6 +36,10 @@ class StubbyHandlerTest(unittest.TestCase):
     self._get_bundle_info_request.email = 'foo@bar'
     self._get_bundle_info_request.project = 'project'
 
+    self._download_bundle_request = factorybundle_v2_pb2.DownloadBundleRequest()
+    self._download_bundle_request.email = 'foo@bar'
+    self._download_bundle_request.blob_path = 'board/project/fake.tar.bz2'
+
     mock_flask_patcher = mock.patch(
         'cros.factory.bundle_creator.utils.allowlist_utils.flask')
     mock_flask = mock_flask_patcher.start()
@@ -155,6 +159,23 @@ class StubbyHandlerTest(unittest.TestCase):
                                filename='fake_bundle_1.tar.bz2',
                                bundle_created_timestamp_sec=base_timestamp_sec))
     self.assertEqual(response, expected_response)
+
+  def testDownloadBundle_succeed_returnsExpectedResponse(self):
+    response = self._stubby_handler.DownloadBundle(
+        self._download_bundle_request)
+
+    expected_response = factorybundle_v2_pb2.DownloadBundleResponse()
+    expected_response.download_link = (
+        f'https://storage.cloud.google.com/fake-bundle-bucket/'
+        f'{self._download_bundle_request.blob_path}')
+    self.assertEqual(response, expected_response)
+
+  def testDownloadBundle_succeed_verifiesCallingConnector(self):
+    self._stubby_handler.DownloadBundle(self._download_bundle_request)
+
+    method = self._mock_storage_connector.GrantReadPermissionToBlob
+    method.assert_called_once_with(self._download_bundle_request.email,
+                                   self._download_bundle_request.blob_path)
 
   def _CreateStorageBundleInfo(
       self, email: str, filename: str,

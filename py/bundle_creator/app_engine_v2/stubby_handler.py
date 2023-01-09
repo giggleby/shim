@@ -102,3 +102,15 @@ class FactoryBundleServiceV2(protorpc_utils.ProtoRPCServiceBase):
         if b.status == firestore_connector.UserRequestStatus.SUCCEEDED.name else
         b.request_time_sec, reverse=True)
     return response
+
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
+  def DownloadBundle(
+      self, request: factorybundle_v2_pb2.DownloadBundleRequest
+  ) -> factorybundle_v2_pb2.DownloadBundleResponse:
+    response = factorybundle_v2_pb2.DownloadBundleResponse()
+    self._storage_connector.GrantReadPermissionToBlob(request.email,
+                                                      request.blob_path)
+    response.download_link = (
+        f'https://storage.cloud.google.com/{config.BUNDLE_BUCKET}/'
+        f'{request.blob_path}')
+    return response

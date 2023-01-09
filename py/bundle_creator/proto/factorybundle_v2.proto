@@ -57,11 +57,23 @@ message GetBundleInfoResponse {
   repeated BundleInfo bundle_infos = 1;
 }
 
+message DownloadBundleRequest {
+  string email = 1;
+  string blob_path = 2;
+}
+
+message DownloadBundleResponse {
+  string download_link = 1;
+}
+
 service FactoryBundleServiceV2 {
   rpc CreateBundle(CreateBundleRequest)
       returns (CreateBundleResponse) {
   }
   rpc GetBundleInfo(GetBundleInfoRequest)
       returns (GetBundleInfoResponse) {
+  }
+  rpc DownloadBundle(DownloadBundleRequest)
+      returns (DownloadBundleResponse) {
   }
 }

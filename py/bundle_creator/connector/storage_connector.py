@@ -174,3 +174,14 @@ class StorageConnector:
               'Time-Created', datetime.timestamp(blob.time_created)))
       infos.append(info)
     return infos
+
+  def GrantReadPermissionToBlob(self, email: str, blob_path: str):
+    """Grants the specific blob's read permission to the specific user.
+
+    Args:
+      email: The user's email to get the read permission.
+      blob_path: The path to the blob.
+    """
+    blob = self._bucket.get_blob(blob_path)
+    blob.acl.user(email).grant_read()
+    blob.acl.save()

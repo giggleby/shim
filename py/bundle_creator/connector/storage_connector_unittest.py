@@ -208,6 +208,21 @@ class StorageConnectorTest(unittest.TestCase):
     self.assertEqual(len(infos), 1)
     self.assertEqual(infos[0].created_timestamp_sec, 1672750600)
 
+  def testGrantReadPermissionToBlob_succeed_verifyCallingBucketAndAcl(self):
+    email = 'foo@bar'
+    blob_path = 'board/project/fake.tar.bz2'
+    mock_blob = mock.Mock()
+    self._mock_bucket.get_blob.return_value = mock_blob
+    mock_user_entity = mock.Mock()
+    mock_blob.acl.user.return_value = mock_user_entity
+
+    self._connector.GrantReadPermissionToBlob(email, blob_path)
+
+    self._mock_bucket.get_blob.assert_called_once_with(blob_path)
+    mock_blob.acl.user.assert_called_once_with(email)
+    mock_user_entity.grant_read.assert_called_once()
+    mock_blob.acl.save.assert_called_once()
+
   def _CreateMockBlob(self, project: str, created_timestamp_sec: int):
     mock_blob = mock.Mock(
         metadata={
