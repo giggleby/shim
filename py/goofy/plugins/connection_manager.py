@@ -83,3 +83,7 @@ class ConnectionManager(plugin.Plugin):
       self._connection_manager.DisableNetworking()
       self._connection_manager = None
     self._SetAPs(wlans)
+
+  @plugin.RPCFunction
+  def SetWifiScanInterval(self, scan_interval=None):
+    self._connection_manager.SetWifiScanInterval(scan_interval)
