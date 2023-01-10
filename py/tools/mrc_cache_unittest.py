@@ -11,7 +11,7 @@ from unittest import mock
 from cros.factory.tools import mrc_cache
 
 
-_SYSTEM_BOOT = '78 | 2022-10-05 20:23:14 | System boot | 70\n'
+_SYSTEM_BOOT = '78 | 2022-10-05 20:23:14 | System boot | %d\n'
 _CACHE_UPDATE = '77 | 2022-10-05 20:23:03 | Memory Cache Update | %s | %s\n'
 
 
@@ -27,22 +27,31 @@ def _GenerateEventLog(
       has_recovery_sec: FMAP contains `RECOVERY_MRC_CACHE` section or not.
 
     Returns:
-      An eventlog string.
+      The last boot log and the eventlog string.
     """
+  system_boot_count = 1
+
+  def GenerateSystemBootEvent():
+    nonlocal system_boot_count
+    eventlog = _SYSTEM_BOOT % system_boot_count
+    system_boot_count += 1
+    return eventlog
 
   def GenerateUpdateEvent(mode: mrc_cache.Mode, result: mrc_cache.Result):
     eventlog = ''
     if result != mrc_cache.Result.NoUpdate:
       eventlog += _CACHE_UPDATE % (mode.value, result.value)
-    eventlog += _SYSTEM_BOOT
+    eventlog += GenerateSystemBootEvent()
     return eventlog
 
-  eventlog = _SYSTEM_BOOT
+  # User triggers reboot.
+  last_boot_log = GenerateSystemBootEvent()
+  eventlog = last_boot_log
   if has_recovery_sec:
     eventlog += GenerateUpdateEvent(mrc_cache.Mode.Recovery, recovery_res)
   eventlog += GenerateUpdateEvent(mrc_cache.Mode.Normal, normal_res)
 
-  return eventlog
+  return last_boot_log, eventlog
 
 
 class MRCCacheTestHasRecovery(unittest.TestCase):
@@ -121,30 +130,36 @@ class MRCCacheTestHasRecovery(unittest.TestCase):
     ]
     self.assertEqual(self.dut.CheckCall.call_args_list, check_call_calls)
 
+  @mock.patch('cros.factory.test.device_data.GetDeviceData')
   @mock.patch('cros.factory.tools.mrc_cache.GetMRCSections')
-  def testVerifyTrainingResult(self, get_mrc_section_mock):
+  def testVerifyTrainingResult(self, get_mrc_section_mock,
+                               get_device_data_mock):
     get_mrc_section_mock.return_value = self.mrc_sections
 
     # Both sections updates successfully.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(
-        mrc_cache.Result.Success, mrc_cache.Result.Success, True)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.Success, mrc_cache.Result.Success, True)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # Recovery MRC cache does not update.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(
-        mrc_cache.Result.Success, mrc_cache.Result.NoUpdate, True)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.Success, mrc_cache.Result.NoUpdate, True)
     with self.assertRaises(mrc_cache.MRCCacheUpdateError):
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # Both sections fails to update.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(
-        mrc_cache.Result.Fail, mrc_cache.Result.Fail)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.Fail, mrc_cache.Result.Fail)
     with self.assertRaises(mrc_cache.MRCCacheUpdateError):
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # Both sections do not update.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(
-        mrc_cache.Result.NoUpdate, mrc_cache.Result.NoUpdate)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.NoUpdate, mrc_cache.Result.NoUpdate)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.NoUpdate)
 
 
@@ -203,23 +218,28 @@ class MRCCacheTestNoRecovery(unittest.TestCase):
     mrc_cache.SetRecoveryRequest(self.dut)
     self.assertEqual(self.dut.CheckCall.call_args_list, [])
 
+  @mock.patch('cros.factory.test.device_data.GetDeviceData')
   @mock.patch('cros.factory.tools.mrc_cache.GetMRCSections')
-  def testVerifyTrainingData(self, get_mrc_section_mock):
+  def testVerifyTrainingData(self, get_mrc_section_mock, get_device_data_mock):
     get_mrc_section_mock.return_value = self.mrc_sections
 
     # RW cache updates successfully.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(
-        mrc_cache.Result.Success)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.Success)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # RW cache fails to update.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(mrc_cache.Result.Fail)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.Fail)
     with self.assertRaises(mrc_cache.MRCCacheUpdateError):
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
 
     # RW cache does not update.
-    self.dut.CheckOutput.return_value = _GenerateEventLog(
-        mrc_cache.Result.NoUpdate)
+    (get_device_data_mock.return_value,
+     self.dut.CheckOutput.return_value) = _GenerateEventLog(
+         mrc_cache.Result.NoUpdate)
     mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.NoUpdate)
 
 
