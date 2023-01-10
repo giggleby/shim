@@ -329,6 +329,13 @@ class CountDownTest(test_case.TestCase):
     self._cpu_freq_manager = plugin_controller.GetPluginRPCProxy(
         'cpu_freq_manager')
 
+    # Disable wifi scanning in connection manager to prevent from device busy.
+    if self.args.wifi_update_interval:
+      connection_manager = plugin_controller.GetPluginRPCProxy(
+          'connection_manager')
+      connection_manager.SetWifiScanInterval(scan_interval=0)
+      self.addCleanup(connection_manager.SetWifiScanInterval)
+
     self._als_controller = None
     try:
       self._als_controller = self._dut.ambient_light_sensor.GetController(

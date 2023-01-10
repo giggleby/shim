@@ -319,17 +319,7 @@ class ConnectionManager:
       logging.exception('Could not find the network manager service')
       return False
 
-    # Configure the wireless network scanning interval.
-    for dev in self._GetInterfaces():
-      if 'wlan' in dev or 'mlan' in dev:
-        try:
-          device = base_manager.FindElementByNameSubstring('Device', dev)
-          device.SetProperty('ScanInterval', dbus.UInt16(self.scan_interval))
-        except dbus.exceptions.DBusException:
-          logging.exception('Failed to set scanning interval for interface: %s',
-                            dev)
-        except AttributeError:
-          logging.exception('Unable to find the interface: %s', dev)
+    self.SetWifiScanInterval()
 
     # Set the known wireless networks.
     for wlan in self.wlans:
@@ -338,6 +328,7 @@ class ConnectionManager:
       except dbus.exceptions.DBusException:
         logging.exception('Unable to configure wireless network: %s',
                           wlan['SSID'])
+
     return True
 
   def DisableNetworking(self, clear=True):
@@ -365,6 +356,28 @@ class ConnectionManager:
       except OSError:
         logging.exception('Unable to remove the network profile.'
                           ' File non-existent?')
+
+  def SetWifiScanInterval(self, scan_interval=None):
+    """Configures the wireless network scanning interval.
+
+    Args:
+      scan_interval: 0 indicates disable scanning. if None, the default scan
+        interval will be applied.
+    """
+    if scan_interval is None:
+      scan_interval = self.scan_interval
+    for dev in self._GetInterfaces():
+      if 'wlan' in dev or 'mlan' in dev:
+        try:
+          base_manager = GetBaseNetworkManager()
+          device = base_manager.FindElementByNameSubstring('Device', dev)
+          device.SetProperty('ScanInterval', dbus.UInt16(scan_interval))
+          logging.info('Set Wifi ScanInterval = %f', scan_interval)
+        except dbus.exceptions.DBusException:
+          logging.exception('Failed to set scanning interval for interface: %s',
+                            dev)
+        except AttributeError:
+          logging.exception('Unable to find the interface: %s', dev)
 
   def WaitForConnection(self, timeout=_CONNECTION_TIMEOUT_SECS):
     """A blocking function that waits until any network is connected.
