@@ -8,20 +8,20 @@
 The test flow of MRC cache training test: (b/249174725#comment13)
 
 1. Erase both RECOVERY_MRC_CACHE and RW_MRC_CACHE
-2. Set `crossystem recovery_request=0xC4` (VB2_RECOVERY_TRAIN_AND_REBOOT) and
-   reboot.
+2. Set `crossystem recovery_request=0xC4` (VB2_RECOVERY_TRAIN_AND_REBOOT),
+   cache the last line of event log and reboot.
    a. On first boot (recovery), coreboot repopulates RECOVERY_MRC_CACHE, then
       depthcharge triggers a reboot
    b. On second boot (normal), coreboot repopulates RW_MRC_CACHE
 3. Check eventlog and see if caches are successfully updated.
-4. Set `crossystem recovery_request=0xC4` (VB2_RECOVERY_TRAIN_AND_REBOOT) and
-   reboot
+4. Set `crossystem recovery_request=0xC4` (VB2_RECOVERY_TRAIN_AND_REBOOT),
+   cache the last line of event log and reboot.
    a. On third boot (recovery), coreboot will validate RECOVERY_MRC_CACHE, then
       depthcharge triggers a reboot
    b. On fourth boot (normal), coreboot will validate RW_MRC_CACHE
 5. Check eventlog and see if there's no cache update message. Coreboot won't
    update the cache if it is valid, and it only prints messages when the cache
-   is updated.
+   is updated. Finally, delete the cached boot log.
 
 The test raises `MRCCacheUpdateError` if cache validation fails.
 It also skips setting `crossystem recovery_request=0xC4` and checking
@@ -36,6 +36,7 @@ import logging
 import re
 
 from cros.factory.device import device_utils
+from cros.factory.test import device_data
 from cros.factory.utils import type_utils
 
 # x86 and ARM (Qualcomm) have both RECOVERY and RW MRC cache.
@@ -65,7 +66,15 @@ class Result(str, enum.Enum):
 
 _MRC_CACHE_UPDATE_REGEX = (
     r'\| Memory Cache Update \| (?P<mode>\w+) \| (?P<result>\w+)')
-_SYSTEM_BOOT_REGEX = r'\| System boot \| \d+'
+
+# An event log looks like this: `<event_num> | <timestamp> | <message>`
+# The event number might change across the boot if elogs is filled up.
+# In this case, elog will remove some events from the beginning and re-number
+# the remaining events. So we remove the event number here.
+_MRC_CACHE_EVENTLOG_REGEX = r'\d+ (?P<content>.*)'
+
+_MRC_CACHE_LAST_EVENTLOG = device_data.JoinKeys(device_data.KEY_FACTORY,
+                                                'mrc_cache_last_eventlog')
 
 
 def GetMRCSections(dut):
@@ -120,12 +129,39 @@ class MRCCacheUpdateError(type_utils.Error):
             f'Expected: {self.expected}, Actual: {self.actual}')
 
 
-def _ReadEventLog(has_recovery_mrc, dut):
+class MRCCacheEventLogError(type_utils.Error):
+  pass
+
+
+def CacheEventLog(dut):
+  """Caches the last line of the eventlog to compare with the next boot log."""
+  last_line = _GetEventLog(dut)[-1]
+  match = re.search(_MRC_CACHE_EVENTLOG_REGEX, last_line)
+  if not match:
+    raise MRCCacheEventLogError(f'Fail to parse eventlog: {last_line}')
+  log_content = match.group('content')
+  logging.info('Cache the last line of eventlog: %s', log_content)
+  device_data.UpdateDeviceData({_MRC_CACHE_LAST_EVENTLOG: log_content})
+
+
+def ClearEventlogCache():
+  device_data.DeleteDeviceData(_MRC_CACHE_LAST_EVENTLOG, True)
+
+
+def _GetEventLog(dut):
+  # Use elogtool command instead of reading from eventlog.txt in case eventlog
+  # is not flushed to file yet. See b/249407529.
+  return dut.CheckOutput('elogtool list', log=True).splitlines()
+
+
+def _ReadEventLog(dut):
   """Reads the eventlog reversely and returns the MRC update result.
 
   The update result can be 'Success', 'Fail' or 'NoUpdate'. Coreboot only
   prints eventlog message if the MRC cache succeeds or fails to update.
-  This is an example output of a success update.
+  This is an example output of a success update. Note that the order of system
+  boot event and the cache update event might change.
+
   ```
   40 | 2022-10-04 01:41:38 | System boot | 61
   # The test erases cache and sets recovery_request, and user triggers reboots.
@@ -155,26 +191,28 @@ def _ReadEventLog(has_recovery_mrc, dut):
       Mode.Normal: Result.NoUpdate,
   }
 
-  system_boot_msg_cnt = 0
+  last_boot_record = device_data.GetDeviceData(_MRC_CACHE_LAST_EVENTLOG)
+  if not last_boot_record:
+    raise MRCCacheEventLogError(
+        'Fail to get the last boot record from device data.')
+  logging.info('The last boot record is %s', last_boot_record)
 
-  # Use elogtool command instead of reading from eventlog.txt in case eventlog
-  # is not flushed to file yet. See b/249407529.
-  elogtool_output = dut.CheckOutput('elogtool list', log=True)
-  for line in reversed(elogtool_output.splitlines()):
+  for line in reversed(_GetEventLog(dut)):
+    if last_boot_record in line:
+      break
     match = re.search(_MRC_CACHE_UPDATE_REGEX, line)
     if match:
-      update_result[Mode(match.group('mode'))] = Result(match.group('result'))
-    if re.search(_SYSTEM_BOOT_REGEX, line):
-      system_boot_msg_cnt += 1
-    if system_boot_msg_cnt >= int(has_recovery_mrc) + 2:
-      break
+      mode = Mode(match.group('mode'))
+      result = Result(match.group('result'))
+      logging.info('Update mode %s to %s.', mode.value, result.value)
+      update_result[mode] = result
 
   return update_result
 
 
 def VerifyTrainingData(dut, expected):
   has_recovery_mrc = HasRecoveryMRCCache(dut)
-  update_result = _ReadEventLog(has_recovery_mrc, dut)
+  update_result = _ReadEventLog(dut)
   actual_normal = update_result[Mode.Normal]
 
   if actual_normal != expected:
@@ -197,9 +235,10 @@ def main():
   subparsers.add_parser(
       'set_recovery_request',
       help='Set recovery request if RECOVERY_MRC_CACHE is present in FMAP. '
-      'User needs to trigger reboot by themselves.')
+      'It will also cache the last boot log from elogtool for verifying the '
+      'training result. User needs to trigger reboot by themselves.')
   verify_op_parser = subparsers.add_parser(
-      'verify', help='Verify the training result using /var/log/eventlog.txt')
+      'verify', help='Verify the training result using elogtool.')
   verify_op_parser.add_argument(
       'op', choices=('update', 'no_update'),
       help='update: Verify if cache is updated. '
@@ -212,11 +251,13 @@ def main():
     EraseTrainingData(dut)
   elif args.subcommand == 'set_recovery_request':
     SetRecoveryRequest(dut)
+    CacheEventLog(dut)
   elif args.subcommand == 'verify':
     if args.op == 'update':
       VerifyTrainingData(dut, Result.Success)
     if args.op == 'no_update':
       VerifyTrainingData(dut, Result.NoUpdate)
+    ClearEventlogCache()
 
 
 if __name__ == '__main__':

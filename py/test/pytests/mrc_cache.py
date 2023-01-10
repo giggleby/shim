@@ -93,10 +93,13 @@ class MrcCacheTest(unittest.TestCase):
     if mode == TestMode.create:
       mrc_cache.EraseTrainingData(self.dut)
       mrc_cache.SetRecoveryRequest(self.dut)
+      mrc_cache.CacheEventLog(self.dut)
     elif mode == TestMode.verify_update:
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.Success)
       # Though `verify_update` requests memory retraining, coreboot won't
       # retrain the memory if the cache is valid.
       mrc_cache.SetRecoveryRequest(self.dut)
+      mrc_cache.CacheEventLog(self.dut)
     elif mode == TestMode.verify_no_update:
       mrc_cache.VerifyTrainingData(self.dut, mrc_cache.Result.NoUpdate)
+      mrc_cache.ClearEventlogCache()
