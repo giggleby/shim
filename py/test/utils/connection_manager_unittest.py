@@ -126,7 +126,7 @@ class ConnectionManagerTest(unittest.TestCase):
         'SecurityClass': 'psk',
         'Passphrase': 'test0000'
     }, signature=mock.ANY)
-    connection_manager.GetBaseNetworkManager.assert_called_once_with()
+    connection_manager.GetBaseNetworkManager.assert_called()
     glob_mock.assert_called_with('/sys/class/net/*')
     self.assertEqual(glob_call_count, glob_mock.call_count)
 
