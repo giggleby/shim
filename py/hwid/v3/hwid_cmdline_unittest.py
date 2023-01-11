@@ -464,7 +464,8 @@ class VerifyHWIDWrapperTest(TestCaseBaseWithFakeOutput):
         options.database, options.hwid, hwid_material.probed_results,
         hwid_material.device_info, hwid_material.vpd, options.rma_mode,
         current_phase=options.phase,
-        allow_mismatched_components=options.allow_mismatched_components)
+        allow_mismatched_components=options.allow_mismatched_components,
+        pvt_component_status_check=options.pvt_component_status_check)
 
   @mock.patch('cros.factory.hwid.v3.hwid_utils.VerifyHWID',
               side_effect=HWIDException('verify fail'))

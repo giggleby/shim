@@ -499,14 +499,20 @@ def DecodeHWIDWrapper(options):
       })
 
 
-@Command('verify',
-         CmdArg('hwid', nargs='?', default=None,
-                help='the HWID to verify.\n(required if not running on a DUT)'),
-         CmdArg(
-             '--allow-mismatched-components', action='store_true',
-             help='Allows some probed components to be ignored if no any '
-             'component in the database matches with them.'),
-         *_HWID_MATERIAL_COMMON_ARGS, *_RMA_COMMON_ARGS)
+@Command(
+    'verify',
+    CmdArg('hwid', nargs='?', default=None,
+           help='the HWID to verify.\n(required if not running on a DUT)'),
+    CmdArg(
+        '--allow-mismatched-components', action='store_true',
+        help='Allows some probed components to be ignored if no any '
+        'component in the database matches with them.'),
+    CmdArg(
+        '--no-pvt-component-status-check',
+        help='Skip enforcing all component status to be `supported` if the '
+        'phase is PVT.', dest='pvt_component_status_check',
+        action='store_false', default=True), *_HWID_MATERIAL_COMMON_ARGS,
+    *_RMA_COMMON_ARGS)
 def VerifyHWIDWrapper(options):
   """Verifies HWID."""
   encoded_string = options.hwid if options.hwid else GetHWIDString()
@@ -517,7 +523,8 @@ def VerifyHWIDWrapper(options):
       options.database, encoded_string, hwid_material.probed_results,
       hwid_material.device_info, hwid_material.vpd, options.rma_mode,
       current_phase=options.phase,
-      allow_mismatched_components=options.allow_mismatched_components)
+      allow_mismatched_components=options.allow_mismatched_components,
+      pvt_component_status_check=options.pvt_component_status_check)
 
   # No exception raised. Verification was successful.
   Output('Verification passed.')

@@ -117,6 +117,8 @@ class HWIDV3Test(test_case.TestCase):
           default=True),
       Arg('enable_configless_fields', bool, 'Include the configless fields',
           default=False),
+      Arg('enable_component_status_check_on_pvt', bool,
+          'Enable component status check if the phase is PVT.', default=True),
       Arg('include_brand_code', bool, 'Include RLZ brand code', default=True),
       Arg('project', str, 'Project name of the HWID.', default=None),
   ]
@@ -237,6 +239,8 @@ class HWIDV3Test(test_case.TestCase):
       verify_cmd += ['--rma-mode']
     if not self.args.verify_checksum:
       verify_cmd += ['--no-verify-checksum']
+    if not self.args.enable_component_status_check_on_pvt:
+      verify_cmd += ['--no-pvt-component-status-check']
     self.AppendProjectArg(verify_cmd)
     verify_cmd += [encoded_string]
 

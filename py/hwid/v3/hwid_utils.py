@@ -66,7 +66,8 @@ def GenerateHWID(database, probed_results, device_info, vpd, rma_mode,
   bom = probe.GenerateBOMFromProbedResults(
       database, probed_results, device_info, vpd, hwid_mode,
       allow_mismatched_components, use_name_match)[0]
-  verifier.VerifyComponentStatus(database, bom, hwid_mode)
+  verifier.VerifyComponentStatus(database, bom, hwid_mode,
+                                 accept_unqualified_on_pvt=True)
 
   encoded_configless = None
   if with_configless_fields:
@@ -116,9 +117,9 @@ def DecodeHWID(database, encoded_string):
   return identity, bom, configless_fields
 
 
-def VerifyHWID(database, encoded_string,
-               probed_results, device_info, vpd, rma_mode,
-               current_phase=None, allow_mismatched_components=False):
+def VerifyHWID(database, encoded_string, probed_results, device_info, vpd,
+               rma_mode, current_phase=None, allow_mismatched_components=False,
+               pvt_component_status_check=True):
   """Verifies the given encoded HWID v3 string against the probed BOM object.
 
   A HWID context is built with the encoded HWID string and the project-specific
@@ -149,6 +150,8 @@ def VerifyHWID(database, encoded_string,
         if none is available).
     allow_mismatched_components: Whether to allows some probed components to be
         ignored if no any component in the database matches with them.
+    pvt_component_status_check: Whether to check if all component status are
+        `supported` when the phase is PVT.
 
   Raises:
     HWIDException if verification fails.
@@ -166,7 +169,8 @@ def VerifyHWID(database, encoded_string,
 
   verifier.VerifyBOM(database, decoded_bom, probed_bom)
   verifier.VerifyComponentStatus(
-      database, decoded_bom, hwid_mode, current_phase=current_phase)
+      database, decoded_bom, hwid_mode, current_phase=current_phase,
+      accept_unqualified_on_pvt=not pvt_component_status_check)
   verifier.VerifyPhase(database, decoded_bom, current_phase, rma_mode)
   if decoded_configless:
     verifier.VerifyConfigless(

@@ -22,13 +22,14 @@ from cros.factory.hwid.v3.configless_fields import ConfiglessFields
 from cros.factory.test.rules import phase
 
 
-def VerifyComponentStatus(database, bom, mode, current_phase=None):
+def VerifyComponentStatus(database, bom, mode, current_phase=None,
+                          accept_unqualified_on_pvt=False):
   """Verifies the status of all components.
 
-  Accepts all 'supported' components, rejects all 'unsupported' components,
-  accepts/rejects 'deprecated' components if operation mode is/is not
-  rma and accepts 'unqualified' components if current phase is not
-  PVT_DOGFOOD/PVT.
+  - Accepts all 'supported' components.
+  - Rejects all 'unsupported' components.
+  - Accepts/rejects 'deprecated' components based on the operation mode.
+  - Accepts/rejects 'unqualified' components based on the current phase.
 
   Args:
     database: The Database object which records the status of each components.
@@ -37,23 +38,30 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None):
     current_phase: The current phase, for phase checks.  If None is
         specified, then phase.GetPhase() is used (this defaults to PVT
         if none is available).
+    accept_unqualified_on_pvt: Whether to accept unqualified components when
+        the phase is PVT.
 
   Raises:
     HWIDException if verification fails.
   """
+  # Coerce current_phase to a Phase object, and use default phase
+  # if unspecified.
+  current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
+  is_pvt = current_phase in (phase.PVT_DOGFOOD, phase.PVT)
   for comp_cls, comp_names in bom.components.items():
     for comp_name in comp_names:
       status = database.GetComponents(comp_cls)[comp_name].status
       if status == common.COMPONENT_STATUS.supported:
         continue
       if status == common.COMPONENT_STATUS.unqualified:
-        # Coerce current_phase to a Phase object, and use default phase
-        # if unspecified.
-        current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
-        if current_phase in (phase.PVT_DOGFOOD, phase.PVT):
-          raise common.HWIDException(
-              f'Found unqualified component of {comp_cls!r}: {comp_name!r} in '
-              f'{current_phase!r}')
+        if is_pvt:
+          if accept_unqualified_on_pvt:
+            logging.warning('Found unqualified component of %r: %r in %r.',
+                            comp_cls, comp_name, current_phase)
+          else:
+            raise common.HWIDException(
+                f'Found unqualified component of {comp_cls!r}: {comp_name!r} '
+                f'in {current_phase!r}.')
         continue
       if status == common.COMPONENT_STATUS.unsupported:
         raise common.HWIDException(
