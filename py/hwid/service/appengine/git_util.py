@@ -20,12 +20,11 @@ from typing import Any, DefaultDict, Deque, MutableMapping, MutableSequence, Nam
 import urllib.parse
 
 import certifi
-from dulwich.client import HttpGitClient
-from dulwich.objects import Blob
-from dulwich.objects import Tree
+from dulwich import client as dw_client
+from dulwich import objects as dw_objects
 from dulwich import porcelain
-from dulwich import refs
-from dulwich.repo import MemoryRepo as _MemoryRepo
+from dulwich import refs as dw_refs
+from dulwich import repo as dw_repo
 import google.auth
 from google.auth import impersonated_credentials
 import google.auth.transport.requests
@@ -52,6 +51,7 @@ _BOT_COMMIT = 'Bot-Commit'
 _CODE_REVIEW = 'Code-Review'
 _COMMIT_QUEUE = 'Commit-Queue'
 _VERIFIED = 'Verified'
+_AUTO_SUBMIT = 'Auto-Submit'
 
 
 class ReviewVote(NamedTuple):
@@ -288,12 +288,12 @@ class GitFilesystemAdapter(filesystem_adapter.FileSystemAdapter):
     return ret
 
 
-class MemoryRepo(_MemoryRepo):
+class MemoryRepo(dw_repo.MemoryRepo):
   """Enhance MemoryRepo with push ability."""
 
   def __init__(self, auth_cookie, *args, **kwargs):
     """Initializes with auth_cookie."""
-    _MemoryRepo.__init__(self, *args, **kwargs)
+    super().__init__(*args, **kwargs)
     self.auth_cookie = auth_cookie
 
   def shallow_clone(self, remote_location, branch):
@@ -308,12 +308,12 @@ class MemoryRepo(_MemoryRepo):
 
     pool_manager = _CreatePoolManager(cookie=self.auth_cookie)
 
-    client = HttpGitClient.from_parsedurl(
+    client = dw_client.HttpGitClient.from_parsedurl(
         parsed, config=self.get_config_stack(), pool_manager=pool_manager)
     fetch_result = client.fetch(
         parsed.path, self, determine_wants=lambda mapping:
         [mapping[REF_HEADS_PREFIX + _B(branch)]], depth=1)
-    stripped_refs = refs.strip_peeled_refs(fetch_result.refs)
+    stripped_refs = dw_refs.strip_peeled_refs(fetch_result.refs)
     branches = {
         n[len(REF_HEADS_PREFIX):]: v
         for (n, v) in stripped_refs.items()
@@ -342,11 +342,12 @@ class MemoryRepo(_MemoryRepo):
       if child_name in cur:
         unused_mode, sha = cur[child_name]
         sub = self[sha]
-        if not isinstance(sub, Tree):  # if child_name exists but not a dir
+        if not isinstance(sub, dw_objects.Tree):
+          # if child_name exists but not a dir
           raise GitUtilException
       else:
         # not exists, create a new tree
-        sub = Tree()
+        sub = dw_objects.Tree()
       self.recursively_add_file(sub, path_splits[1:], file_name, mode, blob)
       cur.add(child_name, DIR_MODE, sub.id)
     else:
@@ -354,7 +355,7 @@ class MemoryRepo(_MemoryRepo):
       if file_name in cur:
         unused_mod, sha = cur[file_name]
         existed_obj = self[sha]
-        if not isinstance(existed_obj, Blob):
+        if not isinstance(existed_obj, dw_objects.Blob):
           # if file_name exists but not a Blob(file)
           raise GitUtilException
       self.object_store.add_object(blob)
@@ -383,7 +384,7 @@ class MemoryRepo(_MemoryRepo):
       ]
       try:
         self.recursively_add_file(tree, paths, _B(filename), mode,
-                                  Blob.from_string(_B(content)))
+                                  dw_objects.Blob.from_string(_B(content)))
       except GitUtilException as ex:
         raise GitUtilException(f'Invalid filepath {file_path!r}.') from ex
 
@@ -444,9 +445,23 @@ def _GetChangeId(tree_id, parent_commit, author, committer, commit_msg):
   return f'I{hashlib.sha1(change_id_input).hexdigest()}'
 
 
-def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
-             commit_msg, reviewers=None, cc=None, bot_commit=False,
-             commit_queue=False, repo=None):
+def CreateCL(
+    git_url: str,
+    auth_cookie: str,
+    branch: str,
+    new_files: Sequence[Tuple[str, int, Union[str, bytes]]],
+    author: str,
+    committer: str,
+    commit_msg: str,
+    reviewers: Optional[Sequence[str]] = None,
+    cc: Optional[Sequence[str]] = None,
+    bot_commit: bool = False,
+    commit_queue: bool = False,
+    repo: Optional[MemoryRepo] = None,
+    topic: Optional[str] = None,
+    verified: bool = False,
+    auto_submit: bool = False,
+):
   """Creates a CL from adding files in specified location.
 
   Args:
@@ -463,6 +478,9 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
     commit_queue: True if this CL is ready to be put into the commit queue.
     repo: The `MemoryRepo` instance to create the commit.  If not specified,
         this function clones the repository from `git_url:branch`.
+    topic: A string of topic set for CL.
+    verified: True if Verified vote is set.
+    auto_submit: True if Auto-Submit vote is set.
   Returns:
     A tuple of (change id, cl number).
     cl number will be None if fail to parse git-push output.
@@ -480,19 +498,25 @@ def CreateCL(git_url, auth_cookie, branch, new_files, author, committer,
   change_id = _GetChangeId(updated_tree.id, repo.head(), author, committer,
                            commit_msg)
   repo.do_commit(
-      _B(commit_msg + f'\n\nChange-Id: {change_id}'), author=_B(author),
+      _B(f'{commit_msg}\n\nChange-Id: {change_id}'), author=_B(author),
       committer=_B(committer), tree=updated_tree.id)
 
   options = []
   if reviewers:
-    options += ['r=' + email for email in reviewers]
+    options.extend(f'r={email}' for email in reviewers)
   if cc:
-    options += ['cc=' + email for email in cc]
+    options.extend(f'cc={email}' for email in cc)
   if bot_commit:
     options.append(f'l={_BOT_COMMIT}+1')
   if commit_queue:
     options.append(f'l={_COMMIT_QUEUE}+2')
-  target_branch = 'refs/for/refs/heads/' + branch
+  if verified:
+    options.append(f'l={_VERIFIED}+1')
+  if auto_submit:
+    options.append(f'l={_AUTO_SUBMIT}+1')
+  if topic:
+    options.append(f'topic={topic}')
+  target_branch = f'refs/for/refs/heads/{branch}'
   if options:
     target_branch += '%' + ','.join(options)
 

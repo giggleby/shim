@@ -13,7 +13,7 @@ from typing import Optional, Sequence, Tuple
 import unittest
 from unittest import mock
 
-from dulwich.objects import Tree
+from dulwich import objects as dw_objects
 
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -54,7 +54,7 @@ class MemoryRepoTest(unittest.TestCase):
         ('a/b/e/./././f', 0o100644, b'content of a/b/e/f'),
     ]
     repo = git_util.MemoryRepo('')
-    tree = Tree()
+    tree = dw_objects.Tree()
     try:
       tree = repo.add_files(new_files, tree)
       tree.check()
@@ -79,7 +79,7 @@ class MemoryRepoTest(unittest.TestCase):
         ('a/b/c/d', 0o100644, b'content of a/b/c/d'),
     ]
     repo = git_util.MemoryRepo('')
-    tree = Tree()
+    tree = dw_objects.Tree()
     with self.assertRaises(git_util.GitUtilException) as ex:
       repo.add_files(new_files, tree)
     self.assertEqual(str(ex.exception), "Invalid filepath 'a/b/c/d'.")
@@ -90,7 +90,7 @@ class MemoryRepoTest(unittest.TestCase):
         ('a/b/c', 0o100644, b'content of a/b/c'),
     ]
     repo = git_util.MemoryRepo('')
-    tree = Tree()
+    tree = dw_objects.Tree()
     with self.assertRaises(git_util.GitUtilException) as ex:
       repo.add_files(new_files, tree)
     self.assertEqual(str(ex.exception), "Invalid filepath 'a/b/c'.")
@@ -117,7 +117,7 @@ class MemoryRepoTest(unittest.TestCase):
         ('a/b/e/./././f', 0o100644, b'content of a/b/e/f'),
     ]
     repo = git_util.MemoryRepo('')
-    tree = Tree()
+    tree = dw_objects.Tree()
     try:
       tree = repo.add_files(new_files, tree)
       tree.check()
