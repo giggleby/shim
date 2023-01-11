@@ -578,7 +578,7 @@ class SelfServiceHelper:
     for cl_number in put_cq:
       try:
         git_util.ReviewCL(
-            hwid_repo.INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
+            hwid_repo.INTERNAL_REPO_REVIEW_URL, git_util.GetGerritAuthCookie(),
             cl_number=cl_number, reasons=[]
             if cl_number == cl_info.cl_number else parent_cl_cq_reasons,
             approval_case=git_util.ApprovalCase.COMMIT_QUEUE)
@@ -867,7 +867,7 @@ class SelfServiceHelper:
             protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT) from None
       approval_case = _APPROVAL_CASE[cl_action.approval_case]
       try:
-        git_util.ReviewCL(hwid_repo.INTERNAL_REPO_URL,
+        git_util.ReviewCL(hwid_repo.INTERNAL_REPO_REVIEW_URL,
                           git_util.GetGerritAuthCookie(), cl_number=cl_number,
                           reasons=cl_action.reasons,
                           approval_case=approval_case,

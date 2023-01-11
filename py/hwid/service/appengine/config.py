@@ -4,7 +4,6 @@
 """Cloud stoarge buckets and service environment configuration."""
 
 import os
-from typing import NamedTuple, Optional
 
 import yaml
 
@@ -47,14 +46,6 @@ _RESOURCE_DIR = os.path.join(
 
 _PATH_TO_APP_CONFIGURATIONS_FILE = os.path.join(_RESOURCE_DIR,
                                                 'configurations.yaml')
-
-class VerificationPayloadSettings(NamedTuple):
-  review_host: str
-  repo_host: str
-  repo_path: str
-  project: str
-  prefix: str
-  branch: Optional[str]
 
 
 class _Config:
@@ -114,22 +105,6 @@ class _Config:
     self.avl_converter_manager = converter_utils.ConverterManager.FromDefault()
     self.avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
         self._ndb_connector)
-
-  def GetVerificationPayloadSettings(self, board):
-    """Get repo settings for specific board.
-
-    Args:
-      board: The board name
-
-    Returns:
-      A dictionary with corresponding settings
-    """
-    return VerificationPayloadSettings(
-        review_host=hwid_repo.INTERNAL_REPO_URL,
-        repo_host='https://chrome-internal.googlesource.com',
-        repo_path=f'/chromeos/overlays/overlay-{board}-private',
-        project=f'chromeos/overlays/overlay-{board}-private',
-        prefix=f'chromeos-base/racc-config-{board}/files/', branch=None)
 
 
 CONFIG = type_utils.LazyObject(_Config)

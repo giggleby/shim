@@ -27,7 +27,8 @@ class RepoFileContents(NamedTuple):
   file_contents: Sequence[str]
 
 
-INTERNAL_REPO_URL = 'https://chrome-internal-review.googlesource.com'
+INTERNAL_REPO_REVIEW_URL = 'https://chrome-internal-review.googlesource.com'
+INTERNAL_REPO_URL = 'https://chrome-internal.googlesource.com'
 _CHROMEOS_HWID_PROJECT = 'chromeos/chromeos-hwid'
 _PROJECTS_YAML_PATH = 'projects.yaml'
 
@@ -186,7 +187,7 @@ class HWIDRepo:
         logging.warning(
             'Failed to parse CL number from change_id=%s. Get CL number from '
             'Gerrit.', change_id)
-        cl_info = git_util.GetCLInfo(INTERNAL_REPO_URL, change_id,
+        cl_info = git_util.GetCLInfo(INTERNAL_REPO_REVIEW_URL, change_id,
                                      auth_cookie=git_util.GetGerritAuthCookie())
         cl_number = cl_info.cl_number
     except git_util.GitUtilException as ex:
@@ -232,12 +233,12 @@ class HWIDRepoManager:
   def GetLiveHWIDRepo(self):
     """Returns an HWIDRepo instance for accessing the up-to-date HWID repo."""
     if self._repo_branch is None:
-      repo_branch = git_util.GetCurrentBranch(INTERNAL_REPO_URL,
+      repo_branch = git_util.GetCurrentBranch(INTERNAL_REPO_REVIEW_URL,
                                               _CHROMEOS_HWID_PROJECT,
                                               git_util.GetGerritAuthCookie())
     else:
       repo_branch = self._repo_branch
-    repo_url = f'{INTERNAL_REPO_URL}/{_CHROMEOS_HWID_PROJECT}'
+    repo_url = f'{INTERNAL_REPO_REVIEW_URL}/{_CHROMEOS_HWID_PROJECT}'
     repo = git_util.MemoryRepo(git_util.GetGerritAuthCookie())
     repo.shallow_clone(repo_url, repo_branch)
     return HWIDRepo(repo, repo_url, repo_branch)
@@ -257,7 +258,7 @@ class HWIDRepoManager:
       HWIDRepoError: Failed to fetch the CL info from Gerrit.
     """
     try:
-      cl_info = git_util.GetCLInfo(INTERNAL_REPO_URL, cl_number,
+      cl_info = git_util.GetCLInfo(INTERNAL_REPO_REVIEW_URL, cl_number,
                                    auth_cookie=git_util.GetGerritAuthCookie(),
                                    include_comment_thread=True,
                                    include_mergeable=True,
@@ -271,7 +272,8 @@ class HWIDRepoManager:
 
   def GetMainCommitID(self):
     """Fetches the latest commit ID of the main branch on the upstream."""
-    return git_util.GetCommitId(INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT,
+    return git_util.GetCommitId(INTERNAL_REPO_REVIEW_URL,
+                                _CHROMEOS_HWID_PROJECT,
                                 auth_cookie=git_util.GetGerritAuthCookie())
 
   def GetHWIDDBMetadataByProject(self, project: str) -> HWIDDBMetadata:
@@ -294,12 +296,12 @@ class HWIDRepoManager:
     commit_id = None
     if cl_number is None:
       commit_id = git_util.GetCommitId(
-          INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, branch=self._repo_branch,
-          auth_cookie=git_util.GetGerritAuthCookie())
+          INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT,
+          branch=self._repo_branch, auth_cookie=git_util.GetGerritAuthCookie())
 
     file_contents = [
         git_util.GetFileContent(
-            INTERNAL_REPO_URL, _CHROMEOS_HWID_PROJECT, path,
+            INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT, path,
             commit_id=commit_id, change_id=str(cl_number),
             auth_cookie=git_util.GetGerritAuthCookie()).decode()
         for path in paths
@@ -308,12 +310,14 @@ class HWIDRepoManager:
 
   def AbandonCL(self, cl_number: int, reason=None):
     """Abandons the given CL number."""
-    return git_util.AbandonCL(INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
-                              cl_number, reason=reason)
+    return git_util.AbandonCL(INTERNAL_REPO_REVIEW_URL,
+                              git_util.GetGerritAuthCookie(), cl_number,
+                              reason=reason)
 
   def RebaseCLMetadata(self, cl_info: HWIDDBCLInfo):
     """Rebases `projects.yaml` and try to resolve merge conflict for the CL."""
-    conflicts = git_util.RebaseCL(INTERNAL_REPO_URL, str(cl_info.cl_number),
+    conflicts = git_util.RebaseCL(INTERNAL_REPO_REVIEW_URL,
+                                  str(cl_info.cl_number),
                                   git_util.GetGerritAuthCookie())
 
     if not conflicts:
@@ -335,14 +339,14 @@ class HWIDRepoManager:
     metadata[project] = cl_metadata[project]
 
     # Force rebase and patch metadata when merge conflict on project.yaml.
-    git_util.RebaseCL(INTERNAL_REPO_URL, str(cl_info.cl_number),
+    git_util.RebaseCL(INTERNAL_REPO_REVIEW_URL, str(cl_info.cl_number),
                       git_util.GetGerritAuthCookie(), force=True)
-    git_util.PatchCL(INTERNAL_REPO_URL, str(cl_info.cl_number),
+    git_util.PatchCL(INTERNAL_REPO_REVIEW_URL, str(cl_info.cl_number),
                      _PROJECTS_YAML_PATH,
                      _DumpMetadata(metadata).encode(),
                      git_util.GetGerritAuthCookie())
     git_util.ReviewCL(
-        INTERNAL_REPO_URL, git_util.GetGerritAuthCookie(),
+        INTERNAL_REPO_REVIEW_URL, git_util.GetGerritAuthCookie(),
         cl_number=cl_info.cl_number, reasons=[
             f'Auto resolved merge conflict for {_PROJECTS_YAML_PATH}'
         ], approval_case=git_util.ApprovalCase.APPROVED)

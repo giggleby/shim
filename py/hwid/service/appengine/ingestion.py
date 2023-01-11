@@ -16,6 +16,7 @@ import urllib3
 from cros.factory.hwid.service.appengine import api_connector
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine import config
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
@@ -259,8 +260,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       dryrun_upload = False
     author = f'chromeoshwid <{service_account_name}>'
 
-    setting = CONFIG.GetVerificationPayloadSettings(board)
-    git_url = setting.repo_host + setting.repo_path
+    setting = config_data.CreateVerificationPayloadSettings(board)
+    git_url = f'{setting.repo_host}/{setting.project}'
     branch = setting.branch or git_util.GetCurrentBranch(
         setting.review_host, setting.project, git_util.GetGerritAuthCookie())
     reviewers = self.vp_data_manager.GetCLReviewers()

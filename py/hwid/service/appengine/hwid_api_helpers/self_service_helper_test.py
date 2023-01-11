@@ -607,10 +607,10 @@ class SelfServiceHelperTest(unittest.TestCase):
 
     # Verify that the CL and its parent CLs are put into CQ.
     self.assertCountEqual([
-        mock.call(hwid_repo.INTERNAL_REPO_URL, mock.ANY,
+        mock.call(hwid_repo.INTERNAL_REPO_REVIEW_URL, mock.ANY,
                   approval_case=git_util.ApprovalCase.COMMIT_QUEUE, cl_number=2,
                   reasons=[]),
-        *(mock.call(hwid_repo.INTERNAL_REPO_URL, mock.ANY,
+        *(mock.call(hwid_repo.INTERNAL_REPO_REVIEW_URL, mock.ANY,
                     approval_case=git_util.ApprovalCase.COMMIT_QUEUE,
                     cl_number=cl_number, reasons=['CL:*2 has been approved.'])
           for cl_number in [3, 4, 5])
