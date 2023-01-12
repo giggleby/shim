@@ -1188,7 +1188,8 @@ class Gooftool:
     # ensure the correctness of commands executed in shell.
     return {
         'platform_name':
-            self._cros_config.GetPlatformName(),
+            self._util.GetReleaseImageLsbData().get('CHROMEOS_RELEASE_BOARD',
+                                                    ''),
         'crossystem':
             self._util.GetCrosSystem(),
         'modem_status':
