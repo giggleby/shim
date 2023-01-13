@@ -100,20 +100,35 @@ prepare_cros_regions() {
   add_temp "${cros_regions}"
 }
 
+run_in_chroot() {
+  cros_sdk --no-ns-pid --working-dir="$(realpath --relative-to="." \
+    "${FACTORY_DIR}")" -- "$@"
+}
+
 prepare_protobuf() {
   local protobuf_out="${TEMP_DIR}/protobuf_out"
   mkdir -p "${protobuf_out}"
-  protoc \
-    -I="${RT_PROBE_DIR}" \
-    -I="${HW_VERIFIER_DIR}" \
-    --python_out="${protobuf_out}" \
-    "${HW_VERIFIER_DIR}/hardware_verifier.proto" \
-    "${RT_PROBE_DIR}/runtime_probe.proto"
+  local rel_hw_verifier_dir
+  local rel_rt_probe_dir
+  local rel_protobuf_out
+  rel_hw_verifier_dir="$(realpath --relative-to="${FACTORY_DIR}" \
+    "${HW_VERIFIER_DIR}")"
+  rel_rt_probe_dir="$(realpath --relative-to="${FACTORY_DIR}" \
+    "${RT_PROBE_DIR}")"
+  rel_protobuf_out="$(realpath --relative-to="${FACTORY_DIR}" \
+    "${protobuf_out}")"
 
-  protobuf_out="${TEMP_DIR}/cros/factory/hwid/service/appengine/proto/"
-  protoc \
-    -I="${TEMP_DIR}" \
-    --python_out="${TEMP_DIR}" \
+  run_in_chroot protoc \
+    -I="${rel_hw_verifier_dir}" -I="${rel_rt_probe_dir}" \
+    --python_out="${rel_protobuf_out}" \
+    "hardware_verifier.proto" "runtime_probe.proto"
+
+  local rel_temp_dir
+  rel_temp_dir="$(realpath --relative-to="${FACTORY_DIR}" "${TEMP_DIR}")"
+
+  run_in_chroot protoc \
+    -I="${rel_temp_dir}" \
+    --python_out="${rel_temp_dir}" \
     "cros/factory/hwid/service/appengine/proto/hwid_api_messages.proto" \
     "cros/factory/hwid/service/appengine/proto/ingestion.proto" \
     "cros/factory/probe_info_service/app_engine/stubby.proto"
@@ -240,7 +255,9 @@ do_build() {
 }
 
 do_test() {
-  # Compile proto to *_pb2.py for e2e test.
+  # Compile proto to *_pb2.py for e2e test.  Note that we run this outside
+  # chroot, so the protoc version and protobuf library in host should be
+  # compatible with each other.
   protoc \
     -I="${PY_PKG_DIR}" \
     --python_out="${PY_PKG_DIR}" \
