@@ -1161,10 +1161,16 @@
       "run_if": "not constants.has_device_data or device.component.has_stylus_garage"
     },
     "SuspendResume": {
-      "pytest_name": "suspend_resume"
+      "pytest_name": "suspend_resume",
+      "exclusive_resources": [
+        "POWER"
+      ]
     },
     "SuspendStress": {
-      "pytest_name": "suspend_stress"
+      "pytest_name": "suspend_stress",
+      "exclusive_resources": [
+        "POWER"
+      ]
     },
     "SyncFactoryServer": {
       "pytest_name": "sync_factory_server",
