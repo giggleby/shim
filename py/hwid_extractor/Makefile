@@ -24,6 +24,9 @@ UTILS_SOURCES := \
 	platform_utils.py \
 	process_utils.py \
 	schema.py \
+	sync_utils.py \
+	thread_utils.py \
+	time_utils.py \
 	type_utils.py
 
 JS_SOURCES := \
