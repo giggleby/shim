@@ -11,6 +11,7 @@ import unittest
 from google.protobuf import text_format
 
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine import hwid_action
@@ -222,7 +223,8 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
     helper_inst_before = self._LoadSSHelper('v3-golden-audio-codec.yaml')
     editable_section = helper_inst_before.GetDBEditableSection()
     avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
-        ndbc_module.NDBConnector())
+        ndbc_module.NDBConnector(),
+        config_data.AVLMetadataSetting.CreateInstance(True, '', '', []))
 
     avl_metadata_manager.UpdateAudioCodecBlocklist(['skippable_kernel_names'])
     analysis_report = helper_inst_before.AnalyzeDraftDBEditableSection(

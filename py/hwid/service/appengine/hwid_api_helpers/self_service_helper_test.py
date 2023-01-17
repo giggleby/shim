@@ -10,6 +10,8 @@ from typing import Optional, Sequence
 import unittest
 from unittest import mock
 
+from cros.factory.hwid.service.appengine.data import avl_metadata_util
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
@@ -94,13 +96,18 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules = test_utils.FakeModuleCollection()
     self._mock_hwid_repo_manager = mock.create_autospec(
         hwid_repo.HWIDRepoManager, instance=True)
+    avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
+        self._modules.ndb_connector,
+        config_data.AVLMetadataSetting.CreateInstance(False, 'namespace.prefix',
+                                                      'avl-metadata-topic',
+                                                      ['cc1@notgoogle.com']))
     self._ss_helper = ss_helper.SelfServiceHelper(
         self._modules.fake_hwid_action_manager,
         self._mock_hwid_repo_manager,
         self._modules.fake_hwid_db_data_manager,
         self._modules.fake_avl_converter_manager,
         self._modules.fake_session_cache_adapter,
-        self._modules.fake_avl_metadata_manager,
+        avl_metadata_manager,
     )
 
   def tearDown(self):
@@ -1601,8 +1608,49 @@ class SelfServiceHelperTest(unittest.TestCase):
         'Allowlist and blocklist should be disjoint, and the '
         "overlapped part: {'common'}.", ex.exception.detail)
 
-  def testAnalyzeHWIDDBEditableSection_ReportAVLSkippableComps(self):
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.CreateCL')
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.GetCurrentBranch')
+  @mock.patch(
+      'cros.factory.hwid.service.appengine.git_util.GetGerritCredentials')
+  def testUpdateAudioCodecKernelNames_CreateCL(
+      self, mock_gerrit_cred, mock_get_curr_branch, mock_create_cl):
+    del mock_get_curr_branch
     # Arrange.
+    mock_gerrit_cred.return_value = ('unused_service_account', 'unused_token')
+
+    # Act.
+    # Update blocklist of audio codec kernel names.
+    blocklist_req = hwid_api_messages_pb2.UpdateAudioCodecKernelNamesRequest(
+        allowlisted_kernel_names=['allowed1', 'allowed2', 'allowed3'],
+        blocklisted_kernel_names=['blocked3', 'blocked2', 'blocked1'])
+    self._ss_helper.UpdateAudioCodecKernelNames(blocklist_req)
+
+    # Assert.
+    unused_args, kwargs = mock_create_cl.call_args
+    new_files = kwargs['new_files']
+    self.assertEqual(1, len(new_files))
+    file_path, unused_mode, file_content = new_files[0]
+    self.assertEqual('vars/namespace.prefix.yaml', file_path)
+    self.assertEqual(
+        'namespace.prefix.allowlist: '
+        '\'["allowed1", "allowed2", "allowed3"]\'\n'
+        'namespace.prefix.blocklist: '
+        '\'["blocked1", "blocked2", "blocked3"]\'\n', file_content)
+    self.assertCountEqual(['cc1@notgoogle.com'], kwargs['cc'])
+    self.assertEqual('avl-metadata-topic', kwargs['topic'])
+    self.assertTrue(kwargs['auto_submit'])
+    self.assertTrue(kwargs['rubber_stamper'])
+
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.CreateCL')
+  @mock.patch('cros.factory.hwid.service.appengine.git_util.GetCurrentBranch')
+  @mock.patch(
+      'cros.factory.hwid.service.appengine.git_util.GetGerritCredentials')
+  def testAnalyzeHWIDDBEditableSection_ReportAVLSkippableComps(
+      self, mock_gerrit_cred, mock_get_curr_branch, mock_create_cl):
+    # Arrange.
+    del mock_get_curr_branch
+    del mock_create_cl
+    mock_gerrit_cred.return_value = ('unused_service_account', 'unused_token')
     project = 'CHROMEBOOK'
     old_db_data = file_utils.ReadFile(_HWID_V3_GOLDEN_WITH_AUDIO_CODEC)
     action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper

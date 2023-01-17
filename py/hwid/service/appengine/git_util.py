@@ -52,6 +52,7 @@ _CODE_REVIEW = 'Code-Review'
 _COMMIT_QUEUE = 'Commit-Queue'
 _VERIFIED = 'Verified'
 _AUTO_SUBMIT = 'Auto-Submit'
+_RUBBER_STAMPER_ACCOUNT = 'rubber-stamper@appspot.gserviceaccount.com'
 
 
 class ReviewVote(NamedTuple):
@@ -461,6 +462,7 @@ def CreateCL(
     topic: Optional[str] = None,
     verified: bool = False,
     auto_submit: bool = False,
+    rubber_stamper: bool = False,
 ):
   """Creates a CL from adding files in specified location.
 
@@ -481,6 +483,7 @@ def CreateCL(
     topic: A string of topic set for CL.
     verified: True if Verified vote is set.
     auto_submit: True if Auto-Submit vote is set.
+    rubber_stamper: True if Rubber Stamper is set as a reviewer.
   Returns:
     A tuple of (change id, cl number).
     cl number will be None if fail to parse git-push output.
@@ -504,6 +507,8 @@ def CreateCL(
   options = []
   if reviewers:
     options.extend(f'r={email}' for email in reviewers)
+  if rubber_stamper:
+    options.append(f'r={_RUBBER_STAMPER_ACCOUNT}')
   if cc:
     options.extend(f'cc={email}' for email in cc)
   if bot_commit:

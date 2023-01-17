@@ -9,6 +9,7 @@ import yaml
 
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -103,8 +104,16 @@ class _Config:
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch)
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
     self.avl_converter_manager = converter_utils.ConverterManager.FromDefault()
+
+    avl_metadata_setting = conf.get('avl_metadata_setting', {})
+    secret_var_namespace = avl_metadata_setting.get('secret_var_namespace', '')
+    avl_metadata_topic = avl_metadata_setting.get('topic', '')
+    avl_metadata_cl_ccs = avl_metadata_setting.get('cl_ccs', [])
     self.avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
-        self._ndb_connector)
+        self._ndb_connector,
+        config_data.AVLMetadataSetting.CreateInstance(
+            self.dryrun_upload, secret_var_namespace, avl_metadata_topic,
+            avl_metadata_cl_ccs))
 
 
 CONFIG = type_utils.LazyObject(_Config)

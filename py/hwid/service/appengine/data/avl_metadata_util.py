@@ -9,6 +9,7 @@ from typing import Sequence
 
 from google.cloud import ndb
 
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.v3 import database
 
@@ -27,8 +28,14 @@ class AudioCodecBlocklist(ndb.Model):
 
 class AVLMetadataManager:
 
-  def __init__(self, ndb_connector: ndbc_module.NDBConnector):
+  def __init__(self, ndb_connector: ndbc_module.NDBConnector,
+               avl_metadata_setting: config_data.AVLMetadataSetting):
     self._ndb_connector = ndb_connector
+    self._avl_metadata_setting = avl_metadata_setting
+
+  @property
+  def avl_metadata_setting(self):
+    return self._avl_metadata_setting
 
   def UpdateAudioCodecBlocklist(self, kernel_name_blocklist: Sequence[str]):
     """Updates the blocklist of audio codec kernel names.

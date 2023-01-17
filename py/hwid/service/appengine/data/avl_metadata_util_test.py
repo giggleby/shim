@@ -5,6 +5,7 @@
 import unittest
 
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import rule as v3_rule
@@ -15,7 +16,12 @@ class AVLMetadataManagerTest(unittest.TestCase):
   def setUp(self):
     super().setUp()
     self._ndb_connector = ndbc_module.NDBConnector()
-    self._manager = avl_metadata_util.AVLMetadataManager(self._ndb_connector)
+    self._avl_metadata_setting = config_data.AVLMetadataSetting.CreateInstance(
+        dryrun_upload=True, secret_var_namespace='', avl_metadata_topic='',
+        avl_metadata_cl_ccs=[])
+
+    self._manager = avl_metadata_util.AVLMetadataManager(
+        self._ndb_connector, self._avl_metadata_setting)
 
   def tearDown(self):
     super().tearDown()
