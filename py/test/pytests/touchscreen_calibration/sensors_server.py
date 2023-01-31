@@ -34,30 +34,6 @@ class Error(Exception):
   pass
 
 
-REMOTE_COMMAND_FLAGS = [
-    '-i', os.path.join(os.path.dirname(__file__), '.test_rsa'),
-    '-o', 'UserKnownHostsFile=/dev/null',
-    '-o', 'StrictHostKeyChecking=no',
-]
-
-
-def SshCommand(ip, cmd, output=True):
-  """Execute a remote command through ssh."""
-  remote_args = ['ssh', f'root@{ip}'] + REMOTE_COMMAND_FLAGS + [cmd]
-  cmd_str = ' '.join(remote_args)
-  if output:
-    return utils.SimpleSystemOutput(cmd_str)
-
-  return utils.IsSuccessful(utils.SimpleSystem(cmd_str))
-
-
-def ScpCommand(ip, filename, remote_path):
-  """Execute a remote command through ssh."""
-  remote_args = (['scp'] + REMOTE_COMMAND_FLAGS +
-                 ['-p', filename, f'root@{ip}:{remote_path}'])
-  return utils.IsSuccessful(utils.SimpleSystem(' '.join(remote_args)))
-
-
 class TSConfig:
   """Manage the touchscreen config data."""
 
