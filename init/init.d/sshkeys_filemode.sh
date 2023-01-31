@@ -7,6 +7,11 @@
 
 FACTORY_DIR="$(readlink -f "$(dirname "$(readlink -f "$0")")/../..")"
 
-if [ -d "${FACTORY_DIR}/misc/sshkeys" ]; then
-  chmod 600 "${FACTORY_DIR}/misc/sshkeys/testing_rsa"
+if [ -d "${FACTORY_DIR}"/misc/sshkeys ]; then
+  for f in "${FACTORY_DIR}"/misc/sshkeys/*; do
+    case "${f}" in
+      *.pub) ;;
+      *) chmod 600 "${f}" ;;
+    esac
+  done
 fi

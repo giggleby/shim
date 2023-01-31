@@ -25,6 +25,7 @@
 # targets like presubmit-*, lint, test, overlay-* ... etc.
 
 # Local environment settings
+REPO_DIR := ../../..
 MK_DIR := devtools/mk
 
 include $(MK_DIR)/common.mk
@@ -229,6 +230,19 @@ $(if $(wildcard $(CURRENT_PACKAGE_FILES_DIR)), \
     -C $(CURRENT_PACKAGE_FILES_DIR) .))
 endef
 
+# Add all available SSH identities to misc/sshkeys. These includes testing_rsa
+# and partner_testing_rsa if accessible.
+define func-add-ssh-identities
+	@mkdir -p $(TEMP_DIR)/misc/sshkeys
+	@-cp \
+	  $(REPO_DIR)/chromite/ssh_keys/testing_rsa \
+	  $(REPO_DIR)/chromite/ssh_keys/testing_rsa.pub \
+	  $(REPO_DIR)/sshkeys/partner_testing_rsa \
+	  $(REPO_DIR)/src/private-overlays/chromeos-overlay/chromeos-base/chromeos-ssh-testkeys/files/partner_testing_rsa.pub \
+	  $(TEMP_DIR)/misc/sshkeys
+	tar -rf $(RESOURCE_PATH) -C $(TEMP_DIR) misc/sshkeys
+endef
+
 # Prepare files from source folder into resource folder.
 resource: closure po
 	@rm -f $(TEMP_DIR)/reinstall
@@ -248,6 +262,7 @@ resource: closure po
 	  bin misc py py_pkg sh init \
 	  $(EXTRA_RESOURCE_ARGS)
 	tar -rf $(RESOURCE_PATH) -C $(BUILD_DIR) locale
+	$(call func-add-ssh-identities)
 	$(if $(OUTOFTREE_BUILD),\
 	  tar -rf $(RESOURCE_PATH) --transform 's"^"./py/goofy/static/"' \
 	    -C "$(CLOSURE_OUTPUT_DIR)" $(CLOSURE_OUTPUT_FILENAMES))
