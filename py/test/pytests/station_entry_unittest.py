@@ -131,7 +131,7 @@ class FactoryEntryUnitTest(unittest.TestCase):
     self._timeline.AssertTimeAt(10)
 
   def testStartStationBasedTestTimeout(self):
-    timeout_secs = 0
+    timeout_secs = 123
     self.test.args = FakeArgs({'start_station_tests': True,
                                'prompt_start': False,
                                'load_dut_storage': True,

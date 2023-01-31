@@ -9,6 +9,7 @@ import _thread
 from contextlib import contextmanager
 import functools
 import logging
+import math
 import queue
 import signal
 import sys
@@ -116,7 +117,7 @@ def WaitFor(condition: Callable, timeout_secs: int = DEFAULT_TIMEOUT_SECS,
   if not callable(condition):
     raise ValueError('condition must be a callable object')
 
-  @RetryDecorator(timeout_sec=timeout_secs if timeout_secs else 0,
+  @RetryDecorator(timeout_sec=timeout_secs if timeout_secs else math.inf,
                   interval_sec=poll_interval, target_condition=lambda x: x)
   def WaitForCondition():
     return condition()
@@ -133,7 +134,7 @@ def QueueGet(q: queue.Queue, timeout: int = DEFAULT_TIMEOUT_SECS,
   if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return q.get(timeout=timeout)
 
-  @RetryDecorator(timeout_sec=timeout if timeout else 0,
+  @RetryDecorator(timeout_sec=timeout if timeout else math.inf,
                   interval_sec=poll_interval_secs,
                   exceptions_to_catch=[queue.Empty], reraise=True)
   def QueueGetNowait():
@@ -151,7 +152,7 @@ def EventWait(event: threading.Event, timeout=None,
   if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return event.wait(timeout=timeout)
 
-  @RetryDecorator(timeout_sec=timeout if timeout else 0,
+  @RetryDecorator(timeout_sec=timeout if timeout else math.inf,
                   interval_sec=poll_interval_secs,
                   target_condition=lambda x: x is True)
   def WaitEventSet():
