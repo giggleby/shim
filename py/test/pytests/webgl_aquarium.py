@@ -13,12 +13,8 @@ Test Procedure
 --------------
 This is an automatic test that doesn't need any user interaction.
 Just set the argument before start, and wait for the completion.
-
-"min_fps" argument is the minimum average FPS to pass the test, if the average
-FPS is lower than it, the test will fail, the default value of it is set to 10
-for warning that FPS is low.
-You can set it to 0 if FPS doesn't matter at all, or set it to a higher value
-for strictly performance requirement.
+It runs the WebGL aquarium test, and fail if the average FPS value
+less than 'min_fps' while testing.
 
 Dependency
 ----------
@@ -64,7 +60,13 @@ class WebGLAquariumTest(test_case.TestCase):
           default=True),
       Arg('full_screen', bool, 'Whether to go full screen mode by default',
           default=True),
-      Arg('min_fps', int, 'Minimum average FPS to pass the test', default=10),
+      Arg(
+          'min_fps', int, 'Minimum average FPS to pass the test, '
+          'if the average FPS is lower than it, the test will fail.'
+          'The default value of it is set to 10 for warning that FPS is low.'
+          'You can set it to 0 if FPS does not matter at all, '
+          'or set it to a higher value for strict performance requirement.',
+          default=10),
       Arg('fps_sample_interval', float, 'Period of FPS sampling in seconds',
           default=1.0),
       Arg('fps_log_interval', int, 'Period of FPS logging in seconds',
