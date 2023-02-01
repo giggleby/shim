@@ -6,4 +6,4 @@ gunicorn==20.0.4
 # Uses `MarkupSafe` with version 2.0.1 here to prevent `ImportError`, see
 # https://github.com/pallets/markupsafe/issues/284 for details.
 MarkupSafe==2.0.1
-protobuf==3.19.0
+protobuf==3.20.3

@@ -11,7 +11,7 @@ from cros.factory.bundle_creator.utils import protorpc_utils
 app = flask.Flask(__name__)
 
 protorpc_utils.RegisterProtoRPCServiceToFlaskApp(
-    app, '/_ah/stubby', stubby_handler.FactoryBundleServiceV2())
+    app, '/_ah/stubby', stubby_handler.FactoryBundleV2Service())
 
 if __name__ == '__main__':
   app.run(host='127.0.0.1', port=8080, debug=True)

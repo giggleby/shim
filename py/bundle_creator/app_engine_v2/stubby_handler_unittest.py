@@ -74,7 +74,7 @@ class StubbyHandlerTest(unittest.TestCase):
         self._mock_storage_connector)
     self.addCleanup(mock_storage_connector_patcher.stop)
 
-    self._stubby_handler = stubby_handler.FactoryBundleServiceV2()
+    self._stubby_handler = stubby_handler.FactoryBundleV2Service()
 
   def testCreateBundle_succeed_returnsExpectedResponse(self):
     response = self._stubby_handler.CreateBundle(self._create_bundle_request)

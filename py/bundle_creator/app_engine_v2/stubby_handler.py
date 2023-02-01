@@ -13,9 +13,9 @@ from cros.factory.bundle_creator.utils import allowlist_utils
 from cros.factory.bundle_creator.utils import protorpc_utils
 
 
-class FactoryBundleServiceV2(protorpc_utils.ProtoRPCServiceBase):
+class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
   SERVICE_DESCRIPTOR = factorybundle_v2_pb2.DESCRIPTOR.services_by_name[
-      'FactoryBundleServiceV2']
+      'FactoryBundleV2Service']
 
   _REQUEST_FROM_VALUE = 'v2'
 
