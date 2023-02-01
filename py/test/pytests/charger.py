@@ -3,8 +3,41 @@
 # found in the LICENSE file.
 
 
-"""Test that charger can charge/discharge battery for certain amount
-of change within certain time under certain load.
+"""Test if the charger can charge battery in time.
+
+Description
+-----------
+Test that charger can charge/discharge battery for certain amount of change
+within certain time under certain load.
+
+Test Procedure
+--------------
+1. The battery and AC must present before running the test.
+2. This is an automated test without user interaction.
+
+Dependency
+----------
+Device API `cros.factory.device.power`.
+
+Examples
+--------
+A test that charges/discharges until the battery percentage is 87 with 1 hour
+timeout.::
+
+  {
+    "pytest_name": "charger",
+    "exclusive_resources": [
+      "POWER"
+    ],
+    "args": {
+      "min_starting_charge_pct": 87,
+      "max_starting_charge_pct": 87,
+      "check_battery_current": false,
+      "starting_timeout_secs": 3600,
+      "spec_list": []
+    }
+  }
+
 """
 
 import logging
@@ -335,14 +368,15 @@ class ChargerTest(test_case.TestCase):
     if self.args.check_battery_current:
       self.assertLess(battery_current, 0, 'Abnormal battery current')
 
-  def _SetCharge(self):
+  def _SetCharge(self, teardown=False):
     """Sets charger state to CHARGE"""
     try:
       self._power.SetChargeState(self._power.ChargeState.CHARGE)
     except Exception as e:
       self.fail(f'Cannot set charger state to CHARGE on this board. {e}')
     else:
-      self.Sleep(1)
+      if not teardown:
+        self.Sleep(1)
 
   def _SetDischarge(self):
     """Sets charger state to DISCHARGE"""
@@ -381,4 +415,4 @@ class ChargerTest(test_case.TestCase):
 
   def tearDown(self):
     # Must enable charger to charge or we will drain the battery!
-    self._SetCharge()
+    self._SetCharge(teardown=True)
