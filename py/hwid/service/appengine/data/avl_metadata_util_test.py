@@ -7,6 +7,7 @@ import unittest
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import rule as v3_rule
 
 
 class AVLMetadataManagerTest(unittest.TestCase):
@@ -76,6 +77,15 @@ class AVLMetadataManagerTest(unittest.TestCase):
     self.assertTrue(self._manager.SkipAVLCheck('audio_codec', comp1))
     self.assertTrue(self._manager.SkipAVLCheck('audio_codec', comp2))
     self.assertFalse(self._manager.SkipAVLCheck('audio_codec', comp3))
+
+  def testSkipAVLCheck_SkipNonStr(self):
+    self._manager.UpdateAudioCodecBlocklist([
+        'kernel_name1',
+        'kernel_name2',
+    ])
+    comp_with_re = database.ComponentInfo(
+        {'name': v3_rule.Value(r'^kernel_name\d$', is_re=True)}, 'supported')
+    self.assertFalse(self._manager.SkipAVLCheck('audio_codec', comp_with_re))
 
 
 if __name__ == '__main__':

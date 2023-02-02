@@ -87,7 +87,7 @@ class AVLMetadataManager:
       return False
 
     kernel_name = comp_info.values.get('name')
-    if kernel_name is None:
+    if kernel_name is None or not isinstance(kernel_name, str):
       return False
     try:
       with self._ndb_connector.CreateClientContextWithGlobalCache():
