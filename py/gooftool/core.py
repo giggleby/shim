@@ -881,11 +881,6 @@ class Gooftool:
                   for field in fields}
                  for config in obj['chromeos']['configs']
                  if config['name'] == model]
-      configs = {
-          # set sort_keys=True to make the result stable.
-          json_utils.DumpStr(config, sort_keys=True)
-          for config in configs
-      }
       return configs
 
     # Load config.yaml from release image (FSI) and test image, and compare the
