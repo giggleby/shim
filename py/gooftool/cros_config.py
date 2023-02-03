@@ -48,10 +48,6 @@ class CrosConfig:
             'the test image to version higher than "14675.0.0".')
     return result.success, (result.stdout.strip() if result.stdout else '')
 
-  def GetPlatformName(self):
-    result = self.GetValue('/identity', 'platform-name')
-    return result.stdout.strip() if result.stdout else ''
-
   # Introducing frid as ToT cros_config only supports this field
   # while removing smbios-name-match / device-tree-compatible-match.
   # The change was landed in 15227.0.0, refer to b/245588383 for details.
