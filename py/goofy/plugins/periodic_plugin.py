@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 
+import logging
 import threading
 
 from cros.factory.goofy.plugins import plugin
@@ -21,12 +22,14 @@ class PeriodicPlugin(plugin.Plugin):
   in a daemon thread.
   """
 
-  def __init__(self, goofy, period_secs,
-               used_resources=None, catch_exception=True):
-    """Contructor of PeriodicPlugin.
+  def __init__(self, goofy, period_secs, used_resources=None,
+               catch_exception=True, *, stop_timeout_secs=1):
+    """Constructor of PeriodicPlugin.
 
     Args:
       period_secs: seconds between each run.
+      stop_timeout_secs: seconds to wait for the daemon in OnStop. Pass to
+          threading.Thread.join directly.
       catch_exception: catch exceptions from `RunTask()` function or not. If
           set to False, exception in `RunTask()` would cause the running thread
           to crash, and the following periodic task would be stopped.
@@ -35,6 +38,7 @@ class PeriodicPlugin(plugin.Plugin):
     self._thread = None
     self._stop_event = threading.Event()
     self._period_secs = period_secs
+    self._stop_timeout_secs = stop_timeout_secs
     self._run_times = 0
     self._run_task = self._RunTaskWithCatch if catch_exception else self.RunTask
 
@@ -66,3 +70,8 @@ class PeriodicPlugin(plugin.Plugin):
   @type_utils.Overrides
   def OnStop(self):
     self._stop_event.set()
+    self._thread.join(self._stop_timeout_secs)
+    if self._thread.is_alive():
+      logging.warning('%s is still alive after %s.OnStop.', self._thread.name,
+                      self.__class__.__name__)
+    self._thread = None
