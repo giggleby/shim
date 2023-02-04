@@ -18,6 +18,7 @@ from backend.models import Project
 from backend.models import Resource
 from backend.models import Service
 from backend.models import TemporaryUploadedFile
+from backend.models import UpdateDuplicateResource
 from backend.serializers import BundleSerializer
 from backend.serializers import ConfigSerializer
 from backend.serializers import FactoryDriveComponentSerializer
@@ -284,6 +285,21 @@ class ResourceDownloadView(views.APIView):
                                       kwargs['resource_type'])
     return StreamingHttpResponse(resource_file,
                                  content_type='application/octet-stream')
+
+
+class ResourceUpdateView(views.APIView):
+
+  serializer_class = BundleSerializer
+
+  def put(self, request, *args, **kwargs):
+    del args, kwargs  # unused
+    UpdateDuplicateResource(
+        request.data['project_name'], request.data['old_bundle_name'],
+        request.data['new_bundle_name'], request.data['note'],
+        request.data['resource_type'], request.data['resource_file'])
+    bundle_list = Bundle.ListAll(request.data['project_name'])
+    serializer = BundleSerializer(bundle_list, many=True)
+    return Response(serializer.data)
 
 
 class SyncStatusView(views.APIView):

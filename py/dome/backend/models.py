@@ -236,6 +236,29 @@ def GetNetbootFirmwarewarningMessage(project_name, payloads):
   return json.dumps(warning_message)
 
 
+def UpdateDuplicateResource(project_name, old_bundle_name, new_bundle_name,
+                            note, resource_type, resource_file):
+  """Update the duplicate resource.
+
+  Args:
+    project_name: name of the project.
+    old_bundle_name: name of the old bundle, in string. This corresponds to the
+        "id" field in umpire config.
+    new_bundle_name: name of the new bundle, in string. This corresponds to the
+        "id" field in umpire config.
+    note: A description of this bundle.
+    resource_type: type of the resource.
+    resource_file: A resource's filename.
+  """
+  try:
+    umpire_server = GetUmpireServer(project_name)
+    umpire_server.UpdateDuplicateResource(old_bundle_name, new_bundle_name,
+                                          note, resource_type, resource_file)
+  except xmlrpc.client.Fault as e:
+    logger.error('Updating the duplicate resource failed')
+    raise DomeServerException(detail=e.faultString) from e
+
+
 class DomeConfig(django.db.models.Model):
 
   id = django.db.models.IntegerField(
@@ -718,11 +741,12 @@ class Bundle:
   """Represent a bundle in umpire."""
 
   def __init__(self, name, note, active, payloads, project_name,
-               warning_message):
+               require_user_action, warning_message):
     self.name = name
     self.note = note
     self.active = active
     self.project_name = project_name
+    self.require_user_action = require_user_action
     self.warning_message = warning_message
 
     self.resources = {
@@ -760,12 +784,14 @@ class Bundle:
       config: Umpire config.
     """
     payloads = GetUmpireServer(project_name).GetPayloadsDict(bundle['payloads'])
+    require_user_action = bundle.get('require_user_action') or {}
     return Bundle(
         bundle['id'],  # name
         bundle['note'],  # note
         bundle['id'] == config['active_bundle_id'],  # active
         payloads,  # payloads
         project_name,  # project name
+        require_user_action,  # require user action items
         warning_message)  # warning message
 
   @classmethod

@@ -40,6 +40,8 @@ class BundleImporter:
       daemon: UmpireDaemon object.
     """
     self._daemon = daemon
+    self._duplicate_types = []
+    self._require_user_action = {}
 
   def Import(self, bundle_path, bundle_id=None, note=None):
     """Imports a bundle.
@@ -65,31 +67,44 @@ class BundleImporter:
         self.Import(temp_dir, bundle_id=bundle_id, note=note)
         return
 
-    import_list = BundleImporter._GetImportList(bundle_path)
+    import_list = self._GetImportList(bundle_path)
     payloads = {}
+    for type_name in self._duplicate_types:
+      temp_object = [{
+          "type": "duplicate",
+          "file_list": []
+      }]
+      self._require_user_action[type_name] = temp_object
     for path, type_name in import_list:
-      payloads.update(self._daemon.env.AddPayload(path, type_name))
+      update_payloads = self._daemon.env.AddPayload(path, type_name)
+      if type_name in self._duplicate_types:
+        self._require_user_action[type_name][0]['file_list'].append(
+            update_payloads[type_name])
+      payloads.update(update_payloads)
     payload_json_name = self._daemon.env.AddConfigFromBlob(
         json.dumps(payloads), resource.ConfigTypeNames.payload_config)
 
-    config['bundles'].insert(0, {
-        'id': bundle_id,
-        'note': note,
-        'payloads': payload_json_name
-    })
+    config['bundles'].insert(
+        0, {
+            'id': bundle_id,
+            'note': note,
+            'payloads': payload_json_name,
+            'require_user_action': self._require_user_action,
+        })
     config['active_bundle_id'] = bundle_id
     deploy.ConfigDeployer(self._daemon).Deploy(
         self._daemon.env.AddConfigFromBlob(
             config.Dump(), resource.ConfigTypeNames.umpire_config))
 
-  @classmethod
-  def _GetImportList(cls, bundle_path):
+  def _GetImportList(self, bundle_path):
     ret = []
     for type_name in resource.PayloadTypeNames:
       target = resource.GetPayloadType(type_name).import_pattern
       candidates = glob.glob(os.path.join(bundle_path, target))
       if len(candidates) > 1:
-        raise common.UmpireError(f'Multiple {type_name} found: {candidates!r}')
+        self._duplicate_types.append(type_name)
+        for candidate in candidates:
+          ret.append((candidate, type_name))
       if len(candidates) == 1:
         ret.append((candidates[0], type_name))
     return ret

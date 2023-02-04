@@ -111,6 +111,7 @@ class BundleSerializer(serializers.Serializer):
   active = serializers.NullBooleanField(required=False)
   rules = serializers.DictField(required=False)
   resources = serializers.DictField(required=False, child=ResourceSerializer())
+  require_user_action = serializers.DictField(required=False)
   warning_message = serializers.CharField(required=False)
 
   new_name = serializers.CharField(write_only=True, required=False)

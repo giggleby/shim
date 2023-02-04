@@ -64,5 +64,6 @@
       "warningMessage": ""
     }
   },
-  "warningMessage": null
+  "warningMessage": null,
+  "requireUserAction": {}
 }

@@ -49,6 +49,8 @@ urlpatterns = [
     url(f'{URL_PREFIX}bundles/{BUNDLE_URL_ARG}/'
         f'{RESOURCE_URL_ARG}'
         r'$', views.ResourceDownloadView.as_view()),
+    url(f'{URL_PREFIX}bundles/{BUNDLE_URL_ARG}/resources/'
+        r'$', views.ResourceUpdateView.as_view()),
     url(f'{URL_PREFIX}'
         r'log/compress/$', views.LogExportView.as_view()),
     url(f'{URL_PREFIX}'

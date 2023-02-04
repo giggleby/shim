@@ -23,12 +23,49 @@ from cros.factory.utils.schema import JSONSchemaDict
 _BUNDLE_JSON_SCHEMA = {
     'type': 'object',
     'properties': {
-        'id': {'type': 'string'},
-        'note': {'type': 'string'},
-        'payloads': {'type': 'string'}
+        'id': {
+            'type': 'string'
+        },
+        'note': {
+            'type': 'string'
+        },
+        'payloads': {
+            'type': 'string'
+        },
+        'require_user_action': {
+            'type': 'object',
+            'patternProperties': {
+                '^.*$': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'type': {
+                                'type': 'string'
+                            },
+                            'file_list': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'file': {
+                                            'type': 'string'
+                                        },
+                                        'version': {
+                                            'type': 'string'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     },
     'required': ['id', 'note', 'payloads'],
-    'additionalProperties': False}
+    'additionalProperties': False
+}
 
 def ValidateConfig(config):
   """Validates Umpire config dict.

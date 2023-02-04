@@ -40,12 +40,27 @@ export interface ResourceMap {
   [type: string]: Resource;
 }
 
+export interface FileList {
+  file: string;
+  version: string;
+}
+
+export interface RequireUserAction {
+  type: string;
+  fileList: FileList[];
+}
+
+export interface RequireUserActionMap {
+  [type: string]: RequireUserAction[];
+}
+
 export interface Bundle {
   name: string;
   note: string;
   active: boolean;
   resources: ResourceMap;
   warningMessage: string;
+  requireUserAction: RequireUserActionMap;
 }
 
 export interface DeletedResources {

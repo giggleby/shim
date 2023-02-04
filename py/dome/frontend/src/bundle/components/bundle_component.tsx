@@ -4,10 +4,12 @@
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
+import ErrorIcon from '@mui/icons-material/Error';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Collapse from '@mui/material/Collapse';
+import red from '@mui/material/colors/red';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import {Theme} from '@mui/material/styles';
@@ -68,6 +70,10 @@ const styles = (theme: Theme) => createStyles({
     marginLeft: 0,
     marginRight: theme.spacing(2),
   },
+  errorIcon: {
+    color: red[700],
+    marginRight: theme.spacing(2),
+  },
 });
 
 export interface BundleComponentOwnProps {
@@ -117,6 +123,9 @@ class BundleComponent extends React.Component<BundleComponentProps> {
         className={classNames(classes.root, !bundle.active && classes.inactive)}
       >
         <CardContent className={classes.header} onClick={this.toggleExpand}>
+          {Object.keys(bundle.requireUserAction).length > 0 &&
+            <ErrorIcon className={classes.errorIcon} />
+          }
           <div className={classes.headerText}>
             <Typography variant="h5">{bundle.name}</Typography>
             <Typography variant="caption">{bundle.note}</Typography>

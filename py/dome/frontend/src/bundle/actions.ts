@@ -164,6 +164,7 @@ export const startUploadBundle = (data: UploadBundleRequestPayload) =>
         active: true,
         resources: {},
         warningMessage: '',
+        requireUserAction: {},
       }));
     };
 
@@ -237,6 +238,34 @@ export const setBundleAsNetboot = (name: string, projectName: string) => (
     {netbootBundle: name},
     `Set netboot bundle to ${name} for project "${projectName}"`)
 );
+
+export const resetDuplicateBundleResource =
+  (projectName: string, oldBundleName: string, newBundleName: string,
+   note: string, resourceType: string, resourceFile: string) =>
+    async (dispatch: Dispatch) => {
+      // send the request
+      const body = {
+        projectName,
+        oldBundleName,
+        newBundleName,
+        note,
+        resourceType,
+        resourceFile,
+      };
+      await authorizedAxios().put(
+          `projects/${projectName}/bundles/${oldBundleName}/resources/`, body)
+        .then((response) => {
+          console.log('response', response);
+        }, (unknownError) => {
+          let moreMessage = unknownError.response?.data.detail;
+          if (moreMessage === undefined) {
+            moreMessage = unknownError.response?.data;
+          }
+          dispatch(error.actions.setAndShowErrorDialog(
+            `error updating resource\n\n${unknownError.message}`, moreMessage));
+        });
+      await dispatch(fetchBundles());
+    };
 
 export const downloadResource = (projectName: string,
                                  bundleName: string,

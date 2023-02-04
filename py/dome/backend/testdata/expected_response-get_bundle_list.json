@@ -65,7 +65,8 @@
         "warningMessage": ""
       }
     },
-    "warningMessage": null
+    "warningMessage": null,
+    "requireUserAction": {}
   },
   {
     "active": false,
@@ -133,7 +134,8 @@
         "warningMessage": ""
       }
     },
-    "warningMessage": null
+    "warningMessage": null,
+    "requireUserAction": {}
   },
   {
     "active": false,
@@ -201,7 +203,8 @@
         "warningMessage": ""
       }
     },
-    "warningMessage": null
+    "warningMessage": null,
+    "requireUserAction": {}
   },
   {
     "active": false,
@@ -269,7 +272,8 @@
         "warningMessage": ""
       }
     },
-    "warningMessage": null
+    "warningMessage": null,
+    "requireUserAction": {}
   },
   {
     "active": false,
@@ -337,6 +341,7 @@
         "warningMessage": ""
       }
     },
-    "warningMessage": null
+    "warningMessage": null,
+    "requireUserAction": {}
   }
 ]

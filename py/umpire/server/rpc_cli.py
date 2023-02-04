@@ -9,6 +9,7 @@ import urllib.request
 from cros.factory.umpire import common
 from cros.factory.umpire.server.commands import delete_log
 from cros.factory.umpire.server.commands import deploy
+from cros.factory.umpire.server.commands import duplicate_update
 from cros.factory.umpire.server.commands import export_log
 from cros.factory.umpire.server.commands import export_payload
 from cros.factory.umpire.server.commands import import_bundle
@@ -129,6 +130,26 @@ class CLICommand(umpire_rpc.UmpireRPC):
     """
     import_bundle.BundleImporter(self.daemon).Import(
         bundle_path, bundle_id, note)
+
+  @umpire_rpc.RPCCall
+  def UpdateDuplicateResource(self, old_bundle_id, new_bundle_id, note,
+                              resource_type, resource_file):
+    """Update the duplicate bundle.
+
+    It will reset the duplicate bundle resource and deploys the updated
+    bundle_user_action_state config file.
+
+    Args:
+      old_bundle_id: The ID of the old bundle. If omitted, use bundle_name in
+          factory bundle's manifest.
+      new_bundle_id: The ID of the new bundle. If omitted, use bundle_name in
+          factory bundle's manifest.
+      note: A description of this bundle.
+      resource_type: type of the resource.
+      resource_file: A resource's filename.
+    """
+    duplicate_update.DuplicateUpdater(self.daemon).Update(
+        old_bundle_id, new_bundle_id, note, resource_type, resource_file)
 
   @umpire_rpc.RPCCall
   def AddPayload(self, file_path, type_name):
