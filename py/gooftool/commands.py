@@ -777,7 +777,6 @@ def VerifyBeforeCr50Finalize(options):
     'verify_after_cr50_finalize',
     _no_write_protect_cmd_arg,  # this
     *GetGooftool.__args__,
-    *VerifyCBIEEPROMWPStatus.__args__,
     *VerifySnBits.__args__,
     *VerifyWPSwitch.__args__,
 )
@@ -789,7 +788,6 @@ def VerifyAfterCr50Finalize(options):
   """
   if not options.no_write_protect:
     VerifyWPSwitch(options)
-  VerifyCBIEEPROMWPStatus(options)
   VerifySnBits(options)
 
 
@@ -1041,6 +1039,7 @@ def SMTFinalize(options):
     *UploadReport.__args__,
     *VerifyAfterCr50Finalize.__args__,
     *VerifyBeforeCr50Finalize.__args__,
+    *VerifyCBIEEPROMWPStatus.__args__,
 )
 def Finalize(options):
   """Verify system readiness and trigger transition into release state.
@@ -1086,6 +1085,7 @@ def Finalize(options):
     event_log.Log('wp', fw='both', status='skipped')
   else:
     WriteProtect(options)
+  VerifyCBIEEPROMWPStatus(options)
   FpmcuInitializeEntropy(options)
   LogSystemDetails(options)
   UploadReport(options)
