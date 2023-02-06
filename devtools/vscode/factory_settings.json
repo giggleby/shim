@@ -11,6 +11,12 @@
         "py/goofy/*/manifest.json"
       ],
       "url": "https://json.schemastore.org/chrome-manifest"
+    },
+    {
+      "fileMatch": [
+        "py/goofy/plugins/goofy_plugin*.json"
+      ],
+      "url": "file://${factoryFolder}/py_pkg/cros/factory/goofy/plugins/plugins.schema.json"
     }
   ],
   "python.pythonPath": "/usr/bin/python3.6",

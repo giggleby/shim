@@ -3,12 +3,27 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "inherit": {
+      "default": [],
+      "description": "See description of LoadConfig in https://source.chromium.org/chromium/chromiumos/platform/factory/+/main:py/utils/config_utils.py",
+      "oneOf":[
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
     "plugins": {
       "type": "object",
       "patternProperties": {
         "^.+$": {
           "type": "object",
-          "addtionalProperties": false,
+          "additionalProperties": false,
           "properties": {
             "args": {
               "type": "object",
