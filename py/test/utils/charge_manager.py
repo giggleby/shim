@@ -14,8 +14,14 @@ class ChargeManagerException(Exception):
 
 
 class ChargeManager:
-  """Properties:
+  """The class controls the battery level.
 
+  We use this because
+  1. Let the battery fully charged for a long time is bad to
+  the battery.
+  2. The battery tests requires to run with non-full battery.
+
+  Attributes:
     state: The current state (an element of either ErrorState or
       Board.ChargeState).
   """

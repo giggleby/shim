@@ -36,6 +36,45 @@
           }
         }
       },
+      "properties": {
+        "charge_manager": {
+          "additionalProperties": false,
+          "description": "This plugin controls the battery level. We use this because let the battery fully charged for a long time is bad to the battery and the battery tests require to run with non-full battery.",
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "max_charge_pct": {
+                  "default": 89,
+                  "description": "The maximum level of charge. Battery discharges when charge level is higher than this value. This value must be between 0 and 100, and must be higher than min_charge_pct.",
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "min_charge_pct": {
+                  "default": 88,
+                  "description": "The minimum level of charge. Battery charges when charge level is lower than this value. This value must be between 0 and 100.",
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "period_secs": {
+                  "default": 120,
+                  "description": "seconds between each run.",
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      },
       "additionalProperties": false
     }
   }
