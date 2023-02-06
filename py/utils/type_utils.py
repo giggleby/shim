@@ -9,7 +9,7 @@ import functools
 import inspect
 import queue
 import re
-from typing import Callable, Generic, TypeVar, Union
+from typing import Any, Callable, Dict, Generic, Iterable, List, Set, Tuple, TypeVar, Union, overload
 
 
 # The regular expression used by Overrides.
@@ -85,7 +85,7 @@ class Enum(frozenset):
     raise AttributeError
 
 
-def DrainQueue(q):
+def DrainQueue(q: 'queue.Queue[T]') -> List[T]:
   """Returns as many elements as can be obtained from a queue without blocking.
 
   (This may be no elements at all.)
@@ -99,18 +99,23 @@ def DrainQueue(q):
   return ret
 
 
-def FlattenList(lst):
+T_ElementOrList = Union[T, List[T]]
+
+
+def FlattenList(lst: List[T_ElementOrList]) -> List[T]:
   """Flattens a list, recursively including all items in contained arrays.
 
   For example:
 
     FlattenList([1,2,[3,4,[]],5,6]) == [1,2,3,4,5,6]
   """
-  return sum((FlattenList(x) if isinstance(x, list) else [x] for x in lst),
-             [])
+  return sum((FlattenList(x) if isinstance(x, list) else [x] for x in lst), [])
 
 
-def FlattenTuple(tupl):
+T_ElementOrTuple = Union[T, Tuple[T]]
+
+
+def FlattenTuple(tupl: Tuple[T_ElementOrTuple]) -> Tuple[T, ...]:
   """Flattens a tuple, recursively including all items in contained tuples.
 
   For example:
@@ -119,6 +124,21 @@ def FlattenTuple(tupl):
   """
   return sum((FlattenTuple(x) if isinstance(x, tuple) else (x, ) for x in tupl),
              ())
+
+
+@overload
+def MakeList(value: str) -> List[str]:
+  ...
+
+
+@overload
+def MakeList(value: Iterable[T]) -> List[T]:
+  ...
+
+
+@overload
+def MakeList(value: T) -> List[T]:
+  ...
 
 
 def MakeList(value):
@@ -134,6 +154,21 @@ def MakeList(value):
   return [value]
 
 
+@overload
+def MakeTuple(value: str) -> Tuple[str]:
+  ...
+
+
+@overload
+def MakeTuple(value: Iterable[T]) -> Tuple[T]:
+  ...
+
+
+@overload
+def MakeTuple(value: T) -> Tuple[T]:
+  ...
+
+
 def MakeTuple(value):
   """Converts the given value to a tuple recursively.
 
@@ -144,16 +179,31 @@ def MakeTuple(value):
     A tuple of elements from "value" if it is iterable (except string)
     recursively; otherwise, a tuple with only one element.
   """
+
   def ShouldExpand(v):
-    return (isinstance(v, collections.abc.Iterable) and
-            not isinstance(v, str))
+    return (isinstance(v, collections.abc.Iterable) and not isinstance(v, str))
 
   def Expand(v):
     return tuple(Expand(e) if ShouldExpand(e) else e for e in v)
 
   if ShouldExpand(value):
     return Expand(value)
-  return (value,)
+  return (value, )
+
+
+@overload
+def MakeSet(value: str) -> Set[str]:
+  ...
+
+
+@overload
+def MakeSet(value: Iterable[T]) -> Set[T]:
+  ...
+
+
+@overload
+def MakeSet(value: T) -> Set[T]:
+  ...
 
 
 def MakeSet(value):
@@ -169,7 +219,7 @@ def MakeSet(value):
   return set([value])
 
 
-def CheckDictKeys(dict_to_check, allowed_keys):
+def CheckDictKeys(dict_to_check: Dict[T, Any], allowed_keys: List[T]):
   """Makes sure that a dictionary's keys are valid.
 
   Args:
@@ -184,7 +234,8 @@ def CheckDictKeys(dict_to_check, allowed_keys):
     raise ValueError(f'Found extra keys: {list(extra_keys)}')
 
 
-def GetDict(data, key_path, default_value=None):
+def GetDict(data: Dict[Any, Any], key_path: Union[str, List[Any]],
+            default_value: Any = None) -> Any:
   """A simplified getter function to retrieve values inside dictionary.
 
   This function is very similar to `dict.get`, except it accepts a key path
