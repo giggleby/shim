@@ -142,6 +142,30 @@ class SSHLinkIntegrationTest(unittest.TestCase):
     # Delete test file on remote.
     self.assertEqual(self.ssh_link.Shell('rm -f /tmp/content').wait(), 0)
 
+  def testPullDirectory(self):
+    remote_test_dir = '/tmp/test_dir'
+    remote_test_file = '/tmp/test_dir/test_file'
+    test_file_content = _GenerateRandomString()
+    ssh_link = ssh.SSHLink(**dut_options)
+
+    # Create temp directory and file on the remote.
+    self.assertEqual(
+        ssh_link.Shell(
+            f'mkdir "{remote_test_dir}" && \\'
+            f'echo -n "{test_file_content}" > "{remote_test_file}"').wait(), 0)
+
+    # Pull the remote directory to local and verify the file content.
+    with file_utils.TempDirectory() as local_temp:
+      local_test_dir = os.path.join(local_temp, 'test_dir')
+      local_test_file = os.path.join(local_temp, 'test_dir/test_file')
+      ssh_link.PullDirectory(remote_test_dir, local_test_dir)
+      self.assertTrue(os.path.isdir(local_test_dir))
+      self.assertTrue(os.path.isfile(local_test_file))
+      self.assertEqual(file_utils.ReadFile(local_test_file), test_file_content)
+
+    # Delete test directory on remote.
+    self.assertEqual(ssh_link.Shell(f'rm -rf {remote_test_dir}').wait(), 0)
+
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)

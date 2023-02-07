@@ -46,6 +46,10 @@ class LocalLink(device_types.DeviceLink):
     return None
 
   @type_utils.Overrides
+  def PullDirectory(self, remote: str, local: str) -> None:
+    shutil.copytree(remote, local)
+
+  @type_utils.Overrides
   def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
                                                                IO[Any]] = None,
             stdout: Union[None, int, IO[Any]] = None,

@@ -83,6 +83,11 @@ class DeviceLink(abc.ABC):
     raise NotImplementedError
 
   @abc.abstractmethod
+  def PullDirectory(self, remote: str, local: str) -> None:
+    """Downloads a directory from target device to local."""
+    raise NotImplementedError
+
+  @abc.abstractmethod
   def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
                                                                IO[Any]] = None,
             stdout: Union[None, int, IO[Any]] = None,
@@ -402,6 +407,10 @@ class MockLink(DeviceLink):
 
   @type_utils.Overrides
   def Pull(self, remote, local=None):
+    raise NotImplementedError
+
+  @type_utils.Overrides
+  def PullDirectory(self, remote, local):
     raise NotImplementedError
 
   @type_utils.Overrides

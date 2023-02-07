@@ -142,7 +142,8 @@ class SSHLink(device_types.DeviceLink):
   def PushDirectory(self, local: str, remote: str) -> None:
     """See DeviceLink.PushDirectory"""
     # Copy the directory itself, so add a trailing slash.
-    local = local + '/'
+    if not local.endswith('/'):
+      local = local + '/'
     self._DoRsync(local, remote, True)
 
   @type_utils.Overrides
@@ -156,6 +157,13 @@ class SSHLink(device_types.DeviceLink):
 
     self._DoRsync(remote, local, False)
     return None
+
+  @type_utils.Overrides
+  def PullDirectory(self, remote: str, local: str) -> None:
+    # Copy the directory itself, so add a trailing slash.
+    if not remote.endswith('/'):
+      remote = remote + '/'
+    self._DoRsync(remote, local, is_push=False)
 
   @type_utils.Overrides
   def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
