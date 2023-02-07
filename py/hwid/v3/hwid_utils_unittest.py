@@ -15,6 +15,7 @@ from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.unittest_utils import label_utils
 
+
 _TEST_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_project.yaml')
 
@@ -235,6 +236,15 @@ class GetProbeStatementPathTest(unittest.TestCase):
     self.assertTrue(
         os.path.basename(probe_statement_path).startswith(
             project.lower() + '_'))
+
+  @mock.patch('os.path.exists')
+  def testUseCommonProbeStatementPath(self, os_path_exists_mock):
+    project = 'PROJECT'
+    os_path_exists_mock.side_effect = [True, False]
+    probe_statement_path = hwid_utils.GetProbeStatementPath(project)
+
+    self.assertTrue(
+        os.path.basename(probe_statement_path).startswith('common_'))
 
 
 if __name__ == '__main__':
