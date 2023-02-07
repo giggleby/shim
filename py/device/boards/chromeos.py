@@ -4,6 +4,8 @@
 
 """ChromeOS family boards."""
 
+import subprocess
+
 from cros.factory.device.boards import linux
 from cros.factory.device import device_types
 from cros.factory.utils import type_utils
@@ -55,9 +57,7 @@ class ChromeOSBoard(linux.LinuxBoard):
   @type_utils.Overrides
   def GetStartupMessages(self):
     res = super().GetStartupMessages()
-
-    eventlog = self.CallOutput(
-        ['elogtool', 'list'], stderr=self.STDOUT)
+    eventlog = self.CallOutput(['elogtool', 'list'], stderr=subprocess.STDOUT)
 
     if eventlog:
       res['firmware_eventlog'] = eventlog

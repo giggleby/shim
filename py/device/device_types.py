@@ -4,14 +4,15 @@
 
 """Interfaces, classes and types for Device API."""
 
+import abc
+from typing import IO, Any, List, Optional, Union, overload
+
 from cros.factory.utils import sys_interface
 from cros.factory.utils import type_utils
 
+
 # Default component property - using lazy loaded property implementation.
 DeviceProperty = type_utils.LazyProperty
-# TODO(hungte) Change DeviceProperty to also check if it has overridden an
-# existing component; and NewDeviceProperty to declare new component.
-Overrides = type_utils.Overrides
 
 # Use sys_interface.CalledProcessError for invocation exceptions.
 CalledProcessError = sys_interface.CalledProcessError
@@ -23,10 +24,11 @@ class DeviceException(Exception):
   """Common exception for all components."""
 
 
-class DeviceLink:
+class DeviceLink(abc.ABC):
   """An abstract class for connection to remote or local device."""
 
-  def Push(self, local, remote):
+  @abc.abstractmethod
+  def Push(self, local: str, remote: str) -> None:
     """Uploads a local file to target device.
 
     Args:
@@ -35,7 +37,8 @@ class DeviceLink:
     """
     raise NotImplementedError
 
-  def PushDirectory(self, local, remote):
+  @abc.abstractmethod
+  def PushDirectory(self, local: str, remote: str) -> None:
     """Copies a local file to target device.
 
     `local` should be a local directory, and `remote` should be a non-existing
@@ -54,7 +57,18 @@ class DeviceLink:
     """
     raise NotImplementedError
 
-  def Pull(self, remote, local=None):
+  @abc.abstractmethod
+  @overload
+  def Pull(self, remote: str, local: None = None) -> Union[str, bytes]:
+    ...
+
+  @abc.abstractmethod
+  @overload
+  def Pull(self, remote: str, local: str) -> None:
+    ...
+
+  @abc.abstractmethod
+  def Pull(self, remote: str, local: Optional[str] = None):
     """Downloads a file from target device to local.
 
     Args:
@@ -63,13 +77,17 @@ class DeviceLink:
              None to return the contents directly.
 
     Returns:
-      If local is None, return a string as contents in remote file.
+      If local is None, return bytes or a string as contents in remote file.
       Otherwise, do not return anything.
     """
     raise NotImplementedError
 
-  def Shell(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
-            encoding='utf-8'):
+  @abc.abstractmethod
+  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
+                                                               IO[Any]] = None,
+            stdout: Union[None, int, IO[Any]] = None,
+            stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
+            encoding: Optional[str] = 'utf-8') -> Any:
     """Executes a command on device.
 
     The calling convention is similar to subprocess.Popen, but only a subset of
@@ -89,7 +107,8 @@ class DeviceLink:
     """
     raise NotImplementedError
 
-  def IsReady(self):
+  @abc.abstractmethod
+  def IsReady(self) -> bool:
     """Checks if device is ready for connection.
 
     Returns:
@@ -97,22 +116,27 @@ class DeviceLink:
     """
     raise NotImplementedError
 
-  def IsLocal(self):
-    """Returns if the target device exactly the local machine.
+  @abc.abstractmethod
+  def IsLocal(self) -> bool:
+    """Checks if the target device exactly the local machine.
 
     This is helpful for tests to decide if they can use Python native modules or
     need to invoke system commands.
+
+    Returns:
+      True if the target device is local; False if remote or not certain.
     """
-    return False
+    raise NotImplementedError
 
   @classmethod
-  def PrepareLink(cls):
+  def PrepareLink(cls) -> None:
     """Setup prerequisites of device connections.
 
     Some device types need to do some setup before we can connect to.
     For example, we might need to start a DHCP server that assigns IP addresses
     to devices.
     """
+    # Default to do nothing so leave it empty.
 
 
 class DeviceComponent:
@@ -183,7 +207,7 @@ class DeviceInterface(sys_interface.SystemInterface):
           device.
   """
 
-  def __init__(self, link=None):
+  def __init__(self, link: DeviceLink):
     """Constructor.
 
     Arg:
@@ -343,6 +367,7 @@ class DeviceInterface(sys_interface.SystemInterface):
     """Interface for controlling WiFi devices."""
     raise NotImplementedError
 
+  @abc.abstractmethod
   def GetStartupMessages(self):
     """Get various startup messages.
 
@@ -362,6 +387,35 @@ class DeviceInterface(sys_interface.SystemInterface):
     return self.link.IsReady()
 
 
-# pylint:disable=abstract-method
 class DeviceBoard(DeviceInterface):
   """A base class all for board implementations to inherit from."""
+
+
+class MockLink(DeviceLink):
+  """A `DeviceLink` mocking class used for unittests."""
+
+  @type_utils.Overrides
+  def Push(self, local, remote):
+    raise NotImplementedError
+
+  @type_utils.Overrides
+  def PushDirectory(self, local, remote):
+    raise NotImplementedError
+
+  @type_utils.Overrides
+  def Pull(self, remote, local=None):
+    raise NotImplementedError
+
+  @type_utils.Overrides
+  def Shell(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
+            encoding='utf-8'):
+    raise NotImplementedError
+
+  @type_utils.Overrides
+  def IsReady(self):
+    raise NotImplementedError
+
+  @type_utils.Overrides
+  def IsLocal(self):
+    """In unittests we assume this is a remote device."""
+    return False

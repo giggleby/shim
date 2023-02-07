@@ -28,7 +28,7 @@ class MockProcess:
 class LinuxTargetTest(unittest.TestCase):
 
   def setUp(self):
-    self.link = device_types.DeviceLink()
+    self.link = device_types.MockLink()
     self.dut = linux.LinuxBoard(self.link)
 
   def testReadFile(self):

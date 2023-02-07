@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-
 """Basic linux specific interface."""
-
 
 import logging
 import posixpath  # Assume most linux devices will be running POSIX os.
+import subprocess
+from typing import IO, Any, List, Optional, Union, overload
 
 from cros.factory.device import device_types
 from cros.factory.utils import file_utils
@@ -190,7 +190,8 @@ class LinuxBoard(device_types.DeviceBoard):
     return wifi.WiFi(self)
 
   @type_utils.Overrides
-  def ReadFile(self, path, count=None, skip=None):
+  def ReadFile(self, path: str, count: Optional[int] = None,
+               skip: Optional[int] = None) -> str:
     """Returns file contents on target device.
 
     By default the "most-efficient" way of reading file will be used, which may
@@ -209,11 +210,26 @@ class LinuxBoard(device_types.DeviceBoard):
       A string as file contents.
     """
     if count is None and skip is None:
-      return self.link.Pull(path)
+      content = self.link.Pull(path)
+      return content.decode('utf-8') if isinstance(content, bytes) else content
+
     return self.ReadSpecialFile(path, count=count, skip=skip)
 
+  @overload
+  def ReadSpecialFile(self, path: str, count: Optional[int],
+                      skip: Optional[int], encoding: None) -> bytes:
+    ...
+
+  @overload
+  def ReadSpecialFile(self, path: str, count: Optional[int] = None,
+                      skip: Optional[int] = None,
+                      encoding: str = 'utf-8') -> str:
+    ...
+
   @type_utils.Overrides
-  def ReadSpecialFile(self, path, count=None, skip=None, encoding='utf-8'):
+  def ReadSpecialFile(self, path: str, count: Optional[int] = None,
+                      skip: Optional[int] = None,
+                      encoding: Optional[str] = 'utf-8'):
     """Returns contents of special file on target device.
 
     Reads special files (device node, disk block, or sys driver files) on device
@@ -233,14 +249,14 @@ class LinuxBoard(device_types.DeviceBoard):
 
     args = ['dd', 'bs=1', f'if={path}']
     if count is not None:
-      args += [f'count={int(count)}']
+      args += [f'count={count}']
     if skip is not None:
-      args += [f'skip={int(skip)}']
+      args += [f'skip={skip}']
 
     return self.CheckOutput(args)
 
   @type_utils.Overrides
-  def WriteFile(self, path, content):
+  def WriteFile(self, path: str, content: str) -> None:
     """Writes some content into file on target device.
 
     Args:
@@ -257,7 +273,7 @@ class LinuxBoard(device_types.DeviceBoard):
       self.link.Push(temp_path, path)
 
   @type_utils.Overrides
-  def WriteSpecialFile(self, path, content):
+  def WriteSpecialFile(self, path: str, content: str) -> None:
     """Writes some content into a special file on target device.
 
     Args:
@@ -276,7 +292,7 @@ class LinuxBoard(device_types.DeviceBoard):
         self.CheckOutput(['dd', f'if={remote_temp}', f'of={path}'])
 
   @type_utils.Overrides
-  def SendDirectory(self, local, remote):
+  def SendDirectory(self, local: str, remote: str) -> None:
     """Copies a local directory to target device.
 
     `local` should be a local directory, and `remote` should be a non-existing
@@ -293,21 +309,24 @@ class LinuxBoard(device_types.DeviceBoard):
       local: A string for directory path in local.
       remote: A string for directory path on remote device.
     """
-    return self.link.PushDirectory(local, remote)
+    self.link.PushDirectory(local, remote)
 
   @type_utils.Overrides
-  def SendFile(self, local, remote):
+  def SendFile(self, local: str, remote: str) -> None:
     """Copies a local file to target device.
 
     Args:
       local: A string for file path in local.
       remote: A string for file path on remote device.
     """
-    return self.link.Push(local, remote)
+    self.link.Push(local, remote)
 
   @type_utils.Overrides
-  def Popen(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
-            log=False, encoding='utf-8'):
+  def Popen(self, command: Union[str, List[str]], stdin: Union[None, int,
+                                                               IO[Any]] = None,
+            stdout: Union[None, int, IO[Any]] = None,
+            stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
+            log=False, encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
     """Executes a command on target device using subprocess.Popen convention.
 
     This function should be the single entry point for invoking link.Shell
@@ -336,7 +355,7 @@ class LinuxBoard(device_types.DeviceBoard):
                            stderr=stderr, encoding=encoding)
 
   @type_utils.Overrides
-  def Glob(self, pattern):
+  def Glob(self, pattern: str) -> List[str]:
     """Finds files on target device by pattern, similar to glob.glob.
 
     Args:
@@ -349,6 +368,7 @@ class LinuxBoard(device_types.DeviceBoard):
       return super().Glob(pattern)
 
     results = self.CallOutput(f'ls -d {pattern}')
+    assert not isinstance(results, bytes)
     return results.splitlines() if results else []
 
   @type_utils.Overrides

@@ -4,22 +4,24 @@
 
 """The abstraction of minimal functions needed to access a system."""
 
+import abc
 import glob
 import logging
 import pipes
 import shutil
 import subprocess
 import tempfile
-from typing import List, Union
+from typing import IO, Any, List, Optional, Union, overload
 
 from . import file_utils
 from . import process_utils
+
 
 # Use process_utils.CalledProcessError for invocation exceptions.
 CalledProcessError = process_utils.CalledProcessError
 
 
-def CommandsToShell(command: Union[str, List[str]]):
+def CommandsToShell(command: Union[str, List[str]]) -> str:
   """Joins commands to a shell command.
 
   Args:
@@ -27,18 +29,14 @@ def CommandsToShell(command: Union[str, List[str]]):
   """
   if isinstance(command, str):
     return command
-  return ' '.join(pipes.quote(param) for param in command)
+  return ' '.join(map(pipes.quote, command))
 
 
-class SystemInterface:
+class SystemInterface(abc.ABC):
   """Abstract interface for accessing a system."""
 
-  # Special values to make Popen work like subprocess.
-  PIPE = subprocess.PIPE
-  STDOUT = subprocess.STDOUT
-
-
-  def ReadFile(self, path, count=None, skip=None):
+  def ReadFile(self, path: str, count: Optional[int] = None,
+               skip: Optional[int] = None) -> str:
     """Returns file contents on target device.
 
     By default the "most-efficient" way of reading file will be used, which may
@@ -60,7 +58,20 @@ class SystemInterface:
       return file_utils.ReadFile(path)
     return self.ReadSpecialFile(path, count=count, skip=skip)
 
-  def ReadSpecialFile(self, path, count=None, skip=None, encoding='utf-8'):
+  @overload
+  def ReadSpecialFile(self, path: str, count: Optional[int],
+                      skip: Optional[int], encoding: None) -> bytes:
+    ...
+
+  @overload
+  def ReadSpecialFile(self, path: str, count: Optional[int] = None,
+                      skip: Optional[int] = None,
+                      encoding: str = 'utf-8') -> str:
+    ...
+
+  def ReadSpecialFile(self, path: str, count: Optional[int] = None,
+                      skip: Optional[int] = None,
+                      encoding: Optional[str] = 'utf-8'):
     """Returns contents of special file on target device.
 
     Reads special files (device node, disk block, or sys driver files) on device
@@ -84,7 +95,7 @@ class SystemInterface:
       x = f.read() if count is None else f.read(count)
       return x.decode(encoding) if encoding else x
 
-  def WriteFile(self, path, content):
+  def WriteFile(self, path: str, content: str) -> None:
     """Writes some content into file on target device.
 
     Args:
@@ -93,7 +104,7 @@ class SystemInterface:
     """
     file_utils.WriteFile(path, content)
 
-  def WriteSpecialFile(self, path, content):
+  def WriteSpecialFile(self, path: str, content: str) -> None:
     """Writes some content into a special file on target device.
 
     Args:
@@ -102,7 +113,7 @@ class SystemInterface:
     """
     self.WriteFile(path, content)
 
-  def SendDirectory(self, local, remote):
+  def SendDirectory(self, local: str, remote: str) -> None:
     """Copies a local directory to target device.
 
     `local` should be a local directory, and `remote` should be a non-existing
@@ -119,19 +130,22 @@ class SystemInterface:
       local: A string for directory path in local.
       remote: A string for directory path on remote device.
     """
-    return shutil.copytree(local, remote)
+    shutil.copytree(local, remote)
 
-  def SendFile(self, local, remote):
+  def SendFile(self, local: str, remote: str) -> None:
     """Copies a local file to target device.
 
     Args:
       local: A string for file path in local.
       remote: A string for file path on remote device.
     """
-    return shutil.copy(local, remote)
+    shutil.copy(local, remote)
 
-  def Popen(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
-            log=False, encoding='utf-8'):
+  def Popen(self, command: Union[str, List[str]], stdin: Union[None, int,
+                                                               IO[Any]] = None,
+            stdout: Union[None, int, IO[Any]] = None,
+            stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
+            log=False, encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
     """Executes a command on target device using subprocess.Popen convention.
 
     Compare to `subprocess.Popen`, the argument `shell=True/False` is not
@@ -157,14 +171,17 @@ class SystemInterface:
     if log:
       logger = logging.info if log is True else log
       logger('%s Running: %r', type(self), command)
-    return subprocess.Popen(command, cwd=cwd, shell=True, close_fds=True,
-                            stdin=stdin, stdout=stdout, stderr=stderr,
-                            encoding=encoding)
+    return process_utils.Spawn(command, cwd=cwd, shell=True, stdin=stdin,
+                               stdout=stdout, stderr=stderr, encoding=encoding)
 
-  def Call(self, *args, **kargs):
+  def Call(self, *args, **kargs) -> int:
     """Executes a command on target device, using subprocess.call convention.
 
     The arguments are explained in Popen.
+
+    Do not override this function. The behavior of this function depends on the
+    underlying device (e.g. SSH-connected device or local device), which has
+    been well-handled by Popen.
 
     Returns:
       Exit code from executed command.
@@ -173,9 +190,18 @@ class SystemInterface:
     process.wait()
     return process.returncode
 
-  def CheckCall(self, command,
-                stdin=None, stdout=None, stderr=None, cwd=None, log=False):
+  def CheckCall(self, command: Union[str,
+                                     List[str]], stdin: Union[None, int,
+                                                              IO[Any]] = None,
+                stdout: Union[None, int,
+                              IO[Any]] = None, stderr: Union[None, int,
+                                                             IO[Any]] = None,
+                cwd: Optional[str] = None, log=False) -> int:
     """Executes a command on device, using subprocess.check_call convention.
+
+    Do not override this function. The behavior of this function depends on the
+    underlying device (e.g. SSH-connected device or local device), which has
+    been well-handled by Popen.
 
     Args:
       command: A string or a list of strings for command to execute.
@@ -187,24 +213,31 @@ class SystemInterface:
           running the command.
 
     Returns:
-      Exit code from executed command.
+      Exit code from executed command, which is always 0.
 
     Raises:
       CalledProcessError if the exit code is non-zero.
     """
-    exit_code = self.Call(
-        command, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, log=log)
+    exit_code = self.Call(command, stdin=stdin, stdout=stdout, stderr=stderr,
+                          cwd=cwd, log=log)
     if exit_code != 0:
       raise CalledProcessError(returncode=exit_code, cmd=command)
-    return exit_code
+    return 0
 
-  def CheckOutput(self, command, stdin=None, stderr=None, cwd=None, log=False):
+  def CheckOutput(self, command: Union[str, List[str]],
+                  stdin: Union[None, int,
+                               IO[Any]] = None, stderr: Union[None, int,
+                                                              IO[Any]] = None,
+                  cwd: Optional[str] = None, log=False) -> Union[str, bytes]:
     """Executes a command on device, using subprocess.check_output convention.
+
+    Do not override this function. The behavior of this function depends on the
+    underlying device (e.g. SSH-connected device or local device), which has
+    been well-handled by Popen.
 
     Args:
       command: A string or a list of strings for command to execute.
       stdin: A file object to override standard input.
-      stdout: A file object to override standard output.
       stderr: A file object to override standard error.
       cwd: The working directory for the command.
       log: True (for logging.info) or a logger object to keep logs before
@@ -217,18 +250,21 @@ class SystemInterface:
       CalledProcessError if the exit code is non-zero.
     """
     with tempfile.TemporaryFile('w+', encoding='utf-8') as stdout:
-      exit_code = self.Call(
-          command, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, log=log)
+      exit_code = self.Call(command, stdin=stdin, stdout=stdout, stderr=stderr,
+                            cwd=cwd, log=log)
       stdout.flush()
       stdout.seek(0)
       output = stdout.read()
     if exit_code != 0:
-      raise CalledProcessError(
-          returncode=exit_code, cmd=command, output=output)
+      raise CalledProcessError(returncode=exit_code, cmd=command, output=output)
     return output
 
-  def CallOutput(self, *args, **kargs):
+  def CallOutput(self, *args, **kargs) -> Union[None, bytes, str]:
     """Runs the command on device and returns standard output if success.
+
+    Do not override this function. The behavior of this function depends on the
+    underlying device (e.g. SSH-connected device or local device), which has
+    been well-handled by Popen.
 
     Returns:
       If command exits with zero (success), return the standard output;
@@ -240,7 +276,7 @@ class SystemInterface:
     except CalledProcessError:
       return None
 
-  def Glob(self, pattern):
+  def Glob(self, pattern: str) -> List[str]:
     """Finds files on target device by pattern, similar to glob.glob.
 
     Args:

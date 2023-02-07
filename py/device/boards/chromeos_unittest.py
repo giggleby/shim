@@ -15,7 +15,7 @@ from cros.factory.device import device_types
 class ChromeOSBoardTest(unittest.TestCase):
 
   def setUp(self):
-    self.link = device_types.DeviceLink()
+    self.link = device_types.MockLink()
     self.dut = chromeos.ChromeOSBoard(self.link)
 
   @mock.patch('cros.factory.device.boards.chromeos.ChromeOSBoard.CallOutput',

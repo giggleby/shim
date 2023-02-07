@@ -9,11 +9,13 @@ import os
 import pipes
 import subprocess
 import tempfile
+from typing import IO, Any, List, Optional, Union
 import uuid
 
 from cros.factory.device import device_types
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.utils import type_utils
 
 
 class LegacyADBProcess:
@@ -75,16 +77,19 @@ class ADBLink(device_types.DeviceLink):
     self._temp_dir = temp_dir
     self._exit_code_hack = exit_code_hack
 
-  def Push(self, local, remote):
+  @type_utils.Overrides
+  def Push(self, local: str, remote: str) -> None:
     """See DeviceLink.Push"""
     subprocess.check_output(['adb', 'push', local, remote],
                             stderr=subprocess.STDOUT)
 
-  def PushDirectory(self, local, remote):
+  @type_utils.Overrides
+  def PushDirectory(self, local: str, remote: str) -> None:
     """See DeviceLink.PushDirectory"""
     return self.Push(local, remote)
 
-  def Pull(self, remote, local=None):
+  @type_utils.Overrides
+  def Pull(self, remote: str, local: Optional[str] = None):
     """See DeviceLink.Pull"""
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
@@ -95,8 +100,13 @@ class ADBLink(device_types.DeviceLink):
                             stderr=subprocess.STDOUT)
     return None
 
-  def Shell(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
-            encoding='utf-8'):
+  @type_utils.Overrides
+  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
+                                                               IO[Any]] = None,
+            stdout: Union[None, int,
+                          IO[Any]] = None, stderr: Union[None, int,
+                                                         IO[Any]] = None,
+            cwd: Optional[str] = None, encoding: Optional[str] = 'utf-8'):
     """See DeviceLink.Shell"""
     # ADB shell does not provide interactive shell, which means we are not
     # able to send stdin data in an interactive way (
@@ -136,7 +146,12 @@ class ADBLink(device_types.DeviceLink):
                         type(self).__name__)
       else:
         with tempfile.NamedTemporaryFile() as tmp_file:
-          data = stdin.read()
+          data: bytes
+          if isinstance(stdin, int):
+            # 256 MiB should be enough.
+            data = os.read(stdin, 256 * 1024 * 1024)
+          else:
+            data = stdin.read()
           tmp_file.write(data)
           tmp_file.flush()
 
@@ -168,11 +183,17 @@ class ADBLink(device_types.DeviceLink):
       wrapper = RawADBProcess
 
     logging.debug('ADBLink: Run %r', command)
-    return wrapper(subprocess.Popen(command, shell=False, close_fds=True,
-                                    stdin=stdin, stdout=stdout,
-                                    stderr=stderr, encoding=encoding),
-                   session_id)
+    return wrapper(
+        subprocess.Popen(command, shell=False, close_fds=True, stdin=stdin,
+                         stdout=stdout, stderr=stderr, encoding=encoding),
+        session_id)
 
-  def IsReady(self):
+  @type_utils.Overrides
+  def IsReady(self) -> bool:
     """See DeviceLink.IsReady"""
     return process_utils.CheckOutput(['adb', 'get-state']).strip() == 'device'
+
+  @type_utils.Overrides
+  def IsLocal(self) -> bool:
+    """See DeviceLink.IsLocal"""
+    return False
