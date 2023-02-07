@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -19,11 +18,10 @@ from cros.factory.test.test_lists import manager
 from cros.factory.test.test_lists import test_list_common
 from cros.factory.utils import cros_board_utils
 from cros.factory.utils import file_utils
-from cros.factory.utils.process_utils import Spawn
-from cros.factory.utils.ssh_utils import SpawnRsyncToDUT
-from cros.factory.utils.ssh_utils import SpawnSSHToDUT
-from cros.factory.utils.sync_utils import Retry
-from cros.factory.utils.sys_utils import InChroot
+from cros.factory.utils import process_utils
+from cros.factory.utils import ssh_utils
+from cros.factory.utils import sync_utils
+from cros.factory.utils import sys_utils
 
 
 SRCROOT = os.environ.get('CROS_WORKON_SRCROOT')
@@ -35,8 +33,8 @@ class GoofyRemoteException(Exception):
 
 def GetBoard(host):
   logging.info('Checking release board on %s...', host)
-  release = SpawnSSHToDUT([host, 'cat /etc/lsb-release'],
-                          check_output=True, log=True).stdout_data
+  release = ssh_utils.SpawnSSHToDUT([host, 'cat /etc/lsb-release'],
+                                    check_output=True, log=True).stdout_data
   match = re.search(r'^CHROMEOS_RELEASE_BOARD=(.+)', release, re.MULTILINE)
   if not match:
     logging.warning('Unable to determine release board')
@@ -137,7 +135,7 @@ def main():
   logging.basicConfig(level=logging.INFO)
 
   if args.local:
-    if InChroot():
+    if sys_utils.InChroot():
       sys.exit('--local must be used only on the target device')
     TweakTestLists(args)
     return
@@ -145,38 +143,39 @@ def main():
   if not SRCROOT:
     sys.exit('goofy_remote must be run from within the chroot')
 
-  Spawn(['make', '--quiet'], cwd=paths.FACTORY_DIR,
-        check_call=True, log=True)
+  process_utils.Spawn(['make', '--quiet'], cwd=paths.FACTORY_DIR,
+                      check_call=True, log=True)
   board = args.board or GetBoard(args.host)
 
   # We need to rsync the public factory repo first to set up goofy symlink.
   # We need --force to remove the original goofy directory if it's not a
   # symlink, -l for re-creating the symlink on DUT, -K for following the symlink
   # on DUT.
-  SpawnRsyncToDUT(['-azlKC', '--force', '--exclude', '*.pyc'] + list(
+  ssh_utils.SpawnRsyncToDUT(['-azlKC', '--force', '--exclude', '*.pyc'] + list(
       filter(os.path.exists, [
           os.path.join(paths.FACTORY_DIR, x)
           for x in ('bin', 'py', 'py_pkg', 'sh', 'third_party', 'init')
       ])) + [f'{args.host}:/usr/local/factory'], check_call=True, log=True)
 
-  Spawn(['make', f'par-overlay-{board}'], cwd=paths.FACTORY_DIR,
-        check_call=True, log=True)
+  process_utils.Spawn(['make', f'par-overlay-{board}'], cwd=paths.FACTORY_DIR,
+                      check_call=True, log=True)
 
-  SpawnRsyncToDUT([
+  ssh_utils.SpawnRsyncToDUT([
       '-az', f'overlay-{board}/build/par/factory.par',
       f'{args.host}:/usr/local/factory/'
   ], cwd=paths.FACTORY_DIR, check_call=True, log=True)
 
   private_path = cros_board_utils.GetChromeOSFactoryBoardPath(board)
   if private_path:
-    SpawnRsyncToDUT(['-azlKC', '--exclude', 'bundle'] +
-                    [private_path + '/', f'{args.host}:/usr/local/factory/'],
-                    check_call=True, log=True)
+    ssh_utils.SpawnRsyncToDUT(
+        ['-azlKC', '--exclude', 'bundle'] +
+        [private_path + '/', f'{args.host}:/usr/local/factory/'],
+        check_call=True, log=True)
 
   # Call goofy_remote on the remote host, allowing it to tweak test lists.
-  SpawnSSHToDUT([args.host, 'goofy_remote', '--local'] +
-                [pipes.quote(x) for x in sys.argv[1:]],
-                check_call=True, log=True)
+  ssh_utils.SpawnSSHToDUT([args.host, 'goofy_remote', '--local'] +
+                          [pipes.quote(x) for x in sys.argv[1:]],
+                          check_call=True, log=True)
 
   if args.hwid:
     project = args.project
@@ -188,9 +187,10 @@ def main():
       sys.exit('Cannot update hwid without project name')
     chromeos_hwid_path = os.path.join(
         os.path.dirname(paths.FACTORY_DIR), 'chromeos-hwid')
-    Spawn(['./create_bundle', '--version', '3', project.upper()],
-          cwd=chromeos_hwid_path, check_call=True, log=True)
-    SpawnSSHToDUT(
+    process_utils.Spawn(['./create_bundle', '--version', '3',
+                         project.upper()], cwd=chromeos_hwid_path,
+                        check_call=True, log=True)
+    ssh_utils.SpawnSSHToDUT(
         [args.host, 'bash'],
         stdin=open(  # pylint: disable=consider-using-with
             os.path.join(chromeos_hwid_path,
@@ -201,22 +201,30 @@ def main():
 
   # Make sure all the directories and files have correct permissions.  This is
   # essential for Chrome to load the factory test extension.
-  SpawnSSHToDUT([args.host, 'find', '/usr/local/factory', '-type', 'd',
-                 '-exec', 'chmod 755 {} +'], check_call=True, log=True)
-  SpawnSSHToDUT([args.host, 'find', '/usr/local/factory', '-type', 'f',
-                 '-exec', 'chmod go+r {} +'], check_call=True, log=True)
+  ssh_utils.SpawnSSHToDUT([
+      args.host, 'find', '/usr/local/factory', '-type', 'd', '-exec',
+      'chmod 755 {} +'
+  ], check_call=True, log=True)
+  ssh_utils.SpawnSSHToDUT([
+      args.host, 'find', '/usr/local/factory', '-type', 'f', '-exec',
+      'chmod go+r {} +'
+  ], check_call=True, log=True)
 
   if args.restart:
-    SpawnSSHToDUT([args.host, '/usr/local/factory/bin/factory_restart'] +
-                  (['-a'] if args.clear_state else []),
-                  check_call=True, log=True)
+    ssh_utils.SpawnSSHToDUT(
+        [args.host, '/usr/local/factory/bin/factory_restart'] +
+        (['-a'] if args.clear_state else []), check_call=True, log=True)
 
   if args.run_test:
+
+    @sync_utils.RetryDecorator(max_attempt_count=10, interval_sec=5,
+                               timeout_sec=float('inf'))
     def GoofyRpcRunTest():
-      return SpawnSSHToDUT(
+      return ssh_utils.SpawnSSHToDUT(
           [args.host, 'goofy_rpc', r'RunTest\(\"' + args.run_test + r'\"\)'],
           check_call=True, log=True)
-    Retry(max_retry_times=10, interval=5, callback=None, target=GoofyRpcRunTest)
+
+    GoofyRpcRunTest()
 
 if __name__ == '__main__':
   main()

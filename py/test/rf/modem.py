@@ -5,15 +5,18 @@
 """A wrapper for talking with a tty modem."""
 
 import logging
-import re
+from typing import List
 
 import serial
 
+from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 
 _COMMAND_RETRY_TIMES = 5
-_RECEIVE_RETRY_TIMES = 10
+
+SUCCESSS_RESPONSE_TOKEN = 'OK'
+ERROR_RESPONSE_TOKEN = 'ERROR'
 
 
 class Modem:
@@ -40,11 +43,30 @@ class Modem:
     # Send an AT command and expect 'OK'
     self.SendCommandWithCheck('AT')
 
-  def ReadLine(self):
-    """Reads a line from the modem."""
-    line = self.ser.readline()
-    logging.info('modem[ %r', line)
-    return line.rstrip('\r\n')
+  def ReadLine(self) -> str:
+    """Reads a line from the modem.
+
+    Raises:
+      MaxRetryError: If the serial didn't return a not `None` object
+        after `_COMMAND_RETRY_TIMES` times
+    """
+
+    @sync_utils.RetryDecorator(max_attempt_count=_COMMAND_RETRY_TIMES,
+                               timeout_sec=float('inf'),
+                               target_condition=lambda x: x)
+    def _SerialRead() -> str:
+      return self.ser.readline()
+
+    try:
+      response = _SerialRead()
+    except type_utils.MaxRetryError:
+      logging.error('modem cannot get non-empty response')
+      raise
+
+    response = response.rstrip('\r\n')
+    logging.info('modem[%s]', response)
+
+    return response
 
   def SendLine(self, line):
     """Sends a line to the modem."""
@@ -56,77 +78,56 @@ class Modem:
     self.SendLine(command)
     self.ReadLine()
 
-  def SendCommandWithCheck(self, command, retry_times=_COMMAND_RETRY_TIMES):
+  def SendCommandWithCheck(
+      self, command: str, retry_times: int = _COMMAND_RETRY_TIMES) -> List[str]:
     """Sends a command to the modem.
 
     SendCommand function allow retry when response is not OK.
 
     Returns:
       response: A list contains all success responses from modem.
-    """
-    retries = 0
-    while retries < retry_times:
-      self.SendLine(command)
-      response = self.GetResponse()
-      if response[-1] == 'OK':
-        break
-      retries += 1
-    return response
 
-  def GetResponse(self, retry_times=_RECEIVE_RETRY_TIMES):
+    Raises:
+      MaxRetryError: If the command cannot get non-empty response after
+        `_COMMAND_RETRY_TIMES`.
+    """
+
+    @sync_utils.RetryDecorator(max_attempt_count=retry_times,
+                               timeout_sec=float('inf'),
+                               target_condition=lambda x: x)
+    def _SendCommand() -> List[str]:
+      self.SendLine(command)
+      response = self._GetFullResponse()
+      if response[-1] == SUCCESSS_RESPONSE_TOKEN:
+        return response
+      return []
+
+    return _SendCommand()
+
+  def _GetFullResponse(self) -> List[str]:
     """Gets response from modem.
 
     A formal response should be OK or ERROR at the end of response.
 
     Returns:
-      response: A list contains all response from modem.
+      response: A list of str contains all response from modem.
 
     Raises:
-      Error when getting response exceeds time limit
-      (serial timeout * retry_times).
+      MaxRetryError: If the underlying `ReadLine()` cannot get non-empty
+        response after `_COMMAND_RETRY_TIMES`.
     """
     response = []
-    retries = 0
-    while retries < retry_times:
+    while True:
       line = self.ReadLine()
-      if line:
-        response.append(line)
-        # TODO (henryhsu): The response may have "+CME ERROR: <errno>".
-        # If we will use ME command in the future, we will need handle this
-        # error type.
-        if line in ['OK', 'ERROR']:
-          return response
-      else:
-        retries += 1
-    raise type_utils.Error(f'Cannot get entire response: {response!r}')
-
-  def ExpectResponse(self, expected_msg, modem_response):
-    """Checks expected messages from modem.
-
-    Args:
-      expected_msg: expected messages can be list or string.
-      modem_response: A list contains all responses from modem.
-
-    Raises:
-      Error when results mismatch.
-    """
-    if isinstance(expected_msg, str):
-      expected_msg = [expected_msg]
-    for msg in expected_msg:
-      if msg not in modem_response:
-        raise type_utils.Error(
-            f'Expected {expected_msg!r} but got {modem_response!r}')
+      response.append(line)
+      # TODO (henryhsu): The response may have "+CME ERROR: <errno>".
+      # If we will use ME command in the future, we will need handle this
+      # error type.
+      if line in {SUCCESSS_RESPONSE_TOKEN, ERROR_RESPONSE_TOKEN}:
+        return response
 
   def ExpectLine(self, expected_line):
     """Expects a line from the modem."""
     line = self.ReadLine()
     if line != expected_line:
       raise type_utils.Error(f'Expected {expected_line!r} but got {line!r}')
-
-  def ExpectMultipleLines(self, expected_regex):
-    """Expects a multiple line regular expression."""
-    lines = self.ser.readlines()
-    for line in lines:
-      logging.info('modem[ %r', line)
-    if not re.search(expected_regex, ''.join(lines), re.MULTILINE | re.DOTALL):
-      raise type_utils.Error(f'Expected {expected_regex!r} but got {lines!r}')

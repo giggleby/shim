@@ -126,14 +126,22 @@ def MountPartition(source_path, index=None, mount_point=None, rw=False,
     finally:
       logging.info('Unmounting %s', mount_point)
 
+      retry_wrapper = sync_utils.RetryDecorator(
+          max_attempt_count=5, timeout_sec=float('inf'), interval_sec=1,
+          target_condition=lambda x: x == 0)
       if local_mode:
-        umount = lambda: process_utils.Spawn(
-            ['umount', mount_point], call=True,
-            sudo=True, ignore_stderr=True).returncode == 0
-      else:
-        umount = lambda: dut.Call(['umount', mount_point]) == 0
 
-      if not sync_utils.Retry(5, 1, None, umount):
+        def _Unmount():
+          return process_utils.Spawn(['umount', mount_point], call=True,
+                                     sudo=True, ignore_stderr=True).returncode
+      else:
+
+        def _Unmount():
+          return dut.Call(['umount', mount_point])
+
+      unmount_result = retry_wrapper(_Unmount)()
+
+      if not unmount_result:
         logging.warning('Unable to umount %s', mount_point)
 
       if remove_mount_point:

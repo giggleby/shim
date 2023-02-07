@@ -424,7 +424,13 @@ class DolphinBFTFixture(bft_fixture.BFTFixture):
     Returns:
       A dict with PD state information.
     """
-    return sync_utils.Retry(retry_times, 0.1, None, self.GetPDState)
+
+    @sync_utils.RetryDecorator(max_attempt_count=retry_times, interval_sec=0.1,
+                               timeout_sec=float('inf'))
+    def _GetPDState():
+      return self.GetPDState()
+
+    return _GetPDState()
 
   def GetPDState(self):
     """Gets PD state information.

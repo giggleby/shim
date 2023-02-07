@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Copyright 2013 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -17,7 +16,7 @@ from cros.factory.device.bluetooth import BluetoothManager
 from cros.factory.device.bluetooth import BluetoothManagerException
 from cros.factory.test.utils import bluetooth_utils
 from cros.factory.utils.sync_utils import PollForCondition
-from cros.factory.utils.sync_utils import Retry
+from cros.factory.utils.sync_utils import RetryDecorator
 
 from cros.factory.external import dbus
 # pylint: disable=no-name-in-module,import-error
@@ -332,8 +331,11 @@ class ChromeOSBluetoothManager(BluetoothManager):
       the interface of 'org.bluez.Adapter1'. Returns None if there is no
       available adapter.
     """
-    adapters = Retry(max_retry_times, interval, None, self._GetAdapters,
-                     mac_addr=mac_addr)
+    retry_wrapper = RetryDecorator(max_attempt_count=max_retry_times,
+                                   interval_sec=interval,
+                                   timeout_sec=float('inf'))
+
+    adapters = retry_wrapper(self._GetAdapters)(max_addr=mac_addr)
     if adapters is None:
       logging.error('BluetoothManager: Fail to get any adapter.')
       return None
