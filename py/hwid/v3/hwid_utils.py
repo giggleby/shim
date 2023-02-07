@@ -478,6 +478,11 @@ def GetBrandCode(brand_code=None):
 def GetProbeStatementPath(project=None):
   path = os.path.join(os.path.dirname(__file__), common.DEFAULT_PROBE_STATEMENT)
 
+  common_path = os.path.join(
+      os.path.dirname(__file__), common.COMMON_PROBE_STATEMENT)
+  if os.path.exists(common_path):
+    path = common_path
+
   try:
     project = project or ProbeProject()
     # We assume that project name is not 'default'.

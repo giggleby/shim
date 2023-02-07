@@ -10,6 +10,7 @@ from cros.factory.utils import type_utils
 
 
 DEFAULT_PROBE_STATEMENT = 'default_probe_statement.json'
+COMMON_PROBE_STATEMENT = 'common_probe_statement.json'
 HEADER_BIT_LENGTH = 5
 IMAGE_ID_BIT_LENGTH = HEADER_BIT_LENGTH - 1
 HEADER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
