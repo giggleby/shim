@@ -32,6 +32,11 @@ class LogExtractorRecordTest(unittest.TestCase):
     record2 = LogExtractorRecord.Load('{"time": 2.34}')
     self.assertTrue(record1 < record2)
 
+  def testTestRunEventType(self):
+    record = LogExtractorRecord.Load(
+        '{"type": "station.test_run", "time": 1.23, "endTime": 1.24}')
+    self.assertEqual(record.GetTime(), 1.24)
+
 
 if __name__ == '__main__':
   unittest.main()

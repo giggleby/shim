@@ -31,6 +31,13 @@ class LogExtractorRecord(dict):
     if not isinstance(time, numbers.Number):
       raise InvalidRecord('The value of field `time` should be numeric type.')
 
+    # The `time` field should store the timestamp that the event is generated.
+    # However, there's an exception in testlog. The `time` field of event type
+    # `station.test_run` stores the time that a factory test starts, rather
+    # than the time that a test ends.
+    if record.get('type') == 'station.test_run' and 'endTime' in record:
+      record['time'] = record['endTime']
+
     return cls(record)
 
   def GetTime(self):
