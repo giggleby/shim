@@ -6,11 +6,12 @@
 
 import argparse
 import heapq
+from io import TextIOWrapper
 import json
 import logging
+from typing import Dict, List
 
 from cros.factory.log_extractor.file_utils import LogExtractorFileReader
-from cros.factory.log_extractor.record import LogExtractorRecord
 
 
 DESCRIPTION = """
@@ -57,12 +58,27 @@ DEFAULT_FIELDS_TO_KEEP = [
 ]
 
 
-def ExtractAndMergeLogs(input_paths, output_path, fields_to_keep):
+class FactoryLogExtractorError(Exception):
+  pass
 
-  def _RemoveFields(record: LogExtractorRecord, fields_to_keep):
-    """Inplace removes some fields from the JSON record."""
-    for to_remove in record.keys() - fields_to_keep:
-      record.pop(to_remove)
+
+def _RemoveFields(record: Dict, fields_to_keep: List):
+  """Inplace removes some fields from the JSON record."""
+  for to_remove in record.keys() - fields_to_keep:
+    record.pop(to_remove)
+
+
+def _WriteRecord(f: TextIOWrapper, fields_to_keep: List, record: Dict):
+  _RemoveFields(record, fields_to_keep)
+  if record:
+    f.write(json.dumps(record, sort_keys=True) + '\n')
+
+
+def ExtractAndMergeLogs(input_paths: List, output_path: str,
+                        fields_to_keep: List):
+
+  if not fields_to_keep:
+    raise FactoryLogExtractorError('At least one field should be kept.')
 
   reader_heap = []
   for p in input_paths:
@@ -75,10 +91,7 @@ def ExtractAndMergeLogs(input_paths, output_path, fields_to_keep):
     while reader_heap:
       reader = heapq.heappop(reader_heap)
       record = reader.GetCurRecord()
-      if fields_to_keep:
-        _RemoveFields(record, fields_to_keep)
-      if record:
-        output_f.write(json.dumps(record, sort_keys=True) + '\n')
+      _WriteRecord(output_f, fields_to_keep, record)
       if not reader.ReadNextValidRecord():
         continue
       heapq.heappush(reader_heap, reader)

@@ -20,6 +20,12 @@ class ExtractAndMergeLogsTest(unittest.TestCase):
     file_utils.WriteFile(path, content)
     return path
 
+  def testEmptyFields(self):
+    with self.assertRaisesRegex(factory_log_extractor.FactoryLogExtractorError,
+                                'At least one field should be kept.'):
+      factory_log_extractor.ExtractAndMergeLogs(['/path/not/exists'],
+                                                '/path/not/exists', [])
+
   def testKeepFields(self):
     FACTORY_TEST_LOG = textwrap.dedent("""\
       {"count": 1, "success": true, "time": 1664758814.8908494}
