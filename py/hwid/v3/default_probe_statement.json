@@ -71,19 +71,10 @@
   },
   "embedded_controller": {
     "generic": {
-      "eval": [
-        {
-          "shell": {
-            "command": "mosys ec info -s vendor",
-            "key": "vendor"
-          }
-        },
-        {
-          "shell": {
-            "command": "mosys ec info -s name",
-            "key": "name"
-          }
-        }
+      "eval": "embedded_controller",
+      "keys": [
+        "vendor",
+        "name"
       ]
     }
   },
