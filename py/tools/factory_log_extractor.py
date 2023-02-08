@@ -78,7 +78,7 @@ def ExtractAndMergeLogs(input_paths, output_path, fields_to_keep):
       if fields_to_keep:
         _RemoveFields(record, fields_to_keep)
       if record:
-        output_f.write(json.dumps(record) + '\n')
+        output_f.write(json.dumps(record, sort_keys=True) + '\n')
       if not reader.ReadNextValidRecord():
         continue
       heapq.heappush(reader_heap, reader)
