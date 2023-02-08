@@ -213,6 +213,27 @@ class FpmcuDevice:
       match_rw = match_rw.group(1)
     return match_ro, match_rw
 
+  def ValidateFpinfoNoErrorFlags(self, fpinfo: Optional[str] = None) -> None:
+    """Validates that no error flags are set in fpinfo stdout.
+
+    Args:
+      fpinfo: If given, parses error flags from it.
+
+    Raises:
+      FpmcuError: When error flags are set.
+    """
+    if fpinfo is None:
+      fpinfo = self.FpmcuCommand('fpinfo')
+
+    # TODO(wdzeng): Reuse utility `_ExtractTokenFromFpmcuStdout` functions.
+    match_errors = self.FPINFO_ERRORS_RE.search(fpinfo)
+    if match_errors is None:
+      raise FpmcuError('Sensor error flags not found.')
+
+    error_flags = match_errors.group(1)
+    if error_flags != '':
+      raise FpmcuError(f'Sensor failure: {error_flags}')
+
   def GetFpSensorInfo(self):
     """Retrieve the fingerprint sensor identifiers
 
@@ -228,14 +249,7 @@ class FpmcuDevice:
       raise FpmcuError(f'Unable to retrieve Sensor info ({info})')
     logging.info('ectool fpinfo:\n%s\n', info)
 
-    # Check error flags
-    match_errors = self.FPINFO_ERRORS_RE.search(info)
-    if match_errors is None:
-      raise FpmcuError('Sensor error flags not found.')
-
-    flags = match_errors.group(1)
-    if flags != '':
-      raise FpmcuError(f'Sensor failure: {flags}')
+    self.ValidateFpinfoNoErrorFlags(info)
 
     return (match_vendor.group(1), match_model.group(1))
 

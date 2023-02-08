@@ -428,12 +428,16 @@ class FingerprintTest(test_case.TestCase):
     self.ui.SetState([])
     self._dut.CheckCall(['rm', '-rf', self._image_dir], log=True)
 
-  def runTest(self):
-    # Verify communication with the FPMCU
+  def _VerifyCommunication(self):
     ro_ver, rw_ver = self._fpmcu.GetFpmcuFirmwareVersion()
     self.assertTrue(ro_ver is not None and rw_ver is not None,
                     'Unable to retrieve FPMCU version')
     logging.info("FPMCU version RO %s RW %s", ro_ver, rw_ver)
+
+    self._fpmcu.ValidateFpinfoNoErrorFlags()
+
+  def runTest(self):
+    self._VerifyCommunication()
 
     # checkerboard test patterns
     self.CheckerboardTest(inverted=False)
