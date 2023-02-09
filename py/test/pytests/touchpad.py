@@ -188,7 +188,6 @@ class TouchpadTest(test_case.TestCase):
     """
     if self.dispatcher is not None:
       self.dispatcher.Close()
-    self.touchpad_device.ungrab()
     # Enable lid function.
     process_utils.CheckOutput(['ectool', 'forcelidopen', '0'])
 
@@ -331,24 +330,24 @@ class TouchpadTest(test_case.TestCase):
     self.ui.StartCountdownTimer(self.args.timeout_secs, self.FailWithMessage)
 
     self.touchpad_device = evdev_utils.DeviceReopen(self.touchpad_device)
-    self.touchpad_device.grab()
-    self.monitor = TouchpadMonitor(self.touchpad_device, self)
-    if self.monitor.GetState().num_fingers != 0:
-      logging.error('Ghost finger detected.')
-      self.ui.Alert(_(
-          'Ghost finger detected!!\n'
-          'Please treat this touch panel as a problematic one!!'))
-      self.FailTask('Ghost finger detected.')
+    with self.touchpad_device.grab_context():
+      self.monitor = TouchpadMonitor(self.touchpad_device, self)
+      if self.monitor.GetState().num_fingers != 0:
+        logging.error('Ghost finger detected.')
+        self.ui.Alert(_(
+            'Ghost finger detected!!\n'
+            'Please treat this touch panel as a problematic one!!'))
+        self.FailTask('Ghost finger detected.')
 
-    self.frontend_proxy = self.ui.InitJSTestObject(
-        'TouchpadTest', self.x_segments, self.y_segments,
-        self.args.number_to_click, self.args.number_to_quadrant)
+      self.frontend_proxy = self.ui.InitJSTestObject(
+          'TouchpadTest', self.x_segments, self.y_segments,
+          self.args.number_to_click, self.args.number_to_quadrant)
 
-    self.GetSpec()
-    self.dispatcher = evdev_utils.InputDeviceDispatcher(
-        self.touchpad_device,
-        self.event_loop.CatchException(self.monitor.Handler))
-    logging.info('start monitor daemon thread')
-    self.dispatcher.StartDaemon()
+      self.GetSpec()
+      self.dispatcher = evdev_utils.InputDeviceDispatcher(
+          self.touchpad_device,
+          self.event_loop.CatchException(self.monitor.Handler))
+      logging.info('start monitor daemon thread')
+      self.dispatcher.StartDaemon()
 
-    self.WaitTaskEnd()
+      self.WaitTaskEnd()
