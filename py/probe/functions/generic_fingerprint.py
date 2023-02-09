@@ -23,7 +23,7 @@ class FingerprintFunction(cached_probe_function.CachedProbeFunction):
     _fpmcu = fpmcu_utils.FpmcuDevice(sys_interface.SystemInterface())
 
     sensor_vendor, sensor_model = _fpmcu.GetFpSensorInfo()
-    fpmcu_name = _fpmcu.GetFpmcuName()
+    fpmcu_name = _fpmcu.GetName()
 
     results = [{
         'sensor_vendor': sensor_vendor,

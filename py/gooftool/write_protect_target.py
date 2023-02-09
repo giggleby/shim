@@ -241,7 +241,7 @@ class _FPMCUWriteProtectTarget(WriteProtectTarget):
     # Validate the final FPMCU state.
     _Assert(self._fpmcu.IsSWWPEnabled(), 'FPMCU SWWP is enabled')
     _Assert(self._fpmcu.IsHWWPEnabled(), 'FPMCU HWWP is enabled')
-    _Assert(self._fpmcu.GetImageName() == fpmcu_utils.ImageName.RW,
+    _Assert(self._fpmcu.GetImageSlot() == fpmcu_utils.ImageSlot.RW,
             'FPMCU RW image is active')
     _Assert(self._fpmcu.IsSystemLocked(), 'FPMCU system is locked')
 

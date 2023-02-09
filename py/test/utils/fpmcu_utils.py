@@ -9,7 +9,7 @@ import logging
 import re
 import subprocess
 import time
-from typing import Dict, List, Optional, Union, overload
+from typing import Dict, List, Optional, Tuple, Union, overload
 
 from cros.factory.utils.sys_interface import SystemInterface
 
@@ -45,16 +45,16 @@ class SysinfoFlags(enum.IntEnum):
   SYSTEM_IS_LOCKED = (1 << 0)
 
 
-class ImageName(enum.Enum):
+class ImageSlot(enum.Enum):
   RO = 'RO'
   RW = 'RW'
   UNKNOWN = 'unknown'
 
   @classmethod
-  def FromEctoolOutput(cls, image_name: str) -> 'ImageName':
-    image_name_mapping: Dict[str, ImageName] = dict(
+  def FromEctoolOutput(cls, image_name: str) -> 'ImageSlot':
+    image_name_mapping: Dict[str, ImageSlot] = dict(
         {e.value: e
-         for e in ImageName}, **{'?': ImageName.UNKNOWN})
+         for e in ImageSlot}, **{'?': ImageSlot.UNKNOWN})
     return image_name_mapping[image_name]
 
   def __str__(self):
@@ -129,18 +129,22 @@ def _ExtractFlagsFromFpmcuStdout(regexp: str, stdout: str) -> int:
         'Failed to get the flags from called FPMCU command.') from e
 
 
+# Select the Fingerprint MCU cros_ec device
+_CROS_FP_ARG = '--name=cros_fp'
+
+# Regular expressions for fetching target information.
+_RE_CHIPINFO_NAME = r'name:[^\S\r\n]*(\S+)'
+_RE_RO_VERSION = r'^RO version:[^\S\r\n]*(\S+)'
+_RE_RW_VERSION = r'^RW version:[^\S\r\n]*(\S+)'
+_RE_FPINFO_ERROR_FLAGS = r'^Error flags:(.*)$'
+_RE_VENDOR_ID = r'^Fingerprint sensor:[^\S\r\n]*vendor\s+(\S+)\s+product'
+_RE_SENSOR_ID = r'^Fingerprint sensor:[^\S\r\n]*vendor.+model\s+(\S+)\s+version'
+_RE_FLASH_PROTECT_FLAGS = r'^Flash protect flags:[^\S\r\n]*(\S+)'
+_RE_SYSINFO_IMAGE_NAME = r'^Flags:[^\S\r\n]*(\S+)'
+_RE_VERSION_FW_COPY_NAME = r'^Firmware copy:[^\S\r\n]*(\S+)$'
+
+
 class FpmcuDevice:
-  # Select the Fingerprint MCU cros_ec device
-  CROS_FP_ARG = "--name=cros_fp"
-  # Regular expression for parsing ectool output.
-  RO_VERSION_RE = re.compile(r'^RO version:\s*(\S+)\s*$', re.MULTILINE)
-  RW_VERSION_RE = re.compile(r'^RW version:\s*(\S+)\s*$', re.MULTILINE)
-  CHIPINFO_NAME_RE = re.compile(r'name:\s*(\S+)\s*$', re.MULTILINE)
-  FPINFO_MODEL_RE = re.compile(
-      r'^Fingerprint sensor:\s+vendor.+model\s+(\S+)\s+version', re.MULTILINE)
-  FPINFO_VENDOR_RE = re.compile(
-      r'^Fingerprint sensor:\s+vendor\s+(\S+)\s+product', re.MULTILINE)
-  FPINFO_ERRORS_RE = re.compile(r'^Error flags:\s*(\S*)$', re.MULTILINE)
 
   def __init__(self, dut: SystemInterface):
     self._dut = dut
@@ -155,7 +159,8 @@ class FpmcuDevice:
   def FpmcuCommand(self, command: str, *args: str, encoding: None) -> bytes:
     ...
 
-  def FpmcuCommand(self, command, *args, encoding='utf-8'):
+  def FpmcuCommand(self, command: str, *args: str,
+                   encoding: Optional[str] = 'utf-8') -> Union[bytes, str]:
     """Executes a host command on the FPMCU.
 
     Args:
@@ -167,7 +172,7 @@ class FpmcuDevice:
     Raises:
       FpmcuCommandError: If the exit code is non-zero.
     """
-    cmdline = ['ectool', self.CROS_FP_ARG, command] + list(args)
+    cmdline = ['ectool', _CROS_FP_ARG, command] + list(args)
     process = self._dut.Popen(cmdline, encoding=encoding,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
@@ -184,7 +189,7 @@ class FpmcuDevice:
 
     raise FpmcuCommandError(cmdline, stdout, stderr, return_code)
 
-  def GetFpmcuName(self):
+  def GetName(self) -> str:
     """Queries fingerprint MCU name.
 
     Returns:
@@ -196,15 +201,12 @@ class FpmcuDevice:
       FpmcuError:
         When underlying FPMCU command replies unexpected message.
     """
-    fpmcu_chipinfo = self.FpmcuCommand("chipinfo")
-    match_name = self.CHIPINFO_NAME_RE.search(fpmcu_chipinfo)
+    # See `FpmcuDeviceTest.testGetName` for example output.
+    fpmcu_output = self.FpmcuCommand('chipinfo')
 
-    if match_name is None:
-      raise FpmcuError(f'Unable to retrieve FPMCU chipinfo ({fpmcu_chipinfo})')
+    return _ExtractTokenFromFpmcuStdout(_RE_CHIPINFO_NAME, fpmcu_output)
 
-    return match_name.group(1)
-
-  def GetFpmcuFirmwareVersion(self):
+  def GetFirmwareVersion(self) -> Tuple[str, str]:
     """Queries fingerprint MCU firmware version.
 
     Returns:
@@ -213,15 +215,15 @@ class FpmcuDevice:
     Raises:
       FpmcuCommandError:
         When underlying FPMCU command returns non-zero exit code.
+      FpmcuError:
+        When underlying FPMCU command replies unexpected message.
     """
-    fw_version = self.FpmcuCommand("version")
-    match_ro = self.RO_VERSION_RE.search(fw_version)
-    match_rw = self.RW_VERSION_RE.search(fw_version)
-    if match_ro is not None:
-      match_ro = match_ro.group(1)
-    if match_rw is not None:
-      match_rw = match_rw.group(1)
-    return match_ro, match_rw
+    # See `FpmcuDeviceTest.testGetFirmwareVersion` for example output.
+    fpmcu_output = self.FpmcuCommand('version')
+
+    ro_version = _ExtractTokenFromFpmcuStdout(_RE_RO_VERSION, fpmcu_output)
+    rw_version = _ExtractTokenFromFpmcuStdout(_RE_RW_VERSION, fpmcu_output)
+    return ro_version, rw_version
 
   def ValidateFpinfoNoErrorFlags(self, fpinfo: Optional[str] = None) -> None:
     """Validates that no error flags are set in fpinfo stdout.
@@ -240,16 +242,12 @@ class FpmcuDevice:
     if fpinfo is None:
       fpinfo = self.FpmcuCommand('fpinfo')
 
-    # TODO(wdzeng): Reuse utility `_ExtractTokenFromFpmcuStdout` functions.
-    match_errors = self.FPINFO_ERRORS_RE.search(fpinfo)
-    if match_errors is None:
-      raise FpmcuError('Sensor error flags not found.')
-
-    error_flags = match_errors.group(1)
-    if error_flags != '':
+    error_flags = _ExtractTokenFromFpmcuStdout(_RE_FPINFO_ERROR_FLAGS,
+                                               fpinfo).strip()
+    if error_flags:
       raise FpmcuError(f'Sensor failure: {error_flags}')
 
-  def GetFpSensorInfo(self):
+  def GetFpSensorInfo(self) -> Tuple[str, str]:
     """Queries the fingerprint sensor identifiers.
 
     This method also checks that no error flags set.
@@ -264,17 +262,14 @@ class FpmcuDevice:
         When underlying FPMCU command replies unexpected message, or when error
         flags are set.
     """
-    info = self.FpmcuCommand('fpinfo')
-    match_vendor = self.FPINFO_VENDOR_RE.search(info)
-    match_model = self.FPINFO_MODEL_RE.search(info)
+    # See `FpmcuDeviceTest.testGetFpSensorInfoOnNoErrorFlagsSet` and
+    # `FpmcuDeviceTest.testGetFpSensorInfoOnErrorFlagsSet` for example output.
+    fpmcu_output = self.FpmcuCommand('fpinfo')
 
-    if match_vendor is None or match_model is None:
-      raise FpmcuError(f'Unable to retrieve Sensor info ({info})')
-    logging.info('ectool fpinfo:\n%s\n', info)
-
-    self.ValidateFpinfoNoErrorFlags(info)
-
-    return (match_vendor.group(1), match_model.group(1))
+    vendor_id = _ExtractTokenFromFpmcuStdout(_RE_VENDOR_ID, fpmcu_output)
+    sensor_id = _ExtractTokenFromFpmcuStdout(_RE_SENSOR_ID, fpmcu_output)
+    self.ValidateFpinfoNoErrorFlags(fpmcu_output)
+    return vendor_id, sensor_id
 
   def GetFlashProtectFlags(self) -> int:
     """Queries the flash protect flags.
@@ -287,25 +282,13 @@ class FpmcuDevice:
       FpmcuError:
         When underlying FPMCU command replies unexpected message.
     """
-
-    # Execute `ectool --name=cros_fp flashprotect` and observe the stdout. It
-    # should be like:
-    #
-    # ```
-    # Flash protect flags: 0x0000040f wp_gpio_asserted ro_at_boot ro_now ...
-    # Valid flags:         0x0000083f wp_gpio_asserted ro_at_boot ro_now ...
-    # Writable flags:      0x00000000
-    # ```
-    #
-    # We need the flags for `Flash protect flags`. In the above case, it is
-    # 0x0000040f.
-
     if self._cached_flash_protect_flags is not None:
       return self._cached_flash_protect_flags
 
+    # See `FpmcuDeviceTest.testGetFlashProtectFlagsOnLowercasedHexOutput` for
+    # example output.
     fpmcu_stdout = self.FpmcuCommand('flashprotect')
-    flags = _ExtractFlagsFromFpmcuStdout(
-        r'^Flash protect flags:\s+(0x[0-9a-f]+)', fpmcu_stdout)
+    flags = _ExtractFlagsFromFpmcuStdout(_RE_FLASH_PROTECT_FLAGS, fpmcu_stdout)
     self._cached_flash_protect_flags = flags
     return self._cached_flash_protect_flags
 
@@ -367,23 +350,14 @@ class FpmcuDevice:
       FpmcuError:
         When underlying FPMCU command replies unexpected message.
     """
-
     # Validate if the `system_is_locked()` mentioned below in EC code returns
     # true.
     # go/cros-src/platform/ec/common/system.c;l=178;drc=4c716941
 
-    # Execute `ectool --name=cros_fp sysinfo` and check if `SYSTEM_IS_LOCKED`
-    # flag appears. The stdout is like:
-    #
-    # ```
-    # Reset flags: 0x00000c02
-    # Flags: 0x0000000d
-    # Firmware copy: 2
-    # ```
-
+    # See `FpmcuDeviceTest.testIsSystemLockedOnLowercasedHexOutput` for example
+    # output.
     fpmcu_stdout = self.FpmcuCommand('sysinfo')
-    flags = _ExtractFlagsFromFpmcuStdout(r'^Flags:\s+(0x[0-9a-f]+)',
-                                         fpmcu_stdout)
+    flags = _ExtractFlagsFromFpmcuStdout(_RE_SYSINFO_IMAGE_NAME, fpmcu_stdout)
     return bool(flags & SysinfoFlags.SYSTEM_IS_LOCKED)
 
   def Reboot(self) -> None:
@@ -393,7 +367,6 @@ class FpmcuDevice:
       FpmcuError:
         When FPMCU fails to reboot.
     """
-
     logging.info('Rebooting FPMCU ...')
 
     try:
@@ -415,6 +388,7 @@ class FpmcuDevice:
     logging.info('FPMCU rebooted.')
 
   def RequestToEnableSWWPOnBoot(self) -> None:
+    """Sets flashprotect flags such that SWWP will be enabled on next boot."""
     logging.info('Enabling FPMCU software write protection ...')
 
     try:
@@ -432,42 +406,34 @@ class FpmcuDevice:
     logging.info(
         'FPMCU software write protection is enabled. Remember to reboot.')
 
-  def GetImageName(self) -> ImageName:
-    """Queries the image name.
+  def GetImageSlot(self) -> ImageSlot:
+    """Queries the image slot.
 
-    Returns: Image name.
+    Returns: Image slot.
 
     Raises:
       FpmcuCommandError:
         When underlying FPMCU command returns non-zero status code.
       FpmcuError:
-        When underlying FPMCU command replies invalid image name.
+        When underlying FPMCU command replies invalid image slot.
     """
+    logging.info('Checking FPMCU image slot ...')
 
-    # The image name must be one of 'unknown', 'RO', or 'RW'. Follow the design
-    # from EC:
-    # go/cros-src/platform/ec/util/ectool.c;l=370;drc=f119e0eb
-
-    # The value of "Firmware copy" must be either an image name mentioned above,
-    # or a question mark '?'. The format is `Firmware copy: <value>`. Follow the
-    # design from EC:
-    # go/cros-src/platform/ec/util/ectool.c;l=1179;drc=f119e0eb
-
-    logging.info('Checking FPMCU image name ...')
-
+    # See `FpmcuDeviceTest.testGetImageSlotForRW` for example output.
     fpmcu_stdout = self.FpmcuCommand('version')
 
-    # The image name should be one of 'RO', 'RW', 'unknown', or '?'.
-    image_name = _ExtractTokenFromFpmcuStdout(r'^Firmware copy:\s+(\S+)$',
+    # The image slot should be one of 'RO', 'RW', 'unknown', or '?'. Follow the
+    # design from EC: go/cros-src/platform/ec/util/ectool.c;l=370;drc=f119e0eb
+    image_slot = _ExtractTokenFromFpmcuStdout(_RE_VERSION_FW_COPY_NAME,
                                               fpmcu_stdout)
 
-    logging.info('Got FPMCU image name: %s', image_name)
+    logging.info('Got FPMCU image slot: %s', image_slot)
     try:
-      return ImageName.FromEctoolOutput(image_name)
+      return ImageSlot.FromEctoolOutput(image_slot)
     except KeyError as e:
-      # Unexpected. None of candidate matches the image name. This happens only
+      # Unexpected. None of candidate matches the image slot. This happens only
       # if ectool changes its implementation.
-      raise FpmcuError(f'Unexpected FPMCU image name: {image_name}') from e
+      raise FpmcuError(f'Unexpected FPMCU image slot: {image_slot}') from e
 
   def GetFpframe(self) -> bytes:
     """Reads the fpframe.

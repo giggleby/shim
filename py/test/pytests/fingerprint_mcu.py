@@ -429,7 +429,7 @@ class FingerprintTest(test_case.TestCase):
     self._dut.CheckCall(['rm', '-rf', self._image_dir], log=True)
 
   def _VerifyCommunication(self):
-    ro_ver, rw_ver = self._fpmcu.GetFpmcuFirmwareVersion()
+    ro_ver, rw_ver = self._fpmcu.GetFirmwareVersion()
     self.assertTrue(ro_ver is not None and rw_ver is not None,
                     'Unable to retrieve FPMCU version')
     logging.info("FPMCU version RO %s RW %s", ro_ver, rw_ver)

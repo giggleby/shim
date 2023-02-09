@@ -169,7 +169,7 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
   def GetCurrentAndExpectedFirmwareVersion(self, firmware_file):
     cur_ro_ver = cur_rw_ver = ''
     try:
-      cur_ro_ver, cur_rw_ver = self._fpmcu.GetFpmcuFirmwareVersion()
+      cur_ro_ver, cur_rw_ver = self._fpmcu.GetFirmwareVersion()
       logging.info('Current FPMCU RO: %s, RW: %s', cur_ro_ver, cur_rw_ver)
     except Exception:
       logging.exception('Fail to read the current FPMCU RO/RW FW versions.')
