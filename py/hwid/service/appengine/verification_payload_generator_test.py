@@ -58,7 +58,29 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'generic_battery': {}
                 },
                 'expect': {
-                    'chemistry': [True, 'str', '!eq LION'],
+                    'chemistry': [False, 'str'],
+                    'manufacturer': [True, 'str', '!eq foo'],
+                    'model_name': [True, 'str', '!eq bar'],
+                }
+            }))
+
+  def testTryGenerate_Integrated_VendorSpecificChemistry(self):
+    comp = database.ComponentInfo(
+        {
+            'chemistry': 'OOI0',
+            'manufacturer': 'foo',
+            'model_name': 'bar',
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('battery', comp)
+    self.assertEqual(
+        vp_piece.probe_statement,
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'battery', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': {
+                    'chemistry': [True, 'str', '!eq OOI0'],
                     'manufacturer': [True, 'str', '!eq foo'],
                     'model_name': [True, 'str', '!eq bar'],
                 }
@@ -84,7 +106,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'model_name': [True, 'str', r'!re bar\-567.*'],
                     'technology': [True, 'str', '!eq Li-ion']
                 }, {
-                    'chemistry': [True, 'str', '!eq Li-ion'],
+                    'chemistry': [False, 'str'],
                     'manufacturer': [True, 'str', '!eq foo-567'],
                     'model_name': [True, 'str', '!eq bar-567'],
                 }]
@@ -110,7 +132,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'model_name': [True, 'str', r'!re bar(\s{4}.*)?'],
                     'technology': [True, 'str', '!eq Li-ion']
                 }, {
-                    'chemistry': [True, 'str', '!eq Li-ion'],
+                    'chemistry': [False, 'str'],
                     'manufacturer': [True, 'str', '!eq foo'],
                     'model_name': [True, 'str', '!eq bar'],
                 }]
@@ -136,7 +158,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'model_name': [True, 'str', '!re bar.*'],
                     'technology': [True, 'str', '!eq Li-ion']
                 }, {
-                    'chemistry': [True, 'str', '!eq Li-ion'],
+                    'chemistry': [False, 'str'],
                     'manufacturer': [True, 'str', '!eq foo-567'],
                     'model_name': [True, 'str', '!re bar.*']
                 }]
@@ -158,7 +180,29 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
                     'generic_battery': {}
                 },
                 'expect': {
-                    'chemistry': [True, 'str', '!eq LION'],
+                    'chemistry': [False, 'str'],
+                    'manufacturer': [True, 'str', '!eq foo'],
+                    'model_name': [True, 'str', '!eq bar']
+                }
+            }))
+
+  def testTryGenerate_Ectool_VendorSpecificTechnology(self):
+    comp = database.ComponentInfo(
+        {
+            'manufacturer': 'foo',
+            'model_name': 'bar',
+            'technology': 'OOI0'
+        }, hwid_common.COMPONENT_STATUS.supported)
+    vp_piece = self._GenerateBatteryProbeStatement('ec_battery', comp)
+    self.assertEqual(
+        vp_piece.probe_statement,
+        probe_config_types.ComponentProbeStatement(
+            'battery', 'ec_battery', {
+                'eval': {
+                    'generic_battery': {}
+                },
+                'expect': {
+                    'chemistry': [True, 'str', '!eq OOI0'],
                     'manufacturer': [True, 'str', '!eq foo'],
                     'model_name': [True, 'str', '!eq bar']
                 }

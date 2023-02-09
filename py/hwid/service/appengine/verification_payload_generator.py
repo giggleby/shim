@@ -7,7 +7,7 @@
 import collections
 import hashlib
 import re
-from typing import DefaultDict, Dict, List, NamedTuple, Optional, Union
+from typing import DefaultDict, Dict, List, NamedTuple, Optional, Set, Union
 
 from google.protobuf import text_format
 import hardware_verifier_pb2  # pylint: disable=import-error
@@ -25,6 +25,7 @@ from cros.factory.utils import type_utils
 
 BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH = 7
 BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH = 7
+
 
 class GenericProbeStatementInfoRecord:
   """Placeholder for info. related to the generic probe statement.
@@ -253,16 +254,20 @@ class _FieldRecord:
     value_converters: The converter or a list of converters converting HWID
         values.
     is_optional: Whether this record is optional.
+    skip_values: Set of values to skip generating the expected value for this
+        field.
   """
 
-  def __init__(self, hwid_field_names: Union[str, List[str]],
-               probe_statement_field_name: str,
-               value_converters: Union[ValueConverter, List[ValueConverter]],
-               is_optional: bool = False):
+  def __init__(
+      self, hwid_field_names: Union[str,
+                                    List[str]], probe_statement_field_name: str,
+      value_converters: Union[ValueConverter, List[ValueConverter]],
+      is_optional: bool = False, skip_values: Optional[Set[str]] = None):
     self.hwid_field_names = type_utils.MakeList(hwid_field_names)
     self.probe_statement_field_name = probe_statement_field_name
     self.value_converters = type_utils.MakeList(value_converters)
     self.is_optional = is_optional
+    self.skip_values = skip_values or set()
 
   def GenerateExpectedFields(self, comp_values: dict) -> Optional[str]:
     """Generates the expected field from a given component.
@@ -270,16 +275,25 @@ class _FieldRecord:
     This function generates the expected field from a given component using
     predefined fields and value converters.
 
-    If there are not any HWID fields found in `comp_values`, this function will
-    raise `MissingComponentValueError` if `is_optional` is `False`, otherwise
-    return `None`.  If there are zero or multiple HWID fields covertible with
-    the converters, this function will raise `ProbeStatementConversionError`,
-    otherwise return the converted value.
+    If any of the HWID fields found in `comp_values` is in `self.skip_values`,
+    this function will return `None`. If there are not any HWID fields found in
+    `comp_values`, this function will raise `MissingComponentValueError` if
+    `is_optional` is `False`, otherwise return `None`.  If there are zero or
+    multiple HWID fields covertible with the converters, this function will
+    raise `ProbeStatementConversionError`, otherwise return the converted value.
     """
     expected_field = []
     valid_hwid_field_names = [
         name for name in self.hwid_field_names if name in comp_values
     ]
+
+    for hwid_field_name in valid_hwid_field_names:
+      comp_value = comp_values[hwid_field_name]
+      if isinstance(comp_value, str) and comp_value in self.skip_values:
+        # The value in HWID can be ignored. Don't generate expected value
+        # for this field.
+        return None
+
     err = None
     for hwid_field_name in valid_hwid_field_names:
       for value_converter in self.value_converters:
@@ -376,7 +390,8 @@ def GetAllProbeStatementGenerators():
           'generic_battery',
           [
               [
-                  _SameNameFieldRecord('chemistry', str_converter),
+                  _SameNameFieldRecord('chemistry', str_converter,
+                                       skip_values=set(['LION', 'LiP'])),
                   _SameNameFieldRecord('manufacturer', str_converter),
                   _SameNameFieldRecord('model_name', str_converter),
               ],
@@ -397,10 +412,13 @@ def GetAllProbeStatementGenerators():
                                        BatteryTechnologySysfsValueConverter()),
               ],
               # Components from EC.
+              # For the chemistry field, keep only vendor-specific value.
               [
                   _SameNameFieldRecord('manufacturer', str_converter),
                   _SameNameFieldRecord('model_name', str_converter),
-                  _FieldRecord('technology', 'chemistry', str_converter),
+                  _FieldRecord(
+                      'technology', 'chemistry', str_converter, skip_values=set(
+                          ['Li-ion', 'Li-poly', 'LION', 'LiP'])),
               ]
           ])
   ]
