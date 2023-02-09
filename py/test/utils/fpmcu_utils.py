@@ -74,10 +74,10 @@ def _ExtractTokenFromFpmcuStdout(regexp: str, stdout: str) -> str:
   with a regular expression.
 
   Args:
-    regexp: a regular expression for parsing.
-    command: the name of the ectool command.
+    regexp: A regular expression for parsing.
+    command: The name of the ectool command.
 
-  Returns: the parsed flags
+  Returns: The parsed flags.
 
   Raises:
     FpmcuError:
@@ -108,10 +108,10 @@ def _ExtractFlagsFromFpmcuStdout(regexp: str, stdout: str) -> int:
   This function assumes that the flags are written in lowercased hexadecimal.
 
   Args:
-    regexp: a regular expression for parsing.
-    command: the name of the ectool command.
+    regexp: A regular expression for parsing.
+    command: The name of the ectool command.
 
-  Returns: the parsed flags
+  Returns: The parsed flags.
 
   Raises:
     FpmcuError:
@@ -159,7 +159,7 @@ class FpmcuDevice:
     """Executes a host command on the FPMCU.
 
     Args:
-      command: the name of the ectool command.
+      command: The name of the ectool command.
 
     Returns:
       The stdout.
@@ -185,10 +185,16 @@ class FpmcuDevice:
     raise FpmcuCommandError(cmdline, stdout, stderr, return_code)
 
   def GetFpmcuName(self):
-    """Get fingerprint MCU name
+    """Queries fingerprint MCU name.
 
     Returns:
       A string for FPMCU part number.
+
+    Raises:
+      FpmcuCommandError:
+        When underlying FPMCU command returns non-zero exit code.
+      FpmcuError:
+        When underlying FPMCU command replies unexpected message.
     """
     fpmcu_chipinfo = self.FpmcuCommand("chipinfo")
     match_name = self.CHIPINFO_NAME_RE.search(fpmcu_chipinfo)
@@ -199,10 +205,14 @@ class FpmcuDevice:
     return match_name.group(1)
 
   def GetFpmcuFirmwareVersion(self):
-    """Get fingerprint MCU firmware version
+    """Queries fingerprint MCU firmware version.
 
     Returns:
-      A tuple (ro_ver, rw_ver) for RO and RW frimware versions.
+      A tuple (ro_ver, rw_ver) for RO and RW firmware versions.
+
+    Raises:
+      FpmcuCommandError:
+        When underlying FPMCU command returns non-zero exit code.
     """
     fw_version = self.FpmcuCommand("version")
     match_ro = self.RO_VERSION_RE.search(fw_version)
@@ -220,7 +230,12 @@ class FpmcuDevice:
       fpinfo: If given, parses error flags from it.
 
     Raises:
-      FpmcuError: When error flags are set.
+      FpmcuCommandError:
+        When `fpinfo` is not set and underlying FPMCU command returns non-zero
+        exit code.
+      FpmcuError:
+        When underlying FPMCU command replies unexpected message, or when error
+        flags are set.
     """
     if fpinfo is None:
       fpinfo = self.FpmcuCommand('fpinfo')
@@ -235,11 +250,19 @@ class FpmcuDevice:
       raise FpmcuError(f'Sensor failure: {error_flags}')
 
   def GetFpSensorInfo(self):
-    """Retrieve the fingerprint sensor identifiers
+    """Queries the fingerprint sensor identifiers.
+
+    This method also checks that no error flags set.
 
     Returns:
-      An tuple (vendor_id, sensor_id) of two strings
-      representing vendor ID and sensor ID.
+      A tuple (vendor_id, sensor_id) for vendor ID and sensor ID.
+
+    Raises:
+      FpmcuCommandError:
+        When underlying FPMCU command returns non-zero exit code.
+      FpmcuError:
+        When underlying FPMCU command replies unexpected message, or when error
+        flags are set.
     """
     info = self.FpmcuCommand('fpinfo')
     match_vendor = self.FPINFO_VENDOR_RE.search(info)
@@ -256,13 +279,13 @@ class FpmcuDevice:
   def GetFlashProtectFlags(self) -> int:
     """Queries the flash protect flags.
 
-    Returns: flash protect flags
+    Returns: Flash protect flags.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command returns non-zero exit code.
+        When underlying FPMCU command returns non-zero exit code.
       FpmcuError:
-        when underlying FPMCU command replies unexpected message.
+        When underlying FPMCU command replies unexpected message.
     """
 
     # Execute `ectool --name=cros_fp flashprotect` and observe the stdout. It
@@ -272,7 +295,7 @@ class FpmcuDevice:
     # Flash protect flags: 0x0000040f wp_gpio_asserted ro_at_boot ro_now ...
     # Valid flags:         0x0000083f wp_gpio_asserted ro_at_boot ro_now ...
     # Writable flags:      0x00000000
-    # ````
+    # ```
     #
     # We need the flags for `Flash protect flags`. In the above case, it is
     # 0x0000040f.
@@ -289,13 +312,13 @@ class FpmcuDevice:
   def IsHWWPEnabled(self) -> bool:
     """Queries if hardware write protection is enabled.
 
-    Returns: True if hardware write protection is enabled; otherwise False
+    Returns: True if hardware write protection is enabled; otherwise False.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command returns non-zero exit code.
+        When underlying FPMCU command returns non-zero exit code.
       FpmcuError:
-        when underlying FPMCU command replies unexpected message.
+        When underlying FPMCU command replies unexpected message.
     """
 
     flags = self.GetFlashProtectFlags()
@@ -304,13 +327,13 @@ class FpmcuDevice:
   def IsSWWPEnabled(self) -> bool:
     """Queries if software write protection is enabled.
 
-    Returns: True if software write protection is enabled; otherwise False
+    Returns: True if software write protection is enabled; otherwise False.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command returns non-zero exit code.
+        When underlying FPMCU command returns non-zero exit code.
       FpmcuError:
-        when underlying FPMCU command replies unexpected message.
+        When underlying FPMCU command replies unexpected message.
     """
 
     flags = self.GetFlashProtectFlags()
@@ -321,13 +344,13 @@ class FpmcuDevice:
 
     Returns:
       True if software write protection will be enabled at the next boot;
-      otherwise False
+      otherwise False.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command returns non-zero exit code.
+        When underlying FPMCU command returns non-zero exit code.
       FpmcuError:
-        when underlying FPMCU command replies unexpected message.
+        When underlying FPMCU command replies unexpected message.
     """
 
     flags = self.GetFlashProtectFlags()
@@ -336,13 +359,13 @@ class FpmcuDevice:
   def IsSystemLocked(self) -> bool:
     """Queries if the system is locked.
 
-    Returns: True if system is locked; otherwise False
+    Returns: True if system is locked; otherwise False.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command returns non-zero exit code.
+        When underlying FPMCU command returns non-zero exit code.
       FpmcuError:
-        when underlying FPMCU command replies unexpected message.
+        When underlying FPMCU command replies unexpected message.
     """
 
     # Validate if the `system_is_locked()` mentioned below in EC code returns
@@ -352,11 +375,11 @@ class FpmcuDevice:
     # Execute `ectool --name=cros_fp sysinfo` and check if `SYSTEM_IS_LOCKED`
     # flag appears. The stdout is like:
     #
-    # ````
+    # ```
     # Reset flags: 0x00000c02
     # Flags: 0x0000000d
     # Firmware copy: 2
-    # ````
+    # ```
 
     fpmcu_stdout = self.FpmcuCommand('sysinfo')
     flags = _ExtractFlagsFromFpmcuStdout(r'^Flags:\s+(0x[0-9a-f]+)',
@@ -368,7 +391,7 @@ class FpmcuDevice:
 
     Raises:
       FpmcuError:
-        when FPMCU fails to reboot.
+        When FPMCU fails to reboot.
     """
 
     logging.info('Rebooting FPMCU ...')
@@ -412,13 +435,13 @@ class FpmcuDevice:
   def GetImageName(self) -> ImageName:
     """Queries the image name.
 
-    Returns: image name
+    Returns: Image name.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command returns non-zero status code.
+        When underlying FPMCU command returns non-zero status code.
       FpmcuError:
-        when underlying FPMCU command replies invalid image name.
+        When underlying FPMCU command replies invalid image name.
     """
 
     # The image name must be one of 'unknown', 'RO', or 'RW'. Follow the design
@@ -449,11 +472,11 @@ class FpmcuDevice:
   def GetFpframe(self) -> bytes:
     """Reads the fpframe.
 
-    Returns: fpframe in bytes
+    Returns: The fpframe in bytes.
 
     Raises:
       FpmcuCommandError:
-        when underlying FPMCU command fails to read the fpframe.
+        When underlying FPMCU command fails to read the fpframe.
     """
 
     return self.FpmcuCommand('fpframe', 'raw', encoding=None)
