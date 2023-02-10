@@ -7,14 +7,13 @@
 """Unit tests for sys_utils module."""
 
 import os
-import subprocess
 import tempfile
 import unittest
 from unittest import mock
 
 from cros.factory.device import device_utils
 from cros.factory.utils import file_utils
-from cros.factory.utils.process_utils import Spawn
+from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 
 
@@ -47,9 +46,8 @@ class GetInterruptsTest(unittest.TestCase):
   def testFailToReadProcInterrupts(self, read_lines_mock):
     read_lines_mock.return_value = None
 
-    self.assertRaisesRegex(
-        OSError, r'Unable to read /proc/interrupts',
-        sys_utils.GetInterrupts)
+    self.assertRaisesRegex(OSError, r'Unable to read /proc/interrupts',
+                           sys_utils.GetInterrupts)
 
     read_lines_mock.assert_called_once_with('/proc/interrupts')
 
@@ -146,8 +144,9 @@ class GetI2CBusTest(unittest.TestCase):
   @mock.patch('cros.factory.utils.file_utils.ReadFile')
   def testTouchpad(self, read_file_mock):
     read_file_mock.return_value = SAMPLE_INPUT_DEVICES
-    self.assertEqual(sys_utils.GetI2CBus(['Dummy device name',
-                                          'Atmel maXTouch Touchpad']), 0)
+    self.assertEqual(
+        sys_utils.GetI2CBus(['Dummy device name', 'Atmel maXTouch Touchpad']),
+        0)
     read_file_mock.assert_called_once_with('/proc/bus/input/devices')
 
   @mock.patch('cros.factory.utils.file_utils.ReadFile')
@@ -212,27 +211,28 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
   def setUp(self):
     # Creates a temp file and create file system on it as a mock device.
     self.device = tempfile.NamedTemporaryFile(prefix='MountDeviceAndReadFile')  # pylint: disable=consider-using-with
-    Spawn(['truncate', '-s', '1M', self.device.name], log=True,
-          check_call=True)
+    process_utils.CheckCall(['truncate', '-s', '1M', self.device.name],
+                            log_stderr_on_error=True)
 
     # In CrOS chroot, mkfs and mkfs.extX may live in different locations that
     # normal user can't run without adding /sbin and /usr/sbin.
     env = os.environ.copy()
     env['PATH'] = '/sbin:/usr/sbin:' + env['PATH']
-    Spawn([
+    process_utils.CheckCall([
         '/sbin/mkfs', '-E', f'root_owner={os.getuid()}:{os.getgid()}', '-F',
         '-t', 'ext3', self.device.name
-    ], log=True, check_call=True, env=env)
+    ], log_stderr_on_error=True, env=env)
 
     # Creates a file with some content on the device.
     mount_point = tempfile.mkdtemp(prefix='MountDeviceAndReadFileSetup')
-    Spawn(['mount', self.device.name, mount_point], sudo=True, check_call=True,
-          log=True)
+    process_utils.CheckCall(['mount', self.device.name, mount_point], sudo=True,
+                            log_stderr_on_error=True, env=env)
     self.content = 'file content'
     self.file_name = 'file'
     file_utils.WriteFile(
         os.path.join(mount_point, self.file_name), self.content)
-    Spawn(['umount', '-l', mount_point], sudo=True, check_call=True, log=True)
+    process_utils.CheckCall(['umount', '-l', mount_point], sudo=True,
+                            log_stderr_on_error=True)
     os.rmdir(mount_point)
     self.dut = device_utils.CreateDUTInterface()
 
@@ -246,8 +246,10 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
         command = ['sudo', 'sh', '-c', command]
       else:
         command = ['sudo'] + command
-      return subprocess.Popen(command, cwd=cwd, close_fds=True, stdin=stdin,
-                              stdout=stdout, stderr=stderr, encoding=encoding)
+      return process_utils.Spawn(command, cwd=cwd, close_fds=True, stdin=stdin,
+                                 stdout=stdout, stderr=stderr,
+                                 encoding=encoding)
+
     self.dut.link.Shell = _SudoShell
 
   def tearDown(self):
@@ -256,8 +258,7 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
   def testMountDeviceAndReadFile(self):
     self.assertEqual(
         self.content,
-        sys_utils.MountDeviceAndReadFile(
-            self.device.name, self.file_name))
+        sys_utils.MountDeviceAndReadFile(self.device.name, self.file_name))
 
   def testMountDeviceAndReadFileWrongFile(self):
     with self.assertRaises(IOError):
@@ -270,8 +271,8 @@ class MountDeviceAndReadFileTest(unittest.TestCase):
   def testMountDeviceAndReadFileWithDUT(self):
     self.assertEqual(
         self.content,
-        sys_utils.MountDeviceAndReadFile(
-            self.device.name, self.file_name, self.dut))
+        sys_utils.MountDeviceAndReadFile(self.device.name, self.file_name,
+                                         self.dut))
 
   def testMountDeviceAndReadFileWrongFileWithDUT(self):
     with self.assertRaises(IOError):
@@ -286,8 +287,9 @@ class TestLogMessagesTest(unittest.TestCase):
 
   def testGetVarLogMessages(self):
     with tempfile.NamedTemporaryFile('w', encoding='utf-8') as f:
-      data = ("Captain's log.\xFF\n"  # \xFF = invalid UTF-8
-              'We are in pursuit of a starship of Ferengi design.\n')
+      data = (
+          "Captain's log.\xFF\n"  # \xFF = invalid UTF-8
+          'We are in pursuit of a starship of Ferengi design.\n')
       f.write(('X' * 100) + '\n' + data)
       f.flush()
       # Use max_length=len(data) + 5 so that we'll end up reading
@@ -331,38 +333,38 @@ class TestLogMessagesTest(unittest.TestCase):
       f.write(VAR_LOG_MESSAGES)
       f.flush()
 
-      self.assertEqual(
-          ("19:27:17 kernel: That's all, folks.\n"
-           "19:27:17 kernel: Kernel logging (proc) stopped.\n"
-           "<after reboot, kernel came up at 19:27:56>\n"),
-          sys_utils.GetVarLogMessagesBeforeReboot(
-              path=f.name, lines=2, dut=dut))
+      self.assertEqual(("19:27:17 kernel: That's all, folks.\n"
+                        "19:27:17 kernel: Kernel logging (proc) stopped.\n"
+                        "<after reboot, kernel came up at 19:27:56>\n"),
+                       sys_utils.GetVarLogMessagesBeforeReboot(
+                           path=f.name, lines=2, dut=dut))
 
-      self.assertEqual(
-          ("19:27:17 kernel: That's all, folks.\n"
-           "19:27:17 kernel: Kernel logging (proc) stopped.\n"
-           "<after reboot, kernel came up at 19:27:56>\n"),
-          sys_utils.GetVarLogMessagesBeforeReboot(path=f.name, lines=2))
+      self.assertEqual(("19:27:17 kernel: That's all, folks.\n"
+                        "19:27:17 kernel: Kernel logging (proc) stopped.\n"
+                        "<after reboot, kernel came up at 19:27:56>\n"),
+                       sys_utils.GetVarLogMessagesBeforeReboot(
+                           path=f.name, lines=2))
 
-      self.assertEqual(
-          ("19:27:17 kernel: Kernel logging (proc) stopped.\n"
-           "<after reboot, kernel came up at 19:27:56>\n"),
-          sys_utils.GetVarLogMessagesBeforeReboot(path=f.name, lines=1))
+      self.assertEqual(("19:27:17 kernel: Kernel logging (proc) stopped.\n"
+                        "<after reboot, kernel came up at 19:27:56>\n"),
+                       sys_utils.GetVarLogMessagesBeforeReboot(
+                           path=f.name, lines=1))
 
-      self.assertEqual(
-          ("19:00:00 kernel: 7 p.m. and all's well.\n"
-           "19:27:17 kernel: That's all, folks.\n"
-           "19:27:17 kernel: Kernel logging (proc) stopped.\n"
-           "<after reboot, kernel came up at 19:27:56>\n"),
-          sys_utils.GetVarLogMessagesBeforeReboot(path=f.name, lines=100))
+      self.assertEqual(("19:00:00 kernel: 7 p.m. and all's well.\n"
+                        "19:27:17 kernel: That's all, folks.\n"
+                        "19:27:17 kernel: Kernel logging (proc) stopped.\n"
+                        "<after reboot, kernel came up at 19:27:56>\n"),
+                       sys_utils.GetVarLogMessagesBeforeReboot(
+                           path=f.name, lines=100))
 
     with tempfile.NamedTemporaryFile('w') as f:
       f.write(EARLIER_VAR_LOG_MESSAGES)
       f.flush()
-      self.assertEqual(
-          ("19:26:17 kernel: That's all, folks.\n"
-           "<after reboot, kernel came up at 19:26:56>\n"),
-          sys_utils.GetVarLogMessagesBeforeReboot(path=f.name, lines=1))
+      self.assertEqual(("19:26:17 kernel: That's all, folks.\n"
+                        "<after reboot, kernel came up at 19:26:56>\n"),
+                       sys_utils.GetVarLogMessagesBeforeReboot(
+                           path=f.name, lines=1))
+
 
 class TestGetRunningFactoryPythonArchivePath(unittest.TestCase):
 
@@ -499,6 +501,7 @@ class TestPartitionManagerGetSectorSize(unittest.TestCase):
     manager = sys_utils.PartitionManager('mock_dev', mock_dut)
 
     self.assertEqual(manager.GetSectorSize(), 4096)
+
 
 if __name__ == '__main__':
   unittest.main()
