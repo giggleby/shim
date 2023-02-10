@@ -181,9 +181,9 @@ DOCKER_IMAGE_TIMESTAMP="20230115183950"
 DOCKER_IMAGE_NAME="cros/factory_server"
 
 if [ -n "${HOST_LOCALTIME_PATH}" ]; then
-  DOCKER_LOCALTIME_VOLUME="--volume ${HOST_LOCALTIME_PATH}:/etc/localtime:ro"
+  DOCKER_LOCALTIME_VOLUME=(--volume "${HOST_LOCALTIME_PATH}:/etc/localtime:ro")
 else
-  DOCKER_LOCALTIME_VOLUME=""
+  DOCKER_LOCALTIME_VOLUME=()
 fi
 
 # Configures docker image file information by DOCKER_IMAGE_{GITHASH,TIMESTAMP}.
@@ -301,7 +301,7 @@ do_umpire_run() {
     --restart unless-stopped \
     --name "${UMPIRE_CONTAINER_NAME}" \
     --tmpfs "/run:rw,size=16384k" \
-    ${DOCKER_LOCALTIME_VOLUME} \
+    "${DOCKER_LOCALTIME_VOLUME[@]}" \
     --volume "${HOST_SHARED_DIR}:/mnt" \
     --volume "${UMPIRE_CONTAINER_DIR}:${docker_db_dir}" \
     --volume "${HOST_SHARED_TMP_VOLUME}:${DOCKER_SHARED_TMP_DIR}" \
@@ -378,7 +378,7 @@ do_umpire_test() {
   ${DOCKER} run \
     --rm \
     --net=host \
-    ${DOCKER_LOCALTIME_VOLUME} \
+    "${DOCKER_LOCALTIME_VOLUME[@]}" \
     --volume "${temp_dir}:${temp_dir}" \
     --volume /run/docker.sock:/run/docker.sock \
     --volume /run \
@@ -783,7 +783,7 @@ do_dev_run() {
     --name "${DOME_DEV_FRONTEND_CONTAINER_NAME}" \
     --network "${DOME_DEV_DOCKER_NETWORK_NAME}" \
     --volume "${DOME_DIR}:${DOCKER_DOME_DIR}" \
-    ${DOCKER_LOCALTIME_VOLUME} \
+    "${DOCKER_LOCALTIME_VOLUME[@]}" \
     --workdir "${DOCKER_DOME_FRONTEND_DIR}" \
     "${DOME_BUILDER_IMAGE_NAME}" \
     npm run dev
@@ -808,7 +808,7 @@ do_dev_run() {
     --volume "${HOST_TFTP_DIR}:${DOCKER_TFTP_DIR_IN_DOME}" \
     --volume "${HOST_UMPIRE_DIR}:${DOCKER_UMPIRE_DIR_IN_DOME}" \
     --volume "${HOST_SHARED_TMP_VOLUME}:${DOCKER_SHARED_TMP_DIR}" \
-    ${DOCKER_LOCALTIME_VOLUME} \
+    "${DOCKER_LOCALTIME_VOLUME[@]}" \
     --workdir "${DOCKER_DOME_DIR}" \
     "${DOCKER_IMAGE_NAME}" \
     python3 manage.py runserver 0:8080
@@ -992,7 +992,7 @@ do_run() {
     --volume "${HOST_TFTP_DIR}:${DOCKER_TFTP_DIR_IN_DOME}" \
     --volume "${HOST_UMPIRE_DIR}:${DOCKER_UMPIRE_DIR_IN_DOME}" \
     --volume "${HOST_SHARED_TMP_VOLUME}:${DOCKER_SHARED_TMP_DIR}" \
-    ${DOCKER_LOCALTIME_VOLUME} \
+    "${DOCKER_LOCALTIME_VOLUME[@]}" \
     --workdir "${DOCKER_DOME_DIR}" \
     "${DOCKER_IMAGE_NAME}" \
     uwsgi --ini uwsgi.ini
@@ -1216,6 +1216,21 @@ TEST=None"
   run_in_factory repo upload --cbr --no-verify .
 }
 
+do_update_umpire_version() {
+  local file="$1"
+  local tag="$2"
+
+  UMPIRE_VERSION="$(sed -n "s/${tag} = \(.*\)/\1/p" "${file}")"
+  if [ "${tag}" == "MOCK_UMPIRE_VERSION" ]; then
+    UMPIRE_VERSION="$(sed -n "s/[ ]\+cls.${tag} = \(.*\)/\1/p" "${file}")"
+  fi
+
+  local old_umpire_version="${tag} = $((UMPIRE_VERSION))"
+  local new_umpire_version="${tag} = $((UMPIRE_VERSION + 1))"
+
+  sed -i "s/${old_umpire_version}/${new_umpire_version}/" "${file}"
+}
+
 do_publish() {
   check_gsutil
 
@@ -1228,6 +1243,10 @@ do_publish() {
   local script_file="$(realpath "$0")"
   do_update_docker_image_version "${script_file}" "${changes_file}" ||
     die "Failed updating docker image version."
+
+  # auto increase the umpire version
+  do_update_umpire_version "${UMPIRE_DIR}/common.py" "UMPIRE_VERSION"
+  do_update_umpire_version "${DOME_DIR}/backend/tests.py" "MOCK_UMPIRE_VERSION"
 
   do_reload_docker_image_info "${script_file}"
 

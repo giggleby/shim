@@ -130,6 +130,8 @@ choices - just choose one of them:
        ./cros_docker.sh install
 
 4. Run following command to start the front end [Dome](../py/dome/README.md).
+   Note: When we uprev the `UMPIRE_VERSION`, Umpire instances will be updated
+   automatically after we run following command at first time.
 
        ./cros_docker.sh run
 
@@ -142,10 +144,3 @@ version, do:
      ./cros_docker.sh update
 
 Then repeat the steps in previous section to update Docker images.
-
-*** note
-Note: Umpire instances already created won't be updated automatically.
-To update, go to Dome console and enter created projects, click the "DISABLE"
-action button then "ENABLE" again using same port, then click the "CREATE A NEW
-UMPIRE INSTANCE" button.
-***
