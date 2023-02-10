@@ -4073,6 +4073,10 @@ msgid "Stress Group With Rear Camera"
 msgstr "后相机集合压力测试"
 
 #: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Suspend Stress Memory Check"
+msgstr "暂停/恢复内存压力测试"
+
+#: ../py/test/test_lists/generic_run_in.test_list.json
 msgid "Webgl Aquarium 1000"
 msgstr "WebGL 水族箱 1000"
 

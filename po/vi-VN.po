@@ -4139,6 +4139,10 @@ msgid "Stress Group With Rear Camera"
 msgstr "Camera phía sau Thử áp lực tập trung"
 
 #: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Suspend Stress Memory Check"
+msgstr ""
+
+#: ../py/test/test_lists/generic_run_in.test_list.json
 msgid "Webgl Aquarium 1000"
 msgstr ""
 
