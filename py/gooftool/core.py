@@ -926,10 +926,9 @@ class Gooftool:
   def GetGBBFlags(self):
     result = self._util.shell('futility gbb --get --flash --flags')
     if result.success:
-      for line in result.stdout.split('\n'):
-        match = re.match(r'.*GBB set flags: (\S*)', line)
-        if match:
-          return int(match.group(1), 16)
+      match = re.match(r'flags: (\S*)', result.stdout)
+      if match:
+        return int(match.group(1), 16)
 
     raise Error(f'Failed getting GBB flags {result.stdout}')
 
