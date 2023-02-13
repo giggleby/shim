@@ -195,6 +195,7 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     Returns:
       True if the data is within the tolerance of the spec.
     """
+    ret = True
     for signal_name in data:
       value = data[signal_name]
       orientation = orientations[signal_name]
@@ -206,9 +207,10 @@ class AccelerometerController(sensor_utils.BasicSensorController):
       index = abs(orientation)
       ideal_value = _GRAVITY * orientation
       if abs(value - ideal_value) > spec_offset[index]:
-        logging.error('Signal %s out of range: %f', signal_name, value)
-        return False
-    return True
+        logging.error('Signal %s out of range. Detected = %f; Expected = %f',
+                      signal_name, value, ideal_value)
+        ret = False
+    return ret
 
   def CalculateCalibrationBias(self, data, orientations):
     # Calculating calibration data.
