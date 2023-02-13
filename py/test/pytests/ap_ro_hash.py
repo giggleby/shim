@@ -50,6 +50,7 @@ from cros.factory.gooftool.core import Gooftool
 from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils.gsc_utils import GSCUtils
 
 
 class APROHashTest(test_case.TestCase):
@@ -59,6 +60,11 @@ class APROHashTest(test_case.TestCase):
     self.gooftool = Gooftool()
 
   def runTest(self):
+    # skip the test if the firmware is Ti50
+    if GSCUtils().IsTi50():
+      session.console.info('Skip Cr50 AP RO hash test '
+                           'since the firmware is Ti50.')
+      return
     if self.gooftool.IsCr50BoardIDSet():
       session.console.warn('Unable to modify RO hash, test skipped.')
       return
