@@ -37,7 +37,9 @@ import os
 import re
 import threading
 import time
+from typing import List, Optional
 
+from cros.factory.device import device_types
 from cros.factory.device import device_utils
 from cros.factory.test.env import paths
 from cros.factory.test import session
@@ -51,6 +53,67 @@ from cros.factory.utils import process_utils
 
 
 _MIN_SUSPEND_MARGIN_SECS = 5
+_WAKE_SOURCE_PATTERN = re.compile('|'.join((
+    r'.*\| Wake Source \| .*$',
+    r'.*\| EC Event \| AC Connected$',
+    r'.*\| EC Event \| AC Disconnected$',
+    r'.*\| EC Event \| Host Event Hang$',
+    r'.*\| EC Event \| Key Pressed$',
+    r'.*\| EC Event \| USB MUX change$',
+)))
+
+
+def GetElog(dut: device_types.DeviceBoard,
+            cut_line: Optional[str] = None) -> List[str]:
+  """Return elog.
+
+  elog is a useful log to get the wake source.
+
+  Args:
+    dut: The device interface.
+    cut_line: The last line of elog before we run suspend_stress_test. If it's
+      specified and found in the logs, we only returns the line after that. If
+      it's not found in the log, then elog is probably cleared so we return the
+      whole section.
+
+  Returns:
+    The elog.
+  """
+  p = dut.Popen(['elogtool', 'list'], stdout=dut.PIPE, stderr=dut.PIPE)
+  stdout, unused_stderr = p.communicate()
+  stdout_lines = stdout.splitlines()
+  if cut_line:
+    for index, line in enumerate(stdout_lines):
+      if line == cut_line:
+        stdout_lines = stdout_lines[index + 1:]
+        break
+  return stdout_lines
+
+
+def GetElogLastLine(dut: device_types.DeviceBoard) -> Optional[str]:
+  stdout_lines = GetElog(dut)
+  return stdout_lines[-1] if stdout_lines else None
+
+
+def GetWakeSource(elog: List[str]) -> Optional[str]:
+  """Return wake source from the elog.
+
+  The wake source may be wrong because elog doesn't create an event for some
+  wake sources. For example, b/222375516.
+
+  Args:
+    elog: The content of elog.
+
+  Returns:
+    The line indicates the wake source.
+  """
+  wake_source = None
+  for line in reversed(elog):
+    match = _WAKE_SOURCE_PATTERN.match(line)
+    if match:
+      wake_source = match.group(0)
+      break
+  return wake_source
 
 
 class SuspendStressTest(test_case.TestCase):
@@ -166,6 +229,8 @@ class SuspendStressTest(test_case.TestCase):
     logging.info('command: %r', command)
     testlog.LogParam('command', command)
 
+    elog_cut_line = GetElogLastLine(self.dut)
+
     logging.info('Log path is %s', GetLogPath('*'))
     result_path = GetLogPath('result')
     stdout_path = GetLogPath('stdout')
@@ -194,15 +259,21 @@ class SuspendStressTest(test_case.TestCase):
     testlog.LogParam('returncode', returncode)
     # TODO(chuntsen): Attach EC logs and other system logs on failure.
 
+    elog = GetElog(self.dut, elog_cut_line)
+    testlog_elog = False
     errors = []
     if returncode != 0:
       errors.append(f'Suspend stress test failed: returncode:{int(returncode)}')
     match = re.findall(r'Premature wake detected', stdout)
     if match:
+      testlog_elog = True
+      wake_source = GetWakeSource(elog)
       if self.args.premature_wake_fatal:
         errors.append(f'Premature wake detected:{len(match)}')
+        errors.append(f'Last elog Wake Source event: {wake_source!r}')
       else:
         logging.warning('Premature wake detected:%d', len(match))
+        logging.warning('Last elog Wake Source event: %r', wake_source)
     match = re.findall(r'Late wake detected', stdout)
     if match:
       if self.args.late_wake_fatal:
@@ -228,5 +299,8 @@ class SuspendStressTest(test_case.TestCase):
     match = re.search(r's0ix errors: (\d+)', stdout)
     if match and match.group(1) != '0':
       errors.append(match.group(0))
+    if testlog_elog or errors:
+      # This is the elog produced during the test.
+      testlog.LogParam('elog', elog)
     if errors:
       self.FailTask(f'{errors!r}')
