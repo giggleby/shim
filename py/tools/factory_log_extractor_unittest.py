@@ -9,7 +9,8 @@ import os
 import textwrap
 import unittest
 
-from cros.factory.tools import factory_log_extractor
+from cros.factory.tools.factory_log_extractor import FactoryLogExtractor
+from cros.factory.tools.factory_log_extractor import FactoryLogExtractorError
 from cros.factory.utils import file_utils
 
 
@@ -21,10 +22,10 @@ class ExtractAndMergeLogsTest(unittest.TestCase):
     return path
 
   def testEmptyFields(self):
-    with self.assertRaisesRegex(factory_log_extractor.FactoryLogExtractorError,
-                                'At least one field should be kept.'):
-      factory_log_extractor.ExtractAndMergeLogs(['/path/not/exists'],
-                                                '/path/not/exists', [])
+    with file_utils.UnopenedTemporaryFile(prefix='empty_fields_') as output_f:
+      with self.assertRaisesRegex(FactoryLogExtractorError,
+                                  'At least one field should be kept.'):
+        FactoryLogExtractor(['/path/not/exists'], output_f, [])
 
   def testKeepFields(self):
     FACTORY_TEST_LOG = textwrap.dedent("""\
@@ -40,8 +41,8 @@ class ExtractAndMergeLogsTest(unittest.TestCase):
                                               FACTORY_TEST_LOG)
       output_path = os.path.join(temp_dir, 'extracted_logs.json')
 
-      factory_log_extractor.ExtractAndMergeLogs([testlog_path], output_path,
-                                                ['filePath', 'message'])
+      FactoryLogExtractor([testlog_path], output_path,
+                          ['filePath', 'message']).ExtractAndMergeLogs()
       self.assertEqual(file_utils.ReadFile(output_path), EXPECTED_FILTERED_LOGS)
 
   def testExtractAndMergeMultiFiles(self):
@@ -74,8 +75,8 @@ class ExtractAndMergeLogsTest(unittest.TestCase):
                                                   VAR_LOG_MESSAGES)
       output_path = os.path.join(temp_dir, 'extracted_logs.json')
 
-      factory_log_extractor.ExtractAndMergeLogs(
-          [testlog_path, var_log_msg_path], output_path, ['time', 'message'])
+      FactoryLogExtractor([testlog_path, var_log_msg_path], output_path,
+                          ['time', 'message']).ExtractAndMergeLogs()
       self.assertEqual(
           file_utils.ReadFile(output_path),
           EXPECTED_MERGED_LOGS_FILTER_LOG_LEVEL)
