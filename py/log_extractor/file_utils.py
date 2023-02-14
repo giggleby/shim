@@ -24,7 +24,7 @@ class LogExtractorFileReader:
     self._f = open(self._f_name, 'r', encoding='utf-8')  # pylint: disable=consider-using-with
     self._cur_record = None
     if not self.ReadNextValidRecord():
-      logging.warning('The content of file %s is empty!', self.f_name)
+      logging.warning('The content of file %s is empty!', self._f_name)
 
   def __del__(self):
     self._f.close()
