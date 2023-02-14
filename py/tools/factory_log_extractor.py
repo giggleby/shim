@@ -6,7 +6,6 @@
 
 import argparse
 import heapq
-from io import TextIOWrapper
 import json
 import logging
 from typing import Dict, List
@@ -35,7 +34,7 @@ EXAMPLES = """
     {"time": 1664758861.4400852, "message": "Running command: \"mount /dev/mmcblk0p1 -o commit=0,remount\""}
 """
 
-DEFAULT_FIELDS_TO_KEEP = [
+DEFAULT_FIELDS_TO_KEEP = (
     # General fields to keep
     'time',
     # Below are the fields defined in testlog and are categorized by the event
@@ -55,43 +54,49 @@ DEFAULT_FIELDS_TO_KEEP = [
     'arguments',
     'startTime',
     'endTime',
-]
+)
 
 
 class FactoryLogExtractorError(Exception):
   pass
 
 
-def _RemoveFields(record: Dict, fields_to_keep: List):
-  """Inplace removes some fields from the JSON record."""
-  for to_remove in record.keys() - fields_to_keep:
-    record.pop(to_remove)
+class FactoryLogExtractor:
 
+  def __init__(self, input_paths: List, output_path: str,
+               fields_to_keep: List = DEFAULT_FIELDS_TO_KEEP):
+    self._input_paths = input_paths
+    self._output_f = open(output_path, 'w', encoding='utf-8')  # pylint: disable=consider-using-with
+    if not fields_to_keep:
+      raise FactoryLogExtractorError('At least one field should be kept.')
+    self._fields_to_keep = fields_to_keep
 
-def _WriteRecord(f: TextIOWrapper, fields_to_keep: List, record: Dict):
-  _RemoveFields(record, fields_to_keep)
-  if record:
-    f.write(json.dumps(record, sort_keys=True) + '\n')
+  def __del__(self):
+    if self._output_f:
+      self._output_f.close()
 
+  def _RemoveFields(self, record: Dict):
+    """Inplace removes some fields from the JSON record."""
+    for to_remove in record.keys() - self._fields_to_keep:
+      record.pop(to_remove)
 
-def ExtractAndMergeLogs(input_paths: List, output_path: str,
-                        fields_to_keep: List):
+  def _WriteRecord(self, record: Dict):
+    self._RemoveFields(record)
+    if record:
+      self._output_f.write(json.dumps(record, sort_keys=True) + '\n')
 
-  if not fields_to_keep:
-    raise FactoryLogExtractorError('At least one field should be kept.')
+  def ExtractAndMergeLogs(self):
+    reader_heap = []
+    for p in self._input_paths:
+      reader = LogExtractorFileReader(p)
+      if reader.GetCurRecord():
+        reader_heap.append(reader)
+    heapq.heapify(reader_heap)
 
-  reader_heap = []
-  for p in input_paths:
-    reader = LogExtractorFileReader(p)
-    if reader.GetCurRecord():
-      reader_heap.append(reader)
-  heapq.heapify(reader_heap)
-
-  with open(output_path, 'w', encoding='utf-8') as output_f:
     while reader_heap:
       reader = heapq.heappop(reader_heap)
       record = reader.GetCurRecord()
-      _WriteRecord(output_f, fields_to_keep, record)
+      self._WriteRecord(record)
       if not reader.ReadNextValidRecord():
         continue
       heapq.heappush(reader_heap, reader)
@@ -118,7 +123,7 @@ def main():
   args = ParseArgument()
   logging.info('Extracting logs from %r to %s ...', args.path, args.output)
   logging.info('Fields to keep: %r', args.keep)
-  ExtractAndMergeLogs(args.path, args.output, args.keep)
+  FactoryLogExtractor(args.path, args.output, args.keep).ExtractAndMergeLogs()
 
 
 if __name__ == '__main__':
