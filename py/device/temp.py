@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""A system module providing access of temprary files on remote DUT."""
+"""A system module providing access of temporary files on remote DUT."""
 
 from contextlib import contextmanager
+from typing import Optional
 
 from cros.factory.device import device_types
+from cros.factory.utils import type_utils
 
 
 class TemporaryFiles(device_types.DeviceComponent):
@@ -21,11 +23,11 @@ class TemporaryFiles(device_types.DeviceComponent):
 
    with self.dut.temp.TempDirectory() as tmp_dir:
      self.dut.Call('gen_output -C %s' % tmp_dir)
-
   """
 
   # pylint: disable=redefined-builtin
-  def mktemp(self, is_dir, suffix='', prefix='cftmp', dir=None):
+  def mktemp(self, is_dir: bool, suffix='', prefix='cftmp',
+             dir: Optional[str] = None) -> str:
     """Creates a temporary file or directory on DUT."""
     template = f'{prefix}.XXXXXX{suffix}'
     # http://unix.stackexchange.com/questions/30091/
@@ -60,7 +62,6 @@ class TemporaryFiles(device_types.DeviceComponent):
     finally:
       self._device.Call(['rm', '-f', path])
 
-
   @contextmanager
   def TempDirectory(self, **kargs):
     """Yields a temporary directory.
@@ -83,7 +84,9 @@ class AndroidTemporaryFiles(TemporaryFiles):
   """Access to temporary objects on Android systems."""
 
   # pylint: disable=redefined-builtin
-  def mktemp(self, is_dir, suffix='', prefix='cftmp', dir=None):
+  @type_utils.Overrides
+  def mktemp(self, is_dir: bool, suffix='', prefix='cftmp',
+             dir: Optional[str] = None) -> str:
     """Creates a temporary file or directory on DUT."""
 
     template = f'{prefix}.XXXXXX{suffix}'
@@ -100,10 +103,13 @@ class DummyTemporaryFiles(TemporaryFiles):
   DUMMY_FILE_NAME = 'DUMMY_TEMP_FILE'
 
   # pylint: disable=redefined-builtin
-  def mktemp(self, is_dir, suffix='', prefix='cftmp', dir=None):
+  @type_utils.Overrides
+  def mktemp(self, is_dir: bool, suffix='', prefix='cftmp',
+             dir: Optional[str] = None) -> str:
     return self.DUMMY_FILE_NAME
 
   @contextmanager
+  @type_utils.Overrides
   def TempFile(self, **kargs):
     path = self.mktemp(False, **kargs)
     try:
@@ -112,6 +118,7 @@ class DummyTemporaryFiles(TemporaryFiles):
       pass
 
   @contextmanager
+  @type_utils.Overrides
   def TempDirectory(self, **kargs):
     path = self.mktemp(True, **kargs)
     try:
