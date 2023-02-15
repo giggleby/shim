@@ -268,6 +268,11 @@ class SSHLink(device_types.DeviceLink):
   _dhcp_manager = None
   _dhcp_manager_lock = threading.Lock()
 
+  @type_utils.Overrides
+  def IsLocal(self) -> bool:
+    """See DeviceLink.IsLocal"""
+    return False
+
   @classmethod
   def SetLinkIP(cls, ip):
     state.DataShelfSetValue(_DEVICE_DATA_KEY, ip)
