@@ -9,12 +9,25 @@
 
 PACKAGE_PATH_NAME = cros/factory/probe_info_service
 
+# TODO(yhong): Centralize the protobuf version with the one in requirements.txt.
+PROTOBUF_VERSION = 3.19.0
+
 FACTORY_DIR = ../..
 FACTORY_PY_PKG_DIR = $(FACTORY_DIR)/py_pkg
 PACKAGE_PRIVATE_DIR = \
 	$(FACTORY_DIR)/../factory-private/config/probe_info_service
 BUILD_DIR := $(FACTORY_DIR)/build/probe_info_service
 GEN_CODE_DIR = $(BUILD_DIR)/gen
+PROTOC_LOCAL_BASE_DIR = $(BUILD_DIR)/protoc_local
+PROTOC = $(PROTOC_LOCAL_BASE_DIR)/bin/protoc
+
+# Reference:
+# https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os
+PROTOC_ARCHIVE_BASENAME = protoc-$(PROTOBUF_VERSION)-linux-x86_64.zip
+PROTOC_ARCHIVE_DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOBUF_VERSION)/$(PROTOC_ARCHIVE_BASENAME)
+
+PROTOC_ARCHIVE_FULLNAME = $(BUILD_DIR)/$(PROTOC_ARCHIVE_BASENAME)
+
 PACK_DEST_DIR :=
 
 PROTO_SRC_FILES = \
@@ -24,8 +37,8 @@ PROTO_SRC_FILES = \
 PROTO_PYGEN_FILES = $(patsubst \
 	%.proto,$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)/%_pb2.py, \
 	$(PROTO_SRC_FILES))
-
-APPENGINE_CONFIGS = app_engine/requirements.txt app_engine/app.yaml
+PIP_REQUIREMENT_FILE = app_engine/requirements.txt
+APPENGINE_CONFIGS = $(PIP_REQUIREMENT_FILE) app_engine/app.yaml
 
 DEP_PACKAGE_PATH_NAMES = cros/factory/utils cros/factory/probe/runtime_probe
 
@@ -36,9 +49,21 @@ prepare: $(PROTO_PYGEN_FILES)
 clean:
 	rm -rf "$(BUILD_DIR)"
 
-$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)/%_pb2.py: %.proto
+$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)/%_pb2.py: %.proto $(PROTOC)
 	mkdir -p "$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)" || true
-	protoc --python_out="$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)" "$<"
+	$(PROTOC) --python_out="$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)" "$<"
+
+$(PROTOC): $(PROTOC_LOCAL_BASE_DIR)
+
+$(PROTOC_LOCAL_BASE_DIR): $(PROTOC_ARCHIVE_FULLNAME)
+	rm -rf "$@"
+	mkdir -p "$@" || true
+	unzip -d "$@" "$<"
+
+$(PROTOC_ARCHIVE_FULLNAME): $(PIP_REQUIREMENT_FILE)
+	grep "protobuf==$(PROTOBUF_VERSION)" "$<"
+	mkdir -p "$$(dirname "$@")" || true
+	curl "$(PROTOC_ARCHIVE_DOWNLOAD_URL)" -L -o "$@"
 
 _pack: prepare
 	$(if $(PACK_DEST_DIR),, \
