@@ -152,10 +152,27 @@ class VarLogMessageRecord(SystemLogRecord):
 
     return TestRunStatus.UNKNOWN
 
-# TODO: Change the start and end time of the StationTestRun event.
 class TestlogRecord(FactoryRecord):
 
   _STATION_TO_STR_TEMPLATE = '[{log_level}] {time} {msg}'
+
+  def __init__(self, data: testlog.EventBase):
+    super().__init__(data)
+    self._time = self._data['time']
+    if isinstance(self._data, testlog.StationTestRun):
+      # The `time` field should store the timestamp that the event is generated.
+      # However, there's an exception in testlog type `station.test_run`, where
+      # we expect `time` be equal to `startTime` when the test starts, and be
+      # equal to `endTime` when the test ends.
+      # 'startTime' is required field for `station.test_run`, while `endTime`
+      # only exists when a test completes.
+      if 'endTime' in self:
+        self._time = self['endTime']
+      else:
+        self._time = self['startTime']
+
+  def GetTime(self) -> float:
+    return self._time
 
   @classmethod
   def FromJSON(cls, json_str: str, check_valid: bool = True):
