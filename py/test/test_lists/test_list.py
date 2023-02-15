@@ -804,7 +804,10 @@ class ITestList(metaclass=abc.ABCMeta):
     syntax_tree = ast.parse(expression, mode='eval')
     syntax_tree = NodeTransformer_AddGet(['device']).visit(syntax_tree)
     code_object = compile(syntax_tree, '<string>', 'eval')
-    return eval(code_object, namespace)  # pylint: disable=eval-used
+    try:
+      return eval(code_object, namespace)  # pylint: disable=eval-used
+    except AttributeError as err:
+      raise AttributeError(expression) from err
 
   @classmethod
   def EvaluateRunIf(cls, test, test_list):

@@ -23,10 +23,12 @@ from io import StringIO
 import logging
 import os
 import re
+from typing import Any, Dict, List, Union
 
 from cros.factory.probe import function as probe_function
 from cros.factory.test.env import paths
 from cros.factory.test.test_lists import manager
+from cros.factory.test.test_lists import test_object as test_object_module
 from cros.factory.test.utils import pytest_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
@@ -214,33 +216,60 @@ def GeneratePyTestsDoc(pytests_output_dir):
 
 
 def WriteTestObjectDetail(
-    rst,
-    test_object_name,
-    test_object):
+    rst: RSTWriter,
+    documented_test_object_names: List[str],
+    test_object_name: str,
+    raw_test_object: Dict[str, Any],
+    test: Union[test_object_module.FactoryTest, list],
+) -> None:
   """Writes a test_object to output stream.
 
   Args:
     rst: An instance of RSTWriter for writing RST context.
-    test_object_name: name of the test object (string).
-    test_object: a test_object defined by JSON test list.
+    documented_test_object_names: The names of test objects that we have doc.
+    test_object_name: The name of the test object.
+    raw_test_object: a test_object defined by JSON test list without resolving
+      inheritance.
+    test: The resolved object from test_list.MakeTest. May be a list if it's a
+      FlattenGroup.
   """
   rst.WriteTitle(Escape(test_object_name), '-')
 
-  if '__comment' in test_object:
-    rst.WriteParagraph(Escape(test_object['__comment']))
+  if '__comment' in raw_test_object:
+    rst.WriteParagraph(Escape(raw_test_object['__comment']))
 
-  if test_object.get('run_if'):
+  if isinstance(test, test_object_module.FactoryTest) and test.run_if:
     rst.WriteTitle('run_if', '`')
-    rst.WriteParagraph('::\n\n' + Indent(test_object['run_if'], '  '))
+    rst.WriteParagraph('::\n\n' + Indent(test.run_if, '  '))
 
-  if test_object.get('args'):
+  if isinstance(test, test_object_module.FactoryTest) and test.pytest_name:
+    doc_path = os.path.join('..', 'pytests', test.pytest_name)
+    rst.WriteTitle('pytest_name', '`')
+    rst.WriteParagraph(LinkToDoc(test.pytest_name, doc_path))
+
+  args = raw_test_object.get('args')
+  if args:
     rst.WriteTitle('args', '`')
-    for key, value in test_object['args'].items():
+    for key, value in args.items():
       formatted_value = json_utils.DumpStr(value, pretty=True)
       formatted_value = '::\n\n' + Indent(formatted_value, '  ')
       formatted_value = Indent(formatted_value, '  ')
       rst.WriteParagraph(f'``{key}``\n{formatted_value}')
 
+  subtests = raw_test_object.get('subtests')
+  if subtests:
+    rst.WriteTitle('subtests', '`')
+    for value in subtests:
+      if isinstance(value, str):
+        formatted_value = value
+        if value in documented_test_object_names:
+          formatted_value = f'`{Escape(value)}`_'
+        rst.WriteParagraph(f'- {formatted_value}\n')
+      else:
+        formatted_value = json_utils.DumpStr(value, pretty=True)
+        formatted_value = '::\n\n' + Indent(formatted_value, '  ')
+        formatted_value = Indent(formatted_value, '  ')
+        rst.WriteParagraph(f'-{formatted_value}\n')
 
 @DocGenerator('test_lists')
 def GenerateTestListDoc(output_dir):
@@ -267,33 +296,42 @@ def GenerateTestListDoc(output_dir):
       for parent in raw_config.get('inherit', []):
         rst.WriteListItem(LinkToDoc(parent, parent))
 
-      rst.WriteTitle('Definitions', '-')
-      rst.WriteParagraph('Only pytest definitions are listed.')
+      rst_pytest_detail = RSTWriter(StringIO())
+      has_pytest_detail = False
 
-      rst_define = RSTWriter(StringIO())
-      rst_detail = RSTWriter(StringIO())
+      rst_group_detail = RSTWriter(StringIO())
+      has_group_detail = False
 
-      rst_define.WriteListTableHeader(header_rows=1)
-      rst_define.WriteListTableRow(('Defined Name', 'Pytest Name'))
+      test_object_names = sorted(raw_config['definitions'])
+      cache = {}
+      for test_object_name in test_object_names:
+        resolved_test_object = config['definitions'][test_object_name]
+        raw_test_object = test_list.ResolveTestObject(
+            resolved_test_object, test_object_name, cache={})
 
-      has_definitions = False
-      for test_object_name in sorted(raw_config['definitions'].keys()):
-        test_object = config['definitions'][test_object_name]
-        test_object = test_list.ResolveTestObject(
-            test_object, test_object_name, cache={})
-        if test_object.get('pytest_name'):
-          has_definitions = True
-          pytest_name = test_object['pytest_name']
-          doc_path = os.path.join('..', 'pytests', pytest_name)
-          rst_define.WriteListTableRow(
-              (f'`{Escape(test_object_name)}`_', LinkToDoc(
-                  pytest_name, doc_path)))
+        try:
+          test = test_list.MakeTest(resolved_test_object, cache=cache)
+        except Exception as err:
+          raise ValueError(test_list_id) from err
 
-          WriteTestObjectDetail(rst_detail, test_object_name, test_object)
+        if (isinstance(test, test_object_module.FactoryTest) and
+            test.pytest_name):
+          has_pytest_detail = True
+          WriteTestObjectDetail(rst_pytest_detail, test_object_names,
+                                test_object_name, raw_test_object, test)
+        elif isinstance(test, (test_object_module.FactoryTest, list)):
+          has_group_detail = True
+          WriteTestObjectDetail(rst_group_detail, test_object_names,
+                                test_object_name, raw_test_object, test)
+        else:
+          logging.warning('Test Object %r with unknown type %r',
+                          test_object_name, type(test))
 
-      if has_definitions:
-        rst.WriteParagraph(rst_define.io.getvalue())
-        rst.WriteParagraph(rst_detail.io.getvalue())
+      if has_pytest_detail:
+        rst.WriteParagraph(rst_pytest_detail.io.getvalue())
+
+      if has_group_detail:
+        rst.WriteParagraph(rst_group_detail.io.getvalue())
 
 
 def FinishTemplate(path, **kwargs):
