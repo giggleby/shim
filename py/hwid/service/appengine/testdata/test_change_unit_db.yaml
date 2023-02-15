@@ -44,8 +44,7 @@ encoded_fields:
   mainboard_field:
     0:
       mainboard: rev0
-  region_field: !region_field
-  - us
+  region_field: !region_field []
   ro_main_firmware_field:
     0:
       ro_main_firmware: firmware0

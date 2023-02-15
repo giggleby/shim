@@ -9,12 +9,11 @@ import textwrap
 from typing import Iterable, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Tuple
 import unittest
 
+from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.v3 import builder
-from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
-
 
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -215,7 +214,7 @@ class CompChangeTest(ChangeUnitTestBase):
   _DIFF_ADD_COMPONENT = textwrap.dedent('''\
       ---
       +++
-      @@ -98,6 +98,12 @@
+      @@ -97,6 +97,12 @@
              comp_1_2:
                values:
                  value: '2'
@@ -233,7 +232,7 @@ class CompChangeTest(ChangeUnitTestBase):
   _DIFF_UPDATE_COMPONENT = textwrap.dedent('''\
       ---
       +++
-      @@ -54,7 +54,7 @@
+      @@ -53,7 +53,7 @@
              storage: []
          comp_cls_1_field:
            0:
@@ -242,7 +241,7 @@ class CompChangeTest(ChangeUnitTestBase):
            1:
              comp_cls_1: comp_1_2
          comp_cls_23_field:
-      @@ -92,9 +92,13 @@
+      @@ -91,9 +91,13 @@
                  hash": '0'
          comp_cls_1:
            items:
@@ -327,7 +326,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
   _DIFF_ADD_FIRST_ENCODING_COMBINATION = textwrap.dedent('''\
        ---
        +++
-       @@ -64,6 +64,11 @@
+       @@ -63,6 +63,11 @@
             1:
               comp_cls_2: comp_2_2
               comp_cls_3: comp_3_2
@@ -351,7 +350,7 @@ class AddEncodingCombinationTest(ChangeUnitTestBase):
 
        encoded_fields:
          chassis_field:
-      @@ -57,6 +58,21 @@
+      @@ -56,6 +57,21 @@
              comp_cls_1: comp_1_1
            1:
              comp_cls_1: comp_1_2
@@ -559,7 +558,7 @@ class ReplaceRulesTest(ChangeUnitTestBase):
   _DIFF_REPLACE_RULES = textwrap.dedent('''\
       ---
       +++
-      @@ -115,4 +115,10 @@
+      @@ -114,4 +114,10 @@
                values:
                  value: '2'
 
@@ -632,7 +631,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
        encoded_fields:
          chassis_field:
-      @@ -54,9 +68,24 @@
+      @@ -53,9 +67,24 @@
              storage: []
          comp_cls_1_field:
            0:
@@ -658,7 +657,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_23_field:
            0:
              comp_cls_2: comp_2_1
-      @@ -64,6 +93,11 @@
+      @@ -63,6 +92,11 @@
            1:
              comp_cls_2: comp_2_2
              comp_cls_3: comp_3_2
@@ -670,7 +669,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
        components:
          mainboard:
-      @@ -92,12 +126,21 @@
+      @@ -91,12 +125,21 @@
                  hash": '0'
          comp_cls_1:
            items:
@@ -694,7 +693,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
          comp_cls_2:
            items:
              comp_2_1:
-      @@ -115,4 +158,10 @@
+      @@ -114,4 +157,10 @@
                values:
                  value: '2'
 
@@ -777,7 +776,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
          encoded_fields:
            chassis_field:
-        @@ -56,7 +58,7 @@
+        @@ -55,7 +57,7 @@
              0:
                comp_cls_1: comp_1_1
              1:
@@ -786,7 +785,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
            comp_cls_23_field:
              0:
                comp_cls_2: comp_2_1
-        @@ -64,6 +66,15 @@
+        @@ -63,6 +65,15 @@
              1:
                comp_cls_2: comp_2_2
                comp_cls_3: comp_3_2
@@ -802,7 +801,7 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
 
          components:
            mainboard:
-        @@ -95,9 +106,13 @@
+        @@ -94,9 +105,13 @@
                comp_1_1:
                  values:
                    value: '1'
@@ -880,7 +879,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
 
              encoded_fields:
                chassis_field:
-            @@ -54,7 +77,7 @@
+            @@ -53,7 +76,7 @@
                    storage: []
                comp_cls_1_field:
                  0:
@@ -889,7 +888,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
                  1:
                    comp_cls_1: comp_1_2
                comp_cls_23_field:
-            @@ -64,6 +87,17 @@
+            @@ -63,6 +86,17 @@
                  1:
                    comp_cls_2: comp_2_2
                    comp_cls_3: comp_3_2
@@ -907,7 +906,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
 
              components:
                mainboard:
-            @@ -92,12 +126,16 @@
+            @@ -91,12 +125,16 @@
                        hash: '0'
                comp_cls_1:
                  items:
@@ -985,7 +984,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
         textwrap.dedent('''\
             ---
             +++
-            @@ -64,6 +64,11 @@
+            @@ -63,6 +63,11 @@
                  1:
                    comp_cls_2: comp_2_2
                    comp_cls_3: comp_3_2
@@ -1013,7 +1012,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
         textwrap.dedent('''\
             ---
             +++
-            @@ -64,6 +64,9 @@
+            @@ -63,6 +63,9 @@
                  1:
                    comp_cls_2: comp_2_2
                    comp_cls_3: comp_3_2
@@ -1023,7 +1022,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
 
              components:
                mainboard:
-            @@ -98,6 +101,9 @@
+            @@ -97,6 +100,9 @@
                    comp_1_2:
                      values:
                        value: '2'
@@ -1041,7 +1040,7 @@ class ChangeUnitManagerTest(unittest.TestCase):
             textwrap.dedent('''\
                 ---
                 +++
-                @@ -98,6 +98,9 @@
+                @@ -97,6 +97,9 @@
                        comp_1_2:
                          values:
                            value: '2'

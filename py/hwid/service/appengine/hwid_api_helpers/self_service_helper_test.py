@@ -10,6 +10,7 @@ from typing import Optional, Sequence
 import unittest
 from unittest import mock
 
+from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import git_util
@@ -22,7 +23,6 @@ from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
-from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import file_utils

@@ -17,7 +17,6 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
 
-
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
 
@@ -466,7 +465,6 @@ def _ExtractAddEncodingCombination(
 
   if old_db.GetPatternCount() > new_db.GetPatternCount():
     raise SplitChangeUnitException('Change of pattern removal is unsupported.')
-
 
   if not old_encoded_fields.issubset(new_encoded_fields):
     raise SplitChangeUnitException(

@@ -7,13 +7,13 @@ import collections
 import copy
 from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 
+from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
-from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import contents_analyzer as v3_contents_analyzer
 from cros.factory.hwid.v3 import database as v3_database
 

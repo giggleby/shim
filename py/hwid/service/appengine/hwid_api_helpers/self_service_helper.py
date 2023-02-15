@@ -15,6 +15,7 @@ import uuid
 from google.protobuf import descriptor
 from google.protobuf import json_format
 
+from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -28,7 +29,6 @@ from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import builder as v3_builder
-from cros.factory.hwid.v3 import change_unit_utils
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import database
 from cros.factory.hwid.v3 import name_pattern_adapter
