@@ -10,6 +10,7 @@ import logging
 import pipes
 import subprocess
 import threading
+from typing import IO, Any, List, Optional, Union
 
 from cros.factory.device import device_types
 from cros.factory.test import state
@@ -25,6 +26,7 @@ _DEVICE_DATA_KEY = 'DYNAMIC_SSH_TARGET_IP'
 
 
 class ClientNotExistError(Exception):
+
   def __str__(self):
     return 'There is no DHCP client registered.'
 
@@ -38,12 +40,11 @@ class RsyncExitCode(int, enum.Enum):
 class SSHLink(device_types.DeviceLink):
   """A DUT target that is connected via SSH interface.
 
-  Properties:
+  Attributes:
     host: A string for SSH host, if it's None, will get from shared data.
-    user: A string for the user accont to login. Defaults to 'root'.
+    user: A string for the user account to login. Defaults to 'root'.
     port: An integer for the SSH port on remote host.
-    identity: Identity file(s) to specify credential; or `None` to use the
-              default set.
+    identity: A list of strings indicating paths to the identity files used.
     use_ping: A bool, whether using ping(8) to check connection with DUT or not.
               If it's False, will use ssh(1) instead. This is useful if DUT
               drops incoming ICMP packets.
@@ -80,7 +81,9 @@ class SSHLink(device_types.DeviceLink):
       }
   """
 
-  def __init__(self, host=None, user='root', port=22, identity=None,
+  def __init__(self, host: Optional[str] = None, user: Optional[str] = 'root',
+               port: Optional[int] = 22, identity: Union[None, str,
+                                                         List[str]] = None,
                use_ping=True, connect_timeout=1, control_persist=300):
     self._host = host
     self.user = user
@@ -96,16 +99,12 @@ class SSHLink(device_types.DeviceLink):
     self._state = state.GetInstance()
 
   @property
-  def host(self):
+  def host(self) -> str:
     if self._host is None:
       if not state.DataShelfHasKey(_DEVICE_DATA_KEY):
         raise ClientNotExistError
-      return state.DataShelfGetValue(_DEVICE_DATA_KEY)
+      return state.DataShelfGetValue(_DEVICE_DATA_KEY)  # type: ignore
     return self._host
-
-  @host.setter
-  def host(self, value):
-    self._host = value
 
   def _DoRsync(self, src: str, dst: str, is_push: bool) -> None:
     """Runs rsync given source and destination path and retries when failing."""
@@ -134,17 +133,21 @@ class SSHLink(device_types.DeviceLink):
       raise subprocess.CalledProcessError(
           returncode, f'rsync failed: src={src}, dst={dst}')
 
-  def Push(self, local, remote):
+  @type_utils.Overrides
+  def Push(self, local: str, remote: str) -> None:
     """See DeviceLink.Push"""
     self._DoRsync(local, remote, True)
 
-  def PushDirectory(self, local, remote):
+  @type_utils.Overrides
+  def PushDirectory(self, local: str, remote: str) -> None:
     """See DeviceLink.PushDirectory"""
     # Copy the directory itself, so add a trailing slash.
     local = local + '/'
     self._DoRsync(local, remote, True)
 
-  def Pull(self, remote, local=None):
+  @type_utils.Overrides
+  def Pull(self, remote: str,
+           local: Optional[str] = None) -> Union[None, str, bytes]:
     """See DeviceLink.Pull"""
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
@@ -154,11 +157,16 @@ class SSHLink(device_types.DeviceLink):
     self._DoRsync(remote, local, False)
     return None
 
-  def Shell(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
-            encoding='utf-8'):
+  @type_utils.Overrides
+  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
+                                                               IO[Any]] = None,
+            stdout: Union[None, int, IO[Any]] = None,
+            stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
+            encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
     """See DeviceLink.Shell"""
     if not isinstance(command, str):
       command = ' '.join(map(pipes.quote, command))
+
     if cwd:
       command = f'cd {pipes.quote(cwd)} ; {command}'
 
@@ -168,7 +176,8 @@ class SSHLink(device_types.DeviceLink):
                                   encoding=encoding)
     return proc
 
-  def IsReady(self):
+  @type_utils.Overrides
+  def IsReady(self) -> bool:
     """See DeviceLink.IsReady"""
     try:
       if self.use_ping:
@@ -198,10 +207,8 @@ class SSHLink(device_types.DeviceLink):
       state.DataShelfDeleteKeys(_DEVICE_DATA_KEY)
 
   @classmethod
-  def PrepareLink(cls,
-                  start_dhcp_server=True,
-                  start_dhcp_server_after_ping=None,
-                  dhcp_server_args=None):
+  def PrepareLink(cls, start_dhcp_server=True,
+                  start_dhcp_server_after_ping=None, dhcp_server_args=None):
     """Prepare for SSHLink connection
 
     Arguments:
@@ -241,25 +248,20 @@ class SSHLink(device_types.DeviceLink):
       cmd = ['ping', '-w', '1', '-c', '1', host]
       return process_utils.Spawn(cmd, call=True).returncode == 0
 
-    sync_utils.PollForCondition(ping,
-                                timeout_secs=timeout_secs,
+    sync_utils.PollForCondition(ping, timeout_secs=timeout_secs,
                                 poll_interval_secs=interval_secs)
 
   class LinkManager:
-    def __init__(self,
-                 lease_time=3600,
-                 interface_blocklist_file=None,
-                 exclude_ip_prefix=None,
-                 on_add=None,
-                 on_old=None,
-                 on_del=None):
+
+    def __init__(self, lease_time=3600, interface_blocklist_file=None,
+                 exclude_ip_prefix=None, on_add=None, on_old=None, on_del=None):
       """
-        A LinkManager will automatically start a DHCP server for each availiable
+        A LinkManager will automatically start a DHCP server for each available
         network interfaces, if the interface is not default gateway or in the
         blocklist.
 
         This LinkManager will automatically save IP of the latest client in
-        system-wise shared data, make it availible to SSHLinks whose host is set
+        system-wise shared data, make it available to SSHLinks whose host is set
         to None.
 
         Options:
@@ -269,7 +271,7 @@ class SSHLink(device_types.DeviceLink):
             a path to the file of blocklist, each line represents an interface
             (e.g. eth0, wlan1, ...)
           exclude_ip_prefix:
-            some IP range cannot be used becase of system settings, this
+            some IP range cannot be used because of system settings, this
             argument should be a list of tuple of (ip, prefix_bits).
           on_add, on_old, on_del:
             callback functions for DHCP servers.
@@ -333,10 +335,8 @@ class SSHLink(device_types.DeviceLink):
       self._dhcp_server = dhcp_utils.StartDHCPManager(
           blocklist_file=self._blocklist_file,
           exclude_ip_prefix=self._exclude_ip_prefix,
-          lease_time=self._lease_time,
-          on_add=self._OnDHCPAdd,
-          on_old=self._OnDHCPOld,
-          on_del=self._OnDHCPDel)
+          lease_time=self._lease_time, on_add=self._OnDHCPAdd,
+          on_old=self._OnDHCPOld, on_del=self._OnDHCPDel)
 
     def Start(self):
       self._SetLastDUT()
