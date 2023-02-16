@@ -336,7 +336,7 @@ class ChromeOSBluetoothManager(BluetoothManager):
                                    interval_sec=interval,
                                    timeout_sec=float('inf'))
 
-    adapters = retry_wrapper(self._GetAdapters)(max_addr=mac_addr)
+    adapters = retry_wrapper(self._GetAdapters)(mac_addr=mac_addr)
     if adapters is None:
       logging.error('BluetoothManager: Fail to get any adapter.')
       return None
