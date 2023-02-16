@@ -1,0 +1,1 @@
+../tools/extract_firmware_info.py

@@ -1711,6 +1711,8 @@ if __name__ == '__main__':
   try:
     cmd_args = FinalizeBundle.ParseArgs()
     if cmd_args.extract_firmware_info:
+      logging.warning('--extract-firmware-info will be deprecated. Please use '
+                      'bin/extract_firmware_info instead.')
       info = FinalizeBundle.ExtractFirmwareInfo(cmd_args.extract_firmware_info)
       logging.info(json_utils.DumpStr(info[0], pretty=True))
     else:
