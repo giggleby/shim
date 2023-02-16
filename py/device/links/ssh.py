@@ -5,20 +5,18 @@
 """Implementation of cros.factory.device.device_types.DeviceLink using SSH."""
 
 import collections
+import enum
 import logging
-import os
 import pipes
-import queue
 import subprocess
-import tempfile
 import threading
-import time
 
 from cros.factory.device import device_types
 from cros.factory.test import state
 from cros.factory.test.utils import dhcp_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
+from cros.factory.utils import ssh_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
@@ -31,32 +29,10 @@ class ClientNotExistError(Exception):
     return 'There is no DHCP client registered.'
 
 
-class SSHProcess:
-  ERROR_CONNECTION_TIMEOUT = 255
-  MAX_RETRY = 3
-  INTERVAL = 1
-
-  def __init__(self, *args, **kwargs):
-    self.__args = args
-    self.__kwargs = kwargs
-    self.__process = self._create_process()
-    self.__retry_count = 0
-
-  def __getattr__(self, attr):
-    return getattr(self.__process, attr)
-
-  def _create_process(self):
-    return subprocess.Popen(*self.__args, **self.__kwargs)
-
-  def wait(self):
-    returncode = self.__process.wait()
-    if (returncode == self.ERROR_CONNECTION_TIMEOUT and
-        self.__retry_count < self.MAX_RETRY):
-      time.sleep(self.INTERVAL)
-      self.__retry_count += 1
-      self.__process = self._create_process()
-      return self.wait()
-    return returncode
+class RsyncExitCode(int, enum.Enum):
+  ERROR_SOCKET_IO = 10
+  TIMEOUT_DATA_SEND_RECEIVE = 30
+  TIMEOUT_DAEMON_CONNECTION = 35
 
 
 class SSHLink(device_types.DeviceLink):
@@ -66,7 +42,8 @@ class SSHLink(device_types.DeviceLink):
     host: A string for SSH host, if it's None, will get from shared data.
     user: A string for the user accont to login. Defaults to 'root'.
     port: An integer for the SSH port on remote host.
-    identify: An identity file to specify credential.
+    identity: Identity file(s) to specify credential; or `None` to use the
+              default set.
     use_ping: A bool, whether using ping(8) to check connection with DUT or not.
               If it's False, will use ssh(1) instead. This is useful if DUT
               drops incoming ICMP packets.
@@ -108,7 +85,10 @@ class SSHLink(device_types.DeviceLink):
     self._host = host
     self.user = user
     self.port = port
-    self.identity = identity
+    self.identity = [identity] if isinstance(identity, str) else identity or []
+    self._ssh_runner = ssh_utils.SSHRunner(host=self.host, user=self.user,
+                                           port=self.port,
+                                           identity_files=self.identity)
     self.use_ping = use_ping
     self.connect_timeout = connect_timeout
     self.control_persist = control_persist
@@ -127,141 +107,76 @@ class SSHLink(device_types.DeviceLink):
   def host(self, value):
     self._host = value
 
-  def _signature(self, is_scp=False):
-    """Generates the ssh command signature.
-
-    Args:
-      is_scp: A boolean flag indicating if the signature is made for scp.
-
-    Returns:
-      A pair of signature in (sig, options). The 'sig' is a string representing
-      remote ssh user and host. 'options' is a list of required command line
-      parameters.
-    """
-    if self.user:
-      sig = f'{self.user}@{self.host}'
-    else:
-      sig = self.host
-
-    options = [
-        '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no',
-        '-o', f'ConnectTimeout={int(self.connect_timeout)}'
-    ]
-    if self.control_persist is not None:
-      options += [
-          '-o', 'ControlMaster=auto', '-o', 'ControlPath=/tmp/.ssh-%r@%h:%p',
-          '-o', f'ControlPersist={self.control_persist}'
-      ]
-    if self.port:
-      options += ['-P' if is_scp else '-p', str(self.port)]
-    if self.identity:
-      options += ['-i', self.identity]
-    return sig, options
-
-  def _DoSCP(self, src, dest, is_push, options=None, max_retry=3):
-    remote_sig, scp_options = self._signature(True)
-
-    if is_push:
-      dest = f'{remote_sig}:{dest}'
-    else:
-      src = f'{remote_sig}:{src}'
-
-    if options:
-      if isinstance(options, list):
-        scp_options += options
-      elif isinstance(options, str):
-        scp_options.append(options)
-      else:
-        raise ValueError(f'options must be a list or string (got {options!r})')
+  def _DoRsync(self, src: str, dst: str, is_push: bool) -> None:
+    """Runs rsync given source and destination path and retries when failing."""
 
     def _TryOnce():
-      with tempfile.TemporaryFile('w+') as stderr:
-        with subprocess.Popen(['scp'] + scp_options + [src, dest],
-                              stderr=stderr) as proc:
-          self._StartWatcher(proc)
+      if is_push:
+        rsync_process = self._ssh_runner.SpawnRsyncAndPush(src, dst, call=True)
+      else:
+        rsync_process = self._ssh_runner.SpawnRsyncAndPull(src, dst, call=True)
 
-        if proc.returncode != 0:
-          # SCP returns error code "1" for SSH connection failure,
-          # which means "generic error".
-          # Therefore, we cannot tell the difference between connection failure
-          # and other errors (e.g. file not found) by looking at return code
-          # only, we need to parse the error message.
-          stderr.flush()
-          stderr.seek(0)
-          error = stderr.read()
-          SSH_CONNECT_ERROR_MSG = [
-              'ssh: connect to host',
-              'Connection timed out',
-          ]
-          if [msg for msg in SSH_CONNECT_ERROR_MSG if msg in error]:
-            # this is a connection issue
-            logging.warning(error)
-            return False
-        # either succeeded, or failed by other reasons, stop trying
-        return (True, returncode)
+      returncode = rsync_process.returncode
+      exitcode_need_retry = [
+          RsyncExitCode.ERROR_SOCKET_IO,
+          RsyncExitCode.TIMEOUT_DAEMON_CONNECTION,
+          RsyncExitCode.TIMEOUT_DATA_SEND_RECEIVE
+      ]
+      return False if returncode in exitcode_need_retry else (True, returncode)
 
     def _Callback(retry_time, max_retry_times):
-      logging.info('SCP: src=%s, dst=%s (%d/%d)',
-                   src, dest, retry_time, max_retry_times)
+      logging.info('rsync: src=%s, dst=%s (%d/%d)', src, dst, retry_time,
+                   max_retry_times)
 
-    result = sync_utils.Retry(
-        max_retry, 0.1, callback=_Callback, target=_TryOnce)
-
+    result = sync_utils.Retry(3, 0.1, callback=_Callback, target=_TryOnce)
     returncode = result[1] if result else 255
     if returncode:
-      raise subprocess.CalledProcessError(returncode,
-                                          f'SCP failed: src={src}, dst={dest}')
-    return 0
+      raise subprocess.CalledProcessError(
+          returncode, f'rsync failed: src={src}, dst={dst}')
 
   def Push(self, local, remote):
     """See DeviceLink.Push"""
-    return self._DoSCP(local, remote, is_push=True)
+    self._DoRsync(local, remote, True)
 
   def PushDirectory(self, local, remote):
     """See DeviceLink.PushDirectory"""
-    return self._DoSCP(local, remote, is_push=True, options='-r')
+    # Copy the directory itself, so add a trailing slash.
+    local = local + '/'
+    self._DoRsync(local, remote, True)
 
   def Pull(self, remote, local=None):
     """See DeviceLink.Pull"""
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
-        self.Pull(remote, path)
+        self._DoRsync(remote, path, False)
         return file_utils.ReadFile(path)
 
-    return self._DoSCP(remote, local, is_push=False)
-
-  def _StartWatcher(self, subproc):
-    watcher = self.__class__.ControlMasterWatcher(self)
-    watcher.Start()  # make sure the watcher is running
-    watcher.AddProcess(subproc.pid, os.getpid())
+    self._DoRsync(remote, local, False)
+    return None
 
   def Shell(self, command, stdin=None, stdout=None, stderr=None, cwd=None,
             encoding='utf-8'):
     """See DeviceLink.Shell"""
-    remote_sig, options = self._signature(False)
-
     if not isinstance(command, str):
       command = ' '.join(map(pipes.quote, command))
     if cwd:
       command = f'cd {pipes.quote(cwd)} ; {command}'
 
-    command = ['ssh'] + options + [remote_sig, command]
-
     logging.debug('SSHLink: Run [%r]', command)
-    proc = SSHProcess(command, shell=False, close_fds=True, stdin=stdin,
-                      stdout=stdout, stderr=stderr, encoding=encoding)
-    self._StartWatcher(proc)
+    proc = self._ssh_runner.Spawn(command, shell=False, close_fds=True,
+                                  stdin=stdin, stdout=stdout, stderr=stderr,
+                                  encoding=encoding)
     return proc
 
   def IsReady(self):
     """See DeviceLink.IsReady"""
     try:
       if self.use_ping:
-        cmd = ['ping', '-w', '1', '-c', '1', self.host]
+        proc = process_utils.Spawn(['ping', '-w', '1', '-c', '1', self.host],
+                                   call=True)
       else:
-        remote_sig, options = self._signature(False)
-        cmd = ['ssh'] + options + [remote_sig] + ['true']
-      return subprocess.call(cmd) == 0
+        proc = self._ssh_runner.Spawn('true', call=True)
+      return proc.returncode == 0
     except Exception:
       return False
 
@@ -324,117 +239,11 @@ class SSHLink(device_types.DeviceLink):
 
     def ping():
       cmd = ['ping', '-w', '1', '-c', '1', host]
-      return subprocess.call(cmd) == 0
+      return process_utils.Spawn(cmd, call=True).returncode == 0
 
     sync_utils.PollForCondition(ping,
                                 timeout_secs=timeout_secs,
                                 poll_interval_secs=interval_secs)
-
-  class ControlMasterWatcher(metaclass=type_utils.Singleton):
-    def __init__(self, link_instance):
-      assert isinstance(link_instance, SSHLink)
-
-      self._link = link_instance
-      self._thread = threading.Thread(target=self.Run)
-      self._proc_queue = queue.Queue()
-
-      self._user = self._link.user
-      self._host = self._link._host
-      self._port = self._link.port
-      self._link_class_name = self._link.__class__.__name__
-
-    def IsRunning(self):
-      if not self._thread:
-        return False
-      if not self._thread.is_alive():
-        self._thread = None
-        return False
-      return True
-
-    def Start(self):
-      if self.IsRunning():
-        return
-
-      if self._link.control_persist is None:
-        logging.debug('%s %s@%s:%s is not using control master, don\'t start',
-                      self._link_class_name, self._user, self._host, self._port)
-        return
-
-      self._thread = process_utils.StartDaemonThread(target=self.Run)
-
-    def AddProcess(self, pid, ppid=None):
-      """Add an SSH process to monitor.
-
-      If any of added SSH process is still running, ControlMasterWatcher will
-      keep monitoring network connectivity.  If network is down, control master
-      will be killed.
-
-      Args:
-        pid: PID of process using SSH
-        ppid: parent PID of given process
-      """
-      if not self.IsRunning():
-        logging.warning('Watcher is not running, %d is not added', pid)
-        return
-      self._proc_queue.put((pid, ppid))
-
-    def Run(self):
-      logging.debug('start monitoring control master')
-
-      # an alias to prevent duplicated pylint warnings
-      # pylint: disable=protected-access
-      _GetLinkSignature = self._link._signature
-
-      def _IsControlMasterRunning():
-        sig, options = _GetLinkSignature(False)
-        return subprocess.call(
-            ['ssh', '-O', 'check'] + options + [sig, 'true']) == 0
-
-      def _StopControlMaster():
-        sig, options = _GetLinkSignature(False)
-        subprocess.call(['ssh', '-O', 'exit'] + options + [sig, 'true'])
-
-      def _CallTrue():
-        sig, options = _GetLinkSignature(False)
-        proc = subprocess.Popen(['ssh'] + options + [sig, 'true'])  # pylint: disable=consider-using-with
-        time.sleep(1)
-        returncode = proc.poll()
-        if returncode != 0:
-          proc.kill()
-          return False
-        return True
-
-      def _PollingCallback(is_process_alive):
-        if not is_process_alive:
-          return True  # returns True to stop polling
-
-        try:
-          if not _IsControlMasterRunning():
-            logging.info('control master is not running, skipped')
-            return False
-
-          if not _CallTrue():
-            logging.info('loss connection, stopping control master')
-            _StopControlMaster()
-        except Exception:
-          logging.info('monitoring %s to %s@%s:%s',
-                       self._link_class_name,
-                       self._user, self._host, self._port, exc_info=True)
-        return False
-
-      while True:
-        # get a new process from queue to monitor
-        # since queue.get will block if queue is empty, we don't need to sleep
-        pid, ppid = self._proc_queue.get()
-        logging.debug('start monitoring control master until %d terminates',
-                      pid)
-
-        sync_utils.PollForCondition(
-            lambda: process_utils.IsProcessAlive(pid, ppid),
-            condition_method=_PollingCallback,
-            timeout_secs=None,
-            poll_interval_secs=1)
-
 
   class LinkManager:
     def __init__(self,

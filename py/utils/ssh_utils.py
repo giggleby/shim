@@ -5,160 +5,309 @@
 """Utilities for ssh and rsync.
 
 This module is intended to work with Chrome OS DUTs only as it uses Chrome OS
-testing_rsa identity.
+testing_rsa and partner_testing_rsa identities.
 """
 
+import abc
 import logging
 import os
+import pipes
+import queue
+import subprocess
+import threading
+import time
+from typing import List, Optional, Tuple, Union  # pylint: disable=unused-import
 
-
-try:
-  from chromite.lib import remote_access
-  _HAS_REMOTE_ACCESS = True
-except ImportError:
-  _HAS_REMOTE_ACCESS = False
-
-from . import file_utils
-from . import net_utils
 from . import process_utils
+from . import sync_utils
+from . import type_utils
 
 
-# The path to the testing_rsa identity file.
-testing_rsa = None
+_SSHKEYS_DIR = os.path.realpath(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), '../../misc/sshkeys'))
 
 
-def _Init():
-  """Initializes ssh identity.
+def _GetIdentityFiles() -> List[str]:
+  """Fetches all paths of available private keys under misc/sshkeys."""
 
-  The identity file is created per user in /tmp as testing_rsa.${USER}.  We
-  first create a temp identity file from the reference testing_rsa identity and
-  change file mode to 0400 so it is only readable by the user.  We then move the
-  temp file to our target /tmp/testing_rsa.${USER}.  We do not have race
-  condition here since the move operation is atomic.
+  identity_files = []
+  for identity_file in os.listdir(_SSHKEYS_DIR):
+    # Ignore public keys.
+    if not identity_file.endswith('.pub'):
+      identity_files.append(os.path.join(_SSHKEYS_DIR, identity_file))
 
-  We do not use generated temp files because we do not want to leave dangling
-  temp files around.
+  return identity_files
+
+
+_STANDARD_SSH_OPTIONS = [
+    '-o', 'UserKnownHostsFile=/dev/null', '-o', 'LogLevel=ERROR', '-o',
+    'User=root', '-o', 'StrictHostKeyChecking=no', '-o', 'Protocol=2', '-o',
+    'BatchMode=yes', '-o', 'ConnectTimeout=30', '-o', 'ServerAliveInterval=180',
+    '-o', 'ServerAliveCountMax=3', '-o', 'ConnectionAttempts=4'
+]
+
+
+class ISSHRunner(abc.ABC):
+  """An abstract class that runs a command via SSH on a target device."""
+
+  @abc.abstractmethod
+  def Spawn(self, command: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+    """Executes a command or a script in the device.
+
+    Args:
+      command: The script content if given as a string, or the command if given
+               as a list of string.
+      kwargs: See docstring of process_utils.Spawn.
+
+    Returns: The SSH process.
+    """
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def SpawnRsyncAndPush(self, src: str, dest: str,
+                        **kwargs) -> subprocess.Popen:
+    """Copies a file or directory from local to remote.
+
+    Arguments `src` and `dest` are directly passed to rsync command, so make
+    sure to check if a trailing slash is required.
+
+    Args:
+      src: The path of local file or directory.
+      dest: The path of remote file or directory.
+      kwargs: See docstring of Spawn.
+
+    Returns: The rsync process.
+    """
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def SpawnRsyncAndPull(self, src: str, dest: str,
+                        **kwargs) -> subprocess.Popen:
+    """Copies a file or directory from remote to local.
+
+    Arguments `src` and `dest` are directly passed to rsync command, so make
+    sure to check if a trailing slash is required.
+
+    Args:
+      src: The path of remote file or directory.
+      dest: The path of local file or directory.
+      kwargs: See docstring of Spawn.
+
+    Returns: The rsync process.
+    """
+    raise NotImplementedError
+
+
+class SSHRunner(ISSHRunner):
+  """A class that implements `ISSHRunner`."""
+
+  def __init__(self, host: str, user: Optional[str] = 'root',
+               port: Optional[int] = None,
+               identity_files: Optional[List[str]] = None):
+    self.host = host
+    self.user = user
+    self.port = port
+    self._identity_files = identity_files or _GetIdentityFiles()
+
+  def _GetDeviceSignature(self, include_port=False) -> str:
+    sig = f'{self.user}@{self.host}' if self.user else self.host
+    if include_port and self.port:
+      sig += f':{self.port}'
+    return sig
+
+  def _GetSSHOptions(self) -> List[str]:
+    identity_args: List[str] = []
+    for identity_file in self._identity_files:
+      identity_args += ['-o', f'IdentityFile={identity_file}']
+
+    port_args: List[str] = ['-p', str(self.port)] if self.port else []
+
+    return port_args + identity_args + _STANDARD_SSH_OPTIONS
+
+  def _GetSSHCommand(
+      self, command: Union[None, str, List[str]],
+      additional_ssh_options: Optional[List[str]] = None) -> List[str]:
+    if additional_ssh_options is None:
+      additional_ssh_options = []
+    if isinstance(command, list):
+      if len(command) == 0:
+        raise ValueError('Command as a list must not be empty.')
+      command = ' '.join(map(pipes.quote, command))
+
+    sig = self._GetDeviceSignature()
+    command = [command] if command is not None else []
+    return ['ssh'
+           ] + self._GetSSHOptions() + additional_ssh_options + [sig] + command
+
+  def _BuildRsyncCommand(self, src: str, dest: str, is_push: bool) -> List[str]:
+    if is_push:
+      dest = f'{self._GetDeviceSignature()}:{dest}'
+    else:
+      src = f'{self._GetDeviceSignature()}:{src}'
+
+    ssh_options = 'ssh ' + (' '.join(map(pipes.quote, self._GetSSHOptions())))
+    return ['rsync', '-az', '-e', ssh_options, src, dest]
+
+  @type_utils.Overrides
+  def Spawn(self, command: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+    """See ISSHRunner.Spawn."""
+    ssh_command = self._GetSSHCommand(command)
+    return process_utils.Spawn(ssh_command, **kwargs)
+
+  @type_utils.Overrides
+  def SpawnRsyncAndPush(self, src: str, dest: str,
+                        **kwargs) -> subprocess.Popen:
+    """See ISSHRunner.SpawnRsyncAndPush."""
+    rsync_command = self._BuildRsyncCommand(src, dest, True)
+    return process_utils.Spawn(rsync_command, **kwargs)
+
+  @type_utils.Overrides
+  def SpawnRsyncAndPull(self, src: str, dest: str,
+                        **kwargs) -> subprocess.Popen:
+    """See ISSHRunner.SpawnRsyncAndPull."""
+    rsync_command = self._BuildRsyncCommand(src, dest, False)
+    return process_utils.Spawn(rsync_command, **kwargs)
+
+
+class ControlMasterSSHRunner(ISSHRunner):
+  """A class that implements `ISSHRunner`.
+
+  When running SSH and rsync commands, make use of the control master feature to
+  decrease network traffic.
   """
-  # TODO(hungte) Use testing keys from factory repo.
-  global testing_rsa    # pylint: disable=global-statement
-  if not _HAS_REMOTE_ACCESS:
-    raise RuntimeError('chromite.lib.remote_access does not exist.')
-  if not testing_rsa:
-    target_name = f"/tmp/testing_rsa.{os.environ.get('USER', 'default')}"
-    if not os.path.exists(target_name):
-      file_utils.AtomicCopy(remote_access.TEST_PRIVATE_KEY, target_name, 0o400)
-    testing_rsa = target_name
+
+  def __init__(self, host: str, user: Optional[str] = 'root',
+               port: Optional[int] = None,
+               identity_files: Optional[List[str]] = None):
+    self._inner_ssh_runner = SSHRunner(host=host, user=user, port=port,
+                                       identity_files=identity_files)
+    self._watcher = _SSHControlMasterWatcher(self._inner_ssh_runner)
+
+  def _MonitorProcess(self, proc: subprocess.Popen) -> None:
+    self._watcher.Start()
+    self._watcher.AddProcess(proc.pid, os.getpid())
+
+  @type_utils.Overrides
+  def Spawn(self, command: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+    """See ISSHRunner.Spawn."""
+    ssh_process = self._inner_ssh_runner.Spawn(command, **kwargs)
+    self._MonitorProcess(ssh_process)
+    return ssh_process
+
+  @type_utils.Overrides
+  def SpawnRsyncAndPush(self, src: str, dest: str,
+                        **kwargs) -> subprocess.Popen:
+    """See ISSHRunner.SpawnRsyncAndPush."""
+    rsync_process = self._inner_ssh_runner.SpawnRsyncAndPush(
+        src, dest, **kwargs)
+    self._MonitorProcess(rsync_process)
+    return rsync_process
+
+  @type_utils.Overrides
+  def SpawnRsyncAndPull(self, src: str, dest: str,
+                        **kwargs) -> subprocess.Popen:
+    """See ISSHRunner.SpawnRsyncAndPull."""
+    rsync_process = self._inner_ssh_runner.SpawnRsyncAndPull(
+        src, dest, **kwargs)
+    self._MonitorProcess(rsync_process)
+    return rsync_process
 
 
-def BuildSSHCommand(identity_file=None):
-  """Builds SSH command that can be used to connect to a DUT.
+class _SSHControlMasterWatcher:
 
-  Args:
-    identity_file: if specified, use it as identity file. Otherwise, use
-        private_key provided by chromite.lib.remote_access (only avaliable
-        in chroot).
-  """
-  if not identity_file:
-    _Init()
-    identity_file = testing_rsa
-  return [
-      'ssh', '-o', f'IdentityFile={identity_file}', '-o',
-      'UserKnownHostsFile=/dev/null', '-o', 'LogLevel=ERROR', '-o', 'User=root',
-      '-o', 'StrictHostKeyChecking=no', '-o', 'Protocol=2', '-o',
-      'BatchMode=yes', '-o', 'ConnectTimeout=30', '-o',
-      'ServerAliveInterval=180', '-o', 'ServerAliveCountMax=3', '-o',
-      'ConnectionAttempts=4'
-  ]
+  def __init__(self, ssh_runner: SSHRunner):
+    self._ssh_runner = ssh_runner
+    self._thread = threading.Thread(target=self._Run)
+    self._proc_queue: 'queue.Queue[Tuple[int, Optional[int]]]' = queue.Queue()
+    self._link_class_name = self._ssh_runner.__class__.__name__
 
+  def IsRunning(self) -> bool:
+    """Checks if the watcher is running."""
+    if not self._thread:
+      return False
+    if not self._thread.is_alive():
+      self._thread = None
+      return False
+    return True
 
-def BuildRsyncCommand(identity_file=None):
-  """Build rsync command that can be used to rsync to a DUT.
+  def Start(self) -> None:
+    """Starts the watcher if it is not yet started."""
+    if self.IsRunning():
+      return
 
-  Args:
-    identity_file: if specified, use it as identity file. Otherwise, use
-        private_key provided by chromite.lib.remote_access (only avaliable
-        in chroot).
-  """
-  return ['rsync', '-e', ' '.join(BuildSSHCommand(identity_file=identity_file))]
+    self._thread = process_utils.StartDaemonThread(target=self._Run)
 
+  def AddProcess(self, pid: int, ppid: Optional[int] = None) -> None:
+    """Adds an SSH process to be monitored.
 
-def SpawnSSHToDUT(args, **kwargs):
-  """Spawns a process to issue ssh command to a DUT.
+    If any of added SSH process is still running, the watcher will keep
+    monitoring network connectivity. If network is down, control master will be
+    killed.
 
-  Args:
-    args: Args appended to the ssh command.
-    kwargs: See docstring of Spawn.
-  """
-  return process_utils.Spawn(BuildSSHCommand() + args, **kwargs)
+    Args:
+      pid: PID of process using SSH ppid: parent PID of given process
+    """
+    if not self.IsRunning():
+      logging.warning('Watcher is not running, so %d is not added.', pid)
+      return
 
+    self._proc_queue.put((pid, ppid))
 
-def SpawnRsyncToDUT(args, **kwargs):
-  """Spawns a process to issue rsync command to a DUT.
+  def _Run(self):
+    logging.debug('Start monitoring control master.')
+    # pylint: disable=protected-access
+    device_address = self._ssh_runner._GetDeviceSignature(include_port=False)
 
-  Args:
-    args: Arguments appended to the rsync command.
-    kwargs: See docstring of Spawn.
-  """
-  return process_utils.Spawn(BuildRsyncCommand() + args, **kwargs)
+    def _IsControlMasterRunning() -> bool:
+      # pylint: disable=protected-access
+      ssh_command = self._ssh_runner._GetSSHCommand(
+          command=None, additional_ssh_options=['-O', 'check'])
+      return process_utils.Spawn(ssh_command, call=True).returncode == 0
 
+    def _StopControlMaster() -> bool:
+      # pylint: disable=protected-access
+      ssh_command = self._ssh_runner._GetSSHCommand(
+          command=None, additional_ssh_options=['-O', 'exit'])
+      return process_utils.Spawn(ssh_command, call=True).returncode == 0
 
-class SSHTunnelToDUT:
-  """A class to establish and close SSH tunnel to a DUT.
+    def _CallTrue() -> bool:
+      ssh_command = self._ssh_runner._GetSSHCommand(command='true')
+      ssh_proc = process_utils.Spawn(ssh_command)
+      time.sleep(1)
+      returncode = ssh_proc.poll()
+      if returncode != 0:
+        ssh_proc.kill()
+        return False
+      return True
 
-  Usage:
-    >> # Create a SSH tunnel from localhost:8888 on 10.3.0.23 to localhost:9999
-    >> # on current machine.
-    >> with SSHTunnel('10.3.0.23', 9999, 8888):
-    >>   [do something while the tunnel is established]
+    def _PollingCallback(is_process_alive: bool) -> Union[bool, None]:
+      if not is_process_alive:
+        return True  # returns True to stop polling
 
-    or
-
-    >> tunnel = SSHTunnel('10.3.0.23', 9999, 8888)
-    >> tunnel.Establish()
-    >> [do something while the tunnel is established]
-    >> tunnel.Close()
-
-  Args:
-    remote: The hostname or IP address of the remote host.
-    bind_port: The local port to bind to.
-    host_port: The remote port to bind to.
-    bind_address: The local address to bind to; default to '127.0.0.1'.
-    host: The remote address to bind to; default to '127.0.0.1'.
-  """
-
-  def __init__(self, remote, bind_port, host_port,
-               bind_address=net_utils.LOCALHOST, host=net_utils.LOCALHOST):
-    self._remote = remote
-    self._bind_address = bind_address
-    self._bind_port = bind_port
-    self._host = host
-    self._host_port = host_port
-    self._ssh_process = None
-
-  def Establish(self):
-    logging.debug('Establishing SSH tunnel to %s with spec %s:%s:%s:%s',
-                  self._remote, self._bind_address, self._bind_port, self._host,
-                  self._host_port)
-    if self._ssh_process:
-      self.Close()
-    self._ssh_process = SpawnSSHToDUT([
-        self._remote, '-N', '-f', '-L',
-        f'{self._bind_address}:{self._bind_port}:{self._host}:{self._host_port}'
-    ], stderr=process_utils.DEVNULL, check_call=True)
-
-  def Close(self):
-    logging.debug('Closing SSH tunnel to %s', self._remote)
-    if self._ssh_process:
       try:
-        self._ssh_process.terminate()
-      except OSError as e:
-        if e.errno == 3:
-          # The process has already been terminated.
-          pass
-      self._ssh_process = None
+        if not _IsControlMasterRunning():
+          logging.info('Control master is not running, skipped.')
+          return False
 
-  def __enter__(self):
-    self.Establish()
+        if not _CallTrue():
+          logging.info('Lost connection, stopping control master.')
+          _StopControlMaster()
 
-  def __exit__(self, *args, **kwargs):
-    self.Close()
+        return None
+
+      except Exception:
+        # TODO(wdzeng): when will this exception be raised?
+        logging.info('Monitoring %s to %s', self._link_class_name,
+                     device_address, exc_info=True)
+        return False
+
+    while True:
+      # get a new process from queue to monitor
+      # since queue.get will block if queue is empty, we don't need to sleep
+      pid, ppid = self._proc_queue.get()
+      logging.debug('start monitoring control master until %d terminates', pid)
+      sync_utils.PollForCondition(
+          lambda: process_utils.IsProcessAlive(pid, ppid),
+          condition_method=_PollingCallback, timeout_secs=None,
+          poll_interval_secs=1)
