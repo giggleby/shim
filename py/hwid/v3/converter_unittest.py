@@ -27,6 +27,13 @@ class ConvertToProbeStatementTest(unittest.TestCase):
     self.assertEqual(converter.ConvertToProbeStatement(
         database, 'fake_probe_statement_path'), result)
 
+  def testConvertToProbeStatement_LoadDefaultStatement(self):
+    database = Database.LoadFile(
+        os.path.join(_TEST_DATA_PATH, 'test_converter_db.yaml'),
+        verify_checksum=False)
+    converter.ConvertToProbeStatement(database,
+                                      converter.DEFAULT_PROBE_STATEMENT_PATH)
+
 
 if __name__ == '__main__':
   unittest.main()
