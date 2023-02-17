@@ -14,6 +14,7 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
+
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',
     'v3-golden.yaml')
@@ -40,8 +41,11 @@ class DUTLabelHelperTest(unittest.TestCase):
         self._module_collection.fake_goldeneye_memcache, self._bc_helper,
         self._sku_helper)
 
-    self._module_collection.fake_goldeneye_memcache.Put(
-        'regexp_to_device', [('r1.*', 'b1', []), ('^Fo.*', 'found_device', [])])
+    self._module_collection.fake_goldeneye_memcache.Put('regexp_to_device', [
+        ('r1.*', 'b1', []),
+        ('^Fo.*', 'found_device', []),
+        ('^F.*', 'found_device', []),
+    ])
 
   def tearDown(self):
     super().tearDown()

@@ -79,13 +79,16 @@ class DUTLabelHelper:
       return hwid_api_messages_pb2.DutLabelsResponse(
           error='Missing Regexp List', possible_labels=possible_labels,
           status=hwid_api_messages_pb2.Status.SERVER_ERROR)
+    variant_set = set()
     for (regexp, device, unused_regexp_to_project) in regexp_to_device:
       del unused_regexp_to_project  # unused
       try:
         if re.match(regexp, hwid):
-          response.labels.add(name='variant', value=device)
+          variant_set.add(device)
       except re.error:
         logging.exception('invalid regex pattern: %r', regexp)
+    for device in variant_set:
+      response.labels.add(name='variant', value=device)
     if bom.phase:
       response.labels.add(name='phase', value=bom.phase)
 
