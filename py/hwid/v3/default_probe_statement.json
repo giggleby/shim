@@ -107,7 +107,7 @@
     }
   },
   "nfc_reader": {
-    "usb": {
+    "generic": {
       "eval": "nfc_reader",
       "keys": [
         "idVendor",
@@ -162,7 +162,7 @@
     }
   },
   "smart_card_reader": {
-    "usb": {
+    "generic": {
       "eval": "smart_card_usb",
       "keys": [
         "idVendor",
