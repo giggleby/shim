@@ -2,46 +2,61 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import json
-import numbers
+from typing import Dict
 
-from cros.factory.utils import type_utils
-
-
-class InvalidRecord(type_utils.Error):
-  pass
+from cros.factory.utils.schema import FixedDict
+from cros.factory.utils.schema import Scalar
 
 
-class LogExtractorRecord(dict):
-  """A JSON loader which checks the validity of field `time` when parsing.
+class IRecord(abc.ABC):
+  """A base class for holding dictionary-like data."""
 
-  Note that the range and precision of JSON number depends on the
-  implementation of deserializer, and thus field `time` might lose some
-  precision after loading.
-  """
+  def __init__(self, data: Dict):
+    self._data = data
 
-  @classmethod
-  def Load(cls, line):
-    """Each JSON record should contain at least a field called `time`."""
-    record = json.loads(line)
-    time = record.get('time')
-    if not time:
-      raise InvalidRecord(
-          f'JSON record {record!r} does not contain field `time`.')
-    if not isinstance(time, numbers.Number):
-      raise InvalidRecord('The value of field `time` should be numeric type.')
+  def __getitem__(self, key):
+    return self._data[key]
 
-    # The `time` field should store the timestamp that the event is generated.
-    # However, there's an exception in testlog. The `time` field of event type
-    # `station.test_run` stores the time that a factory test starts, rather
-    # than the time that a test ends.
-    if record.get('type') == 'station.test_run' and 'endTime' in record:
-      record['time'] = record['endTime']
+  def __setitem__(self, key, val):
+    self._data[key] = val
 
-    return cls(record)
+  def __contains__(self, item):
+    return item in self._data
 
-  def GetTime(self):
-    return self['time']
+  def __eq__(self, other):
+    if isinstance(other, self.__class__):
+      return self._data == other._data
+    return False
+
+  def ToDict(self):
+    return self._data
+
+  @abc.abstractmethod
+  def GetTime(self) -> float:
+    """Returns the number of seconds passed since 1970/01/01 00:00:00."""
+    raise NotImplementedError
 
   def __lt__(self, other):
     return self.GetTime() < other.GetTime()
+
+
+class FactoryRecord(IRecord):
+  _SCHEMA = FixedDict(
+      'Factory record schema', items={
+          'time':
+              Scalar('Time in seconds since the epoch of the record.', float),
+      }, allow_undefined_keys=True)
+
+  @classmethod
+  def FromJSON(cls, json_str: str, check_valid: bool = True):
+    """Loads and validates the field of a JSON string to a dict-like object."""
+    data = json.loads(json_str)
+    if check_valid:
+      cls._SCHEMA.Validate(data)
+
+    return cls(data)
+
+  def GetTime(self) -> float:
+    return self['time']

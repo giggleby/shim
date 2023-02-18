@@ -11,6 +11,7 @@ import logging
 from typing import Dict, List
 
 from cros.factory.log_extractor.file_utils import LogExtractorFileReader
+import cros.factory.log_extractor.record as record_module
 
 
 DESCRIPTION = """
@@ -75,20 +76,21 @@ class FactoryLogExtractor:
     if self._output_f:
       self._output_f.close()
 
-  def _RemoveFields(self, record: Dict):
-    """Inplace removes some fields from the JSON record."""
-    for to_remove in record.keys() - self._fields_to_keep:
-      record.pop(to_remove)
+  def _RemoveFields(self, data: Dict):
+    """Inplace removes some fields from the dictionary."""
+    for to_remove in data.keys() - self._fields_to_keep:
+      data.pop(to_remove)
 
-  def _WriteRecord(self, record: Dict):
-    self._RemoveFields(record)
-    if record:
-      self._output_f.write(json.dumps(record, sort_keys=True) + '\n')
+  def _WriteRecord(self, record: record_module.IRecord):
+    data = record.ToDict().copy()
+    self._RemoveFields(data)
+    if data:
+      self._output_f.write(json.dumps(data, sort_keys=True) + '\n')
 
   def ExtractAndMergeLogs(self):
     reader_heap = []
     for p in self._input_paths:
-      reader = LogExtractorFileReader(p)
+      reader = LogExtractorFileReader(p, record_module.FactoryRecord.FromJSON)
       if reader.GetCurRecord():
         reader_heap.append(reader)
     heapq.heapify(reader_heap)

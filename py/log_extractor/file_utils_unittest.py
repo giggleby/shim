@@ -9,7 +9,7 @@ import os
 import unittest
 
 from cros.factory.log_extractor.file_utils import LogExtractorFileReader
-from cros.factory.log_extractor.record import LogExtractorRecord
+import cros.factory.log_extractor.record as record_module
 from cros.factory.utils import file_utils
 
 
@@ -26,13 +26,11 @@ class LogExtractorFileReaderTest(unittest.TestCase):
       testlog_path = os.path.join(temp_dir, 'test_filter_record.json')
       file_utils.WriteFile(testlog_path, '\n'.join(self._RECORD))
 
-      reader = LogExtractorFileReader(testlog_path)
-      self.assertEqual(
-          LogExtractorRecord.Load(self._RECORD[0]), reader.GetCurRecord())
+      loader = record_module.FactoryRecord.FromJSON
+      reader = LogExtractorFileReader(testlog_path, loader)
+      self.assertEqual(loader(self._RECORD[0]), reader.GetCurRecord())
       # Should keep reading since the second record is invalid.
-      self.assertEqual(
-          LogExtractorRecord.Load(self._RECORD[2]),
-          reader.ReadNextValidRecord())
+      self.assertEqual(loader(self._RECORD[2]), reader.ReadNextValidRecord())
       self.assertEqual(None, reader.ReadNextValidRecord())
 
 
