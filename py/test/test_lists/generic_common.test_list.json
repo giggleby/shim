@@ -88,7 +88,8 @@
           "DisplayPort",
           "DP-2"
         ]
-      }
+      },
+      "back": {}
     },
     "update_firmware": {
       "reboot_type": "reboot"
@@ -310,7 +311,7 @@
       },
       "subtests": [
         {
-          "inherit": "USBTypeCExternalDisplay",
+          "inherit": "USBTypeCManualExternalDisplay",
           "args": {
             "start_output_only": false,
             "stop_output_only": false,
@@ -1450,15 +1451,7 @@
           }
         },
         "USBTypeCManualChargeItems",
-        {
-          "inherit": "ExternalDisplay",
-          "label": "USB3 External Display Test",
-          "args": {
-            "display_info": [
-              "eval! locals.usb.display_info"
-            ]
-          }
-        },
+        "USBTypeCManualExternalDisplay",
         "Barrier"
       ]
     },
@@ -1491,6 +1484,15 @@
           }
         }
       ]
+    },
+    "USBTypeCManualExternalDisplay": {
+      "inherit": "ExternalDisplay",
+      "label": "USB3 External Display Test",
+      "args": {
+        "display_info": [
+          "eval! locals.usb.display_info"
+        ]
+      }
     },
     "USBTypeCManualLeft": {
       "inherit": "USBTypeCManualBase",

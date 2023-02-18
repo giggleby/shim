@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-12-30 13:28+CST\n"
+"PO-Revision-Date: 2023-02-18 12:54+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3842,16 +3842,16 @@ msgid "USB2 Performance"
 msgstr "Kiểm tra hiệu năng USB2"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "USB3 External Display Test"
-msgstr "Màn hình ngoài"
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "20V Charging"
 msgstr "20V Sạc pin"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "5V Charging"
 msgstr "5V Sạc pin"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "USB3 External Display Test"
+msgstr "Màn hình ngoài"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Left USB TypeC"
