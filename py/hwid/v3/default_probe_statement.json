@@ -259,7 +259,6 @@
         "mipi_sensor_id",
         "mipi_vendor",
         "usb_bcd_device",
-        "usb_manufacturer",
         "usb_product",
         "usb_product_id",
         "usb_vendor_id"
