@@ -7,36 +7,26 @@
 
 import unittest
 
-from cros.factory.log_extractor.record import InvalidRecord
-from cros.factory.log_extractor.record import LogExtractorRecord
+from cros.factory.log_extractor import record as record_module
+from cros.factory.utils.schema import SchemaException
 
 
-class LogExtractorRecordTest(unittest.TestCase):
+class FactoryRecordTest(unittest.TestCase):
 
   def testHasTimeField(self):
-    json_has_time = '{"filePath": "/test/file/path", "time": 1.23}'
-    LogExtractorRecord.Load(json_has_time)
+    json_has_time = '{"time": 1.23}'
+    record = record_module.FactoryRecord.FromJSON(json_has_time)
+    self.assertEqual(record.GetTime(), 1.23)
 
   def testNoTimeField(self):
     json_no_time = '{"filePath": "/test/file/path"}'
-    with self.assertRaises(InvalidRecord):
-      LogExtractorRecord.Load(json_no_time)
-
-  def testNonNumericTime(self):
-    json_non_numeric_time = '{"time": "1.23"}'
-    with self.assertRaises(InvalidRecord):
-      LogExtractorRecord.Load(json_non_numeric_time)
+    with self.assertRaises(SchemaException):
+      record_module.FactoryRecord.FromJSON(json_no_time)
 
   def testComparator(self):
-    record1 = LogExtractorRecord.Load('{"time": 1.23}')
-    record2 = LogExtractorRecord.Load('{"time": 2.34}')
+    record1 = record_module.FactoryRecord.FromJSON('{"time": 1.23}')
+    record2 = record_module.FactoryRecord.FromJSON('{"time": 2.34}')
     self.assertTrue(record1 < record2)
-
-  def testTestRunEventType(self):
-    record = LogExtractorRecord.Load(
-        '{"type": "station.test_run", "time": 1.23, "endTime": 1.24}')
-    self.assertEqual(record.GetTime(), 1.24)
-
 
 if __name__ == '__main__':
   unittest.main()
