@@ -199,7 +199,9 @@ class StorageConnectorTest(unittest.TestCase):
   def testGetBundleInfosByProject_useTimeCreated_verifiesCreatedTimestamp(self):
     project = 'project'
     mock_blob = mock.Mock(
-        metadata={}, time_created=datetime.datetime(2023, 1, 3, 12, 56, 40))
+        metadata={}, time_created=datetime.datetime(
+            2023, 1, 3, 12, 56, 40,
+            tzinfo=datetime.timezone(datetime.timedelta())))
     mock_blob.name = f'board/{project}/fake_bundle.tar.bz2'
     self._mock_bucket.list_blobs.return_value = [mock_blob]
 
