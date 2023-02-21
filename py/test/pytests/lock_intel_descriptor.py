@@ -99,7 +99,7 @@ class LockIntelDescriptor(test_case.TestCase):
         logging.info('Skip locking the descriptor since it is already locked.')
         return
       logging.info('Lock the descriptor...')
-      main_fw.WriteDescriptor(locked_desc_bin)
+      main_fw.WriteDescriptor(filename=locked_desc_bin)
       device_data.UpdateDeviceData({self._DESC_UPDATE_NEED_REBOOT: True})
     elif mode == TestMode.verify:
       self.assertTrue(is_locked, 'The descriptor is not locked!')

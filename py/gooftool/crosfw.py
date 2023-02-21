@@ -364,17 +364,23 @@ class IntelMainFirmwareContent(FirmwareContent):
     is_locked = filecmp.cmp(desc_bin, locked_desc_bin, shallow=False)
     return locked_desc_bin, is_locked
 
-  def WriteDescriptor(self, desc):
-    """Write the given descriptor to the main firmware.
+  def ReadDescriptor(self):
+    """Read the descriptor data."""
+    return self.flashrom.Read(sections=[IntelLayout.DESC.value])
+
+  def WriteDescriptor(self, *, data=None, filename=None):
+    """Write the given descriptor data or file to the main firmware.
 
     For the new descriptor to take effect, caller needs to trigger a cold
     reboot.
 
     Args:
-      desc: Path to the descriptor binary.
+      data: Image data to write. None to write given file.
+      filename: File name of image to write if data is None.
     """
     logging.info('Write the descriptor...')
-    self.flashrom.Write(filename=desc, sections=[IntelLayout.DESC.value])
+    self.flashrom.Write(data=data, filename=filename,
+                        sections=[IntelLayout.DESC.value])
 
 def LoadEcFirmware():
   """Returns flashrom data from Embedded Controller chipset."""
