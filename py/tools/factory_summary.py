@@ -6,6 +6,7 @@
 
 import argparse
 import json
+from typing import Dict, Optional, Union
 
 from cros.factory.device import device_utils
 from cros.factory.test.rules.privacy import FilterDict
@@ -39,10 +40,9 @@ def PrintTestInfo():
   print('This command has not been implemented.')
 
 
-def PrintSystemInfo(filter_vpd=False, output_file=None):
-  if sys_utils.InChroot():
-    raise RuntimeError('This command can only be run on DUT!')
-
+def GetSystemInfo(filter_vpd: bool = False) -> Dict[
+  str, Optional[Union[Dict, bool, int, str]]]:
+  """Returns the system information in type of dict."""
   dut_info = device_utils.CreateStationInterface().info
   vpd = dut_info.vpd_info
   if filter_vpd:
@@ -61,6 +61,16 @@ def PrintSystemInfo(filter_vpd=False, output_file=None):
       'vpd': vpd,
       'wp': dut_info.wp_info,
   }
+  return system_info
+
+
+def PrintSystemInfo(filter_vpd: bool = False,
+                    output_file: Optional[str] = None) -> None:
+  """Prints or writes the result of GetSystemInfo() in json format."""
+  if sys_utils.InChroot():
+    raise RuntimeError('This command can only be run on DUT!')
+
+  system_info = GetSystemInfo(filter_vpd)
   serialized_system_info = json.dumps(system_info, indent=4, sort_keys=True)
 
   if output_file is None:

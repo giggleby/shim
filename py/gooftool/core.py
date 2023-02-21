@@ -39,6 +39,7 @@ from cros.factory.test.utils import bluetooth_utils
 from cros.factory.test.utils import cbi_utils
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.test.utils import smart_amp_utils
+from cros.factory.tools import factory_summary
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import gsc_utils
@@ -1122,10 +1123,13 @@ class Gooftool:
           {Name_of_the_detail: "result of the detail"}
       Note that the outputs could be multi-line strings.
     """
+    # TODO(iamjeffliu): We keep original information for backward compatibility.
+    # Remove them after they are added to the output of factory_summary.
+    system_info = factory_summary.GetSystemInfo(filter_vpd=True)
 
     # Note: Handle the shell commands with care since unit tests cannot
     # ensure the correctness of commands executed in shell.
-    return {
+    additional_system_info = {
         'platform_name':
             self._util.GetReleaseImageLsbData().get('CHROMEOS_RELEASE_BOARD',
                                                     ''),
@@ -1133,19 +1137,11 @@ class Gooftool:
             self._util.GetCrosSystem(),
         'modem_status':
             self._util.shell('modem status').stdout.splitlines(),
-        'ec_wp_status':
-            self._util.shell('flashrom -p ec --flash-size 2>/dev/null && '
-                             'flashrom -p ec --wp-status || '
-                             'echo "EC is not available."').stdout,
-        'bios_wp_status':
-            self._util.shell('flashrom -p host --wp-status').stdout,
-        'cr50_board_id':
-            self._util.shell('gsctool -a -i -M').stdout,
         'cr50_sn_bits':
             self._util.shell('/usr/share/cros/cr50-read-rma-sn-bits.sh').stdout,
-        'cr50_fw_version':
-            self._util.shell('gsctool -a -f -M').stdout,
     }
+    system_info.update(additional_system_info)
+    return system_info
 
   def ClearFactoryVPDEntries(self):
     """Clears factory related VPD entries in the RW VPD.
