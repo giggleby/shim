@@ -45,6 +45,7 @@ from cros.factory.test.utils import evdev_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
+from cros.factory.utils import sync_utils
 
 from cros.factory.external import evdev
 
@@ -231,19 +232,20 @@ class LidSwitchTest(test_case.TestCase):
     # if we are in tearDown function, the task is over, self.Sleep will fail
     # immediately.
     sleep = time.sleep if in_tear_down else self.Sleep
-    for retry in range(self.args.bft_retries + 1):
-      try:
-        sleep(self.args.bft_pause_secs)
-        self.fixture.SetDeviceEngaged(
-            self.args.bft_control_name, close)
-        self.fixture_lid_closed = close
-        break
-      except bft_fixture.BFTFixtureException as e:
-        if retry == self.args.bft_retries:
-          if not in_tear_down:
-            self.FailTask(
-                f"Failed to {'close' if close else 'open'} the lid with "
-                f"{int(self.args.bft_retries)} retries. Reason: {e}")
+
+    @sync_utils.RetryDecorator(max_attempt_count=self.args.bft_retries,
+                               interval_sec=self.args.bft_pause_secs,
+                               sleep=sleep, reraise=True)
+    def _SetDeviceEngaged():
+      self.fixture.SetDeviceEngaged(self.args.bft_control_name, close)
+      self.fixture_lid_closed = close
+
+    try:
+      _SetDeviceEngaged()
+    except bft_fixture.BFTFixtureException as e:
+      if not in_tear_down:
+        self.FailTask(f"Failed to {'close' if close else 'open'} the lid with "
+                      f"{int(self.args.bft_retries)} retries. Reason: {e}")
 
   def AskForOpenLid(self):
     if self.fixture:

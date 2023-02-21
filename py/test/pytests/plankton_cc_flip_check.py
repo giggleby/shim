@@ -183,7 +183,7 @@ class PlanktonCCFlipCheck(test_case.TestCase):
                  self.args.state_src_ready, port_status['state'])
     return _CC_UNCONNECT
 
-  def CheckCCPolarityWithRetry(self, expected_polarity, retry_times):
+  def CheckCCPolarityWithRetry(self, expected_polarity, retry_times: int):
     """Check the CC Polarity.
 
     It will retry by retry_times argument to let PD do negotiate.
@@ -194,18 +194,23 @@ class PlanktonCCFlipCheck(test_case.TestCase):
 
     Returns:
       'CC1' or 'CC2', or _CC_UNCONNECT
+
+    Raises:
+      MaxRetryError: If the polarity cannot meet `expected_polarity`.
     """
     # We may need some time for PD negotiate and settle down
-    retry_times_left = retry_times
-    polarity = self.GetCCPolarity()
-    while retry_times_left != 0 and polarity != expected_polarity:
-      self.Sleep(1)
-      polarity = self.GetCCPolarity()
-      logging.info('[%d]Poll polarity %s', retry_times_left, polarity)
-      retry_times_left -= 1
-    return polarity
 
-  def GetCCPolarityWithRetry(self, retry_times):
+    @sync_utils.RetryDecorator(
+        max_attempt_count=retry_times, interval_sec=1, timeout_sec=float('inf'),
+        target_condition=lambda x: x == expected_polarity)
+    def _GetCCPolarity():
+      polarity = self.GetCCPolarity()
+      logging.info('Poll polarity %s', polarity)
+      return polarity
+
+    return _GetCCPolarity()
+
+  def GetCCPolarityWithRetry(self, retry_times: int):
     """Get the CC Polarity.
 
     It will retry by retry_times argument to let PD do negotiate.
@@ -215,16 +220,20 @@ class PlanktonCCFlipCheck(test_case.TestCase):
 
     Returns:
       'CC1' or 'CC2', or _CC_UNCONNECT
+
+    Raises:
+      MaxRetryError: If the polarity always returns `_CC_UNCONNECT`.
     """
     # We may need some time for PD negotiate and settle down
-    retry_times_left = retry_times
-    polarity = self.GetCCPolarity()
-    while retry_times_left != 0 and polarity == _CC_UNCONNECT:
-      self.Sleep(1)
+    @sync_utils.RetryDecorator(max_attempt_count=retry_times, interval_sec=1,
+                               timeout_sec=float('inf'),
+                               target_condition=lambda x: x == _CC_UNCONNECT)
+    def _GetCCPolarity():
       polarity = self.GetCCPolarity()
-      logging.info('[%d]Poll polarity %s', retry_times_left, polarity)
-      retry_times_left -= 1
-    return polarity
+      logging.info('Poll polarity %s', polarity)
+      return polarity
+
+    return _GetCCPolarity()
 
   def tearDown(self):
     self._bft_fixture.Disconnect()

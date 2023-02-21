@@ -163,7 +163,8 @@ def EventWait(event: threading.Event, timeout=None,
 
 # TODO(louischiu) Migrate all the RetryDecorator to retry
 def RetryDecorator(
-    *, max_attempt_count: int = sys.maxsize, timeout_sec: Union[int, float] = 1,
+    *, max_attempt_count: int = sys.maxsize,
+    timeout_sec: Union[int, float] = float('inf'),
     interval_sec: Union[int, float] = 0.5, target_condition=None,
     exceptions_to_catch: Union[None, Sequence[Type[Exception]]] = None,
     timeout_exception_to_raise: Type[Exception] = type_utils.TimeoutError,

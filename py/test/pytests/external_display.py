@@ -136,6 +136,7 @@ from cros.factory.test.utils import button_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 
 # Interval (seconds) of probing connection state.
@@ -495,19 +496,25 @@ class ExtDisplayTest(test_case.TestCase):
     self.ui.SetState(
         _('Fixture is checking if video is displayed on {display}?',
           display=args.display_label))
-    for num_tries in range(1, retry_times + 1):
+
+    @sync_utils.RetryDecorator(max_attempt_count=retry_times,
+                               interval_sec=check_interval_secs)
+    def _CheckExtDisplay():
       try:
         self._fixture.CheckExtDisplay()
         self.PassTask()
       except bft_fixture.BFTFixtureException:
-        if num_tries < retry_times:
-          logging.info(
-              'Cannot see screen on external display. Wait for %.1f seconds.',
-              check_interval_secs)
-          self.Sleep(check_interval_secs)
-        else:
-          self.FailTask(f'Failed to see screen on external display after '
-                        f'{int(retry_times)} retries.')
+        logging.info(
+            'Cannot see screen on external display. Wait for %.1f seconds.',
+            check_interval_secs)
+        raise
+
+    try:
+      _CheckExtDisplay()
+    except type_utils.MaxRetryError:
+      self.FailTask(f'Failed to see screen on external display after '
+                    f'{int(retry_times)} retries.')
+
 
   def VerifyDisplayConfig(self):
     """Check display configuration.

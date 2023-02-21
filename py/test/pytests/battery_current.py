@@ -98,6 +98,7 @@ from cros.factory.test.i18n import arg_utils as i18n_arg_utils
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 
 def _GetPromptText(current, target):
@@ -208,7 +209,8 @@ class BatteryCurrentTest(test_case.TestCase):
     self.ui.SetState(_GetPromptText(current, -target))
     return -current >= target
 
-  def _GetAverageCurrent(self, total_measure_secs=3, poll_interval_secs=0.2):
+  def _GetAverageCurrent(self, total_measure_secs=3,
+                         poll_interval_secs=0.2) -> float:
     """Average current for a given period of time."""
     times_to_count = int(total_measure_secs / poll_interval_secs)
     acc_current = 0
@@ -250,15 +252,23 @@ class BatteryCurrentTest(test_case.TestCase):
         _('Calculating the current difference between charging mode and'
           ' discharging mode.'))
 
-    for times in range(self.args.retry_times + 1):
+    times = 0
+
+    @sync_utils.RetryDecorator(max_attempt_count=self.args.retry_times,
+                               target_condition=lambda x: x)
+    def _CheckCurrentDiffs():
       if self._CheckCurrentDifference():
-        break
+        return True
       logging.info('CheckCurrentDifference failed. This is the %d try.',
                    times + 1)
       self.ui.SetState(
           _('CheckCurrentDifference failed. This is the {times} try',
             times=times + 1), append=True)
-    else:
+      return False
+
+    try:
+      _CheckCurrentDiffs()
+    except type_utils.MaxRetryError:
       self.FailTask('battery_current test failed.')
 
   def runTest(self):

@@ -332,7 +332,6 @@ class SerialDeviceSendReceiveTest(unittest.TestCase):
     self.device.Send.side_effect = [serial.SerialTimeoutException, None]
     send_calls = [mock.call(_COMMAND), mock.call(_COMMAND)]
     sleep_calls = [
-        mock.call(_RETRY_INTERVAL_SECS),
         mock.call(_SEND_RECEIVE_INTERVAL_SECS)]
     self.device.Receive.return_value = _RESPONSE
 
@@ -342,8 +341,12 @@ class SerialDeviceSendReceiveTest(unittest.TestCase):
     self.assertEqual(2, self.device.FlushBuffer.call_count)
     self.device.Receive.assert_called_once_with(_RECEIVE_SIZE)
 
+  @mock.patch('cros.factory.utils.sync_utils.GetPollingSleepFunction')
   @mock.patch('time.sleep')
-  def testSendReceiveReadTimeoutRetrySuccess(self, sleep_mock):
+  def testSendReceiveReadTimeoutRetrySuccess(self, sleep_mock,
+                                             polling_sleep_mock):
+    polling_sleep_mock.return_value = sleep_mock
+
     send_calls = [mock.call(_COMMAND), mock.call(_COMMAND)]
     sleep_calls = [
         mock.call(_SEND_RECEIVE_INTERVAL_SECS),
@@ -361,8 +364,12 @@ class SerialDeviceSendReceiveTest(unittest.TestCase):
     self.assertEqual(self.device.Receive.call_args_list, receive_calls)
     self.assertEqual(2, self.device.FlushBuffer.call_count)
 
+  @mock.patch('cros.factory.utils.sync_utils.GetPollingSleepFunction')
   @mock.patch('time.sleep')
-  def testSendRequestWriteTimeoutRetryFailure(self, sleep_mock):
+  def testSendRequestWriteTimeoutRetryFailure(self, sleep_mock,
+                                              polling_sleep_mock):
+
+    polling_sleep_mock.return_value = sleep_mock
     # Send timeout & retry still fail.
     self.device.Send.side_effect = [
         serial.SerialTimeoutException,

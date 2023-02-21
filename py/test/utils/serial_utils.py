@@ -19,6 +19,8 @@ import re
 import time
 
 from cros.factory.utils import file_utils
+from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 from cros.factory.external import serial  # site-packages: dev-python/pyserial
 
@@ -300,7 +302,7 @@ class SerialDevice:
     self._serial.reset_input_buffer()
     self._serial.reset_output_buffer()
 
-  def SendReceive(self, command, size=1, retry=0, interval_secs=None,
+  def SendReceive(self, command, size=1, retry=1, interval_secs=None,
                   suppress_log=False):
     """Sends a command and returns a N bytes response.
 
@@ -319,28 +321,28 @@ class SerialDevice:
     Raises:
       SerialTimeoutException if it fails to receive N bytes.
     """
-    for nth_run in range(retry + 1):
-      self.FlushBuffer()
-      try:
-        self.Send(command)
-        if interval_secs is None:
-          time.sleep(self.send_receive_interval_secs)
-        else:
-          time.sleep(interval_secs)
-        response = self.Receive(size)
-        if not suppress_log and self.log:
-          logging.info('Successfully sent %r and received %r', command,
-                       response)
-        return response
-      except serial.SerialTimeoutException:
-        if nth_run < retry:
-          time.sleep(self.retry_interval_secs)
+    if not interval_secs:
+      interval_secs = self.send_receive_interval_secs
 
-    error_message = (
-        f'Timeout receiving {int(size)} bytes for command {command!r}')
-    if not suppress_log and self.log:
-      logging.warning(error_message)
-    raise serial.SerialTimeoutException(error_message)
+    @sync_utils.RetryDecorator(max_attempt_count=retry + 1,
+                               interval_sec=self.retry_interval_secs)
+    def _SendReceive():
+      self.FlushBuffer()
+      self.Send(command)
+      time.sleep(interval_secs)
+      response = self.Receive(size)
+      if not suppress_log and self.log:
+        logging.info('Successfully sent %r and received %r', command, response)
+      return response
+
+    try:
+      return _SendReceive()
+    except type_utils.MaxRetryError as e:
+      error_message = (
+          f'Timeout receiving {int(size)} bytes for command {command!r}')
+      if not suppress_log and self.log:
+        logging.warning(error_message)
+      raise serial.SerialTimeoutException(error_message) from e
 
   def SendExpectReceive(self, command, expect_response, retry=0,
                         interval_secs=None):
