@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-02-18 12:54+CST\n"
+"PO-Revision-Date: 2023-03-07 05:58+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -580,6 +580,10 @@ msgstr "TPMXóa TPM"
 #: ../build/pytests_label_generated.json
 msgid "TPM Diagnosis"
 msgstr "Chẩn đoán TPM"
+
+#: ../build/pytests_label_generated.json
+msgid "TPM State"
+msgstr "Trạng thái TPM"
 
 #: ../build/pytests_label_generated.json
 msgid "TPM Verify EK"
@@ -3792,6 +3796,10 @@ msgstr "Thử áp lực"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Stylus And Garage"
 msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Verify TPM state"
+msgstr "Trạng thái TPM"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Tablet Rotation Accelerometers"

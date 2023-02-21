@@ -1190,6 +1190,10 @@
       "pytest_name": "thunderbolt_loopback",
       "run_if": "False"
     },
+    "TPMState": {
+      "pytest_name": "tpm_state",
+      "label": "Verify TPM state"
+    },
     "TPMVerifyEK": {
       "pytest_name": "tpm_verify_ek"
     },
