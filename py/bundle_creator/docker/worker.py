@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import base64
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -178,8 +177,7 @@ class EasyBundleCreationWorker:
           worker_result.status = (
               factorybundle_pb2.WorkerResult.CREATE_CL_FAILED)
           worker_result.error_message = str(cl_error_msg)
-        self._cloudtasks_connector.ResponseWorkerResult(
-            self._EncodeWorkerResult(worker_result))
+        self._cloudtasks_connector.ResponseWorkerResult(worker_result)
       except CreateBundleException as e:
         self._logger.error(e)
 
@@ -193,8 +191,7 @@ class EasyBundleCreationWorker:
         worker_result.status = factorybundle_pb2.WorkerResult.FAILED
         worker_result.original_request.MergeFrom(task.ToOriginalRequest())
         worker_result.error_message = str(e)
-        self._cloudtasks_connector.ResponseWorkerResult(
-            self._EncodeWorkerResult(worker_result))
+        self._cloudtasks_connector.ResponseWorkerResult(worker_result)
 
   def _CreateBundle(
       self, task: CreateBundleTask) -> Tuple[str, List[str], Optional[str]]:
@@ -289,10 +286,6 @@ class EasyBundleCreationWorker:
     if message:
       return CreateBundleTask.FromPubSubMessage(message)
     return None
-
-  def _EncodeWorkerResult(self,
-                          worker_result: factorybundle_pb2.WorkerResult) -> str:
-    return base64.b64encode(worker_result.SerializeToString()).decode('utf-8')
 
 
 if __name__ == '__main__':

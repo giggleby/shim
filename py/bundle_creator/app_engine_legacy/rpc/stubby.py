@@ -20,7 +20,20 @@ import config  # pylint: disable=wrong-import-position
 from cros.factory import proto  # pylint: disable=wrong-import-position
 
 
+ExtractorResultStatus = proto.FirmwareInfoExtractorResult.Status
+
 _SERVICE_PATH = '/_ah/stubby/FactoryBundleService'
+
+
+def _GenerateFailedContents(error_message):
+  issue_link = ('https://issuetracker.google.com/'
+                'new?component=596923&template=1242367')
+  plain_content = ('If you have issues that need help, please use {}\n\n'
+                   '{}').format(issue_link, error_message)
+  html_content = plain_content.replace(
+      issue_link, '<a href="{0}">{0}</a>'.format(issue_link))
+  html_content = html_content.replace('\n', '<br>').replace(' ', '&nbsp;')
+  return plain_content, html_content
 
 
 class FactoryBundleService(remote.Service):
@@ -69,19 +82,15 @@ class FactoryBundleService(remote.Service):
       plain_content = ''.join(items)
       unprocessed_html_content = plain_content.replace(
           download_link, '<a href="{0}">{0}</a>'.format(download_link))
+      html_content = unprocessed_html_content.replace('\n', '<br>').replace(
+          ' ', '&nbsp;')
     else:
       subject = 'Bundle creation failed - {:%Y-%m-%d %H:%M:%S}'.format(
           datetime.datetime.now())
-      issue_link = ('https://issuetracker.google.com/'
-                    'new?component=596923&template=1242367')
-      plain_content = ('If you have issues that need help, please use {}\n\n'
-                       '{}').format(issue_link, worker_result.error_message)
-      unprocessed_html_content = plain_content.replace(
-          issue_link, '<a href="{0}">{0}</a>'.format(issue_link))
+      plain_content, html_content = _GenerateFailedContents(
+          worker_result.error_message)
       mail_list.append(config.FAILURE_EMAIL)
 
-    html_content = unprocessed_html_content.replace('\n', '<br>').replace(
-        ' ', '&nbsp;')
     mail.send_mail(
         sender=config.NOREPLY_EMAIL,
         to=mail_list,
@@ -89,6 +98,20 @@ class FactoryBundleService(remote.Service):
         body=plain_content,
         html=html_content)
     return proto.CreateBundleRpcResponse()
+
+  @remote.method(proto.FirmwareInfoExtractorResult,
+                 proto.ExtractFirmwareInfoRpcResponse)
+  def ExtractFirmwareInfoCallback(self, extractor_result):
+    # Only send failed email because HWID server will send email when success.
+    if extractor_result.status == ExtractorResultStatus.FAILED:
+      mail_list = [extractor_result.original_request.email]
+      subject = 'Extract Firmware Info Failed - {:%Y-%m-%d %H:%M:%S}'.format(
+          datetime.datetime.now())
+      plain_content, html_content = _GenerateFailedContents(
+          extractor_result.error_message)
+      mail.send_mail(sender=config.NOREPLY_EMAIL, to=mail_list, subject=subject,
+                     body=plain_content, html=html_content)
+    return proto.ExtractFirmwareInfoRpcResponse()
 
 
 # Map the RPC service and path

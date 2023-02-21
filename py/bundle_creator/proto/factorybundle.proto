@@ -44,6 +44,34 @@ message WorkerResult {
   repeated string cl_url = 5;
 }
 
+message ExtractFirmwareInfoRpcRequest {
+  optional string project = 1;
+  optional string phase = 2;
+  optional string image_gs_path = 3;
+  optional string email = 4;
+  optional int64 bug_number = 5;
+}
+
+message FirmwareInfoExtractorResult {
+  enum Status {
+    UNKNOWN = 0;
+    NO_ERROR = 1;
+    FAILED = 2;
+  }
+  optional Status status = 1 [default = NO_ERROR];
+  optional ExtractFirmwareInfoRpcRequest original_request = 2;
+  optional string error_message = 3;
+  repeated string cl_url = 4;
+}
+
+message ExtractFirmwareInfoRpcResponse {
+  enum Status {
+    UNKNOWN = 0;
+    NO_ERROR = 1;
+  }
+  optional Status status = 1 [default = NO_ERROR];
+}
+
 // TODO(b/178182522): Remove `BundleHistoryProject` and use `FactoryBundleBoard`
 // instead of `BundleHistoryBoard`.
 message BundleHistoryProject {

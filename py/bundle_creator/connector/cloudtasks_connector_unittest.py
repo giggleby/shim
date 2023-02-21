@@ -8,6 +8,7 @@ from unittest import mock
 from googleapiclient.errors import HttpError
 
 from cros.factory.bundle_creator.connector import cloudtasks_connector
+from cros.factory.bundle_creator.proto import factorybundle_pb2  # pylint: disable=no-name-in-module
 
 
 class CloudTasksConnectorTest(unittest.TestCase):
@@ -44,9 +45,10 @@ class CloudTasksConnectorTest(unittest.TestCase):
         'fake-project-id')
 
   def testResponseWorkerResult_succeed_verifyRequest(self):
-    encoded_worker_result = 'Ig5nczovL2Zha2VfcGF0aA=='
+    worker_result = factorybundle_pb2.WorkerResult(error_message='fake_error')
+    encoded_worker_result = cloudtasks_connector.EncodeMessage(worker_result)
 
-    self._connector.ResponseWorkerResult(encoded_worker_result)
+    self._connector.ResponseWorkerResult(worker_result)
 
     sent_data = self._mock_tasks.create.call_args.kwargs['body']['task'][
         'app_engine_http_request']['body']
@@ -57,9 +59,36 @@ class CloudTasksConnectorTest(unittest.TestCase):
     http_error = HttpError(resp=mock.Mock(status=403), content=b'fake_content')
     self._mock_request.execute.side_effect = http_error
 
-    self._connector.ResponseWorkerResult('fake_encoded_worker_result')
+    self._connector.ResponseWorkerResult(factorybundle_pb2.WorkerResult())
 
     self._mock_logger.error.assert_called_once_with(http_error)
+
+  def testResponseFirmwareInfoExtractor_succeed_verifyRequest(self):
+    extractor_result = factorybundle_pb2.FirmwareInfoExtractorResult(
+        error_message='fake_error')
+    encoded_extractor_result = cloudtasks_connector.EncodeMessage(
+        extractor_result)
+
+    self._connector.ResponseFirmwareInfoExtractorResult(extractor_result)
+
+    sent_data = self._mock_tasks.create.call_args.kwargs['body']['task'][
+        'app_engine_http_request']['body']
+    self.assertEqual(sent_data, encoded_extractor_result)
+    self._mock_request.execute.assert_called_once_with(num_retries=5)
+
+  def testResponseFirmwareInfoExtractor_httpError_verifyLogError(self):
+    http_error = HttpError(resp=mock.Mock(status=403), content=b'fake_content')
+    self._mock_request.execute.side_effect = http_error
+
+    self._connector.ResponseFirmwareInfoExtractorResult(
+        factorybundle_pb2.FirmwareInfoExtractorResult())
+
+    self._mock_logger.error.assert_called_once_with(http_error)
+
+  def testEncodeMessage_succeed(self):
+    message = factorybundle_pb2.WorkerResult(error_message='fake_error')
+    self.assertEqual(
+        cloudtasks_connector.EncodeMessage(message), 'GgpmYWtlX2Vycm9y')
 
 
 if __name__ == '__main__':

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import base64
 import datetime
 import os
 import shutil
@@ -286,8 +285,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     self.assertEqual(doc['start_time'], self._FIRESTORE_CURRENT_DATETIME)
     self.assertEqual(doc['end_time'], self._FIRESTORE_CURRENT_DATETIME)
     self.assertEqual(doc['gs_path'], self._GS_PATH)
-    mock_method.assert_called_once_with(
-        self._EncodeWorkerResult(expected_worker_result))
+    mock_method.assert_called_once_with(expected_worker_result)
 
   def testTryProcessRequest_bundleCreationFailed_verifiesResultHandling(self):
     error_message = 'fake_error_message'
@@ -307,8 +305,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
                      firestore_connector.UserRequestStatus.FAILED.name)
     self.assertEqual(doc['end_time'], self._FIRESTORE_CURRENT_DATETIME)
     self.assertEqual(doc['error_message'], error_message)
-    mock_method.assert_called_once_with(
-        self._EncodeWorkerResult(expected_worker_result))
+    mock_method.assert_called_once_with(expected_worker_result)
 
   def testTryProcessRequest_createHWIDCLSucceed_verifiesResultHandling(self):
     cl_url = ['https://fake_cl_url']
@@ -327,8 +324,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.cl_url.extend(cl_url)
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['hwid_cl_url'], cl_url)
-    mock_method.assert_called_once_with(
-        self._EncodeWorkerResult(expected_worker_result))
+    mock_method.assert_called_once_with(expected_worker_result)
 
   def testTryProcessRequest_createHWIDCLFailed_verifiesResultHandling(self):
     error_message = '{"fake_error": "fake_message"}'
@@ -349,8 +345,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.error_message = error_message
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['hwid_cl_error_msg'], error_message)
-    mock_method.assert_called_once_with(
-        self._EncodeWorkerResult(expected_worker_result))
+    mock_method.assert_called_once_with(expected_worker_result)
 
   def testTryProcessRequest_withoutFirmwareSource_verifiesManifest(self):
     self._PublishCreateBundleMessage()
@@ -451,8 +446,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.original_request.MergeFrom(self._message.request)
     expected_worker_result.gs_path = self._GS_PATH
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
-    mock_method.assert_called_once_with(
-        self._EncodeWorkerResult(expected_worker_result))
+    mock_method.assert_called_once_with(expected_worker_result)
 
   def _MockDatetime(self, module_name: str):
     mock_datetime_patcher = mock.patch(f'{module_name}.datetime')
@@ -475,10 +469,6 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
   def _ReadManifest(self) -> Dict:
     manifest_path = os.path.join(self._temp_dir_path, 'MANIFEST.yaml')
     return yaml.safe_load(file_utils.ReadFile(manifest_path))
-
-  def _EncodeWorkerResult(self,
-                          worker_result: factorybundle_pb2.WorkerResult) -> str:
-    return base64.b64encode(worker_result.SerializeToString()).decode('utf-8')
 
 
 if __name__ == '__main__':
