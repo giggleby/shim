@@ -20,8 +20,8 @@ _MANIFACTURING_MODE_RULES = {
     'FW Partition Table': 'OK',
     # WP for RO should be enabled if GPR0 is enabled.
     _WP_FOR_RO_KEY: 'YES',
-    # We don't check RO write protect scope for now since the values vary
-    # according to different projects.
+    # Nissa specific values.
+    'RO write protection scope': (0x1000, 0x14FFFF),
 }
 
 _RE_FLMSTR_PATTERN = \
