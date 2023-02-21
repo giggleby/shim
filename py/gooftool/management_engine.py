@@ -11,10 +11,17 @@ from cros.factory.utils.type_utils import Error
 
 
 _RE_ME_PATTERN = r'^(?:\[DEBUG\]\s+)?ME:\s+(?P<key>.+)\s+:\s+(?P<value>.+)$'
+_RE_ME_RO_WP_PATTERN = (r'^(?:\[DEBUG\]\s+)?ME:\s+(?P<key>.+)\s+-\s+'
+                        r'Start=(?P<start>.+),\s+End=(?P<end>.+)$')
 
+_WP_FOR_RO_KEY = 'WP for RO is enabled'
 _MANIFACTURING_MODE_RULES = {
     'Manufacturing Mode': 'NO',
     'FW Partition Table': 'OK',
+    # WP for RO should be enabled if GPR0 is enabled.
+    _WP_FOR_RO_KEY: 'YES',
+    # We don't check RO write protect scope for now since the values vary
+    # according to different projects.
 }
 
 _RE_FLMSTR_PATTERN = \
@@ -54,16 +61,21 @@ class SKU(str, enum.Enum):
         }
     }[self]
 
+
+def _HexStrToInt(hex_str):
+  try:
+    hex_int = int(hex_str, 0)
+  except:
+    raise ManagementEngineError(
+        f'Hex string {hex_str!r} can not be converted to an integer') from None
+  return hex_int
+
 def _GetSKUFromHFSTS3(me_flags):
   hfsts3_str = me_flags.get('HFSTS3')
   if hfsts3_str is None:
     raise ManagementEngineError('HFSTS3 is not found')
 
-  try:
-    hfsts3 = int(hfsts3_str, 0)
-  except:
-    raise ManagementEngineError(
-        f'HFSTS3 is {hfsts3_str!r} and can not convert to an integer') from None
+  hfsts3 = _HexStrToInt(hfsts3_str)
   if (hfsts3 & 0xF0) == SKU.Consumer.flag:
     return SKU.Consumer
   if (hfsts3 & 0xF0) == SKU.Lite.flag:
@@ -88,6 +100,10 @@ def _VerifyManufacturingMode(me_flags):
     actual = me_flags.get(key)
     if actual is None:
       errors.append(f'{key!r} is not found')
+      # This key does not exist on older platforms such as volteer and octopus.
+      if actual == _WP_FOR_RO_KEY:
+        errors.append('Please use toolkit from the factory branch to do GRT '
+                      'finalize.')
       continue
     if actual != expected:
       errors.append(f'{key!r} is {actual!r} and we expect {expected!r}')
@@ -122,6 +138,8 @@ def _ReadCbmem(shell):
     [DEBUG]  ME: FW Partition Table          : OK
     [DEBUG]  ME: Bringup Loader Failure      : NO
     [DEBUG]  ME: Firmware Init Complete      : YES
+    [DEBUG]  ME: WP for RO is enabled        : YES
+    [DEBUG]  ME: RO write protection scope - Start=0x1000, End=0x14FFFF
   ...
   """
   cbmem_cmd = 'cbmem -1'
@@ -181,6 +199,25 @@ def VerifyMELocked(main_fw, shell):
   me_flags = {}
   for match in re.finditer(_RE_ME_PATTERN, cbmem_stdout, re.MULTILINE):
     me_flags[match.group('key').strip()] = match.group('value')
+
+  # GRP0 (Global Protected Range) defines the FW ranges that have WP,
+  # including CSE_LAYOUT, CSE_RO and part of CSE_DATA.
+  # When GRP0 is enabled:
+  #   `WP for RO is enabled` should be `YES` and
+  #   `RO write protection scope` should reflects the WP-ed ranges.
+  # For non-flexible EOM projects, GRP0 should be enabled automatically
+  # on the first boot in PVT. For flexible EOM projects, it may be enabled
+  # on the first boot or be enabled through a factory test. Please check with
+  # firmware owner about the intended behavior.
+  ro_wp_match = re.search(_RE_ME_RO_WP_PATTERN, cbmem_stdout, re.MULTILINE)
+  if not ro_wp_match:
+    raise ManagementEngineError('Cannot find `RO write protection scope`. '
+                                'Is GPR0 enabled?')
+  hex_start = _HexStrToInt(ro_wp_match.group('start').strip())
+  hex_end = _HexStrToInt(ro_wp_match.group('end').strip())
+  me_flags[ro_wp_match.group('key').strip()] = hex_start, hex_end
+
+  logging.info('ME flags: %r', me_flags)
 
   sku = _GetSKUFromHFSTS3(me_flags)
   logging.info('CSE SKU: %s', sku.value)
