@@ -78,6 +78,7 @@
         "UploadZeroTouchIds",
         "VerifyWidevineKeybox",
         "VerifyUFSAndISHConfig",
+        "EnableIntelGPR0Group",
         "LockIntelDescriptorGroup"
       ]
     },

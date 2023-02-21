@@ -540,6 +540,27 @@
         "RebootStep"
       ]
     },
+    "EnableIntelGPR0Group": {
+      "run_if": "constants.grt.force_write_protect or constants.phase == 'PVT'",
+      "subtests": [
+        {
+          "pytest_name": "enable_intel_gpr0",
+          "label": "Enable Intel GPR0"
+        },
+        {
+          "inherit": "FullRebootStep",
+          "run_if": "device.factory.gpr0_enabled_need_reboot"
+        },
+        {
+          "pytest_name": "enable_intel_gpr0",
+          "label": "Verify Intel GPR0 has enabled",
+          "run_if": "device.factory.gpr0_enabled_need_reboot",
+          "args": {
+            "mode": "verify"
+          }
+        }
+      ]
+    },
     "EnableLidSwitch": {
       "pytest_name": "exec_shell",
       "label": "Enable Lid Switch",

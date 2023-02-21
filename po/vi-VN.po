@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2022-12-27 11:46+CST\n"
+"PO-Revision-Date: 2023-02-21 15:00+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3570,6 +3570,14 @@ msgstr "Tắt chức năng công tắc Nắp"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Enable EC Write Protect"
 msgstr "EC Viết bảo vệ"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Enable Intel GPR0"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Verify Intel GPR0 has enabled"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Enable Lid Switch"
