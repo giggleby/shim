@@ -116,7 +116,7 @@ class APROVerficationTest(test_case.TestCase):
 
     rebooted = device_data.GetDeviceData(self.device_data_key)
     if rebooted:
-      status = self.gooftool.Cr50GetAPROResult()
+      status = self.gooftool.GSCGetAPROResult()
       if status != gsctool.APROResult.AP_RO_PASS:
         self.HandleError(status)
     else:

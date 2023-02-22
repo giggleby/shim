@@ -1399,7 +1399,7 @@ class Gooftool:
       raise Error('Failed to set serial number bits on Cr50. '
                   '(args=%s)' % arg_phase)
 
-  def _Cr50SetBoardId(self, two_stages, is_flags_only=False):
+  def Cr50SetBoardId(self, two_stages, is_flags_only=False):
     """Set the board id and flags on the Cr50 chip.
 
     The Cr50 image need to be lock down for a certain subset of devices for
@@ -1496,7 +1496,7 @@ class Gooftool:
     # The MLB is still not finalized, and some dependencies of
     # SN bits or AP RO Hash might be uncertain at this time.
     # So we only set Board ID flags for security issue.
-    self._Cr50SetBoardId(two_stages=True, is_flags_only=True)
+    self.Cr50SetBoardId(two_stages=True, is_flags_only=True)
 
   def Cr50WriteFlashInfo(self, enable_zero_touch=False,
                          factory_process=FactoryProcessEnum.FULL,
@@ -1526,15 +1526,15 @@ class Gooftool:
       self._Cr50SetROHashForShipping()
 
     if not rma_mode:
-      self._Cr50SetBoardId(
+      self.Cr50SetBoardId(
           two_stages=factory_process == FactoryProcessEnum.TWOSTAGES)
       return
 
     # In RMA center, we don't know the process that the device was produced.
     try:
-      self._Cr50SetBoardId(two_stages=True)
+      self.Cr50SetBoardId(two_stages=True)
     except Exception:
-      self._Cr50SetBoardId(two_stages=False)
+      self.Cr50SetBoardId(two_stages=False)
 
   def Cr50DisableFactoryMode(self):
     """Disable Cr50 Factory mode.
@@ -1596,7 +1596,15 @@ class Gooftool:
     cmd = 'gsctool -aB start'
     self._util.shell(cmd)
 
-  def Cr50GetAPROResult(self):
+  def GSCReboot(self):
+    """Reboot and trigger the AP RO verification V2.
+
+    The device will reboot after the command.
+    """
+    cmd = 'gsctool -a --reboot'
+    self._util.shell(cmd)
+
+  def GSCGetAPROResult(self):
     """Get the result of the AP RO verification.
 
     ref: process_get_apro_boot_status in
@@ -1604,9 +1612,10 @@ class Gooftool:
     """
     cmd = 'gsctool -aB'
     result = self._util.shell(cmd)
-    if result.status == 0:
-      # An example of the result is "apro result (0) : not run".
-      match = re.match(r'apro result \((\d)\).*', result.stdout)
+    if result.success:
+      # An example of the Cr50 result is "apro result (0) : not run".
+      # An example of the Ti50 result is "apro result (20) : success".
+      match = re.match(r'apro result \((\d+)\).*', result.stdout)
       if match:
         return gsctool_module.APROResult(int(match.group(1)))
     raise Error(f'Unknown apro result {result}.')

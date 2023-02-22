@@ -76,7 +76,8 @@
         "VerifyWidevineKeybox",
         "VerifyUFSAndISHConfig",
         "EnableIntelGPR0Group",
-        "LockIntelDescriptorGroup"
+        "LockIntelDescriptorGroup",
+        "Ti50APROVerification"
       ]
     },
     "GRTStart": {
