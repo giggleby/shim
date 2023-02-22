@@ -538,6 +538,10 @@ msgid "Thunderbolt Loopback"
 msgstr "TBT 回送卡"
 
 #: ../build/pytests_label_generated.json
+msgid "TI50 Ap Ro Verification"
+msgstr "验证 Ti50 AP RO"
+
+#: ../build/pytests_label_generated.json
 msgid "Touch Device FW Update"
 msgstr "触控轫体更新"
 
@@ -3695,6 +3699,10 @@ msgstr "平版旋转-主板加速度计"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Tablet Rotation Lid-Accel"
 msgstr "平版旋转-上盖加速度计"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Ti50 AP RO Verification"
+msgstr "验证 Ti50 AP RO"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Touchscreen Uniformity"

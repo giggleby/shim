@@ -73,7 +73,8 @@
         "ReSignReleaseKernel",
         "UploadRegCodes",
         "UploadZeroTouchIds",
-        "VerifyWidevineKeybox"
+        "VerifyWidevineKeybox",
+        "Ti50APROVerification"
       ]
     },
     "GRTStart": {
