@@ -66,4 +66,4 @@ ENV USER bundle_creator
 
 COPY . /usr/local/factory/py/bundle_creator/
 
-CMD python /usr/local/factory/py/bundle_creator/docker/worker.py
+CMD python /usr/local/factory/py/bundle_creator/docker/main.py

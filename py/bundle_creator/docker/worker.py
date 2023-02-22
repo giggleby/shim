@@ -6,10 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 import logging
 import os
-import time
 from typing import List, Optional, Tuple
 
-from google.cloud import logging as gc_logging
 import yaml
 
 
@@ -27,12 +25,46 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 
+class BaseWorkerTask:
+
+  @classmethod
+  def FromPubSubMessage(cls, pubsub_message: pubsub_connector.PubSubMessage):
+    raise NotImplementedError
+
+  def ToOriginalRequest(self):
+    raise NotImplementedError
+
+
+class BaseWorker:
+
+  WORKER_TASK = None
+  SUBSCRIPTION_ID = None
+
+  def __init__(self):
+    self._logger = logging.getLogger(self.__class__.__name__)
+
+  def TryProcessRequest(self):
+    """Tries to pull the first task and process the request."""
+    raise NotImplementedError
+
+  def _PullTask(self) -> Optional[BaseWorkerTask]:
+    """Pulls one task from the Pub/Sub subscription.
+
+    Returns:
+      A `BaseWorkerTask` object if it exists.  Otherwise `None` is returned.
+    """
+    message = self._pubsub_connector.PullFirstMessage(self.SUBSCRIPTION_ID)
+    if message:
+      return self.WORKER_TASK.FromPubSubMessage(message)
+    return None
+
+
 class CreateBundleException(Exception):
   """An Exception raised when fail to create factory bundle."""
 
 
 @dataclass
-class CreateBundleTask:
+class CreateBundleTask(BaseWorkerTask):
   """A placeholder represents the information of a create bundle task.
 
   Properties:
@@ -125,11 +157,14 @@ class CreateBundleTask:
         firmware_source=self.firmware_source or None)
 
 
-class EasyBundleCreationWorker:
+class EasyBundleCreationWorker(BaseWorker):
   """Easy Bundle Creation worker."""
 
+  WORKER_TASK = CreateBundleTask
+  SUBSCRIPTION_ID = config.PUBSUB_SUBSCRIPTION
+
   def __init__(self):
-    self._logger = logging.getLogger('EasyBundleCreationWorker')
+    super().__init__()
     self._cloudtasks_connector = cloudtasks_connector.CloudTasksConnector(
         config.GCLOUD_PROJECT)
     self._firestore_connector = firestore_connector.FirestoreConnector(
@@ -141,17 +176,8 @@ class EasyBundleCreationWorker:
     self._storage_connector = storage_connector.StorageConnector(
         config.GCLOUD_PROJECT, config.BUNDLE_BUCKET)
 
-  def MainLoop(self):
-    """The main loop tries to process a request per 30 seconds."""
-    while True:
-      try:
-        worker.TryProcessRequest()
-      except Exception as e:
-        self._logger.error(e)
-      time.sleep(30)
-
   def TryProcessRequest(self):
-    """Tries to pull the first task and process the request."""
+    """See base class."""
     task = self._PullTask()
     if task:
       try:
@@ -274,24 +300,3 @@ class EasyBundleCreationWorker:
           self._logger.error(cl_error_msg)
 
     return gs_path, cl_url, cl_error_msg
-
-  def _PullTask(self) -> Optional[CreateBundleTask]:
-    """Pulls one task from the Pub/Sub subscription.
-
-    Returns:
-      A `CreateBundleTask` object if it exists.  Otherwise `None` is returned.
-    """
-    message = self._pubsub_connector.PullFirstMessage(
-        config.PUBSUB_SUBSCRIPTION)
-    if message:
-      return CreateBundleTask.FromPubSubMessage(message)
-    return None
-
-
-if __name__ == '__main__':
-  if config.ENV_TYPE == 'local':
-    logging.basicConfig(level=logging.INFO)
-  else:
-    gc_logging.Client().setup_logging(log_level=logging.INFO)
-  worker = EasyBundleCreationWorker()
-  worker.MainLoop()
