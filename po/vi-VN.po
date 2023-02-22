@@ -546,6 +546,10 @@ msgid "Thunderbolt Loopback"
 msgstr ""
 
 #: ../build/pytests_label_generated.json
+msgid "TI50 Ap Ro Verification"
+msgstr ""
+
+#: ../build/pytests_label_generated.json
 msgid "Touch Device FW Update"
 msgstr "Chạm vào cập nhật  thay đổi"
 
@@ -3800,6 +3804,10 @@ msgstr "Máy tính bảng gia tốc xoay-bo mạch chủ"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Tablet Rotation Lid-Accel"
 msgstr "Máy đo tốc độ quay đầu"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Ti50 AP RO Verification"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Touchscreen Uniformity"

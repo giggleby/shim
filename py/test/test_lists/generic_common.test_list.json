@@ -1334,6 +1334,16 @@
     "ThermalSlope": {
       "pytest_name": "thermal_slope"
     },
+    "Ti50APROVerification": {
+      "pytest_name": "ti50_ap_ro_verification",
+      "label": "Ti50 AP RO Verification",
+      "allow_reboot": true,
+      "args": {
+        "enable_swwp": "eval! constants.phase == 'PVT'",
+        "two_stages": "eval! constants.factory_process == 'TWOSTAGES'",
+        "wpsr": "eval! constants.grt.wpsr"
+      }
+    },
     "Touchpad": {
       "pytest_name": "touchpad"
     },
