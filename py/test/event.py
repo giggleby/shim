@@ -298,7 +298,7 @@ class EventServer(socketserver.ThreadingUnixStreamServer):
         q.put(message)
 
 
-class EventClientBase(metaclass=abc.ABCMeta):
+class EventClientBase(abc.ABC):
   """A client used to post and receive messages from an event server.
 
   All events sent through this class must be subclasses of Event. It

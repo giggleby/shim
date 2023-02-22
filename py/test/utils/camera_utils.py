@@ -111,7 +111,7 @@ def FilterNonVideoCapture(uvc_vid_dirs, dut):
 
 
 # TODO(yllin): Support device interface for Readers.
-class CameraReaderBase(metaclass=abc.ABCMeta):
+class CameraReaderBase(abc.ABC):
   """Abstract camera reader."""
 
   @abc.abstractmethod

@@ -518,7 +518,7 @@ class FactoryTestList(test_object_module.FactoryTest):
     return json.dumps(self.ToTestListConfig(recursive=False), sort_keys=True)
 
 
-class ITestList(metaclass=abc.ABCMeta):
+class ITestList(abc.ABC):
   """An interface of test list object."""
 
   # Declare instance variables to make __setattr__ happy.
@@ -1280,7 +1280,7 @@ class TestList(ITestList):
     self.ToFactoryTestList().state_change_callback = state_change_callback
 
 
-class BasePatch(metaclass=abc.ABCMeta):
+class BasePatch(abc.ABC):
   """Base class of patches with different actions."""
 
   @type_utils.ClassProperty

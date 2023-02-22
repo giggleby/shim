@@ -23,7 +23,7 @@ class FixtureConnectionError(Exception):
   pass
 
 
-class FixtureConnection(metaclass=abc.ABCMeta):
+class FixtureConnection(abc.ABC):
   """Abstract fixture connection."""
 
   @abc.abstractmethod

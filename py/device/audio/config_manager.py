@@ -92,7 +92,7 @@ INPUT_SENSITIVITY_NAME = 'IntrinsicSensitivity'
 DEFAULT_CAPTURE_VOLUME_DBFS = -600
 
 
-class BaseConfigManager(metaclass=abc.ABCMeta):
+class BaseConfigManager(abc.ABC):
   @abc.abstractmethod
   def Initialize(self, card='0'):
     """Initialize card device.

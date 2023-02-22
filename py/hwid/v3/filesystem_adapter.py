@@ -15,7 +15,7 @@ class FileSystemAdapterException(Exception):
   pass
 
 
-class FileSystemAdapter(metaclass=abc.ABCMeta):
+class FileSystemAdapter(abc.ABC):
   """Abstract class for file access adapters.
 
   It supports simple, generic operations on files and is meant to provide a
