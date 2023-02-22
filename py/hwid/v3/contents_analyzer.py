@@ -178,7 +178,7 @@ class ContentsAnalyzer:
     for dram_tag, dram_info in db_instance.GetComponents('dram').items():
       if dram_tag in _BLOCKLIST_DRAM_TAG:
         continue
-      if dram_info.value_is_none or 'size' not in dram_info.values:
+      if not dram_info.value_is_none and 'size' not in dram_info.values:
         validation_report.errors.append(
             Error(ErrorCode.CONTENTS_ERROR,
                   f'{dram_tag!r} does not contain size property'))

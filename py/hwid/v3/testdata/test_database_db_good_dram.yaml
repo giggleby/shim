@@ -68,6 +68,8 @@ components:
           part: whatever
           size: '512'
           slot: '0'
+      default_dram_should_be_skipped:
+        values: null
 
 rules:
 - name: device_info.set_image_id
