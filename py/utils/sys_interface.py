@@ -224,11 +224,30 @@ class SystemInterface(abc.ABC):
       raise CalledProcessError(returncode=exit_code, cmd=command)
     return 0
 
+  @overload
+  def CheckOutput(self, command: Union[str,
+                                       List[str]], stdin: Union[None, int,
+                                                                IO[Any]] = None,
+                  stderr: Union[None, int,
+                                IO[Any]] = None, cwd: Optional[str] = None,
+                  log=False, encoding: None = None) -> bytes:
+    ...
+
+  @overload
+  def CheckOutput(self, command: Union[str,
+                                       List[str]], stdin: Union[None, int,
+                                                                IO[Any]] = None,
+                  stderr: Union[None, int,
+                                IO[Any]] = None, cwd: Optional[str] = None,
+                  log=False, encoding: str = 'utf-8') -> str:
+    ...
+
   def CheckOutput(self, command: Union[str, List[str]],
                   stdin: Union[None, int,
                                IO[Any]] = None, stderr: Union[None, int,
                                                               IO[Any]] = None,
-                  cwd: Optional[str] = None, log=False) -> Union[str, bytes]:
+                  cwd: Optional[str] = None, log=False,
+                  encoding: Optional[str] = 'utf-8') -> Union[str, bytes]:
     """Executes a command on device, using subprocess.check_output convention.
 
     Do not override this function. The behavior of this function depends on the
@@ -242,6 +261,8 @@ class SystemInterface(abc.ABC):
       cwd: The working directory for the command.
       log: True (for logging.info) or a logger object to keep logs before
           running the command.
+      encoding: The name of the encoding used to decode the command's output.
+          Set to ``None`` to read as byte.
 
     Returns:
       The output on STDOUT from executed command.
@@ -249,9 +270,10 @@ class SystemInterface(abc.ABC):
     Raises:
       CalledProcessError if the exit code is non-zero.
     """
-    with tempfile.TemporaryFile('w+', encoding='utf-8') as stdout:
+    mode = 'w+b' if encoding is None else 'w+'
+    with tempfile.TemporaryFile(mode, encoding=encoding) as stdout:
       exit_code = self.Call(command, stdin=stdin, stdout=stdout, stderr=stderr,
-                            cwd=cwd, log=log)
+                            cwd=cwd, log=log, encoding=encoding)
       stdout.flush()
       stdout.seek(0)
       output = stdout.read()

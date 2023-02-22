@@ -253,7 +253,7 @@ class LinuxBoard(device_types.DeviceBoard):
     if skip is not None:
       args += [f'skip={skip}']
 
-    return self.CheckOutput(args)
+    return self.CheckOutput(args, encoding=encoding)
 
   @type_utils.Overrides
   def WriteFile(self, path: str, content: str) -> None:

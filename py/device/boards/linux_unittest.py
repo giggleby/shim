@@ -14,6 +14,7 @@ from cros.factory.utils import file_utils
 
 
 class MockProcess:
+
   def __init__(self, returncode):
     self._returncode = returncode
 
@@ -38,20 +39,30 @@ class LinuxTargetTest(unittest.TestCase):
 
     self.dut.CheckOutput = mock.MagicMock(return_value='TEST')
     self.assertEqual(self.dut.ReadFile('/non-exist', 4), 'TEST')
-    self.dut.CheckOutput.assert_called_with(['dd', 'bs=1', 'if=/non-exist',
-                                             'count=4'])
+    self.dut.CheckOutput.assert_called_with(
+        ['dd', 'bs=1', 'if=/non-exist', 'count=4'], encoding='utf-8')
 
     self.dut.CheckOutput = mock.MagicMock(return_value='TEST')
     self.assertEqual(self.dut.ReadFile('/non-exist', 4, 4), 'TEST')
-    self.dut.CheckOutput.assert_called_with(['dd', 'bs=1', 'if=/non-exist',
-                                             'count=4', 'skip=4'])
+    self.dut.CheckOutput.assert_called_with(
+        ['dd', 'bs=1', 'if=/non-exist', 'count=4', 'skip=4'], encoding='utf-8')
 
     self.dut.CheckOutput = mock.MagicMock(return_value='TEST')
     self.assertEqual(self.dut.ReadFile('/non-exist', skip=4), 'TEST')
-    self.dut.CheckOutput.assert_called_with(['dd', 'bs=1', 'if=/non-exist',
-                                             'skip=4'])
+    self.dut.CheckOutput.assert_called_with(
+        ['dd', 'bs=1', 'if=/non-exist', 'skip=4'], encoding='utf-8')
+
+  @mock.patch('cros.factory.device.boards.linux.LinuxBoard.CheckOutput',
+              return_value=b'\xff\x0f\x00\x00\x00\x00\x00\x00')
+  def testReadSpecialFile(self, mock_check_output: mock.Mock):
+    self.assertEqual(
+        self.dut.ReadSpecialFile('/dev/cpu/0/msr', count=8, encoding=None),
+        b'\xff\x0f\x00\x00\x00\x00\x00\x00')
+    mock_check_output.assert_called_with(
+        ['dd', 'bs=1', 'if=/dev/cpu/0/msr', 'count=8'], encoding=None)
 
   def testWriteFile(self):
+
     def fakePush(local, remote):
       self.assertEqual(remote, '/non-exist')
       self.assertEqual(file_utils.ReadFile(local), 'TEST')
@@ -62,30 +73,29 @@ class LinuxTargetTest(unittest.TestCase):
   def testPopen(self):
     self.link.Shell = mock.MagicMock()
     self.assertEqual(self.dut.Popen(['ls']), self.link.Shell.return_value)
-    self.link.Shell.assert_called_with(
-        ['ls'], cwd=None, stdin=None, stdout=None, stderr=None,
-        encoding='utf-8')
+    self.link.Shell.assert_called_with(['ls'], cwd=None, stdin=None,
+                                       stdout=None, stderr=None,
+                                       encoding='utf-8')
 
     self.link.Shell = mock.MagicMock()
-    self.assertEqual(self.dut.Popen('ls', cwd='/'),
-                     self.link.Shell.return_value)
-    self.link.Shell.assert_called_with(
-        'ls', cwd='/', stdin=None, stdout=None, stderr=None,
-        encoding='utf-8')
+    self.assertEqual(
+        self.dut.Popen('ls', cwd='/'), self.link.Shell.return_value)
+    self.link.Shell.assert_called_with('ls', cwd='/', stdin=None, stdout=None,
+                                       stderr=None, encoding='utf-8')
 
   def testCall(self):
     self.link.Shell = mock.MagicMock(return_value=MockProcess(1))
     self.assertEqual(self.dut.Call(['ls']), 1)
-    self.link.Shell.assert_called_with(
-        ['ls'], cwd=None, stdin=None, stdout=None, stderr=None,
-        encoding='utf-8')
+    self.link.Shell.assert_called_with(['ls'], cwd=None, stdin=None,
+                                       stdout=None, stderr=None,
+                                       encoding='utf-8')
 
   def testCheckCall(self):
     self.link.Shell = mock.MagicMock(return_value=MockProcess(0))
     self.assertEqual(self.dut.CheckCall(['ls']), 0)
-    self.link.Shell.assert_called_with(
-        ['ls'], cwd=None, stdin=None, stdout=None, stderr=None,
-        encoding='utf-8')
+    self.link.Shell.assert_called_with(['ls'], cwd=None, stdin=None,
+                                       stdout=None, stderr=None,
+                                       encoding='utf-8')
 
     self.link.Shell = mock.MagicMock(return_value=MockProcess(1))
     with self.assertRaises(device_types.CalledProcessError):
@@ -95,14 +105,17 @@ class LinuxTargetTest(unittest.TestCase):
         encoding='utf-8')
 
   def testCheckOutput(self):
-    def fakeCallSuccess(command, cwd, stdin, stdout, stderr, log):
+
+    def fakeCallSuccess(command, cwd, stdin, stdout, stderr, log, encoding):
       # pylint: disable=unused-argument
       stdout.write('fake data')
       return 0
-    def fakeCallFailure(command, cwd, stdin, stdout, stderr, log):
+
+    def fakeCallFailure(command, cwd, stdin, stdout, stderr, log, encoding):
       # pylint: disable=unused-argument
       stdout.write('fake data')
       return 1
+
     self.dut.Call = mock.MagicMock(side_effect=fakeCallSuccess)
     self.assertEqual(self.dut.CheckOutput(['cmd']), 'fake data')
     self.dut.Call = mock.MagicMock(side_effect=fakeCallFailure)
@@ -110,14 +123,17 @@ class LinuxTargetTest(unittest.TestCase):
       self.dut.CheckOutput(['cmd'])
 
   def testCallOutput(self):
-    def fakeCallSuccess(command, cwd, stdin, stdout, stderr, log):
+
+    def fakeCallSuccess(command, cwd, stdin, stdout, stderr, log, encoding):
       # pylint: disable=unused-argument
       stdout.write('fake data')
       return 0
-    def fakeCallFailure(command, cwd, stdin, stdout, stderr, log):
+
+    def fakeCallFailure(command, cwd, stdin, stdout, stderr, log, encoding):
       # pylint: disable=unused-argument
       stdout.write('fake data')
       return 1
+
     self.dut.Call = mock.MagicMock(side_effect=fakeCallSuccess)
     self.assertEqual(self.dut.CallOutput(['cmd']), 'fake data')
     self.dut.Call = mock.MagicMock(side_effect=fakeCallFailure)
