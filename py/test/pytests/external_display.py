@@ -708,12 +708,10 @@ class ExtDisplayTest(test_case.TestCase):
         # we can not check display info has no display with 'isInternal' False
         # because any display for chromebox has 'isInternal' False.
         if connect:
-          if not self._IsDisplayConnected(args, display_info):
-            pass
-          elif all(x['isInternal'] for x in display_info):
+          if all(x['isInternal'] for x in display_info):
             self._display_manager.SetMirrorMode(
                 mode=display_manager.MirrorMode.off, timeout=10)
-          else:
+          elif self._IsDisplayConnected(args, display_info):
             break
         elif self._IsDisplayDisconnected(args):
           break
