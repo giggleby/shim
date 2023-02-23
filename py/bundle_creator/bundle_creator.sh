@@ -44,6 +44,8 @@ INSTANCE_GROUP_NAME=
 BUNDLE_BUCKET=
 PUBSUB_TOPIC=
 PUBSUB_SUBSCRIPTION=
+FW_INFO_EXTRACTOR_TOPIC=
+FW_INFO_EXTRACTOR_SUBSCRIPTION=
 ALLOWED_LOAS_PEER_USERNAMES=
 NOREPLY_EMAIL=
 FAILURE_EMAIL=
@@ -89,6 +91,7 @@ prepare_docker_files() {
   env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
     BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
     PUBSUB_SUBSCRIPTION="${PUBSUB_SUBSCRIPTION}" \
+    FW_INFO_EXTRACTOR_SUBSCRIPTION="${FW_INFO_EXTRACTOR_SUBSCRIPTION}" \
     HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
     ENV_TYPE="${env_type}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > \
@@ -119,6 +122,7 @@ prepare_appengine_files() {
   env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
       BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
       PUBSUB_TOPIC="${PUBSUB_TOPIC}" \
+      FW_INFO_EXTRACTOR_TOPIC="${FW_INFO_EXTRACTOR_TOPIC}" \
       ALLOWED_LOAS_PEER_USERNAMES="${allowed_array}" \
       envsubst < "${SOURCE_DIR}/${appengine_source_name}/config.py" \
       > "${package_dir}/${appengine_source_name}/config.py"
@@ -418,11 +422,21 @@ do_create_pubsub() {
 
   try_delete_pubsub "subscription" "${PUBSUB_SUBSCRIPTION}"
   try_delete_pubsub "topic" "${PUBSUB_TOPIC}"
+  try_delete_pubsub "subscription" "${FW_INFO_EXTRACTOR_SUBSCRIPTION}"
+  try_delete_pubsub "topic" "${FW_INFO_EXTRACTOR_TOPIC}"
 
   info "Start creating Pub/Sub topic and subscription."
   gcloud pubsub topics create "${PUBSUB_TOPIC}" --project="${GCLOUD_PROJECT}"
   gcloud pubsub subscriptions create "${PUBSUB_SUBSCRIPTION}" \
     --topic "${PUBSUB_TOPIC}" \
+    --project="${GCLOUD_PROJECT}" \
+    --expiration-period=never \
+    --enable-message-ordering
+
+  gcloud pubsub topics create "${FW_INFO_EXTRACTOR_TOPIC}" \
+    --project="${GCLOUD_PROJECT}"
+  gcloud pubsub subscriptions create "${FW_INFO_EXTRACTOR_SUBSCRIPTION}" \
+    --topic "${FW_INFO_EXTRACTOR_TOPIC}" \
     --project="${GCLOUD_PROJECT}" \
     --expiration-period=never \
     --enable-message-ordering
@@ -474,6 +488,7 @@ do_test_docker() {
   GCLOUD_PROJECT="fake-gcloud-project"
   BUNDLE_BUCKET="fake-bundle-bucket"
   PUBSUB_SUBSCRIPTION="fake-sub"
+  FW_INFO_EXTRACTOR_SUBSCRIPTION="fake-fw-info-extractor-sub"
   HWID_API_ENDPOINT="https://fake_hwid_api_endpoint"
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
   prepare_python_venv "${TEST_DOCKER_NAME}" \
@@ -492,6 +507,7 @@ do_test_appengine_v2() {
   GCLOUD_PROJECT="fake-gcloud-project"
   ALLOWED_LOAS_PEER_USERNAMES=("foobar")
   PUBSUB_TOPIC="fake-topic"
+  FW_INFO_EXTRACTOR_TOPIC="fake-fw-info-extractor-topic"
   BUNDLE_BUCKET="fake-bundle-bucket"
   prepare_appengine_files "${LOCAL_DEPLOYMENT_SOURCE_DIR}" "v2"
   prepare_python_venv "${TEST_APPENGINE_V2_NAME}" \
