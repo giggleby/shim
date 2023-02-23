@@ -1023,6 +1023,8 @@ class SelfServiceHelper:
             commit_msg=commit_msg, reviewers=list(reviewers), cc_list=list(ccs),
             bot_commit=bot_commit, commit_queue=commit_queue,
             hwid_db_contents_internal=new_hwid_db_contents_internal)
+      except git_util.GitUtilNoModificationException:
+        return 0, new_hwid_db_contents_external
       except hwid_repo.HWIDRepoError:
         logging.exception(
             'Caught an unexpected exception while uploading a HWID CL.')
@@ -1046,22 +1048,21 @@ class SelfServiceHelper:
     final_hwid_db_content = ''
     final_cl_number = 0
 
-    if not split_result.auto_mergeable_noop:
-      commit_msg = textwrap.dedent(f"""\
-          ({int(time.time())}) {project}: (Auto-approved) HWID Config Update
+    commit_msg = textwrap.dedent(f"""\
+        ({int(time.time())}) {project}: (Auto-approved) HWID Config Update
 
-          Requested by: {request.original_requester}
-          Warning: this CL will be automatically merged or abandoned with the
-                   following CL if exists.
+        Requested by: {request.original_requester}
+        Warning: this CL will be automatically merged or abandoned with the
+                 following CL if exists.
 
-          %s
-      """) % request.description
-      auto_mergeable_change_cl_number, final_hwid_db_content = (
-          _CommitSplittedCL(split_result.auto_mergeable_db, commit_msg,
-                            split_result.auto_mergeable_change_unit_identities,
-                            bot_commit=True,
-                            commit_queue=split_result.review_required_noop))
-      final_cl_number = auto_mergeable_change_cl_number
+        %s
+    """) % request.description
+    auto_mergeable_change_cl_number, final_hwid_db_content = (
+        _CommitSplittedCL(split_result.auto_mergeable_db, commit_msg,
+                          split_result.auto_mergeable_change_unit_identities,
+                          bot_commit=True,
+                          commit_queue=split_result.review_required_noop))
+    final_cl_number = auto_mergeable_change_cl_number
 
     if not split_result.review_required_noop:
       commit_msg = textwrap.dedent(f"""\

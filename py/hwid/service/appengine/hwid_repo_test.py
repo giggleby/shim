@@ -152,6 +152,15 @@ class HWIDRepoTest(HWIDRepoBaseTest):
       self._hwid_repo.CommitHWIDDB('SBOARD', 'unused_test_str',
                                    'unused_test_str', [], [], False)
 
+  def testCommitHWIDDB_FailedNoModificationException(self):
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
+    self._mocked_create_cl.side_effect = (
+        git_util.GitUtilNoModificationException)
+
+    with self.assertRaises(git_util.GitUtilNoModificationException):
+      self._hwid_repo.CommitHWIDDB('SBOARD', 'unused_test_str',
+                                   'unused_test_str', [], [], False)
+
   def testCommitHWIDDB_Succeed(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
     expected_cl_number = 123

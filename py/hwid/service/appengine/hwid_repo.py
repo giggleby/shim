@@ -150,6 +150,7 @@ class HWIDRepo:
 
     Raises:
       ValueError if the given HWID DB name is invalid.
+      git_util.GitUtilNoModificationException if no modification is made.
       HWIDRepoError for other unexpected errors.
     """
     new_files = []
@@ -190,6 +191,8 @@ class HWIDRepo:
         cl_info = git_util.GetCLInfo(INTERNAL_REPO_REVIEW_URL, change_id,
                                      auth_cookie=git_util.GetGerritAuthCookie())
         cl_number = cl_info.cl_number
+    except git_util.GitUtilNoModificationException:
+      raise
     except git_util.GitUtilException as ex:
       raise HWIDRepoError from ex
     return cl_number
