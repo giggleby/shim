@@ -29,11 +29,10 @@ class EmbeddedControllerTest(unittest.TestCase):
     self.ec = ec.EmbeddedController(self.board)
 
   def testGetECVersion(self):
-    self.board.CallOutput.return_value = 'link_v1.1.227-3b0e131'
+    self.board.CallOutput.return_value = self._EC_VERSION_OUTPUT
 
-    self.assertEqual(self.ec.GetECVersion(), 'link_v1.1.227-3b0e131')
-    self.board.CallOutput.assert_called_once_with(
-        ['mosys', 'ec', 'info', '-s', 'fw_version'])
+    self.assertEqual(self.ec.GetECVersion(), 'samus_v1.7.688-22cf733')
+    self.board.CallOutput.assert_called_with(['ectool', 'version'])
 
   def testGetROVersion(self):
     self.board.CallOutput.return_value = self._EC_VERSION_OUTPUT
