@@ -17,6 +17,7 @@ class EmbeddedController(device_types.DeviceComponent):
 
   # Regular expression for parsing ectool output.
   I2C_READ_RE = re.compile(r'I2C port \d+ at \S+ offset \S+ = (0x[0-9a-f]+)')
+  FIRMWARE_COPY = re.compile(r'^Firmware copy:\s*(\S+)\s*$', re.MULTILINE)
   RO_VERSION_RE = re.compile(r'^RO version:\s*(\S+)\s*$', re.MULTILINE)
   RW_VERSION_RE = re.compile(r'^RW version:\s*(\S+)\s*$', re.MULTILINE)
 
@@ -30,7 +31,17 @@ class EmbeddedController(device_types.DeviceComponent):
     Returns:
       A string of the active EC firmware version.
     """
-    return self._GetOutput(['mosys', 'ec', 'info', '-s', 'fw_version'])
+    ec_version = self._GetOutput(['ectool', 'version'])
+    match = self.FIRMWARE_COPY.search(ec_version)
+    if not match:
+      raise self.Error(f'Unexpected output from "ectool version": {ec_version}')
+
+    if match.group(1) == 'RO':
+      return self.GetROVersion()
+    if match.group(1) == 'RW':
+      return self.GetRWVersion()
+    raise self.Error(
+        f'Unexpected firmware copy from "ectool version": {ec_version}')
 
   def GetROVersion(self):
     """Gets the EC RO firmware version.
