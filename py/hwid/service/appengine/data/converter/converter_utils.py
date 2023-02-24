@@ -5,6 +5,7 @@
 from typing import Mapping, Optional
 
 from cros.factory.hwid.service.appengine.data.converter import battery_converter
+from cros.factory.hwid.service.appengine.data.converter import camera_converter
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import storage_converter
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -18,6 +19,8 @@ from cros.factory.hwid.v3 import name_pattern_adapter
 _DEFAULT_CONVERTER_COLLECTION_MAP = {
     'battery': battery_converter.GetConverterCollection(),
     'storage': storage_converter.GetConverterCollection(),
+    'camera': camera_converter.GetConverterCollection(category='camera'),
+    'video': camera_converter.GetConverterCollection(category='video'),
 }
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 

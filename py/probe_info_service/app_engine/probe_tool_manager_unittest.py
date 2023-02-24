@@ -47,7 +47,8 @@ class ProbeToolManagerTest(unittest.TestCase):
   def testGetProbeSchema(self):
     resp = self._probe_tool_manager.GetProbeSchema()
     self.assertCountEqual([f.name for f in resp.probe_function_definitions], [
-        'battery.generic_battery', 'storage.mmc_storage', 'storage.nvme_storage'
+        'battery.generic_battery', 'camera.usb_camera', 'storage.mmc_storage',
+        'storage.nvme_storage'
     ])
 
   def testValidateProbeInfo_InvalidProbeFunction(self):

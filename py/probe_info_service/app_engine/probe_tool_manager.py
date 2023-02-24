@@ -241,6 +241,12 @@ def _RemoveHexPrefixAndNormalize(value: str) -> str:
   return value[2:].upper()
 
 
+def _NormalizeHexValueWithoutPrefix(value: str) -> str:
+  if value.lower().startswith('0x'):
+    raise ValueError('Expect hex value not to start with "0x".')
+  return value.upper()
+
+
 @type_utils.CachedGetter
 def _GetAllProbeFuncs() -> List[ProbeFunc]:
   # TODO(yhong): Separate the data piece out the code logic.
@@ -255,6 +261,18 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
           'battery', 'generic_battery', {
               'manufacturer': _ParamValueConverter('string'),
               'model_name': _ParamValueConverter('string'),
+          }),
+      ProbeFunc(
+          'camera', 'usb_camera', {
+              'usb_vendor_id':
+                  _ParamValueConverter('string',
+                                       _NormalizeHexValueWithoutPrefix),
+              'usb_product_id':
+                  _ParamValueConverter('string',
+                                       _NormalizeHexValueWithoutPrefix),
+              'usb_bcd_device':
+                  _ParamValueConverter('string',
+                                       _NormalizeHexValueWithoutPrefix),
           }),
       ProbeFunc(
           'storage', 'mmc_storage', {

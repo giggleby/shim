@@ -26,8 +26,8 @@ class StubbyHandlerTest(unittest.TestCase):
     resp = self._stubby_handler.GetProbeSchema(req)
     self.assertCountEqual(
         [f.name for f in resp.probe_schema.probe_function_definitions], [
-            'battery.generic_battery', 'storage.mmc_storage',
-            'storage.nvme_storage'
+            'battery.generic_battery', 'camera.usb_camera',
+            'storage.mmc_storage', 'storage.nvme_storage'
         ])
 
   def testGetProbeMetadata_IncludeProbeStatementPreviewOfValidInput(self):
