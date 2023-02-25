@@ -52,7 +52,7 @@
         "init_cmd": "echo DATA[hwid]=\\'$(crossystem hwid)\\'"
       }, {
         "id": "gbb_flags",
-        "init_cmd": "echo DATA[gbb_flags]=\\'$(/usr/share/vboot/bin/get_gbb_flags.sh 2>&1 | sed -n 's/^Chrome OS GBB set flags: *//p')\\'"
+        "init_cmd": "echo DATA[gbb_flags]=\\'$(/usr/bin/futility gbb --flash --get --flags 2>&1 | sed -n 's/^flags: *//p')\\'"
       }, {
         "id": "battery_percent",
         "poll": {
