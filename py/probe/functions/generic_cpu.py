@@ -2,19 +2,72 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 import re
+import struct
 import subprocess
 
 from cros.factory.probe import function
+from cros.factory.probe.functions import file
 from cros.factory.probe.lib import probe_function
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import type_utils
 
 
-KNOWN_CPU_TYPES = type_utils.Enum(['x86', 'arm'])
+CPU_INFO_FILE = '/proc/cpuinfo'
+SOC_ID_FILE = '/sys/bus/soc/devices/soc0/soc_id'
+NVMEM_FILE = '/sys/bus/nvmem/devices/nvmem0/nvmem'
+
+VENDOR0426_NVMEM_OFFSET = 0x7a0
+
+
+class KnownCPUTypes(str, enum.Enum):
+  x86 = 'x86'
+  arm = 'arm'
+
+  def __str__(self):
+    return self.name
+
+  @classmethod
+  def has_value(cls, value):
+    return value in cls.__members__
+
+
+def _ProbeChipIDVendor0426():
+  # TODO(b/253555789): The offset "0x7A0" which stores chip ID is only supported
+  # by the platforms after MT8195. Need the vendor to provide a more generic way
+  # to probe chip_id.
+  chip_id_bytes = file.ReadFile(NVMEM_FILE, True, VENDOR0426_NVMEM_OFFSET, 4)
+  # Unpack the bytes since all vendor0426 chipsets today use little-endian.
+  (chip_id, ) = struct.unpack('<I', chip_id_bytes)
+  return f'{chip_id:#08x}'
+
+
+def _ProbeChipID(vendor_id):
+  """Probes Chip ID for the corresponding CPU vendor ID."""
+  if vendor_id == '0426':
+    return _ProbeChipIDVendor0426()
+  if vendor_id == '0070':
+    # TODO(b/232146395): Probe chip_id for vendor0070 CPU.
+    return 'unknown'
+  raise ValueError(f'Vendor ID {vendor_id!r} is not supported for ChromeOS '
+                   'projects.')
+
+
+def _GetSoCInfo():
+  """Gets SoC information for ARMv8"""
+  raw_soc_id = file.ReadFile(SOC_ID_FILE)
+  match = re.match(r'jep106:([\d]{4}):([\d]{4})', raw_soc_id)
+  if not match:
+    raise ValueError(f'SoC ID format is invalid: {raw_soc_id!r}')
+
+  vendor_id = match.group(1)
+  soc_id = match.group(2)
+
+  model = f'ARMv8 Vendor{vendor_id} {soc_id}'
+  hardware = _ProbeChipID(vendor_id)
+  return model, hardware
 
 
 class GenericCPUFunction(probe_function.ProbeFunction):
@@ -33,11 +86,12 @@ class GenericCPUFunction(probe_function.ProbeFunction):
       logging.info('cpu_type not specified. Determine by crossystem.')
       self.args.cpu_type = process_utils.CheckOutput(
           'crossystem arch', shell=True)
-    if self.args.cpu_type not in KNOWN_CPU_TYPES:
-      raise ValueError(f'cpu_type should be one of {list(KNOWN_CPU_TYPES)!r}.')
+    if not KnownCPUTypes.has_value(self.args.cpu_type):
+      raise ValueError('cpu_type should be one of '
+                       f'{list(KnownCPUTypes.__members__)!r}.')
 
   def Probe(self):
-    if self.args.cpu_type == KNOWN_CPU_TYPES.x86:
+    if self.args.cpu_type == KnownCPUTypes.x86:
       return self._ProbeX86()
     return self._ProbeArm()
 
@@ -79,8 +133,7 @@ class GenericCPUFunction(probe_function.ProbeFunction):
     # doesn't seem to be available in ARMv8 (and probably all future versions).
     # In this case, we will use 'CPU architecture' to identify the ARM version.
 
-    CPU_INFO_FILE = '/proc/cpuinfo'
-    cpuinfo = file_utils.ReadFile(CPU_INFO_FILE)
+    cpuinfo = file.ReadFile(CPU_INFO_FILE)
 
     def _SearchCPUInfo(regex, name):
       matched = re.search(regex, cpuinfo, re.MULTILINE)
@@ -92,17 +145,16 @@ class GenericCPUFunction(probe_function.ProbeFunction):
     # For ARMv7, model and hardware should be available.
     model = _SearchCPUInfo(r'^(?:Processor|model name)\s*: (.*)$', 'model')
     hardware = _SearchCPUInfo(r'^Hardware\s*: (.*)$', 'hardware')
-
-    # For ARMv8, there is no model nor hardware, we use 'CPU architecture' as
-    # backup plan.  For an ARM device project (reference board and all follower
-    # devices), all SKUs should be using same ARM CPU.  So we don't really need
-    # detail information.  In the future, we can consider adding other "CPU .*"
-    # fields into model name if we think they are important.
     architecture = _SearchCPUInfo(r'^CPU architecture\s*: (\d+)$',
                                   'architecture')
-    if model.strip() == 'unknown' and architecture != 'unknown':
-      model = 'ARMv' + architecture.strip()
-    else:
+
+    if model.strip() == 'unknown' and architecture == '8':
+      # For ARMv8, the model and hardware are not available from the cpuinfo
+      # file; but the identifiers can be found from the soc_id and some
+      # vendor-specific information.
+      model, hardware = _GetSoCInfo()
+
+    if model.strip() == 'unknown':
       logging.error('Unable to construct "model" of ARM CPU')
 
     cores = process_utils.CheckOutput('nproc', shell=True, log=True)
@@ -111,4 +163,5 @@ class GenericCPUFunction(probe_function.ProbeFunction):
     return {
         'model': model.strip(),
         'cores': cores.strip(),
-        'hardware': hardware.strip()}
+        'hardware': hardware.strip()
+    }
