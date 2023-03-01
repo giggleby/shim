@@ -144,21 +144,25 @@ def QueueGet(q: queue.Queue, timeout: int = DEFAULT_TIMEOUT_SECS,
 
 
 def EventWait(event: threading.Event, timeout=None,
-              poll_interval_secs=DEFAULT_POLL_INTERVAL_SECS):
-  """Wait for a threading.Event, possibly by polling.
+              poll_interval_secs=DEFAULT_POLL_INTERVAL_SECS) -> bool:
+  """Wait for a threading.Event upto `timeout` seconds
 
-  This is useful when a custom polling sleep function is set.
+  This function waits for a `Event` to be set. If the `Event` is set within
+  `timeout` seconds, the function returns `True`. Otherwise, `False`.
+
+  Returns:
+    bool: True if the event is set, otherwise False.
   """
-  if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
-    return event.wait(timeout=timeout)
 
   @RetryDecorator(timeout_sec=timeout if timeout else math.inf,
-                  interval_sec=poll_interval_secs,
-                  target_condition=lambda x: x is True)
+                  interval_sec=poll_interval_secs, target_condition=lambda x: x)
   def WaitEventSet():
-    event.is_set()
+    return event.is_set()
 
-  return WaitEventSet()
+  try:
+    return WaitEventSet()
+  except type_utils.TimeoutError:
+    return False
 
 
 # TODO(louischiu) Migrate all the RetryDecorator to retry

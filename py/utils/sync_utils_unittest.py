@@ -81,7 +81,7 @@ class WaitForTest(PollingTestBase):
 
 class EventWaitTest(unittest.TestCase):
 
-  def testMultithreadClose(self):
+  def testEventWait(self):
     start_event = threading.Event()
 
     def Target():
@@ -93,7 +93,7 @@ class EventWaitTest(unittest.TestCase):
     t.start()
 
     self.assertEqual(False, sync_utils.EventWait(start_event, 0.5, 1))
-    self.assertEqual(True, sync_utils.EventWait(start_event, 1, 0.5))
+    self.assertEqual(True, sync_utils.EventWait(start_event, 2, 0.5))
 
 
 class QueueGetTest(PollingTestBase):
