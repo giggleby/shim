@@ -1137,8 +1137,18 @@ class Gooftool:
             self._util.GetCrosSystem(),
         'modem_status':
             self._util.shell('modem status').stdout.splitlines(),
+        'ec_wp_status':
+            self._util.shell('flashrom -p ec --flash-size 2>/dev/null && '
+                             'flashrom -p ec --wp-status || '
+                             'echo "EC is not available."').stdout,
+        'bios_wp_status':
+            self._util.shell('flashrom -p host --wp-status').stdout,
+        'cr50_board_id':
+            self._util.shell('gsctool -a -i -M').stdout,
         'cr50_sn_bits':
             self._util.shell('/usr/share/cros/cr50-read-rma-sn-bits.sh').stdout,
+        'cr50_fw_version':
+            self._util.shell('gsctool -a -f -M').stdout,
     }
     system_info.update(additional_system_info)
     return system_info

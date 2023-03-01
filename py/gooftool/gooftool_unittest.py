@@ -966,7 +966,8 @@ class GooftoolTest(unittest.TestCase):
         'gsc', 'hw', 'image', 'system', 'vpd', 'wp'
     }
     addtional_system_info_keys = {
-        'platform_name', 'crossystem', 'modem_status', 'cr50_sn_bits'
+        'platform_name', 'crossystem', 'modem_status', 'ec_wp_status',
+        'bios_wp_status', 'cr50_board_id', 'cr50_sn_bits', 'cr50_fw_version'
     }
     self.assertEqual(system_info_keys | addtional_system_info_keys,
                      set(self._gooftool.GetSystemDetails().keys()))
