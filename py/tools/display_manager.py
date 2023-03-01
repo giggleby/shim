@@ -2,6 +2,7 @@
 # Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Factory Display Manager
 
 Control display from command line. The target device must run with
@@ -25,7 +26,7 @@ EXAMPLES = """Examples:
 > display_manager set_mirror_mode
   Enable mirror mode.
 
-> display_manager set_mirror_mode --off
+> display_manager set_mirror_mode --mode off
   Disable mirror mode.
 
 > display_manager set_main_display 12345678910
