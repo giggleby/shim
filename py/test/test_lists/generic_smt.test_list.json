@@ -79,8 +79,8 @@
       "inherit": "TestGroup",
       "label": "Finish",
       "subtests": [
-        "StationEnd",
         "SMTFinalize",
+        "StationEnd",
         "CheckPoint",
         "HaltStep"
       ]

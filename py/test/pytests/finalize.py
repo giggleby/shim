@@ -103,6 +103,7 @@ from cros.factory.device import device_utils
 from cros.factory.device.links import ssh
 from cros.factory.gooftool import commands
 from cros.factory.gooftool.core import FactoryProcessEnum
+from cros.factory.gooftool.core import FinalizeMode
 from cros.factory.test import device_data
 from cros.factory.test.env import paths
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
@@ -206,6 +207,11 @@ class Finalize(test_case.TestCase):
           '"<sr_value1> <sr_mask1> <sr_value2> <sr_mask2> ...", '
           'e.g. "0x0f 0x0f 0x00 0xf0". The value will be deduced automatically'
           ' if not provided.', default=''),
+      Arg(
+          'mode', str, 'Set "SHIMLESS_MLB" if the MLB is produced for '
+          'shimless RMA. SET "MLB" if the MLB is produced for RMA or LOEM '
+          'project. SET "ASSEMBLED" if the DUT is full assembled and ready to '
+          'enter shipping mode.', default=FinalizeMode.ASSEMBLED),
   ]
 
   FINALIZE_TIMEOUT = 180
@@ -253,7 +259,12 @@ class Finalize(test_case.TestCase):
     self.ui.SetState(MSG_PREFLIGHT)
     self.Preflight()
     self.ui.SetState(MSG_FINALIZING)
-    self.DoFinalize()
+    if self.args.mode == FinalizeMode.MLB:
+      self.FinalizeMLB()
+    elif self.args.mode == FinalizeMode.SHIMLESS_MLB:
+      raise NotImplementedError()
+    elif self.args.mode == FinalizeMode.ASSEMBLED:
+      self.Finalize()
 
   def Preflight(self):
     # Check for HWID bundle update from factory server.
@@ -337,13 +348,35 @@ class Finalize(test_case.TestCase):
 
     return method
 
-  def DoFinalize(self):
+  def _AppendUploadReportArgs(self, command):
     upload_method = self.NormalizeUploadMethod(self.args.upload_method)
-
-    command = 'gooftool -v 4 finalize'
-
     if self.args.enable_factory_server:
       state.GetInstance().FlushEventLogs()
+    if self.args.enable_factory_server:
+      server_url = server_proxy.GetServerURL()
+      if server_url:
+        command += f' --shopfloor_url "{server_url}"'
+
+    command += f' --upload_method "{upload_method}"'
+    if self.args.upload_max_retry_times:
+      command += f' --upload_max_retry_times {self.args.upload_max_retry_times}'
+    if self.args.upload_retry_interval is not None:
+      command += f' --upload_retry_interval {self.args.upload_retry_interval}'
+    if self.args.upload_allow_fail:
+      command += ' --upload_allow_fail'
+    command += f' --add_file "{self.test_states_path}"'
+
+    return command
+
+  def FinalizeMLB(self):
+    command = 'gooftool -v 4 smt_finalize'
+    command = self._AppendUploadReportArgs(command)
+    # We only wipe DUT in GRT.
+    self._DoFinalize(command, True)
+
+  def Finalize(self):
+    command = 'gooftool -v 4 finalize'
+    command = self._AppendUploadReportArgs(command)
 
     if not self.args.write_protection:
       self.Warn('WRITE PROTECTION IS DISABLED.')
@@ -355,20 +388,6 @@ class Finalize(test_case.TestCase):
     if not self.args.secure_wipe:
       command += ' --fast'
 
-    if self.args.enable_factory_server:
-      server_url = server_proxy.GetServerURL()
-      if server_url:
-        command += f' --shopfloor_url "{server_url}"'
-
-    command += f' --upload_method "{upload_method}"'
-    command += f' --factory_process {self.args.factory_process}'
-    if self.args.upload_max_retry_times:
-      command += f' --upload_max_retry_times {self.args.upload_max_retry_times}'
-    if self.args.upload_retry_interval is not None:
-      command += f' --upload_retry_interval {self.args.upload_retry_interval}'
-    if self.args.upload_allow_fail:
-      command += ' --upload_allow_fail'
-    command += f' --add_file "{self.test_states_path}"'
     if self.args.hwid_need_vpd:
       command += ' --hwid-run-vpd'
     if self.args.is_cros_core:
@@ -403,15 +422,16 @@ class Finalize(test_case.TestCase):
       command += f' --project {self.args.project}'
     command += f' --phase "{phase.GetPhase()}"'
 
-    self._FinalizeWipeInPlace(command)
+    self._DoFinalize(command, commands.WIPE_IN_PLACE
+                     in self.args.gooftool_skip_list)
 
-  def _FinalizeWipeInPlace(self, command):
+  def _DoFinalize(self, command, skip_wipe):
     if self.dut.link.IsLocal():
       success = self._CallGoofTool(command)
       if not success:
         raise type_utils.TestFailure(f'DUT Failed to run {command!r}')
 
-      if commands.WIPE_IN_PLACE in self.args.gooftool_skip_list:
+      if skip_wipe:
         return
 
       # Wipe-in-place will terminate all processes that are using stateful
@@ -419,6 +439,8 @@ class Finalize(test_case.TestCase):
       self.Sleep(self.FINALIZE_TIMEOUT)
       raise type_utils.TestFailure(
           f'DUT Failed to finalize in {int(self.FINALIZE_TIMEOUT)} seconds')
+
+    # TODO(b/271796311) To discuss if we need to maintain this section.
     if isinstance(self.dut.link, ssh.SSHLink):
       # For remote SSH DUT, we ask DUT to send wipe log back.
       self._FinalizeRemoteSSHDUT(command)

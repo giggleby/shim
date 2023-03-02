@@ -984,13 +984,11 @@
       }
     },
     "SMTFinalize": {
-      "inherit": "ExecShell",
+      "pytest_name": "finalize",
       "label": "SMT Finalize",
-      "run_if": "constants.factory_process == 'TWOSTAGES'",
       "args": {
-        "commands": [
-          "gooftool smt_finalize"
-        ]
+        "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
+        "mode": "MLB"
       }
     },
     "Scan": {

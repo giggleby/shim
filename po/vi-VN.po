@@ -3976,22 +3976,6 @@ msgstr "GRT (Dự án thử nghiệm bắt buộc của Google)"
 msgid "Generic Chromebook"
 msgstr "Kiểm tra Chromebook chung"
 
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Replacement MLB End"
-msgstr "Kết thúc bo mạch chủ thay thế"
-
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Replacement MLB GRT (Google Required Tests)"
-msgstr "GRT (Dự án thử nghiệm bắt buộc của Google) bo mạch chủ thay thế"
-
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Replacement MLB SMT"
-msgstr "SMT bo mạch chủ thay thế "
-
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Generic Replacement MLB SMT"
-msgstr "SMT của bo mạch chủ thay thế chung"
-
 #: ../py/test/test_lists/generic_rf_station.test_list.json
 msgid "Generic RF Station"
 msgstr "Trạm kiểm tra chung RF"

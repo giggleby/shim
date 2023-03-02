@@ -3907,22 +3907,6 @@ msgstr "GRT (Google 必要测试项目)"
 msgid "Generic Chromebook"
 msgstr "一般 Chromebook 测试"
 
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Replacement MLB End"
-msgstr "更换主板结束"
-
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Replacement MLB GRT (Google Required Tests)"
-msgstr "更换主板 GRT (Google 必要测试项目)"
-
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Replacement MLB SMT"
-msgstr "更换主板 SMT"
-
-#: ../py/test/test_lists/generic_replacement_mlb.test_list.json
-msgid "Generic Replacement MLB SMT"
-msgstr "一般更换主板 SMT"
-
 #: ../py/test/test_lists/generic_rf_station.test_list.json
 msgid "Generic RF Station"
 msgstr "一般射频測試站"

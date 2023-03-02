@@ -70,8 +70,22 @@ _DLC_ERROR_TEMPLATE = (
     'dlm/docs/factory/factory-dlc-support.html.')
 
 
+class FinalizeMode(str, enum.Enum):
+  """The process that a device/MLB is needed before leaving the factory.
+
+  MLB: The MLB is expected to leaving the factory after SMT, such as local
+    OEM project or MLB for RMA.
+  SHIMLESS_MLB: The MLB is produced for shimless RMA.
+  ASSEMBLED: Verify the final state of the DUT and make it enter shipping mode.
+  TODO(b/171467079): Add the reference doc in #1.
+  """
+  MLB = 'MLB'
+  SHIMLESS_MLB = 'SHIMLESS_MLB'
+  ASSEMBLED = 'ASSEMBLED'
+
+
 class FactoryProcessEnum(str, enum.Enum):
-  """ The process that a device/MLB is produced or assembled.
+  """The process that a device/MLB is produced or assembled.
 
   FULL: The device runs full factory process in current factory.
   TWOSTAGES: The MLB part is sent to a different location for assembly, such
