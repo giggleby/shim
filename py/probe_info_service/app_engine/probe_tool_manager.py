@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import collections
 import hashlib
 import itertools
 import os
 import re
-from typing import Any, List, Mapping, NamedTuple, Optional, Tuple
+from typing import Any, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
 from google.protobuf import text_format
 
@@ -35,6 +36,43 @@ ProbeInfoTestResult = stubby_pb2.ProbeInfoTestResult
 
 class _IncompatibleError(Exception):
   """Raised when the given input is incompatible with the probe tool."""
+
+
+class ComponentProbeStatementConverter(abc.ABC):
+  """Represents a converter for probe info to component probe statement."""
+
+  @abc.abstractmethod
+  def GetName(self) -> str:
+    """Gets the converter's unique name."""
+
+  @abc.abstractmethod
+  def GenerateDefinition(self) -> ProbeFunctionDefinition:
+    """Returns the schema of this converter."""
+
+  @abc.abstractmethod
+  def ParseProbeParams(
+      self, probe_params: Sequence[stubby_pb2.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> Tuple[ProbeInfoParsedResult,
+             Optional[probe_config_types.ComponentProbeStatement]]:
+    """Walk through the given probe parameters.
+
+    The method first validate each probe parameter.  Then if specified,
+    it also generates the probe statement from the given input.
+
+    Args:
+      probe_params: A list of `ProbeParameter` to validate.
+      allow_missing_params: Whether missing required probe parameters is
+          allowed.
+      comp_name_for_probe_statement: If set, this method generates the probe
+          statement with the specified component name when all probe parameters
+          are valid.
+
+    Returns:
+      A pair of the following:
+        - `ProbeInfoParsedResult`
+        - A probe statement object or `None`.
+    """
 
 
 class _ParamValueConverter:
@@ -76,12 +114,8 @@ class _ParamValueConverter:
     return value
 
 
-class ProbeFunc:
-  """Represents a probe function that exports to other services.
-
-  Properties:
-    name: A string of the name as the identifier of this function.
-  """
+class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
+  """Converts probe info into a statement of one single probe function call."""
 
   class _ProbeParam:
 
@@ -122,11 +156,15 @@ class ProbeFunc:
           output_field.description, probe_param,
           output_field.probe_statement_generator)
 
-    self.name = runtime_probe_category_name + '.' + runtime_probe_func_name
+    self._name = runtime_probe_category_name + '.' + runtime_probe_func_name
 
-  def GenerateProbeFunctionDefinition(self):
-    """Returns the schema of this function."""
-    ret = ProbeFunctionDefinition(name=self.name,
+  def GetName(self) -> str:
+    """See base class."""
+    return self._name
+
+  def GenerateDefinition(self) -> ProbeFunctionDefinition:
+    """See base class."""
+    ret = ProbeFunctionDefinition(name=self._name,
                                   description=self._probe_func_def.description)
     for probe_param_name, probe_param in self._probe_param_infos.items():
       ret.parameter_definitions.add(
@@ -135,28 +173,11 @@ class ProbeFunc:
     return ret
 
   def ParseProbeParams(
-      self, probe_params: List[stubby_pb2.ProbeParameter],
+      self, probe_params: Sequence[stubby_pb2.ProbeParameter],
       allow_missing_params: bool, comp_name_for_probe_statement=None
   ) -> Tuple[ProbeInfoParsedResult,
              Optional[probe_config_types.ComponentProbeStatement]]:
-    """Walk through the given probe parameters.
-
-    The method first validate each probe parameter.  Then if specified,
-    it also generates the probe statement from the given input.
-
-    Args:
-      probe_params: A list of `ProbeParameter` to validate.
-      allow_missing_params: Whether missing required probe parameters is
-          allowed.
-      comp_name_for_probe_statement: If set, this method generates the probe
-          statement with the specified component name when all probe parameters
-          are valid.
-
-    Returns:
-      A pair of the following:
-        - `ProbeInfoParsedResult`
-        - A probe statement object or `None`.
-    """
+    """See base class."""
     probe_param_errors = []
     expected_values_of_field = collections.defaultdict(list)
     try:
@@ -248,7 +269,7 @@ def _NormalizeHexValueWithoutPrefix(value: str) -> str:
 
 
 @type_utils.CachedGetter
-def _GetAllProbeFuncs() -> List[ProbeFunc]:
+def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   def _StringToRegexpOrString(value):
     PREFIX = '!re '
@@ -257,15 +278,15 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
     return value
 
   return [
-      ProbeFunc('audio_codec', 'audio_codec', {
+      _SingleProbeFuncConverter('audio_codec', 'audio_codec', {
           'name': _ParamValueConverter('string'),
       }),
-      ProbeFunc(
+      _SingleProbeFuncConverter(
           'battery', 'generic_battery', {
               'manufacturer': _ParamValueConverter('string'),
               'model_name': _ParamValueConverter('string'),
           }),
-      ProbeFunc(
+      _SingleProbeFuncConverter(
           'camera', 'usb_camera', {
               'usb_vendor_id':
                   _ParamValueConverter('string',
@@ -277,7 +298,7 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
                   _ParamValueConverter('string',
                                        _NormalizeHexValueWithoutPrefix),
           }),
-      ProbeFunc(
+      _SingleProbeFuncConverter(
           'storage', 'mmc_storage', {
               'mmc_manfid':
                   _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
@@ -286,7 +307,7 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
                       'string', lambda hex_with_prefix: bytes.fromhex(
                           hex_with_prefix[2:]).decode('ascii')),
           }),
-      ProbeFunc(
+      _SingleProbeFuncConverter(
           'storage', 'nvme_storage', {
               'pci_vendor':
                   _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
@@ -297,7 +318,7 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
               'nvme_model':
                   None,
           }),
-      ProbeFunc(
+      _SingleProbeFuncConverter(
           'storage', 'ufs_storage', {
               'ufs_vendor': _ParamValueConverter('string'),
               'ufs_model': _ParamValueConverter('string'),
@@ -397,8 +418,8 @@ class ProbeToolManager:
   """Provides functionalities related to the probe tool."""
 
   def __init__(self):
-    self._probe_funcs = {pf.name: pf
-                         for pf in _GetAllProbeFuncs()}
+    self._converters = {c.GetName(): c
+                        for c in _GetAllConverters()}
 
   def GetProbeSchema(self) -> ProbeSchema:
     """
@@ -406,9 +427,8 @@ class ProbeToolManager:
       An instance of `ProbeSchema`.
     """
     ret = ProbeSchema()
-    for probe_func in self._probe_funcs.values():
-      ret.probe_function_definitions.append(
-          probe_func.GenerateProbeFunctionDefinition())
+    for converter in self._converters.values():
+      ret.probe_function_definitions.append(converter.GenerateDefinition())
     return ret
 
   def ValidateProbeInfo(
@@ -428,10 +448,10 @@ class ProbeToolManager:
         2. An instance of `ProbeInfoParsedResult` which records detailed
            validation result.
     """
-    probe_info_parsed_result, probe_func = self._LookupProbeFunc(
+    probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_info.probe_function_name)
-    if probe_func:
-      probe_info_parsed_result, unused_ps = probe_func.ParseProbeParams(
+    if converter:
+      probe_info_parsed_result, unused_ps = converter.ParseProbeParams(
           probe_info.probe_parameters, allow_missing_params)
     return probe_info, probe_info_parsed_result
 
@@ -655,30 +675,32 @@ class ProbeToolManager:
             ProbeInfoTestResult(result_type=t) for t in pi_test_result_types
         ])
 
-  def _LookupProbeFunc(
-      self, probe_function_name) -> Tuple[ProbeInfoParsedResult, ProbeFunc]:
-    """A helper method to find the probe function instance by name.
+  def _LookupProbeConverter(
+      self, converter_name: str
+  ) -> Tuple[ProbeInfoParsedResult, ComponentProbeStatementConverter]:
+    """A helper method to find the probe statement converter instance by name.
 
-    When the target probe function doesn't exist, the method creates and
+    When the target probe converter doesn't exist, the method creates and
     returns a `ProbeInfoParsedResult` message so that the caller merely
     needs to forward the error message without constructing it.
 
     Args:
-      probe_function_name: A string of name of the target probe function.
+      converter_name: A string of name of the target converter.
 
     Returns:
       A pair of the following:
         - An instance of `ProbeInfoParsedResult` if not found; otherwise `None`.
-        - An instance of `ProbeFunc` if found; otherwise `None`.
+        - An instance of `ComponentProbeStatementConverter` if found; otherwise
+          `None`.
     """
-    probe_func = self._probe_funcs.get(probe_function_name)
-    if probe_func:
+    converter = self._converters.get(converter_name)
+    if converter:
       parsed_result = None
     else:
       parsed_result = ProbeInfoParsedResult(
           result_type=ProbeInfoParsedResult.ResultType.INCOMPATIBLE_ERROR,
-          general_error_msg=f'unknown probe function: {probe_function_name!r}')
-    return parsed_result, probe_func
+          general_error_msg=f'Unknown probe converter: {converter_name!r}.')
+    return parsed_result, converter
 
   def _CalcProbeInfoFingerprint(self, probe_info: ProbeInfo) -> str:
     """Derives a fingerprint string for the given probe info.
@@ -709,10 +731,10 @@ class ProbeToolManager:
 
   def _ConvertProbeDataSourceToProbeStatement(
       self, probe_data_source: ProbeDataSource) -> ProbeInfoArtifact:
-    probe_info_parsed_result, probe_func = self._LookupProbeFunc(
+    probe_info_parsed_result, converter = self._LookupProbeConverter(
         probe_data_source.probe_info.probe_function_name)
-    if probe_func:
-      probe_info_parsed_result, ps = probe_func.ParseProbeParams(
+    if converter:
+      probe_info_parsed_result, ps = converter.ParseProbeParams(
           probe_data_source.probe_info.probe_parameters, False,
           comp_name_for_probe_statement=probe_data_source.component_name)
     else:
