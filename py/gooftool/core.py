@@ -1505,12 +1505,8 @@ class Gooftool:
 
     gsc = gsc_utils.GSCUtils()
     if gsc.IsTi50():
-      # TODO(b/262525027): AP RO provision will brick the device after deep
-      # sleep resume.  Temporary disable provision process for PVT devices until
-      # the issue is fixed.
-      if no_write_protect:
-        self.Ti50SetAddressingMode()
-        self.Ti50SetSWWPRegister(no_write_protect, wpsr)
+      self.Ti50SetAddressingMode()
+      self.Ti50SetSWWPRegister(no_write_protect, wpsr)
     else:
       self._Cr50SetROHashForShipping()
     self._Cr50SetBoardId(two_stages)
