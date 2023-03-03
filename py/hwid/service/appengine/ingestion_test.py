@@ -83,6 +83,82 @@ class IngestionTest(unittest.TestCase):
         ], delete_missing=False)
     ])
 
+  def testRefreshWithLimitedBoards(self):
+    hwid_db_metadata_list = [
+        hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
+        hwid_repo.HWIDDBMetadata('KPROJ2', 'KBOARD', 3, 'KPROJ2'),
+        hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
+        hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
+    ]
+    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
+
+    request = ingestion_pb2.IngestHwidDbRequest(limit_boards=['KBOARD'])
+    response = self.service.IngestHwidDb(request)
+
+    self.assertEqual(
+        response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
+    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
+        mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
+            hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
+            hwid_repo.HWIDDBMetadata('KPROJ2', 'KBOARD', 3, 'KPROJ2'),
+            hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
+        ], delete_missing=False)
+    ])
+
+  def testRefreshWithInvalidLimitedBoards(self):
+    hwid_db_metadata_list = [
+        hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
+        hwid_repo.HWIDDBMetadata('KPROJ2', 'KBOARD', 3, 'KPROJ2'),
+        hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
+        hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
+    ]
+    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
+
+    request = ingestion_pb2.IngestHwidDbRequest(limit_boards=['ZBOARD'])
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self.service.IngestHwidDb(request)
+    self.assertEqual(ex.exception.detail, 'No model meets the limit.')
+
+  def testRefreshWithLimitedBoardsAndModels(self):
+    hwid_db_metadata_list = [
+        hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
+        hwid_repo.HWIDDBMetadata('KPROJ2', 'KBOARD', 3, 'KPROJ2'),
+        hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
+        hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
+    ]
+    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
+
+    request = ingestion_pb2.IngestHwidDbRequest(
+        limit_boards=['KBOARD'], limit_models=['KPROJ1', 'SPROJ1'])
+    response = self.service.IngestHwidDb(request)
+
+    self.assertEqual(
+        response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
+    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
+        mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
+            hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
+        ], delete_missing=False)
+    ])
+
+  def testRefreshWithInvalidLimitedBoardsAndModels(self):
+    hwid_db_metadata_list = [
+        hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
+        hwid_repo.HWIDDBMetadata('KPROJ2', 'KBOARD', 3, 'KPROJ2'),
+        hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
+        hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
+    ]
+    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
+
+    request = ingestion_pb2.IngestHwidDbRequest(
+        limit_boards=['SBOARD'], limit_models=['KPROJ1', 'KPROJ2'])
+    with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
+      self.service.IngestHwidDb(request)
+    self.assertEqual(ex.exception.detail, 'No model meets the limit.')
+
   def testRefreshWithoutBoardsInfo(self):
     live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.side_effect = hwid_repo.HWIDRepoError

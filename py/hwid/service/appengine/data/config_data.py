@@ -61,6 +61,6 @@ def CreateVerificationPayloadSettings(board) -> CLSetting:
   """
   return CLSetting(review_host=hwid_repo.INTERNAL_REPO_REVIEW_URL,
                    repo_host=hwid_repo.INTERNAL_REPO_URL,
-                   project=f'chromeos/overlays/overlay-{board}-private',
-                   prefix=f'chromeos-base/racc-config-{board}/files/',
+                   project=f'chromeos/overlays/overlay-{board.lower()}-private',
+                   prefix=f'chromeos-base/racc-config-{board.lower()}/files/',
                    branch=None)

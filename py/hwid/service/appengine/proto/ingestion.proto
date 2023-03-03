@@ -4,6 +4,7 @@ package cros.factory.hwid.service.appengine.proto.ingestion_pb2;
 message IngestHwidDbRequest {
   repeated string limit_models = 1;
   bool force_push = 2;
+  repeated string limit_boards = 3;
 }
 
 message IngestHwidDbResponse {

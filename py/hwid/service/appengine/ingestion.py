@@ -102,20 +102,28 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     # Limit projects for ingestion (e2e test only).
     limit_models = set(request.limit_models)
-    do_limit = bool(limit_models)
+    limit_boards = set(request.limit_boards)
+    do_limit = bool(limit_models) or bool(limit_boards)
     force_push = request.force_push
 
     live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo()
-    # TODO(yllin): Reduce memory footprint.
-    # Get projects.yaml
     try:
       hwid_db_metadata_list = live_hwid_repo.ListHWIDDBMetadata()
 
       if do_limit:
-        # only process required models
         hwid_db_metadata_list = [
-            x for x in hwid_db_metadata_list if x.name in limit_models
+            x for x in hwid_db_metadata_list
+            if (not limit_models or x.name in limit_models) and
+            (not limit_boards or x.board_name in limit_boards)
         ]
+        limit_models = set(x.name for x in hwid_db_metadata_list)
+
+        if not hwid_db_metadata_list:
+          logging.error('No model meets the limit.')
+          raise protorpc_utils.ProtoRPCException(
+              protorpc_utils.RPCCanonicalErrorCode.INTERNAL,
+              detail='No model meets the limit.') from None
+
       self.hwid_db_data_manager.UpdateProjectsByRepo(
           live_hwid_repo, hwid_db_metadata_list, delete_missing=not do_limit)
 
@@ -179,22 +187,29 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
 
     return ingestion_pb2.IngestDevicesVariantsResponse()
 
-  def _GetPayloadDBLists(self):
+  def _GetPayloadDBLists(self, limit_models: Set[str]):
     """Get payload DBs specified in config.
+
+    Args:
+      limit_models: A set of models requiring payload generation, empty if
+        unlimited.  A model will be ignored if it is not vpg-enabled.
 
     Returns:
       A dict in form of {board: list of database instances}
     """
 
+    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo()
     db_lists = collections.defaultdict(list)
     for model_name, vpg_config in self.vpg_targets.items():
-      try:
-        hwid_action = self.hwid_action_manager.GetHWIDAction(model_name)
-        db = hwid_action.GetDBV3()
-      except (KeyError, ValueError, RuntimeError) as ex:
-        logging.error('Cannot get board data for %r: %r', model_name, ex)
-        continue
-      db_lists[vpg_config.board].append((db, vpg_config))
+      if not limit_models or model_name in limit_models:
+        try:
+          hwid_action = self.hwid_action_manager.GetHWIDAction(model_name)
+          db = hwid_action.GetDBV3()
+        except (KeyError, ValueError, RuntimeError) as ex:
+          logging.error('Cannot get board data for %r: %r', model_name, ex)
+          continue
+        db_metadata = live_hwid_repo.GetHWIDDBMetadataByName(model_name)
+        db_lists[db_metadata.board_name].append((db, vpg_config))
     return db_lists
 
   def _GetMainCommitIfChanged(self, force_update):
@@ -322,13 +337,10 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       force_update: True for always returning payload_hash_mapping for testing
         purpose.
       limit_models: A set of models requiring payload generation, empty if
-        unlimited.
+        unlimited.  A model will be ignored if it is not vpg-enabled.
     Returns:
       tuple (commit_id, {board: payload_hash,...}), possibly None for commit_id
     """
-
-    def IsModelRequired(model: str) -> bool:
-      return not limit_models or model in limit_models
 
     payload_hash_mapping = {}
     service_account_name, unused_token = git_util.GetGerritCredentials()
@@ -336,14 +348,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     if hwid_main_commit is None and not force_update:
       return None, payload_hash_mapping
 
-    db_lists = self._GetPayloadDBLists()
-
-    for board, db_list in db_lists.items():
-      db_list = [(db, vpg_config)
-                 for (db, vpg_config) in db_list
-                 if IsModelRequired(db.project)]
-      if not db_list:
-        continue
+    for board, db_list in self._GetPayloadDBLists(limit_models).items():
       result = vpg_module.GenerateVerificationPayload(db_list)
       if result.error_msgs:
         logging.error('Generate Payload fail: %s', ' '.join(result.error_msgs))
@@ -381,7 +386,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       force_update: True for always getting payload_hash_mapping for testing
         purpose.
       limit_models: A set of models requiring payload generation, empty if
-        unlimited.
+        unlimited.  A model will be ignored if it is not vpg-enabled.
     """
 
     response = ingestion_pb2.IngestHwidDbResponse()
