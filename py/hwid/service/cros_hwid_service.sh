@@ -21,6 +21,9 @@ DOCKER_TAG="hwid_service"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 REQUEST_SCRIPT="${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/test/\
 send_request.sh"
+# The minor version should match the protobuf library version in
+# ${APPENGINE_DIR}/requirements.txt.
+PROTOC_VERSION="3.19.0"
 # shellcheck disable=SC2269
 REDIS_RDB="${REDIS_RDB}"
 # shellcheck disable=SC2269
@@ -100,35 +103,40 @@ prepare_cros_regions() {
   add_temp "${cros_regions}"
 }
 
-run_in_chroot() {
-  cros_sdk --no-ns-pid --working-dir="$(realpath --relative-to="." \
-    "${FACTORY_DIR}")" -- "$@"
+prepare_protoc() {
+  local protoc_dir="$1"
+  shift
+  local protoc_archive_basename="protoc-${PROTOC_VERSION}-\
+linux-x86_64.zip"
+  local protoc_archive_download_url="https://github.com/protocolbuffers/\
+protobuf/releases/download/v${PROTOC_VERSION}/${protoc_archive_basename}"
+  local protoc_archive_fullname="${protoc_dir}/${protoc_archive_basename}"
+  curl "${protoc_archive_download_url}" -sL -o "${protoc_archive_fullname}" || \
+    die "Could not download protoc binary at ${protoc_archive_download_url}"
+  unzip -qq -d "${protoc_dir}" "${protoc_archive_fullname}" || die \
+    "Could not unzip protoc archive at ${protoc_archive_fullname}"
 }
 
 prepare_protobuf() {
   local protobuf_out="${TEMP_DIR}/protobuf_out"
+  local protoc_dir
+  local protoc
+
+  protoc_dir="$(mktemp -d)"
+  add_temp "${protoc_dir}"
+  prepare_protoc "${protoc_dir}"
+  protoc="${protoc_dir}/bin/protoc"
   mkdir -p "${protobuf_out}"
-  local rel_hw_verifier_dir
-  local rel_rt_probe_dir
-  local rel_protobuf_out
-  rel_hw_verifier_dir="$(realpath --relative-to="${FACTORY_DIR}" \
-    "${HW_VERIFIER_DIR}")"
-  rel_rt_probe_dir="$(realpath --relative-to="${FACTORY_DIR}" \
-    "${RT_PROBE_DIR}")"
-  rel_protobuf_out="$(realpath --relative-to="${FACTORY_DIR}" \
-    "${protobuf_out}")"
+  "${protoc}" \
+    -I="${RT_PROBE_DIR}" \
+    -I="${HW_VERIFIER_DIR}" \
+    --python_out="${protobuf_out}" \
+    "${HW_VERIFIER_DIR}/hardware_verifier.proto" \
+    "${RT_PROBE_DIR}/runtime_probe.proto"
 
-  run_in_chroot protoc \
-    -I="${rel_hw_verifier_dir}" -I="${rel_rt_probe_dir}" \
-    --python_out="${rel_protobuf_out}" \
-    "hardware_verifier.proto" "runtime_probe.proto"
-
-  local rel_temp_dir
-  rel_temp_dir="$(realpath --relative-to="${FACTORY_DIR}" "${TEMP_DIR}")"
-
-  run_in_chroot protoc \
-    -I="${rel_temp_dir}" \
-    --python_out="${rel_temp_dir}" \
+  "${protoc}" \
+    -I="${TEMP_DIR}" \
+    --python_out="${TEMP_DIR}" \
     "cros/factory/hwid/service/appengine/proto/hwid_api_messages.proto" \
     "cros/factory/hwid/service/appengine/proto/ingestion.proto" \
     "cros/factory/probe_info_service/app_engine/stubby.proto"
