@@ -2,29 +2,23 @@
 # Copyright 2023 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
-SCRIPT_FOLDER="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
-EDITOR_FOLDER="$(realpath "${SCRIPT_FOLDER}"/../)"
-VENV_FOLDER="$(realpath "${EDITOR_FOLDER}"/editor.venv)"
-CHROOT_VENV_FOLDER="$(realpath "${EDITOR_FOLDER}"/editor.chroot.venv)"
+source "${SCRIPT_DIR}"/common.sh
 
-in_chroot() {
-  [ -n "${CROS_WORKON_SRCROOT}" ]
-}
-
-if in_chroot && [ ! -d "${CHROOT_VENV_FOLDER}" ]; then
+if in_chroot && [ ! -d "${CHROOT_VENV_DIR}" ]; then
   # Chroot Case
   echo "Setup env inside chroot."
-  virtualenv -p python3.8 "${CHROOT_VENV_FOLDER}"
-  source "${CHROOT_VENV_FOLDER}"/bin/activate
-elif (! in_chroot) && [ ! -d "${VENV_FOLDER}" ]; then
+  virtualenv -p python3.8 "${CHROOT_VENV_DIR}"
+  source "${CHROOT_VENV_DIR}"/bin/activate
+elif (! in_chroot) && [ ! -d "${VENV_DIR}" ]; then
   # Outside Case
   echo "Setup env outside chroot."
-  virtualenv -p python3.10 "${VENV_FOLDER}"
-  source "${VENV_FOLDER}"/bin/activate
+  virtualenv -p python3.10 "${VENV_DIR}"
+  source "${VENV_DIR}"/bin/activate
 else
   echo "Venv folder exists, Exiting..."
   exit
 fi
 
-pip install -r "${EDITOR_FOLDER}"/requirements.dev
+pip install -r "${EDITOR_DIR}"/requirements.dev

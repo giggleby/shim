@@ -72,6 +72,13 @@ def CheckDomeLint(files):
       '.lint-frontend-passed')
 
 
+def CheckEditor(files):
+  return CheckTestsPassedInDirectory(
+      'py/test_list_editor/backend', files,
+      ('Please run "scripts/run-unittest.sh" in test_list_editor/backend'
+       ' in editor venv outside chroot.'), '.tests-passed')
+
+
 def CheckPytestDoc(files):
   all_pytests = json.loads(
       subprocess.check_output(['bin/list_pytests']))
@@ -110,6 +117,7 @@ def main():
   all_passed &= CheckUmpire(files)
   all_passed &= CheckDome(files)
   all_passed &= CheckDomeLint(files)
+  all_passed &= CheckEditor(files)
   if all_passed:
     print('All presubmit test passed.')
   else:
