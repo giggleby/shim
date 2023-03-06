@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import subprocess
+import tarfile
 import time
 import unittest
 import xmlrpc.client
@@ -420,6 +421,9 @@ class RPCDUTTest(UmpireDockerTestCase):
   def setUp(self):
     super().setUp()
     self.proxy = xmlrpc.client.ServerProxy(self.umpire.addr_base)
+    shutil.copy(
+        os.path.join(CONFIG_TESTDATA_DIR, 'test_report_index.json'),
+        os.path.join(self.umpire.umpire_dir, 'properties', 'report_index.json'))
 
   def testPing(self):
     version = self.proxy.Ping()
@@ -450,9 +454,16 @@ class RPCDUTTest(UmpireDockerTestCase):
   def testGetFactoryLogPort(self):
     self.assertEqual(self.umpire.port + 4, self.proxy.GetFactoryLogPort())
 
+  def _GenerateReportBlob(self):
+    report_path = os.path.join(SHARED_TESTDATA_DIR, 'report_for_upload.rpt.xz')
+    report_blob = file_utils.ReadFile(report_path, encoding=None)
+    with tarfile.open(report_path, 'r:xz') as tar_file:
+      file_list = tar_file.getnames()
+    return report_blob, file_list
+
   def testUploadReport(self):
-    report = b'Stub report content for testing.'
-    self.assertTrue(self.proxy.UploadReport('test_serial', report))
+    report_blob, file_list = self._GenerateReportBlob()
+    self.assertTrue(self.proxy.UploadReport('test_serial', report_blob))
     # Report uses GMT time
     timezone = None
     service_config = ServiceTest().ReadConfigTestdata(
@@ -467,7 +478,13 @@ class RPCDUTTest(UmpireDockerTestCase):
     report_files = glob.glob(report_pattern)
     self.assertEqual(1, len(report_files))
     report_file = report_files[0]
-    self.assertEqual(report, file_utils.ReadFile(report_file, encoding=None))
+    with tarfile.open(report_file, 'r:xz') as tar_file:
+      self.assertEqual(tar_file.getnames(), file_list + ['metadata.json'])
+      for tarinfo in tar_file.getmembers():
+        if tarinfo.name == 'metadata.json':
+          metadata_json = json_utils.LoadStr(
+              tar_file.extractfile(tarinfo).read())
+          self.assertEqual('0000000001', metadata_json['report_index'])
 
 
 class ServiceTest(TwoUmpireDockerTestCase):

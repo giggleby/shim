@@ -6,6 +6,7 @@
 
 import csv
 import glob
+import io
 import os
 import shutil
 import tarfile
@@ -284,6 +285,42 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
         timezone = self_active_config['umpire_timezone']['timezone']
     return timezone
 
+  def _CreateMetadataFile(self, filepath):
+    """Create a new metadata.json file."""
+    with file_utils.FileLock(self.daemon.env.report_index_json_file):
+      properties = json_utils.LoadFile(self.daemon.env.report_index_json_file)
+      report_index = properties['next_report_index']
+      properties['next_report_index'] = report_index + 1
+      json_utils.DumpFile(self.daemon.env.report_index_json_file, properties)
+    json_utils.DumpFile(
+        filepath, {
+            'server_uuid': properties['server_uuid'],
+            'report_index': f'{report_index:010d}'
+        }, pretty=True)
+
+  def AddMetadataToReportBlob(self, report_blob):
+    """Add metadata.json file to the factory report blob.
+
+     Args:
+      report_blob: Blob of compressed report to be stored (must be prepared by
+          shopfloor.Binary)
+
+     Returns:
+      The new report blob
+    """
+    output = io.BytesIO()
+    fileobj = io.BytesIO(self._UnwrapBlob(report_blob))
+    with tarfile.open(fileobj=output, mode='w:xz') as tar:
+      with tarfile.open(fileobj=fileobj) as input_file:
+        for tarinfo in input_file.getmembers():
+          tar.addfile(tarinfo)
+      with file_utils.TempDirectory() as temp_dir:
+        metadata_file = 'metadata.json'
+        metadata_path = os.path.join(temp_dir, metadata_file)
+        self._CreateMetadataFile(metadata_path)
+        tar.add(metadata_path, arcname=metadata_file)
+    return output.getvalue()
+
   def _SaveUpload(self, upload_type, file_name, content, mode='wb'):
     """Saves log file.
 
@@ -360,8 +397,10 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
     opt_name = ('-' + report_name) if report_name else ''
     file_name = (f"{stage or 'Unknown'}{opt_name}-{serial}-"
                  f"{time.strftime('%Y%m%dT%H%M%SZ', self._Now())}.rpt.xz")
-    d = threads.deferToThread(lambda: self._SaveUpload(
-        'report', file_name, self._UnwrapBlob(report_blob)))
+    # Add a metadata.json file to factory report
+    new_report_blob = self.AddMetadataToReportBlob(report_blob)
+    d = threads.deferToThread(
+        lambda: self._SaveUpload('report', file_name, new_report_blob))
     d.addCallback(self._ReturnTrue)
     return d
 

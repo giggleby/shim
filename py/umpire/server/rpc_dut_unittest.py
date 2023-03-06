@@ -5,11 +5,12 @@
 # found in the LICENSE file.
 
 import glob
+import io
 import logging
 import os
 import shutil
+import tarfile
 import time
-import xmlrpc.client
 
 from twisted.internet import reactor
 from twisted.trial import unittest
@@ -23,7 +24,9 @@ from cros.factory.umpire.server import umpire_env
 from cros.factory.umpire.server import unittest_helper
 from cros.factory.umpire.server.web import xmlrpc as umpire_xmlrpc
 from cros.factory.utils import file_utils
+from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
+
 
 # Forward to the correct executer with additional arguments.
 if __name__ == '__main__':
@@ -33,6 +36,8 @@ if __name__ == '__main__':
 TEST_RPC_PORT = net_utils.FindUnusedPort()
 TESTDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'testdata'))
 TESTCONFIG = os.path.join(TESTDIR, 'minimal_empty_services_umpire.json')
+TESTREPORTINDEX = os.path.join(TESTDIR, 'test_report_index.json')
+TESTREPORTPATH = os.path.join(TESTDIR, 'report_for_upload.rpt.xz')
 
 
 class DUTRPCTest(unittest.TestCase):
@@ -40,19 +45,20 @@ class DUTRPCTest(unittest.TestCase):
   def setUp(self):
     self.env = umpire_env.UmpireEnvForTest()
     shutil.copy(TESTCONFIG, self.env.active_config_file)
+    shutil.copy(TESTREPORTINDEX, self.env.report_index_json_file)
 
     self.env.LoadConfig()
     self.proxy = twisted_xmlrpc.Proxy(
         b'http://%s:%d' % (net_utils.LOCALHOST.encode('utf-8'), TEST_RPC_PORT),
         allowNone=True)
     self.daemon = daemon.UmpireDaemon(self.env)
+    self.rpc = rpc_dut.LogDUTCommands(self.daemon)
     root_commands = rpc_dut.RootDUTCommands(self.daemon)
     umpire_dut_commands = rpc_dut.UmpireDUTCommands(self.daemon)
-    log_dut_commands = rpc_dut.LogDUTCommands(self.daemon)
     xmlrpc_resource = umpire_xmlrpc.XMLRPCContainer()
     xmlrpc_resource.AddHandler(root_commands)
     xmlrpc_resource.AddHandler(umpire_dut_commands)
-    xmlrpc_resource.AddHandler(log_dut_commands)
+    xmlrpc_resource.AddHandler(self.rpc)
     self.twisted_port = reactor.listenTCP(
         TEST_RPC_PORT, server.Site(xmlrpc_resource))
     # The device info that matches TESTCONFIG
@@ -105,12 +111,25 @@ class DUTRPCTest(unittest.TestCase):
     d.addCallback(CheckList)
     return d
 
+  def testAddMetadataToReportBlob(self):
+    report_blob = self.rpc.AddMetadataToReportBlob(
+        file_utils.ReadFile(TESTREPORTPATH, encoding=None))
+    with tarfile.open(TESTREPORTPATH, 'r:xz') as tar_file:
+      file_list = tar_file.getnames()
+    with tarfile.open(fileobj=io.BytesIO(report_blob)) as tar_file:
+      self.assertEqual(tar_file.getnames(), file_list + ['metadata.json'])
+      for tarinfo in tar_file.getmembers():
+        if tarinfo.name == 'metadata.json':
+          metadata_json = json_utils.LoadStr(
+              tar_file.extractfile(tarinfo).read())
+          self.assertEqual('0000000001', metadata_json['report_index'])
+
   def testUploadReport(self):
     def CheckTrue(result):
       self.assertEqual(result, True)
       return result
 
-    def CheckReport(content, namestrings=None):
+    def CheckReport(namestrings=None):
       if namestrings is None:
         namestrings = []
       report_files = glob.glob(os.path.join(
@@ -118,17 +137,26 @@ class DUTRPCTest(unittest.TestCase):
       logging.debug('report files: %r', report_files)
       self.assertTrue(report_files)
       report_path = report_files[0]
-      self.assertEqual(file_utils.ReadFile(report_path), content)
+      with tarfile.open(TESTREPORTPATH, 'r:xz') as tar_file:
+        file_list = tar_file.getnames()
+      with tarfile.open(report_path, 'r:xz') as tar_file:
+        self.assertEqual(tar_file.getnames(), file_list + ['metadata.json'])
+        for tarinfo in tar_file.getmembers():
+          if tarinfo.name == 'metadata.json':
+            metadata_json = json_utils.LoadStr(
+                tar_file.extractfile(tarinfo).read())
+            self.assertEqual('0000000001', metadata_json['report_index'])
       for name in namestrings:
         self.assertIn(name, report_path)
       return True
 
     d = self.Call('UploadReport', 'serial1234',
-                  xmlrpc.client.Binary(b'content'), 'rpt_name5678', 'stage90')
+                  file_utils.ReadFile(TESTREPORTPATH, encoding=None),
+                  'rpt_name5678', 'stage90')
     d.addCallback(CheckTrue)
-    d.addCallback(lambda _: CheckReport(
-        'content', namestrings=['serial1234', 'rpt_name5678', 'stage90',
-                                'report', 'rpt.xz']))
+    d.addCallback(lambda _: CheckReport(namestrings=[
+        'serial1234', 'rpt_name5678', 'stage90', 'report', 'rpt.xz'
+    ]))
     return d
 
   def testUploadEvent(self):

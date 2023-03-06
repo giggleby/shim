@@ -42,6 +42,7 @@ FACTORY_DRIVE_JSON_FILE = 'factory_drives.json'
 
 # File name under base_dir
 _ACTIVE_UMPIRE_CONFIG = 'active_umpire.json'
+_REPORT_INDEX_JSON_FILE = 'report_index.json'
 _UMPIRE_DATA_DIR = 'umpire_data'
 _RESOURCES_DIR = 'resources'
 _FACTORY_DRIVES_DIR = 'factory_drives'
@@ -49,6 +50,7 @@ _CONFIG_DIR = 'conf'
 _LOG_DIR = 'log'
 _PID_DIR = 'run'
 _TEMP_DIR = 'temp'
+_PROPERTIES_DIR = 'properties'
 _WEBAPP_PORT_OFFSET = 1
 _CLI_PORT_OFFSET = 2
 _RPC_PORT_OFFSET = 3
@@ -115,8 +117,16 @@ class UmpireEnv:
     return os.path.join(self.base_dir, _UMPIRE_DATA_DIR)
 
   @property
+  def properties_dir(self):
+    return os.path.join(self.base_dir, _PROPERTIES_DIR)
+
+  @property
   def active_config_file(self):
     return os.path.join(self.base_dir, _ACTIVE_UMPIRE_CONFIG)
+
+  @property
+  def report_index_json_file(self):
+    return os.path.join(self.properties_dir, _REPORT_INDEX_JSON_FILE)
 
   @property
   def factory_drive_json_file(self):
@@ -434,6 +444,7 @@ class UmpireEnvForTest(UmpireEnv):
         self.temp_dir,
         self.factory_drives_dir,
         self.umpire_data_dir,
+        self.properties_dir,
     ):
       os.makedirs(fundamental_subdir)
     self.AddConfigFromBlob('{}', resource.ConfigTypeNames.payload_config)
