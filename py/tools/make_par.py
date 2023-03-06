@@ -159,13 +159,19 @@ def main(argv=None):
     # directory.
     src = os.path.join(tmp, 'src')
     os.mkdir(src)
-    Spawn(['rsync', '-a',
-           '--exclude', '/py/dome',
-           '--exclude', '/py/umpire/server',
-           os.path.join(paths.FACTORY_DIR, 'py'),
-           os.path.join(paths.FACTORY_DIR, 'bin'),
-           src],
-          log=True, check_call=True)
+    Spawn([
+        'rsync',
+        '-a',
+        '--exclude',
+        '/py/dome',
+        '--exclude',
+        '/py/test_list_editor',
+        '--exclude',
+        '/py/umpire/server',
+        os.path.join(paths.FACTORY_DIR, 'py'),
+        os.path.join(paths.FACTORY_DIR, 'bin'),
+        src,
+    ], log=True, check_call=True)
     # Add files from overlay.
     for f in args.add_zip:
       Spawn(['unzip', '-oq', f, '-d', src],
