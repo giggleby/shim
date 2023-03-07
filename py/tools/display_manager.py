@@ -49,7 +49,13 @@ def ListDisplayInfo(manager: display_manager.DisplayManager, pretty: bool,
 def SetMirrorMode(manager: display_manager.DisplayManager, mode: str,
                   timeout: Optional[int], **unused_kwargs):
   """Sets mirror mode."""
-  manager.SetMirrorMode(mode, timeout)
+  err = manager.SetMirrorMode(mode, timeout)
+  if err is not None:
+    if isinstance(err, dict) and 'message' in err:
+      err_msg = err['message']
+    else:
+      err_msg = json_utils.DumpStr(err)
+    sys.exit(f'Failed to set mirror mode to {mode}: {err_msg}\n')
 
 
 def SetMainDisplay(manager: display_manager.DisplayManager, display_id: str,

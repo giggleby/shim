@@ -77,17 +77,19 @@ class DisplayManager(plugin.Plugin):
     err = server_proxy.DeviceSetDisplayMirrorMode(info)
     if err is not None:
       logging.warning('Failed to turn %s the mirror mode: %s', mode, err)
-    else:
-      logging.info('Turned %s display mirror mode.', mode)
+      return err
+
+    logging.info('Turned %s display mirror mode.', mode)
 
     if timeout == -1:
-      return
+      return None
 
     def MirrorModeMatchEvent():
       has_mirror = HasMirror(server_proxy)
       return (mode == MirrorMode.off) != has_mirror
 
     sync_utils.WaitFor(MirrorModeMatchEvent, timeout)
+    return None
 
   @plugin.RPCFunction
   def SetMainDisplay(self, display_id: str, timeout: Optional[int]):
