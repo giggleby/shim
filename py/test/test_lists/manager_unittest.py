@@ -275,5 +275,91 @@ class TestListLoaderTest(unittest.TestCase):
         test_list_common.GetTestListConfigFile(test_list_id))
 
 
+class TestListManagerTest(unittest.TestCase):
+
+  @mock.patch("cros.factory.utils.config_utils.LoadConfig")
+  def testInit(self, mock_loader):
+    fake_test_list = {
+        "test_field": [],
+        "definitions": {
+            "TestItem1": {
+                "id": "test_item_1",
+                "subtests": []
+            },
+            "TestItem2": {
+                "id": "test_item_2",
+                "subtests": []
+            }
+        }
+    }
+    mock_loader.return_value = fake_test_list
+
+    test_list_manager = manager.InlineTestItemFixer("fake_test_list")
+    expected_result = json.dumps(fake_test_list, sort_keys=True, indent=2)
+    loaded_result = json.dumps(test_list_manager.test_list_config,
+                               sort_keys=True, indent=2)
+    self.assertEqual(expected_result, loaded_result)
+
+  @mock.patch("cros.factory.utils.config_utils.LoadConfig")
+  def testTraversal(self, mock_loader):
+    mock_loader.return_value = {
+        "test_field": [],
+        "definitions": {
+            "TestItem1": {
+                "id": "test_item_1",
+                "subtests": [{
+                    "inherit": "FactoryTest"
+                }, "TestItem2"]
+            },
+            "TestItem2": {
+                "id":
+                    "test_item_2",
+                "subtests": [
+                    {
+                        # TestItem2-1
+                        "inherit": "TestGroup",
+                        "subtests": [{
+                            "test_field": True
+                        }, "TestItem2-2"]
+                    },
+                    "TestItem2-b"
+                ]
+            }
+        }
+    }
+
+    fixed_item = {
+        "test_field": [],
+        "definitions": {
+            "TestItem1": {
+                "id": "test_item_1",
+                "subtests": ["TestItem1Step0", "TestItem2"]
+            },
+            "TestItem1Step0": {
+                "inherit": "FactoryTest"
+            },
+            "TestItem2": {
+                "id": "test_item_2",
+                "subtests": ["TestItem2Step0", "TestItem2-b"]
+            },
+            "TestItem2Step0": {
+                "inherit": "TestGroup",
+                "subtests": ["TestItem2Step0Step0", "TestItem2-2"]
+            },
+            "TestItem2Step0Step0": {
+                "test_field": True
+            },
+        }
+    }
+
+    test_list_manager = manager.InlineTestItemFixer("fake_test_list")
+    test_list_manager.Fix()
+
+    expected_result = json.dumps(fixed_item, sort_keys=True, indent=2)
+    fixed_test_list = json.dumps(test_list_manager.test_list_config,
+                                 sort_keys=True, indent=2)
+    self.assertEqual(expected_result, fixed_test_list)
+
+
 if __name__ == '__main__':
   unittest.main()

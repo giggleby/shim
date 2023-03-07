@@ -5,8 +5,10 @@
 """Loader of test_list.json"""
 
 import collections
+import copy
 import logging
 import os
+from typing import Tuple
 import zipimport
 
 from cros.factory.gooftool import cros_config as cros_config_module
@@ -22,6 +24,7 @@ from cros.factory.utils import type_utils
 
 # Default test list.
 DEFAULT_TEST_LIST_ID = 'main'
+TEST_LIST_CONFIG_DIR = test_list_common.TEST_LISTS_PATH
 
 
 class TestListConfig:
@@ -297,6 +300,100 @@ class Manager:
         test_list_common.ACTIVE_TEST_LIST_CONFIG_PATH) as f:
       f.write(config_data)
 
+
+class InlineTestItemFixer:
+  """Fixes inline defined test items by moving them to definition section"""
+
+  def __init__(self, test_list_id: str) -> None:
+    self.test_list_config = self._LoadTestListConfig(test_list_id)
+    self.test_items = self.test_list_config['definitions']
+    self.item_cache = {}
+
+  def Fix(self):
+    fixed_test_items = self.FixInlineTestItems(self.test_items)
+    self.test_list_config['definitions'] = fixed_test_items
+
+  def _LoadTestListConfig(self,
+                          test_list_id: str) -> config_utils.ResolvedConfig:
+    """Returns the loaded `test_list_id`
+
+    Loads the `test_list_id` from disk and returns the dictionary format of it.
+    The dictionary returned has the file level "inheritance" resolved.
+
+    Returns:
+      ResolvedConfig: The dictionary of test list
+
+    Raises:
+      Exception if the test list cannot be loaded.
+    """
+    try:
+      loaded_config = config_utils.LoadConfig(
+          config_name=test_list_id,
+          schema_name=test_list_common.TEST_LIST_SCHEMA_NAME,
+          validate_schema=True, default_config_dirs=TEST_LIST_CONFIG_DIR,
+          allow_inherit=True)
+    except Exception:
+      logging.exception('Test List %s cannot be loaded', test_list_id)
+      raise
+
+    return loaded_config
+
+  def FixInlineTestItems(self, test_items: dict) -> dict:
+    """Fixes inline test items
+
+    This function returns an updated version of test definition that moves the
+    inline defined test items in subtests section into separate test items.
+
+    Returns:
+      updated_test_items: Dict, a dictionary storing the mapping of test items.
+    """
+    updated_test_items = {}
+
+    for test_item_name, test_item in test_items.items():
+      inline_items, updated_test_item = self._FixOneTestItem(
+          test_item, test_item_name)
+
+      updated_test_items.update(inline_items)
+      updated_test_items[test_item_name] = updated_test_item
+
+    return updated_test_items
+
+  def _FixOneTestItem(self, test_item: dict,
+                      test_item_name: str) -> Tuple[dict, dict]:
+    """Fixes inline definition in `test_item`'s `subtest` section
+
+    This function returns a copy of fixed test item and the test items defined
+    in inline format.
+
+    Test items defined in inline style in a test item's `subtests`
+    section will be replaced with a string in the fixed test item.
+
+    Returns
+      `inline_test_definition`, Dictionary mapping of the test items created
+        while visiting this test item.
+      `updated_test_item`, The updated version of test item.
+    """
+    inline_test_definition = {}
+    updated_test_item = copy.deepcopy(test_item)
+    updated_subtests = []
+
+    for i, subtest_item in enumerate(test_item.get('subtests', [])):
+      if isinstance(subtest_item, str):
+        updated_subtests.append(subtest_item)
+        continue
+
+      subtest_item_name = test_item_name + f'Step{i}'
+      updated_subtests.append(subtest_item_name)
+      new_definition, updated_subtest_item = self._FixOneTestItem(
+          subtest_item, subtest_item_name)
+
+      inline_test_definition[subtest_item_name] = updated_subtest_item
+      inline_test_definition.update(new_definition)
+
+    if inline_test_definition:
+      updated_test_item['subtests'] = updated_subtests
+
+    return inline_test_definition, updated_test_item
 
 def BuildTestListForUnittest(test_list_config, manager=None):
   """Build a test list from loaded config.
