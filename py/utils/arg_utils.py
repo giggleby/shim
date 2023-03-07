@@ -23,6 +23,8 @@ use the args attribute to access the attribute values.
       self.assertEqual(self.args.explode, device.exploded)
 """
 
+import enum
+
 from .type_utils import Enum
 
 
@@ -80,6 +82,22 @@ class Arg:
 
           type=int         # Allow only integers
           type=(int, str)  # Allow int or string
+
+        You can use ``enum.Enum`` object as a type::
+
+          class enum_obj(str, enum.Enum):
+            a = 'a'
+            b = 'b'
+
+            def __str__(self):
+            return self.name
+
+          type=enum_obj
+              # Allows only the members in enum_obj and str 'a' or 'b'.
+
+        Besides, you can use enum.Enum functional API::
+
+          type=enum.Enum('enum_obj', 'a b')
 
         You can also use an ``Enum`` object as a type.  First import
         it::
@@ -143,6 +161,9 @@ class Arg:
         return True
       if isinstance(t, Enum) and value in t:
         return True
+      if (not isinstance(t, Enum) and issubclass(t, enum.Enum) and
+          (value in t or value in t.__members__)):
+        return True
     return False
 
   def IsOptional(self):
@@ -155,7 +176,8 @@ class Arg:
       parser: argparse.ArgumentParser object
     """
     if (len(self.type) >= 1 and self.type[0] not in [str, list, bool, int] and
-        not isinstance(self.type[0], Enum)):
+        not isinstance(self.type[0], Enum) and
+        not issubclass(self.type[0], enum.Enum)):
       raise ValueError(f'Arg {self.name} cannot be transfered. {self.type}')
 
     if self.IsOptional():
@@ -181,6 +203,9 @@ class Arg:
     elif isinstance(self.type[0], Enum):
       kwargs['type'] = str
       kwargs['choices'] = self.type[0]
+    elif issubclass(self.type[0], enum.Enum):
+      kwargs['type'] = str
+      kwargs['choices'] = set(self.type[0].__members__)
     parser.add_argument(*args, **kwargs)
 
 

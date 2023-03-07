@@ -3,13 +3,13 @@
 # found in the LICENSE file.
 
 import collections
+import enum
 import logging
 import re
 import statistics
 import time
 
 from cros.factory.device import device_types
-from cros.factory.utils import type_utils
 
 
 class PowerException(device_types.DeviceException):
@@ -53,7 +53,12 @@ class PowerBase(device_types.DeviceComponent):
   """
 
   # Power source types
-  PowerSource = type_utils.Enum(['BATTERY', 'AC'])
+  class PowerSource(str, enum.Enum):
+    BATTERY = 'BATTERY'
+    AC = 'AC'
+
+    def __str__(self):
+      return self.name
 
   # An enumeration of possible charge states.
   # - ``CHARGE``: Charge the device as usual.
@@ -61,8 +66,15 @@ class PowerBase(device_types.DeviceComponent):
   # - ``DISCHARGE``: Force the device to discharge.
   # - ``FULL``: Full charge states.
   # - ``NOT CHARGING``: The device is not charging.
-  ChargeState = type_utils.Enum(
-      ['CHARGE', 'IDLE', 'DISCHARGE', 'FULL', 'NOT_CHARGING'])
+  class ChargeState(str, enum.Enum):
+    CHARGE = 'CHARGE'
+    IDLE = 'IDLE'
+    DISCHARGE = 'DISCHARGE'
+    FULL = 'FULL'
+    NOT_CHARGING = 'NOT_CHARGING'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, dut, pd_name=None):
     super().__init__(dut)
@@ -106,11 +118,11 @@ class PowerInfoMixinBase:
   """Base class for power info mixin."""
 
   _CHARGE_STATE_MAP = {
-      'Charging': PowerBase.ChargeState.CHARGE,
-      'Idle': PowerBase.ChargeState.IDLE,
-      'Discharging': PowerBase.ChargeState.DISCHARGE,
-      'Full': PowerBase.ChargeState.FULL,
-      'Not charging': PowerBase.ChargeState.NOT_CHARGING
+      'Charging': PowerBase.ChargeState.CHARGE.name,
+      'Idle': PowerBase.ChargeState.IDLE.name,
+      'Discharging': PowerBase.ChargeState.DISCHARGE.name,
+      'Full': PowerBase.ChargeState.FULL.name,
+      'Not charging': PowerBase.ChargeState.NOT_CHARGING.name
   }
 
   def CheckACPresent(self):
@@ -517,8 +529,8 @@ class ECToolPowerInfoMixin(PowerInfoMixinBase):
   def GetChargeState(self):
     """See PowerInfoMixinBase.GetWearPct"""
     if 'CHARGING' in self._GetECToolBatteryFlags():
-      return self.ChargeState.CHARGE
-    return self.ChargeState.DISCHARGE
+      return self.ChargeState.CHARGE.name
+    return self.ChargeState.DISCHARGE.name
 
   def GetBatteryCurrent(self):
     """See PowerInfoMixinBase.GetBatteryCurrent"""

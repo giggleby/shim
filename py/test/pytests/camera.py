@@ -203,6 +203,7 @@ import random
 import time
 import uuid
 
+from cros.factory.device.chromeos import camera
 from cros.factory.device import device_utils
 from cros.factory.test import i18n
 from cros.factory.test.i18n import _
@@ -301,7 +302,7 @@ class CameraTest(test_case.TestCase):
           'resize_ratio', float,
           'The resize ratio of captured image on screen, '
           'has no effect on e2e mode.', default=0.4),
-      Arg('camera_facing', type_utils.Enum(['front', 'rear']),
+      Arg('camera_facing', camera.AllowedFacing,
           ('String "front" or "rear" for the camera to test. '
            'If in normal mode, default is automatically searching one. '
            'If in e2e mode, default is "front".'), default=None),

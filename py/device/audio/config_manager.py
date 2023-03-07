@@ -5,13 +5,13 @@
 """A module to load audio-related configurations."""
 
 import abc
+import enum
 import logging
 import re
 import subprocess
 
 from cros.factory.device import device_types
 from cros.factory.utils import config_utils
-from cros.factory.utils import type_utils
 
 
 # Strings for key in audio.conf
@@ -26,17 +26,67 @@ _SCRIPT_CARD_INDEX = '999'
 
 DEFAULT_JSON_CONFIG_NAME = 'audio'
 
-MicJackType = type_utils.Enum(['none', 'lrgm', 'lrmg'])
-PCMType = type_utils.Enum(['PlaybackPCM', 'CapturePCM'])
-DEVICE_STATE = type_utils.Enum(['Enabled', 'Disabled', 'Initial'])
+
+class MicJackType(str, enum.Enum):
+  none = 'none'
+  lrgm = 'lrgm'
+  lrmg = 'lrmg'
+
+  def __str__(self) -> str:
+    return self.name
+
+
+class PCMType(str, enum.Enum):
+  PlaybackPCM = 'PlaybackPCM'
+  CapturePCM = 'CapturePCM'
+
+  def __str__(self) -> str:
+    return self.name
+
+
+class DeviceState(str, enum.Enum):
+  Enabled = 'Enabled'
+  Disabled = 'Disabled'
+  Initial = 'Initial'
+
+  def __str__(self) -> str:
+    return self.name
+
+
 # Used for external command return value
 MIC_JACK_TYPE_RETURN_LRGM = '1'
 MIC_JACK_TYPE_RETURN_LRMG = '2'
 
-InputDevices = type_utils.Enum(['Dmic', 'Dmic2', 'MLBDmic', 'Extmic'])
-OutputDevices = type_utils.Enum(['Speaker', 'Headphone'])
-AudioDeviceType = type_utils.Enum(
-    list(InputDevices) + list(OutputDevices))
+
+class InputDevices(str, enum.Enum):
+  Dmic = 'Dmic'
+  Dmic2 = 'Dmic2'
+  MLBDmic = 'MLBDmic'
+  Extmic = 'Extmic'
+
+  def __str__(self) -> str:
+    return self.name
+
+
+class OutputDevices(str, enum.Enum):
+  Speaker = 'Speaker'
+  Headphone = 'Headphone'
+
+  def __str__(self) -> str:
+    return self.name
+
+
+class AudioDeviceType(str, enum.Enum):
+  Dmic = 'Dmic'
+  Dmic2 = 'Dmic2'
+  MLBDmic = 'MLBDmic'
+  Extmic = 'Extmic'
+  Speaker = 'Speaker'
+  Headphone = 'Headphone'
+
+  def __str__(self) -> str:
+    return self.name
+
 
 INPUT_SENSITIVITY_NAME = 'IntrinsicSensitivity'
 DEFAULT_CAPTURE_VOLUME_DBFS = -600
@@ -460,7 +510,7 @@ class UCMConfigManager(BaseConfigManager):
     for card, device_map in self._card_device_map.items():
       # Assert that card is defined in self._card_map.
       self._GetCardName(card)
-      invalid_devices = set(device_map) - set(AudioDeviceType)
+      invalid_devices = set(device_map) - set(AudioDeviceType.__members__)
       if invalid_devices:
         raise KeyError(
             f"Invalid device: '{invalid_devices!r}' in card '{card}'")
@@ -478,8 +528,9 @@ class UCMConfigManager(BaseConfigManager):
       self._card_device_map[card] = device_map
 
     self._card_device_state = {
-        card: dict.fromkeys(device_map, DEVICE_STATE.Initial)
-        for card, device_map in self._card_device_map.items()}
+        card: dict.fromkeys(device_map, DeviceState.Initial)
+        for card, device_map in self._card_device_map.items()
+    }
 
   def _GetCardNameMap(self):
     """Get card name with UCM suffix from aplay and cros_config."""
@@ -640,16 +691,16 @@ class UCMConfigManager(BaseConfigManager):
     enable_commands = []
     disable_commands = []
     for device, state in self._card_device_state[card].items():
-      if state == DEVICE_STATE.Initial:
+      if state == DeviceState.Initial:
         continue
       device_name = self._GetDeviceName(card, device)
       # The ucm config expects enable before disable so we always enable it
       # after reset. The quotes are used to pass device name with space, such as
       # "Internal Mic".
-      if state == DEVICE_STATE.Disabled:
+      if state == DeviceState.Disabled:
         disable_commands.append(f'set _enadev "{device_name}"')
         disable_commands.append(f'set _disdev "{device_name}"')
-      elif state == DEVICE_STATE.Enabled:
+      elif state == DeviceState.Enabled:
         enable_commands.append(f'set _enadev "{device_name}"')
     # Always run disable commands before enable. In some case there will have a
     # mutex between different devices, and it will disable devices unexpectedly
@@ -661,8 +712,8 @@ class UCMConfigManager(BaseConfigManager):
     """Initialize the sound card."""
     # Assert that card is defined in self._card_map.
     self._GetCardName(card)
-    self._card_device_state[card] = dict.fromkeys(
-        self._card_device_map[card], DEVICE_STATE.Initial)
+    self._card_device_state[card] = dict.fromkeys(self._card_device_map[card],
+                                                  DeviceState.Initial)
     self._InvokeDeviceCommands(card)
 
   def EnableDevice(self, device, card='0'):
@@ -670,7 +721,7 @@ class UCMConfigManager(BaseConfigManager):
     # Assert that card is defined in self._card_map and device is defined in
     # device map.
     self._GetDeviceName(card, device)
-    self._card_device_state[card][device] = DEVICE_STATE.Enabled
+    self._card_device_state[card][device] = DeviceState.Enabled
     self._InvokeDeviceCommands(card)
 
   def DisableDevice(self, device, card='0'):
@@ -680,13 +731,13 @@ class UCMConfigManager(BaseConfigManager):
     # Assert that card is defined in self._card_map and device is defined in
     # device map.
     self._GetDeviceName(card, device)
-    self._card_device_state[card][device] = DEVICE_STATE.Disabled
+    self._card_device_state[card][device] = DeviceState.Disabled
     self._InvokeDeviceCommands(card)
 
   def GetPCMId(self, category, device, card):
     """Return the card index and device index of a device."""
     if category not in PCMType:
-      raise ValueError(f'category must in one of {PCMType!r}')
+      raise ValueError(f'category must in one of {list(PCMType.__members__)}')
     card_name = self._GetCardName(card)
     device_name = self._GetDeviceName(card, device)
     identity = f'{category}/{device_name}'

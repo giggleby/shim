@@ -2,12 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
+
 from cros.factory.device.audio import alsa
 from cros.factory.device.audio import tinyalsa
-from cros.factory.utils import type_utils
+
 
 # Known controllers.
-CONTROLLERS = type_utils.Enum(['ALSA', 'TINYALSA'])
+class Controllers(str, enum.Enum):
+  ALSA = 'ALSA'
+  TINYALSA = 'TINYALSA'
+
+  def __str__(self):
+    return self.name
 
 
 def CreateAudioControl(dut, config_path=None):
@@ -18,8 +25,8 @@ def CreateAudioControl(dut, config_path=None):
     config_path: a string of file path to config file to load.
   """
   controllers = {
-      CONTROLLERS.ALSA: alsa.AlsaAudioControl,
-      CONTROLLERS.TINYALSA: tinyalsa.TinyalsaAudioControl
+      Controllers.ALSA: alsa.AlsaAudioControl,
+      Controllers.TINYALSA: tinyalsa.TinyalsaAudioControl
   }
   constructor = None
 
@@ -30,9 +37,9 @@ def CreateAudioControl(dut, config_path=None):
   tinyalsa_commands = ['tinymix', 'tinyplay', 'tinycap']
 
   if all(dut.Call(['which', command]) == 0 for command in alsa_commands):
-    controller = CONTROLLERS.ALSA
+    controller = Controllers.ALSA
   if all(dut.Call(['which', command]) == 0 for command in tinyalsa_commands):
-    controller = CONTROLLERS.TINYALSA
+    controller = Controllers.TINYALSA
 
   # Read from controllers.
   constructor = controllers.get(controller)

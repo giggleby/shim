@@ -4,6 +4,7 @@
 
 """This is audio utility module to setup amixer related options."""
 
+import enum
 import logging
 import re
 import traceback
@@ -11,7 +12,6 @@ import traceback
 from cros.factory.device.audio import base
 from cros.factory.device.audio import config_manager
 from cros.factory.utils import file_utils
-from cros.factory.utils import type_utils
 
 
 # Configuration file is put under overlay directory and it can be customized
@@ -101,7 +101,14 @@ class AlsaAudioControl(base.BaseAudioControl):
   file will override the behavior.
   """
   # Just list all supported options. But we only use wav and raw types.
-  RecordType = type_utils.Enum(['voc', 'wav', 'raw', 'au'])
+  class RecordType(str, enum.Enum):
+    voc = 'voc'
+    wav = 'wav'
+    raw = 'raw'
+    au = 'au'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, dut, config_name=None, ucm_card_map=None,
                ucm_device_map=None, ucm_verb=None):

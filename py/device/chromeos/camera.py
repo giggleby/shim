@@ -7,6 +7,7 @@
 This module provides accessing camera devices.
 """
 
+import enum
 import os
 import re
 
@@ -15,11 +16,17 @@ from cros.factory.test.utils.camera_utils import CVCameraReader
 from cros.factory.test.utils.camera_utils import CameraDevice
 from cros.factory.test.utils.camera_utils import CameraError
 from cros.factory.test.utils.camera_utils import GetValidCameraPaths
-from cros.factory.utils import type_utils
 
 
 CAMERA_CONFIG_PATH = '/etc/camera/camera_characteristics.conf'
-ALLOWED_FACING = type_utils.Enum(['front', 'rear', None])
+
+
+class AllowedFacing(str, enum.Enum):
+  front = 'front'
+  rear = 'rear'
+
+  def __str__(self):
+    return self.value
 
 
 class ChromeOSCamera(camera.Camera):
@@ -44,9 +51,9 @@ class ChromeOSCamera(camera.Camera):
       facing: Direction the camera faces relative to device screen. Only allow
               'front', 'rear' or None. None is automatically searching one.
     """
-    if facing not in ALLOWED_FACING:
-      raise CameraError(
-          f'The facing ({facing}) is not in ALLOWED_FACING ({ALLOWED_FACING})')
+    if facing not in AllowedFacing.__members__ and facing is not None:
+      raise CameraError(f'The facing ({facing}) is not in AllowedFacing '
+                        f'({list(AllowedFacing.__members__) + [None]})')
 
     if facing in self._index_mapping:
       return self._index_mapping[facing]

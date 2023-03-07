@@ -239,47 +239,41 @@ _DEFAULT_MIN_FREQUENCY = 4000
 # Default maximum frequency.
 _DEFAULT_MAX_FREQUENCY = 10000
 
-_ARG_INPUT_DEVICE_SCHEMA = JSONSchemaDict('input_dev schema object', {
-    'type': 'array',
-    'items': [
-        {'type': 'string'},
-        {
-            'anyOf': [
-                {
-                    'type': 'string',
-                    'pattern': '^[0-9]+$'
-                },
-                {
-                    'type': 'string',
-                    'enum': list(base.InputDevices)
-                }
-            ]
-        }
-    ],
-    'minItems': 2,
-    'maxItems': 2
-})
+_ARG_INPUT_DEVICE_SCHEMA = JSONSchemaDict(
+    'input_dev schema object', {
+        'type': 'array',
+        'items': [{
+            'type': 'string'
+        }, {
+            'anyOf': [{
+                'type': 'string',
+                'pattern': '^[0-9]+$'
+            }, {
+                'type': 'string',
+                'enum': list(base.InputDevices.__members__)
+            }]
+        }],
+        'minItems': 2,
+        'maxItems': 2
+    })
 
-_ARG_OUTPUT_DEVICE_SCHEMA = JSONSchemaDict('output_dev schema object', {
-    'type': 'array',
-    'items': [
-        {'type': 'string'},
-        {
-            'anyOf': [
-                {
-                    'type': 'string',
-                    'pattern': '^[0-9]+$'
-                },
-                {
-                    'type': 'string',
-                    'enum': list(base.OutputDevices)
-                }
-            ]
-        }
-    ],
-    'minItems': 2,
-    'maxItems': 2
-})
+_ARG_OUTPUT_DEVICE_SCHEMA = JSONSchemaDict(
+    'output_dev schema object', {
+        'type': 'array',
+        'items': [{
+            'type': 'string'
+        }, {
+            'anyOf': [{
+                'type': 'string',
+                'pattern': '^[0-9]+$'
+            }, {
+                'type': 'string',
+                'enum': list(base.OutputDevices.__members__)
+            }]
+        }],
+        'minItems': 2,
+        'maxItems': 2
+    })
 
 _ARG_CHANNELS_SCHEMA_DICT = {
     'type': 'array',
@@ -400,19 +394,19 @@ class AudioLoopTest(test_case.TestCase):
       Arg(
           'input_dev', list, 'Input ALSA device. [card_name, sub_device]. '
           'For example: ["audio_card", "0"]. The sub_device could be a string '
-          f'of an integer or one of {list(base.InputDevices)!r}. If this '
-          'argument is a string of an integer then it represents the PCM Id. '
-          'Otherwise the test will find the PCM Id from UCM config using this '
-          'argument as the keyword.', default=['0', '0'],
+          f'of an integer or one of {list(base.InputDevices.__members__)!r}.'
+          'If this argument is a string of an integer then it represents the '
+          'PCM Id. Otherwise the test will find the PCM Id from UCM config '
+          'using this argument as the keyword.', default=['0', '0'],
           schema=_ARG_INPUT_DEVICE_SCHEMA),
       Arg('num_input_channels', int, 'Number of input channels.', default=2),
       Arg(
           'output_dev', list, 'Output ALSA device. [card_name, sub_device]. '
           'For example: ["audio_card", "0"]. The sub_device could be a string '
-          f'of an integer or one of {list(base.OutputDevices)!r}. If this '
-          'argument is a string of an integer then it represents the PCM Id. '
-          'Otherwise the test will find the PCM Id from UCM config using this '
-          'argument as the keyword.', default=['0', '0'],
+          f'of an integer or one of {list(base.OutputDevices.__members__)!r}.'
+          'If this argument is a string of an integer then it represents the '
+          'PCM Id. Otherwise the test will find the PCM Id from UCM config '
+          'using this argument as the keyword.', default=['0', '0'],
           schema=_ARG_OUTPUT_DEVICE_SCHEMA),
       Arg('num_output_channels', int, 'Number of output channels.', default=2),
       Arg('output_volume', (int, list),
