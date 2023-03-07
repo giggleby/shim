@@ -387,8 +387,8 @@ doc:
 	# Generate rst sources for test cases
 	bin/generate_rsts -o $(DOC_TEMP_DIR)
 	# Copy Markdown files to temp dir
-	rsync -am --include="*.png" --include="*.md" --exclude="*"\
-	  --files-from=<(git ls-tree -r HEAD --name-only) . \
+	rsync -am --files-from=<(git ls-tree -r HEAD --name-only |\
+	  grep "\.\(md\|png\)$$") . \
 	  $(DOC_TEMP_DIR)/$(DOC_MD_DIR)
 	CROS_FACTORY_PY_ROOT=$(realpath py_pkg) $(MK_DIR)/sphinx.sh $(MAKE) \
 	                     $(DOC_TEMP_DIR)
