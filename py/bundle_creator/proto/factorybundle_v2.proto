@@ -66,6 +66,23 @@ message DownloadBundleResponse {
   string download_link = 1;
 }
 
+message ExtractFirmwareInfoRequest {
+  string project = 1;
+  string phase = 2;
+  string image_gs_path = 3;
+  string email = 4;
+  int64 bug_number = 5;
+}
+
+message ExtractFirmwareInfoResponse {
+  enum Status {
+    UNKNOWN = 0;
+    NO_ERROR = 1;
+  }
+  Status status = 1;
+}
+
+
 service FactoryBundleV2Service {
   rpc CreateBundle(CreateBundleRequest)
       returns (CreateBundleResponse) {
@@ -75,5 +92,8 @@ service FactoryBundleV2Service {
   }
   rpc DownloadBundle(DownloadBundleRequest)
       returns (DownloadBundleResponse) {
+  }
+  rpc ExtractFirmwareInfo(ExtractFirmwareInfoRequest)
+      returns (ExtractFirmwareInfoResponse) {
   }
 }

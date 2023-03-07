@@ -10,6 +10,7 @@ from unittest import mock
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 import pytz
 
+
 # isort: split
 
 from cros.factory.bundle_creator.app_engine_v2 import stubby_handler
@@ -39,6 +40,13 @@ class StubbyHandlerTest(unittest.TestCase):
     self._download_bundle_request = factorybundle_v2_pb2.DownloadBundleRequest()
     self._download_bundle_request.email = 'foo@bar'
     self._download_bundle_request.blob_path = 'board/project/fake.tar.bz2'
+
+    self._extract_fw_info_request = (
+        factorybundle_v2_pb2.ExtractFirmwareInfoRequest())
+    self._extract_fw_info_request.project = 'project'
+    self._extract_fw_info_request.phase = 'EVT'
+    self._extract_fw_info_request.image_gs_path = 'fake-path'
+    self._extract_fw_info_request.email = 'foo@bar'
 
     mock_flask_patcher = mock.patch(
         'cros.factory.bundle_creator.utils.allowlist_utils.flask')
@@ -176,6 +184,22 @@ class StubbyHandlerTest(unittest.TestCase):
     method = self._mock_storage_connector.GrantReadPermissionToBlob
     method.assert_called_once_with(self._download_bundle_request.email,
                                    self._download_bundle_request.blob_path)
+
+  def testExtractFirmwareInfo_succeed_returnsExpectedResponse(self):
+    response = self._stubby_handler.ExtractFirmwareInfo(
+        self._extract_fw_info_request)
+
+    expected_response = factorybundle_v2_pb2.ExtractFirmwareInfoResponse()
+    expected_response.status = (
+        factorybundle_v2_pb2.ExtractFirmwareInfoResponse.Status.NO_ERROR)
+    self.assertEqual(response, expected_response)
+
+  def testExtractFirmwareInfo_succeed_verifiesCallingConnector(self):
+    self._stubby_handler.ExtractFirmwareInfo(self._extract_fw_info_request)
+
+    self._mock_pubsub_connector.PublishMessage.assert_called_once_with(
+        'fake-fw-info-extractor-topic',
+        self._extract_fw_info_request.SerializeToString())
 
   def _CreateStorageBundleInfo(
       self, email: str, filename: str,

@@ -114,3 +114,14 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
         f'https://storage.cloud.google.com/{config.BUNDLE_BUCKET}/'
         f'{request.blob_path}')
     return response
+
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
+  def ExtractFirmwareInfo(
+      self, request: factorybundle_v2_pb2.ExtractFirmwareInfoRequest
+  ) -> factorybundle_v2_pb2.ExtractFirmwareInfoResponse:
+    self._pubsub_connector.PublishMessage(config.FW_INFO_EXTRACTOR_TOPIC,
+                                          request.SerializeToString())
+    response = factorybundle_v2_pb2.ExtractFirmwareInfoResponse()
+    response.status = (
+        factorybundle_v2_pb2.ExtractFirmwareInfoResponse.Status.NO_ERROR)
+    return response

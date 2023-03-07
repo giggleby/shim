@@ -7,6 +7,7 @@ import time
 from google.cloud import logging as gc_logging
 
 from cros.factory.bundle_creator.docker import config
+from cros.factory.bundle_creator.docker import firmware_info_extractor
 from cros.factory.bundle_creator.docker import worker
 
 
@@ -14,9 +15,11 @@ def main():
   """The main loop tries to process a request per 30 seconds."""
   logger = logging.getLogger('main')
   create_bundle_worker = worker.EasyBundleCreationWorker()
+  fw_info_extractor = firmware_info_extractor.FirmwareInfoExtractor()
   while True:
     try:
       create_bundle_worker.TryProcessRequest()
+      fw_info_extractor.TryProcessRequest()
     except Exception as e:
       logger.error(e)
     time.sleep(30)
