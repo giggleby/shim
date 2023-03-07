@@ -1186,8 +1186,7 @@ class Gooftool:
     # ensure the correctness of commands executed in shell.
     additional_system_info = {
         'platform_name':
-            self._util.GetReleaseImageLsbData().get('CHROMEOS_RELEASE_BOARD',
-                                                    ''),
+            self._util.GetReleaseImageBoardName(),
         'crossystem':
             self._util.GetCrosSystem(),
         'modem_status':
