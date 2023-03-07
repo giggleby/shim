@@ -52,7 +52,7 @@
           step: 1
           unit: 'lines'
       steps:
-        - command: 'if [ "$1" = "event log" ]; then elogtool list | tail -n $2; else ectool $1 | tail -n $2; fi'
+        - command: 'if [ "$1" = "event log" ]; then elogtool list --utc | tail -n $2; else ectool $1 | tail -n $2; fi'
 
     - name: View Chrome logs
       inputs:

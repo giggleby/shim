@@ -57,7 +57,7 @@ class ChromeOSBoard(linux.LinuxBoard):
   @type_utils.Overrides
   def GetStartupMessages(self):
     res = super().GetStartupMessages()
-    eventlog = self.CallOutput(['elogtool', 'list'], stderr=subprocess.STDOUT)
+    eventlog = self.CallOutput(['elogtool', 'list', '--utc'], stderr=subprocess.STDOUT)
 
     if eventlog:
       res['firmware_eventlog'] = eventlog

@@ -147,7 +147,7 @@ def ClearEventlogCache():
 def _GetEventLog(dut):
   # Use elogtool command instead of reading from eventlog.txt in case eventlog
   # is not flushed to file yet. See b/249407529.
-  return dut.CheckOutput('elogtool list', log=True).splitlines()
+  return dut.CheckOutput('elogtool list --utc', log=True).splitlines()
 
 
 def _ReadEventLog(dut):

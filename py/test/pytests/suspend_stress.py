@@ -79,7 +79,7 @@ def GetElog(dut: device_types.DeviceBoard,
   Returns:
     The elog.
   """
-  p = dut.Popen(['elogtool', 'list'], stdout=dut.PIPE, stderr=dut.PIPE)
+  p = dut.Popen(['elogtool', 'list', '--utc'], stdout=dut.PIPE, stderr=dut.PIPE)
   stdout, unused_stderr = p.communicate()
   stdout_lines = stdout.splitlines()
   if cut_line:
