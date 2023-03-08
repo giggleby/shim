@@ -34,7 +34,7 @@ class HWIDAPIConnector:
 
   def CreateHWIDFirmwareInfoCL(self, bundle_record: str,
                                original_requester: str, bug_number: int,
-                               phase: str) -> List[str]:
+                               phase: str, description: str) -> List[str]:
     """Sends HTTP request to HWID API to create HWID firmware info change.
 
     Args:
@@ -43,6 +43,7 @@ class HWIDAPIConnector:
           Easy Bundle Creation.
       bug_number: The related bug number used to create HWID CL.
       phase: The build phase of the project.
+      description: The description of the CL.
 
     Returns:
       A list contains created HWID CL url.
@@ -57,7 +58,7 @@ class HWIDAPIConnector:
     }
     data = {
         'original_requester': original_requester,
-        'description': 'This CL is created by Easy Bundle Creation service.',
+        'description': description,
         'bundle_record': bundle_record,
         'bug_number': bug_number,
         'phase': phase,

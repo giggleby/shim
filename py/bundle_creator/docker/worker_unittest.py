@@ -418,7 +418,8 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     mock_method.assert_called_once_with(
         _BUNDLE_RECORD, self._message.request.email,
         self._message.request.hwid_related_bug_number,
-        self._message.request.phase)
+        self._message.request.phase,
+        'Firmware info extracted from factory_bundle_project_20220608_proto')
 
   def testTryProcessRequest_createBundleMessageV2_verifiesWorkerResult(self):
     message_v2 = factorybundle_v2_pb2.CreateBundleMessage()

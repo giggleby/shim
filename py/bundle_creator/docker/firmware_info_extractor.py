@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 import os
 
+
 # isort: split
 
 from cros.factory.bundle_creator.connector import cloudtasks_connector
@@ -131,9 +132,10 @@ class FirmwareInfoExtractor(worker.BaseWorker):
 
       fw_info = json_utils.DumpStr(fw_info)
       cl_url = []
+      description = f'Firmware info extracted from {image_file}'
       try:
         cl_url += self._hwid_api_connector.CreateHWIDFirmwareInfoCL(
-            fw_info, task.email, task.bug_number, task.phase)
+            fw_info, task.email, task.bug_number, task.phase, description)
       except hwid_api_connector.HWIDAPIRequestException as e:
         error_msg = str(e)
         self._logger.error(error_msg)

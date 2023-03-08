@@ -291,10 +291,12 @@ class EasyBundleCreationWorker(BaseWorker):
       cl_error_msg = None
       if task.update_hwid_db_firmware_info:
         bundle_record = file_utils.ReadFile(bundle_record_path)
+        description = ('Firmware info extracted from '
+                       f'factory_bundle_{task.project}_{bundle_name}')
         try:
           cl_url += self._hwid_api_connector.CreateHWIDFirmwareInfoCL(
               bundle_record, task.email, task.hwid_related_bug_number,
-              task.phase)
+              task.phase, description)
         except hwid_api_connector.HWIDAPIRequestException as e:
           cl_error_msg = str(e)
           self._logger.error(cl_error_msg)

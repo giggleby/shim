@@ -94,7 +94,8 @@ class FirmwareInfoExtractorTest(unittest.TestCase):
     fn = self._mock_cloudtasks_connector.ResponseFirmwareInfoExtractorResult
     fn.assert_called_once_with(expected_result)
     fn = self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL
-    fn.assert_called_once_with('{"board": "board"}', 'foo@bar', 123, 'evt')
+    fn.assert_called_once_with('{"board": "board"}', 'foo@bar', 123, 'evt',
+                               'Firmware info extracted from image')
 
   def testTryProcessRequest_HWIDAPIError_verifiesErrorMessage(self):
     self._CreateFakeFirmwareInfo({})
