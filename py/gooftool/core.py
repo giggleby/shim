@@ -1505,8 +1505,9 @@ class Gooftool:
 
     gsc = gsc_utils.GSCUtils()
     if gsc.IsTi50():
-      self.Ti50SetAddressingMode()
-      self.Ti50SetSWWPRegister(no_write_protect, wpsr)
+      if no_write_protect or wpsr:
+        self.Ti50SetAddressingMode()
+        self.Ti50SetSWWPRegister(no_write_protect, wpsr)
     else:
       self._Cr50SetROHashForShipping()
     self._Cr50SetBoardId(two_stages)
