@@ -10,6 +10,7 @@ import os
 import pwd
 import sys
 
+
 # derived from src/aosp/external/minijail/minijail0_cli.c
 OPT_STRING = 'u:g:sS:c:C:P:b:B:V:f:m::M::k:a:e::R:T:vrGhHinNplLt::IUKwyYzd'
 # TODO(pihsun): The uts argument is actually optional long option, but Python
@@ -23,6 +24,9 @@ LONG_OPTIONS = [
     'logging=',
     'profile=',
     'seccomp-bpf-binary',
+    'no-default-runtime-environment',
+    'no-fs-restrictions',
+    'config',  # used by pciguard
 ]
 
 # Only override these programs (find from /etc/init/*.conf)
