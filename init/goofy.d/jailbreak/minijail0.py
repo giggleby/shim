@@ -26,6 +26,7 @@ LONG_OPTIONS = [
     'seccomp-bpf-binary',
     'no-default-runtime-environment',
     'no-fs-restrictions',
+    'config',  # used by pciguard
 ]
 
 # Only override these programs (find from /etc/init/*.conf)
