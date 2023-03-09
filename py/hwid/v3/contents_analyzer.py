@@ -214,6 +214,22 @@ class ContentsAnalyzer:
     self._ValidateChangeOfComponents(report)
     return report
 
+  def ValidateFirmwareComponents(self):
+    """Check if modified (created) firmware components are valid."""
+    report = ValidationReport.CreateEmpty()
+    for comps in self._ExtractHWIDComponents().values():
+      for comp in comps:
+        if (comp.from_factory_bundle and not comp.is_newly_added and
+            (comp.diff_prev.name_changed or comp.diff_prev.values_changed)):
+          report.errors.append(
+              Error(
+                  ErrorCode.CONTENTS_ERROR, 'Modifying firmware component '
+                  f'{comp.diff_prev.prev_comp_name!r} which is generated from '
+                  'the system. Is this change proposal mistakenly based on a '
+                  'legacy HWID bundle?'))
+    return report
+
+
   def _ValidateChangeOfNewCreation(self, report: ValidationReport) -> bool:
     """Checks if the newly created HWID DB applies up-to-date styles.
 
@@ -522,6 +538,7 @@ class ContentsAnalyzer:
     link_avl: bool
     probe_value_alignment_status: ProbeValueAlignmentStatus
     skip_avl_check: bool
+    from_factory_bundle: bool
 
   def _ExtractHWIDComponents(
       self,
@@ -553,6 +570,7 @@ class ContentsAnalyzer:
             ProbeValueAlignmentStatus.FromProbeValues(comp_info.values))
 
         diffstatus = None
+        from_factory_bundle = False
         skip_avl_check = (
             skip_avl_check_checker(comp_cls, comp_info)
             if skip_avl_check_checker else False)
@@ -578,6 +596,7 @@ class ContentsAnalyzer:
               unchanged, name_changed, support_status_changed, values_changed,
               prev_comp_name, prev_support_status,
               probe_value_alignment_status_changed, prev_alignment_status)
+          from_factory_bundle = bool(prev_comp_info.bundle_uuids)
           is_newly_added = False
         else:
           is_newly_added = True
@@ -587,7 +606,7 @@ class ContentsAnalyzer:
                 comp_name, comp_info.status, noseq_comp_name,
                 actual_seq if sep else None, name_info, expected_seq,
                 is_newly_added, null_values, diffstatus, link_avl,
-                curr_alignment_status, skip_avl_check))
+                curr_alignment_status, skip_avl_check, from_factory_bundle))
     return ret
 
   @classmethod

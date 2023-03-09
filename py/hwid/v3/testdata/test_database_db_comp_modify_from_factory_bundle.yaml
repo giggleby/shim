@@ -11,7 +11,7 @@ board: CHROMEBOOK
 # 若修改将使设备配置變為无效，并且不得销售此设备。
 #
 #####
-checksum: af7ceb34d17e8a9ff5edd8f9bbed0b22f603b738
+checksum: e19b35db8a39c104d92a05315593a868e142a286
 
 ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
 
@@ -54,7 +54,7 @@ components:
           the_attribute: EEE
   ro_ec_firmware:
     items:
-      ro_ec_firmware_1: !from_factory_bundle
+      ro_ec_firmware_2: !from_factory_bundle
         bundle_uuids:
         - uuid1
         status: unqualified

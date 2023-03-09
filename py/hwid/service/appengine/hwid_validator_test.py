@@ -14,6 +14,7 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import file_utils
 
+
 TESTDATA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata')
 
@@ -35,6 +36,10 @@ GOLDEN_HWIDV3_DATA_AFTER_INVALID_NAME_PATTERN_WITH_NOTE = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-golden-after-comp-note-bad.yaml'))
 GOLDEN_HWIDV3_DATA_AFTER_VALID_NAME_PATTERN_WITH_NOTE = file_utils.ReadFile(
     os.path.join(TESTDATA_PATH, 'v3-golden-after-comp-note-good.yaml'))
+GOLDEN_HWIDV3_DATA_FROM_FACTORY_BUNDLE = file_utils.ReadFile(
+    os.path.join(TESTDATA_PATH, 'v3-from-factory-bundle.yaml'))
+GOLDEN_HWIDV3_DATA_FROM_FACTORY_BUNDLE_MODIFIED = file_utils.ReadFile(
+    os.path.join(TESTDATA_PATH, 'v3-from-factory-bundle-modified.yaml'))
 
 _ComponentNameInfo = contents_analyzer.ComponentNameInfo
 
@@ -52,6 +57,13 @@ class HwidValidatorTest(unittest.TestCase):
     with self.assertRaises(hwid_validator.ValidationError):
       hwid_validator.HwidValidator().ValidateChange(
           GOLDEN_HWIDV3_DATA_AFTER_BAD, GOLDEN_HWIDV3_DATA_BEFORE)
+
+  def testValidateChange_modifiedFromFactoryBundle(self):
+    with self.assertRaises(hwid_validator.ValidationError):
+      hwid_validator.HwidValidator().ValidateChange(
+          GOLDEN_HWIDV3_DATA_FROM_FACTORY_BUNDLE,
+          GOLDEN_HWIDV3_DATA_FROM_FACTORY_BUNDLE,
+          GOLDEN_HWIDV3_DATA_FROM_FACTORY_BUNDLE_MODIFIED)
 
   def testValidateSarien_withValidChange(self):
     hwid_validator.HwidValidator().ValidateChange(SARIEN_DATA_GOOD,

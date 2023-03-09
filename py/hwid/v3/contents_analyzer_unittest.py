@@ -25,6 +25,8 @@ DB_COMP_AFTER_GOOD_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_good_change.yaml')
 DB_COMP_AFTER_INCOMPATIBLE_CHANGE_PATH = os.path.join(
     _TEST_DATA_PATH, 'test_database_db_comp_incompatible_change.yaml')
+DB_COMP_MODIFY_FROM_FACTORY_BUNDLE_PATH = os.path.join(
+    _TEST_DATA_PATH, 'test_database_db_comp_modify_from_factory_bundle.yaml')
 
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _HWIDCompAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
@@ -72,6 +74,22 @@ class ContentsAnalyzerTest(unittest.TestCase):
         "'display_panel_123_456') and values often causes compatibility "
         'issues. Is this change proposal mistakenly based on a legacy HWID '
         'bundle?')
+    self.assertIn(expect_error, report.errors)
+
+  def test_ValidateFirmwareComponents_ModifyFromFactoryBundle(self):
+    prev_db_contents = file_utils.ReadFile(DB_COMP_BEFORE_PATH)
+    curr_db_contents = file_utils.ReadFile(
+        DB_COMP_MODIFY_FROM_FACTORY_BUNDLE_PATH)
+
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    report = inst.ValidateFirmwareComponents()
+
+    expect_error = contents_analyzer.Error(
+        contents_analyzer.ErrorCode.CONTENTS_ERROR,
+        "Modifying firmware component 'ro_ec_firmware_1' which is generated "
+        'from the system. Is this change proposal mistakenly based on a legacy '
+        'HWID bundle?')
     self.assertIn(expect_error, report.errors)
 
   def test_AnalyzeChange_PreconditionErrors(self):

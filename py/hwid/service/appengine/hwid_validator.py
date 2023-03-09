@@ -10,6 +10,7 @@ from cros.factory.hwid.service.appengine import verification_payload_generator a
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 
+
 ErrorCode = contents_analyzer.ErrorCode
 Error = contents_analyzer.Error
 
@@ -41,7 +42,8 @@ class HwidValidator:
     if report.errors:
       raise ValidationError(report.errors)
 
-  def ValidateChange(self, hwid_config_contents, prev_hwid_config_contents):
+  def ValidateChange(self, hwid_config_contents, prev_hwid_config_contents,
+                     prev_hwid_config_contents_with_bundle_uuid=None):
     """Validates a HWID config change.
 
     This method validates the current config (strict, i.e. including its
@@ -52,6 +54,8 @@ class HwidValidator:
     Args:
       hwid_config_contents: the current HWID config as a string.
       prev_hwid_config_contents: the previous HWID config as a string.
+      prev_hwid_config_contents_with_bundle_uuid: the previous HWID config with
+        bundle_uuid as a string.
     """
     expected_checksum = database.Database.ChecksumForText(hwid_config_contents)
     analyzer = contents_analyzer.ContentsAnalyzer(
@@ -64,6 +68,14 @@ class HwidValidator:
     report_of_integrity = analyzer.ValidateIntegrity()
     if report_of_integrity.errors:
       raise ValidationError(report_of_integrity.errors)
+
+    if prev_hwid_config_contents_with_bundle_uuid:
+      analyzer_of_firmware = contents_analyzer.ContentsAnalyzer(
+          hwid_config_contents, None,
+          prev_hwid_config_contents_with_bundle_uuid)
+      report_of_firmware = analyzer_of_firmware.ValidateFirmwareComponents()
+      if report_of_firmware.errors:
+        raise ValidationError(report_of_firmware.errors)
 
     db = analyzer.curr_db_instance
     vpg_target = config.CONFIG.vpg_targets.get(db.project)

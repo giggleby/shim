@@ -99,8 +99,6 @@ class HWIDV3SelfServiceActionHelper:
     new_db = database.Database.LoadData(internal_db_content)
     for comp_cls in common.FirmwareComps:
       new_db_components = new_db.GetComponents(comp_cls)
-      # TODO: disable renaming fw related components as bundle_uuids will be
-      # lost.
       for comp_name, comp_info in old_db.GetComponents(comp_cls).items():
         if comp_info.bundle_uuids and comp_name in new_db_components:
           new_db.SetBundleUUIDs(comp_cls, comp_name, comp_info.bundle_uuids)
@@ -189,8 +187,11 @@ class HWIDV3SelfServiceActionHelper:
         ], [], {})
 
     try:
-      self._hwid_validator.ValidateChange(new_hwid_db_contents,
-                                          curr_hwid_db_contents)
+      # Patch bundle_uuids to external DB to validate NOT editing components
+      # with bundle_uuids.
+      self._hwid_validator.ValidateChange(
+          new_hwid_db_contents, curr_hwid_db_contents,
+          self.PatchFirmwareBundleUUIDs(curr_hwid_db_contents))
     except hwid_validator.ValidationError as ex:
       return report_factory(ex.errors, [], [], {})
 
