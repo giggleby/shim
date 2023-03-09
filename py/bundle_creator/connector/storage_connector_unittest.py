@@ -62,6 +62,45 @@ class StorageConnectorTest(unittest.TestCase):
 
   _CLOUD_PROJECT_ID = 'fake-project-id'
   _BUCKET_NAME = 'fake-bucket'
+
+  def setUp(self):
+    self._mock_blob = mock.Mock()
+    self._mock_bucket = mock.Mock()
+    self._mock_bucket.blob.return_value = self._mock_blob
+    mock_storage_patcher = mock.patch('google.cloud.storage.Client')
+    mock_client = mock_storage_patcher.start().return_value
+    mock_client.get_bucket.return_value = self._mock_bucket
+    self.addCleanup(mock_storage_patcher.stop)
+
+    self._connector = storage_connector.StorageConnector(
+        self._CLOUD_PROJECT_ID, self._BUCKET_NAME)
+
+  def testGrantReadPermissionToBlob_succeed_verifyCallingBucketAndAcl(self):
+    email = 'foo@bar'
+    blob_path = 'board/project/fake.tar.bz2'
+    mock_blob = mock.Mock()
+    self._mock_bucket.get_blob.return_value = mock_blob
+    mock_user_entity = mock.Mock()
+    mock_blob.acl.user.return_value = mock_user_entity
+
+    self._connector.GrantReadPermissionToBlob(email, blob_path)
+
+    self._mock_bucket.get_blob.assert_called_once_with(blob_path)
+    mock_blob.acl.user.assert_called_once_with(email)
+    mock_user_entity.grant_read.assert_called_once()
+    mock_blob.acl.save.assert_called_once()
+
+  def testReadFile_succeed(self):
+    self._mock_bucket.blob.return_value.download_as_string.return_value = (
+        'fake_content')
+
+    self.assertEqual('fake_content', self._connector.ReadFile('fake_path'))
+
+
+class FactoryBundleStorageConnectorTest(unittest.TestCase):
+
+  _CLOUD_PROJECT_ID = 'fake-project-id'
+  _BUCKET_NAME = 'fake-bucket'
   _BUNDLE_PATH = '/tmp/fake_bundle_path'
   _EXPECTED_FILENAME = (
       'factory_bundle_project_20220508_0000_proto_00000.tar.bz2')
@@ -87,7 +126,7 @@ class StorageConnectorTest(unittest.TestCase):
     mock_client.get_bucket.return_value = self._mock_bucket
     self.addCleanup(mock_storage_patcher.stop)
 
-    self._connector = storage_connector.StorageConnector(
+    self._connector = storage_connector.FactoryBundleStorageConnector(
         self._CLOUD_PROJECT_ID, self._BUCKET_NAME)
 
   def testUploadCreatedBundle_verifyInitializesBlobWithExpectedValues(self):
@@ -209,21 +248,6 @@ class StorageConnectorTest(unittest.TestCase):
 
     self.assertEqual(len(infos), 1)
     self.assertEqual(infos[0].created_timestamp_sec, 1672750600)
-
-  def testGrantReadPermissionToBlob_succeed_verifyCallingBucketAndAcl(self):
-    email = 'foo@bar'
-    blob_path = 'board/project/fake.tar.bz2'
-    mock_blob = mock.Mock()
-    self._mock_bucket.get_blob.return_value = mock_blob
-    mock_user_entity = mock.Mock()
-    mock_blob.acl.user.return_value = mock_user_entity
-
-    self._connector.GrantReadPermissionToBlob(email, blob_path)
-
-    self._mock_bucket.get_blob.assert_called_once_with(blob_path)
-    mock_blob.acl.user.assert_called_once_with(email)
-    mock_user_entity.grant_read.assert_called_once()
-    mock_blob.acl.save.assert_called_once()
 
   def _CreateMockBlob(self, project: str, created_timestamp_sec: int):
     mock_blob = mock.Mock(

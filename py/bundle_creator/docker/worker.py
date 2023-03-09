@@ -173,7 +173,7 @@ class EasyBundleCreationWorker(BaseWorker):
         config.HWID_API_ENDPOINT)
     self._pubsub_connector = pubsub_connector.PubSubConnector(
         config.GCLOUD_PROJECT)
-    self._storage_connector = storage_connector.StorageConnector(
+    self._storage_connector = storage_connector.FactoryBundleStorageConnector(
         config.GCLOUD_PROJECT, config.BUNDLE_BUCKET)
 
   def TryProcessRequest(self):

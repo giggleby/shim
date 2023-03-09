@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import collections
 import datetime
+import json
 
 from cros.factory.bundle_creator.app_engine_v2 import config
 from cros.factory.bundle_creator.connector import firestore_connector
@@ -11,6 +13,9 @@ from cros.factory.bundle_creator.connector import storage_connector
 from cros.factory.bundle_creator.proto import factorybundle_v2_pb2  # pylint: disable=no-name-in-module
 from cros.factory.bundle_creator.utils import allowlist_utils
 from cros.factory.bundle_creator.utils import protorpc_utils
+
+
+IMAGE_ARCHIVE_BUCKET = 'chromeos-image-archive'
 
 
 class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
@@ -24,8 +29,10 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
         config.GCLOUD_PROJECT)
     self._pubsub_connector = pubsub_connector.PubSubConnector(
         config.GCLOUD_PROJECT)
-    self._storage_connector = storage_connector.StorageConnector(
+    self._storage_connector = storage_connector.FactoryBundleStorageConnector(
         config.GCLOUD_PROJECT, config.BUNDLE_BUCKET)
+    self._image_archive_storage_connector = storage_connector.StorageConnector(
+        config.GCLOUD_PROJECT, IMAGE_ARCHIVE_BUCKET)
 
   @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
   def CreateBundle(
@@ -124,4 +131,28 @@ class FactoryBundleV2Service(protorpc_utils.ProtoRPCServiceBase):
     response = factorybundle_v2_pb2.ExtractFirmwareInfoResponse()
     response.status = (
         factorybundle_v2_pb2.ExtractFirmwareInfoResponse.Status.NO_ERROR)
+    return response
+
+  @allowlist_utils.Allowlist(config.ALLOWED_LOAS_PEER_USERNAMES)
+  def GetFirmwareInfoPreview(
+      self, request: factorybundle_v2_pb2.GetFirmwareInfoPreviewRequest
+  ) -> factorybundle_v2_pb2.GetFirmwareInfoPreviewResponse:
+    path = (f'{request.board}-release/R{request.milestone}-{request.version}/'
+            'config.yaml')
+    cros_config = self._image_archive_storage_connector.ReadFile(path)
+    fw_info_preview = collections.defaultdict(set)
+    for conf in json.loads(cros_config)['chromeos']['configs']:
+      if conf.get('name') != request.project:
+        continue
+      if 'firmware' in conf and 'main-ro-image' in conf['firmware']:
+        fw_info_preview['main-ro-image'].add(conf['firmware']['main-ro-image'])
+      if 'firmware' in conf and 'ec-ro-image' in conf['firmware']:
+        fw_info_preview['ec-ro-image'].add(conf['firmware']['ec-ro-image'])
+      if 'fingerprint' in conf and 'board' in conf['fingerprint']:
+        fw_info_preview['fp-ro-image'].add(conf['fingerprint']['board'])
+
+    response = factorybundle_v2_pb2.GetFirmwareInfoPreviewResponse()
+    response.main_ro_image.extend(fw_info_preview['main-ro-image'])
+    response.ec_ro_image.extend(fw_info_preview['ec-ro-image'])
+    response.fp_ro_image.extend(fw_info_preview['fp-ro-image'])
     return response

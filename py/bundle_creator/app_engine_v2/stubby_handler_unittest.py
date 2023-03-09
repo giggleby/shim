@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import datetime
+import json
 from typing import Dict
 import unittest
 from unittest import mock
@@ -77,10 +78,18 @@ class StubbyHandlerTest(unittest.TestCase):
     self._mock_storage_connector = mock.Mock()
     mock_storage_connector_patcher = mock.patch(
         'cros.factory.bundle_creator.connector'
-        '.storage_connector.StorageConnector')
+        '.storage_connector.FactoryBundleStorageConnector')
     mock_storage_connector_patcher.start().return_value = (
         self._mock_storage_connector)
     self.addCleanup(mock_storage_connector_patcher.stop)
+
+    self._mock_image_archive_storage_connector = mock.Mock()
+    mock_image_archive_storage_connector_patcher = mock.patch(
+        'cros.factory.bundle_creator.connector'
+        '.storage_connector.StorageConnector')
+    mock_image_archive_storage_connector_patcher.start().return_value = (
+        self._mock_image_archive_storage_connector)
+    self.addCleanup(mock_image_archive_storage_connector_patcher.stop)
 
     self._stubby_handler = stubby_handler.FactoryBundleV2Service()
 
@@ -200,6 +209,34 @@ class StubbyHandlerTest(unittest.TestCase):
     self._mock_pubsub_connector.PublishMessage.assert_called_once_with(
         'fake-fw-info-extractor-topic',
         self._extract_fw_info_request.SerializeToString())
+
+  def testGetFirmwareInfoPreview_succeed_returnsExpectedResponse(self):
+    cros_config = {
+        'chromeos': {
+            'configs': [{
+                'name': 'proj',
+                'firmware': {
+                    'main-ro-image': 'main-ro.bin',
+                    'ec-ro-image': 'ec-ro.bin'
+                },
+                'fingerprint': {
+                    'board': 'fpboard'
+                }
+            }]
+        }
+    }
+    self._mock_image_archive_storage_connector.ReadFile.return_value = (
+        json.dumps(cros_config))
+
+    request = factorybundle_v2_pb2.GetFirmwareInfoPreviewRequest(
+        project='proj', board='board', milestone=111, version='1111.1.1')
+    response = self._stubby_handler.GetFirmwareInfoPreview(request)
+
+    expected_response = factorybundle_v2_pb2.GetFirmwareInfoPreviewResponse()
+    expected_response.main_ro_image.append('main-ro.bin')
+    expected_response.ec_ro_image.append('ec-ro.bin')
+    expected_response.fp_ro_image.append('fpboard')
+    self.assertEqual(expected_response, response)
 
   def _CreateStorageBundleInfo(
       self, email: str, filename: str,

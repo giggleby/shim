@@ -258,7 +258,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
                         self._mock_cloudtasks_connector)
     self._MockConnector('hwid_api_connector.HWIDAPIConnector',
                         self._mock_hwid_api_connector)
-    self._MockConnector('storage_connector.StorageConnector',
+    self._MockConnector('storage_connector.FactoryBundleStorageConnector',
                         self._mock_storage_connector)
     self._mock_storage_connector.UploadCreatedBundle.return_value = (
         self._GS_PATH)

@@ -84,10 +84,29 @@ class StorageConnector:
       cloud_project_id: A cloud project id.
       bucket_name: A name of the bucket which stored files.
     """
-    self._logger = logging.getLogger('StorageConnector')
+    self._logger = logging.getLogger(self.__class__.__name__)
     self._bucket_name = bucket_name
     self._bucket = storage.Client(
         project=cloud_project_id).get_bucket(bucket_name)
+
+  def GrantReadPermissionToBlob(self, email: str, blob_path: str):
+    """Grants the specific blob's read permission to the specific user.
+
+    Args:
+      email: The user's email to get the read permission.
+      blob_path: The path to the blob.
+    """
+    blob = self._bucket.get_blob(blob_path)
+    blob.acl.user(email).grant_read()
+    blob.acl.save()
+
+  def ReadFile(self, path: str):
+    """Reads file from the path."""
+    return self._bucket.blob(path).download_as_string()
+
+
+class FactoryBundleStorageConnector(StorageConnector):
+  """Connector for access Factory Bundle on Cloud Storage"""
 
   def UploadCreatedBundle(self, bundle_path: str,
                           bundle_metadata: StorageBundleMetadata) -> str:
@@ -174,14 +193,3 @@ class StorageConnector:
               'Time-Created', datetime.timestamp(blob.time_created)))
       infos.append(info)
     return infos
-
-  def GrantReadPermissionToBlob(self, email: str, blob_path: str):
-    """Grants the specific blob's read permission to the specific user.
-
-    Args:
-      email: The user's email to get the read permission.
-      blob_path: The path to the blob.
-    """
-    blob = self._bucket.get_blob(blob_path)
-    blob.acl.user(email).grant_read()
-    blob.acl.save()

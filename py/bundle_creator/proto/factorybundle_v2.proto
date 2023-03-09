@@ -82,6 +82,19 @@ message ExtractFirmwareInfoResponse {
   Status status = 1;
 }
 
+message GetFirmwareInfoPreviewRequest {
+  string project = 1;
+  string board = 2;
+  int64 milestone = 3;
+  string version = 4;
+}
+
+message GetFirmwareInfoPreviewResponse {
+  repeated string main_ro_image = 1;
+  repeated string ec_ro_image = 2;
+  repeated string fp_ro_image = 3;
+}
+
 
 service FactoryBundleV2Service {
   rpc CreateBundle(CreateBundleRequest)
@@ -95,5 +108,8 @@ service FactoryBundleV2Service {
   }
   rpc ExtractFirmwareInfo(ExtractFirmwareInfoRequest)
       returns (ExtractFirmwareInfoResponse) {
+  }
+  rpc GetFirmwareInfoPreview(GetFirmwareInfoPreviewRequest)
+      returns (GetFirmwareInfoPreviewResponse) {
   }
 }
