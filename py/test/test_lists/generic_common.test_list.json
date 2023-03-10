@@ -1424,7 +1424,9 @@
         "USBTypeAManualRight"
       ]
     },
-    "USBTypeATest": "USBTypeAManualTest",
+    "USBTypeATest": {
+      "inherit": "USBTypeAManualTest"
+    },
     "USBTypeCManualBase": {
       "inherit": "TestGroup",
       "subtests": [
@@ -1533,7 +1535,9 @@
         "USBTypeCManualRight"
       ]
     },
-    "USBTypeCTest": "USBTypeCManualTest",
+    "USBTypeCTest": {
+      "inherit": "USBTypeCManualTest"
+    },
     "UpdateCBI": {
       "pytest_name": "update_cbi",
       "label": "Update CBI",

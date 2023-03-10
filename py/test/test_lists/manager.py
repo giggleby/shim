@@ -382,7 +382,7 @@ class InlineTestItemFixer:
         updated_subtests.append(subtest_item)
         continue
 
-      subtest_item_name = test_item_name + f'Step{i}'
+      subtest_item_name = f'{test_item_name}Step{i}'
       updated_subtests.append(subtest_item_name)
       new_definition, updated_subtest_item = self._FixOneTestItem(
           subtest_item, subtest_item_name)
