@@ -55,6 +55,14 @@ class ProbeValueAlignmentStatus(enum.Enum):
     return cls.ALIGNED if values.probe_value_matched else cls.NOT_ALIGNED
 
 
+def _GetConverterIdentifier(comp_info: database.ComponentInfo) -> Optional[str]:
+  if comp_info.value_is_none:
+    return None
+  if not isinstance(comp_info.values, rule.AVLProbeValue):
+    return None
+  return comp_info.values.converter_identifier
+
+
 class DiffStatus(NamedTuple):
   """Diff stats with the corresponding component in the previous DB."""
   unchanged: bool
@@ -65,6 +73,7 @@ class DiffStatus(NamedTuple):
   prev_support_status: str
   probe_value_alignment_status_changed: bool
   prev_probe_value_alignment_status: ProbeValueAlignmentStatus
+  converter_changed: bool
 
 
 ComponentNameInfo = name_pattern_adapter.NameInfo
@@ -588,14 +597,22 @@ class ContentsAnalyzer:
           probe_value_alignment_status_changed = (
               curr_alignment_status != prev_alignment_status)
 
+          converter_changed = (
+              _GetConverterIdentifier(comp_info) !=
+              _GetConverterIdentifier(prev_comp_info))
+
           unchanged = not any([
-              name_changed, support_status_changed, values_changed,
-              probe_value_alignment_status_changed
+              name_changed,
+              support_status_changed,
+              values_changed,
+              probe_value_alignment_status_changed,
+              converter_changed,
           ])
-          diffstatus = DiffStatus(
-              unchanged, name_changed, support_status_changed, values_changed,
-              prev_comp_name, prev_support_status,
-              probe_value_alignment_status_changed, prev_alignment_status)
+          diffstatus = DiffStatus(unchanged, name_changed,
+                                  support_status_changed, values_changed,
+                                  prev_comp_name, prev_support_status,
+                                  probe_value_alignment_status_changed,
+                                  prev_alignment_status, converter_changed)
           from_factory_bundle = bool(prev_comp_info.bundle_uuids)
           is_newly_added = False
         else:

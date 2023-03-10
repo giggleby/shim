@@ -582,7 +582,8 @@
         "prev_comp_name": "display_panel_A",
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
-        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO",
+        "converter_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
@@ -605,7 +606,8 @@
         "prev_comp_name": "display_panel_B_both_null",
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
-        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO",
+        "converter_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
@@ -628,7 +630,8 @@
         "prev_comp_name": "display_panel_B_prev_null",
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
-        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO",
+        "converter_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",
@@ -651,7 +654,8 @@
         "prev_comp_name": "display_panel_B_next_null",
         "prev_support_status": "unqualified",
         "probe_value_alignment_status_changed": false,
-        "prev_probe_value_alignment_status": "NO_PROBE_INFO"
+        "prev_probe_value_alignment_status": "NO_PROBE_INFO",
+        "converter_changed": false
       },
       "link_avl": false,
       "probe_value_alignment_status": "NO_PROBE_INFO",

@@ -30,6 +30,7 @@ DB_COMP_MODIFY_FROM_FACTORY_BUNDLE_PATH = os.path.join(
 
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _HWIDCompAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
+_DiffStatus = contents_analyzer.DiffStatus
 
 
 class ContentsAnalyzerTest(unittest.TestCase):
@@ -193,6 +194,50 @@ class ContentsAnalyzerTest(unittest.TestCase):
             probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
             skip_avl_check=True)
     ], skippable_comps)
+
+  def test_AnalyzeChange_WithConverterChanges(self):
+
+    prev_db_contents = self._ReadTestData(
+        'test_database_internal_db_before.yaml')
+    curr_db_contents = self._ReadTestData(
+        'test_database_internal_db_after.yaml')
+
+    inst = contents_analyzer.ContentsAnalyzer(curr_db_contents, None,
+                                              prev_db_contents)
+    analysis = inst.AnalyzeChange(None, False)
+
+    # converter_identifier changed.
+    self.assertIn(
+        _HWIDCompAnalysisResult(
+            comp_cls='cls1', comp_name='comp1', support_status='supported',
+            is_newly_added=False, comp_name_info=None, seq_no=1,
+            comp_name_with_correct_seq_no=None, null_values=False,
+            diff_prev=_DiffStatus(
+                unchanged=False, name_changed=False,
+                support_status_changed=False, values_changed=False,
+                prev_comp_name='comp1', prev_support_status='supported',
+                probe_value_alignment_status_changed=False,
+                prev_probe_value_alignment_status=(
+                    _PVAlignmentStatus.NOT_ALIGNED),
+                converter_changed=True), link_avl=True,
+            probe_value_alignment_status=_PVAlignmentStatus.NOT_ALIGNED,
+            skip_avl_check=False), analysis.hwid_components.values())
+    # converter_identifier unchanged.
+    self.assertIn(
+        _HWIDCompAnalysisResult(
+            comp_cls='cls1', comp_name='comp2', support_status='supported',
+            is_newly_added=False, comp_name_info=None, seq_no=2,
+            comp_name_with_correct_seq_no=None, null_values=False,
+            diff_prev=_DiffStatus(
+                unchanged=True, name_changed=False,
+                support_status_changed=False, values_changed=False,
+                prev_comp_name='comp2', prev_support_status='supported',
+                probe_value_alignment_status_changed=False,
+                prev_probe_value_alignment_status=(
+                    _PVAlignmentStatus.NOT_ALIGNED),
+                converter_changed=False), link_avl=True,
+            probe_value_alignment_status=_PVAlignmentStatus.NOT_ALIGNED,
+            skip_avl_check=False), analysis.hwid_components.values())
 
   def _ReadTestData(self, test_data_name: str) -> str:
     return file_utils.ReadFile(os.path.join(_TEST_DATA_PATH, test_data_name))

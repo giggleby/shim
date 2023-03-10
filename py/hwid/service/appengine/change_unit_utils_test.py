@@ -15,6 +15,7 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
 from cros.factory.utils import file_utils
 
+
 # Shorter identifiers.
 _HWIDComponentAnalysisResult = contents_analyzer.HWIDComponentAnalysisResult
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
@@ -81,7 +82,7 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
     comp_name_info: Optional[_ComponentNameInfo] = None,
     comp_name_with_correct_seq_no: Optional[str] = None,
     probe_value_alignment_status: _PVAlignmentStatus = (
-        _PVAlignmentStatus.NO_PROBE_INFO),
+        _PVAlignmentStatus.NO_PROBE_INFO), converter_changed: bool = False,
     diff_prev: Optional[_DiffStatus] = None, skip_avl_check: bool = False):
 
   null_values = comp_info.value_is_none
@@ -96,7 +97,8 @@ def _BuildHWIDComponentAnalysisResultWithDefaults(
           values_changed=False, prev_comp_name=comp_name,
           prev_support_status=support_status,
           probe_value_alignment_status_changed=False,
-          prev_probe_value_alignment_status=probe_value_alignment_status)
+          prev_probe_value_alignment_status=probe_value_alignment_status,
+          converter_changed=converter_changed)
   return _HWIDComponentAnalysisResult(
       comp_cls=comp_cls, comp_name=comp_name, seq_no=seq_no,
       support_status=support_status, is_newly_added=is_newly_added,
@@ -291,7 +293,8 @@ class CompChangeTest(ChangeUnitTestBase):
                 prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO))), comp_info.values,
+                    _PVAlignmentStatus.NO_PROBE_INFO),
+                converter_changed=False)), comp_info.values,
         comp_info.information, comp_info.comp_hash)
 
     self._AssertApplyingPatchesEqualsData(
@@ -313,7 +316,8 @@ class CompChangeTest(ChangeUnitTestBase):
                 prev_support_status='supported',
                 probe_value_alignment_status_changed=False,
                 prev_probe_value_alignment_status=(
-                    _PVAlignmentStatus.NO_PROBE_INFO))), comp_info.values,
+                    _PVAlignmentStatus.NO_PROBE_INFO),
+                converter_changed=False)), comp_info.values,
         comp_info.information, comp_info.comp_hash)
 
     with self._builder:
@@ -728,7 +732,8 @@ class MixedChangeUnitTest(ChangeUnitTestBase):
             values_changed=True, prev_comp_name='comp_1_2',
             prev_support_status='supported',
             probe_value_alignment_status_changed=False,
-            prev_probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO))
+            prev_probe_value_alignment_status=_PVAlignmentStatus.NO_PROBE_INFO,
+            converter_changed=False))
     comp_change_cus = [
         _CompChange(  # Add component.
             analysis_result=comp_1_2_analysis, probe_values=comp_info_1.values,

@@ -209,8 +209,9 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_support_status='unqualified',
                             probe_value_alignment_status_changed=False,
                             prev_probe_value_alignment_status=(
-                                _PVAlignmentStatus.NO_PROBE_INFO)),
-                        link_avl=False, probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO),
+                            converter_changed=False), link_avl=False,
+                        probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
                         skip_avl_check=False),
                 'comp2':
@@ -228,8 +229,9 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_support_status='unqualified',
                             probe_value_alignment_status_changed=True,
                             prev_probe_value_alignment_status=(
-                                _PVAlignmentStatus.NO_PROBE_INFO)),
-                        link_avl=False, probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO),
+                            converter_changed=False), link_avl=False,
+                        probe_value_alignment_status=(
                             _PVAlignmentStatus.ALIGNED), skip_avl_check=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(
@@ -958,8 +960,9 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_support_status='unqualified',
                             probe_value_alignment_status_changed=False,
                             prev_probe_value_alignment_status=(
-                                _PVAlignmentStatus.NO_PROBE_INFO)),
-                        link_avl=False, probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO),
+                            converter_changed=False), link_avl=False,
+                        probe_value_alignment_status=(
                             _PVAlignmentStatus.NO_PROBE_INFO),
                         skip_avl_check=False),
                 'comp2':
@@ -977,8 +980,9 @@ class SelfServiceHelperTest(unittest.TestCase):
                             prev_support_status='unqualified',
                             probe_value_alignment_status_changed=True,
                             prev_probe_value_alignment_status=(
-                                _PVAlignmentStatus.NO_PROBE_INFO)),
-                        link_avl=False, probe_value_alignment_status=(
+                                _PVAlignmentStatus.NO_PROBE_INFO),
+                            converter_changed=False), link_avl=False,
+                        probe_value_alignment_status=(
                             _PVAlignmentStatus.ALIGNED), skip_avl_check=False),
                 'comp3':
                     hwid_action.DBHWIDComponentAnalysisResult(

@@ -203,7 +203,8 @@ def _ConvertCompInfoToMsg(
             probe_value_alignment_status_changed=(
                 diff.probe_value_alignment_status_changed),
             prev_probe_value_alignment_status=_PROBE_VALUE_ALIGNMENT_STATUS[
-                diff.prev_probe_value_alignment_status]))
+                diff.prev_probe_value_alignment_status],
+            converter_changed=diff.converter_changed))
   comp_info_msg.probe_value_alignment_status = _PROBE_VALUE_ALIGNMENT_STATUS[
       comp_info.probe_value_alignment_status]
   comp_info_msg.skip_avl_check = comp_info.skip_avl_check
