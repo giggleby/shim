@@ -216,7 +216,7 @@ message ComponentSupportStatus {
 message DiffStatus {
   // True if the component is unchanged.  This value should be equals to
   // not (name_changed or support_status_changed or values_changed or
-  // probe_value_alignment_status_changed).
+  // probe_value_alignment_status_changed or converter_changed).
   bool unchanged = 1;
   // True if the name is changed.
   bool name_changed = 2;
@@ -231,8 +231,12 @@ message DiffStatus {
   // True if the probe value alignment (w/ the probe info from P.I.S.) status
   // has changed.
   bool probe_value_alignment_status_changed = 7;
+  // The previous alignment status.
   ProbeValueAlignmentStatus.Case prev_probe_value_alignment_status = 8;
+  // The support status in enum.
   ComponentSupportStatus.Case prev_support_status_case = 9;
+  // True if the converter changes.
+  bool converter_changed = 10;
 }
 
 message NameChangedComponent {
