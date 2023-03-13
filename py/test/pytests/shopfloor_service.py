@@ -42,6 +42,10 @@ When started, the test will connect to remote server and try to invoke specified
 method with given arguments, and will display return (error) messages and wait
 for retry on failure.
 
+The pytest also sets device data to indicate certain checkpoint is passed, such
+as ``factory.start_SMT``, ``factory.end_SMT``. These values can be synced to RW
+VPD by write_device_data_to_vpd.py.
+
 Dependency
 ----------
 No special dependency on client side, but the server must be implemented with
