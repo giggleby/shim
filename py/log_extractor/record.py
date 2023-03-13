@@ -4,6 +4,7 @@
 
 import abc
 import datetime
+import enum
 import json
 import re
 from typing import Dict, Optional
@@ -50,6 +51,12 @@ class IRecord(abc.ABC):
     return self.GetTime() < other.GetTime()
 
 
+class TestRunStatus(enum.Enum):
+  UNKNOWN = 'UNKNOWN'
+  STARTED = 'STARTED'
+  RUNNING = 'RUNNING'
+  COMPLETED = 'COMPLETED'
+
 class FactoryRecord(IRecord):
   _SCHEMA = FixedDict(
       'Factory record schema', items={
@@ -80,6 +87,15 @@ class FactoryRecord(IRecord):
     """
     return None
 
+  def GetTestRunStatus(self) -> TestRunStatus:
+    """Gets the test run status from the record.
+
+    Returns:
+      `TestRunStatus.UNKNOWN` if the record doesn't contain the test run status
+      information. Else returns the TestRunStatus.
+    """
+    return TestRunStatus.UNKNOWN
+
 
 class SystemLogRecord(FactoryRecord):
   _SCHEMA = FixedDict(
@@ -109,8 +125,10 @@ class SystemLogRecord(FactoryRecord):
 class VarLogMessageRecord(SystemLogRecord):
   # Example output of message:
   #   goofy[1845]: Test generic:SMT.Update (123-456) starting
+  #   goofy[1845]: Test generic:SMT.Update (123-456) completed: FAILED (reason)
   _GOOFY_TEST_RUN_REGEX = (
-      r'goofy\[\d+\]: Test (?P<testName>.+) \((?P<testRunId>.+)\)')
+      r'goofy\[\d+\]: Test (?P<testName>\S+) \((?P<testRunId>\S+)\) '
+      r'(\S+: )?(?P<status>\S+)')
 
   def GetTestRunName(self) -> Optional[str]:
     match = re.search(self._GOOFY_TEST_RUN_REGEX, self['message'])
@@ -120,6 +138,19 @@ class VarLogMessageRecord(SystemLogRecord):
       return f'{testName}-{testRunId}'
     return None
 
+  def GetTestRunStatus(self) -> TestRunStatus:
+    match = re.search(self._GOOFY_TEST_RUN_REGEX, self['message'])
+    if match:
+      status = match.group('status').strip()
+      # TODO: Unify status such that it is the same as the status in testlog.
+      if status == 'starting':
+        return TestRunStatus.STARTED
+      if status == 'resuming':
+        return TestRunStatus.RUNNING
+      if status in ('FAILED', 'PASSED'):
+        return TestRunStatus.COMPLETED
+
+    return TestRunStatus.UNKNOWN
 
 # TODO: Change the start and end time of the StationTestRun event.
 class TestlogRecord(FactoryRecord):
@@ -131,6 +162,19 @@ class TestlogRecord(FactoryRecord):
     data = testlog.EventBase.FromJSON(json_str, check_valid)
 
     return cls(data)
+
+  def GetTestRunStatus(self) -> TestRunStatus:
+    if not isinstance(self._data, testlog.StationTestRun):
+      return TestRunStatus.UNKNOWN
+    status = self['status']
+    if status == 'STARTING':
+      return TestRunStatus.STARTED
+    if status in ('FAIL', 'PASS'):
+      return TestRunStatus.COMPLETED
+    if status == 'RUNNING':
+      return TestRunStatus.RUNNING
+
+    return TestRunStatus.UNKNOWN
 
   def GetTestRunName(self) -> Optional[str]:
     return f'{self["testName"]}-{self["testRunId"]}'
