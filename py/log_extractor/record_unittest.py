@@ -42,6 +42,37 @@ class SystemLogRecordTest(unittest.TestCase):
 
 class VarLogMessageRecordTest(unittest.TestCase):
 
+  def testGetTestRunStatus(self):
+    testrun_starting = record_module.VarLogMessageRecord.FromJSON(
+        '{"message": "goofy[1845]: Test generic:SMT.Update '
+        '(f9c665ff-55d0) starting"}', check_valid=False)
+    self.assertEqual(testrun_starting.GetTestRunStatus(),
+                     record_module.TestRunStatus.STARTED)
+
+    testrun_passed = record_module.VarLogMessageRecord.FromJSON(
+        '{"message": "goofy[1845]: Test generic:SMT.Update '
+        '(f9c665ff-55d0) completed: PASSED"}', check_valid=False)
+    self.assertEqual(testrun_passed.GetTestRunStatus(),
+                     record_module.TestRunStatus.COMPLETED)
+
+    testrun_failed = record_module.VarLogMessageRecord.FromJSON(
+        '{"message": "goofy[1845]: Test generic:SMT.Update '
+        '(f9c665ff-55d0) completed: FAILED (reason)"}', check_valid=False)
+    self.assertEqual(testrun_failed.GetTestRunStatus(),
+                     record_module.TestRunStatus.COMPLETED)
+
+    testrun_running = record_module.VarLogMessageRecord.FromJSON(
+        '{"message": "goofy[1845]: Test generic:SMT.Update '
+        '(f9c665ff-55d0) resuming"}', check_valid=False)
+    self.assertEqual(testrun_running.GetTestRunStatus(),
+                     record_module.TestRunStatus.RUNNING)
+
+    testrun_unknown = record_module.VarLogMessageRecord.FromJSON(
+        '{"message": "kernel: [   13.644255] usb 4-2: new SuperSpeed USB", '
+        '"time": 1.23}', check_valid=False)
+    self.assertEqual(testrun_unknown.GetTestRunStatus(),
+                     record_module.TestRunStatus.UNKNOWN)
+
   def testGetTestRunName(self):
     testrun_starting = record_module.VarLogMessageRecord.FromJSON(
         '{"message": "goofy[1845]: Test generic:SMT.Update '
@@ -51,6 +82,37 @@ class VarLogMessageRecordTest(unittest.TestCase):
 
 
 class TestlogRecordTest(unittest.TestCase):
+
+  def testGetTestRunStatus(self):
+    testrun_starting = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23, "status": "STARTING"}',
+        check_valid=False)
+    self.assertEqual(testrun_starting.GetTestRunStatus(),
+                     record_module.TestRunStatus.STARTED)
+
+    testrun_passed = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23, "status": "PASS"}',
+        check_valid=False)
+    self.assertEqual(testrun_passed.GetTestRunStatus(),
+                     record_module.TestRunStatus.COMPLETED)
+
+    testrun_failed = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23, "status": "FAIL"}',
+        check_valid=False)
+    self.assertEqual(testrun_failed.GetTestRunStatus(),
+                     record_module.TestRunStatus.COMPLETED)
+
+    testrun_running = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23, "status": "RUNNING"}',
+        check_valid=False)
+    self.assertEqual(testrun_running.GetTestRunStatus(),
+                     record_module.TestRunStatus.RUNNING)
+
+    testrun_unknown = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23, "status": "UNKNOWN"}',
+        check_valid=False)
+    self.assertEqual(testrun_unknown.GetTestRunStatus(),
+                     record_module.TestRunStatus.UNKNOWN)
 
   def testGetTestRunName(self):
     testrun_record = record_module.TestlogRecord.FromJSON(
