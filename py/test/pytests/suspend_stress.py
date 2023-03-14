@@ -35,6 +35,7 @@ and suspend to idle by writing freeze to ``/sys/power/state``::
 import logging
 import os
 import re
+import subprocess
 import threading
 import time
 from typing import List, Optional
@@ -79,7 +80,8 @@ def GetElog(dut: device_types.DeviceBoard,
   Returns:
     The elog.
   """
-  p = dut.Popen(['elogtool', 'list', '--utc'], stdout=dut.PIPE, stderr=dut.PIPE)
+  p = dut.Popen(['elogtool', 'list', '--utc'], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
   stdout, unused_stderr = p.communicate()
   stdout_lines = stdout.splitlines()
   if cut_line:

@@ -5,10 +5,12 @@
 
 import os
 import re
+import subprocess
 from typing import Optional, Tuple
 
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
+
 
 DEFAULT_HPS_FACTORY_PATH = 'hps-factory'
 IOTOOLS_PATH = 'iotools'
@@ -67,8 +69,8 @@ class HPSDevice:
     """
     cmd = self.GetCommandPrefix()
     cmd.append('print-part-ids')
-    process = self._dut.Popen(cmd, stdout=self._dut.PIPE, stderr=self._dut.PIPE,
-                              log=True)
+    process = self._dut.Popen(cmd, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, log=True)
     output, stderr = process.communicate()
     errors = []
     results = []

@@ -26,6 +26,7 @@ Example usage::
 import logging
 import os
 import re
+import subprocess
 import textwrap
 import time
 
@@ -848,9 +849,8 @@ class Connection:
     self._device.WriteFile(wpa_file, config_content)
 
     logging.info('Launching wpa_supplicant...')
-    process = self._device.Popen(wpa_supplicant_command,
-                                 stdout=self._device.PIPE,
-                                 stderr=self._device.PIPE)
+    process = self._device.Popen(wpa_supplicant_command, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     if stdout:
       logging.info('stdout:\n%s', stdout)
