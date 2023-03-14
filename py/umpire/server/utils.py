@@ -4,7 +4,6 @@
 
 """Umpire utility classes."""
 
-from collections import namedtuple
 import filecmp
 import functools
 import logging
@@ -50,27 +49,20 @@ def Deprecate(method):
   return _Wrapper
 
 
-LoopDeviceStat = namedtuple('LoopDeviceStat', 'major_number mode uid gid')
-DEFAULT_LOOP_DEVICE_STAT = LoopDeviceStat(7, 0o0660 | stat.S_IFBLK, 0, 0)
-
-
-def _GetLoopDeviceStat():
+def CreateLoopDevice(loop_path_prefix, start, end):
+  major_number = 7
+  mode = 0o0660 | stat.S_IFBLK
+  uid = 0
+  gid = 0
   try:
     stat_result = os.stat('/dev/loop0')
     major_number = os.major(stat_result.st_rdev)
     mode = stat_result.st_mode
     uid = stat_result.st_uid
     gid = stat_result.st_gid
-    return_value = LoopDeviceStat(major_number, mode, uid, gid)
   except OSError:
     logging.warning('Failed to stat /dev/loop0, try defalt value.',
                     exc_info=True)
-    return_value = DEFAULT_LOOP_DEVICE_STAT
-  return return_value
-
-
-def CreateLoopDevice(loop_path_prefix: str, start: int, end: int):
-  major_number, mode, uid, gid = _GetLoopDeviceStat()
 
   for i in range(start, end):
     loop_path = loop_path_prefix + str(i)

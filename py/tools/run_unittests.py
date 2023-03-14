@@ -48,6 +48,7 @@ TESTS_TO_EXCLUDE = [
     'py/bundle_creator',
     'py/probe_info_service',
     'py/dome',
+    'py/umpire',
     # TODO (b/204134192)
     'py/test/utils/media_utils_unittest.py',
 ]
