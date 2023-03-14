@@ -10,5 +10,6 @@ This folder contains various tools to help developer's life easier.
 - [instalog/](instalog/README.md): Tools for finding information on Google
     Cloud.
 - mk/: Scripts for top level Makefile to use.
+- upload_reports_sftp/: Scripts for uploading Factory Reports to SFTP server.
 - [vim/](vim/README.md): Scripts to help programming within VIM editor.
 - [vscode/](vscode/README.md): VSCode configuration files.
