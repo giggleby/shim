@@ -110,7 +110,7 @@ class _TestProc:
         'CROS_FACTORY_UNITTEST_PORT_DISTRIBUTE_SERVER'] = self._port_server
     with open(self.log_file_name, 'w', encoding='utf8') as log_file:
       self.start_time = time.time()
-      self.proc = process_utils.Spawn(self.test_name, stdout=log_file,
+      self.proc = process_utils.Spawn([self.test_name], stdout=log_file,
                                       stderr=STDOUT, env=child_env)
     process_utils.StartDaemonThread(target=self._WatchTest)
     return self

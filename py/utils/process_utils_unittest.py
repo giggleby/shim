@@ -26,6 +26,15 @@ from cros.factory.utils.process_utils import SpawnOutput
 from cros.factory.utils.process_utils import TerminateOrKillProcess
 
 
+class MockFile:
+
+  def write(self, x):
+    pass
+
+  def read(self, x):  # pylint: disable=unused-argument
+    return ''
+
+
 class SpawnTest(unittest.TestCase):
 
   def setUp(self):
@@ -36,7 +45,8 @@ class SpawnTest(unittest.TestCase):
       def handle(self, record):
         log_entries.append((record.levelname, record.msg % record.args))
 
-    self.handler = handlers.MemoryHandler(capacity=0, target=Target())
+    self.handler = handlers.MemoryHandler(capacity=0,
+                                          target=Target())  # type: ignore
     logging.getLogger().addHandler(self.handler)
 
   def tearDown(self):
@@ -50,8 +60,7 @@ class SpawnTest(unittest.TestCase):
     self.assertEqual('f<o>o\n', stdout)
     self.assertEqual('', stderr)
     self.assertEqual(0, process.returncode)
-    self.assertEqual([('INFO',
-                       '''Running command: "echo \'f<o>o\'"''')],
+    self.assertEqual([('INFO', '''Running command: "echo \'f<o>o\'"''')],
                      self.log_entries)
 
   def testShell(self):
@@ -68,14 +77,14 @@ class SpawnTest(unittest.TestCase):
     process = Spawn('echo blah; exit 3', shell=True, call=True)
     self.assertEqual(3, process.returncode)
     # stdout/stderr are not trapped
-    self.assertEqual(None, process.stdout)
-    self.assertEqual(None, process.stdout_data)
+    self.assertIsNone(process.stdout)
+    self.assertIsNone(process.stdout_data)
 
     # Would cause a bad buffering situation.
     self.assertRaises(ValueError,
-                      lambda: Spawn('echo', call=True, stdout=PIPE))
+                      lambda: Spawn(['echo'], call=True, stdout=PIPE))
     self.assertRaises(ValueError,
-                      lambda: Spawn('echo', call=True, stderr=PIPE))
+                      lambda: Spawn(['echo'], call=True, stderr=PIPE))
 
   def testCheckCall(self):
     Spawn('exit 0', shell=True, check_call=True)
@@ -304,6 +313,7 @@ class TerminateOrKillProcessTest(unittest.TestCase):
 
 
 class TestRedirectStdout(unittest.TestCase):
+
   def setUp(self):
     self.saved_stdout = sys.stdout
     self.mock_stdout = StringIO()
@@ -314,8 +324,8 @@ class TestRedirectStdout(unittest.TestCase):
 
   def testRedirectStdout(self):
     print('before')
-    dummy_file = process_utils.DummyFile()
-    with process_utils.RedirectStandardStreams(stdout=dummy_file):
+    mock_file = MockFile()
+    with process_utils.RedirectStandardStreams(stdout=mock_file):
       print('SHOULD_NOT_OUTPUT')
     print('after')
     self.assertEqual('before\nafter\n', self.mock_stdout.getvalue())
@@ -329,23 +339,24 @@ class TestRedirectStdout(unittest.TestCase):
                      self.mock_stdout.getvalue())
 
   def testRedirectAgainStdoutWithinContext(self):
-    dummy_file = process_utils.DummyFile()
+    mock_file = MockFile()
     with self.assertRaises(IOError):
-      with process_utils.RedirectStandardStreams(stdout=dummy_file):
-        sys.stdout = process_utils.DummyFile()
+      with process_utils.RedirectStandardStreams(stdout=mock_file):
+        sys.stdout = MockFile()
 
   def testRedirectStdoutWithinContext(self):
-    dummy_file = process_utils.DummyFile()
+    mock_file = MockFile()
     print('before')
     with process_utils.RedirectStandardStreams(stdout=None):
       print('SHOULD_OUTPUT')
-      sys.stdout = dummy_file
+      sys.stdout = mock_file
       print('SHOULD_NOT_OUTPUT')
     print('after')
     self.assertEqual('before\nSHOULD_OUTPUT\n', self.mock_stdout.getvalue())
 
 
 class TestPipeStdoutLines(unittest.TestCase):
+
   def testBasic(self):
     buf = []
     process = Spawn('echo foo', stdout=PIPE, shell=True)
@@ -367,6 +378,7 @@ class TestPipeStdoutLines(unittest.TestCase):
           f'echo foo\nwhile [ ! -e "{f}" ]; do\n  sleep 0.01\ndone\necho bar',
           stdout=PIPE, shell=True)
       buf = []
+
       def _Callback(line):
         buf.append(line)
         file_utils.TouchFile(f)

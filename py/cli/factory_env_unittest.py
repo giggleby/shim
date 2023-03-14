@@ -11,6 +11,7 @@ import unittest
 from cros.factory.cli import factory_env
 from cros.factory.utils import process_utils
 
+
 FACTORY_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
@@ -24,8 +25,9 @@ DUMMY_EXCUTABLE = os.path.join(
 
 class FactoryEnvUnittest(unittest.TestCase):
   def testSymbolicLinkToFactoryEnv(self):
-    self.assertEqual(0,
-                     process_utils.LogAndCheckCall(DUMMY_EXCUTABLE).returncode)
+    self.assertEqual(
+        0,
+        process_utils.LogAndCheckCall([DUMMY_EXCUTABLE]).returncode)
 
   def testFactoryEnvWithSymbolicLinkToFactoryEnv(self):
     self.assertEqual(0, process_utils.LogAndCheckCall(

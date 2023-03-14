@@ -4,7 +4,7 @@
 
 import contextlib
 import getpass
-from io import StringIO
+import io
 import logging
 import os
 import pipes
@@ -16,6 +16,9 @@ import sys
 import threading
 import time
 import traceback
+from typing import IO, TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, cast
+
+from cros.factory.utils import type_utils
 
 
 # Use subprocess.CalledProcessError for invocation exceptions.
@@ -37,26 +40,29 @@ except Exception:
   # Hack for HWID Service on AppEngine. The subprocess module on AppEngine
   # doesn't contain these attributes. HWID Service will not use all of these
   # attributes. This makes AppEngine won't complain we are using process_utils.
-  PIPE = None
-  STDOUT = None
-  DEVNULL = None
-  Popen = object
-  TimeoutExpired = None
+  PIPE = None  # type: ignore
+  STDOUT = None  # type: ignore
+  DEVNULL = None  # type: ignore
+  Popen = object  # type: ignore
+  TimeoutExpired = None  # type: ignore
+
+  # Make type checker believe these types are not None.
+  assert not TYPE_CHECKING
 
 
-def GetLines(data, strip=False):
+def GetLines(data: Optional[str], strip=False) -> List[str]:
   """Returns a list of all lines in data.
 
   Args:
     strip: If True, each line is stripped.
   """
-  ret = StringIO(data).readlines()
+  ret = io.StringIO(data).readlines()
   if strip:
     ret = [x.strip() for x in ret]
   return ret
 
 
-def IsProcessAlive(pid, ppid=None):
+def IsProcessAlive(pid: int, ppid: Optional[int] = None) -> bool:
   """Returns true if the named process is alive and not a zombie.
 
   A PPID (parent PID) can be provided to be more specific to which process you
@@ -70,8 +76,11 @@ def IsProcessAlive(pid, ppid=None):
       not match, we assume that the named process is done, and we are looking at
       another process, the function returns False in this case.
   """
+  if not isinstance(pid, int):
+    raise TypeError('PID must be an integer.')
+
   try:
-    with open(f'/proc/{int(pid)}/stat', encoding='utf8') as f:
+    with open(f'/proc/{pid}/stat', encoding='utf-8') as f:
       stat = f.readline().split()
       if ppid is not None and int(stat[3]) != ppid:
         return False
@@ -80,7 +89,7 @@ def IsProcessAlive(pid, ppid=None):
     return False
 
 
-def CheckCall(*args, **kwargs):
+def CheckCall(*args, **kwargs) -> 'ExtendedPopen':
   """Run and wait for the command to be completed.
 
   It is like subprocess.check_call but with the extra flexibility of Spawn.
@@ -95,7 +104,7 @@ def CheckCall(*args, **kwargs):
   return Spawn(*args, **kwargs)
 
 
-def CheckOutput(*args, **kwargs):
+def CheckOutput(*args, **kwargs) -> Union[str, bytes]:
   """Runs command and returns its output.
 
   It is like subprocess.check_output but with the extra flexibility of Spawn.
@@ -110,10 +119,10 @@ def CheckOutput(*args, **kwargs):
     process_utils.CalledProcessError if returncode != 0.
   """
   kwargs['check_output'] = True
-  return Spawn(*args, **kwargs).stdout_data
+  return Spawn(*args, **kwargs).stdout_data  # type: ignore
 
 
-def SpawnOutput(*args, **kwargs):
+def SpawnOutput(*args, **kwargs) -> Union[str, bytes]:
   """Runs command and returns its output.
 
   Like CheckOutput. But it won't raise exception unless you set
@@ -126,70 +135,87 @@ def SpawnOutput(*args, **kwargs):
     stdout
   """
   kwargs['read_stdout'] = True
-  return Spawn(*args, **kwargs).stdout_data
+  return Spawn(*args, **kwargs).stdout_data  # type: ignore
 
 
-def LogAndCheckCall(*args, **kwargs):
+def LogAndCheckCall(*args, **kwargs) -> 'ExtendedPopen':
   """Logs a command and invokes CheckCall."""
   logging.info('Running: %s', ' '.join(pipes.quote(arg) for arg in args[0]))
   return CheckCall(*args, **kwargs)
 
 
-def LogAndCheckOutput(*args, **kwargs):
+def LogAndCheckOutput(*args, **kwargs) -> Union[str, bytes]:
   """Logs a command and invokes CheckOutput."""
   logging.info('Running: %s', ' '.join(pipes.quote(arg) for arg in args[0]))
   return CheckOutput(*args, **kwargs)
 
 
-class _ExtendedPopen(Popen):
-  """Popen subclass supported a few extra methods.
+class ExtendedPopen(Popen):
+  """Popen subclass that supports a few extra methods.
 
   Attributes:
     stdout_data, stderr_data: Data read by communicate().  These are set by
       the Spawn call if read_stdout/read_stderr are True.
   """
-  stdout_data = None
-  stderr_data = None
+  stdout_data: Union[str, bytes, None] = None
+  stderr_data: Union[str, bytes, None] = None
 
-  def stdout_lines(self, strip=False):
+  def stdout_lines(self, strip=False) -> List[str]:
     """Returns lines in stdout_data as a list.
 
     Args:
       strip: If True, each line is stripped.
+
+    Raises:
+      TypeError: If stdout are bytes.
     """
+    if isinstance(self.stdout_data, bytes):
+      raise TypeError('Stdout are bytes.')
     return GetLines(self.stdout_data, strip)
 
-  def stderr_lines(self, strip=False):
+  def stderr_lines(self, strip=False) -> List[str]:
     """Returns lines in stderr_data as a list.
 
     Args:
       strip: If True, each line is stripped.
+
+    Raises:
+      TypeError: If stderr are bytes.
     """
+    if isinstance(self.stderr_data, bytes):
+      raise TypeError('Stderr are bytes.')
     return GetLines(self.stderr_data, strip)
 
-  def communicate(self, *args, **kwargs):
+  @type_utils.Overrides
+  def communicate(self, *args,
+                  **kwargs) -> Tuple[Union[str, bytes], Union[str, bytes]]:
     if self.stdout_data is None and self.stderr_data is None:
       return super().communicate(*args, **kwargs)
-    return self.stdout_data, self.stderr_data
+
+    # Already communicated.
+    return self.stdout_data, self.stderr_data  # type: ignore
 
 
-def Spawn(args, **kwargs):
+def Spawn(args: Union[str, List[str]], **kwargs) -> ExtendedPopen:
   """Popen wrapper with extra functionality:
 
-    - Sets close_fds to True by default.  (You may still set
-      close_fds=False to leave all fds open.)
-    - Provides a consistent interface to functionality like the call,
-      check_call, and check_output functions in subprocess.
+  - Sets close_fds to True by default.  (You may still set close_fds=False to
+    leave all fds open.)
+  - Provides a consistent interface to functionality like the call, check_call,
+    and check_output functions in subprocess.
 
-  To get a command's output, logging stderr if the process fails:
+  To get a command's output, logging stderr if the process fails, and do not
+  check exit code:
 
-    # Doesn't check retcode
     Spawn(['cmd'], read_stdout=True, log_stderr_on_error=True).stdout_data
-    # Throws CalledProcessError on error
+
+  To get a command's output, logging stderr if the process fails, and throws
+  CalledProcessError when exit code is non-zero:
+
     Spawn(['cmd'], read_stdout=True, log_stderr_on_error=True,
           check_call=True).stdout_data
 
-  To get a command's stdout and stderr, without checking the retcode:
+  To get a command's stdout and stderr, without checking the return code:
 
     stdout, stderr = Spawn(
         ['cmd'], read_stdout=True, read_stderr=True).communicate()
@@ -216,6 +242,7 @@ def Spawn(args, **kwargs):
     read_stdout: Wait for the command to complete, saving the contents
       to the return object's stdout_data attribute.  This implies
       call=True and stdout=PIPE.
+    ignore_stdin: Ignore stdin.
     ignore_stdout: Ignore stdout.
     read_stderr: Wait for the command to complete, saving the contents
       to the return object's stderr_data attribute.  This implies
@@ -226,27 +253,36 @@ def Spawn(args, **kwargs):
     encoding: Same as subprocess.Popen, we will use `utf-8` as default to make
       it output str type.
     timeout: Set a timeout for process. Implies call=True.
+    shell: If this is a shell script. In this case args must be a string.
 
   Returns:
-    A _ExtendedPopen object.
+    An ExtendedPopen object.
+
   Raises:
-    ValueError: If receive wrong arguments.
+    ValueError | TypeError: If receive wrong arguments.
     CalledProcessError: If check is True and return code is non-zero.
     TimeoutExpired: If timeout expired.
   """
   kwargs.setdefault('close_fds', True)
   kwargs.setdefault('encoding', 'utf-8')
 
-  logger = logging
-  log = kwargs.pop('log', False)
+  args_to_log: str
   if kwargs.get('shell'):
+    if not isinstance(args, str):
+      raise TypeError('Command must be a string when shell is specified.')
     args_to_log = args
   else:
-    args_to_log = ' '.join(pipes.quote(arg) for arg in args)
+    if not isinstance(args, list):
+      raise TypeError('Command must be a list of string.')
+    args_to_log = ' '.join(map(pipes.quote, args))
 
+  logger = logging
+  log = kwargs.pop('log', False)
   if log:
-    if (callable(getattr(log, "info", None)) and
-        callable(getattr(log, "error", None))):
+    if log is not True:
+      if not callable(getattr(log, 'info', None)) or not callable(
+          getattr(log, 'error', None)):
+        raise TypeError('log must be either True or a logging object.')
       logger = log
     message = f'Running command: "{args_to_log}"'
     if 'cwd' in kwargs:
@@ -267,9 +303,9 @@ def Spawn(args, **kwargs):
 
   if sudo and getpass.getuser() != 'root':
     if kwargs.pop('shell', False):
-      args = ['sudo', 'sh', '-c', args]
+      args = ['sudo', 'sh', '-c', cast(str, args)]  # args must be a string
     else:
-      args = ['sudo'] + args
+      args = ['sudo'] + cast(List[str], args)  # args must be a list of string
 
   if ignore_stdin:
     assert not kwargs.get('stdin')
@@ -309,7 +345,7 @@ def Spawn(args, **kwargs):
     raise ValueError('Cannot use call=True argument with stderr=PIPE, '
                      'since OS buffers may get filled up')
 
-  process = _ExtendedPopen(args, **kwargs)
+  process = ExtendedPopen(args, **kwargs)
 
   if call:
     try:
@@ -336,7 +372,10 @@ def Spawn(args, **kwargs):
             f'Exit code {int(process.returncode)} from command: "{args_to_log}'
             '"')
         if log_stderr_on_error:
-          message += f'; stderr: ""\"\n{process.stderr_data}\n"""'
+          if isinstance(process.stderr_data, bytes):
+            message += f'; stderr: ""\"\n{process.stderr_data.hex()}\n"""'
+          else:
+            message += f'; stderr: ""\"\n{process.stderr_data}\n"""'
         logger.error(message)
 
       if check_call:
@@ -363,26 +402,28 @@ class CommandPipe:
     out, err = CommandPipe().Pipe(['cmdC']).Pipe('CmdD').Communicate()
   """
 
-  def __init__(self, encoding='utf-8', check=True, read_timeout=0.1):
-    self._encoding = encoding
+  def __init__(self, encoding: Optional[str] = 'utf-8', check=True,
+               read_timeout=0.1):
+    self._encoding: Optional[str] = encoding
     self._check = check
     self._read_timeout = read_timeout
-    self._processes = []
+    self._processes: List[subprocess.Popen] = []
     self._is_done = False
-    self._stdout_data = None
-    self._stderr_data = None
+    self._stdout_data: Union[str, bytes, None] = None
+    self._stderr_data: Union[str, bytes, None] = None
 
   @property
-  def stdout_data(self):
+  def stdout_data(self) -> Union[str, bytes]:
     stdout, unused_stderr = self.Communicate()
     return stdout
 
   @property
-  def stderr_data(self):
+  def stderr_data(self) -> Union[str, bytes]:
     unused_stdout, stderr = self.Communicate()
     return stderr
 
-  def Pipe(self, args, shell=False, sudo=False, env=None):
+  def Pipe(self, args: Union[str, List[str]], shell=False, sudo=False,
+           env: Optional[Dict[str, str]] = None) -> 'CommandPipe':
     """Add a command to the commands pipe.
 
     Args:
@@ -404,7 +445,7 @@ class CommandPipe:
     self._processes.append(process)
     return self
 
-  def _GetDecodedStr(self, string):
+  def _GetDecodedStr(self, string: bytes) -> Union[str, bytes]:
     return string.decode(self._encoding) if self._encoding else string
 
   def _Communicate(self):
@@ -413,15 +454,17 @@ class CommandPipe:
 
     # `bufs` contains stderr of all the processes, and the stdout of the last
     # process. The last two are the stderr and stdout of the last process.
-    out_pipes = ([p.stderr for p in self._processes] +
-                 [self._processes[-1].stdout])
-    bufs = [b''] * len(out_pipes)
+    out_pipes: List[IO[Any]] = (
+        [p.stderr for p in self._processes] + [self._processes[-1].stdout]
+    )  # type: ignore
+    bufs: List[bytes] = [b''] * len(out_pipes)
     try:
       while not self._is_done:
         self._is_done = all(p.poll() is not None for p in self._processes)
 
+        rlist: IO[Any]
         rlist, unused_wlist, unused_xlist = select.select(
-            out_pipes, [], [], self._read_timeout)
+            out_pipes, [], [], self._read_timeout)  # type: ignore
         for i, pipe in enumerate(out_pipes):
           if pipe not in rlist:
             continue
@@ -447,7 +490,7 @@ class CommandPipe:
       for pipe in out_pipes:
         pipe.close()
 
-  def Communicate(self):
+  def Communicate(self) -> Tuple[Union[str, bytes], Union[str, bytes]]:
     """Get the output of the commands pipe.
 
     Returns:
@@ -459,10 +502,11 @@ class CommandPipe:
     """
     if not self._is_done:
       self._Communicate()
-    return self._stdout_data, self._stderr_data
+    return self._stdout_data, self._stderr_data  # type: ignore
 
 
-def TerminateOrKillProcess(process, wait_seconds=1, sudo=False):
+def TerminateOrKillProcess(process: subprocess.Popen, wait_seconds=1,
+                           sudo=False) -> None:
   """Terminates a process and waits for it.
 
   The function sends SIGTERM to terminate the process, if it's not terminated
@@ -489,30 +533,33 @@ def TerminateOrKillProcess(process, wait_seconds=1, sudo=False):
   logging.debug('Process %d stopped.', pid)
 
 
-def KillProcessTree(process, caption):
+def KillProcessTree(process: subprocess.Popen, caption: str) -> None:
   """Kills a process and all its subprocesses.
 
   Args:
     process: The process to kill (opened with the subprocess module).
     caption: A caption describing the process.
   """
+
   # os.kill does not kill child processes. os.killpg kills all processes
   # sharing same group (and is usually used for killing process tree). But in
   # our case, to preserve PGID for autotest and upstart service, we need to
   # iterate through each level until leaf of the tree.
 
-  def get_all_pids(root):
-    ps_output = Spawn(['ps', '--no-headers', '-eo', 'pid,ppid'],
-                      stdout=subprocess.PIPE)
-    children = {}
-    for line in ps_output.stdout:
+  def get_all_pids(root: int) -> List[int]:
+    ps_output = CheckOutput(['ps', '--no-headers', '-eo', 'pid,ppid'])
+    assert isinstance(ps_output, str)
+    children: Dict[int, List[int]] = {}
+    for line in ps_output:
       match = re.findall(r'\d+', line)
       children.setdefault(int(match[1]), []).append(int(match[0]))
-    pids = []
+    pids: List[int] = []
 
-    def add_children(pid):
+    def add_children(pid: int) -> None:
       pids.append(pid)
-      list(map(add_children, children.get(pid, [])))
+      for child_pid in children.get(pid, []):
+        add_children(child_pid)
+
     add_children(root)
     # Reverse the list to first kill children then parents.
     # Note reversed(pids) will return an iterator instead of real list, so
@@ -540,7 +587,7 @@ def KillProcessTree(process, caption):
   logging.warning('Failed to stop %s process %r. Ignoring.', caption, pids)
 
 
-def WaitEvent(event):
+def WaitEvent(event: threading.Event) -> bool:
   """Waits for an event without timeout, without blocking signals.
 
   event.wait() masks all signals until the event is set; this can be used
@@ -556,7 +603,7 @@ def WaitEvent(event):
   return True
 
 
-def StartDaemonThread(*args, **kwargs):
+def StartDaemonThread(*args, **kwargs) -> threading.Thread:
   """Creates, starts, and returns a daemon thread.
 
   Args:
@@ -567,6 +614,7 @@ def StartDaemonThread(*args, **kwargs):
   if kwargs.pop('interrupt_on_crash', False):
     # 'target' is the second parameter of threading.Thread()
     target = args[1] if len(args) > 1 else kwargs.get('target')
+    assert callable(target)
 
     def _target(*_args, **_kwargs):
       try:
@@ -576,8 +624,8 @@ def StartDaemonThread(*args, **kwargs):
         os.kill(os.getpid(), signal.SIGINT)
 
     if len(args) > 1:
-      args = list(args)
-      args[1] = _target
+      args = list(args)  # type: ignore
+      args[1] = _target  # type: ignore
     else:
       kwargs['target'] = _target
 
@@ -585,15 +633,6 @@ def StartDaemonThread(*args, **kwargs):
   thread.daemon = True
   thread.start()
   return thread
-
-
-class DummyFile:
-
-  def write(self, x):
-    pass
-
-  def read(self, x):  # pylint: disable=unused-argument
-    return ''
 
 
 @contextlib.contextmanager
@@ -607,8 +646,7 @@ def RedirectStandardStreams(stdin=None, stdout=None, stderr=None):
     If stdin, stdout, stderr is None, then the stream is not redirected.
 
   Raises:
-    IOError: raise the exception if the standard streams is redirected again
-             within the context.
+    IOError: If the standard stream is redirected again within the context.
   """
   args = {'stdin': stdin, 'stdout': stdout, 'stderr': stderr}
   redirect_streams = {k: v for k, v in args.items() if v is not None}
@@ -625,12 +663,13 @@ def RedirectStandardStreams(stdin=None, stdout=None, stderr=None):
       if v is not sys.__dict__[k]
   }
   if changed:
-    raise IOError(f'Unexpected standard stream redirections: {changed!r}')
+    raise IOError(f'Unexpected standard stream redirection: {changed!r}')
   for k, v in old_streams.items():
     sys.__dict__[k] = v
 
 
-def PipeStdoutLines(process, callback, read_timeout=0.1):
+def PipeStdoutLines(process: subprocess.Popen, callback: Callable[[str], Any],
+                    read_timeout=0.1) -> None:
   """Read a process stdout and call callback for each line of stdout.
 
   Args:
@@ -642,7 +681,7 @@ def PipeStdoutLines(process, callback, read_timeout=0.1):
   """
   buf = ['']
 
-  def _TryReadOutputLines(timeout):
+  def _TryReadOutputLines(timeout) -> bool:
     rlist, unused_wlist, unused_xlist = select.select([process.stdout], [], [],
                                                       timeout)
     if process.stdout not in rlist:
@@ -650,6 +689,7 @@ def PipeStdoutLines(process, callback, read_timeout=0.1):
 
     # Read a chunk of the process output. This should not block because of the
     # above select, and can return chunk with size < 4096.
+    assert process.stdout is not None
     data = str(os.read(process.stdout.fileno(), 4096), 'utf-8')
     if not data:
       return False

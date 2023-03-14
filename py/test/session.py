@@ -63,7 +63,7 @@ def GetDeviceID():
   # The device_id file doesn't exist, we probably are not on DUT, just
   # run bin/device_id once and return the result.
   device_id_bin = os.path.join(paths.FACTORY_DIR, 'bin', 'device_id')
-  return process_utils.CheckOutput(device_id_bin).strip()
+  return process_utils.CheckOutput([device_id_bin]).strip()
 
 
 @type_utils.CachedGetter
