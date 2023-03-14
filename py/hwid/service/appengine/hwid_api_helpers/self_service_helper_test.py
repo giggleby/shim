@@ -6,25 +6,31 @@ import datetime
 import os
 import re
 import textwrap
-from typing import Optional, Sequence
+from typing import Mapping, Optional, Sequence
 import unittest
 from unittest import mock
 
 from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data import config_data
+from cros.factory.hwid.service.appengine.data.converter import converter as converter_module
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
+from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
-from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
+from cros.factory.hwid.service.appengine import hwid_action_manager
+from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import hwid_v3_action
+from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import builder as v3_builder
 from cros.factory.hwid.v3 import database
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.utils import file_utils
 
 
@@ -51,6 +57,7 @@ _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
 _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
 _SessionCache = hwid_action.SessionCache
 _ApprovalStatus = change_unit_utils.ApprovalStatus
+_ActionHelperCls = v3_action_helper.HWIDV3SelfServiceActionHelper
 
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -64,6 +71,12 @@ _HWID_V3_CHANGE_UNIT_AFTER = os.path.join(
 _HWID_V3_GOLDEN_WITH_AUDIO_CODEC = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/v3-golden-audio-codec.yaml')
+_HWID_V3_CHANGE_UNIT_INTERNAL_BEFORE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/change-unit-with-internal-before.yaml')
+_HWID_V3_CHANGE_UNIT_INTERNAL_AFTER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/change-unit-with-internal-after.yaml')
 
 
 def _ApplyUnifiedDiff(src: str, diff: str) -> str:
@@ -89,6 +102,49 @@ def _ApplyUnifiedDiff(src: str, diff: str) -> str:
   return ''.join(result_lines + src_lines[src_next_line_no:])
 
 
+def _CreateFakeSelfServiceHelper(
+    modules: test_utils.FakeModuleCollection,
+    hwid_repo_manager: hwid_repo.HWIDRepoManager,
+    hwid_action_manager_inst: Optional[
+        hwid_action_manager.HWIDActionManager] = None,
+    hwid_db_data_manager: Optional[hwid_db_data.HWIDDBDataManager] = None,
+    avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
+    session_cache_adapter: Optional[memcache_adapter.MemcacheAdapter] = None,
+    avl_metadata_manager: Optional[avl_metadata_util.AVLMetadataManager] = None,
+) -> ss_helper_module.SelfServiceHelper:
+  avl_metadata_manager = (
+      avl_metadata_manager or avl_metadata_util.AVLMetadataManager(
+          modules.ndb_connector,
+          config_data.AVLMetadataSetting.CreateInstance(
+              False, 'namespace.prefix', 'avl-metadata-topic',
+              ['cc1@notgoogle.com'])))
+  return ss_helper_module.SelfServiceHelper(
+      hwid_action_manager_inst or modules.fake_hwid_action_manager,
+      hwid_repo_manager,
+      hwid_db_data_manager or modules.fake_hwid_db_data_manager,
+      avl_converter_manager or modules.fake_avl_converter_manager,
+      session_cache_adapter or modules.fake_session_cache_adapter,
+      avl_metadata_manager,
+  )
+
+
+def _AnalyzeHWIDDBEditableSection(ss_helper: ss_helper_module.SelfServiceHelper,
+                                  project: str, hwid_db_editable_section: str):
+  analyze_req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
+      project=project, hwid_db_editable_section=hwid_db_editable_section,
+      require_hwid_db_lines=False)
+
+  return ss_helper.AnalyzeHWIDDBEditableSection(analyze_req)
+
+
+def _SplitHWIDDBChange(
+    ss_helper: ss_helper_module.SelfServiceHelper, session_token: str,
+    db_external_resource: hwid_api_messages_pb2.HwidDbExternalResource):
+  split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
+      session_token=session_token, db_external_resource=db_external_resource)
+  return ss_helper.SplitHWIDDBChange(split_req)
+
+
 class SelfServiceHelperTest(unittest.TestCase):
 
   def setUp(self):
@@ -96,19 +152,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules = test_utils.FakeModuleCollection()
     self._mock_hwid_repo_manager = mock.create_autospec(
         hwid_repo.HWIDRepoManager, instance=True)
-    avl_metadata_manager = avl_metadata_util.AVLMetadataManager(
-        self._modules.ndb_connector,
-        config_data.AVLMetadataSetting.CreateInstance(False, 'namespace.prefix',
-                                                      'avl-metadata-topic',
-                                                      ['cc1@notgoogle.com']))
-    self._ss_helper = ss_helper.SelfServiceHelper(
-        self._modules.fake_hwid_action_manager,
-        self._mock_hwid_repo_manager,
-        self._modules.fake_hwid_db_data_manager,
-        self._modules.fake_avl_converter_manager,
-        self._modules.fake_session_cache_adapter,
-        avl_metadata_manager,
-    )
+    self._ss_helper = _CreateFakeSelfServiceHelper(self._modules,
+                                                   self._mock_hwid_repo_manager)
 
   def tearDown(self):
     self._modules.ClearAll()
@@ -1091,8 +1136,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     builder = v3_builder.DatabaseBuilder.FromEmpty(project='proj',
                                                    image_name='EVT')
     db_content = builder.Build().DumpDataWithoutChecksum(internal=True)
-    action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper
-    expected_db_content = action_helper_cls.RemoveHeader(db_content)
+    expected_db_content = _ActionHelperCls.RemoveHeader(db_content)
 
     req = hwid_api_messages_pb2.CreateHwidDbInitClRequest(
         project='proj', board='board', phase='EVT', bug_number=12345)
@@ -1332,7 +1376,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
 
     # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
-    analyze_resp = self._AnalyzeHWIDDBEditableSection(project, new_db_data)
+    analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
+                                                 new_db_data)
     session_token = analyze_resp.validation_token
 
     db_external_resource = hwid_api_messages_pb2.HwidDbExternalResource()
@@ -1381,10 +1426,12 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
 
     # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
-    analyze_resp = self._AnalyzeHWIDDBEditableSection(project, new_db_data)
+    analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
+                                                 new_db_data)
     session_token = analyze_resp.validation_token
-    split_resp = self._SplitHWIDDBChange(
-        session_token, hwid_api_messages_pb2.HwidDbExternalResource())
+    split_resp = _SplitHWIDDBChange(
+        self._ss_helper, session_token,
+        hwid_api_messages_pb2.HwidDbExternalResource())
 
     create_cl_req = hwid_api_messages_pb2.CreateSplittedHwidDbClsRequest(
         session_token=session_token,
@@ -1598,6 +1645,269 @@ class SelfServiceHelperTest(unittest.TestCase):
             f'reason2 of {identity}.' in review_required_call['commit_msg'] for
             identity in create_cl_resp.review_required_change_unit_identities))
 
+  def testCreateSplittedHWIDDBCLs_AVLAlignmentChanges(self):
+
+    def CreateMockAVLConverterManager(
+        match_result_mapping: Mapping[
+            str, Sequence[converter_module.CollectionMatchResult]]
+    ) -> converter_utils.ConverterManager:
+      converter_collections = {}
+      for comp_cls, match_results in match_result_mapping.items():
+        converter_collection = mock.create_autospec(
+            converter_module.ConverterCollection, instance=True)
+        converter_collection.Match.side_effect = match_results
+        converter_collections[comp_cls] = converter_collection
+      return converter_utils.ConverterManager(converter_collections)
+
+    # Arrange.
+    project = 'CHROMEBOOK'
+    old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_INTERNAL_BEFORE)
+    # The internal format is unused but just as a reference of the expected
+    # final resut.
+    new_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_INTERNAL_AFTER)
+    editable_content = _ActionHelperCls.RemoveHeader(
+        database.Database.LoadData(new_db_data).DumpDataWithoutChecksum(
+            suppress_support_status=False))
+    # Config repo and action.
+    self._ConfigLiveHWIDRepo(project, 3, old_db_data)
+    action = self._CreateFakeHWIDBAction(project, old_db_data)
+    self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
+
+    mock_avl_converter_manager = CreateMockAVLConverterManager({
+        'comp_cls1': [
+            # comp_cls1_2: both converter and alignment status are unchanged.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter1',
+            ),
+            # comp_cls1_3: change to aligned with converter1 from non-AVL one.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter1',
+            ),
+            # comp_cls1_4: change to aligned with converter changed.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter2',
+            ),
+            # comp_cls1_5: new component with converter and alignment status.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter1',
+            ),
+        ],
+        'comp_cls2': [
+            # comp_cls2_2: both converter and alignment status are unchanged.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter1',
+            ),
+            # comp_cls2_3: change to aligned with converter1 from non-AVL one.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter1',
+            ),
+            # comp_cls2_4: change to aligned with converter changed.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter2',
+            ),
+            # comp_cls2_5: new component with converter and alignment status.
+            converter_module.CollectionMatchResult(
+                _PVAlignmentStatus.ALIGNED,
+                'converter1',
+            ),
+        ],
+    })
+    # Mock ConverterManager instance in SelfServiceHelper.
+    ss_helper = _CreateFakeSelfServiceHelper(
+        self._modules,
+        self._mock_hwid_repo_manager,
+        avl_converter_manager=mock_avl_converter_manager,
+    )
+    # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
+    analyze_resp = _AnalyzeHWIDDBEditableSection(ss_helper, project,
+                                                 editable_content)
+    session_token = analyze_resp.validation_token
+
+    # ConverterCollection.Match will look up probe_info by CID.  Since we are
+    # mocking ConverterCollection.Match, only filling CID is enough.
+    db_external_resource = hwid_api_messages_pb2.HwidDbExternalResource(
+        component_probe_infos=[
+            stubby_pb2.ComponentProbeInfo(
+                component_identity=stubby_pb2.ComponentIdentity(component_id=i))
+            # CID 1 and 6 are skipped as non-AVL-linked cases.
+            for i in [2, 3, 4, 5, 7, 8, 9, 10]
+        ])
+    split_resp = _SplitHWIDDBChange(ss_helper, session_token,
+                                    db_external_resource)
+
+    create_cl_req = hwid_api_messages_pb2.CreateSplittedHwidDbClsRequest(
+        session_token=session_token,
+        original_requester='requester@notgoogle.com', description='description',
+        bug_number=100)
+    approval_status = create_cl_req.approval_status
+
+    # Act
+    change_unit_mapping = split_resp.change_units
+    approved_cl_action = _ClActionMsg(
+        approval_case=_ClActionMsg.ApprovalCase.APPROVED)
+    review_required_cl_action = _ClActionMsg(
+        approval_case=_ClActionMsg.ApprovalCase.NEED_MANUAL_REVIEW)
+    # Set the changes of comp_cls1 comps AUTO_APPROVED and set the
+    # other changes as MANUAL_REVIEW_REQUIRED.
+    for identity, change_unit in change_unit_mapping.items():
+      if (change_unit.WhichOneof('change_unit_type') == 'comp_change' and
+          change_unit.comp_change.component_class == 'comp_cls1'):
+        approval_status[identity].CopyFrom(approved_cl_action)
+      else:
+        approval_status[identity].CopyFrom(review_required_cl_action)
+
+    ss_helper.CreateSplittedHWIDDBCLs(create_cl_req)
+
+    # Assert
+    # Validate the two CommitHWIDDB calls.
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    self.assertEqual(2, live_hwid_repo.CommitHWIDDB.call_count)
+    auto_approved_call, review_required_call = (
+        kwargs for (unused_args,
+                    kwargs) in live_hwid_repo.CommitHWIDDB.call_args_list)
+
+    expected_auto_approved_diff = textwrap.dedent('''\
+        ---
+        +++
+        @@ -11,7 +11,7 @@
+         # 若修改将使设备配置變為无效，并且不得销售此设备。
+         #
+         #####
+        -checksum:
+        +checksum: 24ab053b998f9bd18273c6b2ebfb3d17285eb893
+
+         ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+        @@ -133,15 +133,25 @@
+                   probe_value_matched: true
+               comp_cls1_3:
+                 status: supported
+        -        values:
+        -          incorrect_value: '3'
+        +        values: !link_avl
+        +          converter: converter1
+        +          original_values:
+        +            value: '3'
+        +          probe_value_matched: true
+               comp_cls1_4:
+        +        status: supported
+        +        values: !link_avl
+        +          converter: converter2
+        +          original_values:
+        +            value2: '4'
+        +          probe_value_matched: true
+        +      comp_cls1_5:
+                 status: supported
+                 values: !link_avl
+                   converter: converter1
+                   original_values:
+        -            value: '4'
+        -          probe_value_matched: false
+        +            value: '5'
+        +          probe_value_matched: true
+           comp_cls2:
+             items:
+               comp_cls2_6:
+    ''')
+    expected_review_required_diff = textwrap.dedent('''\
+        ---
+        +++
+        @@ -11,7 +10,7 @@
+         # 若修改将使设备配置變為无效，并且不得销售此设备。
+         #
+         #####
+        -checksum: 24ab053b998f9bd18273c6b2ebfb3d17285eb893
+        +checksum: b5ff010eb9860e7733b7fa21bc0444c4091b4eea
+
+         ##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+        @@ -41,6 +40,7 @@
+           - ro_main_firmware_field: 1
+           - comp_cls1_field: 2
+           - comp_cls2_field: 3
+        +  - comp_cls1_field: 1
+
+         encoded_fields:
+           chassis_field:
+        @@ -76,6 +76,8 @@
+               comp_cls1: comp_cls1_3
+             3:
+               comp_cls1: comp_cls1_4
+        +    4:
+        +      comp_cls1: comp_cls1_5
+           comp_cls2_field:
+             0:
+               comp_cls2: comp_cls2_6
+        @@ -85,6 +87,8 @@
+               comp_cls2: comp_cls2_8
+             3:
+               comp_cls2: comp_cls2_9
+        +    4:
+        +      comp_cls2: comp_cls2_10
+
+         components:
+           mainboard:
+        @@ -167,14 +171,24 @@
+                   probe_value_matched: true
+               comp_cls2_8:
+                 status: supported
+        -        values:
+        -          incorrect_value: '3'
+        +        values: !link_avl
+        +          converter: converter1
+        +          original_values:
+        +            value: '3'
+        +          probe_value_matched: true
+               comp_cls2_9:
+        +        status: supported
+        +        values: !link_avl
+        +          converter: converter2
+        +          original_values:
+        +            value2: '4'
+        +          probe_value_matched: true
+        +      comp_cls2_10:
+                 status: supported
+                 values: !link_avl
+                   converter: converter1
+                   original_values:
+        -            value: '4'
+        -          probe_value_matched: false
+        +            value: '5'
+        +          probe_value_matched: true
+
+         rules: []
+    ''')
+    auto_approved_db_content_internal = _ApplyUnifiedDiff(
+        old_db_data, expected_auto_approved_diff)
+    auto_approved_db_content_external = action.PatchHeader(
+        database.Database.LoadData(auto_approved_db_content_internal)
+        .DumpDataWithoutChecksum(suppress_support_status=False))
+
+    review_required_db_content_internal = _ApplyUnifiedDiff(
+        auto_approved_db_content_internal, expected_review_required_diff)
+    review_required_db_content_external = action.PatchHeader(
+        database.Database.LoadData(review_required_db_content_internal)
+        .DumpDataWithoutChecksum(suppress_support_status=False))
+
+    # Validate contents of auto-approved HWID DB CL.
+    self.assertEqual(auto_approved_db_content_external,
+                     auto_approved_call['hwid_db_contents'])
+    self.assertEqual(auto_approved_db_content_internal,
+                     auto_approved_call['hwid_db_contents_internal'])
+
+    # Validate contents review-required HWID DB CL.
+    self.assertEqual(review_required_db_content_external,
+                     review_required_call['hwid_db_contents'])
+    self.assertEqual(review_required_db_content_internal,
+                     review_required_call['hwid_db_contents_internal'])
+
   def testUpdateAudioCodecKernelNames_HasIntersection(self):
     req = hwid_api_messages_pb2.UpdateAudioCodecKernelNamesRequest(
         allowlisted_kernel_names=['common', 'allowlist1', 'allowlist2'],
@@ -1657,8 +1967,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     mock_gerrit_cred.return_value = ('unused_service_account', 'unused_token')
     project = 'CHROMEBOOK'
     old_db_data = file_utils.ReadFile(_HWID_V3_GOLDEN_WITH_AUDIO_CODEC)
-    action_helper_cls = v3_action_helper.HWIDV3SelfServiceActionHelper
-    new_db_data = action_helper_cls.RemoveHeader(old_db_data)
+    new_db_data = _ActionHelperCls.RemoveHeader(old_db_data)
     # Config repo and action.
     self._ConfigLiveHWIDRepo(project, 3, old_db_data)
     action = self._CreateFakeHWIDBAction(project, old_db_data)
@@ -1669,7 +1978,8 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ss_helper.UpdateAudioCodecKernelNames(blocklist_req)
 
     # Act.
-    analysis_resp = self._AnalyzeHWIDDBEditableSection(project, new_db_data)
+    analysis_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
+                                                  new_db_data)
 
     # Assert.
     skippable_comps = [
@@ -1697,22 +2007,6 @@ class SelfServiceHelperTest(unittest.TestCase):
             skip_avl_check=True,
         )
     ], skippable_comps)
-
-  def _AnalyzeHWIDDBEditableSection(self, project: str,
-                                    hwid_db_editable_section: str):
-    analyze_req = hwid_api_messages_pb2.AnalyzeHwidDbEditableSectionRequest(
-        project=project, hwid_db_editable_section=hwid_db_editable_section,
-        require_hwid_db_lines=False)
-
-    return self._ss_helper.AnalyzeHWIDDBEditableSection(analyze_req)
-
-  def _SplitHWIDDBChange(
-      self, session_token: str,
-      db_external_resource: hwid_api_messages_pb2.HwidDbExternalResource):
-    split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
-        session_token=session_token, db_external_resource=db_external_resource)
-
-    return self._ss_helper.SplitHWIDDBChange(split_req)
 
   @classmethod
   def _CreateFakeHWIDBAction(cls, project: str, raw_db: str):

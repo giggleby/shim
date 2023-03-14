@@ -783,6 +783,42 @@ class ComponentsTest(unittest.TestCase):
 
     self.assertNotEqual(comp.comp_hash, comp_diff.comp_hash)
 
+  def testComponentHashInternalByDefault(self):
+    comp_external = database.ComponentInfo(
+        yaml.Dict([
+            ('a1', 'b1'),
+            ('a2', 'b2'),
+            ('a3', 'b3'),
+        ]), status='supported')
+    comp_internal1 = database.ComponentInfo(
+        rule.AVLProbeValue(
+            'identifier1', False,
+            yaml.Dict([
+                ('a1', 'b1'),
+                ('a2', 'b2'),
+                ('a3', 'b3'),
+            ])), status='supported')
+    comp_internal2 = database.ComponentInfo(
+        rule.AVLProbeValue(
+            'identifier1', False,
+            yaml.Dict([
+                ('a3', 'b3'),
+                ('a2', 'b2'),
+                ('a1', 'b1'),
+            ])), status='supported')
+    comp_internal_diff = database.ComponentInfo(
+        rule.AVLProbeValue(
+            'identifier2', True,
+            yaml.Dict([
+                ('a1', 'b1'),
+                ('a2', 'b2'),
+                ('a3', 'b3'),
+            ])), status='supported')
+
+    self.assertNotEqual(comp_external.comp_hash, comp_internal1.comp_hash)
+    self.assertEqual(comp_internal1.comp_hash, comp_internal2.comp_hash)
+    self.assertNotEqual(comp_internal1.comp_hash, comp_internal_diff.comp_hash)
+
   def testUpdateComponent_MappingUpdate(self):
 
     c = database.Components({

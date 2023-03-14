@@ -39,8 +39,8 @@ pattern:
   - dram_field: 5
   - firmware_keys_field: 1
   - ro_main_firmware_field: 1
-  - comp_cls_1_field: 2
-  - comp_cls_23_field: 2
+  - comp_cls1_field: 2
+  - comp_cls2_field: 3
 
 encoded_fields:
   chassis_field:
@@ -67,18 +67,24 @@ encoded_fields:
   storage_field:
     0:
       storage: []
-  comp_cls_1_field:
+  comp_cls1_field:
     0:
-      comp_cls_1: comp_1_1
+      comp_cls1: comp_cls1_1
     1:
-      comp_cls_1: comp_1_2
-  comp_cls_23_field:
+      comp_cls1: comp_cls1_2
+    2:
+      comp_cls1: comp_cls1_3
+    3:
+      comp_cls1: comp_cls1_4
+  comp_cls2_field:
     0:
-      comp_cls_2: comp_2_1
-      comp_cls_3: comp_3_1
+      comp_cls2: comp_cls2_6
     1:
-      comp_cls_2: comp_2_2
-      comp_cls_3: comp_3_2
+      comp_cls2: comp_cls2_7
+    2:
+      comp_cls2: comp_cls2_8
+    3:
+      comp_cls2: comp_cls2_9
 
 components:
   mainboard:
@@ -112,35 +118,53 @@ components:
         status: supported
         values:
           hash: '0'
-  comp_cls_1:
+  comp_cls1:
     items:
-      comp_1_1:
+      comp_cls1_1:
         status: supported
         values:
           value: '1'
-      comp_1_2:
+      comp_cls1_2:
+        status: supported
+        values: !link_avl
+          converter: converter1
+          original_values:
+            value: '2'
+          probe_value_matched: true
+      comp_cls1_3:
         status: supported
         values:
-          value: '2'
-  comp_cls_2:
+          incorrect_value: '3'
+      comp_cls1_4:
+        status: supported
+        values: !link_avl
+          converter: converter1
+          original_values:
+            value: '4'
+          probe_value_matched: false
+  comp_cls2:
     items:
-      comp_2_1:
+      comp_cls2_6:
         status: supported
         values:
           value: '1'
-      comp_2_2:
+      comp_cls2_7:
+        status: supported
+        values: !link_avl
+          converter: converter1
+          original_values:
+            value: '2'
+          probe_value_matched: true
+      comp_cls2_8:
         status: supported
         values:
-          value: '2'
-  comp_cls_3:
-    items:
-      comp_3_1:
+          incorrect_value: '3'
+      comp_cls2_9:
         status: supported
-        values:
-          value: '1'
-      comp_3_2:
-        status: supported
-        values:
-          value: '2'
+        values: !link_avl
+          converter: converter1
+          original_values:
+            value: '4'
+          probe_value_matched: false
 
 rules: []

@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.v3 import builder
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.utils import file_utils
 
 
@@ -230,6 +231,26 @@ class CompChangeTest(ChangeUnitTestBase):
            items:
              comp_2_1:
   ''')
+  _DIFF_ADD_COMPONENT_INTERNAL = textwrap.dedent('''\
+      ---
+      +++
+      @@ -97,6 +97,15 @@
+             comp_1_2:
+               values:
+                 value: '2'
+      +      new_comp:
+      +        values: !link_avl
+      +          converter: identifier1
+      +          original_values:
+      +            field1: value1
+      +            field2: value2
+      +          probe_value_matched: true
+      +        information:
+      +          info1: val1
+         comp_cls_2:
+           items:
+             comp_2_1:
+  ''')
 
   _DIFF_UPDATE_COMPONENT = textwrap.dedent('''\
       ---
@@ -263,6 +284,7 @@ class CompChangeTest(ChangeUnitTestBase):
 
   _DIFFS: Sequence[str] = [
       _DIFF_ADD_COMPONENT,
+      _DIFF_ADD_COMPONENT_INTERNAL,
       _DIFF_UPDATE_COMPONENT,
   ]
 
@@ -277,6 +299,24 @@ class CompChangeTest(ChangeUnitTestBase):
 
     self._AssertApplyingPatchesEqualsData(
         self._LoadDBContentWithDiffPatched(self._DIFF_ADD_COMPONENT),
+        [new_comp])
+
+  def testPatchCompChange_NewInternal(self):
+    comp_info = database.ComponentInfo(
+        v3_rule.AVLProbeValue(
+            identifier='identifier1',
+            probe_value_matched=True,
+            values={
+                'field1': 'value1',
+                'field2': 'value2'
+            },
+        ), 'supported', {'info1': 'val1'})
+    new_comp = _CompChange(
+        _GenerateNewComponentAnalysis(3), comp_info.values,
+        comp_info.information, comp_info.comp_hash)
+
+    self._AssertApplyingPatchesEqualsData(
+        self._LoadDBContentWithDiffPatched(self._DIFF_ADD_COMPONENT_INTERNAL),
         [new_comp])
 
   def testPatchCompChange_Update(self):

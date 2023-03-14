@@ -1006,13 +1006,14 @@ class SelfServiceHelper:
 
       commit_msg_list.append(f'BUG=b:{request.bug_number}')
       commit_msg = '\n'.join(commit_msg_list)
-      new_hwid_db_editable_section = (
-          db.DumpDataWithoutChecksum(suppress_support_status=False))
+      new_hwid_db_editable_section_internal = db.DumpDataWithoutChecksum(
+          suppress_support_status=False, internal=True)
+      new_hwid_db_editable_section_external = db.DumpDataWithoutChecksum(
+          suppress_support_status=False)
       new_hwid_db_contents_external = action.PatchHeader(
-          new_hwid_db_editable_section)
-      new_hwid_db_contents_internal = action.ConvertToInternalHWIDDBContent(
-          self._avl_converter_manager, new_hwid_db_contents_external,
-          session_cache.avl_resource)
+          new_hwid_db_editable_section_external)
+      new_hwid_db_contents_internal = action.PatchHeader(
+          new_hwid_db_editable_section_internal)
       reviewers = set()
       ccs = set()
       for identity in change_unit_identities:

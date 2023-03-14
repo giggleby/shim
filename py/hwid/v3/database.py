@@ -96,8 +96,8 @@ class ComponentInfo:
     self._bundle_uuids = bundle_uuids or []
     self._comp_hash = hashlib.sha1(
         yaml.safe_dump(
-            self.Export(sort_values_by_key=True),
-            default_flow_style=False).encode('utf8')).hexdigest()
+            self.Export(sort_values_by_key=True), default_flow_style=False,
+            internal=True).encode('utf8')).hexdigest()
 
   def __eq__(self, rhs: Any) -> bool:
     return (self._values == rhs._values and self._status == rhs._status and
@@ -111,8 +111,13 @@ class ComponentInfo:
     def _ExportDict(values):
       if not sort_values_by_key:
         return values
-      return None if v3_rule.IsComponentValueNone(values) else yaml.Dict(
-          sorted(values.items()))
+      if v3_rule.IsComponentValueNone(values):
+        return None
+      sorted_values = yaml.Dict(sorted(values.items()))
+      if not isinstance(values, v3_rule.AVLProbeValue):
+        return sorted_values
+      return v3_rule.AVLProbeValue(values.converter_identifier,
+                                   values.probe_value_matched, sorted_values)
 
     if self.bundle_uuids:
       component_dict = v3_rule.FromFactoryBundle(self.bundle_uuids)
