@@ -37,6 +37,7 @@ import re
 
 from cros.factory.device import device_utils
 from cros.factory.test import device_data
+from cros.factory.utils import log_utils
 from cros.factory.utils import type_utils
 
 
@@ -147,7 +148,7 @@ def ClearEventlogCache():
 def _GetEventLog(dut):
   # Use elogtool command instead of reading from eventlog.txt in case eventlog
   # is not flushed to file yet. See b/249407529.
-  return dut.CheckOutput('elogtool list --utc', log=True).splitlines()
+  return log_utils.GetCorebootEventLog(dut=dut, log=True).splitlines()
 
 
 def _ReadEventLog(dut):

@@ -18,7 +18,7 @@ class ChromeOSBoardTest(unittest.TestCase):
     self.link = device_types.MockLink()
     self.dut = chromeos.ChromeOSBoard(self.link)
 
-  @mock.patch('cros.factory.device.boards.chromeos.ChromeOSBoard.CallOutput',
+  @mock.patch('cros.factory.utils.log_utils.GetCorebootEventLog',
               return_value='eventlog_value')
   @mock.patch(
       'cros.factory.device.boards.linux.LinuxBoard.GetStartupMessages',

@@ -35,7 +35,6 @@ and suspend to idle by writing freeze to ``/sys/power/state``::
 import logging
 import os
 import re
-import subprocess
 import threading
 import time
 from typing import List, Optional
@@ -50,6 +49,7 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
+from cros.factory.utils import log_utils
 from cros.factory.utils import process_utils
 
 
@@ -80,10 +80,7 @@ def GetElog(dut: device_types.DeviceBoard,
   Returns:
     The elog.
   """
-  p = dut.Popen(['elogtool', 'list', '--utc'], stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-  stdout, unused_stderr = p.communicate()
-  stdout_lines = stdout.splitlines()
+  stdout_lines = log_utils.GetCorebootEventLog(dut=dut).splitlines()
   if cut_line:
     for index, line in enumerate(stdout_lines):
       if line == cut_line:

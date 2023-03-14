@@ -6,10 +6,13 @@
 
 import logging
 import os
+import subprocess
 import sys
 import time
 
-from . import file_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import sys_interface
+
 
 DEFAULT_LOG_FORMAT = '[%(levelname)s] %(message)s'
 
@@ -80,6 +83,21 @@ def FileLogger(logger, log_path, log_prefix=None, log_format=None, level=None):
   ret.addHandler(handler)
   ret.setLevel(level)
   return ret
+
+
+def GetCorebootEventLog(dut=None, log=False, utc=True):
+  """Returns the stdout results of executing elogtool command."""
+  if dut is None:
+    dut = sys_interface.SystemInterface()
+
+  command = ['elogtool', 'list']
+  if utc:
+    command.append('--utc')
+
+  result_stdout, unused_result_stderr = dut.Popen(
+      command, log=log, stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE).communicate()
+  return result_stdout
 
 
 class NoisyLogger:
