@@ -1,0 +1,103 @@
+
+
+
+##### BEGIN CHECKSUM BLOCK
+#
+# WARNING: This checksum is generated and audited by Google. Do not
+# modify it. If you modify it, devices' configurations will be
+# invalid, and the devices may not be sold.
+#
+# 警告：此校验码由 Google 产生及审核，禁止手动修改。
+# 若修改将使设备配置變為无效，并且不得销售此设备。
+#
+#####
+checksum: 65a7054cbf5e10ddbe1907b48b71df483add4f2e
+
+##### END CHECKSUM BLOCK. See the warning above. 请参考上面的警告。
+
+
+project: PROJ
+
+encoding_patterns:
+  0: default
+
+image_id:
+  0: PROTO
+
+pattern:
+- image_ids:
+  - 0
+  encoding_scheme: base8192
+  fields: []
+
+encoded_fields:
+  region_field: !region_field []
+  firmware_keys_field:
+    0:
+      firmware_keys: firmware_keys_mp_default
+  ro_main_firmware_field:
+    0:
+      ro_main_firmware: Google_Proj_1111_1_1
+  ro_fp_firmware_field:
+    0:
+      ro_fp_firmware: fp_firmware_1
+    1:
+      ro_fp_firmware: fp_firmware_2
+
+components:
+  region: !region_component
+  ro_ec_firmware:
+    items:
+      ro_ec_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid1
+        status: unqualified
+        values: null
+  ro_main_firmware:
+    items:
+      ro_main_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid1
+        status: unqualified
+        values:
+          version: Google_Proj.1111.1.1
+      ro_main_firmware_2: !from_factory_bundle
+        bundle_uuids:
+        - uuid2
+        status: unqualified
+        values:
+          version: Google_Proj.2222.2.2_2022_08_22_1144
+      Google_Proj_1111_1_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid3
+        status: unqualified
+        values:
+          hash: hash_string
+          version: Google_Proj.1111.1.1
+  firmware_keys:
+    items:
+      firmware_keys_mp_default: !from_factory_bundle
+        bundle_uuids:
+        - uuid3
+        status: unqualified
+        values:
+          key_recovery: key_recovery
+          key_root: key_root
+  ro_fp_firmware:
+    items:
+      fp_firmware_1: !from_factory_bundle
+        bundle_uuids:
+        - uuid3
+        status: unqualified
+        values:
+          hash: hash_string
+          version: fp_firmware_1
+      fp_firmware_2: !from_factory_bundle
+        bundle_uuids:
+        - uuid3
+        status: unqualified
+        values:
+          hash: hash_string
+          version: fp_firmware_2
+
+rules: []

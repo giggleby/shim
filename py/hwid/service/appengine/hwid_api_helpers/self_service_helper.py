@@ -454,7 +454,7 @@ class SelfServiceHelper:
                          f'{bundle_record.firmware_signer}.'))
         keys_comp_name = f'firmware_keys_{match.group(1)}'
 
-      changed = False
+      covered_bundle_uuids = None
       # Add component to DB
       with v3_builder.DatabaseBuilder.FromExistingDB(
           db=action.GetDBV3()) as db_builder:
@@ -486,9 +486,15 @@ class SelfServiceHelper:
             comp = db_builder.GetComponents(field.name)[comp_name]
             db_builder.GetComponents(field.name)[comp_name] = comp.Replace(
                 bundle_uuids=list(comp.bundle_uuids) + [request_uuid])
-            changed = True
 
-      if not changed:
+            # If the added components are covered by any other uuid, this CL
+            # is a no-op.
+            if covered_bundle_uuids is None:
+              covered_bundle_uuids = set(comp.bundle_uuids)
+            else:
+              covered_bundle_uuids &= set(comp.bundle_uuids)
+
+      if covered_bundle_uuids:
         logging.info('No component is added/modified to DB: %s', model)
         continue
 

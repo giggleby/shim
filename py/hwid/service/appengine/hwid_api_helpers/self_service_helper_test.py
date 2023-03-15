@@ -62,6 +62,9 @@ _ActionHelperCls = v3_action_helper.HWIDV3SelfServiceActionHelper
 HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/v3-from-factory-bundle.yaml')
+HWIDV3_FROM_FACTORY_BUNDLE_AFTER_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../testdata/v3-from-factory-bundle-after.yaml')
 _HWID_V3_CHANGE_UNIT_BEFORE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     '../testdata/change-unit-before.yaml')
@@ -1219,6 +1222,18 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(resp.commits['PROJ'].cl_number, 123)
     self.assertEqual(resp.commits['PROJ'].new_hwid_db_contents,
                      action.GetDBEditableSection())
+
+  def testCreateHWIDDBFirmwareInfoUpdateCL_NoComponentAdded(self):
+    raw_db = file_utils.ReadFile(HWIDV3_FROM_FACTORY_BUNDLE_AFTER_FILE)
+    self._ConfigLiveHWIDRepo('PROJ', 3, raw_db)
+    action = self._CreateFakeHWIDBAction('PROJ', raw_db)
+    self._modules.ConfigHWID('PROJ', '3', raw_db, hwid_action=action)
+
+    req = hwid_api_messages_pb2.CreateHwidDbFirmwareInfoUpdateClRequest(
+        bundle_record=self._CreateBundleRecord(['proj']))
+    resp = self._ss_helper.CreateHWIDDBFirmwareInfoUpdateCL(req)
+
+    self.assertEqual(len(resp.commits), 0)
 
   def testCreateHWIDDBFirmwareInfoUpdateCL_ProjectNotFound(self):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
