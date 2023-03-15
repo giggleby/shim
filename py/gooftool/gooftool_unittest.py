@@ -27,7 +27,6 @@ from cros.factory.gooftool.management_engine import SKU
 from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
-from cros.factory.tools.factory_summary import GetSystemInfo
 from cros.factory.unittest_utils import label_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import pygpt
@@ -952,31 +951,24 @@ class GooftoolTest(unittest.TestCase):
 
     self.assertRaises(Error, self._gooftool.SetFirmwareBitmapLocale)
 
-  @mock.patch(
-      'cros.factory.tools.factory_summary.GetSystemInfo',
-      return_value={
-          'cbi': None, 'crosid': None, 'device': None, 'factory': None,
-          'fw': None, 'gsc': None, 'hw': None, 'image': None,
-          'system': None, 'vpd': None, 'wp': None
-      }
-  )
-  def testGetSystemDetails(self, mock_get_system_info):
+  def testGetSystemDetails(self):
     """Test for GetSystemDetails to ensure it returns desired keys."""
 
     self._gooftool._util.shell.return_value = StubStdout('stub_value')
+    self._gooftool._util.sys_interface = mock.Mock()
     self._gooftool._util.GetCrosSystem.return_value = {'key': 'value'}
+    self._gooftool._util.GetSystemInfo.return_value = core.Util.GetSystemInfo(
+        self._gooftool._util)
 
-    system_info_keys = {
-        'cbi', 'crosid', 'device', 'factory', 'fw',
-        'gsc', 'hw', 'image', 'system', 'vpd', 'wp'
+    system_summary_keys = {
+        'cbi', 'crosid', 'device', 'factory', 'fw', 'gsc', 'hw', 'image',
+        'system', 'vpd', 'wp', 'platform_name', 'crossystem', 'modem_status',
+        'ec_wp_status', 'bios_wp_status', 'cr50_board_id', 'cr50_sn_bits',
+        'cr50_fw_version'
     }
-    addtional_system_info_keys = {
-        'platform_name', 'crossystem', 'modem_status', 'ec_wp_status',
-        'bios_wp_status', 'cr50_board_id', 'cr50_sn_bits', 'cr50_fw_version'
-    }
-    self.assertEqual(system_info_keys | addtional_system_info_keys,
+    self.assertEqual(system_summary_keys,
                      set(self._gooftool.GetSystemDetails().keys()))
-    mock_get_system_info.assert_called_once()
+    self._gooftool._util.GetSystemInfo.assert_called_once()
 
   def testCr50WriteFlashInfoWithCustomType(self):
     """Test for custom label field.
