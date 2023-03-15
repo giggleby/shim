@@ -8,11 +8,13 @@ import pipes
 import re
 from subprocess import PIPE
 from subprocess import Popen
+from typing import Dict, Optional, Union
 
+from cros.factory.device import device_utils
 from cros.factory.test.env import paths
+from cros.factory.test.rules.privacy import FilterDict
 from cros.factory.utils import file_utils
 from cros.factory.utils import string_utils
-from cros.factory.utils import sys_interface as sys_interface_module
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
@@ -82,7 +84,7 @@ class Util:
     self.shell = Shell
     # TODO(cyueh): Remove self.sys_interface after we moving cbi_utils into
     # gooftool/.
-    self.sys_interface = sys_interface_module.SystemInterface()
+    self.sys_interface = device_utils.CreateStationInterface()
 
   def _IsDeviceFixed(self, dev):
     """Check if a device is a fixed device, i.e. not a removable device.
@@ -464,3 +466,67 @@ class Util:
       logging.error('FAIL: Failed to enable release partition.')
       self.shell('crossystem disable_dev_request=0')
       self.SetCgptAttributes(curr_attrs, device)
+
+  def GetSystemInfo(
+      self, filter_vpd: bool = False
+  ) -> Dict[str, Optional[Union[Dict, bool, int, str]]]:
+    """Returns the system information in type of dict.
+
+    Args:
+      filter_vpd: Filters the sensitive VPD in
+        cros.factory.test.rules.privacy.BLOCKLIST_KEYS.
+
+    Returns:
+      The system information in type of dict.
+    """
+
+    dut_info = self.sys_interface.info
+    vpd = dut_info.vpd_info
+    if filter_vpd:
+      vpd = FilterDict(vpd)
+
+    # Note: Handle the shell commands with care since unit tests cannot
+    # ensure the correctness of commands executed in shell.
+    system_info = {
+        'cbi':
+            dut_info.cbi_info,
+        'crosid':
+            dut_info.crosid,
+        'device':
+            dut_info.device_info,
+        'factory':
+            dut_info.factory_info,
+        'fw':
+            dut_info.fw_info,
+        'gsc':
+            dut_info.gsc_info,
+        'hw':
+            dut_info.hw_info,
+        'image':
+            dut_info.image_info,
+        'system':
+            dut_info.system_info,
+        'vpd':
+            vpd,
+        'wp':
+            dut_info.wp_info,
+        'platform_name':
+            self.GetReleaseImageBoardName(),
+        'crossystem':
+            self.GetCrosSystem(),
+        'modem_status':
+            self.shell('modem status').stdout.splitlines(),
+        'ec_wp_status':
+            self.shell('flashrom -p ec --flash-size 2>/dev/null && '
+                       'flashrom -p ec --wp-status || '
+                       'echo "EC is not available."').stdout,
+        'bios_wp_status':
+            self.shell('flashrom -p host --wp-status').stdout,
+        'cr50_board_id':
+            self.shell('gsctool -a -i -M').stdout,
+        'cr50_sn_bits':
+            self.shell('/usr/share/cros/cr50-read-rma-sn-bits.sh').stdout,
+        'cr50_fw_version':
+            self.shell('gsctool -a -f -M').stdout,
+    }
+    return system_info
