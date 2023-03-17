@@ -45,6 +45,14 @@ Device Data can be considered as a mapping or dictionary, with following keys:
 - ``factory``: A dict for manufacturing flow control, used by shopfloor
   backends. See Shopfloor Service API for more details.
 
+- ``feature management``: A dictionary for what feature management will be
+  reading, including:
+
+  - ``feature management``: boolean value specifying if panel A contains
+    logo.
+
+  - ``hw_compliance_version``: Int value representing the version in factory?
+
 For example, a typical device usually has both device serial number and
 main board serial number, region VPD, registration codes, thus the device data
 will be set to::
@@ -115,7 +123,7 @@ API Spec
 import collections.abc
 import logging
 import os
-from typing import Union
+from typing import Dict, Union
 
 # pylint: disable=wildcard-import,unused-wildcard-import
 from cros.factory.test.device_data_constants import *
@@ -460,3 +468,47 @@ def _DeriveDeviceDataKey(rule, vpd_key):
   vpd_key = vpd_key[len(expected_key[:-1]):]
   # Pre-pend new prefix.
   return JoinKeys(rule[1], vpd_key)
+
+
+class InvalidFeatureData(Exception):
+  """Exception to raise when data is incorrect"""
+
+
+class InconsistentFeatureData(Exception):
+  """Raised when data is not matching with existing device_data"""
+
+
+def GetFeatureDeviceData() -> Dict[str, Union[int, bool]]:
+  """Returns Feature Management"""
+  return GetDeviceData(KEY_FM, {})  # type: ignore
+
+
+def VerifyFeatureData(data: dict) -> bool:
+  if len(data.keys()) != 2:
+    return False
+  if NAME_CHASSIS_BRANDED not in data or NAME_HW_COMPLIANCE_VERSION not in data:
+    return False
+  if not isinstance(data[NAME_CHASSIS_BRANDED], bool):
+    return False
+  if not isinstance(data[NAME_HW_COMPLIANCE_VERSION], int):
+    return False
+  return True
+
+
+def SetFeatureDeviceData(new_data: Dict) -> None:
+  """Sets the data of feature device."""
+  if not VerifyFeatureData(new_data):
+    raise InvalidFeatureData
+  UpdateDeviceData({KEY_FM: new_data})
+
+
+def SetBrandedChassisData(branded: bool) -> None:
+  if not isinstance(branded, bool):
+    raise InvalidFeatureData
+  UpdateDeviceData({KEY_FM_CHASSIS_BRANDED: branded})
+
+
+def SetHWComplianceVersionData(version: int) -> None:
+  if not isinstance(version, int):
+    raise InvalidFeatureData
+  UpdateDeviceData({KEY_FM_HW_COMPLIANCE_VERSION: version})
