@@ -244,6 +244,9 @@
         "scan_devices": true
       }
     },
+    "BrandedChassis": {
+      "pytest_name": "branded_chassis"
+    },
     "Button": {
       "pytest_name": "button",
       "args": {

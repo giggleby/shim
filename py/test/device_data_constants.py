@@ -4,6 +4,7 @@
 
 from cros.factory.utils import shelve_utils
 
+
 # Helper utility for manipulating keys.
 JoinKeys = shelve_utils.DictKey.Join
 
@@ -35,6 +36,13 @@ KEY_COMPONENT_HAS_TOUCHSCREEN = JoinKeys(KEY_COMPONENT, 'has_touchscreen')
 
 KEY_HWID = 'hwid'
 KEY_FACTORY = 'factory'
+
+# Feature Management sections
+KEY_FM = 'feature_management'
+NAME_CHASSIS_BRANDED = 'chassis_branded'
+NAME_HW_COMPLIANCE_VERSION = 'hw_compliance_version'
+KEY_FM_CHASSIS_BRANDED = JoinKeys(KEY_FM, NAME_CHASSIS_BRANDED)
+KEY_FM_HW_COMPLIANCE_VERSION = JoinKeys(KEY_FM, NAME_HW_COMPLIANCE_VERSION)
 
 # default key mapping from RO_VPD to device data
 DEFAULT_RO_VPD_KEY_MAP = {
