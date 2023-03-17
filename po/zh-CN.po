@@ -102,6 +102,10 @@ msgid "Bluetooth Host"
 msgstr "蓝牙主机"
 
 #: ../build/pytests_label_generated.json
+msgid "Branded Chassis"
+msgstr "品牌机箱"
+
+#: ../build/pytests_label_generated.json
 msgid "Brightness"
 msgstr "亮度"
 
@@ -1654,6 +1658,28 @@ msgstr "连接到蓝牙输入设备..."
 #: ../py/test/pytests/bluetooth.py
 msgid "Please test input. Press Escape to fail and Enter to pass"
 msgstr "请测试输入, 如果失败, 请按Esc键，如果成功，请按Enter键"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "Verify branded chassis"
+msgstr "验证品牌机箱"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid ""
+"Please verify if the chassis has X label on it.If Yes, press \"Y\". If not, "
+"press \"N\""
+msgstr "请验证机箱上是否有 X 标签。如果是，请按 \"Y\"。如果没有，请按\"N\""
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "The DUT is a branded chassis"
+msgstr "DUT 是品牌机箱"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "The DUT is NOT branded chassis"
+msgstr "DUT 不是品牌机箱"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "Data is inconsistent, please double check!"
+msgstr "数据不一致，请仔细检查"
 
 #: ../py/test/pytests/brightness/lcd_backlight.py
 msgid "Please check if backlight brightness is changing from dark to bright."

@@ -250,6 +250,9 @@
         "average_rssi_threshold": -55.0
       }
     },
+    "BrandedChassis": {
+      "pytest_name": "branded_chassis"
+    },
     "Button": {
       "pytest_name": "button",
       "args": {

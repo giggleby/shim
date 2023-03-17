@@ -3,10 +3,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-
+import json
 import unittest
 
 from cros.factory.test import device_data
+from cros.factory.test import device_data_constants
 from cros.factory.test import state
 
 
@@ -68,6 +69,50 @@ class VerifyDeviceDataUnittest(unittest.TestCase):
         {
             'component.has_eeff': 'Y'
         })
+
+
+class VerifyFeatureDataUnittest(unittest.TestCase):
+
+  def setUp(self) -> None:
+    self.state_proxy = state.StubFactoryState()
+
+  def testVerifyExtraFeatureFields(self) -> None:
+    fake_data = {
+        device_data_constants.NAME_CHASSIS_BRANDED: False,
+        device_data_constants.NAME_HW_COMPLIANCE_VERSION: 123,
+        'something_else': 123
+    }
+    self.assertFalse(device_data.VerifyFeatureData(fake_data))
+
+  def testVerifyMissingFeatureFields(self) -> None:
+    fake_data = {
+        device_data_constants.NAME_CHASSIS_BRANDED: False,
+    }
+    self.assertFalse(device_data.VerifyFeatureData(fake_data))
+
+  def testVerifyIncorrectChassisType(self) -> None:
+    fake_data = {
+        device_data_constants.NAME_CHASSIS_BRANDED: 123,
+    }
+    self.assertFalse(device_data.VerifyFeatureData(fake_data))
+
+  def testVerifyIncorrectHWComplianceType(self) -> None:
+    fake_data = {
+        device_data_constants.NAME_HW_COMPLIANCE_VERSION: False,
+    }
+    self.assertFalse(device_data.VerifyFeatureData(fake_data))
+
+  def testSetFeatureDeviceData(self):
+    mock_data = {
+        device_data_constants.NAME_CHASSIS_BRANDED: False,
+        device_data_constants.NAME_HW_COMPLIANCE_VERSION: 123
+    }
+    device_data.SetFeatureDeviceData(mock_data)
+    result = device_data.GetFeatureDeviceData()
+
+    self.assertEqual(
+        json.dumps(mock_data, sort_keys=True), json.dumps(
+            result, sort_keys=True))
 
 
 if __name__ == '__main__':
