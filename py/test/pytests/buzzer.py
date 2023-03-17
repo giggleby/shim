@@ -53,7 +53,10 @@ from cros.factory.utils.arg_utils import Arg
 
 
 _MAX_BEEP_TIMES = 5
-
+# Use the same frequency as dev boot beep
+# Reference: https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/41b87c02a7facc8ba47c3f9ac6ad16d4fcfbc2b8/src/drivers/sound/gpio_edge_buzzer.c#29
+_BEEP_FREQUENCY = 2700
+_SECOND_TO_NANOSECONDS = 10**9
 
 class BuzzerTest(test_case.TestCase):
   """Tests buzzer."""
@@ -96,6 +99,11 @@ class BuzzerTest(test_case.TestCase):
         self.assertEqual(self._pass_digit, int(key), 'Wrong number to press.')
         return
 
+  def WaitingLoop(self, target_time):
+    time_nsecs = time.time() * _SECOND_TO_NANOSECONDS
+    while time_nsecs < target_time:
+      time_nsecs = time.time() * _SECOND_TO_NANOSECONDS
+
   def BeepOnce(self, beep_duration):
     t1 = datetime.datetime.now()
     beep_sec = datetime.timedelta(seconds=beep_duration)
@@ -105,9 +113,13 @@ class BuzzerTest(test_case.TestCase):
     self.dut.WriteSpecialFile(f'/sys/class/gpio/gpio{index}/direction', 'out')
 
     i = 0
+    half_period_nsecs = _SECOND_TO_NANOSECONDS / _BEEP_FREQUENCY / 2
+    start_time_nsecs = time.time() * _SECOND_TO_NANOSECONDS
+    next_flip_time_nsecs = start_time_nsecs + half_period_nsecs
     while t1 + beep_sec > datetime.datetime.now():
       self.dut.WriteSpecialFile(f'/sys/class/gpio/gpio{index}/value', str(i))
       i = i ^ 1
-      self.Sleep(0.0001)  # A louder buzzing frequency
+      self.WaitingLoop(next_flip_time_nsecs)
+      next_flip_time_nsecs += half_period_nsecs
 
     self.dut.WriteSpecialFile('/sys/class/gpio/unexport', index)
