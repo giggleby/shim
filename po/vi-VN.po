@@ -102,6 +102,10 @@ msgid "Bluetooth Host"
 msgstr "Bluetooth"
 
 #: ../build/pytests_label_generated.json
+msgid "Branded Chassis"
+msgstr "khung gầm có thương hiệu"
+
+#: ../build/pytests_label_generated.json
 msgid "Brightness"
 msgstr "Độ sáng"
 
@@ -1661,6 +1665,30 @@ msgid "Please test input. Press Escape to fail and Enter to pass"
 msgstr ""
 "Vui lòng kiểm tra đầu vào.Nếu không thành công, nhấn phím Esc, nếu thành "
 "công, nhấn phím Enter."
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "Verify branded chassis"
+msgstr "Xác minh khung xe có thương hiệu"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid ""
+"Please verify if the chassis has X label on it.If Yes, press \"Y\". If not, "
+"press \"N\""
+msgstr ""
+"Vui lòng xác minh xem khung xe có nhãn X hay không. Nếu có, hãy nhấn \"Y\". "
+"Nếu không, nhấn \"N\""
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "The DUT is a branded chassis"
+msgstr "DUT là một khung gầm có thương hiệu"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "The DUT is NOT branded chassis"
+msgstr "DUT KHÔNG phải là khung có thương hiệu"
+
+#: ../py/test/pytests/branded_chassis.py
+msgid "Data is inconsistent, please double check!"
+msgstr "Dữ liệu không nhất quán, vui lòng kiểm tra lại!"
 
 #: ../py/test/pytests/brightness/lcd_backlight.py
 msgid "Please check if backlight brightness is changing from dark to bright."
