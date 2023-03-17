@@ -5,7 +5,7 @@
 # This is the image for running integration tests for umpire docker. We use
 # docker to ensure that everyone can run test in same environment.
 
-FROM alpine:3.10
+FROM alpine:3.17
 MAINTAINER Pi-Hsun Shih <pihsun@google.com>
 
 ARG server_dir="/usr/local/factory"

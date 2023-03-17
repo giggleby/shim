@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-FROM alpine:3.10
+# Remember to uprev the alpine in py/umpire/server/e2e_test/Dockerfile too.
+FROM alpine:3.17
 MAINTAINER Mao Huang <littlecvr@google.com>
 
 # need to explicitly assign PYTHONPATH for uwsgi

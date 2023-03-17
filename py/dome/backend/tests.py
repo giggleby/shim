@@ -424,7 +424,7 @@ class DomeAPITest(rest_framework.test.APITestCase):
     with TestData('umpire_config-activated_unicode.json') as c:
       self.assertEqual(c, self._GetLastestUploadedConfig())
     with TestData('expected_response-activated_bundle_unicode.json') as r:
-      self.assertEqual(r, response.json(encoding='UTF-8'))
+      self.assertEqual(r, response.json())
 
   def testDeleteBundle(self):
     response = self.client.delete(
