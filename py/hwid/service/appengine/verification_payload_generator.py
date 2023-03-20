@@ -601,10 +601,10 @@ ComponentVerificationPayloadPiece = collections.namedtuple(
     ['is_duplicate', 'error_msg', 'probe_statement', 'component_info'])
 
 _STATUS_MAP = {
-    hwid_common.COMPONENT_STATUS.supported: hardware_verifier_pb2.QUALIFIED,
-    hwid_common.COMPONENT_STATUS.unqualified: hardware_verifier_pb2.UNQUALIFIED,
-    hwid_common.COMPONENT_STATUS.deprecated: hardware_verifier_pb2.REJECTED,
-    hwid_common.COMPONENT_STATUS.unsupported: hardware_verifier_pb2.REJECTED,
+    hwid_common.ComponentStatus.supported: hardware_verifier_pb2.QUALIFIED,
+    hwid_common.ComponentStatus.unqualified: hardware_verifier_pb2.UNQUALIFIED,
+    hwid_common.ComponentStatus.deprecated: hardware_verifier_pb2.REJECTED,
+    hwid_common.ComponentStatus.unsupported: hardware_verifier_pb2.REJECTED,
 }
 
 _ProbeRequestSupportCategory = runtime_probe_pb2.ProbeRequest.SupportCategory
@@ -635,7 +635,7 @@ def GenerateProbeStatement(ps_gens, comp_name, comp_info):
       # Ignore this component if no any generator are suitable for it.
       return None
 
-  is_duplicate = comp_info.status == hwid_common.COMPONENT_STATUS.duplicate
+  is_duplicate = comp_info.status == hwid_common.ComponentStatus.duplicate
   if is_duplicate or error_msg:
     probe_statement = None
     component_info = None

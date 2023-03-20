@@ -50,8 +50,8 @@ from cros.factory.hwid.v3 import base8192
 from cros.factory.hwid.v3 import common
 
 _ENCODING_SCHEME_MAP = {
-    common.ENCODING_SCHEME.base32: base32.Base32,
-    common.ENCODING_SCHEME.base8192: base8192.Base8192
+    common.EncodingScheme.base32: base32.Base32,
+    common.EncodingScheme.base8192: base8192.Base8192
 }
 
 

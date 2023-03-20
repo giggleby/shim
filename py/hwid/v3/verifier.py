@@ -44,9 +44,9 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None):
   for comp_cls, comp_names in bom.components.items():
     for comp_name in comp_names:
       status = database.GetComponents(comp_cls)[comp_name].status
-      if status == common.COMPONENT_STATUS.supported:
+      if status == common.ComponentStatus.supported:
         continue
-      if status == common.COMPONENT_STATUS.unqualified:
+      if status == common.ComponentStatus.unqualified:
         # Coerce current_phase to a Phase object, and use default phase
         # if unspecified.
         current_phase = phase.CoerceToPhaseOrCurrent(current_phase)
@@ -55,11 +55,11 @@ def VerifyComponentStatus(database, bom, mode, current_phase=None):
               'Found unqualified component of %r: %r in %r' %
               (comp_cls, comp_name, current_phase))
         continue
-      if status == common.COMPONENT_STATUS.unsupported:
+      if status == common.ComponentStatus.unsupported:
         raise common.HWIDException('Found unsupported component of %r: %r' %
                                    (comp_cls, comp_name))
-      if status == common.COMPONENT_STATUS.deprecated:
-        if mode != common.OPERATION_MODE.rma:
+      if status == common.ComponentStatus.deprecated:
+        if mode != common.OperationMode.rma:
           raise common.HWIDException(
               'Not in RMA mode. Found deprecated component of %r: %r' %
               (comp_cls, comp_name))

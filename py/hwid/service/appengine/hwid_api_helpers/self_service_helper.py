@@ -119,12 +119,11 @@ def _NormalizeProjectString(string: str) -> Optional[str]:
 def _SetupKnownSupportStatusCategories(report: _AnalysisReportMsg):
   # TODO(yhong): Don't add the status `duplicate` if the project is too old.
   report.unqualified_support_status.extend([
-      v3_common.COMPONENT_STATUS.deprecated,
-      v3_common.COMPONENT_STATUS.unsupported,
-      v3_common.COMPONENT_STATUS.unqualified,
-      v3_common.COMPONENT_STATUS.duplicate
+      v3_common.ComponentStatus.deprecated,
+      v3_common.ComponentStatus.unsupported,
+      v3_common.ComponentStatus.unqualified, v3_common.ComponentStatus.duplicate
   ])
-  report.qualified_support_status.append(v3_common.COMPONENT_STATUS.supported)
+  report.qualified_support_status.append(v3_common.ComponentStatus.supported)
 
 
 class HWIDStatusConversionError(Exception):
@@ -141,15 +140,15 @@ def _ConvertValidationErrorCode(code):
 
 
 _SUPPORT_STATUS_CASE_OF_HWID_STRING = {
-    v3_common.COMPONENT_STATUS.supported:
+    v3_common.ComponentStatus.supported:
         hwid_api_messages_pb2.ComponentSupportStatus.Case.SUPPORTED,
-    v3_common.COMPONENT_STATUS.deprecated:
+    v3_common.ComponentStatus.deprecated:
         hwid_api_messages_pb2.ComponentSupportStatus.Case.DEPRECATED,
-    v3_common.COMPONENT_STATUS.unsupported:
+    v3_common.ComponentStatus.unsupported:
         hwid_api_messages_pb2.ComponentSupportStatus.Case.UNSUPPORTED,
-    v3_common.COMPONENT_STATUS.unqualified:
+    v3_common.ComponentStatus.unqualified:
         hwid_api_messages_pb2.ComponentSupportStatus.Case.UNQUALIFIED,
-    v3_common.COMPONENT_STATUS.duplicate:
+    v3_common.ComponentStatus.duplicate:
         hwid_api_messages_pb2.ComponentSupportStatus.Case.DUPLICATE,
 }
 
@@ -901,12 +900,12 @@ class SelfServiceHelper:
     changed = False
     for comp_cls, comps in firmware_comps.items():
       for comp_name, comp_info in comps.items():
-        if comp_info.status in (v3_common.COMPONENT_STATUS.deprecated,
-                                v3_common.COMPONENT_STATUS.supported):
+        if comp_info.status in (v3_common.ComponentStatus.deprecated,
+                                v3_common.ComponentStatus.supported):
           continue
         if bundle_uuids.intersection(comp_info.bundle_uuids):
           db.SetComponentStatus(comp_cls, comp_name,
-                                v3_common.COMPONENT_STATUS.supported)
+                                v3_common.ComponentStatus.supported)
           changed = True
 
     if not changed:

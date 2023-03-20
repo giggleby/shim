@@ -37,11 +37,12 @@ each part is described in the class' document.
 import abc
 import collections
 import copy
+import enum
 import hashlib
 import itertools
 import logging
 import re
-from typing import Any, DefaultDict, List, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Set, Tuple
+from typing import Any, DefaultDict, List, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import rule as v3_rule
@@ -87,11 +88,13 @@ class PatternDatum(NamedTuple):
 
 class ComponentInfo:
 
-  def __init__(self, values: Optional[Mapping[str, Any]], status: str,
+  def __init__(self, values: Optional[Mapping[str, Any]],
+               status: Union[str, common.ComponentStatus],
                information: Optional[Mapping[str, Any]] = None,
                bundle_uuids: Optional[Sequence[str]] = None):
     self._values = values
-    self._status = status
+    # Casts status to str type for avoiding yaml dump error.
+    self._status = str(status)
     self._information = information
     self._bundle_uuids = bundle_uuids or []
     self._comp_hash = hashlib.sha1(
@@ -119,7 +122,7 @@ class ComponentInfo:
     else:
       component_dict = yaml.Dict()
     if not suppress_support_status or (self._status !=
-                                       common.COMPONENT_STATUS.supported):
+                                       common.ComponentStatus.supported):
       component_dict['status'] = override_support_status or self._status
     component_dict['values'] = _ExportDict(self._values)
     if is_default_comp:
@@ -422,7 +425,7 @@ class Database(abc.ABC):
       A dict which maps a string of component name to a `ComponentInfo` object,
       which is a named tuple contains two attributes:
         values: A string-to-string dict of expected probed results.
-        status: One of `common.COMPONENT_STATUS`.
+        status: One of `common.ComponentStatus`.
         information: optional dict, these data will be used to further help
                      Runtime Probe and Hardware Verifier have more information
                      to handle miscellaneous probe issues.
@@ -715,7 +718,7 @@ class WritableDatabase(Database):
       new_name: The updated component name.
       values: A dict of the probed results or None if the component is updated
         to a null component.
-      support_status: One of `common.COMPONENT_STATUS`.
+      support_status: One of `common.ComponentStatus`.
       information: Optional dict, these data will be used to further help
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
@@ -1459,9 +1462,8 @@ class Components:
                                       'is default component item (deprecated)',
                                       bool),
                               'status':
-                                  schema.Scalar(
-                                      'item status', str,
-                                      choices=common.COMPONENT_STATUS),
+                                  schema.Scalar('item status', str,
+                                                choices=common.ComponentStatus),
                               'information':
                                   schema.AnyOf([
                                       schema.Dict(
@@ -1503,7 +1505,7 @@ class Components:
       for comp_name, comp_attr in comps_data['items'].items():
         self._AddComponent(
             comp_cls, comp_name, comp_attr['values'],
-            comp_attr.get('status', common.COMPONENT_STATUS.supported),
+            comp_attr.get('status', common.ComponentStatus.supported),
             comp_attr.get('information'))
 
         if comp_attr.get('default') is True:
@@ -1577,7 +1579,7 @@ class Components:
       A dict which maps a string of component name to a `ComponentInfo` object,
       which is a named tuple contains two attributes:
         values: A string-to-string dict of expected probed results.
-        status: One of `common.COMPONENT_STATUS`.
+        status: One of `common.ComponentStatus`.
         information: optional dict, these data will be used to further help
                      Runtime Probe and Hardware Verifier have more information
                      to handle miscellaneous probe issues.
@@ -1608,7 +1610,7 @@ class Components:
       comp_cls: A string of the component class.
       comp_name: A string of the name of the component.
       values: A dict of the expected probed results.
-      status: One of `common.COMPONENT_STATUS`.
+      status: One of `common.ComponentStatus`.
       information: optional dict, these data will be used to further help
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
@@ -1624,7 +1626,7 @@ class Components:
     Args:
       comp_cls: The component class name.
       comp_name: The component name.
-      status: One of `common.COMPONENT_STATUS`.
+      status: One of `common.ComponentStatus`.
     """
     if comp_cls == 'region':
       raise common.HWIDException('Region component class is not modifiable.')
@@ -1673,8 +1675,8 @@ class Components:
       # `cros.factory.hwid.v3.probe.GenerateBOMFromProbedResults` will raise an
       # exception when the probed result indeed matches two or more components.
       if values == existed_comp_values:
-        if common.COMPONENT_STATUS.duplicate not in (status,
-                                                     existed_comp_info.status):
+        if common.ComponentStatus.duplicate not in (status,
+                                                    existed_comp_info.status):
           logging.warning('Probed values %r is ambiguous with %r', values,
                           existed_comp_name)
           logging.warning('Did you merge two components? You should set status '
@@ -1733,7 +1735,7 @@ class Components:
       new_name: The updated component name.
       values: A dict of the probed results or None if the component is updated
         to a null component.
-      support_status: One of `common.COMPONENT_STATUS`.
+      support_status: One of `common.ComponentStatus`.
       information: Optional dict, these data will be used to further help
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
@@ -1834,7 +1836,7 @@ class Pattern:
                       min_length=1),
               'encoding_scheme':
                   schema.Scalar('encoding scheme', str,
-                                choices=['base32', 'base8192']),
+                                choices=common.EncodingScheme),
               'fields':
                   schema.List(
                       'encoded fields',
@@ -1901,7 +1903,9 @@ class Pattern:
     """Returns all image ids."""
     return list(self._image_id_to_pattern)
 
-  def AddEmptyPattern(self, image_id, encoding_scheme) -> int:
+  def AddEmptyPattern(
+      self, image_id, encoding_scheme: Union[str,
+                                             common.EncodingScheme]) -> int:
     """Adds a new empty pattern.
 
     Args:
@@ -1910,6 +1914,8 @@ class Pattern:
     Returns:
       The associated pattern index.
     """
+    # Casts encoding_scheme to str type for avoiding yaml dump error.
+    encoding_scheme = str(encoding_scheme)
     self._SCHEMA.element_type.items['image_ids'].element_type.Validate(image_id)
     self._SCHEMA.element_type.items['encoding_scheme'].Validate(encoding_scheme)
 
@@ -2197,7 +2203,13 @@ class Rules:
 
   """
 
-  _RULE_TYPES = type_utils.Enum(['verify', 'device_info'])
+  class _RuleTypes(str, enum.Enum):
+    verify = 'verify'
+    device_info = 'device_info'
+
+    def __str__(self):
+      return self.name
+
   _EXPRESSIONS_SCHEMA = schema.AnyOf([
       schema.Scalar('rule expression', str),
       schema.List('list of rule expressions',
@@ -2228,7 +2240,7 @@ class Rules:
       self._RULE_SCHEMA.Validate(rule_expr)
 
       rule = v3_rule.Rule.CreateFromDict(rule_expr)
-      if not any(rule.name.startswith(x + '.') for x in self._RULE_TYPES):
+      if not any(rule.name.startswith(x + '.') for x in self._RuleTypes):
         raise common.HWIDException(
             'Invalid rule name %r; rule name must be prefixed with '
             '"device_info." (evaluated when generating HWID) '
@@ -2258,11 +2270,11 @@ class Rules:
 
   @property
   def device_info_rules(self):
-    return self._GetRules(self._RULE_TYPES.device_info + '.')
+    return self._GetRules(self._RuleTypes.device_info + '.')
 
   @property
   def verify_rules(self):
-    return self._GetRules(self._RULE_TYPES.verify + '.')
+    return self._GetRules(self._RuleTypes.verify + '.')
 
   def AddDeviceInfoRule(self, name_suffix, evaluate, **kwargs):
     """Adds a device info type rule.
@@ -2278,7 +2290,7 @@ class Rules:
       position:
     """
     position = kwargs.pop('position', None)
-    self._AddRule(self._RULE_TYPES.device_info, position, name_suffix, evaluate,
+    self._AddRule(self._RuleTypes.device_info, position, name_suffix, evaluate,
                   **kwargs)
 
   def _GetRules(self, prefix):

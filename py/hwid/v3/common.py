@@ -6,23 +6,43 @@
 
 import enum
 
-from cros.factory.utils import type_utils
-
 
 DEFAULT_PROBE_STATEMENT = 'default_probe_statement.json'
 HEADER_BIT_LENGTH = 5
 IMAGE_ID_BIT_LENGTH = HEADER_BIT_LENGTH - 1
 HEADER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-OPERATION_MODE = type_utils.Enum(['normal', 'rma', 'no_check'])
-COMPONENT_STATUS = type_utils.Enum(['supported', 'deprecated',
-                                    'unsupported', 'unqualified',
-                                    'duplicate'])
-ENCODING_SCHEME = type_utils.Enum(['base32', 'base8192'])
-
 OLDEST_FRAMEWORK_VERSION = 0
 # This version number is used to distinguish non-compatible syntax changes
 # in HWID DB.
 FRAMEWORK_VERSION = 0
+
+
+class OperationMode(str, enum.Enum):
+  normal = 'normal'
+  rma = 'rma'
+  no_check = 'no_check'
+
+  def __str__(self):
+    return self.name
+
+
+class ComponentStatus(str, enum.Enum):
+  supported = 'supported'
+  deprecated = 'deprecated'
+  unsupported = 'unsupported'
+  unqualified = 'unqualified'
+  duplicate = 'duplicate'
+
+  def __str__(self):
+    return self.name
+
+
+class EncodingScheme(str, enum.Enum):
+  base32 = 'base32'
+  base8192 = 'base8192'
+
+  def __str__(self):
+    return self.name
 
 
 class FirmwareComps(str, enum.Enum):

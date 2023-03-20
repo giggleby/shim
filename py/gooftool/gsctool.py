@@ -26,7 +26,13 @@ class BoardID(type_utils.Obj):
     super().__init__(type=type_, flags=flags)
 
 
-UpdateResult = type_utils.Enum(['NOOP', 'ALL_UPDATED', 'RW_UPDATED'])
+class UpdateResult(str, enum.Enum):
+  NOOP = 'NOOP'
+  ALL_UPDATED = 'ALL_UPDATED'
+  RW_UPDATED = 'RW_UPDATED'
+
+  def __str__(self) -> str:
+    return self.name
 
 
 class FeatureManagementFlags(type_utils.Obj):

@@ -1394,7 +1394,7 @@ class PatternTest(unittest.TestCase):
 
     # Add new image id with a new pattern.
     associated_pattern_idx = patterns.AddEmptyPattern(
-        4, common.ENCODING_SCHEME.base8192)
+        4, common.EncodingScheme.base8192)
 
     self.assertEqual(2, associated_pattern_idx)
 
@@ -1428,13 +1428,13 @@ class PatternTest(unittest.TestCase):
         }]
     }
 
-    pattern_datum_0 = database.PatternDatum(0, common.ENCODING_SCHEME.base32, [
+    pattern_datum_0 = database.PatternDatum(0, common.EncodingScheme.base32, [
         database.PatternField('a', 3),
         database.PatternField('b', 0),
         database.PatternField('a', 1),
         database.PatternField('c', 5),
     ])
-    pattern_datum_1 = database.PatternDatum(1, common.ENCODING_SCHEME.base32, [
+    pattern_datum_1 = database.PatternDatum(1, common.EncodingScheme.base32, [
         database.PatternField('a', 3),
         database.PatternField('b', 0),
     ])

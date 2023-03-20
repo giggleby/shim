@@ -27,8 +27,8 @@ from cros.factory.utils import type_utils
 
 def _HWIDMode(rma_mode):
   if rma_mode:
-    return common.OPERATION_MODE.rma
-  return common.OPERATION_MODE.normal
+    return common.OperationMode.rma
+  return common.OperationMode.normal
 
 
 def GenerateHWID(database, probed_results, device_info, vpd, rma_mode,
@@ -228,12 +228,12 @@ def EnumerateHWID(database, image_id=None, status='supported', comps=None,
     image_id = database.max_image_id
 
   if status == 'supported':
-    acceptable_status = set([common.COMPONENT_STATUS.supported])
+    acceptable_status = set([common.ComponentStatus.supported])
   elif status == 'released':
-    acceptable_status = set([common.COMPONENT_STATUS.supported,
-                             common.COMPONENT_STATUS.deprecated])
+    acceptable_status = set(
+        [common.ComponentStatus.supported, common.ComponentStatus.deprecated])
   elif status == 'all':
-    acceptable_status = set(common.COMPONENT_STATUS)
+    acceptable_status = set(common.ComponentStatus)
   else:
     raise ValueError('The argument `status` must be one of "supported", '
                      '"released", "all", but got %r.' % status)
