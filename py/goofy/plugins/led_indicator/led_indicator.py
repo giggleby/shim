@@ -27,7 +27,7 @@ class LedIndicator(plugin.Plugin):
   """
 
   def __init__(self, goofy, check_tests=None):
-    super().__init__(goofy, [plugin.RESOURCE.LED])
+    super().__init__(goofy, [plugin.Resource.LED])
     self._check_tests = check_tests
     self._thread = None
     self._stop_event = threading.Event()

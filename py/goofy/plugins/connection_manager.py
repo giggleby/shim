@@ -30,7 +30,7 @@ class ConnectionManager(plugin.Plugin):
           list or empty string (blocks nothing), or None (don't override).
     """
 
-    super().__init__(goofy, [plugin.RESOURCE.NETWORK])
+    super().__init__(goofy, [plugin.Resource.NETWORK])
     self._scan_wifi_periods_secs = scan_wifi_periods_secs
     self._override_blocklisted_devices = override_blocklisted_network_devices
     self._shuffle_wlans = shuffle_wlans

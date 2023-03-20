@@ -7,6 +7,7 @@
 
 import argparse
 import base64
+import enum
 import glob
 import inspect
 import logging
@@ -44,8 +45,17 @@ DEFAULT_GOOFY_RPC_TIMEOUT_SECS = 15
 REBOOT_AFTER_UPDATE_DELAY_SECS = 5
 PING_SERVER_TIMEOUT_SECS = 2
 UPLOAD_FACTORY_LOGS_TIMEOUT_SECS = 20
-RunState = type_utils.Enum(['UNINITIALIZED', 'STARTING', 'NOT_ACTIVE_RUN',
-                            'RUNNING', 'FINISHED'])
+
+
+class RunState(str, enum.Enum):
+  UNINITIALIZED = 'UNINITIALIZED'
+  STARTING = 'STARTING'
+  NOT_ACTIVE_RUN = 'NOT_ACTIVE_RUN'
+  RUNNING = 'RUNNING'
+  FINISHED = 'FINISHED'
+
+  def __str__(self) -> str:
+    return self.name
 
 
 class GoofyRPCException(Exception):

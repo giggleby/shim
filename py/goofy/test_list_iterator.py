@@ -3,12 +3,12 @@
 # found in the LICENSE file.
 
 
+import enum
 import logging
 
 from cros.factory.test import state
 from cros.factory.test.test_lists import test_list as test_list_module
 from cros.factory.test.test_lists import test_object
-from cros.factory.utils import type_utils
 
 
 class PickableFrame:
@@ -101,23 +101,29 @@ class TestListIterator:
   _SERIALIZE_FIELDS = ('stack', 'status_filter', 'teardown_only')
   """fields in self.__dict__ that should be serialized."""
 
-  RETURN_CODE = type_utils.Enum(
-      ['POP_FRAME', 'NEW_FRAME', 'CONTINUE', 'RETURN'])
-  """Represents how state transistion should be done to the state machine.
+  class ReturnCode(str, enum.Enum):
+    """Represents how state transition should be done to the state machine.
 
-  Each transition function should return a tuple of (return_code, value).
-  TestListIterator will call a transition function (decided by next_step of top
-  frame) and receive a tuple.  And the TestListIterator will do the following
-  according to the return_code:
+    Each transition function should return a tuple of (return_code, value).
+    TestListIterator will call a transition function (decided by next_step of
+    top frame) and receive a tuple.  And the TestListIterator will do the
+    following according to the return_code:
 
-  POP_FRAME: the top frame should be popped, `value` is ignored.  The state
-    machine should try to make transition again.
-  NEW_FRAME: a new frame is pushed according to `value`.  The state machine
-    should try to make transition again.
-  CONTINUE: don't push or pop a frame, just try to make another transition.
-    `value` is ignored.
-  RETURN: return `value`
-  """
+    POP_FRAME: the top frame should be popped, `value` is ignored.  The state
+      machine should try to make transition again.
+    NEW_FRAME: a new frame is pushed according to `value`.  The state machine
+      should try to make transition again.
+    CONTINUE: don't push or pop a frame, just try to make another transition.
+      `value` is ignored.
+    RETURN: return `value`
+    """
+    POP_FRAME = 'POP_FRAME'
+    NEW_FRAME = 'NEW_FRAME'
+    CONTINUE = 'CONTINUE'
+    RETURN = 'RETURN'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, root=None, status_filter=None, test_list=None):
     """Constructor of TestListIterator.
@@ -192,15 +198,15 @@ class TestListIterator:
 
     returncode, value = func()
 
-    if returncode == self.RETURN_CODE.POP_FRAME:
+    if returncode == self.ReturnCode.POP_FRAME:
       self.Pop()
       return next(self)
-    if returncode == self.RETURN_CODE.NEW_FRAME:
+    if returncode == self.ReturnCode.NEW_FRAME:
       self.Push(value)
       return next(self)
-    if returncode == self.RETURN_CODE.CONTINUE:
+    if returncode == self.ReturnCode.CONTINUE:
       return next(self)
-    if returncode == self.RETURN_CODE.RETURN:
+    if returncode == self.ReturnCode.RETURN:
       return value
     raise AssertionError
 
@@ -281,7 +287,7 @@ class TestListIterator:
     test = self._GetTestFromFrame(frame)
 
     if self.CheckSkip(test):
-      return self.RETURN_CODE.POP_FRAME, None
+      return self.ReturnCode.POP_FRAME, None
 
     status = test.GetState().status
     if state == state.TestState.SKIPPED:
@@ -291,7 +297,7 @@ class TestListIterator:
         self.status_filter and
         state.TestState.PASSED not in self.status_filter):
       # We are sure we don't need to run this again.
-      return self.RETURN_CODE.POP_FRAME, None
+      return self.ReturnCode.POP_FRAME, None
 
     self._ResetIterations(test)
     frame.next_step = self.CheckContinue.__name__
@@ -300,7 +306,7 @@ class TestListIterator:
       # We definitely need to rerun everything.
       self._ResetSubtestStatus(test)
 
-    return self.RETURN_CODE.CONTINUE, None
+    return self.ReturnCode.CONTINUE, None
 
   def CheckContinue(self):
     frame = self.Top()
@@ -323,10 +329,10 @@ class TestListIterator:
       frame.next_step = self.Body.__name__
       if frame.locals.get('executed', False):
         self._ResetSubtestStatus(test)
-      return self.RETURN_CODE.CONTINUE, None
+      return self.ReturnCode.CONTINUE, None
     # should not continue
     frame.next_step = self.OnLeave.__name__
-    return self.RETURN_CODE.CONTINUE, None
+    return self.ReturnCode.CONTINUE, None
 
   def Body(self):
     frame = self.Top()
@@ -336,7 +342,7 @@ class TestListIterator:
 
     if self._IsRunnableTest(test):
       frame.next_step = self.CheckContinue.__name__
-      return self.RETURN_CODE.RETURN, test.path
+      return self.ReturnCode.RETURN, test.path
 
     subtest = frame.locals.get('subtest', None)
     if subtest is None:
@@ -373,21 +379,21 @@ class TestListIterator:
       # teardown test when teardown_only == True).  Let's update local variable
       # and create a new frame (recursive call).
       frame.locals['subtest'] = next_subtest.path
-      return self.RETURN_CODE.NEW_FRAME, next_subtest.path
+      return self.ReturnCode.NEW_FRAME, next_subtest.path
 
     # no next subtest, go to CheckContinue to check if we need to run again
     frame.next_step = self.CheckContinue.__name__
     # unset local variable subtest
     frame.locals.pop('subtest', None)
 
-    return self.RETURN_CODE.CONTINUE, None
+    return self.ReturnCode.CONTINUE, None
 
   def OnLeave(self):
     # Before we leave current frame, if this is a group, we need to compute
     # overall status again.
     test = self._GetTestFromFrame(self.Top())
     test.UpdateStatusFromChildren()
-    return self.RETURN_CODE.POP_FRAME, None
+    return self.ReturnCode.POP_FRAME, None
 
   ####################
   # Helper Functions #

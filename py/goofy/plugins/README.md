@@ -81,7 +81,7 @@ For example:
     class BatteryMonitor(plugin.Plugin):
         def __init__(self, goofy, min_charge, max_charge):
           super(BatteryMonitor, self).__init__(
-              self, goofy, used_resource=[plugin.RESOURCE.POWER])
+              self, goofy, used_resource=[plugin.Resource.POWER])
           ...
 
 In test list, a test can ask Goofy to stop plugins using specific resources.

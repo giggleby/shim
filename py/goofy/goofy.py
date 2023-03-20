@@ -6,6 +6,7 @@
 """The main factory flow that runs the factory test and finalizes a device."""
 
 import argparse
+import enum
 import functools
 import logging
 import os
@@ -74,10 +75,18 @@ TESTS_AFTER_SHUTDOWN = 'tests_after_shutdown'
 # Key to store active test list id.
 ACTIVE_TEST_LIST_ID = 'active_test_list_id'
 
-Status = type_utils.Enum(['UNINITIALIZED', 'INITIALIZING', 'RUNNING',
-                          'TERMINATING', 'TERMINATED'])
-
 RUN_QUEUE_TIMEOUT_SECS = 10
+
+
+class Status(str, enum.Enum):
+  UNINITIALIZED = 'UNINITIALIZED'
+  INITIALIZING = 'INITIALIZING'
+  RUNNING = 'RUNNING'
+  TERMINATING = 'TERMINATING'
+  TERMINATED = 'TERMINATED'
+
+  def __str__(self) -> str:
+    return self.name
 
 
 class Goofy:

@@ -127,7 +127,7 @@ class VerifyComponentTest(test_case.TestCase):
       for comp_cls, comp_info in self.perfect_match_results.items():
         for comp_item in comp_info:
           status = comp_item['information']['status']
-          if status != common.COMPONENT_STATUS.supported:
+          if status != common.ComponentStatus.supported:
             self.not_supported.append((comp_cls, comp_item['name'], status))
 
   def _GetConvertedStatement(self):

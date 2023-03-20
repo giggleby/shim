@@ -291,7 +291,7 @@ class DatabaseBuilderTest(unittest.TestCase):
     # Should deprecated the legacy firmwares.
     self.assertEqual(
         db.GetComponents('ro_main_firmware')['firmware0'].status,
-        common.COMPONENT_STATUS.deprecated)
+        common.ComponentStatus.deprecated)
 
   # TODO (b/212216855)
   @label_utils.Informational

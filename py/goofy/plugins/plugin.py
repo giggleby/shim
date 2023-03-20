@@ -3,16 +3,25 @@
 # found in the LICENSE file.
 
 import collections
+import enum
 import inspect
 import logging
 import uuid
 
 from cros.factory.utils import debug_utils
-from cros.factory.utils import type_utils
 
 
 # Type of resources that can be used by plugins.
-RESOURCE = type_utils.Enum(['CPU', 'LED', 'NETWORK', 'POWER', 'DISPLAY'])
+class Resource(str, enum.Enum):
+  CPU = 'CPU'
+  LED = 'LED'
+  NETWORK = 'NETWORK'
+  POWER = 'POWER'
+  DISPLAY = 'DISPLAY'
+
+  def __str__(self) -> str:
+    return self.name
+
 
 # Base package name of Goofy plugins.
 _PLUGIN_MODULE_BASE = 'cros.factory.goofy.plugins'
@@ -89,8 +98,13 @@ class MenuItem:
     eng_mode_only: Only show the item in engineering mode.
   """
 
-  Action = type_utils.Enum(['SHOW_IN_DIALOG', 'RUN_AS_JS'])
-  """Action to be executed in Goofy frontend after callback finished."""
+  class Action(str, enum.Enum):
+    """Action to be executed in Goofy frontend after callback finished."""
+    SHOW_IN_DIALOG = 'SHOW_IN_DIALOG'
+    RUN_AS_JS = 'RUN_AS_JS'
+
+    def __str__(self):
+      return self.name
 
   ReturnData = collections.namedtuple('ReturnData', ['action', 'data'])
   """Data to be returned after the execution of menu item callback.
@@ -124,18 +138,24 @@ class Plugin:
   `OnDestroy`: Called when Goofy is going to shutdown.
   """
 
-  STATE = type_utils.Enum(['RUNNING', 'STOPPED', 'DESTROYED'])
-  """State of the plugin.
+  class State(str, enum.Enum):
+    """State of the plugin.
 
-  Goofy plugins are started by Goofy during initialization, and are stopped when
-  Goofy is about to shutdown. During the tests, some plugins may also be paused
-  temporarily.
+    Goofy plugins are started by Goofy during initialization, and are stopped
+    when Goofy is about to shutdown. During the tests, some plugins may also be
+    paused temporarily.
 
-  Therefore, a plugin can be in one of the three states:
-  - RUNNING: `OnStart` is called and the plugin is running.
-  - STOPPED: `OnStop` is called and the plugin is stopped / paused.
-  - DESTORYED: `OnDestory` is called and Goofy is going to shutdown.
-  """
+    Therefore, a plugin can be in one of the three states:
+    - RUNNING: `OnStart` is called and the plugin is running.
+    - STOPPED: `OnStop` is called and the plugin is stopped / paused.
+    - DESTROYED: `OnDestroy` is called and Goofy is going to shutdown.
+    """
+    RUNNING = 'RUNNING'
+    STOPPED = 'STOPPED'
+    DESTROYED = 'DESTROYED'
+
+    def __str__(self):
+      return self.name
 
   class RPCInstance:
     pass
@@ -150,7 +170,7 @@ class Plugin:
     """
     self.goofy = goofy
     self.used_resources = used_resources or []
-    self._state = self.STATE.STOPPED
+    self._state = self.State.STOPPED
     self._rpc_instance = None
 
   def OnStart(self):
@@ -202,22 +222,22 @@ class Plugin:
   @debug_utils.CatchException('Plugin')
   def Start(self):
     """Starts running the plugin."""
-    if self._state == self.STATE.STOPPED:
-      self._state = self.STATE.RUNNING
+    if self._state == self.State.STOPPED:
+      self._state = self.State.RUNNING
       self.OnStart()
 
   @debug_utils.CatchException('Plugin')
   def Stop(self):
     """Stops running the plugin."""
-    if self._state == self.STATE.RUNNING:
-      self._state = self.STATE.STOPPED
+    if self._state == self.State.RUNNING:
+      self._state = self.State.STOPPED
       self.OnStop()
 
   @debug_utils.CatchException('Plugin')
   def Destroy(self):
     """Destroy the plugin."""
-    if self._state == self.STATE.DESTROYED:
+    if self._state == self.State.DESTROYED:
       return
     self.Stop()
-    self._state = self.STATE.DESTROYED
+    self._state = self.State.DESTROYED
     self.OnDestroy()

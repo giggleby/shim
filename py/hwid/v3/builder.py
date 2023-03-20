@@ -278,7 +278,7 @@ class DatabaseBuilder:
 
     comp_name = comp_cls + self._DEFAULT_COMPONENT_SUFFIX
     self._database.AddComponent(comp_cls, comp_name, None,
-                                common.COMPONENT_STATUS.unqualified)
+                                common.ComponentStatus.unqualified)
 
   @_EnsureInBuilderContext
   def AddNullComponent(self, comp_cls):
@@ -310,8 +310,7 @@ class DatabaseBuilder:
       if (value and not comp_info.value_is_none and
           dict.__eq__(comp_info.values, value)):
         status = (
-            common.COMPONENT_STATUS.supported
-            if supported else comp_info.status)
+            common.ComponentStatus.supported if supported else comp_info.status)
         self.UpdateComponent(comp_cls, old_comp_name, comp_name,
                              comp_info.values, status, comp_info.information,
                              comp_info.bundle_uuids)
@@ -441,7 +440,7 @@ class DatabaseBuilder:
               0: {image_name}
             pattern:
               - image_ids: [0]
-                encoding_scheme: {common.ENCODING_SCHEME.base8192}
+                encoding_scheme: {common.EncodingScheme.base8192}
                 fields: []
             encoded_fields:
               region_field: !region_field []
@@ -484,7 +483,7 @@ class DatabaseBuilder:
 
     # Set old firmware components to deprecated.
     for comp_name, comp_info in self._database.GetComponents(comp_cls).items():
-      if comp_info.status != common.COMPONENT_STATUS.supported:
+      if comp_info.status != common.ComponentStatus.supported:
         continue
 
       existing_fw_identity = _GetVersionStringIdentity(
@@ -493,7 +492,7 @@ class DatabaseBuilder:
       if (_IsPrePVTFirmwareKeys(comp_name) or
           fw_identity and fw_identity == existing_fw_identity):
         self._database.SetComponentStatus(comp_cls, comp_name,
-                                          common.COMPONENT_STATUS.deprecated)
+                                          common.ComponentStatus.deprecated)
 
   @_EnsureInBuilderContext
   def AddComponentCheck(self, comp_cls: str, probed_value: ProbedValueType,
@@ -525,15 +524,15 @@ class DatabaseBuilder:
 
     logging.info('Component %s: add an item "%s".', comp_cls, comp_name)
     status = (
-        common.COMPONENT_STATUS.supported
-        if supported else common.COMPONENT_STATUS.unqualified)
+        common.ComponentStatus.supported
+        if supported else common.ComponentStatus.unqualified)
     self._database.AddComponent(comp_cls, comp_name, probed_value, status)
 
     # Deprecate the default component.
     default_comp_name = self._database.GetDefaultComponent(comp_cls)
     if default_comp_name is not None:
       self._database.SetComponentStatus(comp_cls, default_comp_name,
-                                        common.COMPONENT_STATUS.unsupported)
+                                        common.ComponentStatus.unsupported)
 
   @_EnsureInBuilderContext
   def AddComponent(self, comp_cls: str, comp_name: str,
@@ -545,7 +544,7 @@ class DatabaseBuilder:
       comp_cls: The component class.
       comp_name: Set component name for the item.
       probed_value: The probed value of the component.
-      support_status: One of `common.COMPONENT_STATUS`.
+      support_status: One of `common.ComponentStatus`.
       information: Optional dict, these data will be used to further help
           Runtime Probe and Hardware Verifier have more information to handle
           miscellaneous probe issues.
@@ -609,7 +608,7 @@ class DatabaseBuilder:
                reference_image_id: Optional[int] = None) -> int:
     """See database.WritableDatabase.AddImage."""
     return self._database.AddImage(image_id, image_name,
-                                   common.ENCODING_SCHEME.base8192, new_pattern,
+                                   common.EncodingScheme.base8192, new_pattern,
                                    reference_image_id, pattern_idx)
 
   @_EnsureInBuilderContext
@@ -695,7 +694,7 @@ class DatabaseBuilder:
     # Add mismatched components to the database.
     bom, mismatched_probed_results = probe.GenerateBOMFromProbedResults(
         self._database, probed_results, device_info, vpd,
-        common.OPERATION_MODE.normal, True)
+        common.OperationMode.normal, True)
 
     if mismatched_probed_results:
       for comp_cls, probed_comps in mismatched_probed_results.items():
@@ -704,7 +703,7 @@ class DatabaseBuilder:
 
       bom = probe.GenerateBOMFromProbedResults(
           self._database, probed_results, device_info, vpd,
-          common.OPERATION_MODE.normal, False)[0]
+          common.OperationMode.normal, False)[0]
 
     # Ensure all essential components are recorded in the database.
     for comp_cls in ESSENTIAL_COMPS:
@@ -743,7 +742,7 @@ class DatabaseBuilder:
 
     return probe.GenerateBOMFromProbedResults(
         self._database, probed_results, device_info, vpd,
-        common.OPERATION_MODE.normal, False)[0]
+        common.OperationMode.normal, False)[0]
 
   def _UpdateEncodedFields(self, bom):
     covered_comp_classes = set()
@@ -791,8 +790,8 @@ class DatabaseBuilder:
       raise ValueError(f'Cannot extend {field_name!r} to full combinations '
                        'because it contains multiple component classes.')
     comp_class = next(iter(comp_classes))
-    acceptable_status = (common.COMPONENT_STATUS.supported,
-                         common.COMPONENT_STATUS.unqualified)
+    acceptable_status = (common.ComponentStatus.supported,
+                         common.ComponentStatus.unqualified)
     candidate_comp_names = sorted(
         comp_name for comp_name, comp_info in self._database.GetComponents(
             comp_class).items() if comp_info.status in acceptable_status)
@@ -844,7 +843,7 @@ class DatabaseBuilder:
         self._database.GetEncodedFieldsBitLength().keys())
     if image_name:
       self._database.AddImage(self._database.max_image_id + 1, image_name,
-                              common.ENCODING_SCHEME.base8192,
+                              common.EncodingScheme.base8192,
                               new_pattern=bool(extra_fields))
 
     elif extra_fields and PromptAndAsk(

@@ -41,7 +41,7 @@ class DisplayManager(plugin.Plugin):
   """Goofy Plugin to manage display settings."""
 
   def __init__(self, goofy, mirror_mode):
-    super().__init__(goofy, used_resources=[plugin.RESOURCE.DISPLAY])
+    super().__init__(goofy, used_resources=[plugin.Resource.DISPLAY])
     self.mirror_mode = mirror_mode
 
   @type_utils.Overrides
