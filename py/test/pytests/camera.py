@@ -465,7 +465,8 @@ class CameraTest(test_case.TestCase):
       draw_rect_js += (
           f'cameraTest.drawRect({float(x_pos) / image_width}, '
           f'{float(y_pos) / image_height}, {float(rect_width) / image_width}, '
-          f'{float(rect_height) / image_height}, {color_string}, {fill_string}')
+          f'{float(rect_height) / image_height}, "{color_string}", '
+          f'{fill_string});')
     else:
       cv.rectangle(cv_image, (x_pos, y_pos),
                    (x_pos + rect_width, y_pos + rect_height), bgr_color,
