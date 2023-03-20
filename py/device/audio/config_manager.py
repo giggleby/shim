@@ -736,7 +736,7 @@ class UCMConfigManager(BaseConfigManager):
 
   def GetPCMId(self, category, device, card):
     """Return the card index and device index of a device."""
-    if category not in PCMType:
+    if category not in PCMType.__members__:
       raise ValueError(f'category must in one of {list(PCMType.__members__)}')
     card_name = self._GetCardName(card)
     device_name = self._GetDeviceName(card, device)
