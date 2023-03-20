@@ -23,7 +23,7 @@ class VerifyComponentStatusTest(unittest.TestCase):
     self.database = Database.LoadFile(_TEST_DATABASE_PATH,
                                       verify_checksum=False)
     self.boms = {}
-    for status in common.COMPONENT_STATUS:
+    for status in common.ComponentStatus:
       bom = BOM(encoding_pattern_index=0, image_id=0, components={
           'cpu': [f'cpu_{status}'],
           'ram': ['ram_supported']
@@ -32,45 +32,45 @@ class VerifyComponentStatusTest(unittest.TestCase):
 
   def testSupported(self):
     # Should always pass.
-    for mode in common.OPERATION_MODE:
+    for mode in common.OperationMode:
       for ph in phase.PHASE_NAMES:
         verifier.VerifyComponentStatus(
-            self.database, self.boms[common.COMPONENT_STATUS.supported],
+            self.database, self.boms[common.ComponentStatus.supported],
             mode=mode, current_phase=ph)
 
   def testUnqualified(self):
     # Should pass the verification only if the phase is before PVT.
-    for mode in common.OPERATION_MODE:
+    for mode in common.OperationMode:
       for ph in ['PROTO', 'EVT', 'DVT']:
         verifier.VerifyComponentStatus(
-            self.database, self.boms[common.COMPONENT_STATUS.unqualified],
+            self.database, self.boms[common.ComponentStatus.unqualified],
             mode=mode, current_phase=ph)
 
       for ph in ['PVT', 'PVT_DOGFOOD']:
         self.assertRaises(common.HWIDException, verifier.VerifyComponentStatus,
                           self.database,
-                          self.boms[common.COMPONENT_STATUS.unqualified],
+                          self.boms[common.ComponentStatus.unqualified],
                           mode=mode, current_phase=ph)
 
   def testDeprecated(self):
     # Should pass the verification only in rma mode.
     for ph in phase.PHASE_NAMES:
       verifier.VerifyComponentStatus(
-          self.database, self.boms[common.COMPONENT_STATUS.deprecated],
-          mode=common.OPERATION_MODE.rma, current_phase=ph)
+          self.database, self.boms[common.ComponentStatus.deprecated],
+          mode=common.OperationMode.rma, current_phase=ph)
 
       self.assertRaises(common.HWIDException, verifier.VerifyComponentStatus,
                         self.database,
-                        self.boms[common.COMPONENT_STATUS.deprecated],
-                        mode=common.OPERATION_MODE.normal, current_phase=ph)
+                        self.boms[common.ComponentStatus.deprecated],
+                        mode=common.OperationMode.normal, current_phase=ph)
 
   def testUnsupported(self):
     # Should always fail the verification.
-    for mode in common.OPERATION_MODE:
+    for mode in common.OperationMode:
       for ph in phase.PHASE_NAMES:
         self.assertRaises(common.HWIDException, verifier.VerifyComponentStatus,
                           self.database,
-                          self.boms[common.COMPONENT_STATUS.unsupported],
+                          self.boms[common.ComponentStatus.unsupported],
                           mode=mode, current_phase=ph)
 
 

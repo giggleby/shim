@@ -254,12 +254,12 @@ class _RegionComponent(dict):
           }
       }
       if code not in regions.REGIONS:
-        region_comp['status'] = common.COMPONENT_STATUS.unsupported
+        region_comp['status'] = common.ComponentStatus.unsupported
       components_dict['items'][code] = region_comp
 
     # Apply customized status lists.
     if status_lists is not None:
-      for status in common.COMPONENT_STATUS:
+      for status in common.ComponentStatus:
         for region in status_lists.get(status, []):
           components_dict['items'][region]['status'] = status
 
@@ -283,7 +283,7 @@ class _RegionComponentYAMLTagHandler(_HWIDV3YAMLTagHandler):
       'status lists', optional_items={
           s: schema.List('regions', element_type=schema.Scalar('region', str),
                          min_length=1)
-          for s in common.COMPONENT_STATUS
+          for s in common.ComponentStatus
       })
 
   @classmethod

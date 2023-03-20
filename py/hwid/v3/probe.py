@@ -65,7 +65,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
     # Always ignore the unsupported default components.
     if default_comp is not None:
       default_comp_info = database.GetComponents(comp_cls)[default_comp]
-      if default_comp_info.status == common.COMPONENT_STATUS.unsupported:
+      if default_comp_info.status == common.ComponentStatus.unsupported:
         default_comp = None
 
     return default_comp
@@ -77,7 +77,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
         comp_classes.add(cls)
     return comp_classes
 
-  if mode == common.OPERATION_MODE.rma:
+  if mode == common.OperationMode.rma:
     # If RMA image ID is not available, fallback to max image ID.
     image_id = database.rma_image_id or database.max_image_id
   else:
@@ -90,7 +90,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
     for comp_cls, comps in probed_results.items():
       matched_components[comp_cls] = [comp['name'] for comp in comps]
   else:
-    if mode == common.OPERATION_MODE.rma:
+    if mode == common.OperationMode.rma:
       component_classes = _GetEncodedCompClasses(image_id)
       # In RMA mode, we don't care about those components that won't be encoded.
       mismatched_components = {}
@@ -112,7 +112,7 @@ def GenerateBOMFromProbedResults(database, probed_results, device_info, vpd,
         matched_comp_score = float('-inf')
         for comp_name, comp_info in database.GetComponents(
             comp_cls, include_default=False).items():
-          if comp_info.status == common.COMPONENT_STATUS.duplicate:
+          if comp_info.status == common.ComponentStatus.duplicate:
             # A component that is 'duplicate' is covered by another component.
             # Therefore, the duplicate one should not be used for encoding.
             continue

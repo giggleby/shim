@@ -48,7 +48,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'chemistry': 'LION',
             'manufacturer': 'foo',
             'model_name': 'bar',
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -70,7 +70,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'chemistry': 'OOI0',
             'manufacturer': 'foo',
             'model_name': 'bar',
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -92,7 +92,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'manufacturer': 'foo-567',
             'model_name': 'bar-567',
             'technology': 'Li-ion'
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -118,7 +118,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'manufacturer': 'foo',
             'model_name': 'bar',
             'technology': 'Li-ion'
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -144,7 +144,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'manufacturer': 'foo-567',
             'model_name': hwid_rule.Value('bar.*', is_re=True),
             'technology': 'Li-ion'
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('sysfs_battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -170,7 +170,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'manufacturer': 'foo',
             'model_name': 'bar',
             'technology': 'LION'
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('ec_battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -192,7 +192,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
             'manufacturer': 'foo',
             'model_name': 'bar',
             'technology': 'OOI0'
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('ec_battery', comp)
     self.assertEqual(
         vp_piece.probe_statement,
@@ -213,7 +213,7 @@ class GenericBatteryProbeStatementGeneratorTest(unittest.TestCase):
         {
             'manufacturer': 'foo',
             'technology': 'Li-ion'
-        }, hwid_common.COMPONENT_STATUS.supported)
+        }, hwid_common.ComponentStatus.supported)
     vp_piece = self._GenerateBatteryProbeStatement('name', comp)
     self.assertIsNone(vp_piece)
 

@@ -13,6 +13,7 @@ from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.hwid.v3 import probe
 from cros.factory.unittest_utils import label_utils
 
+
 _TEST_DATABASE_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_configless_field.yaml')
 
@@ -40,13 +41,8 @@ class ConfiglessFieldsTest(unittest.TestCase):
     }
     vpd = {}
     bom = probe.GenerateBOMFromProbedResults(
-        self.database,
-        self.probed_results,
-        device_info,
-        vpd,
-        common.OPERATION_MODE.normal,
-        False,
-        False)[0]
+        self.database, self.probed_results, device_info, vpd,
+        common.OperationMode.normal, False, False)[0]
     # 0-8-3A-180's feature list field will be different if we extend new feature
     # to the end of version 0, see configless_fields.py for details
     self.assertEqual(_CF.Encode(self.database, bom, device_info, 0, False),
