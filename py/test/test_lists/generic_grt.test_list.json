@@ -6,7 +6,7 @@
     "grt": {
       "__comment": "See https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/py/test/test_lists/test_list.schema.json for the description of each attributes",
       "force_write_protect": false,
-      "cbi_eeprom_wp_status": "Locked",
+      "cbi_eeprom_wp_status": "Unlocked",
       "collect_zero_touch_ids": false,
       "ec_pubkey_path": null,
       "ec_pubkey_hash": null,
