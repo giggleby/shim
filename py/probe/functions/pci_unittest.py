@@ -7,6 +7,7 @@ import os
 import tempfile
 import unittest
 
+from cros.factory.probe import function
 from cros.factory.probe.functions import pci
 from cros.factory.utils import file_utils
 
@@ -21,6 +22,7 @@ class PCIFunctionTest(unittest.TestCase):
 
   def tearDown(self):
     pci.PCIFunction.GLOB_PATH = self.orig_glob_path
+    pci.PCIFunction.CleanCachedData()
 
   def _CreatePCIDevice(self, pci_name, real_path, values):
     real_path = self.my_root + real_path
@@ -28,9 +30,9 @@ class PCIFunctionTest(unittest.TestCase):
     file_utils.TryMakeDirs(real_path)
     for key, value in values.items():
       if key == 'revision_id':
+        value = bytes([int(value, 16)]) if value else b''
         file_utils.WriteFile(
-            os.path.join(real_path, 'config'),
-            b'x' * 8 + bytes([int(value, 16)]), encoding=None)
+            os.path.join(real_path, 'config'), b'x' * 8 + value, encoding=None)
       else:
         file_utils.WriteFile(os.path.join(real_path, key), value)
 
@@ -39,7 +41,7 @@ class PCIFunctionTest(unittest.TestCase):
     file_utils.TryMakeDirs(os.path.dirname(link_name))
     file_utils.ForceSymlink(real_path, link_name)
 
-  def testNormal(self):
+  def testPCIFunction_success(self):
     values1 = {
         'class': '010203',
         'vendor': 'dev1',
@@ -56,16 +58,29 @@ class PCIFunctionTest(unittest.TestCase):
     }
     self._CreatePCIDevice('dev2', '/sys/devices/pci1/aabb', values2)
 
-    values3 = {
-        'vendor': 'dev3'
-    }
-    self._CreatePCIDevice('dev3', '/sys/devices/pci1/xxxx', values3)
 
     func = pci.PCIFunction()
     self.assertCountEqual(func(), self._AddExtraFields([values1, values2]))
 
     func = pci.PCIFunction(dir_path=self.my_root + '/sys/devices/pci1/xxyy')
     self.assertCountEqual(func(), self._AddExtraFields([values1]))
+
+  def testPCIFunction_missingRequiredKey_returnNothing(self):
+    values3 = {
+        'vendor': 'dev3'
+    }
+    self._CreatePCIDevice('dev1', '/sys/devices/pci1/xxxx', values3)
+    self.assertEqual(pci.PCIFunction()(), function.NOTHING)
+
+  def testPCIFunction_noRevisionId_returnNothing(self):
+    values = {
+        'class': '010203',
+        'vendor': 'dev1',
+        'device': '5678',
+        'revision_id': ''
+    }
+    self._CreatePCIDevice('dev1', '/sys/devices/pci1/xxxx', values)
+    self.assertEqual(pci.PCIFunction()(), function.NOTHING)
 
   def _AddExtraFields(self, values):
     for value in values:

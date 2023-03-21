@@ -24,7 +24,7 @@ def ReadPCISysfs(path):
                                  skip=pci_revision_id_offset, size=1)
   if content is None:
     return None
-  ret['revision_id'] = content
+  ret['revision_id'] = ' '.join([f'{char:#04x}' for char in content])
   ret['bus_type'] = 'pci'
   return ret
 
