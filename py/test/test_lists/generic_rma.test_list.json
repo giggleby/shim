@@ -40,7 +40,9 @@
     "RMAGRTFinalize": {
       "inherit": "GRTFinalize",
       "args": {
-        "upload_method": "eval! constants.rma_factory_server"
+        "upload_method": "eval! constants.rma_factory_server",
+        "factory_process": "RMA",
+        "mode": "ASSEMBLED"
       }
     }
   },
