@@ -35,3 +35,21 @@ npm run start
 # Now the frontend is running on port 5100.
 # Go to localhost:5100 to see the webpage.
 ```
+
+## Production container
+
+* The production container uses a nginx instance to serve the static files.
+* The default port for nginx inside the container is 6000 and should not be modified, but you can
+bind it to a different port on your host by specifying it when running the container using the
+PORT argument as below example. However, if you need to modify the port inside the container
+itself, you will need to edit the Dockerfile and nginx.conf files.
+
+```sh
+# Builds the container
+docker build -t dev-editor-fe .
+
+# Runs the container
+# Change PORT variable to change the bind location
+PORT=6000
+docker run -p ${PORT}:6000 dev-editor-fe
+```
