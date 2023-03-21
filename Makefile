@@ -155,6 +155,7 @@ closure: $(CLOSURE_LIB_DIR)
 # this proto should change infrequently or never.
 proto:
 	protoc proto/reg_code.proto --python_out=py
+	protoc proto/hwid_feature_requirement.proto --python_out=py
 
 func-extract-from-url = @\
 	mkdir -p $(1) ;\

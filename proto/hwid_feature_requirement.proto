@@ -1,0 +1,62 @@
+// Copyright 2023 The ChromiumOS Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Note: You must run `make proto` after modification to update the generated
+// code for Python.
+
+syntax = "proto3";
+
+// Of a certain brand, this message records the available feature version
+// and its requirements in terms of HWID string.
+message BrandFeatureRequirementSpec {
+  // The non-zero feature version number.
+  uint32 feature_version = 1;
+
+  // A bundle of checking rules, targeting to match a subset or all HWID strings
+  // that fulfill the feature's requirements.
+  message Profile {
+    // Briefly describe the scope of this profile.
+    string description = 1;
+
+    // One single requirement for the encoded HWID bit string.
+    //
+    // A HWID string contains a base8192 encoded bit string that records
+    // probed component IDs.  This requirement asserts the values of the
+    // certain bits.  Specifically, a HWID string fulfills this requirement if
+    // and only if <BIT_VALUE> is in `required_values`, where <BIT_VALUE>
+    // is defined as the following:
+    //
+    //   <BIT_VALUE> = sum( hwid_bit_string[bit_locations[i]] << i
+    //                      for i in 0..len(bit_locations)-1 )
+    //
+    // Note that `required_values` is stored in little-endian bit-string so
+    // that it can hold integers beyond 32-bits.  The string length of
+    // each element in `required_values` is expected to equal to the length
+    // of `bit_locations`.
+    message EncodingRequirement {
+      // Briefly describes what this rule is checking for.
+      string description = 1;
+
+      // See message's description.
+      repeated uint32 bit_locations = 2;
+      // See message's description.
+      repeated string required_values = 3;
+    }
+    // A set of requisite encoding requirements.  The HWID string is considered
+    // matched only if it fulfills all encoding requirements.
+    repeated EncodingRequirement encoding_requirements = 2;
+  }
+  // A set of profiles.  If the HWID matches any of it, the requirements
+  // are considered fulfilled.
+  repeated Profile profiles = 3;
+}
+
+
+// Records the available feature versions and the requirements of the project.
+message FeatureRequirementSpec {
+  // Records the available feature version and the requirements of each brand
+  // code.  If a brand doesn't have a versioned feature, this mapping table
+  // will not contain that brand code.
+  map<string, BrandFeatureRequirementSpec> brand_specs = 1;
+}
