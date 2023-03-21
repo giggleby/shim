@@ -171,8 +171,6 @@ class DeviceComponent:
     :type device: cros.factory.device.device_types.DeviceInterface
     """
     self._device = device
-    # TODO(hungte) Remove the legacy reference _dut.
-    self._dut = device
 
 
 class DeviceInterface(sys_interface.SystemInterface):
