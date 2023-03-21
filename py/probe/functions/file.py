@@ -23,13 +23,10 @@ def ReadFile(path, binary_mode=False, skip=0, size=-1):
     f.seek(skip)
     data = f.read(size)
   if not binary_mode:
-    ret = data.strip()
-  else:
-    binary_data = [f'0x{char:02x}' for char in data]
-    ret = ' '.join(binary_data)
-  if not ret:
+    data = data.strip()
+  if not data:
     return None
-  return ret
+  return data
 
 
 class FileFunction(probe_function.ProbeFunction):
