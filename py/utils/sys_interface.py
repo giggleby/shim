@@ -4,7 +4,6 @@
 
 """The abstraction of minimal functions needed to access a system."""
 
-import abc
 import glob
 import logging
 import pipes
@@ -32,8 +31,8 @@ def CommandsToShell(command: Union[str, List[str]]) -> str:
   return ' '.join(map(pipes.quote, command))
 
 
-class SystemInterface(abc.ABC):
-  """Abstract interface for accessing a system."""
+class SystemInterface:
+  """An interface for accessing a system."""
 
   def ReadFile(self, path: str, count: Optional[int] = None,
                skip: Optional[int] = None) -> str:

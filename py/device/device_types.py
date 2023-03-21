@@ -173,7 +173,7 @@ class DeviceComponent:
     self._device = device
 
 
-class DeviceInterface(sys_interface.SystemInterface):
+class DeviceInterface(abc.ABC, sys_interface.SystemInterface):
   """Abstract interface for accessing a device.
 
   This class provides an interface for accessing a device, for example reading
