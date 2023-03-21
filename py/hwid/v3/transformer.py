@@ -9,6 +9,14 @@ from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3.identity import Identity
 
 
+def AddHWIDBinaryStringPadding(hwid_binary_string: str) -> str:
+  return hwid_binary_string + '1'
+
+
+def RemoveHWIDBinaryStringPadding(hwid_binary_string: str) -> str:
+  return hwid_binary_string[:-1]
+
+
 def BOMToIdentity(database, bom, brand_code=None, encoded_configless=None):
   """Encodes the given BOM object to a binary string.
 
@@ -57,7 +65,7 @@ def BOMToIdentity(database, bom, brand_code=None, encoded_configless=None):
     components_bitset += '01'[(encoded_fields[field] >> bit_offset) & 1]
 
   # Set stop bit.
-  components_bitset += '1'
+  components_bitset = AddHWIDBinaryStringPadding(components_bitset)
 
   return Identity.GenerateFromBinaryString(
       database.GetEncodingScheme(bom.image_id), database.project,
