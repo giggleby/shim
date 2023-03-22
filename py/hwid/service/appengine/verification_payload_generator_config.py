@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """Classes defining configs for the verification payload generator."""
 
-from typing import List, NamedTuple, Optional
+from typing import List, Mapping, NamedTuple, Optional
 
 
 class VerificationPayloadGeneratorConfig(NamedTuple):
@@ -31,3 +31,18 @@ class VerificationPayloadGeneratorConfig(NamedTuple):
 
     return cls(ignore_error=ignore_error,
                waived_comp_categories=waived_comp_categories)
+
+  @classmethod
+  def BatchCreate(
+      cls, config: Mapping[str, dict]
+  ) -> 'Mapping[str, VerificationPayloadGeneratorConfig]':
+    """Create batch configs from a dictionary.
+
+    Args:
+      config: A dictionary where key is model name and value is config
+    Returns:
+      A dictionary where key is model name and value is a verification payload
+        generator config instance.
+    """
+    return {k: cls.Create(**v)
+            for k, v in config.items()}

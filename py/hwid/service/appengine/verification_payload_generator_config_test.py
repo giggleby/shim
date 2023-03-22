@@ -24,6 +24,23 @@ class VerificationPayloadGeneratorConfigTest(unittest.TestCase):
     self.assertEqual(vpg_config.ignore_error, ['stylus'])
     self.assertEqual(vpg_config.waived_comp_categories, ['battery'])
 
+  def testWithMultipleConfig(self):
+    config = {
+        'MODEL1': {
+            'waived_comp_categories': ['battery'],
+            'ignore_error': ['stylus'],
+        },
+        'MODEL2': {
+            'waived_comp_categories': ['memory'],
+        },
+    }
+    vpg_configs = (
+        vpg_config_module.VerificationPayloadGeneratorConfig.BatchCreate(config)
+    )
+    self.assertEqual(vpg_configs['MODEL1'].ignore_error, ['stylus'])
+    self.assertEqual(vpg_configs['MODEL1'].waived_comp_categories, ['battery'])
+    self.assertEqual(vpg_configs['MODEL2'].waived_comp_categories, ['memory'])
+
 
 if __name__ == '__main__':
   unittest.main()

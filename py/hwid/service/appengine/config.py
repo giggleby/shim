@@ -78,10 +78,9 @@ class _Config:
         conf['ge_bucket'])
     self.hwid_filesystem = cloudstorage_adapter.CloudStorageAdapter(
         conf['bucket'])
-    self.vpg_targets = {
-        k: vpg_config_module.VerificationPayloadGeneratorConfig.Create(**v)
-        for k, v in conf.get('vpg_targets', {}).items()
-    }
+    self.vpg_targets = (
+        vpg_config_module.VerificationPayloadGeneratorConfig.BatchCreate(
+            conf.get('vpg_targets', {})))
     self._ndb_connector = ndbc_module.NDBConnector()
     self.vp_data_manager = (
         verification_payload_data.VerificationPayloadDataManager(
