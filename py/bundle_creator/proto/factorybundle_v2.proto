@@ -33,6 +33,7 @@ message CreateBundleRequest {
   string email = 1;
   BundleMetadata bundle_metadata = 2;
   HwidOption hwid_option = 3;
+  repeated string cc_emails = 4;
 }
 
 message CreateBundleResponse {

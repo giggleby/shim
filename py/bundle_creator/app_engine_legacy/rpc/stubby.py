@@ -41,7 +41,7 @@ class FactoryBundleService(remote.Service):
 
   @remote.method(proto.WorkerResult, proto.CreateBundleRpcResponse)
   def ResponseCallback(self, worker_result):
-    mail_list = [worker_result.original_request.email]
+    cc_list = list(worker_result.original_request.cc_emails)
 
     if worker_result.status != proto.WorkerResult.Status.FAILED:
       subject = 'Bundle creation success'
@@ -86,14 +86,14 @@ class FactoryBundleService(remote.Service):
           datetime.datetime.now())
       plain_content, html_content = _GenerateFailedContents(
           worker_result.error_message)
-      mail_list.append(config.FAILURE_EMAIL)
+      cc_list.append(config.FAILURE_EMAIL)
 
-    mail.send_mail(
-        sender=config.NOREPLY_EMAIL,
-        to=mail_list,
-        subject=subject,
-        body=plain_content,
-        html=html_content)
+    kwargs = {
+        'cc': cc_list,
+    } if cc_list else {}
+    mail.send_mail(sender=config.NOREPLY_EMAIL,
+                   to=[worker_result.original_request.email], subject=subject,
+                   body=plain_content, html=html_content, **kwargs)
     return proto.CreateBundleRpcResponse()
 
   @remote.method(proto.FirmwareInfoExtractorResult,

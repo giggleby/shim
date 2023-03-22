@@ -33,6 +33,7 @@ class CreateBundleRequestInfoTest(unittest.TestCase):
     self._request.release_image_version = '33333.0.0'
     self._request.email = 'foo@bar'
     self._request.update_hwid_db_firmware_info = False
+    self._request.cc_emails.append('foo.cc@bar')
 
     self._request_v2 = factorybundle_v2_pb2.CreateBundleRequest()
     self._request_v2.email = 'foo2@bar'
@@ -43,6 +44,7 @@ class CreateBundleRequestInfoTest(unittest.TestCase):
     self._request_v2.bundle_metadata.test_image_version = '66666.0.0'
     self._request_v2.bundle_metadata.release_image_version = '77777.0.0'
     self._request_v2.hwid_option.update_db_firmware_info = False
+    self._request_v2.cc_emails.append('foo2.cc@bar')
 
   def testFromCreateBundleRpcRequest_succeed_returnsExpectedValue(self):
     info = CreateBundleRequestInfo.FromCreateBundleRpcRequest(self._request)
@@ -50,7 +52,8 @@ class CreateBundleRequestInfoTest(unittest.TestCase):
     expected_info = CreateBundleRequestInfo(
         email='foo@bar', board='board', project='project', phase='proto',
         toolkit_version='11111.0.0', test_image_version='22222.0.0',
-        release_image_version='33333.0.0', update_hwid_db_firmware_info=False)
+        release_image_version='33333.0.0', update_hwid_db_firmware_info=False,
+        cc_emails=['foo.cc@bar'])
     self.assertEqual(info, expected_info)
 
   def testFromCreateBundleRpcRequest_optionalFields_verifiesOptionalFields(
@@ -69,7 +72,8 @@ class CreateBundleRequestInfoTest(unittest.TestCase):
     expected_info = CreateBundleRequestInfo(
         email='foo2@bar', board='board2', project='project2', phase='proto2',
         toolkit_version='55555.0.0', test_image_version='66666.0.0',
-        release_image_version='77777.0.0', update_hwid_db_firmware_info=False)
+        release_image_version='77777.0.0', update_hwid_db_firmware_info=False,
+        cc_emails=['foo2.cc@bar'])
     self.assertEqual(info, expected_info)
 
   def testFromV2CreateBundleRequest_optionalFields_verifiesOptionalFields(
@@ -96,7 +100,8 @@ class FirestoreConnectorTest(unittest.TestCase):
     self._info = firestore_connector.CreateBundleRequestInfo(
         email='foo@bar', board='board', project='project', phase='proto',
         toolkit_version='11111.0.0', test_image_version='12222.0.0',
-        release_image_version='13333.0.0', update_hwid_db_firmware_info=False)
+        release_image_version='13333.0.0', update_hwid_db_firmware_info=False,
+        cc_emails=[])
 
     mock_datetime_patcher = mock.patch(
         'cros.factory.bundle_creator.connector.firestore_connector.datetime')
@@ -181,6 +186,14 @@ class FirestoreConnectorTest(unittest.TestCase):
 
     doc = self._connector.GetUserRequestDocument(doc_id)
     self.assertEqual(doc['request_from'], request_from)
+
+  def testCreateUserRequest_hasCcEmails_verifiesCcEmailsValue(self):
+    self._info.cc_emails.append('foo.cc@bar')
+
+    doc_id = self._connector.CreateUserRequest(self._info)
+
+    doc = self._connector.GetUserRequestDocument(doc_id)
+    self.assertEqual(doc['cc_emails'], self._info.cc_emails)
 
   def testUpdateUserRequestStatus_succeed_verifiesDocStatus(self):
     status = firestore_connector.UserRequestStatus.SUCCEEDED

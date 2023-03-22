@@ -72,6 +72,7 @@ class CreateBundleTaskTest(unittest.TestCase):
     self._test_image_version = '22222.0.0'
     self._release_image_version = '33333.0.0'
     self._firmware_source = '44444.0.0'
+    self._cc_emails = ['foo.cc@bar']
     self._hwid_related_bug_number = 123
 
     self._request = factorybundle_pb2.CreateBundleRpcRequest()
@@ -83,12 +84,14 @@ class CreateBundleTaskTest(unittest.TestCase):
     self._request.release_image_version = self._release_image_version
     self._request.email = self._email
     self._request.update_hwid_db_firmware_info = False
+    self._request.cc_emails.extend(self._cc_emails)
     self._message = factorybundle_pb2.CreateBundleMessage()
     self._message.doc_id = self._doc_id
     self._message.request.MergeFrom(self._request)
 
     request_v2 = factorybundle_v2_pb2.CreateBundleRequest()
     request_v2.email = self._email
+    request_v2.cc_emails.extend(self._cc_emails)
     request_v2.bundle_metadata.board = self._board
     request_v2.bundle_metadata.project = self._project
     request_v2.bundle_metadata.phase = self._phase
@@ -110,7 +113,7 @@ class CreateBundleTaskTest(unittest.TestCase):
         toolkit_version=self._toolkit_version,
         test_image_version=self._test_image_version,
         release_image_version=self._release_image_version,
-        update_hwid_db_firmware_info=False)
+        update_hwid_db_firmware_info=False, cc_emails=self._cc_emails)
 
   def testFromPubSubMessage_isV2_returnsExpectedValue(self):
     task = CreateBundleTask.FromPubSubMessage(
@@ -249,7 +252,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
         toolkit_version=self._message.request.toolkit_version,
         test_image_version=self._message.request.test_image_version,
         release_image_version=self._message.request.release_image_version,
-        update_hwid_db_firmware_info=False)
+        update_hwid_db_firmware_info=False, cc_emails=[])
     self._message.doc_id = self._firestore_connector.CreateUserRequest(info)
     self._pubsub_connector.CreateSubscription(self._TOPIC_NAME,
                                               config.PUBSUB_SUBSCRIPTION)

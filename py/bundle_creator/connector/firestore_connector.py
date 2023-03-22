@@ -40,6 +40,8 @@ class CreateBundleRequestInfo:
     release_image_version: The release image version.
     update_hwid_db_firmware_info: A boolean value which represents including
         firmware info in HWID DB or not.
+    cc_emails: A list of emails which should be also notified when a request
+        is processed.
     firmware_source: The firmware source, `None` if it isn't set.
     hwid_related_bug_number: The bug number to create a HWID CL, `None` if it
         isn't set.
@@ -52,6 +54,7 @@ class CreateBundleRequestInfo:
   test_image_version: str
   release_image_version: str
   update_hwid_db_firmware_info: bool
+  cc_emails: List[str]
   firmware_source: Optional[str] = None
   hwid_related_bug_number: Optional[int] = None
 
@@ -64,7 +67,8 @@ class CreateBundleRequestInfo:
         phase=request.phase, toolkit_version=request.toolkit_version,
         test_image_version=request.test_image_version,
         release_image_version=request.release_image_version,
-        update_hwid_db_firmware_info=request.update_hwid_db_firmware_info)
+        update_hwid_db_firmware_info=request.update_hwid_db_firmware_info,
+        cc_emails=list(request.cc_emails))
     info.firmware_source = request.firmware_source if request.HasField(
         'firmware_source') else None
     info.hwid_related_bug_number = (
@@ -78,14 +82,15 @@ class CreateBundleRequestInfo:
   ) -> 'CreateBundleRequestInfo':
     metadata = request.bundle_metadata
     hwid_option = request.hwid_option
-    info = cls(email=request.email, board=metadata.board,
-               project=metadata.project, phase=metadata.phase,
-               toolkit_version=metadata.toolkit_version,
-               test_image_version=metadata.test_image_version,
-               release_image_version=metadata.release_image_version,
-               update_hwid_db_firmware_info=hwid_option.update_db_firmware_info,
-               firmware_source=metadata.firmware_source or None,
-               hwid_related_bug_number=hwid_option.related_bug_number or None)
+    info = cls(
+        email=request.email, board=metadata.board, project=metadata.project,
+        phase=metadata.phase, toolkit_version=metadata.toolkit_version,
+        test_image_version=metadata.test_image_version,
+        release_image_version=metadata.release_image_version,
+        update_hwid_db_firmware_info=hwid_option.update_db_firmware_info,
+        cc_emails=list(
+            request.cc_emails), firmware_source=metadata.firmware_source or
+        None, hwid_related_bug_number=hwid_option.related_bug_number or None)
     return info
 
 
@@ -143,6 +148,8 @@ class FirestoreConnector:
     doc_value['request_time'] = datetime.now()
     if not doc_value['firmware_source']:
       del doc_value['firmware_source']
+    if not doc_value['cc_emails']:
+      del doc_value['cc_emails']
     if not info.update_hwid_db_firmware_info:
       del doc_value['hwid_related_bug_number']
     if request_from:

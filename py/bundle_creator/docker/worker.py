@@ -79,6 +79,8 @@ class CreateBundleTask(BaseWorkerTask):
     release_image_version: The release image version.
     update_hwid_db_firmware_info: A boolean value which represents including
         firmware info in HWID DB or not.
+    cc_emails: A list of emails which should be also notified when a request
+        is processed.
     firmware_source: The firmware source, `None` if it isn't set.
     hwid_related_bug_number: The bug number to create a HWID CL, `None` if it
         isn't set.
@@ -94,6 +96,7 @@ class CreateBundleTask(BaseWorkerTask):
   test_image_version: str
   release_image_version: str
   update_hwid_db_firmware_info: bool
+  cc_emails: List[str]
   firmware_source: Optional[str] = None
   hwid_related_bug_number: Optional[int] = None
   request_from: Optional[str] = None
@@ -114,6 +117,7 @@ class CreateBundleTask(BaseWorkerTask):
           test_image_version=metadata.test_image_version,
           release_image_version=metadata.release_image_version,
           update_hwid_db_firmware_info=hwid_option.update_db_firmware_info,
+          cc_emails=list(message.request.cc_emails),
           firmware_source=metadata.firmware_source or None,
           hwid_related_bug_number=hwid_option.related_bug_number or None,
           request_from='v2')
@@ -127,7 +131,8 @@ class CreateBundleTask(BaseWorkerTask):
         toolkit_version=request.toolkit_version,
         test_image_version=request.test_image_version,
         release_image_version=request.release_image_version,
-        update_hwid_db_firmware_info=request.update_hwid_db_firmware_info)
+        update_hwid_db_firmware_info=request.update_hwid_db_firmware_info,
+        cc_emails=list(request.cc_emails))
     task.firmware_source = request.firmware_source if request.HasField(
         'firmware_source') else None
     task.hwid_related_bug_number = (
@@ -145,6 +150,7 @@ class CreateBundleTask(BaseWorkerTask):
     request.release_image_version = self.release_image_version
     request.email = self.email
     request.update_hwid_db_firmware_info = self.update_hwid_db_firmware_info
+    request.cc_emails.extend(self.cc_emails)
     if self.firmware_source:
       request.firmware_source = self.firmware_source
     if self.hwid_related_bug_number:
