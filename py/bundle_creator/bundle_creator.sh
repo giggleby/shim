@@ -52,6 +52,8 @@ FAILURE_EMAIL=
 APPENGINE_ID=
 SERVICE_ACCOUNT=
 HWID_API_ENDPOINT=
+DOWNLOAD_LINK_FORMAT=
+DOWNLOAD_LINK_FORMAT_V2=
 
 load_config_by_deployment_type() {
   local deployment_type="$1"
@@ -94,6 +96,8 @@ prepare_docker_files() {
     FW_INFO_EXTRACTOR_SUBSCRIPTION="${FW_INFO_EXTRACTOR_SUBSCRIPTION}" \
     HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
     ENV_TYPE="${env_type}" \
+    DOWNLOAD_LINK_FORMAT="${DOWNLOAD_LINK_FORMAT}" \
+    DOWNLOAD_LINK_FORMAT_V2="${DOWNLOAD_LINK_FORMAT_V2}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > \
       "${destination_dir}/docker/config.py"
 
@@ -490,6 +494,8 @@ do_test_docker() {
   PUBSUB_SUBSCRIPTION="fake-sub"
   FW_INFO_EXTRACTOR_SUBSCRIPTION="fake-fw-info-extractor-sub"
   HWID_API_ENDPOINT="https://fake_hwid_api_endpoint"
+  DOWNLOAD_LINK_FORMAT="https://fake_download_link_format/?path={}"
+  DOWNLOAD_LINK_FORMAT_V2="https://fake_download_link_format_v2/?path={}"
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
   prepare_python_venv "${TEST_DOCKER_NAME}" \
     "${SOURCE_DIR}/docker/requirements.txt"

@@ -82,6 +82,8 @@ class CreateBundleTask(BaseWorkerTask):
     firmware_source: The firmware source, `None` if it isn't set.
     hwid_related_bug_number: The bug number to create a HWID CL, `None` if it
         isn't set.
+    request_from: A string value which represents the version of the message is
+        from, `None` if it is from `py/bundle_creator/app_engine`.
   """
   doc_id: str
   email: str
@@ -94,6 +96,7 @@ class CreateBundleTask(BaseWorkerTask):
   update_hwid_db_firmware_info: bool
   firmware_source: Optional[str] = None
   hwid_related_bug_number: Optional[int] = None
+  request_from: Optional[str] = None
 
   @classmethod
   def FromPubSubMessage(
@@ -112,7 +115,8 @@ class CreateBundleTask(BaseWorkerTask):
           release_image_version=metadata.release_image_version,
           update_hwid_db_firmware_info=hwid_option.update_db_firmware_info,
           firmware_source=metadata.firmware_source or None,
-          hwid_related_bug_number=hwid_option.related_bug_number or None)
+          hwid_related_bug_number=hwid_option.related_bug_number or None,
+          request_from='v2')
 
     message = factorybundle_pb2.CreateBundleMessage.FromString(
         pubsub_message.data)
@@ -203,6 +207,9 @@ class EasyBundleCreationWorker(BaseWorker):
           worker_result.status = (
               factorybundle_pb2.WorkerResult.CREATE_CL_FAILED)
           worker_result.error_message = str(cl_error_msg)
+        worker_result.download_link_format = (
+            config.DOWNLOAD_LINK_FORMAT_V2
+            if task.request_from == 'v2' else config.DOWNLOAD_LINK_FORMAT)
         self._cloudtasks_connector.ResponseWorkerResult(worker_result)
       except CreateBundleException as e:
         self._logger.error(e)

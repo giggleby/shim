@@ -118,6 +118,7 @@ class CreateBundleTaskTest(unittest.TestCase):
             data=self._message_v2.SerializeToString(),
             attributes=self._attributes))
 
+    self._task.request_from = 'v2'
     self.assertEqual(task, self._task)
 
   def testFromPubSubMessage_isV2WithOptionalFields_verifiesOptionalFields(self):
@@ -197,6 +198,8 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
   _GS_PATH = 'gs://fake_path'
   _FIRESTORE_CURRENT_DATETIME = DatetimeWithNanoseconds(2022, 6, 8, 0, 0,
                                                         tzinfo=pytz.UTC)
+  _DOWNLOAD_LINK_FORMAT = 'https://fake_download_link_format/?path={}'
+  _DOWNLOAD_LINK_FORMAT_V2 = 'https://fake_download_link_format_v2/?path={}'
 
   @classmethod
   def setUpClass(cls):
@@ -279,6 +282,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.status = factorybundle_pb2.WorkerResult.NO_ERROR
     expected_worker_result.original_request.MergeFrom(self._message.request)
     expected_worker_result.gs_path = self._GS_PATH
+    expected_worker_result.download_link_format = self._DOWNLOAD_LINK_FORMAT
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['status'],
                      firestore_connector.UserRequestStatus.SUCCEEDED.name)
@@ -322,6 +326,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.original_request.MergeFrom(self._message.request)
     expected_worker_result.gs_path = self._GS_PATH
     expected_worker_result.cl_url.extend(cl_url)
+    expected_worker_result.download_link_format = self._DOWNLOAD_LINK_FORMAT
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['hwid_cl_url'], cl_url)
     mock_method.assert_called_once_with(expected_worker_result)
@@ -343,6 +348,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.original_request.MergeFrom(self._message.request)
     expected_worker_result.gs_path = self._GS_PATH
     expected_worker_result.error_message = error_message
+    expected_worker_result.download_link_format = self._DOWNLOAD_LINK_FORMAT
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     self.assertEqual(doc['hwid_cl_error_msg'], error_message)
     mock_method.assert_called_once_with(expected_worker_result)
@@ -446,6 +452,7 @@ class EasyBundleCreationWorkerTest(unittest.TestCase):
     expected_worker_result.status = factorybundle_pb2.WorkerResult.NO_ERROR
     expected_worker_result.original_request.MergeFrom(self._message.request)
     expected_worker_result.gs_path = self._GS_PATH
+    expected_worker_result.download_link_format = self._DOWNLOAD_LINK_FORMAT_V2
     mock_method = self._mock_cloudtasks_connector.ResponseWorkerResult
     mock_method.assert_called_once_with(expected_worker_result)
 
