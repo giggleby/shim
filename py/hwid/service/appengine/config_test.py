@@ -11,6 +11,7 @@ from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine import verification_payload_generator_config as vpg_config_module
 from cros.factory.hwid.v3 import filesystem_adapter
 
+
 _TEST_CONFIG_PATH = os.path.join(
     os.path.dirname(__file__), 'testdata', 'test_config.yaml')
 
@@ -50,8 +51,7 @@ class ConfigTest(unittest.TestCase):
     self.assertEqual(
         _config.vpg_targets['BAR'],
         vpg_config_module.VerificationPayloadGeneratorConfig.Create(
-            board='foo', ignore_error=['stylus'],
-            waived_comp_categories=['display_panel']))
+            ignore_error=['stylus'], waived_comp_categories=['display_panel']))
 
 
 if __name__ == '__main__':

@@ -31,7 +31,6 @@ _DEFAULT_CONFIGURATION = {
     'ge_bucket': 'chromeos-build-release-console-staging',
     'vpg_targets': {
         'SARIEN': {  # for unittests
-            'board': 'sarien',
             'waived_comp_categories': ['ethernet']
         }
     },

@@ -1,6 +1,5 @@
 vpg_targets: &vpg_targets
   BAR:
-    board: "foo"
     ignore_error:
       - stylus
     waived_comp_categories:
