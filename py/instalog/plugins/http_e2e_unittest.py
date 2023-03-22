@@ -125,6 +125,9 @@ class TestHTTP(unittest.TestCase):
       self.assertEqual(0, len(self.core.emit_calls))
 
 
+# TODO(b/274732328): Fix or deprecate GnuPG codes.
+@unittest.skip('This test does not support latest GnuPG, so disable it '
+               'temporarily')
 class TestHTTPAE(unittest.TestCase):
 
   def _CreateKeys(self):
