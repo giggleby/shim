@@ -568,7 +568,9 @@ class DatabaseBuilderTest(unittest.TestCase):
             }, {}, {}, [], image_name=image_name)
 
       db = db_builder.Build()
-      self.assertEqual(db.GetBitMapping(0), db.GetBitMapping(db.max_image_id))
+      self.assertEqual(
+          db.GetBitMapping(image_id=0),
+          db.GetBitMapping(image_id=db.max_image_id))
 
   # TODO (b/212216855)
   @label_utils.Informational

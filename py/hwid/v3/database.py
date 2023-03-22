@@ -358,7 +358,7 @@ class Database(abc.ABC):
     return self._pattern.GetEncodingScheme(image_id)
 
   def GetTotalBitLength(self, image_id: Optional[int] = None) -> int:
-    return self._pattern.GetTotalBitLength(image_id)
+    return self._pattern.GetTotalBitLength(image_id=image_id)
 
   def GetEncodedFieldsBitLength(
       self, image_id: Optional[int] = None,
@@ -367,11 +367,27 @@ class Database(abc.ABC):
                                             pattern_idx=pattern_idx)
 
   def GetBitMapping(self, image_id: Optional[int] = None,
+                    pattern_idx: Optional[int] = None,
                     max_bit_length: Optional[int] = None) -> Sequence[BitEntry]:
-    return self._pattern.GetBitMapping(image_id, max_bit_length)
+    # TODO(yhong): Consider move `GetBitMapping()` and other similar methods
+    #    into `PatternDatum` class to separate the logic of identifying the
+    #    pattern out from the rest tasks.
+    return self._pattern.GetBitMapping(image_id=image_id,
+                                       pattern_idx=pattern_idx,
+                                       max_bit_length=max_bit_length)
 
   def GetPattern(self, image_id: Optional[int] = None,
                  pattern_idx: Optional[int] = None) -> PatternDatum:
+    """Get the pattern by the given image id or the pattern's numerical index.
+
+    Args:
+      image_id: An integer of the image id to query.  If not given, the latest
+          image id would be used.
+      pattern_idx: The index of the pattern.
+
+    Returns:
+      The `PatternDatum` object.
+    """
     return self._pattern.GetPattern(image_id=image_id, pattern_idx=pattern_idx)
 
   def GetPatternCount(self) -> int:
@@ -1998,17 +2014,19 @@ class Pattern:
     """
     return self.GetPattern(image_id).encoding_scheme
 
-  def GetTotalBitLength(self, image_id=None):
+  def GetTotalBitLength(self, image_id=None, pattern_idx=None):
     """Gets the total bit length defined by the pattern.
 
     Args:
-      image_id: An integer of the image id to query. If not given, the latest
-          image id would be used.
+      image_id: An integer of the image id to query. If both image_id and
+          pattern_idx are not given, the latest image id would be used.
+      pattern_idx: The index of the pattern.
 
     Returns:
       A int indicating the total bit length.
     """
-    return sum([field.bit_length for field in self.GetPattern(image_id).fields])
+    pattern = self.GetPattern(image_id=image_id, pattern_idx=pattern_idx)
+    return sum(field.bit_length for field in pattern.fields)
 
   def GetFieldsBitLength(self, image_id: Optional[int] = None,
                          pattern_idx: Optional[int] = None):
@@ -2029,7 +2047,7 @@ class Pattern:
       ret[field.name] += field.bit_length
     return dict(ret)
 
-  def GetBitMapping(self, image_id=None, max_bit_length=None):
+  def GetBitMapping(self, image_id=None, pattern_idx=None, max_bit_length=None):
     """Gets a list indicating the mapping target (field name and the offset) of
     each bit in the components bitset.
 
@@ -2037,9 +2055,9 @@ class Pattern:
     corresponds to the least significant bit of encoded field 'cpu'.
 
     Args:
-      image_id: An integer of the image id to query. If not given, the latest
-          image id would be used.
-
+      image_id: An integer of the image id to query. If both image_id and
+          pattern_idx are not given, the latest image id would be used.
+      pattern_idx: The index of the pattern.
       max_bit_length: The max length of the return list.  If given, it is used
           to check against the encoding pattern to see if there is an incomplete
           bit chunk.
@@ -2054,7 +2072,8 @@ class Pattern:
           of encoded field 'cpu'.
     """
 
-    total_bit_length = self.GetTotalBitLength(image_id=image_id)
+    total_bit_length = self.GetTotalBitLength(image_id=image_id,
+                                              pattern_idx=pattern_idx)
     if max_bit_length is None:
       max_bit_length = total_bit_length
     else:
@@ -2062,7 +2081,8 @@ class Pattern:
 
     ret = []
     field_offset_map = collections.defaultdict(int)
-    for name, bit_length in self.GetPattern(image_id).fields:
+    for name, bit_length in self.GetPattern(image_id=image_id,
+                                            pattern_idx=pattern_idx).fields:
       # Normally when one wants to extend bit length of a field, one should
       # append new pattern field instead of expanding the last field.
       # However, for some project, we already have cases where last pattern
@@ -2086,7 +2106,7 @@ class Pattern:
 
   def GetPattern(self, image_id: Optional[int] = None,
                  pattern_idx: Optional[int] = None) -> PatternDatum:
-    """Get the pattern by a given image id.
+    """Get the pattern by the given image id or the pattern's numerical index.
 
     Args:
       image_id: An integer of the image id to query.  If not given, the latest

@@ -418,7 +418,8 @@ class ContentsAnalyzer:
             image_id):
           pattern_change_status = HWIDSectionTouchCase.TOUCHED
           break
-        if prev_db.GetBitMapping(image_id) != curr_db.GetBitMapping(image_id):
+        if prev_db.GetBitMapping(image_id=image_id) != curr_db.GetBitMapping(
+            image_id=image_id):
           pattern_change_status = HWIDSectionTouchCase.TOUCHED
           break
 

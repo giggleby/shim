@@ -61,7 +61,7 @@ def BOMToIdentity(database, bom, brand_code=None, encoded_configless=None):
 
   # Fill in each bit.
   components_bitset = ''
-  for (field, bit_offset) in database.GetBitMapping(bom.image_id):
+  for (field, bit_offset) in database.GetBitMapping(image_id=bom.image_id):
     components_bitset += '01'[(encoded_fields[field] >> bit_offset) & 1]
 
   # Set stop bit.
@@ -103,7 +103,7 @@ def IdentityToBOM(database, identity):
         f'The hwid {identity!r} was generated with wrong encoding scheme.')
 
   bit_length = len(identity.components_bitset) - 1
-  total_bit_length = database.GetTotalBitLength(image_id)
+  total_bit_length = database.GetTotalBitLength(image_id=image_id)
   if bit_length > total_bit_length:
     raise common.HWIDException(
         f'Invalid bit string length of {identity.components_bitset[:-1]!r}. '
