@@ -160,6 +160,10 @@ msgid "Check Serial Number"
 msgstr "检查机器序号"
 
 #: ../build/pytests_label_generated.json
+msgid "Check Test List"
+msgstr "检查测试列表"
+
+#: ../build/pytests_label_generated.json
 msgid "Compass"
 msgstr "罗盘"
 
@@ -512,6 +516,10 @@ msgstr "暂停/恢复"
 #: ../build/pytests_label_generated.json
 msgid "Suspend Stress"
 msgstr "暂停/恢复压力测试"
+
+#: ../build/pytests_label_generated.json
+msgid "Switch Test List"
+msgstr "切换测试列表"
 
 #: ../build/pytests_label_generated.json
 msgid "Sync Factory Server"
@@ -3579,6 +3587,10 @@ msgid "Fingerprint Sensor test"
 msgstr "指纹感应器测试"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Finalize MLB"
+msgstr "MLB 最终程序"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 #: ../py/test/test_lists/generic_fat.test_list.json
 #: ../py/test/test_lists/generic_fft.test_list.json
 #: ../py/test/test_lists/generic_grt.test_list.json
@@ -3703,10 +3715,6 @@ msgstr "恢复按钮群组"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "SD Performance"
 msgstr "SD 效能"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "SMT Finalize"
-msgstr "SMT 最终程序"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Screen Rotation"
@@ -3993,6 +4001,10 @@ msgid "Webgl Aquarium 50"
 msgstr "WebGL 水族箱 50"
 
 #: ../py/test/test_lists/generic_smt.test_list.json
+msgid "Check RMA test list"
+msgstr "检查 RMA 测试列表"
+
+#: ../py/test/test_lists/generic_smt.test_list.json
 msgid "SMT (SA Test)"
 msgstr "SMT (SA 测试)"
 
@@ -4027,6 +4039,10 @@ msgstr "扫描测站 ID"
 #: ../py/test/test_lists/generic_smt.test_list.json
 msgid "Stress Test"
 msgstr "压力测试"
+
+#: ../py/test/test_lists/generic_smt.test_list.json
+msgid "Switch to RMA test list"
+msgstr "切换至 RMA 测试列表"
 
 #: ../py/test/test_lists/generic_tast.test_list.json
 msgid "Test List for Tast Tests"

@@ -18,10 +18,19 @@
       ],
       "__comment_component_list": "Can also verify firmware here if preflashed firmware for SMT stage can meet the requirements in HWID.",
       "stress_duration_secs": 10,
-      "__comment_stress_duration_secs": "Duration of stress test (SAT, Stressful Application Test) during SMT."
+      "__comment_stress_duration_secs": "Duration of stress test (SAT, Stressful Application Test) during SMT.",
+      "rma_test_list": "generic_rma"
     }
   },
   "definitions": {
+    "CheckRMATestList": {
+      "pytest_name": "check_test_list",
+      "label": "Check RMA test list",
+      "run_if": "constants.factory_process == 'RMA'",
+      "args": {
+        "test_list_id": "eval! constants.smt.rma_test_list"
+      }
+    },
     "ChromeboxSMTItems": {
       "inherit": "FlattenGroup",
       "subtests": [
@@ -79,10 +88,12 @@
       "inherit": "TestGroup",
       "label": "Finish",
       "subtests": [
-        "SMTFinalize",
+        "FinalizeMLB",
+        "CheckRMATestList",
         "StationEnd",
         "CheckPoint",
-        "HaltStep"
+        "HaltStep",
+        "SwitchToRMATestList"
       ]
     },
     "SMTItems": {
@@ -196,6 +207,14 @@
       "inherit": "WifiSSIDList",
       "args": {
         "event_log_name": "SMT_basic_ssid_list"
+      }
+    },
+    "SwitchToRMATestList": {
+      "pytest_name": "switch_test_list",
+      "label": "Switch to RMA test list",
+      "run_if": "constants.factory_process == 'RMA'",
+      "args": {
+        "test_list_id": "eval! constants.smt.rma_test_list"
       }
     }
   }

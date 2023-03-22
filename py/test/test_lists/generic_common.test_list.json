@@ -497,7 +497,7 @@
       ]
     },
     "Cr50SMTWriteFlashInfo": {
-      "inherit": "SMTFinalize",
+      "inherit": "FinalizeMLB",
       "__comment": "Make old definition as an alias of the new definition for backward compatibility"
     },
     "Cr50WriteCustomlabelFlags": {
@@ -621,6 +621,15 @@
           6000
         ],
         "error_margin": 300
+      }
+    },
+    "FinalizeMLB": {
+      "pytest_name": "finalize",
+      "label": "Finalize MLB",
+      "run_if": "constants.factory_process != 'FULL'",
+      "args": {
+        "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
+        "mode": "MLB"
       }
     },
     "Finish": {
@@ -993,16 +1002,6 @@
         "media": "SD",
         "sysfs_path": "eval! constants.sd.sysfs_path",
         "timeout_secs": 60
-      }
-    },
-    "SMTFinalize": {
-      "pytest_name": "finalize",
-      "label": "SMT Finalize",
-      "run_if": "constants.factory_process == 'TWOSTAGES'",
-      "args": {
-        "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
-        "factory_process": "TWOSTAGES",
-        "mode": "MLB"
       }
     },
     "Scan": {
