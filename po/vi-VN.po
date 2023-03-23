@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-03-23 14:44+CST\n"
+"PO-Revision-Date: 2023-03-27 21:02+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -2941,6 +2941,10 @@ msgstr "Tải lên báo cáo sản xuất"
 #: ../py/test/pytests/sync_factory_server.py
 msgid "Upload Reg Codes"
 msgstr "Tải lên mã đăng ký"
+
+#: ../py/test/pytests/sync_factory_server.py
+msgid "Upload Serial Number for auditing"
+msgstr "Số sêri bo mạch chủ(MLB)"
 
 #: ../py/test/pytests/sync_factory_server.py
 #: ../py/test/test_lists/generic_common.test_list.json

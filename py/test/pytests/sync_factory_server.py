@@ -135,6 +135,7 @@ mapping object with key set to "IP/CIDR" and value set to server URL::
   }
 """
 
+import datetime
 import logging
 import threading
 import time
@@ -202,6 +203,8 @@ class SyncFactoryServer(test_case.TestCase):
           default=False),
       Arg('upload_reg_codes', bool, 'Upload registration codes to server.',
           default=False),
+      Arg('upload_sn', bool, 'Upload serial number for auditing.',
+          default=False),
       Arg('upload_report', bool, 'Upload a factory report to factory server.',
           default=False),
       Arg('report_stage', str, 'Stage of report to upload.', default=None),
@@ -224,6 +227,13 @@ class SyncFactoryServer(test_case.TestCase):
     self.report = Report(None, None, self.args.report_stage)
     self.dut = device_utils.CreateDUTInterface()
     self.station = device_utils.CreateStationInterface()
+
+  def _GetHWID(self) -> str:
+    hwid = device_data.GetDeviceData(device_data.KEY_HWID,
+                                     self.dut.CallOutput('crossystem hwid'))
+    if not hwid:
+      raise Exception('Failed to find HWID.')
+    return hwid
 
   @classmethod
   def CreateButton(cls, node_id, message, on_click):
@@ -366,10 +376,7 @@ class SyncFactoryServer(test_case.TestCase):
 
     The registration codes should be sent in format from http://goto/nkjyr.
     """
-    hwid = device_data.GetDeviceData(
-        device_data.KEY_HWID, self.dut.CallOutput('crossystem hwid'))
-    if not hwid:
-      raise Exception('Need HWID before uploading registration codes.')
+    hwid = self._GetHWID()
 
     board = hwid.partition(' ')[0]
     ubind = device_data.GetDeviceData(device_data.KEY_VPD_USER_REGCODE)
@@ -384,6 +391,21 @@ class SyncFactoryServer(test_case.TestCase):
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
     entry = [board, ubind, gbind, timestamp, hwid]
     self.server.UploadCSVEntry('registration_code_log', entry)
+
+  def UploadSerialNumberForAuditing(self):
+    hwid = self._GetHWID()
+    serial_number = device_data.GetSerialNumber()
+    if not serial_number:
+      raise Exception('Failed to find serial number.')
+    assert isinstance(hwid, str)
+    assert isinstance(serial_number, str)
+
+    now = datetime.datetime.now()
+    timestamp = now.astimezone().replace(microsecond=0).isoformat()
+    entry = [serial_number, hwid, timestamp]
+
+    csv_filename = f'sn-report-{now.strftime("%Y-%m-%d")}'
+    self.server.UploadCSVEntry(csv_filename, entry)
 
   def UploadZeroTouchIds(self):
     """Uploads identifiers for zero touch enrollment.
@@ -422,7 +444,6 @@ class SyncFactoryServer(test_case.TestCase):
     # updateFactory is running.
     self.WaitTaskEnd()
 
-
   def runTest(self):
     self.ui.SetInstruction(_('Preparing...'))
     retry_secs = self.args.first_retry_secs
@@ -457,6 +478,10 @@ class SyncFactoryServer(test_case.TestCase):
 
     if self.args.upload_reg_codes:
       tasks += [(_('Upload Reg Codes'), self.UploadRegCodes)]
+
+    if self.args.upload_sn:
+      tasks += [(_('Upload Serial Number for auditing'),
+                 self.UploadSerialNumberForAuditing)]
 
     if self.args.upload_zero_touch_ids:
       tasks += [(_('Upload Zero Touch Ids'), self.UploadZeroTouchIds)]
