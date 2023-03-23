@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-03-07 05:58+UTC\n"
+"PO-Revision-Date: 2023-03-23 14:44+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -28,14 +28,6 @@ msgstr "Điều chỉnh gia tốc kế"
 #: ../build/pytests_label_generated.json
 msgid "Accelerometers Lid Angle"
 msgstr "Góc gia tốc kế"
-
-#: ../build/pytests_label_generated.json
-msgid "Ap Ro Hash"
-msgstr ""
-
-#: ../build/pytests_label_generated.json
-msgid "Ap Ro Verification"
-msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Audio"
@@ -174,6 +166,14 @@ msgstr "La bàn"
 #: ../build/pytests_label_generated.json
 msgid "Countdown"
 msgstr "Đếm ngược"
+
+#: ../build/pytests_label_generated.json
+msgid "CR50 Ap Ro Hash"
+msgstr ""
+
+#: ../build/pytests_label_generated.json
+msgid "CR50 Ap Ro Verification"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Display"
@@ -1317,10 +1317,6 @@ msgstr ""
 msgid "Checking angle..."
 msgstr "Góc được xác nhận"
 
-#: ../py/test/pytests/ap_ro_verification.py
-msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
-msgstr ""
-
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
 msgstr "Kênh bên trái"
@@ -1874,6 +1870,10 @@ msgstr "Thời gian còn lại:"
 #: ../py/test/pytests/countdown_static/countdown.html
 msgid "Load:"
 msgstr "Tải hệ thống:"
+
+#: ../py/test/pytests/cr50_ap_ro_verification.py
+msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
+msgstr ""
 
 #: ../py/test/pytests/display.py
 msgid "solid-gray-170"
@@ -3500,14 +3500,6 @@ msgid "Set DeviceInfo"
 msgstr "Cài đặt thông tin máy"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "AP RO Verification"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "AP RO Verification Group"
-msgstr ""
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Activate Registration Code"
 msgstr "Kích hoạt mã đăng ký(ECHO Code)"
 
@@ -3580,7 +3572,7 @@ msgid "Check Release Image"
 msgstr "Kiểm tra hệ thống nhà máy"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Clear AP RO Hash"
+msgid "Clear Cr50 AP RO Hash"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
@@ -3594,6 +3586,14 @@ msgstr "EC Khởi động lại lạnh"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Cold Reset"
 msgstr "Khởi động nguội"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Cr50 AP RO Verification"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Cr50 AP RO Verification Group"
+msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Deprovision CBI"
@@ -3758,7 +3758,7 @@ msgid "Screen Rotation"
 msgstr "Xoay màn hình"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Set AP RO Hash"
+msgid "Set Cr50 AP RO Hash"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json

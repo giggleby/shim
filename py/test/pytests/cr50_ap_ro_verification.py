@@ -72,7 +72,8 @@ class OperationError(Exception):
   def __init__(self):
     super().__init__('Please retry the test.')
 
-class APROVerficationTest(test_case.TestCase):
+
+class Cr50APROVerficationTest(test_case.TestCase):
   ARGS = [
       Arg('timeout_secs', int,
           'How many seconds to wait for the RO verification key combo.',

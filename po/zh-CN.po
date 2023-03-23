@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-03-07 05:58+UTC\n"
+"PO-Revision-Date: 2023-03-23 14:44+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -28,14 +28,6 @@ msgstr "加速度计校正"
 #: ../build/pytests_label_generated.json
 msgid "Accelerometers Lid Angle"
 msgstr "加速度计上盖角度"
-
-#: ../build/pytests_label_generated.json
-msgid "Ap Ro Hash"
-msgstr ""
-
-#: ../build/pytests_label_generated.json
-msgid "Ap Ro Verification"
-msgstr "检查 AP RO hash"
 
 #: ../build/pytests_label_generated.json
 msgid "Audio"
@@ -174,6 +166,14 @@ msgstr "罗盘"
 #: ../build/pytests_label_generated.json
 msgid "Countdown"
 msgstr "倒数计时"
+
+#: ../build/pytests_label_generated.json
+msgid "CR50 Ap Ro Hash"
+msgstr "清除 CR50 AP RO Hash"
+
+#: ../build/pytests_label_generated.json
+msgid "CR50 Ap Ro Verification"
+msgstr "CR50 验证 AP RO"
 
 #: ../build/pytests_label_generated.json
 msgid "Display"
@@ -1300,10 +1300,6 @@ msgstr "请将上盖掀开到 {angle} 度。"
 msgid "Checking angle..."
 msgstr "正在确认角度……"
 
-#: ../py/test/pytests/ap_ro_verification.py
-msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
-msgstr "请在{seconds}秒內按著电源並按Refresh键三次"
-
 #: ../py/test/pytests/audio.py
 msgid "Left Channel"
 msgstr "左声道"
@@ -1843,6 +1839,10 @@ msgstr "剩余时间："
 #: ../py/test/pytests/countdown_static/countdown.html
 msgid "Load:"
 msgstr "系统负载："
+
+#: ../py/test/pytests/cr50_ap_ro_verification.py
+msgid "Please press POWER and (REFRESH*3) in {seconds} seconds."
+msgstr "请在 {seconds} 秒內按著电源並按 Refresh 键三次"
 
 #: ../py/test/pytests/display.py
 msgid "solid-gray-170"
@@ -3431,14 +3431,6 @@ msgid "Set DeviceInfo"
 msgstr "设定机器资讯"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "AP RO Verification"
-msgstr "检查 AP RO hash"
-
-#: ../py/test/test_lists/generic_common.test_list.json
-msgid "AP RO Verification Group"
-msgstr "检查 AP RO hash 群組"
-
-#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Activate Registration Code"
 msgstr "激活注册码(ECHO Code)"
 
@@ -3511,8 +3503,8 @@ msgid "Check Release Image"
 msgstr "检查出厂系统"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Clear AP RO Hash"
-msgstr "清除 AP RO Hash"
+msgid "Clear Cr50 AP RO Hash"
+msgstr "清除 Cr50 AP RO Hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Clear factory VPD entries"
@@ -3525,6 +3517,14 @@ msgstr "EC 冷重启"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Cold Reset"
 msgstr "冷重启"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Cr50 AP RO Verification"
+msgstr "Cr50 验证 AP RO"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Cr50 AP RO Verification Group"
+msgstr "Cr50 验证 AP RO hash 群組"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Deprovision CBI"
@@ -3689,8 +3689,8 @@ msgid "Screen Rotation"
 msgstr "屏幕旋转"
 
 #: ../py/test/test_lists/generic_common.test_list.json
-msgid "Set AP RO Hash"
-msgstr "写入 AP RO Hash"
+msgid "Set Cr50 AP RO Hash"
+msgstr "写入 Cr50 AP RO Hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set Widevine Keybox"
