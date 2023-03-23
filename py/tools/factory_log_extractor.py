@@ -88,21 +88,14 @@ class FactoryLogExtractor:
       self._output_f.write(json.dumps(data, sort_keys=True) + '\n')
 
   def ExtractAndMergeLogs(self):
-    reader_heap = []
-    for p in self._input_paths:
-      reader = LogExtractorFileReader(p, record_module.FactoryRecord.FromJSON)
-      if reader.GetCurRecord():
-        reader_heap.append(reader)
-    heapq.heapify(reader_heap)
+    reader_list = [
+        LogExtractorFileReader(p, record_module.FactoryRecord.FromJSON)
+        for p in self._input_paths
+    ]
 
-    while reader_heap:
-      reader = heapq.heappop(reader_heap)
-      record = reader.GetCurRecord()
+    record_generator = heapq.merge(*reader_list)
+    for record in record_generator:
       self._WriteRecord(record)
-      if not reader.ReadNextValidRecord():
-        continue
-      heapq.heappush(reader_heap, reader)
-
 
 def ParseArgument():
   parser = argparse.ArgumentParser(

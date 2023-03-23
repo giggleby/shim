@@ -27,8 +27,6 @@ class LogExtractorFileReader:
     self._validate = validate
     self._loader = loader
     self._cur_record = None
-    if not self.ReadNextValidRecord():
-      logging.warning('The content of file %s is empty!', self._input_path)
 
   def __del__(self):
     self._f.close()
@@ -36,19 +34,18 @@ class LogExtractorFileReader:
   def GetCurRecord(self) -> Optional[IRecord]:
     return self._cur_record
 
-  def ReadNextValidRecord(self) -> Optional[IRecord]:
-    """Reads and filters a new valid record from the file."""
-    line = self._f.readline()
-    if line:
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    """Keeps reading from the file until a valid record is found."""
+    # Continue reading from the file descriptor.
+    for line in self._f:
       try:
         self._cur_record = self._loader(line, self._validate)
+        return self._cur_record
       except Exception as err:
         logging.warning('Record %s in %s is invalid! %r', line,
                         self._input_path, err)
-        return self.ReadNextValidRecord()
-    else:
-      self._cur_record = None
-    return self._cur_record
-
-  def __lt__(self, other):
-    return self._cur_record < other._cur_record
+    self._cur_record = None
+    raise StopIteration
