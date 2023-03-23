@@ -28,10 +28,15 @@ class LogExtractorFileReaderTest(unittest.TestCase):
 
       loader = record_module.FactoryRecord.FromJSON
       reader = LogExtractorFileReader(testlog_path, loader)
+      self.assertEqual(loader(self._RECORD[0]), next(reader))
       self.assertEqual(loader(self._RECORD[0]), reader.GetCurRecord())
       # Should keep reading since the second record is invalid.
-      self.assertEqual(loader(self._RECORD[2]), reader.ReadNextValidRecord())
-      self.assertEqual(None, reader.ReadNextValidRecord())
+      self.assertEqual(loader(self._RECORD[2]), next(reader))
+      self.assertEqual(loader(self._RECORD[2]), reader.GetCurRecord())
+      # Read till the end of file.
+      with self.assertRaises(StopIteration):
+        next(reader)
+      self.assertEqual(None, reader.GetCurRecord())
 
 
 if __name__ == '__main__':
