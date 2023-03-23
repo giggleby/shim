@@ -46,6 +46,8 @@ PUBSUB_TOPIC=
 PUBSUB_SUBSCRIPTION=
 FW_INFO_EXTRACTOR_TOPIC=
 FW_INFO_EXTRACTOR_SUBSCRIPTION=
+RETRY_PUBSUB_TOPIC=
+RETRY_PUBSUB_SUBSCRIPTION=
 ALLOWED_LOAS_PEER_USERNAMES=
 NOREPLY_EMAIL=
 FAILURE_EMAIL=
@@ -98,6 +100,7 @@ prepare_docker_files() {
     ENV_TYPE="${env_type}" \
     DOWNLOAD_LINK_FORMAT="${DOWNLOAD_LINK_FORMAT}" \
     DOWNLOAD_LINK_FORMAT_V2="${DOWNLOAD_LINK_FORMAT_V2}" \
+    RETRY_PUBSUB_SUBSCRIPTION="${RETRY_PUBSUB_SUBSCRIPTION}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > \
       "${destination_dir}/docker/config.py"
 
@@ -248,6 +251,18 @@ try_delete_pubsub() {
     gcloud pubsub "${type}"s delete "${name}" --project="${GCLOUD_PROJECT}"
   }
   return 0
+}
+
+create_pubsub() {
+  local topic_name="$1"
+  local subscription_name="$2"
+
+  gcloud pubsub topics create "${topic_name}" --project="${GCLOUD_PROJECT}"
+  gcloud pubsub subscriptions create "${subscription_name}" \
+    --topic "${topic_name}" \
+    --project="${GCLOUD_PROJECT}" \
+    --expiration-period=never \
+    --enable-message-ordering
 }
 
 prepare_python_venv() {
@@ -428,22 +443,14 @@ do_create_pubsub() {
   try_delete_pubsub "topic" "${PUBSUB_TOPIC}"
   try_delete_pubsub "subscription" "${FW_INFO_EXTRACTOR_SUBSCRIPTION}"
   try_delete_pubsub "topic" "${FW_INFO_EXTRACTOR_TOPIC}"
+  try_delete_pubsub "subscription" "${RETRY_PUBSUB_SUBSCRIPTION}"
+  try_delete_pubsub "topic" "${RETRY_PUBSUB_TOPIC}"
 
   info "Start creating Pub/Sub topic and subscription."
-  gcloud pubsub topics create "${PUBSUB_TOPIC}" --project="${GCLOUD_PROJECT}"
-  gcloud pubsub subscriptions create "${PUBSUB_SUBSCRIPTION}" \
-    --topic "${PUBSUB_TOPIC}" \
-    --project="${GCLOUD_PROJECT}" \
-    --expiration-period=never \
-    --enable-message-ordering
-
-  gcloud pubsub topics create "${FW_INFO_EXTRACTOR_TOPIC}" \
-    --project="${GCLOUD_PROJECT}"
-  gcloud pubsub subscriptions create "${FW_INFO_EXTRACTOR_SUBSCRIPTION}" \
-    --topic "${FW_INFO_EXTRACTOR_TOPIC}" \
-    --project="${GCLOUD_PROJECT}" \
-    --expiration-period=never \
-    --enable-message-ordering
+  create_pubsub "${PUBSUB_TOPIC}" "${PUBSUB_SUBSCRIPTION}"
+  create_pubsub "${FW_INFO_EXTRACTOR_TOPIC}" \
+    "${FW_INFO_EXTRACTOR_SUBSCRIPTION}"
+  create_pubsub "${RETRY_PUBSUB_TOPIC}" "${RETRY_PUBSUB_SUBSCRIPTION}"
 }
 
 do_run_docker() {
@@ -496,6 +503,7 @@ do_test_docker() {
   HWID_API_ENDPOINT="https://fake_hwid_api_endpoint"
   DOWNLOAD_LINK_FORMAT="https://fake_download_link_format/?path={}"
   DOWNLOAD_LINK_FORMAT_V2="https://fake_download_link_format_v2/?path={}"
+  RETRY_PUBSUB_SUBSCRIPTION="fake-retry-sub"
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
   prepare_python_venv "${TEST_DOCKER_NAME}" \
     "${SOURCE_DIR}/docker/requirements.txt"
@@ -551,7 +559,7 @@ commands
       creates a compute engine instance which uses the docker image.
 
   $0 deploy-all [prod|staging|dev|dev2]
-      Does \`deploy-appengine\`, \`deploy-appengine-v2\`,
+      Does \`create-pubsub\`, \`deploy-appengine\`, \`deploy-appengine-v2\`,
       \`deploy-appengine-legacy\` and \`deploy-docker\` commands.
 
   $0 create-pubsub [prod|staging|dev|dev2]
@@ -596,6 +604,7 @@ main() {
         do_deploy_docker "$2"
         ;;
       deploy-all)
+        do_create_pubsub "$2"
         do_deploy_appengine "$2"
         do_deploy_appengine "$2" "v2"
         do_deploy_appengine_legacy "$2"
