@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import enum
+import glob
 import logging
 import re
 import struct
@@ -17,7 +18,7 @@ from cros.factory.utils import process_utils
 
 
 CPU_INFO_FILE = '/proc/cpuinfo'
-SOC_ID_FILE = '/sys/bus/soc/devices/soc0/soc_id'
+SOC_ID_FILE_GLOB = '/sys/bus/soc/devices/soc*/soc_id'
 NVMEM_FILE = '/sys/bus/nvmem/devices/nvmem0/nvmem'
 
 VENDOR0426_NVMEM_OFFSET = 0x7a0
@@ -50,18 +51,24 @@ def _ProbeChipID(vendor_id):
   if vendor_id == '0426':
     return _ProbeChipIDVendor0426()
   if vendor_id == '0070':
-    # TODO(b/232146395): Probe chip_id for vendor0070 CPU.
-    return 'unknown'
+    # vendor0070 CPU can be distinguished by SoC ID so we don't need to
+    # additionally probe chip ID.
+    return None
   raise ValueError(f'Vendor ID {vendor_id!r} is not supported for ChromeOS '
                    'projects.')
 
 
 def _GetSoCInfo():
   """Gets SoC information for ARMv8"""
-  raw_soc_id = file.ReadFile(SOC_ID_FILE)
-  match = re.match(r'jep106:([\d]{4}):([\d]{4})', raw_soc_id)
+  match = None
+  pattern = re.compile(r'jep106:([\d]{4}):([a-z\d]{4})')
+  for path in glob.glob(SOC_ID_FILE_GLOB):
+    raw_soc_id = file.ReadFile(path)
+    match = pattern.match(raw_soc_id)
+    if match:
+      break
   if not match:
-    raise ValueError(f'SoC ID format is invalid: {raw_soc_id!r}')
+    raise ValueError(f'No valid SoC ID found in {SOC_ID_FILE_GLOB!r}')
 
   vendor_id = match.group(1)
   soc_id = match.group(2)
@@ -161,8 +168,10 @@ class GenericCPUFunction(probe_function.ProbeFunction):
     cores = process_utils.CheckOutput('nproc', shell=True, log=True)
     # TODO(frankbozar): count the number of online cores
 
-    return {
+    values = {
         'model': model.strip(),
         'cores': cores.strip(),
-        'hardware': hardware.strip()
     }
+    if hardware:
+      values['hardware'] = hardware.strip()
+    return values

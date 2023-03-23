@@ -22,6 +22,10 @@ class GenericCPUFunctionTest(unittest.TestCase):
     self.mock_read_file = patcher.start()
     self.addCleanup(patcher.stop)
 
+    patcher = mock.patch('glob.glob')
+    self.mock_glob = patcher.start()
+    self.addCleanup(patcher.stop)
+
   def testProbeX86_Suceed(self):
     self.mock_check_output.return_value = textwrap.dedent('''\
       Model name:             Intel(R) Xeon(R) Gold 6154 CPU @ 3.00GHz
@@ -63,6 +67,7 @@ class GenericCPUFunctionTest(unittest.TestCase):
 
   def testProbeArm_V8(self):
     cpu_info = 'CPU architecture: 8'
+    self.mock_glob.return_value = ['fake_path']
     self.mock_read_file.side_effect = [
         cpu_info, 'jep106:0426:8186', b'\x01\x10\x86\x81'
     ]
@@ -76,14 +81,29 @@ class GenericCPUFunctionTest(unittest.TestCase):
         'model': 'ARMv8 Vendor0426 8186',
     })
 
+  def testProbeArm_V8_MultipleSoCID(self):
+    cpu_info = 'CPU architecture: 8'
+    self.mock_glob.return_value = ['fake_path1', 'fake_path2']
+    self.mock_read_file.side_effect = [cpu_info, '425', 'jep106:0070:01a9']
+    self.mock_check_output.return_value = '8'
+
+    probe_result = generic_cpu.GenericCPUFunction(cpu_type='arm').Probe()
+
+    self.assertDictEqual(probe_result, {
+        'cores': '8',
+        'model': 'ARMv8 Vendor0070 01a9',
+    })
+
   def testProbeArm_V8_InvalidVendorID(self):
     cpu_info = 'CPU architecture: 8'
+    self.mock_glob.return_value = ['fake_path']
     self.mock_read_file.side_effect = [cpu_info, 'invalid_vendor_id']
     with self.assertRaises(ValueError):
       generic_cpu.GenericCPUFunction(cpu_type='arm').Probe()
 
   def testProbeArm_V8_UnsupportedVendorID(self):
     cpu_info = 'CPU architecture: 8'
+    self.mock_glob.return_value = ['fake_path']
     self.mock_read_file.side_effect = [cpu_info, 'jep106:1234']
     with self.assertRaises(ValueError):
       generic_cpu.GenericCPUFunction(cpu_type='arm').Probe()
