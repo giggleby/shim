@@ -8,7 +8,6 @@ import collections
 import sys
 import threading
 import time
-from typing import Callable, List
 import unittest
 
 from cros.factory.test import device_data
@@ -27,7 +26,7 @@ class TaskEndException(Exception):
   """The exception to end a task."""
 
 
-_Task = collections.namedtuple('Task', ['name', 'run'])
+_Task = collections.namedtuple('Task', ['name', 'run', 'reboot'])
 _NEXT_TASK_STAGE_KEY = 'factory.test_case.next_task_stage'
 
 
@@ -46,12 +45,12 @@ class TestCase(unittest.TestCase):
     self.__method_name = methodName
     self.__task_end_event = threading.Event()
     self.__task_failed = False
-    self.__tasks = []
+    self.__tasks = collections.deque()
 
     self.__exceptions = []
     self.__exceptions_lock = threading.Lock()
 
-    self.__goofy_rpc = state.GetInstance()
+    self.goofy_rpc = state.GetInstance()
 
   def PassTask(self):
     """Pass current task.
@@ -76,7 +75,7 @@ class TestCase(unittest.TestCase):
     thread.
     """
     current_invocation_uuid = session.GetCurrentTestInvocation()
-    self.__goofy_rpc.WaiveCurrentFactoryTest(current_invocation_uuid)
+    self.goofy_rpc.WaiveCurrentFactoryTest(current_invocation_uuid)
     self.FailTask(msg)
 
   def __WaitTaskEnd(self, timeout):
@@ -106,71 +105,41 @@ class TestCase(unittest.TestCase):
     """
     self.__WaitTaskEnd(secs)
 
-  def AddTask(self, task, *task_args, **task_kwargs):
+  def AddTask(self, task, *task_args, reboot: bool = False, **task_kwargs):
     """Add a task to the test.
 
     Extra arguments would be passed to the task function.
+    The 'reboot' argument is for the tasks that include reboot process,
+    the test flow will continue after reboot instead of fail
+    if the last executed task was added with 'reboot=True'.
+    Remember to add '"allow_reboot": true' in test_list,
+    which allows reboot while running the pytest.
 
     Args:
       task: A task function.
+      reboot: True if the task include reboot process.
       task_args, task_kwargs: Arguments for the task function.
+
+    Example:
+
+      def Task(arg):
+        print(arg + 5)
+
+      def RebootTask(arg):
+        print(arg)
+        os.system('reboot')
+
+      AddTask(RebootTask, 1, reboot=True)
+      AddTask(Task, 2)
+      AddTask(RebootTask, 3, reboot=True)
     """
     name = task.__name__
     run = lambda: task(*task_args, **task_kwargs)
 
-    self.__tasks.append(_Task(name=name, run=run))
-
-  def AddTasksWithReboot(self, add_task_list: List[Callable]) -> None:
-    """Add multiple tasks that include reboot process.
-
-    This function extends AddTask() for the tasks that include reboot process.
-    It will execute the lambda functions of AddTask() in add_task_list
-    sequentially.
-    Even the tasks are separated by reboot, the test flow will still continue
-    after reboot, instead of resetting.
-    If the reboot won't be triggered immediately, you should add a buffer time
-    for waiting, which avoid running next task while waiting for the reboot,
-    e.g., use `time.sleep(buffer_time)`
-
-    Args:
-      add_task_list:  A list contains lambda functions of AddTask().
-                      i.e, lambda: self.AddTask(task, *task_args, **task_kwargs)
-
-    Example:
-
-      def RebootTask(arg1, arg2):
-        print(arg1 + arg2)
-        os.system('reboot')
-
-      def FinalTask():
-        print('tasks finished!')
-
-      AddTasksWithReboot(
-        [
-          lambda: self.AddTask(RebootTask, 1, 2),
-          lambda: self.AddTask(RebootTask, 3, arg2=4),
-          lambda: self.AddTask(RebootTask, arg1=5, arg2=6),
-          lambda: self.AddTask(FinalTask)
-        ]
-      )
-    """
-    # Saves the pending test list for restoring the test list after reboot.
-    self.__goofy_rpc.SaveDataForNextBoot()
-
-    # Gets next task stage
-    next_task_stage = self.GetNextTaskStage()
-    if next_task_stage is None:
-      next_task_stage = 0
-      self.UpdateNextTaskStage(next_task_stage)
-
-    # Skips the tasks that has passed.
-    for stage, add_task in enumerate(add_task_list):
-      if stage < next_task_stage:
-        continue
-      add_task()
+    self.__tasks.append(_Task(name=name, run=run, reboot=reboot))
 
   def GetNextTaskStage(self) -> None:
-    return device_data.GetDeviceData(_NEXT_TASK_STAGE_KEY, default=None)
+    return device_data.GetDeviceData(_NEXT_TASK_STAGE_KEY, default=0)
 
   def UpdateNextTaskStage(self, next_task_stage) -> None:
     device_data.UpdateDeviceData({_NEXT_TASK_STAGE_KEY: next_task_stage})
@@ -248,36 +217,57 @@ class TestCase(unittest.TestCase):
         self.AddTask(getattr(self, self.__method_name))
 
       try:
+        next_task_stage = self.GetNextTaskStage()
+
+        # Fails the pytest if last executed task triggered an unexpected reboot.
+        if next_task_stage > 0:
+          last_task_before_reboot = self.__tasks[next_task_stage - 1]
+          if not last_task_before_reboot.reboot:
+            self.FailTask('Unexpected reboot was triggered while running '
+                          f'"{last_task_before_reboot.name}".')
+
+        # Skips the tasks that have passed.
+        for unused_passed_tasks in range(next_task_stage):
+          self.__tasks.popleft()
+
+        # Saves pending test list for restoring test list after reboot.
+        if any(task.reboot for task in self.__tasks):
+          self.goofy_rpc.SaveDataForNextBoot()
+
         for task in self.__tasks:
           self.__task_end_event.clear()
           try:
             self.__SetupGoofyJSEvents()
-            try:
-              # Updates the next task stage for stage checking after reboot.
-              # Only execute when the tasks are added by AddTasksWithReboot().
-              next_task_stage = self.GetNextTaskStage()
-              if next_task_stage is not None:
-                self.UpdateNextTaskStage(next_task_stage + 1)
 
-              task.run()
-              # Adds buffer time for triggering reboot
-              if next_task_stage is not None:
-                time.sleep(5)
-            finally:
-              self.__task_end_event.set()
-              self.event_loop.ClearHandlers()
-              self.ui.UnbindAllKeys()
-          except Exception:
-            self.__HandleException()
-            if self.__task_failed:
-              return
+            # Updates the next task stage for stage checking before running.
+            next_task_stage += 1
+            self.UpdateNextTaskStage(next_task_stage)
+
+            task.run()
+            # Adds buffer time for avoiding run next task before
+            # triggering reboot.
+            if task.reboot:
+              buffer_time = 5
+              time.sleep(buffer_time)
+              # Fails the pytest if reboot not triggered within buffer_time,
+              # which avoid race condition.
+              self.FailTask('Reboot not triggered '
+                            f'within buffer time ({buffer_time} seconds), '
+                            'next task may be executed in advance.')
+          finally:
+            self.__task_end_event.set()
+            self.event_loop.ClearHandlers()
+            self.ui.UnbindAllKeys()
+      except Exception:
+        self.__HandleException()
+        if self.__task_failed:
+          return
       finally:
         # Clears the task stage data after all tasks passed or any task failed.
         # Only execute when the tasks are added by AddTasksWithReboot().
-        if self.GetNextTaskStage() is not None:
-          session.console.info(
-              'Test finished. Clear the data of next task stage.')
-          self.ClearNextTaskStage()
+        session.console.info(
+            'Test finished. Clear the data of next task stage.')
+        self.ClearNextTaskStage()
 
       self.event_loop.PostNewEvent(
           test_event.Event.Type.END_EVENT_LOOP, status=state.TestState.PASSED)
