@@ -74,7 +74,7 @@ class DisplayPanelType(enum.Enum):
 
 
 class DisplayProperty(NamedTuple):
-  """Holds display panel properties realated to versioned features.
+  """Holds display panel properties related to versioned features.
 
   Attributes:
     panel_type: The panel type.
@@ -82,6 +82,21 @@ class DisplayProperty(NamedTuple):
     vertical_resolution: The vertical resolution in pixel.
   """
   panel_type: DisplayPanelType
+  horizontal_resolution: int
+  vertical_resolution: int
+
+
+class CameraProperty(NamedTuple):
+  """Holds camera properties related to versioned features.
+
+  Attributes:
+    is_user_facing: Whether this camera is user facing on the device.
+    has_tnr: Whether the TNR feature is enabled.
+    horizontal_resolution: The horizontal resolution in pixel.
+    vertical_resolution: The vertical resolution in pixel.
+  """
+  is_user_facing: bool
+  has_tnr: bool
   horizontal_resolution: int
   vertical_resolution: int
 
@@ -100,13 +115,15 @@ class DLMComponentEntry(NamedTuple):
       eMMC+eMMC_PCIe assembly).
     display_panel_property: The display panel properties if the entry supports
       the display functionality.
+    camera_property: The camera properties if the entry supports the camera
+      functionality.
   """
   dlm_id: DLMComponentEntryID
   cpu_property: Optional[CPUProperty]
   virtual_dimm_property: Optional[VirtualDIMMProperty]
   storage_function_property: Optional[StorageFunctionProperty]
   display_panel_property: Optional[DisplayProperty]
-  # TODO(yhong): Add more component properties on need.
+  camera_property: Optional[CameraProperty]
 
 
 DLMComponentDatabase = Mapping[DLMComponentEntryID, DLMComponentEntry]
@@ -662,3 +679,54 @@ class DisplayPanelV1Spec(HWIDSpec):
     """See base class."""
     resolver = self._DisplayV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
     return resolver.FindSatisfiedEncodedValues()
+
+
+class CameraV1Spec(HWIDSpec):
+  """Holds the camera spec for feature v1.
+
+  It states that the HWID is compatible to v1 feature only if the UFC camera
+  is FHD or above and has TNR enabled.
+  """
+
+  class _CameraV1SatisfiedEncodedFieldValueResolver(
+      _SatisfiedEncodedValueResolver):
+    _CAMERA_COMPONENT_TYPES = ('camera', 'video')
+    _MIN_HORIZONTAL_RESOLUTION = 1920
+    _MIN_VERTICAL_RESOLUTION = 1080
+
+    @classmethod
+    def _GetComponentTypesToCheck(cls) -> Collection[str]:
+      """See base class."""
+      return cls._CAMERA_COMPONENT_TYPES
+
+    def _IdentifyDLMComponentCompatibility(
+        self, dlm_entry: DLMComponentEntry) -> bool:
+      """See base class."""
+      if not dlm_entry.camera_property:
+        return False
+      properties = dlm_entry.camera_property
+      return all((
+          properties.has_tnr,
+          properties.is_user_facing,
+          properties.horizontal_resolution >= self._MIN_HORIZONTAL_RESOLUTION,
+          properties.vertical_resolution >= self._MIN_VERTICAL_RESOLUTION,
+      ))
+
+  def GetName(self) -> str:
+    return 'CameraV1'
+
+  def FindSatisfiedEncodedValues(
+      self, db: db_module.Database,
+      dlm_db: DLMComponentDatabase) -> Mapping[str, Collection[int]]:
+    """See base class."""
+    resolver = self._CameraV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
+    return resolver.FindSatisfiedEncodedValues()
+
+
+class V1HWIDRequirementResolver(HWIDRequirementResolver):
+  """The HWID requirement resolver for feature v1."""
+
+  def __init__(self):
+    """Initializer."""
+    super().__init__((CPUV1Spec, MemoryV1Spec, StorageV1Spec,
+                      DisplayPanelV1Spec, CameraV1Spec))

@@ -22,6 +22,7 @@ def _BuildDLMComponentEntry(
     virtual_dimm_property: Optional[Mapping] = None,
     storage_function_property: Optional[Mapping] = None,
     display_panel_property: Optional[Mapping] = None,
+    camera_property: Optional[Mapping] = None,
 ) -> features.DLMComponentEntry:
   return features.DLMComponentEntry(
       dlm_id=features.DLMComponentEntryID(cid, qid),
@@ -35,6 +36,8 @@ def _BuildDLMComponentEntry(
       display_panel_property=(
           display_panel_property and
           features.DisplayProperty(**display_panel_property)),
+      camera_property=(camera_property and
+                       features.CameraProperty(**camera_property)),
   )
 
 
@@ -697,6 +700,68 @@ class DisplayPanelV1SpecTest(unittest.TestCase):
                          for k, v in actual.items()}
 
     self.assertDictEqual(comparable_actual, {'display_panel_field': (4, )})
+
+
+class CameraV1SpecTest(unittest.TestCase):
+
+  def testNormal(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              camera_field:
+                0:
+                  camera: [camera_10, camera_20]
+                1:
+                  camera: [camera_10, camera_21]
+                2:
+                  camera: [camera_10, camera_22]
+                3:
+                  camera: camera_10
+                4:
+                  camera: camera_21
+                5:
+                  camera: camera_22
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(
+            10,
+            camera_property={
+                'is_user_facing': False,  # incompatible
+                'has_tnr': True,
+                'horizontal_resolution': 1920,
+                'vertical_resolution': 1080
+            }),
+        _BuildDLMComponentEntry(
+            20,
+            camera_property={
+                'is_user_facing': True,
+                'has_tnr': True,
+                'horizontal_resolution': 1080,  # incompatible
+                'vertical_resolution': 720
+            }),
+        _BuildDLMComponentEntry(
+            21,
+            camera_property={
+                'is_user_facing': True,
+                'has_tnr': False,  # incompatible
+                'horizontal_resolution': 1920,
+                'vertical_resolution': 1080
+            }),
+        _BuildDLMComponentEntry(
+            22,
+            camera_property={  # compatible
+                'is_user_facing': True,
+                'has_tnr': True,
+                'horizontal_resolution': 1920,
+                'vertical_resolution': 1080
+            }),
+    ])
+
+    actual = features.CameraV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'camera_field': (2, 5)})
 
 
 if __name__ == '__main__':
