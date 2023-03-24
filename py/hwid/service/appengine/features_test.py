@@ -19,10 +19,14 @@ def _BuildDLMComponentEntry(
     cid: int,
     qid: Optional[int] = None,
     cpu_property: Optional[Mapping] = None,
+    virtual_dimm_property: Optional[Mapping] = None,
 ) -> features.DLMComponentEntry:
   return features.DLMComponentEntry(
       dlm_id=features.DLMComponentEntryID(cid, qid),
       cpu_property=cpu_property and features.CPUProperty(**cpu_property),
+      virtual_dimm_property=(
+          virtual_dimm_property and
+          features.VirtualDIMMProperty(**virtual_dimm_property)),
   )
 
 
@@ -513,6 +517,86 @@ class CPUV1SpecTest(unittest.TestCase):
                          for k, v in actual.items()}
 
     self.assertDictEqual(comparable_actual, {'cpu_field': (2, 4)})
+
+
+class MemoryV1SpecTest(unittest.TestCase):
+
+  def testIncorrectFieldName(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              not_dram_field:
+                0:
+                  dram: dram_1
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(
+            1, virtual_dimm_property={'size_in_mb': 1024 * 32}),
+    ])
+
+    actual = features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+
+    self.assertFalse(actual)
+
+  def testIncorrectFieldComponents(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              dram_field:
+                0:
+                  cpu: cpu_1
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(
+            1, virtual_dimm_property={'size_in_mb': 1024 * 32}),
+    ])
+
+    with self.assertRaises(features.HWIDDBNotSupportError):
+      features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+
+  def testMatch(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              dram_field:
+                0:
+                  dram: dram_1  # only 4GB
+                1:
+                  dram: [dram_1, dram_1]  # totall 8GB
+                2:
+                  dram: [dram_1, dram_1, dram_2]  # totall 16GB
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(1,
+                                virtual_dimm_property={'size_in_mb': 1024 * 4}),
+        _BuildDLMComponentEntry(2,
+                                virtual_dimm_property={'size_in_mb': 1024 * 8}),
+    ])
+
+    actual = features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'dram_field': (1, 2)})
+
+  def testMatchIgnoreNonAVLComponent(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              dram_field:
+                0:
+                  dram: [dram_1, dram_1, dram_unknown]
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(1,
+                                virtual_dimm_property={'size_in_mb': 1024 * 4}),
+    ])
+
+    actual = features.MemoryV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'dram_field': (0, )})
 
 
 if __name__ == '__main__':

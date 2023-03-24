@@ -48,6 +48,15 @@ class CPUProperty(NamedTuple):
   compatible_versions: Collection[int]
 
 
+class VirtualDIMMProperty(NamedTuple):
+  """Holds virtual DIMM properties related to versioned features.
+
+  Attributes:
+    size_in_mb: The DIMM size in MB.
+  """
+  size_in_mb: int
+
+
 class DLMComponentEntry(NamedTuple):
   """Represents one single DLM component entry.
 
@@ -55,9 +64,12 @@ class DLMComponentEntry(NamedTuple):
     dlm_id: The entry ID.
     cpu_property: The CPU related properties if the entry supports the CPU
       functionality.
+    virtual_dimm_property: The DIMM related properties if the entry supports the
+      DRAM functionality (e.g. DRAM module / DRAM chip / eMCP).
   """
   dlm_id: DLMComponentEntryID
   cpu_property: Optional[CPUProperty]
+  virtual_dimm_property: Optional[VirtualDIMMProperty]
   # TODO(yhong): Add more component properties on need.
 
 
@@ -485,3 +497,56 @@ class CPUV1Spec(HWIDSpec):
     """See base class."""
     resolver = self._CPUV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
     return resolver.FindSatisfiedEncodedValues()
+
+
+class MemoryV1Spec(HWIDSpec):
+  """Holds the DRAM spec for feature v1.
+
+  It states that the HWID is compatible to v1 feature only if the DRAM encoded
+  field shows that the total memory size is 8GB or more.
+  """
+
+  _MIN_MEMORY_SIZE_IN_MB = 1024 * 8
+  _DRAM_FIELD_NAME = 'dram_field'
+  _DRAM_COMPONENT_TYPE = 'dram'
+
+  def __init__(self):
+    self._name_pattern = npa_module.NamePatternAdapter().GetNamePattern(
+        self._DRAM_COMPONENT_TYPE)
+
+  def _GetVirtualDIMMSizeInMB(self, hwid_component_name: str,
+                              dlm_db: DLMComponentDatabase) -> int:
+    name_info = self._name_pattern.Matches(hwid_component_name)
+    if not name_info:
+      return 0
+    dlm_id = DLMComponentEntryID(name_info.cid, name_info.qid or None)
+    if dlm_id not in dlm_db or not dlm_db[dlm_id].virtual_dimm_property:
+      return 0
+    return dlm_db[dlm_id].virtual_dimm_property.size_in_mb
+
+  def GetName(self) -> str:
+    return 'MemoryV1'
+
+  def FindSatisfiedEncodedValues(
+      self, db: db_module.Database,
+      dlm_db: DLMComponentDatabase) -> Mapping[str, Collection[int]]:
+    """See base class."""
+    if self._DRAM_FIELD_NAME not in db.encoded_fields:
+      return {}
+
+    compliant_encoded_values = []
+    for encoded_value, component_combo in db.GetEncodedField(
+        self._DRAM_FIELD_NAME).items():
+      if (len(component_combo) != 1 or
+          self._DRAM_COMPONENT_TYPE not in component_combo):
+        raise HWIDDBNotSupportError(
+            f'Unexpected components in {self._DRAM_FIELD_NAME} in HWID DB.')
+      total_memory_size = sum(
+          self._GetVirtualDIMMSizeInMB(comp_name, dlm_db)
+          for comp_name in component_combo[self._DRAM_COMPONENT_TYPE])
+      if total_memory_size >= self._MIN_MEMORY_SIZE_IN_MB:
+        compliant_encoded_values.append(encoded_value)
+
+    return ({
+        self._DRAM_FIELD_NAME: compliant_encoded_values
+    } if compliant_encoded_values else {})
