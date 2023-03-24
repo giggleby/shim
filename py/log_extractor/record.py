@@ -4,7 +4,6 @@
 
 import abc
 import datetime
-import enum
 import json
 import re
 from typing import Dict, Optional
@@ -50,19 +49,6 @@ class IRecord(abc.ABC):
   def __lt__(self, other):
     return self.GetTime() < other.GetTime()
 
-
-class TestRunStatus(enum.Enum):
-  UNKNOWN = 'UNKNOWN'
-  STARTED = 'STARTED'
-  RUNNING = 'RUNNING'
-  COMPLETED = 'COMPLETED'
-
-
-class ShutdownStatus(enum.Enum):
-  """The possible shutdown tag name is defined in py/goofy/invocation.py."""
-  PRE_SHUTDOWN = 'pre-shutdown'
-  POST_SHUTDOWN = 'post-shutdown'
-
 class FactoryRecord(IRecord):
   _SCHEMA = FixedDict(
       'Factory record schema', items={
@@ -93,15 +79,6 @@ class FactoryRecord(IRecord):
     """
     return None
 
-  def GetTestRunStatus(self) -> TestRunStatus:
-    """Gets the test run status from the record.
-
-    Returns:
-      `TestRunStatus.UNKNOWN` if the record doesn't contain the test run status
-      information. Else returns the TestRunStatus.
-    """
-    return TestRunStatus.UNKNOWN
-
 
 class SystemLogRecord(FactoryRecord):
   _SCHEMA = FixedDict(
@@ -128,7 +105,6 @@ class SystemLogRecord(FactoryRecord):
         msg=self['message'])
 
 
-# TODO: Modify TestRunStatus based on shutdown event.
 class VarLogMessageRecord(SystemLogRecord):
   # Example output of message:
   #   goofy[1845]: Test generic:SMT.Update (123-456) starting
@@ -144,20 +120,6 @@ class VarLogMessageRecord(SystemLogRecord):
       testRunId = match.group('testRunId').strip()
       return f'{testName}-{testRunId}'
     return None
-
-  def GetTestRunStatus(self) -> TestRunStatus:
-    match = re.search(self._GOOFY_TEST_RUN_REGEX, self['message'])
-    if match:
-      status = match.group('status').strip()
-      # TODO: Unify status such that it is the same as the status in testlog.
-      if status == 'starting':
-        return TestRunStatus.STARTED
-      if status == 'resuming':
-        return TestRunStatus.RUNNING
-      if status in ('FAILED', 'PASSED'):
-        return TestRunStatus.COMPLETED
-
-    return TestRunStatus.UNKNOWN
 
 class TestlogRecord(FactoryRecord):
 
@@ -186,40 +148,6 @@ class TestlogRecord(FactoryRecord):
     data = testlog.EventBase.FromJSON(json_str, check_valid)
 
     return cls(data)
-
-  def _IsShutdownEvent(self) -> bool:
-    return self['testType'] == 'shutdown'
-
-  def _GetShutdownStatus(self) -> ShutdownStatus:
-    """Gets the shutdown status from parameters."""
-    # Only shutdown type contains "tag".
-    return ShutdownStatus(self['parameters']['tag']['data'][0]['textValue'])
-
-  def GetTestRunStatus(self) -> TestRunStatus:
-    if not isinstance(self._data, testlog.StationTestRun):
-      return TestRunStatus.UNKNOWN
-    status = self['status']
-    if status == 'STARTING':
-      # Most of the tests starts with `status` STARTING and end with `status`
-      # PASS or FAIL. However, for shutdown test, the test status looks like:
-      #   STARTING (pre-shutdown) -> FAIL (pre-shutdown) -> (DUT reboots) ->
-      #   STARTING (post-shutdown)-> PASS/FAIL (post-shutdown)
-      # which contains two starting (STARTING) and two ending (PASS/FAIL)
-      # events. Change the second and third test events to RUNNING so that it
-      # is easier to understand the test run status.
-      if (self._IsShutdownEvent() and
-          self._GetShutdownStatus() == ShutdownStatus.POST_SHUTDOWN):
-        return TestRunStatus.RUNNING
-      return TestRunStatus.STARTED
-    if status in ('FAIL', 'PASS'):
-      if (self._IsShutdownEvent() and
-          self._GetShutdownStatus() == ShutdownStatus.PRE_SHUTDOWN):
-        return TestRunStatus.RUNNING
-      return TestRunStatus.COMPLETED
-    if status == 'RUNNING':
-      return TestRunStatus.RUNNING
-
-    return TestRunStatus.UNKNOWN
 
   def GetTestRunName(self) -> Optional[str]:
     return f'{self["testName"]}-{self["testRunId"]}'
