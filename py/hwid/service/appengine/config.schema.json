@@ -1,0 +1,71 @@
+{
+  "type": "object",
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "models": {
+      "type": "string"
+    },
+    "component_category": {
+      "type": "string"
+    },
+    "vpg_targets": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/models"
+      },
+      "patternProperties": {
+        ".*": {
+          "properties": {
+            "waived_comp_categories": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/component_category"
+                  }
+                }
+              ]
+            },
+            "ignore_error": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/component_category"
+                  }
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "patternProperties": {
+    ".*": {
+      "if": {
+        "properties": {
+          "bucket": {}
+        }
+      },
+      "then": {
+        "properties": {
+          "bucket": {
+            "type": "string"
+          },
+          "vpg_targets": {
+            "$ref": "#/definitions/vpg_targets"
+          }
+        }
+      }
+    }
+  }
+}
