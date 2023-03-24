@@ -21,6 +21,7 @@ def _BuildDLMComponentEntry(
     cpu_property: Optional[Mapping] = None,
     virtual_dimm_property: Optional[Mapping] = None,
     storage_function_property: Optional[Mapping] = None,
+    display_panel_property: Optional[Mapping] = None,
 ) -> features.DLMComponentEntry:
   return features.DLMComponentEntry(
       dlm_id=features.DLMComponentEntryID(cid, qid),
@@ -31,6 +32,9 @@ def _BuildDLMComponentEntry(
       storage_function_property=(
           storage_function_property and
           features.StorageFunctionProperty(**storage_function_property)),
+      display_panel_property=(
+          display_panel_property and
+          features.DisplayProperty(**display_panel_property)),
   )
 
 
@@ -641,6 +645,58 @@ class StorageV1SpecTest(unittest.TestCase):
         'storage_field': (2, ),
         'storage_bridge_field': (1, 2)
     })
+
+
+class DisplayPanelV1SpecTest(unittest.TestCase):
+
+  def testNormal(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              display_panel_field:
+                0:
+                  display_panel: display_panel_1
+                1:
+                  display_panel: display_panel_2
+                2:
+                  display_panel: display_panel_3
+                3:
+                  display_panel: display_panel_4
+                4:
+                  display_panel: display_panel_5
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        # CID 1 is not found.
+        _BuildDLMComponentEntry(2),
+        _BuildDLMComponentEntry(
+            3,
+            display_panel_property={
+                'panel_type': features.DisplayPanelType.TN,  # incompatible
+                'horizontal_resolution': 1920,
+                'vertical_resolution': 1080
+            }),
+        _BuildDLMComponentEntry(
+            4,
+            display_panel_property={
+                'panel_type': features.DisplayPanelType.OTHER,
+                'horizontal_resolution': 1080,  # incompatible
+                'vertical_resolution': 720
+            }),
+        _BuildDLMComponentEntry(
+            5,
+            display_panel_property={  # compatible
+                'panel_type': features.DisplayPanelType.OTHER,
+                'horizontal_resolution': 192000,
+                'vertical_resolution': 108000
+            }),
+    ])
+
+    actual = features.DisplayPanelV1Spec().FindSatisfiedEncodedValues(
+        db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'display_panel_field': (4, )})
 
 
 if __name__ == '__main__':

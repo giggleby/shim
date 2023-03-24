@@ -4,6 +4,7 @@
 
 import abc
 import collections
+import enum
 import itertools
 from typing import Container, Generic, Iterable, Mapping, NamedTuple, Optional, Sequence, Sized, TypeVar, Union
 
@@ -66,6 +67,25 @@ class StorageFunctionProperty(NamedTuple):
   size_in_gb: int
 
 
+class DisplayPanelType(enum.Enum):
+  """Enumerates the known display panel types."""
+  TN = enum.auto()
+  OTHER = enum.auto()
+
+
+class DisplayProperty(NamedTuple):
+  """Holds display panel properties realated to versioned features.
+
+  Attributes:
+    panel_type: The panel type.
+    horizontal_resolution: The horizontal resolution in pixel.
+    vertical_resolution: The vertical resolution in pixel.
+  """
+  panel_type: DisplayPanelType
+  horizontal_resolution: int
+  vertical_resolution: int
+
+
 class DLMComponentEntry(NamedTuple):
   """Represents one single DLM component entry.
 
@@ -78,11 +98,14 @@ class DLMComponentEntry(NamedTuple):
     storage_function_property: The storage related properties if the entry
       supports the mass storage functionality (e.g. eMMC, NVMe,
       eMMC+eMMC_PCIe assembly).
+    display_panel_property: The display panel properties if the entry supports
+      the display functionality.
   """
   dlm_id: DLMComponentEntryID
   cpu_property: Optional[CPUProperty]
   virtual_dimm_property: Optional[VirtualDIMMProperty]
   storage_function_property: Optional[StorageFunctionProperty]
+  display_panel_property: Optional[DisplayProperty]
   # TODO(yhong): Add more component properties on need.
 
 
@@ -597,4 +620,45 @@ class StorageV1Spec(HWIDSpec):
       dlm_db: DLMComponentDatabase) -> Mapping[str, Collection[int]]:
     """See base class."""
     resolver = self._StorageV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
+    return resolver.FindSatisfiedEncodedValues()
+
+
+class DisplayPanelV1Spec(HWIDSpec):
+  """Holds the display panel spec for feature v1.
+
+  It states that the HWID is compatible to v1 feature only if the display panel
+  resolution is FHD or above and also the panel type must not be TN.
+  """
+
+  class _DisplayV1SatisfiedEncodedFieldValueResolver(
+      _SatisfiedEncodedValueResolver):
+    _DISPLAY_COMPONENT_TYPE = 'display_panel'
+    _FHD_HORIZONTAL_RESOLUTION = 1920
+    _FHD_VERTICAL_RESOLUTION = 1080
+
+    @classmethod
+    def _GetComponentTypesToCheck(cls) -> Collection[str]:
+      """See base class."""
+      return (cls._DISPLAY_COMPONENT_TYPE, )
+
+    def _IdentifyDLMComponentCompatibility(
+        self, dlm_entry: DLMComponentEntry) -> bool:
+      """See base class."""
+      if not dlm_entry.display_panel_property:
+        return False
+      properties = dlm_entry.display_panel_property
+      return all((
+          properties.panel_type != DisplayPanelType.TN,
+          properties.horizontal_resolution >= self._FHD_HORIZONTAL_RESOLUTION,
+          properties.vertical_resolution >= self._FHD_VERTICAL_RESOLUTION,
+      ))
+
+  def GetName(self) -> str:
+    return 'DisplayPanelV1'
+
+  def FindSatisfiedEncodedValues(
+      self, db: db_module.Database,
+      dlm_db: DLMComponentDatabase) -> Mapping[str, Collection[int]]:
+    """See base class."""
+    resolver = self._DisplayV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
     return resolver.FindSatisfiedEncodedValues()
