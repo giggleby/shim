@@ -20,6 +20,7 @@ def _BuildDLMComponentEntry(
     qid: Optional[int] = None,
     cpu_property: Optional[Mapping] = None,
     virtual_dimm_property: Optional[Mapping] = None,
+    storage_function_property: Optional[Mapping] = None,
 ) -> features.DLMComponentEntry:
   return features.DLMComponentEntry(
       dlm_id=features.DLMComponentEntryID(cid, qid),
@@ -27,6 +28,9 @@ def _BuildDLMComponentEntry(
       virtual_dimm_property=(
           virtual_dimm_property and
           features.VirtualDIMMProperty(**virtual_dimm_property)),
+      storage_function_property=(
+          storage_function_property and
+          features.StorageFunctionProperty(**storage_function_property)),
   )
 
 
@@ -597,6 +601,46 @@ class MemoryV1SpecTest(unittest.TestCase):
                          for k, v in actual.items()}
 
     self.assertDictEqual(comparable_actual, {'dram_field': (0, )})
+
+
+class StorageV1SpecTest(unittest.TestCase):
+
+  def testSuccess(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              storage_field:
+                0:
+                  storage: []
+                1:
+                  storage: storage_1
+                2:
+                  storage: storage_2
+              storage_bridge_field:
+                0:
+                  storage_bridge: []
+                1:
+                  storage_bridge: storage_bridge_2
+                2:
+                  storage_bridge: storage_bridge_3
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(1,
+                                storage_function_property={'size_in_gb': 64}),
+        _BuildDLMComponentEntry(2,
+                                storage_function_property={'size_in_gb': 128}),
+        _BuildDLMComponentEntry(3,
+                                storage_function_property={'size_in_gb': 256}),
+    ])
+
+    actual = features.StorageV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {
+        'storage_field': (2, ),
+        'storage_bridge_field': (1, 2)
+    })
 
 
 if __name__ == '__main__':

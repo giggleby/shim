@@ -57,6 +57,15 @@ class VirtualDIMMProperty(NamedTuple):
   size_in_mb: int
 
 
+class StorageFunctionProperty(NamedTuple):
+  """Holds storage function properties related to versioned features.
+
+  Attributes:
+    size_in_gb: The storage size in GB.
+  """
+  size_in_gb: int
+
+
 class DLMComponentEntry(NamedTuple):
   """Represents one single DLM component entry.
 
@@ -66,10 +75,14 @@ class DLMComponentEntry(NamedTuple):
       functionality.
     virtual_dimm_property: The DIMM related properties if the entry supports the
       DRAM functionality (e.g. DRAM module / DRAM chip / eMCP).
+    storage_function_property: The storage related properties if the entry
+      supports the mass storage functionality (e.g. eMMC, NVMe,
+      eMMC+eMMC_PCIe assembly).
   """
   dlm_id: DLMComponentEntryID
   cpu_property: Optional[CPUProperty]
   virtual_dimm_property: Optional[VirtualDIMMProperty]
+  storage_function_property: Optional[StorageFunctionProperty]
   # TODO(yhong): Add more component properties on need.
 
 
@@ -550,3 +563,38 @@ class MemoryV1Spec(HWIDSpec):
     return ({
         self._DRAM_FIELD_NAME: compliant_encoded_values
     } if compliant_encoded_values else {})
+
+
+class StorageV1Spec(HWIDSpec):
+  """Holds the storage spec for feature v1.
+
+  It states that the HWID is compatible to v1 feature only if the storage size
+  is at least 128GB.
+  """
+
+  class _StorageV1SatisfiedEncodedFieldValueResolver(
+      _SatisfiedEncodedValueResolver):
+    _STORAGE_COMPONENT_TYPES = ('storage', 'storage_bridge')
+    _MIN_STORAGE_SIZE_IN_GB = 128
+
+    @classmethod
+    def _GetComponentTypesToCheck(cls) -> Collection[str]:
+      """See base class."""
+      return cls._STORAGE_COMPONENT_TYPES
+
+    def _IdentifyDLMComponentCompatibility(
+        self, dlm_entry: DLMComponentEntry) -> bool:
+      """See base class."""
+      return bool(dlm_entry.storage_function_property) and (
+          dlm_entry.storage_function_property.size_in_gb >=
+          self._MIN_STORAGE_SIZE_IN_GB)
+
+  def GetName(self) -> str:
+    return 'StorageV1'
+
+  def FindSatisfiedEncodedValues(
+      self, db: db_module.Database,
+      dlm_db: DLMComponentDatabase) -> Mapping[str, Collection[int]]:
+    """See base class."""
+    resolver = self._StorageV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
+    return resolver.FindSatisfiedEncodedValues()
