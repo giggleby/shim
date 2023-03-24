@@ -15,6 +15,24 @@ from cros.factory.hwid.v3 import database as db_module
 from cros.factory.utils import type_utils
 
 
+def _BuildDLMComponentEntry(
+    cid: int,
+    qid: Optional[int] = None,
+    cpu_property: Optional[Mapping] = None,
+) -> features.DLMComponentEntry:
+  return features.DLMComponentEntry(
+      dlm_id=features.DLMComponentEntryID(cid, qid),
+      cpu_property=cpu_property and features.CPUProperty(**cpu_property),
+  )
+
+
+def _BuildDLMComponentDatabase(
+    entries: features.Collection[features.DLMComponentEntry]
+) -> features.DLMComponentDatabase:
+  return {entry.dlm_id: entry
+          for entry in entries}
+
+
 def _BuildDatabaseForTest(
     encoded_fields_section: str,
     pattern_section: Optional[str] = None) -> db_module.Database:
@@ -462,6 +480,39 @@ class HWIDRequirementResolverTest(unittest.TestCase):
     self.assertCountEqual(
         _ToComparableHWIDRequirements(actual),
         _ToComparableHWIDRequirements(expect))
+
+
+class CPUV1SpecTest(unittest.TestCase):
+
+  def testNormal(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              cpu_field:
+                0:
+                  cpu: cpu_1
+                1:
+                  cpu: cpu_2
+                2:
+                  cpu: cpu_3
+                3:
+                  cpu: cpu_4
+                4:
+                  cpu: cpu_3#2
+        """))
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(2),
+        _BuildDLMComponentEntry(3, cpu_property={'compatible_versions': [1,
+                                                                         2]}),
+        _BuildDLMComponentEntry(4, cpu_property={'compatible_versions': [2,
+                                                                         3]}),
+    ])
+
+    actual = features.CPUV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'cpu_field': (2, 4)})
 
 
 if __name__ == '__main__':

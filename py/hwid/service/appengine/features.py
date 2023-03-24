@@ -9,6 +9,7 @@ from typing import Container, Generic, Iterable, Mapping, NamedTuple, Optional, 
 
 from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database as db_module
+from cros.factory.hwid.v3 import name_pattern_adapter as npa_module
 
 
 _CollectionElementType = TypeVar('_CollectionElementType')
@@ -38,13 +39,25 @@ class DLMComponentEntryID(NamedTuple):
   qid: Optional[int]
 
 
+class CPUProperty(NamedTuple):
+  """Holds CPU properties related to versioned features.
+
+  Attributes:
+    compatible_versions: A set of feature versions this CPU is compatible to.
+  """
+  compatible_versions: Collection[int]
+
+
 class DLMComponentEntry(NamedTuple):
   """Represents one single DLM component entry.
 
   Attributes:
     dlm_id: The entry ID.
+    cpu_property: The CPU related properties if the entry supports the CPU
+      functionality.
   """
   dlm_id: DLMComponentEntryID
+  cpu_property: Optional[CPUProperty]
   # TODO(yhong): Add more component properties on need.
 
 
@@ -361,3 +374,114 @@ class HWIDRequirementResolver:
                     itertools.chain(image_id_prerequisites,
                                     candidate.bit_string_prerequisites))))
     return all_requirements
+
+
+class _SatisfiedEncodedValueResolver(abc.ABC):
+  """A class method to help find all satisfied encoded values for a spec."""
+
+  def __init__(self, db: db_module.Database, dlm_db: DLMComponentDatabase):
+    self._db = db
+    self._dlm_db = dlm_db
+    self._compatibility_of_hwid_component = {}
+    self._compatibility_of_dlm_id = {}
+    self._name_pattern_adapter = npa_module.NamePatternAdapter()
+    self._name_patterns = {}
+
+  @abc.abstractmethod
+  def _IdentifyDLMComponentCompatibility(self,
+                                         dlm_entry: DLMComponentEntry) -> bool:
+    """Checks whether the given DLM entry is a feature-compatible one.
+
+    Args:
+      dlm_entry: The DLM component entry.
+
+    Returns:
+      Whether the entry is feature-compatible.
+    """
+    raise NotImplementedError
+
+  @classmethod
+  @abc.abstractmethod
+  def _GetComponentTypesToCheck(cls) -> Collection[str]:
+    """Returns all HWID component types to check."""
+
+  def _IsDLMComponentCompatible(self, dlm_id: DLMComponentEntryID) -> bool:
+    cached_value = self._compatibility_of_dlm_id.get(dlm_id)
+    if cached_value is not None:
+      return cached_value
+    dlm_entry = self._dlm_db.get(dlm_id)
+    is_compatible = (False if not dlm_entry else
+                     self._IdentifyDLMComponentCompatibility(dlm_entry))
+    self._compatibility_of_dlm_id[dlm_id] = is_compatible
+    return is_compatible
+
+  def _IsHWIDComponentCompatible(self, component_type: str,
+                                 component_name: str) -> bool:
+    cache_key = (component_type, component_name)
+    cached_answer = self._compatibility_of_hwid_component.get(cache_key)
+    if cached_answer is not None:
+      return cached_answer
+
+    if component_type not in self._name_patterns:
+      self._name_patterns[component_type] = (
+          self._name_pattern_adapter.GetNamePattern(component_type))
+    name_info = self._name_patterns[component_type].Matches(component_name)
+    if not name_info:
+      is_compatible = False
+    else:
+      dlm_id = DLMComponentEntryID(cid=name_info.cid, qid=name_info.qid or None)
+      is_compatible = self._IsDLMComponentCompatible(dlm_id)
+    self._compatibility_of_hwid_component[cache_key] = is_compatible
+    return is_compatible
+
+  def FindSatisfiedEncodedValues(self) -> Mapping[str, Collection[int]]:
+    """Finds and returns all HWID encoded values that satisfy the spec.
+
+    See `HWIDSpec.FindSatisfiedEncodedValues` for more details.
+
+    Returns:
+      See `HWIDSpec.FindSatisfiedEncodedValues` for more details.
+    """
+    field_values = collections.defaultdict(set)
+    component_types = self._GetComponentTypesToCheck()
+    for field_name in self._db.encoded_fields:
+      for field_value, comps in self._db.GetEncodedField(field_name).items():
+        if any(self._IsHWIDComponentCompatible(component_type, component_name)
+               for component_type in component_types
+               for component_name in comps.get(component_type, [])):
+          field_values[field_name].add(field_value)
+    return field_values
+
+
+class CPUV1Spec(HWIDSpec):
+  """Holds the CPU spec for feature v1.
+
+  It states that the HWID is compatible to v1 feature only if the encoded
+  CPU has the corresponding `1` listed in the `compatible_versions` on DLM.
+  """
+
+  class _CPUV1SatisfiedEncodedFieldValueResolver(
+      _SatisfiedEncodedValueResolver):
+    _TARGET_VERSION = 1
+    _CPU_COMPONENT_TYPE = 'cpu'
+
+    @classmethod
+    def _GetComponentTypesToCheck(cls) -> Collection[str]:
+      """See base class."""
+      return (cls._CPU_COMPONENT_TYPE, )
+
+    def _IdentifyDLMComponentCompatibility(
+        self, dlm_entry: DLMComponentEntry) -> bool:
+      """See base class."""
+      return bool(dlm_entry.cpu_property) and (
+          self._TARGET_VERSION in dlm_entry.cpu_property.compatible_versions)
+
+  def GetName(self) -> str:
+    return 'CPUv1'
+
+  def FindSatisfiedEncodedValues(
+      self, db: db_module.Database,
+      dlm_db: DLMComponentDatabase) -> Mapping[str, Collection[int]]:
+    """See base class."""
+    resolver = self._CPUV1SatisfiedEncodedFieldValueResolver(db, dlm_db)
+    return resolver.FindSatisfiedEncodedValues()
