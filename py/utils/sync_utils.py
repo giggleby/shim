@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Syncronization-related utilities (waiting for state change).
-"""
+"""Synchronization-related utilities (waiting for state change)."""
 
 import _thread
-from contextlib import contextmanager
+import contextlib
 import functools
 import logging
 import math
@@ -15,34 +14,33 @@ import signal
 import sys
 import threading
 import time
-from typing import Callable, Optional, Sequence, Type, Union
+from typing import Callable, Optional, Sequence, Type, TypeVar, Union
 
-from . import thread_utils
-from . import time_utils
-from . import type_utils
+from cros.factory.utils import thread_utils
+from cros.factory.utils import time_utils
+from cros.factory.utils import type_utils
 
 
-_HAVE_CTYPES = True
+_HAVE_CTYPES = False
 try:
   import ctypes
+  _HAVE_CTYPES = True
 except Exception:
-  _HAVE_CTYPES = False
-
+  pass
 
 DEFAULT_TIMEOUT_SECS = 10
 DEFAULT_POLL_INTERVAL_SECS = 0.1
-
 
 _DEFAULT_POLLING_SLEEP_FUNCTION = time.sleep
 _POLLING_SLEEP_FUNCTION_KEY = 'sync_utils_polling_sleep_function'
 
 
-def GetPollingSleepFunction() -> Callable:
+def GetPollingSleepFunction() -> Callable[[float], None]:
   return thread_utils.LocalEnv().get(_POLLING_SLEEP_FUNCTION_KEY,
                                      _DEFAULT_POLLING_SLEEP_FUNCTION)
 
 
-@contextmanager
+@contextlib.contextmanager
 def WithPollingSleepFunction(sleep_func):
   """Set the function to be used to sleep for PollForCondition and Retry.
 
@@ -55,10 +53,14 @@ def WithPollingSleepFunction(sleep_func):
     yield
 
 
-def PollForCondition(
-    poll_method: Callable, condition_method: Callable = lambda x: x,
-    timeout_secs: int = DEFAULT_TIMEOUT_SECS,
-    poll_interval_secs=DEFAULT_POLL_INTERVAL_SECS, condition_name=None):
+T = TypeVar('T')
+
+
+def PollForCondition(poll_method: Callable[[], T],
+                     condition_method: Callable[[T], bool] = bool,
+                     timeout_secs: float = DEFAULT_TIMEOUT_SECS,
+                     poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS,
+                     condition_name: Optional[str] = None) -> T:
   """Polls for every poll_interval_secs until timeout reached or condition met.
 
   It is a blocking call. If the condition is met, poll_method's return value
@@ -101,8 +103,9 @@ def PollForCondition(
     sleep(poll_interval_secs)
 
 
-def WaitFor(condition: Callable, timeout_secs: int = DEFAULT_TIMEOUT_SECS,
-            poll_interval: float = DEFAULT_POLL_INTERVAL_SECS):
+def WaitFor(condition: Callable[[], bool],
+            timeout_secs: float = DEFAULT_TIMEOUT_SECS,
+            poll_interval: float = DEFAULT_POLL_INTERVAL_SECS) -> bool:
   """Wait for the given condition for at most the specified time.
 
   Args:
@@ -118,15 +121,15 @@ def WaitFor(condition: Callable, timeout_secs: int = DEFAULT_TIMEOUT_SECS,
     raise ValueError('condition must be a callable object')
 
   @RetryDecorator(timeout_sec=timeout_secs if timeout_secs else math.inf,
-                  interval_sec=poll_interval, target_condition=lambda x: x)
-  def WaitForCondition():
+                  interval_sec=poll_interval, target_condition=bool)
+  def WaitForCondition() -> bool:
     return condition()
 
   return WaitForCondition()
 
 
-def QueueGet(q: queue.Queue, timeout: int = DEFAULT_TIMEOUT_SECS,
-             poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS):
+def QueueGet(q: 'queue.Queue[T]', timeout: float = DEFAULT_TIMEOUT_SECS,
+             poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS) -> T:
   """Get from a queue.Queue, possibly by polling.
 
   This is useful when a custom polling sleep function is set.
@@ -134,17 +137,16 @@ def QueueGet(q: queue.Queue, timeout: int = DEFAULT_TIMEOUT_SECS,
   if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return q.get(timeout=timeout)
 
-  @RetryDecorator(timeout_sec=timeout if timeout else math.inf,
-                  interval_sec=poll_interval_secs,
+  @RetryDecorator(timeout_sec=timeout, interval_sec=poll_interval_secs,
                   exceptions_to_catch=[queue.Empty], reraise=True)
-  def QueueGetNowait():
+  def QueueGetNowait() -> T:
     return q.get_nowait()
 
   return QueueGetNowait()
 
 
-def EventWait(event: threading.Event, timeout=None,
-              poll_interval_secs=DEFAULT_POLL_INTERVAL_SECS) -> bool:
+def EventWait(event: threading.Event, timeout: float = math.inf,
+              poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS) -> bool:
   """Wait for a threading.Event upto `timeout` seconds
 
   This function waits for a `Event` to be set. If the `Event` is set within
@@ -154,9 +156,9 @@ def EventWait(event: threading.Event, timeout=None,
     bool: True if the event is set, otherwise False.
   """
 
-  @RetryDecorator(timeout_sec=timeout if timeout else math.inf,
-                  interval_sec=poll_interval_secs, target_condition=lambda x: x)
-  def WaitEventSet():
+  @RetryDecorator(timeout_sec=timeout, interval_sec=poll_interval_secs,
+                  target_condition=bool)
+  def WaitEventSet() -> bool:
     return event.is_set()
 
   try:
@@ -167,12 +169,13 @@ def EventWait(event: threading.Event, timeout=None,
 
 # TODO(louischiu) Migrate all the RetryDecorator to retry
 def RetryDecorator(
-    *, max_attempt_count: int = sys.maxsize,
-    timeout_sec: Union[int, float] = float('inf'),
-    interval_sec: Union[int, float] = 0.5, target_condition=None,
+    *, max_attempt_count: int = sys.maxsize, timeout_sec: float = math.inf,
+    interval_sec: float = 0.5,
+    target_condition: Optional[Callable[[T], bool]] = None,
     exceptions_to_catch: Union[None, Sequence[Type[Exception]]] = None,
     timeout_exception_to_raise: Type[Exception] = type_utils.TimeoutError,
-    reraise: bool = False, sleep: Optional[Callable] = None) -> Callable:
+    reraise: bool = False, sleep: Optional[Callable[[float],
+                                                    None]] = None) -> Callable:
   """A decorator to handle the retry mechanism
 
   The decorator to handle the nuances of retrying.
@@ -183,7 +186,7 @@ def RetryDecorator(
     def foo():
       raise Exception
 
-    foo() # Exectues 5 times and stops
+    foo() # Executes 5 times and stops
 
     2. We want to retry for 10 seconds and abort.
     @RetryDecorator(timeout_sec=10)
@@ -274,8 +277,7 @@ def RetryDecorator(
   if not callable(sleep):
     sleep = GetPollingSleepFunction()
 
-  def Decorator(func: Callable):
-
+  def Decorator(func: Callable[..., T]):
     @functools.wraps(func)
     def Execute(*args, **kwargs):
       result = None
@@ -346,7 +348,7 @@ def Retry(max_retry_times, interval, callback, target, *args, **kwargs):
   return result
 
 
-def Timeout(secs, use_signal=False):
+def Timeout(secs: float, use_signal=False):
   """Timeout context manager.
 
   It will raise TimeoutError after timeout is reached, interrupting execution
@@ -365,12 +367,13 @@ def Timeout(secs, use_signal=False):
     use_signal: force using SignalTimeout (implemented by signal.alarm)
   """
   if not _HAVE_CTYPES or use_signal:
+    # b/275018373: SignalTimeout fails when secs is not integer.
     return SignalTimeout(secs)
   return ThreadTimeout(secs)
 
 
-def WithTimeout(secs, use_signal=False):
-  """Function decoractor that adds a limited execution time to the function.
+def WithTimeout(secs: float, use_signal=False):
+  """Function decorator that adds a limited execution time to the function.
 
   Please see `Timeout`
 
@@ -380,17 +383,21 @@ def WithTimeout(secs, use_signal=False):
     def func(a, b, c):  # execution time of func will be limited to 0.5 seconds
       ...
   """
-  def _Decorate(func):
+
+  def _Decorate(func: Callable):
+
     @functools.wraps(func)
-    def _Decoracted(*func_args, **func_kwargs):
+    def _Decorated(*func_args, **func_kwargs):
       with Timeout(secs, use_signal):
         return func(*func_args, **func_kwargs)
-    return _Decoracted
+
+    return _Decorated
+
   return _Decorate
 
 
-@contextmanager
-def SignalTimeout(secs):
+@contextlib.contextmanager
+def SignalTimeout(secs: float):
   """Timeout context manager.
 
   It will raise TimeoutError after timeout is reached, interrupting execution
@@ -408,6 +415,7 @@ def SignalTimeout(secs):
     del signum, frame  # Unused.
     raise type_utils.TimeoutError('Timeout')
 
+  old_handler = None
   if secs:
     old_handler = signal.signal(signal.SIGALRM, handler)
     prev_secs = signal.alarm(secs)
@@ -418,10 +426,11 @@ def SignalTimeout(secs):
   finally:
     if secs:
       signal.alarm(0)
+      assert old_handler is not None
       signal.signal(signal.SIGALRM, old_handler)
 
 
-def Synchronized(f):
+def Synchronized(f: Callable):
   """Decorates a member function to run with a lock
 
   The decorator is for Synchronizing member functions of a class object. To use
@@ -443,7 +452,6 @@ def Synchronized(f):
       ...
 
   """
-
   @functools.wraps(f)
   def wrapped(self, *args, **kw):
     # pylint: disable=protected-access
@@ -454,6 +462,7 @@ def Synchronized(f):
 
     with self._lock:
       return f(self, *args, **kw)
+
   return wrapped
 
 
@@ -470,9 +479,10 @@ class ThreadTimeout:
     TimeoutError if timeout is reached before execution has completed.
     ValueError if not run in the main thread.
   """
-  def __init__(self, secs):
+
+  def __init__(self, secs: float):
     self._secs = secs
-    self._timer = None
+    self._timer: Optional[threading.Timer] = None
     self._current_thread = threading.current_thread().ident
     self._lock = threading.RLock()
 
