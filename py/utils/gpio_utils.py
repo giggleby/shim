@@ -30,17 +30,19 @@ Usage:
 >> g.Write(port=<number, ex. 7 for '/sys/class/gpio7'>, value=<1, 0>)
 """
 
+import io
 import logging
 import os
 import select
 import socket
 import sys
 import time
+from typing import Optional
 
-from . import file_utils
-from . import net_utils
-from . import sync_utils
-from . import type_utils
+from cros.factory.utils import file_utils
+from cros.factory.utils import net_utils
+from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 
 class GpioManagerError(Exception):
@@ -55,7 +57,8 @@ class GpioManager:
   GPIO_EDGE_BOTH = 'gpio_both'
   GPIO_EDGE_LIST = [GPIO_EDGE_RISING, GPIO_EDGE_FALLING, GPIO_EDGE_BOTH]
 
-  def __init__(self, use_polld, host=None, tcp_port=None, timeout=10,
+  def __init__(self, use_polld: bool, host: Optional[str] = None,
+               tcp_port: Optional[int] = None, timeout: int = 10,
                verbose=False):
     """Constructor.
 
@@ -67,14 +70,14 @@ class GpioManager:
       timeout: Timeout for HTTP connection.
       verbose: Enables verbose messaging across xmlrpclib.ServerProxy.
     """
-    self._use_polld = use_polld
-    self._server = None
+    self._server: Optional[net_utils.TimeoutXMLRPCServerProxy] = None
     if use_polld:
       remote = f'http://{host}:{tcp_port}'
-      self._server = net_utils.TimeoutXMLRPCServerProxy(
-          remote, timeout=timeout, verbose=verbose)
+      self._server = net_utils.TimeoutXMLRPCServerProxy(remote, timeout=timeout,
+                                                        verbose=verbose)
 
-  def Poll(self, port, edge, timeout_secs=None):
+  def Poll(self, port: int, edge: str,
+           timeout_secs: Optional[int] = None) -> bool:
     """Polls a GPIO port.
 
     Args:
@@ -94,7 +97,7 @@ class GpioManager:
           f'Invalid edge {edge!r}. Valid values: {self.GPIO_EDGE_LIST!r}')
 
     try:
-      if self._use_polld:
+      if self._server is not None:
         try:
           # TODO: Interrupting HTTP requests with Timeout() is problematic.
           #       Use with caution!
@@ -110,10 +113,10 @@ class GpioManager:
     except Exception as e:
       exception_name = sys.exc_info()[0].__name__
       raise GpioManagerError(
-          f'Problem to poll GPIO {str(port)} {edge}: {exception_name}({str(e)})'
+          f'Problem to poll GPIO {port} {edge}: {exception_name}({str(e)})'
       ) from None
 
-  def Read(self, port):
+  def Read(self, port: int) -> int:
     """Reads data from GPIO by given port.
 
     Args:
@@ -126,7 +129,7 @@ class GpioManager:
       GpioManagerError: If error occurs when reading GPIO port.
     """
     try:
-      if self._use_polld:
+      if self._server is not None:
         return self._server.read_gpio(port)
       # Use with statement to make sure releasing system resource
       with Gpio(port) as gpio:
@@ -134,10 +137,9 @@ class GpioManager:
     except Exception as e:
       exception_name = sys.exc_info()[0].__name__
       raise GpioManagerError(
-          f'Problem to read GPIO {str(port)}: {exception_name}({str(e)})'
-      ) from None
+          f'Problem to read GPIO {port}: {exception_name}({str(e)})') from None
 
-  def Write(self, port, value):
+  def Write(self, port: int, value: int) -> None:
     """Writes data to GPIO by given port.
 
     Be aware that writing action will set GPIO direction to output mode.
@@ -151,7 +153,7 @@ class GpioManager:
       GpioManagerError: If error occurs when writing GPIO port.
     """
     try:
-      if self._use_polld:
+      if self._server is not None:
         self._server.write_gpio(port, value)
       else:
         # Use with statement to make sure releasing system resource
@@ -160,8 +162,7 @@ class GpioManager:
     except Exception as e:
       exception_name = sys.exc_info()[0].__name__
       raise GpioManagerError(
-          f'Problem to write GPIO {str(port)}: {exception_name}({str(e)})'
-      ) from None
+          f'Problem to write GPIO {port}: {exception_name}({str(e)})') from None
 
 
 class GpioError(Exception):
@@ -189,7 +190,7 @@ class Gpio:
   _UNEXPORT_FILE = os.path.join(_GPIO_ROOT, 'unexport')
   _GPIO_PIN_PATTERN = os.path.join(_GPIO_ROOT, 'gpio%d')
 
-  def __init__(self, port):
+  def __init__(self, port: int):
     """Constructor.
 
     Args:
@@ -204,9 +205,9 @@ class Gpio:
     Raises:
       GpioError
     """
-    self._port = port
+    self._port: int = port
     self._stop_sockets = socket.socketpair()
-    self._poll_fd = None
+    self._poll_fd: Optional[io.TextIOWrapper] = None
 
   def __enter__(self):
     self._ExportSysfs()
@@ -215,11 +216,11 @@ class Gpio:
   def __exit__(self, exc_type, value, traceback):
     self._CleanUp()
 
-  def _CleanUp(self):
+  def _CleanUp(self) -> None:
     """Aborts any blocking poll() syscall and unexports the sysfs interface."""
     try:
       logging.debug('Gpio._CleanUp')
-      self._stop_sockets[0].send('.')  # send a dummy char
+      self._stop_sockets[0].send(b'.')  # send a random char
       time.sleep(0.5)
       if self._poll_fd:
         self._poll_fd.close()
@@ -227,7 +228,7 @@ class Gpio:
     except Exception as e:
       logging.error('Fail to clean up GPIO %d: %s', self._port, e)
 
-  def _GetSysfsPath(self, attribute=None):
+  def _GetSysfsPath(self, attribute: Optional[str] = None) -> str:
     """Gets the path of GPIO sysfs interface.
 
     Args:
@@ -241,18 +242,18 @@ class Gpio:
       return os.path.join(gpio_path, attribute)
     return gpio_path
 
-  def _ExportSysfs(self):
+  def _ExportSysfs(self) -> None:
     """Exports GPIO sysfs interface."""
     logging.debug('export GPIO port %d', self._port)
     if not os.path.exists(self._GetSysfsPath()):
       file_utils.WriteFile(self._EXPORT_FILE, str(self._port))
 
-  def _UnexportSysfs(self):
+  def _UnexportSysfs(self) -> None:
     """Unexports GPIO sysfs interface."""
     logging.debug('unexport GPIO port %d', self._port)
     file_utils.WriteFile(self._UNEXPORT_FILE, str(self._port))
 
-  def _AssignEdge(self, edge):
+  def _AssignEdge(self, edge: str) -> None:
     """Writes edge value to GPIO sysfs interface.
 
     Args:
@@ -261,7 +262,7 @@ class Gpio:
     # for poll action, write edge value to /sys/class/gpio/gpioN/edge.
     file_utils.WriteFile(self._GetSysfsPath('edge'), self._EDGE_VALUES[edge])
 
-  def _ReadValue(self):
+  def _ReadValue(self) -> int:
     """Reads the current GPIO value.
 
     Returns:
@@ -269,7 +270,7 @@ class Gpio:
     """
     return int(file_utils.ReadFile(self._GetSysfsPath('value')).strip())
 
-  def _WriteValue(self, value):
+  def _WriteValue(self, value: int) -> None:
     """Writes the GPIO value.
 
     Args:
@@ -279,7 +280,7 @@ class Gpio:
     file_utils.WriteFile(self._GetSysfsPath('direction'), 'out')
     file_utils.WriteFile(self._GetSysfsPath('value'), str(value))
 
-  def Poll(self, edge, timeout_secs=0):
+  def Poll(self, edge: str, timeout_secs: int = 0) -> bool:
     """Waits for a GPIO port being edge triggered.
 
     This method may block up to 'timeout_secs' seconds.
@@ -298,21 +299,21 @@ class Gpio:
       logging.debug('Gpio.Poll() assigns edge: %s', edge)
       self._AssignEdge(edge)
     except Exception as e:
-      raise GpioError(
-          f'Fail to assign edge to GPIO {int(self._port)} {e}') from None
+      raise GpioError(f'Fail to assign edge to GPIO {self._port} {e}') from None
 
     try:
       logging.debug('Gpio.Poll() starts waiting')
       if not self._poll_fd:
-        self._poll_fd = open(self._GetSysfsPath('value'), 'r', encoding='utf8')  # pylint: disable=consider-using-with
+        # pylint: disable=consider-using-with
+        self._poll_fd = open(self._GetSysfsPath('value'), 'r', encoding='utf8')
 
       poll = select.poll()
       # Poll for POLLPRI and POLLERR of 'value' file according to
       # https://www.kernel.org/doc/Documentation/gpio/sysfs.txt.
       poll.register(self._poll_fd, select.POLLPRI | select.POLLERR)
       poll.register(self._stop_sockets[1], select.POLLIN | select.POLLERR)
-      logging.debug('poll()-ing on gpio %d for %r seconds',
-                    self._port, timeout_secs)
+      logging.debug('poll()-ing on gpio %d for %r seconds', self._port,
+                    timeout_secs)
       # After edge is triggered, re-read from head of 'gpio[N]/value'.
       # Or poll() will return immediately next time.
       self._poll_fd.seek(0)
@@ -331,9 +332,9 @@ class Gpio:
       logging.debug('Gpio.Poll() finishes waiting')
       return False
     except Exception as e:
-      raise GpioError(f'Fail to poll GPIO {int(self._port)} {e}') from None
+      raise GpioError(f'Fail to poll GPIO {self._port} {e}') from None
 
-  def Read(self):
+  def Read(self) -> int:
     """Reads current GPIO port value.
 
     Returns:
@@ -346,9 +347,9 @@ class Gpio:
       logging.debug('Gpio.Read() starts')
       return self._ReadValue()
     except Exception as e:
-      raise GpioError(f'Fail to read GPIO {int(self._port)} {e}') from None
+      raise GpioError(f'Fail to read GPIO {self._port} {e}') from None
 
-  def Write(self, value):
+  def Write(self, value: int) -> None:
     """Writes GPIO port value.
 
     Be aware that writing action will set GPIO direction to output mode.
@@ -364,4 +365,4 @@ class Gpio:
       self._WriteValue(value)
     except Exception as e:
       raise GpioError(
-          f'Fail to write {int(value)} to GPIO {int(self._port)} {e}') from None
+          f'Fail to write {value} to GPIO {self._port} {e}') from None
