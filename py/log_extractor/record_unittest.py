@@ -42,37 +42,6 @@ class SystemLogRecordTest(unittest.TestCase):
 
 class VarLogMessageRecordTest(unittest.TestCase):
 
-  def testGetTestRunStatus(self):
-    testrun_starting = record_module.VarLogMessageRecord.FromJSON(
-        '{"message": "goofy[1845]: Test generic:SMT.Update '
-        '(f9c665ff-55d0) starting"}', check_valid=False)
-    self.assertEqual(testrun_starting.GetTestRunStatus(),
-                     record_module.TestRunStatus.STARTED)
-
-    testrun_passed = record_module.VarLogMessageRecord.FromJSON(
-        '{"message": "goofy[1845]: Test generic:SMT.Update '
-        '(f9c665ff-55d0) completed: PASSED"}', check_valid=False)
-    self.assertEqual(testrun_passed.GetTestRunStatus(),
-                     record_module.TestRunStatus.COMPLETED)
-
-    testrun_failed = record_module.VarLogMessageRecord.FromJSON(
-        '{"message": "goofy[1845]: Test generic:SMT.Update '
-        '(f9c665ff-55d0) completed: FAILED (reason)"}', check_valid=False)
-    self.assertEqual(testrun_failed.GetTestRunStatus(),
-                     record_module.TestRunStatus.COMPLETED)
-
-    testrun_running = record_module.VarLogMessageRecord.FromJSON(
-        '{"message": "goofy[1845]: Test generic:SMT.Update '
-        '(f9c665ff-55d0) resuming"}', check_valid=False)
-    self.assertEqual(testrun_running.GetTestRunStatus(),
-                     record_module.TestRunStatus.RUNNING)
-
-    testrun_unknown = record_module.VarLogMessageRecord.FromJSON(
-        '{"message": "kernel: [   13.644255] usb 4-2: new SuperSpeed USB", '
-        '"time": 1.23}', check_valid=False)
-    self.assertEqual(testrun_unknown.GetTestRunStatus(),
-                     record_module.TestRunStatus.UNKNOWN)
-
   def testGetTestRunName(self):
     testrun_starting = record_module.VarLogMessageRecord.FromJSON(
         '{"message": "goofy[1845]: Test generic:SMT.Update '
@@ -83,74 +52,16 @@ class VarLogMessageRecordTest(unittest.TestCase):
 
 class TestlogRecordTest(unittest.TestCase):
 
-  def testGetShutdownStatusAndGetTime(self):
-    pre_shutdown_start = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "testType": "shutdown",'
-        '"parameters": {"tag": {"data": [{"textValue": "pre-shutdown"}]}},'
-        '"status": "STARTING", "startTime": 1.22}', check_valid=False)
-    self.assertEqual(pre_shutdown_start.GetTestRunStatus(),
-                     record_module.TestRunStatus.STARTED)
-    self.assertEqual(pre_shutdown_start.GetTime(), 1.22)
-
-    pre_shutdown_end = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "testType": "shutdown",'
-        '"parameters": {"tag": {"data": [{"textValue": "pre-shutdown"}]}},'
-        '"status": "FAIL", "endTime": 1.24}', check_valid=False)
-    self.assertEqual(pre_shutdown_end.GetTestRunStatus(),
-                     record_module.TestRunStatus.RUNNING)
-    self.assertEqual(pre_shutdown_end.GetTime(), 1.24)
-
-    post_shutdown_start = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "testType": "shutdown",'
-        '"parameters": {"tag": {"data": [{"textValue": "post-shutdown"}]}},'
-        '"status": "STARTING", "startTime": 1.22}', check_valid=False)
-    self.assertEqual(post_shutdown_start.GetTestRunStatus(),
-                     record_module.TestRunStatus.RUNNING)
-    self.assertEqual(post_shutdown_start.GetTime(), 1.22)
-
-    post_shutdown_end = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "testType": "shutdown",'
-        '"parameters": {"tag": {"data": [{"textValue": "post-shutdown"}]}},'
-        '"status": "PASS", "endTime": 1.24}', check_valid=False)
-    self.assertEqual(post_shutdown_end.GetTestRunStatus(),
-                     record_module.TestRunStatus.COMPLETED)
-    self.assertEqual(post_shutdown_end.GetTime(), 1.24)
-
-  def testGetTestRunStatusAndGetTime(self):
-    testrun_starting = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "status": "STARTING",'
+  def testGetTime(self):
+    record_has_start_time = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23,'
         '"startTime": 1.22, "testType": "mock"}', check_valid=False)
-    self.assertEqual(testrun_starting.GetTestRunStatus(),
-                     record_module.TestRunStatus.STARTED)
-    self.assertEqual(testrun_starting.GetTime(), 1.22)
+    self.assertEqual(record_has_start_time.GetTime(), 1.22)
 
-    testrun_passed = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "status": "PASS",'
+    record_has_end_time = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1.23,'
         '"endTime": 1.24, "testType": "mock"}', check_valid=False)
-    self.assertEqual(testrun_passed.GetTestRunStatus(),
-                     record_module.TestRunStatus.COMPLETED)
-    self.assertEqual(testrun_passed.GetTime(), 1.24)
-
-    testrun_failed = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "status": "FAIL",'
-        '"endTime": 1.24, "testType": "mock"}', check_valid=False)
-    self.assertEqual(testrun_failed.GetTestRunStatus(),
-                     record_module.TestRunStatus.COMPLETED)
-    self.assertEqual(testrun_passed.GetTime(), 1.24)
-
-    testrun_running = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "status": "RUNNING",'
-        '"startTime": 1.22, "testType": "mock"}', check_valid=False)
-    self.assertEqual(testrun_running.GetTestRunStatus(),
-                     record_module.TestRunStatus.RUNNING)
-    self.assertEqual(testrun_running.GetTime(), 1.22)
-
-    testrun_unknown = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "time": 1.23, "status": "UNKNOWN",'
-        '"startTime": 1.22, "testType": "mock"}', check_valid=False)
-    self.assertEqual(testrun_unknown.GetTestRunStatus(),
-                     record_module.TestRunStatus.UNKNOWN)
-    self.assertEqual(testrun_unknown.GetTime(), 1.22)
+    self.assertEqual(record_has_end_time.GetTime(), 1.24)
 
   def testGetTestRunName(self):
     testrun_record = record_module.TestlogRecord.FromJSON(
