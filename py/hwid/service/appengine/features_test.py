@@ -764,5 +764,117 @@ class CameraV1SpecTest(unittest.TestCase):
     self.assertDictEqual(comparable_actual, {'camera_field': (2, 5)})
 
 
+class BrandFeatureSpecResolverTest(unittest.TestCase):
+
+  def testNoBrandFeatureVersion(self):
+    db = _BuildDatabaseForTest('encoded_fields: {}')
+    brand_feature_versions = {}
+    dlm_db = _BuildDLMComponentDatabase([])
+    resolver = features.BrandFeatureSpecResolver(
+        {1: features.HWIDRequirementResolver([])})
+
+    actual = resolver.DeduceBrandFeatureSpec(db, brand_feature_versions, dlm_db)
+
+    self.assertFalse(actual)
+
+  def testBrandFeatureVersion0(self):
+    db = _BuildDatabaseForTest('encoded_fields: {}')
+    brand_feature_versions = {
+        'ZZCA': 0
+    }
+    dlm_db = _BuildDLMComponentDatabase([])
+    resolver = features.BrandFeatureSpecResolver(
+        {1: features.HWIDRequirementResolver([])})
+
+    actual = resolver.DeduceBrandFeatureSpec(db, brand_feature_versions, dlm_db)
+
+    self.assertFalse(actual)
+
+  def testBrandFeatureVersionNotSupported(self):
+    db = _BuildDatabaseForTest('encoded_fields: {}')
+    brand_feature_versions = {
+        'ZZCA': 99
+    }
+    dlm_db = _BuildDLMComponentDatabase([])
+    resolver = features.BrandFeatureSpecResolver(
+        {1: features.HWIDRequirementResolver([])})
+
+    with self.assertRaises(ValueError):
+      resolver.DeduceBrandFeatureSpec(db, brand_feature_versions, dlm_db)
+
+  def testSuccess(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              field1:
+                0:
+                  type1: name1
+                1:
+                  type1: name2
+        """), pattern_section=textwrap.dedent("""\
+            pattern:
+            - image_ids: [0]
+              encoding_scheme: base8192
+              fields:
+              - field1: 1
+            """))
+    dlm_db = _BuildDLMComponentDatabase([])
+    stub_hwid_spec_for_v1 = _StubHWIDSpec('the_stub_spec1', db, dlm_db,
+                                          {'field1': [0]})
+    stub_hwid_spec_for_v2 = _StubHWIDSpec('the_stub_spec2', db, dlm_db,
+                                          {'field1': [1]})
+    brand_feature_versions = {
+        'ZZCA': 1,
+        'ZZCB': 2
+    }
+    resolver = features.BrandFeatureSpecResolver({
+        1: features.HWIDRequirementResolver([stub_hwid_spec_for_v1]),
+        2: features.HWIDRequirementResolver([stub_hwid_spec_for_v2])
+    })
+
+    actual = resolver.DeduceBrandFeatureSpec(db, brand_feature_versions, dlm_db)
+
+    comparable_actual = {
+        brand: features.BrandFeatureSpec(
+            brand=elem.brand, feature_version=elem.feature_version,
+            hwid_requirement_candidates=tuple(
+                _ToComparableHWIDRequirements(
+                    elem.hwid_requirement_candidates)))
+        for brand, elem in actual.items()
+    }
+
+    self.assertEqual(
+        comparable_actual, {
+            'ZZCA':
+                features.BrandFeatureSpec(
+                    brand='ZZCA', feature_version=1,
+                    hwid_requirement_candidates=(features.HWIDRequirement(
+                        description='pattern_idx=0', bit_string_prerequisites=(
+                            features.HWIDBitStringRequirement(
+                                description='image_id',
+                                bit_positions=(4, 3, 2, 1, 0),
+                                required_values=(0, )),
+                            features.HWIDBitStringRequirement(
+                                description=(
+                                    'the_stub_spec1,encoded_field=field1'),
+                                bit_positions=(5, ), required_values=(0, )),
+                        )), )),
+            'ZZCB':
+                features.BrandFeatureSpec(
+                    brand='ZZCB', feature_version=2,
+                    hwid_requirement_candidates=(features.HWIDRequirement(
+                        description='pattern_idx=0', bit_string_prerequisites=(
+                            features.HWIDBitStringRequirement(
+                                description='image_id',
+                                bit_positions=(4, 3, 2, 1, 0),
+                                required_values=(0, )),
+                            features.HWIDBitStringRequirement(
+                                description=(
+                                    'the_stub_spec2,encoded_field=field1'),
+                                bit_positions=(5, ), required_values=(1, )),
+                        )), )),
+        })
+
+
 if __name__ == '__main__':
   unittest.main()

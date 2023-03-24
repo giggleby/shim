@@ -12,8 +12,14 @@ from google.protobuf import text_format
 
 from cros.factory.hwid.v3 import identity as identity_module
 from cros.factory.hwid.v3 import transformer
-from cros.factory.proto import hwid_feature_requirement_pb2
 from cros.factory.utils import file_utils
+
+try:
+  # For HWID service testing environment.
+  import hwid_feature_requirement_pb2
+except ImportError:
+  # For factory software environment.
+  from cros.factory.proto import hwid_feature_requirement_pb2  # pylint: disable=ungrouped-imports
 
 
 _Profile = hwid_feature_requirement_pb2.BrandFeatureRequirementSpec.Profile
@@ -101,15 +107,17 @@ class FeatureRequirementSpecChecker(Checker):
                        hwid_identity: identity_module.Identity) -> bool:
     bit_string = transformer.RemoveHWIDBinaryStringPadding(
         hwid_identity.binary_string)
-    for encoding_requirement in profile.encoding_requirements:
-      if not self._CheckOneEncodingRequirement(encoding_requirement,
-                                               bit_string):
-        return False
-    return True
+    return all(
+        self._CheckOneEncodingRequirement(encoding_requirement, bit_string)
+        for encoding_requirement in profile.encoding_requirements)
 
   def CheckFeatureComplianceVersion(
       self, hwid_identity: identity_module.Identity) -> int:
     """See base class."""
+    if hwid_identity.brand_code is None:
+      logging.info('No brand info from HWID.')
+      return FEATURE_INCOMPLIANT_VERSION
+
     brand_spec = self._spec.brand_specs.get(hwid_identity.brand_code)
     if brand_spec is None:
       logging.info('No feature requirement spec for %r.',

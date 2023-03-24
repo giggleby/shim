@@ -11,6 +11,7 @@ from typing import Container, Generic, Iterable, Mapping, NamedTuple, Optional, 
 from cros.factory.hwid.v3 import common as hwid_common
 from cros.factory.hwid.v3 import database as db_module
 from cros.factory.hwid.v3 import name_pattern_adapter as npa_module
+from cros.factory.utils import type_utils
 
 
 _CollectionElementType = TypeVar('_CollectionElementType')
@@ -391,7 +392,7 @@ class HWIDRequirementResolver:
     Args:
       specs: The specs of the target versioned feature.
     """
-    self._spec = specs
+    self._specs = specs
 
   def _GetImageIDRequirement(
       self, image_ids: Collection[int]) -> HWIDBitStringRequirement:
@@ -424,7 +425,8 @@ class HWIDRequirementResolver:
       pattern_idx = db.GetPattern(image_id=image_id).idx
       image_ids_of_pattern_idx[pattern_idx].append(image_id)
 
-    helper = _HWIDRequirementResolverForEncodedFieldPart(self._spec, db, dlm_db)
+    helper = _HWIDRequirementResolverForEncodedFieldPart(
+        self._specs, db, dlm_db)
 
     all_requirements = []
     for pattern_idx, image_ids in image_ids_of_pattern_idx.items():
@@ -730,3 +732,76 @@ class V1HWIDRequirementResolver(HWIDRequirementResolver):
     """Initializer."""
     super().__init__((CPUV1Spec, MemoryV1Spec, StorageV1Spec,
                       DisplayPanelV1Spec, CameraV1Spec))
+
+
+NO_FEATURE_VERSION = 0
+
+BrandFeatureVersions = Mapping[str, int]
+
+
+class BrandFeatureSpec(NamedTuple):
+  """Holds the feature spec of a specific brand.
+
+  Attributes:
+    brand: The brand name.
+    feature_version: A positive integer of the supported feature version.
+    hwid_requirement_candidates: HWID requirements for the target versioned
+      feature.  A HWID string is considered supports the target versioned
+      feature if and only if it fulfills any of the HWID requirements.
+  """
+  brand: str
+  feature_version: int
+  hwid_requirement_candidates: Collection[HWIDRequirement]
+
+
+class BrandFeatureSpecResolver:
+  """Provides functionalities to deduce projects' brand feature spec."""
+
+  def __init__(
+      self, hwid_requirement_resolvers: Mapping[int, HWIDRequirementResolver]):
+    """Initializer.
+
+    Args:
+      hwid_requirement_resolvers: The HWID requirement resolver for each
+        supported feature version.
+    """
+    self._hwid_requirement_resolvers = hwid_requirement_resolvers
+
+  def DeduceBrandFeatureSpec(
+      self,
+      db: db_module.Database,
+      brand_feature_versions: BrandFeatureVersions,
+      dlm_db: DLMComponentDatabase,
+  ) -> Mapping[str, BrandFeatureSpec]:
+    """Deduces the brand feature spec of a specific HWID project.
+
+    Args:
+      db: The HWID DB of the project.
+      brand_feature_versions: The feature version of each brand.
+      dlm_db: The DLM database.
+
+    Returns:
+      A table of feature spec of each brand, indexed by the brand name.
+
+    Raises:
+      HWIDDBNotSupportError: if the HWID DB scheme is incompatible for brand
+        feature spec generation.
+      ValueError: if any of the brand feature version is unrecognizable.
+    """
+    result = {}
+    for brand_name, feature_version in brand_feature_versions.items():
+      if feature_version == NO_FEATURE_VERSION:
+        continue
+      resolver = self._hwid_requirement_resolvers.get(feature_version)
+      if resolver is None:
+        raise ValueError(f'Unsupported feature version: {feature_version}.')
+      result[brand_name] = BrandFeatureSpec(
+          brand=brand_name, feature_version=feature_version,
+          hwid_requirement_candidates=resolver.DeduceHWIDRequirementCandidates(
+              db, dlm_db))
+    return result
+
+
+@type_utils.CachedGetter
+def GetDefaultBrandFeatureSpecResolver() -> BrandFeatureSpecResolver:
+  return BrandFeatureSpecResolver({1: V1HWIDRequirementResolver()})

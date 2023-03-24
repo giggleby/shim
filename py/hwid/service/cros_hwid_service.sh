@@ -5,6 +5,7 @@
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 FACTORY_DIR="$(readlink -f "${SCRIPT_DIR}/../../..")"
+FACTORY_PROTO_DIR="${FACTORY_DIR}/proto"
 PY_PKG_DIR="${FACTORY_DIR}/py_pkg"
 APPENGINE_DIR="${PY_PKG_DIR}/cros/factory/hwid/service/appengine"
 HW_VERIFIER_DIR="${FACTORY_DIR}/../../platform2/hardware_verifier/proto"
@@ -130,9 +131,11 @@ prepare_protobuf() {
   "${protoc}" \
     -I="${RT_PROBE_DIR}" \
     -I="${HW_VERIFIER_DIR}" \
+    -I="${FACTORY_PROTO_DIR}" \
     --python_out="${protobuf_out}" \
     "${HW_VERIFIER_DIR}/hardware_verifier.proto" \
-    "${RT_PROBE_DIR}/runtime_probe.proto"
+    "${RT_PROBE_DIR}/runtime_probe.proto" \
+    "${FACTORY_PROTO_DIR}/hwid_feature_requirement.proto"
 
   "${protoc}" \
     -I="${TEMP_DIR}" \
