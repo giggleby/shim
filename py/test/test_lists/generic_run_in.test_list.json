@@ -5,6 +5,8 @@
   "constants": {
     "run_in": {
       "sat_duration_secs": 28800,
+      "__comment_run_fishes_for_secs": "See tast/local/bundles/cros/graphics/webgl_aquarium.go.",
+      "run_fishes_for_secs": 120,
       "dozing_sat_duration_secs": 600,
       "reboot_warmup_secs": 30
     }
@@ -99,6 +101,10 @@
         "Barrier",
         "RunInStressGroupWithRearCamera",
         "Barrier",
+        "RunInWebGLAquarium50",
+        "Barrier",
+        "RunInWebGLAquarium1000",
+        "Barrier",
         "RunInRebootStep",
         "Barrier",
         "RunInDozingStress",
@@ -190,7 +196,6 @@
       "label": "Stress Group With Front Camera",
       "parallel": true,
       "subtests": [
-        "RunInWebGLAquarium",
         "RunInStressFrontCamera",
         "RunInURandom",
         "RunInStressAppTest",
@@ -202,7 +207,6 @@
       "run_if": "not constants.has_device_data or device.component.has_rear_camera",
       "parallel": true,
       "subtests": [
-        "RunInWebGLAquarium",
         "RunInStressRearCamera",
         "RunInURandom",
         "RunInStressAppTest",
@@ -225,6 +229,7 @@
     },
     "RunInWebGLAquarium": {
       "inherit": "WebGLAquarium",
+      "__comment": "You can enhance RunInStressGroup by adding this test. However, running WebGLAquarium with a bunch of other stress tests is not a FSI gate. go/pe-sw-gates",
       "args": {
         "duration_secs": "eval! constants.run_in.sat_duration_secs"
       }
@@ -232,14 +237,18 @@
     "RunInWebGLAquarium1000": {
       "inherit": "RunInWebGLAquarium",
       "label": "Webgl Aquarium 1000",
+      "__comment": "Monitor the performance of graphics.",
       "args": {
+        "duration_secs": "eval! constants.run_in.run_fishes_for_secs",
         "num_fish": 1000
       }
     },
     "RunInWebGLAquarium50": {
       "inherit": "RunInWebGLAquarium",
       "label": "Webgl Aquarium 50",
+      "__comment": "Monitor the performance of graphics.",
       "args": {
+        "duration_secs": "eval! constants.run_in.run_fishes_for_secs",
         "num_fish": 50
       }
     }
