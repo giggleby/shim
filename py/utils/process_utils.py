@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 import traceback
-from typing import IO, TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import IO, TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 from cros.factory.utils import type_utils
 
@@ -24,7 +24,6 @@ from cros.factory.utils import type_utils
 # Use subprocess.CalledProcessError for invocation exceptions.
 class CalledProcessError(subprocess.CalledProcessError):
   """A CalledProcessError with a workaround repr."""
-
   def __repr__(self):
     msg = 'CalledProcessError(returncode=%d, cmd=%r, stdout=%r, stderr=%r)'
     return msg % (self.returncode, self.cmd, self.stdout, self.stderr)
@@ -196,7 +195,7 @@ class ExtendedPopen(Popen):
     return self.stdout_data, self.stderr_data  # type: ignore
 
 
-def Spawn(args: Union[str, List[str]], **kwargs) -> ExtendedPopen:
+def Spawn(args: Union[str, Sequence[str]], **kwargs) -> ExtendedPopen:
   """Popen wrapper with extra functionality:
 
   - Sets close_fds to True by default.  (You may still set close_fds=False to
@@ -272,8 +271,8 @@ def Spawn(args: Union[str, List[str]], **kwargs) -> ExtendedPopen:
       raise TypeError('Command must be a string when shell is specified.')
     args_to_log = args
   else:
-    if not isinstance(args, list):
-      raise TypeError('Command must be a list of string.')
+    if isinstance(args, str):
+      raise TypeError('Command must be a sequence (list/tuple) of string.')
     args_to_log = ' '.join(map(pipes.quote, args))
 
   logger = logging
@@ -373,7 +372,7 @@ def Spawn(args: Union[str, List[str]], **kwargs) -> ExtendedPopen:
             '"')
         if log_stderr_on_error:
           if isinstance(process.stderr_data, bytes):
-            message += f'; stderr: ""\"\n{process.stderr_data.hex()}\n"""'
+            message += f'; stderr: ""\"\n{process.stderr_data!r}\n"""'
           else:
             message += f'; stderr: ""\"\n{process.stderr_data}\n"""'
         logger.error(message)
@@ -401,7 +400,6 @@ class CommandPipe:
     out = CommandPipe().Pipe(['cmdA', 'arg']).Pipe('CmdB').stdout_data
     out, err = CommandPipe().Pipe(['cmdC']).Pipe('CmdD').Communicate()
   """
-
   def __init__(self, encoding: Optional[str] = 'utf-8', check=True,
                read_timeout=0.1):
     self._encoding: Optional[str] = encoding
@@ -547,10 +545,11 @@ def KillProcessTree(process: subprocess.Popen, caption: str) -> None:
   # iterate through each level until leaf of the tree.
 
   def get_all_pids(root: int) -> List[int]:
-    ps_output = CheckOutput(['ps', '--no-headers', '-eo', 'pid,ppid'])
-    assert isinstance(ps_output, str)
+    ps_output = Spawn(['ps', '--no-headers', '-eo', 'pid,ppid'],
+                      stdout=subprocess.PIPE)
     children: Dict[int, List[int]] = {}
-    for line in ps_output:
+    assert ps_output.stdout is not None
+    for line in cast(IO[str], ps_output.stdout):
       match = re.findall(r'\d+', line)
       children.setdefault(int(match[1]), []).append(int(match[0]))
     pids: List[int] = []

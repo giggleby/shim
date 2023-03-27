@@ -543,10 +543,8 @@ class GoofyRPC:
     process_utils.Spawn(['goofy_ghost', 'reset'], call=True)
     # Restart Goofy and clear state.
     process_utils.Spawn(
-        ['nohup ' +
-         os.path.join(paths.FACTORY_DIR, 'bin', 'factory_restart') +
-         ' -a &'],
-        shell=True, check_call=True)
+        'nohup ' + os.path.join(paths.FACTORY_DIR, 'bin', 'factory_restart') +
+        ' -a &', shell=True, check_call=True)
     # Wait for a while.  This process should be killed long before
     # 60 seconds have passed.
     time.sleep(60)
