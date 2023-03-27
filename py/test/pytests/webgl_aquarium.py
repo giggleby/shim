@@ -46,16 +46,31 @@ add this in test list::
 
 import collections
 import time
+from types import MappingProxyType
 
 from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 
 
+# Define in the aquarium.html of the webgl_aquarium package.
+_FISH_SETTINGS = MappingProxyType({
+    1: 0,
+    10: 1,
+    50: 2,
+    100: 3,
+    250: 4,
+    500: 5,
+    1000: 6,
+})
+
 class WebGLAquariumTest(test_case.TestCase):
   ARGS = [
       Arg('duration_secs', int, 'Duration of time in seconds to run the test',
           default=60),
+      Arg('num_fish', int,
+          f'Number of fishes. Must be one of {list(_FISH_SETTINGS.keys())!r}',
+          default=50),
       Arg('hide_options', bool, 'Whether to hide the options on UI',
           default=True),
       Arg('full_screen', bool, 'Whether to go full screen mode by default',
@@ -83,6 +98,10 @@ class WebGLAquariumTest(test_case.TestCase):
     self.end_time = self.start_time + self.args.duration_secs
     self.sum_fps = 0
     self.window_fps = collections.deque()
+    num_fish: int = self.args.num_fish
+
+    self.assertIn(num_fish, _FISH_SETTINGS)
+    self.ui.CallJSFunction('setSettings', _FISH_SETTINGS[num_fish])
 
     if self.args.full_screen:
       self.ui.CallJSFunction('toggleFullScreen')

@@ -29,6 +29,14 @@ const sendFpsToPytest = () => {
   window.test.sendTestEvent('AddFPSToWindow', {'webgl_fps': getFpsValue()});
 }
 
+const setSettings = (setting_index) => {
+  iframeLoaded.then(() => {
+    const element = webglIFrame.contentDocument.getElementById(
+        `setSetting${setting_index}`);
+    webglIFrame.contentWindow.setSetting(element, `${setting_index}`);
+  });
+};
+
 const toggleFullScreen = () => {
   const fullscreen = !isFullScreen();
 
@@ -103,7 +111,8 @@ iframeLoaded.then(() => {
 const exports = {
   toggleFullScreen,
   updateUI,
-  sendFpsToPytest
+  sendFpsToPytest,
+  setSettings,
 };
 for (const key of Object.keys(exports)) {
   window[key] = exports[key];

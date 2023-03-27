@@ -4033,6 +4033,14 @@ msgstr "Camera phía trước Thử áp lực tập trung"
 msgid "Stress Group With Rear Camera"
 msgstr "Camera phía sau Thử áp lực tập trung"
 
+#: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Webgl Aquarium 1000"
+msgstr ""
+
+#: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Webgl Aquarium 50"
+msgstr ""
+
 #: ../py/test/test_lists/generic_smt.test_list.json
 msgid "SMT (SA Test)"
 msgstr "SMT (SA Test)"

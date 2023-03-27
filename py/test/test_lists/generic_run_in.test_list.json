@@ -228,6 +228,20 @@
       "args": {
         "duration_secs": "eval! constants.run_in.sat_duration_secs"
       }
+    },
+    "RunInWebGLAquarium1000": {
+      "inherit": "RunInWebGLAquarium",
+      "label": "Webgl Aquarium 1000",
+      "args": {
+        "num_fish": 1000
+      }
+    },
+    "RunInWebGLAquarium50": {
+      "inherit": "RunInWebGLAquarium",
+      "label": "Webgl Aquarium 50",
+      "args": {
+        "num_fish": 50
+      }
     }
   }
 }

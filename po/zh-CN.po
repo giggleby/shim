@@ -3964,6 +3964,14 @@ msgstr "前相机集合压力测试"
 msgid "Stress Group With Rear Camera"
 msgstr "后相机集合压力测试"
 
+#: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Webgl Aquarium 1000"
+msgstr "WebGL 水族箱 1000"
+
+#: ../py/test/test_lists/generic_run_in.test_list.json
+msgid "Webgl Aquarium 50"
+msgstr "WebGL 水族箱 50"
+
 #: ../py/test/test_lists/generic_smt.test_list.json
 msgid "SMT (SA Test)"
 msgstr "SMT (SA 测试)"
