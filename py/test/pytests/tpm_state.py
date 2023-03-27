@@ -29,13 +29,15 @@ To verify the tpm state, add this to test list::
 
 """
 
+import re
+
 from cros.factory.device import device_utils
 from cros.factory.test import session
 from cros.factory.test import test_case
 
 
 GET_TPM_STATE_CMD = 'cbmem -1 | grep -i hsp'
-TPM_SUCCESS_STATE = 'HSP Secure state:      0x20'
+TPM_SUCCESS_STATE_REGEXP = r'^HSP Secure state:\s+0x20'
 
 
 class TPMStateNotFoundException(Exception):
@@ -62,14 +64,13 @@ class VerifyTPMState(test_case.TestCase):
       TPMStateNotFoundException: if the log output from `cbmem` command
         didn't show HSP state.
     """
-    state_result = self._dut.CallOutput(GET_TPM_STATE_CMD)
+    state_result: str = self._dut.CallOutput(GET_TPM_STATE_CMD)
 
     if not state_result:
       session.console.error('cbmem did not show TPM log')
       raise TPMStateNotFoundException
 
-    state_result = state_result.strip()
-    if state_result == TPM_SUCCESS_STATE:
+    if re.match(TPM_SUCCESS_STATE_REGEXP, state_result):
       return True
 
     session.console.info(f'Incorrect TPM state, output: {state_result}')
