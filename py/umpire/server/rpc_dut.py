@@ -313,7 +313,8 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
     with tarfile.open(fileobj=output, mode='w:xz') as tar:
       with tarfile.open(fileobj=fileobj) as input_file:
         for tarinfo in input_file.getmembers():
-          tar.addfile(tarinfo)
+          content = input_file.extractfile(tarinfo)
+          tar.addfile(tarinfo, fileobj=content)
       with file_utils.TempDirectory() as temp_dir:
         metadata_file = 'metadata.json'
         metadata_path = os.path.join(temp_dir, metadata_file)

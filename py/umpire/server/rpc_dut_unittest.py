@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import glob
+import hashlib
 import io
 import logging
 import os
@@ -112,10 +113,22 @@ class DUTRPCTest(unittest.TestCase):
     return d
 
   def testAddMetadataToReportBlob(self):
+
+    def _ComputeHash(tar_file, tarinfo):
+      # content is available for a regular file or a link. Otherwise it's None.
+      content = tar_file.extractfile(tarinfo)
+      if content:
+        return hashlib.sha256(content.read()).digest()
+      return None
+
     report_blob = self.rpc.AddMetadataToReportBlob(
         file_utils.ReadFile(TESTREPORTPATH, encoding=None))
+    hashes = {}
     with tarfile.open(TESTREPORTPATH, 'r:xz') as tar_file:
       file_list = tar_file.getnames()
+      for tarinfo in tar_file.getmembers():
+        hashes[tarinfo.name] = _ComputeHash(tar_file, tarinfo)
+
     with tarfile.open(fileobj=io.BytesIO(report_blob)) as tar_file:
       self.assertEqual(tar_file.getnames(), file_list + ['metadata.json'])
       for tarinfo in tar_file.getmembers():
@@ -123,6 +136,9 @@ class DUTRPCTest(unittest.TestCase):
           metadata_json = json_utils.LoadStr(
               tar_file.extractfile(tarinfo).read())
           self.assertEqual('0000000001', metadata_json['report_index'])
+        else:
+          digest = _ComputeHash(tar_file, tarinfo)
+          self.assertEqual(digest, hashes[tarinfo.name])
 
   def testUploadReport(self):
     def CheckTrue(result):
