@@ -287,16 +287,12 @@ class LogDUTCommands(umpire_rpc.UmpireRPC):
 
   def _CreateMetadataFile(self, filepath):
     """Create a new metadata.json file."""
-    with file_utils.FileLock(self.daemon.env.report_index_json_file):
-      properties = json_utils.LoadFile(self.daemon.env.report_index_json_file)
-      report_index = properties['next_report_index']
-      properties['next_report_index'] = report_index + 1
-      json_utils.DumpFile(self.daemon.env.report_index_json_file, properties)
-    json_utils.DumpFile(
-        filepath, {
-            'server_uuid': properties['server_uuid'],
-            'report_index': f'{report_index:010d}'
-        }, pretty=True)
+    manager = self.daemon.env.GetReportIndexManager()
+    with manager.AllocateNextIndex() as (server_uuid, report_index):
+      json_utils.DumpFile(filepath, {
+          'server_uuid': server_uuid,
+          'report_index': f'{report_index:010d}'
+      }, pretty=True)
 
   def AddMetadataToReportBlob(self, report_blob):
     """Add metadata.json file to the factory report blob.

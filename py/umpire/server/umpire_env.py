@@ -7,12 +7,14 @@
 This module provides constants and common Umpire classes.
 """
 
+import contextlib
 import json
 import logging
 import os
 import re
 import shutil
 import tempfile
+from typing import Generator, Tuple
 import urllib.parse
 
 from cros.factory.umpire import common
@@ -418,6 +420,34 @@ class UmpireEnv:
         'files': deleted_files,
         'size': str(deleted_size)
     }
+
+  def GetReportIndexManager(self):
+    return ReportIndexManager(self.report_index_json_file)
+
+
+class ReportIndexManager:
+  """Maintain a counter for number of logs received by this umpire server"""
+
+  def __init__(self, json_file: str):
+    self.json_file = json_file
+
+  @contextlib.contextmanager
+  def AllocateNextIndex(self) -> Generator[Tuple[str, int], None, None]:
+    """Enter a context of next index.
+
+    Return a tuple of `server_uuid, next_report_index`. If the context is exited
+    normally, next_report_index will be increased by one. Otherwise the value
+    won't be changed.
+    """
+    with file_utils.FileLock(self.json_file, timeout_secs=float('inf')):
+      properties = json_utils.LoadFile(self.json_file)
+      report_index: int = properties['next_report_index']
+      server_uuid: str = properties['server_uuid']
+
+      yield server_uuid, report_index
+
+      properties['next_report_index'] += 1
+      json_utils.DumpFile(self.json_file, properties)
 
 
 class UmpireEnvForTest(UmpireEnv):
