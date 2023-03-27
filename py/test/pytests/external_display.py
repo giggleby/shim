@@ -231,24 +231,60 @@ def _MigrateDisplayInfo(display_info):
 class SysfsDisplayInfo:
   """The display info under /sys/class/drm/cardX-YYY."""
 
-  def __init__(self, dut: device_types.DeviceBoard, sysfs_path: str):
+  def __init__(self, dut: device_types.DeviceBoard, sysfs_path: str,
+               retry_times: int = 3):
     self.sysfs_path = sysfs_path
     self.status_path = dut.path.join(sysfs_path, 'status')
     self.edid_path = dut.path.join(sysfs_path, 'edid')
-    self.status = dut.ReadFile(self.status_path).strip()
+    self.status = None
     self.edid = None
+
+    sleep = sync_utils.GetPollingSleepFunction()
+    for iteration in range(1, retry_times + 1):
+      try:
+        self.Fetch(dut)
+        break
+      except RuntimeError:
+        logging.exception('iteration %d: Fail to get sysfs display info',
+                          iteration)
+      if iteration != retry_times:
+        sleep(1)
+      else:
+        raise RuntimeError('All iterations fail to get sysfs display info')
+
+  def Fetch(self, dut: device_types.DeviceBoard):
+    """Fetches status and edid.
+
+    Possible outcomes:
+    - status == 'connect' and edid is a valid edid represented by a dict.
+    - status != 'connect' and edid is None.
+    - Raise an Exception and status and edid contain meaningless value.
+
+    Raises:
+      FileNotFoundError: If status path or edid path absent.
+      RuntimeError: If the status is 'connected' but the edid is invalid.
+    """
+    self.edid = None
+    self.status = dut.ReadFile(self.status_path).strip()
     if self.status != 'connected':
       return
+    edid_bytes = dut.ReadSpecialFile(self.edid_path, encoding=None)
     try:
-      edid_data = edid.LoadFromFile(self.edid_path)
-      edid_data['manufacturerId'] = edid_data['vendor']
-      edid_data['productId'] = edid_data['product_id'].upper()
-      edid_data.pop('vendor')
-      edid_data.pop('product_id')
-      self.edid = edid_data
+      edid_data = edid.Parse(edid_bytes)
     except Exception as err:
-      raise RuntimeError('No edid or bad edid found from drm_sysfs_path: '
-                         f'{sysfs_path}') from err
+      raise RuntimeError(f'edid.Parse({edid_bytes}) fails for drm_sysfs_path: '
+                         f'{self.sysfs_path}') from err
+    if edid_data is None:
+      raise RuntimeError(f'edid.Parse({edid_bytes}) fails for drm_sysfs_path: '
+                         f'{self.sysfs_path}. See logging.warning for the '
+                         'reason.')
+    self.edid = edid_data.copy()
+    try:
+      self.edid['manufacturerId'] = self.edid.pop('vendor')
+      self.edid['productId'] = self.edid.pop('product_id').upper()
+    except KeyError as err:
+      raise RuntimeError(f'Bad edid {edid_data!r} found from drm_sysfs_path: '
+                         f'{self.sysfs_path}') from err
 
   def JoinTargetInfo(self, display_info: List[Dict[str, Any]]):
     """Joins target display info between sysfs and Chrome API.
@@ -619,18 +655,25 @@ class ExtDisplayTest(test_case.TestCase):
 
   def _GetInfoFromSysfs(self, display_id):
     candidates = self._dut.Glob(self.args.drm_sysfs_path)
+    not_found_files = []
     # Get display status from sysfs path.
     for candidate in candidates:
       card_name = os.path.basename(candidate.rstrip('/'))
       sysfs_path = self._dut.path.join(candidate, f'{card_name}-{display_id}')
       try:
         return SysfsDisplayInfo(self._dut, sysfs_path)
-      except FileNotFoundError:
-        # Ignore exception if status is not there.
+      except FileNotFoundError as err:
+        # Ignore exception and go to the next candidate if status is not there.
+        not_found_files.append(str(err))
         continue
+      except RuntimeError as err:
+        self.FailTask(str(err))
 
-    raise RuntimeError(
-        f'No display found from drm_sysfs_path: {self.args.drm_sysfs_path}')
+    messages = '\n'.join(not_found_files)
+    self.FailTask(
+        f'No display found from drm_sysfs_path: {self.args.drm_sysfs_path}.\n'
+        f'{messages}')
+    return None
 
   def _FetchTargetInfo(self, display_id):
     target_display_info = self._GetInfoFromSysfs(display_id)
