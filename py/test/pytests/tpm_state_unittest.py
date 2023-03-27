@@ -38,6 +38,17 @@ class TPMStateTest(unittest.TestCase):
     # pylint: enable=protected-access
     self.assertTrue(result)
 
+  def testTPMSpaceCount(self) -> None:
+    success_state = 'HSP Secure state:  0x20\n'
+    output_mock = mock.Mock()
+    output_mock.CallOutput.return_value = success_state
+
+    # pylint: disable=protected-access
+    self.tpm._dut = output_mock
+    result = self.tpm._CheckTPMFusedOff()
+    # pylint: enable=protected-access
+    self.assertTrue(result)
+
   def testTPMIncorrectState(self) -> None:
     incorrect_state = ''
     output_mock = mock.Mock()
