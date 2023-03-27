@@ -170,7 +170,7 @@ class SSHLink(device_types.DeviceLink):
                                                                IO[Any]] = None,
             stdout: Union[None, int, IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
-            encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
+            encoding: Optional[str] = 'utf-8') -> process_utils.ExtendedPopen:
     """See DeviceLink.Shell"""
     if not isinstance(command, str):
       command = ' '.join(map(pipes.quote, command))

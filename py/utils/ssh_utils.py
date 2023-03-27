@@ -150,7 +150,8 @@ class SSHRunner(ISSHRunner):
     return ['rsync', '-az', '-e', ssh_options, src, dest]
 
   @type_utils.Overrides
-  def Spawn(self, command: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+  def Spawn(self, command: Union[str, List[str]],
+            **kwargs) -> process_utils.ExtendedPopen:
     """See ISSHRunner.Spawn."""
     ssh_command = self._GetSSHCommand(command)
     return process_utils.Spawn(ssh_command, **kwargs)

@@ -1,223 +1,180 @@
 # Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Display interactive test utils.
+
 This module contains the utils for the display interactive test.
 """
+
 import logging
 import os
-import subprocess
+import sys
 import time
 import xmlrpc.client
+
+# TODO(b/275322979): Solve dependency issue.
+from cros.factory.device.links import ssh
+from cros.factory.utils import process_utils
 
 
 # Setup logging level and format.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
 
-def SimpleCommandWithoutOutput(cmd):
-  """Execute a command, return the return code."""
-  try:
-    ret = subprocess.call(cmd, shell=True, stdout=subprocess.DEVNULL,
-                          stderr=subprocess.STDOUT)
-    return ret
-  except subprocess.CalledProcessError as e:
-    return e.returncode
-
-
-def SimpleCommand(cmd, print_output=False):
-  """Execute a command and return the stdout."""
-  try:
-    with subprocess.Popen(
-        cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8',
-    ) as proc:
-      stdout, stderr = proc.communicate()
-      ret = proc.returncode
-      if ret:
-        logging.warning('%s', stderr)
-        return ret
-      if print_output:
-        logging.info('Output: %s', stdout)
-      return stdout.strip()
-  except subprocess.CalledProcessError as e:
-    return e.returncode
-
-
-def SetupSSHIdentityFile():
-  """Setup the ssh identity file."""
-  cmd = "curl 'https://chromium.googlesource.com/chromiumos/chromite/+/main" \
-        "/ssh_keys/testing_rsa?format=TEXT'| base64 --decode > " \
-        "~/.ssh/cros_testing_rsa"
-  file_path = os.path.join(os.path.expanduser("~"), '.ssh', 'cros_testing_rsa')
-  if not os.path.exists(file_path):
-    logging.info('Missing identity file, start setup ssh identity file.')
-    SimpleCommand(cmd)
-  if oct(os.stat(file_path).st_mode)[-3:] != '600':
-    os.chmod(file_path, 0o600)
-
-
-def PingIsSuccessful(ip):
-  """Ping a host and return True if successful."""
-  cmd = f'ping -c 1 -W 1 {ip}'
-  return SimpleCommandWithoutOutput(cmd) == 0
-
-
-class SSHClient:
-  """Utility class for SSH and SCP.
-  Default settings for the ssh and scp commands are:
-    Host: 192.168.0.* or any.
-    User: root
-    UserKnownHostsFile: /dev/null
-    IdentityFile: ~/.ssh/cros_testing_rsa
-    StrictHostKeyChecking: no
-    ProxyCommand: none
-    LogLevel: ERROR # to suppress warnings
-    ConnectTimeout: 10
-  """
-  # Setup the fixed options.
-  _fixed_options = [
-      '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null',
-      '-o', 'ConnectTimeout=10', '-o', 'ProxyCommand=none', '-o', 'User=root',
-      '-o', 'LogLevel=ERROR', '-o', 'IdentityFile=~/.ssh/cros_testing_rsa'
-  ]
-
-  def __init__(self, host):
-    self._host = host
-
-  def SSHCommand(self, cmd):
-    """Build the ssh command using the fixed options."""
-    return f"ssh {' '.join(self._fixed_options)} {self._host} {cmd}"
-
-  def SCPPushCommand(self, src, dst):
-    """Build the scp push command using the fixed options."""
-    return (
-        f"scp -r {' '.join(self._fixed_options)} {src} root@{self._host}:{dst}")
-
-  def SCPPullCommand(self, src, dst):
-    """Build the scp pull command using the fixed options."""
-    return (
-        f"scp -r {' '.join(self._fixed_options)} root@{self._host}:{src} {dst}")
-
-
 class Communication:
   """XML-RPC client communication."""
 
-  def __init__(self, ip, port=5566):
+  def __init__(self, ip: str, xmlrpc_port=5566, ssh_port=22):
     """Initialize the XML-RPC client.
+
     Args:
         ip: The DUT IP address.
         port: The DUT XML-RPC listening port.
     """
-    self._ip = ip
-    self._port = port
-    self.proxy = xmlrpc.client.ServerProxy(f'http://{ip}:{port}')
-    self.ssh_client = SSHClient(ip)
+    self.proxy = xmlrpc.client.ServerProxy(f'http://{ip}:{xmlrpc_port}')
+    self.ssh_link = ssh.SSHLink(host=ip, port=ssh_port, control_persist=300)
 
-  def ItemIsRunning(self, item):
-    """Check if the test is running.
+  def _IsPytestRunning(self, pytest_id: str) -> bool:
+    """Check if a pytest is running.
+
     Args:
-      item: The test item name.
+      pytest_id: The pytest ID.
+
     Returns:
-        True if the test is running, False otherwise.
+        True if the test is running; otherwise False.
     """
-    if not PingIsSuccessful(self._ip):
-      logging.error('%s is not reachable.', self._ip)
-      return False
-    output = SimpleCommand(
-        self.ssh_client.SSHCommand('factory run-status'), print_output=False)
-    return 'RUNNING' in output and item in output and len(
-        output.split(item.split('.')[0])) == 2
+    args = ['factory', 'run-status']
+    process = self.ssh_link.Shell(args, stdout=process_utils.PIPE,
+                                  stderr=process_utils.PIPE)
+    output, errmsg = process.communicate()
+    if process.returncode != 0:
+      logging.error('Exit code %d from command: "%s"', process.returncode, args)
+      raise process_utils.CalledProcessError(process.returncode, args, output,
+                                             errmsg)
+
+    assert isinstance(output, str)
+    return 'RUNNING' in output and pytest_id in output and len(
+        output.split(pytest_id.split('.')[0])) == 2
 
   def tearDown(self):
-    """Tear down the test."""
+    """Tears down the test."""
     self.proxy.tearDown()
 
-  def Init(self, item):
-    """Initialize the DUT for the test, if the test is not running, start it."""
-    if not self.ItemIsRunning(item):
-      SimpleCommand(
-          self.ssh_client.SSHCommand(f'factory run {item}'), print_output=False)
-      time.sleep(0.3)
+  def Init(self, pytest_id: str) -> None:
+    """Initializes the DUT and runs a pytest if not yet running.
 
-  @staticmethod
-  def SetupSSHIdentity():
-    """Setup ssh access."""
-    SetupSSHIdentityFile()
-
-  def RunCommand(self, cmd):
-    """Run a command on the DUT.
     Args:
-        cmd: The command to run.
-    Returns:
-        The output of the command if print_output is True, otherwise the return
-        code of the command.
+      pytest_id: pytest ID
     """
-    return SimpleCommand(self.ssh_client.SSHCommand(cmd), print_output=True)
+    if self._IsPytestRunning(pytest_id):
+      return
 
-  def RunCommandWithoutOutput(self, cmd):
-    """Run a command on the remote host and return the return code."""
-    return SimpleCommandWithoutOutput(self.ssh_client.SSHCommand(cmd))
+    args = ['factory', 'run', pytest_id]
+    process = self.ssh_link.Shell(args)
+    if process.wait() != 0:
+      raise process_utils.CalledProcessError(
+          process.returncode, args, process.stdout_data, process.stderr_data)
+    time.sleep(0.3)
 
-  def Push(self, src, dst):
-    """Push a file or directory to the remote host.
+  def RunCommand(self, cmd: str) -> None:
+    """Run a command on the DUT.
+
+    Args:
+      cmd: The command to run.
+    """
+    returncode = self.ssh_link.Shell(cmd).wait()
+    sys.exit(returncode)
+
+  def Push(self, src: str, dst: str) -> None:
+    """Pushes a file or directory on local to the remote host.
+
     Args:
       src: The source file or directory.
       dst: The destination file or directory.
     """
-    return SimpleCommand(self.ssh_client.SCPPushCommand(src, dst))
+    if os.path.isdir(src):
+      self.ssh_link.PushDirectory(src, dst)
+    else:
+      self.ssh_link.Push(src, dst)
 
-  def Pull(self, src, dst):
-    """Pull a file or directory from the remote host.
+  def Pull(self, src: str, dst: str) -> None:
+    """Pulls a file or directory from the remote host to local.
+
     Args:
       src: The source file or directory.
       dst: The destination file or directory.
     """
     logging.info('Pull %s to %s', src, dst)
-    return SimpleCommand(self.ssh_client.SCPPullCommand(src, dst))
 
-  def ShowPattern(self, pattern):
-    """Show the css pattern.
+    # Checks remote source is a file or a directory.
+    returncode = self.ssh_link.Shell(f'[ -d "{src}" ]').wait()
+    if returncode == 0:
+      self.ssh_link.PullDirectory(src, dst)
+    else:
+      self.ssh_link.Pull(src, dst)
+
+  def ShowPattern(self, pattern) -> None:
+    """Shows the css pattern.
+
     Args:
         pattern: The pattern to show.
     """
     self.proxy.ShowPattern(pattern)
 
-  def GetSerialNumber(self):
-    """Get the DUT serial number.
+  def GetSerialNumber(self) -> None:
+    """Gets the DUT serial number.
+
     Returns:
         The DUT device data serial number.
     """
-    print(f'Serial Number: {self.proxy.GetSerialNumber()}')
-    self.proxy.GetSerialNumber()
+    serial_number = self.proxy.GetSerialNumber()
+    print(serial_number)
 
-  def FailTest(self, reason):
-    """Fail the test.
+  def FailTest(self, reason: str) -> None:
+    """Fails the pytest.
+
     Args:
-        reason: The reason to fail the test.
+        reason: The reason to fail the pytest.
     """
     self.proxy.FailTest(reason)
 
-  def ShowImage(self, image):
-    """Show the image.
+  def ShowImage(self, image: str) -> None:
+    """Shows an image.
+
     Args:
         image: The image name to display on the DUT.
     """
     self.proxy.ShowImage(image)
 
-  def SetDisplayBrightness(self, brightness):
-    """Set the display backlight brightness, 0.0 to 1.0, DUT default is 0.5.
-    Args:
-        brightness: The brightness to set.
-    """
-    self.proxy.SetDisplayBrightness(float(brightness))
+  def SetDisplayBrightness(self, arg_brightness: str) -> None:
+    """Sets the display backlight brightness.
 
-  def SetKeyboardBacklight(self, brightness):
-    """Set the keyboard backlight brightness, 0 to 100, DUT default is 0.
+    The brightness should be in the range from  0.0 to 1.0. Default value for
+    DUTs is 0.5.
+
     Args:
         brightness: The brightness to set.
     """
-    self.RunCommand(f'ectool pwmsetkblight {brightness}')
+    brightness = float(arg_brightness)
+    if brightness < 0.0 or brightness > 1.0:
+      raise ValueError('Brightness must be in range [0.0, 1.0].')
+    self.proxy.SetDisplayBrightness(brightness)
+
+  def SetKeyboardBacklight(self, arg_brightness: str) -> None:
+    """Sets the keyboard backlight brightness.
+
+    The brightness should be an integer in the range from  0 to 100. Default
+    value for DUTs is 0.
+
+    Args:
+        brightness: The brightness to set.
+    """
+    try:
+      brightness = int(arg_brightness)
+    except ValueError:
+      raise ValueError('Brightness must be an integer.') from None
+    if brightness < 0 or brightness > 100:
+      raise ValueError('Brightness must be in range [0, 100].')
+    # TODO(wdzeng, cyueh): Use XMLRPC method.
+    self.ssh_link.Shell(['ectool', 'pwmsetkblight', str(brightness)])
