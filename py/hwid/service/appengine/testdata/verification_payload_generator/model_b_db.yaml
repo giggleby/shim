@@ -41,7 +41,7 @@ components:
       battery_large_supported_tech_2:
         status: supported
         values:
-          manufacturer: mfr
+          manufacturer: mfr2
           model_name: L
           technology: Li-poly
 

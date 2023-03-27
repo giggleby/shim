@@ -1,0 +1,58 @@
+checksum: DUMMY
+
+board: MODEL_F
+
+encoding_patterns: {0: default}
+
+image_id: {0: EVT}
+
+pattern:
+  - image_ids: [0]
+    encoding_scheme: base8192
+    fields:
+    - battery: 3
+
+encoded_fields:
+  battery:
+    0: {battery: battery_medium_unqualified}
+    1: {battery: battery_small_deprecated}
+    2: {battery: battery_medium_unsupported}
+    3: {battery: battery_small_supported}
+    4: {battery: battery_small_supported_2}
+
+components:
+  battery:
+    items:
+      battery_medium_unqualified:
+        status: unqualified
+        values:
+          manufacturer: mfr
+          model_name: M
+          technology: LION
+      battery_small_deprecated:
+        status: deprecated
+        values:
+          manufacturer: mfr
+          model_name: S
+          technology: LION
+      battery_medium_unsupported:
+        status: unsupported
+        values:
+          manufacturer: mfr
+          model_name: M
+          technology: Li-ion
+          type: Battery
+      battery_small_supported:
+        status: supported
+        values:
+          manufacturer: mfr
+          model_name: S
+          technology: Li-ion
+      battery_small_supported_2:
+        status: supported
+        values:
+          manufacturer: mfr
+          model_name: S
+          technology: Li-poly
+
+rules: []

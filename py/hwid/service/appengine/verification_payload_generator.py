@@ -6,6 +6,7 @@
 
 import collections
 import hashlib
+import logging
 import re
 from typing import DefaultDict, Dict, List, NamedTuple, Optional, Set, Union
 
@@ -334,6 +335,7 @@ class _ProbeStatementGenerator:
   def __init__(self, probe_category, probe_function_name, field_converters,
                probe_function_argument=None):
     self.probe_category = probe_category
+    self.has_multiple_converters = False
 
     self._probe_statement_generator = (
         probe_config_definition.GetProbeStatementDefinition(probe_category))
@@ -342,6 +344,7 @@ class _ProbeStatementGenerator:
       self._field_converters = [field_converters]
     else:
       self._field_converters = field_converters
+      self.has_multiple_converters = True
     self._probe_function_argument = probe_function_argument
 
   def TryGenerate(self, comp_name, comp_values, information=None):
@@ -609,6 +612,24 @@ def GetAllProbeStatementGenerators():
   return all_probe_statement_generators
 
 
+@type_utils.CachedGetter
+def GetMultiExpectedFieldsCategories():
+  """Get component categories that may generate multiple expected fields lists
+
+  This function checks all probe statement generators, and collects the probe
+  categories of the generators that have multiple converters and thus may
+  generate multiple expected fields lists.
+
+  Returns:
+    A frozenset contains all the probe categories that may generate multiple
+    expected fields lists.
+  """
+  return frozenset(ps_gen.probe_category
+                   for ps_gens in GetAllProbeStatementGenerators().values()
+                   for ps_gen in ps_gens
+                   if ps_gen.has_multiple_converters)
+
+
 class VerificationPayloadGenerationResult(NamedTuple):
   """
   Attributes:
@@ -785,18 +806,67 @@ def GenerateVerificationPayload(dbs):
                                     primary_component_name, model)
     return primary_identifiers
 
+  def _MergeExpectedFields(probe_config, vp_pieces):
+    """Merge the same expected fields in different components.
+
+    This function traverses components in vp_pieces in qualification status
+    order. For every component, if the expected fields were also in the previous
+    components, skip generating probe statement for these fields. Or else, add
+    them to probe_config.
+    """
+    vp_pieces.sort(key=_ComponentSortKey)
+    # Map expect fields string to the component.
+    comp_expects = {}
+
+    for vp_piece in vp_pieces:
+      expect_fields = vp_piece.probe_statement.statement.get('expect')
+      if isinstance(expect_fields, dict):
+        expect_fields = [expect_fields]
+
+      new_expect_fields = []
+      for expect_field in expect_fields:
+        expect_field_str = json_utils.DumpStr(expect_field, sort_keys=True)
+        if expect_field_str in comp_expects:
+          main_category, main_component = comp_expects[expect_field_str]
+          merged_category = vp_piece.probe_statement.category_name
+          merged_component = vp_piece.probe_statement.component_name
+          logging.info('Some expected fields of %s/%s are merged into %s/%s',
+                       merged_category, merged_component, main_category,
+                       main_component)
+        else:
+          category = vp_piece.probe_statement.category_name
+          component = vp_piece.probe_statement.component_name
+          comp_expects[expect_field_str] = (category, component)
+          new_expect_fields.append(expect_field)
+
+      if not new_expect_fields:
+        # All expected fields of this component were merged into previous
+        # components. Skip generating probe statements for it.
+        vp_piece.probe_statement.UpdateExpect({})
+        continue
+
+      if len(new_expect_fields) == 1:
+        vp_piece.probe_statement.UpdateExpect(new_expect_fields[0])
+      else:
+        vp_piece.probe_statement.UpdateExpect(new_expect_fields)
+
+      probe_config.AddComponentProbeStatement(vp_piece.probe_statement)
+
   error_msgs = []
   generated_file_contents = {}
 
   grouped_comp_vp_piece_per_model = {}
   grouped_primary_comp_name_per_model = {}
   hw_verification_spec = hardware_verifier_pb2.HwVerificationSpec()
+  multi_exp_categories = GetMultiExpectedFieldsCategories()
+
   for db, vpg_config in dbs:
     model_prefix = db.project.lower()
     probe_config = probe_config_types.ProbeConfigPayload()
     all_pieces = GetAllComponentVerificationPayloadPieces(db, vpg_config)
     grouped_comp_vp_piece = collections.defaultdict(list)
     grouped_primary_comp_name = {}
+    grouped_merge_vp_piece = collections.defaultdict(list)
     for comp_vp_piece in all_pieces.values():
       if comp_vp_piece.is_duplicate:
         continue
@@ -810,8 +880,15 @@ def GenerateVerificationPayload(dbs):
       comp_vp_piece = min(comp_vp_piece_list, key=_ComponentSortKey)
       grouped_primary_comp_name[
           hash_val] = comp_vp_piece.probe_statement.component_name
-      probe_config.AddComponentProbeStatement(comp_vp_piece.probe_statement)
+      comp_category = comp_vp_piece.probe_statement.category_name
       hw_verification_spec.component_infos.append(comp_vp_piece.component_info)
+      if comp_category in multi_exp_categories:
+        grouped_merge_vp_piece[comp_category].append(comp_vp_piece)
+      else:
+        probe_config.AddComponentProbeStatement(comp_vp_piece.probe_statement)
+
+    for vp_pieces in grouped_merge_vp_piece.values():
+      _MergeExpectedFields(probe_config, vp_pieces)
 
     # Append the generic probe statements.
     for ps_gen in _GetAllGenericProbeStatementInfoRecords():
@@ -848,7 +925,6 @@ def GenerateVerificationPayload(dbs):
 def main():
   # only import the required modules while running this module as a program
   import argparse
-  import logging
   import os
   import sys
 

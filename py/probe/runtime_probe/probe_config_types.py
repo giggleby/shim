@@ -19,6 +19,10 @@ class ValueType(str, enum.Enum):
     return self.name
 
 
+def CalculateStatementHash(category_name, statement):
+  return hash(json_utils.DumpStr((category_name, statement), sort_keys=True))
+
+
 class OutputFieldDefinition:
   """Placeholder for the definition of a field outputted by a probe function.
 
@@ -74,8 +78,7 @@ class ComponentProbeStatement:
     self._category_name = category_name
     self._component_name = component_name
     self._statement = statement
-    self._statement_hash = hash(
-        json_utils.DumpStr((category_name, statement), sort_keys=True))
+    self._statement_hash = CalculateStatementHash(category_name, statement)
 
   @property
   def category_name(self):
@@ -122,6 +125,11 @@ class ComponentProbeStatement:
       raise
     except Exception as e:
       raise ValueError(f'Unexpected format for dict {d!r}') from e
+
+  def UpdateExpect(self, expect):
+    self._statement['expect'] = expect
+    self._statement_hash = CalculateStatementHash(self._category_name,
+                                                  self._statement)
 
 
 class ProbeStatementDefinition:
