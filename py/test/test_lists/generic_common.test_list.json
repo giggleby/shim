@@ -779,6 +779,19 @@
         "flush_testlog": false
       }
     },
+    "UploadSerialNumberForAuditing": {
+      "inherit": "SyncFactoryServer",
+      "label": "Upload Serial Number for auditing",
+      "args": {
+        "sync_event_logs": false,
+        "sync_time": true,
+        "update_toolkit": false,
+        "upload_report": false,
+        "upload_reg_codes": false,
+        "upload_sn": true,
+        "flush_testlog": false
+      }
+    },
     "UploadZeroTouchIds": {
       "inherit": "SyncFactoryServer",
       "label": "Upload Zero Touch Ids",
