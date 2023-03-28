@@ -103,7 +103,7 @@ OVERLORD_DEPS_URL ?= \
 OVERLORD_DEPS_DIR ?= $(BUILD_DIR)/dist/go
 # This must match chromeos-base/factory/factory-9999.ebuild.
 WEBGL_AQUARIUM_URI ?= \
-  gs://chromeos-localmirror/distfiles/webgl-aquarium-20130524.tar.bz2
+  gs://chromeos-localmirror/distfiles/webgl-aquarium-20221212.tar.zst
 WEBGL_AQUARIUM_DIR ?= $(BUILD_DIR)/dist/webgl_aquarium_static
 # Following versions must match dev-libs/closure-library/*.ebuild.
 CLOSURE_LIB_GITREV ?= 7744b75c637054ed38b14901d091ec3196b2ef9b
