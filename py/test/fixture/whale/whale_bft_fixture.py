@@ -5,15 +5,15 @@
 
 import ast
 import logging
-import os
+from typing import Optional
 
+from cros.factory.device.links import ssh
 from cros.factory.test.fixture import bft_fixture as bft
 from cros.factory.test.fixture.whale import color_sensor
 from cros.factory.test.fixture.whale import keyboard_emulator
 from cros.factory.test.fixture.whale import lcm2004
 from cros.factory.test.fixture.whale import servo_client
 from cros.factory.utils import process_utils
-from cros.factory.utils import ssh_utils
 
 
 class WhaleBFTFixture(bft.BFTFixture):
@@ -66,7 +66,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     self._lcm = None
     self._nuc_host = None
     self._nuc_dut_serial_path = None
-    self._testing_rsa_path = None
+    self._nuc_ssh_link: Optional[ssh.SSHLink] = None
 
   def Init(self, **params):
     """Sets up an XML-RPC proxy to BFTFixture's BeagleBone Servo.
@@ -84,10 +84,6 @@ class WhaleBFTFixture(bft.BFTFixture):
       self._lcm = lcm2004.Lcm2004(self._servo)
       self._nuc_host = params.get('nuc_host')
       self._nuc_dut_serial_path = params.get('nuc_dut_serial_path')
-      self._testing_rsa_path = params.get('testing_rsa_path')
-      if self._testing_rsa_path:
-        # Make identity file less open to make ssh happy
-        os.chmod(self._testing_rsa_path, 0o600)
     except servo_client.ServoClientError as e:
       raise bft.BFTFixtureException(f'Failed to Init(). Reason: {e}')
 
@@ -110,7 +106,7 @@ class WhaleBFTFixture(bft.BFTFixture):
   def SetDeviceEngaged(self, device, engage):
     """Engages/disengages a device.
 
-    Issues a command to BFT fixture to engage/disenage a device.
+    Issues a command to BFT fixture to engage/disengage a device.
     The device can be either a peripheral device of the board or a
     device of the fixture.
 
@@ -121,7 +117,7 @@ class WhaleBFTFixture(bft.BFTFixture):
     action = f"{'engage' if engage else 'disengage'} device {device}"
     logging.debug(action)
 
-    whale_device = self._WHALE_DEVICE.get(device)
+    whale_device: str = self._WHALE_DEVICE.get(device)
     if not whale_device:
       raise bft.BFTFixtureException('Unsupported device: ' + whale_device)
     try:
@@ -162,24 +158,24 @@ class WhaleBFTFixture(bft.BFTFixture):
   def GetFixtureId(self):
     raise NotImplementedError
 
-  def ScanBarcode(self, saved_barcode_path=None):
+  def ScanBarcode(self, saved_barcode_path: Optional[str] = None):
     _UNSPECIFIED_ERROR = 'unspecified {} in BFT params'
     if not self._nuc_host:
       raise bft.BFTFixtureException(_UNSPECIFIED_ERROR.format('nuc_host'))
     if not self._nuc_dut_serial_path and not saved_barcode_path:
       raise bft.BFTFixtureException(
           _UNSPECIFIED_ERROR.format('nuc_dut_serial_path'))
-    if not self._testing_rsa_path:
-      raise bft.BFTFixtureException(
-          _UNSPECIFIED_ERROR.format('testing_rsa_path'))
 
     if not saved_barcode_path:
       saved_barcode_path = self._nuc_dut_serial_path
+      assert saved_barcode_path is not None
 
-    ssh_command_base = ssh_utils.BuildSSHCommand(
-        identity_file=self._testing_rsa_path)
-    mlbsn = process_utils.SpawnOutput(
-        ssh_command_base + [self._nuc_host, 'cat', saved_barcode_path])
+    if self._nuc_ssh_link is None:
+      self._nuc_ssh_link = ssh.SSHLink(host=self._nuc_host)
+    process = self._nuc_ssh_link.Shell(['cat', saved_barcode_path],
+                                       stdout=process_utils.PIPE)
+    process.wait()
+    mlbsn = process.stdout_data
     if not mlbsn:
       raise bft.BFTFixtureException(
           f'Unable to read barcode from {self._nuc_host}:{saved_barcode_path}')

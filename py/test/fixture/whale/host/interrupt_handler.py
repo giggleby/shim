@@ -10,17 +10,17 @@ import argparse
 import enum
 import functools
 import logging
-import os
 import re
 import sys
 import time
+from typing import Optional
 
+from cros.factory.device.links import ssh
 from cros.factory.test.fixture.whale import keyboard_emulator
 from cros.factory.test.fixture.whale import serial_client
 from cros.factory.test.fixture.whale import servo_client
 from cros.factory.utils import gpio_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import ssh_utils
 
 
 class ActionType(str, enum.Enum):
@@ -126,7 +126,7 @@ class InterruptHandler:
 
     self._polling_wait_secs = polling_wait_secs
 
-    # Store last feedback value. The value is initialzed in the very first
+    # Store last feedback value. The value is initialized in the very first
     # ScanFeedback call.
     self._last_feedback = {}
 
@@ -134,6 +134,8 @@ class InterruptHandler:
 
     # Used to avoid toggle battery too fast.
     self._last_battery_toggle_time = time.time()
+
+    self.nuc_ssh_link: Optional[ssh.SSHLink] = None
 
   @TimeClassMethodDebug
   def Init(self):
@@ -429,27 +431,27 @@ class InterruptHandler:
   def ShowNucIpOnLED(self):
     """Shows NUC dongle IP on LED second line"""
     nuc_host = '192.168.234.1'
-    testing_rsa_path = '/usr/local/factory/misc/sshkeys/testing_rsa'
+
+    if self.nuc_ssh_link is None:
+      self.nuc_ssh_link = ssh.SSHLink(host=nuc_host)
+
     get_dongle_eth_script = (
         'timeout 1s /usr/local/factory/py/test/fixture/get_dongle_eth.sh')
-
-    # Make identity file less open to make ssh happy
-    os.chmod(testing_rsa_path, 0o600)
-    ssh_command_base = ssh_utils.BuildSSHCommand(
-        identity_file=testing_rsa_path)
-
     try:
-      interface = process_utils.SpawnOutput(
-          ssh_command_base + [nuc_host, get_dongle_eth_script]).strip()
+      process = self.nuc_ssh_link.Shell(get_dongle_eth_script,
+                                        stdout=process_utils.PIPE)
+      process.wait()
+      interface = process.stdout_data.strip()
     except BaseException:
       interface = None
-
     if not interface:
       ip_address = 'dongle not found...'
     else:
       ifconfig_command = f'ifconfig {interface}'
-      ifconfig_result = process_utils.SpawnOutput(
-          ssh_command_base + [nuc_host, ifconfig_command]).strip()
+      process = self.nuc_ssh_link.Shell(ifconfig_command,
+                                        stdout=process_utils.PIPE)
+      process.wait()
+      ifconfig_result = process.stdout_data
       ip_matcher = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', ifconfig_result,
                              re.MULTILINE)
       if not ip_matcher:
@@ -459,6 +461,7 @@ class InterruptHandler:
 
     self._servo.MultipleSet([(self._CONTROL.LCM_ROW, 'r1'),
                              (self._CONTROL.LCM_TEXT, ip_address)])
+
 
 def ParseArgs():
   """Parses command line arguments.
