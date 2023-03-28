@@ -6,7 +6,7 @@ import abc
 import enum
 import logging
 import re
-from typing import Optional, Type
+from typing import Optional, Tuple, Type
 
 import cros.factory.log_extractor.record as record_module
 
@@ -41,8 +41,9 @@ class TestRunStatus(enum.Enum):
   RUNNING = 'RUNNING'
   COMPLETED = 'COMPLETED'
 
-
-# TODO(phoebewang): Add TestRunNameHandler to parse test run name.
+# Example output of message:
+#   goofy[1845]: Test generic:SMT.Update (123-456) starting
+#   goofy[1845]: Test generic:SMT.Update (123-456) completed: FAILED (reason)
 _VAR_LOG_MSG_TEST_RUN_REGEX = (
     r'goofy\[\d+\]: Test (?P<testName>\S+) \((?P<testRunId>\S+)\) '
     r'(\S+: )?(?P<status>\S+)')
@@ -155,3 +156,33 @@ def DetermineStatusHandlerType(
 def ParseStatus(record: record_module.TestlogRecord) -> TestRunStatus:
   """Determines the status handler type and parses the record."""
   return DetermineStatusHandlerType(record)().Parse(record)
+
+
+class TestRunNameHandler(AbstractTestRunHandler):
+  """Gets the test name and test run id from the record.
+
+  This information helps user identify which test is running.
+  """
+
+  def ParseGenericRecord(
+      self,
+      record: record_module.IRecord) -> Tuple[Optional[str], Optional[str]]:
+    return None, None
+
+  def ParseSystemLogRecord(
+      self, record: record_module.SystemLogRecord
+  ) -> Tuple[Optional[str], Optional[str]]:
+    match = re.search(_VAR_LOG_MSG_TEST_RUN_REGEX, record['message'])
+    if match:
+      test_name = match.group('testName').strip()
+      test_run_id = match.group('testRunId').strip()
+      return test_name, test_run_id
+    return None, None
+
+  def ParseTestlogRecord(
+      self, record: record_module.TestlogRecord
+  ) -> Tuple[Optional[str], Optional[str]]:
+    test_name = record['testName'] if 'testName' in record else None
+    test_run_id = record['testRunId'] if 'testRunId' in record else None
+
+    return test_name, test_run_id

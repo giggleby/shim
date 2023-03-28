@@ -178,5 +178,39 @@ class DetermineStatusHandlerTypeTest(unittest.TestCase):
     self.assertEqual(status_handler_type, handler.StatusHandler)
 
 
+class TestRunNameHandlerTest(unittest.TestCase):
+
+  def testParseSystemLogRecord(self):
+    has_test_info = record_module.SystemLogRecord.FromJSON(
+        '{"message": "goofy[1845]: Test generic:SMT.Update '
+        '(f9c665ff-55d0) starting"}', check_valid=False)
+    test_name, test_run_id = handler.TestRunNameHandler().Parse(has_test_info)
+    self.assertEqual(test_name, 'generic:SMT.Update')
+    self.assertEqual(test_run_id, 'f9c665ff-55d0')
+
+    no_test_info = record_module.SystemLogRecord.FromJSON(
+        '{"message": "kernel: [   13.644255] usb 4-2: new SuperSpeed USB"}',
+        check_valid=False)
+    test_name, test_run_id = handler.TestRunNameHandler().Parse(no_test_info)
+    self.assertEqual(test_name, None)
+    self.assertEqual(test_run_id, None)
+
+  def testParseTestlogRecord(self):
+    test_run = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "testName": "generic_main:Idle",'
+        '"testRunId": "abc-123", "time": 1656340134.0011251,'
+        '"startTime": 1656340133.123}', check_valid=False)
+    test_name, test_run_id = handler.TestRunNameHandler().Parse(test_run)
+    self.assertEqual(test_name, 'generic_main:Idle')
+    self.assertEqual(test_run_id, 'abc-123')
+
+    message = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.message", "testRunId": "18fb0d2a-6d72", '
+        '"time": 1656340134.0011251}', check_valid=False)
+    test_name, test_run_id = handler.TestRunNameHandler().Parse(message)
+    self.assertEqual(test_name, None)
+    self.assertEqual(test_run_id, '18fb0d2a-6d72')
+
+
 if __name__ == '__main__':
   unittest.main()

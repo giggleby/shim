@@ -5,8 +5,7 @@
 import abc
 import datetime
 import json
-import re
-from typing import Dict, Optional
+from typing import Dict
 
 from cros.factory.testlog import testlog
 from cros.factory.utils.schema import FixedDict
@@ -68,18 +67,6 @@ class FactoryRecord(IRecord):
   def GetTime(self) -> float:
     return self['time']
 
-  def GetTestRunName(self) -> Optional[str]:
-    """Gets the test run name.
-
-    The name should be in `<testName>-<testRunId>` format. This helps us
-    identify which test is running.
-
-    Returns:
-      None if the record itself cannot infer which test is running.
-    """
-    return None
-
-
 class SystemLogRecord(FactoryRecord):
   _SCHEMA = FixedDict(
       'System log record schema', items={
@@ -103,23 +90,6 @@ class SystemLogRecord(FactoryRecord):
         log_level=self['logLevel'], file_path=self['filePath'],
         line_num=self['lineNumber'], time=self._GetFormattedUTCTime(),
         msg=self['message'])
-
-
-class VarLogMessageRecord(SystemLogRecord):
-  # Example output of message:
-  #   goofy[1845]: Test generic:SMT.Update (123-456) starting
-  #   goofy[1845]: Test generic:SMT.Update (123-456) completed: FAILED (reason)
-  _GOOFY_TEST_RUN_REGEX = (
-      r'goofy\[\d+\]: Test (?P<testName>\S+) \((?P<testRunId>\S+)\) '
-      r'(\S+: )?(?P<status>\S+)')
-
-  def GetTestRunName(self) -> Optional[str]:
-    match = re.search(self._GOOFY_TEST_RUN_REGEX, self['message'])
-    if match:
-      testName = match.group('testName').strip()
-      testRunId = match.group('testRunId').strip()
-      return f'{testName}-{testRunId}'
-    return None
 
 class TestlogRecord(FactoryRecord):
 
@@ -149,8 +119,6 @@ class TestlogRecord(FactoryRecord):
 
     return cls(data)
 
-  def GetTestRunName(self) -> Optional[str]:
-    return f'{self["testName"]}-{self["testRunId"]}'
 
   def _BuildStrFromStationMessage(self) -> str:
     msg_list = []
@@ -167,7 +135,8 @@ class TestlogRecord(FactoryRecord):
     msg_list = []
     # StationTestRun is a subclass of StationStatus.
     if isinstance(self._data, testlog.StationTestRun):
-      msg_list.append(f"{self.GetTestRunName()} {self['status']}")
+      msg_list.append(
+          f"{self['testName']}-{self['testRunId']} {self['status']}")
     if 'filePath' in self:
       msg_list.append(f"{self['filePath']}")
     msg_str = ' '.join(msg_list)

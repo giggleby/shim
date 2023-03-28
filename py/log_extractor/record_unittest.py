@@ -40,16 +40,6 @@ class SystemLogRecordTest(unittest.TestCase):
         '[WARNING] 2022-06-27T14:28:54.001125Z testlog.py:230 factory msg')
 
 
-class VarLogMessageRecordTest(unittest.TestCase):
-
-  def testGetTestRunName(self):
-    testrun_starting = record_module.VarLogMessageRecord.FromJSON(
-        '{"message": "goofy[1845]: Test generic:SMT.Update '
-        '(f9c665ff-55d0) starting"}', check_valid=False)
-    self.assertEqual(testrun_starting.GetTestRunName(),
-                     'generic:SMT.Update-f9c665ff-55d0')
-
-
 class TestlogRecordTest(unittest.TestCase):
 
   def testGetTime(self):
@@ -62,14 +52,6 @@ class TestlogRecordTest(unittest.TestCase):
         '{"type": "station.test_run", "time": 1.23,'
         '"endTime": 1.24, "testType": "mock"}', check_valid=False)
     self.assertEqual(record_has_end_time.GetTime(), 1.24)
-
-  def testGetTestRunName(self):
-    testrun_record = record_module.TestlogRecord.FromJSON(
-        '{"type": "station.test_run", "testName": "generic_main:Idle",'
-        '"testRunId": "abc-123", "time": 1656340134.0011251,'
-        '"status": "UNKNOWN", "startTime": 1656340133.123}', check_valid=False)
-    self.assertEqual(testrun_record.GetTestRunName(),
-                     'generic_main:Idle-abc-123')
 
   def testToStr(self):
     message_record = record_module.TestlogRecord.FromJSON(
