@@ -86,6 +86,8 @@ class FirmwareInfoExtractor(worker.BaseWorker):
       try:
         cl_url = self._ExtractFirmwareInfo(task)
         extractor_result.cl_url.extend(cl_url)
+        extractor_result.status = (
+            factorybundle_pb2.FirmwareInfoExtractorResult.Status.NO_ERROR)
       except ExtractFirmwareInfoError as e:
         extractor_result.error_message = str(e)
         extractor_result.status = (

@@ -90,6 +90,8 @@ class FirmwareInfoExtractorTest(unittest.TestCase):
 
     expected_result = factorybundle_pb2.FirmwareInfoExtractorResult()
     expected_result.original_request.MergeFrom(task.ToOriginalRequest())
+    expected_result.status = (
+        factorybundle_pb2.FirmwareInfoExtractorResult.Status.NO_ERROR)
     expected_result.cl_url.append('fake_url')
     fn = self._mock_cloudtasks_connector.ResponseFirmwareInfoExtractorResult
     fn.assert_called_once_with(expected_result)

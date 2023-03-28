@@ -102,15 +102,32 @@ class FactoryBundleService(remote.Service):
   @remote.method(proto.FirmwareInfoExtractorResult,
                  proto.ExtractFirmwareInfoRpcResponse)
   def ExtractFirmwareInfoCallback(self, extractor_result):
-    # Only send failed email because HWID server will send email when success.
-    if extractor_result.status == ExtractorResultStatus.FAILED:
-      mail_list = [extractor_result.original_request.email]
+    mail_list = [extractor_result.original_request.email]
+    if extractor_result.status == ExtractorResultStatus.NO_ERROR:
+      subject = 'HWID DB Change Request Success'
+      if extractor_result.cl_url:
+        items = [
+            'Firmware info extracted from "{}" is submitted as CL:\n'.format(
+                extractor_result.original_request.image_gs_path)
+        ]
+        for url in extractor_result.cl_url:
+          items.append('<a href="{0}">{0}</a>\n'.format(url))
+        plain_content = ''.join(items)
+      else:
+        plain_content = ('No firmware info extracted from "{}" or the info '
+                         'already exists in HWID DB. No CL is created.').format(
+                             extractor_result.original_request.image_gs_path)
+      html_content = plain_content.replace('\n', '<br>').replace(' ', '&nbsp;')
+    else:
+      mail_list.append(config.FAILURE_EMAIL)
       subject = 'Extract Firmware Info Failed - {:%Y-%m-%d %H:%M:%S}'.format(
           datetime.datetime.now())
       plain_content, html_content = _GenerateFailedContents(
           extractor_result.error_message)
-      mail.send_mail(sender=config.NOREPLY_EMAIL, to=mail_list, subject=subject,
-                     body=plain_content, html=html_content)
+
+    mail.send_mail(sender=config.NOREPLY_EMAIL, to=mail_list, subject=subject,
+                   body=plain_content, html=html_content)
+
     return proto.ExtractFirmwareInfoRpcResponse()
 
 
