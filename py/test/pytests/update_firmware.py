@@ -68,6 +68,7 @@ import os
 import tempfile
 
 from cros.factory.device import device_utils
+from cros.factory.gooftool import cros_config
 from cros.factory.test.env import paths
 from cros.factory.test import event
 from cros.factory.test import test_case
@@ -159,6 +160,11 @@ class UpdateFirmwareTest(test_case.TestCase):
       command += ['--mode=recovery', '--wp=1']
     else:
       command += ['--mode=factory']
+
+    model_name = cros_config.CrosConfig(dut=self._dut).GetModelName()
+    if 'yaviks' in model_name:
+      logging.info('Pass --unlock_me to firmware updater to unlock ME region.')
+      command += ['--unlock_me']
 
     returncode = self.ui.PipeProcessOutputToUI(command)
 
