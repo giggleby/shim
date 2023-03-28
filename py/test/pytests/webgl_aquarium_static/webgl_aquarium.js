@@ -26,7 +26,14 @@ var getFpsValue = () => {
 
 const sendFpsToPytest = () => {
   // Triggers 'AddFPSToWindow' event in pytest with latest FPS value.
-  window.test.sendTestEvent('AddFPSToWindow', {'webgl_fps': getFpsValue()});
+  const g_crosFpsCounter = webglIFrame.contentWindow.g_crosFpsCounter
+  window.test.sendTestEvent('AddFPSToWindow', {
+    'webgl_fps': getFpsValue(),
+    'avg_fps': g_crosFpsCounter.getAvgFps(),
+    'avg_interframe_time': g_crosFpsCounter.getAvgInterFrameTime(),
+    'avg_render_time': g_crosFpsCounter.getAvgRenderTime(),
+    'std_interframe_time': g_crosFpsCounter.getStdInterFrameTime(),
+  });
 }
 
 const setSettings = (setting_index) => {
@@ -34,6 +41,7 @@ const setSettings = (setting_index) => {
     const element = webglIFrame.contentDocument.getElementById(
         `setSetting${setting_index}`);
     webglIFrame.contentWindow.setSetting(element, `${setting_index}`);
+    webglIFrame.contentWindow.g_crosFpsCounter.reset();
   });
 };
 
