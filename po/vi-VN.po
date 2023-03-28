@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-03-27 21:02+CST\n"
+"PO-Revision-Date: 2023-03-28 09:15+UTC\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -3502,6 +3502,10 @@ msgstr "Với bảng điều khiển cảm ứng"
 #: ../py/test/test_lists/disable_factory_server.test_list.json
 msgid "Set DeviceInfo"
 msgstr "Cài đặt thông tin máy"
+
+#: ../py/test/test_lists/empty.test_list.json
+msgid "Empty Test List"
+msgstr "Danh sách kiểm tra quá tải"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Activate Registration Code"

@@ -1,0 +1,9 @@
+{
+  "inherit": [
+    "generic_main.test_list"
+  ],
+  "label": "Empty Test List",
+  "options": {},
+  "definitions": {},
+  "tests": []
+}
