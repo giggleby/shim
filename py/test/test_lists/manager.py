@@ -24,7 +24,6 @@ from cros.factory.utils import type_utils
 
 # Default test list.
 DEFAULT_TEST_LIST_ID = 'main'
-TEST_LIST_CONFIG_DIR = test_list_common.TEST_LISTS_PATH
 
 
 class TestListConfig:
@@ -305,40 +304,15 @@ class InlineTestItemFixer:
   """Fixes inline defined test items by moving them to definition section"""
 
   def __init__(self, test_list_id: str) -> None:
-    self.test_list_config = self._LoadTestListConfig(test_list_id)
+    self.test_list_config = test_list_common.LoadTestList(test_list_id)
     self.test_items = self.test_list_config['definitions']
-    self.item_cache = {}
 
   def Fix(self):
     fixed_test_items = self.FixInlineTestItems(self.test_items)
     self.test_list_config['definitions'] = fixed_test_items
 
-  def _LoadTestListConfig(self,
-                          test_list_id: str) -> config_utils.ResolvedConfig:
-    """Returns the loaded `test_list_id`
-
-    Loads the `test_list_id` from disk and returns the dictionary format of it.
-    The dictionary returned has the file level "inheritance" resolved.
-
-    Returns:
-      ResolvedConfig: The dictionary of test list
-
-    Raises:
-      Exception if the test list cannot be loaded.
-    """
-    try:
-      loaded_config = config_utils.LoadConfig(
-          config_name=test_list_id,
-          schema_name=test_list_common.TEST_LIST_SCHEMA_NAME,
-          validate_schema=True, default_config_dirs=TEST_LIST_CONFIG_DIR,
-          allow_inherit=True)
-    except Exception:
-      logging.exception('Test List %s cannot be loaded', test_list_id)
-      raise
-
-    return loaded_config
-
-  def FixInlineTestItems(self, test_items: dict) -> dict:
+  @classmethod
+  def FixInlineTestItems(cls, test_items: dict) -> dict:
     """Fixes inline test items
 
     This function returns an updated version of test definition that moves the
@@ -350,7 +324,7 @@ class InlineTestItemFixer:
     updated_test_items = {}
 
     for test_item_name, test_item in test_items.items():
-      inline_items, updated_test_item = self._FixOneTestItem(
+      inline_items, updated_test_item = cls._FixOneTestItem(
           test_item, test_item_name)
 
       updated_test_items.update(inline_items)
@@ -358,7 +332,8 @@ class InlineTestItemFixer:
 
     return updated_test_items
 
-  def _FixOneTestItem(self, test_item: dict,
+  @classmethod
+  def _FixOneTestItem(cls, test_item: dict,
                       test_item_name: str) -> Tuple[dict, dict]:
     """Fixes inline definition in `test_item`'s `subtest` section
 
@@ -384,7 +359,7 @@ class InlineTestItemFixer:
 
       subtest_item_name = f'{test_item_name}Step{i}'
       updated_subtests.append(subtest_item_name)
-      new_definition, updated_subtest_item = self._FixOneTestItem(
+      new_definition, updated_subtest_item = cls._FixOneTestItem(
           subtest_item, subtest_item_name)
 
       inline_test_definition[subtest_item_name] = updated_subtest_item
@@ -411,8 +386,7 @@ def BuildTestListForUnittest(test_list_config, manager=None):
           'options': {
               'plugin_config_name': 'goofy_plugin_goofy_unittest'
           }
-      },
-      base_config)
+      }, base_config)
   config = config_utils.OverrideConfig(base_config, test_list_config)
   config = config_utils.ResolvedConfig(config)
   config = TestListConfig(config, test_list_id='test')

@@ -524,6 +524,12 @@
     "override_args": {
       "__comment": "To override argument of a test in 'tests', maps the test path to a dictionary",
       "type": "object"
+    },
+    "inherit": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "patternProperties": {
