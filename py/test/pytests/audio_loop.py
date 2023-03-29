@@ -175,6 +175,7 @@ import re
 import time
 from typing import Optional
 
+from cros.factory.cli.image_tool import LSBFile
 from cros.factory.device.audio import base
 from cros.factory.device import device_utils
 from cros.factory.test.env import paths
@@ -1214,6 +1215,21 @@ class AudioLoopTest(test_case.TestCase):
       output_device: The playback device.
     """
 
+    def _IsInMergeThresholdSize480Board():
+      """Checks if the device in board list that should modify merge threshold
+      to be able to pass conformance tests. Please refer b/274866472 for the
+      details. Currently only boards using Intel SOF should apply to this list.
+
+      Returns:
+        `True` if given device in the board list.
+      """
+
+      _merge_threshold_size_480_boards = ('brya', 'rex', 'volteer', 'hades')
+
+      lsb_data = LSBFile(os.path.join('/', 'etc', 'lsb-release'))
+      board_name = lsb_data.GetChromeOSBoard().lower()
+      return board_name in _merge_threshold_size_480_boards
+
     commands = [
         audio_utils.CONFORMANCETEST_PATH, '--test-suites', 'test_rates',
         '--rate-criteria-diff-pct', f'{self.args.conformance_rate_criteria:f}',
@@ -1224,6 +1240,8 @@ class AudioLoopTest(test_case.TestCase):
       commands.extend(['-C', input_device])
     if output_device:
       commands.extend(['-P', output_device])
+    if _IsInMergeThresholdSize480Board():
+      commands.extend(['--merge-thld-size', '480'])
     self.ui.CallJSFunction('checkConformance', input_device, output_device)
     process = self._dut.Popen(commands, stdout=process_utils.PIPE,
                               stderr=process_utils.PIPE, log=True)
