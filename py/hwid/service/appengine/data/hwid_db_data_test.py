@@ -7,6 +7,7 @@
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 
 from dulwich import objects as dulwich_objects
 
@@ -124,10 +125,14 @@ class HWIDDBDataManagerTest(unittest.TestCase):
 
     repo_metadata = hwid_repo.HWIDDBMetadata(
         name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
+    repo = mock.create_autospec(hwid_repo.GerritCLHWIDRepo, instance=True)
+    repo.commit_id = 'NEW-COMMIT-ID'
+    repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
+        external_db='updated data',
+        internal_db='updated data(internal)',
+    )
 
-    self.hwid_db_data_manager.UpdateProjectContent(
-        repo_metadata, 'PROJECTA', 'updated data', 'updated data(internal)',
-        'NEW-COMMIT-ID')
+    self.hwid_db_data_manager.UpdateProjectContent(repo, repo_metadata)
 
     updated_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
         project='PROJECTA')
@@ -143,9 +148,13 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     repo_metadata = hwid_repo.HWIDDBMetadata(
         name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
 
-    self.hwid_db_data_manager.UpdateProjectContent(
-        repo_metadata, 'PROJECTA', 'updated data', 'updated data(internal)',
-        'NEW-COMMIT-ID')
+    repo = mock.create_autospec(hwid_repo.GerritCLHWIDRepo, instance=True)
+    repo.commit_id = 'NEW-COMMIT-ID'
+    repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
+        external_db='updated data',
+        internal_db='updated data(internal)',
+    )
+    self.hwid_db_data_manager.UpdateProjectContent(repo, repo_metadata)
 
     created_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
         project='PROJECTA')

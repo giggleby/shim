@@ -5,7 +5,7 @@
 
 from concurrent import futures
 import logging
-from typing import List, Optional, Sequence
+from typing import Mapping, Optional, Sequence
 
 from google.cloud import ndb
 
@@ -57,8 +57,8 @@ class HWIDDBDataManager:
     self._fs_adapter = fs_adapter
 
   def ListHWIDDBMetadata(
-      self, versions: Optional[List[str]] = None,
-      projects: Optional[List[str]] = None) -> List[HWIDDBMetadata]:
+      self, versions: Optional[Sequence[str]] = None,
+      projects: Optional[Sequence[str]] = None) -> Sequence[HWIDDBMetadata]:
     """Get a list of supported projects.
 
     Args:
@@ -130,35 +130,37 @@ class HWIDDBDataManager:
           f'HWID file missing for the requested project: {e!r}') from None
     return raw_hwid_yaml
 
-  def UpdateProjectContent(self, repo_metadata: hwid_repo.HWIDDBMetadata,
-                           project: str, content: str, content_internal: str,
-                           commit_id: str):
+  def _CreateHWIDDBMetadata(self, repo_metadata: hwid_repo.HWIDDBMetadata,
+                            commit_id: str) -> HWIDDBMetadata:
+    path = repo_metadata.name  # Use the project name as the file path.
+    return HWIDDBMetadata(board=repo_metadata.board_name, version=str(
+        repo_metadata.version), path=path, project=repo_metadata.name,
+                          commit=commit_id)
+
+  def UpdateProjectContent(self,
+                           gerrit_cl_hwid_repo: hwid_repo.GerritCLHWIDRepo,
+                           repo_metadata: hwid_repo.HWIDDBMetadata):
     """Updates HWID DB content
 
     Args:
+      gerrit_cl_hwid_repo: The HWID repo view of a specific Gerrit CL.
       repo_metadata: HWID DB metadata.
-      project: Project name.
-      content: New HWID DB content.
-      content_internal: New HWID DB content in internal format.
-      commit_id: The commit id of the HWID DB.
     """
-    self._fs_adapter.WriteFile(self._LivePath(project), content)
-    self._fs_adapter.WriteFile(
-        self._LivePath(project, internal=True), content_internal)
     try:
-      metadata = self.GetHWIDDBMetadataOfProject(project)
-      metadata.commit = commit_id
+      metadata = self.GetHWIDDBMetadataOfProject(repo_metadata.name)
+      metadata.commit = gerrit_cl_hwid_repo.commit_id
     except HWIDDBNotFoundError:
-      path = project  # Use the project name as the file path.
-      metadata = HWIDDBMetadata(board=repo_metadata.board_name, path=path,
-                                version=str(repo_metadata.version),
-                                project=project, commit=commit_id)
+      metadata = self._CreateHWIDDBMetadata(repo_metadata,
+                                            gerrit_cl_hwid_repo.commit_id)
     with self._ndb_connector.CreateClientContextWithGlobalCache():
       metadata.put()
+    file_changes = self._LoadProjectFiles(gerrit_cl_hwid_repo, metadata)
+    for file_path, file_contents in file_changes.items():
+      self._fs_adapter.WriteFile(file_path, file_contents)
 
   def UpdateProjectsByRepo(
       self, live_hwid_repo: hwid_repo.HWIDRepo,
-      hwid_db_metadata_list: List[hwid_repo.HWIDDBMetadata],
+      hwid_db_metadata_list: Sequence[hwid_repo.HWIDDBMetadata],
       delete_missing=True):
     """Updates project contents with a live repo.
 
@@ -204,13 +206,9 @@ class HWIDDBDataManager:
           metadata_to_update.append(hwid_metadata)
 
     for project in files_to_create:
-      path = project  # Use the project name as the file path.
       new_data = hwid_db_metadata_of_name[project]
-      board = new_data.board_name
-      version = str(new_data.version)
       with self._ndb_connector.CreateClientContextWithGlobalCache():
-        metadata = HWIDDBMetadata(board=board, version=version, path=path,
-                                  project=project, commit=hwid_db_commit_id)
+        metadata = self._CreateHWIDDBMetadata(new_data, hwid_db_commit_id)
         metadata_to_update.append(metadata)
 
     self._ActivateProjectFiles(live_hwid_repo, metadata_to_update)
@@ -259,24 +257,32 @@ class HWIDDBDataManager:
   def _LivePath(self, file_id: str, internal: bool = False):
     path = f'live/{file_id}'
     if internal:
-      return hwid_repo.HWIDRepo.InternalDBPath(path)
+      return f'{path}.internal'
     return path
 
-  def _ActivateProjectFiles(self, live_hwid_repo: hwid_repo.HWIDRepo,
-                            hwid_metadata_list: Sequence[HWIDDBMetadata]):
+  def _LoadProjectFiles(self, hwid_repo_view: hwid_repo.HWIDRepoView,
+                        hwid_metadata: HWIDDBMetadata) -> Mapping[str, str]:
+    hwid_db_name = hwid_metadata.project
+    live_file_id = hwid_metadata.path
+    if hwid_metadata.version == '2':
+      project_data = hwid_repo_view.LoadV2HWIDDBByName(hwid_db_name)
+      return {
+          self._LivePath(live_file_id): project_data
+      }
+    if hwid_metadata.version == '3':
+      project_data = hwid_repo_view.LoadV3HWIDDBByName(hwid_db_name)
+      return {
+          self._LivePath(live_file_id): project_data.external_db,
+          self._LivePath(live_file_id, internal=True): project_data.internal_db,
+      }
+    raise AssertionError('Unexpected call path.')
 
+  def _ActivateProjectFiles(self, hwid_repo_view: hwid_repo.HWIDRepoView,
+                            hwid_metadata_list: Sequence[HWIDDBMetadata]):
     with self._ndb_connector.CreateClientContextWithGlobalCache(), \
         futures.ThreadPoolExecutor() as executor:
       for hwid_metadata in hwid_metadata_list:
-        hwid_db_name = hwid_metadata.project
-        live_file_id = hwid_metadata.path
-        project_data = live_hwid_repo.LoadHWIDDBByName(hwid_db_name)
-        executor.submit(self._fs_adapter.WriteFile,
-                        self._LivePath(live_file_id), project_data)
-        if hwid_metadata.has_internal_format():
-          project_data_internal = live_hwid_repo.LoadHWIDDBByName(
-              hwid_db_name, internal=True)
-          executor.submit(self._fs_adapter.WriteFile,
-                          self._LivePath(live_file_id, internal=True),
-                          project_data_internal)
+        file_changes = self._LoadProjectFiles(hwid_repo_view, hwid_metadata)
+        for file_path, file_contents in file_changes.items():
+          executor.submit(self._fs_adapter.WriteFile, file_path, file_contents)
       ndb.model.put_multi(hwid_metadata_list)

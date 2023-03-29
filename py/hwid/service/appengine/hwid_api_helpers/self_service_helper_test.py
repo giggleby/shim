@@ -2053,25 +2053,35 @@ class SelfServiceHelperTest(unittest.TestCase):
                                 firmware_records=firmware_records)
 
   def _ConfigLiveHWIDRepo(self, project, version, db_contents,
+                          db_contents_internal=None,
                           commit_id='TEST-COMMIT-ID'):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
                                                 f'v{version}/{project}')
     live_hwid_repo.GetHWIDDBMetadataByName.return_value = hwid_db_metadata
     live_hwid_repo.ListHWIDDBMetadata.return_value = [hwid_db_metadata]
-    live_hwid_repo.LoadHWIDDBByName.return_value = db_contents
-    live_hwid_repo.LoadHWIDDB.return_value = db_contents
+    live_hwid_repo.LoadV2HWIDDBByName.return_value = db_contents
+    live_hwid_repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
+        internal_db=db_contents_internal or db_contents,
+        external_db=db_contents,
+    )
     live_hwid_repo.hwid_db_commit_id = commit_id
 
   def _ConfigHWIDRepoManager(self, project, version, db_contents,
                              db_contents_internal, commit_id='TEST-COMMIT-ID'):
     hwid_db_metadata = hwid_repo.HWIDDBMetadata(project, project, version,
                                                 f'v{version}/{project}')
-    self._mock_hwid_repo_manager.GetRepoFileContents.return_value = (
-        hwid_repo.RepoFileContents(commit_id,
-                                   [db_contents, db_contents_internal]))
-    self._mock_hwid_repo_manager.GetHWIDDBMetadata.return_value = (
+    gerrit_tot_hwid_repo = (
+        self._mock_hwid_repo_manager.GetGerritToTHWIDRepo.return_value)
+    gerrit_tot_hwid_repo.GetHWIDDBMetadataByName.return_value = (
         hwid_db_metadata)
+    gerrit_tot_hwid_repo.LoadV2HWIDDBByName.return_value = db_contents
+    gerrit_tot_hwid_repo.commit_id = commit_id
+    gerrit_tot_hwid_repo.LoadV3HWIDDBByName.return_value = (
+        hwid_repo.V3DBContents(
+            internal_db=db_contents_internal,
+            external_db=db_contents,
+        ))
 
 
 if __name__ == '__main__':

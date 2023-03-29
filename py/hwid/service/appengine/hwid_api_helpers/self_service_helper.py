@@ -346,13 +346,20 @@ class SelfServiceHelper:
 
   def _UpdateHWIDDBDataIfNeed(self, live_hwid_repo: hwid_repo.HWIDRepo,
                               project: str):
-    live_raw_db = live_hwid_repo.LoadHWIDDBByName(project)
+    # TODO(yhong): Move the version specific logic into HWID preproc data
+    #     instance.
+    metadata = live_hwid_repo.GetHWIDDBMetadataByName(project)
+    if metadata.version == 2:
+      live_raw_db = live_hwid_repo.LoadV2HWIDDBByName(project)
+    elif metadata.version == 3:
+      live_raw_db = live_hwid_repo.LoadV3HWIDDBByName(project).external_db
+    else:
+      raise AssertionError('Unexpected call path.')
     curr_preproc_data = self._hwid_action_manager.GetHWIDPreprocDataFromCache(
         project)
     if (curr_preproc_data and
         getattr(curr_preproc_data, 'raw_database', None) == live_raw_db):
       return
-    metadata = live_hwid_repo.GetHWIDDBMetadataByName(project)
     self._hwid_db_data_manager.UpdateProjectsByRepo(live_hwid_repo, [metadata],
                                                     delete_missing=False)
     self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
@@ -762,14 +769,10 @@ class SelfServiceHelper:
   def GetHWIDBundleResourceInfo(self, request):
     project = _NormalizeProjectString(request.project)
     try:
-      metadata = self._hwid_repo_manager.GetHWIDDBMetadataByProject(project)
-      repo_file_contents = self._hwid_repo_manager.GetRepoFileContents(
-          [metadata.path,
-           hwid_repo.HWIDRepo.InternalDBPath(metadata.path)])
-      commit_id = repo_file_contents.commit_id
-      content, content_internal = repo_file_contents.file_contents
-      self._hwid_db_data_manager.UpdateProjectContent(
-          metadata, project, content, content_internal, commit_id)
+      gerrit_hwid_repo = self._hwid_repo_manager.GetGerritToTHWIDRepo()
+      metadata = gerrit_hwid_repo.GetHWIDDBMetadataByName(project)
+      self._hwid_db_data_manager.UpdateProjectContent(gerrit_hwid_repo,
+                                                      metadata)
       self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
           limit_models=[project])
 

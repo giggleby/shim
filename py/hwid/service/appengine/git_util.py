@@ -155,10 +155,16 @@ def _CreatePoolManager(cookie: str = '', content_type: str = '',
 
 
 def _InvokeGerritAPI(
-    method: str, url: str, params: Optional[Sequence[Tuple[str, str]]] = None,
-    auth_cookie: str = '', content_type: str = '', body: bytes = b'',
+    method: str,
+    url: str,
+    params: Optional[Sequence[Tuple[str, str]]] = None,
+    auth_cookie: str = '',
+    content_type: str = '',
+    body: bytes = b'',
     json_body: Optional[Any] = None,
-    return_resp: bool = False) -> Union[bytes, http.client.HTTPResponse]:
+    return_resp: bool = False,
+    accept_not_found: bool = False,
+) -> Union[type(None), bytes, http.client.HTTPResponse]:
   """Invokes a Gerrit API endpoint and returns the response in bytes.
 
   Args:
@@ -171,6 +177,9 @@ def _InvokeGerritAPI(
     json_body: The JSON-seralizable object to be attached in the HTTP body. Will
       override `content_type` and `body` if provided.
     return_resp: Return the whole response body.
+    accept_not_found: If `return_resp` is `False` and `accept_not_found` is
+      `True`, this method returns `None` when the response code is 404 instead
+      of raising the exception.
 
   Returns:
     The response in bytes.
@@ -195,6 +204,9 @@ def _InvokeGerritAPI(
 
   if return_resp:
     return resp
+
+  if resp.status == http.HTTPStatus.NOT_FOUND and accept_not_found:
+    return None
 
   if resp.status != http.HTTPStatus.OK:
     raise GitUtilException(
@@ -599,8 +611,8 @@ def GetCommitId(git_url_prefix, project, branch=None, auth_cookie=''):
 def GetFileContent(git_url_prefix: str, project: str, path: str,
                    commit_id: Optional[str] = None,
                    change_id: Optional[str] = None,
-                   branch: Optional[str] = None,
-                   auth_cookie: str = '') -> bytes:
+                   branch: Optional[str] = None, auth_cookie: str = '',
+                   optional: bool = False) -> Optional[bytes]:
   """Gets file content on Gerrit.
 
   Uses the gerrit API to get the file content.  If commit_id is specified
@@ -613,6 +625,11 @@ def GetFileContent(git_url_prefix: str, project: str, path: str,
     change_id: The identity of CL which is the version of the file.
     branch: Branch name, use the branch HEAD tracks if set to None.
     auth_cookie: Auth cookie.
+    optional: Whether the file is optional.
+
+  Returns:
+    If the file is not found and `optional` is `True`, it returns `None`.
+    Otherwise it returns the file contents in bytes.
   """
   project, path = map(lambda s: urllib.parse.quote(s, safe=''), (project, path))
   if commit_id:
@@ -636,7 +653,10 @@ def GetFileContent(git_url_prefix: str, project: str, path: str,
         GetCurrentBranch(git_url_prefix, project, auth_cookie), safe='')
     git_url = (f'{git_url_prefix}/projects/{project}/branches/{branch}/files/'
                f'{path}/content')
-  raw_data = _InvokeGerritAPI('GET', git_url, auth_cookie=auth_cookie)
+  raw_data = _InvokeGerritAPI('GET', git_url, auth_cookie=auth_cookie,
+                              accept_not_found=optional)
+  if raw_data is None:
+    return raw_data
   try:
     return base64.b64decode(raw_data)
   except Exception as ex:

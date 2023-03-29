@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 """Provide functionalities to access the HWID DB repository."""
 
+import abc
 import collections
 import logging
 import re
@@ -22,18 +23,13 @@ class HWIDDBMetadata(NamedTuple):
   path: str
 
 
-class RepoFileContents(NamedTuple):
-  commit_id: str
-  file_contents: Sequence[str]
-
-
 INTERNAL_REPO_REVIEW_URL = 'https://chrome-internal-review.googlesource.com'
 INTERNAL_REPO_URL = 'https://chrome-internal.googlesource.com'
 _CHROMEOS_HWID_PROJECT = 'chromeos/chromeos-hwid'
 _PROJECTS_YAML_PATH = 'projects.yaml'
 
 
-def _ParseMetadata(raw_metadata):
+def _ParseMetadata(raw_metadata) -> Mapping[str, HWIDDBMetadata]:
   metadata_yaml = yaml.safe_load(raw_metadata)
   hwid_db_metadata_of_name = collections.OrderedDict()
   for name, hwid_db_info in metadata_yaml.items():
@@ -66,9 +62,118 @@ class HWIDRepoError(Exception):
   """Root exception class for reporting unexpected error in HWID repo."""
 
 
-class HWIDRepo:
+class V3DBContents(NamedTuple):
+  """Holds the HWID DB file contents of a v3 project."""
+  internal_db: str
+  external_db: str
 
-  INTERNAL_DB_NAME_SUFFIX = '.internal'
+
+class HWIDRepoView(abc.ABC):
+  """Represents a read-only view of a HWID repository snapshot."""
+
+  _INTERNAL_DB_NAME_SUFFIX = '.internal'
+
+  @abc.abstractmethod
+  def _LoadMandatoryTextFile(self, path: str) -> str:
+    """Load a mandatory file from the repository file system.
+
+    Args:
+      path: The path of the file to load.
+
+    Returns:
+      The loaded file contents.
+
+    Raises:
+      HWIDRepoError: Failed to load the file.
+    """
+    raise NotImplementedError
+
+  @classmethod
+  def _GetV3InternalDBPath(cls, path: str) -> str:
+    return f'{path}{cls._INTERNAL_DB_NAME_SUFFIX}'
+
+  @type_utils.LazyProperty
+  def hwid_db_metadata_of_name(self) -> Mapping[str, HWIDDBMetadata]:
+    raw_metadata = self._LoadMandatoryTextFile(_PROJECTS_YAML_PATH)
+    try:
+      return _ParseMetadata(raw_metadata)
+    except Exception as ex:
+      raise HWIDRepoError(f'Invalid {_PROJECTS_YAML_PATH}: {ex}') from None
+
+  def ListHWIDDBMetadata(self) -> Sequence[HWIDDBMetadata]:
+    """Returns a list of metadata of HWID DBs recorded in the HWID repo.
+
+    Returns:
+      A list of all HWID DB metadatas.
+
+    Raises:
+      HWIDRepoError: If unexpected error occurred while fetching the data.
+    """
+    return list(self.hwid_db_metadata_of_name.values())
+
+  def GetHWIDDBMetadataByName(self, name: str) -> HWIDDBMetadata:
+    """Returns the DB metadata of the specific project name in the HWID repo.
+
+    Args:
+      name: The project name to query.
+
+    Returns:
+      The HWID DB metadata.
+
+    Raises:
+      HWIDRepoError: If unexpected error occurred while fetching the data.
+      ValueError: If the given project name is invalid.
+    """
+    try:
+      return self.hwid_db_metadata_of_name[name]
+    except KeyError:
+      raise ValueError(f'Invalid HWID DB name: {name}.') from None
+
+  def LoadV2HWIDDBByName(self, name: str) -> str:
+    """Returns the HWID DB contents by the v2 project name.
+
+    Args:
+      name: The project name to query.
+
+    Returns:
+      The HWID V2 DB contents.
+
+    Raises:
+      ValueError: If the given project name is invalid or the corresponding
+        project is not a HWID v2 one.
+      HWIDRepoError: Got unexpected failures while loading.
+    """
+    metadata = self.GetHWIDDBMetadataByName(name)
+    if metadata.version != 2:
+      raise ValueError(f'{name} is not a HWID V2 project.')
+    return self._LoadMandatoryTextFile(metadata.path)
+
+  def LoadV3HWIDDBByName(self, name: str) -> V3DBContents:
+    """Returns the HWID DB contents by the v3 project name.
+
+    Args:
+      name: The project name to query.
+
+    Returns:
+      The HWID V3 DB contents.
+
+    Raises:
+      ValueError: If the given project name is invalid or the corresponding
+        project is not a HWID v3 one.
+      HWIDRepoError: Got unexpected failures while loading.
+    """
+    metadata = self.GetHWIDDBMetadataByName(name)
+    if metadata.version != 3:
+      raise ValueError(f'{name} is not a HWID V3 project.')
+    # TODO(yhong): Set `feature_matcher_source` to `None` only if the file
+    #     does not exist.
+    return V3DBContents(
+        external_db=self._LoadMandatoryTextFile(metadata.path),
+        internal_db=self._LoadMandatoryTextFile(
+            self._GetV3InternalDBPath(metadata.path)))
+
+
+class HWIDRepo(HWIDRepoView):
 
   def __init__(self, repo, repo_url, repo_branch):
     """Constructor.
@@ -84,47 +189,17 @@ class HWIDRepo:
 
     self._git_fs = git_util.GitFilesystemAdapter(self._repo)
 
-  def ListHWIDDBMetadata(self):
-    """Returns a list of metadata of HWID DBs recorded in the HWID repo."""
-    return list(self._hwid_db_metadata_of_name.values())
-
-  def GetHWIDDBMetadataByName(self, name):
-    """Returns the metadata of the specific HWID DB in the HWID repo."""
-    try:
-      return self._hwid_db_metadata_of_name[name]
-    except KeyError:
-      raise ValueError(f'invalid HWID DB name: {name}') from None
-
-  @property
-  def hwid_db_commit_id(self) -> str:
-    return self._repo.head().decode()
-
-  def LoadHWIDDBByName(self, name: str, internal: bool = False):
-    """Reads out the specific HWID DB content.
-
-    Args:
-      name: The project name of the HWID DB.  One can get the available names
-          from the HWIDDBMetadata instances.
-
-    Returns:
-      A string of HWID DB content.
-
-    Raises:
-      ValueError if the given HWID DB name is invalid.
-      HWIDRepoError for other unexpected errors.
-    """
-    try:
-      path = self._hwid_db_metadata_of_name[name].path
-      if internal:
-        path = self.InternalDBPath(path)
-    except KeyError:
-      raise ValueError(f'invalid HWID DB name: {name}') from None
+  def _LoadMandatoryTextFile(self, path: str) -> str:
+    """See base class."""
     try:
       return self._git_fs.ReadFile(path).decode('utf-8')
     except (KeyError, ValueError,
             filesystem_adapter.FileSystemAdapterException) as ex:
-      raise HWIDRepoError(
-          f'failed to load the HWID DB (name={name}): {ex}') from None
+      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
+
+  @property
+  def hwid_db_commit_id(self) -> str:
+    return self._repo.head().decode()
 
   def CommitHWIDDB(self, name: str, hwid_db_contents: str, commit_msg: str,
                    reviewers: Sequence[str], cc_list: Sequence[str],
@@ -155,12 +230,12 @@ class HWIDRepo:
     """
     new_files = []
     if update_metadata:
-      self._hwid_db_metadata_of_name[name] = update_metadata
-      new_raw_metadata = _DumpMetadata(self._hwid_db_metadata_of_name)
+      self.hwid_db_metadata_of_name[name] = update_metadata
+      new_raw_metadata = _DumpMetadata(self.hwid_db_metadata_of_name)
       new_files.append((_PROJECTS_YAML_PATH, git_util.NORMAL_FILE_MODE,
                         new_raw_metadata.encode('utf-8')))
     try:
-      path = self._hwid_db_metadata_of_name[name].path
+      path = self.hwid_db_metadata_of_name[name].path
     except KeyError:
       raise ValueError(f'invalid HWID DB name: {name}') from None
     hwid_db_contents = _RemoveChecksum(hwid_db_contents)
@@ -170,7 +245,7 @@ class HWIDRepo:
     if not hwid_db_contents_internal:
       hwid_db_contents_internal = hwid_db_contents
 
-    internal_path = self.InternalDBPath(path)
+    internal_path = self._GetV3InternalDBPath(path)
     hwid_db_contents_internal = _RemoveChecksum(hwid_db_contents_internal)
     new_files.append((internal_path, git_util.NORMAL_FILE_MODE,
                       hwid_db_contents_internal.encode('utf-8')))
@@ -197,22 +272,54 @@ class HWIDRepo:
       raise HWIDRepoError from ex
     return cl_number
 
-  @type_utils.LazyProperty
-  def _hwid_db_metadata_of_name(self):
-    try:
-      raw_metadata = self._git_fs.ReadFile(_PROJECTS_YAML_PATH)
-    except (KeyError, ValueError,
-            filesystem_adapter.FileSystemAdapterException) as ex:
-      raise HWIDRepoError(
-          f'failed to load {_PROJECTS_YAML_PATH}: {ex}') from None
-    try:
-      return _ParseMetadata(raw_metadata)
-    except Exception as ex:
-      raise HWIDRepoError(f'invalid {_PROJECTS_YAML_PATH}: {ex}') from None
 
-  @classmethod
-  def InternalDBPath(cls, path):
-    return f'{path}{cls.INTERNAL_DB_NAME_SUFFIX}'
+class GerritCLHWIDRepo(HWIDRepoView):
+  """Represents a view of HWID repository from a specific Gerrit CL."""
+
+  def __init__(self, repo_branch: str, cl_number: int):
+    self._repo_branch = repo_branch
+    self._cl_number = cl_number
+
+  def _GetGitFileRawContents(
+      self, path: str, optional: bool) -> Optional[bytes]:
+    return git_util.GetFileContent(
+        INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT, path,
+        change_id=self._cl_number, auth_cookie=git_util.GetGerritAuthCookie(),
+        optional=optional)
+
+  def _LoadMandatoryTextFile(self, path: str) -> str:
+    """See base class."""
+    try:
+      return self._GetGitFileRawContents(path, optional=False).decode()
+    except (git_util.GitUtilException, ValueError) as ex:
+      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
+
+
+class GerritToTHWIDRepo(HWIDRepoView):
+  """Represents a view of HWID repository from Gerrit ToT."""
+
+  def __init__(self, repo_branch: str):
+    self._repo_branch = repo_branch
+
+  def _GetGitFileRawContents(
+      self, path: str, optional: bool) -> Optional[bytes]:
+    return git_util.GetFileContent(
+        INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT, path,
+        commit_id=self.commit_id, auth_cookie=git_util.GetGerritAuthCookie(),
+        optional=optional)
+
+  def _LoadMandatoryTextFile(self, path: str) -> str:
+    """See base class."""
+    try:
+      return self._GetGitFileRawContents(path, optional=False).decode()
+    except (git_util.GitUtilException, ValueError) as ex:
+      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
+
+  @type_utils.LazyProperty
+  def commit_id(self) -> str:
+    return git_util.GetCommitId(
+        INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT,
+        branch=self._repo_branch, auth_cookie=git_util.GetGerritAuthCookie())
 
 
 HWIDDBCLInfo = git_util.CLInfo
@@ -233,7 +340,7 @@ class HWIDRepoManager:
     """
     self._repo_branch = repo_branch
 
-  def GetLiveHWIDRepo(self):
+  def GetLiveHWIDRepo(self) -> HWIDRepo:
     """Returns an HWIDRepo instance for accessing the up-to-date HWID repo."""
     if self._repo_branch is None:
       repo_branch = git_util.GetCurrentBranch(INTERNAL_REPO_REVIEW_URL,
@@ -279,37 +386,11 @@ class HWIDRepoManager:
                                 _CHROMEOS_HWID_PROJECT,
                                 auth_cookie=git_util.GetGerritAuthCookie())
 
-  def GetHWIDDBMetadataByProject(self, project: str) -> HWIDDBMetadata:
-    """Gets the metadata from HWID repo tot by project name."""
-    metadata = self.GetHWIDDBMetadata()
-    if project not in metadata:
-      raise KeyError(f'Project: "{project}" does not exist in the repo.')
-    return metadata[project]
+  def GetGerritCLHWIDRepo(self, cl_number: int) -> GerritCLHWIDRepo:
+    return GerritCLHWIDRepo(self._repo_branch, cl_number)
 
-  def GetHWIDDBMetadata(
-      self, cl_number: Optional[int] = None) -> Mapping[str, HWIDDBMetadata]:
-    """Gets the metadata from HWID repo."""
-    repo_file_contents = self.GetRepoFileContents([_PROJECTS_YAML_PATH],
-                                                  cl_number)
-    return _ParseMetadata(repo_file_contents.file_contents[0])
-
-  def GetRepoFileContents(self, paths: Sequence[str],
-                          cl_number: Optional[int] = None) -> RepoFileContents:
-    """Gets the file content as well as the commit id from HWID repo."""
-    commit_id = None
-    if cl_number is None:
-      commit_id = git_util.GetCommitId(
-          INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT,
-          branch=self._repo_branch, auth_cookie=git_util.GetGerritAuthCookie())
-
-    file_contents = [
-        git_util.GetFileContent(
-            INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT, path,
-            commit_id=commit_id, change_id=str(cl_number),
-            auth_cookie=git_util.GetGerritAuthCookie()).decode()
-        for path in paths
-    ]
-    return RepoFileContents(commit_id, file_contents)
+  def GetGerritToTHWIDRepo(self) -> GerritToTHWIDRepo:
+    return GerritToTHWIDRepo(self._repo_branch)
 
   def AbandonCL(self, cl_number: int, reason=None):
     """Abandons the given CL number."""
@@ -337,8 +418,9 @@ class HWIDRepoManager:
 
     project = matches.group(1)
 
-    metadata = self.GetHWIDDBMetadata()
-    cl_metadata = self.GetHWIDDBMetadata(cl_number=cl_info.cl_number)
+    metadata = self.GetGerritToTHWIDRepo().hwid_db_metadata_of_name
+    cl_metadata = self.GetGerritCLHWIDRepo(
+        cl_info.cl_number).hwid_db_metadata_of_name
     metadata[project] = cl_metadata[project]
 
     # Force rebase and patch metadata when merge conflict on project.yaml.

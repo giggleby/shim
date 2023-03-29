@@ -99,34 +99,46 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo.ListHWIDDBMetadata()
 
-  def testLoadHWIDDBByName_Success(self):
+  def testLoadV2HWIDDBByName_Success(self):
+    self._AddFilesToFakeRepo({
+        'projects.yaml': _SERVER_BOARDS_DATA,
+        'KBOARD': b'kboard data',
+    })
+
+    actual_hwid_db = self._hwid_repo.LoadV2HWIDDBByName('KBOARD')
+
+    self.assertEqual('kboard data', actual_hwid_db)
+
+  def testLoadV3HWIDDBByName_Success(self):
     self._AddFilesToFakeRepo({
         'projects.yaml': _SERVER_BOARDS_DATA,
         'SBOARD': b'sboard data',
         'SBOARD.internal': b'sboard data (internal)',
     })
 
-    actual_hwid_db = self._hwid_repo.LoadHWIDDBByName('SBOARD')
-    self.assertEqual('sboard data', actual_hwid_db)
+    actual_contents = self._hwid_repo.LoadV3HWIDDBByName('SBOARD')
 
-    actual_hwid_db_internal = self._hwid_repo.LoadHWIDDBByName(
-        'SBOARD', internal=True)
-    self.assertEqual('sboard data (internal)', actual_hwid_db_internal)
+    self.assertEqual(
+        actual_contents,
+        hwid_repo.V3DBContents(
+            external_db='sboard data',
+            internal_db='sboard data (internal)',
+        ))
 
-  def testLoadHWIDDBByName_InvalidName(self):
+  def testLoadV3HWIDDBByName_InvalidName(self):
     self._AddFilesToFakeRepo({
         'projects.yaml': _SERVER_BOARDS_DATA,
         'SBOARD': b'sboard data',
     })
 
     with self.assertRaises(ValueError):
-      self._hwid_repo.LoadHWIDDBByName('NO_SUCH_BOARD')
+      self._hwid_repo.LoadV3HWIDDBByName('NO_SUCH_BOARD')
 
-  def testLoadHWIDDBByName_ValidNameButDbNotFound(self):
+  def testLoadV3HWIDDBByName_ValidNameButDbNotFound(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
 
     with self.assertRaises(hwid_repo.HWIDRepoError):
-      self._hwid_repo.LoadHWIDDBByName('SBOARD')
+      self._hwid_repo.LoadV3HWIDDBByName('SBOARD')
 
   def testCommitHWIDDB_InvalidHWIDDBName(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
@@ -187,7 +199,8 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     kwargs = self._mocked_create_cl.call_args[1]
     self.assertEqual([
         ('SBOARD', 0o100644, b'hwid_db_contents\nchecksum:\n'),
-        ('SBOARD.internal', 0o100644, b'hwid_db_contents_internal\nchecksum:\n')
+        ('SBOARD.internal', 0o100644,
+         b'hwid_db_contents_internal\nchecksum:\n'),
     ], kwargs['new_files'])
 
   def testHWIDRepoHasCommitProperty(self):
@@ -198,6 +211,85 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     updated_tree = self._fake_repo.add_files(
         [(p, 0o100644, c) for p, c in contents_of_pathname.items()])
     self._fake_repo.do_commit(message=b'add test files', tree=updated_tree.id)
+
+
+class GerritToTHWIDRepoTest(HWIDRepoBaseTest):
+  _RAW_METADATA = textwrap.dedent("""\
+      PROJ1:
+          board: BOARD
+          branch: main
+          version: 3
+          path: v3/PROJ1
+      """).encode()
+  _METADATA = {
+      'PROJ1':
+          hwid_repo.HWIDDBMetadata(name='PROJ1', board_name='BOARD', version=3,
+                                   path='v3/PROJ1')
+  }
+
+  def setUp(self):
+    super().setUp()
+    self._hwid_repo_manager = hwid_repo.HWIDRepoManager('unused_test_branch')
+
+  def testGetCommitId_Success(self):
+    self._mocked_get_commit_id.return_value = 'the_commit_id'
+
+    gerrit_repo = self._hwid_repo_manager.GetGerritToTHWIDRepo()
+
+    self.assertEqual(gerrit_repo.commit_id, 'the_commit_id')
+
+  def testListHWIDDBMetadata_Succeed(self):
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+
+    metadatas = (
+        self._hwid_repo_manager.GetGerritToTHWIDRepo().ListHWIDDBMetadata())
+
+    self.assertCountEqual(metadatas, list(self._METADATA.values()))
+
+  def testGetHWIDDBMetadataByProject_Succeed(self):
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+
+    metadata = self._hwid_repo_manager.GetGerritToTHWIDRepo(
+    ).GetHWIDDBMetadataByName('PROJ1')
+
+    self.assertEqual(metadata, self._METADATA['PROJ1'])
+
+  def testGetHWIDDBMetadataByProject_NotFound(self):
+    self._mocked_get_commit_id.return_value = 'unused_commit_id'
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+
+    with self.assertRaises(ValueError):
+      self._hwid_repo_manager.GetGerritToTHWIDRepo().GetHWIDDBMetadataByName(
+          'PROJ2')
+
+
+class GerritCLHWIDRepoTest(HWIDRepoBaseTest):
+  _RAW_METADATA = textwrap.dedent("""\
+      PROJ1:
+          board: BOARD
+          branch: main
+          version: 3
+          path: v3/PROJ1
+      """).encode()
+  _METADATA = {
+      'PROJ1':
+          hwid_repo.HWIDDBMetadata(name='PROJ1', board_name='BOARD', version=3,
+                                   path='v3/PROJ1')
+  }
+
+  def setUp(self):
+    super().setUp()
+    self._hwid_repo_manager = hwid_repo.HWIDRepoManager('unused_test_branch')
+
+  def testListHWIDDBMetadata_Succeed(self):
+    self._mocked_get_file_content.return_value = self._RAW_METADATA
+
+    metadatas = (
+        self._hwid_repo_manager.GetGerritCLHWIDRepo(123).ListHWIDDBMetadata())
+
+    self.assertCountEqual(metadatas, list(self._METADATA.values()))
 
 
 class HWIDRepoManagerTest(HWIDRepoBaseTest):
@@ -222,24 +314,6 @@ class HWIDRepoManagerTest(HWIDRepoBaseTest):
     self._mocked_get_cl_info.side_effect = git_util.GitUtilException
     with self.assertRaises(hwid_repo.HWIDRepoError):
       self._hwid_repo_manager.GetHWIDDBCLInfo(123)
-
-  def testGetHWIDDBMetadata_Succeed(self):
-    self._mocked_get_commit_id.return_value = 'unused_commit_id'
-    self._mocked_get_file_content.return_value = self._RAW_METADATA
-    metadata = self._hwid_repo_manager.GetHWIDDBMetadata()
-    self.assertEqual(metadata, self._METADATA)
-
-  def testGetHWIDDBMetadataByProject_Succeed(self):
-    self._mocked_get_commit_id.return_value = 'unused_commit_id'
-    self._mocked_get_file_content.return_value = self._RAW_METADATA
-    metadata = self._hwid_repo_manager.GetHWIDDBMetadataByProject('PROJ1')
-    self.assertEqual(metadata, self._METADATA['PROJ1'])
-
-  def testGetHWIDDBMetadataByProject_NotFound(self):
-    self._mocked_get_commit_id.return_value = 'unused_commit_id'
-    self._mocked_get_file_content.return_value = self._RAW_METADATA
-    with self.assertRaises(KeyError):
-      self._hwid_repo_manager.GetHWIDDBMetadataByProject('PROJ2')
 
   def testGetHWIDDBCLInfo_Succeed(self):
     cl_mergeable = False
