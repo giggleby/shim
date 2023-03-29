@@ -545,8 +545,8 @@ commands
       creates a compute engine instance which uses the docker image.
 
   $0 deploy-all [prod|staging|dev|dev2]
-      Does \`deploy-appengine\`, \`deploy-appengine-legacy\` and
-      \`deploy-docker\` commands.
+      Does \`deploy-appengine\`, \`deploy-appengine-v2\`,
+      \`deploy-appengine-legacy\` and \`deploy-docker\` commands.
 
   $0 create-pubsub [prod|staging|dev|dev2]
       Creates Pub/Sub topic and subscription used by the appengine and docker.
