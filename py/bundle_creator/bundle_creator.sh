@@ -51,6 +51,7 @@ RETRY_PUBSUB_SUBSCRIPTION=
 ALLOWED_LOAS_PEER_USERNAMES=
 NOREPLY_EMAIL=
 FAILURE_EMAIL=
+RETRY_FAILURE_EMAIL=
 APPENGINE_ID=
 SERVICE_ACCOUNT=
 HWID_API_ENDPOINT=
@@ -94,6 +95,7 @@ prepare_docker_files() {
   # Fill in env vars in docker/config.py
   env GCLOUD_PROJECT="${GCLOUD_PROJECT}" \
     BUNDLE_BUCKET="${BUNDLE_BUCKET}" \
+    PUBSUB_TOPIC="${PUBSUB_TOPIC}" \
     PUBSUB_SUBSCRIPTION="${PUBSUB_SUBSCRIPTION}" \
     FW_INFO_EXTRACTOR_SUBSCRIPTION="${FW_INFO_EXTRACTOR_SUBSCRIPTION}" \
     HWID_API_ENDPOINT="${HWID_API_ENDPOINT}" \
@@ -101,6 +103,7 @@ prepare_docker_files() {
     DOWNLOAD_LINK_FORMAT="${DOWNLOAD_LINK_FORMAT}" \
     DOWNLOAD_LINK_FORMAT_V2="${DOWNLOAD_LINK_FORMAT_V2}" \
     RETRY_PUBSUB_SUBSCRIPTION="${RETRY_PUBSUB_SUBSCRIPTION}" \
+    RETRY_FAILURE_EMAIL="${RETRY_FAILURE_EMAIL}" \
     envsubst < "${SOURCE_DIR}/docker/config.py" > \
       "${destination_dir}/docker/config.py"
 
@@ -498,12 +501,14 @@ do_test_docker() {
   # Assign fake values for generating the configuration.
   GCLOUD_PROJECT="fake-gcloud-project"
   BUNDLE_BUCKET="fake-bundle-bucket"
+  PUBSUB_TOPIC="fake-topic"
   PUBSUB_SUBSCRIPTION="fake-sub"
   FW_INFO_EXTRACTOR_SUBSCRIPTION="fake-fw-info-extractor-sub"
   HWID_API_ENDPOINT="https://fake_hwid_api_endpoint"
   DOWNLOAD_LINK_FORMAT="https://fake_download_link_format/?path={}"
   DOWNLOAD_LINK_FORMAT_V2="https://fake_download_link_format_v2/?path={}"
   RETRY_PUBSUB_SUBSCRIPTION="fake-retry-sub"
+  RETRY_FAILURE_EMAIL="fake-retry@google.com"
   prepare_docker_files "${LOCAL_DEPLOYMENT_BUNDLE_CREATOR_DIR}" "local"
   prepare_python_venv "${TEST_DOCKER_NAME}" \
     "${SOURCE_DIR}/docker/requirements.txt"
@@ -535,6 +540,33 @@ do_test_appengine_v2() {
   done
 
   run_tests "${TEST_APPENGINE_V2_NAME}"
+}
+
+do_trigger_retry() {
+  load_config_by_deployment_type "$1"
+  local within_days="$2"
+  if [[ -z "${within_days}" ]]; then
+    within_days="10"
+  fi
+
+  if [[ "${within_days}" -le 0 ]]; then
+    die "It's not allowed to retry failure requests within ${within_days} days."
+  fi
+
+  read -r -p \
+    "Start retrying failure requests within ${within_days} days? [y/N] " \
+    answer
+  if [[ "${answer}" =~ ^[yY]$ ]]; then
+    local requester
+    requester="$(gcloud auth list --filter=status:ACTIVE \
+      --format="value(account)")"
+    gcloud --project="${GCLOUD_PROJECT}" pubsub topics \
+      publish "${RETRY_PUBSUB_TOPIC}" --message="${within_days},${requester}" \
+      >/dev/null
+    info "The retry failure request is sent."
+  else
+    info "The retry failure request is cancelled."
+  fi
 }
 
 print_usage() {
@@ -582,6 +614,10 @@ commands
 
   $0 test-appengine-v2
       Run all tests under \`py/bundle_creator/app_engine_v2\`.
+
+  $0 trigger-retry [prod|staging|dev|dev2] [NUMBER]
+     Trigger the retry process to rerun the failed requests in \`NUMBER\` days.
+
 __EOF__
 }
 
@@ -627,6 +663,9 @@ main() {
         ;;
       test-appengine-v2)
         do_test_appengine_v2
+        ;;
+      trigger-retry)
+        do_trigger_retry "$2" "$3"
         ;;
       *)
         die "Unknown sub-command: \"${subcmd}\".  Run \`${0} help\` to print" \

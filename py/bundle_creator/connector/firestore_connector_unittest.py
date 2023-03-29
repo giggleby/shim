@@ -103,10 +103,10 @@ class FirestoreConnectorTest(unittest.TestCase):
         release_image_version='13333.0.0', update_hwid_db_firmware_info=False,
         cc_emails=[])
 
+    self._datetime_now = datetime.datetime(2022, 6, 8, 0, 0)
     mock_datetime_patcher = mock.patch(
         'cros.factory.bundle_creator.connector.firestore_connector.datetime')
-    mock_datetime_patcher.start().now.return_value = datetime.datetime(
-        2022, 6, 8, 0, 0)
+    mock_datetime_patcher.start().now.return_value = self._datetime_now
     self.addCleanup(mock_datetime_patcher.stop)
 
     self._connector = firestore_connector.FirestoreConnector(
@@ -303,6 +303,60 @@ class FirestoreConnectorTest(unittest.TestCase):
             project,
         'request_time':
             DatetimeWithNanoseconds(2022, 12, 24, 0, 0, tzinfo=pytz.UTC),
+    }])
+
+  def testGetLatestUserRequestsByStatus_succeed_returnsExpectedDocuments(self):
+    status = firestore_connector.UserRequestStatus.FAILED
+    self._user_requests_col.document('doc_1').set({
+        'status': status.name,
+        'request_time': self._datetime_now - datetime.timedelta(days=1000),
+    })
+    self._user_requests_col.document('doc_2').set({
+        'status': status.name,
+        'request_time': self._datetime_now,
+    })
+    self._user_requests_col.document('doc_3').set({
+        'status': firestore_connector.UserRequestStatus.SUCCEEDED.name,
+        'request_time': self._datetime_now,
+    })
+    self._user_requests_col.document('doc_4').set({
+        'status': firestore_connector.UserRequestStatus.NOT_STARTED.name,
+        'request_time': self._datetime_now,
+    })
+
+    user_requests = self._connector.GetLatestUserRequestsByStatus(status)
+
+    self.assertEqual(user_requests, [{
+        'status':
+            status.name,
+        'request_time':
+            DatetimeWithNanoseconds(2022, 6, 8, 0, 0, tzinfo=pytz.UTC),
+    }, {
+        'status':
+            status.name,
+        'request_time':
+            DatetimeWithNanoseconds(2019, 9, 12, 0, 0, tzinfo=pytz.UTC),
+    }])
+
+  def testGetLatestUserRequestsByStatus_hasWithinDays_returnsExpectedDocuments(
+      self):
+    status = firestore_connector.UserRequestStatus.FAILED
+    self._user_requests_col.document('doc_1').set({
+        'status': status.name,
+        'request_time': self._datetime_now - datetime.timedelta(days=7),
+    })
+    self._user_requests_col.document('doc_2').set({
+        'status': status.name,
+        'request_time': self._datetime_now - datetime.timedelta(days=11),
+    })
+
+    user_requests = self._connector.GetLatestUserRequestsByStatus(status, 10)
+
+    self.assertEqual(user_requests, [{
+        'status':
+            status.name,
+        'request_time':
+            DatetimeWithNanoseconds(2022, 6, 1, 0, 0, tzinfo=pytz.UTC),
     }])
 
   def testUpdateHWIDCLURLAndErrorMessage_onlyCLURL_verifiesDocument(self):

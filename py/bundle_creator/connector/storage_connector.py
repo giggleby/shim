@@ -134,7 +134,7 @@ class FactoryBundleStorageConnector(StorageConnector):
                       self._bucket_name)
     blob.upload_from_filename(bundle_path)
 
-    # Set read permission for the requestor's email, the entity method creates a
+    # Set read permission for the requester's email, the entity method creates a
     # new acl entity and add it to the blob.
     blob.acl.entity('user', bundle_metadata.email).grant_read()
     blob.acl.save()

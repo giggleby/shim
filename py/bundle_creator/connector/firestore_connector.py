@@ -5,6 +5,7 @@
 from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 import enum
 import logging
 from typing import Any, Dict, List, Optional
@@ -207,7 +208,7 @@ class FirestoreConnector:
     """Returns user requests with the specific email.
 
     Args:
-      email: The requestor's email.
+      email: The requester's email.
       project: An optional field used to filter with email together.
 
     Returns:
@@ -216,6 +217,29 @@ class FirestoreConnector:
     """
     query = self._user_request_col_ref.where('email', '==', email)
     query = query.where('project', '==', project) if project else query
+    query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
+    return [doc.to_dict() for doc in query.stream()]
+
+  def GetLatestUserRequestsByStatus(
+      self, status: UserRequestStatus,
+      within_days: Optional[int] = None) -> List[Dict]:
+    """Returns user requests with the specific status.
+
+    Returns user requests with the specific status.  If `within_days` is set, it
+    only returns the requests which were requested within the specific days.
+
+    Args:
+      status: The user request's status used to filter.
+      within_days: An optional field used to filter the requests.
+
+    Returns:
+      A list of dictionaries which represent the specific user requests in
+      descending order of `request_time`.
+    """
+    query = self._user_request_col_ref.where('status', '==', status.name)
+    query = query.where('request_time', '>',
+                        datetime.now() -
+                        timedelta(days=within_days)) if within_days else query
     query = query.order_by('request_time', direction=firestore.Query.DESCENDING)
     return [doc.to_dict() for doc in query.stream()]
 
