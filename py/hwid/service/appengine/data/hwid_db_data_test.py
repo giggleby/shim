@@ -130,6 +130,7 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
         external_db='updated data',
         internal_db='updated data(internal)',
+        feature_matcher_source=None,
     )
 
     self.hwid_db_data_manager.UpdateProjectContent(repo, repo_metadata)
@@ -143,6 +144,27 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(updated_metadata, internal=True),
         'updated data(internal)')
+    self.assertIsNone(
+        self.hwid_db_data_manager.LoadFeatureMatcherData(updated_metadata))
+
+  def testUpdateProjectContent_WithFeatureMatcherSource(self):
+    repo_metadata = hwid_repo.HWIDDBMetadata(
+        name='PROJECTA', board_name='BOARDA', version='3', path='v3/PROJECTA')
+    repo = mock.create_autospec(hwid_repo.GerritCLHWIDRepo, instance=True)
+    repo.commit_id = 'UNUSED-NEW-COMMIT-ID'
+    repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
+        external_db='unused updated data',
+        internal_db='unused updated data (internal)',
+        feature_matcher_source='the feature matcher payload',
+    )
+    self.hwid_db_data_manager.UpdateProjectContent(repo, repo_metadata)
+
+    created_metadata = self.hwid_db_data_manager.GetHWIDDBMetadataOfProject(
+        project='PROJECTA')
+
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadFeatureMatcherData(created_metadata),
+        'the feature matcher payload')
 
   def testUpdateProjectContent_CreateNewMetadata(self):
     repo_metadata = hwid_repo.HWIDDBMetadata(
@@ -153,6 +175,7 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
         external_db='updated data',
         internal_db='updated data(internal)',
+        feature_matcher_source=None,
     )
     self.hwid_db_data_manager.UpdateProjectContent(repo, repo_metadata)
 
@@ -190,6 +213,8 @@ class HWIDDBDataManagerTest(unittest.TestCase):
         ('v3/PROJECTA.internal', 0o100644, b'updated data (internal)'),
         ('v3/PROJECTC', 0o100644, b'newly added data'),
         ('v3/PROJECTC.internal', 0o100644, b'newly added data (internal)'),
+        ('v3/PROJECTC.feature_matcher.textproto', 0o100644,
+         b'the feature matcher source'),
     ], tree=dulwich_objects.Tree())
     repo.do_commit(message=b'the head commit', tree=tree.id)
     expected_commit_id = repo.head().decode()
@@ -216,11 +241,16 @@ class HWIDDBDataManagerTest(unittest.TestCase):
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(metadata_a, internal=True),
         'updated data (internal)')
+    self.assertIsNone(
+        self.hwid_db_data_manager.LoadFeatureMatcherData(metadata_a))
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(metadata_c), 'newly added data')
     self.assertEqual(
         self.hwid_db_data_manager.LoadHWIDDB(metadata_c, internal=True),
         'newly added data (internal)')
+    self.assertEqual(
+        self.hwid_db_data_manager.LoadFeatureMatcherData(metadata_c),
+         'the feature matcher source')
 
     with self.assertRaises(hwid_db_data.HWIDDBNotFoundError):
       self.hwid_db_data_manager.GetHWIDDBMetadataOfProject('PROJECTB')

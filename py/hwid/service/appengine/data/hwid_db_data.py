@@ -137,6 +137,25 @@ class HWIDDBDataManager:
         repo_metadata.version), path=path, project=repo_metadata.name,
                           commit=commit_id)
 
+  def LoadFeatureMatcherData(self, metadata: HWIDDBMetadata) -> Optional[str]:
+    """Load HWID feature matcher data from the filesystem.
+
+    Args:
+      metadata: The HWIDDBMetadata object of the target HWID DB.
+
+    Returns:
+      The raw HWID feature matcher data source or `None` if not exist.
+    """
+    logging.debug(
+        'Reading feature matcher data file of project %s from live path.',
+        metadata.project)
+    path = self._LivePathForFeatureMatcher(metadata.path)
+    try:
+      return self._fs_adapter.ReadFile(path)
+    except Exception:
+      logging.info('Missing feature matcher data file: %r.', path)
+      return None
+
   def UpdateProjectContent(self,
                            gerrit_cl_hwid_repo: hwid_repo.GerritCLHWIDRepo,
                            repo_metadata: hwid_repo.HWIDDBMetadata):
@@ -156,7 +175,10 @@ class HWIDDBDataManager:
       metadata.put()
     file_changes = self._LoadProjectFiles(gerrit_cl_hwid_repo, metadata)
     for file_path, file_contents in file_changes.items():
-      self._fs_adapter.WriteFile(file_path, file_contents)
+      if file_contents is None:
+        self._TryDeleteFile(file_path)
+      else:
+        self._fs_adapter.WriteFile(file_path, file_contents)
 
   def UpdateProjectsByRepo(
       self, live_hwid_repo: hwid_repo.HWIDRepo,
@@ -246,12 +268,19 @@ class HWIDDBDataManager:
       self._fs_adapter.WriteFile(
           self._LivePath(metadata.path, internal=True), hwid_db_internal)
 
+  def _TryDeleteFile(self, path: str):
+    try:
+      self._fs_adapter.DeleteFile(path)
+    except filesystem_adapter.FileSystemAdapterException as ex:
+      logging.info('Failed to delete %r, maybe the file already inexists? %r.',
+                   path, ex)
+
   def CleanAllForTest(self):
     with self._ndb_connector.CreateClientContext():
       for key in HWIDDBMetadata.query().iter(keys_only=True):
-        self._fs_adapter.DeleteFile(self._LivePath(key.get().path))
-        self._fs_adapter.DeleteFile(
-            self._LivePath(key.get().path, internal=True))
+        self._TryDeleteFile(self._LivePath(key.get().path))
+        self._TryDeleteFile(self._LivePath(key.get().path, internal=True))
+        self._TryDeleteFile(self._LivePathForFeatureMatcher(key.get().path))
         key.delete()
 
   def _LivePath(self, file_id: str, internal: bool = False):
@@ -260,8 +289,12 @@ class HWIDDBDataManager:
       return f'{path}.internal'
     return path
 
-  def _LoadProjectFiles(self, hwid_repo_view: hwid_repo.HWIDRepoView,
-                        hwid_metadata: HWIDDBMetadata) -> Mapping[str, str]:
+  def _LivePathForFeatureMatcher(self, file_id: str) -> str:
+    return f'{self._LivePath(file_id)}.feature_matcher.textproto'
+
+  def _LoadProjectFiles(
+      self, hwid_repo_view: hwid_repo.HWIDRepoView,
+      hwid_metadata: HWIDDBMetadata) -> Mapping[str, Optional[str]]:
     hwid_db_name = hwid_metadata.project
     live_file_id = hwid_metadata.path
     if hwid_metadata.version == '2':
@@ -274,6 +307,8 @@ class HWIDDBDataManager:
       return {
           self._LivePath(live_file_id): project_data.external_db,
           self._LivePath(live_file_id, internal=True): project_data.internal_db,
+          self._LivePathForFeatureMatcher(live_file_id):
+              project_data.feature_matcher_source,
       }
     raise AssertionError('Unexpected call path.')
 
@@ -284,5 +319,9 @@ class HWIDDBDataManager:
       for hwid_metadata in hwid_metadata_list:
         file_changes = self._LoadProjectFiles(hwid_repo_view, hwid_metadata)
         for file_path, file_contents in file_changes.items():
-          executor.submit(self._fs_adapter.WriteFile, file_path, file_contents)
+          if file_contents is None:
+            executor.submit(self._TryDeleteFile, file_path)
+          else:
+            executor.submit(
+                self._fs_adapter.WriteFile, file_path, file_contents)
       ndb.model.put_multi(hwid_metadata_list)

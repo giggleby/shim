@@ -66,12 +66,14 @@ class V3DBContents(NamedTuple):
   """Holds the HWID DB file contents of a v3 project."""
   internal_db: str
   external_db: str
+  feature_matcher_source: Optional[str]
 
 
 class HWIDRepoView(abc.ABC):
   """Represents a read-only view of a HWID repository snapshot."""
 
   _INTERNAL_DB_NAME_SUFFIX = '.internal'
+  _FEATURE_MATCHER_SOURCE_SUFFIX = '.feature_matcher.textproto'
 
   @abc.abstractmethod
   def _LoadMandatoryTextFile(self, path: str) -> str:
@@ -88,9 +90,28 @@ class HWIDRepoView(abc.ABC):
     """
     raise NotImplementedError
 
+  @abc.abstractmethod
+  def _LoadOptionalTextFile(self, path: str) -> Optional[str]:
+    """Load an optional file from the repository file system.
+
+    Args:
+      path: The path of the file to load.
+
+    Returns:
+      The loaded file contents or `None` if the file doesn't exist.
+
+    Raises:
+      HWIDRepoError: Failed to load the file.
+    """
+    raise NotImplementedError
+
   @classmethod
   def _GetV3InternalDBPath(cls, path: str) -> str:
     return f'{path}{cls._INTERNAL_DB_NAME_SUFFIX}'
+
+  @classmethod
+  def _GetV3FeatureMatcherSourcePath(cls, path: str) -> str:
+    return f'{path}{cls._FEATURE_MATCHER_SOURCE_SUFFIX}'
 
   @type_utils.LazyProperty
   def hwid_db_metadata_of_name(self) -> Mapping[str, HWIDDBMetadata]:
@@ -170,7 +191,9 @@ class HWIDRepoView(abc.ABC):
     return V3DBContents(
         external_db=self._LoadMandatoryTextFile(metadata.path),
         internal_db=self._LoadMandatoryTextFile(
-            self._GetV3InternalDBPath(metadata.path)))
+            self._GetV3InternalDBPath(metadata.path)),
+        feature_matcher_source=self._LoadOptionalTextFile(
+            self._GetV3FeatureMatcherSourcePath(metadata.path)))
 
 
 class HWIDRepo(HWIDRepoView):
@@ -197,6 +220,17 @@ class HWIDRepo(HWIDRepoView):
             filesystem_adapter.FileSystemAdapterException) as ex:
       raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
 
+  def _LoadOptionalTextFile(self, path: str) -> Optional[str]:
+    """See base class."""
+    try:
+      raw_contents = self._git_fs.ReadFile(path)
+    except (KeyError, filesystem_adapter.FileSystemAdapterException):
+      return None
+    try:
+      return raw_contents.decode('utf-8')
+    except ValueError as ex:
+      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
+
   @property
   def hwid_db_commit_id(self) -> str:
     return self._repo.head().decode()
@@ -205,7 +239,8 @@ class HWIDRepo(HWIDRepoView):
                    reviewers: Sequence[str], cc_list: Sequence[str],
                    bot_commit: bool = False, commit_queue: bool = False,
                    update_metadata: Optional[HWIDDBMetadata] = None,
-                   hwid_db_contents_internal: Optional[str] = None):
+                   hwid_db_contents_internal: Optional[str] = None,
+                   feature_matcher_source: Optional[str] = None):
     """Commit an HWID DB to the repo.
 
     Args:
@@ -219,6 +254,9 @@ class HWIDRepo(HWIDRepoView):
       commit_queue: True if this CL is ready to be put into the commit queue.
       update_metadata: A HWIDDBMetadata object to update for the project.
       hwid_db_contents_internal: The contents of the HWID DB in internal format.
+      feature_matcher_source: Uses a string to represent the feature matcher
+        source contents to push.  `None` to instruct this method not to update
+        the contents.
 
     Returns:
       A numeric ID of the created CL.
@@ -249,6 +287,10 @@ class HWIDRepo(HWIDRepoView):
     hwid_db_contents_internal = _RemoveChecksum(hwid_db_contents_internal)
     new_files.append((internal_path, git_util.NORMAL_FILE_MODE,
                       hwid_db_contents_internal.encode('utf-8')))
+    if feature_matcher_source is not None:
+      feature_matcher_source_path = self._GetV3FeatureMatcherSourcePath(path)
+      new_files.append((feature_matcher_source_path, git_util.NORMAL_FILE_MODE,
+                        feature_matcher_source.encode('utf-8')))
 
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
@@ -273,7 +315,45 @@ class HWIDRepo(HWIDRepoView):
     return cl_number
 
 
-class GerritCLHWIDRepo(HWIDRepoView):
+class _GerritHWIDRepo(HWIDRepoView):
+  """Represents a view of HWID repository on Gerrit."""
+
+  @abc.abstractmethod
+  def _GetGitFileRawContents(
+      self, path: str, optional: bool) -> Optional[bytes]:
+    """Fetches file contents over Gerrit API.
+
+    Args:
+      path: The path name of the file to fetch.
+      optional: Whether to return `None` if the file is not found.
+
+    Returns:
+      If `optional` is `True` and the file is not found, it returns `None`.
+      Otherwise it returns the file contents in bytes.
+
+    Raises:
+      git_util.GitUtilException: if the Gerrit API invocation doesn't success.
+    """
+
+  def _LoadMandatoryTextFile(self, path: str) -> str:
+    """See base class."""
+    try:
+      return self._GetGitFileRawContents(path, optional=False).decode()
+    except (git_util.GitUtilException, ValueError) as ex:
+      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
+
+  def _LoadOptionalTextFile(self, path: str) -> Optional[str]:
+    """See base class."""
+    try:
+      raw_contents = self._GetGitFileRawContents(path, optional=True)
+      if raw_contents is None:
+        return None
+      return raw_contents.decode()
+    except (git_util.GitUtilException, ValueError) as ex:
+      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
+
+
+class GerritCLHWIDRepo(_GerritHWIDRepo):
   """Represents a view of HWID repository from a specific Gerrit CL."""
 
   def __init__(self, repo_branch: str, cl_number: int):
@@ -282,20 +362,14 @@ class GerritCLHWIDRepo(HWIDRepoView):
 
   def _GetGitFileRawContents(
       self, path: str, optional: bool) -> Optional[bytes]:
+    """See base class."""
     return git_util.GetFileContent(
         INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT, path,
         change_id=self._cl_number, auth_cookie=git_util.GetGerritAuthCookie(),
         optional=optional)
 
-  def _LoadMandatoryTextFile(self, path: str) -> str:
-    """See base class."""
-    try:
-      return self._GetGitFileRawContents(path, optional=False).decode()
-    except (git_util.GitUtilException, ValueError) as ex:
-      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
 
-
-class GerritToTHWIDRepo(HWIDRepoView):
+class GerritToTHWIDRepo(_GerritHWIDRepo):
   """Represents a view of HWID repository from Gerrit ToT."""
 
   def __init__(self, repo_branch: str):
@@ -303,17 +377,11 @@ class GerritToTHWIDRepo(HWIDRepoView):
 
   def _GetGitFileRawContents(
       self, path: str, optional: bool) -> Optional[bytes]:
+    """See base class."""
     return git_util.GetFileContent(
         INTERNAL_REPO_REVIEW_URL, _CHROMEOS_HWID_PROJECT, path,
         commit_id=self.commit_id, auth_cookie=git_util.GetGerritAuthCookie(),
         optional=optional)
-
-  def _LoadMandatoryTextFile(self, path: str) -> str:
-    """See base class."""
-    try:
-      return self._GetGitFileRawContents(path, optional=False).decode()
-    except (git_util.GitUtilException, ValueError) as ex:
-      raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
 
   @type_utils.LazyProperty
   def commit_id(self) -> str:

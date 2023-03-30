@@ -2064,6 +2064,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.LoadV3HWIDDBByName.return_value = hwid_repo.V3DBContents(
         internal_db=db_contents_internal or db_contents,
         external_db=db_contents,
+        feature_matcher_source=None,
     )
     live_hwid_repo.hwid_db_commit_id = commit_id
 
@@ -2081,6 +2082,7 @@ class SelfServiceHelperTest(unittest.TestCase):
         hwid_repo.V3DBContents(
             internal_db=db_contents_internal,
             external_db=db_contents,
+            feature_matcher_source=None,
         ))
 
 

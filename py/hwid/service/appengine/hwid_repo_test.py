@@ -123,6 +123,24 @@ class HWIDRepoTest(HWIDRepoBaseTest):
         hwid_repo.V3DBContents(
             external_db='sboard data',
             internal_db='sboard data (internal)',
+            feature_matcher_source=None,
+        ))
+
+  def testLoadV3HWIDDBByName_SuccessWithFeatureMatcherSource(self):
+    self._AddFilesToFakeRepo({
+        'projects.yaml': _SERVER_BOARDS_DATA,
+        'SBOARD': b'sboard data',
+        'SBOARD.internal': b'sboard data (internal)',
+        'SBOARD.feature_matcher.textproto': b'sboard feature matcher payload',
+    })
+
+    actual_contents = self._hwid_repo.LoadV3HWIDDBByName('SBOARD')
+    self.assertEqual(
+        actual_contents,
+        hwid_repo.V3DBContents(
+            external_db='sboard data',
+            internal_db='sboard data (internal)',
+            feature_matcher_source='sboard feature matcher payload',
         ))
 
   def testLoadV3HWIDDBByName_InvalidName(self):
@@ -182,11 +200,34 @@ class HWIDRepoTest(HWIDRepoBaseTest):
     actual_cl_number = self._hwid_repo.CommitHWIDDB(
         'SBOARD', 'hwid_db_contents', 'unused_test_str', [], [], False, False,
         None, 'hwid_db_contents_internal')
+
+    self.assertEqual(actual_cl_number, expected_cl_number)
+    kwargs = self._mocked_create_cl.call_args[1]
+    self.assertEqual([
+        ('SBOARD', 0o100644, b'hwid_db_contents'),
+        ('SBOARD.internal', 0o100644, b'hwid_db_contents_internal'),
+    ], kwargs['new_files'])
+
+  def testCommitHWIDDB_SucceedWithFeatureMatcher(self):
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
+    expected_cl_number = 123
+    self._mocked_create_cl.return_value = ('Ithis_is_change_id',
+                                           expected_cl_number)
+
+    actual_cl_number = self._hwid_repo.CommitHWIDDB(
+        'SBOARD', 'hwid_db_contents', 'unused_test_str', [], [], False, False,
+        None, 'hwid_db_contents_internal',
+        feature_matcher_source='feature matcher payload')
+
     self.assertEqual(actual_cl_number, expected_cl_number)
     kwargs = self._mocked_create_cl.call_args[1]
     self.assertEqual(
-        [('SBOARD', 0o100644, b'hwid_db_contents'),
-         ('SBOARD.internal', 0o100644, b'hwid_db_contents_internal')],
+        [
+            ('SBOARD', 0o100644, b'hwid_db_contents'),
+            ('SBOARD.internal', 0o100644, b'hwid_db_contents_internal'),
+            ('SBOARD.feature_matcher.textproto', 0o100644,
+             b'feature matcher payload'),
+        ],
         kwargs['new_files'])
 
   def testCommitHWIDDB_Succeed_RemoveChecksum(self):
