@@ -23,6 +23,7 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import feature_compliance
 from cros.factory.probe_info_service.app_engine import bundle_builder
 from cros.factory.utils import schema
 
@@ -223,6 +224,12 @@ class HWIDV3SelfServiceActionHelper:
     checksum = database.Database.ChecksumForText(external_raw_db)
 
     builder.AddRegularFile(internal_db.project, external_raw_db.encode('utf-8'))
+    feature_matcher = self._preproc_data.feature_matcher
+    if feature_matcher:
+      payload = feature_matcher.GenerateHWIDFeatureRequirementPayload()
+      file_name = feature_compliance.GetFeatureRequirementSpecFileName(
+          internal_db.project)
+      builder.AddRegularFile(file_name, payload.encode('utf-8'))
     builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)

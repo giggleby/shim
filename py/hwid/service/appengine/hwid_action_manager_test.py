@@ -16,10 +16,12 @@ from cros.factory.hwid.service.appengine import test_utils
 class HWIDPreprocDataForTest(hwid_preproc_data.HWIDPreprocData):
   CACHE_VERSION = '1'
 
-  def __init__(self, project, raw_db, raw_db_internal, hwid_action_inst):
+  def __init__(self, project, raw_db, raw_db_internal, feature_matcher_source,
+               hwid_action_inst):
     super().__init__(project)
     self.raw_db = raw_db
     self.raw_db_internal = raw_db_internal
+    self.feature_matcher_source = feature_matcher_source
     self.hwid_action = hwid_action_inst
 
   @classmethod
@@ -52,13 +54,14 @@ class InstanceFactoryForTest(hwid_action_manager.InstanceFactory):
     self._known_project_to_hwid_action[project] = hwid_action_inst
 
   def CreateHWIDPreprocData(self, metadata, raw_db,
-                            raw_db_internal: Optional[str] = None):
+                            raw_db_internal: Optional[str] = None,
+                            feature_matcher_source: Optional[str] = None):
     try:
       hwid_action_inst = self._known_project_to_hwid_action[metadata.project]
     except KeyError:
       raise hwid_action_manager.ProjectNotSupportedError from None
     return HWIDPreprocDataForTest(metadata.project, raw_db, raw_db_internal,
-                                  hwid_action_inst)
+                                  feature_matcher_source, hwid_action_inst)
 
   def CreateHWIDAction(self, hwid_data):
     hwid_action_inst = (

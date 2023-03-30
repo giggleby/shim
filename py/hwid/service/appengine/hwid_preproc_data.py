@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 """Defines Preprocessors for HWID DBs."""
 
+from typing import Optional
+
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.v2 import yaml_datastore as v2_yaml_datastore
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import database as v3_database
@@ -85,10 +88,31 @@ class HWIDV2PreprocData(HWIDPreprocData):
 class HWIDV3PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv3 data."""
 
-  CACHE_VERSION = '6'
+  CACHE_VERSION = '7'
+  HWID_FEATURE_MATCHER_BUILDER = feature_matching.HWIDFeatureMatcherBuilder()
+
+  @classmethod
+  def _ParseDatabase(cls, raw_hwid_yaml_internal: str) -> v3_database.Database:
+    try:
+      return v3_database.Database.LoadData(raw_hwid_yaml_internal,
+                                           expected_checksum=None)
+    except v3_common.HWIDException as ex:
+      raise PreprocHWIDError(f'Failed to load HWIDv3 DB: {ex}.') from ex
+
+  @classmethod
+  def _ParseFeatureMatcherSource(
+      cls, database: v3_database.Database,
+      feature_matcher_source: str) -> feature_matching.HWIDFeatureMatcher:
+    try:
+      return cls.HWID_FEATURE_MATCHER_BUILDER.CreateHWIDFeatureMatcher(
+          database, feature_matcher_source)
+    except ValueError as ex:
+      raise PreprocHWIDError(
+          f'Failed to load the feature matcher: {ex}.') from ex
 
   def __init__(self, project: str, raw_hwid_yaml: str,
-               raw_hwid_yaml_internal: str, hwid_db_commit_id: str):
+               raw_hwid_yaml_internal: str, hwid_db_commit_id: str,
+               feature_matcher_source: Optional[str]):
     """Constructor.
 
     Requires one of hwid_file, hwid_yaml or hwid_data.
@@ -98,6 +122,7 @@ class HWIDV3PreprocData(HWIDPreprocData):
       raw_hwid_yaml: the raw YAML string of HWID data.
       raw_hwid_yaml_internal: the internal format of HWID data.
       hwid_db_commit_id: the commit id of the HWIDB data.
+      feature_matcher_source: The raw string of the feature matcher data source.
 
     Raises:
       PreprocHWIDError: Fails to load the given HWIDv3 DB contents.
@@ -106,11 +131,10 @@ class HWIDV3PreprocData(HWIDPreprocData):
     self._raw_database = raw_hwid_yaml
     self._raw_database_internal = raw_hwid_yaml_internal
     self._hwid_db_commit_id = hwid_db_commit_id
-    try:
-      self._database = v3_database.Database.LoadData(raw_hwid_yaml_internal,
-                                                     expected_checksum=None)
-    except v3_common.HWIDException as ex:
-      raise PreprocHWIDError(f'fail to load HWIDv3 DB: {ex}') from ex
+    self._feature_matcher_source = feature_matcher_source
+    self._database = self._ParseDatabase(self._raw_database_internal)
+    self._feature_matcher = feature_matcher_source and (
+        self._ParseFeatureMatcherSource(self._database, feature_matcher_source))
 
   @property
   def hwid_db_commit_id(self):
@@ -123,6 +147,10 @@ class HWIDV3PreprocData(HWIDPreprocData):
   @property
   def raw_database_internal(self):
     return self._raw_database_internal
+
+  @property
+  def feature_matcher(self) -> Optional[feature_matching.HWIDFeatureMatcher]:
+    return self._feature_matcher
 
   @property
   def database(self):

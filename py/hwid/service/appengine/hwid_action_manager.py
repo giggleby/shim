@@ -12,6 +12,7 @@ from cros.factory.hwid.service.appengine import hwid_v2_action
 from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine import memcache_adapter
 
+
 # Shorter identifiers to type definition.
 _HWIDDBData = hwid_db_data.HWIDDBData
 _HWIDDBMetadata = hwid_db_data.HWIDDBMetadata
@@ -34,12 +35,15 @@ class InstanceFactory:
 
   def CreateHWIDPreprocData(
       self, metadata: _HWIDDBMetadata, raw_db: _HWIDDBData,
-      raw_db_internal: Optional[_HWIDDBData] = None) -> _HWIDPreprocData:
+      raw_db_internal: Optional[_HWIDDBData] = None,
+      feature_matcher_source: Optional[str] = None) -> _HWIDPreprocData:
     """Creates the correct instance of `HWIDPreprocData` for the given DB info.
 
     Args:
       metadata: The HWID DB metadata instance that includes the version info.
       raw_db: The raw string of the HWID DB contents.
+      raw_db_internal: The internal version of the HWID DB contents.
+      feature_matcher_source: The source payload of the HWID feature matcher.
 
     Returns:
       An instance of `hwid_preproc_data.HWIDPreprocData`.
@@ -72,7 +76,8 @@ class InstanceFactoryImpl(InstanceFactory):
 
   def CreateHWIDPreprocData(
       self, metadata: _HWIDDBMetadata, raw_db: _HWIDDBData,
-      raw_db_internal: Optional[_HWIDDBData] = None) -> _HWIDPreprocData:
+      raw_db_internal: Optional[_HWIDDBData] = None,
+      feature_matcher_source: Optional[str] = None) -> _HWIDPreprocData:
     if metadata.version == '2':
       logging.debug('Processing as version 2 file.')
       return hwid_preproc_data.HWIDV2PreprocData(metadata.project, raw_db)
@@ -80,7 +85,8 @@ class InstanceFactoryImpl(InstanceFactory):
     if metadata.version == '3':
       logging.debug('Processing as version 3 file.')
       return hwid_preproc_data.HWIDV3PreprocData(
-          metadata.project, raw_db, raw_db_internal, metadata.commit)
+          metadata.project, raw_db, raw_db_internal, metadata.commit,
+          feature_matcher_source)
 
     raise ProjectNotSupportedError(
         f'Project {metadata.project!r} has invalid version '
@@ -167,10 +173,13 @@ class HWIDActionManager:
         raise ProjectUnavailableError(str(ex)) from ex
     else:
       raw_hwid_yaml_internal = raw_hwid_yaml
+    feature_matcher_source = (
+        self._hwid_db_data_manager.LoadFeatureMatcherData(metadata))
 
     try:
       return self._instance_factory.CreateHWIDPreprocData(
-          metadata, raw_hwid_yaml, raw_hwid_yaml_internal)
+          metadata, raw_hwid_yaml, raw_hwid_yaml_internal,
+          feature_matcher_source)
     except hwid_preproc_data.PreprocHWIDError as ex:
       raise ProjectUnavailableError(str(ex)) from ex
 

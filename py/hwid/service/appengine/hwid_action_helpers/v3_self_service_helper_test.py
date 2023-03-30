@@ -6,6 +6,7 @@ import os
 import os.path
 import re
 import tempfile
+from typing import Optional
 import unittest
 
 from google.protobuf import text_format
@@ -14,12 +15,14 @@ from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data.converter import converter
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
+from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import database
+from cros.factory.hwid.v3 import feature_compliance
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
@@ -354,12 +357,42 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         self.assertNotIn('board', tot_yaml)
         self.assertIn('project', tot_yaml)
 
-  def _LoadPreprocDataAndSSHelper(self, testdata_name, commit_id='COMMIT-ID'):
+  def testBundleHWIDDB_ContainsFeatureRequirementSpecFile(self):
+    spec = {
+        'ABCD':
+            features.BrandFeatureSpec(
+                brand='ABCD', feature_version=1, hwid_requirement_candidates=[
+                    features.HWIDRequirement(
+                        description='always_fulfill_requirement',
+                        bit_string_prerequisites=[])
+                ]),
+    }
+    feature_matcher_builder = (
+        hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
+    feature_matcher_source = (
+        feature_matcher_builder.GenerateFeatureMatcherRawSource(spec))
+    preproc_data, helper_inst = self._LoadPreprocDataAndSSHelper(
+        'v3-golden.yaml', feature_matcher_source=feature_matcher_source)
+
+    payload = helper_inst.BundleHWIDDB().bundle_contents
+
+    with file_utils.UnopenedTemporaryFile() as bundle_path:
+      os.chmod(bundle_path, 0o755)
+      file_utils.WriteFile(bundle_path, payload, encoding=None)
+      with tempfile.TemporaryDirectory() as dest_dir:
+        process_utils.CheckCall([bundle_path, dest_dir])
+
+        checker = feature_compliance.LoadChecker(dest_dir, preproc_data.project)
+
+        self.assertIsNotNone(checker)
+
+  def _LoadPreprocDataAndSSHelper(self, testdata_name, commit_id='COMMIT-ID',
+                                  feature_matcher_source: Optional[str] = None):
     preproc_data = hwid_preproc_data.HWIDV3PreprocData(
         'CHROMEBOOK',
         file_utils.ReadFile(os.path.join(_TESTDATA_PATH, testdata_name)),
         file_utils.ReadFile(os.path.join(_TESTDATA_PATH, testdata_name)),
-        commit_id)
+        commit_id, feature_matcher_source)
     helper_inst = ss_helper.HWIDV3SelfServiceActionHelper(preproc_data)
     return preproc_data, helper_inst
 

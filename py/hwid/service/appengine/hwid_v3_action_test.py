@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine import verification_payload_generator_c
 from cros.factory.hwid.v3 import rule as v3_rule
 from cros.factory.utils import file_utils
 
+
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'testdata/v3-golden.yaml')
 TEST_V3_HWID_1 = 'CHROMEBOOK AA5A-Y6L'
@@ -26,7 +27,7 @@ class HWIDV3ActionTest(unittest.TestCase):
 
     self.preproc_data = hwid_preproc_data.HWIDV3PreprocData(
         'CHROMEBOOK', file_utils.ReadFile(GOLDEN_HWIDV3_FILE),
-        file_utils.ReadFile(GOLDEN_HWIDV3_FILE), 'COMMIT-ID')
+        file_utils.ReadFile(GOLDEN_HWIDV3_FILE), 'COMMIT-ID', None)
     self.action = hwid_v3_action.HWIDV3Action(self.preproc_data)
 
   def testGetBOM(self):

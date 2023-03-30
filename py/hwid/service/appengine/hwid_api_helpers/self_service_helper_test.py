@@ -2027,7 +2027,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   def _CreateFakeHWIDBAction(cls, project: str, raw_db: str):
     return hwid_v3_action.HWIDV3Action(
         hwid_preproc_data.HWIDV3PreprocData(project, raw_db, raw_db,
-                                            'TEST-COMMIT-ID'))
+                                            'TEST-COMMIT-ID', None))
 
   @classmethod
   def _CreateBundleRecord(cls, projects):
