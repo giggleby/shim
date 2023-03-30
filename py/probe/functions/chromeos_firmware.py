@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import glob
 import hashlib
 import logging
@@ -18,15 +19,20 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import fmap
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
-from cros.factory.utils import type_utils
 
-
-FIELDS = type_utils.Enum([
-    'firmware_keys', 'ro_main_firmware', 'ro_ec_firmware', 'ro_pd_firmware',
-    'ro_fp_firmware'
-])
 
 ROOTFS_FP_FIRMWARE_DIR = 'opt/google/biod/fw'
+
+
+class Fields(str, enum.Enum):
+  firmware_keys = 'firmware_keys'
+  ro_main_firmware = 'ro_main_firmware'
+  ro_ec_firmware = 'ro_ec_firmware'
+  ro_pd_firmware = 'ro_pd_firmware'
+  ro_fp_firmware = 'ro_fp_firmware'
+
+  def __str__(self):
+    return self.name
 
 
 class FPReferenceFirmwareError(Exception):
@@ -246,31 +252,31 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
   """
 
   ARGS = [
-      Arg('field', type_utils.Enum(FIELDS),
+      Arg('field', Fields,
           'The flash chip where this function probes the firmware from.')
   ]
 
   def GetCategoryFromArgs(self):
-    if self.args.field not in FIELDS:
+    if self.args.field not in Fields.__members__:
       raise cached_probe_function.InvalidCategoryError(
-          f'`field` should be one of {FIELDS!r}')
+          f'`field` should be one of {list(Fields.__members__)}')
 
     return self.args.field
 
   @classmethod
   def ProbeDevices(cls, category):
-    if category == FIELDS.firmware_keys:
+    if category == Fields.firmware_keys:
       fw_file_path = crosfw.LoadMainFirmware().GetFileName(
           sections=['RO_SECTION'])
       return GetFirmwareKeys(fw_file_path)
 
-    if category == FIELDS.ro_main_firmware:
+    if category == Fields.ro_main_firmware:
       fw_file_path = crosfw.LoadMainFirmware().GetFileName(
           sections=['RO_SECTION'])
-    elif category == FIELDS.ro_ec_firmware:
+    elif category == Fields.ro_ec_firmware:
       fw_file_path = crosfw.LoadEcFirmware().GetFileName()
-    elif category == FIELDS.ro_pd_firmware:
+    elif category == Fields.ro_pd_firmware:
       fw_file_path = crosfw.LoadPDFirmware().GetFileName()
-    elif category == FIELDS.ro_fp_firmware:
+    elif category == Fields.ro_fp_firmware:
       fw_file_path = DumpFPFirmware()
     return CalculateFirmwareHashes(fw_file_path)

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 import os
 import re
@@ -9,13 +10,20 @@ import re
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.test.utils import evdev_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import type_utils
 
 from cros.factory.external import evdev
 
 
 INPUT_DEVICE_PATH = '/proc/bus/input/devices'
-KNOWN_DEVICE_TYPES = type_utils.Enum(['touchscreen', 'touchpad', 'stylus'])
+
+
+class KnownDeviceTypes(str, enum.Enum):
+  touchscreen = 'touchscreen'
+  touchpad = 'touchpad'
+  stylus = 'stylus'
+
+  def __str__(self):
+    return self.name
 
 
 def GetInputDevices():
@@ -58,11 +66,11 @@ def GetDeviceType(device):
   evdev_device = evdev.InputDevice(os.path.join('/dev/input', device['event']))
   ret = 'unknown'
   if evdev_utils.IsStylusDevice(evdev_device):
-    ret = KNOWN_DEVICE_TYPES.stylus
+    ret = KnownDeviceTypes.stylus
   if evdev_utils.IsTouchpadDevice(evdev_device):
-    ret = KNOWN_DEVICE_TYPES.touchpad
+    ret = KnownDeviceTypes.touchpad
   if evdev_utils.IsTouchscreenDevice(evdev_device):
-    ret = KNOWN_DEVICE_TYPES.touchscreen
+    ret = KnownDeviceTypes.touchscreen
   logging.debug('device %s type: %s', device['event'], ret)
   return ret
 
@@ -132,15 +140,16 @@ class InputDeviceFunction(cached_probe_function.CachedProbeFunction):
   """
 
   ARGS = [
-      Arg('device_type', KNOWN_DEVICE_TYPES, 'The type of input device.',
+      Arg('device_type', KnownDeviceTypes, 'The type of input device.',
           default=None)
   ]
 
   def GetCategoryFromArgs(self):
     if (self.args.device_type is not None and
-        self.args.device_type not in KNOWN_DEVICE_TYPES):
+        self.args.device_type not in KnownDeviceTypes.__members__):
       raise cached_probe_function.InvalidCategoryError(
-          f'The type of input device must be one of {KNOWN_DEVICE_TYPES!r}')
+          'The type of input device must be one of '
+          f'{list(KnownDeviceTypes.__members__)!r}')
 
     return self.args.device_type
 

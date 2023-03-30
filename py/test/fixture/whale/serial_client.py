@@ -6,16 +6,24 @@
 """Client to connect to serial server."""
 
 import argparse
+import enum
 import logging
 import sys
 import xmlrpc.client
 
 from cros.factory.test.fixture.whale.host import dolphin_server
-from cros.factory.utils import type_utils
 
 
 __all__ = ['SerialClientError', 'SerialClient']
-FUNCTIONS = type_utils.Enum(['send', 'receive', 'get_serial_num'])
+
+
+class Functions(str, enum.Enum):
+  send = 'send'
+  receive = 'receive'
+  get_serial_num = 'get_serial_num'
+
+  def __str__(self):
+    return self.name
 
 
 class SerialClientError(Exception):
@@ -120,7 +128,7 @@ def ParseArgs():
                       type=str, help='hostname of server')
   parser.add_argument('--port', default=dolphin_server.DEFAULT_PORT,
                       type=int, help='port that server is listening on')
-  parser.add_argument('function', type=str, choices=FUNCTIONS)
+  parser.add_argument('function', type=str, choices=list(Functions.__members__))
   parser.add_argument('serial_index', type=int, default=-1, nargs='?',
                       help='serial connection index')
   parser.add_argument('function_args', nargs=argparse.REMAINDER,
@@ -147,16 +155,16 @@ def CallFunction(args, sclient):
             serial_index: -1}
     sclient: SerialClient object.
   """
-  if args.function == FUNCTIONS.get_serial_num:
+  if args.function == Functions.get_serial_num:
     sclient.GetSerialAmount()
     return
 
   if args.serial_index == -1:
     raise SerialClientError('No serial index is assigned')
 
-  if args.function == FUNCTIONS.receive:
+  if args.function == Functions.receive:
     sclient.Receive(args.serial_index, int(args.function_args[0]))
-  elif args.function == FUNCTIONS.send:
+  elif args.function == Functions.send:
     sclient.Send(args.serial_index, ' '.join(args.function_args))
   else:
     raise SerialClientError('Invalid function ' + args.function)

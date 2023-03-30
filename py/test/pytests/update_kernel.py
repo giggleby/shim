@@ -116,7 +116,7 @@ class UpdateKernel(unittest.TestCase):
                               '--enforced_release_channels', 'dev'])
       # verify firmware is dev key
       probed_keys = chromeos_firmware.ChromeosFirmwareFunction.ProbeDevices(
-          chromeos_firmware.FIELDS.firmware_keys).values()
+          chromeos_firmware.Fields.firmware_keys).values()
       fw_keys = [key.split('#')[1] for key in probed_keys]
       self.assertIn(_DEVKEY, fw_keys)
 

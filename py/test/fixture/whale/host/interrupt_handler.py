@@ -7,6 +7,7 @@
 """Handles Whale's button click event."""
 
 import argparse
+import enum
 import functools
 import logging
 import os
@@ -20,10 +21,15 @@ from cros.factory.test.fixture.whale import servo_client
 from cros.factory.utils import gpio_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import ssh_utils
-from cros.factory.utils import type_utils
 
 
-ActionType = type_utils.Enum(['PUSH_NEEDLE', 'FIXTURE_STARTED'])
+class ActionType(str, enum.Enum):
+  PUSH_NEEDLE = 'PUSH_NEEDLE'
+  FIXTURE_STARTED = 'FIXTURE_STARTED'
+
+  def __str__(self):
+    return self.name
+
 
 def TimeClassMethodDebug(func):
   """A decorator to log method running time on debug level."""
@@ -75,8 +81,16 @@ class InterruptHandler:
   # Used to avoid toggle battery too fast.
   _BATTERY_CEASE_TOGGLE_SECS = 1.0
 
-  _FixtureState = type_utils.Enum(
-      ['WAIT', 'CLOSED', 'ERR_CLOSING', 'CLOSING', 'OPENING'])
+  class _FixtureState(str, enum.Enum):
+    WAIT = 'WAIT'
+    CLOSED = 'CLOSED'
+    ERR_CLOSING = 'ERR_CLOSING'
+    CLOSING = 'CLOSING'
+    OPENING = 'OPENING'
+
+    def __str__(self):
+      return self.name
+
   # Fixture state to LED light and LCD message (green, red, message).
   _FixtureStateParams = {
       _FixtureState.WAIT: ('on', 'on', 'ready'),

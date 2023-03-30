@@ -2,16 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
+
 from cros.factory.gooftool import vpd
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import type_utils
 
 
-PARTITION = type_utils.Enum(['ro', 'rw'])
+class Partition(str, enum.Enum):
+  ro = 'ro'
+  rw = 'rw'
 
-_PARTITION_NAME_MAP = {PARTITION.ro: vpd.VPD_READONLY_PARTITION_NAME,
-                       PARTITION.rw: vpd.VPD_READWRITE_PARTITION_NAME}
+  def __str__(self):
+    return self.name
+
+
+_PARTITION_NAME_MAP = {
+    Partition.ro: vpd.VPD_READONLY_PARTITION_NAME,
+    Partition.rw: vpd.VPD_READWRITE_PARTITION_NAME
+}
 
 
 class VPDFunction(cached_probe_function.LazyCachedProbeFunction):
@@ -120,10 +129,11 @@ class VPDFunction(cached_probe_function.LazyCachedProbeFunction):
   ARGS = [
       Arg('fields', list, 'A list of fields of VPD data to probe.',
           default=None),
-      Arg('key', str,
+      Arg(
+          'key', str,
           'The key of the result.  Can be specified only if the `fields` '
           'argument contains exact one element', default=None),
-      Arg('partition', PARTITION,
+      Arg('partition', Partition,
           'The partition name to read, can be either "ro" or "rw"',
           default='ro')
   ]
@@ -150,9 +160,9 @@ class VPDFunction(cached_probe_function.LazyCachedProbeFunction):
     return [{field: vpd_data[field] for field in self.args.fields}]
 
   def GetCategoryFromArgs(self):
-    if self.args.partition not in PARTITION:
+    if self.args.partition not in Partition.__members__:
       raise cached_probe_function.InvalidCategoryError(
-          f'partition should be one of {list(PARTITION)!r}.')
+          f'partition should be one of {list(Partition.__members__)!r}.')
 
     return self.args.partition
 

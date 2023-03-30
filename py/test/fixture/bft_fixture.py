@@ -29,12 +29,11 @@ under DUT shell. For example::
 """
 
 import argparse
+import enum
 import logging
 import os
 
 import yaml
-
-from cros.factory.utils import type_utils
 
 
 TEST_ARG_HELP = """A dictionary with the following items:
@@ -63,27 +62,90 @@ class BFTFixture:
 
   Methods for this class will raise BFTFixtureException if a failure occurs.
   """
-  SystemStatus = type_utils.Enum(['BACKLIGHT'])
-  Status = type_utils.Enum(['OFF', 'ON', 'OPEN', 'CLOSING', 'CLOSED'])
+
+  class SystemStatus(str, enum.Enum):
+    BACKLIGHT = 'BACKLIGHT'
+
+    def __str__(self):
+      return self.name
+
+  class Status(str, enum.Enum):
+    OFF = 'OFF'
+    ON = 'ON'
+    OPEN = 'OPEN'
+    CLOSING = 'CLOSING'
+    CLOSED = 'CLOSED'
+
+    def __str__(self):
+      return self.name
 
   # A subset of cros.factory.device.led.LED.Color.
-  LEDColor = type_utils.Enum(['RED', 'GREEN', 'YELLOW', 'BLUE', 'OFF'])
+  class LEDColor(str, enum.Enum):
+    RED = 'RED'
+    GREEN = 'GREEN'
+    YELLOW = 'YELLOW'
+    BLUE = 'BLUE'
+    OFF = 'OFF'
 
-  StatusColor = type_utils.Enum(['RED', 'GREEN', 'OFF'])
-  Device = type_utils.Enum([
-      'AC_ADAPTER', 'AUDIO_JACK', 'EXT_DISPLAY', 'LID_MAGNET',
-      'USB_0', 'USB_1', 'USB_2', 'BATTERY',
-      'C0_CC2_DUT', 'C1_CC2_DUT', 'PWR_BUTTON',
-      'LID_HALL_MAGNET', 'BASE_HALL_MAGNET', 'BASE_CHARGER',
-      'VOLU_BUTTON', 'VOLD_BUTTON',
-      # Plankton-Raiden fixture devices.
-      'CHARGE_5V', 'CHARGE_12V', 'CHARGE_20V',
-      'USB2', 'USB3', 'DP', 'ADB_HOST', 'DEFAULT'])
+    def __str__(self):
+      return self.name
+
+  class StatusColor(str, enum.Enum):
+    RED = 'RED'
+    GREEN = 'GREEN'
+    OFF = 'OFF'
+
+    def __str__(self):
+      return self.name
+
+  class Device(str, enum.Enum):
+    AC_ADAPTER = 'AC_ADAPTER'
+    AUDIO_JACK = 'AUDIO_JACK'
+    EXT_DISPLAY = 'EXT_DISPLAY'
+    LID_MAGNET = 'LID_MAGNET'
+    USB_0 = 'USB_0'
+    USB_1 = 'USB_1'
+    USB_2 = 'USB_2'
+    BATTERY = 'BATTERY'
+    C0_CC2_DUT = 'C0_CC2_DUT'
+    C1_CC2_DUT = 'C1_CC2_DUT'
+    PWR_BUTTON = 'PWR_BUTTON'
+    LID_HALL_MAGNET = 'LID_HALL_MAGNET'
+    BASE_HALL_MAGNET = 'BASE_HALL_MAGNET'
+    BASE_CHARGER = 'BASE_CHARGER'
+    VOLU_BUTTON = 'VOLU_BUTTON'
+    VOLD_BUTTON = 'VOLD_BUTTON'
+    # Plankton-Raiden fixture devices.
+    CHARGE_5V = 'CHARGE_5V'
+    CHARGE_12V = 'CHARGE_12V'
+    CHARGE_20V = 'CHARGE_20V'
+    USB2 = 'USB2'
+    USB3 = 'USB3'
+    DP = 'DP'
+    ADB_HOST = 'ADB_HOST'
+    DEFAULT = 'DEFAULT'
+
+    def __str__(self):
+      return self.name
 
   # LCM enumeration.
-  LcmCommand = type_utils.Enum([
-      'BACKLIGHT_OFF', 'BACKLIGHT_ON', 'CLEAR', 'HOME'])
-  LcmRow = type_utils.Enum(['ROW0', 'ROW1', 'ROW2', 'ROW3'])
+  class LcmCommand(str, enum.Enum):
+    BACKLIGHT_OFF = 'BACKLIGHT_OFF'
+    BACKLIGHT_ON = 'BACKLIGHT_ON'
+    CLEAR = 'CLEAR'
+    HOME = 'HOME'
+
+    def __str__(self):
+      return self.name
+
+  class LcmRow(str, enum.Enum):
+    ROW0 = 'ROW0'
+    ROW1 = 'ROW1'
+    ROW2 = 'ROW2'
+    ROW3 = 'ROW3'
+
+    def __str__(self):
+      return self.name
 
   def Init(self, **kwargs):
     """Initializes connection with fixture."""
@@ -346,7 +408,7 @@ def main():
             'found, a DummyBFTFixture is used.'))
 
   subparsers = parser.add_subparsers(dest='command')
-  support_devices = sorted(BFTFixture.Device)
+  support_devices = sorted(list(BFTFixture.Device.__members__))
   parser_engage = subparsers.add_parser(
       'Engage', help='Engage a device. -h for more help.')
   parser_engage.add_argument('device', choices=support_devices,
@@ -366,20 +428,20 @@ def main():
       'SystemStatus',
       help='Get status of a component in DUT. -h for more help.')
   parser_system_status.add_argument(
-      'component', choices=sorted(BFTFixture.SystemStatus),
+      'component', choices=sorted(list(BFTFixture.SystemStatus.__members__)),
       help='A DUT component (defined in SystemStatus) to get status.')
 
   parser_is_led_color = subparsers.add_parser(
       'IsLEDColor', help='Check LED color. -h for more help.')
-  parser_is_led_color.add_argument('color',
-                                   choices=sorted(BFTFixture.LEDColor),
-                                   help='Color to inspect.')
+  parser_is_led_color.add_argument(
+      'color', choices=sorted(list(BFTFixture.LEDColor.__members__)),
+      help='Color to inspect.')
 
   parser_set_status_color = subparsers.add_parser(
       'SetStatusColor', help='Set status color indicator. -h for more help.')
-  parser_set_status_color.add_argument('color',
-                                       choices=sorted(BFTFixture.StatusColor),
-                                       help='Status color to set.')
+  parser_set_status_color.add_argument(
+      'color', choices=sorted(list(BFTFixture.StatusColor.__members__)),
+      help='Status color to set.')
 
   subparsers.add_parser('ResetKeyboard', help='Reset keyboard device.')
 
@@ -397,16 +459,16 @@ def main():
 
   parser_set_lcm_text = subparsers.add_parser(
       'SetLcmText', help='Show a message on LCM. -h for more help.')
-  parser_set_lcm_text.add_argument('row_number',
-                                   choices=sorted(BFTFixture.LcmRow),
-                                   help='Row number to set.')
+  parser_set_lcm_text.add_argument(
+      'row_number', choices=sorted(list(BFTFixture.LcmRow.__members__)),
+      help='Row number to set.')
   parser_set_lcm_text.add_argument('message',
                                    help='Message to show.')
 
   parser_issue_lcm_command = subparsers.add_parser(
       'IssueLcmCommand', help='Issue a command to LCM. -h for more help.')
   parser_issue_lcm_command.add_argument(
-      'action', choices=sorted(BFTFixture.LcmCommand),
+      'action', choices=sorted(list(BFTFixture.LcmCommand.__members__)),
       help='Action to execute.')
 
   parser_set_usb_hub_charge = subparsers.add_parser(

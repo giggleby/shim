@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ from cros.factory.probe import function
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
-from cros.factory.utils import type_utils
 from cros.factory.utils.type_utils import Obj
 
 
@@ -22,7 +22,13 @@ except ImportError:
   pass
 
 
-KNOWN_DEVICE_TYPES = type_utils.Enum(['wireless', 'ethernet', 'cellular'])
+class KnownDeviceTypes(str, enum.Enum):
+  wireless = 'wireless'
+  ethernet = 'ethernet'
+  cellular = 'cellular'
+
+  def __str__(self):
+    return self.name
 
 
 class NetworkDevices:
@@ -275,18 +281,19 @@ class GenericNetworkDeviceFunction(
   ]
 
   def GetCategoryFromArgs(self):
-    if self.args.device_type not in KNOWN_DEVICE_TYPES:
+    if self.args.device_type not in KnownDeviceTypes.__members__:
       raise cached_probe_function.InvalidIdentityError(
-          f'device_type should be one of {KNOWN_DEVICE_TYPES!r}.')
+          f'device_type should be one of {list(KnownDeviceTypes.__members__)}.')
 
     return self.args.device_type
 
   @classmethod
   def ProbeDevices(cls, category):
     function_table = {
-        KNOWN_DEVICE_TYPES.wireless: cls.ProbeWireless,
-        KNOWN_DEVICE_TYPES.ethernet: cls.ProbeEthernet,
-        KNOWN_DEVICE_TYPES.cellular: cls.ProbeCellular}
+        KnownDeviceTypes.wireless: cls.ProbeWireless,
+        KnownDeviceTypes.ethernet: cls.ProbeEthernet,
+        KnownDeviceTypes.cellular: cls.ProbeCellular
+    }
     return function_table[category]()
 
   @classmethod

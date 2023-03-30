@@ -4,13 +4,20 @@
 """Defines classes to hold the definitions regarding to the probe config."""
 
 import copy
+import enum
 import re
 
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
 
 
-ValueType = type_utils.Enum(['INT', 'STRING'])
+class ValueType(str, enum.Enum):
+  INT = 'INT'
+  STRING = 'STRING'
+
+  def __str__(self):
+    return self.name
+
 
 class OutputFieldDefinition:
   """Placeholder for the definition of a field outputted by a probe function.

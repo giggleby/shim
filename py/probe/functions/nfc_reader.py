@@ -2,20 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 
 from cros.factory.probe.functions import sysfs
 from cros.factory.probe.functions import usb
 from cros.factory.probe.lib import cached_probe_function
-from cros.factory.utils import type_utils
 
-
-RemovableResult = type_utils.Enum(('fixed', 'removable', 'unknown'))
 
 _REMOVABLE_FIELD = 'removable'
 _ALLOWED_VID_PID_LIST = frozenset([
     ('0c27', '3bfa'),
 ])
+
+
+class RemovableResult(str, enum.Enum):
+  fixed = 'fixed'
+  removable = 'removable'
+  unknown = 'unknown'
+
+  def __str__(self):
+    return self.name
 
 
 class NFCUSBFunction(cached_probe_function.GlobPathCachedProbeFunction):
