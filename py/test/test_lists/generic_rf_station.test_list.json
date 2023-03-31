@@ -8,7 +8,6 @@
     "dut_options": {
       "link_class": "SSHLink",
       "host": null,
-      "identity": "/usr/local/factory/misc/sshkeys/testing_rsa",
       "use_ping": true,
       "start_dhcp_server": true,
       "start_dhcp_server_after_ping": {
