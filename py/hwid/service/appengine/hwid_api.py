@@ -72,7 +72,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         self._sku_helper)
     self._ss_helper = ss_helper.SelfServiceHelper(
         _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager,
-        _avl_converter_manager, _session_cache_adapter, _avl_metadata_manager)
+        _avl_converter_manager, _session_cache_adapter, _avl_metadata_manager,
+        ss_helper.FeatureMatcherBuilderImpl)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -254,7 +255,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def ValidateHwidDbEditableSectionChange(self, request):
-    return self._ss_helper.ValidateHWIDDBEditableSectionChange(request)
+    raise protorpc_utils.ProtoRPCException(
+        protorpc_utils.RPCCanonicalErrorCode.UNIMPLEMENTED,
+        'Deprecated. Use AnalyzeHwidDbEditableSection instead.')
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck

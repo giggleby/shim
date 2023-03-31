@@ -6,9 +6,11 @@ import datetime
 import os
 import re
 import textwrap
-from typing import Mapping, Optional, Sequence
+from typing import Mapping, Optional, Sequence, Type
 import unittest
 from unittest import mock
+
+import yaml
 
 from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
@@ -16,6 +18,7 @@ from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data.converter import converter as converter_module
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
@@ -114,6 +117,8 @@ def _CreateFakeSelfServiceHelper(
     avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
     session_cache_adapter: Optional[memcache_adapter.MemcacheAdapter] = None,
     avl_metadata_manager: Optional[avl_metadata_util.AVLMetadataManager] = None,
+    feature_matcher_builder_class: (
+        Optional[Type[ss_helper_module.FeatureMatcherBuilder]]) = None,
 ) -> ss_helper_module.SelfServiceHelper:
   avl_metadata_manager = (
       avl_metadata_manager or avl_metadata_util.AVLMetadataManager(
@@ -123,12 +128,12 @@ def _CreateFakeSelfServiceHelper(
               ['cc1@notgoogle.com'])))
   return ss_helper_module.SelfServiceHelper(
       hwid_action_manager_inst or modules.fake_hwid_action_manager,
-      hwid_repo_manager,
-      hwid_db_data_manager or modules.fake_hwid_db_data_manager,
-      avl_converter_manager or modules.fake_avl_converter_manager,
-      session_cache_adapter or modules.fake_session_cache_adapter,
-      avl_metadata_manager,
-  )
+      hwid_repo_manager, hwid_db_data_manager or
+      modules.fake_hwid_db_data_manager, avl_converter_manager or
+      modules.fake_avl_converter_manager, session_cache_adapter or
+      modules.fake_session_cache_adapter, avl_metadata_manager,
+      (feature_matcher_builder_class or
+       ss_helper_module.FeatureMatcherBuilderImpl))
 
 
 def _AnalyzeHWIDDBEditableSection(ss_helper: ss_helper_module.SelfServiceHelper,
@@ -148,6 +153,360 @@ def _SplitHWIDDBChange(
   return ss_helper.SplitHWIDDBChange(split_req)
 
 
+_ComponentClass = str
+_ComponentName = str
+_ComponentValue = Mapping[str, str]
+
+
+class FeatureMatcherBuilderImplTest(unittest.TestCase):
+
+  def _BuildHWIDDBForTest(
+      self,
+      components: Optional[Mapping[_ComponentClass,
+                                   Mapping[_ComponentName,
+                                           _ComponentValue]]] = None,
+  ) -> database.Database:
+    components = components or {}
+    db_components = {}
+    for comp_class, comp_names_and_values in components.items():
+      for comp_name, comp_value in comp_names_and_values.items():
+        db_comps_of_class = db_components.setdefault(comp_class, {'items': {}})
+        db_comps_of_class['items'][comp_name] = {
+            'status': 'supported',
+            'values': comp_value,
+        }
+    return database.Database.LoadData('\n'.join([
+        textwrap.dedent('''\
+            checksum:
+            project: UNUSEDPROJNAME
+            encoding_patterns:
+              0: default
+            image_id:
+              0: DVT
+            pattern:
+            - image_ids: [0]
+              encoding_scheme: base8192
+              fields: []
+            encoded_fields: {}
+            '''),
+        yaml.safe_dump({'components': db_components}),
+        'rules: []',
+    ]))
+
+  def _CreateDLMComponentEntry(
+      self, cid: int, qid: Optional[int] = None,
+      cpu_property: Optional[features.CPUProperty] = None,
+      virtual_dimm_property: Optional[features.VirtualDIMMProperty] = None,
+      storage_function_property: (
+          Optional[features.StorageFunctionProperty]) = None,
+      display_property: Optional[features.DisplayProperty] = None,
+      camera_property: Optional[features.CameraProperty] = None):
+    return features.DLMComponentEntry(
+        dlm_id=features.DLMComponentEntryID(cid=cid, qid=qid),
+        cpu_property=cpu_property, virtual_dimm_property=virtual_dimm_property,
+        storage_function_property=storage_function_property,
+        display_panel_property=display_property,
+        camera_property=camera_property)
+
+  def setUp(self):
+    super().setUp()
+
+    self._mock_spec_resolver = (
+        mock.create_autospec(features.BrandFeatureSpecResolver, instance=True))
+    self._mock_spec_resolver.DeduceBrandFeatureSpec.return_value = {}
+
+    patcher = mock.patch.object(features, 'GetDefaultBrandFeatureSpecResolver',
+                                return_value=self._mock_spec_resolver)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def _GetConvertedBrandFeatureVersionsFromMock(self):
+    self._mock_spec_resolver.DeduceBrandFeatureSpec.assert_called()
+    args, kwargs = self._mock_spec_resolver.DeduceBrandFeatureSpec.call_args
+    return kwargs['brand_feature_versions'] if len(args) < 1 else args[1]
+
+  def _GetConvertedDLMComponentDatabaseFromMock(self):
+    self._mock_spec_resolver.DeduceBrandFeatureSpec.assert_called()
+    args, kwargs = self._mock_spec_resolver.DeduceBrandFeatureSpec.call_args
+    return kwargs['dlm_db'] if len(args) < 2 else args[2]
+
+  def _AssertFeatureMatcherBuildResultSuccess(
+      self, actual: ss_helper_module.FeatureMatcherBuildResult,
+      expect_warnings: Optional[Sequence[str]] = None):
+    """Checks the given feature matcher build result is a success.
+
+    Args:
+      actual: The value to check.
+      expect_warning: `None` to skip the warning message check.  Empty list to
+        specify that the actual build result is expected to contain the no
+        warnings.  Otherwise it expects the actual build result to contain given
+        warnings.
+    """
+    if expect_warnings is not None:
+      self.assertEqual(actual.has_warnings, bool(expect_warnings))
+      for expect_warning in expect_warnings:
+        self.assertIn(expect_warning, actual.commit_message)
+    self.assertIsNotNone(actual.feature_matcher_source)
+
+  def _AssertFeatureMatcherBuildResultFailure(
+      self, actual: ss_helper_module.FeatureMatcherBuildResult,
+      expect_errors: Optional[Sequence[str]] = None):
+    """Checks the given feature matcher build result is a failure.
+
+    Args:
+      actual: The value to check.
+      expect_errors: The expected error messages in the commit message.
+    """
+    for expect_error in expect_errors or []:
+      self.assertIn(expect_error, actual.commit_message)
+    self.assertIsNone(actual.feature_matcher_source)
+
+  def testBuild_WithInvalidBrandFeatureVersion_ThenFailWithError(self):
+    db = self._BuildHWIDDBForTest()
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create(
+        'ZZCR').feature_version = -1
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultFailure(
+        result, expect_errors=['Unexpect feature version (-1).'])
+
+  def testBuild_WithValidBrandFeatureVersion_ThenSuccess(self):
+    db = self._BuildHWIDDBForTest()
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 0
+    extra_resource.brand_feature_infos.get_or_create('BBBB').feature_version = 1
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result)
+    self.assertDictEqual(self._GetConvertedBrandFeatureVersionsFromMock(),
+                         {'BBBB': 1})
+
+  def testBuild_WithInvalidCPUFeatureVersion_ThenSuccessWithWarning(self):
+    db = self._BuildHWIDDBForTest(
+        components={'cpu': {
+            'cpu_1': {
+                'model': 'cpu_1_model'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    dlm_component_msg = extra_resource.dlm_components.add(cid=1, is_cpu=True)
+    dlm_component_msg.cpu_info.feature_compatible_versions.append(-1)
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(
+        result, expect_warnings=['Invalid CPU feature versions: [-1].'])
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(cid=1)
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithValidCPUFeatureVersion_ThenSuccess(self):
+    db = self._BuildHWIDDBForTest(
+        components={'cpu': {
+            'cpu_1': {
+                'model': 'cpu_1_model'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    dlm_component_msg = extra_resource.dlm_components.add(cid=1, is_cpu=True)
+    dlm_component_msg.cpu_info.feature_compatible_versions.append(1)
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result, expect_warnings=[])
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(
+        cid=1, cpu_property=features.CPUProperty(compatible_versions=[1]))
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithSizedDRAM_Success(self):
+    db = self._BuildHWIDDBForTest(
+        components={'dram': {
+            'dram_1': {
+                'partnumber': 'PN',
+                'size': '4096'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.dlm_components.add(cid=1, is_dram=True)
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result, expect_warnings=[])
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(
+        cid=1,
+        virtual_dimm_property=features.VirtualDIMMProperty(size_in_mb=4096))
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithNoSizeDRAM_SuccessWithWarnings(self):
+    db = self._BuildHWIDDBForTest(
+        components={'dram': {
+            'dram_1': {
+                'partnumber': 'PN12345'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.dlm_components.add(cid=1, is_dram=True)
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(
+        result,
+        expect_warnings=['Unable to get the virtual DIMM size from dram_1.'])
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(cid=1)
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithAmbiguousSizeDRAM_FailWithError(self):
+    db = self._BuildHWIDDBForTest(components={
+        'dram': {
+            'dram_1#1': {
+                'size': '1024'
+            },
+            'dram_1#2': {
+                'size': '4096'
+            }
+        }
+    })
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.dlm_components.add(cid=1, is_dram=True)
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultFailure(
+        result, expect_errors=['Failed to resolve DIMM size from HWID DB'])
+
+  def testBuild_WithStorage_Success(self):
+    db = self._BuildHWIDDBForTest(
+        components={'storage': {
+            'storage_1': {
+                'vid': 'abcd'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    msg = extra_resource.dlm_components.add(cid=1, is_storage=True)
+    msg.storage_info.size_in_gb = 256
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result)
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(
+        cid=1, storage_function_property=features.StorageFunctionProperty(
+            size_in_gb=256))
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithStorageSizeMismatch_SuccessWithWarnings(self):
+    db = self._BuildHWIDDBForTest(components={
+        'storage': {
+            'storage_1': {
+                'vid': 'abcd',
+                'size': str(100 * 1024**3)
+            }
+        }
+    })
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    msg = extra_resource.dlm_components.add(cid=1, is_storage=True)
+    msg.storage_info.size_in_gb = 256
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(
+        result, expect_warnings=textwrap.wrap(
+            'The estimated storage size (100) from HWID component storage_1 '
+            'different than the DLM provided one: 256.', initial_indent='  * ',
+            subsequent_indent='    '))
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(
+        cid=1, storage_function_property=features.StorageFunctionProperty(
+            size_in_gb=256))
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithDisplaySizeMismatch_SuccessWithWarnings(self):
+    db = self._BuildHWIDDBForTest(components={
+        'display_panel': {
+            'display_panel_1': {
+                'width': '1920',
+                'height': '768'
+            }
+        }
+    })
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    msg = extra_resource.dlm_components.add(cid=1, is_display_panel=True)
+    msg.display_panel_info.panel_type = msg.display_panel_info.OTHER
+    msg.display_panel_info.horizontal_resolution = 1920
+    msg.display_panel_info.vertical_resolution = 1080
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(
+        result, expect_warnings=[
+            'The resolution from HWID component display_panel_1 is different'
+        ])
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(
+        cid=1, display_property=features.DisplayProperty(
+            panel_type=features.DisplayPanelType.OTHER,
+            horizontal_resolution=1920, vertical_resolution=1080))
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+  def testBuild_WithCamera_Success(self):
+    db = self._BuildHWIDDBForTest(
+        components={'camera': {
+            'camera_1': {
+                'vid': 'abcd'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    msg = extra_resource.dlm_components.add(cid=1, is_camera=True)
+    msg.camera_info.position = msg.camera_info.USER_FACING
+    msg.camera_info.horizontal_resolution = 1000
+    msg.camera_info.vertical_resolution = 500
+    msg.camera_info.has_tnr = True
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result)
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(
+        cid=1, camera_property=features.CameraProperty(
+            is_user_facing=True, has_tnr=True, horizontal_resolution=1000,
+            vertical_resolution=500))
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
+
 class SelfServiceHelperTest(unittest.TestCase):
 
   def setUp(self):
@@ -155,8 +514,18 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._modules = test_utils.FakeModuleCollection()
     self._mock_hwid_repo_manager = mock.create_autospec(
         hwid_repo.HWIDRepoManager, instance=True)
-    self._ss_helper = _CreateFakeSelfServiceHelper(self._modules,
-                                                   self._mock_hwid_repo_manager)
+    self._mock_feature_matcher_builder_class = mock.create_autospec(
+        ss_helper_module.FeatureMatcherBuilder)
+    self._mock_feature_matcher_builder = (
+        self._mock_feature_matcher_builder_class.Create.return_value)
+    self._mock_feature_matcher_builder.Build.return_value = (
+        ss_helper_module.FeatureMatcherBuildResult(
+            has_warnings=False, commit_message='',
+            feature_matcher_source='unused value'))
+
+    self._ss_helper = _CreateFakeSelfServiceHelper(
+        self._modules, self._mock_hwid_repo_manager,
+        feature_matcher_builder_class=self._mock_feature_matcher_builder_class)
 
   def tearDown(self):
     self._modules.ClearAll()
@@ -234,7 +603,67 @@ class SelfServiceHelperTest(unittest.TestCase):
     self.assertEqual(ex.exception.code,
                      protorpc_utils.RPCCanonicalErrorCode.ABORTED)
 
-  def testCreateHWIDDBEditableSectionChangeCL_Succeed(self):
+  @mock.patch.object(database.Database, 'LoadData')
+  def testCreateHWIDDBEditableSectionChangeCL_BuildFeatureMatcherFail(
+      self, mock_load_data):
+    del mock_load_data
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+    action.AnalyzeDraftDBEditableSection.return_value = (
+        hwid_action.DBEditableSectionAnalysisReport(
+            'validation-token-value-1', 'db data after change 1',
+            'db data after change 1 (internal)', False, [], [], [], {}))
+    self._modules.fake_session_cache_adapter.Put(
+        'validation-token-value-1', _SessionCache('PROJ',
+                                                  'db data after change'))
+    self._mock_feature_matcher_builder.Build.return_value = (
+        ss_helper_module.FeatureMatcherBuildResult(
+            has_warnings=False, commit_message='THIS_IS_THE_ERROR',
+            feature_matcher_source=None))
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+
+    req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
+        project='proj', validation_token='validation-token-value-1')
+    self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+
+    unused_args, kwargs = live_hwid_repo.CommitHWIDDB.call_args
+    self.assertIn('THIS_IS_THE_ERROR', kwargs['commit_msg'])
+    self.assertIsNone(kwargs['feature_matcher_source'])
+
+  @mock.patch.object(database.Database, 'LoadData')
+  def testCreateHWIDDBEditableSectionChangeCL_BuildFeatureMatcherSuccess(
+      self, mock_load_data):
+    del mock_load_data
+    self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
+    live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
+    action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
+    action.AnalyzeDraftDBEditableSection.return_value = (
+        hwid_action.DBEditableSectionAnalysisReport(
+            'validation-token-value-1', 'db data after change 1',
+            'db data after change 1 (internal)', False, [], [], [], {}))
+    self._modules.fake_session_cache_adapter.Put(
+        'validation-token-value-1', _SessionCache('PROJ',
+                                                  'db data after change'))
+    self._mock_feature_matcher_builder.Build.return_value = (
+        ss_helper_module.FeatureMatcherBuildResult(
+            has_warnings=False, commit_message='Some commit info.',
+            feature_matcher_source='the result payload'))
+    live_hwid_repo.CommitHWIDDB.return_value = 123
+
+    req = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClRequest(
+        project='proj', validation_token='validation-token-value-1')
+    self._ss_helper.CreateHWIDDBEditableSectionChangeCL(req)
+
+    unused_args, kwargs = live_hwid_repo.CommitHWIDDB.call_args
+    self.assertIn('Some commit info.', kwargs['commit_msg'])
+    self.assertEqual('the result payload', kwargs['feature_matcher_source'])
+
+  @mock.patch.object(database.Database, 'LoadData')
+  def testCreateHWIDDBEditableSectionChangeCL_Succeed(self, mock_load_data):
+    del mock_load_data
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.CommitHWIDDB.return_value = 123
@@ -1439,6 +1868,10 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ConfigLiveHWIDRepo(project, 3, old_db_data)
     action = self._CreateFakeHWIDBAction(project, old_db_data)
     self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
+    self._mock_feature_matcher_builder.Build.return_value = (
+        ss_helper_module.FeatureMatcherBuildResult(
+            has_warnings=False, commit_message='unused msg',
+            feature_matcher_source='generated feature matcher payload'))
 
     # Call AnalyzeHWIDDBEditableSection to start a HWID DB change workflow.
     analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project,
@@ -1659,6 +2092,8 @@ class SelfServiceHelperTest(unittest.TestCase):
         all(f'reason1 of {identity}.' in review_required_call['commit_msg'] and
             f'reason2 of {identity}.' in review_required_call['commit_msg'] for
             identity in create_cl_resp.review_required_change_unit_identities))
+    self.assertEqual('generated feature matcher payload',
+                     review_required_call['feature_matcher_source'])
 
   def testCreateSplittedHWIDDBCLs_AVLAlignmentChanges(self):
 

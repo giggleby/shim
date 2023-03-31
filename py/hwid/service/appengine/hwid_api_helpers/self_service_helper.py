@@ -2,14 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import datetime
 import io
 import logging
+import math
 import os.path
 import re
 import textwrap
 import time
-from typing import Collection, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Tuple
+from typing import Container, Generic, Iterable, Iterator, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Sized, Tuple, Type, TypeVar
 import uuid
 
 from google.protobuf import descriptor
@@ -19,11 +21,13 @@ from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as v3_action_helper
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
+from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import hwid_v3_action
 from cros.factory.hwid.service.appengine import memcache_adapter
@@ -35,6 +39,22 @@ from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import yaml_wrapper as yaml
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 from cros.factory.utils import json_utils
+
+
+_CollectionElementType = TypeVar('_CollectionElementType')
+
+
+class Collection(abc.ABC, Generic[_CollectionElementType],
+                 Container[_CollectionElementType], Sized,
+                 Iterable[_CollectionElementType]):
+  """A custom alias of `typing.Collection` to avoid `pylint`'s false alarms."""
+  # The current `pylint` reports false alarm "unsubscriptable-object: Value
+  # 'Collection' is unsubscriptable" because it fails to treat the built-in
+  # one as a type.  This replacement helps `pylint` correctly recognize the
+  # data type.
+  # TODO(yhong): Use the built-in `typing.Collection` after the
+  #    [fix](https://github.com/PyCQA/pylint/issues/2377) is adopted to the
+  #    repository.
 
 
 _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
@@ -311,6 +331,279 @@ def _IsCLReadyForCQ(cl_info: hwid_repo.HWIDDBCLInfo) -> bool:
                                 == hwid_repo.HWIDDBCLReviewStatus.APPROVED)
 
 
+class FeatureMatcherBuildResult(NamedTuple):
+  has_warnings: bool
+  commit_message: str
+  feature_matcher_source: Optional[str]
+
+
+class FeatureMatcherBuilder(abc.ABC):
+  """Builds the feature matcher from the DB and DLM resources."""
+
+  @classmethod
+  @abc.abstractmethod
+  def Create(
+      cls, db: database.Database,
+      extra_resource: hwid_api_messages_pb2.HwidDbExternalResource
+  ) -> 'FeatureMatcherBuilder':
+    """Creates a new builder instance.
+
+    Args:
+      db: The source HWID DB instance.
+      extra_resource: The extra data source from DLM.
+
+    Returns:
+      The created builder instance.
+    """
+
+  @abc.abstractmethod
+  def Build(self) -> FeatureMatcherBuildResult:
+    """Build the feature matcher source from the resources.
+
+    Returns:
+      The generation results.
+    """
+
+
+class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
+  """Real implementation of feature matcher source builder."""
+  _FEATURE_MATCHER_BUILDER = (
+      hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
+  _HWID_DB_DRAM_COMPONENT_TYPE = 'dram'
+  _HWID_DB_STORAGE_COMPONENT_TYPES = ('storage', 'storage_bridge')
+  _HWID_DB_DISPLAY_PANEL_TYPE = 'display_panel'
+
+  def __init__(self, db: database.Database,
+               extra_resource: hwid_api_messages_pb2.HwidDbExternalResource):
+    """Initializer.
+
+    Args:
+      db: The source HWID DB instance.
+      extra_resource: The extra data source from DLM.
+    """
+    self._db = db
+    self._extra_resource = extra_resource
+    self._warnings = []
+    self._npa = name_pattern_adapter.NamePatternAdapter()
+
+  @classmethod
+  def Create(
+      cls, db: database.Database,
+      extra_resource: hwid_api_messages_pb2.HwidDbExternalResource) -> 'cls':
+    return cls(db, extra_resource)
+
+  def _GetCPUProperty(
+      self, dlm_component_info: hwid_api_messages_pb2.DlmComponentInfo
+  ) -> Optional[features.CPUProperty]:
+    if not dlm_component_info.is_cpu:
+      return None
+    cpu_info = dlm_component_info.cpu_info
+    if any(v <= 0 for v in cpu_info.feature_compatible_versions):
+      self._warnings.append('Invalid CPU feature versions: '
+                            f'{cpu_info.feature_compatible_versions}.')
+      return None
+    return features.CPUProperty(
+        compatible_versions=cpu_info.feature_compatible_versions)
+
+  def _GetIntegerProbeValueFromHWID(self, comp_info,
+                                    field_name) -> Optional[int]:
+    try:
+      return int(comp_info.values[field_name])
+    except (KeyError, ValueError):
+      return None
+
+  def _EnumerateHWIDRelatedComponents(
+      self, component_type: str, dlm_id: features.DLMComponentEntryID
+  ) -> Iterator[Tuple[str, database.ComponentInfo]]:
+    np = self._npa.GetNamePattern(component_type)
+    for db_comp_name, db_comp_info in self._db.GetComponents(
+        component_type, include_default=False).items():
+      name_info = np.Matches(db_comp_name)
+      name_info_qid = name_info.qid or None
+      if (name_info and name_info.cid == dlm_id.cid and
+          name_info_qid == dlm_id.qid):
+        yield db_comp_name, db_comp_info
+
+  def _GetVirtualDIMMProperty(
+      self,
+      dlm_id: features.DLMComponentEntryID,
+      dlm_component_info: hwid_api_messages_pb2.DlmComponentInfo,
+  ) -> Optional[features.VirtualDIMMProperty]:
+    if not dlm_component_info.is_dram:
+      return None
+
+    sizes = set()
+    for db_comp_name, db_comp_info in self._EnumerateHWIDRelatedComponents(
+        self._HWID_DB_DRAM_COMPONENT_TYPE, dlm_id):
+      size_in_mb = self._GetIntegerProbeValueFromHWID(db_comp_info, 'size')
+      if not size_in_mb or size_in_mb <= 0:
+        self._warnings.append(
+            f'Unable to get the virtual DIMM size from {db_comp_name}.')
+        continue
+      sizes.add(size_in_mb)
+    if not sizes:
+      return None
+    if len(sizes) > 1:
+      # TODO(yhong): Consider ignoring "unsupported" or "duplicated" entries.
+      raise ValueError(
+          f'Failed to resolve DIMM size from HWID DB for {dlm_id}.')
+
+    return features.VirtualDIMMProperty(size_in_mb=sizes.pop())
+
+  def _GuessHWIDDBStorageSizeInBytes(self, comp_info) -> Optional[int]:
+    size_in_bytes = self._GetIntegerProbeValueFromHWID(comp_info, 'size')
+    if size_in_bytes and size_in_bytes > 0:
+      return size_in_bytes
+    sectors = self._GetIntegerProbeValueFromHWID(comp_info, 'sectors')
+    if sectors and sectors > 0:
+      return sectors * 512
+    return None
+
+  def _GetOrderOfMagnitudeOf2(self, value: int) -> int:
+    return round(math.log2(value))
+
+  def _GetStorageFunctionProperty(
+      self,
+      dlm_id: features.DLMComponentEntryID,
+      dlm_component_info: hwid_api_messages_pb2.DlmComponentInfo,
+  ) -> Optional[features.StorageFunctionProperty]:
+    if not dlm_component_info.is_storage:
+      return None
+
+    dlm_storage_size_in_gb = dlm_component_info.storage_info.size_in_gb
+    if dlm_storage_size_in_gb <= 0:
+      raise ValueError(
+          f'Invalid storage (ID={dlm_id}) size: {dlm_storage_size_in_gb}.')
+
+    for comp_type in self._HWID_DB_STORAGE_COMPONENT_TYPES:
+      for db_comp_name, db_comp_info in self._EnumerateHWIDRelatedComponents(
+          comp_type, dlm_id):
+        hwid_storage_size_in_bytes = self._GuessHWIDDBStorageSizeInBytes(
+            db_comp_info)
+        if hwid_storage_size_in_bytes is None:
+          continue
+        hwid_storage_size_in_gb = hwid_storage_size_in_bytes // (1024**3)
+        if hwid_storage_size_in_gb <= 0:
+          self._warnings.append(f'The HWID component {db_comp_name} has '
+                                'suspicious storage size info.')
+        if (self._GetOrderOfMagnitudeOf2(hwid_storage_size_in_gb) !=
+            self._GetOrderOfMagnitudeOf2(dlm_storage_size_in_gb)):
+          self._warnings.append(
+              f'The estimated storage size ({hwid_storage_size_in_gb}) '
+              f'from HWID component {db_comp_name} is different than the DLM '
+              f'provided one: {dlm_storage_size_in_gb}.')
+
+    return features.StorageFunctionProperty(size_in_gb=dlm_storage_size_in_gb)
+
+  def _GetDisplayProperty(
+      self,
+      dlm_id: features.DLMComponentEntryID,
+      dlm_component_info: hwid_api_messages_pb2.DlmComponentInfo,
+  ) -> Optional[features.DisplayProperty]:
+    if not dlm_component_info.is_display_panel:
+      return None
+
+    display_panel_info = dlm_component_info.display_panel_info
+    if (not display_panel_info.panel_type or
+        display_panel_info.vertical_resolution <= 0 or
+        display_panel_info.horizontal_resolution <= 0):
+      raise ValueError(f'Invalid display panel info: {display_panel_info}.')
+
+    for db_comp_name, db_comp_info in self._EnumerateHWIDRelatedComponents(
+        self._HWID_DB_DISPLAY_PANEL_TYPE, dlm_id):
+      hwid_width = self._GetIntegerProbeValueFromHWID(db_comp_info, 'width')
+      hwid_height = self._GetIntegerProbeValueFromHWID(db_comp_info, 'height')
+      if hwid_width is None or hwid_height is None:
+        continue
+      if (hwid_width != display_panel_info.horizontal_resolution or
+          hwid_height != display_panel_info.vertical_resolution):
+        self._warnings.append(
+            f'The resolution from HWID component {db_comp_name} is different '
+            f'than the DLM provided one: {display_panel_info}.')
+
+    return features.DisplayProperty(
+        panel_type=(features.DisplayPanelType.TN
+                    if display_panel_info.panel_type == display_panel_info.TN
+                    else features.DisplayPanelType.OTHER),
+        horizontal_resolution=display_panel_info.horizontal_resolution,
+        vertical_resolution=display_panel_info.vertical_resolution)
+
+  def _GetCameraProperty(
+      self, dlm_component_info: hwid_api_messages_pb2.DlmComponentInfo
+  ) -> Optional[features.CameraProperty]:
+    if not dlm_component_info.is_camera:
+      return None
+
+    camera_info = dlm_component_info.camera_info
+    return features.CameraProperty(
+        is_user_facing=camera_info.position == camera_info.USER_FACING,
+        has_tnr=camera_info.has_tnr,
+        horizontal_resolution=camera_info.horizontal_resolution,
+        vertical_resolution=camera_info.vertical_resolution)
+
+  def _BuildDLMComponentDB(self) -> features.DLMComponentDatabase:
+    dlm_component_db = {}
+    for dlm_component_info in self._extra_resource.dlm_components:
+      dlm_id = features.DLMComponentEntryID(dlm_component_info.cid,
+                                            dlm_component_info.qid or None)
+      dlm_component_db[dlm_id] = features.DLMComponentEntry(
+          dlm_id, cpu_property=self._GetCPUProperty(dlm_component_info),
+          virtual_dimm_property=self._GetVirtualDIMMProperty(
+              dlm_id, dlm_component_info),
+          storage_function_property=self._GetStorageFunctionProperty(
+              dlm_id, dlm_component_info),
+          display_panel_property=self._GetDisplayProperty(
+              dlm_id, dlm_component_info),
+          camera_property=self._GetCameraProperty(dlm_component_info))
+    return dlm_component_db
+
+  def _BuildBrandFeatureVersions(self) -> features.BrandFeatureVersions:
+    brand_feature_versions = {}
+    for brand_name, feature_info in (
+        self._extra_resource.brand_feature_infos.items()):
+      if feature_info.feature_version < 0:
+        raise ValueError(
+            f'Unexpect feature version ({feature_info.feature_version}).')
+      if feature_info.feature_version > 0:
+        brand_feature_versions[brand_name] = feature_info.feature_version
+    return brand_feature_versions
+
+  def Build(self) -> FeatureMatcherBuildResult:
+    """Build the feature matcher source from the resources.
+
+    Returns:
+      The generation results.
+    """
+    try:
+      _brand_feature_versions = self._BuildBrandFeatureVersions()
+      _dlm_component_db = (
+          self._BuildDLMComponentDB() if _brand_feature_versions else {})
+      resolver = features.GetDefaultBrandFeatureSpecResolver()
+      spec = resolver.DeduceBrandFeatureSpec(self._db, _brand_feature_versions,
+                                             _dlm_component_db)
+      feature_matcher_source = (
+          self._FEATURE_MATCHER_BUILDER.GenerateFeatureMatcherRawSource(spec))
+
+    except (ValueError, features.HWIDDBNotSupportError) as ex:
+      return FeatureMatcherBuildResult(
+          has_warnings=False, commit_message=(
+              f'ERROR: Failed to generate feature matcher payload: {ex}'),
+          feature_matcher_source=None)
+
+    commit_message_lines = []
+    if self._warnings:
+      commit_message_lines.append(
+          'Feature matcher payload generation WARNINGS:')
+      for warning in self._warnings:
+        commit_message_lines.extend(
+            textwrap.wrap(warning, initial_indent='  * ',
+                          subsequent_indent='    '))
+    return FeatureMatcherBuildResult(
+        has_warnings=bool(self._warnings),
+        commit_message='\n'.join(commit_message_lines),
+        feature_matcher_source=feature_matcher_source)
+
+
 class SelfServiceHelper:
 
   def __init__(self,
@@ -319,13 +612,15 @@ class SelfServiceHelper:
                hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
                avl_converter_manager: converter_utils.ConverterManager,
                session_cache_adapter: memcache_adapter.MemcacheAdapter,
-               avl_metadata_manager: avl_metadata_util.AVLMetadataManager):
+               avl_metadata_manager: avl_metadata_util.AVLMetadataManager,
+               feature_matcher_builder_class: Type[FeatureMatcherBuilder]):
     self._hwid_action_manager = hwid_action_manager_inst
     self._hwid_repo_manager = hwid_repo_manager
     self._hwid_db_data_manager = hwid_db_data_manager
     self._avl_converter_manager = avl_converter_manager
     self._session_cache_adapter = session_cache_adapter
     self._avl_metadata_manager = avl_metadata_manager
+    self._feature_matcher_builder_class = feature_matcher_builder_class
 
   def GetHWIDDBEditableSection(self, request):
     project = _NormalizeProjectString(request.project)
@@ -338,11 +633,6 @@ class SelfServiceHelper:
     response = hwid_api_messages_pb2.GetHwidDbEditableSectionResponse(
         hwid_db_editable_section=editable_section)
     return response
-
-  def ValidateHWIDDBEditableSectionChange(self, request):
-    raise common_helper.ConvertExceptionToProtoRPCException(
-        NotImplementedError(('Deprecated. Use AnalyzeHwidDbEditableSection '
-                             'instead')))
 
   def _UpdateHWIDDBDataIfNeed(self, live_hwid_repo: hwid_repo.HWIDRepo,
                               project: str):
@@ -391,6 +681,10 @@ class SelfServiceHelper:
           protorpc_utils.RPCCanonicalErrorCode.ABORTED,
           detail='The validation token is expired.')
 
+    feature_matcher_build_result = self._feature_matcher_builder_class.Create(
+        database.Database.LoadData(analysis.new_hwid_db_contents_internal),
+        request.db_external_resource).Build()
+
     commit_msg = [
         textwrap.dedent(f"""\
             ({int(time.time())}) {project}: HWID Config Update
@@ -401,6 +695,10 @@ class SelfServiceHelper:
             %s
             """) % request.description
     ]
+
+    # TODO(b/273607350): Set verify-1 if there are warnings / errors.
+    if feature_matcher_build_result.commit_message:
+      commit_msg.append(feature_matcher_build_result.commit_message)
 
     if request.dlm_validation_exemption:
       commit_msg.append(
@@ -415,7 +713,9 @@ class SelfServiceHelper:
           commit_msg=commit_msg, reviewers=request.reviewer_emails,
           cc_list=request.cc_emails, bot_commit=request.auto_approved,
           commit_queue=request.auto_approved,
-          hwid_db_contents_internal=analysis.new_hwid_db_contents_internal)
+          hwid_db_contents_internal=analysis.new_hwid_db_contents_internal,
+          feature_matcher_source=(
+              feature_matcher_build_result.feature_matcher_source))
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')
@@ -1000,20 +1300,16 @@ class SelfServiceHelper:
 
   def CreateSplittedHWIDDBCLs(self, request):
 
-    def _CommitSplittedCL(db: database.Database, msg: str,
-                          change_unit_identities: Sequence[str],
-                          bot_commit: bool = False,
-                          commit_queue: bool = False) -> Tuple[int, str]:
-      commit_msg_list = [msg]
-
-      commit_msg_list.append('Reasons:\n')
-      commit_msg_list.extend(
+    def _CommitSplittedCL(
+        db: database.Database, msg: str, change_unit_identities: Sequence[str],
+        bot_commit: bool = False, commit_queue: bool = False,
+        include_feature_matcher_source: bool = False) -> Tuple[int, str]:
+      change_unit_commit_msg = '\n'.join(['Reasons:'] + [
           _FormatApprovalStatusReasons(approval_infos[identity])
           for identity in change_unit_identities
-          if approval_infos[identity].reasons)
+          if approval_infos[identity].reasons
+      ])
 
-      commit_msg_list.append(f'BUG=b:{request.bug_number}')
-      commit_msg = '\n'.join(commit_msg_list)
       new_hwid_db_editable_section_internal = db.DumpDataWithoutChecksum(
           suppress_support_status=False, internal=True)
       new_hwid_db_editable_section_external = db.DumpDataWithoutChecksum(
@@ -1027,12 +1323,31 @@ class SelfServiceHelper:
       for identity in change_unit_identities:
         ccs.update(approval_infos[identity].ccs)
         reviewers.update(approval_infos[identity].reviewers)
+
+      if include_feature_matcher_source:
+        build_result = self._feature_matcher_builder_class.Create(
+            db, session_cache.avl_resource).Build()
+        feature_matcher_generation_commit_msg = build_result.commit_message
+        feature_matcher_source = build_result.feature_matcher_source
+        # TODO(b/273607350): Set verify-1 if there are warnings / errors.
+      else:
+        feature_matcher_generation_commit_msg = ''
+        feature_matcher_source = None
+
+      commit_msg = '\n\n'.join(
+          filter(None, [
+              msg,
+              feature_matcher_generation_commit_msg,
+              change_unit_commit_msg,
+              f'BUG=b:{request.bug_number}',
+          ]))
       try:
         cl_number = live_hwid_repo.CommitHWIDDB(
             name=project, hwid_db_contents=new_hwid_db_contents_external,
             commit_msg=commit_msg, reviewers=list(reviewers), cc_list=list(ccs),
             bot_commit=bot_commit, commit_queue=commit_queue,
-            hwid_db_contents_internal=new_hwid_db_contents_internal)
+            hwid_db_contents_internal=new_hwid_db_contents_internal,
+            feature_matcher_source=feature_matcher_source)
       except git_util.GitUtilNoModificationException:
         return 0, new_hwid_db_contents_external
       except hwid_repo.HWIDRepoError:
@@ -1068,10 +1383,11 @@ class SelfServiceHelper:
         %s
     """) % request.description
     auto_mergeable_change_cl_number, final_hwid_db_content = (
-        _CommitSplittedCL(split_result.auto_mergeable_db, commit_msg,
-                          split_result.auto_mergeable_change_unit_identities,
-                          bot_commit=True,
-                          commit_queue=split_result.review_required_noop))
+        _CommitSplittedCL(
+            split_result.auto_mergeable_db, commit_msg,
+            split_result.auto_mergeable_change_unit_identities, bot_commit=True,
+            commit_queue=split_result.review_required_noop,
+            include_feature_matcher_source=(split_result.review_required_noop)))
     final_cl_number = auto_mergeable_change_cl_number
 
     if not split_result.review_required_noop:
@@ -1085,9 +1401,9 @@ class SelfServiceHelper:
           %s
       """) % request.description
       review_required_change_cl_number, final_hwid_db_content = (
-          _CommitSplittedCL(
-              split_result.review_required_db, commit_msg,
-              split_result.review_required_change_unit_identities))
+          _CommitSplittedCL(split_result.review_required_db, commit_msg,
+                            split_result.review_required_change_unit_identities,
+                            include_feature_matcher_source=True))
       final_cl_number = review_required_change_cl_number
 
     return hwid_api_messages_pb2.CreateSplittedHwidDbClsResponse(

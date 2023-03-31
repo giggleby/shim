@@ -404,12 +404,68 @@ message CreateHwidDbEditableSectionChangeClResponse {
   HwidDbEditableSectionAnalysisReport analysis_report = 2;
 }
 
+message DlmCpuInfo {
+  repeated int64 feature_compatible_versions = 1;
+}
+
+message DlmStorageInfo {
+  int64 size_in_gb = 1;
+}
+
+message DlmDisplayPanelInfo {
+  enum PanelType {
+    PANEL_TYPE_UNSPECIFIC = 0;
+    TN = 1;
+    OTHER = 2;
+  }
+  PanelType panel_type = 1;
+  int64 vertical_resolution = 2;
+  int64 horizontal_resolution = 3;
+}
+
+message DlmCameraInfo {
+  enum PositionCase {
+    POSITION_CASE_UNSPECIFIC = 0;
+    USER_FACING = 1;
+    WORLD_FACING = 2;
+  }
+  PositionCase position = 1;
+  int64 vertical_resolution = 2;
+  int64 horizontal_resolution = 3;
+  bool has_tnr = 4;
+}
+
+message DlmComponentInfo {
+  int64 cid = 1;
+  int64 qid = 2;
+
+  bool is_cpu = 3;
+  DlmCpuInfo cpu_info = 4;
+
+  bool is_dram = 5;
+
+  bool is_storage = 6;
+  DlmStorageInfo storage_info = 7;
+
+  bool is_display_panel = 8;
+  DlmDisplayPanelInfo display_panel_info = 9;
+
+  bool is_camera = 10;
+  DlmCameraInfo camera_info = 11;
+}
+
+message FeatureInfo {
+  int64 feature_version = 1;
+}
+
 // External resources that HWID DB can refer to.
 message HwidDbExternalResource {
   // Component probe info from AVL.
   repeated
       cros.factory.probe_info_service.app_engine.stubby_pb2.ComponentProbeInfo
           component_probe_infos = 1;
+  repeated DlmComponentInfo dlm_components = 2;
+  map<string, FeatureInfo> brand_feature_infos = 3;
 }
 
 message BatchGetHwidDbEditableSectionChangeClInfoRequest {
@@ -591,7 +647,7 @@ message HwidBundleResourceInfo {
 
 message HwidBundleResource {
   // External resources for Factory HWID Consultant to create HWID bundles.
-  HwidDbExternalResource db_external_resource = 1;
+  HwidDbExternalResource db_external_resource = 1  [deprecated = true];
 }
 
 message HwidBundle {
