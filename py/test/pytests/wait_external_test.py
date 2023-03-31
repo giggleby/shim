@@ -32,11 +32,11 @@ In summary, to design and implement a test item with external fixture:
    to the test name.
 3. In the fixture side, detect if the DUT is connected. For Chromebooks, this
    is usually done by ethernet dongle. For Android devices, try ADB.
-4. Fixture should drive the test and implement all logic and test procedure.
-   To access Chromebooks, execute programs using SSH (you can find the private
-   key for root in
-   https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/misc/sshkeys/testing_rsa
-   ). For Android, use ``adb shell``.
+4. Fixture should drive the test and implement all logic and test procedure. To
+   access Chromebooks, execute programs using SSH with SSH keys that can be
+   authenticated to DUTs (testing_rsa at
+   https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:chromite/ssh_keys/testing_rsa
+   or partner_testing_rsa). For Android, use ``adb shell``.
 5. When the test by fixture is finished, invoke the ``factory_external_result``
    to set result or manually create the files under ``/run/factory/external``.
 
@@ -78,7 +78,7 @@ In the fixture side, it should do something like this:
 
 .. code-block:: sh
 
-  SSH_KEY=PATH_TO/testing_rsa
+  SSH_KEY=/path/to/ssh_key
   TEST_NAME=VSWR
   SET_RESULT=/usr/local/factory/bin/factory_external_result
   chmod go-rwx "${SSH_KEY}"  # SSH needs private key to be restricted.
