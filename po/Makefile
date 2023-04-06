@@ -16,7 +16,7 @@ KEYWORDS = -k _ -t i18n-label -j _ -j i18nLabel -j i18nLabelNode -J "i18n! "
 DOMAIN = factory
 BUILD_DIR ?= ../build
 PO_DIR ?= .
-OUTPUT_DIR ?= $(BUILD_DIR)/locale
+OUTPUT_DIR = $(BUILD_DIR)/locale
 TEMP_DIR ?= $(BUILD_DIR)/po
 
 BOARD_PO_DIR ?= $(if $(BOARD_FILES_DIR),$(BOARD_FILES_DIR)/po)
