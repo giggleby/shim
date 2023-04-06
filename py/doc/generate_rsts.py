@@ -18,6 +18,7 @@ always practical.)
 
 import argparse
 import codecs
+import enum
 import inspect
 from io import StringIO
 import logging
@@ -156,6 +157,8 @@ def WriteArgsTable(rst, title, args):
     def FormatArgType(arg_type):
       if isinstance(arg_type, Enum):
         return repr(sorted(arg_type))
+      if issubclass(arg_type, enum.Enum):
+        return repr(sorted(list(arg_type.__members__)))
       if arg_type == type(None):
         return 'None'
       return arg_type.__name__
