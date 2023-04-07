@@ -1,34 +1,4 @@
 # For consistency an alphabetical order is recommended.
 
-# The factory repo is owned by Chrome OS factory team.
-chenghan@chromium.org
-chungsheng@chromium.org
-chuntsen@chromium.org
-ckclark@chromium.org
-cyueh@chromium.org
-fshao@chromium.org
-genechang@google.com
-hungte@chromium.org
-iamjeffliu@google.com
-itspeter@chromium.org
-jamesqaq@chromium.org
-jasonchuang@google.com
-jeffulin@google.com
-jimmysun@chromium.org
-jjsu@chromium.org
-kerker@chromium.org
-kevinptt@chromium.org
-louischiu@google.com
-lschyi@chromium.org
-menghuan@chromium.org
-phoebewang@chromium.org
-phoenixshen@chromium.org
-pihsun@chromium.org
-roccochen@chromium.org
-rueifong@google.com
-stevesu@google.com
-stimim@chromium.org
-treapking@chromium.org
-wdzeng@chromium.org
-wyuang@google.com
-yhong@chromium.org
+# The factory repo is owned by ChromeOS factory team.
+include chromiumos/owners:v1:/factory/OWNERS.factory
