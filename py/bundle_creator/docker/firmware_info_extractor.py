@@ -105,22 +105,33 @@ class FirmwareInfoExtractor(worker.BaseWorker):
   def _ExtractFirmwareInfo(self, task: ExtractFirmwareInfoTask):
     self._logger.info(task)
 
+    image_gs_path = task.image_gs_path
+
+    # Try to find archive anyway to speed up the process. If no archive, use
+    # raw binary instead.
+    if not image_gs_path.endswith('.zip'):
+      image_gs_path += '.zip'
+
     # The path should follow the pattern:
-    # chromeos-releases/{$CHANNEL}/{$BOARD}/{$VERSION}/{$IMAGE_NAME}.zip
+    # chromeos-releases/{$CHANNEL}/{$BOARD}/{$VERSION}/{$IMAGE_NAME}.bin(.zip)?
     try:
-      _, _, board, _, image_archive = task.image_gs_path.split('/')
-      if not image_archive.endswith('.zip'):
-        raise ValueError
+      _, _, board, _, image_file = image_gs_path.split('/')
     except ValueError:
       raise ExtractFirmwareInfoError(
           f'Invalid image path: {task.image_gs_path}') from None
 
     with file_utils.TempDirectory() as temp_dir:
       os.chdir(temp_dir)
-      self._LogAndCheckOutput(
-          ['gsutil', 'cp', f'gs://{task.image_gs_path}', '.'])
-      self._LogAndCheckOutput(['unzip', image_archive])
-      image_file = image_archive[:-4]
+
+      try:
+        self._LogAndCheckOutput(['gsutil', 'cp', f'gs://{image_gs_path}', '.'])
+        self._LogAndCheckOutput(['unzip', image_file])
+      except ExtractFirmwareInfoError:
+        self._logger.warning(
+            'Cannot find image archive. Try to find raw binary image.')
+        self._LogAndCheckOutput(
+            ['gsutil', 'cp', f'gs://{image_gs_path[:-4]}', '.'])
+      image_file = image_file[:-4]
 
       self._LogAndCheckOutput([
           '/usr/local/factory/factory.par', 'extract_firmware_info', image_file,

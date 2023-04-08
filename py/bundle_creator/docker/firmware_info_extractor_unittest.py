@@ -143,6 +143,27 @@ class FirmwareInfoExtractorTest(unittest.TestCase):
     fn = self._mock_cloudtasks_connector.ResponseFirmwareInfoExtractorResult
     fn.assert_called_once_with(expected_result)
 
+  def testTryProcessRequest_noArchive_downloadRawImage(self):
+    self._CreateFakeFirmwareInfo({})
+    self._mock_hwid_api_connector.CreateHWIDFirmwareInfoCL.return_value = [
+        'fake_url'
+    ]
+
+    def _MockCheckOutput(cmd, *unused_arg, **unused_kwargs):
+      if cmd[2].endswith('.zip'):
+        raise process_utils.CalledProcessError(1, 'fake_cmd', 'no image found')
+
+    self._PublishFakeTask(image_gs_path='_/_/board/_/image.bin')
+    self._mock_check_output.side_effect = _MockCheckOutput
+
+    self.extractor.TryProcessRequest()
+
+    self.assertEqual(3, len(self._mock_check_output.call_args_list))
+    self.assertEqual(self._mock_check_output.call_args_list[0].args[0],
+                     ['gsutil', 'cp', 'gs://_/_/board/_/image.bin.zip', '.'])
+    self.assertEqual(self._mock_check_output.call_args_list[1].args[0],
+                     ['gsutil', 'cp', 'gs://_/_/board/_/image.bin', '.'])
+
   def _CreateFakeFirmwareInfo(self, fw_info):
     json_utils.DumpFile(
         os.path.join(self._temp_dir_path, 'firmware_info.json'), fw_info)
