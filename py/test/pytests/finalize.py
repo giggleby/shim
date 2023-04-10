@@ -348,7 +348,7 @@ class Finalize(test_case.TestCase):
 
     return method
 
-  def _AppendUploadReportArgs(self, command):
+  def AppendUploadReportArgs(self, command):
     upload_method = self.NormalizeUploadMethod(self.args.upload_method)
     if self.args.enable_factory_server:
       state.GetInstance().FlushEventLogs()
@@ -370,14 +370,11 @@ class Finalize(test_case.TestCase):
 
   def FinalizeMLB(self):
     command = 'gooftool -v 4 smt_finalize'
-    command = self._AppendUploadReportArgs(command)
+    command = self.AppendUploadReportArgs(command)
     # We only wipe DUT in GRT.
     self._DoFinalize(command, True)
 
-  def Finalize(self):
-    command = 'gooftool -v 4 finalize'
-    command = self._AppendUploadReportArgs(command)
-
+  def AppendAssembledArgs(self, command):
     if not self.args.write_protection:
       self.Warn('WRITE PROTECTION IS DISABLED.')
       command += ' --no_write_protect'
@@ -421,6 +418,14 @@ class Finalize(test_case.TestCase):
           'Should not use `project` option in this phase')
       command += f' --project {self.args.project}'
     command += f' --phase "{phase.GetPhase()}"'
+    command += f' --factory_process {self.args.factory_process}'
+
+    return command
+
+  def Finalize(self):
+    command = 'gooftool -v 4 finalize'
+    command = self.AppendUploadReportArgs(command)
+    command = self.AppendAssembledArgs(command)
 
     self._DoFinalize(command, commands.WIPE_IN_PLACE
                      in self.args.gooftool_skip_list)
