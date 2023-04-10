@@ -50,28 +50,35 @@ StylusAndGarage is defined in generic_common.test_list.json::
   }
 """
 
+import enum
+
 from cros.factory.test.i18n import _
 from cros.factory.test import test_case
 from cros.factory.test.utils import evdev_utils
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import type_utils
 
 from cros.factory.external import evdev
 
-STYLUS_STATUS = type_utils.Enum(['inserted', 'ejected'])
+
+class StylusStatus(str, enum.Enum):
+  inserted = 'inserted'
+  ejected = 'ejected'
+
+  def __str__(self):
+    return self.name
 
 
 class StylusGarageTest(test_case.TestCase):
   """Stylus garage detection factory test."""
   ARGS = [
-      Arg('timeout_secs', int, 'Timeout value for the test.',
-          default=180),
+      Arg('timeout_secs', int, 'Timeout value for the test.', default=180),
       Arg('device_filter', (int, str),
-          'Event ID or name for evdev. None for auto probe.',
-          default=None),
-      Arg('garage_is_stylus', bool, 'Some garages are not stylus devices. Set '
+          'Event ID or name for evdev. None for auto probe.', default=None),
+      Arg(
+          'garage_is_stylus', bool, 'Some garages are not stylus devices. Set '
           'this flag to False to skip the check.', default=True),
-      Arg('target_state', STYLUS_STATUS, 'The test passes when reaches the '
+      Arg(
+          'target_state', StylusStatus, 'The test passes when reaches the '
           'target state. If not specified, pass after an insertion and then '
           'an ejection or an ejection and then an insertion.', default=None),
   ]
@@ -95,21 +102,21 @@ class StylusGarageTest(test_case.TestCase):
     if (event.type == evdev.ecodes.EV_SW and
         event.code == evdev.ecodes.SW_PEN_INSERTED):
       if event.value == 1:  # Stylus inserted
-        if self._current_status == STYLUS_STATUS.inserted:
+        if self._current_status == StylusStatus.inserted:
           self.FailTask('Consecutive insertion')
-        elif self._current_status == STYLUS_STATUS.ejected:
+        elif self._current_status == StylusStatus.ejected:
           self.PassTask()
-        self._current_status = STYLUS_STATUS.inserted
+        self._current_status = StylusStatus.inserted
       elif event.value == 0:  # Stylus ejected
-        if self._current_status == STYLUS_STATUS.inserted:
+        if self._current_status == StylusStatus.inserted:
           self.PassTask()
-        elif self._current_status == STYLUS_STATUS.ejected:
+        elif self._current_status == StylusStatus.ejected:
           self.FailTask('Consecutive ejection')
-        self._current_status = STYLUS_STATUS.ejected
+        self._current_status = StylusStatus.ejected
 
       if self._current_status == self.args.target_state:
         self.PassTask()
-      elif self._current_status == STYLUS_STATUS.inserted:
+      elif self._current_status == StylusStatus.inserted:
         self.ui.SetState(_('Remove stylus'))
       else:
         self.ui.SetState(_('Insert stylus'))

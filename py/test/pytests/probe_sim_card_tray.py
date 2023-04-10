@@ -11,6 +11,7 @@ Args:
   tray_detection_gpio: SIM card tray detection gpio number.
 """
 
+import enum
 import logging
 import os
 
@@ -19,14 +20,19 @@ from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
-from cros.factory.utils import type_utils
 
 
 # Constants.
 _INSERT_CHECK_PERIOD_SECS = 1
 _GPIO_PATH = '/sys/class/gpio'
 
-_TrayState = type_utils.Enum(['INSERTED', 'REMOVED'])
+
+class _TrayState(str, enum.Enum):
+  INSERTED = 'INSERTED'
+  REMOVED = 'REMOVED'
+
+  def __str__(self):
+    return self.name
 
 
 class ProbeTrayException(Exception):

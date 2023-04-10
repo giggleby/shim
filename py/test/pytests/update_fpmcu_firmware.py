@@ -70,6 +70,7 @@ release image::
   }
 """
 
+import enum
 import logging
 
 from cros.factory.device import device_utils
@@ -79,7 +80,6 @@ from cros.factory.test import test_ui
 from cros.factory.test.utils import fpmcu_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
-from cros.factory.utils.type_utils import Enum
 from cros.factory.utils.type_utils import Error
 
 
@@ -88,15 +88,21 @@ FPMCU_FW_DIR_UNDER_ROOTFS = 'opt/google/biod/fw'
 
 
 class UpdateFpmcuFirmwareTest(test_case.TestCase):
-  _METHOD_TYPE = Enum(['UPDATE', 'CHECK_VERSION'])
+
+  class _MethodType(str, enum.Enum):
+    UPDATE = 'UPDATE'
+    CHECK_VERSION = 'CHECK_VERSION'
+
+    def __str__(self):
+      return self.name
 
   ARGS = [
       Arg('firmware_file', str, 'The full path of the firmware binary file.',
           default=None),
       Arg(
-          'method', _METHOD_TYPE,
+          'method', _MethodType,
           'Specify whether to update the fingerprint firmware or to check the '
-          'fingerprint firmware version.', default=_METHOD_TYPE.UPDATE),
+          'fingerprint firmware version.', default=_MethodType.UPDATE),
   ]
 
   ui_class = test_ui.ScrollableLogUI
@@ -106,7 +112,7 @@ class UpdateFpmcuFirmwareTest(test_case.TestCase):
     self._fpmcu = fpmcu_utils.FpmcuDevice(self._dut)
 
   def runTest(self):
-    if self.args.method == self._METHOD_TYPE.UPDATE:
+    if self.args.method == self._MethodType.UPDATE:
       method_func = self.UpdateFpmcuFirmware
     else:
       method_func = self.CheckFpmcuFirmwareVersion

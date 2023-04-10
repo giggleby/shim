@@ -56,6 +56,7 @@ Test controller 0-3 with CC1 port 1 with 60 seconds timeout::
   }
 """
 
+import enum
 import logging
 import os
 import re
@@ -74,7 +75,6 @@ from cros.factory.test import test_case
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
-from cros.factory.utils import type_utils
 
 
 _LOOPBACK_TEST_PATH = '/sys/kernel/debug/thunderbolt'
@@ -84,18 +84,44 @@ _RE_MARGIN_LOOPBACK = re.compile(
     r'(RT\d+ L\d+ )(BOTTOM|LEFT),(TOP|RIGHT) = (\d+),(\d+)')
 _DMA_TEST = 'dma_test'
 _TEST_MODULE = 'thunderbolt_dma_test'
-LINK_WIDTH_TYPE = type_utils.Enum(['Single', 'Dual'])
-LINK_SPEED_TYPE = type_utils.Enum(['Slow', 'Fast'])
+
+
+class LinkWidthType(str, enum.Enum):
+  Single = 'Single'
+  Dual = 'Dual'
+
+  def __str__(self):
+    return self.name
+
+
+class LinkSpeedType(str, enum.Enum):
+  Slow = 'Slow'
+  Fast = 'Fast'
+
+  def __str__(self):
+    return self.name
+
+
 ENCODE_LINK_WIDTH = {
-    LINK_WIDTH_TYPE.Single: '1',
-    LINK_WIDTH_TYPE.Dual: '2'
+    LinkWidthType.Single: '1',
+    LinkWidthType.Dual: '2'
 }
 ENCODE_LINK_SPEED = {
-    LINK_SPEED_TYPE.Slow: '10',
-    LINK_SPEED_TYPE.Fast: '20'
+    LinkSpeedType.Slow: '10',
+    LinkSpeedType.Fast: '20'
 }
 _RE_STATUS = re.compile(r'^result: (.+)\n(?:.|\n)*$')
-_CARD_STATE = type_utils.Enum(['Absent', 'Multiple', 'Wrong'])
+
+
+class _CardState(str, enum.Enum):
+  Absent = 'Absent'
+  Multiple = 'Multiple'
+  Wrong = 'Wrong'
+
+  def __str__(self):
+    return self.name
+
+
 _TDTL_PATH = os.path.join(paths.FACTORY_DIR, 'tdtl-master')
 
 
@@ -124,10 +150,10 @@ class ThunderboltLoopbackTest(test_case.TestCase):
   ]
   ARGS = [
       Arg('timeout_secs', int, 'Timeout value for the test.', default=None),
-      Arg('expected_link_speed', LINK_SPEED_TYPE, 'Link speed.',
-          default=LINK_SPEED_TYPE.Fast),
-      Arg('expected_link_width', LINK_WIDTH_TYPE, 'Link width.',
-          default=LINK_WIDTH_TYPE.Dual),
+      Arg('expected_link_speed', LinkSpeedType, 'Link speed.',
+          default=LinkSpeedType.Fast),
+      Arg('expected_link_width', LinkWidthType, 'Link width.',
+          default=LinkWidthType.Dual),
       Arg('packets_to_send', int, 'Amount of packets to be sent.',
           default=1000),
       Arg('packets_to_receive', int, 'Amount of packets to be received.',
@@ -266,7 +292,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
     if self.args.debugfs_path:
       if self._dut.path.exists(self.args.debugfs_path):
         return self.args.debugfs_path
-      if self._SetCardState(_CARD_STATE.Absent):
+      if self._SetCardState(_CardState.Absent):
         logging.info('No loopback card exists.')
       return None
 
@@ -275,7 +301,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
         .controller_patterns)
     target_controllers = self._GlobLoopbackPath(target_controller_patterns)
     if len(target_controllers) > 1:
-      if self._SetCardState(_CARD_STATE.Multiple):
+      if self._SetCardState(_CardState.Multiple):
         self.ui.SetState(_('Do not insert more than one loopback card.'))
         logging.info(
             'Multiple loopback cards exist: %r with patterns: %r. '
@@ -291,7 +317,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
     non_target_controllers = self._GlobLoopbackPath(
         non_target_controller_patterns)
     if non_target_controllers:
-      if self._SetCardState(_CARD_STATE.Wrong):
+      if self._SetCardState(_CardState.Wrong):
         self.ui.SetState(
             _('The loopback card is inserted into the wrong port.'))
         logging.info(
@@ -299,7 +325,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
             '%r with patterns: %r', non_target_controllers,
             non_target_controller_patterns)
     else:
-      if self._SetCardState(_CARD_STATE.Absent):
+      if self._SetCardState(_CardState.Absent):
         self.ui.SetState(_('Insert the loopback card.'))
         logging.info('No loopback card exists with patterns: %r',
                      target_controller_patterns)

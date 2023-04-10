@@ -80,6 +80,7 @@ charging, add this in test list::
   }
 """
 
+import enum
 import logging
 import os
 
@@ -94,7 +95,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
 from cros.factory.utils.process_utils import CheckOutput
 from cros.factory.utils.process_utils import LogAndCheckCall
-from cros.factory.utils import type_utils
 
 
 _DEFAULT_TARGET_CHARGE = 78
@@ -135,7 +135,8 @@ def _GetGoofyBatteryMinPercentage():
 
 class ChargerTest(test_case.TestCase):
   ARGS = [
-      Arg('target_charge_pct', (int, type_utils.Enum(['goofy', 'cutoff'])),
+      Arg('target_charge_pct',
+          (int, enum.Enum('TargetChargePct', ['goofy', 'cutoff'])),
           'Target charge level.', default='goofy'),
       Arg('target_charge_pct_is_delta', bool,
           'Specify target_charge_pct is a delta of current charge',
@@ -146,8 +147,7 @@ class ChargerTest(test_case.TestCase):
           'Turn backlight/screen brightness lower to charge faster.',
           default=True),
       Arg('dim_backlight_pct', float,
-          'The brightness in linear % when charging.',
-          default=3.0),
+          'The brightness in linear % when charging.', default=3.0),
   ]
 
   def setUp(self):

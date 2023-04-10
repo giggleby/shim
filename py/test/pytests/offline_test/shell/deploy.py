@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import json
 import logging
 import os
@@ -248,13 +249,22 @@ class ScriptBuilder:
 class DeployShellOfflineTest(unittest.TestCase):
   """A factory test to deploy shell offline test."""
 
-  NEXT_ACTION = type_utils.Enum(['REBOOT', 'POWEROFF', 'START_TEST', 'NOP'])
+  class NextAction(str, enum.Enum):
+    REBOOT = 'REBOOT'
+    POWEROFF = 'POWEROFF'
+    START_TEST = 'START_TEST'
+    NOP = 'NOP'
+
+    def __str__(self):
+      return self.name
 
   ARGS = [
       Arg('test_spec', list,
           'Please refer to _`py/test/pytests/offline_test/shell/README`.'),
-      Arg('next_action', NEXT_ACTION,
-          f'What to do after tests are deployed (One of {NEXT_ACTION})'),
+      Arg(
+          'next_action', NextAction,
+          'What to do after tests are deployed (One of '
+          f'{list(NextAction.__members__)})'),
       Arg('start_up_service', bool, 'Do you want to run the tests on start up?',
           default=True),
       Arg(
@@ -355,7 +365,7 @@ class DeployShellOfflineTest(unittest.TestCase):
 
     self.dut.Call(['sync'])
 
-    if self.args.next_action == self.NEXT_ACTION.POWEROFF:
+    if self.args.next_action == self.NextAction.POWEROFF:
       # Since Android doesn't have shutdown(8) command, we will use 'reboot -p'
       # however, in Chrome OS, 'reboot -p' sometimes reboot the device rather
       # than halt the device, so we will still use 'shutdown -h now'.
@@ -364,17 +374,17 @@ class DeployShellOfflineTest(unittest.TestCase):
         self.dut.Call(['reboot', '-p'])
       else:
         self.dut.Call(['shutdown', '-h', 'now'])
-    elif self.args.next_action == self.NEXT_ACTION.REBOOT:
+    elif self.args.next_action == self.NextAction.REBOOT:
       self.dut.Call(['reboot'])
-    elif self.args.next_action == self.NEXT_ACTION.START_TEST:
+    elif self.args.next_action == self.NextAction.START_TEST:
       # Starts the scripts in background and deteches it from the terminal.
       self.dut.Popen([
           'sh', '-c', f"nohup {starter_path} >"
           f"{self.dut.path.join(self.data_root, 'nohup.out')} &"
       ])
-    elif self.args.next_action == self.NEXT_ACTION.NOP:
+    elif self.args.next_action == self.NextAction.NOP:
       pass
     else:
       raise ValueError(
-          f'`next_action` must be one of {self.NEXT_ACTION} (it is '
-          f'{self.args.next_action})')
+          f'`next_action` must be one of {list(self.NextAction.__members__)} '
+          f'(it is {self.args.next_action})')

@@ -62,6 +62,7 @@ To load the JSON config from a USB stick, add this in test list::
 """
 
 
+import enum
 import logging
 import os
 import threading
@@ -74,10 +75,14 @@ from cros.factory.test.utils import media_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
-from cros.factory.utils import type_utils
 
 
-DATA_METHOD = type_utils.Enum(['USB', 'FACTORY_SERVER'])
+class DataMethod(str, enum.Enum):
+  USB = 'USB'
+  FACTORY_SERVER = 'FACTORY_SERVER'
+
+  def __str__(self):
+    return self.name
 
 
 class RetrieveConfigException(Exception):
@@ -109,33 +114,29 @@ class RetrieveConfig(unittest.TestCase):
   """
 
   ARGS = [
-      Arg('data_method',
-          DATA_METHOD,
-          'The method to retrieve config.',
-          default=DATA_METHOD.FACTORY_SERVER),
-      Arg('config_retrieve_path',
-          str,
+      Arg('data_method', DataMethod, 'The method to retrieve config.',
+          default=DataMethod.FACTORY_SERVER),
+      Arg('config_retrieve_path', str,
           'The path to the config file to retrieve from.'),
-      Arg('config_save_dir',
-          str,
+      Arg(
+          'config_save_dir', str,
           'The directory path to the config file to place at;'
           'defaults to RuntimeConfigDirectory in config_utils.json.',
           default=None),
-      Arg('config_save_name',
-          str,
+      Arg(
+          'config_save_name', str,
           'The config name saved in the config_save_dir; The name should '
           'suffix with ".json". if None then defaults to its origin name.',
           default=None),
-      Arg('local_ip',
-          str,
+      Arg(
+          'local_ip', str,
           'Local IP address for connecting to the factory server '
           'when data_method = FACTORY_SERVER. Set as None to use DHCP.',
           default=None),
-      Arg('usb_dev_partition',
-          int,
+      Arg(
+          'usb_dev_partition', int,
           'The partition of the usb_dev_path to be mounted. If None, will try '
-          'to mount the usb_dev_path without partition number.',
-          default=None),
+          'to mount the usb_dev_path without partition number.', default=None),
   ]
 
   def setUp(self):
@@ -154,9 +155,9 @@ class RetrieveConfig(unittest.TestCase):
 
   def runTest(self):
     file_utils.TryMakeDirs(os.path.dirname(self.config_save_path))
-    if self.args.data_method == DATA_METHOD.USB:
+    if self.args.data_method == DataMethod.USB:
       self._RetrieveConfigFromUSB()
-    elif self.args.data_method == DATA_METHOD.FACTORY_SERVER:
+    elif self.args.data_method == DataMethod.FACTORY_SERVER:
       self._RetrieveConfigFromFactoryServer()
     else:
       raise ValueError('Unknown data_method.')

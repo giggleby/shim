@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import unittest
 
 from cros.factory.device import device_utils
@@ -9,7 +10,6 @@ from cros.factory.test.env import paths
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import type_utils
 
 
 class OfflineTestError(Exception):
@@ -17,19 +17,32 @@ class OfflineTestError(Exception):
 
 class OfflineTest(unittest.TestCase):
 
-  SHUTDOWN = type_utils.Enum(['REBOOT', 'POWEROFF', 'NO_ACTION'])
-  ACTION = type_utils.Enum(['DEPLOY'])
+  class Shutdown(str, enum.Enum):
+    REBOOT = 'REBOOT'
+    POWEROFF = 'POWEROFF'
+    NO_ACTION = 'NO_ACTION'
+
+    def __str__(self):
+      return self.name
+
+  class Action(str, enum.Enum):
+    DEPLOY = 'DEPLOY'
+
+    def __str__(self):
+      return self.name
 
   DEPLOY_ARGS = [
-      Arg('shutdown', SHUTDOWN,
-          f'What to do after tests are deployed (One of {SHUTDOWN})'),
+      Arg(
+          'shutdown', Shutdown, 'What to do after tests are deployed (One of '
+          f'{list(Shutdown.__members__)})'),
       Arg('test_spec_file', str,
           'A JSON file to specify which tests are running'),
       Arg('start_up_service', bool, 'Do you want to run the tests on start up?',
           default=True)
   ]
 
-  ARGS = [Arg('action', ACTION, f'one of {ACTION}')] + DEPLOY_ARGS
+  ARGS = [Arg('action', Action, f'one of {list(Action.__members__)}')
+         ] + DEPLOY_ARGS
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
@@ -65,5 +78,5 @@ class OfflineTest(unittest.TestCase):
     self.dut.CheckCall(['tar', '-xf', uploaded_file, '-C', dut_root])
 
   def runTest(self):
-    if self.args.action == self.ACTION.DEPLOY:
+    if self.args.action == self.Action.DEPLOY:
       self.SetUpEnvironment()

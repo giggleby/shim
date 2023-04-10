@@ -11,6 +11,7 @@ charge (e.g., 95%).  Cycle times are logged to event logs.
 """
 
 import collections
+import enum
 import logging
 import time
 
@@ -22,12 +23,18 @@ from cros.factory.test.utils import stress_manager
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import debug_utils
 from cros.factory.utils import time_utils
-from cros.factory.utils import type_utils
 
-
-Mode = type_utils.Enum(['CHARGE', 'DISCHARGE', 'CUTOFF'])
 
 History = collections.namedtuple('History', ['cycle', 'charge', 'discharge'])
+
+
+class Mode(str, enum.Enum):
+  CHARGE = 'CHARGE'
+  DISCHARGE = 'DISCHARGE'
+  CUTOFF = 'CUTOFF'
+
+  def __str__(self):
+    return self.name
 
 
 class BatteryCycleTest(test_case.TestCase):

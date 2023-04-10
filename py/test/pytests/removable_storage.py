@@ -102,6 +102,7 @@ If this test can not properly find the device with a specific sysfs_path, try:
   "/sys" as prefix to get the full path.
 """
 
+import enum
 import logging
 import random
 import re
@@ -119,7 +120,6 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
-from cros.factory.utils import type_utils
 
 from cros.factory.external import pyudev
 
@@ -134,8 +134,15 @@ _SECTOR_SIZE = 512
 _SKIP_HEAD_SECTOR = 34
 _SKIP_TAIL_SECTOR = 33
 
+
 # Read/Write test modes
-_RWTestMode = type_utils.Enum(['RANDOM', 'SEQUENTIAL'])
+class _RWTestMode(str, enum.Enum):
+  RANDOM = 'RANDOM'
+  SEQUENTIAL = 'SEQUENTIAL'
+
+  def __str__(self):
+    return self.name
+
 
 # Minimum size required for partition test
 _MIN_PARTITION_SIZE_MB = 1
@@ -146,9 +153,22 @@ _MILLION = 1000000
 _RE_DD_EXECUTION_TIME = re.compile(
     r'^.* copied, ([0-9]+\.[0-9]+) s(?:econds)?, .*$', re.MULTILINE)
 
-_Event = type_utils.Enum(['WAIT_INSERT', 'WAIT_REMOVE'])
 
-_MediaType = type_utils.Enum(['SD', 'USB', 'NVME'])
+class _Event(str, enum.Enum):
+  WAIT_INSERT = 'WAIT_INSERT'
+  WAIT_REMOVE = 'WAIT_REMOVE'
+
+  def __str__(self):
+    return self.name
+
+
+class _MediaType(str, enum.Enum):
+  SD = 'SD'
+  USB = 'USB'
+  NVME = 'NVME'
+
+  def __str__(self):
+    return self.name
 
 
 class RemovableStorageTest(test_case.TestCase):

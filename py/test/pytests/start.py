@@ -65,6 +65,7 @@ toolkit is properly installed::
   }
 """
 
+import enum
 import logging
 import os
 
@@ -80,20 +81,28 @@ from cros.factory.test.utils import button_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import log_utils
 from cros.factory.utils import sync_utils
-from cros.factory.utils import type_utils
+
 
 _LSB_FACTORY_PATH = '/usr/local/etc/lsb-factory'
 _AC_CHECK_PERIOD = 0.5
-_KEY_TYPE = type_utils.Enum(['NONE', 'SPACE', 'HW_BUTTON'])
+
+
+class _KeyType(str, enum.Enum):
+  NONE = 'NONE'
+  SPACE = 'SPACE'
+  HW_BUTTON = 'HW_BUTTON'
+
+  def __str__(self):
+    return self.name
 
 
 class StartTest(test_case.TestCase):
   """The factory test to start the whole factory test process."""
   ARGS = [
       Arg(
-          'key_to_continue', _KEY_TYPE,
+          'key_to_continue', _KeyType,
           'The key which need to be pressed to continue. "NONE" means don\'t '
-          'need to press key to continue.', default=_KEY_TYPE.SPACE),
+          'need to press key to continue.', default=_KeyType.SPACE),
       Arg('button_key_name', str, 'The key name to identify the button.',
           default=None),
       i18n_arg_utils.I18nArg(
@@ -135,10 +144,10 @@ class StartTest(test_case.TestCase):
     if self.args.require_external_power:
       self.CheckExternalPower()
 
-    if self.args.key_to_continue == _KEY_TYPE.SPACE:
+    if self.args.key_to_continue == _KeyType.SPACE:
       self.SetStateWithPrompt(_('Hit SPACE to start testing...'))
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
-    elif self.args.key_to_continue == _KEY_TYPE.HW_BUTTON:
+    elif self.args.key_to_continue == _KeyType.HW_BUTTON:
       self.SetStateWithPrompt(
           _('Hit {name} to start testing...', name=self.args.button_name))
       self.WaitHWButton()

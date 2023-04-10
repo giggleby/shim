@@ -58,6 +58,7 @@ https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/README.md#I
 """
 
 from collections import namedtuple
+import enum
 import logging
 import re
 from select import select
@@ -74,10 +75,15 @@ from cros.factory.test import test_ui
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
-from cros.factory.utils import type_utils
 
 
-_TestModes = type_utils.Enum(['file', 'raw', 'stateful_partition_free_space'])
+class _TestModes(str, enum.Enum):
+  file = 'file'
+  raw = 'raw'
+  stateful_partition_free_space = 'stateful_partition_free_space'
+
+  def __str__(self):
+    return self.name
 
 
 class BadBlocksTest(test_case.TestCase):

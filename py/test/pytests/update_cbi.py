@@ -53,6 +53,7 @@ To set SKU ID and run the pytest `model_sku`, add this in test list::
   }
 """
 
+import enum
 import logging
 import os
 
@@ -68,7 +69,6 @@ from cros.factory.test.utils import model_sku_utils
 from cros.factory.test.utils import update_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.schema import JSONSchemaDict
-from cros.factory.utils import type_utils
 
 
 _DEFAULT_SKU_ID = 0x7fffffff
@@ -91,9 +91,22 @@ _ARG_CBI_DATA_NAMES_SCHEMA = JSONSchemaDict(
         }
     })
 
-SKU_ID_SOURCE = type_utils.Enum(['device_data', 'hardcode'])
-CONFIG_SOURCE = type_utils.Enum(
-    ['cros_config_mock', 'config_jsonproto', 'model_sku'])
+
+class SKUIDSource(str, enum.Enum):
+  device_data = 'device_data'
+  hardcode = 'hardcode'
+
+  def __str__(self):
+    return self.name
+
+
+class ConfigSource(str, enum.Enum):
+  cros_config_mock = 'cros_config_mock'
+  config_jsonproto = 'config_jsonproto'
+  model_sku = 'model_sku'
+
+  def __str__(self):
+    return self.name
 
 
 class UpdateCBITest(test_case.TestCase):
@@ -104,11 +117,11 @@ class UpdateCBITest(test_case.TestCase):
       Arg('force', bool,
           'If true then overwrite settings even if the sku_id is the same.',
           default=False),
-      Arg('sku_id_source', SKU_ID_SOURCE, 'The source of sku_id.',
-          default=SKU_ID_SOURCE.device_data),
+      Arg('sku_id_source', SKUIDSource, 'The source of sku_id.',
+          default=SKUIDSource.device_data),
       Arg('hardcode_sku_id', int, 'The hard-code sku_id.', default=None),
-      Arg('config_source', CONFIG_SOURCE, 'The source of updating data.',
-          default=CONFIG_SOURCE.cros_config_mock),
+      Arg('config_source', ConfigSource, 'The source of updating data.',
+          default=ConfigSource.cros_config_mock),
       Arg('program', str, 'The program of the device.', default=None),
       Arg('project', str, 'The project of the device.', default=None),
       Arg(
@@ -124,18 +137,19 @@ class UpdateCBITest(test_case.TestCase):
   def setUp(self):
     self._dut = device_utils.CreateDUTInterface()
     # Check settings of sku_id_source.
-    if (self.args.sku_id_source != SKU_ID_SOURCE.hardcode and
+    if (self.args.sku_id_source != SKUIDSource.hardcode and
         self.args.hardcode_sku_id is not None):
       raise ValueError(f'hardcode_sku_id must be None for sku_id_source: '
                        f'{self.args.sku_id_source}')
-    if (self.args.sku_id_source == SKU_ID_SOURCE.hardcode and
+    if (self.args.sku_id_source == SKUIDSource.hardcode and
         self.args.hardcode_sku_id is None):
       raise ValueError(f'hardcode_sku_id must not be None for sku_id_source: '
                        f'{self.args.sku_id_source}')
 
     if self.args.enable_factory_server:
-      if self.args.config_source in [CONFIG_SOURCE.config_jsonproto,
-                                     CONFIG_SOURCE.model_sku]:
+      if self.args.config_source in [
+          ConfigSource.config_jsonproto, ConfigSource.model_sku
+      ]:
         update_success = update_utils.UpdateProjectConfig(self._dut)
         if not update_success:
           session.console.info('project_config is not updated')
@@ -146,7 +160,7 @@ class UpdateCBITest(test_case.TestCase):
 
     self._config_jsonproto = None
     # Check settings of config_source.
-    if self.args.config_source == CONFIG_SOURCE.config_jsonproto:
+    if self.args.config_source == ConfigSource.config_jsonproto:
       if not cros_config_api_utils.MODULE_READY:
         raise ImportError(
             f'cros_config_api_utils is not ready. chromeos-base/cros-config-api'
@@ -217,7 +231,7 @@ class UpdateCBITest(test_case.TestCase):
 
   def SetSKUIDAndFWConfig(self):
     old_sku_id = GetCbiData(self._dut, CbiDataName.SKU_ID)
-    if self.args.sku_id_source == SKU_ID_SOURCE.device_data:
+    if self.args.sku_id_source == SKUIDSource.device_data:
       new_sku_id = self.GetDeviceData(_KEY_COMPONENT_SKU, int)
     else:
       new_sku_id = self.args.hardcode_sku_id
@@ -233,9 +247,9 @@ class UpdateCBITest(test_case.TestCase):
           f'({int(2 ** 32 - 1)}).')
 
     old_fw_config = GetCbiData(self._dut, CbiDataName.FW_CONFIG)
-    if self.args.config_source == CONFIG_SOURCE.config_jsonproto:
+    if self.args.config_source == ConfigSource.config_jsonproto:
       new_fw_config = self.GetFirmwareConfigFromJsonProto(new_sku_id)
-    elif self.args.config_source == CONFIG_SOURCE.model_sku:
+    elif self.args.config_source == ConfigSource.model_sku:
       new_fw_config = self.GetFirmwareConfigFromModelSku(new_sku_id)
     else:
       new_fw_config = self.GetFirmwareConfigFromCrosConfig(new_sku_id)

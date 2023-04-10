@@ -5,6 +5,7 @@
 """A factory test that utilizes Chameleon to do automated display testing."""
 
 import contextlib
+import enum
 import logging
 import os
 import xmlrpc.client
@@ -22,17 +23,23 @@ from cros.factory.utils import arg_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
-from cros.factory.utils import type_utils
 
 
 # Constants.
-PORTS = type_utils.Enum(['DP', 'HDMI'])
+class Ports(str, enum.Enum):
+  DP = 'DP'
+  HDMI = 'HDMI'
+
+  def __str__(self):
+    return self.name
+
+
 EDIDS = {
-    PORTS.DP: {
+    Ports.DP: {
         ('2560x1600', '60Hz'): 'DP_2560x1600_60Hz',
         ('1920x1080', '60Hz'): 'DP_1920x1080_60Hz',
     },
-    PORTS.HDMI: {
+    Ports.HDMI: {
         ('3840x2160', '30Hz'): 'HDMI_3840x2160_30Hz',
         ('1920x1200', '60Hz'): 'HDMI_1920x1200_60Hz',
         ('1920x1080', '60Hz'): 'HDMI_1920x1080_60Hz',
@@ -48,8 +55,8 @@ class Chameleon:
         board.
   """
   PORT_ID_MAP = {
-      PORTS.DP: 1,
-      PORTS.HDMI: 3,
+      Ports.DP: 1,
+      Ports.HDMI: 3,
   }
 
   def __init__(self, hostname, port):
@@ -413,9 +420,8 @@ class ChameleonDisplayTest(test_case.TestCase):
   def runTest(self):
     dut_port, chameleon_port, width, height, refresh_rate = self.args.test_info
     self.assertTrue(
-        chameleon_port in PORTS,
-        f'Invalid port: {chameleon_port}; chameleon port must be one of {PORTS}'
-    )
+        chameleon_port in Ports.__members__, f'Invalid port: {chameleon_port}; '
+        f'chameleon port must be one of {list(Ports.__members__)}')
     # Wait for 5 seconds for the fade-in visual effect.
     self.Sleep(5)
     self.TestPort(dut_port, chameleon_port, width, height, refresh_rate)

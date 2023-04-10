@@ -137,6 +137,7 @@ If you found the calibrated coefficients are skewd:
 """
 
 from collections import namedtuple
+import enum
 import json
 import logging
 import time
@@ -156,15 +157,27 @@ from cros.factory.test.utils import media_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
-from cros.factory.utils import type_utils
 
 
 # LED pattern.
 LED_PATTERN = ((kbd_leds.LED_NUM | kbd_leds.LED_CAP, 0.05), (0, 0.05))
 
+
 # Data structures.
-EventType = type_utils.Enum(['START_TEST', 'EXIT_TEST'])
-FIXTURE_STATUS = type_utils.Enum(['CONNECTED', 'DISCONNECTED'])
+class EventType(str, enum.Enum):
+  START_TEST = 'START_TEST'
+  EXIT_TEST = 'EXIT_TEST'
+
+  def __str__(self):
+    return self.name
+
+
+class FixtureStatus(str, enum.Enum):
+  CONNECTED = 'CONNECTED'
+  DISCONNECTED = 'DISCONNECTED'
+
+  def __str__(self):
+    return self.name
 
 
 InternalEvent = namedtuple('InternalEvent', 'event_type aux_data')
@@ -381,23 +394,23 @@ class ALSFixture(test_case.TestCase):
     while cnt < self.args.chamber_n_retries:
       try:
         self._SetupFixture()
-        self._SetFixtureStatus(FIXTURE_STATUS.CONNECTED)
+        self._SetFixtureStatus(FixtureStatus.CONNECTED)
         return
       except Exception:
         cnt += 1
-        self._SetFixtureStatus(FIXTURE_STATUS.DISCONNECTED)
+        self._SetFixtureStatus(FixtureStatus.DISCONNECTED)
         self.Sleep(self.args.chamber_retry_delay)
     raise light_chamber.LightChamberError('Error connecting to light chamber')
 
   def _OnU2SRemoval(self, device):
     del device  # unused
-    self._SetFixtureStatus(FIXTURE_STATUS.DISCONNECTED)
+    self._SetFixtureStatus(FixtureStatus.DISCONNECTED)
 
   def _SetFixtureStatus(self, status):
-    if status == FIXTURE_STATUS.CONNECTED:
+    if status == FixtureStatus.CONNECTED:
       style = 'color-good'
       label = _('Fixture Connected')
-    elif status == FIXTURE_STATUS.DISCONNECTED:
+    elif status == FixtureStatus.DISCONNECTED:
       style = 'color-bad'
       label = _('Fixture Disconnected')
     else:
@@ -570,7 +583,7 @@ class ALSFixture(test_case.TestCase):
         on_insert=self._OnU2SInsertion, on_remove=self._OnU2SRemoval)
 
     if self.args.assume_chamber_connected:
-      self._SetFixtureStatus(FIXTURE_STATUS.CONNECTED)
+      self._SetFixtureStatus(FixtureStatus.CONNECTED)
 
     try:
       with kbd_leds.Blinker(LED_PATTERN):

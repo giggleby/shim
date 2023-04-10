@@ -51,6 +51,7 @@ server.
 """
 
 import binascii
+import enum
 import logging
 import os
 import re
@@ -75,7 +76,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import type_utils
 
 
 # Host test machine crossover connected to DUT, fix local ip and port for
@@ -122,8 +122,6 @@ _VERSION_RE = re.compile('(?i)version')
 _CONFIG_FILE_RE = re.compile('(?i)config_file')
 _PLAYBACK_WAV_FILE_RE = re.compile('(?i)playback_wav_file')
 
-LoopType = type_utils.Enum(['sox', 'looptest', 'tinyloop', 'hwloop'])
-
 # To optimize execution time. If we have shell script to create loop and restore
 # configuration, we just use it and don't need to do separate actions.
 # Note: If we use script to setup audio loop, we need to prepare restore script
@@ -134,6 +132,16 @@ _KDMIC_JACK_SCRIPT = 'kdmic_jack_script'
 _JACK_SPEAKER_SCRIPT = 'jack_speaker_script'
 _JACK_HP_SCRIPT = 'jack_hp_script'
 _DMIC2_JACK_SCRIPT = 'dmic2_jack_script'
+
+
+class LoopType(str, enum.Enum):
+  sox = 'sox'
+  looptest = 'looptest'
+  tinyloop = 'tinyloop'
+  hwloop = 'hwloop'
+
+  def __str__(self):
+    return self.name
 
 
 class AudioQualityTest(test_case.TestCase):

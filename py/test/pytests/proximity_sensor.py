@@ -70,6 +70,7 @@ show in the test list::
 """
 
 import ctypes
+import enum
 import fcntl
 import logging
 import mmap
@@ -82,15 +83,21 @@ from cros.factory.test.i18n import _
 from cros.factory.test.i18n import arg_utils as i18n_arg_utils
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
-from cros.factory.utils import type_utils
 
 
 IIO_GET_EVENT_FD_IOCTL = 0x80046990
 
-PROXIMITY_EVENT_TYPE = type_utils.Enum(['close', 'far'])
 PROXIMITY_EVENT_BUF_SIZE = 16
 _DEFAULT_CALIBRATE_PATH = 'events/in_proximity0_thresh_either_en'
 _DEFAULT_SENSOR_VALUE_PATH = 'in_proximity0_raw'
+
+
+class ProximityEventType(str, enum.Enum):
+  close = 'close'
+  far = 'far'
+
+  def __str__(self):
+    return self.name
 
 
 class ProximitySensor(test_case.TestCase):
@@ -211,12 +218,12 @@ class ProximitySensor(test_case.TestCase):
       self._event_fd = self._GetEventFd()
 
       event_type_map = {
-          1: PROXIMITY_EVENT_TYPE.far,
-          2: PROXIMITY_EVENT_TYPE.close
+          1: ProximityEventType.far,
+          2: ProximityEventType.close
       }
 
-      test_flow = [(PROXIMITY_EVENT_TYPE.close, self.args.close_instruction),
-                   (PROXIMITY_EVENT_TYPE.far, self.args.far_instruction)]
+      test_flow = [(ProximityEventType.close, self.args.close_instruction),
+                   (ProximityEventType.far, self.args.far_instruction)]
       for expect_event_type, instruction in test_flow:
         self.ui.SetHTML(instruction, id='proximity-sensor-instruction')
 

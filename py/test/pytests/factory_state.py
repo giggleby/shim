@@ -100,6 +100,7 @@ Here is an example of station based test list::
   }
 """
 
+import enum
 import logging
 import unittest
 
@@ -109,26 +110,41 @@ from cros.factory.test import state
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
 
-ENUM_ACTION = type_utils.Enum(['APPEND', 'POP', 'COPY', 'MERGE'])
 
-ENUM_ROLE = type_utils.Enum(['STATION', 'DUT'])
+class EnumAction(str, enum.Enum):
+  APPEND = 'APPEND'
+  POP = 'POP'
+  COPY = 'COPY'
+  MERGE = 'MERGE'
+
+  def __str__(self):
+    return self.name
+
+
+class EnumRole(str, enum.Enum):
+  STATION = 'STATION'
+  DUT = 'DUT'
+
+  def __str__(self):
+    return self.name
 
 
 class ManipulateFactoryStateLayer(unittest.TestCase):
   ARGS = [
-      Arg('action', ENUM_ACTION, 'What kind of action to do?'),
+      Arg('action', EnumAction, 'What kind of action to do?'),
       Arg('dut_options', dict, 'DUT options to create remote dut instnace.',
           default={}),
-      Arg('device', ENUM_ROLE,
+      Arg(
+          'device', EnumRole,
           'Device to do the action.  If the action is COPY, it requires two '
           'devices (copy from source to destination), the `device` will be '
           'source, and destination will be the other role.',
-          default=ENUM_ROLE.STATION),
+          default=EnumRole.STATION),
       Arg('exclude_current_test_list', bool,
           "For `COPY` command, don't copy test states of current test list.",
           default=True),
-      Arg('include_tests', bool,
-          'For `COPY` command, include `tests_shelf`.', default=False),
+      Arg('include_tests', bool, 'For `COPY` command, include `tests_shelf`.',
+          default=False),
   ]
 
   def setUp(self):
@@ -148,13 +164,13 @@ class ManipulateFactoryStateLayer(unittest.TestCase):
 
   def runTest(self):
     _ACTION_TO_FUNC = {
-        ENUM_ACTION.APPEND: self.DoAppend,
-        ENUM_ACTION.POP: self.DoPop,
-        ENUM_ACTION.COPY: self.DoCopy,
-        ENUM_ACTION.MERGE: self.DoMerge,
+        EnumAction.APPEND: self.DoAppend,
+        EnumAction.POP: self.DoPop,
+        EnumAction.COPY: self.DoCopy,
+        EnumAction.MERGE: self.DoMerge,
     }
 
-    if self.args.device == ENUM_ROLE.STATION:
+    if self.args.device == EnumRole.STATION:
       source = self._CreateStationStateProxy()
       destination = self._CreateDUTStateProxy()
     else:

@@ -123,6 +123,7 @@ prepvt firmware::
 """
 
 from distutils import version
+import enum
 import functools
 import logging
 import os
@@ -152,7 +153,13 @@ KEY_CR50_UPDATE_NEED_REBOOT = device_data.JoinKeys(device_data.KEY_FACTORY,
 
 
 class UpdateCr50FirmwareTest(test_case.TestCase):
-  _METHOD_TYPE = type_utils.Enum(['UPDATE', 'CHECK_VERSION'])
+
+  class _MethodType(str, enum.Enum):
+    UPDATE = 'UPDATE'
+    CHECK_VERSION = 'CHECK_VERSION'
+
+    def __str__(self):
+      return self.name
 
   ARGS = [
       Arg(
@@ -170,9 +177,9 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
           'firmware when first time boot to recovery image. '
           'http://crbug.com/802235', default=False),
       Arg(
-          'method', _METHOD_TYPE,
+          'method', _MethodType,
           'Specify whether to update the Cr50 firmware or to check the '
-          'firmware version.', default=_METHOD_TYPE.UPDATE),
+          'firmware version.', default=_MethodType.UPDATE),
       Arg(
           'upstart_mode', bool,
           'Use upstart mode to update Cr50 firmware. The DUT will not reboot '
@@ -245,7 +252,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
   def CacheImageInfoAndCallMethod(self, firmware_file):
     session.console.info('Firmware path: %s', firmware_file)
     self.image_info = self.gsctool.GetImageInfo(firmware_file)
-    if self.args.method == self._METHOD_TYPE.UPDATE:
+    if self.args.method == self._MethodType.UPDATE:
       self._UpdateCr50Firmware(firmware_file)
     else:
       self._CheckCr50FirmwareVersion()

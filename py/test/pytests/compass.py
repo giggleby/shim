@@ -5,6 +5,7 @@
 """Compass test which requires operator place the DUT heading north and south.
 """
 
+import enum
 import math
 
 from cros.factory.device import device_utils
@@ -22,11 +23,9 @@ _FLASH_STATUS_TIME = 1
 
 class CompassTest(test_case.TestCase):
   ARGS = [
-      Arg('tolerance', int, 'The tolerance in degree.',
-          default=5),
-      Arg('location', type_utils.Enum(['base', 'lid']),
-          'Where the compass is located.',
-          default='base')
+      Arg('tolerance', int, 'The tolerance in degree.', default=5),
+      Arg('location', enum.Enum('Location', ['base', 'lid']),
+          'Where the compass is located.', default='base')
   ]
 
   def setUp(self):

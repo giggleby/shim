@@ -195,6 +195,7 @@ To check the camera capturing black frames (the maximum brightness less than
 
 
 import codecs
+import enum
 import logging
 import numbers
 import os
@@ -216,7 +217,6 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
-from cros.factory.utils import type_utils
 
 from cros.factory.external import cv2 as cv
 from cros.factory.external import numpy as np
@@ -228,10 +228,21 @@ _JPEG_QUALITY = 70
 _HAAR_CASCADE_PATH = (
     '/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml')
 
-TestModes = type_utils.Enum([
-    'camera_assemble', 'qr', 'camera_assemble_qr', 'face', 'timeout',
-    'frame_count', 'manual', 'manual_led', 'brightness'
-])
+
+class TestModes(str, enum.Enum):
+  camera_assemble = 'camera_assemble'
+  qr = 'qr'
+  camera_assemble_qr = 'camera_assemble_qr'
+  face = 'face'
+  timeout = 'timeout'
+  frame_count = 'frame_count'
+  manual = 'manual'
+  manual_led = 'manual_led'
+  brightness = 'brightness'
+
+  def __str__(self):
+    return self.name
+
 
 _TEST_MODE_INST = {
     TestModes.manual:
