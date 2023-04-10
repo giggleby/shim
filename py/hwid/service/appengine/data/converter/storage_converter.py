@@ -18,6 +18,8 @@ class StorageAVLAttrs(converter.AVLAttrs):
   MMC_MANFID = 'mmc_manfid'
   MMC_NAME = 'mmc_name'
   NVME_MODEL = 'nvme_model'
+  UFS_MODEL = 'ufs_model'
+  UFS_VENDOR = 'ufs_vendor'
 
 
 _STORAGE_CONVERTERS: Sequence[converter.FieldNameConverter] = [
@@ -60,6 +62,11 @@ _STORAGE_CONVERTERS: Sequence[converter.FieldNameConverter] = [
                     'mmc_manfid',
                     converter.MakeFixedWidthHexValueFactory(
                         width=6, source_has_prefix=True))
+        }),
+    converter.FieldNameConverter.FromFieldMap(
+        'ufs_full_match', {
+            StorageAVLAttrs.UFS_MODEL: _ConvertedValueSpec('ufs_model'),
+            StorageAVLAttrs.UFS_VENDOR: _ConvertedValueSpec('ufs_vendor'),
         }),
 ]
 

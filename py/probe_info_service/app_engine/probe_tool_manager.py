@@ -294,6 +294,11 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
               'nvme_model':
                   None,
           }),
+      ProbeFunc(
+          'storage', 'ufs_storage', {
+              'ufs_vendor': _ParamValueConverter('string'),
+              'ufs_model': _ParamValueConverter('string'),
+          }),
   ]
 
 
