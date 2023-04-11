@@ -89,6 +89,8 @@ EBUILD_TEST_BLOCKED_LIST = \
   nocturne \
   soraka
 
+PROTO_FILES = $(wildcard proto/*.proto)
+
 CLOSURE_DIR = py/goofy/static
 CLOSURE_OUTPUT_FILENAMES = js/goofy.js css/closure.css
 CLOSURE_OUTPUT_DIR ?= \
@@ -156,13 +158,25 @@ closure: $(CLOSURE_LIB_DIR)
 	  CLOSURE_COMPILER=$(realpath $(CLOSURE_COMPILER)) \
 	  CLOSURE_LIB_DIR=$(realpath $(CLOSURE_LIB_DIR))
 
-# Regenerates the reg code proto.
-# TODO(jsalz): Integrate this as a "real" part of the build, rather than
-# relying on regenerating it only if/when it changes. This is OK for now since
-# this proto should change infrequently or never.
+# Regenerates the reg code and hwid_feature_requirement proto.
+# Use this build target to update pb2 file in source code.
 proto:
-	protoc proto/reg_code.proto --python_out=py
-	protoc proto/factory_hwid_feature_requirement.proto --python_out=py
+	$(foreach file,\
+	  $(PROTO_FILES),\
+	  $(info - Compiling proto resource file $(file)) \
+	  protoc $(file) --python_out=py${\n} )
+
+# Resource/Toolkit uses the pb2 file generated at build time.
+# The reason we're not incorporating it into `make proto`
+# is that patching source code will fail due to permission issue when emerge.
+define func-gen-and-add-pb2-files-to-resource
+	mkdir -p $(TEMP_DIR)/py
+	$(foreach file,\
+	  $(PROTO_FILES),\
+	  $(info - Compiling proto resource file $(file)) \
+	  protoc $(file) --python_out=$(TEMP_DIR)/py${\n} )
+	tar -rf $(RESOURCE_PATH) -C $(TEMP_DIR) py/proto
+endef
 
 func-extract-from-url = @\
 	mkdir -p $(1) ;\
@@ -270,6 +284,7 @@ resource: closure po
 	  $(EXTRA_RESOURCE_ARGS)
 	tar -rf $(RESOURCE_PATH) -C $(BUILD_DIR) locale
 	$(call func-add-ssh-identities)
+	$(call func-gen-and-add-pb2-files-to-resource)
 	$(if $(OUTOFTREE_BUILD),\
 	  tar -rf $(RESOURCE_PATH) --transform 's"^"./py/goofy/static/"' \
 	    -C "$(CLOSURE_OUTPUT_DIR)" $(CLOSURE_OUTPUT_FILENAMES))
