@@ -1909,6 +1909,7 @@ class SelfServiceHelperTest(unittest.TestCase):
         # The combination of
         #   comp_cls_1: new_comp
         approval_status[identity].CopyFrom(review_required_cl_action)
+        approval_status[identity].warnings[:] = ['warning message.']
       approval_status[identity].reasons[:] = [
           f'reason1 of {identity}.',
           f'reason2 of {identity}.',
@@ -2071,6 +2072,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     # Validate review-required HWID DB CL.
     self.assertFalse(review_required_call['bot_commit'])
     self.assertFalse(review_required_call['commit_queue'])
+    self.assertEqual(-1, review_required_call['verified'])
     self.assertCountEqual([
         'cc1@notgoogle.com',
         'cc2@notgoogle.com',
@@ -2092,6 +2094,7 @@ class SelfServiceHelperTest(unittest.TestCase):
         all(f'reason1 of {identity}.' in review_required_call['commit_msg'] and
             f'reason2 of {identity}.' in review_required_call['commit_msg'] for
             identity in create_cl_resp.review_required_change_unit_identities))
+    self.assertIn('[!] warning message.', review_required_call['commit_msg'])
     self.assertEqual('generated feature matcher payload',
                      review_required_call['feature_matcher_source'])
 

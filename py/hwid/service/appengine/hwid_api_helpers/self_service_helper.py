@@ -286,13 +286,28 @@ class _ApprovalInfo(NamedTuple):
   reviewers: Sequence[str]
   ccs: Sequence[str]
   reasons: Sequence[str]
+  warnings: Sequence[str]
 
 
 def _FormatApprovalStatusReasons(approval_info: _ApprovalInfo) -> str:
   outbuf = io.StringIO()
   outbuf.write(f'{approval_info.change_unit_repr}:\n')
   for reason in approval_info.reasons:
-    outbuf.write(f'  - {reason}\n')
+    outbuf.write(
+        textwrap.fill(reason, width=72, initial_indent='  - ',
+                      subsequent_indent='    '))
+    outbuf.write('\n')
+  return outbuf.getvalue()
+
+
+def _FormatApprovalStatusWarnings(approval_info: _ApprovalInfo) -> str:
+  outbuf = io.StringIO()
+  outbuf.write(f'{approval_info.change_unit_repr}:\n')
+  for warning in approval_info.warnings:
+    outbuf.write(
+        textwrap.fill(warning, width=72, initial_indent='  [!] ',
+                      subsequent_indent='      '))
+    outbuf.write('\n')
   return outbuf.getvalue()
 
 
@@ -304,7 +319,7 @@ def _CollectApprovalInfos(
   for identity, cu_action in approval_status.items():
     approval_info_per_identity[identity] = _ApprovalInfo(
         repr(change_units[identity]), cu_action.reviewers, cu_action.ccs,
-        cu_action.reasons)
+        cu_action.reasons, cu_action.warnings)
   return approval_info_per_identity
 
 
@@ -696,7 +711,6 @@ class SelfServiceHelper:
             """) % request.description
     ]
 
-    # TODO(b/273607350): Set verify-1 if there are warnings / errors.
     if feature_matcher_build_result.commit_message:
       commit_msg.append(feature_matcher_build_result.commit_message)
 
@@ -1304,6 +1318,24 @@ class SelfServiceHelper:
         db: database.Database, msg: str, change_unit_identities: Sequence[str],
         bot_commit: bool = False, commit_queue: bool = False,
         include_feature_matcher_source: bool = False) -> Tuple[int, str]:
+
+      warning_commit_msg_list = []
+      has_warning = any(
+          approval_infos[i].warnings for i in change_unit_identities)
+      if has_warning:
+        warning_commit_msg_list.append('-' * 72)
+        warning_commit_msg_list.append(
+            'This CL is marked as Verified-1 because some warnings are forced\n'
+            'submitted by the requester.\n\n'
+            'Please carefully review the following changes:\n')
+        warning_commit_msg_list.extend(
+            _FormatApprovalStatusWarnings(approval_infos[identity])
+            for identity in change_unit_identities
+            if approval_infos[identity].warnings)
+        warning_commit_msg_list.append('-' * 72)
+
+      warning_commit_msg = '\n'.join(warning_commit_msg_list)
+
       change_unit_commit_msg = '\n'.join(['Reasons:'] + [
           _FormatApprovalStatusReasons(approval_infos[identity])
           for identity in change_unit_identities
@@ -1318,6 +1350,8 @@ class SelfServiceHelper:
           new_hwid_db_editable_section_external)
       new_hwid_db_contents_internal = action.PatchHeader(
           new_hwid_db_editable_section_internal)
+      verified = -1 if has_warning and not bot_commit else 0
+
       reviewers = set()
       ccs = set()
       for identity in change_unit_identities:
@@ -1329,7 +1363,6 @@ class SelfServiceHelper:
             db, session_cache.avl_resource).Build()
         feature_matcher_generation_commit_msg = build_result.commit_message
         feature_matcher_source = build_result.feature_matcher_source
-        # TODO(b/273607350): Set verify-1 if there are warnings / errors.
       else:
         feature_matcher_generation_commit_msg = ''
         feature_matcher_source = None
@@ -1337,6 +1370,7 @@ class SelfServiceHelper:
       commit_msg = '\n\n'.join(
           filter(None, [
               msg,
+              warning_commit_msg,
               feature_matcher_generation_commit_msg,
               change_unit_commit_msg,
               f'BUG=b:{request.bug_number}',
@@ -1345,7 +1379,7 @@ class SelfServiceHelper:
         cl_number = live_hwid_repo.CommitHWIDDB(
             name=project, hwid_db_contents=new_hwid_db_contents_external,
             commit_msg=commit_msg, reviewers=list(reviewers), cc_list=list(ccs),
-            bot_commit=bot_commit, commit_queue=commit_queue,
+            bot_commit=bot_commit, commit_queue=commit_queue, verified=verified,
             hwid_db_contents_internal=new_hwid_db_contents_internal,
             feature_matcher_source=feature_matcher_source)
       except git_util.GitUtilNoModificationException:

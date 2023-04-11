@@ -211,6 +211,7 @@ class GetCLInfoTest(unittest.TestCase):
   _THE_CL_STATUS = 'NEW'
   _THE_CL_SUBJECT = 'SUBJECT'
   _THE_COMMIT_ID = 'the_commit_id'
+  _THE_OWNER_ID = 12345
 
   def setUp(self):
     super().setUp()
@@ -233,6 +234,9 @@ class GetCLInfoTest(unittest.TestCase):
         'status': status or self._THE_CL_STATUS,
         'subject': subject or self._THE_CL_SUBJECT,
         'current_revision': current_revision or self._THE_COMMIT_ID,
+        'owner': {
+            '_account_id': self._THE_OWNER_ID,
+        },
     }
     json_obj.update(other_fields)
     return self._BuildGerritSuccResponse(json_obj)
@@ -317,6 +321,33 @@ class GetCLInfoTest(unittest.TestCase):
         'unused_review_host', self._THE_CHANGE_ID, include_mergeable=True)
 
     self.assertFalse(actual_cl_info.mergeable)
+
+  def testGetCLInfo_VerifiedLabelExcludeOwner(self):
+    mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
+    mock_urlopen.side_effect = [
+        self._BuildGetChangeSuccResponseWithDefaults(
+            labels={
+                'Code-Review': {},
+                'Verified': {
+                    'all': [
+                        {
+                            'value': -1,
+                            '_account_id': self._THE_OWNER_ID
+                        },
+                        {
+                            'value': 1,
+                            '_account_id': 0
+                        },
+                    ],
+                },
+            }),
+        self._BuildGerritRelatedChangeInfos(),
+    ]
+
+    actual_cl_info = git_util.GetCLInfo(
+        'unused_review_host', self._THE_CHANGE_ID, include_review_status=True)
+
+    self.assertTrue(actual_cl_info.verified)
 
   def testGetCLInfo_WithApprovedReviewStatus(self):
     mock_urlopen = self._mocked_pool_manager_cls.return_value.urlopen
@@ -463,6 +494,7 @@ class GetCLInfoTest(unittest.TestCase):
                 'message': 'This is comment 1.',
                 'author': {
                     'email': 'somebody@not_google.com',
+                    '_account_id': 1,
                 }
             }, ],
         }),
@@ -490,6 +522,7 @@ class GetCLInfoTest(unittest.TestCase):
                     'This is comment 1.',
                 'author': {
                     'email': 'somebody@not_google.com',
+                    '_account_id': 1,
                 },
                 'context_lines': [
                     {
@@ -526,6 +559,7 @@ class GetCLInfoTest(unittest.TestCase):
           'message': f'Message {numeric_id}.',
           'author': {
               'email': f'author{numeric_id}@not_google.com',
+              '_account_id': 1,
           },
       }
       if in_reply_to is not None:
@@ -605,12 +639,13 @@ class CreateCLTest(unittest.TestCase):
     new_files = [(file_name, 0o100644, b'')]
     git_util.CreateCL(url, auth_cookie, branch, new_files, author, committer,
                       commit_msg, reviewers, ccs, bot_commit=True,
-                      commit_queue=True)
+                      commit_queue=True, verified=1)
     mock_porcelain.push.assert_called_once_with(
         mock.ANY, url,
         (f'HEAD:refs/for/refs/heads/{branch}%'
-         'r=reviewer@email.com,cc=cc@email.com,l=Bot-Commit+1,l=Commit-Queue+2'
-        ).encode('UTF-8'), errstream=mock.ANY, pool_manager=mock.ANY)
+         'r=reviewer@email.com,cc=cc@email.com,l=Bot-Commit+1,l=Commit-Queue+2,'
+         'l=Verified+1').encode('UTF-8'), errstream=mock.ANY,
+        pool_manager=mock.ANY)
 
 
 class GitFilesystemAdapterTest(unittest.TestCase):

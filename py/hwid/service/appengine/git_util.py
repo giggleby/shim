@@ -86,7 +86,10 @@ _REVIEW_VOTES_OF_CASE = {
         ReviewVote(_CODE_REVIEW, 0),
         ReviewVote(_COMMIT_QUEUE, 0),
     ],
-    ApprovalCase.COMMIT_QUEUE: [ReviewVote(_COMMIT_QUEUE, 2)],
+    ApprovalCase.COMMIT_QUEUE: [
+        ReviewVote(_VERIFIED, 0),
+        ReviewVote(_COMMIT_QUEUE, 2)
+    ],
 }
 
 
@@ -488,7 +491,7 @@ def CreateCL(
     commit_queue: bool = False,
     repo: Optional[MemoryRepo] = None,
     topic: Optional[str] = None,
-    verified: bool = False,
+    verified: int = 0,
     auto_submit: bool = False,
     rubber_stamper: bool = False,
 ):
@@ -509,7 +512,7 @@ def CreateCL(
     repo: The `MemoryRepo` instance to create the commit.  If not specified,
         this function clones the repository from `git_url:branch`.
     topic: A string of topic set for CL.
-    verified: True if Verified vote is set.
+    verified: Vote Verified. The score should be {-1, 0, 1}.
     auto_submit: True if Auto-Submit vote is set.
     rubber_stamper: True if Rubber Stamper is set as a reviewer.
   Returns:
@@ -544,7 +547,7 @@ def CreateCL(
   if commit_queue:
     options.append(f'l={_COMMIT_QUEUE}+2')
   if verified:
-    options.append(f'l={_VERIFIED}+1')
+    options.append(f'l={_VERIFIED}{verified:+d}')
   if auto_submit:
     options.append(f'l={_AUTO_SUBMIT}+1')
   if topic:
@@ -748,9 +751,17 @@ def _ConvertGerritTimestamp(timestamp):
 
 
 _ACCOUNT_INFO_SCHEMA = schema.FixedDict(
-    'AccountInfo', optional_items={
+    'AccountInfo', items={
+        '_account_id': schema.Scalar('_account_id', int),
+    }, optional_items={
         'display_name': schema.Scalar('display_name', str),
         'email': schema.Scalar('email', str),
+    }, allow_undefined_keys=True)
+_APPROVAL_INFO_SCHEMA = schema.FixedDict(
+    'ApprovalInfo', items={
+        '_account_id': schema.Scalar('_account_id', int),
+    }, optional_items={
+        'value': schema.Scalar('value', int),
     }, allow_undefined_keys=True)
 _LABEL_INFO_SCHEMA = schema.FixedDict(
     'LabelInfo', optional_items={
@@ -758,6 +769,7 @@ _LABEL_INFO_SCHEMA = schema.FixedDict(
         'rejected': _ACCOUNT_INFO_SCHEMA,
         'recommended': _ACCOUNT_INFO_SCHEMA,
         'disliked': _ACCOUNT_INFO_SCHEMA,
+        'all': schema.List('all', _APPROVAL_INFO_SCHEMA),
     }, allow_undefined_keys=True)
 _CHANGE_INFO_SCHEMA = schema.FixedDict(
     'ChangeInfo', items={
@@ -767,6 +779,7 @@ _CHANGE_INFO_SCHEMA = schema.FixedDict(
         '_number': schema.Scalar('_number', int),
         'subject': schema.Scalar('subject', str),
         'current_revision': schema.Scalar('current_revision', str),
+        'owner': _ACCOUNT_INFO_SCHEMA,
     }, optional_items={
         'labels':
             schema.Dict('labels', schema.Scalar('label_name', str),
@@ -903,7 +916,16 @@ def GetCLInfo(review_host, change_id, auth_cookie='', include_mergeable=False,
     if not include_review_status:
       return None
     verified_labels = change_info_json.get('labels', {}).get(_VERIFIED, {})
-    return bool(verified_labels.get('approved'))
+
+    # Exclude the rejected vote by bot (as CL owner) itself
+    owner_id = change_info_json.get('owner', {}).get('_account_id')
+    verified = any(
+        vote.get('value') == 1 for vote in verified_labels.get('all', []))
+    rejected = any(
+        vote.get('value') == -1
+        for vote in verified_labels.get('all', [])
+        if vote.get('_account_id') != owner_id)
+    return verified and not rejected
 
   def _GetBotApprovalStatus(change_info_json):
     if not include_review_status:

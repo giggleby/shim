@@ -792,6 +792,8 @@ message ClAction {
   repeated string reviewers = 3;
   // The additional CC reviewers to be added.
   repeated string ccs = 4;
+  // Warning message of unverified changes.
+  repeated string warnings = 5;
 }
 
 // The request of setting CL approval status.

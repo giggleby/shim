@@ -239,7 +239,8 @@ class HWIDRepo(HWIDRepoView):
                    bot_commit: bool = False, commit_queue: bool = False,
                    update_metadata: Optional[HWIDDBMetadata] = None,
                    hwid_db_contents_internal: Optional[str] = None,
-                   feature_matcher_source: Optional[str] = None):
+                   feature_matcher_source: Optional[str] = None,
+                   verified: int = 0):
     """Commit an HWID DB to the repo.
 
     Args:
@@ -256,6 +257,7 @@ class HWIDRepo(HWIDRepoView):
       feature_matcher_source: Uses a string to represent the feature matcher
         source contents to push.  `None` to instruct this method not to update
         the contents.
+      verified: Vote Verified. The score should be {-1, 0, 1}.
 
     Returns:
       A numeric ID of the created CL.
@@ -299,7 +301,7 @@ class HWIDRepo(HWIDRepoView):
           branch=self._repo_branch, new_files=new_files, author=author,
           committer=author, commit_msg=commit_msg, reviewers=reviewers,
           cc=cc_list, bot_commit=bot_commit, commit_queue=commit_queue,
-          repo=self._repo)
+          repo=self._repo, verified=verified)
       if cl_number is None:
         logging.warning(
             'Failed to parse CL number from change_id=%s. Get CL number from '
