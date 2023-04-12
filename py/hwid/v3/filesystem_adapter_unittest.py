@@ -23,7 +23,7 @@ class FileSystemAdapterTest(unittest.TestCase):
   def testAbstractClass(self):
     """Tests if FileSystemAdapter cannot be instantiated since it's an abstract
     class."""
-    self.assertRaises(TypeError, filesystem_adapter.FileSystemAdapter)
+    self.assertRaises(TypeError, filesystem_adapter.IFileSystemAdapter)
 
 
 class LocalFileSystemAdapterTest(unittest.TestCase):

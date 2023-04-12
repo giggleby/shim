@@ -4,6 +4,7 @@
 
 """Touch Component."""
 
+import abc
 import logging
 import struct
 import time
@@ -11,7 +12,7 @@ import time
 from cros.factory.device import device_types
 
 
-class Touch(device_types.DeviceComponent):
+class ITouch(device_types.DeviceComponent, abc.ABC):
   """Touch Component."""
 
   def GetController(self, index):
@@ -26,7 +27,7 @@ class Touch(device_types.DeviceComponent):
     raise NotImplementedError
 
 
-class TouchController(device_types.DeviceComponent):
+class ITouchController(device_types.DeviceComponent, abc.ABC):
   """Touch Controller."""
 
   def CheckInterface(self):
@@ -57,7 +58,7 @@ class TouchController(device_types.DeviceComponent):
     raise NotImplementedError
 
 
-class Atmel1664sTouchController(TouchController):
+class Atmel1664sTouchController(ITouchController):
   """Atmel 1664s touch controller."""
 
   _I2C_DEVICES_PATH = '/sys/bus/i2c/devices'
@@ -87,11 +88,11 @@ class Atmel1664sTouchController(TouchController):
     return candidates[0]
 
   def CheckInterface(self):
-    """See TouchController.CheckInterface."""
+    """See ITouchController.CheckInterface."""
     return self._device.path.exists(self._object_path)
 
   def Calibrate(self):
-    """See TouchController.Calibrate."""
+    """See ITouchController.Calibrate."""
     logging.info('Calibrating...')
     # Force calibration with T6 instance 0, byte 2 (calibrate), non-zero value.
     self._device.WriteFile(self._object_path, '06000201')
@@ -100,7 +101,7 @@ class Atmel1664sTouchController(TouchController):
     return True  # TODO(dparker): Figure out how to detect calibration errors.
 
   def GetMatrices(self, frame_idx_list):
-    """See TouchController.GetMatrices.
+    """See ITouchController.GetMatrices.
 
     Args:
       frame_idx_list: Index 0 = References, Index 1 = Deltas.

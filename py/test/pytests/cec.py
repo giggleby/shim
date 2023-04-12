@@ -59,6 +59,7 @@ manually. Verify that display can be turned on/off via CEC::
 """
 
 from enum import IntEnum
+import abc
 import logging
 import re
 import subprocess
@@ -100,7 +101,7 @@ class Status(IntEnum):
   TO_OFF = 3
 
 
-class CecController:
+class ICecController(abc.ABC):
   """Base class for CEC controllers."""
 
   def __init__(self, dut):
@@ -140,7 +141,7 @@ class CecController:
     raise NotImplementedError
 
 
-class EcCecController(CecController):
+class IEcCecController(ICecController):
   """Class for EC-based CEC controller."""
 
   def GetDisplayStatus(self):
@@ -153,7 +154,7 @@ class EcCecController(CecController):
     raise NotImplementedError
 
 
-class ApCecController(CecController):
+class ApCecController(ICecController):
   """Class for AP-based CEC controller."""
 
   def __init__(self, dut, index):
@@ -241,7 +242,7 @@ class CecTest(test_case.TestCase):
 
     self._dut = device_utils.CreateDUTInterface()
     if self.args.controller_type == 'EC':
-      self.cec = EcCecController(self._dut)
+      self.cec = IEcCecController(self._dut)
     elif self.args.controller_type == 'AP':
       self.cec = ApCecController(self._dut, self.args.index)
     else:

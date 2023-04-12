@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import functools
 import logging
 
@@ -11,7 +12,7 @@ from cros.factory.gooftool import vpd
 from cros.factory.test.rules import privacy
 
 
-class Partition(device_types.DeviceComponent):
+class IPartition(device_types.DeviceComponent, abc.ABC):
   """A VPD partition.
 
   This should not be created by the caller; rather, the caller should use
@@ -50,7 +51,7 @@ class Partition(device_types.DeviceComponent):
     raise NotImplementedError
 
 
-class CommandVPDPartition(Partition):
+class CommandVPDPartition(IPartition):
   """A VPD partition that is accessed by command 'vpd'.
 
   The 'vpd' command is usually available on systems using ChromeOS firmware that
@@ -70,20 +71,20 @@ class CommandVPDPartition(Partition):
     self._vpd_tool = vpd.VPDTool(shell_func, raw_file=raw_file)
 
   def get(self, key, default=None):
-    """See Partition.get."""
+    """See IPartition.get."""
     return self._vpd_tool.GetValue(
         key, default_value=default, partition=self.name)
 
   def Delete(self, *keys):
-    """See Partition.Delete."""
+    """See IPartition.Delete."""
     self._vpd_tool.UpdateData({key: None for key in keys}, partition=self.name)
 
   def GetAll(self):
-    """See Partition.GetAll."""
+    """See IPartition.GetAll."""
     return self._vpd_tool.GetAllData(partition=self.name)
 
   def Update(self, items, log=True):
-    """See Partition.Update.
+    """See IPartition.Update.
 
     Args:
       items: Items to set.  A value of "None" deletes the item
@@ -104,7 +105,7 @@ class CommandVPDPartition(Partition):
     return self._vpd_tool.UpdateData(changed_items, partition=self.name)
 
 
-class ImmutableFileBasedPartition(Partition):
+class ImmutableFileBasedPartition(IPartition):
   """A file-based VPD partition which cannot be updated."""
 
   def __init__(self, device, path):
@@ -118,18 +119,18 @@ class ImmutableFileBasedPartition(Partition):
     self._path = path
 
   def get(self, key, default=None):
-    """See Partition.get"""
+    """See IPartition.get"""
     file_path = self._device.path.join(self._path, key)
     if self._device.path.exists(file_path):
       return self._device.ReadFile(file_path)
     return None
 
   def Delete(self, *keys):
-    """See Partition.Delete. This operation is not supported."""
+    """See IPartition.Delete. This operation is not supported."""
     raise NotImplementedError('An immutable partition cannot be updated.')
 
   def GetAll(self):
-    """See Partition.GetAll."""
+    """See IPartition.GetAll."""
     ret = {}
     for file_name in self._device.CheckOutput(
         ['find', self._path, '-type', 'f']).splitlines():
@@ -138,7 +139,7 @@ class ImmutableFileBasedPartition(Partition):
     return ret
 
   def Update(self, items, log=True):
-    """See Partition.Update. This operation is not supported."""
+    """See IPartition.Update. This operation is not supported."""
     raise NotImplementedError('An immutable partition cannot be updated.')
 
 
@@ -146,7 +147,7 @@ class MutableFileBasedPartition(ImmutableFileBasedPartition):
   """A file-based VPD partition."""
 
   def Delete(self, *keys):
-    """See Partition.Delete."""
+    """See IPartition.Delete."""
     for key in keys:
       file_path = self._device.path.join(self._path, key)
       if self._device.path.exists(file_path):
@@ -154,7 +155,7 @@ class MutableFileBasedPartition(ImmutableFileBasedPartition):
         return
 
   def Update(self, items, log=True):
-    """See Partition.Update."""
+    """See IPartition.Update."""
     for k, v in items.items():
       file_name = self._device.path.join(self._path, k)
       if v is not None:

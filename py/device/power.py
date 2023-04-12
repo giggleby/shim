@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import collections
 import enum
 import logging
@@ -81,7 +82,7 @@ class PowerBase(device_types.DeviceComponent):
     self._pd_name = pd_name
 
 
-class PowerControlMixinBase:
+class IPowerControlMixin(abc.ABC):
   """Base class for power control mixin."""
 
   def SetChargeState(self, state):
@@ -89,18 +90,18 @@ class PowerControlMixinBase:
     raise NotImplementedError
 
 
-class DummyPowerControlMixin(PowerControlMixinBase):
+class DummyPowerControlMixin(IPowerControlMixin):
   """Power control mixin that does nothing."""
 
   def SetChargeState(self, state):
-    """See PowerControlMixinBase.SetChargeState"""
+    """See IPowerControlMixin.SetChargeState"""
 
 
-class ECToolPowerControlMixin(PowerControlMixinBase):
+class ECToolPowerControlMixin(IPowerControlMixin):
   """Power control mixin that uses ectool."""
 
   def SetChargeState(self, state):
-    """See PowerControlMixinBase.SetChargeState"""
+    """See IPowerControlMixin.SetChargeState"""
     try:
       if state == self.ChargeState.CHARGE:
         self._device.CheckCall(['ectool', 'chargecontrol', 'normal'])

@@ -20,7 +20,7 @@ class NotFoundException(FileSystemAdapterException):
   """Exceptions of file not found while reading/writing/removing files."""
 
 
-class FileSystemAdapter(abc.ABC):
+class IFileSystemAdapter(abc.ABC):
   """Abstract class for file access adapters.
 
   It supports simple, generic operations on files and is meant to provide a
@@ -154,7 +154,7 @@ class FileSystemAdapter(abc.ABC):
     raise NotImplementedError('Abstract method not implemented.')
 
 
-class LocalFileSystemAdapter(FileSystemAdapter):
+class LocalFileSystemAdapter(IFileSystemAdapter):
 
   class ExceptionMapper(contextlib.AbstractContextManager):
     def __exit__(self, value_type, value, traceback):

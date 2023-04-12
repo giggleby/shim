@@ -4,12 +4,13 @@
 
 """System module for memory."""
 
+import abc
 import pipes
 
 from cros.factory.device import device_types
 
 
-class BaseMemory(device_types.DeviceComponent):
+class IMemory(device_types.DeviceComponent, abc.ABC):
   """Abstract class for memory component."""
 
   def ResizeSharedMemory(self, size='100%'):
@@ -26,11 +27,11 @@ class BaseMemory(device_types.DeviceComponent):
     raise NotImplementedError
 
 
-class LinuxMemory(BaseMemory):
+class LinuxMemory(IMemory):
   """Implementation of BaseMemory on Linux system."""
 
   def ResizeSharedMemory(self, size='100%'):
-    """See BaseMemory.ResizeSharedMemory."""
+    """See IMemory.ResizeSharedMemory."""
     self._device.CheckCall(
         f'mount -o remount,size={pipes.quote(size)} /dev/shm')
 
@@ -47,7 +48,7 @@ class AndroidMemory(LinuxMemory):
   """Implementation of BaseMemory on Android system."""
 
   def ResizeSharedMemory(self, size='100%'):
-    """See BaseMemory.ResizeSharedMemory."""
+    """See IMemory.ResizeSharedMemory."""
     # Android uses ashmem and does not have /dev/shm.
     # TODO(phoenixshen): Stressapptest on Android uses memalign/mmap to
     # allocate large blocks instead of using shared memory.

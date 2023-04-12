@@ -7,6 +7,7 @@
 This module reports readings from system thermal sensors and power usage.
 """
 
+import abc
 import logging
 import re
 import struct
@@ -106,7 +107,7 @@ class SensorSource(device_types.DeviceComponent):
     return {name: self.GetValue(name) for name in self.GetSensors()}
 
 
-class ThermalSensorSource(SensorSource):
+class IThermalSensorSource(SensorSource, abc.ABC):
   """A special sensor source that returns thermal in Celsius."""
 
   def _Probe(self):
@@ -126,7 +127,7 @@ class ThermalSensorSource(SensorSource):
     raise NotImplementedError
 
 
-class CoreTempSensors(ThermalSensorSource):
+class CoreTempSensors(IThermalSensorSource):
   """A thermal sensor source based on CoreTemp.
 
   CoreTemp is available on Intel CPUs, using Linux 'coretemp' driver
@@ -169,7 +170,7 @@ class CoreTempSensors(ThermalSensorSource):
     return self._ConvertRawValue(self._device.ReadFile(path))
 
 
-class ThermalZoneSensors(ThermalSensorSource):
+class ThermalZoneSensors(IThermalSensorSource):
   """A thermal sensor source based on Linux Thermal Zone.
 
   Linux Thermal Zone is a general way of reading system thermal on most systems
@@ -202,7 +203,7 @@ class ThermalZoneSensors(ThermalSensorSource):
     raise NotImplementedError
 
 
-class ECToolTemperatureSensors(ThermalSensorSource):
+class ECToolTemperatureSensors(IThermalSensorSource):
   """A thermal sensor source based on ChromeOS ECTool.
 
   ChromeOS ECTool allows reading thermals using 'temps' and 'tempsinfo'
@@ -378,7 +379,7 @@ class Thermal(device_types.DeviceComponent):
     self._sources = []
 
     for source_class in self.SOURCE_CLASSES:
-      assert issubclass(source_class, ThermalSensorSource)
+      assert issubclass(source_class, IThermalSensorSource)
       source = source_class(self._device)
       self._AddThermalSensorSource(source)
       if self._main_sensor:

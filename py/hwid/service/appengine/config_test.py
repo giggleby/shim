@@ -36,7 +36,7 @@ class ConfigTest(unittest.TestCase):
     from cros.factory.hwid.service.appengine import config
     self.assertTrue(
         issubclass(config.CONFIG.hwid_filesystem.__class__,
-                   filesystem_adapter.FileSystemAdapter))
+                   filesystem_adapter.IFileSystemAdapter))
 
   def testHwidManagerType(self):
     from cros.factory.hwid.service.appengine import config

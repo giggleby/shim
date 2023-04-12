@@ -111,7 +111,7 @@ def FilterNonVideoCapture(uvc_vid_dirs, dut):
 
 
 # TODO(yllin): Support device interface for Readers.
-class CameraReaderBase(abc.ABC):
+class ICameraReader(abc.ABC):
   """Abstract camera reader."""
 
   @abc.abstractmethod
@@ -154,7 +154,7 @@ class CameraReaderBase(abc.ABC):
     raise NotImplementedError
 
 
-class CVCameraReader(CameraReaderBase):
+class CVCameraReader(ICameraReader):
   """Camera device reader via OpenCV V4L2 interface."""
 
   def __init__(self, device_index=None, dut=None):
@@ -219,7 +219,7 @@ class CVCameraReader(CameraReaderBase):
     return int(re.search(r'video([0-9]+)$', uvc_vid_dirs[0]).group(1))
 
 
-class MockCameraReader(CameraReaderBase):
+class MockCameraReader(ICameraReader):
   """Mocked camera device reader."""
 
   def __init__(self, resolution, qr=False):
@@ -258,7 +258,7 @@ class MockCameraReader(CameraReaderBase):
     return self._enabled
 
 
-class YavtaCameraReader(CameraReaderBase):
+class YavtaCameraReader(ICameraReader):
   """Captures image with yavta."""
 
   _RAW_PATH = '/tmp/yavta_output.raw'

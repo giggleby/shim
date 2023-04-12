@@ -158,7 +158,7 @@ class LinuxBoard(device_types.DeviceBoard):
   @DeviceProperty
   def touch(self):
     from cros.factory.device import touch
-    return touch.Touch(self)
+    return touch.ITouch(self)
 
   @DeviceProperty
   def toybox(self):

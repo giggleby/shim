@@ -264,7 +264,7 @@ class GitUtilNoModificationException(GitUtilException):
   """Raised if no modification is made for commit."""
 
 
-class GitFilesystemAdapter(filesystem_adapter.FileSystemAdapter):
+class GitFilesystemAdapter(filesystem_adapter.IFileSystemAdapter):
 
   def __init__(self, memory_repo):
     self._memory_repo = memory_repo

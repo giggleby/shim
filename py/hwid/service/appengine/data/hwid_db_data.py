@@ -52,7 +52,7 @@ class TooManyHWIDDBError(Exception):
 class HWIDDBDataManager:
 
   def __init__(self, ndb_connector: ndbc_module.NDBConnector,
-               fs_adapter: filesystem_adapter.FileSystemAdapter):
+               fs_adapter: filesystem_adapter.IFileSystemAdapter):
     self._ndb_connector = ndb_connector
     self._fs_adapter = fs_adapter
 
