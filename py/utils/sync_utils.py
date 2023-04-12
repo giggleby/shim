@@ -128,12 +128,16 @@ def WaitFor(condition: Callable[[], bool],
   return WaitForCondition()
 
 
-def QueueGet(q: 'queue.Queue[T]', timeout: float = DEFAULT_TIMEOUT_SECS,
+def QueueGet(q: 'queue.Queue[T]',
+             timeout: Optional[float] = DEFAULT_TIMEOUT_SECS,
              poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS) -> T:
   """Get from a queue.Queue, possibly by polling.
 
   This is useful when a custom polling sleep function is set.
   """
+  if not timeout:
+    timeout = math.inf
+
   if GetPollingSleepFunction() is _DEFAULT_POLLING_SLEEP_FUNCTION:
     return q.get(timeout=timeout)
 
@@ -145,7 +149,7 @@ def QueueGet(q: 'queue.Queue[T]', timeout: float = DEFAULT_TIMEOUT_SECS,
   return QueueGetNowait()
 
 
-def EventWait(event: threading.Event, timeout: float = math.inf,
+def EventWait(event: threading.Event, timeout: Optional[float] = None,
               poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS) -> bool:
   """Wait for a threading.Event upto `timeout` seconds
 
@@ -155,6 +159,8 @@ def EventWait(event: threading.Event, timeout: float = math.inf,
   Returns:
     bool: True if the event is set, otherwise False.
   """
+  if not timeout:
+    timeout = math.inf
 
   @RetryDecorator(timeout_sec=timeout, interval_sec=poll_interval_secs,
                   target_condition=bool)
