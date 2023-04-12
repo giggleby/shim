@@ -126,7 +126,11 @@ def _B(s):
 
 
 class GitUtilException(Exception):
-  pass
+  """Exceptions of git_util operations."""
+
+
+class GitFileNotFoundException(GitUtilException):
+  """Raised when file is not found."""
 
 
 def _CreatePoolManager(cookie: str = '', content_type: str = '',
@@ -265,32 +269,44 @@ class GitFilesystemAdapter(filesystem_adapter.FileSystemAdapter):
   class ExceptionMapper(contextlib.AbstractContextManager):
 
     def __exit__(self, value_type, value, traceback):
-      if isinstance(value, GitUtilException):
-        raise KeyError(value)
+      if isinstance(value, GitFileNotFoundException):
+        raise filesystem_adapter.NotFoundException(str(value)) from value
       if isinstance(value, Exception):
-        raise filesystem_adapter.FileSystemAdapterException(str(value))
+        raise filesystem_adapter.FileSystemAdapterException(str(value)) from \
+            value
 
   EXCEPTION_MAPPER = ExceptionMapper()
 
   @classmethod
   def GetExceptionMapper(cls):
+    """See base class."""
     return cls.EXCEPTION_MAPPER
 
-  def _ReadFile(self, path):
+  def _ReadFile(self, path: str,
+                encoding: Optional[str] = 'utf-8') -> Union[str, bytes]:
+    """See base class."""
     head_commit = self._memory_repo[HEAD]
     root = self._memory_repo[head_commit.tree]
-    mode, sha = root.lookup_path(self._memory_repo.get_object, _B(path))
+    try:
+      mode, sha = root.lookup_path(self._memory_repo.get_object, _B(path))
+    except KeyError:
+      raise GitFileNotFoundException(f'Path {path!r} is not a file.') from None
     if mode != NORMAL_FILE_MODE:
       raise GitUtilException(f'Path {path!r} is not a file.')
-    return self._memory_repo[sha].data
+    data = self._memory_repo[sha].data
+    if encoding is not None:
+      return str(data, encoding=encoding)
+    return data
 
-  def _WriteFile(self, path, content):
+  def _WriteFile(self, path: str, content: Union[str, bytes],
+                 encoding: Optional[str] = 'utf-8'):
     raise NotImplementedError('GitFilesystemAdapter is read-only.')
 
-  def _DeleteFile(self, path):
+  def _DeleteFile(self, path: str):
     raise NotImplementedError('GitFilesystemAdapter is read-only.')
 
-  def _ListFiles(self, prefix=None):
+  def _ListFiles(self, prefix: Optional[str] = None) -> Sequence[str]:
+    """See base class."""
     if prefix is None:
       prefix = ''
 

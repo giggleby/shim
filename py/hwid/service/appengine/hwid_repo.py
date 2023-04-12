@@ -215,16 +215,15 @@ class HWIDRepo(HWIDRepoView):
   def _LoadMandatoryTextFile(self, path: str) -> str:
     """See base class."""
     try:
-      return self._git_fs.ReadFile(path).decode('utf-8')
-    except (KeyError, ValueError,
-            filesystem_adapter.FileSystemAdapterException) as ex:
+      return self._git_fs.ReadFile(path)
+    except filesystem_adapter.FileSystemAdapterException as ex:
       raise HWIDRepoError(f'Failed to load {path}: {ex}.') from None
 
   def _LoadOptionalTextFile(self, path: str) -> Optional[str]:
     """See base class."""
     try:
-      raw_contents = self._git_fs.ReadFile(path)
-    except (KeyError, filesystem_adapter.FileSystemAdapterException):
+      raw_contents = self._git_fs.ReadFile(path, encoding=None)
+    except filesystem_adapter.NotFoundException:
       return None
     try:
       return raw_contents.decode('utf-8')

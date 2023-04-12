@@ -4,14 +4,16 @@
 # found in the LICENSE file.
 """Tests for CloudStorageAdapter"""
 
-import collections
 import os.path
+from typing import NamedTuple
 import unittest
 from unittest import mock
 
 import google.cloud.exceptions
 
 from cros.factory.hwid.service.appengine import cloudstorage_adapter
+from cros.factory.hwid.v3 import filesystem_adapter
+
 
 TEST_BUCKET = 'test-bucket'
 TEST_FILE = 'foo'
@@ -20,18 +22,21 @@ TEST_PATH = '/test-bucket/foo'
 
 
 def _CreateMockListBlobsWrapper(test_files):
-  blob_class = collections.namedtuple('Blob', ['name', 'path'])
+
+  class Blob(NamedTuple):
+    name: str
+    path: str
 
   def wrapper(bucket_name, prefix, delimiter):
     if bucket_name == TEST_BUCKET and delimiter == '/':
       if prefix == '':
         return [
-            blob_class(name=key, path=None)
+            Blob(name=key, path=None)
             for key in test_files
             if os.path.dirname(key) == prefix
         ]
       return [
-          blob_class(name=key, path=None)
+          Blob(name=key, path=None)
           for key in test_files
           if os.path.dirname(key) + '/' == prefix
       ]
@@ -68,7 +73,7 @@ class CloudStorageAdapterTest(unittest.TestCase):
     read_result = adapter.ReadFile(TEST_FILE)
     mock_blob.assert_has_calls(
         [mock.call(TEST_FILE),
-         mock.call().download_as_text()])
+         mock.call().download_as_text(encoding='utf-8')])
     self.assertEqual(TEST_DATA, read_result)
 
   def testDelete(self):
@@ -82,7 +87,8 @@ class CloudStorageAdapterTest(unittest.TestCase):
     mock_blob.assert_has_calls([mock.call(TEST_FILE), mock.call().delete()])
     mock_blob().download_as_text.side_effect = \
         google.cloud.exceptions.NotFound('Not found')
-    self.assertRaises(KeyError, adapter.ReadFile, TEST_FILE)
+    self.assertRaises(filesystem_adapter.NotFoundException, adapter.ReadFile,
+                      TEST_FILE)
 
   def testListFiles(self):
     """Tests the ListFiles method."""
@@ -142,8 +148,10 @@ class CloudStorageAdapterTest(unittest.TestCase):
       with mapper:
         return True
 
-    self.assertRaises(KeyError, WithError,
+    self.assertRaises(filesystem_adapter.NotFoundException, WithError,
                       google.cloud.exceptions.NotFound('Not Found'))
+    self.assertRaises(filesystem_adapter.FileSystemAdapterException, WithError,
+                      google.cloud.exceptions.GoogleCloudError('Other error'))
     self.assertTrue(WithNoError())
 
 

@@ -630,7 +630,7 @@ class GitFilesystemAdapterTest(unittest.TestCase):
 
   def testReadFile(self):
     # Validate the consistency between content hash and object hash in git.
-    content = self.git_fs.ReadFile(self.file_path)
+    content = self.git_fs.ReadFile(self.file_path, encoding=None)
     head_commit = self.repo[b'HEAD']
     unused_mode, sha = self.repo[head_commit.tree].lookup_path(
         self.repo.get_object, self.file_path.encode())

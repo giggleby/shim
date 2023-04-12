@@ -6,9 +6,11 @@
 import contextlib
 import logging
 import os.path
+from typing import Optional, Sequence, Union
 
 import google.cloud.exceptions
 from google.cloud import storage
+
 
 # isort: split
 
@@ -23,9 +25,10 @@ class CloudStorageAdapter(filesystem_adapter.FileSystemAdapter):
 
     def __exit__(self, value_type, value, traceback):
       if isinstance(value, google.cloud.exceptions.NotFound):
-        raise KeyError(value)
-      if isinstance(value, google.cloud.exceptions.GoogleCloudError):
-        raise filesystem_adapter.FileSystemAdapterException(str(value))
+        raise filesystem_adapter.NotFoundException(str(value)) from value
+      if isinstance(value, Exception):
+        raise filesystem_adapter.FileSystemAdapterException(str(value)) from \
+            value
 
   CHUNK_SIZE = 2 ** 20
 
@@ -33,6 +36,7 @@ class CloudStorageAdapter(filesystem_adapter.FileSystemAdapter):
 
   @classmethod
   def GetExceptionMapper(cls):
+    """See base class."""
     return cls.EXCEPTION_MAPPER
 
   def __init__(self, bucket, chunk_size=None):
@@ -53,25 +57,31 @@ class CloudStorageAdapter(filesystem_adapter.FileSystemAdapter):
   def _storage_bucket(self):
     return self._storage_client.bucket(self._bucket_name)
 
-  def _ReadFile(self, path):
-    """Read a file from the backing storage system."""
+  def _ReadFile(self, path: str,
+                encoding: Optional[str] = 'utf-8') -> Union[str, bytes]:
+    """See base class."""
     blob = self._storage_bucket.blob(path)
-    return blob.download_as_text()
+    return (blob.download_as_text(
+        encoding=encoding) if encoding else blob.download_as_bytes())
 
-  def _WriteFile(self, path, content):
-    """Create a file in the backing storage system."""
+  def _WriteFile(self, path: str, content: Union[str, bytes],
+                 encoding: Optional[str] = 'utf-8'):
+    """See base class."""
     blob = self._storage_bucket.blob(path)
     logging.debug('Writing file: %s', blob.path)
-    blob.upload_from_string(content)
+    if encoding == 'utf-8' or isinstance(content, bytes):
+      blob.upload_from_string(content)
+    else:
+      blob.upload_from_string(content.encode(encoding))
 
-  def _DeleteFile(self, path):
-    """Create a file in the backing storage system."""
+  def _DeleteFile(self, path: str):
+    """See base class."""
     blob = self._storage_bucket.blob(path)
     logging.debug('Deleting file: %s', blob.path)
     blob.delete()
 
-  def _ListFiles(self, prefix=None):
-    """List files in the backing storage system."""
+  def _ListFiles(self, prefix: Optional[str] = None) -> Sequence[str]:
+    """See base class."""
 
     if prefix is None:
       prefix = ''

@@ -271,9 +271,8 @@ class HWIDDBDataManager:
   def _TryDeleteFile(self, path: str):
     try:
       self._fs_adapter.DeleteFile(path)
-    except filesystem_adapter.FileSystemAdapterException as ex:
-      logging.info('Failed to delete %r, maybe the file already inexists? %r.',
-                   path, ex)
+    except filesystem_adapter.NotFoundException:
+      logging.info('The path of the file %r does not exist, skipped.', path)
 
   def CleanAllForTest(self):
     with self._ndb_connector.CreateClientContext():

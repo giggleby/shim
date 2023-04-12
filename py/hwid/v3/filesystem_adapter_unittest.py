@@ -12,6 +12,7 @@ import unittest
 from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import file_utils
 
+
 TEST_FILE = 'foo'
 TEST_DATA = 'bar'
 
@@ -55,8 +56,8 @@ class LocalFileSystemAdapterTest(unittest.TestCase):
     self.assertEqual(TEST_DATA, adapter.ReadFile(TEST_FILE))
     adapter.DeleteFile(TEST_FILE)
 
-    self.assertRaises(filesystem_adapter.FileSystemAdapterException,
-                      adapter.ReadFile, TEST_FILE)
+    self.assertRaises(filesystem_adapter.NotFoundException, adapter.ReadFile,
+                      TEST_FILE)
 
   def testListFiles(self):
     """Tests the ListFiles method."""
@@ -101,8 +102,8 @@ class LocalFileSystemAdapterTest(unittest.TestCase):
       with mapper:
         return True
 
-    self.assertRaises(filesystem_adapter.FileSystemAdapterException, WithError,
-                      OSError)
+    self.assertRaises(filesystem_adapter.NotFoundException, WithError,
+                      FileNotFoundError)
     self.assertRaises(filesystem_adapter.FileSystemAdapterException, WithError,
                       IOError)
     self.assertTrue(WithoutError())
