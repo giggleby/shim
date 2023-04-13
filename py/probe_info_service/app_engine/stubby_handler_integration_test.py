@@ -26,6 +26,7 @@ class StubbyHandlerTest(unittest.TestCase):
     resp = self._stubby_handler.GetProbeSchema(req)
     self.assertCountEqual(
         [f.name for f in resp.probe_schema.probe_function_definitions], [
+            'audio_codec.audio_codec',
             'battery.generic_battery',
             'camera.usb_camera',
             'storage.mmc_storage',

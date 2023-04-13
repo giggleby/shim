@@ -4,6 +4,7 @@
 
 from typing import Mapping, Optional
 
+from cros.factory.hwid.service.appengine.data.converter import audio_codec_converter
 from cros.factory.hwid.service.appengine.data.converter import battery_converter
 from cros.factory.hwid.service.appengine.data.converter import camera_converter
 from cros.factory.hwid.service.appengine.data.converter import converter
@@ -21,6 +22,7 @@ _DEFAULT_CONVERTER_COLLECTION_MAP = {
     'storage': storage_converter.GetConverterCollection(),
     'camera': camera_converter.GetConverterCollection(category='camera'),
     'video': camera_converter.GetConverterCollection(category='video'),
+    'audio_codec': audio_codec_converter.GetConverterCollection(),
 }
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 

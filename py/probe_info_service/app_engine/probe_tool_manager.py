@@ -257,6 +257,9 @@ def _GetAllProbeFuncs() -> List[ProbeFunc]:
     return value
 
   return [
+      ProbeFunc('audio_codec', 'audio_codec', {
+          'name': _ParamValueConverter('string'),
+      }),
       ProbeFunc(
           'battery', 'generic_battery', {
               'manufacturer': _ParamValueConverter('string'),

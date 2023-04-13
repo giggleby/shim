@@ -207,6 +207,13 @@ def _GetAllProbeStatementDefinitions():
   builder.AddHexOutputField('subsystem_device', 'The subsystem device id.')
   probe_statement_definitions['gpu'] = builder.Build()
 
+  # Create audio codec builder
+  builder = probe_config_types.ProbeStatementDefinitionBuilder('audio_codec')
+  builder.AddProbeFunction('audio_codec', 'Probe audio codec info.')
+  builder.AddStrOutputField('name',
+                            'The probed kernel name of audio codec comp.')
+  probe_statement_definitions['audio_codec'] = builder.Build()
+
   return probe_statement_definitions
 
 
