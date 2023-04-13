@@ -82,19 +82,24 @@ def _GetAllGenericProbeStatementInfoRecords():
           'mmc_prv', 'mmc_serial', 'pci_vendor', 'pci_device', 'pci_class',
           'nvme_model', 'ata_vendor', 'ata_model', 'ufs_vendor', 'ufs_model'
       ]),
-      GenericProbeStatementInfoRecord('cellular', 'cellular_network', [
-          'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
-          'pci_subsystem', 'usb_vendor_id', 'usb_product_id', 'usb_bcd_device'
-      ]),
-      GenericProbeStatementInfoRecord('ethernet', 'ethernet_network', [
-          'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
-          'pci_subsystem', 'usb_vendor_id', 'usb_product_id', 'usb_bcd_device'
-      ]),
-      GenericProbeStatementInfoRecord('wireless', 'wireless_network', [
-          'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
-          'pci_subsystem', 'usb_vendor_id', 'usb_product_id', 'usb_bcd_device',
-          'sdio_vendor_id', 'sdio_device_id'
-      ]),
+      GenericProbeStatementInfoRecord(
+          'cellular', 'network', [
+              'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
+              'pci_subsystem', 'usb_vendor_id', 'usb_product_id',
+              'usb_bcd_device'
+          ], probe_function_argument={'device_type': 'cellular'}),
+      GenericProbeStatementInfoRecord(
+          'ethernet', 'network', [
+              'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
+              'pci_subsystem', 'usb_vendor_id', 'usb_product_id',
+              'usb_bcd_device'
+          ], probe_function_argument={'device_type': 'ethernet'}),
+      GenericProbeStatementInfoRecord(
+          'wireless', 'network', [
+              'bus_type', 'pci_vendor_id', 'pci_device_id', 'pci_revision',
+              'pci_subsystem', 'usb_vendor_id', 'usb_product_id',
+              'usb_bcd_device', 'sdio_vendor_id', 'sdio_device_id'
+          ], probe_function_argument={'device_type': 'wifi'}),
       GenericProbeStatementInfoRecord('dram', 'memory',
                                       ['part', 'size', 'slot']),
       GenericProbeStatementInfoRecord('camera', 'generic_camera', [
@@ -497,19 +502,27 @@ def GetAllProbeStatementGenerators():
                    is_optional=True),
   ]
   all_probe_statement_generators['cellular'] = [
-      _ProbeStatementGenerator('cellular', 'cellular_network',
-                               network_pci_fields),
-      _ProbeStatementGenerator('cellular', 'cellular_network', usb_fields),
+      _ProbeStatementGenerator(
+          'cellular', 'network', network_pci_fields,
+          probe_function_argument={'device_type': 'cellular'}),
+      _ProbeStatementGenerator(
+          'cellular', 'network', usb_fields,
+          probe_function_argument={'device_type': 'cellular'}),
   ]
   all_probe_statement_generators['ethernet'] = [
-      _ProbeStatementGenerator('ethernet', 'ethernet_network',
-                               network_pci_fields),
-      _ProbeStatementGenerator('ethernet', 'ethernet_network', usb_fields),
+      _ProbeStatementGenerator(
+          'ethernet', 'network', network_pci_fields,
+          probe_function_argument={'device_type': 'ethernet'}),
+      _ProbeStatementGenerator(
+          'ethernet', 'network', usb_fields,
+          probe_function_argument={'device_type': 'ethernet'}),
   ]
   all_probe_statement_generators['wireless'] = [
-      _ProbeStatementGenerator('wireless', 'wireless_network',
-                               [network_pci_fields, network_sdio_fields]),
-      _ProbeStatementGenerator('wireless', 'wireless_network', usb_fields),
+      _ProbeStatementGenerator('wireless', 'network',
+                               [network_pci_fields, network_sdio_fields],
+                               probe_function_argument={'device_type': 'wifi'}),
+      _ProbeStatementGenerator('wireless', 'network', usb_fields,
+                               probe_function_argument={'device_type': 'wifi'}),
   ]
 
   dram_fields = [

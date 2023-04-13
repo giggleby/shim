@@ -357,7 +357,9 @@ class NetworkProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'wireless', 'name1', {
                 'eval': {
-                    'wireless_network': {}
+                    'network': {
+                        'device_type': 'wifi'
+                    }
                 },
                 'expect': {
                     'usb_vendor_id': [True, 'hex', '!eq 0x1122'],
@@ -377,7 +379,9 @@ class NetworkProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'wireless', 'name1', {
                 'eval': {
-                    'wireless_network': {}
+                    'network': {
+                        'device_type': 'wifi'
+                    }
                 },
                 'expect': [{
                     'pci_device_id': [True, 'hex', '!eq 0x5678'],
@@ -400,7 +404,9 @@ class NetworkProbeStatementGeneratorTest(unittest.TestCase):
         probe_config_types.ComponentProbeStatement(
             'wireless', 'name1', {
                 'eval': {
-                    'wireless_network': {}
+                    'network': {
+                        'device_type': 'wifi'
+                    }
                 },
                 'expect': [{
                     'pci_device_id': [True, 'hex', '!eq 0x5678'],

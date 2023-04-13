@@ -468,7 +468,9 @@
     "cellular": {
       "generic": {
         "eval": {
-          "cellular_network": {}
+          "network": {
+            "device_type": "cellular"
+          }
         },
         "expect": {
           "bus_type": [
@@ -555,7 +557,9 @@
     "ethernet": {
       "generic": {
         "eval": {
-          "ethernet_network": {}
+          "network": {
+            "device_type": "ethernet"
+          }
         },
         "expect": {
           "bus_type": [
@@ -918,7 +922,9 @@
     "wireless": {
       "generic": {
         "eval": {
-          "wireless_network": {}
+          "network": {
+            "device_type": "wifi"
+          }
         },
         "expect": {
           "bus_type": [
@@ -1199,7 +1205,9 @@
     "cellular": {
       "generic": {
         "eval": {
-          "cellular_network": {}
+          "network": {
+            "device_type": "cellular"
+          }
         },
         "expect": {
           "bus_type": [
@@ -1286,7 +1294,9 @@
     "ethernet": {
       "generic": {
         "eval": {
-          "ethernet_network": {}
+          "network": {
+            "device_type": "ethernet"
+          }
         },
         "expect": {
           "bus_type": [
@@ -1493,7 +1503,9 @@
     "wireless": {
       "generic": {
         "eval": {
-          "wireless_network": {}
+          "network": {
+            "device_type": "wifi"
+          }
         },
         "expect": {
           "bus_type": [
@@ -1670,7 +1682,9 @@
     "cellular": {
       "generic": {
         "eval": {
-          "cellular_network": {}
+          "network": {
+            "device_type": "cellular"
+          }
         },
         "expect": {
           "bus_type": [
@@ -1757,7 +1771,9 @@
     "ethernet": {
       "generic": {
         "eval": {
-          "ethernet_network": {}
+          "network": {
+            "device_type": "ethernet"
+          }
         },
         "expect": {
           "bus_type": [
@@ -1964,7 +1980,9 @@
     "wireless": {
       "generic": {
         "eval": {
-          "wireless_network": {}
+          "network": {
+            "device_type": "wifi"
+          }
         },
         "expect": {
           "bus_type": [
@@ -2141,7 +2159,9 @@
     "cellular": {
       "generic": {
         "eval": {
-          "cellular_network": {}
+          "network": {
+            "device_type": "cellular"
+          }
         },
         "expect": {
           "bus_type": [
@@ -2228,7 +2248,9 @@
     "ethernet": {
       "generic": {
         "eval": {
-          "ethernet_network": {}
+          "network": {
+            "device_type": "ethernet"
+          }
         },
         "expect": {
           "bus_type": [
@@ -2435,7 +2457,9 @@
     "wireless": {
       "generic": {
         "eval": {
-          "wireless_network": {}
+          "network": {
+            "device_type": "wifi"
+          }
         },
         "expect": {
           "bus_type": [
@@ -2556,7 +2580,9 @@
     "cellular": {
       "generic": {
         "eval": {
-          "cellular_network": {}
+          "network": {
+            "device_type": "cellular"
+          }
         },
         "expect": {
           "bus_type": [
@@ -2687,7 +2713,9 @@
     "ethernet": {
       "generic": {
         "eval": {
-          "ethernet_network": {}
+          "network": {
+            "device_type": "ethernet"
+          }
         },
         "expect": {
           "bus_type": [
@@ -2976,7 +3004,9 @@
     "wireless": {
       "generic": {
         "eval": {
-          "wireless_network": {}
+          "network": {
+            "device_type": "wifi"
+          }
         },
         "expect": {
           "bus_type": [
@@ -3202,7 +3232,9 @@
     "cellular": {
       "generic": {
         "eval": {
-          "cellular_network": {}
+          "network": {
+            "device_type": "cellular"
+          }
         },
         "expect": {
           "bus_type": [
@@ -3289,7 +3321,9 @@
     "ethernet": {
       "generic": {
         "eval": {
-          "ethernet_network": {}
+          "network": {
+            "device_type": "ethernet"
+          }
         },
         "expect": {
           "bus_type": [
@@ -3496,7 +3530,9 @@
     "wireless": {
       "generic": {
         "eval": {
-          "wireless_network": {}
+          "network": {
+            "device_type": "wifi"
+          }
         },
         "expect": {
           "bus_type": [
