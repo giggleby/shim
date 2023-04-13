@@ -367,7 +367,7 @@ class Value:
         return self.__eq__(operand)
       operand = operand.raw_value
     if self.is_re:
-      return re.match(self.raw_value, operand) is not None
+      return re.fullmatch(self.raw_value, operand) is not None
     return self.raw_value == operand
 
   def __eq__(self, operand):
