@@ -73,7 +73,6 @@ If explicitly supplying detachable base info (Krane for example)::
 import logging
 import re
 import subprocess
-import time
 
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
@@ -83,6 +82,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import sys_utils
+from cros.factory.utils import type_utils
 
 
 BASE_FW_DIR = '/lib/firmware'
@@ -157,12 +157,14 @@ class UpdateDetachableBaseTest(test_case.TestCase):
                           key_version=key_version)
       session.console.info('Detachable base verification done.')
 
-  def GetDetachableKeyVersion(self, retry_times=3):  # pylint: disable=inconsistent-return-statements
+  def GetDetachableKeyVersion(self, retry_times=3):
     '''Gets the firmware version on the detachable base.
 
     Gets the firmware version via hammer_info.py with retry.
     '''
-    for unused_i in range(retry_times):
+
+    @sync_utils.RetryDecorator(max_attempt_count=retry_times, interval_sec=0.5)
+    def _CheckOutput():
       try:
         key_version = process_utils.CheckOutput(
             ['hammer_info.py', 'key_version'])
@@ -171,9 +173,13 @@ class UpdateDetachableBaseTest(test_case.TestCase):
         if e.returncode != 3:
           self.fail(
               f'hammer_info.py failed (exit status {e.returncode}): {e.stderr}')
-        time.sleep(0.5)
-    self.fail(
-        f'Failed to get detachable base version over {retry_times} time(s)')
+        raise
+
+    try:
+      return _CheckOutput()
+    except type_utils.MaxRetryError:
+      self.fail(
+          f'Failed to get detachable base version over {retry_times} time(s)')
 
   def runTest(self):
     self.ui.SetState(_('Please connect the detachable base.'))
@@ -311,20 +317,18 @@ class UsbInfo:
     Raises:
       CalledProcessError if `cmd` failed up to `tries` times.
     """
-    err = None
 
-    for _ in range(tries):
+    @sync_utils.RetryDecorator(max_attempt_count=tries, interval_sec=0.5,
+                               reraise=True)
+    def _LogAndCheckOutput():
       try:
-        return process_utils.LogAndCheckOutput(
-            [cmd, '-d', self._device_id] + args)
-      except process_utils.CalledProcessError as e:
-        err = e
+        return process_utils.LogAndCheckOutput([cmd, '-d', self._device_id] +
+                                               args)
+      except process_utils.CalledProcessError:
         logging.warning('Failed to call %s, trying again.', cmd)
-        time.sleep(0.5)
+        raise
 
-    logging.error('Failed to call %s after %d tries.', cmd, tries)
-
-    raise err
+    return _LogAndCheckOutput()
 
   def GetBaseInfo(self):
     """Retrieve and parse on-board EC info.

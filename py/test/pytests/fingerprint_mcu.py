@@ -72,6 +72,7 @@ from cros.factory.test.utils import fpmcu_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
+from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
 from cros.factory.external.py_lib import numpy
@@ -188,17 +189,17 @@ class FingerprintTest(test_case.TestCase):
 
   def FpmcuGetFpframe(self, *args, **kwargs):
     # try fpframe command for at most (fpframe_retry_count + 1) times.
-    for num_retries in range(self.args.fpframe_retry_count + 1):
-      try:
-        img = self._fpmcu.FpmcuCommand('fpframe', *args, **kwargs)
-        break
-      except Exception as e:
-        if num_retries < self.args.fpframe_retry_count:
-          logging.info('Retrying fpframe %d times', num_retries + 1)
-        else:
-          # raise an exception if last attempt failed
-          raise e
-    return img
+
+    def _LoggingCallback(num_retries, max_retry_count):  # pylint: disable=unused-argument
+      logging.exception('Retrying fpframe %d times', num_retries + 1)
+
+    @sync_utils.RetryDecorator(
+        max_attempt_count=self.args.fpframe_retry_count + 1,
+        retry_callback=_LoggingCallback, interval_sec=0)
+    def _GetFpFrame():
+      return self._fpmcu.FpmcuCommand('fpframe', *args, **kwargs)
+
+    return _GetFpFrame()
 
   def IsDetectZone(self, x, y):
     for x1, y1, x2, y2 in self.args.detect_zones:

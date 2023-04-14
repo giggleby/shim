@@ -277,22 +277,25 @@ class PlanktonChargeBFTTest(test_case.TestCase):
     if not self.args.check_protect_ina_current:
       return
     current_min, current_max = self.args.protect_ina_current_range
-
     self.ui.SetState(_('Checking Plankton INA current for protection...'))
     self._bft_fixture.SetDeviceEngaged('CHARGE_5V', engage=True)
     self.Sleep(self.args.wait_after_engage_secs)
 
     ina_current = 0
     retry = self.args.protect_ina_retry_times
-    while retry > 0:
-      self.Sleep(1)  # Wait for INA stable
+
+    @sync_utils.RetryDecorator(max_attempt_count=retry, interval_sec=1,
+                               target_condition=bool)
+    def _ReadValues():
       ina_current = self._bft_fixture.ReadINAValues()['current']
       logging.info('Current of plankton INA = %d mA', ina_current)
       if current_min <= ina_current <= current_max:
-        break
-      retry -= 1
+        return True
+      return False
 
-    if retry <= 0:
+    try:
+      _ReadValues()
+    except type_utils.MaxRetryError:
       self.fail(f'Plankton INA current {int(ina_current)} mA out of range '
                 f'[{int(current_min)}, {int(current_max)}] after '
                 f'{int(self.args.protect_ina_retry_times)} retry.')

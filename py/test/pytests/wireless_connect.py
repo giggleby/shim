@@ -55,6 +55,8 @@ from cros.factory.goofy.plugins import plugin_controller
 from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import sync_utils
+from cros.factory.utils import type_utils
 
 
 class WirelessConnectTest(test_case.TestCase):
@@ -87,16 +89,24 @@ class WirelessConnectTest(test_case.TestCase):
     self._connection_manager.Reconnect(services)
     SSID_RE = re.compile('SSID: (.*)$', re.MULTILINE)
     ssid_list = [service.get('ssid') for service in services]
-    for _ in range(self.args.retries):
+
+    @sync_utils.RetryDecorator(max_attempt_count=self.args.retries,
+                               interval_sec=self.args.sleep_interval,
+                               target_condition=bool)
+    def _CheckOutput():
       result = self._dut.CheckOutput(['iw', 'dev', self._device_name, 'link'],
                                      log=True)
       if ssid_list:
         match = SSID_RE.search(result)
         if match and match.group(1) in ssid_list:
-          self.PassTask()
-      else:
-        if result.startswith('Not connected.'):
-          self.PassTask()
+          return True
+      if result.startswith('Not connected.'):
+        return True
+      return False
 
-      self.Sleep(self.args.sleep_interval)
-    self.FailTask('Reach maximum retries.')
+    try:
+      _CheckOutput()
+    except type_utils.MaxRetryError:
+      self.FailTask('Reach maximum retries.')
+    else:
+      self.PassTask()

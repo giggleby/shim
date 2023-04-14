@@ -2,7 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""A factory test for basic ethernet connectivity."""
+"""A factory test for basic ethernet connectivity.
+
+Description
+-----------
+A factory test for basic ethernet connectivity.
+
+Test Procedure
+--------------
+This is an automated test without user interaction. It may require user
+to press the space bar if not set to auto_start.
+
+Dependency
+----------
+The pytest depends on the ethernet on the system.
+
+Examples
+--------
+To use the test::
+
+  {
+    "pytest_name": "ethernet"
+  }
+
+"""
 
 import logging
 
@@ -13,6 +36,7 @@ from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import net_utils
+from cros.factory.utils import sync_utils
 
 
 _LOCAL_FILE_PATH = '/tmp/test'
@@ -173,8 +197,11 @@ class EthernetTest(test_case.TestCase):
     if self.args.use_swconfig:
       self.CheckLinkSWconfig()
 
-    # Only retry 5 times
-    for unused_i in range(5):
+    interval_sec = self.args.retry_interval_msecs / 1000.0
+
+    @sync_utils.RetryDecorator(max_attempt_count=5, interval_sec=interval_sec,
+                               exceptions_to_catch=[])
+    def _CheckLink():
       eth = self.GetInterface()
       if eth:
         if self.args.link_only:
@@ -187,7 +214,8 @@ class EthernetTest(test_case.TestCase):
           if ethernet_ip:
             session.console.info('Get ethernet IP %s for %s', ethernet_ip, eth)
             self.PassTask()
-      self.Sleep(self.args.retry_interval_msecs / 1000.0)
+
+    _CheckLink()
 
     if self.args.link_only:
       self.FailTask(f'Cannot find interface {self.args.iface}')
