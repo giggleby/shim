@@ -18,10 +18,10 @@ TEST_DATA = 'bar'
 
 
 class FileSystemAdapterTest(unittest.TestCase):
-  """Tests the FileSystemAdapter interface."""
+  """Tests the IFileSystemAdapter interface."""
 
   def testAbstractClass(self):
-    """Tests if FileSystemAdapter cannot be instantiated since it's an abstract
+    """Tests if IFileSystemAdapter cannot be instantiated since it's an abstract
     class."""
     self.assertRaises(TypeError, filesystem_adapter.IFileSystemAdapter)
 

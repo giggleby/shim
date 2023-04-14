@@ -18,7 +18,7 @@ from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.utils import type_utils
 
 
-class CloudStorageAdapter(filesystem_adapter.FileSystemAdapter):
+class CloudStorageAdapter(filesystem_adapter.IFileSystemAdapter):
   """Adapter for Google Cloud Storage."""
 
   class ExceptionMapper(contextlib.AbstractContextManager):

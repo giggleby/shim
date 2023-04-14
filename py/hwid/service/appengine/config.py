@@ -53,9 +53,9 @@ class _Config:
 
   Attributes:
     env: A string for the environment.
-    goldeneye_filesystem: A FileSystemAdapter object, the GoldenEye filesystem
+    goldeneye_filesystem: An IFileSystemAdapter object, the GoldenEye filesystem
         on CloudStorage.
-    hwid_filesystem: A FileSystemAdapter object, the HWID filesystem on
+    hwid_filesystem: An IFileSystemAdapter object, the HWID filesystem on
         CloudStorage.
     hwid_action_manager: A HWIDActionManager object. The object maintains
         HWIDAction objects, which provide HWID DB related operations.
