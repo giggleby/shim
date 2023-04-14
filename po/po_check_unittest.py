@@ -108,7 +108,7 @@ class PoBuildTest(unittest.TestCase):
       if field_name is None:
         continue
       var_name = re.match('[a-zA-Z0-9_]*', field_name).group(0)
-      if not var_name or re.match('[0-9]+$', var_name):
+      if not var_name or re.fullmatch('[0-9]+', var_name):
         self.AddError(
             f'[{locale}] "{format_str}": Positional argument {{{var_name}}} '
             'found')

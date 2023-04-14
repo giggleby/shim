@@ -50,8 +50,8 @@ class DocTest(unittest.TestCase):
         files_with_errors.add(basename)
         continue
 
-      match = re.match(
-          r'ERROR:root:Failed to generate document for pytest (.+)\.$',
+      match = re.fullmatch(
+          r'ERROR:root:Failed to generate document for pytest (.+)\.',
           l.strip())
 
       if match:

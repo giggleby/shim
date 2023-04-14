@@ -29,7 +29,7 @@ import yaml
 # Constants for config file.
 CONFIG_GROUPS = r'groups'
 CONFIG_RULES = r'rules'
-CONFIG_GROUP_PATTERN = re.compile(r'<([^<>].*)>$')
+CONFIG_GROUP_PATTERN = re.compile(r'<([^<>].*)>')
 
 
 FACTORY_DIR = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
@@ -283,13 +283,13 @@ def LoadRules(path):
     # Expand value into imports
     imports = []
     for package in value:
-      match = re.match(CONFIG_GROUP_PATTERN, package)
+      match = re.fullmatch(CONFIG_GROUP_PATTERN, package)
       if match:
         imports += groups[match.group(1)]
       else:
         imports.append(package)
 
-    match = re.match(CONFIG_GROUP_PATTERN, key)
+    match = re.fullmatch(CONFIG_GROUP_PATTERN, key)
     if match:
       # Duplicate multiple rules
       for module in groups[match.group(1)]:

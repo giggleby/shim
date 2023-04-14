@@ -12,7 +12,7 @@ from cros.factory.device.audio import config_manager
 from cros.factory.device import device_types
 
 
-_RE_CARD_NAME_FROM_COMMANDS = re.compile(r'open \"(.*)\"$')
+_RE_CARD_NAME_FROM_COMMANDS = re.compile(r'open \"(.*)\"')
 """The pattern captures card name from alsaucm commands.
 
 See config_manager._InvokeAlsaUCM for more detail about alsaucm commands."""
@@ -68,7 +68,7 @@ card 2: card_2 [card_2], device 8: Audio (*) []
   processes = []
 
   def MockWriteFile(unused_path: str, content: str):
-    match = _RE_CARD_NAME_FROM_COMMANDS.match(content.splitlines()[0])
+    match = _RE_CARD_NAME_FROM_COMMANDS.fullmatch(content.splitlines()[0])
     card_name = match.group(1)
     processes.append(MockProcess(card_name))
 

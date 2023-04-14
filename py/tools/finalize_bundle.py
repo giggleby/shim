@@ -1363,8 +1363,8 @@ class FinalizeBundle:
         relpath = os.path.relpath(path, self.bundle_dir)
         if f == FIRMWARE_UPDATER_NAME:
           vitals.extend(_ExtractFirmwareVersions(path, relpath))
-        elif f in ['ec.bin', 'bios.bin', 'image.bin'] or re.match(
-            r'image.*\.net\.bin$', f):
+        elif f in ['ec.bin', 'bios.bin', 'image.bin'] or re.fullmatch(
+            r'image.*\.net\.bin', f):
           version = get_version.GetFirmwareBinaryVersion(path)
           if not version:
             raise FinalizeBundleException(

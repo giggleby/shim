@@ -1109,8 +1109,8 @@ class LSBFile:
     if remove_timestamp:
       version = version.split()[0]
     if remove_milestone:
-      re_branched_image_version = re.compile(r'R\d+-(\d+\.\d+\.\d+)$')
-      ver_match = re_branched_image_version.match(version)
+      re_branched_image_version = re.compile(r'R\d+-(\d+\.\d+\.\d+)')
+      ver_match = re_branched_image_version.fullmatch(version)
       if ver_match:
         version = ver_match.group(1)
     return version
@@ -2527,8 +2527,8 @@ class ChromeOSFactoryBundle:
         for netboot_firmware_image in glob.glob(
             os.path.join(self.netboot, 'image*.net.bin')):
           key_name = 'Netboot firmware'
-          match = re.match(r'image-(.*)\.net\.bin$',
-                           os.path.basename(netboot_firmware_image))
+          match = re.fullmatch(r'image-(.*)\.net\.bin',
+                               os.path.basename(netboot_firmware_image))
           if match:
             key_name += f' ({match.group(1)})'
           info += [(key_name,

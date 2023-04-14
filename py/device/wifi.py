@@ -46,7 +46,7 @@ class WiFi(device_types.DeviceComponent):
       r'BSS ([:\w]*)\W*\(on \w*\)( -- associated)?\r?\n')
   _WLAN_NAME_PATTERNS = ['wlan*', 'mlan*']
   _RE_WIPHY = re.compile(r'wiphy (\d+)')
-  _RE_LAST_SEEN = re.compile(r'(\d+) ms ago$')
+  _RE_LAST_SEEN = re.compile(r'(\d+) ms ago')
 
   # Shortcut to access exception object.
   WiFiError = WiFiError
@@ -258,7 +258,7 @@ class WiFi(device_types.DeviceComponent):
           ap.channel = int(value)
 
         elif key == 'last seen':
-          matched = self._RE_LAST_SEEN.match(value)
+          matched = self._RE_LAST_SEEN.fullmatch(value)
           if matched:
             ap.last_seen = int(matched.group(1))
 
@@ -512,10 +512,10 @@ class Connection:
   _CONNECT_ATTEMPT_TIMEOUT = 10
   _DHCP_TIMEOUT = 10
 
-  _CONN_STATUS_SIGNALS_RE = re.compile(r'\s*signal:.*$')
-  _CONN_STATUS_AVG_SIGNALS_RE = re.compile(r'\s*signal avg:.*$')
-  _CONN_STATUS_TX_BITRATE_RE = re.compile(r'\s*tx bitrate:.*$')
-  _CONN_STATUS_RX_BITRATE_RE = re.compile(r'\s*rx bitrate:.*$')
+  _CONN_STATUS_SIGNALS_RE = re.compile(r'\s*signal:.*')
+  _CONN_STATUS_AVG_SIGNALS_RE = re.compile(r'\s*signal avg:.*')
+  _CONN_STATUS_TX_BITRATE_RE = re.compile(r'\s*tx bitrate:.*')
+  _CONN_STATUS_RX_BITRATE_RE = re.compile(r'\s*rx bitrate:.*')
 
   def __init__(self, dut: device_types.DeviceInterface, interface: str,
                ap: AccessPoint, passkey, connect_timeout=None,
@@ -670,7 +670,7 @@ class Connection:
              ('rx_bitrate', _ParseBitRate, self._CONN_STATUS_RX_BITRATE_RE)]
     for line in out.splitlines():
       for attr_name, parse_func, regexp in cases:
-        if regexp.match(line):
+        if regexp.fullmatch(line):
           setattr(ret, attr_name, parse_func(line))
           break
 

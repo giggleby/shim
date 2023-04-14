@@ -256,7 +256,7 @@ def main(argv=None):
       if not os.path.islink(f):
         continue
       dest = os.readlink(f)
-      match = re.match(r'\.\./py/(.+)\.py$', dest)
+      match = re.fullmatch(r'\.\./py/(.+)\.py', dest)
       if not match:
         continue
 
