@@ -14,6 +14,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import schema
 
+
 FLASHROM_BIN = '/usr/sbin/flashrom'
 FUTILITY_BIN = '/usr/bin/futility'
 VPD_BIN = '/usr/sbin/vpd'
@@ -54,8 +55,8 @@ AP_CONFIG_SCHEMA = schema.JSONSchemaDict(
         }
     })
 
-HWID_RE = re.compile(r'^hardware_id: ([A-Z0-9- ]+)$')
-SERIAL_NUMBER_RE = re.compile(r'^"serial_number"="([A-Za-z0-9]+)"$')
+HWID_RE = re.compile(r'hardware_id: ([A-Z0-9- ]+)$')
+SERIAL_NUMBER_RE = re.compile(r'"serial_number"="([A-Za-z0-9]+)"$')
 
 
 @functools.lru_cache(maxsize=None)

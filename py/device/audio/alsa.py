@@ -37,7 +37,7 @@ from cros.factory.utils import file_utils
 class AlsaMixerController(base.BaseMixerController):
   """Mixer controller for alsa."""
   _CONTROL_RE_STR = r'numid=(\d+).*?name=\'%s\''
-  _RE_CARD_INDEX = re.compile(r'^card (\d+):.*?\[(.+?)\]')
+  _RE_CARD_INDEX = re.compile(r'card (\d+):.*?\[(.+?)\]')
 
   def GetMixerControls(self, name, card='0'):
     """See BaseMixerController.GetMixerControls"""

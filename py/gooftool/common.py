@@ -305,7 +305,7 @@ class Util:
 
     board_name = self.GetReleaseImageLsbData().get(
       'CHROMEOS_RELEASE_BOARD', '')
-    signed_board_name = re.match(r'^(\S+)-signed-.*keys', board_name)
+    signed_board_name = re.match(r'(\S+)-signed-.*keys', board_name)
     if signed_board_name:
       board_name = signed_board_name.group(1)
 

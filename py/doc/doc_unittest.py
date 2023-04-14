@@ -39,7 +39,7 @@ class DocTest(unittest.TestCase):
     rsts_with_errors = set()
 
     for l in stderr_lines:
-      match = re.match(r'^(([^:]+):)*(\d+): (ERROR|WARNING|SEVERE): (.+)',
+      match = re.match(r'(([^:]+):)*(\d+): (ERROR|WARNING|SEVERE): (.+)',
                        l.strip())
 
       if match:
@@ -51,7 +51,7 @@ class DocTest(unittest.TestCase):
         continue
 
       match = re.match(
-          r'^ERROR:root:Failed to generate document for pytest (.+).$',
+          r'ERROR:root:Failed to generate document for pytest (.+)\.$',
           l.strip())
 
       if match:

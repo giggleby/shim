@@ -231,7 +231,7 @@ def GetCardIndexByName(card_name):
   Raises:
     ValueError when card name does not exist.
   """
-  _RE_CARD_INDEX = re.compile(r'^card (\d+):.*?\[(.+?)\]')
+  _RE_CARD_INDEX = re.compile(r'card (\d+):.*?\[(.+?)\]')
   output = process_utils.Spawn(['aplay', '-l'], read_stdout=True).stdout_data
   for line in output.split('\n'):
     m = _RE_CARD_INDEX.match(line)

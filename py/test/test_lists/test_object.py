@@ -24,7 +24,7 @@ from cros.factory.utils import type_utils
 
 # Regexp that all IDs should match.  Note that this allows leading digits
 # (for tests like '3G').
-ID_REGEXP = re.compile(r'^[a-zA-Z0-9]+$')
+ID_REGEXP = re.compile(r'[a-zA-Z0-9]+$')
 
 # Special value for require_run meaning "all tests".
 ALL = 'all'

@@ -131,7 +131,7 @@ class GlobPathCachedProbeFunctionTest(unittest.TestCase):
         name = os.path.basename(dir_path)
         if name == 'dev_raise_exception':
           raise Exception()
-        if re.match(r'^dev[0-9]+$', name):
+        if re.match(r'dev[0-9]+$', name):
           return {'name': os.path.basename(os.path.realpath(dir_path))}
         return None
 

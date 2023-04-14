@@ -23,9 +23,9 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
 
-KEYBOARD_PATTERN = re.compile(r'^xkb:\w+:[\w-]*:\w+$|'
-                              r'^(ime|m17n|t13n):[\w:-]+$')
-LANGUAGE_CODE_PATTERN = re.compile(r'^(\w+)(-[A-Z0-9]+)?$')
+KEYBOARD_PATTERN = re.compile(r'xkb:\w+:[\w-]*:\w+$|'
+                              r'(ime|m17n|t13n):[\w:-]+$')
+LANGUAGE_CODE_PATTERN = re.compile(r'(\w+)(-[A-Z0-9]+)?$')
 
 CROS_REGIONS_DATABASE_DEFAULT_PATH = '/usr/share/misc/cros-regions.json'
 CROS_REGIONS_DATABASE_ENV_NAME = 'CROS_REGIONS_DATABASE'

@@ -41,7 +41,7 @@ class InterpretFunctionTest(unittest.TestCase):
         'Invalid argument: .* should be string or dict.'):
       function.InterpretFunction({'mock': ['key', 'foo']})
     error_pattern = re.compile(
-        r'.*value.*The argument is required but isn\'t specified.', re.DOTALL)
+        r'.*value.*The argument is required but isn\'t specified\.', re.DOTALL)
     with self.assertRaisesRegex(arg_utils.ArgError, error_pattern):
       function.InterpretFunction({'mock': {'key': 'foo'}})
     with self.assertRaisesRegex(

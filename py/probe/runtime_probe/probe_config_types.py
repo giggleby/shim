@@ -319,11 +319,11 @@ class _HexOutputFieldValue(_AbstractOutputFieldValue):
 
   def __init__(self, num_digits=None):
     if num_digits is None:
-      self._pattern = re.compile('^[0-9A-F]+$')
+      self._pattern = re.compile('[0-9A-F]+$')
       self._format_error_msg = (
           'format error, should be a hex number constructs with 0-9, A-F')
     else:
-      self._pattern = re.compile(f'^[0-9A-F]{{{num_digits:d}}}$')
+      self._pattern = re.compile(f'[0-9A-F]{{{num_digits:d}}}$')
       self._format_error_msg = (
           f"format error, should be hex number between {'0' * num_digits} and "
           f"{'F' * num_digits} with leading zero perserved.")

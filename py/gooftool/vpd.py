@@ -16,7 +16,7 @@ VPD_READWRITE_PARTITION_NAME = 'RW_VPD'
 class VPDTool:
   """This class wraps the functions supplied by VPD cmdline tool into methods.
   """
-  _KEY_PATTERN = re.compile(r'^[a-zA-Z0-9_.]+$')
+  _KEY_PATTERN = re.compile(r'[a-zA-Z0-9_.]+$')
 
   def __init__(self, shell=None, raw_file=None):
     self._shell = shell or gooftool_common.Shell

@@ -94,7 +94,7 @@ class StationSetup(plugin.Plugin):
     output = process_utils.CheckOutput(connect_cmd, log=True)
     # TODO(pihsun): Make ovl return non-zero when connection fail, so this
     # check is not needed.
-    if not re.match(r'connection to .* established.', output):
+    if not re.match(r'connection to .* established\.', output):
       return False
     return True
 

@@ -512,10 +512,10 @@ class Connection:
   _CONNECT_ATTEMPT_TIMEOUT = 10
   _DHCP_TIMEOUT = 10
 
-  _CONN_STATUS_SIGNALS_RE = re.compile(r'^\s*signal:.*$')
-  _CONN_STATUS_AVG_SIGNALS_RE = re.compile(r'^\s*signal avg:.*$')
-  _CONN_STATUS_TX_BITRATE_RE = re.compile(r'^\s*tx bitrate:.*$')
-  _CONN_STATUS_RX_BITRATE_RE = re.compile(r'^\s*rx bitrate:.*$')
+  _CONN_STATUS_SIGNALS_RE = re.compile(r'\s*signal:.*$')
+  _CONN_STATUS_AVG_SIGNALS_RE = re.compile(r'\s*signal avg:.*$')
+  _CONN_STATUS_TX_BITRATE_RE = re.compile(r'\s*tx bitrate:.*$')
+  _CONN_STATUS_RX_BITRATE_RE = re.compile(r'\s*rx bitrate:.*$')
 
   def __init__(self, dut: device_types.DeviceInterface, interface: str,
                ap: AccessPoint, passkey, connect_timeout=None,

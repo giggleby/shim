@@ -452,7 +452,7 @@ class Ghost:
       from cros.factory.test import server_proxy
 
       url = server_proxy.GetServerURL()
-      match = re.match(r'^https?://(.*):.*$', url)
+      match = re.match(r'https?://(.*):.*$', url)
       if match:
         return [match.group(1)]
     except Exception:

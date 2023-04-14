@@ -348,5 +348,5 @@ class DisplayTest(test_case.TestCase):
 
   @classmethod
   def _IsHexColor(cls, color_code):
-    pattern = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+    pattern = r'#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
     return re.match(pattern, color_code)

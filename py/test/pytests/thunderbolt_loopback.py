@@ -79,7 +79,7 @@ from cros.factory.utils import sync_utils
 
 _LOOPBACK_TEST_PATH = '/sys/kernel/debug/thunderbolt'
 _DEFAULT_CONTROLLER_PATTERNS = ('0-1.*', '0-3.*', '1-1.*', '1-3.*')
-_RE_ADP_DOMAIN = re.compile(r'^.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+$')
+_RE_ADP_DOMAIN = re.compile(r'.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+$')
 _RE_MARGIN_LOOPBACK = re.compile(
     r'(RT\d+ L\d+ )(BOTTOM|LEFT),(TOP|RIGHT) = (\d+),(\d+)')
 _DMA_TEST = 'dma_test'
@@ -110,7 +110,7 @@ ENCODE_LINK_SPEED = {
     LinkSpeedType.Slow: '10',
     LinkSpeedType.Fast: '20'
 }
-_RE_STATUS = re.compile(r'^result: (.+)\n(?:.|\n)*$')
+_RE_STATUS = re.compile(r'result: (.+)\n(?:.|\n)*$')
 
 
 class _CardState(str, enum.Enum):

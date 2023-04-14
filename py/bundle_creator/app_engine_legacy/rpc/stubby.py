@@ -45,7 +45,7 @@ class FactoryBundleService(remote.Service):
 
     if worker_result.status != proto.WorkerResult.Status.FAILED:
       subject = 'Bundle creation success'
-      match = re.match(r'^gs://{}/(.*)$'.format(config.BUNDLE_BUCKET),
+      match = re.match(r'gs://{}/(.*)$'.format(config.BUNDLE_BUCKET),
                        worker_result.gs_path)
       download_link = (
           worker_result.download_link_format.format(

@@ -445,7 +445,7 @@ class UCMConfigManager(BaseConfigManager):
       'Front Mic': AudioDeviceType.Dmic,
       'Rear Mic': AudioDeviceType.Dmic2}
   _DefaultVerb = 'HiFi'
-  _RE_CARD_NAME = re.compile(r'^card (\d+):.*?\[(.+?)\]')
+  _RE_CARD_NAME = re.compile(r'card (\d+):.*?\[(.+?)\]')
 
   def __init__(self, device: device_types.DeviceBoard, mixer_controller,
                card_map=None, card_device_map=None, verb=None):

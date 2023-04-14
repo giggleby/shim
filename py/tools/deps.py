@@ -29,7 +29,7 @@ import yaml
 # Constants for config file.
 CONFIG_GROUPS = r'groups'
 CONFIG_RULES = r'rules'
-CONFIG_GROUP_PATTERN = re.compile(r'^<([^<>].*)>$')
+CONFIG_GROUP_PATTERN = re.compile(r'<([^<>].*)>$')
 
 
 FACTORY_DIR = os.path.abspath(os.path.join(__file__, '..', '..', '..'))

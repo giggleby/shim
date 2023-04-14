@@ -34,7 +34,7 @@ class ArgUtilsTest(unittest_test_case.I18nTestCase):
     self.assertEqual({'en-US': 'text 1', 'zh-CN': 'text-1'}, test.args.text)
 
     error_pattern = re.compile(
-        r'.*text.*The argument is required but isn\'t specified.', re.DOTALL)
+        r'.*text.*The argument is required but isn\'t specified\.', re.DOTALL)
     self.assertRaisesRegex(ValueError, error_pattern, test.Parse, {})
 
   def testI18nArgWithDefault(self):

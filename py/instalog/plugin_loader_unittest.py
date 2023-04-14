@@ -189,7 +189,7 @@ class TestPluginLoader(unittest.TestCase):
     pl = plugin_loader.PluginLoader(pname, _plugin_prefix='')
     error_pattern = re.compile(
         (r'Error parsing arguments: .*explode.*The argument is required but '
-         r'isn\'t specified.'), re.DOTALL)
+         r'isn\'t specified\.'), re.DOTALL)
     with self.assertRaisesRegex(plugin_base.LoadPluginError, error_pattern):
       pl.Create()
 

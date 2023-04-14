@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, Generic, Iterable, List, Set, Tuple, Typ
 
 
 # The regular expression used by Overrides.
-_OVERRIDES_CLASS_RE = re.compile(r'^\s*class([^#]+)\(\s*([^\s#]+)\s*\)\s*\:')
+_OVERRIDES_CLASS_RE = re.compile(r'\s*class([^#]+)\(\s*([^\s#]+)\s*\)\s*\:')
 T = TypeVar('T')
 
 

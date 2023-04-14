@@ -675,7 +675,7 @@ class FinalizeBundle:
     logging.info('Release image version: %s', self.release_image_version)
 
     output = Spawn([self.toolkit_path, '--info'], check_output=True).stdout_data
-    match = re.match(r'^Identification: .+ Factory Toolkit (.+)$', output, re.M)
+    match = re.match(r'Identification: .+ Factory Toolkit (.+)$', output, re.M)
     assert match, f'Unable to parse toolkit info: {output!r}'
     self.toolkit_version = match.group(1)  # May be None if locally built
     logging.info('Toolkit version: %s', self.toolkit_version)
@@ -1364,7 +1364,7 @@ class FinalizeBundle:
         if f == FIRMWARE_UPDATER_NAME:
           vitals.extend(_ExtractFirmwareVersions(path, relpath))
         elif f in ['ec.bin', 'bios.bin', 'image.bin'] or re.match(
-            r'^image.*\.net\.bin$', f):
+            r'image.*\.net\.bin$', f):
           version = get_version.GetFirmwareBinaryVersion(path)
           if not version:
             raise FinalizeBundleException(

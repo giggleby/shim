@@ -513,7 +513,7 @@ class DeviceDataCommand(Subcommand):
     if self.args.set:
       update = {}
       for item in self.args.set:
-        match = re.match(r'^([^=]+)=(.*)$', item)
+        match = re.match(r'([^=]+)=(.*)$', item)
         if not match:
           sys.exit('--set argument %r should be in the form KEY=VALUE')
 

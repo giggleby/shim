@@ -37,7 +37,7 @@ from cros.factory.test import test_case
 
 
 GET_TPM_STATE_CMD = 'cbmem -1 | grep -i hsp'
-TPM_SUCCESS_STATE_REGEXP = r'^HSP Secure state:\s+0x20'
+TPM_SUCCESS_STATE_REGEXP = r'HSP Secure state:\s+0x20'
 
 
 class TPMStateNotFoundException(Exception):

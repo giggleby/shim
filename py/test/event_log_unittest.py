@@ -29,7 +29,8 @@ from cros.factory.utils import file_utils
 
 from cros.factory.external import dbus
 
-UUID_RE = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'
+
+UUID_RE = re.compile(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'
                      '[a-f0-9]{4}-[a-f0-9]{12}$')
 
 
@@ -254,7 +255,7 @@ class EventLogTest(unittest.TestCase):
 
     for i in log_data:
       # Check and remove times, to make everything else easier to compare
-      assert re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$',
+      assert re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$',
                       i['TIME']), i['TIME']
       del i['TIME']
 

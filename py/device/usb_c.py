@@ -219,7 +219,7 @@ class USBTypeC(device_types.DeviceComponent):
     """
     response = self._device.CheckOutput(
         ['ectool'] + self.ECTOOL_PD_ARGS + ['usbpdmuxinfo'], log=log)
-    re_port = re.compile(r'^Port (\d+): ')
+    re_port = re.compile(r'Port (\d+): ')
     re_key_value = re.compile(r'\b(\w+)=(\w+)\b')
 
     def MatchToPair(match):

@@ -605,7 +605,7 @@ def InCrOSDevice():
   if not os.path.exists('/etc/lsb-release'):
     return False
   lsb_release = file_utils.ReadFile('/etc/lsb-release')
-  return re.match(r'^CHROMEOS_RELEASE', lsb_release, re.MULTILINE) is not None
+  return re.search(r'^CHROMEOS_RELEASE', lsb_release, re.MULTILINE) is not None
 
 
 def GetVarLogMessages(max_length=256 * 1024,

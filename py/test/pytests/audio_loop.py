@@ -198,7 +198,7 @@ _DEFAULT_SINEWAV_DURATION_MARGIN = 8
 _AUDIOFUNTEST_MIC_CHANNEL_RE = re.compile(r'.*Microphone channels:\s*(.*)$')
 _AUDIOFUNTEST_SUCCESS_RATE_RE = re.compile(
     r'.*channel\s*=\s*([0-9]*),.*rate\s*=\s*(.*)$')
-_AUDIOFUNTEST_RUN_START_RE = re.compile('^carrier')
+_AUDIOFUNTEST_RUN_START_RE = re.compile('carrier')
 
 # Default minimum success rate of audiofun test to pass.
 _DEFAULT_AUDIOFUN_TEST_THRESHOLD = 50
@@ -1152,7 +1152,7 @@ class AudioLoopTest(test_case.TestCase):
 
     m = self._MatchPatternLines(
         conformance_output,
-        re.compile(r'^[0-9]+\s*passed,\s*([0-9]+)\s*failed$'))
+        re.compile(r'[0-9]+\s*passed,\s*([0-9]+)\s*failed$'))
     if m is None:
       raise ValueError(
           'Failed to get expected output from alsa_conformance_test.py')

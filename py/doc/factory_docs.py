@@ -122,7 +122,7 @@ def ProcessDocstring(unused_app, what, unused_name, unused_obj,
     in_section = None
 
     for i, line in enumerate(lines):
-      match = re.match(r'^(\w+):$', line)
+      match = re.match(r'(\w+):$', line)
       if match:
         in_section = match.group(1)
 
