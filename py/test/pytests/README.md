@@ -116,6 +116,47 @@ To use your test (say `mytest.py`), define an entry in
   }
 ```
 
+## Writting a test with reboot process
+
+There are two ways to write a test that contains reboot process.
+
+1. We recommended to use [`shutdown.py`](./shutdown.py) if feasible. \
+   You can add `RebootStep` as an independent test item in the test group,
+   it will trigger a reboot and continue executing the remain test items after reboot.
+
+   For example:
+   ```python
+   {
+     "label": "Test Group Label",
+     "subtests": [
+       "PytestWithReboot",
+       "RebootStep",
+       "PytestWithReboot"
+     ]
+   }
+   ```
+
+2. Sometimes the reboot is triggered by 3rd-party commands/operations, which is not supported by [`shutdown.py`](./shutdown.py). \
+   In this situation, you can set `allow_reboot: true` for the test item in test_list,
+   and then use `AddTask(task, *args, reboot=True, **kwargs)` to add tasks in your pytest.
+
+   For example:
+   ```python
+   def Task(arg):
+     # task
+     ...
+
+   def RebootTask(arg):
+     # task with reboot process
+     ...
+
+   AddTask(Task, arg)
+   AddTask(RebootTask, arg, reboot=True)
+   AddTask(Task, arg)
+   ```
+
+See [JSON_TEST_LIST.md](../test_lists/JSON_TEST_LIST.md) and [test_case.py](../test_case.py) for more details.
+
 ## Using arguments
 
 To read arguments specified from test list, use
