@@ -197,8 +197,8 @@ class HexToHexValueFormatter(converter_types.StrFormatter):
 
   def __call__(self, value):
     source_prefix = '0x' if self._source_has_prefix else ''
-    if not re.match(
-        f'{source_prefix.lower()}0*[0-9a-f]{{1,{self._num_digits}}}$', value,
+    if not re.fullmatch(
+        f'{source_prefix.lower()}0*[0-9a-f]{{1,{self._num_digits}}}', value,
         flags=re.I):
       raise converter_types.StrFormatterError(
           f'Not a regular string of {self._num_digits} digits hex number.')

@@ -179,7 +179,8 @@ class HexToHexValueConverter(ValueConverter):
 
   def __call__(self, value):
     prefix = '0x' if self._has_prefix else ''
-    if not re.match(f'{prefix}0*[0-9a-fA-F]{{1,{self._num_digits}}}$', value):
+    if not re.fullmatch(f'{prefix}0*[0-9a-fA-F]{{1,{self._num_digits}}}',
+                        value):
       raise ValueError(
           f'Not a regular string of {self._num_digits} digits hex number.')
     # Regulate the output to the fixed-digit hex string with upper cases.
@@ -233,9 +234,11 @@ class InputDeviceVendorValueConverter(ValueConverter):
 
   def __call__(self, value):
     value = self._str_converter(value)
-    if re.match(r'ELAN\d{4}:\d{2}$', value) or re.match(r'ekth\d{4}$', value):
+    if re.fullmatch(r'ELAN\d{4}:\d{2}', value) or re.fullmatch(
+        r'ekth\d{4}', value):
       return self._hex_to_hex_converter(self.ELAN_VID)
-    if value == 'Raydium Touchscreen' or re.match(r'RAYD\d{4}:\d{2}$', value):
+    if value == 'Raydium Touchscreen' or re.fullmatch(r'RAYD\d{4}:\d{2}',
+                                                      value):
       return self._hex_to_hex_converter(self.RAYD_VID)
     raise ValueError(f'Unknown input device id {value}.')
 

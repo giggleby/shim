@@ -110,7 +110,7 @@ def _CheckProject(args):
 @label_utils.Informational
 class ValidHWIDDBsTest(unittest.TestCase):
   """Unit test for HWID database."""
-  V3_HWID_DATABASE_PATH_REGEXP = re.compile('v3/[A-Z0-9]+$')
+  V3_HWID_DATABASE_PATH_REGEXP = re.compile('v3/[A-Z0-9]+')
 
   def runTest(self):
     hwid_dir = hwid_utils.GetHWIDRepoPath()
@@ -133,7 +133,7 @@ class ValidHWIDDBsTest(unittest.TestCase):
         project_info = projects_info.get(project_name)
         if project_info and project_info.get('version') == 3:
           if db_path == project_info['path']:
-            if not ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.match(
+            if not ValidHWIDDBsTest.V3_HWID_DATABASE_PATH_REGEXP.fullmatch(
                 project_info['path']):
               raise ValueError(
                   f'Unexpected db path {db_path!r}. Expected db path should '

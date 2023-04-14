@@ -121,8 +121,8 @@ class USBFunction(cached_probe_function.GlobPathCachedProbeFunction):
     # A valid usb device name is <roothub_num>-<addr>[.<addr2>[.<addr3>...]] or
     # usb[0-9]+ for usb root hub.
     name = os.path.basename(dir_path)
-    if (not re.match(r'[0-9]+-[0-9]+(\.[0-9]+)*$', name) and
-        not re.match(r'usb[0-9]+$', name)):
+    if (not re.fullmatch(r'[0-9]+-[0-9]+(\.[0-9]+)*', name) and
+        not re.fullmatch(r'usb[0-9]+', name)):
       return None
 
     return ReadUSBSysfs(dir_path)

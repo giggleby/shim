@@ -121,8 +121,8 @@ class Validator:
     if not os.path.exists(source_path):
       raise ValueError(f'not able to find file {source_path}')
     mime_type = value[MIME_TYPE]
-    if not isinstance(mime_type, str) or (not re.match(r'[-\+\w]+/[-\+\w]+$',
-                                                       mime_type)):
+    if not isinstance(mime_type, str) or (not re.fullmatch(
+        r'[-\+\w]+/[-\+\w]+', mime_type)):
       raise ValueError(
           f'mimeType({mime_type!r}) is incorrect for file {source_path}')
 

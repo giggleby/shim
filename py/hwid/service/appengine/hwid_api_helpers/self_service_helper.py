@@ -789,8 +789,9 @@ class SelfServiceHelper:
       # Derive firmware key component name
       keys_comp_name = None
       if bundle_record.firmware_signer:
-        match = re.match(f'{bundle_record.board}(mp|premp)keys(?:-v[0-9]+)?$',
-                         bundle_record.firmware_signer.lower())
+        match = re.fullmatch(
+            f'{bundle_record.board}(mp|premp)keys(?:-v[0-9]+)?',
+            bundle_record.firmware_signer.lower())
         if match is None:
           raise common_helper.ConvertExceptionToProtoRPCException(
               ValueError('Cannot derive firmware key name from signer: '

@@ -187,7 +187,7 @@ def _VerifyPart(condition, part, value):
 
 
 def _VerifyProjectPart(project):
-  _VerifyPart(lambda val: re.match(r'[A-Z0-9]+$', val), 'project', project)
+  _VerifyPart(lambda val: re.fullmatch(r'[A-Z0-9]+', val), 'project', project)
 
 
 def _VerifyEncodingSchemePart(encoding_scheme):
