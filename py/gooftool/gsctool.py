@@ -219,7 +219,7 @@ class GSCTool:
     if result.BID_RLZ == '????':
       rlz_num = 0xffffffff
       result.BID_RLZ = None
-    elif re.match(r'[A-Z]{4}$', result.BID_RLZ):
+    elif re.fullmatch(r'[A-Z]{4}', result.BID_RLZ):
       rlz_num = int.from_bytes(result.BID_RLZ.encode('utf-8'), 'big')
     else:
       raise GSCToolError(f'Unexpected RLZ format: {result.BID_RLZ!r}.')

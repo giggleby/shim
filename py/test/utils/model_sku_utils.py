@@ -16,7 +16,7 @@ BOXSTER = 'boxster'
 PROJECT_CONFIG_PATH = os.path.join(paths.FACTORY_DIR, 'project_config')
 DEVICE_TREE_COMPATIBLE_PATH = cros_config.DEVICE_TREE_COMPATIBLE_PATH
 PRODUCT_NAME_PATH = cros_config.PRODUCT_NAME_PATH
-_RE_GENERATED_MODELSKU = re.compile(r'(\w+)_(\w+)_model_sku$')
+_RE_GENERATED_MODELSKU = re.compile(r'(\w+)_(\w+)_model_sku')
 _PROGRAM = 'program'
 _PROJECT = 'project'
 _DESIGN = 'design'
@@ -123,7 +123,7 @@ def GetDesignConfig(dut, product_name=None, sku_id=None,
       oem_config = {}
       oem_matched = False
 
-    match = _RE_GENERATED_MODELSKU.match(os.path.basename(config_name))
+    match = _RE_GENERATED_MODELSKU.fullmatch(os.path.basename(config_name))
     if match:
       design_config.setdefault(_PROGRAM, match.group(1))
       design_config.setdefault(_PROJECT, match.group(2))

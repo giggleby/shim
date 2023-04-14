@@ -22,14 +22,14 @@ _WIP_KEY = 'migrate_in_progress'
 
 _SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 _MIGRATIONS_DIR = os.path.join(_SCRIPT_DIR, 'migrations')
-_MIGRATION_NAME_RE = r'(\d{4})\.py$'
+_MIGRATION_NAME_RE = r'(\d{4})\.py'
 _MIGRATION_NAME_TEMPLATE = '%04d'
 
 
 def _GetVersionOfLatestMigration():
   s = set()
   for path in glob.glob(os.path.join(_MIGRATIONS_DIR, '*')):
-    matched = re.match(_MIGRATION_NAME_RE, os.path.basename(path))
+    matched = re.fullmatch(_MIGRATION_NAME_RE, os.path.basename(path))
     if matched:
       s.add(int(matched.group(1)))
   if max(s) != len(s) - 1:

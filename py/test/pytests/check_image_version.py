@@ -128,7 +128,7 @@ from cros.factory.utils import type_utils
 
 
 _RE_CROS_PAYLOAD_ERROR = re.compile(r'ERROR: .*')
-_RE_BRANCHED_IMAGE_VERSION = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*$')
+_RE_BRANCHED_IMAGE_VERSION = re.compile(r'R\d+-(\d+\.\d+\.\d+)(?:-b\d+)*')
 
 
 class CheckImageVersionTest(test_case.TestCase):
@@ -271,7 +271,7 @@ class CheckImageVersionTest(test_case.TestCase):
       if not expected_ver:
         return expected_ver
 
-      expected_match = pattern.match(expected_ver)
+      expected_match = pattern.fullmatch(expected_ver)
       if expected_match:
         expected_ver = expected_match.group(1)
 
@@ -307,7 +307,7 @@ class CheckImageVersionTest(test_case.TestCase):
     # For image built by tryjob, the image version will look like this:
     # `R89-13600.271.0-b5006899`. We do not compare the sub-verion of tryjob
     # image, which is `5006899` in this example, since it is meaningless.
-    ver_match = _RE_BRANCHED_IMAGE_VERSION.match(ver)
+    ver_match = _RE_BRANCHED_IMAGE_VERSION.fullmatch(ver)
     if ver_match:
       ver = ver_match.group(1)
 

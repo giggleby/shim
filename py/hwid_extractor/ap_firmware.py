@@ -55,8 +55,8 @@ AP_CONFIG_SCHEMA = schema.JSONSchemaDict(
         }
     })
 
-HWID_RE = re.compile(r'hardware_id: ([A-Z0-9- ]+)$')
-SERIAL_NUMBER_RE = re.compile(r'"serial_number"="([A-Za-z0-9]+)"$')
+HWID_RE = re.compile(r'hardware_id: ([A-Z0-9- ]+)')
+SERIAL_NUMBER_RE = re.compile(r'"serial_number"="([A-Za-z0-9]+)"')
 
 
 @functools.lru_cache(maxsize=None)
@@ -99,7 +99,7 @@ def _GetHWID(firmware_binary_file):
                                    timeout=CMD_TIMEOUT_SECOND)
   logging.debug('futility output:\n%s', output)
   output.split(':')
-  m = HWID_RE.match(output.strip())
+  m = HWID_RE.fullmatch(output.strip())
   return m and m.group(1)
 
 
@@ -110,7 +110,7 @@ def _GetSerialNumber(firmware_binary_file):
                                    timeout=CMD_TIMEOUT_SECOND)
   logging.debug('vpd output:\n%s', output)
   for line in output.splitlines():
-    m = SERIAL_NUMBER_RE.match(line.strip())
+    m = SERIAL_NUMBER_RE.fullmatch(line.strip())
     if m:
       return m.group(1)
   return None

@@ -21,7 +21,7 @@ REGISTRATION_CODE_PAYLOAD_BYTES = 32
 
 
 # Pattern matching devices in reg code.
-DEVICE_PATTERN = re.compile(r'\w+(?:-\w+)?$')
+DEVICE_PATTERN = re.compile(r'\w+(?:-\w+)?')
 
 
 class RegistrationCodeException(Exception):
@@ -120,7 +120,7 @@ class RegistrationCode:
           raise RegistrationCodeException(
               f'In reg code {encoded_string!r}, expected non-empty device')
 
-      if self.device is not None and not DEVICE_PATTERN.match(self.device):
+      if self.device is not None and not DEVICE_PATTERN.fullmatch(self.device):
         raise RegistrationCodeException(
             f'In reg code {encoded_string!r}, invalid device {self.device!r} '
             f'(expected pattern {DEVICE_PATTERN.pattern!r})')

@@ -697,7 +697,7 @@ class Gooftool:
       return dsm_vpd_ro_data
 
     def MatchWhole(key, pattern, value, raise_exception=True):
-      if re.match(pattern + r'$', value):
+      if re.fullmatch(pattern, value):
         return key
       if raise_exception:
         raise ValueError(

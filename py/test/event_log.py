@@ -75,9 +75,9 @@ SEQ_INCREMENT_ON_BOOT = 1000000
 SEQ_RE = re.compile(r"SEQ: (\d+)$")
 
 # Regexp matching the prefix of events.
-PREFIX_RE = re.compile(r"([\w\:]+(?:-\d+)?\.?)+$")
+PREFIX_RE = re.compile(r"([\w\:]+(?:-\d+)?\.?)+")
 
-EVENT_NAME_RE = re.compile(r"[a-zA-Z_]\w*$")
+EVENT_NAME_RE = re.compile(r"[a-zA-Z_]\w*")
 EVENT_KEY_RE = EVENT_NAME_RE
 
 # Sync markers.
@@ -227,7 +227,7 @@ def SetGlobalLoggerDefaultPrefix(prefix):
 
   global _default_event_logger_prefix  # pylint: disable=global-statement
 
-  if not PREFIX_RE.match(prefix):
+  if not PREFIX_RE.fullmatch(prefix):
     raise ValueError(f"prefix {prefix!r} must match re {PREFIX_RE.pattern}")
   if _global_event_logger:
     raise EventLogException((f"Unable to set default prefix {prefix} after "
@@ -526,11 +526,11 @@ class EventLog:
 
     if self.file is None:
       raise IOError(f"cannot append to closed file for prefix {self.prefix!r}")
-    if not EVENT_NAME_RE.match(event_name):
+    if not EVENT_NAME_RE.fullmatch(event_name):
       raise ValueError(
           f"event_name {event_name!r} must match {EVENT_NAME_RE.pattern}")
     for k in kwargs:
-      if not EVENT_KEY_RE.match(k):
+      if not EVENT_KEY_RE.fullmatch(k):
         raise ValueError(f"key {k!r} must match re {EVENT_KEY_RE.pattern}")
     data = {
         "EVENT": event_name,

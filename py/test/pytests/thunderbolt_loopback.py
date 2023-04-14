@@ -79,7 +79,7 @@ from cros.factory.utils import sync_utils
 
 _LOOPBACK_TEST_PATH = '/sys/kernel/debug/thunderbolt'
 _DEFAULT_CONTROLLER_PATTERNS = ('0-1.*', '0-3.*', '1-1.*', '1-3.*')
-_RE_ADP_DOMAIN = re.compile(r'.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+$')
+_RE_ADP_DOMAIN = re.compile(r'.*(?P<domain>\d+)-(?P<adapter>\d+)\.\d+')
 _RE_MARGIN_LOOPBACK = re.compile(
     r'(RT\d+ L\d+ )(BOTTOM|LEFT),(TOP|RIGHT) = (\d+),(\d+)')
 _DMA_TEST = 'dma_test'
@@ -462,7 +462,7 @@ class ThunderboltLoopbackTest(test_case.TestCase):
     self.ui.SetState(_('Insert the loopback card.'))
     device_path = sync_utils.WaitFor(self._FindLoopbackPath,
                                      self.args.timeout_secs, poll_interval=0.5)
-    match = _RE_ADP_DOMAIN.match(device_path)
+    match = _RE_ADP_DOMAIN.fullmatch(device_path)
     if not match:
       raise Exception('device_path is not in expected format.')
     adapter = match.group('adapter')

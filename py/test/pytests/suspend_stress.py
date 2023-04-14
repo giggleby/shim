@@ -55,12 +55,12 @@ from cros.factory.utils import process_utils
 
 _MIN_SUSPEND_MARGIN_SECS = 5
 _WAKE_SOURCE_PATTERN = re.compile('|'.join((
-    r'.*\| Wake Source \| .*$',
-    r'.*\| EC Event \| AC Connected$',
-    r'.*\| EC Event \| AC Disconnected$',
-    r'.*\| EC Event \| Host Event Hang$',
-    r'.*\| EC Event \| Key Pressed$',
-    r'.*\| EC Event \| USB MUX change$',
+    r'.*\| Wake Source \| .*',
+    r'.*\| EC Event \| AC Connected',
+    r'.*\| EC Event \| AC Disconnected',
+    r'.*\| EC Event \| Host Event Hang',
+    r'.*\| EC Event \| Key Pressed',
+    r'.*\| EC Event \| USB MUX change',
 )))
 
 
@@ -108,7 +108,7 @@ def GetWakeSource(elog: List[str]) -> Optional[str]:
   """
   wake_source = None
   for line in reversed(elog):
-    match = _WAKE_SOURCE_PATTERN.match(line)
+    match = _WAKE_SOURCE_PATTERN.fullmatch(line)
     if match:
       wake_source = match.group(0)
       break

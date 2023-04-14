@@ -16,7 +16,7 @@ VPD_READWRITE_PARTITION_NAME = 'RW_VPD'
 class VPDTool:
   """This class wraps the functions supplied by VPD cmdline tool into methods.
   """
-  _KEY_PATTERN = re.compile(r'[a-zA-Z0-9_.]+$')
+  _KEY_PATTERN = re.compile(r'[a-zA-Z0-9_.]+')
 
   def __init__(self, shell=None, raw_file=None):
     self._shell = shell or gooftool_common.Shell
@@ -106,6 +106,6 @@ class VPDTool:
 
   @classmethod
   def _EnsureIfKeyValid(cls, key):
-    if not cls._KEY_PATTERN.match(key):
+    if not cls._KEY_PATTERN.fullmatch(key):
       raise ValueError(f'Invalid VPD key {key!r} (does not match pattern '
                        f'{cls._KEY_PATTERN.pattern})')

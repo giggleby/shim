@@ -141,7 +141,7 @@ class LANSCPI:
       if not error_id:
         # We don't have an error ID for the exception yet;
         # try to parse the SCPI error.
-        match = re.match(br'([-+]?\d+),"(.+)"$', ret)
+        match = re.fullmatch(br'([-+]?\d+),"(.+)"', ret)
         if match:
           error_id = int(match.group(1))
           error_msg = match.group(2)

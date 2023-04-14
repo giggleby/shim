@@ -23,9 +23,9 @@ from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
 
-KEYBOARD_PATTERN = re.compile(r'xkb:\w+:[\w-]*:\w+$|'
-                              r'(ime|m17n|t13n):[\w:-]+$')
-LANGUAGE_CODE_PATTERN = re.compile(r'(\w+)(-[A-Z0-9]+)?$')
+KEYBOARD_PATTERN = re.compile(r'xkb:\w+:[\w-]*:\w+|'
+                              r'(ime|m17n|t13n):[\w:-]+')
+LANGUAGE_CODE_PATTERN = re.compile(r'(\w+)(-[A-Z0-9]+)?')
 
 CROS_REGIONS_DATABASE_DEFAULT_PATH = '/usr/share/misc/cros-regions.json'
 CROS_REGIONS_DATABASE_ENV_NAME = 'CROS_REGIONS_DATABASE'
@@ -149,10 +149,10 @@ class Region:
       assert all(isinstance(x, str) for x in f), (
           f'Expected a list of strings, not {f!r}')
     for f in self.keyboards:
-      assert KEYBOARD_PATTERN.match(f), (
+      assert KEYBOARD_PATTERN.fullmatch(f), (
           f'Keyboard pattern {f!r} does not match {KEYBOARD_PATTERN.pattern!r}')
     for f in self.language_codes:
-      assert LANGUAGE_CODE_PATTERN.match(f), (
+      assert LANGUAGE_CODE_PATTERN.fullmatch(f), (
           f'Language code {f!r} does not match '
           f'{LANGUAGE_CODE_PATTERN.pattern!r}')
 

@@ -90,7 +90,7 @@ class BtMgmt:
     if self._hci_device:
       index = int(self._hci_device.lstrip('hci'))
 
-    patt = re.compile(r'hci\d+\sdev_found:\s(.+)\stype\s.+\srssi\s(\-\d+)\s.*$')
+    patt = re.compile(r'hci\d+\sdev_found:\s(.+)\stype\s.+\srssi\s(\-\d+)\s.*')
     devices = {}
     find_cmd = ['btmgmt', '--index', str(index)]
     if timeout_secs is not None:
@@ -98,7 +98,7 @@ class BtMgmt:
     find_cmd.append('find')
     for line in process_utils.CheckOutput(find_cmd, log=log).splitlines():
       if line.startswith('hci'):
-        result = patt.match(line)
+        result = patt.fullmatch(line)
         if not result:
           continue
 

@@ -31,7 +31,7 @@ from cros.factory.external import dbus
 
 
 UUID_RE = re.compile(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'
-                     '[a-f0-9]{4}-[a-f0-9]{12}$')
+                     '[a-f0-9]{4}-[a-f0-9]{12}')
 
 
 _TestNamedTuple = collections.namedtuple('_TestNamedTuple', ['a', 'b', 'c'])
@@ -51,10 +51,10 @@ class BasicTest(unittest.TestCase):
 
   def testEventNameRE(self):
     for i in ('a', '_', 'azAZ09_', 'a0'):
-      self.assertTrue(event_log.EVENT_NAME_RE.match(i))
+      self.assertTrue(event_log.EVENT_NAME_RE.fullmatch(i))
 
     for i in ('', 'a.', '0', '0a'):
-      self.assertFalse(event_log.EVENT_NAME_RE.match(i))
+      self.assertFalse(event_log.EVENT_NAME_RE.fullmatch(i))
 
 
 class GlobalSeqTest(unittest.TestCase):
@@ -196,12 +196,12 @@ class EventLogTest(unittest.TestCase):
     shutil.rmtree(self.tmp)
 
   def testGetBootId(self):
-    assert UUID_RE.match(event_log.GetBootId())
+    assert UUID_RE.fullmatch(event_log.GetBootId())
 
 
   def testGetReimageId(self):
     reimage_id = event_log.GetReimageId()
-    assert UUID_RE.match(reimage_id), reimage_id
+    assert UUID_RE.fullmatch(reimage_id), reimage_id
 
   def testSuppress(self):
     for suppress in [False, True]:
@@ -255,8 +255,8 @@ class EventLogTest(unittest.TestCase):
 
     for i in log_data:
       # Check and remove times, to make everything else easier to compare
-      assert re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$',
-                      i['TIME']), i['TIME']
+      assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z',
+                          i['TIME']), i['TIME']
       del i['TIME']
 
     self.assertEqual(

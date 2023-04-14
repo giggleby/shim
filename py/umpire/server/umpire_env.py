@@ -352,7 +352,7 @@ class UmpireEnv:
     payloads = self.GetPayloadsDict(payloads_name)
     for type_name, payload_dict in payloads.items():
       for part, res_name in payload_dict.items():
-        if (part == 'file' or re.match(r'part\d+$', part) or
+        if (part == 'file' or re.fullmatch(r'part\d+', part) or
             part == 'crx_cache' or part == 'dlc_factory_cache'):
           files.add((type_name, part, res_name))
     return files
