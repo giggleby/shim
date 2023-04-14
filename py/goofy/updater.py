@@ -48,7 +48,7 @@ def TryUpdate(pre_update_hook=None, timeout=15):
       server_proxy.GetServerURL(), current_version)
 
   proxy = server_proxy.GetServerProxy(timeout=timeout)
-  updater = update_utils.Updater(update_utils.COMPONENTS.toolkit, proxy=proxy)
+  updater = update_utils.Updater(update_utils.Components.toolkit, proxy=proxy)
   if not updater.IsUpdateAvailable(current_version):
     session.console.info('Factory software is up to date: %s', current_version)
     return False
@@ -146,7 +146,7 @@ def CheckForUpdate(timeout):
     An exception if unable to contact the factory server.
   """
   proxy = server_proxy.GetServerProxy(timeout=timeout)
-  updater = update_utils.Updater(update_utils.COMPONENTS.toolkit, proxy=proxy)
+  updater = update_utils.Updater(update_utils.Components.toolkit, proxy=proxy)
   remote_version = updater.GetUpdateVersion()
   current_version = session.GetToolkitVersion()
 

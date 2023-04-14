@@ -328,7 +328,7 @@ class LightSensorTest(test_case.TestCase):
     # Group checker and details for Testlog.
     self._group_checker = testlog.GroupParam(
         'light', ['name', 'elapsed', 'light'])
-    testlog.UpdateParam('name', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('name', param_type=testlog.ParamType.argument)
     testlog.UpdateParam('light', description=('Light sensor values over time'))
     testlog.UpdateParam('elapsed', value_unit='seconds')
 

@@ -153,6 +153,6 @@ class Validator:
 
   @classmethod
   def Status(cls, inst, key, value):
-    if value not in inst.STATUS:
+    if value not in inst.Status.__members__:
       raise ValueError(f'Invalid status : {value!r}')
     Validator.Object(inst, key, value)

@@ -9,7 +9,7 @@ updates if available.
 
 To check if update to component 'hwid' is available::
 
-  updater = update_utils.Updater(updat_utils.COMPONENTS.hwid)
+  updater = update_utils.Updater(updat_utils.Components.hwid)
   print('Remote version: %s' % updater.GetUpdateVersion())
   if updater.IsUpdateAvailable(current_version):
     print('Update found!')
@@ -18,20 +18,22 @@ To download the 'toolkit' component (which is a self-extracted installer) and
 then execute::
 
   with file_utils.UnopenedTemporaryFile() as f:
-    updater = update_utils.Updater(update_utils.COMPONENTS.toolkit)
+    updater = update_utils.Updater(update_utils.Components.toolkit)
     updater.PerformUpdate(destination=f)
     os.system(f)
 
 To directly install 'release_image' (block device component)::
 
-  updater = update_utils.Updater(update_utils.COMPONENTS.release_image)
+  updater = update_utils.Updater(update_utils.Components.release_image)
   updater.PerformUpdate(destination='/dev/mmcblk0')
 """
 
+import enum
 import json
 import logging
 import os
 import re
+from typing import Union
 import urllib.request
 
 from cros.factory.device import device_utils
@@ -39,16 +41,37 @@ from cros.factory.test import server_proxy
 from cros.factory.umpire.client import umpire_client
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import type_utils
+
 
 # A list of known components.
-COMPONENTS = type_utils.Enum([
-    'firmware', 'hwid', 'netboot_firmware', 'project_config', 'release_image',
-    'toolkit', 'release_image.crx_cache', 'release_image.dlc_factory_cache'
-])
-OPTIONAL_COMPONENTS = type_utils.Enum(
-    ['release_image.crx_cache', 'release_image.dlc_factory_cache'])
-MATCH_METHOD = type_utils.Enum(['exact', 'substring'])
+class Components(str, enum.Enum):
+  firmware = 'firmware'
+  hwid = 'hwid'
+  netboot_firmware = 'netboot_firmware'
+  project_config = 'project_config'
+  release_image = 'release_image'
+  toolkit = 'toolkit'
+  crx_cache = 'release_image.crx_cache'
+  dlc_factory_cache = 'release_image.dlc_factory_cache'
+
+  def __str__(self):
+    return self.value
+
+
+class OptionalComponents(str, enum.Enum):
+  crx_cache = 'release_image.crx_cache'
+  dlc_factory_cache = 'release_image.dlc_factory_cache'
+
+  def __str__(self):
+    return self.value
+
+
+class MatchMethod(str, enum.Enum):
+  exact = 'exact'
+  substring = 'substring'
+
+  def __str__(self):
+    return self.name
 
 
 class Updater:
@@ -56,7 +79,7 @@ class Updater:
 
   KEY_VERSION = 'version'
 
-  def __init__(self, component, proxy=None, spawn=None):
+  def __init__(self, component: Union[str, Components], proxy=None, spawn=None):
     self._component = component
     self._url = None
     self._payload = {}
@@ -102,7 +125,7 @@ class Updater:
     return info.get(key)
 
   def IsUpdateAvailable(self, current_version=None,
-                        match_method=MATCH_METHOD.exact):
+                        match_method=MatchMethod.exact):
     """Checks if updates to component are available.
 
     Args:
@@ -116,7 +139,7 @@ class Updater:
     update_version = self.GetUpdateVersion()
     if not update_version:
       return False
-    if match_method == MATCH_METHOD.exact:
+    if match_method == MatchMethod.exact:
       return current_version != update_version
     return current_version not in update_version
 
@@ -151,7 +174,7 @@ class Updater:
         ['cros_payload', 'install', self._url, destination, self._component])
     if self._component == 'release_image':
       # Install crx_cache and factory installed DLC images if they exist.
-      for optional in OPTIONAL_COMPONENTS:
+      for optional in OptionalComponents:
         self._spawn([
             'cros_payload', 'install_optional', self._url, destination, optional
         ])
@@ -170,7 +193,7 @@ def UpdateHWIDDatabase(dut=None, target_dir=None):
   Returns:
     True if new database is applied.
   """
-  updater = Updater(COMPONENTS.hwid)
+  updater = Updater(Components.hwid)
   if dut is None:
     dut = device_utils.CreateDUTInterface()
   else:
@@ -216,7 +239,7 @@ def UpdateProjectConfig(dut=None, target_dir=None):
   Returns:
     True if new files are applied.
   """
-  updater = Updater(COMPONENTS.project_config)
+  updater = Updater(Components.project_config)
   if dut is None:
     dut = device_utils.CreateDUTInterface()
   if target_dir is None:

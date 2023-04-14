@@ -73,9 +73,11 @@ class TestlogTestBase(unittest.TestCase):
         'testRunId': self.session_uuid,
         'testType': 'TestlogDemo',
         'testName': 'TestlogDemo.Test',
-        'status': testlog.StationTestRun.STATUS.STARTING,
+        'status': testlog.StationTestRun.Status.STARTING,
         'startTime': SAMPLE_DATETIME_FLOAT,
-        'serialNumbers': {'serial_number': 'TestlogDemo'}
+        'serialNumbers': {
+            'serial_number': 'TestlogDemo'
+        }
     })
 
     session_json_path = testlog.InitSubSession(

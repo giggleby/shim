@@ -148,10 +148,10 @@ class VSWR(test_case.TestCase):
     # Group checker and details for Testlog
     self._group_checker = testlog.GroupParam(
         'trace_data', ['name', 'trace_data', 'frequency'])
-    testlog.UpdateParam('name', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('name', param_type=testlog.ParamType.argument)
     testlog.UpdateParam('trace_data', value_unit='dB')
     testlog.UpdateParam('frequency', value_unit='Hz',
-                        param_type=testlog.PARAM_TYPE.argument)
+                        param_type=testlog.ParamType.argument)
 
   def _ConnectToENA(self, network_analyzer_config):
     """Connnects to the ENA and initializes the SCPI object."""
@@ -195,8 +195,7 @@ class VSWR(test_case.TestCase):
 
     self.log['config']['file_path'] = self.args.config_path
     self.log['config']['content'] = self._config
-    testlog.UpdateParam('config_content',
-                        param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('config_content', param_type=testlog.ParamType.argument)
     testlog.LogParam('config_content', self._config)
 
   def _LoadParametersFromLocalDisk(self):

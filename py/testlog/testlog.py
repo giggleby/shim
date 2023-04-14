@@ -35,6 +35,7 @@ TODO(itspeter): Move to Instalog folder and remove the dependency of
                    └─ testlog_seq
 """
 
+import enum
 import json
 import logging
 import os
@@ -47,7 +48,6 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
-from cros.factory.utils import type_utils
 
 from . import hooks
 from . import testlog_seq
@@ -58,8 +58,15 @@ from . import testlog_validator
 TESTLOG_API_VERSION = '0.21'
 TESTLOG_ENV_VARIABLE_NAME = 'TESTLOG'
 
+
 # Possible values for the `Stationstatus.parameters.type` field.
-PARAM_TYPE = type_utils.Enum(['argument', 'measurement'])
+class ParamType(str, enum.Enum):
+  argument = 'argument'
+  measurement = 'measurement'
+
+  def __str__(self):
+    return self.name
+
 
 # TODO(itspeter): Use config_utils for those default constants.
 # The primary JSON file. It will be ingested by Instalog.
@@ -119,9 +126,17 @@ class Testlog:
         during test.
   """
 
-  FIELDS = type_utils.Enum([
-      'LAST_TEST_RUN', 'LOG_ROOT', 'PRIMARY_JSON', 'SESSION_JSON',
-      'ATTACHMENTS_FOLDER', 'UUID', '_METADATA'])
+  class Fields(str, enum.Enum):
+    LAST_TEST_RUN = 'LAST_TEST_RUN'
+    LOG_ROOT = 'LOG_ROOT'
+    PRIMARY_JSON = 'PRIMARY_JSON'
+    SESSION_JSON = 'SESSION_JSON'
+    ATTACHMENTS_FOLDER = 'ATTACHMENTS_FOLDER'
+    UUID = 'UUID'
+    _METADATA = '_METADATA'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, log_root=None, uuid=None,
                stationDeviceId=None, stationInstallationId=None):
@@ -144,12 +159,15 @@ class Testlog:
       # Indicate it initialized from a harness that no one will collect its
       # session JSON file (so set to None)
       session_data = {
-          Testlog.FIELDS.LOG_ROOT: log_root,
-          Testlog.FIELDS.PRIMARY_JSON:
+          Testlog.Fields.LOG_ROOT:
+              log_root,
+          Testlog.Fields.PRIMARY_JSON:
               os.path.join(log_root, _DEFAULT_PRIMARY_JSON_FILE),
-          Testlog.FIELDS.ATTACHMENTS_FOLDER:
+          Testlog.Fields.ATTACHMENTS_FOLDER:
               os.path.join(log_root, _DEFAULT_ATTACHMENTS_FOLDER),
-          Testlog.FIELDS.UUID: uuid}
+          Testlog.Fields.UUID:
+              uuid
+      }
     elif not log_root and not uuid:
       # Get the related information from the OS environment variable.
       self.in_subsession = True
@@ -159,15 +177,15 @@ class Testlog:
           f'Wrong initialization of _global_testlog with log_root: {log_root!r}'
           f', uuid: {uuid!r}')
 
-    self.last_test_run = session_data.pop(self.FIELDS.LAST_TEST_RUN, None)
-    self.log_root = session_data.pop(self.FIELDS.LOG_ROOT)
-    self.primary_json = session_data.pop(self.FIELDS.PRIMARY_JSON)
-    self.session_json = session_data.pop(self.FIELDS.SESSION_JSON, None)
-    self.attachments_folder = session_data.pop(self.FIELDS.ATTACHMENTS_FOLDER)
-    self.uuid = session_data.pop(self.FIELDS.UUID)
-    metadata = session_data.pop(self.FIELDS._METADATA, None)
+    self.last_test_run = session_data.pop(self.Fields.LAST_TEST_RUN, None)
+    self.log_root = session_data.pop(self.Fields.LOG_ROOT)
+    self.primary_json = session_data.pop(self.Fields.PRIMARY_JSON)
+    self.session_json = session_data.pop(self.Fields.SESSION_JSON, None)
+    self.attachments_folder = session_data.pop(self.Fields.ATTACHMENTS_FOLDER)
+    self.uuid = session_data.pop(self.Fields.UUID)
+    metadata = session_data.pop(self.Fields._METADATA, None)
     if metadata:
-      self.last_test_run[self.FIELDS._METADATA] = metadata
+      self.last_test_run[self.Fields._METADATA] = metadata
     assert not session_data, 'Not all variable initialized.'
 
     # Initialize the sequence generator
@@ -259,17 +277,23 @@ class Testlog:
     with manager as fd:
       last_test_run = json.loads(fd.read())
     manager.Close()
-    metadata = last_test_run.pop(
-        Testlog.FIELDS._METADATA)  # pylint: disable=protected-access
+    metadata = last_test_run.pop(Testlog.Fields._METADATA)  # pylint: disable=protected-access
     return {
-        Testlog.FIELDS.LAST_TEST_RUN: Event.FromDict(last_test_run, False),
-        Testlog.FIELDS.LOG_ROOT: metadata[Testlog.FIELDS.LOG_ROOT],
-        Testlog.FIELDS.PRIMARY_JSON: metadata[Testlog.FIELDS.PRIMARY_JSON],
-        Testlog.FIELDS.SESSION_JSON: session_json_path,
-        Testlog.FIELDS.ATTACHMENTS_FOLDER:
-            metadata[Testlog.FIELDS.ATTACHMENTS_FOLDER],
-        Testlog.FIELDS.UUID: metadata[Testlog.FIELDS.UUID],
-        Testlog.FIELDS._METADATA: metadata}  # pylint: disable=protected-access
+        Testlog.Fields.LAST_TEST_RUN:
+            Event.FromDict(last_test_run, False),
+        Testlog.Fields.LOG_ROOT:
+            metadata[Testlog.Fields.LOG_ROOT],
+        Testlog.Fields.PRIMARY_JSON:
+            metadata[Testlog.Fields.PRIMARY_JSON],
+        Testlog.Fields.SESSION_JSON:
+            session_json_path,
+        Testlog.Fields.ATTACHMENTS_FOLDER:
+            metadata[Testlog.Fields.ATTACHMENTS_FOLDER],
+        Testlog.Fields.UUID:
+            metadata[Testlog.Fields.UUID],
+        Testlog.Fields._METADATA:  # pylint: disable=protected-access
+            metadata
+    }
 
   def _CreateFolders(self):
     for x in [self.log_root, self.attachments_folder]:
@@ -336,19 +360,22 @@ def InitSubSession(log_root, uuid, station_test_run=None):
   if not station_test_run:
     station_test_run = StationTestRun()
     station_test_run.FromDict({
-        'status': StationTestRun.STATUS.STARTING,
+        'status': StationTestRun.Status.STARTING,
         'testRunId': uuid,
         'startTime': time.time()
     })
   # pylint: disable=protected-access
-  station_test_run[Testlog.FIELDS._METADATA] = {
-      Testlog.FIELDS.LOG_ROOT: log_root,
-      Testlog.FIELDS.PRIMARY_JSON:
+  station_test_run[Testlog.Fields._METADATA] = {
+      Testlog.Fields.LOG_ROOT:
+          log_root,
+      Testlog.Fields.PRIMARY_JSON:
           os.path.join(log_root, _DEFAULT_PRIMARY_JSON_FILE),
-      Testlog.FIELDS.SESSION_JSON: session_log_path,
-      Testlog.FIELDS.ATTACHMENTS_FOLDER:
+      Testlog.Fields.SESSION_JSON:
+          session_log_path,
+      Testlog.Fields.ATTACHMENTS_FOLDER:
           os.path.join(log_root, _DEFAULT_ATTACHMENTS_FOLDER),
-      Testlog.FIELDS.UUID: uuid
+      Testlog.Fields.UUID:
+          uuid
   }
   manager = file_utils.FileLockContextManager(session_log_path, 'w')
   with manager as fd:
@@ -391,8 +418,8 @@ def LogTestRun(session_json_path, station_test_run=None):
           test_run['duration'] = test_run['endTime'] - test_run['startTime']
         Log(test_run)
         # pylint: disable=protected-access
-        test_run[Testlog.FIELDS._METADATA] = (
-            session_json[Testlog.FIELDS._METADATA])
+        test_run[Testlog.Fields._METADATA] = (
+            session_json[Testlog.Fields._METADATA])
         fd.seek(0)
         fd.truncate()
         fd.write(test_run.ToJSON())
@@ -737,7 +764,7 @@ class EventBase:
   FIELDS = {
       'type': (True, testlog_validator.Validator.String),
       # pylint: disable=protected-access
-      Testlog.FIELDS._METADATA: (False, testlog_validator.Validator.Object)
+      Testlog.Fields._METADATA: (False, testlog_validator.Validator.Object)
   }
 
   def __init__(self, data=None):
@@ -1064,14 +1091,13 @@ class StationStatus(_StationBase):
             'serializedValue': schema.Scalar('serializedValue', str)
         }))
     SCHEMA = schema.FixedDict(
-        'parameters.value',
-        items={},
-        optional_items={
+        'parameters.value', items={}, optional_items={
             'description': schema.Scalar('description', str),
             'group': schema.Scalar('group', str),
             'valueUnit': schema.Scalar('valueUnit', str),
-            'type': schema.Scalar('type', str, list(PARAM_TYPE)),
-            'data': DATA_SCHEMA})
+            'type': schema.Scalar('type', str, list(ParamType.__members__)),
+            'data': DATA_SCHEMA
+        })
     kwargs['schema'] = SCHEMA
     return testlog_validator.Validator.Dict(*args, **kwargs)
 
@@ -1111,7 +1137,10 @@ class StationStatus(_StationBase):
     if 'parameters' not in self._data or name not in self['parameters']:
       self['parameters'] = {
           'key': name,
-          'value': {'type': PARAM_TYPE.measurement, 'data': []}
+          'value': {
+              'type': ParamType.measurement,
+              'data': []
+          }
       }
 
   def _LogParamValue(self, name, value_dict):
@@ -1345,9 +1374,15 @@ class StationTestRun(StationStatus):
 
   # Possible values for the `status` field.
   # TODO(itspeter): Check on log when will UNKNOWN emitted.
-  STATUS = type_utils.Enum([
-      'STARTING', 'RUNNING', 'FAIL', 'PASS',
-      'UNKNOWN'])  # States that doesn't apply for StationTestRun
+  class Status(str, enum.Enum):
+    STARTING = 'STARTING'
+    RUNNING = 'RUNNING'
+    FAIL = 'FAIL'
+    PASS = 'PASS'
+    UNKNOWN = 'UNKNOWN'  # States that doesn't apply for StationTestRun
+
+    def __str__(self):
+      return self.name
 
   @classmethod
   def GetEventType(cls):

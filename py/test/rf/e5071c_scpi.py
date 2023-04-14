@@ -8,13 +8,13 @@
 # TODO(itspeter): write unittest and verify it on a real E5071C
 
 import bisect
+import enum
 import itertools
 import logging
 import urllib.request
 
 from cros.factory.test.rf import agilent_scpi
 from cros.factory.test.rf import lan_scpi
-from cros.factory.utils import type_utils
 
 
 def CheckTraceValid(x_values, y_values):
@@ -114,7 +114,7 @@ class Traces:
     Args:
       freq: The frequency we want to obtain from the traces.
       parameter: One of the parameters provided in
-          ENASCPI.PARAMETERS.
+          ENASCPI.Parameters.
 
     Returns:
       A floating point value in dB at freq.
@@ -126,7 +126,15 @@ class Traces:
 
 class ENASCPI(agilent_scpi.AgilentSCPI):
   """An Agilent ENA (E5071C) device."""
-  PARAMETERS = type_utils.Enum(['S11', 'S12', 'S21', 'S22'])
+
+  class Parameters(str, enum.Enum):
+    S11 = 'S11'
+    S12 = 'S12'
+    S21 = 'S21'
+    S22 = 'S22'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, *args, **kwargs):
     # The first few commands need some warm up time in real E5071C based

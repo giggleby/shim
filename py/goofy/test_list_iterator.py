@@ -355,7 +355,7 @@ class TestListIterator:
       success = self._DetermineSuccess(subtest)
       if not success:
         # create an alias
-        ACTION_ON_FAILURE = test_object.FactoryTest.ACTION_ON_FAILURE
+        ACTION_ON_FAILURE = test_object.FactoryTest.ActionOnFailure
         if subtest.action_on_failure == ACTION_ON_FAILURE.NEXT:
           pass  # does nothing, just find the next test
         elif subtest.action_on_failure == ACTION_ON_FAILURE.PARENT:

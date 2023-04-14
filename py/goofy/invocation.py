@@ -534,13 +534,20 @@ class _TestInvocationTestLogHelper:
 
   _STATUS_CONVERSION = {
       # TODO(itspeter): No mapping for STARTING ?
-      TestState.ACTIVE: testlog.StationTestRun.STATUS.RUNNING,
-      TestState.PASSED: testlog.StationTestRun.STATUS.PASS,
-      TestState.FAILED: testlog.StationTestRun.STATUS.FAIL,
-      TestState.UNTESTED: testlog.StationTestRun.STATUS.UNKNOWN,
+      TestState.ACTIVE:
+          testlog.StationTestRun.Status.RUNNING,
+      TestState.PASSED:
+          testlog.StationTestRun.Status.PASS,
+      TestState.FAILED:
+          testlog.StationTestRun.Status.FAIL,
+      TestState.UNTESTED:
+          testlog.StationTestRun.Status.UNKNOWN,
       # TODO(itspeter): Consider adding another status.
-      TestState.FAILED_AND_WAIVED: testlog.StationTestRun.STATUS.PASS,
-      TestState.SKIPPED: testlog.StationTestRun.STATUS.PASS}
+      TestState.FAILED_AND_WAIVED:
+          testlog.StationTestRun.Status.PASS,
+      TestState.SKIPPED:
+          testlog.StationTestRun.Status.PASS
+  }
 
   def __init__(self):
     self.session_json_path = None
@@ -566,7 +573,7 @@ class _TestInvocationTestLogHelper:
         'testRunId': init_data['testRunId'],
         'testName': init_data['testName'],
         'testType': init_data['testType'],
-        'status': testlog.StationTestRun.STATUS.RUNNING,
+        'status': testlog.StationTestRun.Status.RUNNING,
         'startTime': init_data['startTime']
     }
     testlog_event.Populate(kwargs)
@@ -593,7 +600,7 @@ class _TestInvocationTestLogHelper:
 
   def LogStartEvent(self):
     testlog_event = testlog.StationTestRun()
-    testlog_event.Populate({'status': testlog.StationTestRun.STATUS.STARTING})
+    testlog_event.Populate({'status': testlog.StationTestRun.Status.STARTING})
     testlog.LogTestRun(self.session_json_path, station_test_run=testlog_event)
 
   def LogFinishEvent(self, finish_data):
@@ -608,7 +615,7 @@ class _TestInvocationTestLogHelper:
     }
     testlog_event.Populate(kwargs)
 
-    if status == testlog.StationTestRun.STATUS.FAIL:
+    if status == testlog.StationTestRun.Status.FAIL:
       for err_field, failure_code in [('error_msg', 'GoofyErrorMsg'),
                                       ('log_tail', 'GoofyLogTail')]:
         if err_field in finish_data:

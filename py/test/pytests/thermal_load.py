@@ -142,7 +142,7 @@ class ThermalLoadTest(unittest.TestCase):
     self.group_checker = testlog.GroupParam(
         'temperature',
         ['elapsed', 'sensor', 'temperature'])
-    testlog.UpdateParam('sensor', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('sensor', param_type=testlog.ParamType.argument)
 
   def runTest(self):
     start_temperatures = self.GetTemperatures()

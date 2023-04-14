@@ -630,11 +630,11 @@ class WirelessTest(test_case.TestCase):
     # Group checker for Testlog.
     self._service_group_checker = testlog.GroupParam(
         'service_signal', ['service', 'service_strength'])
-    testlog.UpdateParam('service', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('service', param_type=testlog.ParamType.argument)
     self._antenna_group_checker = testlog.GroupParam(
         'antenna', ['antenna', 'freq', 'strength'])
-    testlog.UpdateParam('antenna', param_type=testlog.PARAM_TYPE.argument)
-    testlog.UpdateParam('freq', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('antenna', param_type=testlog.ParamType.argument)
+    testlog.UpdateParam('freq', param_type=testlog.ParamType.argument)
 
   def tearDown(self):
     """Restores wifi states."""

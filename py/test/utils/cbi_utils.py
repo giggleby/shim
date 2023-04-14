@@ -9,11 +9,10 @@ This module provides functions to set and get CBI values using data names
 """
 
 import collections
+import enum
 import logging
 import re
 import subprocess
-
-from cros.factory.utils import type_utils
 
 
 class CbiException(Exception):
@@ -34,15 +33,31 @@ class CbiException(Exception):
 #   <value/string> is an integer or a string to be set.
 #   <size> is the size of the data in byte. It should be zero for
 #     string types.
-CbiDataName = type_utils.Enum([
-    'BOARD_VERSION',
-    'OEM_ID',
-    'SKU_ID',
-    'DRAM_PART_NUM',
-    'OEM_NAME',
-    'MODEL_ID',
-    'FW_CONFIG',
-    'PCB_SUPPLIER'])
+
+
+class CbiDataName(str, enum.Enum):
+  BOARD_VERSION = 'BOARD_VERSION'
+  OEM_ID = 'OEM_ID'
+  SKU_ID = 'SKU_ID'
+  DRAM_PART_NUM = 'DRAM_PART_NUM'
+  OEM_NAME = 'OEM_NAME'
+  MODEL_ID = 'MODEL_ID'
+  FW_CONFIG = 'FW_CONFIG'
+  PCB_SUPPLIER = 'PCB_SUPPLIER'
+
+  def __str__(self):
+    return self.name
+
+
+class CbiEepromWpStatus(str, enum.Enum):
+  Locked = 'Locked'
+  Unlocked = 'Unlocked'
+  Absent = 'Absent'
+
+  def __str__(self):
+    return self.name
+
+
 CbiDataAttr = collections.namedtuple('DataAttr', ['tag', 'type', 'size'])
 CbiDataDict = {
     CbiDataName.BOARD_VERSION: CbiDataAttr(0, int, 1),
@@ -54,7 +69,6 @@ CbiDataDict = {
     CbiDataName.FW_CONFIG: CbiDataAttr(6, int, 4),
     CbiDataName.PCB_SUPPLIER: CbiDataAttr(7, int, 1)
 }
-CbiEepromWpStatus = type_utils.Enum(['Locked', 'Unlocked', 'Absent'])
 # The error messages of ectool change from time to time.
 AllowedWpErrorMessages = [
     'Write-protect is enabled or EC explicitly '
@@ -63,7 +77,7 @@ AllowedWpErrorMessages = [
 
 
 def GetCbiData(dut, data_name):
-  if data_name not in CbiDataName:
+  if data_name not in CbiDataName.__members__:
     raise CbiException(f'{data_name} is not a valid CBI data name.')
   data_attr = CbiDataDict[data_name]
 
@@ -88,7 +102,7 @@ def GetCbiData(dut, data_name):
 
 
 def SetCbiData(dut, data_name, value):
-  if data_name not in CbiDataName:
+  if data_name not in CbiDataName.__members__:
     raise CbiException(f'{data_name} is not a valid CBI data name.')
   data_attr = CbiDataDict[data_name]
   if not isinstance(value, data_attr.type):

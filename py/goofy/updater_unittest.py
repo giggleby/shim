@@ -8,6 +8,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.goofy import updater
+from cros.factory.test.utils import update_utils
 
 
 class CheckForUpdateTest(unittest.TestCase):
@@ -32,7 +33,8 @@ class CheckForUpdateTest(unittest.TestCase):
 
     get_toolkit_version_mock.assert_called_once_with()
     get_server_proxy_mock.assert_called_once_with(timeout=3)
-    updater_mock.assert_called_once_with('toolkit', proxy=fake_proxy)
+    updater_mock.assert_called_once_with(update_utils.Components.toolkit,
+                                         proxy=fake_proxy)
     fake_updater.GetUpdateVersion.assert_called_once_with()
     fake_updater.IsUpdateAvailable.assert_called_once_with(local_version)
 

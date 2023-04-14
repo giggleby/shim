@@ -4,13 +4,13 @@
 
 import base64
 import binascii
+import enum
 import logging
 import re
 import struct
 
 from cros.factory.proto import reg_code_pb2
 from cros.factory.proto.reg_code_pb2 import RegCode
-from cros.factory.utils import type_utils
 
 
 # Registration code length in characters.
@@ -37,17 +37,26 @@ class RegistrationCode:
     device: The device type, if known.
   """
 
-  Type = type_utils.Enum(['UNIQUE_CODE', 'GROUP_CODE', 'ONE_TIME_CODE',
-                          'LEGACY'])
-  """Registration code type.
+  class Type(str, enum.Enum):
+    """Registration code type.
 
-  - UNIQUE_CODE: A unique user code (ubind_attribute value).
-  - GROUP_CODE: A group code (gbind_attribute value).
-  - ONE_TIME_CODE: A code for one-time use only.  Not likely to be seen
-    in the factory.
-  - LEGACY: A legacy (72-character) ubind_attribute or gbind_attribute value.
-    There is no way to distinguish unique and group codes in the old format.
-  """
+    - UNIQUE_CODE: A unique user code (ubind_attribute value).
+    - GROUP_CODE: A group code (gbind_attribute value).
+    - ONE_TIME_CODE: A code for one-time use only.  Not likely to be seen
+      in the factory.
+    - LEGACY: A legacy (72-character) ubind_attribute or gbind_attribute value.
+      There is no way to distinguish unique and group codes in the old format.
+    """
+    UNIQUE_CODE = 'UNIQUE_CODE'
+    GROUP_CODE = 'GROUP_CODE'
+    ONE_TIME_CODE = 'ONE_TIME_CODE'
+    LEGACY = 'LEGACY'
+
+    def __str__(self):
+      return self.name
+
+    def __repr__(self):
+      return f"'{self.__str__()}'"
 
   def __init__(self, encoded_string):
     """Parses a registration code.
@@ -166,9 +175,7 @@ def CheckRegistrationCode(encoded_string, type=None, device=None,
         old-style).
     type: The required type, if any.  A member of the RegistrationCode.Type
         enum.  This is ignored for legacy registration codes.
-    device: The required device, if any.  A member of the
-        RegistrationCode.Type enum.  This is ignored for legacy registration
-        codes.
+    device: The required device, if any.
 
   Raises:
     RegistrationCodeException: If the registration code is invalid or does

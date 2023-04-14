@@ -951,8 +951,8 @@ class WiFiThroughput(test_case.TestCase):
         value_unit='Bits/second')
     testlog.UpdateParam('start_time', value_unit='seconds')
     testlog.UpdateParam('end_time', value_unit='seconds')
-    testlog.UpdateParam('log_type', param_type=testlog.PARAM_TYPE.argument)
-    testlog.UpdateParam('ap_ssid', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('log_type', param_type=testlog.ParamType.argument)
+    testlog.UpdateParam('ap_ssid', param_type=testlog.ParamType.argument)
     testlog.UpdateParam('computed_rssi', value_unit='dBm')
     testlog.UpdateParam('antenna_rssi', value_unit='dBm')
 

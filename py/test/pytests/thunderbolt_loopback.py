@@ -202,8 +202,8 @@ class ThunderboltLoopbackTest(test_case.TestCase):
       # Group checker and details for Testlog.
       self._group_checker = testlog.GroupParam(self.LOG_GROUP_NAME,
                                                self.LOG_KEYS)
-      testlog.UpdateParam('ADP', param_type=testlog.PARAM_TYPE.argument)
-      testlog.UpdateParam('DOMAIN', param_type=testlog.PARAM_TYPE.argument)
+      testlog.UpdateParam('ADP', param_type=testlog.ParamType.argument)
+      testlog.UpdateParam('DOMAIN', param_type=testlog.ParamType.argument)
     self._errors = []
 
   def tearDown(self):

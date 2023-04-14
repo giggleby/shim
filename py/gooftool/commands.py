@@ -301,7 +301,7 @@ _enable_zero_touch_cmd_arg = CmdArg(
 
 _cbi_eeprom_wp_status_cmd_arg = CmdArg(
     '--cbi_eeprom_wp_status', type=str, default=CbiEepromWpStatus.Locked,
-    choices=CbiEepromWpStatus,
+    choices=list(CbiEepromWpStatus.__members__),
     help='The expected status of CBI EEPROM after factory mode disabled.')
 
 _is_reference_board_cmd_arg = CmdArg(

@@ -95,7 +95,7 @@ class WhaleCheckVoltageTest(test_case.TestCase):
     self._group_checker = testlog.GroupParam(
         'voltage',
         ['ina_name', 'voltage', 'elapsed'])
-    testlog.UpdateParam('ina_name', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('ina_name', param_type=testlog.ParamType.argument)
     testlog.UpdateParam(
         'voltage',
         description='Voltage value over time',

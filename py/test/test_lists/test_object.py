@@ -9,6 +9,7 @@ infrastructure. This library explicitly does not import gtk, to
 allow its use by the autotest control process.
 """
 
+import enum
 import itertools
 import json
 import logging
@@ -73,8 +74,6 @@ class FactoryTest:
       'label', 'allow_reboot', 'parallel', 'pytest_name', 'retries',
       'run_if', 'subtests', 'teardown', 'inherit', 'locals', ]
 
-  ACTION_ON_FAILURE = type_utils.Enum(['STOP', 'NEXT', 'PARENT'])
-
   _PYTEST_LABEL_MAP = {
       'ac': 'AC',
       'als': 'ALS',
@@ -89,6 +88,14 @@ class FactoryTest:
       'ui': 'UI',
       'usb': 'USB',
   }
+
+  class ActionOnFailure(str, enum.Enum):
+    STOP = 'STOP'
+    NEXT = 'NEXT'
+    PARENT = 'PARENT'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self,
                label=None,
@@ -205,7 +212,7 @@ class FactoryTest:
     else:
       self.layout_type = layout.get('type', 'tab')
       self.layout_options = layout.get('options', {})
-    self.action_on_failure = action_on_failure or self.ACTION_ON_FAILURE.NEXT
+    self.action_on_failure = action_on_failure or self.ActionOnFailure.NEXT
     if isinstance(enable_services, str):
       self.enable_services = [enable_services]
     else:
@@ -403,12 +410,12 @@ class FactoryTest:
 
     # subtests of a teardown test should be part of teardown as well
     if self.teardown:
-      if self.action_on_failure != self.ACTION_ON_FAILURE.NEXT:
+      if self.action_on_failure != self.ActionOnFailure.NEXT:
         logging.warning(
             '%s: action_on_failure=%s, `action_on_failure` of a teardown test '
             'must be `NEXT`, the value will be overwritten.', self.path,
             self.action_on_failure)
-        self.action_on_failure = self.ACTION_ON_FAILURE.NEXT
+        self.action_on_failure = self.ActionOnFailure.NEXT
       for subtest in self.subtests:
         subtest.SetTeardown()
 
@@ -434,7 +441,7 @@ class FactoryTest:
     We assume that _init is called before _check, so properties are properly
     setup and propagated to child nodes.
     """
-    if self.action_on_failure not in self.ACTION_ON_FAILURE:
+    if self.action_on_failure not in self.ActionOnFailure.__members__:
       raise type_utils.TestListError(
           'action_on_failure must be one of "NEXT", "PARENT", "STOP"')
 
@@ -692,8 +699,14 @@ class ShutdownStep(FactoryTest):
   # an independent step in some tests. We should find a more gerneal way.
   # Look ap_ro_verification.py as an example.
 
-  ShutdownTypes = type_utils.Enum(
-      ['reboot', 'full_reboot', 'halt', 'direct_ec_reboot'])
+  class ShutdownTypes(str, enum.Enum):
+    reboot = 'reboot'
+    full_reboot = 'full_reboot'
+    halt = 'halt'
+    direct_ec_reboot = 'direct_ec_reboot'
+
+    def __str__(self):
+      return self.name
 
   allow_reboot = True
 

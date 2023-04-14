@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 
 from cros.factory.device import device_utils
 from cros.factory.utils import process_utils
-from cros.factory.utils import type_utils
 
 
 class ChargeManagerException(Exception):
@@ -26,8 +26,13 @@ class ChargeManager:
       Board.ChargeState).
   """
 
-  ErrorState = type_utils.Enum(
-      ['BATTERY_NOT_PRESENT', 'AC_UNPLUGGED', 'BATTERY_ERROR'])
+  class ErrorState(str, enum.Enum):
+    BATTERY_NOT_PRESENT = 'BATTERY_NOT_PRESENT'
+    AC_UNPLUGGED = 'AC_UNPLUGGED'
+    BATTERY_ERROR = 'BATTERY_ERROR'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, min_charge_pct, max_charge_pct, power=None):
     """Constructor.

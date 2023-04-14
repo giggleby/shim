@@ -115,7 +115,7 @@ class ChargerTest(test_case.TestCase):
     # Group checker for Testlog.
     self._group_checker = testlog.GroupParam(
         'charge_info', ['load', 'target', 'charge', 'elapsed', 'status'])
-    testlog.UpdateParam('target', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('target', param_type=testlog.ParamType.argument)
 
   def _GetLabelWithUnit(self, value):
     return f"{value:.2f}{'%' if self.args.use_percentage else 'mAh'}"

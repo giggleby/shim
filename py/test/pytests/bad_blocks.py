@@ -142,7 +142,7 @@ class BadBlocksTest(test_case.TestCase):
     # Group checker for Testlog.
     self.command_group_checker = testlog.GroupParam(
         'log_command', ['command', 'command_stdout', 'command_stderr'])
-    testlog.UpdateParam('command', param_type=testlog.PARAM_TYPE.argument)
+    testlog.UpdateParam('command', param_type=testlog.ParamType.argument)
     self.sata_link_info_group_checker = testlog.GroupParam(
         'sata_link_info', ['sata_link_speed', 'system_log_message', 'phase'])
 

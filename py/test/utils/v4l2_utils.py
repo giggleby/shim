@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import ctypes
+import enum
 import fcntl
 import logging
-
-from cros.factory.utils import type_utils
 
 
 # Bitmask for video capture capability.  Please check
@@ -44,19 +43,24 @@ class V4L2Capability(ctypes.Structure):
   ]
 
 
-COMPONENT_TYPE = type_utils.Enum(['webcam', 'video_codec'])
+class ComponentType(str, enum.Enum):
+  webcam = 'webcam'
+  video_codec = 'video_codec'
+
+  def __str__(self):
+    return self.name
 
 
 def GuessComponentType(video_idx):
   """Guess what kind of v4l2 device it is.
 
-  Returns: an element of COMPONENT_TYPE, or None for unknown types.
+  Returns: an element of ComponentType, or None for unknown types.
   """
   v4l2_capability = QueryV4L2Capability(video_idx)
   if IsCaptureDevice(v4l2_capability):
-    return COMPONENT_TYPE.webcam
+    return ComponentType.webcam
   if IsVideoCodec(v4l2_capability):
-    return COMPONENT_TYPE.video_codec
+    return ComponentType.video_codec
   return None
 
 

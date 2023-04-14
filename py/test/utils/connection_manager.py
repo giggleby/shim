@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import argparse
+import enum
 import glob
 import logging
 import os
@@ -14,7 +15,6 @@ import time
 from cros.factory.utils import config_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils.net_utils import WLAN  # pylint: disable=unused-import
-from cros.factory.utils import type_utils
 
 
 try:
@@ -31,6 +31,7 @@ try:
 except ImportError:
   # E.g., in chroot
   pass
+
 
 _CONNECTION_TIMEOUT_SECS = 15.0
 _PING_TIMEOUT_SECS = 15
@@ -68,13 +69,17 @@ def GetConnectionManagerProxy():
 
 
 class ConnectionManagerException(Exception):
-  ErrorCode = type_utils.Enum([
-      # shill does not start a service for a device without physical link
-      'NO_PHYSICAL_LINK',
-      'INTERFACE_NOT_FOUND',
-      # there is no service running on that device
-      'NO_SELECTED_SERVICE',
-      'NOT_SPECIFIED', ])
+
+  class ErrorCode(str, enum.Enum):
+    # shill does not start a service for a device without physical link
+    NO_PHYSICAL_LINK = 'NO_PHYSICAL_LINK'
+    INTERFACE_NOT_FOUND = 'INTERFACE_NOT_FOUND'
+    # there is no service running on that device
+    NO_SELECTED_SERVICE = 'NO_SELECTED_SERVICE'
+    NOT_SPECIFIED = 'NOT_SPECIFIED'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, message, error_code=ErrorCode.NOT_SPECIFIED):
     super().__init__(message)

@@ -97,7 +97,7 @@ class SampleCustomizedTest(unittest.TestCase):
     self.group_checker = testlog.GroupParam(
         'audio', ['audio_quality', 'audio_frequency'])
     testlog.UpdateParam('audio_frequency',
-                        param_type=testlog.PARAM_TYPE.argument)
+                        param_type=testlog.ParamType.argument)
     testlog.UpdateParam(
         name='audio_quality',
         description='quality of audio device on different frequency',

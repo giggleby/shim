@@ -216,15 +216,14 @@ class CheckImageVersionTest(test_case.TestCase):
       self.ui.WaitKeysOnce(test_ui.SPACE_KEY)
 
     if self.args.use_netboot:
-      component = update_utils.COMPONENTS.netboot_firmware
+      component = update_utils.Components.netboot_firmware
       destination = None
       callback = self.NetbootCallback
     else:
       if self.args.reinstall_only_dlc:
-        component = update_utils.COMPONENTS.__getattr__(
-            'release_image.dlc_factory_cache')
+        component = update_utils.Components.dlc_factory_cache
       else:
-        component = update_utils.COMPONENTS.release_image
+        component = update_utils.Components.release_image
       destination = self.dut.partitions.rootdev
       callback = None
     self.ReImage(component, destination, callback)
@@ -250,7 +249,7 @@ class CheckImageVersionTest(test_case.TestCase):
     else:
       self.FailTask(f'{self.reinstall_reason}. DUT is rebooting to reimage.')
 
-  def ReImage(self, component, destination, callback):
+  def ReImage(self, component: update_utils.Components, destination, callback):
 
     def ReInstallCallBack(line):
       # Check the output of the `cros_payload`.
@@ -361,7 +360,7 @@ class CheckImageVersionTest(test_case.TestCase):
       return None
 
     self.WaitNetworkReady()
-    updater = update_utils.Updater(update_utils.COMPONENTS.release_image)
+    updater = update_utils.Updater(update_utils.Components.release_image)
 
     # The 'release_image' components in cros_payload are using
     # CHROMEOS_RELEASE_DESCRIPTION for version string.

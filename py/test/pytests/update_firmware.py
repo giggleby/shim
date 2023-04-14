@@ -111,7 +111,7 @@ class UpdateFirmwareTest(test_case.TestCase):
 
   def DownloadFirmware(self, force_update, target_path):
     """Downloads firmware updater from server."""
-    updater = update_utils.Updater(update_utils.COMPONENTS.firmware)
+    updater = update_utils.Updater(update_utils.Components.firmware)
     if not updater.IsUpdateAvailable():
       logging.warning('No firmware updater available on server.')
       return False
