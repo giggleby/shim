@@ -103,9 +103,9 @@ def PollForCondition(poll_method: Callable[[], T],
     sleep(poll_interval_secs)
 
 
-def WaitFor(condition: Callable[[], bool],
-            timeout_secs: float = DEFAULT_TIMEOUT_SECS,
-            poll_interval: float = DEFAULT_POLL_INTERVAL_SECS) -> bool:
+def WaitFor(condition: Callable[[],
+                                T], timeout_secs: float = DEFAULT_TIMEOUT_SECS,
+            poll_interval: float = DEFAULT_POLL_INTERVAL_SECS) -> T:
   """Wait for the given condition for at most the specified time.
 
   Args:
@@ -122,7 +122,7 @@ def WaitFor(condition: Callable[[], bool],
 
   @RetryDecorator(timeout_sec=timeout_secs if timeout_secs else math.inf,
                   interval_sec=poll_interval, target_condition=bool)
-  def WaitForCondition() -> bool:
+  def WaitForCondition() -> T:
     return condition()
 
   return WaitForCondition()
