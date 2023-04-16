@@ -35,6 +35,7 @@ To test AP RO verification, add this to test list::
 
   {
     "pytest_name": "ti50_ap_ro_verification",
+    "allow_reboot": true,
   }
 """
 
@@ -64,10 +65,13 @@ class Ti50APROVerficationTest(test_case.TestCase):
   def setUp(self):
     self.gooftool = Gooftool()
     self.goofy = state.GetInstance()
-    self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
     self._util = Util()
 
-  def setSoftwareWriteProtect(self, enable: bool):
+    self.AddTask(self.PreCheck)
+    self.AddTask(self.VerifyAPRO, reboot=True)
+    self.AddTask(self.CheckAPROResult)
+
+  def SetSoftwareWriteProtect(self, enable: bool):
     operation = 'enable' if enable else 'disable'
     session.console.info(f'{operation} SWWP.')
     cmd = f'gooftool write_protect --operartion {operation}'
@@ -75,56 +79,55 @@ class Ti50APROVerficationTest(test_case.TestCase):
     if not result.success:
       raise Error(f'Fail to {operation} software write protect.')
 
-  def runTest(self):
+  def PreCheck(self):
     # Skip the test if thr firmware is not Ti50.
     if not GSCUtils().IsTi50():
-      session.console.info('Skip Ti50 AP RO Verification test'
-                           'since the firmware is not Ti50.')
-      return
+      self.WaiveTask('Skip Ti50 AP RO Verification test '
+                     'since the firmware is not Ti50.')
 
-    # Check whether the device has rebooted or not.
-    rebooted = device_data.GetDeviceData(self.device_data_key)
-
+  def VerifyAPRO(self):
     try:
-      if rebooted:
-        # Check the result after device has rebooted.
-        # We cannot set zero GBB flags in factory mode,
-        # so we want to look for:
-        # 'apro result (36) : AP_RO_V2_NON_ZERO_GBB_FLAGS',
-        # which will map to a failure only related to non-zero GBB flags,
-        # but it would pass if GBB flags are zero.
-        result = self.gooftool.GSCGetAPROResult()
-        if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
-          self.FailTask('Ti50 AP RO Verification failed '
-                        f'with the following result: {result.name}')
-      else:
-        # Enable software write protect.
-        if self.args.enable_swwp:
-          self.setSoftwareWriteProtect(enable=True)
+      # Enable software write protect.
+      if self.args.enable_swwp:
+        self.SetSoftwareWriteProtect(enable=True)
 
-        # Set board ID.
-        session.console.info('Set board ID.')
-        self.gooftool.Cr50SetBoardId(two_stages=self.args.two_stages)
+      # Set board ID.
+      session.console.info('Set board ID.')
+      self.gooftool.Cr50SetBoardId(two_stages=self.args.two_stages)
 
-        # Set Addressing mode and WPSR.
-        session.console.info('Set Addressing mode and WPSR.')
-        self.gooftool.Ti50SetAddressingMode()
-        self.gooftool.Ti50SetSWWPRegister(
-            no_write_protect=(not self.args.enable_swwp), wpsr=self.args.wpsr)
+      # Set Addressing mode and WPSR.
+      session.console.info('Set Addressing mode and WPSR.')
+      self.gooftool.Ti50SetAddressingMode()
+      self.gooftool.Ti50SetSWWPRegister(
+          no_write_protect=(not self.args.enable_swwp), wpsr=self.args.wpsr)
 
-        # Reboot GSC.
-        self.goofy.SaveDataForNextBoot()
-        device_data.UpdateDeviceData({self.device_data_key: True})
-        try:
-          self.gooftool.GSCReboot()
-        finally:
-          # If the command works properly, the device will reboot and won't
-          # execute this line.
-          self.FailTask('Please make sure gsctool version >= 15287.0.0.')
+      # Reboot GSC.
+      self.goofy.SaveDataForNextBoot()
+      device_data.UpdateDeviceData({self.device_data_key: True})
+      try:
+        self.gooftool.GSCReboot()
+      finally:
+        # If the command works properly, the device will reboot and won't
+        # execute this line.
+        self.FailTask('Please make sure gsctool version >= 15287.0.0.')
+    finally:
+      # Disable software write protect if reboot is not triggered.
+      if self.args.enable_swwp:
+        self.SetSoftwareWriteProtect(enable=False)
+
+  def CheckAPROResult(self):
+    # Check the result after device has rebooted.
+    # We cannot set zero GBB flags in factory mode,
+    # so we want to look for:
+    # 'apro result (36) : AP_RO_V2_NON_ZERO_GBB_FLAGS',
+    # which will map to a failure only related to non-zero GBB flags,
+    # but it would pass if GBB flags are zero.
+    try:
+      result = self.gooftool.GSCGetAPROResult()
+      if result != gsctool.APROResult.AP_RO_V2_NON_ZERO_GBB_FLAGS:
+        self.FailTask('Ti50 AP RO Verification failed '
+                      f'with the following result: {result.name}')
     finally:
       # Disable software write protect.
       if self.args.enable_swwp:
-        self.setSoftwareWriteProtect(enable=False)
-
-  def tearDown(self):
-    device_data.DeleteDeviceData(self.device_data_key, True)
+        self.SetSoftwareWriteProtect(enable=False)

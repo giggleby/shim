@@ -58,9 +58,7 @@ import logging
 from cros.factory.device import device_utils
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import gsctool
-from cros.factory.test import device_data
 from cros.factory.test.i18n import _
-from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
@@ -87,7 +85,10 @@ class Cr50APROVerficationTest(test_case.TestCase):
     self.ui.ToggleTemplateClass('font-large', True)
     self.dut = device_utils.CreateDUTInterface()
     self.goofy = state.GetInstance()
-    self.device_data_key = f'factory.{type(self).__name__}.has_rebooted'
+
+    self.AddTask(self.PreCheck)
+    self.AddTask(self.VerifyAPRO, reboot=True)
+    self.AddTask(self.CheckAPROResult)
 
   def HandleError(self, status):
     if status == gsctool.APROResult.AP_RO_NOT_RUN:
@@ -108,43 +109,36 @@ class Cr50APROVerficationTest(test_case.TestCase):
     else:
       raise Exception(f'Unknown status {status}.')
 
-  def runTest(self):
+  def PreCheck(self):
     # skip the test if the firmware is Ti50
     if GSCUtils().IsTi50():
-      session.console.info('Skip Cr50 AP RO Verification test '
-                           'since the firmware is Ti50.')
-      return
+      self.WaiveTask('Skip Cr50 AP RO Verification test '
+                     'since the firmware is Ti50.')
     if self.gooftool.IsCr50BoardIDSet():
-      session.console.warn('Unable to verify RO hash '
-                           'since the board ID is set, test skipped.')
-      return
+      self.WaiveTask('Unable to verify RO hash '
+                     'since the board ID is set, test skipped.')
     if not self.gooftool.IsCr50ROHashSet():
       raise Exception('Please set RO hash first.')
 
-    rebooted = device_data.GetDeviceData(self.device_data_key)
-    if rebooted:
-      status = self.gooftool.GSCGetAPROResult()
-      if status != gsctool.APROResult.AP_RO_PASS:
-        self.HandleError(status)
-    else:
-      self.goofy.SaveDataForNextBoot()
-      device_data.UpdateDeviceData({self.device_data_key: True})
-      if self.args.manual_test:
-        self.ui.SetState(
-            _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
-              seconds=self.args.timeout_secs))
-        self.Sleep(self.args.timeout_secs)
-        logging.info('Reboot not triggered.')
-        raise OperationError
+  def VerifyAPRO(self):
+    if self.args.manual_test:
+      self.ui.SetState(
+          _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
+            seconds=self.args.timeout_secs))
+      self.Sleep(self.args.timeout_secs)
+      logging.info('Reboot not triggered.')
+      raise OperationError
 
-      try:
-        self.dut.CheckOutput(['gsctool', '-ao'], log=True)
-        self.gooftool.Cr50VerifyAPRO()
-      finally:
-        # If the command works properly, the device will reboot and won't
-        # execute this line.
-        self.FailTask('CR50 version should >= 0.5.111, '
-                      'and check if DUT is in CR50 factory mode.')
+    try:
+      self.dut.CheckOutput(['gsctool', '-ao'], log=True)
+      self.gooftool.Cr50VerifyAPRO()
+    finally:
+      # If the command works properly, the device will reboot and won't
+      # execute this line.
+      self.FailTask('CR50 version should >= 0.5.111, '
+                    'and check if DUT is in CR50 factory mode.')
 
-  def tearDown(self):
-    device_data.DeleteDeviceData(self.device_data_key, True)
+  def CheckAPROResult(self):
+    status = self.gooftool.GSCGetAPROResult()
+    if status != gsctool.APROResult.AP_RO_PASS:
+      self.HandleError(status)
