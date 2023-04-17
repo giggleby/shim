@@ -137,7 +137,7 @@ class QueueGetTest(PollingTestBase):
         sync_utils.QueueGet(self._queue, timeout=.5, poll_interval_secs=0.2))
 
 
-class RetryTest(unittest.TestCase):
+class RetryTest(PollingTestBase):
 
   def testNormal(self):
     counter = []
@@ -190,12 +190,11 @@ class RetryTest(unittest.TestCase):
 
     self.assertRaises(type_utils.TestFailure, CountFunc)
 
-  def testRetryTimeout(self):
+  def testEndOnNoException(self):
     counter = []
-
     @sync_utils.RetryDecorator(
         timeout_sec=1,
-        interval_sec=0.1,
+        interval_sec=0,
     )
     def CountFunc():
       counter.append(0)
