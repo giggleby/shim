@@ -421,6 +421,7 @@ message DlmDisplayPanelInfo {
   PanelType panel_type = 1;
   int64 vertical_resolution = 2;
   int64 horizontal_resolution = 3;
+  repeated int64 feature_compatible_versions = 4;
 }
 
 message DlmCameraInfo {
@@ -433,6 +434,7 @@ message DlmCameraInfo {
   int64 vertical_resolution = 2;
   int64 horizontal_resolution = 3;
   bool has_tnr = 4;
+  repeated int64 feature_compatible_versions = 5;
 }
 
 message DlmComponentInfo {

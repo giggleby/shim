@@ -676,22 +676,69 @@ class DisplayPanelV1SpecTest(unittest.TestCase):
             display_panel_property={
                 'panel_type': features.DisplayPanelType.TN,  # incompatible
                 'horizontal_resolution': 1920,
-                'vertical_resolution': 1080
+                'vertical_resolution': 1080,
+                'compatible_versions': None,
             }),
         _BuildDLMComponentEntry(
             4,
             display_panel_property={
                 'panel_type': features.DisplayPanelType.OTHER,
                 'horizontal_resolution': 1080,  # incompatible
-                'vertical_resolution': 720
+                'vertical_resolution': 720,
+                'compatible_versions': None,
             }),
         _BuildDLMComponentEntry(
             5,
             display_panel_property={  # compatible
                 'panel_type': features.DisplayPanelType.OTHER,
                 'horizontal_resolution': 192000,
-                'vertical_resolution': 108000
+                'vertical_resolution': 108000,
+                'compatible_versions': None,
             }),
+    ])
+
+    actual = features.DisplayPanelV1Spec().FindSatisfiedEncodedValues(
+        db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'display_panel_field': (4, )})
+
+  def testNormalWithResolvedCompatibleVersions(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              display_panel_field:
+                0:
+                  display_panel: display_panel_1
+                1:
+                  display_panel: display_panel_2
+                2:
+                  display_panel: display_panel_3
+                3:
+                  display_panel: display_panel_4
+                4:
+                  display_panel: display_panel_5
+        """))
+
+    def _BuildProperty(compatible_versions: features.Collection[int]):
+      return {
+          'panel_type': None,
+          'horizontal_resolution': None,
+          'vertical_resolution': None,
+          'compatible_versions': compatible_versions
+      }
+
+    dlm_db = _BuildDLMComponentDatabase([
+        # CID 1 is not found.
+        # CID 2 is incompatible for not being a display panel.
+        _BuildDLMComponentEntry(2),
+        # CID 3 is incompatible for no compatible versions.
+        _BuildDLMComponentEntry(3, display_panel_property=_BuildProperty([])),
+        # CID 4 is incompatible for compatible version 0.
+        _BuildDLMComponentEntry(4, display_panel_property=_BuildProperty([0])),
+        # CID 5 is compatible.
+        _BuildDLMComponentEntry(5, display_panel_property=_BuildProperty([1])),
     ])
 
     actual = features.DisplayPanelV1Spec().FindSatisfiedEncodedValues(
@@ -729,7 +776,8 @@ class CameraV1SpecTest(unittest.TestCase):
                 'is_user_facing': False,  # incompatible
                 'has_tnr': True,
                 'horizontal_resolution': 1920,
-                'vertical_resolution': 1080
+                'vertical_resolution': 1080,
+                'compatible_versions': None,
             }),
         _BuildDLMComponentEntry(
             20,
@@ -737,7 +785,8 @@ class CameraV1SpecTest(unittest.TestCase):
                 'is_user_facing': True,
                 'has_tnr': True,
                 'horizontal_resolution': 1080,  # incompatible
-                'vertical_resolution': 720
+                'vertical_resolution': 720,
+                'compatible_versions': None,
             }),
         _BuildDLMComponentEntry(
             21,
@@ -745,7 +794,8 @@ class CameraV1SpecTest(unittest.TestCase):
                 'is_user_facing': True,
                 'has_tnr': False,  # incompatible
                 'horizontal_resolution': 1920,
-                'vertical_resolution': 1080
+                'vertical_resolution': 1080,
+                'compatible_versions': None,
             }),
         _BuildDLMComponentEntry(
             22,
@@ -753,8 +803,52 @@ class CameraV1SpecTest(unittest.TestCase):
                 'is_user_facing': True,
                 'has_tnr': True,
                 'horizontal_resolution': 1920,
-                'vertical_resolution': 1080
+                'vertical_resolution': 1080,
+                'compatible_versions': None,
             }),
+    ])
+
+    actual = features.CameraV1Spec().FindSatisfiedEncodedValues(db, dlm_db)
+    comparable_actual = {k: tuple(sorted(v))
+                         for k, v in actual.items()}
+
+    self.assertDictEqual(comparable_actual, {'camera_field': (2, 5)})
+
+  def testNormalWithResolvedCompatibleVersions(self):
+    db = _BuildDatabaseForTest(
+        textwrap.dedent("""\
+            encoded_fields:
+              camera_field:
+                0:
+                  camera: [camera_10, camera_20]
+                1:
+                  camera: [camera_10, camera_21]
+                2:
+                  camera: [camera_10, camera_22]
+                3:
+                  camera: camera_10
+                4:
+                  camera: camera_21
+                5:
+                  camera: camera_22
+        """))
+
+    def _BuildProperty(compatible_versions: features.Collection[int]):
+      return {
+          'is_user_facing': None,
+          'has_tnr': None,
+          'horizontal_resolution': None,
+          'vertical_resolution': None,
+          'compatible_versions': compatible_versions,
+      }
+
+    # Only CID 22 is compatible for having the target version in the compatible
+    # version list.
+    dlm_db = _BuildDLMComponentDatabase([
+        _BuildDLMComponentEntry(10, camera_property=_BuildProperty([])),
+        _BuildDLMComponentEntry(20, camera_property=_BuildProperty([0])),
+        _BuildDLMComponentEntry(21, camera_property=_BuildProperty([0])),
+        _BuildDLMComponentEntry(22, camera_property=_BuildProperty([0, 1])),
     ])
 
     actual = features.CameraV1Spec().FindSatisfiedEncodedValues(db, dlm_db)

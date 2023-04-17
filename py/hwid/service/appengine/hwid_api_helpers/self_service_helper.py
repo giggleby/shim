@@ -475,7 +475,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
     return None
 
   def _GetOrderOfMagnitudeOf2(self, value: int) -> int:
-    return round(math.log2(value))
+    return math.ceil(math.log2(value))
 
   def _GetStorageFunctionProperty(
       self,
@@ -486,9 +486,12 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       return None
 
     dlm_storage_size_in_gb = dlm_component_info.storage_info.size_in_gb
-    if dlm_storage_size_in_gb <= 0:
+    if dlm_storage_size_in_gb < 0:
       raise ValueError(
           f'Invalid storage (ID={dlm_id}) size: {dlm_storage_size_in_gb}.')
+    is_data_from_dlm = dlm_storage_size_in_gb > 0
+
+    hwid_storage_size_in_gb_candidates = set()
 
     for comp_type in self._HWID_DB_STORAGE_COMPONENT_TYPES:
       for db_comp_name, db_comp_info in self._EnumerateHWIDRelatedComponents(
@@ -501,14 +504,22 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
         if hwid_storage_size_in_gb <= 0:
           self._warnings.append(f'The HWID component {db_comp_name} has '
                                 'suspicious storage size info.')
-        if (self._GetOrderOfMagnitudeOf2(hwid_storage_size_in_gb) !=
-            self._GetOrderOfMagnitudeOf2(dlm_storage_size_in_gb)):
-          self._warnings.append(
-              f'The estimated storage size ({hwid_storage_size_in_gb}) '
-              f'from HWID component {db_comp_name} is different than the DLM '
-              f'provided one: {dlm_storage_size_in_gb}.')
+        hwid_storage_size_in_gb_candidates.add(
+            2**self._GetOrderOfMagnitudeOf2(hwid_storage_size_in_gb))
+        if is_data_from_dlm:
+          if (self._GetOrderOfMagnitudeOf2(hwid_storage_size_in_gb) !=
+              self._GetOrderOfMagnitudeOf2(dlm_storage_size_in_gb)):
+            self._warnings.append(
+                f'The estimated storage size ({hwid_storage_size_in_gb}) '
+                f'from HWID component {db_comp_name} is different than the DLM '
+                f'provided one: {dlm_storage_size_in_gb}.')
 
-    return features.StorageFunctionProperty(size_in_gb=dlm_storage_size_in_gb)
+    if is_data_from_dlm:
+      return features.StorageFunctionProperty(size_in_gb=dlm_storage_size_in_gb)
+    if len(hwid_storage_size_in_gb_candidates) != 1:
+      raise ValueError('Unable to discover the storage size from HWID DB.')
+    return features.StorageFunctionProperty(
+        size_in_gb=hwid_storage_size_in_gb_candidates.pop())
 
   def _GetDisplayProperty(
       self,
@@ -519,6 +530,12 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       return None
 
     display_panel_info = dlm_component_info.display_panel_info
+    if display_panel_info.feature_compatible_versions:
+      if any(v < 0 for v in display_panel_info.feature_compatible_versions):
+        raise ValueError('Invalid display panel feature versions: '
+                         f'{display_panel_info.feature_compatible_versions}.')
+      return features.DisplayPanel.FromCompatibleVersions(
+          display_panel_info.feature_compatible_versions)
     if (not display_panel_info.panel_type or
         display_panel_info.vertical_resolution <= 0 or
         display_panel_info.horizontal_resolution <= 0):
@@ -536,7 +553,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
             f'The resolution from HWID component {db_comp_name} is different '
             f'than the DLM provided one: {display_panel_info}.')
 
-    return features.DisplayProperty(
+    return features.DisplayProperty.FromAttributes(
         panel_type=(features.DisplayPanelType.TN
                     if display_panel_info.panel_type == display_panel_info.TN
                     else features.DisplayPanelType.OTHER),
@@ -550,7 +567,13 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       return None
 
     camera_info = dlm_component_info.camera_info
-    return features.CameraProperty(
+    if camera_info.feature_compatible_versions:
+      if any(v < 0 for v in camera_info.feature_compatible_versions):
+        raise ValueError('Invalid camera feature versions: '
+                         f'{camera_info.feature_compatible_versions}.')
+      return features.CameraProperty.FromCompatibleVersions(
+          camera_info.feature_compatible_versions)
+    return features.CameraProperty.FromAttributes(
         is_user_facing=camera_info.position == camera_info.USER_FACING,
         has_tnr=camera_info.has_tnr,
         horizontal_resolution=camera_info.horizontal_resolution,

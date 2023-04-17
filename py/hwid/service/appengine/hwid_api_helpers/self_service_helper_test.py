@@ -472,7 +472,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             'The resolution from HWID component display_panel_1 is different'
         ])
     expected_converted_dlm_entry = self._CreateDLMComponentEntry(
-        cid=1, display_property=features.DisplayProperty(
+        cid=1, display_property=features.DisplayProperty.FromAttributes(
             panel_type=features.DisplayPanelType.OTHER,
             horizontal_resolution=1920, vertical_resolution=1080))
     self.assertDictEqual(
@@ -499,7 +499,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
 
     self._AssertFeatureMatcherBuildResultSuccess(result)
     expected_converted_dlm_entry = self._CreateDLMComponentEntry(
-        cid=1, camera_property=features.CameraProperty(
+        cid=1, camera_property=features.CameraProperty.FromAttributes(
             is_user_facing=True, has_tnr=True, horizontal_resolution=1000,
             vertical_resolution=500))
     self.assertDictEqual(

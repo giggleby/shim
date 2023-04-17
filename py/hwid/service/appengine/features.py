@@ -81,10 +81,24 @@ class DisplayProperty(NamedTuple):
     panel_type: The panel type.
     horizontal_resolution: The horizontal resolution in pixel.
     vertical_resolution: The vertical resolution in pixel.
+    compatible_versions: The resolved feature compatible versions from the
+      upstream server.
   """
-  panel_type: DisplayPanelType
-  horizontal_resolution: int
-  vertical_resolution: int
+  panel_type: Optional[DisplayPanelType]
+  horizontal_resolution: Optional[int]
+  vertical_resolution: Optional[int]
+  compatible_versions: Optional[Collection[int]]
+
+  @classmethod
+  def FromAttributes(cls, panel_type: DisplayPanelType,
+                     horizontal_resolution: int,
+                     vertical_resolution: int) -> 'DisplayProperty':
+    return cls(panel_type, horizontal_resolution, vertical_resolution, None)
+
+  @classmethod
+  def FromCompatibleVersions(
+      cls, compatible_versions: Collection[int]) -> 'DisplayProperty':
+    return cls(None, None, None, compatible_versions)
 
 
 class CameraProperty(NamedTuple):
@@ -95,11 +109,26 @@ class CameraProperty(NamedTuple):
     has_tnr: Whether the TNR feature is enabled.
     horizontal_resolution: The horizontal resolution in pixel.
     vertical_resolution: The vertical resolution in pixel.
+    compatible_versions: The resolved feature compatible versions from the
+      upstream server.
   """
-  is_user_facing: bool
-  has_tnr: bool
-  horizontal_resolution: int
-  vertical_resolution: int
+  is_user_facing: Optional[bool]
+  has_tnr: Optional[bool]
+  horizontal_resolution: Optional[int]
+  vertical_resolution: Optional[int]
+  compatible_versions: Optional[Collection[int]]
+
+  @classmethod
+  def FromAttributes(cls, is_user_facing: bool, has_tnr: bool,
+                     horizontal_resolution: int,
+                     vertical_resolution: int) -> DisplayProperty:
+    return cls(is_user_facing, has_tnr, horizontal_resolution,
+               vertical_resolution, None)
+
+  @classmethod
+  def FromCompatibleVersions(
+      cls, compatible_versions: Collection[int]) -> DisplayProperty:
+    return cls(None, None, None, None, compatible_versions)
 
 
 class DLMComponentEntry(NamedTuple):
@@ -654,6 +683,7 @@ class DisplayPanelV1Spec(HWIDSpec):
     _DISPLAY_COMPONENT_TYPE = 'display_panel'
     _FHD_HORIZONTAL_RESOLUTION = 1920
     _FHD_VERTICAL_RESOLUTION = 1080
+    _TARGET_VERSION = 1
 
     @classmethod
     def _GetComponentTypesToCheck(cls) -> Collection[str]:
@@ -666,6 +696,8 @@ class DisplayPanelV1Spec(HWIDSpec):
       if not dlm_entry.display_panel_property:
         return False
       properties = dlm_entry.display_panel_property
+      if properties.compatible_versions is not None:
+        return self._TARGET_VERSION in properties.compatible_versions
       return all((
           properties.panel_type != DisplayPanelType.TN,
           properties.horizontal_resolution >= self._FHD_HORIZONTAL_RESOLUTION,
@@ -695,6 +727,7 @@ class CameraV1Spec(HWIDSpec):
     _CAMERA_COMPONENT_TYPES = ('camera', 'video')
     _MIN_HORIZONTAL_RESOLUTION = 1920
     _MIN_VERTICAL_RESOLUTION = 1080
+    _TARGET_VERSION = 1
 
     @classmethod
     def _GetComponentTypesToCheck(cls) -> Collection[str]:
@@ -707,6 +740,8 @@ class CameraV1Spec(HWIDSpec):
       if not dlm_entry.camera_property:
         return False
       properties = dlm_entry.camera_property
+      if properties.compatible_versions is not None:
+        return self._TARGET_VERSION in properties.compatible_versions
       return all((
           properties.has_tnr,
           properties.is_user_facing,
