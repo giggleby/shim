@@ -1180,6 +1180,7 @@ class AudioLoopTest(test_case.TestCase):
       commands.extend(['-C', input_device])
     if output_device:
       commands.extend(['-P', output_device])
+    self.ui.CallJSFunction('checkConformance', input_device, output_device)
     process = self._dut.Popen(commands, stdout=process_utils.PIPE,
                               stderr=process_utils.PIPE, log=True)
     stdout, stderr = process.communicate()

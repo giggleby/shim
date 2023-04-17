@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-03-28 09:15+UTC\n"
+"PO-Revision-Date: 2023-04-21 10:30+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -1465,6 +1465,18 @@ msgstr ""
 #: ../py/test/pytests/audio_loop_static/audio_loop.js
 msgid "Testing Result: Success!"
 msgstr "Kết quả kiểm tra: Thành công!"
+
+#: ../py/test/pytests/audio_loop_static/audio_loop.js
+msgid ""
+"Running Conformance test....\n"
+" Input dev: {input_device}"
+msgstr ""
+
+#: ../py/test/pytests/audio_loop_static/audio_loop.js
+msgid ""
+"Running Conformance test....\n"
+" Output dev: {output_device}"
+msgstr ""
 
 #: ../py/test/pytests/audio_quality.py
 msgid "Press 'Space' to start test"

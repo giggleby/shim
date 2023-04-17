@@ -32,11 +32,25 @@ const testPassResult = () => {
       cros.factory.i18n.i18nLabelNode('Testing Result: Success!'));
 };
 
+const checkConformance = (input_device, output_device) => {
+  window.template.innerHTML = '';
+  if (input_device != null) {
+    window.template.appendChild(cros.factory.i18n.i18nLabelNode(
+      _('Running Conformance test....\n Input dev: {input_device}'
+      , {input_device})));
+  } else {
+    window.template.appendChild(cros.factory.i18n.i18nLabelNode(
+      _('Running Conformance test....\n Output dev: {output_device}'
+      , {output_device})));
+  }
+};
+
 const exports = {
   init,
   testInProgress,
   testFailResult,
-  testPassResult
+  testPassResult,
+  checkConformance
 };
 for (const key of Object.keys(exports)) {
   window[key] = exports[key];
