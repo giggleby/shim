@@ -67,17 +67,16 @@ def _RunCrosDockerCommand(project_name, port, *args):
       })
 
 
-class _UmpireReady():
+def _WaitForUmpireReady(rpc_addr):
+  with xmlrpc.client.ServerProxy(rpc_addr) as proxy:
 
-  def __init__(self, rpc_addr):
-    self.proxy = xmlrpc.client.ServerProxy(rpc_addr)
+    def _IsReady():
+      try:
+        return not proxy.IsDeploying()
+      except Exception:
+        return False
 
-  def IsReady(self):
-    try:
-      return not self.proxy.IsDeploying()
-    except Exception:
-      return False
-
+    return sync_utils.WaitFor(_IsReady, 10)
 
 class _UmpireInformation():
 
@@ -100,6 +99,11 @@ def _CopyTestData(umpire_dir, setup_shared_data):
     os.mkdir(os.path.join(umpire_dir, sub_dir))
 
 
+def _CloseServerProxyConnection(proxy):
+  """Release the underlying resource in ServerProxy."""
+  return proxy("close")()
+
+
 def CleanUp(project_name, port):
   """Cleanup everything."""
   logging.info('Doing cleanup...')
@@ -119,8 +123,7 @@ def SetUpUmpire(project_name, port, umpire_dir, rpc_addr,
 
     logging.info('Waiting umpire to be started...')
 
-    umpire = _UmpireReady(rpc_addr)
-    sync_utils.WaitFor(umpire.IsReady, 10)
+    _WaitForUmpireReady(rpc_addr)
   except:
     CleanUp(project_name, port)
     raise
@@ -244,6 +247,7 @@ class UmpireRPCTest(UmpireDockerTestCase):
     conf = self.proxy.AddConfigFromBlob(
         json.dumps(self.default_config), 'umpire_config')
     self.proxy.Deploy(conf)
+    self.addCleanup(_CloseServerProxyConnection, self.proxy)
 
   def ReadConfigTestdata(self, name):
     return file_utils.ReadFile(os.path.join(CONFIG_TESTDATA_DIR, name))
@@ -255,8 +259,8 @@ class UmpireRPCTest(UmpireDockerTestCase):
     self.assertIn('IsDeploying', self.proxy.system.listMethods())
 
   def testEndingSlashInProxyAddress(self):
-    proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
-    self.assertIn('IsDeploying', proxy.system.listMethods())
+    with xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base) as proxy:
+      self.assertIn('IsDeploying', proxy.system.listMethods())
 
   def testGetActiveConfig(self):
     self.assertEqual(self.default_config,
@@ -401,6 +405,7 @@ class UmpireHTTPTest(UmpireDockerTestCase):
   def setUp(self):
     super().setUp()
     self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
+    self.addCleanup(_CloseServerProxyConnection, self.proxy)
 
   def testReverseProxy(self):
     to_deploy_config = file_utils.ReadFile(
@@ -424,6 +429,7 @@ class RPCDUTTest(UmpireDockerTestCase):
     shutil.copy(
         os.path.join(CONFIG_TESTDATA_DIR, 'test_report_index.json'),
         os.path.join(self.umpire.umpire_dir, 'properties', 'report_index.json'))
+    self.addCleanup(_CloseServerProxyConnection, self.proxy)
 
   def testPing(self):
     version = self.proxy.Ping()
@@ -433,23 +439,23 @@ class RPCDUTTest(UmpireDockerTestCase):
     }, version)
 
   def testEndingSlashInProxyAddress(self):
-    proxy = xmlrpc.client.ServerProxy(self.umpire.addr_base)
-    self.assertEqual({
-        'version': 3,
-        'project': self.umpire.project_name
-    }, proxy.Ping())
+    with xmlrpc.client.ServerProxy(self.umpire.addr_base) as proxy:
+      self.assertEqual({
+          'version': 3,
+          'project': self.umpire.project_name
+      }, proxy.Ping())
 
   def testGetTime(self):
     t = self.proxy.GetTime()
     self.assertAlmostEqual(t, time.time(), delta=1)
 
   def testAlternateURL(self):
-    proxy = xmlrpc.client.ServerProxy(f'{self.umpire.addr_base}/umpire')
-    version = proxy.Ping()
-    self.assertEqual({
-        'version': 3,
-        'project': self.umpire.project_name
-    }, version)
+    with xmlrpc.client.ServerProxy(f'{self.umpire.addr_base}/umpire') as proxy:
+      version = proxy.Ping()
+      self.assertEqual({
+          'version': 3,
+          'project': self.umpire.project_name
+      }, version)
 
   def testGetFactoryLogPort(self):
     self.assertEqual(self.umpire.port + 4, self.proxy.GetFactoryLogPort())
@@ -494,6 +500,8 @@ class ServiceTest(TwoUmpireDockerTestCase):
     self.proxy = xmlrpc.client.ServerProxy(self.umpire.rpc_addr_base)
     self.second_proxy = xmlrpc.client.ServerProxy(
         self.second_umpire.rpc_addr_base)
+    self.addCleanup(_CloseServerProxyConnection, self.proxy)
+    self.addCleanup(_CloseServerProxyConnection, self.second_proxy)
 
   def ReadConfigTestdata(self, name):
     return json_utils.LoadFile(os.path.join(CONFIG_TESTDATA_DIR, name))
