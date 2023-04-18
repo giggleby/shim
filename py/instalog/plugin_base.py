@@ -4,10 +4,11 @@
 
 """Instalog plugin base.
 
-Defines plugin classes (buffer, input, output), and a PluginAPI interface for
+Defines plugin classes (buffer, input, output), and an IPlugin interface for
 plugins to access.
 """
 
+import abc
 import inspect
 import logging
 import os
@@ -47,7 +48,7 @@ class ConfigError(Exception):
   """An error occurred when loading the config file."""
 
 
-class PluginAPI:
+class IPlugin(abc.ABC):
   """Defines an interface for plugins to call."""
 
   def SaveStore(self, plugin):
@@ -79,22 +80,22 @@ class PluginAPI:
     raise NotImplementedError
 
   def EventStreamNext(self, plugin, plugin_stream, timeout):
-    """See BufferEventStream.Next."""
+    """See IBufferEventStream.Next."""
     raise NotImplementedError
 
   def EventStreamCommit(self, plugin, plugin_stream):
-    """See BufferEventStream.Commit."""
+    """See IBufferEventStream.Commit."""
     raise NotImplementedError
 
   def EventStreamAbort(self, plugin, plugin_stream):
-    """See BufferEventStream.Abort."""
+    """See IBufferEventStream.Abort."""
     raise NotImplementedError
 
 
 class Plugin(log_utils.LoggerMixin):
   """Base class for a buffer plugin, input plugin, or output plugin in Instalog.
 
-  This is a base class for BufferPlugin, InputPlugin and OutputPlugin.  Plugins
+  This is a base class for IBufferPlugin, InputPlugin and OutputPlugin.  Plugins
   should subclass from these three classes.
 
   This base class processes plugin arguments set through the ARGS variable, and
@@ -109,7 +110,7 @@ class Plugin(log_utils.LoggerMixin):
               validated against the specification in ARGS.
       logger: A reference to the logger for this plugin instance.
       store: A reference to the plugin's store dictionary.
-      plugin_api: An instance of a class implementing PluginAPI.
+      plugin_api: An instance of a class implementing IPlugin.
 
     Raises:
       arg_utils.ArgError if the arguments fail to validate.
@@ -230,7 +231,7 @@ class Plugin(log_utils.LoggerMixin):
       time.sleep(min(1, secs))
 
 
-class BufferPlugin(Plugin):
+class IBufferPlugin(Plugin, abc.ABC):
   """Base class for a buffer plugin in Instalog."""
 
   def AddConsumer(self, consumer_id):
@@ -277,10 +278,10 @@ class BufferPlugin(Plugin):
     raise NotImplementedError
 
   def Consume(self, consumer_id):
-    """Returns a BufferEventStream to consume events from the buffer.
+    """Returns an IBufferEventStream to consume events from the buffer.
 
     Args:
-      consumer_id: ID of the consumer for which to create a BufferEventStream.
+      consumer_id: ID of the consumer for which to create an IBufferEventStream.
 
     Returns:
       True if successful, False otherwise.
@@ -288,10 +289,10 @@ class BufferPlugin(Plugin):
     raise NotImplementedError
 
 
-class BufferEventStream:
+class IBufferEventStream(abc.ABC):
   """Event stream interface that a buffer needs to implement.
 
-  Objects implementing BufferEventStream should be returned when the buffer
+  Objects implementing IBufferEventStream should be returned when the buffer
   plugin's Consume method is called.
   """
 
@@ -302,22 +303,22 @@ class BufferEventStream:
   def Commit(self):
     """Marks this batch of Events as successfully processed.
 
-    Marks this BufferEventStream as expired.
+    Marks this IBufferEventStream as expired.
 
     Raises:
-      EventStreamExpired if this BufferEventStream is expired.
+      EventStreamExpired if this IBufferEventStream is expired.
     """
     raise NotImplementedError
 
   def Abort(self):
     """Aborts processing this batch of Events.
 
-    Marks this BufferEventStream as expired.  This BufferEventStream's Events
-    will still be returned on subsequent Next calls from other BufferEventStream
-    objects.
+    Marks this IBufferEventStream as expired.  This IBufferEventStream's Events
+    will still be returned on subsequent Next calls from other
+    IBufferEventStream objects.
 
     Raises:
-      EventStreamExpired if this BufferEventStream is expired.
+      EventStreamExpired if this IBufferEventStream is expired.
     """
     raise NotImplementedError
 

@@ -57,16 +57,16 @@ class TestPluginLoader(unittest.TestCase):
       f.write(textwrap.dedent(content))
       return os.path.splitext(os.path.basename(f.name))[0]
 
-  def testInvalidPluginAPI(self):
-    """Tests that a loader passed an invalid PluginAPI object will complain."""
-    with self.assertRaisesRegex(TypeError, 'Invalid PluginAPI object'):
+  def testInvalidIPlugin(self):
+    """Tests that a loader passed an invalid IPlugin object will complain."""
+    with self.assertRaisesRegex(TypeError, 'Invalid IPlugin object'):
       plugin_loader.PluginLoader('plugin_id', plugin_api=True)
 
   def testGetSuperclass(self):
     """Tests that GetSuperclass returns correctly."""
     self.assertEqual(
-        plugin_loader.PluginLoader._GetSuperclass(plugin_base.BufferPlugin),
-        plugin_base.BufferPlugin)
+        plugin_loader.PluginLoader._GetSuperclass(plugin_base.IBufferPlugin),
+        plugin_base.IBufferPlugin)
     self.assertEqual(
         plugin_loader.PluginLoader._GetSuperclass(plugin_base.InputPlugin),
         plugin_base.InputPlugin)

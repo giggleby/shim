@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Implementation of cros.factory.device.device_types.DeviceLink using ADB."""
+"""Implementation of cros.factory.device.device_types.IDeviceLink using ADB."""
 
 import logging
 import os
@@ -63,7 +63,7 @@ def RawADBProcess(proxy_object, session_id):
   return proxy_object
 
 
-class ADBLink(device_types.DeviceLink):
+class ADBLink(device_types.IDeviceLink):
   """A device that is connected via ADB interface.
 
   Args:
@@ -79,18 +79,18 @@ class ADBLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def Push(self, local: str, remote: str) -> None:
-    """See DeviceLink.Push"""
+    """See IDeviceLink.Push"""
     subprocess.check_output(['adb', 'push', local, remote],
                             stderr=subprocess.STDOUT)
 
   @type_utils.Overrides
   def PushDirectory(self, local: str, remote: str) -> None:
-    """See DeviceLink.PushDirectory"""
+    """See IDeviceLink.PushDirectory"""
     return self.Push(local, remote)
 
   @type_utils.Overrides
   def Pull(self, remote: str, local: Optional[str] = None):
-    """See DeviceLink.Pull"""
+    """See IDeviceLink.Pull"""
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
         self.Pull(remote, path)
@@ -113,7 +113,7 @@ class ADBLink(device_types.DeviceLink):
                           IO[Any]] = None, stderr: Union[None, int,
                                                          IO[Any]] = None,
             cwd: Optional[str] = None, encoding: Optional[str] = 'utf-8'):
-    """See DeviceLink.Shell"""
+    """See IDeviceLink.Shell"""
     # ADB shell does not provide interactive shell, which means we are not
     # able to send stdin data in an interactive way (
     # https://code.google.com/p/android/issues/detail?id=74856). As described
@@ -196,10 +196,10 @@ class ADBLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def IsReady(self) -> bool:
-    """See DeviceLink.IsReady"""
+    """See IDeviceLink.IsReady"""
     return process_utils.CheckOutput(['adb', 'get-state']).strip() == 'device'
 
   @type_utils.Overrides
   def IsLocal(self) -> bool:
-    """See DeviceLink.IsLocal"""
+    """See IDeviceLink.IsLocal"""
     return False

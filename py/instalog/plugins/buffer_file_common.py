@@ -596,7 +596,7 @@ class BufferFile(log_utils.LoggerMixin):
         name, self, self.consumer_path_format % name, self.logger.name)
 
   def AddConsumer(self, name):
-    """See BufferPlugin.AddConsumer."""
+    """See IBufferPlugin.AddConsumer."""
     self.debug('Add consumer %s', name)
     with self.data_write_lock, self._consumer_lock:
       if name in self.consumers:
@@ -605,7 +605,7 @@ class BufferFile(log_utils.LoggerMixin):
       self._SaveConsumers()
 
   def RemoveConsumer(self, name):
-    """See BufferPlugin.RemoveConsumer."""
+    """See IBufferPlugin.RemoveConsumer."""
     self.debug('Remove consumer %s', name)
     with self.data_write_lock, self._consumer_lock:
       if name not in self.consumers:
@@ -614,7 +614,7 @@ class BufferFile(log_utils.LoggerMixin):
       self._SaveConsumers()
 
   def ListConsumers(self):
-    """See BufferPlugin.ListConsumers."""
+    """See IBufferPlugin.ListConsumers."""
     with self._consumer_lock:
       # cur_seq represents the sequence ID of the consumer's next event.  If
       # that event doesn't exist yet, it will be set to the next (non-existent)
@@ -628,11 +628,11 @@ class BufferFile(log_utils.LoggerMixin):
               for key, cur_seq in cur_seqs.items()}
 
   def Consume(self, name):
-    """See BufferPlugin.Consume."""
+    """See IBufferPlugin.Consume."""
     return self.consumers[name].CreateStream()
 
 
-class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
+class Consumer(log_utils.LoggerMixin, plugin_base.IBufferEventStream):
   """Represents a Consumer and its BufferEventStream.
 
   Since SimpleFile has only a single database file, there can only ever be one
@@ -664,7 +664,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
     self._SaveMetadata()
 
   def CreateStream(self):
-    """Creates a BufferEventStream object to be used by Instalog core.
+    """Creates an IBufferEventStream object to be used by Instalog core.
 
     Since this class doubles as BufferEventStream, we mark that the
     BufferEventStream is "unexpired" by setting self._stream_lock,
@@ -782,7 +782,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
     return seq, record
 
   def Next(self):
-    """See BufferEventStream.Next."""
+    """See IBufferEventStream.Next."""
     seq, record = self._Next()
     if not seq:
       return None
@@ -790,7 +790,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
     return self.simple_file.ExternalizeEvent(event)
 
   def Commit(self):
-    """See BufferEventStream.Commit."""
+    """See IBufferEventStream.Commit."""
     if not self._stream_lock.IsHolder():
       raise plugin_base.EventStreamExpired
     self.cur_seq = self.new_seq
@@ -812,7 +812,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
         self.exception('Commit: Internal error occurred')
 
   def Abort(self):
-    """See BufferEventStream.Abort."""
+    """See IBufferEventStream.Abort."""
     if not self._stream_lock.IsHolder():
       raise plugin_base.EventStreamExpired
     self.new_seq = self.cur_seq

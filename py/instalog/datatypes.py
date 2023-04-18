@@ -214,7 +214,7 @@ class EventStream:
 
   Properties:
     _plugin: A reference to the plugin using this EventStream.
-    _plugin_api: An instance of a class implementing PluginAPI.  Usually the
+    _plugin_api: An instance of a class implementing IPlugin. Usually the
                  PluginSandbox of this plugin.
     _count: The number of events retrieved so far through this EventStream.
   """

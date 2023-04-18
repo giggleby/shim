@@ -130,5 +130,5 @@ API Documentation
    :members:
    :inherited-members:
 
-.. autoclass:: DeviceLink
+.. autoclass:: IDeviceLink
    :members:

@@ -35,8 +35,8 @@ class PluginLoader:
       plugin_id: See plugin_sandbox.PluginSandbox.
       superclass: See plugin_sandbox.PluginSandbox.
       config: See plugin_sandbox.PluginSandbox.
-      plugin_api: Reference to an object that implements plugin_base.PluginAPI.
-                   Defaults to an instance of the PluginAPI interface, which
+      plugin_api: Reference to an object that implements plugin_base.IPlugin.
+                   Defaults to an instance of the IPlugin interface, which
                    will throw NotImplementedError when any method is called.
                    This may be acceptible for testing.
       _plugin_prefix: The prefix where the plugin module should be found.
@@ -50,9 +50,9 @@ class PluginLoader:
     self._store = store
     if self._store is None:
       self._store = {}
-    self._plugin_api = plugin_api or plugin_base.PluginAPI()
-    if not isinstance(self._plugin_api, plugin_base.PluginAPI):
-      raise TypeError('Invalid PluginAPI object provided')
+    self._plugin_api = plugin_api or plugin_base.IPlugin()
+    if not isinstance(self._plugin_api, plugin_base.IPlugin):
+      raise TypeError('Invalid IPlugin object provided')
     self._plugin_prefix = _plugin_prefix
     self._plugin_class = _plugin_class
     self._possible_module_names = None
@@ -70,7 +70,7 @@ class PluginLoader:
       self.superclass = plugin_base.Plugin
 
     # Check that the provided plugin_api is valid.
-    if not isinstance(self._plugin_api, plugin_base.PluginAPI):
+    if not isinstance(self._plugin_api, plugin_base.IPlugin):
       self._ReportException('Provided plugin_api object is invalid')
 
     # Create a logger for the plugin to use.
@@ -182,9 +182,10 @@ class PluginLoader:
     """Returns the superclass for the given plugin class, or None otherwise."""
     # Since OutputPlugin is a subclass of InputPlugin, OutputPlugin must be
     # checked before InputPlugin.
-    for superclass in [plugin_base.BufferPlugin,
-                       plugin_base.OutputPlugin,
-                       plugin_base.InputPlugin]:
+    for superclass in [
+        plugin_base.IBufferPlugin, plugin_base.OutputPlugin,
+        plugin_base.InputPlugin
+    ]:
       if issubclass(target_class, superclass):
         return superclass
     return None
@@ -194,7 +195,7 @@ class PluginLoader:
 
     Returns:
       None if _plugin_class is not specified and GetClass() has not yet been
-      run.  Afterwards, one of BufferPlugin, InputPlugin, or OutputPlugin.
+      run.  Afterwards, one of IBufferPlugin, InputPlugin, or OutputPlugin.
     """
     if self.superclass is plugin_base.Plugin:
       return None

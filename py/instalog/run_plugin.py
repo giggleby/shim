@@ -38,7 +38,7 @@ _MAIN_LOOP_INTERVAL = 1
 _POLL_STDIN_TIMEOUT = 0.1
 
 
-class PluginRunnerBufferEventStream(plugin_base.BufferEventStream,
+class PluginRunnerBufferEventStream(plugin_base.IBufferEventStream,
                                     log_utils.LoggerMixin):
   """Simulates a BufferEventStream for PluginRunner."""
 
@@ -52,16 +52,16 @@ class PluginRunnerBufferEventStream(plugin_base.BufferEventStream,
     try:
       ret = self._event_queue.get(False)
       self._retrieved_events.append(ret)
-      self.debug('BufferEventStream.Next: %s', ret)
+      self.debug('IBufferEventStream.Next: %s', ret)
       return ret
     except queue.Empty:
-      self.debug('BufferEventStream.Next: (empty)')
+      self.debug('IBufferEventStream.Next: (empty)')
       return None
 
   def Commit(self):
     if self._expired:
       raise plugin_base.EventStreamExpired
-    self.debug('BufferEventStream.Commit %d events: %s',
+    self.debug('IBufferEventStream.Commit %d events: %s',
                len(self._retrieved_events), self._retrieved_events)
     # TODO(kitching): Delete attachment files to simulate buffer.
     self._expired = True
@@ -70,7 +70,7 @@ class PluginRunnerBufferEventStream(plugin_base.BufferEventStream,
   def Abort(self):
     if self._expired:
       raise plugin_base.EventStreamExpired
-    self.debug('BufferEventStream.Abort %d events: %s',
+    self.debug('IBufferEventStream.Abort %d events: %s',
                len(self._retrieved_events), self._retrieved_events)
     # TODO(kitching): Maybe delete attachment files to simulate buffer.
     self._expired = True
@@ -160,12 +160,11 @@ class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
     events, more_data = self._GetStdinEvents()
     if events:
       superclass = self._plugin.GetSuperclass()
-      if superclass is plugin_base.BufferPlugin:
-        self.debug('BufferPlugin: Calling BufferPlugin.Produce')
+      if superclass is plugin_base.IBufferPlugin:
+        self.debug('IBufferPlugin: Calling IBufferPlugin.Produce')
         result = self._plugin.CallPlugin('Produce', self._plugin.plugin_id,
                                          events, True)
-        self.info('BufferPlugin: BufferPlugin.Produce returned: %s',
-                  result)
+        self.info('IBufferPlugin: IBufferPlugin.Produce returned: %s', result)
       elif superclass is plugin_base.InputPlugin:
         self.info('InputPlugin: [Ignoring]')
       else:
@@ -175,8 +174,8 @@ class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
     return more_data
 
   def FlushBufferConsumer(self):
-    """Flushes the buffer for our consumer if the plugin is a BufferPlugin."""
-    if self._plugin.GetSuperclass() is plugin_base.BufferPlugin:
+    """Flushes the buffer for our consumer if the plugin is a IBufferPlugin."""
+    if self._plugin.GetSuperclass() is plugin_base.IBufferPlugin:
       # TODO(kitching): Wrap calls to returned BufferStream somehow.
       buffer_stream = self._plugin.CallPlugin('Consume', '__instalog__')
       while True:
@@ -223,8 +222,8 @@ class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
     self.info('Starting plugin...')
     self._plugin.Start(True)
 
-    # If this is a BufferPlugin, make sure we have a Consumer set up to use.
-    if self._plugin.GetSuperclass() is plugin_base.BufferPlugin:
+    # If this is a IBufferPlugin, make sure we have a Consumer set up to use.
+    if self._plugin.GetSuperclass() is plugin_base.IBufferPlugin:
       try:
         self._plugin.CallPlugin('AddConsumer', '__instalog__')
       except Exception:

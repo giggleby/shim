@@ -47,7 +47,7 @@ class SSHLinkIntegrationTest(unittest.TestCase):
   def setUp(self):
     self.ssh_link = ssh.SSHLink(**dut_options)
 
-  def _GetOutput(self, link: device_types.DeviceLink,
+  def _GetOutput(self, link: device_types.IDeviceLink,
                  cmd: Union[str, Sequence[str]]) -> str:
     with tempfile.TemporaryFile('w+') as stdout:
       self.assertEqual(link.Shell(cmd, stdout=stdout).wait(), 0)

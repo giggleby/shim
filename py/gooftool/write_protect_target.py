@@ -33,17 +33,17 @@ class WriteProtectTargetType(enum.Enum):
 
 
 def CreateWriteProtectTarget(
-    target: WriteProtectTargetType) -> 'WriteProtectTarget':
+    target: WriteProtectTargetType) -> 'IWriteProtectTarget':
   if target == WriteProtectTargetType.AP:
     return _APWriteProtectTarget()
   if target == WriteProtectTargetType.EC:
     return _ECWriteProtectTarget()
   if target == WriteProtectTargetType.FPMCU:
     return _FPMCUWriteProtectTarget()
-  raise TypeError(f'Cannot create WriteProtectTarget for {target}.')
+  raise TypeError(f'Cannot create IWriteProtectTarget for {target}.')
 
 
-class WriteProtectTarget(abc.ABC):
+class IWriteProtectTarget(abc.ABC):
 
   @abc.abstractmethod
   def SetProtectionStatus(self, enable, skip_enable_check=False):
@@ -70,7 +70,7 @@ class WriteProtectTarget(abc.ABC):
     raise NotImplementedError
 
 
-class _FlashromBasedWriteProtectTarget(WriteProtectTarget):
+class _FlashromBasedWriteProtectTarget(IWriteProtectTarget):
 
   def __init__(self):
     self._flashrom = self._GetFlashrom()
@@ -152,7 +152,7 @@ class _ECWriteProtectTarget(_ECBasedWriteProtectTarget):
     return crosfw.LoadEcFirmware()
 
 
-class _FPMCUWriteProtectTarget(WriteProtectTarget):
+class _FPMCUWriteProtectTarget(IWriteProtectTarget):
 
   FILE_FPFRAME = 'fp.raw'
   FILE_FPFRAME_ERR_MSG = 'error_msg.txt'

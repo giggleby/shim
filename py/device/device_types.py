@@ -24,7 +24,7 @@ class DeviceException(Exception):
   """Common exception for all components."""
 
 
-class DeviceLink(abc.ABC):
+class IDeviceLink(abc.ABC):
   """An abstract class for connection to remote or local device."""
 
   @abc.abstractmethod
@@ -207,16 +207,16 @@ class DeviceInterface(abc.ABC, sys_interface.SystemInterface):
   :py:class:`NotImplementedError` if not implemented for this board.
 
   Attributes:
-    link: A cros.factory.device.device_types.DeviceLink instance for accessing
+    link: A cros.factory.device.device_types.IDeviceLink instance for accessing
           device.
   """
 
-  def __init__(self, link: DeviceLink):
+  def __init__(self, link: IDeviceLink):
     """Constructor.
 
     Arg:
-      link: A cros.factory.device.device_types.DeviceLink instance for accessing
-            device.
+      link: A cros.factory.device.device_types.IDeviceLink instance for
+            accessing device.
     """
     super().__init__()
     self.link = link
@@ -395,8 +395,8 @@ class DeviceBoard(DeviceInterface):
   """A base class all for board implementations to inherit from."""
 
 
-class MockLink(DeviceLink):
-  """A `DeviceLink` mocking class used for unittests."""
+class MockLink(IDeviceLink):
+  """A `IDeviceLink` mocking class used for unittests."""
 
   @type_utils.Overrides
   def Push(self, local, remote):

@@ -8,7 +8,7 @@ import time
 from typing import Callable, Dict, List, Optional, Type
 
 from cros.factory.instalog import datatypes
-from cros.factory.instalog.plugin_base import BufferPlugin
+from cros.factory.instalog.plugin_base import IBufferPlugin
 from cros.factory.instalog.plugin_base import OutputPlugin
 from cros.factory.instalog.plugin_base import Plugin
 from cros.factory.instalog.plugin_sandbox import PluginSandbox
@@ -74,7 +74,7 @@ class _BufferPluginBenchmarkRunner(PluginBenchmarkRunner):
   PRODUCER_ID = 'benchmark_producer'
   CONSUMER_ID = 'benchmark_consumer'
 
-  def __init__(self, plugin_class_to_test: Type[BufferPlugin],
+  def __init__(self, plugin_class_to_test: Type[IBufferPlugin],
                plugin_config: Dict, pre_emit: bool) -> None:
     super().__init__(plugin_class_to_test, plugin_config)
     self._pre_emit = pre_emit
@@ -84,7 +84,7 @@ class _BufferPluginBenchmarkRunner(PluginBenchmarkRunner):
       plugin_api = _BufferBenchmarkPluginAPIImpl(tmp_dir_path)
       plugin = self._plugin_class_to_test(self._plugin_config, '', {},
                                           plugin_api)
-      assert isinstance(plugin, BufferPlugin)
+      assert isinstance(plugin, IBufferPlugin)
       plugin.SetUp()
       plugin.AddConsumer(self.CONSUMER_ID)
 
@@ -229,7 +229,7 @@ class _OutputBenchmarkPluginAPIImpl(_BaseBenchmarkPluginAPIImpl):
 
 def CreatePluginBenchmarkRunner(
     test_config: BenchmarkTestConfig) -> PluginBenchmarkRunner:
-  if issubclass(test_config.plugin_class_to_test, BufferPlugin):
+  if issubclass(test_config.plugin_class_to_test, IBufferPlugin):
     return _BufferPluginBenchmarkRunner(test_config.plugin_class_to_test,
                                         test_config.plugin_config,
                                         test_config.pre_emit)

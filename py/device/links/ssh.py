@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Implementation of cros.factory.device.device_types.DeviceLink using SSH."""
+"""Implementation of cros.factory.device.device_types.IDeviceLink using SSH."""
 
 import collections
 import enum
@@ -37,7 +37,7 @@ class RsyncExitCode(int, enum.Enum):
   TIMEOUT_DAEMON_CONNECTION = 35
 
 
-class SSHLink(device_types.DeviceLink):
+class SSHLink(device_types.IDeviceLink):
   """A DUT target that is connected via SSH interface.
 
   Attributes:
@@ -135,12 +135,12 @@ class SSHLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def Push(self, local: str, remote: str) -> None:
-    """See DeviceLink.Push"""
+    """See IDeviceLink.Push"""
     self._DoRsync(local, remote, True)
 
   @type_utils.Overrides
   def PushDirectory(self, local: str, remote: str) -> None:
-    """See DeviceLink.PushDirectory"""
+    """See IDeviceLink.PushDirectory"""
     # Copy the directory itself, so add a trailing slash.
     if not local.endswith('/'):
       local = local + '/'
@@ -149,7 +149,7 @@ class SSHLink(device_types.DeviceLink):
   @type_utils.Overrides
   def Pull(self, remote: str,
            local: Optional[str] = None) -> Union[None, str, bytes]:
-    """See DeviceLink.Pull"""
+    """See IDeviceLink.Pull"""
     if local is None:
       with file_utils.UnopenedTemporaryFile() as path:
         self._DoRsync(remote, path, False)
@@ -172,7 +172,7 @@ class SSHLink(device_types.DeviceLink):
                                                         IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             encoding: Optional[str] = 'utf-8') -> process_utils.ExtendedPopen:
-    """See DeviceLink.Shell"""
+    """See IDeviceLink.Shell"""
     if not isinstance(command, str):
       command = ' '.join(map(pipes.quote, command))
 
@@ -187,7 +187,7 @@ class SSHLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def IsReady(self) -> bool:
-    """See DeviceLink.IsReady"""
+    """See IDeviceLink.IsReady"""
     try:
       if self.use_ping:
         proc = process_utils.Spawn(['ping', '-w', '1', '-c', '1', self.host],
@@ -203,7 +203,7 @@ class SSHLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def IsLocal(self) -> bool:
-    """See DeviceLink.IsLocal"""
+    """See IDeviceLink.IsLocal"""
     return False
 
   @classmethod

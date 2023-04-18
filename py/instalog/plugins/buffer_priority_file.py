@@ -44,7 +44,7 @@ _DEFAULT_COPY_ATTACHMENTS = False  # use move instead of copy by default
 _DEFAULT_ENABLE_FSYNC = True  # fsync when it receives events
 
 
-class BufferPriorityFile(plugin_base.BufferPlugin):
+class BufferPriorityFile(plugin_base.IBufferPlugin):
 
   ARGS = [
       Arg('truncate_interval', (int, float),
@@ -294,20 +294,20 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
           event_iter_factory, self.process_pool)
 
   def AddConsumer(self, consumer_id):
-    """See BufferPlugin.AddConsumer."""
+    """See IBufferPlugin.AddConsumer."""
     self.consumers[consumer_id] = Consumer(consumer_id, self)
     for pri_level in range(_PRIORITY_LEVEL):
       for file_num in range(_PARTITION):
         self.buffer_file[pri_level][file_num].AddConsumer(consumer_id)
 
   def RemoveConsumer(self, consumer_id):
-    """See BufferPlugin.RemoveConsumer."""
+    """See IBufferPlugin.RemoveConsumer."""
     for pri_level in range(_PRIORITY_LEVEL):
       for file_num in range(_PARTITION):
         self.buffer_file[pri_level][file_num].RemoveConsumer(consumer_id)
 
   def ListConsumers(self, details=0):
-    """See BufferPlugin.ListConsumers."""
+    """See IBufferPlugin.ListConsumers."""
     consumers_dict = {}
     progress_dict = {}
     for name in self.consumers:
@@ -332,11 +332,11 @@ class BufferPriorityFile(plugin_base.BufferPlugin):
     return consumers_dict
 
   def Consume(self, consumer_id):
-    """See BufferPlugin.Consume."""
+    """See IBufferPlugin.Consume."""
     return self.consumers[consumer_id].CreateStream()
 
 
-class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
+class Consumer(log_utils.LoggerMixin, plugin_base.IBufferEventStream):
   """Represents a Consumer and its BufferEventStream."""
 
   def __init__(self, name, priority_buffer):
@@ -346,7 +346,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
     self.streams_index = 0
 
   def CreateStream(self):
-    """Creates a BufferEventStream object to be used by Instalog core."""
+    """Creates an IBufferEventStream object to be used by Instalog core."""
     fail = False
     for pri_level in range(_PRIORITY_LEVEL):
       for file_num in self.priority_buffer.ConsumeOrderIter():
@@ -378,7 +378,7 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
     return None
 
   def Next(self):
-    """See BufferEventStream.Next."""
+    """See IBufferEventStream.Next."""
     event = self._Next()
     if event is not None:
       return event
@@ -390,13 +390,13 @@ class Consumer(log_utils.LoggerMixin, plugin_base.BufferEventStream):
     return self._Next()
 
   def Commit(self):
-    """See BufferEventStream.Commit."""
+    """See IBufferEventStream.Commit."""
     for stream in self.streams:
       stream.Commit()
     self.streams = []
 
   def Abort(self):
-    """See BufferEventStream.Abort."""
+    """See IBufferEventStream.Abort."""
     for stream in self.streams:
       stream.Abort()
     self.streams = []

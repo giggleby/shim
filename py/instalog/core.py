@@ -65,8 +65,8 @@ class Instalog(plugin_sandbox.CoreAPI):
 
     # Create plugin sandboxes.
     self._PreprocessConfigEntries(input_plugins, output_plugins)
-    self._buffer = self._ConfigEntryToSandbox(
-        plugin_base.BufferPlugin, 'buffer', buffer_plugin)
+    self._buffer = self._ConfigEntryToSandbox(plugin_base.IBufferPlugin,
+                                              'buffer', buffer_plugin)
     self._plugins = {}
     self._plugins.update(self._ConfigEntriesToSandboxes(
         plugin_base.InputPlugin, input_plugins))
@@ -360,7 +360,7 @@ class Instalog(plugin_sandbox.CoreAPI):
       plugin: PluginSandbox object requesting BufferEventStream.
 
     Returns:
-      Object implementing plugin_base.BufferEventStream.
+      Object implementing plugin_base.IBufferEventStream.
 
     Raises:
       PluginCallError if Buffer fails unexpectedly.

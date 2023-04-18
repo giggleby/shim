@@ -232,7 +232,7 @@ class TestPluginSandbox(unittest.TestCase):
     with self.assertRaises(plugin_base.UnexpectedAccess):
       p.EventStreamAbort(p._plugin, None)
 
-    buffer_stream = plugin_base.BufferEventStream()
+    buffer_stream = plugin_base.IBufferEventStream()
     m = mock.Mock(return_value=buffer_stream)
     with mock.patch.object(p._core_api, 'NewStream', m):
       with mock.patch.object(p._core_api, 'GetNodeID', return_value='testing'):
@@ -250,7 +250,7 @@ class TestPluginSandbox(unittest.TestCase):
     p.Pause(False)
 
     # Check during the PAUSING state.
-    buffer_stream = plugin_base.BufferEventStream()
+    buffer_stream = plugin_base.IBufferEventStream()
     m = mock.Mock(return_value=buffer_stream)
     with mock.patch.object(p._core_api, 'NewStream', m):
       with mock.patch.object(p._core_api, 'GetNodeID', return_value='testing'):
@@ -291,7 +291,7 @@ class TestPluginSandbox(unittest.TestCase):
 
     p.Start(True)
 
-    buffer_stream = plugin_base.BufferEventStream()
+    buffer_stream = plugin_base.IBufferEventStream()
     m = mock.Mock(return_value=buffer_stream)
     with mock.patch.object(p._core_api, 'NewStream', m):
       with mock.patch.object(p._core_api, 'GetNodeID', return_value='testing'):

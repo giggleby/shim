@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
+
 from cros.factory.device import device_types
 
 
-class Hygrometer(device_types.DeviceComponent):
+class IHygrometer(device_types.DeviceComponent, abc.ABC):
   """System module for hygrometers."""
 
+  @abc.abstractmethod
   def GetRelativeHumidity(self):
     """Get the relative humidity.
 
@@ -17,7 +20,7 @@ class Hygrometer(device_types.DeviceComponent):
     raise NotImplementedError
 
 
-class SysFSHygrometer(Hygrometer):
+class SysFSHygrometer(IHygrometer):
   """System module for hygrometers.
 
   Implementation for systems which able to read humidities with sysfs api.
@@ -41,7 +44,7 @@ class SysFSHygrometer(Hygrometer):
     self._rh_map = rh_map
 
   def GetRelativeHumidity(self):
-    """See Hygrometer.GetRelativeHumidity."""
+    """See IHygrometer.GetRelativeHumidity."""
     try:
       return self._rh_map(self._device.ReadFile(self._rh_filename))
     except Exception as e:

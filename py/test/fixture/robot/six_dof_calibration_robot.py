@@ -9,7 +9,7 @@ from cros.factory.test.fixture.robot import robot
 from cros.factory.external.py_lib import serial
 
 
-class SixDoFCalibrationRobot(robot.Robot):
+class SixDoFCalibrationRobot(robot.IRobot):
   """Communication object for 6 DoF calibration robot.
 
   The robot is connected with a TCP/IP socket. With command as the following

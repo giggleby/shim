@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -25,7 +26,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
 
-class BaseWorkerTask:
+class IWorkerTask(abc.ABC):
 
   @classmethod
   def FromPubSubMessage(cls, pubsub_message: pubsub_connector.PubSubMessage):
@@ -47,11 +48,11 @@ class BaseWorker:
     """Tries to pull the first task and process the request."""
     raise NotImplementedError
 
-  def _PullTask(self) -> Optional[BaseWorkerTask]:
+  def _PullTask(self) -> Optional[IWorkerTask]:
     """Pulls one task from the Pub/Sub subscription.
 
     Returns:
-      A `BaseWorkerTask` object if it exists.  Otherwise `None` is returned.
+      An `IWorkerTask` object if it exists.  Otherwise `None` is returned.
     """
     message = self._pubsub_connector.PullFirstMessage(self.SUBSCRIPTION_ID)
     if message:
@@ -64,7 +65,7 @@ class CreateBundleException(Exception):
 
 
 @dataclass
-class CreateBundleTask(BaseWorkerTask):
+class CreateBundleTask(IWorkerTask):
   """A placeholder represents the information of a create bundle task.
 
   Properties:

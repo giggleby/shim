@@ -68,6 +68,11 @@ class MockCore(plugin_sandbox.CoreAPI):
     self.emit_calls.append(events)
     return True
 
+  #TODO(jimmysun): add PreEmit as it is added in crrev/c/3581463.
+  def PreEmit(self, plugin, events):
+    """See Core.PreEmit."""
+    raise NotImplementedError
+
   def GetStream(self, stream_id):
     """Retrieves the stream with the given ID, creating if necessary."""
     assert 0 <= stream_id <= len(self.streams)
@@ -120,7 +125,7 @@ class MockCore(plugin_sandbox.CoreAPI):
     return 'testing'
 
 
-class MockBufferEventStream(plugin_base.BufferEventStream):
+class MockBufferEventStream(plugin_base.IBufferEventStream):
   """Implements a mock BufferEventStream class."""
 
   def __init__(self):

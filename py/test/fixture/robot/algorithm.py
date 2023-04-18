@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import logging
 
 
@@ -9,7 +10,7 @@ class AlgorithmException(Exception):
   pass
 
 
-class Algorithm:
+class IAlgorithm(abc.ABC):
   """Interface of the computation algorithm."""
 
   def __init__(self):

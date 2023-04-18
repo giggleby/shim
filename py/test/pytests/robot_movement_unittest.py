@@ -8,8 +8,8 @@ import unittest
 from unittest import mock
 
 from cros.factory.device import device_types
-from cros.factory.test.fixture.robot.algorithm import Algorithm
-from cros.factory.test.fixture.robot.robot import Robot
+from cros.factory.test.fixture.robot.algorithm import IAlgorithm
+from cros.factory.test.fixture.robot.robot import IRobot
 from cros.factory.test.pytests import robot_movement
 from cros.factory.test import test_ui
 
@@ -29,8 +29,8 @@ class RobotMovementTest(unittest.TestCase):
     self._test._dut = mock.create_autospec(spec=device_types.DeviceInterface)
     self._test._dut.info.serial_number = 'SN123'
     self._test.ui_class = lambda event_loop: mock.Mock(spec=test_ui.StandardUI)
-    self._test._robot = mock.create_autospec(spec=Robot)
-    self._test._algorithm = mock.create_autospec(spec=Algorithm)
+    self._test._robot = mock.create_autospec(spec=IRobot)
+    self._test._algorithm = mock.create_autospec(spec=IAlgorithm)
     self._test.args = FakeArgs({
         'positions': [0, 15, 16, 7, 10, 13, 14, 9, 8, 11, 12, 0],
         'period_between_movement': 0,

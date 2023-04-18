@@ -5,7 +5,7 @@
 """Instalog plugin sandbox.
 
 Loads the plugin class instance (using plugin_loader), manages the plugin's
-state, and implements PluginAPI functions for the plugin.
+state, and implements IPlugin functions for the plugin.
 """
 
 import inspect
@@ -71,17 +71,17 @@ class CoreAPI:
     raise NotImplementedError
 
 
-class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
+class PluginSandbox(plugin_base.IPlugin, log_utils.LoggerMixin):
   """Represents a running instance of a particular plugin.
 
-  Implementation for non-PluginAPI functions is not thread-safe.  I.e., you
+  Implementation for non-IPlugin functions is not thread-safe.  I.e., you
   should not give multiple threads access to a PluginSandbox object, and run
   Stop() and Pause() simultaneously.  Bad things will happen.  Plugins, however,
-  are expected to be able to run multiple threads, and run multiple PluginAPI
+  are expected to be able to run multiple threads, and run multiple IPlugin
   functions simultaneously.  This is expected behaviour.
   """
 
-  # Different actions to take when a call is made into PluginAPI functions.  See
+  # Different actions to take when a call is made into PluginAPI functions. See
   # the _AskGatekeeper function.
   _ALLOW = 'allow'
   _WAIT = 'wait'
@@ -128,7 +128,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
                  may have multiple plugin entries with different IDs.  If
                  unspecified, will default to the same as plugin_type.
       superclass: The superclass of this plugin.  Can be one of:
-                  BufferPlugin, InputPlugin, OutputPlugin.  If unspecified,
+                  IBufferPlugin, InputPlugin, OutputPlugin.  If unspecified,
                   will allow any of the three types to be created.
       config: Configuration dict of the plugin entry.  Defaults to an empty
               dict.
@@ -204,7 +204,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
 
     Returns:
       None if _plugin_class is not specified and GetClass() has not yet been
-      run.  Afterwards, one of BufferPlugin, InputPlugin, or OutputPlugin.
+      run.  Afterwards, one of IBufferPlugin, InputPlugin, or OutputPlugin.
     """
     return self._loader.GetSuperclass()
 
@@ -538,36 +538,36 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
       self._state = UP
 
   ############################################################
-  # Functions below implement plugin_base.PluginAPI.
+  # Functions below implement plugin_base.IPlugin.
   ############################################################
 
   def SaveStore(self, plugin):
-    """See PluginAPI.SaveStore."""
+    """See IPlugin.SaveStore."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_ALL)
     self.debug('SaveStore called with state=%s', self._state)
     with file_utils.AtomicWrite(self._store_path) as f:
       f.write(json_utils.JSONEncoder().encode(self.store))
 
   def GetDataDir(self, plugin):
-    """See PluginAPI.GetDataDir."""
+    """See IPlugin.GetDataDir."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_ALL)
     self.debug('GetDataDir called with state=%s', self._state)
     return self._data_dir
 
   def GetNodeID(self, plugin):
-    """See PluginAPI.GetNodeID."""
+    """See IPlugin.GetNodeID."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_ALL)
     self.debug('GetNodeID called with state=%s', self._state)
     return self._core_api.GetNodeID()
 
   def IsStopping(self, plugin):
-    """See PluginAPI.IsStopping."""
+    """See IPlugin.IsStopping."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_ALL)
     self.debug('IsStopping called with state=%s', self._state)
     return self._state is STOPPING
 
   def IsFlushing(self, plugin):
-    """See PluginAPI.IsFlushing."""
+    """See IPlugin.IsFlushing."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_ALL)
     self.debug('IsFlushing called with state=%s', self._state)
     if self._state is not FLUSHING:
@@ -598,17 +598,17 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
       event.AppendStage(process_stage)
 
   def Emit(self, plugin, events):
-    """See PluginAPI.Emit."""
+    """See IPlugin.Emit."""
     self._EmitCommonProcedure(plugin, events, 'Emit')
     return self._core_api.Emit(self, events)
 
   def PreEmit(self, plugin, events):
-    """See PluginAPI.PreEmit."""
+    """See IPlugin.PreEmit."""
     self._EmitCommonProcedure(plugin, events, 'PreEmit')
     return self._core_api.PreEmit(self, events)
 
   def NewStream(self, plugin):
-    """See PluginAPI.NewStream."""
+    """See IPlugin.NewStream."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_UP_PAUSING_STOPPING)
     self.debug('NewStream called with state=%s', self._state)
 
@@ -618,7 +618,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
     return plugin_stream
 
   def EventStreamNext(self, plugin, plugin_stream, timeout=1):
-    """See PluginAPI.EventStreamNext."""
+    """See IPlugin.EventStreamNext."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_UP)
     self.debug('EventStreamNext called with state=%s', self._state)
     if plugin_stream not in self._event_stream_map:
@@ -658,7 +658,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
       return None
 
   def EventStreamCommit(self, plugin, plugin_stream):
-    """See PluginAPI.EventStreamCommit."""
+    """See IPlugin.EventStreamCommit."""
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_UP_PAUSING_STOPPING)
     self.debug('EventStreamCommit called with state=%s', self._state)
     self._RecordUnexpectedAccess(plugin, 'EventStreamAbort', inspect.stack())
@@ -667,7 +667,7 @@ class PluginSandbox(plugin_base.PluginAPI, log_utils.LoggerMixin):
     return self._event_stream_map.pop(plugin_stream).Commit()
 
   def EventStreamAbort(self, plugin, plugin_stream):
-    """See PluginAPI.EventStreamAbort."""
+    """See IPlugin.EventStreamAbort."""
     # TODO(kitching): Test in unittest.
     self._AskGatekeeper(plugin, self._GATEKEEPER_ALLOW_UP_PAUSING_STOPPING)
     self.debug('EventStreamAbort called with state=%s', self._state)

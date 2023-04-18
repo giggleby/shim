@@ -59,17 +59,16 @@ class RuntimeBound:
       )
 
 
-# pylint: disable=abstract-method
-class FakePluginAPI(plugin_base.PluginAPI):
-  """Implements a fake PluginAPI.
+class FakeIPlugin(plugin_base.IPlugin):
+  """Implements a fake IPlugin.
 
   Implements IsFlushing, EventStreamNext, EventStreamCommit, and
-  EventStreamAbort from PluginAPI.  Ignores the `plugin` and `plugin_stream`
+  EventStreamAbort from IPlugin.  Ignores the `plugin` and `plugin_stream`
   arguments, essentially acting as a BufferEventStream itself.
   """
 
   def __init__(self, buffer_queue, fail_on_commit=False):
-    """Initializes FakePluginAPI.
+    """Initializes FakeIPlugin.
 
     Args:
       buffer_queue: A queue from which to pop elements when EventStreamNext is
@@ -240,7 +239,7 @@ class TestEventStream(unittest.TestCase):
   def testEventStream(self):
     """Tests using the basic functionality of EventStream."""
     buffer_q = queue.Queue()
-    plugin_api = FakePluginAPI(buffer_q)
+    plugin_api = FakeIPlugin(buffer_q)
     event_stream = datatypes.EventStream(None, plugin_api)
 
     # Try pulling events.
@@ -264,7 +263,7 @@ class TestEventStreamIteratorBase(unittest.TestCase):
 
   def setUp(self):
     self.q = queue.Queue()
-    self.plugin_api = FakePluginAPI(self.q)
+    self.plugin_api = FakeIPlugin(self.q)
     self.event_stream = datatypes.EventStream(None, self.plugin_api)
 
 

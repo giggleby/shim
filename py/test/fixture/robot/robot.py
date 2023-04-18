@@ -23,6 +23,7 @@ For example::
   Bye.
 """
 
+import abc
 import argparse
 import logging
 
@@ -34,7 +35,7 @@ class RobotException(Exception):
   pass
 
 
-class Robot:
+class IRobot(abc.ABC):
   """Interface of the robot arm fixture."""
 
   def Connect(self):

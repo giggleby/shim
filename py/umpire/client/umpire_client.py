@@ -10,7 +10,7 @@ from cros.factory.device import device_utils
 from cros.factory.umpire import common
 
 
-class UmpireClientInfoInterface:
+class IUmpireClientInfo:
   """The interface that provide client info for Umpire server proxy."""
 
   def Update(self):
@@ -45,7 +45,7 @@ class UmpireClientInfoException(Exception):
 
 class UmpireClientInfo:
   """This class maintains client side info on DUT that is related to Umpire."""
-  __implements__ = (UmpireClientInfoInterface)
+  __implements__ = (IUmpireClientInfo)
   # Translated keys in DUT_INFO_KEYS to attributes used in UmpireClientInfo.
   # DUT_INFO_KEYS are used in GetXUmpireDUT() for X-Umpire-DUT.
   KEY_TRANSLATION = {

@@ -13,7 +13,7 @@ from cros.factory.test.utils import deploy_utils
 
 class FactoryPythonArchiveUnittest(unittest.TestCase):
   def setUp(self):
-    self.link = mock.Mock(spec=device_types.DeviceLink)
+    self.link = mock.Mock(spec=device_types.IDeviceLink)
     self.dut = chromeos.ChromeOSBoard(self.link)
     self.remote_factory_root = '/remote/factory/root'
     self.dut.storage.GetFactoryRoot = mock.MagicMock(

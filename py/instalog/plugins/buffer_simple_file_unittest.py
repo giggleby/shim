@@ -225,7 +225,7 @@ class TestBufferSimpleFile(unittest.TestCase):
     self.sf.AddConsumer('a')
     stream1 = self.sf.Consume('a')
     stream2 = self.sf.Consume('a')
-    self.assertIsInstance(stream1, plugin_base.BufferEventStream)
+    self.assertIsInstance(stream1, plugin_base.IBufferEventStream)
     self.assertEqual(stream2, None)
 
   def testUseExpiredBufferEventStream(self):

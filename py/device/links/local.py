@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Implementation of cros.factory.device.device_types.DeviceLink on local
+"""Implementation of cros.factory.device.device_types.IDeviceLink on local
 system."""
 
 import pipes
@@ -16,7 +16,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
 
-class LocalLink(device_types.DeviceLink):
+class LocalLink(device_types.IDeviceLink):
   """Runs locally on a device."""
 
   def __init__(self, shell_path: Optional[str] = None):
@@ -29,16 +29,16 @@ class LocalLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def Push(self, local: str, remote: str) -> None:
-    """See DeviceLink.Push"""
+    """See IDeviceLink.Push"""
     shutil.copy(local, remote)
 
   def PushDirectory(self, local: str, remote: str) -> None:
-    """See DeviceLink.PushDirectory"""
+    """See IDeviceLink.PushDirectory"""
     shutil.copytree(local, remote)
 
   @type_utils.Overrides
   def Pull(self, remote: str, local: Optional[str] = None):
-    """See DeviceLink.Pull"""
+    """See IDeviceLink.Pull"""
     if local is None:
       return file_utils.ReadFile(remote)
 
@@ -56,7 +56,7 @@ class LocalLink(device_types.DeviceLink):
                                                         IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
-    """See DeviceLink.Shell"""
+    """See IDeviceLink.Shell"""
 
     # On most remote links, we always need to execute the commands via shell. To
     # unify the behavior we should always run the command using shell even on
@@ -84,10 +84,10 @@ class LocalLink(device_types.DeviceLink):
 
   @type_utils.Overrides
   def IsReady(self) -> bool:
-    """See DeviceLink.IsReady"""
+    """See IDeviceLink.IsReady"""
     return True
 
   @type_utils.Overrides
   def IsLocal(self) -> bool:
-    """See DeviceLink.IsLocal"""
+    """See IDeviceLink.IsLocal"""
     return True

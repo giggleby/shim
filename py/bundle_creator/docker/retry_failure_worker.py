@@ -116,7 +116,7 @@ class UserRequest:
 
 
 @dataclass
-class RetryFailureTask(worker.BaseWorkerTask):
+class RetryFailureTask(worker.IWorkerTask):
   within_days: int
   requester: str
 

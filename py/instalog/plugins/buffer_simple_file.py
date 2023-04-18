@@ -25,7 +25,7 @@ _DEFAULT_COPY_ATTACHMENTS = False  # use move instead of copy by default
 _DEFAULT_ENABLE_FSYNC = True  # fsync when it receives events
 
 
-class BufferSimpleFile(plugin_base.BufferPlugin):
+class BufferSimpleFile(plugin_base.IBufferPlugin):
 
   ARGS = [
       Arg('truncate_interval', (int, float),
@@ -83,7 +83,7 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
       self.Sleep(self.args.truncate_interval)
 
   def Produce(self, producer, events, consumable):
-    """See BufferPlugin.Produce."""
+    """See IBufferPlugin.Produce."""
     non_consumable_file = \
         self.non_consumable_event_manager.GetNonConsumableFile(producer)
     if not consumable:
@@ -112,20 +112,20 @@ class BufferSimpleFile(plugin_base.BufferPlugin):
       return False
 
   def AddConsumer(self, consumer_id):
-    """See BufferPlugin.AddConsumer."""
+    """See IBufferPlugin.AddConsumer."""
     self.buffer_file.AddConsumer(consumer_id)
 
   def RemoveConsumer(self, consumer_id):
-    """See BufferPlugin.RemoveConsumer."""
+    """See IBufferPlugin.RemoveConsumer."""
     self.buffer_file.RemoveConsumer(consumer_id)
 
   def ListConsumers(self, details=0):
-    """See BufferPlugin.ListConsumers."""
+    """See IBufferPlugin.ListConsumers."""
     del details
     return self.buffer_file.ListConsumers()
 
   def Consume(self, consumer_id):
-    """See BufferPlugin.Consume."""
+    """See IBufferPlugin.Consume."""
     return self.buffer_file.Consume(consumer_id)
 
 

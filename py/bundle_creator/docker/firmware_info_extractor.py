@@ -28,7 +28,7 @@ class ExtractFirmwareInfoError(Exception):
 
 
 @dataclass
-class ExtractFirmwareInfoTask(worker.BaseWorkerTask):
+class ExtractFirmwareInfoTask(worker.IWorkerTask):
   """A placeholder represents the information of an extract firmware info task.
 
   Properties:

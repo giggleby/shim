@@ -165,16 +165,16 @@ def CreateStationInterface(**options):
   return CreateBoardInterface(config_type=DEVICE_CONFIG_TYPE_STATION, **options)
 
 
-def CreateDUTLink(**options) -> device_types.DeviceLink:
+def CreateDUTLink(**options) -> device_types.IDeviceLink:
   """Creates a link object to device under test.
 
   Args:
     options: Options to setup DUT link (see _ParseOptions).
 
   Returns:
-    An instance of the sub-classede DeviceLink.
+    An instance of the sub-classede IDeviceLink.
 
-  :rtype: cros.factory.device.device_types.DeviceLink
+  :rtype: cros.factory.device.device_types.IDeviceLink
   """
   link_name, unused_name, args = _ParseOptions(DEVICE_CONFIG_TYPE_DUT, options)
   link_class = _GetDeviceClass('links', 'Link', link_name)
