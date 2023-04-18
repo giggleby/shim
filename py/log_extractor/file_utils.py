@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional, Tuple
 
 import cros.factory.log_extractor.record as record_module
 from cros.factory.log_extractor import test_run_handler
@@ -60,11 +60,19 @@ class LogExtractorFileReader:
       if record.GetEventType() in types:
         yield record
 
+
+class TestRunInfo(NamedTuple):
+
+  test_name: str
+  test_run_id: str
+  status: TestRunStatus
+  time: float
+
 class LogExtractorStateMachine:
   """A state machine which performs file I/O given different state."""
 
   def __init__(self):
-    """Initializes the test_run_id to file descriptor map.
+    """Initializes the test_run_id to MetaData map.
 
     Since tests might run in parallel, we need to store all running tests.
     """
@@ -119,58 +127,87 @@ def GetExtractedLogOutputPath(test_name: str, test_run_id: str, root: str,
   return output_path
 
 
-def ExtractAndWriteRecordByTestRun(reader, output_dir: str, output_fname: str):
-  """Extracts records based on the test run event.
+def ExtractAndWriteRecordByTestRun(
+    reader, output_dir: str, output_fname: str,
+    start_event_cnt_map: Dict[str, int]) -> List[TestRunInfo]:
+  """Extracts records based on the test run status.
 
-  The extraction starts when reading the STARTED event and stops when reading
-  the COMPLETED event. Only testlog and /var/log/messages contains such
-  events. The extracted records will be written under
+  Normally, the log extraction should start when reading the STARTING event and
+  should stop when reading the COMPLETED (PASS/FAIL) event. However, there
+  might be several STARTING and COMPLETED events if the test involes reboot.
+
+  Below are examples of possible test status sequences:
+  For test without reboot:
+    STARTING -> PASS/FAIL
+  For test with one intentional reboot:
+    STARTING (pre-shutdown) -> FAIL (pre-shutdown) -> (DUT reboots)
+    -> STARTING (post-shutdown)-> PASS/FAIL (post-shutdown)
+  For test with one un-intentional reboot:
+    STARTING -> (DUT reboots) -> STARTING -> FAIL
+
+  To address this, we count the number of start event beforehand and store it
+  in `start_event_cnt_map`. When reading the COMPLETED event, we check if the
+  current number of start event count matches the one stored in
+  `start_event_cnt_map`. If yes, then stops log extraction.
+
+  Only testlog and /var/log/messages contains test run status. The extracted
+  records will be written under
   `{output_dir}/{test_name}-{test_run_id}/summary/{output_fname}`.
 
   Args:
     reader: A file reader which reads new record on every iteration.
     output_dir: The output directory.
     output_fname: The output filename.
+    start_event_cnt_map: A dictionary which contains test_run_id to
+      start_event_cnt map.
+
+  Returns:
+    A list of type TestRunInfo. It contains non-duplicated test run events
+    which will be used to extract logs on files that do not contain test
+    run event.
   """
   state_machine = LogExtractorStateMachine()
+  cur_start_event_cnt_map = {}
+  test_run_info_list = []
   for record in reader:
-    status = test_run_handler.ParseStatus(record)
+    status = test_run_handler.StatusHandler().Parse(record)
     test_name, test_run_id = test_run_handler.TestRunNameHandler().Parse(record)
-
     if status in (TestRunStatus.STARTED, TestRunStatus.COMPLETED):
       if not test_name or not test_run_id:
         logging.warning('Record %s does not contain test run name info.',
                         str(record))
         continue
 
+    if test_run_id and test_run_id not in start_event_cnt_map:
+      logging.warning('Skip recording %s.', test_run_id)
+      continue
+
     if status == TestRunStatus.STARTED:
-      output_path = GetExtractedLogOutputPath(test_name, test_run_id,
-                                              output_dir, output_fname)
-      state_machine.BeginTestRun(test_run_id, output_path)
+      if test_run_id in cur_start_event_cnt_map:
+        cur_start_event_cnt_map[test_run_id] += 1
+      else:
+        cur_start_event_cnt_map[test_run_id] = 1
+        output_path = GetExtractedLogOutputPath(test_name, test_run_id,
+                                                output_dir, output_fname)
+        state_machine.BeginTestRun(test_run_id, output_path)
+        test_run_info_list.append(
+            TestRunInfo(test_name, test_run_id, status, record.GetTime()))
 
     if state_machine.IsTestRunning():
       state_machine.WriteRecord(test_run_id, record)
 
     if status == TestRunStatus.COMPLETED:
-      state_machine.EndTestRun(test_run_id)
+      if (cur_start_event_cnt_map.get(test_run_id,
+                                      0) == start_event_cnt_map[test_run_id]):
+        state_machine.EndTestRun(test_run_id)
+        test_run_info_list.append(
+            TestRunInfo(test_name, test_run_id, status, record.GetTime()))
 
-
-# pylint: disable=unused-argument
-def GetTestRunStartEndTime(reader) -> Dict[str, Tuple]:
-  """Gets the start and end time of all the test run.
-
-  Args:
-    reader: A file reader which reads new record on every iteration.
-
-  Returns:
-    A dictionary whose key is the test_run_name and values are start and
-    end time.
-  """
-
+  return test_run_info_list
 
 # pylint: disable=unused-argument
 def ExtractAndWriteRecordByTimeStamp(reader, output_dir: str, output_fname: str,
-                                     timestamps: Dict[str, Tuple]):
+                                     test_run_info_dict: List[TestRunInfo]):
   """Extracts records based on the timestamps.
 
   The extractions start and stop based on the given start and end time. The
@@ -181,28 +218,50 @@ def ExtractAndWriteRecordByTimeStamp(reader, output_dir: str, output_fname: str,
     reader: A file reader which reads new record on every iteration.
     output_dir: The output directory.
     output_fname: The output filename.
-    timestamps: A dictionary whose key is the test_run_name and values are
-      start and end time.
+    test_run_info_list: A list of type TestRunInfo.
   """
+
+
+def GetStartEventCnt(reader) -> Dict[str, int]:
+  start_cnt = {}
+  for record in reader:
+    status = test_run_handler.StatusHandler().Parse(record)
+    _, test_run_id = test_run_handler.TestRunNameHandler().Parse(record)
+    if status != TestRunStatus.STARTED or test_run_id is None:
+      continue
+
+    start_cnt[test_run_id] = start_cnt.get(test_run_id, 0) + 1
+
+  return start_cnt
 
 
 def ExtractLogsAndWriteRecord(output_root: str, factory_log: str,
                               var_log_msg: str, system_logs: Tuple = ()):
-  """Extracts JSON logs by test run."""
+  """Extracts JSON logs to {output_root}/{test_name}-{test_run_id}/summary."""
+  # We use factory log as source of truth to generate test run info for two
+  # reasons:
+  # - We often only care about the logs generated after toolkit is installed.
+  # - If user has cleared the factory log using e.g. `factory_restart` before,
+  #   the logs in factory logs and system logs will not match. e.g. The system
+  #   log contains a test start event `A` while the factory logs does not.
+  #   In this case, we often don't care about the un-matched logs.
   factory_log_reader = LogExtractorFileReader(
       factory_log, record_module.TestlogRecord.FromJSON)
-  ExtractAndWriteRecordByTestRun(factory_log_reader, output_root, 'factory')
+  start_event_cnt_map = GetStartEventCnt(factory_log_reader)
+
+  factory_log_reader = LogExtractorFileReader(
+      factory_log, record_module.TestlogRecord.FromJSON)
+  test_run_info_list = ExtractAndWriteRecordByTestRun(
+      factory_log_reader, output_root, 'factory', start_event_cnt_map)
 
   var_log_msg_reader = LogExtractorFileReader(
       var_log_msg, record_module.SystemLogRecord.FromJSON)
-  ExtractAndWriteRecordByTestRun(var_log_msg_reader, output_root, 'message')
-
-  factory_log_reader = LogExtractorFileReader(
-      factory_log, record_module.TestlogRecord.FromJSON)
-  timestamps = GetTestRunStartEndTime(factory_log_reader)
+  ExtractAndWriteRecordByTestRun(var_log_msg_reader, output_root, 'message',
+                                 start_event_cnt_map)
 
   for system_log in system_logs:
     system_log_reader = LogExtractorFileReader(
         system_log, record_module.SystemLogRecord.FromJSON)
     ExtractAndWriteRecordByTimeStamp(system_log_reader, output_root,
-                                     os.path.basename(system_log), timestamps)
+                                     os.path.basename(system_log),
+                                     test_run_info_list)

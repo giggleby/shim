@@ -4,9 +4,8 @@
 
 import abc
 import enum
-import logging
 import re
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple
 
 import cros.factory.log_extractor.record as record_module
 
@@ -65,10 +64,8 @@ class StatusHandler(AbstractTestRunHandler):
     match = re.search(_VAR_LOG_MSG_TEST_RUN_REGEX, record['message'])
     if match:
       status = match.group('status').strip()
-      if status == 'starting':
+      if status in ('starting', 'resuming'):
         return TestRunStatus.STARTED
-      if status == 'resuming':
-        return TestRunStatus.RUNNING
       if status in ('FAILED', 'PASSED'):
         return TestRunStatus.COMPLETED
 
@@ -88,75 +85,6 @@ class StatusHandler(AbstractTestRunHandler):
       return TestRunStatus.RUNNING
 
     return TestRunStatus.UNKNOWN
-
-
-class ShutdownStatus(enum.Enum):
-  """The possible shutdown tag name is defined in py/goofy/invocation.py."""
-  PRE_SHUTDOWN = 'pre-shutdown'
-  POST_SHUTDOWN = 'post-shutdown'
-
-
-class ShutdownStatusHandler(StatusHandler):
-  """Specialized handler for parsing shutdown event."""
-
-  def ParseTestlogRecord(self,
-                         record: record_module.TestlogRecord) -> TestRunStatus:
-    """Modify test status according to shutdown state.
-
-    Most of the tests start with `status` STARTING and end with `status` PASS
-    FAIL. However, for shutdown test, the test status looks like:
-      STARTING (pre-shutdown) -> FAIL (pre-shutdown) -> (DUT reboots) ->
-      STARTING (post-shutdown)-> PASS/FAIL (post-shutdown)
-    which contains two starting (STARTING) and two ending (PASS/FAIL) events.
-    Change the second and third test events to RUNNING so that it is easier to
-    understand the test run status.
-    """
-    try:
-      shutdown_status = ShutdownStatus(
-          record['parameters']['tag']['data'][0]['textValue'])
-    except Exception as err:
-      logging.warning('Failed to get shutdown status. (reason: %r).', err)
-      return super().ParseTestlogRecord(record)
-
-    status = record['status']
-    # Change `FAIL (pre-shutdown)` and `STARTING (post-shutdown)` to RUNNING.
-    if ((status == 'FAIL' and shutdown_status == ShutdownStatus.PRE_SHUTDOWN) or
-        (status == 'STARTING' and
-         shutdown_status == ShutdownStatus.POST_SHUTDOWN)):
-      return TestRunStatus.RUNNING
-
-    return super().ParseTestlogRecord(record)
-
-
-class TestTypeHandler(AbstractTestRunHandler):
-  """Handler to get the test type info."""
-
-  def ParseGenericRecord(self, record: record_module.IRecord) -> Optional[str]:
-    return None
-
-  def ParseSystemLogRecord(
-      self, record: record_module.SystemLogRecord) -> Optional[str]:
-    return None
-
-  def ParseTestlogRecord(self,
-                         record: record_module.TestlogRecord) -> Optional[str]:
-    if 'testType' in record:
-      return record['testType']
-    return None
-
-
-def DetermineStatusHandlerType(
-    record: record_module.TestlogRecord) -> Type['StatusHandler']:
-  """Determines the status handler type according to the data in record."""
-  if TestTypeHandler().Parse(record) == 'shutdown':
-    return ShutdownStatusHandler
-  return StatusHandler
-
-
-def ParseStatus(record: record_module.TestlogRecord) -> TestRunStatus:
-  """Determines the status handler type and parses the record."""
-  return DetermineStatusHandlerType(record)().Parse(record)
-
 
 class TestRunNameHandler(AbstractTestRunHandler):
   """Gets the test name and test run id from the record.
