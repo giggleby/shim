@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Callable, Dict, Optional, Tuple
 
-from cros.factory.log_extractor.record import IRecord
+import cros.factory.log_extractor.record as record_module
 from cros.factory.log_extractor import test_run_handler
 from cros.factory.log_extractor.test_run_handler import TestRunStatus
 from cros.factory.utils import file_utils
@@ -24,7 +24,8 @@ class LogExtractorFileReader:
     validate: To validate the fields in a record or not.
   """
 
-  def __init__(self, input_path: str, loader: Callable[[str, bool], IRecord],
+  def __init__(self, input_path: str, loader: Callable[[str, bool],
+                                                       record_module.IRecord],
                validate: bool = True):
     self._input_path = input_path
     self._f = open(self._input_path, 'r', encoding='utf-8')  # pylint: disable=consider-using-with
@@ -35,7 +36,7 @@ class LogExtractorFileReader:
   def __del__(self):
     self._f.close()
 
-  def GetCurRecord(self) -> Optional[IRecord]:
+  def GetCurRecord(self) -> Optional[record_module.IRecord]:
     return self._cur_record
 
   def __iter__(self):
@@ -85,7 +86,8 @@ class LogExtractorStateMachine:
     self._f_map[test_run_id].close()
     self._f_map.pop(test_run_id)
 
-  def WriteRecord(self, test_run_id: Optional[str], record: IRecord):
+  def WriteRecord(self, test_run_id: Optional[str],
+                  record: record_module.IRecord):
     """Write a record to the current running test(s).
 
     Args:
@@ -108,10 +110,10 @@ class LogExtractorStateMachine:
 
 def GetExtractedLogOutputPath(test_name: str, test_run_id: str, root: str,
                               fname: str) -> str:
-  test_run_name = f'{test_name}-{test_run_id}'
-  test_run_dir = os.path.join(root, test_run_name)
-  file_utils.TryMakeDirs(test_run_dir)
-  return os.path.join(test_run_dir, fname)
+  output_path = f'{root}/{test_name}-{test_run_id}/summary/{fname}'
+  file_utils.TryMakeDirs(os.path.dirname(output_path))
+  return output_path
+
 
 def ExtractAndWriteRecordByTestRun(reader, output_dir: str, output_fname: str):
   """Extracts records based on the test run event.
@@ -119,7 +121,7 @@ def ExtractAndWriteRecordByTestRun(reader, output_dir: str, output_fname: str):
   The extraction starts when reading the STARTED event and stops when reading
   the COMPLETED event. Only testlog and /var/log/messages contains such
   events. The extracted records will be written under
-  `{output_dir}/{test_run_name}/{output_fname}`.
+  `{output_dir}/{test_name}-{test_run_id}/summary/{output_fname}`.
 
   Args:
     reader: A file reader which reads new record on every iteration.
@@ -148,6 +150,8 @@ def ExtractAndWriteRecordByTestRun(reader, output_dir: str, output_fname: str):
     if status == TestRunStatus.COMPLETED:
       state_machine.EndTestRun(test_run_id)
 
+
+# pylint: disable=unused-argument
 def GetTestRunStartEndTime(reader) -> Dict[str, Tuple]:
   """Gets the start and end time of all the test run.
 
@@ -158,16 +162,16 @@ def GetTestRunStartEndTime(reader) -> Dict[str, Tuple]:
     A dictionary whose key is the test_run_name and values are start and
     end time.
   """
-  raise NotImplementedError
 
 
+# pylint: disable=unused-argument
 def ExtractAndWriteRecordByTimeStamp(reader, output_dir: str, output_fname: str,
                                      timestamps: Dict[str, Tuple]):
   """Extracts records based on the timestamps.
 
   The extractions start and stop based on the given start and end time. The
   extracted records will be written under
-  `{output_dir}/{test_run_name}/{output_fname}`.
+  `{output_dir}/{test_name}-{test_run_id}/summary/{output_fname}`.
 
   Args:
     reader: A file reader which reads new record on every iteration.
@@ -176,4 +180,25 @@ def ExtractAndWriteRecordByTimeStamp(reader, output_dir: str, output_fname: str,
     timestamps: A dictionary whose key is the test_run_name and values are
       start and end time.
   """
-  raise NotImplementedError
+
+
+def ExtractLogsAndWriteRecord(output_root: str, factory_log: str,
+                              var_log_msg: str, system_logs: Tuple = ()):
+  """Extracts JSON logs by test run."""
+  factory_log_reader = LogExtractorFileReader(
+      factory_log, record_module.TestlogRecord.FromJSON)
+  ExtractAndWriteRecordByTestRun(factory_log_reader, output_root, 'factory')
+
+  var_log_msg_reader = LogExtractorFileReader(
+      var_log_msg, record_module.SystemLogRecord.FromJSON)
+  ExtractAndWriteRecordByTestRun(var_log_msg_reader, output_root, 'message')
+
+  factory_log_reader = LogExtractorFileReader(
+      factory_log, record_module.TestlogRecord.FromJSON)
+  timestamps = GetTestRunStartEndTime(factory_log_reader)
+
+  for system_log in system_logs:
+    system_log_reader = LogExtractorFileReader(
+        system_log, record_module.SystemLogRecord.FromJSON)
+    ExtractAndWriteRecordByTimeStamp(system_log_reader, output_root,
+                                     os.path.basename(system_log), timestamps)
