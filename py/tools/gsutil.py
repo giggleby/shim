@@ -6,6 +6,7 @@
 
 import argparse
 from distutils import version as version_utils
+import enum
 import logging
 import os
 import re
@@ -15,7 +16,6 @@ from cros.factory.utils import cros_board_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
-from cros.factory.utils import type_utils
 
 
 class GSUtilError(Exception):
@@ -28,8 +28,30 @@ class NoSuchKey(GSUtilError):
 
 class GSUtil:
   """A class that wraps gsutil."""
-  CHANNELS = type_utils.Enum(['beta', 'canary', 'dev', 'stable'])
-  IMAGE_TYPES = type_utils.Enum(['factory', 'firmware', 'recovery', 'test'])
+
+  class Channels(str, enum.Enum):
+    beta = 'beta'
+    canary = 'canary'
+    dev = 'dev'
+    stable = 'stable'
+
+    def __str__(self):
+      return self.name
+
+    def __repr__(self):
+      return f"'{self.__str__()}'"
+
+  class ImageTypes(str, enum.Enum):
+    factory = 'factory'
+    firmware = 'firmware'
+    recovery = 'recovery'
+    test = 'test'
+
+    def __str__(self):
+      return self.name
+
+    def __repr__(self):
+      return f"'{self.__str__()}'"
 
   def __init__(self, board):
     self.board = cros_board_utils.BuildBoard(board)
@@ -68,9 +90,9 @@ class GSUtil:
     Returns:
       The generated Google storage URI prefix.
     """
-    if channel not in self.CHANNELS:
-      raise GSUtilError(
-          f'Invalid channel {channel!r}. Valid choices are: {self.CHANNELS!r}')
+    if channel not in self.Channels.__members__:
+      raise GSUtilError(f'Invalid channel {channel!r}. '
+                        f'Valid choices are: {list(self.Channels.__members__)}')
     return ('gs://chromeos-releases/'
             f'{dict(channel=channel, board=self.board.gsutil_name)["channel"]}'
             '-channel/'
@@ -123,19 +145,19 @@ class GSUtil:
     Returns:
       The Google storage URI of the specified binary object.
     """
-    if filetype not in self.IMAGE_TYPES:
+    if filetype not in self.ImageTypes.__members__:
       raise GSUtilError(f'Invalid file type {filetype!r}. Valid choices are: '
-                        f'{self.IMAGE_TYPES!r}')
+                        f'{list(self.ImageTypes.__members__)}')
 
     fileext = {
-        self.IMAGE_TYPES.factory: 'zip',
-        self.IMAGE_TYPES.firmware: 'tar.bz2',
-        self.IMAGE_TYPES.recovery: 'tar.xz',
-        self.IMAGE_TYPES.test: 'tar.xz',
+        self.ImageTypes.factory: 'zip',
+        self.ImageTypes.firmware: 'tar.bz2',
+        self.ImageTypes.recovery: 'tar.xz',
+        self.ImageTypes.test: 'tar.xz',
     }
 
     if key:
-      if filetype == self.IMAGE_TYPES.firmware:
+      if filetype == self.ImageTypes.firmware:
         tag = self.board.short_name
       else:
         tag = r'\w*'
@@ -267,7 +289,7 @@ class GSUtil:
 
 def BuildResourceBaseURL(channel, board, version):
   BASE_URL_FORMAT = 'gs://chromeos-releases/{channel}-channel/{board}/{version}'
-  assert channel in GSUtil.CHANNELS
+  assert channel in GSUtil.Channels.__members__
   assert isinstance(board, str)
   assert isinstance(version, str)
 
@@ -282,8 +304,8 @@ class _DownloadCommand:
     subparser = parser.add_parser('download', description='Download an image.')
     subparser.set_defaults(subcommand=cls)
     subparser.add_argument('--board', type=str, required=True)
-    subparser.add_argument('--channel', choices=GSUtil.CHANNELS,
-                           default=GSUtil.CHANNELS.dev)
+    subparser.add_argument('--channel', choices=list(
+        GSUtil.Channels.__members__), default=GSUtil.Channels.dev)
     subparser.add_argument('--version', type=str, help='e.g. "1234.56.78"')
     subparser.add_argument('--branch', type=str, help='e.g. "1234.56"')
     subparser.add_argument('--key', type=str, help='e.g. "premp", "mp-v2"')
@@ -295,7 +317,7 @@ class _DownloadCommand:
     subparser.add_argument('--dry-run', action='store_true',
                            help='Print the URI to be downloaded and exit.')
 
-    subparser.add_argument('type', choices=GSUtil.IMAGE_TYPES)
+    subparser.add_argument('type', choices=list(GSUtil.ImageTypes.__members__))
 
   @classmethod
   def Run(cls, args):

@@ -82,7 +82,7 @@ class BundleImporter:
             update_payloads[type_name])
       payloads.update(update_payloads)
     payload_json_name = self._daemon.env.AddConfigFromBlob(
-        json.dumps(payloads), resource.ConfigTypeNames.payload_config)
+        json.dumps(payloads), resource.ConfigTypes.payload_config)
 
     config['bundles'].insert(
         0, {
@@ -93,13 +93,14 @@ class BundleImporter:
         })
     config['active_bundle_id'] = bundle_id
     deploy.ConfigDeployer(self._daemon).Deploy(
-        self._daemon.env.AddConfigFromBlob(
-            config.Dump(), resource.ConfigTypeNames.umpire_config))
+        self._daemon.env.AddConfigFromBlob(config.Dump(),
+                                           resource.ConfigTypes.umpire_config))
 
   def _GetImportList(self, bundle_path):
     ret = []
-    for type_name in resource.PayloadTypeNames:
-      target = resource.GetPayloadType(type_name).import_pattern
+    for config_type in resource.PayloadTypes:
+      type_name = config_type.name
+      target = config_type.value.import_pattern
       candidates = glob.glob(os.path.join(bundle_path, target))
       if len(candidates) > 1:
         self._duplicate_types.append(type_name)

@@ -150,7 +150,7 @@ class CommandTest(unittest.TestCase):
     file_to_add = os.path.join(self.env.base_dir, 'hwid')
     file_utils.WriteFile(file_to_add, f'checksum: {checksum_for_empty}')
 
-    d = self.Call('AddPayload', file_to_add, resource.PayloadTypeNames.hwid)
+    d = self.Call('AddPayload', file_to_add, resource.PayloadTypes.hwid.name)
     d.addCallback(lambda result: self.assertEqual(checksum_for_empty,
                                                   result['hwid']['version']))
     return self.AssertSuccess(d)
@@ -160,7 +160,7 @@ class CommandTest(unittest.TestCase):
 
     return self.AssertFailure(
         self.Call('AddConfig', '/path/to/nowhere',
-                  resource.ConfigTypeNames.umpire_config),
+                  resource.ConfigTypes.umpire_config.name),
         'FileNotFoundError:.*/path/to/nowhere')
 
   def testValidateConfig(self):

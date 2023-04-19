@@ -478,7 +478,7 @@ class Project(django.db.models.Model):
 
     new_config_path = umpire_server.AddConfigFromBlob(
         json_utils.DumpStr(config, pretty=True),
-        umpire_resource.ConfigTypeNames.umpire_config)
+        umpire_resource.ConfigTypes.umpire_config.name)
 
     logger.info('Deploying Umpire config')
     try:
@@ -495,8 +495,8 @@ class Project(django.db.models.Model):
   def MapNetbootResourceToTFTP(self, bundle_name):
     umpire_server = GetUmpireServer(self.name)
     netboot_resources = [
-        (umpire_resource.PayloadTypeNames.netboot_kernel, 'vmlinuz'),
-        (umpire_resource.PayloadTypeNames.netboot_cmdline, 'cmdline')
+        (umpire_resource.PayloadTypes.netboot_kernel.name, 'vmlinuz'),
+        (umpire_resource.PayloadTypes.netboot_cmdline.name, 'cmdline')
     ]
     for (payload_type, file_name) in netboot_resources:
       tftp_path = os.path.join('chrome-bot', self.name, file_name)
@@ -751,7 +751,7 @@ class Bundle:
 
     self.resources = {
         type_name: Resource(type_name, 'N/A', '', '')
-        for type_name in umpire_resource.PayloadTypeNames
+        for type_name in umpire_resource.PayloadTypes.__members__
     }
     for type_name in payloads:
       if type_name == 'netboot_firmware':
@@ -953,14 +953,14 @@ class Bundle:
     return Bundle.ListAll(project_name)
 
   @classmethod
-  def _UpdateResource(cls, project_name, bundle_name, type_name,
+  def _UpdateResource(cls, project_name, bundle_name, type_name: str,
                       resource_file_id):
     """Update resource in a bundle.
 
     Args:
       project_name: name of the project.
       bundle_name: the bundle to update.
-      type_name: An element of umpire_resource.PayloadTypeNames.
+      type_name: An element of umpire_resource.PayloadTypes.
       resource_file_id: id of the resource file (id of TemporaryUploadedFile).
     """
     umpire_server = GetUmpireServer(project_name)

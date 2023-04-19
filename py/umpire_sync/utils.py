@@ -2,10 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from cros.factory.utils import json_utils
-from cros.factory.utils import type_utils
+import enum
 
-STATUS = type_utils.Enum(['Waiting', 'Updating', 'Success', 'Failure'])
+from cros.factory.utils import json_utils
+
+
+class Status(str, enum.Enum):
+  Waiting = 'Waiting'
+  Updating = 'Updating'
+  Success = 'Success'
+  Failure = 'Failure'
+
+  def __str__(self):
+    return self.name
 
 
 class StatusUpdater:

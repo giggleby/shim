@@ -13,6 +13,7 @@ from unittest import mock
 
 from cros.factory.tools import gsutil
 
+
 # pylint: disable=line-too-long
 FAKE_GS_LS_OUTPUT = (
     """gs://chromeos-releases/canary-channel/daisy-spring/4262.1.0/
@@ -136,35 +137,35 @@ class GsutilUnittest(unittest.TestCase):
 
     self.assertEqual(
         gs_dir + 'ChromeOS-factory-R29-4262.140.0-daisy-spring.zip',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.factory))
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.factory))
     mock_ls.assert_called_with(gs_dir)
 
     self.assertEqual(
         gs_dir + 'ChromeOS-firmware-R29-4262.140.0-daisy-spring.tar.bz2',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.firmware))
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.firmware))
 
     self.assertEqual(
         gs_dir + 'ChromeOS-recovery-R29-4262.140.0-daisy-spring.tar.xz',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.recovery))
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.recovery))
     mock_ls.assert_called_with(gs_dir)
 
     self.assertEqual(
         gs_dir + 'chromeos_4262.140.0_daisy-spring_' +
         'factory_canary-channel_mp.bin',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.factory,
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.factory,
                                  key='mp'))
     mock_ls.assert_called_with(gs_dir)
 
     self.assertEqual(
         gs_dir + 'chromeos_4262.140.0_daisy-spring_' +
         'recovery_canary-channel_mp.bin',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.recovery,
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.recovery,
                                  key='mp'))
     mock_ls.assert_called_with(gs_dir)
 
     self.assertEqual(
         gs_dir + 'ChromeOS-test-R29-4262.140.0-daisy-spring.tar.xz',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.test))
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.test))
     mock_ls.assert_called_with(gs_dir)
 
   @mock.patch.object(gsutil.GSUtil, 'LS',
@@ -175,7 +176,7 @@ class GsutilUnittest(unittest.TestCase):
     self.assertEqual(
         gs_dir + 'chromeos_3824.120.0_daisy-spring_' +
         'firmware-spring_canary-channel_mp.bin',
-        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.IMAGE_TYPES.firmware,
+        self.gsutil.GetBinaryURI(gs_dir, self.gsutil.ImageTypes.firmware,
                                  key='mp'))
     mock_ls.assert_called_with(gs_dir)
 

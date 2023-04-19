@@ -76,7 +76,7 @@ class DuplicateUpdater:
       payloads = self._daemon.env.GetPayloadsDict(bundle['payloads'])
       payloads.update(update_payloads)
       payload_json_name = self._daemon.env.AddConfigFromBlob(
-          json.dumps(payloads), resource.ConfigTypeNames.payload_config)
+          json.dumps(payloads), resource.ConfigTypes.payload_config)
       config['bundles'].insert(
           0, {
               'id': new_bundle_id,
@@ -87,4 +87,4 @@ class DuplicateUpdater:
       config['active_bundle_id'] = new_bundle_id
       deploy.ConfigDeployer(self._daemon).Deploy(
           self._daemon.env.AddConfigFromBlob(
-              config.Dump(), resource.ConfigTypeNames.umpire_config))
+              config.Dump(), resource.ConfigTypes.umpire_config))

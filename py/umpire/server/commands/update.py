@@ -43,7 +43,7 @@ class ResourceUpdater:
   def _CheckPayloadsList(self, payloads_to_update):
     """Check the correctness of payloads list."""
     for type_name, file_path in payloads_to_update:
-      if type_name not in resource.PayloadTypeNames:
+      if type_name not in resource.PayloadTypes.__members__:
         raise common.UmpireError(f'Unsupported payload type: {type_name}')
       if not os.path.isfile(file_path):
         raise common.UmpireError(f'File not found: {file_path}')
@@ -51,7 +51,7 @@ class ResourceUpdater:
   def _CheckPayloadsConfig(self, payloads_config_to_update):
     """Check the correctness of payloads config."""
     for type_name in payloads_config_to_update:
-      if type_name not in resource.PayloadTypeNames:
+      if type_name not in resource.PayloadTypes.__members__:
         raise common.UmpireError(f'Unsupported payload type: {type_name}')
 
   def _MakePayloads(self, payloads_to_update):
@@ -64,12 +64,12 @@ class ResourceUpdater:
     payloads = self._daemon.env.GetPayloadsDict(bundle['payloads'])
     payloads.update(payloads_to_update)
     bundle['payloads'] = self._daemon.env.AddConfigFromBlob(
-        json.dumps(payloads), resource.ConfigTypeNames.payload_config)
+        json.dumps(payloads), resource.ConfigTypes.payload_config)
 
   def _Deploy(self, config):
     deploy.ConfigDeployer(self._daemon).Deploy(
-        self._daemon.env.AddConfigFromBlob(
-            config.Dump(), resource.ConfigTypeNames.umpire_config))
+        self._daemon.env.AddConfigFromBlob(config.Dump(),
+                                           resource.ConfigTypes.umpire_config))
 
   def Update(self, payloads_to_update, source_id=None, dest_id=None):
     """Updates payload(s) in a bundle.

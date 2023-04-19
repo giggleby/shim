@@ -3,67 +3,45 @@
 # found in the LICENSE file.
 
 import collections
+import enum
+from typing import Union
 
 from cros.factory.utils import file_utils
-from cros.factory.utils import type_utils
-
-
-def _InitializeTypes(type_list):
-  types = {}
-  type_names = []
-  for t in type_list:
-    types[t.type_name] = t
-    type_names.append(t.type_name)
-  return type_utils.Obj(**types), type_utils.Enum(type_names)
 
 
 ConfigType = collections.namedtuple('ConfigType',
                                     ['type_name', 'fn_prefix', 'fn_suffix'])
 
-ConfigTypes, ConfigTypeNames = _InitializeTypes([
-    ConfigType('umpire_config', 'umpire', 'json'),
-    ConfigType('payload_config', 'payload', 'json'),
-    ConfigType('multicast_config', 'multicast', 'json')])
+
+class ConfigTypes(enum.Enum):
+  umpire_config = ConfigType('umpire_config', 'umpire', 'json')
+  payload_config = ConfigType('payload_config', 'payload', 'json')
+  multicast_config = ConfigType('multicast_config', 'multicast', 'json')
+
+  def __str__(self):
+    return self.name
+
 
 PayloadType = collections.namedtuple('PayloadType',
                                      ['type_name', 'import_pattern'])
 
-PayloadTypes, PayloadTypeNames = _InitializeTypes([
-    PayloadType('complete', 'complete/*'),
-    PayloadType('firmware', 'firmware/*'),
-    PayloadType('hwid', 'hwid/*'),
-    PayloadType('netboot_cmdline', 'netboot/tftp/chrome-bot/*/cmdline*'),
-    PayloadType('netboot_firmware', 'netboot/image*.net.bin'),
-    PayloadType('netboot_kernel', 'netboot/tftp/chrome-bot/*/vmlinu*'),
-    PayloadType('project_config', 'project_config/*'),
-    PayloadType('release_image', 'release_image/*'),
-    PayloadType('test_image', 'test_image/*'),
-    PayloadType('toolkit', 'toolkit/*')
-])
 
+class PayloadTypes(enum.Enum):
+  complete = PayloadType('complete', 'complete/*')
+  firmware = PayloadType('firmware', 'firmware/*')
+  hwid = PayloadType('hwid', 'hwid/*')
+  netboot_cmdline = PayloadType('netboot_cmdline',
+                                'netboot/tftp/chrome-bot/*/cmdline*')
+  netboot_firmware = PayloadType('netboot_firmware', 'netboot/image*.net.bin')
+  netboot_kernel = PayloadType('netboot_kernel',
+                               'netboot/tftp/chrome-bot/*/vmlinu*')
+  project_config = PayloadType('project_config', 'project_config/*')
+  release_image = PayloadType('release_image', 'release_image/*')
+  test_image = PayloadType('test_image', 'test_image/*')
+  toolkit = PayloadType('toolkit', 'toolkit/*')
 
-def GetConfigType(type_name):
-  """Gets the ConfigType object of a type_name.
-
-  Args:
-    type_name: An element of ConfigTypeNames.
-
-  Returns:
-    Corresponding ConfigType.
-  """
-  return getattr(ConfigTypes, type_name)
-
-
-def GetPayloadType(type_name):
-  """Gets the PayloadType object of a type_name.
-
-  Args:
-    type_name: An element of PayloadTypeNames.
-
-  Returns:
-    Corresponding PayloadType.
-  """
-  return getattr(PayloadTypes, type_name)
+  def __str__(self):
+    return self.name
 
 
 def GetResourceHashFromFile(file_path):
@@ -78,17 +56,19 @@ def GetResourceHashFromFile(file_path):
   return file_utils.MD5InHex(file_path)
 
 
-def BuildConfigFileName(type_name, file_path):
+def BuildConfigFileName(config_type: Union[str, ConfigTypes], file_path):
   """Builds resource name for a config file.
 
   Args:
-    type_name: An element of ConfigTypeNames.
+    config_type: An element of ConfigTypes.
     file_path: path to the config file.
 
   Returns:
     Resource name.
   """
-  cfg_type = GetConfigType(type_name)
+  if not isinstance(config_type, ConfigTypes):
+    config_type = ConfigTypes[config_type]
+  cfg_type = config_type.value
   return '.'.join([cfg_type.fn_prefix,
                    GetResourceHashFromFile(file_path),
                    cfg_type.fn_suffix])
@@ -98,8 +78,8 @@ def IsConfigFileName(basename):
   """Check if basename is a config file."""
   s = basename.split('.')
   if len(s) == 3:
-    for type_name in ConfigTypeNames:
-      type_info = getattr(ConfigTypes, type_name)
+    for config_type in ConfigTypes:
+      type_info = config_type.value
       if s[0] == type_info.fn_prefix and s[2] == type_info.fn_suffix:
         return True
   return False

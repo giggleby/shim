@@ -1031,7 +1031,7 @@ class FinalizeBundle:
     version_str = '.'.join(netboot_firmware_source_version)
     resource_name = 'unsigned_firmware_archive'
     url_prefix = gsutil.BuildResourceBaseURL(
-        gsutil.GSUtil.CHANNELS.dev, self.build_board.gsutil_name, version_str)
+        gsutil.GSUtil.Channels.dev, self.build_board.gsutil_name, version_str)
     urls = [f'{url_prefix}/ChromeOS-firmware-*.tar.bz2']
 
     netboot_firmware_set = self.GetNetbootFirmwareSet()

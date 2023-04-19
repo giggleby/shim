@@ -2,16 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import logging
 import threading
 
 from . import process_utils
 from . import sync_utils
-from . import type_utils
+
 
 START_TEXT = 'start/running'
 STOP_TEXT = 'stop/waiting'
-Status = type_utils.Enum(['START', 'STOP', 'UNKNOWN'])
+
+
+class Status(str, enum.Enum):
+  START = 'START'
+  STOP = 'STOP'
+  UNKNOWN = 'UNKNOWN'
+
+  def __str__(self):
+    return self.name
 
 
 def ParseServiceStatus(status_output):

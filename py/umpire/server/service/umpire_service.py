@@ -13,6 +13,7 @@ for all service module.
 # dynamically at run time. To suppress warnings, pylint: disable=no-member
 
 import copy
+import enum
 import importlib
 import inspect
 import json
@@ -63,9 +64,17 @@ _INSTANCE_MAP = {}
 
 
 # Process and service state
-State = type_utils.Enum([
-    'INIT', 'STARTING', 'STARTED', 'STOPPING', 'STOPPED', 'ERROR', 'DESTRUCTING'
-])
+class State(str, enum.Enum):
+  INIT = 'INIT'
+  STARTING = 'STARTING'
+  STARTED = 'STARTED'
+  STOPPING = 'STOPPING'
+  STOPPED = 'STOPPED'
+  ERROR = 'ERROR'
+  DESTRUCTING = 'DESTRUCTING'
+
+  def __str__(self):
+    return self.name
 
 
 class ServiceProcess(protocol.ProcessProtocol):

@@ -55,7 +55,7 @@ class SecondaryUmpire:
     self.status = utils.StatusUpdater(status_path)
 
     for url in urls:
-      self.status.SetStatus(url, utils.STATUS.Waiting)
+      self.status.SetStatus(url, utils.Status.Waiting)
       host, port = url.split('//')[1].split(':')[0], int(url.split(':')[2])
       rpc_url = f'http://{host}:{int(port + RPC_PORT_OFFSET)}'
       self.proxies.append(self._MakeTimeoutProxy(rpc_url, UPDATE_TIMEOUT))
@@ -72,21 +72,21 @@ class SecondaryUmpire:
       try:
         # Check the secondary xmlrpc server is alive in timeout seconds
         check_alive_proxy.GetVersion()
-        self.status.SetStatus(url, utils.STATUS.Updating)
+        self.status.SetStatus(url, utils.Status.Updating)
         sync_status = proxy.CheckAndUpdate(primary_payload, primary_url)
         if sync_status:
-          self.status.SetStatus(url, utils.STATUS.Success,
+          self.status.SetStatus(url, utils.Status.Success,
                                 time.strftime('%Y-%m-%d %H:%M:%S'))
           logging.info('Update Successfully.')
         else:
-          self.status.SetStatus(url, utils.STATUS.Success)
+          self.status.SetStatus(url, utils.Status.Success)
       except Exception as e:
-        self.status.SetStatus(url, utils.STATUS.Failure)
+        self.status.SetStatus(url, utils.Status.Failure)
         logging.error('Failed to update the secondary umpire[%s]: %s', url, e)
 
   def WaitToSynchronize(self):
     for url in self.urls:
-      self.status.SetStatus(url, utils.STATUS.Waiting)
+      self.status.SetStatus(url, utils.Status.Waiting)
 
 
 def _ParseArguments():

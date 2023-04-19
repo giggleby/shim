@@ -53,7 +53,7 @@ class UmpireEnvTest(unittest.TestCase):
 
   def testGetResourcePath(self):
     resource_path = self.env.AddConfigFromBlob(
-        'hello', resource.ConfigTypeNames.umpire_config)
+        'hello', resource.ConfigTypes.umpire_config)
     resource_name = os.path.basename(resource_path)
 
     self.assertTrue(resource_path, self.env.GetResourcePath(resource_name))

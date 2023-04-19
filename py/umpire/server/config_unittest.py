@@ -16,6 +16,7 @@ from cros.factory.umpire.server import umpire_env
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 
+
 TESTDATA_DIR = os.path.join(os.path.dirname(__file__), 'testdata')
 MINIMAL_CONFIG = os.path.join(TESTDATA_DIR, 'minimal_umpire.json')
 EMPTY_SERVICES_CONFIG = os.path.join(TESTDATA_DIR,
@@ -114,11 +115,11 @@ class ValidateResourcesTest(unittest.TestCase):
 
   def setUp(self):
     self.env = umpire_env.UmpireEnvForTest()
-    self.conf = config.UmpireConfig(
-        file_path=RESOURCE_CHECK_CONFIG, validate=False)
-    self.env.AddConfigFromBlob('{}', resource.ConfigTypeNames.payload_config)
+    self.conf = config.UmpireConfig(file_path=RESOURCE_CHECK_CONFIG,
+                                    validate=False)
+    self.env.AddConfigFromBlob('{}', resource.ConfigTypes.payload_config)
     self.env.AddConfigFromBlob('{"hwid":{"file":"hwid.404.gz"}}',
-                               resource.ConfigTypeNames.payload_config)
+                               resource.ConfigTypes.payload_config)
 
   def tearDown(self):
     self.env.Close()
