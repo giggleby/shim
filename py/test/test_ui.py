@@ -338,7 +338,7 @@ class UI:
     if css:
       self.AppendCSS(css)
 
-  def SetHTML(self, html, id, append=False, autoscroll=False):  # pylint: disable=redefined-builtin
+  def SetHTML(self, html, id, append=False, autoscroll=False):
     """Sets a HTML snippet to the UI in the test pane.
 
     Note that <script> tags are not allowed in SetHTML() and
@@ -354,6 +354,7 @@ class UI:
     """
     if id:
       id = str(id)
+    # pylint: disable=redefined-builtin
     self._event_loop.PostNewEvent(test_event.Event.Type.SET_HTML,
                                   html=EnsureI18n(html), append=append, id=id,
                                   autoscroll=autoscroll)
@@ -588,14 +589,14 @@ class UI:
     self._event_loop.PostNewEvent(
         test_event.Event.Type.IMPORT_HTML, url=url)
 
-  def WaitKeysOnce(self, keys, timeout=float('inf')):
+  def WaitKeysOnce(self, keys, timeout=None):
     """Wait for one of the keys to be pressed.
 
     Note that this must NOT be called in the UI thread.
 
     Args:
       keys: A key or an array of keys to wait for.
-      timeout: Timeout for waiting the key, float('inf') for no timeout.
+      timeout: Timeout for waiting the key, None for no timeout.
     Returns:
       The key that is pressed, or None if no key is pressed before timeout.
     """

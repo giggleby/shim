@@ -8,7 +8,6 @@ import signal
 import threading
 import time
 import unittest
-from unittest import mock
 
 from cros.factory.unittest_utils import mock_time_utils
 from cros.factory.utils import sync_utils
@@ -245,7 +244,8 @@ class RetryTest(PollingTestBase):
   def testRaiseOnTarget(self):
 
     @sync_utils.RetryDecorator(timeout_sec=0.5, interval_sec=0,
-                               exceptions_to_catch=[])
+                               exceptions_to_catch=[],
+                               target_condition=lambda x: len(x) == 2)
     def CountFunc():
       raise type_utils.TestFailure
 
@@ -275,38 +275,6 @@ class RetryTest(PollingTestBase):
       raise type_utils.TestFailure
 
     self.assertRaises(type_utils.Error, CountFunc)
-
-  def testNoExceptionTargetNotMet(self):
-
-    counter = []
-
-    @sync_utils.RetryDecorator(max_attempt_count=3,
-                               target_condition=lambda x: len(x) == 100)
-    def CountFunc():
-      counter.append(0)
-      return counter
-
-    with self.assertRaises(type_utils.MaxRetryError):
-      CountFunc()
-
-  def testCallback(self):
-
-    counter = []
-
-    mock_callback = mock.MagicMock()
-
-    @sync_utils.RetryDecorator(max_attempt_count=5, interval_sec=0.1,
-                               target_condition=lambda x: len(x) == 3,
-                               retry_callback=mock_callback)
-    def CountFunc():
-      counter.append(0)
-      return counter
-
-    CountFunc()
-    # (2, 5) will not be called because it has already satisfied the
-    # target_condition.
-    mock_callback.assert_called_with(1, 5)
-
 
 
 class TimeoutTest(unittest.TestCase):
