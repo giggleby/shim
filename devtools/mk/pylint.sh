@@ -7,7 +7,7 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 . "${SCRIPT_DIR}/common.sh" || exit 1
 
 : "${PYTHONPATH:=py_pkg:py:setup}"
-: "${PYLINT_MSG_TEMPLATE:="{path}:{line}: {symbol}: {msg}"}"
+: "${PYLINT_MSG_TEMPLATE:="[{path}]:{line}: {symbol}: {msg}"}"
 : "${PYLINT_RC_FILE:="${SCRIPT_DIR}/pylint.rc"}"
 : "${PYLINT_OPTIONS:=}"
 : "${PYLINT_VENV:="${SCRIPT_DIR}/pylint.venv"}"
@@ -26,11 +26,13 @@ do_lint() {
     "$@" 2>&1 | tee "${out}" || ret="$?"
 
   if [ "${ret}" != "0" ]; then
+    local failed_files
+    failed_files="$(
+      grep '^\[.*\]' -o "${out}" | uniq | tr '\n' ' ' | \
+      sed -e 's/\[//g;s/\]//g;s/ $//')"
     echo
     echo "To re-lint failed files, run:"
-    echo " make lint LINT_ALLOWLIST=\"$(
-      grep '^\*' "${out}" | cut -c22- | tr . / | \
-      sed 's/$/.py/' | tr '\n' ' ' | sed -e 's/ $//')\""
+    echo " make lint LINT_ALLOWLIST=\"${failed_files}\""
     echo
     die "Failure in pylint."
   fi
