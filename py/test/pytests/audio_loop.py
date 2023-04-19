@@ -167,6 +167,7 @@ for your sound card. Otherwise the test will use audio.json instead of ucm::
     }
 """
 
+import collections
 import io
 import logging
 import os
@@ -177,7 +178,6 @@ from typing import Optional
 from cros.factory.cli.image_tool import LSBFile
 from cros.factory.device.audio import base
 from cros.factory.device import device_utils
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.test.env import paths
 from cros.factory.test import session
 from cros.factory.test import test_case
@@ -299,6 +299,29 @@ _ARG_RANGE_THRESHOLD_SCHEMA_DICT = {
     'maxItems': 2
 }
 
+_FREQUENCY_STRATEGY = collections.OrderedDict({
+    'serial': 'serial',
+    'low_hi_uniform': 'serial',
+    'random': 'random',
+    'pure_random': 'random',
+    'step': 'step',
+    'low_hi_uni_rand_variation': 'step',
+})
+
+
+def GetOneOfMessages(input_list):
+  if len(input_list) == 1:
+    return f'One of ``{input_list[0]}``'
+  return 'One of' + ''.join(
+      f' ``{x}``,' for x in input_list[:-1]) + f' or ``{input_list[-1]}``'
+
+
+def GetDescriptiveFrequencyStrategyMessages():
+  return ''.join(f'        - ``{name}`` is an alias of ``{value}``\n'
+                 for name, value in _FREQUENCY_STRATEGY.items()
+                 if name != value)
+
+
 _ARG_TESTS_TO_CONDUCT_SCHEMA = JSONSchemaDict(
     'tests_to_conduct schema', {
         'type': 'array',
@@ -340,6 +363,9 @@ _ARG_TESTS_TO_CONDUCT_SCHEMA = JSONSchemaDict(
                     },
                     'max_frequency': {
                         'type': 'number'
+                    },
+                    'frequency_sample_strategy': {
+                        'enum': list(_FREQUENCY_STRATEGY)
                     },
                     'rms_threshold': {
                         'type': 'number'
@@ -475,6 +501,10 @@ class AudioLoopTest(test_case.TestCase):
           '  - **player_format**: The sample format for output device.\n'
           '  - **min_frequency**: The minimum frequency set to audiofuntest.\n'
           '  - **max_frequency**: The maximum frequency set to audiofuntest.\n'
+          '  - **frequency_sample_strategy**: '
+          f'{GetOneOfMessages(list(_FREQUENCY_STRATEGY))}. See '
+          '``audiofuntest -h`` for explanations.\n'
+          f'{GetDescriptiveFrequencyStrategyMessages()}'
           '\n'
           'If type is **sinewav**, the dict can optionally contain:\n'
           '  - **duration**: The test duration, in seconds.\n'
@@ -858,6 +888,19 @@ class AudioLoopTest(test_case.TestCase):
       recorded_audio_path = None
       local_recorded_audio_path = None
       logging.warning("audiofuntest doesn't support '--recorded-file-path'")
+
+    frequency_sample_strategy = self._current_test_args.get(
+        'frequency_sample_strategy')
+    if frequency_sample_strategy:
+      match = re.search(r'--frequency-sample-strategy\b', help_stderr)
+      if match:
+        audiofun_cmd.extend([
+            '--frequency-sample-strategy',
+            _FREQUENCY_STRATEGY[frequency_sample_strategy]
+        ])
+      else:
+        self.FailTask(
+            "audiofuntest doesn't support '--frequency-sample-strategy'")
 
     process = self._dut.Popen(audiofun_cmd, stdout=process_utils.PIPE,
                               stderr=process_utils.PIPE, log=True)
