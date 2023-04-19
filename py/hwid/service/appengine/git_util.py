@@ -494,6 +494,7 @@ def CreateCL(
     verified: int = 0,
     auto_submit: bool = False,
     rubber_stamper: bool = False,
+    hashtags: Optional[Sequence[str]] = None,
 ):
   """Creates a CL from adding files in specified location.
 
@@ -515,6 +516,7 @@ def CreateCL(
     verified: Vote Verified. The score should be {-1, 0, 1}.
     auto_submit: True if Auto-Submit vote is set.
     rubber_stamper: True if Rubber Stamper is set as a reviewer.
+    hashtags: A list of string of hashtags set for CL.
   Returns:
     A tuple of (change id, cl number).
     cl number will be None if fail to parse git-push output.
@@ -552,6 +554,8 @@ def CreateCL(
     options.append(f'l={_AUTO_SUBMIT}+1')
   if topic:
     options.append(f'topic={topic}')
+  if hashtags:
+    options.extend(f't={hashtag}' for hashtag in hashtags)
   target_branch = f'refs/for/refs/heads/{branch}'
   if options:
     target_branch += '%' + ','.join(options)

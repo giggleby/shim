@@ -1345,7 +1345,8 @@ class SelfServiceHelper:
       warning_commit_msg_list = []
       has_warning = any(
           approval_infos[i].warnings for i in change_unit_identities)
-      if has_warning:
+      verified = -1 if has_warning and not bot_commit else 0
+      if verified == -1:
         warning_commit_msg_list.append('-' * 72)
         warning_commit_msg_list.append(
             'This CL is marked as Verified-1 because some warnings are forced\n'
@@ -1373,7 +1374,6 @@ class SelfServiceHelper:
           new_hwid_db_editable_section_external)
       new_hwid_db_contents_internal = action.PatchHeader(
           new_hwid_db_editable_section_internal)
-      verified = -1 if has_warning and not bot_commit else 0
 
       reviewers = set()
       ccs = set()

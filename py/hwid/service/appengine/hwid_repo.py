@@ -27,6 +27,7 @@ INTERNAL_REPO_REVIEW_URL = 'https://chrome-internal-review.googlesource.com'
 INTERNAL_REPO_URL = 'https://chrome-internal.googlesource.com'
 _CHROMEOS_HWID_PROJECT = 'chromeos/chromeos-hwid'
 _PROJECTS_YAML_PATH = 'projects.yaml'
+_UNVERIFIED_HASHTAG = 'cros-hwid-unverified-change'
 
 
 def _ParseMetadata(raw_metadata) -> Mapping[str, HWIDDBMetadata]:
@@ -296,12 +297,13 @@ class HWIDRepo(HWIDRepoView):
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
       author = f'chromeoshwid <{author_email}>'
+      hashtags = [_UNVERIFIED_HASHTAG] if verified == -1 else None
       change_id, cl_number = git_util.CreateCL(
           git_url=self._repo_url, auth_cookie=git_util.GetGerritAuthCookie(),
           branch=self._repo_branch, new_files=new_files, author=author,
           committer=author, commit_msg=commit_msg, reviewers=reviewers,
           cc=cc_list, bot_commit=bot_commit, commit_queue=commit_queue,
-          repo=self._repo, verified=verified)
+          repo=self._repo, verified=verified, hashtags=hashtags)
       if cl_number is None:
         logging.warning(
             'Failed to parse CL number from change_id=%s. Get CL number from '
