@@ -87,7 +87,8 @@ class Cr50APROVerficationTest(test_case.TestCase):
     self.goofy = state.GetInstance()
 
     self.AddTask(self.PreCheck)
-    self.AddTask(self.VerifyAPRO, reboot=True)
+    self.AddTask(self.VerifyAPRO, reboot=True,
+                 reboot_timeout_secs=self.args.timeout_secs)
     self.AddTask(self.CheckAPROResult)
 
   def HandleError(self, status):
@@ -125,18 +126,15 @@ class Cr50APROVerficationTest(test_case.TestCase):
       self.ui.SetState(
           _('Please press POWER and (REFRESH*3) in {seconds} seconds.',
             seconds=self.args.timeout_secs))
-      self.Sleep(self.args.timeout_secs)
-      logging.info('Reboot not triggered.')
-      raise OperationError
-
-    try:
-      self.dut.CheckOutput(['gsctool', '-ao'], log=True)
-      self.gooftool.Cr50VerifyAPRO()
-    finally:
-      # If the command works properly, the device will reboot and won't
-      # execute this line.
-      self.FailTask('CR50 version should >= 0.5.111, '
-                    'and check if DUT is in CR50 factory mode.')
+    else:
+      try:
+        self.dut.CheckOutput(['gsctool', '-ao'], log=True)
+        self.gooftool.Cr50VerifyAPRO()
+      finally:
+        # If the command works properly, the device will reboot and won't
+        # execute this line.
+        self.FailTask('CR50 version should >= 0.5.111, '
+                      'and check if DUT is in CR50 factory mode.')
 
   def CheckAPROResult(self):
     status = self.gooftool.GSCGetAPROResult()

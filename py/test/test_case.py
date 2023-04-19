@@ -26,7 +26,8 @@ class TaskEndException(Exception):
   """The exception to end a task."""
 
 
-_Task = collections.namedtuple('Task', ['name', 'run', 'reboot'])
+_Task = collections.namedtuple('Task',
+                               ['name', 'run', 'reboot', 'reboot_timeout_secs'])
 _NEXT_TASK_STAGE_KEY = 'factory.test_case.next_task_stage'
 
 
@@ -105,7 +106,8 @@ class TestCase(unittest.TestCase):
     """
     self.__WaitTaskEnd(secs)
 
-  def AddTask(self, task, *task_args, reboot: bool = False, **task_kwargs):
+  def AddTask(self, task, *task_args, reboot: bool = False,
+              reboot_timeout_secs: int = 5, **task_kwargs):
     """Add a task to the test.
 
     Extra arguments would be passed to the task function.
@@ -118,6 +120,8 @@ class TestCase(unittest.TestCase):
     Args:
       task: A task function.
       reboot: True if the task include reboot process.
+      reboot_timeout_secs: Buffer time of reboot. The test will fail
+                           if reboot is not triggered within it.
       task_args, task_kwargs: Arguments for the task function.
 
     Example:
@@ -136,7 +140,9 @@ class TestCase(unittest.TestCase):
     name = task.__name__
     run = lambda: task(*task_args, **task_kwargs)
 
-    self.__tasks.append(_Task(name=name, run=run, reboot=reboot))
+    self.__tasks.append(
+        _Task(name=name, run=run, reboot=reboot,
+              reboot_timeout_secs=reboot_timeout_secs))
 
   def GetNextTaskStage(self) -> None:
     return device_data.GetDeviceData(_NEXT_TASK_STAGE_KEY, default=0)
@@ -250,12 +256,11 @@ class TestCase(unittest.TestCase):
             # Adds buffer time for avoiding run next task before
             # triggering reboot.
             if task.reboot:
-              buffer_time = 5
-              time.sleep(buffer_time)
-              # Fails the pytest if reboot not triggered within buffer_time,
-              # which avoid race condition.
-              self.FailTask('Reboot not triggered '
-                            f'within buffer time ({buffer_time} seconds), '
+              time.sleep(task.reboot_timeout_secs)
+              # Fails the pytest if reboot not triggered
+              # within reboot_timeout_secs ,which avoid race condition.
+              self.FailTask('Reboot not triggered within buffer time '
+                            f'({task.reboot_timeout_secs} seconds), '
                             'next task may be executed in advance.')
           finally:
             self.__task_end_event.set()

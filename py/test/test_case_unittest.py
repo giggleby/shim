@@ -275,25 +275,36 @@ class TestCaseTest(unittest.TestCase):
     self.assertEqual([], next_task_stages)
     self.assertEqual(self._test.GetNextTaskStage(), 0)
 
-  def testAddTasks_RebootNotTriggeredWithinBufferTime(self):
+  @mock.patch('time.sleep')
+  def testAddTasks_RebootNotTriggeredWithinBufferTime(self, time_sleep):
     executed_tasks = []
-    next_task_stages = []
 
     # Task without reboot process
     def _Task(name):
       executed_tasks.append((name))
-      next_task_stages.append(self._test.GetNextTaskStage())
 
     self._test.AddTask(lambda: _Task('task1'), reboot=True)
     self._test.AddTask(lambda: _Task('task2'))
 
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
     self.AssertRunResult('Reboot not triggered '
                          'within buffer time (5 seconds), '
                          'next task may be executed in advance.')
     self.assertEqual(['task1'], executed_tasks)
-    self.assertEqual([1], next_task_stages)
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
+    time_sleep.assert_called_once()
+
+  @mock.patch('time.sleep')
+  def testAddTasks_SetRebootBufferTime(self, time_sleep):
+
+    def _Task():
+      pass
+
+    self._test.AddTask(lambda: _Task, reboot=True, reboot_timeout_secs=3)
+    self._test.AddTask(lambda: _Task)
+
+    self.AssertRunResult('Reboot not triggered '
+                         'within buffer time (3 seconds), '
+                         'next task may be executed in advance.')
+    time_sleep.assert_called_once_with(3)
 
   def testWaitTaskEnd(self):
     def _RunTest():
