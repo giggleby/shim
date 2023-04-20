@@ -58,7 +58,7 @@ T = TypeVar('T')
 
 def PollForCondition(poll_method: Callable[[], T],
                      condition_method: Callable[[T], bool] = bool,
-                     timeout_secs: float = DEFAULT_TIMEOUT_SECS,
+                     timeout_secs: Optional[float] = DEFAULT_TIMEOUT_SECS,
                      poll_interval_secs: float = DEFAULT_POLL_INTERVAL_SECS,
                      condition_name: Optional[str] = None) -> T:
   """Polls for every poll_interval_secs until timeout reached or condition met.
