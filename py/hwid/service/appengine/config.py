@@ -98,8 +98,10 @@ class _Config:
     self.queue_name = conf['queue_name']
     # Setting this config empty means the branch HEAD tracks.
     self.hwid_repo_branch = conf['hwid_repo_branch']
+    self.unverified_cl_ccs = conf.get('unverified_cl_ccs', [])
     self.client_allowlist = conf.get('client_allowlist', [])
-    self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch)
+    self.hwid_repo_manager = hwid_repo.HWIDRepoManager(self.hwid_repo_branch,
+                                                       self.unverified_cl_ccs)
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
     self.avl_converter_manager = converter_utils.ConverterManager.FromDefault()
 

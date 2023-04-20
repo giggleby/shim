@@ -199,17 +199,19 @@ class HWIDRepoView(abc.ABC):
 
 class HWIDRepo(HWIDRepoView):
 
-  def __init__(self, repo, repo_url, repo_branch):
+  def __init__(self, repo, repo_url, repo_branch, unverified_cl_ccs=None):
     """Constructor.
 
     Args:
       repo: The local cloned git repo.
       repo_url: URL of the HWID repo.
       repo_branch: Branch name to track in the HWID repo.
+      unverified_cl_ccs: CC list when unverfied CL created.
     """
     self._repo = repo
     self._repo_url = repo_url
     self._repo_branch = repo_branch
+    self._unverfied_cl_ccs = unverified_cl_ccs or []
 
     self._git_fs = git_util.GitFilesystemAdapter(self._repo)
 
@@ -297,13 +299,17 @@ class HWIDRepo(HWIDRepoView):
     try:
       author_email, unused_token = git_util.GetGerritCredentials()
       author = f'chromeoshwid <{author_email}>'
-      hashtags = [_UNVERIFIED_HASHTAG] if verified == -1 else None
+      hashtags = []
+      if verified == -1:
+        hashtags = [_UNVERIFIED_HASHTAG]
+        cc_list.extend(self._unverfied_cl_ccs)
       change_id, cl_number = git_util.CreateCL(
           git_url=self._repo_url, auth_cookie=git_util.GetGerritAuthCookie(),
           branch=self._repo_branch, new_files=new_files, author=author,
           committer=author, commit_msg=commit_msg, reviewers=reviewers,
-          cc=cc_list, bot_commit=bot_commit, commit_queue=commit_queue,
-          repo=self._repo, verified=verified, hashtags=hashtags)
+          cc=list(set(cc_list)), bot_commit=bot_commit,
+          commit_queue=commit_queue, repo=self._repo, verified=verified,
+          hashtags=hashtags)
       if cl_number is None:
         logging.warning(
             'Failed to parse CL number from change_id=%s. Get CL number from '
@@ -402,14 +408,17 @@ HWIDDBCLComment = git_util.CLComment
 
 class HWIDRepoManager:
 
-  def __init__(self, repo_branch):
+  def __init__(self, repo_branch: str,
+               unverified_cl_ccs: Optional[Sequence[str]] = None):
     """Constructor.
 
     Args:
       repo_branch: The git branch name of the HWID repo to access.  Assigning
           `None` to use the default "main" branch.
+      unverified_cl_ccs: CC list when unverfied CL created.
     """
     self._repo_branch = repo_branch
+    self._unverfied_cl_ccs = unverified_cl_ccs or []
 
   def GetLiveHWIDRepo(self) -> HWIDRepo:
     """Returns an HWIDRepo instance for accessing the up-to-date HWID repo."""
@@ -422,7 +431,7 @@ class HWIDRepoManager:
     repo_url = f'{INTERNAL_REPO_REVIEW_URL}/{_CHROMEOS_HWID_PROJECT}'
     repo = git_util.MemoryRepo(git_util.GetGerritAuthCookie())
     repo.shallow_clone(repo_url, repo_branch)
-    return HWIDRepo(repo, repo_url, repo_branch)
+    return HWIDRepo(repo, repo_url, repo_branch, self._unverfied_cl_ccs)
 
   def GetHWIDDBCLInfo(self, cl_number) -> HWIDDBCLInfo:
     """Returns the CL info of the given HWID DB CL number.

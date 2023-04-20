@@ -67,13 +67,14 @@ class HWIDRepoTest(HWIDRepoBaseTest):
 
   def setUp(self):
     super().setUp()
+    self._fake_unverified_ccs = ['foo@google.com']
     self._fake_repo = git_util.MemoryRepo('')
     tree = dulwich_objects.Tree()
     self._fake_repo.object_store.add_object(tree)
     self._fake_repo.do_commit(message=b'initial commit', tree=tree.id)
 
-    self._hwid_repo = hwid_repo.HWIDRepo(self._fake_repo, 'test_repo',
-                                         'test_branch')
+    self._hwid_repo = hwid_repo.HWIDRepo(
+        self._fake_repo, 'test_repo', 'test_branch', self._fake_unverified_ccs)
 
   def testListHWIDDBMetadata_Success(self):
     self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
@@ -243,6 +244,18 @@ class HWIDRepoTest(HWIDRepoBaseTest):
         ('SBOARD.internal', 0o100644,
          b'hwid_db_contents_internal\nchecksum:\n'),
     ], kwargs['new_files'])
+
+  def testCommitHWIDDB_Succeed_UnverifiedChange(self):
+    self._AddFilesToFakeRepo({'projects.yaml': _SERVER_BOARDS_DATA})
+    self._mocked_create_cl.return_value = ('Ithis_is_change_id', 123)
+
+    self._hwid_repo.CommitHWIDDB('SBOARD', 'hwid_db_contents',
+                                 'unused_test_str', [], [], False, False, None,
+                                 'hwid_db_contents_internal', verified=-1)
+
+    kwargs = self._mocked_create_cl.call_args[1]
+    self.assertCountEqual(['cros-hwid-unverified-change'], kwargs['hashtags'])
+    self.assertCountEqual(self._fake_unverified_ccs, kwargs['cc'])
 
   def testHWIDRepoHasCommitProperty(self):
     self.assertEqual(self._hwid_repo.hwid_db_commit_id,
