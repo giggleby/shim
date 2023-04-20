@@ -160,6 +160,7 @@ class ProbeToolManagerTest(unittest.TestCase):
           probe_parameters: { name: "mmc_manfid" string_value: "0x0a" }
           probe_parameters: { name: "mmc_manfid" string_value: "0x0b" }
           probe_parameters: { name: "mmc_name" string_value: "0x414141414141" }
+          probe_parameters: { name: "size_in_gb" int_value: 256 }
         }
     ''')
     probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
@@ -179,6 +180,39 @@ class ProbeToolManagerTest(unittest.TestCase):
                 { "mmc_manfid": [ true, "hex", "!eq 0x0B" ],
                   "mmc_name": [ true, "str", "!eq AAAAAA" ] }
               ]
+            }
+          }
+        }''')
+
+  def testGenerateRawProbeStatement_WithInformationalParam(self):
+    probe_info, comp_name = _LoadProbeInfoAndCompNameFromPayload('''
+        component_identity: {
+          qual_id: 1
+          readable_label: "PART_NO_1234"
+          component_id: 100
+        }
+        probe_info: {
+          probe_function_name: "storage.mmc_storage"
+          probe_parameters: { name: "mmc_manfid" string_value: "0x0a" }
+          probe_parameters: { name: "mmc_name" string_value: "0x414141414141" }
+          probe_parameters: { name: "size_in_gb" int_value: 256 }
+        }
+    ''')
+    probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+        comp_name, probe_info)
+
+    probe_statement = self._probe_tool_manager.GenerateRawProbeStatement(
+        probe_data_source).output
+
+    self._AssertJSONStringEqual(
+        probe_statement, '''{
+          "storage": {
+            "AVL_1": {
+              "eval": { "mmc_storage": {} },
+              "expect": {
+                "mmc_manfid": [ true, "hex", "!eq 0x0A" ],
+                "mmc_name": [ true, "str", "!eq AAAAAA" ]
+              }
             }
           }
         }''')

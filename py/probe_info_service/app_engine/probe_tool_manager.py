@@ -8,7 +8,7 @@ import hashlib
 import itertools
 import os
 import re
-from typing import Any, List, Mapping, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple
 
 from google.protobuf import text_format
 
@@ -114,13 +114,24 @@ class _ParamValueConverter:
     return value
 
 
+class _InformationalParam(NamedTuple):
+  """Holds an "information parameter" for `_SingleProbeFuncConverter`.
+
+  The informational parameter values will not be put into the probe statement
+  while generation.  It's just for other clients to reference in the probe
+  info instance.
+  """
+  description: str
+  value_converter: _ParamValueConverter
+
+
 class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
   """Converts probe info into a statement of one single probe function call."""
 
   class _ProbeParam:
 
     def __init__(self, description, value_converter: _ParamValueConverter,
-                 ps_gen):
+                 ps_gen: Optional[Callable]):
       # TODO(yhong): Consider define whether to accept non-singular parameter
       #     values.
       self.description = description
@@ -132,8 +143,11 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
       probe_config_types.ValueType.STRING: _ParamValueConverter('string'),
   }
 
-  def __init__(self, runtime_probe_category_name, runtime_probe_func_name,
-               probe_params=None):
+  def __init__(
+      self, runtime_probe_category_name, runtime_probe_func_name,
+      probe_params=None,
+      informational_params: (Optional[Mapping[str,
+                                              _InformationalParam]]) = None):
     self._ps_generator = probe_config_definition.GetProbeStatementDefinition(
         runtime_probe_category_name)
     self._probe_func_def = self._ps_generator.probe_functions[
@@ -155,6 +169,10 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
       self._probe_param_infos[output_field.name] = self._ProbeParam(
           output_field.description, probe_param,
           output_field.probe_statement_generator)
+    for param_name, informational_param in (informational_params or {}).items():
+      self._probe_param_infos[param_name] = self._ProbeParam(
+          informational_param.description, informational_param.value_converter,
+          None)
 
     self._name = runtime_probe_category_name + '.' + runtime_probe_func_name
 
@@ -180,19 +198,26 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
     """See base class."""
     probe_param_errors = []
     expected_values_of_field = collections.defaultdict(list)
+
+    informational_probe_params = set()
     try:
       for index, probe_param in enumerate(probe_params):
         try:
-          value = self._ConvertProbeParamToProbeStatementValue(probe_param)
+          param_info, value = (
+              self._ConvertProbeParamToProbeStatementValue(probe_param))
         except ValueError as e:
           expected_values_of_field[probe_param.name].append(None)
           probe_param_errors.append(
               ProbeParameterSuggestion(index=index, hint=str(e)))
         else:
-          expected_values_of_field[probe_param.name].append(value)
+          if param_info.ps_gen:
+            expected_values_of_field[probe_param.name].append(value)
+          else:
+            informational_probe_params.add(probe_param.name)
 
       missing_param_names = (
-          set(self._probe_param_infos) - set(expected_values_of_field))
+          set(self._probe_param_infos) - set(expected_values_of_field) -
+          informational_probe_params)
       if missing_param_names and not allow_missing_params:
         raise _IncompatibleError(
             f'Missing probe parameters: {", ".join(missing_param_names)}.')
@@ -225,7 +250,8 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
             general_error_msg=str(e)), None)
     return ProbeInfoParsedResult(result_type=ProbeInfoParsedResult.PASSED), ps
 
-  def _ConvertProbeParamToProbeStatementValue(self, probe_param):
+  def _ConvertProbeParamToProbeStatementValue(
+      self, probe_param) -> Tuple['_ProbeParam', Any]:
     """Tries to convert the given `ProbeParameter` into the expected value in
     the probe statement.
 
@@ -233,7 +259,9 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
       probe_param: The target `ProbeParameter` message to convert.
 
     Returns:
-      The converted value.
+      A tuple of the following 2 items:
+        1. The corresponding probe parameter info instance.
+        2. The converted value.
 
     Raises:
       - `ValueError` for any kind of formatting error.
@@ -249,11 +277,12 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
       raise _IncompatibleError(
           f'Got improper probe parameter {probe_param.name!r}: {e}.') from e
 
-    # Attempt to trigger the probe statement generator directly to see if
-    # it's convertable.
-    unused_ps = probe_param_info.ps_gen(value)
+    if probe_param_info.ps_gen:
+      # Attempt to trigger the probe statement generator directly to see if
+      # it's convertible.
+      unused_ps = probe_param_info.ps_gen(value)
 
-    return value
+    return probe_param_info, value
 
 
 def _RemoveHexPrefixAndNormalize(value: str) -> str:
@@ -306,6 +335,10 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _ParamValueConverter(
                       'string', lambda hex_with_prefix: bytes.fromhex(
                           hex_with_prefix[2:]).decode('ascii')),
+          }, informational_params={
+              'size_in_gb':
+                  _InformationalParam('The storage size in GB.',
+                                      _ParamValueConverter('int')),
           }),
       _SingleProbeFuncConverter(
           'storage', 'nvme_storage', {
@@ -317,11 +350,19 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
               'nvme_model':
                   None,
+          }, informational_params={
+              'size_in_gb':
+                  _InformationalParam('The storage size in GB.',
+                                      _ParamValueConverter('int')),
           }),
       _SingleProbeFuncConverter(
           'storage', 'ufs_storage', {
               'ufs_vendor': _ParamValueConverter('string'),
               'ufs_model': _ParamValueConverter('string'),
+          }, informational_params={
+              'size_in_gb':
+                  _InformationalParam('The storage size in GB.',
+                                      _ParamValueConverter('int')),
           }),
   ]
 

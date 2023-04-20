@@ -22,4 +22,8 @@ probe_info: {
     name: "nvme_model"
     string_value: "PN_1234"
   }
+  probe_parameters: {
+    name: "size_in_gb"
+    int_value: 256
+  }
 }

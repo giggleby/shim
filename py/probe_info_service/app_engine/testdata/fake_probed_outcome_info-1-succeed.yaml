@@ -8,7 +8,7 @@ envs:
 probed_outcome_prototxt: '
   probe_statement_metadatas: {
     component_name: "AVL_1"
-    fingerprint: "50da96e1f5ac34ea1751a75646aa6070b75958ad"
+    fingerprint: "3f5eeff42c6dff41b20cf63fcaf321372ac7eea6"
   }
   rp_invocation_result: {
     result_type: FINISHED
