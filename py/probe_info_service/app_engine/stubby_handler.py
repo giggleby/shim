@@ -8,7 +8,7 @@ from typing import Callable, NamedTuple, Optional, Tuple
 from cros.factory.probe_info_service.app_engine import models
 from cros.factory.probe_info_service.app_engine import probe_tool_manager
 from cros.factory.probe_info_service.app_engine import protorpc_utils
-from cros.factory.probe_info_service.app_engine import ps_storage_connector
+from cros.factory.probe_info_service.app_engine import ps_storages
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
 
@@ -54,8 +54,7 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
 
   def __init__(self):
     self._probe_tool_manager = probe_tool_manager.ProbeToolManager()
-    self._ps_storage_connector = (
-        ps_storage_connector.GetProbeStatementStorageConnector())
+    self._ps_storage_connector = ps_storages.GetProbeStatementStorageConnector()
     self._avl_probe_entry_mngr = models.AVLProbeEntryManager()
 
   @protorpc_utils.ProtoRPCServiceMethod

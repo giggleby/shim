@@ -6,7 +6,7 @@ import unittest
 from unittest import mock
 
 from cros.factory.probe_info_service.app_engine import models
-from cros.factory.probe_info_service.app_engine import ps_storage_connector
+from cros.factory.probe_info_service.app_engine import ps_storages
 from cros.factory.probe_info_service.app_engine import stubby_handler
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 from cros.factory.probe_info_service.app_engine import unittest_utils
@@ -15,7 +15,7 @@ from cros.factory.probe_info_service.app_engine import unittest_utils
 class StubbyHandlerTest(unittest.TestCase):
 
   def setUp(self):
-    ps_storage_connector.GetProbeStatementStorageConnector().Clean()
+    ps_storages.GetProbeStatementStorageConnector().Clean()
     models.AVLProbeEntryManager().CleanupForTest()
 
     self._stubby_handler = stubby_handler.ProbeInfoService()
@@ -61,13 +61,11 @@ class StubbyHandlerTest(unittest.TestCase):
     self._stubby_handler.CreateOverriddenProbeStatement(
         stubby_pb2.CreateOverriddenProbeStatementRequest(
             component_probe_info=qual_probe_info))
-    ps_storage_connector_inst = (
-        ps_storage_connector.GetProbeStatementStorageConnector())
-    probe_data = ps_storage_connector_inst.TryLoadOverriddenProbeData(
-        qual_id, '')
+    ps_storage_connector = ps_storages.GetProbeStatementStorageConnector()
+    probe_data = ps_storage_connector.TryLoadOverriddenProbeData(qual_id, '')
     overridden_ps = unittest_utils.LoadProbeStatementString('1-invalid')
     probe_data.probe_statement = overridden_ps
-    ps_storage_connector_inst.UpdateOverriddenProbeData(qual_id, '', probe_data)
+    ps_storage_connector.UpdateOverriddenProbeData(qual_id, '', probe_data)
 
     # Verify if the returned preview string is the overridden one.
     req = stubby_pb2.GetProbeMetadataRequest(
@@ -207,8 +205,7 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertFalse(resp.probe_metadatas[0].is_tested)
 
   def testStatefulAPIs_Scenario2(self):
-    ps_storage_connector_inst = (
-        ps_storage_connector.GetProbeStatementStorageConnector())
+    ps_storage_connector = ps_storages.GetProbeStatementStorageConnector()
 
     qual_probe_info = unittest_utils.LoadComponentProbeInfo('1-valid')
     qual_id = qual_probe_info.component_identity.qual_id
@@ -255,11 +252,10 @@ class StubbyHandlerTest(unittest.TestCase):
 
     # 3. The user modifies the overridden probe statement, then downloads the
     #    qual test bundle.
-    probe_data = ps_storage_connector_inst.TryLoadOverriddenProbeData(
-        qual_id, '')
+    probe_data = ps_storage_connector.TryLoadOverriddenProbeData(qual_id, '')
     probe_data.probe_statement = unittest_utils.LoadProbeStatementString(
         '1-invalid')
-    ps_storage_connector_inst.UpdateOverriddenProbeData(qual_id, '', probe_data)
+    ps_storage_connector.UpdateOverriddenProbeData(qual_id, '', probe_data)
 
     req = stubby_pb2.GetQualProbeTestBundleRequest(
         qual_probe_info=qual_probe_info)
@@ -269,11 +265,10 @@ class StubbyHandlerTest(unittest.TestCase):
         resp.probe_info_parsed_result.result_type,
         resp.probe_info_parsed_result.OVERRIDDEN_PROBE_STATEMENT_ERROR)
 
-    probe_data = ps_storage_connector_inst.TryLoadOverriddenProbeData(
-        qual_id, '')
+    probe_data = ps_storage_connector.TryLoadOverriddenProbeData(qual_id, '')
     probe_data.probe_statement = unittest_utils.LoadProbeStatementString(
         '1-valid_modified')
-    ps_storage_connector_inst.UpdateOverriddenProbeData(qual_id, '', probe_data)
+    ps_storage_connector.UpdateOverriddenProbeData(qual_id, '', probe_data)
 
     req = stubby_pb2.GetQualProbeTestBundleRequest(
         qual_probe_info=qual_probe_info)
@@ -297,10 +292,9 @@ class StubbyHandlerTest(unittest.TestCase):
     self.assertTrue(resp.probe_metadatas[0].is_tested)
 
     # 5. The user modifies the overridden probe statement, drop the tested flag.
-    probe_data = ps_storage_connector_inst.TryLoadOverriddenProbeData(
-        qual_id, '')
+    probe_data = ps_storage_connector.TryLoadOverriddenProbeData(qual_id, '')
     probe_data.is_tested = False
-    ps_storage_connector_inst.UpdateOverriddenProbeData(qual_id, '', probe_data)
+    ps_storage_connector.UpdateOverriddenProbeData(qual_id, '', probe_data)
 
     resp = self._stubby_handler.GetProbeMetadata(get_probe_metadata_req)
     self.assertEqual(resp.probe_metadatas[0].probe_statement_type,
@@ -310,8 +304,7 @@ class StubbyHandlerTest(unittest.TestCase):
   def testStatefulAPIs_Scenario3(self):
     # 3 qualifications (Q1, Q2 and Q3) and two devices (D1, D2) are involved.
 
-    ps_storage_connector_inst = (
-        ps_storage_connector.GetProbeStatementStorageConnector())
+    ps_storage_connector = ps_storages.GetProbeStatementStorageConnector()
 
     # 1. Creates and modifies overridden probe statement for Q1.
     qual_probe_info_1 = unittest_utils.LoadComponentProbeInfo('1-valid')
@@ -320,11 +313,11 @@ class StubbyHandlerTest(unittest.TestCase):
     resp = self._stubby_handler.CreateOverriddenProbeStatement(req)
     self.assertEqual(resp.status, resp.SUCCEED)
 
-    probe_data = ps_storage_connector_inst.TryLoadOverriddenProbeData(
+    probe_data = ps_storage_connector.TryLoadOverriddenProbeData(
         qual_probe_info_1.component_identity.qual_id, '')
     probe_data.probe_statement = unittest_utils.LoadProbeStatementString(
         '1-valid_modified')
-    ps_storage_connector_inst.UpdateOverriddenProbeData(
+    ps_storage_connector.UpdateOverriddenProbeData(
         qual_probe_info_1.component_identity.qual_id, '', probe_data)
 
     # 2. Creates D1 overridden qualification for Q3.
@@ -393,10 +386,10 @@ class StubbyHandlerTest(unittest.TestCase):
 
     # 7. Modifies D1 specific probed statement of Q3.
     qual_probe_info_3 = unittest_utils.LoadComponentProbeInfo('3-valid')
-    probe_data = ps_storage_connector_inst.TryLoadOverriddenProbeData(
+    probe_data = ps_storage_connector.TryLoadOverriddenProbeData(
         qual_probe_info_3.component_identity.qual_id, 'device_one')
     probe_data.is_tested = False
-    ps_storage_connector_inst.UpdateOverriddenProbeData(
+    ps_storage_connector.UpdateOverriddenProbeData(
         qual_probe_info_3.component_identity.qual_id, 'device_one', probe_data)
 
     # 8. Queries the probe status of Q1, Q2 and Q3 for D1.  The expected

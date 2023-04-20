@@ -20,6 +20,7 @@ class OverriddenProbeData:
     is_reviewed: Whether the probe statement is reviewed.
     probe_statement: A string payload of the probe statement data.
   """
+
   def __init__(self, is_tested: bool, is_reviewed: bool, probe_statement: str):
     self.is_tested = is_tested
     self.is_reviewed = is_reviewed
@@ -46,8 +47,8 @@ class IProbeStatementStorageConnector(abc.ABC):
     raise NotImplementedError
 
   @abc.abstractmethod
-  def SetProbeStatementOverridden(
-      self, qual_id, device_id, init_probe_statement) -> str:
+  def SetProbeStatementOverridden(self, qual_id, device_id,
+                                  init_probe_statement) -> str:
     """Sets the probe statement of the qualification to manual maintained.
 
     For any unexpected case that makes the qualification need an specialized
@@ -117,8 +118,8 @@ class _InMemoryProbeStatementStorageConnector(IProbeStatementStorageConnector):
     assert qual_id not in self._overridden_probe_data
     self._qual_probe_statement[qual_id] = probe_statement
 
-  def SetProbeStatementOverridden(
-      self, qual_id, device_id, init_probe_statement):
+  def SetProbeStatementOverridden(self, qual_id, device_id,
+                                  init_probe_statement):
     key = (qual_id, device_id)
     assert key not in self._overridden_probe_data
     self._overridden_probe_data[key] = OverriddenProbeData(
@@ -169,8 +170,8 @@ class _DataStoreProbeStatementStorageConnector(IProbeStatementStorageConnector):
     logging.debug('Update the generated probe statement for qual %r by %r.',
                   qual_id, probe_statement)
 
-  def SetProbeStatementOverridden(
-      self, qual_id, device_id, init_probe_statement):
+  def SetProbeStatementOverridden(self, qual_id, device_id,
+                                  init_probe_statement):
     data_instance = OverriddenProbeData(False, False, init_probe_statement)
     entity_path = self._GetOverriddenProbeDataPath(qual_id, device_id)
     self._SaveEntity(entity_path, data_instance.__dict__)
@@ -215,7 +216,7 @@ class _DataStoreProbeStatementStorageConnector(IProbeStatementStorageConnector):
 
 
 @type_utils.CachedGetter
-def GetProbeStatementStorageConnector():
+def GetProbeStatementStorageConnector() -> IProbeStatementStorageConnector:
   env_type = config.Config().env_type
   if env_type == config.EnvType.LOCAL:
     return _InMemoryProbeStatementStorageConnector()
