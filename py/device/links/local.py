@@ -8,7 +8,7 @@ system."""
 import pipes
 import shutil
 import subprocess
-from typing import IO, Any, List, Optional, Union
+from typing import IO, Any, Optional, Sequence, Union
 
 from cros.factory.device import device_types
 from cros.factory.utils import file_utils
@@ -50,9 +50,10 @@ class LocalLink(device_types.DeviceLink):
     shutil.copytree(remote, local)
 
   @type_utils.Overrides
-  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
-                                                               IO[Any]] = None,
-            stdout: Union[None, int, IO[Any]] = None,
+  def Shell(self, command: Union[str, Sequence[str]],
+            stdin: Union[None, int,
+                         IO[Any]] = None, stdout: Union[None, int,
+                                                        IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
     """See DeviceLink.Shell"""

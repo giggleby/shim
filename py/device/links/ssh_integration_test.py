@@ -21,7 +21,7 @@ import os
 import random
 import string
 import tempfile
-from typing import List, Union
+from typing import Sequence, Union
 import unittest
 
 from cros.factory.device import device_types
@@ -48,7 +48,7 @@ class SSHLinkIntegrationTest(unittest.TestCase):
     self.ssh_link = ssh.SSHLink(**dut_options)
 
   def _GetOutput(self, link: device_types.DeviceLink,
-                 cmd: Union[str, List[str]]) -> str:
+                 cmd: Union[str, Sequence[str]]) -> str:
     with tempfile.TemporaryFile('w+') as stdout:
       self.assertEqual(link.Shell(cmd, stdout=stdout).wait(), 0)
       stdout.seek(0)

@@ -10,7 +10,7 @@ import pipes
 import shutil
 import subprocess
 import tempfile
-from typing import IO, Any, List, Optional, Union, overload
+from typing import IO, Any, List, Optional, Sequence, Union, overload
 
 from . import file_utils
 from . import process_utils
@@ -20,7 +20,7 @@ from . import process_utils
 CalledProcessError = process_utils.CalledProcessError
 
 
-def CommandsToShell(command: Union[str, List[str]]) -> str:
+def CommandsToShell(command: Union[str, Sequence[str]]) -> str:
   """Joins commands to a shell command.
 
   Args:
@@ -140,9 +140,10 @@ class SystemInterface:
     """
     shutil.copy(local, remote)
 
-  def Popen(self, command: Union[str, List[str]], stdin: Union[None, int,
-                                                               IO[Any]] = None,
-            stdout: Union[None, int, IO[Any]] = None,
+  def Popen(self, command: Union[str, Sequence[str]],
+            stdin: Union[None, int,
+                         IO[Any]] = None, stdout: Union[None, int,
+                                                        IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             log=False, encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
     """Executes a command on target device using subprocess.Popen convention.
@@ -189,9 +190,8 @@ class SystemInterface:
     process.wait()
     return process.returncode
 
-  def CheckCall(self, command: Union[str,
-                                     List[str]], stdin: Union[None, int,
-                                                              IO[Any]] = None,
+  def CheckCall(self, command: Union[str, Sequence[str]],
+                stdin: Union[None, int, IO[Any]] = None,
                 stdout: Union[None, int,
                               IO[Any]] = None, stderr: Union[None, int,
                                                              IO[Any]] = None,
@@ -224,24 +224,22 @@ class SystemInterface:
     return 0
 
   @overload
-  def CheckOutput(self, command: Union[str,
-                                       List[str]], stdin: Union[None, int,
-                                                                IO[Any]] = None,
-                  stderr: Union[None, int,
-                                IO[Any]] = None, cwd: Optional[str] = None,
-                  log=False, encoding: None = None) -> bytes:
-    ...
-
-  @overload
-  def CheckOutput(self, command: Union[str,
-                                       List[str]], stdin: Union[None, int,
-                                                                IO[Any]] = None,
+  def CheckOutput(self, command: Union[str, Sequence[str]],
+                  stdin: Union[None, int, IO[Any]] = None,
                   stderr: Union[None, int,
                                 IO[Any]] = None, cwd: Optional[str] = None,
                   log=False, encoding: str = 'utf-8') -> str:
     ...
 
-  def CheckOutput(self, command: Union[str, List[str]],
+  @overload
+  def CheckOutput(self, command: Union[str, Sequence[str]],
+                  stdin: Union[None, int, IO[Any]] = None,
+                  stderr: Union[None, int,
+                                IO[Any]] = None, cwd: Optional[str] = None,
+                  log=False, encoding: None = None) -> bytes:
+    ...
+
+  def CheckOutput(self, command: Union[str, Sequence[str]],
                   stdin: Union[None, int,
                                IO[Any]] = None, stderr: Union[None, int,
                                                               IO[Any]] = None,

@@ -9,7 +9,7 @@ import os
 import pipes
 import subprocess
 import tempfile
-from typing import IO, Any, List, Optional, Union
+from typing import IO, Any, Optional, Sequence, Union
 import uuid
 
 from cros.factory.device import device_types
@@ -106,8 +106,9 @@ class ADBLink(device_types.DeviceLink):
     raise NotImplementedError
 
   @type_utils.Overrides
-  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
-                                                               IO[Any]] = None,
+  def Shell(self, command: Union[str,
+                                 Sequence[str]], stdin: Union[None, int,
+                                                              IO[Any]] = None,
             stdout: Union[None, int,
                           IO[Any]] = None, stderr: Union[None, int,
                                                          IO[Any]] = None,

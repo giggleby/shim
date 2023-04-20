@@ -7,7 +7,7 @@
 import logging
 import posixpath  # Assume most linux devices will be running POSIX os.
 import subprocess
-from typing import IO, Any, List, Optional, Union, overload
+from typing import IO, Any, List, Optional, Sequence, Union, overload
 
 from cros.factory.device import device_types
 from cros.factory.utils import file_utils
@@ -322,9 +322,10 @@ class LinuxBoard(device_types.DeviceBoard):
     self.link.Push(local, remote)
 
   @type_utils.Overrides
-  def Popen(self, command: Union[str, List[str]], stdin: Union[None, int,
-                                                               IO[Any]] = None,
-            stdout: Union[None, int, IO[Any]] = None,
+  def Popen(self, command: Union[str, Sequence[str]],
+            stdin: Union[None, int,
+                         IO[Any]] = None, stdout: Union[None, int,
+                                                        IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             log=False, encoding: Optional[str] = 'utf-8') -> subprocess.Popen:
     """Executes a command on target device using subprocess.Popen convention.

@@ -5,7 +5,7 @@
 """Interfaces, classes and types for Device API."""
 
 import abc
-from typing import IO, Any, List, Optional, Union, overload
+from typing import IO, Any, Optional, Sequence, Union, overload
 
 from cros.factory.utils import sys_interface
 from cros.factory.utils import type_utils
@@ -88,9 +88,10 @@ class DeviceLink(abc.ABC):
     raise NotImplementedError
 
   @abc.abstractmethod
-  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
-                                                               IO[Any]] = None,
-            stdout: Union[None, int, IO[Any]] = None,
+  def Shell(self, command: Union[str, Sequence[str]],
+            stdin: Union[None, int,
+                         IO[Any]] = None, stdout: Union[None, int,
+                                                        IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             encoding: Optional[str] = 'utf-8') -> Any:
     """Executes a command on device.
@@ -170,7 +171,7 @@ class DeviceComponent:
 
   Error = DeviceException
 
-  def __init__(self, device):
+  def __init__(self, device: 'DeviceInterface'):
     """Constructor of DeviceComponent.
 
     :type device: cros.factory.device.device_types.DeviceInterface

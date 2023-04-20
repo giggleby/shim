@@ -16,7 +16,7 @@ import queue
 import subprocess
 import threading
 import time
-from typing import List, Optional, Tuple, Union  # pylint: disable=unused-import
+from typing import List, Optional, Sequence, Tuple, Union  # pylint: disable=unused-import
 
 from . import process_utils
 from . import sync_utils
@@ -52,7 +52,8 @@ class ISSHRunner(abc.ABC):
   """An abstract class that runs a command via SSH on a target device."""
 
   @abc.abstractmethod
-  def Spawn(self, command: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+  def Spawn(self, command: Union[str, Sequence[str]],
+            **kwargs) -> subprocess.Popen:
     """Executes a command or a script in the device.
 
     Args:
@@ -126,13 +127,13 @@ class SSHRunner(ISSHRunner):
     return port_args + identity_args + _STANDARD_SSH_OPTIONS
 
   def _GetSSHCommand(
-      self, command: Union[None, str, List[str]],
+      self, command: Union[None, str, Sequence[str]],
       additional_ssh_options: Optional[List[str]] = None) -> List[str]:
     if additional_ssh_options is None:
       additional_ssh_options = []
-    if isinstance(command, list):
+    if command is not None and not isinstance(command, str):
       if len(command) == 0:
-        raise ValueError('Command as a list must not be empty.')
+        raise ValueError('Command as a sequence must not be empty.')
       command = ' '.join(map(pipes.quote, command))
 
     sig = self._GetDeviceSignature()
@@ -150,7 +151,7 @@ class SSHRunner(ISSHRunner):
     return ['rsync', '-az', '-e', ssh_options, src, dest]
 
   @type_utils.Overrides
-  def Spawn(self, command: Union[str, List[str]],
+  def Spawn(self, command: Union[str, Sequence[str]],
             **kwargs) -> process_utils.ExtendedPopen:
     """See ISSHRunner.Spawn."""
     ssh_command = self._GetSSHCommand(command)
@@ -190,7 +191,8 @@ class ControlMasterSSHRunner(ISSHRunner):
     self._watcher.AddProcess(proc.pid, os.getpid())
 
   @type_utils.Overrides
-  def Spawn(self, command: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+  def Spawn(self, command: Union[str, Sequence[str]],
+            **kwargs) -> subprocess.Popen:
     """See ISSHRunner.Spawn."""
     ssh_process = self._inner_ssh_runner.Spawn(command, **kwargs)
     self._MonitorProcess(ssh_process)

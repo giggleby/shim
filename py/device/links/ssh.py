@@ -10,7 +10,7 @@ import logging
 import pipes
 import subprocess
 import threading
-from typing import IO, Any, List, Optional, Union
+from typing import IO, Any, List, Optional, Sequence, Union
 
 from cros.factory.device import device_types
 from cros.factory.test import state
@@ -166,9 +166,10 @@ class SSHLink(device_types.DeviceLink):
     self._DoRsync(remote, local, is_push=False)
 
   @type_utils.Overrides
-  def Shell(self, command: Union[str, List[str]], stdin: Union[None, int,
-                                                               IO[Any]] = None,
-            stdout: Union[None, int, IO[Any]] = None,
+  def Shell(self, command: Union[str, Sequence[str]],
+            stdin: Union[None, int,
+                         IO[Any]] = None, stdout: Union[None, int,
+                                                        IO[Any]] = None,
             stderr: Union[None, int, IO[Any]] = None, cwd: Optional[str] = None,
             encoding: Optional[str] = 'utf-8') -> process_utils.ExtendedPopen:
     """See DeviceLink.Shell"""
