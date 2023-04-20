@@ -7,26 +7,14 @@
 This module provides accessing camera devices.
 """
 
-import enum
 import os
 import re
 
 from cros.factory.device import camera
-from cros.factory.test.utils.camera_utils import CVCameraReader
-from cros.factory.test.utils.camera_utils import CameraDevice
-from cros.factory.test.utils.camera_utils import CameraError
-from cros.factory.test.utils.camera_utils import GetValidCameraPaths
+from cros.factory.test.utils import camera_utils
 
 
 CAMERA_CONFIG_PATH = '/etc/camera/camera_characteristics.conf'
-
-
-class AllowedFacing(str, enum.Enum):
-  front = 'front'
-  rear = 'rear'
-
-  def __str__(self):
-    return self.value
 
 
 class ChromeOSCamera(camera.Camera):
@@ -50,14 +38,15 @@ class ChromeOSCamera(camera.Camera):
     Since the video device index may change after device reboot/suspend resume,
     we search the video device index from the camera characteristics file.
     """
-    if facing not in AllowedFacing.__members__ and facing is not None:
-      raise CameraError(f'The facing ({facing}) is not in AllowedFacing '
-                        f'({list(AllowedFacing.__members__) + [None]})')
+    if not (facing in camera_utils.CameraFacing.__members__ or facing is None):
+      raise camera_utils.CameraError(
+          f'The facing ({facing}) is not in CameraFacing '
+          f'({list(camera_utils.CameraFacing.__members__) + [None]})')
 
     if facing in self._index_mapping:
       return self._index_mapping[facing]
 
-    camera_paths = GetValidCameraPaths(self._device)
+    camera_paths = camera_utils.GetValidCameraPaths(self._device)
     index_to_vid_pid = {}
     for path, index in camera_paths:
       vid = self._device.ReadFile(
@@ -70,18 +59,18 @@ class ChromeOSCamera(camera.Camera):
         self._device.CallOutput(['cros_config', '/camera', 'count']))
 
     if num_camera == 0:
-      raise CameraError('No camera detected')
+      raise camera_utils.CameraError('No camera detected')
 
     self.GetCameraIndexFromCameraConfig(index_to_vid_pid)
     if facing is None:
       if len(self._index_mapping) > 1:
-        raise CameraError('Multiple cameras are found')
+        raise camera_utils.CameraError('Multiple cameras are found')
       if not self._index_mapping:
-        raise CameraError('No camera is found')
+        raise camera_utils.CameraError('No camera is found')
       return next(iter(self._index_mapping.values()))
 
     if facing not in self._index_mapping:
-      raise CameraError(f'No {facing} camera is found')
+      raise camera_utils.CameraError(f'No {facing} camera is found')
     return self._index_mapping[facing]
 
   def GetCameraIndexFromCameraConfig(self, index_to_vid_pid):
@@ -100,13 +89,13 @@ class ChromeOSCamera(camera.Camera):
           f'{vid_pid}'
           r'$', camera_config, re.IGNORECASE | re.MULTILINE)
       if len(camera_id) > 1:
-        raise CameraError(
+        raise camera_utils.CameraError(
             f'Multiple cameras have the same usb_vid_pid ({vid_pid})'
             ' There are duplicated usb_vid_pid in the'
             ' camera_characteristics.conf file. Please submit'
             ' a CL to fix this. See sample CL at https://crrev.com/c/419375')
       if not camera_id:
-        raise CameraError(
+        raise camera_utils.CameraError(
             f'No camera has the usb_vid_pid ({vid_pid}) Please submit a CL to '
             'update the camera_characteristics.conf file. See sample CL at '
             'https://crrev.com/c/419375')
@@ -138,9 +127,11 @@ class ChromeOSCamera(camera.Camera):
       cros.factory.test.utils.camera_utils.CameraDevice.
     """
     device_index = self.GetDeviceIndex(facing)
-    return self._devices.setdefault(facing, CameraDevice(
-        dut=self._device, sn_format=None,
-        reader=CVCameraReader(device_index, self._device)))
+    return self._devices.setdefault(
+        facing,
+        camera_utils.CameraDevice(
+            dut=self._device, sn_format=None,
+            reader=camera_utils.CVCameraReader(device_index, self._device)))
 
   def GetCameraDeviceByUsbVidPid(self, vid, pid):
     """Get the camera device with the given USB vendor and device id.
@@ -153,7 +144,7 @@ class ChromeOSCamera(camera.Camera):
       Camera device object that implements
       cros.factory.test.utils.camera_utils.CameraDevice.
     """
-    camera_paths = GetValidCameraPaths(self._device)
+    camera_paths = camera_utils.GetValidCameraPaths(self._device)
     match_index = -1
     for path, index in camera_paths:
       dev_removable = self._device.ReadFile(
@@ -165,12 +156,15 @@ class ChromeOSCamera(camera.Camera):
       if (dev_removable != 'fixed' and vid.lower() == dev_vid and
           pid.lower() == dev_pid):
         if match_index != -1:
-          raise CameraError(f'Found multiple cameras with VID:PID {vid}:{pid}')
+          raise camera_utils.CameraError(
+              f'Found multiple cameras with VID:PID {vid}:{pid}')
         match_index = index
     if match_index == -1:
-      raise CameraError(f'Did not find camera with VID:PID {vid}:{pid}')
+      raise camera_utils.CameraError(
+          f'Did not find camera with VID:PID {vid}:{pid}')
 
     return self._devices.setdefault(
         None,
-        CameraDevice(dut=self._device, sn_format=None, reader=CVCameraReader(
-            match_index, self._device)))
+        camera_utils.CameraDevice(
+            dut=self._device, sn_format=None,
+            reader=camera_utils.CVCameraReader(match_index, self._device)))

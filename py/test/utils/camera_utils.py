@@ -5,6 +5,7 @@
 """Camera utilities."""
 
 import abc
+import enum
 import glob
 import logging
 import os
@@ -30,9 +31,53 @@ _MOCK_IMAGE_VGA = 'mock_B.jpg'
 _MOCK_IMAGE_QR = 'mock_QR.jpg'
 
 
+class CameraFacing(str, enum.Enum):
+  front = 'front'
+  rear = 'rear'
+
+  def __str__(self):
+    return self.value
+
+
+class CameraType(str, enum.Enum):
+  mipi = 'mipi'
+  usb = 'usb'
+
+  def __str__(self):
+    return self.value
+
+
 class CameraError(Exception):
   """Camera device exception class."""
 
+
+def GetCameraTypeFromCameraFacing(facing: CameraFacing):
+  """Gets the camera type from camera facing.
+
+  Args:
+    facing: Direction the camera faces relative to device screen.
+
+  Returns:
+    Camera type.
+
+  Raises:
+    CameraError on error.
+  """
+  if facing not in CameraFacing.__members__:
+    raise CameraError(f'The facing ({facing}) is not in CameraFacing'
+                      f'{list(CameraFacing.__members__)}')
+
+  #TODO(jimmysun) remove this line after changing rear to back in pytest.
+  facing = 'back' if facing == CameraFacing.rear else facing
+  for index in (0, 1):
+    command = ['cros_config', f'/camera/devices/{index}']
+    if process_utils.SpawnOutput(command + ['facing']) == facing:
+      camera_type = process_utils.SpawnOutput(command + ['interface'])
+      assert camera_type in CameraType.__members__, (
+          'Unexpected camera type ({camera_type}) detected.')
+      logging.info('The type of camera facing %s is %s.', facing, camera_type)
+      return camera_type
+  raise CameraError('No camera with index 0 or 1 found in cros_config.')
 
 def ReadImageFile(filename):
   """Reads an image file.

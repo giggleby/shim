@@ -204,7 +204,6 @@ import random
 import time
 import uuid
 
-from cros.factory.device.chromeos import camera
 from cros.factory.device import device_utils
 from cros.factory.test import i18n
 from cros.factory.test.i18n import _
@@ -213,6 +212,7 @@ from cros.factory.test import session
 from cros.factory.test import test_case
 from cros.factory.test.utils import barcode
 from cros.factory.test.utils import camera_assemble
+from cros.factory.test.utils import camera_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import schema
@@ -227,7 +227,10 @@ from cros.factory.external import numpy as np
 _JPEG_QUALITY = 70
 _HAAR_CASCADE_PATH = (
     '/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml')
-
+MIN_LUMINANCE_RATIO_TABLE = {
+    camera_utils.CameraType.mipi: 0.7,
+    camera_utils.CameraType.usb: 0.5
+}
 
 class TestModes(str, enum.Enum):
   camera_assemble = 'camera_assemble'
@@ -313,7 +316,7 @@ class CameraTest(test_case.TestCase):
           'resize_ratio', float,
           'The resize ratio of captured image on screen, '
           'has no effect on e2e mode.', default=0.4),
-      Arg('camera_facing', camera.AllowedFacing,
+      Arg('camera_facing', camera_utils.CameraFacing,
           ('String "front" or "rear" for the camera to test. '
            'If in normal mode, default is automatically searching one. '
            'If in e2e mode, default is "front".'), default=None),
@@ -349,7 +352,7 @@ class CameraTest(test_case.TestCase):
            'image. If the luminance of the boundary region is lower than or'
            'equal to the product, we consider the image containing black edges,'
            'and thus the camera is badly assembled. It is recommended to set'
-           'this value to 0.5 for usb camera and 0.7 for mipi camera.'),
+           'this value to 0.5 for USB camera and 0.7 for MIPI camera.'),
           default=0.5)
   ]
 
@@ -508,6 +511,11 @@ class CameraTest(test_case.TestCase):
     return detected
 
   def DetectAssemblyIssue(self, cv_image):
+    if self.min_luminance_ratio < MIN_LUMINANCE_RATIO_TABLE[self.camera_type]:
+      logging.warning('min_luminance_ratio for %s camera should be at least %s',
+                      self.camera_type,
+                      MIN_LUMINANCE_RATIO_TABLE[self.camera_type])
+
     camera_assemble_issue = camera_assemble.DetectCameraAssemblyIssue(
         cv_image, self.min_luminance_ratio)
 
@@ -689,6 +697,8 @@ class CameraTest(test_case.TestCase):
     self.dut = device_utils.CreateDUTInterface()
 
     self.mode = self.args.mode
+    self.camera_type = camera_utils.GetCameraTypeFromCameraFacing(
+        self.args.camera_facing)
     self.e2e_mode = self.args.e2e_mode
     self.min_luminance_ratio = self.args.min_luminance_ratio
 
@@ -696,6 +706,10 @@ class CameraTest(test_case.TestCase):
     # TODO(pihsun): This can be removed after the desktop Chrome implements
     # shape detection API.
     self.need_transmit_from_ui = False
+
+    if self.camera_type == camera_utils.CameraType.mipi:
+      self.assertTrue(self.e2e_mode,
+                      'e2e_mode should be enabled for MIPI camera.')
 
     self.flip_image = self.args.flip_image
     if self.flip_image is None:

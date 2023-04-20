@@ -30,11 +30,11 @@ To run a VSync pin test, add this in test list::
 import os
 import stat
 
-from cros.factory.device.chromeos import camera
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
 from cros.factory.test import session
 from cros.factory.test import test_case
+from cros.factory.test.utils import camera_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
@@ -47,7 +47,7 @@ class SpatialSensorCalibration(test_case.TestCase):
   ARGS = [
       Arg('capture_number', int, 'The number of capture frames.',
           default=DEFAULT_CAPTURE_NUMBER),
-      Arg('camera_facing', camera.AllowedFacing,
+      Arg('camera_facing', camera_utils.CameraFacing,
           ('Direction the camera faces relative to device screen. Only allow '
            '"front", "rear" or None. None is automatically searching one.'),
           default=None),
