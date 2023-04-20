@@ -53,7 +53,7 @@ class NetworkDevices:
     """
     return [
         Obj(devtype='wifi', path=f'/sys/class/net/{node.split()[0]}/device')
-        for node in process_utils.CheckOutput('iwconfig').splitlines()
+        for node in process_utils.CheckOutput(['iwconfig']).splitlines()
         if extension in node
     ]
 
