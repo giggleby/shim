@@ -1136,6 +1136,11 @@ install_payload() {
     output_display="${output_display%.${file_ext}}"
   fi
 
+  # A temporary file to record the error message generated during pipe.
+  local tmp_file
+  tmp_file="$(mktemp)"
+  register_tmp_object "${tmp_file}"
+
   if [ "${mode}" = "partition" ]; then
     info "Installing from ${payload} to ${output} ..."
     # bs is fixed on 1048576 because many dd implementations do not support
@@ -1144,12 +1149,10 @@ install_payload() {
     # 59s for bs=2M), but that does not help bz2 payloads and also makes it
     # harder to install small partitions.
     {
-      MCAST="${mcast_enabled}" fetch "${remote_url}" || \
-        die "Failed to fetch ${remote_url}";
       # The script won't actually die here since the error code is piped to
-      # `do_compress`.  But we added `die` here to make the caller able to catch
-      # the error by parsing the output.
-      # (see py/test/pytests/check_image_version.py)
+      # `do_compress`.
+      MCAST="${mcast_enabled}" fetch "${remote_url}" || \
+        echo "Failed to fetch ${remote_url}" > "${tmp_file}";
     } | \
       do_compress ".${file_ext}" -d | \
       dd of="${dest}" bs=1048576 iflag=fullblock oflag=dsync
@@ -1157,7 +1160,7 @@ install_payload() {
     echo "Installing from ${payload} to ${output_display} ..."
     {
       MCAST="${mcast_enabled}" fetch "${remote_url}" || \
-        die "Failed to fetch ${remote_url}";
+        echo "Failed to fetch ${remote_url}" > "${tmp_file}";
     } | \
       do_compress ".${file_ext}" -d >"${output}"
     if [ -n "${mount_point}" ]; then
@@ -1166,6 +1169,10 @@ install_payload() {
   else
     echo "Downloading from ${payload} to ${output_display} ..."
     MCAST="${mcast_enabled}" fetch "${remote_url}" "${output}"
+  fi
+
+  if grep -q "Failed to fetch" "${tmp_file}"; then
+    die "install_payload failed! Error msg: $(cat "${tmp_file}")"
   fi
 
   if [ -n "${mount_point}" ]; then
