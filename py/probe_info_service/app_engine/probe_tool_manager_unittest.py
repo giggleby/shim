@@ -53,6 +53,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         'storage.mmc_storage',
         'storage.nvme_storage',
         'storage.ufs_storage',
+        'raw_probe_statement',
     ])
 
   def testValidateProbeInfo_InvalidProbeFunction(self):
@@ -229,12 +230,6 @@ class ProbeToolManagerTest(unittest.TestCase):
         gen_result.probe_info_parsed_result,
         unittest_utils.LoadProbeInfoParsedResult('1-param_value_error'))
     self.assertIsNone(gen_result.output)
-
-  def testGenerateRawProbeStatement_FromOverriddenProbeStatement(self):
-    overridden_ps = unittest_utils.LoadProbeStatementString('1-valid_modified')
-    s = self._probe_tool_manager.LoadProbeDataSource('comp_name', overridden_ps)
-    generated_ps = self._probe_tool_manager.GenerateRawProbeStatement(s).output
-    self._AssertJSONStringEqual(generated_ps, overridden_ps)
 
   def testGenerateProbeBundlePayload_ProbeParameterError(self):
     s = self._LoadProbeDataSource('1-param_value_error')

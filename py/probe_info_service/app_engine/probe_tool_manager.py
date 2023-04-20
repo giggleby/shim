@@ -75,6 +75,79 @@ class ComponentProbeStatementConverter(abc.ABC):
     """
 
 
+class RawProbeStatementConverter(ComponentProbeStatementConverter):
+  """A converter that is simply a wrapper of raw probe statement string."""
+
+  _CONVERTER_NAME = 'raw_probe_statement'
+  _CONVERTER_DESCRIPTION = 'Probe by the given raw probe statement.'
+
+  _PARAMETER_NAME = 'json_text'
+  _PARAMETER_DESCRIPTION = 'The raw probe statement text value in JSON.'
+
+  def GetName(self) -> str:
+    """See base class."""
+    return self._CONVERTER_NAME
+
+  def GenerateDefinition(self) -> ProbeFunctionDefinition:
+    """See base class."""
+    ret = ProbeFunctionDefinition(name=self._CONVERTER_NAME,
+                                  description=self._CONVERTER_DESCRIPTION)
+    ret.parameter_definitions.add(name=self._PARAMETER_NAME,
+                                  description=self._PARAMETER_DESCRIPTION,
+                                  value_type=ProbeParameterValueType.STRING)
+    return ret
+
+  def ParseProbeParams(
+      self, probe_params: Sequence[stubby_pb2.ProbeParameter],
+      allow_missing_params: bool, comp_name_for_probe_statement=None
+  ) -> Tuple[ProbeInfoParsedResult,
+             Optional[probe_config_types.ComponentProbeStatement]]:
+    """See base class."""
+    if (len(probe_params) != 1 or
+        probe_params[0].name != self._PARAMETER_NAME or
+        probe_params[0].WhichOneof('value') != 'string_value'):
+      parsed_result = ProbeInfoParsedResult(
+          result_type=ProbeInfoParsedResult.INCOMPATIBLE_ERROR,
+          general_error_msg='Got unexpected probe parameter(s).')
+      return parsed_result, None
+
+    try:
+      loaded_component_probe_statement = (
+          probe_config_types.ComponentProbeStatement.FromDict(
+              json_utils.LoadStr(probe_params[0].string_value)))
+    except ValueError as ex:
+      parsed_result = ProbeInfoParsedResult(
+          result_type=ProbeInfoParsedResult.PROBE_PARAMETER_ERROR)
+      parsed_result.probe_parameter_errors.add(
+          index=0,
+          hint=f'Unable to load the component probe statement in JSON: {ex}.')
+      return parsed_result, None
+
+    parsed_result = ProbeInfoParsedResult(
+        result_type=ProbeInfoParsedResult.PASSED)
+    component_probe_statement = None
+    if comp_name_for_probe_statement is not None:
+      component_probe_statement = probe_config_types.ComponentProbeStatement(
+          loaded_component_probe_statement.category_name,
+          comp_name_for_probe_statement,
+          loaded_component_probe_statement.statement)
+    return parsed_result, component_probe_statement
+
+  @classmethod
+  def BuildProbeInfo(cls, probe_statement: str) -> ProbeInfo:
+    probe_info = stubby_pb2.ProbeInfo(probe_function_name=cls._CONVERTER_NAME)
+    probe_info.probe_parameters.add(name=cls._PARAMETER_NAME,
+                                    string_value=probe_statement)
+    return probe_info
+
+  @classmethod
+  def ComponentProbeStatementToProbeInfo(
+      cls, component_probe_statement: probe_config_types.ComponentProbeStatement
+  ) -> ProbeInfo:
+    return cls.BuildProbeInfo(
+        json_utils.DumpStr(component_probe_statement.statement))
+
+
 class _ParamValueConverter:
   """Converter for the input of the probe statement from the probe parameter.
 
@@ -366,6 +439,7 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _InformationalParam('The storage size in GB.',
                                       _ParamValueConverter('int')),
           }),
+      RawProbeStatementConverter(),
   ]
 
 
@@ -376,28 +450,38 @@ class PayloadInvalidError(Exception):
 class ProbeDataSource:
   """A record class for a source of probe statement and its metadata.
 
-  Instances of this class are the source for generating the final probe
-  bundle.  There are two ways to generate an instance:
-    1. Convert from the probe info from other services.
-    2. Load from the backend storage system.
+  Instances of this class are the source for generating the final probe bundle.
 
-  Properties:
+  Attributes:
+    component_name: A string of the name of the component.
+    probe_info: An instance of `ProbeInfo`.
     fingerprint: A string of fingerprint of this instance, like a kind of
         unique identifier.
-    component_name: A string of the name of the component.  `None` if the
-        instance is generated from the payload stored in the backend system.
-    probe_info: An instance of `ProbeInfo`.  `None` if the
-        instance is generated from the payload stored in the backend system.
-    probe_statement: A string of probe statement from the backend system.
-        `None` if the instance is generated from probe info.
   """
 
-  def __init__(self, fingerprint: str, component_name: str,
-               probe_info: Optional[ProbeInfo], probe_statement: Optional[str]):
+  def __init__(self, component_name: str, probe_info: ProbeInfo):
     self.component_name = component_name
     self.probe_info = probe_info
-    self.fingerprint = fingerprint
-    self.probe_statement = probe_statement
+
+  @type_utils.LazyProperty
+  def fingerprint(self) -> str:
+    probe_param_values = {}
+    for probe_param in self.probe_info.probe_parameters:
+      probe_param_values.setdefault(probe_param.name, [])
+      value_attr_name = probe_param.WhichOneof('value')
+      probe_param_values[probe_param.name].append(
+          getattr(probe_param, value_attr_name) if value_attr_name else None)
+    serializable_data = {
+        'probe_function_name': self.probe_info.probe_function_name,
+        'probe_parameters': {
+            k: sorted(v)
+            for k, v in probe_param_values.items()
+        },
+    }
+    hash_engine = hashlib.sha1()
+    hash_engine.update(
+        json_utils.DumpStr(serializable_data, sort_keys=True).encode('utf-8'))
+    return hash_engine.hexdigest()
 
 
 class ProbeInfoArtifact(NamedTuple):
@@ -501,18 +585,7 @@ class ProbeToolManager:
   def CreateProbeDataSource(self, component_name,
                             probe_info) -> ProbeDataSource:
     """Creates the probe data source from the given probe_info."""
-    return ProbeDataSource(
-        self._CalcProbeInfoFingerprint(probe_info), component_name, probe_info,
-        None)
-
-  def LoadProbeDataSource(self, component_name,
-                          probe_statement) -> ProbeDataSource:
-    """Load the probe data source from the given probe statement."""
-    hash_engine = hashlib.sha1()
-    hash_engine.update(
-        ('}}}not_a_json_header' + probe_statement).encode('utf-8'))
-    return ProbeDataSource(hash_engine.hexdigest(), component_name, None,
-                           probe_statement)
+    return ProbeDataSource(component_name, probe_info)
 
   def DumpProbeDataSource(self, probe_data_source) -> ProbeInfoArtifact:
     """Dump the probe data source to a loadable probe statement string."""
@@ -553,10 +626,6 @@ class ProbeToolManager:
       An instance of `ProbeInfoArtifact`, which `output` property is a string
       of the probe statement or `None` if failed.
     """
-    if probe_data_source.probe_info is None:
-      return ProbeInfoArtifact(
-          ProbeInfoParsedResult(result_type=ProbeInfoParsedResult.PASSED),
-          probe_data_source.probe_statement)
     return self.DumpProbeDataSource(probe_data_source)
 
   def GenerateProbeBundlePayload(
@@ -574,21 +643,8 @@ class ProbeToolManager:
     probe_info_parsed_results = []
     probe_statements = []
     for probe_data_source in probe_data_sources:
-      if probe_data_source.probe_info is None:
-        try:
-          ps = probe_config_types.ComponentProbeStatement.FromDict(
-              json_utils.LoadStr(probe_data_source.probe_statement))
-          pi_parsed_result = ProbeInfoParsedResult(
-              result_type=ProbeInfoParsedResult.PASSED)
-        except Exception as e:
-          ps = None
-          pi_parsed_result = ProbeInfoParsedResult(
-              result_type=(
-                  ProbeInfoParsedResult.OVERRIDDEN_PROBE_STATEMENT_ERROR),
-              general_error_msg=str(e))
-      else:
-        pi_parsed_result, ps = self._ConvertProbeDataSourceToProbeStatement(
-            probe_data_source)
+      pi_parsed_result, ps = self._ConvertProbeDataSourceToProbeStatement(
+          probe_data_source)
       probe_statements.append(ps)
       probe_info_parsed_results.append(pi_parsed_result)
 
@@ -744,33 +800,6 @@ class ProbeToolManager:
           result_type=ProbeInfoParsedResult.ResultType.INCOMPATIBLE_ERROR,
           general_error_msg=f'Unknown probe converter: {converter_name!r}.')
     return parsed_result, converter
-
-  def _CalcProbeInfoFingerprint(self, probe_info: ProbeInfo) -> str:
-    """Derives a fingerprint string for the given probe info.
-
-    Args:
-      probe_info: An instance of `ProbeInfo` to be validated.
-
-    Returns:
-      A string of the fingerprint.
-    """
-    probe_param_values = {}
-    for probe_param in probe_info.probe_parameters:
-      probe_param_values.setdefault(probe_param.name, [])
-      value_attr_name = probe_param.WhichOneof('value')
-      probe_param_values[probe_param.name].append(
-          getattr(probe_param, value_attr_name) if value_attr_name else None)
-    serializable_data = {
-        'probe_function_name': probe_info.probe_function_name,
-        'probe_parameters': {
-            k: sorted(v)
-            for k, v in probe_param_values.items()
-        },
-    }
-    hash_engine = hashlib.sha1()
-    hash_engine.update(
-        json_utils.DumpStr(serializable_data, sort_keys=True).encode('utf-8'))
-    return hash_engine.hexdigest()
 
   def _ConvertProbeDataSourceToProbeStatement(
       self, probe_data_source: ProbeDataSource) -> ProbeInfoArtifact:

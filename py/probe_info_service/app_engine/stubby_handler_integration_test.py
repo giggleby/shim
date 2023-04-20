@@ -32,6 +32,7 @@ class StubbyHandlerTest(unittest.TestCase):
             'storage.mmc_storage',
             'storage.nvme_storage',
             'storage.ufs_storage',
+            'raw_probe_statement',
         ])
 
   def testGetProbeMetadata_IncludeProbeStatementPreviewOfValidInput(self):

@@ -35,10 +35,14 @@ def _InplaceNormalizeProbeInfo(probe_info):
   probe_info.probe_parameters.sort(key=_DeriveSortableValueFromProbeParameter)
 
 
-class _ProbeDataSourceFactory(NamedTuple):
-  probe_statement_type: int
-  probe_data_source_generator: Callable[[], probe_tool_manager.ProbeDataSource]
-  overridden_probe_data: Optional[ps_storage_connector.OverriddenProbeData]
+class _ProbeDataSourceLookupResult(NamedTuple):
+  # `source_type` captures the enum item of
+  # `stubby_pb2.ProbeMetadata.ProbeStatementType`.  However that type is not
+  # a valid annotation, so here it uses `int` instead.
+  source_type: int
+  probe_data_source: probe_tool_manager.ProbeDataSource
+  is_tested: bool
+  preview_generator: Callable[[], str]
 
 
 class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
@@ -77,13 +81,14 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
     response = stubby_pb2.GetQualProbeTestBundleResponse()
 
     self._UpdateCompProbeInfo(request.qual_probe_info)
-    probe_data_source_factory = self._GetProbeDataSourceFactory(
+    lookup_result = self._LookupProbeDataSource(
         request.qual_probe_info.component_identity)
     gen_result = self._probe_tool_manager.GenerateProbeBundlePayload(
-        [probe_data_source_factory.probe_data_source_generator()])
+        [lookup_result.probe_data_source])
 
     response.probe_info_parsed_result.CopyFrom(
-        gen_result.probe_info_parsed_results[0])
+        self._ConvertProbeInfoParsedResult(
+            lookup_result, gen_result.probe_info_parsed_results[0]))
     if gen_result.output is None:
       response.status = response.INVALID_PROBE_INFO
     else:
@@ -100,20 +105,17 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
 
     self._UpdateCompProbeInfo(request.qual_probe_info)
     component_identity = request.qual_probe_info.component_identity
-    probe_data_source_factory = self._GetProbeDataSourceFactory(
-        component_identity)
-    data_source = probe_data_source_factory.probe_data_source_generator()
+    lookup_result = self._LookupProbeDataSource(component_identity)
 
     try:
       result = self._probe_tool_manager.AnalyzeQualProbeTestResultPayload(
-          data_source, request.test_result_payload)
+          lookup_result.probe_data_source, request.test_result_payload)
     except probe_tool_manager.PayloadInvalidError as e:
       response.is_uploaded_payload_valid = False
       response.uploaded_payload_error_msg = str(e)
       return response
 
-    probe_statement_type = probe_data_source_factory.probe_statement_type
-    if probe_statement_type != stubby_pb2.ProbeMetadata.AUTO_GENERATED:
+    if lookup_result.source_type != stubby_pb2.ProbeMetadata.AUTO_GENERATED:
       if result.result_type == result.PASSED:
         self._ps_storage_connector.MarkOverriddenProbeStatementTested(
             component_identity.qual_id, '')
@@ -133,24 +135,36 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
     response.probe_info_test_result.CopyFrom(result)
     return response
 
+  def _ConvertProbeInfoParsedResult(
+      self, lookup_result: _ProbeDataSourceLookupResult,
+      parsed_result: stubby_pb2.ProbeInfoParsedResult
+  ) -> stubby_pb2.ProbeInfoParsedResult:
+    if (lookup_result.source_type == stubby_pb2.ProbeMetadata.AUTO_GENERATED or
+        parsed_result.result_type != parsed_result.PROBE_PARAMETER_ERROR):
+      return parsed_result
+    converted_msg = stubby_pb2.ProbeInfoParsedResult()
+    converted_msg.CopyFrom(parsed_result)
+    converted_msg.result_type = converted_msg.OVERRIDDEN_PROBE_STATEMENT_ERROR
+    return converted_msg
+
   @protorpc_utils.ProtoRPCServiceMethod
   def GetDeviceProbeConfig(self,
                            request: stubby_pb2.GetDeviceProbeConfigRequest):
     response = stubby_pb2.GetDeviceProbeConfigResponse()
 
-    probe_data_sources = []
+    lookup_results = []
     for comp_probe_info in request.component_probe_infos:
       self._UpdateCompProbeInfo(comp_probe_info)
-      probe_data_source_factory = self._GetDeviceProbeDataSourceFactory(
-          comp_probe_info.component_identity)
-      probe_data_sources.append(
-          probe_data_source_factory.probe_data_source_generator())
+      lookup_results.append(
+          self._LookupProbeDataSource(comp_probe_info.component_identity))
 
     gen_result = self._probe_tool_manager.GenerateProbeBundlePayload(
-        probe_data_sources)
+        [r.probe_data_source for r in lookup_results])
 
-    for pi_parsed_result in gen_result.probe_info_parsed_results:
-      response.probe_info_parsed_results.append(pi_parsed_result)
+    for lookup_result, pi_parsed_result in zip(
+        lookup_results, gen_result.probe_info_parsed_results):
+      response.probe_info_parsed_results.append(
+          self._ConvertProbeInfoParsedResult(lookup_result, pi_parsed_result))
     if gen_result.output is None:
       response.status = response.INVALID_PROBE_INFO
     else:
@@ -165,15 +179,12 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
       self, request: stubby_pb2.UploadDeviceProbeResultRequest):
     response = stubby_pb2.UploadDeviceProbeResultResponse()
 
-    probe_data_source_factories = []
+    lookup_results = []
     for comp_probe_info in request.component_probe_infos:
       self._UpdateCompProbeInfo(comp_probe_info)
-      probe_data_source_factories.append(
-          self._GetDeviceProbeDataSourceFactory(
-              comp_probe_info.component_identity))
-    probe_data_sources = [
-        f.probe_data_source_generator() for f in probe_data_source_factories
-    ]
+      lookup_results.append(
+          self._LookupProbeDataSource(comp_probe_info.component_identity))
+    probe_data_sources = [r.probe_data_source for r in lookup_results]
 
     try:
       analyzed_result = (
@@ -189,12 +200,11 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
       response.error_msg = analyzed_result.intrivial_error_msg
       return response
 
-    for i, probe_data_source_factory in enumerate(probe_data_source_factories):
+    for i, lookup_result in enumerate(lookup_results):
       if (analyzed_result.probe_info_test_results[i].result_type ==
           stubby_pb2.ProbeInfoParsedResult.PASSED):
-        ps_type = probe_data_source_factory.probe_statement_type
         component_identity = request.component_probe_infos[i].component_identity
-        if ps_type == stubby_pb2.ProbeMetadata.AUTO_GENERATED:
+        if lookup_result.source_type == stubby_pb2.ProbeMetadata.AUTO_GENERATED:
           avl_entry = self._avl_probe_entry_mngr.GetAVLProbeEntry(
               component_identity.component_id, component_identity.qual_id)
           if not avl_entry:
@@ -205,9 +215,9 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
             avl_entry.is_tested = True
             self._avl_probe_entry_mngr.SaveAVLProbeEntry(avl_entry)
         else:
-          device_id = ('' if ps_type == stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN
-                       else component_identity.device_id)
-          probe_data_source_factory.overridden_probe_data.is_tested = True
+          device_id = ('' if (lookup_result.source_type
+                              == stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN) else
+                       component_identity.device_id)
           self._ps_storage_connector.MarkOverriddenProbeStatementTested(
               component_identity.qual_id, device_id)
 
@@ -251,13 +261,12 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
 
     for comp_probe_info in request.component_probe_infos:
       entry, unused_parsed_result = self._UpdateCompProbeInfo(comp_probe_info)
-      probe_data_source_factory = self._GetDeviceProbeDataSourceFactory(
+      lookup_result = self._LookupProbeDataSource(
           comp_probe_info.component_identity)
-      probe_statement_type = probe_data_source_factory.probe_statement_type
-      if probe_statement_type != stubby_pb2.ProbeMetadata.AUTO_GENERATED:
+      if lookup_result.source_type != stubby_pb2.ProbeMetadata.AUTO_GENERATED:
         probe_metadata = response.probe_metadatas.add(
-            probe_statement_type=probe_data_source_factory.probe_statement_type,
-            is_tested=probe_data_source_factory.overridden_probe_data.is_tested)
+            probe_statement_type=lookup_result.source_type,
+            is_tested=lookup_result.is_tested)
       else:
         probe_metadata = response.probe_metadatas.add(
             probe_statement_type=stubby_pb2.ProbeMetadata.AUTO_GENERATED,
@@ -265,11 +274,8 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
             is_proved_ready_for_overridden=entry.is_justified_for_overridden)
 
       if request.include_probe_statement_preview:
-        gen_result = self._probe_tool_manager.GenerateRawProbeStatement(
-            probe_data_source_factory.probe_data_source_generator())
         probe_metadata.probe_statement_preview = (
-            gen_result.output if gen_result.output is not None else
-            self.MSG_NO_PROBE_STATEMENT_PREVIEW_INVALID_AVL_DATA)
+            lookup_result.preview_generator())
 
     return response
 
@@ -332,14 +338,24 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
 
     return response
 
-  def _GetProbeDataSourceFactory(self, component_identity):
+  def _GeneratePreviewForProbeDataSourceFromAVL(
+      self, probe_data_source: probe_tool_manager.ProbeDataSource) -> str:
+    gen_result = self._probe_tool_manager.GenerateRawProbeStatement(
+        probe_data_source)
+    return (gen_result.output or
+            self.MSG_NO_PROBE_STATEMENT_PREVIEW_INVALID_AVL_DATA)
+
+  def _LookupProbeDataSource(
+      self, component_identity) -> _ProbeDataSourceLookupResult:
     """Gets the probe data source for the component.
 
-    It loads and returns the correct probe data source factory with the
+    It loads and returns the correct probe data source with the
     following orders:
-      1.  If there's a device agnostic overridden, uses it as the data source.
-      2.  If there's AVL-generated probe info, uses it as the data source.
-      3.  Otherwise, raises `protorpc_utils.ProtoRPCException` to indicate an
+      1.  If the device ID is specified and there's device specific overridden,
+          uses it as the data source.
+      2.  If there's a device agnostic overridden, uses it as the data source.
+      3.  If there's AVL-generated probe info, uses it as the data source.
+      4.  Otherwise, raises `protorpc_utils.ProtoRPCException` to indicate an
           invalid argument error.
 
     Args:
@@ -352,60 +368,48 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
       `protorpc_utils.ProtoRPCException`: If no probe info for the given AVL ID.
     """
     component_name = GetProbeDataSourceComponentName(component_identity)
-    ret = self._TryGetProbeDataSourceFactoryForOverridden(
-        component_identity.qual_id, '',
-        stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN, component_name)
-    if ret:
-      return ret
+
+    overridden_lookup_result = self._LookupOverriddenProbeDataSource(
+        component_identity.qual_id, component_identity.device_id,
+        component_name)
+    if overridden_lookup_result:
+      return overridden_lookup_result
+
+    if component_identity.device_id:
+      overridden_lookup_result = self._LookupOverriddenProbeDataSource(
+          component_identity.qual_id, '', component_name)
+      if overridden_lookup_result:
+        return overridden_lookup_result
 
     entry = self._avl_probe_entry_mngr.GetAVLProbeEntry(
         component_identity.component_id, component_identity.qual_id)
-    if not entry:
-      raise protorpc_utils.ProtoRPCException(
-          protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT,
-          'Invalid AVL ID.')
-    return _ProbeDataSourceFactory(
-        stubby_pb2.ProbeMetadata.AUTO_GENERATED,
-        functools.partial(self._probe_tool_manager.CreateProbeDataSource,
-                          component_name, entry.probe_info), None)
+    if entry:
+      probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+          component_name, entry.probe_info)
+      preview_generator = functools.partial(
+          self._GeneratePreviewForProbeDataSourceFromAVL, probe_data_source)
+      return _ProbeDataSourceLookupResult(
+          stubby_pb2.ProbeMetadata.AUTO_GENERATED, probe_data_source,
+          entry.is_tested, preview_generator)
 
-  def _GetDeviceProbeDataSourceFactory(self, component_identity):
-    """Gets the probe data source for the component on the specific device.
+    raise protorpc_utils.ProtoRPCException(
+        protorpc_utils.RPCCanonicalErrorCode.INVALID_ARGUMENT,
+        'Invalid AVL ID.')
 
-    It loads and returns the correct probe data source factory with the
-    following orders:
-      1.  If there's a device specific overridden, uses it as the data source.
-      2.  If there's a device agnostic overridden, uses it as the data source.
-      3.  If there's AVL-generated probe info, uses it as the data source.
-      4.  Otherwise, raises `protorpc_utils.ProtoRPCException` to indicate an
-          invalid argument error.
-
-    Args:
-      component_identity: AVL IDs and the device ID of the target.
-
-    Returns:
-      The factory instance for the loaded probe data source.
-
-    Raises:
-      `protorpc_utils.ProtoRPCException`: If no probe info for the given AVL ID.
-    """
-    component_name = GetProbeDataSourceComponentName(component_identity)
-    if component_identity.device_id:
-      ret = self._TryGetProbeDataSourceFactoryForOverridden(
-          component_identity.qual_id, component_identity.device_id,
-          stubby_pb2.ProbeMetadata.DEVICE_OVERRIDDEN, component_name)
-      if ret:
-        return ret
-    return self._GetProbeDataSourceFactory(component_identity)
-
-  def _TryGetProbeDataSourceFactoryForOverridden(
-      self, qual_id, device_id, probe_statement_type, component_name):
-    probe_data = self._ps_storage_connector.TryLoadOverriddenProbeData(
+  def _LookupOverriddenProbeDataSource(
+      self, qual_id: int, device_id: str,
+      component_name: str) -> Optional[_ProbeDataSourceLookupResult]:
+    overridden_data = self._ps_storage_connector.TryLoadOverriddenProbeData(
         qual_id, device_id)
-    if not probe_data:
+    if not overridden_data:
       return None
-    return _ProbeDataSourceFactory(
-        probe_statement_type,
-        functools.partial(self._probe_tool_manager.LoadProbeDataSource,
-                          component_name, probe_data.probe_statement),
-        probe_data)
+    source_type = (
+        stubby_pb2.ProbeMetadata.DEVICE_OVERRIDDEN
+        if device_id else stubby_pb2.ProbeMetadata.QUAL_OVERRIDDEN)
+    probe_info = probe_tool_manager.RawProbeStatementConverter.BuildProbeInfo(
+        overridden_data.probe_statement)
+    probe_data_source = self._probe_tool_manager.CreateProbeDataSource(
+        component_name, probe_info)
+    return _ProbeDataSourceLookupResult(source_type, probe_data_source,
+                                        overridden_data.is_tested,
+                                        lambda: overridden_data.probe_statement)
