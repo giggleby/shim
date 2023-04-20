@@ -63,11 +63,12 @@ def _GetSoCInfo():
   pattern = re.compile(r'jep106:([\d]{4}):([a-z\d]{4})')
   for path in glob.glob(SOC_ID_FILE_GLOB):
     raw_soc_id = file.ReadFile(path)
-    match = pattern.match(raw_soc_id)
+    match = pattern.fullmatch(raw_soc_id)
     if match:
       break
   if not match:
-    raise ValueError(f'No valid SoC ID found in {SOC_ID_FILE_GLOB!r}')
+    logging.error('No valid SoC ID found in %s', SOC_ID_FILE_GLOB)
+    return 'ARMv8', 'unknown'
 
   vendor_id = match.group(1)
   soc_id = match.group(2)

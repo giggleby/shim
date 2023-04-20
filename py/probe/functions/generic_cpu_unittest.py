@@ -98,14 +98,22 @@ class GenericCPUFunctionTest(unittest.TestCase):
     cpu_info = 'CPU architecture: 8'
     self.mock_glob.return_value = ['fake_path']
     self.mock_read_file.side_effect = [cpu_info, 'invalid_vendor_id']
-    with self.assertRaises(ValueError):
-      generic_cpu.GenericCPUFunction(cpu_type='arm').Probe()
+    self.mock_check_output.return_value = '8'
+
+    probe_result = generic_cpu.GenericCPUFunction(cpu_type='arm').Probe()
+
+    self.assertDictEqual(probe_result, {
+        'cores': '8',
+        'model': 'ARMv8',
+        'hardware': 'unknown'
+    })
 
   def testProbeArm_V8_UnsupportedVendorID(self):
     cpu_info = 'CPU architecture: 8'
     self.mock_glob.return_value = ['fake_path']
-    self.mock_read_file.side_effect = [cpu_info, 'jep106:1234']
-    with self.assertRaises(ValueError):
+    self.mock_read_file.side_effect = [cpu_info, 'jep106:1234:1234']
+    with self.assertRaisesRegex(
+        ValueError, "Vendor ID '1234' is not supported for ChromeOS projects."):
       generic_cpu.GenericCPUFunction(cpu_type='arm').Probe()
 
 
