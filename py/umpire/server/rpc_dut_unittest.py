@@ -62,6 +62,7 @@ class DUTRPCTest(unittest.TestCase):
     xmlrpc_resource.AddHandler(self.rpc)
     self.twisted_port = reactor.listenTCP(
         TEST_RPC_PORT, server.Site(xmlrpc_resource))
+    self.addCleanup(self.cleanupTwistedPort)
     # The device info that matches TESTCONFIG
     self.device_info = {
         'x_umpire_dut': {
@@ -73,8 +74,14 @@ class DUTRPCTest(unittest.TestCase):
             'device_factory_toolkit': '1234'}}
 
   def tearDown(self):
-    self.twisted_port.stopListening()
     self.env.Close()
+
+  def cleanupTwistedPort(self):
+    self.twisted_port.stopListening()
+    # Workaround: we need to close the file by ourselves.
+    # Issue: https://github.com/twisted/twisted/issues/11842
+    from twisted.internet import tcp
+    tcp._reservedFD._fileDescriptor.close()  # pylint: disable=protected-access
 
   def Call(self, function, *args):
     return self.proxy.callRemote(function, *args)

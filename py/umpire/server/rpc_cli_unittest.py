@@ -56,8 +56,14 @@ class CommandTest(unittest.TestCase):
     }
 
   def tearDown(self):
-    self.port.stopListening()
     self.env.Close()
+
+  def cleanupTwistedPort(self):
+    self.port.stopListening()
+    # Workaround: we need to close the file by ourselves.
+    # Issue: https://github.com/twisted/twisted/issues/11842
+    from twisted.internet import tcp
+    tcp._reservedFD._fileDescriptor.close()  # pylint: disable=protected-access
 
   def SetUpMock(self, success, umpire_cli_func, *umpire_cli_func_args):
     def SideEffect(*args, **unused_kwargs):
@@ -74,6 +80,7 @@ class CommandTest(unittest.TestCase):
     self.xmlrpc_resource.AddHandler(self.umpire_cli)
     self.port = reactor.listenTCP(self.test_port,
                                   server.Site(self.xmlrpc_resource))
+    self.addCleanup(self.cleanupTwistedPort)
 
   def Call(self, function, *args):
     return self.proxy.callRemote(function, *args)
