@@ -37,7 +37,7 @@ import json
 import logging
 from typing import Any, Dict
 
-from cros.factory.device import CalledProcessError
+from cros.factory.device.device_types import CalledProcessError
 from cros.factory.device.device_types import DeviceBoard
 from cros.factory.device import device_utils
 from cros.factory.test.i18n import _
