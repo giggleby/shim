@@ -88,7 +88,7 @@ import subprocess
 import sys
 import time
 
-from cros.factory.device import CalledProcessError
+from cros.factory.device.device_types import CalledProcessError
 from cros.factory.device import device_utils
 from cros.factory.test import event_log  # TODO(chuntsen): Deprecate event log.
 from cros.factory.test.fixture import arduino
