@@ -335,6 +335,8 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _ParamValueConverter(
                       'string', lambda hex_with_prefix: bytes.fromhex(
                           hex_with_prefix[2:]).decode('ascii')),
+              'mmc_prv':
+                  _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
           }, informational_params={
               'size_in_gb':
                   _InformationalParam('The storage size in GB.',

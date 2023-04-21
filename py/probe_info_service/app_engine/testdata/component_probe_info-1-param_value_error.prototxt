@@ -14,6 +14,10 @@ probe_info: {
     string_value: "0x1212121212121212"  # An unexpected long string.
   }
   probe_parameters: {
+    name: "mmc_prv"
+    string_value: "0x12"
+  }
+  probe_parameters: {
     name: "size_in_gb"
     int_value: 256
   }

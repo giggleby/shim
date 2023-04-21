@@ -14,6 +14,11 @@
           true,
           "str",
           "!eq ABCxyz"
+        ],
+        "mmc_prv": [
+          true,
+          "hex",
+          "!eq 0x12"
         ]
       }
     }

@@ -7,7 +7,7 @@ from typing import Sequence
 
 from cros.factory.hwid.service.appengine.data.converter import converter
 
-# Shorter identifiers.
+
 _ConvertedValueSpec = converter.ConvertedValueSpec
 
 
@@ -17,6 +17,7 @@ class StorageAVLAttrs(converter.AVLAttrs):
   PCI_CLASS = 'pci_class'
   MMC_MANFID = 'mmc_manfid'
   MMC_NAME = 'mmc_name'
+  MMC_PRV = 'mmc_prv'
   NVME_MODEL = 'nvme_model'
   UFS_MODEL = 'ufs_model'
   UFS_VENDOR = 'ufs_vendor'
@@ -48,7 +49,12 @@ _STORAGE_CONVERTERS: Sequence[converter.FieldNameConverter] = [
                 _ConvertedValueSpec(
                     'manfid',
                     converter.MakeFixedWidthHexValueFactory(
-                        width=6, source_has_prefix=True))
+                        width=6, source_has_prefix=True)),
+            StorageAVLAttrs.MMC_PRV:
+                _ConvertedValueSpec(
+                    'prv',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=2, source_has_prefix=True)),
         }),
     converter.FieldNameConverter.FromFieldMap(
         'mmc_with_prefix', {
@@ -61,7 +67,12 @@ _STORAGE_CONVERTERS: Sequence[converter.FieldNameConverter] = [
                 _ConvertedValueSpec(
                     'mmc_manfid',
                     converter.MakeFixedWidthHexValueFactory(
-                        width=6, source_has_prefix=True))
+                        width=6, source_has_prefix=True)),
+            StorageAVLAttrs.MMC_PRV:
+                _ConvertedValueSpec(
+                    'mmc_prv',
+                    converter.MakeBothNormalizedFillWidthHexValueFactory(
+                        fill_width=2, source_has_prefix=True)),
         }),
     converter.FieldNameConverter.FromFieldMap(
         'ufs_full_match', {

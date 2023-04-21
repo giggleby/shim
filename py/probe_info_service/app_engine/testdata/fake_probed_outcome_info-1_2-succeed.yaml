@@ -9,7 +9,7 @@ envs:
 probed_outcome_prototxt: '
   probe_statement_metadatas: {
     component_name: "AVL_1"
-    fingerprint: "3f5eeff42c6dff41b20cf63fcaf321372ac7eea6"
+    fingerprint: "5b4e4b54aebea41595c10d4d59cf8cc0493ff428"
   }
   probe_statement_metadatas: {
     component_name: "AVL_2"
@@ -28,7 +28,8 @@ probe_config_payload: '
         "eval": {"mmc_storage": {}},
         "expect": {
           "mmc_manfid": [true, "hex", "!eq 0x0A"],
-          "mmc_name": [true, "str", "!eq ABCxyz"]
+          "mmc_name": [true, "str", "!eq ABCxyz"],
+          "mmc_prv": [true, "hex", "!eq 0x12"]
         }
       },
       "AVL_2": {

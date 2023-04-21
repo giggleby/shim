@@ -160,6 +160,7 @@ class ProbeToolManagerTest(unittest.TestCase):
           probe_parameters: { name: "mmc_manfid" string_value: "0x0a" }
           probe_parameters: { name: "mmc_manfid" string_value: "0x0b" }
           probe_parameters: { name: "mmc_name" string_value: "0x414141414141" }
+          probe_parameters: { name: "mmc_prv" string_value: "0x12" }
           probe_parameters: { name: "size_in_gb" int_value: 256 }
         }
     ''')
@@ -176,9 +177,11 @@ class ProbeToolManagerTest(unittest.TestCase):
               "eval": { "mmc_storage": {} },
               "expect": [
                 { "mmc_manfid": [ true, "hex", "!eq 0x0A" ],
-                  "mmc_name": [ true, "str", "!eq AAAAAA" ] },
+                  "mmc_name": [ true, "str", "!eq AAAAAA" ],
+                  "mmc_prv": [ true, "hex", "!eq 0x12" ] },
                 { "mmc_manfid": [ true, "hex", "!eq 0x0B" ],
-                  "mmc_name": [ true, "str", "!eq AAAAAA" ] }
+                  "mmc_name": [ true, "str", "!eq AAAAAA" ],
+                  "mmc_prv": [ true, "hex", "!eq 0x12" ] }
               ]
             }
           }
@@ -195,6 +198,7 @@ class ProbeToolManagerTest(unittest.TestCase):
           probe_function_name: "storage.mmc_storage"
           probe_parameters: { name: "mmc_manfid" string_value: "0x0a" }
           probe_parameters: { name: "mmc_name" string_value: "0x414141414141" }
+          probe_parameters: { name: "mmc_prv" string_value: "0x12" }
           probe_parameters: { name: "size_in_gb" int_value: 256 }
         }
     ''')
@@ -211,7 +215,8 @@ class ProbeToolManagerTest(unittest.TestCase):
               "eval": { "mmc_storage": {} },
               "expect": {
                 "mmc_manfid": [ true, "hex", "!eq 0x0A" ],
-                "mmc_name": [ true, "str", "!eq AAAAAA" ]
+                "mmc_name": [ true, "str", "!eq AAAAAA" ],
+                "mmc_prv": [ true, "hex", "!eq 0x12" ]
               }
             }
           }

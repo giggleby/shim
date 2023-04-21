@@ -14,7 +14,6 @@ from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.probe_info_service.app_engine import stubby_pb2  # pylint: disable=no-name-in-module
 
 
-# Shorter identifiers.
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 _ConvertedValueTypeMapping = Mapping[
     str, Sequence[converter_types.ConvertedValueType]]
@@ -237,6 +236,18 @@ def MakeFixedWidthHexValueFactory(
   return converter_types.FormattedStrType.CreateInstanceFactory(
       formatter_self=HexToHexValueFormatter(width, source_has_prefix,
                                             target_has_prefix))
+
+
+def MakeBothNormalizedFillWidthHexValueFactory(
+    fill_width: int,
+    source_has_prefix: bool = False,
+    target_has_prefix: bool = True,
+) -> Callable[..., converter_types.FormattedStrType]:
+  return converter_types.FormattedStrType.CreateInstanceFactory(
+      formatter_self=HexToHexValueFormatter(fill_width, source_has_prefix,
+                                            target_has_prefix),
+      formatter_other=HexToHexValueFormatter(fill_width, source_has_prefix,
+                                             target_has_prefix))
 
 
 def MakeHexEncodedStrValueFactory(

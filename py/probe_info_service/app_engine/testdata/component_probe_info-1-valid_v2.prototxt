@@ -1,4 +1,4 @@
-# corresponding fingerprint: e2be72fe5bd3296140492fd6255c118b151e4917
+# corresponding fingerprint: f9d24486a9f3c410cdd204ea230980504f9302d6
 component_identity: {
   component_id: 100
   qual_id: 1
@@ -15,6 +15,10 @@ probe_info: {
   probe_parameters: {
     name: "mmc_name"
     string_value: "0x41424378797a"
+  }
+  probe_parameters: {
+    name: "mmc_prv"
+    string_value: "0x12"
   }
   probe_parameters: {
     name: "size_in_gb"
