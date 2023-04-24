@@ -250,6 +250,10 @@ msgid "Fastboot Flash"
 msgstr "烧录 Fastboot"
 
 #: ../build/pytests_label_generated.json
+msgid "Feature Compliance Version"
+msgstr "功能合规测试"
+
+#: ../build/pytests_label_generated.json
 msgid "Finalize"
 msgstr "最终程序"
 

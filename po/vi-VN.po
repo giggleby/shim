@@ -250,6 +250,10 @@ msgid "Fastboot Flash"
 msgstr " Đốt Fastboot"
 
 #: ../build/pytests_label_generated.json
+msgid "Feature Compliance Version"
+msgstr "Phiên bản Công cụ Kiểm tra"
+
+#: ../build/pytests_label_generated.json
 msgid "Finalize"
 msgstr "Trình tự cuối cùng"
 
