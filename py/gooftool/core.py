@@ -28,6 +28,7 @@ from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
 from cros.factory.hwid.v3 import hwid_utils
+from cros.factory.test import device_data
 from cros.factory.probe.functions import flash_chip
 from cros.factory.test.l10n import regions
 from cros.factory.test.rules import phase
@@ -1480,6 +1481,74 @@ class Gooftool:
       raise Error(
           f'Failed to set serial number bits on Cr50. (args={arg_phase})')
 
+  def _Cr50SetFeatureManagementFlagsWithHwSecUtils(self, chassis_branded: bool,
+                                                   hw_compliance_version: int):
+    """Leverages HwSec utils to set feature management flags.
+
+    According to https://crrev.com/c/4483473, the return codes of
+    /usr/share/cros/hwsec-utils/cr50_set_factory_config are
+      0: Success
+      1: General Error
+      2: Config Already Set Error
+
+    Args:
+      chassis_branded: chassis_branded set in device data.
+      hw_compliance_version: hw_compliance_version set in device data.
+
+    Raises:
+      `cros.factory.utils.type_utils.Error` if fails.
+    """
+
+    bin_path = '/usr/share/cros/hwsec-utils/cr50_set_factory_config'
+    if not os.path.exists(bin_path):
+      raise FileNotFoundError(f'Required binary {bin_path} not existed.')
+
+    cmd = [bin_path, str(chassis_branded).lower(), str(hw_compliance_version)]
+    result = self._util.shell(cmd)
+    if result.status == 0:
+      logging.info('Successfully set feature management flags with `%s`.',
+                   ' '.join(cmd))
+      return
+
+    if result.status == 2:
+      logging.error('Feature management flags already set.')
+
+    raise Error(
+        f"Feature management flags cannot be set. (cmd=`{' '.join(cmd)}`)")
+
+  def _Cr50SetFeatureManagementFlags(self):
+    """ Sets the feature management flags to GSC.
+
+    Please be noted that this is a write-once operation.
+    For details, please refer to b/275356839.
+
+    Raises:
+      `cros.factory.utils.type_utils.Error` if cr50_set_factory_config fails.
+      `GSCToolError` if GSC tool fails.
+    """
+
+    chassis_branded = device_data.GetDeviceData(
+        device_data.KEY_FM_CHASSIS_BRANDED)
+    hw_compliance_version = device_data.GetDeviceData(
+        device_data.KEY_FM_HW_COMPLIANCE_VERSION)
+    gsctool = gsctool_module.GSCTool(self._util.shell)
+    feature_flags = gsctool.GetFeatureManagementFlags()
+
+    # In RMA scene, in cases where the feature flags unchanged,
+    # we shouldn't try to set it, otherwise the finalize will fail.
+    # By default the feature flags should be (False, 0) in raw bit form,
+    # so it is also safe not setting it at all.
+    if (feature_flags.is_chassis_branded == chassis_branded and
+        feature_flags.hw_compliance_version == hw_compliance_version):
+      return
+
+    # If the DUT has HwSec utils, we should prioritize using it.
+    try:
+      self._Cr50SetFeatureManagementFlagsWithHwSecUtils(chassis_branded,
+                                                        hw_compliance_version)
+    except FileNotFoundError:
+      gsctool.SetFeatureManagementFlags(chassis_branded, hw_compliance_version)
+
   def Cr50SetBoardId(self, two_stages, is_flags_only=False):
     """Set the board id and flags on the Cr50 chip.
 
@@ -1605,6 +1674,10 @@ class Gooftool:
         self.Ti50SetSWWPRegister(no_write_protect, wpsr)
     else:
       self._Cr50SetROHashForShipping()
+
+    # Setting the feature management flags to GSC is a write-once operation,
+    # so we should set these flags right before Cr50SetBoardId.
+    self._Cr50SetFeatureManagementFlags()
 
     if not rma_mode:
       self.Cr50SetBoardId(
