@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import textwrap
 import unittest
 from unittest import mock
 
@@ -148,6 +149,75 @@ class GSCToolTest(unittest.TestCase):
 
   def _CheckCalledCommand(self, cmd):
     self.assertEqual(self.shell.call_args[0][0], cmd)
+
+  def testEncodeFeatureManagementBits_Not_Chassis_Branded_Hw_Incompliant(self):
+    result = self.gsctool.EncodeFeatureManagementBits(False, 0)
+    self.assertEqual(result, '0000000000000000')
+
+  def testEncodeFeatureManagementBits_Not_Chassis_Branded_Hw_Compliant(self):
+    result = self.gsctool.EncodeFeatureManagementBits(False, 1)
+    self.assertEqual(result, '0000000000000001')
+
+  def testEncodeFeatureManagementBits_Chassis_Branded_Hw_Compliant(self):
+    result = self.gsctool.EncodeFeatureManagementBits(True, 1)
+    self.assertEqual(result, '0000000000000011')
+
+  def testParseFeatureConfigs_Not_Chassis_Branded_Hw_Incompliant(self):
+    feature_config = textwrap.dedent("""raw_value: 0000000000000000
+                 chassis_x_branded: false
+                 hw_x_compliance_version: 00
+              """)
+    result = self.gsctool.ParseFeatureManagementConfigs(feature_config)
+    self.assertEqual(result, gsctool.FeatureManagementFlags(False, 0))
+
+  def testParseFeatureConfigs_Not_Chassis_Branded_Hw_Compliant(self):
+    feature_config = textwrap.dedent("""raw_value: 0000000000000001
+                 chassis_x_branded: false
+                 hw_x_compliance_version: 01
+              """)
+    result = self.gsctool.ParseFeatureManagementConfigs(feature_config)
+    self.assertEqual(result, gsctool.FeatureManagementFlags(False, 1))
+
+  def testParseFeatureConfigs_Chassis_Branded_Hw_Compliant(self):
+    feature_config = textwrap.dedent("""raw_value: 0000000000000011
+                 chassis_x_branded: true
+                 hw_x_compliance_version: 01
+              """)
+    result = self.gsctool.ParseFeatureManagementConfigs(feature_config)
+    self.assertEqual(result, gsctool.FeatureManagementFlags(True, 1))
+
+  def testInvalidFeatureManagementFlags_Invalid_Chassis_Branded_Type(self):
+    with self.assertRaises(TypeError):
+      self.gsctool.SetFeatureManagementFlags(0, 0)
+
+  def testInvalidFeatureManagementFlags_Invalid_Hw_Compliance_Type(self):
+    with self.assertRaises(TypeError):
+      self.gsctool.SetFeatureManagementFlags(False, False)
+
+  def testInvalidFeatureManagementFlags_Invalid_Hw_Compliance_Value(self):
+    with self.assertRaises(ValueError):
+      self.gsctool.SetFeatureManagementFlags(True, 16)
+
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool.'
+              'EncodeFeatureManagementBits')
+  def testSetFeatureManagementFlags(self, mock_encoded_bits):
+    mocked_feature_bits = 'bits'
+    mock_encoded_bits.return_value = mocked_feature_bits
+    self.gsctool.SetFeatureManagementFlags(True, 1)
+    self._CheckCalledCommand(
+        ['/usr/sbin/gsctool', '-a', '--factory_config', mocked_feature_bits])
+
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool.'
+              'ParseFeatureManagementConfigs')
+  def testGetFeatureManagementFlags(self, mock_decode_func):
+    expected_result = gsctool.FeatureManagementFlags(False, 0)
+    mock_decode_func.return_value = expected_result
+    feature_flags = self.gsctool.GetFeatureManagementFlags()
+
+    self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '--factory_config'])
+    mock_decode_func.assert_called_with(mock.ANY)
+    self.assertEqual(feature_flags, expected_result)
+
 
 
 if __name__ == '__main__':
