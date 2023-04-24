@@ -1,6 +1,8 @@
 syntax = "proto3";
 package cros.factory.probe_info_service.app_engine.admin_pb2;
 
+import "cros/factory/probe_info_service/app_engine/stubby.proto";
+
 message RunMigrationScriptsRequest {
 }
 
@@ -28,10 +30,25 @@ message ForceForwardMigrationProgressRequest {
 message ForceForwardMigrationProgressResponse {
 }
 
+message ModifyComponentProbeInfoRequest {
+  repeated
+      cros.factory.probe_info_service.app_engine
+          .stubby_pb2.ComponentProbeInfo component_probe_infos = 1;
+}
+
+message ModifyComponentProbeInfoResponse {
+  repeated cros.factory.probe_info_service.app_engine
+      .stubby_pb2.ProbeInfoParsedResult probe_info_parsed_results = 1;
+}
+
 service AdminService {
   rpc RunMigrationScripts(RunMigrationScriptsRequest)
       returns (RunMigrationScriptsResponse) {}
 
   rpc ForceForwardMigrationProgress(ForceForwardMigrationProgressRequest)
       returns (ForceForwardMigrationProgressResponse) {}
+
+  // Modify the component probe info with status preserved.
+  rpc ModifyComponentProbeInfo(ModifyComponentProbeInfoRequest)
+      returns (ModifyComponentProbeInfoResponse) {}
 }

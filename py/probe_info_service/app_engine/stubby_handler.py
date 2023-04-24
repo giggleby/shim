@@ -31,7 +31,7 @@ def _DeriveSortableValueFromProbeParameter(probe_parameter):
   return (probe_parameter.name, value_type, probe_parameter_value)
 
 
-def _InplaceNormalizeProbeInfo(probe_info):
+def InplaceNormalizeProbeInfo(probe_info):
   probe_info.probe_parameters.sort(key=_DeriveSortableValueFromProbeParameter)
 
 
@@ -310,7 +310,7 @@ class ProbeInfoService(protorpc_utils.ProtoRPCServiceBase):
         self._probe_tool_manager.ValidateProbeInfo(
             comp_probe_info.probe_info,
             not comp_probe_info.component_identity.qual_id))
-    _InplaceNormalizeProbeInfo(converted_probe_info)
+    InplaceNormalizeProbeInfo(converted_probe_info)
     need_save, entry = self._avl_probe_entry_mngr.GetOrCreateAVLProbeEntry(
         comp_probe_info.component_identity.component_id,
         comp_probe_info.component_identity.qual_id)

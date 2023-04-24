@@ -51,7 +51,10 @@ clean:
 
 $(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)/%_pb2.py: %.proto $(PROTOC)
 	mkdir -p "$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)" || true
-	$(PROTOC) --python_out="$(GEN_CODE_DIR)/$(PACKAGE_PATH_NAME)" "$<"
+	$(PROTOC) \
+		-I $(FACTORY_PY_PKG_DIR) \
+		--python_out="$(GEN_CODE_DIR)" \
+		"$(PACKAGE_PATH_NAME)/$<"
 
 $(PROTOC): $(PROTOC_LOCAL_BASE_DIR)
 
