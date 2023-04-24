@@ -391,6 +391,13 @@
         "method": "CHECK_VERSION"
       }
     },
+    "CheckFeatureCompliance": {
+      "pytest_name": "feature_compliance_version",
+      "args": {
+        "hwid_need_vpd": "eval! constants.hwid_need_vpd",
+        "rma_mode": false
+      }
+    },
     "CheckPoint": {
       "inherit": "Barrier",
       "label": "Check Point",
