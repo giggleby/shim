@@ -91,6 +91,11 @@
       ]
     }
   },
+  "feature_management_flags": {
+    "generic": {
+      "eval": "feature_management_flags"
+    }
+  },
   "fingerprint": {
     "generic": {
       "eval": "generic_fingerprint"
