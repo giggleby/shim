@@ -61,6 +61,7 @@ import re
 import struct
 import subprocess
 import sys
+from typing import Tuple
 
 from cros.factory.device import device_types
 from cros.factory.device import device_utils
@@ -195,6 +196,32 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
       logging.info('Restore antenna.')
       self.SwitchAntenna('all')
 
+  def _GetConfiguredAntenna(self) -> Tuple[int, int]:
+    """Gets configured antenna.
+
+    This method executes `iw` command to fetch configured antenna of the WiFi
+    chip.
+
+    Returns: An integer tuple representing (TX, RX).
+
+    Raises:
+      process_utils.CalledProcessError: When `iw` has non-zero exit code.
+      wifi.WiFiError: When failed to parse information from `iw` output.
+    """
+    cmd = ['iw', 'phy', self._phy_name, 'info']
+    output = self._device.CheckOutput(cmd)
+    pattern = r'Configured Antennas: TX (0x[0-9a-fA-F]+) RX (0x[0-9a-fA-F]+)'
+    matching = re.findall(pattern, output)
+
+    # If `Configured Antennas` does not appear or appears more than once in the
+    # output then the output is unexpected.
+    if len(matching) != 1:
+      raise wifi.WiFiError('Failed to get configured antennas.')
+
+    tx = int(matching[0][0], 16)
+    rx = int(matching[0][1], 16)
+    return tx, rx
+
   def SwitchAntenna(self, antenna, max_retries=10):
     """Sets antenna using iw command.
 
@@ -220,7 +247,16 @@ class SwitchAntennaWiFiChip(wifi.WiFiChip):
       unused_stdout, stderr = process.communicate()
       retcode = process.returncode
       if retcode == 0:
-        success = True
+        # Some WiFi chips do not support switching to certain antenna but return
+        # zero on `iw` command. We have to explicitly check if antenna is
+        # switched. See b/273440001.
+        configured_tx, configured_rx = self._GetConfiguredAntenna()
+        success = (configured_tx, configured_rx) == (tx_bitmap, rx_bitmap)
+        if not success:
+          logging.warning(
+              'Failed to switch antenna. '
+              'Expected TX %s RX %s, but got TX %s RX %s.', hex(tx_bitmap),
+              hex(rx_bitmap), hex(configured_tx), hex(configured_rx))
         break
       # (-95) EOPNOTSUPP Operation not supported on transport endpoint
       # Do ifconfig down again may solve this problem.
