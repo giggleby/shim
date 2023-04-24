@@ -359,6 +359,7 @@
           "verify_cros_config",
           "verify_dlc_images",
           "verify_ec_key",
+          "verify_feature_management_flags",
           "verify_fp_key",
           "verify_hwid",
           "verify_keys",

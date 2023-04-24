@@ -34,8 +34,10 @@ from cros.factory.gooftool import vpd
 from cros.factory.gooftool.write_protect_target import CreateWriteProtectTarget
 from cros.factory.gooftool.write_protect_target import UnsupportedOperationError
 from cros.factory.gooftool.write_protect_target import WriteProtectTargetType
+from cros.factory.hwid.v3 import feature_compliance
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.probe.functions import chromeos_firmware
+from cros.factory.test import device_data
 from cros.factory.test.env import paths
 from cros.factory.test import event_log
 from cros.factory.test.rules import phase
@@ -669,6 +671,66 @@ def WipeInit(options):
       options.test_umount)
 
 
+@Command('verify_feature_management_flags', *GetGooftool.__args__)
+def VerifyFeatureManagementFlags(options):
+  """Verify the flags for feature managements.
+
+  This command verifies:
+  1. (is_chassis_branded, hw_compliance_version) stored correctly in device
+     data, indicating the pytest branded_chassis and feature_compliance_version
+     passed.
+  2. hw_compliance_version computed from HWID string matches
+     hw_compliance_version stored in device data.
+  """
+
+  chassis_branded_device_data = device_data.GetDeviceData(
+      device_data.KEY_FM_CHASSIS_BRANDED)
+  hw_compliance_version_device_data = device_data.GetDeviceData(
+      device_data.KEY_FM_HW_COMPLIANCE_VERSION)
+
+  incorrect_pytest_error_msg = []
+  if chassis_branded_device_data is None:
+    msg = (f'{device_data.KEY_FM_CHASSIS_BRANDED} is not in device data.'
+           'Run `branded_chassis` pytest to set it.')
+    incorrect_pytest_error_msg.append(msg)
+
+  if hw_compliance_version_device_data is None:
+    msg = (f'{device_data.KEY_FM_HW_COMPLIANCE_VERSION} is not in device data.'
+           'Run `feature_compliance_version` pytest to set it.')
+    incorrect_pytest_error_msg.append(msg)
+
+  if incorrect_pytest_error_msg:
+    incorrect_pytest_str = '\n'.join(incorrect_pytest_error_msg)
+    raise Error(incorrect_pytest_str)
+
+  hwid_string = GetGooftool(options).ReadHWID()
+  database = GetGooftool(options).db
+  hwid_dir = hwid_utils.GetDefaultDataPath()
+
+  identity, unused_bom, unused_configless = hwid_utils.DecodeHWID(
+      database, hwid_string)
+
+  checker = feature_compliance.LoadChecker(hwid_dir,
+                                           hwid_utils.ProbeProject().upper())
+  hw_compliance_version_checker = checker.CheckFeatureComplianceVersion(
+      identity)
+
+  if hw_compliance_version_device_data != hw_compliance_version_checker:
+    raise Error(
+        'HW compliance version set for device '
+        f'({hw_compliance_version_device_data}) differs the one calculated '
+        f'with the compliance checker ({hw_compliance_version_checker}) '
+        'from HWID data.')
+
+  if chassis_branded_device_data:
+    if (hw_compliance_version_checker ==
+        feature_compliance.FEATURE_INCOMPLIANT_VERSION):
+      raise Error(f'Chassis branded HW compliance version '
+                  f'({hw_compliance_version_checker}) incorrect, should not '
+                  'be incompliant version: '
+                  f'({feature_compliance.FEATURE_INCOMPLIANT_VERSION}).')
+
+
 @Command(
     'verify_hwid',
     _probe_results_cmd_arg,  # this
@@ -744,6 +806,7 @@ def VerifyHWID(options):
     *VerifySystemTime.__args__,
     *VerifyTPM.__args__,
     *VerifyVPD.__args__,
+    *VerifyFeatureManagementFlags.__args__,
 )
 def VerifyBeforeCr50Finalize(options):
   """Verifies if the device is ready for finalization before Cr50Finalize.
@@ -756,6 +819,7 @@ def VerifyBeforeCr50Finalize(options):
   if not options.no_write_protect:
     VerifyManagementEngineLocked(options)
   VerifyHWID(options)
+  VerifyFeatureManagementFlags(options)
   VerifySystemTime(options)
   if options.has_ec_pubkey:
     VerifyECKey(options)
