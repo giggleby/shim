@@ -8,6 +8,7 @@ from cros.factory.hwid.service.appengine.data.converter import audio_codec_conve
 from cros.factory.hwid.service.appengine.data.converter import battery_converter
 from cros.factory.hwid.service.appengine.data.converter import camera_converter
 from cros.factory.hwid.service.appengine.data.converter import converter
+from cros.factory.hwid.service.appengine.data.converter import display_panel_converter
 from cros.factory.hwid.service.appengine.data.converter import storage_converter
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -18,11 +19,12 @@ from cros.factory.hwid.v3 import name_pattern_adapter
 
 # A map to collect converter collections.
 _DEFAULT_CONVERTER_COLLECTION_MAP = {
-    'battery': battery_converter.GetConverterCollection(),
-    'storage': storage_converter.GetConverterCollection(),
-    'camera': camera_converter.GetConverterCollection(category='camera'),
-    'video': camera_converter.GetConverterCollection(category='video'),
     'audio_codec': audio_codec_converter.GetConverterCollection(),
+    'battery': battery_converter.GetConverterCollection(),
+    'camera': camera_converter.GetConverterCollection(category='camera'),
+    'display_panel': display_panel_converter.GetConverterCollection(),
+    'storage': storage_converter.GetConverterCollection(),
+    'video': camera_converter.GetConverterCollection(category='video'),
 }
 _PVAlignmentStatus = contents_analyzer.ProbeValueAlignmentStatus
 

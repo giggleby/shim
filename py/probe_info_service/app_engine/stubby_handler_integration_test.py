@@ -29,6 +29,7 @@ class StubbyHandlerTest(unittest.TestCase):
             'audio_codec.audio_codec',
             'battery.generic_battery',
             'camera.usb_camera',
+            'display_panel.edid',
             'storage.mmc_storage',
             'storage.nvme_storage',
             'storage.ufs_storage',

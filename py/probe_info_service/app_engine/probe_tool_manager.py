@@ -401,6 +401,21 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                                        _NormalizeHexValueWithoutPrefix),
           }),
       _SingleProbeFuncConverter(
+          'display_panel', 'edid', {
+              'product_id':
+                  _ParamValueConverter('string',
+                                       _NormalizeHexValueWithoutPrefix),
+              'vendor':
+                  _ParamValueConverter('string'),
+          }, informational_params={
+              'width':
+                  _InformationalParam('The width of display panel.',
+                                      _ParamValueConverter('int')),
+              'height':
+                  _InformationalParam('The height of display panel.',
+                                      _ParamValueConverter('int')),
+          }),
+      _SingleProbeFuncConverter(
           'storage', 'mmc_storage', {
               'mmc_manfid':
                   _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
