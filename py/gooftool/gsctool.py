@@ -30,6 +30,13 @@ class BoardID(type_utils.Obj):
 UpdateResult = type_utils.Enum(['NOOP', 'ALL_UPDATED', 'RW_UPDATED'])
 
 
+class FeatureManagementFlags(type_utils.Obj):
+
+  def __init__(self, is_chassis_branded_: bool, hw_compliance_version_: int):
+    super().__init__(is_chassis_branded=is_chassis_branded_,
+                     hw_compliance_version=hw_compliance_version_)
+
+
 class APROResult(enum.Enum):
   # ref: platform/cr50/include/ap_ro_integrity_check.h
   # Results of cr50.
@@ -247,6 +254,99 @@ class GSCTool:
     """Clear the AP-RO hash in Cr50."""
     self._InvokeCommand([GSCTOOL_PATH, '-a', '-H'],
                         'Failed to clear the AP-RO hash.')
+
+  # TODO(stevesu): Refactor this function to make adding new flag/mask easy.
+  def EncodeFeatureManagementBits(self, chassis_branded: bool,
+                                  hw_compliance_version: int) -> str:
+    """Encodes the factory config hex string from feature management flags.
+
+    According to b/275356839, factory configs can now be stored in GSC INFO
+    page with 64 bit length. The lower 5 bits are now allocated to the
+    feature management flags. The function constructs the raw 64 bit hex string
+    input for the later GSC command call.
+
+    Args:
+      chassis_branded: Chassis branded feature flag (bool)
+      hw_compliance_version: Compliance version of the feature (int)
+
+    Returns:
+      64 bit hex string.
+    """
+    factory_config = (((chassis_branded & 0x1) << 4) |
+                      (hw_compliance_version & 0xF))
+    return f'{factory_config:016x}'
+
+  def ParseFeatureManagementConfigs(self,
+                                    feature_config) -> FeatureManagementFlags:
+    """Parse the feature config from gsctool -a --factory_config output.
+
+    Example factory_config output:
+      raw_value: 0000000000000000
+      chassis_x_branded: false
+      hw_x_compliance_version: 01
+
+    Args:
+      feature_config: The output string from from gsctool -a --factory_config.
+
+    Returns:
+      `FeatureManagementFlags` instance.
+
+    Raises:
+      `GSCToolError` if the output cannot be correctly parsed.
+    """
+    chassis_pattern = r'chassis_x_branded: (true|false)'
+    hw_compliance_version_pattern = r'hw_x_compliance_version: (\d{2})'
+
+    match_chassis = re.search(chassis_pattern, feature_config, re.MULTILINE)
+    if not match_chassis:
+      raise GSCToolError('Unable to parse chassis_x_branded from output.')
+
+    match_compliance_version = re.search(hw_compliance_version_pattern,
+                                         feature_config, re.MULTILINE)
+    if not match_compliance_version:
+      raise GSCToolError('Unable to parse hw_x_compliance_version from output.')
+
+    chassis_branded = match_chassis.group(1) == 'true'
+    hw_compliance_version = int(match_compliance_version.group(1), 16)
+    return FeatureManagementFlags(chassis_branded, hw_compliance_version)
+
+  def SetFeatureManagementFlags(self, chassis_branded: bool,
+                                hw_compliance_version: int):
+    """Sets the feature config chassis_branded and hw_compliance_version.
+
+    Raises:
+      `GSCToolError` if fails.
+      `TypeError` if the input argument type incorrect.
+      `ValueError` if `hw_compliance_version` is not within valid 4 bit range.
+    """
+
+    if not isinstance(chassis_branded, bool):
+      raise TypeError('chassis_branded should be bool type.')
+    if not isinstance(hw_compliance_version, int):
+      raise TypeError('hw_compliance_version should be int type.')
+    if isinstance(hw_compliance_version, bool):
+      # Add this because bool is sub-type of int.
+      raise TypeError('hw_compliance_version should be int type, not boolean.')
+    if hw_compliance_version > 0xF:
+      raise ValueError('hw_compliance_version should be a 4 bit integer.')
+
+    feature_bits = self.EncodeFeatureManagementBits(chassis_branded,
+                                                    hw_compliance_version)
+    self._InvokeCommand([GSCTOOL_PATH, '-a', '--factory_config', feature_bits],
+                        'Failed to set feature flags.')
+
+  def GetFeatureManagementFlags(self) -> FeatureManagementFlags:
+    """Gets the chassis_branded and hw_compliance_version feature flags.
+
+    Returns:
+      `FeatureManagementFlags` instance.
+
+    Raises:
+      `GSCToolError` if fails.
+    """
+    result = self._InvokeCommand([GSCTOOL_PATH, '-a', '--factory_config'],
+                                 'Failed to get feature flags.')
+    return self.ParseFeatureManagementConfigs(result.stdout)
 
   def _InvokeCommand(self, cmd, failure_msg, cmd_result_checker=None):
     cmd_result_checker = cmd_result_checker or (lambda result: result.success)
