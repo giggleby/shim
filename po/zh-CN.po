@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-03-07 05:58+UTC\n"
+"PO-Revision-Date: 2023-05-02 20:29+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -235,6 +235,10 @@ msgstr "风扇转速"
 #: ../build/pytests_label_generated.json
 msgid "Fastboot Flash"
 msgstr "烧录 Fastboot"
+
+#: ../build/pytests_label_generated.json
+msgid "Feature Compliance Version"
+msgstr "功能合规测试"
 
 #: ../build/pytests_label_generated.json
 msgid "Finalize"
