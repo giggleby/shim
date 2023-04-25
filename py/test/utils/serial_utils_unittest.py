@@ -11,7 +11,7 @@ from unittest import mock
 
 from cros.factory.test.utils import serial_utils
 
-from cros.factory.external import serial
+from cros.factory.external.py_lib import serial
 
 _DEFAULT_DRIVER = 'pl2303'
 _DEFAULT_INDEX = '1-1'
@@ -30,7 +30,8 @@ class OpenSerialTest(unittest.TestCase):
     mock_serial = mock.Mock(serial.Serial)
     mock_serial.isOpen = lambda: True
 
-    with mock.patch('cros.factory.external.serial.Serial') as serial_mock:
+    with mock.patch(
+        'cros.factory.external.py_lib.serial.Serial') as serial_mock:
       serial_mock.return_value = mock_serial
       serial_utils.OpenSerial(port=_DEFAULT_PORT, baudrate=19200)
 

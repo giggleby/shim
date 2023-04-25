@@ -21,7 +21,7 @@ import sqlite3
 import textwrap
 import xmlrpc.server
 
-import gnupg
+from cros.factory.external.py_lib import gnupg
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 FILTERS_DIR = os.path.join(SCRIPT_DIR, 'filters')

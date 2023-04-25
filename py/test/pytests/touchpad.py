@@ -57,7 +57,7 @@ from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 class TouchpadMonitor(touch_monitor.MultiTouchMonitor):

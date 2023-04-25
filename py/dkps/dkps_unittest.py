@@ -12,13 +12,13 @@ import subprocess
 import tempfile
 import unittest
 
-import gnupg
-
 from cros.factory.dkps import dkps
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils import sync_utils
+
+from cros.factory.external.py_lib import gnupg
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
