@@ -136,6 +136,9 @@ _DATABASE_BUILDER_COMMON_ARGS = _HWID_MATERIAL_COMMON_ARGS + [
         'combination of 2 cameras into `camera_field`.'),
     CmdArg('--add-firmware-components', action='store_true',
            help='Add firmware components when building HWID database.'),
+    CmdArg('--add-feature-tiering-components', default=False,
+           action='store_true',
+           help="Add default feature tiering components.\n"),
 ]
 
 _RMA_COMMON_ARGS = [
@@ -355,6 +358,8 @@ def RunDatabaseBuilder(database_builder, options):
     if options.add_regions:
       database_builder.AddRegions(options.add_regions,
                                   options.region_field_name)
+    if options.add_feature_tiering_components:
+      database_builder.AddFeatureManagementFlagComponents()
 
     if not options.skip_update_by_material_file:
       hwid_material = ObtainHWIDMaterial(options)

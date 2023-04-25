@@ -81,13 +81,42 @@ def HandleCollisionName(comp_name, name_list):
   return comp_name
 
 
+def _DetermineFeatureManagementComponentName(comp_cls: str,
+                                             value: ProbedValueType) -> str:
+  # See context for naming strategy in b/274033956.
+  postfix = []
+  if value.get('is_chassis_branded', '0') != '0':
+    postfix.append('chassis_branded')
+  else:
+    postfix.append('not_chassis_branded')
+
+  if value.get('hw_compliance_version', '0') != '0':
+    postfix.append('hw_compliant')
+  else:
+    postfix.append('hw_incompliant')
+  postfix_str = '_'.join(postfix)
+  return f'{comp_cls}_{postfix_str}'
+
+
+def _DetermineFirmwareComponentName(unused_comp_cls: str,
+                                    value: ProbedValueType) -> str:
+  if 'devkeys' in value['key_root']:
+    return 'firmware_keys_dev'
+  return 'firmware_keys_non_dev'
+
+
+def _DetermineSkuIdComponentName(unused_comp_cls: str,
+                                 value: ProbedValueType) -> str:
+  return f'sku_{value["sku_id"]}'
+
+
 def _DetermineComponentName(comp_cls: str, value: ProbedValueType):
   """Determines the component name by the value.
 
   For some specific components, we can determine a meaningful name by the
   component value. For example the value contains the vendor name, or the part
   number. But some components value don't, so we just use UUID.
-  Note that the function doesn't ganrantee the name is unique.
+  Note that the function doesn't guarantee the name is unique.
 
   Args:
     comp_cls: the component class name.
@@ -96,14 +125,14 @@ def _DetermineComponentName(comp_cls: str, value: ProbedValueType):
   Returns:
     the component name.
   """
-  # Known specific components.
-  if comp_cls == 'firmware_keys':
-    if 'devkeys' in value['key_root']:
-      return 'firmware_keys_dev'
-    return 'firmware_keys_non_dev'
+  component_name_generators = {
+      'feature_management_flags': _DetermineFeatureManagementComponentName,
+      'firmware_keys': _DetermineFirmwareComponentName,
+      'sku_id': _DetermineSkuIdComponentName,
+  }
 
-  if comp_cls == 'sku_id':
-    return f'sku_{value["sku_id"]}'
+  if comp_cls in component_name_generators:
+    return component_name_generators[comp_cls](comp_cls, value)
 
   # General components.
   if len(value) == 1:
@@ -254,6 +283,35 @@ class DatabaseBuilder:
     db = database.WritableDatabase.LoadData(db_data, expected_checksum=None)
     return cls(db=db, from_empty_database=False,
                auto_decline_essential_prompt=auto_decline_essential_prompt)
+
+  @_EnsureInBuilderContext
+  def AddFeatureManagementFlagComponents(self):
+    """Adds component items and encoded bits for feature management flags."""
+
+    comp_cls = 'feature_management_flags'
+    existed_comps = self._database.GetComponents(comp_cls)
+
+    if existed_comps:
+      raise BuilderException(
+          'Already have existed feature management components in database.'
+          'Use only when updating the database for the first time.')
+
+    # ('is_chassis_branded', 'hw_compliance_version')
+    valid_feature_flag_pairs = [('0', '0'), ('0', '1'), ('1', '1')]
+    for chassis_branded, hw_compliance_version in valid_feature_flag_pairs:
+      value = {
+          'hw_compliance_version': hw_compliance_version,
+          'is_chassis_branded': chassis_branded
+      }
+      self.AddComponentCheck(comp_cls, value)
+
+    existed_comp_names = self._database.GetComponents(comp_cls).keys()
+    field_name = f'{comp_cls}_field'
+    for idx, name in enumerate(existed_comp_names):
+      if idx:
+        self.AddEncodedFieldComponents(field_name, comp_cls, [name])
+      else:
+        self.AddNewEncodedField(comp_cls, [name])
 
   @_EnsureInBuilderContext
   def UprevFrameworkVersion(self, new_framework_version):
