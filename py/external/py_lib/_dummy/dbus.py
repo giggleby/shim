@@ -1,7 +1,6 @@
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Dummy implementation for dbus."""
 
 import sys
@@ -31,7 +30,7 @@ service = Service()
 DBusException = DummyClass
 
 # Create virtual packages.
-_name = 'cros.factory.external.dbus.mainloop'
+_name = 'cros.factory.external.py_lib.dbus.mainloop'
 mainloop = sys.modules[_name] = types.ModuleType(_name)
 _name += '.glib'
 mainloop.glib = sys.modules[_name] = types.ModuleType(_name)

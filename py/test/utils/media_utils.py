@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import tempfile
 
-from cros.factory.external import pyudev
+from cros.factory.external.py_lib import pyudev
 
 # udev constants
 _UDEV_ACTION_INSERT = 'add'

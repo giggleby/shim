@@ -31,7 +31,7 @@ from cros.factory.test import event
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
 
-from cros.factory.external import qrcode
+from cros.factory.external.py_lib import qrcode
 
 _POS_SCHEMA = schema.JSONSchemaDict(
     'position schema object',

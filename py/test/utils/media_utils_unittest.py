@@ -20,9 +20,9 @@ import unittest
 from cros.factory.test.utils.media_utils import MediaMonitor
 from cros.factory.test.utils.media_utils import MountedMedia
 
-from cros.factory.external import glib
-from cros.factory.external import gtk
-from cros.factory.external import pyudev
+from cros.factory.external.py_lib import glib
+from cros.factory.external.py_lib import gtk
+from cros.factory.external.py_lib import pyudev
 
 # udev constants
 _UDEV_ACTION_INSERT = 'add'

@@ -21,10 +21,10 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-from cros.factory.external import dbus
-from cros.factory.external import dpkt
-from cros.factory.external import netifaces
-from cros.factory.external import pexpect
+from cros.factory.external.py_lib import dbus
+from cros.factory.external.py_lib import dpkt
+from cros.factory.external.py_lib import netifaces
+from cros.factory.external.py_lib import pexpect
 
 INSERT_ETHERNET_DONGLE_TIMEOUT = 30
 
