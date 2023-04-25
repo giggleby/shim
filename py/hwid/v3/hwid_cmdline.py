@@ -353,6 +353,8 @@ def RunDatabaseBuilder(database_builder, options):
     if options.add_regions:
       database_builder.AddRegions(options.add_regions,
                                   options.region_field_name)
+    if options.add_feature_tiering_components:
+      database_builder.AddFeatureManagementFlagComponents()
 
     if not options.skip_update_by_material_file:
       hwid_material = ObtainHWIDMaterial(options)
@@ -414,6 +416,9 @@ def BuildDatabaseWrapper(options):
 
 @Command('update-database',
          CmdArg('--image-id', default=None, help="Name of image_id.\n"),
+         CmdArg('--add-feature-tiering-components', default=False,
+                action='store_true',
+                help="Add default feature tiering components.\n"),
          CmdArg('--output-database', default=None,
                 help='Write into different file.\n'),
          *_DATABASE_BUILDER_COMMON_ARGS)
