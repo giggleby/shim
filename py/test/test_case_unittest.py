@@ -157,7 +157,7 @@ class TestCaseTest(unittest.TestCase):
 
     self.AssertRunResult()
     self.assertEqual([0, 1, 2], executed_tasks)
-    self.assertEqual([1, 2, 3], next_task_stages)
+    self.assertEqual([0, 0, 0], next_task_stages)
 
   def testAddTaskSomeFail(self):
     executed_tasks = []
@@ -175,7 +175,22 @@ class TestCaseTest(unittest.TestCase):
 
     self.AssertRunResult('Something wrong')
     self.assertEqual(['task1', 'task2'], executed_tasks)
-    self.assertEqual([1, 2], next_task_stages)
+    self.assertEqual([0, 0], next_task_stages)
+
+  def testAddTask_NotEnableNextTaskStage(self):
+    next_task_stages = []
+
+    def _Task():
+      next_task_stages.append(self._test.GetNextTaskStage())
+
+    # next_task_stage will not be enabled if all tasks were added with
+    # `reboot=False`
+    self._test.AddTask(lambda: _Task())
+    self._test.AddTask(lambda: _Task())
+    self._test.AddTask(lambda: _Task())
+
+    self.AssertRunResult()
+    self.assertEqual([0, 0, 0], next_task_stages)
 
   def testAddTasks_ClearNextTaskStageWhenFail(self):
     executed_tasks = []
@@ -188,14 +203,14 @@ class TestCaseTest(unittest.TestCase):
         self._test.FailTask(f'Fail at {name}')
 
     # Makes sure the next stage flag will be cleared if any task fail.
-    self._test.AddTask(lambda: _Task('task1'))
+    self._test.AddTask(lambda: _Task('task1'), reboot=True)
     self._test.AddTask(lambda: _Task('task2', fail_task=True))
     self._test.AddTask(lambda: _Task('task3'))
 
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
+    self._test.UpdateNextTaskStage(1)
     self.AssertRunResult('Fail at task2')
-    self.assertEqual(['task1', 'task2'], executed_tasks)
-    self.assertEqual([1, 2], next_task_stages)
+    self.assertEqual(['task2'], executed_tasks)
+    self.assertEqual([2], next_task_stages)
     self.assertEqual(self._test.GetNextTaskStage(), 0)
 
   def testAddTasks_ClearNextTaskStageWhenPass(self):
@@ -207,14 +222,14 @@ class TestCaseTest(unittest.TestCase):
       next_task_stages.append(self._test.GetNextTaskStage())
 
     # Makes sure the next stage flag will be cleared if all tasks pass.
-    self._test.AddTask(lambda: _Task('task1'))
+    self._test.AddTask(lambda: _Task('task1'), reboot=True)
     self._test.AddTask(lambda: _Task('task2'))
     self._test.AddTask(lambda: _Task('task3'))
 
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
+    self._test.UpdateNextTaskStage(1)
     self.AssertRunResult()
-    self.assertEqual(['task1', 'task2', 'task3'], executed_tasks)
-    self.assertEqual([1, 2, 3], next_task_stages)
+    self.assertEqual(['task2', 'task3'], executed_tasks)
+    self.assertEqual([2, 3], next_task_stages)
     self.assertEqual(self._test.GetNextTaskStage(), 0)
 
   def testAddTasks_SkipFinishedTasksAfterReboot(self):
@@ -225,14 +240,13 @@ class TestCaseTest(unittest.TestCase):
       executed_tasks.append((name))
       next_task_stages.append(self._test.GetNextTaskStage())
 
-    # Sets the next stage flag for simulating the reboot scenario.
-    # The tasks finished before reboot should be skipped.
-    self._test.UpdateNextTaskStage(2)
-
     self._test.AddTask(lambda: _Task('task1'))
     self._test.AddTask(lambda: _Task('task2'), reboot=True)
     self._test.AddTask(lambda: _Task('task3'))
 
+    # Sets the next stage flag for simulating the reboot scenario.
+    # The tasks finished before reboot should be skipped.
+    self._test.UpdateNextTaskStage(2)
     self.AssertRunResult()
     self.assertEqual(['task3'], executed_tasks)
     self.assertEqual([3], next_task_stages)
@@ -251,7 +265,7 @@ class TestCaseTest(unittest.TestCase):
     # while running the task with 'reboot=False'
     self._test.UpdateNextTaskStage(2)
 
-    self._test.AddTask(lambda: _Task('task1'))
+    self._test.AddTask(lambda: _Task('task1'), reboot=True)
     self._test.AddTask(lambda: _Task('task2'), reboot=False)
     self._test.AddTask(lambda: _Task('task3'))
 

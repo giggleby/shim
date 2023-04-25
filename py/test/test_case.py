@@ -216,32 +216,35 @@ class TestCase(unittest.TestCase):
       if not self.__tasks:
         self.AddTask(getattr(self, self.__method_name))
 
+      tasks_with_reboot = any(task.reboot for task in self.__tasks)
+
       try:
-        next_task_stage = self.GetNextTaskStage()
+        if tasks_with_reboot:
+          next_task_stage = self.GetNextTaskStage()
 
-        # Fails the pytest if last executed task triggered an unexpected reboot.
-        if next_task_stage > 0:
-          last_task_before_reboot = self.__tasks[next_task_stage - 1]
-          if not last_task_before_reboot.reboot:
-            self.FailTask('Unexpected reboot was triggered while running '
-                          f'"{last_task_before_reboot.name}".')
+          # Fails the pytest if last executed task triggered an unexpected reboot.
+          if next_task_stage > 0:
+            last_task_before_reboot = self.__tasks[next_task_stage - 1]
+            if not last_task_before_reboot.reboot:
+              self.FailTask('Unexpected reboot was triggered while running '
+                            f'"{last_task_before_reboot.name}".')
 
-        # Skips the tasks that have passed.
-        for unused_passed_tasks in range(next_task_stage):
-          self.__tasks.popleft()
+          # Skips the tasks that have passed.
+          for unused_passed_tasks in range(next_task_stage):
+            self.__tasks.popleft()
 
-        # Saves pending test list for restoring test list after reboot.
-        if any(task.reboot for task in self.__tasks):
-          self.goofy_rpc.SaveDataForNextBoot()
+            # Saves pending test list for restoring test list after reboot.
+            self.goofy_rpc.SaveDataForNextBoot()
 
         for task in self.__tasks:
           self.__task_end_event.clear()
           try:
             self.__SetupGoofyJSEvents()
 
-            # Updates the next task stage for stage checking before running.
-            next_task_stage += 1
-            self.UpdateNextTaskStage(next_task_stage)
+            if tasks_with_reboot:
+              # Updates the next task stage for stage checking before running.
+              next_task_stage += 1
+              self.UpdateNextTaskStage(next_task_stage)
 
             task.run()
             # Adds buffer time for avoiding run next task before
@@ -263,11 +266,11 @@ class TestCase(unittest.TestCase):
         if self.__task_failed:
           return
       finally:
-        # Clears the task stage data after all tasks passed or any task failed.
-        # Only execute when the tasks are added by AddTasksWithReboot().
-        session.console.info(
-            'Test finished. Clear the data of next task stage.')
-        self.ClearNextTaskStage()
+        if self.GetNextTaskStage() != 0:
+          # Clears the task stage data after all tasks passed or any task failed.
+          session.console.info(
+              'Test finished. Clear the data of next task stage.')
+          self.ClearNextTaskStage()
 
       self.event_loop.PostNewEvent(
           test_event.Event.Type.END_EVENT_LOOP, status=state.TestState.PASSED)
