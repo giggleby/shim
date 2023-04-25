@@ -25,7 +25,7 @@ Test Procedure
 Dependency
 ----------
 
-* cros.factory.external.evdev
+* cros.factory.external.py_lib.evdev
 * cros.factory.test.utils.evdev_utils
 
 Examples
@@ -63,7 +63,7 @@ from cros.factory.test import test_ui
 from cros.factory.test.utils import evdev_utils
 from cros.factory.utils.arg_utils import Arg
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 def FormatMultipleDevicesMessages(arg_name, candidates):

@@ -6,7 +6,7 @@ import logging
 
 from cros.factory.test.fixture.robot import robot
 
-from cros.factory.external import serial
+from cros.factory.external.py_lib import serial
 
 
 class SixDoFCalibrationRobot(robot.Robot):

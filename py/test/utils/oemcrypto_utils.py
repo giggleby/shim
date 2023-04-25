@@ -7,7 +7,7 @@ Currently the dbus interface is only supported on the AMD platform for
 Spriggins project. See go/spriggins-factory-provision for more details.
 """
 
-from cros.factory.external import dbus
+from cros.factory.external.py_lib import dbus
 
 
 class OEMCryptoClient:

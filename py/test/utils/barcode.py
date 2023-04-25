@@ -4,12 +4,14 @@
 
 """Encapsulates QR Barcode scanner."""
 
-try:
-  import cv2 as cv
-  import numpy as np
-  import zbar
-except ImportError:
-  pass
+import logging
+
+from cros.factory.external.py_lib import cv2 as cv
+from cros.factory.external.py_lib import numpy as np
+from cros.factory.external.py_lib import zbar
+
+if not zbar.MODULE_READY:
+  logging.warning('zbar is not installed')
 
 
 def ScanQRCode(cv_image):

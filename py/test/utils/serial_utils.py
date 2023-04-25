@@ -18,7 +18,7 @@ import os
 import re
 import time
 
-from cros.factory.external import serial  # site-packages: dev-python/pyserial
+from cros.factory.external.py_lib import serial  # site-packages: dev-python/pyserial
 
 
 def OpenSerial(**params):

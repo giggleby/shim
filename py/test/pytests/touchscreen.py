@@ -119,7 +119,7 @@ from cros.factory.test.utils import touch_monitor
 from cros.factory.utils.arg_utils import Arg
 
 # pylint: disable=no-name-in-module
-from cros.factory.external.evdev import ecodes
+from cros.factory.external.py_lib.evdev import ecodes
 
 
 class StylusMonitor(touch_monitor.SingleTouchMonitor):

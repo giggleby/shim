@@ -20,8 +20,8 @@ from cros.factory.instalog.utils import file_utils
 from cros.factory.instalog.utils import sync_utils
 from cros.factory.instalog.utils import type_utils
 
-from cros.factory.instalog.external import jsonrpclib
-from cros.factory.instalog.external import yaml
+from cros.factory.instalog.external.py_lib import jsonrpclib
+from cros.factory.instalog.external.py_lib import yaml
 
 
 # The default number of seconds to wait before giving up on a flush.

@@ -23,7 +23,7 @@ from cros.factory.utils import log_utils
 from cros.factory.utils import type_utils
 
 # pylint: disable=no-name-in-module
-from cros.factory.external.setproctitle import setproctitle
+from cros.factory.external.py_lib.setproctitle import setproctitle
 
 
 def RunPytest(test_info):

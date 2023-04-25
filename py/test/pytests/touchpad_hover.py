@@ -77,7 +77,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 class TouchpadHoverTest(test_case.TestCase):

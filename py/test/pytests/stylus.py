@@ -62,7 +62,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils.type_utils import Enum
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 class StylusMonitor(touch_monitor.SingleTouchMonitor):

@@ -9,7 +9,7 @@ import hashlib
 import http.client
 import logging
 
-from cros.factory.external import ws4py
+from cros.factory.external.py_lib import ws4py
 
 
 def WebSocketHandshake(request):

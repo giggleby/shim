@@ -26,7 +26,7 @@ import tempfile
 import uuid
 import xmlrpc.client
 
-import gnupg
+from cros.factory.external.py_lib import gnupg
 
 
 class BaseHelper:

@@ -6,7 +6,7 @@
 
 import logging
 
-from cros.factory.instalog.external import gnupg
+from cros.factory.instalog.external.py_lib import gnupg
 
 
 DEFAULT_PORT = 8899

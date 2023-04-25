@@ -38,7 +38,7 @@ from cros.factory.utils import log_utils
 from cros.factory.utils.process_utils import Spawn
 from cros.factory.utils import sys_interface
 
-from cros.factory.external import setproctitle
+from cros.factory.external.py_lib import setproctitle
 
 
 def Dump(data, dump_format, stream=sys.stdout, use_filter=True):
