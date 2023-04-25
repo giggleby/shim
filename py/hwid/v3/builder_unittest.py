@@ -224,6 +224,50 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
+  def testAddFeatureManagementFlagComponents(self):
+
+    comp_cls = 'feature_management_flags'
+
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.AddFeatureManagementFlagComponents()
+
+    db = db_builder.Build()
+
+    comp_items = sorted([{
+        comp_name: attr.values
+    } for comp_name, attr in db.GetComponents(comp_cls).items()],
+                        key=lambda d: sorted(d.items()))
+
+    self.assertEqual(
+        comp_items,
+        sorted([{
+            'feature_management_flags_not_chassis_branded_hw_compliant': {
+                'hw_compliance_version': '1',
+                'is_chassis_branded': '0'
+            }
+        }, {
+            'feature_management_flags_not_chassis_branded_hw_incompliant': {
+                'hw_compliance_version': '0',
+                'is_chassis_branded': '0'
+            }
+        }, {
+            'feature_management_flags_chassis_branded_hw_compliant': {
+                'hw_compliance_version': '1',
+                'is_chassis_branded': '1'
+            }
+        }], key=lambda d: sorted(d.items())))
+
+    # Should add 3 components to encoded field.
+    self.assertEqual(len(db.GetEncodedField(f'{comp_cls}_field').values()), 3)
+
+    # This function should only be called once.
+    with self.assertRaises(builder.BuilderException):
+      db_builder.AddFeatureManagementFlagComponents()
+
+
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=True)
   def testExtendEncodedFieldToFullCombination(self, unused_patch):
     with builder.DatabaseBuilder.FromFilePath(
