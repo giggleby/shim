@@ -59,7 +59,7 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
 
-from cros.factory.external import syslog
+from cros.factory.external.py_lib import syslog
 
 
 HWID_CFG_PATH = '/usr/local/share/chromeos-hwid/cfg'

@@ -7,16 +7,16 @@
 It converts DP/HDMI to UVC camera (a USB3 device).
 """
 
-try:
-  import cv2 as cv
-except ImportError:
-  pass
-
 import glob
 import logging
 import re
 import threading
 import time
+
+from cros.factory.external.py_lib import cv2 as cv
+
+if not cv.MODULE_READY:
+  logging.error('Cannot find module cv2')
 
 
 class PlanktonHDMIException(Exception):

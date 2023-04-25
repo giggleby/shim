@@ -15,7 +15,7 @@ from cros.factory.instalog import datatypes
 from cros.factory.instalog import plugin_base
 from cros.factory.instalog.plugins import input_log_file
 
-from cros.factory.external import yaml
+from cros.factory.external.py_lib import yaml
 
 
 _EVENT_HEAD = 'EVENT: '

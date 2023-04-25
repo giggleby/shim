@@ -121,7 +121,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.type_utils import Enum
 
 # pylint: disable=no-name-in-module
-from cros.factory.external.evdev import ecodes
+from cros.factory.external.py_lib.evdev import ecodes
 
 
 class StylusMonitor(touch_monitor.SingleTouchMonitor):

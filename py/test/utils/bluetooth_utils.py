@@ -19,7 +19,7 @@ import re
 
 from cros.factory.utils import process_utils
 
-from cros.factory.external import pexpect
+from cros.factory.external.py_lib import pexpect
 
 
 class BluetoothUtilsError(Exception):

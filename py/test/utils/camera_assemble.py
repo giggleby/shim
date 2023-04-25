@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from cros.factory.external import cv2 as cv
-from cros.factory.external import numpy as np
+from cros.factory.external.py_lib import cv2 as cv
+from cros.factory.external.py_lib import numpy as np
+
 
 # different kinds of grids
 GRID_SHAPES = [[40, 40], [20, 20], [10, 30], [30, 10]]

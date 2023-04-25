@@ -6,7 +6,7 @@ import time
 
 from cros.factory.test.utils import evdev_utils
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 _KEY_GPIO = 'gpio:'

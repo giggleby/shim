@@ -12,7 +12,7 @@ import socket
 
 from cros.factory.umpire.server.service import umpire_service
 
-from cros.factory.external import yaml
+from cros.factory.external.py_lib import yaml
 
 
 CLI_HOSTNAME = '0.0.0.0'  # Allows remote connections.
