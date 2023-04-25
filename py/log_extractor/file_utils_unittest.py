@@ -16,28 +16,55 @@ from cros.factory.utils import file_utils
 
 class LogExtractorFileReaderTest(unittest.TestCase):
 
-  _RECORD = [
-      '{"time": 1.23, "message": "Test LogExtractorFileReader message 1"}',
-      '{"message": "Test LogExtractorFileReader invalid message"}',
-      '{"time": 2.34, "message": "Test LogExtractorFileReader message 2"}',
-  ]
-
   def testReadRecord(self):
+    RECORD = [
+        '{"time": 1.23, "message": "Test LogExtractorFileReader message 1"}',
+        '{"message": "Test LogExtractorFileReader invalid message"}',
+        '{"time": 2.34, "message": "Test LogExtractorFileReader message 2"}',
+    ]
     with file_utils.TempDirectory() as temp_dir:
       testlog_path = os.path.join(temp_dir, 'test_filter_record.json')
-      file_utils.WriteFile(testlog_path, '\n'.join(self._RECORD))
+      file_utils.WriteFile(testlog_path, '\n'.join(RECORD))
 
       loader = record_module.FactoryRecord.FromJSON
       reader = log_extractor_file_utils.LogExtractorFileReader(
           testlog_path, loader)
-      self.assertEqual(loader(self._RECORD[0]), next(reader))
-      self.assertEqual(loader(self._RECORD[0]), reader.GetCurRecord())
+      self.assertEqual(loader(RECORD[0]), next(reader))
+      self.assertEqual(loader(RECORD[0]), reader.GetCurRecord())
       # Should keep reading since the second record is invalid.
-      self.assertEqual(loader(self._RECORD[2]), next(reader))
-      self.assertEqual(loader(self._RECORD[2]), reader.GetCurRecord())
+      self.assertEqual(loader(RECORD[2]), next(reader))
+      self.assertEqual(loader(RECORD[2]), reader.GetCurRecord())
       # Read till the end of file.
       with self.assertRaises(StopIteration):
         next(reader)
+      self.assertEqual(None, reader.GetCurRecord())
+
+  def testYieldByEventType(self):
+    RECORD = [
+        '{"type": "station.message", "time": 1.0}',
+        '{"type": "station.test_run", "time": 1.1, "startTime": 1.2}',
+        '{"type": "station.status", "time": 1.3}',
+        '{"type": "station.init", "time": 1.4}',
+    ]
+    with file_utils.TempDirectory() as temp_dir:
+      testlog_path = os.path.join(temp_dir, 'test_yield_event_type.json')
+      file_utils.WriteFile(testlog_path, '\n'.join(RECORD))
+
+      loader = record_module.TestlogRecord.FromJSON
+      reader = log_extractor_file_utils.LogExtractorFileReader(
+          testlog_path, loader, False)
+      type_to_yield = ['station.init', 'station.test_run']
+      self.assertEqual(
+          loader(RECORD[1], False), next(
+              reader.YieldByEventType(type_to_yield)))
+      self.assertEqual(loader(RECORD[1], False), reader.GetCurRecord())
+      self.assertEqual(
+          loader(RECORD[3], False), next(
+              reader.YieldByEventType(type_to_yield)))
+      self.assertEqual(loader(RECORD[3], False), reader.GetCurRecord())
+      # Read till the end of file.
+      with self.assertRaises(StopIteration):
+        next(reader.YieldByEventType(type_to_yield))
       self.assertEqual(None, reader.GetCurRecord())
 
 
@@ -121,51 +148,11 @@ class ExtractAndWriteRecordByTestRunTest(unittest.TestCase):
     TEST_NAME_2 = 'generic:Test_2'
     TEST_RUN_ID_2 = 'def'
     TEST_RUN_EXPECTED_OUTPUT_2 = textwrap.dedent("""\
-      [INFO] 2023-01-13T08:44:57.076953Z generic:Test_2-def STARTING
-      parameters:
-      {
-        "tag": {
-          "data": [
-            {
-              "textValue": "pre-shutdown"
-            }
-          ]
-        }
-      }
-      [INFO] 2023-01-13T08:44:58.123457Z generic:Test_2-def FAIL
-      parameters:
-      {
-        "tag": {
-          "data": [
-            {
-              "textValue": "pre-shutdown"
-            }
-          ]
-        }
-      }
+      [INFO] 2023-01-13T08:44:57.076953Z generic:Test_2-def STARTING (pre-shutdown)
+      [INFO] 2023-01-13T08:44:58.123457Z generic:Test_2-def FAIL (pre-shutdown)
       [INFO] 2023-01-13T08:45:00.508633Z testlog.py:230 device rebooting
-      [INFO] 2023-01-13T08:44:59.456732Z generic:Test_2-def STARTING
-      parameters:
-      {
-        "tag": {
-          "data": [
-            {
-              "textValue": "post-shutdown"
-            }
-          ]
-        }
-      }
-      [INFO] 2023-01-13T08:45:00.508633Z generic:Test_2-def PASS
-      parameters:
-      {
-        "tag": {
-          "data": [
-            {
-              "textValue": "post-shutdown"
-            }
-          ]
-        }
-      }
+      [INFO] 2023-01-13T08:44:59.456732Z generic:Test_2-def STARTING (post-shutdown)
+      [INFO] 2023-01-13T08:45:00.508633Z generic:Test_2-def PASS (post-shutdown)
     """)
 
     OUTPUT_NAME = 'testlog'

@@ -8,10 +8,12 @@ import argparse
 import json
 import logging
 import os
-from typing import Dict, Optional, Union
+from typing import IO, Dict, Optional, Union
 
 from cros.factory.gooftool.common import Util
 from cros.factory.log_extractor.file_utils import ExtractLogsAndWriteRecord
+from cros.factory.log_extractor.file_utils import LogExtractorFileReader
+import cros.factory.log_extractor.record as record_module
 from cros.factory.tools.factory_log_parser import FactoryLogParser
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
@@ -59,7 +61,7 @@ VAR_LOG_MSG_REL_PATH = 'var/log/messages'
 FACTORY_LOG_DIR_REL_PATH = 'var/factory'
 FACTORY_TESTLOG_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/log/testlog.json'
 FACTORY_TESTS_DIR_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/tests'
-
+FACTORY_TEST_SUMMARY_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_summary'
 
 def _GetTimeZone(root: str) -> str:
   if sys_utils.InCrOSDevice():
@@ -84,29 +86,43 @@ def _GetRoot() -> str:
   raise RuntimeError('Please specify the argument `root`!')
 
 
-# pylint: disable=unused-argument
-def _GenerateTestSummary(output_dir: str, factory_log_path: str):
+# TODO(phoebewang): Include AC info
+def _GenerateTestSummary(summary_path: str, factory_log_path: str):
   """Generates the test summary.
 
   The test summary should contain:
   - Failed test items and the failed reason.
   - The start and end time of all tests.
+  - Goofy start event.
 
   Args:
-    output_dir: The output path of the factory summary.
+    summary_path: The output path of the factory summary.
     factory_log_path: Path to the factory log.
   """
 
+  # TODO(phoebewang): Print the output of `factory tests --status`
+  def PrintTestSummaryHeader(fd: IO):
+    fd.write(f"{'=' * 14} Factory Test Summary {'=' * 14}\n")
+
+  reader = LogExtractorFileReader(factory_log_path,
+                                  record_module.TestlogRecord.FromJSON)
+  with open(summary_path, 'w', encoding='utf-8') as summary_f:
+    PrintTestSummaryHeader(summary_f)
+    for record in reader.YieldByEventType(['station.init', 'station.test_run']):
+      if record.GetEventType() == 'station.init':
+        summary_f.write(f"\n{'=' * 19} Goofy Init {'=' * 19}\n")
+      summary_f.write(f'{str(record)}\n')
+
 
 # TODO(phoebewang): Provide an argument to extract from system logs.
-def ExtractTestInfo(root: Optional[str], timezone: Optional[str]):
+def ExtractTestInfo(root: Optional[str], timezone: Optional[str],
+                    factory_test_summary_path: Optional[str]):
   if root is None:
     root = _GetRoot()
   if timezone is None:
     timezone = _GetTimeZone(root)
 
   logging.info('Root: %s, TimeZone: %s', root, timezone)
-  factory_log_dir_path = os.path.join(root, FACTORY_LOG_DIR_REL_PATH)
   factory_testlog_path = os.path.join(root, FACTORY_TESTLOG_REL_PATH)
   factory_tests_path = os.path.join(root, FACTORY_TESTS_DIR_REL_PATH)
   var_log_msg_path = os.path.join(root, VAR_LOG_MSG_REL_PATH)
@@ -125,8 +141,10 @@ def ExtractTestInfo(root: Optional[str], timezone: Optional[str]):
     ExtractLogsAndWriteRecord(factory_tests_path, factory_testlog_path,
                               parsed_var_log_msg_path)
 
-  logging.info('Generate test summary ...')
-  _GenerateTestSummary(factory_log_dir_path, factory_testlog_path)
+  if factory_test_summary_path is None:
+    factory_test_summary_path = os.path.join(root, FACTORY_TEST_SUMMARY_PATH)
+  logging.info('Generate test summary to %s', factory_test_summary_path)
+  _GenerateTestSummary(factory_test_summary_path, factory_testlog_path)
 
 
 def GetSystemSummary(
@@ -164,7 +182,7 @@ def ParseArgument():
                              help=('Filter out sensitive VPD values.'))
   system_parser.add_argument(
       '--output', '-o', type=str, default=None, metavar='path',
-      help=('Path to store the summary file. '
+      help=('Path to store the system summary file. '
             'Print to stdout if not set.'))
   test_parser = subparsers.add_parser('test', help='Collect test summary.')
   test_parser.add_argument(
@@ -179,6 +197,10 @@ def ParseArgument():
             'will be inferred using `date +%%:z` if the program is running on '
             'DUT and read from `factory_summary_system` if the program is '
             'running on workstation.'))
+  test_parser.add_argument(
+      '--output', '-o', type=str, default=None, metavar='path',
+      help=('Path to store the test summary file. If set to None, Store to'
+            f'<root>/{FACTORY_TEST_SUMMARY_PATH}.'))
 
   return parser
 
@@ -190,7 +212,7 @@ def main():
   if args.subcommand == 'system':
     PrintSystemSummary(args.filter_vpd, args.output)
   elif args.subcommand == 'test':
-    ExtractTestInfo(args.root, args.timezone)
+    ExtractTestInfo(args.root, args.timezone, args.output)
 
 
 if __name__ == '__main__':

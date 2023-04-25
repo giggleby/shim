@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import cros.factory.log_extractor.record as record_module
 from cros.factory.log_extractor import test_run_handler
@@ -55,6 +55,10 @@ class LogExtractorFileReader:
     self._cur_record = None
     raise StopIteration
 
+  def YieldByEventType(self, types: List[str]):
+    for record in self:
+      if record.GetEventType() in types:
+        yield record
 
 class LogExtractorStateMachine:
   """A state machine which performs file I/O given different state."""
