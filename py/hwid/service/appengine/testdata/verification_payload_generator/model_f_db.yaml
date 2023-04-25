@@ -14,45 +14,63 @@ pattern:
 
 encoded_fields:
   battery:
-    0: {battery: battery_medium_unqualified}
-    1: {battery: battery_small_deprecated}
-    2: {battery: battery_medium_unsupported}
-    3: {battery: battery_small_supported}
-    4: {battery: battery_small_supported_2}
+    0: {battery: battery_0_0_supported}
+    1: {battery: battery_0_1_supported}
+    2: {battery: battery_0_2_supported}
+    3: {battery: battery_1_0_unsupported}
+    4: {battery: battery_1_1_unqualified}
+    5: {battery: battery_2_0_special_chemistry}
+    6: {battery: battery_2_1_special_chemistry}
 
 components:
   battery:
     items:
-      battery_medium_unqualified:
-        status: unqualified
+      # ===================================================================== #
+      battery_0_0_supported: # Skipped due to longer field values.
+        status: supported
+        values:
+          manufacturer: mfr    abc
+          model_name: S      123
+          technology: Li-ion
+      battery_0_1_supported:
+        status: supported
         values:
           manufacturer: mfr
-          model_name: M
-          technology: LION
-      battery_small_deprecated:
-        status: deprecated
+          model_name: S
+          technology: Li-poly
+      battery_0_2_supported: # Skipped due to lexicographically larger component name.
+        status: supported
         values:
           manufacturer: mfr
-          model_name: S2
-          technology: LION
-      battery_medium_unsupported:
+          model_name: S
+          technology: LIP
+      # ===================================================================== #
+      battery_1_0_unsupported: # Skipped due to qualification status.
         status: unsupported
         values:
           manufacturer: mfr
           model_name: M
           technology: Li-ion
           type: Battery
-      battery_small_supported:
+      battery_1_1_unqualified:
+        status: unqualified
+        values:
+          manufacturer: mfr
+          model_name: M
+          technology: LION
+      # ===================================================================== #
+      # No component is skipped because their technologies are special.
+      battery_2_0_special_chemistry:
+        status: unsupported
+        values:
+          manufacturer: mfr
+          model_name: L
+          technology: OOI0
+      battery_2_1_special_chemistry:
         status: supported
         values:
           manufacturer: mfr
-          model_name: S
-          technology: Li-ion
-      battery_small_supported_2:
-        status: supported
-        values:
-          manufacturer: mfr
-          model_name: S
-          technology: Li-poly
+          model_name: L
+          technology: O1E0
 
 rules: []

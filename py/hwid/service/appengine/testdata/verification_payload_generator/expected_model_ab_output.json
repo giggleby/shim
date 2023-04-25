@@ -37,26 +37,21 @@
       },
       {
         "componentCategory": "battery",
-        "componentUuid": "model_f_battery_medium_unqualified"
+        "componentUuid": "model_f_battery_0_1_supported",
+        "qualificationStatus": "QUALIFIED"
       },
       {
         "componentCategory": "battery",
-        "componentUuid": "model_f_battery_medium_unsupported",
+        "componentUuid": "model_f_battery_1_1_unqualified"
+      },
+      {
+        "componentCategory": "battery",
+        "componentUuid": "model_f_battery_2_0_special_chemistry",
         "qualificationStatus": "REJECTED"
       },
       {
         "componentCategory": "battery",
-        "componentUuid": "model_f_battery_small_deprecated",
-        "qualificationStatus": "QUALIFIED"
-      },
-      {
-        "componentCategory": "battery",
-        "componentUuid": "model_f_battery_small_supported",
-        "qualificationStatus": "QUALIFIED"
-      },
-      {
-        "componentCategory": "battery",
-        "componentUuid": "model_f_battery_small_supported_2",
+        "componentUuid": "model_f_battery_2_1_special_chemistry",
         "qualificationStatus": "QUALIFIED"
       },
       {
@@ -136,6 +131,31 @@
       {
         "componentCategory": "dram",
         "componentUuid": "model_e_dram2",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "wireless",
+        "componentUuid": "model_g_wireless_comp_0_0_unsupported",
+        "qualificationStatus": "REJECTED"
+      },
+      {
+        "componentCategory": "wireless",
+        "componentUuid": "model_g_wireless_comp_0_1_supported",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "wireless",
+        "componentUuid": "model_g_wireless_comp_0_2_deprecated",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "wireless",
+        "componentUuid": "model_g_wireless_comp_1_0_supported",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
+        "componentCategory": "wireless",
+        "componentUuid": "model_g_wireless_comp_1_1_supported",
         "qualificationStatus": "QUALIFIED"
       }
     ],
@@ -3078,7 +3098,7 @@
           ]
         }
       },
-      "model_f_battery_medium_unqualified": {
+      "model_f_battery_1_1_unqualified": {
         "eval": {
           "generic_battery": {}
         },
@@ -3099,50 +3119,7 @@
           ]
         }
       },
-      "model_f_battery_medium_unsupported": {
-        "eval": {
-          "generic_battery": {}
-        },
-        "expect": {
-          "manufacturer": [
-            true,
-            "str",
-            "!re mfr(\\s{4}.*)?"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!re M(\\s{6}.*)?"
-          ],
-          "technology": [
-            true,
-            "str",
-            "!eq Li-ion"
-          ]
-        }
-      },
-      "model_f_battery_small_deprecated": {
-        "eval": {
-          "generic_battery": {}
-        },
-        "expect": {
-          "chemistry": [
-            false,
-            "str"
-          ],
-          "manufacturer": [
-            true,
-            "str",
-            "!eq mfr"
-          ],
-          "model_name": [
-            true,
-            "str",
-            "!eq S2"
-          ]
-        }
-      },
-      "model_f_battery_small_supported": {
+      "model_f_battery_0_1_supported": {
         "eval": {
           "generic_battery": {}
         },
@@ -3161,7 +3138,7 @@
             "technology": [
               true,
               "str",
-              "!eq Li-ion"
+              "!eq Li-poly"
             ]
           },
           {
@@ -3182,25 +3159,47 @@
           }
         ]
       },
-      "model_f_battery_small_supported_2": {
+      "model_f_battery_2_0_special_chemistry": {
         "eval": {
           "generic_battery": {}
         },
         "expect": {
+          "chemistry": [
+            true,
+            "str",
+            "!eq OOI0"
+          ],
           "manufacturer": [
             true,
             "str",
-            "!re mfr(\\s{4}.*)?"
+            "!eq mfr"
           ],
           "model_name": [
             true,
             "str",
-            "!re S(\\s{6}.*)?"
-          ],
-          "technology": [
+            "!eq L"
+          ]
+        }
+      },
+      "model_f_battery_2_1_special_chemistry": {
+        "eval": {
+          "generic_battery": {}
+        },
+        "expect": {
+          "chemistry": [
             true,
             "str",
-            "!eq Li-poly"
+            "!eq O1E0"
+          ],
+          "manufacturer": [
+            true,
+            "str",
+            "!eq mfr"
+          ],
+          "model_name": [
+            true,
+            "str",
+            "!eq L"
           ]
         }
       }
@@ -3215,22 +3214,6 @@
             false,
             "str"
           ],
-          "usb_bcd_device": [
-            false,
-            "hex"
-          ],
-          "usb_product_id": [
-            false,
-            "hex"
-          ],
-          "usb_removable": [
-            false,
-            "str"
-          ],
-          "usb_vendor_id": [
-            false,
-            "hex"
-          ],
           "mipi_module_id": [
             false,
             "str"
@@ -3244,6 +3227,22 @@
             "str"
           ],
           "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
             false,
             "hex"
           ]
@@ -3595,6 +3594,595 @@
           "usb_vendor_id": [
             false,
             "hex"
+          ]
+        }
+      }
+    }
+  },
+  "runtime_probe/model_g/probe_config.json": {
+    "battery": {
+      "generic": {
+        "eval": {
+          "generic_battery": {}
+        },
+        "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
+          "manufacturer": [
+            false,
+            "str"
+          ],
+          "model_name": [
+            false,
+            "str"
+          ],
+          "technology": [
+            false,
+            "str"
+          ]
+        }
+      }
+    },
+    "camera": {
+      "generic": {
+        "eval": {
+          "generic_camera": {}
+        },
+        "expect": {
+          "bus_type": [
+            false,
+            "str"
+          ],
+          "mipi_module_id": [
+            false,
+            "str"
+          ],
+          "mipi_name": [
+            false,
+            "str"
+          ],
+          "mipi_sensor_id": [
+            false,
+            "str"
+          ],
+          "mipi_vendor": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_removable": [
+            false,
+            "str"
+          ],
+          "usb_vendor_id": [
+            false,
+            "hex"
+          ]
+        }
+      }
+    },
+    "cellular": {
+      "generic": {
+        "eval": {
+          "network": {
+            "device_type": "cellular"
+          }
+        },
+        "expect": {
+          "bus_type": [
+            false,
+            "str"
+          ],
+          "pci_device_id": [
+            false,
+            "hex"
+          ],
+          "pci_revision": [
+            false,
+            "hex"
+          ],
+          "pci_subsystem": [
+            false,
+            "hex"
+          ],
+          "pci_vendor_id": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_vendor_id": [
+            false,
+            "hex"
+          ]
+        }
+      }
+    },
+    "display_panel": {
+      "generic": {
+        "eval": {
+          "edid": {}
+        },
+        "expect": {
+          "height": [
+            false,
+            "int"
+          ],
+          "product_id": [
+            false,
+            "hex"
+          ],
+          "vendor": [
+            false,
+            "str"
+          ],
+          "width": [
+            false,
+            "int"
+          ]
+        }
+      }
+    },
+    "dram": {
+      "generic": {
+        "eval": {
+          "memory": {}
+        },
+        "expect": {
+          "part": [
+            false,
+            "str"
+          ],
+          "size": [
+            false,
+            "int"
+          ],
+          "slot": [
+            false,
+            "int"
+          ]
+        }
+      }
+    },
+    "ethernet": {
+      "generic": {
+        "eval": {
+          "network": {
+            "device_type": "ethernet"
+          }
+        },
+        "expect": {
+          "bus_type": [
+            false,
+            "str"
+          ],
+          "pci_device_id": [
+            false,
+            "hex"
+          ],
+          "pci_revision": [
+            false,
+            "hex"
+          ],
+          "pci_subsystem": [
+            false,
+            "hex"
+          ],
+          "pci_vendor_id": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_vendor_id": [
+            false,
+            "hex"
+          ]
+        }
+      }
+    },
+    "storage": {
+      "generic": {
+        "eval": {
+          "generic_storage": {}
+        },
+        "expect": {
+          "ata_model": [
+            false,
+            "str"
+          ],
+          "ata_vendor": [
+            false,
+            "str"
+          ],
+          "mmc_hwrev": [
+            false,
+            "hex"
+          ],
+          "mmc_manfid": [
+            false,
+            "hex"
+          ],
+          "mmc_name": [
+            false,
+            "str"
+          ],
+          "mmc_oemid": [
+            false,
+            "hex"
+          ],
+          "mmc_prv": [
+            false,
+            "hex"
+          ],
+          "mmc_serial": [
+            false,
+            "hex"
+          ],
+          "nvme_model": [
+            false,
+            "str"
+          ],
+          "pci_class": [
+            false,
+            "hex"
+          ],
+          "pci_device": [
+            false,
+            "hex"
+          ],
+          "pci_vendor": [
+            false,
+            "hex"
+          ],
+          "sectors": [
+            false,
+            "int"
+          ],
+          "type": [
+            false,
+            "str"
+          ],
+          "ufs_model": [
+            false,
+            "str"
+          ],
+          "ufs_vendor": [
+            false,
+            "str"
+          ]
+        }
+      }
+    },
+    "stylus": {
+      "generic": {
+        "eval": {
+          "input_device": {
+            "device_type": "stylus"
+          }
+        },
+        "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
+          "fw_version": [
+            false,
+            "str"
+          ],
+          "name": [
+            false,
+            "str"
+          ],
+          "product": [
+            false,
+            "hex"
+          ],
+          "vendor": [
+            false,
+            "hex"
+          ]
+        }
+      }
+    },
+    "touchpad": {
+      "generic": {
+        "eval": {
+          "input_device": {
+            "device_type": "touchpad"
+          }
+        },
+        "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
+          "fw_version": [
+            false,
+            "str"
+          ],
+          "name": [
+            false,
+            "str"
+          ],
+          "product": [
+            false,
+            "hex"
+          ],
+          "vendor": [
+            false,
+            "hex"
+          ]
+        }
+      }
+    },
+    "touchscreen": {
+      "generic": {
+        "eval": {
+          "input_device": {
+            "device_type": "touchscreen"
+          }
+        },
+        "expect": {
+          "device_type": [
+            false,
+            "str"
+          ],
+          "fw_version": [
+            false,
+            "str"
+          ],
+          "name": [
+            false,
+            "str"
+          ],
+          "product": [
+            false,
+            "hex"
+          ],
+          "vendor": [
+            false,
+            "hex"
+          ]
+        }
+      }
+    },
+    "wireless": {
+      "generic": {
+        "eval": {
+          "network": {
+            "device_type": "wifi"
+          }
+        },
+        "expect": {
+          "bus_type": [
+            false,
+            "str"
+          ],
+          "pci_device_id": [
+            false,
+            "hex"
+          ],
+          "pci_revision": [
+            false,
+            "hex"
+          ],
+          "pci_subsystem": [
+            false,
+            "hex"
+          ],
+          "pci_vendor_id": [
+            false,
+            "hex"
+          ],
+          "sdio_device_id": [
+            false,
+            "hex"
+          ],
+          "sdio_vendor_id": [
+            false,
+            "hex"
+          ],
+          "usb_bcd_device": [
+            false,
+            "hex"
+          ],
+          "usb_product_id": [
+            false,
+            "hex"
+          ],
+          "usb_vendor_id": [
+            false,
+            "hex"
+          ]
+        }
+      },
+      "model_g_wireless_comp_0_0_unsupported": {
+        "eval": {
+          "network": {
+            "device_type": "wifi"
+          }
+        },
+        "expect": {
+          "pci_device_id": [
+            true,
+            "hex",
+            "!eq 0x1234"
+          ],
+          "pci_revision": [
+            true,
+            "hex",
+            "!eq 0x00"
+          ],
+          "pci_subsystem": [
+            false,
+            "hex"
+          ],
+          "pci_vendor_id": [
+            true,
+            "hex",
+            "!eq 0x5678"
+          ]
+        }
+      },
+      "model_g_wireless_comp_0_1_supported": {
+        "eval": {
+          "network": {
+            "device_type": "wifi"
+          }
+        },
+        "expect": [
+          {
+            "pci_device_id": [
+              true,
+              "hex",
+              "!eq 0x1234"
+            ],
+            "pci_revision": [
+              true,
+              "hex",
+              "!eq 0x01"
+            ],
+            "pci_subsystem": [
+              false,
+              "hex"
+            ],
+            "pci_vendor_id": [
+              true,
+              "hex",
+              "!eq 0x5678"
+            ]
+          },
+          {
+            "sdio_device_id": [
+              true,
+              "hex",
+              "!eq 0x1234"
+            ],
+            "sdio_vendor_id": [
+              true,
+              "hex",
+              "!eq 0x5678"
+            ]
+          }
+        ]
+      },
+      "model_g_wireless_comp_0_2_deprecated": {
+        "eval": {
+          "network": {
+            "device_type": "wifi"
+          }
+        },
+        "expect": {
+          "pci_device_id": [
+            true,
+            "hex",
+            "!eq 0x1234"
+          ],
+          "pci_revision": [
+            true,
+            "hex",
+            "!eq 0x02"
+          ],
+          "pci_subsystem": [
+            false,
+            "hex"
+          ],
+          "pci_vendor_id": [
+            true,
+            "hex",
+            "!eq 0x5678"
+          ]
+        }
+      },
+      "model_g_wireless_comp_1_0_supported": {
+        "eval": {
+          "network": {
+            "device_type": "wifi"
+          }
+        },
+        "expect": [
+          {
+            "pci_device_id": [
+              true,
+              "hex",
+              "!eq 0x1111"
+            ],
+            "pci_revision": [
+              true,
+              "hex",
+              "!eq 0x03"
+            ],
+            "pci_subsystem": [
+              false,
+              "hex"
+            ],
+            "pci_vendor_id": [
+              true,
+              "hex",
+              "!eq 0x2222"
+            ]
+          },
+          {
+            "sdio_device_id": [
+              true,
+              "hex",
+              "!eq 0x1111"
+            ],
+            "sdio_vendor_id": [
+              true,
+              "hex",
+              "!eq 0x2222"
+            ]
+          }
+        ]
+      },
+      "model_g_wireless_comp_1_1_supported": {
+        "eval": {
+          "network": {
+            "device_type": "wifi"
+          }
+        },
+        "expect": {
+          "pci_device_id": [
+            true,
+            "hex",
+            "!eq 0x1111"
+          ],
+          "pci_revision": [
+            true,
+            "hex",
+            "!eq 0x04"
+          ],
+          "pci_subsystem": [
+            false,
+            "hex"
+          ],
+          "pci_vendor_id": [
+            true,
+            "hex",
+            "!eq 0x2222"
           ]
         }
       }

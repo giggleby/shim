@@ -1,0 +1,59 @@
+checksum: DUMMY
+
+board: MODEL_G
+
+encoding_patterns: {0: default}
+
+image_id: {0: EVT}
+
+pattern:
+  - image_ids: [0]
+    encoding_scheme: base8192
+    fields:
+    - wireless: 3
+
+encoded_fields:
+  wireless:
+    0: {wireless: wireless_comp_0_0_unsupported}
+    1: {wireless: wireless_comp_0_1_supported}
+    2: {wireless: wireless_comp_0_2_deprecated}
+    3: {wireless: wireless_comp_1_0_supported}
+    4: {wireless: wireless_comp_1_1_supported}
+
+components:
+  wireless:
+    items:
+      # ===================================================================== #
+      wireless_comp_0_0_unsupported: # Merged due to qualification status.
+        status: unsupported
+        values:
+          device: '0x1234'
+          revision_id: '0x00'
+          vendor: '0x5678'
+      wireless_comp_0_1_supported:
+        status: supported
+        values:
+          device: '0x1234'
+          revision_id: '0x01'
+          vendor: '0x5678'
+      wireless_comp_0_2_deprecated: # Merged due to lexicographically larger component name.
+        status: deprecated
+        values:
+          device: '0x1234'
+          revision_id: '0x02'
+          vendor: '0x5678'
+      # ===================================================================== #
+      wireless_comp_1_0_supported:
+        status: supported
+        values:
+          device: '0x1111'
+          revision_id: '0x03'
+          vendor: '0x2222'
+      wireless_comp_1_1_supported: # Merged due to lexicographically larger component name.
+        status: supported
+        values:
+          device: '0x1111'
+          revision_id: '0x04'
+          vendor: '0x2222'
+
+rules: []

@@ -627,8 +627,8 @@ class GenerateVerificationPayloadTest(unittest.TestCase):
         os.path.join(TESTDATA_DIR, name), verify_checksum=False),
             vpg_config_module.VerificationPayloadGeneratorConfig.Create())
            for name in ('model_a_db.yaml', 'model_b_db.yaml', 'model_c_db.yaml',
-                        'model_d_db.yaml', 'model_e_db.yaml', 'model_f_db.yaml')
-          ]
+                        'model_d_db.yaml', 'model_e_db.yaml', 'model_f_db.yaml',
+                        'model_g_db.yaml')]
     expected_outputs = json_utils.LoadFile(
         os.path.join(TESTDATA_DIR, 'expected_model_ab_output.json'))
 
@@ -655,6 +655,9 @@ class GenerateVerificationPayloadTest(unittest.TestCase):
     self.assertEqual(
         json_utils.LoadStr(files['runtime_probe/model_f/probe_config.json']),
         expected_outputs['runtime_probe/model_f/probe_config.json'])
+    self.assertEqual(
+        json_utils.LoadStr(files['runtime_probe/model_g/probe_config.json']),
+        expected_outputs['runtime_probe/model_g/probe_config.json'])
     hw_verificaiontion_spec = hardware_verifier_pb2.HwVerificationSpec()
     text_format.Parse(files['hw_verification_spec.prototxt'],
                       hw_verificaiontion_spec)

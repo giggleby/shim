@@ -6,9 +6,10 @@
 
 import collections
 import hashlib
+import itertools
 import logging
 import re
-from typing import DefaultDict, Dict, List, NamedTuple, Optional, Set, Union
+from typing import DefaultDict, Dict, List, Mapping, NamedTuple, Optional, Set, Union
 
 from google.protobuf import text_format
 import hardware_verifier_pb2  # pylint: disable=import-error
@@ -26,6 +27,9 @@ from cros.factory.utils import type_utils
 
 BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH = 7
 BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH = 7
+COMMON_SYSFS_TECHNOLOGY = frozenset(['Li-ion', 'Li-poly'])
+COMMON_ECTOOL_CHEMISTRY = frozenset(['LION', 'LiP', 'LIP'])
+COMMON_HWID_TECHNOLOGY = COMMON_SYSFS_TECHNOLOGY | COMMON_ECTOOL_CHEMISTRY
 
 
 class GenericProbeStatementInfoRecord:
@@ -213,7 +217,7 @@ class FloatToHexValueConverter(ValueConverter):
 
 
 class BatteryTechnologySysfsValueConverter(ValueConverter):
-  VALUE_ALLOWLIST = ['Li-ion', 'Li-poly']
+  VALUE_ALLOWLIST = COMMON_SYSFS_TECHNOLOGY
 
   def __init__(self):
     self._str_converter = StrValueConverter()
@@ -402,7 +406,7 @@ def GetAllProbeStatementGenerators():
           [
               [
                   _SameNameFieldRecord('chemistry', str_converter,
-                                       skip_values=set(['LION', 'LiP'])),
+                                       skip_values=COMMON_ECTOOL_CHEMISTRY),
                   _SameNameFieldRecord('manufacturer', str_converter),
                   _SameNameFieldRecord('model_name', str_converter),
               ],
@@ -427,9 +431,8 @@ def GetAllProbeStatementGenerators():
               [
                   _SameNameFieldRecord('manufacturer', str_converter),
                   _SameNameFieldRecord('model_name', str_converter),
-                  _FieldRecord(
-                      'technology', 'chemistry', str_converter, skip_values=set(
-                          ['Li-ion', 'Li-poly', 'LION', 'LiP'])),
+                  _FieldRecord('technology', 'chemistry', str_converter,
+                               skip_values=COMMON_HWID_TECHNOLOGY),
               ]
           ])
   ]
@@ -674,6 +677,12 @@ _STATUS_MAP = {
     hwid_common.ComponentStatus.unsupported: hardware_verifier_pb2.REJECTED,
 }
 
+_QUAL_STATUS_PREFERENCE = {
+    hardware_verifier_pb2.QUALIFIED: 0,
+    hardware_verifier_pb2.UNQUALIFIED: 1,
+    hardware_verifier_pb2.REJECTED: 2,
+}
+
 _ProbeRequestSupportCategory = runtime_probe_pb2.ProbeRequest.SupportCategory
 
 
@@ -717,8 +726,10 @@ def GenerateProbeStatement(ps_gens, comp_name, comp_info):
                                            probe_statement, component_info)
 
 
-def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
-    vpg_config_module.VerificationPayloadGeneratorConfig] = None):
+def GetAllComponentVerificationPayloadPieces(
+    db, vpg_config: Optional[
+        vpg_config_module.VerificationPayloadGeneratorConfig] = None,
+    skip_comp_names: Optional[Set[str]] = None):
   """Generates materials for verification payload from each components in HWID.
 
   This function goes over each component in HWID one-by-one, and attempts to
@@ -747,6 +758,8 @@ def GetAllComponentVerificationPayloadPieces(db, vpg_config: Optional[
       continue
     comps = db.GetComponents(hwid_comp_category, include_default=False)
     for comp_name, comp_info in comps.items():
+      if skip_comp_names and comp_name in skip_comp_names:
+        continue
       unique_comp_name = model_prefix + '_' + comp_name
       vp_piece = GenerateProbeStatement(ps_gens, unique_comp_name, comp_info)
       if vp_piece is None:
@@ -776,12 +789,7 @@ def GenerateVerificationPayload(dbs):
   """
 
   def _ComponentSortKey(comp_vp_piece):
-    qual_status_preference = {
-        hardware_verifier_pb2.QUALIFIED: 0,
-        hardware_verifier_pb2.UNQUALIFIED: 1,
-        hardware_verifier_pb2.REJECTED: 2,
-    }
-    return (qual_status_preference.get(
+    return (_QUAL_STATUS_PREFERENCE.get(
         comp_vp_piece.component_info.qualification_status,
         3), comp_vp_piece.probe_statement.component_name)
 
@@ -868,6 +876,100 @@ def GenerateVerificationPayload(dbs):
 
       probe_config.AddComponentProbeStatement(vp_piece.probe_statement)
 
+  def _CheckShouldSkipBattery(battery_lhs: Mapping[str, str],
+                              battery_rhs: Mapping[str, str]):
+    """Check if we should skip generating probe statements for either
+    `battery_lhs` or `battery_rhs`.
+
+    Return True if the following are satisfied:
+    1. `model_name` and `manufacturer` of one battery are prefixes of the
+       corresponding field values of the other.
+    2. At least one of `model_name`, `manufacturer` and `technology` are
+       different between the two batteries.
+    3. At least one of the batteries' `technology` is Li-ion, Li-poly, LION,
+       LiP, or LIP.
+    """
+
+    for field in ['model_name', 'manufacturer', 'technology']:
+      field_lhs = battery_lhs.get(field)
+      field_rhs = battery_rhs.get(field)
+      if field_lhs != field_rhs:
+        break
+    else:
+      # Return False on the special case that all fields are the same between
+      # two batteries.
+      return False
+
+    lhs_technology = battery_lhs.get('technology')
+    rhs_technology = battery_rhs.get('technology')
+    if not (lhs_technology in COMMON_HWID_TECHNOLOGY or
+            rhs_technology in COMMON_HWID_TECHNOLOGY):
+      return False
+
+    lhs_match = True
+    rhs_match = True
+
+    for field, min_length in [
+        ('model_name', BATTERY_SYSFS_MODEL_NAME_MAX_LENGTH),
+        ('manufacturer', BATTERY_SYSFS_MANUFACTURER_MAX_LENGTH)
+    ]:
+      field_lhs = battery_lhs.get(field)
+      field_rhs = battery_rhs.get(field)
+      if not (isinstance(field_lhs, str) and isinstance(field_rhs, str)):
+        return False
+
+      field_lhs = field_lhs.ljust(min_length)
+      field_rhs = field_rhs.ljust(min_length)
+
+      if not field_rhs.startswith(field_lhs):
+        lhs_match = False
+      if not field_lhs.startswith(field_rhs):
+        rhs_match = False
+
+    return lhs_match or rhs_match
+
+  def _CollectSkipCompNames(db: database.Database) -> Set[str]:
+    """Collect a set of component names for which we should skip generating
+    probe statements.
+
+    This function checks all components in `db` and collect those for which we
+    should skip generating probe statements. Currently it only checks battery
+    components.
+    """
+    skip_comp_names = set()
+
+    batteries = db.GetComponents('battery', include_default=False)
+
+    def BatteryKeyFunc(comp_name: str):
+      """Key function for deciding which battery to skip.
+
+      The battery with larger key returned by this function is going to be
+      skipped, in the order:
+      1. Qualification status.
+      2. Length of model_name (skip the longer one).
+      3. Length of manufacturer (skip the longer one).
+      4. Component name (skip the lexicographically larger one).
+      """
+      component = batteries[comp_name]
+      model_name = component.values['model_name']
+      manufacturer = component.values['manufacturer']
+      status = _STATUS_MAP.get(component.status)
+      qual = _QUAL_STATUS_PREFERENCE.get(status, 3)
+
+      return (qual, len(model_name), len(manufacturer), comp_name)
+
+    for comp_name_1, comp_name_2 in itertools.combinations(batteries, 2):
+      if comp_name_1 in skip_comp_names or comp_name_2 in skip_comp_names:
+        continue
+
+      comp_1 = batteries[comp_name_1].values
+      comp_2 = batteries[comp_name_2].values
+
+      if _CheckShouldSkipBattery(comp_1, comp_2):
+        skip_comp_names.add(max(comp_name_1, comp_name_2, key=BatteryKeyFunc))
+
+    return skip_comp_names
+
   error_msgs = []
   generated_file_contents = {}
 
@@ -879,7 +981,14 @@ def GenerateVerificationPayload(dbs):
   for db, vpg_config in dbs:
     model_prefix = db.project.lower()
     probe_config = probe_config_types.ProbeConfigPayload()
-    all_pieces = GetAllComponentVerificationPayloadPieces(db, vpg_config)
+
+    skip_comp_names = _CollectSkipCompNames(db)
+    if skip_comp_names:
+      logging.info('Skip generating payload for components: %s',
+                   skip_comp_names)
+
+    all_pieces = GetAllComponentVerificationPayloadPieces(
+        db, vpg_config, skip_comp_names)
     grouped_comp_vp_piece = collections.defaultdict(list)
     grouped_primary_comp_name = {}
     grouped_merge_vp_piece = collections.defaultdict(list)
