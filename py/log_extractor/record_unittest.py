@@ -64,19 +64,40 @@ class TestlogRecordTest(unittest.TestCase):
 
     testrun_record = record_module.TestlogRecord.FromJSON(
         '{"type": "station.test_run", "time": 1656340134.0011251,'
-        '"testName": "generic_main:Idle", "testRunId": "abc-123",'
-        '"status": "RUNNING", "startTime": 1656340133.123}', check_valid=False)
+        '"testName": "generic_main:Idle", "testType" : "idle", '
+        '"testRunId": "abc-123", "status": "RUNNING", "startTime": '
+        '1656340133.123}', check_valid=False)
     self.assertEqual(
         str(testrun_record),
         '[INFO] 2022-06-27T14:28:53.123000Z generic_main:Idle-abc-123 RUNNING')
 
+    failed_testrun_record = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1656340134.0011251,'
+        '"testName": "generic_main:Idle", "testType" : "idle", '
+        '"testRunId": "abc-123", "status": "FAIL", "startTime": '
+        '1656340133.123, "failures": [{"code": "GoofyErrorMsg", '
+        '"details": "TestFailure"}]}', check_valid=False)
+    self.assertEqual(
+        str(failed_testrun_record),
+        '[INFO] 2022-06-27T14:28:53.123000Z generic_main:Idle-abc-123 FAIL\n'
+        '  Failed reason: TestFailure')
+
+    shutdown_testrun_record = record_module.TestlogRecord.FromJSON(
+        '{"type": "station.test_run", "time": 1656340134.0011251,'
+        '"testName": "generic_main:Reboot", "testRunId": "abc-123",'
+        '"status": "STARTING", "startTime": 1656340133.123, '
+        '"testType": "shutdown", "parameters": {"tag": {"data": '
+        '[{"textValue": "post-shutdown"}]}}}', check_valid=False)
+    self.assertEqual(
+        str(shutdown_testrun_record),
+        '[INFO] 2022-06-27T14:28:53.123000Z generic_main:Reboot-abc-123 '
+        'STARTING (post-shutdown)')
+
     status_record = record_module.TestlogRecord.FromJSON(
         '{"type": "station.status", "time": 1656340134.0011251, '
-        '"filePath": "testlog.py", "parameters": {"status": {'
-        '"type": "measurement"}}}', check_valid=False)
+        '"filePath": "testlog.py"}', check_valid=False)
     self.assertEqual(
-        str(status_record), '[INFO] 2022-06-27T14:28:54.001125Z testlog.py\n'
-        'parameters:\n{\n  "status": {\n    "type": "measurement"\n  }\n}')
+        str(status_record), '[INFO] 2022-06-27T14:28:54.001125Z testlog.py')
 
     init_record = record_module.TestlogRecord.FromJSON(
         '{"type": "station.init", "time": 1656340134.0011251, "count": 1,'

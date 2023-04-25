@@ -35,6 +35,9 @@ class IRecord(abc.ABC):
   def ToDict(self):
     return self._data
 
+  def GetEventType(self) -> str:
+    return 'irecord'
+
   @abc.abstractmethod
   def GetTime(self) -> float:
     """Returns the number of seconds passed since 1970/01/01 00:00:00."""
@@ -64,6 +67,9 @@ class FactoryRecord(IRecord):
 
     return cls(data)
 
+  def GetEventType(self) -> str:
+    return 'factory'
+
   def GetTime(self) -> float:
     return self['time']
 
@@ -84,6 +90,9 @@ class SystemLogRecord(FactoryRecord):
               Scalar('Time in seconds since the epoch of the record.', float),
       }, allow_undefined_keys=True)
   _SYSLOG_TO_STR_TEMPLATE = '[{log_level}] {time} {file_path}:{line_num} {msg}'
+
+  def GetEventType(self) -> str:
+    return 'system'
 
   def __str__(self):
     return self._SYSLOG_TO_STR_TEMPLATE.format(
@@ -119,6 +128,8 @@ class TestlogRecord(FactoryRecord):
 
     return cls(data)
 
+  def GetEventType(self) -> str:
+    return self._data.GetEventType()
 
   def _BuildStrFromStationMessage(self) -> str:
     msg_list = []
@@ -135,14 +146,18 @@ class TestlogRecord(FactoryRecord):
     msg_list = []
     # StationTestRun is a subclass of StationStatus.
     if isinstance(self._data, testlog.StationTestRun):
-      msg_list.append(
-          f"{self['testName']}-{self['testRunId']} {self['status']}")
+      test_run = f"{self['testName']}-{self['testRunId']} {self['status']}"
+      if self['testType'] == 'shutdown':
+        test_run += f" ({self['parameters']['tag']['data'][0]['textValue']})"
+      msg_list.append(test_run)
     if 'filePath' in self:
       msg_list.append(f"{self['filePath']}")
     msg_str = ' '.join(msg_list)
-    if 'parameters' in self:
-      param_to_str = json.dumps(self['parameters'], indent=2, sort_keys=True)
-      msg_str += f'\nparameters:\n{param_to_str}'
+    if 'failures' in self:
+      for failure in self['failures']:
+        if failure['code'] == 'GoofyErrorMsg':
+          msg_str += f"\n  Failed reason: {failure['details']}"
+
     return msg_str
 
   def __str__(self):
