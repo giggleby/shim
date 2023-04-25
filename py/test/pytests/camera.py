@@ -218,8 +218,8 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import schema
 from cros.factory.utils import sync_utils
 
-from cros.factory.external import cv2 as cv
-from cros.factory.external import numpy as np
+from cros.factory.external.py_lib import cv2 as cv
+from cros.factory.external.py_lib import numpy as np
 
 
 # Set JPEG image compression quality to 70 so that the image can be transferred

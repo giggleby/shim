@@ -43,7 +43,7 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import net_utils
 
-from cros.factory.external import gnupg
+from cros.factory.external.py_lib import gnupg
 
 
 _DEFAULT_HOSTNAME = '0.0.0.0'

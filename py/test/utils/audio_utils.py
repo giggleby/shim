@@ -8,7 +8,7 @@ import re
 
 from cros.factory.utils import process_utils
 
-from cros.factory.external import dbus
+from cros.factory.external.py_lib import dbus
 
 
 # Configuration file is put under overlay directory and it can be customized

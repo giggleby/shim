@@ -9,7 +9,7 @@ import threading
 from cros.factory.device import device_types
 from cros.factory.utils import process_utils
 
-from cros.factory.external import pyudev
+from cros.factory.external.py_lib import pyudev
 
 
 class UdevMonitorBase(device_types.DeviceComponent):

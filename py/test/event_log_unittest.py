@@ -27,7 +27,7 @@ from cros.factory.test import event_log
 from cros.factory.test import session
 from cros.factory.utils import file_utils
 
-from cros.factory.external import dbus
+from cros.factory.external.py_lib import dbus
 
 
 UUID_RE = re.compile(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'

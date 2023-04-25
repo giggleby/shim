@@ -57,7 +57,7 @@ from cros.factory.test import test_case
 from cros.factory.test.utils import evdev_utils
 from cros.factory.utils.arg_utils import Arg
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 class StylusStatus(str, enum.Enum):

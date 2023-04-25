@@ -115,7 +115,8 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
+
 
 # Defined in "uapi/linux/input.h":
 #   struct input_keymap_entry {

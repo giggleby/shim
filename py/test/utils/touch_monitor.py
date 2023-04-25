@@ -30,7 +30,7 @@ import fcntl
 import struct
 
 # pylint: disable=no-name-in-module
-from cros.factory.external.evdev import ecodes
+from cros.factory.external.py_lib.evdev import ecodes
 
 
 class TouchMonitorBase:

@@ -22,7 +22,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import sync_utils
 from cros.factory.utils import type_utils
 
-from cros.factory.external import serial  # site-packages: dev-python/pyserial
+from cros.factory.external.py_lib import serial  # site-packages: dev-python/pyserial
 
 
 def OpenSerial(**params):

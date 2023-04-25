@@ -11,7 +11,7 @@ from cros.factory.probe.lib import cached_probe_function
 from cros.factory.test.utils import evdev_utils
 from cros.factory.utils.arg_utils import Arg
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 INPUT_DEVICE_PATH = '/proc/bus/input/devices'

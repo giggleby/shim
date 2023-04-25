@@ -142,8 +142,6 @@ import json
 import logging
 import time
 
-import numpy as np
-
 from cros.factory.device import ambient_light_sensor
 from cros.factory.device import device_utils
 from cros.factory.test.fixture import fixture_connection
@@ -157,6 +155,8 @@ from cros.factory.test.utils import media_utils
 from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import config_utils
+
+from cros.factory.external.py_lib import numpy as np
 
 
 # LED pattern.
