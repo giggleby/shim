@@ -7,7 +7,7 @@ import threading
 
 from cros.factory.utils import process_utils
 
-from cros.factory.external import evdev
+from cros.factory.external.py_lib import evdev
 
 
 def GetDevices():

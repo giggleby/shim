@@ -1,7 +1,6 @@
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Wrapper for loading external module."""
 
 import importlib
@@ -23,7 +22,7 @@ def _ExternalWrapperLoadModule(file_name, context):
   if not module:
     # Try to load from dummy implementation. This should not change
     # MODULE_READY.
-    name = 'cros.factory.external._dummy.' + name
+    name = 'cros.factory.external.py_lib._dummy.' + name
     try:
       module = importlib.import_module(name)
     except Exception:

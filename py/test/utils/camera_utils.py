@@ -15,7 +15,7 @@ from cros.factory.test.utils import v4l2_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 
-from cros.factory.external import cv2 as cv
+from cros.factory.external.py_lib import cv2 as cv
 
 
 # sysfs camera paths.

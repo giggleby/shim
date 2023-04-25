@@ -1,4 +1,4 @@
-ChromeOS Factory Software External Modules
+ChromeOS Factory Software External Python Modules
 ==========================================
 
 This package folder provides a wrapper for loading external modules.
@@ -11,7 +11,7 @@ instance, numpy).
 For most modules you just need to create a symlink with right module name and
 import it from `cros.factory`. Examples:
 
-    from cros.factory.external import cv
+    from cros.factory.external.py_lib import cv
 
 Then use `cv` as usual.
 

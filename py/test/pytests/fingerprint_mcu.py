@@ -61,8 +61,6 @@ import os
 import re
 import sys
 
-import numpy
-
 from cros.factory.device import device_utils
 from cros.factory.test.env import paths
 from cros.factory.test.i18n import _
@@ -75,6 +73,8 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import schema
 from cros.factory.utils import type_utils
+
+from cros.factory.external.py_lib import numpy
 
 
 # use the fingerprint image processing library if available

@@ -29,8 +29,8 @@ class MockInterface:
 class OEMCryptoClientTest(unittest.TestCase):
 
   def setUp(self):
-    with mock.patch('cros.factory.external.dbus.SystemBus'), \
-         mock.patch('cros.factory.external.dbus.Interface',
+    with mock.patch('cros.factory.external.py_lib.dbus.SystemBus'), \
+         mock.patch('cros.factory.external.py_lib.dbus.Interface',
                     return_value=MockInterface()):
       self.oemcrypto_client = OEMCryptoClient()
 

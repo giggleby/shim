@@ -19,12 +19,12 @@ from cros.factory.test.utils import bluetooth_utils
 from cros.factory.utils.sync_utils import PollForCondition
 from cros.factory.utils.sync_utils import Retry
 
-from cros.factory.external import dbus
+from cros.factory.external.py_lib import dbus
 # pylint: disable=no-name-in-module,import-error
-from cros.factory.external.dbus import DBusException
-from cros.factory.external.dbus.mainloop.glib import DBusGMainLoop
-from cros.factory.external.dbus import service
-from cros.factory.external import gobject
+from cros.factory.external.py_lib.dbus import DBusException
+from cros.factory.external.py_lib.dbus.mainloop.glib import DBusGMainLoop
+from cros.factory.external.py_lib.dbus import service
+from cros.factory.external.py_lib import gobject
 
 BUS_NAME = 'org.bluez'
 SERVICE_NAME = 'org.bluez'
