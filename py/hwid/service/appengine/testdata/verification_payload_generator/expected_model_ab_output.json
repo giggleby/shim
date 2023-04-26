@@ -4,7 +4,7 @@
       {
         "componentCategory": "battery",
         "componentUuid": "model_a_battery_large_deprecated",
-        "qualificationStatus": "REJECTED"
+        "qualificationStatus": "QUALIFIED"
       },
       {
         "componentCategory": "battery",
@@ -47,7 +47,7 @@
       {
         "componentCategory": "battery",
         "componentUuid": "model_f_battery_small_deprecated",
-        "qualificationStatus": "REJECTED"
+        "qualificationStatus": "QUALIFIED"
       },
       {
         "componentCategory": "battery",
@@ -3118,6 +3118,27 @@
             true,
             "str",
             "!eq Li-ion"
+          ]
+        }
+      },
+      "model_f_battery_small_deprecated": {
+        "eval": {
+          "generic_battery": {}
+        },
+        "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
+          "manufacturer": [
+            true,
+            "str",
+            "!eq mfr"
+          ],
+          "model_name": [
+            true,
+            "str",
+            "!eq S2"
           ]
         }
       },

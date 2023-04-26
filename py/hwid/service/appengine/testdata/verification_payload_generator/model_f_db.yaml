@@ -33,7 +33,7 @@ components:
         status: deprecated
         values:
           manufacturer: mfr
-          model_name: S
+          model_name: S2
           technology: LION
       battery_medium_unsupported:
         status: unsupported

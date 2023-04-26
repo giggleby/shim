@@ -670,7 +670,7 @@ ComponentVerificationPayloadPiece = collections.namedtuple(
 _STATUS_MAP = {
     hwid_common.ComponentStatus.supported: hardware_verifier_pb2.QUALIFIED,
     hwid_common.ComponentStatus.unqualified: hardware_verifier_pb2.UNQUALIFIED,
-    hwid_common.ComponentStatus.deprecated: hardware_verifier_pb2.REJECTED,
+    hwid_common.ComponentStatus.deprecated: hardware_verifier_pb2.QUALIFIED,
     hwid_common.ComponentStatus.unsupported: hardware_verifier_pb2.REJECTED,
 }
 
