@@ -406,3 +406,10 @@ After minutes, you will get a complete factory bundle. Cheers!
 
 [CPFE]: https://www.google.com/chromeos/partner/fe/
 [DLM]: https://chromeos.google.com/partner/dlm/device/list
+
+Another example if you simply want to run it via the `MANIFEST.yaml`.
+
+  ```sh
+    (inside)
+    bin/factory_env py/tools/finalize_bundle.py MANIFEST.yml
+  ```
