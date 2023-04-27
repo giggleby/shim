@@ -10,6 +10,8 @@ syntax = "proto3";
 // Of a certain brand, this message records the available feature version
 // and its requirements in terms of HWID string.
 message BrandFeatureRequirementSpec {
+  reserved 2;
+
   // The non-zero feature version number.
   uint32 feature_version = 1;
 
@@ -50,6 +52,20 @@ message BrandFeatureRequirementSpec {
   // A set of profiles.  If the HWID matches any of it, the requirements
   // are considered fulfilled.
   repeated Profile profiles = 3;
+
+  enum FeatureEnablementCase {
+    FEATURE_ENABLEMENT_CASE_UNSPECIFIC = 0;
+
+    // Specifies that devices of this brand is not allowed for feature
+    // enablement.
+    FEATURE_MUST_NOT_ENABLED = 1;
+    // Specifies that devices of this brand is expected to enable the feature.
+    FEATURE_MUST_ENABLED = 2;
+    // Specifies that devices of this brand has no limitation on feature
+    // enablement.
+    MIXED = 3;
+  }
+  FeatureEnablementCase feature_enablement_case = 4;
 }
 
 
