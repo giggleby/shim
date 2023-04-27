@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$proto/hwid_feature_requirement.proto\"\xc4\x02\n\x1b\x42randFeatureRequirementSpec\x12\x17\n\x0f\x66\x65\x61ture_version\x18\x01 \x01(\r\x12\x36\n\x08profiles\x18\x03 \x03(\x0b\x32$.BrandFeatureRequirementSpec.Profile\x1a\xd3\x01\n\x07Profile\x12\x13\n\x0b\x64\x65scription\x18\x01 \x01(\t\x12W\n\x15\x65ncoding_requirements\x18\x02 \x03(\x0b\x32\x38.BrandFeatureRequirementSpec.Profile.EncodingRequirement\x1aZ\n\x13\x45ncodingRequirement\x12\x13\n\x0b\x64\x65scription\x18\x01 \x01(\t\x12\x15\n\rbit_locations\x18\x02 \x03(\r\x12\x17\n\x0frequired_values\x18\x03 \x03(\t\"\xa7\x01\n\x16\x46\x65\x61tureRequirementSpec\x12<\n\x0b\x62rand_specs\x18\x01 \x03(\x0b\x32\'.FeatureRequirementSpec.BrandSpecsEntry\x1aO\n\x0f\x42randSpecsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12+\n\x05value\x18\x02 \x01(\x0b\x32\x1c.BrandFeatureRequirementSpec:\x02\x38\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$proto/hwid_feature_requirement.proto\"\xa4\x04\n\x1b\x42randFeatureRequirementSpec\x12\x17\n\x0f\x66\x65\x61ture_version\x18\x01 \x01(\r\x12\x36\n\x08profiles\x18\x03 \x03(\x0b\x32$.BrandFeatureRequirementSpec.Profile\x12S\n\x17\x66\x65\x61ture_enablement_case\x18\x04 \x01(\x0e\x32\x32.BrandFeatureRequirementSpec.FeatureEnablementCase\x1a\xd3\x01\n\x07Profile\x12\x13\n\x0b\x64\x65scription\x18\x01 \x01(\t\x12W\n\x15\x65ncoding_requirements\x18\x02 \x03(\x0b\x32\x38.BrandFeatureRequirementSpec.Profile.EncodingRequirement\x1aZ\n\x13\x45ncodingRequirement\x12\x13\n\x0b\x64\x65scription\x18\x01 \x01(\t\x12\x15\n\rbit_locations\x18\x02 \x03(\r\x12\x17\n\x0frequired_values\x18\x03 \x03(\t\"\x82\x01\n\x15\x46\x65\x61tureEnablementCase\x12&\n\"FEATURE_ENABLEMENT_CASE_UNSPECIFIC\x10\x00\x12\x1c\n\x18\x46\x45\x41TURE_MUST_NOT_ENABLED\x10\x01\x12\x18\n\x14\x46\x45\x41TURE_MUST_ENABLED\x10\x02\x12\t\n\x05MIXED\x10\x03J\x04\x08\x02\x10\x03\"\xa7\x01\n\x16\x46\x65\x61tureRequirementSpec\x12<\n\x0b\x62rand_specs\x18\x01 \x03(\x0b\x32\'.FeatureRequirementSpec.BrandSpecsEntry\x1aO\n\x0f\x42randSpecsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12+\n\x05value\x18\x02 \x01(\x0b\x32\x1c.BrandFeatureRequirementSpec:\x02\x38\x01\x62\x06proto3')
 
 
 
@@ -67,13 +67,15 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _FEATUREREQUIREMENTSPEC_BRANDSPECSENTRY._options = None
   _FEATUREREQUIREMENTSPEC_BRANDSPECSENTRY._serialized_options = b'8\001'
   _BRANDFEATUREREQUIREMENTSPEC._serialized_start=41
-  _BRANDFEATUREREQUIREMENTSPEC._serialized_end=365
-  _BRANDFEATUREREQUIREMENTSPEC_PROFILE._serialized_start=154
-  _BRANDFEATUREREQUIREMENTSPEC_PROFILE._serialized_end=365
-  _BRANDFEATUREREQUIREMENTSPEC_PROFILE_ENCODINGREQUIREMENT._serialized_start=275
-  _BRANDFEATUREREQUIREMENTSPEC_PROFILE_ENCODINGREQUIREMENT._serialized_end=365
-  _FEATUREREQUIREMENTSPEC._serialized_start=368
-  _FEATUREREQUIREMENTSPEC._serialized_end=535
-  _FEATUREREQUIREMENTSPEC_BRANDSPECSENTRY._serialized_start=456
-  _FEATUREREQUIREMENTSPEC_BRANDSPECSENTRY._serialized_end=535
+  _BRANDFEATUREREQUIREMENTSPEC._serialized_end=589
+  _BRANDFEATUREREQUIREMENTSPEC_PROFILE._serialized_start=239
+  _BRANDFEATUREREQUIREMENTSPEC_PROFILE._serialized_end=450
+  _BRANDFEATUREREQUIREMENTSPEC_PROFILE_ENCODINGREQUIREMENT._serialized_start=360
+  _BRANDFEATUREREQUIREMENTSPEC_PROFILE_ENCODINGREQUIREMENT._serialized_end=450
+  _BRANDFEATUREREQUIREMENTSPEC_FEATUREENABLEMENTCASE._serialized_start=453
+  _BRANDFEATUREREQUIREMENTSPEC_FEATUREENABLEMENTCASE._serialized_end=583
+  _FEATUREREQUIREMENTSPEC._serialized_start=592
+  _FEATUREREQUIREMENTSPEC._serialized_end=759
+  _FEATUREREQUIREMENTSPEC_BRANDSPECSENTRY._serialized_start=680
+  _FEATUREREQUIREMENTSPEC_BRANDSPECSENTRY._serialized_end=759
 # @@protoc_insertion_point(module_scope)
