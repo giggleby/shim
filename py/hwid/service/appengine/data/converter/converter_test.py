@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import List, Mapping, Union
+from typing import Mapping
 import unittest
 
 from cros.factory.hwid.service.appengine.data.converter import converter
+from cros.factory.hwid.service.appengine.data.converter import converter_test_utils
 from cros.factory.hwid.service.appengine.data.converter import converter_types
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -26,19 +27,7 @@ class TestAVLAttrs(converter.AVLAttrs):
   AVL_ATTR4 = 'avl_attr_name4'
 
 
-def _ProbeInfoFromMapping(mapping: Mapping[str, Union[str, int,
-                                                      List[Union[str, int]]]]):
-  probe_parameters = []
-  for name, value_or_values in mapping.items():
-    values = value_or_values if isinstance(value_or_values,
-                                           list) else [value_or_values]
-    for value in values:
-      kwargs = {
-          'name': name
-      }
-      kwargs['string_value' if isinstance(value, str) else 'int_value'] = value
-      probe_parameters.append(stubby_pb2.ProbeParameter(**kwargs))
-  return stubby_pb2.ProbeInfo(probe_parameters=probe_parameters)
+_ProbeInfoFromMapping = converter_test_utils.ProbeInfoFromMapping
 
 
 def _HWIDDBExternalResourceFromProbeInfos(
