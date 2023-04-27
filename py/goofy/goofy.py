@@ -477,8 +477,13 @@ class Goofy:
                            status=TestState.FAILED,
                            invocation=test.GetState().invocation,
                            error_msg=error_msg)
-        testlog.CollectExpiredSessions(paths.DATA_LOG_DIR,
-                                       GetUnexpectedShutdownTestRun())
+        # Walk through /var/factory/log/running to get the running test items.
+        # Those test items should be marked as failed.
+        expired_sessions = testlog.CollectExpiredSessions(
+            paths.DATA_LOG_DIR, GetUnexpectedShutdownTestRun())
+        for test_name, test_run_id in expired_sessions:
+          syslog.syslog(f'Test {test_name} ({test_run_id}) completed: FAILED'
+                        f'{f" ({error_msg})" if error_msg else ""}')
         test.UpdateState(
             status=TestState.FAILED,
             error_msg=error_msg)
