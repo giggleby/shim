@@ -31,7 +31,7 @@ SECRET_KEY = '2z+gdb%-eijhj_81jr3lzg7#)zp!q+ujuv$2!0lzvtmuvof)1e'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # default superuser
 SITE_SUPERUSER_USERNAME = 'admin'
