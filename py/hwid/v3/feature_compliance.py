@@ -22,7 +22,9 @@ except ImportError:
   from cros.factory.proto import hwid_feature_requirement_pb2  # pylint: disable=ungrouped-imports
 
 
-_Profile = hwid_feature_requirement_pb2.BrandFeatureRequirementSpec.Profile
+_BrandFeatureRequirementSpec = (
+    hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
+_Profile = _BrandFeatureRequirementSpec.Profile
 _EncodingRequirement = _Profile.EncodingRequirement
 
 FEATURE_INCOMPLIANT_VERSION = 0
@@ -42,6 +44,23 @@ class Checker(abc.ABC):
     Returns:
       The resolved feature version, or `FEATURE_INCOMPLIANT_VERSION` if not
       compliant.
+    """
+
+  @abc.abstractmethod
+  def CheckFeatureEnablement(
+      self, brand_code: str, is_feature_enabled: bool) -> bool:
+    """Reports whether the feature enablement state is permitted.
+
+    Args:
+      brand_code: The brand code of the device.
+      is_feature_enabled: Whether the feature is enabled.
+
+    Returns:
+      If `is_feature_enabled` is `True`, it returns `True` when the device
+      of the specified `brand_code` is permitted for feature enablement.
+      If `is_feature_enabled` is `False`, it returns `True` when the device
+      of the specified `brand_code` is permitted for not enabling the versioned
+      feature.
     """
 
 
@@ -66,8 +85,10 @@ class FeatureRequirementSpecChecker(Checker):
     for brand_name, brand_spec in spec.brand_specs.items():
       if brand_spec.feature_version <= FEATURE_INCOMPLIANT_VERSION:
         raise ValueError('Invalid spec: bad feature version.')
-      if not brand_spec.profiles:
-        raise ValueError(f'Invalid spec: no profiles for brand {brand_name}.')
+      if (brand_spec.feature_enablement_case ==
+          _BrandFeatureRequirementSpec.FEATURE_ENABLEMENT_CASE_UNSPECIFIC):
+        raise ValueError(
+            'Invalid spec: feature enablement case not specified.')
       for profile in brand_spec.profiles:
         for encoding_requirement in profile.encoding_requirements:
           if not encoding_requirement.bit_locations:
@@ -111,6 +132,22 @@ class FeatureRequirementSpecChecker(Checker):
         self._CheckOneEncodingRequirement(encoding_requirement, bit_string)
         for encoding_requirement in profile.encoding_requirements)
 
+  def _GetBrandFeatureRequirementSpec(
+      self, brand_code: str) -> _BrandFeatureRequirementSpec:
+    brand_spec = self._spec.brand_specs.get(brand_code)
+    if brand_spec:
+      logging.info('Got brand specific feature requirement spec for %r.',
+                   brand_code)
+      return brand_spec
+
+    logging.info('Fall back to default feature requirement spec for %r.',
+                 brand_code)
+    brand_spec = self._spec.brand_specs.get('')
+    if not brand_spec:
+      raise ValueError(f'No default feature requirement spec for {brand_code}.')
+
+    return brand_spec
+
   def CheckFeatureComplianceVersion(
       self, hwid_identity: identity_module.Identity) -> int:
     """See base class."""
@@ -118,11 +155,7 @@ class FeatureRequirementSpecChecker(Checker):
       logging.info('No brand info from HWID.')
       return FEATURE_INCOMPLIANT_VERSION
 
-    brand_spec = self._spec.brand_specs.get(hwid_identity.brand_code)
-    if brand_spec is None:
-      logging.info('No feature requirement spec for %r.',
-                   hwid_identity.brand_code)
-      return FEATURE_INCOMPLIANT_VERSION
+    brand_spec = self._GetBrandFeatureRequirementSpec(hwid_identity.brand_code)
 
     for profile in brand_spec.profiles:
       logging.info('Check if HWID meets the profile %r.', profile.description)
@@ -130,6 +163,19 @@ class FeatureRequirementSpecChecker(Checker):
         return brand_spec.feature_version
 
     return FEATURE_INCOMPLIANT_VERSION
+
+  def CheckFeatureEnablement(
+      self, brand_code: str, is_feature_enabled: bool) -> bool:
+    brand_spec = self._GetBrandFeatureRequirementSpec(brand_code)
+
+    if is_feature_enabled:
+      return brand_spec.feature_enablement_case in (
+          _BrandFeatureRequirementSpec.FEATURE_MUST_ENABLED,
+          _BrandFeatureRequirementSpec.MIXED)
+
+    return brand_spec.feature_enablement_case in (
+        _BrandFeatureRequirementSpec.FEATURE_MUST_NOT_ENABLED,
+        _BrandFeatureRequirementSpec.MIXED)
 
 
 FEATURE_REQUIREMENT_SPEC_CHECKSUM_ROW_PREFIX = '# checksum: '

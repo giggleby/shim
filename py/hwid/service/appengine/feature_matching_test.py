@@ -129,6 +129,7 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
                     required_values: "10"
                   }
                 }
+                feature_enablement_case: MIXED
               }
             }
             """))

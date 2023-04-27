@@ -112,6 +112,7 @@ class HWIDFeatureMatcherBuilder:
     for brand, feature_spec in brand_feature_specs.items():
       brand_specific_msg = msg.brand_specs.get_or_create(brand)
       brand_specific_msg.feature_version = feature_spec.feature_version
+      brand_specific_msg.feature_enablement_case = brand_specific_msg.MIXED
       for hwid_requirement in feature_spec.hwid_requirement_candidates:
         profile_msg = brand_specific_msg.profiles.add(
             description=hwid_requirement.description)
