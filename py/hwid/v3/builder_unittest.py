@@ -295,6 +295,29 @@ class DatabaseBuilderTest(unittest.TestCase):
 
   # TODO (b/212216855)
   @label_utils.Informational
+  @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk', return_value=False)
+  def testUpdateByProbedResultsAddFirmware_SkipFirmwareComponents(
+      self, unused_prompt_and_ask_mock):
+    with builder.DatabaseBuilder.FromFilePath(
+        db_path=_TEST_DATABASE_PATH) as db_builder:
+      db_builder.UpdateByProbedResults(
+          {
+              'ro_main_firmware': [{
+                  'name': 'generic',
+                  'values': {
+                      'hash': '1',
+                      'version': 'Google_Proj.2222.2.2'
+                  }
+              }]
+          }, {}, {}, [], skip_firmware_components=True)
+
+    db = db_builder.Build()
+
+    self.assertNotIn('Google_Proj_2222_2_2',
+                     db.GetComponents('ro_main_firmware'))
+
+  # TODO (b/212216855)
+  @label_utils.Informational
   @mock.patch('cros.factory.hwid.v3.builder.PromptAndAsk')
   def testUpdateByProbedResultsWithExtraComponentClasses(self,
                                                          prompt_and_ask_mock):

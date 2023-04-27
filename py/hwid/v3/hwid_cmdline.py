@@ -134,6 +134,8 @@ _DATABASE_BUILDER_COMMON_ARGS = _HWID_MATERIAL_COMMON_ARGS + [
         'of the specific number of components. '
         ' E.g. `--fill-combination camera_field:2` will append all '
         'combination of 2 cameras into `camera_field`.'),
+    CmdArg('--add-firmware-components', action='store_true',
+           help='Add firmware components when building HWID database.'),
 ]
 
 _RMA_COMMON_ARGS = [
@@ -361,7 +363,8 @@ def RunDatabaseBuilder(database_builder, options):
 
       database_builder.UpdateByProbedResults(
           hwid_material.probed_results, hwid_material.device_info,
-          hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id)
+          hwid_material.vpd, hwid_material.sku_ids, image_name=options.image_id,
+          skip_firmware_components=not options.add_firmware_components)
 
     for request in options.fill_combinations:
       database_builder.ExtendEncodedFieldToFullCombination(

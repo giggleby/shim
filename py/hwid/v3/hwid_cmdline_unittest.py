@@ -245,6 +245,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
       options.auto_decline_essential_prompt = []
       options.fill_combinations = []
       options.skip_update_by_material_file = False
+      options.add_firmware_components = False
 
       hwid_cmdline.BuildDatabaseWrapper(options)
 
@@ -272,7 +273,7 @@ class BuildDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.device_info,
           obtain_hwid_material_mock.return_value.vpd,
           obtain_hwid_material_mock.return_value.sku_ids,
-          image_name=options.image_id)
+          image_name=options.image_id, skip_firmware_components=True)
 
   def testBuildMinimalHWIDDBConflictOptions(self):
     with file_utils.TempDirectory() as path:
@@ -357,6 +358,7 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
       options.fill_combinations = [
           hwid_cmdline.ComponentCombinationFillingRequest('camera_field', 2)
       ]
+      options.add_firmware_components = False
 
       hwid_cmdline.UpdateDatabaseWrapper(options)
 
@@ -379,7 +381,7 @@ class UpdateDatabaseWrapperTest(unittest.TestCase):
           obtain_hwid_material_mock.return_value.device_info,
           obtain_hwid_material_mock.return_value.vpd,
           obtain_hwid_material_mock.return_value.sku_ids,
-          image_name=options.image_id)
+          image_name=options.image_id, skip_firmware_components=True)
 
       # Extend full component combination in specified encoded fields.
       instance.ExtendEncodedFieldToFullCombination.assert_called_with(
