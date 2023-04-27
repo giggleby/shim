@@ -42,6 +42,7 @@ import re
 import tempfile
 import threading
 import time
+from typing import List, Tuple
 
 from . import hooks
 from . import testlog_seq
@@ -357,24 +358,34 @@ def InitSubSession(log_root, uuid, station_test_run=None):
   return session_log_path
 
 
-def CollectExpiredSessions(log_root, station_test_run=None):
+def CollectExpiredSessions(log_root,
+                           station_test_run=None) -> List[Tuple[str, str]]:
+  expired_session = []
   session_dir = os.path.join(log_root, _DEFAULT_SESSION_FOLDER)
   for session_log_path in os.listdir(session_dir):
     session_log_path = os.path.join(session_dir, session_log_path)
     if os.path.isfile(session_log_path):
-      LogFinalTestRun(session_log_path, station_test_run)
+      test_name, test_run_id = LogFinalTestRun(session_log_path,
+                                               station_test_run)
+      expired_session.append([test_name, test_run_id])
+  return expired_session
 
 
-def LogTestRun(session_json_path, station_test_run=None):
-  """Merges the session JSON into the primary JSON and logs it.
+def LogTestRun(session_json_path, station_test_run=None) -> Tuple[str, str]:
+  """Reads and merges the session JSON into the primary JSON and logs it.
 
   Args:
     session_json_path: Path to the session JSON.
     station_test_run: Additional information might be appended.
+
+  Returns:
+    The test name and the test run id of the given session JSON.
   """
   # TODO(itspeter): Check the file is already closed properly. (i.e.
   #                 no lock exists or other process using it)
   manager = file_utils.FileLockContextManager(session_json_path, 'r+')
+  test_name = None
+  test_run_id = None
   try:
     with manager as fd:
       content = fd.read()
@@ -391,6 +402,8 @@ def LogTestRun(session_json_path, station_test_run=None):
         # pylint: disable=protected-access
         test_run[Testlog.FIELDS._METADATA] = (
             session_json[Testlog.FIELDS._METADATA])
+        test_name = test_run['testName']
+        test_run_id = test_run['testRunId']
         fd.seek(0)
         fd.truncate()
         fd.write(test_run.ToJSON())
@@ -405,10 +418,14 @@ def LogTestRun(session_json_path, station_test_run=None):
   finally:
     manager.Close()
 
+  return test_name, test_run_id
 
-def LogFinalTestRun(session_json_path, station_test_run=None):
-  LogTestRun(session_json_path, station_test_run)
+
+def LogFinalTestRun(session_json_path,
+                    station_test_run=None) -> Tuple[str, str]:
+  test_name, test_run_id = LogTestRun(session_json_path, station_test_run)
   os.unlink(session_json_path)
+  return test_name, test_run_id
 
 
 def GetGlobalTestlog():
