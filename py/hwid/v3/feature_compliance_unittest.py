@@ -32,9 +32,9 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
 
     checker = feature_compliance.FeatureRequirementSpecChecker(
         hwid_feature_requirement_pb2.FeatureRequirementSpec())
-    actual_value = checker.CheckFeatureComplianceVersion(hwid_identity)
 
-    self.assertEqual(actual_value, 0)
+    with self.assertRaises(ValueError):
+      checker.CheckFeatureComplianceVersion(hwid_identity)
 
   def testCheckFeatureComplianceVersion_MatchNoProfile(self):
     hwid_identity = _CreateHWIDIdentityForTest('AABB', '0011001000')
@@ -52,6 +52,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                         required_values: "111"
                     }
                 }
+                feature_enablement_case: MIXED
             }
         }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
@@ -83,6 +84,7 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
                         required_values: "1"
                     }
                 }
+                feature_enablement_case: MIXED
             }
         }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
 
@@ -90,6 +92,145 @@ class FeatureRequirementSpecCheckerTest(unittest.TestCase):
     actual_value = checker.CheckFeatureComplianceVersion(hwid_identity)
 
     self.assertEqual(actual_value, 3)
+
+  def testCheckFeatureComplianceVersion_MatchOneProfileInDefaultSpec(self):
+    hwid_identity = _CreateHWIDIdentityForTest('AABB', '0011001000')
+    spec = text_format.Parse(
+        textwrap.dedent('''\
+        brand_specs: {
+            key: ""
+            value: {
+                feature_version: 3
+                profiles: {
+                    encoding_requirements: {
+                        bit_locations: 2
+                        bit_locations: 3
+                        bit_locations: 5
+                        required_values: "000"
+                        required_values: "100"
+                        required_values: "010"
+                        required_values: "110"
+                    }
+                    encoding_requirements: {
+                        bit_locations: 6
+                        required_values: "1"
+                    }
+                }
+                feature_enablement_case: MIXED
+            }
+        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+
+    checker = feature_compliance.FeatureRequirementSpecChecker(spec)
+    actual_value = checker.CheckFeatureComplianceVersion(hwid_identity)
+
+    self.assertEqual(actual_value, 3)
+
+  def testCheckFeatureEnablement_NoBrandInfo(self):
+    spec = hwid_feature_requirement_pb2.FeatureRequirementSpec()
+
+    checker = feature_compliance.FeatureRequirementSpecChecker(spec)
+
+    with self.assertRaises(ValueError):
+      checker.CheckFeatureEnablement('ABCD', True)
+
+    with self.assertRaises(ValueError):
+      checker.CheckFeatureEnablement('ABCD', False)
+
+  def testCheckFeatureEnablement_FeatureMustEnabled(self):
+    spec = text_format.Parse(
+        textwrap.dedent('''\
+        brand_specs: {
+            key: "AABB"
+            value: {
+                feature_version: 3  # Unused.
+                profiles: {  # Unused.
+                    encoding_requirements: {
+                        bit_locations: 6
+                        required_values: "1"
+                    }
+                }
+                feature_enablement_case: FEATURE_MUST_ENABLED
+            }
+        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+
+    checker = feature_compliance.FeatureRequirementSpecChecker(spec)
+    permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
+    permit_to_not_enable = checker.CheckFeatureEnablement('AABB', False)
+
+    self.assertTrue(permit_to_enable)
+    self.assertFalse(permit_to_not_enable)
+
+  def testCheckFeatureEnablement_FeatureMustNotEnabled(self):
+    spec = text_format.Parse(
+        textwrap.dedent('''\
+        brand_specs: {
+            key: "AABB"
+            value: {
+                feature_version: 3  # Unused.
+                profiles: {  # Unused.
+                    encoding_requirements: {
+                        bit_locations: 6
+                        required_values: "1"
+                    }
+                }
+                feature_enablement_case: FEATURE_MUST_NOT_ENABLED
+            }
+        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+
+    checker = feature_compliance.FeatureRequirementSpecChecker(spec)
+    permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
+    permit_to_not_enable = checker.CheckFeatureEnablement('AABB', False)
+
+    self.assertFalse(permit_to_enable)
+    self.assertTrue(permit_to_not_enable)
+
+  def testCheckFeatureEnablement_FeatureMayOrMayNotEnable(self):
+    spec = text_format.Parse(
+        textwrap.dedent('''\
+        brand_specs: {
+            key: "AABB"
+            value: {
+                feature_version: 3  # Unused.
+                profiles: {  # Unused.
+                    encoding_requirements: {
+                        bit_locations: 6
+                        required_values: "1"
+                    }
+                }
+                feature_enablement_case: MIXED
+            }
+        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+
+    checker = feature_compliance.FeatureRequirementSpecChecker(spec)
+    permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
+    permit_to_not_enable = checker.CheckFeatureEnablement('AABB', False)
+
+    self.assertTrue(permit_to_enable)
+    self.assertTrue(permit_to_not_enable)
+
+  def testCheckFeatureEnablement_UseDefaultSpec(self):
+    spec = text_format.Parse(
+        textwrap.dedent('''\
+        brand_specs: {
+            key: ""
+            value: {
+                feature_version: 3  # Unused.
+                profiles: {  # Unused.
+                    encoding_requirements: {
+                        bit_locations: 6
+                        required_values: "1"
+                    }
+                }
+                feature_enablement_case: MIXED
+            }
+        }'''), hwid_feature_requirement_pb2.FeatureRequirementSpec())
+
+    checker = feature_compliance.FeatureRequirementSpecChecker(spec)
+    permit_to_enable = checker.CheckFeatureEnablement('AABB', True)
+    permit_to_not_enable = checker.CheckFeatureEnablement('AABB', False)
+
+    self.assertTrue(permit_to_enable)
+    self.assertTrue(permit_to_not_enable)
 
 
 class LoadCheckerTest(unittest.TestCase):
@@ -146,6 +287,7 @@ class LoadCheckerTest(unittest.TestCase):
                         required_values: "111"
                     }
                 }
+                feature_enablement_case: MIXED
             }
         }''')
     file_utils.WriteFile(
