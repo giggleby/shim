@@ -712,6 +712,8 @@ def WipeInit(wipe_args, shopfloor_url, state_dev, release_rootfs,
                    wipe_init_log=logfile, wipe_in_ramfs_log=wipe_in_ramfs_log,
                    success=True)
 
+    # Sleep 1 second for waiting PDO switching, see b/278804761.
+    time.sleep(1)
     _Cutoff()
 
     # should not reach here

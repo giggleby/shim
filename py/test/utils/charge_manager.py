@@ -4,6 +4,7 @@
 
 import enum
 import logging
+import time
 
 from cros.factory.device import device_utils
 from cros.factory.utils import process_utils
@@ -64,6 +65,9 @@ class ChargeManager:
       logging.info('Charger state: %s', self.state)
 
   def StartCharging(self):
+    # Disable DPS and wait 1 second for PDO switching before starting charging.
+    self.DisableDPS()
+    time.sleep(1)
     self._SetState(self._power.ChargeState.CHARGE)
     self._power.SetChargeState(self._power.ChargeState.CHARGE)
 
@@ -98,6 +102,8 @@ class ChargeManager:
         self._SetState(self.ErrorState.BATTERY_ERROR)
       elif charge < self._min_charge_pct:
         self.StartCharging()
+        # Re-enable DPS since we disable it before starting charging.
+        self.EnableDPS()
       elif charge > self._max_charge_pct:
         self.ForceDischarge()
       else:

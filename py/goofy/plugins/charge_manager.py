@@ -24,7 +24,6 @@ class ChargeManager(periodic_plugin.PeriodicPlugin):
   def OnStop(self):
     super().OnStop()
     self._charge_manager.StartCharging()
-    self._charge_manager.DisableDPS()
 
   @type_utils.Overrides
   def OnStart(self):

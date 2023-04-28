@@ -21,6 +21,10 @@ class ChargeManagerTest(unittest.TestCase):
     self._power.ChargeState = Power.ChargeState
     self._charge_manager = charge_manager.ChargeManager(70, 80, self._power)
 
+    patcher = mock.patch('cros.factory.utils.process_utils.CheckCall')
+    self._mock_check_call = patcher.start()
+    self.addCleanup(patcher.stop)
+
   def testCharge(self):
     self._power.CheckBatteryPresent.return_value = True
     self._power.CheckACPresent.return_value = True
@@ -33,6 +37,12 @@ class ChargeManagerTest(unittest.TestCase):
     self._power.GetChargePct.assert_called_once_with()
     self._power.SetChargeState.assert_called_once_with(
         self._power.ChargeState.CHARGE)
+
+    dps_calls = [
+        mock.call(['ectool', 'usbpddps', 'disable']),
+        mock.call(['ectool', 'usbpddps', 'enable'])
+    ]
+    self._mock_check_call.assert_has_calls(dps_calls, any_order=False)
 
   def testDischarge(self):
     self._power.CheckBatteryPresent.return_value = True
