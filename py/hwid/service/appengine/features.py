@@ -765,8 +765,8 @@ class V1HWIDRequirementResolver(HWIDRequirementResolver):
 
   def __init__(self):
     """Initializer."""
-    super().__init__((CPUV1Spec, MemoryV1Spec, StorageV1Spec,
-                      DisplayPanelV1Spec, CameraV1Spec))
+    super().__init__((CPUV1Spec(), MemoryV1Spec(), StorageV1Spec(),
+                      DisplayPanelV1Spec(), CameraV1Spec()))
 
 
 NO_FEATURE_VERSION = 0

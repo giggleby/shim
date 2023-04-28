@@ -413,7 +413,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
     if not dlm_component_info.is_cpu:
       return None
     cpu_info = dlm_component_info.cpu_info
-    if any(v <= 0 for v in cpu_info.feature_compatible_versions):
+    if any(v < 0 for v in cpu_info.feature_compatible_versions):
       self._warnings.append('Invalid CPU feature versions: '
                             f'{cpu_info.feature_compatible_versions}.')
       return None
