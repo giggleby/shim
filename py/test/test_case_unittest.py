@@ -92,14 +92,20 @@ class TestCaseTest(unittest.TestCase):
     for patcher in self._patchers:
       patcher.stop()
 
-  def AssertRunResult(self, error_msg=None):
+  def GetRunResult(self):
     result = unittest.TestResult()
     self._test.run(result=result)
     errors = result.errors + result.failures
-    if error_msg is None:
-      self.assertFalse(errors)
-    else:
-      self.assertEqual(1, len(errors))
+    return errors
+
+  def AssertRunPass(self):
+    errors = self.GetRunResult()
+    self.assertFalse(errors)
+
+  def AssertRunFail(self, error_msg=None):
+    errors = self.GetRunResult()
+    self.assertEqual(1, len(errors))
+    if error_msg:
       self.assertIn(error_msg, errors[0][1])
 
   def AssertNotReached(self):
@@ -111,7 +117,7 @@ class TestCaseTest(unittest.TestCase):
 
     self._test.runTest = _RunTest
 
-    self.AssertRunResult()
+    self.AssertRunPass()
     self._mock_event_loop.AddEventHandler.assert_any_call(
         'goofy_ui_task_end', mock.ANY)
 
@@ -122,16 +128,16 @@ class TestCaseTest(unittest.TestCase):
 
     self._test.runTest = _RunTest
 
-    self.AssertRunResult()
+    self.AssertRunPass()
 
   def testFailTask(self):
     def _RunTest():
-      self._test.FailTask('failed to bla')
+      self._test.FailTask('Task fail.')
       self.AssertNotReached()
 
     self._test.runTest = _RunTest
 
-    self.AssertRunResult('failed to bla')
+    self.AssertRunFail()
 
   def testFailWithAssert(self):
     def _RunTest():
@@ -139,98 +145,67 @@ class TestCaseTest(unittest.TestCase):
 
     self._test.runTest = _RunTest
 
-    self.AssertRunResult('False is not true')
+    self.AssertRunFail('False is not true')
 
-  def testAddTaskAllPass(self):
+  def testAddTask_AllPass(self):
     executed_tasks = []
-    next_task_stages = []
 
     def _Task(idx):
       self.assertEqual(idx, self._mock_event_loop.ClearHandlers.call_count)
       self.assertEqual(idx, self._test.ui.UnbindAllKeys.call_count)
       executed_tasks.append(idx)
-      next_task_stages.append(self._test.GetNextTaskStage())
 
     self._test.AddTask(lambda: _Task(0))
     self._test.AddTask(lambda: _Task(1))
     self._test.AddTask(lambda: _Task(2))
 
-    self.AssertRunResult()
+    self.AssertRunPass()
     self.assertEqual([0, 1, 2], executed_tasks)
-    self.assertEqual([0, 0, 0], next_task_stages)
 
-  def testAddTaskSomeFail(self):
+  def testAddTask_SomeFail(self):
     executed_tasks = []
-    next_task_stages = []
 
     def _Task(name, fail=False):
       executed_tasks.append(name)
-      next_task_stages.append(self._test.GetNextTaskStage())
       if fail:
-        self._test.FailTask('Something wrong')
+        self._test.FailTask('Task fail.')
 
     self._test.AddTask(lambda: _Task('task1'))
     self._test.AddTask(lambda: _Task('task2', fail=True))
     self._test.AddTask(lambda: _Task('task3'))
 
-    self.AssertRunResult('Something wrong')
+    self.AssertRunFail()
     self.assertEqual(['task1', 'task2'], executed_tasks)
-    self.assertEqual([0, 0], next_task_stages)
 
-  def testAddTask_NotEnableNextTaskStage(self):
+  def testAddTask_CheckNextTaskStage_WithoutReboot(self):
     next_task_stages = []
 
     def _Task():
       next_task_stages.append(self._test.GetNextTaskStage())
 
-    # next_task_stage will not be enabled if all tasks were added with
+    # next_task_stage will not be updated if all tasks were added with
     # `reboot=False`
-    self._test.AddTask(lambda: _Task())
-    self._test.AddTask(lambda: _Task())
-    self._test.AddTask(lambda: _Task())
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task)
 
-    self.AssertRunResult()
+    self.AssertRunPass()
     self.assertEqual([0, 0, 0], next_task_stages)
 
-  def testAddTasks_ClearNextTaskStageWhenFail(self):
-    executed_tasks = []
+  def testAddTask_CheckNextTaskStage_WithReboot(self):
     next_task_stages = []
 
-    def _Task(name, fail_task=False):
-      executed_tasks.append((name))
-      next_task_stages.append(self._test.GetNextTaskStage())
-      if fail_task:
-        self._test.FailTask(f'Fail at {name}')
-
-    # Makes sure the next stage flag will be cleared if any task fail.
-    self._test.AddTask(lambda: _Task('task1'), reboot=True)
-    self._test.AddTask(lambda: _Task('task2', fail_task=True))
-    self._test.AddTask(lambda: _Task('task3'))
-
-    self._test.UpdateNextTaskStage(1)
-    self.AssertRunResult('Fail at task2')
-    self.assertEqual(['task2'], executed_tasks)
-    self.assertEqual([2], next_task_stages)
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
-
-  def testAddTasks_ClearNextTaskStageWhenPass(self):
-    executed_tasks = []
-    next_task_stages = []
-
-    def _Task(name):
-      executed_tasks.append((name))
+    def _Task():
       next_task_stages.append(self._test.GetNextTaskStage())
 
-    # Makes sure the next stage flag will be cleared if all tasks pass.
-    self._test.AddTask(lambda: _Task('task1'), reboot=True)
-    self._test.AddTask(lambda: _Task('task2'))
-    self._test.AddTask(lambda: _Task('task3'))
+    # next_task_stage will be updated if any task was added with
+    # `reboot=True`
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task, reboot=True)
 
-    self._test.UpdateNextTaskStage(1)
-    self.AssertRunResult()
-    self.assertEqual(['task2', 'task3'], executed_tasks)
-    self.assertEqual([2, 3], next_task_stages)
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
+    self.AssertRunFail()
+    self.assertEqual([1, 2, 3], next_task_stages)
 
   def testAddTasks_SkipFinishedTasksAfterReboot(self):
     executed_tasks = []
@@ -247,49 +222,68 @@ class TestCaseTest(unittest.TestCase):
     # Sets the next stage flag for simulating the reboot scenario.
     # The tasks finished before reboot should be skipped.
     self._test.UpdateNextTaskStage(2)
-    self.AssertRunResult()
+    self.AssertRunPass()
     self.assertEqual(['task3'], executed_tasks)
     self.assertEqual([3], next_task_stages)
+
+  def testAddTasks_ClearNextTaskStage_TestPass(self):
+
+    def _Task():
+      pass
+
+    # Makes sure the next stage flag will be cleared if all tasks pass.
+    self._test.AddTask(_Task, reboot=True)
+    self._test.AddTask(_Task)
+    self._test.AddTask(_Task)
+
+    self._test.UpdateNextTaskStage(1)
+    self.AssertRunPass()
+    self.assertEqual(self._test.GetNextTaskStage(), 0)
+
+  def testAddTasks_ClearNextTaskStage_TestFail(self):
+
+    def _Task(fail_task=False):
+      if fail_task:
+        self._test.FailTask('Task fail.')
+
+    # Makes sure the next stage flag will be cleared if any task fail.
+    self._test.AddTask(_Task, reboot=True)
+    self._test.AddTask(_Task, fail_task=True)
+    self._test.AddTask(_Task)
+
+    self._test.UpdateNextTaskStage(1)
+    self.AssertRunFail()
     self.assertEqual(self._test.GetNextTaskStage(), 0)
 
   def testAddTasks_UnexpectedReboot(self):
-    executed_tasks = []
-    next_task_stages = []
 
-    def _Task(name):
-      executed_tasks.append((name))
-      next_task_stages.append(self._test.GetNextTaskStage())
+    def _Task():
+      pass
 
     # Sets the next stage flag for simulating the reboot scenario.
     # Exception should be triggered if the device reboot
     # while running the task with 'reboot=False'
     self._test.UpdateNextTaskStage(2)
 
-    self._test.AddTask(lambda: _Task('task1'), reboot=True)
-    self._test.AddTask(lambda: _Task('task2'), reboot=False)
-    self._test.AddTask(lambda: _Task('task3'))
+    self._test.AddTask(_Task, reboot=True)
+    self._test.AddTask(_Task, reboot=False)
+    self._test.AddTask(_Task)
 
-    self.AssertRunResult(
-        'Unexpected reboot was triggered while running "<lambda>".')
-    self.assertEqual([], executed_tasks)
-    self.assertEqual([], next_task_stages)
-    self.assertEqual(self._test.GetNextTaskStage(), 0)
+    self.AssertRunFail('Unexpected reboot was triggered while running "_Task".')
 
   @mock.patch('time.sleep')
   def testAddTasks_RebootNotTriggeredWithinBufferTime(self, time_sleep):
-    executed_tasks = []
 
     # Task without reboot process
-    def _Task(name):
-      executed_tasks.append((name))
+    def _Task():
+      pass
 
-    self._test.AddTask(lambda: _Task('task1'), reboot=True)
-    self._test.AddTask(lambda: _Task('task2'))
+    self._test.AddTask(_Task, reboot=True)
+    self._test.AddTask(_Task)
 
-    self.AssertRunResult('Reboot not triggered '
-                         'within buffer time (5 seconds), '
-                         'next task may be executed in advance.')
-    self.assertEqual(['task1'], executed_tasks)
+    self.AssertRunFail('Reboot not triggered '
+                       'within buffer time (5 seconds), '
+                       'next task may be executed in advance.')
     time_sleep.assert_called_once()
 
   @mock.patch('time.sleep')
@@ -298,12 +292,12 @@ class TestCaseTest(unittest.TestCase):
     def _Task():
       pass
 
-    self._test.AddTask(lambda: _Task, reboot=True, reboot_timeout_secs=3)
-    self._test.AddTask(lambda: _Task)
+    self._test.AddTask(_Task, reboot=True, reboot_timeout_secs=3)
+    self._test.AddTask(_Task)
 
-    self.AssertRunResult('Reboot not triggered '
-                         'within buffer time (3 seconds), '
-                         'next task may be executed in advance.')
+    self.AssertRunFail('Reboot not triggered '
+                       'within buffer time (3 seconds), '
+                       'next task may be executed in advance.')
     time_sleep.assert_called_once_with(3)
 
   def testWaitTaskEnd(self):
@@ -320,7 +314,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.runTest = _RunTest
     self._timeline.AddEvent(10, _TestEnd)
 
-    self.AssertRunResult()
+    self.AssertRunPass()
     self._timeline.AssertTimeAt(10)
 
   def testWaitTaskEndFail(self):
@@ -337,7 +331,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.runTest = _RunTest
     self._timeline.AddEvent(10, _TestEnd)
 
-    self.AssertRunResult('FAILED!')
+    self.AssertRunFail()
     self._timeline.AssertTimeAt(10)
 
   def testSleep(self):
@@ -356,7 +350,7 @@ class TestCaseTest(unittest.TestCase):
     self._test.runTest = _RunTest
     self._timeline.AddEvent(5, _TestEnd)
 
-    self.AssertRunResult('FAILED!')
+    self.AssertRunFail()
     self.assertEqual(5, self._timeline.GetTime())
     self.assertEqual([0, 2, 4], times)
 
