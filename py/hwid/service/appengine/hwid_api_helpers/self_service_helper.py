@@ -534,7 +534,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       if any(v < 0 for v in display_panel_info.feature_compatible_versions):
         raise ValueError('Invalid display panel feature versions: '
                          f'{display_panel_info.feature_compatible_versions}.')
-      return features.DisplayPanel.FromCompatibleVersions(
+      return features.DisplayProperty.FromCompatibleVersions(
           display_panel_info.feature_compatible_versions)
     if (not display_panel_info.panel_type or
         display_panel_info.vertical_resolution <= 0 or
