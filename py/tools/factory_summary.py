@@ -8,6 +8,7 @@ import argparse
 import json
 import logging
 import os
+import re
 from typing import IO, Dict, Optional, Union
 
 from cros.factory.gooftool.common import Util
@@ -62,6 +63,7 @@ FACTORY_LOG_DIR_REL_PATH = 'var/factory'
 FACTORY_TESTLOG_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/log/testlog.json'
 FACTORY_TESTS_DIR_REL_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/tests'
 FACTORY_TEST_SUMMARY_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_summary'
+FACTORY_TEST_STATUS_PATH = f'{FACTORY_LOG_DIR_REL_PATH}/factory_test_status'
 
 def _GetTimeZone(root: str) -> str:
   if sys_utils.InCrOSDevice():
@@ -87,7 +89,8 @@ def _GetRoot() -> str:
 
 
 # TODO(phoebewang): Include AC info
-def _GenerateTestSummary(summary_path: str, factory_log_path: str):
+def _GenerateTestSummary(summary_path: str, factory_log_path: str,
+                         test_status: Optional[str]):
   """Generates the test summary.
 
   The test summary should contain:
@@ -98,20 +101,49 @@ def _GenerateTestSummary(summary_path: str, factory_log_path: str):
   Args:
     summary_path: The output path of the factory summary.
     factory_log_path: Path to the factory log.
+    test_status: A string which contains test status of all tests.
   """
 
-  # TODO(phoebewang): Print the output of `factory tests --status`
-  def PrintTestSummaryHeader(fd: IO):
+  def ParseTestStatus(test_status: str) -> str:
+    """Parses the tests' status and only returns the status of tested items.
+
+    Test status format:
+      - Tested test items: `generic_main:RunIn.BadBlocks: PASSED`
+      - Untested test items: `generic_main:FFT.LidSwitch`
+    Tested test items contain an extra test status field.
+    """
+    TESTED_ITEM_REGEX = (
+        r'\S+: (ACTIVE|PASSED|FAILED|FAILED_AND_WAIVED|SKIPPED)')
+    run_tests = ''
+    for line in test_status.split('\n'):
+      if re.match(TESTED_ITEM_REGEX, line):
+        run_tests += f'{line}\n'
+
+    return run_tests
+
+  def PrintTestSummaryHeader(fd: IO, test_status: Optional[str]):
     fd.write(f"{'=' * 14} Factory Test Summary {'=' * 14}\n")
+    if test_status:
+      run_tests = ParseTestStatus(test_status)
+      fd.write(f'Tests that have been run:\n{run_tests}')
 
   reader = LogExtractorFileReader(factory_log_path,
                                   record_module.TestlogRecord.FromJSON)
   with open(summary_path, 'w', encoding='utf-8') as summary_f:
-    PrintTestSummaryHeader(summary_f)
+    PrintTestSummaryHeader(summary_f, test_status)
     for record in reader.YieldByEventType(['station.init', 'station.test_run']):
       if record.GetEventType() == 'station.init':
         summary_f.write(f"\n{'=' * 19} Goofy Init {'=' * 19}\n")
       summary_f.write(f'{str(record)}\n')
+
+
+def _GetTestStatus(root: str) -> Optional[str]:
+  if sys_utils.InCrOSDevice():
+    return process_utils.CheckOutput(['factory', 'tests', '--status']).strip()
+  test_status = os.path.join(root, FACTORY_TEST_STATUS_PATH)
+  if os.path.exists(test_status):
+    return file_utils.ReadFile(test_status)
+  return None
 
 
 # TODO(phoebewang): Provide an argument to extract from system logs.
@@ -144,7 +176,8 @@ def ExtractTestInfo(root: Optional[str], timezone: Optional[str],
   if factory_test_summary_path is None:
     factory_test_summary_path = os.path.join(root, FACTORY_TEST_SUMMARY_PATH)
   logging.info('Generate test summary to %s', factory_test_summary_path)
-  _GenerateTestSummary(factory_test_summary_path, factory_testlog_path)
+  _GenerateTestSummary(factory_test_summary_path, factory_testlog_path,
+                       _GetTestStatus(root))
 
 
 def GetSystemSummary(
