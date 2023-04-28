@@ -212,6 +212,48 @@ class TestCase(unittest.TestCase):
         else:
           thread.join(3)
 
+  def __CheckAndSkipPassedTasks(self):
+    """Checks the next_task_stage flag and skips the tasks that have passed."""
+    next_task_stage = self.GetNextTaskStage()
+
+    # Fails the pytest if last executed task triggered an unexpected reboot.
+    if next_task_stage > 0:
+      last_task_before_reboot = self.__tasks[next_task_stage - 1]
+      if not last_task_before_reboot.reboot:
+        self.FailTask('Unexpected reboot was triggered while running '
+                      f'"{last_task_before_reboot.name}".')
+
+    # Skips the tasks that have passed.
+    for unused_passed_tasks in range(next_task_stage):
+      self.__tasks.popleft()
+
+  def __RunTask(self, task, tasks_with_reboot):
+    """Runs the task that was added to self.__tasks."""
+    self.__task_end_event.clear()
+    try:
+      self.__SetupGoofyJSEvents()
+
+      if tasks_with_reboot:
+        # Updates the next task stage for stage checking before running.
+        self.UpdateNextTaskStage(self.GetNextTaskStage() + 1)
+
+      task.run()
+      # Adds buffer time for avoiding run next task before
+      # triggering reboot.
+      if task.reboot:
+        time.sleep(task.reboot_timeout_secs)
+        # Fails the pytest if reboot not triggered
+        # within reboot_timeout_secs ,which avoid race condition.
+        self.FailTask('Reboot not triggered within buffer time '
+                      f'({task.reboot_timeout_secs} seconds), '
+                      'next task may be executed in advance.')
+    except Exception:
+      self.__HandleException()
+    finally:
+      self.__task_end_event.set()
+      self.event_loop.ClearHandlers()
+      self.ui.UnbindAllKeys()
+
   def __RunTasks(self):
     """Run the tasks in background daemon thread."""
     # Set the sleep function for various polling methods in sync_utils to
@@ -226,53 +268,22 @@ class TestCase(unittest.TestCase):
 
       try:
         if tasks_with_reboot:
-          next_task_stage = self.GetNextTaskStage()
+          self.__CheckAndSkipPassedTasks()
 
-          # Fails the pytest if last executed task triggered an unexpected reboot.
-          if next_task_stage > 0:
-            last_task_before_reboot = self.__tasks[next_task_stage - 1]
-            if not last_task_before_reboot.reboot:
-              self.FailTask('Unexpected reboot was triggered while running '
-                            f'"{last_task_before_reboot.name}".')
-
-          # Skips the tasks that have passed.
-          for unused_passed_tasks in range(next_task_stage):
-            self.__tasks.popleft()
-
-            # Saves pending test list for restoring test list after reboot.
-            self.goofy_rpc.SaveDataForNextBoot()
+          # Saves pending test list for restoring test list after reboot.
+          self.goofy_rpc.SaveDataForNextBoot()
 
         for task in self.__tasks:
-          self.__task_end_event.clear()
-          try:
-            self.__SetupGoofyJSEvents()
-
-            if tasks_with_reboot:
-              # Updates the next task stage for stage checking before running.
-              next_task_stage += 1
-              self.UpdateNextTaskStage(next_task_stage)
-
-            task.run()
-            # Adds buffer time for avoiding run next task before
-            # triggering reboot.
-            if task.reboot:
-              time.sleep(task.reboot_timeout_secs)
-              # Fails the pytest if reboot not triggered
-              # within reboot_timeout_secs ,which avoid race condition.
-              self.FailTask('Reboot not triggered within buffer time '
-                            f'({task.reboot_timeout_secs} seconds), '
-                            'next task may be executed in advance.')
-          finally:
-            self.__task_end_event.set()
-            self.event_loop.ClearHandlers()
-            self.ui.UnbindAllKeys()
+          self.__RunTask(task, tasks_with_reboot)
+          if self.__task_failed:
+            return
       except Exception:
         self.__HandleException()
         if self.__task_failed:
           return
       finally:
         if self.GetNextTaskStage() != 0:
-          # Clears the task stage data after all tasks passed or any task failed.
+          # Clears next_task_stage after all tasks passed or any task failed.
           session.console.info(
               'Test finished. Clear the data of next task stage.')
           self.ClearNextTaskStage()
