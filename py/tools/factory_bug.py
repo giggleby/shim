@@ -474,6 +474,8 @@ def SaveLogs(output_dir, archive_id=None, net=False, probe=False, dram=False,
               check_call=False),
           Run(['factory_summary', 'system'], filename='factory_system_summary',
               check_call=False),
+          Run(['factory', 'tests', '--status'], filename='factory_test_status',
+              check_call=False),
       ]
       if HasEC():
         files += [
