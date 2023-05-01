@@ -29,7 +29,6 @@ class WriteProtectError(Error):
 class WriteProtectTargetType(enum.Enum):
   AP = 'main'
   EC = 'ec'
-  PD = 'pd'
   FPMCU = 'fpmcu'
 
 
@@ -39,8 +38,6 @@ def CreateWriteProtectTarget(
     return _APWriteProtectTarget()
   if target == WriteProtectTargetType.EC:
     return _ECWriteProtectTarget()
-  if target == WriteProtectTargetType.PD:
-    return _PDWriteProtectTarget()
   if target == WriteProtectTargetType.FPMCU:
     return _FPMCUWriteProtectTarget()
   raise TypeError(f'Cannot create WriteProtectTarget for {target}.')
@@ -153,15 +150,6 @@ class _ECWriteProtectTarget(_ECBasedWriteProtectTarget):
 
   def _GetReferenceFirmware(self):
     return crosfw.LoadEcFirmware()
-
-
-class _PDWriteProtectTarget(_ECBasedWriteProtectTarget):
-
-  def _GetFlashrom(self):
-    return crosfw.Flashrom(crosfw.TARGET_PD)
-
-  def _GetReferenceFirmware(self):
-    return crosfw.LoadPDFirmware()
 
 
 class _FPMCUWriteProtectTarget(WriteProtectTarget):

@@ -28,7 +28,6 @@ class Fields(str, enum.Enum):
   firmware_keys = 'firmware_keys'
   ro_main_firmware = 'ro_main_firmware'
   ro_ec_firmware = 'ro_ec_firmware'
-  ro_pd_firmware = 'ro_pd_firmware'
   ro_fp_firmware = 'ro_fp_firmware'
 
   def __str__(self):
@@ -194,11 +193,6 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
   - If ``field="ro_ec_firmware"``, this function outputs the sha256 hash of
     the readonly EC firmware and also the version of the firmware.
 
-  - If ``field="ro_pd_firmware"``, this function outputs the sha256 hash of
-    the readonly PD firmware and also the version of the firmware.  Since
-    not all devices have a PD flash chip, it's possible that the output of this
-    function is empty.
-
   - If ``field="ro_fp_firmware"``, this function outputs the sha256 hash of
     the readonly fingerprint firmware and also the version of the firmware.
 
@@ -236,7 +230,7 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
       }
     ]
 
-  Probe the RO Firmware Image Hash (``field="ro_[main|ec|pd]_firmware"``)
+  Probe the RO Firmware Image Hash (``field="ro_[main|ec]_firmware"``)
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   The ``values`` of the output must contains two fields: ``hash`` and
@@ -275,8 +269,6 @@ class ChromeosFirmwareFunction(cached_probe_function.LazyCachedProbeFunction):
           sections=['RO_SECTION'])
     elif category == Fields.ro_ec_firmware:
       fw_file_path = crosfw.LoadEcFirmware().GetFileName()
-    elif category == Fields.ro_pd_firmware:
-      fw_file_path = crosfw.LoadPDFirmware().GetFileName()
     elif category == Fields.ro_fp_firmware:
       fw_file_path = DumpFPFirmware()
     return CalculateFirmwareHashes(fw_file_path)

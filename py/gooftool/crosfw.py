@@ -29,9 +29,6 @@ from cros.factory.utils.type_utils import Error
 # Names to select target bus.
 TARGET_MAIN = 'main'
 TARGET_EC = 'ec'
-TARGET_PD = 'pd'
-
-CROS_PD_PATH = '/dev/cros_pd'
 
 # Types of named tuples
 WpStatus = collections.namedtuple('WpStatus', 'enabled offset size')
@@ -47,11 +44,10 @@ class Flashrom:
   """Wrapper for calling system command flashrom(8)."""
 
   # flashrom(8) command line parameters
-  _VALID_TARGETS = (TARGET_MAIN, TARGET_EC, TARGET_PD)
+  _VALID_TARGETS = (TARGET_MAIN, TARGET_EC)
   _TARGET_MAP = {
       TARGET_MAIN: '-p host',
       TARGET_EC: '-p ec',
-      TARGET_PD: '-p ec:type=pd',
   }
   _WRITE_FLAGS = '--noverify-all'
   _READ_FLAGS = ''
@@ -61,16 +57,6 @@ class Flashrom:
 
   def _InvokeCommand(self, param, ignore_status=False):
     command = ' '.join(['flashrom', self._TARGET_MAP[self._target], param])
-
-    if self._target == TARGET_PD and not os.path.exists(CROS_PD_PATH):
-      # crbug.com/p/691901: 'flashrom' does not return PD information reliably
-      # using programmer "-p ec:type=pd". As a result, we want to only read PD
-      # information if /dev/cros_pd exists.
-      logging.debug('%s._InvokeCommand: Ignore command because %s does not '
-                    'exist: [%s]', self.__class__, CROS_PD_PATH, command)
-      command = 'false'
-    else:
-      logging.debug('%s._InvokeCommand: %s', self.__class__, command)
 
     result = common.Shell(command)
     if not (ignore_status or result.success):
@@ -385,11 +371,6 @@ class IntelMainFirmwareContent(FirmwareContent):
 def LoadEcFirmware():
   """Returns flashrom data from Embedded Controller chipset."""
   return FirmwareContent.Load(TARGET_EC)
-
-
-def LoadPDFirmware():
-  """Returns flashrom data from Power Delivery chipset."""
-  return FirmwareContent.Load(TARGET_PD)
 
 
 def LoadMainFirmware():

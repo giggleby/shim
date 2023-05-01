@@ -51,7 +51,6 @@ class FirmwareComps(str, enum.Enum):
 
   RO_MAIN_FIRMWARE = 'ro_main_firmware'
   RO_EC_FIRMWARE = 'ro_ec_firmware'
-  RO_PD_FIRMWARE = 'ro_pd_firmware'
   RO_FP_FIRMWARE = 'ro_fp_firmware'
   FIRMWARE_KEYS = 'firmware_keys'
 

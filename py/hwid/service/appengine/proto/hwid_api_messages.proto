@@ -705,8 +705,7 @@ message FactoryBundleRecord {
     repeated FirmwareInfo ro_main_firmware = 3;
     // RO EC firmware info
     repeated FirmwareInfo ro_ec_firmware = 4;
-    // RO PD firmware info
-    repeated FirmwareInfo ro_pd_firmware = 5;
+    reserved 5;
     // Whether the firmware status is supported.
     bool supported = 6;
     // RO FP firmware info.

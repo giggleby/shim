@@ -304,11 +304,6 @@
       "eval": "chromeos_firmware:ro_ec_firmware"
     }
   },
-  "ro_pd_firmware": {
-    "generic": {
-      "eval": "chromeos_firmware:ro_pd_firmware"
-    }
-  },
   "ro_fp_firmware": {
     "generic": {
       "eval": "chromeos_firmware:ro_fp_firmware"

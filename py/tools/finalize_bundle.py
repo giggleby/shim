@@ -83,8 +83,7 @@ RESOURCE_CHANNELS = ['stable', 'beta', 'dev', 'canary']
 # Mapping firmware updater manifest to the firmware type
 FIRMWARE_MANIFEST_MAP = {
     'host': 'main',
-    'ec': 'ec',
-    'pd': 'pd'
+    'ec': 'ec'
 }
 
 PROJECT_TOOLKIT_PACKAGES = 'factory_project_toolkits.tar.gz'
@@ -112,7 +111,7 @@ def _GetFirmwareVersions(updater, expected_firmwares):
         get version, ex: ['BIOS', EC'].
 
   Returns:
-    {'BIOS': bios_version, 'EC': ec_version, 'PD': pd_version}.
+    {'BIOS': bios_version, 'EC': ec_version}.
     If the firmware is not found, the version will be None.
   """
   versions = get_version.GetFirmwareVersionsWithLabel(updater)

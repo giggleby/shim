@@ -16,7 +16,7 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import fmap
 from cros.factory.utils import process_utils
 
-FIRMWARE_LABELS = ('BIOS', 'EC', 'PD')
+FIRMWARE_LABELS = ('BIOS', 'EC')
 EMPTY_FIRMWARE_TUPLE = tuple([None] * len(FIRMWARE_LABELS))
 
 
@@ -47,7 +47,7 @@ def GetFirmwareVersions(updater):
     updater: Path to a firmware updater.
 
   Returns:
-    (bios_version, ec_version, pd_version). If no firmware/EC/PD version is
+    (bios_version, ec_version). If no firmware/EC version is
     found, sets version to None.
   """
   def _GetFirmwareVersions(updater):
@@ -79,7 +79,7 @@ def GetFirmwareVersionsWithLabel(updater):
     updater: Path to a firmware updater.
 
   Returns:
-    {'BIOS': bios_version, 'EC': ec_version, 'PD': pd_version}.
+    {'BIOS': bios_version, 'EC': ec_version}.
     If the firmware is not found, the version will be None.
   """
   return dict(zip(FIRMWARE_LABELS, GetFirmwareVersions(updater)))
