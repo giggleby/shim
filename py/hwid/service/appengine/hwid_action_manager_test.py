@@ -43,7 +43,7 @@ class HWIDActionForTest(hwid_action.HWIDAction):
     return not self.__eq__(rhs)
 
 
-class InstanceFactoryForTest(hwid_action_manager.InstanceFactory):
+class InstanceFactoryForTest(hwid_action_manager.IInstanceFactory):
 
   def __init__(self):
     self._known_project_to_hwid_action = {}

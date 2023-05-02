@@ -309,9 +309,9 @@ class TestPluginSandbox(unittest.TestCase):
 
     p.Stop(True)
 
-  def testInvalidCoreAPI(self):
-    """Tests that a sandbox passed an invalid CoreAPI object will complain."""
-    with self.assertRaisesRegex(TypeError, 'Invalid CoreAPI object'):
+  def testInvalidICore(self):
+    """Tests that a sandbox passed an invalid ICore object will complain."""
+    with self.assertRaisesRegex(TypeError, 'Invalid ICore object'):
       plugin_sandbox.PluginSandbox('plugin_id', core_api=True)
 
 

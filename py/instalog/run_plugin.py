@@ -76,7 +76,7 @@ class PluginRunnerBufferEventStream(plugin_base.IBufferEventStream,
     self._expired = True
 
 
-class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
+class PluginRunner(plugin_sandbox.ICore, log_utils.LoggerMixin):
 
   def __init__(self, logger_name, plugin_type, config):
     self.logger = logging.getLogger(logger_name)
@@ -253,7 +253,7 @@ class PluginRunner(plugin_sandbox.CoreAPI, log_utils.LoggerMixin):
     self.Close()
 
   ############################################################
-  # Functions below implement plugin_base.CoreAPI.
+  # Functions below implement plugin_sandbox.ICore.
   ############################################################
 
   def Emit(self, plugin, events):

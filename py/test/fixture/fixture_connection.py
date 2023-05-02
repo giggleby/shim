@@ -4,7 +4,7 @@
 
 """Fixture connection interface and implementation.
 
-FixtureConnection defines the interface for communicating with a fixture.
+IFixtureConnection defines the interface for communicating with a fixture.
 Currently the following kind of FixtureConnection is supported:
 
 MockFixtureConnection: a fake FixtureConnection for testing purpose.
@@ -23,7 +23,7 @@ class FixtureConnectionError(Exception):
   pass
 
 
-class FixtureConnection(abc.ABC):
+class IFixtureConnection(abc.ABC):
   """Abstract fixture connection."""
 
   @abc.abstractmethod
@@ -71,7 +71,7 @@ class FixtureConnection(abc.ABC):
     raise NotImplementedError
 
 
-class MockFixtureConnection(FixtureConnection):
+class MockFixtureConnection(IFixtureConnection):
   """A fake FixtureConnection for simulation."""
 
   def __init__(self, script):
@@ -104,7 +104,7 @@ class MockFixtureConnection(FixtureConnection):
         f"Unexpected fixture command '{self._curr_cmd}'")
 
 
-class SerialFixtureConnection(FixtureConnection):
+class SerialFixtureConnection(IFixtureConnection):
 
   def __init__(self, driver, serial_delay, serial_params, response_delay,
                retries=5):

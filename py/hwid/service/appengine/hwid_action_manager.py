@@ -44,8 +44,9 @@ class IHWIDDataCacher(abc.ABC):
     """
 
 
-class InstanceFactory:
+class IInstanceFactory(abc.ABC):
 
+  @abc.abstractmethod
   def CreateHWIDPreprocData(
       self, metadata: _HWIDDBMetadata, raw_db: _HWIDDBData,
       raw_db_internal: Optional[_HWIDDBData] = None,
@@ -68,6 +69,7 @@ class InstanceFactory:
     """
     raise NotImplementedError
 
+  @abc.abstractmethod
   def CreateHWIDAction(self, hwid_data: _HWIDDBData) -> hwid_action.HWIDAction:
     """Creates the correct instance of `HWIDAction` for the given DB data.
 
@@ -85,7 +87,7 @@ class InstanceFactory:
     raise NotImplementedError
 
 
-class InstanceFactoryImpl(InstanceFactory):
+class InstanceFactoryImpl(IInstanceFactory):
 
   def CreateHWIDPreprocData(
       self, metadata: _HWIDDBMetadata, raw_db: _HWIDDBData,
@@ -179,7 +181,7 @@ class HWIDActionManager(IHWIDActionGetter):
       hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
       preproc_data_memcache_adapter: memcache_adapter.MemcacheAdapter,
       hwid_data_cachers: Collection[IHWIDDataCacher],
-      instance_factory: Optional[InstanceFactory] = None,
+      instance_factory: Optional[IInstanceFactory] = None,
   ):
     self._hwid_db_data_manager = hwid_db_data_manager
     self._preproc_data_memcache_adapter = preproc_data_memcache_adapter

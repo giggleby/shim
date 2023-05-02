@@ -27,7 +27,7 @@ STOPPING = 'STOPPING'
 DOWN = 'DOWN'
 
 
-class Instalog(plugin_sandbox.CoreAPI):
+class Instalog(plugin_sandbox.ICore):
 
   def __init__(self, node_id, data_dir, cli_hostname, cli_port, buffer_plugin,
                input_plugins=None, output_plugins=None):
@@ -330,7 +330,7 @@ class Instalog(plugin_sandbox.CoreAPI):
     return self._buffer.CallPlugin('ListConsumers', details)
 
   ############################################################
-  # Functions below implement plugin_base.CoreAPI.
+  # Functions below implement plugin_sandbox.ICore.
   ############################################################
 
   def Emit(self, plugin, events):

@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 """Methods to generate the verification payload from the HWID database."""
 
+import abc
 import collections
 import hashlib
 import itertools
@@ -140,13 +141,14 @@ def _GetAllGenericProbeStatementInfoRecords():
   ]
 
 
-class ValueConverter:
+class IValueConverter(abc.ABC):
 
+  @abc.abstractmethod
   def __call__(self, value):
     raise NotImplementedError
 
 
-class StrValueConverter(ValueConverter):
+class StrValueConverter(IValueConverter):
 
   def __call__(self, value):
     if isinstance(value, hwid_rule.Value):
@@ -154,7 +156,7 @@ class StrValueConverter(ValueConverter):
     return str(value)
 
 
-class TruncatedStrValueConverter(ValueConverter):
+class TruncatedStrValueConverter(IValueConverter):
 
   def __init__(self, truncated_length: int = 0):
     self._truncated_length = truncated_length
@@ -169,13 +171,13 @@ class TruncatedStrValueConverter(ValueConverter):
     return re.compile(f'{re.escape(value)}.*')
 
 
-class IntValueConverter(ValueConverter):
+class IntValueConverter(IValueConverter):
 
   def __call__(self, value):
     return int(value)
 
 
-class HexToHexValueConverter(ValueConverter):
+class HexToHexValueConverter(IValueConverter):
 
   def __init__(self, num_digits, has_prefix=True):
     self._num_digits = num_digits
@@ -192,7 +194,7 @@ class HexToHexValueConverter(ValueConverter):
         self._num_digits)
 
 
-class IntToHexValueConverter(ValueConverter):
+class IntToHexValueConverter(IValueConverter):
 
   def __init__(self, num_digits):
     self._num_digits = num_digits
@@ -204,7 +206,7 @@ class IntToHexValueConverter(ValueConverter):
     return self._hex_to_hex_converter(value)
 
 
-class FloatToHexValueConverter(ValueConverter):
+class FloatToHexValueConverter(IValueConverter):
 
   def __init__(self, num_digits):
     self._num_digits = num_digits
@@ -216,7 +218,7 @@ class FloatToHexValueConverter(ValueConverter):
     return self._hex_to_hex_converter(value)
 
 
-class BatteryTechnologySysfsValueConverter(ValueConverter):
+class BatteryTechnologySysfsValueConverter(IValueConverter):
   VALUE_ALLOWLIST = COMMON_SYSFS_TECHNOLOGY
 
   def __init__(self):
@@ -228,7 +230,7 @@ class BatteryTechnologySysfsValueConverter(ValueConverter):
     raise ValueError(f'Unknown battery technology {value}.')
 
 
-class InputDeviceVendorValueConverter(ValueConverter):
+class InputDeviceVendorValueConverter(IValueConverter):
   ELAN_VID = '04F3'
   RAYD_VID = '27A3'
 
@@ -274,7 +276,7 @@ class _FieldRecord:
   def __init__(
       self, hwid_field_names: Union[str,
                                     List[str]], probe_statement_field_name: str,
-      value_converters: Union[ValueConverter, List[ValueConverter]],
+      value_converters: Union[IValueConverter, List[IValueConverter]],
       is_optional: bool = False, skip_values: Optional[Set[str]] = None):
     self.hwid_field_names = type_utils.MakeList(hwid_field_names)
     self.probe_statement_field_name = probe_statement_field_name

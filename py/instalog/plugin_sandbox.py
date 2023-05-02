@@ -8,6 +8,7 @@ Loads the plugin class instance (using plugin_loader), manages the plugin's
 state, and implements IPlugin functions for the plugin.
 """
 
+import abc
 import inspect
 import logging
 import os
@@ -47,7 +48,7 @@ UNPAUSING = 'UNPAUSING'
 
 
 # TODO(kitching): Find a better home for this class definition.
-class CoreAPI:
+class ICore(abc.ABC):
   """Defines the API a sandbox should use interact with Instalog core."""
 
   def Emit(self, plugin, events):
@@ -136,8 +137,8 @@ class PluginSandbox(plugin_base.IPlugin, log_utils.LoggerMixin):
               plugin.
       store_path: Path to this plugin's data store file.
       data_dir: Path to the the data directory of this plugin.
-      core_api: Reference to an object that implements CoreAPI, usually Core.
-                Defaults to an instance of the CoreAPI interface, which will
+      core_api: Reference to an object that implements ICore, usually Core.
+                Defaults to an instance of the ICore interface, which will
                 throw NotImplementedError when any method is called.  This may
                 be acceptible for testing.
       _plugin_class: A "pre-loaded" plugin class for the plugin in question.
@@ -156,9 +157,9 @@ class PluginSandbox(plugin_base.IPlugin, log_utils.LoggerMixin):
     else:
       self.store = {}
     self._data_dir = data_dir
-    self._core_api = core_api or CoreAPI()
-    if not isinstance(self._core_api, CoreAPI):
-      raise TypeError('Invalid CoreAPI object provided')
+    self._core_api = core_api or ICore()
+    if not isinstance(self._core_api, ICore):
+      raise TypeError('Invalid ICore object provided')
 
     # Create a logger this class to use.
     self.logger = logging.getLogger(f'{self.plugin_id}.plugin_sandbox')

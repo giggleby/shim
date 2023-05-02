@@ -92,7 +92,7 @@ INPUT_SENSITIVITY_NAME = 'IntrinsicSensitivity'
 DEFAULT_CAPTURE_VOLUME_DBFS = -600
 
 
-class BaseConfigManager(abc.ABC):
+class IConfigManager(abc.ABC):
   @abc.abstractmethod
   def Initialize(self, card='0'):
     """Initialize card device.
@@ -222,7 +222,7 @@ class BaseConfigManager(abc.ABC):
     raise NotImplementedError
 
 
-class AudioConfigManager(BaseConfigManager):
+class AudioConfigManager(IConfigManager):
   """Loads config files which are defined by our factory toolkit."""
 
   def __init__(self, mixer_controller, config_name=None):
@@ -309,7 +309,7 @@ class AudioConfigManager(BaseConfigManager):
         "disable_" + self._GetConfigPostfix(device), card)
 
   def ApplyAudioConfig(self, action, card='0', is_script=False):
-    """BaseConfigManager.ApplyAudioConfig."""
+    """IConfigManager.ApplyAudioConfig."""
     if is_script:
       card = _SCRIPT_CARD_INDEX
 
@@ -434,7 +434,7 @@ class JSONAudioConfigManager(AudioConfigManager):
     self.audio_config = config
 
 
-class UCMConfigManager(BaseConfigManager):
+class UCMConfigManager(IConfigManager):
   """A UCM config manager which deals with UCM configs."""
   _AlsaUCMPath = '/usr/share/alsa/ucm'
   _InvertedDeviceMap = {

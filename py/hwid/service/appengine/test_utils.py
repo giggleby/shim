@@ -59,7 +59,7 @@ class FakeHWIDPreprocData(hwid_preproc_data.HWIDPreprocData):
     self.feature_matcher_source = feature_matcher_source
 
 
-class FakeHWIDInstanceFactory(hwid_action_manager.InstanceFactory):
+class FakeHWIDInstanceFactory(hwid_action_manager.IInstanceFactory):
 
   def __init__(self):
     self._hwid_actions = {}

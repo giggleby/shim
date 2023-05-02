@@ -17,8 +17,8 @@ from cros.factory.instalog import plugin_sandbox
 from cros.factory.utils import file_utils
 
 
-class MockCore(plugin_sandbox.CoreAPI):
-  """Implements CoreAPI as a mock object for testing.
+class MockCore(plugin_sandbox.ICore):
+  """Implements ICore as a mock object for testing.
 
   Allows low-level access to BufferEventStreams, as well as storing and playing
   back Emit call history.
@@ -68,7 +68,6 @@ class MockCore(plugin_sandbox.CoreAPI):
     self.emit_calls.append(events)
     return True
 
-  #TODO(jimmysun): add PreEmit as it is added in crrev/c/3581463.
   def PreEmit(self, plugin, events):
     """See Core.PreEmit."""
     raise NotImplementedError
