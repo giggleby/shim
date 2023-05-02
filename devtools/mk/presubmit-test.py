@@ -48,8 +48,7 @@ def CheckTestsPassedInDirectory(folder, files, instruction, checked_file):
 
 def CheckFactoryRepo(files):
   return CheckTestsPassedInDirectory(
-      '.', files, 'Please run "make test" in factory repo inside chroot.',
-      '.tests-passed')
+      '.', files, 'Run "make test" in factory repo.', '.tests-passed')
 
 
 def CheckUmpire(files):

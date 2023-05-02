@@ -115,6 +115,10 @@ LINT_BLOCKLIST=$(shell cat $(MK_DIR)/pylint.blocklist | grep -v '^\#')
 LINT_FILES=$(shell find py go po devtools -name '*.py' -type f | sort)
 LINT_ALLOWLIST=$(filter-out $(LINT_BLOCKLIST),$(wildcard $(LINT_FILES)))
 
+CROS_CHROOT_VERSION := $(wildcard /etc/cros_chroot_version)
+ENTER_CHROOT_PREFIX := $(if $(CROS_CHROOT_VERSION)\
+  ,,cros_sdk --working-dir . )
+
 # Substitute PRESUBMIT_FILES to relative path (similar to
 # GNU realpath "--relative-to=.", but works on non-GNU realpath).
 PRESUBMIT_FILES := \
@@ -134,7 +138,7 @@ PRESUBMIT_TARGETS := \
 # wildchar (for instance, overlay-%) to be treated as .PHONY.
 .PHONY: \
   .phony default clean closure proto overlord ovl-bin par doc resource toolkit \
-  bundle presubmit presubmit-chroot $(PRESUBMIT_TARGETS) \
+  bundle presubmit $(PRESUBMIT_TARGETS) \
   lint smartlint smart_lint test test-critical overlay publish-docs po \
   test-list-check ebuild-unit-test ebuild-test project-toolkits
 
@@ -435,10 +439,13 @@ bundle: par toolkit
 	$(info Bundle is created in $(abspath $(BUNDLE_DIR)))
 
 lint:
-	$(MK_DIR)/pylint.sh $(LINT_ALLOWLIST)
+	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
+	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/pylint.sh $(LINT_ALLOWLIST)
 
 format:
-	$(MK_DIR)/presubmit_format.py --fix --commit=$(COMMIT) $(FILES)
+	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
+	$(ENTER_CHROOT_PREFIX)$(MK_DIR)/presubmit_format.py \
+	  --fix --commit=$(COMMIT) $(FILES)
 
 # Target to lint only files that have changed.  (We allow either
 # "smartlint" or "smart_lint".)
@@ -449,10 +456,6 @@ smartlint smart_lint:
 # the given overlay.
 smart_lint-%: .phony
 	bin/smart_lint --overlay $(@:smart_lint-%=%)
-
-presubmit-chroot:
-	$(foreach target,$(PRESUBMIT_TARGETS),\
-	  PYTHONDONTWRITEBYTECODE=true $(MAKE) -s $(target)${\n})
 
 presubmit-lint:
 	@$(MAKE) lint LINT_FILES="$(filter %.py,$(PRESUBMIT_FILES))" 2>/dev/null
@@ -481,22 +484,25 @@ presubmit-test:
 	@$(MK_DIR)/$@.py $(PRESUBMIT_FILES)
 
 presubmit:
-ifeq ($(wildcard /etc/cros_chroot_version),)
-	$(info Running presubmit checks inside chroot...)
-	@cros_sdk \
+ifeq ($(CROS_CHROOT_VERSION),)
+	$(info Entering chroot for "make $@" ...)
+	@$(ENTER_CHROOT_PREFIX) \
 		PRESUBMIT_PROJECT="$(PRESUBMIT_PROJECT)" \
 		PRESUBMIT_COMMIT="$(PRESUBMIT_COMMIT)" \
 		PRESUBMIT_FILES="$(PRESUBMIT_FILES)" -- \
-	  $(MAKE) -C ../platform/factory -s $@-chroot
+	  $(MAKE) -$(MAKEFLAGS) $@
 else
-	@$(MAKE) -s $@-chroot
+	$(foreach target,$(PRESUBMIT_TARGETS),\
+	  PYTHONDONTWRITEBYTECODE=true $(MAKE) $(target)${\n})
 endif
 
 test:
-	$(TEST_RUNNER)
+	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
+	$(ENTER_CHROOT_PREFIX)$(TEST_RUNNER)
 
 test-critical:
-	$(TEST_RUNNER) --no-informational --no-pass-mark
+	$(if $(CROS_CHROOT_VERSION),,$(info Entering chroot for "make $@" ...))
+	$(ENTER_CHROOT_PREFIX)$(TEST_RUNNER) --no-informational --no-pass-mark
 
 # Builds an overlay of the given board.  Use "private" to overlay
 # factory-private (e.g., to build private API docs).

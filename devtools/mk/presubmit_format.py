@@ -191,10 +191,10 @@ def main():
       fix_cmd.append('COMMIT=HEAD')
     fix_cmd = ' '.join(fix_cmd)
     if is_not_head_commit:
-      fix_message = ('Run the following command (in chroot) and then rebase: '
+      fix_message = ('Run the following command and then rebase: '
                      f'`git checkout {args.commit} && {fix_cmd}`')
     else:
-      fix_message = f'Run the following command (in chroot): `{fix_cmd}`'
+      fix_message = f'Run the following command: `{fix_cmd}`'
 
     if failed_files:
       print('Format your code before submitting for review.')
