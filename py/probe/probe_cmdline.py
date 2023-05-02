@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -15,6 +15,7 @@ from cros.factory.probe import probe_utils
 from cros.factory.probe import search
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
+
 
 _sub_cmd_list = []
 
