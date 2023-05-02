@@ -71,7 +71,7 @@ class Servod:
     self._exit_stack = contextlib.ExitStack()
 
   @classmethod
-  def _CheckServodHasInitialized(cls, dut_control):
+  def _CheckServodHasInitialized(cls, dut_control, stdout_file, stderr_file):
     """Wait until servod has initialized.
 
     If servod has stopped, RuntimeError should be raised.  If servod is
@@ -88,9 +88,11 @@ class Servod:
         last_error = e
       except process_utils.TimeoutExpired as e:
         last_error = e
+    servod_logs = file_utils.ReadFile(stdout_file), file_utils.ReadFile(
+        stderr_file)
     raise RuntimeError(
-        f'Cannot initialize servod in {SERVOD_INIT_TIMEOUT_SEC} seconds',
-        last_error)
+        f'Cannot initialize servod in {SERVOD_INIT_TIMEOUT_SEC} seconds. '
+        f'Last error: {last_error!r}. Servod logs: {servod_logs}')
 
   def _GetDutControl(self):
     stdout_file = self._exit_stack.enter_context(
@@ -108,18 +110,19 @@ class Servod:
     def CheckServodAlive():
       if servod_process.poll() is None:
         return
-      raise RuntimeError('Servod unexpectedly stopped.',
-                         file_utils.ReadFile(stdout_file),
-                         file_utils.ReadFile(stderr_file))
+      servod_logs = file_utils.ReadFile(stdout_file), file_utils.ReadFile(
+          stderr_file)
+      raise RuntimeError(
+          f'Servod unexpectedly stopped. Servod logs: {servod_logs}')
 
-    return _DutControl(self._port, CheckServodAlive)
+    dut_control = _DutControl(self._port, CheckServodAlive)
+    self._CheckServodHasInitialized(dut_control, stdout_file, stderr_file)
+    return dut_control
 
   def __enter__(self):
     self._exit_stack.__enter__()
     try:
-      dut_control = self._GetDutControl()
-      self._CheckServodHasInitialized(dut_control)
-      return dut_control
+      return self._GetDutControl()
     except Exception:
       self._exit_stack.close()
       raise
