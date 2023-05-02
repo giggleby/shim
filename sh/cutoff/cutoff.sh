@@ -241,16 +241,6 @@ check_ac_state() {
 }
 
 main() {
-  local key
-  key="$(findLSBValue CONTINUE_KEY)"
-  local input
-  if [ -n "${key}" ]; then
-    while [ "${input}" != "${key}" ]; do
-      read -r -N 1 -p "Press ${key} to cutoff...> " input
-      echo
-    done
-  fi
-
   options_find_tty
 
   options_parse_command_line "$@"
