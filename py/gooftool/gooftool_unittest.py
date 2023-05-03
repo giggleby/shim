@@ -31,6 +31,7 @@ from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
 
 from cros.factory.external.chromeos_cli import cros_config
+from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
 from cros.factory.external.chromeos_cli import vpd
 
 
@@ -992,6 +993,79 @@ class GooftoolTest(unittest.TestCase):
         Error, 'custom_label_tag reported by cros_config and VPD does not '
         'match.  Have you reboot the device after updating VPD '
         'fields?', self._gooftool.Cr50WriteFlashInfo)
+
+
+  @mock.patch('cros.factory.gooftool.core.Gooftool.'
+              'Cr50SetFeatureManagementFlagsWithHwSecUtils')
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
+  @mock.patch('cros.factory.test.device_data.GetDeviceData')
+  def testCr50SetFeatureManagementFlags_Flags_Inconsistent_Use_HwSecUtils(
+      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+
+    mock_get_device_data.side_effect = [True, 1]
+    mock_gsctool(
+    ).GetFeatureManagementFlags.return_value = FeatureManagementFlags(False, 0)
+
+    self._gooftool.Cr50SetFeatureManagementFlags()
+    mock_hwsec_wrapper.assert_called_once()
+
+  @mock.patch('cros.factory.gooftool.core.Gooftool.'
+              'Cr50SetFeatureManagementFlagsWithHwSecUtils')
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
+  @mock.patch('cros.factory.test.device_data.GetDeviceData')
+  def testCr50SetFeatureManagementFlags_Flags_Inconsistent_Use_GSCTool(
+      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+
+    mock_get_device_data.side_effect = [True, 1]
+    mock_hwsec_wrapper.side_effect = FileNotFoundError()
+    mock_gsctool(
+    ).GetFeatureManagementFlags.return_value = FeatureManagementFlags(False, 0)
+
+    self._gooftool.Cr50SetFeatureManagementFlags()
+    mock_gsctool().SetFeatureManagementFlags.assert_called_once()
+
+  @mock.patch('cros.factory.gooftool.core.Gooftool.'
+              'Cr50SetFeatureManagementFlagsWithHwSecUtils')
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool.GSCTool')
+  @mock.patch('cros.factory.test.device_data.GetDeviceData')
+  def testCr50SetFeatureManagementFlags_Flags_Consistent(
+      self, mock_get_device_data, mock_gsctool, mock_hwsec_wrapper):
+
+    mock_get_device_data.side_effect = [False, 0]
+    mock_gsctool(
+    ).GetFeatureManagementFlags.return_value = FeatureManagementFlags(False, 0)
+
+    self._gooftool.Cr50SetFeatureManagementFlags()
+    mock_hwsec_wrapper.assert_not_called()
+
+  @mock.patch('os.path.exists')
+  def testCr50SetFeatureManagementFlagsWithHwSecUtils_Success(
+      self, mock_path_exists):
+
+    mock_path_exists.return_value = True
+    self._gooftool._util.shell.return_value = Obj(success=True, status=0)
+
+    with self.assertLogs(level='INFO') as cm:
+      self._gooftool.Cr50SetFeatureManagementFlagsWithHwSecUtils(False, 0)
+
+    expect_str = (
+        'INFO:root:Successfully set feature management flags with '
+        '`/usr/share/cros/hwsec-utils/cr50_set_factory_config false 0`.')
+    self.assertEqual([expect_str], cm.output)
+
+  @mock.patch('os.path.exists')
+  def testCr50SetFeatureManagementFlagsWithHwSecUtils_AlreadySet(
+      self, mock_path_exists):
+
+    mock_path_exists.return_value = True
+    self._gooftool._util.shell.return_value = Obj(success=True, status=2)
+
+    with self.assertLogs(level='ERROR') as cm:
+      with self.assertRaises(Error):
+        self._gooftool.Cr50SetFeatureManagementFlagsWithHwSecUtils(False, 0)
+
+    expect_str = 'ERROR:root:Feature management flags already set.'
+    self.assertEqual([expect_str], cm.output)
 
 
 if __name__ == '__main__':
