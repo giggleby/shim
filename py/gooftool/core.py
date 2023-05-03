@@ -1481,8 +1481,8 @@ class Gooftool:
       raise Error(
           f'Failed to set serial number bits on Cr50. (args={arg_phase})')
 
-  def _Cr50SetFeatureManagementFlagsWithHwSecUtils(self, chassis_branded: bool,
-                                                   hw_compliance_version: int):
+  def Cr50SetFeatureManagementFlagsWithHwSecUtils(self, chassis_branded: bool,
+                                                  hw_compliance_version: int):
     """Leverages HwSec utils to set feature management flags.
 
     According to https://crrev.com/c/4483473, the return codes of
@@ -1505,6 +1505,7 @@ class Gooftool:
 
     cmd = [bin_path, str(chassis_branded).lower(), str(hw_compliance_version)]
     result = self._util.shell(cmd)
+
     if result.status == 0:
       logging.info('Successfully set feature management flags with `%s`.',
                    ' '.join(cmd))
@@ -1516,7 +1517,7 @@ class Gooftool:
     raise Error(
         f"Feature management flags cannot be set. (cmd=`{' '.join(cmd)}`)")
 
-  def _Cr50SetFeatureManagementFlags(self):
+  def Cr50SetFeatureManagementFlags(self):
     """ Sets the feature management flags to GSC.
 
     Please be noted that this is a write-once operation.
@@ -1544,8 +1545,8 @@ class Gooftool:
 
     # If the DUT has HwSec utils, we should prioritize using it.
     try:
-      self._Cr50SetFeatureManagementFlagsWithHwSecUtils(chassis_branded,
-                                                        hw_compliance_version)
+      self.Cr50SetFeatureManagementFlagsWithHwSecUtils(chassis_branded,
+                                                       hw_compliance_version)
     except FileNotFoundError:
       gsctool.SetFeatureManagementFlags(chassis_branded, hw_compliance_version)
 
@@ -1677,7 +1678,7 @@ class Gooftool:
 
     # Setting the feature management flags to GSC is a write-once operation,
     # so we should set these flags right before Cr50SetBoardId.
-    self._Cr50SetFeatureManagementFlags()
+    self.Cr50SetFeatureManagementFlags()
 
     if not rma_mode:
       self.Cr50SetBoardId(
