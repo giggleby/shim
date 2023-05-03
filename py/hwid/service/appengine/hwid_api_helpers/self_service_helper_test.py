@@ -589,7 +589,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     self._ConfigLiveHWIDRepo('PROJ', 3, 'db data')
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'validation-token-value-2', 'db data after change 2',
             'db data after change 2 (internal)', False, [], [], [], {}))
@@ -611,7 +611,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'validation-token-value-1', 'db data after change 1',
             'db data after change 1 (internal)', False, [], [], [], {}))
@@ -640,7 +640,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo = self._mock_hwid_repo_manager.GetLiveHWIDRepo.return_value
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'validation-token-value-1', 'db data after change 1',
             'db data after change 1 (internal)', False, [], [], [], {}))
@@ -669,7 +669,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     live_hwid_repo.CommitHWIDDB.return_value = 123
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'validation-token-value-1', 'db data after change 1',
             'db data after change 1 (internal)', False, [], [], [], {
@@ -802,7 +802,7 @@ class SelfServiceHelperTest(unittest.TestCase):
       # Configure the mocked HWIDAction so that it returns the change
       # fingerprint based on the contents of the HWID DB.
       action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
-      action.AnalyzeDraftDBEditableSection.return_value = (
+      action.AnalyzeDBEditableSection.return_value = (
           hwid_action.DBEditableSectionAnalysisReport(hwid_data.raw_db, '', '',
                                                       False, [], [], [], {}))
       return action
@@ -1139,7 +1139,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   def testAnalyzeHWIDDBEditableSection_PreconditionErrors(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'fingerprint', 'new_db_content', None, False, [
                 hwid_action.DBValidationError(
@@ -1171,7 +1171,7 @@ class SelfServiceHelperTest(unittest.TestCase):
     ModificationStatus = (
         hwid_action.DBEditableSectionLineAnalysisResult.ModificationStatus)
     Part = hwid_action.DBEditableSectionLineAnalysisResult.Part
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'fingerprint', 'new_db_content', None, False, [], [], [
                 hwid_action.DBEditableSectionLineAnalysisResult(
@@ -1289,7 +1289,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   def testAnalyzeHWIDDBEditableSection_NoopChange(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'fingerprint', 'new_db_content', None, True, [], [], [], {}))
 
@@ -1421,7 +1421,7 @@ class SelfServiceHelperTest(unittest.TestCase):
   def testAnalyzeHWIDDBEditableSection_DiffStatus(self):
     action = mock.create_autospec(hwid_action.HWIDAction, instance=True)
     self._modules.ConfigHWID('PROJ', '3', 'db data', hwid_action=action)
-    action.AnalyzeDraftDBEditableSection.return_value = (
+    action.AnalyzeDBEditableSection.return_value = (
         hwid_action.DBEditableSectionAnalysisReport(
             'fingerprint', 'new_db_content', None, False, [], [], [], {
                 'comp1':

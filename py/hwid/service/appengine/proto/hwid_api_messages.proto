@@ -526,7 +526,9 @@ message BatchGenerateAvlComponentNameResponse {
 message AnalyzeHwidDbEditableSectionRequest {
   // The project name.
   string project = 1;
-  // The HWID DB as a string.
+  // The HWID DB as a string.  Use empty string to instruct the server to
+  // analyze the current HWID DB contents instead of the change in between
+  // the current contents and the given one.
   string hwid_db_editable_section = 2;
   // A bool indicating if HWID DB lines are required.
   bool require_hwid_db_lines = 3;

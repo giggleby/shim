@@ -407,8 +407,8 @@ class HWIDAction:
     raise NotSupportedError(
         f'`GetDBEditableSection` is not supported in HWID v{self.HWID_VERSION}')
 
-  def AnalyzeDraftDBEditableSection(
-      self, draft_db_editable_section: hwid_db_data.HWIDDBData,
+  def AnalyzeDBEditableSection(
+      self, draft_db_editable_section: Optional[hwid_db_data.HWIDDBData],
       derive_fingerprint_only: bool, require_hwid_db_lines: bool,
       internal: bool = False,
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
@@ -418,10 +418,14 @@ class HWIDAction:
       avl_metadata_manager: Optional[
           avl_metadata_util.AVLMetadataManager] = None
   ) -> DBEditableSectionAnalysisReport:
-    """Deep analyzes the given HWID DB editable section.
+    """Deep analyzes the HWID DB editable section.
 
     Args:
-      draft_db_editable_section: The editable section to analyze.
+      draft_db_editable_section: The draft editable section to analyze.  When
+          specified, it compares the current HWID DB with the given one.  When
+          this argument is `None`, it treats the request as "nothing changed
+          in the external DB", but still regenerates the internal DB and
+          compare.
       derive_fingerprint_only: Whether only fingerprint is required.
       require_hwid_db_lines: A flag indicating if DB line analysis is required.
       internal: Whether this report returns an internal format of HWID DB.
@@ -439,7 +443,7 @@ class HWIDAction:
       HWIDActionError: An error occurs regarding internal data integrity issue.
     """
     raise NotSupportedError(
-        '`AnalyzeDraftDbEditableSection` is not supported in HWID '
+        '`AnalyzeDBEditableSection` is not supported in HWID '
         f'v{self.HWID_VERSION}')
 
   def GetHWIDBundleResourceInfo(self,

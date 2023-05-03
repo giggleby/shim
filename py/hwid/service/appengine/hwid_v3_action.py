@@ -56,8 +56,8 @@ class HWIDV3Action(hwid_action.HWIDAction):
     return self._ss_helper.GetDBEditableSection(
         suppress_support_status=suppress_support_status, internal=internal)
 
-  def AnalyzeDraftDBEditableSection(
-      self, draft_db_editable_section: hwid_db_data.HWIDDBData,
+  def AnalyzeDBEditableSection(
+      self, draft_db_editable_section: Optional[hwid_db_data.HWIDDBData],
       derive_fingerprint_only: bool, require_hwid_db_lines: bool,
       internal: bool = False,
       avl_converter_manager: Optional[converter_utils.ConverterManager] = None,
@@ -67,7 +67,7 @@ class HWIDV3Action(hwid_action.HWIDAction):
       avl_metadata_manager: Optional[
           avl_metadata_util.AVLMetadataManager] = None
   ) -> hwid_action.DBEditableSectionAnalysisReport:
-    return self._ss_helper.AnalyzeDraftDBEditableSection(
+    return self._ss_helper.AnalyzeDBEditableSection(
         draft_db_editable_section, derive_fingerprint_only,
         require_hwid_db_lines, internal, avl_converter_manager, avl_resource,
         hwid_bundle_checksum, avl_metadata_manager)

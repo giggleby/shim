@@ -705,7 +705,7 @@ class SelfServiceHelper:
       self._UpdateHWIDDBDataIfNeed(live_hwid_repo, project)
 
       action = self._hwid_action_manager.GetHWIDAction(project)
-      analysis = action.AnalyzeDraftDBEditableSection(
+      analysis = action.AnalyzeDBEditableSection(
           cache.new_hwid_db_editable_section, derive_fingerprint_only=False,
           require_hwid_db_lines=False, internal=True,
           avl_converter_manager=self._avl_converter_manager,
@@ -1030,8 +1030,9 @@ class SelfServiceHelper:
 
     try:
       action = self._hwid_action_manager.GetHWIDAction(project)
-      report = action.AnalyzeDraftDBEditableSection(
-          request.hwid_db_editable_section, False, require_hwid_db_lines,
+      report = action.AnalyzeDBEditableSection(
+          request.hwid_db_editable_section or None, False,
+          require_hwid_db_lines,
           hwid_bundle_checksum=request.hwid_bundle_checksum,
           avl_metadata_manager=self._avl_metadata_manager)
     except (KeyError, ValueError, RuntimeError) as ex:

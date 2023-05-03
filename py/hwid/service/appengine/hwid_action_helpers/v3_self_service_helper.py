@@ -107,9 +107,9 @@ class HWIDV3SelfServiceActionHelper:
         new_db.DumpDataWithoutChecksum(internal=True,
                                        suppress_support_status=False))
 
-  def AnalyzeDraftDBEditableSection(
+  def AnalyzeDBEditableSection(
       self,
-      draft_db_editable_section: hwid_db_data.HWIDDBData,
+      draft_db_editable_section: Optional[hwid_db_data.HWIDDBData],
       derive_fingerprint_only: bool,
       require_hwid_db_lines: bool,
       internal: bool = False,
@@ -122,6 +122,8 @@ class HWIDV3SelfServiceActionHelper:
   ) -> hwid_action.DBEditableSectionAnalysisReport:
     curr_hwid_db_contents_external = self._preproc_data.raw_database
     curr_hwid_db_contents_internal = self._preproc_data.raw_database_internal
+    if draft_db_editable_section is None:
+      draft_db_editable_section = curr_hwid_db_contents_external
 
     new_hwid_db_contents_external, fingerprint = (
         _GetFullHWIDDBAndChangeFingerprint(curr_hwid_db_contents_external,
