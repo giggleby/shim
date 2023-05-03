@@ -7,7 +7,6 @@ import collections
 import copy
 from typing import Collection, Dict, List, Mapping, NamedTuple, Optional, Set
 
-from cros.factory.hwid.service.appengine import change_unit_utils
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -242,15 +241,6 @@ DBHWIDComponentNameInfo = v3_contents_analyzer.ComponentNameInfo
 DBHWIDPVAlignmentStatus = v3_contents_analyzer.ProbeValueAlignmentStatus
 DBHWIDTouchSections = v3_contents_analyzer.TouchHWIDSections
 DBHWIDTouchCase = v3_contents_analyzer.HWIDSectionTouchCase
-SESSION_CACHE_NAMESPACE = 'SessionCache'
-SESSION_TIMEOUT = 3 * 60  # 3 minutes
-
-
-class SessionCache(NamedTuple):
-  project: str
-  new_hwid_db_editable_section: str
-  change_unit_manager: Optional[change_unit_utils.ChangeUnitManager] = None
-  avl_resource: Optional[hwid_api_messages_pb2.HwidDbExternalResource] = None
 
 
 class DBEditableSectionAnalysisReport(NamedTuple):

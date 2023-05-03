@@ -10,7 +10,6 @@ from typing import Optional
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
-from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
@@ -28,6 +27,9 @@ KNOWN_BAD_SUBSTR = [
     '.*TEST.*', '.*CHEETS.*', '^SAMS .*', '.* DEV$', '.*DOGFOOD.*'
 ]
 
+_SESSION_CACHE_NAMESPACE = 'SessionCache'
+
+
 _hwid_action_manager = CONFIG.hwid_action_manager
 _hwid_db_data_manager = CONFIG.hwid_db_data_manager
 _decoder_data_manager = CONFIG.decoder_data_manager
@@ -37,7 +39,7 @@ _goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
 _hwid_repo_manager = CONFIG.hwid_repo_manager
 _avl_converter_manager = CONFIG.avl_converter_manager
 _session_cache_adapter = memcache_adapter.MemcacheAdapter(
-    namespace=hwid_action.SESSION_CACHE_NAMESPACE)
+    namespace=_SESSION_CACHE_NAMESPACE)
 _avl_metadata_manager = CONFIG.avl_metadata_manager
 
 

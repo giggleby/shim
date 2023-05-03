@@ -57,6 +57,16 @@ class Collection(abc.ABC, Generic[_CollectionElementType],
   #    repository.
 
 
+_SESSION_TIMEOUT = 3 * 60  # 3 minutes
+
+
+class SessionCache(NamedTuple):
+  project: str
+  new_hwid_db_editable_section: Optional[str]
+  change_unit_manager: Optional[change_unit_utils.ChangeUnitManager] = None
+  avl_resource: Optional[hwid_api_messages_pb2.HwidDbExternalResource] = None
+
+
 _HWID_DB_COMMIT_STATUS_TO_PROTOBUF_HWID_CL_STATUS = {
     hwid_repo.HWIDDBCLStatus.NEW:
         hwid_api_messages_pb2.HwidDbEditableSectionChangeClInfo.PENDING,
@@ -96,7 +106,6 @@ _HWID_SECTION_CHANGE_STATUS = {
         _AnalysisReportMsg.HwidSectionChange.ChangeStatus.UNTOUCHED),
 }
 
-_SessionCache = hwid_action.SessionCache
 _ChangeUnitMsg = hwid_api_messages_pb2.ChangeUnit
 _CLActionMsg = hwid_api_messages_pb2.ClAction
 _CHANGE_UNIT_APPROVAL_STATUS_MAP = {
@@ -723,9 +732,11 @@ class SelfServiceHelper:
         database.Database.LoadData(analysis.new_hwid_db_contents_internal),
         request.db_external_resource).Build()
 
+    commit_title = ('HWID Config Update' if cache.new_hwid_db_editable_section
+                    else 'Resync with DLM')
     commit_msg = [
         textwrap.dedent(f"""\
-            ({int(time.time())}) {project}: HWID Config Update
+            ({int(time.time())}) {project}: {commit_title}
 
             Requested by: {request.original_requester}
             Warning: all posted comments will be sent back to the requester.
@@ -1040,8 +1051,8 @@ class SelfServiceHelper:
     response.validation_token = report.fingerprint
     self._session_cache_adapter.Put(
         report.fingerprint,
-        _SessionCache(project, request.hwid_db_editable_section),
-        expiry=hwid_action.SESSION_TIMEOUT)
+        SessionCache(project, request.hwid_db_editable_section or None),
+        expiry=_SESSION_TIMEOUT)
     response.analysis_report.noop_for_external_db = (
         report.noop_for_external_db)
 
@@ -1329,7 +1340,7 @@ class SelfServiceHelper:
         request.session_token,
         session_cache._replace(change_unit_manager=change_unit_manager,
                                avl_resource=avl_resource),
-        expiry=hwid_action.SESSION_TIMEOUT)
+        expiry=_SESSION_TIMEOUT)
     return hwid_api_messages_pb2.SplitHwidDbChangeResponse(
         change_units={
             identity: _ConvertChangeUnitToMsg(change_unit)
@@ -1510,7 +1521,7 @@ class SelfServiceHelper:
     except (KeyError, ValueError, RuntimeError, hwid_repo.HWIDRepoError) as ex:
       raise common_helper.ConvertExceptionToProtoRPCException(ex) from None
 
-  def _GetSessionCache(self, session_token: str) -> _SessionCache:
+  def _GetSessionCache(self, session_token: str) -> SessionCache:
     session_cache = self._session_cache_adapter.Get(session_token)
     if session_cache is None:
       raise protorpc_utils.ProtoRPCException(

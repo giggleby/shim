@@ -58,7 +58,7 @@ _ClActionMsg = hwid_api_messages_pb2.ClAction
 _ReplaceRulesMsg = _ChangeUnitMsg.ReplaceRules
 _FactoryBundleRecord = hwid_api_messages_pb2.FactoryBundleRecord
 _FirmwareRecord = _FactoryBundleRecord.FirmwareRecord
-_SessionCache = hwid_action.SessionCache
+_SessionCache = ss_helper_module.SessionCache
 _ApprovalStatus = change_unit_utils.ApprovalStatus
 _ActionHelperCls = v3_action_helper.HWIDV3SelfServiceActionHelper
 
