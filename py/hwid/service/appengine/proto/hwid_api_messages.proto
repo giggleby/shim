@@ -399,9 +399,11 @@ message CreateHwidDbEditableSectionChangeClRequest {
 }
 
 message CreateHwidDbEditableSectionChangeClResponse {
-  // The CL number to the created HWID change request.
+  // The CL number to the created HWID change request, if any.
   int64 cl_number = 1;
   HwidDbEditableSectionAnalysisReport analysis_report = 2;
+  // Whether no CL is created because nothing in the HWID repository is changed.
+  bool is_noop = 3;
 }
 
 message DlmCpuInfo {

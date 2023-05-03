@@ -764,13 +764,17 @@ class SelfServiceHelper:
           hwid_db_contents_internal=analysis.new_hwid_db_contents_internal,
           feature_matcher_source=(
               feature_matcher_build_result.feature_matcher_source))
+      is_noop = False
+    except git_util.GitUtilNoModificationException:
+      cl_number = 0
+      is_noop = True
     except hwid_repo.HWIDRepoError:
       logging.exception(
           'Caught an unexpected exception while uploading a HWID CL.')
       raise protorpc_utils.ProtoRPCException(
           protorpc_utils.RPCCanonicalErrorCode.INTERNAL) from None
     resp = hwid_api_messages_pb2.CreateHwidDbEditableSectionChangeClResponse(
-        cl_number=cl_number)
+        cl_number=cl_number, is_noop=is_noop)
     for reference_id, comp_info in analysis.hwid_components.items():
       resp.analysis_report.component_infos[reference_id].CopyFrom(
           _ConvertCompInfoToMsg(comp_info))
@@ -1476,7 +1480,7 @@ class SelfServiceHelper:
                             include_feature_matcher_source=True))
       final_cl_number = review_required_change_cl_number
 
-    return hwid_api_messages_pb2.CreateSplittedHwidDbClsResponse(
+    resp = hwid_api_messages_pb2.CreateSplittedHwidDbClsResponse(
         auto_mergeable_change_cl_created=not split_result.auto_mergeable_noop,
         auto_mergeable_change_cl_number=auto_mergeable_change_cl_number,
         auto_mergeable_change_unit_identities=(
@@ -1484,10 +1488,11 @@ class SelfServiceHelper:
         review_required_change_cl_created=not split_result.review_required_noop,
         review_required_change_cl_number=review_required_change_cl_number,
         review_required_change_unit_identities=(
-            split_result.review_required_change_unit_identities),
-        final_hwid_db_commit=hwid_api_messages_pb2.HwidDbCommit(
-            cl_number=final_cl_number,
-            new_hwid_db_contents=final_hwid_db_content))
+            split_result.review_required_change_unit_identities))
+    if final_cl_number:
+      resp.final_hwid_db_commit.cl_number = final_cl_number
+      resp.final_hwid_db_commit.new_hwid_db_contents = final_hwid_db_content
+    return resp
 
   def UpdateAudioCodecKernelNames(self, request):
     allowlist = set(request.allowlisted_kernel_names)
