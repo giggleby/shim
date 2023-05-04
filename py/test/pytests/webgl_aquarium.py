@@ -45,6 +45,7 @@ add this in test list::
 """
 
 import collections
+import logging
 import time
 from types import MappingProxyType
 
@@ -137,9 +138,10 @@ class WebGLAquariumTest(test_case.TestCase):
       fps = int(event.data.get('webgl_fps'))
       self.metrics.update(
           (item, float(event.data.get(item))) for item in _TAST_METRICS)
-    except ValueError:
+    except (ValueError, TypeError):
       session.console.warning('Failed to get FPS from frontend. '
                               'The FPS event is skipped.')
+      logging.warning('Skipped event %s', event.data)
       return
 
     self.window_sum_fps += fps
