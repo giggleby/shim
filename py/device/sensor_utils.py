@@ -10,6 +10,11 @@ from cros.factory.device import device_types
 
 
 IIO_DEVICES_PATTERN = '/sys/bus/iio/devices/iio:device*'
+LABEL_FROM_LOCATION = {
+    'base': 'accel-base',
+    'lid': 'accel-display',
+    'camera': 'accel-camera'
+}
 
 
 class SensorError(device_types.DeviceException):
@@ -77,8 +82,16 @@ class BasicSensorController(device_types.DeviceComponent):
     """
     super().__init__(dut)
     self.signal_names = signal_names
-    self._iio_path = FindDevice(self._device, IIO_DEVICES_PATTERN, name=name,
-                                location=location)
+    try:
+      # TODO(jimmysun) Remove searching location after all boards are using
+      # kernel 6.1+.
+      self._iio_path = FindDevice(self._device, IIO_DEVICES_PATTERN, name=name,
+                                  location=location)
+    except device_types.DeviceException:
+      if location not in LABEL_FROM_LOCATION:
+        raise
+      self._iio_path = FindDevice(self._device, IIO_DEVICES_PATTERN, name=name,
+                                  label=LABEL_FROM_LOCATION[location])
     self.scale = 1.0 if not scale else float(self._GetSysfsValue('scale'))
 
   def _GetRepresentList(self) -> list:
