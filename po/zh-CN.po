@@ -471,6 +471,10 @@ msgid "Serial Echo"
 msgstr ""
 
 #: ../build/pytests_label_generated.json
+msgid "Setup PSR Feature"
+msgstr "设定 PSR 功能"
+
+#: ../build/pytests_label_generated.json
 msgid "Shopfloor Service"
 msgstr "Shopfloor"
 
@@ -635,6 +639,10 @@ msgstr "更新 Kernel"
 #: ../build/pytests_label_generated.json
 msgid "Update Plugin Firmware"
 msgstr "更新插件韧体"
+
+#: ../build/pytests_label_generated.json
+msgid "Update PSR Oem Data"
+msgstr "更新 PSR Oem 资料"
 
 #: ../build/pytests_label_generated.json
 msgid "Urandom"
@@ -3550,6 +3558,10 @@ msgid "Check Display Connection"
 msgstr "确认显示链接"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Check EOM NVAR"
+msgstr "确认 EOM NVAR"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Fingerprint Firmware"
 msgstr "确认指纹韧体"
 
@@ -3752,6 +3764,10 @@ msgid "Set Cr50 AP RO Hash"
 msgstr "写入 Cr50 AP RO Hash"
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Set EOM NVAR"
+msgstr "设定 EOM NVAR"
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set Widevine Keybox"
 msgstr "写入 Widevine Keybox"
 
@@ -3778,6 +3794,10 @@ msgstr "喇叭/麦克风"
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Speaker/Microphone Conformance"
 msgstr "喇叭/麦克风符合性"
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Start PSR Log"
+msgstr "开始 PSR 记录"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Stress App Test"

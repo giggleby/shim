@@ -377,6 +377,13 @@
         "drm_sysfs_path": "/sys/class/drm/card0"
       }
     },
+    "CheckEOMNVAR": {
+      "pytest_name": "setup_psr_feature",
+      "label": "Check EOM NVAR",
+      "args": {
+        "action": "check"
+      }
+    },
     "CheckFPFirmware": {
       "pytest_name": "update_fpmcu_firmware",
       "label": "Check Fingerprint Firmware",
@@ -1036,6 +1043,13 @@
         "action": "set"
       }
     },
+    "SetEOMNVAR": {
+      "pytest_name": "setup_psr_feature",
+      "label": "Set EOM NVAR",
+      "args": {
+        "action": "set"
+      }
+    },
     "SetWidevineKeybox": {
       "pytest_name": "provision_drm_key",
       "label": "Set Widevine Keybox",
@@ -1122,6 +1136,23 @@
     "Start": {
       "pytest_name": "start",
       "allow_reboot": true
+    },
+    "StartPSRLog": {
+      "pytest_name": "setup_psr_feature",
+      "label": "Start PSR Log",
+      "args": {
+        "action": "start"
+      }
+    },
+    "StartPSRLogGroup": {
+      "__comment": "Put this test right before GRTFinalize to minimize logging",
+      "subtests": [
+        "SetEOMNVAR",
+        "FullRebootStep",
+        "SyncFactoryServer",
+        "CheckEOMNVAR",
+        "StartPSRLog"
+      ]
     },
     "StationEnd": {
       "inherit": "FlattenGroup",
@@ -1622,6 +1653,18 @@
           }
         }
       ]
+    },
+    "UpdatePSROEMData": {
+      "pytest_name": "update_psr_oem_data",
+      "args": {
+        "update_from_config": false,
+        "oem_data_value": {
+          "OEM Name": "Google",
+          "OEM Make": "ChromeOS",
+          "OEM Model": "MTL vPro",
+          "Country of Manufacturer": "TW"
+        }
+      }
     },
     "UpdateSKUID": {
       "pytest_name": "update_cbi",

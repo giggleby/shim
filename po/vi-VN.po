@@ -471,6 +471,10 @@ msgid "Serial Echo"
 msgstr ""
 
 #: ../build/pytests_label_generated.json
+msgid "Setup PSR Feature"
+msgstr ""
+
+#: ../build/pytests_label_generated.json
 msgid "Shopfloor Service"
 msgstr "Shopfloor"
 
@@ -634,6 +638,10 @@ msgstr "KernelCập nhật Kernel"
 
 #: ../build/pytests_label_generated.json
 msgid "Update Plugin Firmware"
+msgstr ""
+
+#: ../build/pytests_label_generated.json
+msgid "Update PSR Oem Data"
 msgstr ""
 
 #: ../build/pytests_label_generated.json
@@ -3617,6 +3625,10 @@ msgid "Check Display Connection"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Check EOM NVAR"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Check Fingerprint Firmware"
 msgstr ""
 
@@ -3819,6 +3831,10 @@ msgid "Set Cr50 AP RO Hash"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
+msgid "Set EOM NVAR"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
 msgid "Set Widevine Keybox"
 msgstr ""
 
@@ -3844,6 +3860,10 @@ msgstr "Loa / micrô"
 
 #: ../py/test/test_lists/generic_common.test_list.json
 msgid "Speaker/Microphone Conformance"
+msgstr ""
+
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Start PSR Log"
 msgstr ""
 
 #: ../py/test/test_lists/generic_common.test_list.json
