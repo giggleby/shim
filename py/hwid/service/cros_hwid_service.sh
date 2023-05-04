@@ -13,11 +13,15 @@ RT_PROBE_DIR="${FACTORY_DIR}/../../platform2/system_api/dbus/runtime_probe"
 TEST_DIR="${APPENGINE_DIR}/test"
 PLATFORM_DIR="$(dirname ${FACTORY_DIR})"
 REGIONS_DIR="$(readlink -f "${FACTORY_DIR}/../../platform2/regions")"
+REPO_ROOT_DIR="$(dirname "$(dirname "${PLATFORM_DIR}")")"
 TEMP_DIR="${FACTORY_DIR}/build/hwid"
 DEPLOYMENT_PROD="prod"
 DEPLOYMENT_STAGING="staging"
 DEPLOYMENT_LOCAL="local"
 DEPLOYMENT_E2E="e2e"
+PUBLIC_DEPENDENCY=(src/platform/factory src/platform2)
+INTERNAL_DEPENDENCY=(src/platform/factory-private src/platform/chromeos-hwid)
+DEPENDENCY=("${PUBLIC_DEPENDENCY[@]}" "${INTERNAL_DEPENDENCY[@]}")
 DOCKER_TAG="hwid_service"
 FACTORY_PRIVATE_DIR="${FACTORY_DIR}/../factory-private"
 REQUEST_SCRIPT="${FACTORY_PRIVATE_DIR}/config/hwid/service/appengine/test/\
@@ -146,6 +150,36 @@ prepare_protobuf() {
     "cros/factory/probe_info_service/app_engine/stubby.proto"
 }
 
+ensure_clean_repo() {
+  local dirty_repo=0
+  for project in "${DEPENDENCY[@]}"; do
+    if ! git -C "${REPO_ROOT_DIR}/${project}" diff HEAD --quiet; then
+      echo "WARNING: unstaged files in \"${project}\""
+      dirty_repo=1
+    fi
+  done
+  if [ -n "$(git -C "${FACTORY_DIR}" status --porcelain)" ]; then
+    echo "WARNING: untracked files in \"factory\""
+    dirty_repo=1
+  fi
+  if [ "${dirty_repo}" -eq 1 ]; then
+    die "Found unstaged or untracked files"
+  fi
+}
+
+sync_to_commit() {
+  local target="$1"
+  shift
+  local projects=("$@")
+  echo "Sync project(s) ${projects[*]}"
+  # shellcheck disable=SC2015
+  (cd "${REPO_ROOT_DIR}" && repo sync -n "${projects[@]}" || die)
+  for project in "${projects[@]}"; do
+    echo "Switch project ${project} to ${target}"
+    git -C "${REPO_ROOT_DIR}/${project}" switch -d "${target}"
+  done
+}
+
 do_make_build_folder() {
   mkdir -p "${TEMP_DIR}"
   add_temp "${TEMP_DIR}"
@@ -174,6 +208,9 @@ do_deploy() {
   check_credentials "${GCP_PROJECT}"
 
   if [ "${deployment_type}" == "${DEPLOYMENT_PROD}" ]; then
+    ensure_clean_repo
+    sync_to_commit cros/main "${PUBLIC_DEPENDENCY[@]}"
+    sync_to_commit cros-internal/main "${INTERNAL_DEPENDENCY[@]}"
     do_test
   fi
 
