@@ -157,13 +157,15 @@ class Arg:
   def ValueMatchesType(self, value):
     """Returns True if value matches the type for this argument."""
     for t in self.type:
-      if isinstance(t, TYPE) and isinstance(value, t):
-        return True
-      if isinstance(t, Enum) and value in t:
-        return True
-      if (not isinstance(t, Enum) and issubclass(t, enum.Enum) and
-          (value in t or value in t.__members__)):
-        return True
+      if isinstance(t, Enum):
+        if value in t:
+          return True
+      elif issubclass(t, enum.Enum):
+        if isinstance(value, t) or value in t.__members__:
+          return True
+      elif isinstance(t, TYPE):
+        if isinstance(value, t):
+          return True
     return False
 
   def IsOptional(self):

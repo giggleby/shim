@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 #
 # Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -7,9 +7,11 @@
 import enum
 import re
 import unittest
+from unittest import mock
 
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.arg_utils import Args
+from cros.factory.utils.arg_utils import _DEFAULT_NOT_SET
 from cros.factory.utils.type_utils import Enum
 
 
@@ -21,19 +23,93 @@ class enum_typed_1(str, enum.Enum):
     return self.name
 
 
+class ArgTest(unittest.TestCase):
+
+  def setUp(self):
+    patcher = mock.patch('argparse.ArgumentParser')
+    self.parser = patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def testIsOptional(self):
+    int_arg_1 = Arg('int_arg_1', int, 'X')
+    self.assertFalse(int_arg_1.IsOptional())
+    int_arg_2 = Arg('int_arg_2', int, 'X', default=0)
+    self.assertTrue(int_arg_2.IsOptional())
+
+  def testValueMatchesType_int(self):
+    int_arg = Arg('int_arg', int, 'X')
+    self.assertTrue(int_arg.ValueMatchesType(0))
+    self.assertFalse(int_arg.ValueMatchesType('0'))
+
+  def testValueMatchesType_Enum(self):
+    enum_arg_1 = Arg('enum_arg_1', enum_typed_1, 'X')
+    self.assertTrue(enum_arg_1.ValueMatchesType(enum_typed_1.a))
+    self.assertTrue(enum_arg_1.ValueMatchesType('a'))
+    self.assertFalse(enum_arg_1.ValueMatchesType('c'))
+    enum_arg_2 = Arg('enum_arg_2', enum.Enum('enum_typed_2', ['a', 'b']), 'X')
+    self.assertTrue(enum_arg_2.ValueMatchesType('a'))
+    self.assertFalse(enum_arg_2.ValueMatchesType('c'))
+
+  def testValueMatchesType_type_util_Enum(self):
+    type_util_enum_arg = Arg('type_util_enum_typed', Enum(['a']), 'X')
+    self.assertTrue(type_util_enum_arg.ValueMatchesType('a'))
+    self.assertFalse(type_util_enum_arg.ValueMatchesType('b'))
+
+  def testValueMatchesType_DefaultNone(self):
+    int_arg_1 = Arg('int_arg_1', int, 'X')
+    self.assertFalse(int_arg_1.ValueMatchesType(None))
+    int_arg_2 = Arg('int_arg_2', int, 'X', default=None)
+    self.assertTrue(int_arg_2.ValueMatchesType(None))
+
+  def testAddToParser_InvalidType(self):
+    self.assertRaisesRegex(
+        ValueError,
+        r'Arg float_arg cannot be transfered. \(\<class \'float\'\>,\)',
+        lambda: Arg('float_arg', float, 'X').AddToParser(self.parser))
+
+  def testAddToParser_Optional(self):
+    Arg('int_arg', int, 'X').AddToParser(self.parser)
+    self.parser.add_argument.assert_called_with('int_arg', type=int, help='X',
+                                                default=_DEFAULT_NOT_SET)
+    Arg('int_arg', int, 'X', default=0).AddToParser(self.parser)
+    self.parser.add_argument.assert_called_with('--int-arg', type=int, help='X',
+                                                default=0)
+
+  def testAddToParser_AddBool(self):
+    Arg('bool_arg', bool, 'X').AddToParser(self.parser)
+    self.parser.add_argument.assert_called_with(
+        'bool_arg', help='X', default=False, action='store_true')
+    Arg('bool_arg', bool, 'X', default=True).AddToParser(self.parser)
+    self.parser.add_argument.assert_called_with(
+        '--no-bool-arg', help='X', default=True, action='store_false')
+
+  def testAddToParser_AddInt(self):
+    Arg('int_arg', int, 'X', default=0).AddToParser(self.parser)
+    self.parser.add_argument.assert_called_once_with('--int-arg', type=int,
+                                                     help='X', default=0)
+
+  def testAddToParser_AddList(self):
+    Arg('list_arg', list, 'X').AddToParser(self.parser)
+    self.parser.add_argument.assert_called_once_with(
+        'list_arg', help='X', default=_DEFAULT_NOT_SET, nargs='*')
+
+  def testAddToParser_AddEnum(self):
+    Arg('enum_arg', enum_typed_1, 'X').AddToParser(self.parser)
+    self.parser.add_argument.assert_called_once_with(
+        'enum_arg', type=str, help='X', choices={'a',
+                                                 'b'}, default=_DEFAULT_NOT_SET)
+
+  def testAddToParser_AddTypeUtilEnum(self):
+    Arg('type_util_enum_arg', Enum(['1', '2']), 'X').AddToParser(self.parser)
+    self.parser.add_argument.assert_called_once_with(
+        'type_util_enum_arg', type=str, help='X', choices={'1', '2'},
+        default=_DEFAULT_NOT_SET)
+
+
 class ArgsTest(unittest.TestCase):
 
   def setUp(self):
-    self.parser = Args(
-        Arg('required', str, 'X'),
-        Arg('has_default', str, 'X', default='DEFAULT_VALUE'),
-        Arg('optional', str, 'X', default=None),
-        Arg('int_typed', int, 'X', default=None),
-        Arg('int_or_string_typed', (int, str), 'X', default=None),
-        Arg('type_util_enum_typed', Enum(['a', 'b']), 'X', default=None),
-        Arg('enum_typed_1', enum_typed_1, 'X', default=None),
-        Arg('enum_typed_2', enum.Enum('enum_typed_2', 'a b'), 'X',
-            default=None))
+    self.parser = None
 
   def Parse(self, dargs):
     """Parses dargs.
@@ -44,92 +120,58 @@ class ArgsTest(unittest.TestCase):
     values = self.parser.Parse(dargs)
     return {k: v for k, v in values.__dict__.items() if not k.startswith('_')}
 
-  def testIntOrNone(self):
-    self.parser = Args(
-        Arg('int_or_none', (int, type(None)), 'X', default=5))
-    self.assertEqual(dict(int_or_none=5), self.Parse({}))
+  def testNone(self):
+    self.parser = Args(Arg('int_or_none', int, 'X', default=None))
+    self.assertEqual(dict(int_or_none=None), self.Parse({}))
     self.assertEqual(dict(int_or_none=10), self.Parse(dict(int_or_none=10)))
-    self.assertEqual(dict(int_or_none=None),
-                     self.Parse(dict(int_or_none=None)))
 
   def testRequired(self):
-    self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': None,
-            'int_or_string_typed': None,
-            'int_typed': None,
-            'type_util_enum_typed': None,
-            'enum_typed_1': None,
-            'enum_typed_2': None
-        }, self.Parse(dict(required='x')))
+    self.parser = Args(Arg('required', str, 'X'))
+    self.assertEqual(dict(required='x'), self.Parse(dict(required='x')))
     self.assertRaises(ValueError, lambda: self.Parse({}))
     self.assertRaises(ValueError, lambda: self.Parse(dict(required=None)))
     self.assertRaises(ValueError, lambda: self.Parse(dict(required=3)))
 
   def testOptional(self):
-    self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': 'y',
-            'int_or_string_typed': None,
-            'int_typed': None,
-            'type_util_enum_typed': None,
-            'enum_typed_1': None,
-            'enum_typed_2': None
-        }, self.Parse(dict(required='x', optional='y')))
-    self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': None,
-            'int_or_string_typed': None,
-            'int_typed': None,
-            'type_util_enum_typed': None,
-            'enum_typed_1': None,
-            'enum_typed_2': None
-        }, self.Parse(dict(required='x', optional=None)))
+    self.parser = Args(Arg('optional', str, 'X', default=None))
+    self.assertEqual(dict(optional=None), self.Parse({}))
+    self.assertEqual(dict(optional='y'), self.Parse(dict(optional='y')))
 
   def testInt(self):
-    self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': None,
-            'int_or_string_typed': None,
-            'int_typed': 3,
-            'type_util_enum_typed': None,
-            'enum_typed_1': None,
-            'enum_typed_2': None
-        }, self.Parse(dict(required='x', int_typed=3)))
-    self.assertRaises(ValueError, self.Parse, dict(required='x', int_typed='3'))
+    self.parser = Args(Arg('int_typed', int, 'X', default=0))
+    self.assertEqual(dict(int_typed=0), self.Parse({}))
+    self.assertEqual(dict(int_typed=3), self.Parse(dict(int_typed=3)))
+    self.assertRaises(ValueError, lambda: self.Parse(dict(int_typed='3')))
+
+  def testIntOrString(self):
+    self.parser = Args(
+        Arg('int_or_string_typed', (int, str), 'X', default=None))
+    for value in (3, 'x'):
+      self.assertEqual(
+          dict(int_or_string_typed=value),
+          self.Parse(dict(int_or_string_typed=value)))
+    # Wrong type
+    self.assertRaises(
+        ValueError,
+        lambda: self.Parse(dict(required='x', int_or_string_typed=1.0)))
 
   def testEnum(self):
+    self.parser = Args(
+        Arg('enum_typed_1', enum_typed_1, 'X', default=None),
+        Arg('enum_typed_2', enum.Enum('enum_typed_2', 'a b'), 'X',
+            default=None))
     self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': None,
-            'int_or_string_typed': None,
-            'int_typed': None,
-            'type_util_enum_typed': None,
-            'enum_typed_1': 'a',
-            'enum_typed_2': 'a'
-        }, self.Parse(dict(required='x', enum_typed_1='a', enum_typed_2='a')))
-
+        dict(enum_typed_1=enum_typed_1.a, enum_typed_2=None),
+        self.Parse(dict(enum_typed_1=enum_typed_1.a)))
     self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': None,
-            'int_or_string_typed': None,
-            'int_typed': None,
-            'type_util_enum_typed': None,
-            'enum_typed_1': 'b',
-            'enum_typed_2': None
-        }, self.Parse(dict(required='x', enum_typed_1=enum_typed_1.b)))
+        dict(enum_typed_1='a', enum_typed_2=None),
+        self.Parse(dict(enum_typed_1=enum_typed_1.a)))
+    self.assertEqual(
+        dict(enum_typed_1='a', enum_typed_2=None),
+        self.Parse(dict(enum_typed_1='a')))
+    self.assertEqual(
+        dict(enum_typed_1=None, enum_typed_2='b'),
+        self.Parse(dict(enum_typed_2='b')))
 
     error_pattern = re.compile(
         r'.*enum_typed_[12].*The argument should have type '
@@ -140,42 +182,17 @@ class ArgsTest(unittest.TestCase):
                            dict(required='x', enum_typed_2='c'))
 
   def testTypeUtilEnum(self):
+    self.parser = Args(
+        Arg('type_util_enum_typed', Enum(['a', 'b']), 'X', default=None))
     self.assertEqual(
-        {
-            'has_default': 'DEFAULT_VALUE',
-            'required': 'x',
-            'optional': None,
-            'int_or_string_typed': None,
-            'int_typed': 3,
-            'type_util_enum_typed': 'a',
-            'enum_typed_1': None,
-            'enum_typed_2': None
-        }, self.Parse(
-            dict(required='x', int_typed=3, type_util_enum_typed='a')))
+        dict(type_util_enum_typed='a'),
+        self.Parse(dict(type_util_enum_typed='a')))
 
     error_pattern = re.compile(
         r'.*type_util_enum_typed.*The argument should have type \(Enum',
         re.DOTALL)
     self.assertRaisesRegex(ValueError, error_pattern, self.Parse,
                            dict(required='x', type_util_enum_typed='c'))
-
-  def testIntOrString(self):
-    for value in (3, 'x'):
-      self.assertEqual(
-          {
-              'has_default': 'DEFAULT_VALUE',
-              'required': 'x',
-              'optional': None,
-              'int_or_string_typed': value,
-              'int_typed': None,
-              'type_util_enum_typed': None,
-              'enum_typed_1': None,
-              'enum_typed_2': None
-          }, self.Parse(dict(required='x', int_or_string_typed=value)))
-    # Wrong type
-    self.assertRaises(
-        ValueError,
-        self.Parse, dict(required='x', int_or_string_typed=1.0))
 
 
 if __name__ == '__main__':
