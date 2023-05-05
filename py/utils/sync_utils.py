@@ -180,8 +180,9 @@ def RetryDecorator(
     target_condition: Optional[Callable[[T], bool]] = None,
     exceptions_to_catch: Union[None, Sequence[Type[Exception]]] = None,
     timeout_exception_to_raise: Type[Exception] = type_utils.TimeoutError,
-    reraise: bool = False, sleep: Optional[Callable[[float],
-                                                    None]] = None) -> Callable:
+    reraise: bool = False, sleep: Optional[Callable[[float], None]] = None,
+    retry_callback: Optional[Callable[[int, int], None]] = None,
+    enable_logging: bool = True) -> Callable:
   """A decorator to handle the retry mechanism
 
   The decorator to handle the nuances of retrying.
@@ -254,10 +255,12 @@ def RetryDecorator(
   Args:
     max_attempt_count: Number of times to attempt execution.
         It will retry forever, if not set.
-    timeout_sec: Number of seconds to wait before ending.
+    timeout_sec: Number of seconds to wait before ending. Defaults to inf,
+        which is no timeout.
     interval_sec: Number of seconds to wait between each run.
     target_condition: The function that takes the result of the function
-        as parameter and evaluates the result.
+        as parameter and evaluates the result. If not given, then the decorator
+        will end as soon as the function has ended without any exception.
     exceptions_to_catch: The exception(s) we wanted to catch.
         Set to None if you want to catch all the
         exceptions. Set to [] if you don't want to catch
@@ -267,16 +270,23 @@ def RetryDecorator(
     reraise: If you want to re-raise the error at timeout or
         exceed max_attempt_count.
     sleep: The sleep function we want to use.
+    retry_callback: A callback function accepting two int arguments,
+        `loop_count` and `max_attempt_count`. The callback function will be
+        called right after executing the wrapped function.
   """
   if exceptions_to_catch is None:
     # set default
     exceptions_to_catch = [Exception]
   custom_exceptions = type_utils.MakeTuple(exceptions_to_catch)
 
-  max_retry_exception = type_utils.MaxRetryError
-
   if target_condition is not None and not callable(target_condition):
     raise TypeError
+
+  if retry_callback and not callable(retry_callback):
+    raise TypeError('retry_callback should be callable')
+
+  if timeout_sec is None:
+    raise ValueError('timeout_sec cannot be None, please use float("inf")')
 
   end_time = time_utils.MonotonicTime() + timeout_sec
 
@@ -292,6 +302,11 @@ def RetryDecorator(
         try:
           result = func(*args, **kwargs)
         except custom_exceptions as captured_exception:  # pylint: disable=catching-non-exception
+          if enable_logging:
+            logging.exception('Retry... loop count: %d / %d', loop_count,
+                              max_attempt_count)
+          if retry_callback:
+            retry_callback(loop_count, max_attempt_count)
           now = time_utils.MonotonicTime()
           if now + interval_sec > end_time:
             if reraise:
@@ -300,15 +315,24 @@ def RetryDecorator(
           if loop_count == max_attempt_count - 1:
             if reraise:
               raise captured_exception
-            raise max_retry_exception from captured_exception
+            raise type_utils.MaxRetryError from captured_exception
           sleep(interval_sec)
           continue
+        # Use target condition to verify
         if target_condition is not None and not target_condition(result):
+          if enable_logging:
+            logging.warning('Target condition not met, loop count: %d / %d',
+                            loop_count, max_attempt_count)
+          if retry_callback:
+            retry_callback(loop_count, max_attempt_count)
           now = time_utils.MonotonicTime()
           if now + interval_sec > end_time:
             raise timeout_exception_to_raise
+          if loop_count == max_attempt_count - 1:
+            raise type_utils.MaxRetryError
           sleep(interval_sec)
         else:
+          # Do not add logging here as it cannot be resolved.
           # target condition met or function successfully executed
           break
       return result
