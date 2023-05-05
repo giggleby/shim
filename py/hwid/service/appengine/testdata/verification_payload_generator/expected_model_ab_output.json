@@ -55,6 +55,16 @@
         "qualificationStatus": "QUALIFIED"
       },
       {
+        "componentCategory": "battery",
+        "componentUuid": "model_f_battery_3_0_common_chemistry",
+        "qualificationStatus": "REJECTED"
+      },
+      {
+        "componentCategory": "battery",
+        "componentUuid": "model_f_battery_3_1_common_chemistry",
+        "qualificationStatus": "QUALIFIED"
+      },
+      {
         "componentCategory": "storage",
         "componentUuid": "model_a_storage_0_unsupported",
         "qualificationStatus": "REJECTED"
@@ -3200,6 +3210,48 @@
             true,
             "str",
             "!eq L"
+          ]
+        }
+      },
+      "model_f_battery_3_0_common_chemistry": {
+        "eval": {
+          "generic_battery": {}
+        },
+        "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
+          "manufacturer": [
+            true,
+            "str",
+            "!eq mfr123456"
+          ],
+          "model_name": [
+            true,
+            "str",
+            "!eq XL"
+          ]
+        }
+      },
+      "model_f_battery_3_1_common_chemistry": {
+        "eval": {
+          "generic_battery": {}
+        },
+        "expect": {
+          "chemistry": [
+            false,
+            "str"
+          ],
+          "manufacturer": [
+            true,
+            "str",
+            "!eq mfr12345678"
+          ],
+          "model_name": [
+            true,
+            "str",
+            "!eq XL"
           ]
         }
       }

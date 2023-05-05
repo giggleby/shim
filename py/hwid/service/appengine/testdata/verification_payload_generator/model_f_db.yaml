@@ -10,7 +10,7 @@ pattern:
   - image_ids: [0]
     encoding_scheme: base8192
     fields:
-    - battery: 3
+    - battery: 4
 
 encoded_fields:
   battery:
@@ -21,6 +21,8 @@ encoded_fields:
     4: {battery: battery_1_1_unqualified}
     5: {battery: battery_2_0_special_chemistry}
     6: {battery: battery_2_1_special_chemistry}
+    7: {battery: battery_3_0_common_chemistry}
+    8: {battery: battery_3_1_common_chemistry}
 
 components:
   battery:
@@ -72,5 +74,19 @@ components:
           manufacturer: mfr
           model_name: L
           technology: O1E0
+      # ===================================================================== #
+      # No component is skipped because none of their technologies is common technology.
+      battery_3_0_common_chemistry:
+        status: unsupported
+        values:
+          manufacturer: mfr123456
+          model_name: XL
+          technology: LiP
+      battery_3_1_common_chemistry:
+        status: supported
+        values:
+          manufacturer: mfr12345678
+          model_name: XL
+          technology: LiP
 
 rules: []

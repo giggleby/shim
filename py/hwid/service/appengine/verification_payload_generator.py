@@ -886,8 +886,7 @@ def GenerateVerificationPayload(dbs):
        corresponding field values of the other.
     2. At least one of `model_name`, `manufacturer` and `technology` are
        different between the two batteries.
-    3. At least one of the batteries' `technology` is Li-ion, Li-poly, LION,
-       LiP, or LIP.
+    3. At least one of the batteries' `technology` is Li-ion or Li-poly.
     """
 
     for field in ['model_name', 'manufacturer', 'technology']:
@@ -902,8 +901,8 @@ def GenerateVerificationPayload(dbs):
 
     lhs_technology = battery_lhs.get('technology')
     rhs_technology = battery_rhs.get('technology')
-    if not (lhs_technology in COMMON_HWID_TECHNOLOGY or
-            rhs_technology in COMMON_HWID_TECHNOLOGY):
+    if not (lhs_technology in COMMON_SYSFS_TECHNOLOGY or
+            rhs_technology in COMMON_SYSFS_TECHNOLOGY):
       return False
 
     lhs_match = True
