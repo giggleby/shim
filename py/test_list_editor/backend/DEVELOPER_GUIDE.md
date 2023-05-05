@@ -101,7 +101,7 @@ bp = Blueprint('users', __name__, url_prefix='/api/v1/resource')
 @middleware.ValidateRequest(blob.ResourcesRequest)
 @middleware.ValidateResponse(blob.CreateResourceResponse)
 def CreateResources(request_body):
-  # process files
+  # process request
   return blob.CreateResourceResponse(...)
 ```
 
@@ -146,7 +146,7 @@ This is equivalent to the following representation.
 }
 ```
 
-Now to make a request, if you use any Postman like interface, set the endpoint to
+Now to make a request, if you use any Postman-like interface, set the endpoint to
 `localhost:5000/api/v1/resource`, request method to **PUT** and body to json. A sample json data
 like the following would work.
 
@@ -201,6 +201,75 @@ After making a successful request, you should see the response
   "message": "",
   "status": "success"
 }
+```
+
+## Structuring the code
+
+The above section should give you a basic understanding of how we should test the endpoints. Now,
+we move on to how we should structure the code between the following folders.
+
+### api/**.py
+
+* The Flask endpoint related definition should be placed here.
+* Use `middleware.Validate` when you need to serialize **params**, **request_body**, and
+**response**.
+  * See *middleware/validation.py* for more information.
+* This file should do nothing more than passing the request to the controller.
+
+```python
+# api/v1/user.py
+
+bp = Blueprint('users', __name__, url_prefix='/api/v1/resource')
+...
+
+controller = blob_controller.ResourceController(...)
+
+@bp.route('/', methods=['PUT'])
+@middleware.Validate
+def CreateResources(request_body: blob.ResourcesRequest) -> blob.CreateResourceResponse:
+  return controller.CreateResource(request_body) # We pass the resource directly to the controller.
+```
+
+### controller/**.py
+
+* This is where the main logic of processing should happen.
+* If possible, use factory pattern or dependency injection to better decouple the relationship
+  between controller and models.
+  * Refer to controller/files.py and you should be able to understand it.
+
+```python
+class ResourceController:
+  def __init__(self):
+    ...
+
+  def CreateResource(resource: blob.ResourcesRequest):
+    """Process the resource."""
+    return blob.CreateResourceResponse(status='SUCCESS')
+```
+
+### models/
+
+* This is where we define how each container should provide what functionality to the controller.
+
+```python
+class FileResource:
+  def __init__(self, filename: str, data: str):
+    ...
+
+  def Put(data: str) -> None:
+    """Update the data."""
+    return
+```
+
+### schema/
+
+* This is where the "shape" of the data model (container) should be defined.
+* We use [Pydantic](https://docs.pydantic.dev/latest/) to define our data models.
+
+```python
+class ResourcesRequest(BaseRequest):
+  filename: str
+  data: str
 ```
 
 ## Run unittest
