@@ -23,7 +23,10 @@ This is the folder for the test list editor backend server. The folder has the f
 
 * `scripts/`, the folder storing scripts for certain tasks.
 * `api/`, the folder storing the endpoint processing logic.
-* `tests/`, the folder storing unit test for the backend.
+* `schema/`, the folder storing the data models used to validate the parameters, body, and response.
+* `models/`, the folder storing the data models used by each controller.
+* `controller/`, the folder for interacting with different "models"(resources).
+* `middleware/`, the folder for storing the decorator middleware.
 
 The `api/` folder has the following logic.
 
@@ -79,6 +82,126 @@ as a lightweight alternative to
 
 You can verify if the server is running or not by `curl localhost:5000/status`. This should respond
 `{'status': 'ok'}`
+
+## Testing out endpoints
+
+After you have successfully start the Flask instance, you can now use `curl` or
+[thunder client](https://marketplace.visualstudio.com/items?itemName=rangav.vscode-thunder-client)
+to make request to the server.
+
+In Flask, we use blueprints to specify endpoints in a structural way. Take the following as an
+example. The endpoint in below example does not exist in the actual server. They are here just for
+demonstration purposes.
+
+```python
+bp = Blueprint('users', __name__, url_prefix='/api/v1/resource')
+...
+
+@bp.route('/', methods=['PUT'])
+@middleware.ValidateRequest(blob.ResourcesRequest)
+@middleware.ValidateResponse(blob.CreateResourceResponse)
+def CreateResources(request_body):
+  # process files
+  return blob.CreateResourceResponse(...)
+```
+
+The code means we can access the api at `localhost:5000/api/v1/resource` by "PUT" method.
+It expects the request body to be in the form of `ResourcesRequest` and a response to be in the form
+of `CreateResourceResponse`.
+
+The request and response shape can be found in `schema/blob.py`.
+The file names in `schema` specify what data models are used in the corresponding file
+inside `api/v1/*`.
+
+The following is an example of the data model specified by [Pydantic](https://docs.pydantic.dev/).
+
+```python
+class ResourceObject(BaseModel):
+  resource_name: str
+  data: Dict
+
+class ResourcesRequest(BaseModel):
+  blobs: List[ResourceObject]
+```
+
+This is equivalent to the following representation.
+
+```json
+{
+  "blobs": [
+    {
+      "resource_name": "xxx",
+      "data": {
+        ...
+      }
+    },
+    {
+      "resource_name": "yyy",
+      "data": {
+        ...
+      }
+    },
+    ...
+  ]
+}
+```
+
+Now to make a request, if you use any Postman like interface, set the endpoint to
+`localhost:5000/api/v1/resource`, request method to **PUT** and body to json. A sample json data
+like the following would work.
+
+```json
+{
+  "blobs": [
+    {
+      "resource_name": "www",
+      "data": {
+        "something": true
+      }
+    },
+    {
+      "resource_name": "xxx",
+      "data": {
+        "something": true
+      }
+    }
+  ]
+}
+```
+
+Or, if you use `curl`
+
+```sh
+curl -X PUT \
+  'localhost:5000/api/v1/resource' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+  "blobs": [
+    {
+      "resource_name": "www",
+      "data": {
+        "something": true
+      }
+    },
+    {
+      "resource_name": "xxx",
+      "data": {
+        "something": true
+      }
+    }
+  ]
+}'
+```
+
+After making a successful request, you should see the response
+
+```json
+{
+  "blob_status": {},
+  "message": "",
+  "status": "success"
+}
+```
 
 ## Run unittest
 

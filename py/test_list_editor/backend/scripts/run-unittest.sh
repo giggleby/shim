@@ -14,7 +14,7 @@ source "$(get_venv_dir)"/bin/activate
 cd "${CROS_DIR}" || exit
 python3 -m coverage run -m \
   unittest discover \
-    -s cros/factory/test_list_editor/backend/tests \
+    -s cros/factory/test_list_editor/backend \
     -p "*_unittest.py" -v && \
 python3 -m coverage report \
   --include="${EDITOR_DIR}/*" \

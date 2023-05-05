@@ -415,6 +415,7 @@ ignored-modules=
     django.db,
     rest_framework,
     distutils,  # known issue: https://github.com/PyCQA/pylint/issues/73
+    pydantic,
 
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
