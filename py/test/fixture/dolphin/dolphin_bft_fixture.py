@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import copy
+import enum
 import logging
 import re
 import time
@@ -16,7 +17,6 @@ from cros.factory.test.utils import serial_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sync_utils
-from cros.factory.utils.type_utils import Enum
 
 
 _RE_INA_VOLTAGE = re.compile(r'^\s*Bus voltage\s+:\s+\w+\s+=>\s+(-?\d+)\s+mV',
@@ -59,9 +59,15 @@ class DolphinBFTFixture(bft_fixture.BFTFixture):
   # There are methods of abstract in class 'BFTFixture' but is not overridden.
 
   # Devices on Plankton-Raiden to be engaged/disengaged.
-  Device = Enum(
-      ['CHARGE_5V', 'CHARGE_12V', 'CHARGE_20V',
-       'USB2', 'USB3', 'DP', 'ADB_HOST', 'DEFAULT'])
+  class Device(str, enum.Enum):
+    CHARGE_5V = 'CHARGE_5V'
+    CHARGE_12V = 'CHARGE_12V'
+    CHARGE_20V = 'CHARGE_20V'
+    USB2 = 'USB2'
+    USB3 = 'USB3'
+    DP = 'DP'
+    ADB_HOST = 'ADB_HOST'
+    DEFAULT = 'DEFAULT'
 
   # dev means charge-to-device.
   DEVICE_COMMAND = {

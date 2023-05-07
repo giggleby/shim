@@ -5,11 +5,11 @@
 
 """Generic LED components."""
 
+import enum
 import logging
 import re
 
 from cros.factory.device import device_types
-from cros.factory.utils.type_utils import Enum
 
 
 _PATTERN = re.compile(r'\t([a-z]+)\t: (0x[0-9A-Fa-f]+)\n')
@@ -18,24 +18,43 @@ _PATTERN = re.compile(r'\t([a-z]+)\t: (0x[0-9A-Fa-f]+)\n')
 class LED(device_types.DeviceComponent):
   """LED control using Chrome OS ectool."""
 
-  Color = Enum(['AUTO', 'OFF', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE',
-                'AMBER'])
-  """Charger LED colors.
+  class Color(str, enum.Enum):
+    """Charger LED colors.
 
-  - ``AUTO``: Use the default logic to select the LED color.
-  - ``OFF``: Turn the LED off.
-  - others: The respective colors.
-  """
+    - ``AUTO``: Use the default logic to select the LED color.
+    - ``OFF``: Turn the LED off.
+    - others: The respective colors.
+    """
+    AUTO = 'AUTO'
+    OFF = 'OFF'
+    RED = 'RED'
+    GREEN = 'GREEN'
+    BLUE = 'BLUE'
+    YELLOW = 'YELLOW'
+    WHITE = 'WHITE'
+    AMBER = 'AMBER'
 
-  CrOSIndexes = Enum(['BATTERY', 'POWER', 'ADAPTER', 'LEFT', 'RIGHT',
-                      'RECOVERY_HWREINIT', 'SYSRQ DEBUG'])
-  """All LED names published by `ectool` today.
+    def __str__(self):
+      return self.name
 
-  Run `ectool led non-exist x` or look up src/platform/ec/util/ectool.c for
-  latest known names.
+  class CrOSIndexes(str, enum.Enum):
+    """All LED names published by `ectool` today.
 
-  Note 'SYSRQ DEBUG' is one single index with space in name, not typo.
-  """
+    Run `ectool led non-exist x` or look up src/platform/ec/util/ectool.c for
+    latest known names.
+
+    Note 'SYSRQ DEBUG' is one single index with space in name, not typo.
+    """
+    BATTERY = 'BATTERY'
+    POWER = 'POWER'
+    ADAPTER = 'ADAPTER'
+    LEFT = 'LEFT'
+    RIGHT = 'RIGHT'
+    RECOVERY_HWREINIT = 'RECOVERY_HWREINIT'
+    SYSRQ_DEBUG = 'SYSRQ DEBUG'
+
+    def __str__(self):
+      return self.value
 
   Index = None
   """List of LEDs available on DUT. Usually a subset from CrOSIndexes."""
@@ -47,7 +66,7 @@ class LED(device_types.DeviceComponent):
     self._GetLEDInfo()
 
     if self.Index is None:
-      self.Index = Enum(self.led_infoes)
+      self.Index = tuple(self.led_infoes.keys())
 
   def _GetLEDInfo(self):
     for index in self.CrOSIndexes:
@@ -67,7 +86,7 @@ class LED(device_types.DeviceComponent):
     """Check parameters."""
     if led_name is not None and led_name.upper() not in self.Index:
       raise ValueError(f'Invalid led name: {led_name!r}')
-    if color not in self.Color:
+    if color not in self.Color.__members__:
       raise ValueError(f'Invalid color: {color!r}')
     if brightness is not None:
       if not isinstance(brightness, int):
@@ -90,8 +109,6 @@ class LED(device_types.DeviceComponent):
     if brightness is None:
       brightness = 100
 
-    # self.Index using Enum will be a frozenset so the for-loop below may be
-    # in arbitrary order.
     for name in [led_name] if led_name else self.Index:
       self._SetColor(color, name, brightness)
 
@@ -127,28 +144,28 @@ class LED(device_types.DeviceComponent):
 
 class BatteryLED(LED):
   """Devices with only Battery LED (usually Tablet or Chromebook)."""
-  Index = Enum([LED.CrOSIndexes.BATTERY])
+  Index = (LED.CrOSIndexes.BATTERY, )
 
 
 class PowerLED(LED):
   """Devices with only Power LED (usually Chromebox)."""
-  Index = Enum([LED.CrOSIndexes.POWER])
+  Index = (LED.CrOSIndexes.POWER, )
 
 
 class BatteryPowerLED(LED):
   """Devices with Battery and Power LEDs (most recent x86 Chromebooks)."""
-  Index = Enum([LED.CrOSIndexes.BATTERY, LED.CrOSIndexes.POWER])
+  Index = (LED.CrOSIndexes.BATTERY, LED.CrOSIndexes.POWER)
 
 
 class BatteryPowerAdapterLED(LED):
   """Devices with Battery, Power and Adapter LEDs. (older Chromebooks)."""
-  Index = Enum([LED.CrOSIndexes.BATTERY, LED.CrOSIndexes.POWER,
-                LED.CrOSIndexes.ADAPTER])
+  Index = (LED.CrOSIndexes.BATTERY, LED.CrOSIndexes.POWER,
+           LED.CrOSIndexes.ADAPTER)
 
 
 class LeftRightLED(LED):
   """Devices with only Left and Right LEDs (modern Chromebooks with 2 TypeC)."""
-  Index = Enum([LED.CrOSIndexes.LEFT, LED.CrOSIndexes.RIGHT])
+  Index = (LED.CrOSIndexes.LEFT, LED.CrOSIndexes.RIGHT)
 
 
 class LeftRightPowerLED(LED):
@@ -156,13 +173,12 @@ class LeftRightPowerLED(LED):
 
      Modern convertible Chromebooks with 2 TypeC and power button with LED.
   """
-  Index = Enum([LED.CrOSIndexes.LEFT, LED.CrOSIndexes.RIGHT,
-                LED.CrOSIndexes.POWER])
+  Index = (LED.CrOSIndexes.LEFT, LED.CrOSIndexes.RIGHT, LED.CrOSIndexes.POWER)
 
 
 class PWMLeftRightLED(LED):
   """Devices with only Left and Right LEDs which are controlled by PWM."""
-  Index = Enum([LED.CrOSIndexes.LEFT, LED.CrOSIndexes.RIGHT])
+  Index = (LED.CrOSIndexes.LEFT, LED.CrOSIndexes.RIGHT)
   DefaultDutyMap = {
       LED.CrOSIndexes.LEFT: 65535,
       LED.CrOSIndexes.RIGHT: 0,

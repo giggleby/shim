@@ -86,7 +86,8 @@ _INDEX_LABEL = {
     LEDIndex.LEFT: _('left LED'),
     LEDIndex.RIGHT: _('right LED'),
     LEDIndex.RECOVERY_HWREINIT: _('recovery hwreinit LED'),
-    getattr(LEDIndex, 'SYSRQ DEBUG'): _('sysrq debug LED')}
+    LEDIndex.SYSRQ_DEBUG: _('sysrq debug LED')
+}
 
 _ARG_COLORS_SCHEMA = JSONSchemaDict(
     'colors schema object', {
@@ -94,16 +95,16 @@ _ARG_COLORS_SCHEMA = JSONSchemaDict(
         'items': {
             'oneOf': [
                 {
-                    'enum': list(LEDColor)
+                    'enum': list(LEDColor.__members__)
                 },
                 {
                     'type': 'array',
                     'items': [
                         {
-                            'enum': list(LEDIndex)
+                            'enum': list(member.value for member in LEDIndex)
                         },
                         {
-                            'enum': list(LEDColor)
+                            'enum': list(LEDColor.__members__)
                         },
                         {
                             'type': ['integer', 'null']
