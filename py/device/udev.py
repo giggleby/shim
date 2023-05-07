@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import enum
 import re
 import threading
 
 from cros.factory.device import device_types
 from cros.factory.utils import process_utils
-from cros.factory.utils.type_utils import Enum
 
 from cros.factory.external.py_lib import pyudev
 
@@ -33,7 +33,12 @@ class UdevMonitorBase(device_types.DeviceComponent):
   """
 
   # Event types.
-  Event = Enum(['INSERT', 'REMOVE'])
+  class Event(str, enum.Enum):
+    INSERT = 'INSERT'
+    REMOVE = 'REMOVE'
+
+    def __str__(self):
+      return self.name
 
   def __init__(self, dut):
     super().__init__(dut)

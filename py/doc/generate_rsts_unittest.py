@@ -6,6 +6,7 @@
 
 
 import codecs
+import enum
 import unittest
 from unittest import mock
 
@@ -24,13 +25,13 @@ class GenerateDocsTest(unittest.TestCase):
       class FooTest(unittest.TestCase):
         ARGS = [
             Arg('a', int, 'A', default=1),
-            Arg('b', Enum(['b1', 'b2']),
-                'Foo:\n'
+            Arg('b', enum.Enum('b', ['b1', 'b2']), 'Foo:\n'
                 '\n'
                 '  - bar\n'
-                '  - baz\n',
-                default='b1'),
+                '  - baz\n', default='b1'),
+            Arg('c', Enum(['c1', 'c2']), 'C', default='c1'),
         ]
+
         def runTest(self):
           pass
 
@@ -73,6 +74,10 @@ Test Arguments
      - (optional; default: ``\'b1\'``) Foo:
        \n         - bar
          - baz
+
+   * - c
+     - ['c1', 'c2']
+     - (optional; default: ``\'c1\'``) C
 """
       self.maxDiff = None
       self.assertEqual(pseudo_output, '\n'.join(lines))
