@@ -5,24 +5,29 @@
 import enum
 import re
 
-from cros.factory.gooftool import common as gooftool_common
 from cros.factory.utils import type_utils
 
+from cros.factory.external.chromeos_cli import shell
 
 # Path to the relied `gsctool` command line utility.
 GSCTOOL_PATH = '/usr/sbin/gsctool'
 
 
 class FirmwareVersion(type_utils.Obj):
+
   def __init__(self, ro_version, rw_version):
     super().__init__(ro_version=ro_version, rw_version=rw_version)
 
+
 class ImageInfo(type_utils.Obj):
+
   def __init__(self, ro_fw_version, rw_fw_version, board_id_flags):
     super().__init__(ro_fw_version=ro_fw_version, rw_fw_version=rw_fw_version,
                      board_id_flags=board_id_flags)
 
+
 class BoardID(type_utils.Obj):
+
   def __init__(self, type_, flags):
     super().__init__(type=type_, flags=flags)
 
@@ -72,6 +77,7 @@ class APROResult(enum.Enum):
   AP_RO_V2_WRONG_ROOT_KEY = 37
   AP_RO_V2_UNKNOWN = 255
 
+
 class GSCToolError(Exception):
   pass
 
@@ -80,13 +86,8 @@ class GSCTool:
   """Helper class to operate on Cr50 firmware by the `gsctool` cmdline utility.
   """
 
-  def __init__(self, shell=None):
-    self._shell = shell or gooftool_common.Shell
-
-  def ClearInactiveGSCSlot(self):
-    """Clears the inactive GSC RW slot."""
-    cmd = [GSCTOOL_PATH, '-a', '-c']
-    self._InvokeCommand(cmd, 'failed to clear inactive GSC slot.')
+  def __init__(self, dut=None):
+    self._shell = shell.Shell(dut)
 
   def GetCr50FirmwareVersion(self):
     """Get the version of the current Cr50 firmware.
@@ -98,9 +99,10 @@ class GSCTool:
       `GSCToolError` if fails.
     """
     cmd = [GSCTOOL_PATH, '-M', '-a', '-f']
-    return self._GetAttrs(cmd, FirmwareVersion, {'RO_FW_VER': 'ro_version',
-                                                 'RW_FW_VER': 'rw_version'},
-                          'firmware versions.')
+    return self._GetAttrs(cmd, FirmwareVersion, {
+        'RO_FW_VER': 'ro_version',
+        'RW_FW_VER': 'rw_version'
+    }, 'firmware versions.')
 
   def UpdateCr50Firmware(self, image_file, upstart_mode=True,
                          force_ro_mode=False):
@@ -148,10 +150,12 @@ class GSCTool:
       `GSCToolError` if fails.
     """
     cmd = [GSCTOOL_PATH, '-M', '-b', image_file]
-    info = self._GetAttrs(cmd, ImageInfo, {'IMAGE_RO_FW_VER': 'ro_fw_version',
-                                           'IMAGE_RW_FW_VER': 'rw_fw_version',
-                                           'IMAGE_BID_FLAGS': 'board_id_flags'},
-                          'image versions.')
+    info = self._GetAttrs(
+        cmd, ImageInfo, {
+            'IMAGE_RO_FW_VER': 'ro_fw_version',
+            'IMAGE_RW_FW_VER': 'rw_fw_version',
+            'IMAGE_BID_FLAGS': 'board_id_flags'
+        }, 'image versions.')
     # pylint: disable=attribute-defined-outside-init
     info.board_id_flags = int(info.board_id_flags, 16)
     return info
@@ -165,8 +169,10 @@ class GSCTool:
       for field_name, attr_name in fields.items():
         if line.startswith(field_name + '='):
           translated_kwargs[attr_name] = line[len(field_name) + 1:]
-    missing_fields = [field_name for field_name, attr_name in fields.items()
-                      if attr_name not in translated_kwargs]
+    missing_fields = [
+        field_name for field_name, attr_name in fields.items()
+        if attr_name not in translated_kwargs
+    ]
     if missing_fields:
       raise GSCToolError(
           f'{missing_fields!r} Field(s) are missing, gsctool stdout='
@@ -210,8 +216,8 @@ class GSCTool:
     #
     # If factory mode is disabed then the last line would be
     # Capabilities are default.
-    return bool(re.search('^Capabilities are modified.$', result.stdout,
-                          re.MULTILINE))
+    return bool(
+        re.search('^Capabilities are modified.$', result.stdout, re.MULTILINE))
 
   def GetBoardID(self):
     """Get the board ID of the Cr50 firmware.
@@ -226,12 +232,13 @@ class GSCTool:
 
     result = self._GetAttrs(
         [GSCTOOL_PATH, '-a', '-M', '-i'], type_utils.Obj,
-        {k: k for k in ('BID_TYPE', 'BID_TYPE_INV', 'BID_FLAGS', 'BID_RLZ')},
+        {k: k
+         for k in ('BID_TYPE', 'BID_TYPE_INV', 'BID_FLAGS', 'BID_RLZ')},
         'board ID')
     if result.BID_RLZ == '????':
       rlz_num = 0xffffffff
       result.BID_RLZ = None
-    elif re.match(r'[A-Z]{4}$', result.BID_RLZ):
+    elif re.fullmatch(r'[A-Z]{4}', result.BID_RLZ):
       rlz_num = int.from_bytes(result.BID_RLZ.encode('utf-8'), 'big')
     else:
       raise GSCToolError(f'Unexpected RLZ format: {result.BID_RLZ!r}.')
@@ -244,8 +251,8 @@ class GSCTool:
 
     # The output of the gsctool command contains 4 fields, check if they are
     # not conflicted to each other.
-    is_bid_type_programmed = (bid_type != _BID_TYPE_MASK or
-                              bid_type_inv != _BID_TYPE_MASK)
+    is_bid_type_programmed = (
+        bid_type != _BID_TYPE_MASK or bid_type_inv != _BID_TYPE_MASK)
     is_bid_type_complement = ((bid_type & bid_type_inv) == 0 and
                               (bid_type | bid_type_inv) == _BID_TYPE_MASK)
     if is_bid_type_programmed and not is_bid_type_complement:

@@ -12,8 +12,6 @@ import re
 
 from cros.factory.device import device_types
 from cros.factory.device import storage
-from cros.factory.gooftool import gsctool
-from cros.factory.gooftool import vpd
 from cros.factory.gooftool import write_protect_target
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.test import device_data
@@ -25,6 +23,9 @@ from cros.factory.utils import file_utils
 from cros.factory.utils import gsc_utils
 from cros.factory.utils import net_utils
 from cros.factory.utils.sys_utils import MountDeviceAndReadFile
+
+from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import vpd
 
 
 # Static list of known properties in SystemInfo.
@@ -432,14 +433,15 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def gsc_info(self):
     """Returns the Google Security Chip (GSC) info of the device."""
+    gsctool_ = gsctool.GSCTool(self._device)
     gsc_info = {}
     gsc_info['name'] = gsc_utils.GSCUtils().name
-    board_id = gsctool.GSCTool().GetBoardID()
+    board_id = gsctool_.GetBoardID()
     gsc_info['board_id'] = {
         'type': self._IntToHexStr(board_id.type),
         'flags': self._IntToHexStr(board_id.flags)
     }
-    fw_version = gsctool.GSCTool().GetCr50FirmwareVersion()
+    fw_version = gsctool_.GetCr50FirmwareVersion()
     gsc_info['version'] = {
         'ro_version': fw_version.ro_version,
         'rw_version': fw_version.rw_version,
@@ -462,12 +464,10 @@ class SystemInfo(device_types.DeviceComponent):
   @InfoProperty
   def vpd_info(self):
     """Returns the VPD info of the device."""
+    vpd_tool = vpd.VPDTool(self._device)
     return {
-        'ro':
-            vpd.VPDTool().GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME),
-        'rw':
-            vpd.VPDTool().GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME
-                                    ),
+        'ro': vpd_tool.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME),
+        'rw': vpd_tool.GetAllData(partition=vpd.VPD_READWRITE_PARTITION_NAME),
     }
 
   @InfoProperty

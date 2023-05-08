@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from cros.factory.gooftool import gsctool as gsctool_module
 from cros.factory.probe.lib import probe_function
 from cros.factory.test import device_data
+
+from cros.factory.external.chromeos_cli import gsctool as gsctool_module
 
 
 class FeatureManagementFlagsFunction(probe_function.ProbeFunction):

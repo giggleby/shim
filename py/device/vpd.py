@@ -2,13 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import functools
 import logging
 
 from cros.factory.device import device_types
-from cros.factory.gooftool import common as gooftool_common
-from cros.factory.gooftool import vpd
 from cros.factory.test.rules import privacy
+
+from cros.factory.external.chromeos_cli import vpd
 
 
 class Partition(device_types.DeviceComponent):
@@ -66,8 +65,7 @@ class CommandVPDPartition(Partition):
     """
     super().__init__(dut)
     self.name = name
-    shell_func = functools.partial(gooftool_common.Shell, sys_interface=dut)
-    self._vpd_tool = vpd.VPDTool(shell_func, raw_file=raw_file)
+    self._vpd_tool = vpd.VPDTool(dut=dut, raw_file=raw_file)
 
   def get(self, key, default=None):
     """See Partition.get."""

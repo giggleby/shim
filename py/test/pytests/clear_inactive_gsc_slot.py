@@ -26,21 +26,19 @@ To run the test, do::
 
 """
 
-import functools
 import logging
 
 from cros.factory.device import device_utils
-from cros.factory.gooftool import common as gooftool_common
-from cros.factory.gooftool import gsctool
 from cros.factory.test import test_case
+
+from cros.factory.external.chromeos_cli import gsctool
 
 
 class ClearInactiveGscSlot(test_case.TestCase):
 
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
-    dut_shell = functools.partial(gooftool_common.Shell, sys_interface=self.dut)
-    self.gsctool = gsctool.GSCTool(dut_shell)
+    self.gsctool = gsctool.GSCTool(dut=self.dut)
 
   def runTest(self):
     logging.info('Clearing inactive GSC slot ...')
