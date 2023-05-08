@@ -435,6 +435,12 @@ For instance, a board overlay may install:
 ## Development Tips
 For developers, there may few tips you'd want to learn:
 
+### Changing Display Language
+![Translate Button](doc/images/translate.png)
+
+The display language can be changed by clicking on the button with the above
+image.
+
 ### Run Goofy in Docker
 If you need don't have a real DUT and still want to invoke Goofy (for example to
 work on test list or UI), it is possible to run Goofy in Docker. To do this,
