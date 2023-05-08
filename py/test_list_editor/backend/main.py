@@ -5,12 +5,15 @@
 from flask import Flask
 
 from cros.factory.test_list_editor.backend.api import status
+from cros.factory.test_list_editor.backend.api.v1 import files
 from cros.factory.test_list_editor.backend.middleware import validation_exception
 
 
 def CreateApp():
   flask_app = Flask(__name__)
   flask_app.register_blueprint(status.bp)
+  flask_app.register_blueprint(files.CreateBP())
+
   validation_exception.RegisterErrorHandler(flask_app)
   return flask_app
 
