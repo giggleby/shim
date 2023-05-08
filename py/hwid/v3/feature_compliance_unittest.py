@@ -21,7 +21,7 @@ from cros.factory.utils import file_utils
 def _CreateHWIDIdentityForTest(brand_code: str,
                                bit_string: str) -> identity_module.Identity:
   return identity_module.Identity(
-      common.EncodingScheme.base8192, 'UNUSED_PROJ_NAME', int(bit_string[0]),
+      common.ENCODING_SCHEME.base8192, 'UNUSED_PROJ_NAME', int(bit_string[0]),
       int(bit_string[1:5], 2), bit_string[5:] + '1', brand_code=brand_code)
 
 

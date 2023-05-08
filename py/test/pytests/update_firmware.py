@@ -68,7 +68,6 @@ import os
 import tempfile
 
 from cros.factory.device import device_utils
-from cros.factory.gooftool import cros_config
 from cros.factory.test.env import paths
 from cros.factory.test import event
 from cros.factory.test import test_case
@@ -77,6 +76,8 @@ from cros.factory.test.utils import update_utils
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_utils
+
+from cros.factory.external.chromeos_cli import cros_config
 
 
 _FIRMWARE_UPDATER_NAME = 'chromeos-firmwareupdate'

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 The ChromiumOS Authors.
+# Copyright 2022 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -32,7 +32,8 @@ class ChromeosFirmwareTest(unittest.TestCase):
     self.fake_mount.return_value.__enter__.return_value = self.fake_rootfs
     self.addCleanup(patcher.stop)
 
-    patcher = mock.patch('cros.factory.gooftool.cros_config.CrosConfig')
+    patcher = mock.patch(
+        'cros.factory.external.chromeos_cli.cros_config.CrosConfig')
     self.mock_cros_config = patcher.start()
     self.mock_cros_config.return_value.GetFingerPrintBoard.return_value = (
         'board')

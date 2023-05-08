@@ -35,7 +35,6 @@ import uuid
 import jsonrpclib
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.test import device_data
 from cros.factory.test import state
 from cros.factory.test.state import TestState
@@ -47,6 +46,9 @@ from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Enum
+
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
+
 
 _GHOST_RPC_PORT = int(os.getenv('GHOST_RPC_PORT', '4499'))
 
