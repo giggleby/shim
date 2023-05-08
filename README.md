@@ -350,7 +350,7 @@ Here are few resources you will want to dig into more details:
 ### Factory Server
 To setup factory server, read [Factory Server doc](setup/FACTORY_SERVER.md).
 
-### Internalization
+### Internationalization
 The DUT Software (Goofy) and pytests can be localized. Read the
 [Localization Guide](po/README.md) for more information.
 
