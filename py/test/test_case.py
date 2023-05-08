@@ -28,7 +28,6 @@ class TaskEndException(Exception):
 
 _Task = collections.namedtuple('Task',
                                ['name', 'run', 'reboot', 'reboot_timeout_secs'])
-_NEXT_TASK_STAGE_KEY = 'factory.test_case.next_task_stage'
 
 
 class TestCase(unittest.TestCase):
@@ -53,6 +52,14 @@ class TestCase(unittest.TestCase):
 
     self.goofy_rpc = state.GetInstance()
 
+    self.invocation_uuid = session.GetCurrentTestInvocation()
+
+  @type_utils.LazyProperty
+  def _next_task_stage_key(self):
+    # Gets the unique id of test object as the key name of next stage flag.
+    test_id = self.goofy_rpc.GetCurrentFactoryTest(self.invocation_uuid).id
+    return '.'.join(('factory.test_case.next_task_stage', test_id))
+
   def PassTask(self):
     """Pass current task.
 
@@ -75,9 +82,11 @@ class TestCase(unittest.TestCase):
     Should only be called in the event callbacks or primary background test
     thread.
     """
-    current_invocation_uuid = session.GetCurrentTestInvocation()
-    self.goofy_rpc.WaiveCurrentFactoryTest(current_invocation_uuid)
-    self.FailTask(msg)
+    current_factory_test = self.goofy_rpc.GetCurrentFactoryTest(
+        self.invocation_uuid)
+    current_factory_test.Waive()
+    self.FailTask(msg + '\nWaive current running factory test: '
+                  f'{current_factory_test.path}')
 
   def __WaitTaskEnd(self, timeout):
     if self.__task_end_event.wait(timeout=timeout):
@@ -145,13 +154,13 @@ class TestCase(unittest.TestCase):
               reboot_timeout_secs=reboot_timeout_secs))
 
   def GetNextTaskStage(self) -> None:
-    return device_data.GetDeviceData(_NEXT_TASK_STAGE_KEY, default=0)
+    return device_data.GetDeviceData(self._next_task_stage_key, default=0)
 
   def UpdateNextTaskStage(self, next_task_stage) -> None:
-    device_data.UpdateDeviceData({_NEXT_TASK_STAGE_KEY: next_task_stage})
+    device_data.UpdateDeviceData({self._next_task_stage_key: next_task_stage})
 
   def ClearNextTaskStage(self):
-    device_data.DeleteDeviceData(_NEXT_TASK_STAGE_KEY, optional=False)
+    device_data.DeleteDeviceData(self._next_task_stage_key, optional=False)
 
   def ClearTasks(self):
     self.__tasks.clear()
@@ -282,7 +291,7 @@ class TestCase(unittest.TestCase):
         if self.__task_failed:
           return
       finally:
-        if self.GetNextTaskStage() != 0:
+        if tasks_with_reboot:
           # Clears next_task_stage after all tasks passed or any task failed.
           session.console.info(
               'Test finished. Clear the data of next task stage.')

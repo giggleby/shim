@@ -28,7 +28,6 @@ from cros.factory.test.event import Event
 from cros.factory.test.event import SendEvent
 from cros.factory.test.i18n import translation
 from cros.factory.test import server_proxy
-from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test.test_lists import manager
 from cros.factory.test.test_lists import test_list
@@ -847,23 +846,13 @@ class GoofyRPC:
     """Sets ui_initialized flag for informing backend that UI is ready."""
     self.goofy.ui_initialized.set()
 
-  def WaiveCurrentFactoryTest(self, current_invocation_uuid):
-    """Waives current running factory test with given invocation uuid.
-
-    First, gets the invocation from goofy with current_invocation_uuid.
-    After got the 'TestInvocation' object of current running test,
-    we can get the 'FactoryTest' object in it, then call the 'Waive' function
-    for waiving current running factory test.
-    """
+  def GetCurrentFactoryTest(self, current_invocation_uuid):
+    """Gets current running FactoryTest object with given invocation uuid."""
     current_invocation = self.goofy.invocations.get(current_invocation_uuid)
     if not current_invocation:
       raise GoofyRPCException('unabled to get invocation by given uuid: '
                               f'{current_invocation_uuid}')
-
-    current_factory_test = current_invocation.test
-    current_factory_test.Waive()
-    session.console.info('Waive current running factory test: '
-                         f'{current_factory_test.path}')
+    return current_invocation.test
 
 
 def main():

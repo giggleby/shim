@@ -11,6 +11,7 @@ from unittest import mock
 
 from cros.factory.test import device_data
 from cros.factory.test import event as test_event
+from cros.factory.test import state
 from cros.factory.test import test_case
 from cros.factory.test import test_ui
 from cros.factory.unittest_utils import mock_time_utils
@@ -47,6 +48,13 @@ class TestCaseTest(unittest.TestCase):
     self._timeline = mock_time_utils.TimeLine()
     self._patchers.extend(mock_time_utils.MockAll(self._timeline))
 
+    # Mocks goofy_rpc
+    goofy_mock_attrs = {
+        'GetCurrentFactoryTest.return_value': mock.Mock(id='UniqueID')
+    }
+    self._CreatePatcher(
+        state, 'GetInstance').return_value = mock.Mock(**goofy_mock_attrs)
+
     self._test = test_case.TestCase()
     self._test.ui_class = mock.Mock
 
@@ -56,7 +64,6 @@ class TestCaseTest(unittest.TestCase):
     self._CreatePatcher(
         test_ui, 'EventLoop').side_effect = self._StubEventLoopConstructor
 
-    self._CreatePatcher(self._test, 'goofy_rpc').return_value = mock.Mock()
     self._CreatePatcher(device_data,
                         'GetDeviceData').side_effect = self._MockGetDeviceData
     self._CreatePatcher(
@@ -110,6 +117,11 @@ class TestCaseTest(unittest.TestCase):
 
   def AssertNotReached(self):
     raise AssertionError('This should not be reached.')
+
+  def testGetNextTaskStageKey(self):
+    # pylint: disable=protected-access
+    self.assertEqual(self._test._next_task_stage_key,
+                     'factory.test_case.next_task_stage.UniqueID')
 
   def testAutomaticPass(self):
     def _RunTest():
