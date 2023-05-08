@@ -15,7 +15,7 @@
 # External dependencies:
 #  jq curl md5sum partx|cgpt pigz|gzip
 #  dd tee od sed chmod basename dirname readlink mktemp stat
-#  cp ln rm
+#  cp ln rm blockdev
 
 # Environment settings for utilities to invoke.
 : "${GZIP:="gzip"}"
@@ -1142,20 +1142,29 @@ install_payload() {
   register_tmp_object "${tmp_file}"
 
   if [ "${mode}" = "partition" ]; then
-    info "Installing from ${payload} to ${output} ..."
-    # bs is fixed on 1048576 because many dd implementations do not support
-    # units like '1M' or '1m'. Larger bs may slightly increase the speed for gz
-    # payloads (for a test_image component, execution time reduced from 72s to
-    # 59s for bs=2M), but that does not help bz2 payloads and also makes it
-    # harder to install small partitions.
-    {
-      # The script won't actually die here since the error code is piped to
-      # `do_compress`.
-      MCAST="${mcast_enabled}" fetch "${remote_url}" || \
-        echo "Failed to fetch ${remote_url}" > "${tmp_file}";
-    } | \
-      do_compress ".${file_ext}" -d | \
-      dd of="${dest}" bs=1048576 iflag=fullblock oflag=dsync
+    local output_size
+    output_size="$(blockdev --getsz "${output}")"
+    # Skip copying to output if its size is 1, which usually means it is only
+    # a placeholder.
+    if [ "${output_size}" = 1 ]; then
+      info "Skip installing from ${payload} to ${output} " \
+           "since ${output}'s block size is 1."
+    else
+      info "Installing from ${payload} to ${output} ..."
+      # bs is fixed on 1048576 because many dd implementations do not support
+      # units like '1M' or '1m'. Larger bs may slightly increase the speed for
+      # gz payloads (for a test_image component, execution time reduced from
+      # 72s to 59s for bs=2M), but that does not help bz2 payloads and also
+      # makes it harder to install small partitions.
+      {
+        # The script won't actually die here since the error code is piped to
+        # `do_compress`.
+        MCAST="${mcast_enabled}" fetch "${remote_url}" || \
+          echo "Failed to fetch ${remote_url}" > "${tmp_file}";
+      } | \
+        do_compress ".${file_ext}" -d | \
+        dd of="${dest}" bs=1048576 iflag=fullblock oflag=dsync
+    fi
   elif [ -n "${DO_INSTALL}" ]; then
     echo "Installing from ${payload} to ${output_display} ..."
     {
