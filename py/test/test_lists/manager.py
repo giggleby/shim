@@ -9,7 +9,6 @@ import logging
 import os
 import zipimport
 
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.test.test_lists import checker as checker_module
 from cros.factory.test.test_lists import test_list as test_list_module
 from cros.factory.test.test_lists import test_list_common
@@ -18,6 +17,9 @@ from cros.factory.utils import config_utils
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import type_utils
+
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
+
 
 # Default test list.
 DEFAULT_TEST_LIST_ID = 'main'

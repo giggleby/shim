@@ -5,9 +5,11 @@
 import logging
 import re
 
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.utils import file_utils
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
+
 
 _RE_MAX98390_CHANNEL_NAME = re.compile(r'"(.+?) DSM Rdc"', re.MULTILINE)
 
@@ -40,7 +42,7 @@ class SoundCardInitConfParseError(Error):
            (self.path, self.content)
 
 
-def GetSmartAmpInfo(shell=None, dut=None):
+def GetSmartAmpInfo(dut=None):
   """Returns the information about the amplifier on DUT.
 
   Amplifiers listed under `src/third_party/adhd/sound_card_init/amp/src` are
@@ -66,7 +68,7 @@ def GetSmartAmpInfo(shell=None, dut=None):
 
     return channel_names
 
-  cros_config = cros_config_module.CrosConfig(shell=shell, dut=dut)
+  cros_config = cros_config_module.CrosConfig(dut=dut)
   amp_name = cros_config.GetAmplifier()
   sound_card_init_file = cros_config.GetSoundCardInit()
   if not sound_card_init_file:
