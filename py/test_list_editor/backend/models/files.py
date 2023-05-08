@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import abc
+import json
 import os
 import threading
+from typing import Optional
 
 from cros.factory.test.env import paths
 from cros.factory.test.test_lists import test_list_common
@@ -12,50 +14,102 @@ from cros.factory.test.test_lists import test_list_common
 TEST_LIST_CONFIG_DIR = os.path.join(paths.FACTORY_PYTHON_PACKAGE_DIR, 'test',
                                     'test_lists')
 
+JSON_FILE_SUFFIX = '.json'
+DIFF_FILE_PREFIX = 'diff.'
+
 
 class ITestListFile(abc.ABC):
   """Abstract base class for test list files.
 
   This class defines the interface for saving and loading test list files.
+
+  The `diff_data` for now only stores one change. All of the changes are
+  squashed into one dictionary. In the future, if we want to support undo/redo
+  operations, we can expand this into an array of changes (deltas).
+
+  Attribute:
+    data (dict): A dictionary of test items.
+    diff_data (dict): A dictionary containing diff data.
   """
+
+  def __init__(self, data: dict, diff_data: dict) -> None:
+    self.data = data
+    self.diff_data = diff_data
 
   @abc.abstractmethod
   def Save(self) -> None:
-    """Save the test list file."""
+    """Saves the test list file."""
+
+  @abc.abstractmethod
+  def SaveDiff(self) -> None:
+    """Saves the diff test list file."""
 
   @abc.abstractmethod
   def Load(self) -> None:
-    """Load the test list file."""
+    """Loads the test list file and diff data."""
+
+
+class FilepathNotSetException(Exception):
+  """Exception to raise when path is not set."""
 
 
 class TestListFile(ITestListFile):
+  """The container for JSON test list file.
 
-  def __init__(self, data: dict, filename: str):
-    """The container for JSON test list file.
+  This class represents a container for JSON test list file. It will load the
+  corresponding base test list and its diff file.
 
-    The `filename` does not need to include ".test_list" or ".json".
+  Args:
+    data (dict): A dictionary of test items.
+    filename (str): The name of the test list. The `filename` does not need
+      to include ".json".
+    diff_data (dict): A dictionary containing diff data.
+  """
 
-    Args:
-      data: A dictionary of test items.
-      filename: The name of the test list.
-    """
-    self.data = data
+  def __init__(self, data: Optional[dict] = None, filename: str = '',
+               diff_data: Optional[dict] = None):
+    data = data or {}
+    diff_data = diff_data or {}
+    super().__init__(data, diff_data)
     self.filename = filename
+    self.diff_file_path = os.path.join(
+        TEST_LIST_CONFIG_DIR, DIFF_FILE_PREFIX + filename +
+        JSON_FILE_SUFFIX) if filename else ''
 
   def Save(self):
     """Saves test list to JSON file.
 
-    Refer to `test_list_common.SaveTestList`.
+    Refer to the underlying function for detailed exceptions.
     """
-    test_list_common.SaveTestList(self.data, self.filename)
+    if not self.filename:
+      raise FilepathNotSetException('File path is not set.')
+
+    test_list_common.SaveTestList(self.data,
+                                  self.filename.removesuffix('.test_list'))
+
+  def SaveDiff(self) -> None:
+    """Save the diff to test list diff file."""
+    if not self.diff_file_path:
+      raise FilepathNotSetException('File path is not set.')
+
+    with open(self.diff_file_path, 'w', encoding='UTF-8') as file:
+      json.dump(self.diff_data, file)
 
   def Load(self):
-    """Loads test list JSON file to self.data.
+    """Loads the test list file and diff data.
 
-    Refer to `test_list_common.LoadTestList`.
+    This method loads the test list JSON file and its diff data into
+    `self.data` and `self.diff_data`.
     """
     self.data = test_list_common.LoadTestList(self.filename,
                                               TEST_LIST_CONFIG_DIR)
+
+    if not os.path.exists(self.diff_file_path):
+      self.diff_data = {}
+      return
+
+    with open(self.diff_file_path, 'r', encoding='UTF-8') as file:
+      self.diff_data = json.load(file)
 
 
 class ITestListFileFactory(abc.ABC):

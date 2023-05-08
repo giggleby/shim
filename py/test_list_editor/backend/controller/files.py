@@ -17,7 +17,7 @@ class SaveFileController:
       files_request: file_schema.FilesRequest) -> file_schema.SaveFilesResponse:
     for file in files_request.files:
       test_list_file: file_model.ITestListFile = self.factory.Get(
-          data=file.data, filename=file.filename)
+          data=file.data, filename=file.filename, diff_data={})
       test_list_file.Save()
 
     return file_schema.SaveFilesResponse(
