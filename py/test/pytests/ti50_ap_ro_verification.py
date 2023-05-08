@@ -41,7 +41,6 @@ To test AP RO verification, add this to test list::
 
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool.core import Gooftool
-from cros.factory.test import device_data
 from cros.factory.test import session
 from cros.factory.test import state
 from cros.factory.test import test_case
@@ -103,8 +102,6 @@ class Ti50APROVerficationTest(test_case.TestCase):
           no_write_protect=(not self.args.enable_swwp), wpsr=self.args.wpsr)
 
       # Reboot GSC.
-      self.goofy.SaveDataForNextBoot()
-      device_data.UpdateDeviceData({self.device_data_key: True})
       try:
         self.gooftool.GSCReboot()
       finally:
