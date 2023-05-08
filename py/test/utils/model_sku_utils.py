@@ -7,9 +7,10 @@ import logging
 import os
 import re
 
-from cros.factory.gooftool import cros_config
 from cros.factory.test.env import paths
 from cros.factory.utils import config_utils
+
+from cros.factory.external.chromeos_cli import cros_config
 
 
 BOXSTER = 'boxster'

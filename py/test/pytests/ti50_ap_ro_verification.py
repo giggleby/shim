@@ -41,7 +41,6 @@ To test AP RO verification, add this to test list::
 
 from cros.factory.gooftool.common import Util
 from cros.factory.gooftool.core import Gooftool
-from cros.factory.gooftool import gsctool
 from cros.factory.test import device_data
 from cros.factory.test import session
 from cros.factory.test import state
@@ -49,6 +48,8 @@ from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils.gsc_utils import GSCUtils
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import gsctool
 
 
 class Ti50APROVerficationTest(test_case.TestCase):

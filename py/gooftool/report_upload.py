@@ -15,10 +15,11 @@ import urllib.parse
 import xmlrpc.client
 
 from cros.factory.gooftool.common import Shell
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.utils import file_utils
 from cros.factory.utils.string_utils import ParseUrl
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
 
 
 # Constants

@@ -6,22 +6,24 @@
 import unittest
 from unittest import mock
 
-from cros.factory.gooftool import common
-from cros.factory.gooftool import gsctool
-from cros.factory.utils import type_utils
+from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import shell
 
 
 class GSCToolTest(unittest.TestCase):
+
   def setUp(self):
-    self.shell = mock.Mock(spec=common.Shell)
-    self.gsctool = gsctool.GSCTool(shell=self.shell)
+    self.gsctool = gsctool.GSCTool()
+    self.shell = mock.Mock(spec=shell.Shell)
+    self.gsctool._shell = self.shell  # pylint: disable=protected-access
 
   def testGetCr50FirmwareVersion(self):
-    self._SetGSCToolUtilityResult(stdout=('start\n'
-                                          'target running protocol version -1\n'
-                                          'offsets: .....\n'
-                                          'RO_FW_VER=1.2.34\n'
-                                          'RW_FW_VER=5.6.78\n'))
+    self._SetGSCToolUtilityResult(
+        stdout=('start\n'
+                'target running protocol version -1\n'
+                'offsets: .....\n'
+                'RO_FW_VER=1.2.34\n'
+                'RW_FW_VER=5.6.78\n'))
     fw_ver = self.gsctool.GetCr50FirmwareVersion()
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-M', '-a', '-f'])
     self.assertEqual(fw_ver.ro_version, '1.2.34')
@@ -35,37 +37,40 @@ class GSCToolTest(unittest.TestCase):
 
   def testUpdateCr50Firmware(self):
     self._SetGSCToolUtilityResult()
-    self.assertEqual(self.gsctool.UpdateCr50Firmware('img'),
-                     gsctool.UpdateResult.NOOP)
+    self.assertEqual(
+        self.gsctool.UpdateCr50Firmware('img'), gsctool.UpdateResult.NOOP)
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-a', '-u', 'img'])
 
     self._SetGSCToolUtilityResult(status=1)
-    self.assertEqual(self.gsctool.UpdateCr50Firmware('img'),
-                     gsctool.UpdateResult.ALL_UPDATED)
+    self.assertEqual(
+        self.gsctool.UpdateCr50Firmware('img'),
+        gsctool.UpdateResult.ALL_UPDATED)
 
     self._SetGSCToolUtilityResult(status=2)
-    self.assertEqual(self.gsctool.UpdateCr50Firmware('img'),
-                     gsctool.UpdateResult.RW_UPDATED)
+    self.assertEqual(
+        self.gsctool.UpdateCr50Firmware('img'), gsctool.UpdateResult.RW_UPDATED)
 
     self._SetGSCToolUtilityResult(status=3)
     self.assertRaises(gsctool.GSCToolError, self.gsctool.UpdateCr50Firmware,
                       'img')
 
   def testGetImageInfo(self):
-    self._SetGSCToolUtilityResult(stdout=('read ... bytes from ...\n'
-                                          'IMAGE_RO_FW_VER=1.2.34\n'
-                                          'IMAGE_RW_FW_VER=5.6.78\n'
-                                          'IMAGE_BID_STRING=00000000\n'
-                                          'IMAGE_BID_MASK=00000000\n'
-                                          'IMAGE_BID_FLAGS=00000abc\n'))
+    self._SetGSCToolUtilityResult(
+        stdout=('read ... bytes from ...\n'
+                'IMAGE_RO_FW_VER=1.2.34\n'
+                'IMAGE_RW_FW_VER=5.6.78\n'
+                'IMAGE_BID_STRING=00000000\n'
+                'IMAGE_BID_MASK=00000000\n'
+                'IMAGE_BID_FLAGS=00000abc\n'))
     image_info = self.gsctool.GetImageInfo('img')
     self._CheckCalledCommand(['/usr/sbin/gsctool', '-M', '-b', 'img'])
     self.assertEqual(image_info.ro_fw_version, '1.2.34')
     self.assertEqual(image_info.rw_fw_version, '5.6.78')
     self.assertEqual(image_info.board_id_flags, 0xabc)
 
-    self._SetGSCToolUtilityResult(stdout=('read ... bytes from ...\n'
-                                          'IMAGE_BID_FLAGS=00000abc\n'))
+    self._SetGSCToolUtilityResult(
+        stdout=('read ... bytes from ...\n'
+                'IMAGE_BID_FLAGS=00000abc\n'))
     self.assertRaises(gsctool.GSCToolError, self.gsctool.GetImageInfo, 'img')
 
     self._SetGSCToolUtilityResult(status=1)
@@ -98,7 +103,8 @@ class GSCToolTest(unittest.TestCase):
         'BID_TYPE': '41424344',
         'BID_TYPE_INV': 'bebdbcbb',
         'BID_FLAGS': '0000ff00',
-        'BID_RLZ': 'ABCD'}
+        'BID_RLZ': 'ABCD'
+    }
     self._SetGSCToolUtilityResult(
         stdout=(''.join(f'{k}={v}\n' for k, v in fields.items())))
     board_id = self.gsctool.GetBoardID()
@@ -112,7 +118,8 @@ class GSCToolTest(unittest.TestCase):
         'BID_TYPE': 'ffffffff',
         'BID_TYPE_INV': 'ffffffff',
         'BID_FLAGS': '0000ff00',
-        'BID_RLZ': '????'}
+        'BID_RLZ': '????'
+    }
     self._SetGSCToolUtilityResult(
         stdout=(''.join(f'{k}={v}\n' for k, v in fields2.items())))
     board_id = self.gsctool.GetBoardID()
@@ -136,7 +143,7 @@ class GSCToolTest(unittest.TestCase):
     self.assertRaises(gsctool.GSCToolError, self.gsctool.GetBoardID)
 
   def _SetGSCToolUtilityResult(self, stdout='', status=0):
-    self.shell.return_value = type_utils.Obj(
+    self.shell.return_value = shell.ShellResult(
         success=status == 0, status=status, stdout=stdout, stderr='')
 
   def _CheckCalledCommand(self, cmd):

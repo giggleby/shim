@@ -4,9 +4,10 @@
 
 import enum
 
-from cros.factory.gooftool import vpd
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
+
+from cros.factory.external.chromeos_cli import vpd
 
 
 class Partition(str, enum.Enum):

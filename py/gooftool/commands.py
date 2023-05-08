@@ -30,7 +30,6 @@ from cros.factory.gooftool import core
 from cros.factory.gooftool.core import FactoryProcessEnum
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import report_upload
-from cros.factory.gooftool import vpd
 from cros.factory.gooftool.write_protect_target import CreateWriteProtectTarget
 from cros.factory.gooftool.write_protect_target import UnsupportedOperationError
 from cros.factory.gooftool.write_protect_target import WriteProtectTargetType
@@ -54,6 +53,8 @@ from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import vpd
 
 
 # TODO(tammo): Replace calls to sys.exit with raise Exit, and maybe

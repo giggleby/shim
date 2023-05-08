@@ -5,8 +5,7 @@
 import re
 import subprocess
 
-from cros.factory.gooftool import common as gooftool_common
-
+from cros.factory.external.chromeos_cli import shell
 
 # ChromeOS firmware VPD partition names.
 VPD_READONLY_PARTITION_NAME = 'RO_VPD'
@@ -18,8 +17,8 @@ class VPDTool:
   """
   _KEY_PATTERN = re.compile(r'[a-zA-Z0-9_.]+')
 
-  def __init__(self, shell=None, raw_file=None):
-    self._shell = shell or gooftool_common.Shell
+  def __init__(self, dut=None, raw_file=None):
+    self._shell = shell.Shell(dut)
     self._raw_file = raw_file
 
   def GetValue(self, key, default_value=None, partition=None, filename=None):
@@ -58,8 +57,8 @@ class VPDTool:
     """
     raw_data = self._InvokeCmd(
         self._BuildBasicCmd(partition, filename) + ['-l', '--null-terminated'])
-    result = dict(field.split('=', 1) for field in raw_data.split('\0')
-                  if '=' in field)
+    result = dict(
+        field.split('=', 1) for field in raw_data.split('\0') if '=' in field)
     if not result and filename is not None:
       self._CheckFileExistence(filename)
     return result

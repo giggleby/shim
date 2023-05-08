@@ -124,13 +124,10 @@ prepvt firmware::
 
 from distutils import version
 import enum
-import functools
 import logging
 import os
 
 from cros.factory.device import device_utils
-from cros.factory.gooftool import common as gooftool_common
-from cros.factory.gooftool import gsctool
 from cros.factory.test import device_data
 from cros.factory.test.rules import phase
 from cros.factory.test import session
@@ -140,6 +137,8 @@ from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import gsc_utils
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
+
+from cros.factory.external.chromeos_cli import gsctool
 
 
 PROD_FW_SUFFIX = ".prod"
@@ -206,9 +205,8 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
 
-    dut_shell = functools.partial(gooftool_common.Shell, sys_interface=self.dut)
     self.gsc_utils = gsc_utils.GSCUtils()
-    self.gsctool = gsctool.GSCTool(shell=dut_shell)
+    self.gsctool = gsctool.GSCTool(dut=self.dut)
     self.fw_ver = self.gsctool.GetCr50FirmwareVersion()
     self.board_id = self.gsctool.GetBoardID()
     self.image_info = None
