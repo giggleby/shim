@@ -604,16 +604,12 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
           camera_property=self._GetCameraProperty(dlm_component_info))
     return dlm_component_db
 
-  def _BuildBrandFeatureVersions(self) -> features.BrandFeatureVersions:
-    brand_feature_versions = {}
-    for brand_name, feature_info in (
-        self._extra_resource.brand_feature_infos.items()):
-      if feature_info.feature_version < 0:
-        raise ValueError(
-            f'Unexpect feature version ({feature_info.feature_version}).')
-      if feature_info.feature_version > 0:
-        brand_feature_versions[brand_name] = feature_info.feature_version
-    return brand_feature_versions
+  def _ExtractLegacyBrands(self) -> Collection[str]:
+    return [
+        brand_name for brand_name, feature_info in
+        self._extra_resource.brand_feature_infos.items()
+        if feature_info.has_legacy_units
+    ]
 
   def Build(self) -> FeatureMatcherBuildResult:
     """Build the feature matcher source from the resources.
@@ -622,15 +618,28 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       The generation results.
     """
     try:
-      _brand_feature_versions = self._BuildBrandFeatureVersions()
-      _dlm_component_db = (
-          self._BuildDLMComponentDB() if _brand_feature_versions else {})
-      resolver = features.GetDefaultBrandFeatureSpecResolver()
-      spec = resolver.DeduceBrandFeatureSpec(self._db, _brand_feature_versions,
-                                             _dlm_component_db)
-      feature_matcher_source = (
-          self._FEATURE_MATCHER_BUILDER.GenerateFeatureMatcherRawSource(spec))
+      # TODO(yhong): Only look up `self._extra_resource.device_feature_version`.
+      all_feature_versions = [self._extra_resource.device_feature_version]
+      for feature_info in self._extra_resource.brand_feature_infos.values():
+        all_feature_versions.append(feature_info.feature_version)
+      for feature_version in all_feature_versions:
+        if feature_version < features.NO_FEATURE_VERSION:
+          raise ValueError(f'Unexpect feature version ({feature_version}).')
+      feature_version = max(all_feature_versions)
 
+      if feature_version == features.NO_FEATURE_VERSION:
+        feature_matcher_source = (
+            self._FEATURE_MATCHER_BUILDER.GenerateNoneFeatureMatcherRawSource())
+
+      else:
+        legacy_brand_names = self._ExtractLegacyBrands()
+        dlm_db = self._BuildDLMComponentDB()
+        hwid_requirement_candidates = features.GetHWIDRequirementResolver(
+            feature_version).DeduceHWIDRequirementCandidates(self._db, dlm_db)
+        feature_matcher_source = (
+            self._FEATURE_MATCHER_BUILDER.GenerateFeatureMatcherRawSource(
+                feature_version, legacy_brand_names,
+                hwid_requirement_candidates))
     except (ValueError, features.HWIDDBNotSupportError) as ex:
       return FeatureMatcherBuildResult(
           has_warnings=False, commit_message=(

@@ -459,7 +459,8 @@ message DlmComponentInfo {
 }
 
 message FeatureInfo {
-  int64 feature_version = 1;
+  int64 feature_version = 1  [deprecated = true];
+  bool has_legacy_units = 2;
 }
 
 // External resources that HWID DB can refer to.
@@ -470,6 +471,7 @@ message HwidDbExternalResource {
           component_probe_infos = 1;
   repeated DlmComponentInfo dlm_components = 2;
   map<string, FeatureInfo> brand_feature_infos = 3;
+  int64 device_feature_version = 4;
 }
 
 message BatchGetHwidDbEditableSectionChangeClInfoRequest {

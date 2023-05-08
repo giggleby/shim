@@ -65,32 +65,29 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
       self, mock_sha256):
     mock_sha256.return_value.hexdigest.return_value = 'the_fixed_checksum'
     db = _BuildHWIDDBForTest(project_name='UNUSEDPROJ', image_ids=[0, 1, 2])
-    brand_feature_specs = {
-        'ABCD':
-            features.BrandFeatureSpec(
-                brand='ABCD', feature_version=1, hwid_requirement_candidates=[
-                    features.HWIDRequirement(
-                        description='scenario_1', bit_string_prerequisites=[
-                            features.HWIDBitStringRequirement(
-                                description='bit_string_prerequisite1-1',
-                                bit_positions=[2, 4, 5],
-                                required_values=[0b001, 0b101]),
-                        ]),
-                    features.HWIDRequirement(
-                        description='scenario_2', bit_string_prerequisites=[
-                            features.HWIDBitStringRequirement(
-                                description='bit_string_prerequisite2-1',
-                                bit_positions=[2, 4,
-                                               5], required_values=[0b000]),
-                            features.HWIDBitStringRequirement(
-                                description='bit_string_prerequisite2-1',
-                                bit_positions=[3, 6], required_values=[0b01]),
-                        ]),
-                ]),
-    }
+    feature_version = 1
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='bit_string_prerequisite1-1',
+                    bit_positions=[2, 4, 5], required_values=[0b001, 0b101]),
+            ]),
+        features.HWIDRequirement(
+            description='scenario_2', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='bit_string_prerequisite2-1',
+                    bit_positions=[2, 4, 5], required_values=[0b000]),
+                features.HWIDBitStringRequirement(
+                    description='bit_string_prerequisite2-1',
+                    bit_positions=[3, 6], required_values=[0b01]),
+            ]),
+    ]
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
-    source = builder.GenerateFeatureMatcherRawSource(brand_feature_specs)
+    legacy_brands = []
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
     actual = matcher.GenerateHWIDFeatureRequirementPayload()
 
@@ -99,7 +96,6 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         textwrap.dedent("""\
             # checksum: the_fixed_checksum
             brand_specs {
-              key: "ABCD"
               value {
                 feature_version: 1
                 profiles {
@@ -134,40 +130,38 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
             }
             """))
 
-  def testConvertedHWIDFeatureMatcherCanMatchHWIDs(self):
+  def testConvertedHWIDFeatureMatcherCanMatchHWIDsForLegacyCase(self):
     db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2])
-    brand_feature_specs = {
-        'ABCD':
-            features.BrandFeatureSpec(
-                brand='ABCD', feature_version=1, hwid_requirement_candidates=[
-                    features.HWIDRequirement(
-                        description='scenario_1', bit_string_prerequisites=[
-                            features.HWIDBitStringRequirement(
-                                description='image_id_0_or_1',
-                                bit_positions=[4, 3, 2, 1, 0],
-                                required_values=[0b00000, 0b00001]),
-                        ]),
-                    features.HWIDRequirement(
-                        description='scenario_2', bit_string_prerequisites=[
-                            features.HWIDBitStringRequirement(
-                                description='image_id_2',
-                                bit_positions=[4, 3, 2, 1,
-                                               0], required_values=[0b00010]),
-                            features.HWIDBitStringRequirement(
-                                description='bit_5_6_7_has_100_or_111',
-                                bit_positions=[5, 6, 7],
-                                required_values=[0b001, 0b111]),
-                        ]),
-                ]),
-    }
+    feature_version = 1
+    legacy_brands = ['ABCD']
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(
+                    description='image_id_0_or_1',
+                    bit_positions=[4, 3, 2, 1,
+                                   0], required_values=[0b00000, 0b00001]),
+            ]),
+        features.HWIDRequirement(
+            description='scenario_2', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(description='image_id_2',
+                                                  bit_positions=[4, 3, 2, 1, 0],
+                                                  required_values=[0b00010]),
+                features.HWIDBitStringRequirement(
+                    description='bit_5_6_7_has_100_or_111',
+                    bit_positions=[5, 6, 7], required_values=[0b001, 0b111]),
+            ]),
+    ]
 
     builder = feature_matching.HWIDFeatureMatcherBuilder()
-    source = builder.GenerateFeatureMatcherRawSource(brand_feature_specs)
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
     for hwid_string, expected_version_or_error in (
         ('NOTTHISPROJ-ABCD A2A-B47', ValueError),
-        ('THEPROJ A2A-B47', 0),
+        ('THEPROJ A2A-B47', 0),  # no brand
+        ('THEPROJ-WXYZ A2A-B9W', 0),  # incorrect brand
         ('THEPROJ-ABCD A8A-B4T', 1),  # match scenario_1
         ('THEPROJ-ABCD B2A-B5L', 1),  # match scenario_1
         ('THEPROJ-ABCD C8A-B8Y', 0),  # not match bit_5_6_7_has_100_or_111

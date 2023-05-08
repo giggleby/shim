@@ -14,6 +14,7 @@ from cros.factory.hwid.v3 import identity as identity_module
 from cros.factory.hwid.v3 import transformer
 from cros.factory.utils import file_utils
 
+
 try:
   # For HWID service testing environment.
   import hwid_feature_requirement_pb2
@@ -71,6 +72,10 @@ def _GetBitOrZeroAt(bit_string: str, index: int) -> str:
 class FeatureRequirementSpecChecker(Checker):
   """Checks the HWID's feature compliance version against the given spec."""
 
+  _FEATURE_INCOMPLIANT_BRAND_SPEC = _BrandFeatureRequirementSpec(
+      feature_version=FEATURE_INCOMPLIANT_VERSION, feature_enablement_case=(
+          _BrandFeatureRequirementSpec.FEATURE_MUST_NOT_ENABLED))
+
   @classmethod
   def _ValidateFeatureRequirementSpec(
       cls, spec: hwid_feature_requirement_pb2.FeatureRequirementSpec):
@@ -83,21 +88,27 @@ class FeatureRequirementSpecChecker(Checker):
       ValueError: if the given spec is considered invalid.
     """
     for brand_name, brand_spec in spec.brand_specs.items():
-      if brand_spec.feature_version <= FEATURE_INCOMPLIANT_VERSION:
-        raise ValueError('Invalid spec: bad feature version.')
+      error_msg_prompt = f'Invalid spec for {brand_name or "(default brand)"}'
+      feature_version = brand_spec.feature_version
+      if feature_version == cls._FEATURE_INCOMPLIANT_BRAND_SPEC.feature_version:
+        if brand_spec != cls._FEATURE_INCOMPLIANT_BRAND_SPEC:
+          raise ValueError(f'{error_msg_prompt}: brand spec conflicts with '
+                           'feature incompliant version.')
+        continue
+
       if (brand_spec.feature_enablement_case ==
           _BrandFeatureRequirementSpec.FEATURE_ENABLEMENT_CASE_UNSPECIFIC):
         raise ValueError(
-            'Invalid spec: feature enablement case not specified.')
+            f'{error_msg_prompt}: feature enablement case not specified.')
       for profile in brand_spec.profiles:
         for encoding_requirement in profile.encoding_requirements:
           if not encoding_requirement.bit_locations:
-            raise ValueError('Invalid spec: zero-length bit_locations.')
+            raise ValueError(f'{error_msg_prompt}: zero-length bit_locations.')
           if any(
               len(required_value) != len(encoding_requirement.bit_locations)
               for required_value in encoding_requirement.required_values):
-            raise ValueError(
-                'Invalid spec: required value bit-string length mismatch.')
+            raise ValueError(f'{error_msg_prompt}: required value bit-string '
+                             'length mismatch.')
 
   def __init__(self, spec: hwid_feature_requirement_pb2.FeatureRequirementSpec):
     """Initializer.

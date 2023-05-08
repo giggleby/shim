@@ -370,19 +370,15 @@ class HWIDV3SelfServiceActionHelperTest(unittest.TestCase):
         self.assertIn('project', tot_yaml)
 
   def testBundleHWIDDB_ContainsFeatureRequirementSpecFile(self):
-    spec = {
-        'ABCD':
-            features.BrandFeatureSpec(
-                brand='ABCD', feature_version=1, hwid_requirement_candidates=[
-                    features.HWIDRequirement(
-                        description='always_fulfill_requirement',
-                        bit_string_prerequisites=[])
-                ]),
-    }
     feature_matcher_builder = (
         hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
     feature_matcher_source = (
-        feature_matcher_builder.GenerateFeatureMatcherRawSource(spec))
+        feature_matcher_builder.GenerateFeatureMatcherRawSource(
+            feature_version=1, legacy_brands=[], hwid_requirement_candidates=[
+                features.HWIDRequirement(
+                    description='always_fulfill_requirement',
+                    bit_string_prerequisites=[])
+            ]))
     preproc_data, helper_inst = self._LoadPreprocDataAndSSHelper(
         'v3-golden.yaml', feature_matcher_source=feature_matcher_source)
 

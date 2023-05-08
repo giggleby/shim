@@ -142,6 +142,7 @@ prepare_protobuf() {
     --python_out="${TEMP_DIR}" \
     "cros/factory/hwid/service/appengine/proto/hwid_api_messages.proto" \
     "cros/factory/hwid/service/appengine/proto/ingestion.proto" \
+    "cros/factory/hwid/service/appengine/proto/feature_match.proto" \
     "cros/factory/probe_info_service/app_engine/stubby.proto"
 }
 

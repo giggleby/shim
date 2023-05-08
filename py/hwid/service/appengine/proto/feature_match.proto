@@ -1,0 +1,55 @@
+// Copyright 2023 The ChromiumOS Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+// A bundle of checking rules, targeting to match a subset or all HWID strings
+// that fulfill the feature's requirements.
+message HwidRequirement {
+  // Briefly describe the scope of this profile.
+  string description = 1;
+
+  // One single requirement for the encoded HWID bit string.
+  //
+  // A HWID string contains a base8192 encoded bit string that records
+  // probed component IDs.  This requirement asserts the values of the
+  // certain bits.  Specifically, a HWID string fulfills this requirement if
+  // and only if <BIT_VALUE> is in `required_values`, where <BIT_VALUE>
+  // is defined as the following:
+  //
+  //   <BIT_VALUE> = sum( hwid_bit_string[bit_positions[i]] << i
+  //                      for i in 0..len(bit_positions)-1 )
+  //
+  // Note that `required_values` is stored in little-endian bit-string so
+  // that it can hold integers beyond 32-bits.  The string length of
+  // each element in `required_values` is expected to equal to the length
+  // of `bit_positions`.
+  message EncodingRequirement {
+    // Briefly describes what this rule is checking for.
+    string description = 1;
+
+    // See message's description.
+    repeated uint32 bit_positions = 2;
+    // See message's description.
+    repeated string required_values = 3;
+  }
+  // A set of requisite encoding requirements.  The HWID string is considered
+  // matched only if it fulfills all encoding requirements.
+  repeated EncodingRequirement encoding_requirements = 2;
+}
+
+// The feature spec of the device.
+message DeviceFeatureSpec {
+  // The device's feature version.  Value 0 means the device completely out
+  // for versioned feature enablement.
+  uint32 feature_version = 1;
+
+  // If `feature_version` is greater than 0, `hwid_requirement_candidates`
+  // stores candidates of HWID requirements that can match the compliant HW
+  // configurations.
+  repeated HwidRequirement hwid_requirement_candidates = 2;
+
+  // A list of legacy brand names.
+  repeated string legacy_brands = 3;
+}

@@ -18,6 +18,7 @@ from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data.converter import converter as converter_module
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_action
@@ -211,24 +212,42 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
   def setUp(self):
     super().setUp()
 
-    self._mock_spec_resolver = (
-        mock.create_autospec(features.BrandFeatureSpecResolver, instance=True))
-    self._mock_spec_resolver.DeduceBrandFeatureSpec.return_value = {}
-
-    patcher = mock.patch.object(features, 'GetDefaultBrandFeatureSpecResolver',
-                                return_value=self._mock_spec_resolver)
-    patcher.start()
+    patcher = mock.patch.object(features, 'GetHWIDRequirementResolver')
+    self._mock_get_hwid_requirement_resolver = patcher.start()
+    mock_resolver = self._mock_get_hwid_requirement_resolver.return_value
+    self._mock_deduce_hwid_requirement_candidates = (
+        mock_resolver.DeduceHWIDRequirementCandidates)
+    self._mock_deduce_hwid_requirement_candidates.return_value = []
     self.addCleanup(patcher.stop)
 
-  def _GetConvertedBrandFeatureVersionsFromMock(self):
-    self._mock_spec_resolver.DeduceBrandFeatureSpec.assert_called()
-    args, kwargs = self._mock_spec_resolver.DeduceBrandFeatureSpec.call_args
-    return kwargs['brand_feature_versions'] if len(args) < 1 else args[1]
+    patcher = mock.patch.object(feature_matching.HWIDFeatureMatcherBuilder,
+                                'GenerateFeatureMatcherRawSource',
+                                return_value='')
+    self._mock_generate_feature_matcher_raw_source = patcher.start()
+    self.addCleanup(patcher.stop)
+
+    patcher = mock.patch.object(feature_matching.HWIDFeatureMatcherBuilder,
+                                'GenerateNoneFeatureMatcherRawSource',
+                                return_value='')
+    self._mock_generate_none_feature_matcher_raw_source = patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def _GetMockMethodArg(self, mock_method, arg_index, kwarg_name):
+    mock_method.assert_called()
+    args, kwargs = mock_method.call_args
+    return args[arg_index] if arg_index < len(args) else kwargs[kwarg_name]
+
+  def _GetFeatureVersionFromMock(self):
+    return self._GetMockMethodArg(
+        self._mock_generate_feature_matcher_raw_source, 0, 'feature_version')
+
+  def _GetLegacyBrandsFromMock(self):
+    return self._GetMockMethodArg(
+        self._mock_generate_feature_matcher_raw_source, 1, 'legacy_brands')
 
   def _GetConvertedDLMComponentDatabaseFromMock(self):
-    self._mock_spec_resolver.DeduceBrandFeatureSpec.assert_called()
-    args, kwargs = self._mock_spec_resolver.DeduceBrandFeatureSpec.call_args
-    return kwargs['dlm_db'] if len(args) < 2 else args[2]
+    return self._GetMockMethodArg(self._mock_deduce_hwid_requirement_candidates,
+                                  1, 'dlm_db')
 
   def _AssertFeatureMatcherBuildResultSuccess(
       self, actual: ss_helper_module.FeatureMatcherBuildResult,
@@ -283,8 +302,21 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
     result = inst.Build()
 
     self._AssertFeatureMatcherBuildResultSuccess(result)
-    self.assertDictEqual(self._GetConvertedBrandFeatureVersionsFromMock(),
-                         {'BBBB': 1})
+    self.assertEqual(self._GetFeatureVersionFromMock(), 1)
+
+  def testBuild_WithValidLegacyBrands_ThenSuccess(self):
+    db = self._BuildHWIDDBForTest()
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    bbbb_info = extra_resource.brand_feature_infos.get_or_create('BBBB')
+    bbbb_info.feature_version = 1
+    bbbb_info.has_legacy_units = True
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result)
+    self.assertCountEqual(self._GetLegacyBrandsFromMock(), ['BBBB'])
 
   def testBuild_WithInvalidCPUFeatureVersion_ThenSuccessWithWarning(self):
     db = self._BuildHWIDDBForTest(
