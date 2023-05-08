@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from cros.factory.gooftool import common as gooftool_common
+from cros.factory.external.chromeos_cli import shell
 
 # Path to the product name and sku id of the device.
 # ARM devices: DEVICE_TREE_COMPATIBLE_PATH and DEVICE_TREE_SKU_ID_PATH
@@ -16,12 +16,11 @@ PRODUCT_SKU_ID_PATH = '/sys/class/dmi/id/product_sku'
 class CrosConfig:
   """Helper class to get data from cros_config."""
 
-  def __init__(self, shell=None, dut=None):
-    self._shell = shell or gooftool_common.Shell
-    self._dut = dut
+  def __init__(self, dut=None):
+    self._shell = shell.Shell(dut)
 
   def GetValue(self, path, key):
-    return self._shell(['cros_config', path, key], sys_interface=self._dut)
+    return self._shell(['cros_config', path, key])
 
   def GetCustomLabelTag(self):
     """Get custom-label-tag value of this device.

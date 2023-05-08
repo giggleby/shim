@@ -15,8 +15,8 @@ class VPDTest(unittest.TestCase):
     self.dut = device_utils.CreateDUTInterface()
     self.vpd = self.dut.vpd
 
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.GetAllData')
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.GetValue')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.GetAllData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.GetValue')
   def testGet(self, get_value_mock, get_all_data_mock):
     def GetValueSideEffect(*args, **unused_kwargs):
       if args[0] == 'a':
@@ -39,8 +39,8 @@ class VPDTest(unittest.TestCase):
     get_value_mock.assert_called_with('b', default_value=123,
                                       partition='RO_VPD')
 
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.GetAllData')
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.UpdateData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.GetAllData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.UpdateData')
   def testUpdate(self, update_data_mock, get_all_data_mock):
     get_all_data_mock.return_value = dict(a='b', foo='bar', empty='')
 
@@ -49,8 +49,8 @@ class VPDTest(unittest.TestCase):
     update_data_mock.assert_called_once_with(dict(w='x', y='z', foo=None),
                                              partition='RW_VPD')
 
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.GetAllData')
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.UpdateData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.GetAllData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.UpdateData')
   def testUpdatePartial(self, update_data_mock, get_all_data_mock):
     # "a"="b" is already in vpd, update will skip it.
     # "unset" is already not in vpd, update will skip it.
@@ -61,18 +61,18 @@ class VPDTest(unittest.TestCase):
     update_data_mock.assert_called_once_with(dict(w='x', y='z'),
                                              partition='RW_VPD')
 
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.UpdateData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.UpdateData')
   def testDeleteOne(self, update_data_mock):
     self.vpd.rw.Delete('a')
     update_data_mock.assert_called_once_with(dict(a=None), partition='RW_VPD')
 
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.UpdateData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.UpdateData')
   def testDeleteTwo(self, update_data_mock):
     self.vpd.rw.Delete('a', 'b')
     update_data_mock.assert_called_once_with(dict(a=None, b=None),
                                              partition='RW_VPD')
 
-  @mock.patch('cros.factory.gooftool.vpd.VPDTool.GetAllData')
+  @mock.patch('cros.factory.external.chromeos_cli.vpd.VPDTool.GetAllData')
   def testGetPartition(self, get_all_data_mock):
     get_all_data_mock.return_value = dict(foo='bar')
     self.assertEqual(dict(foo='bar'),

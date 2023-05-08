@@ -6,7 +6,7 @@
 import unittest
 from unittest import mock
 
-from cros.factory.gooftool.gsctool import FeatureManagementFlags
+from cros.factory.external.chromeos_cli.gsctool import FeatureManagementFlags
 from cros.factory.probe.functions import feature_management_flags
 
 
@@ -19,7 +19,7 @@ class FeatureManagementFlagsFunctionTest(unittest.TestCase):
     self._mock_board_id_set = patcher.start()
     self.addCleanup(self._mock_board_id_set.stop)
 
-  @mock.patch('cros.factory.gooftool.gsctool'
+  @mock.patch('cros.factory.external.chromeos_cli.gsctool'
               '.GSCTool.GetFeatureManagementFlags')
   def testCr50BoardIDAlreadySet(self, mock_gsc_get_flags):
     self._mock_board_id_set.return_value = True

@@ -358,7 +358,7 @@ def GetVPDData(run_vpd=False, infile=None):
   """
   assert not (run_vpd and infile)
   if run_vpd:
-    from cros.factory.gooftool import vpd
+    from cros.factory.external.chromeos_cli import vpd
     vpd_tool = vpd.VPDTool()
     return {
         'ro': vpd_tool.GetAllData(partition=vpd.VPD_READONLY_PARTITION_NAME),
@@ -387,13 +387,14 @@ def ProbeProject():
   """
   import subprocess
 
-  from cros.factory.gooftool import cros_config as cros_config_module
   from cros.factory.utils import cros_board_utils
+
+  from cros.factory.external.chromeos_cli import cros_config
 
 
   try:
-    cros_config = cros_config_module.CrosConfig()
-    project = cros_config.GetModelName().lower()
+    cros_config_cli = cros_config.CrosConfig()
+    project = cros_config_cli.GetModelName().lower()
     if project:
       return project
 
@@ -412,16 +413,17 @@ def ProbeBrandCode():
   Returns:
     The probed brand code as a string.
   """
-  from cros.factory.gooftool import cros_config as cros_config_module
   from cros.factory.utils import sys_utils
+
+  from cros.factory.external.chromeos_cli import cros_config
 
   if sys_utils.InChroot():
     raise ValueError('Cannot probe brand code in chroot. Please use '
                      '--brand-code to specify brand code.')
 
-  cros_config = cros_config_module.CrosConfig()
+  cros_config_cli = cros_config.CrosConfig()
 
-  return cros_config.GetBrandCode()
+  return cros_config_cli.GetBrandCode()
 
 
 _HWID_REPO_PATH = None

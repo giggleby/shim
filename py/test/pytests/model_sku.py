@@ -68,7 +68,6 @@ import logging
 import os
 
 from cros.factory.device import device_utils
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.test import device_data
 from cros.factory.test.i18n import _
 from cros.factory.test import state
@@ -77,6 +76,8 @@ from cros.factory.test import test_ui
 from cros.factory.test import ui_templates
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.utils.arg_utils import Arg
+
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
 
 
 _KEY_COMPONENT_SKU = device_data.JoinKeys(device_data.KEY_COMPONENT, 'sku')

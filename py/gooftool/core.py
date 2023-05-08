@@ -20,12 +20,9 @@ import yaml
 
 from cros.factory.gooftool import bmpblk
 from cros.factory.gooftool.common import Util
-from cros.factory.gooftool import cros_config as cros_config_module
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import gbb
-from cros.factory.gooftool import gsctool as gsctool_module
 from cros.factory.gooftool import interval
-from cros.factory.gooftool import vpd
 from cros.factory.gooftool import vpd_data
 from cros.factory.gooftool import wipe
 from cros.factory.hwid.v3.database import Database
@@ -47,6 +44,10 @@ from cros.factory.utils import json_utils
 from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
+from cros.factory.external.chromeos_cli import gsctool as gsctool_module
+from cros.factory.external.chromeos_cli import vpd
 
 
 # The mismatch result tuple.
@@ -145,7 +146,7 @@ class Gooftool:
     self._unpack_bmpblock = bmpblk.unpack_bmpblock
     self._named_temporary_file = tempfile.NamedTemporaryFile
     self._db = None
-    self._cros_config = cros_config_module.CrosConfig(self._util.shell)
+    self._cros_config = cros_config_module.CrosConfig()
 
   def GetLogicalBlockSize(self):
     """Get the logical block size of a DUT by reading file under /sys/block.
@@ -1286,7 +1287,7 @@ class Gooftool:
       Error if failed to get board ID, failed to get RLZ, or cr50 board ID is
       different from RLZ.
     """
-    gsctool = gsctool_module.GSCTool(self._util.shell)
+    gsctool = gsctool_module.GSCTool()
 
     try:
       board_id = gsctool.GetBoardID()
@@ -1312,7 +1313,7 @@ class Gooftool:
       logging.info('AP-RO hash is already cleared, do nothing.')
       return
 
-    gsctool = gsctool_module.GSCTool(self._util.shell)
+    gsctool = gsctool_module.GSCTool()
     gsctool.ClearROHash()
     logging.info('Successfully clear AP-RO hash on Cr50.')
 
@@ -1645,7 +1646,7 @@ class Gooftool:
     open ccd capabilities. Before finalizing the DUT, factory mode MUST be
     disabled.
     """
-    gsctool = gsctool_module.GSCTool(self._util.shell)
+    gsctool = gsctool_module.GSCTool()
 
     def _IsCCDInfoMandatory():
       cr50_verion = gsctool.GetCr50FirmwareVersion().rw_version
@@ -1814,4 +1815,4 @@ class Gooftool:
   def GetSmartAmpInfo(self):
     """Returns the smart amp info by parsing sound-card-init-conf."""
 
-    return smart_amp_utils.GetSmartAmpInfo(shell=self._util.shell)
+    return smart_amp_utils.GetSmartAmpInfo()
