@@ -19,6 +19,9 @@ from cros.factory.test import session
 from cros.factory.utils import net_utils
 from cros.factory.utils.sys_utils import MountDeviceAndReadFile
 
+from cros.factory.external.chromeos_cli import gsctool
+from cros.factory.external.chromeos_cli import vpd
+
 
 # Static list of known properties in SystemInfo.
 _INFO_PROP_LIST = []

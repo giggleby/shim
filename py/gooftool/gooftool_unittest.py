@@ -21,9 +21,7 @@ from cros.factory.gooftool.common import Shell
 from cros.factory.gooftool import core
 from cros.factory.gooftool.core import CrosConfigIdentity
 from cros.factory.gooftool.core import IdentitySourceEnum
-from cros.factory.gooftool import cros_config
 from cros.factory.gooftool import crosfw
-from cros.factory.gooftool import vpd
 from cros.factory.test.rules import phase
 from cros.factory.test.utils import model_sku_utils
 from cros.factory.unittest_utils import label_utils
@@ -32,6 +30,9 @@ from cros.factory.utils import pygpt
 from cros.factory.utils import sys_utils
 from cros.factory.utils.type_utils import Error
 from cros.factory.utils.type_utils import Obj
+
+from cros.factory.external.chromeos_cli import cros_config
+from cros.factory.external.chromeos_cli import vpd
 
 
 _TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), 'testdata')

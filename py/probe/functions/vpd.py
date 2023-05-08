@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from cros.factory.gooftool import vpd
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import type_utils
+
+from cros.factory.external.chromeos_cli import vpd
 
 
 PARTITION = type_utils.Enum(['ro', 'rw'])

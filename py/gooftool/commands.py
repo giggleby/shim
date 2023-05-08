@@ -28,7 +28,6 @@ from cros.factory.gooftool import core
 from cros.factory.gooftool.core import Gooftool
 from cros.factory.gooftool import crosfw
 from cros.factory.gooftool import report_upload
-from cros.factory.gooftool import vpd
 from cros.factory.hwid.v3 import hwid_utils
 from cros.factory.probe.functions import chromeos_firmware
 from cros.factory.test.env import paths
@@ -49,6 +48,8 @@ from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
 from cros.factory.utils import time_utils
 from cros.factory.utils.type_utils import Error
+
+from cros.factory.external.chromeos_cli import vpd
 
 
 # TODO(tammo): Replace calls to sys.exit with raise Exit, and maybe

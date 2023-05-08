@@ -46,12 +46,11 @@ If you are manufacturing MLBs for RMA parts or LOEM projects, please set test
 list constant "mlb_mode" to true.
 """
 
-import functools
 import logging
 
 from cros.factory.device import device_utils
 from cros.factory.gooftool import common as gooftool_common
-from cros.factory.gooftool import cros_config as cros_config_module
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
 from cros.factory.test import test_case
 from cros.factory.test.utils import deploy_utils
 from cros.factory.testlog import testlog
@@ -76,8 +75,7 @@ class Cr50WriteCustomLabelFlags(test_case.TestCase):
   def setUp(self):
     # Setups the DUT environments.
     self.dut = device_utils.CreateDUTInterface()
-    dut_shell = functools.partial(gooftool_common.Shell, sys_interface=self.dut)
-    self.cros_config = cros_config_module.CrosConfig(dut_shell)
+    self.cros_config = cros_config_module.CrosConfig(self.dut)
 
   def runTest(self):
     is_custom_label, custom_label_tag = self.cros_config.GetCustomLabelTag()

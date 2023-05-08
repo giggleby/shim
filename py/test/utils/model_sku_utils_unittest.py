@@ -94,7 +94,7 @@ class TestModelSKUUtils(unittest.TestCase):
     cros_config_mock.GetModelName.return_value = model
 
   @mock.patch('os.listdir')
-  @mock.patch('cros.factory.gooftool.cros_config.CrosConfig')
+  @mock.patch('cros.factory.external.chromeos_cli.cros_config.CrosConfig')
   @mock.patch('cros.factory.utils.config_utils.LoadConfig')
   @mock.patch('cros.factory.utils.sys_interface.SystemInterface')
   def testGetDesignConfigX86(self, sys_mock, load_config_mock, cros_config_mock,
@@ -125,7 +125,7 @@ class TestModelSKUUtils(unittest.TestCase):
     self.assertEqual(design_config, {})
 
   @mock.patch('os.listdir')
-  @mock.patch('cros.factory.gooftool.cros_config.CrosConfig')
+  @mock.patch('cros.factory.external.chromeos_cli.cros_config.CrosConfig')
   @mock.patch('cros.factory.utils.config_utils.LoadConfig')
   @mock.patch('cros.factory.utils.sys_interface.SystemInterface')
   def testGetDesignConfigARM(self, sys_mock, load_config_mock, cros_config_mock,

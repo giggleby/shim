@@ -6,17 +6,17 @@
 import unittest
 from unittest import mock
 
-from cros.factory.gooftool import common
-from cros.factory.gooftool import vpd
-from cros.factory.utils import type_utils
+from cros.factory.external.chromeos_cli import shell
+from cros.factory.external.chromeos_cli import vpd
 
 
 class VPDToolTest(unittest.TestCase):
   """Unittest for VPDTool."""
 
   def setUp(self):
-    self.mocked_shell = mock.Mock(spec=common.Shell)
-    self.vpd = vpd.VPDTool(shell=self.mocked_shell)
+    self.vpd = vpd.VPDTool()
+    self.mocked_shell = mock.Mock(spec=shell.Shell)
+    self.vpd._shell = self.mocked_shell  # pylint: disable=protected-access
 
   def testGetData(self):
     self.mocked_shell.return_value = self._CreateSuccessShellOutput('bbb')
@@ -32,41 +32,48 @@ class VPDToolTest(unittest.TestCase):
   def testGetAllData(self):
     self.mocked_shell.return_value = self._CreateSuccessShellOutput(
         'aa=bb\0cc==\0')
-    self.assertEqual(self.vpd.GetAllData(), {'aa': 'bb', 'cc': '='})
+    self.assertEqual(self.vpd.GetAllData(), {
+        'aa': 'bb',
+        'cc': '='
+    })
     self._CheckMockedShellCmd(['vpd', '-l', '--null-terminated'])
 
   def testUpdateData(self):
     self.vpd.UpdateData({'cc': None})
     self.assertEqual(self.mocked_shell.call_args_list, [
         mock.call(['vpd', '-d', 'cc']),
-        mock.call(['dump_vpd_log', '--force'])])
+        mock.call(['dump_vpd_log', '--force'])
+    ])
 
     self.mocked_shell.reset_mock()
     self.vpd.UpdateData({'aa': 'bb'})
     self.assertEqual(self.mocked_shell.call_args_list, [
         mock.call(['vpd', '-s', 'aa=bb']),
-        mock.call(['dump_vpd_log', '--force'])])
+        mock.call(['dump_vpd_log', '--force'])
+    ])
 
   def testInvalidKey(self):
     self.assertRaises(ValueError, self.vpd.GetValue, '')
     self.assertRaises(ValueError, self.vpd.GetValue, 'aaa=bb')
-    self.assertRaises(ValueError, self.vpd.UpdateData, {'aa': 'bb', '': None})
+    self.assertRaises(ValueError, self.vpd.UpdateData, {
+        'aa': 'bb',
+        '': None
+    })
 
   def testSpecificFilenameAndPartition(self):
     self.mocked_shell.return_value = self._CreateSuccessShellOutput('v')
     self.assertEqual(
         self.vpd.GetValue('key', filename='f',
-                          partition=vpd.VPD_READONLY_PARTITION_NAME),
-        'v')
+                          partition=vpd.VPD_READONLY_PARTITION_NAME), 'v')
     self._CheckMockedShellCmd(['vpd', '-i', 'RO_VPD', '-f', 'f', '-g', 'key'])
 
   @classmethod
   def _CreateSuccessShellOutput(cls, stdout):
-    return type_utils.Obj(stdout=stdout, stderr='', status=0, success=True)
+    return shell.ShellResult(stdout=stdout, stderr='', status=0, success=True)
 
   @classmethod
   def _CreateFailShellOutput(cls, status):
-    return type_utils.Obj(stdout='', stderr='', status=status, success=False)
+    return shell.ShellResult(stdout='', stderr='', status=status, success=False)
 
   def _CheckMockedShellCmd(self, cmd):
     # pylint: disable=unpacking-non-sequence

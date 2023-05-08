@@ -7,7 +7,7 @@ import os
 import subprocess
 import tempfile
 
-from cros.factory.gooftool import cros_config as cros_config_module
+from cros.factory.external.chromeos_cli import cros_config as cros_config_module
 from cros.factory.probe.lib import cached_probe_function
 from cros.factory.test.utils import fpmcu_utils
 from cros.factory.utils import file_utils

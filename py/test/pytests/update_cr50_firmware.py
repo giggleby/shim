@@ -83,13 +83,10 @@ in the release image::
 """
 
 from distutils import version
-import functools
 import logging
 import os
 
 from cros.factory.device import device_utils
-from cros.factory.gooftool import common as gooftool_common
-from cros.factory.gooftool import gsctool
 from cros.factory.test import device_data
 from cros.factory.test.rules import phase
 from cros.factory.test import session
@@ -98,6 +95,8 @@ from cros.factory.testlog import testlog
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import sys_utils
 from cros.factory.utils import type_utils
+
+from cros.factory.external.chromeos_cli import gsctool
 
 
 DEFAULT_FIRMWARE_PATH = '/opt/google/cr50/firmware/cr50.bin.prod'
@@ -148,8 +147,7 @@ class UpdateCr50FirmwareTest(test_case.TestCase):
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
 
-    dut_shell = functools.partial(gooftool_common.Shell, sys_interface=self.dut)
-    self.gsctool = gsctool.GSCTool(shell=dut_shell)
+    self.gsctool = gsctool.GSCTool(dut=self.dut)
     self.fw_ver = self.gsctool.GetCr50FirmwareVersion()
     self.board_id = self.gsctool.GetBoardID()
 
