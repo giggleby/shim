@@ -558,6 +558,12 @@ class ReportParser(log_utils.LoggerMixin):
         report_tar.extractall(report_dir)
       process_event['decompressEndTime'] = time.time()
 
+      metadata_path = os.path.join(report_dir, 'metadata.json')
+      if os.path.exists(metadata_path):
+        metadata_dict = json.loads(file_utils.ReadFile(metadata_path))
+        report_event['reportIndex'] = metadata_dict.get('report_index', None)
+        report_event['serverUuid'] = metadata_dict.get('server_uuid', None)
+
       eventlog_path = os.path.join(report_dir, 'events')
       if os.path.exists(eventlog_path):
         eventlog_report_event = copy.deepcopy(report_event)

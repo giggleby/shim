@@ -24,6 +24,8 @@ class OutputBigQueryFactoryReport(output_bigquery.OutputBigQuery):
         SchemaField('uuid', 'string', 'NULLABLE', None, ()),
         SchemaField('objectId', 'string', 'NULLABLE', None, ()),
         SchemaField('reportFilePath', 'string', 'NULLABLE', None, ()),
+        SchemaField('reportIndex', 'string', 'NULLABLE', None, ()),
+        SchemaField('serverUuid', 'string', 'NULLABLE', None, ()),
         SchemaField('toolkitVersion', 'string', 'NULLABLE', None, ()),
         SchemaField('factoryImageVersion', 'string', 'NULLABLE', None, ()),
         SchemaField('releaseImageVersion', 'string', 'NULLABLE', None, ()),
@@ -69,6 +71,8 @@ class OutputBigQueryFactoryReport(output_bigquery.OutputBigQuery):
     row['uuid'] = event.get('uuid')
     row['objectId'] = event.get('objectId')
     row['reportFilePath'] = event.get('reportFilePath')
+    row['reportIndex'] = event.get('reportIndex')
+    row['serverUuid'] = event.get('serverUuid')
     row['toolkitVersion'] = event.get('toolkitVersion')
     row['factoryImageVersion'] = event.get('factoryImageVersion')
     row['releaseImageVersion'] = event.get('releaseImageVersion')
