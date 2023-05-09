@@ -1859,6 +1859,28 @@ class SelfServiceHelperTest(unittest.TestCase):
                 with_new_encoding_pattern=True)),
     ], list(split_resp.change_units.values()))
 
+  def testSplitHWIDDBChange_PassWhenNoChange(self):
+    # Arrange.
+    project = 'CHROMEBOOK'
+    old_db_data = file_utils.ReadFile(_HWID_V3_CHANGE_UNIT_BEFORE)
+    # Config repo and action.
+    self._ConfigLiveHWIDRepo(project, 3, old_db_data)
+    action = self._CreateFakeHWIDBAction(project, old_db_data)
+    self._modules.ConfigHWID(project, '3', old_db_data, hwid_action=action)
+    # Call AnalyzeHWIDDBEditableSection without new_db_data to start a HWID DB
+    # change workflow.
+    analyze_resp = _AnalyzeHWIDDBEditableSection(self._ss_helper, project, '')
+    session_token = analyze_resp.validation_token
+
+    # Act.
+    db_external_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    split_req = hwid_api_messages_pb2.SplitHwidDbChangeRequest(
+        session_token=session_token, db_external_resource=db_external_resource)
+    split_resp = self._ss_helper.SplitHWIDDBChange(split_req)
+
+    # Assert.
+    self.assertFalse(split_resp.change_units)
+
   def testCreateSplittedHWIDDBCLs_Pass(self):
     # Arrange.
     project = 'CHROMEBOOK'

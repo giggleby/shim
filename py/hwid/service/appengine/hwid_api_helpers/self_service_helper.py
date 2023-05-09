@@ -1333,11 +1333,14 @@ class SelfServiceHelper:
 
     old_db = database.Database.LoadData(
         action.PatchHeader(action.GetDBEditableSection(internal=True)))
-    new_hwid_db_contents_internal = action.ConvertToInternalHWIDDBContent(
-        self._avl_converter_manager,
-        action.PatchHeader(session_cache.new_hwid_db_editable_section),
-        avl_resource)
-    new_db = database.Database.LoadData(new_hwid_db_contents_internal)
+    if session_cache.new_hwid_db_editable_section is None:
+      new_db = old_db
+    else:
+      new_hwid_db_contents_internal = action.ConvertToInternalHWIDDBContent(
+          self._avl_converter_manager,
+          action.PatchHeader(session_cache.new_hwid_db_editable_section),
+          avl_resource)
+      new_db = database.Database.LoadData(new_hwid_db_contents_internal)
 
     change_unit_manager = change_unit_utils.ChangeUnitManager(old_db, new_db)
     self._session_cache_adapter.Put(
