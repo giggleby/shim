@@ -10,7 +10,6 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 DISPLAY_MESSAGE="${SCRIPT_DIR}/display_wipe_message.sh"
 . "${SCRIPT_DIR}/options.sh"
-EC_PRESENT=0
 ECTOOL_BATTERY_SUPPORT=0
 POWER_SUPPLY_PATH="/sys/class/power_supply"
 
@@ -35,20 +34,9 @@ reset_recovery_count() {
   fi
 }
 
-test_ec_flash_presence() {
-  # If "flashrom -p ec --flash-size" command succeeds (returns 0),
-  # then EC flash chip is present in system. Otherwise, assume EC flash is not
-  # present or supported.
-  if flashrom -p ec --flash-size >/dev/null 2>&1; then
-    EC_PRESENT=1
-  else
-    EC_PRESENT=0
-  fi
-}
-
 test_ectool_battery_support() {
   # Check if "ectool battery" works
-  if [ "${EC_PRESENT}" -eq 1 ] && ectool battery >/dev/null 2>&1; then
+  if ectool battery >/dev/null 2>&1; then
     ECTOOL_BATTERY_SUPPORT=1
   else
     ECTOOL_BATTERY_SUPPORT=0
@@ -153,11 +141,7 @@ require_remove_ac() {
 }
 
 charge_control() {
-  if [ "${EC_PRESENT}" = "1" ]; then
-    ectool chargecontrol "$1" >/dev/null
-  else
-    echo "Not support charge_control without EC."
-  fi
+  ectool chargecontrol "$1" >/dev/null
 }
 
 run_stressapptest() {
@@ -249,7 +233,6 @@ main() {
   reset_activate_date
   reset_recovery_count
 
-  test_ec_flash_presence
   test_ectool_battery_support
 
   local battery_path
