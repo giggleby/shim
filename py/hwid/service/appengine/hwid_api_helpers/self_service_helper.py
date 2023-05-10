@@ -1493,11 +1493,11 @@ class SelfServiceHelper:
       final_cl_number = review_required_change_cl_number
 
     resp = hwid_api_messages_pb2.CreateSplittedHwidDbClsResponse(
-        auto_mergeable_change_cl_created=not split_result.auto_mergeable_noop,
+        auto_mergeable_change_cl_created=auto_mergeable_change_cl_number != 0,
         auto_mergeable_change_cl_number=auto_mergeable_change_cl_number,
         auto_mergeable_change_unit_identities=(
             split_result.auto_mergeable_change_unit_identities),
-        review_required_change_cl_created=not split_result.review_required_noop,
+        review_required_change_cl_created=review_required_change_cl_number != 0,
         review_required_change_cl_number=review_required_change_cl_number,
         review_required_change_unit_identities=(
             split_result.review_required_change_unit_identities))
