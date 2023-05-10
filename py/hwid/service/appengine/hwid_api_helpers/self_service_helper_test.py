@@ -280,23 +280,10 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
       self.assertIn(expect_error, actual.commit_message)
     self.assertIsNone(actual.feature_matcher_source)
 
-  def testBuild_WithInvalidBrandFeatureVersion_ThenFailWithError(self):
+  def testBuild_WithValidFeatureVersion_ThenSuccess(self):
     db = self._BuildHWIDDBForTest()
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create(
-        'ZZCR').feature_version = -1
-
-    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
-    result = inst.Build()
-
-    self._AssertFeatureMatcherBuildResultFailure(
-        result, expect_errors=['Unexpect feature version (-1).'])
-
-  def testBuild_WithValidBrandFeatureVersion_ThenSuccess(self):
-    db = self._BuildHWIDDBForTest()
-    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 0
-    extra_resource.brand_feature_infos.get_or_create('BBBB').feature_version = 1
+    extra_resource.device_feature_version = 1
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
     result = inst.Build()
@@ -307,9 +294,9 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
   def testBuild_WithValidLegacyBrands_ThenSuccess(self):
     db = self._BuildHWIDDBForTest()
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
+    extra_resource.brand_feature_infos.get_or_create('AAAA')
     bbbb_info = extra_resource.brand_feature_infos.get_or_create('BBBB')
-    bbbb_info.feature_version = 1
     bbbb_info.has_legacy_units = True
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
@@ -326,7 +313,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     dlm_component_msg = extra_resource.dlm_components.add(cid=1, is_cpu=True)
     dlm_component_msg.cpu_info.feature_compatible_versions.append(-1)
 
@@ -348,7 +335,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     dlm_component_msg = extra_resource.dlm_components.add(cid=1, is_cpu=True)
     dlm_component_msg.cpu_info.feature_compatible_versions.append(1)
 
@@ -370,7 +357,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     extra_resource.dlm_components.add(cid=1, is_dram=True)
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
@@ -391,7 +378,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     extra_resource.dlm_components.add(cid=1, is_dram=True)
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
@@ -413,7 +400,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     extra_resource.dlm_components.add(cid=1, is_dram=True)
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
@@ -439,7 +426,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
         }
     })
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     extra_resource.dlm_components.add(cid=1, is_dram=True)
 
     inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
@@ -456,7 +443,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     msg = extra_resource.dlm_components.add(cid=1, is_storage=True)
     msg.storage_info.size_in_gb = 256
 
@@ -481,7 +468,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
         }
     })
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     msg = extra_resource.dlm_components.add(cid=1, is_storage=True)
     msg.storage_info.size_in_gb = 256
 
@@ -510,7 +497,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
         }
     })
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     msg = extra_resource.dlm_components.add(cid=1, is_display_panel=True)
     msg.display_panel_info.panel_type = msg.display_panel_info.OTHER
     msg.display_panel_info.horizontal_resolution = 1920
@@ -539,7 +526,7 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
             }
         }})
     extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
-    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.device_feature_version = 1
     msg = extra_resource.dlm_components.add(cid=1, is_camera=True)
     msg.camera_info.position = msg.camera_info.USER_FACING
     msg.camera_info.horizontal_resolution = 1000

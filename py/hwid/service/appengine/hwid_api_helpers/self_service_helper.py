@@ -617,14 +617,7 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
       The generation results.
     """
     try:
-      # TODO(yhong): Only look up `self._extra_resource.device_feature_version`.
-      all_feature_versions = [self._extra_resource.device_feature_version]
-      for feature_info in self._extra_resource.brand_feature_infos.values():
-        all_feature_versions.append(feature_info.feature_version)
-      for feature_version in all_feature_versions:
-        if feature_version < features.NO_FEATURE_VERSION:
-          raise ValueError(f'Unexpect feature version ({feature_version}).')
-      feature_version = max(all_feature_versions)
+      feature_version = self._extra_resource.device_feature_version
 
       if feature_version == features.NO_FEATURE_VERSION:
         feature_matcher_source = (

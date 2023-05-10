@@ -45,57 +45,6 @@ class HWIDFeatureMatcher(abc.ABC):
     """
 
 
-# TODO(yhong): Remove this legacy implementation once the data are all migrated.
-
-
-class _HWIDFeatureMatcherLegacyImpl(HWIDFeatureMatcher):
-  """A seralizable HWID feature matcher implementation."""
-
-  def __init__(self, db: db_module.Database, spec: str):
-    """Initializer.
-
-    Args:
-      db: The HWID DB instance.
-      spec: A `hwid_feature_requirement_pb2.FeatureRequirementSpec` message
-        in prototext form.
-
-    Raises:
-      ValueError: If the given spec is invalid.
-    """
-    self._db = db
-    self._raw_spec = spec
-    try:
-      self._spec = text_format.Parse(
-          self._raw_spec, hwid_feature_requirement_pb2.FeatureRequirementSpec())
-    except text_format.ParseError as ex:
-      raise ValueError(f'Invalid raw spec: {ex}') from ex
-    self._checker = feature_compliance.FeatureRequirementSpecChecker(self._spec)
-
-  def GenerateHWIDFeatureRequirementPayload(self) -> str:
-    """See base class."""
-    checksum = hashlib.sha256(self._raw_spec.encode('utf-8')).hexdigest()
-    header = (
-        feature_compliance.FEATURE_REQUIREMENT_SPEC_CHECKSUM_ROW_PREFIX +
-        checksum)
-    return f'{header}\n{self._raw_spec}'
-
-  def Match(self, hwid_string: str) -> int:
-    """See base class."""
-    db_project = self._db.project.upper()
-    if (not hwid_string.startswith(f'{db_project}-') and
-        not hwid_string.startswith(f'{db_project} ')):
-      raise ValueError('The given HWID string does not belong to the HWID DB.')
-
-    image_id = identity_module.GetImageIdFromEncodedString(hwid_string)
-    encoding_scheme = self._db.GetEncodingScheme(image_id)
-    try:
-      identity = identity_module.Identity.GenerateFromEncodedString(
-          encoding_scheme, hwid_string)
-    except v3_common.HWIDException as ex:
-      raise ValueError(f'Invalid HWID: {ex}.') from ex
-    return self._checker.CheckFeatureComplianceVersion(identity)
-
-
 _BrandFeatureRequirementSpec = (
     hwid_feature_requirement_pb2.BrandFeatureRequirementSpec)
 
@@ -267,7 +216,4 @@ class HWIDFeatureMatcherBuilder:
     Raises:
       ValueError: If the given source is invalid.
     """
-    try:
-      return _HWIDFeatureMatcherImpl(db, source)
-    except ValueError:
-      return _HWIDFeatureMatcherLegacyImpl(db, source)
+    return _HWIDFeatureMatcherImpl(db, source)

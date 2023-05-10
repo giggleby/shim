@@ -459,7 +459,7 @@ message DlmComponentInfo {
 }
 
 message FeatureInfo {
-  int64 feature_version = 1  [deprecated = true];
+  reserved 1;
   bool has_legacy_units = 2;
 }
 
@@ -471,7 +471,7 @@ message HwidDbExternalResource {
           component_probe_infos = 1;
   repeated DlmComponentInfo dlm_components = 2;
   map<string, FeatureInfo> brand_feature_infos = 3;
-  int64 device_feature_version = 4;
+  uint64 device_feature_version = 4;
 }
 
 message BatchGetHwidDbEditableSectionChangeClInfoRequest {
