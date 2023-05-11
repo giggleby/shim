@@ -39,6 +39,7 @@ class DUTLabelHelper:
         'variant',
         'wireless',
         'cellular',
+        'feature_enablement_status',
     ]
 
     if not hwid:  # Return possible labels.
@@ -128,6 +129,10 @@ class DUTLabelHelper:
         comp_name = components[0]
         avl_name = self._decoder_data_manager.GetAVLName(comp_cls, comp_name)
         response.labels.add(name=comp_cls, value=avl_name)
+
+    action = hwid_action_getter.GetHWIDAction(bom.project)
+    response.labels.add(name='feature_enablement_status',
+                        value=action.GetFeatureEnablementLabel(hwid))
 
     unexpected_labels = set(
         label.name for label in response.labels) - set(possible_labels)

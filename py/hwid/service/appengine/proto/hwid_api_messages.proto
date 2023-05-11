@@ -299,6 +299,9 @@ message SkuResponse {
   Status status = 7;
   // Strings of warnings as a note of potential issues in the SKU.
   repeated string warnings = 8;
+  // A human readable string representing the versioned feature info on the
+  // device.
+  string feature_enablement_status = 9;
 }
 
 // A label of a DUT.

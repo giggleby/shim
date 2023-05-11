@@ -153,11 +153,13 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     configless = bom_configless.configless
 
     sku = self._sku_helper.GetSKUFromBOM(bom, configless)
-
+    action = hwid_action_getter.GetHWIDAction(bom.project)
     return hwid_api_messages_pb2.SkuResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS, project=sku.project,
         cpu=sku.cpu, memory_in_bytes=sku.total_bytes, memory=sku.memory_str,
-        sku=sku.sku_str, warnings=sku.warnings)
+        sku=sku.sku_str, warnings=sku.warnings,
+        feature_enablement_status=(action.GetFeatureEnablementLabel(
+            request.hwid)))
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck

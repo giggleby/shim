@@ -350,6 +350,15 @@ class ProtoRPCServiceTest(unittest.TestCase):
             ComponentMsg(component_class='dram', name='dram2'),
         ])
 
+  def _SetupFakeHWIDActionForFeatureEnablementLabel(
+      self, project_name: str,
+      feature_enablement_label: str = 'just_a_random_default_value'):
+    instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    self._modules.ConfigHWID(project_name, 3, 'unused raw HWID DB contents',
+                             hwid_action=instance)
+    return instance
+
   def testGetSku(self):
     bom = hwid_action.BOM()
     bom.AddAllComponents({
@@ -358,6 +367,8 @@ class ProtoRPCServiceTest(unittest.TestCase):
     })
     bom.project = 'foo'
     configless = None
+    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
+                                                       'feature_value')
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMAndConfigless.return_value = {
           TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
@@ -373,8 +384,8 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
             status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
-            memory='1MB', memory_in_bytes=100000000, sku='foo_bar1_bar2_1MB'),
-        msg)
+            memory='1MB', memory_in_bytes=100000000, sku='foo_bar1_bar2_1MB',
+            feature_enablement_status='feature_value'), msg)
 
   def testGetSku_WithConfigless(self):
     bom = hwid_action.BOM()
@@ -386,6 +397,8 @@ class ProtoRPCServiceTest(unittest.TestCase):
     configless = {
         'memory': 4
     }
+    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
+                                                       'feature_value')
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMAndConfigless.return_value = {
           TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
@@ -401,8 +414,8 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
             status=StatusMsg.SUCCESS, project='foo', cpu='bar1_bar2',
-            memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB'),
-        msg)
+            memory='4GB', memory_in_bytes=4294967296, sku='foo_bar1_bar2_4GB',
+            feature_enablement_status='feature_value'), msg)
 
   def testGetSku_DramWithoutSize(self):
     bom = hwid_action.BOM()
@@ -412,6 +425,8 @@ class ProtoRPCServiceTest(unittest.TestCase):
     })
     bom.project = 'foo'
     configless = None
+    self._SetupFakeHWIDActionForFeatureEnablementLabel(bom.project,
+                                                       'feature_value')
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMAndConfigless.return_value = {
           TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
@@ -423,8 +438,9 @@ class ProtoRPCServiceTest(unittest.TestCase):
     self.assertEqual(
         hwid_api_messages_pb2.SkuResponse(
             project='foo', cpu='bar', memory_in_bytes=0, sku='foo_bar_0B',
-            memory='0B', status=StatusMsg.SUCCESS,
-            warnings=["'fail' does not contain size field"]), msg)
+            memory='0B', status=StatusMsg.SUCCESS, warnings=[
+                "'fail' does not contain size field"
+            ], feature_enablement_status='feature_value'), msg)
 
   def testGetDutLabels(self):
     with mock.patch.object(self.service, '_dut_label_helper') as mock_helper:

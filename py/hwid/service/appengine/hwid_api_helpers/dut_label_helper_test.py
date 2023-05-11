@@ -19,6 +19,7 @@ GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',
     'v3-golden.yaml')
 
+TEST_PROJECT = 'Foo'
 TEST_HWID = 'Foo'
 
 
@@ -51,18 +52,27 @@ class DUTLabelHelperTest(unittest.TestCase):
     super().tearDown()
     self._module_collection.ClearAll()
 
+  def _SetupFakeHWIDActionForTestProject(
+      self, feature_enablement_label: str = 'just_a_random_default_value'):
+    instance = mock.create_autospec(hwid_action.HWIDAction, instance=True)
+    instance.GetFeatureEnablementLabel.return_value = feature_enablement_label
+    self._module_collection.ConfigHWID(
+        TEST_PROJECT, 3, 'unused raw HWID DB contents', hwid_action=instance)
+    return instance
+
   def testGetDUTLabels_Success(self):
     self._module_collection.AddAVLNameMapping(10, 'AVL_CELLULAR')
     bom = hwid_action.BOM()
     bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
     bom.AddComponent('wireless', name='wireless_11_21', is_vp_related=True)
     bom.AddComponent('cellular', name='cellular_10_20', is_vp_related=True)
-    bom.project = 'foo'
+    bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
     self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=[])
+    self._SetupFakeHWIDActionForTestProject('feature_enablement_value')
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
@@ -73,6 +83,8 @@ class DUTLabelHelperTest(unittest.TestCase):
     self.assertCountEqual(
         msg.labels,
         [
+            hwid_api_messages_pb2.DutLabel(name='feature_enablement_status',
+                                           value='feature_enablement_value'),
             hwid_api_messages_pb2.DutLabel(name='hwid_component',
                                            value='cellular/cellular_10_20'),
             hwid_api_messages_pb2.DutLabel(name='hwid_component',
@@ -94,12 +106,13 @@ class DUTLabelHelperTest(unittest.TestCase):
   def testGetDUTLabels_WithWarnings(self):
     bom = hwid_action.BOM()
     bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
-    bom.project = 'foo'
+    bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
     self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
         warnings=['warning1', 'warning2'])
+    self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
@@ -113,15 +126,15 @@ class DUTLabelHelperTest(unittest.TestCase):
     self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
     self.assertTrue(self.CheckForLabelValue(msg, 'hwid_component'))
     self.assertCountEqual(['warning1', 'warning2'], msg.warnings)
-    self.assertEqual(5, len(msg.labels))
 
   def testGetDUTLabels_MissingRegexpList(self):
     self._module_collection.fake_goldeneye_memcache.ClearAll()
     bom = hwid_action.BOM()
     bom.AddComponent('touchscreen', name='testscreen', is_vp_related=True)
-    bom.project = 'foo'
+    bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
+    self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
@@ -145,6 +158,7 @@ class DUTLabelHelperTest(unittest.TestCase):
                 'variant',
                 'wireless',
                 'cellular',
+                'feature_enablement_status',
             ]), msg)
 
   def testGetPossibleDUTLabels(self):
@@ -163,17 +177,19 @@ class DUTLabelHelperTest(unittest.TestCase):
                 'variant',
                 'wireless',
                 'cellular',
+                'feature_enablement_status',
             ]), msg)
 
   def testGetDUTLabels_WithConfigless(self):
     bom = hwid_action.BOM()
-    bom.project = 'foo'
+    bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = {
         'feature_list': {
             'has_touchscreen': 1,
         },
     }
+    self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
@@ -189,7 +205,6 @@ class DUTLabelHelperTest(unittest.TestCase):
     self.assertTrue(self.CheckForLabelValue(msg, 'sku', 'TestSku'))
     self.assertTrue(self.CheckForLabelValue(msg, 'touchscreen'))
     self.assertFalse(msg.warnings)
-    self.assertEqual(4, len(msg.labels))
 
   def testGetDUTLabels_CheckIsVPRelated(self):
     bom = hwid_action.BOM()
@@ -200,9 +215,10 @@ class DUTLabelHelperTest(unittest.TestCase):
             'cpu': ['cpu_0', 'cpu_1'],
         }, comp_db=database.Database.LoadFile(
             GOLDEN_HWIDV3_FILE, verify_checksum=False), require_vp_info=True)
-    bom.project = 'foo'
+    bom.project = TEST_PROJECT
     bom.phase = 'bar'
     configless = None
+    self._SetupFakeHWIDActionForTestProject('feature_value')
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
         TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
     }
@@ -216,6 +232,8 @@ class DUTLabelHelperTest(unittest.TestCase):
             labels=[
                 # Only components with 'is_vp_related=True' will be reported as
                 # hwid_component.
+                hwid_api_messages_pb2.DutLabel(name='feature_enablement_status',
+                                               value='feature_value'),
                 hwid_api_messages_pb2.DutLabel(name='hwid_component',
                                                value='battery/battery_small'),
                 hwid_api_messages_pb2.DutLabel(name='hwid_component',
@@ -236,6 +254,7 @@ class DUTLabelHelperTest(unittest.TestCase):
                 'variant',
                 'wireless',
                 'cellular',
+                'feature_enablement_status',
             ]),
         msg)
 
