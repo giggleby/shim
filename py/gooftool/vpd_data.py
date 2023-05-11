@@ -73,6 +73,7 @@ KNOWN_RW_DATA = {
     'check_enrollment': ANY,
     'first_active_omaha_ping_sent': ANY,
     'tpm_firmware_update_params': ANY,
+    'feature_device_info': ANY,
 
     # In factory, a new device should have should_send_rlz_ping='1'.
     # In RMA center, this value might be '0'.
