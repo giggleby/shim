@@ -9,6 +9,7 @@ from typing import List, Optional
 from cros.factory.hwid.service.appengine.data import avl_metadata_util
 from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine import feature_matching
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine.hwid_action_helpers import v3_self_service_helper as ss_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
@@ -17,6 +18,17 @@ from cros.factory.hwid.service.appengine import verification_payload_generator_c
 from cros.factory.hwid.v3 import common
 from cros.factory.hwid.v3 import hwid_utils
 
+
+_FEATURE_ENABLEMENT_TYPE_TO_LABEL = {
+    feature_matching.FeatureEnablementType.DISABLED:
+        'not_branded',
+    feature_matching.FeatureEnablementType.ENABLED_WITH_CHASSIS:
+        'hard_branded',
+    feature_matching.FeatureEnablementType.ENABLED_FOR_LEGACY:
+        'soft_branded_legacy',
+    feature_matching.FeatureEnablementType.ENABLED_BY_WAIVER:
+        'soft_branded_waiver',
+}
 
 class HWIDV3Action(hwid_action.HWIDAction):
   HWID_VERSION = 3
@@ -99,3 +111,10 @@ class HWIDV3Action(hwid_action.HWIDAction):
   ) -> hwid_db_data.HWIDDBData:
     return self._ss_helper.ConvertToInternalHWIDDBContent(
         avl_converter_manager, hwid_db_contents, avl_resource)
+
+  def GetFeatureEnablementLabel(self, hwid_string: str) -> str:
+    """See base class."""
+    match_result = self._preproc_data.feature_matcher.Match(hwid_string)
+    enablement_status = _FEATURE_ENABLEMENT_TYPE_TO_LABEL[
+        match_result.enablement_status]
+    return f'{enablement_status}:{match_result.feature_version}'

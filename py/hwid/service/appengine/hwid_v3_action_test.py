@@ -6,6 +6,7 @@
 import os
 import unittest
 
+from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import hwid_v3_action
@@ -20,7 +21,7 @@ TEST_V3_HWID_1 = 'CHROMEBOOK AA5A-Y6L'
 TEST_V3_HWID_WITH_CONFIGLESS = 'CHROMEBOOK-BRAND 0-8-74-180 AA5C-YNQ'
 
 
-class HWIDV3ActionTest(unittest.TestCase):
+class HWIDV3ActionWithoutFeatureMatcherTextTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -133,6 +134,36 @@ class HWIDV3ActionTest(unittest.TestCase):
 
     for comp in bom.GetComponents(cls='storage'):
       self.assertTrue(comp.is_vp_related)
+
+  def testGetFeatureEnablementLabel(self):
+    label = self.action.GetFeatureEnablementLabel(TEST_V3_HWID_1)
+
+    self.assertEqual(label, 'not_branded:0')
+
+
+class HWIDV3ActionWithFeatureMatcherTextTest(unittest.TestCase):
+
+  def testGetFeatureEnablementLabel(self):
+    feature_matcher_builder = (
+        hwid_preproc_data.HWIDV3PreprocData.HWID_FEATURE_MATCHER_BUILDER)
+    raw_source = feature_matcher_builder.GenerateFeatureMatcherRawSource(
+        1, ['ABCD'], [
+            features.HWIDRequirement(description='always_match',
+                                     bit_string_prerequisites=[])
+        ])
+    preproc_data = hwid_preproc_data.HWIDV3PreprocData(
+        'CHROMEBOOK', file_utils.ReadFile(GOLDEN_HWIDV3_FILE),
+        file_utils.ReadFile(GOLDEN_HWIDV3_FILE), 'COMMIT-ID', raw_source)
+    action = hwid_v3_action.HWIDV3Action(preproc_data)
+
+    for hwid, expected_label in (
+        ('CHROMEBOOK-WXYZ A2A-BUY', 'not_branded:1'),
+        ('CHROMEBOOK-ABCD A2A-BHL', 'soft_branded_legacy:1'),
+    ):
+      with self.subTest(hwid=hwid, expected_label=expected_label):
+        actual = action.GetFeatureEnablementLabel(hwid)
+
+        self.assertEqual(actual, expected_label)
 
 
 if __name__ == '__main__':

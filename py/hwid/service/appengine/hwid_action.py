@@ -445,3 +445,20 @@ class HWIDAction:
     raise NotSupportedError(
         '`ConvertToInternalHWIDDBContent` is not supported in HWID '
         f'v{self.HWID_VERSION}')
+
+  def GetFeatureEnablementLabel(self, hwid_string: str) -> str:
+    """Gets the feature enablement label for the given HWID string.
+
+    Args:
+      hwid_string: The HWID string to match.
+
+    Returns:
+      A human readable label to represent the feature enablement status.
+
+    Raises:
+      ValueError: If the given HWID string is invalid or does not belong to the
+          current project.
+    """
+    raise NotSupportedError(
+        '`GetFeatureEnablementLabel` is not supported in HWID '
+        f'v{self.HWID_VERSION}')
