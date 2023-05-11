@@ -14,9 +14,12 @@ from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.v3 import database as db_module
 
 
-def _BuildHWIDDBForTest(
-    project_name: str,
-    image_ids: features.Collection[int]) -> db_module.Database:
+_DeviceFeatureInfo = feature_matching.DeviceFeatureInfo
+_FeatureEnablementType = feature_matching.FeatureEnablementType
+
+
+def _BuildHWIDDBForTest(project_name: str, image_ids: features.Collection[int],
+                        feature_version: str = '1') -> db_module.Database:
   image_id_part = {
       'image_id': {
           image_id: f'THE_IMAGE_ID_{image_id}'
@@ -25,11 +28,18 @@ def _BuildHWIDDBForTest(
   }
   pattern_part = {
       'pattern': [{
-          'image_ids': list(image_ids),
-          'encoding_scheme': 'base8192',
-          'fields': [{
-              'dummy_field': 100
-          }],
+          'image_ids':
+              list(image_ids),
+          'encoding_scheme':
+              'base8192',
+          'fields': [
+              {
+                  'dummy_field': 8
+              },
+              {
+                  'feature_management_flags_field': 13
+              },
+          ],
       }]
   }
   return db_module.Database.LoadData('\n'.join([
@@ -41,11 +51,18 @@ def _BuildHWIDDBForTest(
           """),
       yaml.safe_dump(image_id_part),
       yaml.safe_dump(pattern_part),
-      textwrap.dedent("""\
+      textwrap.dedent(f"""\
           encoded_fields:
             dummy_field:
               0:
                 dummy_type: null
+            feature_management_flags_field:
+              0:
+                feature_management_flags: chassis_not_branded_and_hw_incompliant
+              1:
+                feature_management_flags: chassis_not_branded_but_hw_compliant
+              2:
+                feature_management_flags: chassis_branded_and_hw_compliant
           components:
             dummy_type:
               items:
@@ -53,6 +70,23 @@ def _BuildHWIDDBForTest(
                   status: supported
                   values:
                     dummy_probe_attr: dummy_probe_value
+            feature_management_flags:
+              items:
+                chassis_not_branded_and_hw_incompliant:
+                  status: supported
+                  values:
+                    is_chassis_branded: '0'
+                    hw_compliance_version: '0'
+                chassis_not_branded_but_hw_compliant:
+                  status: supported
+                  values:
+                    is_chassis_branded: '0'
+                    hw_compliance_version: {feature_version!r}
+                chassis_branded_and_hw_compliant:
+                  status: supported
+                  values:
+                    is_chassis_branded: {feature_version!r}
+                    hw_compliance_version: {feature_version!r}
           rules: []
           """),
   ]))
@@ -130,9 +164,10 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
             }
             """))
 
-  def testConvertedHWIDFeatureMatcherCanMatchHWIDsForLegacyCase(self):
-    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2])
+  def testConvertedHWIDFeatureMatcherCanMatchHWIDs(self):
     feature_version = 1
+    db = _BuildHWIDDBForTest(project_name='THEPROJ', image_ids=[0, 1, 2],
+                             feature_version=str(feature_version))
     legacy_brands = ['ABCD']
     hwid_requirement_candidates = [
         features.HWIDRequirement(
@@ -158,24 +193,127 @@ class HWIDFeatureMatcherBuilderTest(unittest.TestCase):
         feature_version, legacy_brands, hwid_requirement_candidates)
     matcher = builder.CreateHWIDFeatureMatcher(db, source)
 
-    for hwid_string, expected_version_or_error in (
+    disabled_match_result = _DeviceFeatureInfo(feature_version,
+                                               _FeatureEnablementType.DISABLED)
+    legacy_enabled_match_result = _DeviceFeatureInfo(
+        feature_version, _FeatureEnablementType.ENABLED_FOR_LEGACY)
+    branded_enabled_match_result = _DeviceFeatureInfo(
+        feature_version, _FeatureEnablementType.ENABLED_WITH_CHASSIS)
+    waiver_enabled_match_result = _DeviceFeatureInfo(
+        feature_version, _FeatureEnablementType.ENABLED_BY_WAIVER)
+    for hwid_string, expected_match_result_or_error in (
+        # incorrect project
         ('NOTTHISPROJ-ABCD A2A-B47', ValueError),
-        ('THEPROJ A2A-B47', 0),  # no brand
-        ('THEPROJ-WXYZ A2A-B9W', 0),  # incorrect brand
-        ('THEPROJ-ABCD A8A-B4T', 1),  # match scenario_1
-        ('THEPROJ-ABCD B2A-B5L', 1),  # match scenario_1
-        ('THEPROJ-ABCD C8A-B8Y', 0),  # not match bit_5_6_7_has_100_or_111
-        ('THEPROJ-ABCD C6A-B8S', 1),  # match scenario_2
+        # no brand
+        ('THEPROJ A2A-B47', disabled_match_result),
+        # incorrect brand with no feature management flag
+        ('THEPROJ-WXYZ A2A-B9W', disabled_match_result),
+        # match scenario_1
+        ('THEPROJ-ABCD A8A-B4T', legacy_enabled_match_result),
+        # match scenario_2
+        ('THEPROJ-ABCD B2A-B5L', legacy_enabled_match_result),
+        # match neither scenario_1 nor scenario_2
+        ('THEPROJ-ABCD C8A-B8Y', disabled_match_result),
+        # match scenario_2
+        ('THEPROJ-ABCD C6A-B8S', legacy_enabled_match_result),
+        # match neither scenario_1 nor scenario_2, but feature management flag
+        # indicates chassis has branded.
+        ('THEPROJ-WXYZ C2A-A2C-B93', branded_enabled_match_result),
+        # feature management flag indicates chassis has branded while scenario_1
+        # is also matched
+        ('THEPROJ-WXYZ A2A-A2C-B8S', branded_enabled_match_result),
+        # feature management flag indicates HW compliant without branded
+        # chassis, also the brand code is on the legacy list
+        ('THEPROJ-ABCD C2A-A2B-B3L', waiver_enabled_match_result),
+        # feature management flag indicates HW compliant without branded
+        # chassis, also the brand code is not on the legacy list
+        ('THEPROJ-WXYZ C2A-A2B-B72', disabled_match_result),
     ):
-      if isinstance(expected_version_or_error, int):
+      if isinstance(expected_match_result_or_error, _DeviceFeatureInfo):
         with self.subTest(hwid_string=hwid_string,
-                          expected_version=expected_version_or_error):
+                          expected_version=expected_match_result_or_error):
           actual = matcher.Match(hwid_string)
-          self.assertEqual(actual, expected_version_or_error)
+          self.assertEqual(actual, expected_match_result_or_error)
       else:
         with self.subTest(hwid_string=hwid_string,
-                          expected_error=expected_version_or_error):
-          with self.assertRaises(expected_version_or_error):
+                          expected_error=expected_match_result_or_error):
+          with self.assertRaises(expected_match_result_or_error):
+            matcher.Match(hwid_string)
+
+  def testConvertedHWIDFeatureMatcherCanMatchForOldHWIDDB(self):
+    feature_version = 1
+    db = db_module.Database.LoadData(
+        textwrap.dedent("""\
+        checksum:
+        project: THEPROJ
+        encoding_patterns:
+          0: default
+        image_id:
+          0: PROTO
+          1: EVT
+          2: DVT
+          3: PVT
+          4: PVT_COMPLIANT
+        pattern:
+        - image_ids: [0, 1, 2, 3, 4]
+          encoding_scheme: base8192
+          fields:
+          - dummy_field: 8
+        encoded_fields:
+          dummy_field:
+            0:
+              dummy_type: null
+        components:
+          dummy_type:
+            items:
+              dummy_component:
+                status: supported
+                values:
+                  dummy_probe_attr: dummy_probe_value
+        rules: []
+        """))
+    legacy_brands = ['ABCD']
+    hwid_requirement_candidates = [
+        features.HWIDRequirement(
+            description='scenario_1', bit_string_prerequisites=[
+                features.HWIDBitStringRequirement(description='image_id_4',
+                                                  bit_positions=[4, 3, 2, 1, 0],
+                                                  required_values=[0b00100]),
+            ]),
+    ]
+
+    builder = feature_matching.HWIDFeatureMatcherBuilder()
+    source = builder.GenerateFeatureMatcherRawSource(
+        feature_version, legacy_brands, hwid_requirement_candidates)
+    matcher = builder.CreateHWIDFeatureMatcher(db, source)
+
+    disabled_match_result = _DeviceFeatureInfo(feature_version,
+                                               _FeatureEnablementType.DISABLED)
+    legacy_enabled_match_result = _DeviceFeatureInfo(
+        feature_version, _FeatureEnablementType.ENABLED_FOR_LEGACY)
+    for hwid_string, expected_match_result_or_error in (
+        # incorrect project
+        ('NOTTHISPROJ-ABCD A2A-B47', ValueError),
+        # no brand
+        ('THEPROJ A2A-B47', disabled_match_result),
+        # incorrect brand, not match scenario_1
+        ('THEPROJ-WXYZ E2A-B7B', disabled_match_result),
+        # incorrect brand, match scenario_1
+        ('THEPROJ-WXYZ E8A-B5X', disabled_match_result),
+        # correct brand, not match scenario_1
+        ('THEPROJ-ABCD A8A-B4T', disabled_match_result),
+        # correct brand, match scenario_1
+        ('THEPROJ-ABCD E8A-B2E', legacy_enabled_match_result),
+    ):
+      if isinstance(expected_match_result_or_error, _DeviceFeatureInfo):
+        with self.subTest(hwid_string=hwid_string,
+                          expected_version=expected_match_result_or_error):
+          actual = matcher.Match(hwid_string)
+          self.assertEqual(actual, expected_match_result_or_error)
+      else:
+        with self.subTest(hwid_string=hwid_string,
+                          expected_error=expected_match_result_or_error):
+          with self.assertRaises(expected_match_result_or_error):
             matcher.Match(hwid_string)
 
 

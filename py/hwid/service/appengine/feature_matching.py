@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 import abc
+import enum
+import functools
 import hashlib
+from typing import Mapping, NamedTuple
 
 from google.protobuf import text_format
 import hwid_feature_requirement_pb2  # pylint: disable=import-error
@@ -20,6 +23,65 @@ from cros.factory.utils import type_utils
 Collection = features.Collection
 
 
+# TODO(yhong): Consider move the following constants to
+#    `cros.factory.hwid.v3.common` to reduce duplications.
+
+_FEATURE_MANAGEMENT_FLAGS_CATEGORY = 'feature_management_flags'
+
+
+class _FeatureManagementFlagField(str, enum.Enum):
+  """Enumerate field names of feature management flags components in HWID."""
+  IS_CHASSIS_BRANDED = 'is_chassis_branded'
+  HW_COMPLIANCE_VERSION = 'hw_compliance_version'
+
+
+class _FeatureManagementFlagHWIDSpec(features.HWIDSpec):
+  """Leverages `features.HWIDSpec` to match feature management flags."""
+
+  def __init__(self, target_flag_field: _FeatureManagementFlagField,
+               target_value: str):
+    self._target_flag_field = target_flag_field
+    self._target_value = target_value
+
+  def GetName(self) -> str:
+    """See base class."""
+    return f'{self._target_flag_field!r}={self._target_value!r}'
+
+  def FindSatisfiedEncodedValues(
+      self, db: db_module.Database,
+      dlm_db: features.DLMComponentDatabase) -> Mapping[str, Collection[int]]:
+    """See base class."""
+    del dlm_db  # unused
+
+    feature_management_flag_components = db.GetComponents(
+        _FEATURE_MANAGEMENT_FLAGS_CATEGORY, include_default=False)
+    satisfied_comp_names = set(
+        name for name, info in feature_management_flag_components.items()
+        if info.values.get(self._target_flag_field) == self._target_value)
+
+    satisfied_encoded_values = {}
+    for encoded_field in db.encoded_fields:
+      for index, comp_combo in db.GetEncodedField(encoded_field).items():
+        related_comps = comp_combo.get(_FEATURE_MANAGEMENT_FLAGS_CATEGORY, [])
+        if any(n in satisfied_comp_names for n in related_comps):
+          satisfied_encoded_values.setdefault(encoded_field, []).append(index)
+    return satisfied_encoded_values
+
+
+class FeatureEnablementType(enum.Enum):
+  """Enumerates different ways to enable the feature."""
+  DISABLED = enum.auto()
+  ENABLED_WITH_CHASSIS = enum.auto()
+  ENABLED_FOR_LEGACY = enum.auto()
+  ENABLED_BY_WAIVER = enum.auto()
+
+
+class DeviceFeatureInfo(NamedTuple):
+  """Records a device's feature version and its enablement status."""
+  feature_version: int
+  enablement_status: FeatureEnablementType
+
+
 class HWIDFeatureMatcher(abc.ABC):
   """Represents the interface of a matcher of HWID and feature versions."""
 
@@ -30,15 +92,16 @@ class HWIDFeatureMatcher(abc.ABC):
   # TODO(b/273967719): Provide the interface to generate runtime payload.
 
   @abc.abstractmethod
-  def Match(self, hwid_string: str) -> int:
-    """Matches the given HWID string to resolve the enabled feature version.
+  def Match(self, hwid_string: str) -> DeviceFeatureInfo:
+    """Matches the given HWID string to resolve the feature enablement status.
 
     Args:
       hwid_string: The HWID string to check.
 
     Returns:
-      If no version is enabled, it returns `0`.  Otherwise it returns the
-      feature version.
+      It returns the named tuple of the following fields:
+        1. `feature_version` records the feature version bound to the device.
+        2. `enablement_status` refers to how the feature is enabled or not.
 
     Raises:
       ValueError: If the given `hwid_string` is invalid for the project.
@@ -104,9 +167,65 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
     """See base class."""
     return self._hwid_feature_requirement_payload
 
+  def _BuildFeatureManagementFlagChecker(
+      self, target_field: _FeatureManagementFlagField
+  ) -> feature_compliance.FeatureRequirementSpecChecker:
+    """Builds a `FeatureRequirementSpecChecker` for the feature mngt flag field.
+
+    Args:
+      target_field: The field name in the feature management component values
+        to check.
+
+    Returns:
+      A `FeatureRequirementSpecChecker` instance, which
+      `CheckFeatureComplianceVersion` method returns
+      `self._spec.feature_version` if and only if the HWID contains
+      the feature management flag component with `target_field` value being
+      `str(self._spec.feature_version)`.
+    """
+    hwid_requirement_resolver = features.HWIDRequirementResolver([
+        _FeatureManagementFlagHWIDSpec(target_field,
+                                       str(self._spec.feature_version))
+    ])
+    hwid_requirement_candidates = (
+        hwid_requirement_resolver.DeduceHWIDRequirementCandidates(self._db, {}))
+
+    checker_spec = hwid_feature_requirement_pb2.FeatureRequirementSpec()
+    default_brand_spec = checker_spec.brand_specs.get_or_create('')
+    default_brand_spec.feature_version = self._spec.feature_version
+    default_brand_spec.feature_enablement_case = default_brand_spec.MIXED
+    for hwid_requirement_candidate in hwid_requirement_candidates:
+      profile_msg = default_brand_spec.profiles.add()
+      for prerequisite in hwid_requirement_candidate.bit_string_prerequisites:
+        bit_length = len(prerequisite.bit_positions)
+        required_values = [
+            f'{required_value:0{bit_length}b}'[::-1]
+            for required_value in prerequisite.required_values
+        ]
+        profile_msg.encoding_requirements.add(
+            bit_locations=prerequisite.bit_positions,
+            required_values=required_values)
+    return feature_compliance.FeatureRequirementSpecChecker(checker_spec)
+
   @type_utils.LazyProperty
-  def _match_checker(self) -> feature_compliance.FeatureRequirementSpecChecker:
-    """The checker to match the feature enablement state."""
+  def _chassis_is_branded_checker(
+      self) -> feature_compliance.FeatureRequirementSpecChecker:
+    """The checker to match the chassis branding state."""
+    assert self._spec.feature_version != features.NO_FEATURE_VERSION
+    return self._BuildFeatureManagementFlagChecker(
+        _FeatureManagementFlagField.IS_CHASSIS_BRANDED)
+
+  @type_utils.LazyProperty
+  def _hw_compliant_checker(
+      self) -> feature_compliance.FeatureRequirementSpecChecker:
+    """The checker to match the HW compliance version state."""
+    assert self._spec.feature_version != features.NO_FEATURE_VERSION
+    return self._BuildFeatureManagementFlagChecker(
+        _FeatureManagementFlagField.HW_COMPLIANCE_VERSION)
+
+  @type_utils.LazyProperty
+  def _legacy_checker(self) -> feature_compliance.FeatureRequirementSpecChecker:
+    """The checker to match the feature enablement state for legacy devices."""
     assert self._spec.feature_version != features.NO_FEATURE_VERSION
 
     spec_msg = hwid_feature_requirement_pb2.FeatureRequirementSpec()
@@ -118,9 +237,6 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
       self._ExtendHWIDProfiles(brand_matching_spec_msg,
                                self._spec.hwid_requirement_candidates)
 
-    # TODO(yhong): Use the brand specific spec to match (0, N) GSC flag.
-    # TODO(yhong): Use the default brand spec to match (N, N) GSC flag.
-
     default_matching_spec_msg = spec_msg.brand_specs.get_or_create('')
     default_matching_spec_msg.feature_version = features.NO_FEATURE_VERSION
     default_matching_spec_msg.feature_enablement_case = (
@@ -128,24 +244,54 @@ class _HWIDFeatureMatcherImpl(HWIDFeatureMatcher):
 
     return feature_compliance.FeatureRequirementSpecChecker(spec_msg)
 
-  def Match(self, hwid_string: str) -> int:
-    """See base class."""
-    if self._spec.feature_version == features.NO_FEATURE_VERSION:
-      return features.NO_FEATURE_VERSION
-
-    db_project = self._db.project.upper()
-    if (not hwid_string.startswith(f'{db_project}-') and
-        not hwid_string.startswith(f'{db_project} ')):
-      raise ValueError('The given HWID string does not belong to the HWID DB.')
-
+  def _GetHWIDIdentityFromHWIDString(
+      self, hwid_string: str) -> identity_module.Identity:
     image_id = identity_module.GetImageIdFromEncodedString(hwid_string)
     encoding_scheme = self._db.GetEncodingScheme(image_id)
     try:
-      identity = identity_module.Identity.GenerateFromEncodedString(
+      return identity_module.Identity.GenerateFromEncodedString(
           encoding_scheme, hwid_string)
     except v3_common.HWIDException as ex:
       raise ValueError(f'Invalid HWID: {ex}.') from ex
-    return self._match_checker.CheckFeatureComplianceVersion(identity)
+
+  def _IsHWIDStringProjectMatch(self, hwid_string: str) -> bool:
+    db_project = self._db.project.upper()
+    return hwid_string.startswith(f'{db_project}-') or hwid_string.startswith(
+        f'{db_project} ')
+
+  def _MatchByChecker(self,
+                      checker: feature_compliance.FeatureRequirementSpecChecker,
+                      identity: identity_module.Identity) -> bool:
+    return checker.CheckFeatureComplianceVersion(
+        identity) > features.NO_FEATURE_VERSION
+
+  def Match(self, hwid_string: str) -> DeviceFeatureInfo:
+    """See base class."""
+    if not self._IsHWIDStringProjectMatch(hwid_string):
+      raise ValueError('The given HWID string does not belong to the HWID DB.')
+
+    result_factory = functools.partial(DeviceFeatureInfo,
+                                       self._spec.feature_version)
+
+    if self._spec.feature_version == features.NO_FEATURE_VERSION:
+      return result_factory(FeatureEnablementType.DISABLED)
+
+    hwid_identity = self._GetHWIDIdentityFromHWIDString(hwid_string)
+
+    # Follows the same logic as OS runtime feature-level determination workflow
+    # to deduce whether the versioned feature is enabled or not.
+
+    if self._MatchByChecker(self._chassis_is_branded_checker, hwid_identity):
+      return result_factory(FeatureEnablementType.ENABLED_WITH_CHASSIS)
+
+    if self._MatchByChecker(self._hw_compliant_checker, hwid_identity):
+      if hwid_identity.brand_code in self._spec.legacy_brands:
+        return result_factory(FeatureEnablementType.ENABLED_BY_WAIVER)
+      return result_factory(FeatureEnablementType.DISABLED)
+
+    if self._MatchByChecker(self._legacy_checker, hwid_identity):
+      return result_factory(FeatureEnablementType.ENABLED_FOR_LEGACY)
+    return result_factory(FeatureEnablementType.DISABLED)
 
 
 class HWIDFeatureMatcherBuilder:
