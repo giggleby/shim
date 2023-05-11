@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
+
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',
     'v3-golden.yaml')
@@ -23,7 +24,6 @@ TEST_HWID = 'Foo ABC'
 ComponentMsg = hwid_api_messages_pb2.Component
 FieldMsg = hwid_api_messages_pb2.Field
 AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
-LabelMsg = hwid_api_messages_pb2.Label
 Status = hwid_api_messages_pb2.Status
 BOMAndConfigless = bc_helper_module.BOMAndConfigless
 
@@ -149,36 +149,6 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             FieldMsg(name='name', value='CPU @ 2.00GHz')
                         ], avl_info=AvlInfoMsg(cid=1, avl_name=''),
                         has_avl=True)
-                ], [], '', '', Status.SUCCESS),
-        })
-
-  def testBatchGetBOMEntry_WithLabels(self):
-    bom = hwid_action.BOM()
-    bom.AddAllLabels({
-        'foo': {
-            'bar': None,
-        },
-        'baz': {
-            'qux': '1',
-            'rox': '2',
-        },
-    })
-    configless = None
-
-    with self._PatchBatchGetBOMAndConfigless() as patch_method:
-      patch_method.return_value = {
-          TEST_HWID: BOMAndConfigless(bom, configless, None),
-      }
-
-      results = self._bc_helper.BatchGetBOMEntry([TEST_HWID])
-
-    self.assertEqual(
-        results, {
-            TEST_HWID:
-                bc_helper_module.BOMEntry([], [
-                    LabelMsg(component_class='foo', name='bar'),
-                    LabelMsg(component_class='baz', name='qux', value='1'),
-                    LabelMsg(component_class='baz', name='rox', value='2'),
                 ], '', '', Status.SUCCESS),
         })
 
@@ -234,7 +204,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                             FieldMsg(name='part', value='part3'),
                             FieldMsg(name='size', value='4G'),
                         ]),
-                ], [], '', '', Status.SUCCESS)
+                ], '', '', Status.SUCCESS)
         })
 
   def testBatchGetBOMEntry_BOMIsNone(self):
@@ -301,14 +271,14 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                     ComponentMsg(name='qux', component_class='baz'),
                     ComponentMsg(name='rox', component_class='baz'),
                     ComponentMsg(name='bar', component_class='foo'),
-                ], [], '', '', Status.SUCCESS),
+                ], '', '', Status.SUCCESS),
         })
 
   def _PatchBatchGetBOMAndConfigless(self):
     return mock.patch.object(self._bc_helper, 'BatchGetBOMAndConfigless')
 
   def _CreateBOMEntryWithError(self, error_code, msg):
-    return bc_helper_module.BOMEntry(None, None, '', msg, error_code)
+    return bc_helper_module.BOMEntry(None, '', msg, error_code)
 
 
 if __name__ == '__main__':

@@ -101,8 +101,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
           error='Internal error',
           status=hwid_api_messages_pb2.Status.SERVER_ERROR)
     return hwid_api_messages_pb2.BomResponse(
-        components=bom_entry.components, labels=bom_entry.labels,
-        phase=bom_entry.phase, error=bom_entry.error, status=bom_entry.status)
+        components=bom_entry.components, phase=bom_entry.phase,
+        error=bom_entry.error, status=bom_entry.status)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -115,9 +115,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     for hwid, bom_entry in bom_entry_dict.items():
       response.boms.get_or_create(hwid).CopyFrom(
           hwid_api_messages_pb2.BatchGetBomResponse.Bom(
-              components=bom_entry.components, labels=bom_entry.labels,
-              phase=bom_entry.phase, error=bom_entry.error,
-              status=bom_entry.status))
+              components=bom_entry.components, phase=bom_entry.phase,
+              error=bom_entry.error, status=bom_entry.status))
       if bom_entry.status != hwid_api_messages_pb2.Status.SUCCESS:
         if response.status == hwid_api_messages_pb2.Status.SUCCESS:
           # Set the status and error of the response to the first unsuccessful

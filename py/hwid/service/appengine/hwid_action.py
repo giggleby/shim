@@ -73,7 +73,6 @@ class BOM:
 
   def __init__(self):
     self._components = {}
-    self._labels = {}
     self.phase = ''
     self.project = None
 
@@ -167,67 +166,6 @@ class BOM:
                               comp_info.information,
                               (component_class, component_name)
                               in vp_related_comps, fields)
-
-  def HasLabel(self, label):
-    """Test whether the BOM has a label."""
-    return label.cls in self._labels and label.name in self._labels[label.cls]
-
-  def GetLabels(self, cls=None):
-    """Gets the labels of this bom, optionally filtered by class."""
-    if cls:
-      if cls in self._labels:
-        return [
-            Label(cls, name, value)
-            for name, values in self._labels[cls].items()
-            for value in values
-        ]
-      return []
-    return [
-        Label(cls, name, value) for cls, labels in self._labels.items()
-        for name, values in labels.items() for value in values
-    ]
-
-  def AddLabel(self, cls, name, value=None):
-    """Adds a label to this bom.
-
-    The method must be supplied at least a label name.  If no class is
-    specified then the label is assumed to be on the BOM as a whole.
-
-    Args:
-      cls: The component class.
-      name: The name of the label.
-      value: (optional) The label value or True for a valueless label.
-    Returns:
-      self
-    Raises:
-      ValueError: when no name is specified.
-    """
-    if not cls or not name:
-      raise ValueError('Labels must have a class and name.')
-
-    if cls not in self._labels:
-      self._labels[cls] = {}
-
-    if name in self._labels[cls]:
-      self._labels[cls][name].append(value)
-    else:
-      self._labels[cls][name] = [value]
-
-  def AddAllLabels(self, label_dict):
-    """Adds a dict of labels to this bom.
-
-    Args:
-      label_dict: A dictionary with {class: {name: value}} mappings.
-    Returns:
-      self
-    Raises:
-      ValueError: if any of the values are None.
-    """
-
-    for cls in label_dict:
-      for name in label_dict[cls]:
-        value = label_dict[cls][name]
-        self.AddLabel(cls, name, value)
 
 
 DBValidationError = v3_contents_analyzer.Error

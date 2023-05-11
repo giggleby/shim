@@ -99,7 +99,7 @@ message BomResponse {
   // A list of the components in the BOM.
   repeated Component components = 1;
   // A list of labels of the BOM.
-  repeated Label labels = 2;
+  repeated Label labels = 2 [deprecated = true];
   // Build phase (corresponding to HWID image_id).
   string phase = 3;
   // Error message if there was a problem decoding the HWID, if error is set
@@ -123,7 +123,7 @@ message BatchGetBomResponse {
     // A list of the components in the BOM.
     repeated Component components = 1;
     // A list of labels of the BOM.
-    repeated Label labels = 2;
+    repeated Label labels = 2 [deprecated = true];
     // Build phase (corresponding to HWID image_id).
     string phase = 3;
     // Error message if there was a problem decoding the HWID, if error is set

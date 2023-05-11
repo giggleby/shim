@@ -24,7 +24,6 @@ class BOMAndConfigless(NamedTuple):
 class BOMEntry(NamedTuple):
   """A class containing fields of BomResponse."""
   components: Optional[List['hwid_api_messages_pb2.Component']]
-  labels: Optional[List['hwid_api_messages_pb2.Label']]
   phase: str
   error: str
   status: 'hwid_api_messages_pb2.Status'
@@ -96,7 +95,7 @@ class BOMAndConfiglessHelper:
     for hwid in hwids:
       status, error = common_helper.FastFailKnownBadHWID(hwid)
       if status != hwid_api_messages_pb2.Status.SUCCESS:
-        result[hwid] = BOMEntry(None, None, '', error, status)
+        result[hwid] = BOMEntry(None, '', error, status)
       else:
         batch_request.append(hwid)
 
@@ -106,11 +105,11 @@ class BOMAndConfiglessHelper:
       status, error = GetBOMAndConfiglessStatusAndError(bom_configless)
 
       if status != hwid_api_messages_pb2.Status.SUCCESS:
-        result[hwid] = BOMEntry(None, None, '', error, status)
+        result[hwid] = BOMEntry(None, '', error, status)
         continue
       bom = bom_configless.bom
 
-      bom_entry = BOMEntry([], [], bom.phase, '',
+      bom_entry = BOMEntry([], bom.phase, '',
                            status=hwid_api_messages_pb2.Status.SUCCESS)
 
       for component in bom.GetComponents():
@@ -147,12 +146,6 @@ class BOMAndConfiglessHelper:
 
       bom_entry.components.sort(
           key=operator.attrgetter('component_class', 'name'))
-
-      for label in bom.GetLabels():
-        bom_entry.labels.append(
-            hwid_api_messages_pb2.Label(component_class=label.cls,
-                                        name=label.name, value=label.value))
-      bom_entry.labels.sort(key=operator.attrgetter('name', 'value'))
 
       result[hwid] = bom_entry
     return result

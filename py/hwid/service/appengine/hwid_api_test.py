@@ -97,7 +97,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
           TEST_HWID:
               bc_helper.BOMEntry([
                   ComponentMsg(name='qux', component_class='baz'),
-              ], [], '', '', StatusMsg.SUCCESS)
+              ], '', '', StatusMsg.SUCCESS)
       }
 
       req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
@@ -113,7 +113,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMEntry.return_value = {
           TEST_HWID:
-              bc_helper.BOMEntry([], [], '', 'bad hwid', StatusMsg.BAD_REQUEST)
+              bc_helper.BOMEntry([], '', 'bad hwid', StatusMsg.BAD_REQUEST)
       }
 
       req = hwid_api_messages_pb2.BomRequest(hwid=TEST_HWID)
@@ -132,12 +132,12 @@ class ProtoRPCServiceTest(unittest.TestCase):
               bc_helper.BOMEntry([
                   ComponentMsg(name='qux1', component_class='baz1'),
                   ComponentMsg(name='rox1', component_class='baz1'),
-              ], [], '', '', StatusMsg.SUCCESS),
+              ], '', '', StatusMsg.SUCCESS),
           hwid2:
               bc_helper.BOMEntry([
                   ComponentMsg(name='qux2', component_class='baz2'),
                   ComponentMsg(name='rox2', component_class='baz2'),
-              ], [], '', '', StatusMsg.SUCCESS),
+              ], '', '', StatusMsg.SUCCESS),
       }
 
       req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
@@ -168,20 +168,17 @@ class ProtoRPCServiceTest(unittest.TestCase):
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMEntry.return_value = {
           hwid1:
-              bc_helper.BOMEntry([], [], '', 'value error',
-                                 StatusMsg.BAD_REQUEST),
+              bc_helper.BOMEntry([], '', 'value error', StatusMsg.BAD_REQUEST),
           hwid2:
-              bc_helper.BOMEntry([], [], '', "'Invalid key'",
-                                 StatusMsg.NOT_FOUND),
+              bc_helper.BOMEntry([], '', "'Invalid key'", StatusMsg.NOT_FOUND),
           hwid3:
-              bc_helper.BOMEntry([], [], '', 'index error',
-                                 StatusMsg.SERVER_ERROR),
+              bc_helper.BOMEntry([], '', 'index error', StatusMsg.SERVER_ERROR),
           hwid4:
               bc_helper.BOMEntry([
                   ComponentMsg(name='qux', component_class='baz'),
                   ComponentMsg(name='rox', component_class='baz'),
                   ComponentMsg(name='bar', component_class='foo'),
-              ], [], '', '', StatusMsg.SUCCESS),
+              ], '', '', StatusMsg.SUCCESS),
       }
 
       req = hwid_api_messages_pb2.BatchGetBomRequest(hwid=[hwid1, hwid2])
