@@ -15,6 +15,7 @@ from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.hwid.v3 import database
 
 
+_BOMAndConfigless = bc_helper.BOMAndConfigless
 GOLDEN_HWIDV3_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '..', 'testdata',
     'v3-golden.yaml')
@@ -32,7 +33,9 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._bc_helper = mock.Mock(
         spec=bc_helper.BOMAndConfiglessHelper,
         wraps=bc_helper.BOMAndConfiglessHelper(
-            self._module_collection.fake_decoder_data_manager))
+            self._module_collection.fake_decoder_data_manager,
+            self._module_collection.fake_bom_data_cacher,
+        ))
     self._sku_helper = mock.Mock(
         spec=sku_helper.SKUHelper, wraps=sku_helper.SKUHelper(
             self._module_collection.fake_decoder_data_manager))
@@ -73,7 +76,7 @@ class DUTLabelHelperTest(unittest.TestCase):
         warnings=[])
     self._SetupFakeHWIDActionForTestProject('feature_enablement_value')
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
-        TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
+        TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
@@ -113,7 +116,7 @@ class DUTLabelHelperTest(unittest.TestCase):
         warnings=['warning1', 'warning2'])
     self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
-        TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
+        TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)
@@ -135,7 +138,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     configless = None
     self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
-        TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
+        TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
     self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
@@ -190,7 +193,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     }
     self._SetupFakeHWIDActionForTestProject()
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
-        TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
+        TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
     self._sku_helper.GetSKUFromBOM.return_value = sku_helper.SKU(
         sku_str='TestSku', project='', cpu=None, memory_str='', total_bytes=0,
@@ -219,7 +222,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     configless = None
     self._SetupFakeHWIDActionForTestProject('feature_value')
     self._bc_helper.BatchGetBOMAndConfigless.return_value = {
-        TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None),
+        TEST_HWID: _BOMAndConfigless(bom, configless, None),
     }
 
     req = hwid_api_messages_pb2.DutLabelsRequest(hwid=TEST_HWID)

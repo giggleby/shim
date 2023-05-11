@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import fnmatch
 import math
 import tempfile
 import time
@@ -13,6 +14,7 @@ from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action_manager
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine import hwid_preproc_data
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
 from cros.factory.hwid.v3 import filesystem_adapter
@@ -40,6 +42,11 @@ class FakeMemcacheAdapter:
       self._data.pop(key, None)
       self._expiry.pop(key, None)
     return self._data.get(key)
+
+  def DelByPrefix(self, entry_key_pattern: str):
+    for key in fnmatch.filter(self._data, entry_key_pattern):
+      self._data.pop(key, None)
+      self._expiry.pop(key, None)
 
 
 class FakeHWIDPreprocData(hwid_preproc_data.HWIDPreprocData):
@@ -96,10 +103,14 @@ class FakeModuleCollection:
     self.fake_hwid_db_data_manager = hwid_db_data.HWIDDBDataManager(
         self._ndb_connector, self._tempfs_for_hwid_db_data)
     self.fake_goldeneye_memcache = FakeMemcacheAdapter()
+    self.fake_bom_data_cacher = bc_helper_module.BOMDataCacher(
+        FakeMemcacheAdapter())
     self.fake_hwid_action_manager = hwid_action_manager.HWIDActionManager(
         self.fake_hwid_db_data_manager,
         self._fake_memcache_for_hwid_preproc_data,
-        instance_factory=self._fake_hwid_instance_factory)
+        [self.fake_bom_data_cacher],
+        instance_factory=self._fake_hwid_instance_factory,
+    )
     self.fake_avl_converter_manager = converter_utils.ConverterManager({})
     self.fake_session_cache_adapter = FakeMemcacheAdapter()
     self.fake_avl_metadata_manager = avl_metadata_util.AVLMetadataManager(

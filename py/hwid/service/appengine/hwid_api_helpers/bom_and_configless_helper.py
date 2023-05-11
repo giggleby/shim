@@ -7,9 +7,11 @@ import operator
 from typing import Dict, List, NamedTuple, Optional
 
 from cros.factory.hwid.service.appengine.data import config_data
+from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
+from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import rule as v3_rule
@@ -24,6 +26,23 @@ class BOMAndConfigless(NamedTuple):
   bom: Optional[hwid_action.BOM]
   configless: Optional[Dict]
   error: Optional[Exception]
+
+
+class BOMDataCacher(hwid_action_manager.IHWIDDataCacher):
+  """A class to cache bom data by HWID string and invalidate them if needed."""
+
+  def __init__(self, mem_adapter: memcache_adapter.MemcacheAdapter):
+    self._mem_adapter = mem_adapter
+
+  def GetBOMDataFromCache(self, cache_key: str) -> Optional[BOMAndConfigless]:
+    return self._mem_adapter.Get(cache_key)
+
+  def SetBOMDataCache(self, cache_key: str, bom: BOMAndConfigless):
+    self._mem_adapter.Put(cache_key, bom)
+
+  def ClearCache(self, proj: Optional[str] = None):
+    """See base class."""
+    self._mem_adapter.DelByPrefix(f'{proj}[- ]*' if proj else '*')
 
 
 class BOMEntry(NamedTuple):
@@ -45,14 +64,22 @@ def GetBOMAndConfiglessStatusAndError(bom_configless):
 
 class BOMAndConfiglessHelper:
 
-  def __init__(self, decoder_data_manager):
+  def __init__(
+      self,
+      decoder_data_manager: decoder_data.DecoderDataManager,
+      bom_data_cacher: BOMDataCacher,
+  ):
     self._vpg_targets = _CONFIG_DATA.vpg_targets
     self._decoder_data_manager = decoder_data_manager
+    self._bom_data_cacher = bom_data_cacher
 
   def BatchGetBOMAndConfigless(
-      self, hwid_action_getter: hwid_action_manager.IHWIDActionGetter,
-      hwid_strings: List[str], verbose: bool = False,
-      require_vp_info: bool = False) -> Dict[str, BOMAndConfigless]:
+      self,
+      hwid_action_getter: hwid_action_manager.IHWIDActionGetter,
+      hwid_strings: List[str],
+      verbose: bool = False,
+      require_vp_info: bool = False,
+  ) -> Dict[str, BOMAndConfigless]:
     """Get the BOM and configless for a given HWIDs.
 
     Args:
@@ -72,6 +99,8 @@ class BOMAndConfiglessHelper:
     result = {}
     for hwid_string in hwid_strings:
       logging.debug('Getting BOM for %r.', hwid_string)
+      # TODO(b/267677465): Use self._bom_data_cache to cache decoded BOM.
+
       project_and_brand, unused_sep, unused_part = hwid_string.partition(' ')
       project, unused_sep, unused_part = project_and_brand.partition('-')
 

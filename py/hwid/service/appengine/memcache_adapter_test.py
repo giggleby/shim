@@ -118,6 +118,29 @@ class MemcacheAdapterTest(unittest.TestCase):
     self.assertDictEqual(object_to_save, retrived_no_expire_after_sleep)
     self.assertIsNone(retrived_expire_after_sleep)
 
+  def testDelByPrefix(self):
+    existing_data = {
+        'a1': b'a1data',
+        'a2': b'a2data',
+        'b1': b'b1data',
+        'b2': b'b2data',
+    }
+    adapter = memcache_adapter.MemcacheAdapter('testnamespace')
+    for key, val in existing_data.items():
+      adapter.Put(key, val)
+
+    adapter.DelByPrefix('a*')
+
+    remaining_data = {key: adapter.Get(key)
+                      for key in existing_data}
+    self.assertDictEqual(
+        {
+            'a1': None,
+            'a2': None,
+            'b1': b'b1data',
+            'b2': b'b2data',
+        }, remaining_data)
+
 
 if __name__ == '__main__':
   unittest.main()

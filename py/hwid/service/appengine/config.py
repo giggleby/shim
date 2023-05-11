@@ -13,6 +13,7 @@ from cros.factory.hwid.service.appengine.data import decoder_data
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine.data import verification_payload_data
 from cros.factory.hwid.service.appengine import hwid_action_manager
+from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper_module
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine import ndb_connector as ndbc_module
@@ -21,6 +22,8 @@ from cros.factory.utils import type_utils
 
 
 _CONFIG_DATA = config_data.CONFIG
+HWID_PREPROC_DATA_MEMCACHE_NAMESPACE = 'HWIDObject'
+BOM_DATA_MEMCACHE_NAMESPACE = 'BOMAndConfigless'
 
 
 class _Config:
@@ -38,6 +41,8 @@ class _Config:
         PrimaryIdentifier).
     hwid_db_data_manager: A HWIDDBDataManager instance responsible for
         reading/writing HWID DB data/metadata.
+    bom_data_cacher: A BOMDataCacher instance responsible for cache responses of
+        BOM related APIs.
     hwid_action_manager: A HWIDActionManager object. The object maintains
         HWIDAction objects, which provide HWID DB related operations.
     hwid_repo_manager: A HWIDRepoManager object, which provides functionalities
@@ -67,9 +72,16 @@ class _Config:
     self.hwid_db_data_manager = hwid_db_data.HWIDDBDataManager(
         ndb_connector, self.hwid_filesystem)
     hwid_preproc_data_memcache_adapter = memcache_adapter.MemcacheAdapter(
-        namespace='HWIDObject')
+        namespace=HWID_PREPROC_DATA_MEMCACHE_NAMESPACE)
+    bom_data_memcache_adapter = memcache_adapter.MemcacheAdapter(
+        namespace=BOM_DATA_MEMCACHE_NAMESPACE)
+    self.bom_data_cacher = bc_helper_module.BOMDataCacher(
+        bom_data_memcache_adapter)
     self.hwid_action_manager = hwid_action_manager.HWIDActionManager(
-        self.hwid_db_data_manager, hwid_preproc_data_memcache_adapter)
+        self.hwid_db_data_manager,
+        hwid_preproc_data_memcache_adapter,
+        [self.bom_data_cacher],
+    )
     self.hwid_repo_manager = hwid_repo.HWIDRepoManager(
         _CONFIG_DATA.hwid_repo_branch,
         _CONFIG_DATA.unverified_cl_ccs,

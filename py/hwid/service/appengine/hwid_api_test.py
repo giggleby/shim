@@ -22,6 +22,7 @@ TEST_HWID = 'Foo'
 
 ComponentMsg = hwid_api_messages_pb2.Component
 StatusMsg = hwid_api_messages_pb2.Status
+_BOMAndConfigless = bc_helper.BOMAndConfigless
 
 
 def _CreateMockConfig(fake_modules: test_utils.FakeModuleCollection):
@@ -36,6 +37,7 @@ def _CreateMockConfig(fake_modules: test_utils.FakeModuleCollection):
   hwid_live_repo.ListHWIDDBMetadata.return_value = []
   hwid_live_repo.GetHWIDDBMetadataByName.side_effect = ValueError
   mock_config.hwid_db_data_manager = fake_modules.fake_hwid_db_data_manager
+  mock_config.bom_data_cacher = fake_modules.fake_bom_data_cacher
   mock_config.avl_metadata_manager = fake_modules.fake_avl_metadata_manager
   mock_config.avl_converter_manager = converter_utils.ConverterManager({})
   return mock_config
@@ -357,7 +359,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
                                                        'feature_value')
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMAndConfigless.return_value = {
-          TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
+          TEST_HWID: _BOMAndConfigless(bom, configless, None)
       }
 
       with mock.patch.object(
@@ -388,7 +390,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
                                                        'feature_value')
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMAndConfigless.return_value = {
-          TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
+          TEST_HWID: _BOMAndConfigless(bom, configless, None)
       }
 
       with mock.patch.object(
@@ -417,7 +419,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
                                                        'feature_value')
     with mock.patch.object(self.service, '_bc_helper') as mock_helper:
       mock_helper.BatchGetBOMAndConfigless.return_value = {
-          TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
+          TEST_HWID: _BOMAndConfigless(bom, configless, None)
       }
 
       req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)

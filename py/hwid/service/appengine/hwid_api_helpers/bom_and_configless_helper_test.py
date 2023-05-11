@@ -21,11 +21,11 @@ GOLDEN_HWIDV3_FILE = os.path.join(
 TEST_MODEL = 'FOO'
 TEST_HWID = 'Foo ABC'
 
-ComponentMsg = hwid_api_messages_pb2.Component
-FieldMsg = hwid_api_messages_pb2.Field
-AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
-Status = hwid_api_messages_pb2.Status
-BOMAndConfigless = bc_helper_module.BOMAndConfigless
+_ComponentMsg = hwid_api_messages_pb2.Component
+_FieldMsg = hwid_api_messages_pb2.Field
+_AvlInfoMsg = hwid_api_messages_pb2.AvlInfo
+_Status = hwid_api_messages_pb2.Status
+_BOMAndConfigless = bc_helper_module.BOMAndConfigless
 
 
 class BOMAndConfiglessHelperTest(unittest.TestCase):
@@ -37,9 +37,11 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     self._fake_hwid_action_manager = mock.Mock(
         spec=self._module_collection.fake_hwid_action_manager,
         wraps=self._module_collection.fake_hwid_action_manager)
-
+    self._fake_bom_data_cacher = self._module_collection.fake_bom_data_cacher
     self._bc_helper = bc_helper_module.BOMAndConfiglessHelper(
-        self._module_collection.fake_decoder_data_manager)
+        self._module_collection.fake_decoder_data_manager,
+        self._fake_bom_data_cacher,
+    )
 
   def tearDown(self):
     super().tearDown()
@@ -95,7 +97,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     configless = None
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {
-          TEST_HWID: BOMAndConfigless(bom, configless, None),
+          TEST_HWID: _BOMAndConfigless(bom, configless, None),
       }
 
       results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
@@ -105,34 +107,34 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         results, {
             TEST_HWID:
                 bc_helper_module.BOMEntry([
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='battery_small', component_class='battery',
                         fields=[
-                            FieldMsg(name='manufacturer',
-                                     value='manufacturer1'),
-                            FieldMsg(name='model_name', value='model1'),
-                            FieldMsg(name='technology', value='Battery Li-ion')
+                            _FieldMsg(name='manufacturer',
+                                      value='manufacturer1'),
+                            _FieldMsg(name='model_name', value='model1'),
+                            _FieldMsg(name='technology', value='Battery Li-ion')
                         ]),
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='camera_0', component_class='camera', fields=[
-                            FieldMsg(name='idProduct', value='abcd'),
-                            FieldMsg(name='idVendor', value='4567'),
-                            FieldMsg(name='name', value='Camera')
-                        ], avl_info=AvlInfoMsg(cid=0, avl_name=''),
+                            _FieldMsg(name='idProduct', value='abcd'),
+                            _FieldMsg(name='idVendor', value='4567'),
+                            _FieldMsg(name='name', value='Camera')
+                        ], avl_info=_AvlInfoMsg(cid=0, avl_name=''),
                         has_avl=True),
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='cpu_0', component_class='cpu', fields=[
-                            FieldMsg(name='cores', value='4'),
-                            FieldMsg(name='name', value='CPU @ 1.80GHz')
-                        ], avl_info=AvlInfoMsg(cid=0, avl_name=''),
+                            _FieldMsg(name='cores', value='4'),
+                            _FieldMsg(name='name', value='CPU @ 1.80GHz')
+                        ], avl_info=_AvlInfoMsg(cid=0, avl_name=''),
                         has_avl=True),
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='cpu_1', component_class='cpu', fields=[
-                            FieldMsg(name='cores', value='4'),
-                            FieldMsg(name='name', value='CPU @ 2.00GHz')
-                        ], avl_info=AvlInfoMsg(cid=1, avl_name=''),
+                            _FieldMsg(name='cores', value='4'),
+                            _FieldMsg(name='name', value='CPU @ 2.00GHz')
+                        ], avl_info=_AvlInfoMsg(cid=1, avl_name=''),
                         has_avl=True)
-                ], '', '', Status.SUCCESS),
+                ], '', '', _Status.SUCCESS),
         })
 
   def testBatchGetBOMEntry_WithAvlInfo(self):
@@ -149,7 +151,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     self._module_collection.AddAVLNameMapping(1234, 'avl_name_1')
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {
-          TEST_HWID: BOMAndConfigless(bom, configless, None),
+          TEST_HWID: _BOMAndConfigless(bom, configless, None),
       }
 
       results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
@@ -159,42 +161,42 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         results, {
             TEST_HWID:
                 bc_helper_module.BOMEntry([
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='dram_1234_5678', component_class='dram', fields=[
-                            FieldMsg(name='part', value='part2'),
-                            FieldMsg(name='size', value='4G'),
-                        ], avl_info=AvlInfoMsg(cid=1234, qid=5678,
-                                               avl_name='avl_name_1'),
+                            _FieldMsg(name='part', value='part2'),
+                            _FieldMsg(name='size', value='4G'),
+                        ], avl_info=_AvlInfoMsg(cid=1234, qid=5678,
+                                                avl_name='avl_name_1'),
                         has_avl=True),
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='dram_1234_5678#4', component_class='dram',
                         fields=[
-                            FieldMsg(name='part', value='part2'),
-                            FieldMsg(name='size', value='4G'),
-                            FieldMsg(name='slot', value='3'),
-                        ], avl_info=AvlInfoMsg(cid=1234, qid=5678,
-                                               avl_name='avl_name_1'),
+                            _FieldMsg(name='part', value='part2'),
+                            _FieldMsg(name='size', value='4G'),
+                            _FieldMsg(name='slot', value='3'),
+                        ], avl_info=_AvlInfoMsg(cid=1234, qid=5678,
+                                                avl_name='avl_name_1'),
                         has_avl=True),
-                    ComponentMsg(
+                    _ComponentMsg(
                         name='dram_subcomp_2468', component_class='dram',
                         fields=[
-                            FieldMsg(name='part', value='part4'),
-                            FieldMsg(name='size', value='4G'),
-                        ], avl_info=AvlInfoMsg(cid=2468,
-                                               is_subcomp=True), has_avl=True),
-                    ComponentMsg(
+                            _FieldMsg(name='part', value='part4'),
+                            _FieldMsg(name='size', value='4G'),
+                        ], avl_info=_AvlInfoMsg(cid=2468,
+                                                is_subcomp=True), has_avl=True),
+                    _ComponentMsg(
                         name='not_dram_1234_5678', component_class='dram',
                         fields=[
-                            FieldMsg(name='part', value='part3'),
-                            FieldMsg(name='size', value='4G'),
+                            _FieldMsg(name='part', value='part3'),
+                            _FieldMsg(name='size', value='4G'),
                         ]),
-                ], '', '', Status.SUCCESS)
+                ], '', '', _Status.SUCCESS)
         })
 
   def testBatchGetBOMEntry_BOMIsNone(self):
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {
-          TEST_HWID: BOMAndConfigless(None, None, None),
+          TEST_HWID: _BOMAndConfigless(None, None, None),
       }
 
       results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
@@ -203,7 +205,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     self.assertEqual(
         results, {
             TEST_HWID:
-                self._CreateBOMEntryWithError(Status.NOT_FOUND,
+                self._CreateBOMEntryWithError(_Status.NOT_FOUND,
                                               'HWID not found.'),
         })
 
@@ -217,7 +219,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         results, {
             bad_hwid:
                 self._CreateBOMEntryWithError(
-                    Status.KNOWN_BAD_HWID,
+                    _Status.KNOWN_BAD_HWID,
                     'No metadata present for the requested project: FOO TEST'),
         })
 
@@ -233,10 +235,10 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     })
     with self._PatchBatchGetBOMAndConfigless() as patch_method:
       patch_method.return_value = {
-          hwid1: BOMAndConfigless(None, None, ValueError('value error')),
-          hwid2: BOMAndConfigless(None, None, KeyError('Invalid key')),
-          hwid3: BOMAndConfigless(None, None, IndexError('index error')),
-          hwid4: BOMAndConfigless(bom, None, None),
+          hwid1: _BOMAndConfigless(None, None, ValueError('value error')),
+          hwid2: _BOMAndConfigless(None, None, KeyError('Invalid key')),
+          hwid3: _BOMAndConfigless(None, None, IndexError('index error')),
+          hwid4: _BOMAndConfigless(bom, None, None),
       }
 
       results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
@@ -245,20 +247,20 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
     self.assertEqual(
         results, {
             hwid1:
-                self._CreateBOMEntryWithError(Status.BAD_REQUEST,
+                self._CreateBOMEntryWithError(_Status.BAD_REQUEST,
                                               'value error'),
             hwid2:
-                self._CreateBOMEntryWithError(Status.NOT_FOUND,
+                self._CreateBOMEntryWithError(_Status.NOT_FOUND,
                                               "'Invalid key'"),
             hwid3:
-                self._CreateBOMEntryWithError(Status.SERVER_ERROR,
+                self._CreateBOMEntryWithError(_Status.SERVER_ERROR,
                                               'index error'),
             hwid4:
                 bc_helper_module.BOMEntry([
-                    ComponentMsg(name='qux', component_class='baz'),
-                    ComponentMsg(name='rox', component_class='baz'),
-                    ComponentMsg(name='bar', component_class='foo'),
-                ], '', '', Status.SUCCESS),
+                    _ComponentMsg(name='qux', component_class='baz'),
+                    _ComponentMsg(name='rox', component_class='baz'),
+                    _ComponentMsg(name='bar', component_class='foo'),
+                ], '', '', _Status.SUCCESS),
         })
 
   def _PatchBatchGetBOMAndConfigless(self):

@@ -87,11 +87,15 @@ class HWIDActionManagerTest(unittest.TestCase):
         self._modules.fake_hwid_db_data_manager,
         wraps=self._modules.fake_hwid_db_data_manager)
 
-    memcache = test_utils.FakeMemcacheAdapter()
+    preproc_data_memcache = test_utils.FakeMemcacheAdapter()
+    bom_data_cacher = self._modules.fake_bom_data_cacher
 
     self._hwid_action_manager = hwid_action_manager.HWIDActionManager(
-        self._hwid_db_data_manager, memcache,
-        instance_factory=self._instance_factory)
+        self._hwid_db_data_manager,
+        preproc_data_memcache,
+        [bom_data_cacher],
+        instance_factory=self._instance_factory,
+    )
 
   def tearDown(self):
     super().tearDown()

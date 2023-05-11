@@ -52,7 +52,9 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     self._hwid_action_manager = config.hwid_action_manager
     self._hwid_db_data_manager = config.hwid_db_data_manager
     self._sku_helper = sku_helper.SKUHelper(decoder_data_manager)
-    self._bc_helper = bc_helper.BOMAndConfiglessHelper(decoder_data_manager)
+    bom_data_cacher = config.bom_data_cacher
+    self._bc_helper = bc_helper.BOMAndConfiglessHelper(decoder_data_manager,
+                                                       bom_data_cacher)
     self._dut_label_helper = dut_label_helper.DUTLabelHelper(
         decoder_data_manager, goldeneye_memcache_adapter, self._bc_helper,
         self._sku_helper, self._hwid_action_manager)

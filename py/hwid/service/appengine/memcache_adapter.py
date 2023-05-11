@@ -49,13 +49,18 @@ class MemcacheAdapter:
     """
     self.client.flushall()
 
+  def _KeyWithNamespace(self, key: str, chunk_id: Optional[int] = None) -> str:
+    if chunk_id is None:
+      return f'{self.namespace}.py3:{key}'
+    return f'{self.namespace}.py3:{key}.{chunk_id}'
+
   def BreakIntoChunks(self, key, serialized_data):
     chunks = {}
     # Split serialized object into chunks no bigger than chunksize. The unique
     # key for the split chunks is <key>.<number> so the first chunk for key SNOW
     # will be SNOW.0 the second chunk will be in SNOW.1
     for i in range(0, len(serialized_data), MEMCACHE_CHUNKSIZE):
-      chunk_key = f'{self.namespace}.py3:{key}.{i // MEMCACHE_CHUNKSIZE}'
+      chunk_key = self._KeyWithNamespace(key, i // MEMCACHE_CHUNKSIZE)
       chunks[chunk_key] = serialized_data[i : i+MEMCACHE_CHUNKSIZE]
     return chunks
 
@@ -75,10 +80,21 @@ class MemcacheAdapter:
 
   def Get(self, key):
     """Retrieve and re-assemble a large object from memcache."""
-    keys = [f'{self.namespace}.py3:{key}.{i}' for i in range(MAX_NUMBER_CHUNKS)]
+    keys = [self._KeyWithNamespace(key, i) for i in range(MAX_NUMBER_CHUNKS)]
     chunks = self.client.mget(keys)
     serialized_data = b''.join(filter(None, chunks))
     if not serialized_data:
       logging.debug('Memcache no data found %s', key)
       return None
     return pickle.loads(serialized_data)
+
+  def DelByPrefix(self, entry_key_pattern: str):
+    """Deletes entries by the given pattern.
+
+    Args:
+      entry_key_pattern: the pattern of keys to delete.
+    """
+
+    keys = self.client.keys(self._KeyWithNamespace(entry_key_pattern))
+    if keys:
+      self.client.delete(*keys)

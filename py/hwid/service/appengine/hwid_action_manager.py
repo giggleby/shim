@@ -4,7 +4,7 @@
 
 import abc
 import logging
-from typing import MutableMapping, Optional, Sequence, Set, Union
+from typing import Collection, MutableMapping, Optional, Sequence, Set, Union
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
@@ -30,6 +30,18 @@ class ProjectNotSupportedError(ValueError):
 
 class ProjectUnavailableError(RuntimeError):
   """Indicates that the specified project has unexpected malformed HWID data."""
+
+
+class IHWIDDataCacher(abc.ABC):
+  """Caches data per HWID project for easily invalidation."""
+
+  @abc.abstractmethod
+  def ClearCache(self, proj: Optional[str] = None):
+    """Clears cache by project name.
+
+    Args:
+      proj: An optional str of project.  Clear all cache if set to None.
+    """
 
 
 class InstanceFactory:
@@ -162,11 +174,16 @@ class InMemoryCachedHWIDActionGetter(IHWIDActionGetter):
 class HWIDActionManager(IHWIDActionGetter):
   """The canonical portal to get HWID action instances for given projects."""
 
-  def __init__(self, hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
-               mem_adapter: memcache_adapter.MemcacheAdapter,
-               instance_factory: Optional[InstanceFactory] = None):
+  def __init__(
+      self,
+      hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
+      preproc_data_memcache_adapter: memcache_adapter.MemcacheAdapter,
+      hwid_data_cachers: Collection[IHWIDDataCacher],
+      instance_factory: Optional[InstanceFactory] = None,
+  ):
     self._hwid_db_data_manager = hwid_db_data_manager
-    self._memcache_adapter = mem_adapter
+    self._preproc_data_memcache_adapter = preproc_data_memcache_adapter
+    self._hwid_data_cachers = hwid_data_cachers
     self._instance_factory = instance_factory or InstanceFactoryImpl()
 
   def GetHWIDAction(self, project: str) -> hwid_action.HWIDAction:
@@ -258,7 +275,9 @@ class HWIDActionManager(IHWIDActionGetter):
     This method is for testing purpose since each integration test should have
     empty cache in the beginning.
     """
-    self._memcache_adapter.ClearAll()
+    self._preproc_data_memcache_adapter.ClearAll()
+    for hwid_data_cacher in self._hwid_data_cachers:
+      hwid_data_cacher.ClearCache()
 
   def GetHWIDPreprocDataFromCache(self, project: str) -> _HWIDPreprocData:
     """Get the HWID file data from memcache.
@@ -271,7 +290,7 @@ class HWIDActionManager(IHWIDActionGetter):
        memcache.
     """
     try:
-      hwid_preproc_data_inst = self._memcache_adapter.Get(project)
+      hwid_preproc_data_inst = self._preproc_data_memcache_adapter.Get(project)
     except Exception:
       logging.exception('Memcache read miss %s: caught exception.', project)
       return None
@@ -286,7 +305,7 @@ class HWIDActionManager(IHWIDActionGetter):
 
   def _SaveHWIDPreprocDataToCache(self, project: str,
                                   hwid_preproc_data_inst: _HWIDPreprocData):
-    self._memcache_adapter.Put(project, hwid_preproc_data_inst)
+    self._preproc_data_memcache_adapter.Put(project, hwid_preproc_data_inst)
 
   def ListProjects(self) -> Set[str]:
     """Lists all available projects in a set."""
