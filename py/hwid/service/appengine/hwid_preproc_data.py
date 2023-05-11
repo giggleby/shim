@@ -6,6 +6,7 @@
 from typing import Optional
 
 from cros.factory.hwid.service.appengine import feature_matching
+from cros.factory.hwid.service.appengine import features
 from cros.factory.hwid.v2 import yaml_datastore as v2_yaml_datastore
 from cros.factory.hwid.v3 import common as v3_common
 from cros.factory.hwid.v3 import database as v3_database
@@ -88,7 +89,7 @@ class HWIDV2PreprocData(HWIDPreprocData):
 class HWIDV3PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv3 data."""
 
-  CACHE_VERSION = '7'
+  CACHE_VERSION = '8'
   HWID_FEATURE_MATCHER_BUILDER = feature_matching.HWIDFeatureMatcherBuilder()
 
   @classmethod
@@ -101,8 +102,13 @@ class HWIDV3PreprocData(HWIDPreprocData):
 
   @classmethod
   def _ParseFeatureMatcherSource(
-      cls, database: v3_database.Database,
-      feature_matcher_source: str) -> feature_matching.HWIDFeatureMatcher:
+      cls, database: v3_database.Database, feature_matcher_source: Optional[str]
+  ) -> feature_matching.HWIDFeatureMatcher:
+    if feature_matcher_source is None:
+      feature_matcher_source = (
+          cls.HWID_FEATURE_MATCHER_BUILDER.GenerateFeatureMatcherRawSource(
+              features.NO_FEATURE_VERSION, [], []))
+
     try:
       return cls.HWID_FEATURE_MATCHER_BUILDER.CreateHWIDFeatureMatcher(
           database, feature_matcher_source)
@@ -133,8 +139,8 @@ class HWIDV3PreprocData(HWIDPreprocData):
     self._hwid_db_commit_id = hwid_db_commit_id
     self._feature_matcher_source = feature_matcher_source
     self._database = self._ParseDatabase(self._raw_database_internal)
-    self._feature_matcher = feature_matcher_source and (
-        self._ParseFeatureMatcherSource(self._database, feature_matcher_source))
+    self._feature_matcher = self._ParseFeatureMatcherSource(
+        self._database, feature_matcher_source)
 
   @property
   def hwid_db_commit_id(self):
@@ -149,7 +155,7 @@ class HWIDV3PreprocData(HWIDPreprocData):
     return self._raw_database_internal
 
   @property
-  def feature_matcher(self) -> Optional[feature_matching.HWIDFeatureMatcher]:
+  def feature_matcher(self) -> feature_matching.HWIDFeatureMatcher:
     return self._feature_matcher
 
   @property

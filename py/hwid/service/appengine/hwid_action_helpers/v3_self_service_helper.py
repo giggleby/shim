@@ -227,11 +227,10 @@ class HWIDV3SelfServiceActionHelper:
 
     builder.AddRegularFile(internal_db.project, external_raw_db.encode('utf-8'))
     feature_matcher = self._preproc_data.feature_matcher
-    if feature_matcher:
-      payload = feature_matcher.GenerateHWIDFeatureRequirementPayload()
-      file_name = feature_compliance.GetFeatureRequirementSpecFileName(
-          internal_db.project)
-      builder.AddRegularFile(file_name, payload.encode('utf-8'))
+    payload = feature_matcher.GenerateHWIDFeatureRequirementPayload()
+    file_name = feature_compliance.GetFeatureRequirementSpecFileName(
+        internal_db.project)
+    builder.AddRegularFile(file_name, payload.encode('utf-8'))
     builder.AddExecutableFile(_HWID_BUNDLE_INSTALLER_NAME,
                               _HWID_BUNDLE_INSTALLER_SCRIPT.encode('utf-8'))
     builder.SetRunnerFilePath(_HWID_BUNDLE_INSTALLER_NAME)
