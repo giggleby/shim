@@ -342,7 +342,14 @@ class Finalize(test_case.TestCase):
       return 'none'
 
     if method == 'shopfloor':
-      method = (f'shopfloor:{server_proxy.GetServerURL()}#'
+      logging.warning('The upload method "shopfloor" has been deprecated and '
+                      'is renamed to "factory_server". Continuing with the '
+                      'method "factory_server". See b/281573026 and '
+                      'b/281773658 for more information.')
+      method = 'factory_server'
+
+    if method == 'factory_server':
+      method = (f'factory_server:{server_proxy.GetServerURL()}#'
                 f'{device_data.GetSerialNumber()}')
     logging.info('Using upload method %s', method)
 

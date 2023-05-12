@@ -631,7 +631,7 @@
       "label": "Finalize MLB",
       "run_if": "constants.factory_process != 'FULL'",
       "args": {
-        "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
+        "upload_method": "eval! 'factory_server' if constants.enable_factory_server else 'none'",
         "mode": "MLB"
       }
     },

@@ -75,14 +75,14 @@ def RetryCommand(callback, message_prefix, max_retry_times, interval):
       time.sleep(1)
 
 
-def ShopFloorUpload(source_path, remote_spec, stage,
-                    max_retry_times=DEFAULT_MAX_RETRY_TIMES,
-                    retry_interval=DEFAULT_RETRY_INTERVAL,
-                    allow_fail=False):
+def FactoryServerUpload(
+    source_path, remote_spec, stage, max_retry_times=DEFAULT_MAX_RETRY_TIMES,
+    retry_interval=DEFAULT_RETRY_INTERVAL, allow_fail=False):
   if '#' not in remote_spec:
-    raise Error('ShopFloorUpload: need a valid parameter in URL#SN format.')
+    raise Error(f'{FactoryServerUpload.__name__}: '
+                'need a valid parameter in URL#SN format.')
   (server_url, _, serial_number) = remote_spec.partition('#')
-  logging.debug('ShopFloorUpload: [%s].UploadReport(%s, %s)',
+  logging.debug('%s: [%s].UploadReport(%s, %s)', FactoryServerUpload.__name__,
                 server_url, serial_number, source_path)
   instance = xmlrpc.client.ServerProxy(server_url, allow_none=True,
                                        verbose=False)
@@ -91,7 +91,7 @@ def ShopFloorUpload(source_path, remote_spec, stage,
   model = cros_config.GetModelName()
   option_name = model + '-gooftool' if model else 'gooftool'
 
-  def ShopFloorCallback(result):
+  def FactoryServerCallback(result):
     try:
       instance.UploadReport(serial_number, blob, option_name, stage)
       return True
@@ -105,16 +105,19 @@ def ShopFloorUpload(source_path, remote_spec, stage,
     return False
 
   try:
-    RetryCommand(ShopFloorCallback, 'ShopFloorUpload',
+    RetryCommand(FactoryServerCallback, FactoryServerUpload.__name__,
                  max_retry_times=max_retry_times, interval=retry_interval)
   except RetryError:
     if allow_fail:
-      logging.info('ShopFloorUpload: skip uploading to: %s', remote_spec)
+      logging.info('%s: skip uploading to: %s', FactoryServerUpload.__name__,
+                   remote_spec)
     else:
       raise Error(
-          f'ShopFloorUpload: fail to upload to: {remote_spec}') from None
+          f'{FactoryServerUpload.__name__}: fail to upload to: {remote_spec}'
+      ) from None
   else:
-    logging.info('ShopFloorUpload: successfully uploaded to: %s', remote_spec)
+    logging.info('%s: successfully uploaded to: %s',
+                 FactoryServerUpload.__name__, remote_spec)
 
 
 def CurlCommand(curl_command, success_string=None, abort_string=None,

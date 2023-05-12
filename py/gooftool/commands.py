@@ -905,9 +905,18 @@ def CreateReportArchive(device_sn=None, add_file=None):
   return target_path
 
 _upload_method_cmd_arg = CmdArg(
-    '--upload_method', metavar='METHOD:PARAM',
-    help=('How to perform the upload.  METHOD should be one of '
-          '{ftp, shopfloor, ftps, cpfe, smb}.'))
+    '--upload_method',
+    metavar='METHOD:PARAM',
+    help=(
+        'How to perform the upload.  METHOD should be one of {'
+        'ftp, factory_server, '
+        # The method `shopfloor` actually uploads the report to the umpire
+        # server, and this method name made some partners confused. Therefore
+        # rename this method to `factory_server`. See b/281573026 and
+        # b/281773658.
+        'shopfloor (deprecated, use factory_server instead; '
+        'see b/281573026 and b/281773658), '
+        'ftps, cpfe, smb}.'))
 _upload_max_retry_times_arg = CmdArg(
     '--upload_max_retry_times', type=int, default=0,
     help='Number of tries to upload. 0 to retry infinitely.')
@@ -948,12 +957,18 @@ def UploadReport(options):
     retry_interval = report_upload.DEFAULT_RETRY_INTERVAL
 
   if method == 'shopfloor':
-    report_upload.ShopFloorUpload(
+    logging.warning(
+        'The method "shopfloor" has been deprecated and is renamed to '
+        '"factory_server". Now continuing with the method "factory_server". '
+        'See b/281573026 and b/281773658 for more information.')
+    method = 'factory_server'
+
+  if method == 'factory_server':
+    report_upload.FactoryServerUpload(
         target_path, param,
         'GRT' if options.command_name == 'finalize' else None,
         max_retry_times=options.upload_max_retry_times,
-        retry_interval=retry_interval,
-        allow_fail=options.upload_allow_fail)
+        retry_interval=retry_interval, allow_fail=options.upload_allow_fail)
   elif method == 'ftp':
     report_upload.FtpUpload(target_path, 'ftp:' + param,
                             max_retry_times=options.upload_max_retry_times,

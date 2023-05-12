@@ -84,11 +84,11 @@ class FinalizeUnittest(unittest.TestCase):
       actual = self.test.AppendUploadReportArgs('')
       self.assertTrue('--upload_method "none"' in actual)
 
-  def testUploadReportArgsUploadMethodShopfloor(self):
+  def testUploadReportArgsUploadMethodFactoryServer(self):
     self.test.args.enable_factory_server = False
-    self.test.args.upload_method = 'shopfloor'
+    self.test.args.upload_method = 'factory_server'
     actual = self.test.AppendUploadReportArgs('')
-    self.assertTrue('--upload_method "shopfloor:url#123"' in actual)
+    self.assertTrue('--upload_method "factory_server:url#123"' in actual)
 
   def testUploadReportArgsEnableFactoryServer(self):
     self.test.args.enable_factory_server = True

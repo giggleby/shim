@@ -58,7 +58,7 @@
         "has_ec_pubkey": "eval! constants.has_ec_pubkey",
         "factory_process": "eval! constants.factory_process",
         "secure_wipe": "eval! constants.grt.secure_wipe",
-        "upload_method": "eval! 'shopfloor' if constants.enable_factory_server else 'none'",
+        "upload_method": "eval! 'factory_server' if constants.enable_factory_server else 'none'",
         "write_protection": "eval! constants.grt.force_write_protect or options.phase == 'PVT'",
         "cbi_eeprom_wp_status": "eval! 'Locked' if constants.grt.cbi_eeprom_wp_status != 'Absent' and options.phase == 'PVT' else constants.grt.cbi_eeprom_wp_status",
         "is_reference_board": "eval! constants.grt.is_reference_board",
