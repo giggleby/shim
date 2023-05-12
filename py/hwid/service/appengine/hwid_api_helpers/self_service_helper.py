@@ -443,9 +443,8 @@ class FeatureMatcherBuilderImpl(FeatureMatcherBuilder):
     for db_comp_name, db_comp_info in self._db.GetComponents(
         component_type, include_default=False).items():
       name_info = np.Matches(db_comp_name)
-      name_info_qid = name_info.qid or None
       if (name_info and name_info.cid == dlm_id.cid and
-          name_info_qid == dlm_id.qid):
+          (name_info.qid or None) == dlm_id.qid):
         yield db_comp_name, db_comp_info
 
   def _GetVirtualDIMMProperty(

@@ -362,6 +362,26 @@ class FeatureMatcherBuilderImplTest(unittest.TestCase):
         self._GetConvertedDLMComponentDatabaseFromMock(),
         {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
 
+  def testBuild_WithInvalidDRAMComopnentName_ThenMatchNothing(self):
+    db = self._BuildHWIDDBForTest(
+        components={'dram': {
+            'dram_xyz': {
+                'part': 'xyzabc'
+            }
+        }})
+    extra_resource = hwid_api_messages_pb2.HwidDbExternalResource()
+    extra_resource.brand_feature_infos.get_or_create('AAAA').feature_version = 1
+    extra_resource.dlm_components.add(cid=1, is_dram=True)
+
+    inst = ss_helper_module.FeatureMatcherBuilderImpl.Create(db, extra_resource)
+    result = inst.Build()
+
+    self._AssertFeatureMatcherBuildResultSuccess(result, expect_warnings=[])
+    expected_converted_dlm_entry = self._CreateDLMComponentEntry(cid=1)
+    self.assertDictEqual(
+        self._GetConvertedDLMComponentDatabaseFromMock(),
+        {expected_converted_dlm_entry.dlm_id: expected_converted_dlm_entry})
+
   def testBuild_WithSizedDRAM_Success(self):
     db = self._BuildHWIDDBForTest(
         components={'dram': {
