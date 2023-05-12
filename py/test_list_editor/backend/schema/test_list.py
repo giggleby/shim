@@ -26,6 +26,10 @@ class TestItemParams(BaseModel):
   test_item_id: str
 
 
+class TestSequenceParams(BaseModel):
+  test_list_id: str
+
+
 class TestItemDisplay(BaseModel):
   """Display purpose test item container."""
   test_item_id: str
@@ -58,3 +62,22 @@ class ItemListResponse(common.BaseResponse):
 
 class TestItemsResponse(common.BaseResponse):
   data: TestItem
+
+
+class NestedTestSequenceItem(BaseModel):
+  test_item_id: str
+  display_name: str
+  subtests: List['NestedTestSequenceItem'] = []
+
+
+class TestSequenceResponse(common.BaseResponse):
+  data: List[NestedTestSequenceItem]
+
+
+class UpdatedTestSequence(common.BaseRequest):
+  test_item_id: str
+  subtests: List[str]
+
+
+class TestSequenceRequest(common.BaseRequest):
+  data: UpdatedTestSequence

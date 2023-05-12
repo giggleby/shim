@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 
 from cros.factory.test.test_lists import manager
 from cros.factory.test_list_editor.backend.models import files
+from cros.factory.test_list_editor.backend.schema import test_list as test_list_schema
 from cros.factory.utils import config_utils
 
 
@@ -53,12 +54,12 @@ def _GetDisplayName(test_item: TestItem, item_name: str) -> str:
 def _AddFields(test_items: TestItemCollection) -> TestItemCollection:
   """Adds the required fields for each of the test item."""
   updated_test_items = copy.deepcopy(test_items)
-  for item_name, test_item in updated_test_items.items():
+  for test_item_id, test_item in updated_test_items.items():
     # TODO(louischiu) Make the item name display better.
     # TODO(louischiu) Make sure the modifications are properly handled from
     # previous resolve process.
-    test_item[TEST_ITEM_NAME_KEY] = item_name
-    test_item[TEST_ITEM_DISPLAY_KEY] = _GetDisplayName(test_item, item_name)
+    test_item[TEST_ITEM_NAME_KEY] = test_item_id
+    test_item[TEST_ITEM_DISPLAY_KEY] = _GetDisplayName(test_item, test_item_id)
     test_item[LAST_MODIFIED_KEY] = datetime.now().isoformat()
   return updated_test_items
 
@@ -136,6 +137,28 @@ def _ResolveTestItemInheritance(test_item_id: str,
   return _ResolveTestItem(inheritance_chain, definitions)
 
 
+def _ResolveSubtest(test_item_id: str, test_items: TestItemCollection):
+  """Recursively resolve the current test_item's subtest."""
+  # TODO: Do some error handling if `test_item_id` not in test_items
+  test_item = test_items[test_item_id]
+
+  resolved_subtests = [
+      _ResolveSubtest(subtest_id, test_items)
+      for subtest_id in test_item.get(SUBTEST_KEY)
+  ]
+
+  result = {
+      TEST_ITEM_DISPLAY_KEY:
+          _GetDisplayName(test_item, test_item[TEST_ITEM_NAME_KEY]),
+      TEST_ITEM_NAME_KEY:
+          test_item[TEST_ITEM_NAME_KEY],
+      SUBTEST_KEY:
+          resolved_subtests
+  }
+
+  return result
+
+
 class IDiff(abc.ABC):
   """Interface of Diff container."""
 
@@ -191,7 +214,14 @@ class ITestList(abc.ABC):
 
   @abc.abstractmethod
   def GetTestDefinitions(self):
-    """Gets the test item definitions"""
+    """Gets the test item definitions."""
+
+  def GetTestSequence(self) -> List[Dict]:
+    """Gets the resolved test sequence."""
+
+  def UpdateTestSequence(self,
+                         test_sequence: test_list_schema.UpdatedTestSequence):
+    """Updates the test sequence."""
 
   @abc.abstractmethod
   def GetTestItemConfig(self, test_item_id: str) -> Dict:
@@ -224,6 +254,7 @@ class TestList(ITestList):
     self.tests = []
     self.override_args = {}
     self.inherit = []
+    self.tests = []
 
   def LoadFromFile(self, test_list_file: files.ITestListFile):
     """Load from data"""
@@ -241,6 +272,7 @@ class TestList(ITestList):
     self.tests = data.get('tests', [])
     self.override_args = data.get('override_args', {})
     self.inherit = data.get('inherit', [])
+    self.tests = data.get('tests', [])
 
   def ExportDiff(self, test_list_file: files.ITestListFile):
     """Exports the diff made to the test list.
@@ -272,3 +304,15 @@ class TestList(ITestList):
   def UpdateTestItemConfig(self, test_item: TestItem):
     # TODO: Modify this to support Redo/Undo procedures.
     self._diff.Update(['definitions', test_item.test_item_id], test_item.dict())
+
+  def GetTestSequence(self) -> List[Dict]:
+    result = [
+        _ResolveSubtest(test_item_id, self._definitions)
+        for test_item_id in self.tests
+    ]
+    return result
+
+  def UpdateTestSequence(self,
+                         test_sequence: test_list_schema.UpdatedTestSequence):
+    self._diff.Update(['definitions', test_sequence.test_item_id, SUBTEST_KEY],
+                      test_sequence.subtests)

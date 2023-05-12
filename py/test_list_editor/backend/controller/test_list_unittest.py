@@ -22,6 +22,11 @@ class TestItemsController(unittest.TestCase):
         'test_item_id': '',
         'display_name': ''
     }
+    self.fake_test_list.GetTestSequence.return_value = [{
+        'test_item_id': '',
+        'display_name': '',
+        'subtests': []
+    }]
     self.fake_diff = mock.Mock(spec=test_list_model.DiffUnit)
 
   def testGetItemList(self):
@@ -92,3 +97,41 @@ class TestItemsController(unittest.TestCase):
             'subtests': ['a', 'b'],
             'inherit': 'test321'
         })
+
+  def testGetTestSequence(self):
+    controller = test_list_controller.TestListController(self.fake_factory)
+
+    response = controller.GetTestSequence('fake_list_id', self.fake_test_list)
+    self.assertEqual(response.status, common_schema.StatusEnum.SUCCESS)
+    self.assertEqual(response.data, [{
+        'test_item_id': '',
+        'display_name': '',
+        'subtests': []
+    }])
+
+  def testUpdateTestSequence(self):
+    self.fake_loaded_data.diff_data = {
+        'diff_data': True
+    }
+    self.fake_loaded_data.data = {}
+    self.fake_factory.Get.return_value = self.fake_loaded_data
+
+    self.fake_test_list.GetTestSequence.return_value = [{
+        'test_item_id': 'test123',
+        'display_name': 'test123',
+        'subtests': []
+    }]
+
+    fake_item = test_list_schema.UpdatedTestSequence(test_item_id='test123',
+                                                     subtests=[])
+
+    controller = test_list_controller.TestListController(self.fake_factory)
+
+    response = controller.UpdateTestSequence('', self.fake_test_list, fake_item)
+
+    self.assertEqual(response.status, common_schema.StatusEnum.SUCCESS)
+    self.assertEqual(response.data, [{
+        'test_item_id': 'test123',
+        'display_name': 'test123',
+        'subtests': [],
+    }])

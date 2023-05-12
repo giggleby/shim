@@ -131,6 +131,44 @@ class TestHelperFunc(unittest.TestCase):
             'something_else': True
         }})
 
+  def testResolveSubtest(self) -> None:
+    items = {
+        'A': {
+            'test_item_id': 'A',
+            'display_name': 'A',
+            'subtests': []
+        },
+        'B': {
+            'test_item_id': 'B',
+            'display_name': 'B',
+            'subtests': ['A']
+        },
+        'C': {
+            'test_item_id': 'C',
+            'display_name': 'C',
+            'subtests': ['B']
+        }
+    }
+    self.assertEqual(
+        test_list._ResolveSubtest('C', items),  # pylint: disable=protected-access
+        {
+            'test_item_id':
+                'C',
+            'display_name':
+                'C',
+            'subtests': [{
+                'test_item_id':
+                    'B',
+                'display_name':
+                    'B',
+                'subtests': [{
+                    'test_item_id': 'A',
+                    'display_name': 'A',
+                    'subtests': []
+                }]
+            }]
+        })
+
 
 class TestDiffUnit(unittest.TestCase):
 
@@ -384,6 +422,70 @@ class TestEditor(unittest.TestCase):
     self.assertEqual(mock_file.diff_data, {'definitions': {
         'ABC': {}
     }})
+
+  def testGetTestSequence(self):
+    mock_definitions = {
+        'definitions': {
+            'A': {
+                'test_item_id': 'A',
+                'display_name': 'A',
+                'subtests': []
+            },
+            'B': {
+                'test_item_id': 'B',
+                'display_name': 'B',
+                'subtests': ['A']
+            },
+            'C': {
+                'test_item_id': 'C',
+                'display_name': 'C',
+                'subtests': ['B']
+            }
+        },
+        'tests': ['C']
+    }
+    fake_test_list = test_list.TestList()
+    mock_file = mock.Mock(data=mock_definitions, diff_data={})
+    fake_test_list.LoadFromFile(mock_file)
+    test_sequence = fake_test_list.GetTestSequence()
+    self.assertEqual(test_sequence, [{
+        'test_item_id':
+            'C',
+        'display_name':
+            'C',
+        'subtests': [{
+            'test_item_id':
+                'B',
+            'display_name':
+                'B',
+            'subtests': [{
+                'test_item_id': 'A',
+                'display_name': 'A',
+                'subtests': []
+            }]
+        }]
+    }])
+
+  def testUpdateTestSequence(self):
+    fake_test_list = test_list.TestList()
+    mock_item = mock.Mock()
+    mock_item.test_item_id = 'ABC'
+    mock_item.subtests = []
+    mock_item.dict.return_value = {
+        'test_item_id': 'ABC',
+        'display_name': 'A B C',
+        'subtests': []
+    }
+    mock_file = mock.Mock()
+    fake_test_list.UpdateTestSequence(mock_item)
+    fake_test_list.ExportDiff(mock_file)
+
+    self.assertEqual(mock_file.diff_data,
+                     {'definitions': {
+                         'ABC': {
+                             'subtests': []
+                         }
+                     }})
 
 
 if __name__ == '__main__':

@@ -287,3 +287,7 @@ $ scripts/run-unittest.sh
 ### Common Endpoints
 
 * `/status` This is used to verify if the server is up and running.
+* `/api/v1/items` This is used to get / create / update the configurations of a test item.
+* `/api/v1/tests` This is used to get / update the "subtests" of a test item.
+  * If the details to be updated is placed in `subtests` or `tests` section of a test list, then
+  the code should be placed in this directory.
