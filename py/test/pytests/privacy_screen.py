@@ -33,7 +33,6 @@ Turn privacy screen on and then validate state::
 Argument ``target_state`` is required and must be either ``on`` or ``off``.
 """
 
-import enum
 import json
 import logging
 from typing import Any, Dict
@@ -45,6 +44,7 @@ from cros.factory.test.i18n import _
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
 from cros.factory.utils import process_utils
+from cros.factory.utils.type_utils import Enum
 from cros.factory.utils.type_utils import Error
 
 
@@ -55,9 +55,10 @@ class PrivacyScreenNotSupportedException(Error):
 class PrivacyScreenTest(test_case.TestCase):
   """Pytest to measure functionality of built-in privacy screen."""
 
+  _STATE_TYPE = Enum(['on', 'off'])
+
   ARGS = [
-      Arg('target_state', enum.Enum('_StateType', ['on', 'off']),
-          'Privacy screen target state.'),
+      Arg('target_state', _STATE_TYPE, 'Privacy screen target state.'),
   ]
 
   dut: DeviceBoard

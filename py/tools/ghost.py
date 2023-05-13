@@ -9,7 +9,6 @@ import codecs
 import contextlib
 import ctypes
 import ctypes.util
-import enum
 import fcntl
 import hashlib
 import json
@@ -46,6 +45,7 @@ from cros.factory.utils import net_utils
 from cros.factory.utils import process_utils
 from cros.factory.utils import sys_interface
 from cros.factory.utils import sys_utils
+from cros.factory.utils.type_utils import Enum
 
 from cros.factory.external.chromeos_cli import cros_config as cros_config_module
 
@@ -1130,15 +1130,7 @@ class Ghost:
     self._reset.set()
 
   def CollectPytestAndStatus(self):
-
-    class Status(str, enum.Enum):
-      failed = 'failed'
-      running = 'running'
-      idle = 'idle'
-
-      def __str__(self):
-        return self.name
-
+    STATUS = Enum(['failed', 'running', 'idle'])
     goofy = state.GetInstance()
     tests = goofy.GetTests()
 
@@ -1152,7 +1144,7 @@ class Ghost:
     tests = [x for x in tests if x['path'] in scheduled_tests]
     data = {
         'pytest': '',
-        'status': Status.idle
+        'status': STATUS.idle
     }
 
     def parse_pytest_name(test):
@@ -1161,12 +1153,12 @@ class Ghost:
 
     for test in filter(lambda t: t['status'] == TestState.ACTIVE, tests):
       data['pytest'] = parse_pytest_name(test)
-      data['status'] = Status.running
+      data['status'] = STATUS.running
       return data
 
     for test in filter(lambda t: t['status'] == TestState.FAILED, tests):
       data['pytest'] = parse_pytest_name(test)
-      data['status'] = Status.failed
+      data['status'] = STATUS.failed
       return data
 
     if tests:
