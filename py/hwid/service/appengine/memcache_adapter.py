@@ -7,7 +7,7 @@
 import logging
 import os
 import pickle
-from typing import Optional
+from typing import Collection, Optional, Union
 
 import redis
 
@@ -17,6 +17,7 @@ MAX_NUMBER_CHUNKS = 10
 # Chunksize has to be less than 1000000 bytes which is the max size for a
 # memcache data entry.  Tweaking this number may improve/reduce performance.
 MEMCACHE_CHUNKSIZE = 950000
+_REDIS_VALUE_TYPES_TO_SET = Union[bytes, memoryview, str, int, float]
 
 
 class MemcacheAdapterException(Exception):
@@ -92,9 +93,96 @@ class MemcacheAdapter:
     """Deletes entries by the given pattern.
 
     Args:
-      entry_key_pattern: the pattern of keys to delete.
+      entry_key_pattern: The pattern of keys to delete.
     """
 
     keys = self.client.keys(self._KeyWithNamespace(entry_key_pattern))
     if keys:
       self.client.delete(*keys)
+
+  def AddToSet(self, key: str, values: Collection[_REDIS_VALUE_TYPES_TO_SET]):
+    """Adds elements to a set identified by a key.
+
+    Args:
+      key: The key of the set.
+      values: A collections of acceptable data types which will be encoded to
+          bytes in memcache.
+    """
+    self.client.sadd(self._KeyWithNamespace(key), *values)
+
+  def GetIntSetElements(self, key: str) -> Collection[int]:
+    """Gets the set elements of integers identified by the key.
+
+    Args:
+      key: The key of the set.
+
+    Returns:
+      The collection of the integer set elements identified by the key.
+
+    Raises:
+      MemcacheAdapterException: Raised if the set contains non-integer data.
+    """
+    try:
+      return {
+          int(x)
+          for x in self.client.smembers(self._KeyWithNamespace(key))
+      }
+    except ValueError:
+      raise MemcacheAdapterException(
+          'The set element is not an integer.') from None
+
+  def GetStrSetElements(self, key: str, encoding='utf8') -> Collection[str]:
+    """Gets the set elements of strings identified by the key.
+
+    Args:
+      key: The key of the set.
+      encoding: The encoding of the string which will be used to decode the
+          bytes of set elements in memcache.
+
+    Returns:
+      The collection of the string set elements identified by the key.
+
+    Raises:
+      MemcacheAdapterException: Raised if the set contains data cannot be
+          decoded by the encoding.
+    """
+    try:
+      return {
+          x.decode(encoding)
+          for x in self.client.smembers(self._KeyWithNamespace(key))
+      }
+    except UnicodeDecodeError:
+      raise MemcacheAdapterException(
+          f'A set element cannot be decoded by the encoding {encoding!r}.'
+      ) from None
+
+  def GetBytesSetElements(self, key: str) -> Collection[bytes]:
+    """Gets the set elements of bytes identified by the key.
+
+    Args:
+      key: The key of the set.
+
+    Returns:
+      The collection of the set elements identified by the key.
+    """
+    return self.client.smembers(self._KeyWithNamespace(key))
+
+  def RemoveFromSet(self, key: str, value: _REDIS_VALUE_TYPES_TO_SET) -> bool:
+    """Removes one element from a set.
+
+    Args:
+      key: The key of the set.
+      value: The element to remove.
+
+    Returns:
+      A bool indicating whether the value is found and removed.
+    """
+    return bool(self.client.srem(self._KeyWithNamespace(key), value))
+
+  def ClearSet(self, key: str):
+    """Clears a set by a key.
+
+    Args:
+      key: The key of the set.
+    """
+    self.client.delete(self._KeyWithNamespace(key))
