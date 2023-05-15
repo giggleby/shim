@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 #
 # Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -213,7 +213,7 @@ class TestInputHTTPTestlog(unittest.TestCase):
     data = {'event': datatypes.Event.Serialize(event)}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual("Bad request: KeyError('value',)", r.reason)
+    self.assertRegex(r.reason, r"Bad request: KeyError\('value',?\)")
 
   def testCorrectTime(self):
     event = self._ValidStationTestRunEvent()
@@ -238,8 +238,9 @@ class TestInputHTTPTestlog(unittest.TestCase):
             'att_key1': att1}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError("event[\'attachment\'] are not '
-                     'consistent with attachments in requests.",)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\("event\[\'attachment\'\] are '
+        r'not consistent with attachments in requests\.",?\)')
 
     event['attachments'] = {'att_key1': {'path': '/path/to/file',
                                          'mimeType': 'text/plain'}}
@@ -248,24 +249,27 @@ class TestInputHTTPTestlog(unittest.TestCase):
             'att_key2': att2}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError("event[\'attachment\'] are not '
-                     'consistent with attachments in requests.",)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\("event\[\'attachment\'\] are '
+        r'not consistent with attachments in requests\.",?\)')
 
     event['attachments'] = {}
     data = {'event': datatypes.Event.Serialize(event),
             'att_key1': att1}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError("event[\'attachment\'] are not '
-                     'consistent with attachments in requests.",)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\("event\[\'attachment\'\] are '
+        r'not consistent with attachments in requests\.",?\)')
 
     event['attachments'] = {'att_key1': {'path': '/path/to/file',
                                          'mimeType': 'text/plain'}}
     data = {'event': datatypes.Event.Serialize(event)}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError("event[\'attachment\'] are not '
-                     'consistent with attachments in requests.",)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\("event\[\'attachment\'\] are '
+        r'not consistent with attachments in requests\.",?\)')
 
   def testTestlogEventWithAttachments(self):
     # Should auto set event.attachments['att_key1']='att_key1'
@@ -326,8 +330,9 @@ class TestInputHTTPTestlog(unittest.TestCase):
     data = {'event': datatypes.Event.Serialize(event)}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: SchemaException("Required item \'value\' '
-                     'does not exist in FixedDict {}",)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: SchemaException\("Required item \'value\' '
+        r'does not exist in FixedDict \{\}",?\)')
 
 
 if __name__ == '__main__':

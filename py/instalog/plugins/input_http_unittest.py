@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 #
 # Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -139,8 +139,9 @@ class TestInputHTTP(unittest.TestCase):
     data = {'event': datatypes.Event.Serialize(event)}
     r = self._RequestsPost(files=data)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError(\'Attachment(att) should have '
-                     'exactly one in the request\',)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\(\'Attachment\(att\) should '
+        r'have exactly one in the request\',?\)')
     self.assertEqual(0, len(self.core.emit_calls))
 
   def testSameNameAttachment(self):
@@ -152,8 +153,9 @@ class TestInputHTTP(unittest.TestCase):
             ('att', att2)]
     r = self._RequestsPost(files=data)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError(\'Attachment(att) should have '
-                     'exactly one in the request\',)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\(\'Attachment\(att\) should '
+        r'have exactly one in the request\',?\)')
     self.assertEqual(0, len(self.core.emit_calls))
 
   def testUseSameAttachment(self):
@@ -165,8 +167,9 @@ class TestInputHTTP(unittest.TestCase):
             ('att', att)]
     r = self._RequestsPost(files=data)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError(\'Attachment(att) should be '
-                     'used by one event\',)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\(\'Attachment\(att\) should be '
+        r'used by one event\',?\)')
     self.assertEqual(0, len(self.core.emit_calls))
 
   def testAdditionalAttachment(self):
@@ -178,8 +181,9 @@ class TestInputHTTP(unittest.TestCase):
             ('att2', att2)]
     r = self._RequestsPost(files=data)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError("Additional fields: '
-                     '[\'att2\']",)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\("Additional fields: '
+        r'\[\'att2\'\]",?\)')
     self.assertEqual(0, len(self.core.emit_calls))
 
   def testInvalidSingleEvent(self):
@@ -190,8 +194,9 @@ class TestInputHTTP(unittest.TestCase):
             'att': att}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError(\'Please follow the format: '
-                     'event={Payload}\',)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\(\'Please follow the format: '
+        r'event=\{Payload\}\',?\)')
 
     event = datatypes.Event(
         {'type': 'other', 'AA': 'BB', 'attachments': {'att_key1': {},
@@ -204,8 +209,9 @@ class TestInputHTTP(unittest.TestCase):
             'att_key2': att2}
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError(\'Please follow the format: '
-                     'event={Payload}\',)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\(\'Please follow the format: '
+        r'event=\{Payload\}\',?\)')
 
   def testOneEvent(self):
     event = datatypes.Event({'AA': 'BB'}, {'att_id': 'att'})
@@ -255,8 +261,9 @@ class TestInputHTTP(unittest.TestCase):
             ('att2', att2)]
     r = self._RequestsPost(files=data, multi_event=False)
     self.assertEqual(400, r.status_code)
-    self.assertEqual('Bad request: ValueError(\'One request should not exceed '
-                     'one event\',)', r.reason)
+    self.assertRegex(
+        r.reason, r'Bad request: ValueError\(\'One request should not exceed '
+        r'one event\',?\)')
     self.assertEqual(0, len(self.core.emit_calls))
 
     r = self._RequestsPost(files=data)
