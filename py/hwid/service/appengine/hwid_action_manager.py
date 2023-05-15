@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import abc
 import logging
-from typing import Optional, Sequence, Set
+from typing import MutableMapping, Optional, Sequence, Set, Union
 
 from cros.factory.hwid.service.appengine.data import hwid_db_data
 from cros.factory.hwid.service.appengine import hwid_action
@@ -103,18 +104,12 @@ class InstanceFactoryImpl(InstanceFactory):
         f'unexpected HWID version: {hwid_data.__class__.__name__}')
 
 
-class HWIDActionManager:
-  """The canonical portal to get HWID action instances for given projects."""
+class IHWIDActionGetter(abc.ABC):
+  """Interface for loading HWID actions."""
 
-  def __init__(self, hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
-               mem_adapter: memcache_adapter.MemcacheAdapter,
-               instance_factory: Optional[InstanceFactory] = None):
-    self._hwid_db_data_manager = hwid_db_data_manager
-    self._memcache_adapter = mem_adapter
-    self._instance_factory = instance_factory or InstanceFactoryImpl()
-
+  @abc.abstractmethod
   def GetHWIDAction(self, project: str) -> hwid_action.HWIDAction:
-    """Retrieves the HWID action for a given project, caching as necessary.
+    """Retrieves the HWID action for a given project.
 
     Args:
       project: The project to get for.
@@ -128,6 +123,54 @@ class HWIDActionManager:
       ProjectUnavailableError: The given project is known, but it encounters
         an error while loading the project's HWID DB.
     """
+
+
+class InMemoryCachedHWIDActionGetter(IHWIDActionGetter):
+  """The HWID action getter with in-memory cache."""
+
+  _ErrorClasses = (ProjectNotFoundError, ProjectNotSupportedError,
+                   ProjectUnavailableError)
+  _ErrorType = Union[ProjectNotFoundError, ProjectNotSupportedError,
+                     ProjectUnavailableError]
+
+  def __init__(self, hwid_action_getter: IHWIDActionGetter):
+    """Initializer.
+
+    Args:
+      hwid_action_getter: The underlying HWID action getter to invoke on cache
+        miss.
+    """
+    self._hwid_action_getter = hwid_action_getter
+    self._cached_hwid_actions: MutableMapping[str, hwid_action.HWIDAction] = {}
+    self._cached_errors: MutableMapping[str, self._ErrorType] = {}
+
+  def GetHWIDAction(self, project: str) -> hwid_action.HWIDAction:
+    """See base class."""
+    if project in self._cached_errors:
+      raise self._cached_errors[project]
+    if project in self._cached_hwid_actions:
+      return self._cached_hwid_actions[project]
+    try:
+      hwid_action_instance = self._hwid_action_getter.GetHWIDAction(project)
+    except self._ErrorClasses as ex:
+      self._cached_errors[project] = ex
+      raise
+    self._cached_hwid_actions[project] = hwid_action_instance
+    return hwid_action_instance
+
+
+class HWIDActionManager(IHWIDActionGetter):
+  """The canonical portal to get HWID action instances for given projects."""
+
+  def __init__(self, hwid_db_data_manager: hwid_db_data.HWIDDBDataManager,
+               mem_adapter: memcache_adapter.MemcacheAdapter,
+               instance_factory: Optional[InstanceFactory] = None):
+    self._hwid_db_data_manager = hwid_db_data_manager
+    self._memcache_adapter = mem_adapter
+    self._instance_factory = instance_factory or InstanceFactoryImpl()
+
+  def GetHWIDAction(self, project: str) -> hwid_action.HWIDAction:
+    """See base class."""
     logging.debug('Loading data for %r.', project)
 
     hwid_preproc_data_inst = self.GetHWIDPreprocDataFromCache(project)

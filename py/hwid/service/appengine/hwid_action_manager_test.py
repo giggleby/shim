@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Optional
+from typing import Mapping, Optional
 import unittest
 from unittest import mock
 
@@ -200,6 +200,67 @@ class HWIDActionManagerTest(unittest.TestCase):
     self._instance_factory.SetHWIDPreprocDataWithAction(project,
                                                         opt_hwid_action_inst)
     return opt_hwid_action_inst
+
+
+class InMemoryCachedHWIDActionGetterTest(unittest.TestCase):
+
+  def _CreateFakeHWIDActionGetter(
+      self, hwid_actions: Mapping[str, hwid_action.HWIDAction]):
+    inst = mock.create_autospec(hwid_action_manager.IHWIDActionGetter,
+                                instance=True)
+
+    def FakeGetHWIDAction(project):
+      if project in hwid_actions:
+        return hwid_actions[project]
+      raise hwid_action_manager.ProjectNotFoundError
+
+    inst.GetHWIDAction.side_effect = FakeGetHWIDAction
+    return inst
+
+  def testGetHWIDAction_CacheSuccessScenario(self):
+    # Arrange.
+    hwid_action_inst = mock.create_autospec(hwid_action.HWIDAction,
+                                            instance=True)
+    underlying_getter = self._CreateFakeHWIDActionGetter({
+        'the_project': hwid_action_inst,
+    })
+    cached_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+        underlying_getter)
+
+    # Act.
+    actual_hwid_action = cached_getter.GetHWIDAction('the_project')
+
+    # Assert.  `GetHWIDAction()` should return the correct instance.
+    self.assertIs(actual_hwid_action, hwid_action_inst)
+
+    # Act.  Invoke `GetHWIDAction()` with the same project again.
+    curr_get_hwid_action_call_count = underlying_getter.GetHWIDAction.call_count
+    actual_hwid_action = cached_getter.GetHWIDAction('the_project')
+
+    # Assert.  `GetHWIDAction()` should return the same instance without
+    # calling the underlying getter again.
+    self.assertIs(actual_hwid_action, hwid_action_inst)
+    self.assertEqual(underlying_getter.GetHWIDAction.call_count,
+                     curr_get_hwid_action_call_count)
+
+  def testGetHWIDAction_CacheProjectNotFoundScenario(self):
+    # Arrange.
+    underlying_getter = self._CreateFakeHWIDActionGetter({})
+    cached_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+        underlying_getter)
+
+    # Act, then assert that the `ProjectNotFound` is raised.
+    with self.assertRaises(hwid_action_manager.ProjectNotFoundError):
+      cached_getter.GetHWIDAction('the_project')
+
+    curr_get_hwid_action_call_count = underlying_getter.GetHWIDAction.call_count
+    # Act again, then assert that the `ProjectNotFound` is raised and the
+    # underlying getter is not called again.
+    # Act.  Invoke `GetHWIDAction()` with the same project again.
+    with self.assertRaises(hwid_action_manager.ProjectNotFoundError):
+      cached_getter.GetHWIDAction('the_project')
+    self.assertEqual(underlying_getter.GetHWIDAction.call_count,
+                     curr_get_hwid_action_call_count)
 
 
 if __name__ == '__main__':
