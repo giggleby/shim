@@ -7,6 +7,7 @@ import operator
 from typing import Dict, List, NamedTuple, Optional
 
 from cros.factory.hwid.service.appengine import hwid_action
+from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import name_pattern_adapter
@@ -40,18 +41,18 @@ def GetBOMAndConfiglessStatusAndError(bom_configless):
 
 class BOMAndConfiglessHelper:
 
-  def __init__(self, hwid_action_manager_inst, vpg_targets,
-               decoder_data_manager):
-    self._hwid_action_manager = hwid_action_manager_inst
+  def __init__(self, vpg_targets, decoder_data_manager):
     self._vpg_targets = vpg_targets
     self._decoder_data_manager = decoder_data_manager
 
   def BatchGetBOMAndConfigless(
-      self, hwid_strings: List[str], verbose: bool = False,
+      self, hwid_action_getter: hwid_action_manager.IHWIDActionGetter,
+      hwid_strings: List[str], verbose: bool = False,
       require_vp_info: bool = False) -> Dict[str, BOMAndConfigless]:
     """Get the BOM and configless for a given HWIDs.
 
     Args:
+      hwid_action_getter: The HWID action getter.
       hwid_strings: List of HWID strings.
       verbose: Requires all fields of components in bom if set to True.
       require_vp_info: A bool to indicate if the is_vp_related field of
@@ -64,7 +65,6 @@ class BOMAndConfiglessHelper:
       exception will also be provided in the instance.
     """
 
-    action_cache = {}
     result = {}
     for hwid_string in hwid_strings:
       logging.debug('Getting BOM for %r.', hwid_string)
@@ -74,13 +74,8 @@ class BOMAndConfiglessHelper:
       vpg_config = self._vpg_targets.get(project)
 
       bom = configless = error = None
-      action = action_cache.get(project)
       try:
-        if action is None:
-          action_cache[
-              project] = action = self._hwid_action_manager.GetHWIDAction(
-                  project)
-
+        action = hwid_action_getter.GetHWIDAction(project)
         bom, configless = action.GetBOMAndConfigless(
             hwid_string, verbose, vpg_config, require_vp_info)
       except (ValueError, KeyError, RuntimeError) as ex:
@@ -88,7 +83,9 @@ class BOMAndConfiglessHelper:
       result[hwid_string] = BOMAndConfigless(bom, configless, error)
     return result
 
-  def BatchGetBOMEntry(self, hwids, verbose=False) -> Dict[str, BOMEntry]:
+  def BatchGetBOMEntry(
+      self, hwid_action_getter: hwid_action_manager.IHWIDActionGetter, hwids,
+      verbose=False) -> Dict[str, BOMEntry]:
     result = {}
     batch_request = []
     # filter out bad HWIDs
@@ -101,7 +98,7 @@ class BOMAndConfiglessHelper:
 
     np_adapter = name_pattern_adapter.NamePatternAdapter()
     for hwid, bom_configless in self.BatchGetBOMAndConfigless(
-        batch_request, verbose).items():
+        hwid_action_getter, batch_request, verbose).items():
       status, error = GetBOMAndConfiglessStatusAndError(bom_configless)
 
       if status != hwid_api_messages_pb2.Status.SUCCESS:

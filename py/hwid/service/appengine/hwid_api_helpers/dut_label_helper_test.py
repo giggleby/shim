@@ -31,7 +31,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._bc_helper = mock.Mock(
         spec=bc_helper.BOMAndConfiglessHelper,
         wraps=bc_helper.BOMAndConfiglessHelper(
-            self._module_collection.fake_hwid_action_manager, self._vpg_targets,
+            self._vpg_targets,
             self._module_collection.fake_decoder_data_manager))
     self._sku_helper = mock.Mock(
         spec=sku_helper.SKUHelper, wraps=sku_helper.SKUHelper(
@@ -39,7 +39,7 @@ class DUTLabelHelperTest(unittest.TestCase):
     self._dl_helper = dut_label_helper.DUTLabelHelper(
         self._module_collection.fake_decoder_data_manager,
         self._module_collection.fake_goldeneye_memcache, self._bc_helper,
-        self._sku_helper)
+        self._sku_helper, self._module_collection.fake_hwid_action_manager)
 
     self._module_collection.fake_goldeneye_memcache.Put('regexp_to_device', [
         ('r1.*', 'b1', []),

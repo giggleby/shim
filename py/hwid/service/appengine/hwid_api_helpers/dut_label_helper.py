@@ -6,6 +6,7 @@ import logging
 import operator
 import re
 
+from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -14,11 +15,13 @@ from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # p
 class DUTLabelHelper:
 
   def __init__(self, decoder_data_manager, goldeneye_memcache_adapter,
-               bom_and_configless_helper_inst, sku_hepler_inst):
+               bom_and_configless_helper_inst, sku_hepler_inst,
+               hwid_action_manager_inst):
     self._decoder_data_manager = decoder_data_manager
     self._goldeneye_memcache_adapter = goldeneye_memcache_adapter
     self._bom_and_configless_helper = bom_and_configless_helper_inst
     self._sku_helper = sku_hepler_inst
+    self._hwid_action_manager_inst = hwid_action_manager_inst
 
   def GetDUTLabels(self, request):
     """Return the components of the SKU identified by the HWID."""
@@ -48,8 +51,10 @@ class DUTLabelHelper:
       return hwid_api_messages_pb2.DutLabelsResponse(
           error=error, possible_labels=possible_labels, status=status)
 
+    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+        self._hwid_action_manager_inst)
     bc_dict = self._bom_and_configless_helper.BatchGetBOMAndConfigless(
-        [hwid], verbose=True, require_vp_info=True)
+        hwid_action_getter, [hwid], verbose=True, require_vp_info=True)
     bom_configless = bc_dict.get(hwid)
     if bom_configless is None:
       return hwid_api_messages_pb2.DutLabelResponse(

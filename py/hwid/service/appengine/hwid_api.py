@@ -10,6 +10,7 @@ from typing import Optional
 
 from cros.factory.hwid.service.appengine import auth
 from cros.factory.hwid.service.appengine.config import CONFIG
+from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
@@ -66,12 +67,11 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self._sku_helper = sku_helper.SKUHelper(_decoder_data_manager)
-    self._bc_helper = (
-        bc_helper.BOMAndConfiglessHelper(
-            _hwid_action_manager, CONFIG.vpg_targets, _decoder_data_manager))
+    self._bc_helper = bc_helper.BOMAndConfiglessHelper(CONFIG.vpg_targets,
+                                                       _decoder_data_manager)
     self._dut_label_helper = dut_label_helper.DUTLabelHelper(
         _decoder_data_manager, _goldeneye_memcache_adapter, self._bc_helper,
-        self._sku_helper)
+        self._sku_helper, _hwid_action_manager)
     self._ss_helper = ss_helper.SelfServiceHelper(
         _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager,
         _avl_converter_manager, _session_cache_adapter, _avl_metadata_manager,
@@ -93,8 +93,10 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   @auth.RpcCheck
   def GetBom(self, request):
     """Return the components of the BOM identified by the HWID."""
-    bom_entry_dict = self._bc_helper.BatchGetBOMEntry([request.hwid],
-                                                      request.verbose)
+    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+        _hwid_action_manager)
+    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
+        hwid_action_getter, [request.hwid], request.verbose)
     bom_entry = bom_entry_dict.get(request.hwid)
     if bom_entry is None:
       return hwid_api_messages_pb2.BomResponse(
@@ -110,8 +112,10 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """Return the components of the BOM identified by the batch HWIDs."""
     response = hwid_api_messages_pb2.BatchGetBomResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS)
-    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(request.hwid,
-                                                      request.verbose)
+    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+        _hwid_action_manager)
+    bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
+        hwid_action_getter, request.hwid, request.verbose)
     for hwid, bom_entry in bom_entry_dict.items():
       response.boms.get_or_create(hwid).CopyFrom(
           hwid_api_messages_pb2.BatchGetBomResponse.Bom(
@@ -133,8 +137,10 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     if status != hwid_api_messages_pb2.Status.SUCCESS:
       return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
 
-    bc_dict = self._bc_helper.BatchGetBOMAndConfigless([request.hwid],
-                                                       verbose=True)
+    hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
+        _hwid_action_manager)
+    bc_dict = self._bc_helper.BatchGetBOMAndConfigless(
+        hwid_action_getter, [request.hwid], verbose=True)
     bom_configless = bc_dict.get(request.hwid)
     if bom_configless is None:
       return hwid_api_messages_pb2.SkuResponse(

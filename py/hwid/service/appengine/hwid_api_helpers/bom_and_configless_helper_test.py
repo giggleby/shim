@@ -39,8 +39,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         wraps=self._module_collection.fake_hwid_action_manager)
 
     self._bc_helper = bc_helper_module.BOMAndConfiglessHelper(
-        self._fake_hwid_action_manager, self._vpg_targets,
-        self._module_collection.fake_decoder_data_manager)
+        self._vpg_targets, self._module_collection.fake_decoder_data_manager)
 
   def tearDown(self):
     super().tearDown()
@@ -72,6 +71,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                                        hwid_action=fake_hwid_action)
 
     ret = self._bc_helper.BatchGetBOMAndConfigless(
+        self._fake_hwid_action_manager,
         ['PROJ0 ABC', 'PROJ1 ABC-DEF', 'PROJ2 ABC-DEF', 'PROJ2 A-VALID-HWID'])
 
     self.assertIsInstance(ret['PROJ0 ABC'].error,
@@ -82,24 +82,6 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                           hwid_action.InvalidHWIDError)
     self.assertEqual(ret['PROJ2 A-VALID-HWID'].bom, bom)
     self.assertEqual(ret['PROJ2 A-VALID-HWID'].configless, configless)
-
-  def testBatchGetBOMAndConfigless_CacheHWIDActions(self):
-    """Test that the local cache works."""
-    bom = hwid_action.BOM()
-    bom.AddAllComponents({'storage': ['storage1', 'storage2']})
-    configless = {
-        'has_touchscreen': True
-    }
-    fake_hwid_action = mock.create_autospec(hwid_action.HWIDAction,
-                                            instance=True)
-    fake_hwid_action.GetBOMAndConfigless.return_value = (bom, configless)
-    self._module_collection.ConfigHWID('PROJ', 3, 'db data',
-                                       hwid_action=fake_hwid_action)
-
-    self._bc_helper.BatchGetBOMAndConfigless(
-        ['PROJ AAA', 'PROJ BBB', 'PROJ CCC'])
-
-    self.assertEqual(self._fake_hwid_action_manager.GetHWIDAction.call_count, 1)
 
   def testBatchGetBOMEntry_WithVerboseFlag(self):
     bom = hwid_action.BOM()
@@ -116,7 +98,8 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
           TEST_HWID: BOMAndConfigless(bom, configless, None),
       }
 
-      results = self._bc_helper.BatchGetBOMEntry([TEST_HWID], verbose=True)
+      results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                                 [TEST_HWID], verbose=True)
 
     self.assertEqual(
         results, {
@@ -169,7 +152,8 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
           TEST_HWID: BOMAndConfigless(bom, configless, None),
       }
 
-      results = self._bc_helper.BatchGetBOMEntry([TEST_HWID], verbose=True)
+      results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                                 [TEST_HWID], verbose=True)
 
     self.assertEqual(
         results, {
@@ -213,7 +197,8 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
           TEST_HWID: BOMAndConfigless(None, None, None),
       }
 
-      results = self._bc_helper.BatchGetBOMEntry([TEST_HWID])
+      results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                                 [TEST_HWID])
 
     self.assertEqual(
         results, {
@@ -225,7 +210,8 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
   def testBatchGetBOMEntry_FastFailKnownBad(self):
     bad_hwid = 'FOO TEST'
 
-    results = self._bc_helper.BatchGetBOMEntry([bad_hwid])
+    results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                               [bad_hwid])
 
     self.assertEqual(
         results, {
@@ -253,7 +239,8 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
           hwid4: BOMAndConfigless(bom, None, None),
       }
 
-      results = self._bc_helper.BatchGetBOMEntry([hwid1, hwid2, hwid3, hwid4])
+      results = self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                                 [hwid1, hwid2, hwid3, hwid4])
 
     self.assertEqual(
         results, {
