@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright 2015 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -268,6 +268,13 @@ main() {
     # idle to keep the charge percentage stable, and set back to normal just
     # before doing cutting off.
     charge_control "idle"
+    local input
+    if [ -n "${CONTINUE_KEY}" ]; then
+      while [ "${input}" != "${CONTINUE_KEY}" ]; do
+        read -r -N 1 -p "Press ${CONTINUE_KEY} to cutoff...> " input
+        echo
+      done
+    fi
     check_ac_state "${CUTOFF_AC_STATE}"
     charge_control "normal"
   else
