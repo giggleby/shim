@@ -13,6 +13,7 @@
 : ${CUTOFF_BATTERY_MIN_VOLTAGE:=}
 : ${CUTOFF_BATTERY_MAX_VOLTAGE:=}
 : ${SHOPFLOOR_URL:=}
+: ${CONTINUE_KEY:=}
 
 # After calling display_wipe_message.sh to draw image with frecon, we must
 # redirect text output to active terminal to display information on the screen.
@@ -157,6 +158,7 @@ options_usage_help() {
     [--max-battery-voltage <maximum battery voltage>]
     [--shopfloor <shopfloor_url]
     [--tty <tty_path>]
+    [--continue_key <key>]
     "
   exit 1
 }
@@ -197,6 +199,10 @@ options_parse_command_line() {
       --tty )
         shift
         TTY="$1"
+        ;;
+      --continue_key )
+        shift
+        CONTINUE_KEY="$1"
         ;;
       * )
         options_usage_help "$1"
