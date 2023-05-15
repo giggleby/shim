@@ -23,6 +23,8 @@ class HWIDPreprocDataForTest(hwid_preproc_data.HWIDPreprocData):
     self.raw_db_internal = raw_db_internal
     self.feature_matcher_source = feature_matcher_source
     self.hwid_action = hwid_action_inst
+    self._hash_value = hwid_preproc_data.NetstringHash(raw_db, raw_db_internal,
+                                                       feature_matcher_source)
 
   @classmethod
   def FlipCacheVersion(cls):
@@ -88,12 +90,13 @@ class HWIDActionManagerTest(unittest.TestCase):
         wraps=self._modules.fake_hwid_db_data_manager)
 
     preproc_data_memcache = test_utils.FakeMemcacheAdapter()
-    bom_data_cacher = self._modules.fake_bom_data_cacher
+    self._mock_hwid_data_cacher = mock.create_autospec(
+        hwid_action_manager.IHWIDDataCacher, instance=True)
 
     self._hwid_action_manager = hwid_action_manager.HWIDActionManager(
         self._hwid_db_data_manager,
         preproc_data_memcache,
-        [bom_data_cacher],
+        [self._mock_hwid_data_cacher],
         instance_factory=self._instance_factory,
     )
 
@@ -195,10 +198,47 @@ class HWIDActionManagerTest(unittest.TestCase):
           mock.call(metadata_v3, internal=True),
       ], self._hwid_db_data_manager.LoadHWIDDB.call_args_list)
 
-  def _RegisterProjectWithAction(
-      self, project, action_uid: Optional[str] = None, version: str = '3'):
+  def testReloadMemcacheCacheFromFiles_InvalidateHWIDDataCache(self):
+    # Arrange.
+    self._RegisterProjectWithAction('PRJ1', 'theuid1')
+    self._RegisterProjectWithAction('PRJ2', 'theuid2')
+
+    # Act.
+    self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+        limit_models=['PRJ1', 'PRJ2'])
+
+    # Assert.  New caches will trigger HWID data cacher invalidation.
+    actual_calls = self._mock_hwid_data_cacher.ClearCache.call_args_list
+    self.assertCountEqual([mock.call('PRJ1'), mock.call('PRJ2')], actual_calls)
+
+    # Arrange.
+    self._mock_hwid_data_cacher.ClearCache.reset_mock()
+
+    # Act
+    self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+        limit_models=['PRJ1', 'PRJ2'])
+
+    # Assert.  No HWID Data cache invalidation is required.
+    self.assertEqual(self._mock_hwid_data_cacher.ClearCache.call_count, 0)
+
+    # Arrange.
+    self._mock_hwid_data_cacher.ClearCache.reset_mock()
+    self._RegisterProjectWithAction('PRJ1', 'theuid1',
+                                    db_data='db data - changed')
+
+    # Act
+    self._hwid_action_manager.ReloadMemcacheCacheFromFiles(
+        limit_models=['PRJ1', 'PRJ2'])
+
+    # Assert.  The hash of PRJ1 has changed, and the invalidation is required.
+    actual_calls = self._mock_hwid_data_cacher.ClearCache.call_args_list
+    self.assertCountEqual([mock.call('PRJ1')], actual_calls)
+
+  def _RegisterProjectWithAction(self, project,
+                                 action_uid: Optional[str] = None,
+                                 version: str = '3', db_data: str = 'db data'):
     self._hwid_db_data_manager.RegisterProjectForTest(project, project, version,
-                                                      'db data')
+                                                      db_data)
     opt_hwid_action_inst = HWIDActionForTest(
         action_uid) if action_uid is not None else None
     self._instance_factory.SetHWIDPreprocDataWithAction(project,

@@ -282,10 +282,10 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         })
 
   def testBatchGetBOMEntry_WithError(self):
-    hwid1 = 'TEST HWID 1'
-    hwid2 = 'TEST HWID 2'
-    hwid3 = 'TEST HWID 3'
-    hwid4 = 'TEST HWID 4'
+    hwid1 = 'PROJ HWID 1'
+    hwid2 = 'PROJ HWID 2'
+    hwid3 = 'PROJ HWID 3'
+    hwid4 = 'PROJ HWID 4'
     bom = hwid_action.BOM()
     bom.AddAllComponents({
         'foo': 'bar',
@@ -320,6 +320,40 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
                     _ComponentMsg(name='bar', component_class='foo'),
                 ], '', '', _Status.SUCCESS),
         })
+
+  def testBatchGetBOMEntry_CacheBomResult(self):
+    """Test that the local cache works."""
+    fake_hwid_action = mock.create_autospec(hwid_action.HWIDAction,
+                                            instance=True)
+    fake_hwid_action.GetBOMAndConfigless.return_value = (hwid_action.BOM(), {})
+    self._module_collection.ConfigHWID('PROJ', 3, 'db data',
+                                       hwid_action=fake_hwid_action)
+
+    self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                     ['PROJ AAA', 'PROJ BBB', 'PROJ CCC'])
+    self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                     ['PROJ AAA', 'PROJ BBB', 'PROJ DDD'])
+
+    self.assertEqual(fake_hwid_action.GetBOMAndConfigless.call_count, 4)
+
+  def testBatchGetBOMEntry_ClearCache(self):
+    """Test that cache clear mechanism works."""
+    fake_hwid_action = mock.create_autospec(hwid_action.HWIDAction,
+                                            instance=True)
+    fake_hwid_action.GetBOMAndConfigless.return_value = (hwid_action.BOM(), {})
+    self._module_collection.ConfigHWID('PROJ1', 3, 'db data',
+                                       hwid_action=fake_hwid_action)
+    self._module_collection.ConfigHWID('PROJ2', 3, 'db data',
+                                       hwid_action=fake_hwid_action)
+
+    self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                     ['PROJ1 AAA', 'PROJ2 BBB', 'PROJ1 CCC'])
+    self._fake_bom_data_cacher.ClearCache('PROJ1')
+    self._bc_helper.BatchGetBOMEntry(self._fake_hwid_action_manager,
+                                     ['PROJ1 AAA', 'PROJ2 BBB', 'PROJ1 DDD'])
+
+    # Only the BOM of 'PROJ2 BBB' is still cached.
+    self.assertEqual(fake_hwid_action.GetBOMAndConfigless.call_count, 5)
 
   def _PatchBatchGetBOMAndConfigless(self):
     return mock.patch.object(self._bc_helper, 'BatchGetBOMAndConfigless')

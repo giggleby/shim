@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 """Defines Preprocessors for HWID DBs."""
 
+import hashlib
 from typing import Optional
 
 from cros.factory.hwid.service.appengine import feature_matching
@@ -14,6 +15,14 @@ from cros.factory.hwid.v3 import database as v3_database
 
 class PreprocHWIDError(Exception):
   """Indicates an error regarding preprocessing HWID DB contents."""
+
+
+def NetstringHash(*args: Optional[str]) -> str:
+  sha1 = hashlib.sha1()
+  for s in args:
+    s = s or ''
+    sha1.update(f'{len(s)}:{s}'.encode('utf8'))
+  return sha1.hexdigest()
 
 
 class HWIDPreprocData:
@@ -33,17 +42,22 @@ class HWIDPreprocData:
   def __init__(self, project: str):
     self._cache_version_snapshot = self.CACHE_VERSION
     self.project = project
+    self._hash_value = ''
 
   @property
   def is_out_of_date(self) -> bool:
     """Returns `True` if this instance is considered as expired."""
     return self._cache_version_snapshot != self.CACHE_VERSION
 
+  @property
+  def hash_value(self) -> str:
+    return self._hash_value
+
 
 class HWIDV2PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv2 data."""
 
-  CACHE_VERSION = '2'
+  CACHE_VERSION = '3'
 
   def __init__(self, project, raw_hwid_yaml):
     """Constructor.
@@ -65,6 +79,7 @@ class HWIDV2PreprocData(HWIDPreprocData):
     self.volatile_value_map = {}
 
     self._SeedFromData(v2_yaml_datastore.YamlRead(raw_hwid_yaml))
+    self._hash_value = NetstringHash(raw_hwid_yaml)
 
   def _SeedFromData(self, hwid_data):
     fields = ['boms', 'variants', 'volatiles', 'hwid_status', 'volatile_values']
@@ -89,7 +104,7 @@ class HWIDV2PreprocData(HWIDPreprocData):
 class HWIDV3PreprocData(HWIDPreprocData):
   """Holds preprocessed HWIDv3 data."""
 
-  CACHE_VERSION = '8'
+  CACHE_VERSION = '9'
   HWID_FEATURE_MATCHER_BUILDER = feature_matching.HWIDFeatureMatcherBuilder()
 
   @classmethod
@@ -141,6 +156,12 @@ class HWIDV3PreprocData(HWIDPreprocData):
     self._database = self._ParseDatabase(self._raw_database_internal)
     self._feature_matcher = self._ParseFeatureMatcherSource(
         self._database, feature_matcher_source)
+    self._hash_value = NetstringHash(
+        project,
+        raw_hwid_yaml,
+        raw_hwid_yaml_internal,
+        feature_matcher_source,
+    )
 
   @property
   def hwid_db_commit_id(self):

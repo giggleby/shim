@@ -4,7 +4,7 @@
 
 import logging
 import operator
-from typing import Collection, Dict, List, NamedTuple, Optional
+from typing import Collection, Dict, NamedTuple, Optional, Sequence
 
 from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine.data import decoder_data
@@ -20,12 +20,30 @@ from cros.factory.hwid.v3 import rule as v3_rule
 _CONFIG_DATA = config_data.CONFIG
 
 
+def _ExtractProjectName(hwid: str) -> str:
+  project_and_brand, unused_sep, unused_part = hwid.partition(' ')
+  project, unused_sep, unused_part = project_and_brand.partition('-')
+  return project
+
+
+def _GenerateCacheKey(hwid: str, verbose: bool, no_avl_name: bool) -> str:
+  return f'{hwid},verbose={verbose},no_avl_name={no_avl_name}'
+
+
 class BOMAndConfigless(NamedTuple):
   """A class to collect bom and configless obtained from decoded HWID string."""
 
   bom: Optional[hwid_action.BOM]
   configless: Optional[Dict]
   error: Optional[Exception]
+
+
+class BOMEntry(NamedTuple):
+  """A class containing fields of BomResponse."""
+  components: Optional[Sequence['hwid_api_messages_pb2.Component']]
+  phase: str
+  error: str
+  status: 'hwid_api_messages_pb2.Status'
 
 
 def _GenerateCacheKeyWithProj(proj: str, cache_key: str) -> str:
@@ -38,25 +56,17 @@ class BOMDataCacher(hwid_action_manager.IHWIDDataCacher):
   def __init__(self, mem_adapter: memcache_adapter.MemcacheAdapter):
     self._mem_adapter = mem_adapter
 
-  def GetBOMDataFromCache(self, proj: str,
-                          cache_key: str) -> Optional[BOMAndConfigless]:
+  def GetBOMEntryFromCache(self, proj: str,
+                           cache_key: str) -> Optional[BOMEntry]:
     return self._mem_adapter.Get(_GenerateCacheKeyWithProj(proj, cache_key))
 
-  def SetBOMDataCache(self, proj: str, cache_key: str, bom: BOMAndConfigless):
+  def SetBOMEntryCache(self, proj: str, cache_key: str, bom: BOMEntry):
     self._mem_adapter.Put(_GenerateCacheKeyWithProj(proj, cache_key), bom)
 
   def ClearCache(self, proj: Optional[str] = None):
     """See base class."""
     self._mem_adapter.DelByPattern(
         _GenerateCacheKeyWithProj(proj, '*') if proj else '*')
-
-
-class BOMEntry(NamedTuple):
-  """A class containing fields of BomResponse."""
-  components: Optional[List['hwid_api_messages_pb2.Component']]
-  phase: str
-  error: str
-  status: 'hwid_api_messages_pb2.Status'
 
 
 def GetBOMAndConfiglessStatusAndError(bom_configless):
@@ -82,7 +92,7 @@ class BOMAndConfiglessHelper:
   def BatchGetBOMAndConfigless(
       self,
       hwid_action_getter: hwid_action_manager.IHWIDActionGetter,
-      hwid_strings: List[str],
+      hwid_strings: Sequence[str],
       verbose: bool = False,
       require_vp_info: bool = False,
   ) -> Dict[str, BOMAndConfigless]:
@@ -105,10 +115,7 @@ class BOMAndConfiglessHelper:
     result = {}
     for hwid_string in hwid_strings:
       logging.debug('Getting BOM for %r.', hwid_string)
-      # TODO(b/267677465): Use self._bom_data_cache to cache decoded BOM.
-
-      project_and_brand, unused_sep, unused_part = hwid_string.partition(' ')
-      project, unused_sep, unused_part = project_and_brand.partition('-')
+      project = _ExtractProjectName(hwid_string)
 
       vpg_config = self._vpg_targets.get(project)
 
@@ -131,26 +138,37 @@ class BOMAndConfiglessHelper:
   ) -> Dict[str, BOMEntry]:
     result = {}
     batch_request = []
-    # filter out bad HWIDs
+    proj_mapping = {}
     for hwid in hwids:
       status, error = common_helper.FastFailKnownBadHWID(hwid)
       if status != hwid_api_messages_pb2.Status.SUCCESS:
+        # Filter out bad HWIDs.
         result[hwid] = BOMEntry(None, '', error, status)
-      else:
-        batch_request.append(hwid)
+        continue
+      project = _ExtractProjectName(hwid)
+      proj_mapping[hwid] = project
+      cache_key = _GenerateCacheKey(hwid, verbose, no_avl_name)
+      bom_from_cache = self._bom_data_cacher.GetBOMEntryFromCache(
+          project, cache_key)
+      if bom_from_cache:
+        # Use cached data.
+        result[hwid] = bom_from_cache
+        continue
+      batch_request.append(hwid)
 
     np_adapter = name_pattern_adapter.NamePatternAdapter()
     for hwid, bom_configless in self.BatchGetBOMAndConfigless(
         hwid_action_getter, batch_request, verbose).items():
+      cache_key = _GenerateCacheKey(hwid, verbose, no_avl_name)
+      project = proj_mapping[hwid]
       status, error = GetBOMAndConfiglessStatusAndError(bom_configless)
 
       if status != hwid_api_messages_pb2.Status.SUCCESS:
         result[hwid] = BOMEntry(None, '', error, status)
+        self._bom_data_cacher.SetBOMEntryCache(project, cache_key, result[hwid])
         continue
       bom = bom_configless.bom
-
-      bom_entry = BOMEntry([], bom.phase, '',
-                           status=hwid_api_messages_pb2.Status.SUCCESS)
+      components = []
 
       for component in bom.GetComponents():
         if no_avl_name:
@@ -182,13 +200,14 @@ class BOMAndConfiglessHelper:
         else:
           avl_info = None
 
-        bom_entry.components.append(
+        components.append(
             hwid_api_messages_pb2.Component(
                 component_class=component.cls, name=component.name,
                 fields=fields, avl_info=avl_info, has_avl=bool(avl_info)))
 
-      bom_entry.components.sort(
-          key=operator.attrgetter('component_class', 'name'))
+      components.sort(key=operator.attrgetter('component_class', 'name'))
 
-      result[hwid] = bom_entry
+      result[hwid] = BOMEntry(components, bom.phase, '',
+                              status=hwid_api_messages_pb2.Status.SUCCESS)
+      self._bom_data_cacher.SetBOMEntryCache(project, cache_key, result[hwid])
     return result

@@ -203,6 +203,7 @@ class HWIDActionManager(IHWIDActionGetter):
       except hwid_db_data.TooManyHWIDDBError as ex:
         raise ProjectUnavailableError(str(ex)) from ex
       self._SaveHWIDPreprocDataToCache(project, hwid_preproc_data_inst)
+      self.InvalidateDataCache([project])
 
     return self._instance_factory.CreateHWIDAction(hwid_preproc_data_inst)
 
@@ -252,22 +253,13 @@ class HWIDActionManager(IHWIDActionGetter):
     """
     metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
         projects=limit_models)
+    projects_changed = []
     for metadata in metadata_list:
-      try:
-        self._SaveHWIDPreprocDataToCache(metadata.project,
-                                         self._LoadHWIDPreprocData(metadata))
-      except Exception:
-        # Catch any exception and continue with other files.  The reason for
-        # the broad exception is that the various exceptions we could catch
-        # are large and from libraries out of our control.  For example, the
-        # HWIDv3 library can throw various unknown errors.  We could have IO
-        # errors, errors with Google Cloud Storage, or YAML parsing errors.
-        #
-        # This may catch some exceptions we do not wish it to, such as SIGINT,
-        # but we expect that to be unlikely in this context and not adversely
-        # affect the system.
-        logging.exception('Exception encountered while reloading cache for %r.',
-                          metadata.project)
+      changed = self._SaveHWIDPreprocDataToCache(
+          metadata.project, self._LoadHWIDPreprocData(metadata))
+      if changed:
+        projects_changed.append(metadata.project)
+    self.InvalidateDataCache(projects_changed)
 
   def _ClearMemcache(self):
     """Clear all cache items via memcache_adapter.
@@ -279,14 +271,31 @@ class HWIDActionManager(IHWIDActionGetter):
     for hwid_data_cacher in self._hwid_data_cachers:
       hwid_data_cacher.ClearCache()
 
-  def GetHWIDPreprocDataFromCache(self, project: str) -> _HWIDPreprocData:
+  def InvalidateDataCache(self, projects: Collection[str]):
+    """Invalidates data caches per project.
+
+    To ensure the correctness of data responded, caches of data should be
+    invalidated when the data sources of certain projects have been changed
+    (e.g. preprocessed HWID DB data, or AVL name mapping)
+
+    Args:
+      projects: A collection of strings of project names.
+    """
+    for proj in projects:
+      logging.info(
+          'Caches of HWID data of project %r is out-of-date, clear now.', proj)
+      for hwid_data_cacher in self._hwid_data_cachers:
+        hwid_data_cacher.ClearCache(proj)
+
+  def GetHWIDPreprocDataFromCache(self,
+                                  project: str) -> Optional[_HWIDPreprocData]:
     """Get the HWID file data from memcache.
 
     Args:
       project: String, the name of the project to retrieve from cache.
 
     Returns:
-       HWIDPreprocData object that was cached or null if not found in the
+       HWIDPreprocData object that was cached or None if not found in the
        memcache.
     """
     try:
@@ -303,9 +312,30 @@ class HWIDActionManager(IHWIDActionGetter):
       return None
     return hwid_preproc_data_inst
 
-  def _SaveHWIDPreprocDataToCache(self, project: str,
-                                  hwid_preproc_data_inst: _HWIDPreprocData):
-    self._preproc_data_memcache_adapter.Put(project, hwid_preproc_data_inst)
+  def _SaveHWIDPreprocDataToCache(
+      self, project: str, hwid_preproc_data_inst: _HWIDPreprocData) -> bool:
+    """Saves HWIDProprocData to cache.
+
+    Args:
+      project: String, the name of the project to retrieve from cache.
+      hwid_preproc_data_inst: The instance to be cached.
+
+    Returns:
+      A bool indicating whether the HWID Data cache of this project should be
+      invalidated (i.e. There is no existing preproc data or cache related data
+      of existing preproc data is different with hwid_preproc_data_inst).
+    """
+
+    preproc_data_in_cache = self.GetHWIDPreprocDataFromCache(project)
+    try:
+      self._preproc_data_memcache_adapter.Put(project, hwid_preproc_data_inst)
+    except memcache_adapter.MemcacheAdapterException:
+      logging.exception('Cannot set cache for project %s', project)
+    if preproc_data_in_cache is None:
+      return True
+    if preproc_data_in_cache.hash_value != hwid_preproc_data_inst.hash_value:
+      return True
+    return False
 
   def ListProjects(self) -> Set[str]:
     """Lists all available projects in a set."""
