@@ -268,14 +268,21 @@ main() {
     # idle to keep the charge percentage stable, and set back to normal just
     # before doing cutting off.
     charge_control "idle"
-    local input
+    check_ac_state "${CUTOFF_AC_STATE}"
     if [ -n "${CONTINUE_KEY}" ]; then
-      while [ "${input}" != "${CONTINUE_KEY}" ]; do
-        read -r -N 1 -p "Press ${CONTINUE_KEY} to cutoff...> " input
-        echo
+      local input
+      local i=0
+      echo "Press ${CONTINUE_KEY} in sequence to cutoff."
+      while [ "${i}" -lt ${#CONTINUE_KEY} ]; do
+        read -r -N 1 input
+        if [ "${input}" = "${CONTINUE_KEY:${i}:1}" ]; then
+            i=$((i+1))
+        else
+            i=0
+            echo "Invalid input, press ${CONTINUE_KEY} in sequence to cutoff."
+        fi
       done
     fi
-    check_ac_state "${CUTOFF_AC_STATE}"
     charge_control "normal"
   else
     echo "Battery not found."
