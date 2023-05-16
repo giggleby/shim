@@ -9,14 +9,12 @@ This file is also the place that all the binding is done for various components.
 from typing import Optional
 
 from cros.factory.hwid.service.appengine import auth
-from cros.factory.hwid.service.appengine.config import CONFIG
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import dut_label_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import self_service_helper as ss_helper
 from cros.factory.hwid.service.appengine.hwid_api_helpers import sku_helper
-from cros.factory.hwid.service.appengine import hwid_validator
 from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine import memcache_adapter
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
@@ -31,58 +29,55 @@ KNOWN_BAD_SUBSTR = [
 _SESSION_CACHE_NAMESPACE = 'SessionCache'
 
 
-_hwid_action_manager = CONFIG.hwid_action_manager
-_hwid_db_data_manager = CONFIG.hwid_db_data_manager
-_decoder_data_manager = CONFIG.decoder_data_manager
-_hwid_validator = hwid_validator.HwidValidator()
-_goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
-    namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
-_hwid_repo_manager = CONFIG.hwid_repo_manager
-_avl_converter_manager = CONFIG.avl_converter_manager
-_session_cache_adapter = memcache_adapter.MemcacheAdapter(
-    namespace=_SESSION_CACHE_NAMESPACE)
-_avl_metadata_manager = CONFIG.avl_metadata_manager
-
-
 def _NormalizeProjectString(string: str) -> Optional[str]:
   """Normalizes a string to account for things like case."""
   return string.strip().upper() if string else None
-
-
-def _MapValidationException(ex, cls):
-  msgs = [er.message for er in ex.errors]
-  if any(er.code == hwid_validator.ErrorCode.SCHEMA_ERROR for er in ex.errors):
-    return cls(
-        error_message=str(msgs) if len(msgs) > 1 else msgs[0],
-        status=hwid_api_messages_pb2.Status.SCHEMA_ERROR)
-  return cls(
-      error_message=str(msgs) if len(msgs) > 1 else msgs[0],
-      status=hwid_api_messages_pb2.Status.BAD_REQUEST)
 
 
 class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   SERVICE_DESCRIPTOR = hwid_api_messages_pb2.DESCRIPTOR.services_by_name[
       'HwidService']
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, config, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self._sku_helper = sku_helper.SKUHelper(_decoder_data_manager)
-    self._bc_helper = bc_helper.BOMAndConfiglessHelper(CONFIG.vpg_targets,
-                                                       _decoder_data_manager)
+    decoder_data_manager = config.decoder_data_manager
+    goldeneye_memcache_adapter = memcache_adapter.MemcacheAdapter(
+        namespace=ingestion.GOLDENEYE_MEMCACHE_NAMESPACE)
+    hwid_repo_manager = config.hwid_repo_manager
+    avl_converter_manager = config.avl_converter_manager
+    session_cache_adapter = memcache_adapter.MemcacheAdapter(
+        namespace=_SESSION_CACHE_NAMESPACE)
+    avl_metadata_manager = config.avl_metadata_manager
+
+    self._hwid_action_manager = config.hwid_action_manager
+    self._hwid_db_data_manager = config.hwid_db_data_manager
+    self._sku_helper = sku_helper.SKUHelper(decoder_data_manager)
+    self._bc_helper = bc_helper.BOMAndConfiglessHelper(decoder_data_manager)
     self._dut_label_helper = dut_label_helper.DUTLabelHelper(
-        _decoder_data_manager, _goldeneye_memcache_adapter, self._bc_helper,
-        self._sku_helper, _hwid_action_manager)
+        decoder_data_manager, goldeneye_memcache_adapter, self._bc_helper,
+        self._sku_helper, self._hwid_action_manager)
     self._ss_helper = ss_helper.SelfServiceHelper(
-        _hwid_action_manager, _hwid_repo_manager, _hwid_db_data_manager,
-        _avl_converter_manager, _session_cache_adapter, _avl_metadata_manager,
-        ss_helper.FeatureMatcherBuilderImpl)
+        self._hwid_action_manager,
+        hwid_repo_manager,
+        self._hwid_db_data_manager,
+        avl_converter_manager,
+        session_cache_adapter,
+        avl_metadata_manager,
+        ss_helper.FeatureMatcherBuilderImpl,
+    )
+
+  @classmethod
+  def CreateInstance(cls, config):
+    """Creates RPC service instance."""
+    return cls(config)
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
   def GetProjects(self, request):
     """Return all of the supported projects in sorted order."""
     versions = list(request.versions) if request.versions else None
-    metadata_list = _hwid_db_data_manager.ListHWIDDBMetadata(versions=versions)
+    metadata_list = self._hwid_db_data_manager.ListHWIDDBMetadata(
+        versions=versions)
     projects = [m.project for m in metadata_list]
 
     response = hwid_api_messages_pb2.ProjectsResponse(
@@ -94,7 +89,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
   def GetBom(self, request):
     """Return the components of the BOM identified by the HWID."""
     hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
-        _hwid_action_manager)
+        self._hwid_action_manager)
     bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
         hwid_action_getter, [request.hwid], request.verbose)
     bom_entry = bom_entry_dict.get(request.hwid)
@@ -113,7 +108,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     response = hwid_api_messages_pb2.BatchGetBomResponse(
         status=hwid_api_messages_pb2.Status.SUCCESS)
     hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
-        _hwid_action_manager)
+        self._hwid_action_manager)
     bom_entry_dict = self._bc_helper.BatchGetBOMEntry(
         hwid_action_getter, request.hwid, request.verbose)
     for hwid, bom_entry in bom_entry_dict.items():
@@ -138,7 +133,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       return hwid_api_messages_pb2.SkuResponse(error=error, status=status)
 
     hwid_action_getter = hwid_action_manager.InMemoryCachedHWIDActionGetter(
-        _hwid_action_manager)
+        self._hwid_action_manager)
     bc_dict = self._bc_helper.BatchGetBOMAndConfigless(
         hwid_action_getter, [request.hwid], verbose=True)
     bom_configless = bc_dict.get(request.hwid)
@@ -168,7 +163,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     project = _NormalizeProjectString(request.project)
     parse_filter_field = lambda value: set(filter(None, value)) or None
     try:
-      action = _hwid_action_manager.GetHWIDAction(project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       hwids = action.EnumerateHWIDs(
           with_classes=parse_filter_field(request.with_classes),
           without_classes=parse_filter_field(request.without_classes),
@@ -187,7 +182,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """Return a list of all component classes for the given project."""
     project = _NormalizeProjectString(request.project)
     try:
-      action = _hwid_action_manager.GetHWIDAction(project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       classes = action.GetComponentClasses()
     except (KeyError, ValueError, RuntimeError) as ex:
       return hwid_api_messages_pb2.ComponentClassesResponse(
@@ -202,7 +197,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     """Return a filtered list of components for the given project."""
     project = _NormalizeProjectString(request.project)
     try:
-      action = _hwid_action_manager.GetHWIDAction(project)
+      action = self._hwid_action_manager.GetHWIDAction(project)
       components = action.GetComponents(
           with_classes=set(filter(None, request.with_classes)) or None)
     except (KeyError, ValueError, RuntimeError) as ex:

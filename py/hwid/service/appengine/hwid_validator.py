@@ -5,7 +5,7 @@
 
 from typing import List
 
-from cros.factory.hwid.service.appengine import config
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import verification_payload_generator as vpg_module
 from cros.factory.hwid.v3 import contents_analyzer
 from cros.factory.hwid.v3 import database
@@ -78,7 +78,7 @@ class HwidValidator:
         raise ValidationError(report_of_firmware.errors)
 
     db = analyzer.curr_db_instance
-    vpg_target = config.CONFIG.vpg_targets.get(db.project)
+    vpg_target = config_data.CONFIG.vpg_targets.get(db.project)
     if vpg_target:
       errors = vpg_module.GenerateVerificationPayload(
           [(db, vpg_target)]).error_msgs

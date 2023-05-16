@@ -7,9 +7,12 @@
 import unittest
 from unittest import mock
 
+from cros.factory.hwid.service.appengine import config as config_module
+from cros.factory.hwid.service.appengine.data.converter import converter_utils
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_api
 from cros.factory.hwid.service.appengine.hwid_api_helpers import bom_and_configless_helper as bc_helper
+from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
 from cros.factory.probe_info_service.app_engine import protorpc_utils
@@ -21,50 +24,33 @@ ComponentMsg = hwid_api_messages_pb2.Component
 StatusMsg = hwid_api_messages_pb2.Status
 
 
-# pylint: disable=protected-access
+def _CreateMockConfig(fake_modules: test_utils.FakeModuleCollection):
+  mock_config = mock.Mock(
+      spec=config_module._Config,  # pylint: disable=protected-access
+      wraps=config_module.CONFIG)
+  mock_config.hwid_action_manager = fake_modules.fake_hwid_action_manager
+  mock_config.decoder_data_manager = fake_modules.fake_decoder_data_manager
+  mock_config.hwid_repo_manager = mock.create_autospec(
+      hwid_repo.HWIDRepoManager, instance=True)
+  hwid_live_repo = mock_config.hwid_repo_manager.GetLiveHWIDRepo.return_value
+  hwid_live_repo.ListHWIDDBMetadata.return_value = []
+  hwid_live_repo.GetHWIDDBMetadataByName.side_effect = ValueError
+  mock_config.hwid_db_data_manager = fake_modules.fake_hwid_db_data_manager
+  mock_config.avl_metadata_manager = fake_modules.fake_avl_metadata_manager
+  mock_config.avl_converter_manager = converter_utils.ConverterManager({})
+  return mock_config
+
+
 class ProtoRPCServiceTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
-
     self._modules = test_utils.FakeModuleCollection()
-
-    patcher = mock.patch('__main__.hwid_api._hwid_action_manager',
-                         new=self._modules.fake_hwid_action_manager)
-    self.fake_hwid_action_manager = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.hwid_api._decoder_data_manager',
-                         new=self._modules.fake_decoder_data_manager)
-    self.fake_decoder_data_manager = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.hwid_api._goldeneye_memcache_adapter',
-                         new=self._modules.fake_goldeneye_memcache)
-    self.fake_goldeneye_memcache_adapter = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.hwid_api._hwid_repo_manager')
-    self.patch_hwid_repo_manager = patcher.start()
-    hwid_live_repo = self.patch_hwid_repo_manager.GetLiveHWIDRepo.return_value
-    hwid_live_repo.ListHWIDDBMetadata.return_value = []
-    hwid_live_repo.GetHWIDDBMetadataByName.side_effect = ValueError
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.hwid_api._hwid_validator')
-    self.patch_hwid_validator = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.hwid_api._hwid_db_data_manager',
-                         new=self._modules.fake_hwid_db_data_manager)
-    self.fake_hwid_db_data_manager = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    self.service = hwid_api.ProtoRPCService()
+    self._config = _CreateMockConfig(self._modules)
+    self.service = hwid_api.ProtoRPCService(self._config)
 
   def tearDown(self):
     super().tearDown()
-
     self._modules.ClearAll()
 
   def testGetProjects(self):
@@ -374,8 +360,9 @@ class ProtoRPCServiceTest(unittest.TestCase):
           TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
       }
 
-      with mock.patch.object(self.service._sku_helper,
-                             'GetTotalRAMFromHWIDData') as mock_func:
+      with mock.patch.object(
+          self.service._sku_helper,  # pylint: disable=protected-access
+          'GetTotalRAMFromHWIDData') as mock_func:
         mock_func.return_value = ('1MB', 100000000, [])
 
         req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
@@ -404,8 +391,9 @@ class ProtoRPCServiceTest(unittest.TestCase):
           TEST_HWID: bc_helper.BOMAndConfigless(bom, configless, None)
       }
 
-      with mock.patch.object(self.service._sku_helper,
-                             'GetTotalRAMFromHWIDData') as mock_func:
+      with mock.patch.object(
+          self.service._sku_helper,  # pylint: disable=protected-access
+          'GetTotalRAMFromHWIDData') as mock_func:
         mock_func.return_value = ('1MB', 100000000, [])
 
         req = hwid_api_messages_pb2.SkuRequest(hwid=TEST_HWID)
@@ -524,7 +512,7 @@ class ProtoRPCServiceTest(unittest.TestCase):
 
   def testGetHwidBundleResourceInfo_ProjectNotFound(self):
     gerrit_tot_hwid_repo = (
-        self.patch_hwid_repo_manager.GetGerritToTHWIDRepo.return_value)
+        self._config.hwid_repo_manager.GetGerritToTHWIDRepo.return_value)
     gerrit_tot_hwid_repo.GetHWIDDBMetadataByName.side_effect = KeyError
     with self.assertRaises(protorpc_utils.ProtoRPCException) as ex:
       req = hwid_api_messages_pb2.GetHwidBundleResourceInfoRequest(

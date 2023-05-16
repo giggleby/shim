@@ -6,12 +6,16 @@ import logging
 import operator
 from typing import Dict, List, NamedTuple, Optional
 
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.hwid.service.appengine import hwid_action
 from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine.hwid_api_helpers import common_helper
 from cros.factory.hwid.service.appengine.proto import hwid_api_messages_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.hwid.v3 import rule as v3_rule
+
+
+_CONFIG_DATA = config_data.CONFIG
 
 
 class BOMAndConfigless(NamedTuple):
@@ -41,8 +45,8 @@ def GetBOMAndConfiglessStatusAndError(bom_configless):
 
 class BOMAndConfiglessHelper:
 
-  def __init__(self, vpg_targets, decoder_data_manager):
-    self._vpg_targets = vpg_targets
+  def __init__(self, decoder_data_manager):
+    self._vpg_targets = _CONFIG_DATA.vpg_targets
     self._decoder_data_manager = decoder_data_manager
 
   def BatchGetBOMAndConfigless(

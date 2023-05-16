@@ -39,7 +39,7 @@ class BOMAndConfiglessHelperTest(unittest.TestCase):
         wraps=self._module_collection.fake_hwid_action_manager)
 
     self._bc_helper = bc_helper_module.BOMAndConfiglessHelper(
-        self._vpg_targets, self._module_collection.fake_decoder_data_manager)
+        self._module_collection.fake_decoder_data_manager)
 
   def tearDown(self):
     super().tearDown()

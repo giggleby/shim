@@ -8,8 +8,11 @@ import logging
 
 import flask
 
-from cros.factory.hwid.service.appengine.config import CONFIG
+from cros.factory.hwid.service.appengine.data import config_data
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+
+
+_CONFIG_DATA = config_data.CONFIG
 
 
 def HttpCheck(func):
@@ -20,9 +23,8 @@ def HttpCheck(func):
   """
 
   @functools.wraps(func)
-  def _MethodWrapper(  # pylint: disable=inconsistent-return-statements
-      *args, **kwargs):
-    if CONFIG.env == 'dev':  # for integration test
+  def _MethodWrapper(*args, **kwargs):
+    if _CONFIG_DATA.env == 'dev':  # for integration test
       return func(*args, **kwargs)
 
     from_cron = flask.request.headers.get('X-AppEngine-Cron')
@@ -44,7 +46,7 @@ def RpcCheck(func):
 
   @functools.wraps(func)
   def _MethodWrapper(*args, **kwargs):
-    if CONFIG.env == 'dev':  # for integration test
+    if _CONFIG_DATA.env == 'dev':  # for integration test
       return func(*args, **kwargs)
 
     from_cloud_task = flask.request.headers.get('X-AppEngine-QueueName')
@@ -54,7 +56,7 @@ def RpcCheck(func):
 
     loas_peer_username = flask.request.headers.get(
         'X-Appengine-Loas-Peer-Username')
-    if loas_peer_username in CONFIG.client_allowlist:
+    if loas_peer_username in _CONFIG_DATA.client_allowlist:
       return func(*args, **kwargs)
 
     raise protorpc_utils.ProtoRPCException(

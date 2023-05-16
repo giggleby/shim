@@ -15,8 +15,7 @@ import urllib3
 
 from cros.factory.hwid.service.appengine import api_connector
 from cros.factory.hwid.service.appengine import auth
-from cros.factory.hwid.service.appengine import config
-from cros.factory.hwid.service.appengine.data import config_data
+from cros.factory.hwid.service.appengine.data import config_data as config_data_module
 from cros.factory.hwid.service.appengine import git_util
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import memcache_adapter
@@ -26,8 +25,6 @@ from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.hwid.v3 import name_pattern_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
 
-
-CONFIG = config.CONFIG
 
 GOLDENEYE_MEMCACHE_NAMESPACE = 'SourceGoldenEye'
 
@@ -44,20 +41,23 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       'HwidIngestion']
 
   @classmethod
-  def CreateInstance(cls):
+  def CreateInstance(cls, config, config_data):
     """Creates RPC service instance."""
-    return cls(api_connector.HWIDAPIConnector())
+    return cls(api_connector.HWIDAPIConnector(), config, config_data)
 
-  def __init__(self, hwid_api_connector, *args, **kwargs):
+  def __init__(self, hwid_api_connector, config, config_data, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.hwid_action_manager = CONFIG.hwid_action_manager
-    self.vp_data_manager = CONFIG.vp_data_manager
-    self.hwid_db_data_manager = CONFIG.hwid_db_data_manager
-    self.decoder_data_manager = CONFIG.decoder_data_manager
-    self.vpg_targets = CONFIG.vpg_targets
-    self.dryrun_upload = CONFIG.dryrun_upload
-    self.hwid_repo_manager = CONFIG.hwid_repo_manager
+    self._config = config
+    self._config_data = config_data
+    self.hwid_action_manager = config.hwid_action_manager
+    self.vp_data_manager = config.vp_data_manager
+    self.hwid_db_data_manager = config.hwid_db_data_manager
+    self.decoder_data_manager = config.decoder_data_manager
+    self.vpg_targets = config_data.vpg_targets
+    self.dryrun_upload = config_data.dryrun_upload
+    self.hwid_repo_manager = config.hwid_repo_manager
     self.hwid_api_connector = hwid_api_connector
+    self.goldeneye_filesystem = config.goldeneye_filesystem
 
   @protorpc_utils.ProtoRPCServiceMethod
   @auth.RpcCheck
@@ -137,7 +137,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         limit_models=list(limit_models) if limit_models else None)
 
     # Skip if env is local (dev)
-    if CONFIG.env == 'dev':
+    if self._config_data.env == 'dev':
       return ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env')
 
     response = self._UpdatePayloadsAndSync(force_push, do_limit, limit_models)
@@ -153,8 +153,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
     try:
       memcache = memcache_adapter.MemcacheAdapter(
           namespace=GOLDENEYE_MEMCACHE_NAMESPACE)
-      all_devices_json = CONFIG.goldeneye_filesystem.ReadFile(
-          'all_devices.json')
+      all_devices_json = self.goldeneye_filesystem.ReadFile('all_devices.json')
       parsed_json = json.loads(all_devices_json)
 
       regexp_to_device = []
@@ -275,7 +274,7 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
       dryrun_upload = False
     author = f'chromeoshwid <{service_account_name}>'
 
-    setting = config_data.CreateVerificationPayloadSettings(board)
+    setting = config_data_module.CreateVerificationPayloadSettings(board)
     git_url = f'{setting.repo_host}/{setting.project}'
     branch = setting.branch or git_util.GetCurrentBranch(
         setting.review_host, setting.project, git_util.GetGerritAuthCookie())
@@ -313,7 +312,8 @@ class ProtoRPCService(protorpc_utils.ProtoRPCServiceBase):
         change_id, _ = git_util.CreateCL(git_url, auth_cookie, branch,
                                          new_git_files, author, author,
                                          commit_msg, reviewers, ccs)
-        if CONFIG.env != 'prod':  # Abandon the test CL to prevent confusion
+        if self._config_data.env != 'prod':
+          # Abandon the test CL to prevent confusion
           try:
             git_util.AbandonCL(setting.review_host, auth_cookie, change_id)
           except (git_util.GitUtilException,

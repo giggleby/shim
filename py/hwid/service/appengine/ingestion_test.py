@@ -7,31 +7,47 @@
 import unittest
 from unittest import mock
 
+from cros.factory.hwid.service.appengine import config as config_module
+from cros.factory.hwid.service.appengine.data import config_data as config_data_module
+from cros.factory.hwid.service.appengine.data import decoder_data
+from cros.factory.hwid.service.appengine.data import hwid_db_data
+from cros.factory.hwid.service.appengine.data import verification_payload_data
 from cros.factory.hwid.service.appengine import hwid_action
+from cros.factory.hwid.service.appengine import hwid_action_manager
 from cros.factory.hwid.service.appengine import hwid_repo
 from cros.factory.hwid.service.appengine import ingestion
 from cros.factory.hwid.service.appengine.proto import ingestion_pb2  # pylint: disable=no-name-in-module
 from cros.factory.hwid.service.appengine import test_utils
+from cros.factory.hwid.v3 import filesystem_adapter
 from cros.factory.probe_info_service.app_engine import protorpc_utils
+
+
+def _CreateMockConfig():
+  mock_config = mock.Mock(
+      spec=config_module._Config,  # pylint: disable=protected-access
+      wraps=config_module.CONFIG)
+  mock_config.hwid_action_manager = mock.create_autospec(
+      hwid_action_manager.HWIDActionManager, instance=True)
+  mock_config.vp_data_manager = mock.create_autospec(
+      verification_payload_data.VerificationPayloadDataManager, instance=True)
+  mock_config.hwid_db_data_manager = mock.create_autospec(
+      hwid_db_data.HWIDDBDataManager, instance=True)
+  mock_config.decoder_data_manager = mock.create_autospec(
+      decoder_data.DecoderDataManager, instance=True)
+  mock_config.hwid_repo_manager = mock.create_autospec(
+      hwid_repo.HWIDRepoManager, instance=True)
+  mock_config.goldeneye_filesystem = mock.create_autospec(
+      filesystem_adapter.IFileSystemAdapter, instance=True)
+  return mock_config
 
 
 class IngestionTest(unittest.TestCase):
 
   def setUp(self):
-    patcher = mock.patch('__main__.ingestion.CONFIG.hwid_action_manager')
-    self.patch_hwid_action_manager = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.ingestion.CONFIG.hwid_db_data_manager')
-    self.patch_hwid_db_data_manager = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.ingestion.CONFIG.hwid_repo_manager',
-                         autospec=True)
-    self.hwid_repo_manager = patcher.start()
-    self.addCleanup(patcher.stop)
-
-    self.service = ingestion.ProtoRPCService.CreateInstance()
+    super().setUp()
+    self._config = _CreateMockConfig()
+    self.service = ingestion.ProtoRPCService.CreateInstance(
+        self._config, config_data_module.CONFIG)
 
   def testRefresh(self):
     hwid_db_metadata_list = [
@@ -41,7 +57,7 @@ class IngestionTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('BETTERCBOARD', 'BETTERCBOARD', 3,
                                  'BETTERCBOARD'),
     ]
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
 
     request = ingestion_pb2.IngestHwidDbRequest()
@@ -49,8 +65,8 @@ class IngestionTest(unittest.TestCase):
 
     self.assertEqual(
         response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
-    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
-        mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
+    self._config.hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
+        mock.call(self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
             hwid_repo.HWIDDBMetadata('KBOARD', 'KBOARD', 2, 'KBOARD'),
             hwid_repo.HWIDDBMetadata('KBOARD.old', 'KBOARD', 2, 'KBOARD.old'),
             hwid_repo.HWIDDBMetadata('SBOARD', 'SBOARD', 3, 'SBOARD'),
@@ -67,7 +83,7 @@ class IngestionTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('BETTERCBOARD', 'BETTERCBOARD', 3,
                                  'BETTERCBOARD'),
     ]
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
 
     request = ingestion_pb2.IngestHwidDbRequest(
@@ -76,8 +92,8 @@ class IngestionTest(unittest.TestCase):
 
     self.assertEqual(
         response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
-    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
-        mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
+    self._config.hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
+        mock.call(self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
             hwid_repo.HWIDDBMetadata('KBOARD', 'KBOARD', 2, 'KBOARD'),
             hwid_repo.HWIDDBMetadata('SBOARD', 'SBOARD', 3, 'SBOARD'),
         ], delete_missing=False)
@@ -90,7 +106,7 @@ class IngestionTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
         hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
     ]
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
 
     request = ingestion_pb2.IngestHwidDbRequest(limit_boards=['KBOARD'])
@@ -98,8 +114,8 @@ class IngestionTest(unittest.TestCase):
 
     self.assertEqual(
         response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
-    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
-        mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
+    self._config.hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
+        mock.call(self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
             hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
             hwid_repo.HWIDDBMetadata('KPROJ2', 'KBOARD', 3, 'KPROJ2'),
             hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
@@ -113,7 +129,7 @@ class IngestionTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
         hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
     ]
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
 
     request = ingestion_pb2.IngestHwidDbRequest(limit_boards=['ZBOARD'])
@@ -128,7 +144,7 @@ class IngestionTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
         hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
     ]
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
 
     request = ingestion_pb2.IngestHwidDbRequest(
@@ -137,8 +153,8 @@ class IngestionTest(unittest.TestCase):
 
     self.assertEqual(
         response, ingestion_pb2.IngestHwidDbResponse(msg='Skip for local env'))
-    self.patch_hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
-        mock.call(self.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
+    self._config.hwid_db_data_manager.UpdateProjectsByRepo.assert_has_calls([
+        mock.call(self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value, [
             hwid_repo.HWIDDBMetadata('KPROJ1', 'KBOARD', 3, 'KPROJ1'),
         ], delete_missing=False)
     ])
@@ -150,7 +166,7 @@ class IngestionTest(unittest.TestCase):
         hwid_repo.HWIDDBMetadata('KPROJ3', 'KBOARD', 3, 'KPROJ3'),
         hwid_repo.HWIDDBMetadata('SPROJ1', 'SBOARD', 3, 'SPROJ1'),
     ]
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.return_value = hwid_db_metadata_list
 
     request = ingestion_pb2.IngestHwidDbRequest(
@@ -160,7 +176,7 @@ class IngestionTest(unittest.TestCase):
     self.assertEqual(ex.exception.detail, 'No model meets the limit.')
 
   def testRefreshWithoutBoardsInfo(self):
-    live_hwid_repo = self.hwid_repo_manager.GetLiveHWIDRepo.return_value
+    live_hwid_repo = self._config.hwid_repo_manager.GetLiveHWIDRepo.return_value
     live_hwid_repo.ListHWIDDBMetadata.side_effect = hwid_repo.HWIDRepoError
 
     request = ingestion_pb2.IngestHwidDbRequest()
@@ -181,17 +197,10 @@ class AVLNameTest(unittest.TestCase):
 
   def setUp(self):
     self.fixtures = test_utils.FakeModuleCollection()
-    patcher = mock.patch('__main__.ingestion.CONFIG.decoder_data_manager',
-                         new=self.fixtures.fake_decoder_data_manager)
-    patcher.start()
-    self.addCleanup(patcher.stop)
-
-    patcher = mock.patch('__main__.ingestion.CONFIG.hwid_action_manager',
-                         new=self.fixtures.fake_hwid_action_manager)
-    patcher.start()
-    self.addCleanup(patcher.stop)
-
-    self.service = ingestion.ProtoRPCService.CreateInstance()
+    self._config = _CreateMockConfig()
+    self._config.decoder_data_manager = self.fixtures.fake_decoder_data_manager
+    self.service = ingestion.ProtoRPCService.CreateInstance(
+        self._config, config_data_module.CONFIG)
 
     self.init_mapping_data = {
         2: "name1",

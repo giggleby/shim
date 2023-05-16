@@ -11,9 +11,9 @@ import google.auth
 from google.auth import impersonated_credentials
 from google.auth.transport import requests as ga_requests
 
-from cros.factory.hwid.service.appengine import config  # pylint: enable=import-error, no-name-in-module
+from cros.factory.hwid.service.appengine.data import config_data
 
-CONFIG = config.CONFIG
+
 HWID_API_SCOPE = 'https://www.googleapis.com/auth/chromeoshwid'
 IMPERSONATED_SERVICE_ACCOUNT = os.getenv('IMPERSONATED_SERVICE_ACCOUNT')
 
@@ -63,7 +63,7 @@ class HWIDAPIConnector:
         'Content-Type': 'application/x-www-form-urlencoded',
         'X-HTTP-Method-Override': 'GET'
     }
-    url = CONFIG.hwid_api_endpoint + '/v2/avlNameMappings:batchGet'
+    url = f'{config_data.CONFIG.hwid_api_endpoint}/v2/avlNameMappings:batchGet'
     avl_name_mapping = {}
     for start_index in range(0, len(comp_ids), batch_size):
       batch_comp_ids = comp_ids[start_index:start_index + batch_size]
