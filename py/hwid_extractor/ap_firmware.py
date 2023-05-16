@@ -96,6 +96,7 @@ def _GetHWID(firmware_binary_file):
   """Get HWID from ap firmware binary."""
   futility_cmd = [FUTILITY_BIN, 'gbb', firmware_binary_file]
   output = subprocess.check_output(futility_cmd, encoding='utf-8',
+                                   stderr=subprocess.PIPE,
                                    timeout=CMD_TIMEOUT_SECOND)
   logging.debug('futility output:\n%s', output)
   output.split(':')
@@ -107,6 +108,7 @@ def _GetSerialNumber(firmware_binary_file):
   """Get serial number from ap firmware binary."""
   vpd_cmd = [VPD_BIN, '-l', '-f', firmware_binary_file]
   output = subprocess.check_output(vpd_cmd, encoding='utf-8',
+                                   stderr=subprocess.PIPE,
                                    timeout=CMD_TIMEOUT_SECOND)
   logging.debug('vpd output:\n%s', output)
   for line in output.splitlines():
@@ -152,6 +154,7 @@ def ExtractHWIDAndSerialNumber(board, dut_control):
         programmer, '-r', tmp_file
     ]
     output = subprocess.check_output(flashrom_cmd, encoding='utf-8',
+                                     stderr=subprocess.PIPE,
                                      timeout=CMD_TIMEOUT_SECOND)
     logging.debug('flashrom output:\n%s', output)
     hwid = _GetHWID(tmp_file)

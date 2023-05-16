@@ -8,12 +8,14 @@ from http import server as http_server
 import json
 import logging
 import os
+import subprocess
 import traceback
 from urllib import parse as urlparse
 
 from cros.factory.hwid_extractor import ap_firmware
 from cros.factory.hwid_extractor import device
 from cros.factory.utils import json_utils
+
 
 WWW_ROOT_DIR = os.path.join(os.path.dirname(__file__), 'www')
 CONFIG_JSON = os.path.join(WWW_ROOT_DIR, 'config.json')
@@ -143,6 +145,14 @@ class RequestHandler(http_server.SimpleHTTPRequestHandler):
       self._SendJSON({
           'error': e.message,
       }, e.status_code)
+    except subprocess.CalledProcessError as e:
+      # repr(e) could miss the stdout / stderr so print them explicitly.
+      self._SendJSON(
+          {
+              'error': f'{e!s}, stdout: "{e.stdout}", stderr: "{e.stderr}"',
+              'traceback': traceback.format_exc()
+          }, http.HTTPStatus.INTERNAL_SERVER_ERROR)
+      raise
     except Exception as e:
       self._SendJSON({
           'error': repr(e),
