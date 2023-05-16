@@ -15,7 +15,6 @@ import uuid
 from cros.factory.test.env import paths
 from cros.factory.utils import file_utils
 from cros.factory.utils import log_utils
-from cros.factory.utils import process_utils
 from cros.factory.utils import type_utils
 
 
@@ -44,6 +43,7 @@ and the content should be different when re-generated.
 INIT_COUNT_PATH = os.path.join(LOG_ROOT, 'init_count')
 """File containing the number of times session (Goofy) has been initialized."""
 
+HOST_DEVICE_ID = 'Host Device ID'
 
 console = type_utils.LazyObject(
     log_utils.FileLogger, 'console', paths.CONSOLE_LOG_PATH,
@@ -60,10 +60,11 @@ def GetDeviceID():
   """
   if os.path.exists(DEVICE_ID_PATH):
     return file_utils.ReadFile(DEVICE_ID_PATH).strip()
-  # The device_id file doesn't exist, we probably are not on DUT, just
-  # run bin/device_id once and return the result.
-  device_id_bin = os.path.join(paths.FACTORY_DIR, 'bin', 'device_id')
-  return process_utils.CheckOutput([device_id_bin]).strip()
+  # The device_id file doesn't exist, we probably are not on DUT, just return a
+  # mocked device id for testing. In testing scenario we only use mocked device
+  # id since the id is only meaningful on a DUT running toolkit and we should
+  # also never try to get the system information of a host (e.g. workstation).
+  return HOST_DEVICE_ID
 
 
 @type_utils.CachedGetter
