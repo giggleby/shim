@@ -54,7 +54,7 @@ Mismatch = namedtuple('Mismatch', ['expected', 'actual'])
 
 _FIRMWARE_RELATIVE_PATH = 'usr/sbin/chromeos-firmwareupdate'
 
-_PART_TABLE_ERROR_TEMPLATE = "Please run partition_table pytest to fix it."
+_MINIOS_VERIY_ERROR_TEMPLATE = 'Please run copy_minios pytest to fix it.'
 
 _DLCVERIFY = 'dlcverify'
 
@@ -376,14 +376,14 @@ class Gooftool:
         if gpt.GetPartition(minios_a_no).blocks != gpt.GetPartition(
             minios_b_no).blocks:
           raise Error(
-              'The size of partition MINIOS_A and MINIOS_B are different. %s' %
-              _PART_TABLE_ERROR_TEMPLATE)
+              'The size of partition MINIOS_A and MINIOS_B are different. '
+              f'{_MINIOS_VERIY_ERROR_TEMPLATE}')
 
         _TmpExec(
             'check if the content of partition MINIOS_A and MINIOS_B are the '
-            'same', 'cmp %s %s' % (minios_a_part, minios_b_part),
-            'The content of partition MINIOS_A and MINIOS_B are different. %s' %
-            _PART_TABLE_ERROR_TEMPLATE)
+            'same', f'cmp {minios_a_part} {minios_b_part}',
+            f'The content of partition MINIOS_A and MINIOS_B are different. '
+            f'{_MINIOS_VERIY_ERROR_TEMPLATE}')
 
         try:
           _TmpExec(

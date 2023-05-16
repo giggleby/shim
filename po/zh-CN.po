@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-02-21 15:00+CST\n"
+"PO-Revision-Date: 2023-05-18 10:57+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: zh-CN\n"
@@ -170,6 +170,11 @@ msgstr "检查机器序号"
 #: ../build/pytests_label_generated.json
 msgid "Compass"
 msgstr "罗盘"
+
+#: ../build/pytests_label_generated.json
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Copy Minios"
+msgstr "复制 MiniOS"
 
 #: ../build/pytests_label_generated.json
 msgid "Countdown"

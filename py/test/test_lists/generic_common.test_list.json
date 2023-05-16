@@ -484,6 +484,10 @@
         "HaltStep"
       ]
     },
+    "CopyMiniOS": {
+      "pytest_name": "copy_minios",
+      "label": "Copy Minios"
+    },
     "Cr50SMTWriteFlashInfo": {
       "inherit": "SMTFinalize",
       "__comment": "Make old definition as an alias of the new definition for backward compatibility"

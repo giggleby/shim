@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ChromeOS Factory Software\n"
-"PO-Revision-Date: 2023-02-21 15:00+CST\n"
+"PO-Revision-Date: 2023-05-18 10:57+CST\n"
 "Last-Translator: ChromeOS Factory Team\n"
 "Language-Team: ChromeOS Factory Team\n"
 "Language: vi-VN\n"
@@ -170,6 +170,11 @@ msgstr "kiểm tra số serial VPD serial number"
 #: ../build/pytests_label_generated.json
 msgid "Compass"
 msgstr "La bàn"
+
+#: ../build/pytests_label_generated.json
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Copy Minios"
+msgstr ""
 
 #: ../build/pytests_label_generated.json
 msgid "Countdown"
