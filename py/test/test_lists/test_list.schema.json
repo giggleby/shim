@@ -370,7 +370,7 @@
           "verify_system_time",
           "verify_tpm",
           "verify_vpd",
-          "verify-sn-bits",
+          "verify_sn_bits",
           "wipe_in_place",
           "write_protect"
         ]

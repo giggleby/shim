@@ -448,11 +448,13 @@ def VerifyCrosConfig(options):
 
 
 @Command(
-    'verify-sn-bits',
+    'verify_sn_bits',
     _enable_zero_touch_cmd_arg,  # this
+    _factory_process_cmd_arg,  # this
     *GetGooftool.__args__)
 def VerifySnBits(options):
-  if options.enable_zero_touch:
+  rma_mode = options.factory_process == FactoryProcessEnum.RMA
+  if options.enable_zero_touch and not rma_mode:
     GetGooftool(options).VerifySnBits()
 
 
