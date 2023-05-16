@@ -18,6 +18,7 @@ from unittest import mock
 from cros.factory.test import session
 from cros.factory.utils import file_utils
 
+
 UUID_RE = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-'
                      '[a-f0-9]{4}-[a-f0-9]{12}$')
 
@@ -45,9 +46,16 @@ class SessionTest(unittest.TestCase):
   def testGetBootID(self):
     self.assertRegex(session.GetBootID(), UUID_RE)
 
+  @mock.patch('os.path.exists', return_value=False)
+  def testGetDeviceIDOnHost(self, mock_exists):
+    session.GetDeviceID.InvalidateCache()
+    self.assertEqual(session.HOST_DEVICE_ID, session.GetDeviceID())
+    mock_exists.assert_called_once_with(session.DEVICE_ID_PATH)
+
   @mock.patch('session.file_utils.ReadFile', return_value='device_id\n')
   @mock.patch('os.path.exists', return_value=True)
-  def testGetDeviceID(self, mock_exists, mock_read_file):
+  def testGetDeviceIDOnDUT(self, mock_exists, mock_read_file):
+    session.GetDeviceID.InvalidateCache()
     self.assertEqual('device_id', session.GetDeviceID())
     # Make one more call to ensure the result is cached.
     self.assertEqual('device_id', session.GetDeviceID())
