@@ -485,6 +485,10 @@
         "HaltStep"
       ]
     },
+    "CopyMiniOS": {
+      "pytest_name": "copy_minios",
+      "label": "Copy Minios"
+    },
     "Cr50APROVerification": {
       "pytest_name": "cr50_ap_ro_verification",
       "label": "Cr50 AP RO Verification",

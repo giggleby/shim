@@ -43,7 +43,8 @@
         "BadBlocks",
         "Barrier",
         "FPSGroup",
-        "Cr50APROVerificationGroup"
+        "Cr50APROVerificationGroup",
+        "CopyMiniOS"
       ]
     },
     "FATStart": {
