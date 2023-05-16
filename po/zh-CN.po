@@ -176,6 +176,11 @@ msgid "Compass"
 msgstr "罗盘"
 
 #: ../build/pytests_label_generated.json
+#: ../py/test/test_lists/generic_common.test_list.json
+msgid "Copy Minios"
+msgstr "复制 MiniOS"
+
+#: ../build/pytests_label_generated.json
 msgid "Countdown"
 msgstr "倒数计时"
 
