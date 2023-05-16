@@ -14,8 +14,9 @@ class NoBenchmarkResultError(Exception):
 
 class BenchmarkResult:
 
-  def __init__(self, measurements: List[float]) -> None:
+  def __init__(self, measurements: List[float], unit: str = '') -> None:
     self.measurements = measurements
+    self.unit = unit
 
   def GetAverage(self) -> float:
     """Get the average from recorded measurements."""
@@ -133,4 +134,4 @@ def Main(module='__main__'):
 
   for benchmark in args.benchmarks:
     result = available_benchmarks[benchmark]()
-    print(f'Run {benchmark}, get average = {result.GetAverage()}s')
+    print(f'Run {benchmark}, get average = {result.GetAverage()} {result.unit}')

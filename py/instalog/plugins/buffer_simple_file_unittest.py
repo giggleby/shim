@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 #
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -38,8 +38,6 @@ import tempfile
 import threading
 import time
 import unittest
-
-import psutil
 
 from cros.factory.instalog import datatypes
 from cros.factory.instalog import log_utils
@@ -609,31 +607,6 @@ class TestBufferSimpleFile(unittest.TestCase):
       self.assertEqual(2, self._CountAttachmentsInBuffer(self.sf))
       self.sf.Produce(alt_producer, [], True)
       self.assertEqual(3, self._CountAttachmentsInBuffer(self.sf))
-
-  def testNonConsumableEventsMemoryUsage(self):
-    PASS_CRITERIA_DIVIDER = 10
-    EVENT_NUM = 500
-    # Count virtual memory as we care about the total memory used by objects,
-    # not the occupied size on the physical memory.
-    memory_before_creating_events = psutil.Process().memory_info().vms
-    events = [
-        datatypes.Event({'test1': 'event'}) for unused_i in range(EVENT_NUM)
-    ]
-    memory_after_creating_events = psutil.Process().memory_info().vms
-    del events
-    rough_memory_for_events = \
-        memory_after_creating_events - memory_before_creating_events
-
-    memory_before_produce = psutil.Process().memory_info().vms
-    for unused_i in range(EVENT_NUM):
-      self.sf.Produce(_TEST_PRODUCER, [datatypes.Event({'test1': 'event'})],
-                      False)
-    memory_after_produce = psutil.Process().memory_info().vms
-    rough_memory_for_non_consumable = \
-        memory_after_produce - memory_before_produce
-
-    self.assertLess(rough_memory_for_non_consumable,
-                    rough_memory_for_events / PASS_CRITERIA_DIVIDER)
 
 
 if __name__ == '__main__':

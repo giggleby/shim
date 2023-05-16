@@ -51,7 +51,7 @@ class PluginBenchmarkRunner(abc.ABC):
     for unused_i in range(count):
       self._RunOnce(testing_events)
       self._measurements.append(self._GetLastMeasurement())
-    return BenchmarkResult(self._measurements)
+    return BenchmarkResult(self._measurements, unit='seconds')
 
   @abc.abstractmethod
   def _RunOnce(self, testing_events: List[datatypes.Event]) -> None:
