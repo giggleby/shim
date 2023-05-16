@@ -3,12 +3,11 @@
 # found in the LICENSE file.
 
 import logging
-import re
 import statistics
 
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
-from cros.factory.utils import process_utils
+from cros.factory.utils import type_utils
 
 
 _GRAVITY = 9.80665
@@ -37,6 +36,11 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     Raises AccelerometerException if there is no accelerometer.
   """
 
+  @type_utils.ClassProperty
+  def raw_to_sys_weight(self):
+    """Maps m/s^2 to 1/1024G."""
+    return 1024 / _GRAVITY
+
   def __init__(self, board, name, location):
     """Cleans up previous calibration values and stores the scan order.
 
@@ -51,98 +55,13 @@ class AccelerometerController(sensor_utils.BasicSensorController):
                      ['in_accel_x', 'in_accel_y', 'in_accel_z'], scale=True)
     self.location = location
 
-  def CleanUpCalibrationValues(self):
-    """Clean up calibration values.
-
-    The sysfs trigger only captures calibrated input values, so we reset
-    the calibration to allow reading raw data from a trigger.
-    """
-    for signal_name in self.signal_names:
-      self._SetSysfsValue(f'{signal_name}_calibbias', '0')
-
-  def GetData(self, capture_count: int = 1, sample_rate: float = None,
-              average: bool = True):
-    """Returns average values of the sensor data.
-
-    Use `iioservice_simpleclient` to capture the sensor data.
-
-    Args:
-      capture_count: how many records to read to compute the average.
-      sample_rate: sample rate in Hz to read data from accelerometers. If it is
-        None, set to the maximum frequency.
-      average: return the average of data or not.
-
-    Returns:
-      A dict of the format {'signal_name': value}
-      The output data is in m/s^2.
-      if `average=True`, value will be a single number.
-      E.g., {'in_accel_x': 0,
-             'in_accel_y': 0,
-             'in_accel_z': 9.8}
-      if `average=False`, it will be a list with length of `capture_count`.
-      E.g., {'in_accel_x': [0.0, 0.0, -0.1],
-             'in_accel_y': [0.0, 0.1, 0.0],
-             'in_accel_z': [9.8, 9.7, 9.9]}
-
-    Raises:
-      Raises AccelerometerException if there is no calibration
-      value in VPD.
-    """
-
-    # Initializes the returned dict.
-    ret = {signal_name: 0.0 for signal_name in self.signal_names}
-
-    def ToChannelName(signal_name):
-      """Transform the signal names (in_accel_(x|y|z)) to the channel names used
-      in iioservice (accel_(x|y|z))."""
-
-      return signal_name[3:] if signal_name.startswith('in_') else signal_name
-
-    iioservice_channels = [
-        ToChannelName(signal_name) for signal_name in self.signal_names
-    ]
-
-    # We only test `iioservice_simpleclient` with maximum frequency in
-    # sensor_iioservice_hard.go. Use maximum frequency by default to make sure
-    # that our tests are using tested commands.
-    if sample_rate is None:
-      frequencies = self.GetSamplingFrequencies()
-      sample_rate = frequencies[1]
-
-    iioservice_cmd = [
-        'iioservice_simpleclient',
-        f"--channels={' '.join(iioservice_channels)}",
-        f'--frequency={sample_rate:f}',
-        f"--device_id={int(self._GetSysfsValue('dev').split(':')[1])}",
-        f'--samples={int(capture_count)}'
-    ]
-    logging.info('iioservice_simpleclient command: %r', iioservice_cmd)
-
-    # Reads the captured data.
-    proc = process_utils.CheckCall(iioservice_cmd, read_stderr=True)
-    for signal_name in self.signal_names:
-      channel_name = ToChannelName(signal_name)
-      matches = re.findall(f'(?<={channel_name}'
-                           r': )-?\d+', proc.stderr_data)
-      if len(matches) != capture_count:
-        logging.error(
-            'Failed to read channel "%s" from iioservice_simpleclient. Expect '
-            '%d data, but %d captured. stderr:\n%s', channel_name,
-            capture_count, len(matches), proc.stderr_data)
-        raise AccelerometerException
-      logging.info('Getting %d data on channel %s: %s', len(matches),
-                   channel_name, matches)
-
-      ret[signal_name] = [int(value) * self.scale for value in matches]
-
-      # Calculates average value and convert to SI unit.
-      if average:
-        ret[signal_name] = statistics.mean(ret[signal_name])
-
-    if average:
-      logging.info('Average of %d data: %s', capture_count, ret)
-
-    return ret
+  def CalculateCalibrationBias(self, data, orientations=None):
+    if not orientations:
+      raise AccelerometerException(
+          '|orientations| is essential to calculate calibration bias')
+    orientations = {k: v * _GRAVITY
+                    for k, v in orientations.items()}
+    return super().CalculateCalibrationBias(data, orientations)
 
   @classmethod
   def IsVarianceOutOfRange(cls, data: dict, threshold: float = 5.0):
@@ -211,42 +130,6 @@ class AccelerometerController(sensor_utils.BasicSensorController):
                       signal_name, value, ideal_value)
         ret = False
     return ret
-
-  def CalculateCalibrationBias(self, data, orientations):
-    # Calculating calibration data.
-    calib_bias = {}
-    for signal_name in data:
-      ideal_value = _GRAVITY * orientations[signal_name]
-      current_calib_bias = (
-          int(self._GetSysfsValue(f'{signal_name}_calibbias')) * _GRAVITY /
-          1024)
-      # Calculate the difference between the ideal value and actual value
-      # then store it into _calibbias.  In release image, the raw data will
-      # be adjusted by _calibbias to generate the 'post-calibrated' values.
-      calib_bias[signal_name + '_' + self.location + '_calibbias'] = (
-          ideal_value - data[signal_name] + current_calib_bias)
-    return calib_bias
-
-  def UpdateCalibrationBias(self, calib_bias):
-    """Update calibration bias to RO_VPD
-
-    Args:
-      calib_bias: A dict of calibration bias, in m/s^2.
-        E.g., {'in_accel_x_base_calibbias': 0.1,
-               'in_accel_y_base_calibbias': -0.2,
-               'in_accel_z_base_calibbias': 0.3}
-    """
-    # Writes the calibration results into ro vpd.
-    # The data is converted to 1/1024G unit before writing.
-    logging.info('Calibration results: %s.', calib_bias)
-    scaled = {k: str(int(v * 1024 / _GRAVITY)) for k, v in calib_bias.items()}
-    self._device.vpd.ro.Update(scaled)
-    mapping = []
-    for signal_name in self.signal_names:
-      mapping.append((f'{signal_name}_{self.location}_calibbias',
-                      f'{signal_name}_calibbias'))
-    for vpd_entry, sysfs_entry in mapping:
-      self._SetSysfsValue(sysfs_entry, scaled[vpd_entry])
 
 
 class Accelerometer(device_types.DeviceComponent):

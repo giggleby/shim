@@ -2,11 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import logging
 import os
-import time
+import re
+import statistics
 import typing
 
 from cros.factory.device import device_types
+from cros.factory.utils import process_utils
+from cros.factory.utils import type_utils
 
 
 IIO_DEVICES_PATTERN = '/sys/bus/iio/devices/iio:device*'
@@ -15,7 +19,6 @@ LABEL_FROM_LOCATION = {
     'lid': 'accel-display',
     'camera': 'accel-camera'
 }
-
 
 class SensorError(device_types.DeviceException):
   TEMPLATE = ('%s To resolve this, modify the driver and pass the '
@@ -70,6 +73,11 @@ def FindDevice(dut, path_pattern, **attr_filter):
 class BasicSensorController(device_types.DeviceComponent):
   """A sensor controller that only supports direct read."""
 
+  @type_utils.ClassProperty
+  def raw_to_sys_weight(self):
+    """The unit transformation weight between system and raw values."""
+    return 1.0
+
   def __init__(self, dut, name, location, signal_names, scale=False):
     """Constructor.
 
@@ -93,6 +101,56 @@ class BasicSensorController(device_types.DeviceComponent):
       self._iio_path = FindDevice(self._device, IIO_DEVICES_PATTERN, name=name,
                                   label=LABEL_FROM_LOCATION[location])
     self.scale = 1.0 if not scale else float(self._GetSysfsValue('scale'))
+
+  def CleanUpCalibrationValues(self):
+    """Clean up calibration values.
+
+    The sysfs trigger only captures calibrated input values, so we reset
+    the calibration to allow reading raw data from a trigger.
+    """
+    for signal_name in self.signal_names:
+      self._SetSysfsValue(f'{signal_name}_calibbias', '0')
+
+  def CalculateCalibrationBias(self, data, orientations=None):
+    # Calculating calibration data.
+    if not orientations:
+      orientations = {}
+
+    calib_bias = {}
+    for signal_name in data:
+      ideal_value = orientations.get(signal_name, 0.0)
+      current_calib_bias = (
+          int(self._GetSysfsValue(f'{signal_name}_calibbias')) /
+          self.raw_to_sys_weight)
+      # Calculate the difference between the ideal value and actual value
+      # then store it into _calibbias.  In release image, the raw data will
+      # be adjusted by _calibbias to generate the 'post-calibrated' values.
+      calib_bias[signal_name + '_' + self.location + '_calibbias'] = (
+          ideal_value - data[signal_name] + current_calib_bias)
+    return calib_bias
+
+  def UpdateCalibrationBias(self, calib_bias):
+    """Update calibration bias to RO_VPD
+
+    Args:
+      calib_bias: A dict of calibration bias, in m/s^2.
+        E.g., {'in_accel_x_base_calibbias': 0.1,
+               'in_accel_y_base_calibbias': -0.2,
+               'in_accel_z_base_calibbias': 0.3}
+    """
+    # Writes the calibration results into ro vpd.
+    logging.info('Calibration results: %s.', calib_bias)
+    scaled = {
+        k: str(int(v * self.raw_to_sys_weight))
+        for k, v in calib_bias.items()
+    }
+    self._device.vpd.ro.Update(scaled)
+    mapping = []
+    for signal_name in self.signal_names:
+      mapping.append((f'{signal_name}_{self.location}_calibbias',
+                      f'{signal_name}_calibbias'))
+    for vpd_entry, sysfs_entry in mapping:
+      self._SetSysfsValue(sysfs_entry, scaled[vpd_entry])
 
   def _GetRepresentList(self) -> list:
     """Returns a list of strings that represents the contents."""
@@ -177,13 +235,17 @@ class BasicSensorController(device_types.DeviceComponent):
             f'frequency:{result[1]}.')
     return result
 
-  def GetData(self, capture_count=1, sample_rate=20, average=True):
-    """Reads several records of raw data and returns the values.
+  def GetData(self, capture_count: int = 1, sample_rate: float = 20.0,
+              average: bool = True):
+    """Returns (averaged) sensor data.
+
+    Use `iioservice_simpleclient` to capture the sensor data.
 
     Args:
       capture_count: how many records to read to compute the average.
-      sample_rate: sample rate in Hz to read data from the sensor.
-      average: return average value or not.
+      sample_rate: sample rate in Hz to read data from sensors. If it is None,
+        set to the maximum frequency.
+      average: return the average of data or not.
 
     Returns:
       A dict of the format {'signal_name': value}
@@ -195,15 +257,63 @@ class BasicSensorController(device_types.DeviceComponent):
       E.g., {'in_accel_x': [0.0, 0.0, -0.1],
              'in_accel_y': [0.0, 0.1, 0.0],
              'in_accel_z': [9.8, 9.7, 9.9]}
+
+    Raises:
+      Raises SensorError if there is no calibration value in VPD.
     """
-    ret = {signal: []
-           for signal in self.signal_names}
-    for unused_i in range(capture_count):
-      time.sleep(1.0 / sample_rate)
-      for signal_name in ret:
-        value = float(self._GetSysfsValue(signal_name + '_raw')) * self.scale
-        ret[signal_name].append(value)
+    # Initializes the returned dict.
+    ret = {signal_name: 0.0
+           for signal_name in self.signal_names}
+
+    def ToChannelName(signal_name):
+      """Transform the signal names (in_(accel|anglvel)_(x|y|z)) to the channel
+      names used in iioservice ((accel|anglvel)_(x|y|z))."""
+
+      return signal_name[3:] if signal_name.startswith('in_') else signal_name
+
+    iioservice_channels = [
+        ToChannelName(signal_name) for signal_name in self.signal_names
+    ]
+
+    # We only test `iioservice_simpleclient` with maximum frequency in
+    # sensor_iioservice_hard.go. Use maximum frequency by default to make sure
+    # that our tests are using tested commands.
+    if sample_rate is None:
+      frequencies = self.GetSamplingFrequencies()
+      sample_rate = frequencies[1]
+
+    iioservice_cmd = [
+        'iioservice_simpleclient',
+        f"--channels={' '.join(iioservice_channels)}",
+        f'--frequency={sample_rate:f}',
+        f"--device_id={int(self._GetSysfsValue('dev').split(':')[1])}",
+        f'--samples={int(capture_count)}'
+    ]
+    logging.info('iioservice_simpleclient command: %r', iioservice_cmd)
+
+    # Reads the captured data.
+    proc = process_utils.CheckCall(iioservice_cmd, read_stderr=True)
+    for signal_name in self.signal_names:
+      channel_name = ToChannelName(signal_name)
+      matches = re.findall(f'(?<={channel_name}'
+                           r': )-?\d+', proc.stderr_data)
+      if len(matches) != capture_count:
+        error_msg = ('Failed to read channel "%s" from iioservice_simpleclient.'
+                     'Expect %d data, but %d captured. stderr:\n%s',
+                     channel_name, capture_count, len(matches),
+                     proc.stderr_data)
+        logging.error(error_msg)
+        raise SensorError(error_msg)
+      logging.info('Getting %d data on channel %s: %s', len(matches),
+                   channel_name, matches)
+
+      ret[signal_name] = [int(value) * self.scale for value in matches]
+
+      # Calculates average value and convert to SI unit.
+      if average:
+        ret[signal_name] = statistics.mean(ret[signal_name])
+
     if average:
-      ret = {k: (sum(v) / capture_count)
-             for k, v in ret.items()}
+      logging.info('Average of %d data: %s', capture_count, ret)
+
     return ret

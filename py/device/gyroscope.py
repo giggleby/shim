@@ -9,6 +9,7 @@ import re
 
 from cros.factory.device import device_types
 from cros.factory.device import sensor_utils
+from cros.factory.utils import type_utils
 
 
 _RADIAN_TO_DEGREE = 180 / math.pi
@@ -39,6 +40,11 @@ class GyroscopeController(sensor_utils.BasicSensorController):
       At least one of name or location must present.
   """
 
+  @type_utils.ClassProperty
+  def raw_to_sys_weight(self):
+    """Maps rad/s to dps."""
+    return 1024 * _RADIAN_TO_DEGREE
+
   def __init__(self, board, name, location, gyro_id, freq):
     super().__init__(board, name, location,
                      ['in_anglvel_x', 'in_anglvel_y', 'in_anglvel_z'],
@@ -54,51 +60,6 @@ class GyroscopeController(sensor_utils.BasicSensorController):
         f'gyro_id={self.gyro_id!r}',
         f'freq={self.freq!r}',
     ]
-
-  def CleanUpCalibrationValues(self):
-    """Clean up calibration values.
-
-    The sysfs trigger only captures calibrated input values, so we reset
-    the calibration to allow reading raw data from a trigger.
-    """
-    for signal_name in self.signal_names:
-      self._SetSysfsValue(f'{signal_name}_calibbias', '0')
-
-  def CalculateCalibrationBias(self, data):
-    """Calculating calibration data."""
-    calib_bias = {}
-    for signal_name in data:
-      ideal_value = 0
-      current_calib_bias = (
-          int(self._GetSysfsValue(f'{signal_name}_calibbias')) /
-          _RADIAN_TO_DEGREE / 1024)
-      # Calculate the difference between the ideal value and actual value
-      # then store it into _calibbias.  In release image, the raw data will
-      # be adjusted by _calibbias to generate the 'post-calibrated' values.
-      calib_bias[signal_name + '_' + self.location + '_calibbias'] = (
-          ideal_value - data[signal_name] + current_calib_bias)
-    return calib_bias
-
-  def UpdateCalibrationBias(self, calib_bias):
-    """Update calibration bias to RO_VPD.
-
-    Args:
-      A dict of calibration bias in, rad/s.
-      For example, {'in_anglvel_x_base_calibbias': 0.1,
-                    'in_anglvel_y_base_calibbias': -0.2,
-                    'in_anglvel_z_base_calibbias': 0.3}
-    """
-    logging.info('Calibration results: %s.', calib_bias)
-    # The data is converted to 1/1024dps unit before writing.
-    scaled = {k: str(int(v * 1024 * _RADIAN_TO_DEGREE))
-              for k, v in calib_bias.items()}
-    self._device.vpd.ro.Update(scaled)
-    mapping = []
-    for signal_name in self.signal_names:
-      mapping.append((f'{signal_name}_{self.location}_calibbias',
-                      f'{signal_name}_calibbias'))
-    for vpd_entry, sysfs_entry in mapping:
-      self._SetSysfsValue(sysfs_entry, scaled[vpd_entry])
 
   def SetupMotionSensor(self):
     """Set up motion sensor for gyroscope.
