@@ -17,24 +17,22 @@ _TEST_CONFIG_PATH = os.path.join(
 class ConfigTest(unittest.TestCase):
   """Test for AppEngine config file."""
 
-  # pylint: disable=protected-access
-
   def testConfigSwitchingDev(self):
     # Have to patch os.enviorn before importing config module
     os.environ['GOOGLE_CLOUD_PROJECT'] = 'unknown project id'
     from cros.factory.hwid.service.appengine.data import config_data
-    self.assertEqual('dev', config_data._Config(_TEST_CONFIG_PATH).env)
+    self.assertEqual('dev', config_data.Config(_TEST_CONFIG_PATH).env)
 
   def testConfigSwitchingProd(self):
     # Have to patch os.enviorn before importing config module
     os.environ['GOOGLE_CLOUD_PROJECT'] = 'prod-project-name'
     from cros.factory.hwid.service.appengine.data import config_data
-    self.assertEqual('prod', config_data._Config(_TEST_CONFIG_PATH).env)
+    self.assertEqual('prod', config_data.Config(_TEST_CONFIG_PATH).env)
 
   def testVpgTargets(self):
     os.environ['GOOGLE_CLOUD_PROJECT'] = 'staging-project-name'
     from cros.factory.hwid.service.appengine.data import config_data
-    config = config_data._Config(_TEST_CONFIG_PATH)
+    config = config_data.Config(_TEST_CONFIG_PATH)
     self.assertEqual(
         config.vpg_targets['BAR'],
         vpg_config_module.VerificationPayloadGeneratorConfig.Create(

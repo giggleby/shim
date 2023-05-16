@@ -97,7 +97,7 @@ def CreateVerificationPayloadSettings(board) -> CLSetting:
                    branch=None)
 
 
-class _Config:
+class Config:
   """Config for AppEngine environment.
 
   Attributes:
@@ -139,4 +139,4 @@ class _Config:
     self.hwid_api_endpoint = conf['hwid_api_endpoint']
 
 
-CONFIG = type_utils.LazyObject(_Config)
+CONFIG = type_utils.LazyObject(Config)
