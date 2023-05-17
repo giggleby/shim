@@ -28,21 +28,27 @@ class BOMAndConfigless(NamedTuple):
   error: Optional[Exception]
 
 
+def _GenerateCacheKeyWithProj(proj: str, cache_key: str) -> str:
+  return f'{proj}:{cache_key}'
+
+
 class BOMDataCacher(hwid_action_manager.IHWIDDataCacher):
   """A class to cache bom data by HWID string and invalidate them if needed."""
 
   def __init__(self, mem_adapter: memcache_adapter.MemcacheAdapter):
     self._mem_adapter = mem_adapter
 
-  def GetBOMDataFromCache(self, cache_key: str) -> Optional[BOMAndConfigless]:
-    return self._mem_adapter.Get(cache_key)
+  def GetBOMDataFromCache(self, proj: str,
+                          cache_key: str) -> Optional[BOMAndConfigless]:
+    return self._mem_adapter.Get(_GenerateCacheKeyWithProj(proj, cache_key))
 
-  def SetBOMDataCache(self, cache_key: str, bom: BOMAndConfigless):
-    self._mem_adapter.Put(cache_key, bom)
+  def SetBOMDataCache(self, proj: str, cache_key: str, bom: BOMAndConfigless):
+    self._mem_adapter.Put(_GenerateCacheKeyWithProj(proj, cache_key), bom)
 
   def ClearCache(self, proj: Optional[str] = None):
     """See base class."""
-    self._mem_adapter.DelByPrefix(f'{proj}[- ]*' if proj else '*')
+    self._mem_adapter.DelByPattern(
+        _GenerateCacheKeyWithProj(proj, '*') if proj else '*')
 
 
 class BOMEntry(NamedTuple):

@@ -88,7 +88,7 @@ class MemcacheAdapter:
       return None
     return pickle.loads(serialized_data)
 
-  def DelByPrefix(self, entry_key_pattern: str):
+  def DelByPattern(self, entry_key_pattern: str):
     """Deletes entries by the given pattern.
 
     Args:

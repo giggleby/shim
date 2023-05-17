@@ -43,7 +43,7 @@ class FakeMemcacheAdapter:
       self._expiry.pop(key, None)
     return self._data.get(key)
 
-  def DelByPrefix(self, entry_key_pattern: str):
+  def DelByPattern(self, entry_key_pattern: str):
     for key in fnmatch.filter(self._data, entry_key_pattern):
       self._data.pop(key, None)
       self._expiry.pop(key, None)

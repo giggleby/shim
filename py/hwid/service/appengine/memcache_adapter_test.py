@@ -118,7 +118,7 @@ class MemcacheAdapterTest(unittest.TestCase):
     self.assertDictEqual(object_to_save, retrived_no_expire_after_sleep)
     self.assertIsNone(retrived_expire_after_sleep)
 
-  def testDelByPrefix(self):
+  def testDelByPattern(self):
     existing_data = {
         'a1': b'a1data',
         'a2': b'a2data',
@@ -129,7 +129,7 @@ class MemcacheAdapterTest(unittest.TestCase):
     for key, val in existing_data.items():
       adapter.Put(key, val)
 
-    adapter.DelByPrefix('a*')
+    adapter.DelByPattern('a*')
 
     remaining_data = {key: adapter.Get(key)
                       for key in existing_data}
