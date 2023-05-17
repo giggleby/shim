@@ -8,6 +8,7 @@ from cros.factory.hwid.service.appengine.data.converter import audio_codec_conve
 from cros.factory.hwid.service.appengine.data.converter import battery_converter
 from cros.factory.hwid.service.appengine.data.converter import camera_converter
 from cros.factory.hwid.service.appengine.data.converter import converter
+from cros.factory.hwid.service.appengine.data.converter import cpu_converter
 from cros.factory.hwid.service.appengine.data.converter import display_panel_converter
 from cros.factory.hwid.service.appengine.data.converter import storage_converter
 from cros.factory.hwid.service.appengine.data import hwid_db_data
@@ -22,6 +23,7 @@ _DEFAULT_CONVERTER_COLLECTION_MAP = {
     'audio_codec': audio_codec_converter.GetConverterCollection(),
     'battery': battery_converter.GetConverterCollection(),
     'camera': camera_converter.GetConverterCollection(category='camera'),
+    'cpu': cpu_converter.GetConverterCollection(),
     'display_panel': display_panel_converter.GetConverterCollection(),
     'storage': storage_converter.GetConverterCollection(),
     'video': camera_converter.GetConverterCollection(category='video'),
