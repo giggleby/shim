@@ -55,6 +55,7 @@ class ProbeToolManagerTest(unittest.TestCase):
         'storage.nvme_storage',
         'storage.ufs_storage',
         'raw_probe_statement',
+        'cpu.generic_cpu',
     ])
 
   def testValidateProbeInfo_InvalidProbeFunction(self):

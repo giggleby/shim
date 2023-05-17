@@ -38,7 +38,7 @@ class _IncompatibleError(Exception):
   """Raised when the given input is incompatible with the probe tool."""
 
 
-class ComponentProbeStatementConverter(abc.ABC):
+class _IComponentProbeStatementConverter(abc.ABC):
   """Represents a converter for probe info to component probe statement."""
 
   @abc.abstractmethod
@@ -75,7 +75,7 @@ class ComponentProbeStatementConverter(abc.ABC):
     """
 
 
-class RawProbeStatementConverter(ComponentProbeStatementConverter):
+class RawProbeStatementConverter(_IComponentProbeStatementConverter):
   """A converter that is simply a wrapper of raw probe statement string."""
 
   _CONVERTER_NAME = 'raw_probe_statement'
@@ -198,7 +198,7 @@ class _InformationalParam(NamedTuple):
   value_converter: _ParamValueConverter
 
 
-class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
+class _SingleProbeFuncConverter(_IComponentProbeStatementConverter):
   """Converts probe info into a statement of one single probe function call."""
 
   class _ProbeParam:
@@ -217,14 +217,14 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
   }
 
   def __init__(
-      self, runtime_probe_category_name, runtime_probe_func_name,
-      probe_params=None,
-      informational_params: (Optional[Mapping[str,
-                                              _InformationalParam]]) = None):
-    self._ps_generator = probe_config_definition.GetProbeStatementDefinition(
-        runtime_probe_category_name)
+      self, ps_generator: probe_config_types.ProbeStatementDefinition,
+      probe_function_name: str,
+      probe_params: Optional[Mapping[str,
+                                     Optional[_ParamValueConverter]]] = None,
+      informational_params: Optional[Mapping[str, _InformationalParam]] = None):
+    self._ps_generator = ps_generator
     self._probe_func_def = self._ps_generator.probe_functions[
-        runtime_probe_func_name]
+        probe_function_name]
 
     self._probe_param_infos: Mapping[str, self._ProbeParam] = {}
     probe_params = (
@@ -247,7 +247,19 @@ class _SingleProbeFuncConverter(ComponentProbeStatementConverter):
           informational_param.description, informational_param.value_converter,
           None)
 
-    self._name = runtime_probe_category_name + '.' + runtime_probe_func_name
+    self._name = (
+        f'{self._ps_generator.category_name}.{self._probe_func_def.name}')
+
+  @classmethod
+  def FromDefaultRuntimeProbeStatementGenerator(
+      cls, runtime_probe_category_name: str, runtime_probe_func_name: str,
+      probe_params: Optional[Mapping[str,
+                                     Optional[_ParamValueConverter]]] = None,
+      informational_params: Optional[Mapping[str, _InformationalParam]] = None):
+    ps_generator = probe_config_definition.GetProbeStatementDefinition(
+        runtime_probe_category_name)
+    return cls(ps_generator, runtime_probe_func_name, probe_params=probe_params,
+               informational_params=informational_params)
 
   def GetName(self) -> str:
     """See base class."""
@@ -370,8 +382,16 @@ def _NormalizeHexValueWithoutPrefix(value: str) -> str:
   return value.upper()
 
 
+def _BuildCPUProbeStatementConverter() -> _IComponentProbeStatementConverter:
+  builder = probe_config_types.ProbeStatementDefinitionBuilder('cpu')
+  builder.AddProbeFunction(
+      'generic_cpu', 'A currently non-existent runtime probe function for CPU.')
+  builder.AddStrOutputField('identifier', 'Model name on x86, chip-id on ARM.')
+  return _SingleProbeFuncConverter(builder.Build(), 'generic_cpu')
+
+
 @type_utils.CachedGetter
-def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
+def _GetAllConverters() -> Sequence[_IComponentProbeStatementConverter]:
   # TODO(yhong): Separate the data piece out the code logic.
   def _StringToRegexpOrString(value):
     PREFIX = '!re '
@@ -380,15 +400,16 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
     return value
 
   return [
-      _SingleProbeFuncConverter('audio_codec', 'audio_codec', {
-          'name': _ParamValueConverter('string'),
-      }),
-      _SingleProbeFuncConverter(
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
+          'audio_codec', 'audio_codec', {
+              'name': _ParamValueConverter('string'),
+          }),
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'battery', 'generic_battery', {
               'manufacturer': _ParamValueConverter('string'),
               'model_name': _ParamValueConverter('string'),
           }),
-      _SingleProbeFuncConverter(
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'camera', 'usb_camera', {
               'usb_vendor_id':
                   _ParamValueConverter('string',
@@ -400,7 +421,7 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _ParamValueConverter('string',
                                        _NormalizeHexValueWithoutPrefix),
           }),
-      _SingleProbeFuncConverter(
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'display_panel', 'edid', {
               'product_id':
                   _ParamValueConverter('string',
@@ -415,7 +436,7 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _InformationalParam('The height of display panel.',
                                       _ParamValueConverter('int')),
           }),
-      _SingleProbeFuncConverter(
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'storage', 'mmc_storage', {
               'mmc_manfid':
                   _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
@@ -430,7 +451,7 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _InformationalParam('The storage size in GB.',
                                       _ParamValueConverter('int')),
           }),
-      _SingleProbeFuncConverter(
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'storage', 'nvme_storage', {
               'pci_vendor':
                   _ParamValueConverter('string', _RemoveHexPrefixAndNormalize),
@@ -445,7 +466,7 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _InformationalParam('The storage size in GB.',
                                       _ParamValueConverter('int')),
           }),
-      _SingleProbeFuncConverter(
+      _SingleProbeFuncConverter.FromDefaultRuntimeProbeStatementGenerator(
           'storage', 'ufs_storage', {
               'ufs_vendor': _ParamValueConverter('string'),
               'ufs_model': _ParamValueConverter('string'),
@@ -454,6 +475,7 @@ def _GetAllConverters() -> Sequence[ComponentProbeStatementConverter]:
                   _InformationalParam('The storage size in GB.',
                                       _ParamValueConverter('int')),
           }),
+      _BuildCPUProbeStatementConverter(),
       RawProbeStatementConverter(),
   ]
 
@@ -791,7 +813,7 @@ class ProbeToolManager:
 
   def _LookupProbeConverter(
       self, converter_name: str
-  ) -> Tuple[ProbeInfoParsedResult, ComponentProbeStatementConverter]:
+  ) -> Tuple[ProbeInfoParsedResult, _IComponentProbeStatementConverter]:
     """A helper method to find the probe statement converter instance by name.
 
     When the target probe converter doesn't exist, the method creates and
@@ -804,8 +826,8 @@ class ProbeToolManager:
     Returns:
       A pair of the following:
         - An instance of `ProbeInfoParsedResult` if not found; otherwise `None`.
-        - An instance of `ComponentProbeStatementConverter` if found; otherwise
-          `None`.
+        - An instance of `_IComponentProbeStatementConverter` if found;
+          otherwise `None`.
     """
     converter = self._converters.get(converter_name)
     if converter:
