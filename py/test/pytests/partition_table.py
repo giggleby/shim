@@ -9,8 +9,11 @@ device.
 Description
 -----------
 This test checks if the partition table allocates at least ``min_usage_pct``
-percent of the storage. If not, this test expands stateful patition to the end
-of the storage device by default.
+percent of the storage. If not, this test expands stateful partition to the end
+of the storage device by default. However, on disk_layout_v3, MINIOS-B locates
+at the end of the partition table. This test will cache and remove MINIOS-B,
+expand stateful partition and copy MINIOS-B back. This test will also resize
+MINIOS-B so that its size is the same as MINIOS-A.
 
 This test doesn't check the actual size of the stateful partition, rather the
 sector at which it ends.
@@ -53,6 +56,7 @@ import os
 from cros.factory.device import device_utils
 from cros.factory.test import test_case
 from cros.factory.utils.arg_utils import Arg
+from cros.factory.utils import file_utils
 from cros.factory.utils import pygpt
 
 
@@ -77,6 +81,11 @@ class PartitionTableTest(test_case.TestCase):
   def setUp(self):
     self.dut = device_utils.CreateDUTInterface()
     self.gpt = None
+    self.minios_b_cache = None
+
+  def tearDown(self):
+    if self.minios_b_cache:
+      file_utils.TryUnlink(self.minios_b_cache)
 
   def runTest(self):
     self.assertTrue(self.dut.link.IsLocal(),
@@ -88,6 +97,8 @@ class PartitionTableTest(test_case.TestCase):
     minios_a_no = self.dut.partitions.MINIOS_A.index
     minios_a_part = self.gpt.GetPartition(minios_a_no)
     minios_b_no = self.dut.partitions.MINIOS_B.index
+    minios_b_dev = self.dut.storage.GetMainStorageDevice(minios_b_no)
+    minios_b_is_removed = False
     start_sector = stateful_part.FirstLBA
     sector_count = stateful_part.blocks
     end_sector = start_sector + sector_count
@@ -107,8 +118,11 @@ class PartitionTableTest(test_case.TestCase):
                  pct_used)
 
     # In disk_layout_v3, minios_b is the last partition.
-    # We have to remove it if we would like to expand the stateful partition.
+    # We have to remove it temporary if we would like to expand the stateful
+    # partition.
     has_minios_b = self.gpt.IsLastPartition(minios_b_no)
+    if has_minios_b:
+      logging.info('DUT is using disk_layout_v3.json.')
 
     if pct_used < self.args.min_usage_pct:
       if not self.args.expand_stateful:
@@ -124,8 +138,19 @@ class PartitionTableTest(test_case.TestCase):
 
       if has_minios_b:
         self.gpt.WriteToFile(dev)
+        # Copy the content of minios_a to minios_b partition.
+        self.minios_b_cache = file_utils.CreateTemporaryFile(
+            prefix='minios_b_cache')
+        logging.info('Caching the content of MINIOS-B to %s',
+                     self.minios_b_cache)
+        self.dut.CheckCall([
+            'dd', 'bs=1048576', f'if={minios_b_dev}',
+            f'of={self.minios_b_cache}', 'iflag=fullblock', 'oflag=dsync'
+        ], log=True)
+
+        minios_b_is_removed = True
         pygpt.RemovePartition(dev, minios_b_no)
-        # Reload gpt table if we remove partition minios_b.
+        # Reload gpt table since we removed partition minios_b.
         self.gpt = pygpt.GPT.LoadFromFile(dev)
 
       _, new_blocks = self.gpt.ExpandPartition(stateful_no, reserved_blocks)
@@ -157,12 +182,11 @@ class PartitionTableTest(test_case.TestCase):
         add_cmd.ExecuteCommandLine('-i', str(minios_b_no), '-s',
                                    str(minios_a_part.blocks), dev)
 
-      # Copy the content of minios_a to minios_b partition.
-      logging.info('Copy the content of MINIOS-A to MINIOS-B.')
-      src = self.dut.storage.GetMainStorageDevice(minios_a_no)
-      dst = self.dut.storage.GetMainStorageDevice(minios_b_no)
-      self.dut.CheckCall([
-          'dd', 'bs=1048576', f'if={src}', f'of={dst}', 'iflag=fullblock',
-          'oflag=dsync'
-      ], log=True)
-      self._ShowGPTTable(dev)
+      if minios_b_is_removed:
+        logging.info('Copying back MINIOS-B.')
+        self.dut.CheckCall([
+            'dd', 'bs=1048576', f'if={self.minios_b_cache}',
+            f'of={minios_b_dev}', 'iflag=fullblock', 'oflag=dsync'
+        ], log=True)
+
+        self._ShowGPTTable(dev)
