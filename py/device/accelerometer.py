@@ -53,7 +53,6 @@ class AccelerometerController(sensor_utils.BasicSensorController):
     """
     super().__init__(board, name, location,
                      ['in_accel_x', 'in_accel_y', 'in_accel_z'], scale=True)
-    self.location = location
 
   def CalculateCalibrationBias(self, data, orientations=None):
     if not orientations:

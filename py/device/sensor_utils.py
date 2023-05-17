@@ -90,6 +90,7 @@ class BasicSensorController(device_types.DeviceComponent):
     """
     super().__init__(dut)
     self.signal_names = signal_names
+    self.location = location
     try:
       # TODO(jimmysun) Remove searching location after all boards are using
       # kernel 6.1+.
