@@ -15,6 +15,12 @@ export interface ConfigState {
 
 type ConfigAction = ActionType<typeof actions>;
 
+const DefaultConfigState = {
+  tftpEnabled: false,
+  mcastEnabled: false,
+  versionCheckEnabled: true,
+};
+
 export default combineReducers<ConfigState, ConfigAction>({
   updating: (state = false, action: ConfigAction) => {
     switch (action.type) {
@@ -28,8 +34,7 @@ export default combineReducers<ConfigState, ConfigAction>({
         return state;
     }
   },
-  config: (state = {tftpEnabled: false, mcastEnabled: false},
-           action: ConfigAction) => {
+  config: (state = DefaultConfigState, action: ConfigAction) => {
     switch (action.type) {
       case getType(actions.receiveConfig):
         return action.payload.config;

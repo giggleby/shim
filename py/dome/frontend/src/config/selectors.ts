@@ -19,5 +19,7 @@ export const isTftpEnabled =
   (state: RootState): boolean => localState(state).config.tftpEnabled;
 export const isMcastEnabled =
   (state: RootState): boolean => localState(state).config.mcastEnabled;
+export const isVersionCheckEnabled =
+  (state: RootState): boolean => localState(state).config.versionCheckEnabled;
 export const isConfigUpdating =
   (state: RootState): boolean => localState(state).updating;

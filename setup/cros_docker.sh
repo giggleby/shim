@@ -1117,6 +1117,7 @@ do_build() {
     --build-arg docker_image_githash="${NEW_DOCKER_IMAGE_GITHASH}" \
     --build-arg docker_image_islocal="${is_local}" \
     --build-arg docker_image_timestamp="${NEW_DOCKER_IMAGE_TIMESTAMP}" \
+    --build-arg resource_cros_docker_url="${RESOURCE_CROS_DOCKER_URL}" \
     "${FACTORY_DIR}"
 
   echo "${DOCKER_IMAGE_NAME} image successfully built."

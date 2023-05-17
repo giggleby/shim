@@ -46,3 +46,9 @@ export const disableTftp = () => updateConfig({tftpEnabled: false});
 export const enableMcast = () => updateConfig({mcastEnabled: true});
 
 export const disableMcast = () => updateConfig({mcastEnabled: false});
+
+export const enableVersionCheck = () => updateConfig(
+  {versionCheckEnabled: true});
+
+export const disableVersionCheck = () => updateConfig(
+  {versionCheckEnabled: false});

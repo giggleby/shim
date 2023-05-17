@@ -35,6 +35,7 @@ import {getCurrentApp} from '../selectors';
 
 import DomeAppBar from './dome_app_bar';
 import DomeAppMenu from './dome_app_menu';
+import DomeAppVersionAlert from './dome_app_version_alert';
 
 const APP_MENU_WIDTH = 250;
 
@@ -153,7 +154,8 @@ To visit Dome, please use Chrome/Chromium to avoid unnecessary issues.`);
             <TaskList className={classes.taskList} />
           </div>
           <Grid container justifyContent="center">
-            <Grid item xs={12} sm={9} md={6}>
+            <Grid item xs={12} sm={12} md={9}>
+              <DomeAppVersionAlert />
               {app}
             </Grid>
           </Grid>

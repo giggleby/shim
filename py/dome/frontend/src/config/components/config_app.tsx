@@ -20,14 +20,17 @@ import {DispatchProps} from '@common/types';
 import {
   disableMcast,
   disableTftp,
+  disableVersionCheck,
   enableMcast,
   enableTftp,
+  enableVersionCheck,
   fetchConfig,
 } from '../actions';
 import {
   isConfigUpdating,
   isMcastEnabled,
   isTftpEnabled,
+  isVersionCheckEnabled,
 } from '../selectors';
 
 type ConfigAppProps =
@@ -42,11 +45,14 @@ class ConfigApp extends React.Component<ConfigAppProps> {
     const {
       isMcastEnabled,
       isTftpEnabled,
+      isVersionCheckEnabled,
       isConfigUpdating,
       disableMcast,
       disableTftp,
+      disableVersionCheck,
       enableMcast,
       enableTftp,
+      enableVersionCheck,
       logout,
     } = this.props;
 
@@ -76,6 +82,18 @@ class ConfigApp extends React.Component<ConfigAppProps> {
             }
             label="Multicast netboot"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                color="primary"
+                checked={isVersionCheckEnabled}
+                onChange={isVersionCheckEnabled ? disableVersionCheck :
+                          enableVersionCheck}
+                disabled={isConfigUpdating}
+              />
+            }
+            label="DOME latest version auto check"
+          />
         </CardContent>
         <CardActions>
           <Button color="primary" size="small" onClick={logout}>
@@ -90,14 +108,17 @@ class ConfigApp extends React.Component<ConfigAppProps> {
 const mapStateToProps = (state: RootState) => ({
   isTftpEnabled: isTftpEnabled(state),
   isMcastEnabled: isMcastEnabled(state),
+  isVersionCheckEnabled: isVersionCheckEnabled(state),
   isConfigUpdating: isConfigUpdating(state),
 });
 
 const mapDispatchToProps = {
   disableMcast,
   disableTftp,
+  disableVersionCheck,
   enableMcast,
   enableTftp,
+  enableVersionCheck,
   fetchConfig,
   logout: auth.actions.logout,
 };

@@ -43,13 +43,16 @@ ADD build/docker/docker.tgz /
 #  coreutils: For GNU mktemp since busybox mktemp doesn't support --tmpdir.
 #
 #  py-psutil: Dependencies for Python package gnupg that is used by Instalog.
+#
+#  bash: Used by Dome, for Dome auto version check.
 RUN apk upgrade --no-cache && apk add --no-cache \
     apache2-utils \
+    bash \
     coreutils \
     curl \
     dnsmasq \
-    gnupg \
     file \
+    gnupg \
     jq \
     nginx \
     openssl \
@@ -123,6 +126,8 @@ COPY py "${server_dir}/py"
 ARG docker_image_githash
 ARG docker_image_islocal
 ARG docker_image_timestamp
+ARG resource_cros_docker_url
 ENV DOCKER_IMAGE_GITHASH="${docker_image_githash}"
 ENV DOCKER_IMAGE_ISLOCAL="${docker_image_islocal}"
 ENV DOCKER_IMAGE_TIMESTAMP="${docker_image_timestamp}"
+ENV RESOURCE_CROS_DOCKER_URL="${resource_cros_docker_url}"

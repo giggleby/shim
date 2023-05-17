@@ -15,5 +15,6 @@ export interface DomeInfo {
   dockerImageGithash: string;
   dockerImageIslocal: boolean;
   dockerImageTimestamp: string;
+  dockerImageLatestVersion: string;
   isDevServer: boolean;
 }

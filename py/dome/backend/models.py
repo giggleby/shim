@@ -19,6 +19,7 @@ import errno
 import json
 import logging
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -37,6 +38,7 @@ from cros.factory.umpire.server.service import umpire_service
 from cros.factory.utils import file_utils
 from cros.factory.utils import json_utils
 from cros.factory.utils import net_utils
+from cros.factory.utils import process_utils
 
 
 # TODO(littlecvr): pull out the common parts between umpire and dome, and put
@@ -259,12 +261,33 @@ def UpdateDuplicateResource(project_name, old_bundle_name, new_bundle_name,
     raise DomeServerException(detail=e.faultString) from e
 
 
+def GetDockerImageLatestVersion(resource_cros_docker_url):
+  try:
+    temp_dir = tempfile.mkdtemp(dir=SHARED_TMP_DIR)
+    cros_docker_temp_file = os.path.join(temp_dir, 'cros_docker_v1.sh')
+    process_utils.SpawnOutput(
+        f'curl -L --fail {resource_cros_docker_url} | base64 --decode '
+        f'>{cros_docker_temp_file}', shell=True)
+    process_utils.SpawnOutput(['chmod', '+x', cros_docker_temp_file])
+    docker_image_version = process_utils.CheckOutput(
+        f'{cros_docker_temp_file} version', shell=True)
+    return re.sub(r'^Chrome OS Factory Server: (\d{14}).*\n', r'\1',
+                  docker_image_version)
+  except Exception:
+    error_message = 'Getting docker image latest version failed.'
+    logger.error(error_message)
+    return error_message
+  finally:
+    process_utils.SpawnOutput(['rm', '-r', temp_dir])
+
+
 class DomeConfig(django.db.models.Model):
 
   id = django.db.models.IntegerField(
       default=0, primary_key=True, serialize=False)
   mcast_enabled = django.db.models.BooleanField(default=False)
   tftp_enabled = django.db.models.BooleanField(default=False)
+  version_check_enabled = django.db.models.BooleanField(default=True)
 
   def CreateTFTPContainer(self):
     if DoesContainerExist(TFTP_CONTAINER_NAME):
@@ -354,6 +377,12 @@ class DomeConfig(django.db.models.Model):
       else:
         self.DeleteMcastContainer()
 
+    if ('version_check_enabled' in kwargs and
+        self.version_check_enabled != kwargs['version_check_enabled']):
+      if kwargs['version_check_enabled']:
+        self.version_check_enabled = True
+      else:
+        self.version_check_enabled = False
 
     # update attributes assigned in kwargs
     for attr, value in kwargs.items():

@@ -12,6 +12,7 @@ from backend.models import Bundle
 from backend.models import DomeConfig
 from backend.models import FactoryDriveComponent
 from backend.models import FactoryDriveDirectory
+from backend.models import GetDockerImageLatestVersion
 from backend.models import GetUmpireSyncStatus
 from backend.models import Log
 from backend.models import Project
@@ -53,10 +54,13 @@ class InfoView(views.APIView):
     # boolean.
     docker_image_islocal = bool(int(docker_image_islocal))
     docker_image_timestamp = os.environ.get('DOCKER_IMAGE_TIMESTAMP', '')
+    docker_image_Latest_version = GetDockerImageLatestVersion(
+        os.environ.get('RESOURCE_CROS_DOCKER_URL', ''))
     return Response({
         'docker_image_githash': docker_image_githash,
         'docker_image_islocal': docker_image_islocal,
         'docker_image_timestamp': docker_image_timestamp,
+        'docker_image_latest_version': docker_image_Latest_version,
         'is_dev_server': common.IsDomeDevServer()
     })
 

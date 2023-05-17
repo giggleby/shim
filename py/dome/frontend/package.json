@@ -12,6 +12,7 @@
     "axios": "~0.24.0",
     "buffer": "~6.0.3",
     "classnames": "~2.2.6",
+    "clipboard-copy": "~4.0.1",
     "dateformat": "~3.0.3",
     "fork-ts-checker-webpack-plugin": "~6.4.0",
     "immer": "~9.0.6",
