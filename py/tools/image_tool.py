@@ -3676,6 +3676,29 @@ class EditLSBCommand(SubCommand):
         'Chrome OS Factory Server or Shopfloor Service for OQC ReFinalize',
         ['SHOPFLOOR_URL'])
 
+  def EditDisplayQrcode(self):
+    """Enable or disable qrcode when factory reset.
+
+    Check src/platform/factory_installer/factory_reset.sh for supported fields.
+    """
+    answer = UserInput.YesNo(
+        'Enable (y) or disable (n) qrcode when factory reset?')
+    self.lsb.SetValue('DISPLAY_QRCODE', 'true' if answer else 'false')
+    if answer:
+      display_info = UserInput.GetString(
+          'Enter the fields needed to display. The fields separated by space '
+          'will be in the same QR code, the fields separated by comma will be '
+          'in the different QR code', optional=True)
+      self.lsb.SetValue('DISPLAY_INFO', display_info)
+
+  def EditContinueKey(self):
+    """Enable or disable a confirmation before battery cutoff."""
+    key = UserInput.GetString(
+        'Enter the key needed to be pressed to continue the cutoff process, '
+        'the characters should be pressed in order.', optional=True)
+    self.lsb.SetValue('CONTINUE_KEY', key)
+
+
   def DoMenu(self, *args, **kargs):
     while True:
       Shell(['clear'])
@@ -3761,15 +3784,11 @@ class EditLSBCommand(SubCommand):
           print('QUIT. No changes were applied.')
           return True
 
-        self.DoMenu(self.EditBoard,
-                    self.EditServerAddress,
-                    self.EditDefaultAction,
-                    self.EditActionCountdown,
-                    self.EditCompletePrompt,
-                    self.EditRMAAutorun,
-                    self.EditCutoff,
-                    w=Write,
-                    q=Quit)
+        self.DoMenu(self.EditBoard, self.EditServerAddress,
+                    self.EditDefaultAction, self.EditActionCountdown,
+                    self.EditCompletePrompt, self.EditRMAAutorun,
+                    self.EditCutoff, self.EditDisplayQrcode,
+                    self.EditContinueKey, w=Write, q=Quit)
 
 
 class EditToolkitConfigCommand(SubCommand):
